@@ -175,9 +175,7 @@ describe('Group', () => {
           // Arrange
           const group = new Group(2);
           const propagationSpies = group.nodes.map((node) =>
-            jest
-              .spyOn(node, 'propagate')
-              .mockImplementation(() => undefined),
+            jest.spyOn(node, 'propagate').mockImplementation(() => undefined),
           );
 
           // Act
@@ -198,9 +196,7 @@ describe('Group', () => {
           // Arrange
           const group = new Group(2);
           const propagationSpies = group.nodes.map((node) =>
-            jest
-              .spyOn(node, 'propagate')
-              .mockImplementation(() => undefined),
+            jest.spyOn(node, 'propagate').mockImplementation(() => undefined),
           );
 
           // Act
@@ -284,9 +280,7 @@ describe('Group', () => {
           // Assert
           expect({
             created: createdConnections.length,
-            warningMessages: warningSpy.mock.calls.map(
-              ([message]) => message,
-            ),
+            warningMessages: warningSpy.mock.calls.map(([message]) => message),
           }).toStrictEqual({
             created: 4,
             warningMessages: [
@@ -344,9 +338,7 @@ describe('Group', () => {
           // Assert
           expect({
             created: createdConnections.length,
-            warningMessages: warningSpy.mock.calls.map(
-              ([message]) => message,
-            ),
+            warningMessages: warningSpy.mock.calls.map(([message]) => message),
           }).toStrictEqual({
             created: 2,
             warningMessages: [
@@ -455,9 +447,7 @@ describe('Group', () => {
           const sourceGroup = new Group(2);
 
           // Act
-          const createdConnections = sourceGroup.connect(
-            {} as unknown as Node,
-          );
+          const createdConnections = sourceGroup.connect({} as unknown as Node);
 
           // Assert
           expect(createdConnections).toStrictEqual([]);
@@ -592,11 +582,7 @@ describe('Group', () => {
             connectionOne.gater,
             connectionTwo.gater,
             connectionThree.gater,
-          ]).toStrictEqual([
-            gatingGroup.nodes[0],
-            gatingGroup.nodes[0],
-            null,
-          ]);
+          ]).toStrictEqual([gatingGroup.nodes[0], gatingGroup.nodes[0], null]);
         });
       });
     });
@@ -618,9 +604,10 @@ describe('Group', () => {
           );
 
           // Assert
-          expect([selfConnectionOne.gater, selfConnectionTwo.gater]).toStrictEqual(
-            [gatingGroup.nodes[0], gatingGroup.nodes[1]],
-          );
+          expect([
+            selfConnectionOne.gater,
+            selfConnectionTwo.gater,
+          ]).toStrictEqual([gatingGroup.nodes[0], gatingGroup.nodes[1]]);
         });
       });
     });

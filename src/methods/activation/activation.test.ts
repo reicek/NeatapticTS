@@ -334,7 +334,8 @@ describe('Activation', () => {
         it('returns the expected bent-identity slope', () => {
           // Arrange
           const inputValue = 0.5;
-          const expectedValue = inputValue / (2 * Math.sqrt(inputValue ** 2 + 1)) + 1;
+          const expectedValue =
+            inputValue / (2 * Math.sqrt(inputValue ** 2 + 1)) + 1;
 
           // Act
           const actualValue = Activation.bentIdentity(inputValue, true);
@@ -687,8 +688,7 @@ describe('Activation', () => {
           const inputValue = 1;
           const sigmoidValue = 1 / (1 + Math.exp(-inputValue));
           const swishValue = inputValue * sigmoidValue;
-          const expectedValue =
-            swishValue + sigmoidValue * (1 - swishValue);
+          const expectedValue = swishValue + sigmoidValue * (1 - swishValue);
 
           // Act
           const actualValue = Activation.swish(inputValue, true);

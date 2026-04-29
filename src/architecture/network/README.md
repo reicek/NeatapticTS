@@ -609,7 +609,7 @@ The method argument should be one of the mutation types defined in `methods.muta
 
 Parameters:
 - `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
- Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
+  Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
 
 #### nodes
 

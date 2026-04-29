@@ -2,7 +2,9 @@ import Connection from '../connection/connection';
 import Activation from '../../methods/activation/activation';
 import Node from './node';
 
-function withSuppressedWarnings<T>(run: (warningSpy: jest.SpyInstance) => T): T {
+function withSuppressedWarnings<T>(
+  run: (warningSpy: jest.SpyInstance) => T,
+): T {
   const warningSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
   try {
@@ -17,7 +19,10 @@ function withIgnoredWriteProperties<T>(
   run: () => T,
 ): T {
   const originalDescriptors = targets.map(({ propertyName, targetObject }) => ({
-    originalDescriptor: Object.getOwnPropertyDescriptor(targetObject, propertyName),
+    originalDescriptor: Object.getOwnPropertyDescriptor(
+      targetObject,
+      propertyName,
+    ),
     propertyName,
     targetObject,
   }));
@@ -142,7 +147,8 @@ function runOptimizerCase(optimizerOptions: OptimizerOptions) {
     hasBiasMaxSecondMoment: typeof optimizerNode.opt_vhatB === 'number',
     hasBiasSecondMoment: typeof optimizerNode.opt_vB === 'number',
     hasBiasSecondMomentum: typeof optimizerNode.opt_mB2 === 'number',
-    hasConnectionFirstMoment: typeof incomingConnection.firstMoment === 'number',
+    hasConnectionFirstMoment:
+      typeof incomingConnection.firstMoment === 'number',
     hasConnectionGradientAccumulator:
       typeof incomingConnection.gradientAccumulator === 'number',
     hasConnectionInfinityNorm:
@@ -168,9 +174,15 @@ describe('Node', () => {
           const projectedTargetNode = new Node('hidden');
           const gateSourceNode = new Node('input');
           const gatedTargetNode = new Node('hidden');
-          const projectedConnection = gatingNode.connect(projectedTargetNode, 7)[0];
+          const projectedConnection = gatingNode.connect(
+            projectedTargetNode,
+            7,
+          )[0];
           const gatedConnection = gateSourceNode.connect(gatedTargetNode, 4)[0];
-          const gatedSelfConnection = gatedTargetNode.connect(gatedTargetNode, 0.1)[0];
+          const gatedSelfConnection = gatedTargetNode.connect(
+            gatedTargetNode,
+            0.1,
+          )[0];
           const ungatedSelfConnection = new Connection(
             gatedTargetNode,
             gatedTargetNode,
@@ -778,11 +790,13 @@ describe('Node', () => {
           defaultLookaheadHarness.incomingConnection.totalDeltaWeight = 1;
           defaultLookaheadHarness.selfConnection.totalDeltaWeight = 1;
 
-          const repeatedLookaheadHarness = createBatchOptimizerHarness('hidden');
-          const repeatedLookaheadNode = repeatedLookaheadHarness.trainingNode as unknown as Record<
-            string,
-            number
-          >;
+          const repeatedLookaheadHarness =
+            createBatchOptimizerHarness('hidden');
+          const repeatedLookaheadNode =
+            repeatedLookaheadHarness.trainingNode as unknown as Record<
+              string,
+              number
+            >;
           repeatedLookaheadNode._la_alpha = 0.25;
           repeatedLookaheadNode._la_k = 1;
           repeatedLookaheadNode._la_shadowBias = 3;
@@ -796,7 +810,8 @@ describe('Node', () => {
           repeatedLookaheadHarness.selfConnection.lookaheadShadowWeight = 5;
           repeatedLookaheadHarness.selfConnection.totalDeltaWeight = 1;
 
-          const zeroGradientAdamaxHarness = createBatchOptimizerHarness('hidden');
+          const zeroGradientAdamaxHarness =
+            createBatchOptimizerHarness('hidden');
           zeroGradientAdamaxHarness.trainingNode.bias = 1;
           zeroGradientAdamaxHarness.trainingNode.totalDeltaBias = 0;
           zeroGradientAdamaxHarness.incomingConnection.totalDeltaWeight = 0;
@@ -809,10 +824,11 @@ describe('Node', () => {
           zeroGradientLionHarness.selfConnection.totalDeltaWeight = 0;
 
           const repeatedAmsgradHarness = createBatchOptimizerHarness('hidden');
-          const repeatedAmsgradNode = repeatedAmsgradHarness.trainingNode as unknown as Record<
-            string,
-            number
-          >;
+          const repeatedAmsgradNode =
+            repeatedAmsgradHarness.trainingNode as unknown as Record<
+              string,
+              number
+            >;
           repeatedAmsgradHarness.trainingNode.totalDeltaBias = 2;
           repeatedAmsgradHarness.incomingConnection.totalDeltaWeight = 2;
           repeatedAmsgradHarness.selfConnection.totalDeltaWeight = 2;
@@ -836,9 +852,11 @@ describe('Node', () => {
             type: 'lookahead',
             baseType: 'sgd',
           });
-          zeroGradientAdamaxHarness.trainingNode.applyBatchUpdatesWithOptimizer({
-            type: 'adamax',
-          });
+          zeroGradientAdamaxHarness.trainingNode.applyBatchUpdatesWithOptimizer(
+            {
+              type: 'adamax',
+            },
+          );
           zeroGradientLionHarness.trainingNode.applyBatchUpdatesWithOptimizer({
             type: 'lion',
           });
@@ -852,36 +870,54 @@ describe('Node', () => {
           // Assert
           expect({
             defaultLookahead: {
-              alpha: (defaultLookaheadHarness.trainingNode as unknown as Record<string, number>)._la_alpha,
+              alpha: (
+                defaultLookaheadHarness.trainingNode as unknown as Record<
+                  string,
+                  number
+                >
+              )._la_alpha,
               bias: defaultLookaheadHarness.trainingNode.bias,
-              k: (defaultLookaheadHarness.trainingNode as unknown as Record<string, number>)._la_k,
-              step: (defaultLookaheadHarness.trainingNode as unknown as Record<string, number>)._la_step,
+              k: (
+                defaultLookaheadHarness.trainingNode as unknown as Record<
+                  string,
+                  number
+                >
+              )._la_k,
+              step: (
+                defaultLookaheadHarness.trainingNode as unknown as Record<
+                  string,
+                  number
+                >
+              )._la_step,
             },
             repeatedAmsgrad: {
-              incomingMaxSecondMoment:
-                Number(
-                  repeatedAmsgradHarness.incomingConnection.maxSecondMoment?.toFixed(
-                    6,
-                  ),
+              incomingMaxSecondMoment: Number(
+                repeatedAmsgradHarness.incomingConnection.maxSecondMoment?.toFixed(
+                  6,
                 ),
+              ),
               optVhatBias: Number(repeatedAmsgradNode.opt_vhatB?.toFixed(6)),
             },
             repeatedLookahead: {
               bias: repeatedLookaheadHarness.trainingNode.bias,
               incomingShadowWeight:
-                repeatedLookaheadHarness.incomingConnection.lookaheadShadowWeight,
+                repeatedLookaheadHarness.incomingConnection
+                  .lookaheadShadowWeight,
               selfShadowWeight:
                 repeatedLookaheadHarness.selfConnection.lookaheadShadowWeight,
             },
             zeroDecayAdamw: {
-              biasFinite: Number.isFinite(zeroDecayAdamwHarness.trainingNode.bias),
+              biasFinite: Number.isFinite(
+                zeroDecayAdamwHarness.trainingNode.bias,
+              ),
               weightFinite: Number.isFinite(
                 zeroDecayAdamwHarness.incomingConnection.weight,
               ),
             },
             zeroGradientAdamax: {
               bias: zeroGradientAdamaxHarness.trainingNode.bias,
-              incomingWeight: zeroGradientAdamaxHarness.incomingConnection.weight,
+              incomingWeight:
+                zeroGradientAdamaxHarness.incomingConnection.weight,
             },
             zeroGradientLion: {
               bias: zeroGradientLionHarness.trainingNode.bias,
@@ -939,7 +975,8 @@ describe('Node', () => {
           amsgradFallbackHarness.incomingConnection.totalDeltaWeight = 2;
           amsgradFallbackHarness.selfConnection.totalDeltaWeight = 2;
 
-          const adabeliefFallbackHarness = createBatchOptimizerHarness('hidden');
+          const adabeliefFallbackHarness =
+            createBatchOptimizerHarness('hidden');
           adabeliefFallbackHarness.trainingNode.totalDeltaBias = 2;
           adabeliefFallbackHarness.incomingConnection.totalDeltaWeight = 2;
           adabeliefFallbackHarness.selfConnection.totalDeltaWeight = 2;
@@ -954,7 +991,8 @@ describe('Node', () => {
           lionFallbackHarness.incomingConnection.totalDeltaWeight = 2;
           lionFallbackHarness.selfConnection.totalDeltaWeight = 2;
 
-          const lookaheadFallbackHarness = createBatchOptimizerHarness('hidden');
+          const lookaheadFallbackHarness =
+            createBatchOptimizerHarness('hidden');
           lookaheadFallbackHarness.trainingNode.bias = 4;
           lookaheadFallbackHarness.trainingNode.totalDeltaBias = 1;
           lookaheadFallbackHarness.incomingConnection.weight = 6;
@@ -1000,9 +1038,11 @@ describe('Node', () => {
               },
             ],
             () => {
-              amsgradFallbackHarness.trainingNode.applyBatchUpdatesWithOptimizer({
-                type: 'amsgrad',
-              });
+              amsgradFallbackHarness.trainingNode.applyBatchUpdatesWithOptimizer(
+                {
+                  type: 'amsgrad',
+                },
+              );
             },
           );
 
@@ -1018,9 +1058,11 @@ describe('Node', () => {
               },
             ],
             () => {
-              adabeliefFallbackHarness.trainingNode.applyBatchUpdatesWithOptimizer({
-                type: 'adabelief',
-              });
+              adabeliefFallbackHarness.trainingNode.applyBatchUpdatesWithOptimizer(
+                {
+                  type: 'adabelief',
+                },
+              );
             },
           );
 
@@ -1036,9 +1078,11 @@ describe('Node', () => {
               },
             ],
             () => {
-              adamaxFallbackHarness.trainingNode.applyBatchUpdatesWithOptimizer({
-                type: 'adamax',
-              });
+              adamaxFallbackHarness.trainingNode.applyBatchUpdatesWithOptimizer(
+                {
+                  type: 'adamax',
+                },
+              );
             },
           );
 
@@ -1088,9 +1132,11 @@ describe('Node', () => {
               },
             ],
             () => {
-              lookaheadFallbackHarness.trainingNode.applyBatchUpdatesWithOptimizer({
-                type: 'lookahead',
-              });
+              lookaheadFallbackHarness.trainingNode.applyBatchUpdatesWithOptimizer(
+                {
+                  type: 'lookahead',
+                },
+              );
             },
           );
 
@@ -1099,13 +1145,21 @@ describe('Node', () => {
             adabeliefBiasFinite: Number.isFinite(
               adabeliefFallbackHarness.trainingNode.bias,
             ),
-            adamaxBiasFinite: Number.isFinite(adamaxFallbackHarness.trainingNode.bias),
-            adamwBiasFinite: Number.isFinite(adamwZeroValueHarness.trainingNode.bias),
+            adamaxBiasFinite: Number.isFinite(
+              adamaxFallbackHarness.trainingNode.bias,
+            ),
+            adamwBiasFinite: Number.isFinite(
+              adamwZeroValueHarness.trainingNode.bias,
+            ),
             adamwIncomingWeightFinite: Number.isFinite(
               adamwZeroValueHarness.incomingConnection.weight,
             ),
-            amsgradBiasFinite: Number.isFinite(amsgradFallbackHarness.trainingNode.bias),
-            lionBiasFinite: Number.isFinite(lionFallbackHarness.trainingNode.bias),
+            amsgradBiasFinite: Number.isFinite(
+              amsgradFallbackHarness.trainingNode.bias,
+            ),
+            lionBiasFinite: Number.isFinite(
+              lionFallbackHarness.trainingNode.bias,
+            ),
             lookaheadBias: lookaheadFallbackHarness.trainingNode.bias,
           }).toStrictEqual({
             adabeliefBiasFinite: true,
@@ -1126,7 +1180,10 @@ describe('Node', () => {
           // Arrange
           const { trainingNode, incomingConnection, selfConnection } =
             createBatchOptimizerHarness('hidden');
-          const optimizerNode = trainingNode as unknown as Record<string, number>;
+          const optimizerNode = trainingNode as unknown as Record<
+            string,
+            number
+          >;
           trainingNode.bias = 4;
           trainingNode.totalDeltaBias = 2;
           incomingConnection.weight = 6;
@@ -1178,7 +1235,10 @@ describe('Node', () => {
           inputNode.totalDeltaBias = 4;
 
           // Act
-          inputNode.applyBatchUpdatesWithOptimizer({ type: 'sgd', momentum: 1 });
+          inputNode.applyBatchUpdatesWithOptimizer({
+            type: 'sgd',
+            momentum: 1,
+          });
 
           // Assert
           expect({

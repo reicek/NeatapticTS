@@ -10,7 +10,9 @@ describe('EvolutionEngine.printNetworkStructure', () => {
     });
     network.activate([0.25, 0.75]);
 
-    const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const consoleLogSpy = jest
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined);
 
     try {
       EvolutionEngine.printNetworkStructure(network as unknown as INetwork);

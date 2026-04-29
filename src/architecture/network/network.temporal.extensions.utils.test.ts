@@ -146,7 +146,9 @@ describe('network.temporal.extensions.utils', () => {
 
         // Act
         const temporalState = {
-          descriptor: describeTemporalStructure(runtimeNetwork as unknown as Network),
+          descriptor: describeTemporalStructure(
+            runtimeNetwork as unknown as Network,
+          ),
           extensions: runtimeNetwork._serializedExtensions,
         };
 
@@ -201,7 +203,9 @@ describe('network.temporal.extensions.utils', () => {
 
         // Act
         const temporalState = {
-          descriptor: describeTemporalStructure(runtimeNetwork as unknown as Network),
+          descriptor: describeTemporalStructure(
+            runtimeNetwork as unknown as Network,
+          ),
           extensions: runtimeNetwork._serializedExtensions,
         };
 
@@ -245,7 +249,9 @@ describe('network.temporal.extensions.utils', () => {
 
         // Act
         const temporalState = {
-          descriptor: describeTemporalStructure(runtimeNetwork as unknown as Network),
+          descriptor: describeTemporalStructure(
+            runtimeNetwork as unknown as Network,
+          ),
           extensions: runtimeNetwork._serializedExtensions,
         };
 
@@ -291,7 +297,11 @@ describe('network.temporal.extensions.utils', () => {
         // Arrange
         const firstModuleNode = createNode(501);
         const secondModuleNode = createNode(502);
-        const liveConnection = connectNodes(firstModuleNode, secondModuleNode, 88);
+        const liveConnection = connectNodes(
+          firstModuleNode,
+          secondModuleNode,
+          88,
+        );
         const runtimeNetwork = createRuntimeSurface(
           [firstModuleNode, secondModuleNode],
           {
@@ -312,9 +322,11 @@ describe('network.temporal.extensions.utils', () => {
         );
 
         // Act
-        const ownedGeneIds = [...resolveTemporalRecurrentModuleNodeGeneIds(
-          runtimeNetwork as unknown as Network,
-        )];
+        const ownedGeneIds = [
+          ...resolveTemporalRecurrentModuleNodeGeneIds(
+            runtimeNetwork as unknown as Network,
+          ),
+        ];
 
         // Assert
         expect(ownedGeneIds).toEqual([501, 502]);
@@ -333,7 +345,11 @@ describe('network.temporal.extensions.utils', () => {
         const rightTargetNode = createNode(612);
         const rightGaterNode = createNode(613);
         const leftConnection = connectNodes(leftSourceNode, leftTargetNode, 91);
-        const rightConnection = connectNodes(rightSourceNode, rightTargetNode, 92);
+        const rightConnection = connectNodes(
+          rightSourceNode,
+          rightTargetNode,
+          92,
+        );
         Reflect.set(leftConnection, 'gater', leftGaterNode);
         Reflect.set(rightConnection, 'gater', rightGaterNode);
         const runtimeNetwork = createRuntimeSurface([
@@ -365,10 +381,11 @@ describe('network.temporal.extensions.utils', () => {
         );
 
         // Assert
-        expect(temporalDescriptor.gatedBlocks.map((gatedBlock) => gatedBlock.blockId)).toEqual([
-          'gated:block:gru:alpha',
-          'gated:block:gru:zeta',
-        ]);
+        expect(
+          temporalDescriptor.gatedBlocks.map(
+            (gatedBlock) => gatedBlock.blockId,
+          ),
+        ).toEqual(['gated:block:gru:alpha', 'gated:block:gru:zeta']);
       });
     });
 
@@ -382,7 +399,11 @@ describe('network.temporal.extensions.utils', () => {
         const memoryCellNode = createNode(805);
         const outputGateNode = createNode(806);
         const outputBlockNode = createNode(807);
-        const gatedConnection = connectNodes(externalSourceNode, externalTargetNode, 222);
+        const gatedConnection = connectNodes(
+          externalSourceNode,
+          externalTargetNode,
+          222,
+        );
         Reflect.set(gatedConnection, 'gater', inputGateNode);
         const runtimeNetwork = createRuntimeSurface(
           [
@@ -412,9 +433,14 @@ describe('network.temporal.extensions.utils', () => {
         );
 
         // Act
-        appendTemporalDescriptorSet(runtimeNetwork as unknown as Network, descriptorSet);
+        appendTemporalDescriptorSet(
+          runtimeNetwork as unknown as Network,
+          descriptorSet,
+        );
         const temporalState = {
-          descriptor: describeTemporalStructure(runtimeNetwork as unknown as Network),
+          descriptor: describeTemporalStructure(
+            runtimeNetwork as unknown as Network,
+          ),
           extensions: runtimeNetwork._serializedExtensions,
         };
 
@@ -486,7 +512,11 @@ describe('network.temporal.extensions.utils', () => {
         const outputBlockNode = createNode(905);
         const externalSourceNode = createNode(906);
         const externalTargetNode = createNode(907);
-        const gatedConnection = connectNodes(externalSourceNode, externalTargetNode, 333);
+        const gatedConnection = connectNodes(
+          externalSourceNode,
+          externalTargetNode,
+          333,
+        );
         Reflect.set(gatedConnection, 'gater', inputGateNode);
         const runtimeNetwork = createRuntimeSurface([
           externalSourceNode,
@@ -509,7 +539,10 @@ describe('network.temporal.extensions.utils', () => {
           lstmLayerNodes,
         );
         // First append seeds _serializedExtensions with version=1
-        appendTemporalDescriptorSet(runtimeNetwork as unknown as Network, firstDescriptorSet);
+        appendTemporalDescriptorSet(
+          runtimeNetwork as unknown as Network,
+          firstDescriptorSet,
+        );
         // Now _serializedExtensions.version === 1; build a second LSTM descriptor set to trigger
         // resolveExtensionVersion with a valid pre-existing version (the true arm at line 716)
         const secondDescriptorSet = buildLstmTemporalDescriptorSet(
@@ -518,7 +551,10 @@ describe('network.temporal.extensions.utils', () => {
         );
 
         // Act — second append hits resolveExtensionVersion with extensions.version === 1
-        appendTemporalDescriptorSet(runtimeNetwork as unknown as Network, secondDescriptorSet);
+        appendTemporalDescriptorSet(
+          runtimeNetwork as unknown as Network,
+          secondDescriptorSet,
+        );
 
         // Assert
         expect(runtimeNetwork._serializedExtensions?.version).toBe(1);
@@ -535,7 +571,11 @@ describe('network.temporal.extensions.utils', () => {
         const outputBlockNode = createNode(915);
         const externalSourceNode = createNode(916);
         const externalTargetNode = createNode(917);
-        const gatedConnection = connectNodes(externalSourceNode, externalTargetNode, 444);
+        const gatedConnection = connectNodes(
+          externalSourceNode,
+          externalTargetNode,
+          444,
+        );
         Reflect.set(gatedConnection, 'gater', inputGateNode);
         const runtimeNetwork = createRuntimeSurface([
           externalSourceNode,
@@ -565,7 +605,9 @@ describe('network.temporal.extensions.utils', () => {
         });
 
         // Act — synchronize with an already-versioned bag; resolveExtensionVersion takes true arm
-        synchronizeTemporalDescriptorExtensions(runtimeNetwork as unknown as Network);
+        synchronizeTemporalDescriptorExtensions(
+          runtimeNetwork as unknown as Network,
+        );
 
         // Assert
         expect(runtimeNetwork._serializedExtensions?.version).toBe(1);
@@ -584,7 +626,9 @@ function connectNodeToSelf(node: Node, innovation: number) {
   const connection = node.connect(node)[0];
 
   if (!connection) {
-    throw new Error('Expected one self-connection for the temporal descriptor test.');
+    throw new Error(
+      'Expected one self-connection for the temporal descriptor test.',
+    );
   }
 
   Reflect.set(connection, 'innovation', innovation);
@@ -595,7 +639,9 @@ function connectNodes(fromNode: Node, toNode: Node, innovation: number) {
   const connection = fromNode.connect(toNode)[0];
 
   if (!connection) {
-    throw new Error('Expected one connection for the temporal descriptor test.');
+    throw new Error(
+      'Expected one connection for the temporal descriptor test.',
+    );
   }
 
   Reflect.set(connection, 'innovation', innovation);
@@ -607,7 +653,9 @@ function createRuntimeSurface(
   serializedExtensions?: SerializedExtensionBag,
 ): TemporalRuntimeSurface {
   return {
-    ...(serializedExtensions ? { _serializedExtensions: serializedExtensions } : {}),
+    ...(serializedExtensions
+      ? { _serializedExtensions: serializedExtensions }
+      : {}),
     nodes,
   };
 }

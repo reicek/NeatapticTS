@@ -77,7 +77,9 @@ describe('neat evaluate auto-distance chapter', () => {
         expect({
           disjointCoeff: evaluationController.options.disjointCoeff,
           excessCoeff: evaluationController.options.excessCoeff,
-          lastConnVar: Number((evaluationController._lastConnVar ?? 0).toFixed(6)),
+          lastConnVar: Number(
+            (evaluationController._lastConnVar ?? 0).toFixed(6),
+          ),
         }).toEqual({
           disjointCoeff: 1.05,
           excessCoeff: 1.05,

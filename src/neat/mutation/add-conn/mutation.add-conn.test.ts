@@ -20,6 +20,38 @@ import {
 
 describe('neat mutation add-connection chapter', () => {
   describe('collectCandidatePairsForConn', () => {
+    describe('given feed-forward connection growth with default second arg', () => {
+      it('returns only forward candidates when called without the recurrent flag', () => {
+        // Arrange – calls without second arg → covers default-param branch (line 80)
+        const genome = createCandidatePairGenome();
+
+        // Act
+        const candidatePairs = summarizePairs(
+          collectCandidatePairsForConn(genome),
+        );
+
+        // Assert
+        expect(candidatePairs).toEqual(['1->2', '1->3', '2->3']);
+      });
+    });
+
+    describe('given a fully-connected genome', () => {
+      it('returns an empty candidate list when all forward edges already exist', () => {
+        // Arrange – add all 3 forward edges so isAbsentDirectedEdge returns false each time (line 114 FALSE arm)
+        const genome = createCandidatePairGenome();
+        const [inputNode, hiddenNode, outputNode] = genome.nodes;
+        connectNodes(genome, inputNode, hiddenNode);
+        connectNodes(genome, inputNode, outputNode);
+        connectNodes(genome, hiddenNode, outputNode);
+
+        // Act
+        const candidatePairs = collectCandidatePairsForConn(genome, false);
+
+        // Assert
+        expect(candidatePairs).toHaveLength(0);
+      });
+    });
+
     describe('given feed-forward connection growth', () => {
       it('returns only forward candidates', () => {
         // Arrange
@@ -126,7 +158,10 @@ describe('neat mutation add-connection chapter', () => {
         Reflect.deleteProperty(targetNode, 'geneId');
 
         // Act
-        const connectionKey = buildDirectionalKeyForConn(sourceNode, targetNode);
+        const connectionKey = buildDirectionalKeyForConn(
+          sourceNode,
+          targetNode,
+        );
 
         // Assert
         expect(connectionKey).toBe('0->0');
@@ -385,26 +420,52 @@ describe('neat mutation add-connection chapter', () => {
   });
 
   describe('choosePairForConn', () => {
-    describe('given multiple candidate pairs exist', () => {
-      it('selects the pair chosen by the controller RNG', () => {
-        // Arrange
-        const firstPair = [createNode('hidden', 2), createNode('hidden', 3)] as [
-          NodeWithMetadata,
-          NodeWithMetadata,
-        ];
-        const secondPair = [createNode('hidden', 3), createNode('hidden', 4)] as [
-          NodeWithMetadata,
-          NodeWithMetadata,
-        ];
+    describe('given no candidate pairs exist', () => {
+      it('returns null when the pairs array is empty', () => {
+        // Arrange & Act (covers line 229 TRUE arm)
+        const chosenPair = choosePairForConn([], createMutationController());
+
+        // Assert
+        expect(chosenPair).toBeNull();
+      });
+    });
+
+    describe('given exactly one candidate pair exists', () => {
+      it('returns that pair without sampling the RNG', () => {
+        // Arrange (covers line 232 TRUE arm)
+        const singlePair = [
+          createNode('hidden', 2),
+          createNode('hidden', 3),
+        ] as [NodeWithMetadata, NodeWithMetadata];
 
         // Act
         const chosenPair = choosePairForConn(
-          [firstPair, secondPair],
-          {
-            ...createMutationController(),
-            _getRNG: () => () => 0.75,
-          },
+          [singlePair],
+          createMutationController(),
         );
+
+        // Assert
+        expect(chosenPair).toBe(singlePair);
+      });
+    });
+
+    describe('given multiple candidate pairs exist', () => {
+      it('selects the pair chosen by the controller RNG', () => {
+        // Arrange
+        const firstPair = [
+          createNode('hidden', 2),
+          createNode('hidden', 3),
+        ] as [NodeWithMetadata, NodeWithMetadata];
+        const secondPair = [
+          createNode('hidden', 3),
+          createNode('hidden', 4),
+        ] as [NodeWithMetadata, NodeWithMetadata];
+
+        // Act
+        const chosenPair = choosePairForConn([firstPair, secondPair], {
+          ...createMutationController(),
+          _getRNG: () => () => 0.75,
+        });
 
         // Assert
         expect(chosenPair).toBe(secondPair);
@@ -413,6 +474,23 @@ describe('neat mutation add-connection chapter', () => {
   });
 
   describe('canApplyChosenPairForConn', () => {
+    describe('given a valid feed-forward pair with default third arg', () => {
+      it('accepts the pair under the default feed-forward policy', () => {
+        // Arrange – no third arg → covers default-param branch (line 255)
+        const { genome, firstHiddenNode, inputNode } =
+          createConnectionReuseGenome();
+
+        // Act
+        const canApplyPair = canApplyChosenPairForConn(genome, [
+          inputNode,
+          firstHiddenNode,
+        ]);
+
+        // Assert
+        expect(canApplyPair).toBe(true);
+      });
+    });
+
     describe('given a valid feed-forward pair', () => {
       it('accepts the pair under the feed-forward policy', () => {
         // Arrange
@@ -558,6 +636,37 @@ describe('neat mutation add-connection chapter', () => {
   });
 
   describe('connectChosenPairWithInnovationReuse', () => {
+    describe('given a valid pair with default fourth arg', () => {
+      it('uses feed-forward policy when allowRecurrentConnections is omitted', () => {
+        // Arrange – no fourth arg → covers default-param branch (line 292)
+        const sourceNode = createNode('input', 1);
+        const targetNode = createNode('hidden', 2);
+        const createdConnection: ConnectionWithMetadata = {
+          from: sourceNode,
+          to: targetNode,
+          weight: 1,
+        };
+        const genome: GenomeWithMetadata = {
+          nodes: [sourceNode, targetNode],
+          connections: [],
+          gates: [],
+          input: 1,
+          output: 1,
+          connect: () => [createdConnection],
+        } as GenomeWithMetadata;
+
+        // Act
+        const returnedConnection = connectChosenPairWithInnovationReuse(
+          genome,
+          [sourceNode, targetNode],
+          createMutationController(),
+        );
+
+        // Assert
+        expect(returnedConnection).toBe(createdConnection);
+      });
+    });
+
     describe('given the chosen pair is not legal for the active topology policy', () => {
       it('returns undefined without materializing a connection', () => {
         // Arrange

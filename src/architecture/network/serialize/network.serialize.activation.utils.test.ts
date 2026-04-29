@@ -60,7 +60,8 @@ describe('network serialize activation utilities chapter', () => {
     describe('given the runtime squash function is missing', () => {
       it('returns the identity fallback key', () => {
         // Arrange
-        const squashFunction = undefined as unknown as SerializeActivationFunction;
+        const squashFunction =
+          undefined as unknown as SerializeActivationFunction;
 
         // Act
         const activationKey = resolveActivationKey(squashFunction);
@@ -114,7 +115,9 @@ describe('network serialize activation utilities chapter', () => {
     describe('given the stored squash name is missing', () => {
       it('returns the identity fallback activation', () => {
         // Arrange
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => undefined);
 
         try {
           // Act

@@ -101,7 +101,10 @@ describe('neat export population utility chapter', () => {
         };
 
         // Act
-        const serializedGenome = serializeGenomeCheckpoint(genome, networkPayload);
+        const serializedGenome = serializeGenomeCheckpoint(
+          genome,
+          networkPayload,
+        );
 
         // Assert
         expect(serializedGenome).toEqual({
@@ -140,7 +143,8 @@ describe('neat export population utility chapter', () => {
         };
 
         // Act
-        const splitCheckpoint = splitSerializedGenomeCheckpoint(serializedGenome);
+        const splitCheckpoint =
+          splitSerializedGenomeCheckpoint(serializedGenome);
 
         // Assert
         expect(splitCheckpoint).toEqual({
@@ -159,7 +163,8 @@ describe('neat export population utility chapter', () => {
         };
 
         // Act
-        const splitCheckpoint = splitSerializedGenomeCheckpoint(serializedGenome);
+        const splitCheckpoint =
+          splitSerializedGenomeCheckpoint(serializedGenome);
 
         // Assert
         expect(splitCheckpoint).toEqual({

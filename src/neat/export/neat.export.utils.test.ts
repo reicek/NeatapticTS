@@ -84,7 +84,8 @@ describe('neat export utility chapter', () => {
           issues: [
             {
               code: 'missing-node-gene-id',
-              message: 'Native genomes must assign a finite geneId to every runtime node.',
+              message:
+                'Native genomes must assign a finite geneId to every runtime node.',
               path: 'nodes[0].geneId',
             },
           ],

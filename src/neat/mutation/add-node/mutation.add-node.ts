@@ -161,7 +161,7 @@ export function chooseConnectionForSplit(
   // Step 2: sample a connection using the controller RNG.
   const randomValue = internal._getRNG()();
   const chosenIndex = Math.floor(randomValue * enabledConnectionsList.length);
-  return enabledConnectionsList[chosenIndex] ?? null;
+  return enabledConnectionsList[chosenIndex];
 }
 
 /**
@@ -357,7 +357,11 @@ function createSplitNode(
   ) => unknown,
   randomValue: () => number,
 ): NodeWithMetadata {
-  return new NodeClass('hidden', undefined, randomValue) as unknown as NodeWithMetadata;
+  return new NodeClass(
+    'hidden',
+    undefined,
+    randomValue,
+  ) as unknown as NodeWithMetadata;
 }
 
 /**

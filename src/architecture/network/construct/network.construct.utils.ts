@@ -179,7 +179,10 @@ export function constructNetwork(
   );
 
   // Step 5: Return the runtime plus lightweight construction diagnostics.
-  const diagnostics = createConstructDiagnostics(network, schedulingDiagnostics);
+  const diagnostics = createConstructDiagnostics(
+    network,
+    schedulingDiagnostics,
+  );
 
   return {
     network,
@@ -415,7 +418,9 @@ function validateRoleEdgeBoundaries(
 ): void {
   const inputNodeSet = new Set(inputNodes);
   const inputIncomingConnections = orderConnections(
-    referencedConnections.filter((connection) => inputNodeSet.has(connection.to)),
+    referencedConnections.filter((connection) =>
+      inputNodeSet.has(connection.to),
+    ),
   );
 
   if (inputIncomingConnections.length) {
@@ -431,7 +436,9 @@ function validateRoleEdgeBoundaries(
 
   const outputNodeSet = new Set(outputNodes);
   const outputOutgoingConnections = orderConnections(
-    referencedConnections.filter((connection) => outputNodeSet.has(connection.from)),
+    referencedConnections.filter((connection) =>
+      outputNodeSet.has(connection.from),
+    ),
   );
 
   if (outputOutgoingConnections.length) {
@@ -443,7 +450,8 @@ function validateRoleEdgeBoundaries(
 
   const outputGatedConnections = orderConnections(
     referencedConnections.filter(
-      (connection) => connection.gater !== null && outputNodeSet.has(connection.gater),
+      (connection) =>
+        connection.gater !== null && outputNodeSet.has(connection.gater),
     ),
   );
 
@@ -465,9 +473,7 @@ function createOrderedNodeList(
   const inputNodeSet = new Set(inputNodes);
   const outputNodeSet = new Set(outputNodes);
   const hiddenNodes = includedNodes
-    .filter(
-      (node) => !inputNodeSet.has(node) && !outputNodeSet.has(node),
-    )
+    .filter((node) => !inputNodeSet.has(node) && !outputNodeSet.has(node))
     .toSorted(compareNodesByGeneId);
 
   return [...inputNodes, ...hiddenNodes, ...outputNodes];
@@ -513,15 +519,21 @@ function validateConnectionEndpoints(
   const missingNodeMessages: string[] = [];
 
   if (!includedNodeSet.has(connection.from)) {
-    missingNodeMessages.push(`source node ${formatNodeIdentity(connection.from)}`);
+    missingNodeMessages.push(
+      `source node ${formatNodeIdentity(connection.from)}`,
+    );
   }
 
   if (!includedNodeSet.has(connection.to)) {
-    missingNodeMessages.push(`target node ${formatNodeIdentity(connection.to)}`);
+    missingNodeMessages.push(
+      `target node ${formatNodeIdentity(connection.to)}`,
+    );
   }
 
   if (connection.gater && !includedNodeSet.has(connection.gater)) {
-    missingNodeMessages.push(`gater node ${formatNodeIdentity(connection.gater)}`);
+    missingNodeMessages.push(
+      `gater node ${formatNodeIdentity(connection.gater)}`,
+    );
   }
 
   if (!missingNodeMessages.length) {
@@ -579,7 +591,9 @@ function validateHiddenConnectivity(
   );
 }
 
-function orderConnections(referencedConnections: readonly Connection[]): Connection[] {
+function orderConnections(
+  referencedConnections: readonly Connection[],
+): Connection[] {
   return [...referencedConnections].toSorted(compareConnections);
 }
 
@@ -708,7 +722,9 @@ function resolveCyclePath(
     outgoingNodesByNode.set(connection.from, outgoingNodes);
   }
 
-  const sortedNodes = [...nodesByGeneId.values()].toSorted(compareNodesByGeneId);
+  const sortedNodes = [...nodesByGeneId.values()].toSorted(
+    compareNodesByGeneId,
+  );
   sortedNodes.forEach((node) => {
     const outgoingNodes = outgoingNodesByNode.get(node);
 
@@ -829,9 +845,7 @@ function createConstructGraphSnapshot(
 function createRoleOrderByGeneId(
   nodeIds: readonly number[],
 ): Map<number, number> {
-  return new Map(
-    nodeIds.map((nodeId, roleIndex) => [nodeId, roleIndex]),
-  );
+  return new Map(nodeIds.map((nodeId, roleIndex) => [nodeId, roleIndex]));
 }
 
 function resolveConstructNodeIndex(
@@ -967,7 +981,9 @@ function formatGatedConnectionIdentity(connection: Connection): string {
 function formatConnectionIdentityList(
   connections: readonly Connection[],
 ): string {
-  return connections.map((connection) => formatConnectionIdentity(connection)).join(', ');
+  return connections
+    .map((connection) => formatConnectionIdentity(connection))
+    .join(', ');
 }
 
 function formatGatedConnectionIdentityList(

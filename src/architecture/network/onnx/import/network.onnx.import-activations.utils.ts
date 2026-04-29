@@ -402,11 +402,9 @@ export function assignActivationFunctions(
     context: OnnxActivationOperationResolutionContext,
   ): ActivationFunction {
     const operation = resolveOperationByPriority(context);
-    return (
-      ACTIVATION_OPERATION_TO_FUNCTION.get(operation) ??
-      ACTIVATION_OPERATION_TO_FUNCTION.get(DEFAULT_ACTIVATION_OPERATION) ??
-      methods.Activation.identity
-    );
+    // All reachable operations are keys in the map; non-null assertion is safe.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return ACTIVATION_OPERATION_TO_FUNCTION.get(operation)!;
   }
 
   /**

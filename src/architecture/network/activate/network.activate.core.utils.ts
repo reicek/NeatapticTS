@@ -1032,7 +1032,6 @@ function activateNodesAndCollectOutputs(
   outputBuffer: ActivationArray,
 ): void {
   for (const node of activationNodes) {
-
     if (node.type === INPUT_NODE_TYPE) {
       node.activate(inputValuesByNodeId.get(node.geneId));
       continue;

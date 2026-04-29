@@ -103,6 +103,22 @@ describe('neat pruning chapter', () => {
   });
 
   describe('applyAdaptivePruning', () => {
+    describe('given adaptive pruning is disabled', () => {
+      it('returns early without touching any genome', () => {
+        // Arrange: no adaptivePruning option → resolveActiveAdaptivePruningOptions returns null
+        const pruningHost = createPruningHost({ connectionCounts: [10, 10] });
+
+        // Act
+        applyAdaptivePruning.call(pruningHost);
+
+        // Assert: early return (line 151) — no genome was pruned
+        expect(pruningHost.population.map((genome) => genome.calls)).toEqual([
+          [],
+          [],
+        ]);
+      });
+    });
+
     describe('given a population whose observed metric exceeds the target remaining complexity', () => {
       it('raises the shared prune level and applies it across the compatible genomes', () => {
         // Arrange
@@ -131,6 +147,56 @@ describe('neat pruning chapter', () => {
             [{ sparsity: 0.2, method: 'magnitude' }],
           ],
         });
+      });
+    });
+
+    describe('given a pre-seeded prune level and a population exceeding the target complexity', () => {
+      it('uses the existing prune level as the base for the next adjustment', () => {
+        // Arrange: _adaptivePruneLevel pre-seeded so the ?? 0 left-arm is exercised
+        const pruningHost = createPruningHost({
+          adaptivePruning: {
+            enabled: true,
+            metric: 'connections',
+            targetSparsity: 0.4,
+            adjustRate: 0.2,
+            tolerance: 0,
+          },
+          connectionCounts: [10, 10],
+        });
+        (pruningHost as Record<string, unknown>)._adaptivePruneLevel = 0.1;
+
+        // Act
+        applyAdaptivePruning.call(pruningHost);
+
+        // Assert: prune level was updated from the pre-seeded 0.1 starting point
+        expect(pruningHost._adaptivePruneLevel).not.toBe(0.1);
+      });
+    });
+
+    describe('given a population whose observed metric is already within tolerance of the target', () => {
+      it('skips the prune-level adjustment and leaves the population unchanged', () => {
+        // Arrange: on the first adaptive pass the baseline equals currentMetricValue,
+        // so drift = targetSparsity. With targetSparsity=0.05 < tolerance=0.1 the
+        // if-block (lines 175-191) is NOT entered and no pruning is applied.
+        const pruningHost = createPruningHost({
+          adaptivePruning: {
+            enabled: true,
+            metric: 'connections',
+            targetSparsity: 0.05,
+            adjustRate: 0.1,
+            tolerance: 0.1,
+          },
+          connectionCounts: [10, 10],
+        });
+
+        // Act
+        applyAdaptivePruning.call(pruningHost);
+
+        // Assert: no prune calls issued because drift is within tolerance
+        expect(pruningHost.population.map((genome) => genome.calls)).toEqual([
+          [],
+          [],
+        ]);
       });
     });
   });

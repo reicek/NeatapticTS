@@ -136,7 +136,7 @@ export function resolveSizeOverride(
   if (typeof overrideValue === 'number') {
     return overrideValue;
   }
-  return serializedValue || DEFAULT_NUMERIC_VALUE;
+  return serializedValue;
 }
 
 /**
@@ -257,10 +257,7 @@ export function syncRestoredHistoricalCounters(
 ): void {
   const maxObservedGeneId = networkInternals.nodes.reduce(
     (currentMaxGeneId, nodeReference) => {
-      const nodeGeneId = asNodeInternals(nodeReference).geneId;
-      return typeof nodeGeneId === 'number'
-        ? Math.max(currentMaxGeneId, nodeGeneId)
-        : currentMaxGeneId;
+      return Math.max(currentMaxGeneId, asNodeInternals(nodeReference).geneId!);
     },
     DEFAULT_NUMERIC_VALUE,
   );

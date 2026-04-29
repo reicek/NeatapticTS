@@ -138,11 +138,7 @@ export function appendJsonForwardConnections(
     }
 
     networkJson.connections.push(
-      createJsonConnection(
-        connectionInstance,
-        sourceIndex,
-        targetIndex,
-      ),
+      createJsonConnection(connectionInstance, sourceIndex, targetIndex),
     );
   });
 }
@@ -295,11 +291,7 @@ function appendJsonSelfConnectionWhenPresent(
   }
 
   networkJson.connections.push(
-    createJsonConnection(
-      selfConnection,
-      nodeIndex,
-      nodeIndex,
-    ),
+    createJsonConnection(selfConnection, nodeIndex, nodeIndex),
   );
 }
 

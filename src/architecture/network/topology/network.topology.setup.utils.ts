@@ -181,7 +181,8 @@ function resolveFinalActivationSchedule(
 function resolveFinalSchedulingDiagnostics(
   buildContext: TopologyBuildContext,
 ): ActivationSchedulingDiagnostics {
-  const activationSchedule = buildContext.internalTopologyProps._activationSchedule;
+  const activationSchedule =
+    buildContext.internalTopologyProps._activationSchedule;
 
   if (activationSchedule) {
     return resolveCompiledSchedulingDiagnostics(
@@ -301,9 +302,7 @@ function resolveCycleNodeIds(buildContext: TopologyBuildContext): number[] {
     (node) => !scheduledNodes.has(node),
   );
 
-  return sortNodesByStableTieBreak(unscheduledNodes).map(
-    (node) => node.geneId,
-  );
+  return sortNodesByStableTieBreak(unscheduledNodes).map((node) => node.geneId);
 }
 
 /**
@@ -343,9 +342,10 @@ function collectStronglyConnectedComponents(
     for (const neighbor of resolveOutgoingNeighbors(node)) {
       if (!indexByNode.has(neighbor)) {
         visitNode(neighbor);
-        const neighborLowLink = lowLinkByNode.get(neighbor) ?? ZERO_COUNT;
-        const nodeLowLink = lowLinkByNode.get(node) ?? ZERO_COUNT;
-        lowLinkByNode.set(node, Math.min(nodeLowLink, neighborLowLink));
+        lowLinkByNode.set(
+          node,
+          Math.min(lowLinkByNode.get(node)!, lowLinkByNode.get(neighbor)!),
+        );
         continue;
       }
 
@@ -353,9 +353,10 @@ function collectStronglyConnectedComponents(
         continue;
       }
 
-      const neighborIndex = indexByNode.get(neighbor) ?? ZERO_COUNT;
-      const nodeLowLink = lowLinkByNode.get(node) ?? ZERO_COUNT;
-      lowLinkByNode.set(node, Math.min(nodeLowLink, neighborIndex));
+      lowLinkByNode.set(
+        node,
+        Math.min(lowLinkByNode.get(node)!, indexByNode.get(neighbor)!),
+      );
     }
 
     const nodeLowLink = lowLinkByNode.get(node);
@@ -513,14 +514,14 @@ function buildRecurrentScheduleSteps(
         currentWaveNodeIds = [...currentWaveNodeIds, ...componentNodeIds];
       }
 
-      for (const nextComponentIndex of condensationContext.outgoingComponentsByIndex[
-        componentIndex
-      ]) {
+      for (const nextComponentIndex of condensationContext
+        .outgoingComponentsByIndex[componentIndex]) {
         condensationContext.componentInDegree[nextComponentIndex] -=
           IN_DEGREE_DECREMENT;
 
         if (
-          condensationContext.componentInDegree[nextComponentIndex] === ZERO_COUNT &&
+          condensationContext.componentInDegree[nextComponentIndex] ===
+            ZERO_COUNT &&
           !queuedComponentIndexes.has(nextComponentIndex) &&
           !processedComponentIndexes.has(nextComponentIndex)
         ) {
@@ -621,12 +622,16 @@ function resolveComponentTieBreakValue(
  * @param componentNodes Stable SCC node list.
  * @returns True when the component is cyclic or carries a self-loop.
  */
-function isRecurrentComponent(componentNodes: readonly TopologyNode[]): boolean {
+function isRecurrentComponent(
+  componentNodes: readonly TopologyNode[],
+): boolean {
   if (componentNodes.length > IN_DEGREE_DECREMENT) {
     return true;
   }
 
-  return componentNodes.some((node) => node.connections.self.length > ZERO_COUNT);
+  return componentNodes.some(
+    (node) => node.connections.self.length > ZERO_COUNT,
+  );
 }
 
 /**

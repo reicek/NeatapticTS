@@ -58,10 +58,7 @@ export interface NetworkArchitectureDescriptor {
 }
 
 /** Supported explicit recurrent-module descriptor kinds. */
-export type NetworkTemporalRecurrentModuleKind =
-  | 'lstm'
-  | 'gru'
-  | 'narx-memory';
+export type NetworkTemporalRecurrentModuleKind = 'lstm' | 'gru' | 'narx-memory';
 
 /**
  * Public snapshot of one validated recurrent module on a runtime network.

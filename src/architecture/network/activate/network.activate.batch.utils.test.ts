@@ -19,10 +19,11 @@ describe('network activate batch utility chapter', () => {
     describe('given one batch row is undefined instead of an input array', () => {
       it('reports the received row width as undefined', () => {
         // Arrange
-        const activationContext = createBatchActivationContext(
-          [undefined] as unknown as number[][],
-        );
-        const activateInvalidBatch = () => executeBatchActivation(activationContext);
+        const activationContext = createBatchActivationContext([
+          undefined,
+        ] as unknown as number[][]);
+        const activateInvalidBatch = () =>
+          executeBatchActivation(activationContext);
 
         // Assert
         expect(activateInvalidBatch).toThrow(

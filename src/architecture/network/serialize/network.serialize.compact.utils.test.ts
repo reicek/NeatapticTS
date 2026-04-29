@@ -1,6 +1,6 @@
 import Connection from '../../connection';
 import Node from '../../node';
-import { methods } from '../../../neataptic';
+import { methods, Network } from '../../../neataptic';
 import {
   collectNodeGeneIds,
   collectSerializedConnections,
@@ -8,6 +8,7 @@ import {
   rebuildNodesFromCompactPayload,
   refreshNodeIndices,
 } from './network.serialize.compact.utils';
+import { deserialize } from './network.serialize.utils';
 import type {
   NetworkInternals,
   SerializedConnection,
@@ -148,7 +149,11 @@ describe('network serialize compact utilities chapter', () => {
             input: 1,
             nodeGeneIds: [11, null, 33],
             output: 1,
-            squashes: ['identity', undefined, 'identity'] as unknown as string[],
+            squashes: [
+              'identity',
+              undefined,
+              'identity',
+            ] as unknown as string[],
             states: [0, 0, 0],
           });
 
@@ -250,6 +255,23 @@ describe('network serialize compact utilities chapter', () => {
             warnSpy.mockRestore();
           }
         });
+      });
+    });
+  });
+
+  describe('deserialize', () => {
+    describe('given a compact tuple with no topology intent at position 7', () => {
+      it('rebuilds the network without setting a topology intent', () => {
+        // Arrange – tuple with undefined at position [7] covers line 169 FALSE arm
+        const source = new Network(1, 1);
+        const tuple = source.serialize();
+        tuple[7] = undefined;
+
+        // Act
+        const rebuilt = deserialize(tuple, 1, 1);
+
+        // Assert
+        expect(rebuilt.getTopologyIntent()).toBe('unconstrained');
       });
     });
   });

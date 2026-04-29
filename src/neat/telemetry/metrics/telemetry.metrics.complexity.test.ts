@@ -1,4 +1,7 @@
-import type { GenomeDetailed, NeatOptions } from '../../shared/neat.shared.types';
+import type {
+  GenomeDetailed,
+  NeatOptions,
+} from '../../shared/neat.shared.types';
 import type {
   TelemetryDiversityOptions,
   TelemetryEntryRecord,
@@ -343,10 +346,9 @@ function createGenomeDetailed(input: {
   );
   const connectionEntries =
     input.connections ??
-    Array.from(
-      { length: input.connectionCount ?? 0 },
-      () => ({ enabled: true }),
-    );
+    Array.from({ length: input.connectionCount ?? 0 }, () => ({
+      enabled: true,
+    }));
 
   return {
     _id: nextGenomeId++,

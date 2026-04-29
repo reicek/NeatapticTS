@@ -39,9 +39,11 @@ describe('network onnx utils barrel', () => {
         finalizeExportMetadata,
       ];
 
-      expect(runtimeHelpers.every((runtimeHelper) => typeof runtimeHelper === 'function')).toBe(
-        true,
-      );
+      expect(
+        runtimeHelpers.every(
+          (runtimeHelper) => typeof runtimeHelper === 'function',
+        ),
+      ).toBe(true);
     });
   });
 
@@ -62,7 +64,10 @@ describe('network onnx utils barrel', () => {
       const buildSourceNetwork = Network.createMLP(2, [2], 1);
       const exportSourceNetwork = Network.createMLP(2, [2], 1);
       const orderedLayers = inferLayerOrdering(buildSourceNetwork);
-      const defaultBuildModel = buildOnnxModel(buildSourceNetwork, orderedLayers);
+      const defaultBuildModel = buildOnnxModel(
+        buildSourceNetwork,
+        orderedLayers,
+      );
       const defaultExportModel = runOnnxExportFlow(exportSourceNetwork);
 
       expect(

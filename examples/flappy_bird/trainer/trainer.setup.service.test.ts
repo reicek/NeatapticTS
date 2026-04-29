@@ -35,8 +35,8 @@ describe('createNeatController', () => {
     ) as TrainerControllerWithRecurrentPolicy;
 
     expect({
-      hiddenLayerSizes: neatController.options.network?.describeArchitecture()
-        .hiddenLayerSizes,
+      hiddenLayerSizes:
+        neatController.options.network?.describeArchitecture().hiddenLayerSizes,
       inputNodeIds: neatController.options.network?.inputNodeIds.length,
       outputNodeIds: neatController.options.network?.outputNodeIds.length,
     }).toEqual({

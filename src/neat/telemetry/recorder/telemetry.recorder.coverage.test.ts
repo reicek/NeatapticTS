@@ -54,11 +54,14 @@ function createGenome(input: {
 
   return {
     _depth: input.depth,
-    connections: Array.from({ length: input.connectionCount }, (_, connectionIndex) => ({
-      enabled: true,
-      from: nodes[0],
-      to: nodes[Math.min(connectionIndex + 1, nodes.length - 1)],
-    })),
+    connections: Array.from(
+      { length: input.connectionCount },
+      (_, connectionIndex) => ({
+        enabled: true,
+        from: nodes[0],
+        to: nodes[Math.min(connectionIndex + 1, nodes.length - 1)],
+      }),
+    ),
     nodes,
   };
 }
@@ -139,7 +142,8 @@ describe('neat telemetry recorder chapter', () => {
               secondGenome: TelemetryGenomeStub,
             ) =>
               Math.abs(
-                firstGenome.connections.length - secondGenome.connections.length,
+                firstGenome.connections.length -
+                  secondGenome.connections.length,
               ),
             _getRNG: createPairRngFactory(0, 0.99),
             _lineageEnabled: true,
@@ -305,9 +309,9 @@ describe('neat telemetry recorder chapter', () => {
           recordTelemetryEntry.call(telemetryContext, telemetryEntry);
 
           // Assert
-          expect((telemetryContext as { _telemetry?: unknown[] })._telemetry).toEqual([
-            telemetryEntry,
-          ]);
+          expect(
+            (telemetryContext as { _telemetry?: unknown[] })._telemetry,
+          ).toEqual([telemetryEntry]);
         });
       });
     });

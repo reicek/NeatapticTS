@@ -207,7 +207,10 @@ describe('neat mutation selection chapter', () => {
         const subtractConnectionMethod = createMutationMethod('SUB_CONN');
         const selectionController = createSelectionController({
           mutationPool: [
-            [addNodeMethod, subtractConnectionMethod] as unknown as MutationMethod,
+            [
+              addNodeMethod,
+              subtractConnectionMethod,
+            ] as unknown as MutationMethod,
           ],
         });
 
@@ -231,7 +234,8 @@ describe('neat mutation selection chapter', () => {
     describe('given the configured mutation policy is not an array shape', () => {
       it('rejects the policy as a legacy FFW pool', () => {
         // Arrange
-        const configuredPool = methods.mutation.ADD_NODE as unknown as MutationMethod[];
+        const configuredPool = methods.mutation
+          .ADD_NODE as unknown as MutationMethod[];
 
         // Act
         const isLegacyFfwPool = isLegacyFFWPoolForSelect(
@@ -352,9 +356,7 @@ describe('neat mutation selection chapter', () => {
         const subtractConnectionMethod = createMutationMethod('SUB_CONN');
         const selectionController = createSelectionController({
           operatorAdaptation: { enabled: true },
-          operatorStats: new Map([
-            ['ADD_NODE', { success: 9, attempts: 10 }],
-          ]),
+          operatorStats: new Map([['ADD_NODE', { success: 9, attempts: 10 }]]),
         });
 
         // Act
@@ -615,9 +617,7 @@ describe('neat mutation selection chapter', () => {
         );
 
         // Assert
-        expect(phasedPool.map((method) => method.name)).toEqual([
-          'ADD_NODE',
-        ]);
+        expect(phasedPool.map((method) => method.name)).toEqual(['ADD_NODE']);
       });
     });
 
@@ -642,9 +642,7 @@ describe('neat mutation selection chapter', () => {
         );
 
         // Assert
-        expect(phasedPool.map((method) => method.name)).toEqual([
-          'SUB_CONN',
-        ]);
+        expect(phasedPool.map((method) => method.name)).toEqual(['SUB_CONN']);
       });
     });
 
@@ -992,7 +990,9 @@ describe('neat mutation selection chapter', () => {
     describe('given the candidate pool is empty', () => {
       it('returns null', () => {
         // Arrange
-        const selectionController = createSelectionController({ randomValue: 0 });
+        const selectionController = createSelectionController({
+          randomValue: 0,
+        });
 
         // Act
         const sampledMethod = sampleFromPoolForSelect([], selectionController);

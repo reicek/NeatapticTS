@@ -23,10 +23,7 @@
  * @module evolutionEngine/networkInspection
  */
 
-import type {
-  IActivationSchedulingDiagnostics,
-  INetwork,
-} from '../interfaces';
+import type { IActivationSchedulingDiagnostics, INetwork } from '../interfaces';
 import type { EngineState } from './engineState';
 import type { NetworkConnection, NetworkNode } from './evolutionEngine.types';
 import { ensureConnFlagsCapacity } from './scratchPools';

@@ -21,7 +21,9 @@ describe('activationArrayPool direct coverage chapter', () => {
       const retainedArray = activationArrayPool.acquire(4);
 
       if (!(retainedArray instanceof Float32Array)) {
-        throw new Error('Expected a Float32Array when float32 mode is enabled.');
+        throw new Error(
+          'Expected a Float32Array when float32 mode is enabled.',
+        );
       }
 
       retainedArray[0] = 7;
@@ -130,7 +132,8 @@ describe('activationArrayPool direct coverage chapter', () => {
       const missingBucketSize = 99;
 
       // Act
-      const retainedBucketSize = activationArrayPool.bucketSize(missingBucketSize);
+      const retainedBucketSize =
+        activationArrayPool.bucketSize(missingBucketSize);
 
       // Assert
       expect(retainedBucketSize).toBe(0);

@@ -97,7 +97,8 @@ export function hydrateGenomeControllerMeta(
   seenGenomeIds: Set<number>,
   nextAssignedGenomeId: number,
 ): number {
-  if (typeof controllerMeta?.score === 'number') genome.score = controllerMeta.score;
+  if (typeof controllerMeta?.score === 'number')
+    genome.score = controllerMeta.score;
   if (
     typeof controllerMeta?.networkRngState === 'number' &&
     typeof genome.setRNGState === 'function'
@@ -127,7 +128,8 @@ export function hydrateGenomeControllerMeta(
       (parentId): parentId is number => typeof parentId === 'number',
     );
   }
-  if (typeof controllerMeta?.depth === 'number') genome._depth = controllerMeta.depth;
+  if (typeof controllerMeta?.depth === 'number')
+    genome._depth = controllerMeta.depth;
   if (typeof controllerMeta?.reenableProb === 'number') {
     genome._reenableProb = controllerMeta.reenableProb;
   }

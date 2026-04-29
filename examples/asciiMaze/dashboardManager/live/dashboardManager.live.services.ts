@@ -264,7 +264,10 @@ export function resolveActivationSchedulingValue(
   detailedStats: DashboardManagerContext['state']['lastDetailedStats'],
 ): string | null {
   const activationScheduling = detailedStats?.activationScheduling;
-  if (!activationScheduling?.requestedMode || !activationScheduling.executionPath) {
+  if (
+    !activationScheduling?.requestedMode ||
+    !activationScheduling.executionPath
+  ) {
     return null;
   }
 

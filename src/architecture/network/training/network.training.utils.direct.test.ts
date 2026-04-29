@@ -4,11 +4,7 @@ jest.mock('./network.training.loop.utils', () => ({
 
 import Network from '../../network';
 import { trainSetCore } from './network.training.loop.utils';
-import {
-  clearState,
-  propagate,
-  trainSetImpl,
-} from './network.training.utils';
+import { clearState, propagate, trainSetImpl } from './network.training.utils';
 import type {
   CostDerivative,
   NetworkNode,
@@ -144,8 +140,10 @@ function createNetworkNode(): MockedNetworkNode {
   } as unknown as MockedNetworkNode;
 }
 
-function createOutputNodeWithCostDerivative(): MockedNetworkNode & OutputNodeWithCostDerivative {
-  return createNetworkNode() as MockedNetworkNode & OutputNodeWithCostDerivative;
+function createOutputNodeWithCostDerivative(): MockedNetworkNode &
+  OutputNodeWithCostDerivative {
+  return createNetworkNode() as MockedNetworkNode &
+    OutputNodeWithCostDerivative;
 }
 
 function createNetworkFixture(

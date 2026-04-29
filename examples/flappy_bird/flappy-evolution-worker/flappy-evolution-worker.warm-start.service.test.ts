@@ -48,8 +48,7 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
       firstGenomeBiasImproved: firstGenome.nodes[0].bias > 6.5,
       firstGenomeWeightImproved: firstGenome.connections[0].weight > 10.5,
       secondGenomeBiasImproved: secondGenome.nodes[0].bias > 6.5,
-      secondGenomeWeightImproved:
-        secondGenome.connections[0].weight > 10.5,
+      secondGenomeWeightImproved: secondGenome.connections[0].weight > 10.5,
       firstGenomeScoreCleared: firstGenome.score === undefined,
       secondGenomeScoreCleared: secondGenome.score === undefined,
     }).toEqual({
@@ -286,33 +285,26 @@ describe('resolveHeuristicTeacherFlapDecisionFromObservationVector', () => {
   it('labels warm-start samples from the compact live controller shelf', () => {
     expect(
       resolveHeuristicTeacherFlapDecisionFromObservationVector([
-        0.62,
-        -0.12,
-        0.31,
-        0.18,
-        0.3,
-        0.66,
+        0.62, -0.12, 0.31, 0.18, 0.3, 0.66,
       ]),
     ).toBe(true);
   });
 
   it('ignores trailing legacy-style extras beyond the live controller input width', () => {
-    const baseObservationVector = [
-      0.62,
-      -0.12,
-      0.31,
-      0.18,
-      0.3,
-      0.66,
-    ];
+    const baseObservationVector = [0.62, -0.12, 0.31, 0.18, 0.3, 0.66];
 
     expect({
       baseDecision: resolveHeuristicTeacherFlapDecisionFromObservationVector(
         baseObservationVector,
       ),
-      extendedDecision: resolveHeuristicTeacherFlapDecisionFromObservationVector(
-        [...baseObservationVector, 0.99, -0.99, 0.77, -0.77],
-      ),
+      extendedDecision:
+        resolveHeuristicTeacherFlapDecisionFromObservationVector([
+          ...baseObservationVector,
+          0.99,
+          -0.99,
+          0.77,
+          -0.77,
+        ]),
       expectedInputWidth: FLAPPY_NETWORK_INPUT_SIZE,
     }).toEqual({
       baseDecision: true,
@@ -324,11 +316,7 @@ describe('resolveHeuristicTeacherFlapDecisionFromObservationVector', () => {
   it('refuses incomplete vectors so warm-start cannot silently invent missing channels', () => {
     expect(
       resolveHeuristicTeacherFlapDecisionFromObservationVector([
-        0.62,
-        -0.12,
-        0.31,
-        0.18,
-        0.3,
+        0.62, -0.12, 0.31, 0.18, 0.3,
       ]),
     ).toBe(false);
   });

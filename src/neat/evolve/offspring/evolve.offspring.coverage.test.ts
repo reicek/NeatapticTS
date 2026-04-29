@@ -5,9 +5,12 @@ import {
   type OffspringContext,
 } from './evolve.offspring.utils';
 
-jest.mock('../../../architecture/network/genetic/network.genetic.utils', () => ({
-  crossOverWithRandomGenerator: jest.fn(),
-}));
+jest.mock(
+  '../../../architecture/network/genetic/network.genetic.utils',
+  () => ({
+    crossOverWithRandomGenerator: jest.fn(),
+  }),
+);
 
 type OffspringMetadataNetwork = Network & {
   _depth?: number;

@@ -101,7 +101,8 @@ export function applyLineageStatsMultiObjective(
   // Step 2: Compute depth metrics.
   const bestGenome = population[0] as GenomeDetailed;
   const depths = population.map((genome) => genome._depth ?? 0);
-  const meanDepth = depths.reduce((sum, value) => sum + value, 0) / depths.length;
+  const meanDepth =
+    depths.reduce((sum, value) => sum + value, 0) / depths.length;
   telemetryContext._lastMeanDepth = meanDepth;
 
   // Step 3: Compute ancestor uniqueness via lineage helper.

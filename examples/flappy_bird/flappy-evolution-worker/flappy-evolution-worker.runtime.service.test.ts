@@ -73,8 +73,8 @@ describe('createInitializedWorkerRuntime', () => {
     ) as unknown as WorkerRuntimeWithSeedNetwork;
 
     expect({
-      hiddenLayerSizes: neatRuntime.options.network.describeArchitecture()
-        .hiddenLayerSizes,
+      hiddenLayerSizes:
+        neatRuntime.options.network.describeArchitecture().hiddenLayerSizes,
       inputNodeIds: neatRuntime.options.network.inputNodeIds.length,
       outputNodeIds: neatRuntime.options.network.outputNodeIds.length,
     }).toEqual({
@@ -96,8 +96,8 @@ describe('createInitializedWorkerRuntime', () => {
     ) as unknown as WorkerRuntimeWithSeedNetwork;
 
     expect({
-      hiddenLayerSizes: neatRuntime.options.network.describeArchitecture()
-        .hiddenLayerSizes,
+      hiddenLayerSizes:
+        neatRuntime.options.network.describeArchitecture().hiddenLayerSizes,
       inputNodeIds: neatRuntime.options.network.inputNodeIds.length,
       outputNodeIds: neatRuntime.options.network.outputNodeIds.length,
     }).toEqual({
@@ -185,49 +185,49 @@ describe('createInitializedWorkerRuntime', () => {
   ])(
     'uses a pipe-first shared-seed browser scalar for the $architectureProfileId worker profile',
     ({ architectureProfileId, expectedSharedSeedCount }) => {
-    const singleRolloutFitnessSpy = jest
-      .spyOn(flappyEvaluation, 'evaluateFlappyFitness')
-      .mockReturnValue(999);
-    const sharedSeedFitnessSpy = jest
-      .spyOn(flappyEvaluation, 'evaluateFlappyFitnessAcrossSeeds')
-      .mockReturnValue({
-        seedCount: 1,
-        meanFitness: 0,
-        medianFitness: 0,
-        p90Fitness: 0,
-        fitnessStdDev: 10,
-        robustFitness: 321,
-        meanPipesPassed: 2,
-        meanFramesSurvived: 150,
-      });
-    const initPayload: WorkerInitMessage['payload'] = {
-      architectureProfileId,
-      populationSize: 8,
-      elitismCount: 2,
-      rngSeed: 12345,
-    };
-    const neatRuntime = createInitializedWorkerRuntime(
-      initPayload,
-    ) as WorkerRuntimeWithPopulation;
-    const resolvedFitness = neatRuntime.fitness(neatRuntime.population[0]);
-    const sharedSeedFitnessCall = sharedSeedFitnessSpy.mock.calls.at(-1);
+      const singleRolloutFitnessSpy = jest
+        .spyOn(flappyEvaluation, 'evaluateFlappyFitness')
+        .mockReturnValue(999);
+      const sharedSeedFitnessSpy = jest
+        .spyOn(flappyEvaluation, 'evaluateFlappyFitnessAcrossSeeds')
+        .mockReturnValue({
+          seedCount: 1,
+          meanFitness: 0,
+          medianFitness: 0,
+          p90Fitness: 0,
+          fitnessStdDev: 10,
+          robustFitness: 321,
+          meanPipesPassed: 2,
+          meanFramesSurvived: 150,
+        });
+      const initPayload: WorkerInitMessage['payload'] = {
+        architectureProfileId,
+        populationSize: 8,
+        elitismCount: 2,
+        rngSeed: 12345,
+      };
+      const neatRuntime = createInitializedWorkerRuntime(
+        initPayload,
+      ) as WorkerRuntimeWithPopulation;
+      const resolvedFitness = neatRuntime.fitness(neatRuntime.population[0]);
+      const sharedSeedFitnessCall = sharedSeedFitnessSpy.mock.calls.at(-1);
 
-    expect({
-      aggregateOptions: sharedSeedFitnessCall?.[2],
-      resolvedFitness,
-      sharedSeedCount: sharedSeedFitnessCall?.[1]?.length,
-      singleRolloutCallCount: singleRolloutFitnessSpy.mock.calls.length,
-    }).toEqual({
-      aggregateOptions: {
-        enableEarlyTermination: true,
-        maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
-        normalizeFitness: true,
-        pipeProgressTarget: 12,
-      },
-      resolvedFitness: 20_145,
-      sharedSeedCount: expectedSharedSeedCount,
-      singleRolloutCallCount: 0,
-    });
+      expect({
+        aggregateOptions: sharedSeedFitnessCall?.[2],
+        resolvedFitness,
+        sharedSeedCount: sharedSeedFitnessCall?.[1]?.length,
+        singleRolloutCallCount: singleRolloutFitnessSpy.mock.calls.length,
+      }).toEqual({
+        aggregateOptions: {
+          enableEarlyTermination: true,
+          maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
+          normalizeFitness: true,
+          pipeProgressTarget: 12,
+        },
+        resolvedFitness: 20_145,
+        sharedSeedCount: expectedSharedSeedCount,
+        singleRolloutCallCount: 0,
+      });
     },
   );
 
@@ -294,9 +294,11 @@ describe('createInitializedWorkerRuntime', () => {
         rngSeed: 12345,
       };
       const neatRuntime = createInitializedWorkerRuntime(initPayload);
-      const generationZeroPopulation = (neatRuntime as unknown as {
-        population: Network[];
-      }).population;
+      const generationZeroPopulation = (
+        neatRuntime as unknown as {
+          population: Network[];
+        }
+      ).population;
       const firstInvalidPopulationIndex = generationZeroPopulation.findIndex(
         (populationNetwork) => {
           try {
@@ -370,9 +372,11 @@ describe('createInitializedWorkerRuntime', () => {
 
       for (let generationStep = 0; generationStep < 2; generationStep++) {
         await neatRuntime.evolve();
-        const evolvedPopulation = (neatRuntime as unknown as {
-          population: Network[];
-        }).population;
+        const evolvedPopulation = (
+          neatRuntime as unknown as {
+            population: Network[];
+          }
+        ).population;
         firstInvalidPopulationIndex = evolvedPopulation.findIndex(
           (populationNetwork) => {
             try {

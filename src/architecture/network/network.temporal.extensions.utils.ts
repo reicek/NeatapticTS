@@ -270,7 +270,9 @@ export function appendTemporalDescriptorSet(
  * @param network Runtime network whose hydrated extension bag should be normalized.
  * @returns Nothing.
  */
-export function synchronizeTemporalDescriptorExtensions(network: Network): void {
+export function synchronizeTemporalDescriptorExtensions(
+  network: Network,
+): void {
   const runtimeNetwork = network as RuntimeNetworkWithSerializedExtensions;
   if (!runtimeNetwork._serializedExtensions) {
     return;
@@ -340,14 +342,14 @@ export function describeTemporalStructure(
 
   const runtimeNetwork = network as RuntimeNetworkWithSerializedExtensions;
   return {
-    recurrentModules: readRecurrentModules(runtimeNetwork._serializedExtensions).map(
-      (recurrentModule) => ({
-        ...recurrentModule,
-        ...(resolveDerivedModuleLabel(recurrentModule)
-          ? { moduleLabel: resolveDerivedModuleLabel(recurrentModule) }
-          : {}),
-      }),
-    ),
+    recurrentModules: readRecurrentModules(
+      runtimeNetwork._serializedExtensions,
+    ).map((recurrentModule) => ({
+      ...recurrentModule,
+      ...(resolveDerivedModuleLabel(recurrentModule)
+        ? { moduleLabel: resolveDerivedModuleLabel(recurrentModule) }
+        : {}),
+    })),
     gatedBlocks: readGatedBlocks(runtimeNetwork._serializedExtensions),
   };
 }
@@ -400,7 +402,8 @@ function descriptorSetHasContent(
   descriptorSet: TemporalDescriptorSet | undefined,
 ): boolean {
   return Boolean(
-    descriptorSet?.recurrentModules?.length || descriptorSet?.gatedBlocks?.length,
+    descriptorSet?.recurrentModules?.length ||
+    descriptorSet?.gatedBlocks?.length,
   );
 }
 
@@ -467,15 +470,19 @@ function createGatedBlockDescriptor(
       gaterNodeSet.has(connection.gater) &&
       Number.isFinite(connection.innovation),
   );
-  const gaterGeneIds = [...new Set(
-    gatedConnections
-      .map((connection) => connection.gater?.geneId)
-      .filter((geneId): geneId is number => Number.isFinite(geneId)),
-  )].toSorted((leftGeneId, rightGeneId) => leftGeneId - rightGeneId);
+  const gaterGeneIds = [
+    ...new Set(
+      gatedConnections
+        .map((connection) => connection.gater?.geneId)
+        .filter((geneId): geneId is number => Number.isFinite(geneId)),
+    ),
+  ].toSorted((leftGeneId, rightGeneId) => leftGeneId - rightGeneId);
   const connectionInnovations = gatedConnections
     .map((connection) => connection.innovation)
     .filter((innovation): innovation is number => Number.isFinite(innovation))
-    .toSorted((leftInnovation, rightInnovation) => leftInnovation - rightInnovation);
+    .toSorted(
+      (leftInnovation, rightInnovation) => leftInnovation - rightInnovation,
+    );
 
   if (gaterGeneIds.length === 0 || connectionInnovations.length === 0) {
     return undefined;
@@ -489,11 +496,13 @@ function createGatedBlockDescriptor(
 }
 
 function collectFiniteNodeGeneIds(nodes: readonly Node[]): number[] {
-  return [...new Set(
-    nodes
-      .map((node) => node.geneId)
-      .filter((geneId): geneId is number => Number.isFinite(geneId)),
-  )].toSorted((leftGeneId, rightGeneId) => leftGeneId - rightGeneId);
+  return [
+    ...new Set(
+      nodes
+        .map((node) => node.geneId)
+        .filter((geneId): geneId is number => Number.isFinite(geneId)),
+    ),
+  ].toSorted((leftGeneId, rightGeneId) => leftGeneId - rightGeneId);
 }
 
 function collectInternalConnectionInnovations(
@@ -502,15 +511,22 @@ function collectInternalConnectionInnovations(
 ): number[] {
   const moduleNodeSet = new Set(moduleNodes);
 
-  return [...new Set(
-    collectRegisteredConnections(network)
-      .filter(
-        (connection) =>
-          moduleNodeSet.has(connection.from) && moduleNodeSet.has(connection.to),
-      )
-      .map((connection) => connection.innovation)
-      .filter((innovation): innovation is number => Number.isFinite(innovation)),
-  )].toSorted((leftInnovation, rightInnovation) => leftInnovation - rightInnovation);
+  return [
+    ...new Set(
+      collectRegisteredConnections(network)
+        .filter(
+          (connection) =>
+            moduleNodeSet.has(connection.from) &&
+            moduleNodeSet.has(connection.to),
+        )
+        .map((connection) => connection.innovation)
+        .filter((innovation): innovation is number =>
+          Number.isFinite(innovation),
+        ),
+    ),
+  ].toSorted(
+    (leftInnovation, rightInnovation) => leftInnovation - rightInnovation,
+  );
 }
 
 function collectGatedConnectionInnovations(
@@ -519,15 +535,21 @@ function collectGatedConnectionInnovations(
 ): number[] {
   const gaterNodeSet = new Set(gaterNodes);
 
-  return [...new Set(
-    collectRegisteredConnections(network)
-      .filter(
-        (connection) =>
-          connection.gater != null && gaterNodeSet.has(connection.gater),
-      )
-      .map((connection) => connection.innovation)
-      .filter((innovation): innovation is number => Number.isFinite(innovation)),
-  )].toSorted((leftInnovation, rightInnovation) => leftInnovation - rightInnovation);
+  return [
+    ...new Set(
+      collectRegisteredConnections(network)
+        .filter(
+          (connection) =>
+            connection.gater != null && gaterNodeSet.has(connection.gater),
+        )
+        .map((connection) => connection.innovation)
+        .filter((innovation): innovation is number =>
+          Number.isFinite(innovation),
+        ),
+    ),
+  ].toSorted(
+    (leftInnovation, rightInnovation) => leftInnovation - rightInnovation,
+  );
 }
 
 function collectBoundaryConnectionInnovations(
@@ -536,25 +558,38 @@ function collectBoundaryConnectionInnovations(
 ): number[] {
   const moduleNodeSet = new Set(moduleNodes);
 
-  return [...new Set(
-    collectRegisteredConnections(network)
-      .filter(
-        (connection) =>
-          moduleNodeSet.has(connection.from) || moduleNodeSet.has(connection.to),
-      )
-      .map((connection) => connection.innovation)
-      .filter((innovation): innovation is number => Number.isFinite(innovation)),
-  )].toSorted((leftInnovation, rightInnovation) => leftInnovation - rightInnovation);
+  return [
+    ...new Set(
+      collectRegisteredConnections(network)
+        .filter(
+          (connection) =>
+            moduleNodeSet.has(connection.from) ||
+            moduleNodeSet.has(connection.to),
+        )
+        .map((connection) => connection.innovation)
+        .filter((innovation): innovation is number =>
+          Number.isFinite(innovation),
+        ),
+    ),
+  ].toSorted(
+    (leftInnovation, rightInnovation) => leftInnovation - rightInnovation,
+  );
 }
 
 function mergeConnectionInnovationSets(
   ...innovationSets: ReadonlyArray<readonly number[]>
 ): number[] {
-  return [...new Set(
-    innovationSets
-      .flatMap((innovationSet) => innovationSet)
-      .filter((innovation): innovation is number => Number.isFinite(innovation)),
-  )].toSorted((leftInnovation, rightInnovation) => leftInnovation - rightInnovation);
+  return [
+    ...new Set(
+      innovationSets
+        .flatMap((innovationSet) => innovationSet)
+        .filter((innovation): innovation is number =>
+          Number.isFinite(innovation),
+        ),
+    ),
+  ].toSorted(
+    (leftInnovation, rightInnovation) => leftInnovation - rightInnovation,
+  );
 }
 
 /**
@@ -580,14 +615,16 @@ function collectRegisteredConnections(network: Network): Connection[] {
   const registeredConnections: Connection[] = [];
 
   runtimeNetwork.nodes.forEach((node) => {
-    [...node.connections.out, ...node.connections.self].forEach((connection) => {
-      if (seenConnections.has(connection)) {
-        return;
-      }
+    [...node.connections.out, ...node.connections.self].forEach(
+      (connection) => {
+        if (seenConnections.has(connection)) {
+          return;
+        }
 
-      seenConnections.add(connection);
-      registeredConnections.push(connection);
-    });
+        seenConnections.add(connection);
+        registeredConnections.push(connection);
+      },
+    );
   });
 
   return registeredConnections;
@@ -595,7 +632,9 @@ function collectRegisteredConnections(network: Network): Connection[] {
 
 function createDescriptorId(
   prefix: string,
-  kind: TemporalRecurrentModuleKind | Exclude<TemporalRecurrentModuleKind, 'narx-memory'>,
+  kind:
+    | TemporalRecurrentModuleKind
+    | Exclude<TemporalRecurrentModuleKind, 'narx-memory'>,
   nodes: readonly Node[],
   label?: string,
 ): string {
@@ -643,7 +682,9 @@ function dedupeGatedBlocks(
   gatedBlocks: readonly TemporalGatedBlockDescriptor[],
 ): TemporalGatedBlockDescriptor[] {
   return Array.from(
-    new Map(gatedBlocks.map((gatedBlock) => [gatedBlock.blockId, gatedBlock])).values(),
+    new Map(
+      gatedBlocks.map((gatedBlock) => [gatedBlock.blockId, gatedBlock]),
+    ).values(),
   ).toSorted((leftBlock, rightBlock) =>
     leftBlock.blockId.localeCompare(rightBlock.blockId),
   );
@@ -652,10 +693,13 @@ function dedupeGatedBlocks(
 function readRecurrentModules(
   extensions: NetworkJSONExtensions | undefined,
 ): TemporalRecurrentModuleDescriptor[] {
-  const recurrentModules = (extensions?.values as TemporalDescriptorSet | undefined)
-    ?.recurrentModules;
+  const recurrentModules = (
+    extensions?.values as TemporalDescriptorSet | undefined
+  )?.recurrentModules;
   return Array.isArray(recurrentModules)
-    ? recurrentModules.map((recurrentModule) => structuredClone(recurrentModule))
+    ? recurrentModules.map((recurrentModule) =>
+        structuredClone(recurrentModule),
+      )
     : [];
 }
 
@@ -674,7 +718,9 @@ function writeTemporalDescriptorExtensions(
   recurrentModules: readonly TemporalRecurrentModuleDescriptor[],
   gatedBlocks: readonly TemporalGatedBlockDescriptor[],
 ): void {
-  const nonTemporalValues = readNonTemporalValues(runtimeNetwork._serializedExtensions);
+  const nonTemporalValues = readNonTemporalValues(
+    runtimeNetwork._serializedExtensions,
+  );
   const nextValues: Record<string, unknown> = {
     ...nonTemporalValues,
     ...(recurrentModules.length > 0
@@ -705,7 +751,8 @@ function readNonTemporalValues(
 
   return Object.fromEntries(
     Object.entries(extensions.values).filter(
-      ([valueKey]) => valueKey !== 'recurrentModules' && valueKey !== 'gatedBlocks',
+      ([valueKey]) =>
+        valueKey !== 'recurrentModules' && valueKey !== 'gatedBlocks',
     ),
   );
 }
@@ -732,8 +779,13 @@ function isRecurrentModuleDescriptorValidOnRuntimeNetwork(
     return false;
   }
 
-  const liveGeneIds = new Set(collectFiniteNodeGeneIds((network as RuntimeNetworkWithSerializedExtensions).nodes));
-  const liveConnectionsByInnovation = createConnectionLookupByInnovation(network);
+  const liveGeneIds = new Set(
+    collectFiniteNodeGeneIds(
+      (network as RuntimeNetworkWithSerializedExtensions).nodes,
+    ),
+  );
+  const liveConnectionsByInnovation =
+    createConnectionLookupByInnovation(network);
   const roleNodeGeneIdGroups = Object.values(recurrentModule.nodeGeneIdsByRole);
 
   if (
@@ -760,12 +812,20 @@ function isGatedBlockDescriptorValidOnRuntimeNetwork(
   network: Network,
   gatedBlock: TemporalGatedBlockDescriptor,
 ): boolean {
-  if (typeof gatedBlock?.blockId !== 'string' || gatedBlock.blockId.length === 0) {
+  if (
+    typeof gatedBlock?.blockId !== 'string' ||
+    gatedBlock.blockId.length === 0
+  ) {
     return false;
   }
 
-  const liveGeneIds = new Set(collectFiniteNodeGeneIds((network as RuntimeNetworkWithSerializedExtensions).nodes));
-  const liveConnectionsByInnovation = createConnectionLookupByInnovation(network);
+  const liveGeneIds = new Set(
+    collectFiniteNodeGeneIds(
+      (network as RuntimeNetworkWithSerializedExtensions).nodes,
+    ),
+  );
+  const liveConnectionsByInnovation =
+    createConnectionLookupByInnovation(network);
 
   if (
     !Array.isArray(gatedBlock.gaterGeneIds) ||
@@ -777,12 +837,18 @@ function isGatedBlockDescriptorValidOnRuntimeNetwork(
     return false;
   }
 
-  if (!isKnownNonEmptyNumberArray(gatedBlock.connectionInnovations, liveConnectionsByInnovation)) {
+  if (
+    !isKnownNonEmptyNumberArray(
+      gatedBlock.connectionInnovations,
+      liveConnectionsByInnovation,
+    )
+  ) {
     return false;
   }
 
   return gatedBlock.connectionInnovations.every((connectionInnovation) => {
-    const liveConnection = liveConnectionsByInnovation.get(connectionInnovation);
+    const liveConnection =
+      liveConnectionsByInnovation.get(connectionInnovation);
     return (
       typeof liveConnection?.gater?.geneId === 'number' &&
       gatedBlock.gaterGeneIds.includes(liveConnection.gater.geneId)

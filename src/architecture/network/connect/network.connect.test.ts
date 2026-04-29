@@ -34,29 +34,45 @@ function summarizeHydratedTemporalExtensionBag(network: Network): {
 }
 
 describe('network connect chapter', () => {
+  describe('connect()', () => {
+    describe('given a duplicate self-connection attempt on the same node', () => {
+      it('returns an empty array when the self-connection already exists', () => {
+        // Arrange: network with a hidden node; create first self-connection
+        const network = new Network(1, 1);
+        const hiddenNode = network.nodes[0];
+        network.connect(hiddenNode, hiddenNode);
+
+        // Act: second self-connection attempt → Node.connect returns []
+        const result = network.connect(hiddenNode, hiddenNode);
+
+        // Assert: no connection created → empty array
+        expect(result).toEqual([]);
+      });
+    });
+  });
+
   describe('disconnect()', () => {
     describe('given a temporal descriptor references the removed structural edge', () => {
       it('retires the hydrated temporal descriptor bag immediately', () => {
         // Arrange
         const network = Architect.lstm(1, 1, 1);
-        const connectionToDisconnect = network.gates[0] ?? network.connections[0];
+        const connectionToDisconnect =
+          network.gates[0] ?? network.connections[0];
 
         if (!connectionToDisconnect) {
           throw new Error('Expected an LSTM fixture connection to disconnect.');
         }
 
-        const summaryBeforeDisconnect = summarizeHydratedTemporalExtensionBag(
-          network,
-        );
+        const summaryBeforeDisconnect =
+          summarizeHydratedTemporalExtensionBag(network);
 
         // Act
         network.disconnect(
           connectionToDisconnect.from,
           connectionToDisconnect.to,
         );
-        const summaryAfterDisconnect = summarizeHydratedTemporalExtensionBag(
-          network,
-        );
+        const summaryAfterDisconnect =
+          summarizeHydratedTemporalExtensionBag(network);
 
         // Assert
         expect({

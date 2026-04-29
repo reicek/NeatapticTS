@@ -1,6 +1,9 @@
 import type Network from '../../network/network';
 import type Node from '../../node';
-import { resolveActivationTraversalNodes, resolveOrderedOutputNodes } from '../activate/network.activate.schedule.utils';
+import {
+  resolveActivationTraversalNodes,
+  resolveOrderedOutputNodes,
+} from '../activate/network.activate.schedule.utils';
 import type {
   NetworkStandaloneProps,
   NodeWithIndex,
@@ -113,12 +116,14 @@ export function resolveStandaloneExecutionMetadata(
   network: Network,
   generationContext: GenerationContext,
 ): void {
-  const scheduleAwareNetwork = network as unknown as StandaloneScheduleAwareNetwork;
+  const scheduleAwareNetwork =
+    network as unknown as StandaloneScheduleAwareNetwork;
 
   // Step 1: Refresh activation scheduling before reading traversal helpers.
   if (
     scheduleAwareNetwork._topoDirty ||
-    (!scheduleAwareNetwork._activationSchedule && !scheduleAwareNetwork._topoOrder)
+    (!scheduleAwareNetwork._activationSchedule &&
+      !scheduleAwareNetwork._topoOrder)
   ) {
     scheduleAwareNetwork._computeTopoOrder();
   }
@@ -135,11 +140,12 @@ export function resolveStandaloneExecutionMetadata(
     const indexedNode = node as Partial<NodeWithIndex>;
     return typeof indexedNode.index === 'number' ? [indexedNode.index] : [];
   });
-  generationContext.outputNodeIndexes = resolveOrderedOutputNodes(network)
-    .flatMap((node) => {
-      const indexedNode = node as Partial<NodeWithIndex>;
-      return typeof indexedNode.index === 'number' ? [indexedNode.index] : [];
-    });
+  generationContext.outputNodeIndexes = resolveOrderedOutputNodes(
+    network,
+  ).flatMap((node) => {
+    const indexedNode = node as Partial<NodeWithIndex>;
+    return typeof indexedNode.index === 'number' ? [indexedNode.index] : [];
+  });
 }
 
 /**
@@ -153,7 +159,9 @@ function resolveInputNodeIndexes(network: Network): number[] {
     network.nodes.map((node) => [node.geneId, node] as const),
   );
   const explicitInputNodeIndexes = network.inputNodeIds.flatMap((nodeId) => {
-    const node = nodesByGeneId.get(nodeId) as Partial<NodeWithIndex> | undefined;
+    const node = nodesByGeneId.get(nodeId) as
+      | Partial<NodeWithIndex>
+      | undefined;
     return typeof node?.index === 'number' ? [node.index] : [];
   });
 

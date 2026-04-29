@@ -88,12 +88,10 @@ describe('genome heredity chapter', () => {
             ),
           inheritedWeight:
             selectedGenes.find(
-              (selectedGene) =>
-                selectedGene.connectionGene.innovation === 101,
+              (selectedGene) => selectedGene.connectionGene.innovation === 101,
             )?.connectionGene.weight ?? null,
           hasLowerFitnessInnovation: selectedGenes.some(
-            (selectedGene) =>
-              selectedGene.connectionGene.innovation === 202,
+            (selectedGene) => selectedGene.connectionGene.innovation === 202,
           ),
         }).toEqual({
           innovations: firstParentGenome.connectionGenes
@@ -216,8 +214,7 @@ describe('genome heredity chapter', () => {
         // Assert
         expect(
           selectedGenes.find(
-            (selectedGene) =>
-              selectedGene.connectionGene.innovation === 101,
+            (selectedGene) => selectedGene.connectionGene.innovation === 101,
           )?.connectionGene.enabled ?? null,
         ).toBe(true);
       });

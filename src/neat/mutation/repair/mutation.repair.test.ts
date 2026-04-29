@@ -240,7 +240,9 @@ describe('neat mutation repair chapter', () => {
         const mutationController = createMutationController({});
         jest
           .spyOn(mutationAddConn, 'canApplyChosenPairForConn')
-          .mockImplementation((_genome, chosenPair) => chosenPair[1] === outputNode);
+          .mockImplementation(
+            (_genome, chosenPair) => chosenPair[1] === outputNode,
+          );
         jest
           .spyOn(mutationAddConn, 'connectChosenPairWithInnovationReuse')
           .mockImplementation((networkToEdit, chosenPair) => {
@@ -365,7 +367,9 @@ describe('neat mutation repair chapter', () => {
         const mutationController = createMutationController({});
         jest
           .spyOn(mutationAddConn, 'canApplyChosenPairForConn')
-          .mockImplementation((_genome, chosenPair) => chosenPair[0] === inputNode);
+          .mockImplementation(
+            (_genome, chosenPair) => chosenPair[0] === inputNode,
+          );
         jest
           .spyOn(mutationAddConn, 'connectChosenPairWithInnovationReuse')
           .mockImplementation((networkToEdit, chosenPair) => {
@@ -396,7 +400,11 @@ describe('neat mutation repair chapter', () => {
         const inputNode = createNode('input', 1);
         const protectedHiddenNode = createNode('hidden', 2);
         const outputNode = createNode('output', 3);
-        const genome = createGenome([inputNode, protectedHiddenNode, outputNode]);
+        const genome = createGenome([
+          inputNode,
+          protectedHiddenNode,
+          outputNode,
+        ]);
         const mutationController = createMutationController({
           allowRecurrent: true,
         });
@@ -413,7 +421,10 @@ describe('neat mutation repair chapter', () => {
             };
           };
         };
-        const moduleConnection = genome.connect?.(inputNode, protectedHiddenNode)[0];
+        const moduleConnection = genome.connect?.(
+          inputNode,
+          protectedHiddenNode,
+        )[0];
 
         if (!moduleConnection) {
           throw new Error('Expected recurrent module seed connection');

@@ -1,13 +1,19 @@
 import Network from '../../../../src/architecture/network';
 import Node from '../../../../src/architecture/node';
-import type { DashboardManagerContext, DashboardManagerState } from '../dashboardManager.types';
+import type {
+  DashboardManagerContext,
+  DashboardManagerState,
+} from '../dashboardManager.types';
 import { formatDashboardStat } from '../dashboardManager.utils';
 import {
   redrawDashboard,
   resolveActivationSchedulingValue,
 } from './dashboardManager.live.services';
 
-const ANSI_ESCAPE_REGEX = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+const ANSI_ESCAPE_REGEX = new RegExp(
+  `${String.fromCharCode(27)}\\[[0-9;]*m`,
+  'g',
+);
 
 describe('resolveActivationSchedulingValue', () => {
   it('formats a compact scheduling summary for the live dashboard', () => {

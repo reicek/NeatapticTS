@@ -327,9 +327,7 @@ export const trainFinalizeCore = (
   let performedIterations = 0;
 
   for (let iteration = 1; iteration <= iterations; iteration++) {
-    if (internalNet._maybePrune) {
-      internalNet._maybePrune((internalNet._globalEpoch || 0) + iteration);
-    }
+    internalNet._maybePrune!((internalNet._globalEpoch || 0) + iteration);
 
     const trainError = trainSetCore(
       net,

@@ -2090,9 +2090,7 @@ function registerRecurrentLayerConnection(
   connection: Connection,
 ): void {
   const targetCollection =
-    connection.from === connection.to
-      ? network.selfconns
-      : network.connections;
+    connection.from === connection.to ? network.selfconns : network.connections;
 
   if (!targetCollection.includes(connection)) {
     targetCollection.push(connection);

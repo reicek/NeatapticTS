@@ -175,7 +175,10 @@ describe('connection accessor chapter', () => {
         const nextToNode = new Node('output');
 
         // Act
-        const reacquiredConnection = Connection.acquire(nextFromNode, nextToNode);
+        const reacquiredConnection = Connection.acquire(
+          nextFromNode,
+          nextToNode,
+        );
 
         // Assert
         expect({
@@ -262,7 +265,10 @@ describe('connection accessor chapter', () => {
         connection.gater = null;
 
         // Assert
-        expect({ gater: connection.gater, hasGater: connection.hasGater }).toEqual({
+        expect({
+          gater: connection.gater,
+          hasGater: connection.hasGater,
+        }).toEqual({
           gater: null,
           hasGater: false,
         });
@@ -331,7 +337,10 @@ describe('connection accessor chapter', () => {
         connection.gater = null;
 
         // Assert
-        expect({ gater: connection.gater, hasGater: connection.hasGater }).toEqual({
+        expect({
+          gater: connection.gater,
+          hasGater: connection.hasGater,
+        }).toEqual({
           gater: null,
           hasGater: false,
         });
@@ -422,7 +431,10 @@ describe('connection accessor chapter', () => {
         connection.plastic = false;
 
         // Assert
-        expect({ plastic: connection.plastic, rate: connection.plasticityRate }).toEqual({
+        expect({
+          plastic: connection.plastic,
+          rate: connection.plasticityRate,
+        }).toEqual({
           plastic: false,
           rate: 0,
         });
@@ -439,7 +451,10 @@ describe('connection accessor chapter', () => {
         connection.plasticityRate = undefined as unknown as number;
 
         // Assert
-        expect({ plastic: connection.plastic, rate: connection.plasticityRate }).toEqual({
+        expect({
+          plastic: connection.plastic,
+          rate: connection.plasticityRate,
+        }).toEqual({
           plastic: false,
           rate: 0,
         });
@@ -455,7 +470,10 @@ describe('connection accessor chapter', () => {
         connection.plasticityRate = undefined as unknown as number;
 
         // Assert
-        expect({ plastic: connection.plastic, rate: connection.plasticityRate }).toEqual({
+        expect({
+          plastic: connection.plastic,
+          rate: connection.plasticityRate,
+        }).toEqual({
           plastic: false,
           rate: 0,
         });
@@ -535,13 +553,20 @@ describe('connection accessor chapter', () => {
         const unindexedToNode = new Node('output');
         unindexedFromNode.index = undefined;
         unindexedToNode.index = undefined;
-        const connection = new Connection(unindexedFromNode, unindexedToNode, 0.4);
+        const connection = new Connection(
+          unindexedFromNode,
+          unindexedToNode,
+          0.4,
+        );
 
         // Act
         const serializedConnection = connection.toJSON();
 
         // Assert
-        expect({ from: serializedConnection.from, to: serializedConnection.to }).toEqual({
+        expect({
+          from: serializedConnection.from,
+          to: serializedConnection.to,
+        }).toEqual({
           from: undefined,
           to: undefined,
         });

@@ -1,7 +1,4 @@
-import type {
-  NeatGenome,
-  NeatGenomeConnectionGene,
-} from '../genome.types';
+import type { NeatGenome, NeatGenomeConnectionGene } from '../genome.types';
 
 /**
  * Stable parent labels used by the genome-owned heredity selector.

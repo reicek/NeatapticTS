@@ -39,10 +39,17 @@ describe('network stats chapter', () => {
 
           // Act
           const testWithNonArraySet = () =>
-            network.test(undefined as unknown as Array<{ input: number[]; output: number[] }>);
+            network.test(
+              undefined as unknown as Array<{
+                input: number[];
+                output: number[];
+              }>,
+            );
 
           // Assert
-          expect(testWithNonArraySet).toThrow(NetworkStatsTestSetValidationError);
+          expect(testWithNonArraySet).toThrow(
+            NetworkStatsTestSetValidationError,
+          );
         });
       });
     });
@@ -185,7 +192,9 @@ describe('network stats chapter', () => {
         it('reactivates hidden-node masks during evaluation setup', () => {
           // Arrange
           const network = Network.createMLP(2, [2], 1);
-          const hiddenNodes = network.nodes.filter((node) => node.type === 'hidden');
+          const hiddenNodes = network.nodes.filter(
+            (node) => node.type === 'hidden',
+          );
           hiddenNodes.forEach((node) => {
             node.mask = 0;
           });

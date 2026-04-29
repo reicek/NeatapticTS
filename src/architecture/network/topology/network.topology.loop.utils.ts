@@ -45,9 +45,8 @@ export function processKahnQueue(buildContext: TopologyBuildContext): void {
     }
 
     appendActivationStep(buildContext.activationSteps, activationStep);
-    buildContext.processingQueue = sortNodesByStableTieBreak(
-      nextProcessingQueue,
-    );
+    buildContext.processingQueue =
+      sortNodesByStableTieBreak(nextProcessingQueue);
   }
 }
 
@@ -200,7 +199,9 @@ function isSelfConnection(from: TopologyNode, to: TopologyNode): boolean {
  * @param nodes Candidate nodes.
  * @returns Sorted node collection.
  */
-export function sortNodesByStableTieBreak(nodes: TopologyNode[]): TopologyNode[] {
+export function sortNodesByStableTieBreak(
+  nodes: TopologyNode[],
+): TopologyNode[] {
   return nodes.toSorted(compareNodesByStableTieBreak);
 }
 

@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx jest *)",
+      "Bash(node -e ' *)",
+      "Bash(python3 -c ' *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -v \"^-\\\\|^File\\\\|^$\\\\|Test Suites\\\\|Tests:\\\\|Snapshots\\\\|Time\\\\|src/\\\\|Warning\\\\|node:\")",
+      "Bash(awk -F'|' '$3 !~ /100/ || $4 !~ /100/ || $5 !~ /100/ {print}')",
+      "Bash(grep -B5 -A30 \"SF:src\\\\\\\\\\\\\\\\architecture\\\\\\\\\\\\\\\\network\\\\\\\\\\\\\\\\training\\\\\\\\\\\\\\\\network.training.finalize\" coverage/lcov.info)",
+      "Bash(awk '/SF:src.architecture.network.training.network.training.finalize/{found=1} found && /^BRDA/{print} found && /^end_of_record/{found=0}' coverage/lcov.info)",
+      "Bash(grep -A 100 \"SF:src\\\\\\\\\\\\\\\\architecture\\\\\\\\\\\\\\\\network\\\\\\\\\\\\\\\\network.utils.ts\" c:/NeatapticTS/coverage/lcov.info)",
+      "PowerShell($content = Get-Content \"c:\\\\NeatapticTS\\\\coverage\\\\lcov.info\" -Raw; $idx = $content.IndexOf\\('network.utils.ts'\\); $content.Substring\\($idx - 3, [Math]::Min\\(2000, $content.Length - $idx + 3\\)\\))",
+      "Bash(xargs grep *)",
+      "PowerShell($content = Get-Content \"c:\\\\NeatapticTS\\\\coverage\\\\lcov.info\" -Raw; $start = $content.IndexOf\\('network.utils.ts'\\); $end = $content.IndexOf\\('end_of_record', $start\\); $content.Substring\\($start, $end - $start + 13\\))",
+      "PowerShell($content = Get-Content \"c:\\\\NeatapticTS\\\\coverage\\\\lcov.info\" -Raw; $start = $content.IndexOf\\('network.activate.utils.ts'\\); $end = $content.IndexOf\\('end_of_record', $start\\); $content.Substring\\($start, $end - $start + 13\\))",
+      "Bash(node -e \"const fs=require\\('fs'\\); const c=fs.readFileSync\\('c:/NeatapticTS/coverage/lcov.info','utf8'\\); console.log\\(c.slice\\(0,200\\)\\);\")",
+      "Bash(grep -A 40 \"methods\\\\\\\\\\\\\\\\methods.ts\" /c/NeatapticTS/coverage/lcov.info)",
+      "Read(//c/Users/reice/AppData/Local/Temp/claude/c--NeatapticTS/d6e9debc-94b7-43c3-bd32-df4d081f7e5f/tasks/**)"
+    ]
+  }
+}

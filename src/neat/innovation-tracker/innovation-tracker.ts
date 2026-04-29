@@ -98,9 +98,7 @@ export function serializeInnovationTracker(
     activeGeneration: tracker.activeGeneration,
     nextInnovationId: tracker.nextInnovationId,
     nodeSplitRecords: Array.from(tracker.nodeSplitRecords.entries()),
-    connectionInnovations: Array.from(
-      tracker.connectionInnovations.entries(),
-    ),
+    connectionInnovations: Array.from(tracker.connectionInnovations.entries()),
   };
 }
 

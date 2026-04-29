@@ -286,8 +286,7 @@ function blendNoveltyIntoScore(
   blendFactor: number,
 ): void {
   if (typeof genome.score !== 'number') return;
-  genome.score =
-    (1 - blendFactor) * genome.score + blendFactor * novelty;
+  genome.score = (1 - blendFactor) * genome.score + blendFactor * novelty;
 }
 
 /**

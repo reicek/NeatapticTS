@@ -82,7 +82,9 @@ describe('resolveHoveredNetworkVisualizationTooltipScene', () => {
     const positionedScene = createHiddenColumnPositionedScene();
     const hiddenColumnLabelScene = positionedScene.hiddenColumnLabelScenes?.[0];
     if (!hiddenColumnLabelScene) {
-      throw new Error('Expected a hidden-column label scene for the recurrent tooltip test.');
+      throw new Error(
+        'Expected a hidden-column label scene for the recurrent tooltip test.',
+      );
     }
     const hoveredTooltipScene = resolveHoveredNetworkVisualizationTooltipScene(
       {

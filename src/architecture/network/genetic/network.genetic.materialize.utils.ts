@@ -194,7 +194,10 @@ function createSourceInterfaceOrdinalMap(
 ): Map<number, number> {
   return new Map(
     Array.from(sourceNodeEntriesByGeneId.entries())
-      .filter(([, sourceNodeEntry]) => typeof sourceNodeEntry.interfaceOrdinal === 'number')
+      .filter(
+        ([, sourceNodeEntry]) =>
+          typeof sourceNodeEntry.interfaceOrdinal === 'number',
+      )
       .map(([geneId, sourceNodeEntry]) => [
         geneId,
         sourceNodeEntry.interfaceOrdinal as number,
@@ -237,9 +240,8 @@ function buildMaterializedOffspringNodes(
       ),
     )
     .filter(
-      (
-        nodeCandidate,
-      ): nodeCandidate is MaterializedNodeCandidate => nodeCandidate !== undefined,
+      (nodeCandidate): nodeCandidate is MaterializedNodeCandidate =>
+        nodeCandidate !== undefined,
     )
     .toSorted(compareMaterializedNodeCandidates)
     .map((nodeCandidate) => nodeCandidate.node);
@@ -264,12 +266,13 @@ function collectRequiredNodeGeneIds(
   const requiredGeneIds = new Set<number>();
   const currentNodeOrderByGeneId = createNodeOrderLookup(currentOffspringNodes);
 
-  for (let nodeIndex = 0; nodeIndex < currentOffspringNodes.length; nodeIndex++) {
+  for (
+    let nodeIndex = 0;
+    nodeIndex < currentOffspringNodes.length;
+    nodeIndex++
+  ) {
     const node = currentOffspringNodes[nodeIndex];
-    if (
-      typeof node.geneId === 'number' &&
-      isRequiredInterfaceNode(node)
-    ) {
+    if (typeof node.geneId === 'number' && isRequiredInterfaceNode(node)) {
       requiredGeneIds.add(node.geneId);
     }
   }
@@ -635,9 +638,9 @@ function resolveInterfaceNodeByOrdinal(
   nodeType: string,
   interfaceOrdinal: number,
 ): Node | undefined {
-  return context.offspring.nodes.filter((node) => node.type === nodeType).at(
-    interfaceOrdinal,
-  );
+  return context.offspring.nodes
+    .filter((node) => node.type === nodeType)
+    .at(interfaceOrdinal);
 }
 
 /**
@@ -709,7 +712,11 @@ function createOffspringConnection(
   toNode: Node,
   connectionWeight: number,
 ): Connection | undefined {
-  const createdConnections = offspring.connect(fromNode, toNode, connectionWeight);
+  const createdConnections = offspring.connect(
+    fromNode,
+    toNode,
+    connectionWeight,
+  );
   return createdConnections.at(FIRST_INDEX);
 }
 

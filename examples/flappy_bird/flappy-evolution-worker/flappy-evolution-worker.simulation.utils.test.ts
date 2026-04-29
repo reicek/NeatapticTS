@@ -7,10 +7,7 @@ describe('createWorkerPopulationRenderState', () => {
     const secondClear = jest.fn();
 
     createWorkerPopulationRenderState(
-      [
-        { clear: firstClear },
-        { clear: secondClear },
-      ] as never[],
+      [{ clear: firstClear }, { clear: secondClear }] as never[],
       createXorshift32(12345),
       1280,
       720,

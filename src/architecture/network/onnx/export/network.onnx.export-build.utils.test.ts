@@ -1,7 +1,10 @@
 import Node from '../../../node';
 import { buildOnnxModel } from './network.onnx.export-build.utils';
 
-function createLayer(nodeType: 'input' | 'hidden' | 'output', nodeCount: number): Node[] {
+function createLayer(
+  nodeType: 'input' | 'hidden' | 'output',
+  nodeCount: number,
+): Node[] {
   return Array.from({ length: nodeCount }, () => new Node(nodeType));
 }
 

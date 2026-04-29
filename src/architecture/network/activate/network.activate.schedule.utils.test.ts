@@ -24,7 +24,11 @@ function setActivationSchedule(
 }
 
 function setTopoOrder(network: Network, topoOrder: Node[] | null): void {
-  Reflect.set(network as unknown as ScheduleAwareRuntime, '_topoOrder', topoOrder);
+  Reflect.set(
+    network as unknown as ScheduleAwareRuntime,
+    '_topoOrder',
+    topoOrder,
+  );
 }
 
 describe('network activate chapter', () => {
@@ -122,7 +126,9 @@ describe('network activate chapter', () => {
           );
 
           // Assert
-          expect(traversalNodeIds).toEqual(network.nodes.map((node) => node.geneId));
+          expect(traversalNodeIds).toEqual(
+            network.nodes.map((node) => node.geneId),
+          );
         });
       });
     });
@@ -134,7 +140,13 @@ describe('network activate chapter', () => {
           const network = new Network(2, 1, { enforceAcyclic: true });
           const [inputLeft, inputRight, outputNode] = network.nodes;
 
-          network.nodes.splice(0, network.nodes.length, inputRight, outputNode, inputLeft);
+          network.nodes.splice(
+            0,
+            network.nodes.length,
+            inputRight,
+            outputNode,
+            inputLeft,
+          );
 
           // Act
           const resolvedInputs = Array.from(
@@ -157,7 +169,13 @@ describe('network activate chapter', () => {
           const network = new Network(2, 1, { enforceAcyclic: true });
           const [inputLeft, inputRight, outputNode] = network.nodes;
 
-          network.nodes.splice(0, network.nodes.length, outputNode, inputLeft, inputRight);
+          network.nodes.splice(
+            0,
+            network.nodes.length,
+            outputNode,
+            inputLeft,
+            inputRight,
+          );
 
           // Act
           const resolvedInputs = {

@@ -250,7 +250,8 @@ export const FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_COLOR = '#9fdcff';
 export const FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_COLOR = '#7fe8ff';
 
 /** Background fill used by horizontal input-description chips. */
-export const FLAPPY_NETWORK_INPUT_DESCRIPTION_FILL_COLOR = 'rgba(21, 77, 110, 0.22)';
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_FILL_COLOR =
+  'rgba(21, 77, 110, 0.22)';
 
 /** Corner radius used by horizontal input-description chips. */
 export const FLAPPY_NETWORK_INPUT_DESCRIPTION_RADIUS_PX = 6;
@@ -316,7 +317,8 @@ export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX = 6;
 export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_COLOR = '#7fe8ff';
 
 /** Fill color used by recurrent hidden-column guide chips when no custom color is set. */
-export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FILL_COLOR = 'rgba(21, 77, 110, 0.28)';
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FILL_COLOR =
+  'rgba(21, 77, 110, 0.28)';
 
 /** Stroke width used by recurrent hidden-column guide chips. */
 export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_WIDTH_PX = 1.5;

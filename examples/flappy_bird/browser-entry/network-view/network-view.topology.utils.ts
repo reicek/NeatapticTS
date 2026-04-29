@@ -64,11 +64,8 @@ export function resolveNetworkVisualizationLayers(
   inputSize: number,
   outputSize: number,
 ): VisualNetworkNodeLike[][] {
-  return resolveNetworkVisualizationTopologyPlan(
-    network,
-    inputSize,
-    outputSize,
-  ).networkLayers;
+  return resolveNetworkVisualizationTopologyPlan(network, inputSize, outputSize)
+    .networkLayers;
 }
 
 /**
@@ -183,9 +180,12 @@ function resolveStructuredTemporalTopologyPlan(
   }
 
   const nodeByGeneId = createNodeByGeneIdMap(runtimeNodes);
-  const orderedRecurrentModules = [...temporalStructure.recurrentModules].toSorted(
+  const orderedRecurrentModules = [
+    ...temporalStructure.recurrentModules,
+  ].toSorted(
     (leftModule, rightModule) =>
-      resolveModuleOrderValue(leftModule) - resolveModuleOrderValue(rightModule),
+      resolveModuleOrderValue(leftModule) -
+      resolveModuleOrderValue(rightModule),
   );
   const moduleOwnedGeneIds = new Set(
     orderedRecurrentModules.flatMap((recurrentModule) =>
@@ -201,14 +201,13 @@ function resolveStructuredTemporalTopologyPlan(
     remainingHiddenNodes,
     moduleOwnedGeneIds,
   );
-  const recurrentKinds = [...new Set(
-    orderedRecurrentModules.map((recurrentModule) => recurrentModule.kind),
-  )];
+  const recurrentKinds = [
+    ...new Set(
+      orderedRecurrentModules.map((recurrentModule) => recurrentModule.kind),
+    ),
+  ];
 
-  if (
-    recurrentKinds.length === 1 &&
-    recurrentKinds[0] === 'narx-memory'
-  ) {
+  if (recurrentKinds.length === 1 && recurrentKinds[0] === 'narx-memory') {
     return resolveNarxTemporalTopologyPlan(
       orderedRecurrentModules,
       nodeByGeneId,
@@ -320,9 +319,7 @@ function resolveModuleRoleColumns(
     const roleNodeGeneIds = recurrentModule.nodeGeneIdsByRole[roleName] ?? [];
     const roleNodes = roleNodeGeneIds
       .map((geneId) => nodeByGeneId.get(geneId))
-      .filter(
-        (roleNode): roleNode is VisualNetworkNodeLike => roleNode != null,
-      )
+      .filter((roleNode): roleNode is VisualNetworkNodeLike => roleNode != null)
       .toSorted((leftNode, rightNode) => leftNode.index - rightNode.index);
     if (roleNodes.length === 0) {
       return [];
@@ -338,7 +335,11 @@ function resolveModuleRoleColumns(
       {
         layer: roleNodes,
         annotation: {
-          label: resolveRoleLabel(recurrentModule.kind, roleName, recurrentModule),
+          label: resolveRoleLabel(
+            recurrentModule.kind,
+            roleName,
+            recurrentModule,
+          ),
           labelLines: resolveRoleLabelLines(
             recurrentModule.kind,
             roleName,
@@ -349,7 +350,9 @@ function resolveModuleRoleColumns(
           backgroundColor:
             FLAPPY_LIGHT_NEON_RAMP[
               (colorOffset + roleIndex) % FLAPPY_LIGHT_NEON_RAMP.length
-            ] ?? FLAPPY_LIGHT_NEON_RAMP[0] ?? '#7fe8ff',
+            ] ??
+            FLAPPY_LIGHT_NEON_RAMP[0] ??
+            '#7fe8ff',
           nodeIndices: roleNodes.map((roleNode) => roleNode.index),
         },
       },
@@ -388,7 +391,9 @@ function resolveAuxiliaryHiddenColumns(
         backgroundColor:
           FLAPPY_LIGHT_NEON_RAMP[
             (colorOffset + hiddenLayerIndex) % FLAPPY_LIGHT_NEON_RAMP.length
-          ] ?? FLAPPY_LIGHT_NEON_RAMP[0] ?? '#7fe8ff',
+          ] ??
+          FLAPPY_LIGHT_NEON_RAMP[0] ??
+          '#7fe8ff',
         nodeIndices: hiddenLayer.map((hiddenNode) => hiddenNode.index),
       };
     }),
@@ -405,7 +410,9 @@ function createNodeByGeneIdMap(
   );
 }
 
-function resolveModuleOrderValue(recurrentModule: TemporalModuleDescriptor): number {
+function resolveModuleOrderValue(
+  recurrentModule: TemporalModuleDescriptor,
+): number {
   const orderedGeneIds = Object.values(recurrentModule.nodeGeneIdsByRole)
     .flat()
     .filter((geneId): geneId is number => Number.isFinite(geneId));
@@ -452,32 +459,37 @@ function resolveRoleLabel(
 ): string {
   if (recurrentKind === 'narx-memory') {
     const delayIndex = resolveNarxDelayRoleIndex(roleName) + 1;
-    const modulePrefix = recurrentModule.moduleLabel === 'output' ? 'OUT' : 'IN';
+    const modulePrefix =
+      recurrentModule.moduleLabel === 'output' ? 'OUT' : 'IN';
     return `${modulePrefix} t-${delayIndex}`;
   }
 
   if (recurrentKind === 'lstm') {
     return (
-      {
-        inputGate: 'INPUT GATE',
-        forgetGate: 'FORGET GATE',
-        memoryCell: 'MEMORY CELL',
-        outputGate: 'OUTPUT GATE',
-        outputBlock: 'OUTPUT BLOCK',
-      } as Record<string, string>
-    )[roleName] ?? roleName.toUpperCase();
+      (
+        {
+          inputGate: 'INPUT GATE',
+          forgetGate: 'FORGET GATE',
+          memoryCell: 'MEMORY CELL',
+          outputGate: 'OUTPUT GATE',
+          outputBlock: 'OUTPUT BLOCK',
+        } as Record<string, string>
+      )[roleName] ?? roleName.toUpperCase()
+    );
   }
 
   return (
-    {
-      updateGate: 'UPDATE GATE',
-      inverseUpdateGate: 'INVERSE UPDATE',
-      resetGate: 'RESET GATE',
-      memoryCell: 'MEMORY CELL',
-      output: 'OUTPUT MIX',
-      previousOutput: 'PREV OUTPUT',
-    } as Record<string, string>
-  )[roleName] ?? roleName.toUpperCase();
+    (
+      {
+        updateGate: 'UPDATE GATE',
+        inverseUpdateGate: 'INVERSE UPDATE',
+        resetGate: 'RESET GATE',
+        memoryCell: 'MEMORY CELL',
+        output: 'OUTPUT MIX',
+        previousOutput: 'PREV OUTPUT',
+      } as Record<string, string>
+    )[roleName] ?? roleName.toUpperCase()
+  );
 }
 
 function resolveRoleLabelLines(
@@ -487,32 +499,39 @@ function resolveRoleLabelLines(
 ): readonly string[] {
   if (recurrentKind === 'narx-memory') {
     const delayIndex = resolveNarxDelayRoleIndex(roleName) + 1;
-    const modulePrefix = recurrentModule.moduleLabel === 'output' ? 'OUT' : 'IN';
+    const modulePrefix =
+      recurrentModule.moduleLabel === 'output' ? 'OUT' : 'IN';
     return [modulePrefix, `t-${delayIndex}`];
   }
 
   if (recurrentKind === 'lstm') {
     return (
-      {
-        inputGate: ['INPUT', 'GATE'],
-        forgetGate: ['FORGET', 'GATE'],
-        memoryCell: ['MEMORY', 'CELL'],
-        outputGate: ['OUTPUT', 'GATE'],
-        outputBlock: ['OUTPUT', 'BLOCK'],
-      } as Record<string, readonly string[]>
-    )[roleName] ?? [resolveRoleLabel(recurrentKind, roleName, recurrentModule)];
+      (
+        {
+          inputGate: ['INPUT', 'GATE'],
+          forgetGate: ['FORGET', 'GATE'],
+          memoryCell: ['MEMORY', 'CELL'],
+          outputGate: ['OUTPUT', 'GATE'],
+          outputBlock: ['OUTPUT', 'BLOCK'],
+        } as Record<string, readonly string[]>
+      )[roleName] ?? [
+        resolveRoleLabel(recurrentKind, roleName, recurrentModule),
+      ]
+    );
   }
 
   return (
-    {
-      updateGate: ['UPDATE', 'GATE'],
-      inverseUpdateGate: ['INV', 'UPDATE'],
-      resetGate: ['RESET', 'GATE'],
-      memoryCell: ['MEMORY', 'CELL'],
-      output: ['OUTPUT', 'MIX'],
-      previousOutput: ['PREV', 'OUTPUT'],
-    } as Record<string, readonly string[]>
-  )[roleName] ?? [resolveRoleLabel(recurrentKind, roleName, recurrentModule)];
+    (
+      {
+        updateGate: ['UPDATE', 'GATE'],
+        inverseUpdateGate: ['INV', 'UPDATE'],
+        resetGate: ['RESET', 'GATE'],
+        memoryCell: ['MEMORY', 'CELL'],
+        output: ['OUTPUT', 'MIX'],
+        previousOutput: ['PREV', 'OUTPUT'],
+      } as Record<string, readonly string[]>
+    )[roleName] ?? [resolveRoleLabel(recurrentKind, roleName, recurrentModule)]
+  );
 }
 
 function resolveHiddenColumnTooltip(
@@ -533,93 +552,97 @@ function resolveHiddenColumnTooltip(
 
 function resolveLstmRoleTooltip(roleName: string): HiddenColumnTooltipContent {
   return (
-    {
-      inputGate: {
-        heading: 'LSTM Input Gate',
-        bodyParagraphs: [
-          'The input gate decides how much new evidence is allowed to write into the cell state on this step.',
-          'Open it wider and the block learns quickly from the present input; close it and the cell protects older memory.',
-        ],
-      },
-      forgetGate: {
-        heading: 'LSTM Forget Gate',
-        bodyParagraphs: [
-          'The forget gate decides how much of the previous cell state survives into the next step.',
-          'It is the LSTM\'s erase control, letting the network drop stale context instead of carrying every old signal forever.',
-        ],
-      },
-      memoryCell: {
-        heading: 'LSTM Memory Cell',
-        bodyParagraphs: [
-          'The memory cell is the long-lived state lane that carries accumulated context across time.',
-          'Because the gates regulate what gets written, preserved, and exposed, this shelf can remember patterns longer than a plain recurrent loop.',
-        ],
-      },
-      outputGate: {
-        heading: 'LSTM Output Gate',
-        bodyParagraphs: [
-          'The output gate decides how much of the cell state is revealed to the rest of the network right now.',
-          'That separation lets the block keep useful memory internally without broadcasting all of it at every timestep.',
-        ],
-      },
-      outputBlock: {
-        heading: 'LSTM Output Block',
-        bodyParagraphs: [
-          'This column is the exposed state emitted after the memory cell has passed through the output gate.',
-          'Other layers read this shelf directly, while the deeper cell memory can still keep extra context private.',
-        ],
-      },
-    } as Record<string, HiddenColumnTooltipContent>
-  )[roleName] ?? resolveGenericRecurrentRoleTooltip('LSTM role', roleName);
+    (
+      {
+        inputGate: {
+          heading: 'LSTM Input Gate',
+          bodyParagraphs: [
+            'The input gate decides how much new evidence is allowed to write into the cell state on this step.',
+            'Open it wider and the block learns quickly from the present input; close it and the cell protects older memory.',
+          ],
+        },
+        forgetGate: {
+          heading: 'LSTM Forget Gate',
+          bodyParagraphs: [
+            'The forget gate decides how much of the previous cell state survives into the next step.',
+            "It is the LSTM's erase control, letting the network drop stale context instead of carrying every old signal forever.",
+          ],
+        },
+        memoryCell: {
+          heading: 'LSTM Memory Cell',
+          bodyParagraphs: [
+            'The memory cell is the long-lived state lane that carries accumulated context across time.',
+            'Because the gates regulate what gets written, preserved, and exposed, this shelf can remember patterns longer than a plain recurrent loop.',
+          ],
+        },
+        outputGate: {
+          heading: 'LSTM Output Gate',
+          bodyParagraphs: [
+            'The output gate decides how much of the cell state is revealed to the rest of the network right now.',
+            'That separation lets the block keep useful memory internally without broadcasting all of it at every timestep.',
+          ],
+        },
+        outputBlock: {
+          heading: 'LSTM Output Block',
+          bodyParagraphs: [
+            'This column is the exposed state emitted after the memory cell has passed through the output gate.',
+            'Other layers read this shelf directly, while the deeper cell memory can still keep extra context private.',
+          ],
+        },
+      } as Record<string, HiddenColumnTooltipContent>
+    )[roleName] ?? resolveGenericRecurrentRoleTooltip('LSTM role', roleName)
+  );
 }
 
 function resolveGruRoleTooltip(roleName: string): HiddenColumnTooltipContent {
   return (
-    {
-      updateGate: {
-        heading: 'GRU Update Gate',
-        bodyParagraphs: [
-          'The update gate chooses how much of the old state survives into the next output.',
-          'It is the GRU\'s main carry-versus-overwrite dial, blending memory retention with new evidence.',
-        ],
-      },
-      inverseUpdateGate: {
-        heading: 'GRU Inverse-Update Branch',
-        bodyParagraphs: [
-          'This branch is the complement of the update gate: it measures how much room is left for the new candidate state.',
-          'When the carry signal stays low, this shelf grows stronger and gives fresh evidence a larger share of the final mix.',
-        ],
-      },
-      resetGate: {
-        heading: 'GRU Reset Gate',
-        bodyParagraphs: [
-          'The reset gate decides how much of the previous state the candidate generator is allowed to inspect.',
-          'Closing it makes the candidate behave more like a fresh local reaction; opening it lets older context shape the new proposal.',
-        ],
-      },
-      memoryCell: {
-        heading: 'GRU Candidate Memory',
-        bodyParagraphs: [
-          'In this GRU, the memory cell is the candidate-state workshop rather than the final state itself.',
-          'It combines current input with reset-filtered history to propose what the unit would believe if it decided to refresh.',
-        ],
-      },
-      output: {
-        heading: 'GRU Output Mix',
-        bodyParagraphs: [
-          'The output mix is the actual recurrent state emitted by the GRU at this step.',
-          'It is the weighted blend of carried old state and the new candidate, so downstream layers see the final compromise instead of the raw proposal.',
-        ],
-      },
-      previousOutput: {
-        heading: 'GRU Previous Output',
-        bodyParagraphs: [
-          'This shelf is the delayed state fed back from the previous timestep.',
-          'It is the recurrent trace the rest of the block decides to preserve, ignore, or remix into something new.',
-        ],
-      },
-    } as Record<string, HiddenColumnTooltipContent>
-  )[roleName] ?? resolveGenericRecurrentRoleTooltip('GRU role', roleName);
+    (
+      {
+        updateGate: {
+          heading: 'GRU Update Gate',
+          bodyParagraphs: [
+            'The update gate chooses how much of the old state survives into the next output.',
+            "It is the GRU's main carry-versus-overwrite dial, blending memory retention with new evidence.",
+          ],
+        },
+        inverseUpdateGate: {
+          heading: 'GRU Inverse-Update Branch',
+          bodyParagraphs: [
+            'This branch is the complement of the update gate: it measures how much room is left for the new candidate state.',
+            'When the carry signal stays low, this shelf grows stronger and gives fresh evidence a larger share of the final mix.',
+          ],
+        },
+        resetGate: {
+          heading: 'GRU Reset Gate',
+          bodyParagraphs: [
+            'The reset gate decides how much of the previous state the candidate generator is allowed to inspect.',
+            'Closing it makes the candidate behave more like a fresh local reaction; opening it lets older context shape the new proposal.',
+          ],
+        },
+        memoryCell: {
+          heading: 'GRU Candidate Memory',
+          bodyParagraphs: [
+            'In this GRU, the memory cell is the candidate-state workshop rather than the final state itself.',
+            'It combines current input with reset-filtered history to propose what the unit would believe if it decided to refresh.',
+          ],
+        },
+        output: {
+          heading: 'GRU Output Mix',
+          bodyParagraphs: [
+            'The output mix is the actual recurrent state emitted by the GRU at this step.',
+            'It is the weighted blend of carried old state and the new candidate, so downstream layers see the final compromise instead of the raw proposal.',
+          ],
+        },
+        previousOutput: {
+          heading: 'GRU Previous Output',
+          bodyParagraphs: [
+            'This shelf is the delayed state fed back from the previous timestep.',
+            'It is the recurrent trace the rest of the block decides to preserve, ignore, or remix into something new.',
+          ],
+        },
+      } as Record<string, HiddenColumnTooltipContent>
+    )[roleName] ?? resolveGenericRecurrentRoleTooltip('GRU role', roleName)
+  );
 }
 
 function resolveNarxRoleTooltip(
@@ -735,17 +758,18 @@ function groupHiddenNodesByTopology(
   const filteredRuntimeNodeIndices = new Set(
     filteredRuntimeNodes.map((runtimeNode) => runtimeNode.index),
   );
-  const filteredRuntimeConnections = ((network.connections ?? []) as VisualNetworkConnectionLike[])
-    .filter((runtimeConnection) => {
-      const fromNodeIndex = runtimeConnection.from?.index;
-      const toNodeIndex = runtimeConnection.to?.index;
-      return (
-        typeof fromNodeIndex === 'number' &&
-        typeof toNodeIndex === 'number' &&
-        filteredRuntimeNodeIndices.has(fromNodeIndex) &&
-        filteredRuntimeNodeIndices.has(toNodeIndex)
-      );
-    });
+  const filteredRuntimeConnections = (
+    (network.connections ?? []) as VisualNetworkConnectionLike[]
+  ).filter((runtimeConnection) => {
+    const fromNodeIndex = runtimeConnection.from?.index;
+    const toNodeIndex = runtimeConnection.to?.index;
+    return (
+      typeof fromNodeIndex === 'number' &&
+      typeof toNodeIndex === 'number' &&
+      filteredRuntimeNodeIndices.has(fromNodeIndex) &&
+      filteredRuntimeNodeIndices.has(toNodeIndex)
+    );
+  });
 
   const hiddenDepthByNodeIndex = resolveHiddenNodeDepthByTopology(
     filteredRuntimeNodes,
@@ -922,9 +946,11 @@ function resolveStronglyConnectedTopologyComponents(
       }
     }
 
-    components.push(componentNodes.toSorted((leftNodeIndex, rightNodeIndex) =>
-      leftNodeIndex - rightNodeIndex,
-    ));
+    components.push(
+      componentNodes.toSorted(
+        (leftNodeIndex, rightNodeIndex) => leftNodeIndex - rightNodeIndex,
+      ),
+    );
   }
 }
 
@@ -941,19 +967,21 @@ function resolveTopologyComponentDepths(
   const componentDepthByIndex = new Map<number, number>();
   const componentEdgeKeys = new Set<string>();
 
-  topologyComponents.components.forEach((componentNodeIndices, componentIndex) => {
-    outgoingTargetsByComponentIndex.set(componentIndex, []);
-    incomingEdgeCountByComponentIndex.set(componentIndex, 0);
-    componentDepthByIndex.set(
-      componentIndex,
-      componentNodeIndices.some((nodeIndex) => {
-        const nodeType = nodeByIndex.get(nodeIndex)?.type;
-        return nodeType === 'input' || nodeType === 'constant';
-      })
-        ? 0
-        : 1,
-    );
-  });
+  topologyComponents.components.forEach(
+    (componentNodeIndices, componentIndex) => {
+      outgoingTargetsByComponentIndex.set(componentIndex, []);
+      incomingEdgeCountByComponentIndex.set(componentIndex, 0);
+      componentDepthByIndex.set(
+        componentIndex,
+        componentNodeIndices.some((nodeIndex) => {
+          const nodeType = nodeByIndex.get(nodeIndex)?.type;
+          return nodeType === 'input' || nodeType === 'constant';
+        })
+          ? 0
+          : 1,
+      );
+    },
+  );
 
   topologyEdges.forEach(([fromNodeIndex, toNodeIndex]) => {
     const fromComponentIndex =

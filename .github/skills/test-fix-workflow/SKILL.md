@@ -33,6 +33,11 @@ canonical tracker format and continuation prompt shape.
 Do not invoke this skill for a single obvious failing assertion unless the task
 is likely to expand into a broader failure-repair pass.
 
+Do not invoke this skill for **coverage expansion** on passing code. Use
+`coverage-tranche` instead when the test suite is green and the goal is to
+raise coverage metrics toward 100%. The two skills are complements: this skill
+repairs failures first; `coverage-tranche` expands coverage afterward.
+
 ## Task Packet
 
 Pass a compact packet that includes:

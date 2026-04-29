@@ -78,9 +78,9 @@ describe('neat adaptive operator utilities chapter', () => {
         const stats = new Map<string, { success: number; attempts: number }>([
           ['rewire', { attempts: 8, success: 6 }],
         ]);
-        const entries = [['rewire', { attempts: 8, success: 6 }]] satisfies Array<
-          [string, { success: number; attempts: number }]
-        >;
+        const entries = [
+          ['rewire', { attempts: 8, success: 6 }],
+        ] satisfies Array<[string, { success: number; attempts: number }]>;
 
         // Act
         applyOperatorDecay(stats, entries, 0.25);

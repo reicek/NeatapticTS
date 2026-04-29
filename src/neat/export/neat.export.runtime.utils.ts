@@ -48,8 +48,7 @@ export function serializeRuntimeMeta(
     runtime.lastInbreedingCount = internal._lastInbreedingCount;
   }
   if (typeof internal._lastGlobalImproveGeneration === 'number') {
-    runtime.lastGlobalImproveGeneration =
-      internal._lastGlobalImproveGeneration;
+    runtime.lastGlobalImproveGeneration = internal._lastGlobalImproveGeneration;
   }
   if (Array.isArray(internal._speciesHistory)) {
     runtime.speciesHistory = structuredClone(internal._speciesHistory);
@@ -109,9 +108,8 @@ function readArchitectureCounters(): {
       Connection as unknown as { _nextInnovation: number }
     )._nextInnovation,
     nextNodeGeneId: (Node as unknown as { _nextGeneId: number })._nextGeneId,
-    nextNodeIndex: (
-      Node as unknown as { _globalNodeIndex: number }
-    )._globalNodeIndex,
+    nextNodeIndex: (Node as unknown as { _globalNodeIndex: number })
+      ._globalNodeIndex,
   };
 }
 
@@ -121,9 +119,8 @@ function restoreArchitectureCounters(runtimeMeta: NeatRuntimeMetaJSON): void {
   // so a full checkpoint can keep allocating unique, deterministic identity
   // values after restore.
   if (typeof runtimeMeta.nextConnectionInnovation === 'number') {
-    (
-      Connection as unknown as { _nextInnovation: number }
-    )._nextInnovation = runtimeMeta.nextConnectionInnovation;
+    (Connection as unknown as { _nextInnovation: number })._nextInnovation =
+      runtimeMeta.nextConnectionInnovation;
   }
   if (typeof runtimeMeta.nextNodeGeneId === 'number') {
     (Node as unknown as { _nextGeneId: number })._nextGeneId =

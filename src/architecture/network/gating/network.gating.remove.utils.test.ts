@@ -235,7 +235,9 @@ describe('network gating removal utility chapter', () => {
           to: successorNode,
           gater: removedNode,
         });
-        removedNode.connections.out = createConnectionList([outboundConnection]);
+        removedNode.connections.out = createConnectionList([
+          outboundConnection,
+        ]);
         const disconnect = jest.fn();
         const network = createNetwork({ disconnect });
         const preservedGaters: Node[] = [];
@@ -321,12 +323,13 @@ describe('network gating removal utility chapter', () => {
         );
 
         // Assert
-        expect({ bridgingConnections, connectCalls: connect.mock.calls }).toEqual(
-          {
-            bridgingConnections: [],
-            connectCalls: [],
-          },
-        );
+        expect({
+          bridgingConnections,
+          connectCalls: connect.mock.calls,
+        }).toEqual({
+          bridgingConnections: [],
+          connectCalls: [],
+        });
       });
     });
 
@@ -354,15 +357,16 @@ describe('network gating removal utility chapter', () => {
         );
 
         // Assert
-        expect({ bridgingConnections, connectCalls: connect.mock.calls }).toEqual(
-          {
-            bridgingConnections: [createdConnection],
-            connectCalls: [
-              [predecessorNodeA, successorNode],
-              [predecessorNodeB, successorNode],
-            ],
-          },
-        );
+        expect({
+          bridgingConnections,
+          connectCalls: connect.mock.calls,
+        }).toEqual({
+          bridgingConnections: [createdConnection],
+          connectCalls: [
+            [predecessorNodeA, successorNode],
+            [predecessorNodeB, successorNode],
+          ],
+        });
       });
     });
   });
@@ -475,12 +479,13 @@ describe('network gating removal utility chapter', () => {
         removeNodeAtIndex(network, 1);
 
         // Assert
-        expect({ nodes: network.nodes, isDirty: network._nodeIndexDirty }).toEqual(
-          {
-            nodes: [retainedNode],
-            isDirty: true,
-          },
-        );
+        expect({
+          nodes: network.nodes,
+          isDirty: network._nodeIndexDirty,
+        }).toEqual({
+          nodes: [retainedNode],
+          isDirty: true,
+        });
       });
     });
   });
@@ -501,15 +506,13 @@ function createNetwork(
   } as unknown as Network;
 }
 
-function createNode(
-  overrides: {
-    gatedConnections?: Connection[];
-    inboundConnections?: Connection[];
-    isProjectingTo?: (targetNode: Node) => boolean;
-    outboundConnections?: Connection[];
-    type: string;
-  },
-): Node {
+function createNode(overrides: {
+  gatedConnections?: Connection[];
+  inboundConnections?: Connection[];
+  isProjectingTo?: (targetNode: Node) => boolean;
+  outboundConnections?: Connection[];
+  type: string;
+}): Node {
   return {
     type: overrides.type,
     connections: {

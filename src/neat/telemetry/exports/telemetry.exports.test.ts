@@ -351,9 +351,10 @@ describe('neat telemetry exports chapter', () => {
         };
 
         // Act
-        const headers = exportTelemetryCSV.call(telemetryExportHost).split(
-          /\r?\n/,
-        )[0].split(',');
+        const headers = exportTelemetryCSV
+          .call(telemetryExportHost)
+          .split(/\r?\n/)[0]
+          .split(',');
 
         // Assert
         expect(headers.includes('objImportance')).toBe(false);

@@ -422,7 +422,9 @@ describe('neat evolve adaptive chapter', () => {
     describe('given autoCompatTuning has no target and no options.targetSpecies', () => {
       it('derives the target from the population size square root', () => {
         // Arrange
-        const evolutionController = createAutoCompatController({ observedSpeciesCount: 1 });
+        const evolutionController = createAutoCompatController({
+          observedSpeciesCount: 1,
+        });
         // Remove all target settings so Math.max fallback is used
         evolutionController.options.autoCompatTuning = { enabled: true };
         evolutionController.options.targetSpecies = undefined;
@@ -446,8 +448,13 @@ describe('neat evolve adaptive chapter', () => {
     describe('given autoCompatTuning options are all absent (uses config fallbacks)', () => {
       it('applies fallback coefficients from the config parameter', () => {
         // Arrange
-        const evolutionController = createAutoCompatController({ observedSpeciesCount: 1 });
-        evolutionController.options.autoCompatTuning = { enabled: true, target: 1 };
+        const evolutionController = createAutoCompatController({
+          observedSpeciesCount: 1,
+        });
+        evolutionController.options.autoCompatTuning = {
+          enabled: true,
+          target: 1,
+        };
         evolutionController.options.excessCoeff = undefined;
         evolutionController.options.disjointCoeff = undefined;
         // Force a non-zero error to avoid the equilibrium random path
@@ -474,7 +481,9 @@ describe('neat evolve adaptive chapter', () => {
     describe('given species list is empty (zero length → || 1 fallback)', () => {
       it('treats observed species count as one to avoid division by zero', () => {
         // Arrange
-        const evolutionController = createAutoCompatController({ targetSpecies: 5 });
+        const evolutionController = createAutoCompatController({
+          targetSpecies: 5,
+        });
         evolutionController._species = [];
 
         // Act
@@ -496,7 +505,9 @@ describe('neat evolve adaptive chapter', () => {
     describe('given a population with mixed cache presence', () => {
       it('removes _compatCache from genomes that have it and ignores those that do not', () => {
         // Arrange
-        const evolutionController = createReenableController({ attemptsByGenome: [0, 0] });
+        const evolutionController = createReenableController({
+          attemptsByGenome: [0, 0],
+        });
         const genomeWithCache = evolutionController.population[0];
         genomeWithCache._compatCache = { 2: 0.5 };
 

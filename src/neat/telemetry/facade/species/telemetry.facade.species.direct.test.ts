@@ -1,5 +1,8 @@
 jest.mock('../../exports/telemetry.exports', () => ({
-  exportSpeciesHistoryCSV: jest.fn(function (this: unknown, maxEntries: number) {
+  exportSpeciesHistoryCSV: jest.fn(function (
+    this: unknown,
+    maxEntries: number,
+  ) {
     return JSON.stringify({
       maxEntries,
       receivedHost: this,
@@ -22,7 +25,9 @@ jest.mock('../../../species/species', () => ({
 }));
 
 jest.mock('../../../species/history/species.history', () => {
-  const actualModule = jest.requireActual('../../../species/history/species.history');
+  const actualModule = jest.requireActual(
+    '../../../species/history/species.history',
+  );
 
   return {
     ...actualModule,
@@ -49,7 +54,9 @@ import {
   type TelemetryFacadeSpeciesHost,
 } from './telemetry.facade.species';
 
-const mockedExportSpeciesHistoryCsvImpl = jest.mocked(exportSpeciesHistoryCsvImpl);
+const mockedExportSpeciesHistoryCsvImpl = jest.mocked(
+  exportSpeciesHistoryCsvImpl,
+);
 const mockedExportSpeciesHistoryJsonl = jest.mocked(exportSpeciesHistoryJsonl);
 const mockedGetSpeciesStatsImpl = jest.mocked(getSpeciesStatsImpl);
 

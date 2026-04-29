@@ -67,8 +67,9 @@ function getFirstOperatorInput(
   model: OnnxModel,
   operatorType: string,
 ): string | undefined {
-  return model.graph.node.find((nodeEntry) => nodeEntry.op_type === operatorType)
-    ?.input[0];
+  return model.graph.node.find(
+    (nodeEntry) => nodeEntry.op_type === operatorType,
+  )?.input[0];
 }
 
 describe('network onnx export postprocess chapter', () => {
@@ -211,14 +212,7 @@ describe('network onnx export postprocess chapter', () => {
         };
 
         // Act
-        finalizeExportMetadata(
-          onnxModel,
-          layers,
-          exportOptions,
-          true,
-          [1],
-          [],
-        );
+        finalizeExportMetadata(onnxModel, layers, exportOptions, true, [1], []);
 
         // Assert
         expect(getMetadataValue(onnxModel, 'conv2d_sharing_verified')).toBe(
@@ -243,14 +237,7 @@ describe('network onnx export postprocess chapter', () => {
         } as OnnxExportOptions;
 
         // Act
-        finalizeExportMetadata(
-          onnxModel,
-          layers,
-          exportOptions,
-          true,
-          [1],
-          [],
-        );
+        finalizeExportMetadata(onnxModel, layers, exportOptions, true, [1], []);
 
         // Assert
         expect(getMetadataValue(onnxModel, 'conv2d_sharing_verified')).toBe(
@@ -284,14 +271,7 @@ describe('network onnx export postprocess chapter', () => {
         };
 
         // Act
-        finalizeExportMetadata(
-          onnxModel,
-          layers,
-          exportOptions,
-          true,
-          [2],
-          [],
-        );
+        finalizeExportMetadata(onnxModel, layers, exportOptions, true, [2], []);
 
         // Assert
         expect(getMetadataValue(onnxModel, 'conv2d_sharing_verified')).toBe(
@@ -321,14 +301,7 @@ describe('network onnx export postprocess chapter', () => {
         };
 
         // Act
-        finalizeExportMetadata(
-          onnxModel,
-          layers,
-          exportOptions,
-          true,
-          [3],
-          [],
-        );
+        finalizeExportMetadata(onnxModel, layers, exportOptions, true, [3], []);
 
         // Assert
         expect(getMetadataValue(onnxModel, 'conv2d_sharing_verified')).toBe(
@@ -358,14 +331,7 @@ describe('network onnx export postprocess chapter', () => {
         };
 
         // Act
-        finalizeExportMetadata(
-          onnxModel,
-          layers,
-          exportOptions,
-          true,
-          [4],
-          [],
-        );
+        finalizeExportMetadata(onnxModel, layers, exportOptions, true, [4], []);
 
         // Assert
         expect(getMetadataValue(onnxModel, 'conv2d_sharing_verified')).toBe(

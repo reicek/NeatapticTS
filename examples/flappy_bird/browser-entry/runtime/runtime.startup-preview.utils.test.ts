@@ -71,7 +71,9 @@ describe('resolveRuntimeStartupPreviewVisualState', () => {
       pipeScrollSpeedPxPerFrame: FLAPPY_PIPE_SPEED_PX_PER_FRAME,
     });
 
-    expect(visualState.legendFontSizePx).toBe(FLAPPY_STARTUP_PREVIEW_LEGEND_MIN_FONT_SIZE_PX);
+    expect(visualState.legendFontSizePx).toBe(
+      FLAPPY_STARTUP_PREVIEW_LEGEND_MIN_FONT_SIZE_PX,
+    );
   });
 
   it('clamps legend font size to the maximum on a very large canvas', () => {
@@ -83,12 +85,15 @@ describe('resolveRuntimeStartupPreviewVisualState', () => {
       pipeScrollSpeedPxPerFrame: FLAPPY_PIPE_SPEED_PX_PER_FRAME,
     });
 
-    expect(visualState.legendFontSizePx).toBe(FLAPPY_STARTUP_PREVIEW_LEGEND_MAX_FONT_SIZE_PX);
+    expect(visualState.legendFontSizePx).toBe(
+      FLAPPY_STARTUP_PREVIEW_LEGEND_MAX_FONT_SIZE_PX,
+    );
   });
 
   it('returns half opacity halfway through the fade-out window', () => {
     const nowMs = 1_000;
-    const previewExitStartTimeMs = nowMs - FLAPPY_STARTUP_PREVIEW_FADE_DURATION_MS / 2;
+    const previewExitStartTimeMs =
+      nowMs - FLAPPY_STARTUP_PREVIEW_FADE_DURATION_MS / 2;
     const visualState = resolveRuntimeStartupPreviewVisualState({
       nowMs,
       previewStartTimeMs: 0,

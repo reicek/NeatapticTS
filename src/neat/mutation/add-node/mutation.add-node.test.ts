@@ -8,8 +8,10 @@ import { createInnovationTracker } from '../../innovation-tracker/innovation-tra
 import {
   applySplitWithExistingRecord,
   applySplitWithNewRecord,
+  assignInnovationsForNewSplit,
   buildSplitDescriptor,
   chooseConnectionForSplit,
+  collectEnabledConnections,
   disconnectOriginalConnection,
   ensureBootstrapConnection,
 } from './mutation.add-node';
@@ -93,8 +95,18 @@ describe('neat mutation add-node chapter', () => {
         // Arrange
         const inputNode = createNode('input', 1);
         const outputNode = createNode('output', 2);
-        const firstConnection = createConnection(inputNode, outputNode, 0.75, 17);
-        const secondConnection = createConnection(inputNode, outputNode, 0.75, 18);
+        const firstConnection = createConnection(
+          inputNode,
+          outputNode,
+          0.75,
+          17,
+        );
+        const secondConnection = createConnection(
+          inputNode,
+          outputNode,
+          0.75,
+          18,
+        );
 
         // Act
         const splitKeys = [
@@ -202,6 +214,116 @@ describe('neat mutation add-node chapter', () => {
     });
   });
 
+  describe('collectEnabledConnections()', () => {
+    describe('given a mix of enabled and disabled connections', () => {
+      it('includes connections where enabled is not explicitly false', () => {
+        // Arrange
+        const inputNode = createNode('input', 1);
+        const outputNode = createNode('output', 2);
+        const activeConnection = createConnection(
+          inputNode,
+          outputNode,
+          0.5,
+          1,
+        );
+        const disabledConnection: ConnectionWithMetadata = {
+          ...createConnection(inputNode, outputNode, 0.3, 2),
+          enabled: false,
+        };
+        const genome = createGenome([inputNode, outputNode]);
+        genome.connections = [activeConnection, disabledConnection];
+
+        // Act
+        const result = collectEnabledConnections(genome);
+
+        // Assert: only the active connection passes the filter
+        expect(result).toEqual([activeConnection]);
+      });
+    });
+  });
+
+  describe('buildSplitDescriptor — legacy path with missing geneIds', () => {
+    describe('given the split connection lacks innovation and both endpoints lack geneId', () => {
+      it('falls back to the default zero id for both source and target', () => {
+        // Arrange: connection with no innovation and nodes with no geneId
+        const fromNode: NodeWithMetadata = {
+          type: 'input',
+          connections: { in: [], out: [] },
+          isProjectingTo: () => false,
+        };
+        const toNode: NodeWithMetadata = {
+          type: 'output',
+          connections: { in: [], out: [] },
+          isProjectingTo: () => false,
+        };
+        const connection = createConnection(fromNode, toNode, 0.5);
+
+        // Act
+        const { splitKey } = buildSplitDescriptor(connection);
+
+        // Assert: DEFAULT_GENE_ID=0 for both endpoints
+        expect(splitKey).toBe('legacyEndpoints:0->0');
+      });
+    });
+  });
+
+  describe('applySplitWithExistingRecord — empty connect result', () => {
+    describe('given the genome connect method returns no connections', () => {
+      it('skips innovation stamp when split edges cannot be created', () => {
+        // Arrange: genome whose connect yields nothing
+        const inputNode = createNode('input', 1);
+        const outputNode = createNode('output', 2);
+        const connectionToSplit = createConnection(
+          inputNode,
+          outputNode,
+          0.75,
+          5,
+        );
+        const genome = createGenome([inputNode, outputNode]);
+        genome.connect = () => [];
+
+        const splitDescriptor = { splitKey: 'test-key', originalWeight: 0.75 };
+        const splitRecord = { newNodeGeneId: 41, inInnov: 7, outInnov: 8 };
+
+        // Act
+        applySplitWithExistingRecord(
+          genome,
+          connectionToSplit,
+          splitDescriptor,
+          splitRecord,
+          DeterministicNode,
+          () => 0.5,
+        );
+
+        // Assert: no connections added, no error thrown
+        expect(genome.connections.length).toBe(0);
+      });
+    });
+  });
+
+  describe('assignInnovationsForNewSplit', () => {
+    describe('given no split connections and a node without a geneId', () => {
+      it('falls back to default gene id and default innovation ids', () => {
+        // Arrange: node with no geneId, empty splitConnections
+        const newNode: NodeWithMetadata = {
+          type: 'hidden',
+          connections: { in: [], out: [] },
+          isProjectingTo: () => false,
+        };
+
+        // Act
+        const record = assignInnovationsForNewSplit(
+          newNode,
+          {},
+          createMutationController(),
+        );
+
+        // Assert: all three fall back to their respective defaults (0)
+        expect(record).toEqual({ newNodeGeneId: 0, inInnov: 0, outInnov: 0 });
+      });
+    });
+  });
+
   describe('chooseConnectionForSplit', () => {
     describe('given no enabled connections are available', () => {
       it('returns null', () => {
@@ -209,7 +331,10 @@ describe('neat mutation add-node chapter', () => {
         const mutationController = createMutationController();
 
         // Act
-        const chosenConnection = chooseConnectionForSplit([], mutationController);
+        const chosenConnection = chooseConnectionForSplit(
+          [],
+          mutationController,
+        );
 
         // Assert
         expect(chosenConnection).toBeNull();

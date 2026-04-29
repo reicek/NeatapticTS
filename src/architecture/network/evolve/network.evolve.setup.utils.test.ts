@@ -1,15 +1,43 @@
 import * as methods from '../../../methods/methods';
-import type { EvolveOptions, EvolutionSettings } from '../network.types';
+import type {
+  EvolveOptions,
+  EvolutionSettings,
+  NeatRuntime,
+} from '../network.types';
 import Network from '../network';
 import * as evolveFitnessUtils from './network.evolve.fitness.utils';
 import {
+  applySmallPopulationHeuristics,
   configureNeatOptions,
   createEvolutionConfig,
   prepareFitnessFunction,
+  warnIfNoBestGenomeMayOccur,
 } from './network.evolve.setup.utils';
 
 describe('network evolve setup utility chapter', () => {
   describe('createEvolutionConfig', () => {
+    describe('given no schedule is configured', () => {
+      it('returns undefined', () => {
+        // Arrange
+        const evolutionSettings: EvolutionSettings = {
+          amount: 1,
+          clear: false,
+          cost: methods.Cost.mse,
+          growth: 0,
+          log: 0,
+          schedule: undefined,
+          targetError: 0.01,
+          threads: 1,
+        };
+
+        // Act
+        const result = createEvolutionConfig(evolutionSettings);
+
+        // Assert
+        expect(result).toBeUndefined();
+      });
+    });
+
     describe('given a schedule callback is configured', () => {
       it('returns the structured evolution summary config', () => {
         // Arrange
@@ -71,6 +99,47 @@ describe('network evolve setup utility chapter', () => {
           network,
           popsize: 7,
           speciation: true,
+        });
+      });
+    });
+  });
+
+  describe('warnIfNoBestGenomeMayOccur', () => {
+    describe('given _warnIfNoBestGenome is absent on the neat instance', () => {
+      it('returns early without throwing', () => {
+        // Arrange – _warnIfNoBestGenome absent → line 250 TRUE arm
+        const neatInstance = {
+          // _warnIfNoBestGenome intentionally absent
+        } as unknown as NeatRuntime;
+
+        // Act & Assert (must not throw)
+        expect(() =>
+          warnIfNoBestGenomeMayOccur(neatInstance, { iterations: 0 }),
+        ).not.toThrow();
+      });
+    });
+  });
+
+  describe('applySmallPopulationHeuristics', () => {
+    describe('given popsize is at or below the small-population threshold', () => {
+      it('assigns default mutation rate and amount when they are not already set', () => {
+        // Arrange – popsize=5 triggers the heuristic, undefined rates → lines 277-279
+        const neatInstance = {
+          options: {
+            // mutationRate and mutationAmount intentionally absent
+          },
+        } as unknown as NeatRuntime;
+
+        // Act
+        applySmallPopulationHeuristics(neatInstance, { popsize: 5 });
+
+        // Assert
+        expect({
+          mutationRate: neatInstance.options.mutationRate,
+          mutationAmount: neatInstance.options.mutationAmount,
+        }).toEqual({
+          mutationRate: expect.any(Number),
+          mutationAmount: expect.any(Number),
         });
       });
     });

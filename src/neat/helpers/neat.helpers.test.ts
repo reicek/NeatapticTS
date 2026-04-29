@@ -234,7 +234,9 @@ describe('neat helpers chapter', () => {
         expect(
           new Set(neat.population.map(collectGenerationZeroSignature)).size,
         ).toBe(1);
-        expect(neat.population[0].getRNGState()).toBe(seedNetwork.getRNGState());
+        expect(neat.population[0].getRNGState()).toBe(
+          seedNetwork.getRNGState(),
+        );
         expect(neat.population[0].getTopologyIntent()).toBe(
           seedNetwork.getTopologyIntent(),
         );
@@ -247,8 +249,8 @@ describe('neat helpers chapter', () => {
 
         // Act
         neat.createPool(seedNetwork);
-        const allGenomesValidate = neat.population.every((genome: Network) =>
-          validateNativeGenome(genome).isValid,
+        const allGenomesValidate = neat.population.every(
+          (genome: Network) => validateNativeGenome(genome).isValid,
         );
 
         // Assert
@@ -262,8 +264,8 @@ describe('neat helpers chapter', () => {
 
         // Act
         neat.createPool(seedNetwork);
-        const allGenomesValidate = neat.population.every((genome: Network) =>
-          validateNativeGenome(genome).isValid,
+        const allGenomesValidate = neat.population.every(
+          (genome: Network) => validateNativeGenome(genome).isValid,
         );
 
         // Assert
@@ -347,8 +349,8 @@ describe('neat helpers chapter', () => {
 
         // Act
         neat.createPool(null);
-        const allGenomesValidate = neat.population.every((genome: Network) =>
-          validateNativeGenome(genome).isValid,
+        const allGenomesValidate = neat.population.every(
+          (genome: Network) => validateNativeGenome(genome).isValid,
         );
 
         // Assert

@@ -394,10 +394,9 @@ describe('neat evolve runtime chapter', () => {
         clearPopulationScores(evolutionHost);
 
         // Assert
-        expect(evolutionHost.population.map((genome) => genome.score)).toStrictEqual([
-          undefined,
-          undefined,
-        ]);
+        expect(
+          evolutionHost.population.map((genome) => genome.score),
+        ).toStrictEqual([undefined, undefined]);
       });
     });
   });

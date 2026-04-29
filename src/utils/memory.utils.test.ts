@@ -76,7 +76,10 @@ describe('utils memory helper chapter', () => {
         const trackedNetworks = [{ connections: [{}] }] as NetworkView[];
 
         // Act
-        const normalizedNetworks = normalizeNetworks(undefined, trackedNetworks);
+        const normalizedNetworks = normalizeNetworks(
+          undefined,
+          trackedNetworks,
+        );
 
         // Assert
         expect(normalizedNetworks).toBe(trackedNetworks);
@@ -91,9 +94,7 @@ describe('utils memory helper chapter', () => {
         const expectedStats = { fresh: 2, pooled: 3 };
 
         // Act
-        const allocationStats = safeGetSlabAllocationStats(
-          () => expectedStats,
-        );
+        const allocationStats = safeGetSlabAllocationStats(() => expectedStats);
 
         // Assert
         expect(allocationStats).toEqual(expectedStats);
@@ -371,7 +372,7 @@ describe('utils memory helper chapter', () => {
           connections: 0,
           nodes: 2,
           bytesPerConnection: 0,
-          estimatedTotalBytes: (2 * NODE_OBJECT_BYTES) + 16,
+          estimatedTotalBytes: 2 * NODE_OBJECT_BYTES + 16,
           slabs: {
             slabBytes: 16,
             slabArrayCount: 0,

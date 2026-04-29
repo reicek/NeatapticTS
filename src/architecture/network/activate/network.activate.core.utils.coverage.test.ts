@@ -1,12 +1,7 @@
 import type Network from '../network';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
-import {
-  NetworkActivateCorruptedStructureError,
-} from './network.activate.errors';
-import {
-  activate,
-  gaussianRand,
-} from './network.activate.core.utils';
+import { NetworkActivateCorruptedStructureError } from './network.activate.errors';
+import { activate, gaussianRand } from './network.activate.core.utils';
 import {
   type ActivateRuntimeNetworkProps,
   type ActivationStats,
@@ -803,7 +798,12 @@ describe('network activate core utilities coverage chapter', () => {
           });
 
           configureFallbackTraversal({
-            activationNodes: [inputNode, hiddenNodeOne, hiddenNodeTwo, outputNode],
+            activationNodes: [
+              inputNode,
+              hiddenNodeOne,
+              hiddenNodeTwo,
+              outputNode,
+            ],
             inputValuesByNodeId: new Map([[1, 0.5]]),
             orderedOutputNodes: [outputNode],
           });
@@ -857,7 +857,12 @@ describe('network activate core utilities coverage chapter', () => {
           });
 
           configureFallbackTraversal({
-            activationNodes: [inputNode, hiddenNodeOne, hiddenNodeTwo, outputNode],
+            activationNodes: [
+              inputNode,
+              hiddenNodeOne,
+              hiddenNodeTwo,
+              outputNode,
+            ],
             inputValuesByNodeId: new Map([[1, 0.5]]),
             orderedOutputNodes: [outputNode],
           });
@@ -920,7 +925,10 @@ describe('network activate core utilities coverage chapter', () => {
 
           // Assert
           expect({
-            hiddenActivations: [hiddenNodeOne.activation, hiddenNodeTwo.activation],
+            hiddenActivations: [
+              hiddenNodeOne.activation,
+              hiddenNodeTwo.activation,
+            ],
             hiddenMasks: [hiddenNodeOne.mask, hiddenNodeTwo.mask],
             stats: summarizeStats(activationNetwork),
           }).toEqual({
@@ -975,7 +983,10 @@ describe('network activate core utilities coverage chapter', () => {
 
           // Assert
           expect({
-            hiddenActivations: [hiddenNodeOne.activation, hiddenNodeTwo.activation],
+            hiddenActivations: [
+              hiddenNodeOne.activation,
+              hiddenNodeTwo.activation,
+            ],
             hiddenMasks: [hiddenNodeOne.mask, hiddenNodeTwo.mask],
             stats: summarizeStats(activationNetwork),
           }).toEqual({
@@ -1029,7 +1040,10 @@ describe('network activate core utilities coverage chapter', () => {
             input: 1,
             output: 1,
             nodes: [inputNode, hiddenNode, outputNode],
-            connections: [restorableOutputConnection, deletedSnapshotConnection],
+            connections: [
+              restorableOutputConnection,
+              deletedSnapshotConnection,
+            ],
             _rand: createRandomSequenceGenerator([0.5, 0.5, 0.5, 0.5]),
             _weightNoiseStd: 0.2,
           });
@@ -1138,7 +1152,8 @@ describe('network activate core utilities coverage chapter', () => {
           // Assert
           expect({
             connections: activationNetwork.connections.map(summarizeConnection),
-            droppedConnections: summarizeStats(activationNetwork)?.droppedConnections,
+            droppedConnections:
+              summarizeStats(activationNetwork)?.droppedConnections,
           }).toEqual({
             connections: [
               {
@@ -1238,7 +1253,11 @@ describe('network activate core utilities coverage chapter', () => {
             _stochasticDepth: [0.4],
           });
 
-          assignLayerSequence(activationNetwork, [stableLayers, stableLayers, undefined]);
+          assignLayerSequence(activationNetwork, [
+            stableLayers,
+            stableLayers,
+            undefined,
+          ]);
 
           // Act
           const activationResult = activate.call(
@@ -1495,19 +1514,21 @@ function summarizeConnection(connection: MockConnection): {
   };
 }
 
-function summarizeStats(network: MockActivationNetwork): {
-  droppedConnections: number;
-  droppedHiddenNodes: number;
-  skippedLayers: number[];
-  totalConnections: number;
-  totalHiddenNodes: number;
-  weightNoise: {
-    count: number;
-    maxAbs: number;
-    meanAbs: number;
-    sumAbs: number;
-  };
-} | undefined {
+function summarizeStats(network: MockActivationNetwork):
+  | {
+      droppedConnections: number;
+      droppedHiddenNodes: number;
+      skippedLayers: number[];
+      totalConnections: number;
+      totalHiddenNodes: number;
+      weightNoise: {
+        count: number;
+        maxAbs: number;
+        meanAbs: number;
+        sumAbs: number;
+      };
+    }
+  | undefined {
   const statsSnapshot = network._lastStats as StatsSnapshot | undefined;
 
   if (!statsSnapshot) {

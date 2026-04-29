@@ -292,7 +292,6 @@ describe('network training learning capability chapter', () => {
         });
       });
     });
-
   });
 
   describe('dropout during training', () => {

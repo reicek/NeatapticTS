@@ -83,9 +83,7 @@ function findMetadataEntry(
   metadataProps: OnnxMetadataProperty[] | undefined,
   key: string,
 ): OnnxMetadataProperty {
-  const matchingEntry = metadataProps?.find(
-    (property) => property.key === key,
-  );
+  const matchingEntry = metadataProps?.find((property) => property.key === key);
 
   if (!matchingEntry) {
     throw new Error(`Missing metadata entry: ${key}`);
@@ -130,7 +128,11 @@ function createConvSharingVerifiedScenario(): {
       connectionEntry.weight = 0;
     });
 
-    for (let kernelRowIndex = 0; kernelRowIndex < kernelHeight; kernelRowIndex += 1) {
+    for (
+      let kernelRowIndex = 0;
+      kernelRowIndex < kernelHeight;
+      kernelRowIndex += 1
+    ) {
       for (
         let kernelColumnIndex = 0;
         kernelColumnIndex < kernelWidth;
@@ -308,14 +310,19 @@ describe('network onnx import weights utility chapter', () => {
         setHiddenLayerSentinelState(targetNetwork, -3, -7);
 
         // Act
-        assignWeightsAndBiases(targetNetwork, onnxModel, [2], onnxModel.metadata_props);
+        assignWeightsAndBiases(
+          targetNetwork,
+          onnxModel,
+          [2],
+          onnxModel.metadata_props,
+        );
 
         // Assert
         expect({
           firstHiddenBias: getHiddenNodes(targetNetwork)[0].bias,
-          firstHiddenWeights: getHiddenNodes(targetNetwork)[0].connections.in.map(
-            (connectionEntry) => connectionEntry.weight,
-          ),
+          firstHiddenWeights: getHiddenNodes(
+            targetNetwork,
+          )[0].connections.in.map((connectionEntry) => connectionEntry.weight),
         }).toEqual({
           firstHiddenBias: -7,
           firstHiddenWeights: [-3, -3],
@@ -340,14 +347,19 @@ describe('network onnx import weights utility chapter', () => {
         );
 
         // Act
-        assignWeightsAndBiases(targetNetwork, onnxModel, [2], onnxModel.metadata_props);
+        assignWeightsAndBiases(
+          targetNetwork,
+          onnxModel,
+          [2],
+          onnxModel.metadata_props,
+        );
 
         // Assert
         expect({
           firstHiddenBias: getHiddenNodes(targetNetwork)[0].bias,
-          remainingInboundWeights: getHiddenNodes(targetNetwork)[0].connections.in.map(
-            (connectionEntry) => connectionEntry.weight,
-          ),
+          remainingInboundWeights: getHiddenNodes(
+            targetNetwork,
+          )[0].connections.in.map((connectionEntry) => connectionEntry.weight),
         }).toEqual({
           firstHiddenBias: 0.25,
           remainingInboundWeights: [0.22],
@@ -378,7 +390,10 @@ describe('network onnx import weights utility chapter', () => {
         assignWeightsAndBiases(
           targetNetwork,
           onnxModel,
-          deriveHiddenLayerSizes(onnxModel.graph.initializer, onnxModel.metadata_props),
+          deriveHiddenLayerSizes(
+            onnxModel.graph.initializer,
+            onnxModel.metadata_props,
+          ),
           onnxModel.metadata_props,
         );
 
@@ -423,7 +438,10 @@ describe('network onnx import weights utility chapter', () => {
         assignWeightsAndBiases(
           targetNetwork,
           onnxModel,
-          deriveHiddenLayerSizes(onnxModel.graph.initializer, onnxModel.metadata_props),
+          deriveHiddenLayerSizes(
+            onnxModel.graph.initializer,
+            onnxModel.metadata_props,
+          ),
           onnxModel.metadata_props,
         );
 
@@ -466,16 +484,19 @@ describe('network onnx import weights utility chapter', () => {
         assignWeightsAndBiases(
           targetNetwork,
           onnxModel,
-          deriveHiddenLayerSizes(onnxModel.graph.initializer, onnxModel.metadata_props),
+          deriveHiddenLayerSizes(
+            onnxModel.graph.initializer,
+            onnxModel.metadata_props,
+          ),
           onnxModel.metadata_props,
         );
 
         // Assert
         expect({
           firstHiddenBias: getHiddenNodes(targetNetwork)[0].bias,
-          remainingInboundWeights: getHiddenNodes(targetNetwork)[0].connections.in.map(
-            (connectionEntry) => connectionEntry.weight,
-          ),
+          remainingInboundWeights: getHiddenNodes(
+            targetNetwork,
+          )[0].connections.in.map((connectionEntry) => connectionEntry.weight),
         }).toEqual({
           firstHiddenBias: 0.27,
           remainingInboundWeights: [0.52],
@@ -495,7 +516,12 @@ describe('network onnx import weights utility chapter', () => {
         setHiddenLayerSentinelState(targetNetwork, -5, -5);
 
         // Act
-        assignWeightsAndBiases(targetNetwork, onnxModel, [4], onnxModel.metadata_props);
+        assignWeightsAndBiases(
+          targetNetwork,
+          onnxModel,
+          [4],
+          onnxModel.metadata_props,
+        );
 
         // Assert
         expect({
@@ -525,14 +551,19 @@ describe('network onnx import weights utility chapter', () => {
         setHiddenLayerSentinelState(targetNetwork, -4, -4);
 
         // Act
-        assignWeightsAndBiases(targetNetwork, onnxModel, [4, 1], onnxModel.metadata_props);
+        assignWeightsAndBiases(
+          targetNetwork,
+          onnxModel,
+          [4, 1],
+          onnxModel.metadata_props,
+        );
 
         // Assert
         expect({
           secondHiddenBias: getHiddenNodes(targetNetwork)[4].bias,
-          secondHiddenWeights: getHiddenNodes(targetNetwork)[4].connections.in.map(
-            (connectionEntry) => connectionEntry.weight,
-          ),
+          secondHiddenWeights: getHiddenNodes(
+            targetNetwork,
+          )[4].connections.in.map((connectionEntry) => connectionEntry.weight),
         }).toEqual({
           secondHiddenBias: 0.25,
           secondHiddenWeights: scenario.kernelPattern,
@@ -551,7 +582,12 @@ describe('network onnx import weights utility chapter', () => {
         findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value = '{';
         const targetNetwork = Network.createMLP(9, [4], 2);
         const assignCallback = () =>
-          assignWeightsAndBiases(targetNetwork, onnxModel, [4], onnxModel.metadata_props);
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [4],
+            onnxModel.metadata_props,
+          );
 
         // Assert
         expect(assignCallback).not.toThrow();
@@ -566,10 +602,16 @@ describe('network onnx import weights utility chapter', () => {
           includeMetadata: true,
           conv2dMappings: scenario.mappings,
         });
-        findMetadataEntry(onnxModel.metadata_props, 'conv2d_layers').value = '{}';
+        findMetadataEntry(onnxModel.metadata_props, 'conv2d_layers').value =
+          '{}';
         const targetNetwork = Network.createMLP(9, [4], 2);
         const assignCallback = () =>
-          assignWeightsAndBiases(targetNetwork, onnxModel, [4], onnxModel.metadata_props);
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [4],
+            onnxModel.metadata_props,
+          );
 
         // Assert
         expect(assignCallback).not.toThrow();
@@ -584,10 +626,16 @@ describe('network onnx import weights utility chapter', () => {
           includeMetadata: true,
           conv2dMappings: scenario.mappings,
         });
-        findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value = '[]';
+        findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value =
+          '[]';
         const targetNetwork = Network.createMLP(9, [4], 2);
         const assignCallback = () =>
-          assignWeightsAndBiases(targetNetwork, onnxModel, [4], onnxModel.metadata_props);
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [4],
+            onnxModel.metadata_props,
+          );
 
         // Assert
         expect(assignCallback).not.toThrow();
@@ -603,16 +651,23 @@ describe('network onnx import weights utility chapter', () => {
           conv2dMappings: scenario.mappings,
         });
         const outOfBoundsSpec = {
-          ...JSON.parse(findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value)[0],
+          ...JSON.parse(
+            findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value,
+          )[0],
           layerIndex: 2,
         } as Conv2DMapping;
-        findMetadataEntry(onnxModel.metadata_props, 'conv2d_layers').value = '[2]';
-        findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value = JSON.stringify([
-          outOfBoundsSpec,
-        ]);
+        findMetadataEntry(onnxModel.metadata_props, 'conv2d_layers').value =
+          '[2]';
+        findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value =
+          JSON.stringify([outOfBoundsSpec]);
         const targetNetwork = Network.createMLP(9, [4], 2);
         const assignCallback = () =>
-          assignWeightsAndBiases(targetNetwork, onnxModel, [4], onnxModel.metadata_props);
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [4],
+            onnxModel.metadata_props,
+          );
 
         // Assert
         expect(assignCallback).not.toThrow();
@@ -632,7 +687,12 @@ describe('network onnx import weights utility chapter', () => {
         );
         const targetNetwork = Network.createMLP(9, [4], 2);
         const assignCallback = () =>
-          assignWeightsAndBiases(targetNetwork, onnxModel, [4], onnxModel.metadata_props);
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [4],
+            onnxModel.metadata_props,
+          );
 
         // Assert
         expect(assignCallback).not.toThrow();
@@ -656,7 +716,12 @@ describe('network onnx import weights utility chapter', () => {
         convWeightTensor.dims = [2, 1, 2, 2];
         const targetNetwork = Network.createMLP(9, [4], 2);
         const assignCallback = () =>
-          assignWeightsAndBiases(targetNetwork, onnxModel, [4], onnxModel.metadata_props);
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [4],
+            onnxModel.metadata_props,
+          );
 
         // Assert
         expect(assignCallback).not.toThrow();
@@ -672,16 +737,22 @@ describe('network onnx import weights utility chapter', () => {
           conv2dMappings: scenario.mappings,
         });
         const paddedSpec = {
-          ...JSON.parse(findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value)[0],
+          ...JSON.parse(
+            findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value,
+          )[0],
           padTop: 1,
           padLeft: 1,
         } as Conv2DMapping;
-        findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value = JSON.stringify([
-          paddedSpec,
-        ]);
+        findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value =
+          JSON.stringify([paddedSpec]);
         const targetNetwork = Network.createMLP(9, [4], 2);
         const assignCallback = () =>
-          assignWeightsAndBiases(targetNetwork, onnxModel, [4], onnxModel.metadata_props);
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [4],
+            onnxModel.metadata_props,
+          );
 
         // Assert
         expect(assignCallback).not.toThrow();
@@ -697,16 +768,22 @@ describe('network onnx import weights utility chapter', () => {
           conv2dMappings: scenario.mappings,
         });
         const stretchedSpec = {
-          ...JSON.parse(findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value)[0],
+          ...JSON.parse(
+            findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value,
+          )[0],
           inHeight: 5,
           inWidth: 5,
         } as Conv2DMapping;
-        findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value = JSON.stringify([
-          stretchedSpec,
-        ]);
+        findMetadataEntry(onnxModel.metadata_props, 'conv2d_specs').value =
+          JSON.stringify([stretchedSpec]);
         const targetNetwork = Network.createMLP(9, [4], 2);
         const assignCallback = () =>
-          assignWeightsAndBiases(targetNetwork, onnxModel, [4], onnxModel.metadata_props);
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [4],
+            onnxModel.metadata_props,
+          );
 
         // Assert
         expect(assignCallback).not.toThrow();
@@ -728,7 +805,12 @@ describe('network onnx import weights utility chapter', () => {
           targetNetwork,
         );
         const assignCallback = () =>
-          assignWeightsAndBiases(targetNetwork, onnxModel, [4], onnxModel.metadata_props);
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [4],
+            onnxModel.metadata_props,
+          );
 
         // Assert
         expect(assignCallback).not.toThrow();
@@ -745,7 +827,12 @@ describe('network onnx import weights utility chapter', () => {
         });
         const targetNetwork = Network.createMLP(9, [4], 2);
         const assignCallback = () =>
-          assignWeightsAndBiases(targetNetwork, onnxModel, [3], onnxModel.metadata_props);
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [3],
+            onnxModel.metadata_props,
+          );
 
         // Assert
         expect(assignCallback).not.toThrow();

@@ -84,39 +84,42 @@ async function startRuntimeSession(
   const runtimeStartContext: RuntimeStartContext = createRuntimeStartContext(
     container,
     {
-    ...runtimeStartOptions,
-    onSelectArchitectureProfile: (profileId): void => {
-      if (
-        queuedRestartProfileId ||
-        runtimeLifecycleState?.stopped ||
-        !runtimeRunHandle
-      ) {
-        return;
-      }
+      ...runtimeStartOptions,
+      onSelectArchitectureProfile: (profileId): void => {
+        if (
+          queuedRestartProfileId ||
+          runtimeLifecycleState?.stopped ||
+          !runtimeRunHandle
+        ) {
+          return;
+        }
 
-      queuedRestartProfileId = profileId;
-      runtimeStartContext.viewContext.architectureSelectorController.setDisabled(
-        true,
-      );
+        queuedRestartProfileId = profileId;
+        runtimeStartContext.viewContext.architectureSelectorController.setDisabled(
+          true,
+        );
 
-      const nextArchitectureProfile = resolveExampleArchitectureProfile(
-        'flappy-bird',
-        profileId,
-      );
-      updateStatsTableValues(runtimeStartContext.viewContext.statsValueByKey, {
-        status: 'restarting',
-        currentArchitecture: nextArchitectureProfile.label,
-        summaryArchitecture: nextArchitectureProfile.label,
-        birds: `${FLAPPY_HUD_ZERO_TEXT}/${runtimeStartContext.config.populationSize}`,
-      });
+        const nextArchitectureProfile = resolveExampleArchitectureProfile(
+          'flappy-bird',
+          profileId,
+        );
+        updateStatsTableValues(
+          runtimeStartContext.viewContext.statsValueByKey,
+          {
+            status: 'restarting',
+            currentArchitecture: nextArchitectureProfile.label,
+            summaryArchitecture: nextArchitectureProfile.label,
+            birds: `${FLAPPY_HUD_ZERO_TEXT}/${runtimeStartContext.config.populationSize}`,
+          },
+        );
 
-      runtimeRunHandle.stop();
-      void runtimeRunHandle.done.then(() => {
-        void startRuntimeSession(runtimeStartContext.hostElement, {
-          architectureProfileId: profileId,
-        }).catch(() => undefined);
-      });
-    },
+        runtimeRunHandle.stop();
+        void runtimeRunHandle.done.then(() => {
+          void startRuntimeSession(runtimeStartContext.hostElement, {
+            architectureProfileId: profileId,
+          }).catch(() => undefined);
+        });
+      },
     },
   );
 

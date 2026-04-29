@@ -80,7 +80,7 @@ function shouldContinueEvolution(
     targetError !== DISABLED_TARGET_ERROR && currentError <= targetError;
   if (targetConditionMet) return false;
   if (!iterationsSpecified) return true;
-  return currentGeneration < (maxIterations ?? 0);
+  return currentGeneration < maxIterations!;
 }
 
 /**

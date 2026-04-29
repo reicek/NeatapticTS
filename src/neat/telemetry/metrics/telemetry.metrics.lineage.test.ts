@@ -563,7 +563,10 @@ describe('neat telemetry lineage metrics chapter', () => {
         const ancestorsB = new Set([2, 3]);
 
         // Act
-        const intersectionCount = countAncestorIntersection(ancestorsA, ancestorsB);
+        const intersectionCount = countAncestorIntersection(
+          ancestorsA,
+          ancestorsB,
+        );
 
         // Assert
         expect(intersectionCount).toBe(1);

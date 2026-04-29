@@ -176,7 +176,10 @@ export function exportPopulation(this: NeatLike): GenomeJSON[] {
 
     const runtimeGenome = genome as unknown as Network;
     const runtimePayload = serializeNetworkToJson.call(runtimeGenome);
-    const strictGenome = createGenomeFromNetwork(runtimeGenome, genomeCaptureOptions);
+    const strictGenome = createGenomeFromNetwork(
+      runtimeGenome,
+      genomeCaptureOptions,
+    );
     const strictNetworkPayload = createNetworkJsonFromGenome(strictGenome, {
       dropout: runtimePayload.dropout,
       architecture: runtimePayload.architecture,
@@ -243,7 +246,10 @@ export async function importPopulation(
 
     const { controllerMeta, networkPayload } =
       splitSerializedGenomeCheckpoint(serializedGenome);
-    assertSerializedGenomeCarriesCheckpointIdentity(networkPayload, genomeIndex);
+    assertSerializedGenomeCarriesCheckpointIdentity(
+      networkPayload,
+      genomeIndex,
+    );
     const serializedNetworkPayload = networkPayload as unknown as NetworkJSON;
     const strictGenome = createGenomeFromNetworkJson(
       serializedNetworkPayload,

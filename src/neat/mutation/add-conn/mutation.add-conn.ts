@@ -234,7 +234,7 @@ export function choosePairForConn(
   // Step 3: sample using the controller RNG.
   const randomValue = internal._getRNG()();
   const chosenIndex = Math.floor(randomValue * pairs.length);
-  return pairs[chosenIndex] ?? null;
+  return pairs[chosenIndex];
 }
 
 /**
@@ -267,10 +267,7 @@ export function canApplyChosenPairForConn(
   }
 
   // Step 2: reject pairs that would violate the cycle contract.
-  return !shouldAbortForCycle(
-    genomeToInspect,
-    resolvePairNodes(chosenPair),
-  );
+  return !shouldAbortForCycle(genomeToInspect, resolvePairNodes(chosenPair));
 }
 
 /**
@@ -388,8 +385,7 @@ export function connectChosenPair(
   // Step 1: derive a deterministic initial weight for the new edge.
   const connectionWeight =
     internal._getRNG()() *
-      (DEFAULT_NEW_CONNECTION_WEIGHT_MAX -
-        DEFAULT_NEW_CONNECTION_WEIGHT_MIN) +
+      (DEFAULT_NEW_CONNECTION_WEIGHT_MAX - DEFAULT_NEW_CONNECTION_WEIGHT_MIN) +
     DEFAULT_NEW_CONNECTION_WEIGHT_MIN;
 
   // Step 2: attempt to connect the chosen nodes.

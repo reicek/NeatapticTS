@@ -804,7 +804,9 @@ function selectSecondParent(
   let otherIndex = speciesIndex;
   let guard = 0;
   while (otherIndex === speciesIndex && guard++ < crossSpeciesGuardLimit) {
-    otherIndex = Math.floor(randomGenerator() * (internal._species?.length ?? 1));
+    otherIndex = Math.floor(
+      randomGenerator() * (internal._species?.length ?? 1),
+    );
   }
   const otherSpecies = internal._species?.[otherIndex];
   if (!otherSpecies) {
@@ -822,5 +824,7 @@ function selectSecondParent(
       ),
     ),
   );
-  return otherSurvivors[Math.floor(randomGenerator() * otherSurvivors.length)] as never;
+  return otherSurvivors[
+    Math.floor(randomGenerator() * otherSurvivors.length)
+  ] as never;
 }

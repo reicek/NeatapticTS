@@ -28,7 +28,9 @@ describe('architecture nodePool root facade', () => {
 
   it('exports the default facade object with function members', () => {
     expect(
-      Object.values(nodePoolFacade).every((member) => typeof member === 'function'),
+      Object.values(nodePoolFacade).every(
+        (member) => typeof member === 'function',
+      ),
     ).toBe(true);
   });
 });

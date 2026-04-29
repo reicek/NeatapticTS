@@ -71,7 +71,9 @@ describe('network evolve fitness utility chapter', () => {
       it('returns negative infinity without logging a warning', () => {
         // Arrange
         config.warnings = false;
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         const genome = new Network(1, 1, { seed: 702 });
         jest.spyOn(genome, 'test').mockImplementation(() => {
           throw new Error('disabled warning failure');
@@ -87,7 +89,10 @@ describe('network evolve fitness utility chapter', () => {
         const fitnessScore = fitnessFunction(genome);
 
         // Assert
-        expect({ fitnessScore, warningCount: warnSpy.mock.calls.length }).toEqual({
+        expect({
+          fitnessScore,
+          warningCount: warnSpy.mock.calls.length,
+        }).toEqual({
           fitnessScore: -Infinity,
           warningCount: 0,
         });
@@ -98,7 +103,9 @@ describe('network evolve fitness utility chapter', () => {
       it('logs the fallback warning message before penalizing the genome', () => {
         // Arrange
         config.warnings = true;
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         const genome = new Network(1, 1, { seed: 703 });
         jest.spyOn(genome, 'test').mockImplementation(() => {
           throw 'string failure';
@@ -294,7 +301,9 @@ describe('network evolve fitness utility chapter', () => {
       it('logs the single-thread fallback warning', async () => {
         // Arrange
         config.warnings = true;
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         Multi.workers = {
           getNodeTestWorker: async () => {
             throw 'worker unavailable';
@@ -320,7 +329,9 @@ describe('network evolve fitness utility chapter', () => {
       it('falls back without emitting a warning', async () => {
         // Arrange
         config.warnings = false;
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         Multi.workers = {
           getNodeTestWorker: async () => {
             throw new Error('silent fallback');
@@ -338,7 +349,10 @@ describe('network evolve fitness utility chapter', () => {
         );
 
         // Assert
-        expect({ threads: fitnessSetup.threads, warningCount: warnSpy.mock.calls.length }).toEqual({
+        expect({
+          threads: fitnessSetup.threads,
+          warningCount: warnSpy.mock.calls.length,
+        }).toEqual({
           threads: DEFAULT_THREAD_COUNT,
           warningCount: 0,
         });
@@ -349,7 +363,9 @@ describe('network evolve fitness utility chapter', () => {
       it('logs the worker spawn failure warning', async () => {
         // Arrange
         config.warnings = true;
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
         Multi.workers = {
           getNodeTestWorker: async () =>
             createWorkerConstructor({ shouldThrowOnConstruct: true }),

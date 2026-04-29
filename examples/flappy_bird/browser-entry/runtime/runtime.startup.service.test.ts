@@ -14,7 +14,9 @@ jest.mock('../worker-channel/worker-channel', () => ({
 }));
 
 jest.mock('./runtime.errors', () => ({
-  resolveRequiredRuntimeHostElement: jest.fn(() => document.createElement('div')),
+  resolveRequiredRuntimeHostElement: jest.fn(() =>
+    document.createElement('div'),
+  ),
 }));
 
 jest.mock('./runtime.telemetry.service', () => ({

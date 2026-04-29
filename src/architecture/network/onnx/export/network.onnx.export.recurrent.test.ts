@@ -101,7 +101,11 @@ describe('network onnx export recurrent chapter', () => {
       describe('when recurrent heuristics are enabled', () => {
         it('returns an empty list via the safety fallback', () => {
           // Arrange
-          const malformedLayers: Array<Network['nodes'] | null> = [[], null, []];
+          const malformedLayers: Array<Network['nodes'] | null> = [
+            [],
+            null,
+            [],
+          ];
 
           // Act
           const lstmPatternStubs = collectLstmPatternStubs(

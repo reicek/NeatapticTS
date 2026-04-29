@@ -57,7 +57,9 @@ export function hasFeedForwardTopologyContract(
       ? carrier.getTopologyIntent()
       : (runtimeCarrier._topologyIntent as NetworkTopologyIntent | undefined);
 
-  return topologyIntent === 'feed-forward' || runtimeCarrier._enforceAcyclic === true;
+  return (
+    topologyIntent === 'feed-forward' || runtimeCarrier._enforceAcyclic === true
+  );
 }
 
 /**

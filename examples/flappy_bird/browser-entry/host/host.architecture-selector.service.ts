@@ -189,7 +189,8 @@ function createArchitectureSelectorItemElement(
 
   // Step 2: Render the optional historical-best caption below the button.
   captionElement.style.fontFamily = FLAPPY_MONOSPACE_FONT_FAMILY;
-  captionElement.style.fontSize = FLAPPY_ARCHITECTURE_SELECTOR_CAPTION_FONT_SIZE;
+  captionElement.style.fontSize =
+    FLAPPY_ARCHITECTURE_SELECTOR_CAPTION_FONT_SIZE;
   captionElement.style.letterSpacing = '0.06em';
   captionElement.style.textTransform = 'uppercase';
   captionElement.style.color = FLAPPY_NEON_PALETTE.bestRunText;
@@ -253,7 +254,8 @@ function createArchitectureSelectorTooltipElement(
   // Step 2: Render the heading and the educational body copy.
   tooltipHeadingElement.textContent = selectorItem.tooltipHeading;
   tooltipHeadingElement.style.fontFamily = FLAPPY_MONOSPACE_FONT_FAMILY;
-  tooltipHeadingElement.style.fontSize = FLAPPY_ARCHITECTURE_TOOLTIP_HEADING_FONT_SIZE;
+  tooltipHeadingElement.style.fontSize =
+    FLAPPY_ARCHITECTURE_TOOLTIP_HEADING_FONT_SIZE;
   tooltipHeadingElement.style.fontWeight = '700';
   tooltipHeadingElement.style.letterSpacing = '0.08em';
   tooltipHeadingElement.style.textTransform = 'uppercase';
@@ -265,7 +267,8 @@ function createArchitectureSelectorTooltipElement(
   tooltipBodyElement.style.flexDirection = 'column';
   tooltipBodyElement.style.gap = '4px';
   tooltipBodyElement.style.fontFamily = FLAPPY_MONOSPACE_FONT_FAMILY;
-  tooltipBodyElement.style.fontSize = FLAPPY_ARCHITECTURE_TOOLTIP_BODY_FONT_SIZE;
+  tooltipBodyElement.style.fontSize =
+    FLAPPY_ARCHITECTURE_TOOLTIP_BODY_FONT_SIZE;
   tooltipBodyElement.style.lineHeight = '1.35';
   tooltipBodyElement.style.color = FLAPPY_NEON_PALETTE.hudText;
 
@@ -313,7 +316,8 @@ function applyArchitectureSelectorButtonPresentation(
     ? 'rgba(255, 92, 255, 0.08)'
     : 'rgba(6, 11, 20, 0.55)';
   buttonElement.style.opacity = disabled ? '0.55' : '1';
-  buttonElement.style.transform = hovered && !disabled ? 'translateY(-1px)' : 'translateY(0)';
+  buttonElement.style.transform =
+    hovered && !disabled ? 'translateY(-1px)' : 'translateY(0)';
   buttonElement.style.boxShadow = resolveArchitectureSelectorBoxShadow(
     selectorItem.selected,
     hovered && !disabled,

@@ -23,7 +23,9 @@ describe('layer factory recurrent utility chapter', () => {
 
             return originalConnect.call(this, target, method, weight);
           });
-        const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => undefined);
 
         try {
           // Act
@@ -52,7 +54,12 @@ describe('layer factory recurrent utility chapter', () => {
           method?: unknown,
           weight?: number,
         ) {
-          const connections = originalConnect.call(this, target, method, weight);
+          const connections = originalConnect.call(
+            this,
+            target,
+            method,
+            weight,
+          );
 
           if (target instanceof Group && this !== target) {
             const nextConnectCount = (connectCountsByGroup.get(this) ?? 0) + 1;
@@ -102,7 +109,9 @@ describe('layer factory recurrent utility chapter', () => {
         const connectMemoryLayer = () => memoryLayer.input(Layer.dense(2));
 
         // Assert
-        expect(connectMemoryLayer).toThrow('Memory layer input block is not a Group.');
+        expect(connectMemoryLayer).toThrow(
+          'Memory layer input block is not a Group.',
+        );
       });
     });
 

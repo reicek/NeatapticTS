@@ -124,7 +124,8 @@ describe('lineage core chapter', () => {
         const rngFactory = () => {
           let readIndex = 0;
           return () => {
-            const nextValue = randomValues[Math.min(readIndex, randomValues.length - 1)];
+            const nextValue =
+              randomValues[Math.min(readIndex, randomValues.length - 1)];
             readIndex += 1;
             return nextValue;
           };

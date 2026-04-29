@@ -11,7 +11,10 @@ import type {
 } from '../network.types';
 import * as topologyUtils from '../topology/network.topology.utils';
 import { constructNetwork } from './network.construct.utils';
-import type { ConstructOptions, ConstructPart } from './network.construct.utils.types';
+import type {
+  ConstructOptions,
+  ConstructPart,
+} from './network.construct.utils.types';
 
 type FakeConstructScenario = {
   activationSchedule?: ActivationSchedule | null;
@@ -90,10 +93,7 @@ class FakeConstructNetwork {
   }
 }
 
-function createNode(
-  role: 'input' | 'hidden' | 'output',
-  label?: string,
-): Node {
+function createNode(role: 'input' | 'hidden' | 'output', label?: string): Node {
   const node = new Node(role);
 
   if (label) {
@@ -192,7 +192,11 @@ describe('network construct utility chapter', () => {
 
         // Act
         const construction = constructWithRealNetwork(
-          [sensorInput, readout, { unsupported: true } as unknown as ConstructPart],
+          [
+            sensorInput,
+            readout,
+            { unsupported: true } as unknown as ConstructPart,
+          ],
           {},
         );
 
@@ -332,10 +336,9 @@ describe('network construct utility chapter', () => {
         hiddenCarrier.connect(hiddenCarrier);
 
         const constructWithSelfEdgeValidation = () => {
-          constructWithRealNetwork(
-            [sensorInput, hiddenCarrier, readout],
-            { validate: { forbidSelfEdges: true } },
-          );
+          constructWithRealNetwork([sensorInput, hiddenCarrier, readout], {
+            validate: { forbidSelfEdges: true },
+          });
         };
 
         // Act / Assert
@@ -355,10 +358,9 @@ describe('network construct utility chapter', () => {
         sensorInput.connect(readout);
 
         // Act
-        const construction = constructWithRealNetwork(
-          [sensorInput, readout],
-          { validate: { forbidDuplicateEdges: false } },
-        );
+        const construction = constructWithRealNetwork([sensorInput, readout], {
+          validate: { forbidDuplicateEdges: false },
+        });
 
         // Assert
         expect({
@@ -571,14 +573,18 @@ describe('network construct utility chapter', () => {
         sensorInput.connect(readout);
 
         const constructWithEmptyCycleIds = () => {
-          constructWithFakeNetwork([sensorInput, readout], {}, {
-            diagnostics: {
-              issue: 'cycle-detected',
-              executionPath: 'cycle-fallback-order',
-              cycleNodeIds: [],
-              message: 'Synthetic cycle fallback.',
+          constructWithFakeNetwork(
+            [sensorInput, readout],
+            {},
+            {
+              diagnostics: {
+                issue: 'cycle-detected',
+                executionPath: 'cycle-fallback-order',
+                cycleNodeIds: [],
+                message: 'Synthetic cycle fallback.',
+              },
             },
-          });
+          );
         };
 
         // Act / Assert
@@ -609,11 +615,7 @@ describe('network construct utility chapter', () => {
               diagnostics: {
                 issue: 'cycle-detected',
                 executionPath: 'cycle-fallback-order',
-                cycleNodeIds: [
-                  hiddenA.geneId,
-                  hiddenB.geneId,
-                  readout.geneId,
-                ],
+                cycleNodeIds: [hiddenA.geneId, hiddenB.geneId, readout.geneId],
                 message: 'Synthetic cycle fallback.',
               },
             },
@@ -725,11 +727,15 @@ describe('network construct utility chapter', () => {
         sensorInput.connect(readout);
 
         const constructWithMissingRuntimeIndex = () => {
-          constructWithFakeNetwork([sensorInput, readout], {}, {
-            onClear: (network) => {
-              network.nodes[0].index = undefined as unknown as number;
+          constructWithFakeNetwork(
+            [sensorInput, readout],
+            {},
+            {
+              onClear: (network) => {
+                network.nodes[0].index = undefined as unknown as number;
+              },
             },
-          });
+          );
         };
 
         // Act / Assert

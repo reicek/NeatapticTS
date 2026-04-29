@@ -16,9 +16,7 @@ function markSlabDirty(network: Network): void {
   Reflect.set(network, '_slabDirty', true);
 }
 
-async function withTemporaryWindow<T>(
-  callback: () => Promise<T>,
-): Promise<T> {
+async function withTemporaryWindow<T>(callback: () => Promise<T>): Promise<T> {
   const hadWindow = Reflect.has(globalThis, 'window');
   const originalWindow = Reflect.get(globalThis, 'window');
 

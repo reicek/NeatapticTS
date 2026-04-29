@@ -81,7 +81,11 @@ describe('neat speciation threshold chapter', () => {
           {},
           undefined as unknown as number,
         );
-        Reflect.set(speciationContext.options, 'compatibilityThreshold', undefined);
+        Reflect.set(
+          speciationContext.options,
+          'compatibilityThreshold',
+          undefined,
+        );
 
         // Act
         adjustCompatibilityThreshold(
@@ -118,7 +122,9 @@ describe('neat speciation threshold chapter', () => {
           },
           0,
         );
-        speciationContext._species = [{ id: 1, members: [population[0]] } as never];
+        speciationContext._species = [
+          { id: 1, members: [population[0]] } as never,
+        ];
 
         // Act
         adjustCompatibilityThreshold(
@@ -132,7 +138,8 @@ describe('neat speciation threshold chapter', () => {
         // Assert
         expect({
           compatibilityIntegral: speciationContext._compatIntegral,
-          compatibilityThreshold: speciationContext.options.compatibilityThreshold,
+          compatibilityThreshold:
+            speciationContext.options.compatibilityThreshold,
         }).toEqual({
           compatibilityIntegral: 0,
           compatibilityThreshold: 6,
@@ -179,7 +186,8 @@ describe('neat speciation threshold chapter', () => {
         // Assert
         expect({
           compatibilityIntegral: speciationContext._compatIntegral,
-          compatibilityThreshold: speciationContext.options.compatibilityThreshold,
+          compatibilityThreshold:
+            speciationContext.options.compatibilityThreshold,
         }).toEqual({
           compatibilityIntegral: DEFAULT_COMPAT_INTEGRAL,
           compatibilityThreshold: 6,

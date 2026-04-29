@@ -27,16 +27,15 @@ function createCompatibilityCacheEntries(
   return [...genome.connections, ...genome.selfconns]
     .filter((connection) => Number.isFinite(connection.innovation))
     .map(
-      (connection) => [connection.innovation, connection.weight] as [number, number],
+      (connection) =>
+        [connection.innovation, connection.weight] as [number, number],
     )
     .toSorted(
       ([leftInnovation], [rightInnovation]) => leftInnovation - rightInnovation,
     );
 }
 
-function collectIssueCodes(
-  issues: NativeGenomeValidationIssue[],
-): string[] {
+function collectIssueCodes(issues: NativeGenomeValidationIssue[]): string[] {
   return issues.map((issue) => issue.code);
 }
 
@@ -59,7 +58,9 @@ function createTemporalModuleExtensions(
   );
 
   if (hiddenNodeGeneIds.length === 0 || gatedConnections.length === 0) {
-    throw new Error('Expected recurrent module fixtures with hidden nodes and gated connections.');
+    throw new Error(
+      'Expected recurrent module fixtures with hidden nodes and gated connections.',
+    );
   }
 
   return {
@@ -80,7 +81,11 @@ function createTemporalModuleExtensions(
       gatedBlocks: [
         {
           blockId: 'gated:block:0',
-          gaterGeneIds: [...new Set(gatedConnections.map((connection) => connection.gaterGeneId))],
+          gaterGeneIds: [
+            ...new Set(
+              gatedConnections.map((connection) => connection.gaterGeneId),
+            ),
+          ],
           connectionInnovations: gatedConnections.map(
             (connection) => connection.innovation,
           ),
@@ -369,7 +374,8 @@ describe('neat validate chapter', () => {
       it('reports the stale compatibility-cache content issue', () => {
         // Arrange
         const genome = createValidationNetwork();
-        const compatibilityCacheEntries = createCompatibilityCacheEntries(genome);
+        const compatibilityCacheEntries =
+          createCompatibilityCacheEntries(genome);
         genome._compatCache = compatibilityCacheEntries.with(0, [
           compatibilityCacheEntries[0][0],
           compatibilityCacheEntries[0][1] + 1,
@@ -450,9 +456,11 @@ describe('neat validate chapter', () => {
         const genome = createGenomeFromNetwork(
           createValidationNetwork(),
         ) as NeatGenome & {
-          connectionGenes: Array<NeatGenome['connectionGenes'][number] & {
-            innovation?: number;
-          }>;
+          connectionGenes: Array<
+            NeatGenome['connectionGenes'][number] & {
+              innovation?: number;
+            }
+          >;
         };
         Reflect.deleteProperty(genome.connectionGenes[0], 'innovation');
         const assertGenome = () => assertValidGenomeContract(genome);
@@ -469,22 +477,26 @@ describe('neat validate chapter', () => {
     describe('given a strict genome keeps one temporal connection gene disabled', () => {
       it('still accepts the dormant temporal descriptor state', () => {
         // Arrange
-        const sourcePayload = Architect.lstm(1, 2, 1)
-          .toJSON() as unknown as NetworkJSON;
+        const sourcePayload = Architect.lstm(
+          1,
+          2,
+          1,
+        ).toJSON() as unknown as NetworkJSON;
         const genome = createGenomeFromNetwork(
           Network.fromJSON(sourcePayload as unknown as Record<string, unknown>),
         );
         genome.extensions = createTemporalModuleExtensions(sourcePayload);
-        const moduleConnectionInnovation = readFirstTemporalConnectionInnovation(
-          genome.extensions,
-        );
+        const moduleConnectionInnovation =
+          readFirstTemporalConnectionInnovation(genome.extensions);
         const moduleConnectionGene = genome.connectionGenes.find(
           (connectionGene) =>
             connectionGene.innovation === moduleConnectionInnovation,
         );
 
         if (!moduleConnectionGene) {
-          throw new Error('Expected one module-owned connection gene for dormant-state validation.');
+          throw new Error(
+            'Expected one module-owned connection gene for dormant-state validation.',
+          );
         }
 
         moduleConnectionGene.enabled = false;
@@ -502,10 +514,9 @@ describe('neat validate chapter', () => {
         // Arrange
         const genome = createValidationNetwork();
         genome.setTopologyIntent('unconstrained');
-        const selfConnection = genome.nodes.at(-1)!.connect(
-          genome.nodes.at(-1)!,
-          0.25,
-        )[0];
+        const selfConnection = genome.nodes
+          .at(-1)!
+          .connect(genome.nodes.at(-1)!, 0.25)[0];
         selfConnection.innovation = 10_001;
         genome.selfconns = [selfConnection];
 
@@ -520,8 +531,11 @@ describe('neat validate chapter', () => {
     describe('given a strict genome carries a malformed recurrent-module descriptor', () => {
       it('reports the new recurrent-module extension issue through the validate facade', () => {
         // Arrange
-        const sourcePayload = Architect.lstm(1, 2, 1)
-          .toJSON() as unknown as NetworkJSON;
+        const sourcePayload = Architect.lstm(
+          1,
+          2,
+          1,
+        ).toJSON() as unknown as NetworkJSON;
         const genome = createGenomeFromNetwork(
           Network.fromJSON(sourcePayload as unknown as Record<string, unknown>),
         );

@@ -35,8 +35,7 @@ export function launchRuntimeEvolution(
 
   // Step 1: Start the long-running evolution orchestration loop.
   void runRuntimeEvolutionLoop({
-    architectureSelectorController:
-      viewContext.architectureSelectorController,
+    architectureSelectorController: viewContext.architectureSelectorController,
     evolutionWorker,
     canvas: viewContext.canvas,
     context: viewContext.context,

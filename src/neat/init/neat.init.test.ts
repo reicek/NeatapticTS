@@ -97,9 +97,13 @@ function loadMockedInitializeNeatConstructor(input: {
 
   jest.isolateModules(() => {
     jest.doMock('../../methods/methods', () => input.methodsModule);
-    jest.doMock('../../methods/selection/selection', () => input.selectionModule);
+    jest.doMock(
+      '../../methods/selection/selection',
+      () => input.selectionModule,
+    );
 
-    const neatInitModule = require('./neat.init') as typeof import('./neat.init');
+    const neatInitModule =
+      require('./neat.init') as typeof import('./neat.init');
     mockedInitializeNeatConstructor = neatInitModule.initializeNeatConstructor;
   });
 
@@ -272,7 +276,9 @@ describe('neat init chapter', () => {
         });
 
         // Assert
-        expect(initializationHost.createPool.mock.calls).toEqual([[seedNetwork]]);
+        expect(initializationHost.createPool.mock.calls).toEqual([
+          [seedNetwork],
+        ]);
       });
     });
 
@@ -300,20 +306,23 @@ describe('neat init chapter', () => {
         // Assert
         expect({
           diversityMetrics: optionBag.diversityMetrics,
-          hasInnovationTracker: initializationHost._innovationTracker !== undefined,
+          hasInnovationTracker:
+            initializationHost._innovationTracker !== undefined,
           multiObjectiveObjectives: optionBag.multiObjective?.objectives,
           nextSpeciesId: initializationHost._nextSpeciesId,
           novelty: optionBag.novelty,
           noveltyArchive: initializationHost._noveltyArchive,
           objectiveAgesIsMap: initializationHost._objectiveAges instanceof Map,
-          objectiveStaleIsMap: initializationHost._objectiveStale instanceof Map,
+          objectiveStaleIsMap:
+            initializationHost._objectiveStale instanceof Map,
           pendingObjectiveAdds: initializationHost._pendingObjectiveAdds,
           pendingObjectiveRemoves: initializationHost._pendingObjectiveRemoves,
           population: initializationHost.population,
           prevSpeciesMembersIsMap:
             initializationHost._prevSpeciesMembers instanceof Map,
           species: initializationHost._species,
-          speciesCreatedIsMap: initializationHost._speciesCreated instanceof Map,
+          speciesCreatedIsMap:
+            initializationHost._speciesCreated instanceof Map,
           speciesLastStatsIsMap:
             initializationHost._speciesLastStats instanceof Map,
         }).toEqual({
@@ -390,13 +399,15 @@ describe('neat init chapter', () => {
           multiObjectiveObjectives: optionBag.multiObjective?.objectives,
           nextSpeciesId: initializationHost._nextSpeciesId,
           novelty: optionBag.novelty,
-          objectiveAgesPreserved: initializationHost._objectiveAges === objectiveAges,
+          objectiveAgesPreserved:
+            initializationHost._objectiveAges === objectiveAges,
           objectiveStalePreserved:
             initializationHost._objectiveStale === objectiveStale,
           pendingObjectiveAddsPreserved:
             initializationHost._pendingObjectiveAdds === pendingObjectiveAdds,
           pendingObjectiveRemovesPreserved:
-            initializationHost._pendingObjectiveRemoves === pendingObjectiveRemoves,
+            initializationHost._pendingObjectiveRemoves ===
+            pendingObjectiveRemoves,
           prevSpeciesMembersPreserved:
             initializationHost._prevSpeciesMembers === prevSpeciesMembers,
           speciesCreatedPreserved:

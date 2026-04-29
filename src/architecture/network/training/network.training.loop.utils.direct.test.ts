@@ -226,11 +226,7 @@ describe('network training loop chapter', () => {
             scaleUpEvents: 0,
           },
           activate: jest.fn(() => [0.25]),
-          nodes: [
-            createNode({ type: 'input' }),
-            hiddenNode,
-            outputNode,
-          ],
+          nodes: [createNode({ type: 'input' }), hiddenNode, outputNode],
         });
 
         // Act

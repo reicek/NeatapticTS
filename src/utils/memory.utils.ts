@@ -426,9 +426,7 @@ function accumulateCapacitySlices(
  * @param network Network whose storage format drives the byte width.
  * @returns Estimated bytes per connection entry.
  */
-function describeConnectionBytes(
-  network: NetworkView,
-): number {
+function describeConnectionBytes(network: NetworkView): number {
   const weightBytes = network._useFloat32Weights
     ? FLOAT32_BYTE_WIDTH
     : FLOAT64_BYTE_WIDTH;

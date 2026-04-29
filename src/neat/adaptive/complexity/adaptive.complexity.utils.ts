@@ -5,7 +5,6 @@ import {
   DEFAULT_CB_INCREASE_FACTOR,
   DEFAULT_CB_STAGNATION_FACTOR,
   DEFAULT_IMPROVEMENT_WINDOW,
-  DENOMINATOR_FALLBACK,
   HISTORY_MIN_IMPROVEMENT_COUNT,
   HISTORY_MIN_SLOPE_COUNT,
   LINEAR_HORIZON_DEFAULT,
@@ -183,7 +182,7 @@ export function computeTrends(history: number[]): {
 } {
   const improvement =
     history.length >= HISTORY_MIN_IMPROVEMENT_COUNT
-      ? (history.at(NEGATIVE_ONE) ?? ZERO) - history[ZERO]
+      ? history.at(NEGATIVE_ONE)! - history[ZERO]
       : ZERO;
   const slope =
     history.length >= HISTORY_MIN_SLOPE_COUNT ? computeSlope(history) : ZERO;
@@ -211,8 +210,7 @@ export function computeSlope(history: number[]): number {
   }
 
   const denominator = count * sumIndexSquared - sumIndices * sumIndices;
-  const safeDenominator = denominator || DENOMINATOR_FALLBACK;
-  return (count * sumIndexScore - sumIndices * sumScores) / safeDenominator;
+  return (count * sumIndexScore - sumIndices * sumScores) / denominator;
 }
 
 /**

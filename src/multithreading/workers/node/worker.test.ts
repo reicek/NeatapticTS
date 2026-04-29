@@ -11,7 +11,9 @@ describe('node worker entrypoint chapter', () => {
         | undefined;
 
       if (!messageHandler) {
-        throw new Error('Expected the worker module to register a process message handler.');
+        throw new Error(
+          'Expected the worker module to register a process message handler.',
+        );
       }
 
       return messageHandler;
@@ -68,7 +70,9 @@ describe('node worker entrypoint chapter', () => {
             consoleErrorCalls: consoleErrorSpy.mock.calls,
             evaluationCalls: testSerializedSetSpy.mock.calls.length,
           }).toEqual({
-            consoleErrorCalls: [['Missing required data for network evaluation']],
+            consoleErrorCalls: [
+              ['Missing required data for network evaluation'],
+            ],
             evaluationCalls: 0,
           });
         } finally {

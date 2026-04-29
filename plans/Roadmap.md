@@ -44,7 +44,7 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
   - Plan: [src-no-explicit-any-cleanup.plans.md](completed/src-no-explicit-any-cleanup.plans.md)
   - Scope note: this lane replaced the stale root checklist with a roadmap-tracked plan aligned to the current folderized tree and is now the closed baseline for future reopen-only follow-up.
 - ES2023 modernization (completed Phase 0 lane: project-wide named errors with `Error.cause`, targeted syntax cleanup, helper normalization, narrow module-edge cleanup, and lint/CI enforcement) [DONE]
-   - Plan: [ES2023 migration](completed/ES2023%20migration)
+  - Plan: [ES2023 migration](completed/ES2023%20migration)
   - Scope note: ESM package wiring, the ES2023 TypeScript baseline, the lint scaffold, named-error rollout, targeted syntax cleanup, shared clone-helper normalization, narrow workflow or benchmark edge cleanup, and CI enforcement are now complete. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
 
 **Gate to Phase 1:** satisfied. Both demos are solid split and documented, the main app split is stable, the remaining documentation work is no longer obscuring ownership boundaries, the ES2023 cleanup lane is complete, and `npm run build`, `npm run lint`, and `npm test` are green after the modernization pass.
@@ -183,6 +183,7 @@ Current status: **Phase 0 and Phase 1 are complete** and **Phase 2 is now the cu
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
 - **Parallel lane B (interop):** [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) after Phase 2 (or earlier if scoped tightly)
+- **Parallel lane C (quality):** [test-repair-and-coverage.plans.md](completed/test-repair-and-coverage.plans.md) [DONE] — 100% statement/branch/function/line coverage across all of `src/`. 331 suites / 3022 tests green.
 - **Final capstone:** [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) and [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md)
 
 ## Plan Inventory in Roadmap Order

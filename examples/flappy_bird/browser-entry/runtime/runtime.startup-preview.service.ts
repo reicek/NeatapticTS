@@ -300,8 +300,7 @@ function renderRuntimeStartupPreviewLegend(
   const legendCenterXPx = input.canvasWidthPx * 0.5;
   const legendCenterYPx = input.canvasHeightPx * 0.5;
   const legendLineHeightPx = input.legendFontSizePx * 1.15;
-  const legendLineBlockHeightPx =
-    (legendLines.length - 1) * legendLineHeightPx;
+  const legendLineBlockHeightPx = (legendLines.length - 1) * legendLineHeightPx;
   context.font = `${FLAPPY_STARTUP_PREVIEW_LEGEND_FONT_WEIGHT} ${input.legendFontSizePx}px ${FLAPPY_MONOSPACE_FONT_FAMILY}`;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
@@ -316,7 +315,8 @@ function renderRuntimeStartupPreviewLegend(
     context.fillText(
       legendLine,
       legendCenterXPx,
-      legendCenterYPx - legendLineBlockHeightPx * 0.5 +
+      legendCenterYPx -
+        legendLineBlockHeightPx * 0.5 +
         legendLineIndex * legendLineHeightPx,
     );
   });
@@ -330,7 +330,8 @@ function renderRuntimeStartupPreviewLegend(
     context.fillText(
       legendLine,
       legendCenterXPx,
-      legendCenterYPx - legendLineBlockHeightPx * 0.5 +
+      legendCenterYPx -
+        legendLineBlockHeightPx * 0.5 +
         legendLineIndex * legendLineHeightPx,
     );
   });

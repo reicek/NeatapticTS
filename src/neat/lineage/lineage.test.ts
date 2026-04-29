@@ -59,9 +59,8 @@ describe('neat lineage chapter', () => {
         };
 
         // Act
-        const ancestorUniqueness = computeAncestorUniqueness.call(
-          lineageContext,
-        );
+        const ancestorUniqueness =
+          computeAncestorUniqueness.call(lineageContext);
 
         // Assert
         expect(ancestorUniqueness).toBe(0);
@@ -81,9 +80,8 @@ describe('neat lineage chapter', () => {
         };
 
         // Act
-        const ancestorUniqueness = computeAncestorUniqueness.call(
-          lineageContext,
-        );
+        const ancestorUniqueness =
+          computeAncestorUniqueness.call(lineageContext);
 
         // Assert
         expect(ancestorUniqueness).toBe(1);

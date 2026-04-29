@@ -30,9 +30,8 @@ describe('neat mutation min-hidden chapter', () => {
         });
 
         // Act
-        const resolvedMaxNodes = resolveMaxNodesForMinHidden(
-          mutationController,
-        );
+        const resolvedMaxNodes =
+          resolveMaxNodesForMinHidden(mutationController);
 
         // Assert
         expect(resolvedMaxNodes).toBe(Infinity);
@@ -94,7 +93,9 @@ describe('neat mutation min-hidden chapter', () => {
           createNode('input', 1),
           createNode('output', 2),
         ]);
-        const hiddenNodes = genome.nodes.filter((node) => node.type === 'hidden');
+        const hiddenNodes = genome.nodes.filter(
+          (node) => node.type === 'hidden',
+        );
         const mutateAddNodeReuse = jest.fn(async () => undefined);
         const mutationController = createMutationController({
           mutateAddNodeReuse,
@@ -110,7 +111,10 @@ describe('neat mutation min-hidden chapter', () => {
         );
 
         // Assert
-        expect({ hiddenCount: hiddenNodes.length, attempts: mutateAddNodeReuse.mock.calls.length }).toEqual({
+        expect({
+          hiddenCount: hiddenNodes.length,
+          attempts: mutateAddNodeReuse.mock.calls.length,
+        }).toEqual({
           hiddenCount: 0,
           attempts: 1,
         });
@@ -310,8 +314,7 @@ function createMutationController(input: {
       maxNodes: input.maxNodes,
     },
     _getRNG: () => () => input.randomValue ?? 0,
-    _mutateAddNodeReuse:
-      input.mutateAddNodeReuse ?? (async () => undefined),
+    _mutateAddNodeReuse: input.mutateAddNodeReuse ?? (async () => undefined),
     _mutateAddConnReuse: () => undefined,
     _invalidateGenomeCaches: () => undefined,
     _operatorStats: new Map(),

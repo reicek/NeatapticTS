@@ -21,9 +21,8 @@ describe('neat topology-intent chapter', () => {
         const mutationConfig = { name: 'ADD_NODE' };
 
         // Act
-        const usesFeedForwardPolicy = usesFeedForwardMutationPolicy(
-          mutationConfig,
-        );
+        const usesFeedForwardPolicy =
+          usesFeedForwardMutationPolicy(mutationConfig);
 
         // Assert
         expect(usesFeedForwardPolicy).toBe(false);
@@ -33,14 +32,13 @@ describe('neat topology-intent chapter', () => {
     describe('when the configured mutation pool is a flattened canonical FFW copy', () => {
       it('recognizes the canonical feed-forward operator order', () => {
         // Arrange
-        const mutationConfig = (methods.mutation.FFW as Array<{ name?: string }>).map(
-          (mutationMethod) => ({ name: mutationMethod.name }),
-        );
+        const mutationConfig = (
+          methods.mutation.FFW as Array<{ name?: string }>
+        ).map((mutationMethod) => ({ name: mutationMethod.name }));
 
         // Act
-        const usesFeedForwardPolicy = usesFeedForwardMutationPolicy(
-          mutationConfig,
-        );
+        const usesFeedForwardPolicy =
+          usesFeedForwardMutationPolicy(mutationConfig);
 
         // Assert
         expect(usesFeedForwardPolicy).toBe(true);
@@ -50,14 +48,15 @@ describe('neat topology-intent chapter', () => {
     describe('when the configured mutation pool omits one canonical FFW operator', () => {
       it('rejects the pool as a feed-forward policy signal', () => {
         // Arrange
-        const mutationConfig = (methods.mutation.FFW as Array<{ name?: string }>)
+        const mutationConfig = (
+          methods.mutation.FFW as Array<{ name?: string }>
+        )
           .slice(0, -1)
           .map((mutationMethod) => ({ name: mutationMethod.name }));
 
         // Act
-        const usesFeedForwardPolicy = usesFeedForwardMutationPolicy(
-          mutationConfig,
-        );
+        const usesFeedForwardPolicy =
+          usesFeedForwardMutationPolicy(mutationConfig);
 
         // Assert
         expect(usesFeedForwardPolicy).toBe(false);

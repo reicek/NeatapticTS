@@ -130,7 +130,10 @@ export function trackGlobalImprovement(
 ): void {
   // Step 1: Compare to prior global best.
   const snapshotScore = snapshot.score;
-  if (snapshotScore !== undefined && snapshotScore > internal._bestGlobalScore) {
+  if (
+    snapshotScore !== undefined &&
+    snapshotScore > internal._bestGlobalScore
+  ) {
     internal._bestGlobalScore = snapshotScore;
     internal._lastGlobalImproveGeneration = internal.generation;
   }

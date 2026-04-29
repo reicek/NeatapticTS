@@ -176,12 +176,7 @@ export function crossOverWithRandomGenerator(
   equal: boolean = false,
   randomGenerator: RandomGenerator,
 ): Network {
-  return runCrossOver(
-    parentNetwork1,
-    parentNetwork2,
-    equal,
-    randomGenerator,
-  );
+  return runCrossOver(parentNetwork1, parentNetwork2, equal, randomGenerator);
 }
 
 function runCrossOver(

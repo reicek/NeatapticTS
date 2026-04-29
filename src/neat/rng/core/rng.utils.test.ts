@@ -1,7 +1,4 @@
-import {
-  getOrCreateRng,
-  restoreRngState,
-} from './rng.utils';
+import { getOrCreateRng, restoreRngState } from './rng.utils';
 import {
   RNG_DEFAULT_SEED_FALLBACK,
   RNG_TIME_SCRAMBLE_CONSTANT,

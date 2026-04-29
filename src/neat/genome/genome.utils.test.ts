@@ -19,8 +19,9 @@ describe('neat genome utility coverage chapter', () => {
     describe('given a legacy-style payload omits strict identity fields and carries malformed values', () => {
       it('fails strict conversion after normalizing the fallback fields', () => {
         // Arrange
-        const networkJson = new Network(1, 1, { seed: 1_450 })
-          .toJSON() as unknown as NetworkJSON;
+        const networkJson = new Network(1, 1, {
+          seed: 1_450,
+        }).toJSON() as unknown as NetworkJSON;
 
         networkJson.nodes = [
           {
@@ -59,12 +60,15 @@ describe('neat genome utility coverage chapter', () => {
     describe('given a payload stores extension values in a non-plain container', () => {
       it('rejects the malformed extension bag during strict conversion', () => {
         // Arrange
-        const networkJson = new Network(1, 1, { seed: 1_451 })
-          .toJSON() as unknown as NetworkJSON;
+        const networkJson = new Network(1, 1, {
+          seed: 1_451,
+        }).toJSON() as unknown as NetworkJSON;
 
         networkJson.extensions = {
           version: 1,
-          values: [] as unknown as NonNullable<NetworkJSON['extensions']>['values'],
+          values: [] as unknown as NonNullable<
+            NetworkJSON['extensions']
+          >['values'],
         };
 
         // Assert
@@ -77,15 +81,19 @@ describe('neat genome utility coverage chapter', () => {
     describe('given a payload stores temporal extension containers in non-array values', () => {
       it('rejects the malformed temporal extension containers during strict conversion', () => {
         // Arrange
-        const networkJson = new Network(1, 1, { seed: 1_452 })
-          .toJSON() as unknown as NetworkJSON;
+        const networkJson = new Network(1, 1, {
+          seed: 1_452,
+        }).toJSON() as unknown as NetworkJSON;
 
         networkJson.extensions = {
           version: 1,
           values: {
-            gatedBlocks: {} as unknown as NonNullable<NetworkJSON['extensions']>['values'],
-            recurrentModules:
-              {} as unknown as NonNullable<NetworkJSON['extensions']>['values'],
+            gatedBlocks: {} as unknown as NonNullable<
+              NetworkJSON['extensions']
+            >['values'],
+            recurrentModules: {} as unknown as NonNullable<
+              NetworkJSON['extensions']
+            >['values'],
           },
         };
 
@@ -99,8 +107,9 @@ describe('neat genome utility coverage chapter', () => {
     describe('given a legacy-style payload omits connection gene ids but still carries node gene ids by index', () => {
       it('reconstructs the endpoint gene ids from the indexed node lookup', () => {
         // Arrange
-        const networkJson = new Network(1, 1, { seed: 1_459 })
-          .toJSON() as unknown as NetworkJSON;
+        const networkJson = new Network(1, 1, {
+          seed: 1_459,
+        }).toJSON() as unknown as NetworkJSON;
         const expectedConnection = networkJson.connections[0];
 
         networkJson.connections = [
@@ -127,8 +136,9 @@ describe('neat genome utility coverage chapter', () => {
     describe('given a legacy-style payload omits endpoint gene ids and points at unknown node indexes', () => {
       it('fails strict conversion after falling back to missing endpoint gene ids', () => {
         // Arrange
-        const networkJson = new Network(1, 1, { seed: 1_462 })
-          .toJSON() as unknown as NetworkJSON;
+        const networkJson = new Network(1, 1, {
+          seed: 1_462,
+        }).toJSON() as unknown as NetworkJSON;
 
         networkJson.connections = [
           {
@@ -248,7 +258,9 @@ describe('neat genome utility coverage chapter', () => {
         const genome = createGenomeFromNetwork(sourceNetwork);
 
         if (genome.nodeGenes.length < 5 || genome.connectionGenes.length < 2) {
-          throw new Error('Expected a multi-hidden genome fixture for integrity validation.');
+          throw new Error(
+            'Expected a multi-hidden genome fixture for integrity validation.',
+          );
         }
 
         genome.topologyIntent = 'feed-forward';
@@ -260,7 +272,8 @@ describe('neat genome utility coverage chapter', () => {
         genome.nodeGenes[4].squash = '';
         genome.nodeGenes[4].type = 'hidden';
 
-        genome.connectionGenes[0].innovation = genome.connectionGenes[1].innovation;
+        genome.connectionGenes[0].innovation =
+          genome.connectionGenes[1].innovation;
         genome.connectionGenes[0].weight = Number.NaN;
         genome.connectionGenes[0].fromGeneId = genome.nodeGenes[4].geneId;
         genome.connectionGenes[0].toGeneId = genome.nodeGenes[0].geneId;
@@ -307,7 +320,9 @@ describe('neat genome utility coverage chapter', () => {
                 connectionInnovations: [Number.NaN],
                 gaterGeneIds: [knownNodeGeneId],
               },
-            ] as unknown as NonNullable<NeatGenome['extensions']>['values']['gatedBlocks'],
+            ] as unknown as NonNullable<
+              NeatGenome['extensions']
+            >['values']['gatedBlocks'],
             recurrentModules: [
               null,
               {
@@ -318,7 +333,9 @@ describe('neat genome utility coverage chapter', () => {
                   recurrentCore: [knownNodeGeneId],
                 },
               },
-            ] as unknown as NonNullable<NeatGenome['extensions']>['values']['recurrentModules'],
+            ] as unknown as NonNullable<
+              NeatGenome['extensions']
+            >['values']['recurrentModules'],
           },
         };
 
@@ -346,7 +363,8 @@ describe('neat genome utility coverage chapter', () => {
         } as Parameters<typeof createCompatibilityGenomeView>[0];
 
         // Act
-        const compatibilityView = createCompatibilityGenomeView(runtimeLikeSource);
+        const compatibilityView =
+          createCompatibilityGenomeView(runtimeLikeSource);
 
         // Assert
         expect(compatibilityView).toBe(runtimeLikeSource);
@@ -390,10 +408,16 @@ describe('neat genome utility coverage chapter', () => {
     describe('given a strict genome is converted into a cached compatibility view', () => {
       it('forwards strict-genome metadata, cache writes, and connection reads', () => {
         // Arrange
-        const genome = createGenomeFromNetwork(new Network(2, 1, { seed: 1_461 })) as typeof createGenomeFromNetwork extends (...args: never[]) => infer T ? T & {
-          _compatInnovationMode?: 'require-explicit' | 'allow-fallback';
-          _id?: number;
-        } : never;
+        const genome = createGenomeFromNetwork(
+          new Network(2, 1, { seed: 1_461 }),
+        ) as typeof createGenomeFromNetwork extends (
+          ...args: never[]
+        ) => infer T
+          ? T & {
+              _compatInnovationMode?: 'require-explicit' | 'allow-fallback';
+              _id?: number;
+            }
+          : never;
         genome._compatInnovationMode = 'require-explicit';
         genome._id = 92;
         const compatibilityView = createCompatibilityGenomeView(genome);
@@ -426,7 +450,8 @@ describe('neat genome utility coverage chapter', () => {
         } as Parameters<typeof createCompatibilityGenomeView>[0];
 
         // Act
-        const compatibilityView = createCompatibilityGenomeView(compatibilitySource);
+        const compatibilityView =
+          createCompatibilityGenomeView(compatibilitySource);
 
         // Assert
         expect(compatibilityView).toBe(compatibilitySource);

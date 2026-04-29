@@ -311,7 +311,8 @@ function applyOptionDefaults(
 }
 
 function ensureInternalState(host: NeatInitializationHost): void {
-  if (!host._innovationTracker) host._innovationTracker = createInnovationTracker();
+  if (!host._innovationTracker)
+    host._innovationTracker = createInnovationTracker();
   if (!Array.isArray(host._species)) host._species = [];
   if (host._nextSpeciesId === undefined) host._nextSpeciesId = 1;
   if (!host._speciesCreated) host._speciesCreated = new Map();

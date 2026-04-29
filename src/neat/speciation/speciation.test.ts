@@ -35,7 +35,8 @@ describe('neat speciation root chapter', () => {
         seed: 41,
         speciation: true,
       });
-      const malformedGenome = neat.population[0] as NetworkWithMutableConnections;
+      const malformedGenome = neat
+        .population[0] as NetworkWithMutableConnections;
       Reflect.deleteProperty(malformedGenome.connections[0], 'innovation');
 
       // Assert

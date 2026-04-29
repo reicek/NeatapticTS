@@ -3,6 +3,7 @@ import Node from '../../node';
 import {
   activateBatch as activateBatchUtils,
   activateRaw as activateRawUtils,
+  gaussianRand,
 } from './network.activate.utils';
 
 type FastSlabActivate = (input: number[]) => number[];
@@ -63,8 +64,12 @@ function createAcyclicScheduleAdoptionScenario(
     seed: 210,
     enforceAcyclic: true,
   });
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
-  const outputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'output');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
+  const outputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'output',
+  );
 
   if (inputNodes.length !== 2 || outputNodes.length !== 2) {
     throw new Error('Expected two input nodes and two output nodes');
@@ -97,7 +102,9 @@ function createAcyclicScheduleAdoptionScenario(
 
   const inputVector = [2, 1];
   network.clear();
-  const expectedOutput = [...runActivationMode(network, inputVector, activationMode)];
+  const expectedOutput = [
+    ...runActivationMode(network, inputVector, activationMode),
+  ];
 
   network.clear();
   network.nodes = [
@@ -123,8 +130,12 @@ function createRecurrentScheduleAdoptionScenario(
     seed: 211,
     enforceAcyclic: false,
   });
-  const inputNode = network.nodes.find((nodeEntry) => nodeEntry.type === 'input');
-  const outputNode = network.nodes.find((nodeEntry) => nodeEntry.type === 'output');
+  const inputNode = network.nodes.find(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
+  const outputNode = network.nodes.find(
+    (nodeEntry) => nodeEntry.type === 'output',
+  );
 
   if (!inputNode || !outputNode) {
     throw new Error('Expected one input node and one output node');
@@ -150,7 +161,9 @@ function createRecurrentScheduleAdoptionScenario(
 
   const inputVector = [2];
   network.clear();
-  const expectedOutput = [...runActivationMode(network, inputVector, activationMode)];
+  const expectedOutput = [
+    ...runActivationMode(network, inputVector, activationMode),
+  ];
 
   network.clear();
   network.nodes = [inputNode, outputNode, hiddenNode];
@@ -213,9 +226,8 @@ describe('network activate chapter', () => {
       describe('when node storage order drifts away from the compiled acyclic schedule', () => {
         it('still follows explicit IO roles and scheduled output order', () => {
           // Arrange
-          const activationScenario = createAcyclicScheduleAdoptionScenario(
-            'activate',
-          );
+          const activationScenario =
+            createAcyclicScheduleAdoptionScenario('activate');
 
           // Act
           const output = activationScenario.network.activate(
@@ -230,9 +242,8 @@ describe('network activate chapter', () => {
       describe('when recurrent node storage order drifts away from the compiled schedule', () => {
         it('still follows the recurrent component order', () => {
           // Arrange
-          const activationScenario = createRecurrentScheduleAdoptionScenario(
-            'activate',
-          );
+          const activationScenario =
+            createRecurrentScheduleAdoptionScenario('activate');
 
           // Act
           const output = activationScenario.network.activate(
@@ -378,9 +389,8 @@ describe('network activate chapter', () => {
       describe('when node storage order drifts away from the compiled acyclic schedule', () => {
         it('still follows explicit IO roles and scheduled output order', () => {
           // Arrange
-          const activationScenario = createAcyclicScheduleAdoptionScenario(
-            'noTrace',
-          );
+          const activationScenario =
+            createAcyclicScheduleAdoptionScenario('noTrace');
 
           // Act
           const output = activationScenario.network.noTraceActivate(
@@ -395,9 +405,8 @@ describe('network activate chapter', () => {
       describe('when recurrent node storage order drifts away from the compiled schedule', () => {
         it('still follows the recurrent component order', () => {
           // Arrange
-          const activationScenario = createRecurrentScheduleAdoptionScenario(
-            'noTrace',
-          );
+          const activationScenario =
+            createRecurrentScheduleAdoptionScenario('noTrace');
 
           // Act
           const output = activationScenario.network.noTraceActivate(
@@ -592,6 +601,15 @@ describe('network activate chapter', () => {
 
           // Assert
           expect(batchOutput.length).toBe(1);
+        });
+      });
+    });
+
+    describe('given gaussianRand is imported through the activate barrel', () => {
+      describe('when called with default rng', () => {
+        it('returns a finite number', () => {
+          const result = gaussianRand();
+          expect(Number.isFinite(result)).toBe(true);
         });
       });
     });

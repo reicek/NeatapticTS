@@ -52,7 +52,11 @@ function resolveRoleCounts(
 ): Record<'input' | 'hidden' | 'output', number> {
   return nodes.reduce<Record<'input' | 'hidden' | 'output', number>>(
     (counts, node) => {
-      if (node.role === 'input' || node.role === 'hidden' || node.role === 'output') {
+      if (
+        node.role === 'input' ||
+        node.role === 'hidden' ||
+        node.role === 'output'
+      ) {
         counts[node.role] += 1;
       }
 
@@ -71,15 +75,21 @@ function formatRoleNodeList(
   }
 
   const orderedNodes = nodes.toSorted((leftNode, rightNode) => {
-    const leftOrder = roleLabel === 'input' ? leftNode.inputOrder : leftNode.outputOrder;
-    const rightOrder = roleLabel === 'input' ? rightNode.inputOrder : rightNode.outputOrder;
+    const leftOrder =
+      roleLabel === 'input' ? leftNode.inputOrder : leftNode.outputOrder;
+    const rightOrder =
+      roleLabel === 'input' ? rightNode.inputOrder : rightNode.outputOrder;
 
-    return (leftOrder ?? Number.POSITIVE_INFINITY) - (rightOrder ?? Number.POSITIVE_INFINITY);
+    return (
+      (leftOrder ?? Number.POSITIVE_INFINITY) -
+      (rightOrder ?? Number.POSITIVE_INFINITY)
+    );
   });
 
   return orderedNodes
     .map((node) => {
-      const roleOrder = roleLabel === 'input' ? node.inputOrder : node.outputOrder;
+      const roleOrder =
+        roleLabel === 'input' ? node.inputOrder : node.outputOrder;
       return `[${roleOrder}] ${formatNodeIdentity(node)}`;
     })
     .join(', ');
@@ -90,7 +100,10 @@ function formatActivationOrder(activationOrder: readonly number[]): string {
     return 'none';
   }
 
-  const activationPreview = activationOrder.slice(0, MAX_ACTIVATION_ORDER_PREVIEW_COUNT);
+  const activationPreview = activationOrder.slice(
+    0,
+    MAX_ACTIVATION_ORDER_PREVIEW_COUNT,
+  );
   const activationSuffix =
     activationOrder.length > MAX_ACTIVATION_ORDER_PREVIEW_COUNT
       ? ` -> ... (+${activationOrder.length - MAX_ACTIVATION_ORDER_PREVIEW_COUNT} more)`
@@ -134,10 +147,14 @@ function formatConnectionPreview(
 }
 
 function formatNodeIdentity(node: ConstructGraphNodeSummary): string {
-  const nodeName = node.label === null ? `geneId:${node.geneId}` : `"${node.label}"`;
+  const nodeName =
+    node.label === null ? `geneId:${node.geneId}` : `"${node.label}"`;
   return `${nodeName} (geneId: ${node.geneId})`;
 }
 
-function formatConnectionEndpoint(nodeGeneId: number, nodeIndex: number): string {
+function formatConnectionEndpoint(
+  nodeGeneId: number,
+  nodeIndex: number,
+): string {
   return `geneId:${nodeGeneId}[${nodeIndex}]`;
 }

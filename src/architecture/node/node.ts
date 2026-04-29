@@ -335,9 +335,9 @@ export default class Node {
    * mutation, or serialization behavior, but it gives later architecture
    * assembly, diagnostics, and visualization passes a stable place to read
    * human-facing labels and intent.
-    *
-    * Reach for this when the node is still the right abstraction but a later
-    * reader should not have to infer its purpose from connection order alone.
+   *
+   * Reach for this when the node is still the right abstraction but a later
+   * reader should not have to infer its purpose from connection order alone.
    *
    * @param descriptor Optional label, intent, and scalar metadata to merge.
    * @returns Nothing.
@@ -347,7 +347,7 @@ export default class Node {
    * const readout = new Node('output');
    * readout.describe({
    *   label: 'readoutNode',
-    *   metadata: { stage: 'readout' },
+   *   metadata: { stage: 'readout' },
    * });
    * ```
    */

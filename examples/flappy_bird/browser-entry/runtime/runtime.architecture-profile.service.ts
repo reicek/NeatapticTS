@@ -54,8 +54,9 @@ export function resolveAvailableRuntimeArchitectureProfiles(): ExampleArchitectu
  * @returns Previously stored local records or an empty table.
  */
 export function resolveRuntimeArchitectureHistory(
-  storage: RuntimeArchitectureHistoryStorage | undefined =
-    resolveRuntimeArchitectureHistoryStorage(),
+  storage:
+    | RuntimeArchitectureHistoryStorage
+    | undefined = resolveRuntimeArchitectureHistoryStorage(),
 ): RuntimeArchitectureHistoryByProfileId {
   if (!storage) {
     return {};
@@ -87,8 +88,9 @@ export function resolveRuntimeArchitectureHistory(
  */
 export function persistRuntimeArchitectureHistory(
   historyByProfileId: RuntimeArchitectureHistoryByProfileId,
-  storage: RuntimeArchitectureHistoryStorage | undefined =
-    resolveRuntimeArchitectureHistoryStorage(),
+  storage:
+    | RuntimeArchitectureHistoryStorage
+    | undefined = resolveRuntimeArchitectureHistoryStorage(),
 ): void {
   if (!storage) {
     return;
@@ -153,9 +155,7 @@ export function resolveRuntimeArchitectureSelectorItems(options: {
     return {
       id: profile.id,
       label: `${profile.label}${isLeader ? ' *' : ''}`,
-      caption: bestScore
-        ? `Best ${bestScore.pipesPassed} pipes`
-        : undefined,
+      caption: bestScore ? `Best ${bestScore.pipesPassed} pipes` : undefined,
       selected: profile.id === options.selectedProfileId,
       tooltipHeading: resolveRuntimeArchitectureTooltipHeading(profile),
       tooltipBodyLines: resolveRuntimeArchitectureTooltipBodyLines(profile),

@@ -403,7 +403,9 @@ describe('neat telemetry diversity metrics chapter', () => {
     describe('given a sampled genome has fewer than three nodes', () => {
       it('skips the graphlet without counting a motif', () => {
         // Arrange
-        const genomes = [createTelemetryGenome({ nodeCount: 2, connectionCount: 1 })];
+        const genomes = [
+          createTelemetryGenome({ nodeCount: 2, connectionCount: 1 }),
+        ];
 
         // Act
         const graphletEntropy = computeGraphletEntropy(
@@ -450,10 +452,13 @@ function createTelemetryGenome(input: {
     toIndex: number;
   }> = input.connections
     ? input.connections
-    : Array.from({ length: input.connectionCount ?? 0 }, (_, connectionIndex) => ({
-        fromIndex: 0,
-        toIndex: Math.min(connectionIndex + 1, input.nodeCount - 1),
-      }));
+    : Array.from(
+        { length: input.connectionCount ?? 0 },
+        (_, connectionIndex) => ({
+          fromIndex: 0,
+          toIndex: Math.min(connectionIndex + 1, input.nodeCount - 1),
+        }),
+      );
 
   return {
     connections: generatedConnections.map((connection) => ({

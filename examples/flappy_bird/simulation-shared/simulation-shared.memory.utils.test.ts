@@ -40,7 +40,9 @@ describe('resolveTemporalObservationVector', () => {
         SAMPLE_OBSERVATION_FEATURES,
         observationMemoryState,
       ),
-    ).toEqual(resolveObservationVectorFromFeatures(SAMPLE_OBSERVATION_FEATURES));
+    ).toEqual(
+      resolveObservationVectorFromFeatures(SAMPLE_OBSERVATION_FEATURES),
+    );
   });
 });
 

@@ -604,21 +604,19 @@ function resolvePositionedNetworkGraphScene(
           overlayAlignedPositionedNodes,
           nodeDimensions,
         );
-  const inputDescriptionScenes =
-    networkVisualizationScene.hideNetworkOverlays
-      ? []
-      : resolveInputDescriptionScenes(
-          overlayAlignedPositionedNodes,
-          nodeDimensions,
-        );
-  const hiddenColumnLabelScenes =
-    networkVisualizationScene.hideNetworkOverlays
-      ? []
-      : resolveHiddenColumnLabelScenes(
-          overlayAlignedPositionedNodes,
-          nodeDimensions,
-          networkTopologySummary.hiddenColumnAnnotations,
-        );
+  const inputDescriptionScenes = networkVisualizationScene.hideNetworkOverlays
+    ? []
+    : resolveInputDescriptionScenes(
+        overlayAlignedPositionedNodes,
+        nodeDimensions,
+      );
+  const hiddenColumnLabelScenes = networkVisualizationScene.hideNetworkOverlays
+    ? []
+    : resolveHiddenColumnLabelScenes(
+        overlayAlignedPositionedNodes,
+        nodeDimensions,
+        networkTopologySummary.hiddenColumnAnnotations,
+      );
 
   // Step 3: Build the connection lookup state used by the drawing layers.
   return {
@@ -626,7 +624,9 @@ function resolvePositionedNetworkGraphScene(
     inputDescriptionScenes,
     inputGroupLabelBandScenes,
     hiddenColumnLabelScenes,
-    positionByNodeIndex: createPositionByNodeIndex(overlayAlignedPositionedNodes),
+    positionByNodeIndex: createPositionByNodeIndex(
+      overlayAlignedPositionedNodes,
+    ),
     runtimeConnections: resolveRuntimeConnections(network),
     nodeDimensions,
   };
@@ -669,7 +669,8 @@ function drawPositionedNetworkGraph(
     );
     drawHiddenColumnLabelScenes(
       context,
-      resolvedNetworkVisualizationFrame.positionedScene.hiddenColumnLabelScenes ?? [],
+      resolvedNetworkVisualizationFrame.positionedScene
+        .hiddenColumnLabelScenes ?? [],
       hoverState?.hoveredNodeIndices,
     );
   }
@@ -695,10 +696,9 @@ function resolveBaseGraphPaddingContext(
   network: Network | undefined,
 ): NetworkGraphPaddingContext {
   // Step 1: Reserve the full input-overlay shelf only when overlays are visible.
-  const descriptionColumnReserveWidthPx =
-    hideNetworkOverlays
-      ? 0
-      : resolveInputDescriptionColumnWidthPx(inputNodeCount);
+  const descriptionColumnReserveWidthPx = hideNetworkOverlays
+    ? 0
+    : resolveInputDescriptionColumnWidthPx(inputNodeCount);
   const groupLabelBandReserveWidthPx =
     hideNetworkOverlays || descriptionColumnReserveWidthPx === 0
       ? 0
@@ -1081,11 +1081,10 @@ function formatArchitectureLabel(
   ]
     .filter(
       (architectureLabelLine): architectureLabelLine is string =>
-        typeof architectureLabelLine === 'string' && architectureLabelLine.length > 0,
+        typeof architectureLabelLine === 'string' &&
+        architectureLabelLine.length > 0,
     )
-    .join(
-    FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR,
-  );
+    .join(FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR);
 }
 
 /**
@@ -1122,10 +1121,16 @@ function resolveTemporalHiddenLayersLabel(
   network: Network,
   temporalStructure: ReturnType<Network['describeTemporalStructure']>,
 ): string {
-  const recurrentKinds = [...new Set(
-    temporalStructure.recurrentModules.map((recurrentModule) => recurrentModule.kind),
-  )];
-  const sortedRecurrentModules = [...temporalStructure.recurrentModules].toSorted(
+  const recurrentKinds = [
+    ...new Set(
+      temporalStructure.recurrentModules.map(
+        (recurrentModule) => recurrentModule.kind,
+      ),
+    ),
+  ];
+  const sortedRecurrentModules = [
+    ...temporalStructure.recurrentModules,
+  ].toSorted(
     (leftModule, rightModule) =>
       resolveTemporalModuleOrderValue(leftModule) -
       resolveTemporalModuleOrderValue(rightModule),
@@ -1162,7 +1167,9 @@ function resolveTemporalHiddenLayersLabel(
 
 function resolveUniformTemporalFamilyLabel(
   familyLabel: string,
-  recurrentModules: ReturnType<Network['describeTemporalStructure']>['recurrentModules'],
+  recurrentModules: ReturnType<
+    Network['describeTemporalStructure']
+  >['recurrentModules'],
   preferredRoleNames: readonly string[],
   network: Network,
 ): string {
@@ -1177,7 +1184,9 @@ function resolveUniformTemporalFamilyLabel(
 }
 
 function resolveNarxTemporalFamilyLabel(
-  recurrentModules: ReturnType<Network['describeTemporalStructure']>['recurrentModules'],
+  recurrentModules: ReturnType<
+    Network['describeTemporalStructure']
+  >['recurrentModules'],
   network: Network,
 ): string {
   const inputDelayModule = recurrentModules.find(
@@ -1200,7 +1209,9 @@ function resolveNarxTemporalFamilyLabel(
 }
 
 function resolvePreferredRoleSize(
-  recurrentModule: ReturnType<Network['describeTemporalStructure']>['recurrentModules'][number],
+  recurrentModule: ReturnType<
+    Network['describeTemporalStructure']
+  >['recurrentModules'][number],
   preferredRoleNames: readonly string[],
 ): number {
   for (const preferredRoleName of preferredRoleNames) {
@@ -1220,7 +1231,9 @@ function resolvePreferredRoleSize(
 }
 
 function resolveTemporalExtraHiddenCount(
-  recurrentModules: ReturnType<Network['describeTemporalStructure']>['recurrentModules'],
+  recurrentModules: ReturnType<
+    Network['describeTemporalStructure']
+  >['recurrentModules'],
   network: Network,
 ): number {
   const moduleOwnedGeneIds = new Set(
@@ -1239,7 +1252,9 @@ function resolveTemporalExtraHiddenCount(
 }
 
 function resolveTemporalModuleOrderValue(
-  recurrentModule: ReturnType<Network['describeTemporalStructure']>['recurrentModules'][number],
+  recurrentModule: ReturnType<
+    Network['describeTemporalStructure']
+  >['recurrentModules'][number],
 ): number {
   const orderedGeneIds = Object.values(recurrentModule.nodeGeneIdsByRole)
     .flat()

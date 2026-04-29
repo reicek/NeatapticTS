@@ -528,7 +528,8 @@ export function resolveWarmStartRolloutOptimizationPlan(
 
   return {
     rolloutSeedCount: FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_SEED_COUNT,
-    optimizationStepCount: FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS,
+    optimizationStepCount:
+      FLAPPY_WORKER_GEN0_PRETRAIN_ROLLOUT_OPTIMIZATION_STEPS,
   };
 }
 
@@ -666,9 +667,8 @@ export function resolveHeuristicTeacherFlapDecisionFromObservationVector(
   const velocity =
     observationVector[FLAPPY_WARM_START_OBSERVATION_INDEX.velocity] ?? 0;
   const distanceToNextPipe =
-    observationVector[
-      FLAPPY_WARM_START_OBSERVATION_INDEX.distanceToNextPipe
-    ] ?? 0;
+    observationVector[FLAPPY_WARM_START_OBSERVATION_INDEX.distanceToNextPipe] ??
+    0;
   const deltaToNextGap =
     observationVector[FLAPPY_WARM_START_OBSERVATION_INDEX.deltaToNextGap] ?? 0;
   const nextGapTop =

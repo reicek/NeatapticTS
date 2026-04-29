@@ -19,7 +19,10 @@
  * 3. the detail builders below when you want the richer analytical shelf.
  */
 import { MazeUtils } from '../../mazeUtils';
-import type { IActivationSchedulingDiagnostics, INetwork } from '../../interfaces';
+import type {
+  IActivationSchedulingDiagnostics,
+  INetwork,
+} from '../../interfaces';
 import { DASHBOARD_MANAGER_CONSTANTS as C } from '../dashboardManager.constants';
 import type {
   AsciiMazeActivationSchedulingStats,
@@ -289,7 +292,10 @@ export function createDetailedStatsSnapshot(
 function resolveActivationSchedulingDetails(
   network: INetwork | null | undefined,
 ): AsciiMazeActivationSchedulingStats | null {
-  if (!network || typeof network.getActivationSchedulingDiagnostics !== 'function') {
+  if (
+    !network ||
+    typeof network.getActivationSchedulingDiagnostics !== 'function'
+  ) {
     return null;
   }
 

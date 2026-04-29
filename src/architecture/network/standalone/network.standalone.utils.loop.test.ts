@@ -29,8 +29,8 @@ describe('network standalone loop utility chapter', () => {
 
         // Act
         appendAllNodeComputationLines(generationContext);
-        const emittedActivationLine = generationContext.bodyLines.find(
-          (line) => line.startsWith(`A[${outputNode.index}] =`),
+        const emittedActivationLine = generationContext.bodyLines.find((line) =>
+          line.startsWith(`A[${outputNode.index}] =`),
         );
 
         // Assert

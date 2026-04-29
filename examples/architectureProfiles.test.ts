@@ -10,8 +10,14 @@ describe('shared example architecture profiles', () => {
   describe('resolveExampleArchitectureProfile()', () => {
     it('keeps one shared MLP profile id while resolving demo-specific shapes', () => {
       // Arrange
-      const flappyProfile = resolveExampleArchitectureProfile('flappy-bird', 'mlp');
-      const asciiProfile = resolveExampleArchitectureProfile('ascii-maze', 'mlp');
+      const flappyProfile = resolveExampleArchitectureProfile(
+        'flappy-bird',
+        'mlp',
+      );
+      const asciiProfile = resolveExampleArchitectureProfile(
+        'ascii-maze',
+        'mlp',
+      );
 
       // Act
       const resolvedProfiles = {
@@ -54,8 +60,10 @@ describe('shared example architecture profiles', () => {
   describe('getApprovedExampleArchitectureProfiles()', () => {
     it('exposes the current approved profile set per demo without inventing demo-local names', () => {
       // Arrange
-      const approvedFlappyProfiles = getApprovedExampleArchitectureProfiles('flappy-bird');
-      const approvedAsciiProfiles = getApprovedExampleArchitectureProfiles('ascii-maze');
+      const approvedFlappyProfiles =
+        getApprovedExampleArchitectureProfiles('flappy-bird');
+      const approvedAsciiProfiles =
+        getApprovedExampleArchitectureProfiles('ascii-maze');
 
       // Act
       const approvedProfileIds = {
@@ -125,10 +133,12 @@ describe('shared example architecture profiles', () => {
         );
 
         // Act
-        const directInputToOutputConnectionCount = flappyGruNetwork.connections.filter(
-          (connection) =>
-            connection.from.type === 'input' && connection.to.type === 'output',
-        ).length;
+        const directInputToOutputConnectionCount =
+          flappyGruNetwork.connections.filter(
+            (connection) =>
+              connection.from.type === 'input' &&
+              connection.to.type === 'output',
+          ).length;
 
         // Assert
         expect(directInputToOutputConnectionCount).toBe(12);

@@ -103,8 +103,12 @@ describe('layer facade chapter', () => {
         const layer = Layer.dense(2);
         const targetGroup = new Group(1);
         const firstConnection = layer.nodes[0].connect(targetGroup.nodes[0])[0];
-        const secondConnection = layer.nodes[1].connect(targetGroup.nodes[0])[0];
-        const reverseConnection = targetGroup.nodes[0].connect(layer.nodes[0])[0];
+        const secondConnection = layer.nodes[1].connect(
+          targetGroup.nodes[0],
+        )[0];
+        const reverseConnection = targetGroup.nodes[0].connect(
+          layer.nodes[0],
+        )[0];
         layer.connections.out.push(firstConnection, secondConnection);
         layer.connections.in.push(reverseConnection);
 
@@ -193,7 +197,10 @@ describe('layer facade chapter', () => {
         layer.set({ bias: 0.5 });
 
         // Assert
-        expect({ bias: layer.nodes[0].bias, nodeCount: layer.nodes.length }).toEqual({
+        expect({
+          bias: layer.nodes[0].bias,
+          nodeCount: layer.nodes.length,
+        }).toEqual({
           bias: 0.5,
           nodeCount: 2,
         });
@@ -256,7 +263,10 @@ describe('layer facade chapter', () => {
         const layer = Layer.batchNorm(2) as BatchNormLayer;
 
         // Assert
-        expect({ batchNorm: layer.batchNorm, nodeCount: layer.nodes.length }).toEqual({
+        expect({
+          batchNorm: layer.batchNorm,
+          nodeCount: layer.nodes.length,
+        }).toEqual({
           batchNorm: true,
           nodeCount: 2,
         });
@@ -269,7 +279,10 @@ describe('layer facade chapter', () => {
         const layer = Layer.layerNorm(2) as LayerNormLayer;
 
         // Assert
-        expect({ layerNorm: layer.layerNorm, nodeCount: layer.nodes.length }).toEqual({
+        expect({
+          layerNorm: layer.layerNorm,
+          nodeCount: layer.nodes.length,
+        }).toEqual({
           layerNorm: true,
           nodeCount: 2,
         });

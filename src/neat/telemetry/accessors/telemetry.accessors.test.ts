@@ -11,7 +11,9 @@ import {
   type TelemetryAccessorHost,
 } from './telemetry.accessors';
 
-type ObjectiveEvent = NonNullable<TelemetryAccessorHost['_objectiveEvents']>[number];
+type ObjectiveEvent = NonNullable<
+  TelemetryAccessorHost['_objectiveEvents']
+>[number];
 
 function createTelemetryHost(
   overrides: TelemetryAccessorHost = {},

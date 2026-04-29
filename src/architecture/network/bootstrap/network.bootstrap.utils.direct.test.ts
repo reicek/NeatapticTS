@@ -307,12 +307,13 @@ describe('network bootstrap utility chapter', () => {
         config.float32Mode = false;
         const acquireNodeSpy = jest
           .spyOn(nodePoolModule, 'acquireNode')
-          .mockImplementation((request) =>
-            new Node(
-              request?.type ?? 'hidden',
-              undefined,
-              request?.rng ?? Math.random,
-            ),
+          .mockImplementation(
+            (request) =>
+              new Node(
+                request?.type ?? 'hidden',
+                undefined,
+                request?.rng ?? Math.random,
+              ),
           );
         const network = createBootstrapNetwork();
 
@@ -328,8 +329,8 @@ describe('network bootstrap utility chapter', () => {
         // Assert
         expect({
           activationPrecision: network._activationPrecision,
-          acquiredNodeTypes: acquireNodeSpy.mock.calls.map(([request]) =>
-            request?.type ?? 'missing',
+          acquiredNodeTypes: acquireNodeSpy.mock.calls.map(
+            ([request]) => request?.type ?? 'missing',
           ),
         }).toEqual({
           activationPrecision: undefined,

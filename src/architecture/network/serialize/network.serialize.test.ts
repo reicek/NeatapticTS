@@ -118,7 +118,9 @@ function createTemporalModuleExtensions(
   );
 
   if (hiddenNodeGeneIds.length === 0 || gatedConnections.length === 0) {
-    throw new Error('Expected recurrent module fixtures with hidden nodes and gated connections.');
+    throw new Error(
+      'Expected recurrent module fixtures with hidden nodes and gated connections.',
+    );
   }
 
   return {
@@ -139,7 +141,11 @@ function createTemporalModuleExtensions(
       gatedBlocks: [
         {
           blockId: 'gated:block:0',
-          gaterGeneIds: [...new Set(gatedConnections.map((connection) => connection.gaterGeneId))],
+          gaterGeneIds: [
+            ...new Set(
+              gatedConnections.map((connection) => connection.gaterGeneId),
+            ),
+          ],
           connectionInnovations: gatedConnections.map(
             (connection) => connection.innovation,
           ),
@@ -694,10 +700,14 @@ describe('network serialize chapter', () => {
           describe('when the JSON payload root is null', () => {
             it('throws an invalid JSON error', () => {
               // Arrange
-              const nullJsonPayload = null as unknown as Record<string, unknown>;
+              const nullJsonPayload = null as unknown as Record<
+                string,
+                unknown
+              >;
 
               // Act
-              const deserializeNullRoot = () => Network.fromJSON(nullJsonPayload);
+              const deserializeNullRoot = () =>
+                Network.fromJSON(nullJsonPayload);
 
               // Assert
               expect(deserializeNullRoot).toThrow();
@@ -830,7 +840,8 @@ describe('network serialize chapter', () => {
             nodeCounterAdvanced:
               nextNode.geneId > 900 + restored.nodes.length - 1,
             connectionCounterAdvanced:
-              nextConnection.innovation > 1_200 + restored.connections.length - 1,
+              nextConnection.innovation >
+              1_200 + restored.connections.length - 1,
           }).toEqual({
             nodeCounterAdvanced: true,
             connectionCounterAdvanced: true,
@@ -1022,9 +1033,13 @@ describe('network serialize chapter', () => {
       describe('when fromJSON() rebuilds the payload and it is serialized again', () => {
         it('preserves the extension bag across the runtime round-trip', () => {
           // Arrange
-          const serializedJson = Architect.lstm(1, 2, 1)
-            .toJSON() as unknown as NetworkJSON;
-          serializedJson.extensions = createTemporalModuleExtensions(serializedJson);
+          const serializedJson = Architect.lstm(
+            1,
+            2,
+            1,
+          ).toJSON() as unknown as NetworkJSON;
+          serializedJson.extensions =
+            createTemporalModuleExtensions(serializedJson);
 
           // Act
           const deserialized = Network.fromJSON(
@@ -1042,8 +1057,9 @@ describe('network serialize chapter', () => {
       describe('when hiddenLayerSizes is not an array during fromJSON()', () => {
         it('ignores the invalid descriptor and keeps a valid runtime architecture descriptor', () => {
           // Arrange
-          const serializedJson = createSerializableNetwork(3812)
-            .toJSON() as unknown as NetworkJSON;
+          const serializedJson = createSerializableNetwork(
+            3812,
+          ).toJSON() as unknown as NetworkJSON;
           serializedJson.architecture = {
             source: 'layer-metadata',
             hiddenLayerSizes: 'invalid-shape',
@@ -1067,11 +1083,15 @@ describe('network serialize chapter', () => {
       describe('when extension values are not a plain object during fromJSON()', () => {
         it('does not preserve the invalid extension bag in the next JSON snapshot', () => {
           // Arrange
-          const serializedJson = createSerializableNetwork(3813)
-            .toJSON() as unknown as NetworkJSON;
+          const serializedJson = createSerializableNetwork(
+            3813,
+          ).toJSON() as unknown as NetworkJSON;
           serializedJson.extensions = {
             version: 1,
-            values: ['invalid-values-shape'] as unknown as Record<string, unknown>,
+            values: ['invalid-values-shape'] as unknown as Record<
+              string,
+              unknown
+            >,
           };
 
           // Act
@@ -1090,8 +1110,11 @@ describe('network serialize chapter', () => {
       describe('when LSTM JSON is serialized without manual extension tagging', () => {
         it('includes one LSTM recurrent module and one gated block', () => {
           // Arrange
-          const serializedJson = Architect.lstm(1, 2, 1)
-            .toJSON() as unknown as NetworkJSON;
+          const serializedJson = Architect.lstm(
+            1,
+            2,
+            1,
+          ).toJSON() as unknown as NetworkJSON;
 
           // Act
           const temporalSummary = summarizeTemporalExtensionBag(serializedJson);
@@ -1108,8 +1131,11 @@ describe('network serialize chapter', () => {
       describe('when GRU JSON is serialized without manual extension tagging', () => {
         it('includes one GRU recurrent module and one gated block', () => {
           // Arrange
-          const serializedJson = Architect.gru(1, 2, 1)
-            .toJSON() as unknown as NetworkJSON;
+          const serializedJson = Architect.gru(
+            1,
+            2,
+            1,
+          ).toJSON() as unknown as NetworkJSON;
 
           // Act
           const temporalSummary = summarizeTemporalExtensionBag(serializedJson);
@@ -1126,8 +1152,13 @@ describe('network serialize chapter', () => {
       describe('when NARX JSON is serialized without manual extension tagging', () => {
         it('includes one memory-module descriptor per delay line and no gated blocks', () => {
           // Arrange
-          const serializedJson = Architect.narx(2, 2, 1, 2, 1)
-            .toJSON() as unknown as NetworkJSON;
+          const serializedJson = Architect.narx(
+            2,
+            2,
+            1,
+            2,
+            1,
+          ).toJSON() as unknown as NetworkJSON;
 
           // Act
           const temporalSummary = summarizeTemporalExtensionBag(serializedJson);
@@ -1147,25 +1178,34 @@ describe('network serialize chapter', () => {
         it('drops the stale temporal descriptors instead of emitting invalid module metadata', () => {
           // Arrange
           const network = Architect.lstm(1, 2, 1);
-          const serializedBeforeEdit = network.toJSON() as unknown as NetworkJSON;
+          const serializedBeforeEdit =
+            network.toJSON() as unknown as NetworkJSON;
           const extensionValues = serializedBeforeEdit.extensions?.values as {
             gatedBlocks?: Array<{ connectionInnovations: number[] }>;
           };
           const moduleConnectionInnovation =
             extensionValues.gatedBlocks?.[0]?.connectionInnovations?.[0];
-          const moduleConnection = [...network.connections, ...network.selfconns].find(
-            (connection) => connection.innovation === moduleConnectionInnovation,
+          const moduleConnection = [
+            ...network.connections,
+            ...network.selfconns,
+          ].find(
+            (connection) =>
+              connection.innovation === moduleConnectionInnovation,
           );
 
           if (!moduleConnection) {
-            throw new Error('Expected one module-owned connection to exist for invalidation coverage.');
+            throw new Error(
+              'Expected one module-owned connection to exist for invalidation coverage.',
+            );
           }
 
           network.disconnect(moduleConnection.from, moduleConnection.to);
 
           // Act
-          const serializedAfterEdit = network.toJSON() as unknown as NetworkJSON;
-          const temporalSummary = summarizeTemporalExtensionBag(serializedAfterEdit);
+          const serializedAfterEdit =
+            network.toJSON() as unknown as NetworkJSON;
+          const temporalSummary =
+            summarizeTemporalExtensionBag(serializedAfterEdit);
 
           // Assert
           expect(temporalSummary).toEqual({
@@ -1182,25 +1222,36 @@ describe('network serialize chapter', () => {
         it('keeps the temporal descriptors because disabled genes still count as dormant structure', () => {
           // Arrange
           const network = Architect.lstm(1, 2, 1);
-          const serializedBeforeEdit = network.toJSON() as unknown as NetworkJSON;
-          const moduleConnectionInnovation = readFirstTemporalConnectionInnovation(
-            serializedBeforeEdit.extensions,
-          );
-          const moduleConnection = [...network.connections, ...network.selfconns].find(
-            (connection) => connection.innovation === moduleConnectionInnovation,
+          const serializedBeforeEdit =
+            network.toJSON() as unknown as NetworkJSON;
+          const moduleConnectionInnovation =
+            readFirstTemporalConnectionInnovation(
+              serializedBeforeEdit.extensions,
+            );
+          const moduleConnection = [
+            ...network.connections,
+            ...network.selfconns,
+          ].find(
+            (connection) =>
+              connection.innovation === moduleConnectionInnovation,
           );
 
           if (!moduleConnection) {
-            throw new Error('Expected one module-owned connection to exist for dormant-state coverage.');
+            throw new Error(
+              'Expected one module-owned connection to exist for dormant-state coverage.',
+            );
           }
 
           moduleConnection.enabled = false;
 
           // Act
-          const serializedAfterEdit = network.toJSON() as unknown as NetworkJSON;
-          const temporalSummary = summarizeTemporalExtensionBag(serializedAfterEdit);
+          const serializedAfterEdit =
+            network.toJSON() as unknown as NetworkJSON;
+          const temporalSummary =
+            summarizeTemporalExtensionBag(serializedAfterEdit);
           const disabledConnection = serializedAfterEdit.connections.find(
-            (connection) => connection.innovation === moduleConnectionInnovation,
+            (connection) =>
+              connection.innovation === moduleConnectionInnovation,
           );
 
           // Assert

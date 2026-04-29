@@ -29,7 +29,9 @@ export function populatePooledOutputBufferFromNodes(
     traversalContext.network,
     traversalContext.inputVector,
   );
-  const orderedOutputNodes = resolveOrderedOutputNodes(traversalContext.network);
+  const orderedOutputNodes = resolveOrderedOutputNodes(
+    traversalContext.network,
+  );
 
   activationNodes.forEach(function processNode(networkNode): void {
     activateSingleNodeWithoutTrace({
@@ -38,12 +40,11 @@ export function populatePooledOutputBufferFromNodes(
     });
   });
 
-  orderedOutputNodes.forEach(function writeOutputNodeActivation(
-    outputNode,
-    outputIndex,
-  ): void {
-    traversalContext.pooledOutputBuffer[outputIndex] = outputNode.activation;
-  });
+  orderedOutputNodes.forEach(
+    function writeOutputNodeActivation(outputNode, outputIndex): void {
+      traversalContext.pooledOutputBuffer[outputIndex] = outputNode.activation;
+    },
+  );
 }
 
 /**

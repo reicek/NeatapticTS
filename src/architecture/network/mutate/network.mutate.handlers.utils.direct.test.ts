@@ -149,7 +149,9 @@ describe('network mutate handler utility chapter', () => {
         );
 
         if (!outputNode) {
-          throw new Error('Expected one output node for gate reassignment test.');
+          throw new Error(
+            'Expected one output node for gate reassignment test.',
+          );
         }
 
         network.gate(outputNode, network.connections[0]);
@@ -180,7 +182,9 @@ describe('network mutate handler utility chapter', () => {
         );
 
         if (!outputNode) {
-          throw new Error('Expected one output node for alternate gate reassignment test.');
+          throw new Error(
+            'Expected one output node for alternate gate reassignment test.',
+          );
         }
 
         network.gate(outputNode, network.connections[0]);
@@ -242,7 +246,9 @@ describe('network mutate handler utility chapter', () => {
         Reflect.set(network, '_detChain', [inputNode]);
         jest.spyOn(network, 'disconnect').mockImplementation((from, to) => {
           if (from === inputNode && to === secondOutputNode) {
-            throw new Error('Expected deterministic stray-edge disconnect failure.');
+            throw new Error(
+              'Expected deterministic stray-edge disconnect failure.',
+            );
           }
 
           return originalDisconnect(from, to);
@@ -417,21 +423,26 @@ describe('network mutate handler utility chapter', () => {
         Reflect.set(network, '_rand', () => 0);
         addNode.call(network);
         const preservedConnection = network.connections.find(
-          (candidateConnection) => candidateConnection.from === network.nodes[1],
+          (candidateConnection) =>
+            candidateConnection.from === network.nodes[1],
         );
 
         if (!preservedConnection) {
-          throw new Error('Expected one preserved downstream connection for stability nudge test.');
+          throw new Error(
+            'Expected one preserved downstream connection for stability nudge test.',
+          );
         }
 
-        const preservedConnectionWeightBeforeMutation = preservedConnection.weight;
+        const preservedConnectionWeightBeforeMutation =
+          preservedConnection.weight;
 
         // Act
         subNode.call(network);
 
         // Assert
         expect(preservedConnection.weight).toBeCloseTo(
-          preservedConnectionWeightBeforeMutation + SUB_NODE_STABILITY_WEIGHT_DELTA,
+          preservedConnectionWeightBeforeMutation +
+            SUB_NODE_STABILITY_WEIGHT_DELTA,
           12,
         );
       });
@@ -476,7 +487,9 @@ describe('network mutate handler utility chapter', () => {
         subConn.call(network);
 
         // Assert
-        expect(network.connections.length).toBe(connectionCountBeforeMutation - 1);
+        expect(network.connections.length).toBe(
+          connectionCountBeforeMutation - 1,
+        );
       });
     });
 
@@ -488,7 +501,11 @@ describe('network mutate handler utility chapter', () => {
           enforceAcyclic: false,
         });
         const hiddenNode = new Node('hidden', undefined, () => 0.5);
-        network.nodes.splice(network.nodes.length - network.output, 0, hiddenNode);
+        network.nodes.splice(
+          network.nodes.length - network.output,
+          0,
+          hiddenNode,
+        );
         network.connect(network.nodes[0], hiddenNode);
         const connectionCountBeforeMutation = network.connections.length;
         Reflect.set(network, '_rand', () => 0);
@@ -517,7 +534,9 @@ describe('network mutate handler utility chapter', () => {
         subConn.call(network);
 
         // Assert
-        expect(network.connections.length).toBe(connectionCountBeforeMutation - 1);
+        expect(network.connections.length).toBe(
+          connectionCountBeforeMutation - 1,
+        );
       });
     });
   });
@@ -550,10 +569,9 @@ describe('network mutate handler utility chapter', () => {
         } as Parameters<typeof modWeight>[0]);
 
         // Assert
-        expect(network.connections[0].weight - weightBeforeMutation).toBeCloseTo(
-          0.25,
-          12,
-        );
+        expect(
+          network.connections[0].weight - weightBeforeMutation,
+        ).toBeCloseTo(0.25, 12);
       });
     });
 
@@ -568,7 +586,10 @@ describe('network mutate handler utility chapter', () => {
         modWeight.call(network);
 
         // Assert
-        expect(network.connections[0].weight).toBeCloseTo(weightBeforeMutation, 12);
+        expect(network.connections[0].weight).toBeCloseTo(
+          weightBeforeMutation,
+          12,
+        );
       });
     });
   });
@@ -628,7 +649,8 @@ describe('network mutate handler utility chapter', () => {
         // Assert
         expect({
           randomCallCount: randomSpy.mock.calls.length,
-          squashChanged: squashSignatureAfterMutation !== squashSignatureBeforeMutation,
+          squashChanged:
+            squashSignatureAfterMutation !== squashSignatureBeforeMutation,
         }).toEqual({
           randomCallCount: 1,
           squashChanged: true,
@@ -668,7 +690,9 @@ describe('network mutate handler utility chapter', () => {
         );
 
         if (!outputNode) {
-          throw new Error('Expected one output node for add-gate saturation test.');
+          throw new Error(
+            'Expected one output node for add-gate saturation test.',
+          );
         }
 
         network.gate(outputNode, network.connections[0]);
@@ -743,7 +767,9 @@ describe('network mutate handler utility chapter', () => {
         addBackConn.call(network);
 
         // Assert
-        expect(network.connections.length).toBe(connectionCountBeforeMutation + 1);
+        expect(network.connections.length).toBe(
+          connectionCountBeforeMutation + 1,
+        );
       });
     });
 
@@ -816,7 +842,9 @@ describe('network mutate handler utility chapter', () => {
         const biasSignatureAfterMutation = readBiasSignature(network);
 
         // Assert
-        expect(biasSignatureAfterMutation).not.toBe(biasSignatureBeforeMutation);
+        expect(biasSignatureAfterMutation).not.toBe(
+          biasSignatureBeforeMutation,
+        );
       });
     });
 
@@ -837,7 +865,9 @@ describe('network mutate handler utility chapter', () => {
         const biasSignatureAfterMutation = readBiasSignature(network);
 
         // Assert
-        expect(biasSignatureAfterMutation).not.toBe(biasSignatureBeforeMutation);
+        expect(biasSignatureAfterMutation).not.toBe(
+          biasSignatureBeforeMutation,
+        );
       });
     });
 
@@ -945,7 +975,9 @@ describe('network mutate handler utility chapter', () => {
         );
 
         if (!outputNode) {
-          throw new Error('Expected one output node for recurrent gate preservation test.');
+          throw new Error(
+            'Expected one output node for recurrent gate preservation test.',
+          );
         }
 
         network.gate(outputNode, network.connections[0]);
@@ -1025,7 +1057,8 @@ describe('network mutate handler utility chapter', () => {
         // Assert
         expect({
           duplicateSelfConnectionCount: network.selfconns.filter(
-            (candidateConnection) => candidateConnection === sharedSelfConnection,
+            (candidateConnection) =>
+              candidateConnection === sharedSelfConnection,
           ).length,
           temporalDescriptorCount: countTemporalDescriptors(network),
         }).toEqual({
@@ -1065,7 +1098,9 @@ describe('network mutate handler utility chapter', () => {
         const weightSignatureAfterMutation = readWeightSignature(network);
 
         // Assert
-        expect(weightSignatureAfterMutation).toBe(weightSignatureBeforeMutation);
+        expect(weightSignatureAfterMutation).toBe(
+          weightSignatureBeforeMutation,
+        );
       });
     });
 

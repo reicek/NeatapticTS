@@ -50,8 +50,7 @@ describe('network mutate errors chapter', () => {
           name: mutateError.name,
         }).toEqual({
           cause: rootCause,
-          message:
-            'The recurrent layer output nodes could not be initialized.',
+          message: 'The recurrent layer output nodes could not be initialized.',
           name: 'NetworkMutateRecurrentLayerOutputInitializationError',
         });
       });

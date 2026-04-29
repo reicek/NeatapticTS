@@ -16,11 +16,15 @@ describe('neat innovation-tracker boundary', () => {
         const innovationTracker = createInnovationTracker();
         innovationTracker.nextInnovationId = 19;
         recordConnectionInnovation(innovationTracker, '2->3', 11);
-        recordNodeSplitRecord(innovationTracker, 'splitConnectionInnovation:11', {
-          newNodeGeneId: 7,
-          inInnov: 11,
-          outInnov: 12,
-        });
+        recordNodeSplitRecord(
+          innovationTracker,
+          'splitConnectionInnovation:11',
+          {
+            newNodeGeneId: 7,
+            inInnov: 11,
+            outInnov: 12,
+          },
+        );
 
         // Act
         prepareInnovationTrackerForGeneration(innovationTracker, 1);
@@ -72,11 +76,15 @@ describe('neat innovation-tracker boundary', () => {
         innovationTracker.activeGeneration = 4;
         innovationTracker.nextInnovationId = 23;
         recordConnectionInnovation(innovationTracker, '2->3', 11);
-        recordNodeSplitRecord(innovationTracker, 'splitConnectionInnovation:11', {
-          newNodeGeneId: 9,
-          inInnov: 11,
-          outInnov: 12,
-        });
+        recordNodeSplitRecord(
+          innovationTracker,
+          'splitConnectionInnovation:11',
+          {
+            newNodeGeneId: 9,
+            inInnov: 11,
+            outInnov: 12,
+          },
+        );
 
         // Act
         const restoredTracker = restoreInnovationTracker(

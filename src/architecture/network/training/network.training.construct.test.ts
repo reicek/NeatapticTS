@@ -82,7 +82,8 @@ describe('network training chapter', () => {
       describe('when propagate() is called with one valid target', () => {
         it('updates the live connection weights without adapter glue', () => {
           // Arrange
-          const { network, probeInputValues } = createConstructedTrainingScenario();
+          const { network, probeInputValues } =
+            createConstructedTrainingScenario();
           const initialConnectionWeights = network.connections.map(
             (connection) => connection.weight,
           );
@@ -96,7 +97,9 @@ describe('network training chapter', () => {
           );
 
           // Assert
-          expect(updatedConnectionWeights).not.toEqual(initialConnectionWeights);
+          expect(updatedConnectionWeights).not.toEqual(
+            initialConnectionWeights,
+          );
         });
       });
     });
@@ -105,12 +108,8 @@ describe('network training chapter', () => {
       describe('when train() runs on a simple supervised sample', () => {
         it('improves the sample error while preserving public IO and topology intent', () => {
           // Arrange
-          const {
-            network,
-            trainingDataset,
-            inputNodeIds,
-            outputNodeIds,
-          } = createConstructedTrainingScenario();
+          const { network, trainingDataset, inputNodeIds, outputNodeIds } =
+            createConstructedTrainingScenario();
           const initialMeanAbsoluteError = measureMeanAbsoluteOutputError(
             network,
             trainingDataset,
@@ -127,8 +126,7 @@ describe('network training chapter', () => {
             trainingDataset,
           );
           const actualTrainingBoundarySummary = {
-            improvedError:
-              trainedMeanAbsoluteError < initialMeanAbsoluteError,
+            improvedError: trainedMeanAbsoluteError < initialMeanAbsoluteError,
             topologyIntent: network.getTopologyIntent(),
             inputNodeIds: network.inputNodeIds,
             outputNodeIds: network.outputNodeIds,

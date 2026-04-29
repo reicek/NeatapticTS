@@ -79,9 +79,11 @@ function resolveInputTooltipSceneFromInputNode(
     return undefined;
   }
 
-  const hoveredInputDescriptionScene = positionedScene.inputDescriptionScenes.find(
-    (inputDescriptionScene) => inputDescriptionScene.nodeIndex === hoveredNodeIndex,
-  );
+  const hoveredInputDescriptionScene =
+    positionedScene.inputDescriptionScenes.find(
+      (inputDescriptionScene) =>
+        inputDescriptionScene.nodeIndex === hoveredNodeIndex,
+    );
   if (!hoveredInputDescriptionScene) {
     return undefined;
   }
@@ -118,15 +120,16 @@ function resolveInputTooltipSceneFromDescription(
   canvasPoint: HostCanvasPointLike,
   positionedScene: NetworkVisualizationPositionedScene,
 ): NetworkVisualizationTooltipScene | undefined {
-  const hoveredInputDescriptionScene = positionedScene.inputDescriptionScenes.findLast(
-    (inputDescriptionScene) =>
-      canvasPoint.xPx >= inputDescriptionScene.leftPx &&
-      canvasPoint.xPx <=
-        inputDescriptionScene.leftPx + inputDescriptionScene.widthPx &&
-      canvasPoint.yPx >= inputDescriptionScene.topPx &&
-      canvasPoint.yPx <=
-        inputDescriptionScene.topPx + inputDescriptionScene.heightPx,
-  );
+  const hoveredInputDescriptionScene =
+    positionedScene.inputDescriptionScenes.findLast(
+      (inputDescriptionScene) =>
+        canvasPoint.xPx >= inputDescriptionScene.leftPx &&
+        canvasPoint.xPx <=
+          inputDescriptionScene.leftPx + inputDescriptionScene.widthPx &&
+        canvasPoint.yPx >= inputDescriptionScene.topPx &&
+        canvasPoint.yPx <=
+          inputDescriptionScene.topPx + inputDescriptionScene.heightPx,
+    );
   if (!hoveredInputDescriptionScene) {
     return undefined;
   }
@@ -142,15 +145,16 @@ function resolveInputTooltipSceneFromGroup(
   canvasPoint: HostCanvasPointLike,
   positionedScene: NetworkVisualizationPositionedScene,
 ): NetworkVisualizationTooltipScene | undefined {
-  const hoveredInputGroupLabelBandScene = positionedScene.inputGroupLabelBandScenes.findLast(
-    (inputGroupLabelBandScene) =>
-      canvasPoint.xPx >= inputGroupLabelBandScene.leftPx &&
-      canvasPoint.xPx <=
-        inputGroupLabelBandScene.leftPx + inputGroupLabelBandScene.widthPx &&
-      canvasPoint.yPx >= inputGroupLabelBandScene.topPx &&
-      canvasPoint.yPx <=
-        inputGroupLabelBandScene.topPx + inputGroupLabelBandScene.heightPx,
-  );
+  const hoveredInputGroupLabelBandScene =
+    positionedScene.inputGroupLabelBandScenes.findLast(
+      (inputGroupLabelBandScene) =>
+        canvasPoint.xPx >= inputGroupLabelBandScene.leftPx &&
+        canvasPoint.xPx <=
+          inputGroupLabelBandScene.leftPx + inputGroupLabelBandScene.widthPx &&
+        canvasPoint.yPx >= inputGroupLabelBandScene.topPx &&
+        canvasPoint.yPx <=
+          inputGroupLabelBandScene.topPx + inputGroupLabelBandScene.heightPx,
+    );
   if (!hoveredInputGroupLabelBandScene) {
     return undefined;
   }
@@ -188,7 +192,8 @@ function createInputTooltipScene(
   );
   const hoveredInputNodeRightEdgePx = hoveredInputNode
     ? hoveredInputNode.xPx + nodeWidthPx * 0.5
-    : hoveredInputDescriptionScene.leftPx + hoveredInputDescriptionScene.widthPx;
+    : hoveredInputDescriptionScene.leftPx +
+      hoveredInputDescriptionScene.widthPx;
   const tooltipAnchorWidthPx = Math.max(
     hoveredInputDescriptionScene.widthPx,
     hoveredInputNodeRightEdgePx - hoveredInputDescriptionScene.leftPx,
@@ -253,7 +258,8 @@ function resolveRightmostNodeEdgePx(
   const rightmostNodeEdgePx = nodeIndices.reduce(
     (currentRightmostNodeEdgePx, nodeIndex) => {
       const positionedNode = positionedNodes.find(
-        (candidatePositionedNode) => candidatePositionedNode.node.index === nodeIndex,
+        (candidatePositionedNode) =>
+          candidatePositionedNode.node.index === nodeIndex,
       );
       if (!positionedNode) {
         return currentRightmostNodeEdgePx;

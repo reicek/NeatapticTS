@@ -57,7 +57,9 @@ describe('neat species root chapter', () => {
         mockedGetSpeciesHistoryImpl.mockReturnValue(speciesHistory);
 
         // Act
-        const returnedSpeciesHistory = getSpeciesHistory.call(speciesHost as never);
+        const returnedSpeciesHistory = getSpeciesHistory.call(
+          speciesHost as never,
+        );
 
         // Assert
         expect({

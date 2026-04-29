@@ -23,9 +23,7 @@ function createGenomeMember(
     _id: genomeId,
     nodes: [],
     connections,
-    ...(compatibilityMode
-      ? { _compatInnovationMode: compatibilityMode }
-      : {}),
+    ...(compatibilityMode ? { _compatInnovationMode: compatibilityMode } : {}),
   };
 }
 
@@ -190,25 +188,33 @@ describe('neat species history read chapter', () => {
         // Arrange
         const speciesHistoryHost = createSpeciesHistoryHost({
           members: [
-            createGenomeMember(1, [
-              {
-                enabled: true,
-                from: { geneId: 1 },
-                to: { geneId: 2 },
-              },
-              {
-                enabled: false,
-                from: { geneId: 2 },
-                to: { geneId: 3 },
-              },
-            ], 'allow-fallback'),
-            createGenomeMember(2, [
-              {
-                enabled: true,
-                from: { geneId: 1 },
-                to: { geneId: 3 },
-              },
-            ], 'allow-fallback'),
+            createGenomeMember(
+              1,
+              [
+                {
+                  enabled: true,
+                  from: { geneId: 1 },
+                  to: { geneId: 2 },
+                },
+                {
+                  enabled: false,
+                  from: { geneId: 2 },
+                  to: { geneId: 3 },
+                },
+              ],
+              'allow-fallback',
+            ),
+            createGenomeMember(
+              2,
+              [
+                {
+                  enabled: true,
+                  from: { geneId: 1 },
+                  to: { geneId: 3 },
+                },
+              ],
+              'allow-fallback',
+            ),
           ],
           fallbackInnov(connection) {
             return (

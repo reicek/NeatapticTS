@@ -1422,7 +1422,10 @@ export class NetworkVisualization {
     network: INetwork,
     categorized: CategorizedNodesResult,
   ): number {
-    if (Array.isArray(network.inputNodeIds) && network.inputNodeIds.length > 0) {
+    if (
+      Array.isArray(network.inputNodeIds) &&
+      network.inputNodeIds.length > 0
+    ) {
       return network.inputNodeIds.length;
     }
 

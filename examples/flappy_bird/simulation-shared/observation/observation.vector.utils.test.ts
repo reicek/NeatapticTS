@@ -34,6 +34,8 @@ describe('resolveCoreObservationVectorFromFeatures', () => {
   it('matches the live controller input ordering so compatibility bookkeeping cannot drift', () => {
     expect(
       resolveCoreObservationVectorFromFeatures(SAMPLE_OBSERVATION_FEATURES),
-    ).toEqual(resolveObservationVectorFromFeatures(SAMPLE_OBSERVATION_FEATURES));
+    ).toEqual(
+      resolveObservationVectorFromFeatures(SAMPLE_OBSERVATION_FEATURES),
+    );
   });
 });

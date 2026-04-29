@@ -282,10 +282,11 @@ describe('network construct errors chapter', () => {
         const rootCause = new Error('output gates connections');
 
         // Act
-        const constructError = new NetworkConstructOutputNodeGatedConnectionError(
-          'Public output nodes must not gate connections when sink-only validation is enabled.',
-          { cause: rootCause },
-        );
+        const constructError =
+          new NetworkConstructOutputNodeGatedConnectionError(
+            'Public output nodes must not gate connections when sink-only validation is enabled.',
+            { cause: rootCause },
+          );
 
         // Assert
         expect({

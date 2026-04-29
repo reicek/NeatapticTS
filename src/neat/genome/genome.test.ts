@@ -7,6 +7,8 @@ import {
   createGenomeFromNetwork,
   createNetworkFromGenome,
   validateGenomeContract,
+  NeatGenomeConversionError,
+  NeatGenomeValidationError,
 } from './genome';
 import { validateGenomeContract as validateGenomeContractFromValidate } from '../validate/neat.validate';
 import type { NeatGenome } from './genome';
@@ -34,7 +36,9 @@ function createTemporalModuleExtensions(
   );
 
   if (hiddenNodeGeneIds.length === 0 || gatedConnections.length === 0) {
-    throw new Error('Expected recurrent module fixtures with hidden nodes and gated connections.');
+    throw new Error(
+      'Expected recurrent module fixtures with hidden nodes and gated connections.',
+    );
   }
 
   return {
@@ -55,7 +59,11 @@ function createTemporalModuleExtensions(
       gatedBlocks: [
         {
           blockId: 'gated:block:0',
-          gaterGeneIds: [...new Set(gatedConnections.map((connection) => connection.gaterGeneId))],
+          gaterGeneIds: [
+            ...new Set(
+              gatedConnections.map((connection) => connection.gaterGeneId),
+            ),
+          ],
           connectionInnovations: gatedConnections.map(
             (connection) => connection.innovation,
           ),
@@ -242,9 +250,13 @@ describe('neat genome chapter', () => {
     describe('given one runtime genome already carries temporal module descriptors in JSON extensions', () => {
       it('preserves the explicit extension bag during strict-genome capture', () => {
         // Arrange
-        const sourcePayload = Architect.lstm(1, 2, 1)
-          .toJSON() as unknown as NetworkJSON;
-        sourcePayload.extensions = createTemporalModuleExtensions(sourcePayload);
+        const sourcePayload = Architect.lstm(
+          1,
+          2,
+          1,
+        ).toJSON() as unknown as NetworkJSON;
+        sourcePayload.extensions =
+          createTemporalModuleExtensions(sourcePayload);
         const sourceNetwork = Network.fromJSON(
           sourcePayload as unknown as Record<string, unknown>,
         );
@@ -304,7 +316,9 @@ describe('neat genome chapter', () => {
         };
         const outputNode = sourceNetwork.nodes.at(-1);
         if (!outputNode) {
-          throw new Error('Expected an output node for extension materialization.');
+          throw new Error(
+            'Expected an output node for extension materialization.',
+          );
         }
 
         outputNode.response = 1.5;
@@ -336,7 +350,9 @@ describe('neat genome chapter', () => {
         const sourceNetwork = new Network(1, 1, { seed: 1_435 });
         const outputNode = sourceNetwork.nodes.at(-1);
         if (!outputNode) {
-          throw new Error('Expected an output node for activation materialization.');
+          throw new Error(
+            'Expected an output node for activation materialization.',
+          );
         }
 
         outputNode.squash = methods.Activation.tanh;
@@ -359,8 +375,11 @@ describe('neat genome chapter', () => {
     describe('given one strict genome carries temporal module descriptors in the extension bag', () => {
       it('preserves the descriptors when the runtime genome is rebuilt', () => {
         // Arrange
-        const sourcePayload = Architect.lstm(1, 2, 1)
-          .toJSON() as unknown as NetworkJSON;
+        const sourcePayload = Architect.lstm(
+          1,
+          2,
+          1,
+        ).toJSON() as unknown as NetworkJSON;
         const genome = createGenomeFromNetwork(
           Network.fromJSON(sourcePayload as unknown as Record<string, unknown>),
         );
@@ -372,36 +391,39 @@ describe('neat genome chapter', () => {
         // Assert
         expect(
           (rebuiltNetwork.toJSON() as unknown as NetworkJSON).extensions,
-        ).toEqual(
-          genome.extensions,
-        );
+        ).toEqual(genome.extensions);
       });
 
       it('keeps the descriptors when one referenced connection gene is disabled', () => {
         // Arrange
-        const sourcePayload = Architect.lstm(1, 2, 1)
-          .toJSON() as unknown as NetworkJSON;
+        const sourcePayload = Architect.lstm(
+          1,
+          2,
+          1,
+        ).toJSON() as unknown as NetworkJSON;
         const genome = createGenomeFromNetwork(
           Network.fromJSON(sourcePayload as unknown as Record<string, unknown>),
         );
         genome.extensions = createTemporalModuleExtensions(sourcePayload);
-        const moduleConnectionInnovation = readFirstTemporalConnectionInnovation(
-          genome.extensions,
-        );
+        const moduleConnectionInnovation =
+          readFirstTemporalConnectionInnovation(genome.extensions);
         const moduleConnectionGene = genome.connectionGenes.find(
           (connectionGene) =>
             connectionGene.innovation === moduleConnectionInnovation,
         );
 
         if (!moduleConnectionGene) {
-          throw new Error('Expected one module-owned connection gene for dormant-state coverage.');
+          throw new Error(
+            'Expected one module-owned connection gene for dormant-state coverage.',
+          );
         }
 
         moduleConnectionGene.enabled = false;
 
         // Act
         const rebuiltNetwork = createNetworkFromGenome(genome);
-        const rebuiltPayload = rebuiltNetwork.toJSON() as unknown as NetworkJSON;
+        const rebuiltPayload =
+          rebuiltNetwork.toJSON() as unknown as NetworkJSON;
         const rebuiltConnection = rebuiltPayload.connections.find(
           (connection) => connection.innovation === moduleConnectionInnovation,
         );
@@ -424,9 +446,11 @@ describe('neat genome chapter', () => {
         // Arrange
         const sourceNetwork = new Network(2, 1, { seed: 1_423 });
         const genome = createGenomeFromNetwork(sourceNetwork) as NeatGenome & {
-          connectionGenes: Array<NeatGenome['connectionGenes'][number] & {
-            innovation?: number;
-          }>;
+          connectionGenes: Array<
+            NeatGenome['connectionGenes'][number] & {
+              innovation?: number;
+            }
+          >;
         };
         Reflect.deleteProperty(genome.connectionGenes[0], 'innovation');
 
@@ -494,8 +518,11 @@ describe('neat genome chapter', () => {
     describe('given a strict genome carries malformed temporal module descriptors', () => {
       it('reports both temporal extension issues', () => {
         // Arrange
-        const sourcePayload = Architect.lstm(1, 2, 1)
-          .toJSON() as unknown as NetworkJSON;
+        const sourcePayload = Architect.lstm(
+          1,
+          2,
+          1,
+        ).toJSON() as unknown as NetworkJSON;
         const genome = createGenomeFromNetwork(
           Network.fromJSON(sourcePayload as unknown as Record<string, unknown>),
         );
@@ -570,9 +597,11 @@ describe('neat genome chapter', () => {
         // Arrange
         const sourceNetwork = new Network(2, 1, { seed: 1_436 });
         const genome = createGenomeFromNetwork(sourceNetwork) as NeatGenome & {
-          connectionGenes: Array<NeatGenome['connectionGenes'][number] & {
-            innovation?: number;
-          }>;
+          connectionGenes: Array<
+            NeatGenome['connectionGenes'][number] & {
+              innovation?: number;
+            }
+          >;
         };
         Reflect.deleteProperty(genome.connectionGenes[0], 'innovation');
 
@@ -627,6 +656,26 @@ describe('neat genome chapter', () => {
 
         // Assert
         expect(validationReport.isValid).toBe(true);
+      });
+    });
+  });
+
+  describe('error class barrel re-exports', () => {
+    describe('given NeatGenomeConversionError is imported through the genome barrel', () => {
+      describe('when instantiated', () => {
+        it('is an instance of Error', () => {
+          expect(new NeatGenomeConversionError('test')).toBeInstanceOf(Error);
+        });
+      });
+    });
+
+    describe('given NeatGenomeValidationError is imported through the genome barrel', () => {
+      describe('when instantiated', () => {
+        it('is an instance of Error', () => {
+          expect(new NeatGenomeValidationError('test', [])).toBeInstanceOf(
+            Error,
+          );
+        });
       });
     });
   });

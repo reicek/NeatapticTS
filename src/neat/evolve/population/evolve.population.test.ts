@@ -154,8 +154,7 @@ function createEvolutionController(input: {
     sort: () => {},
     mutate: async () => {},
     getOffspring:
-      input.getOffspring ??
-      (async () => population[0] as GenomeWithMetadata),
+      input.getOffspring ?? (async () => population[0] as GenomeWithMetadata),
     selectParent: () => population[0] as GenomeWithMetadata,
     registerObjective: () => {},
     ensureMinHiddenNodes: input.ensureMinHiddenNodes ?? (async () => {}),
@@ -205,7 +204,10 @@ describe('neat evolve population chapter', () => {
           const nextPopulation = [undefined as never as Network, genome];
 
           // Act
-          await enforcePopulationConstraints(evolutionController, nextPopulation);
+          await enforcePopulationConstraints(
+            evolutionController,
+            nextPopulation,
+          );
 
           // Assert
           expect({
@@ -380,7 +382,8 @@ describe('neat evolve population chapter', () => {
             speciateCalls: speciate.mock.calls.length,
             speciatedCalls: addSpeciatedOffspring.mock.calls.length,
             unspeciatedCalls: addUnspeciatedOffspring.mock.calls.length,
-            suppressTournamentError: evolutionController._suppressTournamentError,
+            suppressTournamentError:
+              evolutionController._suppressTournamentError,
           }).toEqual({
             speciateCalls: 1,
             speciatedCalls: 1,
@@ -425,7 +428,8 @@ describe('neat evolve population chapter', () => {
           expect({
             speciatedCalls: addSpeciatedOffspring.mock.calls.length,
             unspeciatedCalls: addUnspeciatedOffspring.mock.calls.length,
-            suppressTournamentError: evolutionController._suppressTournamentError,
+            suppressTournamentError:
+              evolutionController._suppressTournamentError,
           }).toEqual({
             speciatedCalls: 0,
             unspeciatedCalls: 1,
@@ -451,7 +455,8 @@ describe('neat evolve population chapter', () => {
           const evolutionController = createEvolutionController({
             species: [],
             randomValues: [0],
-            getOffspring: async () => offspringQueue.shift() as GenomeWithMetadata,
+            getOffspring: async () =>
+              offspringQueue.shift() as GenomeWithMetadata,
           });
           const nextPopulation: Network[] = [];
 
@@ -1319,7 +1324,6 @@ describe('neat evolve population chapter', () => {
             });
           });
         });
-
       });
     });
 
@@ -1355,19 +1359,26 @@ describe('neat evolve population chapter', () => {
             popsize: 1,
           });
           const nextPopulation: Network[] = [];
-          const mathRandomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.99);
+          const mathRandomSpy = jest
+            .spyOn(Math, 'random')
+            .mockReturnValue(0.99);
 
           try {
             // Act
-            await addSpeciatedOffspring(evolutionController, nextPopulation, 1, {
-              minOffspringDefault: 0,
-              survivalThresholdDefault: 1,
-              youngThresholdDefault: 0,
-              youngMultiplierDefault: 1,
-              oldThresholdDefault: 100,
-              oldMultiplierDefault: 1,
-              crossSpeciesGuardLimit: 4,
-            });
+            await addSpeciatedOffspring(
+              evolutionController,
+              nextPopulation,
+              1,
+              {
+                minOffspringDefault: 0,
+                survivalThresholdDefault: 1,
+                youngThresholdDefault: 0,
+                youngMultiplierDefault: 1,
+                oldThresholdDefault: 100,
+                oldMultiplierDefault: 1,
+                crossSpeciesGuardLimit: 4,
+              },
+            );
 
             // Assert
             expect(nextPopulation[0]?.connections[0]?.enabled).toBe(true);

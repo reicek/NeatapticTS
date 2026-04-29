@@ -229,7 +229,8 @@ describe('neat evolve objectives chapter', () => {
         expect({
           fitnessSuppressedOnce: evolutionController._fitnessSuppressedOnce,
           objectivesList: evolutionController._objectivesList,
-          suppressFitnessObjective: evolutionController._suppressFitnessObjective,
+          suppressFitnessObjective:
+            evolutionController._suppressFitnessObjective,
         }).toEqual({
           fitnessSuppressedOnce: true,
           objectivesList: undefined,
@@ -256,7 +257,8 @@ describe('neat evolve objectives chapter', () => {
         // Assert
         expect({
           fitnessSuppressedOnce: evolutionController._fitnessSuppressedOnce,
-          suppressFitnessObjective: evolutionController._suppressFitnessObjective,
+          suppressFitnessObjective:
+            evolutionController._suppressFitnessObjective,
         }).toEqual({
           fitnessSuppressedOnce: undefined,
           suppressFitnessObjective: undefined,

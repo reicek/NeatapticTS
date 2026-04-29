@@ -21,7 +21,10 @@ describe('network regrowth utility chapter', () => {
         // Act
         maybeRunRegrowth(
           network as unknown as Network,
-          createRegrowthContext({ regrowFraction: 0, desiredRemainingConnections: 1 }),
+          createRegrowthContext({
+            regrowFraction: 0,
+            desiredRemainingConnections: 1,
+          }),
         );
 
         // Assert
@@ -71,6 +74,61 @@ describe('network regrowth utility chapter', () => {
       });
     });
 
+    describe('given the network has no nodes', () => {
+      it('exhausts the attempt budget without adding edges', () => {
+        // Arrange – empty nodes → pickRandomNode returns undefined → line 124 TRUE arm
+        const network = createRegrowthNetwork({
+          nodeCount: 0,
+          randomSequence: [0.5],
+        });
+
+        // Act
+        maybeRunRegrowth(
+          network as unknown as Network,
+          createRegrowthContext({ desiredRemainingConnections: 1 }),
+        );
+
+        // Assert
+        expect(network.connections).toHaveLength(0);
+      });
+    });
+
+    describe('given the network has no _rand property', () => {
+      it('uses Math.random as the fallback RNG without throwing', () => {
+        // Arrange – no _rand → ?? Math.random fallback (line 142)
+        const connections: Array<{ from: Node; to: Node }> = [];
+        const nodeA = new Node('hidden');
+        const nodeB = new Node('hidden');
+        const networkWithoutRand = {
+          connect: (from: Node, to: Node) => {
+            connections.push({ from, to });
+          },
+          connections,
+          nodes: [nodeA, nodeB],
+          // _rand intentionally absent
+        };
+
+        // Act – spy Math.random so we can verify the fallback was used
+        const originalRandom = Math.random;
+        let mathRandomCalled = false;
+        Math.random = () => {
+          mathRandomCalled = true;
+          return originalRandom();
+        };
+        try {
+          maybeRunRegrowth(
+            networkWithoutRand as unknown as Network,
+            createRegrowthContext({ desiredRemainingConnections: 1 }),
+          );
+        } finally {
+          Math.random = originalRandom;
+        }
+
+        // Assert
+        expect(mathRandomCalled).toBe(true);
+      });
+    });
+
     describe('given every sampled candidate is invalid', () => {
       it('stops after exhausting the attempt budget without adding edges', () => {
         // Arrange
@@ -114,15 +172,17 @@ function createRegrowthNetwork(input: {
     { length: input.nodeCount ?? 3 },
     () => new Node('hidden'),
   );
-  const connections = (input.existingEdges ?? []).map(([fromIndex, toIndex]) =>
-    ({ from: nodes[fromIndex], to: nodes[toIndex] }) as never,
+  const connections = (input.existingEdges ?? []).map(
+    ([fromIndex, toIndex]) =>
+      ({ from: nodes[fromIndex], to: nodes[toIndex] }) as never,
   );
   let randomIndex = 0;
 
   return {
     _enforceAcyclic: input.enforceAcyclic,
     _rand: () => {
-      const randomValue = input.randomSequence[randomIndex % input.randomSequence.length];
+      const randomValue =
+        input.randomSequence[randomIndex % input.randomSequence.length];
       randomIndex += 1;
       return randomValue;
     },

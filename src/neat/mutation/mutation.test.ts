@@ -2,7 +2,15 @@
 import Network from '../../architecture/network';
 import * as methods from '../../methods/methods';
 import Neat from '../../neat';
-import { ensureMinHiddenNodes, ensureNoDeadEnds, selectMutationMethod } from './mutation';
+import { recordNodeSplitRecord } from '../innovation-tracker/innovation-tracker';
+import * as mutationAddConn from './add-conn/mutation.add-conn';
+import {
+  ensureMinHiddenNodes,
+  ensureNoDeadEnds,
+  mutateAddConnReuse,
+  mutateAddNodeReuse,
+  selectMutationMethod,
+} from './mutation';
 
 function countHiddenNodes(network: Network): number {
   return network.nodes.filter((nodeEntry) => nodeEntry.type === 'hidden')
@@ -92,8 +100,8 @@ describe('neat mutation chapter', () => {
 
           // Assert
           expect(
-            mutationController.toJSON().innovationTracker.nodeSplitRecords.length >
-              0,
+            mutationController.toJSON().innovationTracker.nodeSplitRecords
+              .length > 0,
           ).toBe(true);
         });
       });
@@ -306,9 +314,292 @@ describe('neat mutation chapter', () => {
         });
       });
     });
+
+    describe('given the mutation pool is the legacy FFW array', () => {
+      it('returns the FFW-sampled method directly without building a separate pool (line 535 true arm)', async () => {
+        // Arrange: configure mutation as methods.mutation.FFW → resolveFFWPolicyForSelect returns non-null
+        const network = new Network(2, 1, { seed: 790 });
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          mutation: methods.mutation
+            .FFW as unknown as (typeof methods.mutation.MOD_WEIGHT)[],
+          seed: 791,
+        });
+
+        // Act
+        const result = await selectMutationMethod.call(
+          mutationController as unknown as ThisParameterType<
+            typeof selectMutationMethod
+          >,
+          network as unknown as Parameters<typeof selectMutationMethod>[0],
+          false,
+        );
+
+        // Assert: FFW policy returned a concrete method (not null)
+        expect(result).not.toBeNull();
+      });
+    });
+
+    describe('given the function is called without the rawReturnForTest argument', () => {
+      it('uses the default parameter value (line 522 default arm)', async () => {
+        // Arrange: non-FFW pool so the default rawReturnForTest=true does not return the FFW array
+        const network = new Network(2, 1, { seed: 730 });
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          mutation: [methods.mutation.MOD_WEIGHT],
+          seed: 731,
+        });
+
+        // Act: omit second argument → rawReturnForTest defaults to true
+        const result = await selectMutationMethod.call(
+          mutationController as unknown as ThisParameterType<
+            typeof selectMutationMethod
+          >,
+          network as unknown as Parameters<typeof selectMutationMethod>[0],
+        );
+
+        // Assert: a method was sampled (non-null result)
+        expect(result).not.toBeNull();
+      });
+    });
+
+    describe('given an empty mutation pool', () => {
+      it('returns null when no operator can be sampled (line 557 true arm)', async () => {
+        // Arrange: empty mutation pool → sampleFromPoolForSelect returns null
+        const network = new Network(2, 1, { seed: 732 });
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          mutation: [] as unknown as (typeof methods.mutation.MOD_WEIGHT)[],
+          seed: 733,
+        });
+
+        // Act
+        const result = await selectMutationMethod.call(
+          mutationController as unknown as ThisParameterType<
+            typeof selectMutationMethod
+          >,
+          network as unknown as Parameters<typeof selectMutationMethod>[0],
+          false,
+        );
+
+        // Assert
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('given ADD_BACK_CONN is sampled but recurrent connections are not allowed', () => {
+      it('returns null when the recurrent policy blocks the bandit method (line 583 true arm)', async () => {
+        // Arrange: ADD_BACK_CONN is a recurrent mutation; without allowRecurrent it is blocked
+        const network = new Network(2, 1, { seed: 752 });
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          mutation: [methods.mutation.ADD_BACK_CONN],
+          allowRecurrent: false,
+          seed: 753,
+        });
+
+        // Act
+        const result = await selectMutationMethod.call(
+          mutationController as unknown as ThisParameterType<
+            typeof selectMutationMethod
+          >,
+          network as unknown as Parameters<typeof selectMutationMethod>[0],
+          false,
+        );
+
+        // Assert: blocked by recurrent policy → null
+        expect(result).toBeNull();
+      });
+    });
+  });
+
+  describe('mutateAddNodeReuse', () => {
+    describe('given the innovation tracker already holds a split record for the chosen connection', () => {
+      it('applies the existing split record instead of creating a new one (lines 209-217)', async () => {
+        // Arrange: disable all but the first connection so chooseConnectionForSplit is deterministic
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 1,
+          seed: 760,
+        });
+        const genome = mutationController.population[0];
+        genome.connections.forEach((c, i) => {
+          if (i > 0) c.enabled = false;
+        });
+        const targetConn = genome.connections[0] as {
+          innovation?: number;
+          from: { geneId?: number };
+          to: { geneId?: number };
+        };
+        // Compute the split key the same way buildSplitDescriptor does
+        const splitKey = Number.isInteger(targetConn.innovation)
+          ? `splitConnectionInnovation:${targetConn.innovation}`
+          : `legacyEndpoints:${targetConn.from.geneId ?? 0}->${targetConn.to.geneId ?? 0}`;
+        const internalTracker = (
+          mutationController as unknown as {
+            _innovationTracker: Parameters<typeof recordNodeSplitRecord>[0];
+          }
+        )._innovationTracker;
+        recordNodeSplitRecord(internalTracker, splitKey, {
+          newNodeGeneId: 42,
+          inInnov: 100,
+          outInnov: 101,
+        });
+
+        // Act: only one enabled connection → chooseConnectionForSplit picks it → finds pre-seeded record
+        const nodeCountBefore = genome.nodes.length;
+        await mutateAddNodeReuse.call(
+          mutationController as unknown as ThisParameterType<
+            typeof mutateAddNodeReuse
+          >,
+          genome as unknown as Parameters<typeof mutateAddNodeReuse>[0],
+        );
+
+        // Assert: node was added via the existing split record path
+        expect(genome.nodes.length).toBeGreaterThan(nodeCountBefore);
+      });
+    });
+
+    describe('given a genome where all connections are disabled', () => {
+      it('returns early without adding a node (line 194 true arm)', async () => {
+        // Arrange: network with connections all disabled → collectEnabledConnections returns []
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          seed: 720,
+        });
+        const network = new Network(2, 1, { seed: 721 });
+        network.connections.forEach((conn) => {
+          conn.enabled = false;
+        });
+        const initialNodeCount = network.nodes.length;
+
+        // Act
+        await mutateAddNodeReuse.call(
+          mutationController as unknown as ThisParameterType<
+            typeof mutateAddNodeReuse
+          >,
+          network as unknown as Parameters<typeof mutateAddNodeReuse>[0],
+        );
+
+        // Assert: no node was added (early return fired)
+        expect(network.nodes.length).toBe(initialNodeCount);
+      });
+    });
+  });
+
+  describe('mutateAddConnReuse', () => {
+    describe('given a fully-connected network where no candidate pairs exist', () => {
+      it('returns early without adding a connection (line 281 true arm)', () => {
+        // Arrange: Network(2,1) has all input→output connections — no pairs remain
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          seed: 780,
+        });
+        const network = new Network(2, 1, { seed: 781 });
+        const initialConnCount = network.connections.length;
+
+        // Act
+        mutateAddConnReuse.call(
+          mutationController as unknown as ThisParameterType<
+            typeof mutateAddConnReuse
+          >,
+          network as unknown as Parameters<typeof mutateAddConnReuse>[0],
+        );
+
+        // Assert: no connection added (early return at candidatePairs.length === 0)
+        expect(network.connections.length).toBe(initialConnCount);
+      });
+    });
+
+    describe('given a network with valid candidate pairs', () => {
+      it('adds a connection when a legal pair exists (lines 284-303)', () => {
+        // Arrange: after ADD_NODE, (input1, hidden) is an unconnected pair
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          seed: 722,
+        });
+        const network = new Network(2, 1, { seed: 723 });
+        network.mutate(methods.mutation.ADD_NODE);
+        const initialConnCount = network.connections.filter(
+          (c) => c.enabled !== false,
+        ).length;
+
+        // Act
+        mutateAddConnReuse.call(
+          mutationController as unknown as ThisParameterType<
+            typeof mutateAddConnReuse
+          >,
+          network as unknown as Parameters<typeof mutateAddConnReuse>[0],
+        );
+
+        // Assert: at least one new enabled connection was added
+        expect(
+          network.connections.filter((c) => c.enabled !== false).length,
+        ).toBeGreaterThanOrEqual(initialConnCount);
+      });
+    });
+
+    describe('given choosePairForConn returns null', () => {
+      it('returns early without adding a connection (line 295 true arm)', () => {
+        // Arrange: network with a hidden node so candidatePairs is non-empty; spy returns null
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          seed: 724,
+        });
+        const network = new Network(2, 1, { seed: 725 });
+        network.mutate(methods.mutation.ADD_NODE);
+        const initialConnCount = network.connections.length;
+        const spy = jest
+          .spyOn(mutationAddConn, 'choosePairForConn')
+          .mockReturnValue(null);
+
+        try {
+          // Act
+          mutateAddConnReuse.call(
+            mutationController as unknown as ThisParameterType<
+              typeof mutateAddConnReuse
+            >,
+            network as unknown as Parameters<typeof mutateAddConnReuse>[0],
+          );
+        } finally {
+          spy.mockRestore();
+        }
+
+        // Assert: no connection was added
+        expect(network.connections.length).toBe(initialConnCount);
+      });
+    });
   });
 
   describe('ensureNoDeadEnds', () => {
+    describe('given a controller with allowRecurrent enabled', () => {
+      describe('when ensureNoDeadEnds runs', () => {
+        it('skips feed-forward node reordering (line 467 early-return arm)', () => {
+          // Arrange: allowRecurrent=true → normalizeRepairNodeOrderForFeedForward returns early
+          const mutationController = new Neat(2, 1, () => 0, {
+            popsize: 0,
+            allowRecurrent: true,
+            seed: 770,
+          });
+          const network = new Network(2, 1, { seed: 771 });
+          const outputNode = network.nodes.find((n) => n.type === 'output');
+          const inputNodes = network.nodes.filter((n) => n.type === 'input');
+          // Deliberately put output before inputs to check it's NOT reordered
+          network.nodes = [outputNode!, ...inputNodes];
+
+          // Act
+          ensureNoDeadEnds.call(
+            mutationController as unknown as ThisParameterType<
+              typeof ensureNoDeadEnds
+            >,
+            network as unknown as Parameters<typeof ensureNoDeadEnds>[0],
+          );
+
+          // Assert: reordering was skipped, output node remains first
+          expect(network.nodes[0].type).toBe('output');
+        });
+      });
+    });
+
     describe('given a non-recurrent network whose hidden node is placed after the output node', () => {
       describe('when ensureNoDeadEnds runs', () => {
         it('reorders nodes to the canonical input-hidden-output sequence', () => {

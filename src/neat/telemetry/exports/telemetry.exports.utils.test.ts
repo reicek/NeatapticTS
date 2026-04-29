@@ -205,10 +205,9 @@ describe('neat telemetry exports utility chapter', () => {
         collectDiversityLineageMetrics(telemetryEntry, headerState);
 
         // Assert
-        expect(Array.from(headerState.diversityLineageKeys).toSorted()).toEqual([
-          'lineageMeanDepth',
-          'lineageMeanPairDist',
-        ]);
+        expect(Array.from(headerState.diversityLineageKeys).toSorted()).toEqual(
+          ['lineageMeanDepth', 'lineageMeanPairDist'],
+        );
       });
     });
   });

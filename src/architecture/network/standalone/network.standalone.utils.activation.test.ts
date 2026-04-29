@@ -86,7 +86,8 @@ describe('network standalone activation utility chapter', () => {
 
         // Assert
         expect({
-          activationFunctionSources: generationContext.activationFunctionSources,
+          activationFunctionSources:
+            generationContext.activationFunctionSources,
           activationIndex,
           emittedSource: generationContext.emittedActivationSource.relu,
           nextActivationFunctionIndex:
@@ -120,13 +121,16 @@ describe('network standalone activation utility chapter', () => {
 
         // Assert
         expect({
-          activationFunctionSources: generationContext.activationFunctionSources,
+          activationFunctionSources:
+            generationContext.activationFunctionSources,
           activationIndex,
           emittedSource: generationContext.emittedActivationSource.relu,
           nextActivationFunctionIndex:
             generationContext.nextActivationFunctionIndex,
         }).toEqual({
-          activationFunctionSources: ['function relu(x){ return x > 0 ? x : 0; }'],
+          activationFunctionSources: [
+            'function relu(x){ return x > 0 ? x : 0; }',
+          ],
           activationIndex: 0,
           emittedSource: 'function relu(x){ return x > 0 ? x : 0; }',
           nextActivationFunctionIndex: 1,
@@ -157,8 +161,7 @@ describe('network standalone activation utility chapter', () => {
             generationContext.emittedActivationSource.tanhActivation,
         }).toEqual({
           activationIndex: 0,
-          emittedSource:
-            'function tanhActivation(x){ return Math.tanh(x); }',
+          emittedSource: 'function tanhActivation(x){ return Math.tanh(x); }',
         });
       });
     });

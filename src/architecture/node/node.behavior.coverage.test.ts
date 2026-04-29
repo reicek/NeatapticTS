@@ -19,7 +19,9 @@ function withMockedMathRandom<T>(randomValue: number, run: () => T): T {
   }
 }
 
-function withSuppressedWarnings<T>(run: (warningSpy: jest.SpyInstance) => T): T {
+function withSuppressedWarnings<T>(
+  run: (warningSpy: jest.SpyInstance) => T,
+): T {
   const warningSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
   try {
@@ -181,9 +183,7 @@ describe('Node', () => {
           };
 
           // Assert
-          expect(applyMissingMutation).toThrow(
-            NodeMutationMethodRequiredError,
-          );
+          expect(applyMissingMutation).toThrow(NodeMutationMethodRequiredError);
         });
       });
     });
@@ -217,7 +217,9 @@ describe('Node', () => {
           };
 
           // Assert
-          expect(applyUnnamedMutation).toThrow('Unknown mutation method: undefined');
+          expect(applyUnnamedMutation).toThrow(
+            'Unknown mutation method: undefined',
+          );
         });
       });
     });
@@ -228,23 +230,19 @@ describe('Node', () => {
           // Arrange
           const node = new Node('hidden');
           node.squash = Activation.tanh;
-          const activationMutation = rawMethods.mutation.MOD_ACTIVATION as
-            Record<string, unknown>;
+          const activationMutation = rawMethods.mutation
+            .MOD_ACTIVATION as Record<string, unknown>;
 
           // Act
           const mutationResult = withSuppressedWarnings((warningSpy) =>
-            withTemporaryProperties(
-              activationMutation,
-              { allowed: [] },
-              () => {
-                node.mutate(rawMethods.mutation.MOD_ACTIVATION);
+            withTemporaryProperties(activationMutation, { allowed: [] }, () => {
+              node.mutate(rawMethods.mutation.MOD_ACTIVATION);
 
-                return {
-                  squash: node.squash,
-                  warningCount: warningSpy.mock.calls.length,
-                };
-              },
-            ),
+              return {
+                squash: node.squash,
+                warningCount: warningSpy.mock.calls.length,
+              };
+            }),
           );
 
           // Assert
@@ -262,8 +260,8 @@ describe('Node', () => {
           // Arrange
           const node = new Node('hidden');
           node.squash = Activation.tanh;
-          const activationMutation = rawMethods.mutation.MOD_ACTIVATION as
-            Record<string, unknown>;
+          const activationMutation = rawMethods.mutation
+            .MOD_ACTIVATION as Record<string, unknown>;
 
           // Act
           const resultingSquash = withTemporaryProperties(
@@ -346,10 +344,8 @@ describe('Node', () => {
           const incomingConnection = sourceNode.connect(node, 0)[0];
           const outgoingConnection = node.connect(targetNode, 0)[0];
           const selfConnection = node.connect(node, 0)[0];
-          const reinitializeWeightsMutation = rawMethods.mutation.REINIT_WEIGHT as Record<
-            string,
-            unknown
-          >;
+          const reinitializeWeightsMutation = rawMethods.mutation
+            .REINIT_WEIGHT as Record<string, unknown>;
 
           // Act
           const reinitializedWeights = withTemporaryProperties(
@@ -466,9 +462,9 @@ describe('Node', () => {
           sourceNode.disconnect(removedTargetNode);
 
           // Assert
-          expect(sourceNode.connections.out.map((connection) => connection.to)).toStrictEqual([
-            keptTargetNode,
-          ]);
+          expect(
+            sourceNode.connections.out.map((connection) => connection.to),
+          ).toStrictEqual([keptTargetNode]);
         });
       });
     });
@@ -488,10 +484,9 @@ describe('Node', () => {
           gaterNode.gate([firstConnection, secondConnection]);
 
           // Assert
-          expect([firstConnection.gater, secondConnection.gater]).toStrictEqual([
-            gaterNode,
-            gaterNode,
-          ]);
+          expect([firstConnection.gater, secondConnection.gater]).toStrictEqual(
+            [gaterNode, gaterNode],
+          );
         });
       });
     });

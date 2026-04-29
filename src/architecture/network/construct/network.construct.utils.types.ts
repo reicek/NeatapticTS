@@ -46,11 +46,13 @@ export interface ConstructValidationOptions {
  * pure sources, and output nodes default to pure sinks unless validation opts
  * into outward feedback or gating explicitly.
  */
-export interface ConstructOptions
-  extends Pick<
-    NetworkConstructorOptions,
-    'activationPrecision' | 'returnTypedActivations' | 'reuseActivationArrays' | 'seed'
-  > {
+export interface ConstructOptions extends Pick<
+  NetworkConstructorOptions,
+  | 'activationPrecision'
+  | 'returnTypedActivations'
+  | 'reuseActivationArrays'
+  | 'seed'
+> {
   /** Scheduling mode to compile after materializing the runtime graph. */
   mode?: 'acyclic' | 'recurrent';
   /** Ordered stable ids that define the public input vector contract. */

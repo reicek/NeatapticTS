@@ -510,7 +510,7 @@ the configuration is applied recursively to the nodes within that group.
 
 Parameters:
 - `values` - An object containing the properties and their values to set.
-   Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
+  Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
 
 ## architecture/layer/layer.errors.ts
 

@@ -54,7 +54,8 @@ describe('layer errors chapter', () => {
           name: layerError.name,
         }).toEqual({
           cause: rootCause,
-          message: 'Layer output is not defined. Cannot connect from this layer.',
+          message:
+            'Layer output is not defined. Cannot connect from this layer.',
           name: 'LayerOutputConnectUnavailableError',
         });
       });
@@ -184,7 +185,8 @@ describe('layer errors chapter', () => {
           name: layerError.name,
         }).toEqual({
           cause: rootCause,
-          message: 'Memory input source and target blocks must have the same size.',
+          message:
+            'Memory input source and target blocks must have the same size.',
           name: 'LayerMemoryInputSizeMismatchError',
         });
       });

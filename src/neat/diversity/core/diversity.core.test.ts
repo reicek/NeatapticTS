@@ -3,10 +3,7 @@ import type { CompatComputer, GenomeWithMetrics } from './diversity.types';
 
 function createSingleGenomeWithoutLineageDepth(): GenomeWithMetrics {
   return {
-    nodes: [
-      { connections: { out: [{}] } },
-      { connections: { out: [] } },
-    ],
+    nodes: [{ connections: { out: [{}] } }, { connections: { out: [] } }],
     connections: [{}],
   };
 }

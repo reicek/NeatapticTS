@@ -38,8 +38,7 @@ export function createConnectionsFromSourceNode(
   randomValue?: () => number,
 ): Connection[] {
   const resolvedWeight =
-    initialWeight ??
-    (randomValue ? randomValue() * 0.2 - 0.1 : undefined);
+    initialWeight ?? (randomValue ? randomValue() * 0.2 - 0.1 : undefined);
 
   return sourceNode.connect(targetNode, resolvedWeight);
 }

@@ -83,10 +83,7 @@ function buildAcyclicParentNetwork(
   return network;
 }
 
-function setCrossoverRandomSequence(
-  network: Network,
-  samples: number[],
-): void {
+function setCrossoverRandomSequence(network: Network, samples: number[]): void {
   const randomizedNetwork = network as unknown as {
     _rand?: () => number;
   };
@@ -117,7 +114,9 @@ function reorderParentNodesWithOutputDrift(network: Network): void {
   const trailingOutputNodes = outputNodes.slice(1);
 
   if (!leadingHiddenNode || !leadingOutputNode) {
-    throw new Error('Expected one hidden node and one output node for output-drift coverage.');
+    throw new Error(
+      'Expected one hidden node and one output node for output-drift coverage.',
+    );
   }
 
   network.nodes = [
@@ -526,15 +525,17 @@ describe('network genetic chapter', () => {
           nodeGeneIds: offspringNetwork.nodes.map((node) => node.geneId),
           connectionInnovations: offspringNetwork.connections
             .map((connection) => connection.innovation)
-            .toSorted((leftInnovation, rightInnovation) =>
-              leftInnovation - rightInnovation,
+            .toSorted(
+              (leftInnovation, rightInnovation) =>
+                leftInnovation - rightInnovation,
             ),
         }).toEqual({
           nodeGeneIds: firstParent.nodes.map((node) => node.geneId),
           connectionInnovations: firstParent.connections
             .map((connection) => connection.innovation)
-            .toSorted((leftInnovation, rightInnovation) =>
-              leftInnovation - rightInnovation,
+            .toSorted(
+              (leftInnovation, rightInnovation) =>
+                leftInnovation - rightInnovation,
             ),
         });
       });
@@ -799,7 +800,9 @@ describe('network genetic chapter', () => {
         );
 
         if (!hiddenNode || !inheritedConnection) {
-          throw new Error('Expected a hidden-node split connection for materialization coverage.');
+          throw new Error(
+            'Expected a hidden-node split connection for materialization coverage.',
+          );
         }
 
         const offspring = new Network(2, 1) as unknown as GeneticNetwork;
@@ -813,9 +816,8 @@ describe('network genetic chapter', () => {
           node.index = nodeIndex;
         });
 
-        const chosenGene = createConnectionGeneFromRuntimeConnection(
-          inheritedConnection,
-        );
+        const chosenGene =
+          createConnectionGeneFromRuntimeConnection(inheritedConnection);
 
         // Act
         materializeOffspringConnections(
@@ -965,7 +967,9 @@ describe('network genetic chapter', () => {
           .at(1)?.geneId;
 
         // Assert
-        expect(offspringSecondOutputGeneId).toBe(secondParentSecondOutputNode.geneId);
+        expect(offspringSecondOutputGeneId).toBe(
+          secondParentSecondOutputNode.geneId,
+        );
       });
 
       it('skips unresolved hidden slots when parent hidden partitions do not expose every hidden ordinal', () => {
@@ -980,7 +984,9 @@ describe('network genetic chapter', () => {
         const firstParentExtraHiddenNode = firstParentHiddenNodes.at(1);
 
         if (!firstParentExtraHiddenNode) {
-          throw new Error('Expected the first parent to expose at least two hidden nodes.');
+          throw new Error(
+            'Expected the first parent to expose at least two hidden nodes.',
+          );
         }
 
         firstParentExtraHiddenNode.type = 'output';
@@ -1002,6 +1008,69 @@ describe('network genetic chapter', () => {
 
         // Assert
         expect(skippedHiddenSlotCount).toBe(1);
+      });
+    });
+
+    describe('given parent1 has hidden nodes but parent2 has none and parent1 is the weaker parent', () => {
+      describe('when crossover resolves hidden slots in equal mode', () => {
+        it('selects each hidden gene from parent1 via the equal-mode fallback even when score1 < score2', () => {
+          // Arrange – parent1 weaker (score=1), parent2 stronger (score=2), equal=true
+          // → at ordinals where parent2 has no hidden node:
+          //   score1 >= score2 = FALSE → || equal = TRUE covers the ||'s second branch (line 486)
+          const parent1 = Network.createMLP(2, [3], 1);
+          const parent2 = new Network(2, 1);
+          (parent1 as unknown as { score: number }).score = 1;
+          (parent2 as unknown as { score: number }).score = 2;
+          // injected rng=0.9 → offspringNodeCount = max(6) so hidden ordinals 0,1,2 are visited
+          const crossoverContext = createCrossoverContext(
+            parent1,
+            parent2,
+            true,
+            () => 0.9,
+          );
+          const nodeBuildContext = createNodeBuildContext(crossoverContext);
+
+          // Act
+          assignOffspringNodes(nodeBuildContext);
+
+          // Assert – offspring has all node roles filled (no missing hidden slots skipped)
+          expect(
+            crossoverContext.offspring.nodes.filter(
+              (offspringNode) => offspringNode.type === 'hidden',
+            ).length,
+          ).toBeGreaterThan(0);
+        });
+      });
+    });
+
+    describe('given parent2 has hidden nodes but parent1 has none and parent2 is the weaker parent', () => {
+      describe('when crossover resolves hidden slots in equal mode', () => {
+        it('selects each hidden gene from parent2 via the equal-mode fallback even when score2 < score1', () => {
+          // Arrange – parent1 stronger (score=2), parent2 weaker (score=1), equal=true
+          // → at ordinals where parent1 has no hidden node:
+          //   score2 >= score1 = FALSE → || equal = TRUE covers the ||'s second branch (line 490)
+          const parent1 = new Network(2, 1);
+          const parent2 = Network.createMLP(2, [3], 1);
+          (parent1 as unknown as { score: number }).score = 2;
+          (parent2 as unknown as { score: number }).score = 1;
+          const crossoverContext = createCrossoverContext(
+            parent1,
+            parent2,
+            true,
+            () => 0.9,
+          );
+          const nodeBuildContext = createNodeBuildContext(crossoverContext);
+
+          // Act
+          assignOffspringNodes(nodeBuildContext);
+
+          // Assert
+          expect(
+            crossoverContext.offspring.nodes.filter(
+              (offspringNode) => offspringNode.type === 'hidden',
+            ).length,
+          ).toBeGreaterThan(0);
+        });
       });
     });
   });

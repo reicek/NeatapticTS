@@ -102,10 +102,10 @@ export function resolveInputValuesByNodeId(
 export function resolveOrderedOutputNodes(network: Network): Node[] {
   const scheduleAwareNetwork = network as unknown as ScheduleAwareRuntime;
   const nodesByGeneId = createNodesByGeneId(network.nodes);
-  const orderedOutputNodeIds: readonly number[] =
-    scheduleAwareNetwork._activationSchedule?.outputNodeIds.length
-      ? scheduleAwareNetwork._activationSchedule.outputNodeIds
-      : network.outputNodeIds;
+  const orderedOutputNodeIds: readonly number[] = scheduleAwareNetwork
+    ._activationSchedule?.outputNodeIds.length
+    ? scheduleAwareNetwork._activationSchedule.outputNodeIds
+    : network.outputNodeIds;
   const explicitOutputNodes = orderedOutputNodeIds.flatMap((nodeId) => {
     const outputNode = nodesByGeneId.get(nodeId);
 

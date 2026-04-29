@@ -24,7 +24,9 @@ describe('resolveNetworkArchitectureLabel', () => {
     const network = new Network(3, 2, { seed: 812 });
     const architectureLabel = resolveNetworkArchitectureLabel(network, 38, 99);
 
-    expect(architectureLabel).toMatch(/^3 \| - \| 2\n\(\d+ nodes, \d+ connections\)$/);
+    expect(architectureLabel).toMatch(
+      /^3 \| - \| 2\n\(\d+ nodes, \d+ connections\)$/,
+    );
   });
 
   it('adds a recurrent scheduling line when the runtime advertises recurrent execution', () => {
@@ -47,7 +49,9 @@ describe('resolveNetworkArchitectureLabel', () => {
 
     const architectureLabel = resolveNetworkArchitectureLabel(network, 1, 1);
 
-    expect(architectureLabel).toContain('schedule: recurrent via compiled schedule');
+    expect(architectureLabel).toContain(
+      'schedule: recurrent via compiled schedule',
+    );
   });
 
   it('adds a warning line when acyclic scheduling falls back because of a cycle', () => {
@@ -75,14 +79,18 @@ describe('resolveNetworkArchitectureLabel', () => {
     const network = Architect.lstm(8, 3, 2, { inputToOutput: false });
     const architectureLabel = resolveNetworkArchitectureLabel(network, 8, 2);
 
-    expect(architectureLabel).toMatch(/^8 \| LSTM\[3\] \| 2\n\(\d+ nodes, \d+ connections\)$/);
+    expect(architectureLabel).toMatch(
+      /^8 \| LSTM\[3\] \| 2\n\(\d+ nodes, \d+ connections\)$/,
+    );
   });
 
   it('formats NARX builders with explicit delay-shelf sizes and dense hidden carry-through', () => {
     const network = Architect.narx(1, [3], 1, 2, 1);
     const architectureLabel = resolveNetworkArchitectureLabel(network, 1, 1);
 
-    expect(architectureLabel).toMatch(/^1 \| NARX\[i2,o1,\+3\] \| 1\n\(\d+ nodes, \d+ connections\)$/);
+    expect(architectureLabel).toMatch(
+      /^1 \| NARX\[i2,o1,\+3\] \| 1\n\(\d+ nodes, \d+ connections\)$/,
+    );
   });
 });
 
@@ -95,7 +103,9 @@ describe('resolveNetworkVisualizationTopologyPlan', () => {
       hiddenColumnLabels: topologyPlan.hiddenColumnAnnotations.map(
         (hiddenColumnAnnotation) => hiddenColumnAnnotation.label,
       ),
-      layerSizes: topologyPlan.networkLayers.map((networkLayer) => networkLayer.length),
+      layerSizes: topologyPlan.networkLayers.map(
+        (networkLayer) => networkLayer.length,
+      ),
     }).toStrictEqual({
       hiddenColumnLabels: [
         'INPUT GATE',
@@ -140,7 +150,9 @@ describe('resolveNetworkVisualizationTopologyPlan', () => {
       hiddenColumnLabels: topologyPlan.hiddenColumnAnnotations.map(
         (hiddenColumnAnnotation) => hiddenColumnAnnotation.label,
       ),
-      layerSizes: topologyPlan.networkLayers.map((networkLayer) => networkLayer.length),
+      layerSizes: topologyPlan.networkLayers.map(
+        (networkLayer) => networkLayer.length,
+      ),
     }).toStrictEqual({
       hiddenColumnLabels: [],
       layerSizes: [1, 1, 2, 1],
@@ -207,7 +219,9 @@ describe('resolveNetworkVisualizationTopologyPlan', () => {
       hiddenColumnLabels: topologyPlan.hiddenColumnAnnotations.map(
         (hiddenColumnAnnotation) => hiddenColumnAnnotation.label,
       ),
-      layerSizes: topologyPlan.networkLayers.map((networkLayer) => networkLayer.length),
+      layerSizes: topologyPlan.networkLayers.map(
+        (networkLayer) => networkLayer.length,
+      ),
     }).toStrictEqual({
       hiddenColumnLabels: ['IN t-1', 'IN t-2', 'HIDDEN 1', 'OUT t-1'],
       layerSizes: [1, 1, 1, 3, 1, 1],
@@ -359,7 +373,9 @@ describe('resolveInputNodeDescriptionLabels', () => {
 
 describe('resolveInputDescriptionColumnWidthPx', () => {
   it('reserves only the width required by the widest simplified Flappy chip label', () => {
-    expect(resolveInputDescriptionColumnWidthPx(FLAPPY_NETWORK_INPUT_SIZE)).toBe(118);
+    expect(
+      resolveInputDescriptionColumnWidthPx(FLAPPY_NETWORK_INPUT_SIZE),
+    ).toBe(118);
   });
 });
 
@@ -382,7 +398,11 @@ describe('resolveInputDescriptionScenes', () => {
     );
 
     const minimumSceneGapPx = inputDescriptionScenes.reduce(
-      (currentMinimumGapPx, inputDescriptionScene, inputDescriptionSceneIndex) => {
+      (
+        currentMinimumGapPx,
+        inputDescriptionScene,
+        inputDescriptionSceneIndex,
+      ) => {
         if (inputDescriptionSceneIndex === 0) {
           return currentMinimumGapPx;
         }

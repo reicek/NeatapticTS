@@ -154,7 +154,8 @@ describe('utils chapter', () => {
           }));
 
           jest.isolateModules(() => {
-            const isolatedMemoryModule = require('./memory') as typeof import('./memory');
+            const isolatedMemoryModule =
+              require('./memory') as typeof import('./memory');
             nodePoolSnapshot = isolatedMemoryModule.memoryStats(
               buildTrackedNetwork(0, 0),
             ).pools.nodePool;

@@ -124,7 +124,8 @@ export function resolveInputGroupLabelBandScenes(
       labelBand.endNodeIndex + 1,
     );
     const firstGroupedInputDescriptionScene = groupedInputDescriptionScenes[0];
-    const lastGroupedInputDescriptionScene = groupedInputDescriptionScenes.at(-1);
+    const lastGroupedInputDescriptionScene =
+      groupedInputDescriptionScenes.at(-1);
     if (
       !firstGroupedInputDescriptionScene ||
       !lastGroupedInputDescriptionScene
@@ -183,7 +184,9 @@ export function resolveInputDescriptionScenes(
     return [];
   }
 
-  const inputDescriptions = resolveInputNodeDescriptionLabels(inputNodes.length);
+  const inputDescriptions = resolveInputNodeDescriptionLabels(
+    inputNodes.length,
+  );
   if (inputDescriptions.length === 0) {
     return [];
   }
@@ -318,7 +321,8 @@ export function drawInputGroupLabelBands(
       context.fillText(
         labelLine,
         labelCenterXPx,
-        labelCenterYPx - labelLineBlockHeightPx * 0.5 +
+        labelCenterYPx -
+          labelLineBlockHeightPx * 0.5 +
           labelLineIndex * FLAPPY_NETWORK_INPUT_GROUP_LABEL_LINE_HEIGHT_PX,
       );
     });
@@ -382,7 +386,8 @@ export function drawInputNodeDescriptions(
       context.fillText(
         labelLine,
         descriptionCenterXPx,
-        descriptionCenterYPx - descriptionLineBlockHeightPx * 0.5 +
+        descriptionCenterYPx -
+          descriptionLineBlockHeightPx * 0.5 +
           labelLineIndex * FLAPPY_NETWORK_INPUT_DESCRIPTION_LINE_HEIGHT_PX,
       );
     });
@@ -409,7 +414,10 @@ export function resolveHiddenColumnLabelScenes(
   }
 
   const positionedNodeByIndex = new Map(
-    positionedNodes.map((positionedNode) => [positionedNode.node.index, positionedNode]),
+    positionedNodes.map((positionedNode) => [
+      positionedNode.node.index,
+      positionedNode,
+    ]),
   );
   const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
   const halfNodeHeightPx = nodeDimensions.heightPx * 0.5;
@@ -466,7 +474,10 @@ export function resolveHiddenColumnLabelScenes(
         tooltipHeading: hiddenColumnAnnotation.tooltipHeading,
         tooltipBodyParagraphs: hiddenColumnAnnotation.tooltipBodyParagraphs,
         leftPx: columnCenterXPx - widthPx * 0.5,
-        topPx: minimumNodeTopPx - FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX - heightPx,
+        topPx:
+          minimumNodeTopPx -
+          FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX -
+          heightPx,
         widthPx,
         heightPx,
         backgroundColor:
@@ -542,7 +553,8 @@ export function drawHiddenColumnLabelScenes(
       context.fillText(
         labelLine,
         labelCenterXPx,
-        labelCenterYPx - labelLineBlockHeightPx * 0.5 +
+        labelCenterYPx -
+          labelLineBlockHeightPx * 0.5 +
           labelLineIndex * FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX,
       );
     });
@@ -565,14 +577,7 @@ export function drawRoundedRect(
   radiusPx: number,
   fillColor: string,
 ): void {
-  traceRoundedRectPath(
-    context,
-    leftXPx,
-    topYPx,
-    widthPx,
-    heightPx,
-    radiusPx,
-  );
+  traceRoundedRectPath(context, leftXPx, topYPx, widthPx, heightPx, radiusPx);
   context.fillStyle = fillColor;
   context.fill();
 }
@@ -655,57 +660,57 @@ function resolveInputOverlayLayouts(
   let runningTopYPx = 0;
   const relativeInputOverlayLayouts = labelBands.map(
     (labelBand, labelBandIndex) => {
-    const groupedDescriptionLayouts = descriptionLayouts.slice(
-      labelBand.startNodeIndex,
-      labelBand.endNodeIndex + 1,
-    );
-    const groupedNodeIndices = inputNodes
-      .slice(labelBand.startNodeIndex, labelBand.endNodeIndex + 1)
-      .map((inputNode) => inputNode.node.index);
-    const groupedDescriptionContentHeightPx = resolveGroupedDescriptionContentHeightPx(
-      groupedDescriptionLayouts,
-    );
-    const groupHeightPx = Math.max(
-      FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX,
-      groupedDescriptionContentHeightPx +
-        FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX * 2,
-    );
-    const descriptionContentTopYPx =
-      runningTopYPx +
-      Math.max(
-        FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX,
-        (groupHeightPx - groupedDescriptionContentHeightPx) * 0.5,
+      const groupedDescriptionLayouts = descriptionLayouts.slice(
+        labelBand.startNodeIndex,
+        labelBand.endNodeIndex + 1,
       );
-    let runningDescriptionTopYPx = descriptionContentTopYPx;
-    const groupedDescriptionScenes = groupedDescriptionLayouts.map(
-      (groupedDescriptionLayout, groupedDescriptionIndex) => {
-        const nextDescriptionTopYPx = runningDescriptionTopYPx;
-        runningDescriptionTopYPx += groupedDescriptionLayout.descriptionHeightPx;
-        if (groupedDescriptionIndex < groupedDescriptionLayouts.length - 1) {
+      const groupedNodeIndices = inputNodes
+        .slice(labelBand.startNodeIndex, labelBand.endNodeIndex + 1)
+        .map((inputNode) => inputNode.node.index);
+      const groupedDescriptionContentHeightPx =
+        resolveGroupedDescriptionContentHeightPx(groupedDescriptionLayouts);
+      const groupHeightPx = Math.max(
+        FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX,
+        groupedDescriptionContentHeightPx +
+          FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX * 2,
+      );
+      const descriptionContentTopYPx =
+        runningTopYPx +
+        Math.max(
+          FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX,
+          (groupHeightPx - groupedDescriptionContentHeightPx) * 0.5,
+        );
+      let runningDescriptionTopYPx = descriptionContentTopYPx;
+      const groupedDescriptionScenes = groupedDescriptionLayouts.map(
+        (groupedDescriptionLayout, groupedDescriptionIndex) => {
+          const nextDescriptionTopYPx = runningDescriptionTopYPx;
           runningDescriptionTopYPx +=
-            FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX;
-        }
+            groupedDescriptionLayout.descriptionHeightPx;
+          if (groupedDescriptionIndex < groupedDescriptionLayouts.length - 1) {
+            runningDescriptionTopYPx +=
+              FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX;
+          }
 
-        return {
-          ...groupedDescriptionLayout,
-          topPx: nextDescriptionTopYPx,
-        };
-      },
-    );
+          return {
+            ...groupedDescriptionLayout,
+            topPx: nextDescriptionTopYPx,
+          };
+        },
+      );
 
-    const resolvedGroupLayout = {
-      label: labelBand.label,
-      labelLines: labelBand.labelLines,
-      nodeIndices: groupedNodeIndices,
-      topPx: runningTopYPx,
-      heightPx: groupHeightPx,
-      descriptionLayouts: groupedDescriptionScenes,
-    };
-    runningTopYPx += groupHeightPx;
-    if (labelBandIndex < labelBands.length - 1) {
-      runningTopYPx += FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX;
-    }
-    return resolvedGroupLayout;
+      const resolvedGroupLayout = {
+        label: labelBand.label,
+        labelLines: labelBand.labelLines,
+        nodeIndices: groupedNodeIndices,
+        topPx: runningTopYPx,
+        heightPx: groupHeightPx,
+        descriptionLayouts: groupedDescriptionScenes,
+      };
+      runningTopYPx += groupHeightPx;
+      if (labelBandIndex < labelBands.length - 1) {
+        runningTopYPx += FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX;
+      }
+      return resolvedGroupLayout;
     },
   );
   const totalOverlayHeightPx = relativeInputOverlayLayouts.at(-1)
@@ -735,7 +740,11 @@ function resolveGroupedDescriptionContentHeightPx(
   }
 
   return groupedDescriptionLayouts.reduce(
-    (currentGroupedDescriptionHeightPx, groupedDescriptionLayout, groupedDescriptionIndex) =>
+    (
+      currentGroupedDescriptionHeightPx,
+      groupedDescriptionLayout,
+      groupedDescriptionIndex,
+    ) =>
       currentGroupedDescriptionHeightPx +
       groupedDescriptionLayout.descriptionHeightPx +
       (groupedDescriptionIndex < groupedDescriptionLayouts.length - 1
@@ -768,14 +777,7 @@ function strokeRoundedRect(
   strokeColor: string,
   strokeWidthPx: number,
 ): void {
-  traceRoundedRectPath(
-    context,
-    leftXPx,
-    topYPx,
-    widthPx,
-    heightPx,
-    radiusPx,
-  );
+  traceRoundedRectPath(context, leftXPx, topYPx, widthPx, heightPx, radiusPx);
   context.strokeStyle = strokeColor;
   context.lineWidth = strokeWidthPx;
   context.stroke();

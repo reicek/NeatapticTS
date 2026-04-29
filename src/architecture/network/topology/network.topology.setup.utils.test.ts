@@ -15,9 +15,13 @@ describe('network topology setup helpers', () => {
           // Arrange
           const network = new Network(1, 1, { enforceAcyclic: true });
           const internalTopologyProps = asTopologyProps(network);
-          Reflect.set(internalTopologyProps, '_activationSchedulingDiagnostics', {
-            topologyIntent: 'feed-forward',
-          });
+          Reflect.set(
+            internalTopologyProps,
+            '_activationSchedulingDiagnostics',
+            {
+              topologyIntent: 'feed-forward',
+            },
+          );
           Reflect.set(internalTopologyProps, '_activationSchedule', {
             mode: 'acyclic',
           });

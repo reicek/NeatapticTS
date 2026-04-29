@@ -224,7 +224,9 @@ describe('neat objectives core chapter', () => {
     describe('given the candidate objective has a key and accessor', () => {
       it('returns true', () => {
         // Arrange
-        const candidateObjective = createObjectiveDescriptor({ key: 'novelty' });
+        const candidateObjective = createObjectiveDescriptor({
+          key: 'novelty',
+        });
 
         // Act
         const isCandidateValid = isValidObjective(candidateObjective);
@@ -242,9 +244,8 @@ describe('neat objectives core chapter', () => {
         const objectivesHost = createObjectivesHost();
 
         // Act
-        const multiObjectiveOptions = ensureMultiObjectiveOptions(
-          objectivesHost,
-        );
+        const multiObjectiveOptions =
+          ensureMultiObjectiveOptions(objectivesHost);
 
         // Assert
         expect(multiObjectiveOptions.enabled).toBe(true);
@@ -260,9 +261,8 @@ describe('neat objectives core chapter', () => {
         });
 
         // Act
-        const multiObjectiveOptions = ensureMultiObjectiveOptions(
-          objectivesHost,
-        );
+        const multiObjectiveOptions =
+          ensureMultiObjectiveOptions(objectivesHost);
 
         // Assert
         expect(multiObjectiveOptions).toBe(existingOptions);
@@ -289,7 +289,9 @@ describe('neat objectives core chapter', () => {
     describe('given the objectives list already exists', () => {
       it('returns the existing list reference', () => {
         // Arrange
-        const existingObjectives = [createObjectiveDescriptor({ key: 'energy' })];
+        const existingObjectives = [
+          createObjectiveDescriptor({ key: 'energy' }),
+        ];
         const multiObjectiveOptions: NonNullable<
           NeatLikeWithObjectives['options']['multiObjective']
         > = {

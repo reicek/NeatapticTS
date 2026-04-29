@@ -1,8 +1,5 @@
 import * as pruningModule from '../pruning';
-import {
-  applyAdaptivePruning,
-  applyEvolutionPruning,
-} from './pruning.facade';
+import { applyAdaptivePruning, applyEvolutionPruning } from './pruning.facade';
 
 jest.mock('../pruning', () => ({
   applyAdaptivePruning: jest.fn(),
@@ -24,7 +21,9 @@ function createPruningFacadeHost(): PruningFacadeHost {
 }
 
 describe('pruning facade chapter', () => {
-  const mockedEvolutionPruning = jest.mocked(pruningModule.applyEvolutionPruning);
+  const mockedEvolutionPruning = jest.mocked(
+    pruningModule.applyEvolutionPruning,
+  );
   const mockedAdaptivePruning = jest.mocked(pruningModule.applyAdaptivePruning);
 
   beforeEach(() => {
@@ -42,9 +41,7 @@ describe('pruning facade chapter', () => {
         await applyEvolutionPruning(pruningFacadeHost as never);
 
         // Assert
-        expect(mockedEvolutionPruning.mock.contexts[0]).toBe(
-          pruningFacadeHost,
-        );
+        expect(mockedEvolutionPruning.mock.contexts[0]).toBe(pruningFacadeHost);
       });
     });
 

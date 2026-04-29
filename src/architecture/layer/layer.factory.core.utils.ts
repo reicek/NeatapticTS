@@ -1,9 +1,6 @@
 import type Connection from '../connection/connection';
 import Group from '../group/group';
-import {
-  type PrimitiveNodeType,
-  resolvePrimitiveIntent,
-} from '../node/node';
+import { type PrimitiveNodeType, resolvePrimitiveIntent } from '../node/node';
 import * as methods from '../../methods/methods';
 import type {
   LayerFactoryContext,
@@ -47,7 +44,7 @@ export function buildDenseLayer<TLayer extends LayerFactoryLayer>(
   const layer = context.createLayer();
   const block = new Group(size, nodeType);
 
-   block.describe({
+  block.describe({
     intent: resolvePrimitiveIntent(nodeType),
     metadata: { family: 'dense', size },
   });

@@ -36,12 +36,14 @@ function createTensor(
   };
 }
 
-function createOnnxModel(options: {
-  initializer?: OnnxTensor[];
-  inputCount?: number;
-  metadataProps?: OnnxMetadataProperty[];
-  outputCount?: number;
-} = {}): OnnxModel {
+function createOnnxModel(
+  options: {
+    initializer?: OnnxTensor[];
+    inputCount?: number;
+    metadataProps?: OnnxMetadataProperty[];
+    outputCount?: number;
+  } = {},
+): OnnxModel {
   const inputCount = options.inputCount ?? 2;
   const outputCount = options.outputCount ?? 1;
 
@@ -188,10 +190,11 @@ describe('network onnx import orchestrators utility chapter', () => {
         restoreRecurrentSelfConnections(network, onnxModel, [2], []);
 
         // Assert
-        expect(getHiddenNodes(network).map((hiddenNode) => hiddenNode.connections.self.length)).toEqual([
-          0,
-          0,
-        ]);
+        expect(
+          getHiddenNodes(network).map(
+            (hiddenNode) => hiddenNode.connections.self.length,
+          ),
+        ).toEqual([0, 0]);
       });
     });
 
@@ -212,10 +215,11 @@ describe('network onnx import orchestrators utility chapter', () => {
         );
 
         // Assert
-        expect(getHiddenNodes(network).map((hiddenNode) => hiddenNode.connections.self.length)).toEqual([
-          0,
-          0,
-        ]);
+        expect(
+          getHiddenNodes(network).map(
+            (hiddenNode) => hiddenNode.connections.self.length,
+          ),
+        ).toEqual([0, 0]);
       });
     });
 
@@ -236,10 +240,11 @@ describe('network onnx import orchestrators utility chapter', () => {
         );
 
         // Assert
-        expect(getHiddenNodes(network).map((hiddenNode) => hiddenNode.connections.self.length)).toEqual([
-          0,
-          0,
-        ]);
+        expect(
+          getHiddenNodes(network).map(
+            (hiddenNode) => hiddenNode.connections.self.length,
+          ),
+        ).toEqual([0, 0]);
       });
     });
 
@@ -258,10 +263,11 @@ describe('network onnx import orchestrators utility chapter', () => {
         );
 
         // Assert
-        expect(getHiddenNodes(network).map((hiddenNode) => hiddenNode.connections.self.length)).toEqual([
-          0,
-          0,
-        ]);
+        expect(
+          getHiddenNodes(network).map(
+            (hiddenNode) => hiddenNode.connections.self.length,
+          ),
+        ).toEqual([0, 0]);
       });
     });
 
@@ -383,7 +389,13 @@ describe('network onnx import orchestrators utility chapter', () => {
         };
 
         // Act
-        reconstructFusedRecurrentLayers(network, onnxModel, [1], layerFactory, []);
+        reconstructFusedRecurrentLayers(
+          network,
+          onnxModel,
+          [1],
+          layerFactory,
+          [],
+        );
 
         // Assert
         expect(network.nodes.length).toBe(3);

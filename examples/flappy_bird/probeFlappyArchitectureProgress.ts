@@ -166,9 +166,7 @@ async function main(): Promise<void> {
   const progressChecks = buildProgressChecks(progressSummary);
   const failedProgressChecks = resolveFailedProgressChecks(progressChecks);
   const failedProgressChecksLabel =
-    failedProgressChecks.length === 0
-      ? 'none'
-      : failedProgressChecks.join(',');
+    failedProgressChecks.length === 0 ? 'none' : failedProgressChecks.join(',');
 
   console.log(`[${logPrefix}] checks=${JSON.stringify(progressChecks)}`);
   console.log(
@@ -347,15 +345,14 @@ export function buildProgressChecks(
  * @param progressSummary - Final probe summary.
  * @returns `true` when the run should count as a strong early-peak success.
  */
-function isStrongEarlyPeakRun(
-  progressSummary: ProgressSummary,
-): boolean {
+function isStrongEarlyPeakRun(progressSummary: ProgressSummary): boolean {
   const earlyPeakGenerationLimit = Math.max(
     1,
     Math.floor(progressSummary.generationCount / 2),
   );
   const strongFrameFloor =
-    FLAPPY_MAX_FRAMES_PER_EPISODE * FLAPPY_PROGRESS_STRONG_EARLY_PEAK_FRAME_RATIO;
+    FLAPPY_MAX_FRAMES_PER_EPISODE *
+    FLAPPY_PROGRESS_STRONG_EARLY_PEAK_FRAME_RATIO;
   const strongPipeFloor =
     progressSummary.maxValidationMeanPipesPassed *
     FLAPPY_PROGRESS_STRONG_EARLY_PEAK_PIPE_RATIO;
@@ -417,7 +414,9 @@ function buildValidationSeedBatch(
  * @param rawArguments - Arguments after the script path.
  * @returns Parsed and validated options.
  */
-export function parseCliOptions(rawArguments: readonly string[]): ParsedCliOptions {
+export function parseCliOptions(
+  rawArguments: readonly string[],
+): ParsedCliOptions {
   if (hasFlag(rawArguments, '--help') || hasFlag(rawArguments, '-h')) {
     printUsage();
     process.exit(0);
@@ -533,14 +532,11 @@ function resolveBooleanFlag(
     argument.startsWith(`${optionName}=`),
   );
   if (inlineArgument) {
-    return parseBooleanOptionValue(
-      inlineArgument.slice(optionName.length + 1),
-    );
+    return parseBooleanOptionValue(inlineArgument.slice(optionName.length + 1));
   }
 
-  const environmentValue = process.env[
-    resolveNpmConfigEnvironmentKey(optionName)
-  ];
+  const environmentValue =
+    process.env[resolveNpmConfigEnvironmentKey(optionName)];
   if (environmentValue == null) {
     return false;
   }

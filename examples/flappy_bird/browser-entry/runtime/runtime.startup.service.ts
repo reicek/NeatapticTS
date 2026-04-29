@@ -62,7 +62,8 @@ export function createRuntimeStartContext(
         selectedProfileId: config.selectedArchitectureProfile.id,
         historyByProfileId: config.architectureHistoryByProfileId,
       }),
-      onSelectArchitectureProfile: runtimeStartOptions.onSelectArchitectureProfile,
+      onSelectArchitectureProfile:
+        runtimeStartOptions.onSelectArchitectureProfile,
     }),
     runtimeTelemetryState: createRuntimeTelemetryState(),
     evolutionWorker: createEvolutionWorker(),
@@ -113,7 +114,8 @@ function createRuntimeStartConfig(
   // Step 1: Fold shared runtime constants into one descriptive config object.
   return {
     architectureHistoryByProfileId: resolveRuntimeArchitectureHistory(),
-    availableArchitectureProfiles: resolveAvailableRuntimeArchitectureProfiles(),
+    availableArchitectureProfiles:
+      resolveAvailableRuntimeArchitectureProfiles(),
     inputSize: FLAPPY_NETWORK_INPUT_SIZE,
     outputSize: FLAPPY_NETWORK_OUTPUT_SIZE,
     populationSize: runtimeBudget.populationSize,

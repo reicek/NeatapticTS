@@ -280,14 +280,7 @@ function resolveParentMetrics(
  * @returns Random function.
  */
 function getRandomGenerator(parentNetwork: Network): RandomGenerator {
-  const networkWithDynamicFields = parentNetwork as Record<
-    string,
-    RandomGenerator | number | undefined
-  >;
-  const dynamicRandomCandidate = networkWithDynamicFields._rand;
-  return typeof dynamicRandomCandidate === 'function'
-    ? dynamicRandomCandidate
-    : Math.random;
+  return (parentNetwork as unknown as { _rand: RandomGenerator })._rand;
 }
 
 /**

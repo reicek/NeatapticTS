@@ -226,15 +226,13 @@ describe('network gating chapter', () => {
             throw new Error('Expected an LSTM fixture gate to remove.');
           }
 
-          const summaryBeforeUngate = summarizeHydratedTemporalExtensionBag(
-            network,
-          );
+          const summaryBeforeUngate =
+            summarizeHydratedTemporalExtensionBag(network);
 
           // Act
           network.ungate(gatedConnection);
-          const summaryAfterUngate = summarizeHydratedTemporalExtensionBag(
-            network,
-          );
+          const summaryAfterUngate =
+            summarizeHydratedTemporalExtensionBag(network);
 
           // Assert
           expect({

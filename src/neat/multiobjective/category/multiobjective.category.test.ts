@@ -305,13 +305,12 @@ describe('neat multiobjective category chapter', () => {
         // Assert
         expect({
           categoryArchiveGenerations: archiveTracking._paretoArchive
-            .filter(
-              (entry: { gen?: number }) => typeof entry.gen === 'number',
-            )
+            .filter((entry: { gen?: number }) => typeof entry.gen === 'number')
             .map((entry: { gen?: number }) => entry.gen),
           latestObjectiveArchiveGeneration:
             archiveTracking._paretoObjectivesArchive.at(-1)?.gen ?? null,
-          objectiveArchiveLength: archiveTracking._paretoObjectivesArchive.length,
+          objectiveArchiveLength:
+            archiveTracking._paretoObjectivesArchive.length,
         }).toEqual({
           categoryArchiveGenerations: [1],
           latestObjectiveArchiveGeneration: 1,
@@ -323,7 +322,8 @@ describe('neat multiobjective category chapter', () => {
     describe('given category snapshots see genomes without exported ids or scores', () => {
       it('writes fallback archive identifiers and objective vectors', () => {
         // Arrange
-        const neat = createDelegatedRankingNeat() as unknown as ArchiveTrackingSurface;
+        const neat =
+          createDelegatedRankingNeat() as unknown as ArchiveTrackingSurface;
         const firstGenome = neat.population[0];
         firstGenome._id = undefined;
         firstGenome.score = undefined;
@@ -337,11 +337,16 @@ describe('neat multiobjective category chapter', () => {
             | undefined;
         const fastNonDominatedSpy = jest
           .spyOn(multiobjectiveModule, 'fastNonDominated')
-          .mockReturnValue([[firstGenome]] as unknown as ReturnType<typeof multiobjectiveModule.fastNonDominated>);
+          .mockReturnValue([[firstGenome]] as unknown as ReturnType<
+            typeof multiobjectiveModule.fastNonDominated
+          >);
 
         try {
           // Act
-          processMultiObjective(neat as never, createCategoryProcessConfig({ paretoArchiveMax: 1 }));
+          processMultiObjective(
+            neat as never,
+            createCategoryProcessConfig({ paretoArchiveMax: 1 }),
+          );
 
           // Assert
           expect({
@@ -489,12 +494,11 @@ describe('neat multiobjective category chapter', () => {
             rangeEps: 1e-9,
           },
         });
-        const objectiveStaleTracking = neat as unknown as ObjectiveStaleTrackingSurface;
-        objectiveStaleTracking.population.forEach(
-          (genome, genomeIndex) => {
-            genome.objectiveSignal = genomeIndex;
-          },
-        );
+        const objectiveStaleTracking =
+          neat as unknown as ObjectiveStaleTrackingSurface;
+        objectiveStaleTracking.population.forEach((genome, genomeIndex) => {
+          genome.objectiveSignal = genomeIndex;
+        });
         objectiveStaleTracking._objectiveStale.set('signal', 2);
 
         // Act
@@ -535,19 +539,24 @@ describe('neat multiobjective category chapter', () => {
     describe('given no Pareto fronts are produced and objectives are unavailable', () => {
       it('keeps archives and stale counters unchanged', () => {
         // Arrange
-        const neat = createDelegatedRankingNeat() as unknown as ArchiveTrackingSurface &
-          ObjectiveStaleTrackingSurface & {
-            _getObjectives?: () => ReturnType<Neat['getObjectives']>;
-            options: Neat['options'];
-            _lastEpsilonAdjustGen: number;
-          };
+        const neat =
+          createDelegatedRankingNeat() as unknown as ArchiveTrackingSurface &
+            ObjectiveStaleTrackingSurface & {
+              _getObjectives?: () => ReturnType<Neat['getObjectives']>;
+              options: Neat['options'];
+              _lastEpsilonAdjustGen: number;
+            };
         neat._objectiveStale.set('signal', 2);
         neat._getObjectives = undefined;
         neat.options.multiObjective!.adaptiveEpsilon = { enabled: true };
         neat.options.multiObjective!.pruneInactive = { enabled: true };
         const fastNonDominatedSpy = jest
           .spyOn(multiobjectiveModule, 'fastNonDominated')
-          .mockReturnValue([] as unknown as ReturnType<typeof multiobjectiveModule.fastNonDominated>);
+          .mockReturnValue(
+            [] as unknown as ReturnType<
+              typeof multiobjectiveModule.fastNonDominated
+            >,
+          );
 
         try {
           // Act
@@ -581,10 +590,14 @@ describe('neat multiobjective category chapter', () => {
           min: 0.01,
           max: 1,
         };
-        const inBandFront = (neat.population as DelegatedRankingNetwork[]).slice(0, 2);
+        const inBandFront = (
+          neat.population as DelegatedRankingNetwork[]
+        ).slice(0, 2);
         const fastNonDominatedSpy = jest
           .spyOn(multiobjectiveModule, 'fastNonDominated')
-          .mockReturnValue([inBandFront] as unknown as ReturnType<typeof multiobjectiveModule.fastNonDominated>);
+          .mockReturnValue([inBandFront] as unknown as ReturnType<
+            typeof multiobjectiveModule.fastNonDominated
+          >);
 
         try {
           // Act
@@ -592,7 +605,8 @@ describe('neat multiobjective category chapter', () => {
 
           // Assert
           expect({
-            dominanceEpsilon: neat.options.multiObjective?.dominanceEpsilon ?? 0,
+            dominanceEpsilon:
+              neat.options.multiObjective?.dominanceEpsilon ?? 0,
             lastAdjustGeneration: neat._lastEpsilonAdjustGen,
           }).toEqual({ dominanceEpsilon: 0, lastAdjustGeneration: 0 });
         } finally {
@@ -612,7 +626,9 @@ describe('neat multiobjective category chapter', () => {
         const wideFront = neat.population as DelegatedRankingNetwork[];
         const fastNonDominatedSpy = jest
           .spyOn(multiobjectiveModule, 'fastNonDominated')
-          .mockReturnValue([wideFront] as unknown as ReturnType<typeof multiobjectiveModule.fastNonDominated>);
+          .mockReturnValue([wideFront] as unknown as ReturnType<
+            typeof multiobjectiveModule.fastNonDominated
+          >);
 
         try {
           // Act
@@ -623,7 +639,8 @@ describe('neat multiobjective category chapter', () => {
 
           // Assert
           expect({
-            dominanceEpsilon: neat.options.multiObjective?.dominanceEpsilon ?? 0,
+            dominanceEpsilon:
+              neat.options.multiObjective?.dominanceEpsilon ?? 0,
             lastAdjustGeneration: neat._lastEpsilonAdjustGen,
           }).toEqual({ dominanceEpsilon: 0.1, lastAdjustGeneration: 0 });
         } finally {

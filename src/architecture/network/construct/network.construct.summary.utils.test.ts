@@ -184,7 +184,10 @@ describe('network construct summary chapter', () => {
       it('appends the activation truncation suffix', () => {
         // Arrange
         const construction = createConstructSummaryFixture({
-          activationOrder: Array.from({ length: 18 }, (_unused, index) => index),
+          activationOrder: Array.from(
+            { length: 18 },
+            (_unused, index) => index,
+          ),
           nodes: [createNodeSummary({ index: 0, geneId: 31, role: 'input' })],
         });
 
@@ -203,18 +206,16 @@ describe('network construct summary chapter', () => {
         // Arrange
         const construction = createConstructSummaryFixture({
           nodes: [createNodeSummary({ index: 0, geneId: 40, role: 'hidden' })],
-          connections: Array.from(
-            { length: 13 },
-            (_unused, connectionIndex) =>
-              createConnectionSummary({
-                innovation: connectionIndex,
-                fromIndex: 0,
-                toIndex: 0,
-                fromGeneId: 40,
-                toGeneId: 40,
-                gaterGeneId: connectionIndex === 0 ? 99 : null,
-                isSelfConnection: connectionIndex === 0,
-              }),
+          connections: Array.from({ length: 13 }, (_unused, connectionIndex) =>
+            createConnectionSummary({
+              innovation: connectionIndex,
+              fromIndex: 0,
+              toIndex: 0,
+              fromGeneId: 40,
+              toGeneId: 40,
+              gaterGeneId: connectionIndex === 0 ? 99 : null,
+              isSelfConnection: connectionIndex === 0,
+            }),
           ),
         });
 
@@ -223,18 +224,18 @@ describe('network construct summary chapter', () => {
 
         // Assert
         expect(actualSummary).toContain(
-          'Connections: [0] geneId:40[0] -> geneId:40[0] [self] [gater: geneId:99]'
-            + ', [1] geneId:40[0] -> geneId:40[0]'
-            + ', [2] geneId:40[0] -> geneId:40[0]'
-            + ', [3] geneId:40[0] -> geneId:40[0]'
-            + ', [4] geneId:40[0] -> geneId:40[0]'
-            + ', [5] geneId:40[0] -> geneId:40[0]'
-            + ', [6] geneId:40[0] -> geneId:40[0]'
-            + ', [7] geneId:40[0] -> geneId:40[0]'
-            + ', [8] geneId:40[0] -> geneId:40[0]'
-            + ', [9] geneId:40[0] -> geneId:40[0]'
-            + ', [10] geneId:40[0] -> geneId:40[0]'
-            + ', [11] geneId:40[0] -> geneId:40[0], ... (+1 more)',
+          'Connections: [0] geneId:40[0] -> geneId:40[0] [self] [gater: geneId:99]' +
+            ', [1] geneId:40[0] -> geneId:40[0]' +
+            ', [2] geneId:40[0] -> geneId:40[0]' +
+            ', [3] geneId:40[0] -> geneId:40[0]' +
+            ', [4] geneId:40[0] -> geneId:40[0]' +
+            ', [5] geneId:40[0] -> geneId:40[0]' +
+            ', [6] geneId:40[0] -> geneId:40[0]' +
+            ', [7] geneId:40[0] -> geneId:40[0]' +
+            ', [8] geneId:40[0] -> geneId:40[0]' +
+            ', [9] geneId:40[0] -> geneId:40[0]' +
+            ', [10] geneId:40[0] -> geneId:40[0]' +
+            ', [11] geneId:40[0] -> geneId:40[0], ... (+1 more)',
         );
       });
     });

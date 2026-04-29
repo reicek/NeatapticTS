@@ -5,7 +5,10 @@ import type {
   NetworkJSONNode,
   NetworkTopologyIntent,
 } from '../../architecture/network/network.types';
-import { fromJSONImpl, toJSONImpl } from '../../architecture/network/serialize/network.serialize.utils';
+import {
+  fromJSONImpl,
+  toJSONImpl,
+} from '../../architecture/network/serialize/network.serialize.utils';
 import { validateNetworkJsonOrThrow } from '../../architecture/network/serialize/network.serialize.json.utils';
 import { NETWORK_JSON_FORMAT_VERSION } from '../../architecture/network/serialize/network.serialize.utils.types';
 import type { ConnectionLike, GenomeLike } from '../compat/core/compat.types';
@@ -47,11 +50,9 @@ const genomeCompatibilityViewCache = new WeakMap<object, GenomeLike>();
 const NEAT_GENOME_EXTENSIONS_VERSION = 1;
 const NEUTRAL_CONNECTION_GAIN = 1;
 const NEUTRAL_NODE_RESPONSE = 1;
-const SUPPORTED_RECURRENT_MODULE_KINDS = new Set<NeatGenomeRecurrentModuleKind>([
-  'lstm',
-  'gru',
-  'narx-memory',
-]);
+const SUPPORTED_RECURRENT_MODULE_KINDS = new Set<NeatGenomeRecurrentModuleKind>(
+  ['lstm', 'gru', 'narx-memory'],
+);
 
 /**
  * Convert one executable phenotype into the strict NEAT genome contract.
@@ -69,7 +70,10 @@ export function createGenomeFromNetwork(
   captureOptions: NeatGenomeCaptureOptions = {},
 ): NeatGenome {
   const runtimePayload = toJSONImpl.call(network);
-  const strictGenome = createGenomeFromNetworkJson(runtimePayload, captureOptions);
+  const strictGenome = createGenomeFromNetworkJson(
+    runtimePayload,
+    captureOptions,
+  );
   const mergedExtensions = mergeRuntimeOnlyGenomeExtensions(
     strictGenome.extensions,
     network,
@@ -111,7 +115,10 @@ export function createGenomeFromNetworkJson(
     runtimeOrderedNodeEntries,
   );
   const connectionGenes = networkJson.connections.map((connectionJsonEntry) =>
-    createConnectionGeneFromJsonConnection(connectionJsonEntry, geneIdsByNodeIndex),
+    createConnectionGeneFromJsonConnection(
+      connectionJsonEntry,
+      geneIdsByNodeIndex,
+    ),
   );
   const extensions = resolveGenomeExtensions(networkJson, captureOptions);
 
@@ -161,9 +168,8 @@ export function createNetworkJsonFromGenome(
   );
   const connectionJsonEntries = genome.connectionGenes.map(
     (connectionGene): NetworkJSONConnection => {
-      const resolvedConnectionGain = connectionGainByInnovation?.[
-        String(connectionGene.innovation)
-      ];
+      const resolvedConnectionGain =
+        connectionGainByInnovation?.[String(connectionGene.innovation)];
 
       return {
         from: resolveNodeIndexForGeneId(
@@ -317,7 +323,9 @@ export function createCompatibilityGenomeView(
   return source as GenomeLike;
 }
 
-function createNodeGeneFromJsonNode(nodeJsonEntry: NetworkJSONNode): NeatGenomeNodeGene {
+function createNodeGeneFromJsonNode(
+  nodeJsonEntry: NetworkJSONNode,
+): NeatGenomeNodeGene {
   return {
     geneId:
       typeof nodeJsonEntry.geneId === 'number'
@@ -431,8 +439,7 @@ function mergeRuntimeOnlyGenomeExtensions(
   }
 
   return {
-    version:
-      existingExtensions?.version ?? NEAT_GENOME_EXTENSIONS_VERSION,
+    version: existingExtensions?.version ?? NEAT_GENOME_EXTENSIONS_VERSION,
     values: {
       ...(existingExtensions?.values ?? {}),
       disabledConnectionReenableProbability,
@@ -745,7 +752,9 @@ function validateConnectionGenes(
         ),
       );
     } else {
-      const firstPath = connectionPathsByInnovation.get(connectionGene.innovation);
+      const firstPath = connectionPathsByInnovation.get(
+        connectionGene.innovation,
+      );
       if (firstPath) {
         issues.push(
           createIssue(
@@ -857,7 +866,8 @@ function validateExtensions(
     return;
   }
 
-  const hasValidVersion = Number.isInteger(extensions.version) && extensions.version > 0;
+  const hasValidVersion =
+    Number.isInteger(extensions.version) && extensions.version > 0;
   const hasValidValues = isPlainObjectRecord(extensions.values);
 
   if (!hasValidVersion || !hasValidValues) {
@@ -933,9 +943,8 @@ function validateConnectionGainExtension(
     connectionGainByInnovation,
   )) {
     const parsedInnovation = Number(innovationKey);
-    const matchedConnectionGene = connectionGenesByInnovation.get(
-      parsedInnovation,
-    );
+    const matchedConnectionGene =
+      connectionGenesByInnovation.get(parsedInnovation);
     const hasValidGain =
       typeof gainValue === 'number' &&
       Number.isFinite(gainValue) &&
@@ -988,7 +997,9 @@ function validateNodeResponseExtension(
     nodeGenes.map((nodeGene) => [nodeGene.geneId, nodeGene]),
   );
 
-  for (const [geneIdKey, responseValue] of Object.entries(nodeResponseByGeneId)) {
+  for (const [geneIdKey, responseValue] of Object.entries(
+    nodeResponseByGeneId,
+  )) {
     const parsedGeneId = Number(geneIdKey);
     const matchedNodeGene = nodeGenesById.get(parsedGeneId);
     const hasValidResponse =
@@ -996,7 +1007,11 @@ function validateNodeResponseExtension(
       Number.isFinite(responseValue) &&
       responseValue !== NEUTRAL_NODE_RESPONSE;
 
-    if (!Number.isFinite(parsedGeneId) || !matchedNodeGene || !hasValidResponse) {
+    if (
+      !Number.isFinite(parsedGeneId) ||
+      !matchedNodeGene ||
+      !hasValidResponse
+    ) {
       issues.push(
         createIssue(
           'invalid-node-response-extension',
@@ -1042,9 +1057,7 @@ function validateConnectionReenableExtension(
 }
 
 function validateRecurrentModuleExtension(
-  recurrentModules:
-    | NeatGenomeExtensionValues['recurrentModules']
-    | undefined,
+  recurrentModules: NeatGenomeExtensionValues['recurrentModules'] | undefined,
   nodeGenes: NeatGenomeNodeGene[],
   connectionGenes: NeatGenomeConnectionGene[],
   issues: NeatGenomeValidationIssue[],
@@ -1064,7 +1077,9 @@ function validateRecurrentModuleExtension(
     return;
   }
 
-  const knownNodeGeneIds = new Set(nodeGenes.map((nodeGene) => nodeGene.geneId));
+  const knownNodeGeneIds = new Set(
+    nodeGenes.map((nodeGene) => nodeGene.geneId),
+  );
   const knownConnectionInnovations = new Set(
     connectionGenes.map((connectionGene) => connectionGene.innovation),
   );
@@ -1110,7 +1125,9 @@ function validateGatedBlockExtension(
     return;
   }
 
-  const knownNodeGeneIds = new Set(nodeGenes.map((nodeGene) => nodeGene.geneId));
+  const knownNodeGeneIds = new Set(
+    nodeGenes.map((nodeGene) => nodeGene.geneId),
+  );
   const connectionGenesByInnovation = new Map(
     connectionGenes.map((connectionGene) => [
       connectionGene.innovation,
@@ -1156,7 +1173,9 @@ function isValidRecurrentModuleDescriptor(
     typeof moduleId === 'string' &&
     moduleId.length > 0 &&
     typeof kind === 'string' &&
-    SUPPORTED_RECURRENT_MODULE_KINDS.has(kind as NeatGenomeRecurrentModuleKind) &&
+    SUPPORTED_RECURRENT_MODULE_KINDS.has(
+      kind as NeatGenomeRecurrentModuleKind,
+    ) &&
     isPlainObjectRecord(nodeGeneIdsByRole) &&
     Object.keys(nodeGeneIdsByRole).length > 0 &&
     Object.values(nodeGeneIdsByRole).every((roleNodeGeneIds) =>
@@ -1201,9 +1220,8 @@ function isValidGatedBlockDescriptor(
       return false;
     }
 
-    const matchedConnectionGene = connectionGenesByInnovation.get(
-      connectionInnovation,
-    );
+    const matchedConnectionGene =
+      connectionGenesByInnovation.get(connectionInnovation);
 
     return (
       !!matchedConnectionGene &&
@@ -1295,12 +1313,12 @@ function getOrCreateRuntimeCompatibilityView(
       source._compatCache = cacheEntries;
     },
     get connections(): ConnectionLike[] {
-      return createGenomeFromNetwork(source as unknown as Network).connectionGenes.map(
-        (connectionGene) => ({
-          innovation: connectionGene.innovation,
-          weight: connectionGene.weight,
-        }),
-      );
+      return createGenomeFromNetwork(
+        source as unknown as Network,
+      ).connectionGenes.map((connectionGene) => ({
+        innovation: connectionGene.innovation,
+        weight: connectionGene.weight,
+      }));
     },
   } satisfies GenomeLike;
 

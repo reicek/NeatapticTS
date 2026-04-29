@@ -1,23 +1,54 @@
 /**
  * Runtime registry of built-in and custom activation functions.
  *
- * Read this surface as a behavior shelf for neurons rather than as a loose bag
- * of math helpers. The chosen activation determines what each node can express:
- * whether it saturates, stays sparse, preserves negative values, or responds
- * smoothly enough for gradient-based updates.
+ * ## Why Activation Functions Matter
  *
- * The built-in functions cluster into a few useful families:
+ * Without a non-linear activation at each neuron, a network of any depth
+ * collapses to a single affine transformation — it could be replaced by one
+ * layer. Activation functions are the source of *representational power*: they
+ * let stacked layers compose non-linear features that no linear model can
+ * capture.
  *
- * - saturating classics such as `logistic`, `sigmoid`, and `tanh` keep outputs
- *   bounded and are easy to reason about,
- * - piecewise linear choices such as `relu`, `hardTanh`, and `step` trade
- *   smoothness for cheap evaluation and strong gating behavior,
- * - localized or shape-heavy transforms such as `gaussian`, `sinusoid`, and
- *   `bentIdentity` are useful when you want periodic, radial, or gentler
- *   near-linear responses,
- * - modern smooth hidden-layer options such as `softplus`, `swish`, `gelu`,
- *   and `mish` aim to keep optimization stable without collapsing everything
- *   into hard zero-or-one decisions.
+ * The theoretical guarantee behind this is the **Universal Approximation
+ * Theorem**, which establishes that a network with at least one hidden layer
+ * using a non-polynomial activation function can approximate any continuous
+ * function on a compact domain to arbitrary precision, given enough hidden
+ * units. See Wikipedia contributors,
+ * [Universal approximation theorem](https://en.wikipedia.org/wiki/Universal_approximation_theorem),
+ * for the formal statement and its practical implications.
+ *
+ * ## The Function Interface
+ *
+ * Every activation in this registry shares the same calling convention:
+ *
+ * ```
+ * f(x)          → forward pass value
+ * f(x, true)    → local derivative  f'(x)
+ * ```
+ *
+ * The derivative mode supports gradient-based training (backpropagation).
+ * In NEAT evolutionary runs, the derivative is not required for the forward
+ * activation pass, but it is necessary when the network is trained with
+ * gradient descent rather than evolved.
+ *
+ * ## Function Families
+ *
+ * The built-in functions cluster into four families:
+ *
+ * - **Saturating classics** — `logistic`, `sigmoid`, `tanh`: outputs bounded,
+ *   easy to reason about; historically dominant but prone to vanishing
+ *   gradients in deep networks,
+ * - **Piecewise linear** — `relu`, `hardTanh`, `step`: cheap to evaluate,
+ *   sparse activations, strong gating behavior; `relu` is the default hidden-
+ *   layer choice for most modern work,
+ * - **Shape-specialized** — `gaussian`, `sinusoid`, `bentIdentity`: useful
+ *   when periodic, radial, or near-linear responses are beneficial,
+ * - **Smooth modern** — `softplus`, `swish`, `gelu`, `mish`: differentiable
+ *   everywhere and empirically strong across many architectures.
+ *
+ * See Wikipedia contributors,
+ * [Activation function](https://en.wikipedia.org/wiki/Activation_function),
+ * for a broader survey of the design space and historical progression.
  */
 import {
   absoluteActivation,

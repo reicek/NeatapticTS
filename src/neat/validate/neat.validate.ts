@@ -7,10 +7,7 @@ import {
   assertValidGenomeContract as assertValidGenomeContractImpl,
   validateGenomeContract as validateGenomeContractImpl,
 } from '../genome/genome';
-import type {
-  NeatGenome,
-  NeatGenomeValidationReport,
-} from '../genome/genome';
+import type { NeatGenome, NeatGenomeValidationReport } from '../genome/genome';
 import { NeatNativeGenomeValidationError } from './neat.validate.errors';
 import type {
   NativeGenomeValidationIssue,
@@ -105,7 +102,12 @@ export function validateNativeGenome(
   validateConnections(runtimeGenome, connectionEntries, issues);
 
   // Step 3: Validate topology intent and runtime acyclic semantics.
-  validateTopologyIntent(runtimeGenome, connectionEntries, topologyIntent, issues);
+  validateTopologyIntent(
+    runtimeGenome,
+    connectionEntries,
+    topologyIntent,
+    issues,
+  );
 
   // Step 4: Validate compatibility-cache coherence and stale derived-cache residue.
   validateCompatibilityCache(runtimeGenome, connectionEntries, issues);
@@ -249,15 +251,13 @@ function validateConnections(
   issues: NativeGenomeValidationIssue[],
 ): void {
   const innovationPaths = new Map<number, string>();
-  const allConnections = new Set(connectionEntries.map(({ connection }) => connection));
+  const allConnections = new Set(
+    connectionEntries.map(({ connection }) => connection),
+  );
   const gatedConnections = new Set(runtimeGenome.gates);
 
   for (const connectionEntry of connectionEntries) {
-    validateConnectionInnovation(
-      connectionEntry,
-      innovationPaths,
-      issues,
-    );
+    validateConnectionInnovation(connectionEntry, innovationPaths, issues);
     validateResolvedNode(
       runtimeGenome,
       connectionEntry.path,
@@ -341,7 +341,11 @@ function validateResolvedNode(
   endpointLabel: 'from' | 'to' | 'gater',
   issues: NativeGenomeValidationIssue[],
 ): number | undefined {
-  if (!node || typeof node.index !== 'number' || !Number.isInteger(node.index)) {
+  if (
+    !node ||
+    typeof node.index !== 'number' ||
+    !Number.isInteger(node.index)
+  ) {
     issues.push(
       createIssue(
         endpointLabel === 'gater'
@@ -489,8 +493,13 @@ function validateCompatibilityCache(
 
   const expectedPairs = connectionEntries
     .filter(({ connection }) => Number.isFinite(connection.innovation))
-    .map(({ connection }) => [connection.innovation, connection.weight] as [number, number])
-    .toSorted(([leftInnovation], [rightInnovation]) => leftInnovation - rightInnovation);
+    .map(
+      ({ connection }) =>
+        [connection.innovation, connection.weight] as [number, number],
+    )
+    .toSorted(
+      ([leftInnovation], [rightInnovation]) => leftInnovation - rightInnovation,
+    );
 
   const cacheMatches =
     compatCache.length === expectedPairs.length &&

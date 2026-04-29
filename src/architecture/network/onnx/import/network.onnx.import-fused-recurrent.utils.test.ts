@@ -66,9 +66,12 @@ function createMockFusedLayerRuntime(options: {
   reconnectSelfMode: 'all' | 'first-only';
   unitSize: number;
 }): MockFusedLayerRuntime {
-  const nodes = Array.from({ length: options.gateCount * options.unitSize }, () => {
-    return new Node('hidden');
-  });
+  const nodes = Array.from(
+    { length: options.gateCount * options.unitSize },
+    () => {
+      return new Node('hidden');
+    },
+  );
   const recurrentGateStart = RECURRENT_GATE_GROUP_INDEX * options.unitSize;
   const recurrentGateNodes = nodes.slice(
     recurrentGateStart,
@@ -232,7 +235,8 @@ describe('network onnx fused recurrent import utility chapter', () => {
 
         // Assert
         expect({
-          incompatibleUnitHiddenCount: getHiddenNodes(incompatibleUnitNetwork).length,
+          incompatibleUnitHiddenCount: getHiddenNodes(incompatibleUnitNetwork)
+            .length,
           invalidIndexHiddenCount: getHiddenNodes(invalidIndexNetwork).length,
           missingTensorHiddenCount: getHiddenNodes(missingTensorNetwork).length,
         }).toEqual({

@@ -236,12 +236,8 @@ describe('network evolve chapter', () => {
       describe('when evolve() finishes one bounded generation', () => {
         it('preserves the explicit IO ordering and feed-forward topology intent', async () => {
           // Arrange
-          const {
-            network,
-            trainingSet,
-            inputNodeIds,
-            outputNodeIds,
-          } = createConstructedEvolutionScenario();
+          const { network, trainingSet, inputNodeIds, outputNodeIds } =
+            createConstructedEvolutionScenario();
 
           // Act
           await network.evolve(trainingSet, {

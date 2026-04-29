@@ -206,10 +206,9 @@ function buildPerceptronNetwork(
     buildContext.hiddenSliceEndOffset,
   );
 
-  // Step 3: Resolve output layer width.
-  const outputCount =
-    buildContext.sizes.at(buildContext.hiddenSliceEndOffset) ??
-    buildContext.outputFallbackCount;
+  // Step 3: Resolve output layer width. at(-1) is always defined: validation ensures ≥2 sizes.
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const outputCount = buildContext.sizes.at(buildContext.hiddenSliceEndOffset)!;
 
   // Step 4: Fold widths into MLP creation.
   return Network.createMLP(inputCount, hiddenLayerSizes, outputCount);

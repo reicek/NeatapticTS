@@ -267,7 +267,10 @@ describe('neat evaluate novelty chapter', () => {
         const archiveCapacity = 200;
         evaluationController._noveltyArchive = Array.from(
           { length: archiveCapacity },
-          (_, archiveIndex) => ({ desc: [archiveIndex], novelty: archiveIndex }),
+          (_, archiveIndex) => ({
+            desc: [archiveIndex],
+            novelty: archiveIndex,
+          }),
         );
 
         // Act — archiveAddThreshold: 0 ensures shouldAdd is true for every genome, but archive is full.

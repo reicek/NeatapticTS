@@ -72,8 +72,7 @@ export function createInitializedWorkerRuntime(
   const outputSize = FLAPPY_NETWORK_OUTPUT_SIZE;
   const selectedArchitectureProfile = resolveExampleArchitectureProfile(
     'flappy-bird',
-    initPayload.architectureProfileId ??
-      DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
+    initPayload.architectureProfileId ?? DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
   );
   const seedNetwork = buildExampleArchitectureProfileNetwork(
     'flappy-bird',
@@ -199,12 +198,14 @@ function resolveWorkerPipeFirstEvaluationPlan(
 ): WorkerPipeFirstEvaluationPlan {
   if (architectureProfileId === 'lstm') {
     return {
-      sharedRolloutSeedCount: FLAPPY_WORKER_LSTM_PIPE_FIRST_SHARED_ROLLOUT_SEED_COUNT,
+      sharedRolloutSeedCount:
+        FLAPPY_WORKER_LSTM_PIPE_FIRST_SHARED_ROLLOUT_SEED_COUNT,
     };
   }
 
   return {
-    sharedRolloutSeedCount: FLAPPY_WORKER_DEFAULT_PIPE_FIRST_SHARED_ROLLOUT_SEED_COUNT,
+    sharedRolloutSeedCount:
+      FLAPPY_WORKER_DEFAULT_PIPE_FIRST_SHARED_ROLLOUT_SEED_COUNT,
   };
 }
 
@@ -221,14 +222,14 @@ function buildWorkerSharedRolloutSeedBatch(
 ): number[] {
   // Step 1: Mix both worker seed and generation so browser selection stays fair within a generation without freezing onto one rollout forever.
   const generationMixedSeed =
-    (workerInitSeed ^ 0x9f38_51de) ^
+    workerInitSeed ^
+    0x9f38_51de ^
     Math.imul(generation + 1, FLAPPY_WORKER_SHARED_ROLLOUT_GENERATION_XOR_SALT);
   const rolloutSeedRng = createXorshift32(generationMixedSeed);
 
   // Step 2: Sample a tiny shared batch that remains cheap for the interactive demo.
-  return Array.from(
-    { length: sharedRolloutSeedCount },
-    () => rolloutSeedRng.nextInt(0, 0x1_0000_0000),
+  return Array.from({ length: sharedRolloutSeedCount }, () =>
+    rolloutSeedRng.nextInt(0, 0x1_0000_0000),
   );
 }
 

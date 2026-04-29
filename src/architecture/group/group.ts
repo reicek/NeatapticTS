@@ -129,17 +129,17 @@ export default class Group {
    *
    * @param descriptor Optional label, intent, and scalar metadata to merge.
    * @returns Nothing.
-    *
-    * @example
-    * ```ts
-    * const forgetGate = new Group(8);
-    *
-    * forgetGate.describe({
-    *   label: 'forgetGate',
-    *   intent: 'gate',
-    *   metadata: { family: 'lstm' },
-    * });
-    * ```
+   *
+   * @example
+   * ```ts
+   * const forgetGate = new Group(8);
+   *
+   * forgetGate.describe({
+   *   label: 'forgetGate',
+   *   intent: 'gate',
+   *   metadata: { family: 'lstm' },
+   * });
+   * ```
    */
   describe(descriptor: PrimitiveDescriptor): void {
     if (descriptor.label !== undefined) {
@@ -468,20 +468,20 @@ export default class Group {
             }
           }
 
-           for (
-             let connectionIndex = target.connections.in.length - 1;
-             connectionIndex >= 0;
-             connectionIndex--
-           ) {
-             const connection = target.connections.in[connectionIndex];
-             if (
-               connection.from === this.nodes[sourceNodeIndex] &&
-               connection.to === target.nodes[targetNodeIndex]
-             ) {
-               target.connections.in.splice(connectionIndex, 1);
-               break;
-             }
-           }
+          for (
+            let connectionIndex = target.connections.in.length - 1;
+            connectionIndex >= 0;
+            connectionIndex--
+          ) {
+            const connection = target.connections.in[connectionIndex];
+            if (
+              connection.from === this.nodes[sourceNodeIndex] &&
+              connection.to === target.nodes[targetNodeIndex]
+            ) {
+              target.connections.in.splice(connectionIndex, 1);
+              break;
+            }
+          }
 
           if (twosided) {
             for (

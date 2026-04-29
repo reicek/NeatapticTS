@@ -1,5 +1,8 @@
 import { config } from '../../../config';
-import type { NetworkSlabProps, SlabBuildContext } from './network.slab.utils.types';
+import type {
+  NetworkSlabProps,
+  SlabBuildContext,
+} from './network.slab.utils.types';
 import {
   _applyPlasticPolicyAsync,
   _createSlabBuildContext,
@@ -29,14 +32,12 @@ function createConnection(
   };
 }
 
-function createBuildContext(
-  input?: {
-    capacity?: number;
-    connections?: RebuildConnectionFixture[];
-    growthFactor?: number;
-    internalNet?: Partial<NetworkSlabProps>;
-  },
-): SlabBuildContext {
+function createBuildContext(input?: {
+  capacity?: number;
+  connections?: RebuildConnectionFixture[];
+  growthFactor?: number;
+  internalNet?: Partial<NetworkSlabProps>;
+}): SlabBuildContext {
   const connections = input?.connections ?? [createConnection()];
   const network = {
     _connCapacity: input?.capacity ?? 0,
@@ -73,7 +74,8 @@ describe('network slab rebuild helper chapter', () => {
         // Assert
         expect({
           capacity: buildContext.capacity,
-          reusedWeights: buildContext.internalNet._connWeights === existingWeights,
+          reusedWeights:
+            buildContext.internalNet._connWeights === existingWeights,
         }).toEqual({
           capacity: 4,
           reusedWeights: true,
@@ -132,7 +134,11 @@ describe('network slab rebuild helper chapter', () => {
           capacity: 2,
           connections: [
             createConnection({ from: { index: 0 }, gain: 1, to: { index: 1 } }),
-            createConnection({ from: { index: 1 }, gain: 1.5, to: { index: 2 } }),
+            createConnection({
+              from: { index: 1 },
+              gain: 1.5,
+              to: { index: 2 },
+            }),
           ],
           internalNet: {
             _connCapacity: 2,

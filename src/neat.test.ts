@@ -255,8 +255,7 @@ describe('neat root coverage chapter', () => {
 
         // Act
         const chapterDefaults = {
-          DEFAULT_COMPATIBILITY_THRESHOLD:
-            ROOT_DEFAULT_COMPATIBILITY_THRESHOLD,
+          DEFAULT_COMPATIBILITY_THRESHOLD: ROOT_DEFAULT_COMPATIBILITY_THRESHOLD,
           DEFAULT_DISJOINT_COEFF: ROOT_DEFAULT_DISJOINT_COEFF,
           DEFAULT_DIVERSITY_GRAPHLET_SAMPLE:
             ROOT_DEFAULT_DIVERSITY_GRAPHLET_SAMPLE,
@@ -448,7 +447,9 @@ describe('neat root coverage chapter', () => {
         // Arrange
         const neat = createNeatRootHost();
         const genome = { id: 10 } as unknown as Network;
-        mockSelectMutationMethod.mockRejectedValue(new Error('selection failed'));
+        mockSelectMutationMethod.mockRejectedValue(
+          new Error('selection failed'),
+        );
 
         // Act
         const result = await neat.selectMutationMethod(genome, false);

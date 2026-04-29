@@ -59,8 +59,14 @@ describe('neat multiobjective objectives chapter', () => {
           secondaryValue: 11,
         });
         const descriptors: ObjectiveDescriptor[] = [
-          { accessor: (candidate) => (candidate as ObjectiveTestGenome).secondaryValue },
-          { accessor: (candidate) => (candidate as ObjectiveTestGenome).primaryValue },
+          {
+            accessor: (candidate) =>
+              (candidate as ObjectiveTestGenome).secondaryValue,
+          },
+          {
+            accessor: (candidate) =>
+              (candidate as ObjectiveTestGenome).primaryValue,
+          },
         ];
 
         // Act
@@ -89,8 +95,14 @@ describe('neat multiobjective objectives chapter', () => {
           }),
         ];
         const descriptors: ObjectiveDescriptor[] = [
-          { accessor: (candidate) => (candidate as ObjectiveTestGenome).primaryValue },
-          { accessor: (candidate) => (candidate as ObjectiveTestGenome).secondaryValue },
+          {
+            accessor: (candidate) =>
+              (candidate as ObjectiveTestGenome).primaryValue,
+          },
+          {
+            accessor: (candidate) =>
+              (candidate as ObjectiveTestGenome).secondaryValue,
+          },
         ];
 
         // Act

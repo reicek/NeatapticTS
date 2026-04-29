@@ -38,13 +38,8 @@ export type ExampleArchitectureProfileId =
   | 'narx'
   | 'random-sparse';
 
-const EXAMPLE_ARCHITECTURE_PROFILE_ORDER: readonly ExampleArchitectureProfileId[] = [
-  'mlp',
-  'random-sparse',
-  'narx',
-  'gru',
-  'lstm',
-] as const;
+const EXAMPLE_ARCHITECTURE_PROFILE_ORDER: readonly ExampleArchitectureProfileId[] =
+  ['mlp', 'random-sparse', 'narx', 'gru', 'lstm'] as const;
 
 /** Demo approval flags keyed by the shared example demo ids. */
 export type ExampleArchitectureApprovalMap = Record<ExampleDemoId, boolean>;
@@ -320,8 +315,7 @@ export function getApprovedExampleArchitectureProfiles(
 ): ExampleArchitectureProfile[] {
   return EXAMPLE_ARCHITECTURE_PROFILE_ORDER.map((profileId) =>
     resolveExampleArchitectureProfile(demoId, profileId),
-  )
-    .filter((profile) => profile.approvedForDemo);
+  ).filter((profile) => profile.approvedForDemo);
 }
 
 /**

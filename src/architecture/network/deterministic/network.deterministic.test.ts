@@ -199,7 +199,9 @@ describe('network deterministic chapter', () => {
           const initialState = network.getRNGState();
 
           if (typeof initialState !== 'number') {
-            throw new Error('Initial RNG state should be numeric before update');
+            throw new Error(
+              'Initial RNG state should be numeric before update',
+            );
           }
 
           // Act

@@ -128,7 +128,8 @@ describe('network construct chapter', () => {
                   weight: sensorRight.connections.out[1].weight,
                 },
                 {
-                  innovation: hiddenStage.nodes[0].connections.out[0].innovation,
+                  innovation:
+                    hiddenStage.nodes[0].connections.out[0].innovation,
                   fromIndex: 2,
                   toIndex: 4,
                   fromGeneId: hiddenStage.nodes[0].geneId,
@@ -139,7 +140,8 @@ describe('network construct chapter', () => {
                   weight: hiddenStage.nodes[0].connections.out[0].weight,
                 },
                 {
-                  innovation: hiddenStage.nodes[1].connections.out[0].innovation,
+                  innovation:
+                    hiddenStage.nodes[1].connections.out[0].innovation,
                   fromIndex: 3,
                   toIndex: 4,
                   fromGeneId: hiddenStage.nodes[1].geneId,
@@ -183,7 +185,8 @@ describe('network construct chapter', () => {
             outputNodeIds: construction.network.outputNodeIds,
             diagnostics: construction.diagnostics,
             graph: construction.graph,
-            scheduling: construction.network.getActivationSchedulingDiagnostics(),
+            scheduling:
+              construction.network.getActivationSchedulingDiagnostics(),
           };
 
           // Assert
@@ -205,10 +208,9 @@ describe('network construct chapter', () => {
 
           // Act
           const constructWithAmbiguousInputLabel = () => {
-            Network.construct(
-              [sharedInputLeft, sharedInputRight, readout],
-              { inputNodes: ['sharedInput'] },
-            );
+            Network.construct([sharedInputLeft, sharedInputRight, readout], {
+              inputNodes: ['sharedInput'],
+            });
           };
 
           // Assert
@@ -228,10 +230,9 @@ describe('network construct chapter', () => {
 
           // Act
           const constructWithDuplicateInputIds = () => {
-            Network.construct(
-              [sensorInput, readout],
-              { inputNodes: ['sensorInput', 'sensorInput'] },
-            );
+            Network.construct([sensorInput, readout], {
+              inputNodes: ['sensorInput', 'sensorInput'],
+            });
           };
 
           // Assert
@@ -253,10 +254,9 @@ describe('network construct chapter', () => {
 
           // Act
           const constructWithIncompleteOutputCoverage = () => {
-            Network.construct(
-              [sensorInput, primaryOutput, secondaryOutput],
-              { outputNodes: ['primaryOutput'] },
-            );
+            Network.construct([sensorInput, primaryOutput, secondaryOutput], {
+              outputNodes: ['primaryOutput'],
+            });
           };
 
           // Assert
@@ -276,10 +276,9 @@ describe('network construct chapter', () => {
 
           // Act
           const constructWithWrongRoleOutputId = () => {
-            Network.construct(
-              [sensorInput, readout],
-              { outputNodes: ['sensorInput'] },
-            );
+            Network.construct([sensorInput, readout], {
+              outputNodes: ['sensorInput'],
+            });
           };
 
           // Assert
@@ -598,7 +597,8 @@ describe('network construct chapter', () => {
                   weight: sensor.connections.out[1].weight,
                 },
                 {
-                  innovation: hiddenStage.nodes[0].connections.out[0].innovation,
+                  innovation:
+                    hiddenStage.nodes[0].connections.out[0].innovation,
                   fromIndex: 1,
                   toIndex: 2,
                   fromGeneId: hiddenStage.nodes[0].geneId,
@@ -609,7 +609,8 @@ describe('network construct chapter', () => {
                   weight: hiddenStage.nodes[0].connections.out[0].weight,
                 },
                 {
-                  innovation: hiddenStage.nodes[0].connections.out[1].innovation,
+                  innovation:
+                    hiddenStage.nodes[0].connections.out[1].innovation,
                   fromIndex: 1,
                   toIndex: 3,
                   fromGeneId: hiddenStage.nodes[0].geneId,
@@ -620,7 +621,8 @@ describe('network construct chapter', () => {
                   weight: hiddenStage.nodes[0].connections.out[1].weight,
                 },
                 {
-                  innovation: hiddenStage.nodes[1].connections.out[0].innovation,
+                  innovation:
+                    hiddenStage.nodes[1].connections.out[0].innovation,
                   fromIndex: 2,
                   toIndex: 1,
                   fromGeneId: hiddenStage.nodes[1].geneId,
@@ -631,7 +633,8 @@ describe('network construct chapter', () => {
                   weight: hiddenStage.nodes[1].connections.out[0].weight,
                 },
                 {
-                  innovation: hiddenStage.nodes[1].connections.out[1].innovation,
+                  innovation:
+                    hiddenStage.nodes[1].connections.out[1].innovation,
                   fromIndex: 2,
                   toIndex: 3,
                   fromGeneId: hiddenStage.nodes[1].geneId,
@@ -672,7 +675,8 @@ describe('network construct chapter', () => {
             nodeRoles: construction.network.nodes.map((node) => node.type),
             diagnostics: construction.diagnostics,
             graph: construction.graph,
-            scheduling: construction.network.getActivationSchedulingDiagnostics(),
+            scheduling:
+              construction.network.getActivationSchedulingDiagnostics(),
           };
 
           // Assert

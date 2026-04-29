@@ -56,7 +56,10 @@ describe('layer utils', () => {
           layer.connections.in.push(reverseConnection);
 
           // Act
-          disconnectLayer(layer as unknown as LayerConnectionContext, targetNode);
+          disconnectLayer(
+            layer as unknown as LayerConnectionContext,
+            targetNode,
+          );
 
           // Assert
           expect({

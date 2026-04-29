@@ -30,9 +30,9 @@ describe('normalization layer factory chapter', () => {
         );
 
         // Act
-        const outputs = layer.activate([10, 20], true).map((value) =>
-          +value.toFixed(6),
-        );
+        const outputs = layer
+          .activate([10, 20], true)
+          .map((value) => +value.toFixed(6));
 
         // Assert
         expect({
@@ -53,7 +53,10 @@ describe('normalization layer factory chapter', () => {
       it('marks the layer and normalizes the output to zeros', () => {
         // Arrange
         const baseActivate = jest.fn(() => [3, 3]);
-        const layer = buildLayerNormLayer(createFactoryContext(baseActivate), 2);
+        const layer = buildLayerNormLayer(
+          createFactoryContext(baseActivate),
+          2,
+        );
 
         // Act
         const outputs = layer.activate();

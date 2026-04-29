@@ -197,11 +197,9 @@ describe('adaptive minimal criterion utility chapter', () => {
         applyRejection(adaptiveController, 0.3);
 
         // Assert
-        expect(adaptiveController.population.map((genome) => genome.score)).toEqual([
-          0,
-          0.5,
-          0,
-        ]);
+        expect(
+          adaptiveController.population.map((genome) => genome.score),
+        ).toEqual([0, 0.5, 0]);
       });
     });
   });

@@ -162,15 +162,13 @@ describe('network remove chapter', () => {
               ],
             },
           });
-          const summaryBeforeRemove = summarizeHydratedTemporalExtensionBag(
-            network,
-          );
+          const summaryBeforeRemove =
+            summarizeHydratedTemporalExtensionBag(network);
 
           // Act
           network.remove(gaterNode);
-          const summaryAfterRemove = summarizeHydratedTemporalExtensionBag(
-            network,
-          );
+          const summaryAfterRemove =
+            summarizeHydratedTemporalExtensionBag(network);
 
           // Assert
           expect({

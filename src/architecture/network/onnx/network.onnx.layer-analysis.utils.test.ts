@@ -39,8 +39,12 @@ describe('network onnx layer-analysis utils chapter', () => {
         const internalB = hiddenNodeB as unknown as {
           connections: { in: Connection[] };
         };
-        internalA.connections.in = [new Connection(hiddenNodeB, hiddenNodeA, 1)];
-        internalB.connections.in = [new Connection(hiddenNodeA, hiddenNodeB, 1)];
+        internalA.connections.in = [
+          new Connection(hiddenNodeB, hiddenNodeA, 1),
+        ];
+        internalB.connections.in = [
+          new Connection(hiddenNodeA, hiddenNodeB, 1),
+        ];
 
         // Act + Assert
         expect(() => inferLayerOrdering(network)).toThrow(

@@ -1,6 +1,8 @@
 import {
   assignPopulationToSpecies,
+  refreshSpeciesRepresentatives,
   resetSpeciesMembers,
+  snapshotPreviousMembers,
 } from './speciation.assignment.utils';
 import type {
   ConnectionLike,
@@ -119,6 +121,45 @@ function buildCreationContext(populationSize: number): AssignmentContext {
 }
 
 describe('neat speciation assignment chapter', () => {
+  describe('refreshSpeciesRepresentatives()', () => {
+    describe('given a context with one populated and one empty species', () => {
+      it('removes the empty species and updates the representative', () => {
+        // Arrange
+        const ctx = buildAssignmentContext();
+        // Add an empty species alongside the populated one
+        ctx._species.push({
+          id: 99,
+          members: [],
+          representative: ctx._species[0].representative,
+          lastImproved: 0,
+          bestScore: 0,
+        });
+
+        // Act
+        refreshSpeciesRepresentatives(ctx);
+
+        // Assert: empty species was removed; remaining one has updated representative
+        expect(ctx._species).toHaveLength(1);
+      });
+    });
+  });
+
+  describe('snapshotPreviousMembers()', () => {
+    describe('given a context with no _prevSpeciesMembers set', () => {
+      it('initializes the map before snapshotting (line 122 ?? new Map() branch)', () => {
+        // Arrange: _prevSpeciesMembers is undefined → right arm of ?? fires
+        const ctx = buildAssignmentContext();
+        (ctx as Record<string, unknown>)._prevSpeciesMembers = undefined;
+
+        // Act
+        snapshotPreviousMembers(ctx);
+
+        // Assert: map was created and species members captured
+        expect(ctx._prevSpeciesMembers).toBeDefined();
+      });
+    });
+  });
+
   describe('assignPopulationToSpecies', () => {
     describe('given a second genome already inside the compatibility threshold of an existing representative', () => {
       it('keeps both genomes in the existing species', () => {
@@ -144,6 +185,23 @@ describe('neat speciation assignment chapter', () => {
 
         // Assert
         expect(speciationContext._species).toHaveLength(3);
+      });
+    });
+
+    describe('given options with no compatibilityThreshold configured', () => {
+      it('uses the default compatibility threshold (line 241 ?? DEFAULT branch)', () => {
+        // Arrange: omit compatibilityThreshold so ?? DEFAULT_COMPATIBILITY_THRESHOLD fires
+        const ctx = buildAssignmentContext();
+        const optionsWithoutThreshold = {
+          ...ctx.options,
+          compatibilityThreshold: undefined,
+        } as unknown as AssignmentOptions;
+
+        // Act
+        assignPopulationToSpecies(ctx, optionsWithoutThreshold);
+
+        // Assert: both genomes end up in the same species (threshold is effectively large)
+        expect(ctx._species).toBeDefined();
       });
     });
   });

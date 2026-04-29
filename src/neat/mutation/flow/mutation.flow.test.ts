@@ -67,7 +67,8 @@ function createDeterministicRng(randomValues: number[]): () => number {
   let randomValueIndex = 0;
 
   return () => {
-    const sampledValue = randomValues[randomValueIndex] ?? randomValues.at(-1) ?? 0;
+    const sampledValue =
+      randomValues[randomValueIndex] ?? randomValues.at(-1) ?? 0;
     randomValueIndex++;
     return sampledValue;
   };
@@ -89,7 +90,8 @@ function createMutationController(
     },
     _getRNG: () => randomNumberGenerator,
     selectMutationMethod: overrides.selectMutationMethod ?? (async () => null),
-    _mutateAddNodeReuse: overrides.mutateAddNodeReuse ?? (async () => undefined),
+    _mutateAddNodeReuse:
+      overrides.mutateAddNodeReuse ?? (async () => undefined),
     _mutateAddConnReuse: overrides.mutateAddConnReuse ?? (() => undefined),
     _invalidateGenomeCaches:
       overrides.invalidateGenomeCaches ?? (() => undefined),
@@ -98,9 +100,9 @@ function createMutationController(
   };
 }
 
-function createMutationMethods(
-  overrides: Record<string, unknown> = {},
-): { mutation: unknown } {
+function createMutationMethods(overrides: Record<string, unknown> = {}): {
+  mutation: unknown;
+} {
   return {
     mutation: {
       ADD_NODE: { name: 'ADD_NODE' },
@@ -194,7 +196,9 @@ describe('neat mutation flow chapter', () => {
           selectionIndex,
           invalidatedCount: invalidatedGenomes.length,
           connectionCount: genome.connections.length,
-          operatorStats: Array.from(mutationController._operatorStats.entries()),
+          operatorStats: Array.from(
+            mutationController._operatorStats.entries(),
+          ),
         }).toEqual({
           selectionIndex: 2,
           invalidatedCount: 1,
@@ -706,8 +710,9 @@ describe('neat mutation flow chapter', () => {
           },
         });
         const methods = createMutationMethods();
-        const selectedMethod = (methods.mutation as Record<string, MutationMethod>)
-          .ADD_GATE;
+        const selectedMethod = (
+          methods.mutation as Record<string, MutationMethod>
+        ).ADD_GATE;
         genome.mutate = jest.fn();
 
         // Act

@@ -145,7 +145,9 @@ describe('neat telemetry facade root chapter', () => {
   const mockGetTelemetryFacadeArchiveMetrics = jest.mocked(
     getTelemetryFacadeArchiveMetrics,
   );
-  const mockClearTelemetryFacadeBuffer = jest.mocked(clearTelemetryFacadeBuffer);
+  const mockClearTelemetryFacadeBuffer = jest.mocked(
+    clearTelemetryFacadeBuffer,
+  );
   const mockExportTelemetryFacadeBufferCsv = jest.mocked(
     exportTelemetryFacadeBufferCsv,
   );
@@ -373,7 +375,9 @@ describe('neat telemetry facade root chapter', () => {
       it('returns the events from the objectives chapter', () => {
         // Arrange
         const host = createTelemetryFacadeHost();
-        const objectiveEvents = [{ gen: 12, type: 'add' as const, key: 'novelty' }];
+        const objectiveEvents = [
+          { gen: 12, type: 'add' as const, key: 'novelty' },
+        ];
         mockGetTelemetryFacadeObjectiveEvents.mockReturnValue(objectiveEvents);
 
         // Act
@@ -419,7 +423,9 @@ describe('neat telemetry facade root chapter', () => {
       it('uses the facade default history size for CSV export', () => {
         // Arrange
         const host = createTelemetryFacadeHost();
-        mockExportTelemetryFacadeSpeciesHistoryCsv.mockReturnValue('species-csv');
+        mockExportTelemetryFacadeSpeciesHistoryCsv.mockReturnValue(
+          'species-csv',
+        );
 
         // Act
         const exportPayload = exportSpeciesHistoryCSV(host);

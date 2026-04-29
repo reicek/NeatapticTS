@@ -236,7 +236,11 @@ Compute the population variance of a numeric array.
 Variance complements the raw averages by showing whether the population is
 staying structurally tight or spreading into a wider range of topology sizes.
 
-Parameters:
-- `values` - Values to evaluate.
+The diversity controller only calls this helper after confirming at least
+one genome exists, so the input array is always non-empty at the current
+public boundary.
 
-Returns: Population variance, or `0` when the array is empty.
+Parameters:
+- `values` - Non-empty values to evaluate.
+
+Returns: Population variance.

@@ -200,14 +200,12 @@ export function compareInnovationLists(
     }
 
     if (innovationFirst < innovationSecond) {
-      excessCount += innovationFirst > maxInnovSecond ? 1 : 0;
-      disjointCount += innovationFirst > maxInnovSecond ? 0 : 1;
+      disjointCount++;
       firstIndex++;
       continue;
     }
 
-    excessCount += innovationSecond > maxInnovFirst ? 1 : 0;
-    disjointCount += innovationSecond > maxInnovFirst ? 0 : 1;
+    disjointCount++;
     secondIndex++;
   }
 

@@ -6,9 +6,9 @@
  */
 export { default, type PrimitiveNodeType } from './node/node';
 export {
-	type PrimitiveDescriptor,
-	type PrimitiveIntent,
-	type PrimitiveMetadata,
-	type PrimitiveMetadataValue,
-	resolvePrimitiveIntent,
+  type PrimitiveDescriptor,
+  type PrimitiveIntent,
+  type PrimitiveMetadata,
+  type PrimitiveMetadataValue,
+  resolvePrimitiveIntent,
 } from './node/node';

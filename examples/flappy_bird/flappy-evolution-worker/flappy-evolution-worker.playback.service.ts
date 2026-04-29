@@ -284,10 +284,7 @@ function maybeDownshiftSuccessfulBrowserPopulation(
       elitism?: number;
     };
   };
-  const currentPopulationSize = Math.max(
-    0,
-    runtimeNeat.options?.popsize ?? 0,
-  );
+  const currentPopulationSize = Math.max(0, runtimeNeat.options?.popsize ?? 0);
   if (
     !runtimeNeat.options ||
     currentPopulationSize <= FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE

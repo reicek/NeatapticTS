@@ -36,4 +36,3 @@
 ## Audit log
 
 - Durable completion notes now live in [Architecture_Primitives_Node_Group_Layer.logs.md](Architecture_Primitives_Node_Group_Layer.logs.md).
-

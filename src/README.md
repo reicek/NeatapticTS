@@ -3870,7 +3870,7 @@ The method argument should be one of the mutation types defined in `methods.muta
 
 Parameters:
 - `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
- Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
+  Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
 
 #### mutate
 
@@ -4432,7 +4432,7 @@ the configuration is applied recursively to the nodes within that group.
 
 Parameters:
 - `values` - An object containing the properties and their values to set.
-   Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
+  Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
 
 #### setActivation
 

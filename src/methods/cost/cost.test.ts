@@ -29,12 +29,11 @@ describe('Cost', () => {
           const targets = [0.25, 0.75];
           const outputs = [0.8, 0.2];
           const expectedLoss =
-            (-(
+            -(
               0.25 * Math.log(0.8) +
               (1 - 0.25) * Math.log(1 - 0.8) +
               (0.75 * Math.log(0.2) + (1 - 0.75) * Math.log(1 - 0.2))
-            )) /
-            2;
+            ) / 2;
 
           // Act
           const actualLoss = Cost.crossEntropy(targets, outputs);

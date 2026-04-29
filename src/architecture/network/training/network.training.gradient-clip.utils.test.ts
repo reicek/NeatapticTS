@@ -43,18 +43,22 @@ function createSingleInputDualOutputNetwork(seed: number): {
 
 function getLastGradClipGroupCount(network: Network): number {
   return (
-    Reflect.get(
+    (Reflect.get(
       network as unknown as GradientClipNetworkInternals,
       '_lastGradClipGroupCount',
-    ) as number | undefined
-  ) ?? 0;
+    ) as number | undefined) ?? 0
+  );
 }
 
 function setLayerMetadata(
   network: Network,
   layers: Array<{ nodes?: Array<Network['nodes'][number] | null> } | null>,
 ): void {
-  Reflect.set(network as unknown as GradientClipNetworkInternals, 'layers', layers);
+  Reflect.set(
+    network as unknown as GradientClipNetworkInternals,
+    'layers',
+    layers,
+  );
 }
 
 function clearGradientState(network: Network): void {
@@ -127,8 +131,10 @@ describe('network training chapter', () => {
           // Assert
           expect({
             groupCount: getLastGradClipGroupCount(networkParts.network),
-            incomingScaled: Math.abs(gradientState.incomingConnection.totalDeltaWeight) < 6,
-            selfScaled: Math.abs(gradientState.selfConnection.totalDeltaWeight) < 10,
+            incomingScaled:
+              Math.abs(gradientState.incomingConnection.totalDeltaWeight) < 6,
+            selfScaled:
+              Math.abs(gradientState.selfConnection.totalDeltaWeight) < 10,
           }).toEqual({
             groupCount: 1,
             incomingScaled: true,
@@ -231,8 +237,16 @@ describe('network training chapter', () => {
           Reflect.set(firstLayerSelfConnection, 'totalDeltaWeight', undefined);
           Reflect.set(crossLayerConnection, 'totalDeltaWeight', undefined);
           Reflect.set(secondLayerSelfConnection, 'totalDeltaWeight', undefined);
-          Reflect.set(networkParts.firstOutputNode, 'totalDeltaBias', undefined);
-          Reflect.set(networkParts.secondOutputNode, 'totalDeltaBias', undefined);
+          Reflect.set(
+            networkParts.firstOutputNode,
+            'totalDeltaBias',
+            undefined,
+          );
+          Reflect.set(
+            networkParts.secondOutputNode,
+            'totalDeltaBias',
+            undefined,
+          );
 
           setLayerMetadata(networkParts.network, [
             { nodes: [networkParts.firstOutputNode] },
@@ -282,7 +296,11 @@ describe('network training chapter', () => {
           secondNodeInputConnection.totalDeltaWeight = 0.25;
           Reflect.set(crossNodeConnection, 'totalDeltaWeight', undefined);
           Reflect.set(secondNodeSelfConnection, 'totalDeltaWeight', undefined);
-          Reflect.set(networkParts.secondOutputNode, 'totalDeltaBias', undefined);
+          Reflect.set(
+            networkParts.secondOutputNode,
+            'totalDeltaBias',
+            undefined,
+          );
 
           // Act
           applyGradientClippingCore(networkParts.network, {
@@ -327,8 +345,16 @@ describe('network training chapter', () => {
           secondNodeInputConnection.totalDeltaWeight = 0;
           Reflect.set(crossNodeConnection, 'totalDeltaWeight', undefined);
           Reflect.set(secondNodeSelfConnection, 'totalDeltaWeight', undefined);
-          Reflect.set(networkParts.firstOutputNode, 'totalDeltaBias', undefined);
-          Reflect.set(networkParts.secondOutputNode, 'totalDeltaBias', undefined);
+          Reflect.set(
+            networkParts.firstOutputNode,
+            'totalDeltaBias',
+            undefined,
+          );
+          Reflect.set(
+            networkParts.secondOutputNode,
+            'totalDeltaBias',
+            undefined,
+          );
 
           // Act
           applyGradientClippingCore(networkParts.network, {
@@ -378,7 +404,11 @@ describe('network training chapter', () => {
           Reflect.set(secondNodeInputConnection, 'totalDeltaWeight', undefined);
           Reflect.set(crossNodeConnection, 'totalDeltaWeight', undefined);
           Reflect.set(secondNodeSelfConnection, 'totalDeltaWeight', undefined);
-          Reflect.set(networkParts.secondOutputNode, 'totalDeltaBias', undefined);
+          Reflect.set(
+            networkParts.secondOutputNode,
+            'totalDeltaBias',
+            undefined,
+          );
 
           // Act
           applyGradientClippingCore(networkParts.network, {

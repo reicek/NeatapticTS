@@ -118,10 +118,7 @@ describe('adaptive mutation utility chapter', () => {
         const scoredGenomes = collectScoredGenomes(population);
 
         // Assert
-        expect(scoredGenomes).toEqual([
-          population[0],
-          population[2],
-        ]);
+        expect(scoredGenomes).toEqual([population[0], population[2]]);
       });
     });
   });
@@ -190,9 +187,7 @@ describe('adaptive mutation utility chapter', () => {
       it('falls back to Math.random', () => {
         // Arrange
         const adaptiveController = createAdaptiveController();
-        const mathRandomSpy = jest
-          .spyOn(Math, 'random')
-          .mockReturnValue(0.25);
+        const mathRandomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.25);
 
         try {
           // Act
@@ -358,9 +353,20 @@ describe('adaptive mutation utility chapter', () => {
     describe('given both score partitions exist but the genome is in neither set', () => {
       it('keeps the original amount delta', () => {
         // Arrange
-        const candidateGenome = createGenome({ mutationAmount: 3, mutationRate: 0.5 });
-        const topGenome = createGenome({ mutationAmount: 3, mutationRate: 0.5, score: 1 });
-        const bottomGenome = createGenome({ mutationAmount: 3, mutationRate: 0.5, score: 0 });
+        const candidateGenome = createGenome({
+          mutationAmount: 3,
+          mutationRate: 0.5,
+        });
+        const topGenome = createGenome({
+          mutationAmount: 3,
+          mutationRate: 0.5,
+          score: 1,
+        });
+        const bottomGenome = createGenome({
+          mutationAmount: 3,
+          mutationRate: 0.5,
+          score: 0,
+        });
 
         // Act
         const amountDelta = applyTwoTierAmountDelta(

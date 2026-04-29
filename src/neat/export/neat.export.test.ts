@@ -83,9 +83,8 @@ function readArchitectureCounterSnapshot(): ArchitectureCounterSnapshot {
 function restoreArchitectureCounterSnapshot(
   counterSnapshot: ArchitectureCounterSnapshot,
 ): void {
-  (
-    Connection as unknown as { _nextInnovation: number }
-  )._nextInnovation = counterSnapshot.nextConnectionInnovation;
+  (Connection as unknown as { _nextInnovation: number })._nextInnovation =
+    counterSnapshot.nextConnectionInnovation;
   (Node as unknown as { _nextGeneId: number })._nextGeneId =
     counterSnapshot.nextNodeGeneId;
   (Node as unknown as { _globalNodeIndex: number })._globalNodeIndex =
@@ -111,7 +110,9 @@ function createTemporalModuleExtensions(
   );
 
   if (hiddenNodeGeneIds.length === 0 || gatedConnections.length === 0) {
-    throw new Error('Expected recurrent module fixtures with hidden nodes and gated connections.');
+    throw new Error(
+      'Expected recurrent module fixtures with hidden nodes and gated connections.',
+    );
   }
 
   return {
@@ -132,7 +133,11 @@ function createTemporalModuleExtensions(
       gatedBlocks: [
         {
           blockId: 'gated:block:0',
-          gaterGeneIds: [...new Set(gatedConnections.map((connection) => connection.gaterGeneId))],
+          gaterGeneIds: [
+            ...new Set(
+              gatedConnections.map((connection) => connection.gaterGeneId),
+            ),
+          ],
           connectionInnovations: gatedConnections.map(
             (connection) => connection.innovation,
           ),
@@ -224,9 +229,9 @@ describe('neat export chapter', () => {
             mutationState._innovationTracker,
             'splitConnectionInnovation:11',
             {
-            newNodeGeneId: 7,
-            inInnov: 11,
-            outInnov: 12,
+              newNodeGeneId: 7,
+              inInnov: 11,
+              outInnov: 12,
             },
           );
 
@@ -303,7 +308,10 @@ describe('neat export chapter', () => {
 
       it('rejects unsupported future meta format versions', () => {
         // Arrange
-        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 1, seed: 806 });
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 1,
+          seed: 806,
+        });
         const invalidMeta = {
           ...neat.toJSON(),
           formatVersion: 99,
@@ -317,7 +325,10 @@ describe('neat export chapter', () => {
 
       it('rejects meta payloads that omit innovation tracker state', () => {
         // Arrange
-        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 1, seed: 807 });
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 1,
+          seed: 807,
+        });
         const invalidMeta = {
           ...neat.toJSON(),
           innovationTracker: undefined,
@@ -331,7 +342,10 @@ describe('neat export chapter', () => {
 
       it('rebuilds meta-only checkpoints when serialized options are missing', () => {
         // Arrange
-        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 1, seed: 808 });
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 1,
+          seed: 808,
+        });
         const exportedMeta = neat.toJSON();
         const optionsFreeMeta = {
           ...exportedMeta,
@@ -344,7 +358,8 @@ describe('neat export chapter', () => {
         // Assert
         expect({
           generation: restored.generation,
-          nextInnovationId: restored.toJSON().innovationTracker.nextInnovationId,
+          nextInnovationId:
+            restored.toJSON().innovationTracker.nextInnovationId,
         }).toEqual({
           generation: exportedMeta.generation,
           nextInnovationId: exportedMeta.innovationTracker.nextInnovationId,
@@ -353,7 +368,10 @@ describe('neat export chapter', () => {
 
       it('ignores non-object runtime payloads during meta restore', () => {
         // Arrange
-        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 1, seed: 809 });
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 1,
+          seed: 809,
+        });
         const exportedMeta = neat.toJSON();
         const metaWithPrimitiveRuntime = {
           ...exportedMeta,
@@ -362,7 +380,7 @@ describe('neat export chapter', () => {
 
         // Assert
         expect(() =>
-          Neat.fromJSON(metaWithPrimitiveRuntime, scoreByNodeCount)
+          Neat.fromJSON(metaWithPrimitiveRuntime, scoreByNodeCount),
         ).not.toThrow();
       });
     });
@@ -463,7 +481,8 @@ describe('neat export chapter', () => {
 
         // Act
         await destinationController.import(exportedPopulation);
-        const importedGenome = destinationController.population[0] as ExportGenome;
+        const importedGenome = destinationController
+          .population[0] as ExportGenome;
 
         // Assert
         expect({
@@ -496,12 +515,14 @@ describe('neat export chapter', () => {
 
         // Act
         await destinationController.import(exportedPopulation);
-        const importedGenome = destinationController.population[0] as ExportGenome;
+        const importedGenome = destinationController
+          .population[0] as ExportGenome;
 
         // Assert
         expect({
           importedSquash: importedGenome.nodes.at(-1)?.squash ?? null,
-          usesExtensions: 'extensions' in (exportedPopulation[0] as Record<string, unknown>),
+          usesExtensions:
+            'extensions' in (exportedPopulation[0] as Record<string, unknown>),
         }).toEqual({
           importedSquash: methods.Activation.tanh,
           usesExtensions: false,
@@ -514,9 +535,13 @@ describe('neat export chapter', () => {
           popsize: 1,
           seed: 217,
         });
-        const taggedPayload = Architect.lstm(1, 2, 1)
-          .toJSON() as unknown as NetworkJSON;
-        taggedPayload.extensions = createTemporalModuleExtensions(taggedPayload);
+        const taggedPayload = Architect.lstm(
+          1,
+          2,
+          1,
+        ).toJSON() as unknown as NetworkJSON;
+        taggedPayload.extensions =
+          createTemporalModuleExtensions(taggedPayload);
         sourceController.population = [
           Network.fromJSON(taggedPayload as unknown as Record<string, unknown>),
         ] as unknown as ExportGenome[];
@@ -543,18 +568,23 @@ describe('neat export chapter', () => {
           popsize: 1,
           seed: 219,
         });
-        const taggedPayload = Architect.lstm(1, 2, 1)
-          .toJSON() as unknown as NetworkJSON;
-        taggedPayload.extensions = createTemporalModuleExtensions(taggedPayload);
-        const moduleConnectionInnovation = readFirstTemporalConnectionInnovation(
-          taggedPayload.extensions,
-        );
+        const taggedPayload = Architect.lstm(
+          1,
+          2,
+          1,
+        ).toJSON() as unknown as NetworkJSON;
+        taggedPayload.extensions =
+          createTemporalModuleExtensions(taggedPayload);
+        const moduleConnectionInnovation =
+          readFirstTemporalConnectionInnovation(taggedPayload.extensions);
         const taggedConnection = taggedPayload.connections.find(
           (connection) => connection.innovation === moduleConnectionInnovation,
         );
 
         if (!taggedConnection) {
-          throw new Error('Expected one module-owned connection for dormant-state export coverage.');
+          throw new Error(
+            'Expected one module-owned connection for dormant-state export coverage.',
+          );
         }
 
         taggedConnection.enabled = false;
@@ -569,8 +599,8 @@ describe('neat export chapter', () => {
 
         // Act
         await destinationController.import(exportedPopulation);
-        const importedPayload = destinationController.population[0]
-          .toJSON() as unknown as NetworkJSON;
+        const importedPayload =
+          destinationController.population[0].toJSON() as unknown as NetworkJSON;
         const importedConnection = importedPayload.connections.find(
           (connection) => connection.innovation === moduleConnectionInnovation,
         );
@@ -599,8 +629,10 @@ describe('neat export chapter', () => {
 
         // Act
         await destinationController.import(exportedPopulation);
-        const importedPopulationSnapshot = destinationController.export() as
-          Array<{ connections: Array<{ innovation?: number }> }>;
+        const importedPopulationSnapshot =
+          destinationController.export() as Array<{
+            connections: Array<{ innovation?: number }>;
+          }>;
         const sourcePopulationSnapshot = sourceController.export() as Array<{
           connections: Array<{ innovation?: number }>;
         }>;
@@ -681,7 +713,8 @@ describe('neat export chapter', () => {
         await destinationController.import(exportedPopulation);
         const destinationState =
           destinationController as unknown as ExportControllerState;
-        const importedGenome = destinationController.population[0] as ExportGenome;
+        const importedGenome = destinationController
+          .population[0] as ExportGenome;
 
         // Assert
         expect({
@@ -735,9 +768,10 @@ describe('neat export chapter', () => {
           popsize: 1,
           seed: 226,
         });
-        const exportedPopulation = sourceController.export() as unknown as Array<
-          NetworkJSON & { controllerMeta?: Record<string, unknown> }
-        >;
+        const exportedPopulation =
+          sourceController.export() as unknown as Array<
+            NetworkJSON & { controllerMeta?: Record<string, unknown> }
+          >;
         exportedPopulation[0].dropout = 'invalid' as unknown as number;
 
         // Act
@@ -748,7 +782,8 @@ describe('neat export chapter', () => {
         // Assert
         expect({
           populationSize: destinationController.population.length,
-          isValid: validateNativeGenome(destinationController.population[0]).isValid,
+          isValid: validateNativeGenome(destinationController.population[0])
+            .isValid,
         }).toEqual({ populationSize: 1, isValid: true });
       });
 
@@ -820,7 +855,10 @@ describe('neat export chapter', () => {
     describe('given the import payload is not an array', () => {
       it('rejects the population snapshot', async () => {
         // Arrange
-        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 2, seed: 221 });
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 221,
+        });
         const invalidImport = neat.import(
           undefined as unknown as NeatStateJSON['population'],
         );
@@ -835,7 +873,10 @@ describe('neat export chapter', () => {
     describe('given the import payload contains a non-object entry', () => {
       it('rejects the malformed snapshot entry', async () => {
         // Arrange
-        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 2, seed: 222 });
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 222,
+        });
         const invalidImport = neat.import([
           undefined as unknown as NetworkJSON,
         ] as unknown as NeatStateJSON['population']);
@@ -878,7 +919,10 @@ describe('neat export chapter', () => {
         } as unknown as NeatStateJSON;
 
         // Act
-        const invalidImport = Neat.importState(incompleteState, scoreByNodeCount);
+        const invalidImport = Neat.importState(
+          incompleteState,
+          scoreByNodeCount,
+        );
 
         // Assert
         await expect(invalidImport).rejects.toThrow(
@@ -953,7 +997,10 @@ describe('neat export chapter', () => {
         expect({
           generation: restored.generation,
           populationSize: restored.population.length,
-        }).toEqual({ generation: legacyState.neat.generation, populationSize: 2 });
+        }).toEqual({
+          generation: legacyState.neat.generation,
+          populationSize: 2,
+        });
       });
 
       it('throws when a versioned full checkpoint omits speciation resume state', async () => {
@@ -1057,8 +1104,8 @@ describe('neat export chapter', () => {
           );
 
           // Act
-          const allGenomesValidate = restored.population.every((genome) =>
-            validateNativeGenome(genome).isValid,
+          const allGenomesValidate = restored.population.every(
+            (genome) => validateNativeGenome(genome).isValid,
           );
 
           // Assert
@@ -1139,8 +1186,22 @@ describe('neat export chapter', () => {
           [8, new Set([102])],
         ]);
         controller._speciesLastStats = new Map([
-          [7, { meanNodes: firstGenome.nodes.length, meanConns: firstGenome.connections.length, best: 5 }],
-          [8, { meanNodes: secondGenome.nodes.length, meanConns: secondGenome.connections.length, best: 3 }],
+          [
+            7,
+            {
+              meanNodes: firstGenome.nodes.length,
+              meanConns: firstGenome.connections.length,
+              best: 5,
+            },
+          ],
+          [
+            8,
+            {
+              meanNodes: secondGenome.nodes.length,
+              meanConns: secondGenome.connections.length,
+              best: 3,
+            },
+          ],
         ]);
         controller._compatIntegral = 0.75;
         controller._compatSpeciesEMA = 2;
@@ -1173,7 +1234,8 @@ describe('neat export chapter', () => {
           nextGenomeId: restoredState._nextGenomeId,
           architectureCounters: readArchitectureCounterSnapshot(),
           lineageEnabled: restoredState._lineageEnabled,
-          lastGlobalImproveGeneration: restoredState._lastGlobalImproveGeneration,
+          lastGlobalImproveGeneration:
+            restoredState._lastGlobalImproveGeneration,
           speciesHistory: restoredNeat.getSpeciesHistory(),
         }).toEqual({
           nextGenomeId: 205,
@@ -1260,10 +1322,7 @@ describe('neat export chapter', () => {
           popsize: 6,
           seed: 34,
           speciation: true,
-          mutation: [
-            methods.mutation.ADD_NODE,
-            methods.mutation.ADD_CONN,
-          ],
+          mutation: [methods.mutation.ADD_NODE, methods.mutation.ADD_CONN],
           mutationRate: 1,
           mutationAmount: 1,
         });
@@ -1333,9 +1392,7 @@ describe('neat export chapter', () => {
         ];
 
         // Act
-        const serialized = serializeRuntimeMeta(
-          neatInstance as any,
-        );
+        const serialized = serializeRuntimeMeta(neatInstance as any);
 
         // Assert
         expect({
@@ -1374,16 +1431,15 @@ describe('neat export chapter', () => {
         neatCasted._speciesHistory = undefined;
 
         // Act
-        const serialized = serializeRuntimeMeta(
-          neatInstance as any,
-        );
+        const serialized = serializeRuntimeMeta(neatInstance as any);
 
         // Assert - optional fields should not be in the output
         expect({
           hasNextGenomeId: 'nextGenomeId' in serialized,
           hasLineageEnabled: 'lineageEnabled' in serialized,
           hasLastInbreedingCount: 'lastInbreedingCount' in serialized,
-          hasLastGlobalImproveGeneration: 'lastGlobalImproveGeneration' in serialized,
+          hasLastGlobalImproveGeneration:
+            'lastGlobalImproveGeneration' in serialized,
           hasSpeciesHistory: 'speciesHistory' in serialized,
         }).toEqual({
           hasNextGenomeId: false,
@@ -1477,7 +1533,8 @@ describe('neat export chapter', () => {
         // Assert - optional fields should retain their original values
         expect({
           nextGenomeIdUnchanged: afterState._nextGenomeId === beforeGenomeId,
-          lineageEnabledUnchanged: afterState._lineageEnabled === beforeLineageEnabled,
+          lineageEnabledUnchanged:
+            afterState._lineageEnabled === beforeLineageEnabled,
         }).toEqual({
           nextGenomeIdUnchanged: true,
           lineageEnabledUnchanged: true,
@@ -1492,7 +1549,8 @@ describe('neat export chapter', () => {
         });
         const beforeCounters = readArchitectureCounterSnapshot();
         const runtimeMeta = {
-          nextConnectionInnovation: beforeCounters.nextConnectionInnovation + 10,
+          nextConnectionInnovation:
+            beforeCounters.nextConnectionInnovation + 10,
           nextNodeGeneId: beforeCounters.nextNodeGeneId + 5,
           nextNodeIndex: beforeCounters.nextNodeIndex + 3,
         };

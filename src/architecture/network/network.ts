@@ -2,10 +2,10 @@
  * Core network chapter for the architecture surface.
  *
  * This folder owns the public `Network` class: the boundary where a graph stops
-   *
-   * This is the explicit reset boundary for recurrent execution with carried
-   * state semantics. Call it before a new independent sequence when previous
-   * recurrent state should not influence the next activation run.
+ *
+ * This is the explicit reset boundary for recurrent execution with carried
+ * state semantics. Call it before a new independent sequence when previous
+ * recurrent state should not influence the next activation run.
  * being only nodes and connections and starts behaving like one runnable,
  * mutable, trainable system. Higher-level NEAT code can mutate or score a
  * network, but this chapter is where the graph itself learns how to activate,
@@ -310,7 +310,8 @@ export default class Network implements NetworkView {
   /** @internal Cached deterministic activation schedule for acyclic graphs. */
   private _activationSchedule: ActivationSchedule | null = null;
   /** @internal Human-friendly scheduling diagnostics snapshot. */
-  private _activationSchedulingDiagnostics: ActivationSchedulingDiagnostics | null = null;
+  private _activationSchedulingDiagnostics: ActivationSchedulingDiagnostics | null =
+    null;
   /** @internal Cached topological order. */
   private _topoOrder: Node[] | null = null;
   /** @internal Topology dirty marker. */
@@ -941,7 +942,7 @@ export default class Network implements NetworkView {
    * This is a core operation for neuro-evolutionary algorithms (like NEAT).
    * The method argument should be one of the mutation types defined in `methods.mutation`.
    *
-    * @param method The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+   * @param method The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
    *                 Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
    * @throws {Error} If no valid mutation `method` is provided.
    *
@@ -1121,9 +1122,9 @@ export default class Network implements NetworkView {
    * Reconstructs the network structure and state based on the provided arrays.
    *
    * @param {unknown[]} data - The serialized network data array, typically obtained from `network.serialize()`.
-  *                       Expected format: `[activations, states, squashNames, connectionData, inputSize, outputSize]`
-  *                       with optional trailing `nodeGeneIds` and `topologyIntent` slots for
-  *                       identity-preserving restore paths.
+   *                       Expected format: `[activations, states, squashNames, connectionData, inputSize, outputSize]`
+   *                       with optional trailing `nodeGeneIds` and `topologyIntent` slots for
+   *                       identity-preserving restore paths.
    * @param {number} [inputSize] - Optional input size override.
    * @param {number} [outputSize] - Optional output size override.
    * @returns {Network} A new Network instance reconstructed from the serialized data.

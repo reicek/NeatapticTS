@@ -81,14 +81,22 @@ const mockedUpdateThreshold = jest.mocked(updateThreshold);
 const mockedApplyUniquenessAdjustment = jest.mocked(applyUniquenessAdjustment);
 const mockedExtractAncestorUniqueness = jest.mocked(extractAncestorUniqueness);
 const mockedIsCooldownSatisfied = jest.mocked(isCooldownSatisfied);
-const mockedResolveAdjustmentMagnitude = jest.mocked(resolveAdjustmentMagnitude);
-const mockedResolveUniquenessThresholds = jest.mocked(resolveUniquenessThresholds);
-const mockedApplyMutationsToPopulation = jest.mocked(applyMutationsToPopulation);
+const mockedResolveAdjustmentMagnitude = jest.mocked(
+  resolveAdjustmentMagnitude,
+);
+const mockedResolveUniquenessThresholds = jest.mocked(
+  resolveUniquenessThresholds,
+);
+const mockedApplyMutationsToPopulation = jest.mocked(
+  applyMutationsToPopulation,
+);
 const mockedApplyTwoTierFallback = jest.mocked(applyTwoTierFallback);
 const mockedCollectScoredGenomes = jest.mocked(collectScoredGenomes);
 const mockedResolveMutationSettings = jest.mocked(resolveMutationSettings);
 const mockedResolveRandomSource = jest.mocked(resolveRandomSource);
-const mockedShouldApplyTwoTierFallback = jest.mocked(shouldApplyTwoTierFallback);
+const mockedShouldApplyTwoTierFallback = jest.mocked(
+  shouldApplyTwoTierFallback,
+);
 const mockedShouldAdaptThisGeneration = jest.mocked(shouldAdaptThisGeneration);
 const mockedSortScoredGenomes = jest.mocked(sortScoredGenomes);
 const mockedSplitScoredGenomes = jest.mocked(splitScoredGenomes);
@@ -235,9 +243,7 @@ describe('neat adaptive root chapter', () => {
         const thresholds = {
           lowThreshold: 0.2,
           highThreshold: 0.6,
-        } as ReturnType<
-          typeof resolveUniquenessThresholds
-        >;
+        } as ReturnType<typeof resolveUniquenessThresholds>;
 
         adaptiveController.options.ancestorUniqAdaptive = ancestorUniqAdaptive;
         mockedIsCooldownSatisfied.mockReturnValue(true);
@@ -287,7 +293,8 @@ describe('neat adaptive root chapter', () => {
 
         // Assert
         expect({
-          collectScoredGenomesCalls: mockedCollectScoredGenomes.mock.calls.length,
+          collectScoredGenomesCalls:
+            mockedCollectScoredGenomes.mock.calls.length,
           shouldAdaptArgs: mockedShouldAdaptThisGeneration.mock.calls[0],
         }).toEqual({
           collectScoredGenomesCalls: 0,
@@ -435,7 +442,8 @@ describe('neat adaptive root chapter', () => {
         // Assert
         expect({
           applyDecayCalls: mockedApplyOperatorDecay.mock.calls.length,
-          collectEntriesCalls: mockedCollectOperatorStatsEntries.mock.calls.length,
+          collectEntriesCalls:
+            mockedCollectOperatorStatsEntries.mock.calls.length,
           resolveDecayCalls: mockedResolveOperatorDecay.mock.calls.length,
         }).toEqual({
           applyDecayCalls: 0,
@@ -462,7 +470,8 @@ describe('neat adaptive root chapter', () => {
         // Assert
         expect({
           applyDecayCalls: mockedApplyOperatorDecay.mock.calls.length,
-          collectEntriesCalls: mockedCollectOperatorStatsEntries.mock.calls.length,
+          collectEntriesCalls:
+            mockedCollectOperatorStatsEntries.mock.calls.length,
           resolveDecayCalls: mockedResolveOperatorDecay.mock.calls.length,
         }).toEqual({
           applyDecayCalls: 0,

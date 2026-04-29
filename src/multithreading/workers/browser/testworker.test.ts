@@ -41,7 +41,8 @@ describe('browser worker wrapper chapter', () => {
           .calls[0]?.[0] as { set: ArrayBuffer };
         const transferBuffer = browserHarness.workerHarness.postMessage.mock
           .calls[0]?.[1]?.[0] as ArrayBuffer;
-        const blobRecord = browserHarness.createObjectURL.mock.calls[0]?.[0] as {
+        const blobRecord = browserHarness.createObjectURL.mock
+          .calls[0]?.[0] as {
           parts: unknown[];
         };
 
@@ -91,12 +92,14 @@ describe('browser worker wrapper chapter', () => {
 
         // Assert
         expect({
-          activations: Array.from(new Float64Array(evaluationPayload.activations)),
+          activations: Array.from(
+            new Float64Array(evaluationPayload.activations),
+          ),
           conns: Array.from(new Float64Array(evaluationPayload.conns)),
           evaluationResult,
           states: Array.from(new Float64Array(evaluationPayload.states)),
-          transferCount: browserHarness.workerHarness.postMessage.mock.calls[1]?.[1]
-            ?.length,
+          transferCount:
+            browserHarness.workerHarness.postMessage.mock.calls[1]?.[1]?.length,
         }).toEqual({
           activations: [1, 2],
           conns: [4, 5],
@@ -121,7 +124,8 @@ describe('browser worker wrapper chapter', () => {
         // Assert
         expect({
           revokedUrl: browserHarness.revokeObjectURL.mock.calls[0]?.[0],
-          terminateCalls: browserHarness.workerHarness.terminate.mock.calls.length,
+          terminateCalls:
+            browserHarness.workerHarness.terminate.mock.calls.length,
         }).toEqual({ revokedUrl: 'blob:test-worker', terminateCalls: 1 });
       });
     });
@@ -195,7 +199,10 @@ function installBrowserHarness(): BrowserHarness {
   };
 }
 
-function restoreGlobal(name: 'Blob' | 'Worker' | 'window', value: unknown): void {
+function restoreGlobal(
+  name: 'Blob' | 'Worker' | 'window',
+  value: unknown,
+): void {
   if (value === undefined) {
     Reflect.deleteProperty(globalScope, name);
     return;

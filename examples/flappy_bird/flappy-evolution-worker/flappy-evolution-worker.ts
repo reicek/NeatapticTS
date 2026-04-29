@@ -301,8 +301,7 @@ async function initializeRuntime(
 
   // Step 2: Persist the selected shared profile so generation payloads can report it explicitly.
   workerMutableRuntimeState.currentArchitectureProfileId =
-    initPayload.architectureProfileId ??
-    DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID;
+    initPayload.architectureProfileId ?? DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID;
 
   // Step 3: Reset generation-local caches so a fresh init starts from a clean runtime state.
   workerMutableRuntimeState.currentPopulation = [];
@@ -331,7 +330,8 @@ async function evolveAndPublishGeneration(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
 ): Promise<void> {
   const generationPayload = await evolveAndBuildGenerationReadyMessage({
-    architectureProfileId: workerMutableRuntimeState.currentArchitectureProfileId,
+    architectureProfileId:
+      workerMutableRuntimeState.currentArchitectureProfileId,
     initializationPromise: workerMutableRuntimeState.initializationPromise,
     neatRuntime: workerMutableRuntimeState.neatRuntime,
     isStopped: () => workerMutableRuntimeState.stopped,

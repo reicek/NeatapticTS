@@ -291,10 +291,7 @@ function cloneSchedulingDiagnostics(
  * @param suggestion Suggested next action.
  * @returns Updated suggestions list.
  */
-function appendSuggestion(
-  suggestions: string[],
-  suggestion: string,
-): string[] {
+function appendSuggestion(suggestions: string[], suggestion: string): string[] {
   if (suggestions.includes(suggestion)) {
     return [...suggestions];
   }

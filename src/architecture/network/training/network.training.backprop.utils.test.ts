@@ -71,7 +71,8 @@ describe('network training backprop utility chapter', () => {
           1,
           1,
         );
-        const costDerivative: CostDerivative = (target, output) => target - output;
+        const costDerivative: CostDerivative = (target, output) =>
+          target - output;
 
         // Act
         propagate.call(network, 0.3, 0.4, false, [0.75], 0.5, costDerivative);
@@ -124,8 +125,10 @@ function createNetworkNode(): MockedNetworkNode {
   } as unknown as MockedNetworkNode;
 }
 
-function createOutputNodeWithCostDerivative(): MockedNetworkNode & OutputNodeWithCostDerivative {
-  return createNetworkNode() as MockedNetworkNode & OutputNodeWithCostDerivative;
+function createOutputNodeWithCostDerivative(): MockedNetworkNode &
+  OutputNodeWithCostDerivative {
+  return createNetworkNode() as MockedNetworkNode &
+    OutputNodeWithCostDerivative;
 }
 
 function createNetworkFixture(

@@ -1,7 +1,5 @@
 import { Network } from '../../../neataptic';
-import {
-  NetworkEvolveStoppingConditionRequiredError,
-} from './network.evolve.errors';
+import { NetworkEvolveStoppingConditionRequiredError } from './network.evolve.errors';
 import { evolveNetwork } from './network.evolve.utils';
 
 describe('network evolve utils', () => {

@@ -10,9 +10,11 @@ import type {
   SpeciationCheckpointJSON,
 } from './neat.export.types';
 
-function createGenomeCarrier(input: {
-  genomeId?: number;
-} = {}): GenomeControllerCarrier {
+function createGenomeCarrier(
+  input: {
+    genomeId?: number;
+  } = {},
+): GenomeControllerCarrier {
   return {
     _id: input.genomeId,
     toJSON: () => ({
@@ -64,7 +66,9 @@ function captureErrorSnapshot(runAction: () => void): {
 
 const UNEXPECTED_NETWORK_RESTORE: NetworkClass = {
   fromJSON: () => {
-    throw new Error('Representative restore was not expected in this scenario.');
+    throw new Error(
+      'Representative restore was not expected in this scenario.',
+    );
   },
 };
 
@@ -215,7 +219,8 @@ describe('neat export speciation utilities chapter', () => {
 
         // Assert
         expect(errorSnapshot).toEqual({
-          message: 'Cannot export species 5 member 0 without a stable genome id.',
+          message:
+            'Cannot export species 5 member 0 without a stable genome id.',
           name: 'NeatExportStateBundleValidationError',
         });
       });
@@ -364,7 +369,8 @@ describe('neat export speciation utilities chapter', () => {
           },
           UNEXPECTED_NETWORK_RESTORE,
         );
-        const placeholderPayload = controller._species?.[0]?.members[0]?.toJSON();
+        const placeholderPayload =
+          controller._species?.[0]?.members[0]?.toJSON();
 
         // Assert
         expect(placeholderPayload).toEqual({

@@ -37,9 +37,10 @@ interface ActivationScheduleStepSnapshot {
 function getActivationSchedule(
   network: Network,
 ): ActivationScheduleSnapshot | null {
-  return Reflect.get(network, '_activationSchedule') as
-    | ActivationScheduleSnapshot
-    | null;
+  return Reflect.get(
+    network,
+    '_activationSchedule',
+  ) as ActivationScheduleSnapshot | null;
 }
 
 function setActivationSchedule(
@@ -383,7 +384,9 @@ describe('network topology chapter', () => {
           );
 
           if (!outputNode) {
-            throw new Error('Expected one output node for schedule stability test');
+            throw new Error(
+              'Expected one output node for schedule stability test',
+            );
           }
 
           const hiddenNode = new Node(
@@ -392,7 +395,12 @@ describe('network topology chapter', () => {
             getNetworkRandomGenerator(network),
           );
 
-          network.nodes = [inputNodes[1], inputNodes[0], hiddenNode, outputNode];
+          network.nodes = [
+            inputNodes[1],
+            inputNodes[0],
+            hiddenNode,
+            outputNode,
+          ];
           network.connections.slice().forEach((connection) => {
             network.disconnect(connection.from, connection.to);
           });
@@ -401,7 +409,9 @@ describe('network topology chapter', () => {
           network.connect(hiddenNode, outputNode);
 
           computeTopoOrder.call(network);
-          const initialSchedule = structuredClone(getActivationSchedule(network));
+          const initialSchedule = structuredClone(
+            getActivationSchedule(network),
+          );
 
           network.nodes = network.nodes.toReversed();
           setTopoDirty(network, true);
@@ -432,7 +442,9 @@ describe('network topology chapter', () => {
           );
 
           if (!outputNode) {
-            throw new Error('Expected one output node for recurrent schedule test');
+            throw new Error(
+              'Expected one output node for recurrent schedule test',
+            );
           }
 
           const hiddenNodeLeft = new Node(
@@ -523,7 +535,9 @@ describe('network topology chapter', () => {
           );
 
           if (!outputNode) {
-            throw new Error('Expected one output node for recurrent stability test');
+            throw new Error(
+              'Expected one output node for recurrent stability test',
+            );
           }
 
           const hiddenNodeLeft = new Node(
@@ -537,7 +551,13 @@ describe('network topology chapter', () => {
             getNetworkRandomGenerator(network),
           );
 
-          network.nodes = [inputNodes[0], hiddenNodeRight, outputNode, hiddenNodeLeft, inputNodes[1]];
+          network.nodes = [
+            inputNodes[0],
+            hiddenNodeRight,
+            outputNode,
+            hiddenNodeLeft,
+            inputNodes[1],
+          ];
           network.connections.slice().forEach((connection) => {
             network.disconnect(connection.from, connection.to);
           });
@@ -550,7 +570,9 @@ describe('network topology chapter', () => {
           network.connect(hiddenNodeRight, outputNode);
 
           computeTopoOrder.call(network);
-          const initialSchedule = structuredClone(getActivationSchedule(network));
+          const initialSchedule = structuredClone(
+            getActivationSchedule(network),
+          );
 
           network.nodes = network.nodes.toReversed();
           setTopoDirty(network, true);
@@ -672,7 +694,9 @@ describe('network topology chapter', () => {
           );
 
           if (!outputNode) {
-            throw new Error('Expected one output node for recurrent replacement test');
+            throw new Error(
+              'Expected one output node for recurrent replacement test',
+            );
           }
 
           const hiddenNode = new Node(
@@ -681,7 +705,12 @@ describe('network topology chapter', () => {
             getNetworkRandomGenerator(network),
           );
 
-          network.nodes = [inputNodes[1], outputNode, hiddenNode, inputNodes[0]];
+          network.nodes = [
+            inputNodes[1],
+            outputNode,
+            hiddenNode,
+            inputNodes[0],
+          ];
           network.connections.slice().forEach((connection) => {
             network.disconnect(connection.from, connection.to);
           });

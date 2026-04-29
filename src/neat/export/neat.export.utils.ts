@@ -100,7 +100,10 @@ export function assertSerializedGenomeCarriesCheckpointIdentity(
     }
   }
 
-  for (const [connectionIndex, serializedConnection] of serializedConnections.entries()) {
+  for (const [
+    connectionIndex,
+    serializedConnection,
+  ] of serializedConnections.entries()) {
     if (
       !serializedConnection ||
       typeof serializedConnection !== 'object' ||

@@ -345,6 +345,22 @@ describe('Rate', () => {
         });
       });
     });
+
+    describe('given no arguments', () => {
+      describe('when the first cycle starts', () => {
+        it('returns the base rate using all default cycle parameters', () => {
+          // Arrange
+          const schedule = Rate.cosineAnnealingWarmRestarts();
+          const baseRate = 0.1;
+
+          // Act
+          const resolvedRate = schedule(baseRate, 0);
+
+          // Assert: cosine peak at iteration 0 equals baseRate
+          expect(resolvedRate).toBeCloseTo(baseRate, 10);
+        });
+      });
+    });
   });
 
   describe('linearWarmupDecay()', () => {

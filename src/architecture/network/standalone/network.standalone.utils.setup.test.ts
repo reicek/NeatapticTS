@@ -73,7 +73,8 @@ describe('network standalone setup utility chapter', () => {
         const network = createStandaloneNetwork(7502);
 
         // Act
-        const ensureOutputs = () => ensureOutputNodesExist(asStandaloneProps(network));
+        const ensureOutputs = () =>
+          ensureOutputNodesExist(asStandaloneProps(network));
 
         // Assert
         expect(ensureOutputs).not.toThrow();
@@ -89,7 +90,8 @@ describe('network standalone setup utility chapter', () => {
         );
 
         // Act
-        const ensureOutputs = () => ensureOutputNodesExist(asStandaloneProps(network));
+        const ensureOutputs = () =>
+          ensureOutputNodesExist(asStandaloneProps(network));
 
         // Assert
         expect(ensureOutputs).toThrow(NetworkStandaloneNoOutputNodesError);
@@ -147,7 +149,9 @@ describe('network standalone setup utility chapter', () => {
           initialActivations: network.nodes.map(
             (candidateNode) => candidateNode.activation,
           ),
-          initialStates: network.nodes.map((candidateNode) => candidateNode.state),
+          initialStates: network.nodes.map(
+            (candidateNode) => candidateNode.state,
+          ),
           nodeIndexes: [0, 1, 2],
         });
       });

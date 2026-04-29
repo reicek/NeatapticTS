@@ -6,11 +6,13 @@ import {
 } from './multiobjective.archive';
 import type { NeatLikeWithMultiObjective } from '../shared/multiobjective.types';
 
-function createArchiveHost(input: {
-  enabled?: boolean;
-  generation?: number;
-  archive?: Array<{ generation?: number; fronts: number[][] }>;
-} = {}): NeatLikeWithMultiObjective {
+function createArchiveHost(
+  input: {
+    enabled?: boolean;
+    generation?: number;
+    archive?: Array<{ generation?: number; fronts: number[][] }>;
+  } = {},
+): NeatLikeWithMultiObjective {
   return {
     _getObjectives: () => [],
     options: {
@@ -24,9 +26,7 @@ function createArchiveHost(input: {
 }
 
 function createFront(genomeIds: Array<number | undefined>): Network[] {
-  return genomeIds.map(
-    (genomeId) => ({ _id: genomeId }) as unknown as Network,
-  );
+  return genomeIds.map((genomeId) => ({ _id: genomeId }) as unknown as Network);
 }
 
 describe('neat multiobjective archive chapter', () => {
@@ -62,11 +62,10 @@ describe('neat multiobjective archive chapter', () => {
         expect(archiveHost._paretoArchive).toEqual([
           {
             generation: 27,
-            fronts: [
-              [101, 0],
-              [202],
-              [303],
-            ].slice(0, MAX_PARETO_ARCHIVE_FRONTS),
+            fronts: [[101, 0], [202], [303]].slice(
+              0,
+              MAX_PARETO_ARCHIVE_FRONTS,
+            ),
           },
         ]);
       });

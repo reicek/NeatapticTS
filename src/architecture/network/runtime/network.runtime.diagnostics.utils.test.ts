@@ -12,11 +12,7 @@ import {
 const SCHEDULING_REFRESH_SUGGESTION =
   'Run activate() or noTraceActivate() after structural edits to refresh the compiled scheduling cache.';
 
-function setRuntimeField(
-  network: Network,
-  key: string,
-  value: unknown,
-): void {
+function setRuntimeField(network: Network, key: string, value: unknown): void {
   Reflect.set(network, key, value);
 }
 

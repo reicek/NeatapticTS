@@ -37,11 +37,23 @@ describe('network onnx export layer graph utility chapter', () => {
         const hiddenNode2 = new Node('hidden');
 
         // Create activation functions with different names
-        const tanhFunc = ((x: number) => Math.tanh(x)) as ((x: number, derivate?: boolean) => number) & { name?: string };
-        Object.defineProperty(tanhFunc, 'name', { value: 'tanh', writable: false });
+        const tanhFunc = ((x: number) => Math.tanh(x)) as ((
+          x: number,
+          derivate?: boolean,
+        ) => number) & { name?: string };
+        Object.defineProperty(tanhFunc, 'name', {
+          value: 'tanh',
+          writable: false,
+        });
 
-        const reluFunc = ((x: number) => Math.max(0, x)) as ((x: number, derivate?: boolean) => number) & { name?: string };
-        Object.defineProperty(reluFunc, 'name', { value: 'relu', writable: false });
+        const reluFunc = ((x: number) => Math.max(0, x)) as ((
+          x: number,
+          derivate?: boolean,
+        ) => number) & { name?: string };
+        Object.defineProperty(reluFunc, 'name', {
+          value: 'relu',
+          writable: false,
+        });
 
         hiddenNode1.squash = tanhFunc;
         hiddenNode2.squash = reluFunc;
@@ -59,7 +71,11 @@ describe('network onnx export layer graph utility chapter', () => {
 
         const context: LayerBuildContext = {
           model,
-          layers: [[inputNode1, inputNode2], [hiddenNode1, hiddenNode2], [outputNode]],
+          layers: [
+            [inputNode1, inputNode2],
+            [hiddenNode1, hiddenNode2],
+            [outputNode],
+          ],
           layerIndex: 1,
           previousOutputName: 'input_layer',
           options: {

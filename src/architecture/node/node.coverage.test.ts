@@ -18,7 +18,9 @@ function withMockedMathRandom<T>(randomValue: number, run: () => T): T {
   }
 }
 
-function withSuppressedWarnings<T>(run: (warningSpy: jest.SpyInstance) => T): T {
+function withSuppressedWarnings<T>(
+  run: (warningSpy: jest.SpyInstance) => T,
+): T {
   const warningSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
   try {
@@ -242,7 +244,10 @@ describe('Node', () => {
 
           // Assert
           expect(
-            Reflect.get(node as unknown as { batchNorm?: boolean }, 'batchNorm'),
+            Reflect.get(
+              node as unknown as { batchNorm?: boolean },
+              'batchNorm',
+            ),
           ).toBe(true);
         });
       });
@@ -276,7 +281,10 @@ describe('Node', () => {
           const originalWarnings = config.warnings;
           node.bias = 2;
           node.mask = 'invalid-mask' as unknown as number;
-          node.squash = null as unknown as (x: number, derivate?: boolean) => number;
+          node.squash = null as unknown as (
+            x: number,
+            derivate?: boolean,
+          ) => number;
 
           // Act
           const activationResult = withSuppressedWarnings(() => {
@@ -314,11 +322,12 @@ describe('Node', () => {
           const node = new Node('hidden');
           const disabledSourceNode = new Node('input');
           const dropConnectedSourceNode = new Node('input');
-          const disabledIncomingConnection = disabledSourceNode.connect(node, 5)[0];
-          const dropConnectedIncomingConnection = dropConnectedSourceNode.connect(
+          const disabledIncomingConnection = disabledSourceNode.connect(
             node,
-            7,
+            5,
           )[0];
+          const dropConnectedIncomingConnection =
+            dropConnectedSourceNode.connect(node, 7)[0];
           const selfConnection = node.connect(node, 3)[0];
 
           node.squash = Activation.identity;
@@ -393,7 +402,10 @@ describe('Node', () => {
         it('warns and leaves the gated connection list unchanged', () => {
           // Arrange
           const gaterNode = new Node('hidden');
-          const incompleteConnection = { from: null, to: null } as unknown as Connection;
+          const incompleteConnection = {
+            from: null,
+            to: null,
+          } as unknown as Connection;
 
           // Act
           const gateResult = withSuppressedWarnings((warningSpy) => {

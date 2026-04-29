@@ -14,9 +14,11 @@ import {
 
 jest.retryTimes(2, { logErrorsBeforeRetry: true });
 
-function createOnnxModel(options: {
-  metadataProps?: OnnxMetadataProperty[];
-} = {}): OnnxModel {
+function createOnnxModel(
+  options: {
+    metadataProps?: OnnxMetadataProperty[];
+  } = {},
+): OnnxModel {
   return {
     graph: {
       inputs: [],
@@ -141,7 +143,10 @@ describe('network onnx export layer common utility chapter', () => {
       it('emits one pooling node and the corresponding metadata hints', () => {
         // Arrange
         const onnxModel = createOnnxModel();
-        const poolSpec = createPoolSpec({ afterLayerIndex: 3, type: 'AveragePool' });
+        const poolSpec = createPoolSpec({
+          afterLayerIndex: 3,
+          type: 'AveragePool',
+        });
 
         // Act
         const outputName = emitOptionalPoolingAndFlatten({
@@ -155,8 +160,14 @@ describe('network onnx export layer common utility chapter', () => {
         // Assert
         expect({
           outputName,
-          poolLayers: readParsedMetadataValue<number[]>(onnxModel, 'pool2d_layers'),
-          poolSpecs: readParsedMetadataValue<Pool2DMapping[]>(onnxModel, 'pool2d_specs'),
+          poolLayers: readParsedMetadataValue<number[]>(
+            onnxModel,
+            'pool2d_layers',
+          ),
+          poolSpecs: readParsedMetadataValue<Pool2DMapping[]>(
+            onnxModel,
+            'pool2d_specs',
+          ),
           nodes: onnxModel.graph.node,
         }).toEqual({
           outputName: 'Pool_3',
@@ -203,9 +214,18 @@ describe('network onnx export layer common utility chapter', () => {
         // Assert
         expect({
           outputName,
-          flattenLayers: readParsedMetadataValue<number[]>(onnxModel, 'flatten_layers'),
-          poolLayers: readParsedMetadataValue<number[]>(onnxModel, 'pool2d_layers'),
-          poolSpecs: readParsedMetadataValue<Pool2DMapping[]>(onnxModel, 'pool2d_specs'),
+          flattenLayers: readParsedMetadataValue<number[]>(
+            onnxModel,
+            'flatten_layers',
+          ),
+          poolLayers: readParsedMetadataValue<number[]>(
+            onnxModel,
+            'pool2d_layers',
+          ),
+          poolSpecs: readParsedMetadataValue<Pool2DMapping[]>(
+            onnxModel,
+            'pool2d_specs',
+          ),
           nodes: onnxModel.graph.node,
         }).toEqual({
           outputName: 'PoolFlat_4',
@@ -249,10 +269,9 @@ describe('network onnx export layer common utility chapter', () => {
         appendIndexedMetadata(onnxModel, 'flatten_layers', 4);
 
         // Assert
-        expect(readParsedMetadataValue<number[]>(onnxModel, 'flatten_layers')).toEqual([
-          1,
-          4,
-        ]);
+        expect(
+          readParsedMetadataValue<number[]>(onnxModel, 'flatten_layers'),
+        ).toEqual([1, 4]);
       });
     });
 
@@ -267,10 +286,9 @@ describe('network onnx export layer common utility chapter', () => {
         appendIndexedMetadata(onnxModel, 'flatten_layers', 4);
 
         // Assert
-        expect(readParsedMetadataValue<number[]>(onnxModel, 'flatten_layers')).toEqual([
-          1,
-          4,
-        ]);
+        expect(
+          readParsedMetadataValue<number[]>(onnxModel, 'flatten_layers'),
+        ).toEqual([1, 4]);
       });
     });
 
@@ -285,9 +303,9 @@ describe('network onnx export layer common utility chapter', () => {
         appendIndexedMetadata(onnxModel, 'flatten_layers', 2);
 
         // Assert
-        expect(readParsedMetadataValue<number[]>(onnxModel, 'flatten_layers')).toEqual([
-          2,
-        ]);
+        expect(
+          readParsedMetadataValue<number[]>(onnxModel, 'flatten_layers'),
+        ).toEqual([2]);
       });
     });
 
@@ -302,9 +320,9 @@ describe('network onnx export layer common utility chapter', () => {
         appendIndexedMetadata(onnxModel, 'flatten_layers', 3);
 
         // Assert
-        expect(readParsedMetadataValue<number[]>(onnxModel, 'flatten_layers')).toEqual([
-          3,
-        ]);
+        expect(
+          readParsedMetadataValue<number[]>(onnxModel, 'flatten_layers'),
+        ).toEqual([3]);
       });
     });
   });
@@ -331,10 +349,9 @@ describe('network onnx export layer common utility chapter', () => {
         appendMetadataSpec(onnxModel, 'pool2d_specs', nextPoolSpec);
 
         // Assert
-        expect(readParsedMetadataValue<Pool2DMapping[]>(onnxModel, 'pool2d_specs')).toEqual([
-          existingPoolSpec,
-          nextPoolSpec,
-        ]);
+        expect(
+          readParsedMetadataValue<Pool2DMapping[]>(onnxModel, 'pool2d_specs'),
+        ).toEqual([existingPoolSpec, nextPoolSpec]);
       });
     });
 
@@ -350,9 +367,9 @@ describe('network onnx export layer common utility chapter', () => {
         appendMetadataSpec(onnxModel, 'pool2d_specs', nextPoolSpec);
 
         // Assert
-        expect(readParsedMetadataValue<Pool2DMapping[]>(onnxModel, 'pool2d_specs')).toEqual([
-          nextPoolSpec,
-        ]);
+        expect(
+          readParsedMetadataValue<Pool2DMapping[]>(onnxModel, 'pool2d_specs'),
+        ).toEqual([nextPoolSpec]);
       });
     });
   });

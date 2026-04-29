@@ -31,7 +31,9 @@ describe('network root coverage chapter', () => {
           new Network(undefined as unknown as number, 1);
 
         // Act / Assert
-        expect(constructNetwork).toThrow(NetworkConstructorDimensionRequiredError);
+        expect(constructNetwork).toThrow(
+          NetworkConstructorDimensionRequiredError,
+        );
       });
     });
 
@@ -42,7 +44,9 @@ describe('network root coverage chapter', () => {
           new Network(1, undefined as unknown as number);
 
         // Act / Assert
-        expect(constructNetwork).toThrow(NetworkConstructorDimensionRequiredError);
+        expect(constructNetwork).toThrow(
+          NetworkConstructorDimensionRequiredError,
+        );
       });
     });
   });
@@ -194,10 +198,9 @@ describe('network root coverage chapter', () => {
         network.setStochasticDepthSchedule(stochasticDepthSchedule);
 
         // Assert
-        expect(networkInternals._stochasticDepthSchedule?.(1, [0.2, 0.8])).toEqual([
-          0.8,
-          0.2,
-        ]);
+        expect(
+          networkInternals._stochasticDepthSchedule?.(1, [0.2, 0.8]),
+        ).toEqual([0.8, 0.2]);
       });
     });
 
@@ -207,8 +210,7 @@ describe('network root coverage chapter', () => {
         const network = new Network(2, 1, { enforceAcyclic: true });
         const networkInternals = network as unknown as RootNetworkInternals;
         network.setStochasticDepthSchedule(
-          (_step: number, currentSchedule: number[]) =>
-          currentSchedule,
+          (_step: number, currentSchedule: number[]) => currentSchedule,
         );
 
         // Act

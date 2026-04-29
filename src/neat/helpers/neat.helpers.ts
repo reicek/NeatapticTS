@@ -529,9 +529,7 @@ function compareGenerationZeroConnections(
   return leftConnection.to.index! - rightConnection.to.index!;
 }
 
-function resolveNextInnovationIdFromGenome(
-  genome: GenomeWithMetadata,
-): number {
+function resolveNextInnovationIdFromGenome(genome: GenomeWithMetadata): number {
   const maxObservedInnovation = collectGenerationZeroConnections(genome).reduce(
     (currentMaxInnovation, connection) =>
       typeof connection.innovation === 'number'

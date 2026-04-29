@@ -217,10 +217,11 @@ describe('network runtime errors chapter', () => {
         const cause = new Error('missing layered network');
 
         // Act
-        const error = new NetworkRuntimeStochasticDepthLayeredNetworkRequiredError(
-          'stochastic depth requires a layered network',
-          { cause },
-        );
+        const error =
+          new NetworkRuntimeStochasticDepthLayeredNetworkRequiredError(
+            'stochastic depth requires a layered network',
+            { cause },
+          );
 
         // Assert
         expect(captureErrorSnapshot(error)).toEqual({
@@ -264,7 +265,8 @@ describe('network runtime errors chapter', () => {
 
         // Assert
         expect(captureErrorSnapshot(error)).toEqual({
-          message: 'dropconnect probability must stay inside the valid interval',
+          message:
+            'dropconnect probability must stay inside the valid interval',
           name: 'NetworkRuntimeDropConnectProbabilityRangeError',
           cause,
         });

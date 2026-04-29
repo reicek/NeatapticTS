@@ -197,9 +197,8 @@ export function createCanvasHostInternal(
   const statsValueByKey = createAndAttachHostStatsTable(
     hostLayoutElements.statsTableHost,
   );
-  const architectureSelectorController = createHostArchitectureSelector(
-    options,
-  );
+  const architectureSelectorController =
+    createHostArchitectureSelector(options);
 
   // Step 3: Create reusable header and network visualization controllers.
   const drawHeaderFrame = createHeaderFrameRenderer(
@@ -401,7 +400,8 @@ function createHostLayoutElements(
   architectureSelectorHost.style.flex = '1 1 auto';
   architectureSelectorHost.style.minWidth = '0';
   architectureSelectorHost.style.boxSizing = 'border-box';
-  architectureSelectorHost.style.background = FLAPPY_NEON_PALETTE.hudPanelBackground;
+  architectureSelectorHost.style.background =
+    FLAPPY_NEON_PALETTE.hudPanelBackground;
   architectureSelectorHost.style.border = hostVisualPrimitives.unifiedBorder;
   architectureSelectorHost.style.padding = FLAPPY_HOST_TABLE_HOST_PADDING;
   architectureSelectorHost.style.boxShadow = FLAPPY_UI_CANVAS_INSET_SHADOW;
@@ -563,7 +563,9 @@ function createHostNetworkVisualizationController(
     pendingRedrawAnimationFrameId: undefined,
     pendingRedrawSyncHoveredNodeFromPointer: false,
   };
-  networkCanvasHost.appendChild(networkVisualizationTooltipElements.tooltipElement);
+  networkCanvasHost.appendChild(
+    networkVisualizationTooltipElements.tooltipElement,
+  );
 
   /**
    * Resizes the network canvas backing store to match the host element.
@@ -844,14 +846,18 @@ function mountCanvasHostTree(
   hostLayoutElements.architectureSelectorHost.appendChild(
     architectureSelectorElement,
   );
-  hostLayoutElements.sidebarColumn.appendChild(hostLayoutElements.networkCanvasHost);
+  hostLayoutElements.sidebarColumn.appendChild(
+    hostLayoutElements.networkCanvasHost,
+  );
   hostLayoutElements.sidebarColumn.appendChild(
     hostLayoutElements.architectureSelectorHost,
   );
   hostLayoutElements.statsSplitContainer.appendChild(
     hostLayoutElements.statsTableHost,
   );
-  hostLayoutElements.statsSplitContainer.appendChild(hostLayoutElements.sidebarColumn);
+  hostLayoutElements.statsSplitContainer.appendChild(
+    hostLayoutElements.sidebarColumn,
+  );
   hostLayoutElements.statsContainer.appendChild(
     hostLayoutElements.statsSplitContainer,
   );
@@ -961,7 +967,8 @@ function createNetworkVisualizationTooltipElements(): HostNetworkVisualizationTo
   tooltipArrowElement.style.boxShadow = '0 0 10px rgba(15, 181, 255, 0.26)';
 
   tooltipHeadingElement.style.fontFamily = FLAPPY_MONOSPACE_FONT_FAMILY;
-  tooltipHeadingElement.style.fontSize = FLAPPY_NETWORK_TOOLTIP_HEADING_FONT_SIZE;
+  tooltipHeadingElement.style.fontSize =
+    FLAPPY_NETWORK_TOOLTIP_HEADING_FONT_SIZE;
   tooltipHeadingElement.style.fontWeight = '700';
   tooltipHeadingElement.style.letterSpacing = '0.08em';
   tooltipHeadingElement.style.textTransform = 'uppercase';
@@ -1065,9 +1072,9 @@ function showNetworkVisualizationTooltip(
     networkVisualizationTooltipElements.tooltipBodyElement,
     tooltipScene.bodyParagraphs,
   );
-  networkVisualizationTooltipElements.tooltipElement.style.width =
-    `${tooltipWidthPx}px`;
-  networkVisualizationTooltipElements.tooltipElement.style.visibility = 'hidden';
+  networkVisualizationTooltipElements.tooltipElement.style.width = `${tooltipWidthPx}px`;
+  networkVisualizationTooltipElements.tooltipElement.style.visibility =
+    'hidden';
   const tooltipHeightPx =
     networkVisualizationTooltipElements.tooltipElement.offsetHeight;
   const maximumTooltipLeftPx = Math.max(
@@ -1091,12 +1098,9 @@ function showNetworkVisualizationTooltip(
     tooltipWidthPx - FLAPPY_NETWORK_TOOLTIP_ARROW_EDGE_MARGIN_PX,
   );
 
-  networkVisualizationTooltipElements.tooltipElement.style.left =
-    `${tooltipLeftPx}px`;
-  networkVisualizationTooltipElements.tooltipElement.style.top =
-    `${tooltipTopPx}px`;
-  networkVisualizationTooltipElements.tooltipArrowElement.style.left =
-    `${tooltipArrowLeftPx}px`;
+  networkVisualizationTooltipElements.tooltipElement.style.left = `${tooltipLeftPx}px`;
+  networkVisualizationTooltipElements.tooltipElement.style.top = `${tooltipTopPx}px`;
+  networkVisualizationTooltipElements.tooltipArrowElement.style.left = `${tooltipArrowLeftPx}px`;
   networkVisualizationTooltipElements.tooltipElement.style.visibility =
     'visible';
   networkVisualizationTooltipElements.tooltipElement.style.opacity = '1';
@@ -1123,7 +1127,8 @@ function hideNetworkVisualizationTooltip(
   networkVisualizationTooltipElements: HostNetworkVisualizationTooltipElements,
 ): void {
   networkVisualizationTooltipElements.tooltipElement.style.opacity = '0';
-  networkVisualizationTooltipElements.tooltipElement.style.visibility = 'hidden';
+  networkVisualizationTooltipElements.tooltipElement.style.visibility =
+    'hidden';
   networkVisualizationTooltipElements.tooltipElement.style.transform =
     'translateY(6px)';
 }
@@ -1278,15 +1283,16 @@ function resolveHoveredInputDescriptionNodeIndicesFromCanvasPoint(
   canvasPoint: HostCanvasPoint,
   positionedScene: NetworkVisualizationPositionedScene,
 ): number[] | undefined {
-  const hoveredInputDescriptionScene = positionedScene.inputDescriptionScenes.findLast(
-    (inputDescriptionScene) =>
-      canvasPoint.xPx >= inputDescriptionScene.leftPx &&
-      canvasPoint.xPx <=
-        inputDescriptionScene.leftPx + inputDescriptionScene.widthPx &&
-      canvasPoint.yPx >= inputDescriptionScene.topPx &&
-      canvasPoint.yPx <=
-        inputDescriptionScene.topPx + inputDescriptionScene.heightPx,
-  );
+  const hoveredInputDescriptionScene =
+    positionedScene.inputDescriptionScenes.findLast(
+      (inputDescriptionScene) =>
+        canvasPoint.xPx >= inputDescriptionScene.leftPx &&
+        canvasPoint.xPx <=
+          inputDescriptionScene.leftPx + inputDescriptionScene.widthPx &&
+        canvasPoint.yPx >= inputDescriptionScene.topPx &&
+        canvasPoint.yPx <=
+          inputDescriptionScene.topPx + inputDescriptionScene.heightPx,
+    );
 
   return hoveredInputDescriptionScene
     ? [hoveredInputDescriptionScene.nodeIndex]

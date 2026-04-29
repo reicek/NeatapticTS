@@ -31,8 +31,10 @@ function createSpecies(options: {
   lastImproved?: number;
 }): SpeciesWithMetadata {
   return {
-    members: Array.from({ length: options.memberCount }, (_unusedValue, memberIndex) =>
-      createGenome(options.speciesId * 100 + memberIndex),
+    members: Array.from(
+      { length: options.memberCount },
+      (_unusedValue, memberIndex) =>
+        createGenome(options.speciesId * 100 + memberIndex),
     ),
     id: options.speciesId,
     generation: 0,
@@ -139,7 +141,8 @@ describe('neat evolve speciation chapter', () => {
 
         // Assert
         expect({
-          applyAutoCompatibilityTuningCalls: applyAutoCompatibilityTuning.mock.calls.length,
+          applyAutoCompatibilityTuningCalls:
+            applyAutoCompatibilityTuning.mock.calls.length,
           applyFitnessSharingCalls: applyFitnessSharing.mock.calls.length,
           historySnapshotCalls: recordSnapshot.mock.calls.length,
           sortCalls: sort.mock.calls.length,
@@ -178,7 +181,8 @@ describe('neat evolve speciation chapter', () => {
 
         // Assert
         expect({
-          applyAutoCompatibilityTuningCalls: applyAutoCompatibilityTuning.mock.calls.length,
+          applyAutoCompatibilityTuningCalls:
+            applyAutoCompatibilityTuning.mock.calls.length,
           historySnapshotCalls: recordSnapshot.mock.calls.length,
           sortCalls: sort.mock.calls.length,
         }).toEqual({
@@ -209,7 +213,9 @@ describe('neat evolve speciation chapter', () => {
         // Assert
         expect({
           assignedGenomeId: freshGenome._id,
-          hiddenNodeCount: freshGenome.nodes.filter((node) => node.type === 'hidden').length,
+          hiddenNodeCount: freshGenome.nodes.filter(
+            (node) => node.type === 'hidden',
+          ).length,
           nextGenomeId: evolutionHost._nextGenomeId,
           reenableProbability: freshGenome._reenableProb,
         }).toEqual({
@@ -227,7 +233,11 @@ describe('neat evolve speciation chapter', () => {
         const evolutionHost = createEvolutionHost({
           _lineageEnabled: true,
           ensureMinHiddenNodes: async (genome) => {
-            (genome as unknown as Network).nodes.splice(1, 0, new Node('hidden'));
+            (genome as unknown as Network).nodes.splice(
+              1,
+              0,
+              new Node('hidden'),
+            );
           },
         });
 
@@ -238,7 +248,9 @@ describe('neat evolve speciation chapter', () => {
 
         // Assert
         expect({
-          hiddenNodeCount: freshGenome.nodes.filter((node) => node.type === 'hidden').length,
+          hiddenNodeCount: freshGenome.nodes.filter(
+            (node) => node.type === 'hidden',
+          ).length,
           lineageDepth: freshGenome._depth,
           lineageParents: freshGenome._parents,
         }).toEqual({
@@ -267,7 +279,9 @@ describe('neat evolve speciation chapter', () => {
         // Assert
         expect({
           assignedGenomeId: freshGenome._id,
-          hiddenNodeCount: freshGenome.nodes.filter((node) => node.type === 'hidden').length,
+          hiddenNodeCount: freshGenome.nodes.filter(
+            (node) => node.type === 'hidden',
+          ).length,
           nextGenomeId: evolutionHost._nextGenomeId,
         }).toEqual({
           assignedGenomeId: 20,
@@ -296,7 +310,9 @@ describe('neat evolve speciation chapter', () => {
         expect({
           assignedGenomeId: freshGenome._id,
           connectionCount: freshGenome.connections.length,
-          inputNodeCount: freshGenome.nodes.filter((node) => node.type === 'input').length,
+          inputNodeCount: freshGenome.nodes.filter(
+            (node) => node.type === 'input',
+          ).length,
         }).toEqual({
           assignedGenomeId: 30,
           connectionCount: 1,
@@ -484,7 +500,9 @@ describe('neat evolve speciation chapter', () => {
     describe('when global stagnation injection is disabled', () => {
       it('keeps the ranked population unchanged', async () => {
         // Arrange
-        const buildFreshGenomeForInjection = jest.fn(async () => createGenome(100));
+        const buildFreshGenomeForInjection = jest.fn(async () =>
+          createGenome(100),
+        );
         const evolutionHost = createEvolutionHost({
           generation: 5,
           population: [createGenome(1), createGenome(2)],
@@ -515,7 +533,9 @@ describe('neat evolve speciation chapter', () => {
     describe('when the controller is still inside the allowed stagnation window', () => {
       it('preserves the current non-elite tail', async () => {
         // Arrange
-        const buildFreshGenomeForInjection = jest.fn(async () => createGenome(200));
+        const buildFreshGenomeForInjection = jest.fn(async () =>
+          createGenome(200),
+        );
         const evolutionHost = createEvolutionHost({
           generation: 4,
           population: [createGenome(1), createGenome(2), createGenome(3)],

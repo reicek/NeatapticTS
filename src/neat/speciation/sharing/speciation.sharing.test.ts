@@ -143,7 +143,11 @@ describe('neat speciation sharing chapter', () => {
   describe('applyFitnessSharing branch coverage', () => {
     it('exercises member score undefined branch when score is not a number', () => {
       // Arrange
-      const memberWithoutScore = { _id: 1, nodes: [], connections: [] } as GenomeDetailed;
+      const memberWithoutScore = {
+        _id: 1,
+        nodes: [],
+        connections: [],
+      } as GenomeDetailed;
       const memberWithScore = createMember(2, 10);
       const species: SpeciesLike = {
         id: 1,
@@ -215,7 +219,10 @@ describe('neat speciation sharing chapter', () => {
       const speciationContext: FitnessSharingContext = {
         _species: [species],
         options: {},
-        _compatibilityDistance: (leftGenome: GenomeDetailed, rightGenome: GenomeDetailed) => {
+        _compatibilityDistance: (
+          leftGenome: GenomeDetailed,
+          rightGenome: GenomeDetailed,
+        ) => {
           distanceCalls++;
           void leftGenome;
           void rightGenome;
@@ -240,7 +247,6 @@ describe('neat speciation sharing chapter', () => {
       // Verify distance function was called (proves line 164-171 path executed)
       expect(distanceCalls).toBeGreaterThan(0);
     });
-
 
     it('skips non-numeric score members in sigma sharing path (line 163 false branch)', () => {
       // Arrange - sigma > 0 routes to applySigmaSharingToMembers
@@ -270,7 +276,7 @@ describe('neat speciation sharing chapter', () => {
       expect(memberWithoutScore.score).toBeUndefined();
     });
 
-      it('exercises nullish coalesce when bestScore is defined (line 268 false branch)', () => {
+    it('exercises nullish coalesce when bestScore is defined (line 268 false branch)', () => {
       // Arrange - species WITH defined bestScore to test line 268 nullish coalesce FALSE branch
       // Line 268: const currentBest = species.bestScore ?? NEGATIVE_INFINITY;
       // FALSE branch: bestScore IS defined (not undefined), so ?? doesn't activate fallback
@@ -401,7 +407,11 @@ describe('neat speciation sharing chapter', () => {
 
     it('exercises nullish coalesce when member score is undefined (line 269 false branch)', () => {
       // Arrange - member WITHOUT score to test line 269 nullish coalesce FALSE branch
-      const topMember = { _id: 1, nodes: [], connections: [] } as GenomeDetailed;
+      const topMember = {
+        _id: 1,
+        nodes: [],
+        connections: [],
+      } as GenomeDetailed;
       // topMember.score is undefined
       const species: SpeciesLike = {
         id: 1,

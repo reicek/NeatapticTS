@@ -475,7 +475,8 @@ describe('network runtime controls utility chapter', () => {
 
         // Assert
         expect({
-          nestedSameReference: statsSnapshot.nested === network._lastStats?.nested,
+          nestedSameReference:
+            statsSnapshot.nested === network._lastStats?.nested,
           statsSnapshot,
         }).toEqual({
           nestedSameReference: false,
@@ -558,8 +559,7 @@ describe('network runtime controls utility chapter', () => {
 
         // Assert
         expect(errorSnapshot).toEqual({
-          message:
-            'Expected 2 survival probabilities for hidden layers, got 1',
+          message: 'Expected 2 survival probabilities for hidden layers, got 1',
           name: 'NetworkRuntimeStochasticDepthEntryCountError',
         });
       });
@@ -595,17 +595,19 @@ describe('network runtime controls utility chapter', () => {
   });
 });
 
-function createRuntimeNetwork(options: {
-  connectionCount?: number;
-  hiddenLayerCount?: number;
-  lastSkippedLayers?: number[] | undefined;
-  lastStats?: Record<string, unknown> | undefined;
-  layers?: Array<{ nodes: unknown[] }> | undefined;
-  stochasticDepth?: number[];
-  trainingStep?: number;
-  weightNoisePerHidden?: number[];
-  weightNoiseStd?: number;
-} = {}): RuntimeNetworkState {
+function createRuntimeNetwork(
+  options: {
+    connectionCount?: number;
+    hiddenLayerCount?: number;
+    lastSkippedLayers?: number[] | undefined;
+    lastStats?: Record<string, unknown> | undefined;
+    layers?: Array<{ nodes: unknown[] }> | undefined;
+    stochasticDepth?: number[];
+    trainingStep?: number;
+    weightNoisePerHidden?: number[];
+    weightNoiseStd?: number;
+  } = {},
+): RuntimeNetworkState {
   const hiddenLayerCount = options.hiddenLayerCount ?? 1;
   const defaultLayers = Array.from({ length: hiddenLayerCount + 2 }, () => ({
     nodes: [],

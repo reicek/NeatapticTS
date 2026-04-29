@@ -29,7 +29,10 @@ import type {
 } from '../browser-entry.types';
 import type { WorkerChannelGenerationPayload } from '../worker-channel/worker-channel.types';
 import type { RuntimeStartupPreviewHandle } from './runtime.types';
-import type { ExampleArchitectureProfile, ExampleArchitectureProfileId } from '../../../architectureProfiles';
+import type {
+  ExampleArchitectureProfile,
+  ExampleArchitectureProfileId,
+} from '../../../architectureProfiles';
 import {
   persistRuntimeArchitectureHistory,
   resolveRuntimeArchitectureSelectorItems,

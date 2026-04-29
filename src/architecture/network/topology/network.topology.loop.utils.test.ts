@@ -102,7 +102,9 @@ describe('network topology loop utility chapter', () => {
 
         // Assert
         expect({
-          topoOrder: buildContext.topoOrder.map((nodeEntry) => nodeEntry.geneId),
+          topoOrder: buildContext.topoOrder.map(
+            (nodeEntry) => nodeEntry.geneId,
+          ),
           activationSteps: buildContext.activationSteps,
           remainingInDegree: buildContext.inDegreeByNode.get(targetNode),
           remainingQueueSize: buildContext.processingQueue.length,
@@ -143,7 +145,9 @@ describe('network topology loop utility chapter', () => {
 
         // Assert
         expect({
-          topoOrder: buildContext.topoOrder.map((nodeEntry) => nodeEntry.geneId),
+          topoOrder: buildContext.topoOrder.map(
+            (nodeEntry) => nodeEntry.geneId,
+          ),
           activationSteps: buildContext.activationSteps,
           remainingInDegree: buildContext.inDegreeByNode.get(targetNode),
           remainingQueueSize: buildContext.processingQueue.length,
@@ -210,9 +214,7 @@ type BuildContextOptions = {
   processingQueue?: TopologyNode[];
 };
 
-function createTopologyNode(
-  overrides: TopologyNodeOverrides,
-): TopologyNode {
+function createTopologyNode(overrides: TopologyNodeOverrides): TopologyNode {
   return {
     geneId: overrides.geneId,
     index: overrides.index,

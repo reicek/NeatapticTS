@@ -45,12 +45,11 @@ function summarizeSparseNetwork(network: Network): {
       )
       .join(','),
     gateSignature: network.gates
-      .map(
-        (candidateConnection) =>
-          resolveConnectionSignature(
-            candidateConnection.from,
-            candidateConnection.to,
-          ),
+      .map((candidateConnection) =>
+        resolveConnectionSignature(
+          candidateConnection.from,
+          candidateConnection.to,
+        ),
       )
       .join(','),
     hiddenNodeCount: network.nodes.filter(
@@ -186,7 +185,9 @@ function resolveNarxBoundaryNodes(network: Network): {
   );
 
   if (!inputNode || !outputNode) {
-    throw new Error('Expected NARX fixture to expose one input and one output node.');
+    throw new Error(
+      'Expected NARX fixture to expose one input and one output node.',
+    );
   }
 
   const inputMemoryNode = network.connections.find(
@@ -201,7 +202,9 @@ function resolveNarxBoundaryNodes(network: Network): {
   )?.to;
 
   if (!inputMemoryNode || !outputMemoryNode) {
-    throw new Error('Expected NARX fixture to expose both input and output delay lines.');
+    throw new Error(
+      'Expected NARX fixture to expose both input and output delay lines.',
+    );
   }
 
   const delayedInputMemoryNode = network.connections.find(
@@ -220,11 +223,8 @@ function resolveNarxBoundaryNodes(network: Network): {
 }
 
 function configureNarxRunningTotalPredictor(network: Network): void {
-  const {
-    inputNode,
-    outputMemoryNode,
-    outputNode,
-  } = resolveNarxBoundaryNodes(network);
+  const { inputNode, outputMemoryNode, outputNode } =
+    resolveNarxBoundaryNodes(network);
 
   network.nodes.forEach((candidateNode) => {
     if (candidateNode.type === 'input') {
@@ -260,7 +260,9 @@ function configureNarxRunningTotalPredictor(network: Network): void {
     !outputToMemoryConnection ||
     !outputMemoryToOutputConnection
   ) {
-    throw new Error('Expected NARX fixture connections needed for the sequence predictor.');
+    throw new Error(
+      'Expected NARX fixture connections needed for the sequence predictor.',
+    );
   }
 
   inputToMemoryConnection.weight = 1;
@@ -319,7 +321,8 @@ function summarizeRecurrentArchitectureBoundary(network: Network): {
 
   return {
     clearSuggestion: schedulingDiagnostics.suggestions.at(0) ?? null,
-    directInputToOutputConnections: countDirectInputToOutputConnections(network),
+    directInputToOutputConnections:
+      countDirectInputToOutputConnections(network),
     gatedBlockCount: hydratedExtensions.gatedBlockCount,
     hasCycles: network.describeArchitecture().hasCycles,
     recurrentKinds: hydratedExtensions.recurrentKinds,
@@ -371,7 +374,11 @@ describe('Architect', () => {
           hiddenNode.connect(hiddenNode)[0].weight = 0.5;
 
           // Act
-          const network = Architect.construct([hiddenGroup, inputNode, outputNode]);
+          const network = Architect.construct([
+            hiddenGroup,
+            inputNode,
+            outputNode,
+          ]);
 
           // Assert
           expect({
@@ -428,7 +435,11 @@ describe('Architect', () => {
           };
 
           // Act
-          const network = Architect.construct([inputNode, hiddenNode, outputNode]);
+          const network = Architect.construct([
+            inputNode,
+            hiddenNode,
+            outputNode,
+          ]);
 
           // Assert
           expect({
@@ -515,7 +526,11 @@ describe('Architect', () => {
           const outputNode = new Node('output');
 
           // Act
-          const network = Architect.construct([inputNode, inputNode, outputNode]);
+          const network = Architect.construct([
+            inputNode,
+            inputNode,
+            outputNode,
+          ]);
 
           // Assert
           expect({
@@ -538,7 +553,9 @@ describe('Architect', () => {
           const createNetwork = () => Architect.construct([new Node('hidden')]);
 
           // Assert
-          expect(createNetwork).toThrow(ArchitectInputOutputTypeResolutionError);
+          expect(createNetwork).toThrow(
+            ArchitectInputOutputTypeResolutionError,
+          );
         });
       });
     });
@@ -550,7 +567,9 @@ describe('Architect', () => {
           const createNetwork = () => Architect.construct([new Node('input')]);
 
           // Assert
-          expect(createNetwork).toThrow(ArchitectInputOutputTypeResolutionError);
+          expect(createNetwork).toThrow(
+            ArchitectInputOutputTypeResolutionError,
+          );
         });
       });
     });
@@ -562,7 +581,9 @@ describe('Architect', () => {
           const createNetwork = () => Architect.construct([new Node('output')]);
 
           // Assert
-          expect(createNetwork).toThrow(ArchitectInputOutputTypeResolutionError);
+          expect(createNetwork).toThrow(
+            ArchitectInputOutputTypeResolutionError,
+          );
         });
       });
     });
@@ -617,8 +638,10 @@ describe('Architect', () => {
           const roleCounts = {
             inputNodeIds: network.inputNodeIds.length,
             outputNodeIds: network.outputNodeIds.length,
-            inputNodes: network.nodes.filter((node) => node.type === 'input').length,
-            outputNodes: network.nodes.filter((node) => node.type === 'output').length,
+            inputNodes: network.nodes.filter((node) => node.type === 'input')
+              .length,
+            outputNodes: network.nodes.filter((node) => node.type === 'output')
+              .length,
           };
 
           // Assert
@@ -636,10 +659,15 @@ describe('Architect', () => {
       describe('when constructing the network', () => {
         it('grows that hidden layer to the minimum width', () => {
           // Arrange
-          const network = Architect.perceptron(4, 1, 2) as ArchitectLayeredNetwork;
+          const network = Architect.perceptron(
+            4,
+            1,
+            2,
+          ) as ArchitectLayeredNetwork;
 
           // Act
-          const hiddenLayerSizes = network.describeArchitecture().hiddenLayerSizes;
+          const hiddenLayerSizes =
+            network.describeArchitecture().hiddenLayerSizes;
 
           // Assert
           expect(hiddenLayerSizes).toStrictEqual([3]);
@@ -660,14 +688,16 @@ describe('Architect', () => {
               topologyIntent: builderNetwork.getTopologyIntent(),
               inputNodeIds: builderNetwork.inputNodeIds.length,
               outputNodeIds: builderNetwork.outputNodeIds.length,
-              hiddenLayerSizes: builderNetwork.describeArchitecture().hiddenLayerSizes,
+              hiddenLayerSizes:
+                builderNetwork.describeArchitecture().hiddenLayerSizes,
               hasCycles: builderNetwork.describeArchitecture().hasCycles,
             },
             constructed: {
               topologyIntent: constructedNetwork.getTopologyIntent(),
               inputNodeIds: constructedNetwork.inputNodeIds.length,
               outputNodeIds: constructedNetwork.outputNodeIds.length,
-              hiddenLayerSizes: constructedNetwork.describeArchitecture().hiddenLayerSizes,
+              hiddenLayerSizes:
+                constructedNetwork.describeArchitecture().hiddenLayerSizes,
               hasCycles: constructedNetwork.describeArchitecture().hasCycles,
             },
           };
@@ -773,8 +803,10 @@ describe('Architect', () => {
           const roleCounts = {
             inputNodeIds: network.inputNodeIds.length,
             outputNodeIds: network.outputNodeIds.length,
-            inputNodes: network.nodes.filter((node) => node.type === 'input').length,
-            outputNodes: network.nodes.filter((node) => node.type === 'output').length,
+            inputNodes: network.nodes.filter((node) => node.type === 'input')
+              .length,
+            outputNodes: network.nodes.filter((node) => node.type === 'output')
+              .length,
           };
 
           // Assert
@@ -878,8 +910,8 @@ describe('Architect', () => {
             hiddenNodeCount: network.nodes.filter(
               (candidateNode) => candidateNode.type === 'hidden',
             ).length,
-            recurrentModuleCount: summarizeNarxDelayLines(network)
-              .recurrentModuleCount,
+            recurrentModuleCount:
+              summarizeNarxDelayLines(network).recurrentModuleCount,
           };
 
           // Assert
@@ -983,7 +1015,9 @@ describe('Architect', () => {
           const createNetwork = () => Architect.lstm(2, Number.NaN, 1);
 
           // Assert
-          expect(createNetwork).toThrow(ArchitectInvalidLstmLayerArgumentsError);
+          expect(createNetwork).toThrow(
+            ArchitectInvalidLstmLayerArgumentsError,
+          );
         });
       });
     });
@@ -1007,9 +1041,8 @@ describe('Architect', () => {
           const network = Architect.lstm(2, 3, 1, { inputToOutput: false });
 
           // Act
-          const recurrentSummary = summarizeRecurrentArchitectureBoundary(
-            network,
-          );
+          const recurrentSummary =
+            summarizeRecurrentArchitectureBoundary(network);
 
           // Assert
           expect(recurrentSummary).toStrictEqual({
@@ -1034,9 +1067,8 @@ describe('Architect', () => {
           const network = Architect.lstm(2, 3, 1);
 
           // Act
-          const recurrentSummary = summarizeRecurrentArchitectureBoundary(
-            network,
-          );
+          const recurrentSummary =
+            summarizeRecurrentArchitectureBoundary(network);
 
           // Assert
           expect({
@@ -1130,9 +1162,8 @@ describe('Architect', () => {
           const network = Architect.gru(2, 3, 1);
 
           // Act
-          const recurrentSummary = summarizeRecurrentArchitectureBoundary(
-            network,
-          );
+          const recurrentSummary =
+            summarizeRecurrentArchitectureBoundary(network);
 
           // Assert
           expect({
@@ -1183,9 +1214,8 @@ describe('Architect', () => {
           const network = new Network(2, 1);
 
           // Act
-          const normalizedNetwork = Architect.enforceMinimumHiddenLayerSizes(
-            network,
-          );
+          const normalizedNetwork =
+            Architect.enforceMinimumHiddenLayerSizes(network);
 
           // Assert
           expect(normalizedNetwork).toBe(network);
@@ -1197,7 +1227,11 @@ describe('Architect', () => {
       describe('when normalizing hidden layer sizes', () => {
         it('keeps the existing node and connection counts unchanged', () => {
           // Arrange
-          const network = Architect.perceptron(2, 3, 1) as ArchitectLayeredNetwork;
+          const network = Architect.perceptron(
+            2,
+            3,
+            1,
+          ) as ArchitectLayeredNetwork;
           const beforeNormalization = {
             connections: network.connections.length,
             hiddenNodes: network.layers?.[1]?.nodes.length,
@@ -1221,13 +1255,24 @@ describe('Architect', () => {
       describe('when normalizing hidden layer sizes', () => {
         it('recreates the missing hidden nodes and reconnects both adjacent layers', () => {
           // Arrange
-          const network = Architect.perceptron(3, 3, 2) as ArchitectLayeredNetwork;
+          const network = Architect.perceptron(
+            3,
+            3,
+            2,
+          ) as ArchitectLayeredNetwork;
           const inputLayer = network.layers?.[0];
           const hiddenLayer = network.layers?.[1];
           const outputLayer = network.layers?.[2];
 
-          if (!inputLayer || !hiddenLayer || !outputLayer || !hiddenLayer.output) {
-            throw new Error('Expected the perceptron fixture to expose three layers.');
+          if (
+            !inputLayer ||
+            !hiddenLayer ||
+            !outputLayer ||
+            !hiddenLayer.output
+          ) {
+            throw new Error(
+              'Expected the perceptron fixture to expose three layers.',
+            );
           }
 
           const retainedHiddenNode = hiddenLayer.nodes[0];

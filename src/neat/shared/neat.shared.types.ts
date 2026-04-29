@@ -233,8 +233,8 @@ export interface SpeciationHarnessContext<
   ) => number;
 
   /**
-    * Resolve a fallback innovation id for a connection when a genome has
-    * deliberately opted into compatibility/history fallback mode.
+   * Resolve a fallback innovation id for a connection when a genome has
+   * deliberately opted into compatibility/history fallback mode.
    *
    * @param connection - Connection to extract/derive an innovation identifier from.
    * @returns Numeric innovation identifier.

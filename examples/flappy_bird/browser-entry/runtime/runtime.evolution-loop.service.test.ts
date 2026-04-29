@@ -7,16 +7,19 @@ import {
 describe('resolveGenerationPopulationSize', () => {
   it('prefers the actual generation population length when the worker payload provides the full population', () => {
     expect(
-      resolveGenerationPopulationSize([
-        {} as never,
-        {} as never,
-        {} as never,
-        {} as never,
-        {} as never,
-        {} as never,
-        {} as never,
-        {} as never,
-      ], 30),
+      resolveGenerationPopulationSize(
+        [
+          {} as never,
+          {} as never,
+          {} as never,
+          {} as never,
+          {} as never,
+          {} as never,
+          {} as never,
+          {} as never,
+        ],
+        30,
+      ),
     ).toBe(8);
   });
 
@@ -27,9 +30,7 @@ describe('resolveGenerationPopulationSize', () => {
 
 describe('resolveEvolutionWaitLegendText', () => {
   it('renders a natural-sounding overlay that names the generation being evolved', () => {
-    expect(resolveEvolutionWaitLegendText(7)).toBe(
-      'Evolving Gen 7...',
-    );
+    expect(resolveEvolutionWaitLegendText(7)).toBe('Evolving Gen 7...');
   });
 });
 

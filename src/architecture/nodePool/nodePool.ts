@@ -97,12 +97,10 @@ let freshCount = 0;
  */
 const resetNode = (
   node: Node,
-  type?: string,
+  type: string,
   rng: () => number = Math.random,
 ): void => {
-  if (type) {
-    node.type = type;
-  }
+  node.type = type;
 
   const nodeType = node.type;
   node.bias = nodeType === 'input' ? 0 : rng() * 0.2 - 0.1;

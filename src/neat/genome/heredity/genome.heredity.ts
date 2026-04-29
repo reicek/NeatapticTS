@@ -8,8 +8,7 @@ import type {
 const DEFAULT_HEREDITY_REENABLE_PROBABILITY = 0.25;
 const RANDOM_BINARY_SELECTION_THRESHOLD = 0.5;
 
-interface GenomeConnectionGeneSelectionState
-  extends GenomeHereditySelectionContext {
+interface GenomeConnectionGeneSelectionState extends GenomeHereditySelectionContext {
   parent1GenesByInnovation: Record<string, NeatGenomeConnectionGene>;
   parent2GenesByInnovation: Record<string, NeatGenomeConnectionGene>;
 }
