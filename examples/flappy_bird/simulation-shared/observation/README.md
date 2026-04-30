@@ -108,16 +108,26 @@ resolveObservationVectorFromFeatures(
 ): number[]
 ```
 
-Converts observation features to the canonical 6-value network input vector.
+Converts observation features to the canonical 9-value network input vector.
 
 Educational note:
 This module owns the network-shape projection so feature semantics can change
 independently from how the policy input is ordered.
 
-The 6-value vector is the compact feed-forward policy input used by the main
-evaluation and training flow. Its ordering is stable on purpose: once a
-network topology has evolved against one input layout, silent channel
-reshuffles would invalidate learned behavior.
+The 9-value vector is grouped into three semantic families:
+
+**Bird state (indices 0–1):** normalized height and vertical velocity.
+
+**Next gap (indices 2–5):** distance to pipe exit, signed offset from gap
+center, normalized gap top and bottom boundaries.
+
+**Look-ahead (indices 6–8):** signed distance to pipe entrance (negative
+while inside the pipe body), signed in-gap clearance (how centered the bird
+is right now), and signed offset from the second upcoming gap center.
+
+Its ordering is stable on purpose: once a network topology has evolved
+against one input layout, silent channel reshuffles would invalidate learned
+behavior.
 
 Parameters:
 - `features` - Structured feature object.
@@ -129,6 +139,7 @@ Example:
 ```ts
 const features = resolveObservationFeatures(input);
 const networkInput = resolveObservationVectorFromFeatures(features);
+// networkInput.length === 9
 ```
 
 ### resolveUpcomingPipes
@@ -353,16 +364,26 @@ resolveObservationVectorFromFeatures(
 ): number[]
 ```
 
-Converts observation features to the canonical 6-value network input vector.
+Converts observation features to the canonical 9-value network input vector.
 
 Educational note:
 This module owns the network-shape projection so feature semantics can change
 independently from how the policy input is ordered.
 
-The 6-value vector is the compact feed-forward policy input used by the main
-evaluation and training flow. Its ordering is stable on purpose: once a
-network topology has evolved against one input layout, silent channel
-reshuffles would invalidate learned behavior.
+The 9-value vector is grouped into three semantic families:
+
+**Bird state (indices 0–1):** normalized height and vertical velocity.
+
+**Next gap (indices 2–5):** distance to pipe exit, signed offset from gap
+center, normalized gap top and bottom boundaries.
+
+**Look-ahead (indices 6–8):** signed distance to pipe entrance (negative
+while inside the pipe body), signed in-gap clearance (how centered the bird
+is right now), and signed offset from the second upcoming gap center.
+
+Its ordering is stable on purpose: once a network topology has evolved
+against one input layout, silent channel reshuffles would invalidate learned
+behavior.
 
 Parameters:
 - `features` - Structured feature object.
@@ -374,4 +395,5 @@ Example:
 ```ts
 const features = resolveObservationFeatures(input);
 const networkInput = resolveObservationVectorFromFeatures(features);
+// networkInput.length === 9
 ```

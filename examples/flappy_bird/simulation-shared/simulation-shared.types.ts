@@ -185,6 +185,27 @@ export interface SharedObservationFeatures {
   /** Signed next-gap clearance in [-1, 1]. */
   normalizedNextGapClearance: number;
 
+  /**
+   * Signed distance from the bird's right edge to the pipe's left entrance
+   * edge, normalized to [-1, 1].
+   *
+   * Positive values mean the pipe is still ahead. The signal crosses zero at
+   * the moment the bird's nose touches the pipe body and goes negative while
+   * the bird is traversing the pipe — a clear in-pipe signal absent from the
+   * other channels.
+   */
+  normalizedDistanceToPipeEntrance: number;
+
+  /**
+   * Signed vertical offset from the *second* upcoming gap center, normalized
+   * to [-1, 1].
+   *
+   * Provides the network a reason to plan ahead: if the second pipe sits at a
+   * different height the agent must start repositioning before fully clearing
+   * the first one.
+   */
+  normalizedDeltaToSecondGap: number;
+
   /** Required vertical velocity to center next gap normalized to [-1, 1]. */
   normalizedRequiredVerticalVelocityToNextGap: number;
 

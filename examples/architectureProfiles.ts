@@ -123,7 +123,7 @@ type ExampleArchitectureProfileDefinition = {
 
 /** Default shared profile id for Flappy Bird until the browser selector lands. */
 export const DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID: ExampleArchitectureProfileId =
-  'mlp';
+  'random-sparse';
 
 /** Default shared profile id for ASCII Maze when a builder-backed seed is requested. */
 export const DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID: ExampleArchitectureProfileId =

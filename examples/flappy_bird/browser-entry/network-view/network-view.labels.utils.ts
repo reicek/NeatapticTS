@@ -105,6 +105,48 @@ const FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS: readonly FlappyInputLabelGroupDefini
       backgroundColor: FLAPPY_LIGHT_NEON_RAMP[2],
       orientation: 'vertical',
     },
+    {
+      label: FLAPPY_INPUT_GROUP_LABELS[2] ?? 'LOOK AHEAD',
+      labelLines: ['LOOK', 'AHEAD'],
+      tooltipHeading: 'Look Ahead',
+      tooltipBodyParagraphs: [
+        'This group gives the network three planning-oriented signals that complement the immediate next-gap geometry.',
+        'The pipe entrance distance crosses zero the moment the bird enters the pipe body and goes negative while the bird is traversing it — a signal the other channels cannot provide.',
+        'Gap clearance says how well-centred the bird currently is inside the opening, creating pressure to maintain position rather than drift.',
+        'The second-gap offset introduces a lookahead horizon: if the next obstacle sits at a different height the network can start repositioning early instead of reacting late.',
+      ],
+      nodeDescriptionDefinitions: [
+        {
+          labelLines: ['Pipe entrance dist'],
+          tooltipHeading: 'Pipe Entrance Distance',
+          tooltipBodyParagraphs: [
+            'Pipe entrance distance measures the signed gap between the front of the bird and the left edge of the next pipe.',
+            'The value is positive while the pipe is still ahead, crosses zero when the bird enters, and goes negative while the bird is inside the pipe body.',
+            "That negative region gives the controller an unambiguous 'currently traversing' signal that the pipe-exit distance and gap-offset channels alone cannot supply.",
+          ],
+        },
+        {
+          labelLines: ['Gap clearance'],
+          tooltipHeading: 'Gap Clearance',
+          tooltipBodyParagraphs: [
+            'Gap clearance measures how centred the bird currently is inside the next gap opening.',
+            'A value near +1 means the bird is well inside the safe corridor; a value near 0 means it is on the edge; a negative value means it has already crossed the gap boundary.',
+            'Unlike the gap-offset channel, clearance is symmetric around the corridor centre so the controller gets a direct safety margin reading rather than a directional correction signal.',
+          ],
+        },
+        {
+          labelLines: ['2nd gap offset'],
+          tooltipHeading: 'Second Gap Offset',
+          tooltipBodyParagraphs: [
+            'Second gap offset measures the signed vertical difference between the bird and the centre of the second upcoming pipe opening.',
+            'When the two gaps are at similar heights this channel is near zero and the controller can safely hold position.',
+            'When the second gap sits noticeably higher or lower, this signal motivates early repositioning before the first pipe is even cleared — the key missing ingredient for smooth sequential navigation.',
+          ],
+        },
+      ],
+      backgroundColor: FLAPPY_LIGHT_NEON_RAMP[4],
+      orientation: 'vertical',
+    },
   ] as const;
 
 /**

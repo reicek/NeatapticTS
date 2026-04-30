@@ -101,7 +101,7 @@ export function resolveObservationFeatures(
     input.normalizationEpsilon ?? FLAPPY_SHARED_DEFAULT_NORMALIZATION_EPSILON;
 
   // Step 2: Resolve next-pipe geometry used by all near-term features.
-  const [nextPipe] = resolveUpcomingPipes(
+  const [nextPipe, secondPipe] = resolveUpcomingPipes(
     input.pipes,
     birdCenterXPx,
     birdRadiusPx,
@@ -221,6 +221,21 @@ export function resolveObservationFeatures(
     1,
   );
 
+  // Step 3b: Resolve look-ahead features — entrance signal and second-pipe planning.
+  const normalizedDistanceToPipeEntrance = clamp(
+    distanceToGapEntryPx / input.visibleWorldWidthPx,
+    -1,
+    1,
+  );
+
+  const secondGapCenterYPx =
+    secondPipe?.gapCenterYPx ?? worldHeightPx * 0.5;
+  const normalizedDeltaToSecondGap = clamp(
+    (input.birdYPx - secondGapCenterYPx) / worldHeightPx,
+    -1,
+    1,
+  );
+
   const predictedBirdYAtEntryWithoutFlap = resolvePredictedBirdYAtFrames(
     input.birdYPx,
     input.velocityYPxPerFrame,
@@ -251,6 +266,8 @@ export function resolveObservationFeatures(
     normalizedNextGapBottom,
     normalizedTimeToNextPipe,
     normalizedNextGapClearance,
+    normalizedDistanceToPipeEntrance,
+    normalizedDeltaToSecondGap,
     normalizedRequiredVerticalVelocityToNextGap,
     normalizedFramesToGapEntry,
     normalizedFramesToGapExit,

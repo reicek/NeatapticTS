@@ -11,8 +11,10 @@ const SAMPLE_OBSERVATION_FEATURES: SharedObservationFeatures = {
   normalizedDeltaToNextGap: -0.4,
   normalizedNextGapTop: 0.5,
   normalizedNextGapBottom: 0.6,
-  normalizedTimeToNextPipe: 0.9,
+  normalizedDistanceToPipeEntrance: 0.25,
   normalizedNextGapClearance: -0.1,
+  normalizedDeltaToSecondGap: -0.3,
+  normalizedTimeToNextPipe: 0.9,
   normalizedRequiredVerticalVelocityToNextGap: 0.2,
   normalizedFramesToGapEntry: 0.4,
   normalizedFramesToGapExit: 0.5,
@@ -23,10 +25,10 @@ const SAMPLE_OBSERVATION_FEATURES: SharedObservationFeatures = {
 };
 
 describe('resolveObservationVectorFromFeatures', () => {
-  it('keeps only bird-state and next-gap channels in the public controller input', () => {
+  it('keeps bird-state, next-gap, and look-ahead channels in the public controller input', () => {
     expect(
       resolveObservationVectorFromFeatures(SAMPLE_OBSERVATION_FEATURES),
-    ).toEqual([0.1, -0.2, 0.3, -0.4, 0.5, 0.6]);
+    ).toEqual([0.1, -0.2, 0.3, -0.4, 0.5, 0.6, 0.25, -0.1, -0.3]);
   });
 });
 

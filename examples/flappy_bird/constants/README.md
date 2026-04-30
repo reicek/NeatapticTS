@@ -454,10 +454,19 @@ top of its learned state.
 
 Number of compact current-frame observation features fed into Flappy policies.
 
-The controller keeps only bird-state and next-gap geometry on the public
-input shelf. Higher-level control-pressure hints remain available as derived
-features for shaping and heuristics, but they are no longer wired directly
-into the network input.
+The nine channels are split into three semantic groups:
+
+**Bird state (2):** normalized height and vertical velocity — the controller's
+body-state check before any pipe geometry matters.
+
+**Next gap (4):** distance to the pipe exit, signed vertical offset from the
+gap center, normalized top and bottom boundaries of the safe corridor.
+
+**Look-ahead (3):** signed distance to the pipe *entrance* (goes negative
+while the bird is traversing the pipe body, giving a clear in-pipe signal),
+signed gap clearance (how centered the bird currently is inside the opening),
+and signed vertical offset from the *second* upcoming gap center (gives
+the network a reason to plan ahead instead of staying level).
 
 ### FLAPPY_MEMORY_STACKED_FRAME_COUNT
 
@@ -1730,10 +1739,19 @@ top of its learned state.
 
 Number of compact current-frame observation features fed into Flappy policies.
 
-The controller keeps only bird-state and next-gap geometry on the public
-input shelf. Higher-level control-pressure hints remain available as derived
-features for shaping and heuristics, but they are no longer wired directly
-into the network input.
+The nine channels are split into three semantic groups:
+
+**Bird state (2):** normalized height and vertical velocity — the controller's
+body-state check before any pipe geometry matters.
+
+**Next gap (4):** distance to the pipe exit, signed vertical offset from the
+gap center, normalized top and bottom boundaries of the safe corridor.
+
+**Look-ahead (3):** signed distance to the pipe *entrance* (goes negative
+while the bird is traversing the pipe body, giving a clear in-pipe signal),
+signed gap clearance (how centered the bird currently is inside the opening),
+and signed vertical offset from the *second* upcoming gap center (gives
+the network a reason to plan ahead instead of staying level).
 
 ### FLAPPY_MEMORY_STACKED_FRAME_COUNT
 

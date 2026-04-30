@@ -315,6 +315,15 @@ describe('resolveInputGroupLabelBands', () => {
         tooltipBodyParagraphCount: 3,
         tooltipHeading: 'Next Gap',
       },
+      {
+        endNodeIndex: 8,
+        label: 'LOOK AHEAD',
+        labelLines: ['LOOK', 'AHEAD'],
+        orientation: 'vertical',
+        startNodeIndex: 6,
+        tooltipBodyParagraphCount: 4,
+        tooltipHeading: 'Look Ahead',
+      },
     ]);
   });
 });
@@ -366,6 +375,24 @@ describe('resolveInputNodeDescriptionLabels', () => {
         nodeIndex: 5,
         tooltipBodyParagraphCount: 2,
         tooltipHeading: 'Next Gap Bottom',
+      },
+      {
+        labelLines: ['Pipe entrance dist'],
+        nodeIndex: 6,
+        tooltipBodyParagraphCount: 3,
+        tooltipHeading: 'Pipe Entrance Distance',
+      },
+      {
+        labelLines: ['Gap clearance'],
+        nodeIndex: 7,
+        tooltipBodyParagraphCount: 3,
+        tooltipHeading: 'Gap Clearance',
+      },
+      {
+        labelLines: ['2nd gap offset'],
+        nodeIndex: 8,
+        tooltipBodyParagraphCount: 3,
+        tooltipHeading: 'Second Gap Offset',
       },
     ]);
   });
