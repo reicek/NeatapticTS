@@ -40,8 +40,14 @@ export const FLAPPY_PIPE_GAP_MIN_PX =
   FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME * FLAPPY_TARGET_FLAP_INTERVAL_FRAMES +
   FLAPPY_MIN_CLEARANCE_MARGIN_PX;
 
-/** Initial spawn gap multiplier relative to the current hardest gap target. */
-export const FLAPPY_PIPE_GAP_START_MULTIPLIER = 2.15;
+/**
+ * Initial spawn gap multiplier relative to the current hardest gap target.
+ *
+ * A larger multiplier makes the very first pipes noticeably easier and produces
+ * a more visible difficulty gradient as the gap narrows toward its target.
+ * The value is 20 % wider than the original 2.15 baseline.
+ */
+export const FLAPPY_PIPE_GAP_START_MULTIPLIER = 2.58;
 
 /** Per-pipe gap shrink step toward the current hardest target gap (pixels). */
 export const FLAPPY_PIPE_GAP_SHRINK_PER_PIPE_PX = 10;

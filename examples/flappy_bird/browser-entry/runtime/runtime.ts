@@ -8,6 +8,7 @@ import {
   createRuntimeLifecycleState,
   createRuntimeRunHandle,
 } from './runtime.lifecycle.service';
+import { persistRuntimeArchitectureHistory } from './runtime.architecture-profile.service';
 import {
   createRuntimeStartContext,
   initializeRuntimeHud,
@@ -85,6 +86,32 @@ async function startRuntimeSession(
     container,
     {
       ...runtimeStartOptions,
+      onResetScores: (): void => {
+        if (
+          queuedRestartProfileId ||
+          runtimeLifecycleState?.stopped ||
+          !runtimeRunHandle
+        ) {
+          return;
+        }
+
+        // Clear persisted history so the next session starts with clean captions.
+        persistRuntimeArchitectureHistory({});
+
+        const currentProfileId =
+          runtimeStartContext.config.selectedArchitectureProfile.id;
+        queuedRestartProfileId = currentProfileId;
+        runtimeStartContext.viewContext.architectureSelectorController.setDisabled(
+          true,
+        );
+
+        runtimeRunHandle.stop();
+        void runtimeRunHandle.done.then(() => {
+          void startRuntimeSession(runtimeStartContext.hostElement, {
+            architectureProfileId: currentProfileId,
+          }).catch(() => undefined);
+        });
+      },
       onSelectArchitectureProfile: (profileId): void => {
         if (
           queuedRestartProfileId ||

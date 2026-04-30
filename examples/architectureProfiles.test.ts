@@ -75,7 +75,7 @@ describe('shared example architecture profiles', () => {
       expect({
         ...approvedProfileIds,
       }).toEqual({
-        ascii: ['mlp'],
+        ascii: ['mlp', 'narx', 'gru', 'lstm'],
         flappy: ['mlp', 'random-sparse', 'narx', 'gru', 'lstm'],
       });
     });
@@ -196,6 +196,63 @@ describe('shared example architecture profiles', () => {
 
         // Assert
         expect(captureStrictGenome).not.toThrow();
+      });
+    });
+
+    describe('when the profile is the ASCII Maze NARX preset', () => {
+      it('builds a network with the correct ASCII Maze I/O shape', () => {
+        // Arrange
+        const asciiNarxNetwork = buildExampleArchitectureProfileNetwork(
+          'ascii-maze',
+          'narx',
+        );
+
+        // Assert
+        expect({
+          inputNodeIds: asciiNarxNetwork.inputNodeIds.length,
+          outputNodeIds: asciiNarxNetwork.outputNodeIds.length,
+        }).toEqual({
+          inputNodeIds: 6,
+          outputNodeIds: 4,
+        });
+      });
+    });
+
+    describe('when the profile is the ASCII Maze GRU preset', () => {
+      it('builds a network with the correct ASCII Maze I/O shape', () => {
+        // Arrange
+        const asciiGruNetwork = buildExampleArchitectureProfileNetwork(
+          'ascii-maze',
+          'gru',
+        );
+
+        // Assert
+        expect({
+          inputNodeIds: asciiGruNetwork.inputNodeIds.length,
+          outputNodeIds: asciiGruNetwork.outputNodeIds.length,
+        }).toEqual({
+          inputNodeIds: 6,
+          outputNodeIds: 4,
+        });
+      });
+    });
+
+    describe('when the profile is the ASCII Maze LSTM preset', () => {
+      it('builds a network with the correct ASCII Maze I/O shape', () => {
+        // Arrange
+        const asciiLstmNetwork = buildExampleArchitectureProfileNetwork(
+          'ascii-maze',
+          'lstm',
+        );
+
+        // Assert
+        expect({
+          inputNodeIds: asciiLstmNetwork.inputNodeIds.length,
+          outputNodeIds: asciiLstmNetwork.outputNodeIds.length,
+        }).toEqual({
+          inputNodeIds: 6,
+          outputNodeIds: 4,
+        });
       });
     });
   });

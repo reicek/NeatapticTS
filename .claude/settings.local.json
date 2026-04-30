@@ -19,7 +19,9 @@
       "Bash(grep -A 40 \"methods\\\\\\\\\\\\\\\\methods.ts\" /c/NeatapticTS/coverage/lcov.info)",
       "Read(//c/Users/reice/AppData/Local/Temp/claude/c--NeatapticTS/d6e9debc-94b7-43c3-bd32-df4d081f7e5f/tasks/**)",
       "Bash(npx ts-node *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(node node_modules/.bin/jest --config=jest.config.mjs \"flappy-evolution-worker.runtime.service.test\")",
+      "WebSearch"
     ]
   }
 }

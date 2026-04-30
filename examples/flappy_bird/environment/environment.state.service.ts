@@ -30,7 +30,6 @@ import type { FlappyGameState } from './environment.types';
  * @returns Initial state for one deterministic rollout.
  */
 export function createInitialFlappyState(rng: FlappyRng): FlappyGameState {
-  const initialGapCenterYPx = sampleGapCenterY(rng);
   const initialDifficultyProfile = resolveAdaptiveDifficultyProfile(
     0,
     FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE,
@@ -40,6 +39,7 @@ export function createInitialFlappyState(rng: FlappyRng): FlappyGameState {
     initialDifficultyProfile,
     rng,
   );
+  const initialGapCenterYPx = sampleGapCenterY(rng, initialGapSizePx);
   const initialSpawnIntervalFrames = resolveNextSpawnIntervalFrames(
     undefined,
     initialDifficultyProfile,

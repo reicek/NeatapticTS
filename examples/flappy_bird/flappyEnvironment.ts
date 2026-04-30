@@ -37,15 +37,19 @@ export {
 /**
  * Sample a gap center height inside configured bounds.
  *
- * This root-level helper exists as a convenience export. The underlying spawn
- * logic lives in the shared simulation layer so browser playback and evaluation
- * use the same world-generation rules.
+ * The center is bounded so the gap opening always keeps at least the configured
+ * edge margin as solid pipe on each side, preventing clipping into the canvas
+ * boundary even when the initial wide gap is active.
  *
  * @param rng - Random source.
+ * @param currentGapSizePx - Actual gap size for the pipe being placed.
  * @returns Gap center y coordinate (pixels).
  */
-export function sampleGapCenterY(rng: FlappyRng): number {
-  return sampleSharedGapCenterY(rng);
+export function sampleGapCenterY(
+  rng: FlappyRng,
+  currentGapSizePx: number,
+): number {
+  return sampleSharedGapCenterY(rng, currentGapSizePx);
 }
 
 /**
@@ -53,15 +57,22 @@ export function sampleGapCenterY(rng: FlappyRng): number {
  *
  * Keeping consecutive gap centers locally smooth prevents the environment from
  * generating visually unfair jumps that a feed-forward policy could not react to
- * consistently.
+ * consistently. The center is additionally bounded per the gap size so the
+ * opening never clips the canvas edge.
  *
  * @param previousGapCenterYPx - Previous spawned gap-center y value.
  * @param rng - Random source.
+ * @param currentGapSizePx - Actual gap size for the pipe being placed.
  * @returns Next gap-center y constrained by transition and world bounds.
  */
 export function resolveNextSpawnGapCenterY(
   previousGapCenterYPx: number,
   rng: FlappyRng,
+  currentGapSizePx: number,
 ): number {
-  return resolveSharedNextSpawnGapCenterY(previousGapCenterYPx, rng);
+  return resolveSharedNextSpawnGapCenterY(
+    previousGapCenterYPx,
+    rng,
+    currentGapSizePx,
+  );
 }

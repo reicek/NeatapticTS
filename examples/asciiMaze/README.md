@@ -309,6 +309,56 @@ const result = await EvolutionEngine.runMazeEvolution({
 console.log(result.exitReason, result.bestResult?.progress);
 ```
 
+## Architecture Profiles
+
+ASCII Maze supports the shared [example architecture profile contract](../architectureProfiles.ts) so population seeding can come from any approved builder family rather than only raw NEAT initialization.
+
+Every fresh-start run seeds from the **MLP baseline profile by default**. You can override this by passing an explicit `architectureProfileId` through `evolutionAlgorithmConfig`.
+
+```ts
+const result = await EvolutionEngine.runMazeEvolution({
+  mazeConfig: { maze: new MazeGenerator(24, 24).generate() },
+  agentSimConfig: { maxSteps: 2000 },
+  evolutionAlgorithmConfig: {
+    popSize: 40,
+    maxGenerations: 100,
+    architectureProfileId: 'narx', // or 'mlp', 'gru', 'lstm'
+  },
+  reportingConfig: { dashboardManager: dashboard, logEvery: 1 },
+});
+
+console.log(result.architectureProfileId); // the profile that seeded the run
+```
+
+### Approved profiles for ASCII Maze
+
+| Profile id | Family | Recurrent | Role |
+| --- | --- | --- | --- |
+| `mlp` | MLP | No | Baseline feed-forward reference. Dense connectivity from fixed 6-value observation to 4 directional outputs. |
+| `narx` | NARX | Yes | Delay-line memory profile. Carries short-horizon sequences of inputs and outputs into hidden state without gating. Useful when position history helps navigation. |
+| `gru` | GRU | Yes | Pedagogical gated-memory profile. Recurrent blocks learn what to keep and forget. Practical for tasks that benefit from longer-horizon internal state. |
+| `lstm` | LSTM | Yes | Pedagogical gated-memory profile with explicit cell state. Structurally heavier than GRU but exposes the full gating vocabulary for teaching purposes. |
+
+The `random-sparse` profile is not approved for this demo because the maze's compact six-value observation already constrains useful topology; sparse random connectivity is a better topological starting point for higher-dimensional control problems.
+
+### Recurrent profile guidance
+
+When you run a stateful profile (NARX, GRU, LSTM), the evolution engine already resets carried network state at the start of each rollout episode. You do not need to clear state manually inside the evolution loop. For curriculum runs, winner carry-over across phases preserves network weights but resets activation history at each new phase boundary.
+
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Profile["architectureProfileId\n'mlp' | 'narx' | 'gru' | 'lstm'"]:::accent --> Builder["buildExampleArchitectureProfileNetwork\n(ascii-maze, profileId)"]:::base
+  Builder --> Seed["seed network\ntemplate for NEAT population"]:::base
+  Seed --> NEAT["Neat constructor\npopSize genomes derived from seed"]:::base
+  NEAT --> Loop["generation loop\neach episode resets recurrent state"]:::base
+  Loop --> Result["MazeEvolutionRunResult\n.architectureProfileId preserved"]:::accent
+```
+
+The resolved profile id is available on the returned `MazeEvolutionRunResult.architectureProfileId` field so curriculum orchestrators, telemetry consumers, and archive records can identify which builder family seeded the run.
+
 ## Safe Tuning Knobs
 
 If you are teaching, benchmarking, or experimenting, these are usually the highest-value first changes:

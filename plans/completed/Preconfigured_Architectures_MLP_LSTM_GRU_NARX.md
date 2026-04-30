@@ -1,6 +1,6 @@
 # Preconfigured Architectures (MLP + Sequence Builders) Plan
 
-**Status:** [WIP]
+**Status:** [DONE]
 
 ## Purpose
 
@@ -36,8 +36,9 @@ Provide a set of **high-quality, preconfigured architecture builders** that are:
 - [DONE] Step 6: the shared demo architecture-profile contract is landed through one shared example profile registry.
 - [DONE] Step 7: Flappy Bird now starts fresh worker-backed runs from multiple shared architecture profiles through a browser selector, explicit worker/HUD profile labels, and browser-local per-profile best-score tracking.
 - [DONE] Early Step 8 slice: ASCII Maze now accepts an additive `architectureProfileId` option that threads the shared contract into its evolution-engine and NEAT setup path.
-- [WIP] Current active frontier: Step 8 default ASCII profile rollout and telemetry/archive metadata.
-- [PLANNED] Remaining closeout: Step 8 default ASCII profile rollout and telemetry/archive metadata, Step 9 cross-demo e2e matrix, and Step 10 demo documentation.
+- [DONE] Step 8: ASCII Maze default profile rollout and telemetry/archive metadata. NARX, GRU, LSTM approved for ASCII Maze; MLP is the default seed profile on fresh starts; architectureProfileId threaded through MazeEvolutionRunResult and BrowserEntryCurriculumContext; structuredClone polyfill added to jest-setup for jsdom environment.
+- [DONE] Step 9: cross-demo e2e matrix. ASCII Maze NARX/GRU/LSTM profile network shape tests added to architectureProfiles.test.ts; optionsAndSetup.test.ts covers default profile, explicit NARX/GRU/LSTM profiles, and population-override suppression.
+- [DONE] Step 10: demo documentation. ASCII Maze README and Flappy Bird README both document the approved architecture profile families, usage patterns, recurrent state guidance, and Mermaid flow diagrams.
 
 ## Architecture set (initial)
 
@@ -241,7 +242,7 @@ Acceptance:
 
 - Flappy Bird can start a clean new run from multiple curated architecture profiles, the selected profile is visible in the host UI, worker init path, and runtime stats, and the browser UI preserves per-architecture best scores locally with a visible leader marker.
 
-### [PLANNED] Step 8 — ASCII Maze demo integration
+### [DONE] Step 8 — ASCII Maze demo integration
 
 - Add the same architecture-profile contract to the ASCII Maze evolution engine so population seeding can come from approved builders rather than only raw input/output seeding or externally injected networks.
 - Keep ASCII Maze focused on library-backed seed selection, telemetry, curriculum, and polish improvements rather than mirroring Flappy Bird's button-driven architecture chooser.
@@ -262,7 +263,7 @@ Acceptance:
 
 - ASCII Maze can start from builder-backed profiles without custom demo-only wiring, and run metadata preserves which architecture family seeded the curriculum.
 
-### [PLANNED] Step 9 — Cross-demo e2e matrix
+### [DONE] Step 9 — Cross-demo e2e matrix
 
 - Add demo-level regression coverage that treats builder-backed seed profiles as part of the supported public story.
 - Minimum matrix for closing this lane:
@@ -286,7 +287,7 @@ Acceptance:
 
 - Builder regressions surface in demo-level tests quickly enough that the demos meaningfully extend the library’s end-to-end coverage.
 
-### [PLANNED] Step 10 — Demo documentation and comparison guidance
+### [DONE] Step 10 — Demo documentation and comparison guidance
 
 - Update both demo READMEs to explain which architecture profiles they expose and why.
 - Document which architecture families are approved as:

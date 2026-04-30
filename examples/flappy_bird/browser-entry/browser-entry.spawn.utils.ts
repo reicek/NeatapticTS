@@ -16,15 +16,18 @@ import type { BrowserDifficultyProfile, RngLike } from './browser-entry.types';
  * Samples a random gap center y-position.
  *
  * @param rng - Deterministic RNG.
+ * @param currentGapSizePx - Actual gap size for the pipe being placed.
  * @param worldHeightPx - World height used to derive valid gap-center bounds.
  * @returns Sampled y-position.
  */
 export function sampleGapCenterY(
   rng: RngLike,
+  currentGapSizePx: number,
   worldHeightPx: number = FLAPPY_WORLD_HEIGHT_PX,
 ): number {
   return sampleSharedGapCenterY(
     rng,
+    currentGapSizePx,
     resolveGapCenterUpperBoundYPx(worldHeightPx),
   );
 }
@@ -34,17 +37,20 @@ export function sampleGapCenterY(
  *
  * @param previousGapCenterYPx - Previous spawn gap center.
  * @param rng - Deterministic RNG.
+ * @param currentGapSizePx - Actual gap size for the pipe being placed.
  * @param worldHeightPx - World height used to clamp candidate gap centers.
  * @returns Next gap center y-position.
  */
 export function resolveNextSpawnGapCenterY(
   previousGapCenterYPx: number,
   rng: RngLike,
+  currentGapSizePx: number,
   worldHeightPx: number = FLAPPY_WORLD_HEIGHT_PX,
 ): number {
   return resolveSharedNextSpawnGapCenterY(
     previousGapCenterYPx,
     rng,
+    currentGapSizePx,
     resolveGapCenterUpperBoundYPx(worldHeightPx),
   );
 }

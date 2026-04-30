@@ -70,4 +70,5 @@ export type DenseShapingRewardComponents = {
   centeringProgressReward: number;
   clearanceReward: number;
   velocityStabilityReward: number;
+  gapCenteringQualityReward: number;
 };

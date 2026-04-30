@@ -172,11 +172,11 @@ describe('createInitializedWorkerRuntime', () => {
   it.each([
     {
       architectureProfileId: 'narx' as const,
-      expectedSharedSeedCount: 1,
+      expectedSharedSeedCount: 3,
     },
     {
       architectureProfileId: 'gru' as const,
-      expectedSharedSeedCount: 1,
+      expectedSharedSeedCount: 3,
     },
     {
       architectureProfileId: 'lstm' as const,
@@ -224,7 +224,7 @@ describe('createInitializedWorkerRuntime', () => {
           normalizeFitness: true,
           pipeProgressTarget: 12,
         },
-        resolvedFitness: 20_145,
+        resolvedFitness: 20_316,
         sharedSeedCount: expectedSharedSeedCount,
         singleRolloutCallCount: 0,
       });

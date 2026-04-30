@@ -15,6 +15,7 @@ import {
 import {
   DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
   buildExampleArchitectureProfileNetwork,
+  resolveExampleArchitectureProfile,
 } from '../../architectureProfiles';
 import {
   FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT,
@@ -22,6 +23,14 @@ import {
   FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE,
   FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE,
 } from './trainer.constants';
+
+const FLAPPY_TRAINER_RECURRENT_MUTATION_METHODS = [
+  ...methods.mutation.FFW,
+  methods.mutation.ADD_BACK_CONN,
+  methods.mutation.SUB_BACK_CONN,
+  methods.mutation.ADD_SELF_CONN,
+  methods.mutation.SUB_SELF_CONN,
+];
 import type {
   FlappyTrainerNeatController,
   FlappyTrainerRuntimeState,
@@ -39,8 +48,11 @@ import type {
  * @returns Default trainer setup values used for NEAT configuration.
  */
 export function createTrainerSetup(): FlappyTrainerSetup {
+  const profileId = DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID;
+  const resolvedProfile = resolveExampleArchitectureProfile('flappy-bird', profileId);
   return {
-    architectureProfileId: DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
+    architectureProfileId: profileId,
+    isRecurrent: resolvedProfile.recurrent,
     inputSize: FLAPPY_NETWORK_INPUT_SIZE,
     outputSize: FLAPPY_NETWORK_OUTPUT_SIZE,
     populationSize: FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE,
@@ -83,6 +95,10 @@ export function createTrainerRuntimeState(): FlappyTrainerRuntimeState {
 export function createNeatController(
   trainerSetup: FlappyTrainerSetup,
 ): FlappyTrainerNeatController {
+  const resolvedProfile = resolveExampleArchitectureProfile(
+    'flappy-bird',
+    trainerSetup.architectureProfileId,
+  );
   const seedNetwork = buildExampleArchitectureProfileNetwork(
     'flappy-bird',
     trainerSetup.architectureProfileId,
@@ -96,8 +112,10 @@ export function createNeatController(
       elitism: trainerSetup.elitismCount,
       mutationRate: FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE,
       mutationAmount: FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_AMOUNT,
-      allowRecurrent: false,
-      mutation: methods.mutation.FFW,
+      allowRecurrent: resolvedProfile.recurrent,
+      mutation: resolvedProfile.recurrent
+        ? FLAPPY_TRAINER_RECURRENT_MUTATION_METHODS
+        : methods.mutation.FFW,
       network: seedNetwork,
       fitnessPopulation: true,
       speciation: true,

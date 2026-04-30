@@ -64,6 +64,7 @@ export function createRuntimeStartContext(
       }),
       onSelectArchitectureProfile:
         runtimeStartOptions.onSelectArchitectureProfile,
+      onResetScores: runtimeStartOptions.onResetScores,
     }),
     runtimeTelemetryState: createRuntimeTelemetryState(),
     evolutionWorker: createEvolutionWorker(),

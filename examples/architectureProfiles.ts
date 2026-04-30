@@ -175,7 +175,7 @@ const EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS: Record<
       'Delay-line state profile for short-horizon sequence and control tasks.',
     recurrent: true,
     approvalByDemoId: {
-      'ascii-maze': false,
+      'ascii-maze': true,
       'flappy-bird': true,
     },
     resolveConfiguration: (demoId) =>
@@ -205,7 +205,7 @@ const EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS: Record<
       'Pedagogical recurrent block profile for tasks that benefit from carried state.',
     recurrent: true,
     approvalByDemoId: {
-      'ascii-maze': false,
+      'ascii-maze': true,
       'flappy-bird': true,
     },
     resolveConfiguration: (demoId) =>
@@ -232,7 +232,7 @@ const EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS: Record<
       'Pedagogical gated-memory profile for tasks that need longer carry-over state.',
     recurrent: true,
     approvalByDemoId: {
-      'ascii-maze': false,
+      'ascii-maze': true,
       'flappy-bird': true,
     },
     resolveConfiguration: (demoId) =>

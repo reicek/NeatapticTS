@@ -40,7 +40,7 @@ Active selection guide:
 - [plans/Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md): stable export schema for visualization and inspection tooling.
 - [plans/ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): ONNX export/import architecture and rollout phases.
 - [plans/Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md): checkpointing, persistence, save/resume workflows.
-- [plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): prebuilt architecture constructors and sequence-oriented builders.
+- [plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): prebuilt architecture constructors and sequence-oriented builders. [DONE]
 - [plans/Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md): parallel evaluation API for Node and browser workers.
 - [plans/Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md): fast serialization path for worker-based evaluation.
 - [plans/NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md): NEAT Genesis EvoDevo (NGE) — evo-devo algorithm with computation motifs, memory architecture, neuromodulation, and reproduction system.
@@ -59,7 +59,7 @@ Task-to-plan trigger phrases:
 - workers, threads, parallel evaluation: `plans/Turnkey_Multithread_Evaluation_API.md`
 - checkpoint, resume, save population: `plans/Population_Save_Resume_and_Checkpointing.md`
 - hybrid evolution plus training, optimizer handoff: `plans/Evolution_Training_Interoperability_Contracts.md`
-- preconfigured models, MLP, LSTM, GRU, NARX builders: `plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
+- preconfigured models, MLP, LSTM, GRU, NARX builders: `plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
 - ONNX, import/export interoperability: `plans/ONNX_EXPORT_PLAN.md`
 - memory pressure, large networks, compact storage: `plans/Memory_Optimization.md`
 - visualization, schema, inspect network shape: `plans/Network_Visualization_Export_Schema.md`

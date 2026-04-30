@@ -24,7 +24,7 @@ const FLAPPY_RECURRENT_MUTATION_METHODS = [
   methods.mutation.ADD_SELF_CONN,
   methods.mutation.SUB_SELF_CONN,
 ];
-const FLAPPY_WORKER_DEFAULT_PIPE_FIRST_SHARED_ROLLOUT_SEED_COUNT = 1;
+const FLAPPY_WORKER_DEFAULT_PIPE_FIRST_SHARED_ROLLOUT_SEED_COUNT = 3;
 const FLAPPY_WORKER_LSTM_PIPE_FIRST_SHARED_ROLLOUT_SEED_COUNT = 4;
 const FLAPPY_WORKER_PIPE_PROGRESS_TARGET = 12;
 const FLAPPY_WORKER_PIPE_PROGRESS_WEIGHT = 10_000;
@@ -251,10 +251,15 @@ function scorePipeFirstWorkerAggregateEvaluation(
   const pipeProgressScore =
     aggregateEvaluation.meanPipesPassed * FLAPPY_WORKER_PIPE_PROGRESS_WEIGHT;
 
-  // Step 2: Reward longer stable survival while penalizing noisy aggregates.
-  const survivalScore = aggregateEvaluation.meanFramesSurvived;
+  // Step 2: Use robust normalized fitness as the centering-quality signal.
+  // Raw meanFramesSurvived is intentionally avoided here: birds that survive
+  // thousands of frames without passing any pipes would otherwise outscore
+  // shorter but more controlled centering attempts. The normalized fitness
+  // already incorporates centering quality, velocity stability, and terminal
+  // alignment — all of which reflect real policy quality, not just endurance.
+  const normalizedQualityScore = aggregateEvaluation.robustFitness;
   const stabilityPenalty =
     aggregateEvaluation.fitnessStdDev * FLAPPY_WORKER_STABILITY_STDDEV_WEIGHT;
 
-  return pipeProgressScore + survivalScore - stabilityPenalty;
+  return pipeProgressScore + normalizedQualityScore - stabilityPenalty;
 }

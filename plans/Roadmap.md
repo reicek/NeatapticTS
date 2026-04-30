@@ -77,10 +77,10 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
    - Plan: [Construct_From_Parts_Graph_Assembly.md](completed/Construct_From_Parts_Graph_Assembly.md) [DONE]
    - Current internal state: the construct baseline is closed for the current Phase 2 scope. Public `Network.construct(...)` now covers deterministic materialization, construct-owned diagnostics, explicit public I/O validation, detached graph snapshots plus summary formatting, and adjacent runtime seam coverage across serialization, training, evolution, crossover, and builder interoperability.
 5. Preconfigured architectures (MLP + sequence builders)
-   - Plan: [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [WIP]
-   - Current internal state: this is now the active Phase 2 boundary after construct-from-parts closure. The first architecture-set slice has started by formalizing the sparse-builder surface with a first-class `randomSparse()` entrypoint, validation, and compatibility coverage for the legacy `random()` wrapper while the broader demo-integration gate remains open.
+   - Plan: [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [DONE]
+   - Current internal state: all ten steps are closed. MLP, RandomSparse, NARX, GRU, and LSTM builders are complete; both Flappy Bird and ASCII Maze consume builder-backed seed profiles through the shared example profile contract; cross-demo e2e tests cover the full approved profile matrix; the trainer and worker are both profile-aware for recurrent growth settings; and both demo READMEs document the approved architecture families.
 
-**Gate to Phase 3:** builders use explicit I/O roles, and construction is deterministic with actionable diagnostics.
+**Gate to Phase 3:** satisfied. Builders use explicit I/O roles, construction is deterministic with actionable diagnostics, and all five preconfigured architecture families (MLP, RandomSparse, NARX, GRU, LSTM) are complete and integrated into both flagship demos.
 
 ## Phase 3 — Adoption + Learnability (Browser + Examples + Visualization)
 
@@ -182,7 +182,7 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phase 0 and Phase 1 are complete** and **Phase 2 is now the current roadmap stage**. The proper-NEAT lane in [neat.plans.md](completed/neat.plans.md) and the stable activation-ordering lane in [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md) are closed for their current scope. Both demos are solid split and documented, the example learnability pass materially strengthened across `examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, the ES2023 modernization lane is closed as a completed Phase 0 baseline, the architecture-primitives lane is closed as the first completed Phase 2 baseline, and construct-from-parts is now closed as the second completed Phase 2 baseline in [completed/Construct_From_Parts_Graph_Assembly.md](completed/Construct_From_Parts_Graph_Assembly.md). Preconfigured architectures are now the next planned Phase 2 boundary. The standalone-export planning baseline is now [DONE], which records the completed parity groundwork and the frozen Phase 4 implementation reopen point without changing the active roadmap priority away from Phase 2.
+Current status: **Phase 0 and Phase 1 are complete** and **Phase 2 is now the current roadmap stage**. The proper-NEAT lane in [neat.plans.md](completed/neat.plans.md) and the stable activation-ordering lane in [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md) are closed for their current scope. Both demos are solid split and documented, the example learnability pass materially strengthened across `examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, the ES2023 modernization lane is closed as a completed Phase 0 baseline, the architecture-primitives lane is closed as the first completed Phase 2 baseline, construct-from-parts is closed as the second completed Phase 2 baseline in [completed/Construct_From_Parts_Graph_Assembly.md](completed/Construct_From_Parts_Graph_Assembly.md), and preconfigured architectures (MLP, RandomSparse, NARX, GRU, LSTM) are now closed as the third and final completed Phase 2 baseline in [completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md). Phase 2 is now complete. The standalone-export planning baseline is now [DONE], which records the completed parity groundwork and the frozen Phase 4 implementation reopen point without changing the active roadmap priority away from Phase 3.
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
@@ -226,7 +226,7 @@ Completed entries below resolve into `plans/completed/`.
 
 17. [Architecture_Primitives_Node_Group_Layer.md](completed/Architecture_Primitives_Node_Group_Layer.md) [DONE]
 18. [Construct_From_Parts_Graph_Assembly.md](completed/Construct_From_Parts_Graph_Assembly.md) [DONE]
-19. [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [WIP]
+19. [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [DONE]
 
 ### Phase 3 inventory
 

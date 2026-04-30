@@ -47,6 +47,8 @@ import {
   FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
   FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES,
   FLAPPY_TRAINER_QUICK_ROLLOUT_PIPE_PROGRESS_TARGET,
+  FLAPPY_TRAINER_RECURRENT_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
+  FLAPPY_TRAINER_RECURRENT_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
 } from './trainer.constants';
 import type { FlappyGenerationEvaluationPlan } from './trainer.types';
 
@@ -73,6 +75,7 @@ export interface FlappyMutationSchedule {
  */
 export function resolveGenerationEvaluationPlan(
   generationIndex: number,
+  isRecurrent: boolean = false,
 ): FlappyGenerationEvaluationPlan {
   const mutationSchedule = resolveMutationSchedule(generationIndex);
   const difficultyScale = resolveCurriculumDifficultyScale(generationIndex);
@@ -85,8 +88,8 @@ export function resolveGenerationEvaluationPlan(
     quickSeeds: buildSharedSeedBatch(generationIndex, 0x41a7, 3),
     fullSeeds: buildSharedSeedBatch(generationIndex, 0x7d2b, 8),
     reevaluationSeeds: buildSharedSeedBatch(generationIndex, 0xb8f3, 32),
-    quickRolloutOptions: createQuickRolloutOptions(difficultyScale),
-    fullRolloutOptions: createFullRolloutOptions(difficultyScale),
+    quickRolloutOptions: createQuickRolloutOptions(difficultyScale, isRecurrent),
+    fullRolloutOptions: createFullRolloutOptions(difficultyScale, isRecurrent),
     reevaluationRolloutOptions:
       createReevaluationRolloutOptions(difficultyScale),
   };
@@ -136,13 +139,15 @@ export function resolveMutationSchedule(
  */
 function createQuickRolloutOptions(
   difficultyScale: number,
+  isRecurrent: boolean,
 ): FlappyRolloutOptions {
   return {
     difficultyScale,
     maxFrames: FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES,
     enableEarlyTermination: true,
-    earlyTerminationGraceFrames:
-      FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
+    earlyTerminationGraceFrames: isRecurrent
+      ? FLAPPY_TRAINER_RECURRENT_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES
+      : FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
     earlyTerminationConsecutiveFrames:
       FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES,
     normalizeFitness: true,
@@ -161,13 +166,15 @@ function createQuickRolloutOptions(
  */
 function createFullRolloutOptions(
   difficultyScale: number,
+  isRecurrent: boolean,
 ): FlappyRolloutOptions {
   return {
     difficultyScale,
     maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
     enableEarlyTermination: true,
-    earlyTerminationGraceFrames:
-      FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
+    earlyTerminationGraceFrames: isRecurrent
+      ? FLAPPY_TRAINER_RECURRENT_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES
+      : FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES,
     earlyTerminationConsecutiveFrames:
       FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES,
     normalizeFitness: true,

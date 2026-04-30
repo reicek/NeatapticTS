@@ -21,14 +21,6 @@ interface TrainerControllerWithRecurrentPolicy {
 }
 
 describe('createNeatController', () => {
-  it('pins the trainer runtime to feed-forward growth', () => {
-    const neatController = createNeatController(
-      createTrainerSetup(),
-    ) as TrainerControllerWithRecurrentPolicy;
-
-    expect(neatController.options.allowRecurrent).toBe(false);
-  });
-
   it('uses the shared Flappy MLP profile as the default seed network', () => {
     const neatController = createNeatController(
       createTrainerSetup(),
@@ -44,5 +36,22 @@ describe('createNeatController', () => {
       inputNodeIds: FLAPPY_NETWORK_INPUT_SIZE,
       outputNodeIds: 2,
     });
+  });
+
+  it('disables recurrent growth when the default MLP profile is selected', () => {
+    const neatController = createNeatController(
+      createTrainerSetup(),
+    ) as TrainerControllerWithRecurrentPolicy;
+
+    expect(neatController.options.allowRecurrent).toBe(false);
+  });
+
+  it('enables recurrent growth when a recurrent profile is selected', () => {
+    const neatController = createNeatController({
+      ...createTrainerSetup(),
+      architectureProfileId: 'gru',
+    }) as TrainerControllerWithRecurrentPolicy;
+
+    expect(neatController.options.allowRecurrent).toBe(true);
   });
 });

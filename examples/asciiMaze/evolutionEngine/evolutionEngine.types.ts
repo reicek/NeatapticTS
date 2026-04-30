@@ -236,6 +236,8 @@ export interface MazeEvolutionRunResult {
   neat: NeatInstance;
   /** Canonical or compatibility exit reason describing why the run ended. */
   exitReason: string;
+  /** Shared architecture profile id that seeded the run population, when one was used. */
+  architectureProfileId?: ExampleArchitectureProfileId;
 }
 
 /**

@@ -344,3 +344,23 @@ export const FLAPPY_TRAINER_DUMMY_FLAP_OUTPUT = 0;
  * during long-running terminal sessions.
  */
 export const FLAPPY_TRAINER_LOG_PARTS_DELIMITER = ' ';
+
+/**
+ * Extended early-termination grace frames for recurrent profiles in quick stage.
+ *
+ * Recurrent architectures (NARX, GRU, LSTM) require more time to populate their
+ * hidden state before exhibiting coherent flight behavior. The standard 120-frame
+ * window terminates them before that warm-up completes. This extended window
+ * matches the longer effective response latency of stateful networks.
+ */
+export const FLAPPY_TRAINER_RECURRENT_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES = 300;
+
+/**
+ * Extended early-termination grace frames for recurrent profiles in full stage.
+ *
+ * Full-stage evaluation uses a stricter but still profile-aware grace window so
+ * stateful networks are not penalized for the additional hidden-state warm-up
+ * cost they incur relative to feed-forward policies.
+ */
+export const FLAPPY_TRAINER_RECURRENT_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES = 480;
+

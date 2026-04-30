@@ -255,6 +255,7 @@ function spawnPipeIfNeeded(frameContext: WorkerPlaybackFrameContext): void {
   const nextGapCenterYPx = resolveNextSpawnGapCenterY(
     renderState.lastSpawnedPipeGapCenterYPx,
     rng,
+    nextGapSizePx,
     renderState.visibleWorldHeightPx,
   );
 

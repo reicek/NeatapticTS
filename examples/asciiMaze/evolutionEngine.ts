@@ -335,12 +335,13 @@ export class EvolutionEngine {
       );
     }
 
-    // Final return: best network, its simulation result, the NEAT instance and exit reason
+    // Final return: best network, its simulation result, the NEAT instance, exit reason, and seeding profile id
     return {
       bestNetwork,
       bestResult,
       neat,
       exitReason: bestResult?.exitReason ?? 'incomplete',
+      architectureProfileId: opts.architectureProfileId,
     };
   }
 

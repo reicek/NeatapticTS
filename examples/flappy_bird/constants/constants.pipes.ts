@@ -73,3 +73,13 @@ export const FLAPPY_PIPE_GAP_CENTER_MIN_Y_PX = 100;
 
 /** Maximum allowed gap center height (pixels). */
 export const FLAPPY_PIPE_GAP_CENTER_MAX_Y_PX = FLAPPY_WORLD_HEIGHT_PX - 100;
+
+/**
+ * Minimum fraction of world height that must remain as solid pipe above and
+ * below the gap opening.
+ *
+ * At the world height of 512 px this resolves to ≈26 px of visible pipe cap on
+ * each side, which prevents the opening from clipping into or touching the
+ * canvas edge — especially important when the initial wide gap is active.
+ */
+export const FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO = 0.05;

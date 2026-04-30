@@ -211,6 +211,9 @@ to preserve a cleaner educational rendering path.
 
 Per-frame reward weight for staying vertically aligned with the next gap.
 
+Increased to make gap alignment a primary per-frame signal so that birds
+tracking the ideal center path score noticeably higher than drifting birds.
+
 ### FLAPPY_FITNESS_APPROACH_PROGRESS_WEIGHT
 
 Reward scale for reducing distance to the next pipe between consecutive frames.
@@ -227,9 +230,49 @@ Reward scale for reducing vertical error to the next gap center.
 
 Per-frame reward weight for keeping the bird inside next-gap clearance.
 
+Increased to make clearance (gap-width-normalized position) the primary
+per-frame centering signal. This strongly rewards birds that stay near
+the gap center and penalizes those that drift to the edges.
+
+### FLAPPY_FITNESS_EARLY_DEATH_FRAME_THRESHOLD
+
+Minimum frames survived before the early-death penalty is waived.
+
+Set below the ~104-frame natural-fall time so that untrained birds falling
+straight to the floor are not catastrophically penalized before NEAT can
+explore better policies. Monotonic strategies that die unusually quickly
+(ceiling rockets or instant drops) still trigger the penalty.
+
+Previous value of 120 was above the natural-fall time, which crushed NARX
+signal to near-zero on early generations. Lowering to 80 lets the density
+shaping guide evolution without the early-death gate blocking the signal.
+
+### FLAPPY_FITNESS_EARLY_DEATH_PENALTY_MULTIPLIER
+
+Fitness multiplier applied when a bird dies before the early-death threshold.
+
+Set below 1 so extremely short-lived monotonic deaths score lower than any
+reasonable centering strategy. A value of 0.4 (vs the prior 0.1) keeps the
+penalty meaningful while preserving enough signal for NEAT to distinguish
+between bad and worse short-lived strategies.
+
+### FLAPPY_FITNESS_GAP_CENTERING_QUALITY_WEIGHT_PER_FRAME
+
+Per-frame reward weight for gap-width-normalized centering quality.
+
+This term uses the normalizedNextGapClearance feature, which is proportional
+to how well-centered the bird is relative to the current gap size rather than
+absolute world height. This is the dominant centering signal — a bird that
+stays at gap center earns full reward regardless of gap size, while one near
+the edges earns near zero.
+
 ### FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME
 
 Per-frame reward weight for maintaining controllable vertical velocity.
+
+Increased to penalize monotonic-direction behavior (always rising or always
+falling) more aggressively. Birds with wild or one-directional velocity
+profiles score lower than those with controlled flight.
 
 ### FLAPPY_FITNESS_SURVIVAL_WEIGHT
 
@@ -969,6 +1012,15 @@ Maximum allowed gap center height (pixels).
 
 Minimum allowed gap center height (pixels).
 
+### FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO
+
+Minimum fraction of world height that must remain as solid pipe above and
+below the gap opening.
+
+At the world height of 512 px this resolves to ≈26 px of visible pipe cap on
+each side, which prevents the opening from clipping into or touching the
+canvas edge — especially important when the initial wide gap is active.
+
 ### FLAPPY_PIPE_GAP_MIN_PX
 
 Minimum pipe gap used at peak adaptive difficulty.
@@ -990,6 +1042,10 @@ Per-pipe gap shrink step toward the current hardest target gap (pixels).
 ### FLAPPY_PIPE_GAP_START_MULTIPLIER
 
 Initial spawn gap multiplier relative to the current hardest gap target.
+
+A larger multiplier makes the very first pipes noticeably easier and produces
+a more visible difficulty gradient as the gap narrows toward its target.
+The value is 20 % wider than the original 2.15 baseline.
 
 ### FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX
 
@@ -1499,6 +1555,15 @@ Maximum allowed gap center height (pixels).
 
 Minimum allowed gap center height (pixels).
 
+### FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO
+
+Minimum fraction of world height that must remain as solid pipe above and
+below the gap opening.
+
+At the world height of 512 px this resolves to ≈26 px of visible pipe cap on
+each side, which prevents the opening from clipping into or touching the
+canvas edge — especially important when the initial wide gap is active.
+
 ### FLAPPY_PIPE_GAP_PX
 
 Vertical opening size of each pipe gap (pixels).
@@ -1606,6 +1671,10 @@ Per-pipe gap shrink step toward the current hardest target gap (pixels).
 
 Initial spawn gap multiplier relative to the current hardest gap target.
 
+A larger multiplier makes the very first pipes noticeably easier and produces
+a more visible difficulty gradient as the gap narrows toward its target.
+The value is 20 % wider than the original 2.15 baseline.
+
 ### FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES
 
 Minimum spawn interval used at peak adaptive difficulty.
@@ -1696,9 +1765,19 @@ Flappy reward-shaping constants.
 These values tune the learning signal seen by evolution. Separating them from
 world/physics constants keeps behavior tuning explicit and easier to teach.
 
+Design philosophy: centering quality is the primary signal. An agent that
+stays aligned with the next gap center — measured against the gap width, not
+absolute world height — earns more signal per frame than one that merely
+survives. Survival and pipe-passing remain important, but centering dominates
+the dense-shaping channel so the population does not converge on passive or
+erratic drift strategies.
+
 ### FLAPPY_FITNESS_ALIGNMENT_WEIGHT_PER_FRAME
 
 Per-frame reward weight for staying vertically aligned with the next gap.
+
+Increased to make gap alignment a primary per-frame signal so that birds
+tracking the ideal center path score noticeably higher than drifting birds.
 
 ### FLAPPY_FITNESS_APPROACH_PROGRESS_WEIGHT
 
@@ -1716,9 +1795,49 @@ Reward scale for reducing vertical error to the next gap center.
 
 Per-frame reward weight for keeping the bird inside next-gap clearance.
 
+Increased to make clearance (gap-width-normalized position) the primary
+per-frame centering signal. This strongly rewards birds that stay near
+the gap center and penalizes those that drift to the edges.
+
+### FLAPPY_FITNESS_EARLY_DEATH_FRAME_THRESHOLD
+
+Minimum frames survived before the early-death penalty is waived.
+
+Set below the ~104-frame natural-fall time so that untrained birds falling
+straight to the floor are not catastrophically penalized before NEAT can
+explore better policies. Monotonic strategies that die unusually quickly
+(ceiling rockets or instant drops) still trigger the penalty.
+
+Previous value of 120 was above the natural-fall time, which crushed NARX
+signal to near-zero on early generations. Lowering to 80 lets the density
+shaping guide evolution without the early-death gate blocking the signal.
+
+### FLAPPY_FITNESS_EARLY_DEATH_PENALTY_MULTIPLIER
+
+Fitness multiplier applied when a bird dies before the early-death threshold.
+
+Set below 1 so extremely short-lived monotonic deaths score lower than any
+reasonable centering strategy. A value of 0.4 (vs the prior 0.1) keeps the
+penalty meaningful while preserving enough signal for NEAT to distinguish
+between bad and worse short-lived strategies.
+
+### FLAPPY_FITNESS_GAP_CENTERING_QUALITY_WEIGHT_PER_FRAME
+
+Per-frame reward weight for gap-width-normalized centering quality.
+
+This term uses the normalizedNextGapClearance feature, which is proportional
+to how well-centered the bird is relative to the current gap size rather than
+absolute world height. This is the dominant centering signal — a bird that
+stays at gap center earns full reward regardless of gap size, while one near
+the edges earns near zero.
+
 ### FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME
 
 Per-frame reward weight for maintaining controllable vertical velocity.
+
+Increased to penalize monotonic-direction behavior (always rising or always
+falling) more aggressively. Birds with wild or one-directional velocity
+profiles score lower than those with controlled flight.
 
 ### FLAPPY_FITNESS_SURVIVAL_WEIGHT
 

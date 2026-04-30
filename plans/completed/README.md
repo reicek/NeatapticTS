@@ -16,6 +16,7 @@ Archive selection guide:
 - [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md): deterministic execution ordering and explicit input/output role baseline.
 - [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md): closed primitive DX baseline for `Node`, `Group`, and `Layer`.
 - [Construct_From_Parts_Graph_Assembly.md](Construct_From_Parts_Graph_Assembly.md): closed Phase 2 whole-graph assembly and construct diagnostics baseline.
+- [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): closed Phase 2 preconfigured architecture builders baseline (MLP, RandomSparse, NARX, GRU, LSTM) including shared demo profile contract, Flappy Bird and ASCII Maze integration, cross-demo e2e matrix, and profile-aware trainer/worker recurrent evolution settings.
 - [Standalone_Inference_Export.md](Standalone_Inference_Export.md): closed Phase 4 standalone export architecture baseline.
 - [ES2023 migration](ES2023%20migration): Phase 0 modernization baseline for ES2023 syntax, named errors, and lint enforcement.
 - [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md): completed Flappy Bird documentation pass.
@@ -40,6 +41,7 @@ Trigger phrases:
 - activation order, explicit IO roles, deterministic scheduling: `plans/completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md`
 - architecture primitives, node/group/layer DX, primitive descriptors: `plans/completed/Architecture_Primitives_Node_Group_Layer.md`
 - construct from parts, graph assembly, deterministic builder reopen: `plans/completed/Construct_From_Parts_Graph_Assembly.md`
+- preconfigured builders, MLP/NARX/GRU/LSTM reopen, shared profile contract, demo profile integration: `plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
 - standalone runtime, exported inference file, Phase 4 export reopen: `plans/completed/Standalone_Inference_Export.md`
 - ES2023, immutable array methods, named errors, no CommonJS in new work: `plans/completed/ES2023 migration`
 - methods docs or split reopen: `plans/completed/methods-docs.plans.md`, `plans/completed/methods-solid-split.plans.md`

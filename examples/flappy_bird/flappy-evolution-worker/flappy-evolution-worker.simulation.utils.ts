@@ -43,14 +43,15 @@ export function createWorkerPopulationRenderState(
   initialVisibleWorldHeightPx: number,
 ): WorkerPlaybackState {
   const initialDifficultyProfile = resolveAdaptiveDifficultyProfile(0, 1);
-  const initialGapCenterYPx = sampleGapCenterY(
-    rng,
-    initialVisibleWorldHeightPx,
-  );
   const initialGapSizePx = resolveNextSpawnGapSize(
     undefined,
     initialDifficultyProfile,
     rng,
+  );
+  const initialGapCenterYPx = sampleGapCenterY(
+    rng,
+    initialGapSizePx,
+    initialVisibleWorldHeightPx,
   );
   const initialSpawnIntervalFrames = resolveNextSpawnIntervalFrames(
     undefined,

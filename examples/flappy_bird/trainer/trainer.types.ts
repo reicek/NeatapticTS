@@ -110,6 +110,7 @@ export interface FlappyTrainerRuntimeState {
  */
 export interface FlappyTrainerSetup {
   architectureProfileId: ExampleArchitectureProfileId;
+  isRecurrent: boolean;
   inputSize: number;
   outputSize: number;
   populationSize: number;

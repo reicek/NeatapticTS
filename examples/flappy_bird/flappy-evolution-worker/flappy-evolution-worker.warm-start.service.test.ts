@@ -62,7 +62,7 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
     });
   });
 
-  it('keeps the NARX profile on rollout-only warm-start instead of heuristic teacher fitting', async () => {
+  it('applies heuristic teacher fitting to the NARX profile before rollout refinement', async () => {
     const templateTelemetry = createMockNetworkTelemetry();
     const templateGenome = createMockNetwork({
       telemetry: templateTelemetry,
@@ -100,14 +100,14 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
       propagateCalls: templateTelemetry.propagateCalls,
     }).toEqual({
       optimizeCalls: 1,
-      trainCalls: 0,
+      trainCalls: 1,
       clearCalls: 0,
       activateCalls: 0,
       propagateCalls: 0,
     });
   });
 
-  it('keeps the GRU profile on rollout-only refinement while using stronger profile-specific rollout tuning', async () => {
+  it('applies heuristic teacher fitting to the GRU profile before rollout refinement', async () => {
     const templateTelemetry = createMockNetworkTelemetry();
     const templateGenome = createMockNetwork({
       telemetry: templateTelemetry,
@@ -145,14 +145,14 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
       propagateCalls: templateTelemetry.propagateCalls,
     }).toEqual({
       optimizeCalls: 1,
-      trainCalls: 0,
+      trainCalls: 1,
       clearCalls: 0,
       activateCalls: 0,
       propagateCalls: 0,
     });
   });
 
-  it('keeps the heavier LSTM profile on rollout-only refinement', async () => {
+  it('applies heuristic teacher fitting to the LSTM profile before rollout refinement', async () => {
     const templateTelemetry = createMockNetworkTelemetry();
     const templateGenome = createMockNetwork({
       telemetry: templateTelemetry,
@@ -190,7 +190,7 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
       propagateCalls: templateTelemetry.propagateCalls,
     }).toEqual({
       optimizeCalls: 1,
-      trainCalls: 0,
+      trainCalls: 1,
       clearCalls: 0,
       activateCalls: 0,
       propagateCalls: 0,
@@ -272,12 +272,16 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
     ).toBe(20_176);
   });
 
-  it('keeps the NARX warm-start strategy on rollout-only refinement', () => {
-    expect(resolveWorkerWarmStartTeacherStrategy('narx')).toBe('rollout-only');
+  it('uses feed-forward teacher fitting for the NARX warm-start strategy', () => {
+    expect(resolveWorkerWarmStartTeacherStrategy('narx')).toBe('feed-forward-teacher-fit');
   });
 
-  it('keeps the GRU warm-start strategy on rollout-only refinement', () => {
-    expect(resolveWorkerWarmStartTeacherStrategy('gru')).toBe('rollout-only');
+  it('uses feed-forward teacher fitting for the GRU warm-start strategy', () => {
+    expect(resolveWorkerWarmStartTeacherStrategy('gru')).toBe('feed-forward-teacher-fit');
+  });
+
+  it('uses feed-forward teacher fitting for the LSTM warm-start strategy', () => {
+    expect(resolveWorkerWarmStartTeacherStrategy('lstm')).toBe('feed-forward-teacher-fit');
   });
 });
 

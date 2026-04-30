@@ -64,6 +64,7 @@ export interface RuntimeStartOptions {
   onSelectArchitectureProfile?: (
     profileId: ExampleArchitectureProfileId,
   ) => void;
+  onResetScores?: () => void;
 }
 
 /**

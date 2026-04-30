@@ -111,12 +111,15 @@ export async function runTrainer(): Promise<void> {
   const trainerRuntimeState = createTrainerRuntimeState();
   const neatController = createNeatController(trainerSetup);
 
+  const resolveProfileAwareEvaluationPlan = (generationIndex: number) =>
+    resolveGenerationEvaluationPlan(generationIndex, trainerSetup.isRecurrent);
+
   attachPopulationFitnessEvaluator(
     neatController,
     trainerRuntimeState,
     trainerSetup.elitismCount,
     {
-      resolveGenerationEvaluationPlan,
+      resolveGenerationEvaluationPlan: resolveProfileAwareEvaluationPlan,
       evaluatePopulationQuickStage,
       evaluatePopulationFullStage,
       evaluatePopulationReevaluationStage,

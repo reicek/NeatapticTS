@@ -10,6 +10,7 @@ import type {
 } from './host.types';
 
 const FLAPPY_ARCHITECTURE_SELECTOR_TITLE_TEXT = 'Architectures';
+const FLAPPY_ARCHITECTURE_SELECTOR_RESET_TEXT = 'Reset Scores';
 const FLAPPY_ARCHITECTURE_SELECTOR_GRID_COLUMNS = 'repeat(2, minmax(0, 1fr))';
 const FLAPPY_ARCHITECTURE_SELECTOR_ITEM_GAP_PX = 4;
 const FLAPPY_ARCHITECTURE_SELECTOR_GRID_GAP_PX = 6;
@@ -70,6 +71,14 @@ export function createHostArchitectureSelector(
 
   rootElement.appendChild(titleElement);
   rootElement.appendChild(gridElement);
+
+  // Step 1b: Add the Reset Scores button below the architecture grid when a callback is provided.
+  if (options.onResetScores) {
+    const resetButtonElement = createResetScoresButtonElement(
+      options.onResetScores,
+    );
+    rootElement.appendChild(resetButtonElement);
+  }
 
   const updateItems = (nextItems: HostArchitectureSelectorItem[]): void => {
     currentItems = nextItems;
@@ -323,6 +332,60 @@ function applyArchitectureSelectorButtonPresentation(
     hovered && !disabled,
     hoverGlowColor,
   );
+}
+
+/**
+ * Creates a "Reset Scores" button that clears all architecture best-score captions.
+ *
+ * The button sits below the architecture grid and matches the selector's visual
+ * language while using a muted amber accent to signal that it is a clearing
+ * action rather than a selection.
+ *
+ * @param onResetScores - Callback invoked when the button is clicked.
+ * @returns Styled reset button element.
+ */
+function createResetScoresButtonElement(onResetScores: () => void): HTMLButtonElement {
+  const resetButtonElement = document.createElement('button');
+
+  resetButtonElement.type = 'button';
+  resetButtonElement.textContent = FLAPPY_ARCHITECTURE_SELECTOR_RESET_TEXT;
+  resetButtonElement.style.width = '100%';
+  resetButtonElement.style.boxSizing = 'border-box';
+  resetButtonElement.style.padding = FLAPPY_ARCHITECTURE_SELECTOR_BUTTON_PADDING;
+  resetButtonElement.style.borderRadius = `${FLAPPY_ARCHITECTURE_SELECTOR_BUTTON_RADIUS_PX}px`;
+  resetButtonElement.style.borderStyle = 'solid';
+  resetButtonElement.style.borderWidth = '1px';
+  resetButtonElement.style.borderColor = FLAPPY_NEON_PALETTE.hudPanelBorder;
+  resetButtonElement.style.background = 'transparent';
+  resetButtonElement.style.fontFamily = FLAPPY_MONOSPACE_FONT_FAMILY;
+  resetButtonElement.style.fontSize = FLAPPY_ARCHITECTURE_SELECTOR_BUTTON_FONT_SIZE;
+  resetButtonElement.style.fontWeight = '700';
+  resetButtonElement.style.textTransform = 'uppercase';
+  resetButtonElement.style.letterSpacing = '0.08em';
+  resetButtonElement.style.color = FLAPPY_NEON_PALETTE.hudText;
+  resetButtonElement.style.opacity = '0.65';
+  resetButtonElement.style.cursor = 'pointer';
+  resetButtonElement.style.transition = FLAPPY_ARCHITECTURE_SELECTOR_TRANSITION;
+
+  resetButtonElement.addEventListener('mouseenter', () => {
+    resetButtonElement.style.opacity = '1';
+    resetButtonElement.style.borderColor = FLAPPY_NEON_PALETTE.hudAccent;
+    resetButtonElement.style.color = FLAPPY_NEON_PALETTE.hudAccent;
+    resetButtonElement.style.transform = 'translateY(-1px)';
+    resetButtonElement.style.boxShadow = `0 0 8px rgba(255, 154, 46, 0.55), inset 0 0 10px rgba(255, 154, 46, 0.08)`;
+  });
+
+  resetButtonElement.addEventListener('mouseleave', () => {
+    resetButtonElement.style.opacity = '0.65';
+    resetButtonElement.style.borderColor = FLAPPY_NEON_PALETTE.hudPanelBorder;
+    resetButtonElement.style.color = FLAPPY_NEON_PALETTE.hudText;
+    resetButtonElement.style.transform = 'translateY(0)';
+    resetButtonElement.style.boxShadow = '';
+  });
+
+  resetButtonElement.addEventListener('click', onResetScores);
+
+  return resetButtonElement;
 }
 
 /**

@@ -602,6 +602,25 @@ Parameters:
 
 Returns: Imperative controller for selector item and disabled-state updates.
 
+### createResetScoresButtonElement
+
+```ts
+createResetScoresButtonElement(
+  onResetScores: () => void,
+): HTMLButtonElement
+```
+
+Creates a "Reset Scores" button that clears all architecture best-score captions.
+
+The button sits below the architecture grid and matches the selector's visual
+language while using a muted amber accent to signal that it is a clearing
+action rather than a selection.
+
+Parameters:
+- `onResetScores` - Callback invoked when the button is clicked.
+
+Returns: Styled reset button element.
+
 ### resolveArchitectureSelectorBoxShadow
 
 ```ts

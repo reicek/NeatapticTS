@@ -525,6 +525,23 @@ Pipe-progress target used to normalize quick screening rollout fitness.
 The lower quick-stage target reflects the fact that this pass is a screen, not
 the trainer's final statement of policy quality.
 
+### FLAPPY_TRAINER_RECURRENT_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES
+
+Extended early-termination grace frames for recurrent profiles in full stage.
+
+Full-stage evaluation uses a stricter but still profile-aware grace window so
+stateful networks are not penalized for the additional hidden-state warm-up
+cost they incur relative to feed-forward policies.
+
+### FLAPPY_TRAINER_RECURRENT_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES
+
+Extended early-termination grace frames for recurrent profiles in quick stage.
+
+Recurrent architectures (NARX, GRU, LSTM) require more time to populate their
+hidden state before exhibiting coherent flight behavior. The standard 120-frame
+window terminates them before that warm-up completes. This extended window
+matches the longer effective response latency of stateful networks.
+
 ### FLAPPY_TRAINER_REEVALUATION_MIN_CANDIDATE_COUNT
 
 Minimum candidate count for reevaluation stage, regardless of elitism.
@@ -1260,6 +1277,7 @@ Returns: Deterministic shared seed list.
 ```ts
 createFullRolloutOptions(
   difficultyScale: number,
+  isRecurrent: boolean,
 ): FlappyRolloutOptions
 ```
 
@@ -1278,6 +1296,7 @@ Returns: Full stage rollout options.
 ```ts
 createQuickRolloutOptions(
   difficultyScale: number,
+  isRecurrent: boolean,
 ): FlappyRolloutOptions
 ```
 
@@ -1360,6 +1379,7 @@ Returns: Difficulty scale in [0, 1].
 ```ts
 resolveGenerationEvaluationPlan(
   generationIndex: number,
+  isRecurrent: boolean,
 ): FlappyGenerationEvaluationPlan
 ```
 

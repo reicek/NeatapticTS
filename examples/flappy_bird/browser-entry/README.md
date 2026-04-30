@@ -941,6 +941,7 @@ Returns: Exclusive upper bound for `nextInt(minInclusive, maxExclusive)`.
 resolveNextSpawnGapCenterY(
   previousGapCenterYPx: number,
   rng: RngLike,
+  currentGapSizePx: number,
   worldHeightPx: number,
 ): number
 ```
@@ -950,6 +951,7 @@ Resolves next gap center with bounded per-pipe delta.
 Parameters:
 - `previousGapCenterYPx` - Previous spawn gap center.
 - `rng` - Deterministic RNG.
+- `currentGapSizePx` - Actual gap size for the pipe being placed.
 - `worldHeightPx` - World height used to clamp candidate gap centers.
 
 Returns: Next gap center y-position.
@@ -995,6 +997,7 @@ Returns: Next spawn interval in frames.
 ```ts
 sampleGapCenterY(
   rng: RngLike,
+  currentGapSizePx: number,
   worldHeightPx: number,
 ): number
 ```
@@ -1003,6 +1006,7 @@ Samples a random gap center y-position.
 
 Parameters:
 - `rng` - Deterministic RNG.
+- `currentGapSizePx` - Actual gap size for the pipe being placed.
 - `worldHeightPx` - World height used to derive valid gap-center bounds.
 
 Returns: Sampled y-position.

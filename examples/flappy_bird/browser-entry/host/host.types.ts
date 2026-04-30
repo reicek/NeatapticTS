@@ -50,6 +50,7 @@ export interface CanvasHostOptions {
   onSelectArchitectureProfile?: (
     profileId: ExampleArchitectureProfileId,
   ) => void;
+  onResetScores?: () => void;
 }
 
 /** Imperative controller returned by the host architecture selector service. */

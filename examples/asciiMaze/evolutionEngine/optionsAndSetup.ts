@@ -26,6 +26,7 @@ import { MazeUtils } from '../mazeUtils';
 import { FitnessEvaluator } from '../fitness';
 import {
   buildExampleArchitectureProfileNetwork,
+  DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID,
   type ExampleArchitectureProfileId,
 } from '../../architectureProfiles';
 import type { IFitnessEvaluationContext } from '../fitness.types';
@@ -212,19 +213,25 @@ export const normalizeRunOptions = (
     typeof dynamicPopulationMaxCfg === 'number'
       ? dynamicPopulationMaxCfg
       : Math.max(popSize, 120);
+
+  // Default to the MLP profile when no explicit profile is provided and no pre-built
+  // population overrides the seed. This makes builder-backed profiles the default
+  // fresh-start path rather than leaving seed topology undefined.
+  const effectiveProfileId: ExampleArchitectureProfileId | undefined =
+    architectureProfileId ??
+    (initialPopulation === undefined
+      ? DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID
+      : undefined);
   const seedNetwork =
-    architectureProfileId === undefined
-      ? undefined
-      : buildExampleArchitectureProfileNetwork(
-          'ascii-maze',
-          architectureProfileId,
-        );
+    effectiveProfileId !== undefined
+      ? buildExampleArchitectureProfileNetwork('ascii-maze', effectiveProfileId)
+      : undefined;
 
   // Step 5: compose the final normalised options object (shape expected by callers).
   const normalizedOptions: NormalizedRunOptions = {
     mazeConfig,
     agentSimConfig,
-    architectureProfileId,
+    architectureProfileId: effectiveProfileId,
     evolutionAlgorithmConfig,
     reportingConfig,
     fitnessEvaluator: options?.fitnessEvaluator,

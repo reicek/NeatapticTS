@@ -278,26 +278,49 @@ Returns: Active difficulty profile.
 
 ## simulation-shared/simulation-shared.spawn.utils.ts
 
+### resolveGapCenterBounds
+
+```ts
+resolveGapCenterBounds(
+  currentGapSizePx: number,
+  maximumGapCenterYPx: number,
+): { minY: number; maxY: number; }
+```
+
+Resolves gap-size-aware minimum and maximum gap center y-positions.
+
+The minimum edge margin ensures that at least `FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO`
+of the world height appears as solid pipe above the opening and below the
+opening. This prevents the gap from clipping the canvas boundary even when the
+initial wide gap is active.
+
+Parameters:
+- `currentGapSizePx` - Actual gap size for the pipe being placed.
+- `maximumGapCenterYPx` - Viewport-derived or default upper center bound.
+
+Returns: Effective [minY, maxY) range for gap center sampling.
+
 ### resolveNextSpawnGapCenterY
 
 ```ts
 resolveNextSpawnGapCenterY(
   previousGapCenterYPx: number,
   rng: SharedRngLike,
+  currentGapSizePx: number,
   maximumGapCenterYPx: number,
 ): number
 ```
 
 Resolves next gap center with bounded per-pipe delta.
 
-Educational note:
 Consecutive gaps are deliberately constrained to avoid unfair zig-zag jumps.
-The environment should still be challenging, but it should not demand an
-impossible vertical correction from one pipe to the next.
+The center is additionally bounded so the gap opening always keeps at least
+`FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO` of world height as solid pipe on each side.
 
 Parameters:
 - `previousGapCenterYPx` - Previous spawn gap center.
 - `rng` - Deterministic RNG.
+- `currentGapSizePx` - Actual gap size for the pipe being placed.
 - `maximumGapCenterYPx` - Optional inclusive upper bound for smaller viewports.
 
 Returns: Next gap center y-position.
@@ -351,17 +374,20 @@ Returns: Next spawn interval in frames.
 ```ts
 sampleGapCenterY(
   rng: SharedRngLike,
+  currentGapSizePx: number,
   maximumGapCenterYPx: number,
 ): number
 ```
 
 Samples a random gap center y-position.
 
-The sampled center is bounded so the resulting pipe gap always remains inside
-the visible play area.
+The sampled center is bounded so the gap opening always stays inside the
+visible play area and at least `FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO` of the
+world height remains as solid pipe on each side.
 
 Parameters:
 - `rng` - Deterministic RNG.
+- `currentGapSizePx` - Actual gap size for the pipe being placed.
 - `maximumGapCenterYPx` - Optional inclusive upper bound for smaller viewports.
 
 Returns: Sampled y-position.

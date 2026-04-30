@@ -207,6 +207,39 @@ The browser can render a full generation, highlight the current leader, and show
 
 That distinction is what makes the example useful as a systems reference instead of only a visual demo.
 
+## Architecture Profiles
+
+Flappy Bird uses the shared [example architecture profile contract](../architectureProfiles.ts) so runs can start from any approved builder family. The browser demo exposes a profile selector that starts a clean new run for each family; the Node trainer uses `DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID` unless an explicit profile is passed through setup.
+
+### Approved profiles for Flappy Bird
+
+| Profile id | Family | Recurrent | Role |
+| --- | --- | --- | --- |
+| `mlp` | MLP | No | Baseline feed-forward reference. Dense connectivity from the 6-feature current-frame observation to 2 action outputs. |
+| `random-sparse` | RandomSparse | No | Sparse topology-search baseline. Fewer initial edges encourage topology exploration without requiring recurrent state. |
+| `narx` | NARX | Yes | Delay-line memory profile. Carries short-horizon sequences of inputs and outputs without gating. Feed-forward builders already handle current-frame geometry; any temporal advantage here must come from learned carry-over patterns. |
+| `gru` | GRU | Yes | Pedagogical gated-memory profile with a direct input-to-output readout connection. Recurrent blocks learn what to keep and forget across flap decisions. |
+| `lstm` | LSTM | Yes | Pedagogical gated-memory profile with explicit cell state. Structurally heavier than GRU; exposes the full gating vocabulary for teaching purposes. |
+
+### Selecting a profile in the browser
+
+Clicking an architecture button in the browser UI stops the current session, discards the running population, and starts a completely fresh run seeded from the selected profile. This is a **new-run selector**, not a live topology swap. The profile label in the HUD updates immediately, and the per-architecture best pipe score is stored in browser local storage so repeated sessions can compete against their own records. The family with the highest stored score carries a `*` marker.
+
+### Recurrent profile guidance
+
+When a stateful profile (NARX, GRU, LSTM) is selected, the evaluation and playback paths reset carried network state at every rollout boundary. The 6-feature current-frame observation means feed-forward builders can already solve the task from instantaneous geometry. Recurrent builders earn their temporal advantage through internal state, not through additional external memory channels.
+
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Selector["browser profile selector\n'mlp' | 'sparse' | 'narx' | 'gru' | 'lstm'"]:::accent --> Builder["buildExampleArchitectureProfileNetwork\n(flappy-bird, profileId)"]:::base
+  Builder --> Seed["seed network\ntemplate for worker NEAT population"]:::base
+  Seed --> Worker["flappy-evolution-worker\nfresh population + reset state"]:::base
+  Worker --> HUD["browser HUD\nprofile label + best score record"]:::accent
+```
+
 ## Observation And Fitness Cheat Sheet
 
 The observation vector focuses on control-relevant geometry rather than pixels. The policy sees a compressed description of the next decision, not a screenshot of the scene.
