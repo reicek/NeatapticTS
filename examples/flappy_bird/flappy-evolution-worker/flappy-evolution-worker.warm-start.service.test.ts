@@ -62,7 +62,7 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
     });
   });
 
-  it('applies heuristic teacher fitting to the NARX profile before rollout refinement', async () => {
+  it('skips heuristic teacher fitting for the NARX profile before rollout refinement', async () => {
     const templateTelemetry = createMockNetworkTelemetry();
     const templateGenome = createMockNetwork({
       telemetry: templateTelemetry,
@@ -100,14 +100,14 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
       propagateCalls: templateTelemetry.propagateCalls,
     }).toEqual({
       optimizeCalls: 1,
-      trainCalls: 1,
+      trainCalls: 0,
       clearCalls: 0,
       activateCalls: 0,
       propagateCalls: 0,
     });
   });
 
-  it('applies heuristic teacher fitting to the GRU profile before rollout refinement', async () => {
+  it('skips heuristic teacher fitting for the GRU profile before rollout refinement', async () => {
     const templateTelemetry = createMockNetworkTelemetry();
     const templateGenome = createMockNetwork({
       telemetry: templateTelemetry,
@@ -145,14 +145,14 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
       propagateCalls: templateTelemetry.propagateCalls,
     }).toEqual({
       optimizeCalls: 1,
-      trainCalls: 1,
+      trainCalls: 0,
       clearCalls: 0,
       activateCalls: 0,
       propagateCalls: 0,
     });
   });
 
-  it('applies heuristic teacher fitting to the LSTM profile before rollout refinement', async () => {
+  it('skips heuristic teacher fitting for the LSTM profile before rollout refinement', async () => {
     const templateTelemetry = createMockNetworkTelemetry();
     const templateGenome = createMockNetwork({
       telemetry: templateTelemetry,
@@ -190,7 +190,7 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
       propagateCalls: templateTelemetry.propagateCalls,
     }).toEqual({
       optimizeCalls: 1,
-      trainCalls: 1,
+      trainCalls: 0,
       clearCalls: 0,
       activateCalls: 0,
       propagateCalls: 0,
@@ -272,16 +272,16 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
     ).toBe(20_176);
   });
 
-  it('uses feed-forward teacher fitting for the NARX warm-start strategy', () => {
-    expect(resolveWorkerWarmStartTeacherStrategy('narx')).toBe('feed-forward-teacher-fit');
+  it('uses rollout-only refinement for the NARX warm-start strategy', () => {
+    expect(resolveWorkerWarmStartTeacherStrategy('narx')).toBe('rollout-only');
   });
 
-  it('uses feed-forward teacher fitting for the GRU warm-start strategy', () => {
-    expect(resolveWorkerWarmStartTeacherStrategy('gru')).toBe('feed-forward-teacher-fit');
+  it('uses rollout-only refinement for the GRU warm-start strategy', () => {
+    expect(resolveWorkerWarmStartTeacherStrategy('gru')).toBe('rollout-only');
   });
 
-  it('uses feed-forward teacher fitting for the LSTM warm-start strategy', () => {
-    expect(resolveWorkerWarmStartTeacherStrategy('lstm')).toBe('feed-forward-teacher-fit');
+  it('uses rollout-only refinement for the LSTM warm-start strategy', () => {
+    expect(resolveWorkerWarmStartTeacherStrategy('lstm')).toBe('rollout-only');
   });
 });
 
@@ -289,13 +289,15 @@ describe('resolveHeuristicTeacherFlapDecisionFromObservationVector', () => {
   it('labels warm-start samples from the compact live controller shelf', () => {
     expect(
       resolveHeuristicTeacherFlapDecisionFromObservationVector([
-        0.62, -0.12, 0.31, 0.18, 0.3, 0.66,
+        0.62, -0.12, 0.31, 0.18, 0.3, 0.66, 0.12, 0.04, -0.1,
       ]),
     ).toBe(true);
   });
 
   it('ignores trailing legacy-style extras beyond the live controller input width', () => {
-    const baseObservationVector = [0.62, -0.12, 0.31, 0.18, 0.3, 0.66];
+    const baseObservationVector = [
+      0.62, -0.12, 0.31, 0.18, 0.3, 0.66, 0.12, 0.04, -0.1,
+    ];
 
     expect({
       baseDecision: resolveHeuristicTeacherFlapDecisionFromObservationVector(
@@ -313,7 +315,7 @@ describe('resolveHeuristicTeacherFlapDecisionFromObservationVector', () => {
     }).toEqual({
       baseDecision: true,
       extendedDecision: true,
-      expectedInputWidth: 6,
+      expectedInputWidth: FLAPPY_NETWORK_INPUT_SIZE,
     });
   });
 

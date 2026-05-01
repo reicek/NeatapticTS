@@ -102,8 +102,9 @@ function loadMockedInitializeNeatConstructor(input: {
       () => input.selectionModule,
     );
 
-    const neatInitModule =
-      require('./neat.init') as typeof import('./neat.init');
+    const neatInitModule = jest.requireActual(
+      './neat.init',
+    ) as typeof import('./neat.init');
     mockedInitializeNeatConstructor = neatInitModule.initializeNeatConstructor;
   });
 

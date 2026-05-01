@@ -1,5 +1,4 @@
 import * as validateModule from '../validate/neat.validate';
-import { NeatExportPopulationValidationError } from './neat.export.errors';
 import {
   LEGACY_CHECKPOINT_FORMAT_VERSION,
   type GenomeControllerCarrier,

@@ -182,11 +182,7 @@ export function compareInnovationLists(
   let excessCount = 0;
   let weightDifferenceSum = 0;
 
-  // Step 2: Resolve max innovation ids for excess detection.
-  const maxInnovFirst = resolveMaxInnovation(firstList);
-  const maxInnovSecond = resolveMaxInnovation(secondList);
-
-  // Step 3: Merge-walk the lists to classify matching, disjoint, and excess genes.
+  // Step 2: Merge-walk the lists to classify matching, disjoint, and excess genes.
   while (firstIndex < firstList.length && secondIndex < secondList.length) {
     const [innovationFirst, weightFirst] = firstList[firstIndex];
     const [innovationSecond, weightSecond] = secondList[secondIndex];
@@ -209,7 +205,7 @@ export function compareInnovationLists(
     secondIndex++;
   }
 
-  // Step 4: Remaining genes after one list ends are excess.
+  // Step 3: Remaining genes after one list ends are excess.
   excessCount += Math.max(0, firstList.length - firstIndex);
   excessCount += Math.max(0, secondList.length - secondIndex);
 

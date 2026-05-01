@@ -12,10 +12,7 @@ import {
 import { validateNetworkJsonOrThrow } from '../../architecture/network/serialize/network.serialize.json.utils';
 import { NETWORK_JSON_FORMAT_VERSION } from '../../architecture/network/serialize/network.serialize.utils.types';
 import type { ConnectionLike, GenomeLike } from '../compat/core/compat.types';
-import {
-  NeatGenomeConversionError,
-  NeatGenomeValidationError,
-} from './genome.errors';
+import { NeatGenomeValidationError } from './genome.errors';
 import type {
   GenomeMaterializationRuntimeHints,
   NeatGenome,
@@ -577,6 +574,7 @@ function resolveNodeIndexForGeneId(
   geneId: number,
   label: 'fromGeneId' | 'toGeneId' | 'gaterGeneId',
 ): number {
+  void label;
   const resolvedIndex = nodeIndexesByGeneId.get(geneId);
   return resolvedIndex as number;
 }

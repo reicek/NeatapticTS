@@ -758,8 +758,13 @@ function readNonTemporalValues(
 }
 
 function resolveExtensionVersion(
-  _extensions: NetworkJSONExtensions | undefined,
+  extensions: NetworkJSONExtensions | undefined,
 ): number {
+  const candidateVersion = extensions?.version;
+  if (typeof candidateVersion === 'number' && candidateVersion > 0) {
+    return candidateVersion;
+  }
+
   return TEMPORAL_EXTENSION_VERSION;
 }
 

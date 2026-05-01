@@ -2,7 +2,6 @@ import Network from '../../../architecture/network';
 import {
   accumulateCrowdingForObjective,
   assignCrowdingDistances,
-  buildGenomeIndexByReference,
   markBoundaryCrowding,
   resolveGenomeIndex,
 } from './multiobjective.crowding';
@@ -59,8 +58,6 @@ describe('multiobjective crowding chapter', () => {
       it('skips the empty front without throwing (line 441 branch 0 — shouldSkipCrowdingFront)', () => {
         // Arrange: one empty front → shouldSkipCrowdingFront([]) = true → continue
         const population: Network[] = [];
-        const genomeIndex = buildGenomeIndexByReference(population);
-
         // Act + Assert: must not throw even though a front is empty
         expect(() =>
           assignCrowdingDistances([[]], [], [], population),

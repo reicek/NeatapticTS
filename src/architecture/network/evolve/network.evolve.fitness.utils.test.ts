@@ -404,17 +404,17 @@ describe('network evolve fitness utility chapter', () => {
           2,
           options,
         );
-        let didResolve = false;
         const populationFitness = fitnessSetup.fitnessFunction as unknown as (
           population: Network[],
         ) => Promise<void>;
 
         // Act
-        await populationFitness([new Network(1, 1, { seed: 707 })]);
-        didResolve = true;
+        await expect(
+          populationFitness([new Network(1, 1, { seed: 707 })]),
+        ).resolves.toBeUndefined();
 
         // Assert
-        expect(didResolve).toBe(true);
+        expect(true).toBe(true);
       });
     });
 

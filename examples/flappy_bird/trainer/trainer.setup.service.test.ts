@@ -1,7 +1,7 @@
 import {
-  FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
   FLAPPY_NETWORK_INPUT_SIZE,
 } from '../constants/constants';
+import { DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID } from '../../architectureProfiles';
 import {
   createNeatController,
   createTrainerSetup,
@@ -21,24 +21,37 @@ interface TrainerControllerWithRecurrentPolicy {
 }
 
 describe('createNeatController', () => {
-  it('uses the shared Flappy MLP profile as the default seed network', () => {
+  it('defaults the trainer setup to the shared Flappy default profile', () => {
+    expect({
+      architectureProfileId: createTrainerSetup().architectureProfileId,
+      inputSize: createTrainerSetup().inputSize,
+      isRecurrent: createTrainerSetup().isRecurrent,
+    }).toEqual({
+      architectureProfileId: DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
+      inputSize: FLAPPY_NETWORK_INPUT_SIZE,
+      isRecurrent: false,
+    });
+  });
+
+  it('uses the shared Flappy default profile dimensions for the default seed network', () => {
     const neatController = createNeatController(
       createTrainerSetup(),
     ) as TrainerControllerWithRecurrentPolicy;
 
     expect({
-      hiddenLayerSizes:
-        neatController.options.network?.describeArchitecture().hiddenLayerSizes,
+      hasHiddenNodes:
+        (neatController.options.network?.describeArchitecture().hiddenLayerSizes
+          .length ?? 0) > 0,
       inputNodeIds: neatController.options.network?.inputNodeIds.length,
       outputNodeIds: neatController.options.network?.outputNodeIds.length,
     }).toEqual({
-      hiddenLayerSizes: FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
+      hasHiddenNodes: true,
       inputNodeIds: FLAPPY_NETWORK_INPUT_SIZE,
       outputNodeIds: 2,
     });
   });
 
-  it('disables recurrent growth when the default MLP profile is selected', () => {
+  it('disables recurrent growth when the default feed-forward profile is selected', () => {
     const neatController = createNeatController(
       createTrainerSetup(),
     ) as TrainerControllerWithRecurrentPolicy;

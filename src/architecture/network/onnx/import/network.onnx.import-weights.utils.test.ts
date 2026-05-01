@@ -4,7 +4,6 @@ import { exportToONNX } from '../network.onnx';
 import type { Conv2DMapping } from '../network.onnx';
 import type {
   OnnxMetadataProperty,
-  OnnxModel,
   OnnxTensor,
 } from '../schema/network.onnx.schema.types';
 import {
@@ -90,10 +89,6 @@ function findMetadataEntry(
   }
 
   return matchingEntry;
-}
-
-function cloneOnnxModel(onnxModel: OnnxModel): OnnxModel {
-  return structuredClone(onnxModel) as OnnxModel;
 }
 
 function createConvSharingVerifiedScenario(): {

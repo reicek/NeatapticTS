@@ -6,7 +6,6 @@ import {
   FLAPPY_BROWSER_ELITISM_COUNT,
   FLAPPY_BROWSER_POPULATION_SIZE,
   FLAPPY_MAX_FRAMES_PER_EPISODE,
-  FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
   FLAPPY_NETWORK_INPUT_SIZE,
   FLAPPY_NETWORK_OUTPUT_SIZE,
 } from '../constants/constants';
@@ -39,7 +38,7 @@ afterEach(() => {
 });
 
 describe('createInitializedWorkerRuntime', () => {
-  it('keeps the default MLP worker runtime on the feed-forward mutation shelf', () => {
+  it('keeps the default worker runtime on the feed-forward mutation shelf', () => {
     const initPayload: WorkerInitMessage['payload'] = {
       populationSize: 8,
       elitismCount: 2,
@@ -62,7 +61,7 @@ describe('createInitializedWorkerRuntime', () => {
     });
   });
 
-  it('uses the shared Flappy MLP profile as the default worker seed network', () => {
+  it('uses the shared Flappy default profile dimensions for the default worker seed network', () => {
     const initPayload: WorkerInitMessage['payload'] = {
       populationSize: 8,
       elitismCount: 2,
@@ -73,12 +72,13 @@ describe('createInitializedWorkerRuntime', () => {
     ) as unknown as WorkerRuntimeWithSeedNetwork;
 
     expect({
-      hiddenLayerSizes:
-        neatRuntime.options.network.describeArchitecture().hiddenLayerSizes,
+      hasHiddenNodes:
+        neatRuntime.options.network.describeArchitecture().hiddenLayerSizes
+          .length > 0,
       inputNodeIds: neatRuntime.options.network.inputNodeIds.length,
       outputNodeIds: neatRuntime.options.network.outputNodeIds.length,
     }).toEqual({
-      hiddenLayerSizes: FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
+      hasHiddenNodes: true,
       inputNodeIds: FLAPPY_NETWORK_INPUT_SIZE,
       outputNodeIds: FLAPPY_NETWORK_OUTPUT_SIZE,
     });
@@ -135,7 +135,7 @@ describe('createInitializedWorkerRuntime', () => {
     });
   });
 
-  it('keeps the default MLP worker runtime on the single-rollout browser objective', () => {
+  it('keeps the default worker runtime on the single-rollout browser objective', () => {
     const singleRolloutFitnessSpy = jest
       .spyOn(flappyEvaluation, 'evaluateFlappyFitness')
       .mockReturnValue(123);

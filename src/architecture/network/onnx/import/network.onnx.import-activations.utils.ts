@@ -403,7 +403,6 @@ export function assignActivationFunctions(
   ): ActivationFunction {
     const operation = resolveOperationByPriority(context);
     // All reachable operations are keys in the map; non-null assertion is safe.
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return ACTIVATION_OPERATION_TO_FUNCTION.get(operation)!;
   }
 

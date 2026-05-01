@@ -182,7 +182,6 @@ export function applyAdaptivePruning(this: NeatLikeForPruning): void {
   ) {
     const updatedPruneLevel = computeNextAdaptivePruneLevel(
       adaptivePruningOptions,
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       this._adaptivePruneLevel!,
       currentMetricValue,
       targetRemainingMetric,

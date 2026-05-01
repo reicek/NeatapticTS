@@ -670,7 +670,7 @@ describe('neat mutation add-connection chapter', () => {
     describe('given the chosen pair is not legal for the active topology policy', () => {
       it('returns undefined without materializing a connection', () => {
         // Arrange
-        const { genome, firstHiddenNode, secondHiddenNode } =
+        const { genome, secondHiddenNode } =
           createConnectionReuseGenome();
 
         // Act

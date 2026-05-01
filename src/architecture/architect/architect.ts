@@ -125,8 +125,6 @@ export default class Architect {
     const selfconns = new Set<Connection>();
     let inputSize = 0;
     let outputSize = 0;
-    let foundTypes = false;
-
     for (const item of list) {
       let currentNodes: Node[] = [];
 
@@ -150,10 +148,8 @@ export default class Architect {
 
           if (node.type === 'input') {
             inputSize++;
-            foundTypes = true;
           } else if (node.type === 'output') {
             outputSize++;
-            foundTypes = true;
           }
 
           if (node.connections) {

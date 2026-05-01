@@ -1,5 +1,4 @@
 import type Network from '../network';
-import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import { NetworkActivateCorruptedStructureError } from './network.activate.errors';
 import { activate, gaussianRand } from './network.activate.core.utils';
 import {
@@ -65,8 +64,6 @@ type MockActivationNetwork = ActivateRuntimeNetworkProps & {
 
 type StatsSnapshot = ActivationStats;
 
-const mockedAcquire = jest.mocked(activationArrayPool.acquire);
-const mockedRelease = jest.mocked(activationArrayPool.release);
 const mockedResolveActivationTraversalNodes = jest.mocked(
   resolveActivationTraversalNodes,
 );

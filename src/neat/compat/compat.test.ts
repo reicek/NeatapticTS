@@ -422,6 +422,18 @@ describe('neat compat chapter', () => {
         expect(resolveMaxInnovation([])).toBe(0);
       });
     });
+
+    describe('given a non-empty sorted list', () => {
+      it('returns the final innovation id as the max innovation', () => {
+        expect(
+          resolveMaxInnovation([
+            [3, 0.1],
+            [8, -0.25],
+            [13, 0.5],
+          ]),
+        ).toBe(13);
+      });
+    });
   });
 
   describe('computeCompatibilityDistance()', () => {

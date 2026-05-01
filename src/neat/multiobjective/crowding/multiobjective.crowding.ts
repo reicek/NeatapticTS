@@ -395,7 +395,6 @@ function applyCrowdingDelta(
   valueRange: number,
 ): void {
   // initializeCrowding always runs before this helper; non-null assertion is safe.
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   currentGenome._moCrowd =
     currentGenome._moCrowd! + (nextValue - previousValue) / valueRange;
 }

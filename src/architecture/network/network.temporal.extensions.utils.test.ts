@@ -289,6 +289,50 @@ describe('network.temporal.extensions.utils', () => {
         });
       });
     });
+
+    describe('given a live narx-memory descriptor carries a standard labeled module id', () => {
+      it('derives the module label into the read-side descriptor', () => {
+        // Arrange
+        const memoryNode = createNode(702);
+        const memoryConnection = connectNodeToSelf(memoryNode, 124);
+        const runtimeNetwork = createRuntimeSurface([memoryNode], {
+          values: {
+            recurrentModules: [
+              {
+                connectionInnovations: [memoryConnection.innovation],
+                kind: 'narx-memory',
+                moduleId: 'module:narx-memory:delay-bank:702',
+                nodeGeneIdsByRole: {
+                  delayStep0: [702],
+                },
+              },
+            ],
+          },
+          version: 1,
+        });
+
+        // Act
+        const temporalDescriptor = describeTemporalStructure(
+          runtimeNetwork as unknown as Network,
+        );
+
+        // Assert
+        expect(temporalDescriptor).toEqual({
+          gatedBlocks: [],
+          recurrentModules: [
+            {
+              connectionInnovations: [124],
+              kind: 'narx-memory',
+              moduleId: 'module:narx-memory:delay-bank:702',
+              moduleLabel: 'delay-bank',
+              nodeGeneIdsByRole: {
+                delayStep0: [702],
+              },
+            },
+          ],
+        });
+      });
+    });
   });
 
   describe('resolveTemporalRecurrentModuleNodeGeneIds', () => {

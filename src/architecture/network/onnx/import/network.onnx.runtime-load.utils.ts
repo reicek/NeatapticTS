@@ -207,7 +207,6 @@ function buildPerceptronNetwork(
   );
 
   // Step 3: Resolve output layer width. at(-1) is always defined: validation ensures ≥2 sizes.
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const outputCount = buildContext.sizes.at(buildContext.hiddenSliceEndOffset)!;
 
   // Step 4: Fold widths into MLP creation.

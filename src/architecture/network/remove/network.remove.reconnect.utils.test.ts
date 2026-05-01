@@ -1,4 +1,3 @@
-import type Connection from '../../connection';
 import Node from '../../node';
 import Network from '../network';
 import type {

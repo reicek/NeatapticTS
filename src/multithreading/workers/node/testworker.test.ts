@@ -27,8 +27,12 @@ function createChildProcessHarness(input?: {
   childProcessHarness.send = jest.fn((message: unknown) => {
     if (isEvaluationPayload(message)) {
       queueMicrotask(() => {
-        input?.onEvaluationPayload?.(childProcessHarness) ??
-          childProcessHarness.emit('message', 0.25);
+        if (input?.onEvaluationPayload) {
+          input.onEvaluationPayload(childProcessHarness);
+          return;
+        }
+
+        childProcessHarness.emit('message', 0.25);
       });
     }
 

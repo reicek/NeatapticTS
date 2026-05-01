@@ -4,7 +4,10 @@ import {
   resolveExampleArchitectureProfile,
 } from './architectureProfiles';
 import { createGenomeFromNetwork } from '../src/neat/genome/genome';
-import { FLAPPY_NETWORK_HIDDEN_LAYER_SIZES } from './flappy_bird/constants/constants.network';
+import {
+  FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
+  FLAPPY_NETWORK_INPUT_SIZE,
+} from './flappy_bird/constants/constants.network';
 
 describe('shared example architecture profiles', () => {
   describe('resolveExampleArchitectureProfile()', () => {
@@ -47,7 +50,7 @@ describe('shared example architecture profiles', () => {
         flappyConfiguration: {
           family: 'MLP',
           hiddenLayerSizes: FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
-          input: 6,
+          input: FLAPPY_NETWORK_INPUT_SIZE,
           output: 2,
         },
         flappyFamily: 'MLP',
@@ -117,7 +120,7 @@ describe('shared example architecture profiles', () => {
           topologyIntent: 'feed-forward',
         },
         flappy: {
-          inputNodeIds: 6,
+          inputNodeIds: FLAPPY_NETWORK_INPUT_SIZE,
           outputNodeIds: 2,
           topologyIntent: 'feed-forward',
         },
@@ -141,7 +144,9 @@ describe('shared example architecture profiles', () => {
           ).length;
 
         // Assert
-        expect(directInputToOutputConnectionCount).toBe(12);
+        expect(directInputToOutputConnectionCount).toBe(
+          FLAPPY_NETWORK_INPUT_SIZE * 2,
+        );
       });
     });
 

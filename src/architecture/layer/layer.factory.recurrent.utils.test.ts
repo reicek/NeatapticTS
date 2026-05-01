@@ -1,4 +1,3 @@
-import type Connection from '../connection/connection';
 import Group from '../group/group';
 import Layer from './layer';
 import Node from '../node';
