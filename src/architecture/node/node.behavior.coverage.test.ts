@@ -740,7 +740,7 @@ describe('Node', () => {
           }).toStrictEqual({
             activation: 0,
             error: { responsibility: 0, projected: 0, gated: 0 },
-            gatedGain: 0,
+            gatedGain: 1,
             incomingEligibility: 0,
             incomingXtraceLength: 0,
             old: 0,

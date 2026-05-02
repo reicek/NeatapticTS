@@ -50,7 +50,8 @@ describe('normalizeRunOptions', () => {
     expect({
       architectureProfileId: normalizedOptions.architectureProfileId,
       inputNodeIds: normalizedOptions.neatOptions.network?.inputNodeIds.length,
-      outputNodeIds: normalizedOptions.neatOptions.network?.outputNodeIds.length,
+      outputNodeIds:
+        normalizedOptions.neatOptions.network?.outputNodeIds.length,
     }).toEqual({
       architectureProfileId: 'mlp',
       inputNodeIds: 6,
@@ -82,7 +83,8 @@ describe('normalizeRunOptions', () => {
     expect({
       architectureProfileId: normalizedOptions.architectureProfileId,
       inputNodeIds: normalizedOptions.neatOptions.network?.inputNodeIds.length,
-      outputNodeIds: normalizedOptions.neatOptions.network?.outputNodeIds.length,
+      outputNodeIds:
+        normalizedOptions.neatOptions.network?.outputNodeIds.length,
     }).toEqual({
       architectureProfileId: 'narx',
       inputNodeIds: 6,
@@ -102,7 +104,8 @@ describe('normalizeRunOptions', () => {
     expect({
       architectureProfileId: normalizedOptions.architectureProfileId,
       inputNodeIds: normalizedOptions.neatOptions.network?.inputNodeIds.length,
-      outputNodeIds: normalizedOptions.neatOptions.network?.outputNodeIds.length,
+      outputNodeIds:
+        normalizedOptions.neatOptions.network?.outputNodeIds.length,
     }).toEqual({
       architectureProfileId: 'gru',
       inputNodeIds: 6,
@@ -122,7 +125,8 @@ describe('normalizeRunOptions', () => {
     expect({
       architectureProfileId: normalizedOptions.architectureProfileId,
       inputNodeIds: normalizedOptions.neatOptions.network?.inputNodeIds.length,
-      outputNodeIds: normalizedOptions.neatOptions.network?.outputNodeIds.length,
+      outputNodeIds:
+        normalizedOptions.neatOptions.network?.outputNodeIds.length,
     }).toEqual({
       architectureProfileId: 'lstm',
       inputNodeIds: 6,

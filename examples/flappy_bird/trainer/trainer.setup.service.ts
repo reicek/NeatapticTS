@@ -49,7 +49,10 @@ import type {
  */
 export function createTrainerSetup(): FlappyTrainerSetup {
   const profileId = DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID;
-  const resolvedProfile = resolveExampleArchitectureProfile('flappy-bird', profileId);
+  const resolvedProfile = resolveExampleArchitectureProfile(
+    'flappy-bird',
+    profileId,
+  );
   return {
     architectureProfileId: profileId,
     isRecurrent: resolvedProfile.recurrent,

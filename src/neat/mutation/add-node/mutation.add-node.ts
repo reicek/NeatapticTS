@@ -314,7 +314,13 @@ export function applySplitWithNewRecord(
   // Step 1: create a new hidden node.
   const newNode = createSplitNode(NodeClass, internal._getRNG());
 
-  // Step 2: connect the split edges and assign new innovations.
+  // Step 2: insert the new node before the original target node so that the
+  // acyclic connectivity check (which uses nodes.indexOf) can locate the new
+  // node when connectSplitEdges is called.
+  const insertIndex = resolveInsertIndex(genomeToEdit, connectionToSplit.to);
+  genomeToEdit.nodes.splice(insertIndex, 0, newNode);
+
+  // Step 3: connect the split edges and assign new innovations.
   const splitConnections = connectSplitEdges(
     genomeToEdit,
     connectionToSplit,
@@ -331,10 +337,6 @@ export function applySplitWithNewRecord(
     splitDescriptor.splitKey,
     splitRecord,
   );
-
-  // Step 3: insert the new node before the original target node.
-  const insertIndex = resolveInsertIndex(genomeToEdit, connectionToSplit.to);
-  genomeToEdit.nodes.splice(insertIndex, 0, newNode);
 }
 
 /**

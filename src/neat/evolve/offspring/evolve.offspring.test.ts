@@ -1,4 +1,7 @@
 import Network from '../../../architecture/network';
+import * as methods from '../../../methods/methods';
+import Neat from '../../../neat';
+import { createGenomeFromNetwork } from '../../genome/genome';
 import {
   createOffspring,
   type OffspringContext,
@@ -147,6 +150,65 @@ describe('neat evolve offspring chapter', () => {
         } finally {
           mathRandomSpy.mockRestore();
         }
+      });
+
+      it('keeps crossover offspring strict-genome clean for feed-forward XOR parents before population mutation runs', () => {
+        // Arrange
+        const evolutionController = new Neat(2, 1, () => 1, {
+          elitism: 5,
+          fastMode: true,
+          mutation: methods.mutation.FFW,
+          mutationAmount: 2,
+          mutationRate: 0.8,
+          popsize: 10,
+          seed: 42,
+        });
+        const [firstParent, secondParent] = evolutionController.population;
+
+        if (!firstParent || !secondParent) {
+          throw new Error(
+            'Expected at least two starter genomes for offspring testing.',
+          );
+        }
+
+        const offspringContext: OffspringContext = {
+          population: evolutionController.population,
+          options: {
+            equal:
+              typeof evolutionController.options.equal === 'boolean'
+                ? evolutionController.options.equal
+                : undefined,
+            reenableProb:
+              typeof evolutionController.options.reenableProb === 'number'
+                ? evolutionController.options.reenableProb
+                : undefined,
+          },
+          _getRNG: (
+            evolutionController as unknown as {
+              _getRNG: () => () => number;
+            }
+          )._getRNG.bind(evolutionController),
+          _nextGenomeId: 1,
+          _lineageEnabled: false,
+          ensureMinHiddenNodes: (genome) => {
+            void evolutionController.ensureMinHiddenNodes(genome);
+          },
+          ensureNoDeadEnds: (genome) => {
+            evolutionController.ensureNoDeadEnds(genome);
+          },
+        };
+        let parentReadCount = 0;
+
+        const selectParent = (): Network => {
+          parentReadCount += 1;
+          return parentReadCount === 1 ? firstParent : secondParent;
+        };
+
+        // Act
+        const offspring = createOffspring(offspringContext, selectParent);
+
+        // Assert
+        expect(() => createGenomeFromNetwork(offspring)).not.toThrow();
       });
     });
   });

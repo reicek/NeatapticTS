@@ -2,6 +2,7 @@
 import Network from '../../architecture/network';
 import * as methods from '../../methods/methods';
 import Neat from '../../neat';
+import { createGenomeFromNetwork } from '../genome/genome';
 import { recordNodeSplitRecord } from '../innovation-tracker/innovation-tracker';
 import * as mutationAddConn from './add-conn/mutation.add-conn';
 import {
@@ -285,6 +286,165 @@ describe('neat mutation chapter', () => {
         expect(genomeMutateSpy).not.toHaveBeenCalled();
       });
     });
+
+    describe('given a clean feed-forward starter population is mutated in place', () => {
+      it('keeps every mutated genome strict-genome clean', async () => {
+        // Arrange
+        const mutationController = new Neat(2, 1, () => 0, {
+          fastMode: true,
+          mutation: methods.mutation.FFW,
+          mutationAmount: 2,
+          mutationRate: 0.8,
+          popsize: 20,
+          seed: 42,
+        });
+
+        // Act
+        await mutationController.mutate();
+        const allGenomesConvertToStrictGenome =
+          mutationController.population.every((genome) => {
+            try {
+              createGenomeFromNetwork(genome);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+
+        // Assert
+        expect(allGenomesConvertToStrictGenome).toBe(true);
+      });
+
+      it('keeps every mutated genome strict-genome clean when ADD_NODE is the only operator', async () => {
+        // Arrange
+        const mutationController = new Neat(2, 1, () => 0, {
+          mutation: [methods.mutation.ADD_NODE],
+          mutationAmount: 2,
+          mutationRate: 1,
+          popsize: 20,
+          seed: 43,
+        });
+
+        // Act
+        await mutationController.mutate();
+        const allGenomesConvertToStrictGenome =
+          mutationController.population.every((genome) => {
+            try {
+              createGenomeFromNetwork(genome);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+
+        // Assert
+        expect(allGenomesConvertToStrictGenome).toBe(true);
+      });
+
+      it('keeps every mutated genome strict-genome clean when ADD_CONN is the only operator', async () => {
+        // Arrange
+        const mutationController = new Neat(2, 1, () => 0, {
+          mutation: [methods.mutation.ADD_CONN],
+          mutationAmount: 2,
+          mutationRate: 1,
+          popsize: 20,
+          seed: 44,
+        });
+
+        // Act
+        await mutationController.mutate();
+        const allGenomesConvertToStrictGenome =
+          mutationController.population.every((genome) => {
+            try {
+              createGenomeFromNetwork(genome);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+
+        // Assert
+        expect(allGenomesConvertToStrictGenome).toBe(true);
+      });
+
+      it('keeps every mutated genome strict-genome clean when SUB_NODE and SUB_CONN are the only operators', async () => {
+        // Arrange
+        const mutationController = new Neat(2, 1, () => 0, {
+          mutation: [methods.mutation.SUB_NODE, methods.mutation.SUB_CONN],
+          mutationAmount: 2,
+          mutationRate: 1,
+          popsize: 20,
+          seed: 46,
+        });
+
+        // Act
+        await mutationController.mutate();
+        const allGenomesConvertToStrictGenome =
+          mutationController.population.every((genome) => {
+            try {
+              createGenomeFromNetwork(genome);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+
+        // Assert
+        expect(allGenomesConvertToStrictGenome).toBe(true);
+      });
+
+      it('keeps every mutated genome strict-genome clean when SWAP_NODES is the only operator', async () => {
+        // Arrange
+        const mutationController = new Neat(2, 1, () => 0, {
+          mutation: [methods.mutation.SWAP_NODES],
+          mutationAmount: 2,
+          mutationRate: 1,
+          popsize: 20,
+          seed: 47,
+        });
+
+        // Act
+        await mutationController.mutate();
+        const allGenomesConvertToStrictGenome =
+          mutationController.population.every((genome) => {
+            try {
+              createGenomeFromNetwork(genome);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+
+        // Assert
+        expect(allGenomesConvertToStrictGenome).toBe(true);
+      });
+
+      it('keeps every mutated genome strict-genome clean when ADD_NODE and ADD_CONN are the only operators', async () => {
+        // Arrange
+        const mutationController = new Neat(2, 1, () => 0, {
+          mutation: [methods.mutation.ADD_NODE, methods.mutation.ADD_CONN],
+          mutationAmount: 2,
+          mutationRate: 1,
+          popsize: 20,
+          seed: 45,
+        });
+
+        // Act
+        await mutationController.mutate();
+        const allGenomesConvertToStrictGenome =
+          mutationController.population.every((genome) => {
+            try {
+              createGenomeFromNetwork(genome);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+
+        // Assert
+        expect(allGenomesConvertToStrictGenome).toBe(true);
+      });
+    });
   });
 
   describe('selectMutationMethod', () => {
@@ -482,6 +642,33 @@ describe('neat mutation chapter', () => {
 
         // Assert: no node was added (early return fired)
         expect(network.nodes.length).toBe(initialNodeCount);
+      });
+    });
+
+    describe('given the controller mutates an external genome with higher existing innovations', () => {
+      it('keeps the strict genome contract free of duplicate connection innovations', async () => {
+        // Arrange: force the split onto the second starter edge so the untouched
+        // first edge keeps innovation 1 while the split path allocates two more.
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          seed: 726,
+        });
+        const network = new Network(2, 1, { seed: 727 });
+
+        network.connections.forEach((connectionEntry, connectionIndex) => {
+          connectionEntry.enabled = connectionIndex === 1;
+        });
+
+        // Act
+        await mutateAddNodeReuse.call(
+          mutationController as unknown as ThisParameterType<
+            typeof mutateAddNodeReuse
+          >,
+          network as unknown as Parameters<typeof mutateAddNodeReuse>[0],
+        );
+
+        // Assert
+        expect(() => createGenomeFromNetwork(network)).not.toThrow();
       });
     });
   });

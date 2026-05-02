@@ -273,6 +273,18 @@ describe('network mutate chapter', () => {
           // Assert
           expect(hiddenCountAfterMutation).toBe(hiddenCountBeforeMutation);
         });
+
+        it('keeps strict genome conversion valid after removing one previously added hidden node', () => {
+          // Arrange
+          const network = new Network(2, 1, { seed: 4281 });
+          network.mutate(mutation.ADD_NODE);
+
+          // Act
+          network.mutate(mutation.SUB_NODE);
+
+          // Assert
+          expect(() => createGenomeFromNetwork(network)).not.toThrow();
+        });
       });
     });
 

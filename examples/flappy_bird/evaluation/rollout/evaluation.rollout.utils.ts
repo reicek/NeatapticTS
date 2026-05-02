@@ -97,7 +97,8 @@ export function composeRolloutEpisodeResult(
   // likely always rising or always falling — those should score far lower than
   // any centering strategy that survives longer.
   const fitness =
-    pipesPassed === 0 && framesSurvived < FLAPPY_FITNESS_EARLY_DEATH_FRAME_THRESHOLD
+    pipesPassed === 0 &&
+    framesSurvived < FLAPPY_FITNESS_EARLY_DEATH_FRAME_THRESHOLD
       ? rawFitness * FLAPPY_FITNESS_EARLY_DEATH_PENALTY_MULTIPLIER
       : rawFitness;
 

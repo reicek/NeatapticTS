@@ -542,6 +542,15 @@ Lookahead slow-weight snapshot.
 
 AMSGrad maximum of past second-moment estimates.
 
+#### nextInnovation
+
+Read the current next-innovation cursor without advancing it.
+
+Use this to seed an external innovation tracker so its counter never
+overlaps with innovation IDs already assigned by the Connection constructor.
+
+Returns: Current value of the monotonic connection innovation counter.
+
 #### plastic
 
 Whether this connection participates in plastic adaptation.

@@ -228,8 +228,7 @@ export function resolveObservationFeatures(
     1,
   );
 
-  const secondGapCenterYPx =
-    secondPipe?.gapCenterYPx ?? worldHeightPx * 0.5;
+  const secondGapCenterYPx = secondPipe?.gapCenterYPx ?? worldHeightPx * 0.5;
   const normalizedDeltaToSecondGap = clamp(
     (input.birdYPx - secondGapCenterYPx) / worldHeightPx,
     -1,

@@ -1115,9 +1115,11 @@ export default class Node {
       connection.eligibility = 0;
       connection.xtrace = { nodes: [], values: [] };
     }
-    // Reset gain for connections gated by this node.
+    // Reset gain for connections gated by this node to the neutral default (1).
+    // Using 1 instead of 0 restores the same initial conditions as a fresh network
+    // before any activation — a fresh connection's gain defaults to 1 via the accessor.
     for (const connection of this.connections.gated) {
-      connection.gain = 0;
+      connection.gain = 1;
     }
     // Reset error values.
     this.error = { responsibility: 0, projected: 0, gated: 0 };

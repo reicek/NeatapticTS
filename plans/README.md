@@ -42,7 +42,7 @@ Active selection guide:
 - [plans/Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md): checkpointing, persistence, save/resume workflows.
 - [plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): prebuilt architecture constructors and sequence-oriented builders. [DONE]
 - [plans/Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md): parallel evaluation API for Node and browser workers.
-- [plans/Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md): fast serialization path for worker-based evaluation.
+- [plans/Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md): four progressive worker inference transport strategies (`PortableInferencePayload`, `TransferableInferencePayload`, `InferenceChannel`, `SharedInferenceWorker`) — [PLANNED], no implementation started.
 - [plans/NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md): NEAT Genesis EvoDevo (NGE) — evo-devo algorithm with computation motifs, memory architecture, neuromodulation, and reproduction system.
 - [plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md): NGE racing benchmark — single-agent sensory specialization and behavioral drives.
 - [plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md): NGE ant hive ecosystem — multi-agent stigmergy, role differentiation, and collective intelligence.

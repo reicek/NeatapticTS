@@ -166,6 +166,32 @@ describe('neat mutation add-node chapter', () => {
         });
       });
     });
+
+    describe('given a novel connection split in a feed-forward (acyclic) genome', () => {
+      it('stores a non-zero inInnov from the tracker even though the new node starts outside the nodes array', () => {
+        // Arrange: create an acyclic genome that rejects backward connections
+        const { genome, connectionToSplit } = createAcyclicSplitScenario();
+        const mutationController = createMutationController();
+        const splitDescriptor = buildSplitDescriptor(connectionToSplit);
+        disconnectOriginalConnection(genome, connectionToSplit);
+
+        // Act
+        applySplitWithNewRecord(
+          genome,
+          connectionToSplit,
+          splitDescriptor,
+          DeterministicNode,
+          mutationController,
+        );
+        const recordedSplit =
+          mutationController._innovationTracker.nodeSplitRecords.get(
+            splitDescriptor.splitKey,
+          );
+
+        // Assert: inInnov must be a proper tracker-assigned value (not the fallback DEFAULT_INNOVATION_ID=0)
+        expect(recordedSplit?.inInnov).toBe(11);
+      });
+    });
   });
 
   describe('applySplitWithExistingRecord', () => {
@@ -495,4 +521,65 @@ function createNode(
     isProjectingTo: (targetNode) =>
       connections.out.some((connection) => connection.to === targetNode),
   };
+}
+
+/**
+ * Creates a split scenario using a genome that enforces acyclic (feed-forward)
+ * connectivity. A connection is rejected if the source node appears AFTER the
+ * target node in `genome.nodes` (i.e. it would be a backward edge). This
+ * mirrors `shouldRejectConnectionForAcyclicMode` in the real network.
+ */
+function createAcyclicSplitScenario(): {
+  genome: GenomeWithMetadata;
+  connectionToSplit: ConnectionWithMetadata;
+} {
+  const inputNode = createNode('input', 1);
+  const outputNode = createNode('output', 2);
+  const genome = createAcyclicGenome([inputNode, outputNode]);
+  const [connectionToSplit] = genome.connect!(inputNode, outputNode, 0.75);
+  connectionToSplit.innovation = 5;
+
+  return { genome, connectionToSplit };
+}
+
+/**
+ * Builds a genome whose `connect` implementation rejects any connection where
+ * the source node's position in `genome.nodes` is greater than the target
+ * node's position (acyclic / feed-forward enforcement).
+ */
+function createAcyclicGenome(nodes: NodeWithMetadata[]): GenomeWithMetadata {
+  const genome: GenomeWithMetadata = {
+    nodes,
+    connections: [],
+    gates: [],
+    input: 1,
+    output: 1,
+    connect: (from, to, weight = 1) => {
+      // Reject backward connections — mirrors shouldRejectConnectionForAcyclicMode
+      if (genome.nodes.indexOf(from) > genome.nodes.indexOf(to)) {
+        return [];
+      }
+      const connection: ConnectionWithMetadata = { from, to, weight };
+      from.connections.out.push(connection);
+      to.connections.in.push(connection);
+      genome.connections.push(connection);
+      return [connection];
+    },
+    disconnect: (from, to) => {
+      const matchingConnections = genome.connections.filter(
+        (connection) => connection.from === from && connection.to === to,
+      );
+      genome.connections = genome.connections.filter(
+        (connection) => !(connection.from === from && connection.to === to),
+      );
+      from.connections.out = from.connections.out.filter(
+        (connection) => !matchingConnections.includes(connection),
+      );
+      to.connections.in = to.connections.in.filter(
+        (connection) => !matchingConnections.includes(connection),
+      );
+    },
+  };
+
+  return genome;
 }

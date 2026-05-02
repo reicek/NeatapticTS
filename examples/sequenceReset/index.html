@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sequence Reset (NeatapticTS)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="../../docs/assets/theme.css" />
+    <script defer src="../../docs/assets/theme-tooltips.js"></script>
+  </head>
+  <body class="demo-page">
+    <main class="demo-main">
+      <section class="hero">
+        <p class="eyebrow">Starter Browser Demo</p>
+        <h1>Sequence Reset</h1>
+        <p>
+          Sequence Reset shows how recurrent state changes the meaning of repeated inputs:
+          one run starts fresh, one run starts after <code>network.clear()</code>, and one run
+          carries state forward so the same sequence produces a different response.
+        </p>
+      </section>
+
+      <p id="sequence-reset-status" class="load-status" role="status" aria-live="polite">
+        Loading Sequence Reset browser bundle...
+      </p>
+      <section id="sequence-reset-output" class="starter-demo-shell"></section>
+    </main>
+
+    <script>
+      (function loadSequenceResetBundle() {
+        const statusElement = document.getElementById('sequence-reset-status');
+        const currentPath = window.location.pathname.replace(/\\/g, '/');
+        const isRepositoryExamplePath = /\/examples\//.test(currentPath) && !/\/docs\/examples\//.test(currentPath);
+        const bundleSrc = isRepositoryExamplePath
+          ? '../../docs/assets/sequence-reset.bundle.js'
+          : '../../assets/sequence-reset.bundle.js';
+
+        const scriptElement = document.createElement('script');
+        scriptElement.src = bundleSrc;
+        scriptElement.defer = true;
+        scriptElement.onload = () => {
+          const startFunction = window.sequenceResetStart || window.sequenceReset?.start;
+
+          if (!startFunction) {
+            if (statusElement) {
+              statusElement.textContent =
+                'Bundle loaded, but no Sequence Reset start function was found.';
+            }
+            return;
+          }
+
+          Promise.resolve(startFunction('sequence-reset-output'))
+            .then(() => {
+              if (statusElement) {
+                statusElement.textContent = '';
+              }
+            })
+            .catch((error) => {
+              if (statusElement) {
+                statusElement.textContent = error instanceof Error
+                  ? error.message
+                  : String(error);
+              }
+            });
+        };
+        scriptElement.onerror = () => {
+          if (statusElement) {
+            statusElement.textContent =
+              `Failed to load sequence-reset.bundle.js from ${bundleSrc}. Run npm run build:sequence-reset.`;
+          }
+        };
+
+        document.body.appendChild(scriptElement);
+      })();
+    </script>
+  </body>
+</html>

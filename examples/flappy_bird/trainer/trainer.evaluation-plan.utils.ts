@@ -88,7 +88,10 @@ export function resolveGenerationEvaluationPlan(
     quickSeeds: buildSharedSeedBatch(generationIndex, 0x41a7, 3),
     fullSeeds: buildSharedSeedBatch(generationIndex, 0x7d2b, 8),
     reevaluationSeeds: buildSharedSeedBatch(generationIndex, 0xb8f3, 32),
-    quickRolloutOptions: createQuickRolloutOptions(difficultyScale, isRecurrent),
+    quickRolloutOptions: createQuickRolloutOptions(
+      difficultyScale,
+      isRecurrent,
+    ),
     fullRolloutOptions: createFullRolloutOptions(difficultyScale, isRecurrent),
     reevaluationRolloutOptions:
       createReevaluationRolloutOptions(difficultyScale),

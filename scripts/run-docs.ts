@@ -44,6 +44,9 @@ async function main(): Promise<void> {
 async function runFullDocsWorkflow(): Promise<void> {
   // Step 1: Build the browser example bundles in parallel.
   await runScriptTasksInParallel([
+    { label: 'Hello Network bundle', scriptName: 'build:hello-network' },
+    { label: 'Evolve XOR bundle', scriptName: 'build:evolve-xor' },
+    { label: 'Sequence Reset bundle', scriptName: 'build:sequence-reset' },
     { label: 'ASCII Maze bundle', scriptName: 'build:ascii-maze' },
     { label: 'Flappy worker bundle', scriptName: 'build:flappy-worker' },
     { label: 'Flappy Bird bundle', scriptName: 'build:flappy-bird' },

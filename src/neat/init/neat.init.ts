@@ -63,6 +63,7 @@
  */
 
 import type Network from '../../architecture/network/network';
+import Connection from '../../architecture/connection/connection';
 import * as methods from '../../methods/methods';
 import { selection as selectionMethods } from '../../methods/selection/selection';
 import { createInnovationTracker } from '../innovation-tracker/innovation-tracker';
@@ -242,6 +243,12 @@ export function initializeNeatConstructor(
   // Step 3: Preserve legacy best-effort pool bootstrapping semantics.
   bootstrapInitialPool(host, optionBag);
 
+  // Step 3b: Align the innovation tracker cursor above all innovation IDs
+  // already assigned to connections in the initial population. Without this,
+  // mutation-assigned IDs start at 0 and eventually collide with connection
+  // IDs that were assigned by the Connection constructor counter.
+  seedInnovationTrackerAboveConnectionCounter(host._innovationTracker);
+
   // Step 4: Enable lineage tracking only after the startup pool attempt.
   enableLineageTracking(host, optionBag, rawOptions);
 
@@ -335,6 +342,29 @@ function bootstrapInitialPool(
     else if (optionBag.popsize) host.createPool(null);
   } catch {
     // Pool creation is best-effort; preserve constructor tolerance.
+  }
+}
+
+/**
+ * Align the innovation tracker cursor above all connection innovation IDs that
+ * the Connection constructor already assigned during pool bootstrap.
+ *
+ * Without this step, the tracker starts at 0 and mutation-assigned innovations
+ * eventually collide with the Connection-counter-assigned IDs in the initial
+ * population, causing `assertValidGenomeContract` to reject a parent during
+ * crossover with a duplicate-innovation error.
+ *
+ * @param tracker - Live innovation tracker to seed.
+ * @returns Nothing.
+ */
+function seedInnovationTrackerAboveConnectionCounter(
+  tracker: InnovationTracker | undefined,
+): void {
+  if (!tracker) return;
+  // Connection._nextInnovation is one past the highest ID already assigned.
+  const nextSafeInnovation = Connection.nextInnovation;
+  if (tracker.nextInnovationId < nextSafeInnovation) {
+    tracker.nextInnovationId = nextSafeInnovation;
   }
 }
 

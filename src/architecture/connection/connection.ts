@@ -195,6 +195,18 @@ export default class Connection {
   private static _nextInnovation: number = 1;
 
   /**
+   * Read the current next-innovation cursor without advancing it.
+   *
+   * Use this to seed an external innovation tracker so its counter never
+   * overlaps with innovation IDs already assigned by the Connection constructor.
+   *
+   * @returns Current value of the monotonic connection innovation counter.
+   */
+  static get nextInnovation(): number {
+    return Connection._nextInnovation;
+  }
+
+  /**
    * Reset the monotonic innovation counter used for newly constructed or pooled connections.
    * You usually call this at the start of an experiment or before rebuilding a whole population.
    *

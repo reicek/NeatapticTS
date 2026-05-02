@@ -89,7 +89,7 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 6. Browser build + CDN distribution (ESM + IIFE bundles; stable public surface)
    - Plan: [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
 7. Interactive examples + learning path (Node + browser runnable examples, CI smoke checks)
-   - Plan: [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [PLANNED]
+   - Plan: [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [WIP]
 8. NEATchat (tiny online sequence-learning chatbot demo)
    - Plan: [NEATchat.md](NEATchat.md) [PLANNED]
    - Current internal state: this is a Phase 3 learnability demo candidate, not a Phase 7 research lane. It is intended to start from near-zero knowledge, learn incrementally from short chat exchanges, stay language-agnostic at the token-stream level, and remain intentionally small enough for Node or browser experimentation rather than web-scale training.
@@ -111,9 +111,11 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 9. Standalone inference export (dependency-free runtime output)
    - Plan: [Standalone_Inference_Export.md](completed/Standalone_Inference_Export.md) [DONE]
    - Current internal state: the planning baseline for the standalone deployment lane is closed. The legacy `network.standalone()` generator now honors compiled activation traversal and explicit I/O role ordering, and the next implementation reopen point is to create `src/architecture/network/export/` and freeze `InferenceIRv1` when Phase 4 becomes active.
+
 10. Worker-friendly serialization fastpath (clone/transfer payloads; predictor creation)
 
 - Plan: [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
+- Current internal state: planning complete — four transport strategies defined (`PortableInferencePayload`, `TransferableInferencePayload`, `InferenceChannel`, `SharedInferenceWorker`). No implementation has started. Phase 0 (Shared Inference IR) is the first implementation step when this plan becomes active.
 
 11. Turnkey multithread evaluation API (Node + browser workers)
 
@@ -231,7 +233,7 @@ Completed entries below resolve into `plans/completed/`.
 ### Phase 3 inventory
 
 20. [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
-21. [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [PLANNED]
+21. [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [WIP]
 22. [NEATchat.md](NEATchat.md) [PLANNED]
 23. [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
 

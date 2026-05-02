@@ -901,7 +901,7 @@ describe('Group', () => {
             state: group.nodes[0].state,
           }).toStrictEqual({
             activation: 0,
-            gatedGain: 0,
+            gatedGain: 1,
             inboundEligibility: 0,
             old: 0,
             projectedError: 0,

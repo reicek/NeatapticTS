@@ -3,6 +3,7 @@ import type {
   MutationMethod,
   NeatControllerForMutation,
 } from '../shared/mutation.types';
+import Connection from '../../../architecture/connection/connection';
 import { EXTRA_CONNECTION_PROBABILITY } from '../../neat.constants';
 
 /** Default mutation rate when not configured. */
@@ -324,7 +325,29 @@ export async function applyMutationOperator(
     return;
   }
 
-  // Step 2: defer to genome.mutate for other operators.
+  // Step 2: defer to genome.mutate for other operators, but first sync the
+  // static Connection innovation counter above any innovations already in this
+  // genome so that Connection.acquire() (used inside genome.mutate) never
+  // assigns an innovation ID that is already occupied by an existing edge.
+  const allGenomeConnections = [
+    ...genome.connections,
+    ...((
+      genome as GenomeWithMetadata & {
+        selfconns?: GenomeWithMetadata['connections'];
+      }
+    ).selfconns ?? []),
+  ];
+  const maxExistingInnovation = allGenomeConnections.reduce(
+    (currentMax, connectionEntry) => {
+      const connectionInnovation = connectionEntry.innovation;
+      return typeof connectionInnovation === 'number' &&
+        Number.isFinite(connectionInnovation)
+        ? Math.max(currentMax, connectionInnovation)
+        : currentMax;
+    },
+    0,
+  );
+  Connection.syncInnovationCounter(maxExistingInnovation);
   genome.mutate?.(mutationMethod);
 
   // Step 3: invalidate caches for likely structural changes.

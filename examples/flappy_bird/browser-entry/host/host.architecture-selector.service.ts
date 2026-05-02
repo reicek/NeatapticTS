@@ -344,21 +344,25 @@ function applyArchitectureSelectorButtonPresentation(
  * @param onResetScores - Callback invoked when the button is clicked.
  * @returns Styled reset button element.
  */
-function createResetScoresButtonElement(onResetScores: () => void): HTMLButtonElement {
+function createResetScoresButtonElement(
+  onResetScores: () => void,
+): HTMLButtonElement {
   const resetButtonElement = document.createElement('button');
 
   resetButtonElement.type = 'button';
   resetButtonElement.textContent = FLAPPY_ARCHITECTURE_SELECTOR_RESET_TEXT;
   resetButtonElement.style.width = '100%';
   resetButtonElement.style.boxSizing = 'border-box';
-  resetButtonElement.style.padding = FLAPPY_ARCHITECTURE_SELECTOR_BUTTON_PADDING;
+  resetButtonElement.style.padding =
+    FLAPPY_ARCHITECTURE_SELECTOR_BUTTON_PADDING;
   resetButtonElement.style.borderRadius = `${FLAPPY_ARCHITECTURE_SELECTOR_BUTTON_RADIUS_PX}px`;
   resetButtonElement.style.borderStyle = 'solid';
   resetButtonElement.style.borderWidth = '1px';
   resetButtonElement.style.borderColor = FLAPPY_NEON_PALETTE.hudPanelBorder;
   resetButtonElement.style.background = 'transparent';
   resetButtonElement.style.fontFamily = FLAPPY_MONOSPACE_FONT_FAMILY;
-  resetButtonElement.style.fontSize = FLAPPY_ARCHITECTURE_SELECTOR_BUTTON_FONT_SIZE;
+  resetButtonElement.style.fontSize =
+    FLAPPY_ARCHITECTURE_SELECTOR_BUTTON_FONT_SIZE;
   resetButtonElement.style.fontWeight = '700';
   resetButtonElement.style.textTransform = 'uppercase';
   resetButtonElement.style.letterSpacing = '0.08em';

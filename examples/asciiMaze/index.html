@@ -1,33 +1,40 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>ASCII Maze Demo</title>
+  <title>ASCII Maze (NeatapticTS)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    html,body,#root{height:100%;margin:0}
-    body{font-family:system-ui,Segoe UI,Arial,sans-serif;padding:0;background:#0b0f14;color:#cfe8ff;display:flex;flex-direction:column}
-    main{flex:1;display:flex;flex-direction:column;padding:12px}
-    #ascii-maze-output{flex:1;overflow:auto;background:#041018;padding:12px;border-radius:6px;box-sizing:border-box}
-    #ascii-maze-controls{margin:8px 0}
-    button{padding:6px 10px;border-radius:4px;border:1px solid #2C3963;color:#fff;background:#39632C}
-  </style>
+  <link rel="stylesheet" href="../../docs/assets/theme.css" />
+  <script defer src="../../docs/assets/theme-tooltips.js"></script>
 </head>
-<body>
-  <header style="padding:12px 16px">
-    <h1 style="margin:0;font-size:18px">ASCII Maze Demo</h1>
-  </header>
-  <main id="root">
-  <!-- Internal pause control removed; external host can supply controls using the public API -->
-    <div id="ascii-maze-output">
-      <div id="ascii-maze-live" style="flex:1;min-height:200px"></div>
-      <div id="ascii-maze-archive" style="margin-top:12px"></div>
-    </div>
-  <div id="ascii-maze-status" aria-live="polite" style="margin-top:8px;color:#f88"></div>
+<body class="demo-page">
+  <main class="demo-main demo-main--wide">
+    <section class="hero">
+      <p class="eyebrow">Flagship Browser Demo</p>
+      <h1>ASCII Maze</h1>
+      <p>
+        This page runs the real browser-hosted curriculum loop: the controller starts in a
+        compact maze, advances through larger procedural layouts, and keeps the live ASCII
+        search trace visible while telemetry-rich evolution unfolds.
+      </p>
+    </section>
+
+    <p id="ascii-maze-status" class="load-status" role="status" aria-live="polite">
+      Loading ASCII Maze browser bundle...
+    </p>
+    <section class="starter-demo-shell">
+      <!-- Internal pause control removed; external host can supply controls using the public API -->
+      <div id="ascii-maze-output">
+        <div id="ascii-maze-live"></div>
+        <div id="ascii-maze-archive"></div>
+      </div>
+    </section>
+  </main>
   <script>
     (function loadAsciiMazeBundle() {
       const statusElement = document.getElementById('ascii-maze-status');
-      const isRepositoryExamplePath = /^\/examples\//.test(window.location.pathname);
+      const currentPath = window.location.pathname.replace(/\\/g, '/');
+      const isRepositoryExamplePath = /\/examples\//.test(currentPath) && !/\/docs\/examples\//.test(currentPath);
       const bundleSrc = isRepositoryExamplePath
         ? '../../docs/assets/ascii-maze.bundle.js'
         : '../../assets/ascii-maze.bundle.js';
@@ -36,17 +43,32 @@
       scriptElement.src = bundleSrc;
       scriptElement.defer = true;
       scriptElement.onload = () => {
-        if (window.asciiMazeStart) {
-          window.asciiMazeStart('ascii-maze-output');
+        const startFunction = window.asciiMaze?.start || window.asciiMazeStart;
+
+        if (!startFunction) {
+          if (statusElement) {
+            statusElement.textContent = 'Bundle loaded, but no ASCII Maze start function was found.';
+          }
           return;
         }
-        if (window.asciiMaze?.start) {
-          window.asciiMaze.start('ascii-maze-output');
-        }
+
+        Promise.resolve(startFunction('ascii-maze-output'))
+          .then(() => {
+            if (statusElement) {
+              statusElement.textContent = '';
+            }
+          })
+          .catch((error) => {
+            if (statusElement) {
+              statusElement.textContent = error instanceof Error
+                ? error.message
+                : String(error);
+            }
+          });
       };
       scriptElement.onerror = () => {
         if (statusElement) {
-          statusElement.textContent = `Failed to load ascii-maze.bundle.js from ${bundleSrc}`;
+          statusElement.textContent = `Failed to load ascii-maze.bundle.js from ${bundleSrc}. Run npm run build:ascii-maze.`;
         }
       };
 

@@ -1,6 +1,4 @@
-import {
-  FLAPPY_NETWORK_INPUT_SIZE,
-} from '../constants/constants';
+import { FLAPPY_NETWORK_INPUT_SIZE } from '../constants/constants';
 import { DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID } from '../../architectureProfiles';
 import {
   createNeatController,

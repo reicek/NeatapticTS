@@ -61,7 +61,7 @@ Refer to the **Thematic Identity** section in [NEAT_Genesis_EvoDevo_PredatorPrey
 | `GatedRecurrentCell` (short-term memory) | Path integration state; recent trail quality; short-horizon navigation context                                       |
 | `GatingRouter`                           | Task switching (forage vs. tend nest vs. defend) without structural change                                           |
 | Wiring economy + pruning                 | Ants develop only the sensor processing relevant to their emerged role                                               |
-| `reproductionPolicy` — polyandric        | Queen produces diverse worker cohorts from multiple drone genetic contributions                                       |
+| `reproductionPolicy` — polyandric        | Queen produces diverse worker cohorts from multiple drone genetic contributions                                      |
 | Collective intelligence                  | Colony fitness is measured at the colony level, not per-agent                                                        |
 
 ---
@@ -127,6 +127,7 @@ The GeoFront is not just a spawn point — it is a damageable asset whose degrad
 The GeoFront interior is the set of open cells within the center box. At episode start, interior size = `GEOFRONT_INITIAL_CELLS` (configurable, e.g. 25 cells for a 5×5 box).
 
 Interior cells provide:
+
 - Spawn locations for new ants (up to colony population cap)
 - Food storage (colony accumulates harvested pellets here)
 - Nest scent anchor (workers maintain `nestScent` pheromone inside)
@@ -184,6 +185,7 @@ Angels are **scripted adversaries** — they follow deterministic patrol routes,
 Each Angel patrols a corridor route through the maze. Routes are computed at episode start from the maze structure (seeded — same seed → same Angel routes). Route planning uses depth-first corridor traversal from the Angel's starting position, biased toward the GeoFront.
 
 **Angel patrol behaviors:**
+
 - Move along assigned corridor route, reversing at dead ends.
 - When corridor intersects a junction, choose the branch that minimizes distance to GeoFront.
 - On entering a tunnel cell, transit to the opposite edge tunnel (same 1-tick cooldown as agents).
@@ -248,14 +250,14 @@ The stencil sweep is a single typed-array pass — no per-cell object allocation
 
 Pheromone deposition is **instinctive** — like voice screaming in the Predator/Prey demo, ants cannot choose whether to lay pheromone. The engine applies deposition rules based on observable agent state:
 
-| Condition                                   | Channel deposited         |
-| ------------------------------------------- | ------------------------- |
-| Carrying food                               | `foodTrail`               |
-| Not carrying food, outside GeoFront         | `nestTrail`               |
-| Angel within sensor range                   | `alarmPheromone`          |
-| Soldier role-signal active + Angel nearby   | `recruitmentPheromone`    |
-| Inside GeoFront interior                    | `nestScent`               |
-| Just deposited food at GeoFront             | `trailQuality` (proportional to distance traveled, i.e. trail was productive) |
+| Condition                                 | Channel deposited                                                             |
+| ----------------------------------------- | ----------------------------------------------------------------------------- |
+| Carrying food                             | `foodTrail`                                                                   |
+| Not carrying food, outside GeoFront       | `nestTrail`                                                                   |
+| Angel within sensor range                 | `alarmPheromone`                                                              |
+| Soldier role-signal active + Angel nearby | `recruitmentPheromone`                                                        |
+| Inside GeoFront interior                  | `nestScent`                                                                   |
+| Just deposited food at GeoFront           | `trailQuality` (proportional to distance traveled, i.e. trail was productive) |
 
 NEAT does not evolve whether to deposit — it evolves how to react to the pheromone signals it reads. This eliminates the bootstrap problem: trails are meaningful from generation 1.
 
@@ -280,6 +282,7 @@ Three emerged roles, all developing from the same DNA. **No caste is hardcoded.*
 **Primary task:** find food sources, harvest one unit, return to GeoFront, deposit.
 
 **Expected module specialization by adulthood:**
+
 - Dense chemosensory zone (foodTrail + nestTrail channels dominate connection weight)
 - `EpisodicSlot` storing food-source locations by corridor topology similarity
 - `GatedRecurrentCell` for path integration state (tracking distance and direction from GeoFront)
@@ -292,6 +295,7 @@ Three emerged roles, all developing from the same DNA. **No caste is hardcoded.*
 **Primary task:** maintain GeoFront (deposit nestScent, repair wall damage, distribute food to storage).
 
 **Expected module specialization by adulthood:**
+
 - GeoFront proximity and integrity sensing zone
 - `EpisodicSlot` for GeoFront-state memory (repair sites, food storage locations)
 - Dense nestScent processing
@@ -304,6 +308,7 @@ Three emerged roles, all developing from the same DNA. **No caste is hardcoded.*
 **Primary task:** detect and intercept Angels; lay recruitmentPheromone to rally allies; patrol tunnel entrances.
 
 **Expected module specialization by adulthood:**
+
 - Dense alarmPheromone and recruitmentPheromone sensing zone
 - `ModulatorBroadcaster` output calibrated for fast alarm-to-attack mode switch
 - `GatedRecurrentCell` for Angel tracking state (recent movement direction, approach vector)
@@ -360,6 +365,7 @@ All channels are corridor-relative (wall cells read as zero).
 ### Short-horizon memory senses (8 channels)
 
 Raw history for `GatedRecurrentCell` integration:
+
 - Recent movement direction (last 4 ticks, sin/cos each): 8
 
 **Total sensory input width: 70 channels**
@@ -433,6 +439,7 @@ COORDINATOR (main thread)
 ```
 
 Worker count formula (identical to predator/prey):
+
 ```ts
 const cores = navigator.hardwareConcurrency ?? 4;
 // Reserve: 1 main thread + 1 simulation + 1 NEAT = 3
@@ -444,52 +451,114 @@ All workers are pre-spawned at demo start and kept alive.
 ### Message Protocol
 
 **Coordinator → Colony NEAT Worker:**
+
 ```ts
 type ColonyNeatWorkerRequest =
-  | { type: 'init';           payload: { populationSize: number; elitismCount: number; architectureProfileId: string; rngSeed: number } }
-  | { type: 'submit-fitness'; payload: { genomeFitness: Array<{ genomeId: string; fitness: number; stats: ColonyEpisodeStats }> } }
+  | {
+      type: 'init';
+      payload: {
+        populationSize: number;
+        elitismCount: number;
+        architectureProfileId: string;
+        rngSeed: number;
+      };
+    }
+  | {
+      type: 'submit-fitness';
+      payload: {
+        genomeFitness: Array<{
+          genomeId: string;
+          fitness: number;
+          stats: ColonyEpisodeStats;
+        }>;
+      };
+    }
   | { type: 'evolve' }
-  | { type: 'stop' }
+  | { type: 'stop' };
 ```
 
 **Colony NEAT Worker → Coordinator:**
+
 ```ts
 type ColonyNeatWorkerEvent =
-  | { type: 'population-ready'; payload: { generation: number; population: SerializedGenome[]; champion: SerializedGenome; generationStats: ColonyGenerationStats } }
-  | { type: 'error';            payload: { message: string } }
+  | {
+      type: 'population-ready';
+      payload: {
+        generation: number;
+        population: SerializedGenome[];
+        champion: SerializedGenome;
+        generationStats: ColonyGenerationStats;
+      };
+    }
+  | { type: 'error'; payload: { message: string } };
 ```
 
 **Coordinator → Episode Worker:**
+
 ```ts
 type AntEpisodeWorkerRequest =
-  | { type: 'run-episode';
-      payload: { taskId: string; colonyGenome: SerializedGenome; mazeConfig: MazeConfig; seed: number; rolloutIndex: number; angelCount: number } }
-  | { type: 'stop' }
+  | {
+      type: 'run-episode';
+      payload: {
+        taskId: string;
+        colonyGenome: SerializedGenome;
+        mazeConfig: MazeConfig;
+        seed: number;
+        rolloutIndex: number;
+        angelCount: number;
+      };
+    }
+  | { type: 'stop' };
 ```
 
 **Episode Worker → Coordinator:**
+
 ```ts
 type AntEpisodeWorkerEvent =
-  | { type: 'episode-done'; payload: { taskId: string; fitness: number; stats: ColonyEpisodeStats } }
-  | { type: 'error';        payload: { taskId: string; message: string } }
+  | {
+      type: 'episode-done';
+      payload: { taskId: string; fitness: number; stats: ColonyEpisodeStats };
+    }
+  | { type: 'error'; payload: { taskId: string; message: string } };
 ```
 
 **Coordinator → Simulation Worker:**
+
 ```ts
 type AntSimulationWorkerRequest =
-  | { type: 'start-display';       payload: { colonyChampion: SerializedGenome; mazeConfig: MazeConfig; seed: number; angelCount: number } }
-  | { type: 'request-render-step'; payload: { requestId: number; simulationSteps: number } }
+  | {
+      type: 'start-display';
+      payload: {
+        colonyChampion: SerializedGenome;
+        mazeConfig: MazeConfig;
+        seed: number;
+        angelCount: number;
+      };
+    }
+  | {
+      type: 'request-render-step';
+      payload: { requestId: number; simulationSteps: number };
+    }
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'set-speed'; payload: { multiplier: number } }
-  | { type: 'stop' }
+  | { type: 'stop' };
 ```
 
 **Simulation Worker → Coordinator:**
+
 ```ts
 type AntSimulationWorkerEvent =
-  | { type: 'render-step'; payload: { requestId: number; frame: AntHiveRenderFrame; done: boolean; episodeStats?: ColonyEpisodeStats } }
-  | { type: 'error';       payload: { message: string } }
+  | {
+      type: 'render-step';
+      payload: {
+        requestId: number;
+        frame: AntHiveRenderFrame;
+        done: boolean;
+        episodeStats?: ColonyEpisodeStats;
+      };
+    }
+  | { type: 'error'; payload: { message: string } };
 ```
 
 ### Render Frame — Packed SoA Typed Arrays (Zero-Copy Transfer)
@@ -504,49 +573,58 @@ type AntHiveRenderFrame = {
   gridH: number;
 
   // Ant arrays (fixed ordering throughout episode)
-  antX:       Int16Array;   // [antCount]
-  antY:       Int16Array;
-  antDir:     Uint8Array;   // 0=N 1=E 2=S 3=W
-  antAlive:   Uint8Array;   // 1=alive 0=dead
-  antCarrying: Uint8Array;  // 1=carrying food 0=empty
-  antEvaId:   Uint8Array;   // EVA roster index (stable for life of episode)
+  antX: Int16Array; // [antCount]
+  antY: Int16Array;
+  antDir: Uint8Array; // 0=N 1=E 2=S 3=W
+  antAlive: Uint8Array; // 1=alive 0=dead
+  antCarrying: Uint8Array; // 1=carrying food 0=empty
+  antEvaId: Uint8Array; // EVA roster index (stable for life of episode)
 
   // Angel arrays (fixed ordering throughout episode)
-  angelX:     Int16Array;   // [angelCount]
-  angelY:     Int16Array;
-  angelAlive: Uint8Array;   // 1=active 0=neutralized (cooldown)
+  angelX: Int16Array; // [angelCount]
+  angelY: Int16Array;
+  angelAlive: Uint8Array; // 1=active 0=neutralized (cooldown)
 
   // Pheromone channels — flat row-major [gridW × gridH], one per channel
-  phFoodTrail:           Float32Array;
-  phNestTrail:           Float32Array;
-  phAlarmPheromone:      Float32Array;
-  phRecruitmentPheromone:Float32Array;
-  phNestScent:           Float32Array;
-  phTrailQuality:        Float32Array;
+  phFoodTrail: Float32Array;
+  phNestTrail: Float32Array;
+  phAlarmPheromone: Float32Array;
+  phRecruitmentPheromone: Float32Array;
+  phNestScent: Float32Array;
+  phTrailQuality: Float32Array;
 
   // Pellet grid — bit-packed: byte (y*gridW+x)>>3, bit (y*gridW+x)&7
   pellets: Uint8Array;
 
   // GeoFront state
-  geofrontIntegrity: number;     // fraction of original boundary intact [0, 1]
+  geofrontIntegrity: number; // fraction of original boundary intact [0, 1]
   geofrontInteriorCells: number; // current interior cell count
-  foodStorage: number;           // units stored in GeoFront
+  foodStorage: number; // units stored in GeoFront
 
   // Episode scalars
   antsAlive: number;
   angelsActive: number;
-  foodDeposited: number;         // total this episode
+  foodDeposited: number; // total this episode
   pelletsRemaining: number;
 };
 
 // Transfer list (zero-copy):
 const transferList = [
-  frame.antX.buffer, frame.antY.buffer, frame.antDir.buffer,
-  frame.antAlive.buffer, frame.antCarrying.buffer, frame.antEvaId.buffer,
-  frame.angelX.buffer, frame.angelY.buffer, frame.angelAlive.buffer,
-  frame.phFoodTrail.buffer, frame.phNestTrail.buffer,
-  frame.phAlarmPheromone.buffer, frame.phRecruitmentPheromone.buffer,
-  frame.phNestScent.buffer, frame.phTrailQuality.buffer,
+  frame.antX.buffer,
+  frame.antY.buffer,
+  frame.antDir.buffer,
+  frame.antAlive.buffer,
+  frame.antCarrying.buffer,
+  frame.antEvaId.buffer,
+  frame.angelX.buffer,
+  frame.angelY.buffer,
+  frame.angelAlive.buffer,
+  frame.phFoodTrail.buffer,
+  frame.phNestTrail.buffer,
+  frame.phAlarmPheromone.buffer,
+  frame.phRecruitmentPheromone.buffer,
+  frame.phNestScent.buffer,
+  frame.phTrailQuality.buffer,
   frame.pellets.buffer,
 ];
 ```
@@ -582,13 +660,16 @@ All 10 optimizations from the Predator/Prey plan apply here (offscreen maze canv
 
 **11. Pheromone diffusion as a masked typed-array sweep**
 Pre-compute a `wallMask: Uint8Array` (1=open, 0=wall) at maze generation time. Apply as:
+
 ```ts
 for (let i = 0; i < fieldSize; i++) {
   if (!wallMask[i]) continue;
   // 5-point stencil using precomputed neighbor index table
-  field[i] = field[i] * decayRate + stencilMean(field, neighborTable[i]) * diffusionRate;
+  field[i] =
+    field[i] * decayRate + stencilMean(field, neighborTable[i]) * diffusionRate;
 }
 ```
+
 `neighborTable` is a `Int32Array[fieldSize × 4]` precomputed at episode start, mapping each open cell to its 4 neighbor indices (wall cells map to self, contributing zero gradient). One pass per channel per tick.
 
 **12. Pheromone render via 6-channel ImageData blend**
@@ -603,25 +684,25 @@ Angel patrol routes (including tunnel transits) are computed once at episode sta
 
 ### Rendering
 
-| Element | Visual |
-|---|---|
-| Walls | Neon blue (`#00bfff`) double-line Unicode box chars on black |
-| Corridors | Dark background; floor dots at low opacity |
-| Pellets | Small cyan dots (`#00ffff`, 2 px radius) |
-| Depleted pellet site | Faint grey dot (respawn timer visible as opacity) |
-| EVA Units (ants) | Filled arc (Pac-Man mouth) in designated EVA neon color; mouth opens toward movement direction; carrying=filled mouth |
-| Angels | Hollow rotated-square rhombus silhouette (3 px stroke) in designated angel neon color |
-| GeoFront box (intact) | Amber border (`#ff6600`); interior dark blue tint scales with food storage |
-| GeoFront wall (damaged) | Dimmer amber (`#883300`) with visual gap at breach site |
-| GeoFront repair pulse | Bright amber pulse at active repair site |
-| `foodTrail` overlay | Green tint (`#00ff0020`), intensity proportional to concentration |
-| `nestTrail` overlay | Blue tint (`#0000ff20`) |
-| `alarmPheromone` overlay | Red tint (`#ff000040`) — highly visible; alarm is urgent |
-| `recruitmentPheromone` overlay | Orange tint (`#ff880020`) |
-| `nestScent` overlay | Dim blue (`#0033ff10`) — background gradient |
-| `trailQuality` overlay | Bright gold (`#ffdd0020`) — highlights productive trails |
-| Tunnels | Pulsing cyan glow at 4 edge openings |
-| Agent label | EVA ID or Angel name at 8 px above agent when hovered (toggle-able) |
+| Element                        | Visual                                                                                                                |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Walls                          | Neon blue (`#00bfff`) double-line Unicode box chars on black                                                          |
+| Corridors                      | Dark background; floor dots at low opacity                                                                            |
+| Pellets                        | Small cyan dots (`#00ffff`, 2 px radius)                                                                              |
+| Depleted pellet site           | Faint grey dot (respawn timer visible as opacity)                                                                     |
+| EVA Units (ants)               | Filled arc (Pac-Man mouth) in designated EVA neon color; mouth opens toward movement direction; carrying=filled mouth |
+| Angels                         | Hollow rotated-square rhombus silhouette (3 px stroke) in designated angel neon color                                 |
+| GeoFront box (intact)          | Amber border (`#ff6600`); interior dark blue tint scales with food storage                                            |
+| GeoFront wall (damaged)        | Dimmer amber (`#883300`) with visual gap at breach site                                                               |
+| GeoFront repair pulse          | Bright amber pulse at active repair site                                                                              |
+| `foodTrail` overlay            | Green tint (`#00ff0020`), intensity proportional to concentration                                                     |
+| `nestTrail` overlay            | Blue tint (`#0000ff20`)                                                                                               |
+| `alarmPheromone` overlay       | Red tint (`#ff000040`) — highly visible; alarm is urgent                                                              |
+| `recruitmentPheromone` overlay | Orange tint (`#ff880020`)                                                                                             |
+| `nestScent` overlay            | Dim blue (`#0033ff10`) — background gradient                                                                          |
+| `trailQuality` overlay         | Bright gold (`#ffdd0020`) — highlights productive trails                                                              |
+| Tunnels                        | Pulsing cyan glow at 4 edge openings                                                                                  |
+| Agent label                    | EVA ID or Angel name at 8 px above agent when hovered (toggle-able)                                                   |
 
 ### UI Controls
 
@@ -723,23 +804,23 @@ examples/ant_hive/
 
 **From `examples/predator_prey/`** (copy-paste, adapt — self-contained):
 
-| Source | Reuse level | Target |
-|---|---|---|
-| `maze/*` (all 7 files) | ~100% | `maze/*` — identical algorithm, `maze.pellets.ts` needs PELLET_RESPAWN_TICKS override |
-| `browser-entry/host/host.ts` | ~95% | `browser-entry/host/host.ts` — canvas setup is identical |
-| `environment/environment.state.service.ts` | ~50% | Extend: add geofront, pheromone grids, angel state |
-| `workers/workers.pool.ts` | ~95% | Identical pool pattern, smaller worker count |
-| `workers/workers.coordinator.ts` | ~60% | Simplified: single NEAT worker, no generation barrier, no snapshot |
-| `simulation-worker/simulation-worker.offscreen.service.ts` | ~95% | Identical offscreen maze blit pattern |
-| `episode-worker/episode-worker.warm-start.service.ts` | ~40% | New teachers: follow foodTrail if not carrying, flee alarmPheromone |
-| `constants/constants.theme.ts` | ~100% | Shared EVA + Angel roster — copy-paste |
+| Source                                                     | Reuse level | Target                                                                                |
+| ---------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `maze/*` (all 7 files)                                     | ~100%       | `maze/*` — identical algorithm, `maze.pellets.ts` needs PELLET_RESPAWN_TICKS override |
+| `browser-entry/host/host.ts`                               | ~95%        | `browser-entry/host/host.ts` — canvas setup is identical                              |
+| `environment/environment.state.service.ts`                 | ~50%        | Extend: add geofront, pheromone grids, angel state                                    |
+| `workers/workers.pool.ts`                                  | ~95%        | Identical pool pattern, smaller worker count                                          |
+| `workers/workers.coordinator.ts`                           | ~60%        | Simplified: single NEAT worker, no generation barrier, no snapshot                    |
+| `simulation-worker/simulation-worker.offscreen.service.ts` | ~95%        | Identical offscreen maze blit pattern                                                 |
+| `episode-worker/episode-worker.warm-start.service.ts`      | ~40%        | New teachers: follow foodTrail if not carrying, flee alarmPheromone                   |
+| `constants/constants.theme.ts`                             | ~100%       | Shared EVA + Angel roster — copy-paste                                                |
 
 **From `examples/flappy_bird/`**:
 
-| Source | Reuse level | Target |
-|---|---|---|
-| `flappy-evolution-worker.types.ts` | ~70% | `workers/workers.types.ts` — simplify to 1 NEAT worker |
-| `flappy-evolution-worker.snapshot.utils.ts` | ~40% | `simulation-worker.snapshot.utils.ts` — extend for pheromone channels + geofront |
+| Source                                      | Reuse level | Target                                                                           |
+| ------------------------------------------- | ----------- | -------------------------------------------------------------------------------- |
+| `flappy-evolution-worker.types.ts`          | ~70%        | `workers/workers.types.ts` — simplify to 1 NEAT worker                           |
+| `flappy-evolution-worker.snapshot.utils.ts` | ~40%        | `simulation-worker.snapshot.utils.ts` — extend for pheromone channels + geofront |
 
 ---
 
@@ -764,6 +845,7 @@ examples/ant_hive/
 ## Readiness Checklist (for implementation start)
 
 **NGE prerequisites:**
+
 - [ ] NGE Phase G prerequisites met (stigmergy field infrastructure implemented).
 - [ ] All Phase 0 computation motif primitives implemented and opt-in verified.
 - [ ] Polyandric reproduction mode (Phase E) implemented.
@@ -771,6 +853,7 @@ examples/ant_hive/
 - [ ] Predator/Prey demo maze infrastructure (`examples/predator_prey/maze/`) implemented.
 
 **Environment:**
+
 - [ ] `maze/` — copied from predator_prey, `maze.pellets.ts` updated with PELLET_RESPAWN_TICKS ≈ 2000.
 - [ ] GeoFront state, damage, and repair services implemented and unit-tested.
 - [ ] GeoFront collapse detection (interior below MIN_VIABLE_CELLS) working.
@@ -783,6 +866,7 @@ examples/ant_hive/
 - [ ] Deterministic episode seeding (same seed → same maze + same Angel routes) verified.
 
 **Worker architecture:**
+
 - [ ] `workers.types.ts` — all message type unions written and reviewed.
 - [ ] Episode worker pool — pre-spawned, idle tracking, task dispatch.
 - [ ] Episode worker — isolated episode runner, slab forward passes, observation vector pool.
@@ -795,6 +879,7 @@ examples/ant_hive/
 - [ ] Operation mode switching (training-only / display-only / hybrid) working correctly.
 
 **Rendering and UI:**
+
 - [ ] GeoFront renderer (intact/damaged/repair pulse/food storage glow) implemented.
 - [ ] Pheromone 6-channel ImageData renderer (per-channel tint blend, single putImageData) implemented.
 - [ ] Angel renderer (rhombus silhouette, per-angel color, neutralized state) implemented.
@@ -804,6 +889,7 @@ examples/ant_hive/
 - [ ] Full-screen responsive canvas implemented.
 
 **Verification:**
+
 - [ ] Role emergence verified: forager module weights measurably different from soldier module weights by generation 50.
 - [ ] Tunnel-flanking pressure verified: ablation (disable tunnel transit for Angels) shows higher colony survival.
 - [ ] Pheromone effectiveness verified: ablation (disable pheromone input channels) shows lower food throughput.
@@ -812,4 +898,5 @@ examples/ant_hive/
 - [ ] Episode worker throughput scales with core count.
 
 **Future (post-implementation):**
+
 - [ ] `[FUTURE]` Evolved Angel genome import from Predator/Prey demo hall-of-fame — requires compatible SerializedGenome format and predator episode runner interface.

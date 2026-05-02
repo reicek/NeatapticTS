@@ -129,9 +129,13 @@ const ensurePre = (container?: HTMLElement): HTMLPreElement | null => {
   let preElement = hostElement.querySelector('pre');
   if (!preElement) {
     preElement = document.createElement('pre');
-    preElement.style.fontFamily = 'monospace';
+    // fontFamily is intentionally not set here so it inherits
+    // 'Consolas', 'Lucida Console', monospace from the #ascii-maze-live
+    // CSS rule. Overriding with generic 'monospace' (Courier New on Windows)
+    // causes box-drawing characters to render at inconsistent widths,
+    // misaligning the right-side border of the ASCII frame.
     preElement.style.whiteSpace = 'pre';
-    preElement.style.margin = '0';
+    preElement.style.margin = '0 auto';
     preElement.style.padding = '4px';
     preElement.style.fontSize = '10px';
     hostElement.appendChild(preElement);

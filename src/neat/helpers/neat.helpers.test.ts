@@ -1,5 +1,7 @@
 import Network from '../../architecture/network';
+import * as methods from '../../methods/methods';
 import Neat from '../../neat';
+import { createGenomeFromNetwork } from '../genome/genome';
 import { validateNativeGenome } from '../validate/neat.validate';
 
 type HelperMetadataNetwork = Network & {
@@ -355,6 +357,31 @@ describe('neat helpers chapter', () => {
 
         // Assert
         expect(allGenomesValidate).toBe(true);
+      });
+
+      it('keeps every fresh feed-forward starter genome strict-genome clean before evolve runs', () => {
+        // Arrange
+        const neat = new Neat(2, 1, fitness, {
+          fastMode: true,
+          mutation: methods.mutation.FFW,
+          popsize: 4,
+          seed: 341,
+        });
+
+        // Act
+        const allGenomesConvertToStrictGenome = neat.population.every(
+          (genome: Network) => {
+            try {
+              createGenomeFromNetwork(genome);
+              return true;
+            } catch {
+              return false;
+            }
+          },
+        );
+
+        // Assert
+        expect(allGenomesConvertToStrictGenome).toBe(true);
       });
     });
   });

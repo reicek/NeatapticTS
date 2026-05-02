@@ -8,6 +8,7 @@ import type {
   MutationMethod,
   NeatControllerForMutation,
 } from './shared/mutation.types';
+import Connection from '../../architecture/connection/connection';
 import * as mutationAddConn from './add-conn/mutation.add-conn';
 import * as mutationAddNode from './add-node/mutation.add-node';
 import * as mutationFlow from './flow/mutation.flow';
@@ -39,6 +40,41 @@ export const DEFAULT_GENE_ID = 0;
  * new structural records.
  */
 export const DEFAULT_INNOVATION_ID = 0;
+
+function synchronizeTrackerAboveGenomeInnovations(
+  genome: GenomeWithMetadata,
+  internal: NeatControllerForMutation,
+): void {
+  const genomeConnections = [
+    ...genome.connections,
+    ...((
+      genome as GenomeWithMetadata & {
+        selfconns?: GenomeWithMetadata['connections'];
+      }
+    ).selfconns ?? []),
+  ];
+  const maxObservedInnovation = genomeConnections.reduce(
+    (currentMaxInnovation, connectionEntry) => {
+      const connectionInnovation = connectionEntry.innovation;
+
+      return typeof connectionInnovation === 'number' &&
+        Number.isFinite(connectionInnovation)
+        ? Math.max(currentMaxInnovation, connectionInnovation)
+        : currentMaxInnovation;
+    },
+    DEFAULT_INNOVATION_ID - 1,
+  );
+
+  if (internal._innovationTracker.nextInnovationId <= maxObservedInnovation) {
+    internal._innovationTracker.nextInnovationId = maxObservedInnovation + 1;
+  }
+
+  // Keep the static Connection innovation counter in sync so that any
+  // subsequent genome.mutate() calls (which use Connection.acquire() /
+  // new Connection() directly) never assign an innovation ID that already
+  // exists in this genome.
+  Connection.syncInnovationCounter(maxObservedInnovation);
+}
 
 /**
  * Root orchestration for NEAT mutation operations.
@@ -208,6 +244,9 @@ export async function mutateAddNodeReuse(
 ): Promise<void> {
   const internal = this as unknown as NeatControllerForMutation;
 
+  // Step 0: keep new split innovations above the genome's existing history.
+  synchronizeTrackerAboveGenomeInnovations(genome, internal);
+
   // Step 1: bootstrap connectivity when no connections exist.
   mutationAddNode.ensureBootstrapConnection(genome, internal);
 
@@ -299,6 +338,9 @@ export function mutateAddConnReuse(
     internal.options.allowRecurrent,
   );
 
+  // Step 0: keep new connection innovations above the genome's existing history.
+  synchronizeTrackerAboveGenomeInnovations(genome, internal);
+
   // Step 1: build candidate node pairs.
   const candidatePairs = mutationAddConn.collectCandidatePairsForConn(
     genome,
@@ -362,6 +404,7 @@ export async function ensureMinHiddenNodes(
     internal._innovationTracker,
     controllerGeneration,
   );
+  synchronizeTrackerAboveGenomeInnovations(network, internal);
 
   // Step 2: normalize feed-forward node ordering before repair decisions.
   normalizeRepairNodeOrderForFeedForward(
@@ -434,6 +477,7 @@ export function ensureNoDeadEnds(
     internal._innovationTracker,
     controllerGeneration,
   );
+  synchronizeTrackerAboveGenomeInnovations(network, internal);
 
   // Step 2: normalize feed-forward node ordering before repair decisions.
   normalizeRepairNodeOrderForFeedForward(

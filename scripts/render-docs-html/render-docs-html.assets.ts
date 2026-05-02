@@ -13,6 +13,16 @@ import { DOCS_DIR } from './render-docs-html.shared.js';
 
 const THEME_CSS_SOURCE_PATH = path.resolve('scripts', 'assets', 'theme.css');
 const THEME_CSS_OUTPUT_PATH = path.join(DOCS_DIR, 'assets', 'theme.css');
+const THEME_TOOLTIP_RUNTIME_SOURCE_PATH = path.resolve(
+  'scripts',
+  'assets',
+  'theme-tooltips.js',
+);
+const THEME_TOOLTIP_RUNTIME_OUTPUT_PATH = path.join(
+  DOCS_DIR,
+  'assets',
+  'theme-tooltips.js',
+);
 const NN_IMAGE_SOURCE_PATH = path.resolve('nn.jpg');
 const NN_IMAGE_FALLBACK_SOURCE_PATH = path.resolve(
   'scripts',
@@ -24,6 +34,7 @@ const NN_IMAGE_OUTPUT_PATH = path.join(DOCS_DIR, 'nn.jpg');
 /** Ensures static non-Mermaid assets exist under the generated docs tree. */
 export async function ensureRenderDocsAssets(): Promise<void> {
   await ensureThemeCss();
+  await ensureThemeTooltipRuntime();
   await ensureRootHeroImage();
 }
 
@@ -31,6 +42,15 @@ export async function ensureRenderDocsAssets(): Promise<void> {
 async function ensureThemeCss(): Promise<void> {
   await fs.ensureDir(path.dirname(THEME_CSS_OUTPUT_PATH));
   await fs.copyFile(THEME_CSS_SOURCE_PATH, THEME_CSS_OUTPUT_PATH);
+}
+
+/** Copies the docs tooltip runtime into the published assets tree. */
+async function ensureThemeTooltipRuntime(): Promise<void> {
+  await fs.ensureDir(path.dirname(THEME_TOOLTIP_RUNTIME_OUTPUT_PATH));
+  await fs.copyFile(
+    THEME_TOOLTIP_RUNTIME_SOURCE_PATH,
+    THEME_TOOLTIP_RUNTIME_OUTPUT_PATH,
+  );
 }
 
 /**
