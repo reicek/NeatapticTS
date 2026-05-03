@@ -36,6 +36,7 @@ const config = {
         '/node_modules/',
         '/dist/',
         '/examples/asciiMaze/',
+         '/examples/starter-examples.smoke.test.ts',
       ],
     },
     {
@@ -43,8 +44,8 @@ const config = {
       testMatch: [
         '**/examples/asciiMaze/**/*.test.ts',
       ],
-      preset: 'ts-jest/presets/default-esm',
-      testEnvironment: 'jsdom',
+        preset: 'ts-jest/presets/default-esm',
+        testEnvironment: 'jsdom',
       extensionsToTreatAsEsm: ['.ts'],
       transform: {
         '^.+\\.ts$': [
@@ -55,6 +56,23 @@ const config = {
       setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
       testTimeout: 3000000,
     },
+      {
+        displayName: 'starter-examples',
+        testMatch: [
+          '**/examples/starter-examples.smoke.test.ts',
+        ],
+        preset: 'ts-jest/presets/default-esm',
+        testEnvironment: 'node',
+        extensionsToTreatAsEsm: ['.ts'],
+        transform: {
+          '^.+\\.ts$': [
+            'ts-jest',
+            { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true }
+          ]
+        },
+        setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
+        testTimeout: 300000,
+      },
   ],
   testMatch: [
     '**/src/**/*.test.ts',

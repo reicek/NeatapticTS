@@ -34,7 +34,6 @@ Active selection guide:
 - [plans/Roadmap.md](Roadmap.md): dependency-aware execution order across all initiatives.
 - [plans/Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md): browser packaging, CDN usage, and distribution ergonomics.
 - [plans/Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md): contracts between evolution workflows and gradient-based training.
-- [plans/Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md): runnable examples, onboarding flow, and learning-path improvements.
 - [plans/NEATchat.md](NEATchat.md): tiny online chatbot example planning, scoped as a learnability demo rather than a large-scale language-model training lane.
 - [plans/Memory_Optimization.md](Memory_Optimization.md): scaling, memory layout, and strategies for very large networks.
 - [plans/Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md): stable export schema for visualization and inspection tooling.

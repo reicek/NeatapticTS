@@ -96,6 +96,16 @@ const EXAMPLE_DEFINITIONS: readonly ExampleDefinition[] = [
     title: 'Flappy Bird (NeatapticTS)',
     sourceDir: path.resolve('examples', 'flappy_bird'),
   },
+  {
+    category: 'flagship',
+    description:
+      'A published browser contract preview for the tiny sequence-learning chat demo, with a visible chat shell, staged progress, and the reused Flappy visualizer boundary.',
+    dirName: 'neatChat',
+    label: 'neatChat',
+    runCommand: 'npx tsx examples/neatChat/run.ts',
+    title: 'NEATchat (NeatapticTS)',
+    sourceDir: path.resolve('examples', 'neatChat'),
+  },
 ];
 
 /**

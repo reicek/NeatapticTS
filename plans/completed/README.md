@@ -34,6 +34,7 @@ Archive selection guide:
 - [src-no-explicit-any-cleanup.plans.md](src-no-explicit-any-cleanup.plans.md): completed `src/` no-explicit-any cleanup baseline.
 - [flappy-startup-loading-preview.plans.md](flappy-startup-loading-preview.plans.md): completed Flappy startup loading preview lane.
 - [test-colocation-and-root-examples.plans.md](test-colocation-and-root-examples.plans.md): completed test colocation and root examples lane.
+- [Interactive_Examples_and_Learning_Path.plans.md](Interactive_Examples_and_Learning_Path.plans.md): completed Phase 3 starter-examples lane (helloNetwork, evolveXor, sequenceReset, browser quickstart, learning-path docs, smoke validation).
 
 Trigger phrases:
 
@@ -48,6 +49,7 @@ Trigger phrases:
 - README opening drift or docs-generator reopen: `plans/completed/readme-first-section-pass.plans.md`, `plans/completed/generate-docs-solid-split.plans.md`, `plans/completed/render-docs-html-solid-split.plans.md`
 - trace analyzer split reopen: `plans/completed/analyze-trace-solid-split.plans.md`
 - Flappy docs or startup preview reopen: `plans/completed/Flappy_Bird_Folder_Documentation_Pass.md`, `plans/completed/flappy-startup-loading-preview.plans.md`
+- starter examples, learning path, helloNetwork, evolveXor, sequenceReset, browser quickstart, smoke validation reopen: `plans/completed/Interactive_Examples_and_Learning_Path.plans.md`
 
 Archive rule:
 

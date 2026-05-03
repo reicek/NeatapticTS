@@ -1141,6 +1141,72 @@ table::before {
   text-decoration: none;
 }
 
+.neat-chat-preview-form {
+  display: grid;
+  gap: 14px;
+}
+
+.neat-chat-preview-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.neat-chat-preview-field {
+  display: grid;
+  gap: 8px;
+}
+
+.neat-chat-preview-field--wide {
+  grid-column: 1 / -1;
+}
+
+.neat-chat-preview-field > span {
+  color: var(--muted-soft);
+  font-family: 'Consolas', 'Lucida Console', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.neat-chat-preview-field input,
+.neat-chat-preview-field textarea {
+  width: 100%;
+  border: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: rgba(5, 12, 22, 0.9);
+  color: var(--text-supporting);
+  padding: 10px 12px;
+  box-shadow: inset 0 0 12px rgba(0, 216, 255, 0.06);
+}
+
+.neat-chat-preview-field textarea {
+  min-height: 170px;
+  resize: vertical;
+}
+
+.neat-chat-preview-field input:focus,
+.neat-chat-preview-field textarea:focus {
+  outline: none;
+  border-color: var(--line);
+  box-shadow:
+    0 0 0 1px rgba(0, 216, 255, 0.45),
+    inset 0 0 14px rgba(0, 216, 255, 0.1);
+}
+
+.neat-chat-preview-help {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.neat-chat-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
 .starter-demo-table {
   width: 100%;
   display: table;
@@ -1181,6 +1247,16 @@ table::before {
 
 .starter-demo-row--incorrect {
   background: rgba(255, 78, 206, 0.08);
+}
+
+@media (max-width: 760px) {
+  .neat-chat-preview-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .neat-chat-preview-field--wide {
+    grid-column: auto;
+  }
 }
 
 #hello-network-output,

@@ -89,9 +89,9 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 6. Browser build + CDN distribution (ESM + IIFE bundles; stable public surface)
    - Plan: [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
 7. Interactive examples + learning path (Node + browser runnable examples, CI smoke checks)
-   - Plan: [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [WIP]
+   - Plan: [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [DONE]
 8. NEATchat (tiny online sequence-learning chatbot demo)
-   - Plan: [NEATchat.md](NEATchat.md) [PLANNED]
+   - Plan: [NEATchat.md](NEATchat.md) [WIP]
    - Current internal state: this is a Phase 3 learnability demo candidate, not a Phase 7 research lane. It is intended to start from near-zero knowledge, learn incrementally from short chat exchanges, stay language-agnostic at the token-stream level, and remain intentionally small enough for Node or browser experimentation rather than web-scale training.
 9. Visualization export schema (JSON schema + optional DOT output)
    - Plan: [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]

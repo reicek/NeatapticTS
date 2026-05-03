@@ -50,6 +50,7 @@ async function runFullDocsWorkflow(): Promise<void> {
     { label: 'ASCII Maze bundle', scriptName: 'build:ascii-maze' },
     { label: 'Flappy worker bundle', scriptName: 'build:flappy-worker' },
     { label: 'Flappy Bird bundle', scriptName: 'build:flappy-bird' },
+    { label: 'NEATchat bundle', scriptName: 'build:neat-chat' },
   ]);
 
   // Step 2: Generate copied example assets and folder docs in parallel.

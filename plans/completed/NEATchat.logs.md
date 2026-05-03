@@ -1,0 +1,21 @@
+# NEATchat — Audit Log
+
+**Status:** [DONE]  
+**Closed:** 2026-05-03
+
+## Pass history
+
+| Pass | Step | Outcome |
+|------|------|---------|
+| 1 | Step 1 — Define the example contract | `examples/neatChat/` created; Node entrypoint, builder-backed seed network wrapper, browser flagship page, visualizer reuse metadata pointing to Flappy host. |
+| 2 | Step 2 — Constrain vocabulary and sequence length | `topWordLimit` (default 3000), context-window contract, `UNK` path, and lightweight runtime estimate surfaced in both Node and browser surfaces. |
+| 3 | Step 3 — Optional copy-paste pretraining | Browser preview accepts pasted corpus; bounded chunk processing; retained-vocabulary slice; blank-start vs. preseeded comparison preserved. |
+| 4 | Step 4 — Add corpus report and controls | Corpus report fields added: character count, total tokens, unique terms, retained terms, retained-token coverage %. `topWordLimit` exposed in browser and CLI with default and recommended range. |
+| 5 | Step 5 — Add online-learning loop | Narrow supervised update applied after each exchange; update path made explicit so users can inspect when the model learns vs. infers. |
+| 6 | Step 6 — Add A/B interaction and lightweight evaluation | One-session A/B mode added; lightweight metrics tracked: held-out next-token accuracy, repetition rate, response-length stability. |
+| 7 | Step 7 — Document boundaries honestly | README and browser flagship intro state toy-scale scope, token-stream semantics, `topWordLimit` memory tradeoff, and live vs. scaffold distinction. |
+| 8 | Step 8 — Plan later follow-ons separately | Deferred: persistence → `Population_Save_Resume_and_Checkpointing.md`; background/worker learning → `Turnkey_Multithread_Evaluation_API.md` + `Worker_Friendly_Network_Serialization_Fastpath.md`; training-evolution hybrid → `Evolution_Training_Interoperability_Contracts.md`; visualizer polish deferred until Flappy visualizer baseline reuse is complete. Browser flagship kept publishable throughout. |
+
+## Acceptance summary
+
+All eight steps accepted. The first version is narrow, all expansion seams are explicit and pointed to dedicated plan files, and the browser-hosted flagship surface remained publishable throughout the staged rollout.
