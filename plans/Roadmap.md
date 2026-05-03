@@ -89,20 +89,15 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 6. Browser build + CDN distribution (ESM + IIFE bundles; stable public surface)
    - Plan: [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
 7. Interactive examples + learning path (Node + browser runnable examples, CI smoke checks)
-   - Plan: [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [DONE]
+   - Plan: [Interactive_Examples_and_Learning_Path.md](completed/Interactive_Examples_and_Learning_Path.plans.md) [DONE]
 8. NEATchat (tiny online sequence-learning chatbot demo)
   - Plan: [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
   - Current internal state: the NEATchat Phase 3 learnability lane is closed for current scope and archived as a completed baseline. The delivered surface remains intentionally toy-scale: near-zero start, short online adaptation, language-agnostic token-stream behavior, and browser or Node experimentation boundaries rather than web-scale training.
 9. Visualization export schema (JSON schema + optional DOT output)
-   - Plan: [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [WIP]
+   - Plan: [Network_Visualization_Export_Schema.md](completed/Network_Visualization_Export_Schema.plans.md) [DONE]
+   - Current internal state: all three lanes are closed. `exportVisualizationGraph` + `toDot` schema/DOT export, shared canvas renderer (`renderNetworkView`), and Lane C documentation examples are complete and tested.
 
-**Notes:**
-
-- Phase 3 examples are the starter set only: Node hello/evolve flows plus one minimal browser quickstart once the browser bundle exists.
-- `NEATchat` is part of the learnability lane because it showcases the sequence builders and online adaptation at a toy scale; persistent memory files, worker-backed background training, or any heavier deployment surface remain follow-on work for later phases.
-- Examples that depend on standalone export or worker execution are follow-on additions in Phase 4 after those capabilities land.
-- Before expanding the examples catalog, choose the canonical examples home and decide whether `bench-browser/` is the browser-example host so demo work does not fragment.
-- Visualization can be implemented slightly earlier, but it becomes much more valuable once primitives/builders provide stable labels/roles.
+**Gate to Phase 4:** satisfied. Browser bundle distribution remains [PLANNED] but is not a gate blocker; interactive examples, NEATchat, and visualization export schema are all closed. Phase 4 is the current active stage.
 
 ## Phase 4 — Deployment + Parallel Evaluation (Inference Artifacts, Workers, Checkpoints)
 
@@ -184,7 +179,7 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phase 0 and Phase 1 are complete** and **Phase 2 is now the current roadmap stage**. The proper-NEAT lane in [neat.plans.md](completed/neat.plans.md) and the stable activation-ordering lane in [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md) are closed for their current scope. Both demos are solid split and documented, the example learnability pass materially strengthened across `examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, the ES2023 modernization lane is closed as a completed Phase 0 baseline, the architecture-primitives lane is closed as the first completed Phase 2 baseline, construct-from-parts is closed as the second completed Phase 2 baseline in [completed/Construct_From_Parts_Graph_Assembly.md](completed/Construct_From_Parts_Graph_Assembly.md), and preconfigured architectures (MLP, RandomSparse, NARX, GRU, LSTM) are now closed as the third and final completed Phase 2 baseline in [completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md). Phase 2 is now complete. The standalone-export planning baseline is now [DONE], which records the completed parity groundwork and the frozen Phase 4 implementation reopen point without changing the active roadmap priority away from Phase 3.
+Current status: **Phases 0, 1, 2, and 3 are complete**. The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, and preconfigured architectures (MLP, RandomSparse, NARX, GRU, LSTM) are all closed. Phase 3 is now also fully closed: the browser-build plan remains [PLANNED] (no implementation started), while the interactive examples + learning path, NEATchat, and visualization export schema (including schema/DOT export, shared canvas renderer, and Lane C documentation examples) are all [DONE]. The standalone-export planning baseline is [DONE], recording the frozen Phase 4 implementation reopen point. **Phase 4 is now the current roadmap stage.**
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
@@ -233,9 +228,9 @@ Completed entries below resolve into `plans/completed/`.
 ### Phase 3 inventory
 
 20. [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
-21. [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [WIP]
+21. [Interactive_Examples_and_Learning_Path.plans.md](completed/Interactive_Examples_and_Learning_Path.plans.md) [DONE]
 22. [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
-23. [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [WIP]
+23. [Network_Visualization_Export_Schema.plans.md](completed/Network_Visualization_Export_Schema.plans.md) [DONE]
 
 ### Phase 4 inventory
 
