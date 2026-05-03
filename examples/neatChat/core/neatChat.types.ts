@@ -225,6 +225,8 @@ export interface NeatChatSession {
   readonly seededTokenPairCount: number;
   /** Context-window token count used for live-message tokenization. */
   readonly contextWindowTokenCount: number;
+  /** Number of recent exchanges currently available to replay each update. */
+  readonly replayBufferExchangeCount: number;
 }
 
 /** Serializable snapshot of a live NEATchat session. */

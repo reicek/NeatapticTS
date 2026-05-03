@@ -366,15 +366,21 @@ describe('neatChat browser-entry sample pretraining', () => {
       hasContextWindowSystemMessage: historyText.includes(
         'Updated live context window to 50 tokens without resetting learned weights.',
       ),
-      includesUpdatedContextWindowInStats: sessionStatsText.includes(
-        'Context window: 50 tokens',
-      ),
-      includesSecondExchangeInStats: sessionStatsText.includes('Exchanges: 2'),
+      includesUpdatedContextWindowInStats:
+        sessionStatsText.includes('Context Window') &&
+        sessionStatsText.includes('50 tokens'),
+      includesSecondExchangeInStats:
+        sessionStatsText.includes('Exchanges') &&
+        sessionStatsText.includes('2'),
+      includesPretrainedTermsColumn:
+        sessionStatsText.includes('Pretrained Terms') &&
+        sessionStatsText.includes('3'),
     }).toEqual({
       contextWindowUpdateCalledWith: 50,
       hasContextWindowSystemMessage: true,
       includesUpdatedContextWindowInStats: true,
       includesSecondExchangeInStats: true,
+      includesPretrainedTermsColumn: true,
     });
   });
 });

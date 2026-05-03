@@ -82,6 +82,15 @@
  */
 export { default } from './network/network';
 export { formatConstructSummary } from './network/construct/network.construct.summary.utils';
+export { exportVisualizationGraph, toDot } from './network/visualization/network.visualization';
+export type {
+  ExportVisualizationOptions,
+  VisualizationEdgeV1,
+  VisualizationGraphV1,
+  VisualizationIOV1,
+  VisualizationMetadataV1,
+  VisualizationNodeV1,
+} from './network/visualization/network.visualization.types';
 export type {
   ConstructDiagnostics,
   ConstructGraphConnectionSummary,

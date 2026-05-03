@@ -108,12 +108,12 @@ export const createNeat = (
   ) => Neat;
 
   // Default constants (extracted from EvolutionEngine static fields)
-  const DEFAULT_POPSIZE = 150;
+  const DEFAULT_POPSIZE = 200;
   const DEFAULT_ELITISM_FRACTION = 0.05;
   const DEFAULT_PROVENANCE_FRACTION = 0.1;
   const DEFAULT_MUTATION_RATE = 0.3;
   const DEFAULT_MUTATION_AMOUNT = 0.05;
-  const DEFAULT_MIN_HIDDEN = 0;
+  const DEFAULT_MIN_HIDDEN = 13;
   const DEFAULT_TARGET_SPECIES = 8;
   const DEFAULT_ENTROPY_RANGE: [number, number] = [0.4, 0.6];
   const DEFAULT_ADAPTIVE_SMOOTH = 0.9;

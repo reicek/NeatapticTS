@@ -15,8 +15,8 @@ import {
   createNeatChatSession,
   inferResponseTokenIndices,
   mapTextToVocabularyIndices,
-  runNeatChatExchange,
 } from './neatChat.session.services';
+import { tokenizeNeatChatText } from './neatChat.tokenization.utils';
 import type {
   CreateNeatChatAbComparisonOptions,
   NeatChatAbComparisonResult,
@@ -77,8 +77,11 @@ export function createNeatChatAbComparison(
     preseededSession.vocabulary,
     seedConversationLines,
   );
-  const blankStartResult = runNeatChatExchange(blankStartSession, prompt);
-  const preseededResult = runNeatChatExchange(preseededSession, prompt);
+  const blankStartResult = runAbInferenceOnlyExchange(
+    blankStartSession,
+    prompt,
+  );
+  const preseededResult = runAbInferenceOnlyExchange(preseededSession, prompt);
 
   return {
     prompt,
@@ -108,6 +111,44 @@ export function createNeatChatAbComparison(
         ),
       },
     ],
+  };
+}
+
+function runAbInferenceOnlyExchange(
+  session: NeatChatSession,
+  prompt: string,
+): {
+  readonly response: string;
+  readonly responseTokens: readonly string[];
+  readonly trainedTokenPairCount: number;
+  readonly updatedSession: NeatChatSession;
+} {
+  const userTokens = tokenizeNeatChatText(
+    prompt,
+    session.contextWindowTokenCount,
+  );
+  const userIndices = userTokens.map(
+    (token) =>
+      session.vocabulary.termToIndex.get(token) ??
+      NEATCHAT_SPECIAL_TOKEN_INDICES.UNK,
+  );
+
+  session.network.clear();
+  const responseIndices = inferResponseTokenIndices(
+    session.network,
+    session.vocabulary.size,
+    userIndices,
+  );
+  const responseTokens = responseIndices.map(
+    (tokenIndex) => session.vocabulary.indexToTerm[tokenIndex] ?? 'UNK',
+  );
+  const response = responseTokens.length > 0 ? responseTokens.join(' ') : 'UNK';
+
+  return {
+    response,
+    responseTokens,
+    trainedTokenPairCount: 0,
+    updatedSession: session,
   };
 }
 

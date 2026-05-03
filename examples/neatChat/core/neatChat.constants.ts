@@ -96,6 +96,27 @@ export const NEATCHAT_ONLINE_LEARNING_RATE = 0.06;
 /** Online-learning SGD momentum per live exchange. */
 export const NEATCHAT_ONLINE_LEARNING_MOMENTUM = 0.12;
 
+/** Minimum average selected-token confidence required for auto-committing online updates. */
+export const NEATCHAT_ONLINE_LEARNING_MIN_CONFIDENCE = 0.22;
+
+/** Minimum loss improvement required to commit a low-confidence online update. */
+export const NEATCHAT_ONLINE_LEARNING_MIN_LOSS_IMPROVEMENT = 0.0005;
+
+/** Max recent exchanges replayed during each online-learning update. */
+export const NEATCHAT_REPLAY_BUFFER_MAX_EXCHANGES = 12;
+
+/** Number of curated sample lines permanently replayed as style anchors per exchange. */
+export const NEATCHAT_ONLINE_ANCHOR_SET_LINE_COUNT = 4;
+
+/** Safety cap on anchor replay cases mixed into each online-learning update. */
+export const NEATCHAT_ONLINE_ANCHOR_MAX_TRAINING_CASES = 4;
+
+/** Max sampled cases used when low-confidence updates require loss-improvement checks. */
+export const NEATCHAT_ONLINE_LOSS_GATE_SAMPLE_CASES = 24;
+
+/** Max training-set size eligible for low-confidence clone-and-compare loss gating. */
+export const NEATCHAT_ONLINE_LOSS_GATE_MAX_TRAINING_CASES = 16;
+
 /** Corpus-stream warm-up iteration count during seeding. */
 export const NEATCHAT_SEED_STREAM_TRAINING_ITERATIONS = 2;
 

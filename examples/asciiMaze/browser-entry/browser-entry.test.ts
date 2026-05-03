@@ -44,6 +44,7 @@ describe('asciiMaze browser entry start()', () => {
       hostElement: document.getElementById('ascii-maze-output'),
       archiveElement: null,
       liveElement: null,
+      networkCanvasElement: null,
       observeTarget: null,
     });
     mockedRunBrowserEntryCurriculum.mockClear();

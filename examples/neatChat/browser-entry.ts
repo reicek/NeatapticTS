@@ -14,6 +14,7 @@ import {
   type NeatChatPretrainingPreview,
   type NeatChatRuntimeEstimate,
   type NeatChatSession,
+  type NeatChatSessionSnapshot,
   splitNeatChatSeedAndValidationLines,
 } from './index';
 import { DEFAULT_NEATCHAT_PRETRAINED_SESSION_SNAPSHOT } from './default-pretrained-session-snapshot';
@@ -21,7 +22,9 @@ import { DEFAULT_NEATCHAT_PRETRAINED_SESSION_SNAPSHOT } from './default-pretrain
 type BrowserHostContainer = string | HTMLElement;
 type NeatChatStart = (container?: BrowserHostContainer) => Promise<void>;
 const SAMPLE_PRETRAIN_CHUNK_SIZE = 4;
-const CONTEXT_WINDOW_OPTIONS = [12, 24, 32, 50, 75, 100, 150, 200] as const;
+const CONTEXT_WINDOW_OPTIONS = [
+  12, 24, 32, 50, 75, 100, 150, 200, 300,
+] as const;
 const CONTEXT_WINDOW_EXPLANATION =
   'Controls how many tokens from your message the model processes. Larger windows let the model see more of your input, but may slow inference slightly.';
 const DEFAULT_BROWSER_WARM_START_LINE_COUNT = SAMPLE_PRETRAIN_CHUNK_SIZE;
@@ -39,6 +42,7 @@ declare global {
 /** Module-level live-chat session — rebuilt when the user updates the preview. */
 let currentSession: NeatChatSession | null = null;
 let sampleConversationCursor = 0;
+let activePretrainedSnapshotRetainedTermCount = 0;
 
 /**
  * Starts the browser-hosted NEATchat contract preview.
@@ -66,7 +70,7 @@ export async function start(
 }
 
 /** Default context window shown in the UI dropdown. */
-const DEFAULT_UI_CONTEXT_WINDOW_TOKEN_COUNT = 100;
+const DEFAULT_UI_CONTEXT_WINDOW_TOKEN_COUNT = 300;
 
 function renderContractPreview(
   hostElement: HTMLElement,
@@ -76,6 +80,7 @@ function renderContractPreview(
   corpusText = '',
 ): void {
   sampleConversationCursor = 0;
+  activePretrainedSnapshotRetainedTermCount = 0;
 
   const runtimeEstimate = estimateNeatChatRuntime({
     topWordLimit,
@@ -122,6 +127,10 @@ function renderContractPreview(
         DEFAULT_NEATCHAT_PRETRAINED_SESSION_SNAPSHOT,
       );
       usedShippedBaseSnapshot = true;
+      activePretrainedSnapshotRetainedTermCount =
+        resolveSnapshotRetainedTermCount(
+          DEFAULT_NEATCHAT_PRETRAINED_SESSION_SNAPSHOT,
+        );
     } catch {
       currentSession = createNeatChatSession({
         corpusRetainedTerms: pretrainingPreview.retainedTerms,
@@ -405,7 +414,7 @@ function buildNeatChatMarkup(
   <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
     <label for="neat-chat-context-window-token-count">
       Context window:
-      <select id="neat-chat-context-window-token-count" data-neat-chat-context-window-token-count style="margin-left:0.25rem;" title="${CONTEXT_WINDOW_EXPLANATION}">
+      <select id="neat-chat-context-window-token-count" data-neat-chat-context-window-token-count style="margin-left:0.25rem;" data-tooltip-title="Context Window Size" title="${CONTEXT_WINDOW_EXPLANATION}">
         ${CONTEXT_WINDOW_OPTIONS.map((windowSize) => `<option value="${windowSize}"${windowSize === selectedContextWindow ? ' selected' : ''}>${windowSize} tokens</option>`).join('')}
       </select>
     </label>
@@ -508,8 +517,51 @@ function updateSessionStatsDisplay(
   const tokenPairCount = session.learnedTokenPairCount;
   const seededTokenPairCount = session.seededTokenPairCount;
   const contextWindowTokenCount = session.contextWindowTokenCount;
+  const pretrainedSnapshotRetainedTermCount =
+    activePretrainedSnapshotRetainedTermCount;
+  const replayBufferExchangeCount = session.replayBufferExchangeCount ?? 0;
 
-  statsEl.textContent = `Vocabulary: ${vocabTermCount} terms | Context window: ${contextWindowTokenCount} tokens | Seed token pairs: ${seededTokenPairCount} | Exchanges: ${exchangeCount} | Token pairs learned: ${tokenPairCount}`;
+  const cellStyle =
+    'display:flex;align-items:stretch;flex:1;padding:0.45rem 1.1rem;text-align:center;color:#e0f8ff;font-weight:bold;font-size:0.95rem;border-right:1px solid rgba(0,212,255,0.25);';
+  const lastCellStyle =
+    'display:flex;align-items:stretch;flex:1;padding:0.45rem 1.1rem;text-align:center;color:#e0f8ff;font-weight:bold;font-size:0.95rem;';
+  const headerCellStyle =
+    'display:flex;flex-direction:column;align-items:stretch;flex:1;';
+  const headStyle =
+    'display:flex;align-items:stretch;flex:1;padding:0.3rem 1.1rem;text-align:center;color:#00d4ff;letter-spacing:0.08em;font-size:0.68rem;text-transform:uppercase;border-bottom:3px double rgba(0,212,255,0.6);border-right:1px solid rgba(0,212,255,0.25);';
+  const lastHeadStyle =
+    'display:flex;align-items:stretch;flex:1;padding:0.3rem 1.1rem;text-align:center;color:#00d4ff;letter-spacing:0.08em;font-size:0.68rem;text-transform:uppercase;border-bottom:3px double rgba(0,212,255,0.6);';
+  const rowStyle = 'display:flex;align-items:stretch;flex:1;padding:1em;';
+  statsEl.innerHTML = `<table style="display:flex;flex-direction:column;align-items:stretch;width:100%;border-collapse:separate;border-spacing:0;border:3px double rgba(0,212,255,0.7);background:rgba(0,16,36,0.55);font-family:'Courier New',monospace;">
+    <thead style="${headerCellStyle}"><tr style="${rowStyle}">
+      <th style="${headStyle}">Vocabulary</th>
+      <th style="${headStyle}">Context Window</th>
+      <th style="${headStyle}">Seed Token Pairs</th>
+      <th style="${headStyle}">Exchanges</th>
+      <th style="${headStyle}">Replay Buffer</th>
+      <th style="${headStyle}">Pretrained Terms</th>
+      <th style="${lastHeadStyle}">Token Pairs Learned</th>
+    </tr></thead>
+    <tbody><tr style="${rowStyle}">
+      <td style="${cellStyle}">${vocabTermCount} terms</td>
+      <td style="${cellStyle}">${contextWindowTokenCount} tokens</td>
+      <td style="${cellStyle}">${seededTokenPairCount}</td>
+      <td style="${cellStyle}">${exchangeCount}</td>
+      <td style="${cellStyle}">${replayBufferExchangeCount}</td>
+      <td style="${cellStyle}">${pretrainedSnapshotRetainedTermCount}</td>
+      <td style="${lastCellStyle}">${tokenPairCount}</td>
+    </tr></tbody>
+  </table>`;
+}
+
+function resolveSnapshotRetainedTermCount(
+  snapshot: NeatChatSessionSnapshot,
+): number {
+  if (!Array.isArray(snapshot.retainedTerms)) {
+    return 0;
+  }
+
+  return snapshot.retainedTerms.length;
 }
 
 function updateSamplePretrainProgressDisplay(

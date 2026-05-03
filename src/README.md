@@ -1389,6 +1389,82 @@ const network = Architect.perceptron(2, 4, 1);
 const output = network.activate([0, 1]);
 ```
 
+### centerPositionedNodesInDrawableArea
+
+```ts
+centerPositionedNodesInDrawableArea(
+  positionedNodes: PositionedNetworkNode[],
+  drawableWidthPx: number,
+): PositionedNetworkNode[]
+```
+
+Centers positioned nodes horizontally within the drawable area.
+
+Shifts all node x-coordinates so the leftmost and rightmost nodes
+are balanced around the center of available space.
+
+Parameters:
+- `positionedNodes` - Positioned nodes.
+- `drawableWidthPx` - Drawable width.
+
+Returns: Centered positioned nodes.
+
+### EdgePadding
+
+Padding on all four edges.
+
+### exportVisualizationGraph
+
+```ts
+exportVisualizationGraph(
+  network: default,
+  options: ExportVisualizationOptions | undefined,
+): VisualizationGraphV1
+```
+
+Exports a deterministic, versioned visualization graph from a live network.
+
+The returned `VisualizationGraphV1` object is a plain JSON-serializable value
+with no circular references. It can be passed to a canvas renderer, terminal
+renderer, or serialized to disk.
+
+**Ordering guarantees:**
+- `nodes` are sorted by stable gene id ascending.
+- `edges` are sorted by (from gene id, to gene id) ascending.
+- `io.inputNodeIds` and `io.outputNodeIds` preserve the network's explicit
+  I/O ordering (same as {@link Network.inputNodeIds} / {@link Network.outputNodeIds}).
+
+Parameters:
+- `network` - The network instance to export.
+- `options` - Optional flags controlling which fields are included.
+
+Returns: Versioned, deterministic visualization graph.
+
+Example:
+
+```ts
+const graph = exportVisualizationGraph(network, { includeBiases: true });
+// graph.version === 1
+// graph.nodes[0].role === 'input'
+// graph.edges[0].kind === 'forward'
+```
+
+### ExportVisualizationOptions
+
+Options controlling which fields are included in the exported visualization graph.
+
+All options default to `true` (maximum detail) unless explicitly set to `false`.
+
+Example:
+
+```ts
+// Lightweight export: omit weights and biases for a large evolved network.
+const graph = exportVisualizationGraph(network, {
+  includeWeights: false,
+  includeBiases: false,
+});
+```
+
 ### formatConstructSummary
 
 ```ts
@@ -2423,6 +2499,242 @@ bookkeeping separately from genome payloads, or when the population will be
 reconstructed by other means.
 
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
+
+### NetworkLayerAnnotation
+
+Semantic annotation for one layer of nodes.
+
+For example, recurrent networks can label hidden columns as "input gate",
+"hidden state t-1", etc. Feed-forward networks might have generic labels.
+
+### NetworkNodeDimensions
+
+Dimensions shared across all nodes in a rendering pass.
+
+### NetworkVisualizationColorScales
+
+Color scale for weight and activation visualization.
+
+### NetworkVisualizationResolvedFrame
+
+Complete resolved frame for hover-driven incremental redraws.
+
+The host can cache this between pointer events so it only recomputes
+topology, layout, and legend when the network payload changes.
+
+### NetworkVisualizationTopologyPlan
+
+Full topology plan for layout and rendering.
+
+Preserves the layer-array input used by layout helpers and adds optional
+semantic annotations for overlays.
+
+### OverlayFactoryHooks
+
+Optional hook functions that demos can use to inject custom overlays.
+
+Flappy Bird injects input-group label bands and per-input descriptions.
+ASCII Maze could inject custom layer labels, or leave hooks undefined.
+
+### PositionedNetworkNode
+
+A node with its position and dimensions resolved in canvas coordinates.
+
+### positionNetworkNodes
+
+```ts
+positionNetworkNodes(
+  networkLayers: VisualNetworkNode[][],
+  leftPaddingPx: number,
+  topPaddingPx: number,
+  drawableWidthPx: number,
+  drawableHeightPx: number,
+  nodeLayoutPaddingPx: number,
+  nodeDimensions: NetworkNodeDimensions,
+  inputLayerTargetGapPx: number,
+): PositionedNetworkNode[]
+```
+
+Positions network nodes into drawable canvas coordinates.
+
+The layout preserves layer ordering while adapting inter-node spacing to
+available vertical space. Nodes in earlier layers are placed left; nodes
+in later layers are placed right.
+
+Parameters:
+- `networkLayers` - Resolved network layers (each layer is a list of nodes).
+- `leftPaddingPx` - Left graph padding.
+- `topPaddingPx` - Top graph padding.
+- `drawableWidthPx` - Drawable graph width (canvas width minus horizontal padding).
+- `drawableHeightPx` - Drawable graph height (canvas height minus vertical padding).
+- `nodeLayoutPaddingPx` - Inner graph padding around nodes.
+- `nodeDimensions` - Node dimensions (width × height px).
+- `inputLayerTargetGapPx` - Optional target gap between input nodes (default: 0).
+
+Returns: Positioned nodes.
+
+### renderNetworkView
+
+```ts
+renderNetworkView(
+  canvas: HTMLCanvasElement,
+  graph: VisualizationGraphV1,
+  options: RenderNetworkViewOptions | undefined,
+): NetworkVisualizationResolvedFrame
+```
+
+Renders a network visualization onto a canvas.
+
+This is the main public entry point. It accepts a `VisualizationGraphV1` (from
+`exportVisualizationGraph`), lays out the nodes, and draws them with optional
+demo-specific overlays.
+
+**Typical usage:**
+```ts
+const graph = exportVisualizationGraph(network);
+const canvas = document.getElementById('network-canvas') as HTMLCanvasElement;
+const frame = renderNetworkView(canvas, graph, {
+  nodeDimensions: { widthPx: 32, heightPx: 32 },
+  overlayFactory: { createDemoOverlayScenes: myCustomOverlays },
+});
+// frame contains positioned nodes for hover hit testing
+```
+
+Parameters:
+- `canvas` - Canvas element to render onto.
+- `graph` - Visualization graph (from `exportVisualizationGraph`).
+- `options` - Optional render settings (dimensions, padding, colors, overlays).
+
+Returns: Resolved frame with positioned nodes and scene state (reusable for hover).
+
+### RenderNetworkViewOptions
+
+Options passed to the shared renderer.
+
+### resolveNetworkVisualizationLayers
+
+```ts
+resolveNetworkVisualizationLayers(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): VisualNetworkNode[][]
+```
+
+Resolves layered node groups for network layout.
+
+Parameters:
+- `network` - Runtime network instance (or undefined for fallback).
+- `inputSize` - Input count (used if network is undefined).
+- `outputSize` - Output count (used if network is undefined).
+
+Returns: Layered nodes for rendering.
+
+### resolveNetworkVisualizationTopologyPlan
+
+```ts
+resolveNetworkVisualizationTopologyPlan(
+  network: default | undefined,
+  inputSize: number,
+  outputSize: number,
+): NetworkVisualizationTopologyPlan
+```
+
+Resolves the full topology plan including optional layer annotations.
+
+For recurrent networks, this detects temporal modules and creates annotations.
+For feed-forward networks, this creates a simple acyclic plan.
+
+Parameters:
+- `network` - Runtime network instance (or undefined for fallback).
+- `inputSize` - Input count (used if network is undefined).
+- `outputSize` - Output count (used if network is undefined).
+
+Returns: Layered nodes plus semantic layer annotations.
+
+### toDot
+
+```ts
+toDot(
+  graph: VisualizationGraphV1,
+): string
+```
+
+Converts a {@link VisualizationGraphV1} to a Graphviz DOT string.
+
+The output can be pasted into any DOT renderer (e.g.
+[Graphviz Online](https://dreampuf.github.io/GraphvizOnline/)) to produce
+a visual graph diagram.
+
+Node shapes:
+- **Inputs** — inverted triangle (`invtriangle`).
+- **Outputs** — double circle (`doublecircle`).
+- **Hidden** — circle (`circle`).
+
+Edge labels show weights when they are present in the graph.
+Disabled edges are rendered as dashed lines.
+
+Parameters:
+- `graph` - Versioned visualization graph produced by  {@link exportVisualizationGraph} .
+
+Returns: Graphviz DOT string.
+
+Example:
+
+```ts
+const graph = exportVisualizationGraph(network);
+const dot = toDot(graph);
+// Paste `dot` into https://dreampuf.github.io/GraphvizOnline/
+```
+
+### VisualizationEdgeV1
+
+A single directed edge in a versioned visualization graph.
+
+`from` and `to` are stable gene ids matching {@link VisualizationNodeV1.id}.
+
+### VisualizationGraphV1
+
+Versioned, deterministic graph schema for network visualization.
+
+Produced by {@link exportVisualizationGraph}. Version `1` is the initial
+stable shape; future breaking changes will increment the version field.
+
+Example:
+
+```ts
+import { exportVisualizationGraph } from 'neataptic';
+
+const graph = exportVisualizationGraph(network, { includeBiases: true });
+console.log(graph.nodes.length, graph.edges.length);
+// → 4 6
+```
+
+### VisualizationIOV1
+
+Explicit I/O ordering for the visualization graph.
+
+The arrays use stable gene ids and are ordered consistently so renderers
+can highlight the I/O boundary and map external input/output indices.
+
+### VisualizationMetadataV1
+
+Optional metadata block attached to a visualization graph.
+
+### VisualizationNodeV1
+
+A single node entry in a versioned visualization graph.
+
+`id` is the stable gene id (not a volatile runtime index), so it survives
+serialization, crossover, and round-trips through evolution.
+
+### VisualNetworkConnection
+
+A visual connection between two positioned nodes.
+
+### VisualNetworkNode
+
+A simple node representation for layout input.
 
 ### default
 

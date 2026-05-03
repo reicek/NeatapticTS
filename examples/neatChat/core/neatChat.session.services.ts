@@ -12,8 +12,15 @@ import {
   NEATCHAT_MAX_SEED_CONVERSATION_LINES,
   NEATCHAT_MINIMUM_RESPONSE_LENGTH,
   NEATCHAT_ONLINE_LEARNING_ITERATIONS,
+  NEATCHAT_ONLINE_ANCHOR_MAX_TRAINING_CASES,
+  NEATCHAT_ONLINE_ANCHOR_SET_LINE_COUNT,
+  NEATCHAT_ONLINE_LOSS_GATE_MAX_TRAINING_CASES,
+  NEATCHAT_ONLINE_LOSS_GATE_SAMPLE_CASES,
+  NEATCHAT_ONLINE_LEARNING_MIN_CONFIDENCE,
+  NEATCHAT_ONLINE_LEARNING_MIN_LOSS_IMPROVEMENT,
   NEATCHAT_ONLINE_LEARNING_MOMENTUM,
   NEATCHAT_ONLINE_LEARNING_RATE,
+  NEATCHAT_REPLAY_BUFFER_MAX_EXCHANGES,
   NEATCHAT_REPETITION_PENALTY_FACTOR,
   NEATCHAT_REPETITION_WINDOW_SIZE,
   NEATCHAT_SEED_LINE_TRAINING_ITERATIONS,
@@ -41,6 +48,11 @@ import { NEATCHAT_SAMPLE_CONVERSATION_LINES } from '../sample-conversation';
 
 const NEATCHAT_DEFAULT_SESSION_BOOTSTRAP_TERMS =
   buildDefaultSessionBootstrapTerms();
+const NEATCHAT_ONLINE_ANCHOR_CONVERSATION_LINES =
+  NEATCHAT_SAMPLE_CONVERSATION_LINES.slice(
+    0,
+    NEATCHAT_ONLINE_ANCHOR_SET_LINE_COUNT,
+  );
 
 /**
  * Builds a token vocabulary from retained corpus terms plus stable special tokens.
@@ -134,6 +146,7 @@ export function createNeatChatSession(
     learnedTokenPairCount: 0,
     seededTokenPairCount,
     contextWindowTokenCount,
+    replayBufferExchangeCount: 0,
   };
 }
 
@@ -216,11 +229,12 @@ export function runNeatChatExchange(
   );
 
   session.network.clear();
-  const responseIndices = inferResponseTokenIndices(
+  const responseInferenceResult = inferResponseTokenSelection(
     session.network,
     session.vocabulary.size,
     userIndices,
   );
+  const responseIndices = responseInferenceResult.responseIndices;
   const responseTokens = responseIndices.map(
     (tokenIndex) =>
       session.vocabulary.indexToTerm[tokenIndex] ??
@@ -246,10 +260,19 @@ export function runNeatChatExchange(
     session.exchanges,
     userTokens,
   );
-  const trainedTokenPairCount = applyOnlineLearningUpdate(
-    session.network,
-    trainingCases,
+  const replayTrainingCases = buildReplayExchangeTrainingCases(
+    session.vocabulary,
+    session.exchanges,
   );
+  const anchorTrainingCases = buildAnchorReplayTrainingCases(
+    session.vocabulary,
+  );
+  const onlineLearningOutcome = applyOnlineLearningUpdate(
+    session.network,
+    [...trainingCases, ...replayTrainingCases, ...anchorTrainingCases],
+    responseInferenceResult.averageSelectedTokenConfidence,
+  );
+  const trainedTokenPairCount = onlineLearningOutcome.committedTokenPairCount;
 
   const exchangeRecord: NeatChatExchangeRecord = {
     userMessage,
@@ -266,11 +289,15 @@ export function runNeatChatExchange(
     trainedTokenPairCount,
     updatedSession: {
       ...session,
+      network: onlineLearningOutcome.updatedNetwork,
       exchanges: [...session.exchanges, exchangeRecord],
       learnedExchangeCount: session.learnedExchangeCount + 1,
       learnedTokenPairCount:
         session.learnedTokenPairCount + trainedTokenPairCount,
       seededTokenPairCount: session.seededTokenPairCount,
+      replayBufferExchangeCount: resolveReplayBufferExchangeCount(
+        session.exchanges.length + 1,
+      ),
     },
   };
 }
@@ -288,6 +315,18 @@ export function inferResponseTokenIndices(
   vocabSize: number,
   userIndices: readonly number[],
 ): number[] {
+  return inferResponseTokenSelection(network, vocabSize, userIndices)
+    .responseIndices;
+}
+
+function inferResponseTokenSelection(
+  network: Network,
+  vocabSize: number,
+  userIndices: readonly number[],
+): {
+  readonly responseIndices: number[];
+  readonly averageSelectedTokenConfidence: number;
+} {
   network.activate(
     buildOneHotVector(NEATCHAT_SPECIAL_TOKEN_INDICES.BOS, vocabSize),
   );
@@ -302,6 +341,7 @@ export function inferResponseTokenIndices(
 
   const responseIndices: number[] = [];
   let currentIndex: number = NEATCHAT_SPECIAL_TOKEN_INDICES.TURN_BREAK;
+  let selectedTokenConfidenceSum = 0;
 
   for (let step = 0; step < NEATCHAT_MAX_RESPONSE_TOKENS; step++) {
     const output = network.activate(buildOneHotVector(currentIndex, vocabSize));
@@ -319,11 +359,19 @@ export function inferResponseTokenIndices(
       break;
     }
 
+    const selectedTokenConfidence = output[nextIndex] ?? 0;
     responseIndices.push(nextIndex);
+    selectedTokenConfidenceSum += Math.max(0, selectedTokenConfidence);
     currentIndex = nextIndex;
   }
 
-  return responseIndices;
+  return {
+    responseIndices,
+    averageSelectedTokenConfidence:
+      responseIndices.length === 0
+        ? 0
+        : selectedTokenConfidenceSum / responseIndices.length,
+  };
 }
 
 /**
@@ -486,15 +534,101 @@ function buildObservedUserHistoryTrainingCases(
   return buildTrainingCasesFromSequence(historySequence, vocabulary.size);
 }
 
+function buildReplayExchangeTrainingCases(
+  vocabulary: NeatChatVocabulary,
+  previousExchanges: readonly NeatChatExchangeRecord[],
+): Array<{ input: number[]; output: number[] }> {
+  const replayExchangeRecords = previousExchanges.slice(
+    -NEATCHAT_REPLAY_BUFFER_MAX_EXCHANGES,
+  );
+
+  return replayExchangeRecords.flatMap((exchangeRecord) => {
+    const userIndices = exchangeRecord.userTokens.map(
+      (token) =>
+        vocabulary.termToIndex.get(token) ?? NEATCHAT_SPECIAL_TOKEN_INDICES.UNK,
+    );
+    const responseIndices = exchangeRecord.responseTokens.map(
+      (token) =>
+        vocabulary.termToIndex.get(token) ?? NEATCHAT_SPECIAL_TOKEN_INDICES.UNK,
+    );
+
+    return buildExchangeTrainingCases(
+      vocabulary.size,
+      userIndices,
+      responseIndices,
+    );
+  });
+}
+
+function buildAnchorReplayTrainingCases(
+  vocabulary: NeatChatVocabulary,
+): Array<{ input: number[]; output: number[] }> {
+  const anchorTrainingCases = buildSeedAdjacentPairTrainingCases(
+    vocabulary,
+    NEATCHAT_ONLINE_ANCHOR_CONVERSATION_LINES,
+  );
+
+  return anchorTrainingCases.slice(
+    0,
+    NEATCHAT_ONLINE_ANCHOR_MAX_TRAINING_CASES,
+  );
+}
+
+function resolveReplayBufferExchangeCount(exchangeCount: number): number {
+  return Math.min(exchangeCount, NEATCHAT_REPLAY_BUFFER_MAX_EXCHANGES);
+}
+
 function applyOnlineLearningUpdate(
   network: Network,
   trainingCases: Array<{ input: number[]; output: number[] }>,
-): number {
+  averageSelectedTokenConfidence: number,
+): {
+  readonly updatedNetwork: Network;
+  readonly committedTokenPairCount: number;
+} {
   if (trainingCases.length === 0) {
-    return 0;
+    return {
+      updatedNetwork: network,
+      committedTokenPairCount: 0,
+    };
   }
 
-  network.train(trainingCases, {
+  const confidenceGatePassed =
+    averageSelectedTokenConfidence >= NEATCHAT_ONLINE_LEARNING_MIN_CONFIDENCE;
+
+  if (confidenceGatePassed) {
+    network.train(trainingCases, {
+      iterations: NEATCHAT_ONLINE_LEARNING_ITERATIONS,
+      rate: NEATCHAT_ONLINE_LEARNING_RATE,
+      momentum: NEATCHAT_ONLINE_LEARNING_MOMENTUM,
+      batchSize: 1,
+      allowRecurrent: true,
+      cost: methods.Cost.softmaxCrossEntropy,
+    });
+
+    return {
+      updatedNetwork: network,
+      committedTokenPairCount: trainingCases.length,
+    };
+  }
+
+  if (trainingCases.length > NEATCHAT_ONLINE_LOSS_GATE_MAX_TRAINING_CASES) {
+    return {
+      updatedNetwork: network,
+      committedTokenPairCount: 0,
+    };
+  }
+
+  const sampledTrainingCases = trainingCases.slice(
+    0,
+    NEATCHAT_ONLINE_LOSS_GATE_SAMPLE_CASES,
+  );
+  const baselineError = evaluateNetworkError(network, sampledTrainingCases);
+  const candidateNetwork = Network.fromJSON(
+    network.toJSON() as Record<string, unknown>,
+  );
+
+  candidateNetwork.train(trainingCases, {
     iterations: NEATCHAT_ONLINE_LEARNING_ITERATIONS,
     rate: NEATCHAT_ONLINE_LEARNING_RATE,
     momentum: NEATCHAT_ONLINE_LEARNING_MOMENTUM,
@@ -502,8 +636,42 @@ function applyOnlineLearningUpdate(
     allowRecurrent: true,
     cost: methods.Cost.softmaxCrossEntropy,
   });
+  const updatedError = evaluateNetworkError(
+    candidateNetwork,
+    sampledTrainingCases,
+  );
+  const lossImprovement = baselineError - updatedError;
+  const lossGatePassed =
+    lossImprovement >= NEATCHAT_ONLINE_LEARNING_MIN_LOSS_IMPROVEMENT;
+  const shouldCommitUpdate = confidenceGatePassed || lossGatePassed;
 
-  return trainingCases.length;
+  if (!shouldCommitUpdate) {
+    return {
+      updatedNetwork: network,
+      committedTokenPairCount: 0,
+    };
+  }
+
+  return {
+    updatedNetwork: candidateNetwork,
+    committedTokenPairCount: trainingCases.length,
+  };
+}
+
+function evaluateNetworkError(
+  network: Network,
+  trainingCases: Array<{ input: number[]; output: number[] }>,
+): number {
+  const evaluationSummary = network.test(
+    trainingCases,
+    methods.Cost.softmaxCrossEntropy,
+  );
+
+  if (!Number.isFinite(evaluationSummary.error)) {
+    return Infinity;
+  }
+
+  return evaluationSummary.error;
 }
 
 function applySessionSeedConversationTraining(

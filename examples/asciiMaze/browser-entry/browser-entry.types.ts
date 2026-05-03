@@ -83,6 +83,7 @@ export interface BrowserEntryHostElements {
   hostElement: HTMLElement | null;
   archiveElement: HTMLElement | null;
   liveElement: HTMLElement | null;
+  networkCanvasElement: HTMLCanvasElement | null;
   observeTarget: HTMLElement | null;
 }
 

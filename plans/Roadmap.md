@@ -91,10 +91,10 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 7. Interactive examples + learning path (Node + browser runnable examples, CI smoke checks)
    - Plan: [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [DONE]
 8. NEATchat (tiny online sequence-learning chatbot demo)
-   - Plan: [NEATchat.md](NEATchat.md) [WIP]
-   - Current internal state: this is a Phase 3 learnability demo candidate, not a Phase 7 research lane. It is intended to start from near-zero knowledge, learn incrementally from short chat exchanges, stay language-agnostic at the token-stream level, and remain intentionally small enough for Node or browser experimentation rather than web-scale training.
+  - Plan: [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
+  - Current internal state: the NEATchat Phase 3 learnability lane is closed for current scope and archived as a completed baseline. The delivered surface remains intentionally toy-scale: near-zero start, short online adaptation, language-agnostic token-stream behavior, and browser or Node experimentation boundaries rather than web-scale training.
 9. Visualization export schema (JSON schema + optional DOT output)
-   - Plan: [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
+   - Plan: [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [WIP]
 
 **Notes:**
 
@@ -234,8 +234,8 @@ Completed entries below resolve into `plans/completed/`.
 
 20. [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
 21. [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [WIP]
-22. [NEATchat.md](NEATchat.md) [PLANNED]
-23. [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
+22. [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
+23. [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [WIP]
 
 ### Phase 4 inventory
 

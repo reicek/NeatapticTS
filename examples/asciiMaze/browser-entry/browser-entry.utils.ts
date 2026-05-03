@@ -24,11 +24,15 @@ export const resolveBrowserEntryHostElements = (
   const liveElement = hostElement
     ? (hostElement.querySelector('#ascii-maze-live') as HTMLElement | null)
     : null;
+  const networkCanvasElement = hostElement
+    ? (hostElement.querySelector('#ascii-maze-network-canvas') as HTMLCanvasElement | null)
+    : null;
 
   return {
     hostElement,
     archiveElement,
     liveElement,
+    networkCanvasElement,
     observeTarget:
       hostElement ?? document.getElementById(C.DEFAULT_CONTAINER_ID),
   };

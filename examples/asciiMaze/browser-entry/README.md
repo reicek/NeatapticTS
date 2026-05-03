@@ -348,6 +348,7 @@ Returns: A small hub optimized for browser demo listener counts.
 installResizeRedraw(
   observeTarget: HTMLElement | null,
   runtimeDashboard: DashboardPresentationAdapter,
+  redrawNetworkSnapshot: () => void,
 ): () => void
 ```
 
@@ -358,6 +359,36 @@ Parameters:
 - `runtimeDashboard` - Shared dashboard presentation adapter with redraw support.
 
 Returns: Cleanup function that removes active observers or listeners.
+
+### isVisualizationCompatibleNetwork
+
+```ts
+isVisualizationCompatibleNetwork(
+  networkCandidate: INetwork,
+): boolean
+```
+
+Guard that checks whether a runtime network can be exported as VisualizationGraphV1.
+
+Parameters:
+- `networkCandidate` - Runtime candidate from dashboard updates.
+
+Returns: True when the candidate exposes required visualization fields.
+
+### renderLatestNetworkSnapshot
+
+```ts
+renderLatestNetworkSnapshot(
+  networkCanvasElement: HTMLCanvasElement | null,
+  networkCandidate: INetwork | null,
+): void
+```
+
+Render the latest evolved network into the dedicated browser canvas panel.
+
+Parameters:
+- `networkCanvasElement` - Canvas target in the browser host.
+- `networkCandidate` - Current best network candidate from dashboard updates.
 
 ### safelyRedrawDashboard
 
@@ -371,6 +402,19 @@ Safely request a dashboard redraw without letting host issues break the run.
 
 Parameters:
 - `runtimeDashboard` - Shared dashboard presentation adapter with optional redraw support.
+
+### syncNetworkCanvasToPanel
+
+```ts
+syncNetworkCanvasToPanel(
+  networkCanvasElement: HTMLCanvasElement,
+): void
+```
+
+Align canvas pixel dimensions to the responsive panel width before drawing.
+
+Parameters:
+- `networkCanvasElement` - Canvas target in the browser host.
 
 ## browser-entry/browser-entry.abort.services.ts
 

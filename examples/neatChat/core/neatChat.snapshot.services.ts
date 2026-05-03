@@ -1,5 +1,8 @@
 import { Network } from '../../../src/browser-entry.ts';
-import { NEATCHAT_SPECIAL_TOKENS } from './neatChat.constants';
+import {
+  NEATCHAT_REPLAY_BUFFER_MAX_EXCHANGES,
+  NEATCHAT_SPECIAL_TOKENS,
+} from './neatChat.constants';
 import {
   NeatChatNonNegativeIntegerValidationError,
   NeatChatSnapshotShapeError,
@@ -85,6 +88,10 @@ export function importNeatChatSession(
     learnedTokenPairCount: validatedSnapshot.learnedTokenPairCount,
     seededTokenPairCount: validatedSnapshot.seededTokenPairCount,
     contextWindowTokenCount: validatedSnapshot.contextWindowTokenCount,
+    replayBufferExchangeCount: Math.min(
+      validatedSnapshot.exchanges.length,
+      NEATCHAT_REPLAY_BUFFER_MAX_EXCHANGES,
+    ),
   };
 }
 

@@ -26,9 +26,7 @@ import {
   NEATCHAT_VISUALIZER_OWNER_MODULE_PATH,
 } from './core/neatChat.constants';
 import {
-  createNeatChatPretrainingPreview,
   estimateNeatChatRuntime,
-  extractNeatChatConversationLines,
   resolvePositiveInteger,
 } from './core/neatChat.tokenization.utils';
 import { NEATCHAT_SAMPLE_CONVERSATION_LINES } from './sample-conversation';
@@ -143,7 +141,7 @@ export function createNeatChatExampleContract(): NeatChatExampleContract {
       defaultChunkTokenCount: NEATCHAT_DEFAULT_CHUNK_TOKEN_COUNT,
       unknownToken: NEATCHAT_DEFAULT_UNKNOWN_TOKEN,
       tokenizationRule:
-        'Lowercase the text, keep Unicode letter and number runs plus apostrophes, truncate each prompt or reply slice to the short context window, and map out-of-vocabulary terms to UNK once the retained vocabulary is known.',
+        "Lowercase text, normalize common contractions (for example, can't to can not), collapse punctuation into compact class tokens, bucket numeric terms by size, truncate each prompt or reply slice to the short context window, and map out-of-vocabulary terms to UNK once the retained vocabulary is known.",
       defaultRuntimeEstimate,
       corpusReportFields: NEATCHAT_CORPUS_REPORT_FIELDS,
     },

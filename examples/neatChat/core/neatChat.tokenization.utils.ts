@@ -287,13 +287,146 @@ function resolveRuntimeDurationBucket(
 }
 
 function* iterateNormalizedNeatChatTokens(text: string): Generator<string> {
-  for (const tokenMatch of text.toLowerCase().matchAll(/[\p{L}\p{N}'’-]+/gu)) {
-    const normalizedToken = tokenMatch[0];
+  const lowercaseText = text.toLowerCase();
 
-    if (normalizedToken.length > 0) {
-      yield normalizedToken;
+  for (const tokenMatch of lowercaseText.matchAll(
+    /[\p{L}\p{N}'’-]+|[^\s\p{L}\p{N}]+/gu,
+  )) {
+    const matchedToken = tokenMatch[0] ?? '';
+
+    if (matchedToken.length === 0) {
+      continue;
+    }
+
+    const isWordLikeToken = /^[\p{L}\p{N}'’-]+$/u.test(matchedToken);
+
+    if (isWordLikeToken) {
+      const normalizedWordTokens = normalizeWordLikeToken(matchedToken);
+
+      for (const normalizedWordToken of normalizedWordTokens) {
+        if (normalizedWordToken.length > 0) {
+          yield normalizedWordToken;
+        }
+      }
+
+      continue;
+    }
+
+    const punctuationClassToken = resolvePunctuationClassToken(matchedToken);
+
+    if (punctuationClassToken !== null) {
+      yield punctuationClassToken;
     }
   }
+}
+
+function normalizeWordLikeToken(rawToken: string): string[] {
+  const normalizedApostropheToken = rawToken.replace(/[’]/gu, "'");
+  const normalizedNumberBucket = resolveNumberBucketToken(
+    normalizedApostropheToken,
+  );
+
+  if (normalizedNumberBucket !== null) {
+    return [normalizedNumberBucket];
+  }
+
+  const contractionExpandedTokens = resolveContractionExpansionTokens(
+    normalizedApostropheToken,
+  );
+
+  if (contractionExpandedTokens !== null) {
+    return contractionExpandedTokens;
+  }
+
+  const trimmedToken = normalizedApostropheToken.replace(/^'+|'+$/gu, '');
+
+  return trimmedToken.length > 0 ? [trimmedToken] : [];
+}
+
+function resolveContractionExpansionTokens(token: string): string[] | null {
+  const contractionDictionary = new Map<string, readonly string[]>([
+    ["can't", ['can', 'not']],
+    ["won't", ['will', 'not']],
+    ["shan't", ['shall', 'not']],
+    ["let's", ['let', 'us']],
+  ]);
+  const dictionaryExpansion = contractionDictionary.get(token);
+
+  if (dictionaryExpansion !== undefined) {
+    return [...dictionaryExpansion];
+  }
+
+  if (token.endsWith("n't") && token.length > 3) {
+    const contractionStem = token.slice(0, -3);
+    return contractionStem.length > 0 ? [contractionStem, 'not'] : ['not'];
+  }
+
+  const contractionSuffixMappings: Array<{
+    readonly suffix: string;
+    readonly expansion: string;
+  }> = [
+    { suffix: "'re", expansion: 'are' },
+    { suffix: "'ve", expansion: 'have' },
+    { suffix: "'ll", expansion: 'will' },
+    { suffix: "'d", expansion: 'would' },
+    { suffix: "'m", expansion: 'am' },
+    { suffix: "'s", expansion: 'is' },
+  ];
+
+  for (const contractionSuffixMapping of contractionSuffixMappings) {
+    if (
+      token.endsWith(contractionSuffixMapping.suffix) &&
+      token.length > contractionSuffixMapping.suffix.length
+    ) {
+      const stemToken = token.slice(0, -contractionSuffixMapping.suffix.length);
+
+      if (stemToken.length > 0) {
+        return [stemToken, contractionSuffixMapping.expansion];
+      }
+    }
+  }
+
+  return null;
+}
+
+function resolveNumberBucketToken(token: string): string | null {
+  if (!/^\d+$/u.test(token)) {
+    return null;
+  }
+
+  if (token.length <= 1) {
+    return 'NUM_SMALL';
+  }
+
+  if (token.length <= 3) {
+    return 'NUM_MEDIUM';
+  }
+
+  return 'NUM_LARGE';
+}
+
+function resolvePunctuationClassToken(token: string): string | null {
+  if (/[.!?]/u.test(token)) {
+    return 'PUNC_SENTENCE_END';
+  }
+
+  if (/[,;:]/u.test(token)) {
+    return 'PUNC_PAUSE';
+  }
+
+  if (/[()[\]{}]/u.test(token)) {
+    return 'PUNC_BRACKET';
+  }
+
+  if (/["`]/u.test(token)) {
+    return 'PUNC_QUOTE';
+  }
+
+  if (/[-_/\\]/u.test(token)) {
+    return 'PUNC_JOINER';
+  }
+
+  return null;
 }
 
 function stripJsonCodeFence(value: string): string {
