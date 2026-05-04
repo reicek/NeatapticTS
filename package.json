@@ -1,6 +1,6 @@
 {
   "name": "@reicek/neataptic-ts",
-  "version": "0.1.30",
+  "version": "0.1.31",
   "description": "Architecture-free neural network library with genetic algorithm implementations",
   "main": "./dist/neataptic.js",
   "module": "./dist/neataptic.js",
@@ -69,7 +69,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
-    "@mermaid-js/mermaid-cli": "^11.12.0",
+    "@mermaid-js/mermaid-cli": "^11.14.0",
     "@types/chai": "^5.2.3",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^30.0.0",
@@ -92,7 +92,7 @@
     "jest-environment-jsdom": "^30.3.0",
     "jsdoc-to-markdown": "^9.1.3",
     "marked": "^17.0.5",
-    "mermaid": "^11.13.0",
+    "mermaid": "^11.14.0",
     "mkdocs": "^0.0.1",
     "puppeteer": "^23.11.1",
     "ts-jest": "^29.4.6",
@@ -102,7 +102,7 @@
     "typescript": "^5.9.3",
     "undici-types": "^7.24.6",
     "webpack": "^5.105.4",
-    "webpack-cli": "^7.0.2"
+    "webpack-cli": "^6.0.1"
   },
   "repository": {
     "type": "git",
@@ -134,6 +134,9 @@
   },
   "prettier": {
     "singleQuote": true
+  },
+  "overrides": {
+    "uuid": "^14.0.0"
   },
   "dependencies": {
     "seedrandom": "^3.0.5",

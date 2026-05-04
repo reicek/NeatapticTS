@@ -28,8 +28,7 @@
     <script>
       (function loadEvolveXorBundle() {
         const statusElement = document.getElementById('evolve-xor-status');
-        const currentPath = window.location.pathname.replace(/\\/g, '/');
-        const isRepositoryExamplePath = /\/examples\//.test(currentPath) && !/\/docs\/examples\//.test(currentPath);
+        const isRepositoryExamplePath = /^\/examples\//.test(window.location.pathname);
         const bundleSrc = isRepositoryExamplePath
           ? '../../docs/assets/evolve-xor.bundle.js'
           : '../../assets/evolve-xor.bundle.js';
