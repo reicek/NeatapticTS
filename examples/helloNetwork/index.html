@@ -28,7 +28,7 @@
     <script>
       (function loadHelloNetworkBundle() {
         const statusElement = document.getElementById('hello-network-status');
-        const isRepositoryExamplePath = /^\/examples\//.test(window.location.pathname);
+        const isRepositoryExamplePath = /\/examples\//.test(window.location.pathname);
         const bundleSrc = isRepositoryExamplePath
           ? '../../docs/assets/hello-network.bundle.js'
           : '../../assets/hello-network.bundle.js';

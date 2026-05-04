@@ -135,9 +135,6 @@
   "prettier": {
     "singleQuote": true
   },
-  "overrides": {
-    "uuid": "^14.0.0"
-  },
   "dependencies": {
     "seedrandom": "^3.0.5",
     "undici": "^7.24.6"

@@ -200,7 +200,7 @@
   <script>
     (function loadAsciiMazeBundle() {
       const statusElement = document.getElementById('ascii-maze-status');
-      const isRepositoryExamplePath = /^\/examples\//.test(window.location.pathname);
+      const isRepositoryExamplePath = /\/examples\//.test(window.location.pathname);
       const bundleSrc = isRepositoryExamplePath
         ? '../../docs/assets/ascii-maze.bundle.js'
         : '../../assets/ascii-maze.bundle.js';

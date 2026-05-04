@@ -28,7 +28,7 @@
     <script>
       (function loadSequenceResetBundle() {
         const statusElement = document.getElementById('sequence-reset-status');
-        const isRepositoryExamplePath = /^\/examples\//.test(window.location.pathname);
+        const isRepositoryExamplePath = /\/examples\//.test(window.location.pathname);
         const bundleSrc = isRepositoryExamplePath
           ? '../../docs/assets/sequence-reset.bundle.js'
           : '../../assets/sequence-reset.bundle.js';

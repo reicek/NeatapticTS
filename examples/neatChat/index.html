@@ -30,7 +30,7 @@
     <script>
       (function loadNeatChatBundle() {
         const statusElement = document.getElementById('neat-chat-status');
-        const isRepositoryExamplePath = /^\/examples\//.test(window.location.pathname);
+        const isRepositoryExamplePath = /\/examples\//.test(window.location.pathname);
         const bundleSrc = isRepositoryExamplePath
           ? '../../docs/assets/neat-chat.bundle.js'
           : '../../assets/neat-chat.bundle.js';
