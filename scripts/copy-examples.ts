@@ -415,6 +415,10 @@ function rewriteExamplePageForDocs(examplePageHtml: string): string {
     .replaceAll(
       REPO_EXAMPLE_TOOLTIP_RUNTIME_PATH,
       EXAMPLE_PAGE_TOOLTIP_RUNTIME_PATH,
+    )
+    .replaceAll(
+      "? '../../docs/assets/",
+      "? '../../assets/",
     );
 }
 
