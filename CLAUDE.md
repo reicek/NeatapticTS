@@ -150,6 +150,7 @@ Invoke skills via slash commands — do not re-state their workflow ad hoc:
 | `/educational-docs` | JSDoc quality, README tone, Mermaid diagrams, citations |
 | `/plan-alignment` | Aligning changes with roadmap intent |
 | `/flappy-architecture-polish` | Tuning Flappy Bird architecture profiles |
+| `/visualizer-workflow` | Debugging or improving demo visualizers (layout, overflow, hover/tooltip, parity) |
 | `/architecture-builder` | Adding or extending preconfigured builders (MLP/LSTM/GRU/NARX) |
 | `/onnx-work` | Extending or hardening ONNX export/import (Phase 6 parallel lane) |
 | `/performance-optimization` | Memory/slab/typed-array improvements (Phase 5 parallel lane) |
@@ -164,6 +165,7 @@ Invoke skills via slash commands — do not re-state their workflow ad hoc:
 | `Boundary Mapper` | `solid-split` |
 | `Docs Scout` | `educational-docs` |
 | `Plan Scout` | `plan-alignment` |
+| `Visualizer Scout` | `visualizer-workflow` |
 | `Coverage Scout` | `coverage-tranche` |
 | `Coverage Guard` (agent) | `coverage-guard` |
 

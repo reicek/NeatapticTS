@@ -50,6 +50,8 @@ Current intended ownership split:
 - `flappy-architecture-polish`: canonical workflow for tuning one Flappy Bird
   architecture profile across runtime budget, warm-start, worker selection,
   and durable empirical probes.
+- `visualizer-workflow`: canonical workflow for browser visualizer layout,
+  overflow behavior, hover/tooltip reliability, and cross-demo parity.
 - `test-fix-workflow`: canonical workflow for systematically repairing multiple
   test failures.
 - `plan-alignment`: canonical workflow for selecting and applying roadmap/plan
@@ -64,6 +66,8 @@ Current intended ownership split:
   `educational-docs`.
 - `Plan Scout`: read-only roadmap reconnaissance and handoff into
   `plan-alignment`.
+- `Visualizer Scout`: read-only visualizer reconnaissance and handoff into
+  `visualizer-workflow`.
 
 Use `educational-docs` by default when the task is primarily about documentation quality, generated README tone, source-mapped JSDoc improvement, Mermaid diagrams, citations, or Wikimedia-safe visuals.
 
@@ -76,6 +80,11 @@ Use `flappy-architecture-polish` by default when the task is to tune, rerun,
 or harden one Flappy Bird architecture profile in the browser-worker path,
 especially when the pass needs durable probe commands, worker-fairness tuning,
 or warm-start stabilization that should be reusable for other profiles later.
+
+Use `visualizer-workflow` by default when the task is to debug or improve
+visualizer UI behavior in browser demos, especially layout width allocation,
+overflow scrolling contracts, hover hit-area sync, tooltip reliability, or
+parity with a reference visualizer.
 
 For split or refactor work with meaningful documentation scope, let `solid-split` own the boundary work and `educational-docs` own documentation quality.
 
@@ -244,7 +253,8 @@ Avoid (legacy/less clear):
 - For architectural or roadmap alignment work, invoke `plan-alignment` instead
   of duplicating its bounded plan-reading workflow here.
 - For read-only reconnaissance before implementation, prefer companion agents
-  such as `Boundary Mapper`, `Docs Scout`, and `Plan Scout`, but keep them subordinate to the
+  such as `Boundary Mapper`, `Docs Scout`, `Plan Scout`, and
+  `Visualizer Scout`, but keep them subordinate to the
   relevant skill-owned workflow.
 
 ## Standard architecture for project files
