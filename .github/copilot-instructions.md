@@ -17,10 +17,11 @@ Follow these rules:
 - Use the compressed logging convention already established in this repo for long tasks: prefer short pass-style entries that record what changed, what remains, and the next concrete target without replaying full transcript detail.
 - Keep chat communication to brief confirmations and step transitions only. Prefer one or two short sentences when moving to the next step unless the user explicitly asks for more detail.
 - Prefer communicating ongoing work through markdown tracker files instead of chat when the task spans multiple steps.
+- Treat `plans/` as the active tracker surface and `plans/completed/` as the archive for terminally closed tracker baselines and their matching logs.
 - Use `.plans.md` files for work in progress, pending decisions, next steps, and handoff context.
 - Use `.logs.md` files for completed work, concise pass history, and done-state records.
 - When creating or reshaping tracker files, use `tracker-handoff` as the canonical workflow for `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and `Handoff query` structure.
-- When a workstream reaches `[DONE]`, the final tracker step is to compress the completed `.plans.md` into a short closed tracker and add or update a same-boundary `.logs.md` audit record.
+- When a workstream reaches `[DONE]`, the final tracker step is to compress the completed `.plans.md` into a short closed tracker, add or update a same-boundary `.logs.md` audit record, and move both files into `plans/completed/` before beginning the next workstream.
 - Handoff prompts are strict for active trackers and blocker recovery, but omit them for fully closed trackers unless the user explicitly asks for reopen guidance.
 - When both chat and tracker files are available, treat the tracker files as the primary source of detailed continuity and keep chat as a thin status layer.
 
@@ -46,6 +47,11 @@ Current intended ownership split:
 - `solid-split`: canonical split/refactor workflow and step sequencing.
 - `educational-docs`: canonical documentation quality workflow and generated
   README/JSDoc policy.
+- `flappy-architecture-polish`: canonical workflow for tuning one Flappy Bird
+  architecture profile across runtime budget, warm-start, worker selection,
+  and durable empirical probes.
+- `visualizer-workflow`: canonical workflow for browser visualizer layout,
+  overflow behavior, hover/tooltip reliability, and cross-demo parity.
 - `test-fix-workflow`: canonical workflow for systematically repairing multiple
   test failures.
 - `plan-alignment`: canonical workflow for selecting and applying roadmap/plan
@@ -53,20 +59,32 @@ Current intended ownership split:
 - `tracker-handoff`: canonical workflow for `.plans.md` and `.logs.md`
   structure, `[PLANNED]/[WIP]/[DONE]` status markers, compression,
   active-plan `Handoff query` continuity, and terminal closure into matching
-  `.logs.md` records.
+  `.logs.md` records archived under `plans/completed/`.
 - `Boundary Mapper`: read-only seam mapping and structural handoff into
   `solid-split`.
 - `Docs Scout`: read-only documentation reconnaissance and handoff into
   `educational-docs`.
 - `Plan Scout`: read-only roadmap reconnaissance and handoff into
   `plan-alignment`.
+- `Visualizer Scout`: read-only visualizer reconnaissance and handoff into
+  `visualizer-workflow`.
 
 Use `educational-docs` by default when the task is primarily about documentation quality, generated README tone, source-mapped JSDoc improvement, Mermaid diagrams, citations, or Wikimedia-safe visuals.
 
 Use `tracker-handoff` by default when the task includes creating, compressing,
 or updating `.plans.md` or `.logs.md` files, especially when the tracker needs
 safe session continuation via a `Handoff query` section or terminal closure via
-a compressed plan plus matching log.
+a compressed plan plus matching log archived under `plans/completed/`.
+
+Use `flappy-architecture-polish` by default when the task is to tune, rerun,
+or harden one Flappy Bird architecture profile in the browser-worker path,
+especially when the pass needs durable probe commands, worker-fairness tuning,
+or warm-start stabilization that should be reusable for other profiles later.
+
+Use `visualizer-workflow` by default when the task is to debug or improve
+visualizer UI behavior in browser demos, especially layout width allocation,
+overflow scrolling contracts, hover hit-area sync, tooltip reliability, or
+parity with a reference visualizer.
 
 For split or refactor work with meaningful documentation scope, let `solid-split` own the boundary work and `educational-docs` own documentation quality.
 
@@ -75,6 +93,14 @@ When you touch code under `src/`, `testing/`, `benchmarks/`, or `examples/`, pre
 - **Interesting and explanatory**, not just type signatures.
 - **Example-driven**: include small examples in the main description (prefer fenced code blocks like ```ts) so the docs generator preserves them.
 - **Conceptual**: include a brief “what/why” explanation and any important semantics (defaults, invariants, error cases, performance notes).
+- **Atemporal**: public docs should read as current conceptual guidance, not as repo chronology.
+
+Public documentation rule for `src/**`, `examples/**`, `benchmarks/**`, and `testing/**` README or JSDoc surfaces:
+
+- never reference internal plans, tracker steps, roadmap phases, pass labels, or chat-only context unless the user explicitly asks for process, migration, or historical documentation,
+- never structure public docs as repo before/after comparisons,
+- keep public docs focused on current concepts, boundaries, invariants, tradeoffs, and reading paths,
+- keep plan, rollout, migration, and tracker language in `plans/`, `.logs.md`, PR text, or release notes instead of README openings.
 
 When a diagram would teach faster than prose, prefer Mermaid Markdown in the documentation surface. Use diagrams for architecture overviews, data flows, decision flows, state transitions, entity relationships, and simple quantitative views when they materially improve comprehension.
 
@@ -162,6 +188,26 @@ re-stating the repair protocol in ad hoc instructions.
 Keep this file as the invocation layer. The detailed planning sequence,
 validation cadence, and no-premature-test-run rules belong in that skill.
 
+## TDD-first execution policy (critical)
+
+When a task changes behavior, fixes a regression, or deepens a refactor with
+meaningful runtime risk, prefer a TDD sequence instead of implementation-first
+work.
+
+- Start by adding or updating the smallest targeted test that should fail for
+  the intended behavior or bug fix.
+- Make that narrow surface go red first when the task is not purely
+  documentation, search, or mechanical rename work.
+- Then implement the code change until the targeted test or test slice goes
+  green.
+- After the green step, expand coverage for the new code and the directly
+  related boundary toward >95% when practical and safe.
+- Keep the red/green loop narrow. Do not jump to broad suite runs before the
+  active boundary is green.
+- For coverage passes, prefer dedicated owner-local `*.test.ts` files and keep
+  tests aligned with repo conventions such as AAA structure, nested `describe`
+  blocks, and one top-level `expect(...)` per test.
+
 ## ES2023-first policy (strict)
 
 For educational clarity and a modern look, always prefer idiomatic ES2023 syntax when it improves readability or safety without changing behavior. This repo is intentionally opinionated: use the immutable array methods and modern language constructs by default.
@@ -189,19 +235,26 @@ Avoid (legacy/less clear):
 - Always prefer to produce code that already satisfies the style guide.
 - If you cannot fully transform a file (large refactor), return a patch with clear TODO comments, an explicit list of remaining violations, and small, safe automated fixes where possible.
 - If you propose changes that alter public behavior, include tests and TypeScript typechecks.
+- Prefer a TDD execution order for behavioral work: red-phase targeted tests,
+  then implementation, then green validation, then coverage expansion on the
+  new or directly related boundary.
 - Prefer invoking the relevant repo skill when the task matches an established
   workflow instead of duplicating that workflow in ad hoc instructions.
 - Default discovery order for non-trivial tasks: relevant folder `README.md` -> parent folder `README.md` if needed -> `plans/README.md` for roadmap alignment when relevant -> the specific source files and the single most relevant detailed plan.
 - Treat generated folder READMEs as compressed context, not as a substitute for code. Use them to reduce search noise, then verify behavior in source.
 - Prefer multiple small, targeted, documented edits over large single-pass rewrites when both approaches can solve the task. This reduces breakage risk and makes generated-doc refreshes easier to verify.
 - For documentation-first work, invoke `educational-docs` instead of duplicating its standards in ad hoc instructions.
+- For Flappy architecture tuning or empirical rerun work, invoke
+  `flappy-architecture-polish` instead of recreating the browser-worker polish
+  loop ad hoc.
 - For split work with meaningful docs scope, let `solid-split` own sequencing and `educational-docs` own documentation quality.
 - For multiple test-failure repair work, invoke `test-fix-workflow` instead of
   duplicating its planning and validation sequence here.
 - For architectural or roadmap alignment work, invoke `plan-alignment` instead
   of duplicating its bounded plan-reading workflow here.
 - For read-only reconnaissance before implementation, prefer companion agents
-  such as `Boundary Mapper`, `Docs Scout`, and `Plan Scout`, but keep them subordinate to the
+  such as `Boundary Mapper`, `Docs Scout`, `Plan Scout`, and
+  `Visualizer Scout`, but keep them subordinate to the
   relevant skill-owned workflow.
 
 ## Standard architecture for project files

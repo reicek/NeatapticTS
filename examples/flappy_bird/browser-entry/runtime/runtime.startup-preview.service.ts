@@ -52,6 +52,23 @@ export function startRuntimeStartupPreview(
 }
 
 /**
+ * Starts the centered evolving-preview shown between completed generations.
+ *
+ * This preview keeps the simulation canvas visibly alive while the worker is
+ * evolving the next generation and there are intentionally no birds to render.
+ * Unlike the first-load startup preview, this one is driven by the request
+ * lifecycle of the next generation rather than by initial boot.
+ *
+ * @param options - Canvas, context, stop-state, and evolving legend inputs.
+ * @returns Handle used to fade the overlay out once the next generation is ready.
+ */
+export function startRuntimeEvolvingPreview(
+  options: RuntimeGenerationPreviewOptions,
+): RuntimeStartupPreviewHandle {
+  return startRuntimeLegendPreview(options);
+}
+
+/**
  * Presents a short generation title card before playback begins.
  *
  * Every generation-ready event can reuse the same background-plus-neon style as
@@ -279,8 +296,11 @@ function renderRuntimeStartupPreviewLegend(
     return;
   }
 
+  const legendLines = input.legendText.split('\n');
   const legendCenterXPx = input.canvasWidthPx * 0.5;
   const legendCenterYPx = input.canvasHeightPx * 0.5;
+  const legendLineHeightPx = input.legendFontSizePx * 1.15;
+  const legendLineBlockHeightPx = (legendLines.length - 1) * legendLineHeightPx;
   context.font = `${FLAPPY_STARTUP_PREVIEW_LEGEND_FONT_WEIGHT} ${input.legendFontSizePx}px ${FLAPPY_MONOSPACE_FONT_FAMILY}`;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
@@ -291,14 +311,30 @@ function renderRuntimeStartupPreviewLegend(
   context.globalAlpha = input.opacity * FLAPPY_PIPE_OUTLINE_GLOW_ALPHA;
   context.shadowColor = FLAPPY_PIPE_OUTLINE_CYAN_GLOW_COLOR;
   context.shadowBlur = FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX;
-  context.fillText(input.legendText, legendCenterXPx, legendCenterYPx);
+  legendLines.forEach((legendLine, legendLineIndex) => {
+    context.fillText(
+      legendLine,
+      legendCenterXPx,
+      legendCenterYPx -
+        legendLineBlockHeightPx * 0.5 +
+        legendLineIndex * legendLineHeightPx,
+    );
+  });
 
   // Step 3: Restore a crisp core text pass above the glow bloom.
   context.globalCompositeOperation = 'source-over';
   context.globalAlpha = input.opacity;
   context.shadowBlur = 0;
   context.shadowColor = 'transparent';
-  context.fillText(input.legendText, legendCenterXPx, legendCenterYPx);
+  legendLines.forEach((legendLine, legendLineIndex) => {
+    context.fillText(
+      legendLine,
+      legendCenterXPx,
+      legendCenterYPx -
+        legendLineBlockHeightPx * 0.5 +
+        legendLineIndex * legendLineHeightPx,
+    );
+  });
 }
 
 /**

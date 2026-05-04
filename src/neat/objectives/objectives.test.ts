@@ -52,6 +52,20 @@ describe('neat objectives chapter', () => {
         expect(objectiveKeys).toEqual(['fitness']);
       });
     });
+
+    describe('given the objective list has already been resolved once', () => {
+      it('returns the same cached list on the second call', () => {
+        // Arrange: first call builds and caches the list
+        const objectivesHost = createObjectivesHost();
+        const firstResult = objectivesHost._getObjectives();
+
+        // Act: second call must reuse the cached list (line 97)
+        const secondResult = objectivesHost._getObjectives();
+
+        // Assert: both references are the same cached object
+        expect(secondResult).toBe(firstResult);
+      });
+    });
   });
 
   describe('registerObjective', () => {
@@ -111,6 +125,22 @@ describe('neat objectives chapter', () => {
         expect(
           objectivesHost._getObjectives().map((objective) => objective.key),
         ).toEqual(['fitness']);
+      });
+    });
+
+    describe('given a controller with no multiObjective options configured', () => {
+      it('clears the cached objective list without throwing', () => {
+        // Arrange: host has no multiObjective — the if-guard must be skipped
+        const objectivesHost = createObjectivesHost();
+        objectivesHost._objectivesList = [
+          { key: 'stale', direction: 'max', accessor: () => 0 },
+        ];
+
+        // Act
+        clearObjectives.call(objectivesHost);
+
+        // Assert: cache was cleared even though no multiObjective block existed
+        expect(objectivesHost._objectivesList).toBeUndefined();
       });
     });
   });

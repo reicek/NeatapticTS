@@ -52,7 +52,7 @@
  *
  * - which public defaults become concrete controller policy during
  *   construction,
- * - which internal maps and arrays must exist before generation-zero work can
+ * - which internal state containers must exist before generation-zero work can
  *   proceed safely,
  * - why the constructor delegates here without turning this file into a second
  *   public facade.
@@ -63,8 +63,11 @@
  */
 
 import type Network from '../../architecture/network/network';
+import Connection from '../../architecture/connection/connection';
 import * as methods from '../../methods/methods';
 import { selection as selectionMethods } from '../../methods/selection/selection';
+import { createInnovationTracker } from '../innovation-tracker/innovation-tracker';
+import type { InnovationTracker } from '../innovation-tracker/innovation-tracker.types';
 
 export interface NeatConstructorDefaults {
   populationSize: number;
@@ -155,9 +158,7 @@ export interface NeatInitializationHost {
   _getRNG: () => () => number;
   createPool: (network: Network | null) => void;
   _noveltyArchive?: number[][];
-  _nodeSplitInnovations?: Map<string, unknown>;
-  _connInnovations?: Map<string, number>;
-  _nextGlobalInnovation?: number;
+  _innovationTracker?: InnovationTracker;
   _species?: unknown[];
   _nextSpeciesId?: number;
   _speciesCreated?: Map<number, number>;
@@ -196,7 +197,7 @@ export interface InitializeNeatConstructorRequest {
  * second orchestration facade:
  *
  * 1. materialize public defaults onto the caller-owned options bag,
- * 2. prepare controller bookkeeping maps and arrays,
+ * 2. prepare controller bookkeeping state and arrays,
  * 3. attempt generation-zero pool creation when a seed network or population
  *    size is available,
  * 4. enable lineage only after the initial pool attempt has settled,
@@ -241,6 +242,12 @@ export function initializeNeatConstructor(
 
   // Step 3: Preserve legacy best-effort pool bootstrapping semantics.
   bootstrapInitialPool(host, optionBag);
+
+  // Step 3b: Align the innovation tracker cursor above all innovation IDs
+  // already assigned to connections in the initial population. Without this,
+  // mutation-assigned IDs start at 0 and eventually collide with connection
+  // IDs that were assigned by the Connection constructor counter.
+  seedInnovationTrackerAboveConnectionCounter(host._innovationTracker);
 
   // Step 4: Enable lineage tracking only after the startup pool attempt.
   enableLineageTracking(host, optionBag, rawOptions);
@@ -311,9 +318,8 @@ function applyOptionDefaults(
 }
 
 function ensureInternalState(host: NeatInitializationHost): void {
-  if (!host._nodeSplitInnovations) host._nodeSplitInnovations = new Map();
-  if (!host._connInnovations) host._connInnovations = new Map();
-  if (host._nextGlobalInnovation === undefined) host._nextGlobalInnovation = 0;
+  if (!host._innovationTracker)
+    host._innovationTracker = createInnovationTracker();
   if (!Array.isArray(host._species)) host._species = [];
   if (host._nextSpeciesId === undefined) host._nextSpeciesId = 1;
   if (!host._speciesCreated) host._speciesCreated = new Map();
@@ -336,6 +342,29 @@ function bootstrapInitialPool(
     else if (optionBag.popsize) host.createPool(null);
   } catch {
     // Pool creation is best-effort; preserve constructor tolerance.
+  }
+}
+
+/**
+ * Align the innovation tracker cursor above all connection innovation IDs that
+ * the Connection constructor already assigned during pool bootstrap.
+ *
+ * Without this step, the tracker starts at 0 and mutation-assigned innovations
+ * eventually collide with the Connection-counter-assigned IDs in the initial
+ * population, causing `assertValidGenomeContract` to reject a parent during
+ * crossover with a duplicate-innovation error.
+ *
+ * @param tracker - Live innovation tracker to seed.
+ * @returns Nothing.
+ */
+function seedInnovationTrackerAboveConnectionCounter(
+  tracker: InnovationTracker | undefined,
+): void {
+  if (!tracker) return;
+  // Connection._nextInnovation is one past the highest ID already assigned.
+  const nextSafeInnovation = Connection.nextInnovation;
+  if (tracker.nextInnovationId < nextSafeInnovation) {
+    tracker.nextInnovationId = nextSafeInnovation;
   }
 }
 

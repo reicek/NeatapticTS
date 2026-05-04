@@ -5,7 +5,12 @@ import {
   resolveFramePrimaryWinnerIndex,
   resolveLeaderPipesPassed,
 } from '../browser-entry/browser-entry.observation.utils';
-import { FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION } from '../constants/constants';
+import {
+  FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_ELITISM_COUNT,
+  FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE,
+  FLAPPY_BROWSER_SUCCESS_PIPE_TARGET,
+  FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION,
+} from '../constants/constants';
 import {
   resolveAdaptiveDifficultyProfile,
   type SharedDifficultyProfile,
@@ -57,14 +62,15 @@ export function beginWorkerPlaybackSession(options: {
 } {
   const { currentPopulation, payload, createPopulationRenderState } = options;
   const playbackRng = createXorshift32(0xabcdef01);
+  const currentPlaybackState = createPopulationRenderState(
+    currentPopulation,
+    playbackRng,
+    payload.visibleWorldWidthPx,
+    payload.visibleWorldHeightPx,
+  );
 
   return {
-    currentPlaybackState: createPopulationRenderState(
-      currentPopulation,
-      playbackRng,
-      payload.visibleWorldWidthPx,
-      payload.visibleWorldHeightPx,
-    ),
+    currentPlaybackState,
     currentPlaybackRng: playbackRng,
     playbackWinnerIndex: -1,
   };
@@ -222,6 +228,12 @@ export function processWorkerPlaybackStep(options: {
   const p90FramesSurvived =
     sortedFramesSurvived.length > 0 ? sortedFramesSurvived[p90FrameIndex] : 0;
 
+  // Step 4: Downshift future browser generations once this architecture has clearly solved pipes.
+  maybeDownshiftSuccessfulBrowserPopulation(
+    neatRuntime,
+    winnerBird?.pipesPassed ?? 0,
+  );
+
   postWorkerMessage(
     {
       type: 'playback-step',
@@ -245,4 +257,45 @@ export function processWorkerPlaybackStep(options: {
     currentPopulation,
     playbackWinnerIndex,
   };
+}
+
+/**
+ * Downshifts the worker's future browser population budget after a successful playback run.
+ *
+ * The current generation has already been evaluated, so the savings apply to
+ * future generations only. This keeps the demo responsive once an architecture
+ * has already demonstrated that it can clear the live pipe target.
+ *
+ * @param neatRuntime - Worker-local NEAT runtime.
+ * @param winnerPipesPassed - Winning playback pipe count for the completed generation.
+ * @returns Nothing.
+ */
+function maybeDownshiftSuccessfulBrowserPopulation(
+  neatRuntime: Neat | undefined,
+  winnerPipesPassed: number,
+): void {
+  if (!neatRuntime || winnerPipesPassed < FLAPPY_BROWSER_SUCCESS_PIPE_TARGET) {
+    return;
+  }
+
+  const runtimeNeat = neatRuntime as unknown as {
+    options?: {
+      popsize?: number;
+      elitism?: number;
+    };
+  };
+  const currentPopulationSize = Math.max(0, runtimeNeat.options?.popsize ?? 0);
+  if (
+    !runtimeNeat.options ||
+    currentPopulationSize <= FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE
+  ) {
+    return;
+  }
+
+  runtimeNeat.options.popsize =
+    FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE;
+  runtimeNeat.options.elitism = Math.min(
+    FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_ELITISM_COUNT,
+    FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE,
+  );
 }

@@ -19,8 +19,16 @@ export const FLAPPY_EVALUATION_DEFAULT_EARLY_TERMINATION_CONSECUTIVE_FRAMES = 24
  */
 export const FLAPPY_EVALUATION_DEFAULT_PIPE_PROGRESS_TARGET = 20;
 
-/** Dense shaping normalization factor per survived frame. */
-export const FLAPPY_EVALUATION_DENSE_SHAPING_FRAMES_NORMALIZER = 4.5;
+/**
+ * Dense shaping normalization factor per survived frame.
+ *
+ * Calibrated to match the new centering-focused weight profile. The max
+ * per-frame dense reward with perfect centering is approximately:
+ * alignment (3.0) + clearance (2.5) + centering quality (3.0) + velocity
+ * stability (1.5) = 10.0. Setting the normalizer to 10.0 keeps a perfectly
+ * centered bird near a normalizedDenseShaping of 1.0.
+ */
+export const FLAPPY_EVALUATION_DENSE_SHAPING_FRAMES_NORMALIZER = 10.0;
 
 /** Survival channel weight in normalized fitness composition. */
 export const FLAPPY_EVALUATION_NORMALIZED_SURVIVAL_WEIGHT = 2_600;

@@ -74,6 +74,29 @@ describe('neat evaluate fitness chapter', () => {
       });
     });
 
+    describe('given per-genome evaluation with the clear option enabled', () => {
+      describe('when the genome exposes a clear method', () => {
+        it('invokes clear on the genome before scoring it', async () => {
+          // Arrange
+          const clearFn = jest.fn();
+          const evaluationController: NeatControllerForEval = {
+            options: { fitnessPopulation: false, clear: true },
+            population: [{ connections: [], clear: clearFn }],
+            fitness: async () => 1,
+          };
+
+          // Act
+          await runFitnessEvaluation(
+            evaluationController,
+            evaluationController.options,
+          );
+
+          // Assert
+          expect(clearFn).toHaveBeenCalledTimes(1);
+        });
+      });
+    });
+
     describe('given population-mode evaluation is enabled', () => {
       describe('when the delegate receives the full population together', () => {
         it('calls the fitness delegate once with the shared population array', async () => {

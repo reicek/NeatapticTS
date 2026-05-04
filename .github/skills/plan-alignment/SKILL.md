@@ -53,7 +53,7 @@ Goal: identify the primary plan file and any roadmap mismatch risks.
 
 1. Read `plans/README.md` first.
 2. If the task concerns core NEAT architecture or evolutionary correctness,
-   read `plans/neat.plans.md` next.
+   read `plans/completed/neat.plans.md` next.
 3. Otherwise read only the single most relevant detailed plan, plus at most one
    adjacent related plan when clearly necessary.
 4. Do not bulk-read the whole `plans/` directory unless the task explicitly

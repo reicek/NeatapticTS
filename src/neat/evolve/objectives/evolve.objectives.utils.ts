@@ -281,10 +281,11 @@ function handleEntropyDropAndReadd(
   internal: NeatControllerForEvolution,
   currentObjectiveKeys: string[],
   dynamicConfig: NonNullable<
-    NeatControllerForEvolution['options']['multiObjective']
-  >['dynamic'],
+    NonNullable<
+      NeatControllerForEvolution['options']['multiObjective']
+    >['dynamic']
+  >,
 ): void {
-  if (!dynamicConfig) return;
   // Step 1: Drop entropy when stagnation threshold hit.
   if (
     currentObjectiveKeys.includes('entropy') &&

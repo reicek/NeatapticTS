@@ -73,10 +73,10 @@ spacing between neighboring values, so the same frontier width matters
 whether the controller is minimizing or maximizing that objective.
 
 Parameters:
-- `sortedFront` - - Front sorted by objective.
-- `valuesMatrixInput` - - Values matrix.
-- `genomeIndexByReference` - - Lookup map.
-- `objectiveIndex` - - Objective column index.
+- `sortedFront` - Front sorted by objective.
+- `valuesMatrixInput` - Values matrix.
+- `genomeIndexByReference` - Lookup map.
+- `objectiveIndex` - Objective column index.
 
 ### accumulateInteriorCrowding
 
@@ -100,11 +100,11 @@ much empty objective-space surrounds the current genome, not merely whether
 it differs from one adjacent point.
 
 Parameters:
-- `sortedFront` - - Front sorted by objective.
-- `valuesMatrixInput` - - Values matrix.
-- `genomeIndexByReference` - - Lookup map.
-- `objectiveIndex` - - Objective column index.
-- `valueRange` - - Normalized objective range.
+- `sortedFront` - Front sorted by objective.
+- `valuesMatrixInput` - Values matrix.
+- `genomeIndexByReference` - Lookup map.
+- `objectiveIndex` - Objective column index.
+- `valueRange` - Normalized objective range.
 
 ### applyCrowdingDelta
 
@@ -125,10 +125,10 @@ That preserves the boundary-solutions rule while still allowing interior
 genomes to accumulate spacing contributions across many objectives.
 
 Parameters:
-- `currentGenome` - - Genome to update.
-- `previousValue` - - Objective value of previous genome.
-- `nextValue` - - Objective value of next genome.
-- `valueRange` - - Normalized objective range.
+- `currentGenome` - Genome to update.
+- `previousValue` - Objective value of previous genome.
+- `nextValue` - Objective value of next genome.
+- `valueRange` - Normalized objective range.
 
 ### applyCrowdingForObjective
 
@@ -150,10 +150,10 @@ spacing. Keeping those phases together makes the per-objective flow easy to
 audit in the generated chapter.
 
 Parameters:
-- `front` - - Pareto front.
-- `valuesMatrixInput` - - Values matrix.
-- `genomeIndexByReference` - - Lookup map.
-- `objectiveIndex` - - Objective column index.
+- `front` - Pareto front.
+- `valuesMatrixInput` - Values matrix.
+- `genomeIndexByReference` - Lookup map.
+- `objectiveIndex` - Objective column index.
 
 ### assignCrowdingDistances
 
@@ -188,10 +188,10 @@ Side effects:
 - Writes `_moCrowd` on each genome in each front.
 
 Parameters:
-- `fronts` - - Pareto fronts.
-- `valuesMatrixInput` - - Values matrix.
-- `descriptors` - - Objective descriptors (provides objective count).
-- `population` - - Population to resolve indices.
+- `fronts` - Pareto fronts.
+- `valuesMatrixInput` - Values matrix.
+- `descriptors` - Objective descriptors (provides objective count).
+- `population` - Population to resolve indices.
 
 ### assignCrowdingForFront
 
@@ -211,10 +211,10 @@ crowding fields are initialized, simply walk the objective columns and let
 each one contribute its own spacing signal.
 
 Parameters:
-- `front` - - Pareto front.
-- `valuesMatrixInput` - - Values matrix.
-- `genomeIndexByReference` - - Lookup map.
-- `objectiveIndices` - - Objective indices to process.
+- `front` - Pareto front.
+- `valuesMatrixInput` - Values matrix.
+- `genomeIndexByReference` - Lookup map.
+- `objectiveIndices` - Objective indices to process.
 
 ### buildGenomeIndexByReference
 
@@ -234,7 +234,7 @@ The map preserves the controller's original population order even while this
 chapter temporarily reorders front-local views for spacing calculations.
 
 Parameters:
-- `population` - - Genomes in population order.
+- `population` - Genomes in population order.
 
 Returns: Map from genome references to their index.
 
@@ -252,7 +252,7 @@ Boundary genomes are excluded because their crowding distance is treated as
 infinite.
 
 Parameters:
-- `frontLength` - - Length of the sorted front.
+- `frontLength` - Length of the sorted front.
 
 Returns: Interior indices excluding boundary genomes.
 
@@ -270,7 +270,7 @@ Keeping objective iteration explicit makes the front-level accumulation order
 easy to inspect and keeps the per-objective helper signatures small.
 
 Parameters:
-- `objectiveCount` - - Number of objectives.
+- `objectiveCount` - Number of objectives.
 
 Returns: Objective indices `0..objectiveCount-1`.
 
@@ -293,10 +293,10 @@ The original front array remains untouched so Pareto-rank grouping stays
 stable while each objective gets its own temporary geometric view.
 
 Parameters:
-- `front` - - Pareto front.
-- `valuesMatrixInput` - - Values matrix.
-- `genomeIndexByReference` - - Lookup map.
-- `objectiveIndex` - - Objective column index.
+- `front` - Pareto front.
+- `valuesMatrixInput` - Values matrix.
+- `genomeIndexByReference` - Lookup map.
+- `objectiveIndex` - Objective column index.
 
 Returns: Front sorted by objective value.
 
@@ -319,11 +319,11 @@ stays consistent with the same objective data used during dominance and
 frontier construction.
 
 Parameters:
-- `valuesMatrixInput` - - Values matrix.
-- `genomeIndexByReference` - - Lookup map.
-- `objectiveIndex` - - Objective column index.
-- `leftGenome` - - Left genome.
-- `rightGenome` - - Right genome.
+- `valuesMatrixInput` - Values matrix.
+- `genomeIndexByReference` - Lookup map.
+- `objectiveIndex` - Objective column index.
+- `leftGenome` - Left genome.
+- `rightGenome` - Right genome.
 
 Returns: Numeric sort comparison value (ascending).
 
@@ -345,7 +345,7 @@ additive and makes the final score easy to interpret as one accumulated
 spacing signal across all objectives.
 
 Parameters:
-- `front` - - Pareto front.
+- `front` - Pareto front.
 
 ### markBoundaryCrowding
 
@@ -366,7 +366,7 @@ become densely packed, the extreme solutions remain available to later
 selection because they carry unique objective-space coverage.
 
 Parameters:
-- `sortedFront` - - Front sorted by the current objective.
+- `sortedFront` - Front sorted by the current objective.
 
 ### resolveBoundaryGenomes
 
@@ -379,7 +379,7 @@ resolveBoundaryGenomes(
 Resolves the boundary (first/last) genomes for a sorted front.
 
 Parameters:
-- `sortedFront` - - Front sorted by objective.
+- `sortedFront` - Front sorted by objective.
 
 Returns: Boundary genomes, or `null` if the front is empty.
 
@@ -399,9 +399,9 @@ matrix still lives in population order. This lookup reconnects those two
 views without copying the matrix.
 
 Parameters:
-- `genomeIndexByReference` - - Lookup map created by
+- `genomeIndexByReference` - Lookup map created by
  *  {@link buildGenomeIndexByReference} .
-- `genomeItem` - - Genome to resolve.
+- `genomeItem` - Genome to resolve.
 
 Returns: The population index of the genome.
 
@@ -417,8 +417,8 @@ resolveNeighborPair(
 Resolves the neighbor genomes for an interior element of a sorted front.
 
 Parameters:
-- `sortedFront` - - Front sorted by objective.
-- `sortedIndex` - - Current index in sorted front.
+- `sortedFront` - Front sorted by objective.
+- `sortedIndex` - Current index in sorted front.
 
 Returns: Previous and next neighbor genomes.
 
@@ -440,8 +440,8 @@ The fallback means a flat objective contributes no spacing signal instead of
 exploding numerically or distorting the remaining objectives.
 
 Parameters:
-- `minValue` - - Minimum objective value.
-- `maxValue` - - Maximum objective value.
+- `minValue` - Minimum objective value.
+- `maxValue` - Maximum objective value.
 
 Returns: Normalized range with a non-zero floor.
 
@@ -463,10 +463,10 @@ Because `sortedFront` is sorted by objective, the first and last genomes are
 the extrema used for range normalization.
 
 Parameters:
-- `valuesMatrixInput` - - Values matrix.
-- `genomeIndexByReference` - - Lookup map.
-- `boundaryGenomes` - - Boundary genomes for the front.
-- `objectiveIndex` - - Objective column index.
+- `valuesMatrixInput` - Values matrix.
+- `genomeIndexByReference` - Lookup map.
+- `boundaryGenomes` - Boundary genomes for the front.
+- `objectiveIndex` - Objective column index.
 
 Returns: Normalized value range for the objective.
 
@@ -489,10 +489,10 @@ It lets the crowding pass ask "what is this genome's value on the current
 objective?" without assuming the front is still in population order.
 
 Parameters:
-- `valuesMatrixInput` - - Values matrix indexed by population index.
-- `genomeIndexByReference` - - Lookup map from genome reference to index.
-- `genomeItem` - - Genome to resolve.
-- `objectiveIndex` - - Objective column index.
+- `valuesMatrixInput` - Values matrix indexed by population index.
+- `genomeIndexByReference` - Lookup map from genome reference to index.
+- `genomeItem` - Genome to resolve.
+- `objectiveIndex` - Objective column index.
 
 Returns: The objective value for the genome.
 
@@ -511,7 +511,7 @@ Empty fronts are ignored because they carry no genomes to annotate and would
 otherwise force needless setup work.
 
 Parameters:
-- `front` - - Pareto front.
+- `front` - Pareto front.
 
 Returns: `true` if the front should be skipped.
 

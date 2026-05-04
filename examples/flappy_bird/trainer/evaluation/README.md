@@ -57,8 +57,8 @@ them without mutating the genomes too early. This helper performs the final
 write-back once staged evaluation is complete.
 
 Parameters:
-- `population` - - Current population.
-- `provisionalScoresByGenome` - - Final provisional score map.
+- `population` - Current population.
+- `provisionalScoresByGenome` - Final provisional score map.
 
 Returns: Nothing.
 
@@ -81,11 +81,11 @@ survives into it, but the survivors receive a more trustworthy estimate than
 the quick screen alone can provide.
 
 Parameters:
-- `population` - - Current population.
-- `generationEvaluationPlan` - - Per-generation staged evaluation plan.
-- `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
-- `provisionalScoresByGenome` - - Mutable provisional score map.
-- `elitismCount` - - Configured elitism count.
+- `population` - Current population.
+- `generationEvaluationPlan` - Per-generation staged evaluation plan.
+- `aggregateByGenome` - Mutable aggregate cache keyed by genome.
+- `provisionalScoresByGenome` - Mutable provisional score map.
+- `elitismCount` - Configured elitism count.
 
 Returns: Nothing.
 
@@ -108,10 +108,10 @@ small shared seed batch so the trainer can discard obviously weak candidates
 before spending more rollout budget on them.
 
 Parameters:
-- `population` - - Current population.
-- `generationEvaluationPlan` - - Per-generation staged evaluation plan.
-- `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
-- `provisionalScoresByGenome` - - Mutable provisional score map.
+- `population` - Current population.
+- `generationEvaluationPlan` - Per-generation staged evaluation plan.
+- `aggregateByGenome` - Mutable aggregate cache keyed by genome.
+- `provisionalScoresByGenome` - Mutable provisional score map.
 
 Returns: Nothing.
 
@@ -146,11 +146,11 @@ are tested again on a larger shared seed batch so leaderboard positions are
 less sensitive to a fortunate early sample.
 
 Parameters:
-- `population` - - Current population.
-- `generationEvaluationPlan` - - Per-generation staged evaluation plan.
-- `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
-- `provisionalScoresByGenome` - - Mutable provisional score map.
-- `elitismCount` - - Configured elitism count.
+- `population` - Current population.
+- `generationEvaluationPlan` - Per-generation staged evaluation plan.
+- `aggregateByGenome` - Mutable aggregate cache keyed by genome.
+- `provisionalScoresByGenome` - Mutable provisional score map.
+- `elitismCount` - Configured elitism count.
 
 Returns: Nothing.
 
@@ -170,8 +170,8 @@ enough to preserve competitive diversity while still shrinking meaningfully
 relative to the full population.
 
 Parameters:
-- `populationSize` - - Population size.
-- `elitismCount` - - Configured elitism count.
+- `populationSize` - Population size.
+- `elitismCount` - Configured elitism count.
 
 Returns: Full-pass candidate count.
 
@@ -196,10 +196,10 @@ turns a stage request into three steps: pick candidates, evaluate them across
 shared seeds, then refresh the provisional ranking for the whole population.
 
 Parameters:
-- `population` - - Current population.
-- `populationStageEvaluationRequest` - - Candidate-stage evaluation request.
-- `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
-- `provisionalScoresByGenome` - - Mutable provisional score map.
+- `population` - Current population.
+- `populationStageEvaluationRequest` - Candidate-stage evaluation request.
+- `aggregateByGenome` - Mutable aggregate cache keyed by genome.
+- `provisionalScoresByGenome` - Mutable provisional score map.
 
 Returns: Nothing.
 
@@ -225,10 +225,10 @@ intuition pump for why holding part of the randomness fixed can reduce
 variance when comparing alternatives.
 
 Parameters:
-- `genomes` - - Genomes selected for evaluation.
-- `sharedSeeds` - - Shared deterministic seeds.
-- `rolloutOptions` - - Rollout options for this stage.
-- `aggregateByGenome` - - Mutable aggregate cache keyed by genome.
+- `genomes` - Genomes selected for evaluation.
+- `sharedSeeds` - Shared deterministic seeds.
+- `rolloutOptions` - Rollout options for this stage.
+- `aggregateByGenome` - Mutable aggregate cache keyed by genome.
 
 Returns: Nothing.
 
@@ -273,9 +273,9 @@ progress, survival, and stability into a provisional score so early-stage
 selection remains robust when several genomes are close in quality.
 
 Parameters:
-- `population` - - Current population.
-- `aggregateByGenome` - - Aggregate cache keyed by genome.
-- `provisionalScoresByGenome` - - Mutable provisional score map.
+- `population` - Current population.
+- `aggregateByGenome` - Aggregate cache keyed by genome.
+- `provisionalScoresByGenome` - Mutable provisional score map.
 
 Returns: Nothing.
 
@@ -295,8 +295,8 @@ scoring helpers distinguish between genuinely weak genomes and genomes that
 simply have not yet reached a later stage.
 
 Parameters:
-- `population` - - Current population.
-- `aggregateByGenome` - - Aggregate cache keyed by genome.
+- `population` - Current population.
+- `aggregateByGenome` - Aggregate cache keyed by genome.
 
 Returns: Collected aggregate values.
 
@@ -315,7 +315,7 @@ if a genome is far behind the current pipe leader, it falls back to a simpler
 progress-first score.
 
 Parameters:
-- `aggregateValues` - - Aggregate values currently available.
+- `aggregateValues` - Aggregate values currently available.
 
 Returns: Highest mean pipe-progress value.
 
@@ -334,8 +334,8 @@ This precomputation step keeps the per-genome scoring loop lean and avoids
 recomputing population-wide maxima for every genome.
 
 Parameters:
-- `population` - - Current population.
-- `aggregateByGenome` - - Aggregate cache keyed by genome.
+- `population` - Current population.
+- `aggregateByGenome` - Aggregate cache keyed by genome.
 
 Returns: Aggregate scoring context.
 
@@ -356,7 +356,7 @@ many pipes but has wildly inconsistent fitness across seeds is treated more
 cautiously than a similarly strong but steadier genome.
 
 Parameters:
-- `aggregate` - - Aggregate evaluation result.
-- `maximumMeanPipesPassed` - - Best mean pipe progress in the population.
+- `aggregate` - Aggregate evaluation result.
+- `maximumMeanPipesPassed` - Best mean pipe progress in the population.
 
 Returns: Provisional score.

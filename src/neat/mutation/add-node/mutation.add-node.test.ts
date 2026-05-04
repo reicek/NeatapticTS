@@ -4,14 +4,138 @@ import type {
   NeatControllerForMutation,
   NodeWithMetadata,
 } from '../shared/mutation.types';
+import { createInnovationTracker } from '../../innovation-tracker/innovation-tracker';
 import {
   applySplitWithExistingRecord,
   applySplitWithNewRecord,
+  assignInnovationsForNewSplit,
   buildSplitDescriptor,
+  chooseConnectionForSplit,
+  collectEnabledConnections,
   disconnectOriginalConnection,
+  ensureBootstrapConnection,
 } from './mutation.add-node';
 
 describe('neat mutation add-node chapter', () => {
+  describe('ensureBootstrapConnection', () => {
+    describe('given the genome has no connections and exposes one input-output pair', () => {
+      it('seeds exactly one bootstrap connection', () => {
+        // Arrange
+        const genome = createGenome([
+          createNode('input', 1),
+          createNode('output', 2),
+        ]);
+
+        // Act
+        ensureBootstrapConnection(genome, createMutationController());
+
+        // Assert
+        expect({
+          connectionCount: genome.connections.length,
+          endpointTypes: genome.connections.map((connection) => [
+            connection.from.type,
+            connection.to.type,
+          ]),
+        }).toEqual({
+          connectionCount: 1,
+          endpointTypes: [['input', 'output']],
+        });
+      });
+    });
+
+    describe('given the genome already has one connection', () => {
+      it('keeps the existing connection shelf unchanged', () => {
+        // Arrange
+        const inputNode = createNode('input', 1);
+        const outputNode = createNode('output', 2);
+        const genome = createGenome([inputNode, outputNode]);
+        genome.connect?.(inputNode, outputNode, 0.75);
+
+        // Act
+        ensureBootstrapConnection(genome, createMutationController());
+
+        // Assert
+        expect(genome.connections.length).toBe(1);
+      });
+    });
+
+    describe('given the genome lacks one side of the public interface', () => {
+      it('returns without creating a bootstrap edge', () => {
+        // Arrange
+        const genome = createGenome([createNode('input', 1)]);
+
+        // Act
+        ensureBootstrapConnection(genome, createMutationController());
+
+        // Assert
+        expect(genome.connections.length).toBe(0);
+      });
+    });
+  });
+
+  describe('buildSplitDescriptor', () => {
+    describe('given the split connection already has a historical innovation', () => {
+      it('keys the split descriptor by that structural event instead of only endpoints', () => {
+        // Arrange
+        const { connectionToSplit } = createSplitScenario(17);
+
+        // Act
+        const splitDescriptor = buildSplitDescriptor(connectionToSplit);
+
+        // Assert
+        expect(splitDescriptor).toEqual({
+          splitKey: 'splitConnectionInnovation:17',
+          originalWeight: 0.75,
+        });
+      });
+    });
+
+    describe('given two connections share endpoints but not historical identity', () => {
+      it('keeps their split descriptors distinct', () => {
+        // Arrange
+        const inputNode = createNode('input', 1);
+        const outputNode = createNode('output', 2);
+        const firstConnection = createConnection(
+          inputNode,
+          outputNode,
+          0.75,
+          17,
+        );
+        const secondConnection = createConnection(
+          inputNode,
+          outputNode,
+          0.75,
+          18,
+        );
+
+        // Act
+        const splitKeys = [
+          buildSplitDescriptor(firstConnection).splitKey,
+          buildSplitDescriptor(secondConnection).splitKey,
+        ];
+
+        // Assert
+        expect(splitKeys).toEqual([
+          'splitConnectionInnovation:17',
+          'splitConnectionInnovation:18',
+        ]);
+      });
+    });
+
+    describe('given the split connection lacks historical innovation metadata', () => {
+      it('falls back to the legacy endpoint key', () => {
+        // Arrange
+        const { connectionToSplit } = createSplitScenario(null);
+
+        // Act
+        const splitDescriptor = buildSplitDescriptor(connectionToSplit);
+
+        // Assert
+        expect(splitDescriptor.splitKey).toBe('legacyEndpoints:1->2');
+      });
+    });
+  });
+
   describe('applySplitWithNewRecord', () => {
     describe('given a novel connection split', () => {
       it('stores a reusable innovation record for the split descriptor', () => {
@@ -29,9 +153,10 @@ describe('neat mutation add-node chapter', () => {
           DeterministicNode,
           mutationController,
         );
-        const recordedSplit = mutationController._nodeSplitInnovations.get(
-          splitDescriptor.splitKey,
-        );
+        const recordedSplit =
+          mutationController._innovationTracker.nodeSplitRecords.get(
+            splitDescriptor.splitKey,
+          );
 
         // Assert
         expect(recordedSplit).toEqual({
@@ -39,6 +164,32 @@ describe('neat mutation add-node chapter', () => {
           inInnov: 11,
           outInnov: 12,
         });
+      });
+    });
+
+    describe('given a novel connection split in a feed-forward (acyclic) genome', () => {
+      it('stores a non-zero inInnov from the tracker even though the new node starts outside the nodes array', () => {
+        // Arrange: create an acyclic genome that rejects backward connections
+        const { genome, connectionToSplit } = createAcyclicSplitScenario();
+        const mutationController = createMutationController();
+        const splitDescriptor = buildSplitDescriptor(connectionToSplit);
+        disconnectOriginalConnection(genome, connectionToSplit);
+
+        // Act
+        applySplitWithNewRecord(
+          genome,
+          connectionToSplit,
+          splitDescriptor,
+          DeterministicNode,
+          mutationController,
+        );
+        const recordedSplit =
+          mutationController._innovationTracker.nodeSplitRecords.get(
+            splitDescriptor.splitKey,
+          );
+
+        // Assert: inInnov must be a proper tracker-assigned value (not the fallback DEFAULT_INNOVATION_ID=0)
+        expect(recordedSplit?.inInnov).toBe(11);
       });
     });
   });
@@ -63,6 +214,7 @@ describe('neat mutation add-node chapter', () => {
           splitDescriptor,
           splitRecord,
           DeterministicNode,
+          () => 0.5,
         );
         const insertedNode = genome.nodes.find(
           (node) => node.type === 'hidden',
@@ -84,6 +236,162 @@ describe('neat mutation add-node chapter', () => {
           incomingInnovation: 7,
           outgoingInnovation: 8,
         });
+      });
+    });
+  });
+
+  describe('collectEnabledConnections()', () => {
+    describe('given a mix of enabled and disabled connections', () => {
+      it('includes connections where enabled is not explicitly false', () => {
+        // Arrange
+        const inputNode = createNode('input', 1);
+        const outputNode = createNode('output', 2);
+        const activeConnection = createConnection(
+          inputNode,
+          outputNode,
+          0.5,
+          1,
+        );
+        const disabledConnection: ConnectionWithMetadata = {
+          ...createConnection(inputNode, outputNode, 0.3, 2),
+          enabled: false,
+        };
+        const genome = createGenome([inputNode, outputNode]);
+        genome.connections = [activeConnection, disabledConnection];
+
+        // Act
+        const result = collectEnabledConnections(genome);
+
+        // Assert: only the active connection passes the filter
+        expect(result).toEqual([activeConnection]);
+      });
+    });
+  });
+
+  describe('buildSplitDescriptor — legacy path with missing geneIds', () => {
+    describe('given the split connection lacks innovation and both endpoints lack geneId', () => {
+      it('falls back to the default zero id for both source and target', () => {
+        // Arrange: connection with no innovation and nodes with no geneId
+        const fromNode: NodeWithMetadata = {
+          type: 'input',
+          connections: { in: [], out: [] },
+          isProjectingTo: () => false,
+        };
+        const toNode: NodeWithMetadata = {
+          type: 'output',
+          connections: { in: [], out: [] },
+          isProjectingTo: () => false,
+        };
+        const connection = createConnection(fromNode, toNode, 0.5);
+
+        // Act
+        const { splitKey } = buildSplitDescriptor(connection);
+
+        // Assert: DEFAULT_GENE_ID=0 for both endpoints
+        expect(splitKey).toBe('legacyEndpoints:0->0');
+      });
+    });
+  });
+
+  describe('applySplitWithExistingRecord — empty connect result', () => {
+    describe('given the genome connect method returns no connections', () => {
+      it('skips innovation stamp when split edges cannot be created', () => {
+        // Arrange: genome whose connect yields nothing
+        const inputNode = createNode('input', 1);
+        const outputNode = createNode('output', 2);
+        const connectionToSplit = createConnection(
+          inputNode,
+          outputNode,
+          0.75,
+          5,
+        );
+        const genome = createGenome([inputNode, outputNode]);
+        genome.connect = () => [];
+
+        const splitDescriptor = { splitKey: 'test-key', originalWeight: 0.75 };
+        const splitRecord = { newNodeGeneId: 41, inInnov: 7, outInnov: 8 };
+
+        // Act
+        applySplitWithExistingRecord(
+          genome,
+          connectionToSplit,
+          splitDescriptor,
+          splitRecord,
+          DeterministicNode,
+          () => 0.5,
+        );
+
+        // Assert: no connections added, no error thrown
+        expect(genome.connections.length).toBe(0);
+      });
+    });
+  });
+
+  describe('assignInnovationsForNewSplit', () => {
+    describe('given no split connections and a node without a geneId', () => {
+      it('falls back to default gene id and default innovation ids', () => {
+        // Arrange: node with no geneId, empty splitConnections
+        const newNode: NodeWithMetadata = {
+          type: 'hidden',
+          connections: { in: [], out: [] },
+          isProjectingTo: () => false,
+        };
+
+        // Act
+        const record = assignInnovationsForNewSplit(
+          newNode,
+          {},
+          createMutationController(),
+        );
+
+        // Assert: all three fall back to their respective defaults (0)
+        expect(record).toEqual({ newNodeGeneId: 0, inInnov: 0, outInnov: 0 });
+      });
+    });
+  });
+
+  describe('chooseConnectionForSplit', () => {
+    describe('given no enabled connections are available', () => {
+      it('returns null', () => {
+        // Arrange
+        const mutationController = createMutationController();
+
+        // Act
+        const chosenConnection = chooseConnectionForSplit(
+          [],
+          mutationController,
+        );
+
+        // Assert
+        expect(chosenConnection).toBeNull();
+      });
+    });
+
+    describe('given several enabled connections are available', () => {
+      it('selects the connection at the sampled ordinal', () => {
+        // Arrange
+        const firstConnection = createConnection(
+          createNode('input', 1),
+          createNode('hidden', 2),
+          0.25,
+          11,
+        );
+        const secondConnection = createConnection(
+          createNode('hidden', 3),
+          createNode('output', 4),
+          0.5,
+          12,
+        );
+        const mutationController = createMutationController(0.75);
+
+        // Act
+        const chosenConnection = chooseConnectionForSplit(
+          [firstConnection, secondConnection],
+          mutationController,
+        );
+
+        // Assert
+        expect(chosenConnection?.innovation).toBe(12);
       });
     });
   });
@@ -110,7 +418,7 @@ class DeterministicNode implements NodeWithMetadata {
   }
 }
 
-function createSplitScenario(): {
+function createSplitScenario(connectionInnovation: number | null = 5): {
   genome: GenomeWithMetadata;
   connectionToSplit: ConnectionWithMetadata;
 } {
@@ -118,6 +426,9 @@ function createSplitScenario(): {
   const outputNode = createNode('output', 2);
   const genome = createGenome([inputNode, outputNode]);
   const [connectionToSplit] = genome.connect!(inputNode, outputNode, 0.75);
+  if (typeof connectionInnovation === 'number') {
+    connectionToSplit.innovation = connectionInnovation;
+  }
 
   return {
     genome,
@@ -125,19 +436,34 @@ function createSplitScenario(): {
   };
 }
 
-function createMutationController(): NeatControllerForMutation {
+function createConnection(
+  from: NodeWithMetadata,
+  to: NodeWithMetadata,
+  weight: number,
+  innovation?: number,
+): ConnectionWithMetadata {
+  return {
+    from,
+    to,
+    weight,
+    innovation,
+  };
+}
+
+function createMutationController(randomSample = 0): NeatControllerForMutation {
   return {
     population: [],
     options: {},
-    _getRNG: () => () => 0,
+    _getRNG: () => () => randomSample,
     selectMutationMethod: async () => null,
     _mutateAddNodeReuse: async () => undefined,
     _mutateAddConnReuse: () => undefined,
     _invalidateGenomeCaches: () => undefined,
     _operatorStats: new Map(),
-    _nodeSplitInnovations: new Map(),
-    _connInnovations: new Map(),
-    _nextGlobalInnovation: 11,
+    _innovationTracker: {
+      ...createInnovationTracker(),
+      nextInnovationId: 11,
+    },
   };
 }
 
@@ -195,4 +521,65 @@ function createNode(
     isProjectingTo: (targetNode) =>
       connections.out.some((connection) => connection.to === targetNode),
   };
+}
+
+/**
+ * Creates a split scenario using a genome that enforces acyclic (feed-forward)
+ * connectivity. A connection is rejected if the source node appears AFTER the
+ * target node in `genome.nodes` (i.e. it would be a backward edge). This
+ * mirrors `shouldRejectConnectionForAcyclicMode` in the real network.
+ */
+function createAcyclicSplitScenario(): {
+  genome: GenomeWithMetadata;
+  connectionToSplit: ConnectionWithMetadata;
+} {
+  const inputNode = createNode('input', 1);
+  const outputNode = createNode('output', 2);
+  const genome = createAcyclicGenome([inputNode, outputNode]);
+  const [connectionToSplit] = genome.connect!(inputNode, outputNode, 0.75);
+  connectionToSplit.innovation = 5;
+
+  return { genome, connectionToSplit };
+}
+
+/**
+ * Builds a genome whose `connect` implementation rejects any connection where
+ * the source node's position in `genome.nodes` is greater than the target
+ * node's position (acyclic / feed-forward enforcement).
+ */
+function createAcyclicGenome(nodes: NodeWithMetadata[]): GenomeWithMetadata {
+  const genome: GenomeWithMetadata = {
+    nodes,
+    connections: [],
+    gates: [],
+    input: 1,
+    output: 1,
+    connect: (from, to, weight = 1) => {
+      // Reject backward connections — mirrors shouldRejectConnectionForAcyclicMode
+      if (genome.nodes.indexOf(from) > genome.nodes.indexOf(to)) {
+        return [];
+      }
+      const connection: ConnectionWithMetadata = { from, to, weight };
+      from.connections.out.push(connection);
+      to.connections.in.push(connection);
+      genome.connections.push(connection);
+      return [connection];
+    },
+    disconnect: (from, to) => {
+      const matchingConnections = genome.connections.filter(
+        (connection) => connection.from === from && connection.to === to,
+      );
+      genome.connections = genome.connections.filter(
+        (connection) => !(connection.from === from && connection.to === to),
+      );
+      from.connections.out = from.connections.out.filter(
+        (connection) => !matchingConnections.includes(connection),
+      );
+      to.connections.in = to.connections.in.filter(
+        (connection) => !matchingConnections.includes(connection),
+      );
+    },
+  };
+
+  return genome;
 }

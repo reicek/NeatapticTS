@@ -1,6 +1,24 @@
 import Network from '../../architecture/network';
 import Neat from '../../neat';
 import { SelectionTournamentOverflowError } from './core/selection.core.errors';
+import {
+  DEFAULT_POWER,
+  DEFAULT_TOURNAMENT_SIZE,
+  DEFAULT_TOURNAMENT_PROBABILITY,
+  DEFAULT_SCORE,
+  FIRST_INDEX,
+  SECOND_INDEX,
+  LAST_INDEX_OFFSET,
+  LOOP_INDEX_INCREMENT,
+  LAST_ELEMENT_INDEX,
+  INITIAL_TOTAL_FITNESS,
+  INITIAL_MOST_NEGATIVE_SCORE,
+  INITIAL_CUMULATIVE_FITNESS,
+  sort,
+  getParent,
+  getFittest,
+  getAverage,
+} from './selection';
 
 type SelectionHost = {
   evaluate: () => Promise<void>;
@@ -10,6 +28,72 @@ type SelectionHost = {
 };
 
 describe('neat selection chapter', () => {
+  describe('selection facade re-exports', () => {
+    it('exports DEFAULT_POWER as a number', () => {
+      expect(typeof DEFAULT_POWER).toBe('number');
+    });
+
+    it('exports DEFAULT_TOURNAMENT_SIZE as a number', () => {
+      expect(typeof DEFAULT_TOURNAMENT_SIZE).toBe('number');
+    });
+
+    it('exports DEFAULT_TOURNAMENT_PROBABILITY as a number', () => {
+      expect(typeof DEFAULT_TOURNAMENT_PROBABILITY).toBe('number');
+    });
+
+    it('exports DEFAULT_SCORE as a number', () => {
+      expect(typeof DEFAULT_SCORE).toBe('number');
+    });
+
+    it('exports FIRST_INDEX as a number', () => {
+      expect(typeof FIRST_INDEX).toBe('number');
+    });
+
+    it('exports SECOND_INDEX as a number', () => {
+      expect(typeof SECOND_INDEX).toBe('number');
+    });
+
+    it('exports LAST_INDEX_OFFSET as a number', () => {
+      expect(typeof LAST_INDEX_OFFSET).toBe('number');
+    });
+
+    it('exports LOOP_INDEX_INCREMENT as a number', () => {
+      expect(typeof LOOP_INDEX_INCREMENT).toBe('number');
+    });
+
+    it('exports LAST_ELEMENT_INDEX as a number', () => {
+      expect(typeof LAST_ELEMENT_INDEX).toBe('number');
+    });
+
+    it('exports INITIAL_TOTAL_FITNESS as a number', () => {
+      expect(typeof INITIAL_TOTAL_FITNESS).toBe('number');
+    });
+
+    it('exports INITIAL_MOST_NEGATIVE_SCORE as a number', () => {
+      expect(typeof INITIAL_MOST_NEGATIVE_SCORE).toBe('number');
+    });
+
+    it('exports INITIAL_CUMULATIVE_FITNESS as a number', () => {
+      expect(typeof INITIAL_CUMULATIVE_FITNESS).toBe('number');
+    });
+
+    it('exports sort as a function', () => {
+      expect(typeof sort).toBe('function');
+    });
+
+    it('exports getParent as a function', () => {
+      expect(typeof getParent).toBe('function');
+    });
+
+    it('exports getFittest as a function', () => {
+      expect(typeof getFittest).toBe('function');
+    });
+
+    it('exports getAverage as a function', () => {
+      expect(typeof getAverage).toBe('function');
+    });
+  });
+
   describe('power parent selection', () => {
     describe('given a population whose leading scores are out of order', () => {
       const scoreByNegativeNodeCount = (network: Network) =>
@@ -97,6 +181,62 @@ describe('neat selection chapter', () => {
 
         // Assert
         expect(chosenParent.score).toBe(3);
+      });
+    });
+
+    describe('given a roulette threshold that equals total shifted fitness', () => {
+      it('falls back to selecting a random population member when threshold scan misses', async () => {
+        // Arrange
+        const scoreWithoutSideEffects = (network: Network) => {
+          void network;
+          return 1;
+        };
+        const neat = new Neat(2, 1, scoreWithoutSideEffects, {
+          popsize: 4,
+          seed: 558,
+          selection: { name: 'FITNESS_PROPORTIONATE' },
+        });
+        const selectionHost = neat as unknown as SelectionHost;
+        const randomDraws = [1, 0.8];
+
+        await selectionHost.evaluate();
+        selectionHost._getRNG = () => () => randomDraws.shift() ?? 0;
+        selectionHost.population[0].score = 1;
+        selectionHost.population[1].score = 2;
+        selectionHost.population[2].score = 3;
+        selectionHost.population[3].score = 4;
+
+        // Act
+        const chosenParent = selectionHost.getParent();
+
+        // Assert
+        expect(chosenParent.score).toBe(4);
+      });
+    });
+  });
+
+  describe('tournament parent fallback path', () => {
+    describe('given a zero-sized tournament configuration', () => {
+      it('returns undefined when no tournament participants are sampled', () => {
+        // Arrange
+        const scoreWithoutSideEffects = (network: Network) => {
+          void network;
+          return 1;
+        };
+        const neat = new Neat(2, 1, scoreWithoutSideEffects, {
+          popsize: 3,
+          seed: 559,
+          selection: { name: 'TOURNAMENT', size: 0, probability: 0.5 },
+        });
+        const selectionHost = neat as unknown as {
+          getParent: () => { score?: number } | undefined;
+        };
+
+        // Act
+        const chosenParent = selectionHost.getParent();
+
+        // Assert
+        expect(chosenParent).toBeUndefined();
       });
     });
   });

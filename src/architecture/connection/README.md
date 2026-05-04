@@ -173,6 +173,15 @@ Lookahead slow-weight snapshot.
 
 AMSGrad maximum of past second-moment estimates.
 
+#### nextInnovation
+
+Read the current next-innovation cursor without advancing it.
+
+Use this to seed an external innovation tracker so its counter never
+overlaps with innovation IDs already assigned by the Connection constructor.
+
+Returns: Current value of the monotonic connection innovation counter.
+
 #### plastic
 
 Whether this connection participates in plastic adaptation.
@@ -224,6 +233,24 @@ Second raw moment estimate used by Adam-family optimizers.
 #### secondMomentum
 
 Secondary momentum buffer used by Lion-style updates.
+
+#### syncInnovationCounter
+
+```ts
+syncInnovationCounter(
+  maxObservedInnovation: number,
+): void
+```
+
+Advances the innovation cursor past a restored maximum.
+
+This keeps import and clone paths monotonic: once a payload brings in a high
+innovation id, newly created edges continue from above that value.
+
+Parameters:
+- `maxObservedInnovation` - Highest restored innovation id currently in memory.
+
+Returns: Nothing.
 
 #### to
 

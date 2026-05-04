@@ -34,7 +34,7 @@ record telemetry can ask for a stable mutable array at the moment they need
 it.
 
 Parameters:
-- `telemetryContext` - - Neat-like context holding the mutable telemetry buffer.
+- `telemetryContext` - Neat-like context holding the mutable telemetry buffer.
 
 Returns: Mutable telemetry buffer used for in-memory history.
 
@@ -63,8 +63,8 @@ search loop: visibility is allowed, but observer failures must never become
 control-flow failures for evolution itself.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with optional telemetry stream settings.
-- `telemetryEntry` - - Entry to forward to the configured stream callback.
+- `telemetryContext` - Neat-like context with optional telemetry stream settings.
+- `telemetryEntry` - Entry to forward to the configured stream callback.
 
 Returns: Nothing. The helper only invokes the callback when the runtime opts in.
 
@@ -94,8 +94,8 @@ This helper enforces the retention contract by keeping only the most recent
 slice of the run.
 
 Parameters:
-- `telemetryBufferRef` - - Buffer to trim in place.
-- `maxEntries` - - Maximum number of recent entries to keep.
+- `telemetryBufferRef` - Buffer to trim in place.
+- `maxEntries` - Maximum number of recent entries to keep.
 
 Returns: Nothing. Older entries are dropped from the front of the buffer.
 

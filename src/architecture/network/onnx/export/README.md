@@ -428,7 +428,7 @@ Returns: ONNX-like model payload.
 buildOnnxModel(
   network: default,
   layers: default[][],
-  options: OnnxExportOptions,
+  options: OnnxExportOptions | undefined,
 ): OnnxModel
 ```
 

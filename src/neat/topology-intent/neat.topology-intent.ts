@@ -1,4 +1,8 @@
 import * as methods from '../../methods/methods';
+import {
+  hasFeedForwardTopologyContract,
+  type FeedForwardTopologyContractCarrier,
+} from '../../architecture/network/topology/network.topology.contract.utils';
 
 /**
  * Shared feed-forward topology-intent policy for NEAT population entry points.
@@ -104,11 +108,22 @@ export interface TopologyIntentGenome {
   gates?: unknown[];
   /** Runtime self-connection list. */
   selfconns?: unknown[];
+  /** Optional public topology-intent accessor exposed by `Network`. */
+  getTopologyIntent?: () => 'feed-forward' | 'unconstrained';
   /** Public topology intent setter exposed by `Network`. */
   setTopologyIntent?: (
     topologyIntent: 'feed-forward' | 'unconstrained',
   ) => void;
 }
+
+/**
+ * Minimal runtime surface required to decide whether mutation may add recurrence.
+ *
+ * This bridge intentionally stays smaller than `TopologyIntentGenome` because
+ * selection and mutation helpers only need the topology contract itself, not
+ * the full node/connection shape required for feed-forward promotion checks.
+ */
+export type TopologyIntentRuntimeGenome = FeedForwardTopologyContractCarrier;
 
 /**
  * Determine whether the configured mutation policy communicates feed-forward intent.
@@ -215,6 +230,29 @@ export function promoteGenomeToFeedForwardIntentWhenEligible(
 
   // Step 3: Apply the public topology contract through the network API.
   genome.setTopologyIntent?.('feed-forward');
+}
+
+/**
+ * Decide whether mutation may add recurrent or self connections to a genome.
+ *
+ * Recurrent growth requires one explicit policy seam shared by selection and
+ * structural mutation helpers. It is allowed only when the controller opts
+ * in through `allowRecurrent` and the genome is not currently under the
+ * feed-forward topology contract.
+ *
+ * @param genome Genome candidate whose topology contract is being inspected.
+ * @param allowRecurrent Whether the controller configuration permits recurrent growth.
+ * @returns True when mutation may add recurrent or self connections.
+ */
+export function allowsRecurrentConnectionMutation(
+  genome: TopologyIntentRuntimeGenome,
+  allowRecurrent: boolean | undefined,
+): boolean {
+  if (!allowRecurrent) {
+    return false;
+  }
+
+  return !hasFeedForwardTopologyContract(genome);
 }
 
 /**

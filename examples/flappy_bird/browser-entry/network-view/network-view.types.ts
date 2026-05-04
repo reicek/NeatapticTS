@@ -1,9 +1,9 @@
 /**
  * Shared type contracts for network-view overlays.
  *
- * The most notable overlay is the input-group label band system, which annotates
- * stacked temporal observation channels so the input layer reads as grouped
- * semantics instead of a flat strip of anonymous nodes.
+ * The most notable overlays are the input-group label bands and the per-input
+ * row descriptions. Together they turn the Flappy input shelf back into a
+ * readable teaching surface instead of a flat strip of anonymous nodes.
  */
 
 /**
@@ -14,8 +14,24 @@
  */
 export interface InputGroupLabelBand {
   label: string;
+  labelLines: readonly string[];
+  tooltipHeading: string;
+  tooltipBodyParagraphs: readonly string[];
   startNodeIndex: number;
   endNodeIndex: number;
   backgroundColor: string;
   orientation: 'vertical' | 'horizontal';
+}
+
+/**
+ * One horizontal description aligned to a specific Flappy input node.
+ *
+ * The label sits between the semantic group band and the network itself so the
+ * viewer can understand each observation channel without inspecting source.
+ */
+export interface InputNodeDescriptionLabel {
+  labelLines: readonly string[];
+  tooltipHeading: string;
+  tooltipBodyParagraphs: readonly string[];
+  nodeIndex: number;
 }

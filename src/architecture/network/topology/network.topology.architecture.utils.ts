@@ -403,10 +403,9 @@ function resolveCycleStateAndTopoOrder(
   directedEdges.forEach((directedEdge) => {
     incomingEdgeCountByNode.set(
       directedEdge.toIndex,
-      (incomingEdgeCountByNode.get(directedEdge.toIndex) ?? 0) + 1,
+      incomingEdgeCountByNode.get(directedEdge.toIndex)! + 1,
     );
-    const outgoingTargets =
-      outgoingTargetsByNode.get(directedEdge.fromIndex) ?? [];
+    const outgoingTargets = outgoingTargetsByNode.get(directedEdge.fromIndex)!;
     outgoingTargets.push(directedEdge.toIndex);
     outgoingTargetsByNode.set(directedEdge.fromIndex, outgoingTargets);
   });
@@ -422,16 +421,13 @@ function resolveCycleStateAndTopoOrder(
   // Step 4: Consume queue while decrementing downstream in-degree counters.
   const topologicalOrder: number[] = [];
   while (traversalQueue.length > 0) {
-    const currentNodeIndex = traversalQueue.shift();
-    if (typeof currentNodeIndex !== 'number') {
-      continue;
-    }
+    const currentNodeIndex = traversalQueue.shift()!;
 
     topologicalOrder.push(currentNodeIndex);
-    const outgoingTargets = outgoingTargetsByNode.get(currentNodeIndex) ?? [];
+    const outgoingTargets = outgoingTargetsByNode.get(currentNodeIndex)!;
     outgoingTargets.forEach((targetNodeIndex) => {
       const nextIncomingCount =
-        (incomingEdgeCountByNode.get(targetNodeIndex) ?? 0) - 1;
+        incomingEdgeCountByNode.get(targetNodeIndex)! - 1;
       incomingEdgeCountByNode.set(targetNodeIndex, nextIncomingCount);
       if (nextIncomingCount === 0) {
         traversalQueue.push(targetNodeIndex);
@@ -474,8 +470,7 @@ function resolveNodeDepthByIndex(
 
   // Step 2: Populate incoming source lists from edge data.
   directedEdges.forEach((directedEdge) => {
-    const incomingSources =
-      incomingSourcesByNode.get(directedEdge.toIndex) ?? [];
+    const incomingSources = incomingSourcesByNode.get(directedEdge.toIndex)!;
     incomingSources.push(directedEdge.fromIndex);
     incomingSourcesByNode.set(directedEdge.toIndex, incomingSources);
   });
@@ -484,10 +479,7 @@ function resolveNodeDepthByIndex(
   const depthByNodeIndex = new Map<number, number>();
 
   topologicalOrder.forEach((nodeIndex) => {
-    const node = nodeByIndex.get(nodeIndex);
-    if (!node) {
-      return;
-    }
+    const node = nodeByIndex.get(nodeIndex)!;
 
     // Key note: input nodes define depth origin.
     if (node.type === 'input') {
@@ -495,7 +487,7 @@ function resolveNodeDepthByIndex(
       return;
     }
 
-    const incomingSources = incomingSourcesByNode.get(nodeIndex) ?? [];
+    const incomingSources = incomingSourcesByNode.get(nodeIndex)!;
     const parentDepths = incomingSources
       .map((sourceNodeIndex) => depthByNodeIndex.get(sourceNodeIndex))
       .filter(

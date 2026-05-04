@@ -38,7 +38,7 @@ to scan: archive helpers answer multi-objective questions, novelty helpers
 manage behavior descriptors, and this chapter explains operator activity.
 
 Parameters:
-- `host` - - `Neat` instance recording operator attempts and successes.
+- `host` - `Neat` instance recording operator attempts and successes.
 
 Returns: Operator summaries suitable for dashboards and debugging.
 

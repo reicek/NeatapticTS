@@ -22,6 +22,7 @@ export function adoptBestGenomeOrWarn(
     network.connections = bestGenome.connections;
     network.selfconns = bestGenome.selfconns;
     network.gates = bestGenome.gates;
+    network.refreshExplicitIORoles();
     if (clearState) network.clear();
     return;
   }

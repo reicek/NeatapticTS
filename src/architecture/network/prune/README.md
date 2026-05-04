@@ -112,8 +112,8 @@ Unlike maybePrune this operates immediately relative to the first invocation's c
 (stored separately as _evoInitialConnCount) and does not implement scheduling or regrowth.
 
 Parameters:
-- `targetSparsity` - - Requested target sparsity.
-- `method` - - Connection ranking heuristic.
+- `targetSparsity` - Requested target sparsity.
+- `method` - Connection ranking heuristic.
 
 Returns: Nothing.
 
@@ -130,7 +130,7 @@ buildRegrowthCandidatePair(
 Build one random regrowth candidate pair if valid.
 
 Parameters:
-- `currentNetwork` - - Network being regrown.
+- `currentNetwork` - Network being regrown.
 
 Returns: Candidate node pair or null when invalid.
 
@@ -145,7 +145,7 @@ buildRegrowthPlan(
 Convert regrowth intent into a bounded execution plan.
 
 Parameters:
-- `context` - - Regrowth planning inputs.
+- `context` - Regrowth planning inputs.
 
 Returns: A plan when regrowth is meaningful; otherwise null.
 
@@ -162,9 +162,9 @@ connectionAlreadyExists(
 Check whether a connection already exists.
 
 Parameters:
-- `currentNetwork` - - Network being regrown.
-- `sourceNode` - - Proposed source node.
-- `targetNode` - - Proposed target node.
+- `currentNetwork` - Network being regrown.
+- `sourceNode` - Proposed source node.
+- `targetNode` - Proposed target node.
 
 Returns: True when the edge already exists.
 
@@ -179,7 +179,7 @@ executeRegrowthAttempts(
 Execute bounded stochastic regrowth attempts.
 
 Parameters:
-- `context` - - Regrowth execution settings.
+- `context` - Regrowth execution settings.
 
 Returns: Nothing.
 
@@ -196,9 +196,9 @@ isInvalidRegrowthPair(
 Validate whether a candidate regrowth pair is acceptable.
 
 Parameters:
-- `currentNetwork` - - Network being regrown.
-- `sourceNode` - - Proposed source node.
-- `targetNode` - - Proposed target node.
+- `currentNetwork` - Network being regrown.
+- `sourceNode` - Proposed source node.
+- `targetNode` - Proposed target node.
 
 Returns: True when the pair must be rejected.
 
@@ -214,8 +214,8 @@ maybeRunRegrowth(
 Build and execute a regrowth plan when enabled.
 
 Parameters:
-- `currentNetwork` - - Network to regrow.
-- `context` - - Inputs describing regrowth intent.
+- `currentNetwork` - Network to regrow.
+- `context` - Inputs describing regrowth intent.
 
 Returns: Nothing.
 
@@ -230,7 +230,7 @@ pickRandomNode(
 Pick a random node using the network RNG.
 
 Parameters:
-- `currentNetwork` - - Network providing node set and RNG.
+- `currentNetwork` - Network providing node set and RNG.
 
 Returns: Random node or undefined when the node list is empty.
 
@@ -248,10 +248,10 @@ shouldContinueRegrowth(
 Decide whether another regrowth attempt is allowed.
 
 Parameters:
-- `currentNetwork` - - Network being regrown.
-- `desiredRemainingConnections` - - Target remaining connection count.
-- `attemptedRegrowthCount` - - Number of attempts already used.
-- `maxAttempts` - - Maximum attempts allowed.
+- `currentNetwork` - Network being regrown.
+- `desiredRemainingConnections` - Target remaining connection count.
+- `attemptedRegrowthCount` - Number of attempts already used.
+- `maxAttempts` - Maximum attempts allowed.
 
 Returns: True when another attempt should run.
 
@@ -266,7 +266,7 @@ tryRegrowConnection(
 Attempt one random valid connection addition.
 
 Parameters:
-- `currentNetwork` - - Network being regrown.
+- `currentNetwork` - Network being regrown.
 
 Returns: Nothing.
 
@@ -283,9 +283,9 @@ violatesAcyclicConstraint(
 Check whether a pair violates forward-only acyclic ordering.
 
 Parameters:
-- `currentNetwork` - - Network being regrown.
-- `sourceNode` - - Proposed source node.
-- `targetNode` - - Proposed target node.
+- `currentNetwork` - Network being regrown.
+- `sourceNode` - Proposed source node.
+- `targetNode` - Proposed target node.
 
 Returns: True when acyclic ordering would be violated.
 
@@ -303,8 +303,8 @@ alreadyPrunedThisIteration(
 Check whether this iteration was already pruned.
 
 Parameters:
-- `currentIteration` - - Iteration to evaluate.
-- `currentPruningConfig` - - Active pruning schedule.
+- `currentIteration` - Iteration to evaluate.
+- `currentPruningConfig` - Active pruning schedule.
 
 Returns: True when pruning already happened for this iteration.
 
@@ -319,7 +319,7 @@ buildPruneSelection(
 Build a connection removal selection from current ranking context.
 
 Parameters:
-- `context` - - Inputs for ranking and slicing removable connections.
+- `context` - Inputs for ranking and slicing removable connections.
 
 Returns: Connections selected for pruning.
 
@@ -335,8 +335,8 @@ buildScheduledTarget(
 Build current scheduled pruning targets from schedule context.
 
 Parameters:
-- `context` - - Inputs required to compute desired remaining connections.
-- `currentConnectionCount` - - Current number of network connections.
+- `context` - Inputs required to compute desired remaining connections.
+- `currentConnectionCount` - Current number of network connections.
 
 Returns: Desired remaining connections and current excess.
 
@@ -353,9 +353,9 @@ calculateProgressFraction(
 Compute clamped schedule progress in the [0,1] range.
 
 Parameters:
-- `currentIteration` - - Iteration to evaluate.
-- `scheduleStart` - - Start iteration of schedule window.
-- `scheduleEnd` - - End iteration of schedule window.
+- `currentIteration` - Iteration to evaluate.
+- `scheduleStart` - Start iteration of schedule window.
+- `scheduleEnd` - End iteration of schedule window.
 
 Returns: Clamped normalized progress.
 
@@ -370,7 +370,7 @@ calculateSnipSaliency(
 Compute saliency for SNIP-like ranking.
 
 Parameters:
-- `connection` - - Connection to score.
+- `connection` - Connection to score.
 
 Returns: Saliency value used for sorting.
 
@@ -387,9 +387,9 @@ clamp(
 Clamp a number into an inclusive range.
 
 Parameters:
-- `value` - - Raw value to clamp.
-- `minimum` - - Inclusive lower bound.
-- `maximum` - - Inclusive upper bound.
+- `value` - Raw value to clamp.
+- `minimum` - Inclusive lower bound.
+- `maximum` - Inclusive upper bound.
 
 Returns: Clamped value.
 
@@ -405,8 +405,8 @@ disconnectConnections(
 Disconnect all selected connections from the network.
 
 Parameters:
-- `currentNetwork` - - Network to mutate.
-- `connectionsToDisconnect` - - Connections to remove.
+- `currentNetwork` - Network to mutate.
+- `connectionsToDisconnect` - Connections to remove.
 
 Returns: Nothing.
 
@@ -421,7 +421,7 @@ getInitialConnectionBaseline(
 Read the scheduled-pruning baseline connection count.
 
 Parameters:
-- `currentNetwork` - - Network instance to inspect.
+- `currentNetwork` - Network instance to inspect.
 
 Returns: Baseline count when captured; otherwise undefined.
 
@@ -436,7 +436,7 @@ getPruningConfig(
 Read the active pruning schedule from network internals.
 
 Parameters:
-- `currentNetwork` - - Network instance to inspect.
+- `currentNetwork` - Network instance to inspect.
 
 Returns: Pruning configuration when enabled; otherwise undefined.
 
@@ -452,8 +452,8 @@ isOutsidePruningWindow(
 Check whether an iteration is outside the pruning window.
 
 Parameters:
-- `currentIteration` - - Iteration to evaluate.
-- `currentPruningConfig` - - Active pruning schedule.
+- `currentIteration` - Iteration to evaluate.
+- `currentPruningConfig` - Active pruning schedule.
 
 Returns: True when the iteration is out of range.
 
@@ -469,8 +469,8 @@ isScheduledPruningIteration(
 Check frequency cadence for scheduled pruning.
 
 Parameters:
-- `currentIteration` - - Iteration to evaluate.
-- `currentPruningConfig` - - Active pruning schedule.
+- `currentIteration` - Iteration to evaluate.
+- `currentPruningConfig` - Active pruning schedule.
 
 Returns: True when this iteration matches the schedule cadence.
 
@@ -486,8 +486,8 @@ markPruneIteration(
 Persist the iteration that last performed pruning.
 
 Parameters:
-- `currentPruningConfig` - - Active pruning configuration.
-- `currentIteration` - - Iteration to record.
+- `currentPruningConfig` - Active pruning configuration.
+- `currentIteration` - Iteration to record.
 
 Returns: Nothing.
 
@@ -502,7 +502,7 @@ markTopologyDirty(
 Mark topology cache as dirty after structural updates.
 
 Parameters:
-- `currentNetwork` - - Network with modified connectivity.
+- `currentNetwork` - Network with modified connectivity.
 
 Returns: Nothing.
 
@@ -517,7 +517,7 @@ rankConnectionsByMagnitude(
 Rank connections by absolute weight magnitude.
 
 Parameters:
-- `connections` - - Candidate connections to rank.
+- `connections` - Candidate connections to rank.
 
 Returns: Connections sorted by ascending absolute weight.
 
@@ -533,8 +533,8 @@ rankConnectionsByRemovalPriority(
 Route ranking to the configured pruning heuristic.
 
 Parameters:
-- `connections` - - Candidate connections to rank.
-- `method` - - Ranking method to apply.
+- `connections` - Candidate connections to rank.
+- `method` - Ranking method to apply.
 
 Returns: Connections sorted by ascending removal priority.
 
@@ -549,7 +549,7 @@ rankConnectionsBySnipSaliency(
 Rank connections by SNIP-like saliency approximation.
 
 Parameters:
-- `connections` - - Candidate connections to rank.
+- `connections` - Candidate connections to rank.
 
 Returns: Connections sorted by ascending saliency.
 
@@ -564,7 +564,7 @@ resolveGradientMagnitude(
 Resolve a stable gradient-magnitude proxy from connection delta statistics.
 
 Parameters:
-- `connection` - - Connection containing accumulated delta history.
+- `connection` - Connection containing accumulated delta history.
 
 Returns: Absolute gradient magnitude proxy.
 
@@ -579,7 +579,7 @@ resolvePruningMethod(
 Normalize optional pruning method to a concrete value.
 
 Parameters:
-- `method` - - Optional configured pruning method.
+- `method` - Optional configured pruning method.
 
 Returns: Concrete pruning method.
 
@@ -595,8 +595,8 @@ shouldRunScheduledPrune(
 Determine whether scheduled pruning should run at this iteration.
 
 Parameters:
-- `currentIteration` - - Training iteration being processed.
-- `currentPruningConfig` - - Active pruning schedule.
+- `currentIteration` - Training iteration being processed.
+- `currentPruningConfig` - Active pruning schedule.
 
 Returns: True when pruning should execute now.
 
@@ -614,8 +614,8 @@ calculateSparsityFromBaseline(
 Convert current density into sparsity ratio.
 
 Parameters:
-- `currentConnectionCount` - - Current connection count.
-- `baselineConnectionCount` - - Baseline connection count.
+- `currentConnectionCount` - Current connection count.
+- `baselineConnectionCount` - Baseline connection count.
 
 Returns: Sparsity ratio in [0,1] for valid baselines.
 
@@ -630,7 +630,7 @@ readInitialSparsityBaseline(
 Read baseline used for sparsity reporting.
 
 Parameters:
-- `currentNetwork` - - Network to inspect.
+- `currentNetwork` - Network to inspect.
 
 Returns: Baseline connection count when available.
 
@@ -647,7 +647,7 @@ buildEvolutionaryPruneSelection(
 Build evolutionary pruning connection selection.
 
 Parameters:
-- `context` - - Inputs for ranking and slicing.
+- `context` - Inputs for ranking and slicing.
 
 Returns: Connections selected for removal.
 
@@ -663,8 +663,8 @@ buildEvolutionaryTarget(
 Compute evolutionary pruning target counts.
 
 Parameters:
-- `context` - - Inputs for sparsity-to-count conversion.
-- `currentConnectionCount` - - Current number of network connections.
+- `context` - Inputs for sparsity-to-count conversion.
+- `currentConnectionCount` - Current number of network connections.
 
 Returns: Desired remaining and excess connection counts.
 
@@ -679,7 +679,7 @@ calculateEvolutionarySnipSaliency(
 Compute evolutionary SNIP-like saliency for one connection.
 
 Parameters:
-- `connection` - - Connection to score.
+- `connection` - Connection to score.
 
 Returns: Saliency score.
 
@@ -695,8 +695,8 @@ disconnectEvolutionaryConnections(
 Disconnect selected evolutionary pruning edges.
 
 Parameters:
-- `currentNetwork` - - Network to mutate.
-- `connectionsToDisconnect` - - Edges to remove.
+- `currentNetwork` - Network to mutate.
+- `connectionsToDisconnect` - Edges to remove.
 
 Returns: Nothing.
 
@@ -711,7 +711,7 @@ getOrCaptureEvolutionaryBaseline(
 Capture evolutionary baseline once and reuse it for subsequent pruning calls.
 
 Parameters:
-- `currentNetwork` - - Network to inspect and possibly initialize.
+- `currentNetwork` - Network to inspect and possibly initialize.
 
 Returns: Evolutionary baseline connection count.
 
@@ -726,7 +726,7 @@ markEvolutionaryTopologyDirty(
 Mark topology cache as dirty after evolutionary pruning.
 
 Parameters:
-- `currentNetwork` - - Network with changed structure.
+- `currentNetwork` - Network with changed structure.
 
 Returns: Nothing.
 
@@ -741,7 +741,7 @@ normalizeEvolutionaryTargetSparsity(
 Clamp evolutionary target sparsity to safe operational bounds.
 
 Parameters:
-- `rawTargetSparsity` - - Requested target sparsity.
+- `rawTargetSparsity` - Requested target sparsity.
 
 Returns: Normalized target sparsity.
 
@@ -757,8 +757,8 @@ rankEvolutionaryConnections(
 Route evolutionary ranking to selected heuristic.
 
 Parameters:
-- `connections` - - Candidate connections.
-- `pruningMethod` - - Ranking heuristic.
+- `connections` - Candidate connections.
+- `pruningMethod` - Ranking heuristic.
 
 Returns: Connections sorted by ascending removal priority.
 
@@ -773,7 +773,7 @@ rankEvolutionaryConnectionsByMagnitude(
 Rank connections by magnitude for evolutionary pruning.
 
 Parameters:
-- `connections` - - Candidate connections.
+- `connections` - Candidate connections.
 
 Returns: Connections sorted by ascending absolute weight.
 
@@ -788,7 +788,7 @@ rankEvolutionaryConnectionsBySnip(
 Rank connections by SNIP-like saliency for evolutionary pruning.
 
 Parameters:
-- `connections` - - Candidate connections.
+- `connections` - Candidate connections.
 
 Returns: Connections sorted by ascending saliency.
 
@@ -803,6 +803,6 @@ resolveEvolutionaryGradientMagnitude(
 Resolve gradient proxy for evolutionary SNIP ranking.
 
 Parameters:
-- `connection` - - Connection containing delta history.
+- `connection` - Connection containing delta history.
 
 Returns: Absolute gradient magnitude proxy.

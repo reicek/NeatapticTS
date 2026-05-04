@@ -22,8 +22,6 @@ const MEMORY_BLOCK_LINK_START_INDEX = 1;
 const VARIANT_NODE_TYPE = 'variant';
 const SELF_CONNECTION_WARNING_PREFIX =
   'LSTM Warning: No self-connection found for memory cell node ';
-const MEMORY_OUTPUT_WARNING_MESSAGE =
-  'Unexpected Node type found directly in Memory layer nodes list during output group creation.';
 const MEMORY_INPUT_BLOCK_TYPE_ERROR =
   'Memory layer input block is not a Group.';
 const MEMORY_LAYER_SIZE_ERROR_PREFIX = 'Previous layer size (';
@@ -74,8 +72,8 @@ type ConnectorInput = {
  * It returns a layer object that is compatible with the rest of the layer
  * utilities (`layer.input(...)`, `layer.activate(...)`, `layer.output`, etc.).
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of units in each LSTM gate and cell.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of units in each LSTM gate and cell.
  * @returns The configured layer instance.
  *
  * Example:
@@ -94,6 +92,7 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
   const layer = context.createLayer();
   const lstmGroups = createLstmGroups(size);
 
+  describeLstmBoundary(layer, lstmGroups, size);
   configureLstmBiases(lstmGroups);
   const lstmOutputConnections = connectLstmCoreTopology(lstmGroups);
   applyLstmOutputGating(lstmGroups, lstmOutputConnections);
@@ -107,7 +106,7 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Creates the grouped blocks used by the LSTM topology.
-   * @param groupSize - Number of units to allocate per group.
+   * @param groupSize Number of units to allocate per group.
    * @returns The grouped LSTM components.
    */
   function createLstmGroups(groupSize: number): LstmGroups {
@@ -121,8 +120,51 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
   }
 
   /**
+   * Attaches lightweight descriptor metadata to the LSTM boundary.
+   * @param targetLayer Layer receiving the public descriptor.
+   * @param groups Internal grouped blocks used by the topology.
+   * @param units Number of units in each grouped block.
+   * @returns No return value.
+   */
+  function describeLstmBoundary(
+    targetLayer: TLayer,
+    groups: LstmGroups,
+    units: number,
+  ): void {
+    targetLayer.describe?.({
+      intent: 'recurrent',
+      metadata: { family: 'lstm', units },
+    });
+    groups.inputGate.describe({
+      label: 'inputGate',
+      intent: 'gate',
+      metadata: { family: 'lstm', units },
+    });
+    groups.forgetGate.describe({
+      label: 'forgetGate',
+      intent: 'gate',
+      metadata: { family: 'lstm', units },
+    });
+    groups.memoryCell.describe({
+      label: 'memoryCell',
+      intent: 'state',
+      metadata: { family: 'lstm', units },
+    });
+    groups.outputGate.describe({
+      label: 'outputGate',
+      intent: 'gate',
+      metadata: { family: 'lstm', units },
+    });
+    groups.outputBlock.describe({
+      label: 'outputBlock',
+      intent: 'output',
+      metadata: { family: 'lstm', units },
+    });
+  }
+
+  /**
    * Applies baseline bias values for all LSTM groups.
-   * @param groups - LSTM groups to configure.
+   * @param groups LSTM groups to configure.
    * @returns No return value.
    */
   function configureLstmBiases(groups: LstmGroups): void {
@@ -135,7 +177,7 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Connects the core recurrent and gate topology for the LSTM cell.
-   * @param groups - LSTM groups that will be wired together.
+   * @param groups LSTM groups that will be wired together.
    * @returns Connections from memory cell to output block.
    */
   function connectLstmCoreTopology(groups: LstmGroups): Connection[] {
@@ -160,8 +202,8 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Applies output gating for the LSTM output projection.
-   * @param groups - LSTM groups that contain the output gate.
-   * @param outputConnections - Connections to gate.
+   * @param groups LSTM groups that contain the output gate.
+   * @param outputConnections Connections to gate.
    * @returns No return value.
    */
   function applyLstmOutputGating(
@@ -173,7 +215,7 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Synchronizes each memory self-connection with the paired forget gate node.
-   * @param groups - LSTM groups containing memory and forget gate nodes.
+   * @param groups LSTM groups containing memory and forget gate nodes.
    * @returns No return value.
    */
   function synchronizeLstmForgetSelfConnections(groups: LstmGroups): void {
@@ -192,7 +234,7 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Finds the self-connection for a memory cell node.
-   * @param memoryCellNode - Node to inspect.
+   * @param memoryCellNode Node to inspect.
    * @returns Matching self-connection when present.
    */
   function findMemoryCellSelfConnection(
@@ -207,7 +249,7 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Logs the missing self-connection warning for an LSTM memory node.
-   * @param nodeIndex - Memory node index.
+   * @param nodeIndex Memory node index.
    * @returns No return value.
    */
   function logMissingLstmSelfConnection(nodeIndex: number): void {
@@ -216,8 +258,8 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Assigns a forget gate node as the gater of a connection.
-   * @param connection - Connection to update.
-   * @param forgetGateNode - Gate node to assign.
+   * @param connection Connection to update.
+   * @param forgetGateNode Gate node to assign.
    * @returns No return value.
    */
   function assignForgetGater(
@@ -229,8 +271,8 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Adds a gated connection to the forget gate node when absent.
-   * @param forgetGateNode - Gate node that tracks gated connections.
-   * @param connection - Connection that may be appended.
+   * @param forgetGateNode Gate node that tracks gated connections.
+   * @param connection Connection that may be appended.
    * @returns No return value.
    */
   function appendGatedConnectionIfMissing(
@@ -246,7 +288,7 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Collects all LSTM nodes in canonical layer order.
-   * @param groups - LSTM groups to flatten.
+   * @param groups LSTM groups to flatten.
    * @returns Flattened node list.
    */
   function collectLstmNodes(groups: LstmGroups): Node[] {
@@ -261,8 +303,8 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Creates the layer input connector for the LSTM topology.
-   * @param factoryContext - Factory context used to resolve source groups.
-   * @param groups - LSTM groups that receive source connections.
+   * @param factoryContext Factory context used to resolve source groups.
+   * @param groups LSTM groups that receive source connections.
    * @returns Input connector callback.
    */
   function createLstmInputConnector(
@@ -326,8 +368,8 @@ export function buildLstmLayer<TLayer extends LayerFactoryLayer>(
  * - This implementation wires update/reset gates and a memory cell, then
  * exposes a standard `layer.output` group.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of units in each GRU gate and cell.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of units in each GRU gate and cell.
  * @returns The configured layer instance.
  *
  * Example:
@@ -345,6 +387,7 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
   const gruGroups = createGruGroups(size);
 
   configureGruNodes(gruGroups);
+  describeGruBoundary(layer, gruGroups, size);
   connectGruCoreTopology(gruGroups);
 
   layer.nodes = collectGruNodes(gruGroups);
@@ -355,7 +398,7 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Creates grouped blocks used by the GRU topology.
-   * @param groupSize - Number of units to allocate per group.
+   * @param groupSize Number of units to allocate per group.
    * @returns The grouped GRU components.
    */
   function createGruGroups(groupSize: number): GruGroups {
@@ -370,21 +413,69 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
   }
 
   /**
+   * Attaches lightweight descriptor metadata to the GRU boundary.
+   * @param targetLayer Layer receiving the public descriptor.
+   * @param groups Internal grouped blocks used by the topology.
+   * @param units Number of units in each grouped block.
+   * @returns No return value.
+   */
+  function describeGruBoundary(
+    targetLayer: TLayer,
+    groups: GruGroups,
+    units: number,
+  ): void {
+    targetLayer.describe?.({
+      intent: 'recurrent',
+      metadata: { family: 'gru', units },
+    });
+    groups.updateGate.describe({
+      label: 'updateGate',
+      intent: 'gate',
+      metadata: { family: 'gru', units },
+    });
+    groups.inverseUpdateGate.describe({
+      label: 'inverseUpdateGate',
+      intent: 'gate',
+      metadata: { family: 'gru', units },
+    });
+    groups.resetGate.describe({
+      label: 'resetGate',
+      intent: 'gate',
+      metadata: { family: 'gru', units },
+    });
+    groups.memoryCell.describe({
+      label: 'memoryCell',
+      intent: 'state',
+      metadata: { family: 'gru', units },
+    });
+    groups.output.describe({
+      label: 'outputBlock',
+      intent: 'output',
+      metadata: { family: 'gru', units },
+    });
+    groups.previousOutput.describe({
+      label: 'previousOutput',
+      intent: 'state',
+      metadata: { family: 'gru', units },
+    });
+  }
+
+  /**
    * Applies baseline node settings for GRU groups.
-   * @param groups - GRU groups to configure.
+   * @param groups GRU groups to configure.
    * @returns No return value.
    */
   function configureGruNodes(groups: GruGroups): void {
     groups.previousOutput.set({
       bias: BIAS_OFF,
       squash: methods.Activation.identity,
-      type: VARIANT_NODE_TYPE,
+      type: 'hidden',
     });
     groups.memoryCell.set({ squash: methods.Activation.tanh });
     groups.inverseUpdateGate.set({
       bias: BIAS_OFF,
       squash: methods.Activation.inverse,
-      type: VARIANT_NODE_TYPE,
+      type: 'hidden',
     });
     groups.updateGate.set({ bias: BIAS_ON });
     groups.resetGate.set({ bias: BIAS_OFF });
@@ -392,7 +483,7 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Wires the full GRU topology using focused connection helpers.
-   * @param groups - GRU groups to wire.
+   * @param groups GRU groups to wire.
    * @returns No return value.
    */
   function connectGruCoreTopology(groups: GruGroups): void {
@@ -405,7 +496,7 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Connects previous output into update and reset gate inputs.
-   * @param groups - GRU groups to wire.
+   * @param groups GRU groups to wire.
    * @returns No return value.
    */
   function connectGruGatePriming(groups: GruGroups): void {
@@ -421,7 +512,7 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Connects update gate to inverse update gate.
-   * @param groups - GRU groups to wire.
+   * @param groups GRU groups to wire.
    * @returns No return value.
    */
   function connectGruInverseGate(groups: GruGroups): void {
@@ -434,7 +525,7 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Creates and gates reset-path connections.
-   * @param groups - GRU groups to wire.
+   * @param groups GRU groups to wire.
    * @returns No return value.
    */
   function connectGruResetPath(groups: GruGroups): void {
@@ -447,7 +538,7 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Creates and gates update-path blend connections.
-   * @param groups - GRU groups to wire.
+   * @param groups GRU groups to wire.
    * @returns No return value.
    */
   function connectGruUpdatePath(groups: GruGroups): void {
@@ -466,7 +557,7 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Connects new output back into previous state storage.
-   * @param groups - GRU groups to wire.
+   * @param groups GRU groups to wire.
    * @returns No return value.
    */
   function connectGruStateCarry(groups: GruGroups): void {
@@ -479,7 +570,7 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Collects all GRU nodes in canonical layer order.
-   * @param groups - GRU groups to flatten.
+   * @param groups GRU groups to flatten.
    * @returns Flattened node list.
    */
   function collectGruNodes(groups: GruGroups): Node[] {
@@ -495,8 +586,8 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Creates the layer input connector for the GRU topology.
-   * @param factoryContext - Factory context used to resolve source groups.
-   * @param groups - GRU groups that receive source connections.
+   * @param factoryContext Factory context used to resolve source groups.
+   * @param groups GRU groups that receive source connections.
    * @returns Input connector callback.
    */
   function createGruInputConnector(
@@ -554,9 +645,9 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
  * Important: the input connector for a memory layer enforces **one-to-one**
  * wiring with unit weights to preserve the intended delay-line behavior.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of nodes in each memory block.
- * @param memory - Number of time steps to remember.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of nodes in each memory block.
+ * @param memory Number of time steps to remember.
  * @returns The configured layer instance.
  *
  * Example:
@@ -575,16 +666,22 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
   const layer = context.createLayer();
   const memoryBuildInput: MemoryBuildInput = { memorySteps: memory, size };
   const orderedMemoryBlocks = createOrderedMemoryBlocks(memoryBuildInput);
+  describeMemoryBoundary(layer, orderedMemoryBlocks, size, memory);
 
   layer.nodes = castMemoryBlocksToLayerNodes(orderedMemoryBlocks);
   layer.output = createMemoryOutputGroup(layer.nodes);
+  layer.output.describe({
+    label: 'memoryOutput',
+    intent: 'memory',
+    metadata: { family: 'memory', memorySteps: memory, size },
+  });
   layer.input = createMemoryInputConnector(context, layer.nodes);
 
   return layer;
 
   /**
    * Creates memory blocks, links them, and returns traversal-ready ordering.
-   * @param buildInput - Memory layer shape parameters.
+   * @param buildInput Memory layer shape parameters.
    * @returns Ordered memory blocks.
    */
   function createOrderedMemoryBlocks(buildInput: MemoryBuildInput): Group[] {
@@ -594,8 +691,41 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
   }
 
   /**
+   * Attaches lightweight descriptor metadata to the memory-layer boundary.
+   * @param targetLayer Layer receiving the public descriptor.
+   * @param memoryBlocks Ordered memory blocks exposed by the layer.
+   * @param blockSize Number of nodes in each block.
+   * @param memorySteps Number of remembered time steps.
+   * @returns No return value.
+   */
+  function describeMemoryBoundary(
+    targetLayer: TLayer,
+    memoryBlocks: Group[],
+    blockSize: number,
+    memorySteps: number,
+  ): void {
+    targetLayer.describe?.({
+      intent: 'memory',
+      metadata: { family: 'memory', memorySteps, size: blockSize },
+    });
+
+    memoryBlocks.forEach((memoryBlock, blockIndex) => {
+      memoryBlock.describe({
+        label: `memoryBlock${blockIndex}`,
+        intent: 'state',
+        metadata: {
+          family: 'memory',
+          memoryBlockIndex: blockIndex,
+          memorySteps,
+          size: blockSize,
+        },
+      });
+    });
+  }
+
+  /**
    * Allocates all memory blocks for the memory layer.
-   * @param buildInput - Memory layer shape parameters.
+   * @param buildInput Memory layer shape parameters.
    * @returns Created memory blocks.
    */
   function createMemoryBlocks(buildInput: MemoryBuildInput): Group[] {
@@ -606,7 +736,7 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Creates one configured memory block.
-   * @param blockSize - Number of nodes in the block.
+   * @param blockSize Number of nodes in the block.
    * @returns Configured memory block.
    */
   function createMemoryBlock(blockSize: number): Group {
@@ -621,7 +751,7 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Connects memory blocks in forward sequence.
-   * @param memoryBlocks - Blocks to connect in order.
+   * @param memoryBlocks Blocks to connect in order.
    * @returns No return value.
    */
   function connectMemoryBlocksInSequence(memoryBlocks: Group[]): void {
@@ -635,8 +765,8 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Connects one memory block pair using one-to-one links.
-   * @param previousBlock - Source block in sequence.
-   * @param currentBlock - Destination block in sequence.
+   * @param previousBlock Source block in sequence.
+   * @param currentBlock Destination block in sequence.
    * @returns No return value.
    */
   function connectMemoryBlockPair(
@@ -652,7 +782,7 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Casts memory blocks into the layer node container type.
-   * @param memoryBlocks - Memory blocks to cast.
+   * @param memoryBlocks Memory blocks to cast.
    * @returns Layer node list.
    */
   function castMemoryBlocksToLayerNodes(memoryBlocks: Group[]): Node[] {
@@ -661,7 +791,7 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Creates the memory layer output group from all internal blocks.
-   * @param layerNodes - Layer nodes that may contain memory groups.
+   * @param layerNodes Layer nodes that may contain memory groups.
    * @returns Aggregated output group.
    */
   function createMemoryOutputGroup(layerNodes: Node[]): Group {
@@ -676,26 +806,23 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Appends one layer node into the output group when it is group-like.
-   * @param outputGroup - Output group receiving nodes.
-   * @param layerNode - Candidate layer node.
+   * @param outputGroup Output group receiving nodes.
+   * @param layerNode Candidate layer node.
    * @returns No return value.
    */
   function appendLayerNodeToOutputGroup(
     outputGroup: Group,
     layerNode: Node,
   ): void {
-    if (!isGroupUtils(layerNode)) {
-      console.warn(MEMORY_OUTPUT_WARNING_MESSAGE);
-      return;
-    }
-
-    outputGroup.nodes = outputGroup.nodes.concat(layerNode.nodes);
+    outputGroup.nodes = outputGroup.nodes.concat(
+      (layerNode as unknown as Group).nodes,
+    );
   }
 
   /**
    * Creates the memory layer input connector.
-   * @param factoryContext - Factory context used to resolve source groups.
-   * @param layerNodes - Layer nodes used to resolve the input block.
+   * @param factoryContext Factory context used to resolve source groups.
+   * @param layerNodes Layer nodes used to resolve the input block.
    * @returns Input connector callback.
    */
   function createMemoryInputConnector(
@@ -721,7 +848,7 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Resolves the terminal memory block used as layer input target.
-   * @param layerNodes - Layer nodes to inspect.
+   * @param layerNodes Layer nodes to inspect.
    * @returns Resolved input block group.
    * @throws {Error} When the terminal node is not group-like.
    */
@@ -736,8 +863,8 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
 
   /**
    * Validates that source and memory input block sizes match.
-   * @param sourceGroup - Source group feeding the memory layer.
-   * @param inputBlock - Memory input target block.
+   * @param sourceGroup Source group feeding the memory layer.
+   * @param inputBlock Memory input target block.
    * @returns No return value.
    * @throws {Error} When source and target sizes differ.
    */
@@ -758,8 +885,8 @@ export function buildMemoryLayer<TLayer extends LayerFactoryLayer>(
  * Many wiring helpers accept either a `Group` or a "layer-like" object.
  * When a layer is provided, we treat `layer.output` as the actual source group.
  *
- * @param factoryContext - Factory context providing layer guards.
- * @param from - Source input candidate.
+ * @param factoryContext Factory context providing layer guards.
+ * @param from Source input candidate.
  * @returns Source group used for connections.
  *
  * Example:
@@ -781,7 +908,7 @@ function resolveSourceGroup<TLayer extends LayerFactoryLayer>(
  * When users don't specify a method, we default to a dense-style
  * `ALL_TO_ALL` group connection.
  *
- * @param method - Optional user-supplied connection method.
+ * @param method Optional user-supplied connection method.
  * @returns Connection method to apply.
  *
  * Example:
@@ -800,7 +927,7 @@ function resolveConnectionMethod(method?: unknown): unknown {
  * This keeps builder code declarative: build connections per gate/block,
  * then flatten once at the end.
  *
- * @param connectionLists - Connection groups to flatten.
+ * @param connectionLists Connection groups to flatten.
  * @returns Flattened connection list.
  *
  * Example:

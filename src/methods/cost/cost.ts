@@ -1,70 +1,81 @@
 /**
- * Provides a collection of standard cost functions (also known as loss functions)
- * used for evaluating the performance of neural networks during training.
+ * Cost (loss) functions for evaluating and training neural networks.
  *
- * Cost functions quantify the difference between the network's predictions
- * and the actual target values. The goal of training is typically to minimize
- * the value of the cost function. The choice of cost function is crucial and
- * depends on the specific task (e.g., regression, classification) and the
- * desired behavior of the model.
+ * ## What a Cost Function Does
  *
- * Read this chapter as an answer to one practical modeling question: what kind
- * of mistake do you want the network to care about most?
+ * A cost function measures how far the network's output is from the desired
+ * target. During gradient-based training, the network learns by computing the
+ * partial derivative of the cost with respect to every weight, then nudging
+ * each weight in the direction that reduces the cost. The cost function is
+ * therefore not just a score — it is the *shape of the learning signal*.
  *
- * The methods cluster into three teaching-friendly families:
+ * Choosing the right cost function for a task is as important as choosing the
+ * right activation function. A regression network optimized with cross-entropy
+ * will produce meaningless gradients; a classification network optimized with
+ * MSE ignores calibration and confidence. See Wikipedia contributors,
+ * [Loss function](https://en.wikipedia.org/wiki/Loss_function), for the
+ * general concept and its role in statistical estimation.
  *
- * - classification losses such as `crossEntropy()`, `softmaxCrossEntropy()`,
- *   `binary()`, and `hinge()` care about confidence, separability, or error
- *   rate,
- * - regression losses such as `mse()`, `mae()`, `mape()`, and `msle()` care
- *   about scale, outliers, or percentage error,
- * - calibration helpers such as `focalLoss()` and `labelSmoothing()` change how
- *   harshly easy examples or overconfident predictions should be treated.
+ * ## Key Formulas
+ *
+ * ```
+ * MSE(y, ŷ)         = (1/n) Σ (yᵢ - ŷᵢ)²       ← penalizes large errors heavily
+ * MAE(y, ŷ)         = (1/n) Σ |yᵢ - ŷᵢ|          ← robust to outliers
+ * CrossEntropy(y,ŷ) = −Σ yᵢ log(ŷᵢ)              ← measures prediction confidence
+ * Binary(y, ŷ)      = −[ y log(ŷ) + (1−y) log(1−ŷ) ]  ← two-class CE variant
+ * Hinge(y, ŷ)       = max(0, 1 − y · ŷ)           ← SVM-style margin loss
+ * ```
+ *
+ * Read this chapter as an answer to one practical modeling question:
+ * *what kind of mistake do you want the network to care about most?*
+ *
+ * The functions cluster into three families:
+ *
+ * - classification losses (`crossEntropy`, `softmaxCrossEntropy`, `binary`, `hinge`) —
+ *   care about confidence, separability, or error rate,
+ * - regression losses (`mse`, `mae`, `mape`, `msle`) — care about scale,
+ *   outliers, or percentage error,
+ * - calibration helpers (`focalLoss`, `labelSmoothing`) — change how harshly
+ *   easy examples or overconfident predictions are treated.
  */
 /**
- * Provides a collection of standard cost functions (also known as loss functions)
- * used for evaluating the performance of neural networks during training.
+ * Cost (loss) functions for measuring the quality of network predictions.
  *
- * Cost functions quantify the difference between the network's predictions
- * and the actual target values. The goal of training is typically to minimize
- * the value of the cost function. The choice of cost function is crucial and
- * depends on the specific task (e.g., regression, classification) and the
- * desired behavior of the model.
+ * Each function receives two arrays — `targets` (desired output) and
+ * `outputs` (network output) — and returns a scalar loss. Lower is better.
  *
- * Read this chapter as an answer to one practical modeling question: what kind
- * of mistake do you want the network to care about most?
+ * The two canonical choices that anchor most practical decisions are:
  *
- * The methods cluster into three teaching-friendly families:
+ * - **Mean Squared Error** (`mse`) — the squared distance between prediction
+ *   and target, averaged across outputs. Large errors dominate; good for
+ *   regression where you want smooth, well-scaled gradients.
+ * - **Cross-Entropy** (`crossEntropy`) — measures the divergence between the
+ *   predicted probability distribution and the target. Sensitive to
+ *   overconfident wrong predictions; the natural choice for classification.
  *
- * - classification losses such as `crossEntropy()`, `softmaxCrossEntropy()`,
- *   `binary()`, and `hinge()` care about confidence, separability, or error
- *   rate,
- * - regression losses such as `mse()`, `mae()`, `mape()`, and `msle()` care
- *   about scale, outliers, or percentage error,
- * - calibration helpers such as `focalLoss()` and `labelSmoothing()` change how
- *   harshly easy examples or overconfident predictions should be treated.
+ * A useful reading order:
  *
- * A useful reading order is:
- *
- * 1. start with `crossEntropy()` and `mse()` as the two baseline mental models,
- * 2. compare `mae()`, `mape()`, and `msle()` when scale sensitivity matters,
- * 3. finish with `focalLoss()` and `labelSmoothing()` when you need to tune the
- *    model's confidence behavior rather than only its average error.
+ * 1. Start with `crossEntropy()` and `mse()` as the two baseline mental models.
+ * 2. Compare `mae()`, `mape()`, and `msle()` when scale sensitivity matters.
+ * 3. Finish with `focalLoss()` and `labelSmoothing()` when you need to tune
+ *    confidence behavior rather than average error.
  *
  * ```mermaid
  * flowchart LR
- *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
- *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *   classDef base fill:#001522,stroke:#0fb5ff,color:#9fdcff,stroke-width:1.5px;
+ *   classDef accent fill:#0f1f33,stroke:#00e5ff,color:#d8f6ff,stroke-width:2px;
  *
- *   Goal[Training objective]:::accent --> Classify[Classification losses]:::base
- *   Goal --> Regress[Regression losses]:::base
- *   Goal --> Calibrate[Confidence-shaping losses]:::base
- *   Classify --> CrossEntropy[crossEntropy softmaxCrossEntropy hinge binary]:::base
- *   Regress --> Regression[mse mae mape msle]:::base
- *   Calibrate --> Confidence[focalLoss labelSmoothing]:::base
+ *   Task["What is the training task?"]:::accent --> Classify["Classification\nconfidence · separability"]:::base
+ *   Task --> Regress["Regression\nscale · outliers · ratios"]:::base
+ *   Task --> Calibrate["Calibration\noverconfidence · class imbalance"]:::base
+ *   Classify --> C2["crossEntropy · softmaxCrossEntropy\nhinge · binary"]:::base
+ *   Regress --> R2["mse · mae · mape · msle"]:::base
+ *   Calibrate --> Cal2["focalLoss · labelSmoothing"]:::base
  * ```
  *
  * @see {@link https://en.wikipedia.org/wiki/Loss_function}
+ * @see {@link https://en.wikipedia.org/wiki/Cross-entropy}
+ * @see {@link https://en.wikipedia.org/wiki/Mean_squared_error}
  */
 import {
   computeBinaryError,

@@ -97,8 +97,8 @@ The helper preserves several important controller assumptions:
 - only the existing speciation hook is triggered when needed.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `evaluationOptions` - - Options object for the current evaluation pass.
+- `controller` - NEAT controller instance for evaluation.
+- `evaluationOptions` - Options object for the current evaluation pass.
 
 Example:
 
@@ -133,6 +133,6 @@ not gain a second speciation subsystem here; it only gains a way to avoid
 stale follow-up reads.
 
 Parameters:
-- `evaluationOptions` - - Options object for the current evaluation pass.
+- `evaluationOptions` - Options object for the current evaluation pass.
 
 Returns: True when speciation should run.

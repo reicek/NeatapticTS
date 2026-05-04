@@ -12,6 +12,7 @@ import type { WorkerGenerationReadyMessage } from './flappy-evolution-worker.typ
  * slice of behavior.
  */
 export interface WorkerEvolutionServiceOptions {
+  architectureProfileId: WorkerGenerationReadyMessage['payload']['architectureProfileId'];
   initializationPromise?: Promise<void>;
   neatRuntime: Neat | undefined;
   isStopped: () => boolean;
@@ -45,6 +46,7 @@ export async function evolveAndBuildGenerationReadyMessage(
   options: WorkerEvolutionServiceOptions,
 ): Promise<WorkerGenerationReadyMessage> {
   const {
+    architectureProfileId,
     initializationPromise,
     neatRuntime,
     isStopped,
@@ -62,8 +64,9 @@ export async function evolveAndBuildGenerationReadyMessage(
 
   await warmStartGenerationZeroIfNeeded(neatRuntime);
 
-  const bestNetwork = (await neatRuntime.evolve()) as Network;
   const runtimeNeat = neatRuntime as unknown as { population?: Network[] };
+
+  const bestNetwork = (await neatRuntime.evolve()) as Network;
   setCurrentPopulation(
     Array.isArray(runtimeNeat.population)
       ? runtimeNeat.population
@@ -73,6 +76,7 @@ export async function evolveAndBuildGenerationReadyMessage(
   return {
     type: 'generation-ready',
     payload: {
+      architectureProfileId,
       generation: neatRuntime.generation,
       bestFitness: Number(bestNetwork.score ?? 0),
       bestNetworkJson: bestNetwork.toJSON(),

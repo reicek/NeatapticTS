@@ -5,6 +5,7 @@ import type {
   DashboardTelemetryPayload,
 } from '../dashboardManager/dashboardManager.types';
 import type { EvolutionHostAdapter } from '../evolutionEngine/evolutionEngine.types';
+import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
 
 /**
  * Public lifecycle handle returned by the browser demo entrypoint.
@@ -82,6 +83,7 @@ export interface BrowserEntryHostElements {
   hostElement: HTMLElement | null;
   archiveElement: HTMLElement | null;
   liveElement: HTMLElement | null;
+  networkCanvasElement: HTMLCanvasElement | null;
   observeTarget: HTMLElement | null;
 }
 
@@ -117,4 +119,6 @@ export interface BrowserEntryCurriculumContext {
   isCancelled: () => boolean;
   finish: () => void;
   hostAdapter: EvolutionHostAdapter;
+  /** Shared architecture profile id used to seed every phase of this curriculum run. */
+  architectureProfileId?: ExampleArchitectureProfileId;
 }

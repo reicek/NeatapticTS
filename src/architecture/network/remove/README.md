@@ -108,7 +108,7 @@ clearConnectionGater(
 Clears gater reference so legacy checks treat connection as ungated.
 
 Parameters:
-- `candidateConnection` - - Connection to clear.
+- `candidateConnection` - Connection to clear.
 
 Returns: Nothing.
 
@@ -123,7 +123,7 @@ detachGatesOwnedByNode(
 Removes gate records gated by target node and nulls their gater field.
 
 Parameters:
-- `removalContext` - - Immutable removal context.
+- `removalContext` - Immutable removal context.
 
 Returns: Nothing.
 
@@ -139,8 +139,8 @@ isGatedByRemovedNode(
 Checks whether a gate candidate is currently gated by removed node.
 
 Parameters:
-- `candidateConnection` - - Gate candidate.
-- `removedNode` - - Removed node reference.
+- `candidateConnection` - Gate candidate.
+- `removedNode` - Removed node reference.
 
 Returns: True when removed node is gater.
 
@@ -156,8 +156,8 @@ keepGateConnectionAfterNodeRemoval(
 Filters one gate connection while clearing removed-node gater ownership.
 
 Parameters:
-- `candidateConnection` - - Gate candidate.
-- `removedNode` - - Removed node reference.
+- `candidateConnection` - Gate candidate.
+- `removedNode` - Removed node reference.
 
 Returns: True when gate should remain in list.
 
@@ -174,7 +174,7 @@ markNetworkRemovalDirtyFlags(
 Marks all cached removal-sensitive structures as dirty.
 
 Parameters:
-- `internalNetwork` - - Internal mutable network props.
+- `internalNetwork` - Internal mutable network props.
 
 Returns: Nothing.
 
@@ -189,7 +189,7 @@ releaseRemovedNodeWhenPoolingEnabled(
 Releases removed node to object pool when pooling is enabled.
 
 Parameters:
-- `removedNode` - - Removed node instance.
+- `removedNode` - Removed node instance.
 
 Returns: Nothing.
 
@@ -204,7 +204,7 @@ removeNodeFromNetworkStorage(
 Removes node from network storage and conditionally releases it to pool.
 
 Parameters:
-- `removalContext` - - Immutable removal context.
+- `removalContext` - Immutable removal context.
 
 Returns: Nothing.
 
@@ -219,7 +219,7 @@ spliceNodeFromNetwork(
 Splices node out of network list using validated index.
 
 Parameters:
-- `removalContext` - - Immutable removal context.
+- `removalContext` - Immutable removal context.
 
 Returns: Removed node or undefined.
 
@@ -236,7 +236,7 @@ cloneInboundConnections(
 Clones inbound connections for safe traversal after mutation.
 
 Parameters:
-- `targetNode` - - Node being removed.
+- `targetNode` - Node being removed.
 
 Returns: Inbound connection snapshot.
 
@@ -251,7 +251,7 @@ cloneOutboundConnections(
 Clones outbound connections for safe traversal after mutation.
 
 Parameters:
-- `targetNode` - - Node being removed.
+- `targetNode` - Node being removed.
 
 Returns: Outbound connection snapshot.
 
@@ -266,7 +266,7 @@ countSelfConnections(
 Counts self-loop connections currently attached to node.
 
 Parameters:
-- `targetNode` - - Node being removed.
+- `targetNode` - Node being removed.
 
 Returns: Self-loop count.
 
@@ -281,7 +281,7 @@ createNodeConnectionSnapshot(
 Creates immutable snapshots of node adjacency lists before mutation.
 
 Parameters:
-- `removalContext` - - Immutable removal context.
+- `removalContext` - Immutable removal context.
 
 Returns: Snapshot context.
 
@@ -297,8 +297,8 @@ disconnectAllNodeConnections(
 Disconnects all inbound, outbound, and self-loop edges for removed node.
 
 Parameters:
-- `removalContext` - - Immutable removal context.
-- `snapshotContext` - - Immutable adjacency snapshot.
+- `removalContext` - Immutable removal context.
+- `snapshotContext` - Immutable adjacency snapshot.
 
 Returns: Nothing.
 
@@ -314,8 +314,8 @@ disconnectConnectionGroup(
 Disconnects each connection in a single connection list.
 
 Parameters:
-- `network` - - Target network.
-- `connectionsToDisconnect` - - Connection list.
+- `network` - Target network.
+- `connectionsToDisconnect` - Connection list.
 
 Returns: Nothing.
 
@@ -332,9 +332,9 @@ disconnectSelfLoops(
 Disconnects node self-loop connections using deterministic count traversal.
 
 Parameters:
-- `network` - - Target network.
-- `targetNode` - - Node whose self-loop is removed.
-- `selfConnectionCount` - - Number of self-loops to remove.
+- `network` - Target network.
+- `targetNode` - Node whose self-loop is removed.
+- `selfConnectionCount` - Number of self-loops to remove.
 
 Returns: Nothing.
 
@@ -351,7 +351,7 @@ collectReconnectEndpointPairs(
 Collects all valid source/target reconnect endpoint pairs.
 
 Parameters:
-- `snapshotContext` - - Immutable adjacency snapshot.
+- `snapshotContext` - Immutable adjacency snapshot.
 
 Returns: Valid reconnect endpoint pairs.
 
@@ -367,8 +367,8 @@ connectPairWhenMissing(
 Connects one endpoint pair only when direct edge does not already exist.
 
 Parameters:
-- `network` - - Target network.
-- `reconnectPair` - - Source/target pair.
+- `network` - Target network.
+- `reconnectPair` - Source/target pair.
 
 Returns: Nothing.
 
@@ -384,8 +384,8 @@ createReconnectEndpointPair(
 Creates one reconnect endpoint pair when endpoints are valid.
 
 Parameters:
-- `inboundConnection` - - Inbound edge from snapshot.
-- `outboundConnection` - - Outbound edge from snapshot.
+- `inboundConnection` - Inbound edge from snapshot.
+- `outboundConnection` - Outbound edge from snapshot.
 
 Returns: Reconnect pair or undefined.
 
@@ -401,8 +401,8 @@ doesDirectConnectionExist(
 Checks whether a direct connection already exists for reconnect pair.
 
 Parameters:
-- `network` - - Target network.
-- `reconnectPair` - - Source/target pair.
+- `network` - Target network.
+- `reconnectPair` - Source/target pair.
 
 Returns: True when direct edge already exists.
 
@@ -418,8 +418,8 @@ isReconnectPairValid(
 Validates reconnect pair endpoints.
 
 Parameters:
-- `inboundConnection` - - Inbound edge from snapshot.
-- `outboundConnection` - - Outbound edge from snapshot.
+- `inboundConnection` - Inbound edge from snapshot.
+- `outboundConnection` - Outbound edge from snapshot.
 
 Returns: True when reconnect pair should be attempted.
 
@@ -435,8 +435,8 @@ reconnectBridgedPaths(
 Reconnects paths from former inbound sources to former outbound targets.
 
 Parameters:
-- `removalContext` - - Immutable removal context.
-- `snapshotContext` - - Immutable adjacency snapshot.
+- `removalContext` - Immutable removal context.
+- `snapshotContext` - Immutable adjacency snapshot.
 
 Returns: Nothing.
 
@@ -454,8 +454,8 @@ createValidatedNodeRemovalContext(
 Creates validated immutable context for a node-removal operation.
 
 Parameters:
-- `network` - - Target network.
-- `targetNode` - - Node requested for removal.
+- `network` - Target network.
+- `targetNode` - Node requested for removal.
 
 Returns: Validated removal context.
 
@@ -470,7 +470,7 @@ ensureNodeIsNotStructuralAnchor(
 Ensures removal target is not an input/output anchor node.
 
 Parameters:
-- `targetNode` - - Node under validation.
+- `targetNode` - Node under validation.
 
 Returns: Nothing.
 
@@ -485,7 +485,7 @@ isStructuralAnchorNode(
 Checks whether node is an input/output structural anchor.
 
 Parameters:
-- `targetNode` - - Node under evaluation.
+- `targetNode` - Node under evaluation.
 
 Returns: True when node is an anchor.
 
@@ -501,7 +501,7 @@ resolveNodeIndexOrThrow(
 Resolves node index and throws when missing.
 
 Parameters:
-- `network` - - Target network.
-- `targetNode` - - Node being removed.
+- `network` - Target network.
+- `targetNode` - Node being removed.
 
 Returns: Node index inside network list.

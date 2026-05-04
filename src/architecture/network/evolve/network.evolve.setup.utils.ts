@@ -70,7 +70,7 @@ export function assertEvolutionDatasetCompatibility(
 export function getNormalizedOptions(
   evolveOptions: EvolveOptions,
 ): EvolveOptions {
-  return evolveOptions || {};
+  return evolveOptions;
 }
 
 /**

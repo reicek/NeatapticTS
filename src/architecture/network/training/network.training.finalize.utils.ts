@@ -273,7 +273,6 @@ export const trainFinalizeCore = (
     if (recentErrorsCount < recentErrorsCapacity) recentErrorsCount++;
   };
   const recentErrorsChrono = (): number[] => {
-    if (recentErrorsCount === 0) return [];
     if (recentErrorsCount < recentErrorsCapacity) {
       return recentErrorsBuf.slice(0, recentErrorsCount);
     }
@@ -308,7 +307,6 @@ export const trainFinalizeCore = (
     if (plateauCount < plateauCapacity) plateauCount++;
   };
   const plateauChrono = (): number[] => {
-    if (plateauCount === 0) return [];
     if (plateauCount < plateauCapacity) {
       return plateauBuf.slice(0, plateauCount);
     }
@@ -329,9 +327,7 @@ export const trainFinalizeCore = (
   let performedIterations = 0;
 
   for (let iteration = 1; iteration <= iterations; iteration++) {
-    if (internalNet._maybePrune) {
-      internalNet._maybePrune((internalNet._globalEpoch || 0) + iteration);
-    }
+    internalNet._maybePrune!((internalNet._globalEpoch || 0) + iteration);
 
     const trainError = trainSetCore(
       net,

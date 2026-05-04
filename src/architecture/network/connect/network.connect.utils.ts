@@ -81,6 +81,7 @@ import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';
 import type { NetworkInternals } from './network.connect.utils.types';
+import { synchronizeTemporalDescriptorExtensions } from '../network.temporal.extensions.utils';
 import {
   createConnectionsFromSourceNode,
   markConnectionCachesDirtyWhenNeeded,
@@ -104,7 +105,8 @@ import {
  * Algorithm outline:
  *  1. (Acyclic guard) If acyclicity is enforced and the source node appears after the target node in
  *     the network's node ordering, abort early and return an empty array (prevents back‑edge creation).
- *  2. Delegate to sourceNode.connect(targetNode, weight) to build the raw Connection object(s).
+ *  2. Resolve a deterministic default weight from the owning network RNG when no explicit
+ *     weight was supplied, then delegate to sourceNode.connect(targetNode, weight).
  *  3. For each created connection:
  *       a. If it's a self‑connection: either ignore (acyclic mode) or store in selfconns.
  *       b. Otherwise store in standard connections array.
@@ -118,7 +120,9 @@ import {
  * Edge cases & invariants:
  *  - Acyclic mode silently refuses back‑edges instead of throwing (makes evolutionary search easier).
  *  - Self‑connections are skipped entirely when acyclicity is enforced.
- *  - Weight initialization policy is delegated to Node.connect if not explicitly provided.
+ *  - Weight initialization stays deterministic for seeded networks even when callers omit an explicit weight.
+ *  - When the network carries explicit temporal extension metadata, successful edge creation
+ *    revalidates that descriptor bag immediately so generic structural edits keep the extension lane honest.
  *
  * @param this - Bound Network instance.
  * @param from - Source node (emits signal).
@@ -142,7 +146,12 @@ export function connect(
     return [];
 
   // Step 2: Build low-level connection instances via node delegate.
-  const createdConnections = createConnectionsFromSourceNode(from, to, weight);
+  const createdConnections = createConnectionsFromSourceNode(
+    from,
+    to,
+    weight,
+    networkInternal._rand,
+  );
 
   // Step 3: Register created edges in network-level collections.
   registerCreatedConnections(
@@ -158,6 +167,11 @@ export function connect(
     networkInternal,
     createdConnections.length,
   );
+
+  // Step 5: Revalidate explicit temporal descriptors after a structural edit.
+  if (createdConnections.length > 0) {
+    synchronizeTemporalDescriptorExtensions(this);
+  }
 
   return createdConnections;
 }
@@ -184,6 +198,8 @@ export function connect(
  *
  * Idempotence: If no such edge exists we still perform node-level disconnect and flag caches dirty –
  * this conservative approach simplifies callers (they need not pre‑check existence).
+ * When the network carries explicit temporal extension metadata, the disconnect path also revalidates
+ * that descriptor bag immediately so stale module claims do not linger until a later serialize pass.
  *
  * @param this - Bound Network instance.
  * @param from - Source node.
@@ -206,4 +222,7 @@ export function disconnect(this: Network, from: Node, to: Node): void {
 
   // Step 4: Invalidate structural caches after disconnect flow.
   markStructureCachesDirty(networkInternal);
+
+  // Step 5: Revalidate explicit temporal descriptors after structural removal.
+  synchronizeTemporalDescriptorExtensions(this);
 }

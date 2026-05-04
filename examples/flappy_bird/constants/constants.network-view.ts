@@ -204,11 +204,66 @@ export const FLAPPY_NETWORK_LAYER_COMPLEXITY_BASELINE_COUNT = 3;
 /** Additional multiplier used for topology-driven minimum host-height recommendation. */
 export const FLAPPY_NETWORK_TOPOLOGY_HEIGHT_MULTIPLIER = 1.45;
 
-/** Horizontal gap between input-node column and vertical group label band. */
+/** Horizontal gap between the vertical group-band column and the input-description column. */
 export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX = 6;
 
+/** Horizontal gap between the input-description column and the input-node column. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX = 8;
+
+/** Minimum reserved width for the input-description column. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_WIDTH_PX = 116;
+
+/** Approximate monospace character width used to size the input-description column. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_CHARACTER_WIDTH_PX = 6;
+
+/** Minimum visual height reserved for one input-description hover row. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_HEIGHT_PX = 16;
+
+/** Font size used for horizontal input-description rows. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_SIZE_PX = 9;
+
+/** Vertical distance between wrapped input-description lines. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_LINE_HEIGHT_PX = 8;
+
+/** Minimum vertical gap kept between adjacent input-description chip outlines. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX = 4;
+
+/** Inner vertical padding applied to each semantic input group block. */
+export const FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX = 4;
+
+/** Vertical gap kept between adjacent semantic input groups. */
+export const FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX = 4;
+
+/** Font weight used for horizontal input-description rows. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_WEIGHT = 700;
+
+/** Inner left padding used by the input-description text column. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_PADDING_PX = 5;
+
+/** Inner vertical padding used by outlined input-description chips. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_VERTICAL_PADDING_PX = 4;
+
+/** Text color for horizontal input-description rows. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_COLOR = '#9fdcff';
+
+/** Outline color for horizontal input-description chips. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_COLOR = '#7fe8ff';
+
+/** Background fill used by horizontal input-description chips. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_FILL_COLOR =
+  'rgba(21, 77, 110, 0.22)';
+
+/** Corner radius used by horizontal input-description chips. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_RADIUS_PX = 6;
+
+/** Stroke width used by horizontal input-description chips. */
+export const FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_WIDTH_PX = 1.5;
+
+/** Stroke width used when an input overlay element is actively hovered. */
+export const FLAPPY_NETWORK_INPUT_OVERLAY_FOCUS_STROKE_WIDTH_PX = 3;
+
 /** Width of the vertical input-group label band. */
-export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX = 24;
+export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX = 34;
 
 /** Minimum visual height for any input-group label band. */
 export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX = 22;
@@ -217,13 +272,59 @@ export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX = 22;
 export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_RADIUS_PX = 5;
 
 /** Font size used for vertical input-group label text. */
-export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_SIZE_PX = 9;
+export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_SIZE_PX = 8;
+
+/** Vertical distance between wrapped input-group label lines. */
+export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_LINE_HEIGHT_PX = 8;
 
 /** Font weight used for vertical input-group label text. */
 export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_FONT_WEIGHT = 700;
 
 /** Text color for vertical input-group labels on neon backgrounds. */
 export const FLAPPY_NETWORK_INPUT_GROUP_LABEL_TEXT_COLOR = '#000000';
+
+/** Reserved vertical shelf for recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TOP_RESERVE_PX = 24;
+
+/** Minimum chip width for recurrent hidden-column guide labels. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_MIN_WIDTH_PX = 34;
+
+/** Approximate monospace character width used to size recurrent guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_CHARACTER_WIDTH_PX = 6;
+
+/** Horizontal text padding inside recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_PADDING_PX = 5;
+
+/** Vertical text padding inside recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_VERTICAL_PADDING_PX = 3;
+
+/** Font size used for recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_SIZE_PX = 8;
+
+/** Line height used for recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX = 8;
+
+/** Font weight used for recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_WEIGHT = 700;
+
+/** Corner radius used by recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_RADIUS_PX = 6;
+
+/** Gap between hidden-column guide chips and the node shelf below. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX = 6;
+
+/** Outline color used by recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_COLOR = '#7fe8ff';
+
+/** Fill color used by recurrent hidden-column guide chips when no custom color is set. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FILL_COLOR =
+  'rgba(21, 77, 110, 0.28)';
+
+/** Stroke width used by recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_WIDTH_PX = 1.5;
+
+/** Text color used inside recurrent hidden-column guide chips. */
+export const FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_COLOR = '#001522';
 
 /** Placeholder label used when the network has no hidden layers. */
 export const FLAPPY_NETWORK_EMPTY_HIDDEN_LAYER_LABEL = '-';

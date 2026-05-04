@@ -1,4 +1,5 @@
 import Network from '../../network/network';
+import Connection from '../../connection';
 import Node from '../../node';
 import type {
   CompactPayloadContext,
@@ -74,6 +75,8 @@ export function createCompactPayloadContext(
     connections,
     serializedInput,
     serializedOutput,
+    nodeGeneIds,
+    topologyIntent,
   ] = data;
 
   return {
@@ -83,6 +86,8 @@ export function createCompactPayloadContext(
     connections,
     serializedInput,
     serializedOutput,
+    nodeGeneIds,
+    topologyIntent,
   };
 }
 
@@ -131,7 +136,7 @@ export function resolveSizeOverride(
   if (typeof overrideValue === 'number') {
     return overrideValue;
   }
-  return serializedValue || DEFAULT_NUMERIC_VALUE;
+  return serializedValue;
 }
 
 /**
@@ -187,4 +192,83 @@ export function isNodeIndexInBounds(nodes: Node[], index: number): boolean {
  */
 export function isFiniteIndex(index: number): boolean {
   return Number.isFinite(index);
+}
+
+/**
+ * Writes a restored node gene id when serialized identity data is available.
+ *
+ * Compact restore paths construct fresh runtime nodes first, then overwrite the
+ * temporary constructor-assigned ids with persisted historical ids.
+ *
+ * @param node - Restored runtime node.
+ * @param geneId - Persisted stable gene id.
+ * @returns Nothing.
+ */
+export function hydrateNodeGeneIdWhenProvided(
+  node: Node,
+  geneId: number | null | undefined,
+): void {
+  if (typeof geneId !== 'number') {
+    return;
+  }
+
+  asNodeInternals(node).geneId = geneId;
+}
+
+/**
+ * Restores persisted connection identity onto a freshly created runtime connection.
+ *
+ * Import paths still build edges through `connect()` so graph bookkeeping stays
+ * centralized. This helper then reapplies the persisted innovation and enabled state.
+ *
+ * @param createdConnection - Newly created runtime connection.
+ * @param identity - Persisted identity metadata.
+ * @returns Nothing.
+ */
+export function applyRestoredConnectionIdentity(
+  createdConnection: Connection | undefined,
+  identity: { innovation?: number; enabled?: boolean },
+): void {
+  if (!createdConnection) {
+    return;
+  }
+
+  if (typeof identity.innovation === 'number') {
+    createdConnection.innovation = identity.innovation;
+  }
+
+  if (typeof identity.enabled === 'boolean') {
+    (createdConnection as Connection & { enabled?: boolean }).enabled =
+      identity.enabled;
+  }
+}
+
+/**
+ * Advances static node and connection counters past all restored historical ids.
+ *
+ * Without this step, a fresh process could deserialize a high-id genome and then
+ * allocate colliding `geneId` or `innovation` values on the next mutation.
+ *
+ * @param networkInternals - Restored mutable network internals.
+ * @returns Nothing.
+ */
+export function syncRestoredHistoricalCounters(
+  networkInternals: NetworkInternals,
+): void {
+  const maxObservedGeneId = networkInternals.nodes.reduce(
+    (currentMaxGeneId, nodeReference) => {
+      return Math.max(currentMaxGeneId, asNodeInternals(nodeReference).geneId!);
+    },
+    DEFAULT_NUMERIC_VALUE,
+  );
+  const maxObservedInnovation = networkInternals.connections
+    .concat(networkInternals.selfconns)
+    .reduce(
+      (currentMaxInnovation, connectionReference) =>
+        Math.max(currentMaxInnovation, connectionReference.innovation),
+      DEFAULT_NUMERIC_VALUE,
+    );
+
+  Node.syncGeneIdCounter(maxObservedGeneId);
+  Connection.syncInnovationCounter(maxObservedInnovation);
 }

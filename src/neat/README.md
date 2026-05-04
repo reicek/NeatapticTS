@@ -41,6 +41,20 @@ Miikkulainen,
 for the background behind the compatibility and growth vocabulary that keeps
 surfacing across this folder.
 
+Canonical NEAT vs extensions vs experiments:
+
+- Canonical NEAT (default mental model): historical markings (innovation ids),
+  speciation pressure, and crossover alignment by innovation number. This is the
+  core contract that makes “different topologies can still mate” work.
+- Repo-specific extensions (opt-in features): additional controller lanes such as
+  recurrent/gated allowances, multiobjective policy, novelty tracking, pruning,
+  or richer telemetry. These should preserve the canonical identity rules even
+  when they add new operators or metrics.
+- Experimental research features: best-effort lanes that are intentionally marked
+  as experimental (for example ONNX heuristics or experimental layer builders).
+  Treat these as evolving prototypes: useful for exploration, but not guaranteed
+  to match the strict replay or correctness bar of the canonical core.
+
 Read this root chapter in three passes. Start with this defaults file and
 `neat.types.ts` for the public knobs and broad contracts. Continue into
 `evaluate/`, `evolve/`, and `speciation/` for the live search loop. Finish
@@ -337,8 +351,8 @@ debugging parent tracking, or validating that speciation and reproduction are
 still producing multiple recent family branches.
 
 Parameters:
-- `this` - - NEAT lineage context providing the current population.
-- `genome` - - Genome whose shallow ancestor set should be computed.
+- `this` - NEAT lineage context providing the current population.
+- `genome` - Genome whose shallow ancestor set should be computed.
 
 Returns: Set of ancestor IDs within the configured depth window.
 
@@ -375,7 +389,7 @@ focusing on ancestry overlap rather than structural size or compatibility
 distance.
 
 Parameters:
-- `this` - - NEAT lineage context exposing the population and RNG provider.
+- `this` - NEAT lineage context exposing the population and RNG provider.
 
 Returns: Mean sampled Jaccard distance across shallow ancestor sets.
 
@@ -558,7 +572,7 @@ whose shape matches ordinary diversity output without pretending that real
 real sampling work has happened yet.
 
 Parameters:
-- `populationSize` - - Population size to echo into the empty snapshot.
+- `populationSize` - Population size to echo into the empty snapshot.
 
 Returns: Diversity stats object with zeroed aggregates.
 
@@ -589,8 +603,8 @@ for comparing generations, spotting collapse, or validating that speciation
 and mutation pressure are still producing variety.
 
 Parameters:
-- `population` - - Population genomes exposing nodes, connections, and optional lineage depth.
-- `compatibilityComputer` - - Compatibility-distance provider used for pair sampling.
+- `population` - Population genomes exposing nodes, connections, and optional lineage depth.
+- `compatibilityComputer` - Compatibility-distance provider used for pair sampling.
 
 Returns: Aggregate diversity statistics or `undefined` when the population is empty.
 
@@ -659,6 +673,6 @@ generally mean connectivity is spread across more nodes instead of being
 concentrated into a few hubs.
 
 Parameters:
-- `graph` - - Network to summarize structurally.
+- `graph` - Network to summarize structurally.
 
 Returns: Shannon-style entropy of the out-degree distribution.

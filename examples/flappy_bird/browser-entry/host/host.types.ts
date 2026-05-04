@@ -1,3 +1,4 @@
+import type { ExampleArchitectureProfileId } from '../../../architectureProfiles';
 import type {
   FlappyStatsKey,
   FlappyStatsTableCells,
@@ -22,6 +23,7 @@ export interface CanvasHostResult {
   context: CanvasRenderingContext2D;
   statsValueByKey: FlappyStatsTableCells;
   renderNetworkArchitecture: NetworkVisualizationHandle['renderNetworkArchitecture'];
+  architectureSelectorController: HostArchitectureSelectorController;
 }
 
 /**
@@ -31,3 +33,29 @@ export interface CanvasHostResult {
  * on a given tick.
  */
 export type HostStatsPartialValues = Partial<Record<FlappyStatsKey, string>>;
+
+/** Render-ready button state for one Flappy architecture profile selector item. */
+export interface HostArchitectureSelectorItem {
+  caption?: string;
+  id: ExampleArchitectureProfileId;
+  label: string;
+  selected: boolean;
+  tooltipBodyLines: string[];
+  tooltipHeading: string;
+}
+
+/** Browser host callback bundle used by the architecture selector control group. */
+export interface CanvasHostOptions {
+  architectureSelectorItems: HostArchitectureSelectorItem[];
+  onSelectArchitectureProfile?: (
+    profileId: ExampleArchitectureProfileId,
+  ) => void;
+  onResetScores?: () => void;
+}
+
+/** Imperative controller returned by the host architecture selector service. */
+export interface HostArchitectureSelectorController {
+  element: HTMLDivElement;
+  setDisabled: (disabled: boolean) => void;
+  updateItems: (items: HostArchitectureSelectorItem[]) => void;
+}

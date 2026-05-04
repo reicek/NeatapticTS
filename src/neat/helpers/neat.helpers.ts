@@ -1,9 +1,21 @@
 import type { NeatLike } from '../shared/neat.shared.types';
 import Network from '../../architecture/network/network';
+import { createInnovationTracker } from '../innovation-tracker/innovation-tracker';
+import type { InnovationTracker } from '../innovation-tracker/innovation-tracker.types';
 import {
   promoteGenomeToFeedForwardIntentWhenEligible,
   usesFeedForwardMutationPolicy,
 } from '../topology-intent/neat.topology-intent';
+
+const DEFAULT_POOL_SIZE = 50;
+const DEFAULT_MAX_INNOVATION = -1;
+const RNG_SEED_UPPER_BOUND = 0x1_0000_0000;
+
+interface GenerationZeroConnection {
+  innovation?: number;
+  from: { index?: number };
+  to: { index?: number };
+}
 
 /**
  * Helper utilities for the shared NEAT controller lifecycle.
@@ -51,6 +63,21 @@ import {
  *   admit --> population
  * ```
  *
+ * Required teaching output: generation-zero alignment.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   intent[Seeded or unseeded start]:::base --> template[Build one normalized template genome]:::accent
+ *   template --> ids[Normalize identity\nnode geneIds and connection innovations]:::base
+ *   ids --> tracker[Reseed innovation tracker above template maxima]:::base
+ *   tracker --> clones[Clone template across popsize]:::accent
+ *   clones --> metadata[Assign controller-owned metadata\n_id, lineage, caches]:::base
+ *   metadata --> ready[Homologous generation-zero population]:::base
+ * ```
+ *
  * Read this chapter when you want to answer one practical controller question:
  * before selection, evaluation, and speciation can trust a genome, how does it
  * cross the boundary into the live population in a normalized state?
@@ -76,8 +103,13 @@ interface GenomeWithMetadata {
   _parents?: number[];
   _depth?: number;
   clone?: () => GenomeWithMetadata;
+  connections?: GenerationZeroConnection[];
+  selfconns?: GenerationZeroConnection[];
+  getRNGState?: () => number | undefined;
+  getTopologyIntent?: () => 'feed-forward' | 'unconstrained';
   toJSON?: () => Record<string, unknown>;
   mutate?: (method: MutationMethod) => void;
+  setRNGState?: (state: number) => void;
   setTopologyIntent?: (
     topologyIntent: 'feed-forward' | 'unconstrained',
   ) => void;
@@ -117,6 +149,7 @@ interface MutationMethod {
 interface NeatControllerForHelpers {
   input: number;
   output: number;
+  generation: number;
   population: GenomeWithMetadata[];
   options: {
     reenableProb?: number;
@@ -133,6 +166,7 @@ interface NeatControllerForHelpers {
     genome: GenomeWithMetadata,
     sexual: boolean,
   ) => MutationMethod | MutationMethod[];
+  _innovationTracker: InnovationTracker;
   _invalidateGenomeCaches?: (genome: GenomeWithMetadata) => void;
 }
 
@@ -316,10 +350,12 @@ export function addGenome(
  * Create or reset the initial population pool for a NEAT run.
  *
  * If a `seedNetwork` is supplied, every genome is a structural and weight clone
- * of that seed. This is useful for transfer learning or continuing evolution
- * from a known good architecture. When omitted, brand-new minimal networks are
- * synthesized using the configured input/output sizes and optional minimum
- * hidden layer size.
+ * of one normalized template derived from that seed. This is useful for
+ * transfer learning or continuing evolution from a known good architecture.
+ * When omitted, one fresh minimal template is synthesized using the configured
+ * input/output sizes and optional minimum hidden layer size, then cloned across
+ * the whole starting population so node gene ids and connection innovations are
+ * aligned from the first generation.
  *
  * This is the controller's bootstrap path, not its general-purpose import path.
  * `createPool()` assumes the caller is defining generation zero and therefore
@@ -329,6 +365,9 @@ export function addGenome(
  *
  * Design notes:
  * - Population size is derived from `options.popsize` (default 50).
+ * - The controller innovation tracker is reseeded from the normalized
+ *   generation-zero template so later structural mutations start above the
+ *   starter graph's historical markings.
  * - Each genome gets a unique sequential `_id` for reproducible lineage.
  * - When lineage tracking is enabled (`_lineageEnabled`), parent and depth
  *   fields are initialized for later analytics.
@@ -359,50 +398,163 @@ export function createPool(
   try {
     // Step 1: Reset population container.
     internal.population = [];
-    const poolSize = internal.options?.popsize ?? 50;
+    const poolSize = internal.options?.popsize ?? DEFAULT_POOL_SIZE;
     const shouldPromoteFeedForwardIntent = usesFeedForwardMutationPolicy(
       internal.options?.mutation,
     );
+    const generationZeroTemplate = createGenerationZeroTemplate(
+      seedNetwork,
+      internal,
+      shouldPromoteFeedForwardIntent,
+    );
 
-    // Step 2: Generate each initial genome.
+    // Step 2: Reseed structural-mutation tracking from the generation-zero template.
+    internal._innovationTracker = createInnovationTracker();
+    internal._innovationTracker.activeGeneration = internal.generation;
+    internal._innovationTracker.nextInnovationId =
+      resolveNextInnovationIdFromGenome(generationZeroTemplate);
+
+    // Step 3: Clone one normalized template into the full starting population.
     for (let genomeIndex = 0; genomeIndex < poolSize; genomeIndex++) {
-      // Clone from seed OR build a fresh network.
-      const genomeCopy = seedNetwork
-        ? (Network.fromJSON(
-            seedNetwork.toJSON?.() ?? {},
-          ) as unknown as GenomeWithMetadata)
-        : (new Network(internal.input, internal.output, {
-            minHidden: internal.options?.minHidden,
-          }) as unknown as GenomeWithMetadata);
-
-      // Step 2a: Ensure no stale scoring information.
-      genomeCopy.score = undefined;
-
-      // Step 2a.1: Promote feed-forward topology intent when the policy and topology agree.
-      promoteGenomeToFeedForwardIntentWhenEligible(
-        genomeCopy,
-        shouldPromoteFeedForwardIntent,
-      );
-
-      // Step 2b: Attempt structural invariant enforcement (best effort).
-      try {
-        internal.ensureNoDeadEnds?.(genomeCopy);
-      } catch {
-        // Ignored; genome may still be viable or corrected by later mutations.
-      }
-
-      // Step 2c: Annotate runtime metadata.
-      genomeCopy._reenableProb = internal.options.reenableProb;
-      genomeCopy._id = internal._nextGenomeId++;
-      if (internal._lineageEnabled) {
-        genomeCopy._parents = [];
-        genomeCopy._depth = 0;
-      }
-
-      // Step 2d: Insert into population.
+      const genomeCopy = cloneGenerationZeroGenome(generationZeroTemplate);
+      normalizeGenerationZeroMetadata(internal, genomeCopy);
+      internal._invalidateGenomeCaches?.(genomeCopy);
       internal.population.push(genomeCopy);
     }
   } catch {
     // Swallow: partial population is acceptable; caller may decide to refill or continue.
   }
+}
+
+function createGenerationZeroTemplate(
+  seedNetwork: GenomeWithMetadata | null,
+  internal: NeatControllerForHelpers,
+  shouldPromoteFeedForwardIntent: boolean,
+): GenomeWithMetadata {
+  const generationZeroTemplate = seedNetwork
+    ? cloneGenerationZeroGenome(seedNetwork)
+    : createFreshGenerationZeroTemplate(internal);
+
+  // Step 1: Apply best-effort structural normalization once on the shared template.
+  try {
+    internal.ensureNoDeadEnds?.(generationZeroTemplate);
+  } catch {
+    // Generation-zero repair remains best-effort.
+  }
+
+  // Step 2: Replace incidental constructor innovations with explicit generation-zero ordering.
+  if (!seedNetwork) {
+    canonicalizeFreshGenerationZeroInnovations(generationZeroTemplate);
+  }
+
+  // Step 3: Promote the runtime topology contract only after the final template shape is known.
+  promoteGenomeToFeedForwardIntentWhenEligible(
+    generationZeroTemplate,
+    shouldPromoteFeedForwardIntent,
+  );
+
+  return generationZeroTemplate;
+}
+
+function createFreshGenerationZeroTemplate(
+  internal: NeatControllerForHelpers,
+): GenomeWithMetadata {
+  const controllerRandom = internal._getRNG();
+  const generationZeroSeed = Math.floor(
+    controllerRandom() * RNG_SEED_UPPER_BOUND,
+  );
+
+  return new Network(internal.input, internal.output, {
+    minHidden: internal.options?.minHidden,
+    seed: generationZeroSeed,
+  }) as unknown as GenomeWithMetadata;
+}
+
+function cloneGenerationZeroGenome(
+  sourceGenome: GenomeWithMetadata,
+): GenomeWithMetadata {
+  const clonedGenome = sourceGenome.clone
+    ? sourceGenome.clone()
+    : (Network.fromJSON(
+        sourceGenome.toJSON?.() ?? {},
+      ) as unknown as GenomeWithMetadata);
+
+  synchronizeGenerationZeroCloneState(sourceGenome, clonedGenome);
+  return clonedGenome;
+}
+
+function synchronizeGenerationZeroCloneState(
+  sourceGenome: GenomeWithMetadata,
+  clonedGenome: GenomeWithMetadata,
+): void {
+  const topologyIntent = sourceGenome.getTopologyIntent?.();
+  if (topologyIntent) {
+    clonedGenome.setTopologyIntent?.(topologyIntent);
+  }
+
+  const sourceRngState = sourceGenome.getRNGState?.();
+  if (typeof sourceRngState === 'number') {
+    clonedGenome.setRNGState?.(sourceRngState);
+  }
+}
+
+function canonicalizeFreshGenerationZeroInnovations(
+  generationZeroTemplate: GenomeWithMetadata,
+): void {
+  const generationZeroConnections = collectGenerationZeroConnections(
+    generationZeroTemplate,
+  ).toSorted(compareGenerationZeroConnections);
+
+  generationZeroConnections.forEach((connection, innovationId) => {
+    connection.innovation = innovationId;
+  });
+}
+
+function collectGenerationZeroConnections(
+  genome: GenomeWithMetadata,
+): GenerationZeroConnection[] {
+  return [...(genome.connections ?? []), ...(genome.selfconns ?? [])];
+}
+
+function compareGenerationZeroConnections(
+  leftConnection: GenerationZeroConnection,
+  rightConnection: GenerationZeroConnection,
+): number {
+  const sourceIndexDelta =
+    leftConnection.from.index! - rightConnection.from.index!;
+  if (sourceIndexDelta !== 0) {
+    return sourceIndexDelta;
+  }
+
+  return leftConnection.to.index! - rightConnection.to.index!;
+}
+
+function resolveNextInnovationIdFromGenome(genome: GenomeWithMetadata): number {
+  const maxObservedInnovation = collectGenerationZeroConnections(genome).reduce(
+    (currentMaxInnovation, connection) =>
+      typeof connection.innovation === 'number'
+        ? Math.max(currentMaxInnovation, connection.innovation)
+        : currentMaxInnovation,
+    DEFAULT_MAX_INNOVATION,
+  );
+
+  return maxObservedInnovation + 1;
+}
+
+function normalizeGenerationZeroMetadata(
+  internal: NeatControllerForHelpers,
+  genome: GenomeWithMetadata,
+): void {
+  genome.score = undefined;
+  genome._reenableProb = internal.options.reenableProb;
+  genome._id = internal._nextGenomeId++;
+
+  if (internal._lineageEnabled) {
+    genome._parents = [];
+    genome._depth = 0;
+    return;
+  }
+
+  Reflect.deleteProperty(genome, '_parents');
+  Reflect.deleteProperty(genome, '_depth');
 }

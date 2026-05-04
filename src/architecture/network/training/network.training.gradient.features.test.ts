@@ -171,5 +171,23 @@ describe('network training chapter', () => {
         });
       });
     });
+
+    describe('given gradient clip has no mode, no maxNorm, and no percentile', () => {
+      describe('when training completes without any clip mode applied', () => {
+        it('runs one iteration without throwing even with an empty gradient clip config', () => {
+          // Arrange – gradientClip with no mode/maxNorm/percentile → line 138 FALSE arm
+          const network = createSingleConnectionNetwork(9_101);
+
+          // Act & Assert
+          expect(() =>
+            network.train(LINEAR_DATASET, {
+              iterations: 1,
+              rate: 0.01,
+              gradientClip: {},
+            }),
+          ).not.toThrow();
+        });
+      });
+    });
   });
 });

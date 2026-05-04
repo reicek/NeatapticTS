@@ -1,98 +1,82 @@
 # architecture
 
-Architecture root chapter map and compatibility surface.
+Architecture root — the graph substrate every network is built from.
 
-This root answers the first structural question behind the whole library:
-what are the durable building blocks a NeatapticTS network is made from
-before NEAT, training, workers, or ONNX translation start adding policy
-around it? The answer is a small graph vocabulary. Nodes and connections hold
-local signal semantics. Groups and layers organize repeated structure.
-`Network` orchestrates the whole graph. `Architect` offers common presets.
-The pool chapters keep allocation-heavy hot paths from turning runtime work
-into needless object churn.
+## A Neural Network as a Directed Graph
 
-Read this folder as a map between two kinds of knowledge. One kind is graph
-anatomy: what a node, connection, group, or layer means. The other kind is
-graph orchestration: how those parts become a runnable, mutable, trainable,
-serializable network. The architecture root exists so a reader can see both
-at once before diving into the heavier subchapters.
+At its mathematical core, a neural network is a **weighted directed graph**.
+Each *node* (neuron) receives a weighted sum of its incoming signals, applies
+a non-linear activation function, and sends its output along outgoing
+connections to the next layer of nodes. The forward-propagation formula for
+a single node is:
 
-That boundary matters because the rest of the repo reuses architecture in
-several different ways. The NEAT controller mutates and evaluates graphs.
-The methods chapter defines reusable activation and structural vocabulary.
-Browser examples step and visualize networks. ONNX import and export
-translate networks across ecosystems. If the architecture layer is unclear,
-everything above it feels like policy without a substrate. This root chapter
-makes the substrate legible first.
+```
+output = activation( Σᵢ wᵢ · xᵢ  +  bias )
+```
 
-One helpful mental model is to split the folder into four shelves: graph
-primitives (`node`, `connection`), composition helpers (`group`, `layer`,
-`architect`), orchestration (`network`), and runtime-efficiency helpers
-(`nodePool`, `activationArrayPool`). The flat `src/architecture/*.ts` files
-are compatibility facades that keep imports stable while the real ownership
-and longer explanations live in the chaptered subfolders.
+where xᵢ are the inputs arriving through connections, wᵢ are the
+connection weights, and `activation` is a non-linear function (ReLU, tanh,
+etc.) that gives the network its representational power.
+
+In NEAT, this graph is not fixed in advance. Nodes and connections are
+added by structural mutations over many generations, so the architecture
+layer must support both *fixed-topology training* and *dynamic structural
+growth*. See Wikipedia contributors,
+[Artificial neural network](https://en.wikipedia.org/wiki/Artificial_neural_network),
+for an introduction to the graph model, and Wikipedia contributors,
+[Topological sorting](https://en.wikipedia.org/wiki/Topological_sorting),
+for the scheduling problem that arises when nodes must be activated in the
+correct dependency order.
+
+## The Building Blocks
+
+The architecture layer is organized around four shelves:
+
+- **Graph primitives** (`node`, `connection`) — the atoms of every network.
+  A `Node` holds activation state, bias, and a reference to its activation
+  function. A `Connection` holds the weight, innovation number, and gate flag.
+- **Composition helpers** (`group`, `layer`, `architect`) — tools for
+  building structured networks from groups of nodes, without wiring each
+  connection by hand.
+- **Orchestration** (`network`) — the facade that owns activation, training,
+  mutation, serialization, ONNX export, and slab-optimized forward passes.
+- **Allocation helpers** (`nodePool`, `activationArrayPool`) — typed-array
+  pools that keep hot evaluation paths free of per-step object allocation.
+
+The flat `src/architecture/*.ts` files are compatibility facades. They keep
+public imports stable while the real implementation and longer explanations
+live in the chaptered subfolders.
 
 ```mermaid
 flowchart TD
-  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
-  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+  classDef base fill:#001522,stroke:#0fb5ff,color:#9fdcff,stroke-width:1.5px;
+  classDef accent fill:#0f1f33,stroke:#00e5ff,color:#d8f6ff,stroke-width:2px;
 
-  Architecture[architecture root]:::accent --> Primitives[Node and Connection<br/>graph primitives]:::base
-  Architecture --> Composition[Group Layer Architect<br/>composition helpers]:::base
-  Architecture --> Orchestration[Network<br/>runtime orchestration]:::base
-  Architecture --> Pools[NodePool and ActivationArrayPool<br/>allocation helpers]:::base
+  Architecture["architecture root"]:::accent --> Primitives["Node · Connection\ngraph atoms"]:::base
+  Architecture --> Composition["Group · Layer · Architect\ncomposition helpers"]:::base
+  Architecture --> Orchestration["Network\nactivate · train · mutate · serialize · ONNX"]:::base
+  Architecture --> Pools["NodePool · ActivationArrayPool\nallocation helpers"]:::base
+  Orchestration --> Slab["slab/\ntyped-array fast path"]:::base
 ```
 
-The second useful lens is ownership versus compatibility. This root folder
-intentionally still exposes flat compatibility files because public imports,
-tests, and examples rely on them. But those files are no longer the best
-place to learn the subsystem. They are the stable front desk. The chaptered
-subfolders are where the real guided tour now lives.
+## Practical Reading Order
 
-```mermaid
-flowchart LR
-  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
-  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+1. `network/` — start here for the orchestration surface and its subchapters.
+2. `node/` and `connection/` — graph building blocks and their state semantics.
+3. `group/`, `layer/`, `architect/` — composition and preset builder helpers.
+4. `nodePool/` and `activationArrayPool/` — allocation-efficient runtime paths.
 
-  Caller[Caller import]:::base --> Facade[Flat compatibility facade]:::accent
-  Facade --> Chapter[Chapter-owned implementation folder]:::base
-  Chapter --> Details[Runtime training mutation serialize ONNX details]:::base
-```
-
-For background reading, the most relevant mathematical ideas are the directed
-graph itself and the ordering questions that appear once a graph has to be
-executed. See Wikipedia contributors,
-[Directed graph](https://en.wikipedia.org/wiki/Directed_graph), and
-Wikipedia contributors,
-[Topological sorting](https://en.wikipedia.org/wiki/Topological_sorting),
-for compact background on the graph and scheduling ideas that sit underneath
-this chapter's public surface.
-
-Example: start from a preset builder when you want architecture first and
-wiring details second.
+Example: build a preset feed-forward network and run one forward pass.
 
 ```ts
 const perceptron = new Architect.Perceptron(2, 3, 1);
 const outputValues = perceptron.activate([0, 1]);
 ```
 
-Example: start from `Network` when you want the orchestration surface and
-plan to inspect or mutate the graph more directly.
+Example: start from `Network` directly when you want to inspect or mutate
+the graph yourself.
 
 ```ts
 const network = new Network(2, 1);
 const outputValues = network.activate([0, 1]);
 ```
-
-Practical reading order:
-
-1. Start here for the high-level map of the architecture package.
-2. Continue into `network/` for the main orchestration surface and its
-   runtime, training, mutation, serialization, and ONNX subchapters.
-3. Continue into `node/`, `connection/`, `group/`, and `layer/` for the
-   graph building blocks.
-4. Continue into `architect/` for preset builders and into `nodePool/` and
-   `activationArrayPool/` for allocation-oriented helpers.
-5. Treat the flat `src/architecture/*.ts` files as compatibility facades that
-   keep public imports stable while the implementation lives in narrower,
-   teachable chapters.

@@ -229,7 +229,7 @@ export type SlabAllocStats = { fresh: number; pooled: number } | null;
  * changed the memory story in the expected direction, or teach why reserved and
  * used bytes can diverge even when the active connection count stays stable.
  *
- * @param targetNetworks - Optional single network or array. If omitted, uses registered networks.
+ * @param targetNetworks Optional single network or array. If omitted, uses registered networks.
  * @returns MemoryStats heuristic snapshot.
  *
  * @example

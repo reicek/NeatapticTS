@@ -49,11 +49,32 @@ export class ArchitectInvalidLstmConfigurationError extends Error {
 }
 
 /**
+ * Raised when GRU builder arguments contain invalid layer-size values.
+ */
+export class ArchitectInvalidGruLayerArgumentsError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, { cause: options?.cause });
+    this.name = 'ArchitectInvalidGruLayerArgumentsError';
+  }
+}
+
+/**
  * Raised when a GRU builder receives too few layer sizes.
  */
 export class ArchitectInvalidGruConfigurationError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, { cause: options?.cause });
     this.name = 'ArchitectInvalidGruConfigurationError';
+  }
+}
+
+/**
+ * Raised when a sparse architect builder receives invalid dimensions or
+ * requests more structural edits than the graph can satisfy.
+ */
+export class ArchitectInvalidRandomSparseConfigurationError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, { cause: options?.cause });
+    this.name = 'ArchitectInvalidRandomSparseConfigurationError';
   }
 }

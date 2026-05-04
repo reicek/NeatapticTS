@@ -43,15 +43,15 @@ export function redrawDashboard(
   neat?: unknown,
 ): void {
   context.state.lastUpdateTs = globalThis.performance?.now?.() ?? Date.now();
+  context.state.lastDetailedStats = createDetailedStatsSnapshot(
+    context.state,
+    neat,
+  );
   context.clearFn();
   printTopFrame(context);
   if (context.state.currentBest) {
     printCurrentBestSection(context, currentMaze);
   }
-  context.state.lastDetailedStats = createDetailedStatsSnapshot(
-    context.state,
-    neat,
-  );
   context.logBlank();
 }
 
@@ -225,6 +225,20 @@ function printLiveStats(
       C.SOLVED_LABEL_WIDTH,
     ),
   );
+  const activationSchedulingValue = resolveActivationSchedulingValue(
+    context.state.lastDetailedStats,
+  );
+  if (activationSchedulingValue) {
+    context.logFn(
+      context.formatStat(
+        'Scheduling',
+        activationSchedulingValue,
+        colors.neonSilver,
+        colors.cyanNeon,
+        C.SOLVED_LABEL_WIDTH,
+      ),
+    );
+  }
   if (currentBest.network) {
     MazeVisualization.printMazeStats(
       currentBest as {
@@ -238,6 +252,30 @@ function printLiveStats(
   }
   releaseInt32(scratch);
   context.logBlank();
+}
+
+/**
+ * Resolve the compact activation-scheduling label shown in the live dashboard.
+ *
+ * @param detailedStats - Latest detailed dashboard snapshot.
+ * @returns Human-readable scheduling summary or null when unavailable.
+ */
+export function resolveActivationSchedulingValue(
+  detailedStats: DashboardManagerContext['state']['lastDetailedStats'],
+): string | null {
+  const activationScheduling = detailedStats?.activationScheduling;
+  if (
+    !activationScheduling?.requestedMode ||
+    !activationScheduling.executionPath
+  ) {
+    return null;
+  }
+
+  const issueSuffix = activationScheduling.issue
+    ? ` (${activationScheduling.issue})`
+    : '';
+
+  return `${activationScheduling.requestedMode} via ${activationScheduling.executionPath}${issueSuffix}`;
 }
 
 function printProgressBar(context: DashboardManagerContext): void {

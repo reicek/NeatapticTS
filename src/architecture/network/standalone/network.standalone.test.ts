@@ -144,6 +144,14 @@ describe('network standalone chapter', () => {
         createNetwork: () => Architect.random(2, 3, 1),
       },
       {
+        architectureName: 'RandomSparse',
+        createNetwork: () =>
+          Architect.randomSparse(2, 3, 1, {
+            connections: 6,
+            seed: 702,
+          }),
+      },
+      {
         architectureName: 'NARX',
         createNetwork: () => Architect.narx(2, 2, 2, 2, 1),
       },
@@ -367,6 +375,25 @@ describe('network standalone chapter', () => {
           expect(createStandaloneSource).toThrow(
             NetworkStandaloneNoOutputNodesError,
           );
+        });
+      });
+    });
+
+    describe('given float32 activation precision is requested', () => {
+      describe('when standalone() is called', () => {
+        it('emits Float32Array state and activation buffers', () => {
+          // Arrange
+          const network = new Network(2, 1, { seed: 456 });
+          const networkWithPrecision = network as unknown as {
+            _activationPrecision?: string;
+          };
+          networkWithPrecision._activationPrecision = 'f32';
+
+          // Act
+          const standaloneSource = network.standalone();
+
+          // Assert
+          expect(standaloneSource.includes('new Float32Array([')).toBe(true);
         });
       });
     });

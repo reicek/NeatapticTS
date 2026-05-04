@@ -33,10 +33,11 @@ import {
 export function buildOnnxModel(
   network: Network,
   layers: NeatapticNode[][],
-  options: OnnxExportOptions = {},
+  options?: OnnxExportOptions,
 ): OnnxModel {
   // Step 1: Resolve stable export defaults and input options.
-  const resolvedOptions = resolveBuildOptions(options);
+  const sourceOptions = options ?? {};
+  const resolvedOptions = resolveBuildOptions(sourceOptions);
   void network;
 
   // Step 2: Initialize base ONNX model with graph dimensions and metadata.
@@ -46,7 +47,7 @@ export function buildOnnxModel(
   const recurrentLayerIndices = collectRecurrentIndices({
     model,
     layers,
-    options,
+    options: sourceOptions,
     batchDimension: resolvedOptions.batchDimension,
   });
 
@@ -54,7 +55,7 @@ export function buildOnnxModel(
   const layerEmissionResult = emitNonInputLayers({
     model,
     layers,
-    options,
+    options: sourceOptions,
     recurrentLayerIndices,
     batchDimension: resolvedOptions.batchDimension,
     legacyNodeOrdering: resolvedOptions.legacyNodeOrdering,
@@ -64,7 +65,7 @@ export function buildOnnxModel(
   applyPostProcessing({
     model,
     layers,
-    options,
+    options: sourceOptions,
     includeMetadata: resolvedOptions.includeMetadata,
     recurrentLayerIndices,
     layerEmissionResult,

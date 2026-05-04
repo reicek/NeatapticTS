@@ -1,6 +1,6 @@
 ---
 name: test-fix-workflow
-description: 'Systematically fix multiple test failures by planning first, applying all fixes before broad test execution, validating types early, and only running the full suite at the end.'
+description: 'Systematically fix multiple test failures by planning first, preferring a TDD red-green-coverage cadence inside each fix cluster, validating types early, and only running the full suite at the end.'
 argument-hint: 'Describe the failing surface, available failure output, whether the issue is type-level, runtime, or mixed, and any known plan file or validation constraints.'
 user-invocable: true
 disable-model-invocation: false
@@ -15,6 +15,11 @@ This skill is the canonical workflow for multi-failure test repair in this
 repo. It owns the durable planning sequence, validation cadence, and the rule
 that broad test execution happens only after the planned fixes are applied.
 
+Inside each planned failure cluster, the preferred execution order is TDD:
+narrow red test first, implementation second, narrow green validation third,
+and coverage expansion on the new or directly related area before the final
+broad suite run.
+
 When this workflow updates a durable fix tracker, `tracker-handoff` owns the
 canonical tracker format and continuation prompt shape.
 
@@ -27,6 +32,11 @@ canonical tracker format and continuation prompt shape.
 
 Do not invoke this skill for a single obvious failing assertion unless the task
 is likely to expand into a broader failure-repair pass.
+
+Do not invoke this skill for **coverage expansion** on passing code. Use
+`coverage-tranche` instead when the test suite is green and the goal is to
+raise coverage metrics toward 100%. The two skills are complements: this skill
+repairs failures first; `coverage-tranche` expands coverage afterward.
 
 ## Task Packet
 
@@ -61,13 +71,25 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
 3. Prioritize the plan.
    - Prefer: blocking type errors first, then cheap/high-confidence fixes, then
      deeper investigation items.
-4. Apply all planned fixes systematically before running broad tests.
-5. Do not run `npm test`, `npm run test:silent`, or partial failure scans during
-   the main fix phase.
-6. TypeScript-only validation is allowed during the fix phase when it helps
-   confirm compile-time repairs.
-7. After the planned fixes are complete, run the final broad validation.
-8. Analyze any remaining failures and update the plan rather than switching to
+4. Prefer a TDD loop inside each fix cluster.
+  - Add or reshape the smallest test that should fail for the intended
+    behavior or regression.
+  - Run only that narrow surface to confirm the red phase when practical.
+  - Implement the repair.
+  - Rerun only that narrow surface until it turns green.
+5. Apply all planned fixes systematically before running broad tests.
+6. Do not run `npm test`, `npm run test:silent`, or broad failure scans during
+  the main fix phase.
+  - Narrow red/green reruns for the active fix cluster are allowed.
+7. TypeScript-only validation is allowed during the fix phase when it helps
+  confirm compile-time repairs.
+8. After the targeted fixes are green, run `coverage-guard` on every `src/`
+  file touched by the repair. Coverage must reach 100% (statements, branches,
+  functions, lines) for every changed file before the session is marked done.
+  Partial coverage is a bug in the change, not an acceptable tradeoff.
+9. After the planned fixes and coverage gate are both green, run the final
+  broad validation.
+10. Analyze any remaining failures and update the plan rather than switching to
    unstructured iteration.
 
 ## Guardrails
@@ -79,11 +101,15 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
   `tracker-handoff` conventions instead.
 - When the fix workstream becomes fully complete, finish by using
   `tracker-handoff` to compress the `.plans.md` file into a short closed
-  tracker and add or update the same-boundary `.logs.md` file.
+  tracker, add or update the same-boundary `.logs.md` file, and archive both
+  files into `plans/completed/`.
 - Do not preserve a `Handoff query` on a terminally closed fix plan unless the
   user explicitly wants reopen guidance.
 - Do not bounce between test execution and partial fixes when the workflow is
   still in the main repair phase.
+- Do not skip the red phase for behavior-changing work unless the task is
+  purely documentation, reconnaissance, or a mechanical edit with no runtime
+  behavior change.
 - Do not treat partial reruns as a substitute for a durable plan.
 - Do not improvise a new order once the plan is in motion unless new evidence
   forces a reprioritization.
@@ -93,8 +119,17 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
 
 Preferred validation cadence:
 
-- During the fix phase: `npx tsc --noEmit -p tsconfig.test.json` when needed.
-- After all planned fixes: `npm test` or `npm run test:silent`.
+- During the fix phase: narrow red/green test reruns for the active cluster,
+  plus `npx tsc --noEmit -p tsconfig.test.json` when needed.
+- After the cluster is green: run `coverage-guard` on every `src/` file
+  touched by the repair. All four categories must reach 100% for each file.
+  Use the dead-code rule: remove unreachable branches rather than forcing
+  contorted tests.
+- After all planned fixes and the coverage gate: `npm run test:silent` to
+  confirm the repo-wide suite is green and the baseline has not regressed.
+
+**Coverage is a hard gate, not a recommendation.** No test-fix session is
+complete until every changed `src/` file is at 100% and the suite is green.
 
 If the task is compile-heavy rather than runtime-heavy, file- or package-level
 diagnostics may be enough before the final suite run.
@@ -106,5 +141,8 @@ A strong run should report:
 - the plan file used or created,
 - the failure categories addressed,
 - which validations were intentionally deferred until the end,
-- final validation results,
+- `coverage-guard` result for every changed `src/` file (per-file 100%
+  confirmation or gaps resolved),
+- final `npm run test:silent` result,
+- new green baseline (suite count, test count),
 - any remaining failures or follow-up items.

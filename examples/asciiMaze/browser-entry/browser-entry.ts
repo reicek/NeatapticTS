@@ -98,6 +98,10 @@ import type {
 } from './browser-entry.types';
 import { resolveBrowserEntryHostElements } from './browser-entry.utils';
 
+// Prevents duplicate concurrent curriculum runs when both the HTML onload handler
+// and the bundle's auto-start timer call start() within the same page load.
+let _activeRunHandle: AsciiMazeRunHandle | null = null;
+
 /**
  * Start the browser-hosted ASCII Maze curriculum demo.
  *
@@ -132,6 +136,10 @@ export const start = async (
   container: string | HTMLElement = C.DEFAULT_CONTAINER_ID,
   opts: BrowserEntryStartOptions = {},
 ): Promise<AsciiMazeRunHandle> => {
+  if (_activeRunHandle !== null && _activeRunHandle.isRunning()) {
+    return _activeRunHandle;
+  }
+
   // Step 1: Resolve host elements and attach browser-specific services.
   const hostElements = resolveBrowserEntryHostElements(container);
   const hostServices = createBrowserEntryHostServices(hostElements);
@@ -191,7 +199,7 @@ export const start = async (
   }
 
   // Step 4: Return the stable lifecycle handle for embedding hosts.
-  return {
+  const handle: AsciiMazeRunHandle = {
     stop: () => {
       cancelled = true;
       finalizeRun();
@@ -207,6 +215,21 @@ export const start = async (
       hostServices.telemetryHub.add(telemetryCallback),
     getTelemetry: () => hostServices.runtimeDashboard.getLastTelemetry?.(),
   };
+
+  _activeRunHandle = handle;
+  handle.done
+    .then(() => {
+      if (_activeRunHandle === handle) {
+        _activeRunHandle = null;
+      }
+    })
+    .catch(() => {
+      if (_activeRunHandle === handle) {
+        _activeRunHandle = null;
+      }
+    });
+
+  return handle;
 };
 
 installBrowserEntryGlobals(start);

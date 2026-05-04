@@ -58,7 +58,7 @@ The projection stays intentionally simple:
 3. return one compact row per species.
 
 Parameters:
-- `host` - - NEAT host exposing the internal species registry.
+- `host` - NEAT host exposing the internal species registry.
 
 Returns: Compact per-species summaries suitable for reporting.
 

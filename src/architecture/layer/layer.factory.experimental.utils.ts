@@ -22,11 +22,11 @@ const AVERAGE_INITIAL_VALUE = 0;
  * prototype graphs that *mention* Conv1D without requiring a full convolution
  * implementation yet.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of output nodes (filters).
- * @param kernelSize - Size of the convolution kernel.
- * @param stride - Stride of the convolution.
- * @param padding - Padding size for the convolution.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of output nodes (filters).
+ * @param kernelSize Size of the convolution kernel.
+ * @param stride Stride of the convolution.
+ * @param padding Padding size for the convolution.
  * @returns The configured layer instance.
  *
  * Example:
@@ -51,6 +51,14 @@ export function buildConv1dLayer<TLayer extends LayerFactoryLayer>(
       conv1d: { kernelSize: number; stride: number; padding: number };
     }
   ).conv1d = { kernelSize, stride, padding };
+  layer.describe?.({
+    intent: 'convolution',
+    metadata: { family: 'conv1d', kernelSize, padding, size, stride },
+  });
+  layer.output?.describe({
+    intent: 'convolution',
+    metadata: { family: 'conv1d', kernelSize, padding, size, stride },
+  });
 
   layer.activate = createConv1dActivator(layer, size);
 
@@ -68,9 +76,9 @@ export function buildConv1dLayer<TLayer extends LayerFactoryLayer>(
  * activation behavior is intentionally simple: it collapses provided values to
  * their average.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of output nodes.
- * @param heads - Number of attention heads.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of output nodes.
+ * @param heads Number of attention heads.
  * @returns The configured layer instance.
  *
  * Example:
@@ -88,6 +96,14 @@ export function buildAttentionLayer<TLayer extends LayerFactoryLayer>(
 ): TLayer {
   const layer = createStubLayer(context, size);
   (layer as unknown as { attention: { heads: number } }).attention = { heads };
+  layer.describe?.({
+    intent: 'attention',
+    metadata: { family: 'attention', heads, size },
+  });
+  layer.output?.describe({
+    intent: 'attention',
+    metadata: { family: 'attention', heads, size },
+  });
 
   layer.activate = createAttentionActivator(layer, size);
 
@@ -105,8 +121,8 @@ export function buildAttentionLayer<TLayer extends LayerFactoryLayer>(
  * architecture). In these stubs, the output group is not intended to be a fully
  * wired projection of `nodes`.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of output nodes to allocate.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of output nodes to allocate.
  * @returns Initialized experimental layer.
  */
 function createStubLayer<TLayer extends LayerFactoryLayer>(
@@ -128,8 +144,8 @@ function createStubLayer<TLayer extends LayerFactoryLayer>(
  * This keeps the call signature compatible with real layers while remaining
  * intentionally cheap.
  *
- * @param layer - Layer whose nodes can self-activate.
- * @param size - Number of output values to return.
+ * @param layer Layer whose nodes can self-activate.
+ * @param size Number of output values to return.
  * @returns Activation callback for Conv1D behavior.
  *
  * Example:
@@ -161,8 +177,8 @@ function createConv1dActivator<TLayer extends LayerFactoryLayer>(
  * This behavior is *not* meant to represent real attention math; it simply
  * produces a stable, shape-correct output while attention internals evolve.
  *
- * @param layer - Layer whose nodes can self-activate.
- * @param size - Number of output values to return.
+ * @param layer Layer whose nodes can self-activate.
+ * @param size Number of output values to return.
  * @returns Activation callback for attention behavior.
  *
  * Example:
@@ -194,7 +210,7 @@ function createAttentionActivator<TLayer extends LayerFactoryLayer>(
  * This helper keeps fallback activation behavior identical across experimental
  * layer variants.
  *
- * @param layer - Layer containing nodes to activate.
+ * @param layer Layer containing nodes to activate.
  * @returns Activated node outputs.
  *
  * Example:

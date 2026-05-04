@@ -29,6 +29,7 @@ import { Neat, Network, methods } from '../../../src/neataptic';
 export interface NeatConfig {
   popSize?: number;
   mutation?: unknown[];
+  allowRecurrent?: boolean;
   elitism?: number;
   provenance?: number;
   mutationRate?: number;
@@ -74,6 +75,7 @@ export interface NeatConfig {
  *  - popSize: Population size (default: 150)
  *  - mutation: Array of mutation operators (default: comprehensive set including LSTM)
  *  - allowRecurrent: Enable recurrent connections (default: true)
+ *  - network: Optional builder-backed seed network used as the NEAT base graph
  *  - adaptiveMutation: Adaptive mutation config (default: enabled with 'twoTier' strategy)
  *  - multiObjective: Multi-objective config (default: enabled with 'nodes' metric)
  *  - telemetry: Telemetry config (default: enabled with all metrics)
@@ -106,33 +108,25 @@ export const createNeat = (
   ) => Neat;
 
   // Default constants (extracted from EvolutionEngine static fields)
-  const DEFAULT_POPSIZE = 150;
+  const DEFAULT_POPSIZE = 200;
   const DEFAULT_ELITISM_FRACTION = 0.05;
   const DEFAULT_PROVENANCE_FRACTION = 0.1;
   const DEFAULT_MUTATION_RATE = 0.3;
   const DEFAULT_MUTATION_AMOUNT = 0.05;
-  const DEFAULT_MIN_HIDDEN = 0;
+  const DEFAULT_MIN_HIDDEN = 13;
   const DEFAULT_TARGET_SPECIES = 8;
   const DEFAULT_ENTROPY_RANGE: [number, number] = [0.4, 0.6];
   const DEFAULT_ADAPTIVE_SMOOTH = 0.9;
 
   // Step 1: Normalize configuration bag and derive primary numeric settings.
   const conf = cfg ?? {};
+  const allowRecurrent = conf.allowRecurrent !== false;
   const popSize: number = Number.isFinite(conf.popSize)
     ? (conf.popSize as number)
     : DEFAULT_POPSIZE;
   const mutationOps = Array.isArray(conf.mutation)
     ? conf.mutation
-    : [
-        methods.mutation.ADD_NODE,
-        methods.mutation.SUB_NODE,
-        methods.mutation.ADD_CONN,
-        methods.mutation.SUB_CONN,
-        methods.mutation.MOD_BIAS,
-        methods.mutation.MOD_ACTIVATION,
-        methods.mutation.MOD_WEIGHT,
-        methods.mutation.ADD_LSTM_NODE,
-      ];
+    : resolveDefaultMutationShelf(allowRecurrent);
 
   // Step 2: Compute derived integer settings with descriptive names.
   const elitism = Math.max(1, Math.floor(popSize * DEFAULT_ELITISM_FRACTION));
@@ -142,7 +136,6 @@ export const createNeat = (
   );
 
   // Step 3: Compose other option objects using nullish coalescing for defaults.
-  const allowRecurrent = conf.allowRecurrent !== false;
   const adaptiveMutation = conf.adaptiveMutation ?? {
     enabled: true,
     strategy: 'twoTier',
@@ -187,6 +180,7 @@ export const createNeat = (
       telemetry,
       lineageTracking,
       novelty,
+      network: conf.network,
       targetSpecies,
       adaptiveTargetSpecies,
     },
@@ -194,6 +188,43 @@ export const createNeat = (
 
   return neatInstance;
 };
+
+/**
+ * Resolves the default mutation shelf for the ASCII Maze demo.
+ *
+ * The maze example already opts into recurrent-capable search at the
+ * controller level, so its default mutation shelf should expose the newer
+ * temporal and gated operators that make that policy meaningful. When callers
+ * explicitly disable recurrent growth, the shelf falls back to the compact
+ * feed-forward subset so the controller contract stays aligned with the shelf.
+ *
+ * @param allowRecurrent - Whether recurrent and gated growth is allowed.
+ * @returns Demo-aligned default mutation shelf.
+ */
+function resolveDefaultMutationShelf(allowRecurrent: boolean): unknown[] {
+  const baseMutationShelf = [
+    methods.mutation.ADD_NODE,
+    methods.mutation.SUB_NODE,
+    methods.mutation.ADD_CONN,
+    methods.mutation.SUB_CONN,
+    methods.mutation.MOD_BIAS,
+    methods.mutation.MOD_ACTIVATION,
+    methods.mutation.MOD_WEIGHT,
+  ];
+
+  if (!allowRecurrent) {
+    return baseMutationShelf;
+  }
+
+  return [
+    ...baseMutationShelf,
+    methods.mutation.ADD_GATE,
+    methods.mutation.ADD_SELF_CONN,
+    methods.mutation.ADD_BACK_CONN,
+    methods.mutation.ADD_LSTM_NODE,
+    methods.mutation.ADD_GRU_NODE,
+  ];
+}
 
 /**
  * Seed the NEAT population from an optional initial population and/or an optional

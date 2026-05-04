@@ -23,8 +23,8 @@
  * Read this chapter if you want to answer three practical questions:
  *
  * 1. Which geometric signals does the policy actually see?
- * 2. How does the example add short-horizon memory without requiring recurrent
- *    networks?
+ * 2. Why does the shared runtime still carry observation-memory buffers even
+ *    though the default controller input is current-frame only?
  * 3. How do difficulty, spawn, observation, and control helpers stay reusable
  *    across Node training and browser playback?
  *
@@ -35,7 +35,7 @@
  *     Difficulty["difficulty utils\ncurriculum profile"] --> Spawn["spawn utils\nnext pipe cadence and gap"]
  *     Spawn --> World["environment + worker playback\nconcrete world state"]
  *     World --> Features["observation/\nfeature synthesis"]
- *     Features --> Memory["memory utils\nstack recent frames and actions"]
+ *     Features --> Memory["memory utils\ncompatibility history buffers"]
  *     Features --> Vector["observation/\ncanonical policy vectors"]
  *     Vector --> Control["control utils\nresolve flap decision"]
  *     Memory --> Control
@@ -54,10 +54,11 @@
  * ```
  *
  * The key teaching point is that the policy does not read pixels. It reads a
- * curated state representation: gap geometry, velocity, urgency, and a short
- * action-conditioned memory trail. That makes the control problem easier to
- * inspect and keeps training, evaluation, and playback aligned around the same
- * semantics.
+ * curated state representation: bird state and next-gap geometry from the
+ * current normalized frame. The compatibility memory surface stays in place
+ * for shared runtime plumbing, but the active controller contract leaves
+ * temporal carry-over to recurrent profiles instead of hand-authored input
+ * history.
  *
  * ## Choose Your Route
  *
@@ -68,8 +69,9 @@
  *   generation rules.
  * - Read [simulation-shared/observation/README.md](./observation/README.md) if
  *   you want the feature-engineering story in more detail.
- * - Read `simulation-shared.memory.utils.ts` if you want the frame-stacking and
- *   recent-action channels.
+ * - Read `simulation-shared.memory.utils.ts` if you want the compatibility
+ *   memory surface and the reasoning behind leaving it unused by the default
+ *   controller input.
  * - Read `simulation-shared.control.utils.ts` if you want the final step from
  *   network outputs to `flap` versus `no flap`.
  *
@@ -154,8 +156,9 @@ export interface SharedDifficultyProfile {
  *
  * Educational note:
  * These features make the policy input interpretable. The example does not feed
- * raw pixels into NEAT; it feeds geometric signals such as distance to the next
- * pipe, corridor clearance, and urgency of recovering to the gap center.
+ * raw pixels into NEAT; it feeds geometric signals such as bird state,
+ * next-gap geometry, corridor clearance, and urgency of recovering to the gap
+ * center.
  */
 export interface SharedObservationFeatures {
   /** Bird y position normalized to [0, 1]. */
@@ -176,23 +179,35 @@ export interface SharedObservationFeatures {
   /** Next gap bottom normalized to [0, 1]. */
   normalizedNextGapBottom: number;
 
-  /** Distance to second pipe normalized to [0, 1]. */
-  normalizedDistanceToSecondPipe: number;
-
-  /** Delta to second gap center normalized to [-1, 1]. */
-  normalizedDeltaToSecondGap: number;
-
   /** Time-to-next-pipe closeness normalized to [0, 1]. */
   normalizedTimeToNextPipe: number;
 
   /** Signed next-gap clearance in [-1, 1]. */
   normalizedNextGapClearance: number;
 
+  /**
+   * Signed distance from the bird's right edge to the pipe's left entrance
+   * edge, normalized to [-1, 1].
+   *
+   * Positive values mean the pipe is still ahead. The signal crosses zero at
+   * the moment the bird's nose touches the pipe body and goes negative while
+   * the bird is traversing the pipe — a clear in-pipe signal absent from the
+   * other channels.
+   */
+  normalizedDistanceToPipeEntrance: number;
+
+  /**
+   * Signed vertical offset from the *second* upcoming gap center, normalized
+   * to [-1, 1].
+   *
+   * Provides the network a reason to plan ahead: if the second pipe sits at a
+   * different height the agent must start repositioning before fully clearing
+   * the first one.
+   */
+  normalizedDeltaToSecondGap: number;
+
   /** Required vertical velocity to center next gap normalized to [-1, 1]. */
   normalizedRequiredVerticalVelocityToNextGap: number;
-
-  /** Transition between next and second gap centers normalized to [-1, 1]. */
-  normalizedNextToSecondGapTransition: number;
 
   /** Frames-to-gap-entry estimate normalized to [0, 1]. */
   normalizedFramesToGapEntry: number;
@@ -216,13 +231,12 @@ export interface SharedObservationFeatures {
 /**
  * Mutable temporal memory attached to one policy-controlled bird.
  *
- * The memory stores recent core observation frames and recent action history,
- * allowing feedforward policies to consume short-term context without adding
- * recurrent connections.
+ * The buffers remain available as compatibility state for shared browser and
+ * worker runtime plumbing, but the current controller input contract no longer
+ * feeds this external history into any architecture.
  *
- * If you want background reading, the Wikipedia article on "frame stacking"
- * captures the basic idea of giving a feed-forward policy a short motion trail
- * instead of full recurrent state.
+ * That keeps feed-forward and recurrent profiles on the same current-frame
+ * observation shelf while still leaving room for future opt-in experiments.
  */
 export interface SharedObservationMemoryState {
   /** Previous core frames, newest-first, excluding the current frame. */

@@ -1,4 +1,10 @@
 import Network from '../network';
+import Node from '../../node';
+import {
+  activateBatch as activateBatchUtils,
+  activateRaw as activateRawUtils,
+  gaussianRand,
+} from './network.activate.utils';
 
 type FastSlabActivate = (input: number[]) => number[];
 type CanUseFastSlab = () => boolean;
@@ -23,6 +29,151 @@ function setFastSlabHooks(
 function invokeActivateBatch(network: Network, inputs: unknown): unknown {
   const activateBatch = Reflect.get(network, 'activateBatch') as ActivateBatch;
   return activateBatch.call(network, inputs);
+}
+
+function setTopoDirty(network: Network, isDirty: boolean): void {
+  Reflect.set(network, '_topoDirty', isDirty);
+}
+
+function configureDeterministicNode(node: Node): void {
+  node.bias = 0;
+  node.squash = createIdentityActivation();
+}
+
+function createIdentityActivation(): (
+  value: number,
+  derivate?: boolean,
+) => number {
+  return (value, derivate = false) => (derivate ? 1 : value);
+}
+
+function runActivationMode(
+  network: Network,
+  inputVector: number[],
+  activationMode: 'activate' | 'noTrace',
+): number[] {
+  return activationMode === 'activate'
+    ? network.activate(inputVector)
+    : network.noTraceActivate(inputVector);
+}
+
+function createAcyclicScheduleAdoptionScenario(
+  activationMode: 'activate' | 'noTrace',
+): { network: Network; inputVector: number[]; expectedOutput: number[] } {
+  const network = new Network(2, 2, {
+    seed: 210,
+    enforceAcyclic: true,
+  });
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
+  const outputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'output',
+  );
+
+  if (inputNodes.length !== 2 || outputNodes.length !== 2) {
+    throw new Error('Expected two input nodes and two output nodes');
+  }
+
+  setFastSlabHooks(network, {
+    canUseFastSlab: () => false,
+  });
+
+  const hiddenNode = new Node('hidden');
+  configureDeterministicNode(hiddenNode);
+  outputNodes.forEach(configureDeterministicNode);
+
+  network.connections.slice().forEach((connection) => {
+    network.disconnect(connection.from, connection.to);
+  });
+
+  network.nodes = [
+    inputNodes[0],
+    inputNodes[1],
+    hiddenNode,
+    outputNodes[0],
+    outputNodes[1],
+  ];
+
+  network.connect(inputNodes[0], hiddenNode)[0].weight = 2;
+  network.connect(inputNodes[1], hiddenNode)[0].weight = 3;
+  network.connect(hiddenNode, outputNodes[0])[0].weight = 4;
+  network.connect(hiddenNode, outputNodes[1])[0].weight = -1;
+
+  const inputVector = [2, 1];
+  network.clear();
+  const expectedOutput = [
+    ...runActivationMode(network, inputVector, activationMode),
+  ];
+
+  network.clear();
+  network.nodes = [
+    outputNodes[1],
+    inputNodes[1],
+    hiddenNode,
+    outputNodes[0],
+    inputNodes[0],
+  ];
+  setTopoDirty(network, true);
+
+  return {
+    network,
+    inputVector,
+    expectedOutput,
+  };
+}
+
+function createRecurrentScheduleAdoptionScenario(
+  activationMode: 'activate' | 'noTrace',
+): { network: Network; inputVector: number[]; expectedOutput: number[] } {
+  const network = new Network(1, 1, {
+    seed: 211,
+    enforceAcyclic: false,
+  });
+  const inputNode = network.nodes.find(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
+  const outputNode = network.nodes.find(
+    (nodeEntry) => nodeEntry.type === 'output',
+  );
+
+  if (!inputNode || !outputNode) {
+    throw new Error('Expected one input node and one output node');
+  }
+
+  setFastSlabHooks(network, {
+    canUseFastSlab: () => false,
+  });
+
+  const hiddenNode = new Node('hidden');
+  configureDeterministicNode(hiddenNode);
+  configureDeterministicNode(outputNode);
+
+  network.connections.slice().forEach((connection) => {
+    network.disconnect(connection.from, connection.to);
+  });
+
+  network.nodes = [inputNode, hiddenNode, outputNode];
+
+  network.connect(inputNode, hiddenNode)[0].weight = 2;
+  network.connect(hiddenNode, hiddenNode)[0].weight = 1;
+  network.connect(hiddenNode, outputNode)[0].weight = 3;
+
+  const inputVector = [2];
+  network.clear();
+  const expectedOutput = [
+    ...runActivationMode(network, inputVector, activationMode),
+  ];
+
+  network.clear();
+  network.nodes = [inputNode, outputNode, hiddenNode];
+  setTopoDirty(network, true);
+
+  return {
+    network,
+    inputVector,
+    expectedOutput,
+  };
 }
 
 describe('network activate chapter', () => {
@@ -69,6 +220,38 @@ describe('network activate chapter', () => {
 
           // Assert
           expect(output.length).toBe(expectedLength);
+        });
+      });
+
+      describe('when node storage order drifts away from the compiled acyclic schedule', () => {
+        it('still follows explicit IO roles and scheduled output order', () => {
+          // Arrange
+          const activationScenario =
+            createAcyclicScheduleAdoptionScenario('activate');
+
+          // Act
+          const output = activationScenario.network.activate(
+            activationScenario.inputVector,
+          );
+
+          // Assert
+          expect(output).toEqual(activationScenario.expectedOutput);
+        });
+      });
+
+      describe('when recurrent node storage order drifts away from the compiled schedule', () => {
+        it('still follows the recurrent component order', () => {
+          // Arrange
+          const activationScenario =
+            createRecurrentScheduleAdoptionScenario('activate');
+
+          // Act
+          const output = activationScenario.network.activate(
+            activationScenario.inputVector,
+          );
+
+          // Assert
+          expect(output).toEqual(activationScenario.expectedOutput);
         });
       });
     });
@@ -200,6 +383,38 @@ describe('network activate chapter', () => {
 
           // Assert
           expect(output.length).toBe(expectedLength);
+        });
+      });
+
+      describe('when node storage order drifts away from the compiled acyclic schedule', () => {
+        it('still follows explicit IO roles and scheduled output order', () => {
+          // Arrange
+          const activationScenario =
+            createAcyclicScheduleAdoptionScenario('noTrace');
+
+          // Act
+          const output = activationScenario.network.noTraceActivate(
+            activationScenario.inputVector,
+          );
+
+          // Assert
+          expect(output).toEqual(activationScenario.expectedOutput);
+        });
+      });
+
+      describe('when recurrent node storage order drifts away from the compiled schedule', () => {
+        it('still follows the recurrent component order', () => {
+          // Arrange
+          const activationScenario =
+            createRecurrentScheduleAdoptionScenario('noTrace');
+
+          // Act
+          const output = activationScenario.network.noTraceActivate(
+            activationScenario.inputVector,
+          );
+
+          // Assert
+          expect(output).toEqual(activationScenario.expectedOutput);
         });
       });
     });
@@ -354,6 +569,47 @@ describe('network activate chapter', () => {
           expect(activateWithInvalidCollection).toThrow(
             /inputs must be an array/,
           );
+        });
+      });
+    });
+  });
+
+  describe('activation utility defaults', () => {
+    describe('given raw activation omits its optional flags', () => {
+      describe('when the helper is called directly', () => {
+        it('uses the default training and recursion-depth values', () => {
+          // Arrange
+          const network = Network.createMLP(2, [2], 1);
+
+          // Act
+          const outputValues = activateRawUtils.call(network, [0.1, 0.9]);
+
+          // Assert
+          expect(outputValues.length).toBe(1);
+        });
+      });
+    });
+
+    describe('given batch activation omits its optional training flag', () => {
+      describe('when the helper is called directly', () => {
+        it('uses the default non-training batch path', () => {
+          // Arrange
+          const network = Network.createMLP(2, [2], 1);
+
+          // Act
+          const batchOutput = activateBatchUtils.call(network, [[0.1, 0.9]]);
+
+          // Assert
+          expect(batchOutput.length).toBe(1);
+        });
+      });
+    });
+
+    describe('given gaussianRand is imported through the activate barrel', () => {
+      describe('when called with default rng', () => {
+        it('returns a finite number', () => {
+          const result = gaussianRand();
+          expect(Number.isFinite(result)).toBe(true);
         });
       });
     });

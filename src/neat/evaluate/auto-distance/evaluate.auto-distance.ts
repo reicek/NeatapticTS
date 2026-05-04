@@ -197,14 +197,15 @@ function applyAutoDistanceCoefficientTuning(
   }
 
   // Step 2: Compare the new variance to the moving baseline and adjust.
+  const previousConnectionVariance = controller._lastConnVar!;
   if (
     connectionVariance <
-    (controller._lastConnVar ?? 0) * VARIANCE_DECREASE_THRESHOLD
+    previousConnectionVariance * VARIANCE_DECREASE_THRESHOLD
   ) {
     applyDistanceCoefficientIncrease(controller, tuningBounds, adjustRate);
   } else if (
     connectionVariance >
-    (controller._lastConnVar ?? 0) * VARIANCE_INCREASE_THRESHOLD
+    previousConnectionVariance * VARIANCE_INCREASE_THRESHOLD
   ) {
     applyDistanceCoefficientDecrease(controller, tuningBounds, adjustRate);
   }

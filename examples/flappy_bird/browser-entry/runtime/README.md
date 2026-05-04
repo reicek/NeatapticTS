@@ -38,7 +38,7 @@ This function is intentionally orchestration-focused:
 4) expose a small stop/isRunning/done handle for callers.
 
 Parameters:
-- `container` - - Element id or HTMLElement to host the demo.
+- `container` - Element id or HTMLElement to host the demo.
 
 Returns: Run handle for stop/state control.
 
@@ -50,6 +50,27 @@ const runHandle = await start('flappy-bird-output');
 runHandle.stop();
 await runHandle.done;
 ```
+
+### startRuntimeSession
+
+```ts
+startRuntimeSession(
+  container: RuntimeContainerTarget,
+  runtimeStartOptions: RuntimeStartOptions,
+): Promise<FlappyBirdRunHandle>
+```
+
+Starts one Flappy browser runtime session with optional internal profile selection state.
+
+The public `start(...)` API always enters through this helper. Internal
+browser-UI restarts reuse it so architecture button clicks can launch a fresh
+worker-backed run without widening the public API surface.
+
+Parameters:
+- `container` - Element id or HTMLElement to host the demo.
+- `runtimeStartOptions` - Internal per-session runtime inputs.
+
+Returns: Run handle for the started browser session.
 
 ## browser-entry/runtime/runtime.types.ts
 
@@ -108,6 +129,10 @@ Shared runtime startup dependencies created before evolution begins.
 Once this context exists, the browser has everything it needs to launch the
 actual evolution/playback loop.
 
+### RuntimeStartOptions
+
+Optional runtime session inputs used by internal browser startup flows.
+
 ### RuntimeStartupPreviewHandle
 
 Internal legend-preview handle used while a pre-playback canvas card is active.
@@ -123,7 +148,9 @@ worker, and paint the initial HUD before evolution begins.
 ### createRuntimeStartConfig
 
 ```ts
-createRuntimeStartConfig(): RuntimeStartConfig
+createRuntimeStartConfig(
+  runtimeStartOptions: RuntimeStartOptions,
+): RuntimeStartConfig
 ```
 
 Resolves the static runtime configuration used during browser startup.
@@ -138,6 +165,7 @@ Returns: Runtime configuration derived from shared constants.
 ```ts
 createRuntimeStartContext(
   container: RuntimeContainerTarget,
+  runtimeStartOptions: RuntimeStartOptions,
 ): RuntimeStartContext
 ```
 
@@ -148,7 +176,7 @@ runtime has a host view, a worker channel, telemetry state, and a resolved
 configuration object.
 
 Parameters:
-- `container` - - Element id or HTMLElement to host the demo.
+- `container` - Element id or HTMLElement to host the demo.
 
 Returns: Shared runtime start context for setup and loop launch.
 
@@ -166,7 +194,7 @@ The HUD is seeded immediately so the page communicates that startup is in
 progress rather than appearing blank while the worker and loop are booting.
 
 Parameters:
-- `runtimeStartContext` - - Shared runtime start context.
+- `runtimeStartContext` - Shared runtime start context.
 
 Returns: Nothing.
 
@@ -183,7 +211,7 @@ finalizeRuntimeLegendPreview(
 Waits for a runtime legend preview to finish and then stops its animation loop.
 
 Parameters:
-- `legendPreviewHandle` - - Active preview handle.
+- `legendPreviewHandle` - Active preview handle.
 
 Returns: Nothing.
 
@@ -199,8 +227,8 @@ paintRuntimeStartupPreviewFrame(
 Paints one full startup-preview frame.
 
 Parameters:
-- `context` - - Target canvas 2D context.
-- `input` - - Render-ready startup-preview frame values.
+- `context` - Target canvas 2D context.
+- `input` - Render-ready startup-preview frame values.
 
 Returns: Nothing.
 
@@ -219,7 +247,7 @@ the startup loading screen, but with a bounded fade-in, hold, and fade-out
 lifecycle that automatically completes before playback starts.
 
 Parameters:
-- `options` - - Canvas, context, stop-state, and generation legend inputs.
+- `options` - Canvas, context, stop-state, and generation legend inputs.
 
 Returns: Nothing.
 
@@ -235,8 +263,8 @@ renderRuntimeStartupPreviewLegend(
 Draws the centered neon loading legend over the startup preview canvas.
 
 Parameters:
-- `context` - - Target canvas 2D context.
-- `input` - - Canvas geometry and resolved opacity for the legend.
+- `context` - Target canvas 2D context.
+- `input` - Canvas geometry and resolved opacity for the legend.
 
 Returns: Nothing.
 
@@ -249,6 +277,26 @@ resolveRuntimeStartupPreviewNowMs(): number
 Resolves the best available startup-preview clock source.
 
 Returns: Current timestamp in milliseconds.
+
+### startRuntimeEvolvingPreview
+
+```ts
+startRuntimeEvolvingPreview(
+  options: RuntimeGenerationPreviewOptions,
+): RuntimeStartupPreviewHandle
+```
+
+Starts the centered evolving-preview shown between completed generations.
+
+This preview keeps the simulation canvas visibly alive while the worker is
+evolving the next generation and there are intentionally no birds to render.
+Unlike the first-load startup preview, this one is driven by the request
+lifecycle of the next generation rather than by initial boot.
+
+Parameters:
+- `options` - Canvas, context, stop-state, and evolving legend inputs.
+
+Returns: Handle used to fade the overlay out once the next generation is ready.
 
 ### startRuntimeLegendPreview
 
@@ -265,7 +313,7 @@ generation title cards. The difference is whether the fade-out is scheduled
 up front or started later by calling `complete()`.
 
 Parameters:
-- `options` - - Canvas, legend text, and preview lifecycle inputs.
+- `options` - Canvas, legend text, and preview lifecycle inputs.
 
 Returns: Handle used to complete or stop the preview.
 
@@ -285,7 +333,7 @@ then fades a centered loading legend out before the first playback session is
 allowed to begin.
 
 Parameters:
-- `options` - - Canvas, context, and stop-state inputs for the startup preview.
+- `options` - Canvas, context, and stop-state inputs for the startup preview.
 
 Returns: Handle used to begin the exit transition or stop the preview outright.
 
@@ -303,8 +351,8 @@ resolveRuntimeStartupPreviewLegendFontSizePx(
 Resolves a responsive legend font size for the startup preview.
 
 Parameters:
-- `canvasWidthPx` - - Current preview canvas width.
-- `canvasHeightPx` - - Current preview canvas height.
+- `canvasWidthPx` - Current preview canvas width.
+- `canvasHeightPx` - Current preview canvas height.
 
 Returns: Responsive legend font size in pixels.
 
@@ -324,7 +372,7 @@ the animated background, and a responsive font size that stays readable on
 both compact and wide canvases.
 
 Parameters:
-- `input` - - Timing, canvas size, and scroll-speed inputs for the preview frame.
+- `input` - Timing, canvas size, and scroll-speed inputs for the preview frame.
 
 Returns: Resolved visual state for the current startup-preview frame.
 
@@ -369,8 +417,8 @@ just a thin closure layer over the mutable lifecycle state and startup
 context.
 
 Parameters:
-- `runtimeStartContext` - - Shared runtime start context.
-- `runtimeLifecycleState` - - Mutable lifecycle state for stop semantics.
+- `runtimeStartContext` - Shared runtime start context.
+- `runtimeLifecycleState` - Mutable lifecycle state for stop semantics.
 
 Returns: Public run handle exposed to callers.
 
@@ -398,9 +446,9 @@ This is the boundary between normal browser startup and the long-running async
 loop that drives evolution plus playback.
 
 Parameters:
-- `runtimeStartContext` - - Shared runtime start context.
-- `runtimeLifecycleState` - - Mutable lifecycle state used for stop checks.
-- `stop` - - Idempotent stop function bound to the current runtime handle.
+- `runtimeStartContext` - Shared runtime start context.
+- `runtimeLifecycleState` - Mutable lifecycle state used for stop checks.
+- `stop` - Idempotent stop function bound to the current runtime handle.
 
 Returns: Nothing.
 
@@ -410,8 +458,9 @@ Long-running evolution/playback orchestration for the browser runtime.
 
 This loop is the heart of the interactive demo. It repeatedly asks the worker
 for the next evolved generation, updates the HUD and network view, plays back
-that generation on the canvas, then folds the outcome into best-so-far
-browser state.
+that generation on the canvas, then folds the outcome into the generation
+summary section and the cross-generation history used by the architecture
+selector.
 
 ### finalizeStartupPreview
 
@@ -424,7 +473,7 @@ finalizeStartupPreview(
 Completes and tears down the startup preview when one is active.
 
 Parameters:
-- `startupPreviewHandle` - - Optional preview handle created for first-load boot.
+- `startupPreviewHandle` - Optional preview handle created for first-load boot.
 
 Returns: Nothing.
 
@@ -432,8 +481,8 @@ Returns: Nothing.
 
 ```ts
 requestGenerationWithOptionalStartupPreview(
-  options: { evolutionWorker: Worker; canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; isStopped: () => boolean; showStartupPreview: boolean; },
-): Promise<WorkerChannelGenerationPayload>
+  options: { evolutionWorker: Worker; canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; isStopped: () => boolean; showStartupPreview: boolean; waitLegendText: string; },
+): Promise<EvolutionGenerationPayload>
 ```
 
 Requests the next generation and optionally shows the first-load startup preview.
@@ -443,9 +492,24 @@ first generation is still booting. Later generations can reuse the same
 canvas style through the separate generation-presentation path.
 
 Parameters:
-- `options` - - Generation request inputs and preview-gating state.
+- `options` - Generation request inputs and preview-gating state.
 
 Returns: The next generation payload from the worker.
+
+### resolveEvolutionWaitLegendText
+
+```ts
+resolveEvolutionWaitLegendText(
+  generation: number,
+): string
+```
+
+Resolves the centered legend text shown while the worker evolves the next generation.
+
+Parameters:
+- `generation` - Next generation number expected from the worker.
+
+Returns: Evolving overlay text.
 
 ### resolveGenerationPopulationNetworks
 
@@ -463,10 +527,32 @@ order, so the browser can reuse this ordered cache to redraw the network
 panel when the red-bird champion changes.
 
 Parameters:
-- `generationPayload` - - Worker generation-ready payload.
-- `bestNetwork` - - Current generation best-network fallback.
+- `generationPayload` - Worker generation-ready payload.
+- `bestNetwork` - Current generation best-network fallback.
 
 Returns: Ordered population networks for the upcoming playback session.
+
+### resolveGenerationPopulationSize
+
+```ts
+resolveGenerationPopulationSize(
+  generationPopulationNetworks: default[],
+  fallbackPopulationSize: number,
+): number
+```
+
+Resolves which population size the browser HUD should display for the current generation.
+
+Browser sessions may start with one population budget and later downshift to a
+smaller one after a successful run. The worker generation payload already
+carries the actual serialized population, so the HUD should prefer that real
+size over the startup budget whenever it is available.
+
+Parameters:
+- `generationPopulationNetworks` - Browser-side cache of the current generation population.
+- `fallbackPopulationSize` - Startup budget used before a generation payload is available.
+
+Returns: Population size that should be displayed in the HUD for this generation.
 
 ### resolveGenerationPresentationLegendText
 
@@ -479,9 +565,28 @@ resolveGenerationPresentationLegendText(
 Resolves the centered legend text used to present one ready generation.
 
 Parameters:
-- `generation` - - Ready generation number from the worker payload.
+- `generation` - Ready generation number from the worker payload.
 
 Returns: Generation presentation legend text.
+
+### resolveGenerationSummaryHudValues
+
+```ts
+resolveGenerationSummaryHudValues(
+  input: { architectureLabel: string; bestFitness: number; playbackSummary?: PlaybackEpisodeSummary | undefined; },
+): { summaryHeader: string; summaryFitness: string; summaryWinnerFrames: string; summaryWinnerPipes: string; summaryAveragePipes: string; summaryP90Frames: string; summaryArchitecture: string; }
+```
+
+Resolves the generation-summary HUD values shown beside the live run counters.
+
+The summary intentionally shows metrics the worker already computes for the
+whole population so the browser can present higher-signal data without doing
+extra aggregation on the main thread.
+
+Parameters:
+- `input` - Summary source values for the active generation.
+
+Returns: HUD-ready summary values with placeholders until playback completes.
 
 ### runRuntimeEvolutionLoop
 
@@ -501,7 +606,7 @@ This rhythm makes the demo feel like a live training dashboard instead of a
 one-shot batch job.
 
 Parameters:
-- `options` - - Runtime evolution dependencies and mutable state accessors.
+- `options` - Runtime evolution dependencies and mutable state accessors.
 
 Returns: Nothing.
 
@@ -548,7 +653,7 @@ This is part of runtime teardown and prevents instrumentation observers from
 lingering after the demo has stopped.
 
 Parameters:
-- `telemetryState` - - Runtime telemetry state.
+- `telemetryState` - Runtime telemetry state.
 
 Returns: Nothing.
 
@@ -580,8 +685,8 @@ On each published playback frame, the runtime folds the new telemetry sample
 into rolling windows and emits human-readable HUD strings.
 
 Parameters:
-- `frameStats` - - Playback frame stats for the current frame.
-- `telemetryState` - - Runtime telemetry mutable state.
+- `frameStats` - Playback frame stats for the current frame.
+- `telemetryState` - Runtime telemetry mutable state.
 
 Returns: Formatted telemetry HUD values for this frame.
 
@@ -619,7 +724,7 @@ This keeps parity with the asciiMaze entry style:
 - one guarded auto-start for standalone HTML usage.
 
 Parameters:
-- `startRuntime` - - Runtime entry function.
+- `startRuntime` - Runtime entry function.
 
 Returns: Nothing.
 
@@ -659,7 +764,7 @@ The runtime accepts either a string id or a concrete element so this helper
 folds that loose input into one validated host node.
 
 Parameters:
-- `container` - - Element id or HTMLElement provided to runtime start.
+- `container` - Element id or HTMLElement provided to runtime start.
 
 Returns: Resolved host element.
 
@@ -677,7 +782,7 @@ The HUD should not need to understand arbitrary thrown values, so this helper
 normalizes anything throwable into one readable status line.
 
 Parameters:
-- `error` - - Unknown runtime exception value.
+- `error` - Unknown runtime exception value.
 
 Returns: Normalized status string for HUD output.
 
@@ -687,3 +792,210 @@ Error raised when the browser runtime host container cannot be resolved.
 
 This usually means the caller passed the wrong element id or attempted to
 start the demo before the target container existed in the DOM.
+
+## browser-entry/runtime/runtime.population-budget.ts
+
+### resolveRuntimePopulationBudget
+
+```ts
+resolveRuntimePopulationBudget(
+  architectureProfileId: ExampleArchitectureProfileId,
+): RuntimePopulationBudget
+```
+
+Resolves the browser evolution budget for one architecture profile.
+
+Sparse and NARX keep wider browser budgets than the dense MLP baseline so
+the interactive demo still has room to discover pipe-clearing behavior in a
+small number of generations. GRU and LSTM stay smaller than NARX so the live
+demo remains responsive, but LSTM keeps a broader flock than the old default
+because the heavier gate stack needs more exploration headroom.
+
+Parameters:
+- `architectureProfileId` - Selected shared Flappy profile id.
+
+Returns: Browser-local population and elitism settings.
+
+### RuntimePopulationBudget
+
+Browser-local population budget for one architecture profile.
+
+The browser demo intentionally gives different profiles different flock sizes
+because recurrent builders need more room than the lightweight MLP baseline,
+while still staying responsive enough for an interactive page.
+
+## browser-entry/runtime/runtime.architecture-profile.service.ts
+
+### isRuntimeArchitectureScoreBetter
+
+```ts
+isRuntimeArchitectureScoreBetter(
+  candidateBestScore: RuntimeArchitectureBestScore,
+  currentBestScore: RuntimeArchitectureBestScore | undefined,
+): boolean
+```
+
+Resolves whether a candidate browser score should replace the current record.
+
+Parameters:
+- `candidateBestScore` - Candidate score being considered.
+- `currentBestScore` - Current stored record for the profile.
+
+Returns: True when the candidate is strictly better.
+
+### persistRuntimeArchitectureHistory
+
+```ts
+persistRuntimeArchitectureHistory(
+  historyByProfileId: Partial<Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>>,
+  storage: RuntimeArchitectureHistoryStorage | undefined,
+): void
+```
+
+Persists the current browser-local architecture record table when storage exists.
+
+Parameters:
+- `historyByProfileId` - Local history table to persist.
+- `storage` - Optional storage override for tests.
+
+Returns: Nothing.
+
+### resolveAvailableRuntimeArchitectureProfiles
+
+```ts
+resolveAvailableRuntimeArchitectureProfiles(): ExampleArchitectureProfile[]
+```
+
+Resolves the currently approved shared Flappy architecture profiles.
+
+Returns: Approved shared profiles in the curated Flappy selector order.
+
+### resolveRuntimeArchitectureHistory
+
+```ts
+resolveRuntimeArchitectureHistory(
+  storage: RuntimeArchitectureHistoryStorage | undefined,
+): Partial<Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>>
+```
+
+Reads persisted local browser architecture records when storage is available.
+
+Parameters:
+- `storage` - Optional storage override for tests.
+
+Returns: Previously stored local records or an empty table.
+
+### resolveRuntimeArchitectureHistoryLeaderProfileId
+
+```ts
+resolveRuntimeArchitectureHistoryLeaderProfileId(
+  historyByProfileId: Partial<Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>>,
+): ExampleArchitectureProfileId | undefined
+```
+
+Resolves the highest-scoring architecture profile from the local history table.
+
+Parameters:
+- `historyByProfileId` - Browser-local history table.
+
+Returns: Leading profile id when at least one stored record exists.
+
+### resolveRuntimeArchitectureHistoryStorage
+
+```ts
+resolveRuntimeArchitectureHistoryStorage(): RuntimeArchitectureHistoryStorage | undefined
+```
+
+Resolves browser storage for Flappy local architecture history when available.
+
+Returns: Browser storage implementation or `undefined` outside the browser.
+
+### resolveRuntimeArchitectureSelectorItems
+
+```ts
+resolveRuntimeArchitectureSelectorItems(
+  options: { availableProfiles: ExampleArchitectureProfile[]; selectedProfileId: ExampleArchitectureProfileId; historyByProfileId: Partial<Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>>; },
+): HostArchitectureSelectorItem[]
+```
+
+Resolves render-ready selector items from approved profiles and local history.
+
+Parameters:
+- `options` - Approved profile set, selected profile id, and local history table.
+
+Returns: Render-ready selector items for the Flappy host UI.
+
+### resolveRuntimeArchitectureTooltipBodyLines
+
+```ts
+resolveRuntimeArchitectureTooltipBodyLines(
+  profile: ExampleArchitectureProfile,
+): string[]
+```
+
+Resolves the educational tooltip copy shown for one Flappy architecture profile.
+
+Parameters:
+- `profile` - Shared Flappy architecture profile.
+
+Returns: Short, punchy tooltip lines for the selector button.
+
+### resolveRuntimeArchitectureTooltipHeading
+
+```ts
+resolveRuntimeArchitectureTooltipHeading(
+  profile: ExampleArchitectureProfile,
+): string
+```
+
+Resolves the punchy tooltip heading used by the Flappy architecture selector.
+
+Parameters:
+- `profile` - Shared Flappy architecture profile.
+
+Returns: Tooltip heading shown above the selector button.
+
+### resolveSelectedRuntimeArchitectureProfile
+
+```ts
+resolveSelectedRuntimeArchitectureProfile(
+  profileId: ExampleArchitectureProfileId | undefined,
+): ExampleArchitectureProfile
+```
+
+Resolves the selected shared Flappy profile for the next browser session.
+
+Parameters:
+- `profileId` - Optional requested profile id.
+
+Returns: Resolved Flappy-ready shared profile.
+
+### RuntimeArchitectureBestScore
+
+Best-known local browser record for one Flappy architecture profile.
+
+### RuntimeArchitectureHistoryByProfileId
+
+Local-browser record table keyed by the shared Flappy architecture profile id.
+
+### updateRuntimeArchitectureHistory
+
+```ts
+updateRuntimeArchitectureHistory(
+  historyByProfileId: Partial<Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>>,
+  profileId: ExampleArchitectureProfileId,
+  candidateBestScore: RuntimeArchitectureBestScore,
+): Partial<Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>>
+```
+
+Folds one session-best Flappy record into the persisted architecture history table.
+
+Records compare by pipes passed first and frames survived as a stable
+tiebreaker so the selector caption reflects the most meaningful browser score.
+
+Parameters:
+- `historyByProfileId` - Existing browser-local history table.
+- `profileId` - Shared architecture profile receiving the score update.
+- `candidateBestScore` - Session-best browser score for the profile.
+
+Returns: Updated history table when the candidate improves the stored record.

@@ -7,29 +7,29 @@ import { FLAPPY_NEON_PALETTE } from './constants.palette';
 /**
  * Browser HUD stats table constants.
  *
- * This module defines table ordering, hidden groups, and row metadata for the
- * runtime status panel shown during playback.
+ * This module defines the teaching layout for the browser HUD: a live
+ * current-run block, a generation-summary block fed by worker-side aggregates,
+ * and an optional instrumentation block for runtime diagnostics.
  */
 
-/** Ordered keys for the runtime stats table. */
+/** Ordered keys for the runtime stats table in rendered top-to-bottom order. */
 export const FLAPPY_STATS_KEYS = [
   'currentHeader',
   'currentFrames',
   'currentPipes',
-  'currentMaxFrames',
-  'currentMaxPipes',
   'currentArchitecture',
+  'summaryHeader',
+  'summaryFitness',
+  'summaryWinnerFrames',
+  'summaryWinnerPipes',
+  'summaryAveragePipes',
+  'summaryP90Frames',
+  'summaryArchitecture',
   'telemetryHeader',
   'telemetryActivationsPerFrame',
   'telemetrySimulationStepsPerRaf',
   'telemetryHudUpdatesPerSecond',
   'telemetryMinorGcPerMinute',
-  'bestHeader',
-  'bestFrames',
-  'bestPipes',
-  'bestMaxFrames',
-  'bestMaxPipes',
-  'bestArchitecture',
   'status',
   'birds',
 ] as const;
@@ -39,20 +39,19 @@ export const FLAPPY_STATS_ROWS: readonly FlappyStatsRowDescriptor[] = [
   { key: 'currentHeader', label: 'Current run' },
   { key: 'currentFrames', label: 'Frames' },
   { key: 'currentPipes', label: 'Pipes' },
-  { key: 'currentMaxFrames', label: 'Max frames' },
-  { key: 'currentMaxPipes', label: 'Max pipes' },
   { key: 'currentArchitecture', label: 'NN architecture' },
+  { key: 'summaryHeader', label: 'Generation summary' },
+  { key: 'summaryFitness', label: 'Fitness' },
+  { key: 'summaryWinnerFrames', label: 'Winner frames' },
+  { key: 'summaryWinnerPipes', label: 'Winner pipes' },
+  { key: 'summaryAveragePipes', label: 'Avg pipes' },
+  { key: 'summaryP90Frames', label: 'P90 frames' },
+  { key: 'summaryArchitecture', label: 'NN architecture' },
   { key: 'telemetryHeader', label: 'Instrumentation' },
   { key: 'telemetryActivationsPerFrame', label: 'Act/frame' },
   { key: 'telemetrySimulationStepsPerRaf', label: 'Steps/RAF' },
   { key: 'telemetryHudUpdatesPerSecond', label: 'HUD upd/s' },
   { key: 'telemetryMinorGcPerMinute', label: 'Minor GC/min' },
-  { key: 'bestHeader', label: 'Best run' },
-  { key: 'bestFrames', label: 'Frames' },
-  { key: 'bestPipes', label: 'Pipes' },
-  { key: 'bestMaxFrames', label: 'Max frames' },
-  { key: 'bestMaxPipes', label: 'Max pipes' },
-  { key: 'bestArchitecture', label: 'NN architecture' },
   { key: 'status', label: 'Status' },
   { key: 'birds', label: 'Birds' },
 ] as const;
@@ -69,14 +68,14 @@ export const FLAPPY_INSTRUMENTATION_STATS_KEYS: readonly FlappyStatsKey[] = [
 /** Stats keys rendered as section headers rather than key/value rows. */
 export const FLAPPY_STATS_SECTION_KEYS: readonly FlappyStatsKey[] = [
   'currentHeader',
+  'summaryHeader',
   'telemetryHeader',
-  'bestHeader',
 ] as const;
 
 /** Stats keys whose values should render multi-line architecture content. */
 export const FLAPPY_STATS_ARCHITECTURE_KEYS: readonly FlappyStatsKey[] = [
   'currentArchitecture',
-  'bestArchitecture',
+  'summaryArchitecture',
 ] as const;
 
 /** Border style for regular stats rows. */

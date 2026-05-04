@@ -21,6 +21,12 @@ Stagnation answers the longer-horizon survival question, "has this species
 earned another generation in the run?" Together they form the post-
 assignment pressure layer beneath later selection and maintenance steps.
 
+Both helpers are deliberate controller-policy overlays. Fitness sharing
+rewrites the current generation's score view within each species, and
+stagnation updates controller-owned species bookkeeping such as `bestScore`
+and `lastImproved`. Neither helper changes compatibility distance or the
+structural identity used to form species.
+
 Read the exported helpers in this order:
 
 1. {@link applyFitnessSharing} adjusts member scores inside each already-
@@ -78,9 +84,13 @@ producing a softer gradient of pressure. Uniform sharing says the controller
 only needs a simple crowding penalty, so every member of the species carries
 the same share burden regardless of fine-grained distance.
 
+Read the score writes here as shared-fitness overlays for this generation's
+later selection and allocation steps, not as a replacement for the raw
+evaluation evidence that assignment started from.
+
 Parameters:
-- `speciationContext` - - Neat instance context with species and distance function.
-- `sharingSigma` - - Sharing radius used for distance weighting.
+- `speciationContext` - Neat instance context with species and distance function.
+- `sharingSigma` - Sharing radius used for distance weighting.
 
 Returns: Nothing.
 
@@ -117,10 +127,13 @@ deterministic: the same scored roster yields the same best-member read, which
 means best-score updates and pruning decisions do not drift with incidental
 member ordering.
 
+The resulting `bestScore` and `lastImproved` values belong to species-side
+controller bookkeeping, not to the canonical genome contract.
+
 Parameters:
-- `speciationContext` - - Neat instance context with species array and generation counter.
-- `stagnationWindow` - - Allowed stagnation window.
-- `sortSpeciesMembers` - - Sort function for species members.
+- `speciationContext` - Neat instance context with species array and generation counter.
+- `stagnationWindow` - Allowed stagnation window.
+- `sortSpeciesMembers` - Sort function for species members.
 
 Returns: Nothing.
 

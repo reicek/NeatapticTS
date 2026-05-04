@@ -5,31 +5,61 @@ import type {
   CrossoverContext,
   CrossoverNodeBuildContext,
   GeneticNetwork,
+  NetworkTopologyIntent,
   ParentMetrics,
 } from '../network.types';
+import { hasFeedForwardTopologyContract } from '../topology/network.topology.contract.utils';
 import {
   PARENT_COMPATIBILITY_ERROR_MESSAGE,
   RANDOM_BINARY_SELECTION_THRESHOLD,
   type RandomGenerator,
 } from './network.genetic.utils.types';
 import { NetworkGeneticParentCompatibilityError } from './network.genetic.errors';
-import {
-  chooseConnectionGenes,
-  collectConnectionGenes,
-} from './network.genetic.selection.utils';
+import { chooseConnectionGenes } from './network.genetic.selection.utils';
+
+const OFFSPRING_SCAFFOLD_SEED = 0;
+const NEUTRAL_NODE_CONSTRUCTOR_RANDOM = () => 0.5;
+
+interface ParentNodeRegions {
+  inputNodes: Node[];
+  hiddenNodes: Node[];
+  outputNodes: Node[];
+}
+
+/**
+ * Crossover setup helpers for the network genetic boundary.
+ *
+ * This file prepares the immutable context used by the rest of the crossover
+ * pipeline.
+ *
+ * Key responsibilities:
+ *
+ * - Validate that parents are compatible (same input/output sizes).
+ * - Normalize parent runtime shapes and establish deterministic node indexing.
+ * - Resolve the offspring topology intent conservatively.
+ * - Resolve the crossover RNG source:
+ *   - prefer an explicitly injected RNG (controller-owned determinism),
+ *   - otherwise fall back to the parent runtime `_rand` hook,
+ *   - finally fall back to `Math.random` for standalone use.
+ *
+ * This separation keeps the public crossover surface compact while giving the
+ * evolve controller one clear seam for deterministic replay.
+ */
 
 /**
  * Creates the immutable crossover baseline context.
  *
- * @param parentNetwork1 - First parent network.
- * @param parentNetwork2 - Second parent network.
- * @param equal - Equal-treatment mode flag.
+ * @param parentNetwork1 First parent network.
+ * @param parentNetwork2 Second parent network.
+ * @param equal Equal-treatment mode flag.
+ * @param injectedRandomGenerator Optional explicit crossover RNG supplied by the evolve controller.
  * @returns Initialized crossover context.
  */
 export function createCrossoverContext(
   parentNetwork1: Network,
   parentNetwork2: Network,
   equal: boolean,
+  injectedRandomGenerator?: RandomGenerator,
 ): CrossoverContext {
   // Step 1: Validate compatibility.
   validateParentCompatibility(parentNetwork1, parentNetwork2);
@@ -39,9 +69,14 @@ export function createCrossoverContext(
   const parent2 = asGeneticNetwork(parentNetwork2);
 
   // Step 3: Create the empty offspring scaffold.
+  const offspringTopologyIntent = resolveOffspringTopologyIntent(
+    parentNetwork1,
+    parentNetwork2,
+  );
   const offspring = createOffspringScaffold(
     parentNetwork1.input,
     parentNetwork1.output,
+    offspringTopologyIntent,
   );
 
   // Step 4: Resolve metrics and deterministic parent indices.
@@ -54,7 +89,8 @@ export function createCrossoverContext(
   assignNodeIndexes(parent2.nodes);
 
   // Step 5: Resolve random source.
-  const randomGenerator = getRandomGenerator(parent1);
+  const randomGenerator =
+    injectedRandomGenerator ?? getRandomGenerator(parent1);
 
   return {
     parentNetwork1,
@@ -71,7 +107,7 @@ export function createCrossoverContext(
 /**
  * Creates the node-build context for offspring node selection.
  *
- * @param context - Crossover baseline context.
+ * @param context Crossover baseline context.
  * @returns Node-build context.
  */
 export function createNodeBuildContext(
@@ -91,7 +127,7 @@ export function createNodeBuildContext(
 /**
  * Builds and reindexes offspring nodes.
  *
- * @param nodeContext - Node-build context.
+ * @param nodeContext Node-build context.
  * @returns Nothing.
  */
 export function assignOffspringNodes(
@@ -107,25 +143,27 @@ export function assignOffspringNodes(
     crossoverContext.randomGenerator,
   );
   assignNodeIndexes(crossoverContext.offspring.nodes);
+  crossoverContext.offspring.refreshExplicitIORoles();
 }
 
 /**
  * Chooses all offspring connection genes from both parents.
  *
- * @param context - Crossover baseline context.
+ * Innovation-aligned heredity selection now lives behind the strict genome
+ * boundary. This runtime seam now returns only the stable materialization
+ * descriptor consumed by the phenotype builder, without carrying parent-local
+ * node-index hints across the adapter.
+ *
+ * @param context Crossover baseline context.
  * @returns Chosen connection genes.
  */
 export function chooseOffspringConnectionGenes(
   context: CrossoverContext,
 ): ConnectionGene[] {
-  const parent1Genes = collectConnectionGenes(context.parent1);
-  const parent2Genes = collectConnectionGenes(context.parent2);
   return chooseConnectionGenes(
     context.parent1,
     context.parent2,
     context.parentMetrics,
-    parent1Genes,
-    parent2Genes,
     context.equal,
     context.randomGenerator,
   );
@@ -134,8 +172,8 @@ export function chooseOffspringConnectionGenes(
 /**
  * Validates parent compatibility for crossover.
  *
- * @param parentNetwork1 - First parent candidate.
- * @param parentNetwork2 - Second parent candidate.
+ * @param parentNetwork1 First parent candidate.
+ * @param parentNetwork2 Second parent candidate.
  * @returns Nothing.
  * @throws If input/output dimensions differ.
  */
@@ -156,7 +194,7 @@ function validateParentCompatibility(
 /**
  * Coerces a network to the internal genetic runtime shape.
  *
- * @param network - Source network.
+ * @param network Source network.
  * @returns Network with runtime genetic properties.
  */
 function asGeneticNetwork(network: Network): GeneticNetwork {
@@ -166,31 +204,59 @@ function asGeneticNetwork(network: Network): GeneticNetwork {
 /**
  * Creates an empty offspring scaffold with reset runtime arrays.
  *
- * @param inputSize - Input count.
- * @param outputSize - Output count.
+ * @param inputSize Input count.
+ * @param outputSize Output count.
+ * @param topologyIntent Topology policy inherited by the offspring scaffold.
  * @returns Initialized offspring runtime object.
  */
 function createOffspringScaffold(
   inputSize: number,
   outputSize: number,
+  topologyIntent: NetworkTopologyIntent,
 ): GeneticNetwork {
   // Step 1: Build a fresh Network instance.
-  const offspring = new Network(inputSize, outputSize) as GeneticNetwork;
+  const offspring = new Network(inputSize, outputSize, {
+    seed: OFFSPRING_SCAFFOLD_SEED,
+    topologyIntent,
+  }) as GeneticNetwork;
 
   // Step 2: Reset mutable runtime arrays used by genetic operators.
   offspring.connections = [];
   offspring.nodes = [];
   offspring.selfconns = [];
   offspring.gates = [];
+  offspring.refreshExplicitIORoles();
   return offspring;
+}
+
+/**
+ * Resolves the topology policy to preserve on the offspring scaffold.
+ *
+ * A mixed-parent crossover should not silently downgrade recurrent-capable
+ * parents back to feed-forward mode, because that would prune valid inherited
+ * genes during materialization. The offspring therefore stays feed-forward only
+ * when both parents advertise the feed-forward contract.
+ *
+ * @param parentNetwork1 First parent network.
+ * @param parentNetwork2 Second parent network.
+ * @returns Offspring topology intent.
+ */
+function resolveOffspringTopologyIntent(
+  parentNetwork1: Network,
+  parentNetwork2: Network,
+): NetworkTopologyIntent {
+  return hasFeedForwardTopologyContract(parentNetwork1) &&
+    hasFeedForwardTopologyContract(parentNetwork2)
+    ? 'feed-forward'
+    : 'unconstrained';
 }
 
 /**
  * Computes common parent metrics reused across helper functions.
  *
- * @param parent1 - First parent network.
- * @param parent2 - Second parent network.
- * @param outputSize - Shared output size.
+ * @param parent1 First parent network.
+ * @param parent2 Second parent network.
+ * @param outputSize Shared output size.
  * @returns Parent metrics.
  */
 function resolveParentMetrics(
@@ -210,26 +276,19 @@ function resolveParentMetrics(
 /**
  * Resolves the random generator used by crossover decisions.
  *
- * @param parentNetwork - Parent network that may provide a deterministic `_rand` source.
+ * @param parentNetwork Parent network that may provide a deterministic `_rand` source.
  * @returns Random function.
  */
 function getRandomGenerator(parentNetwork: Network): RandomGenerator {
-  const networkWithDynamicFields = parentNetwork as Record<
-    string,
-    RandomGenerator | number | undefined
-  >;
-  const dynamicRandomCandidate = networkWithDynamicFields._rand;
-  return typeof dynamicRandomCandidate === 'function'
-    ? dynamicRandomCandidate
-    : Math.random;
+  return (parentNetwork as unknown as { _rand: RandomGenerator })._rand;
 }
 
 /**
  * Determines offspring node count from fitness/equality policy.
  *
- * @param equal - Whether equal treatment mode is enabled.
- * @param parentMetrics - Parent metrics.
- * @param randomGenerator - Random generator.
+ * @param equal Whether equal treatment mode is enabled.
+ * @param parentMetrics Parent metrics.
+ * @param randomGenerator Random generator.
  * @returns Offspring node count.
  */
 function determineOffspringNodeCount(
@@ -256,7 +315,7 @@ function determineOffspringNodeCount(
 /**
  * Assigns contiguous indices to a node list.
  *
- * @param nodes - Nodes to reindex.
+ * @param nodes Nodes to reindex.
  * @returns Nothing.
  */
 function assignNodeIndexes(nodes: Node[]): void {
@@ -268,12 +327,12 @@ function assignNodeIndexes(nodes: Node[]): void {
 /**
  * Builds the offspring node list by selecting genes per slot.
  *
- * @param parent1 - First parent.
- * @param parent2 - Second parent.
- * @param parentMetrics - Parent metrics.
- * @param offspringNodeCount - Target offspring size.
- * @param equal - Equal-treatment mode.
- * @param randomGenerator - Random generator.
+ * @param parent1 First parent.
+ * @param parent2 Second parent.
+ * @param parentMetrics Parent metrics.
+ * @param offspringNodeCount Target offspring size.
+ * @param equal Equal-treatment mode.
+ * @param randomGenerator Random generator.
  * @returns Cloned offspring node genes.
  */
 function buildOffspringNodes(
@@ -284,6 +343,8 @@ function buildOffspringNodes(
   equal: boolean,
   randomGenerator: RandomGenerator,
 ): Node[] {
+  const parent1NodeRegions = createParentNodeRegions(parent1.nodes);
+  const parent2NodeRegions = createParentNodeRegions(parent2.nodes);
   const offspringNodes: Node[] = [];
 
   // Step 1: Select parent node genes by slot and clone structural properties.
@@ -291,8 +352,8 @@ function buildOffspringNodes(
     const selectedNode = selectNodeGeneAtIndex(
       nodeIndex,
       offspringNodeCount,
-      parent1,
-      parent2,
+      parent1NodeRegions,
+      parent2NodeRegions,
       parentMetrics,
       equal,
       randomGenerator,
@@ -308,43 +369,41 @@ function buildOffspringNodes(
 /**
  * Selects a node gene for a specific offspring slot.
  *
- * @param nodeIndex - Slot index.
- * @param offspringNodeCount - Total offspring slots.
- * @param parent1 - First parent.
- * @param parent2 - Second parent.
- * @param parentMetrics - Parent metrics.
- * @param equal - Equal-treatment mode.
- * @param randomGenerator - Random generator.
+ * @param nodeIndex Slot index.
+ * @param offspringNodeCount Total offspring slots.
+ * @param parent1NodeRegions First parent node partitions.
+ * @param parent2NodeRegions Second parent node partitions.
+ * @param parentMetrics Parent metrics.
+ * @param equal Equal-treatment mode.
+ * @param randomGenerator Random generator.
  * @returns Selected parent node gene, when present.
  */
 function selectNodeGeneAtIndex(
   nodeIndex: number,
   offspringNodeCount: number,
-  parent1: GeneticNetwork,
-  parent2: GeneticNetwork,
+  parent1NodeRegions: ParentNodeRegions,
+  parent2NodeRegions: ParentNodeRegions,
   parentMetrics: ParentMetrics,
   equal: boolean,
   randomGenerator: RandomGenerator,
 ): Node | undefined {
-  if (nodeIndex < parent1.input) {
-    return selectInputNodeGene(nodeIndex, parent1);
+  if (nodeIndex < parent1NodeRegions.inputNodes.length) {
+    return selectInputNodeGene(nodeIndex, parent1NodeRegions);
   }
 
   if (nodeIndex >= offspringNodeCount - parentMetrics.outputSize) {
     return selectOutputNodeGene(
-      nodeIndex,
-      offspringNodeCount,
-      parent1,
-      parent2,
-      parentMetrics,
+      nodeIndex - (offspringNodeCount - parentMetrics.outputSize),
+      parent1NodeRegions,
+      parent2NodeRegions,
       randomGenerator,
     );
   }
 
   return selectHiddenNodeGene(
-    nodeIndex,
-    parent1,
-    parent2,
+    nodeIndex - parent1NodeRegions.inputNodes.length,
+    parent1NodeRegions,
+    parent2NodeRegions,
     parentMetrics,
     equal,
     randomGenerator,
@@ -354,45 +413,38 @@ function selectNodeGeneAtIndex(
 /**
  * Selects an input-region node gene.
  *
- * @param nodeIndex - Slot index.
- * @param parent1 - First parent.
+ * @param nodeIndex Slot index.
+ * @param parent1 First parent.
  * @returns Parent 1 input node gene.
  */
 function selectInputNodeGene(
   nodeIndex: number,
-  parent1: GeneticNetwork,
+  parent1NodeRegions: ParentNodeRegions,
 ): Node | undefined {
-  return nodeIndex < parent1.nodes.length
-    ? parent1.nodes[nodeIndex]
-    : undefined;
+  return parent1NodeRegions.inputNodes.at(nodeIndex);
 }
 
 /**
- * Selects an output-region node gene using tail alignment.
+ * Selects an output-region node gene by interface ordinal.
  *
- * @param nodeIndex - Slot index.
- * @param offspringNodeCount - Target offspring size.
- * @param parent1 - First parent.
- * @param parent2 - Second parent.
- * @param parentMetrics - Parent metrics.
- * @param randomGenerator - Random generator.
+ * Runtime parents can drift away from strict input-hidden-output ordering after
+ * structural edits. This runtime shelf therefore reads outputs from canonical
+ * per-type partitions rather than trusting the raw tail slots on `nodes[]`.
+ *
+ * @param outputOrdinal Output-slot ordinal.
+ * @param parent1NodeRegions First parent node partitions.
+ * @param parent2NodeRegions Second parent node partitions.
+ * @param randomGenerator Random generator.
  * @returns Selected output node gene.
  */
 function selectOutputNodeGene(
-  nodeIndex: number,
-  offspringNodeCount: number,
-  parent1: GeneticNetwork,
-  parent2: GeneticNetwork,
-  parentMetrics: ParentMetrics,
+  outputOrdinal: number,
+  parent1NodeRegions: ParentNodeRegions,
+  parent2NodeRegions: ParentNodeRegions,
   randomGenerator: RandomGenerator,
 ): Node | undefined {
-  const alignedParent1Index =
-    parentMetrics.nodeCount1 - (offspringNodeCount - nodeIndex);
-  const alignedParent2Index =
-    parentMetrics.nodeCount2 - (offspringNodeCount - nodeIndex);
-
-  const parent1Node = getAlignedOutputNode(parent1, alignedParent1Index);
-  const parent2Node = getAlignedOutputNode(parent2, alignedParent2Index);
+  const parent1Node = parent1NodeRegions.outputNodes.at(outputOrdinal);
+  const parent2Node = parent2NodeRegions.outputNodes.at(outputOrdinal);
 
   if (parent1Node && parent2Node) {
     return randomGenerator() >= RANDOM_BINARY_SELECTION_THRESHOLD
@@ -404,45 +456,26 @@ function selectOutputNodeGene(
 }
 
 /**
- * Reads an aligned output candidate node if index is in the valid non-input range.
- *
- * @param parent - Parent network.
- * @param alignedIndex - Tail-aligned index.
- * @returns Output candidate node.
- */
-function getAlignedOutputNode(
-  parent: GeneticNetwork,
-  alignedIndex: number,
-): Node | undefined {
-  if (alignedIndex < parent.input || alignedIndex >= parent.nodes.length) {
-    return undefined;
-  }
-  return parent.nodes[alignedIndex];
-}
-
-/**
  * Selects a hidden-region node gene.
  *
- * @param nodeIndex - Slot index.
- * @param parent1 - First parent.
- * @param parent2 - Second parent.
- * @param parentMetrics - Parent metrics.
- * @param equal - Equal-treatment mode.
- * @param randomGenerator - Random generator.
+ * @param hiddenOrdinal Hidden-slot ordinal.
+ * @param parent1NodeRegions First parent node partitions.
+ * @param parent2NodeRegions Second parent node partitions.
+ * @param parentMetrics Parent metrics.
+ * @param equal Equal-treatment mode.
+ * @param randomGenerator Random generator.
  * @returns Selected hidden node gene.
  */
 function selectHiddenNodeGene(
-  nodeIndex: number,
-  parent1: GeneticNetwork,
-  parent2: GeneticNetwork,
+  hiddenOrdinal: number,
+  parent1NodeRegions: ParentNodeRegions,
+  parent2NodeRegions: ParentNodeRegions,
   parentMetrics: ParentMetrics,
   equal: boolean,
   randomGenerator: RandomGenerator,
 ): Node | undefined {
-  const parent1Node =
-    nodeIndex < parentMetrics.nodeCount1 ? parent1.nodes[nodeIndex] : undefined;
-  const parent2Node =
-    nodeIndex < parentMetrics.nodeCount2 ? parent2.nodes[nodeIndex] : undefined;
+  const parent1Node = parent1NodeRegions.hiddenNodes.at(hiddenOrdinal);
+  const parent2Node = parent2NodeRegions.hiddenNodes.at(hiddenOrdinal);
 
   if (parent1Node && parent2Node) {
     return randomGenerator() >= RANDOM_BINARY_SELECTION_THRESHOLD
@@ -462,13 +495,63 @@ function selectHiddenNodeGene(
 }
 
 /**
+ * Partitions one runtime node list into canonical IO and hidden shelves.
+ *
+ * Crossover setup still owns runtime node selection, but it must not assume the
+ * raw `nodes[]` array already keeps outputs at the tail. Structural edits can
+ * preserve a valid phenotype while drifting away from that canonical order.
+ * Reading through per-type partitions keeps output-slot inheritance stable
+ * without mutating the parent runtime graph.
+ *
+ * @param nodes Ordered runtime node list.
+ * @returns Canonical node partitions.
+ */
+function createParentNodeRegions(nodes: Node[]): ParentNodeRegions {
+  const inputNodes: Node[] = [];
+  const hiddenNodes: Node[] = [];
+  const outputNodes: Node[] = [];
+
+  for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+    const node = nodes[nodeIndex];
+
+    if (node.type === 'input') {
+      inputNodes.push(node);
+      continue;
+    }
+
+    if (node.type === 'output') {
+      outputNodes.push(node);
+      continue;
+    }
+
+    hiddenNodes.push(node);
+  }
+
+  return {
+    inputNodes,
+    hiddenNodes,
+    outputNodes,
+  };
+}
+
+/**
  * Clones node structural gene attributes.
  *
- * @param sourceNode - Source node gene.
+ * Historical node identity must survive crossover even though the offspring is
+ * rebuilt as a fresh runtime graph. Preserving `geneId` here lets later
+ * materialization resolve inherited connection endpoints by stable gene identity
+ * instead of by whatever transient slot the node lands in after reindexing.
+ *
+ * @param sourceNode Source node gene.
  * @returns Cloned node.
  */
 function cloneNodeGene(sourceNode: Node): Node {
-  const clonedNode = new Node(sourceNode.type);
+  const clonedNode = new Node(
+    sourceNode.type,
+    undefined,
+    NEUTRAL_NODE_CONSTRUCTOR_RANDOM,
+  );
+  clonedNode.geneId = sourceNode.geneId;
   clonedNode.bias = sourceNode.bias;
   clonedNode.squash = sourceNode.squash;
   return clonedNode;

@@ -118,6 +118,12 @@ The helper keeps the top-level flow deliberately linear:
 3. compare aligned innovations,
 4. fold the resulting metrics into one distance.
 
+Native genomes now treat missing connection innovations as a hard failure so
+the compatibility layer cannot silently normalize malformed controller-owned
+structure. Deliberate fallback comparison remains available only for genomes
+that opt into `_compatInnovationMode = 'allow-fallback'`, and those
+synthetic-id views stay transient rather than populating `_compatCache`.
+
 The detailed comparison mechanics live in `core/` so this function can stay
 focused on orchestration and interpretation. That split also makes the root
 chapter easier to read alongside `speciation/`, where the same distance helps
@@ -127,9 +133,9 @@ different question: not whether structures are close, but whether recent
 ancestry is still meaningfully shared.
 
 Parameters:
-- `this` - - NEAT context holding generation state, options, and caches.
-- `genomeA` - - First genome to compare.
-- `genomeB` - - Second genome to compare.
+- `this` - NEAT context holding generation state, options, and caches.
+- `genomeA` - First genome to compare.
+- `genomeB` - Second genome to compare.
 
 Returns: Compatibility distance where lower values mean more similar genomes
 and higher values suggest stronger structural separation.
@@ -162,14 +168,16 @@ still proceed instead of silently dropping structure from the distance read.
 
 Interpret the fallback as a bridge, not as a replacement for properly tracked
 innovations. It keeps compatibility useful for legacy, test, or partially
-normalized genomes, but explicit innovation numbers remain the source of
-truth whenever they are available. A fallback match should therefore be read
-as "these connections occupy the same directed slot" rather than "these two
-genes are proven to share the same historical innovation event."
+normalized genomes that deliberately opt into
+`_compatInnovationMode = 'allow-fallback'`, but explicit innovation numbers
+remain the source of truth for native controller genomes. A fallback match
+should therefore be read as "these connections occupy the same directed
+slot" rather than "these two genes are proven to share the same historical
+innovation event."
 
 Parameters:
-- `this` - - NEAT context kept for symmetry with the other compatibility helpers.
-- `connection` - - Connection object expected to contain `from.index` and `to.index`.
+- `this` - NEAT context kept for symmetry with the other compatibility helpers.
+- `connection` - Connection object expected to contain `from.index` and `to.index`.
 
 Returns: Numeric innovation id derived from the directional endpoint pair.
 

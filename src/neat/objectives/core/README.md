@@ -122,7 +122,7 @@ the default case and makes suppression an explicit opt-out rather than an
 accidental side effect of enabling richer objective configuration later.
 
 Parameters:
-- `neatInstance` - - NEAT host exposing objective settings.
+- `neatInstance` - NEAT host exposing objective settings.
 
 Returns: Default objective descriptors.
 
@@ -145,7 +145,7 @@ contain raw candidates, but the resolved objective list only receives entries
 that are both contextually enabled and structurally safe.
 
 Parameters:
-- `neatInstance` - - NEAT host exposing objective settings.
+- `neatInstance` - NEAT host exposing objective settings.
 
 Returns: Valid user objective descriptors.
 
@@ -168,7 +168,7 @@ later logic can assume the container exists without scattering defensive
 object creation throughout the file.
 
 Parameters:
-- `neatInstance` - - NEAT host receiving the multi-objective container.
+- `neatInstance` - NEAT host receiving the multi-objective container.
 
 Returns: Initialized multi-objective options.
 
@@ -189,7 +189,7 @@ It exists so registration code can talk about replacing objectives by key
 instead of repeatedly guarding against `undefined` lists.
 
 Parameters:
-- `multiObjectiveOptions` - - Multi-objective container to hydrate.
+- `multiObjectiveOptions` - Multi-objective container to hydrate.
 
 Returns: Objectives list ready for non-destructive operations.
 
@@ -209,7 +209,7 @@ That separation makes the later validation helpers easier to test and easier
 to explain in the generated docs.
 
 Parameters:
-- `neatInstance` - - NEAT host exposing objective settings.
+- `neatInstance` - NEAT host exposing objective settings.
 
 Returns: Objective candidates from configuration.
 
@@ -231,7 +231,7 @@ That strictness keeps later helpers simpler because they can assume that a
 `true` result means both the mode and the candidate container are present.
 
 Parameters:
-- `neatInstance` - - NEAT host exposing objective settings.
+- `neatInstance` - NEAT host exposing objective settings.
 
 Returns: `true` when multi-objective mode is enabled and an objective list exists.
 
@@ -254,7 +254,7 @@ This is intentionally a safety check, not a semantic ranking policy. It tells
 the controller whether a descriptor is usable, not whether it is a good idea.
 
 Parameters:
-- `candidateObjective` - - Candidate descriptor to validate.
+- `candidateObjective` - Candidate descriptor to validate.
 
 Returns: `true` when the descriptor can be used safely.
 
@@ -280,9 +280,9 @@ This is the final fold step in the core flow: once a descriptor is accepted,
 replacement by key turns that decision into a new resolved list.
 
 Parameters:
-- `objectivesList` - - Existing objectives to update.
-- `objectiveKey` - - Key to replace.
-- `objectiveDirection` - - Direction for the new objective.
-- `objectiveAccessor` - - Accessor for the new objective.
+- `objectivesList` - Existing objectives to update.
+- `objectiveKey` - Key to replace.
+- `objectiveDirection` - Direction for the new objective.
+- `objectiveAccessor` - Accessor for the new objective.
 
 Returns: Updated objectives list.

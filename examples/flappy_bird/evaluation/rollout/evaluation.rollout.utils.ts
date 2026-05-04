@@ -16,7 +16,9 @@ import {
   FLAPPY_FITNESS_BONUS_PER_PIPE,
   FLAPPY_FITNESS_CENTERING_PROGRESS_WEIGHT,
   FLAPPY_FITNESS_CLEARANCE_WEIGHT_PER_FRAME,
-  FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME,
+  FLAPPY_FITNESS_EARLY_DEATH_FRAME_THRESHOLD,
+  FLAPPY_FITNESS_EARLY_DEATH_PENALTY_MULTIPLIER,
+  FLAPPY_FITNESS_GAP_CENTERING_QUALITY_WEIGHT_PER_FRAME,
   FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME,
   FLAPPY_FITNESS_SURVIVAL_WEIGHT,
   FLAPPY_FITNESS_TERMINAL_ALIGNMENT_BONUS_WEIGHT,
@@ -79,7 +81,7 @@ export function composeRolloutEpisodeResult(
   );
 
   // Step 2: Compose normalized or raw fitness from the resolved breakdown.
-  const fitness = rolloutEpisodeContext.normalizeFitness
+  const rawFitness = rolloutEpisodeContext.normalizeFitness
     ? composeNormalizedFitness(
         framesSurvived,
         pipesPassed,
@@ -89,6 +91,16 @@ export function composeRolloutEpisodeResult(
         rolloutEpisodeContext.pipeProgressTarget,
       )
     : resolveUnnormalizedRolloutFitness(rolloutFitnessBreakdown);
+
+  // Step 2b: Apply early-death penalty for monotonic-direction behavior.
+  // Birds that die without passing any pipes and before the grace threshold are
+  // likely always rising or always falling — those should score far lower than
+  // any centering strategy that survives longer.
+  const fitness =
+    pipesPassed === 0 &&
+    framesSurvived < FLAPPY_FITNESS_EARLY_DEATH_FRAME_THRESHOLD
+      ? rawFitness * FLAPPY_FITNESS_EARLY_DEATH_PENALTY_MULTIPLIER
+      : rawFitness;
 
   // Step 3: Return the public episode result payload.
   return {
@@ -132,8 +144,8 @@ export function computeDenseShapingReward(
     denseShapingRewardComponents.approachProgressReward +
     denseShapingRewardComponents.centeringProgressReward +
     denseShapingRewardComponents.clearanceReward +
-    denseShapingRewardComponents.secondGapAlignmentReward +
-    denseShapingRewardComponents.velocityStabilityReward
+    denseShapingRewardComponents.velocityStabilityReward +
+    denseShapingRewardComponents.gapCenteringQualityReward
   );
 }
 
@@ -268,15 +280,7 @@ function resolveDenseShapingRewardComponents(
       currentFeatures.normalizedNextGapClearance,
     ) * FLAPPY_FITNESS_CLEARANCE_WEIGHT_PER_FRAME;
 
-  // Step 5: Reward alignment with the second upcoming gap to encourage stability.
-  const secondGapAlignmentReward =
-    Math.max(
-      FLAPPY_ROLLOUT_ZERO_FITNESS,
-      FLAPPY_ROLLOUT_MIN_MAX_FRAMES -
-        Math.abs(currentFeatures.normalizedDeltaToSecondGap),
-    ) * FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME;
-
-  // Step 6: Reward stable velocity magnitudes that avoid extreme oscillation.
+  // Step 5: Reward stable velocity magnitudes that avoid extreme oscillation.
   const velocityStabilityReward =
     Math.max(
       FLAPPY_ROLLOUT_ZERO_FITNESS,
@@ -284,13 +288,23 @@ function resolveDenseShapingRewardComponents(
         Math.abs(currentFeatures.normalizedVelocity),
     ) * FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME;
 
+  // Step 6: Reward gap-width-normalized centering quality using normalizedNextGapClearance.
+  // This term is proportional to how well-centered the bird is relative to the current
+  // gap size rather than world height, giving recurrent architectures continuous signal
+  // during hidden-state warm-up even when no pipe is yet cleared.
+  const gapCenteringQualityReward =
+    Math.max(
+      FLAPPY_ROLLOUT_ZERO_FITNESS,
+      currentFeatures.normalizedNextGapClearance,
+    ) * FLAPPY_FITNESS_GAP_CENTERING_QUALITY_WEIGHT_PER_FRAME;
+
   return {
     nextGapAlignmentReward,
     approachProgressReward,
     centeringProgressReward,
     clearanceReward,
-    secondGapAlignmentReward,
     velocityStabilityReward,
+    gapCenteringQualityReward,
   };
 }
 

@@ -169,6 +169,29 @@ export interface INodeWithConnectionInfo extends INodeStruct {
 /**
  * Lightweight neural-network abstraction used across the ASCII Maze example.
  */
+export interface IActivationSchedulingDiagnostics {
+  /** Requested scheduling mode for the current runtime topology contract. */
+  requestedMode?: 'acyclic' | 'recurrent';
+  /** Execution path used for the current activation traversal. */
+  executionPath?:
+    | 'compiled-schedule'
+    | 'cycle-fallback-order'
+    | 'raw-node-order';
+  /** Number of compiled schedule steps when scheduling is available. */
+  stepCount?: number;
+  /** Number of recurrent-component steps in the compiled schedule. */
+  recurrentComponentCount?: number;
+  /** High-level issue attached to the scheduling decision, when one exists. */
+  issue?: 'cycle-detected' | 'schedule-missing' | null;
+  /** Stable input-role ids associated with the runtime network. */
+  inputNodeIds?: number[];
+  /** Stable output-role ids associated with the runtime network. */
+  outputNodeIds?: number[];
+}
+
+/**
+ * Lightweight neural-network abstraction used across the ASCII Maze example.
+ */
 export interface INetwork {
   activate: (inputs: number[]) => number[];
   propagate?: (
@@ -179,6 +202,7 @@ export interface INetwork {
   ) => void;
   clear?: () => void;
   clone?: () => INetwork;
+  getActivationSchedulingDiagnostics?: () => IActivationSchedulingDiagnostics;
   nodes?: INodeStruct[];
   connections?: {
     from: INodeStruct;
@@ -188,7 +212,9 @@ export interface INetwork {
     enabled?: boolean;
     [key: string]: unknown;
   }[];
+  inputNodeIds?: number[];
   input?: number | INodeStruct[];
+  outputNodeIds?: number[];
   output?: number | INodeStruct[];
 }
 

@@ -128,6 +128,7 @@ export function stepFlappyStateWithControlSubsteps(
       const nextGapCenterYPx = resolveNextSpawnGapCenterY(
         state.lastSpawnedPipeGapCenterYPx,
         rng,
+        nextGapSizePx,
       );
       state.pipes.push({
         xPx: FLAPPY_WORLD_WIDTH_PX + FLAPPY_PIPE_WIDTH_PX,

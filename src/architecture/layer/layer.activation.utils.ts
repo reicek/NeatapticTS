@@ -34,8 +34,8 @@ const NODE_INDEX_STEP = 1;
  * assertActivationInputSize(3, [0.1, 0.2]); // throws
  * ```
  *
- * @param nodeCount - Number of nodes in the layer.
- * @param inputValues - Optional activation values provided by the caller.
+ * @param nodeCount Number of nodes in the layer.
+ * @param inputValues Optional activation values provided by the caller.
  */
 export function assertActivationInputSize(
   nodeCount: number,
@@ -66,8 +66,8 @@ export function assertActivationInputSize(
  * resolveLayerMask(0.5, true); // => 0 or 1
  * ```
  *
- * @param layerDropout - The dropout rate configured for the layer.
- * @param isTraining - Whether the layer is running in training mode.
+ * @param layerDropout The dropout rate configured for the layer.
+ * @param isTraining Whether the layer is running in training mode.
  * @returns A mask value of 1 or 0 for all nodes in the layer.
  */
 export function resolveLayerMask(
@@ -93,8 +93,8 @@ export function resolveLayerMask(
  * applyLayerMask(layer.nodes, 1);
  * ```
  *
- * @param nodeList - The layer nodes to update.
- * @param mask - The mask value to apply.
+ * @param nodeList The layer nodes to update.
+ * @param mask The mask value to apply.
  */
 export function applyLayerMask(
   nodeList: LayerActivationContext['nodes'],
@@ -124,7 +124,7 @@ export function applyLayerMask(
  * releaseActivationOutput(pooled);
  * ```
  *
- * @param nodeCount - Number of nodes in the layer.
+ * @param nodeCount Number of nodes in the layer.
  * @returns A pooled output array.
  */
 export function acquireActivationOutput(nodeCount: number): number[] {
@@ -138,7 +138,7 @@ export function acquireActivationOutput(nodeCount: number): number[] {
  *
  * Important: do not keep using `output` after releasing it.
  *
- * @param output - The pooled output array to release.
+ * @param output The pooled output array to release.
  */
 export function releaseActivationOutput(output: number[]): void {
   activationArrayPool.release(output);
@@ -156,7 +156,7 @@ export function releaseActivationOutput(output: number[]): void {
  * const stable = cloneActivationOutput(pooled);
  * ```
  *
- * @param output - The pooled output array to clone.
+ * @param output The pooled output array to clone.
  * @returns A cloned output array.
  */
 export function cloneActivationOutput(output: number[]): number[] {
@@ -179,9 +179,9 @@ export function cloneActivationOutput(output: number[]): number[] {
  * fillActivationOutput(layer.nodes, [0.2, 0.4], pooled);
  * ```
  *
- * @param nodeList - Nodes to activate.
- * @param inputValues - Optional activation values for each node.
- * @param output - Output buffer to populate.
+ * @param nodeList Nodes to activate.
+ * @param inputValues Optional activation values for each node.
+ * @param output Output buffer to populate.
  */
 export function fillActivationOutput(
   nodeList: LayerActivationContext['nodes'],

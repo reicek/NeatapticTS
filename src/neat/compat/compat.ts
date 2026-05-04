@@ -1,3 +1,4 @@
+import { createCompatibilityGenomeView } from '../genome/genome';
 import {
   buildPairKey,
   compareInnovationLists,
@@ -112,10 +113,12 @@ import type {
  *
  * Interpret the fallback as a bridge, not as a replacement for properly tracked
  * innovations. It keeps compatibility useful for legacy, test, or partially
- * normalized genomes, but explicit innovation numbers remain the source of
- * truth whenever they are available. A fallback match should therefore be read
- * as "these connections occupy the same directed slot" rather than "these two
- * genes are proven to share the same historical innovation event."
+ * normalized genomes that deliberately opt into
+ * `_compatInnovationMode = 'allow-fallback'`, but explicit innovation numbers
+ * remain the source of truth for native controller genomes. A fallback match
+ * should therefore be read as "these connections occupy the same directed
+ * slot" rather than "these two genes are proven to share the same historical
+ * innovation event."
  *
  * @example
  * ```ts
@@ -166,6 +169,12 @@ export const _fallbackInnov = function (
  * 3. compare aligned innovations,
  * 4. fold the resulting metrics into one distance.
  *
+ * Native genomes now treat missing connection innovations as a hard failure so
+ * the compatibility layer cannot silently normalize malformed controller-owned
+ * structure. Deliberate fallback comparison remains available only for genomes
+ * that opt into `_compatInnovationMode = 'allow-fallback'`, and those
+ * synthetic-id views stay transient rather than populating `_compatCache`.
+ *
  * The detailed comparison mechanics live in `core/` so this function can stay
  * focused on orchestration and interpretation. That split also makes the root
  * chapter easier to read alongside `speciation/`, where the same distance helps
@@ -192,11 +201,14 @@ export const _compatibilityDistance = function (
   genomeA: GenomeLike,
   genomeB: GenomeLike,
 ): number {
+  const normalizedGenomeA = createCompatibilityGenomeView(genomeA);
+  const normalizedGenomeB = createCompatibilityGenomeView(genomeB);
+
   // Step 1: Ensure generation-scoped caches exist.
   ensureGenerationCache(this);
 
   // Step 2: Resolve the ordered pair key and cache map.
-  const cacheKey = buildPairKey(genomeA, genomeB);
+  const cacheKey = buildPairKey(normalizedGenomeA, normalizedGenomeB);
   const cacheMap = getDistanceCacheMap(this);
 
   // Step 3: Return cached distance when available.
@@ -206,8 +218,8 @@ export const _compatibilityDistance = function (
   }
 
   // Step 4: Resolve the sorted innovation lists for both genomes.
-  const genomeAInnovations = getSortedInnovationCache(this, genomeA);
-  const genomeBInnovations = getSortedInnovationCache(this, genomeB);
+  const genomeAInnovations = getSortedInnovationCache(this, normalizedGenomeA);
+  const genomeBInnovations = getSortedInnovationCache(this, normalizedGenomeB);
 
   // Step 5: Compare the sorted lists and compute the final distance.
   const comparison = compareInnovationLists(

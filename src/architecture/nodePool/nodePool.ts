@@ -76,7 +76,7 @@ let highWaterMark = 0;
 /** Incrementing counter to allocate fresh stable geneIds when resetting pooled nodes. */
 let nextGeneId = 1;
 
-/** Counters for recycling efficiency instrumentation (Phase 2 stress harness). */
+/** Counters for recycling efficiency instrumentation. */
 let reusedCount = 0;
 let freshCount = 0;
 
@@ -97,12 +97,10 @@ let freshCount = 0;
  */
 const resetNode = (
   node: Node,
-  type?: string,
+  type: string,
   rng: () => number = Math.random,
 ): void => {
-  if (type) {
-    node.type = type;
-  }
+  node.type = type;
 
   const nodeType = node.type;
   node.bias = nodeType === 'input' ? 0 : rng() * 0.2 - 0.1;

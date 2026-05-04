@@ -1,3 +1,8 @@
+import {
+  recordNodeSplitRecord,
+  takeNextInnovationId,
+} from '../../innovation-tracker/innovation-tracker';
+import type { NodeSplitRecord } from '../../innovation-tracker/innovation-tracker.types';
 import type {
   ConnectionWithMetadata,
   GenomeWithMetadata,
@@ -11,6 +16,10 @@ const DEFAULT_CONNECTION_WEIGHT = 1;
 const DEFAULT_GENE_ID = 0;
 /** Default innovation id placeholder when missing. */
 const DEFAULT_INNOVATION_ID = 0;
+/** Prefix for canonical split identities keyed by connection innovation. */
+const SPLIT_CONNECTION_INNOVATION_PREFIX = 'splitConnectionInnovation:';
+/** Prefix for legacy split identities keyed by connection endpoints. */
+const LEGACY_ENDPOINT_SPLIT_PREFIX = 'legacyEndpoints:';
 
 /**
  * Add-node mutation helpers.
@@ -29,7 +38,9 @@ const DEFAULT_INNOVATION_ID = 0;
  *
  * 1. ensure there is at least one connection worth splitting,
  * 2. choose one enabled connection,
- * 3. derive a stable split key from the source and target genes,
+ * 3. derive a stable split-event key from the connection innovation when
+ *    present, with a legacy endpoint fallback only when historical metadata
+ *    is missing,
  * 4. either reuse an existing split record or assign a brand-new one,
  * 5. insert the new hidden node while preserving output ordering.
  *
@@ -150,15 +161,17 @@ export function chooseConnectionForSplit(
   // Step 2: sample a connection using the controller RNG.
   const randomValue = internal._getRNG()();
   const chosenIndex = Math.floor(randomValue * enabledConnectionsList.length);
-  return enabledConnectionsList[chosenIndex] ?? null;
+  return enabledConnectionsList[chosenIndex];
 }
 
 /**
  * Build the split descriptor used for innovation lookup and connection creation.
  *
- * The descriptor is the compact identity packet for a split. Its key captures
- * which source and target genes were separated, while its preserved weight lets
- * the outgoing replacement edge inherit the old signal strength.
+ * The descriptor is the compact identity packet for a split. Its key prefers
+ * the historical identity of the split connection itself so homologous splits
+ * follow the structural event rather than only the current endpoint pair.
+ * When the connection lacks historical metadata, the descriptor falls back to a
+ * legacy endpoint key so bootstrap and imported edge cases remain stable.
  *
  * @param connectionToSplit - connection being split
  * @returns split descriptor
@@ -169,18 +182,39 @@ export function buildSplitDescriptor(
   splitKey: string;
   originalWeight: number;
 } {
-  // Step 1: capture source/target gene ids for the key.
-  const sourceGeneId = connectionToSplit.from.geneId;
-  const targetGeneId = connectionToSplit.to.geneId;
+  // Step 1: build a stable split-event key for innovation reuse.
+  const splitKey = buildSplitKeyForConnection(connectionToSplit);
 
-  // Step 2: build a stable split key for innovation reuse.
-  const splitKey = `${sourceGeneId}->${targetGeneId}`;
-
-  // Step 3: capture original connection weight.
+  // Step 2: capture original connection weight.
   return {
     splitKey,
     originalWeight: connectionToSplit.weight,
   };
+}
+
+/**
+ * Build the canonical split identity for one connection.
+ *
+ * The proper-NEAT path keys split reuse by the historical marking of the edge
+ * being split, which is the actual structural event. The endpoint fallback is
+ * retained only so older or freshly bootstrapped connections without recorded
+ * innovations still behave deterministically.
+ *
+ * @param connectionToSplit - connection whose split identity is being resolved
+ * @returns canonical split key for tracker lookup
+ */
+function buildSplitKeyForConnection(
+  connectionToSplit: ConnectionWithMetadata,
+): string {
+  // Step 1: prefer the split connection's historical innovation when present.
+  if (Number.isInteger(connectionToSplit.innovation)) {
+    return `${SPLIT_CONNECTION_INNOVATION_PREFIX}${connectionToSplit.innovation}`;
+  }
+
+  // Step 2: fall back to endpoint identity for legacy or bootstrap edges.
+  const sourceGeneId = connectionToSplit.from.geneId ?? DEFAULT_GENE_ID;
+  const targetGeneId = connectionToSplit.to.geneId ?? DEFAULT_GENE_ID;
+  return `${LEGACY_ENDPOINT_SPLIT_PREFIX}${sourceGeneId}->${targetGeneId}`;
 }
 
 /**
@@ -221,11 +255,16 @@ export function applySplitWithExistingRecord(
   genomeToEdit: GenomeWithMetadata,
   connectionToSplit: ConnectionWithMetadata,
   splitDescriptor: { splitKey: string; originalWeight: number },
-  splitRecord: { newNodeGeneId: number; inInnov: number; outInnov: number },
-  NodeClass: new (type: NodeWithMetadata['type']) => unknown,
+  splitRecord: NodeSplitRecord,
+  NodeClass: new (
+    type: NodeWithMetadata['type'],
+    customActivation?: (x: number, derivate?: boolean) => number,
+    rng?: () => number,
+  ) => unknown,
+  randomValue: () => number,
 ): void {
   // Step 1: create a new node instance with the historical gene id.
-  const newNode = new NodeClass('hidden') as unknown as NodeWithMetadata;
+  const newNode = createSplitNode(NodeClass, randomValue);
   newNode.geneId = splitRecord.newNodeGeneId;
 
   // Step 2: insert the node before the original target node.
@@ -265,13 +304,23 @@ export function applySplitWithNewRecord(
   genomeToEdit: GenomeWithMetadata,
   connectionToSplit: ConnectionWithMetadata,
   splitDescriptor: { splitKey: string; originalWeight: number },
-  NodeClass: new (type: NodeWithMetadata['type']) => unknown,
+  NodeClass: new (
+    type: NodeWithMetadata['type'],
+    customActivation?: (x: number, derivate?: boolean) => number,
+    rng?: () => number,
+  ) => unknown,
   internal: NeatControllerForMutation,
 ): void {
   // Step 1: create a new hidden node.
-  const newNode = new NodeClass('hidden') as unknown as NodeWithMetadata;
+  const newNode = createSplitNode(NodeClass, internal._getRNG());
 
-  // Step 2: connect the split edges and assign new innovations.
+  // Step 2: insert the new node before the original target node so that the
+  // acyclic connectivity check (which uses nodes.indexOf) can locate the new
+  // node when connectSplitEdges is called.
+  const insertIndex = resolveInsertIndex(genomeToEdit, connectionToSplit.to);
+  genomeToEdit.nodes.splice(insertIndex, 0, newNode);
+
+  // Step 3: connect the split edges and assign new innovations.
   const splitConnections = connectSplitEdges(
     genomeToEdit,
     connectionToSplit,
@@ -283,11 +332,38 @@ export function applySplitWithNewRecord(
     splitConnections,
     internal,
   );
-  internal._nodeSplitInnovations.set(splitDescriptor.splitKey, splitRecord);
+  recordNodeSplitRecord(
+    internal._innovationTracker,
+    splitDescriptor.splitKey,
+    splitRecord,
+  );
+}
 
-  // Step 3: insert the new node before the original target node.
-  const insertIndex = resolveInsertIndex(genomeToEdit, connectionToSplit.to);
-  genomeToEdit.nodes.splice(insertIndex, 0, newNode);
+/**
+ * Create a split-inserted hidden node using the controller RNG.
+ *
+ * The add-node replay contract depends on the inserted node receiving the same
+ * bias initialization every time the same checkpointed mutation path resumes.
+ * Passing the controller RNG through the node constructor keeps that
+ * initialization deterministic instead of falling back to `Math.random()`.
+ *
+ * @param NodeClass - node constructor used by the mutation path.
+ * @param randomValue - deterministic controller RNG.
+ * @returns Newly created hidden node.
+ */
+function createSplitNode(
+  NodeClass: new (
+    type: NodeWithMetadata['type'],
+    customActivation?: (x: number, derivate?: boolean) => number,
+    rng?: () => number,
+  ) => unknown,
+  randomValue: () => number,
+): NodeWithMetadata {
+  return new NodeClass(
+    'hidden',
+    undefined,
+    randomValue,
+  ) as unknown as NodeWithMetadata;
 }
 
 /**
@@ -372,19 +448,17 @@ export function assignInnovationsForNewSplit(
     outgoingConnection?: ConnectionWithMetadata;
   },
   internal: NeatControllerForMutation,
-): {
-  newNodeGeneId: number;
-  inInnov: number;
-  outInnov: number;
-} {
+): NodeSplitRecord {
   // Step 1: assign innovations to new connections.
   if (splitConnections.incomingConnection) {
-    splitConnections.incomingConnection.innovation =
-      internal._nextGlobalInnovation++;
+    splitConnections.incomingConnection.innovation = takeNextInnovationId(
+      internal._innovationTracker,
+    );
   }
   if (splitConnections.outgoingConnection) {
-    splitConnections.outgoingConnection.innovation =
-      internal._nextGlobalInnovation++;
+    splitConnections.outgoingConnection.innovation = takeNextInnovationId(
+      internal._innovationTracker,
+    );
   }
 
   // Step 2: build and return the innovation record.

@@ -37,6 +37,11 @@ objectives. It annotates each genome with novelty evidence and optionally
 blends that evidence into the current score so later tuning, selection, and
 speciation reads can still reason from one stable evaluated population.
 
+Ownership boundary: novelty is a controller-policy overlay. It may
+annotate `_novelty` and optionally rewrite the current generation's `score`
+field when blending against existing fitness, but it does not redefine genome
+identity, compatibility distance, or objective registration.
+
 ```mermaid
 flowchart TD
   Population[Freshly scored population] --> Descriptors[Build one behavior descriptor per genome]
@@ -68,10 +73,10 @@ remembering, while the cap prevents novelty exploration from turning into an
 unbounded memory sink.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `descriptor` - - Behavior descriptor for the current genome.
-- `novelty` - - Computed novelty score.
-- `noveltyOptions` - - Novelty configuration.
+- `controller` - NEAT controller instance for evaluation.
+- `descriptor` - Behavior descriptor for the current genome.
+- `novelty` - Computed novelty score.
+- `noveltyOptions` - Novelty configuration.
 
 ### applyNoveltyToPopulation
 
@@ -94,12 +99,12 @@ optionally blends that evidence into numeric scores and records sufficiently
 novel descriptors for future exploration pressure.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `descriptors` - - Descriptor vectors for each genome.
-- `distanceMatrix` - - Dense distance matrix.
-- `kNeighbors` - - Number of nearest neighbors to average.
-- `blendFactor` - - Novelty-vs-fitness blend factor.
-- `noveltyOptions` - - Novelty configuration.
+- `controller` - NEAT controller instance for evaluation.
+- `descriptors` - Descriptor vectors for each genome.
+- `distanceMatrix` - Dense distance matrix.
+- `kNeighbors` - Number of nearest neighbors to average.
+- `blendFactor` - Novelty-vs-fitness blend factor.
+- `noveltyOptions` - Novelty configuration.
 
 ### blendNoveltyIntoScore
 
@@ -117,10 +122,15 @@ This stage intentionally does not invent a base score when one is missing.
 Novelty acts as a companion signal to the existing evaluation path, not as a
 universal replacement for every scoring mode.
 
+When this helper writes `genome.score`, it is rewriting the current
+controller-visible score overlay for later phases of the same generation.
+Callers that need the unblended raw task score should preserve it separately
+before novelty blending.
+
 Parameters:
-- `genome` - - Genome to update.
-- `novelty` - - Computed novelty value.
-- `blendFactor` - - Blend factor for novelty versus fitness.
+- `genome` - Genome to update.
+- `novelty` - Computed novelty value.
+- `blendFactor` - Blend factor for novelty versus fitness.
 
 ### buildDistanceMatrix
 
@@ -137,7 +147,7 @@ the scoring flow simple: each genome reads one row, drops its self-distance,
 and averages the nearest neighbors.
 
 Parameters:
-- `descriptors` - - Descriptor vectors for the current population.
+- `descriptors` - Descriptor vectors for the current population.
 
 Returns: Dense distance matrix aligned with population order.
 
@@ -158,8 +168,8 @@ third. Descriptor failures degrade to an empty vector instead of failing the
 entire evaluation pass.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `noveltyOptions` - - Novelty configuration.
+- `controller` - NEAT controller instance for evaluation.
+- `noveltyOptions` - Novelty configuration.
 
 Returns: Descriptor vectors aligned with population order.
 
@@ -181,9 +191,9 @@ of uneven length. Self-distance is fixed at zero to keep later neighbor
 ranking deterministic.
 
 Parameters:
-- `leftDescriptor` - - Left descriptor vector.
-- `rightDescriptor` - - Right descriptor vector.
-- `isSame` - - Whether both descriptors belong to the same genome index.
+- `leftDescriptor` - Left descriptor vector.
+- `rightDescriptor` - Right descriptor vector.
+- `isSame` - Whether both descriptors belong to the same genome index.
 
 Returns: Euclidean distance across the shared prefix.
 
@@ -203,8 +213,8 @@ after excluding the genome's self-distance. Higher values mean the genome is
 behaving in a less crowded region of descriptor space.
 
 Parameters:
-- `distanceRow` - - Distance values for a single genome.
-- `kNeighbors` - - Number of nearest neighbors to average.
+- `distanceRow` - Distance values for a single genome.
+- `kNeighbors` - Number of nearest neighbors to average.
 
 Returns: Novelty score for the genome.
 
@@ -223,7 +233,7 @@ makes novelty fully replace it when a numeric score exists. Values in between
 turn novelty into a partial exploratory bonus instead of a hard override.
 
 Parameters:
-- `noveltyOptions` - - Novelty configuration.
+- `noveltyOptions` - Novelty configuration.
 
 Returns: Blend factor used when a genome already has a numeric score.
 
@@ -242,7 +252,7 @@ differences, while larger counts smooth that signal across a wider portion of
 the current population.
 
 Parameters:
-- `noveltyOptions` - - Novelty configuration.
+- `noveltyOptions` - Novelty configuration.
 
 Returns: Neighbor count clamped to at least one.
 
@@ -270,8 +280,8 @@ The helper preserves several important controller assumptions:
   updated.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `evaluationOptions` - - Options object for the current evaluation pass.
+- `controller` - NEAT controller instance for evaluation.
+- `evaluationOptions` - Options object for the current evaluation pass.
 
 Example:
 

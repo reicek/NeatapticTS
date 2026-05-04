@@ -43,7 +43,7 @@ few structural summary fields so callers can inspect competitive position and
 genome size in one pass.
 
 Parameters:
-- `population` - - Ranked population with optional multi-objective
+- `population` - Ranked population with optional multi-objective
 annotations.
 
 Returns: Compact metrics aligned with the current population order.
@@ -86,8 +86,8 @@ easy to stream, diff, or feed into external tooling without inventing another
 archive-specific export format.
 
 Parameters:
-- `archive` - - Archive collection ordered from oldest to newest.
-- `maxEntries` - - Maximum number of recent entries to export.
+- `archive` - Archive collection ordered from oldest to newest.
+- `maxEntries` - Maximum number of recent entries to export.
 
 Returns: Newline-delimited JSON for the selected archive window.
 
@@ -111,9 +111,9 @@ When multi-objective mode is disabled, the function falls back to one front
 containing the whole population so callers can keep a uniform read path.
 
 Parameters:
-- `population` - - Current population with optional `_moRank` annotations.
-- `maxFronts` - - Maximum number of fronts to reconstruct.
-- `isMultiObjectiveEnabled` - - Whether the controller is currently using
+- `population` - Current population with optional `_moRank` annotations.
+- `maxFronts` - Maximum number of fronts to reconstruct.
+- `isMultiObjectiveEnabled` - Whether the controller is currently using
 multi-objective ranking.
 
 Returns: Reconstructed fronts in ascending rank order.
@@ -134,7 +134,7 @@ the freshest frontier history rather than the earliest snapshots from a long
 run. This helper therefore keeps the slicing rule explicit and reusable.
 
 Parameters:
-- `archive` - - Archive collection ordered from oldest to newest.
-- `maxEntries` - - Maximum number of recent entries to keep.
+- `archive` - Archive collection ordered from oldest to newest.
+- `maxEntries` - Maximum number of recent entries to keep.
 
 Returns: A trailing slice containing at most `maxEntries` items.

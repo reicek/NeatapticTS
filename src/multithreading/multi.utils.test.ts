@@ -157,6 +157,33 @@ describe('multithreading utility chapter', () => {
         expect(outputValues).toEqual([1]);
       });
     });
+
+    describe('given a network with a gated self-connection and gated incoming connection', () => {
+      describe('when the output node has gaterIndex !== NO_SELF_GATER', () => {
+        it('returns a finite output value using the gater activation', () => {
+          // Arrange – header [1 input, 1 output], then output node (index 1):
+          // [nodeIndex=1, nodeBias=0, activationIndex=0, selfWeight=0.5, selfGaterIndex=0]
+          // connection: [sourceIndex=0, weight=0.5, gaterIndex=0], terminator=-2
+          // selfGaterIndex=0 and gaterIndex=0 hit the FALSE arms at lines 100 and 113.
+          const gatedNetwork = [1, 1, 1, 0, 0, 0.5, 0, 0, 0.5, 0, -2];
+          const inputValues = [0.7];
+          const activationValues = [0, 0];
+          const stateValues = [0, 0];
+
+          // Act
+          const outputValues = activateSerializedNetwork(
+            inputValues,
+            activationValues,
+            stateValues,
+            gatedNetwork,
+            ACTIVATION_FUNCTIONS,
+          );
+
+          // Assert
+          expect(Number.isFinite(outputValues[0])).toBe(true);
+        });
+      });
+    });
   });
 
   describe('testSerializedSet', () => {

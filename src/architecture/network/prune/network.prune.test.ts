@@ -119,6 +119,54 @@ describe('network prune chapter', () => {
   });
 
   describe('maybePrune()', () => {
+    describe('given no pruning config has been set on the network', () => {
+      describe('when maybePrune() is called', () => {
+        it('keeps the connection count unchanged', () => {
+          // Arrange
+          const network = new Network(2, 1, {
+            seed: 471,
+            enforceAcyclic: true,
+          });
+          const connectionCountBeforePrune = network.connections.length;
+
+          // Act
+          maybePrune.call(network, 5);
+          const connectionCountAfterPrune = network.connections.length;
+
+          // Assert
+          expect(connectionCountAfterPrune).toBe(connectionCountBeforePrune);
+        });
+      });
+    });
+
+    describe('given pruning config is set but no connection baseline was captured', () => {
+      describe('when maybePrune() is called within the schedule window', () => {
+        it('keeps the connection count unchanged', () => {
+          // Arrange
+          const network = new Network(2, 1, {
+            seed: 472,
+            enforceAcyclic: true,
+          });
+          setPruningConfig(network, {
+            start: 0,
+            end: 10,
+            frequency: 1,
+            targetSparsity: 0.5,
+            method: 'magnitude',
+          });
+          // No captureInitialConnectionBaseline call
+          const connectionCountBeforePrune = network.connections.length;
+
+          // Act
+          maybePrune.call(network, 5);
+          const connectionCountAfterPrune = network.connections.length;
+
+          // Assert
+          expect(connectionCountAfterPrune).toBe(connectionCountBeforePrune);
+        });
+      });
+    });
+
     describe('given the current iteration is before the pruning window', () => {
       describe('when maybePrune() is called', () => {
         it('keeps the connection count unchanged', () => {
@@ -390,6 +438,29 @@ describe('network prune chapter', () => {
 
           // Assert
           expect(connectionCountAfterPrune).toBe(connectionCountBeforePrune);
+        });
+      });
+    });
+
+    describe('given the network is already at or below the target sparsity', () => {
+      describe('when pruneToSparsity() is called a second time at the same target', () => {
+        it('keeps the connection count unchanged on the second call', () => {
+          // Arrange – first call captures baseline and prunes to 30% sparsity
+          const network = new Network(4, 2, {
+            seed: 473,
+            enforceAcyclic: true,
+          });
+          pruneToSparsity.call(network, 0.3);
+          const connectionCountAfterFirstPrune = network.connections.length;
+
+          // Act – second call finds no excess connections
+          pruneToSparsity.call(network, 0.3);
+          const connectionCountAfterSecondPrune = network.connections.length;
+
+          // Assert
+          expect(connectionCountAfterSecondPrune).toBe(
+            connectionCountAfterFirstPrune,
+          );
         });
       });
     });

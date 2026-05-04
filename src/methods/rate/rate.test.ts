@@ -345,6 +345,22 @@ describe('Rate', () => {
         });
       });
     });
+
+    describe('given no arguments', () => {
+      describe('when the first cycle starts', () => {
+        it('returns the base rate using all default cycle parameters', () => {
+          // Arrange
+          const schedule = Rate.cosineAnnealingWarmRestarts();
+          const baseRate = 0.1;
+
+          // Act
+          const resolvedRate = schedule(baseRate, 0);
+
+          // Assert: cosine peak at iteration 0 equals baseRate
+          expect(resolvedRate).toBeCloseTo(baseRate, 10);
+        });
+      });
+    });
   });
 
   describe('linearWarmupDecay()', () => {
@@ -388,6 +404,20 @@ describe('Rate', () => {
 
           // Assert
           expect(resolvedRate).toBeCloseTo(0.01, 5);
+        });
+      });
+
+      describe('when the schedule is in the decay phase', () => {
+        it('linearly interpolates between base and end rates', () => {
+          // Arrange
+          const schedule = Rate.linearWarmupDecay(20, 5, 0.01);
+          const baseRate = 0.2;
+
+          // Act
+          const resolvedRate = schedule(baseRate, 10);
+
+          // Assert
+          expect(resolvedRate).toBeCloseTo(0.1366666666666667, 10);
         });
       });
     });
@@ -497,6 +527,25 @@ describe('Rate', () => {
         });
       });
     });
+
+    describe('given verbose mode is enabled', () => {
+      describe('when the schedule is evaluated', () => {
+        it('preserves the current learning rate behavior', () => {
+          // Arrange
+          const resolvedRates = runPlateauSchedule({
+            baseRate: 0.05,
+            errors: [0.5],
+            options: { verbose: true },
+          });
+
+          // Act
+          const resolvedRate = resolvedRates[0];
+
+          // Assert
+          expect(resolvedRate).toBe(0.05);
+        });
+      });
+    });
   });
 });
 
@@ -509,6 +558,7 @@ interface PlateauScheduleInput {
     minDelta?: number;
     cooldown?: number;
     minRate?: number;
+    verbose?: boolean;
   };
 }
 

@@ -1,4 +1,10 @@
-import { applyAncestorUniqAdaptive } from './adaptive.lineage';
+import {
+  applyAncestorUniqAdaptive,
+  applyUniquenessAdjustment,
+  extractAncestorUniqueness,
+  isCooldownSatisfied,
+  resolveUniquenessThresholds,
+} from './adaptive.lineage';
 import type {
   AncestorUniqAdaptiveConfig,
   NeatLikeWithAdaptive,
@@ -50,6 +56,28 @@ function createLineagePressureController(input: {
 }
 
 describe('neat adaptive lineage chapter', () => {
+  describe('adaptive.lineage facade re-exports', () => {
+    it('exports applyAncestorUniqAdaptive as a function', () => {
+      expect(typeof applyAncestorUniqAdaptive).toBe('function');
+    });
+
+    it('exports extractAncestorUniqueness as a function', () => {
+      expect(typeof extractAncestorUniqueness).toBe('function');
+    });
+
+    it('exports isCooldownSatisfied as a function', () => {
+      expect(typeof isCooldownSatisfied).toBe('function');
+    });
+
+    it('exports resolveUniquenessThresholds as a function', () => {
+      expect(typeof resolveUniquenessThresholds).toBe('function');
+    });
+
+    it('exports applyUniquenessAdjustment as a function', () => {
+      expect(typeof applyUniquenessAdjustment).toBe('function');
+    });
+  });
+
   describe('applyAncestorUniqAdaptive', () => {
     describe('given epsilon mode', () => {
       describe('when the cooldown window has not elapsed yet', () => {

@@ -83,7 +83,7 @@ computeDiversityStatsSafely(internal);
 ```
 
 Parameters:
-- `internal` - - NEAT controller instance.
+- `internal` - NEAT controller instance.
 
 Returns: Nothing.
 
@@ -127,7 +127,7 @@ await recordTelemetryIfEnabled(internal, bestSnapshot);
 ```
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `snapshot` - - Best network snapshot for the generation.
+- `internal` - NEAT controller instance.
+- `snapshot` - Best network snapshot for the generation.
 
 Returns: A promise that resolves after telemetry has been recorded when enabled.

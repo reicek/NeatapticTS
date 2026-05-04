@@ -176,14 +176,14 @@ function mean(values: number[]): number {
  * Variance complements the raw averages by showing whether the population is
  * staying structurally tight or spreading into a wider range of topology sizes.
  *
- * @param values - Values to evaluate.
- * @returns Population variance, or `0` when the array is empty.
+ * The diversity controller only calls this helper after confirming at least
+ * one genome exists, so the input array is always non-empty at the current
+ * public boundary.
+ *
+ * @param values - Non-empty values to evaluate.
+ * @returns Population variance.
  */
 function variance(values: number[]): number {
-  if (!values.length) {
-    return 0;
-  }
-
   const meanValue = mean(values);
   return mean(values.map((value) => (value - meanValue) * (value - meanValue)));
 }

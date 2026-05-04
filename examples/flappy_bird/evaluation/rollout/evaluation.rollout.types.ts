@@ -34,8 +34,9 @@ export type RolloutEpisodeContext = {
 /**
  * Mutable runtime state accumulated while one rollout episode executes.
  *
- * This is the mutable side of the rollout: world state, RNG, temporal memory,
- * and the counters accumulated during execution.
+ * This is the mutable side of the rollout: world state, RNG, shared
+ * observation-memory compatibility state, and the counters accumulated during
+ * execution.
  */
 export type RolloutEpisodeRuntimeState = {
   rng: ReturnType<typeof createXorshift32>;
@@ -68,6 +69,6 @@ export type DenseShapingRewardComponents = {
   approachProgressReward: number;
   centeringProgressReward: number;
   clearanceReward: number;
-  secondGapAlignmentReward: number;
   velocityStabilityReward: number;
+  gapCenteringQualityReward: number;
 };

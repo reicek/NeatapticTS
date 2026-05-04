@@ -1,48 +1,72 @@
 /**
  * Root orchestration for NEAT population evaluation.
  *
- * Evaluation is the chapter that turns a raw population into something the rest of the NEAT
- * pipeline can actually reason about. Before `evolve()` can sort genomes, speciate them, or apply
- * adaptive policies, this layer has to answer a more basic question: what evidence do we currently
- * have about each candidate, and is that evidence rich enough to support the next controller step?
+ * ## What Evaluation Means in NEAT
  *
- * This boundary stays orchestration-first on purpose. The neighboring folders own the narrow work:
- * running the fitness delegate, computing behavioral novelty, maintaining diversity statistics, and
- * nudging evaluation-related parameters. This file exists so a reader can understand the whole
- * scoring-and-adaptation pass without reading those helper chapters in implementation order first.
+ * Evaluation is the grounding step that connects the evolutionary search to the
+ * real task. Without it, NEAT has genomes and topologies but no evidence about
+ * which ones are worth keeping. With it, the controller can sort, speciate,
+ * apply adaptive pressure, and breed the next generation from a well-evidenced
+ * view of the current population.
  *
- * Read this chapter when you want to answer questions such as:
- * - Does the controller score genomes one at a time or hand the whole population to one delegate?
- * - When does novelty get blended into ordinary fitness?
- * - Which adaptive tuning steps depend on post-evaluation statistics?
- * - Why does evaluation sometimes trigger lightweight speciation and objective registration work?
+ * In NEAT, the fitness function is deliberately kept external to the library.
+ * The caller supplies a scoring delegate — anything from a physics simulation
+ * to an analytic reward function — and the evaluation layer calls it once per
+ * genome (or hands the whole population to a parallel worker batch). That
+ * separation keeps the library domain-agnostic while letting each caller define
+ * what "good behavior" means for their specific task.
  *
- * The evaluation loop is easiest to remember as six stages:
- * 1. run the configured fitness pathway,
- * 2. blend novelty and maintain the novelty archive when enabled,
- * 3. ensure diversity-stat storage exists for downstream tuning,
- * 4. tune sharing and compatibility parameters from fresh evidence,
- * 5. refresh lightweight speciation state,
- * 6. register the entropy objective when multi-objective evaluation asks for it.
+ * ## Beyond Raw Fitness
+ *
+ * Pure fitness maximization can be a poor proxy for the goal of finding
+ * behaviorally diverse solutions. This evaluation boundary supports two
+ * additional evidence sources that can supplement or replace raw fitness:
+ *
+ * - **Novelty search** — scores genomes by how different their behavioral
+ *   *descriptor* is from previously encountered behaviors, rather than by task
+ *   performance. Useful when the fitness landscape is deceptive or has many
+ *   dead-end attractors. See Lehman and Stanley,
+ *   [Abandoning Objectives: Evolution Through the Search for Novelty Alone](http://eplex.cs.ucf.edu/papers/lehman_ecj11.pdf),
+ *   for the original motivation.
+ * - **Multi-objective ranking** — instead of one scalar fitness, multiple
+ *   objectives are tracked simultaneously and genomes are ranked by Pareto
+ *   dominance. The evaluation layer injects an entropy-diversity objective when
+ *   multi-objective mode is active.
+ *
+ * ## The Six-Stage Evaluation Pass
+ *
+ * The full evaluation pass runs these stages in order:
+ *
+ * 1. Run the configured fitness pathway (per-genome or whole-population).
+ * 2. Blend novelty evidence and maintain the novelty archive when enabled.
+ * 3. Ensure diversity-stat storage exists for downstream tuning.
+ * 4. Tune entropy-sharing and compatibility parameters from fresh evidence.
+ * 5. Refresh lightweight speciation state.
+ * 6. Register the entropy objective when multi-objective evaluation is active.
  *
  * ```mermaid
  * flowchart TD
- *   Fitness[Run fitness delegate] --> Novelty[Blend novelty and update archive]
- *   Novelty --> Stats[Ensure diversity stats container]
- *   Stats --> Sharing[Tune entropy sharing]
- *   Sharing --> Compat[Tune compatibility and distance coefficients]
- *   Compat --> Speciation[Refresh lightweight speciation state]
- *   Speciation --> Objectives[Inject entropy objective when enabled]
+ *   classDef base fill:#001522,stroke:#0fb5ff,color:#9fdcff,stroke-width:1.5px;
+ *   classDef accent fill:#0f1f33,stroke:#00e5ff,color:#d8f6ff,stroke-width:2px;
+ *
+ *   Fitness["1 · Run fitness delegate\nper-genome or whole-population"]:::accent
+ *   Novelty["2 · Blend novelty\nupdate archive if enabled"]:::base
+ *   Stats["3 · Ensure diversity stats container"]:::base
+ *   Sharing["4 · Tune entropy sharing and\ncompatibility coefficients"]:::base
+ *   Speciation["5 · Refresh lightweight speciation state"]:::base
+ *   Objectives["6 · Inject entropy objective\nif multi-objective mode active"]:::base
+ *
+ *   Fitness --> Novelty --> Stats --> Sharing --> Speciation --> Objectives
  * ```
  *
  * Reading order:
  * - start with {@link evaluate} for the controller-facing flow,
- * - jump into `fitness/` when you need the per-genome versus whole-population scoring split,
- * - jump into `novelty/` when you need descriptor and archive semantics,
- * - jump into `entropy-sharing/`, `entropy-compat/`, and `auto-distance/` when you need tuning math,
- * - jump into `objectives/` when you need to understand the automatic entropy-objective path.
+ * - jump into `fitness/` for the per-genome vs whole-population scoring split,
+ * - jump into `novelty/` for descriptor and archive semantics,
+ * - jump into `entropy-sharing/`, `entropy-compat/`, and `auto-distance/` for tuning math,
+ * - jump into `objectives/` for the automatic entropy-objective path.
  *
- * The exported constants below fall into four tuning families:
+ * The exported constants fall into four tuning families:
  * - novelty defaults for descriptor-based exploration,
  * - entropy-sharing defaults for diversity-distribution control,
  * - compatibility defaults for speciation pressure,

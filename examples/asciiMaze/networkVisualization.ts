@@ -1337,8 +1337,14 @@ export class NetworkVisualization {
    */
   static visualizeNetworkSummary(network: INetwork): string {
     const categorized = NetworkVisualization.#categorizeNodes(network);
-    const INPUT_COUNT = categorized.inputCountDetected || 18; // legacy fallback retained
-    const OUTPUT_COUNT = 4; // maze solver fixed
+    const INPUT_COUNT = NetworkVisualization.#resolveInputCount(
+      network,
+      categorized,
+    );
+    const OUTPUT_COUNT = NetworkVisualization.#resolveOutputCount(
+      network,
+      categorized,
+    );
     const hiddenLayersRaw = NetworkVisualization.#groupHiddenByLayer(
       categorized.rawInputNodes,
       categorized.rawHiddenNodes,
@@ -1399,6 +1405,73 @@ export class NetworkVisualization {
     );
     const legendLines = NetworkVisualization.#buildLegend();
     return [header, ...rows, ...legendLines].join('\n');
+  }
+
+  /**
+   * Resolve the authoritative input count for the visualization summary.
+   *
+   * Explicit runtime role metadata takes priority when it is available so the
+   * terminal summary reflects the current public vector contract instead of a
+   * legacy example assumption.
+   *
+   * @param network - Runtime network or network-like object.
+   * @param categorized - Categorized node summary used for fallbacks.
+   * @returns Input count for the visualization header and body.
+   */
+  static #resolveInputCount(
+    network: INetwork,
+    categorized: CategorizedNodesResult,
+  ): number {
+    if (
+      Array.isArray(network.inputNodeIds) &&
+      network.inputNodeIds.length > 0
+    ) {
+      return network.inputNodeIds.length;
+    }
+
+    if (Array.isArray(network.input)) {
+      return network.input.length;
+    }
+
+    if (typeof network.input === 'number' && Number.isFinite(network.input)) {
+      return network.input;
+    }
+
+    return categorized.inputCountDetected || 18;
+  }
+
+  /**
+   * Resolve the authoritative output count for the visualization summary.
+   *
+   * The maze example used to rely on a fixed four-output assumption. Now that
+   * runtime networks expose explicit ordered role metadata, the summary should
+   * describe the network's actual public output contract first and only fall
+   * back to example-specific defaults when that metadata is missing.
+   *
+   * @param network - Runtime network or network-like object.
+   * @param categorized - Categorized node summary used for fallbacks.
+   * @returns Output count for the visualization header and body.
+   */
+  static #resolveOutputCount(
+    network: INetwork,
+    categorized: CategorizedNodesResult,
+  ): number {
+    if (
+      Array.isArray(network.outputNodeIds) &&
+      network.outputNodeIds.length > 0
+    ) {
+      return network.outputNodeIds.length;
+    }
+
+    if (Array.isArray(network.output)) {
+      return network.output.length;
+    }
+
+    if (typeof network.output === 'number' && Number.isFinite(network.output)) {
+      return network.output;
+    }
+
+    return categorized.outputNodes.length || 4;
   }
 
   /** Compute layout derived widths for given hidden layer count. */

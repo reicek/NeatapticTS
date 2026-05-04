@@ -35,19 +35,29 @@ export function launchRuntimeEvolution(
 
   // Step 1: Start the long-running evolution orchestration loop.
   void runRuntimeEvolutionLoop({
+    architectureSelectorController: viewContext.architectureSelectorController,
     evolutionWorker,
     canvas: viewContext.canvas,
     context: viewContext.context,
     statsValueByKey: viewContext.statsValueByKey,
     renderNetworkArchitecture: viewContext.renderNetworkArchitecture,
+    availableArchitectureProfiles: config.availableArchitectureProfiles,
+    initialArchitectureHistoryByProfileId:
+      config.architectureHistoryByProfileId,
     populationSize: config.populationSize,
     elitismCount: config.elitismCount,
     inputSize: config.inputSize,
     outputSize: config.outputSize,
+    selectedArchitectureProfileId: config.selectedArchitectureProfile.id,
+    selectedArchitectureProfileLabel: config.selectedArchitectureProfile.label,
     runtimeTelemetryState,
     isStopped: () => runtimeLifecycleState.stopped,
   }).catch((error: unknown) => {
     // Step 2: Surface unexpected failures in the HUD and tear down the runtime.
+    if (runtimeLifecycleState.stopped) {
+      return;
+    }
+
     updateStatsTableValues(viewContext.statsValueByKey, {
       status: resolveRuntimeHudErrorStatus(error),
     });

@@ -40,8 +40,8 @@ Apply gradient clipping to a network using a normalized runtime configuration.
 This is a small wrapper that forwards to the concrete implementation used by training.
 
 Parameters:
-- `net` - - Network instance to update.
-- `cfg` - - Normalized clipping settings.
+- `net` - Network instance to update.
+- `cfg` - Normalized clipping settings.
 
 ### CheckpointConfig
 
@@ -213,9 +213,9 @@ High-level training orchestration with early stopping, smoothing & callbacks.
 This is the main entrypoint used by `Network.train(...)`-style APIs.
 
 Parameters:
-- `net` - - Network instance to train.
-- `set` - - Training dataset.
-- `options` - - Training options (stopping conditions, optimizer, hooks, etc.).
+- `net` - Network instance to train.
+- `set` - Training dataset.
+- `options` - Training options (stopping conditions, optimizer, hooks, etc.).
 
 Returns: Summary payload containing final error, iteration count, and elapsed time.
 
@@ -273,15 +273,15 @@ Returns mean cost across processed samples.
 This is the core "one epoch" primitive used by higher-level training orchestration.
 
 Parameters:
-- `net` - - Network instance receiving training updates.
-- `set` - - Training samples.
-- `batchSize` - - Mini-batch size (use 1 for pure SGD).
-- `accumulationSteps` - - Micro-batch accumulation steps.
-- `currentRate` - - Current learning rate (may be scheduled by caller).
-- `momentum` - - Momentum used by some optimizers (when applicable).
-- `regularization` - - Regularization configuration passed down to nodes.
-- `costFunction` - - Cost function selector (function or compatible object).
-- `optimizer` - - Optional optimizer configuration.
+- `net` - Network instance receiving training updates.
+- `set` - Training samples.
+- `batchSize` - Mini-batch size (use 1 for pure SGD).
+- `accumulationSteps` - Micro-batch accumulation steps.
+- `currentRate` - Current learning rate (may be scheduled by caller).
+- `momentum` - Momentum used by some optimizers (when applicable).
+- `regularization` - Regularization configuration passed down to nodes.
+- `costFunction` - Cost function selector (function or compatible object).
+- `optimizer` - Optional optimizer configuration.
 
 Returns: Mean cost across the processed samples.
 
@@ -305,10 +305,10 @@ buildMonitoredSmoothingConfig(
 Build monitored smoothing configuration from options and defaults.
 
 Parameters:
-- `type` - - Selected monitored smoothing mode.
-- `window` - - Monitored smoothing window length.
-- `emaAlpha` - - Optional monitored EMA alpha.
-- `trimmedRatio` - - Optional trimmed-mean ratio.
+- `type` - Selected monitored smoothing mode.
+- `window` - Monitored smoothing window length.
+- `emaAlpha` - Optional monitored EMA alpha.
+- `trimmedRatio` - Optional trimmed-mean ratio.
 
 Returns: Normalized monitored smoothing configuration.
 
@@ -355,8 +355,8 @@ resolveEmaAlpha(
 Resolve default EMA alpha using a window length.
 
 Parameters:
-- `smoothingWindow` - - Window length for moving average operations.
-- `explicitAlpha` - - Optional user-provided alpha override.
+- `smoothingWindow` - Window length for moving average operations.
+- `explicitAlpha` - Optional user-provided alpha override.
 
 Returns: A valid EMA alpha in the range (0, 1].
 
@@ -379,9 +379,9 @@ trainFinalizeCore(
 Run the full training orchestration loop with smoothing, callbacks, and early stopping.
 
 Parameters:
-- `net` - - Network instance to train.
-- `set` - - Training dataset.
-- `options` - - Training options.
+- `net` - Network instance to train.
+- `set` - Training dataset.
+- `options` - Training options.
 
 Returns: Final training summary including error, iteration count, and elapsed time.
 
@@ -605,15 +605,15 @@ trainSetCore(
 Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
 
 Parameters:
-- `net` - - Network instance being trained.
-- `set` - - Training sample set.
-- `batchSize` - - Mini-batch size.
-- `accumulationSteps` - - Micro-batches per optimizer step.
-- `currentRate` - - Learning rate for this pass.
-- `momentum` - - Momentum value used by propagation paths.
-- `regularization` - - Regularization settings passed into propagation calls.
-- `costFunction` - - Cost function or cost-function object.
-- `optimizer` - - Optional optimizer configuration.
+- `net` - Network instance being trained.
+- `set` - Training sample set.
+- `batchSize` - Mini-batch size.
+- `accumulationSteps` - Micro-batches per optimizer step.
+- `currentRate` - Learning rate for this pass.
+- `momentum` - Momentum value used by propagation paths.
+- `regularization` - Regularization settings passed into propagation calls.
+- `costFunction` - Cost function or cost-function object.
+- `optimizer` - Optional optimizer configuration.
 
 Returns: Mean cost over processed samples.
 
@@ -633,10 +633,10 @@ computeMonitoredError(
 Compute monitored training error using the configured smoothing strategy.
 
 Parameters:
-- `trainError` - - Raw training error for the current iteration.
-- `recentErrors` - - Chronological recent error window (oldest to newest).
-- `cfg` - - Monitored smoothing configuration.
-- `state` - - Mutable smoothing state for EMA-based modes.
+- `trainError` - Raw training error for the current iteration.
+- `recentErrors` - Chronological recent error window (oldest to newest).
+- `cfg` - Monitored smoothing configuration.
+- `state` - Mutable smoothing state for EMA-based modes.
 
 Returns: Smoothed monitored error.
 
@@ -654,10 +654,10 @@ computePlateauMetric(
 Compute plateau metric using the configured plateau smoothing strategy.
 
 Parameters:
-- `trainError` - - Raw training error for the current iteration.
-- `plateauErrors` - - Plateau window of recent raw errors.
-- `cfg` - - Plateau smoothing configuration.
-- `state` - - Mutable state for plateau EMA.
+- `trainError` - Raw training error for the current iteration.
+- `plateauErrors` - Plateau window of recent raw errors.
+- `cfg` - Plateau smoothing configuration.
+- `state` - Mutable state for plateau EMA.
 
 Returns: Smoothed plateau metric.
 
@@ -675,8 +675,8 @@ applyGradientClippingCore(
 Apply gradient clipping to accumulated connection and bias deltas.
 
 Parameters:
-- `net` - - Network instance whose accumulated gradients are clipped.
-- `cfg` - - Runtime clipping configuration.
+- `net` - Network instance whose accumulated gradients are clipped.
+- `cfg` - Runtime clipping configuration.
 
 Returns: Nothing.
 

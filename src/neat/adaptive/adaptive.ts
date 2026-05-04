@@ -7,6 +7,13 @@
  * sake of a single operator. Instead they watch population behavior over time
  * and adjust thresholds, budgets, or rates that later generations inherit.
  *
+ * Ownership boundary: these helpers are controller-owned policy overlays
+ * layered on top of the evaluated population. Complexity budgets and lineage
+ * tuning rewrite future controller options, while acceptance may rewrite the
+ * current generation's score view for selection. None of these helpers change
+ * canonical genome identity, compatibility distance, or replay semantics by
+ * themselves.
+ *
  * The root chapter answers five practical controller questions:
  *
  * - when should network complexity budgets grow, shrink, or flip phase?
@@ -37,7 +44,7 @@
  *   Signals --> Operators["applyOperatorAdaptation()"]
  *   Budget --> Options["update controller limits and options"]
  *   Phase --> Options
- *   Acceptance --> Population["rewrite acceptance state on current genomes"]
+ *   Acceptance --> Population["rewrite controller-visible score overlay"]
  *   Lineage --> Options
  *   Mutation --> Population["update per-genome mutation fields"]
  *   Operators --> Stats["decay operator success history"]
@@ -182,16 +189,18 @@ export function applyPhasedComplexity(this: NeatLikeWithAdaptiveType) {
  *
  * Use this controller when you want the population to earn the right to stay in
  * play. Unlike the complexity and lineage controllers, this one writes back to
- * the current population immediately by zeroing scores below the accepted bar,
- * so it directly changes the selection landscape for the same generation.
+ * the controller-visible score overlay on the current population immediately by
+ * zeroing scores below the accepted bar. It therefore changes the selection
+ * landscape for the same generation without redefining canonical fitness.
  *
  * Behavior summary:
  * - Initializes `_mcThreshold` from configuration if undefined.
  * - Computes the proportion of genomes with score >= threshold.
  * - Adjusts threshold multiplicatively by `adjustRate` to move the
  *   observed proportion towards `targetAcceptance`.
- * - Sets `g.score = 0` for genomes that fall below the final threshold
- *   — effectively rejecting them from selection.
+ * - Sets `g.score = 0` as the controller-visible rejection overlay for genomes
+ *   that fall below the final threshold — effectively rejecting them from
+ *   selection.
  *
  * @this {NeatLikeWithAdaptiveType} NeatEngine
  * @returns {void} Updates `_mcThreshold` over time and may zero out scores for currently rejected genomes.

@@ -27,6 +27,7 @@ import type { FlappyGameState } from '../flappyEnvironment.ts';
  */
 export interface FlappyNetworkLike {
   activate(inputs: number[]): number[] | number;
+  clear?: () => void;
   _id?: number;
 }
 

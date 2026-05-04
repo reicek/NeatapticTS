@@ -42,6 +42,20 @@ import type { NeatConstructorDefaults } from './init/neat.init';
  * for the background behind the compatibility and growth vocabulary that keeps
  * surfacing across this folder.
  *
+ * Canonical NEAT vs extensions vs experiments:
+ *
+ * - Canonical NEAT (default mental model): historical markings (innovation ids),
+ *   speciation pressure, and crossover alignment by innovation number. This is the
+ *   core contract that makes “different topologies can still mate” work.
+ * - Repo-specific extensions (opt-in features): additional controller lanes such as
+ *   recurrent/gated allowances, multiobjective policy, novelty tracking, pruning,
+ *   or richer telemetry. These should preserve the canonical identity rules even
+ *   when they add new operators or metrics.
+ * - Experimental research features: best-effort lanes that are intentionally marked
+ *   as experimental (for example ONNX heuristics or experimental layer builders).
+ *   Treat these as evolving prototypes: useful for exploration, but not guaranteed
+ *   to match the strict replay or correctness bar of the canonical core.
+ *
  * Read this root chapter in three passes. Start with this defaults file and
  * `neat.types.ts` for the public knobs and broad contracts. Continue into
  * `evaluate/`, `evolve/`, and `speciation/` for the live search loop. Finish

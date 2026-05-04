@@ -51,4 +51,5 @@ Use this checklist during each SOLID split session.
 5. If the workstream remains active, stop and produce the next-session handoff
    prompt.
 6. If the workstream is fully complete, finish by compressing the plan into a
-   short closed tracker and adding or updating the matching `.logs.md` file.
+   short closed tracker, adding or updating the matching `.logs.md` file, and
+   moving both files into `plans/completed/`.

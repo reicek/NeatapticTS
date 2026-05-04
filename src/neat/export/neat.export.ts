@@ -1,8 +1,67 @@
+import type Network from '../../architecture/network/network';
+import type { NetworkJSON } from '../../architecture/network/network.types';
+import { toJSONImpl as serializeNetworkToJson } from '../../architecture/network/serialize/network.serialize.utils';
 import type { NeatLike } from '../shared/neat.shared.types';
 import {
+  createGenomeFromNetwork,
+  createGenomeFromNetworkJson,
+  createNetworkFromGenome,
+  createNetworkJsonFromGenome,
+} from '../genome/genome';
+import type { NeatGenomeCaptureOptions } from '../genome/genome';
+import {
+  restoreInnovationTracker,
+  serializeInnovationTracker,
+} from '../innovation-tracker/innovation-tracker';
+import {
+  CURRENT_META_FORMAT_VERSION,
+  CURRENT_STATE_FORMAT_VERSION,
+  FULL_CHECKPOINT_MODE,
+} from './neat.export.types';
+import type {
+  GenomeJSON,
+  GenomeWithSerialization,
+  NeatControllerForExport,
+  NeatMetaJSON,
+  NeatStateJSON,
+  NeatConstructor,
+  NetworkClass,
+} from './neat.export.types';
+import {
+  assertCheckpointGenomeIsNative,
+  assertSerializedGenomeCarriesCheckpointIdentity,
+  findNextGenomeIdFloor,
+  resolveMetaFormatVersion,
+  resolveStateFormatVersion,
+} from './neat.export.utils';
+import {
+  hydrateGenomeControllerMeta,
+  serializeGenomeCheckpoint,
+  splitSerializedGenomeCheckpoint,
+} from './neat.export.population.utils';
+import {
+  restoreRuntimeMeta,
+  serializeRuntimeMeta,
+} from './neat.export.runtime.utils';
+import {
+  restoreSpeciationCheckpoint,
+  serializeSpeciationCheckpoint,
+} from './neat.export.speciation.utils';
+import {
+  NeatExportPopulationValidationError,
   NeatExportStateBundleValidationError,
   NeatExportStateControllerRestoreError,
 } from './neat.export.errors';
+
+export type {
+  GenomeControllerMetaJSON,
+  GenomeJSON,
+  NeatMetaJSON,
+  NeatRuntimeMetaJSON,
+  NeatStateJSON,
+  SpeciationCheckpointJSON,
+  SpeciesCheckpointJSON,
+} from './neat.export.types';
 
 /**
  * Persistence helpers for the NEAT controller's evolutionary state.
@@ -22,6 +81,31 @@ import {
  * - `exportPopulation()` and `importPopulation()` move only candidate genomes
  * - `toJSONImpl()` and `fromJSONImpl()` move only controller meta state
  * - `exportState()` and `importStateImpl()` combine both layers into one full resume bundle
+ *
+ * Deterministic replay contract (why this boundary exists):
+ *
+ * - **Population-only snapshots** are intentionally *not* a full replay.
+ *   They preserve the candidate networks plus controller-owned per-genome
+ *   metadata (stable genome ids, lineage hints, optional per-genome RNG state),
+ *   but they do not promise that a resumed run will make the same future
+ *   structural innovation assignments.
+ * - **Meta-only checkpoints** preserve controller bookkeeping without forcing a
+ *   particular population to travel with it. This is useful for carrying
+ *   options, generation counters, and innovation tracking across environments.
+ * - **Full checkpoints** are the pause-and-resume surface. When you restore a
+ *   full checkpoint into the same codebase, the controller is expected to
+ *   continue evolving as if it had never stopped.
+ *
+ * “Same seed + same checkpoint + same code” is the target replay promise.
+ * That promise only holds when controller-owned randomness and architecture
+ * counters are treated as explicit state (see `neat.export.runtime.utils.ts`),
+ * and when structural identity is treated as explicit history (node gene ids
+ * plus connection innovation numbers).
+ *
+ * Legacy/import bridge: `Network.fromJSON()` supports permissive restore flows
+ * for older payloads, but the strict checkpoint path in this chapter validates
+ * identity fields before allowing a resume. Treat fallback compatibility as a
+ * deliberate opt-in bridge, not as native proper-NEAT semantics.
  *
  * That split matters because not every persistence use case is a full replay.
  * Sometimes you want to archive candidate solutions for later inspection,
@@ -47,127 +131,18 @@ import {
  *   MetaOnly --> ImportMeta[Rebuild controller bookkeeping]
  *   FullState --> Resume[Restore bookkeeping and population together]
  * ```
- */
-
-/**
- * JSON representation of an individual genome (network). The concrete shape is
- * produced by `Network#toJSON()` and re-hydrated via `Network.fromJSON()`. We use
- * an open record signature here because the network architecture may evolve with
- * plugins / future features (e.g. CPPNs, substrate metadata, ONNX export tags).
  *
- * Treat this as a persistence boundary rather than a strict schema promise. The
- * export helpers preserve whatever `Network#toJSON()` emits, which lets the
- * broader architecture evolve without forcing this chapter to hard-code every
- * possible serialized field.
- */
-export interface GenomeJSON {
-  [key: string]: unknown;
-}
-
-/**
- * Connection innovation map entry.
+ * ```mermaid
+ * flowchart LR
+ *   Snapshot[Saved checkpoint] --> Restore[importState]
+ *   Restore --> Determinism{Has runtime meta\n+ explicit identity?}
+ *   Determinism -->|yes| Replay[Controller-owned replay\nfuture innovations match]
+ *   Determinism -->|no| Bridge[Legacy or import bridge\nno replay guarantee]
+ * ```
  *
- * Innovation maps are serialized as `[key, value]` tuples so they can round-trip
- * cleanly through JSON and later be restored into `Map` instances.
+ * Background reading: Wikipedia contributors,
+ * [Serialization](https://en.wikipedia.org/wiki/Serialization).
  */
-type InnovationMapEntry = [string, number];
-
-/**
- * Serialized meta information describing a NEAT run, excluding the concrete
- * population genomes. This allows you to persist and resume experiment context
- * without committing to a particular population snapshot.
- */
-export interface NeatMetaJSON {
-  /** Number of input nodes expected by evolved networks. */
-  input: number;
-  /** Number of output nodes produced by evolved networks. */
-  output: number;
-  /** Current evolutionary generation index (0-based). */
-  generation: number;
-  /** Full options object (hyper-parameters) used to configure NEAT. */
-  options: Record<string, unknown>;
-  /** Innovation records for node split mutations: [compositeKey, innovationId]. */
-  nodeSplitInnovations: InnovationMapEntry[];
-  /** Innovation records for connection mutations: [compositeKey, innovationId]. */
-  connInnovations: InnovationMapEntry[];
-  /** Next global innovation number that will be assigned. */
-  nextGlobalInnovation: number;
-}
-
-/**
- * Genome with toJSON serialization method.
- *
- * This is the smallest runtime contract needed by the export helpers when they
- * only care about turning one genome into a JSON payload.
- */
-interface GenomeWithSerialization {
-  toJSON: () => GenomeJSON;
-}
-
-/**
- * NEAT controller interface for export operations.
- *
- * The persistence helpers intentionally depend on this narrow host shape instead
- * of the concrete `Neat` class. That keeps export and restore logic reusable in
- * tests and static-style helper flows without coupling the file to the full
- * controller implementation.
- */
-interface NeatControllerForExport {
-  input: number;
-  output: number;
-  generation: number;
-  options: Record<string, unknown> & { popsize?: number };
-  population: GenomeWithSerialization[];
-  _nodeSplitInnovations: Map<string, number>;
-  _connInnovations: Map<string, number>;
-  _nextGlobalInnovation: number;
-}
-
-/**
- * Network class with static fromJSON method.
- *
- * Import helpers use this contract when rebuilding genomes from serialized JSON
- * without needing to know the concrete network implementation details.
- */
-interface NetworkClass {
-  fromJSON: (json: GenomeJSON) => GenomeWithSerialization;
-}
-
-/**
- * NEAT class constructor interface.
- *
- * Static-style restore helpers depend on this constructor shape so they can
- * rebuild a controller instance from persisted meta data and then optionally
- * rehydrate the population.
- */
-interface NeatConstructor {
-  new (
-    input: number,
-    output: number,
-    fitness: (network: GenomeWithSerialization) => number | Promise<number>,
-    options?: Record<string, unknown>,
-  ): NeatControllerForExport;
-  fromJSON?: (
-    meta: NeatMetaJSON,
-    fitness: (network: GenomeWithSerialization) => number | Promise<number>,
-  ) => NeatControllerForExport;
-}
-
-/**
- * Top-level bundle containing both NEAT meta information and the full array of
- * serialized genomes (population). This is what you get from `exportState()` and
- * feed into `importStateImpl()` to resume exactly where you left off.
- *
- * If `NeatMetaJSON` is the controller checkpoint and `GenomeJSON[]` is the pool
- * of candidate solutions, `NeatStateJSON` is the combined pause-and-resume
- * artifact that preserves both layers together.
- */
-export interface NeatStateJSON {
-  /** Serialized NEAT meta (innovation history, generation, options, etc.). */
-  neat: NeatMetaJSON;
-  /** Array of serialized genomes representing the current population. */
-  population: GenomeJSON[];
-}
 
 /**
  * Export the current population (array of genomes) into plain JSON objects.
@@ -177,7 +152,9 @@ export interface NeatStateJSON {
  *
  * Why export population only? Sometimes you want to snapshot just the set of
  * candidate solutions (e.g. for ensemble evaluation) without freezing the
- * innovation counters or hyper-parameters.
+ * innovation counters or hyper-parameters. Even in that lighter mode, the
+ * export keeps controller-owned genome metadata next to each network payload so
+ * imported populations do not silently lose genome ids or lineage evidence.
  *
  * Example:
  *
@@ -192,7 +169,27 @@ export interface NeatStateJSON {
  */
 export function exportPopulation(this: NeatLike): GenomeJSON[] {
   const internal = this as unknown as NeatControllerForExport;
-  return internal.population.map((genome) => genome.toJSON());
+  const genomeCaptureOptions = resolveGenomeCaptureOptions(internal);
+
+  return internal.population.map((genome, genomeIndex) => {
+    assertCheckpointGenomeIsNative(genome, genomeIndex, 'export');
+
+    const runtimeGenome = genome as unknown as Network;
+    const runtimePayload = serializeNetworkToJson.call(runtimeGenome);
+    const strictGenome = createGenomeFromNetwork(
+      runtimeGenome,
+      genomeCaptureOptions,
+    );
+    const strictNetworkPayload = createNetworkJsonFromGenome(strictGenome, {
+      dropout: runtimePayload.dropout,
+      architecture: runtimePayload.architecture,
+    });
+
+    return serializeGenomeCheckpoint(
+      genome,
+      strictNetworkPayload as unknown as GenomeJSON,
+    );
+  });
 }
 
 /**
@@ -212,7 +209,10 @@ export function exportPopulation(this: NeatLike): GenomeJSON[] {
  *
  * Edge cases handled:
  * - Empty array => becomes an empty population (popsize=0).
- * - Malformed entries will throw if `Network.fromJSON` rejects them.
+ * - Legacy snapshots without controller genome ids are upgraded by assigning
+ *   fresh ids inside the destination controller.
+ * - Malformed entries or native genomes that fail proper-NEAT validation throw
+ *   explicit population-validation errors.
  *
  * @param populationJSON Array of serialized genome objects.
  * @returns Promise that resolves once all genomes have been rehydrated and the
@@ -222,19 +222,89 @@ export async function importPopulation(
   this: NeatLike,
   populationJSON: GenomeJSON[],
 ): Promise<void> {
-  const { default: Network } =
-    await import('../../architecture/network/network');
+  if (!Array.isArray(populationJSON)) {
+    throw new NeatExportPopulationValidationError(
+      'Population snapshots must be arrays of serialized genomes.',
+    );
+  }
+
   const internal = this as unknown as NeatControllerForExport;
-  internal.population = populationJSON.map((serializedGenome) =>
-    (Network as unknown as NetworkClass).fromJSON(serializedGenome),
-  );
+  const genomeCaptureOptions = resolveGenomeCaptureOptions(internal);
+  const seenGenomeIds = new Set<number>();
+  let nextAssignedGenomeId = internal._nextGenomeId ?? 1;
+
+  internal.population = populationJSON.map((serializedGenome, genomeIndex) => {
+    if (
+      !serializedGenome ||
+      typeof serializedGenome !== 'object' ||
+      Array.isArray(serializedGenome)
+    ) {
+      throw new NeatExportPopulationValidationError(
+        `Population snapshot entry ${genomeIndex} must be a serialized genome object.`,
+      );
+    }
+
+    const { controllerMeta, networkPayload } =
+      splitSerializedGenomeCheckpoint(serializedGenome);
+    assertSerializedGenomeCarriesCheckpointIdentity(
+      networkPayload,
+      genomeIndex,
+    );
+    const serializedNetworkPayload = networkPayload as unknown as NetworkJSON;
+    const strictGenome = createGenomeFromNetworkJson(
+      serializedNetworkPayload,
+      genomeCaptureOptions,
+    );
+    const genome = createNetworkFromGenome(strictGenome, {
+      dropout:
+        typeof serializedNetworkPayload.dropout === 'number'
+          ? serializedNetworkPayload.dropout
+          : undefined,
+      architecture: serializedNetworkPayload.architecture,
+    }) as unknown as ReturnType<NetworkClass['fromJSON']>;
+
+    nextAssignedGenomeId = hydrateGenomeControllerMeta(
+      genome,
+      controllerMeta,
+      seenGenomeIds,
+      nextAssignedGenomeId,
+    );
+    assertCheckpointGenomeIsNative(genome, genomeIndex, 'import');
+    return genome;
+  });
+
   internal.options.popsize = internal.population.length;
+  internal._nextGenomeId = Math.max(
+    nextAssignedGenomeId,
+    findNextGenomeIdFloor(internal.population),
+  );
+}
+
+function resolveGenomeCaptureOptions(
+  controller: NeatControllerForExport,
+): NeatGenomeCaptureOptions {
+  const genomeExtensions = controller.options.genomeExtensions;
+  if (
+    !genomeExtensions ||
+    typeof genomeExtensions !== 'object' ||
+    Array.isArray(genomeExtensions)
+  ) {
+    return {};
+  }
+
+  return {
+    connectionGain: genomeExtensions.connectionGain === true,
+    nodeResponse: genomeExtensions.nodeResponse === true,
+    disabledConnectionReenableProbability:
+      genomeExtensions.disabledConnectionReenableProbability === true,
+  };
 }
 
 /**
  * Convenience helper that returns a full evolutionary snapshot: both NEAT meta
  * information and the serialized population array. Use this when you want a
- * truly pause-and-resume capability including innovation bookkeeping.
+ * truly pause-and-resume capability including innovation bookkeeping, stable
+ * genome ids, species history, and live speciation bookkeeping.
  *
  * In practice this is the "checkpoint" export. It is the safest default when
  * you care about reproducible continuation rather than only preserving candidate
@@ -254,8 +324,13 @@ export async function importPopulation(
  */
 export function exportState(this: NeatLike): NeatStateJSON {
   return {
+    formatVersion: CURRENT_STATE_FORMAT_VERSION,
+    checkpointMode: FULL_CHECKPOINT_MODE,
     neat: toJSONImpl.call(this),
     population: exportPopulation.call(this),
+    speciation: serializeSpeciationCheckpoint(
+      this as unknown as NeatControllerForExport,
+    ),
   };
 }
 
@@ -272,7 +347,9 @@ export function exportState(this: NeatLike): NeatStateJSON {
  *
  * Safety and validation:
  * - Throws if the bundle is not an object.
- * - Silently skips population import if `population` is missing or not an array.
+ * - Throws if the bundle omits the full population array.
+ * - Throws if the population or species payload cannot satisfy the proper-NEAT
+ *   resume contract.
  *
  * Example:
  *
@@ -296,6 +373,39 @@ export async function importStateImpl(
   if (!stateBundle || typeof stateBundle !== 'object')
     throw new NeatExportStateBundleValidationError('Invalid state bundle');
 
+  const checkpointFormatVersion = resolveStateFormatVersion(stateBundle);
+  if (checkpointFormatVersion > CURRENT_STATE_FORMAT_VERSION) {
+    throw new NeatExportStateBundleValidationError(
+      `Unsupported NEAT checkpoint format version: ${checkpointFormatVersion}.`,
+    );
+  }
+  if (!stateBundle.neat || typeof stateBundle.neat !== 'object') {
+    throw new NeatExportStateBundleValidationError(
+      'Full checkpoint bundles must include serialized NEAT meta state.',
+    );
+  }
+  if (!Array.isArray(stateBundle.population)) {
+    throw new NeatExportStateBundleValidationError(
+      'Full checkpoint bundles must include a population array.',
+    );
+  }
+  if (
+    checkpointFormatVersion >= CURRENT_STATE_FORMAT_VERSION &&
+    stateBundle.checkpointMode !== FULL_CHECKPOINT_MODE
+  ) {
+    throw new NeatExportStateBundleValidationError(
+      'Versioned full checkpoints must declare checkpointMode: "full".',
+    );
+  }
+  if (
+    checkpointFormatVersion >= CURRENT_STATE_FORMAT_VERSION &&
+    (!stateBundle.speciation || typeof stateBundle.speciation !== 'object')
+  ) {
+    throw new NeatExportStateBundleValidationError(
+      'Versioned full checkpoints must include speciation resume state.',
+    );
+  }
+
   const neatInstance = (
     this as NeatConstructor & {
       fromJSON?: typeof fromJSONImpl;
@@ -307,11 +417,23 @@ export async function importStateImpl(
       'Failed to create NEAT instance from JSON',
     );
 
-  if (Array.isArray(stateBundle.population))
-    await importPopulation.call(
-      neatInstance as unknown as NeatLike,
-      stateBundle.population,
+  await importPopulation.call(
+    neatInstance as unknown as NeatLike,
+    stateBundle.population,
+  );
+
+  if (stateBundle.speciation) {
+    const { default: Network } =
+      await import('../../architecture/network/network');
+
+    restoreSpeciationCheckpoint(
+      neatInstance,
+      stateBundle.speciation,
+      Network as unknown as NetworkClass,
     );
+  }
+
+  restoreRuntimeMeta(neatInstance, stateBundle.neat.runtime);
 
   return neatInstance;
 }
@@ -320,8 +442,9 @@ export async function importStateImpl(
  * Serialize NEAT meta (excluding the mutable population) for persistence of
  * innovation history and experiment configuration. This is sufficient to
  * recreate a blank NEAT run at the same evolutionary generation with the same
- * innovation counters, enabling deterministic continuation when combined later
- * with a saved population.
+ * innovation counters, genome-id cursor, and archived species history,
+ * enabling deterministic continuation when combined later with a saved
+ * population.
  *
  * Use this path when the controller context matters but the population payload
  * should be stored, transferred, or versioned separately.
@@ -341,13 +464,13 @@ export async function importStateImpl(
 export function toJSONImpl(this: NeatLike): NeatMetaJSON {
   const internal = this as unknown as NeatControllerForExport;
   return {
+    formatVersion: CURRENT_META_FORMAT_VERSION,
     input: internal.input,
     output: internal.output,
     generation: internal.generation,
     options: internal.options,
-    nodeSplitInnovations: Array.from(internal._nodeSplitInnovations.entries()),
-    connInnovations: Array.from(internal._connInnovations.entries()),
-    nextGlobalInnovation: internal._nextGlobalInnovation,
+    innovationTracker: serializeInnovationTracker(internal._innovationTracker),
+    runtime: serializeRuntimeMeta(internal),
   };
 }
 
@@ -355,7 +478,9 @@ export function toJSONImpl(this: NeatLike): NeatMetaJSON {
  * Static-style implementation that rehydrates a NEAT instance from previously
  * exported meta JSON produced by {@link toJSONImpl}. This does not restore a
  * population; callers typically follow up with `importPopulation` or use
- * {@link importStateImpl} for a complete restore.
+ * {@link importStateImpl} for a complete restore. Population-dependent state
+ * such as the live species registry remains reserved for the full checkpoint
+ * bundle.
  *
  * This helper is the mirror image of `toJSONImpl()`: rebuild the controller's
  * evolution bookkeeping first, then decide separately whether the population
@@ -380,6 +505,18 @@ export function fromJSONImpl(
     network: GenomeWithSerialization,
   ) => number | Promise<number>,
 ): NeatControllerForExport {
+  const metaFormatVersion = resolveMetaFormatVersion(neatJSON);
+  if (metaFormatVersion > CURRENT_META_FORMAT_VERSION) {
+    throw new NeatExportStateControllerRestoreError(
+      `Unsupported NEAT meta format version: ${metaFormatVersion}.`,
+    );
+  }
+  if (!neatJSON.innovationTracker) {
+    throw new NeatExportStateControllerRestoreError(
+      'Missing innovation tracker state in NEAT meta JSON',
+    );
+  }
+
   const neatInstance = new this(
     neatJSON.input,
     neatJSON.output,
@@ -388,15 +525,10 @@ export function fromJSONImpl(
   );
 
   neatInstance.generation = neatJSON.generation || 0;
-
-  if (Array.isArray(neatJSON.nodeSplitInnovations))
-    neatInstance._nodeSplitInnovations = new Map(neatJSON.nodeSplitInnovations);
-
-  if (Array.isArray(neatJSON.connInnovations))
-    neatInstance._connInnovations = new Map(neatJSON.connInnovations);
-
-  if (typeof neatJSON.nextGlobalInnovation === 'number')
-    neatInstance._nextGlobalInnovation = neatJSON.nextGlobalInnovation;
+  neatInstance._innovationTracker = restoreInnovationTracker(
+    neatJSON.innovationTracker,
+  );
+  restoreRuntimeMeta(neatInstance, neatJSON.runtime);
 
   return neatInstance;
 }

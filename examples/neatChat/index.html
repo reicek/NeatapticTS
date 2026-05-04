@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>NEATchat (NeatapticTS)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="../../docs/assets/theme.css" />
+    <script defer src="../../docs/assets/theme-tooltips.js"></script>
+  </head>
+  <body class="demo-page">
+    <main class="demo-main">
+      <section class="hero">
+        <p class="eyebrow">Flagship Browser Demo</p>
+        <h1>NEATchat</h1>
+        <p>
+          NEATchat is a tiny sequence-learning chat demo in progress, not a
+          transformer-scale language model. This page publishes the current
+          contract and visible runtime surface so users can inspect what is live
+          behavior versus what is explanatory scaffolding without depending on
+          Node.
+        </p>
+      </section>
+
+      <p id="neat-chat-status" class="load-status" role="status" aria-live="polite">
+        Loading NEATchat preview...
+      </p>
+      <section id="neat-chat-output" class="starter-demo-shell"></section>
+    </main>
+
+    <script>
+      (function loadNeatChatBundle() {
+        const statusElement = document.getElementById('neat-chat-status');
+        const currentPath = window.location.pathname.replace(/\\/g, '/');
+        const isRepositoryExamplePath = /\/examples\//.test(currentPath) && !/\/docs\/examples\//.test(currentPath);
+        const bundleSrc = isRepositoryExamplePath
+          ? '../../docs/assets/neat-chat.bundle.js'
+          : '../../assets/neat-chat.bundle.js';
+
+        const scriptElement = document.createElement('script');
+        scriptElement.src = bundleSrc;
+        scriptElement.defer = true;
+        scriptElement.onload = () => {
+          const startFunction = window.neatChatStart || window.neatChat?.start;
+
+          if (!startFunction) {
+            if (statusElement) {
+              statusElement.textContent =
+                'Bundle loaded, but no NEATchat start function was found.';
+            }
+            return;
+          }
+
+          Promise.resolve(startFunction('neat-chat-output'))
+            .then(() => {
+              if (statusElement) {
+                statusElement.textContent = '';
+              }
+            })
+            .catch((error) => {
+              if (statusElement) {
+                statusElement.textContent = error instanceof Error
+                  ? error.message
+                  : String(error);
+              }
+            });
+        };
+        scriptElement.onerror = () => {
+          if (statusElement) {
+            statusElement.textContent =
+              `Failed to load neat-chat.bundle.js from ${bundleSrc}. Run npm run build:neat-chat.`;
+          }
+        };
+
+        document.body.appendChild(scriptElement);
+      })();
+    </script>
+  </body>
+</html>

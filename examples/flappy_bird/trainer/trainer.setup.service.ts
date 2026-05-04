@@ -7,19 +7,30 @@
  * need before the first generation can run?
  */
 import Neat from '../../../src/neat.ts';
-import Architect from '../../../src/architecture/architect.ts';
 import * as methods from '../../../src/methods/methods.ts';
 import {
-  FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
   FLAPPY_NETWORK_INPUT_SIZE,
   FLAPPY_NETWORK_OUTPUT_SIZE,
 } from '../constants/constants';
+import {
+  DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
+  buildExampleArchitectureProfileNetwork,
+  resolveExampleArchitectureProfile,
+} from '../../architectureProfiles';
 import {
   FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT,
   FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_AMOUNT,
   FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE,
   FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE,
 } from './trainer.constants';
+
+const FLAPPY_TRAINER_RECURRENT_MUTATION_METHODS = [
+  ...methods.mutation.FFW,
+  methods.mutation.ADD_BACK_CONN,
+  methods.mutation.SUB_BACK_CONN,
+  methods.mutation.ADD_SELF_CONN,
+  methods.mutation.SUB_SELF_CONN,
+];
 import type {
   FlappyTrainerNeatController,
   FlappyTrainerRuntimeState,
@@ -37,7 +48,14 @@ import type {
  * @returns Default trainer setup values used for NEAT configuration.
  */
 export function createTrainerSetup(): FlappyTrainerSetup {
+  const profileId = DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID;
+  const resolvedProfile = resolveExampleArchitectureProfile(
+    'flappy-bird',
+    profileId,
+  );
   return {
+    architectureProfileId: profileId,
+    isRecurrent: resolvedProfile.recurrent,
     inputSize: FLAPPY_NETWORK_INPUT_SIZE,
     outputSize: FLAPPY_NETWORK_OUTPUT_SIZE,
     populationSize: FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE,
@@ -80,6 +98,14 @@ export function createTrainerRuntimeState(): FlappyTrainerRuntimeState {
 export function createNeatController(
   trainerSetup: FlappyTrainerSetup,
 ): FlappyTrainerNeatController {
+  const resolvedProfile = resolveExampleArchitectureProfile(
+    'flappy-bird',
+    trainerSetup.architectureProfileId,
+  );
+  const seedNetwork = buildExampleArchitectureProfileNetwork(
+    'flappy-bird',
+    trainerSetup.architectureProfileId,
+  );
   const neatInstance = new Neat(
     trainerSetup.inputSize,
     trainerSetup.outputSize,
@@ -89,12 +115,11 @@ export function createNeatController(
       elitism: trainerSetup.elitismCount,
       mutationRate: FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE,
       mutationAmount: FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_AMOUNT,
-      mutation: methods.mutation.FFW,
-      network: Architect.perceptron(
-        trainerSetup.inputSize,
-        ...FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
-        trainerSetup.outputSize,
-      ),
+      allowRecurrent: resolvedProfile.recurrent,
+      mutation: resolvedProfile.recurrent
+        ? FLAPPY_TRAINER_RECURRENT_MUTATION_METHODS
+        : methods.mutation.FFW,
+      network: seedNetwork,
       fitnessPopulation: true,
       speciation: true,
       multiObjective: { enabled: false },

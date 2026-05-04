@@ -12,6 +12,7 @@ export {
   restoreRNG,
   getRNGState,
   setRNGState,
+  getRandomFn,
 } from './deterministic/network.deterministic.utils';
 export { evolveNetwork } from './evolve/network.evolve.utils';
 export { gate, ungate } from './gating/network.gating.utils';
@@ -54,6 +55,7 @@ export {
   describeArchitecture,
   resolveArchitectureDescriptor,
 } from './topology/network.topology.architecture.utils';
+export { describeTemporalStructure } from './network.temporal.extensions.utils';
 
 export {
   applyGradientClippingImpl,

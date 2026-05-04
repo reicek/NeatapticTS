@@ -35,6 +35,11 @@ handles activation and propagation, another handles wiring and guards, and
 the factory helpers explain how dense, recurrent, normalization, and
 experimental layer families are assembled.
 
+The descriptor surface follows the same rule as the rest of the primitive
+chapter: factory helpers already stamp default family metadata when they can,
+so callers usually only reach for `describe(...)` when a block needs a stable
+human-facing name such as `encoder`, `memoryShelf`, or `policyHead`.
+
 ```mermaid
 flowchart LR
   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
@@ -74,11 +79,13 @@ Example: wire a small dense stack using the same block-level API that higher
 level builders depend on.
 
 ```ts
-const input = Layer.dense(2);
-input.set({ type: 'input' });
+const input = Layer.dense(2, 'input');
 const hidden = Layer.dense(4);
-const output = Layer.dense(1);
-output.set({ type: 'output' });
+const output = Layer.dense(1, 'output');
+
+input.describe({ label: 'sensorStage' });
+hidden.describe({ label: 'hiddenStage' });
+output.describe({ label: 'policyHead' });
 
 input.connect(hidden);
 hidden.connect(output);
@@ -94,6 +101,9 @@ layer-to-layer wiring vocabulary.
 ```ts
 const recurrent = Layer.lstm(8);
 const readout = Layer.dense(2);
+
+recurrent.describe({ label: 'controllerCore' });
+readout.describe({ label: 'readoutHead', intent: 'output' });
 
 recurrent.connect(readout);
 ```
@@ -117,6 +127,11 @@ This makes the class useful when you want to:
   families,
 - keep factory-specific mechanics below the public API.
 
+Dense, recurrent, normalization, convolution, attention, and memory helpers
+can all stamp their own default family metadata. That means the public layer
+API stays low ceremony: choose the right factory first, then add
+`describe(...)` only if a later reader benefits from a clearer boundary name.
+
 ### default
 
 #### activate
@@ -138,8 +153,8 @@ During training, layer-level dropout is applied, masking all nodes in the layer 
 During inference, all masks are set to 1.
 
 Parameters:
-- `value` - - An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
-- `training` - - A boolean indicating whether the layer is in training mode. Defaults to false.
+- `value` - An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
+- `training` - A boolean indicating whether the layer is in training mode. Defaults to false.
 
 Returns: An array containing the activation value of each node in the layer after activation.
 
@@ -155,8 +170,8 @@ attention(
 Creates a multi-head self-attention layer (stub implementation).
 
 Parameters:
-- `size` - - Number of output nodes.
-- `heads` - - Number of attention heads (default 1).
+- `size` - Number of output nodes.
+- `heads` - Number of attention heads (default 1).
 
 Returns: A new Layer instance representing an attention layer.
 
@@ -172,7 +187,7 @@ Creates a batch normalization layer.
 Applies batch normalization to the activations of the nodes in this layer during activation.
 
 Parameters:
-- `size` - - The number of nodes in this layer.
+- `size` - The number of nodes in this layer.
 
 Returns: A new Layer instance configured as a batch normalization layer.
 
@@ -202,9 +217,9 @@ or the target layer's `input` method. It establishes the forward connections
 necessary for signal propagation.
 
 Parameters:
-- `target` - - The destination Layer, Group, or Node to connect to.
-- `method` - - The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
-- `weight` - - An optional fixed weight to assign to all created connections.
+- `target` - The destination Layer, Group, or Node to connect to.
+- `method` - The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
+- `weight` - An optional fixed weight to assign to all created connections.
 
 Returns: An array containing the newly created connection objects.
 
@@ -230,10 +245,10 @@ conv1d(
 Creates a 1D convolutional layer (stub implementation).
 
 Parameters:
-- `size` - - Number of output nodes (filters).
-- `kernelSize` - - Size of the convolution kernel.
-- `stride` - - Stride of the convolution (default 1).
-- `padding` - - Padding (default 0).
+- `size` - Number of output nodes (filters).
+- `kernelSize` - Size of the convolution kernel.
+- `stride` - Stride of the convolution (default 1).
+- `padding` - Padding (default 0).
 
 Returns: A new Layer instance representing a 1D convolutional layer.
 
@@ -242,6 +257,7 @@ Returns: A new Layer instance representing a 1D convolutional layer.
 ```ts
 dense(
   size: number,
+  nodeType: PrimitiveNodeType,
 ): default
 ```
 
@@ -249,11 +265,52 @@ Creates a standard fully connected (dense) layer.
 
 All nodes in the source layer/group will connect to all nodes in this layer
 when using the default `ALL_TO_ALL` connection method via `layer.input()`.
+Dense layers also stamp default descriptor metadata (`family: 'dense'`) so
+later tooling can recognize the block even when the caller never names it.
 
 Parameters:
-- `size` - - The number of nodes (neurons) in this layer.
+- `size` - The number of nodes (neurons) in this layer.
+- `nodeType` - Optional primitive role assigned to the dense block.
 
 Returns: A new Layer instance configured as a dense layer.
+
+Example:
+
+```ts
+const output = Layer.dense(2, 'output');
+
+output.describe({ label: 'policyHead' });
+```
+
+#### describe
+
+```ts
+describe(
+  descriptor: PrimitiveDescriptor,
+): void
+```
+
+Attaches optional descriptor metadata to the layer boundary.
+
+Use this when a layer represents a named stage such as a readout block,
+memory shelf, or recurrent cell family that later diagnostics should
+understand without re-deriving meaning from the internal node order.
+
+Parameters:
+- `descriptor` - Optional label, intent, and scalar metadata to merge.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+const readout = Layer.dense(2, 'output');
+
+readout.describe({
+  label: 'readoutHead',
+  metadata: { stage: 'policy' },
+});
+```
 
 #### disconnect
 
@@ -267,8 +324,8 @@ disconnect(
 Removes connections between this layer's nodes and a target Group or Node.
 
 Parameters:
-- `target` - - The Group or Node to disconnect from.
-- `twosided` - - If true, removes connections in both directions (from this layer to target, and from target to this layer). Defaults to false.
+- `target` - The Group or Node to disconnect from.
+- `twosided` - If true, removes connections in both directions (from this layer to target, and from target to this layer). Defaults to false.
 
 #### dropout
 
@@ -290,8 +347,8 @@ Gating allows the activity of nodes in this layer (specifically, the output grou
 to modulate the flow of information through the specified `connections`.
 
 Parameters:
-- `connections` - - An array of connection objects to be gated.
-- `method` - - The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
+- `connections` - An array of connection objects to be gated.
+- `method` - The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
 
 #### gru
 
@@ -308,7 +365,7 @@ simpler than LSTMs but achieving similar performance on many tasks.
 They use an update gate and a reset gate to manage information flow.
 
 Parameters:
-- `size` - - The number of GRU units (and nodes in each gate/cell group).
+- `size` - The number of GRU units (and nodes in each gate/cell group).
 
 Returns: A new Layer instance configured as a GRU layer.
 
@@ -329,11 +386,19 @@ input mechanism (which is often the `output` group itself, but depends on the la
 This method is usually called by the `connect` method of the source layer/group.
 
 Parameters:
-- `from` - - The source Layer or Group connecting *to* this layer.
-- `method` - - The connection method (e.g., `ALL_TO_ALL`). Defaults to `ALL_TO_ALL`.
-- `weight` - - An optional fixed weight for the connections.
+- `from` - The source Layer or Group connecting *to* this layer.
+- `method` - The connection method (e.g., `ALL_TO_ALL`). Defaults to `ALL_TO_ALL`.
+- `weight` - An optional fixed weight for the connections.
 
 Returns: An array containing the newly created connection objects.
+
+#### intent
+
+Optional semantic intent for architecture tooling and diagnostics.
+
+#### label
+
+Optional human-readable descriptor label for architecture tooling.
 
 #### layerNorm
 
@@ -347,7 +412,7 @@ Creates a layer normalization layer.
 Applies layer normalization to the activations of the nodes in this layer during activation.
 
 Parameters:
-- `size` - - The number of nodes in this layer.
+- `size` - The number of nodes in this layer.
 
 Returns: A new Layer instance configured as a layer normalization layer.
 
@@ -366,7 +431,7 @@ long-range dependencies. This implementation uses standard LSTM architecture
 with input, forget, and output gates, and a memory cell.
 
 Parameters:
-- `size` - - The number of LSTM units (and nodes in each gate/cell group).
+- `size` - The number of LSTM units (and nodes in each gate/cell group).
 
 Returns: A new Layer instance configured as an LSTM layer.
 
@@ -387,10 +452,14 @@ information propagates backward through the blocks. The layer's output
 concatenates the states of all memory blocks.
 
 Parameters:
-- `size` - - The number of nodes in each memory block (must match the input size).
-- `memory` - - The number of time steps to remember (number of memory blocks).
+- `size` - The number of nodes in each memory block (must match the input size).
+- `memory` - The number of time steps to remember (number of memory blocks).
 
 Returns: A new Layer instance configured as a Memory layer.
+
+#### metadata
+
+Optional scalar metadata retained on the primitive boundary.
 
 #### nodes
 
@@ -421,9 +490,9 @@ to calculate the initial error for each node. Otherwise, nodes calculate
 their error based on the error propagated from subsequent layers.
 
 Parameters:
-- `rate` - - The learning rate, controlling the step size of weight adjustments.
-- `momentum` - - The momentum factor, used to smooth weight updates and escape local minima.
-- `target` - - An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
+- `rate` - The learning rate, controlling the step size of weight adjustments.
+- `momentum` - The momentum factor, used to smooth weight updates and escape local minima.
+- `target` - An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
 
 #### set
 
@@ -440,7 +509,7 @@ or node type. If a node within the `nodes` array is actually a `Group` (e.g., in
 the configuration is applied recursively to the nodes within that group.
 
 Parameters:
-- `values` - - An object containing the properties and their values to set.
+- `values` - An object containing the properties and their values to set.
   Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
 
 ## architecture/layer/layer.errors.ts
@@ -613,9 +682,9 @@ const output2 = activateLayer(
 ```
 
 Parameters:
-- `context` - - The layer state needed for activation.
-- `values` - - Optional activation values to set per node.
-- `training` - - Whether to apply dropout masking for training.
+- `context` - The layer state needed for activation.
+- `values` - Optional activation values to set per node.
+- `training` - Whether to apply dropout masking for training.
 
 Returns: A cloned array of activation values.
 
@@ -630,7 +699,7 @@ clearLayer(
 Orchestrates clearing node activation state with a high-level flow.
 
 Parameters:
-- `context` - - The layer state needed to reset nodes.
+- `context` - The layer state needed to reset nodes.
 Example:
 
 ```ts
@@ -660,10 +729,10 @@ connectLayer(layerConnectionContext, nextLayerLike);
 ```
 
 Parameters:
-- `context` - - The layer state needed for connections.
-- `target` - - The layer, group, or node to connect to.
-- `method` - - Optional connection method override.
-- `weight` - - Optional fixed weight to apply.
+- `context` - The layer state needed for connections.
+- `target` - The layer, group, or node to connect to.
+- `method` - Optional connection method override.
+- `weight` - Optional fixed weight to apply.
 
 Returns: The created connection list.
 
@@ -680,9 +749,9 @@ createAttentionLayer(
 Orchestrates attention layer creation with a high-level flow.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of output nodes.
-- `heads` - - Number of attention heads.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of output nodes.
+- `heads` - Number of attention heads.
 
 Returns: The configured layer instance.
 Example:
@@ -703,8 +772,8 @@ createBatchNormLayer(
 Orchestrates batch normalization layer creation with a high-level flow.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in the normalization layer.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of nodes in the normalization layer.
 
 Returns: The configured layer instance.
 Example:
@@ -728,11 +797,11 @@ createConv1dLayer(
 Orchestrates 1D convolution layer creation with a high-level flow.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of output nodes.
-- `kernelSize` - - Size of the convolution kernel.
-- `stride` - - Stride of the convolution.
-- `padding` - - Padding size for the convolution.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of output nodes.
+- `kernelSize` - Size of the convolution kernel.
+- `stride` - Stride of the convolution.
+- `padding` - Padding size for the convolution.
 
 Returns: The configured layer instance.
 Example:
@@ -747,14 +816,16 @@ const conv1d = createConv1dLayer(factoryContext, 8, 3);
 createDenseLayer(
   context: LayerFactoryContext<TLayer>,
   size: number,
+  nodeType: PrimitiveNodeType,
 ): TLayer
 ```
 
 Orchestrates dense layer creation with a high-level flow.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in the dense layer.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of nodes in the dense layer.
+- `nodeType` - Optional primitive role assigned to the dense block.
 
 Returns: The configured layer instance.
 Example:
@@ -775,8 +846,8 @@ createGruLayer(
 Orchestrates GRU layer creation with a high-level flow.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of units in the GRU layer.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of units in the GRU layer.
 
 Returns: The configured layer instance.
 Example:
@@ -797,8 +868,8 @@ createLayerNormLayer(
 Orchestrates layer normalization layer creation with a high-level flow.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in the normalization layer.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of nodes in the normalization layer.
 
 Returns: The configured layer instance.
 Example:
@@ -819,8 +890,8 @@ createLstmLayer(
 Orchestrates LSTM layer creation with a high-level flow.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of units in the LSTM layer.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of units in the LSTM layer.
 
 Returns: The configured layer instance.
 Example:
@@ -842,9 +913,9 @@ createMemoryLayer(
 Orchestrates Memory layer creation with a high-level flow.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in each memory block.
-- `memory` - - Number of time steps to remember.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of nodes in each memory block.
+- `memory` - Number of time steps to remember.
 
 Returns: The configured layer instance.
 Example:
@@ -872,9 +943,9 @@ disconnectLayer(layerConnectionContext, someGroup, true);
 ```
 
 Parameters:
-- `context` - - The layer state needed for disconnecting.
-- `target` - - The group or node to disconnect.
-- `twoSided` - - Whether to remove reciprocal connections as well.
+- `context` - The layer state needed for disconnecting.
+- `target` - The group or node to disconnect.
+- `twoSided` - Whether to remove reciprocal connections as well.
 
 ### gateLayer
 
@@ -895,9 +966,9 @@ gateLayer(layerConnectionContext, someConnections, method);
 ```
 
 Parameters:
-- `context` - - The layer state needed for gating.
-- `connections` - - The connections to gate.
-- `method` - - The gating method.
+- `context` - The layer state needed for gating.
+- `connections` - The connections to gate.
+- `method` - The gating method.
 
 ### inputLayer
 
@@ -919,10 +990,10 @@ inputLayer(layerConnectionContext, previousLayerLike);
 ```
 
 Parameters:
-- `context` - - The layer state needed for input wiring.
-- `from` - - The source layer or group.
-- `method` - - Optional connection method override.
-- `weight` - - Optional fixed weight to apply.
+- `context` - The layer state needed for input wiring.
+- `from` - The source layer or group.
+- `method` - Optional connection method override.
+- `weight` - Optional fixed weight to apply.
 
 Returns: The created connection list.
 
@@ -953,10 +1024,10 @@ propagateLayer({ nodes: layer.nodes }, 0.3, 0.1, [1, 0, 0]);
 ```
 
 Parameters:
-- `context` - - The layer state needed for propagation.
-- `rate` - - The learning rate for weight updates.
-- `momentum` - - The momentum factor for smoothing updates.
-- `targets` - - Optional target values for output layers.
+- `context` - The layer state needed for propagation.
+- `rate` - The learning rate for weight updates.
+- `momentum` - The momentum factor for smoothing updates.
+- `targets` - Optional target values for output layers.
 
 ## architecture/layer/layer.guard.utils.ts
 
@@ -974,7 +1045,7 @@ This is a structural runtime guard used by layer helpers that must safely
 operate on mixed node/group collections.
 
 Parameters:
-- `candidate` - - The value to inspect.
+- `candidate` - The value to inspect.
 
 Returns: True when the value exposes group-like members.
 
@@ -1015,7 +1086,7 @@ releaseActivationOutput(pooled);
 ```
 
 Parameters:
-- `nodeCount` - - Number of nodes in the layer.
+- `nodeCount` - Number of nodes in the layer.
 
 Returns: A pooled output array.
 
@@ -1040,8 +1111,8 @@ applyLayerMask(layer.nodes, 1);
 ```
 
 Parameters:
-- `nodeList` - - The layer nodes to update.
-- `mask` - - The mask value to apply.
+- `nodeList` - The layer nodes to update.
+- `mask` - The mask value to apply.
 
 ### assertActivationInputSize
 
@@ -1076,8 +1147,8 @@ assertActivationInputSize(3, [0.1, 0.2]); // throws
 ```
 
 Parameters:
-- `nodeCount` - - Number of nodes in the layer.
-- `inputValues` - - Optional activation values provided by the caller.
+- `nodeCount` - Number of nodes in the layer.
+- `inputValues` - Optional activation values provided by the caller.
 
 ### cloneActivationOutput
 
@@ -1099,7 +1170,7 @@ const stable = cloneActivationOutput(pooled);
 ```
 
 Parameters:
-- `output` - - The pooled output array to clone.
+- `output` - The pooled output array to clone.
 
 Returns: A cloned output array.
 
@@ -1129,9 +1200,9 @@ fillActivationOutput(layer.nodes, [0.2, 0.4], pooled);
 ```
 
 Parameters:
-- `nodeList` - - Nodes to activate.
-- `inputValues` - - Optional activation values for each node.
-- `output` - - Output buffer to populate.
+- `nodeList` - Nodes to activate.
+- `inputValues` - Optional activation values for each node.
+- `output` - Output buffer to populate.
 
 ### releaseActivationOutput
 
@@ -1148,7 +1219,7 @@ Call this after cloning/consuming the buffer to keep memory reuse effective.
 Important: do not keep using `output` after releasing it.
 
 Parameters:
-- `output` - - The pooled output array to release.
+- `output` - The pooled output array to release.
 
 ### resolveLayerMask
 
@@ -1179,8 +1250,8 @@ resolveLayerMask(0.5, true); // => 0 or 1
 ```
 
 Parameters:
-- `layerDropout` - - The dropout rate configured for the layer.
-- `isTraining` - - Whether the layer is running in training mode.
+- `layerDropout` - The dropout rate configured for the layer.
+- `isTraining` - Whether the layer is running in training mode.
 
 Returns: A mask value of 1 or 0 for all nodes in the layer.
 
@@ -1206,7 +1277,7 @@ clearLayer(layerContext);
 ```
 
 Parameters:
-- `context` - - The layer state needed to reset nodes.
+- `context` - The layer state needed to reset nodes.
 
 ### connectLayer
 
@@ -1240,10 +1311,10 @@ connectLayer(layerAContext, someGroup, methods.groupConnection.ALL_TO_ALL);
 ```
 
 Parameters:
-- `context` - - The layer state needed for connections.
-- `target` - - The layer, group, or node to connect to.
-- `method` - - Optional connection method override.
-- `weight` - - Optional fixed weight to apply.
+- `context` - The layer state needed for connections.
+- `target` - The layer, group, or node to connect to.
+- `method` - Optional connection method override.
+- `weight` - Optional fixed weight to apply.
 
 Returns: The created connection list.
 
@@ -1264,10 +1335,10 @@ This is a "cartesian disconnect": every node in this layer is disconnected
 from every node in the target group.
 
 Parameters:
-- `layerNodes` - - Nodes in the layer.
-- `targetGroup` - - Group to disconnect from.
-- `layerConnections` - - Connection tracking for the layer.
-- `removeTwoSided` - - Whether to remove reciprocal connections as well.
+- `layerNodes` - Nodes in the layer.
+- `targetGroup` - Group to disconnect from.
+- `layerConnections` - Connection tracking for the layer.
+- `removeTwoSided` - Whether to remove reciprocal connections as well.
 
 ### disconnectFromNode
 
@@ -1283,10 +1354,10 @@ disconnectFromNode(
 Disconnects all layer nodes from a target node.
 
 Parameters:
-- `layerNodes` - - Nodes in the layer.
-- `targetNode` - - Node to disconnect from.
-- `layerConnections` - - Connection tracking for the layer.
-- `removeTwoSided` - - Whether to remove reciprocal connections as well.
+- `layerNodes` - Nodes in the layer.
+- `targetNode` - Node to disconnect from.
+- `layerConnections` - Connection tracking for the layer.
+- `removeTwoSided` - Whether to remove reciprocal connections as well.
 
 ### disconnectLayer
 
@@ -1311,9 +1382,9 @@ disconnectLayer(layerContext, someNode, false);
 ```
 
 Parameters:
-- `context` - - The layer state needed for disconnecting.
-- `target` - - The group or node to disconnect.
-- `twoSided` - - Whether to remove reciprocal connections as well.
+- `context` - The layer state needed for disconnecting.
+- `target` - The group or node to disconnect.
+- `twoSided` - Whether to remove reciprocal connections as well.
 
 ### gateLayer
 
@@ -1340,9 +1411,9 @@ gateLayer(layerContext, connections, methods.gating.OUTPUT);
 ```
 
 Parameters:
-- `context` - - The layer state needed for gating.
-- `connections` - - The connections to gate.
-- `method` - - The gating method.
+- `context` - The layer state needed for gating.
+- `connections` - The connections to gate.
+- `method` - The gating method.
 
 ### inputLayer
 
@@ -1375,10 +1446,10 @@ inputLayer(thisLayerContext, someGroup, methods.groupConnection.ONE_TO_ONE);
 ```
 
 Parameters:
-- `context` - - The layer state needed for input wiring.
-- `from` - - The source layer or group.
-- `method` - - Optional connection method override.
-- `weight` - - Optional fixed weight to apply.
+- `context` - The layer state needed for input wiring.
+- `from` - The source layer or group.
+- `method` - Optional connection method override.
+- `weight` - Optional fixed weight to apply.
 
 Returns: The created connection list.
 
@@ -1397,9 +1468,9 @@ Removes an incoming connection from layer tracking.
 This scans in reverse so we can `splice(...)` safely while iterating.
 
 Parameters:
-- `layerConnections` - - Connection tracking for the layer.
-- `sourceNode` - - Source node for the connection.
-- `targetNode` - - Target node for the connection.
+- `layerConnections` - Connection tracking for the layer.
+- `sourceNode` - Source node for the connection.
+- `targetNode` - Target node for the connection.
 
 ### removeOutgoingConnection
 
@@ -1416,9 +1487,9 @@ Removes an outgoing connection from layer tracking.
 This scans in reverse so we can `splice(...)` safely while iterating.
 
 Parameters:
-- `layerConnections` - - Connection tracking for the layer.
-- `sourceNode` - - Source node for the connection.
-- `targetNode` - - Target node for the connection.
+- `layerConnections` - Connection tracking for the layer.
+- `sourceNode` - Source node for the connection.
+- `targetNode` - Target node for the connection.
 
 ## architecture/layer/layer.propagation.utils.ts
 
@@ -1444,8 +1515,8 @@ assertTargetInputSize(2, [1, 0]);
 ```
 
 Parameters:
-- `nodeCount` - - Number of nodes in the layer.
-- `inputTargets` - - Optional target values provided by the caller.
+- `nodeCount` - Number of nodes in the layer.
+- `inputTargets` - Optional target values provided by the caller.
 
 ### propagateNodesInReverse
 
@@ -1481,10 +1552,10 @@ propagateNodesInReverse({ nodes }, 0.3, 0.1, [1, 0, 0]);
 ```
 
 Parameters:
-- `context` - - The layer state needed for propagation.
-- `rate` - - The learning rate for weight updates.
-- `momentum` - - The momentum factor for smoothing updates.
-- `targets` - - Optional target values for output layers.
+- `context` - The layer state needed for propagation.
+- `rate` - The learning rate for weight updates.
+- `momentum` - The momentum factor for smoothing updates.
+- `targets` - Optional target values for output layers.
 
 ## architecture/layer/layer.factory.core.utils.ts
 
@@ -1494,6 +1565,7 @@ Parameters:
 buildDenseLayer(
   context: LayerFactoryContext<TLayer>,
   size: number,
+  nodeType: PrimitiveNodeType,
 ): TLayer
 ```
 
@@ -1508,8 +1580,9 @@ layer is used in a network. It only creates nodes, creates the output group,
 and provides an `input(...)` function so external code can wire it.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes to create in the dense layer.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of nodes to create in the dense layer.
+- `nodeType` - Optional primitive role assigned to every allocated node.
 
 Returns: The configured layer instance.
 
@@ -1542,8 +1615,8 @@ Educational overview:
 exposes a standard `layer.output` group.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of units in each GRU gate and cell.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of units in each GRU gate and cell.
 
 Returns: The configured layer instance.
 
@@ -1575,8 +1648,8 @@ It returns a layer object that is compatible with the rest of the layer
 utilities (`layer.input(...)`, `layer.activate(...)`, `layer.output`, etc.).
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of units in each LSTM gate and cell.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of units in each LSTM gate and cell.
 
 Returns: The configured layer instance.
 
@@ -1609,9 +1682,9 @@ Important: the input connector for a memory layer enforces **one-to-one**
 wiring with unit weights to preserve the intended delay-line behavior.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in each memory block.
-- `memory` - - Number of time steps to remember.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of nodes in each memory block.
+- `memory` - Number of time steps to remember.
 
 Returns: The configured layer instance.
 
@@ -1637,7 +1710,7 @@ This keeps builder code declarative: build connections per gate/block,
 then flatten once at the end.
 
 Parameters:
-- `connectionLists` - - Connection groups to flatten.
+- `connectionLists` - Connection groups to flatten.
 
 Returns: Flattened connection list.
 
@@ -1661,7 +1734,7 @@ When users don't specify a method, we default to a dense-style
 `ALL_TO_ALL` group connection.
 
 Parameters:
-- `method` - - Optional user-supplied connection method.
+- `method` - Optional user-supplied connection method.
 
 Returns: Connection method to apply.
 
@@ -1686,8 +1759,8 @@ Many wiring helpers accept either a `Group` or a "layer-like" object.
 When a layer is provided, we treat `layer.output` as the actual source group.
 
 Parameters:
-- `factoryContext` - - Factory context providing layer guards.
-- `from` - - Source input candidate.
+- `factoryContext` - Factory context providing layer guards.
+- `from` - Source input candidate.
 
 Returns: Source group used for connections.
 
@@ -1713,7 +1786,7 @@ This helper keeps fallback activation behavior identical across experimental
 layer variants.
 
 Parameters:
-- `layer` - - Layer containing nodes to activate.
+- `layer` - Layer containing nodes to activate.
 
 Returns: Activated node outputs.
 
@@ -1744,9 +1817,9 @@ activation behavior is intentionally simple: it collapses provided values to
 their average.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of output nodes.
-- `heads` - - Number of attention heads.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of output nodes.
+- `heads` - Number of attention heads.
 
 Returns: The configured layer instance.
 
@@ -1781,11 +1854,11 @@ prototype graphs that *mention* Conv1D without requiring a full convolution
 implementation yet.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of output nodes (filters).
-- `kernelSize` - - Size of the convolution kernel.
-- `stride` - - Stride of the convolution.
-- `padding` - - Padding size for the convolution.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of output nodes (filters).
+- `kernelSize` - Size of the convolution kernel.
+- `stride` - Stride of the convolution.
+- `padding` - Padding size for the convolution.
 
 Returns: The configured layer instance.
 
@@ -1816,8 +1889,8 @@ This behavior is *not* meant to represent real attention math; it simply
 produces a stable, shape-correct output while attention internals evolve.
 
 Parameters:
-- `layer` - - Layer whose nodes can self-activate.
-- `size` - - Number of output values to return.
+- `layer` - Layer whose nodes can self-activate.
+- `size` - Number of output values to return.
 
 Returns: Activation callback for attention behavior.
 
@@ -1846,8 +1919,8 @@ This keeps the call signature compatible with real layers while remaining
 intentionally cheap.
 
 Parameters:
-- `layer` - - Layer whose nodes can self-activate.
-- `size` - - Number of output values to return.
+- `layer` - Layer whose nodes can self-activate.
+- `size` - Number of output values to return.
 
 Returns: Activation callback for Conv1D behavior.
 
@@ -1878,8 +1951,8 @@ architecture). In these stubs, the output group is not intended to be a fully
 wired projection of `nodes`.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of output nodes to allocate.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of output nodes to allocate.
 
 Returns: Initialized experimental layer.
 
@@ -1902,7 +1975,7 @@ This is implemented as a function wrapper rather than modifying node math.
 That makes it easy to layer normalization behavior onto each dense layer.
 
 Parameters:
-- `layer` - - Dense layer to decorate with normalization behavior.
+- `layer` - Dense layer to decorate with normalization behavior.
 
 Returns: No return value.
 
@@ -1935,8 +2008,8 @@ In this implementation, the normalization is applied to the activation vector
 produced *per call*.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in the normalization layer.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of nodes in the normalization layer.
 
 Returns: The configured layer instance.
 
@@ -1965,8 +2038,8 @@ compute statistics. Here they share the same post-processing to keep the code
 simple and educational.
 
 Parameters:
-- `context` - - Factory helpers for constructing the layer instance.
-- `size` - - Number of nodes in the normalization layer.
+- `context` - Factory helpers for constructing the layer instance.
+- `size` - Number of nodes in the normalization layer.
 
 Returns: The configured layer instance.
 
@@ -1987,7 +2060,7 @@ computeMean(
 Computes the arithmetic mean for a vector of activations.
 
 Parameters:
-- `activations` - - Activation values to summarize.
+- `activations` - Activation values to summarize.
 
 Returns: Mean activation value.
 
@@ -2013,8 +2086,8 @@ Variance is computed as the average squared deviation from the mean.
 Educational note: the standard deviation is `Math.sqrt(variance)`.
 
 Parameters:
-- `activations` - - Activation values to summarize.
-- `mean` - - Mean value used for centering.
+- `activations` - Activation values to summarize.
+- `mean` - Mean value used for centering.
 
 Returns: Variance of the activation values.
 
@@ -2044,9 +2117,9 @@ The transformation is applied per element:
 $(x - \mu) / \sqrt{\sigma^2 + \epsilon}$
 
 Parameters:
-- `activations` - - Activation values to normalize.
-- `mean` - - Mean activation value.
-- `variance` - - Variance activation value.
+- `activations` - Activation values to normalize.
+- `mean` - Mean activation value.
+- `variance` - Variance activation value.
 
 Returns: Normalized activation values.
 

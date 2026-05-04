@@ -46,6 +46,11 @@ import {
  * blends that evidence into the current score so later tuning, selection, and
  * speciation reads can still reason from one stable evaluated population.
  *
+ * Ownership boundary: novelty is a controller-policy overlay. It may
+ * annotate `_novelty` and optionally rewrite the current generation's `score`
+ * field when blending against existing fitness, but it does not redefine genome
+ * identity, compatibility distance, or objective registration.
+ *
  * ```mermaid
  * flowchart TD
  *   Population[Freshly scored population] --> Descriptors[Build one behavior descriptor per genome]
@@ -266,6 +271,11 @@ function computeNoveltyScore(
  * Novelty acts as a companion signal to the existing evaluation path, not as a
  * universal replacement for every scoring mode.
  *
+ * When this helper writes `genome.score`, it is rewriting the current
+ * controller-visible score overlay for later phases of the same generation.
+ * Callers that need the unblended raw task score should preserve it separately
+ * before novelty blending.
+ *
  * @param genome - Genome to update.
  * @param novelty - Computed novelty value.
  * @param blendFactor - Blend factor for novelty versus fitness.
@@ -276,8 +286,7 @@ function blendNoveltyIntoScore(
   blendFactor: number,
 ): void {
   if (typeof genome.score !== 'number') return;
-  genome.score =
-    (1 - blendFactor) * (genome.score ?? 0) + blendFactor * novelty;
+  genome.score = (1 - blendFactor) * genome.score + blendFactor * novelty;
 }
 
 /**
@@ -340,7 +349,7 @@ function computeDescriptorDistance(
   const squaredSum = leftDescriptor
     .slice(0, commonLength)
     .reduce((accumulated, leftValue, index) => {
-      const delta = leftValue - (rightDescriptor[index] ?? 0);
+      const delta = leftValue - rightDescriptor[index]!;
       return accumulated + delta * delta;
     }, 0);
 

@@ -125,6 +125,43 @@ Parameters:
 
 Returns: Void.
 
+### resolveInputNodeIndexes
+
+```ts
+resolveInputNodeIndexes(
+  network: default,
+): number[]
+```
+
+Resolve input-node indexes in public input-vector order.
+
+Parameters:
+- `network` - Runtime network being snapshotted.
+
+Returns: Input-node indexes used when seeding generated activation buffers.
+
+### resolveStandaloneExecutionMetadata
+
+```ts
+resolveStandaloneExecutionMetadata(
+  network: default,
+  generationContext: StandaloneGenerationContext,
+): void
+```
+
+Resolve standalone execution metadata from the runtime activation contract.
+
+The standalone generator should honor the same traversal order and public
+input/output role order that runtime activation uses. That matters for delay
+lines such as NARX memory blocks, where raw node storage order can differ
+from the dependency order used during activation.
+
+Parameters:
+- `network` - Runtime network being snapshotted.
+- `generationContext` - Mutable generation context receiving index metadata.
+
+Returns: Void.
+
 ### seedNodeIndexesAndState
 
 ```ts

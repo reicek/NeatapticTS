@@ -5,10 +5,15 @@ import type {
   NetworkJSON,
 } from './network.serialize.utils.types';
 export type { SerializedConnection } from '../network.types';
-import type { NetworkArchitectureDescriptor } from '../network.types';
+import type {
+  NetworkArchitectureDescriptor,
+  NetworkJSONExtensions,
+} from '../network.types';
+import { synchronizeTemporalDescriptorExtensions } from '../network.temporal.extensions.utils';
 import { describeArchitecture } from '../topology/network.topology.architecture.utils';
 import {
   collectNodeActivations,
+  collectNodeGeneIds,
   collectNodeSquashKeys,
   collectNodeStates,
   collectSerializedConnections,
@@ -33,7 +38,12 @@ import {
   createNetworkInstance,
   resetMutableRuntimeCollections,
   resolveNetworkSize,
+  syncRestoredHistoricalCounters,
 } from './network.serialize.runtime.utils';
+
+type RuntimeNetworkWithSerializedExtensions = Network & {
+  _serializedExtensions?: NetworkJSONExtensions;
+};
 
 /**
  * Serializes a network instance into the compact tuple format.
@@ -45,7 +55,8 @@ import {
  * @returns Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
  * @remarks
  * The tuple is deterministic for a fixed runtime node ordering because indices are refreshed before collection.
- * This compact format is intentionally lossy with respect to object-level metadata outside the captured fields.
+ * Historical node ids and topology intent are appended in optional trailing slots so older consumers that
+ * only read the first six positions keep working.
  * Prefer `toJSONImpl` for human-readable payloads or long-lived interoperability.
  *
  * Time complexity is $O(N + C)$ where $N$ is node count and $C$ is connection count.
@@ -72,11 +83,12 @@ export function serialize(this: Network): CompactSerializedNetworkTuple {
   const activations = collectNodeActivations(networkInternals.nodes);
   const states = collectNodeStates(networkInternals.nodes);
   const squashes = collectNodeSquashKeys(networkInternals.nodes);
+  const nodeGeneIds = collectNodeGeneIds(networkInternals.nodes);
 
   // Step 3: Flatten all connection groups into compact connection records.
   const serializedConnections = collectSerializedConnections(networkInternals);
 
-  // Step 4: Return compact tuple with IO shape metadata.
+  // Step 4: Return compact tuple with IO shape metadata and trailing identity slots.
   return [
     activations,
     states,
@@ -84,6 +96,8 @@ export function serialize(this: Network): CompactSerializedNetworkTuple {
     serializedConnections,
     networkInternals.input,
     networkInternals.output,
+    nodeGeneIds,
+    networkInternals._topologyIntent,
   ];
 }
 
@@ -139,15 +153,23 @@ export const deserialize = (
     activations: compactPayload.activations,
     states: compactPayload.states,
     squashes: compactPayload.squashes,
+    nodeGeneIds: compactPayload.nodeGeneIds,
     input: resolvedSize.input,
     output: resolvedSize.output,
   });
+  rebuiltNetwork.refreshExplicitIORoles();
 
   // Step 4: Rebuild all compact connections and restore gating links.
   rebuildConnectionsFromCompactPayload({
     networkInternals,
     serializedConnections: compactPayload.connections,
   });
+
+  // Step 5: Restore optional topology intent and advance historical counters.
+  if (compactPayload.topologyIntent) {
+    rebuiltNetwork.setTopologyIntent(compactPayload.topologyIntent);
+  }
+  syncRestoredHistoricalCounters(networkInternals);
 
   return rebuiltNetwork;
 };
@@ -192,6 +214,17 @@ export function toJSONImpl(this: Network): NetworkJSON {
   // Step 4: Attach optional architecture metadata for diagnostics consumers.
   networkJson.architecture = describeArchitecture(this);
 
+  // Step 5: Normalize explicit temporal descriptors against the live graph.
+  synchronizeTemporalDescriptorExtensions(
+    this as RuntimeNetworkWithSerializedExtensions,
+  );
+
+  // Step 6: Re-emit any explicit extension bag hydrated previously.
+  applySerializedExtensionBag(
+    this as RuntimeNetworkWithSerializedExtensions,
+    networkJson,
+  );
+
   return networkJson;
 }
 
@@ -234,6 +267,7 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
     networkInternals,
     nodeJsonEntries: json.nodes,
   });
+  rebuiltNetwork.refreshExplicitIORoles();
 
   // Step 4: Rebuild JSON connections, gating links, and enabled flags.
   rebuildConnectionsFromJsonPayload({
@@ -241,16 +275,44 @@ export const fromJSONImpl = (json: NetworkJSON): Network => {
     connectionJsonEntries: json.connections,
   });
 
-  // Step 5: Restore the public topology contract when the payload carries one.
+  // Step 5: Restore the public topology contract and advance historical counters.
   if (json.topologyIntent) {
     rebuiltNetwork.setTopologyIntent(json.topologyIntent);
   }
+  syncRestoredHistoricalCounters(networkInternals);
 
   // Step 6: Hydrate optional architecture metadata when valid.
   applyHydratedArchitectureDescriptor(rebuiltNetwork, json.architecture);
 
+  // Step 7: Hydrate the generic extension bag when its top-level shape is valid.
+  applyHydratedExtensionBag(
+    rebuiltNetwork as RuntimeNetworkWithSerializedExtensions,
+    json.extensions,
+  );
+
   return rebuiltNetwork;
 };
+
+/**
+ * Re-emits the hydrated generic extension bag on verbose JSON snapshots.
+ *
+ * @param runtimeNetwork - Runtime network that may carry hydrated extensions.
+ * @param networkJson - Target JSON payload.
+ * @returns Nothing.
+ */
+function applySerializedExtensionBag(
+  runtimeNetwork: RuntimeNetworkWithSerializedExtensions,
+  networkJson: NetworkJSON,
+): void {
+  const clonedExtensions = cloneNetworkJsonExtensions(
+    runtimeNetwork._serializedExtensions,
+  );
+  if (!clonedExtensions) {
+    return;
+  }
+
+  networkJson.extensions = clonedExtensions;
+}
 
 /**
  * Applies hydrated architecture metadata to runtime network when shape is valid.
@@ -274,6 +336,26 @@ function applyHydratedArchitectureDescriptor(
 }
 
 /**
+ * Hydrates the generic extension bag onto the runtime network when shape is valid.
+ *
+ * @param runtimeNetwork - Runtime network receiving the extension bag.
+ * @param extensions - Optional serialized extension bag.
+ * @returns Nothing.
+ */
+function applyHydratedExtensionBag(
+  runtimeNetwork: RuntimeNetworkWithSerializedExtensions,
+  extensions: NetworkJSON['extensions'],
+): void {
+  const clonedExtensions = cloneNetworkJsonExtensions(extensions);
+  if (!clonedExtensions) {
+    Reflect.deleteProperty(runtimeNetwork, '_serializedExtensions');
+    return;
+  }
+
+  runtimeNetwork._serializedExtensions = clonedExtensions;
+}
+
+/**
  * @param architectureDescriptor - Optional descriptor candidate.
  * @returns True when minimal descriptor shape is valid.
  */
@@ -294,6 +376,37 @@ function isArchitectureDescriptorShapeValid(
     architectureDescriptor.source === 'inferred';
 
   return hasValidSource;
+}
+
+/**
+ * Clones one generic network extension bag when the top-level shape is valid.
+ *
+ * @param extensions - Optional serialized extension bag.
+ * @returns Cloned extension bag or `undefined` when shape is invalid.
+ */
+function cloneNetworkJsonExtensions(
+  extensions: NetworkJSON['extensions'],
+): NetworkJSONExtensions | undefined {
+  if (!extensions) {
+    return undefined;
+  }
+
+  const hasValidVersion =
+    Number.isInteger(extensions.version) && extensions.version > 0;
+  const hasValidValues = isPlainObjectRecord(extensions.values);
+
+  if (!hasValidVersion || !hasValidValues) {
+    return undefined;
+  }
+
+  return {
+    version: extensions.version,
+    values: structuredClone(extensions.values),
+  };
+}
+
+function isPlainObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**

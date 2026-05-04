@@ -24,8 +24,8 @@ without silently redefining what "next gap" or "urgent correction" means.
 Read this chapter if you want to answer three practical questions:
 
 1. Which geometric signals does the policy actually see?
-2. How does the example add short-horizon memory without requiring recurrent
-   networks?
+2. Why does the shared runtime still carry observation-memory buffers even
+   though the default controller input is current-frame only?
 3. How do difficulty, spawn, observation, and control helpers stay reusable
    across Node training and browser playback?
 
@@ -36,7 +36,7 @@ flowchart LR
     Difficulty["difficulty utils\ncurriculum profile"] --> Spawn["spawn utils\nnext pipe cadence and gap"]
     Spawn --> World["environment + worker playback\nconcrete world state"]
     World --> Features["observation/\nfeature synthesis"]
-    Features --> Memory["memory utils\nstack recent frames and actions"]
+    Features --> Memory["memory utils\ncompatibility history buffers"]
     Features --> Vector["observation/\ncanonical policy vectors"]
     Vector --> Control["control utils\nresolve flap decision"]
     Memory --> Control
@@ -55,10 +55,11 @@ flowchart LR
 ```
 
 The key teaching point is that the policy does not read pixels. It reads a
-curated state representation: gap geometry, velocity, urgency, and a short
-action-conditioned memory trail. That makes the control problem easier to
-inspect and keeps training, evaluation, and playback aligned around the same
-semantics.
+curated state representation: bird state and next-gap geometry from the
+current normalized frame. The compatibility memory surface stays in place
+for shared runtime plumbing, but the active controller contract leaves
+temporal carry-over to recurrent profiles instead of hand-authored input
+history.
 
 ## Choose Your Route
 
@@ -69,8 +70,9 @@ semantics.
   generation rules.
 - Read [simulation-shared/observation/README.md](./observation/README.md) if
   you want the feature-engineering story in more detail.
-- Read `simulation-shared.memory.utils.ts` if you want the frame-stacking and
-  recent-action channels.
+- Read `simulation-shared.memory.utils.ts` if you want the compatibility
+  memory surface and the reasoning behind leaving it unused by the default
+  controller input.
 - Read `simulation-shared.control.utils.ts` if you want the final step from
   network outputs to `flap` versus `no flap`.
 
@@ -114,8 +116,9 @@ Structured observation features for network input.
 
 Educational note:
 These features make the policy input interpretable. The example does not feed
-raw pixels into NEAT; it feeds geometric signals such as distance to the next
-pipe, corridor clearance, and urgency of recovering to the gap center.
+raw pixels into NEAT; it feeds geometric signals such as bird state,
+next-gap geometry, corridor clearance, and urgency of recovering to the gap
+center.
 
 ### SharedObservationInput
 
@@ -129,13 +132,12 @@ projection step.
 
 Mutable temporal memory attached to one policy-controlled bird.
 
-The memory stores recent core observation frames and recent action history,
-allowing feedforward policies to consume short-term context without adding
-recurrent connections.
+The buffers remain available as compatibility state for shared browser and
+worker runtime plumbing, but the current controller input contract no longer
+feeds this external history into any architecture.
 
-If you want background reading, the Wikipedia article on "frame stacking"
-captures the basic idea of giving a feed-forward policy a short motion trail
-instead of full recurrent state.
+That keeps feed-forward and recurrent profiles on the same current-frame
+observation shelf while still leaving room for future opt-in experiments.
 
 ### SharedPipeLike
 
@@ -187,9 +189,9 @@ clamp(
 Internal clamp primitive.
 
 Parameters:
-- `value` - - Candidate value.
-- `min` - - Inclusive lower bound.
-- `max` - - Inclusive upper bound.
+- `value` - Candidate value.
+- `min` - Inclusive lower bound.
+- `max` - Inclusive upper bound.
 
 Returns: Clamped value.
 
@@ -204,7 +206,7 @@ clamp01(
 Clamps a numeric value to the inclusive `[0, 1]` interval.
 
 Parameters:
-- `value` - - Candidate value.
+- `value` - Candidate value.
 
 Returns: Value clamped between 0 and 1.
 
@@ -221,9 +223,9 @@ clampValue(
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
 Parameters:
-- `value` - - Candidate value.
-- `min` - - Inclusive lower bound.
-- `max` - - Inclusive upper bound.
+- `value` - Candidate value.
+- `min` - Inclusive lower bound.
+- `max` - Inclusive upper bound.
 
 Returns: Clamped value.
 
@@ -240,9 +242,9 @@ interpolateValue(
 Linear interpolation helper.
 
 Parameters:
-- `startValue` - - Start value at progress `0`.
-- `endValue` - - End value at progress `1`.
-- `progress` - - Normalized interpolation progress.
+- `startValue` - Start value at progress `0`.
+- `endValue` - End value at progress `1`.
+- `progress` - Normalized interpolation progress.
 
 Returns: Interpolated value.
 
@@ -269,12 +271,34 @@ task dominate early, then the example interpolates toward the harder target
 settings as progress increases.
 
 Parameters:
-- `pipesPassed` - - Number of passed pipes.
-- `difficultyScale` - - Curriculum scale in `[0, 1]`.
+- `pipesPassed` - Number of passed pipes.
+- `difficultyScale` - Curriculum scale in `[0, 1]`.
 
 Returns: Active difficulty profile.
 
 ## simulation-shared/simulation-shared.spawn.utils.ts
+
+### resolveGapCenterBounds
+
+```ts
+resolveGapCenterBounds(
+  currentGapSizePx: number,
+  maximumGapCenterYPx: number,
+): { minY: number; maxY: number; }
+```
+
+Resolves gap-size-aware minimum and maximum gap center y-positions.
+
+The minimum edge margin ensures that at least `FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO`
+of the world height appears as solid pipe above the opening and below the
+opening. This prevents the gap from clipping the canvas boundary even when the
+initial wide gap is active.
+
+Parameters:
+- `currentGapSizePx` - Actual gap size for the pipe being placed.
+- `maximumGapCenterYPx` - Viewport-derived or default upper center bound.
+
+Returns: Effective [minY, maxY) range for gap center sampling.
 
 ### resolveNextSpawnGapCenterY
 
@@ -282,21 +306,22 @@ Returns: Active difficulty profile.
 resolveNextSpawnGapCenterY(
   previousGapCenterYPx: number,
   rng: SharedRngLike,
+  currentGapSizePx: number,
   maximumGapCenterYPx: number,
 ): number
 ```
 
 Resolves next gap center with bounded per-pipe delta.
 
-Educational note:
 Consecutive gaps are deliberately constrained to avoid unfair zig-zag jumps.
-The environment should still be challenging, but it should not demand an
-impossible vertical correction from one pipe to the next.
+The center is additionally bounded so the gap opening always keeps at least
+`FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO` of world height as solid pipe on each side.
 
 Parameters:
-- `previousGapCenterYPx` - - Previous spawn gap center.
-- `rng` - - Deterministic RNG.
-- `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
+- `previousGapCenterYPx` - Previous spawn gap center.
+- `rng` - Deterministic RNG.
+- `currentGapSizePx` - Actual gap size for the pipe being placed.
+- `maximumGapCenterYPx` - Optional inclusive upper bound for smaller viewports.
 
 Returns: Next gap center y-position.
 
@@ -317,9 +342,9 @@ active difficulty profile with a small amount of deterministic jitter so runs
 do not feel mechanically repetitive.
 
 Parameters:
-- `previousSpawnGapPx` - - Previous spawn gap size.
-- `difficultyProfile` - - Active difficulty profile.
-- `rng` - - Deterministic RNG.
+- `previousSpawnGapPx` - Previous spawn gap size.
+- `difficultyProfile` - Active difficulty profile.
+- `rng` - Deterministic RNG.
 
 Returns: Next spawn gap size.
 
@@ -339,8 +364,8 @@ spacing contracts toward the current difficulty target as the episode settles
 into its harder rhythm.
 
 Parameters:
-- `previousSpawnIntervalFrames` - - Previous spawn interval.
-- `difficultyProfile` - - Active difficulty profile.
+- `previousSpawnIntervalFrames` - Previous spawn interval.
+- `difficultyProfile` - Active difficulty profile.
 
 Returns: Next spawn interval in frames.
 
@@ -349,18 +374,21 @@ Returns: Next spawn interval in frames.
 ```ts
 sampleGapCenterY(
   rng: SharedRngLike,
+  currentGapSizePx: number,
   maximumGapCenterYPx: number,
 ): number
 ```
 
 Samples a random gap center y-position.
 
-The sampled center is bounded so the resulting pipe gap always remains inside
-the visible play area.
+The sampled center is bounded so the gap opening always stays inside the
+visible play area and at least `FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO` of the
+world height remains as solid pipe on each side.
 
 Parameters:
-- `rng` - - Deterministic RNG.
-- `maximumGapCenterYPx` - - Optional inclusive upper bound for smaller viewports.
+- `rng` - Deterministic RNG.
+- `currentGapSizePx` - Actual gap size for the pipe being placed.
+- `maximumGapCenterYPx` - Optional inclusive upper bound for smaller viewports.
 
 Returns: Sampled y-position.
 
@@ -383,21 +411,19 @@ resolveCoreObservationVectorFromFeatures(
 ): number[]
 ```
 
-Resolves the compact core vector used for temporal stacking.
+Resolves the compact per-frame vector retained for compatibility bookkeeping.
 
 The core intentionally keeps directly observed kinematic and geometric
-channels while dropping derived one-step predictors that become redundant
-once short-term temporal memory is available.
+channels while dropping some derived one-step predictors. If an opt-in
+experiment wants external history again, this is the narrower slice worth
+carrying between steps.
 
-This is the representation used when the example wants a short history of raw
-observation slices. The idea is similar to frame stacking in reinforcement
-learning: a feed-forward policy can recover some sense of motion by looking
-at several recent compact frames at once.
-
-The Wikipedia article on "frame stacking" is a useful conceptual reference.
+Under the current default controller contract, however, the active network
+input uses `resolveObservationVectorFromFeatures(features)` directly and does
+not stack these core frames.
 
 Parameters:
-- `features` - - Structured observation features.
+- `features` - Structured observation features.
 
 Returns: Core per-frame vector.
 
@@ -405,7 +431,7 @@ Example:
 
 ```ts
 const coreFrame = resolveCoreObservationVectorFromFeatures(features);
-observationMemoryState.previousCoreFrames.push(coreFrame);
+console.log(coreFrame.length);
 ```
 
 ### resolveObservationFeatures
@@ -423,11 +449,11 @@ This helper stays focused on semantic feature assembly only. Projection into
 the canonical network vectors now lives in the neighboring vector module so
 observation policy and network-shape concerns can evolve independently.
 
-The features deliberately mix three kinds of signal:
+The features deliberately mix two kinds of control signal plus a small set of
+shaping-oriented derived hints:
 1. Current state, such as bird height and vertical velocity.
-2. Near-term geometry, such as gap bounds and upcoming-pipe distances.
-3. Simple forward-looking control hints, such as urgency and one-flap
-   reachability.
+2. Immediate next-gap geometry, such as distance, offset, and corridor
+   bounds.
 
 This is a compact example of feature engineering for control. Instead of
 asking NEAT to rediscover basic geometry from raw sensory input, the example
@@ -438,7 +464,7 @@ For broader context, the Wikipedia article on "feature engineering" is a
 good companion reference.
 
 Parameters:
-- `input` - - Observation input bundle.
+- `input` - Observation input bundle.
 
 Returns: Structured observation features.
 
@@ -467,19 +493,29 @@ resolveObservationVectorFromFeatures(
 ): number[]
 ```
 
-Converts observation features to the canonical 12-value network input vector.
+Converts observation features to the canonical 9-value network input vector.
 
 Educational note:
 This module owns the network-shape projection so feature semantics can change
 independently from how the policy input is ordered.
 
-The 12-value vector is the compact feed-forward policy input used by the main
-evaluation and training flow. Its ordering is stable on purpose: once a
-network topology has evolved against one input layout, silent channel
-reshuffles would invalidate learned behavior.
+The 9-value vector is grouped into three semantic families:
+
+**Bird state (indices 0–1):** normalized height and vertical velocity.
+
+**Next gap (indices 2–5):** distance to pipe exit, signed offset from gap
+center, normalized gap top and bottom boundaries.
+
+**Look-ahead (indices 6–8):** signed distance to pipe entrance (negative
+while inside the pipe body), signed in-gap clearance (how centered the bird
+is right now), and signed offset from the second upcoming gap center.
+
+Its ordering is stable on purpose: once a network topology has evolved
+against one input layout, silent channel reshuffles would invalidate learned
+behavior.
 
 Parameters:
-- `features` - - Structured feature object.
+- `features` - Structured feature object.
 
 Returns: Ordered feature vector.
 
@@ -488,6 +524,7 @@ Example:
 ```ts
 const features = resolveObservationFeatures(input);
 const networkInput = resolveObservationVectorFromFeatures(features);
+// networkInput.length === 9
 ```
 
 ### resolveUpcomingPipes
@@ -503,16 +540,16 @@ resolveUpcomingPipes(
 
 Resolves the next two upcoming pipes in front of the bird.
 
-The observation pipeline only cares about the immediate near future, because
-Flappy Bird decisions are dominated by the next gap and the transition after
-it. Looking further ahead adds noise faster than it adds useful control
-signal.
+The shared simulation helpers sometimes need the first two obstacles even
+though the current controller contract only reads the next immediate gap.
+Keeping this helper small and explicit makes it easy for callers to choose
+how much near-future geometry they actually want.
 
 Parameters:
-- `pipes` - - Current pipe list.
-- `birdCenterXPx` - - Bird center x-position.
-- `birdRadiusPx` - - Bird radius.
-- `pipeWidthPx` - - Pipe width.
+- `pipes` - Current pipe list.
+- `birdCenterXPx` - Bird center x-position.
+- `birdRadiusPx` - Bird radius.
+- `pipeWidthPx` - Pipe width.
 
 Returns: Tuple of first and second upcoming pipes.
 
@@ -550,8 +587,8 @@ flexibility makes the helper reusable across experiments without forcing every
 caller to reshape its outputs first.
 
 Parameters:
-- `rawOutputs` - - Activation output payload.
-- `flapThreshold` - - Scalar threshold for single-output policies.
+- `rawOutputs` - Activation output payload.
+- `flapThreshold` - Scalar threshold for single-output policies.
 
 Returns: True when flap should trigger.
 
@@ -567,16 +604,18 @@ commitSharedObservationMemoryStep(
 ): void
 ```
 
-Commits one observation-action step into temporal memory.
+Commits one observation-action step into the shared compatibility memory surface.
 
-The memory update happens after the decision is made so the next step can see
-both the recent observation context and the action history that produced the
-current trajectory.
+The bookkeeping point stays fixed at the same post-decision boundary used by
+the browser, worker, and evaluation runtimes. Under the current Flappy
+defaults both history windows are zero-width, so this usually becomes a
+no-op, but the stable hook prevents those runtimes from drifting apart if an
+opt-in history experiment returns later.
 
 Parameters:
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-- `features` - - Structured observation features used for the decision.
-- `didFlap` - - Decision taken at this step.
+- `observationMemoryState` - Mutable temporal memory for the active bird.
+- `features` - Structured observation features used for the decision.
+- `didFlap` - Decision taken at this step.
 
 Returns: Nothing.
 
@@ -586,7 +625,11 @@ Returns: Nothing.
 createSharedObservationMemoryState(): SharedObservationMemoryState
 ```
 
-Creates an empty temporal observation memory state.
+Creates the shared observation-memory compatibility state.
+
+The buffers remain part of the shared Flappy runtime contract even though
+the current controller input does not read external history. That keeps the
+browser, worker, and evaluation helpers aligned on one state shape.
 
 Returns: Fresh mutable memory buffers for one bird/controller.
 
@@ -595,24 +638,6 @@ Example:
 ```ts
 const memoryState = createSharedObservationMemoryState();
 ```
-
-### resolvePreviousCoreFramesWithPadding
-
-```ts
-resolvePreviousCoreFramesWithPadding(
-  observationMemoryState: SharedObservationMemoryState,
-): number[][]
-```
-
-Resolves previous core frames (newest-first) with deterministic zero padding.
-
-Zero padding keeps the policy input width stable during the first few frames
-of an episode before enough history has accumulated.
-
-Parameters:
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
-
-Returns: Previous core frame list with fixed target length.
 
 ### resolveTemporalObservationVector
 
@@ -623,35 +648,19 @@ resolveTemporalObservationVector(
 ): number[]
 ```
 
-Builds the temporal policy input vector (stacked observation + action memory).
+Builds the controller input vector for one decision step.
 
 Educational note:
-This helper turns an interpretable feature object into the exact flat vector a
-feed-forward network consumes. That is why the output layout is documented so
-explicitly: changing the order would change the meaning of every trained
-weight in the policy.
-
-Output layout:
-1) current core observation frame
-2) previous core frames (newest to oldest) with zero padding
-3) last-action channel
-4) recent flap-rate channel over a fixed window
+This helper keeps the public observation API stable while making the
+effective controller input just the current normalized frame. That removes
+hand-authored memory from all architectures so recurrent profiles must learn
+temporal state internally instead of receiving it as extra inputs.
 
 Parameters:
-- `features` - - Structured observation features for the current decision step.
-- `observationMemoryState` - - Mutable temporal memory for the active bird.
+- `features` - Structured observation features for the current decision step.
+- `observationMemoryState` - Mutable temporal memory for the active bird.
 
-Returns: Ordered temporal input vector for policy activation.
-
-### resolveZeroCoreObservationFrame
-
-```ts
-resolveZeroCoreObservationFrame(): number[]
-```
-
-Builds a zero-valued core frame with canonical length.
-
-Returns: Zero core frame.
+Returns: Ordered controller input vector for policy activation.
 
 ## simulation-shared/simulation-shared.statistics.utils.ts
 
@@ -667,8 +676,8 @@ compareNumbersAscending(
 Compares two numeric values in ascending order.
 
 Parameters:
-- `leftValue` - - Left numeric value.
-- `rightValue` - - Right numeric value.
+- `leftValue` - Left numeric value.
+- `rightValue` - Right numeric value.
 
 Returns: Comparator delta for `Array.prototype.toSorted`.
 
@@ -683,7 +692,7 @@ computeMean(
 Computes arithmetic mean for numeric samples.
 
 Parameters:
-- `values` - - Numeric samples.
+- `values` - Numeric samples.
 
 Returns: Arithmetic mean.
 
@@ -702,8 +711,8 @@ Percentiles are useful in the trainer because they reveal whether strong
 performance is broad across the population or concentrated in a single outlier.
 
 Parameters:
-- `values` - - Numeric samples.
-- `percentile` - - Percentile in [0, 1].
+- `values` - Numeric samples.
+- `percentile` - Percentile in [0, 1].
 
 Returns: Percentile value, or `Number.NaN` when `values` is empty.
 
@@ -723,8 +732,8 @@ is summarizing the whole evolved population for that generation, not estimating
 a larger hidden distribution from a subsample.
 
 Parameters:
-- `values` - - Numeric samples.
-- `meanValue` - - Precomputed mean.
+- `values` - Numeric samples.
+- `meanValue` - Precomputed mean.
 
 Returns: Population standard deviation.
 
@@ -757,6 +766,6 @@ the error surface human-readable even when the thrown value is not an
 `Error` instance.
 
 Parameters:
-- `error` - - Unknown error value.
+- `error` - Unknown error value.
 
 Returns: Readable error message.

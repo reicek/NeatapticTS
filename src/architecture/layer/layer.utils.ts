@@ -26,6 +26,7 @@ import {
   propagateNodesInReverse,
 } from './layer.propagation.utils';
 import { buildDenseLayer } from './layer.factory.core.utils';
+import type { PrimitiveNodeType } from '../node/node';
 import {
   buildGruLayer,
   buildLstmLayer,
@@ -70,9 +71,9 @@ const DEFAULT_ATTENTION_HEADS = 1;
  * );
  * ```
  *
- * @param context - The layer state needed for activation.
- * @param values - Optional activation values to set per node.
- * @param training - Whether to apply dropout masking for training.
+ * @param context The layer state needed for activation.
+ * @param values Optional activation values to set per node.
+ * @param training Whether to apply dropout masking for training.
  * @returns A cloned array of activation values.
  */
 export function activateLayer(
@@ -115,10 +116,10 @@ export function activateLayer(
  * propagateLayer({ nodes: layer.nodes }, 0.3, 0.1, [1, 0, 0]);
  * ```
  *
- * @param context - The layer state needed for propagation.
- * @param rate - The learning rate for weight updates.
- * @param momentum - The momentum factor for smoothing updates.
- * @param targets - Optional target values for output layers.
+ * @param context The layer state needed for propagation.
+ * @param rate The learning rate for weight updates.
+ * @param momentum The momentum factor for smoothing updates.
+ * @param targets Optional target values for output layers.
  */
 export function propagateLayer(
   context: LayerPropagationContext,
@@ -147,10 +148,10 @@ export function propagateLayer(
  * connectLayer(layerConnectionContext, nextLayerLike);
  * ```
  *
- * @param context - The layer state needed for connections.
- * @param target - The layer, group, or node to connect to.
- * @param method - Optional connection method override.
- * @param weight - Optional fixed weight to apply.
+ * @param context The layer state needed for connections.
+ * @param target The layer, group, or node to connect to.
+ * @param method Optional connection method override.
+ * @param weight Optional fixed weight to apply.
  * @returns The created connection list.
  */
 export function connectLayer(
@@ -172,9 +173,9 @@ export function connectLayer(
  * gateLayer(layerConnectionContext, someConnections, method);
  * ```
  *
- * @param context - The layer state needed for gating.
- * @param connections - The connections to gate.
- * @param method - The gating method.
+ * @param context The layer state needed for gating.
+ * @param connections The connections to gate.
+ * @param method The gating method.
  */
 export function gateLayer(
   context: LayerConnectionContext,
@@ -194,10 +195,10 @@ export function gateLayer(
  * inputLayer(layerConnectionContext, previousLayerLike);
  * ```
  *
- * @param context - The layer state needed for input wiring.
- * @param from - The source layer or group.
- * @param method - Optional connection method override.
- * @param weight - Optional fixed weight to apply.
+ * @param context The layer state needed for input wiring.
+ * @param from The source layer or group.
+ * @param method Optional connection method override.
+ * @param weight Optional fixed weight to apply.
  * @returns The created connection list.
  */
 export function inputLayer(
@@ -219,9 +220,9 @@ export function inputLayer(
  * disconnectLayer(layerConnectionContext, someGroup, true);
  * ```
  *
- * @param context - The layer state needed for disconnecting.
- * @param target - The group or node to disconnect.
- * @param twoSided - Whether to remove reciprocal connections as well.
+ * @param context The layer state needed for disconnecting.
+ * @param target The group or node to disconnect.
+ * @param twoSided Whether to remove reciprocal connections as well.
  */
 export function disconnectLayer(
   context: LayerConnectionContext,
@@ -235,7 +236,7 @@ export function disconnectLayer(
 /**
  * Orchestrates clearing node activation state with a high-level flow.
  *
- * @param context - The layer state needed to reset nodes.
+ * @param context The layer state needed to reset nodes.
  * Example:
  *
  * ```ts
@@ -250,8 +251,9 @@ export function clearLayer(context: LayerConnectionContext): void {
 /**
  * Orchestrates dense layer creation with a high-level flow.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of nodes in the dense layer.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of nodes in the dense layer.
+ * @param nodeType Optional primitive role assigned to the dense block.
  * @returns The configured layer instance.
  * Example:
  *
@@ -262,16 +264,17 @@ export function clearLayer(context: LayerConnectionContext): void {
 export function createDenseLayer<TLayer extends LayerFactoryLayer>(
   context: LayerFactoryContext<TLayer>,
   size: number,
+  nodeType: PrimitiveNodeType = 'hidden',
 ): TLayer {
   // Step 1: Delegate dense layer creation to the focused helper implementation.
-  return buildDenseLayer(context, size);
+  return buildDenseLayer(context, size, nodeType);
 }
 
 /**
  * Orchestrates LSTM layer creation with a high-level flow.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of units in the LSTM layer.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of units in the LSTM layer.
  * @returns The configured layer instance.
  * Example:
  *
@@ -290,8 +293,8 @@ export function createLstmLayer<TLayer extends LayerFactoryLayer>(
 /**
  * Orchestrates GRU layer creation with a high-level flow.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of units in the GRU layer.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of units in the GRU layer.
  * @returns The configured layer instance.
  * Example:
  *
@@ -310,9 +313,9 @@ export function createGruLayer<TLayer extends LayerFactoryLayer>(
 /**
  * Orchestrates Memory layer creation with a high-level flow.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of nodes in each memory block.
- * @param memory - Number of time steps to remember.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of nodes in each memory block.
+ * @param memory Number of time steps to remember.
  * @returns The configured layer instance.
  * Example:
  *
@@ -332,8 +335,8 @@ export function createMemoryLayer<TLayer extends LayerFactoryLayer>(
 /**
  * Orchestrates batch normalization layer creation with a high-level flow.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of nodes in the normalization layer.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of nodes in the normalization layer.
  * @returns The configured layer instance.
  * Example:
  *
@@ -352,8 +355,8 @@ export function createBatchNormLayer<TLayer extends LayerFactoryLayer>(
 /**
  * Orchestrates layer normalization layer creation with a high-level flow.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of nodes in the normalization layer.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of nodes in the normalization layer.
  * @returns The configured layer instance.
  * Example:
  *
@@ -372,11 +375,11 @@ export function createLayerNormLayer<TLayer extends LayerFactoryLayer>(
 /**
  * Orchestrates 1D convolution layer creation with a high-level flow.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of output nodes.
- * @param kernelSize - Size of the convolution kernel.
- * @param stride - Stride of the convolution.
- * @param padding - Padding size for the convolution.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of output nodes.
+ * @param kernelSize Size of the convolution kernel.
+ * @param stride Stride of the convolution.
+ * @param padding Padding size for the convolution.
  * @returns The configured layer instance.
  * Example:
  *
@@ -398,9 +401,9 @@ export function createConv1dLayer<TLayer extends LayerFactoryLayer>(
 /**
  * Orchestrates attention layer creation with a high-level flow.
  *
- * @param context - Factory helpers for constructing the layer instance.
- * @param size - Number of output nodes.
- * @param heads - Number of attention heads.
+ * @param context Factory helpers for constructing the layer instance.
+ * @param size Number of output nodes.
+ * @param heads Number of attention heads.
  * @returns The configured layer instance.
  * Example:
  *

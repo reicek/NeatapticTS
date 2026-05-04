@@ -70,11 +70,11 @@ The result is always clamped to the configured minimum and maximum so the
 controller cannot drift into an unusably tiny or overly permissive threshold.
 
 Parameters:
-- `entropyCompatOptions` - - Tuning options that define the target entropy,
+- `entropyCompatOptions` - Tuning options that define the target entropy,
 deadband width, adjustment rate, and clamp bounds.
-- `meanEntropy` - - Freshly observed mean structural entropy for the current
+- `meanEntropy` - Freshly observed mean structural entropy for the current
 population.
-- `currentThreshold` - - Current compatibility threshold before adjustment.
+- `currentThreshold` - Current compatibility threshold before adjustment.
 
 Returns: Next compatibility threshold to carry into later controller passes.
 
@@ -115,8 +115,8 @@ That narrow scope lets the evaluation chapter adjust future speciation
 pressure without widening into a full species-rebuild workflow.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `evaluationOptions` - - Options object for the current evaluation pass.
+- `controller` - NEAT controller instance for evaluation.
+- `evaluationOptions` - Options object for the current evaluation pass.
 
 Example:
 

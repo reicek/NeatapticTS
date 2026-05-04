@@ -209,18 +209,16 @@ What still belongs here:
 - Re-exports that are intentionally stable for root ONNX callers.
 - Thin wrappers such as `buildOnnxModel()` that preserve a predictable
   orchestration surface while delegating the real work into smaller chapters.
-- A small amount of roadmap context that helps readers understand why some
-  recurrent and mixed-activation helpers still look transitional.
 
-Phase Coverage (incremental roadmap implemented so far):
- - Phase 1: Deterministic layered MLP export (Gemm + Activation pairs) with basic metadata.
- - Phase 2: Optional partial connectivity (missing edges -> 0 weight) and mixed per-neuron activations
-             (decomposed into per-neuron Gemm + Activation + Concat) via `allowPartialConnectivity` /
-             `allowMixedActivations`.
- - Phase 3 (baseline): Multi-layer self‑recurrence single‑step representation (`allowRecurrent` +
-             `recurrentSingleStep`) adding per-recurrent-layer previous state inputs and diagonal R matrices.
- - Phase 3 (experimental extension): Heuristic detection + emission of simplified LSTM / GRU fused nodes
-             (no sequence axis, simplified bias & recurrence handling) while retaining original Gemm path.
+Current capability set:
+ - Deterministic layered MLP export (Gemm + Activation pairs) with basic metadata.
+ - Optional partial connectivity (missing edges -> 0 weight) and mixed per-neuron activations
+   (decomposed into per-neuron Gemm + Activation + Concat) via `allowPartialConnectivity` /
+   `allowMixedActivations`.
+ - Multi-layer self-recurrence single-step representation (`allowRecurrent` + `recurrentSingleStep`)
+   adding per-recurrent-layer previous state inputs and diagonal R matrices.
+ - Experimental: heuristic detection and emission of simplified LSTM / GRU fused nodes
+   (no sequence axis, simplified bias and recurrence handling) while retaining original Gemm path.
 
 Scope & Assumptions (current):
  - Network must be strictly layered and acyclic (feed‑forward between layers; optional self recurrence within
@@ -244,10 +242,10 @@ Design Goals:
  - Early, explicit structural validation with actionable error messages.
  - Transparent, stepwise transform for testability and deterministic round-tripping.
 
-Limitations / TODO (tracked for later phases):
- - Proper ONNX-compliant LSTM/GRU biases (split Wb/Rb) & complete gate ordering alignment.
- - Pruning or replacing redundant Gemm graph segments when fused recurrent ops are emitted (currently both kept).
- - Multi-time-step sequence handling (currently single-step recurrent representation only).
+Known limitations:
+ - LSTM/GRU biases use single-segment Wb only; Rb is implicitly zero and gate ordering may diverge from canonical ONNX.
+ - Redundant Gemm segments are retained alongside fused recurrent ops rather than pruned.
+ - Only single-step recurrent representation is supported; multi-time-step sequences are not yet handled.
  - Richer recurrence (off-diagonal intra-layer connectivity) and gating reconstruction fidelity.
 
 NOTE: Import is only guaranteed to work for models produced by `exportToONNX()`; arbitrary ONNX graphs are
@@ -338,9 +336,9 @@ High-level behavior:
  3. Return the resulting ONNX-like JSON graph container unchanged.
 
 Parameters:
-- `network` - - Source network to serialize.
-- `layers` - - Ordered layer matrix produced by layer inference utilities.
-- `options` - - Export options controlling metadata/recurrent/partial-connectivity behavior.
+- `network` - Source network to serialize.
+- `layers` - Ordered layer matrix produced by layer inference utilities.
+- `options` - Export options controlling metadata/recurrent/partial-connectivity behavior.
 
 Returns: ONNX-like model object representing graph nodes, tensors, and metadata.
 

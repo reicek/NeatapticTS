@@ -11,8 +11,10 @@ import {
   NetworkTrainingBatchSizeError,
   NetworkTrainingDatasetCompatibilityError,
   NetworkTrainingDropoutRangeError,
+  NetworkTrainingInvalidOptimizerOptionError,
   NetworkTrainingNestedLookaheadError,
   NetworkTrainingStoppingConditionRequiredError,
+  NetworkTrainingUnknownLookaheadBaseTypeError,
   NetworkTrainingUnknownOptimizerTypeError,
 } from './network.training.errors';
 
@@ -20,6 +22,11 @@ type TrainingDataset = Parameters<typeof trainImpl>[1];
 
 interface NetworkInternals {
   _forceNextOverflow: boolean;
+  _currentGradClip?: {
+    maxNorm?: number;
+    mode: string;
+    percentile?: number;
+  };
   _mixedPrecision: { enabled: boolean; lossScale: number };
 }
 
@@ -139,6 +146,37 @@ describe('network training chapter', () => {
             );
           });
         });
+
+        describe('given warnings are enabled for missing stopping conditions', () => {
+          describe('when trainImpl starts', () => {
+            it('logs the missing-condition warning before throwing', () => {
+              // Arrange
+              const network = createSingleInputOutputNetwork(122);
+              const trainingDataset = createSingleSampleDataset();
+              const originalWarnings = config.warnings;
+              const warnSpy = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+
+              config.warnings = true;
+
+              try {
+                // Act
+                const trainWithoutStoppingCondition = () => {
+                  trainImpl(network, trainingDataset, { rate: 0.1 });
+                };
+
+                // Assert
+                expect(trainWithoutStoppingCondition).toThrow(
+                  NetworkTrainingStoppingConditionRequiredError,
+                );
+              } finally {
+                warnSpy.mockRestore();
+                config.warnings = originalWarnings;
+              }
+            });
+          });
+        });
       });
 
       describe('given batch size exceeds the dataset size', () => {
@@ -237,6 +275,30 @@ describe('network training chapter', () => {
         });
       });
 
+      describe('given optimizer option is a non-object, non-string value', () => {
+        describe('when trainImpl starts', () => {
+          it('throws the invalid-optimizer-option error', () => {
+            // Arrange
+            const network = createSingleInputOutputNetwork(206);
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            const trainWithInvalidOptimizerOption = () => {
+              trainImpl(network, trainingDataset, {
+                iterations: 1,
+                rate: 0.1,
+                optimizer: 7 as unknown as never,
+              });
+            };
+
+            // Assert
+            expect(trainWithInvalidOptimizerOption).toThrow(
+              NetworkTrainingInvalidOptimizerOptionError,
+            );
+          });
+        });
+      });
+
       describe('given lookahead uses lookahead as its base type', () => {
         describe('when trainImpl starts', () => {
           it('throws the nested-lookahead error', () => {
@@ -256,6 +318,30 @@ describe('network training chapter', () => {
             // Assert
             expect(trainWithNestedLookahead).toThrow(
               NetworkTrainingNestedLookaheadError,
+            );
+          });
+        });
+      });
+
+      describe('given lookahead uses an unsupported base type', () => {
+        describe('when trainImpl starts', () => {
+          it('throws the unknown-lookahead-base-type error', () => {
+            // Arrange
+            const network = createSingleInputOutputNetwork(207);
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            const trainWithUnknownLookaheadBaseType = () => {
+              trainImpl(network, trainingDataset, {
+                iterations: 1,
+                rate: 0.1,
+                optimizer: { type: 'lookahead', baseType: 'notreal' },
+              });
+            };
+
+            // Assert
+            expect(trainWithUnknownLookaheadBaseType).toThrow(
+              NetworkTrainingUnknownLookaheadBaseTypeError,
             );
           });
         });
@@ -384,6 +470,44 @@ describe('network training chapter', () => {
 
             // Assert
             expect(highMagnitudeConnection.totalDeltaWeight).toBeCloseTo(5);
+          });
+        });
+      });
+
+      describe('given gradient clipping uses shorthand max-norm and percentile options', () => {
+        describe('when trainImpl normalizes the runtime configuration', () => {
+          it('stores the expected runtime clipping mode for both shorthand forms', () => {
+            // Arrange
+            const maxNormNetwork = createSingleInputOutputNetwork(123);
+            const percentileNetwork = createSingleInputOutputNetwork(124);
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            trainImpl(maxNormNetwork, trainingDataset, {
+              iterations: 1,
+              rate: 0.1,
+              gradientClip: { maxNorm: 1 },
+            });
+            trainImpl(percentileNetwork, trainingDataset, {
+              iterations: 1,
+              rate: 0.1,
+              gradientClip: { percentile: 90 },
+            });
+
+            const maxNormClip = getNetworkInternal(
+              maxNormNetwork,
+              '_currentGradClip',
+            );
+            const percentileClip = getNetworkInternal(
+              percentileNetwork,
+              '_currentGradClip',
+            );
+
+            // Assert
+            expect([maxNormClip?.mode, percentileClip?.mode]).toEqual([
+              'norm',
+              'percentile',
+            ]);
           });
         });
       });

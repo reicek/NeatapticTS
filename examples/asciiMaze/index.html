@@ -1,33 +1,207 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>ASCII Maze Demo</title>
+  <title>ASCII Maze (NeatapticTS)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="../../docs/assets/theme.css" />
+  <script defer src="../../docs/assets/theme-tooltips.js"></script>
   <style>
-    html,body,#root{height:100%;margin:0}
-    body{font-family:system-ui,Segoe UI,Arial,sans-serif;padding:0;background:#0b0f14;color:#cfe8ff;display:flex;flex-direction:column}
-    main{flex:1;display:flex;flex-direction:column;padding:12px}
-    #ascii-maze-output{flex:1;overflow:auto;background:#041018;padding:12px;border-radius:6px;box-sizing:border-box}
-    #ascii-maze-controls{margin:8px 0}
-    button{padding:6px 10px;border-radius:4px;border:1px solid #2C3963;color:#fff;background:#39632C}
+    body.demo-page .demo-main.demo-main--wide {
+      max-width: min(99vw, 1960px);
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    .starter-demo-shell {
+      width: 100%;
+      padding: 8px;
+    }
+
+    #ascii-maze-output {
+      display: grid;
+      gap: 16px;
+      width: 100%;
+    }
+
+    #ascii-maze-visualizer-title {
+      margin: 0;
+      text-align: center;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #8ad8ff;
+    }
+
+    #ascii-maze-panels {
+      display: grid;
+      grid-template-columns: minmax(760px, 1.35fr) minmax(900px, 1.55fr);
+      gap: 18px;
+      align-items: start;
+      width: 100%;
+      overflow: visible;
+    }
+
+    .ascii-maze-panel {
+      border: 1px solid #1ea7ff;
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(8, 19, 31, 0.92), rgba(4, 10, 18, 0.9));
+      padding: 10px;
+      min-height: 420px;
+      min-width: 0;
+    }
+
+    #ascii-maze-panels > .ascii-maze-panel:first-child {
+      width: 100%;
+      max-width: none;
+      overflow: hidden;
+    }
+
+    #ascii-maze-panels > .ascii-maze-panel:last-child {
+      min-width: 900px;
+      width: 100%;
+    }
+
+    .ascii-maze-panel h3 {
+      margin: 0 0 10px;
+      text-align: center;
+      color: #dff6ff;
+      font-size: 0.9rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    #ascii-maze-live {
+      min-height: 360px;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: auto;
+      white-space: pre;
+    }
+
+    @media (max-width: 1400px) {
+      #ascii-maze-panels {
+        grid-template-columns: minmax(620px, 1.2fr) minmax(760px, 1.4fr);
+      }
+
+      #ascii-maze-panels > .ascii-maze-panel:last-child {
+        min-width: 680px;
+      }
+    }
+
+    #ascii-maze-network-canvas {
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+      display: block;
+      background: #050a12;
+      border: 1px solid #0e3854;
+      border-radius: 6px;
+      cursor: crosshair;
+    }
+
+    /* Hover tooltip displayed over the network canvas */
+    #maze-network-tooltip {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      max-width: 320px;
+      background: linear-gradient(180deg, rgba(7, 16, 28, 0.98), rgba(2, 8, 18, 0.98));
+      border: 1px solid #0fb5ff;
+      border-radius: 8px;
+      padding: 12px 15px;
+      color: #9fdcff;
+      font-family: Consolas, Menlo, Monaco, monospace;
+      font-size: 0.82rem;
+      line-height: 1.58;
+      letter-spacing: 0.01em;
+      pointer-events: none;
+      box-shadow:
+        0 0 18px rgba(15, 181, 255, 0.24),
+        0 0 10px rgba(255, 154, 46, 0.12),
+        inset 0 0 18px rgba(15, 181, 255, 0.05);
+    }
+
+    #maze-network-tooltip strong,
+    #maze-network-tooltip .maze-network-tooltip-heading {
+      display: block;
+      color: #ff9a2e !important;
+      font-size: 0.86rem;
+      margin-bottom: 7px;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px rgba(255, 154, 46, 0.28);
+    }
+
+    #maze-network-tooltip p {
+      margin: 0 0 8px;
+    }
+
+    #maze-network-tooltip p:last-child {
+      margin-bottom: 0;
+    }
+
+    @media (max-width: 1100px) {
+      #ascii-maze-panels {
+        grid-template-columns: 1fr;
+      }
+
+      #ascii-maze-panels > .ascii-maze-panel:first-child,
+      #ascii-maze-panels > .ascii-maze-panel:last-child {
+        width: 100%;
+        min-width: 0;
+      }
+
+      #ascii-maze-live {
+        width: 100%;
+        min-width: 0;
+      }
+    }
   </style>
 </head>
-<body>
-  <header style="padding:12px 16px">
-    <h1 style="margin:0;font-size:18px">ASCII Maze Demo</h1>
-  </header>
-  <main id="root">
-  <!-- Internal pause control removed; external host can supply controls using the public API -->
-    <div id="ascii-maze-output">
-      <div id="ascii-maze-live" style="flex:1;min-height:200px"></div>
-      <div id="ascii-maze-archive" style="margin-top:12px"></div>
-    </div>
-  <div id="ascii-maze-status" aria-live="polite" style="margin-top:8px;color:#f88"></div>
+<body class="demo-page">
+  <main class="demo-main demo-main--wide">
+    <section class="hero">
+      <p class="eyebrow">Flagship Browser Demo</p>
+      <h1>ASCII Maze</h1>
+      <p>
+        This page runs the real browser-hosted curriculum loop: the controller starts in a
+        compact maze, advances through larger procedural layouts, and keeps the live ASCII
+        search trace visible while telemetry-rich evolution unfolds.
+      </p>
+    </section>
+
+    <p id="ascii-maze-status" class="load-status" role="status" aria-live="polite">
+      Loading ASCII Maze browser bundle...
+    </p>
+    <section class="starter-demo-shell">
+      <!-- Internal pause control removed; external host can supply controls using the public API -->
+      <div id="ascii-maze-output">
+        <h2 id="ascii-maze-visualizer-title">Maze and Network Visualizer</h2>
+        <div id="ascii-maze-panels">
+          <section class="ascii-maze-panel" aria-label="Maze panel">
+            <h3>Maze</h3>
+            <div id="ascii-maze-live"></div>
+          </section>
+          <section class="ascii-maze-panel" aria-label="Network visualizer panel">
+            <h3>Visualizer</h3>
+            <canvas id="ascii-maze-network-canvas" width="700" height="504"></canvas>
+          </section>
+        </div>
+        <div id="ascii-maze-archive"></div>
+      </div>
+    </section>
+  </main>
+  <!-- Hover tooltip for network canvas label system -->
+  <div id="maze-network-tooltip" role="tooltip" aria-live="polite"></div>
   <script>
     (function loadAsciiMazeBundle() {
       const statusElement = document.getElementById('ascii-maze-status');
-      const isRepositoryExamplePath = /^\/examples\//.test(window.location.pathname);
+      const currentPath = window.location.pathname.replace(/\\/g, '/');
+      const isRepositoryExamplePath = /\/examples\//.test(currentPath) && !/\/docs\/examples\//.test(currentPath);
       const bundleSrc = isRepositoryExamplePath
         ? '../../docs/assets/ascii-maze.bundle.js'
         : '../../assets/ascii-maze.bundle.js';
@@ -36,17 +210,32 @@
       scriptElement.src = bundleSrc;
       scriptElement.defer = true;
       scriptElement.onload = () => {
-        if (window.asciiMazeStart) {
-          window.asciiMazeStart('ascii-maze-output');
+        const startFunction = window.asciiMaze?.start || window.asciiMazeStart;
+
+        if (!startFunction) {
+          if (statusElement) {
+            statusElement.textContent = 'Bundle loaded, but no ASCII Maze start function was found.';
+          }
           return;
         }
-        if (window.asciiMaze?.start) {
-          window.asciiMaze.start('ascii-maze-output');
-        }
+
+        Promise.resolve(startFunction('ascii-maze-output'))
+          .then(() => {
+            if (statusElement) {
+              statusElement.textContent = '';
+            }
+          })
+          .catch((error) => {
+            if (statusElement) {
+              statusElement.textContent = error instanceof Error
+                ? error.message
+                : String(error);
+            }
+          });
       };
       scriptElement.onerror = () => {
         if (statusElement) {
-          statusElement.textContent = `Failed to load ascii-maze.bundle.js from ${bundleSrc}`;
+          statusElement.textContent = `Failed to load ascii-maze.bundle.js from ${bundleSrc}. Run npm run build:ascii-maze.`;
         }
       };
 

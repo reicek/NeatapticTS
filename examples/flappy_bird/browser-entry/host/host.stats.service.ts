@@ -6,6 +6,7 @@ import {
   FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION,
   FLAPPY_HUD_INITIALIZING_TEXT,
   FLAPPY_HUD_OFF_TEXT,
+  FLAPPY_HUD_PLACEHOLDER_TEXT,
   FLAPPY_HUD_ZERO_DECIMAL_TEXT,
   FLAPPY_HUD_ZERO_TEXT,
   FLAPPY_MONOSPACE_FONT_FAMILY,
@@ -33,7 +34,9 @@ import type { HostStatsPartialValues } from './host.types';
  * initializes all HUD values to their baseline placeholders.
  *
  * The initial placeholders make the HUD legible before the first generation or
- * playback frame has been processed.
+ * playback frame has been processed: live counters start at zero, generation
+ * summary metrics wait on worker playback completion, and instrumentation rows
+ * stay explicit about whether runtime telemetry is enabled.
  *
  * @param statsTableHost - DOM host that receives the table.
  * @returns Lookup map for future incremental stat updates.
@@ -76,7 +79,7 @@ export function createAndAttachHostStatsTable(
           valueColor: FLAPPY_NEON_PALETTE.currentRunText,
         };
       }
-      if (statsKey.startsWith('best')) {
+      if (statsKey.startsWith('summary')) {
         return {
           keyColor: FLAPPY_NEON_PALETTE.bestRunText,
           valueColor: FLAPPY_NEON_PALETTE.bestRunText,
@@ -94,9 +97,14 @@ export function createAndAttachHostStatsTable(
     currentHeader: 'Current run · Gen -',
     currentFrames: FLAPPY_HUD_ZERO_TEXT,
     currentPipes: FLAPPY_HUD_ZERO_TEXT,
-    currentMaxFrames: FLAPPY_HUD_ZERO_TEXT,
-    currentMaxPipes: FLAPPY_HUD_ZERO_TEXT,
     currentArchitecture: '-',
+    summaryHeader: 'Generation summary',
+    summaryFitness: FLAPPY_HUD_PLACEHOLDER_TEXT,
+    summaryWinnerFrames: FLAPPY_HUD_PLACEHOLDER_TEXT,
+    summaryWinnerPipes: FLAPPY_HUD_PLACEHOLDER_TEXT,
+    summaryAveragePipes: FLAPPY_HUD_PLACEHOLDER_TEXT,
+    summaryP90Frames: FLAPPY_HUD_PLACEHOLDER_TEXT,
+    summaryArchitecture: '-',
     telemetryHeader: 'Instrumentation',
     telemetryActivationsPerFrame: FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION
       ? FLAPPY_HUD_ZERO_DECIMAL_TEXT
@@ -110,12 +118,6 @@ export function createAndAttachHostStatsTable(
     telemetryMinorGcPerMinute: FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION
       ? FLAPPY_HUD_ZERO_DECIMAL_TEXT
       : FLAPPY_HUD_OFF_TEXT,
-    bestHeader: 'Best run',
-    bestFrames: FLAPPY_HUD_ZERO_TEXT,
-    bestPipes: FLAPPY_HUD_ZERO_TEXT,
-    bestMaxFrames: FLAPPY_HUD_ZERO_TEXT,
-    bestMaxPipes: FLAPPY_HUD_ZERO_TEXT,
-    bestArchitecture: '-',
     status: FLAPPY_HUD_INITIALIZING_TEXT,
   });
 
@@ -148,7 +150,7 @@ export function updateStatsTableValues(
       return;
     }
     const formattedValue =
-      statsKey === 'currentArchitecture' || statsKey === 'bestArchitecture'
+      statsKey === 'currentArchitecture' || statsKey === 'summaryArchitecture'
         ? formatArchitectureStatsValue(nextValue)
         : nextValue;
     statsCell.textContent = formattedValue;

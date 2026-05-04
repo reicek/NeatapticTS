@@ -195,6 +195,18 @@ export default class Connection {
   private static _nextInnovation: number = 1;
 
   /**
+   * Read the current next-innovation cursor without advancing it.
+   *
+   * Use this to seed an external innovation tracker so its counter never
+   * overlaps with innovation IDs already assigned by the Connection constructor.
+   *
+   * @returns Current value of the monotonic connection innovation counter.
+   */
+  static get nextInnovation(): number {
+    return Connection._nextInnovation;
+  }
+
+  /**
    * Reset the monotonic innovation counter used for newly constructed or pooled connections.
    * You usually call this at the start of an experiment or before rebuilding a whole population.
    *
@@ -203,6 +215,26 @@ export default class Connection {
    */
   static resetInnovationCounter(value: number = 1) {
     Connection._nextInnovation = value;
+  }
+
+  /**
+   * Advances the innovation cursor past a restored maximum.
+   *
+   * This keeps import and clone paths monotonic: once a payload brings in a high
+   * innovation id, newly created edges continue from above that value.
+   *
+   * @param maxObservedInnovation Highest restored innovation id currently in memory.
+   * @returns Nothing.
+   */
+  static syncInnovationCounter(maxObservedInnovation: number): void {
+    if (!Number.isFinite(maxObservedInnovation)) {
+      return;
+    }
+
+    Connection._nextInnovation = Math.max(
+      Connection._nextInnovation,
+      maxObservedInnovation + 1,
+    );
   }
 
   private static _pool: Connection[] = [];
@@ -239,6 +271,8 @@ export default class Connection {
       connectionInstance.xtrace.nodes.length = 0;
       connectionInstance.xtrace.values.length = 0;
       if (symbolProps[kOpt]) delete symbolProps[kOpt];
+      if (symbolProps[kPlasticRate] !== undefined)
+        delete symbolProps[kPlasticRate];
       mutableConnection.innovation = Connection._nextInnovation++;
     } else {
       connectionInstance = new Connection(from, to, weight);

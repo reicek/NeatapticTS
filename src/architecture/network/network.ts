@@ -2,6 +2,10 @@
  * Core network chapter for the architecture surface.
  *
  * This folder owns the public `Network` class: the boundary where a graph stops
+ *
+ * This is the explicit reset boundary for recurrent execution with carried
+ * state semantics. Call it before a new independent sequence when previous
+ * recurrent state should not influence the next activation run.
  * being only nodes and connections and starts behaving like one runnable,
  * mutable, trainable system. Higher-level NEAT code can mutate or score a
  * network, but this chapter is where the graph itself learns how to activate,
@@ -98,6 +102,7 @@ import {
   resolveTopologyIntent,
   validateTopologyIntentConfiguration,
 } from './bootstrap/network.bootstrap.utils';
+import { constructNetwork as _constructNetwork } from './construct/network.construct.utils';
 import { NetworkConstructorDimensionRequiredError } from './network.errors';
 import {
   createMLP as _createMLP,
@@ -127,6 +132,7 @@ import {
 import {
   disableDropConnect as _disableDropConnect,
   enableDropConnect as _enableDropConnect,
+  getActivationSchedulingDiagnostics as _getActivationSchedulingDiagnostics,
   getLastGradClipGroupCount as _getLastGradClipGroupCount,
   getLossScale as _getLossScale,
   getRawGradientNorm as _getRawGradientNorm,
@@ -154,6 +160,7 @@ import {
   restoreRNG as _restoreRNG,
   getRNGState as _getRNGState,
   setRNGState as _setRNGState,
+  getRandomFn as _getRandomFn,
   removeNode as _removeNodeStandalone,
   connect as _connect,
   disconnect as _disconnect,
@@ -173,15 +180,23 @@ import {
   clearState as _clearState,
   trainImpl as _trainImpl,
   crossOver as _crossOver,
+  describeTemporalStructure as _describeTemporalStructure,
 } from './network.utils';
 import type {
+  ActivationSchedule,
+  ActivationSchedulingDiagnostics,
+  CompactSerializedNetworkTuple,
+  ConstructOptions,
+  ConstructPart,
+  ConstructResult,
+  ExplicitIORoles,
   NetworkArchitectureDescriptor,
   MutationMethod,
   NetworkBootstrapInternals,
   NetworkConstructorOptions,
+  NetworkTemporalStructureDescriptor,
   NetworkTopologyIntent,
   RNGSnapshot,
-  SerializedConnection,
   TrainingOptions,
 } from './network.types';
 
@@ -288,6 +303,15 @@ export default class Network implements NetworkView {
   private _enforceAcyclic: boolean = false;
   /** @internal Public topology intent used to preserve semantic API choices. */
   private _topologyIntent: NetworkTopologyIntent = 'unconstrained';
+  /** @internal Ordered stable gene ids for input-role nodes. */
+  private _inputNodeIds: number[] = [];
+  /** @internal Ordered stable gene ids for output-role nodes. */
+  private _outputNodeIds: number[] = [];
+  /** @internal Cached deterministic activation schedule for acyclic graphs. */
+  private _activationSchedule: ActivationSchedule | null = null;
+  /** @internal Human-friendly scheduling diagnostics snapshot. */
+  private _activationSchedulingDiagnostics: ActivationSchedulingDiagnostics | null =
+    null;
   /** @internal Cached topological order. */
   private _topoOrder: Node[] | null = null;
   /** @internal Topology dirty marker. */
@@ -319,6 +343,29 @@ export default class Network implements NetworkView {
   input!: number;
   /** Output node count. */
   output!: number;
+  /**
+   * Ordered stable gene ids that define the network input vector contract.
+   *
+   * Returns a cloned array so callers can inspect role metadata without
+   * mutating runtime state.
+   *
+   * @returns Ordered input node gene ids.
+   */
+  get inputNodeIds(): number[] {
+    return [...this._inputNodeIds];
+  }
+
+  /**
+   * Ordered stable gene ids that define the network output vector contract.
+   *
+   * Returns a cloned array so callers can inspect role metadata without
+   * mutating runtime state.
+   *
+   * @returns Ordered output node gene ids.
+   */
+  get outputNodeIds(): number[] {
+    return [...this._outputNodeIds];
+  }
   /** Optional fitness score. */
   score?: number;
   /** Network node collection. */
@@ -523,6 +570,19 @@ export default class Network implements NetworkView {
   }
 
   /**
+   * Read a human-friendly snapshot of the current activation-ordering contract.
+   *
+   * Use this after activation or structural edits to see whether the runtime is
+   * using a compiled schedule, a cycle fallback, or a raw-node-order fallback,
+   * and what to do next if that result is not the one you expected.
+   *
+   * @returns Activation scheduling diagnostics snapshot.
+   */
+  getActivationSchedulingDiagnostics(): ActivationSchedulingDiagnostics {
+    return _getActivationSchedulingDiagnostics.call(this);
+  }
+
+  /**
    * Returns the public topology intent for this network.
    *
    * @returns Current topology intent.
@@ -548,6 +608,21 @@ export default class Network implements NetworkView {
    */
   setEnforceAcyclic(flag: boolean): void {
     _setEnforceAcyclic.call(this, flag);
+  }
+
+  /**
+   * Refresh explicit ordered input and output role ids from the current graph.
+   *
+   * Builder, restore, and evolutionary materialization paths use this after
+   * replacing `nodes` wholesale so the role contract stays explicit even while
+   * activation semantics still rely on legacy ordering rules.
+   *
+   * @returns Nothing.
+   */
+  refreshExplicitIORoles(): void {
+    const explicitIORoles = collectExplicitIORoles(this.nodes);
+    this._inputNodeIds = explicitIORoles.inputNodeIds;
+    this._outputNodeIds = explicitIORoles.outputNodeIds;
   }
 
   /**
@@ -670,6 +745,14 @@ export default class Network implements NetworkView {
    */
   setRNGState(state: number) {
     _setRNGState.call(this, state);
+  }
+  /**
+   * Read the active deterministic RNG function.
+   *
+   * @returns RNG function when deterministic state is initialized.
+   */
+  getRandomFn(): (() => number) | undefined {
+    return _getRandomFn.call(this);
   }
   /**
    * Set stochastic-depth schedule function.
@@ -859,7 +942,7 @@ export default class Network implements NetworkView {
    * This is a core operation for neuro-evolutionary algorithms (like NEAT).
    * The method argument should be one of the mutation types defined in `methods.mutation`.
    *
-   * @param method - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
+   * @param method The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
    *                 Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
    * @throws {Error} If no valid mutation `method` is provided.
    *
@@ -1030,14 +1113,7 @@ export default class Network implements NetworkView {
   }
 
   /** Lightweight tuple serializer delegating to network.serialize.ts */
-  serialize(): [
-    number[],
-    number[],
-    string[],
-    SerializedConnection[],
-    number,
-    number,
-  ] {
+  serialize(): CompactSerializedNetworkTuple {
     return _serialize.call(this);
   }
 
@@ -1046,7 +1122,9 @@ export default class Network implements NetworkView {
    * Reconstructs the network structure and state based on the provided arrays.
    *
    * @param {unknown[]} data - The serialized network data array, typically obtained from `network.serialize()`.
-   *                       Expected format: `[activations, states, squashNames, connectionData, inputSize, outputSize]`.
+   *                       Expected format: `[activations, states, squashNames, connectionData, inputSize, outputSize]`
+   *                       with optional trailing `nodeGeneIds` and `topologyIntent` slots for
+   *                       identity-preserving restore paths.
    * @param {number} [inputSize] - Optional input size override.
    * @param {number} [outputSize] - Optional output size override.
    * @returns {Network} A new Network instance reconstructed from the serialized data.
@@ -1054,16 +1132,7 @@ export default class Network implements NetworkView {
    */
   /** Static lightweight tuple deserializer delegate */
   static deserialize(
-    data:
-      | [
-          number[],
-          number[],
-          string[],
-          { from: number; to: number; weight: number; gater: number | null }[],
-          number,
-          number,
-        ]
-      | unknown[],
+    data: CompactSerializedNetworkTuple | unknown[],
     inputSize?: number,
     outputSize?: number,
   ): Network {
@@ -1092,6 +1161,19 @@ export default class Network implements NetworkView {
    */
   describeArchitecture(): NetworkArchitectureDescriptor {
     return _resolveArchitectureDescriptor(this);
+  }
+
+  /**
+   * Resolves the validated temporal-module structure for diagnostics and visualization.
+   *
+   * Call this when the coarse hidden-layer descriptor is not enough and you
+   * need the explicit recurrent-module and gated-block ownership story that the
+   * runtime builders preserve for LSTM, GRU, and NARX networks.
+   *
+   * @returns Temporal-structure descriptor synchronized against the live graph.
+   */
+  describeTemporalStructure(): NetworkTemporalStructureDescriptor {
+    return _describeTemporalStructure(this);
   }
 
   /**
@@ -1185,6 +1267,36 @@ export default class Network implements NetworkView {
   }
 
   /**
+   * Construct a runnable network from mixed `Node`, `Group`, and `Layer` parts.
+   *
+   * This builder compiles the provided parts into the ordinary `Network`
+   * runtime, preserving explicit input/output ordering and then rebuilding the
+   * scheduling cache in either acyclic or recurrent mode.
+   *
+   * @param parts Mixed architecture parts to flatten.
+   * @param options Optional construct-time validation, ordering, and runtime flags.
+   * @returns Materialized runtime plus lightweight diagnostics.
+   *
+   * @example
+   * ```ts
+   * const sensor = new Node('input');
+   * const hidden = new Group(2);
+   * const readout = Layer.dense(1, 'output');
+   *
+   * sensor.connect(hidden);
+   * hidden.connect(readout);
+   *
+   * const { network } = Network.construct([sensor, hidden, readout]);
+   * ```
+   */
+  static construct(
+    parts: readonly ConstructPart[],
+    options?: ConstructOptions,
+  ): ConstructResult {
+    return _constructNetwork.call(this, parts, options);
+  }
+
+  /**
    * Rebuilds the network's connections array from all per-node connections.
    * This ensures that the network.connections array is consistent with the actual
    * outgoing connections of all nodes. Useful after manual wiring or node manipulation.
@@ -1198,4 +1310,24 @@ export default class Network implements NetworkView {
   static rebuildConnections(net: Network): void {
     _rebuildConnections(net);
   }
+}
+
+function collectExplicitIORoles(nodes: readonly Node[]): ExplicitIORoles {
+  const explicitIORoles: ExplicitIORoles = {
+    inputNodeIds: [],
+    outputNodeIds: [],
+  };
+
+  for (const node of nodes) {
+    if (node.type === 'input') {
+      explicitIORoles.inputNodeIds.push(node.geneId);
+      continue;
+    }
+
+    if (node.type === 'output') {
+      explicitIORoles.outputNodeIds.push(node.geneId);
+    }
+  }
+
+  return explicitIORoles;
 }

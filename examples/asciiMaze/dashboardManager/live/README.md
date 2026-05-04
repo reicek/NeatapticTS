@@ -36,6 +36,21 @@ redrawDashboard(
 Repaint the live dashboard from current state and refresh the detailed snapshot.
 
 Parameters:
-- `context` - - Dashboard runtime context for state and output callbacks.
-- `currentMaze` - - Maze currently being evolved.
-- `neat` - - Optional NEAT runtime instance used for detailed stats.
+- `context` - Dashboard runtime context for state and output callbacks.
+- `currentMaze` - Maze currently being evolved.
+- `neat` - Optional NEAT runtime instance used for detailed stats.
+
+### resolveActivationSchedulingValue
+
+```ts
+resolveActivationSchedulingValue(
+  detailedStats: AsciiMazeDetailedStats | null,
+): string | null
+```
+
+Resolve the compact activation-scheduling label shown in the live dashboard.
+
+Parameters:
+- `detailedStats` - Latest detailed dashboard snapshot.
+
+Returns: Human-readable scheduling summary or null when unavailable.

@@ -3,6 +3,7 @@ import type {
   MutationMethod,
   NeatControllerForMutation,
 } from '../shared/mutation.types';
+import Connection from '../../../architecture/connection/connection';
 import { EXTRA_CONNECTION_PROBABILITY } from '../../neat.constants';
 
 /** Default mutation rate when not configured. */
@@ -78,10 +79,10 @@ const DEFAULT_MUTATION_AMOUNT = 1;
  * and bandit-style policies to reward operators that change structure instead
  * of merely consuming attempts.
  *
- * @param genome - genome to mutate
- * @param internal - neat controller context
- * @param methods - mutation methods module
- * @returns Promise resolving after mutation attempts complete
+ * @param genome Genome to mutate.
+ * @param internal NEAT controller context.
+ * @param methods Mutation methods module.
+ * @returns Promise resolving after mutation attempts complete.
  */
 export async function mutateGenome(
   genome: GenomeWithMetadata,
@@ -106,7 +107,7 @@ export async function mutateGenome(
     if (!mutationMethod?.name) continue;
 
     const beforeSizes = captureStructuralSizes(genome);
-    applyMutationOperator(genome, mutationMethod, internal, methods);
+    await applyMutationOperator(genome, mutationMethod, internal, methods);
     maybeAddExtraConnection(genome, internal);
     updateOperatorStatsIfNeeded(genome, mutationMethod, beforeSizes, internal);
   }
@@ -124,9 +125,9 @@ export async function mutateGenome(
  * cheap bootstrap check rather than a repeated reset of evolved mutation
  * behavior.
  *
- * @param genome - genome to initialize
- * @param internal - neat controller context
- * @returns void
+ * @param genome Genome to initialize.
+ * @param internal NEAT controller context.
+ * @returns Nothing.
  */
 export function initializeAdaptiveMutation(
   genome: GenomeWithMetadata,
@@ -161,9 +162,9 @@ export function initializeAdaptiveMutation(
  * Keeping that precedence isolated here makes the rest of the mutation flow
  * read as orchestration instead of configuration branching.
  *
- * @param genome - genome to resolve for
- * @param internal - neat controller context
- * @returns effective mutation rate
+ * @param genome Genome to resolve for.
+ * @param internal NEAT controller context.
+ * @returns Effective mutation rate.
  */
 export function resolveEffectiveRate(
   genome: GenomeWithMetadata,
@@ -192,9 +193,9 @@ export function resolveEffectiveRate(
  * may carry its own evolving attempt budget; otherwise the controller-wide
  * amount stays authoritative.
  *
- * @param genome - genome to resolve for
- * @param internal - neat controller context
- * @returns effective mutation amount
+ * @param genome Genome to resolve for.
+ * @param internal NEAT controller context.
+ * @returns Effective mutation amount.
  */
 export function resolveEffectiveAmount(
   genome: GenomeWithMetadata,
@@ -222,9 +223,9 @@ export function resolveEffectiveAmount(
  * comparison in one helper makes the orchestration read clearly and gives tests
  * one stable seam for deterministic gating behavior.
  *
- * @param effectiveRate - effective mutation probability
- * @param internal - neat controller context
- * @returns true when the genome should be mutated
+ * @param effectiveRate Effective mutation probability.
+ * @param internal NEAT controller context.
+ * @returns True when the genome should be mutated.
  */
 export function shouldMutateGenome(
   effectiveRate: number,
@@ -245,9 +246,9 @@ export function shouldMutateGenome(
  * That normalization keeps `mutateGenome()` focused on lifecycle sequencing
  * rather than on legacy selection-shape quirks.
  *
- * @param genome - genome to select for
- * @param internal - neat controller context
- * @returns resolved mutation method or null
+ * @param genome Genome to select for.
+ * @param internal NEAT controller context.
+ * @returns Resolved mutation method or null.
  */
 export async function selectConcreteMutationMethod(
   genome: GenomeWithMetadata,
@@ -271,8 +272,8 @@ export async function selectConcreteMutationMethod(
  * resulting genome later scored better. This helper records the pre-mutation
  * node and connection counts that make that local success signal possible.
  *
- * @param genome - genome to inspect
- * @returns structural size snapshot
+ * @param genome Genome to inspect.
+ * @returns Structural size snapshot.
  */
 export function captureStructuralSizes(genome: GenomeWithMetadata): {
   beforeNodes: number;
@@ -299,35 +300,54 @@ export function captureStructuralSizes(genome: GenomeWithMetadata): {
  * keep the expensive cleanup targeted to methods that plausibly changed the
  * structural view of the genome.
  *
- * @param genome - genome to mutate
- * @param mutationMethod - mutation operator to apply
- * @param internal - neat controller context
- * @param methods - mutation methods module
- * @returns void
+ * @param genome Genome to mutate.
+ * @param mutationMethod Mutation operator to apply.
+ * @param internal NEAT controller context.
+ * @param methods Mutation methods module.
+ * @returns Promise resolving after the operator has been applied.
  */
-export function applyMutationOperator(
+export async function applyMutationOperator(
   genome: GenomeWithMetadata,
   mutationMethod: MutationMethod,
   internal: NeatControllerForMutation,
   methods: { mutation: unknown },
-): void {
+): Promise<void> {
+  const mutationMethods = methods.mutation as Record<string, MutationMethod>;
+  const mutationName = mutationMethod?.name;
+
   // Step 1: handle structural operators that require innovation reuse.
-  if (
-    mutationMethod ===
-    (methods.mutation as Record<string, MutationMethod>).ADD_NODE
-  ) {
-    applyAddNodeMutation(genome, internal, methods);
+  if (mutationName === mutationMethods.ADD_NODE?.name) {
+    await applyAddNodeMutation(genome, internal, methods);
     return;
   }
-  if (
-    mutationMethod ===
-    (methods.mutation as Record<string, MutationMethod>).ADD_CONN
-  ) {
+  if (mutationName === mutationMethods.ADD_CONN?.name) {
     applyAddConnMutation(genome, internal, methods);
     return;
   }
 
-  // Step 2: defer to genome.mutate for other operators.
+  // Step 2: defer to genome.mutate for other operators, but first sync the
+  // static Connection innovation counter above any innovations already in this
+  // genome so that Connection.acquire() (used inside genome.mutate) never
+  // assigns an innovation ID that is already occupied by an existing edge.
+  const allGenomeConnections = [
+    ...genome.connections,
+    ...((
+      genome as GenomeWithMetadata & {
+        selfconns?: GenomeWithMetadata['connections'];
+      }
+    ).selfconns ?? []),
+  ];
+  const maxExistingInnovation = allGenomeConnections.reduce(
+    (currentMax, connectionEntry) => {
+      const connectionInnovation = connectionEntry.innovation;
+      return typeof connectionInnovation === 'number' &&
+        Number.isFinite(connectionInnovation)
+        ? Math.max(currentMax, connectionInnovation)
+        : currentMax;
+    },
+    0,
+  );
+  Connection.syncInnovationCounter(maxExistingInnovation);
   genome.mutate?.(mutationMethod);
 
   // Step 3: invalidate caches for likely structural changes.
@@ -345,23 +365,27 @@ export function applyMutationOperator(
  * intentionally treats cache invalidation as part of the operation rather than
  * leaving it to callers.
  *
- * @param genome - genome to mutate
- * @param internal - neat controller context
- * @param methods - mutation methods module
- * @returns void
+ * @param genome Genome to mutate.
+ * @param internal NEAT controller context.
+ * @param methods Mutation methods module.
+ * @returns Promise resolving after the add-node operation completes.
  */
-export function applyAddNodeMutation(
+export async function applyAddNodeMutation(
   genome: GenomeWithMetadata,
   internal: NeatControllerForMutation,
   methods: { mutation: unknown },
-): void {
+): Promise<void> {
   // Step 1: perform the structural mutation via reuse helper.
-  internal._mutateAddNodeReuse(genome);
+  await internal._mutateAddNodeReuse(genome);
 
   // Step 2: nudge weights to make the change observable in tests.
   try {
     const mut = methods.mutation as Record<string, MutationMethod>;
-    genome.mutate?.(mut.MOD_WEIGHT as MutationMethod);
+    applyDeterministicWeightNudge(
+      genome,
+      internal,
+      mut.MOD_WEIGHT as MutationMethod,
+    );
   } catch {
     // Intentionally ignore: mutation may fail if genome structure is invalid.
   }
@@ -378,10 +402,10 @@ export function applyAddNodeMutation(
  * identical edge discoveries can still share innovation identity across the
  * population.
  *
- * @param genome - genome to mutate
- * @param internal - neat controller context
- * @param methods - mutation methods module
- * @returns void
+ * @param genome Genome to mutate.
+ * @param internal NEAT controller context.
+ * @param methods Mutation methods module.
+ * @returns Nothing.
  */
 export function applyAddConnMutation(
   genome: GenomeWithMetadata,
@@ -394,7 +418,11 @@ export function applyAddConnMutation(
   // Step 2: nudge weights to make the change observable in tests.
   try {
     const mut = methods.mutation as Record<string, MutationMethod>;
-    genome.mutate?.(mut.MOD_WEIGHT as MutationMethod);
+    applyDeterministicWeightNudge(
+      genome,
+      internal,
+      mut.MOD_WEIGHT as MutationMethod,
+    );
   } catch {
     // Intentionally ignore: mutation may fail if genome structure is invalid.
   }
@@ -411,9 +439,9 @@ export function applyAddConnMutation(
  * graph structure or traversal semantics enough to make cached topology views
  * unsafe.
  *
- * @param mutationMethod - mutation operator to inspect
- * @param methods - mutation methods module
- * @returns true when caches should be invalidated
+ * @param mutationMethod Mutation operator to inspect.
+ * @param methods Mutation methods module.
+ * @returns True when caches should be invalidated.
  */
 export function shouldInvalidateCaches(
   mutationMethod: MutationMethod,
@@ -431,6 +459,44 @@ export function shouldInvalidateCaches(
 }
 
 /**
+ * Apply the post-structural weight nudge using the controller RNG.
+ *
+ * The standalone network mutation helpers are allowed to own their own random
+ * streams, but NEAT replay needs these follow-up weight changes to come from
+ * the controller-owned RNG so the same checkpoint resumes identically.
+ *
+ * @param genome Genome whose connection weight should be nudged.
+ * @param internal NEAT controller owning the deterministic RNG.
+ * @param mutationMethod MOD_WEIGHT descriptor providing the delta range.
+ * @returns Nothing.
+ */
+function applyDeterministicWeightNudge(
+  genome: GenomeWithMetadata,
+  internal: NeatControllerForMutation,
+  mutationMethod: MutationMethod,
+): void {
+  const randomValue = internal._getRNG();
+  const targetConnectionIndex = Math.floor(
+    randomValue() * genome.connections.length,
+  );
+  const targetConnection = genome.connections[targetConnectionIndex];
+
+  if (!targetConnection) {
+    return;
+  }
+
+  const mutationDescriptor =
+    mutationMethod && typeof mutationMethod === 'object'
+      ? (mutationMethod as { min?: number; max?: number })
+      : {};
+  const minDelta = mutationDescriptor.min ?? -1;
+  const maxDelta = mutationDescriptor.max ?? 1;
+  const sampledDelta = randomValue() * (maxDelta - minDelta) + minDelta;
+
+  targetConnection.weight += sampledDelta;
+}
+
+/**
  * Optionally add an extra connection to increase exploration.
  *
  * This small post-operator hook gives the controller one extra chance to add
@@ -438,9 +504,9 @@ export function shouldInvalidateCaches(
  * probabilistic and lightweight: the flow uses it as a gentle exploration bump,
  * not as a second full operator-selection phase.
  *
- * @param genome - genome to mutate
- * @param internal - neat controller context
- * @returns void
+ * @param genome Genome to mutate.
+ * @param internal NEAT controller context.
+ * @returns Nothing.
  */
 export function maybeAddExtraConnection(
   genome: GenomeWithMetadata,
@@ -461,11 +527,11 @@ export function maybeAddExtraConnection(
  * collect every generation and concrete enough for later adaptation logic to
  * bias toward operators that are actually creating new structure.
  *
- * @param genome - genome used to compute after-sizes
- * @param mutationMethod - operator being recorded
- * @param beforeSizes - structural sizes captured before mutation
- * @param internal - neat controller context
- * @returns void
+ * @param genome Genome used to compute after-sizes.
+ * @param mutationMethod Operator being recorded.
+ * @param beforeSizes Structural sizes captured before mutation.
+ * @param internal NEAT controller context.
+ * @returns Nothing.
  */
 export function updateOperatorStatsIfNeeded(
   genome: GenomeWithMetadata,

@@ -1,5 +1,8 @@
 import Network from '../../architecture/network';
+import * as methods from '../../methods/methods';
 import Neat from '../../neat';
+import { createGenomeFromNetwork } from '../genome/genome';
+import { validateNativeGenome } from '../validate/neat.validate';
 
 type HelperMetadataNetwork = Network & {
   _id?: number;
@@ -30,6 +33,45 @@ function cloneGenome(genome: HelperMetadataNetwork): HelperMetadataNetwork {
 
 function countHiddenNodes(genome: Network): number {
   return genome.nodes.filter((nodeEntry) => nodeEntry.type === 'hidden').length;
+}
+
+function collectGenerationZeroSignature(genome: Network): string {
+  return JSON.stringify({
+    nodeGeneIds: genome.nodes.map((nodeEntry) => nodeEntry.geneId),
+    connectionInnovations: genome.connections.map(
+      (connection) => connection.innovation,
+    ),
+    topologyIntent: genome.getTopologyIntent(),
+    rngState: genome.getRNGState(),
+  });
+}
+
+function resolveMaxPopulationInnovation(population: Network[]): number {
+  return population
+    .flatMap((genome) =>
+      genome.connections.map((connection) => connection.innovation),
+    )
+    .reduce(
+      (currentMaxInnovation, innovation) =>
+        Math.max(currentMaxInnovation, innovation),
+      -1,
+    );
+}
+
+function createSeedNetworkWithDisconnectedInput(): Network {
+  const seedNetwork = new Network(2, 1, { seed: 1_204 });
+  const disconnectedConnection = seedNetwork.connections[0];
+
+  if (!disconnectedConnection) {
+    throw new Error('Expected seed network to expose one connection');
+  }
+
+  seedNetwork.disconnect(
+    disconnectedConnection.from,
+    disconnectedConnection.to,
+  );
+
+  return seedNetwork;
 }
 
 describe('neat helpers chapter', () => {
@@ -180,6 +222,57 @@ describe('neat helpers chapter', () => {
           ).size,
         ).toBe(1);
       });
+
+      it('keeps every seeded clone aligned on history, topology intent, and rng state', () => {
+        // Arrange
+        const seedNetwork = new Network(2, 1, { seed: 1_203 });
+        seedNetwork.setTopologyIntent('unconstrained');
+        const neat = new Neat(2, 1, fitness, { popsize: 5, seed: 336 });
+
+        // Act
+        neat.createPool(seedNetwork);
+
+        // Assert
+        expect(
+          new Set(neat.population.map(collectGenerationZeroSignature)).size,
+        ).toBe(1);
+        expect(neat.population[0].getRNGState()).toBe(
+          seedNetwork.getRNGState(),
+        );
+        expect(neat.population[0].getTopologyIntent()).toBe(
+          seedNetwork.getTopologyIntent(),
+        );
+      });
+
+      it('keeps every seeded generation-zero genome validator-clean', () => {
+        // Arrange
+        const seedNetwork = new Network(2, 1);
+        const neat = new Neat(2, 1, fitness, { popsize: 5, seed: 335 });
+
+        // Act
+        neat.createPool(seedNetwork);
+        const allGenomesValidate = neat.population.every(
+          (genome: Network) => validateNativeGenome(genome).isValid,
+        );
+
+        // Assert
+        expect(allGenomesValidate).toBe(true);
+      });
+
+      it('keeps repaired seeded generation-zero genomes validator-clean when the seed needs dead-end repair', () => {
+        // Arrange
+        const seedNetwork = createSeedNetworkWithDisconnectedInput();
+        const neat = new Neat(2, 1, fitness, { popsize: 5, seed: 340 });
+
+        // Act
+        neat.createPool(seedNetwork);
+        const allGenomesValidate = neat.population.every(
+          (genome: Network) => validateNativeGenome(genome).isValid,
+        );
+
+        // Assert
+        expect(allGenomesValidate).toBe(true);
+      });
     });
 
     describe('given a minimum hidden size is configured for fresh generation-zero genomes', () => {
@@ -204,6 +297,91 @@ describe('neat helpers chapter', () => {
             (hiddenNodeCount) => hiddenNodeCount >= minimumHiddenCount,
           ),
         ).toBe(true);
+      });
+
+      it('builds one homologous fresh template for the entire starting population', () => {
+        // Arrange
+        const neat = new Neat(2, 1, fitness, {
+          popsize: 4,
+          minHidden: 5,
+          seed: 337,
+        });
+
+        // Act
+        neat.createPool(null);
+
+        // Assert
+        expect(
+          new Set(neat.population.map(collectGenerationZeroSignature)).size,
+        ).toBe(1);
+      });
+
+      it('seeds the innovation tracker above the starting population history', () => {
+        // Arrange
+        const neat = new Neat(2, 1, fitness, {
+          popsize: 4,
+          minHidden: 3,
+          seed: 338,
+        });
+        const innovationTrackerHost = neat as unknown as {
+          _innovationTracker: {
+            nextInnovationId: number;
+          };
+        };
+
+        // Act
+        neat.createPool(null);
+        const maxPopulationInnovation = resolveMaxPopulationInnovation(
+          neat.population,
+        );
+
+        // Assert
+        expect(innovationTrackerHost._innovationTracker.nextInnovationId).toBe(
+          maxPopulationInnovation + 1,
+        );
+      });
+
+      it('keeps every fresh generation-zero genome validator-clean', () => {
+        // Arrange
+        const neat = new Neat(2, 1, fitness, {
+          popsize: 4,
+          minHidden: 3,
+          seed: 339,
+        });
+
+        // Act
+        neat.createPool(null);
+        const allGenomesValidate = neat.population.every(
+          (genome: Network) => validateNativeGenome(genome).isValid,
+        );
+
+        // Assert
+        expect(allGenomesValidate).toBe(true);
+      });
+
+      it('keeps every fresh feed-forward starter genome strict-genome clean before evolve runs', () => {
+        // Arrange
+        const neat = new Neat(2, 1, fitness, {
+          fastMode: true,
+          mutation: methods.mutation.FFW,
+          popsize: 4,
+          seed: 341,
+        });
+
+        // Act
+        const allGenomesConvertToStrictGenome = neat.population.every(
+          (genome: Network) => {
+            try {
+              createGenomeFromNetwork(genome);
+              return true;
+            } catch {
+              return false;
+            }
+          },
+        );
+
+        // Assert
+        expect(allGenomesConvertToStrictGenome).toBe(true);
       });
     });
   });

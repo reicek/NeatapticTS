@@ -56,7 +56,7 @@ export type NeatRngFacadeHost = RngHost;
  * test session. It captures the current numeric position without implying that
  * the token is about to cross a persistence boundary.
  *
- * @param host - `Neat` instance exposing RNG state.
+ * @param host `Neat` instance exposing RNG state.
  * @returns Numeric RNG state or `undefined` when the RNG has not been initialized.
  */
 export function snapshotRNGState(host: NeatRngFacadeHost): number | undefined {
@@ -73,8 +73,8 @@ export function snapshotRNGState(host: NeatRngFacadeHost): number | undefined {
  * prove that two runs consume the same future subsequence. The wrapper does not
  * draw a random number itself; it only repositions the next draw.
  *
- * @param host - `Neat` instance exposing RNG state.
- * @param state - Numeric or string seed snapshot to restore.
+ * @param host `Neat` instance exposing RNG state.
+ * @param state Numeric or string seed snapshot to restore.
  * @returns Nothing. The helper mutates the host RNG state in place.
  */
 export function restoreRNGState(
@@ -93,8 +93,8 @@ export function restoreRNGState(
  * Read this as a compatibility alias, not a second persistence model. New
  * readers should understand it as the same replay boundary with older naming.
  *
- * @param host - `Neat` instance exposing RNG state.
- * @param state - Numeric or string seed snapshot to restore.
+ * @param host `Neat` instance exposing RNG state.
+ * @param state Numeric or string seed snapshot to restore.
  * @returns Nothing. The helper mutates the host RNG state in place.
  */
 export function importRNGState(
@@ -112,7 +112,7 @@ export function importRNGState(
  * handoff. Compared with `snapshotRNGState()`, the emphasis here is portability
  * rather than momentary inspection.
  *
- * @param host - `Neat` instance exposing RNG state.
+ * @param host `Neat` instance exposing RNG state.
  * @returns Numeric RNG state or `undefined` when the RNG has not been initialized.
  */
 export function exportRNGState(host: NeatRngFacadeHost): number | undefined {
@@ -129,8 +129,8 @@ export function exportRNGState(host: NeatRngFacadeHost): number | undefined {
  * snapshot-then-restore pattern when the caller wants to inspect a sequence
  * without permanently consuming that portion of the run's randomness budget.
  *
- * @param host - `Neat` instance exposing RNG state.
- * @param sampleCount - Number of random values to generate.
+ * @param host `Neat` instance exposing RNG state.
+ * @param sampleCount Number of random values to generate.
  * @returns Deterministic random samples in the range `[0, 1)`.
  *
  * @example

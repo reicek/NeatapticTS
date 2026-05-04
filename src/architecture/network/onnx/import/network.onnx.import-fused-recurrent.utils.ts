@@ -554,7 +554,7 @@ export function reconstructFusedRecurrentLayers(
     );
 
     context.spec.gateOrder.forEach((gateName, gateIndex) => {
-      const gateNeurons = gateGroups[gateName] ?? [];
+      const gateNeurons = gateGroups[gateName];
       gateNeurons.forEach((gateNeuron, rowIndex) =>
         assignGateRow({
           gateNeuronInternal: gateNeuron as unknown as NodeInternals,

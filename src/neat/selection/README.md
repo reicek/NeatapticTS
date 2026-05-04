@@ -2,14 +2,38 @@
 
 Controller-facing selection helpers for the NEAT lifecycle.
 
-Selection is the point where a scored population becomes something the rest
-of the controller can reason about. The helpers in this root chapter answer
-the questions that show up most often during evolution work: which genome is
-currently best, what is the current average score, should the population be
-re-ordered before inspection, and which parent should breed next under the
-active selection strategy.
+## Selection Pressure and the Exploration-Exploitation Tradeoff
 
-Keep the mental model in four steps:
+Selection is the mechanism by which fitness differences translate into
+reproductive advantage. The central tension it manages is the *exploration-
+exploitation tradeoff*: too much pressure toward the current champion
+collapses the population toward one local optimum (exploitation); too little
+pressure allows fit solutions to be lost to noise (exploration). The right
+balance depends on the problem, the generation count, and how diverse the
+current population already is. See Wikipedia contributors,
+[Selection (genetic algorithm)](https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)),
+for an overview of the design space.
+
+## The Three Built-in Selection Strategies
+
+| Strategy | How parents are chosen | Selection pressure |
+|---|---|---|
+| `POWER` | bias random selection toward higher-ranked genomes using a power function | tunable via `power` parameter |
+| `FITNESS_PROPORTIONATE` | probability proportional to score ("roulette wheel") | moderate, scales with score spread |
+| `TOURNAMENT` | sample k random genomes, take the best | tunable via tournament size |
+
+Tournament selection is generally more robust than fitness-proportionate
+selection because it is invariant to score scaling and handles negative
+fitness values without adjustment.
+
+## What This Boundary Owns
+
+This root chapter answers the questions that show up most often during
+evolution work: which genome is currently best, what is the current average
+score, should the population be re-ordered before inspection, and which
+parent should breed next under the active selection strategy.
+
+The mental model splits into four steps:
 
 1. summary helpers such as {@link getFittest} and {@link getAverage} make
    sure evaluation has happened before they report on the population,
@@ -20,16 +44,14 @@ Keep the mental model in four steps:
 4. `facade/` mirrors the stable `Neat` class entrypoints so callers can use
    these same behaviors without importing the lower-level module directly.
 
-That split matters because selection is where a NEAT controller turns raw
-evaluation into search pressure. Once genomes have scores, the controller has
-to answer two different practical questions without mixing them together:
+Inspection questions ("who is winning right now?") and breeding questions
+("which genome should parent the next child?") are kept separate on purpose
+— mixing them would make each call harder to reason about in isolation.
 
-- inspection questions such as "who is winning right now?" and "what does
-  the generation average look like?"
-- breeding questions such as "which genome should parent the next child?"
-
-The public helpers stay readable by keeping those questions adjacent but not
-collapsed into one overloaded routine.
+Ownership boundary: selection consumes the current controller-visible
+score or objective view. It applies search pressure over that view, but it
+does not define canonical fitness, compatibility identity, or species
+history by itself.
 
 The re-exported constants in this file are the small tuning and traversal
 anchors that make those behaviors predictable: fallback scores for

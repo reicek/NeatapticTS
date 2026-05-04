@@ -31,6 +31,29 @@ function getRegularizationStatsSnapshot(
 
 describe('network stats chapter', () => {
   describe('Network.test()', () => {
+    describe('given the evaluation set is not an array', () => {
+      describe('when test() is called', () => {
+        it('throws the test-set validation error', () => {
+          // Arrange
+          const network = createStatsNetwork(299);
+
+          // Act
+          const testWithNonArraySet = () =>
+            network.test(
+              undefined as unknown as Array<{
+                input: number[];
+                output: number[];
+              }>,
+            );
+
+          // Assert
+          expect(testWithNonArraySet).toThrow(
+            NetworkStatsTestSetValidationError,
+          );
+        });
+      });
+    });
+
     describe('given the evaluation set input width is too small', () => {
       describe('when test() is called', () => {
         it('throws the input-size mismatch error', () => {
@@ -49,6 +72,26 @@ describe('network stats chapter', () => {
       });
     });
 
+    describe('given one sample input vector is undefined', () => {
+      describe('when test() is called', () => {
+        it('throws an input-size mismatch that reports undefined width', () => {
+          // Arrange
+          const network = createStatsNetwork(3001);
+
+          // Act
+          const testWithUndefinedInput = () =>
+            network.test([
+              { input: undefined as unknown as number[], output: [1] },
+            ]);
+
+          // Assert
+          expect(testWithUndefinedInput).toThrow(
+            'Test sample input size mismatch: expected 2, got undefined',
+          );
+        });
+      });
+    });
+
     describe('given the evaluation set output width is too large', () => {
       describe('when test() is called', () => {
         it('throws the output-size mismatch error', () => {
@@ -62,6 +105,26 @@ describe('network stats chapter', () => {
           // Assert
           expect(testWithTooManyOutputs).toThrow(
             NetworkStatsTestSampleOutputSizeMismatchError,
+          );
+        });
+      });
+    });
+
+    describe('given one sample output vector is undefined', () => {
+      describe('when test() is called', () => {
+        it('throws an output-size mismatch that reports undefined width', () => {
+          // Arrange
+          const network = createStatsNetwork(3002);
+
+          // Act
+          const testWithUndefinedOutput = () =>
+            network.test([
+              { input: [1, 2], output: undefined as unknown as number[] },
+            ]);
+
+          // Assert
+          expect(testWithUndefinedOutput).toThrow(
+            'Test sample output size mismatch: expected 1, got undefined',
           );
         });
       });
@@ -94,6 +157,53 @@ describe('network stats chapter', () => {
 
           // Assert
           expect(testWithValidSet).not.toThrow();
+        });
+      });
+
+      describe('when a custom cost function is provided', () => {
+        it('uses the provided cost function during evaluation', () => {
+          // Arrange
+          const network = createStatsNetwork(3031);
+          const costFunction = jest.fn(() => 0);
+
+          // Act
+          network.test([{ input: [1, 2], output: [1] }], costFunction);
+
+          // Assert
+          expect(costFunction).toHaveBeenCalledTimes(1);
+        });
+      });
+
+      describe('when dropout is enabled before the run', () => {
+        it('restores the original dropout value after evaluation', () => {
+          // Arrange
+          const network = createStatsNetwork(3032);
+          network.dropout = 0.35;
+
+          // Act
+          network.test([{ input: [1, 2], output: [1] }]);
+
+          // Assert
+          expect(network.dropout).toBe(0.35);
+        });
+      });
+
+      describe('when hidden-node masks are inactive before the run', () => {
+        it('reactivates hidden-node masks during evaluation setup', () => {
+          // Arrange
+          const network = Network.createMLP(2, [2], 1);
+          const hiddenNodes = network.nodes.filter(
+            (node) => node.type === 'hidden',
+          );
+          hiddenNodes.forEach((node) => {
+            node.mask = 0;
+          });
+
+          // Act
+          network.test([{ input: [1, 2], output: [1] }]);
+
+          // Assert
+          expect(hiddenNodes.every((node) => node.mask === 1)).toBe(true);
         });
       });
     });

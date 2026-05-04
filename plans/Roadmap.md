@@ -7,9 +7,11 @@ This roadmap orders every plan in `/plans` into a dependency-aware sequence opti
 - **Adoption next** (browser distribution + examples)
 - **Scale + deployment** (standalone inference, workers, checkpointing)
 - **Interop breadth** (ONNX)
-- **Advanced research** last (HyperEvoDevoMorphoNEAT)
+- **Advanced research** last (NEAT Genesis EvoDevo / NGE)
 
 Where it helps, this roadmap uses **lanes** (things that can proceed in parallel) and **gates** (things that should be true before moving on).
+
+Active plans stay in `plans/`; terminally closed reopen baselines and their logs live in `plans/completed/`.
 
 ## Phase 0 — Hygiene + Refactor Baseline [DONE]
 
@@ -20,29 +22,29 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 - `flappy_bird` reference demo split and documentation baseline [DONE]
 - Main app NEAT surface is already SOLID split [DONE]
 - Educational documentation and split follow-through lane [DONE]
-  - [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md) [DONE]
-  - [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [DONE]
-  - [methods-solid-split.plans.md](methods-solid-split.plans.md) [DONE]
-  - [methods-docs.plans.md](methods-docs.plans.md) [DONE]
-  - [neat-docs.plans.md](neat-docs.plans.md) [DONE]
-  - [readme-first-section-pass.plans.md](readme-first-section-pass.plans.md) [DONE]
-  - [utils-docs.plans.md](utils-docs.plans.md) [DONE]
+  - [Flappy_Bird_Folder_Documentation_Pass.md](completed/Flappy_Bird_Folder_Documentation_Pass.md) [DONE]
+  - [architecture-solid-split.plans.md](completed/architecture-solid-split.plans.md) [DONE]
+  - [methods-solid-split.plans.md](completed/methods-solid-split.plans.md) [DONE]
+  - [methods-docs.plans.md](completed/methods-docs.plans.md) [DONE]
+  - [neat-docs.plans.md](completed/neat-docs.plans.md) [DONE]
+  - [readme-first-section-pass.plans.md](completed/readme-first-section-pass.plans.md) [DONE]
+  - [utils-docs.plans.md](completed/utils-docs.plans.md) [DONE]
   - Both demos are now solid split and the Flappy Bird documentation pass is complete enough to stop being a documentation blocker.
   - The architecture split follow-through and the NEAT educational-docs lane are now also complete enough to stop being Phase 0 blockers.
   - The repo-wide README first-section pass is now closed across the tracked README surfaces under `src/` and `examples/`.
   - The remaining structural polish in Phase 0 is the repository-wide modernization pass plus its validation gate.
 - Supporting repair and docs-tooling stabilization lane [DONE]
-  - [neat-test-surface-repair.plans.md](neat-test-surface-repair.plans.md) [DONE]
-  - [asciiMaze-typescript-repair.plans.md](asciiMaze-typescript-repair.plans.md) [DONE]
-  - [generate-docs-solid-split.plans.md](generate-docs-solid-split.plans.md) [DONE]
-  - [render-docs-html-solid-split.plans.md](render-docs-html-solid-split.plans.md) [DONE]
-  - [analyze-trace-solid-split.plans.md](analyze-trace-solid-split.plans.md) [DONE]
+  - [neat-test-surface-repair.plans.md](completed/neat-test-surface-repair.plans.md) [DONE]
+  - [asciiMaze-typescript-repair.plans.md](completed/asciiMaze-typescript-repair.plans.md) [DONE]
+  - [generate-docs-solid-split.plans.md](completed/generate-docs-solid-split.plans.md) [DONE]
+  - [render-docs-html-solid-split.plans.md](completed/render-docs-html-solid-split.plans.md) [DONE]
+  - [analyze-trace-solid-split.plans.md](completed/analyze-trace-solid-split.plans.md) [DONE]
   - These remain roadmap-visible as reopen points and tooling baselines even though they do not change the forward critical path out of Phase 0.
 - Source strict-typing cleanup for `src/` explicit-`any` debt [DONE]
-  - Plan: [src-no-explicit-any-cleanup.plans.md](src-no-explicit-any-cleanup.plans.md)
+  - Plan: [src-no-explicit-any-cleanup.plans.md](completed/src-no-explicit-any-cleanup.plans.md)
   - Scope note: this lane replaced the stale root checklist with a roadmap-tracked plan aligned to the current folderized tree and is now the closed baseline for future reopen-only follow-up.
 - ES2023 modernization (completed Phase 0 lane: project-wide named errors with `Error.cause`, targeted syntax cleanup, helper normalization, narrow module-edge cleanup, and lint/CI enforcement) [DONE]
-  - Plan: [ES2023 migration](ES2023%20migration)
+  - Plan: [ES2023 migration](completed/ES2023%20migration)
   - Scope note: ESM package wiring, the ES2023 TypeScript baseline, the lint scaffold, named-error rollout, targeted syntax cleanup, shared clone-helper normalization, narrow workflow or benchmark edge cleanup, and CI enforcement are now complete. Memory-management or performance-feature work remains owned by [Memory_Optimization.md](Memory_Optimization.md).
 
 **Gate to Phase 1:** satisfied. Both demos are solid split and documented, the main app split is stable, the remaining documentation work is no longer obscuring ownership boundaries, the ES2023 cleanup lane is complete, and `npm run build`, `npm run lint`, and `npm test` are green after the modernization pass.
@@ -52,29 +54,33 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 **Outcome:** deterministic semantics and “proper NEAT” correctness so everything built on top is reliable.
 
 1. Proper NEAT (historical markings, correct crossover alignment, recurrent/self-connection policy, RNG determinism)
-   - Plan: [neat.plans.md](neat.plans.md) [PLANNED]
+   - Plan: [neat.plans.md](completed/neat.plans.md) [DONE]
+   - Current internal state: the proper-NEAT lane is closed for its current scope through local Phase 7; any later beyond-paper continuation is deferred until an explicit reopen decision.
 2. Explicit I/O roles + stable activation ordering (acyclic + recurrent mode semantics)
-   - Plan: [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [PLANNED]
+   - Plan: [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [DONE]
 
 **Why this ordering:**
 
 - Fixing NEAT correctness prevents “paper cuts” and broken invariants from leaking into every future feature.
 - Stable execution semantics (I/O + scheduling) are required for safe builders, serialization, export, and workers.
 
-**Gate to Phase 2:** deterministic runs are achievable end-to-end (seeded runs don’t “leak” randomness; scheduling is stable; recurrent behavior is documented and tested).
+**Gate to Phase 2:** satisfied for the current roadmap scope. The proper-NEAT and stable activation-ordering lanes are closed, and explicit I/O roles plus deterministic acyclic and recurrent scheduling are now the documented runtime baseline.
 
 ## Phase 2 — Architecture DX (Build Graphs Safely)
 
 **Outcome:** a clear, typed, deterministic “build” story for users and for internal features.
 
 3. Architecture primitives (Node/Group/Layer)
-   - Plan: [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md) [PLANNED]
+   - Plan: [Architecture_Primitives_Node_Group_Layer.md](completed/Architecture_Primitives_Node_Group_Layer.md) [DONE]
+   - Current internal state: the primitive DX baseline is closed; construction-time roles, lightweight descriptors, and source-mapped docs are in place, and the whole-graph construct baseline is now archived in [completed/Construct_From_Parts_Graph_Assembly.md](completed/Construct_From_Parts_Graph_Assembly.md).
 4. Deterministic construct-from-parts (validation + scheduling integration)
-   - Plan: [Construct_From_Parts_Graph_Assembly.md](Construct_From_Parts_Graph_Assembly.md) [PLANNED]
+   - Plan: [Construct_From_Parts_Graph_Assembly.md](completed/Construct_From_Parts_Graph_Assembly.md) [DONE]
+   - Current internal state: the construct baseline is closed for the current Phase 2 scope. Public `Network.construct(...)` now covers deterministic materialization, construct-owned diagnostics, explicit public I/O validation, detached graph snapshots plus summary formatting, and adjacent runtime seam coverage across serialization, training, evolution, crossover, and builder interoperability.
 5. Preconfigured architectures (MLP + sequence builders)
-   - Plan: [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [PLANNED]
+   - Plan: [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [DONE]
+   - Current internal state: all ten steps are closed. MLP, RandomSparse, NARX, GRU, and LSTM builders are complete; both Flappy Bird and ASCII Maze consume builder-backed seed profiles through the shared example profile contract; cross-demo e2e tests cover the full approved profile matrix; the trainer and worker are both profile-aware for recurrent growth settings; and both demo READMEs document the approved architecture families.
 
-**Gate to Phase 3:** builders use explicit I/O roles, and construction is deterministic with actionable diagnostics.
+**Gate to Phase 3:** satisfied. Builders use explicit I/O roles, construction is deterministic with actionable diagnostics, and all five preconfigured architecture families (MLP, RandomSparse, NARX, GRU, LSTM) are complete and integrated into both flagship demos.
 
 ## Phase 3 — Adoption + Learnability (Browser + Examples + Visualization)
 
@@ -83,26 +89,30 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 6. Browser build + CDN distribution (ESM + IIFE bundles; stable public surface)
    - Plan: [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
 7. Interactive examples + learning path (Node + browser runnable examples, CI smoke checks)
-   - Plan: [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [PLANNED]
-8. Visualization export schema (JSON schema + optional DOT output)
-   - Plan: [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
+   - Plan: [Interactive_Examples_and_Learning_Path.md](completed/Interactive_Examples_and_Learning_Path.plans.md) [DONE]
+8. NEATchat (tiny online sequence-learning chatbot demo)
 
-**Notes:**
+- Plan: [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
+- Current internal state: the NEATchat Phase 3 learnability lane is closed for current scope and archived as a completed baseline. The delivered surface remains intentionally toy-scale: near-zero start, short online adaptation, language-agnostic token-stream behavior, and browser or Node experimentation boundaries rather than web-scale training.
 
-- Phase 3 examples are the starter set only: Node hello/evolve flows plus one minimal browser quickstart once the browser bundle exists.
-- Examples that depend on standalone export or worker execution are follow-on additions in Phase 4 after those capabilities land.
-- Before expanding the examples catalog, choose the canonical examples home and decide whether `bench-browser/` is the browser-example host so demo work does not fragment.
-- Visualization can be implemented slightly earlier, but it becomes much more valuable once primitives/builders provide stable labels/roles.
+9. Visualization export schema (JSON schema + optional DOT output)
+   - Plan: [Network_Visualization_Export_Schema.md](completed/Network_Visualization_Export_Schema.plans.md) [DONE]
+   - Current internal state: all three lanes are closed. `exportVisualizationGraph` + `toDot` schema/DOT export, shared canvas renderer (`renderNetworkView`), and Lane C documentation examples are complete and tested.
+
+**Gate to Phase 4:** satisfied. Browser bundle distribution remains [PLANNED] but is not a gate blocker; interactive examples, NEATchat, and visualization export schema are all closed. Phase 4 is the current active stage.
 
 ## Phase 4 — Deployment + Parallel Evaluation (Inference Artifacts, Workers, Checkpoints)
 
 **Outcome:** production and scale workflows: export models, evaluate quickly, resume long runs.
 
 9. Standalone inference export (dependency-free runtime output)
-   - Plan: [Standalone_Inference_Export.md](Standalone_Inference_Export.md) [PLANNED]
+   - Plan: [Standalone_Inference_Export.md](completed/Standalone_Inference_Export.md) [DONE]
+   - Current internal state: the planning baseline for the standalone deployment lane is closed. The legacy `network.standalone()` generator now honors compiled activation traversal and explicit I/O role ordering, and the next implementation reopen point is to create `src/architecture/network/export/` and freeze `InferenceIRv1` when Phase 4 becomes active.
+
 10. Worker-friendly serialization fastpath (clone/transfer payloads; predictor creation)
 
 - Plan: [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
+- Current internal state: planning complete — four transport strategies defined (`PortableInferencePayload`, `TransferableInferencePayload`, `InferenceChannel`, `SharedInferenceWorker`). No implementation has started. Phase 0 (Shared Inference IR) is the first implementation step when this plan becomes active.
 
 11. Turnkey multithread evaluation API (Node + browser workers)
 
@@ -156,23 +166,28 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Phase 7 — Advanced Research Features (Last)
 
-**Outcome:** evo-devo / hyper-scale capabilities and benchmark-driven validation that build on top of all prior infrastructure.
+**Outcome:** evo-devo / NGE capabilities and benchmark-driven validation that build on top of all prior infrastructure.
 
-- HyperEvoDevo MorphoNEAT
-  - Plan: [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]
-- HyperEvoDevo racing curriculum and behavioral drives follow-on
-  - Plan: [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md) [PLANNED]
+- NEAT Genesis EvoDevo (NGE) — core algorithm (computation motifs, lifecycle, DNA, reproduction, collective intelligence)
+  - Plan: [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) [PLANNED]
+- NGE Racing Curriculum — single-agent benchmark (sensory specialization, neuromodulation, lifecycle staging)
+  - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) [PLANNED]
+- NGE Ant Hive Ecosystem — multi-agent benchmark (stigmergy, role differentiation, collective intelligence)
+  - Plan: [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
+- NGE Predator/Prey Co-evolution — co-evolutionary benchmark (sensory arms race, reproduction modes, non-stationary fitness)
+  - Plan: [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]
 
-**Why last:** this work depends heavily on the Memory Optimization track (Track 2 in that plan) and benefits from stable NEAT correctness, deterministic activation semantics, robust serialization/checkpointing, and a mature enough Hyper core that benchmark results reflect the algorithm rather than unstable infrastructure.
+**Why last:** this work depends heavily on the Memory Optimization track (Track 2 in that plan) and benefits from stable NEAT correctness, deterministic activation semantics, robust serialization/checkpointing, and a mature enough NGE core that benchmark results reflect the algorithm rather than unstable infrastructure.
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phase 0 is complete** and the project is ready to begin **Phase 1**. Both demos are solid split and documented, the example learnability pass materially strengthened across `examples`, the Flappy Bird documentation pass is closed, the main app is already solid split, the architecture split follow-through is closed, the broader educational documentation lane is closed including the repo-wide README first-section pass, the `src/` strict-typing cleanup is closed as a completed baseline, and the ES2023 modernization lane is closed as a completed Phase 0 baseline.
+Current status: **Phases 0, 1, 2, and 3 are complete**. The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, and preconfigured architectures (MLP, RandomSparse, NARX, GRU, LSTM) are all closed. Phase 3 is now also fully closed: the browser-build plan remains [PLANNED] (no implementation started), while the interactive examples + learning path, NEATchat, and visualization export schema (including schema/DOT export, shared canvas renderer, and Lane C documentation examples) are all [DONE]. The standalone-export planning baseline is [DONE], recording the frozen Phase 4 implementation reopen point. **Phase 4 is now the current roadmap stage.**
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
 - **Parallel lane B (interop):** [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) after Phase 2 (or earlier if scoped tightly)
-- **Final capstone:** [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) and [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md)
+- **Parallel lane C (quality):** [test-repair-and-coverage.plans.md](completed/test-repair-and-coverage.plans.md) [DONE] — 100% statement/branch/function/line coverage across all of `src/`. 331 suites / 3022 tests green.
+- **Final capstone:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
 
 ## Plan Inventory in Roadmap Order
 
@@ -182,57 +197,62 @@ file has a visible place in the roadmap.
 This inventory excludes [README.md](README.md), which is the plans index rather
 than a roadmap-tracked plan file.
 
+Completed entries below resolve into `plans/completed/`.
+
 ### Phase 0 inventory
 
-1. [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md) [DONE]
-2. [architecture-solid-split.plans.md](architecture-solid-split.plans.md) [DONE]
-3. [methods-solid-split.plans.md](methods-solid-split.plans.md) [DONE]
-4. [methods-docs.plans.md](methods-docs.plans.md) [DONE]
-5. [neat-docs.plans.md](neat-docs.plans.md) [DONE]
-6. [readme-first-section-pass.plans.md](readme-first-section-pass.plans.md) [DONE]
-7. [utils-docs.plans.md](utils-docs.plans.md) [DONE]
-8. [neat-test-surface-repair.plans.md](neat-test-surface-repair.plans.md) [DONE]
-9. [asciiMaze-typescript-repair.plans.md](asciiMaze-typescript-repair.plans.md) [DONE]
-10. [generate-docs-solid-split.plans.md](generate-docs-solid-split.plans.md) [DONE]
-11. [render-docs-html-solid-split.plans.md](render-docs-html-solid-split.plans.md) [DONE]
-12. [analyze-trace-solid-split.plans.md](analyze-trace-solid-split.plans.md) [DONE]
-13. [src-no-explicit-any-cleanup.plans.md](src-no-explicit-any-cleanup.plans.md) [DONE]
-14. [ES2023 migration](ES2023%20migration) [DONE]
+1. [Flappy_Bird_Folder_Documentation_Pass.md](completed/Flappy_Bird_Folder_Documentation_Pass.md) [DONE]
+2. [architecture-solid-split.plans.md](completed/architecture-solid-split.plans.md) [DONE]
+3. [methods-solid-split.plans.md](completed/methods-solid-split.plans.md) [DONE]
+4. [methods-docs.plans.md](completed/methods-docs.plans.md) [DONE]
+5. [neat-docs.plans.md](completed/neat-docs.plans.md) [DONE]
+6. [readme-first-section-pass.plans.md](completed/readme-first-section-pass.plans.md) [DONE]
+7. [utils-docs.plans.md](completed/utils-docs.plans.md) [DONE]
+8. [neat-test-surface-repair.plans.md](completed/neat-test-surface-repair.plans.md) [DONE]
+9. [asciiMaze-typescript-repair.plans.md](completed/asciiMaze-typescript-repair.plans.md) [DONE]
+10. [generate-docs-solid-split.plans.md](completed/generate-docs-solid-split.plans.md) [DONE]
+11. [render-docs-html-solid-split.plans.md](completed/render-docs-html-solid-split.plans.md) [DONE]
+12. [analyze-trace-solid-split.plans.md](completed/analyze-trace-solid-split.plans.md) [DONE]
+13. [src-no-explicit-any-cleanup.plans.md](completed/src-no-explicit-any-cleanup.plans.md) [DONE]
+14. [ES2023 migration](completed/ES2023%20migration) [DONE]
 
 ### Phase 1 inventory
 
-15. [neat.plans.md](neat.plans.md) [PLANNED]
-16. [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [PLANNED]
+15. [neat.plans.md](completed/neat.plans.md) [DONE]
+16. [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md) [DONE]
 
 ### Phase 2 inventory
 
-17. [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md) [PLANNED]
-18. [Construct_From_Parts_Graph_Assembly.md](Construct_From_Parts_Graph_Assembly.md) [PLANNED]
-19. [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [PLANNED]
+17. [Architecture_Primitives_Node_Group_Layer.md](completed/Architecture_Primitives_Node_Group_Layer.md) [DONE]
+18. [Construct_From_Parts_Graph_Assembly.md](completed/Construct_From_Parts_Graph_Assembly.md) [DONE]
+19. [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md) [DONE]
 
 ### Phase 3 inventory
 
 20. [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
-21. [Interactive_Examples_and_Learning_Path.md](Interactive_Examples_and_Learning_Path.md) [PLANNED]
-22. [Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md) [PLANNED]
+21. [Interactive_Examples_and_Learning_Path.plans.md](completed/Interactive_Examples_and_Learning_Path.plans.md) [DONE]
+22. [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
+23. [Network_Visualization_Export_Schema.plans.md](completed/Network_Visualization_Export_Schema.plans.md) [DONE]
 
 ### Phase 4 inventory
 
-23. [Standalone_Inference_Export.md](Standalone_Inference_Export.md) [PLANNED]
-24. [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
-25. [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md) [PLANNED]
-26. [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md) [PLANNED]
-27. [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
+24. [Standalone_Inference_Export.md](completed/Standalone_Inference_Export.md) [DONE]
+25. [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
+26. [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md) [PLANNED]
+27. [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md) [PLANNED]
+28. [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
 
 ### Phase 5 inventory
 
-28. [Memory_Optimization.md](Memory_Optimization.md) [WIP]
+29. [Memory_Optimization.md](Memory_Optimization.md) [WIP]
 
 ### Phase 6 inventory
 
-29. [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
+30. [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
 
 ### Phase 7 inventory
 
-30. [HyperEvoDevoMorphoNEAT.md](HyperEvoDevoMorphoNEAT.md) [PLANNED]
-31. [HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md](HyperEvoDevo_Racing_Curriculum_and_Behavioral_Drives.md) [PLANNED]
+31. [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) [PLANNED]
+32. [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) [PLANNED]
+33. [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
+34. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]

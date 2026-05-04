@@ -72,6 +72,10 @@ console.log(telemetry.bestFitness);
 
 ## dashboardManager/dashboardManager.types.ts
 
+### AsciiMazeActivationSchedulingStats
+
+Public scheduling snapshot retained in dashboard details and exports.
+
 ### AsciiMazeComplexityStats
 
 ### AsciiMazeDetailedStats
@@ -208,8 +212,8 @@ redraw(
 Clear and repaint the live dashboard using the current best candidate and histories.
 
 Parameters:
-- `currentMaze` - - Maze currently shown in the live panel.
-- `neat` - - Optional NEAT instance used to enrich stats.
+- `currentMaze` - Maze currently shown in the live panel.
+- `neat` - Optional NEAT instance used to enrich stats.
 
 #### reset
 
@@ -234,11 +238,11 @@ update(
 Ingest one evolution update, refresh the live dashboard, and emit telemetry.
 
 Parameters:
-- `maze` - - Current maze layout.
-- `result` - - Latest run result for the tracked candidate.
-- `network` - - Candidate network used for the run.
-- `generation` - - Current generation number.
-- `neatInstance` - - Optional NEAT runtime used for advanced telemetry.
+- `maze` - Current maze layout.
+- `result` - Latest run result for the tracked candidate.
+- `network` - Candidate network used for the run.
+- `generation` - Current generation number.
+- `neatInstance` - Optional NEAT runtime used for advanced telemetry.
 
 ## dashboardManager/dashboardManager.services.ts
 
@@ -254,8 +258,8 @@ applyDashboardUpdate(
 Ingest one engine update, refresh the live view, and emit external telemetry.
 
 Parameters:
-- `context` - - Dashboard runtime context for state and output callbacks.
-- `args` - - Latest update payload from the evolution engine.
+- `context` - Dashboard runtime context for state and output callbacks.
+- `args` - Latest update payload from the evolution engine.
 
 ### getDashboardLastTelemetry
 
@@ -268,7 +272,7 @@ getDashboardLastTelemetry(
 Produce the latest public telemetry snapshot from current dashboard state.
 
 Parameters:
-- `state` - - Mutable dashboard state.
+- `state` - Mutable dashboard state.
 
 Returns: Public telemetry snapshot used by browser hosts.
 
@@ -285,9 +289,9 @@ redrawDashboard(
 Repaint the live dashboard from current state and refresh the detailed snapshot.
 
 Parameters:
-- `context` - - Dashboard runtime context for state and output callbacks.
-- `currentMaze` - - Maze currently being evolved.
-- `neat` - - Optional NEAT runtime instance used for detailed stats.
+- `context` - Dashboard runtime context for state and output callbacks.
+- `currentMaze` - Maze currently being evolved.
+- `neat` - Optional NEAT runtime instance used for detailed stats.
 
 ### resetDashboardState
 
@@ -300,7 +304,7 @@ resetDashboardState(
 Clear retained archive, best-candidate, and history state for a fresh run.
 
 Parameters:
-- `state` - - Mutable dashboard state to clear.
+- `state` - Mutable dashboard state to clear.
 
 ## dashboardManager/dashboardManager.constants.ts
 
@@ -330,8 +334,8 @@ buildDashboardSparkline(
 Convert the recent tail of a numeric series into a compact sparkline.
 
 Parameters:
-- `series` - - Numeric history in chronological order.
-- `width` - - Maximum sample count included in the sparkline.
+- `series` - Numeric history in chronological order.
+- `width` - Maximum sample count included in the sparkline.
 
 Returns: Unicode sparkline string.
 
@@ -347,8 +351,8 @@ computeDashboardPathMetrics(
 Compute solved-path efficiency and visitation metrics for archive output.
 
 Parameters:
-- `maze` - - Maze layout containing start and exit markers.
-- `result` - - Run result with path, steps, and fitness.
+- `maze` - Maze layout containing start and exit markers.
+- `result` - Run result with path, steps, and fitness.
 
 Returns: Derived path metrics used by solved archive formatting.
 
@@ -363,7 +367,7 @@ deriveDashboardArchitecture(
 Infer a compact architecture string from a network-like runtime object.
 
 Parameters:
-- `networkInstance` - - Network instance from the maze example runtime.
+- `networkInstance` - Network instance from the maze example runtime.
 
 Returns: Architecture string such as `6 - 8 - 4`, or `n/a` when unavailable.
 
@@ -382,11 +386,11 @@ formatDashboardStat(
 Format a single framed dashboard stat line with aligned label and value columns.
 
 Parameters:
-- `label` - - Descriptive stat label.
-- `value` - - String or number value displayed after the label.
-- `colorLabel` - - Color token applied to the label segment.
-- `colorValue` - - Color token applied to the value segment.
-- `labelWidth` - - Fixed width used for the label column.
+- `label` - Descriptive stat label.
+- `value` - String or number value displayed after the label.
+- `colorLabel` - Color token applied to the label segment.
+- `colorValue` - Color token applied to the value segment.
+- `labelWidth` - Fixed width used for the label column.
 
 Returns: Ready-to-log framed stat line.
 
@@ -401,7 +405,7 @@ getDashboardMazeKey(
 Build a lightweight dedupe key for a maze layout.
 
 Parameters:
-- `maze` - - Maze rows in display order.
+- `maze` - Maze rows in display order.
 
 Returns: Joined maze key used by the solved archive.
 
@@ -416,6 +420,6 @@ sliceDashboardHistoryForExport(
 Return the recent export window of a bounded numeric history buffer.
 
 Parameters:
-- `history` - - History buffer in chronological order.
+- `history` - History buffer in chronological order.
 
 Returns: Independent tail slice suitable for telemetry export.

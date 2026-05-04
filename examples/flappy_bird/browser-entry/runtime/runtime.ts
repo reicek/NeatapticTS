@@ -1,15 +1,25 @@
 import { DEFAULT_CONTAINER_ID } from '../../constants/constants';
+import { FLAPPY_HUD_ZERO_TEXT } from '../../constants/constants';
+import { resolveExampleArchitectureProfile } from '../../../architectureProfiles';
+import { updateStatsTableValues } from '../host/host';
 import { installRuntimeBrowserGlobals } from './runtime.browser-globals.service';
 import { launchRuntimeEvolution } from './runtime.evolution-launch.service';
 import {
   createRuntimeLifecycleState,
   createRuntimeRunHandle,
 } from './runtime.lifecycle.service';
+import { persistRuntimeArchitectureHistory } from './runtime.architecture-profile.service';
 import {
   createRuntimeStartContext,
   initializeRuntimeHud,
 } from './runtime.startup.service';
-import type { RuntimeContainerTarget, RuntimeRunHandle } from './runtime.types';
+import type {
+  RuntimeContainerTarget,
+  RuntimeMutableLifecycleState,
+  RuntimeRunHandle,
+  RuntimeStartContext,
+  RuntimeStartOptions,
+} from './runtime.types';
 
 export type { RuntimeRunHandle as FlappyBirdRunHandle } from './runtime.types';
 
@@ -49,15 +59,102 @@ export type { RuntimeRunHandle as FlappyBirdRunHandle } from './runtime.types';
 export async function start(
   container: RuntimeContainerTarget = DEFAULT_CONTAINER_ID,
 ): Promise<RuntimeRunHandle> {
+  return startRuntimeSession(container, {});
+}
+
+/**
+ * Starts one Flappy browser runtime session with optional internal profile selection state.
+ *
+ * The public `start(...)` API always enters through this helper. Internal
+ * browser-UI restarts reuse it so architecture button clicks can launch a fresh
+ * worker-backed run without widening the public API surface.
+ *
+ * @param container - Element id or HTMLElement to host the demo.
+ * @param runtimeStartOptions - Internal per-session runtime inputs.
+ * @returns Run handle for the started browser session.
+ */
+async function startRuntimeSession(
+  container: RuntimeContainerTarget,
+  runtimeStartOptions: RuntimeStartOptions,
+): Promise<RuntimeRunHandle> {
+  const runtimeLifecycleState: RuntimeMutableLifecycleState =
+    createRuntimeLifecycleState();
+  let queuedRestartProfileId: RuntimeStartOptions['architectureProfileId'];
+
   // Step 1: Resolve the runtime view, worker, telemetry, and static config.
-  const runtimeStartContext = createRuntimeStartContext(container);
+  const runtimeStartContext: RuntimeStartContext = createRuntimeStartContext(
+    container,
+    {
+      ...runtimeStartOptions,
+      onResetScores: (): void => {
+        if (
+          queuedRestartProfileId ||
+          runtimeLifecycleState?.stopped ||
+          !runtimeRunHandle
+        ) {
+          return;
+        }
+
+        // Clear persisted history so the next session starts with clean captions.
+        persistRuntimeArchitectureHistory({});
+
+        const currentProfileId =
+          runtimeStartContext.config.selectedArchitectureProfile.id;
+        queuedRestartProfileId = currentProfileId;
+        runtimeStartContext.viewContext.architectureSelectorController.setDisabled(
+          true,
+        );
+
+        runtimeRunHandle.stop();
+        void runtimeRunHandle.done.then(() => {
+          void startRuntimeSession(runtimeStartContext.hostElement, {
+            architectureProfileId: currentProfileId,
+          }).catch(() => undefined);
+        });
+      },
+      onSelectArchitectureProfile: (profileId): void => {
+        if (
+          queuedRestartProfileId ||
+          runtimeLifecycleState?.stopped ||
+          !runtimeRunHandle
+        ) {
+          return;
+        }
+
+        queuedRestartProfileId = profileId;
+        runtimeStartContext.viewContext.architectureSelectorController.setDisabled(
+          true,
+        );
+
+        const nextArchitectureProfile = resolveExampleArchitectureProfile(
+          'flappy-bird',
+          profileId,
+        );
+        updateStatsTableValues(
+          runtimeStartContext.viewContext.statsValueByKey,
+          {
+            status: 'restarting',
+            currentArchitecture: nextArchitectureProfile.label,
+            summaryArchitecture: nextArchitectureProfile.label,
+            birds: `${FLAPPY_HUD_ZERO_TEXT}/${runtimeStartContext.config.populationSize}`,
+          },
+        );
+
+        runtimeRunHandle.stop();
+        void runtimeRunHandle.done.then(() => {
+          void startRuntimeSession(runtimeStartContext.hostElement, {
+            architectureProfileId: profileId,
+          }).catch(() => undefined);
+        });
+      },
+    },
+  );
 
   // Step 2: Paint the initial HUD state before evolution bootstrapping starts.
   initializeRuntimeHud(runtimeStartContext);
 
   // Step 3: Create lifecycle state and externally exposed run-handle methods.
-  const runtimeLifecycleState = createRuntimeLifecycleState();
-  const runtimeRunHandle = createRuntimeRunHandle(
+  const runtimeRunHandle: RuntimeRunHandle = createRuntimeRunHandle(
     runtimeStartContext,
     runtimeLifecycleState,
   );

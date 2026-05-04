@@ -79,6 +79,12 @@ even when individual episodes vary widely in difficulty and duration.
 
 Dense shaping normalization factor per survived frame.
 
+Calibrated to match the new centering-focused weight profile. The max
+per-frame dense reward with perfect centering is approximately:
+alignment (3.0) + clearance (2.5) + centering quality (3.0) + velocity
+stability (1.5) = 10.0. Setting the normalizer to 10.0 keeps a perfectly
+centered bird near a normalizedDenseShaping of 1.0.
+
 ### FLAPPY_EVALUATION_NORMALIZED_DENSE_WEIGHT
 
 Dense-shaping channel weight in normalized fitness composition.
@@ -154,8 +160,8 @@ This is the simplest evaluation entrypoint: one policy, one rollout, one
 scalar fitness.
 
 Parameters:
-- `network` - - Genome/network to evaluate.
-- `rolloutOptions` - - Optional rollout controls.
+- `network` - Genome/network to evaluate.
+- `rolloutOptions` - Optional rollout controls.
 
 Returns: Fitness score (higher is better).
 
@@ -177,9 +183,9 @@ sees the same rollout seeds, which makes the aggregate statistics much more
 useful for selection than a single lucky episode.
 
 Parameters:
-- `network` - - Genome/network to evaluate.
-- `sharedSeeds` - - Shared deterministic seeds used for all genomes.
-- `rolloutOptions` - - Optional rollout controls.
+- `network` - Genome/network to evaluate.
+- `sharedSeeds` - Shared deterministic seeds used for all genomes.
+- `rolloutOptions` - Optional rollout controls.
 
 Returns: Robust aggregate metrics for selection/ranking.
 
@@ -190,6 +196,28 @@ const aggregate = evaluateFlappyFitnessAcrossSeeds(network, [11, 22, 33], {
   normalizeFitness: true,
 });
 ```
+
+### runClearedRolloutEpisode
+
+```ts
+runClearedRolloutEpisode(
+  network: FlappyNetworkLike,
+  rolloutOptions: FlappyRolloutOptions,
+): FlappyEpisodeResult
+```
+
+Runs one rollout after resetting any carried recurrent network state.
+
+Stateful builders such as NARX, GRU, and LSTM must start each deterministic
+Flappy rollout from a clean memory slate. Feed-forward networks ignore the
+optional `clear()` hook, but recurrent networks use it to avoid leaking state
+across shared-seed evaluations.
+
+Parameters:
+- `network` - Network being evaluated.
+- `rolloutOptions` - Rollout controls for this episode.
+
+Returns: One deterministic episode result.
 
 ## evaluation/evaluation.seed.utils.ts
 
@@ -211,7 +239,7 @@ gives a reasonable intuition for why a few avalanche-style mixing steps help
 nearby ids map to less-correlated seed values.
 
 Parameters:
-- `genomeId` - - Genome id from NEAT bookkeeping.
+- `genomeId` - Genome id from NEAT bookkeeping.
 
 Returns: Mixed uint32 seed.
 
@@ -246,8 +274,8 @@ rolloutEpisode(
 Roll out an episode and return details.
 
 Parameters:
-- `network` - - Genome/network to evaluate.
-- `rolloutOptions` - - Optional rollout controls.
+- `network` - Genome/network to evaluate.
+- `rolloutOptions` - Optional rollout controls.
 
 Returns: Episode result details.
 

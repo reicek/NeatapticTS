@@ -51,8 +51,8 @@ one reconnection target or source without imposing another ranking policy on
 the maintenance path.
 
 Parameters:
-- `candidates` - - candidate nodes
-- `internal` - - neat controller context
+- `candidates` - candidate nodes
+- `internal` - neat controller context
 
 Returns: selected node or null
 
@@ -71,7 +71,7 @@ same structural question from different angles, so grouping the nodes once
 keeps the repair flow declarative and avoids repeating node-type scans.
 
 Parameters:
-- `networkToInspect` - - network to inspect
+- `networkToInspect` - network to inspect
 
 Returns: grouped node arrays
 
@@ -91,15 +91,15 @@ Connect a node to a random candidate if candidates exist.
 
 This is the chapter's small best-effort wiring primitive. It does not decide
 whether repair should happen; it only applies one candidate connection in the
-requested direction and tolerates incompatible node pairs without turning a
-maintenance pass into a fatal error.
+requested direction and now routes that edit through the canonical
+add-connection identity policy instead of using a raw runtime connect.
 
 Parameters:
-- `networkToEdit` - - network to edit
-- `anchorNode` - - node to connect from/to
-- `candidates` - - candidate nodes for connection
-- `reverse` - - whether to connect candidate -> anchor
-- `internal` - - neat controller context
+- `networkToEdit` - network to edit
+- `anchorNode` - node to connect from/to
+- `candidates` - candidate nodes for connection
+- `reverse` - whether to connect candidate -> anchor
+- `internal` - neat controller context
 
 Returns: void
 
@@ -121,9 +121,9 @@ is structural dead weight, so this helper repairs the missing side without
 disturbing hidden nodes that are already participating in a path.
 
 Parameters:
-- `networkToEdit` - - network to edit
-- `nodeGroupsToUse` - - grouped node arrays
-- `internal` - - neat controller context
+- `networkToEdit` - network to edit
+- `nodeGroupsToUse` - grouped node arrays
+- `internal` - neat controller context
 
 Returns: void
 
@@ -145,9 +145,9 @@ into hidden nodes when they exist and falls back to direct output links when
 the network has no hidden layer yet.
 
 Parameters:
-- `networkToEdit` - - network to edit
-- `nodeGroupsToUse` - - grouped node arrays
-- `internal` - - neat controller context
+- `networkToEdit` - network to edit
+- `nodeGroupsToUse` - grouped node arrays
+- `internal` - neat controller context
 
 Returns: void
 
@@ -169,9 +169,9 @@ helper therefore reconnects it from hidden nodes first and from inputs when
 no hidden layer exists.
 
 Parameters:
-- `networkToEdit` - - network to edit
-- `nodeGroupsToUse` - - grouped node arrays
-- `internal` - - neat controller context
+- `networkToEdit` - network to edit
+- `nodeGroupsToUse` - grouped node arrays
+- `internal` - neat controller context
 
 Returns: void
 
@@ -190,7 +190,7 @@ local question "can an upstream node currently reach this one?" before the
 higher-level repair helpers decide whether to reconnect it.
 
 Parameters:
-- `node` - - node to inspect
+- `node` - node to inspect
 
 Returns: true when incoming connections exist
 
@@ -208,7 +208,7 @@ Dead-end repair uses this as the smallest possible structural predicate: if
 the outgoing list is empty, the node cannot currently send signal forward.
 
 Parameters:
-- `node` - - node to inspect
+- `node` - node to inspect
 
 Returns: true when outgoing connections exist
 
@@ -248,8 +248,8 @@ enforcement policy-light: once a legal candidate pool exists, choose one
 using the controller RNG and keep the maintenance pass moving.
 
 Parameters:
-- `candidates` - - candidate nodes
-- `internal` - - neat controller context
+- `candidates` - candidate nodes
+- `internal` - neat controller context
 
 Returns: selected node or null
 
@@ -268,7 +268,7 @@ can reason about endpoints and hidden nodes without repeatedly rescanning the
 whole network.
 
 Parameters:
-- `networkToInspect` - - network to inspect
+- `networkToInspect` - network to inspect
 
 Returns: grouped node arrays
 
@@ -290,10 +290,10 @@ immediately; otherwise the helper derives a hidden target from the visible
 endpoint count and the configured multiplier.
 
 Parameters:
-- `inputCount` - - Number of input nodes in the network.
-- `outputCount` - - Number of output nodes in the network.
-- `explicitMinimumHidden` - - Optional explicit minimum hidden count.
-- `hiddenMultiplier` - - Optional multiplier used when explicit minimum is absent.
+- `inputCount` - Number of input nodes in the network.
+- `outputCount` - Number of output nodes in the network.
+- `explicitMinimumHidden` - Optional explicit minimum hidden count.
+- `hiddenMultiplier` - Optional multiplier used when explicit minimum is absent.
 
 Returns: Minimum hidden node requirement.
 
@@ -315,9 +315,9 @@ pass so newly added nodes and previously under-connected nodes both leave the
 function with usable inbound and outbound links.
 
 Parameters:
-- `networkToEdit` - - network to edit
-- `nodeGroupsToUse` - - grouped node arrays
-- `internal` - - neat controller context
+- `networkToEdit` - network to edit
+- `nodeGroupsToUse` - grouped node arrays
+- `internal` - neat controller context
 
 Returns: void
 
@@ -329,20 +329,22 @@ ensureHiddenNodeCountForMinHidden(
   nodeGroupsToEdit: { hiddenNodes: NodeWithMetadata[]; },
   minimumHidden: number,
   maxNodesLimit: number,
+  internal: NeatControllerForMutation,
 ): Promise<void>
 ```
 
 Ensure the network has at least the minimum number of hidden nodes.
 
-This is the chapter's structural growth step. It creates fresh hidden nodes
-only until the configured floor is met and stops early when the broader
-maximum-node cap would be violated.
+This is the chapter's structural growth step. It asks the canonical add-node
+helper to create fresh hidden structure until the configured floor is met and
+stops early when the broader maximum-node cap would be violated.
 
 Parameters:
-- `networkToEdit` - - network to edit
-- `nodeGroupsToEdit` - - grouped node arrays
-- `minimumHidden` - - minimum hidden nodes required
-- `maxNodesLimit` - - maximum allowed nodes
+- `networkToEdit` - network to edit
+- `nodeGroupsToEdit` - grouped node arrays
+- `minimumHidden` - minimum hidden nodes required
+- `maxNodesLimit` - maximum allowed nodes
+- `internal` - neat controller context
 
 Returns: Promise resolving when nodes are created
 
@@ -361,13 +363,14 @@ Ensure a hidden node has at least one incoming connection.
 
 The helper prefers the smallest legal repair: if a hidden node already has an
 inbound edge it is left untouched; otherwise one random input or peer hidden
-node is allowed to become the new source.
+node is allowed to become the new source through the canonical add-connection
+identity path.
 
 Parameters:
-- `networkToEdit` - - network to edit
-- `nodeGroupsToUse` - - grouped node arrays
-- `hiddenNode` - - hidden node to connect
-- `internal` - - neat controller context
+- `networkToEdit` - network to edit
+- `nodeGroupsToUse` - grouped node arrays
+- `hiddenNode` - hidden node to connect
+- `internal` - neat controller context
 
 Returns: void
 
@@ -386,13 +389,14 @@ Ensure a hidden node has at least one outgoing connection.
 
 This is the outbound twin of {@link ensureIncomingConnectionForMinHidden}.
 It reconnects a hidden node only when it would otherwise remain a sink with
-no downstream effect on outputs or later hidden nodes.
+no downstream effect on outputs or later hidden nodes, again through the
+canonical add-connection identity path.
 
 Parameters:
-- `networkToEdit` - - network to edit
-- `nodeGroupsToUse` - - grouped node arrays
-- `hiddenNode` - - hidden node to connect
-- `internal` - - neat controller context
+- `networkToEdit` - network to edit
+- `nodeGroupsToUse` - grouped node arrays
+- `hiddenNode` - hidden node to connect
+- `internal` - neat controller context
 
 Returns: void
 
@@ -411,7 +415,7 @@ path to support. If either side is missing, the helper chapter stops before
 creating hidden nodes that would have nowhere useful to connect.
 
 Parameters:
-- `nodeGroupsToCheck` - - grouped node arrays
+- `nodeGroupsToCheck` - grouped node arrays
 
 Returns: true when inputs and outputs are present
 
@@ -434,7 +438,7 @@ Rebuilding cached connection views here keeps later mutation, evaluation, and
 repair helpers aligned with the newly edited topology.
 
 Parameters:
-- `networkToEdit` - - network to rebuild
+- `networkToEdit` - network to rebuild
 
 Returns: Promise resolving after rebuild completes
 
@@ -453,7 +457,7 @@ helper centralizes that read so later creation logic can treat "unbounded"
 and "explicitly capped" networks with one consistent limit value.
 
 Parameters:
-- `internal` - - neat controller context
+- `internal` - neat controller context
 
 Returns: maximum node limit
 
@@ -475,10 +479,10 @@ current network. The result respects both the configured minimum-hidden rule
 and the remaining room beneath the maximum-node limit.
 
 Parameters:
-- `networkToInspect` - - network to inspect
-- `maxNodesLimit` - - maximum allowed nodes
-- `multiplier` - - optional size multiplier
-- `internal` - - neat controller context
+- `networkToInspect` - network to inspect
+- `maxNodesLimit` - maximum allowed nodes
+- `multiplier` - optional size multiplier
+- `internal` - neat controller context
 
 Returns: minimum hidden node count
 

@@ -1,11 +1,14 @@
 import {
-  INITIAL_OUTPUT_WRITE_INDEX,
   INPUT_NODE_TYPE,
-  OUTPUT_WRITE_INDEX_INCREMENT,
   OUTPUT_NODE_TYPE,
   type NoTraceNodeTraversalContext,
   type SingleNodeNoTraceActivationContext,
 } from './network.activate.utils.types';
+import {
+  resolveActivationTraversalNodes,
+  resolveInputValuesByNodeId,
+  resolveOrderedOutputNodes,
+} from './network.activate.schedule.utils';
 
 /**
  * Traverse nodes in activation order and write output activations into pooled storage.
@@ -19,17 +22,27 @@ import {
 export function populatePooledOutputBufferFromNodes(
   traversalContext: NoTraceNodeTraversalContext,
 ): void {
-  let outputWriteIndex = INITIAL_OUTPUT_WRITE_INDEX;
+  const activationNodes = resolveActivationTraversalNodes(
+    traversalContext.network,
+  );
+  const inputValuesByNodeId = resolveInputValuesByNodeId(
+    traversalContext.network,
+    traversalContext.inputVector,
+  );
+  const orderedOutputNodes = resolveOrderedOutputNodes(
+    traversalContext.network,
+  );
 
-  traversalContext.networkNodes.forEach(
-    function processNodeAtIndex(networkNode, nodeIndex): void {
-      outputWriteIndex = activateSingleNodeWithoutTrace({
-        networkNode,
-        nodeIndex,
-        inputVector: traversalContext.inputVector,
-        pooledOutputBuffer: traversalContext.pooledOutputBuffer,
-        outputWriteIndex,
-      });
+  activationNodes.forEach(function processNode(networkNode): void {
+    activateSingleNodeWithoutTrace({
+      inputValuesByNodeId,
+      networkNode,
+    });
+  });
+
+  orderedOutputNodes.forEach(
+    function writeOutputNodeActivation(outputNode, outputIndex): void {
+      traversalContext.pooledOutputBuffer[outputIndex] = outputNode.activation;
     },
   );
 }
@@ -42,18 +55,18 @@ export function populatePooledOutputBufferFromNodes(
  */
 function activateSingleNodeWithoutTrace(
   activationContext: SingleNodeNoTraceActivationContext,
-): number {
+): void {
   if (isInputNode(activationContext.networkNode)) {
     activateInputNode(activationContext);
-    return activationContext.outputWriteIndex;
+    return;
   }
 
   if (isOutputNode(activationContext.networkNode)) {
-    return activateOutputNodeAndAdvanceIndex(activationContext);
+    activationContext.networkNode.noTraceActivate();
+    return;
   }
 
   activateHiddenNode(activationContext.networkNode);
-  return activationContext.outputWriteIndex;
 }
 
 /**
@@ -90,22 +103,10 @@ function activateInputNode(
   activationContext: SingleNodeNoTraceActivationContext,
 ): void {
   activationContext.networkNode.noTraceActivate(
-    activationContext.inputVector[activationContext.nodeIndex],
+    activationContext.inputValuesByNodeId.get(
+      activationContext.networkNode.geneId,
+    ),
   );
-}
-
-/**
- * Activate an output node, write the activation value, and advance the output index.
- *
- * @param activationContext - Node-specific activation state.
- * @returns Next output write index.
- */
-function activateOutputNodeAndAdvanceIndex(
-  activationContext: SingleNodeNoTraceActivationContext,
-): number {
-  activationContext.pooledOutputBuffer[activationContext.outputWriteIndex] =
-    activationContext.networkNode.noTraceActivate();
-  return activationContext.outputWriteIndex + OUTPUT_WRITE_INDEX_INCREMENT;
 }
 
 /**

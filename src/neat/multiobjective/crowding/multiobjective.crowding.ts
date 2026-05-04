@@ -394,10 +394,9 @@ function applyCrowdingDelta(
   nextValue: number,
   valueRange: number,
 ): void {
-  // Step 1: apply delta when crowding has been initialized.
-  if (currentGenome._moCrowd !== undefined) {
-    currentGenome._moCrowd += (nextValue - previousValue) / valueRange;
-  }
+  // initializeCrowding always runs before this helper; non-null assertion is safe.
+  currentGenome._moCrowd =
+    currentGenome._moCrowd! + (nextValue - previousValue) / valueRange;
 }
 
 /**

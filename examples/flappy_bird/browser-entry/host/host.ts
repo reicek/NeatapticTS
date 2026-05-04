@@ -16,6 +16,7 @@ import {
   FLAPPY_FRAME_MONOSPACE_FONT,
   FLAPPY_HEADER_CANVAS_HEIGHT_PX,
   FLAPPY_HEADER_TITLE_TEXT,
+  FLAPPY_MONOSPACE_FONT_FAMILY,
   FLAPPY_NEON_PALETTE,
   FLAPPY_SCREEN_PADDING_PX,
   FLAPPY_UI_CANVAS_INSET_SHADOW,
@@ -40,6 +41,7 @@ import type {
   NetworkVisualizationHandle,
   NetworkVisualizationPositionedScene,
 } from '../browser-entry.types';
+import { clamp } from '../browser-entry.math.utils';
 import { renderStandaloneTitleBox } from '../browser-entry.text-frame.utils';
 import {
   drawResolvedNetworkVisualization,
@@ -52,6 +54,7 @@ import {
   applyCanvasBackingSize,
   resolveNetworkCanvasSizePx,
 } from './host.canvas.service';
+import { createHostArchitectureSelector } from './host.architecture-selector.service';
 import {
   FLAPPY_HOST_PANEL_PADDING,
   FLAPPY_HOST_PANEL_TRANSITION,
@@ -59,12 +62,20 @@ import {
   FLAPPY_HOST_TABLE_HOST_PADDING,
 } from './host.constants';
 import { resolveRequiredCanvas2dContext } from './host.dom.service';
+import {
+  resolveHoveredNetworkVisualizationTooltipScene,
+  type NetworkVisualizationTooltipScene,
+} from './host.network-tooltip.service';
 import { installResponsiveViewportSizing } from './resize/host.resize.service';
 import {
   createAndAttachHostStatsTable,
   updateStatsTableValues as updateHostStatsTableValues,
 } from './host.stats.service';
-import type { CanvasHostResult, HostStatsPartialValues } from './host.types';
+import type {
+  CanvasHostOptions,
+  CanvasHostResult,
+  HostStatsPartialValues,
+} from './host.types';
 
 type HostVisualPrimitives = {
   unifiedBorder: string;
@@ -79,7 +90,9 @@ type HostLayoutElements = {
   statsContainer: HTMLDivElement;
   statsSplitContainer: HTMLDivElement;
   statsTableHost: HTMLDivElement;
+  sidebarColumn: HTMLDivElement;
   networkCanvasHost: HTMLDivElement;
+  architectureSelectorHost: HTMLDivElement;
 };
 
 type HostCanvasElements = {
@@ -107,6 +120,13 @@ type HostHoveredNodeAnimationState = {
   lastUpdatedAtMs: number;
 };
 
+type HostNetworkVisualizationTooltipElements = {
+  tooltipArrowElement: HTMLDivElement;
+  tooltipBodyElement: HTMLDivElement;
+  tooltipElement: HTMLDivElement;
+  tooltipHeadingElement: HTMLDivElement;
+};
+
 type HostNetworkVisualizationState = {
   previousNetworkForVisualization: Network | undefined;
   previousVisualizationInputSize: number;
@@ -126,6 +146,18 @@ type HostNetworkVisualizationController = {
   redrawCurrentNetworkArchitecture: () => void;
 };
 
+const FLAPPY_NETWORK_TOOLTIP_OFFSET_PX = 10;
+const FLAPPY_NETWORK_TOOLTIP_HOST_MARGIN_PX = 8;
+const FLAPPY_NETWORK_TOOLTIP_ARROW_EDGE_MARGIN_PX = 18;
+const FLAPPY_NETWORK_TOOLTIP_INPUT_MIN_WIDTH_PX = 320;
+const FLAPPY_NETWORK_TOOLTIP_GROUP_MIN_WIDTH_PX = 420;
+const FLAPPY_NETWORK_TOOLTIP_PADDING = '10px 12px';
+const FLAPPY_NETWORK_TOOLTIP_RADIUS_PX = 12;
+const FLAPPY_NETWORK_TOOLTIP_HEADING_FONT_SIZE = '11px';
+const FLAPPY_NETWORK_TOOLTIP_BODY_FONT_SIZE = '10px';
+const FLAPPY_NETWORK_TOOLTIP_TRANSITION =
+  'opacity 120ms ease-out, transform 120ms ease-out';
+
 /**
  * Builds the browser demo host tree and returns rendering handles.
  *
@@ -136,8 +168,9 @@ type HostNetworkVisualizationController = {
  */
 export function createCanvasHost(
   containerElement: HTMLElement,
+  options: CanvasHostOptions,
 ): CanvasHostResult {
-  return createCanvasHostInternal(containerElement);
+  return createCanvasHostInternal(containerElement, options);
 }
 
 /**
@@ -152,6 +185,7 @@ export function createCanvasHost(
  */
 export function createCanvasHostInternal(
   containerElement: HTMLElement,
+  options: CanvasHostOptions,
 ): CanvasHostResult {
   // Step 1: Reset the host container and resolve shared visual primitives.
   resetHostContainer(containerElement);
@@ -163,6 +197,8 @@ export function createCanvasHostInternal(
   const statsValueByKey = createAndAttachHostStatsTable(
     hostLayoutElements.statsTableHost,
   );
+  const architectureSelectorController =
+    createHostArchitectureSelector(options);
 
   // Step 3: Create reusable header and network visualization controllers.
   const drawHeaderFrame = createHeaderFrameRenderer(
@@ -183,6 +219,7 @@ export function createCanvasHostInternal(
     hostCanvasElements.headerCanvas,
     hostCanvasElements.canvas,
     hostCanvasElements.networkCanvas,
+    architectureSelectorController.element,
   );
 
   // Step 5: Install resize hooks that keep the header and network view in sync.
@@ -207,6 +244,7 @@ export function createCanvasHostInternal(
     statsValueByKey,
     renderNetworkArchitecture:
       hostNetworkVisualizationController.renderNetworkArchitecture,
+    architectureSelectorController,
   };
 }
 
@@ -324,7 +362,7 @@ function createHostLayoutElements(
   const statsSplitContainer = document.createElement('div');
   statsSplitContainer.style.display = 'flex';
   statsSplitContainer.style.flexDirection = 'row';
-  statsSplitContainer.style.alignItems = 'flex-start';
+  statsSplitContainer.style.alignItems = 'stretch';
   statsSplitContainer.style.gap = FLAPPY_HOST_STATS_SPLIT_GAP;
   statsSplitContainer.style.width = '100%';
   statsSplitContainer.style.boxSizing = 'border-box';
@@ -338,9 +376,16 @@ function createHostLayoutElements(
   statsTableHost.style.border = hostVisualPrimitives.unifiedBorder;
   statsTableHost.style.padding = FLAPPY_HOST_TABLE_HOST_PADDING;
 
-  // Step 4: Create the network panel host.
+  // Step 4: Create the right-column panel hosts for network view and architecture controls.
+  const sidebarColumn = document.createElement('div');
+  sidebarColumn.style.flex = '1 1 0';
+  sidebarColumn.style.minWidth = '0';
+  sidebarColumn.style.display = 'flex';
+  sidebarColumn.style.flexDirection = 'column';
+  sidebarColumn.style.gap = FLAPPY_HOST_STATS_SPLIT_GAP;
+
   const networkCanvasHost = document.createElement('div');
-  networkCanvasHost.style.flex = '1 1 0';
+  networkCanvasHost.style.flex = '0 0 auto';
   networkCanvasHost.style.minWidth = '0';
   networkCanvasHost.style.height = `${FLAPPY_UI_NETWORK_HOST_INITIAL_HEIGHT_PX}px`;
   networkCanvasHost.style.background = FLAPPY_UI_NETWORK_HOST_BACKGROUND;
@@ -348,6 +393,18 @@ function createHostLayoutElements(
   networkCanvasHost.style.border = hostVisualPrimitives.unifiedBorder;
   networkCanvasHost.style.padding = `${FLAPPY_UI_NETWORK_HOST_INSET_PX / 2}px`;
   networkCanvasHost.style.boxShadow = FLAPPY_UI_CANVAS_INSET_SHADOW;
+  networkCanvasHost.style.position = 'relative';
+  networkCanvasHost.style.overflow = 'visible';
+
+  const architectureSelectorHost = document.createElement('div');
+  architectureSelectorHost.style.flex = '1 1 auto';
+  architectureSelectorHost.style.minWidth = '0';
+  architectureSelectorHost.style.boxSizing = 'border-box';
+  architectureSelectorHost.style.background =
+    FLAPPY_NEON_PALETTE.hudPanelBackground;
+  architectureSelectorHost.style.border = hostVisualPrimitives.unifiedBorder;
+  architectureSelectorHost.style.padding = FLAPPY_HOST_TABLE_HOST_PADDING;
+  architectureSelectorHost.style.boxShadow = FLAPPY_UI_CANVAS_INSET_SHADOW;
 
   return {
     outerFrame,
@@ -356,7 +413,9 @@ function createHostLayoutElements(
     statsContainer,
     statsSplitContainer,
     statsTableHost,
+    sidebarColumn,
     networkCanvasHost,
+    architectureSelectorHost,
   };
 }
 
@@ -418,6 +477,7 @@ function createHostCanvasElements(
   networkCanvas.style.background = FLAPPY_UI_NETWORK_CANVAS_BACKGROUND;
   networkCanvas.style.border = 'none';
   networkCanvas.style.boxSizing = 'border-box';
+  networkCanvas.style.cursor = 'crosshair';
   const networkContext = resolveRequiredCanvas2dContext(
     networkCanvas,
     'Network canvas 2D context unavailable',
@@ -486,6 +546,8 @@ function createHostNetworkVisualizationController(
   networkCanvas: HTMLCanvasElement,
   networkContext: CanvasRenderingContext2D,
 ): HostNetworkVisualizationController {
+  const networkVisualizationTooltipElements =
+    createNetworkVisualizationTooltipElements();
   const hostNetworkVisualizationState: HostNetworkVisualizationState = {
     previousNetworkForVisualization: undefined,
     previousVisualizationInputSize: FLAPPY_NETWORK_INPUT_SIZE,
@@ -501,6 +563,9 @@ function createHostNetworkVisualizationController(
     pendingRedrawAnimationFrameId: undefined,
     pendingRedrawSyncHoveredNodeFromPointer: false,
   };
+  networkCanvasHost.appendChild(
+    networkVisualizationTooltipElements.tooltipElement,
+  );
 
   /**
    * Resizes the network canvas backing store to match the host element.
@@ -641,6 +706,13 @@ function createHostNetworkVisualizationController(
         ),
       },
     );
+    syncNetworkVisualizationTooltip(
+      networkCanvasHost,
+      networkCanvas,
+      networkVisualizationTooltipElements,
+      hostNetworkVisualizationState.lastPointerClientPosition,
+      latestPositionedScene,
+    );
 
     // Step 3: Re-hit-test against the new scene when the pointer is still active.
     if (!syncHoveredNodeFromPointer) {
@@ -670,7 +742,16 @@ function createHostNetworkVisualizationController(
       clientY: event.clientY,
     };
 
-    // Step 2: Redraw only when the hovered node actually changed.
+    // Step 2: Sync the floating tooltip immediately from the cached frame.
+    syncNetworkVisualizationTooltip(
+      networkCanvasHost,
+      networkCanvas,
+      networkVisualizationTooltipElements,
+      hostNetworkVisualizationState.lastPointerClientPosition,
+      hostNetworkVisualizationState.latestResolvedFrame?.positionedScene,
+    );
+
+    // Step 3: Redraw only when the hovered node actually changed.
     const resolvedHoveredNodeIndices =
       resolveHoveredNodeIndicesFromClientPosition(
         networkCanvas,
@@ -687,6 +768,7 @@ function createHostNetworkVisualizationController(
   const handleNetworkCanvasPointerLeave = (): void => {
     // Step 1: Clear cached pointer state when the cursor leaves the canvas.
     hostNetworkVisualizationState.lastPointerClientPosition = undefined;
+    hideNetworkVisualizationTooltip(networkVisualizationTooltipElements);
     if (!hostNetworkVisualizationState.hoveredNodeIndices?.length) {
       return;
     }
@@ -757,14 +839,24 @@ function mountCanvasHostTree(
   headerCanvas: HTMLCanvasElement,
   canvas: HTMLCanvasElement,
   networkCanvas: HTMLCanvasElement,
+  architectureSelectorElement: HTMLDivElement,
 ): void {
   // Step 1: Mount the stats section and network panel into the stats container.
   hostLayoutElements.networkCanvasHost.appendChild(networkCanvas);
+  hostLayoutElements.architectureSelectorHost.appendChild(
+    architectureSelectorElement,
+  );
+  hostLayoutElements.sidebarColumn.appendChild(
+    hostLayoutElements.networkCanvasHost,
+  );
+  hostLayoutElements.sidebarColumn.appendChild(
+    hostLayoutElements.architectureSelectorHost,
+  );
   hostLayoutElements.statsSplitContainer.appendChild(
     hostLayoutElements.statsTableHost,
   );
   hostLayoutElements.statsSplitContainer.appendChild(
-    hostLayoutElements.networkCanvasHost,
+    hostLayoutElements.sidebarColumn,
   );
   hostLayoutElements.statsContainer.appendChild(
     hostLayoutElements.statsSplitContainer,
@@ -840,6 +932,207 @@ function renderInitialCanvasHostState(
   drawHeaderFrame();
 }
 
+function createNetworkVisualizationTooltipElements(): HostNetworkVisualizationTooltipElements {
+  const tooltipElement = document.createElement('div');
+  const tooltipHeadingElement = document.createElement('div');
+  const tooltipBodyElement = document.createElement('div');
+  const tooltipArrowElement = document.createElement('div');
+
+  tooltipElement.setAttribute('role', 'tooltip');
+  tooltipElement.style.position = 'absolute';
+  tooltipElement.style.left = '0';
+  tooltipElement.style.top = '0';
+  tooltipElement.style.opacity = '0';
+  tooltipElement.style.visibility = 'hidden';
+  tooltipElement.style.pointerEvents = 'none';
+  tooltipElement.style.boxSizing = 'border-box';
+  tooltipElement.style.padding = FLAPPY_NETWORK_TOOLTIP_PADDING;
+  tooltipElement.style.border = `1px solid ${FLAPPY_NEON_PALETTE.hudPanelBorder}`;
+  tooltipElement.style.borderRadius = `${FLAPPY_NETWORK_TOOLTIP_RADIUS_PX}px`;
+  tooltipElement.style.background = 'rgba(0, 21, 34, 0.98)';
+  tooltipElement.style.boxShadow = '0 0 14px rgba(15, 181, 255, 0.26)';
+  tooltipElement.style.backdropFilter = 'blur(6px)';
+  tooltipElement.style.transform = 'translateY(6px)';
+  tooltipElement.style.transition = FLAPPY_NETWORK_TOOLTIP_TRANSITION;
+  tooltipElement.style.zIndex = '8';
+
+  tooltipArrowElement.style.position = 'absolute';
+  tooltipArrowElement.style.bottom = '-6px';
+  tooltipArrowElement.style.width = '12px';
+  tooltipArrowElement.style.height = '12px';
+  tooltipArrowElement.style.transform = 'translateX(-50%) rotate(45deg)';
+  tooltipArrowElement.style.background = 'rgba(0, 21, 34, 0.98)';
+  tooltipArrowElement.style.borderRight = `1px solid ${FLAPPY_NEON_PALETTE.hudPanelBorder}`;
+  tooltipArrowElement.style.borderBottom = `1px solid ${FLAPPY_NEON_PALETTE.hudPanelBorder}`;
+  tooltipArrowElement.style.boxShadow = '0 0 10px rgba(15, 181, 255, 0.26)';
+
+  tooltipHeadingElement.style.fontFamily = FLAPPY_MONOSPACE_FONT_FAMILY;
+  tooltipHeadingElement.style.fontSize =
+    FLAPPY_NETWORK_TOOLTIP_HEADING_FONT_SIZE;
+  tooltipHeadingElement.style.fontWeight = '700';
+  tooltipHeadingElement.style.letterSpacing = '0.08em';
+  tooltipHeadingElement.style.textTransform = 'uppercase';
+  tooltipHeadingElement.style.color = FLAPPY_NEON_PALETTE.hudAccent;
+  tooltipHeadingElement.style.marginBottom = '8px';
+  tooltipHeadingElement.style.textShadow = '0 0 8px rgba(255, 154, 46, 0.35)';
+
+  tooltipBodyElement.style.display = 'flex';
+  tooltipBodyElement.style.flexDirection = 'column';
+  tooltipBodyElement.style.gap = '8px';
+  tooltipBodyElement.style.fontFamily = FLAPPY_MONOSPACE_FONT_FAMILY;
+  tooltipBodyElement.style.fontSize = FLAPPY_NETWORK_TOOLTIP_BODY_FONT_SIZE;
+  tooltipBodyElement.style.lineHeight = '1.45';
+  tooltipBodyElement.style.color = FLAPPY_NEON_PALETTE.hudText;
+
+  tooltipElement.appendChild(tooltipHeadingElement);
+  tooltipElement.appendChild(tooltipBodyElement);
+  tooltipElement.appendChild(tooltipArrowElement);
+  return {
+    tooltipArrowElement,
+    tooltipBodyElement,
+    tooltipElement,
+    tooltipHeadingElement,
+  };
+}
+
+function syncNetworkVisualizationTooltip(
+  networkCanvasHost: HTMLDivElement,
+  networkCanvas: HTMLCanvasElement,
+  networkVisualizationTooltipElements: HostNetworkVisualizationTooltipElements,
+  pointerClientPosition: HostPointerClientPosition | undefined,
+  positionedScene: NetworkVisualizationPositionedScene | undefined,
+): void {
+  if (!pointerClientPosition || !positionedScene) {
+    hideNetworkVisualizationTooltip(networkVisualizationTooltipElements);
+    return;
+  }
+
+  const canvasPoint = resolveCanvasPointFromClientPosition(
+    networkCanvas,
+    pointerClientPosition,
+  );
+  if (!canvasPoint) {
+    hideNetworkVisualizationTooltip(networkVisualizationTooltipElements);
+    return;
+  }
+
+  const tooltipScene = resolveHoveredNetworkVisualizationTooltipScene(
+    canvasPoint,
+    positionedScene,
+  );
+  if (!tooltipScene) {
+    hideNetworkVisualizationTooltip(networkVisualizationTooltipElements);
+    return;
+  }
+
+  showNetworkVisualizationTooltip(
+    networkCanvasHost,
+    networkCanvas,
+    networkVisualizationTooltipElements,
+    tooltipScene,
+  );
+}
+
+function showNetworkVisualizationTooltip(
+  networkCanvasHost: HTMLDivElement,
+  networkCanvas: HTMLCanvasElement,
+  networkVisualizationTooltipElements: HostNetworkVisualizationTooltipElements,
+  tooltipScene: NetworkVisualizationTooltipScene,
+): void {
+  const canvasDisplayWidthPx = Math.max(1, networkCanvas.clientWidth);
+  const canvasDisplayHeightPx = Math.max(1, networkCanvas.clientHeight);
+  const scaleXPx = canvasDisplayWidthPx / Math.max(1, networkCanvas.width);
+  const scaleYPx = canvasDisplayHeightPx / Math.max(1, networkCanvas.height);
+  const availableTooltipWidthPx = Math.max(
+    0,
+    networkCanvasHost.clientWidth - FLAPPY_NETWORK_TOOLTIP_HOST_MARGIN_PX * 2,
+  );
+  if (availableTooltipWidthPx <= 0) {
+    hideNetworkVisualizationTooltip(networkVisualizationTooltipElements);
+    return;
+  }
+
+  const minimumTooltipWidthPx =
+    tooltipScene.kind === 'group'
+      ? FLAPPY_NETWORK_TOOLTIP_GROUP_MIN_WIDTH_PX
+      : FLAPPY_NETWORK_TOOLTIP_INPUT_MIN_WIDTH_PX;
+  const anchorWidthPx = tooltipScene.anchorWidthPx * scaleXPx;
+  const tooltipWidthPx = Math.min(
+    availableTooltipWidthPx,
+    Math.max(minimumTooltipWidthPx, anchorWidthPx),
+  );
+  const anchorCenterXPx =
+    networkCanvas.offsetLeft + tooltipScene.anchorCenterXPx * scaleXPx;
+  const anchorTopPx =
+    networkCanvas.offsetTop + tooltipScene.anchorTopPx * scaleYPx;
+
+  networkVisualizationTooltipElements.tooltipHeadingElement.textContent =
+    tooltipScene.heading;
+  populateNetworkVisualizationTooltipBody(
+    networkVisualizationTooltipElements.tooltipBodyElement,
+    tooltipScene.bodyParagraphs,
+  );
+  networkVisualizationTooltipElements.tooltipElement.style.width = `${tooltipWidthPx}px`;
+  networkVisualizationTooltipElements.tooltipElement.style.visibility =
+    'hidden';
+  const tooltipHeightPx =
+    networkVisualizationTooltipElements.tooltipElement.offsetHeight;
+  const maximumTooltipLeftPx = Math.max(
+    FLAPPY_NETWORK_TOOLTIP_HOST_MARGIN_PX,
+    networkCanvasHost.clientWidth -
+      FLAPPY_NETWORK_TOOLTIP_HOST_MARGIN_PX -
+      tooltipWidthPx,
+  );
+  const tooltipLeftPx = clamp(
+    anchorCenterXPx - tooltipWidthPx * 0.5,
+    FLAPPY_NETWORK_TOOLTIP_HOST_MARGIN_PX,
+    maximumTooltipLeftPx,
+  );
+  const tooltipTopPx = Math.max(
+    FLAPPY_NETWORK_TOOLTIP_HOST_MARGIN_PX,
+    anchorTopPx - tooltipHeightPx - FLAPPY_NETWORK_TOOLTIP_OFFSET_PX,
+  );
+  const tooltipArrowLeftPx = clamp(
+    anchorCenterXPx - tooltipLeftPx,
+    FLAPPY_NETWORK_TOOLTIP_ARROW_EDGE_MARGIN_PX,
+    tooltipWidthPx - FLAPPY_NETWORK_TOOLTIP_ARROW_EDGE_MARGIN_PX,
+  );
+
+  networkVisualizationTooltipElements.tooltipElement.style.left = `${tooltipLeftPx}px`;
+  networkVisualizationTooltipElements.tooltipElement.style.top = `${tooltipTopPx}px`;
+  networkVisualizationTooltipElements.tooltipArrowElement.style.left = `${tooltipArrowLeftPx}px`;
+  networkVisualizationTooltipElements.tooltipElement.style.visibility =
+    'visible';
+  networkVisualizationTooltipElements.tooltipElement.style.opacity = '1';
+  networkVisualizationTooltipElements.tooltipElement.style.transform =
+    'translateY(0)';
+}
+
+function populateNetworkVisualizationTooltipBody(
+  tooltipBodyElement: HTMLDivElement,
+  tooltipBodyParagraphs: readonly string[],
+): void {
+  tooltipBodyElement.replaceChildren(
+    ...tooltipBodyParagraphs.map((tooltipBodyParagraph) => {
+      const tooltipParagraphElement = document.createElement('p');
+      tooltipParagraphElement.textContent = tooltipBodyParagraph;
+      tooltipParagraphElement.style.margin = '0';
+      tooltipParagraphElement.style.whiteSpace = 'normal';
+      return tooltipParagraphElement;
+    }),
+  );
+}
+
+function hideNetworkVisualizationTooltip(
+  networkVisualizationTooltipElements: HostNetworkVisualizationTooltipElements,
+): void {
+  networkVisualizationTooltipElements.tooltipElement.style.opacity = '0';
+  networkVisualizationTooltipElements.tooltipElement.style.visibility =
+    'hidden';
+  networkVisualizationTooltipElements.tooltipElement.style.transform =
+    'translateY(6px)';
+}
+
 function resolveHoveredNodeIndicesFromClientPosition(
   networkCanvas: HTMLCanvasElement,
   pointerClientPosition: HostPointerClientPosition | undefined,
@@ -905,7 +1198,27 @@ function resolveHoveredNodeIndicesFromCanvasPoint(
     return [hoveredNodeIndex];
   }
 
-  // Step 2: Fall back to input-group combo-hover when the pointer is over a category band.
+  // Step 2: Fall back to one-input hover when the pointer is over a description row.
+  const hoveredInputDescriptionNodeIndices =
+    resolveHoveredInputDescriptionNodeIndicesFromCanvasPoint(
+      canvasPoint,
+      positionedScene,
+    );
+  if (hoveredInputDescriptionNodeIndices?.length) {
+    return hoveredInputDescriptionNodeIndices;
+  }
+
+  // Step 3: Fall back to recurrent-column combo-hover when the pointer is over a guide chip.
+  const hoveredHiddenColumnNodeIndices =
+    resolveHoveredHiddenColumnNodeIndicesFromCanvasPoint(
+      canvasPoint,
+      positionedScene,
+    );
+  if (hoveredHiddenColumnNodeIndices?.length) {
+    return hoveredHiddenColumnNodeIndices;
+  }
+
+  // Step 4: Fall back to input-group combo-hover when the pointer is over a category band.
   return resolveHoveredInputGroupNodeIndicesFromCanvasPoint(
     canvasPoint,
     positionedScene,
@@ -949,6 +1262,41 @@ function resolveHoveredInputGroupNodeIndicesFromCanvasPoint(
       canvasPoint.yPx <=
         inputGroupLabelBandScene.topPx + inputGroupLabelBandScene.heightPx,
   )?.nodeIndices;
+}
+
+function resolveHoveredHiddenColumnNodeIndicesFromCanvasPoint(
+  canvasPoint: HostCanvasPoint,
+  positionedScene: NetworkVisualizationPositionedScene,
+): number[] | undefined {
+  return positionedScene.hiddenColumnLabelScenes?.findLast(
+    (hiddenColumnLabelScene) =>
+      canvasPoint.xPx >= hiddenColumnLabelScene.leftPx &&
+      canvasPoint.xPx <=
+        hiddenColumnLabelScene.leftPx + hiddenColumnLabelScene.widthPx &&
+      canvasPoint.yPx >= hiddenColumnLabelScene.topPx &&
+      canvasPoint.yPx <=
+        hiddenColumnLabelScene.topPx + hiddenColumnLabelScene.heightPx,
+  )?.nodeIndices;
+}
+
+function resolveHoveredInputDescriptionNodeIndicesFromCanvasPoint(
+  canvasPoint: HostCanvasPoint,
+  positionedScene: NetworkVisualizationPositionedScene,
+): number[] | undefined {
+  const hoveredInputDescriptionScene =
+    positionedScene.inputDescriptionScenes.findLast(
+      (inputDescriptionScene) =>
+        canvasPoint.xPx >= inputDescriptionScene.leftPx &&
+        canvasPoint.xPx <=
+          inputDescriptionScene.leftPx + inputDescriptionScene.widthPx &&
+        canvasPoint.yPx >= inputDescriptionScene.topPx &&
+        canvasPoint.yPx <=
+          inputDescriptionScene.topPx + inputDescriptionScene.heightPx,
+    );
+
+  return hoveredInputDescriptionScene
+    ? [hoveredInputDescriptionScene.nodeIndex]
+    : undefined;
 }
 
 function hoveredNodeIndicesAreEqual(

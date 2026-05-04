@@ -34,7 +34,7 @@ assume `tracker-handoff` owns the tracker shape rather than defining one here.
 ## Approach
 
 1. Read `plans/README.md` first.
-2. If the task concerns core NEAT architecture or evolutionary correctness, read `plans/neat.plans.md` next.
+2. If the task concerns core NEAT architecture or evolutionary correctness, read `plans/completed/neat.plans.md` next.
 3. Otherwise read only the single most relevant detailed plan, with at most one additional related plan when necessary.
 4. For demo-driven tasks, determine whether the demo is exposing a reusable library ergonomics gap and prefer plan alignment that fixes the library rather than the demo symptom.
 5. Extract terminology, constraints, sequencing hints, and any likely code/plan mismatch risks.

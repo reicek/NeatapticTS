@@ -29,6 +29,7 @@ import type {
   FlappyNetworkLike,
   FlappyRolloutOptions,
 } from '../flappyEvaluation';
+import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
 
 /**
  * Network shape expected by the Flappy trainer.
@@ -52,6 +53,7 @@ export interface FlappyTrainerNetwork extends FlappyNetworkLike {
 export interface FlappyTrainerNeatController {
   generation: number;
   options: {
+    allowRecurrent?: boolean;
     mutationRate: number;
     mutationAmount: number;
     fitnessPopulation?: boolean;
@@ -107,6 +109,8 @@ export interface FlappyTrainerRuntimeState {
  * as a stable configuration shelf rather than scattered ad hoc constants.
  */
 export interface FlappyTrainerSetup {
+  architectureProfileId: ExampleArchitectureProfileId;
+  isRecurrent: boolean;
   inputSize: number;
   outputSize: number;
   populationSize: number;

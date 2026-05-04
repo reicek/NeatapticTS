@@ -1,6 +1,11 @@
 import Network from '../../architecture/network';
 import * as methods from '../../methods/methods';
 import Neat from '../../neat';
+import {
+  allowsRecurrentConnectionMutation,
+  promoteGenomeToFeedForwardIntentWhenEligible,
+  usesFeedForwardMutationPolicy,
+} from './neat.topology-intent';
 
 type FastSlabPredicate = (training: boolean) => boolean;
 
@@ -9,6 +14,116 @@ function getFastSlabPredicate(network: Network): FastSlabPredicate {
 }
 
 describe('neat topology-intent chapter', () => {
+  describe('feed-forward policy detection', () => {
+    describe('when the configured mutation option is one custom object instead of a pool', () => {
+      it('does not report feed-forward mutation intent', () => {
+        // Arrange
+        const mutationConfig = { name: 'ADD_NODE' };
+
+        // Act
+        const usesFeedForwardPolicy =
+          usesFeedForwardMutationPolicy(mutationConfig);
+
+        // Assert
+        expect(usesFeedForwardPolicy).toBe(false);
+      });
+    });
+
+    describe('when the configured mutation pool is a flattened canonical FFW copy', () => {
+      it('recognizes the canonical feed-forward operator order', () => {
+        // Arrange
+        const mutationConfig = (
+          methods.mutation.FFW as Array<{ name?: string }>
+        ).map((mutationMethod) => ({ name: mutationMethod.name }));
+
+        // Act
+        const usesFeedForwardPolicy =
+          usesFeedForwardMutationPolicy(mutationConfig);
+
+        // Assert
+        expect(usesFeedForwardPolicy).toBe(true);
+      });
+    });
+
+    describe('when the configured mutation pool omits one canonical FFW operator', () => {
+      it('rejects the pool as a feed-forward policy signal', () => {
+        // Arrange
+        const mutationConfig = (
+          methods.mutation.FFW as Array<{ name?: string }>
+        )
+          .slice(0, -1)
+          .map((mutationMethod) => ({ name: mutationMethod.name }));
+
+        // Act
+        const usesFeedForwardPolicy =
+          usesFeedForwardMutationPolicy(mutationConfig);
+
+        // Assert
+        expect(usesFeedForwardPolicy).toBe(false);
+      });
+    });
+  });
+
+  describe('direct promotion guardrails', () => {
+    describe('when the active mutation policy does not request promotion', () => {
+      it('returns without applying feed-forward topology intent', () => {
+        // Arrange
+        const setTopologyIntent = jest.fn();
+        const inputNode = { id: 'input' };
+        const outputNode = { id: 'output' };
+        const genome = {
+          nodes: [inputNode, outputNode],
+          connections: [{ from: inputNode, to: outputNode }],
+          gates: [],
+          selfconns: [],
+          setTopologyIntent,
+        };
+
+        // Act
+        promoteGenomeToFeedForwardIntentWhenEligible(genome, false);
+
+        // Assert
+        expect(setTopologyIntent).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('when the genome is missing one topology collection', () => {
+      it('does not apply feed-forward topology intent', () => {
+        // Arrange
+        const setTopologyIntent = jest.fn();
+        const genome = {
+          setTopologyIntent,
+        };
+
+        // Act
+        promoteGenomeToFeedForwardIntentWhenEligible(genome, true);
+
+        // Assert
+        expect(setTopologyIntent).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('recurrent mutation policy seam', () => {
+    describe('when recurrent growth is enabled for one unconstrained genome', () => {
+      it('allows recurrent connection mutation', () => {
+        // Arrange
+        const genome = {
+          getTopologyIntent: () => 'unconstrained' as const,
+        };
+
+        // Act
+        const canAddRecurrentConnection = allowsRecurrentConnectionMutation(
+          genome,
+          true,
+        );
+
+        // Assert
+        expect(canAddRecurrentConnection).toBe(true);
+      });
+    });
+  });
+
   describe('fresh feed-forward populations', () => {
     describe('when the canonical FFW mutation pool is configured directly', () => {
       it('promotes the fresh population to feed-forward intent', () => {

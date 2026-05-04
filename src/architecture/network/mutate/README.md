@@ -131,8 +131,8 @@ Error and warning behavior:
 - Emits a warning and no-ops when an unknown method key is received.
 
 Parameters:
-- `this` - - Network instance.
-- `method` - - Mutation enum value or descriptor object.
+- `this` - Network instance.
+- `method` - Mutation enum value or descriptor object.
 
 Returns: Nothing.
 
@@ -195,7 +195,7 @@ findMutationKeyByIdentityReference(
 Resolves a mutation key by direct identity-reference comparison.
 
 Parameters:
-- `method` - - Mutation object reference.
+- `method` - Mutation object reference.
 
 Returns: Matching mutation key or undefined.
 
@@ -210,7 +210,7 @@ isMutationMethodKeyString(
 Checks whether mutation input is already a direct key string.
 
 Parameters:
-- `method` - - Mutation method input.
+- `method` - Mutation method input.
 
 Returns: True when method is a key string.
 
@@ -225,7 +225,7 @@ resolveDirectMutationKey(
 Resolves direct object fields that can represent a mutation key.
 
 Parameters:
-- `methodObject` - - Mutation method object.
+- `methodObject` - Mutation method object.
 
 Returns: Direct key or undefined.
 
@@ -245,7 +245,7 @@ Resolution order:
 3. Fall back to identity-reference comparison against known mutation objects.
 
 Parameters:
-- `method` - - Mutation method input.
+- `method` - Mutation method input.
 
 Returns: Dispatch key or undefined.
 
@@ -266,7 +266,7 @@ resolveMutationKeyFromObject(
 Resolves mutation key from object-form descriptor.
 
 Parameters:
-- `methodObject` - - Mutation method object.
+- `methodObject` - Mutation method object.
 
 Returns: Dispatch key or undefined.
 
@@ -284,7 +284,7 @@ This helper intentionally no-ops when warnings are disabled so callers can invok
 without repeating feature-flag checks.
 
 Parameters:
-- `mutationKey` - - Resolved mutation key.
+- `mutationKey` - Resolved mutation key.
 
 Returns: Nothing.
 
@@ -314,7 +314,7 @@ Adds one backward (recurrent) connection between eligible node pairs.
 This operation is skipped in acyclic mode.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -329,7 +329,7 @@ Adds one forward connection between currently unconnected eligible node pairs.
 Candidate generation respects node ordering so the added edge is feed-forward.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -344,7 +344,7 @@ Assigns a random eligible node as gater for a random ungated connection.
 Candidate pool includes normal and self-connections.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -357,7 +357,7 @@ addGRUNode(): void
 Replaces one connection by inserting a minimal GRU recurrent block.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -370,7 +370,7 @@ addLSTMNode(): void
 Replaces one connection by inserting a minimal LSTM recurrent block.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -387,7 +387,7 @@ Execution modes:
 - Standard mode splits a randomly selected forward connection.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -403,8 +403,8 @@ addNodeDeterministicChain(
 Applies deterministic chain-growth ADD_NODE mutation.
 
 Parameters:
-- `network` - - Target network.
-- `mutationProps` - - Runtime mutation props.
+- `network` - Target network.
+- `mutationProps` - Runtime mutation props.
 
 Returns: Nothing.
 
@@ -420,8 +420,8 @@ addNodeRandomSplit(
 Applies non-deterministic ADD_NODE by splitting a random connection.
 
 Parameters:
-- `network` - - Target network.
-- `mutationProps` - - Runtime mutation props.
+- `network` - Target network.
+- `mutationProps` - Runtime mutation props.
 
 Returns: Nothing.
 
@@ -437,8 +437,8 @@ addRecurrentNode(
 Shared orchestrator for recurrent-node mutation variants.
 
 Parameters:
-- `network` - - Target network.
-- `blockType` - - Recurrent block type.
+- `network` - Target network.
+- `blockType` - Recurrent block type.
 
 Returns: Nothing.
 
@@ -453,7 +453,7 @@ Adds one self-connection on an eligible node that does not already have one.
 This operation is skipped in acyclic mode.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -469,8 +469,8 @@ appendRecurrentLayerNodes(
 Appends recurrent layer nodes as hidden nodes.
 
 Parameters:
-- `network` - - Target network.
-- `layerNodes` - - Layer nodes.
+- `network` - Target network.
+- `layerNodes` - Layer nodes.
 
 Returns: Nothing.
 
@@ -485,7 +485,7 @@ applyFirstConnectionStabilityNudge(
 Applies tiny stability nudge to the first remaining connection.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Nothing.
 
@@ -500,7 +500,7 @@ asMutationProps(
 Converts a network to its internal mutation runtime shape.
 
 Parameters:
-- `network` - - Network to convert.
+- `network` - Network to convert.
 
 Returns: Runtime mutation props.
 
@@ -513,7 +513,7 @@ batchNorm(): void
 Enables the internal batch-normalization flag on one random hidden node.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -528,7 +528,7 @@ collectAllConnections(
 Collects normal and self connections.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Combined connections.
 
@@ -543,7 +543,7 @@ collectBackwardCandidatesForLaterNode(
 Collects all backward candidates for one later-node traversal context.
 
 Parameters:
-- `traversalContext` - - Later-node traversal context.
+- `traversalContext` - Later-node traversal context.
 
 Returns: Candidate source/target pairs.
 
@@ -559,8 +559,8 @@ collectBackwardCandidatesFromContext(
 Reduces one backward traversal context into candidate connection pairs.
 
 Parameters:
-- `backwardConnectionCandidates` - - Existing candidate pairs.
-- `traversalContext` - - Later-node traversal context.
+- `backwardConnectionCandidates` - Existing candidate pairs.
+- `traversalContext` - Later-node traversal context.
 
 Returns: Updated candidate pairs.
 
@@ -575,7 +575,7 @@ collectBackwardConnectionCandidates(
 Collects backward (recurrent) connection candidates.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Candidate source/target pairs.
 
@@ -590,7 +590,7 @@ collectBackwardTraversalContexts(
 Collects backward traversal contexts for all eligible later nodes.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Backward traversal contexts.
 
@@ -605,7 +605,7 @@ collectConnectionGroupsForReinit(
 Collects all connection groups affected by REINIT_WEIGHT.
 
 Parameters:
-- `targetNode` - - Node receiving the reinitialization.
+- `targetNode` - Node receiving the reinitialization.
 
 Returns: Mutable connection groups.
 
@@ -621,8 +621,8 @@ collectDistinctNodeCandidates(
 Collects candidates that are distinct from an excluded node.
 
 Parameters:
-- `nodeCandidates` - - Candidate nodes.
-- `excludedNode` - - Node to exclude.
+- `nodeCandidates` - Candidate nodes.
+- `excludedNode` - Node to exclude.
 
 Returns: Distinct candidates.
 
@@ -637,7 +637,7 @@ collectForwardCandidatesForSource(
 Collects all forward candidates for one source traversal context.
 
 Parameters:
-- `traversalContext` - - Source traversal context.
+- `traversalContext` - Source traversal context.
 
 Returns: Candidate source/target pairs.
 
@@ -653,8 +653,8 @@ collectForwardCandidatesFromContext(
 Reduces one forward traversal context into candidate connection pairs.
 
 Parameters:
-- `forwardConnectionCandidates` - - Existing candidate pairs.
-- `traversalContext` - - Source traversal context.
+- `forwardConnectionCandidates` - Existing candidate pairs.
+- `traversalContext` - Source traversal context.
 
 Returns: Updated candidate pairs.
 
@@ -669,7 +669,7 @@ collectForwardConnectionCandidates(
 Collects forward connection candidates.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Candidate source/target pairs.
 
@@ -684,7 +684,7 @@ collectForwardTraversalContexts(
 Collects forward traversal contexts for all eligible source nodes.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Forward traversal contexts.
 
@@ -700,8 +700,8 @@ collectMutableNonInputNodes(
 Collects mutable non-input nodes.
 
 Parameters:
-- `network` - - Target network.
-- `excludeOutputNodes` - - True to exclude output nodes.
+- `network` - Target network.
+- `excludeOutputNodes` - True to exclude output nodes.
 
 Returns: Mutable nodes.
 
@@ -717,8 +717,8 @@ collectNodesByType(
 Collects nodes by type.
 
 Parameters:
-- `network` - - Source network.
-- `nodeType` - - Desired node type.
+- `network` - Source network.
+- `nodeType` - Desired node type.
 
 Returns: Matching nodes.
 
@@ -733,7 +733,7 @@ collectNodesWithoutSelfLoop(
 Collects non-input nodes that do not have self loops.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Eligible nodes.
 
@@ -748,7 +748,7 @@ collectRemovableBackwardConnections(
 Collects removable backward connections using redundancy constraints.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Removable backward connections.
 
@@ -763,7 +763,7 @@ collectRemovableForwardConnections(
 Collects removable forward connections using redundancy constraints.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Removable forward connections.
 
@@ -779,8 +779,8 @@ collectSwappableNodesForMutation(
 Collects swap-eligible nodes based on mutation configuration.
 
 Parameters:
-- `network` - - Target network.
-- `method` - - Optional method descriptor.
+- `network` - Target network.
+- `method` - Optional method descriptor.
 
 Returns: Swap-eligible nodes.
 
@@ -796,8 +796,8 @@ collectTargetLayerPeers(
 Collects peers around a target node in the same type/layer neighborhood.
 
 Parameters:
-- `network` - - Target network.
-- `targetNode` - - Node whose peers are collected.
+- `network` - Target network.
+- `targetNode` - Node whose peers are collected.
 
 Returns: Peer nodes.
 
@@ -812,7 +812,7 @@ collectUngatedConnections(
 Collects ungated connections including self-connections.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Ungated connections.
 
@@ -828,8 +828,8 @@ connectPair(
 Connects source/target node pair.
 
 Parameters:
-- `network` - - Target network.
-- `selectedConnectionPair` - - Source/target pair.
+- `network` - Target network.
+- `selectedConnectionPair` - Source/target pair.
 
 Returns: Nothing.
 
@@ -845,8 +845,8 @@ containsNode(
 Checks whether a node list contains a node reference.
 
 Parameters:
-- `nodes` - - Node list.
-- `node` - - Node reference.
+- `nodes` - Node list.
+- `node` - Node reference.
 
 Returns: True when contained.
 
@@ -863,9 +863,9 @@ countConnectionWhenSourceTargetsPeer(
 Counts one connection when it originates from source and targets a peer.
 
 Parameters:
-- `peerConnectionsFromSource` - - Current count.
-- `existingConnection` - - Existing network connection.
-- `countContext` - - Count context.
+- `peerConnectionsFromSource` - Current count.
+- `existingConnection` - Existing network connection.
+- `countContext` - Count context.
 
 Returns: Updated count.
 
@@ -882,9 +882,9 @@ countSourceConnectionsIntoPeerSet(
 Counts source-originated connections that end inside the target peer set.
 
 Parameters:
-- `network` - - Target network.
-- `candidateConnection` - - Candidate connection.
-- `targetLayerPeers` - - Peer-set nodes.
+- `network` - Target network.
+- `candidateConnection` - Candidate connection.
+- `targetLayerPeers` - Peer-set nodes.
 
 Returns: Number of source-to-peer connections.
 
@@ -900,8 +900,8 @@ createBackwardCandidateTraversalContext(
 Creates context for one backward-candidate traversal pass.
 
 Parameters:
-- `network` - - Target network.
-- `laterNodeIndex` - - Current later-node index.
+- `network` - Target network.
+- `laterNodeIndex` - Current later-node index.
 
 Returns: Immutable traversal context.
 
@@ -917,8 +917,8 @@ createConnectionGroupReinitContext(
 Creates immutable context for connection-group reinitialization.
 
 Parameters:
-- `randomValue` - - Random generator.
-- `methodObject` - - Method override object.
+- `randomValue` - Random generator.
+- `methodObject` - Method override object.
 
 Returns: Reinitialization context.
 
@@ -934,8 +934,8 @@ createDirectionalConnectionContext(
 Creates indexed directional context for a connection candidate.
 
 Parameters:
-- `network` - - Target network.
-- `candidateConnection` - - Candidate connection.
+- `network` - Target network.
+- `candidateConnection` - Candidate connection.
 
 Returns: Directional context.
 
@@ -951,8 +951,8 @@ createForwardCandidateTraversalContext(
 Creates context for one forward-candidate source traversal pass.
 
 Parameters:
-- `network` - - Target network.
-- `sourceNodeIndex` - - Current source index.
+- `network` - Target network.
+- `sourceNodeIndex` - Current source index.
 
 Returns: Immutable traversal context.
 
@@ -967,7 +967,7 @@ createHiddenNode(
 Creates a hidden node with random activation mutation.
 
 Parameters:
-- `randomValue` - - Random generator.
+- `randomValue` - Random generator.
 
 Returns: Hidden node.
 
@@ -982,7 +982,7 @@ createRecurrentLayer(
 Creates recurrent layer by type.
 
 Parameters:
-- `blockType` - - Recurrent block type.
+- `blockType` - Recurrent block type.
 
 Returns: Created recurrent layer.
 
@@ -998,8 +998,8 @@ createSourcePeerConnectionCountContext(
 Creates immutable context for source-to-peer connection counting.
 
 Parameters:
-- `candidateConnection` - - Candidate connection.
-- `targetLayerPeers` - - Peer-set nodes.
+- `candidateConnection` - Candidate connection.
+- `targetLayerPeers` - Peer-set nodes.
 
 Returns: Count context.
 
@@ -1015,8 +1015,8 @@ createTargetLayerPeerContext(
 Creates immutable context for peer-layer collection.
 
 Parameters:
-- `network` - - Target network.
-- `targetNode` - - Peer anchor node.
+- `network` - Target network.
+- `targetNode` - Peer anchor node.
 
 Returns: Peer traversal context.
 
@@ -1031,7 +1031,7 @@ createWeightSamplingRangeContext(
 Creates immutable sampling range context.
 
 Parameters:
-- `reinitContext` - - Reinitialization context.
+- `reinitContext` - Reinitialization context.
 
 Returns: Sampling range context.
 
@@ -1047,8 +1047,8 @@ disconnectConnectionAndGetGater(
 Disconnects a connection and returns its previous gater.
 
 Parameters:
-- `network` - - Target network.
-- `connectionToExpand` - - Connection being expanded.
+- `network` - Target network.
+- `connectionToExpand` - Connection being expanded.
 
 Returns: Previous gater reference.
 
@@ -1064,8 +1064,8 @@ disconnectConnectionPair(
 Disconnects selected connection by endpoints.
 
 Parameters:
-- `network` - - Target network.
-- `selectedConnection` - - Connection to disconnect.
+- `network` - Target network.
+- `selectedConnection` - Connection to disconnect.
 
 Returns: Nothing.
 
@@ -1082,9 +1082,9 @@ disconnectUnexpectedOutgoingConnections(
 Removes outgoing connections that do not match the expected chain target.
 
 Parameters:
-- `network` - - Target network.
-- `chainNode` - - Node whose outgoing edges are validated.
-- `expectedTargetNode` - - Allowed outgoing target.
+- `network` - Target network.
+- `chainNode` - Node whose outgoing edges are validated.
+- `expectedTargetNode` - Allowed outgoing target.
 
 Returns: Nothing.
 
@@ -1099,7 +1099,7 @@ enableNodeBatchNorm(
 Enables internal batch-norm flag on a node.
 
 Parameters:
-- `node` - - Node to flag.
+- `node` - Node to flag.
 
 Returns: Nothing.
 
@@ -1116,9 +1116,9 @@ ensureConnection(
 Ensures a connection exists and returns it.
 
 Parameters:
-- `network` - - Target network.
-- `fromNode` - - Source node.
-- `toNode` - - Target node.
+- `network` - Target network.
+- `fromNode` - Source node.
+- `toNode` - Target node.
 
 Returns: Existing or created connection.
 
@@ -1133,7 +1133,7 @@ ensureSeedForwardConnectionWhenEmpty(
 Ensures a seed input->output connection exists when connection list is empty.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: True when mutation may continue.
 
@@ -1150,9 +1150,9 @@ expandConnectionWithRecurrentBlock(
 Replaces one connection with a minimal recurrent block.
 
 Parameters:
-- `network` - - Target network.
-- `connectionToExpand` - - Connection to replace.
-- `blockType` - - Recurrent block type.
+- `network` - Target network.
+- `connectionToExpand` - Connection to replace.
+- `blockType` - Recurrent block type.
 
 Returns: Nothing.
 
@@ -1169,9 +1169,9 @@ findConnection(
 Gets a connection between two nodes when it exists.
 
 Parameters:
-- `network` - - Target network.
-- `fromNode` - - Source node.
-- `toNode` - - Target node.
+- `network` - Target network.
+- `fromNode` - Source node.
+- `toNode` - Target node.
 
 Returns: Matching connection or undefined.
 
@@ -1187,8 +1187,8 @@ findFirstNodeByType(
 Returns the first node by type.
 
 Parameters:
-- `network` - - Target network.
-- `nodeType` - - Node type to match.
+- `network` - Target network.
+- `nodeType` - Node type to match.
 
 Returns: Matching node or undefined.
 
@@ -1203,7 +1203,7 @@ hasRedundantEndpoints(
 Checks whether both endpoints maintain at least one redundant edge.
 
 Parameters:
-- `candidateConnection` - - Candidate connection.
+- `candidateConnection` - Candidate connection.
 
 Returns: True when endpoint redundancy exists.
 
@@ -1221,10 +1221,10 @@ initializeDeterministicChain(
 Initializes deterministic chain storage and seed edge.
 
 Parameters:
-- `network` - - Target network.
-- `mutationProps` - - Runtime mutation props.
-- `inputNode` - - Input node.
-- `outputNode` - - Output node.
+- `network` - Target network.
+- `mutationProps` - Runtime mutation props.
+- `inputNode` - Input node.
+- `outputNode` - Output node.
 
 Returns: Nothing.
 
@@ -1242,10 +1242,10 @@ insertNodeBeforeOutputTail(
 Inserts a node before output tail while preserving output block ordering.
 
 Parameters:
-- `network` - - Target network.
-- `nodeToInsert` - - Node to insert.
-- `targetNode` - - Target node for insertion alignment.
-- `mutationProps` - - Runtime mutation props.
+- `network` - Target network.
+- `nodeToInsert` - Node to insert.
+- `targetNode` - Target node for insertion alignment.
+- `mutationProps` - Runtime mutation props.
 
 Returns: Nothing.
 
@@ -1261,8 +1261,8 @@ isBackwardCandidateTargetAvailable(
 Checks whether a backward candidate target is not already projected.
 
 Parameters:
-- `laterNode` - - Candidate source node.
-- `earlierNode` - - Candidate target node.
+- `laterNode` - Candidate source node.
+- `earlierNode` - Candidate target node.
 
 Returns: True when connection may be added.
 
@@ -1277,7 +1277,7 @@ isBackwardDirectionalContext(
 Checks whether a directional context represents a backward edge.
 
 Parameters:
-- `directionContext` - - Directional context.
+- `directionContext` - Directional context.
 
 Returns: True when backward.
 
@@ -1293,8 +1293,8 @@ isForwardCandidateTargetAvailable(
 Checks whether a forward candidate target is not already projected.
 
 Parameters:
-- `sourceNode` - - Candidate source node.
-- `targetNode` - - Candidate target node.
+- `sourceNode` - Candidate source node.
+- `targetNode` - Candidate target node.
 
 Returns: True when connection may be added.
 
@@ -1310,8 +1310,8 @@ isForwardConnectionStructurallyRemovable(
 Checks structural preconditions for removable forward connections.
 
 Parameters:
-- `network` - - Target network.
-- `candidateConnection` - - Candidate connection.
+- `network` - Target network.
+- `candidateConnection` - Candidate connection.
 
 Returns: True when the connection is a forward edge with redundant endpoints.
 
@@ -1326,7 +1326,7 @@ isForwardDirectionalContext(
 Checks whether a directional context represents a forward edge.
 
 Parameters:
-- `directionContext` - - Directional context.
+- `directionContext` - Directional context.
 
 Returns: True when forward.
 
@@ -1341,7 +1341,7 @@ isNodeWithoutSelfLoop(
 Checks whether a node currently has no self-loop connections.
 
 Parameters:
-- `candidateNode` - - Node under evaluation.
+- `candidateNode` - Node under evaluation.
 
 Returns: True when the node has no self-loop.
 
@@ -1357,8 +1357,8 @@ isRemovableBackwardConnection(
 Evaluates whether a backward connection is safe to remove.
 
 Parameters:
-- `network` - - Target network.
-- `candidateConnection` - - Connection under evaluation.
+- `network` - Target network.
+- `candidateConnection` - Connection under evaluation.
 
 Returns: True when removable.
 
@@ -1374,8 +1374,8 @@ isRemovableForwardConnection(
 Evaluates whether a forward connection is safe to remove.
 
 Parameters:
-- `network` - - Target network.
-- `candidateConnection` - - Connection under evaluation.
+- `network` - Target network.
+- `candidateConnection` - Connection under evaluation.
 
 Returns: True when removable.
 
@@ -1392,9 +1392,9 @@ isTargetLayerPeer(
 Checks whether candidate node belongs to the target peer-layer set.
 
 Parameters:
-- `candidateNode` - - Candidate node.
-- `candidateNodeIndex` - - Candidate node index.
-- `peerContext` - - Peer traversal context.
+- `candidateNode` - Candidate node.
+- `candidateNodeIndex` - Candidate node index.
+- `peerContext` - Peer traversal context.
 
 Returns: True when candidate is an eligible peer.
 
@@ -1410,8 +1410,8 @@ isTargetLayerPeerTypeMatch(
 Checks whether node type matches the target-layer peer type.
 
 Parameters:
-- `candidateNode` - - Candidate node.
-- `peerContext` - - Peer traversal context.
+- `candidateNode` - Candidate node.
+- `peerContext` - Peer traversal context.
 
 Returns: True when type matches.
 
@@ -1427,8 +1427,8 @@ isTargetLayerPeerWithinDistance(
 Checks whether candidate index lies within allowed peer distance.
 
 Parameters:
-- `candidateNodeIndex` - - Candidate node index.
-- `peerContext` - - Peer traversal context.
+- `candidateNodeIndex` - Candidate node index.
+- `peerContext` - Peer traversal context.
 
 Returns: True when within distance.
 
@@ -1443,7 +1443,7 @@ isUngatedConnection(
 Checks whether a connection has no gater attached.
 
 Parameters:
-- `candidateConnection` - - Connection under evaluation.
+- `candidateConnection` - Connection under evaluation.
 
 Returns: True when ungated.
 
@@ -1458,7 +1458,7 @@ markTopoDirtyIfAcyclic(
 Marks topology caches dirty when acyclic mode is enforced.
 
 Parameters:
-- `mutationProps` - - Runtime mutation props.
+- `mutationProps` - Runtime mutation props.
 
 Returns: Nothing.
 
@@ -1475,8 +1475,8 @@ Mutates activation function on one random non-input node.
 Output-node eligibility is controlled by `method.mutateOutput` when provided.
 
 Parameters:
-- `this` - - Bound network.
-- `method` - - Optional method descriptor.
+- `this` - Bound network.
+- `method` - Optional method descriptor.
 
 Returns: Nothing.
 
@@ -1493,8 +1493,8 @@ Mutates bias parameters on one random non-input node.
 Output nodes remain eligible for this operator.
 
 Parameters:
-- `this` - - Bound network.
-- `method` - - Optional method descriptor.
+- `this` - Bound network.
+- `method` - Optional method descriptor.
 
 Returns: Nothing.
 
@@ -1511,8 +1511,8 @@ Perturbs one connection weight using a uniform delta sampled from configured bou
 The candidate pool includes standard and self-connections.
 
 Parameters:
-- `this` - - Bound network.
-- `method` - - Optional method descriptor.
+- `this` - Bound network.
+- `method` - Optional method descriptor.
 
 Returns: Nothing.
 
@@ -1528,8 +1528,8 @@ pickDistinctNodePair(
 Picks two distinct nodes from a candidate set.
 
 Parameters:
-- `swappableNodes` - - Swap candidate nodes.
-- `randomValue` - - Random generator.
+- `swappableNodes` - Swap candidate nodes.
+- `randomValue` - Random generator.
 
 Returns: Distinct pair or undefined.
 
@@ -1546,9 +1546,9 @@ pickDistinctRandomNode(
 Picks a random node distinct from a given reference.
 
 Parameters:
-- `nodeCandidates` - - Candidate nodes.
-- `excludedNode` - - Node to exclude.
-- `randomValue` - - Random generator.
+- `nodeCandidates` - Candidate nodes.
+- `excludedNode` - Node to exclude.
+- `randomValue` - Random generator.
 
 Returns: Distinct node or undefined.
 
@@ -1564,8 +1564,8 @@ pickRandomEntry(
 Selects a random array element.
 
 Parameters:
-- `entries` - - Source entries.
-- `randomValue` - - Random generator.
+- `entries` - Source entries.
+- `randomValue` - Random generator.
 
 Returns: Random entry or undefined when empty.
 
@@ -1582,9 +1582,9 @@ pickRandomNonInputNode(
 Selects a random mutable non-input node.
 
 Parameters:
-- `network` - - Target network.
-- `excludeOutputNodes` - - True to exclude outputs.
-- `randomValue` - - Random generator.
+- `network` - Target network.
+- `excludeOutputNodes` - True to exclude outputs.
+- `randomValue` - Random generator.
 
 Returns: Selected mutable node.
 
@@ -1601,9 +1601,9 @@ pruneDeterministicChainExtraEdges(
 Prunes side edges from chain nodes to preserve linear deterministic depth.
 
 Parameters:
-- `network` - - Target network.
-- `deterministicChain` - - Chain node list.
-- `outputNode` - - Output node.
+- `network` - Target network.
+- `deterministicChain` - Chain node list.
+- `outputNode` - Output node.
 
 Returns: Nothing.
 
@@ -1620,11 +1620,51 @@ reconnectThroughRecurrentLayer(
 Reconnects a source/target pair through a recurrent layer.
 
 Parameters:
-- `network` - - Target network.
-- `connectionToExpand` - - Original connection.
-- `recurrentLayer` - - Recurrent-layer shape.
+- `network` - Target network.
+- `connectionToExpand` - Original connection.
+- `recurrentLayer` - Recurrent-layer shape.
 
 Returns: Latest newly created connection or undefined.
+
+### registerRecurrentLayerConnection
+
+```ts
+registerRecurrentLayerConnection(
+  network: default,
+  connection: default,
+): void
+```
+
+Registers one recurrent-layer connection on the canonical runtime shelves.
+
+Parameters:
+- `network` - Target network.
+- `connection` - Recurrent-layer connection to register.
+
+Returns: Nothing.
+
+### registerRecurrentLayerConnections
+
+```ts
+registerRecurrentLayerConnections(
+  network: default,
+  layerNodes: default[],
+): void
+```
+
+Registers a recurrent layer's prebuilt internal connections on the network.
+
+Recurrent layer factories wire their own internal node graph before the layer
+is attached to a `Network`. Mutation must therefore register those existing
+connection objects onto the network's canonical forward, self, and gated
+shelves before later serialization, validation, and compatibility paths read
+the graph.
+
+Parameters:
+- `network` - Target network.
+- `layerNodes` - Recurrent layer nodes whose internal edges should be registered.
+
+Returns: Nothing.
 
 ### reinitializeConnectionGroupWeights
 
@@ -1638,10 +1678,10 @@ reinitializeConnectionGroupWeights(
 Reinitializes all weights in a connection group.
 
 Parameters:
-- `connections` - - Connection group.
-- `randomValue` - - Random generator.
-- `minWeight` - - Minimum sampled weight.
-- `maxWeight` - - Maximum sampled weight.
+- `connections` - Connection group.
+- `randomValue` - Random generator.
+- `minWeight` - Minimum sampled weight.
+- `maxWeight` - Maximum sampled weight.
 
 Returns: Nothing.
 
@@ -1658,8 +1698,8 @@ Reinitializes incoming, outgoing, and self-connection weights for one target nod
 Weight sampling bounds come from method overrides or default mutation bounds.
 
 Parameters:
-- `this` - - Bound network.
-- `method` - - Optional method descriptor.
+- `this` - Bound network.
+- `method` - Optional method descriptor.
 
 Returns: Nothing.
 
@@ -1675,8 +1715,8 @@ removeHiddenNodeAndApplyStabilityNudge(
 Removes selected hidden node and applies stability nudge.
 
 Parameters:
-- `network` - - Target network.
-- `hiddenNode` - - Hidden node to remove.
+- `network` - Target network.
+- `hiddenNode` - Hidden node to remove.
 
 Returns: Nothing.
 
@@ -1692,8 +1732,8 @@ resolveDeterministicChainMutationContext(
 Resolves all deterministic add-node prerequisites into one context object.
 
 Parameters:
-- `network` - - Target network.
-- `mutationProps` - - Runtime mutation props.
+- `network` - Target network.
+- `mutationProps` - Runtime mutation props.
 
 Returns: Deterministic context or undefined when one or more prerequisites fail.
 
@@ -1710,9 +1750,9 @@ resolveDistinctPairWithKnownFirstNode(
 Resolves a distinct pair when first node is already known.
 
 Parameters:
-- `swappableNodes` - - Swap candidate nodes.
-- `firstNode` - - Chosen first node.
-- `randomValue` - - Random generator.
+- `swappableNodes` - Swap candidate nodes.
+- `firstNode` - Chosen first node.
+- `randomValue` - Random generator.
 
 Returns: Distinct pair or undefined.
 
@@ -1729,9 +1769,9 @@ resolveExpectedChainTarget(
 Resolves the expected outgoing target for a chain node position.
 
 Parameters:
-- `deterministicChain` - - Chain node list.
-- `chainNodeIndex` - - Current chain index.
-- `outputNode` - - Terminal output node.
+- `deterministicChain` - Chain node list.
+- `chainNodeIndex` - Current chain index.
+- `outputNode` - Terminal output node.
 
 Returns: Expected successor target.
 
@@ -1746,7 +1786,7 @@ resolveInputOutputEndpoints(
 Resolves input/output endpoints required for seed and deterministic flows.
 
 Parameters:
-- `network` - - Target network.
+- `network` - Target network.
 
 Returns: Endpoint nodes or undefined when missing.
 
@@ -1761,7 +1801,7 @@ resolveMethodObject(
 Extracts method-object form when provided.
 
 Parameters:
-- `method` - - Optional mutation method.
+- `method` - Optional mutation method.
 
 Returns: Method object view.
 
@@ -1777,8 +1817,8 @@ resolveSelectedBackwardConnectionPair(
 Resolves random selected backward connection pair.
 
 Parameters:
-- `network` - - Target network.
-- `randomValue` - - Random generator.
+- `network` - Target network.
+- `randomValue` - Random generator.
 
 Returns: Selected source/target pair.
 
@@ -1794,8 +1834,8 @@ resolveSelectedForwardConnectionPair(
 Resolves random selected forward connection pair.
 
 Parameters:
-- `network` - - Target network.
-- `randomValue` - - Random generator.
+- `network` - Target network.
+- `randomValue` - Random generator.
 
 Returns: Selected source/target pair.
 
@@ -1811,8 +1851,8 @@ resolveSelfConnectionTargetNode(
 Resolves random node eligible for self-connection creation.
 
 Parameters:
-- `network` - - Target network.
-- `randomValue` - - Random generator.
+- `network` - Target network.
+- `randomValue` - Random generator.
 
 Returns: Selected node.
 
@@ -1829,9 +1869,9 @@ sampleUniform(
 Samples a uniform value from [minValue, maxValue].
 
 Parameters:
-- `randomValue` - - Random generator.
-- `minValue` - - Minimum value.
-- `maxValue` - - Maximum value.
+- `randomValue` - Random generator.
+- `minValue` - Minimum value.
+- `maxValue` - Maximum value.
 
 Returns: Sampled value.
 
@@ -1846,7 +1886,7 @@ sampleUniformFromContext(
 Samples one weight using a prebuilt range context.
 
 Parameters:
-- `samplingContext` - - Sampling range context.
+- `samplingContext` - Sampling range context.
 
 Returns: Sampled weight.
 
@@ -1862,8 +1902,8 @@ selectHiddenNodeForRemoval(
 Selects a hidden node candidate for SUB_NODE mutation.
 
 Parameters:
-- `network` - - Target network.
-- `hiddenNodes` - - Hidden nodes.
+- `network` - Target network.
+- `hiddenNodes` - Hidden nodes.
 
 Returns: Selected hidden node.
 
@@ -1880,9 +1920,9 @@ splitConnectionThroughHiddenNode(
 Replaces one connection by inserting a hidden node and reconnecting edges.
 
 Parameters:
-- `network` - - Target network.
-- `mutationProps` - - Runtime mutation props.
-- `connectionToSplit` - - Connection to split.
+- `network` - Target network.
+- `mutationProps` - Runtime mutation props.
+- `connectionToSplit` - Connection to split.
 
 Returns: Split result values.
 
@@ -1895,7 +1935,7 @@ subBackConn(): void
 Removes one backward connection that satisfies redundancy constraints.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -1910,7 +1950,7 @@ Removes one forward connection when structural redundancy constraints are satisf
 Constraints require endpoint redundancy and avoid disconnecting peer-layer groups.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -1923,7 +1963,7 @@ subGate(): void
 Removes gating from one randomly selected gated connection.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -1939,7 +1979,7 @@ The stability nudge helps keep downstream mutation effects observable in edge ca
 where node removal substantially changes effective signal flow.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -1952,7 +1992,7 @@ subSelfConn(): void
 Removes one existing self-connection chosen at random.
 
 Parameters:
-- `this` - - Bound network.
+- `this` - Bound network.
 
 Returns: Nothing.
 
@@ -1968,8 +2008,8 @@ swapNodeBiasAndSquash(
 Swaps bias and squash values between two nodes.
 
 Parameters:
-- `firstNode` - - First node.
-- `secondNode` - - Second node.
+- `firstNode` - First node.
+- `secondNode` - Second node.
 
 Returns: Nothing.
 
@@ -1987,8 +2027,8 @@ This provides a lightweight structural-parameter recombination without changing
 graph connectivity.
 
 Parameters:
-- `this` - - Bound network.
-- `method` - - Optional method descriptor.
+- `this` - Bound network.
+- `method` - Optional method descriptor.
 
 Returns: Nothing.
 
@@ -2004,8 +2044,8 @@ tryDisconnectConnection(
 Disconnects a connection pair while suppressing errors.
 
 Parameters:
-- `network` - - Target network.
-- `connection` - - Connection to remove.
+- `network` - Target network.
+- `connection` - Connection to remove.
 
 Returns: Nothing.
 
@@ -2022,9 +2062,9 @@ tryGateLatestConnection(
 Gates the latest connection when both previous gater and target exist.
 
 Parameters:
-- `network` - - Target network.
-- `previousGater` - - Previously assigned gater.
-- `latestConnection` - - Connection to receive the gater.
+- `network` - Target network.
+- `previousGater` - Previously assigned gater.
+- `latestConnection` - Connection to receive the gater.
 
 Returns: Nothing.
 
@@ -2041,9 +2081,9 @@ tryReassignGateAfterSplit(
 Reassigns prior gater to one of the new split connections when possible.
 
 Parameters:
-- `network` - - Target network.
-- `randomValue` - - Random generator.
-- `splitResult` - - Split result values.
+- `network` - Target network.
+- `randomValue` - Random generator.
+- `splitResult` - Split result values.
 
 Returns: Nothing.
 
@@ -2058,7 +2098,7 @@ warnWhenEnabled(
 Emits a warning when warning mode is enabled.
 
 Parameters:
-- `message` - - Warning message.
+- `message` - Warning message.
 
 Returns: Nothing.
 
@@ -2074,7 +2114,7 @@ wouldDisconnectTargetPeerLayerGroup(
 Determines whether removal would disconnect a target peer-layer group.
 
 Parameters:
-- `network` - - Target network.
-- `candidateConnection` - - Connection under evaluation.
+- `network` - Target network.
+- `candidateConnection` - Connection under evaluation.
 
 Returns: True when peer group would be disconnected.

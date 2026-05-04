@@ -16,6 +16,26 @@ Read this chapter in three passes:
 3. finish with connectivity, gating, and optimizer helpers when you need to
    understand how one node participates in larger graph changes.
 
+Architecture building asks two different questions at this boundary:
+what role does the neuron play at runtime, and what human-facing meaning
+should later tooling remember about it? The runtime role lives in `type`
+(`input`, `hidden`, `output`) and changes execution semantics. The optional
+descriptor surface (`label`, `intent`, `metadata`) does not change
+activation math; it keeps architecture intent visible for later diagnostics,
+visualization, and construct-from-parts work.
+
+Example:
+
+```ts
+const sensor = new Node('input');
+const readout = new Node('output');
+
+readout.describe({
+  label: 'readoutNode',
+  metadata: { stage: 'policy' },
+});
+```
+
 ## architecture/node/node.ts
 
 ### Node
@@ -28,15 +48,81 @@ function (squash) and emits an activation value. Supports:
  - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
  - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
    a variety of learning rules beyond simple backprop).
+ - Optional descriptors via `describe({ label, intent, metadata })` when a
+   low-level node should keep a stable human-facing identity inside a larger
+   architecture story.
 
 Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
 assignment works in algorithms like RTRL / policy gradients. They are updated only when
 using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
 
+Most architecture code should only attach a descriptor when a node boundary
+matters outside the current function. That keeps the primitive cheap for raw
+graph math while still letting later passes recover names such as
+`readoutNode`, `memoryCell`, or `temperatureGate`.
+
+Example:
+
+```ts
+const sensor = new Node('input');
+const readout = new Node('output');
+
+readout.describe({
+  label: 'readoutNode',
+  metadata: { stage: 'policy' },
+});
+```
+
 ### NodeOptimizerProps
 
 Internal interface for accessing dynamic optimizer properties on Node instances.
 These properties are lazily allocated and not part of the main class definition.
+
+### PrimitiveDescriptor
+
+Optional human-readable descriptor attached to one architecture primitive.
+
+Descriptors are intentionally lightweight. They keep the public primitive
+API teachable by separating runtime behavior from architectural meaning:
+`type` still controls execution semantics, while `label`, `intent`, and
+scalar metadata keep the boundary recognizable to later tooling.
+
+Example:
+
+```ts
+const readout = new Node('output');
+
+readout.describe({
+  label: 'policyLogits',
+  metadata: { stage: 'readout' },
+});
+```
+
+### PrimitiveIntent
+
+Small semantic hints that later architecture tooling can read safely.
+
+### PrimitiveMetadata
+
+Lightweight metadata bag for architecture primitives.
+
+### PrimitiveMetadataValue
+
+Scalar metadata values retained on architecture primitives.
+
+### PrimitiveNodeType
+
+Runtime-supported primitive roles for architecture-building surfaces.
+
+### resolvePrimitiveIntent
+
+```ts
+resolvePrimitiveIntent(
+  nodeType: string,
+): PrimitiveIntent | null
+```
+
+Resolve public primitive intent from a runtime node type when possible.
 
 ### default
 
@@ -207,6 +293,39 @@ Stores incoming, outgoing, gated, and self-connections for this node.
 
 The derivative of the activation function evaluated at the node's current state. Used in backpropagation.
 
+#### describe
+
+```ts
+describe(
+  descriptor: PrimitiveDescriptor,
+): void
+```
+
+Attaches optional descriptor metadata to the primitive boundary.
+
+This descriptor is advisory only. It does not change runtime activation,
+mutation, or serialization behavior, but it gives later architecture
+assembly, diagnostics, and visualization passes a stable place to read
+human-facing labels and intent.
+
+Reach for this when the node is still the right abstraction but a later
+reader should not have to infer its purpose from connection order alone.
+
+Parameters:
+- `descriptor` - Optional label, intent, and scalar metadata to merge.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+const readout = new Node('output');
+readout.describe({
+  label: 'readoutNode',
+  metadata: { stage: 'readout' },
+});
+```
+
 #### disconnect
 
 ```ts
@@ -230,7 +349,7 @@ Stores error values calculated during backpropagation.
 
 ```ts
 fromJSON(
-  json: { bias: number; type: string; squash: string; mask: number; },
+  json: { bias: number; response?: number | undefined; type: string; squash: string; mask: number; },
 ): default
 ```
 
@@ -262,6 +381,10 @@ Stable per-node gene identifier for NEAT innovation reuse
 #### index
 
 Optional index, potentially used to identify the node's position within a layer or network structure. Not used internally by the Node class itself.
+
+#### intent
+
+Optional semantic intent for architecture tooling and diagnostics.
 
 #### isActivating
 
@@ -314,9 +437,17 @@ Parameters:
 
 Returns: True if this node projects to the target node, false otherwise.
 
+#### label
+
+Optional human-readable descriptor label for architecture tooling.
+
 #### mask
 
 A mask factor (typically 0 or 1) used for implementing dropout. If 0, the node's output is effectively silenced.
+
+#### metadata
+
+Optional scalar metadata retained on the primitive boundary.
 
 #### mutate
 
@@ -393,6 +524,14 @@ Parameters:
 - (weight: number) => number (custom function)
 - `target` - The target output value for this node. Only used if the node is of type 'output'.
 
+#### response
+
+Response multiplier applied to the node state before the squash function.
+
+A neutral response of `1` preserves the historical runtime behavior. Values
+above or below `1` steepen or flatten the node's effective transfer curve
+without changing the chosen activation family.
+
 #### setActivation
 
 ```ts
@@ -428,10 +567,28 @@ Returns: The activation value or its derivative.
 
 The internal state of the node (sum of weighted inputs + bias) before the activation function is applied.
 
+#### syncGeneIdCounter
+
+```ts
+syncGeneIdCounter(
+  maxObservedGeneId: number,
+): void
+```
+
+Advances the global gene-id cursor past a restored maximum.
+
+Restore flows use this after hydrating persisted genomes so the next freshly
+created node cannot collide with an older serialized `geneId`.
+
+Parameters:
+- `maxObservedGeneId` - Highest restored node gene id currently in memory.
+
+Returns: Nothing.
+
 #### toJSON
 
 ```ts
-toJSON(): { index: number | undefined; bias: number; type: string; squash: string | null; mask: number; }
+toJSON(): { index: number | undefined; bias: number; response: number; type: string; squash: string | null; mask: number; }
 ```
 
 Converts the node's essential properties to a JSON object for serialization.

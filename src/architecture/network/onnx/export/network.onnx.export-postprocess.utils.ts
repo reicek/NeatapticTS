@@ -922,7 +922,7 @@ function isOutputCoordinateConsistent(
     return true;
   }
   const representativeKernelWeights =
-    representativeKernels[outputCoordinate.outChannelIndex] || [];
+    representativeKernels[outputCoordinate.outChannelIndex];
   const kernelCoordinates = collectConvKernelCoordinates(context.convSpec);
   return kernelCoordinates.every((kernelCoordinate, kernelPointer) =>
     isKernelCoordinateConsistent({

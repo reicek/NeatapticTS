@@ -82,6 +82,34 @@ describe('Node', () => {
     });
   });
 
+  describe('describe()', () => {
+    describe('given an output node', () => {
+      describe('when applying label and scalar metadata', () => {
+        it('stores additive primitive descriptor state', () => {
+          // Arrange
+          const node = new Node('output');
+
+          // Act
+          node.describe({
+            label: 'readoutNode',
+            metadata: { priority: 2, reusable: true },
+          });
+
+          // Assert
+          expect({
+            label: node.label,
+            intent: node.intent,
+            metadata: node.metadata,
+          }).toStrictEqual({
+            label: 'readoutNode',
+            intent: 'output',
+            metadata: { priority: 2, reusable: true },
+          });
+        });
+      });
+    });
+  });
+
   describe('activate()', () => {
     describe('given an identity node with only bias', () => {
       describe('when activating without an explicit input', () => {
@@ -112,6 +140,23 @@ describe('Node', () => {
 
           // Assert
           expect(actualActivation).toBeCloseTo(0.5, 12);
+        });
+      });
+    });
+
+    describe('given a hidden node with a non-neutral response', () => {
+      describe('when activating the node from an explicit input', () => {
+        it('applies the response multiplier before squashing', () => {
+          // Arrange
+          const node = new Node('hidden');
+          node.squash = Activation.identity;
+          node.response = 1.5;
+
+          // Act
+          const actualActivation = node.activate(0.5);
+
+          // Assert
+          expect(actualActivation).toBeCloseTo(0.75, 12);
         });
       });
     });
@@ -270,6 +315,25 @@ describe('Node', () => {
 
           // Assert
           expect(actualSquash).toBe(Activation.relu);
+        });
+      });
+
+      describe('when rehydrating the response value', () => {
+        it('restores the explicit response parameter', () => {
+          // Arrange
+          const restoredNode = Node.fromJSON({
+            bias: 0.25,
+            type: 'output',
+            squash: 'relu',
+            mask: 1,
+            response: 1.5,
+          });
+
+          // Act
+          const actualResponse = restoredNode.response;
+
+          // Assert
+          expect(actualResponse).toBe(1.5);
         });
       });
     });

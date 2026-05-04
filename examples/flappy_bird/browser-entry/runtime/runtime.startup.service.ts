@@ -1,8 +1,6 @@
 import { createCanvasHost, updateStatsTableValues } from '../host/host';
 import { createEvolutionWorker } from '../worker-channel/worker-channel';
 import {
-  FLAPPY_BROWSER_ELITISM_COUNT,
-  FLAPPY_BROWSER_POPULATION_SIZE,
   FLAPPY_HUD_INITIALIZING_TEXT,
   FLAPPY_HUD_ZERO_TEXT,
 } from '../../constants/constants';
@@ -11,11 +9,19 @@ import {
   FLAPPY_NETWORK_OUTPUT_SIZE,
 } from '../../constants/constants';
 import { resolveRequiredRuntimeHostElement } from './runtime.errors';
+import {
+  resolveAvailableRuntimeArchitectureProfiles,
+  resolveRuntimeArchitectureHistory,
+  resolveRuntimeArchitectureSelectorItems,
+  resolveSelectedRuntimeArchitectureProfile,
+} from './runtime.architecture-profile.service';
+import { resolveRuntimePopulationBudget } from './runtime.population-budget';
 import { createRuntimeTelemetryState } from './runtime.telemetry.service';
 import type {
   RuntimeContainerTarget,
   RuntimeStartConfig,
   RuntimeStartContext,
+  RuntimeStartOptions,
 } from './runtime.types';
 
 /**
@@ -38,17 +44,28 @@ import type {
  */
 export function createRuntimeStartContext(
   container: RuntimeContainerTarget,
+  runtimeStartOptions: RuntimeStartOptions,
 ): RuntimeStartContext {
   // Step 1: Resolve and validate the runtime host element.
   const hostElement = resolveRequiredRuntimeHostElement(container);
 
   // Step 2: Construct the static runtime configuration values.
-  const config = createRuntimeStartConfig();
+  const config = createRuntimeStartConfig(runtimeStartOptions);
 
   // Step 3: Create the browser host, telemetry state, and worker channel.
   return {
     config,
-    viewContext: createCanvasHost(hostElement),
+    hostElement,
+    viewContext: createCanvasHost(hostElement, {
+      architectureSelectorItems: resolveRuntimeArchitectureSelectorItems({
+        availableProfiles: config.availableArchitectureProfiles,
+        selectedProfileId: config.selectedArchitectureProfile.id,
+        historyByProfileId: config.architectureHistoryByProfileId,
+      }),
+      onSelectArchitectureProfile:
+        runtimeStartOptions.onSelectArchitectureProfile,
+      onResetScores: runtimeStartOptions.onResetScores,
+    }),
     runtimeTelemetryState: createRuntimeTelemetryState(),
     evolutionWorker: createEvolutionWorker(),
   };
@@ -68,6 +85,10 @@ export function initializeRuntimeHud(
 ): void {
   // Step 1: Publish the initializing state and empty bird counters.
   updateStatsTableValues(runtimeStartContext.viewContext.statsValueByKey, {
+    currentArchitecture:
+      runtimeStartContext.config.selectedArchitectureProfile.label,
+    summaryArchitecture:
+      runtimeStartContext.config.selectedArchitectureProfile.label,
     status: FLAPPY_HUD_INITIALIZING_TEXT,
     birds: `${FLAPPY_HUD_ZERO_TEXT}/${runtimeStartContext.config.populationSize}`,
   });
@@ -81,12 +102,25 @@ export function initializeRuntimeHud(
  *
  * @returns Runtime configuration derived from shared constants.
  */
-function createRuntimeStartConfig(): RuntimeStartConfig {
+function createRuntimeStartConfig(
+  runtimeStartOptions: RuntimeStartOptions,
+): RuntimeStartConfig {
+  const selectedArchitectureProfile = resolveSelectedRuntimeArchitectureProfile(
+    runtimeStartOptions.architectureProfileId,
+  );
+  const runtimeBudget = resolveRuntimePopulationBudget(
+    selectedArchitectureProfile.id,
+  );
+
   // Step 1: Fold shared runtime constants into one descriptive config object.
   return {
+    architectureHistoryByProfileId: resolveRuntimeArchitectureHistory(),
+    availableArchitectureProfiles:
+      resolveAvailableRuntimeArchitectureProfiles(),
     inputSize: FLAPPY_NETWORK_INPUT_SIZE,
     outputSize: FLAPPY_NETWORK_OUTPUT_SIZE,
-    populationSize: FLAPPY_BROWSER_POPULATION_SIZE,
-    elitismCount: FLAPPY_BROWSER_ELITISM_COUNT,
+    populationSize: runtimeBudget.populationSize,
+    elitismCount: runtimeBudget.elitismCount,
+    selectedArchitectureProfile,
   };
 }

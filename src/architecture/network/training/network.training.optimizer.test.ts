@@ -1,4 +1,5 @@
 import Network from '../network';
+import { NetworkTrainingUnknownOptimizerTypeError } from './network.training.errors';
 
 type OptimizerConnection = Network['connections'][number] & {
   firstMoment?: number;
@@ -99,6 +100,26 @@ describe('network training chapter', () => {
             });
           });
         }
+      });
+    });
+
+    describe('given optimizer is an object without a type field', () => {
+      describe('when training runs with a typeless optimizer object', () => {
+        it('leaves the type as-is and throws because the type is unknown', () => {
+          // Arrange – optimizer object with no type string → line 191 FALSE arm
+          // (typeof optimizerConfig.type !== 'string', so toLowerCase is skipped)
+          const network = createSingleConnectionNetwork(9_201);
+
+          // Act & Assert – unknown type throws after the lowercasing branch is skipped
+          expect(() =>
+            network.train(SINGLE_SAMPLE_DATASET, {
+              iterations: 1,
+              rate: 0.01,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              optimizer: {} as any,
+            }),
+          ).toThrow(NetworkTrainingUnknownOptimizerTypeError);
+        });
       });
     });
   });

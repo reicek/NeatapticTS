@@ -94,11 +94,11 @@ whether the remaining search budget should respect live species boundaries or
 whether it should fall back to one global parent pool.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `nextPopulation` - - Target population array.
-- `helpers` - - Helper callbacks for offspring selection.
-- `helpers` - - Speciated offspring helper.
-- `helpers` - - Unspeciated offspring helper.
+- `internal` - NEAT controller instance.
+- `nextPopulation` - Target population array.
+- `helpers` - Helper callbacks for offspring selection.
+- `helpers` - Speciated offspring helper.
+- `helpers` - Unspeciated offspring helper.
 
 Returns: A promise that resolves after the remaining population budget is filled.
 
@@ -134,10 +134,10 @@ keeps the species-aware branch readable in one place instead of scattering the
 allocation rationale across several tiny helpers.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `nextPopulation` - - Target population array.
-- `remainingSlots` - - Slots remaining to fill.
-- `config` - - Offspring allocation constants.
+- `internal` - NEAT controller instance.
+- `nextPopulation` - Target population array.
+- `remainingSlots` - Slots remaining to fill.
+- `config` - Offspring allocation constants.
 
 Returns: A promise that resolves after species-aware offspring have been added.
 
@@ -159,9 +159,9 @@ branch small and makes the contrast with the species-aware allocator easy to
 read in the generated chapter.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `nextPopulation` - - Target population array.
-- `remainingSlots` - - Slots remaining to fill.
+- `internal` - NEAT controller instance.
+- `nextPopulation` - Target population array.
+- `remainingSlots` - Slots remaining to fill.
 
 Returns: A promise that resolves after all remaining slots have been filled.
 
@@ -185,8 +185,8 @@ gambling on new offspring, it preserves a small slice of already-proven
 genomes so the next generation cannot forget the current best evidence.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `nextPopulation` - - Target population array.
+- `internal` - NEAT controller instance.
+- `nextPopulation` - Target population array.
 
 Returns: Nothing.
 
@@ -212,8 +212,8 @@ preserve what is already working; provenance reintroduces known-safe or fresh
 starting material without asking the current parent pool for permission.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `nextPopulation` - - Target population array.
+- `internal` - NEAT controller instance.
+- `nextPopulation` - Target population array.
 
 Returns: Nothing.
 
@@ -251,11 +251,11 @@ const nextPopulation = await buildNextPopulation(internal, {
 ```
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `helpers` - - Helper callbacks for population construction.
-- `helpers` - - Elitism helper.
-- `helpers` - - Provenance helper.
-- `helpers` - - Offspring helper.
+- `internal` - NEAT controller instance.
+- `helpers` - Helper callbacks for population construction.
+- `helpers` - Elitism helper.
+- `helpers` - Provenance helper.
+- `helpers` - Offspring helper.
 
 Returns: Next population array before later mutation and pruning phases.
 
@@ -285,12 +285,12 @@ pools; this helper is where the controller finally spends one unit of that
 budget on one concrete child genome.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `survivors` - - Survivors pool for selection.
-- `speciesIndex` - - Species index.
-- `crossSpeciesProbability` - - Cross-species mating probability.
-- `crossSpeciesGuardLimit` - - Retry guard for cross-species selection.
-- `survivalThresholdDefault` - - Default survivor-window policy used when cross-species selection samples another species.
+- `internal` - NEAT controller instance.
+- `survivors` - Survivors pool for selection.
+- `speciesIndex` - Species index.
+- `crossSpeciesProbability` - Cross-species mating probability.
+- `crossSpeciesGuardLimit` - Retry guard for cross-species selection.
+- `survivalThresholdDefault` - Default survivor-window policy used when cross-species selection samples another species.
 
 Returns: Offspring genome carrying runtime metadata.
 
@@ -321,9 +321,9 @@ Read this as a small budgeting pipeline rather than one opaque formula:
    budget exactly.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `remainingSlots` - - Slots remaining to fill.
-- `config` - - Allocation constants.
+- `internal` - NEAT controller instance.
+- `remainingSlots` - Slots remaining to fill.
+- `config` - Allocation constants.
 
 Returns: Offspring allocation per species index.
 
@@ -333,6 +333,7 @@ Returns: Offspring allocation per species index.
 distributeRemainingSlots(
   allocation: number[],
   rawShares: number[],
+  activeSpeciesIndexes: number[],
   remainingSlots: number,
 ): void
 ```
@@ -348,9 +349,9 @@ systematic flooring losses would quietly bias the final child counts away
 from the fractional budget that the controller just computed.
 
 Parameters:
-- `allocation` - - Allocation array to adjust.
-- `rawShares` - - Raw fractional shares.
-- `remainingSlots` - - Total slots available.
+- `allocation` - Allocation array to adjust.
+- `rawShares` - Raw fractional shares.
+- `remainingSlots` - Total slots available.
 
 Returns: Nothing.
 
@@ -360,6 +361,7 @@ Returns: Nothing.
 enforceMinimumOffspring(
   internal: NeatControllerForEvolution,
   allocation: number[],
+  activeSpeciesIndexes: number[],
   remainingSlots: number,
   minOffspringDefault: number,
 ): void
@@ -375,10 +377,10 @@ In other words, this is the chapter's anti-monoculture guard. It only runs
 when the slot budget is big enough to afford that diversity protection.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `allocation` - - Allocation array to adjust.
-- `remainingSlots` - - Total slots available.
-- `minOffspringDefault` - - Default minimum offspring.
+- `internal` - NEAT controller instance.
+- `allocation` - Allocation array to adjust.
+- `remainingSlots` - Total slots available.
+- `minOffspringDefault` - Default minimum offspring.
 
 Returns: Nothing.
 
@@ -407,8 +409,8 @@ slot-allocation policy together with structural-safety policy. Centralizing
 cleanup here keeps the earlier helpers focused on population composition.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `nextPopulation` - - Population to validate.
+- `internal` - NEAT controller instance.
+- `nextPopulation` - Population to validate.
 
 Returns: A promise that resolves after best-effort structural cleanup.
 
@@ -422,6 +424,7 @@ selectSecondParent(
   crossSpeciesProbability: number,
   crossSpeciesGuardLimit: number,
   survivalThresholdDefault: number,
+  randomGenerator: () => number,
 ): GenomeWithMetadata
 ```
 
@@ -438,12 +441,12 @@ bounds the search so that a sparse registry cannot trap population assembly in
 an expensive parent hunt.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `survivors` - - Survivors pool from the current species.
-- `speciesIndex` - - Current species index.
-- `crossSpeciesProbability` - - Probability to cross species.
-- `crossSpeciesGuardLimit` - - Retry guard for cross-species selection.
-- `survivalThresholdDefault` - - Default survivor-window policy used when sampling another species.
+- `internal` - NEAT controller instance.
+- `survivors` - Survivors pool from the current species.
+- `speciesIndex` - Current species index.
+- `crossSpeciesProbability` - Probability to cross species.
+- `crossSpeciesGuardLimit` - Retry guard for cross-species selection.
+- `survivalThresholdDefault` - Default survivor-window policy used when sampling another species.
 
 Returns: Chosen parent genome from the current or another species.
 
@@ -453,6 +456,7 @@ Returns: Chosen parent genome from the current or another species.
 trimOversubscription(
   internal: NeatControllerForEvolution,
   allocation: number[],
+  activeSpeciesIndexes: number[],
   remainingSlots: number,
   minOffspringDefault: number,
 ): void
@@ -469,9 +473,9 @@ their work. The helper is not changing the policy goal; it is only forcing
 the final integer allocation back inside the available slot budget.
 
 Parameters:
-- `internal` - - NEAT controller instance.
-- `allocation` - - Allocation array to adjust.
-- `remainingSlots` - - Total slots available.
-- `minOffspringDefault` - - Default minimum offspring.
+- `internal` - NEAT controller instance.
+- `allocation` - Allocation array to adjust.
+- `remainingSlots` - Total slots available.
+- `minOffspringDefault` - Default minimum offspring.
 
 Returns: Nothing.

@@ -66,9 +66,9 @@ applyComplexityStatsMonoObjective(
 Attach complexity stats for mono-objective mode.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with population state.
-- `telemetryOptions` - - Options controlling complexity telemetry.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with population state.
+- `telemetryOptions` - Options controlling complexity telemetry.
+- `entry` - Telemetry entry to update.
 
 ### applyComplexityStatsMultiObjective
 
@@ -84,10 +84,10 @@ applyComplexityStatsMultiObjective(
 Attach complexity stats for multi-objective mode.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with population state.
-- `telemetryOptions` - - Options controlling complexity telemetry.
-- `population` - - Population snapshot.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with population state.
+- `telemetryOptions` - Options controlling complexity telemetry.
+- `population` - Population snapshot.
+- `entry` - Telemetry entry to update.
 
 ### applyFastModeDefaults
 
@@ -101,8 +101,8 @@ applyFastModeDefaults(
 Apply fast-mode tuning to diversity sampling and novelty defaults.
 
 Parameters:
-- `telemetryContext` - - Context object storing fast-mode tuning flag.
-- `telemetryOptions` - - Options with diversity and novelty settings.
+- `telemetryContext` - Context object storing fast-mode tuning flag.
+- `telemetryOptions` - Options with diversity and novelty settings.
 
 ### applyHypervolumeTelemetry
 
@@ -117,9 +117,9 @@ applyHypervolumeTelemetry(
 Attach hypervolume scalar when requested.
 
 Parameters:
-- `telemetryOptions` - - Options controlling telemetry fields.
-- `hyperVolumeProxy` - - Hypervolume proxy value.
-- `entry` - - Telemetry entry to update.
+- `telemetryOptions` - Options controlling telemetry fields.
+- `hyperVolumeProxy` - Hypervolume proxy value.
+- `entry` - Telemetry entry to update.
 
 ### applyLineageStatsMonoObjective
 
@@ -134,9 +134,9 @@ applyLineageStatsMonoObjective(
 Apply lineage stats for mono-objective mode using sampled ancestors.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with lineage settings.
-- `population` - - Population snapshot.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with lineage settings.
+- `population` - Population snapshot.
+- `entry` - Telemetry entry to update.
 
 ### applyLineageStatsMultiObjective
 
@@ -151,9 +151,9 @@ applyLineageStatsMultiObjective(
 Apply lineage stats for multi-objective mode using ancestor uniqueness.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with lineage settings.
-- `population` - - Population snapshot.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with lineage settings.
+- `population` - Population snapshot.
+- `entry` - Telemetry entry to update.
 
 ### applyObjectiveAges
 
@@ -167,8 +167,8 @@ applyObjectiveAges(
 Apply objective age snapshots to the entry.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with objective ages.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with objective ages.
+- `entry` - Telemetry entry to update.
 
 ### applyObjectiveEvents
 
@@ -183,9 +183,9 @@ applyObjectiveEvents(
 Apply and flush objective lifecycle events.
 
 Parameters:
-- `telemetryContext` - - Neat-like context holding objective events.
-- `entry` - - Telemetry entry to update.
-- `generation` - - Generation index for event records.
+- `telemetryContext` - Neat-like context holding objective events.
+- `entry` - Telemetry entry to update.
+- `generation` - Generation index for event records.
 
 ### applyObjectiveImportance
 
@@ -199,8 +199,8 @@ applyObjectiveImportance(
 Apply the most recent objective importance snapshot.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with objective importance.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with objective importance.
+- `entry` - Telemetry entry to update.
 
 ### applyObjectivesSnapshot
 
@@ -214,8 +214,8 @@ applyObjectivesSnapshot(
 Apply objectives list snapshot (keys only).
 
 Parameters:
-- `telemetryContext` - - Neat-like context with objective provider.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with objective provider.
+- `entry` - Telemetry entry to update.
 
 ### applyPerformanceStats
 
@@ -230,9 +230,9 @@ applyPerformanceStats(
 Attach performance stats when configured.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with performance data.
-- `telemetryOptions` - - Options controlling performance telemetry.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with performance data.
+- `telemetryOptions` - Options controlling performance telemetry.
+- `entry` - Telemetry entry to update.
 
 ### applyRngState
 
@@ -247,9 +247,9 @@ applyRngState(
 Attach RNG state when configured.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with RNG state.
-- `telemetryOptions` - - Options controlling RNG telemetry.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with RNG state.
+- `telemetryOptions` - Options controlling RNG telemetry.
+- `entry` - Telemetry entry to update.
 
 ### applySpeciesAllocation
 
@@ -263,8 +263,8 @@ applySpeciesAllocation(
 Apply per-species offspring allocation snapshot.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with allocation snapshot.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with allocation snapshot.
+- `entry` - Telemetry entry to update.
 
 ### buildComplexityEntry
 
@@ -281,11 +281,11 @@ buildComplexityEntry(
 Build the complexity entry payload for multi-objective mode.
 
 Parameters:
-- `telemetryOptions` - - Options controlling complexity telemetry.
-- `meanCounts` - - Mean node/connection counts.
-- `maxCounts` - - Max node/connection counts.
-- `meanEnabledRatio` - - Mean enabled ratio.
-- `growthValues` - - Growth deltas.
+- `telemetryOptions` - Options controlling complexity telemetry.
+- `meanCounts` - Mean node/connection counts.
+- `maxCounts` - Max node/connection counts.
+- `meanEnabledRatio` - Mean enabled ratio.
+- `growthValues` - Growth deltas.
 
 Returns: Complexity entry payload.
 
@@ -300,7 +300,7 @@ buildDegreeHistogram(
 Build a histogram of degree frequencies from a degree-count table.
 
 Parameters:
-- `counts` - - Map geneId -> degree count.
+- `counts` - Map geneId -> degree count.
 
 Returns: Map degree -> number of nodes with that degree.
 
@@ -316,8 +316,8 @@ buildLineageContext(
 Build a lineage helper context for ancestor operations.
 
 Parameters:
-- `context` - - Neat-like context with RNG helpers.
-- `populationSnapshot` - - Population snapshot.
+- `context` - Neat-like context with RNG helpers.
+- `populationSnapshot` - Population snapshot.
 
 Returns: Lineage helper context.
 
@@ -335,10 +335,10 @@ buildLineageEntry(
 Build the lineage entry payload.
 
 Parameters:
-- `context` - - Neat-like context with lineage info.
-- `bestGenomeSnapshot` - - Best genome snapshot.
-- `meanDepthValue` - - Mean lineage depth.
-- `ancestorUniquenessScore` - - Ancestor uniqueness score.
+- `context` - Neat-like context with lineage info.
+- `bestGenomeSnapshot` - Best genome snapshot.
+- `meanDepthValue` - Mean lineage depth.
+- `ancestorUniquenessScore` - Ancestor uniqueness score.
 
 Returns: Lineage entry payload.
 
@@ -353,7 +353,7 @@ collectDepths(
 Collect depth values for the current population.
 
 Parameters:
-- `populationSnapshot` - - Population snapshot.
+- `populationSnapshot` - Population snapshot.
 
 Returns: Array of depth values (defaults to 0).
 
@@ -368,7 +368,7 @@ collectPopulationCounts(
 Collect node and connection counts for the population.
 
 Parameters:
-- `populationSnapshot` - - Population snapshot.
+- `populationSnapshot` - Population snapshot.
 
 Returns: Node and connection counts arrays.
 
@@ -384,8 +384,8 @@ computeAncestorUniquenessSampled(
 Compute ancestor uniqueness using sampled Jaccard distance.
 
 Parameters:
-- `context` - - Neat-like context with RNG helpers.
-- `populationSnapshot` - - Population snapshot.
+- `context` - Neat-like context with RNG helpers.
+- `populationSnapshot` - Population snapshot.
 
 Returns: Rounded ancestor uniqueness score.
 
@@ -401,8 +401,8 @@ computeAndStoreGrowthValues(
 Compute growth values and store the latest means on the context.
 
 Parameters:
-- `context` - - Neat-like context with previous mean values.
-- `meanCounts` - - Current mean node/connection counts.
+- `context` - Neat-like context with previous mean values.
+- `meanCounts` - Current mean node/connection counts.
 
 Returns: Growth values for nodes and connections.
 
@@ -421,11 +421,11 @@ computeCompatibilityStats(
 Compute pairwise compatibility statistics via sampling.
 
 Parameters:
-- `genomes` - - Population snapshot.
-- `size` - - Population size.
-- `pairSampleCount` - - Number of pairs to sample.
-- `rngFactoryFn` - - RNG factory returning a uniform random function.
-- `compatibilityDistance` - - Optional compatibility distance function.
+- `genomes` - Population snapshot.
+- `size` - Population size.
+- `pairSampleCount` - Number of pairs to sample.
+- `rngFactoryFn` - RNG factory returning a uniform random function.
+- `compatibilityDistance` - Optional compatibility distance function.
 
 Returns: Mean and variance of sampled compatibilities.
 
@@ -440,7 +440,7 @@ computeDegreeCounts(
 Compute per-node degree counts for enabled connections.
 
 Parameters:
-- `entropyGraph` - - Genome-like graph object.
+- `entropyGraph` - Genome-like graph object.
 
 Returns: Map geneId -> degree count.
 
@@ -455,7 +455,7 @@ computeEnabledRatios(
 Compute enabled ratios per genome.
 
 Parameters:
-- `populationSnapshot` - - Population snapshot.
+- `populationSnapshot` - Population snapshot.
 
 Returns: Array of enabled ratios.
 
@@ -471,8 +471,8 @@ computeEntropyFromHistogram(
 Compute entropy from a degree-frequency histogram.
 
 Parameters:
-- `histogram` - - Map degree -> number of nodes.
-- `totalNodes` - - Total node count used to normalize into probabilities.
+- `histogram` - Map degree -> number of nodes.
+- `totalNodes` - Total node count used to normalize into probabilities.
 
 Returns: Entropy value (non-negative).
 
@@ -488,8 +488,8 @@ computeEntropyStats(
 Compute structural entropy mean and variance across the population.
 
 Parameters:
-- `genomes` - - Population snapshot.
-- `structuralEntropyFn` - - Function to compute entropy for a genome.
+- `genomes` - Population snapshot.
+- `structuralEntropyFn` - Function to compute entropy for a genome.
 
 Returns: Mean and variance of entropy values.
 
@@ -507,10 +507,10 @@ computeGraphletEntropy(
 Sample graphlet motifs and compute entropy over their edge counts.
 
 Parameters:
-- `genomes` - - Population snapshot.
-- `size` - - Population size.
-- `graphletSampleCount` - - Number of graphlets to sample.
-- `rngFactoryFn` - - RNG factory returning a uniform random function.
+- `genomes` - Population snapshot.
+- `size` - Population size.
+- `graphletSampleCount` - Number of graphlets to sample.
+- `rngFactoryFn` - RNG factory returning a uniform random function.
 
 Returns: Graphlet entropy value.
 
@@ -526,8 +526,8 @@ computeHyperVolumeProxy(
 Compute a hypervolume-like proxy for the Pareto front.
 
 Parameters:
-- `telemetryOptions` - - Options controlling complexity metric.
-- `population` - - Population snapshot.
+- `telemetryOptions` - Options controlling complexity metric.
+- `population` - Population snapshot.
 
 Returns: Hypervolume proxy value.
 
@@ -546,11 +546,11 @@ computeLineageStats(
 Compute lineage depth and pairwise depth-distance statistics.
 
 Parameters:
-- `lineageEnabled` - - Whether lineage metrics are enabled.
-- `genomes` - - Population snapshot.
-- `size` - - Population size.
-- `pairSampleCount` - - Number of pairs to sample.
-- `rngFactoryFn` - - RNG factory returning a uniform random function.
+- `lineageEnabled` - Whether lineage metrics are enabled.
+- `genomes` - Population snapshot.
+- `size` - Population size.
+- `pairSampleCount` - Number of pairs to sample.
+- `rngFactoryFn` - RNG factory returning a uniform random function.
 
 Returns: Lineage mean depth and pairwise distance.
 
@@ -565,7 +565,7 @@ computeMaxCounts(
 Compute max node and connection counts.
 
 Parameters:
-- `counts` - - Node and connection counts arrays.
+- `counts` - Node and connection counts arrays.
 
 Returns: Max node and connection counts.
 
@@ -580,7 +580,7 @@ computeMeanCounts(
 Compute mean node and connection counts.
 
 Parameters:
-- `counts` - - Node and connection counts arrays.
+- `counts` - Node and connection counts arrays.
 
 Returns: Mean node and connection counts.
 
@@ -595,7 +595,7 @@ computeMeanDepth(
 Compute the mean depth from a depth list.
 
 Parameters:
-- `depthValues` - - Depth values to average.
+- `depthValues` - Depth values to average.
 
 Returns: Mean depth value.
 
@@ -610,7 +610,7 @@ computeMeanEnabledRatio(
 Compute mean of enabled ratios.
 
 Parameters:
-- `enabledRatios` - - Enabled ratios per genome.
+- `enabledRatios` - Enabled ratios per genome.
 
 Returns: Mean enabled ratio.
 
@@ -625,7 +625,7 @@ computeOperatorStatsSnapshot(
 Snapshot operator statistics into a telemetry-friendly array.
 
 Parameters:
-- `operatorStats` - - Operator stats map (opName -> success/attempts).
+- `operatorStats` - Operator stats map (opName -> success/attempts).
 
 Returns: Operator stats snapshot array.
 
@@ -643,10 +643,10 @@ computePairJaccardDistance(
 Compute Jaccard distance between ancestor sets for a pair.
 
 Parameters:
-- `context` - - Neat-like context for lineage helpers.
-- `populationSnapshot` - - Population snapshot.
-- `firstIndex` - - First genome index.
-- `secondIndex` - - Second genome index.
+- `context` - Neat-like context for lineage helpers.
+- `populationSnapshot` - Population snapshot.
+- `firstIndex` - First genome index.
+- `secondIndex` - Second genome index.
 
 Returns: Jaccard distance or undefined when both sets are empty.
 
@@ -661,7 +661,7 @@ computeParetoFrontSizes(
 Compute sizes of early Pareto fronts.
 
 Parameters:
-- `population` - - Population snapshot.
+- `population` - Population snapshot.
 
 Returns: Array of front sizes (rank 0..4).
 
@@ -677,8 +677,8 @@ countAncestorIntersection(
 Count the size of an ancestor intersection.
 
 Parameters:
-- `ancestorsA` - - First ancestor set.
-- `ancestorsB` - - Second ancestor set.
+- `ancestorsA` - First ancestor set.
+- `ancestorsB` - Second ancestor set.
 
 Returns: Intersection count.
 
@@ -694,8 +694,8 @@ countEnabledEdges(
 Count enabled edges between the selected nodes in a genome.
 
 Parameters:
-- `genome` - - Genome with connections to inspect.
-- `selectedNodes` - - Nodes forming the graphlet sample.
+- `genome` - Genome with connections to inspect.
+- `selectedNodes` - Nodes forming the graphlet sample.
 
 Returns: Edge count capped at 3.
 
@@ -712,8 +712,8 @@ Read a cached entropy value if it exists and belongs to the current
 generation.
 
 Parameters:
-- `generation` - - Current generation number.
-- `entropyGraph` - - Genome-like graph object.
+- `generation` - Current generation number.
+- `entropyGraph` - Genome-like graph object.
 
 Returns: Cached entropy number, or undefined when not available.
 
@@ -730,8 +730,8 @@ Build a snapshot of the core telemetry fields present on the entry; does
 not mutate the source entry.
 
 Parameters:
-- `sourceEntry` - - Source telemetry object.
-- `fields` - - Core telemetry field keys to preserve.
+- `sourceEntry` - Source telemetry object.
+- `fields` - Core telemetry field keys to preserve.
 
 Returns: Shallow snapshot of core fields that exist on the entry.
 
@@ -747,8 +747,8 @@ isLineageEligible(
 Check whether lineage metrics should be computed.
 
 Parameters:
-- `context` - - Neat-like context with lineage flag.
-- `populationSnapshot` - - Population snapshot to validate.
+- `context` - Neat-like context with lineage flag.
+- `populationSnapshot` - Population snapshot to validate.
 
 Returns: True when lineage stats should be computed.
 
@@ -765,8 +765,8 @@ Re-attach core fields to the filtered entry.
 Mutates the entry so the caller keeps the original reference.
 
 Parameters:
-- `sourceEntry` - - Filtered telemetry entry to update.
-- `coreSnapshot` - - Snapshot of core fields to ensure presence.
+- `sourceEntry` - Filtered telemetry entry to update.
+- `coreSnapshot` - Snapshot of core fields to ensure presence.
 
 Returns: The same entry reference with core fields restored.
 
@@ -783,9 +783,9 @@ pickDistinctIndices(
 Pick a fixed number of distinct random indices.
 
 Parameters:
-- `upperBound` - - Exclusive upper bound for random indices.
-- `count` - - Number of distinct indices to pick.
-- `rng` - - RNG function returning values in [0,1).
+- `upperBound` - Exclusive upper bound for random indices.
+- `count` - Number of distinct indices to pick.
+- `rng` - RNG function returning values in [0,1).
 
 Returns: Array of distinct indices.
 
@@ -801,8 +801,8 @@ pickDistinctPairIndices(
 Pick two distinct indices using the context RNG.
 
 Parameters:
-- `context` - - Neat-like context with RNG factory.
-- `populationSize` - - Population size for index bounds.
+- `context` - Neat-like context with RNG factory.
+- `populationSize` - Population size for index bounds.
 
 Returns: Pair of distinct indices.
 
@@ -817,7 +817,7 @@ readOperatorStats(
 Convert operator stats map into the public accessor shape.
 
 Parameters:
-- `operatorStats` - - Operator stats map stored on the host.
+- `operatorStats` - Operator stats map stored on the host.
 
 Returns: Public operator summaries for dashboards and tests.
 
@@ -834,9 +834,9 @@ safelyApplyTelemetrySelect(
 Apply telemetry selection while swallowing selection errors.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with telemetry selection.
-- `telemetryEntry` - - Entry to filter in place.
-- `applyTelemetrySelectFn` - - Selection helper to invoke.
+- `telemetryContext` - Neat-like context with telemetry selection.
+- `telemetryEntry` - Entry to filter in place.
+- `applyTelemetrySelectFn` - Selection helper to invoke.
 
 ### setCachedEntropy
 
@@ -851,9 +851,9 @@ setCachedEntropy(
 Cache an entropy value for the current generation on the graph object.
 
 Parameters:
-- `generation` - - Current generation number.
-- `entropyGraph` - - Genome-like graph object.
-- `entropyValue` - - Entropy value to cache.
+- `generation` - Current generation number.
+- `entropyGraph` - Genome-like graph object.
+- `entropyValue` - Entropy value to cache.
 
 ### stripUnselectedTelemetryKeys
 
@@ -869,9 +869,9 @@ Remove non-core keys that are not whitelisted by the selection set.
 Mutates the provided entry in-place for efficiency.
 
 Parameters:
-- `sourceEntry` - - Telemetry entry being filtered.
-- `selection` - - Whitelist of additional telemetry keys.
-- `fields` - - Core telemetry field keys that must be preserved.
+- `sourceEntry` - Telemetry entry being filtered.
+- `selection` - Whitelist of additional telemetry keys.
+- `fields` - Core telemetry field keys that must be preserved.
 
 Returns: The same entry reference after filtering.
 
@@ -890,9 +890,9 @@ applyRngState(
 Attach RNG state when configured.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with RNG state.
-- `telemetryOptions` - - Options controlling RNG telemetry.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with RNG state.
+- `telemetryOptions` - Options controlling RNG telemetry.
+- `entry` - Telemetry entry to update.
 
 ## neat/telemetry/metrics/telemetry.metrics.entropy.ts
 
@@ -907,7 +907,7 @@ buildDegreeHistogram(
 Build a histogram of degree frequencies from a degree-count table.
 
 Parameters:
-- `counts` - - Map geneId -> degree count.
+- `counts` - Map geneId -> degree count.
 
 Returns: Map degree -> number of nodes with that degree.
 
@@ -922,7 +922,7 @@ computeDegreeCounts(
 Compute per-node degree counts for enabled connections.
 
 Parameters:
-- `entropyGraph` - - Genome-like graph object.
+- `entropyGraph` - Genome-like graph object.
 
 Returns: Map geneId -> degree count.
 
@@ -938,8 +938,8 @@ computeEntropyFromHistogram(
 Compute entropy from a degree-frequency histogram.
 
 Parameters:
-- `histogram` - - Map degree -> number of nodes.
-- `totalNodes` - - Total node count used to normalize into probabilities.
+- `histogram` - Map degree -> number of nodes.
+- `totalNodes` - Total node count used to normalize into probabilities.
 
 Returns: Entropy value (non-negative).
 
@@ -956,8 +956,8 @@ Read a cached entropy value if it exists and belongs to the current
 generation.
 
 Parameters:
-- `generation` - - Current generation number.
-- `entropyGraph` - - Genome-like graph object.
+- `generation` - Current generation number.
+- `entropyGraph` - Genome-like graph object.
 
 Returns: Cached entropy number, or undefined when not available.
 
@@ -974,9 +974,9 @@ setCachedEntropy(
 Cache an entropy value for the current generation on the graph object.
 
 Parameters:
-- `generation` - - Current generation number.
-- `entropyGraph` - - Genome-like graph object.
-- `entropyValue` - - Entropy value to cache.
+- `generation` - Current generation number.
+- `entropyGraph` - Genome-like graph object.
+- `entropyValue` - Entropy value to cache.
 
 ## neat/telemetry/metrics/telemetry.metrics.lineage.ts
 
@@ -993,9 +993,9 @@ applyLineageStatsMonoObjective(
 Apply lineage stats for mono-objective mode using sampled ancestors.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with lineage settings.
-- `population` - - Population snapshot.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with lineage settings.
+- `population` - Population snapshot.
+- `entry` - Telemetry entry to update.
 
 ### applyLineageStatsMultiObjective
 
@@ -1010,9 +1010,9 @@ applyLineageStatsMultiObjective(
 Apply lineage stats for multi-objective mode using ancestor uniqueness.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with lineage settings.
-- `population` - - Population snapshot.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with lineage settings.
+- `population` - Population snapshot.
+- `entry` - Telemetry entry to update.
 
 ### buildLineageContext
 
@@ -1026,8 +1026,8 @@ buildLineageContext(
 Build a lineage helper context for ancestor operations.
 
 Parameters:
-- `context` - - Neat-like context with RNG helpers.
-- `populationSnapshot` - - Population snapshot.
+- `context` - Neat-like context with RNG helpers.
+- `populationSnapshot` - Population snapshot.
 
 Returns: Lineage helper context.
 
@@ -1045,10 +1045,10 @@ buildLineageEntry(
 Build the lineage entry payload.
 
 Parameters:
-- `context` - - Neat-like context with lineage info.
-- `bestGenomeSnapshot` - - Best genome snapshot.
-- `meanDepthValue` - - Mean lineage depth.
-- `ancestorUniquenessScore` - - Ancestor uniqueness score.
+- `context` - Neat-like context with lineage info.
+- `bestGenomeSnapshot` - Best genome snapshot.
+- `meanDepthValue` - Mean lineage depth.
+- `ancestorUniquenessScore` - Ancestor uniqueness score.
 
 Returns: Lineage entry payload.
 
@@ -1063,7 +1063,7 @@ collectDepths(
 Collect depth values for the current population.
 
 Parameters:
-- `populationSnapshot` - - Population snapshot.
+- `populationSnapshot` - Population snapshot.
 
 Returns: Array of depth values (defaults to 0).
 
@@ -1079,8 +1079,8 @@ computeAncestorUniquenessSampled(
 Compute ancestor uniqueness using sampled Jaccard distance.
 
 Parameters:
-- `context` - - Neat-like context with RNG helpers.
-- `populationSnapshot` - - Population snapshot.
+- `context` - Neat-like context with RNG helpers.
+- `populationSnapshot` - Population snapshot.
 
 Returns: Rounded ancestor uniqueness score.
 
@@ -1099,11 +1099,11 @@ computeLineageStats(
 Compute lineage depth and pairwise depth-distance statistics.
 
 Parameters:
-- `lineageEnabled` - - Whether lineage metrics are enabled.
-- `genomes` - - Population snapshot.
-- `size` - - Population size.
-- `pairSampleCount` - - Number of pairs to sample.
-- `rngFactoryFn` - - RNG factory returning a uniform random function.
+- `lineageEnabled` - Whether lineage metrics are enabled.
+- `genomes` - Population snapshot.
+- `size` - Population size.
+- `pairSampleCount` - Number of pairs to sample.
+- `rngFactoryFn` - RNG factory returning a uniform random function.
 
 Returns: Lineage mean depth and pairwise distance.
 
@@ -1118,7 +1118,7 @@ computeMeanDepth(
 Compute the mean depth from a depth list.
 
 Parameters:
-- `depthValues` - - Depth values to average.
+- `depthValues` - Depth values to average.
 
 Returns: Mean depth value.
 
@@ -1136,10 +1136,10 @@ computePairJaccardDistance(
 Compute Jaccard distance between ancestor sets for a pair.
 
 Parameters:
-- `context` - - Neat-like context for lineage helpers.
-- `populationSnapshot` - - Population snapshot.
-- `firstIndex` - - First genome index.
-- `secondIndex` - - Second genome index.
+- `context` - Neat-like context for lineage helpers.
+- `populationSnapshot` - Population snapshot.
+- `firstIndex` - First genome index.
+- `secondIndex` - Second genome index.
 
 Returns: Jaccard distance or undefined when both sets are empty.
 
@@ -1155,10 +1155,20 @@ countAncestorIntersection(
 Count the size of an ancestor intersection.
 
 Parameters:
-- `ancestorsA` - - First ancestor set.
-- `ancestorsB` - - Second ancestor set.
+- `ancestorsA` - First ancestor set.
+- `ancestorsB` - Second ancestor set.
 
 Returns: Intersection count.
+
+### createMathRandomFactory
+
+```ts
+createMathRandomFactory(): () => number
+```
+
+Create a default RNG factory backed by Math.random.
+
+Returns: RNG factory returning Math.random.
 
 ### isLineageEligible
 
@@ -1172,8 +1182,8 @@ isLineageEligible(
 Check whether lineage metrics should be computed.
 
 Parameters:
-- `context` - - Neat-like context with lineage flag.
-- `populationSnapshot` - - Population snapshot to validate.
+- `context` - Neat-like context with lineage flag.
+- `populationSnapshot` - Population snapshot to validate.
 
 Returns: True when lineage stats should be computed.
 
@@ -1189,10 +1199,25 @@ pickDistinctPairIndices(
 Pick two distinct indices using the context RNG.
 
 Parameters:
-- `context` - - Neat-like context with RNG factory.
-- `populationSize` - - Population size for index bounds.
+- `context` - Neat-like context with RNG factory.
+- `populationSize` - Population size for index bounds.
 
 Returns: Pair of distinct indices.
+
+### resolveLineageRngFactory
+
+```ts
+resolveLineageRngFactory(
+  providedRngFactory: (() => () => number) | undefined,
+): () => () => number
+```
+
+Resolve the RNG factory used by lineage helpers.
+
+Parameters:
+- `providedRngFactory` - Optional caller-provided RNG factory.
+
+Returns: Caller RNG factory or the Math.random fallback.
 
 ## neat/telemetry/metrics/telemetry.metrics.operator.ts
 
@@ -1207,7 +1232,7 @@ computeOperatorStatsSnapshot(
 Snapshot operator statistics into a telemetry-friendly array.
 
 Parameters:
-- `operatorStats` - - Operator stats map (opName -> success/attempts).
+- `operatorStats` - Operator stats map (opName -> success/attempts).
 
 Returns: Operator stats snapshot array.
 
@@ -1222,7 +1247,7 @@ readOperatorStats(
 Convert operator stats map into the public accessor shape.
 
 Parameters:
-- `operatorStats` - - Operator stats map stored on the host.
+- `operatorStats` - Operator stats map stored on the host.
 
 Returns: Public operator summaries for dashboards and tests.
 
@@ -1240,8 +1265,8 @@ applyFastModeDefaults(
 Apply fast-mode tuning to diversity sampling and novelty defaults.
 
 Parameters:
-- `telemetryContext` - - Context object storing fast-mode tuning flag.
-- `telemetryOptions` - - Options with diversity and novelty settings.
+- `telemetryContext` - Context object storing fast-mode tuning flag.
+- `telemetryOptions` - Options with diversity and novelty settings.
 
 ### computeCompatibilityStats
 
@@ -1258,11 +1283,11 @@ computeCompatibilityStats(
 Compute pairwise compatibility statistics via sampling.
 
 Parameters:
-- `genomes` - - Population snapshot.
-- `size` - - Population size.
-- `pairSampleCount` - - Number of pairs to sample.
-- `rngFactoryFn` - - RNG factory returning a uniform random function.
-- `compatibilityDistance` - - Optional compatibility distance function.
+- `genomes` - Population snapshot.
+- `size` - Population size.
+- `pairSampleCount` - Number of pairs to sample.
+- `rngFactoryFn` - RNG factory returning a uniform random function.
+- `compatibilityDistance` - Optional compatibility distance function.
 
 Returns: Mean and variance of sampled compatibilities.
 
@@ -1278,8 +1303,8 @@ computeEntropyStats(
 Compute structural entropy mean and variance across the population.
 
 Parameters:
-- `genomes` - - Population snapshot.
-- `structuralEntropyFn` - - Function to compute entropy for a genome.
+- `genomes` - Population snapshot.
+- `structuralEntropyFn` - Function to compute entropy for a genome.
 
 Returns: Mean and variance of entropy values.
 
@@ -1297,10 +1322,10 @@ computeGraphletEntropy(
 Sample graphlet motifs and compute entropy over their edge counts.
 
 Parameters:
-- `genomes` - - Population snapshot.
-- `size` - - Population size.
-- `graphletSampleCount` - - Number of graphlets to sample.
-- `rngFactoryFn` - - RNG factory returning a uniform random function.
+- `genomes` - Population snapshot.
+- `size` - Population size.
+- `graphletSampleCount` - Number of graphlets to sample.
+- `rngFactoryFn` - RNG factory returning a uniform random function.
 
 Returns: Graphlet entropy value.
 
@@ -1316,8 +1341,8 @@ countEnabledEdges(
 Count enabled edges between the selected nodes in a genome.
 
 Parameters:
-- `genome` - - Genome with connections to inspect.
-- `selectedNodes` - - Nodes forming the graphlet sample.
+- `genome` - Genome with connections to inspect.
+- `selectedNodes` - Nodes forming the graphlet sample.
 
 Returns: Edge count capped at 3.
 
@@ -1334,9 +1359,9 @@ pickDistinctIndices(
 Pick a fixed number of distinct random indices.
 
 Parameters:
-- `upperBound` - - Exclusive upper bound for random indices.
-- `count` - - Number of distinct indices to pick.
-- `rng` - - RNG function returning values in [0,1).
+- `upperBound` - Exclusive upper bound for random indices.
+- `count` - Number of distinct indices to pick.
+- `rng` - RNG function returning values in [0,1).
 
 Returns: Array of distinct indices.
 
@@ -1355,8 +1380,8 @@ Build a snapshot of the core telemetry fields present on the entry; does
 not mutate the source entry.
 
 Parameters:
-- `sourceEntry` - - Source telemetry object.
-- `fields` - - Core telemetry field keys to preserve.
+- `sourceEntry` - Source telemetry object.
+- `fields` - Core telemetry field keys to preserve.
 
 Returns: Shallow snapshot of core fields that exist on the entry.
 
@@ -1373,8 +1398,8 @@ Re-attach core fields to the filtered entry.
 Mutates the entry so the caller keeps the original reference.
 
 Parameters:
-- `sourceEntry` - - Filtered telemetry entry to update.
-- `coreSnapshot` - - Snapshot of core fields to ensure presence.
+- `sourceEntry` - Filtered telemetry entry to update.
+- `coreSnapshot` - Snapshot of core fields to ensure presence.
 
 Returns: The same entry reference with core fields restored.
 
@@ -1391,9 +1416,9 @@ safelyApplyTelemetrySelect(
 Apply telemetry selection while swallowing selection errors.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with telemetry selection.
-- `telemetryEntry` - - Entry to filter in place.
-- `applyTelemetrySelectFn` - - Selection helper to invoke.
+- `telemetryContext` - Neat-like context with telemetry selection.
+- `telemetryEntry` - Entry to filter in place.
+- `applyTelemetrySelectFn` - Selection helper to invoke.
 
 ### stripUnselectedTelemetryKeys
 
@@ -1409,9 +1434,9 @@ Remove non-core keys that are not whitelisted by the selection set.
 Mutates the provided entry in-place for efficiency.
 
 Parameters:
-- `sourceEntry` - - Telemetry entry being filtered.
-- `selection` - - Whitelist of additional telemetry keys.
-- `fields` - - Core telemetry field keys that must be preserved.
+- `sourceEntry` - Telemetry entry being filtered.
+- `selection` - Whitelist of additional telemetry keys.
+- `fields` - Core telemetry field keys that must be preserved.
 
 Returns: The same entry reference after filtering.
 
@@ -1431,9 +1456,9 @@ applyComplexityStatsMonoObjective(
 Attach complexity stats for mono-objective mode.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with population state.
-- `telemetryOptions` - - Options controlling complexity telemetry.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with population state.
+- `telemetryOptions` - Options controlling complexity telemetry.
+- `entry` - Telemetry entry to update.
 
 ### applyComplexityStatsMultiObjective
 
@@ -1449,10 +1474,10 @@ applyComplexityStatsMultiObjective(
 Attach complexity stats for multi-objective mode.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with population state.
-- `telemetryOptions` - - Options controlling complexity telemetry.
-- `population` - - Population snapshot.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with population state.
+- `telemetryOptions` - Options controlling complexity telemetry.
+- `population` - Population snapshot.
+- `entry` - Telemetry entry to update.
 
 ### buildComplexityEntry
 
@@ -1469,11 +1494,11 @@ buildComplexityEntry(
 Build the complexity entry payload for multi-objective mode.
 
 Parameters:
-- `telemetryOptions` - - Options controlling complexity telemetry.
-- `meanCounts` - - Mean node/connection counts.
-- `maxCounts` - - Max node/connection counts.
-- `meanEnabledRatio` - - Mean enabled ratio.
-- `growthValues` - - Growth deltas.
+- `telemetryOptions` - Options controlling complexity telemetry.
+- `meanCounts` - Mean node/connection counts.
+- `maxCounts` - Max node/connection counts.
+- `meanEnabledRatio` - Mean enabled ratio.
+- `growthValues` - Growth deltas.
 
 Returns: Complexity entry payload.
 
@@ -1488,7 +1513,7 @@ collectPopulationCounts(
 Collect node and connection counts for the population.
 
 Parameters:
-- `populationSnapshot` - - Population snapshot.
+- `populationSnapshot` - Population snapshot.
 
 Returns: Node and connection counts arrays.
 
@@ -1504,8 +1529,8 @@ computeAndStoreGrowthValues(
 Compute growth values and store the latest means on the context.
 
 Parameters:
-- `context` - - Neat-like context with previous mean values.
-- `meanCounts` - - Current mean node/connection counts.
+- `context` - Neat-like context with previous mean values.
+- `meanCounts` - Current mean node/connection counts.
 
 Returns: Growth values for nodes and connections.
 
@@ -1520,7 +1545,7 @@ computeEnabledRatios(
 Compute enabled ratios per genome.
 
 Parameters:
-- `populationSnapshot` - - Population snapshot.
+- `populationSnapshot` - Population snapshot.
 
 Returns: Array of enabled ratios.
 
@@ -1535,7 +1560,7 @@ computeMaxCounts(
 Compute max node and connection counts.
 
 Parameters:
-- `counts` - - Node and connection counts arrays.
+- `counts` - Node and connection counts arrays.
 
 Returns: Max node and connection counts.
 
@@ -1550,7 +1575,7 @@ computeMeanCounts(
 Compute mean node and connection counts.
 
 Parameters:
-- `counts` - - Node and connection counts arrays.
+- `counts` - Node and connection counts arrays.
 
 Returns: Mean node and connection counts.
 
@@ -1565,7 +1590,7 @@ computeMeanEnabledRatio(
 Compute mean of enabled ratios.
 
 Parameters:
-- `enabledRatios` - - Enabled ratios per genome.
+- `enabledRatios` - Enabled ratios per genome.
 
 Returns: Mean enabled ratio.
 
@@ -1584,9 +1609,9 @@ applyHypervolumeTelemetry(
 Attach hypervolume scalar when requested.
 
 Parameters:
-- `telemetryOptions` - - Options controlling telemetry fields.
-- `hyperVolumeProxy` - - Hypervolume proxy value.
-- `entry` - - Telemetry entry to update.
+- `telemetryOptions` - Options controlling telemetry fields.
+- `hyperVolumeProxy` - Hypervolume proxy value.
+- `entry` - Telemetry entry to update.
 
 ### applyObjectiveAges
 
@@ -1600,8 +1625,8 @@ applyObjectiveAges(
 Apply objective age snapshots to the entry.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with objective ages.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with objective ages.
+- `entry` - Telemetry entry to update.
 
 ### applyObjectiveEvents
 
@@ -1616,9 +1641,9 @@ applyObjectiveEvents(
 Apply and flush objective lifecycle events.
 
 Parameters:
-- `telemetryContext` - - Neat-like context holding objective events.
-- `entry` - - Telemetry entry to update.
-- `generation` - - Generation index for event records.
+- `telemetryContext` - Neat-like context holding objective events.
+- `entry` - Telemetry entry to update.
+- `generation` - Generation index for event records.
 
 ### applyObjectiveImportance
 
@@ -1632,8 +1657,8 @@ applyObjectiveImportance(
 Apply the most recent objective importance snapshot.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with objective importance.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with objective importance.
+- `entry` - Telemetry entry to update.
 
 ### applyObjectivesSnapshot
 
@@ -1647,8 +1672,8 @@ applyObjectivesSnapshot(
 Apply objectives list snapshot (keys only).
 
 Parameters:
-- `telemetryContext` - - Neat-like context with objective provider.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with objective provider.
+- `entry` - Telemetry entry to update.
 
 ### applySpeciesAllocation
 
@@ -1662,8 +1687,8 @@ applySpeciesAllocation(
 Apply per-species offspring allocation snapshot.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with allocation snapshot.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with allocation snapshot.
+- `entry` - Telemetry entry to update.
 
 ### computeHyperVolumeProxy
 
@@ -1677,8 +1702,8 @@ computeHyperVolumeProxy(
 Compute a hypervolume-like proxy for the Pareto front.
 
 Parameters:
-- `telemetryOptions` - - Options controlling complexity metric.
-- `population` - - Population snapshot.
+- `telemetryOptions` - Options controlling complexity metric.
+- `population` - Population snapshot.
 
 Returns: Hypervolume proxy value.
 
@@ -1693,7 +1718,7 @@ computeParetoFrontSizes(
 Compute sizes of early Pareto fronts.
 
 Parameters:
-- `population` - - Population snapshot.
+- `population` - Population snapshot.
 
 Returns: Array of front sizes (rank 0..4).
 
@@ -1712,6 +1737,6 @@ applyPerformanceStats(
 Attach performance stats when configured.
 
 Parameters:
-- `telemetryContext` - - Neat-like context with performance data.
-- `telemetryOptions` - - Options controlling performance telemetry.
-- `entry` - - Telemetry entry to update.
+- `telemetryContext` - Neat-like context with performance data.
+- `telemetryOptions` - Options controlling performance telemetry.
+- `entry` - Telemetry entry to update.

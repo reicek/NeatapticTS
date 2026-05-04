@@ -63,8 +63,8 @@ useful for telemetry, charts, and quick frontier-history questions, but it is
 not designed to reconstruct full genome state later.
 
 Parameters:
-- `neatInstance` - - Neat instance.
-- `fronts` - - Ordered Pareto fronts from the current ranking pass.
+- `neatInstance` - Neat instance.
+- `fronts` - Ordered Pareto fronts from the current ranking pass.
 
 ### MAX_PARETO_ARCHIVE_FRONTS
 

@@ -42,6 +42,31 @@ export const FLAPPY_BROWSER_POPULATION_SIZE = 5;
 export const FLAPPY_BROWSER_ELITISM_COUNT = 1;
 
 /**
+ * Pipe-count milestone that marks a browser run as "good enough" to downshift.
+ *
+ * Once a generation clears this bar, future browser generations can shrink to a
+ * lighter flock without losing the core demonstration that the selected
+ * architecture is already solving pipes in the live demo.
+ */
+export const FLAPPY_BROWSER_SUCCESS_PIPE_TARGET = 10;
+
+/**
+ * Reduced browser population size used after a live run has already hit the success bar.
+ *
+ * The downshift keeps later browser generations cheaper once an architecture is
+ * already demonstrating stable pipe-clearing behavior.
+ */
+export const FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE = 8;
+
+/**
+ * Reduced browser elitism count paired with the post-success population downshift.
+ *
+ * Two elites keep a small continuity shelf while still leaving most of the
+ * reduced flock available for visible variation.
+ */
+export const FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_ELITISM_COUNT = 2;
+
+/**
  * Deterministic default RNG seed shared by browser runtime and trainer flows.
  *
  * Reusing one canonical seed makes debugging and README examples more
@@ -63,6 +88,9 @@ export const FLAPPY_HUD_ZERO_TEXT = '0';
 
 /** Shared HUD value for decimal zero fields. */
 export const FLAPPY_HUD_ZERO_DECIMAL_TEXT = '0.00';
+
+/** Shared HUD value for metrics that are not available yet. */
+export const FLAPPY_HUD_PLACEHOLDER_TEXT = '-';
 
 /** Shared HUD value when a metric is intentionally disabled. */
 export const FLAPPY_HUD_OFF_TEXT = 'off';

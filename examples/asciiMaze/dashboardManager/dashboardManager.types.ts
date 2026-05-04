@@ -1,5 +1,6 @@
 import type Neat from '../../../src/neat';
 import type {
+  IActivationSchedulingDiagnostics,
   IDashboardManager,
   IMazeRunResult,
   INetwork,
@@ -52,6 +53,15 @@ export interface AsciiMazeComplexityStats extends NumericTelemetryMap {
 
 export type MutationStatsMap = Record<string, unknown>;
 
+/** Public scheduling snapshot retained in dashboard details and exports. */
+export interface AsciiMazeActivationSchedulingStats {
+  requestedMode: IActivationSchedulingDiagnostics['requestedMode'] | null;
+  executionPath: IActivationSchedulingDiagnostics['executionPath'] | null;
+  issue: IActivationSchedulingDiagnostics['issue'] | null;
+  stepCount: number;
+  recurrentComponentCount: number;
+}
+
 /** Raw telemetry shape received from NEAT dashboard integrations. */
 export interface DashboardTelemetry {
   complexity?: AsciiMazeComplexityStats | null;
@@ -102,6 +112,7 @@ export interface AsciiMazeDetailedStats {
   bestFitnessDelta: number | null;
   saturationFraction: number | null;
   actionEntropy: number | null;
+  activationScheduling: AsciiMazeActivationSchedulingStats | null;
   populationMean: number | null;
   populationMedian: number | null;
   enabledConnRatio: number | null;

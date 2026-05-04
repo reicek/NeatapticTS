@@ -85,8 +85,7 @@ export function computeEntropyFromHistogram(
   for (const [degree, frequency] of Object.entries(histogram)) {
     void degree;
     const probability = frequency / totalNodes;
-    if (probability > 0)
-      entropy -= probability * Math.log(probability + EPSILON);
+    entropy -= probability * Math.log(probability + EPSILON);
   }
   // Step 2: Return the computed entropy.
   return entropy;

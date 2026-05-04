@@ -20,6 +20,19 @@ describe('neat telemetry facade novelty chapter', () => {
         expect(archiveSize).toBe(3);
       });
     });
+
+    describe('given the host has no novelty archive yet', () => {
+      it('returns zero', () => {
+        // Arrange
+        const host: TelemetryFacadeNoveltyHost = {};
+
+        // Act
+        const archiveSize = getNoveltyArchiveSize(host);
+
+        // Assert
+        expect(archiveSize).toBe(0);
+      });
+    });
   });
 
   describe('resetNoveltyArchive', () => {

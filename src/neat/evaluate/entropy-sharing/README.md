@@ -69,11 +69,11 @@ The returned value is always clamped to the configured minimum and maximum,
 which keeps tuning predictable even when entropy measurements swing sharply.
 
 Parameters:
-- `entropySharingOptions` - - Tuning options that define the target
+- `entropySharingOptions` - Tuning options that define the target
 entropy variance, adjustment rate, and clamp bounds.
-- `currentVarEntropy` - - Freshly observed variance of structural entropy
+- `currentVarEntropy` - Freshly observed variance of structural entropy
 for the current population.
-- `currentSigma` - - Current sharing sigma before this adjustment.
+- `currentSigma` - Current sharing sigma before this adjustment.
 
 Returns: Next sharing sigma value to carry into later controller passes.
 
@@ -104,7 +104,7 @@ post-score measurements. The container is created lazily so callers do not
 need to pre-seed optional diversity state during controller construction.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
+- `controller` - NEAT controller instance for evaluation.
 
 ### runEntropySharingTuning
 
@@ -133,8 +133,8 @@ evaluated population while still benefiting from a tuned sharing radius on
 the next cycle.
 
 Parameters:
-- `controller` - - NEAT controller instance for evaluation.
-- `evaluationOptions` - - Options object for the current evaluation pass.
+- `controller` - NEAT controller instance for evaluation.
+- `evaluationOptions` - Options object for the current evaluation pass.
 
 Example:
 

@@ -37,6 +37,17 @@
 // Compatibility core symbol contracts begin below.
 
 /**
+ * Compatibility-innovation policy for one genome comparison surface.
+ *
+ * Native controller genomes should stay on `require-explicit`, which means
+ * compatibility reads expect every connection gene to carry a finite
+ * innovation number. Legacy, imported, or deliberately partial genomes may opt
+ * into `allow-fallback` so comparison can still proceed with endpoint-derived
+ * synthetic ids.
+ */
+export type CompatibilityInnovationMode = 'require-explicit' | 'allow-fallback';
+
+/**
  * Shape of a connection entry used during compatibility checks.
  *
  * The mechanics layer only needs endpoint indices, an optional innovation id,
@@ -67,8 +78,16 @@ export interface GenomeLike {
   _id?: number;
   /** Raw connection list that will be normalized into innovation-weight pairs. */
   connections: ConnectionLike[];
-  /** Optional cached sorted innovation list for the current generation's comparisons. */
+  /**
+   * Optional cached sorted innovation list for the current generation's native comparisons.
+   *
+   * This cache is reserved for explicit-innovation views only. Any connection
+   * insertion, removal, innovation rewrite, weight rewrite, or compatibility
+   * mode change must invalidate `_compatCache` before the next comparison.
+   */
   _compatCache?: Array<[number, number]>;
+  /** Optional compatibility mode for legacy/imported/partial genomes. */
+  _compatInnovationMode?: CompatibilityInnovationMode;
 }
 
 /**
@@ -94,7 +113,7 @@ export interface NeatLikeForCompat {
   _compatCacheGen?: number;
   /** Pairwise distance cache for the current generation's already-compared genome pairs. */
   _compatDistCache?: Map<string, number>;
-  /** Deterministic fallback innovation id generator for legacy or partially normalized connections. */
+  /** Deterministic fallback innovation id generator used only by fallback-allowed genomes. */
   _fallbackInnov: (connection: ConnectionLike) => number;
 }
 

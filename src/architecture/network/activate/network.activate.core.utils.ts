@@ -6,7 +6,6 @@ import {
   INITIAL_OUTPUT_WRITE_INDEX,
   INPUT_NODE_TYPE,
   OUTPUT_NODE_TYPE,
-  OUTPUT_WRITE_INDEX_INCREMENT,
   UNDEFINED_INPUT_LENGTH_TEXT,
 } from './network.activate.utils.types';
 import type {
@@ -25,6 +24,11 @@ import {
   NetworkActivateCorruptedStructureError,
   NetworkActivateInputSizeMismatchError,
 } from './network.activate.errors';
+import {
+  resolveActivationTraversalNodes,
+  resolveInputValuesByNodeId,
+  resolveOrderedOutputNodes,
+} from './network.activate.schedule.utils';
 
 /**
  * Produce a normally distributed random sample using the Box-Muller transform.
@@ -75,6 +79,7 @@ export function activate(
     this,
     runtimeNetwork,
     training,
+    stats,
   );
 
   updateStochasticDepthFromSchedule(runtimeNetwork, training);
@@ -93,7 +98,7 @@ export function activate(
 }
 
 /**
- * Ensure topological order is refreshed before activation when acyclic mode requires it.
+ * Ensure compiled activation scheduling is refreshed before activation when topology changed.
  *
  * @param runtimeNetwork Runtime activation internals.
  * @returns Nothing.
@@ -101,7 +106,7 @@ export function activate(
 function prepareTopologyForActivation(
   runtimeNetwork: ActivateRuntimeNetworkProps,
 ): void {
-  if (runtimeNetwork._enforceAcyclic && runtimeNetwork._topoDirty) {
+  if (runtimeNetwork._topoDirty) {
     runtimeNetwork._computeTopoOrder();
   }
 }
@@ -218,12 +223,14 @@ function createWeightNoiseStats(): WeightNoiseStats {
  * @param network Network being activated.
  * @param runtimeNetwork Runtime activation internals.
  * @param isTraining Training-time flag.
+ * @param stats Activation stats accumulator.
  * @returns Applied-state information for downstream restore logic.
  */
 function applyTrainingWeightNoise(
   network: Network,
   runtimeNetwork: ActivateRuntimeNetworkProps,
   isTraining: boolean,
+  stats: ActivationStats,
 ): WeightNoiseApplyResult {
   if (!isTraining) {
     return { appliedWeightNoise: false };
@@ -259,6 +266,7 @@ function applyTrainingWeightNoise(
         standardDeviation * gaussianRand(runtimeNetwork._rand);
       connection.weight += sampledNoise;
       setLastSampledNoise(connection, sampledNoise);
+      recordWeightNoiseSample(stats, sampledNoise);
       appliedWeightNoise = true;
       continue;
     }
@@ -267,6 +275,24 @@ function applyTrainingWeightNoise(
   }
 
   return { appliedWeightNoise };
+}
+
+/**
+ * Record one sampled weight-noise value in the activation statistics snapshot.
+ *
+ * @param stats Activation stats accumulator.
+ * @param sampledNoise Sampled noise value before restoration.
+ * @returns Nothing.
+ */
+function recordWeightNoiseSample(
+  stats: ActivationStats,
+  sampledNoise: number,
+): void {
+  const absoluteNoise = Math.abs(sampledNoise);
+
+  stats.weightNoise.count++;
+  stats.weightNoise.sumAbs += absoluteNoise;
+  stats.weightNoise.maxAbs = Math.max(stats.weightNoise.maxAbs, absoluteNoise);
 }
 
 /**
@@ -311,10 +337,6 @@ function resolveConnectionNoiseStd(
   }
 
   const hiddenLayerIndex = sourceLayerIndex - 1;
-
-  if (hiddenLayerIndex < 0) {
-    return fallbackStandardDeviation;
-  }
 
   if (hiddenLayerIndex >= runtimeNetwork._weightNoisePerHidden.length) {
     return fallbackStandardDeviation;
@@ -845,7 +867,7 @@ function setAllMasksToOne(nodes: NetworkLayerNodes): void {
 }
 
 /**
- * Run fallback node-by-node activation for networks without explicit layer definitions.
+ * Run schedule-aware node activation for networks without explicit layer definitions.
  *
  * @param network Network being activated.
  * @param runtimeNetwork Runtime activation internals.
@@ -864,6 +886,9 @@ function activateNodeNetworkFallback(
   stats: ActivationStats,
 ): void {
   const hiddenNodes = collectHiddenNodes(network.nodes);
+  const activationNodes = resolveActivationTraversalNodes(network);
+  const inputValuesByNodeId = resolveInputValuesByNodeId(network, inputVector);
+  const orderedOutputNodes = resolveOrderedOutputNodes(network);
 
   applyFallbackHiddenDropout(
     hiddenNodes,
@@ -873,8 +898,13 @@ function activateNodeNetworkFallback(
     stats,
   );
 
-  applyFallbackWeightNoise(network, runtimeNetwork, isTraining);
-  activateNodesAndCollectOutputs(network.nodes, inputVector, outputBuffer);
+  applyFallbackWeightNoise(network, runtimeNetwork, isTraining, stats);
+  activateNodesAndCollectOutputs(
+    activationNodes,
+    inputValuesByNodeId,
+    orderedOutputNodes,
+    outputBuffer,
+  );
 
   applyDropConnect(network, runtimeNetwork, isTraining, stats);
 }
@@ -949,12 +979,14 @@ function applyFallbackHiddenDropout(
  * @param network Network being activated.
  * @param runtimeNetwork Runtime activation internals.
  * @param isTraining Training-time flag.
+ * @param stats Activation stats accumulator.
  * @returns Nothing.
  */
 function applyFallbackWeightNoise(
   network: Network,
   runtimeNetwork: ActivateRuntimeNetworkProps,
   isTraining: boolean,
+  stats: ActivationStats,
 ): void {
   if (!isTraining || runtimeNetwork._weightNoiseStd <= 0) {
     return;
@@ -980,40 +1012,45 @@ function applyFallbackWeightNoise(
     const sampledNoise =
       runtimeNetwork._weightNoiseStd * gaussianRand(runtimeNetwork._rand);
     connection.weight += sampledNoise;
+    recordWeightNoiseSample(stats, sampledNoise);
   }
 }
 
 /**
- * Activate raw nodes in order and collect output-node activations into output buffer.
+ * Activate raw nodes in the resolved execution order and collect outputs by explicit role order.
  *
- * @param nodes Network nodes in activation order.
- * @param inputVector Input vector.
+ * @param activationNodes Network nodes in activation order.
+ * @param inputValuesByNodeId Stable lookup for explicit input-role injection.
+ * @param orderedOutputNodes Output nodes in public vector order.
  * @param outputBuffer Mutable output buffer.
  * @returns Nothing.
  */
 function activateNodesAndCollectOutputs(
-  nodes: Network['nodes'],
-  inputVector: number[],
+  activationNodes: Network['nodes'],
+  inputValuesByNodeId: Map<number, number>,
+  orderedOutputNodes: Network['nodes'],
   outputBuffer: ActivationArray,
 ): void {
-  let outputIndex = INITIAL_OUTPUT_WRITE_INDEX;
-
-  for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
-    const node = nodes[nodeIndex];
-
+  for (const node of activationNodes) {
     if (node.type === INPUT_NODE_TYPE) {
-      node.activate(inputVector[nodeIndex]);
+      node.activate(inputValuesByNodeId.get(node.geneId));
       continue;
     }
 
     if (node.type === OUTPUT_NODE_TYPE) {
-      const activationValue = node.activate();
-      outputBuffer[outputIndex] = activationValue;
-      outputIndex += OUTPUT_WRITE_INDEX_INCREMENT;
+      node.activate();
       continue;
     }
 
     node.activate();
+  }
+
+  for (
+    let outputIndex = INITIAL_OUTPUT_WRITE_INDEX;
+    outputIndex < orderedOutputNodes.length;
+    outputIndex++
+  ) {
+    outputBuffer[outputIndex] = orderedOutputNodes[outputIndex].activation;
   }
 }
 

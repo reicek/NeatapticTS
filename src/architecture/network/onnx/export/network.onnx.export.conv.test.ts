@@ -428,5 +428,52 @@ describe('network onnx export conv chapter', () => {
         });
       });
     });
+
+    describe('given explicit conv and pooling mappings share the same layer', () => {
+      let onnxModel: OnnxModel;
+
+      beforeEach(() => {
+        // Arrange
+        const scenario = createConvGroundworkScenario();
+
+        // Act
+        onnxModel = exportToONNX(scenario.network, {
+          conv2dMappings: scenario.mappings,
+          pool2dMappings: createPoolingMappings(),
+        });
+      });
+
+      describe('when conv layer emission resolves pooling spec by layer index', () => {
+        it('emits a MaxPool operator after conv activation', () => {
+          // Assert
+          expect(hasGraphNodeType(onnxModel, 'MaxPool')).toBe(true);
+        });
+      });
+    });
+  });
+
+  describe('given a conv network where one inbound connection is removed from a hidden node', () => {
+    describe('when the Conv layer is exported with allowPartialConnectivity', () => {
+      it('exports successfully and uses a zero-weight fallback for the missing connection', () => {
+        // Arrange – remove from the hidden node's connections.in so that
+        // resolveInboundWeightOrZero cannot find the connection and ?? 0 fires.
+        // allowPartialConnectivity bypasses the connectivity validation so the
+        // export reaches the weight-lookup code with a missing connection.
+        const scenario = createConvGroundworkScenario();
+        const firstHiddenNode = scenario.network.nodes.find(
+          (nodeEntry) => nodeEntry.type === 'hidden',
+        )!;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (firstHiddenNode as any).connections.in.splice(0, 1);
+
+        // Act & Assert
+        expect(() =>
+          exportToONNX(scenario.network, {
+            conv2dMappings: scenario.mappings,
+            allowPartialConnectivity: true,
+          }),
+        ).not.toThrow();
+      });
+    });
   });
 });

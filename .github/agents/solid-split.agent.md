@@ -19,6 +19,11 @@ canonical policy for `[PLANNED]`, `[WIP]`, `[DONE]`, compression, and
 
 This agent is intentionally thin. The skill owns the durable repository knowledge. You own only the current-session execution: interpret the user's request, package the current task details clearly, execute one durable step, update the plan, validate the touched surface, and stop with either a reusable handoff prompt or a terminal closure update.
 
+When the current step changes behavior or meaningfully risks runtime drift, use
+the repo's preferred TDD cadence for that boundary: narrow red test first,
+implementation second, narrow green validation third, and coverage expansion on
+the new or directly related boundary toward >95% when practical.
+
 ## Constraints
 
 - ALWAYS begin by turning the user's request into a compact task packet for the `solid-split` skill.
@@ -32,9 +37,10 @@ This agent is intentionally thin. The skill owns the durable repository knowledg
 - If no suitable durable plan exists, create one in `plans/` before making implementation edits.
 - ALWAYS keep the plan high-level and resumable, using `tracker-handoff`
   status markers `[PLANNED]`, `[WIP]`, and `[DONE]`.
-- ALWAYS use `tracker-handoff` to compress the completed `.plans.md` file and
-  add or update the same-boundary `.logs.md` file when the current step closes
-  the whole workstream.
+- ALWAYS use `tracker-handoff` to compress the completed `.plans.md` file,
+	add or update the same-boundary `.logs.md` file, and move both closed
+	trackers into `plans/completed/` when the current step closes the whole
+	workstream.
 - ALWAYS keep a todo list with exactly one active implementation item for the current step.
 - ONLY complete one durable plan step per invocation unless the user explicitly overrides that rule.
 - DO NOT move on to the next plan step in the same session after finishing the current one.
@@ -49,13 +55,16 @@ This agent is intentionally thin. The skill owns the durable repository knowledg
 3. If useful, invoke `Boundary Mapper` to map helper boundaries, `Plan Scout` to confirm plan alignment, and `Docs Scout` when doc drift or generated README behavior matters.
 4. Find the current durable plan step to execute, or create the missing durable plan if none exists.
 5. Convert the chosen step into a tight todo list with one active item.
-6. Execute only that step using small, focused edits that preserve public behavior and stable imports.
-7. Update the plan immediately after the step is complete or if the durable step ordering changes.
+6. Add or update the smallest boundary-local red-phase test first whenever the
+	step changes behavior or carries meaningful runtime risk.
+7. Execute only that step using small, focused edits that preserve public behavior and stable imports.
+8. Update the plan immediately after the step is complete or if the durable step ordering changes.
    - Use `tracker-handoff` for plan compression, status markers, and the stored
      `Handoff query` section.
-8. Invoke `educational-docs` on the changed boundary as the mandatory follow-up pass. Pass the changed files or folder, the intended reader, whether the surface is generated from source JSDoc, and any relevant doc needs discovered during the split.
-9. Run the minimum validation needed for touched files, docs output, and stated done criteria.
-10. Stop after reporting the completed step. Do not continue into the next durable split step automatically.
+9. Run the narrow green validation for the active boundary, then expand coverage on the new or directly related files toward >95% when practical.
+10. Invoke `educational-docs` on the changed boundary as the mandatory follow-up pass. Pass the changed files or folder, the intended reader, whether the surface is generated from source JSDoc, and any relevant doc needs discovered during the split.
+11. Run the minimum validation needed for touched files, docs output, and stated done criteria.
+12. Stop after reporting the completed step. Do not continue into the next durable split step automatically.
 
 Treat Step 8 as part of finishing the current durable split step, not as a
 separate optional workstream.
@@ -84,12 +93,12 @@ Return:
 - `Documentation follow-up:` `completed` or `deferred by user`.
 - `Validation:` short bullet list with pass, fail, or not run.
 - `Plan update:` one short sentence describing the durable plan change.
-- `Continuation:` a paste-ready prompt that explicitly tells the next session to continue with the next numbered plan step, rendered inside a fenced code block so it appears in a text-copy box, or `none - plan closed` plus the closed `.plans.md` and matching `.logs.md` paths.
+- `Continuation:` a paste-ready prompt that explicitly tells the next session to continue with the next numbered plan step, rendered inside a fenced code block so it appears in a text-copy box, or `none - plan closed` plus the archived closed `.plans.md` and matching `.logs.md` paths under `plans/completed/`.
 
 ## Final Response Requirement
 
 - If the workstream remains active, the last part of every successful run MUST be a next-session handoff prompt rendered in a fenced `text` code block.
-- If the workstream becomes fully complete, the final tracker action MUST be to compress the plan and add or update the same-boundary `.logs.md` file; in that terminal closure case, do not emit a next-session handoff prompt unless the user explicitly asks for reopen guidance.
+- If the workstream becomes fully complete, the final tracker action MUST be to compress the plan, add or update the same-boundary `.logs.md` file, and move both files into `plans/completed/`; in that terminal closure case, do not emit a next-session handoff prompt unless the user explicitly asks for reopen guidance.
 - Any active-plan handoff prompt MUST use the complete template below, adapted to the specific repository, plan file, module boundary, known current state, validation expectations, and next numbered step.
 - Any active-plan handoff prompt MUST be actionable on its own, without requiring the next session to infer missing context from prior chat history.
 - When relevant, include confirmed completed prior steps, important file locations, validation commands already known to be required, and any worktree cautions about unrelated generated changes.
@@ -170,6 +179,6 @@ Every successful run that leaves the workstream active must end with a handoff p
 Continue with <plan path>, starting Step <N>: <step title>. First read the nearest folder README.md files, confirm plan alignment, complete only this step, update the plan when done, validate the touched surface, and stop with the next handoff prompt.
 ```
 
-If the run closes the workstream completely, do not emit a next-session handoff prompt unless the user explicitly asks for reopen guidance; instead, finish by reporting the compressed plan and matching `.logs.md` file.
+If the run closes the workstream completely, do not emit a next-session handoff prompt unless the user explicitly asks for reopen guidance; instead, finish by reporting the archived closed plan and matching `.logs.md` file in `plans/completed/`.
 
 If the run is blocked, end with the same fenced code block shape and the same complete template, but replace the completion request with the smallest safe unblock action.

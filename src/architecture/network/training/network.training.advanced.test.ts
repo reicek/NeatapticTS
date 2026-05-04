@@ -211,5 +211,32 @@ describe('network training chapter', () => {
         });
       });
     });
+
+    describe('checkpoint.best callback', () => {
+      describe('given checkpoint.best runs for two iterations where the second error is not an improvement', () => {
+        it('only triggers the best-checkpoint save on the first iteration', () => {
+          // Arrange – iteration 2 has the same error as iteration 1 → line 393 FALSE arm
+          // (_checkpointBestError is already set and error is not lower)
+          const network = createSingleInputOutputNetwork(9_301);
+          const saveCalls: string[] = [];
+
+          // Act – run 2 iterations; trainSetCore returns the same error both times
+          // so the second iteration won't improve _checkpointBestError
+          network.train(createSingleSampleDataset(0.5), {
+            iterations: 2,
+            rate: 0,
+            checkpoint: {
+              best: true,
+              save: (checkpointPayload: { type: string }) => {
+                saveCalls.push(checkpointPayload.type);
+              },
+            },
+          });
+
+          // Assert – best is saved on iteration 1 only (not again on iteration 2)
+          expect(saveCalls.filter((type) => type === 'best').length).toBe(1);
+        });
+      });
+    });
   });
 });

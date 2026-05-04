@@ -106,8 +106,8 @@ narrow family of similar genomes or whether structural experimentation is
 still producing spread.
 
 Parameters:
-- `population` - - Population genomes exposing nodes, connections, and optional `_depth`.
-- `compatibilityComputer` - - Object exposing `_compatibilityDistance(a, b)`.
+- `population` - Population genomes exposing nodes, connections, and optional `_depth`.
+- `compatibilityComputer` - Object exposing `_compatibilityDistance(a, b)`.
 
 Returns: Diversity report or `undefined` when the population is empty.
 
@@ -137,7 +137,7 @@ entropy read adds a lightweight topology fingerprint beside the raw size
 aggregates.
 
 Parameters:
-- `graph` - - Network instance to evaluate.
+- `graph` - Network instance to evaluate.
 
 Returns: Shannon-style entropy value.
 
@@ -158,8 +158,8 @@ genomes along that depth axis?" Sampling keeps that pairwise comparison
 cheap enough for repeated telemetry reads.
 
 Parameters:
-- `values` - - Values to compare.
-- `sampleLimit` - - Maximum number of sampled values to include.
+- `values` - Values to compare.
+- `sampleLimit` - Maximum number of sampled values to include.
 
 Returns: Mean absolute pair distance across the sampled values.
 
@@ -181,9 +181,9 @@ a prefix of genomes, then averaging the pair distances so callers get a
 stable separation trend instead of an exhaustive matrix.
 
 Parameters:
-- `genomes` - - Population genomes to compare.
-- `compatibilityComputer` - - Compatibility-distance provider.
-- `sampleLimit` - - Maximum number of genomes to include.
+- `genomes` - Population genomes to compare.
+- `compatibilityComputer` - Compatibility-distance provider.
+- `sampleLimit` - Maximum number of genomes to include.
 
 Returns: Mean compatibility distance across the sampled pairs.
 
@@ -219,7 +219,7 @@ average lineage depth, average node count, average connection count, and the
 mean entropy across genomes.
 
 Parameters:
-- `values` - - Values to average.
+- `values` - Values to average.
 
 Returns: Arithmetic mean, or `0` when the array is empty.
 
@@ -236,7 +236,11 @@ Compute the population variance of a numeric array.
 Variance complements the raw averages by showing whether the population is
 staying structurally tight or spreading into a wider range of topology sizes.
 
-Parameters:
-- `values` - - Values to evaluate.
+The diversity controller only calls this helper after confirming at least
+one genome exists, so the input array is always non-empty at the current
+public boundary.
 
-Returns: Population variance, or `0` when the array is empty.
+Parameters:
+- `values` - Non-empty values to evaluate.
+
+Returns: Population variance.

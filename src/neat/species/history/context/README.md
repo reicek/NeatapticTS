@@ -5,8 +5,9 @@ Setup seam for species-history reads.
 The public species facade answers a simple question: "what does the recent
 species story look like?" The controller data behind that answer is less
 simple. The history read path may need the stored history buffer, the live
-species registry, fallback innovation access used by optional backfill, and
-controller options that decide whether augmentation should happen at all.
+species registry, the explicit legacy/import fallback resolver used by
+optional backfill, and controller options that decide whether augmentation
+should happen at all.
 
 This file keeps that setup work narrow and explicit. Instead of making the
 public history read helper reach into several internal host fields directly,
@@ -69,7 +70,7 @@ focused on serving historical data, while this helper owns the one-time host
 translation from controller internals into a stable read-side context.
 
 Parameters:
-- `host` - - NEAT host exposing species history, species records, fallback innovation logic, and options.
+- `host` - NEAT host exposing species history, species records, explicit legacy/import fallback innovation logic, and options.
 
 Returns: Normalized history-read context for the species facade.
 

@@ -69,6 +69,44 @@ describe('network slab chapter', () => {
       });
     });
 
+    describe('given a rebuilt network has stale node indices', () => {
+      describe('when internal fast slab activation runs', () => {
+        it('reindexes the nodes before continuing activation', () => {
+          // Arrange
+          const network = new Network(2, 1, {
+            seed: 22,
+            enforceAcyclic: true,
+          });
+          const inputVector = [0.3, -0.1];
+
+          network.rebuildConnectionSlab(true);
+          const legacyOutput = network.activate([...inputVector], false);
+
+          network.nodes.forEach((node, nodeIndex) => {
+            node.index = network.nodes.length - nodeIndex - 1;
+          });
+          markTopologyDirty(network);
+          const expectedNodeIndices = network.nodes.map((_, nodeIndex) => {
+            return nodeIndex;
+          });
+
+          // Act
+          const outputVector = runInternalFastSlabActivate(network, [
+            ...inputVector,
+          ]);
+
+          // Assert
+          expect({
+            nodeIndices: network.nodes.map((node) => node.index),
+            outputVector,
+          }).toStrictEqual({
+            nodeIndices: expectedNodeIndices,
+            outputVector: legacyOutput,
+          });
+        });
+      });
+    });
+
     describe('given an eligible acyclic network without gating or noise', () => {
       describe('when fast slab activation is compared with legacy activation', () => {
         it('produces identical outputs', () => {

@@ -99,7 +99,7 @@ Bird collision radius (pixels).
 Horizontal viewport anchor for the bird.
 
 A value of `0.33` places the bird roughly one-third from the left, leaving
-more lookahead space for incoming pipes.
+more forward screen space for incoming pipes.
 
 ### FLAPPY_BIRD_X_PX
 
@@ -129,6 +129,28 @@ Default population size for browser playback worker initialization.
 
 The browser default stays intentionally small so the interactive demo remains
 responsive and each generation is easy to inspect during playback.
+
+### FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_ELITISM_COUNT
+
+Reduced browser elitism count paired with the post-success population downshift.
+
+Two elites keep a small continuity shelf while still leaving most of the
+reduced flock available for visible variation.
+
+### FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE
+
+Reduced browser population size used after a live run has already hit the success bar.
+
+The downshift keeps later browser generations cheaper once an architecture is
+already demonstrating stable pipe-clearing behavior.
+
+### FLAPPY_BROWSER_SUCCESS_PIPE_TARGET
+
+Pipe-count milestone that marks a browser run as "good enough" to downshift.
+
+Once a generation clears this bar, future browser generations can shrink to a
+lighter flock without losing the core demonstration that the selected
+architecture is already solving pipes in the live demo.
 
 ### FLAPPY_CENTER_BLUE_RAMP
 
@@ -189,6 +211,9 @@ to preserve a cleaner educational rendering path.
 
 Per-frame reward weight for staying vertically aligned with the next gap.
 
+Increased to make gap alignment a primary per-frame signal so that birds
+tracking the ideal center path score noticeably higher than drifting birds.
+
 ### FLAPPY_FITNESS_APPROACH_PROGRESS_WEIGHT
 
 Reward scale for reducing distance to the next pipe between consecutive frames.
@@ -205,13 +230,49 @@ Reward scale for reducing vertical error to the next gap center.
 
 Per-frame reward weight for keeping the bird inside next-gap clearance.
 
-### FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME
+Increased to make clearance (gap-width-normalized position) the primary
+per-frame centering signal. This strongly rewards birds that stay near
+the gap center and penalizes those that drift to the edges.
 
-Per-frame reward weight for pre-aligning with the second upcoming gap.
+### FLAPPY_FITNESS_EARLY_DEATH_FRAME_THRESHOLD
+
+Minimum frames survived before the early-death penalty is waived.
+
+Set below the ~104-frame natural-fall time so that untrained birds falling
+straight to the floor are not catastrophically penalized before NEAT can
+explore better policies. Monotonic strategies that die unusually quickly
+(ceiling rockets or instant drops) still trigger the penalty.
+
+Previous value of 120 was above the natural-fall time, which crushed NARX
+signal to near-zero on early generations. Lowering to 80 lets the density
+shaping guide evolution without the early-death gate blocking the signal.
+
+### FLAPPY_FITNESS_EARLY_DEATH_PENALTY_MULTIPLIER
+
+Fitness multiplier applied when a bird dies before the early-death threshold.
+
+Set below 1 so extremely short-lived monotonic deaths score lower than any
+reasonable centering strategy. A value of 0.4 (vs the prior 0.1) keeps the
+penalty meaningful while preserving enough signal for NEAT to distinguish
+between bad and worse short-lived strategies.
+
+### FLAPPY_FITNESS_GAP_CENTERING_QUALITY_WEIGHT_PER_FRAME
+
+Per-frame reward weight for gap-width-normalized centering quality.
+
+This term uses the normalizedNextGapClearance feature, which is proportional
+to how well-centered the bird is relative to the current gap size rather than
+absolute world height. This is the dominant centering signal — a bird that
+stays at gap center earns full reward regardless of gap size, while one near
+the edges earns near zero.
 
 ### FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME
 
 Per-frame reward weight for maintaining controllable vertical velocity.
+
+Increased to penalize monotonic-direction behavior (always rising or always
+falling) more aggressively. Birds with wild or one-directional velocity
+profiles score lower than those with controlled flight.
 
 ### FLAPPY_FITNESS_SURVIVAL_WEIGHT
 
@@ -318,6 +379,10 @@ Initial status text displayed before evolution starts.
 
 Shared HUD value when a metric is intentionally disabled.
 
+### FLAPPY_HUD_PLACEHOLDER_TEXT
+
+Shared HUD value for metrics that are not available yet.
+
 ### FLAPPY_HUD_UPDATE_INTERVAL_FRAMES
 
 Update HUD counters every N simulation frames to reduce DOM churn.
@@ -380,15 +445,36 @@ runtime and keeps evolution throughput predictable.
 
 ### FLAPPY_MEMORY_ACTION_WINDOW_STEPS
 
-Number of past actions retained for the action-memory channel.
+Size of the legacy action-history buffer.
+
+This stays at zero so no controller receives hand-authored action memory on
+top of its learned state.
 
 ### FLAPPY_MEMORY_CORE_FEATURE_COUNT
 
-Number of core per-frame observation features retained for temporal stacking.
+Number of compact current-frame observation features fed into Flappy policies.
+
+The nine channels are split into three semantic groups:
+
+**Bird state (2):** normalized height and vertical velocity — the controller's
+body-state check before any pipe geometry matters.
+
+**Next gap (4):** distance to the pipe exit, signed vertical offset from the
+gap center, normalized top and bottom boundaries of the safe corridor.
+
+**Look-ahead (3):** signed distance to the pipe *entrance* (goes negative
+while the bird is traversing the pipe body, giving a clear in-pipe signal),
+signed gap clearance (how centered the bird currently is inside the opening),
+and signed vertical offset from the *second* upcoming gap center (gives
+the network a reason to plan ahead instead of staying level).
 
 ### FLAPPY_MEMORY_STACKED_FRAME_COUNT
 
-Number of temporal frames included in the stacked observation window.
+Effective controller frame count kept in the external observation window.
+
+All Flappy architectures now consume only the current normalized frame so
+recurrent profiles are not double-fed with both built-in state and a
+hand-authored temporal stack.
 
 ### FLAPPY_MIN_CLEARANCE_MARGIN_PX
 
@@ -467,6 +553,62 @@ Header font size for architecture label lines.
 
 Header text color for architecture label in visualization.
 
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_CHARACTER_WIDTH_PX
+
+Approximate monospace character width used to size recurrent guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FILL_COLOR
+
+Fill color used by recurrent hidden-column guide chips when no custom color is set.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_SIZE_PX
+
+Font size used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_WEIGHT
+
+Font weight used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX
+
+Gap between hidden-column guide chips and the node shelf below.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX
+
+Line height used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_MIN_WIDTH_PX
+
+Minimum chip width for recurrent hidden-column guide labels.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_RADIUS_PX
+
+Corner radius used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_COLOR
+
+Outline color used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_WIDTH_PX
+
+Stroke width used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_COLOR
+
+Text color used inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_PADDING_PX
+
+Horizontal text padding inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_VERTICAL_PADDING_PX
+
+Vertical text padding inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TOP_RESERVE_PX
+
+Reserved vertical shelf for recurrent hidden-column guide chips.
+
 ### FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR
 
 Separator used between hidden-layer sizes inside architecture labels.
@@ -486,9 +628,69 @@ Hidden-node stroke color.
 
 Prefix used when hidden-layer counts are inferred rather than declared.
 
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_CHARACTER_WIDTH_PX
+
+Approximate monospace character width used to size the input-description column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX
+
+Minimum vertical gap kept between adjacent input-description chip outlines.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FILL_COLOR
+
+Background fill used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_SIZE_PX
+
+Font size used for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_WEIGHT
+
+Font weight used for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX
+
+Horizontal gap between the input-description column and the input-node column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_LINE_HEIGHT_PX
+
+Vertical distance between wrapped input-description lines.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_HEIGHT_PX
+
+Minimum visual height reserved for one input-description hover row.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_WIDTH_PX
+
+Minimum reserved width for the input-description column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_RADIUS_PX
+
+Corner radius used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_COLOR
+
+Outline color for horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_WIDTH_PX
+
+Stroke width used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_COLOR
+
+Text color for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_PADDING_PX
+
+Inner left padding used by the input-description text column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_VERTICAL_PADDING_PX
+
+Inner vertical padding used by outlined input-description chips.
+
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX
 
-Horizontal gap between input-node column and vertical group label band.
+Horizontal gap between the vertical group-band column and the input-description column.
 
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX
 
@@ -502,6 +704,10 @@ Font size used for vertical input-group label text.
 
 Font weight used for vertical input-group label text.
 
+### FLAPPY_NETWORK_INPUT_GROUP_LABEL_LINE_HEIGHT_PX
+
+Vertical distance between wrapped input-group label lines.
+
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX
 
 Minimum visual height for any input-group label band.
@@ -514,9 +720,21 @@ Corner radius used by input-group label band backgrounds.
 
 Text color for vertical input-group labels on neon backgrounds.
 
+### FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX
+
+Inner vertical padding applied to each semantic input group block.
+
+### FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX
+
+Vertical gap kept between adjacent semantic input groups.
+
 ### FLAPPY_NETWORK_INPUT_LAYER_TARGET_GAP_PX
 
 Preferred vertical spacing between input-layer nodes.
+
+### FLAPPY_NETWORK_INPUT_OVERLAY_FOCUS_STROKE_WIDTH_PX
+
+Stroke width used when an input overlay element is actively hovered.
 
 ### FLAPPY_NETWORK_INPUT_SIZE
 
@@ -803,6 +1021,15 @@ Maximum allowed gap center height (pixels).
 
 Minimum allowed gap center height (pixels).
 
+### FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO
+
+Minimum fraction of world height that must remain as solid pipe above and
+below the gap opening.
+
+At the world height of 512 px this resolves to ≈26 px of visible pipe cap on
+each side, which prevents the opening from clipping into or touching the
+canvas edge — especially important when the initial wide gap is active.
+
 ### FLAPPY_PIPE_GAP_MIN_PX
 
 Minimum pipe gap used at peak adaptive difficulty.
@@ -824,6 +1051,10 @@ Per-pipe gap shrink step toward the current hardest target gap (pixels).
 ### FLAPPY_PIPE_GAP_START_MULTIPLIER
 
 Initial spawn gap multiplier relative to the current hardest gap target.
+
+A larger multiplier makes the very first pipes noticeably easier and produces
+a more visible difficulty gradient as the gap narrows toward its target.
+The value is 20 % wider than the original 2.15 baseline.
 
 ### FLAPPY_PIPE_OUTLINE_CYAN_GLOW_BLUR_PX
 
@@ -1011,7 +1242,7 @@ Stats keys whose values should render multi-line architecture content.
 
 ### FLAPPY_STATS_KEYS
 
-Ordered keys for the runtime stats table.
+Ordered keys for the runtime stats table in rendered top-to-bottom order.
 
 ### FLAPPY_STATS_ROWS
 
@@ -1333,6 +1564,15 @@ Maximum allowed gap center height (pixels).
 
 Minimum allowed gap center height (pixels).
 
+### FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO
+
+Minimum fraction of world height that must remain as solid pipe above and
+below the gap opening.
+
+At the world height of 512 px this resolves to ≈26 px of visible pipe cap on
+each side, which prevents the opening from clipping into or touching the
+canvas edge — especially important when the initial wide gap is active.
+
 ### FLAPPY_PIPE_GAP_PX
 
 Vertical opening size of each pipe gap (pixels).
@@ -1440,6 +1680,10 @@ Per-pipe gap shrink step toward the current hardest target gap (pixels).
 
 Initial spawn gap multiplier relative to the current hardest gap target.
 
+A larger multiplier makes the very first pipes noticeably easier and produces
+a more visible difficulty gradient as the gap narrows toward its target.
+The value is 20 % wider than the original 2.15 baseline.
+
 ### FLAPPY_PIPE_SPAWN_INTERVAL_MIN_FRAMES
 
 Minimum spawn interval used at peak adaptive difficulty.
@@ -1486,15 +1730,36 @@ used when seeding agents for evolution.
 
 ### FLAPPY_MEMORY_ACTION_WINDOW_STEPS
 
-Number of past actions retained for the action-memory channel.
+Size of the legacy action-history buffer.
+
+This stays at zero so no controller receives hand-authored action memory on
+top of its learned state.
 
 ### FLAPPY_MEMORY_CORE_FEATURE_COUNT
 
-Number of core per-frame observation features retained for temporal stacking.
+Number of compact current-frame observation features fed into Flappy policies.
+
+The nine channels are split into three semantic groups:
+
+**Bird state (2):** normalized height and vertical velocity — the controller's
+body-state check before any pipe geometry matters.
+
+**Next gap (4):** distance to the pipe exit, signed vertical offset from the
+gap center, normalized top and bottom boundaries of the safe corridor.
+
+**Look-ahead (3):** signed distance to the pipe *entrance* (goes negative
+while the bird is traversing the pipe body, giving a clear in-pipe signal),
+signed gap clearance (how centered the bird currently is inside the opening),
+and signed vertical offset from the *second* upcoming gap center (gives
+the network a reason to plan ahead instead of staying level).
 
 ### FLAPPY_MEMORY_STACKED_FRAME_COUNT
 
-Number of temporal frames included in the stacked observation window.
+Effective controller frame count kept in the external observation window.
+
+All Flappy architectures now consume only the current normalized frame so
+recurrent profiles are not double-fed with both built-in state and a
+hand-authored temporal stack.
 
 ### FLAPPY_NETWORK_HIDDEN_LAYER_SIZES
 
@@ -1518,9 +1783,19 @@ Flappy reward-shaping constants.
 These values tune the learning signal seen by evolution. Separating them from
 world/physics constants keeps behavior tuning explicit and easier to teach.
 
+Design philosophy: centering quality is the primary signal. An agent that
+stays aligned with the next gap center — measured against the gap width, not
+absolute world height — earns more signal per frame than one that merely
+survives. Survival and pipe-passing remain important, but centering dominates
+the dense-shaping channel so the population does not converge on passive or
+erratic drift strategies.
+
 ### FLAPPY_FITNESS_ALIGNMENT_WEIGHT_PER_FRAME
 
 Per-frame reward weight for staying vertically aligned with the next gap.
+
+Increased to make gap alignment a primary per-frame signal so that birds
+tracking the ideal center path score noticeably higher than drifting birds.
 
 ### FLAPPY_FITNESS_APPROACH_PROGRESS_WEIGHT
 
@@ -1538,13 +1813,49 @@ Reward scale for reducing vertical error to the next gap center.
 
 Per-frame reward weight for keeping the bird inside next-gap clearance.
 
-### FLAPPY_FITNESS_SECOND_GAP_ALIGNMENT_WEIGHT_PER_FRAME
+Increased to make clearance (gap-width-normalized position) the primary
+per-frame centering signal. This strongly rewards birds that stay near
+the gap center and penalizes those that drift to the edges.
 
-Per-frame reward weight for pre-aligning with the second upcoming gap.
+### FLAPPY_FITNESS_EARLY_DEATH_FRAME_THRESHOLD
+
+Minimum frames survived before the early-death penalty is waived.
+
+Set below the ~104-frame natural-fall time so that untrained birds falling
+straight to the floor are not catastrophically penalized before NEAT can
+explore better policies. Monotonic strategies that die unusually quickly
+(ceiling rockets or instant drops) still trigger the penalty.
+
+Previous value of 120 was above the natural-fall time, which crushed NARX
+signal to near-zero on early generations. Lowering to 80 lets the density
+shaping guide evolution without the early-death gate blocking the signal.
+
+### FLAPPY_FITNESS_EARLY_DEATH_PENALTY_MULTIPLIER
+
+Fitness multiplier applied when a bird dies before the early-death threshold.
+
+Set below 1 so extremely short-lived monotonic deaths score lower than any
+reasonable centering strategy. A value of 0.4 (vs the prior 0.1) keeps the
+penalty meaningful while preserving enough signal for NEAT to distinguish
+between bad and worse short-lived strategies.
+
+### FLAPPY_FITNESS_GAP_CENTERING_QUALITY_WEIGHT_PER_FRAME
+
+Per-frame reward weight for gap-width-normalized centering quality.
+
+This term uses the normalizedNextGapClearance feature, which is proportional
+to how well-centered the bird is relative to the current gap size rather than
+absolute world height. This is the dominant centering signal — a bird that
+stays at gap center earns full reward regardless of gap size, while one near
+the edges earns near zero.
 
 ### FLAPPY_FITNESS_STABLE_VELOCITY_WEIGHT_PER_FRAME
 
 Per-frame reward weight for maintaining controllable vertical velocity.
+
+Increased to penalize monotonic-direction behavior (always rising or always
+falling) more aggressively. Birds with wild or one-directional velocity
+profiles score lower than those with controlled flight.
 
 ### FLAPPY_FITNESS_SURVIVAL_WEIGHT
 
@@ -1590,6 +1901,28 @@ Default population size for browser playback worker initialization.
 The browser default stays intentionally small so the interactive demo remains
 responsive and each generation is easy to inspect during playback.
 
+### FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_ELITISM_COUNT
+
+Reduced browser elitism count paired with the post-success population downshift.
+
+Two elites keep a small continuity shelf while still leaving most of the
+reduced flock available for visible variation.
+
+### FLAPPY_BROWSER_SUCCESS_DOWNSHIFT_POPULATION_SIZE
+
+Reduced browser population size used after a live run has already hit the success bar.
+
+The downshift keeps later browser generations cheaper once an architecture is
+already demonstrating stable pipe-clearing behavior.
+
+### FLAPPY_BROWSER_SUCCESS_PIPE_TARGET
+
+Pipe-count milestone that marks a browser run as "good enough" to downshift.
+
+Once a generation clears this bar, future browser generations can shrink to a
+lighter flock without losing the core demonstration that the selected
+architecture is already solving pipes in the live demo.
+
 ### FLAPPY_DEFAULT_RNG_SEED
 
 Deterministic default RNG seed shared by browser runtime and trainer flows.
@@ -1620,6 +1953,10 @@ Initial status text displayed before evolution starts.
 ### FLAPPY_HUD_OFF_TEXT
 
 Shared HUD value when a metric is intentionally disabled.
+
+### FLAPPY_HUD_PLACEHOLDER_TEXT
+
+Shared HUD value for metrics that are not available yet.
 
 ### FLAPPY_HUD_UPDATE_INTERVAL_FRAMES
 
@@ -1700,7 +2037,7 @@ keep the demo readable from compact to wide viewports.
 Horizontal viewport anchor for the bird.
 
 A value of `0.33` places the bird roughly one-third from the left, leaving
-more lookahead space for incoming pipes.
+more forward screen space for incoming pipes.
 
 ### FLAPPY_SCREEN_PADDING_PX
 
@@ -1801,8 +2138,9 @@ Vertical layout gutter between stats panel and simulation canvas.
 
 Browser HUD stats table constants.
 
-This module defines table ordering, hidden groups, and row metadata for the
-runtime status panel shown during playback.
+This module defines the teaching layout for the browser HUD: a live
+current-run block, a generation-summary block fed by worker-side aggregates,
+and an optional instrumentation block for runtime diagnostics.
 
 ### FLAPPY_INSTRUMENTATION_STATS_KEYS
 
@@ -1818,7 +2156,7 @@ Stats keys whose values should render multi-line architecture content.
 
 ### FLAPPY_STATS_KEYS
 
-Ordered keys for the runtime stats table.
+Ordered keys for the runtime stats table in rendered top-to-bottom order.
 
 ### FLAPPY_STATS_ROWS
 
@@ -2209,6 +2547,62 @@ Graph-top padding for network visualization content.
 
 Header font size for architecture label lines.
 
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_CHARACTER_WIDTH_PX
+
+Approximate monospace character width used to size recurrent guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FILL_COLOR
+
+Fill color used by recurrent hidden-column guide chips when no custom color is set.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_SIZE_PX
+
+Font size used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_FONT_WEIGHT
+
+Font weight used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX
+
+Gap between hidden-column guide chips and the node shelf below.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_LINE_HEIGHT_PX
+
+Line height used for recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_MIN_WIDTH_PX
+
+Minimum chip width for recurrent hidden-column guide labels.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_RADIUS_PX
+
+Corner radius used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_COLOR
+
+Outline color used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_STROKE_WIDTH_PX
+
+Stroke width used by recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_COLOR
+
+Text color used inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_PADDING_PX
+
+Horizontal text padding inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TEXT_VERTICAL_PADDING_PX
+
+Vertical text padding inside recurrent hidden-column guide chips.
+
+### FLAPPY_NETWORK_HIDDEN_COLUMN_LABEL_TOP_RESERVE_PX
+
+Reserved vertical shelf for recurrent hidden-column guide chips.
+
 ### FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR
 
 Separator used between hidden-layer sizes inside architecture labels.
@@ -2217,9 +2611,69 @@ Separator used between hidden-layer sizes inside architecture labels.
 
 Prefix used when hidden-layer counts are inferred rather than declared.
 
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_CHARACTER_WIDTH_PX
+
+Approximate monospace character width used to size the input-description column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX
+
+Minimum vertical gap kept between adjacent input-description chip outlines.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FILL_COLOR
+
+Background fill used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_SIZE_PX
+
+Font size used for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_FONT_WEIGHT
+
+Font weight used for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX
+
+Horizontal gap between the input-description column and the input-node column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_LINE_HEIGHT_PX
+
+Vertical distance between wrapped input-description lines.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_HEIGHT_PX
+
+Minimum visual height reserved for one input-description hover row.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_WIDTH_PX
+
+Minimum reserved width for the input-description column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_RADIUS_PX
+
+Corner radius used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_COLOR
+
+Outline color for horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_STROKE_WIDTH_PX
+
+Stroke width used by horizontal input-description chips.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_COLOR
+
+Text color for horizontal input-description rows.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_PADDING_PX
+
+Inner left padding used by the input-description text column.
+
+### FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_VERTICAL_PADDING_PX
+
+Inner vertical padding used by outlined input-description chips.
+
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX
 
-Horizontal gap between input-node column and vertical group label band.
+Horizontal gap between the vertical group-band column and the input-description column.
 
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX
 
@@ -2233,6 +2687,10 @@ Font size used for vertical input-group label text.
 
 Font weight used for vertical input-group label text.
 
+### FLAPPY_NETWORK_INPUT_GROUP_LABEL_LINE_HEIGHT_PX
+
+Vertical distance between wrapped input-group label lines.
+
 ### FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX
 
 Minimum visual height for any input-group label band.
@@ -2245,9 +2703,21 @@ Corner radius used by input-group label band backgrounds.
 
 Text color for vertical input-group labels on neon backgrounds.
 
+### FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX
+
+Inner vertical padding applied to each semantic input group block.
+
+### FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX
+
+Vertical gap kept between adjacent semantic input groups.
+
 ### FLAPPY_NETWORK_INPUT_LAYER_TARGET_GAP_PX
 
 Preferred vertical spacing between input-layer nodes.
+
+### FLAPPY_NETWORK_INPUT_OVERLAY_FOCUS_STROKE_WIDTH_PX
+
+Stroke width used when an input overlay element is actively hovered.
 
 ### FLAPPY_NETWORK_LAYER_COMPLEXITY_BASELINE_COUNT
 

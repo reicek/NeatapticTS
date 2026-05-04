@@ -1,4 +1,8 @@
 import Network from '../network';
+import {
+  computeMonitoredError,
+  computePlateauMetric,
+} from './network.training.smoothing.utils';
 
 type TrainingSummary = { error: number; iterations: number };
 
@@ -29,6 +33,84 @@ function trainWithSmoothingSequence(
     ...options,
   });
 }
+
+describe('computeMonitoredError()', () => {
+  describe('given window is 1 and type is median', () => {
+    describe('when called with a raw error', () => {
+      it('returns the raw training error unchanged', () => {
+        // Arrange – window <= 1 AND type !== ema → covers line 24 TRUE arm
+        const cfg = { window: 1, type: 'median' as const };
+        const state = {};
+
+        // Act
+        const monitoredError = computeMonitoredError(0.42, [0.42], cfg, state);
+
+        // Assert
+        expect(monitoredError).toBe(0.42);
+      });
+    });
+  });
+
+  describe('given type is trimmed without an explicit trimmedRatio', () => {
+    describe('when called with a window of errors', () => {
+      it('applies the default trimmed ratio of 0.1', () => {
+        // Arrange – no trimmedRatio → cfg.trimmedRatio || 0.1 fallback (line 81)
+        const cfg = { window: 4, type: 'trimmed' as const };
+        const state = {};
+
+        // Act
+        const monitoredError = computeMonitoredError(
+          0.5,
+          [0.5, 0.6, 0.7, 0.8],
+          cfg,
+          state,
+        );
+
+        // Assert
+        expect(typeof monitoredError).toBe('number');
+      });
+    });
+  });
+
+  describe('given an unrecognized smoothing type', () => {
+    describe('when called with a window of errors', () => {
+      it('returns the simple moving average over the window', () => {
+        // Arrange – type not matching any known case → falls through to SMA fallback (line 101)
+        const cfg = { window: 3, type: 'sma' as unknown as 'median' };
+        const state = {};
+
+        // Act
+        const monitoredError = computeMonitoredError(
+          0.5,
+          [0.3, 0.4, 0.5],
+          cfg,
+          state,
+        );
+
+        // Assert – SMA of [0.3, 0.4, 0.5] = 0.4
+        expect(monitoredError).toBeCloseTo(0.4);
+      });
+    });
+  });
+});
+
+describe('computePlateauMetric()', () => {
+  describe('given window is 1 and type is median', () => {
+    describe('when called with a raw error', () => {
+      it('returns the raw training error unchanged', () => {
+        // Arrange – window <= 1 AND type !== ema → covers line 119 TRUE arm
+        const cfg = { window: 1, type: 'median' as const };
+        const state = {};
+
+        // Act
+        const plateauMetric = computePlateauMetric(0.55, [0.55], cfg, state);
+
+        // Assert
+        expect(plateauMetric).toBe(0.55);
+      });
+    });
+  });
+});
 
 describe('network training chapter', () => {
   describe('smoothing strategy comparisons', () => {

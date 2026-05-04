@@ -5,6 +5,7 @@ import {
   resolveActivationKey,
 } from './network.serialize.activation.utils';
 import {
+  applyRestoredConnectionIdentity,
   asNodeInternals,
   isFiniteIndex,
   isNodeIndexInBounds,
@@ -30,6 +31,8 @@ import {
   WARNING_UNKNOWN_FORMAT_VERSION,
 } from './network.serialize.utils.types';
 import { NetworkSerializeInvalidJsonError } from './network.serialize.errors';
+
+const NEUTRAL_NODE_RESPONSE = 1;
 
 /**
  * Creates an empty verbose JSON shell from runtime internals.
@@ -117,20 +120,46 @@ export function appendJsonForwardConnections(
     const sourceIndex = asNodeInternals(connectionInstance.from).index;
     const targetIndex = asNodeInternals(connectionInstance.to).index;
 
-    if (!isFiniteIndex(sourceIndex) || !isFiniteIndex(targetIndex)) {
+    if (
+      !isFiniteIndex(sourceIndex) ||
+      !isFiniteIndex(targetIndex) ||
+      !isCurrentJsonEndpoint(
+        networkInternals.nodes,
+        connectionInstance.from,
+        sourceIndex,
+      ) ||
+      !isCurrentJsonEndpoint(
+        networkInternals.nodes,
+        connectionInstance.to,
+        targetIndex,
+      )
+    ) {
       return;
     }
 
     networkJson.connections.push(
-      createJsonConnection(
-        sourceIndex,
-        targetIndex,
-        connectionInstance.weight,
-        resolveGaterIndex(connectionInstance.gater),
-        isConnectionEnabled(connectionInstance),
-      ),
+      createJsonConnection(connectionInstance, sourceIndex, targetIndex),
     );
   });
+}
+
+/**
+ * Validates that one serialized endpoint still points at the canonical node table.
+ *
+ * @param nodes - Canonical node table being serialized.
+ * @param endpointNode - Connection endpoint node reference.
+ * @param endpointIndex - Endpoint index stored on the node internals.
+ * @returns True when the endpoint still belongs to the canonical node table.
+ */
+function isCurrentJsonEndpoint(
+  nodes: Node[],
+  endpointNode: Node,
+  endpointIndex: number,
+): boolean {
+  return (
+    isNodeIndexInBounds(nodes, endpointIndex) &&
+    nodes[endpointIndex] === endpointNode
+  );
 }
 
 /**
@@ -234,6 +263,9 @@ function createJsonNode(
   return {
     type: node.type,
     bias: nodeInternals.bias,
+    ...(isFiniteNonNeutralNodeResponse(nodeInternals.response)
+      ? { response: nodeInternals.response }
+      : {}),
     squash: resolveActivationKey(nodeInternals.squash),
     index: nodeIndex,
     geneId: nodeInternals.geneId,
@@ -259,39 +291,36 @@ function appendJsonSelfConnectionWhenPresent(
   }
 
   networkJson.connections.push(
-    createJsonConnection(
-      nodeIndex,
-      nodeIndex,
-      selfConnection.weight,
-      resolveGaterIndex(selfConnection.gater),
-      isConnectionEnabled(selfConnection),
-    ),
+    createJsonConnection(selfConnection, nodeIndex, nodeIndex),
   );
 }
 
 /**
  * Creates one JSON connection entry.
  *
+ * @param connectionInstance - Runtime connection carrying the historical identity to persist.
  * @param from - Source index.
  * @param to - Target index.
- * @param weight - Connection weight.
- * @param gater - Optional gater index.
- * @param enabled - Enabled status.
  * @returns JSON connection entry.
  */
 function createJsonConnection(
+  connectionInstance: Connection,
   from: number,
   to: number,
-  weight: number,
-  gater: number | null,
-  enabled: boolean,
 ): NetworkJSONConnection {
   return {
     from,
     to,
-    weight,
-    gater,
-    enabled,
+    weight: connectionInstance.weight,
+    gain: connectionInstance.gain,
+    gater: resolveGaterIndex(connectionInstance.gater),
+    enabled: isConnectionEnabled(connectionInstance),
+    innovation: connectionInstance.innovation,
+    fromGeneId: asNodeInternals(connectionInstance.from).geneId,
+    toGeneId: asNodeInternals(connectionInstance.to).geneId,
+    gaterGeneId: connectionInstance.gater
+      ? asNodeInternals(connectionInstance.gater).geneId
+      : null,
   };
 }
 
@@ -335,11 +364,24 @@ function hydrateNodeFromJsonEntry(
 ): void {
   const nodeInternals = asNodeInternals(rebuiltNode);
   nodeInternals.bias = nodeJsonEntry.bias;
+  nodeInternals.response =
+    typeof nodeJsonEntry.response === 'number' &&
+    Number.isFinite(nodeJsonEntry.response)
+      ? nodeJsonEntry.response
+      : NEUTRAL_NODE_RESPONSE;
   nodeInternals.squash = resolveActivationFunction(nodeJsonEntry.squash);
   nodeInternals.index = nodeIndex;
   if (typeof nodeJsonEntry.geneId === 'number') {
     nodeInternals.geneId = nodeJsonEntry.geneId;
   }
+}
+
+function isFiniteNonNeutralNodeResponse(response: unknown): response is number {
+  return (
+    typeof response === 'number' &&
+    Number.isFinite(response) &&
+    response !== NEUTRAL_NODE_RESPONSE
+  );
 }
 
 /**
@@ -372,6 +414,7 @@ function rebuildOneJsonConnection(
     targetNode,
     connectionJsonEntry.weight,
   );
+  applyRestoredConnectionIdentity(createdConnection, connectionJsonEntry);
 
   assignJsonGaterWhenValid(
     networkInternals,
@@ -382,6 +425,7 @@ function rebuildOneJsonConnection(
     createdConnection,
     connectionJsonEntry.enabled,
   );
+  assignJsonGainWhenProvided(createdConnection, connectionJsonEntry.gain);
 }
 
 /**
@@ -477,6 +521,28 @@ function assignJsonEnabledFlagWhenProvided(
   }
 
   (createdConnection as ConnectionInternalsWithEnabled).enabled = enabled;
+}
+
+/**
+ * Assigns a restored connection gain when one was serialized explicitly.
+ *
+ * @param createdConnection - Created connection.
+ * @param gain - Optional serialized gain.
+ * @returns Nothing.
+ */
+function assignJsonGainWhenProvided(
+  createdConnection: Connection | undefined,
+  gain: number | undefined,
+): void {
+  if (
+    !createdConnection ||
+    typeof gain !== 'number' ||
+    !Number.isFinite(gain)
+  ) {
+    return;
+  }
+
+  createdConnection.gain = gain;
 }
 
 /**

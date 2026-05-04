@@ -33,6 +33,13 @@ The prose does not pretend the architecture is arbitrary. It explains why the
 trainer uses staged evaluation, why the browser avoids simulation authority, and
 why compatibility facades still exist.
 
+### It stays atemporal
+
+The strongest public docs read like current engineering guidance, not like a
+tour through repo milestones. They explain the present boundary, current
+tradeoffs, and current reading path without assuming the reader knows an
+internal plan, tracker step, or what the module looked like in an earlier pass.
+
 ### It respects different reading goals
 
 A new reader gets orientation. A focused reader gets entry points for training,
@@ -61,6 +68,8 @@ following.
 - Omitting the reader's likely next question.
 - Treating README generation as an excuse for generic comments.
 - Adding "educational" fluff that does not improve understanding.
+- Referencing internal plans, tracker steps, roadmap phases, or chat-only terms.
+- Framing the module through repo before/after comparisons instead of current concepts.
 
 ## Practical Rewrite Moves
 

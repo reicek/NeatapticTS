@@ -8,7 +8,7 @@ const FUNCTION_TYPE_NAME = 'function';
  * This is a structural runtime guard used by layer helpers that must safely
  * operate on mixed node/group collections.
  *
- * @param candidate - The value to inspect.
+ * @param candidate The value to inspect.
  * @returns True when the value exposes group-like members.
  *
  * Example:

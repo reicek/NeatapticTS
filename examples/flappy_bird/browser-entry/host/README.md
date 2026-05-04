@@ -19,6 +19,7 @@ hand the runtime narrow handles for drawing and HUD updates.
 ```ts
 createCanvasHost(
   containerElement: HTMLElement,
+  options: CanvasHostOptions,
 ): CanvasHostResult
 ```
 
@@ -27,7 +28,7 @@ Builds the browser demo host tree and returns rendering handles.
 This is the public host entrypoint used by the runtime startup path.
 
 Parameters:
-- `containerElement` - - Root host container.
+- `containerElement` - Root host container.
 
 Returns: Canvas handles, stats cells and network render callback.
 
@@ -36,6 +37,7 @@ Returns: Canvas handles, stats cells and network render callback.
 ```ts
 createCanvasHostInternal(
   containerElement: HTMLElement,
+  options: CanvasHostOptions,
 ): CanvasHostResult
 ```
 
@@ -46,7 +48,7 @@ create canvases, wire resize behavior, render placeholders, then return the
 handles the runtime will mutate during execution.
 
 Parameters:
-- `containerElement` - - Root host container.
+- `containerElement` - Root host container.
 
 Returns: Canvas handles, stats cells and network render callback.
 
@@ -62,8 +64,8 @@ createHeaderFrameRenderer(
 Creates the reusable title-frame renderer for the header canvas.
 
 Parameters:
-- `headerCanvas` - - Header canvas element.
-- `headerContext` - - Header canvas 2D context.
+- `headerCanvas` - Header canvas element.
+- `headerContext` - Header canvas 2D context.
 
 Returns: Callback that redraws the framed title.
 
@@ -81,7 +83,7 @@ The host manages three canvas surfaces with different jobs: a title/header
 frame, the main simulation view, and the side-panel network visualization.
 
 Parameters:
-- `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
+- `hostVisualPrimitives` - Shared visual primitives for border and shadow styling.
 
 Returns: Simulation, header, and network canvases with required contexts.
 
@@ -99,7 +101,7 @@ This creates the structural DOM only. Canvases, stats content, and
 visualization wiring are layered on afterward.
 
 Parameters:
-- `hostVisualPrimitives` - - Shared visual primitives for border and shadow styling.
+- `hostVisualPrimitives` - Shared visual primitives for border and shadow styling.
 
 Returns: Layout elements grouped by host responsibility.
 
@@ -116,9 +118,9 @@ createHostNetworkVisualizationController(
 Creates the network visualization renderer and redraw controller.
 
 Parameters:
-- `networkCanvasHost` - - Host element wrapping the network canvas.
-- `networkCanvas` - - Network visualization canvas.
-- `networkContext` - - Network visualization 2D context.
+- `networkCanvasHost` - Host element wrapping the network canvas.
+- `networkCanvas` - Network visualization canvas.
+- `networkContext` - Network visualization 2D context.
 
 Returns: Renderer and redraw callbacks for the network panel.
 
@@ -137,11 +139,11 @@ installCanvasHostResizeHooks(
 Installs responsive resize hooks for the simulation canvas and side panel.
 
 Parameters:
-- `canvas` - - Simulation canvas.
-- `hostLayoutElements` - - Prepared layout containers.
-- `networkCanvas` - - Network visualization canvas.
-- `drawHeaderFrame` - - Callback that redraws the header title.
-- `hostNetworkVisualizationController` - - Network panel resize/redraw controller.
+- `canvas` - Simulation canvas.
+- `hostLayoutElements` - Prepared layout containers.
+- `networkCanvas` - Network visualization canvas.
+- `drawHeaderFrame` - Callback that redraws the header title.
+- `hostNetworkVisualizationController` - Network panel resize/redraw controller.
 
 Returns: Nothing.
 
@@ -154,17 +156,18 @@ mountCanvasHostTree(
   headerCanvas: HTMLCanvasElement,
   canvas: HTMLCanvasElement,
   networkCanvas: HTMLCanvasElement,
+  architectureSelectorElement: HTMLDivElement,
 ): void
 ```
 
 Mounts the completed host DOM tree into the container in final order.
 
 Parameters:
-- `containerElement` - - Root host container.
-- `hostLayoutElements` - - Prepared layout containers.
-- `headerCanvas` - - Header title canvas.
-- `canvas` - - Main simulation canvas.
-- `networkCanvas` - - Network visualization canvas.
+- `containerElement` - Root host container.
+- `hostLayoutElements` - Prepared layout containers.
+- `headerCanvas` - Header title canvas.
+- `canvas` - Main simulation canvas.
+- `networkCanvas` - Network visualization canvas.
 
 Returns: Nothing.
 
@@ -180,8 +183,8 @@ renderInitialCanvasHostState(
 Renders the initial header and placeholder network visualization state.
 
 Parameters:
-- `drawHeaderFrame` - - Callback that redraws the header title.
-- `renderNetworkArchitecture` - - Network visualization renderer.
+- `drawHeaderFrame` - Callback that redraws the header title.
+- `renderNetworkArchitecture` - Network visualization renderer.
 
 Returns: Nothing.
 
@@ -199,7 +202,7 @@ The demo rebuilds the host from scratch on each startup so repeated runs begin
 from a known clean DOM state.
 
 Parameters:
-- `containerElement` - - Root host container.
+- `containerElement` - Root host container.
 
 Returns: Nothing.
 
@@ -231,8 +234,8 @@ The runtime writes HUD values incrementally, so the host exposes a narrow
 partial-update helper rather than requiring full table redraws.
 
 Parameters:
-- `statsValueByKey` - - Lookup of stat keys to value cells.
-- `partialValues` - - Subset of values to write this tick.
+- `statsValueByKey` - Lookup of stat keys to value cells.
+- `partialValues` - Subset of values to write this tick.
 
 Returns: Nothing.
 
@@ -243,12 +246,24 @@ Public type contracts for the browser-entry host boundary.
 These types describe what the host builder returns to the runtime and how HUD
 value updates are represented once the UI tree exists.
 
+### CanvasHostOptions
+
+Browser host callback bundle used by the architecture selector control group.
+
 ### CanvasHostResult
 
 Result payload returned after constructing the browser host UI tree.
 
 This is the runtime's handle into the rendered browser shell: the main canvas,
 its 2D context, the stats-cell lookup, and the network-panel draw callback.
+
+### HostArchitectureSelectorController
+
+Imperative controller returned by the host architecture selector service.
+
+### HostArchitectureSelectorItem
+
+Render-ready button state for one Flappy architecture profile selector item.
 
 ### HostStatsPartialValues
 
@@ -320,9 +335,9 @@ Browser canvases have both backing-store dimensions and CSS box dimensions;
 this helper updates both together.
 
 Parameters:
-- `canvas` - - Target canvas element.
-- `widthPx` - - Desired backing-store width in pixels.
-- `heightPx` - - Desired backing-store height in pixels.
+- `canvas` - Target canvas element.
+- `widthPx` - Desired backing-store width in pixels.
+- `heightPx` - Desired backing-store height in pixels.
 
 Returns: True when canvas dimensions changed.
 
@@ -342,9 +357,9 @@ The main simulation canvas uses fixed bounds because the world renderer is
 tuned for a controlled viewport rather than fluid DOM stretching.
 
 Parameters:
-- `canvas` - - Simulation canvas element.
-- `widthPx` - - Desired width in pixels.
-- `heightPx` - - Desired height in pixels.
+- `canvas` - Simulation canvas element.
+- `widthPx` - Desired width in pixels.
+- `heightPx` - Desired height in pixels.
 
 Returns: True when backing-store dimensions changed.
 
@@ -363,8 +378,8 @@ The side-panel network view needs the drawable size after panel insets are
 accounted for, not just the raw host client box.
 
 Parameters:
-- `networkCanvasHost` - - Host element wrapping the network canvas.
-- `hostInsetPx` - - Total inset to subtract from both dimensions.
+- `networkCanvasHost` - Host element wrapping the network canvas.
+- `hostInsetPx` - Total inset to subtract from both dimensions.
 
 Returns: Width/height pair in pixels.
 
@@ -390,8 +405,8 @@ Resolves a required 2D context from a canvas element.
 Failing early here keeps later rendering code free from repeated null checks.
 
 Parameters:
-- `canvas` - - Target canvas element.
-- `errorMessage` - - Error message when 2D context is unavailable.
+- `canvas` - Target canvas element.
+- `errorMessage` - Error message when 2D context is unavailable.
 
 Returns: Canvas 2D rendering context.
 
@@ -415,10 +430,12 @@ Creates the host stats table, appends it into the provided host element, and
 initializes all HUD values to their baseline placeholders.
 
 The initial placeholders make the HUD legible before the first generation or
-playback frame has been processed.
+playback frame has been processed: live counters start at zero, generation
+summary metrics wait on worker playback completion, and instrumentation rows
+stay explicit about whether runtime telemetry is enabled.
 
 Parameters:
-- `statsTableHost` - - DOM host that receives the table.
+- `statsTableHost` - DOM host that receives the table.
 
 Returns: Lookup map for future incremental stat updates.
 
@@ -437,8 +454,8 @@ This keeps HUD writes cheap and explicit: only supplied keys are rewritten,
 and architecture values receive their display formatting in one place.
 
 Parameters:
-- `statsValueByKey` - - Lookup of stat keys to value cells.
-- `partialValues` - - Subset of values to write this tick.
+- `statsValueByKey` - Lookup of stat keys to value cells.
+- `partialValues` - Subset of values to write this tick.
 
 Returns: Nothing.
 
@@ -467,14 +484,158 @@ creates the deferred redraw policy, runs the first layout pass, and installs
 ongoing resize listeners.
 
 Parameters:
-- `canvas` - - Simulation canvas to resize.
-- `containerElement` - - Width/height source.
-- `mainSplitContainer` - - Main split panel host.
-- `statsContainer` - - Stats host element.
-- `statsSplitContainer` - - Stats split panel containing stats and network panes.
-- `statsTableHost` - - Stats table host element.
-- `networkCanvas` - - Network canvas.
-- `networkCanvasHost` - - Network host element.
-- `onNetworkResize` - - Callback after network resize.
+- `canvas` - Simulation canvas to resize.
+- `containerElement` - Width/height source.
+- `mainSplitContainer` - Main split panel host.
+- `statsContainer` - Stats host element.
+- `statsSplitContainer` - Stats split panel containing stats and network panes.
+- `statsTableHost` - Stats table host element.
+- `networkCanvas` - Network canvas.
+- `networkCanvasHost` - Network host element.
+- `onNetworkResize` - Callback after network resize.
 
 Returns: Nothing.
+
+## browser-entry/host/host.network-tooltip.service.ts
+
+### HostCanvasPointLike
+
+Canvas-space point used when resolving network tooltip targets.
+
+### NetworkVisualizationTooltipScene
+
+Tooltip scene model resolved from the hovered network overlay target.
+
+### resolveHoveredNetworkVisualizationTooltipScene
+
+```ts
+resolveHoveredNetworkVisualizationTooltipScene(
+  canvasPoint: HostCanvasPointLike,
+  positionedScene: NetworkVisualizationPositionedScene,
+): NetworkVisualizationTooltipScene | undefined
+```
+
+Resolves the educational tooltip scene for the current hovered network overlay target.
+
+Input descriptions and input nodes intentionally share the same tooltip copy,
+while semantic group bands resolve a broader group-level teaching tooltip.
+
+Parameters:
+- `canvasPoint` - Hover point in network-canvas coordinates.
+- `positionedScene` - Rendered positioned scene reused for hover hit testing.
+
+Returns: Tooltip scene model for the hovered overlay target.
+
+## browser-entry/host/host.architecture-selector.service.ts
+
+### applyArchitectureSelectorButtonPresentation
+
+```ts
+applyArchitectureSelectorButtonPresentation(
+  buttonElement: HTMLButtonElement,
+  selectorItem: HostArchitectureSelectorItem,
+  disabled: boolean,
+  hovered: boolean,
+): void
+```
+
+Applies the neon-outline presentation for one architecture selector button.
+
+Parameters:
+- `buttonElement` - Target button element.
+- `selectorItem` - Render-ready selector state.
+- `disabled` - Whether the selector is disabled.
+- `hovered` - Whether the pointer is currently hovering the button.
+
+Returns: Nothing.
+
+### createArchitectureSelectorItemElement
+
+```ts
+createArchitectureSelectorItemElement(
+  selectorItem: HostArchitectureSelectorItem,
+  disabled: boolean,
+  onClick: () => void,
+): HTMLDivElement
+```
+
+Creates one selector item element with hover glow and optional best-score caption.
+
+Parameters:
+- `selectorItem` - Render-ready button state.
+- `disabled` - Whether the selector is temporarily disabled.
+- `onClick` - Click callback invoked for fresh-run selection.
+
+Returns: Rendered selector item wrapper.
+
+### createArchitectureSelectorTooltipElement
+
+```ts
+createArchitectureSelectorTooltipElement(
+  selectorItem: HostArchitectureSelectorItem,
+): HTMLDivElement
+```
+
+Creates the neon tooltip shown above one architecture selector button.
+
+Parameters:
+- `selectorItem` - Render-ready selector item with heading and teaching copy.
+
+Returns: Tooltip element positioned above the button.
+
+### createHostArchitectureSelector
+
+```ts
+createHostArchitectureSelector(
+  options: CanvasHostOptions,
+): HostArchitectureSelectorController
+```
+
+Creates the Flappy architecture selector control group used in the browser HUD.
+
+The selector is intentionally presentation-only. It renders the current shared
+architecture profiles, exposes a narrow click callback, and lets the runtime
+update local-record captions without rebuilding the whole host tree.
+
+Parameters:
+- `options` - Initial selector items and restart callback.
+
+Returns: Imperative controller for selector item and disabled-state updates.
+
+### createResetScoresButtonElement
+
+```ts
+createResetScoresButtonElement(
+  onResetScores: () => void,
+): HTMLButtonElement
+```
+
+Creates a "Reset Scores" button that clears all architecture best-score captions.
+
+The button sits below the architecture grid and matches the selector's visual
+language while using a muted amber accent to signal that it is a clearing
+action rather than a selection.
+
+Parameters:
+- `onResetScores` - Callback invoked when the button is clicked.
+
+Returns: Styled reset button element.
+
+### resolveArchitectureSelectorBoxShadow
+
+```ts
+resolveArchitectureSelectorBoxShadow(
+  selected: boolean,
+  hovered: boolean,
+  hoverGlowColor: string,
+): string
+```
+
+Resolves the neon glow stack for the architecture selector button state.
+
+Parameters:
+- `selected` - Whether the button is the active profile.
+- `hovered` - Whether the button is hovered.
+- `hoverGlowColor` - Primary glow color for the current button state.
+
+Returns: CSS box-shadow string.

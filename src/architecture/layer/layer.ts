@@ -34,6 +34,11 @@
  * the factory helpers explain how dense, recurrent, normalization, and
  * experimental layer families are assembled.
  *
+ * The descriptor surface follows the same rule as the rest of the primitive
+ * chapter: factory helpers already stamp default family metadata when they can,
+ * so callers usually only reach for `describe(...)` when a block needs a stable
+ * human-facing name such as `encoder`, `memoryShelf`, or `policyHead`.
+ *
  * ```mermaid
  * flowchart LR
  *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
@@ -73,11 +78,13 @@
  * level builders depend on.
  *
  * ```ts
- * const input = Layer.dense(2);
- * input.set({ type: 'input' });
+ * const input = Layer.dense(2, 'input');
  * const hidden = Layer.dense(4);
- * const output = Layer.dense(1);
- * output.set({ type: 'output' });
+ * const output = Layer.dense(1, 'output');
+ *
+ * input.describe({ label: 'sensorStage' });
+ * hidden.describe({ label: 'hiddenStage' });
+ * output.describe({ label: 'policyHead' });
  *
  * input.connect(hidden);
  * hidden.connect(output);
@@ -94,11 +101,21 @@
  * const recurrent = Layer.lstm(8);
  * const readout = Layer.dense(2);
  *
+ * recurrent.describe({ label: 'controllerCore' });
+ * readout.describe({ label: 'readoutHead', intent: 'output' });
+ *
  * recurrent.connect(readout);
  * ```
  */
 
 import Node from '../node/node';
+import {
+  type PrimitiveDescriptor,
+  type PrimitiveIntent,
+  type PrimitiveMetadata,
+  type PrimitiveNodeType,
+  resolvePrimitiveIntent,
+} from '../node/node';
 import Connection from '../connection/connection';
 import Group from '../group/group';
 import {
@@ -130,6 +147,10 @@ const DEFAULT_ATTENTION_HEADS = 1;
 const NODE_INDEX_START = 0;
 const NODE_INDEX_STEP = 1;
 
+function isLayerInstance(candidate: unknown): candidate is LayerLike {
+  return candidate instanceof Layer;
+}
+
 /**
  * Public block-level facade for layer-oriented architecture building.
  *
@@ -145,6 +166,11 @@ const NODE_INDEX_STEP = 1;
  * - reuse the same activation, wiring, and propagation vocabulary across layer
  *   families,
  * - keep factory-specific mechanics below the public API.
+ *
+ * Dense, recurrent, normalization, convolution, attention, and memory helpers
+ * can all stamp their own default family metadata. That means the public layer
+ * API stays low ceremony: choose the right factory first, then add
+ * `describe(...)` only if a later reader benefits from a clearer boundary name.
  */
 export default class Layer {
   /**
@@ -168,6 +194,12 @@ export default class Layer {
    * It might be null if the layer is not yet fully constructed or is an input layer.
    */
   output: Group | null;
+  /** Optional human-readable descriptor label for architecture tooling. */
+  label: string | null;
+  /** Optional semantic intent for architecture tooling and diagnostics. */
+  intent: PrimitiveIntent | null;
+  /** Optional scalar metadata retained on the primitive boundary. */
+  metadata: PrimitiveMetadata;
 
   /**
    * Dropout rate for this layer (0 to 1). If > 0, all nodes in the layer are masked together during training.
@@ -182,6 +214,46 @@ export default class Layer {
     this.output = null;
     this.nodes = [];
     this.connections = { in: [], out: [], self: [] };
+    this.label = null;
+    this.intent = null;
+    this.metadata = {};
+  }
+
+  /**
+   * Attaches optional descriptor metadata to the layer boundary.
+   *
+   * Use this when a layer represents a named stage such as a readout block,
+   * memory shelf, or recurrent cell family that later diagnostics should
+   * understand without re-deriving meaning from the internal node order.
+   *
+   * @param descriptor Optional label, intent, and scalar metadata to merge.
+   * @returns Nothing.
+   *
+   * @example
+   * ```ts
+   * const readout = Layer.dense(2, 'output');
+   *
+   * readout.describe({
+   *   label: 'readoutHead',
+   *   metadata: { stage: 'policy' },
+   * });
+   * ```
+   */
+  describe(descriptor: PrimitiveDescriptor): void {
+    if (descriptor.label !== undefined) {
+      this.label = descriptor.label;
+    }
+
+    if (descriptor.intent !== undefined) {
+      this.intent = descriptor.intent;
+    }
+
+    if (descriptor.metadata !== undefined) {
+      this.metadata = {
+        ...this.metadata,
+        ...descriptor.metadata,
+      };
+    }
   }
 
   /**
@@ -194,8 +266,8 @@ export default class Layer {
    * During training, layer-level dropout is applied, masking all nodes in the layer together.
    * During inference, all masks are set to 1.
    *
-   * @param value - An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
-   * @param training - A boolean indicating whether the layer is in training mode. Defaults to false.
+   * @param value An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
+   * @param training A boolean indicating whether the layer is in training mode. Defaults to false.
    * @returns An array containing the activation value of each node in the layer after activation.
    * @throws {Error} If the provided `value` array's length does not match the number of nodes in the layer.
    */
@@ -219,9 +291,9 @@ export default class Layer {
    * to calculate the initial error for each node. Otherwise, nodes calculate
    * their error based on the error propagated from subsequent layers.
    *
-   * @param rate - The learning rate, controlling the step size of weight adjustments.
-   * @param momentum - The momentum factor, used to smooth weight updates and escape local minima.
-   * @param target - An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
+   * @param rate The learning rate, controlling the step size of weight adjustments.
+   * @param momentum The momentum factor, used to smooth weight updates and escape local minima.
+   * @param target An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
    * @throws {Error} If the provided `target` array's length does not match the number of nodes in the layer.
    */
   propagate(rate: number, momentum: number, target?: number[]) {
@@ -236,9 +308,9 @@ export default class Layer {
    * or the target layer's `input` method. It establishes the forward connections
    * necessary for signal propagation.
    *
-   * @param target - The destination Layer, Group, or Node to connect to.
-   * @param method - The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
-   * @param weight - An optional fixed weight to assign to all created connections.
+   * @param target The destination Layer, Group, or Node to connect to.
+   * @param method The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
+   * @param weight An optional fixed weight to assign to all created connections.
    * @returns An array containing the newly created connection objects.
    * @throws {Error} If the layer's `output` group is not defined.
    */
@@ -251,8 +323,7 @@ export default class Layer {
     return connectLayerUtils(
       {
         connections: this.connections,
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
         layer: this,
         nodes: this.nodes,
         output: this.output,
@@ -269,8 +340,8 @@ export default class Layer {
    * Gating allows the activity of nodes in this layer (specifically, the output group)
    * to modulate the flow of information through the specified `connections`.
    *
-   * @param connections - An array of connection objects to be gated.
-   * @param method - The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
+   * @param connections An array of connection objects to be gated.
+   * @param method The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
    * @throws {Error} If the layer's `output` group is not defined.
    */
   gate(connections: Connection[], method: unknown): void {
@@ -278,8 +349,7 @@ export default class Layer {
     gateLayerUtils(
       {
         connections: this.connections,
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
         layer: this,
         nodes: this.nodes,
         output: this.output,
@@ -296,7 +366,7 @@ export default class Layer {
    * or node type. If a node within the `nodes` array is actually a `Group` (e.g., in memory layers),
    * the configuration is applied recursively to the nodes within that group.
    *
-   * @param values - An object containing the properties and their values to set.
+   * @param values An object containing the properties and their values to set.
    *                 Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
    */
   set(values: {
@@ -320,26 +390,30 @@ export default class Layer {
         }
         if (values.type !== undefined) {
           node.type = values.type;
+          node.intent = resolvePrimitiveIntent(values.type);
         }
       } else if (isGroupUtils(node)) {
         (node as Group).set(values);
       }
+    }
+
+    if (values.type !== undefined) {
+      this.intent = resolvePrimitiveIntent(values.type);
     }
   }
 
   /**
    * Removes connections between this layer's nodes and a target Group or Node.
    *
-   * @param target - The Group or Node to disconnect from.
-   * @param twosided - If true, removes connections in both directions (from this layer to target, and from target to this layer). Defaults to false.
+   * @param target The Group or Node to disconnect from.
+   * @param twosided If true, removes connections in both directions (from this layer to target, and from target to this layer). Defaults to false.
    */
   disconnect(target: Group | Node, twosided?: boolean) {
     // Step 1: Delegate disconnection to the orchestrated utils flow.
     disconnectLayerUtils(
       {
         connections: this.connections,
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
         layer: this,
         nodes: this.nodes,
         output: this.output,
@@ -357,7 +431,7 @@ export default class Layer {
     // Step 1: Delegate clearing to the orchestrated utils flow.
     clearLayerUtils({
       connections: this.connections,
-      isLayer: (candidate): candidate is Layer => candidate instanceof Layer,
+      isLayer: isLayerInstance,
       layer: this,
       nodes: this.nodes,
       output: this.output,
@@ -371,9 +445,9 @@ export default class Layer {
    * input mechanism (which is often the `output` group itself, but depends on the layer type).
    * This method is usually called by the `connect` method of the source layer/group.
    *
-   * @param from - The source Layer or Group connecting *to* this layer.
-   * @param method - The connection method (e.g., `ALL_TO_ALL`). Defaults to `ALL_TO_ALL`.
-   * @param weight - An optional fixed weight for the connections.
+   * @param from The source Layer or Group connecting *to* this layer.
+   * @param method The connection method (e.g., `ALL_TO_ALL`). Defaults to `ALL_TO_ALL`.
+   * @param weight An optional fixed weight for the connections.
    * @returns An array containing the newly created connection objects.
    * @throws {Error} If the layer's `output` group (acting as input target here) is not defined.
    */
@@ -386,8 +460,7 @@ export default class Layer {
     return inputLayerUtils(
       {
         connections: this.connections,
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
         layer: this,
         nodes: this.nodes,
         output: this.output,
@@ -403,19 +476,29 @@ export default class Layer {
    *
    * All nodes in the source layer/group will connect to all nodes in this layer
    * when using the default `ALL_TO_ALL` connection method via `layer.input()`.
+   * Dense layers also stamp default descriptor metadata (`family: 'dense'`) so
+   * later tooling can recognize the block even when the caller never names it.
    *
-   * @param size - The number of nodes (neurons) in this layer.
+   * @param size The number of nodes (neurons) in this layer.
+   * @param nodeType Optional primitive role assigned to the dense block.
    * @returns A new Layer instance configured as a dense layer.
+   *
+   * @example
+   * ```ts
+   * const output = Layer.dense(2, 'output');
+   *
+   * output.describe({ label: 'policyHead' });
+   * ```
    */
-  static dense(size: number): Layer {
+  static dense(size: number, nodeType: PrimitiveNodeType = 'hidden'): Layer {
     // Step 1: Delegate dense layer creation to the utils orchestrator.
     return createDenseLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
+      nodeType,
     );
   }
 
@@ -426,7 +509,7 @@ export default class Layer {
    * long-range dependencies. This implementation uses standard LSTM architecture
    * with input, forget, and output gates, and a memory cell.
    *
-   * @param size - The number of LSTM units (and nodes in each gate/cell group).
+   * @param size The number of LSTM units (and nodes in each gate/cell group).
    * @returns A new Layer instance configured as an LSTM layer.
    */
   static lstm(size: number): Layer {
@@ -434,8 +517,7 @@ export default class Layer {
     return createLstmLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
     );
@@ -448,7 +530,7 @@ export default class Layer {
    * simpler than LSTMs but achieving similar performance on many tasks.
    * They use an update gate and a reset gate to manage information flow.
    *
-   * @param size - The number of GRU units (and nodes in each gate/cell group).
+   * @param size The number of GRU units (and nodes in each gate/cell group).
    * @returns A new Layer instance configured as a GRU layer.
    */
   static gru(size: number): Layer {
@@ -456,8 +538,7 @@ export default class Layer {
     return createGruLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
     );
@@ -471,8 +552,8 @@ export default class Layer {
    * information propagates backward through the blocks. The layer's output
    * concatenates the states of all memory blocks.
    *
-   * @param size - The number of nodes in each memory block (must match the input size).
-   * @param memory - The number of time steps to remember (number of memory blocks).
+   * @param size The number of nodes in each memory block (must match the input size).
+   * @param memory The number of time steps to remember (number of memory blocks).
    * @returns A new Layer instance configured as a Memory layer.
    * @throws {Error} If the connecting layer's size doesn't match the memory block `size`.
    */
@@ -481,8 +562,7 @@ export default class Layer {
     return createMemoryLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
       memory,
@@ -492,7 +572,7 @@ export default class Layer {
   /**
    * Creates a batch normalization layer.
    * Applies batch normalization to the activations of the nodes in this layer during activation.
-   * @param size - The number of nodes in this layer.
+   * @param size The number of nodes in this layer.
    * @returns A new Layer instance configured as a batch normalization layer.
    */
   static batchNorm(size: number): Layer {
@@ -500,8 +580,7 @@ export default class Layer {
     return createBatchNormLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
     );
@@ -510,7 +589,7 @@ export default class Layer {
   /**
    * Creates a layer normalization layer.
    * Applies layer normalization to the activations of the nodes in this layer during activation.
-   * @param size - The number of nodes in this layer.
+   * @param size The number of nodes in this layer.
    * @returns A new Layer instance configured as a layer normalization layer.
    */
   static layerNorm(size: number): Layer {
@@ -518,8 +597,7 @@ export default class Layer {
     return createLayerNormLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
     );
@@ -527,10 +605,10 @@ export default class Layer {
 
   /**
    * Creates a 1D convolutional layer (stub implementation).
-   * @param size - Number of output nodes (filters).
-   * @param kernelSize - Size of the convolution kernel.
-   * @param stride - Stride of the convolution (default 1).
-   * @param padding - Padding (default 0).
+   * @param size Number of output nodes (filters).
+   * @param kernelSize Size of the convolution kernel.
+   * @param stride Stride of the convolution (default 1).
+   * @param padding Padding (default 0).
    * @returns A new Layer instance representing a 1D convolutional layer.
    */
   static conv1d(
@@ -543,8 +621,7 @@ export default class Layer {
     return createConv1dLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
       kernelSize,
@@ -555,8 +632,8 @@ export default class Layer {
 
   /**
    * Creates a multi-head self-attention layer (stub implementation).
-   * @param size - Number of output nodes.
-   * @param heads - Number of attention heads (default 1).
+   * @param size Number of output nodes.
+   * @param heads Number of attention heads (default 1).
    * @returns A new Layer instance representing an attention layer.
    */
   static attention(
@@ -567,8 +644,7 @@ export default class Layer {
     return createAttentionLayerUtils<Layer>(
       {
         createLayer: () => new Layer(),
-        isLayer: (candidate): candidate is LayerLike =>
-          candidate instanceof Layer,
+        isLayer: isLayerInstance,
       },
       size,
       heads,

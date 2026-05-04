@@ -13,7 +13,11 @@
  *
  * Minimal example:
  * ```ts
- * const layers = resolveNetworkVisualizationLayers(network, 38, 2);
+ * const layers = resolveNetworkVisualizationLayers(
+ *   network,
+ *   network.inputNodeIds.length,
+ *   network.outputNodeIds.length,
+ * );
  * console.log(layers.length);
  * ```
  */

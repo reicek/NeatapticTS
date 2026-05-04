@@ -92,6 +92,7 @@ import type {
   IMazeRunResult,
   INetwork,
 } from '../interfaces';
+import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
 
 /** Maze configuration used by the ASCII Maze evolution helpers. */
 export interface IMazeConfig {
@@ -108,6 +109,7 @@ export interface IAgentSimulationConfig {
 /** Configuration options for the evolutionary algorithm used in the ASCII Maze demos. */
 export interface IEvolutionAlgorithmConfig {
   allowRecurrent?: boolean;
+  architectureProfileId?: ExampleArchitectureProfileId;
   popSize?: number;
   maxStagnantGenerations?: number;
   minProgressToPass?: number;
@@ -234,6 +236,8 @@ export interface MazeEvolutionRunResult {
   neat: NeatInstance;
   /** Canonical or compatibility exit reason describing why the run ended. */
   exitReason: string;
+  /** Shared architecture profile id that seeded the run population, when one was used. */
+  architectureProfileId?: ExampleArchitectureProfileId;
 }
 
 /**

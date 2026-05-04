@@ -53,7 +53,7 @@ Read this file when you want to answer three startup questions:
 
 - which public defaults become concrete controller policy during
   construction,
-- which internal maps and arrays must exist before generation-zero work can
+- which internal state containers must exist before generation-zero work can
   proceed safely,
 - why the constructor delegates here without turning this file into a second
   public facade.
@@ -85,7 +85,7 @@ The helper coordinates five constructor responsibilities without becoming a
 second orchestration facade:
 
 1. materialize public defaults onto the caller-owned options bag,
-2. prepare controller bookkeeping maps and arrays,
+2. prepare controller bookkeeping state and arrays,
 3. attempt generation-zero pool creation when a seed network or population
    size is available,
 4. enable lineage only after the initial pool attempt has settled,
@@ -98,8 +98,8 @@ the bootstrap attempt has finished. Treat this helper as the constructor's
 setup pipeline, not as a general-purpose runtime entrypoint.
 
 Parameters:
-- `host` - - `Neat` instance receiving constructor-time side effects.
-- `request` - - Mutable options bag, raw constructor intent, and public
+- `host` - `Neat` instance receiving constructor-time side effects.
+- `request` - Mutable options bag, raw constructor intent, and public
 default values exported by the facade.
 
 Returns: Nothing. The helper mutates `host` and `request.optionBag` in place.
@@ -138,3 +138,24 @@ helper needs write access to a few controller-owned fields and one pool
 creation hook, but it does not own evaluation, evolution, or persistence.
 Keeping the contract narrow prevents the init chapter from quietly becoming a
 second facade.
+
+### seedInnovationTrackerAboveConnectionCounter
+
+```ts
+seedInnovationTrackerAboveConnectionCounter(
+  tracker: InnovationTracker | undefined,
+): void
+```
+
+Align the innovation tracker cursor above all connection innovation IDs that
+the Connection constructor already assigned during pool bootstrap.
+
+Without this step, the tracker starts at 0 and mutation-assigned innovations
+eventually collide with the Connection-counter-assigned IDs in the initial
+population, causing `assertValidGenomeContract` to reject a parent during
+crossover with a duplicate-innovation error.
+
+Parameters:
+- `tracker` - Live innovation tracker to seed.
+
+Returns: Nothing.

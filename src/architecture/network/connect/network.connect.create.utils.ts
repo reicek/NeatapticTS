@@ -28,14 +28,19 @@ export function shouldRejectConnectionForAcyclicMode(
  * @param sourceNode - Source node.
  * @param targetNode - Target node.
  * @param initialWeight - Optional explicit initial weight.
+ * @param randomValue - Network-owned RNG used when the caller did not provide a weight.
  * @returns Created low-level connection objects.
  */
 export function createConnectionsFromSourceNode(
   sourceNode: Node,
   targetNode: Node,
   initialWeight?: number,
+  randomValue?: () => number,
 ): Connection[] {
-  return sourceNode.connect(targetNode, initialWeight);
+  const resolvedWeight =
+    initialWeight ?? (randomValue ? randomValue() * 0.2 - 0.1 : undefined);
+
+  return sourceNode.connect(targetNode, resolvedWeight);
 }
 
 /**

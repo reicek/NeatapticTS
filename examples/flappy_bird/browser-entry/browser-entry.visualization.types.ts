@@ -82,6 +82,7 @@ export interface VisualNetworkNodeLike {
   index: number;
   type: string;
   bias: number;
+  geneId?: number;
   layer?: number;
 }
 
@@ -130,12 +131,51 @@ export interface NetworkVisualizationHoverState {
  */
 export interface NetworkInputGroupLabelBandScene {
   label: string;
+  labelLines: readonly string[];
+  tooltipHeading: string;
+  tooltipBodyParagraphs: readonly string[];
   leftPx: number;
   topPx: number;
   widthPx: number;
   heightPx: number;
   backgroundColor: string;
   orientation: 'vertical' | 'horizontal';
+  nodeIndices: number[];
+}
+
+/**
+ * Positioned input-description row scene reused by drawing and hover hit testing.
+ *
+ * Each row maps one human-readable description to one input node so hovering
+ * the text can emphasize the same node the description explains.
+ */
+export interface NetworkInputDescriptionScene {
+  labelLines: readonly string[];
+  tooltipHeading: string;
+  tooltipBodyParagraphs: readonly string[];
+  leftPx: number;
+  topPx: number;
+  widthPx: number;
+  heightPx: number;
+  nodeIndex: number;
+}
+
+/**
+ * Positioned hidden-column label scene reused by drawing and future hit testing.
+ *
+ * Recurrent-aware layouts use these scenes to explain what one hidden column
+ * means, for example an LSTM gate or a NARX delay shelf, without replacing the
+ * underlying node bias encoding.
+ */
+export interface NetworkHiddenColumnLabelScene {
+  labelLines: readonly string[];
+  tooltipHeading: string;
+  tooltipBodyParagraphs: readonly string[];
+  leftPx: number;
+  topPx: number;
+  widthPx: number;
+  heightPx: number;
+  backgroundColor: string;
   nodeIndices: number[];
 }
 
@@ -149,6 +189,8 @@ export interface NetworkVisualizationPositionedScene {
   positionedNodes: PositionedNetworkNodeLike[];
   nodeDimensions: NetworkNodeDimensionsLike;
   inputGroupLabelBandScenes: NetworkInputGroupLabelBandScene[];
+  inputDescriptionScenes: NetworkInputDescriptionScene[];
+  hiddenColumnLabelScenes?: NetworkHiddenColumnLabelScene[];
 }
 
 /**

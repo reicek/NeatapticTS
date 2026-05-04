@@ -131,6 +131,9 @@ function renderDocsPage(
     .replace(/\\/g, '/');
   const cssHref =
     (relativePathToRoot ? `${relativePathToRoot}/` : '') + 'assets/theme.css';
+  const tooltipRuntimeHref =
+    (relativePathToRoot ? `${relativePathToRoot}/` : '') +
+    'assets/theme-tooltips.js';
   const mermaidBootstrapScript = renderedBody.hasMermaidDiagram
     ? buildMermaidBootstrapScript(relativePathToRoot)
     : '';
@@ -141,7 +144,7 @@ function renderDocsPage(
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${
     page.title
-  } – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">\n<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">\n<link rel="stylesheet" href="${cssHref}"></head><body class="${
+  } – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">\n<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">\n<link rel="stylesheet" href="${cssHref}"><script defer src="${tooltipRuntimeHref}"></script></head><body class="${
     page.relDir === '' ? 'is-root' : ''
   }">\n<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="${
     relativePathToRoot || '.'

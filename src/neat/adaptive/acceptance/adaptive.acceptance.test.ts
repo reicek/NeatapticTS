@@ -1,4 +1,12 @@
-import { applyMinimalCriterionAdaptive } from './adaptive.acceptance';
+import {
+  applyMinimalCriterionAdaptive,
+  applyRejection,
+  collectScores,
+  computeAcceptance,
+  initializeThreshold,
+  resolveTargetSettings,
+  updateThreshold,
+} from './adaptive.acceptance';
 import Network from '../../../architecture/network';
 import Neat from '../../../neat';
 import type { NeatLikeWithAdaptive } from '../core/adaptive.core.types';
@@ -21,6 +29,36 @@ function createAcceptanceController(
 }
 
 describe('neat adaptive acceptance chapter', () => {
+  describe('adaptive.acceptance facade re-exports', () => {
+    it('exports applyMinimalCriterionAdaptive as a function', () => {
+      expect(typeof applyMinimalCriterionAdaptive).toBe('function');
+    });
+
+    it('exports initializeThreshold as a function', () => {
+      expect(typeof initializeThreshold).toBe('function');
+    });
+
+    it('exports collectScores as a function', () => {
+      expect(typeof collectScores).toBe('function');
+    });
+
+    it('exports computeAcceptance as a function', () => {
+      expect(typeof computeAcceptance).toBe('function');
+    });
+
+    it('exports resolveTargetSettings as a function', () => {
+      expect(typeof resolveTargetSettings).toBe('function');
+    });
+
+    it('exports updateThreshold as a function', () => {
+      expect(typeof updateThreshold).toBe('function');
+    });
+
+    it('exports applyRejection as a function', () => {
+      expect(typeof applyRejection).toBe('function');
+    });
+  });
+
   describe('applyMinimalCriterionAdaptive', () => {
     describe('given a generation whose acceptance rate exceeds the configured target band', () => {
       it('raises the threshold and rejects genomes that still fall below the updated bar', () => {

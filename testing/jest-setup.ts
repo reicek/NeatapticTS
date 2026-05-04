@@ -1,3 +1,13 @@
+// Polyfill structuredClone for jsdom test environments that do not expose it.
+if (typeof globalThis.structuredClone === 'undefined') {
+  // Use Node.js v8 serialization as a spec-compliant substitute.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { serialize, deserialize } = require('v8') as typeof import('v8');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).structuredClone = <T>(obj: T): T =>
+    deserialize(serialize(obj)) as T;
+}
+
 // Suppress noisy console output during tests unless explicitly requested.
 const originalLog = console.log;
 const originalWarn = console.warn;

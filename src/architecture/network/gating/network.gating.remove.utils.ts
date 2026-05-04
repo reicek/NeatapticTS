@@ -185,10 +185,7 @@ export function reassignPreservedGaters(
     }
 
     const connectionIndex = selectRandomIndex(bridgingConnections.length);
-    const connectionToGate = bridgingConnections.at(connectionIndex);
-    if (!connectionToGate) {
-      continue;
-    }
+    const connectionToGate = bridgingConnections[connectionIndex];
 
     network.gate(gaterNode, connectionToGate);
     bridgingConnections.splice(connectionIndex, 1);

@@ -109,6 +109,10 @@
 
 import { Neat } from '../../../src/neataptic';
 import Network from '../../../src/architecture/network';
+import {
+  DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
+  type ExampleArchitectureProfileId,
+} from '../../architectureProfiles';
 import { createXorshift32 } from '../rng';
 import type {
   WorkerInitMessage,
@@ -142,6 +146,7 @@ const FLAPPY_WORKER_INITIAL_SEED = 0;
 const FLAPPY_WORKER_INITIAL_WINNER_INDEX = -1;
 
 type WorkerMutableRuntimeState = {
+  currentArchitectureProfileId: ExampleArchitectureProfileId;
   stopped: boolean;
   neatRuntime: Neat | undefined;
   currentPopulation: Network[];
@@ -189,6 +194,7 @@ self.onmessage = createWorkerMessageHandler(workerMutableRuntimeState);
 function createWorkerMutableRuntimeState(): WorkerMutableRuntimeState {
   // Step 1: Initialize the worker state with empty runtime and playback fields.
   return {
+    currentArchitectureProfileId: DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
     stopped: false,
     neatRuntime: undefined,
     currentPopulation: [],
@@ -293,7 +299,19 @@ async function initializeRuntime(
   // Step 1: Persist the worker seed so warm-start logic can reuse it deterministically.
   workerMutableRuntimeState.workerInitSeed = initPayload.rngSeed;
 
-  // Step 2: Build and configure the NEAT runtime controller.
+  // Step 2: Persist the selected shared profile so generation payloads can report it explicitly.
+  workerMutableRuntimeState.currentArchitectureProfileId =
+    initPayload.architectureProfileId ?? DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID;
+
+  // Step 3: Reset generation-local caches so a fresh init starts from a clean runtime state.
+  workerMutableRuntimeState.currentPopulation = [];
+  workerMutableRuntimeState.currentPlaybackState = undefined;
+  workerMutableRuntimeState.currentPlaybackRng = undefined;
+  workerMutableRuntimeState.playbackWinnerIndex =
+    FLAPPY_WORKER_INITIAL_WINNER_INDEX;
+  workerMutableRuntimeState.generationZeroWarmStartApplied = false;
+
+  // Step 4: Build and configure the NEAT runtime controller.
   workerMutableRuntimeState.neatRuntime =
     createInitializedWorkerRuntime(initPayload);
 }
@@ -312,11 +330,15 @@ async function evolveAndPublishGeneration(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
 ): Promise<void> {
   const generationPayload = await evolveAndBuildGenerationReadyMessage({
+    architectureProfileId:
+      workerMutableRuntimeState.currentArchitectureProfileId,
     initializationPromise: workerMutableRuntimeState.initializationPromise,
     neatRuntime: workerMutableRuntimeState.neatRuntime,
     isStopped: () => workerMutableRuntimeState.stopped,
     warmStartGenerationZeroIfNeeded: (neatController) =>
       warmStartWorkerGenerationZeroIfNeeded(neatController, {
+        architectureProfileId:
+          workerMutableRuntimeState.currentArchitectureProfileId,
         workerInitSeed: workerMutableRuntimeState.workerInitSeed,
         generationZeroWarmStartApplied:
           workerMutableRuntimeState.generationZeroWarmStartApplied,

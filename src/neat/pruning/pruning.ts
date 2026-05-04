@@ -182,7 +182,7 @@ export function applyAdaptivePruning(this: NeatLikeForPruning): void {
   ) {
     const updatedPruneLevel = computeNextAdaptivePruneLevel(
       adaptivePruningOptions,
-      this._adaptivePruneLevel ?? 0,
+      this._adaptivePruneLevel!,
       currentMetricValue,
       targetRemainingMetric,
     );

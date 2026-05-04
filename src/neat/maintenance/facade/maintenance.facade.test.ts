@@ -30,6 +30,29 @@ describe('neat maintenance facade chapter', () => {
                 hiddenNode.connections.out.length > 0)),
         ).toBe(true);
       });
+
+      it('records repair-created connections in the innovation tracker', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, () => 1, {
+          popsize: 1,
+          seed: 4,
+          minHidden: 1,
+          speciation: false,
+        });
+        await neat.evaluate();
+        const network = neat.population[0];
+        [...network.connections].forEach((connection: Connection) =>
+          network.disconnect(connection.from, connection.to),
+        );
+
+        // Act
+        neat.ensureNoDeadEnds(network);
+
+        // Assert
+        expect(
+          neat.toJSON().innovationTracker.connectionInnovations.length > 0,
+        ).toBe(true);
+      });
     });
   });
 });

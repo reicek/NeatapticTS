@@ -146,6 +146,12 @@ README-owning folders is visible in the todo list.
 The project prefers small, durable, orchestration-first refactors over large
 one-pass rewrites.
 
+When a split step changes behavior or meaningfully risks runtime drift, prefer a
+TDD lane for that boundary: add or reshape the narrow red-phase test first,
+complete the split until that boundary turns green, then run `coverage-guard` on
+every `src/` file touched by the split to enforce 100% coverage in all four
+categories before the step is considered fully hardened.
+
 - Default to direct path migration once a boundary is folderized.
 - Do not preserve the old flat path with placeholder, mirror, or compatibility
   re-export files unless the user explicitly asks for them or there is a
@@ -189,15 +195,18 @@ API, default, or runtime contract.
 7. If no durable plan exists, create one using the bundled template.
 8. Keep the README todo explicit and folder-focused, with exactly one active
    README or folder documentation item at a time.
-9. Execute only one durable step unless the user explicitly asks for more.
-10. Improve JSDoc on touched exported and public surfaces so generated README
+9. Before implementation, add or update the smallest boundary-local test that
+   should go red for the intended behavior whenever the step changes behavior
+   or carries meaningful runtime risk.
+10. Execute only one durable step unless the user explicitly asks for more.
+11. Improve JSDoc on touched exported and public surfaces so generated README
     output remains educational, example-driven, and conceptually clear.
-11. After moving a boundary into a real folder, update repo-local imports and
+12. After moving a boundary into a real folder, update repo-local imports and
     tests to use the new folder path directly unless the task packet explicitly
     requires compatibility files.
-12. Delete obsolete flat or mirror files from the old location once direct
+13. Delete obsolete flat or mirror files from the old location once direct
     imports are in place and validations pass.
-13. Update the plan immediately after the step completes.
+14. Update the plan immediately after the step completes.
 
 - Follow `tracker-handoff` for `[PLANNED]`, `[WIP]`, `[DONE]`, compression,
   and `Handoff query` structure.
@@ -205,7 +214,11 @@ API, default, or runtime contract.
 - Prefer `### Playback boundary pass` over
   `### YYYY-MM-DD - Playback boundary pass`.
 
-14. Immediately run `educational-docs` as the next step on the touched
+15. Run the narrow green validation for the active boundary, then run
+  `coverage-guard` on every `src/` file touched by the split to enforce 100%
+  coverage in all four categories (statements, branches, functions, lines).
+
+16. Immediately run `educational-docs` as the next step on the touched
     surface.
 
 - This is mandatory even when the user invokes `solid-split` directly.
@@ -217,16 +230,17 @@ API, default, or runtime contract.
 - Do not report the split step as complete until that follow-up has run or
   the user has explicitly said to defer it.
 
-15. Run the minimum validation needed for touched files, documentation output,
+17. Run the minimum validation needed for touched files, documentation output,
     and the step's done criteria.
-16. End with the correct tracker-closing action for the current state.
+18. End with the correct tracker-closing action for the current state.
 
 - If the workstream is still active, end with a next-session handoff prompt
   that can continue from the next step without depending on prior chat
   history.
 - If the workstream becomes fully complete, use `tracker-handoff` to
-  compress the plan into a short closed tracker and add or update the
-  same-boundary `.logs.md` file.
+  compress the plan into a short closed tracker, add or update the
+  same-boundary `.logs.md` file, and archive both files into
+  `plans/completed/`.
 - Do not preserve a next-session handoff prompt on a terminally closed plan
   unless the user explicitly wants reopen guidance.
 
@@ -274,8 +288,8 @@ the plan file and how active versus completed tracker sections are marked.
 
 When the split workstream is fully complete, the terminal closure rule takes
 precedence instead: compress the `.plans.md` file, add or update the matching
-`.logs.md` file, and omit the handoff prompt unless the user explicitly wants a
-reopen prompt.
+`.logs.md` file, move both files into `plans/completed/`, and omit the handoff
+prompt unless the user explicitly wants a reopen prompt.
 
 The handoff prompt must:
 

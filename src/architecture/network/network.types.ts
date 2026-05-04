@@ -2,6 +2,17 @@ import type Network from './network';
 import type Node from '../node';
 import type Connection from '../connection/connection';
 import type { TestWorkerInstance } from '../../multithreading/types';
+export type {
+  ConstructDiagnostics,
+  ConstructGraphConnectionSummary,
+  ConstructGraphNodeSummary,
+  ConstructGraphSnapshot,
+  ConstructNodeId,
+  ConstructOptions,
+  ConstructPart,
+  ConstructResult,
+  ConstructValidationOptions,
+} from './construct/network.construct.utils.types';
 
 export * from './onnx/network.onnx.utils.types';
 export * from './slab/network.slab.utils.types';
@@ -16,6 +27,8 @@ export interface NetworkRuntimeProps {
   layers?: unknown[];
   /** Optional architecture descriptor hydrated from serialization metadata. */
   _serializedArchitectureDescriptor?: NetworkArchitectureDescriptor;
+  /** Optional generic extension bag hydrated from serialization metadata. */
+  _serializedExtensions?: NetworkJSONExtensions;
   /** Optional public topology intent preserved across runtime boundaries. */
   _topologyIntent?: NetworkTopologyIntent;
 }
@@ -44,6 +57,58 @@ export interface NetworkArchitectureDescriptor {
   totalConnections: number;
 }
 
+/** Supported explicit recurrent-module descriptor kinds. */
+export type NetworkTemporalRecurrentModuleKind = 'lstm' | 'gru' | 'narx-memory';
+
+/**
+ * Public snapshot of one validated recurrent module on a runtime network.
+ *
+ * The role map keeps architecture-aware tooling honest: a visualizer can label
+ * LSTM gates or NARX delay shelves directly instead of reverse-engineering the
+ * meaning of each hidden node from raw graph topology alone.
+ */
+export interface NetworkTemporalRecurrentModuleDescriptor {
+  /** Stable module identity preserved across runtime synchronization. */
+  moduleId: string;
+  /** Public recurrent-module family. */
+  kind: NetworkTemporalRecurrentModuleKind;
+  /** Ordered node gene ids grouped by semantic role within the module. */
+  nodeGeneIdsByRole: Record<string, number[]>;
+  /** Connection innovations that still define the live module boundary. */
+  connectionInnovations: number[];
+  /** Optional user-facing sub-label, currently used by NARX delay shelves. */
+  moduleLabel?: string;
+}
+
+/**
+ * Public snapshot of one validated gated block on a runtime network.
+ *
+ * This keeps recurrent-aware tooling free to highlight which gates own which
+ * structural edges without exposing the raw private extension bag directly.
+ */
+export interface NetworkTemporalGatedBlockDescriptor {
+  /** Stable block identity preserved across runtime synchronization. */
+  blockId: string;
+  /** Ordered gate-owner gene ids attached to the block. */
+  gaterGeneIds: number[];
+  /** Connection innovations gated by this block. */
+  connectionInnovations: number[];
+}
+
+/**
+ * Public temporal-structure descriptor for one runtime network.
+ *
+ * Consumers should treat this as a read-only teaching and diagnostics surface.
+ * It summarizes validated recurrent modules and gated blocks after stale
+ * extension records have been synchronized against the live graph.
+ */
+export interface NetworkTemporalStructureDescriptor {
+  /** Explicit recurrent modules that still match the runtime graph. */
+  recurrentModules: NetworkTemporalRecurrentModuleDescriptor[];
+  /** Explicit gated blocks that still match the runtime graph. */
+  gatedBlocks: NetworkTemporalGatedBlockDescriptor[];
+}
+
 /**
  * Public topology intent exposed by the network API.
  *
@@ -52,6 +117,103 @@ export interface NetworkArchitectureDescriptor {
  * cyclic structures may be introduced.
  */
 export type NetworkTopologyIntent = 'feed-forward' | 'unconstrained';
+
+/**
+ * Explicit ordered node-role metadata stored on a runtime network.
+ *
+ * The order of each array defines the public input and output vector semantics.
+ */
+export interface ExplicitIORoles {
+  /** Ordered stable gene ids for input-role nodes. */
+  inputNodeIds: number[];
+  /** Ordered stable gene ids for output-role nodes. */
+  outputNodeIds: number[];
+}
+
+/** Supported activation-schedule modes. */
+export type ActivationMode = 'acyclic' | 'recurrent';
+
+/** Execution path used by the most recent activation scheduling decision. */
+export type ActivationSchedulingExecutionPath =
+  | 'compiled-schedule'
+  | 'cycle-fallback-order'
+  | 'raw-node-order';
+
+/** High-level issue attached to the latest scheduling decision. */
+export type ActivationSchedulingIssue =
+  | 'cycle-detected'
+  | 'schedule-missing'
+  | null;
+
+/** Supported step kinds inside one activation schedule. */
+export type ActivationScheduleStepKind = 'wave' | 'recurrent-component';
+
+/** State-handling rule for recurrent schedule execution. */
+export type RecurrentStateSemantics = 'carry';
+
+/** One deterministic activation step inside a compiled schedule. */
+export interface ActivationScheduleStep {
+  /** Whether the step is a plain feed-forward wave or a recurrent SCC boundary. */
+  kind: ActivationScheduleStepKind;
+  /** Stable node gene ids executed by this step in deterministic order. */
+  nodeIds: ReadonlyArray<number>;
+  /** Fixed iteration count for recurrent components. */
+  iterations?: number;
+}
+
+/**
+ * Deterministic execution schedule for a network graph.
+ *
+ * Steps preserve deterministic order while distinguishing ordinary waves from
+ * recurrent strongly-connected components.
+ */
+export interface ActivationSchedule {
+  /** Execution mode used to derive this schedule. */
+  mode: ActivationMode;
+  /** Deterministic activation steps stored as stable node gene ids. */
+  steps: ReadonlyArray<ActivationScheduleStep>;
+  /** Ordered output-role node gene ids aligned with output vector semantics. */
+  outputNodeIds: number[];
+  /** Recurrent runtime state policy for recurrent schedules. */
+  stateSemantics?: RecurrentStateSemantics;
+}
+
+/**
+ * Human-friendly snapshot of the current activation-ordering contract.
+ *
+ * Activation ordering is the resolved execution story for one network: which
+ * mode is active, whether execution is using a compiled schedule or a fallback
+ * path, what recurrent state semantics apply, and what callers should do next
+ * when a cycle or stale cache prevents the preferred path.
+ */
+export interface ActivationSchedulingDiagnostics {
+  /** Semantic topology contract currently advertised by the network. */
+  topologyIntent: NetworkTopologyIntent;
+  /** Scheduling mode requested by the current topology contract. */
+  requestedMode: ActivationMode;
+  /** Whether structural edits marked the scheduling cache as stale. */
+  topologyDirty: boolean;
+  /** Execution path currently selected for activation traversal. */
+  executionPath: ActivationSchedulingExecutionPath;
+  /** High-level issue attached to the current scheduling result, when one exists. */
+  issue: ActivationSchedulingIssue;
+  /** Human-readable summary of the scheduling result. */
+  message: string;
+  /** Ordered input-role node ids that define public input-vector semantics. */
+  inputNodeIds: number[];
+  /** Ordered output-role node ids that define public output-vector semantics. */
+  outputNodeIds: number[];
+  /** Number of execution steps in the compiled schedule when one exists. */
+  stepCount: number;
+  /** Number of recurrent-component steps in the compiled schedule. */
+  recurrentComponentCount: number;
+  /** Recurrent state policy for the current schedule, when one exists. */
+  stateSemantics: RecurrentStateSemantics | null;
+  /** Node ids implicated in a cycle fallback, when one was detected. */
+  cycleNodeIds: number[];
+  /** Suggested next actions for callers who want a different scheduling result. */
+  suggestions: string[];
+}
 
 /**
  * Public constructor options for `Network`.
@@ -105,6 +267,8 @@ export interface NetworkBootstrapInternals {
   _reuseActivationArrays: boolean;
   /** Whether pooled typed activations can be returned directly. */
   _returnTypedActivations: boolean;
+  /** Refresh explicit ordered input/output role ids from the current node list. */
+  refreshExplicitIORoles: () => void;
   /** Seed the internal deterministic RNG. */
   setSeed: (seed: number) => void;
   /** Connect two nodes inside the runtime graph. */
@@ -151,6 +315,8 @@ export interface ActivateNetworkInternals {
 export interface ConnectNetworkInternals {
   /** Acyclic mode enforcement flag. */
   _enforceAcyclic?: boolean;
+  /** Network-owned RNG used for deterministic default connection weights. */
+  _rand?: () => number;
   /** Topology dirty marker. */
   _topoDirty: boolean;
   /** Slab dirty marker. */
@@ -211,6 +377,20 @@ export interface NetworkRuntimeDiagnosticsInternals {
   layers?: { nodes: Node[] }[];
   /** Flat network node collection. */
   nodes: Node[];
+  /** Ordered input-role node ids. */
+  inputNodeIds: number[];
+  /** Ordered output-role node ids. */
+  outputNodeIds: number[];
+  /** Public topology intent preserved on the runtime seam. */
+  _topologyIntent?: NetworkTopologyIntent;
+  /** Cached compiled activation schedule. */
+  _activationSchedule?: ActivationSchedule | null;
+  /** Cached scheduling diagnostics snapshot. */
+  _activationSchedulingDiagnostics?: ActivationSchedulingDiagnostics | null;
+  /** Topology dirty marker. */
+  _topoDirty?: boolean;
+  /** Acyclic mode enforcement flag. */
+  _enforceAcyclic?: boolean;
   /** Active DropConnect probability. */
   _dropConnectProb: number;
   /** Last recorded gradient norm. */
@@ -259,6 +439,10 @@ export interface StatsNetworkProps {
 export interface TopologyNetworkProps {
   /** Acyclic mode enforcement flag. */
   _enforceAcyclic?: boolean;
+  /** Cached deterministic activation schedule for acyclic execution. */
+  _activationSchedule?: ActivationSchedule | null;
+  /** Cached human-friendly scheduling diagnostics snapshot. */
+  _activationSchedulingDiagnostics?: ActivationSchedulingDiagnostics | null;
   /** Cached topological order. */
   _topoOrder: Node[] | null;
   /** Topology dirty marker. */
@@ -275,6 +459,8 @@ export interface TopologyBuildContext {
   inDegreeByNode: Map<Node, number>;
   /** Pending processing queue. */
   processingQueue: Node[];
+  /** Deterministic wave groups captured during Kahn traversal. */
+  activationSteps: number[][];
   /** Built topological order. */
   topoOrder: Node[];
 }
@@ -311,6 +497,12 @@ export interface NodeWithIndex extends Node {
 export interface StandaloneGenerationContext {
   /** Standalone network projection. */
   standaloneProps: NetworkStandaloneProps;
+  /** Indexed input nodes in public input-vector order. */
+  inputNodeIndexes: number[];
+  /** Indexed activation traversal in runtime execution order without inputs. */
+  activationNodeIndexes: number[];
+  /** Indexed output nodes in public output-vector order. */
+  outputNodeIndexes: number[];
   /** Already emitted activation source by name. */
   emittedActivationSource: Record<string, string>;
   /** Activation source snippets in order. */
@@ -536,6 +728,8 @@ export interface SerializeNodeInternals {
   state: number;
   /** Node bias value. */
   bias: number;
+  /** Node response multiplier applied before squashing. */
+  response: number;
   /** Optional stable gene identifier. */
   geneId?: number;
   /** Node self-connection holder. */
@@ -556,11 +750,30 @@ export type ConnectionInternalsWithEnabled = Connection & {
 };
 
 /**
+ * Stable historical identity fields for a connection gene.
+ *
+ * Runtime node indices are useful for fast reconstruction, but NEAT alignment,
+ * checkpoint migration, and future genotype-first work all depend on the
+ * historical identifiers that survive reindexing.
+ */
+export interface ConnectionHistoricalIdentity {
+  /** Stable innovation number for this connection gene. */
+  innovation?: number;
+  /** Stable gene id of the source node. */
+  fromGeneId?: number;
+  /** Stable gene id of the target node. */
+  toGeneId?: number;
+  /** Stable gene id of the gater node when one exists. */
+  gaterGeneId?: number | null;
+}
+
+/**
  * Serialized connection representation used by compact and JSON formats.
  *
- * Endpoints are canonical node indices, which keeps payloads deterministic and language-agnostic.
+ * Endpoints stay index-based for deterministic reconstruction, while the optional
+ * historical fields preserve NEAT identity across clone, export, and restore flows.
  */
-export interface SerializedConnection {
+export interface SerializedConnection extends ConnectionHistoricalIdentity {
   /** Source node index. */
   from: number;
   /** Target node index. */
@@ -569,13 +782,16 @@ export interface SerializedConnection {
   weight: number;
   /** Optional gater node index. */
   gater: number | null;
+  /** Optional explicit enabled state for compact historical payloads. */
+  enabled?: boolean;
 }
 
 /**
  * Compact tuple payload used by `serialize` output.
  *
  * Tuple slots are intentionally positional to reduce payload size:
- * 0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size.
+ * 0) activations, 1) states, 2) squash keys, 3) connections, 4) input size,
+ * 5) output size, 6) optional node gene ids, 7) optional topology intent.
  *
  * @remarks
  * This format is efficient but less self-describing than JSON.
@@ -599,6 +815,8 @@ export type CompactSerializedNetworkTuple = [
   SerializedConnection[],
   number,
   number,
+  Array<number | null>?,
+  NetworkTopologyIntent?,
 ];
 
 /**
@@ -611,6 +829,8 @@ export interface NetworkJSONNode {
   type: string;
   /** Node bias value. */
   bias: number;
+  /** Optional non-neutral response multiplier. Missing means the neutral response value `1`. */
+  response?: number;
   /** Squash function name. */
   squash: string;
   /** Node index in topology. */
@@ -624,17 +844,33 @@ export interface NetworkJSONNode {
  *
  * Includes optional gater and explicit enabled state for portability.
  */
-export interface NetworkJSONConnection {
+export interface NetworkJSONConnection extends ConnectionHistoricalIdentity {
   /** Source node index. */
   from: number;
   /** Target node index. */
   to: number;
   /** Connection weight. */
   weight: number;
+  /** Optional non-neutral gain. Missing means the neutral gain value `1`. */
+  gain?: number;
   /** Optional gater node index. */
   gater: number | null;
   /** Explicit enabled state. */
   enabled: boolean;
+}
+
+/**
+ * Optional extension bag carried by versioned network JSON payloads.
+ *
+ * The runtime serializer keeps this generic so stricter boundaries such as the
+ * NEAT genome adapter can attach additive, versioned metadata without forcing
+ * the network layer to understand each feature-specific field.
+ */
+export interface NetworkJSONExtensions {
+  /** Monotonic extension-bag version. */
+  version: number;
+  /** Plain-object extension payload. */
+  values: Record<string, unknown>;
 }
 
 /**
@@ -668,6 +904,8 @@ export interface NetworkJSON {
   nodes: NetworkJSONNode[];
   /** Serialized connections. */
   connections: NetworkJSONConnection[];
+  /** Optional additive extension bag preserved for higher-level bridges. */
+  extensions?: NetworkJSONExtensions;
   /** Optional architecture metadata for diagnostics/UI consumers. */
   architecture?: NetworkArchitectureDescriptor;
 }
@@ -690,6 +928,10 @@ export interface CompactPayloadContext {
   serializedInput: number;
   /** Serialized output size. */
   serializedOutput: number;
+  /** Optional stable node gene ids aligned to node order. */
+  nodeGeneIds?: Array<number | null>;
+  /** Optional topology intent contract for compact restore. */
+  topologyIntent?: NetworkTopologyIntent;
 }
 
 /**
@@ -708,6 +950,12 @@ export interface ResolvedNetworkSizeContext {
  * Context for compact-node reconstruction.
  *
  * Arrays are expected to be index-aligned so each node can be hydrated deterministically.
+ *
+ * This is a serialization/hydration constraint only: the compact format stores node fields
+ * (activation, state, squash, and optional gene id) as parallel arrays.
+ *
+ * Do not read this as guidance for genetic alignment. In NEAT-style crossover and speciation,
+ * homologous structure is matched by historical markings (innovation ids), not by array indices.
  */
 export interface CompactNodeRebuildContext {
   /** Activation values. */
@@ -716,6 +964,8 @@ export interface CompactNodeRebuildContext {
   states: number[];
   /** Squash function names. */
   squashes: string[];
+  /** Optional stable node gene ids aligned to node order. */
+  nodeGeneIds?: Array<number | null>;
   /** Input size. */
   input: number;
   /** Output size. */
@@ -1425,16 +1675,26 @@ export interface NetworkGeneticProps {
   _reenableProb?: number;
 }
 
-/** Crossover connection-gene descriptor. */
-export interface ConnectionGene {
+/**
+ * Runtime materialization descriptor for one inherited connection gene.
+ *
+ * Step 7.2b keeps this runtime shelf narrower than the old crossover gene
+ * shape. The phenotype materializer consumes only stable heredity identity
+ * plus weight and enabled state. Runtime node indexes are intentionally
+ * excluded because endpoints and gaters are resolved later by `geneId` after
+ * the offspring node set is rebuilt.
+ */
+export interface ConnectionGene extends ConnectionHistoricalIdentity {
   /** Weight value. */
   weight: number;
-  /** Source node index. */
-  from: number;
-  /** Target node index. */
-  to: number;
-  /** Gater node index. */
-  gater: number;
+  /** Stable innovation number used for historical alignment. */
+  innovation: number;
+  /** Stable gene id for the source node. */
+  fromGeneId: number;
+  /** Stable gene id for the target node. */
+  toGeneId: number;
+  /** Stable gene id for the gater node when one exists. */
+  gaterGeneId: number | null;
   /** Enabled state. */
   enabled: boolean;
 }
@@ -1452,8 +1712,14 @@ export type GeneticNetwork = Network & NetworkGeneticProps;
 export interface OffspringMaterializationContext {
   /** Mutable offspring reference. */
   offspring: GeneticNetwork;
-  /** Chosen offspring node count. */
-  offspringNodeCount: number;
+  /** Public topology intent guiding recurrent/self-gene pruning. */
+  topologyIntent: NetworkTopologyIntent;
+  /** Gene-id lookup for resolving inherited endpoints after node reindexing. */
+  offspringNodesByGeneId: Map<number, Node>;
+  /** Source nodes keyed by gene id for interface-resolution fallback. */
+  sourceNodesByGeneId: Map<number, Node>;
+  /** Input/output ordinals keyed by source gene id for interface fallback. */
+  sourceNodeInterfaceOrdinalsByGeneId: Map<number, number>;
 }
 
 /** Traversal context for one connection gene. */

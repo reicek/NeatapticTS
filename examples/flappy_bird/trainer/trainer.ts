@@ -79,8 +79,8 @@ import { registerTrainerStopSignals } from './trainer.signals.service';
  * Flappy Bird neuroevolution demo.
  *
  * This script runs a small NEAT population where each genome controls a bird.
- * The network sees a temporal observation (38 floats) and outputs two competing
- * action scores (`no flap` vs `flap`).
+ * The network sees the compact current-frame observation (6 floats) and
+ * outputs two competing action scores (`no flap` vs `flap`).
  *
  * The function is intentionally orchestration-first. It answers one practical
  * question: what has to be connected so a generic NEAT controller turns into a
@@ -111,12 +111,15 @@ export async function runTrainer(): Promise<void> {
   const trainerRuntimeState = createTrainerRuntimeState();
   const neatController = createNeatController(trainerSetup);
 
+  const resolveProfileAwareEvaluationPlan = (generationIndex: number) =>
+    resolveGenerationEvaluationPlan(generationIndex, trainerSetup.isRecurrent);
+
   attachPopulationFitnessEvaluator(
     neatController,
     trainerRuntimeState,
     trainerSetup.elitismCount,
     {
-      resolveGenerationEvaluationPlan,
+      resolveGenerationEvaluationPlan: resolveProfileAwareEvaluationPlan,
       evaluatePopulationQuickStage,
       evaluatePopulationFullStage,
       evaluatePopulationReevaluationStage,

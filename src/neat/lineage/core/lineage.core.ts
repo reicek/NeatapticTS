@@ -18,8 +18,6 @@ const PAIR_COUNT_DENOMINATOR = 2;
 const INDEX_OFFSET = 1;
 /** Default empty set size sentinel used in guards. */
 const EMPTY_SET_SIZE = 0;
-/** Fallback union size to avoid divide-by-zero. */
-const UNION_SIZE_FALLBACK = 1;
 /** Jaccard distance base (1 - similarity). */
 const JACCARD_DISTANCE_BASE = 1;
 /** Decimal precision for reported uniqueness. */
@@ -346,9 +344,7 @@ function computeJaccardDistance(
   ancestorSetB: Set<number>,
 ): number {
   const intersectionCount = countIntersection(ancestorSetA, ancestorSetB);
-  const unionSize =
-    ancestorSetA.size + ancestorSetB.size - intersectionCount ||
-    UNION_SIZE_FALLBACK;
+  const unionSize = ancestorSetA.size + ancestorSetB.size - intersectionCount;
   return JACCARD_DISTANCE_BASE - intersectionCount / unionSize;
 }
 

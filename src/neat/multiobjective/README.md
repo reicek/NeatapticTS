@@ -12,6 +12,11 @@ chapters own the narrow mechanics. This file exists so a reader can learn
 the ranking pipeline from top to bottom without digging through those lower-
 level helpers first.
 
+Ownership boundary: this ranking flow is controller-owned policy, not
+canonical genome identity. `_moRank` and `_moCrowd` are temporary annotations
+for selection, telemetry, and export; they do not become compatibility inputs
+or historical markings unless a later opt-in policy explicitly says so.
+
 Multi-objective ranking answers a different question than ordinary single-
 score selection. Instead of asking "which genome has the highest score?",
 this chapter asks "which genomes are still competitive once several goals
@@ -52,10 +57,14 @@ several genomes are non-dominated. It does not tell you whether those genomes
 represent a broad tradeoff surface or a tightly clustered patch of nearly
 identical solutions.
 
-The function annotates genomes with two fields used elsewhere in the codebase:
+The function annotates genomes with two controller-owned fields used
+elsewhere in the codebase:
 - `_moRank`: integer Pareto front rank (0 = best/frontier)
 - `_moCrowd`: numeric crowding distance (higher is better; Infinity for
   boundary solutions)
+
+Treat both fields as current-ranking metadata rather than as canonical genome
+traits.
 
 This orchestration layer also decides when the leading fronts should be
 archived for later telemetry or inspection. That keeps the ranking story in
@@ -83,8 +92,8 @@ Important assumptions:
 - Accessor failures are guarded and will yield a default value of 0.
 
 Parameters:
-- `this` - - Neat instance providing `_getObjectives()`, `options` and
+- `this` - Neat instance providing `_getObjectives()`, `options` and
 `_paretoArchive` fields (function is meant to be invoked using `.call`)
-- `pop` - - population array of `Network` genomes to be ranked
+- `pop` - population array of `Network` genomes to be ranked
 
 Returns: Array of Pareto fronts; each front is an array of `Network` genomes.

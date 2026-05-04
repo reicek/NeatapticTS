@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Hello Network (NeatapticTS)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="../../docs/assets/theme.css" />
+    <script defer src="../../docs/assets/theme-tooltips.js"></script>
+  </head>
+  <body class="demo-page">
+    <main class="demo-main">
+      <section class="hero">
+        <p class="eyebrow">Starter Browser Demo</p>
+        <h1>Hello Network</h1>
+        <p>
+          Hello Network shows the smallest complete inference story in the examples set:
+          two inputs move through a fixed feed-forward network, one output comes back,
+          and the table plus diagram make the path through the network visible.
+        </p>
+      </section>
+
+      <p id="hello-network-status" class="load-status" role="status" aria-live="polite">
+        Loading Hello Network browser bundle...
+      </p>
+      <section id="hello-network-output" class="starter-demo-shell"></section>
+    </main>
+
+    <script>
+      (function loadHelloNetworkBundle() {
+        const statusElement = document.getElementById('hello-network-status');
+        const currentPath = window.location.pathname.replace(/\\/g, '/');
+        const isRepositoryExamplePath = /\/examples\//.test(currentPath) && !/\/docs\/examples\//.test(currentPath);
+        const bundleSrc = isRepositoryExamplePath
+          ? '../../docs/assets/hello-network.bundle.js'
+          : '../../assets/hello-network.bundle.js';
+
+        const scriptElement = document.createElement('script');
+        scriptElement.src = bundleSrc;
+        scriptElement.defer = true;
+        scriptElement.onload = () => {
+          const startFunction =
+            window.helloNetworkStart || window.helloNetwork?.start;
+
+          if (!startFunction) {
+            if (statusElement) {
+              statusElement.textContent =
+                'Bundle loaded, but no Hello Network start function was found.';
+            }
+            return;
+          }
+
+          Promise.resolve(startFunction('hello-network-output'))
+            .then(() => {
+              if (statusElement) {
+                statusElement.textContent = '';
+              }
+            })
+            .catch((error) => {
+              if (statusElement) {
+                statusElement.textContent = error instanceof Error
+                  ? error.message
+                  : String(error);
+              }
+            });
+        };
+        scriptElement.onerror = () => {
+          if (statusElement) {
+            statusElement.textContent =
+              `Failed to load hello-network.bundle.js from ${bundleSrc}. Run npm run build:hello-network.`;
+          }
+        };
+
+        document.body.appendChild(scriptElement);
+      })();
+    </script>
+  </body>
+</html>

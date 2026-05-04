@@ -1,8 +1,5 @@
 import type { StandaloneGenerationContext as GenerationContext } from '../network.types';
-import {
-  INPUT_LOOP_LINE,
-  MASK_MULTIPLIER_IDENTITY,
-} from './network.standalone.utils.types';
+import { MASK_MULTIPLIER_IDENTITY } from './network.standalone.utils.types';
 import {
   ensureActivationFunctionIndex,
   resolveSquashName,
@@ -21,7 +18,9 @@ import {
 export function appendInputSeedLine(
   generationContext: GenerationContext,
 ): void {
-  generationContext.bodyLines.push(INPUT_LOOP_LINE);
+  generationContext.inputNodeIndexes.forEach((nodeIndex, inputIndex) => {
+    generationContext.bodyLines.push(`A[${nodeIndex}] = input[${inputIndex}];`);
+  });
 }
 
 /**
@@ -33,14 +32,7 @@ export function appendInputSeedLine(
 export function appendAllNodeComputationLines(
   generationContext: GenerationContext,
 ): void {
-  const firstComputableNodeIndex = generationContext.standaloneProps.input;
-  const nodeCount = generationContext.standaloneProps.nodes.length;
-
-  for (
-    let nodeTraversalIndex = firstComputableNodeIndex;
-    nodeTraversalIndex < nodeCount;
-    nodeTraversalIndex++
-  ) {
+  for (const nodeTraversalIndex of generationContext.activationNodeIndexes) {
     appendSingleNodeComputationLines(generationContext, nodeTraversalIndex);
   }
 }

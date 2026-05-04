@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Evolve XOR (NeatapticTS)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="../../docs/assets/theme.css" />
+    <script defer src="../../docs/assets/theme-tooltips.js"></script>
+  </head>
+  <body class="demo-page">
+    <main class="demo-main">
+      <section class="hero">
+        <p class="eyebrow">Starter Browser Demo</p>
+        <h1>Evolve XOR</h1>
+        <p>
+          Evolve XOR shows a seeded feed-forward NEAT run in the browser,
+          then breaks down how to read the champion table: the correct XOR labels,
+          the raw network outputs, the thresholded decisions, and the network shape behind them.
+        </p>
+      </section>
+
+      <p id="evolve-xor-status" class="load-status" role="status" aria-live="polite">
+        Loading Evolve XOR browser bundle...
+      </p>
+      <section id="evolve-xor-output" class="starter-demo-shell"></section>
+    </main>
+
+    <script>
+      (function loadEvolveXorBundle() {
+        const statusElement = document.getElementById('evolve-xor-status');
+        const currentPath = window.location.pathname.replace(/\\/g, '/');
+        const isRepositoryExamplePath = /\/examples\//.test(currentPath) && !/\/docs\/examples\//.test(currentPath);
+        const bundleSrc = isRepositoryExamplePath
+          ? '../../docs/assets/evolve-xor.bundle.js'
+          : '../../assets/evolve-xor.bundle.js';
+
+        const scriptElement = document.createElement('script');
+        scriptElement.src = bundleSrc;
+        scriptElement.defer = true;
+        scriptElement.onload = () => {
+          const startFunction = window.evolveXorStart || window.evolveXor?.start;
+
+          if (!startFunction) {
+            if (statusElement) {
+              statusElement.textContent =
+                'Bundle loaded, but no Evolve XOR start function was found.';
+            }
+            return;
+          }
+
+          Promise.resolve(startFunction('evolve-xor-output'))
+            .then(() => {
+              if (statusElement) {
+                statusElement.textContent = '';
+              }
+            })
+            .catch((error) => {
+              if (statusElement) {
+                statusElement.textContent = error instanceof Error
+                  ? error.message
+                  : String(error);
+              }
+            });
+        };
+        scriptElement.onerror = () => {
+          if (statusElement) {
+            statusElement.textContent =
+              `Failed to load evolve-xor.bundle.js from ${bundleSrc}. Run npm run build:evolve-xor.`;
+          }
+        };
+
+        document.body.appendChild(scriptElement);
+      })();
+    </script>
+  </body>
+</html>

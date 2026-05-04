@@ -44,6 +44,7 @@
 import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';
+import { synchronizeTemporalDescriptorExtensions } from '../network.temporal.extensions.utils';
 import {
   assertGaterNodeBelongsToNetwork,
   isConnectionAlreadyGated,
@@ -73,6 +74,8 @@ import {
  * Validation / invariants:
  *  - Throws if the gater node is not part of this network (prevents cross-network corruption).
  *  - If the connection is already gated, function is a no-op (emits warning when enabled).
+ *  - Successful gate attachment revalidates the explicit temporal descriptor bag so generic gating edits
+ *    cannot leave stale module metadata behind.
  *
  * Complexity: O(1)
  *
@@ -92,6 +95,9 @@ export function gate(this: Network, node: Node, connection: Connection) {
 
   // Step 3: Attach and track the gate connection.
   attachGaterToConnection(this, node, connection);
+
+  // Step 4: Revalidate explicit temporal descriptors after gate attachment.
+  synchronizeTemporalDescriptorExtensions(this);
 }
 
 /**
@@ -100,6 +106,8 @@ export function gate(this: Network, node: Node, connection: Connection) {
  * Idempotent: If the connection is not currently gated, the call performs no structural changes
  * (and optionally logs a warning). After ungating, the connection's weight will be used directly
  * without modulation by a gater activation.
+ * Successful ungate operations also revalidate the explicit temporal descriptor bag so stale gated-block
+ * descriptors do not survive until a later serialize pass.
  *
  * Complexity: O(n) where n = number of gated connections (indexOf lookup) – typically small.
  *
@@ -119,6 +127,9 @@ export function ungate(this: Network, connection: Connection) {
   // Step 3: Remove gate tracking and detach gater bookkeeping.
   removeGateAtIndex(this, gateIndex);
   detachConnectionFromGater(connection);
+
+  // Step 4: Revalidate explicit temporal descriptors after gate removal.
+  synchronizeTemporalDescriptorExtensions(this);
 }
 
 /**

@@ -12,7 +12,7 @@ Goal: Enable construction, evolution, and training of networks scaling toward **
 4. Incremental & Measurable: Each optimization introduces a benchmark & memory snapshot (Node + Browser where feasible).
 5. Branch Containment: Refactors isolated (one concern per PR) with compatibility shims where needed.
 6. Environment Awareness: Node path may adopt heavier instrumentation & persistent caches; Browser path emphasizes chunking, responsiveness, and quota safety.
-7. Hyper Alignment: Memory layers anticipate HyperEvoDevo MorphoNEAT phases (indirect generation, morphogenesis churn, phenotype/adjacency caches).
+7. NGE Alignment: Memory layers anticipate NEAT Genesis EvoDevo (NGE) phases (indirect generation, morphogenesis churn, phenotype/adjacency caches).
 8. Transparent API: All environment-specific memory optimizations (Node vs Browser, slabs, pooling, precision) remain behind a stable public memory/network API; callers never branch on environment—feature flags + `memoryStats()` abstraction handle differences.
 9. Performance Trade-off Management: Acknowledge that initial memory optimizations (like instrumentation and slab packing) may introduce temporary performance overhead. The plan must track these trade-offs and ensure that subsequent optimizations (e.g., caching, sparsity) deliver a net performance gain at scale.
 
@@ -49,7 +49,7 @@ Implications: Browser emphasizes **cooperative scheduling, micro-chunk allocatio
 
 Note on Bytes/Connection: The baseline of ~64 bytes/connection reflects the overhead of individual JavaScript objects. The slab packing in Phase 3 was designed to change the _memory layout_ to enable future gains but did not reduce the _data payload_ itself, hence the flat metric. The targeted 25% reduction is contingent on **Phase 5 (Sparsity)**, where connections are selectively pruned, directly reducing the average memory cost across the network.
 
-### Additional Hyper-Specific Metrics (Introduced Once Hyper Phases Land)
+### Additional NGE-Specific Metrics (Introduced Once NGE Phases Land)
 
 | Metric                                                   | Baseline (Post Phase 11 Hyper) | Target Phase | Goal                                                   |
 | -------------------------------------------------------- | ------------------------------ | ------------ | ------------------------------------------------------ |
@@ -104,7 +104,7 @@ Track 1 — **Core Library Foundation (Implementation First)**
 - Purpose: deliver memory/perf infrastructure that benefits the current library regardless of Hyper adoption.
 - Status: 0–3 complete; 4 next; 5–10 planned.
 
-Track 2 — **HyperEvoDevo MorphoNEAT Algorithm Integration**
+Track 2 — **NEAT Genesis EvoDevo (NGE) Algorithm Integration**
 
 - Phases **11–16**
 - Purpose: add evo-devo algorithmic capabilities after core memory infrastructure is in place.
@@ -287,11 +287,11 @@ Notes:
 - Bytes/connection held constant (no regression) despite added optional slabs; gain omission and plasticity pay‑for‑use prevented per-connection inflation. This confirms the pay-for-use principle is working but highlights that progress on the bytes/connection reduction metric is dependent on Phase 5 (Sparsity).
 - Field audit counts: Connection enumerable keys = 9 (stable), Node = 15 (stable) per benchmark `fieldAudit` confirmation.
 
-Results Notes & Next Step: For quantitative deltas see table above; variance & invariant consolidation detailed in Phase 3 Conclusion below. Proceed to Phase 4 centralized memory management and browser-validation work with a stable slab foundation. Track 2 Hyper work remains gated behind the Track 1 conditions defined earlier in this document.
+Results Notes & Next Step: For quantitative deltas see table above; variance & invariant consolidation detailed in Phase 3 Conclusion below. Proceed to Phase 4 centralized memory management and browser-validation work with a stable slab foundation. Track 2 NGE work remains gated behind the Track 1 conditions defined earlier in this document.
 
 #### Phase 3 Conclusion (Extended Slab Packing & Validation)
 
-All planned Phase 3 memory layout features are implemented, documented, and validated by tests; the slab system now provides a pay-for-use foundation for later Track 1 caching work and eventual HyperEvoDevo MorphoNEAT phases once the Track 1 gate is satisfied.
+All planned Phase 3 memory layout features are implemented, documented, and validated by tests; the slab system now provides a pay-for-use foundation for later Track 1 caching work and eventual NEAT Genesis EvoDevo (NGE) phases once the Track 1 gate is satisfied.
 
 Delivered Enhancements (Recap):
 
@@ -336,7 +336,7 @@ Exit Criteria (Met):
 - Pooling instrumentation exposes measurable reuse (alloc stats).
 - Documentation contains quantitative benchmark comparison and enumerated achievements.
 
-Ready for Next Phase: HyperEvoDevo MorphoNEAT work can proceed atop a stable, instrumented slab foundation with confidence in memory invariants and optional feature overhead discipline.
+Ready for Next Phase: NEAT Genesis EvoDevo (NGE) work can proceed atop a stable, instrumented slab foundation with confidence in memory invariants and optional feature overhead discipline.
 
 ### Phase 4 – Centralized Memory Management & Browser Validation [Next]
 
@@ -523,14 +523,14 @@ Steps:
 
 1. (H) Run high-scale determinism and performance sweeps under fixed seeds and replay streams.
 2. (H) Validate compatibility-version upgrade/downgrade behavior and cache key hardening.
-3. (H) Confirm acceptance criteria from `plans/HyperEvoDevoMorphoNEAT.md` are met with evidence artifacts.
+3. (H) Confirm acceptance criteria from `plans/NEAT_Genesis_EvoDevo.md` are met with evidence artifacts.
 4. (C/H) Final rollout readiness review with fallback/disable strategy documented.
 
 ## Cross-Cutting Utilities
 
 1. `memoryStats()` : counts & approximate bytes (connections, nodes, slabs, pools, caches) + active flag states + environment heuristics (browser only). All data will be sourced from the `Centralized Memory Manager`.
 2. Flag definitions in `config.ts` with environment gating (auto-disable unsupported features; expose status via stats).
-3. `wiringStats()`: Tracks wiring cost metrics required by HyperEvoDevo MorphoNEAT, such as `totalWiringLength`, `interModuleEdgeCount`, `meanEdgeLength`, and `modularityQ`.
+3. `wiringStats()`: Tracks wiring cost metrics required by NEAT Genesis EvoDevo (NGE), such as `totalWiringLength`, `interModuleEdgeCount`, `meanEdgeLength`, and `modularityQ`.
 4. `adjacencyCacheStats()` (Hyper): entries, bytes, hit/miss, evictions, persistence bytes.
 5. `precisionStats()` capturing current precision modes, overflow/underflow counters, scaling adjustments.
 6. `poolHighWaterMarks()` for churn leak detection and morphogenesis stress tests.
@@ -604,7 +604,7 @@ Metrics (Env): frame jank %, disk/IndexedDB bytes, heuristic error factor, compr
 Notes:
 ```
 
-## Coordination With HyperEvoDevo MorphoNEAT Plan (Expanded)
+## Coordination With NEAT Genesis EvoDevo Plan (Expanded)
 
 Dependency Mapping:
 Hyper Phase -> Memory Requirement -> Memory Phase

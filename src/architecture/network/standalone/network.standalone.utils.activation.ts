@@ -181,10 +181,6 @@ function convertArrowToNamedFunction(
   squashName: string,
 ): string {
   const arrowTokenIndex = sourceCode.indexOf(ARROW_TOKEN);
-  if (arrowTokenIndex < 0) {
-    return `function ${squashName}${FALLBACK_IDENTITY_BODY}`;
-  }
-
   const parameterSegment = sourceCode.substring(0, arrowTokenIndex).trim();
   const bodySegment = sourceCode
     .substring(arrowTokenIndex + ARROW_TOKEN.length)

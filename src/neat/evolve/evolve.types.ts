@@ -390,6 +390,8 @@ export interface NeatControllerForEvolution {
   sort: () => void;
   /** Mutate population hook. */
   mutate: () => Promise<void>;
+  /** Prepare the innovation tracker for a specific mutation-generation window. */
+  _prepareInnovationTrackerGeneration?: (targetGeneration: number) => void;
   /** Offspring generation hook. */
   getOffspring: () => Promise<GenomeWithMetadata>;
   /** Parent selection hook. */

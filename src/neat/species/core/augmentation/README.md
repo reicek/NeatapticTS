@@ -42,8 +42,8 @@ pretending that old history can always be reconstructed perfectly from the
 current runtime state.
 
 Parameters:
-- `history` - - Recorded species history to enrich.
-- `context` - - NEAT context exposing current species and optional fallback innovations.
+- `history` - Recorded species history to enrich.
+- `context` - NEAT context exposing current species and optional fallback innovations.
 
 Returns: Nothing. The history entries are mutated in place when backfill succeeds.
 
