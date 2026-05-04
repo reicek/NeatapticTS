@@ -15,6 +15,7 @@
     "bench:tables": "npm run docs:build-scripts && node ./dist-docs/scripts/generate-bench-tables.js",
     "test:silent": "npm run jest:base -- --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --testPathIgnorePatterns=benchmark\\..*\\.test\\.ts$ --silent",
     "test:smoke:starters": "npm run jest:base -- --no-cache --runInBand --testPathPattern='examples/(helloNetwork|evolveXor|sequenceReset|starter-examples)'",
+    "test:smoke": "npm run jest:base -- --no-cache --selectProjects starter-examples --runInBand",
     "deploy": "npm run build && npm run test:dist && npm publish",
     "build": "npm run build:webpack && npm run build:ts",
     "build:ts": "tsc",
