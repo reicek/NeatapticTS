@@ -2,8 +2,11 @@ import { BrowserTerminalUtility } from '../browserTerminalUtility';
 import { createBrowserLogger } from '../browserLogger';
 import { DashboardManager } from '../dashboardManager';
 import type { INetwork } from '../interfaces';
+import {
+  drawMazeNetworkVisualization,
+  type MazeHitArea,
+} from './network-view/network-view';
 import { exportVisualizationGraph } from '../../../src/architecture/network';
-import { renderNetworkView } from '../../../src/visualization/visualization';
 import type Network from '../../../src/architecture/network';
 import type {
   DashboardPresentationAdapter,
@@ -16,12 +19,11 @@ import type {
   BrowserEntryTelemetryHub,
 } from './browser-entry.types';
 
-/** Minimum width reserved for the visualizer canvas during responsive layout. */
-const MIN_NETWORK_CANVAS_WIDTH_PX = 280;
-/** Minimum height reserved for the visualizer canvas during responsive layout. */
-const MIN_NETWORK_CANVAS_HEIGHT_PX = 240;
-/** Width-to-height ratio used by the ASCII maze network visualizer canvas. */
-const NETWORK_CANVAS_ASPECT_RATIO = 0.6;
+/** ID of the DOM tooltip div used for hover tooltips over the network canvas. */
+const NETWORK_TOOLTIP_ELEMENT_ID = 'maze-network-tooltip';
+
+/** Extra hover padding used to make canvas label tooltips easier to trigger. */
+const TOOLTIP_HIT_AREA_PADDING_PX = 10;
 
 /**
  * Browser host-service boundary for the ASCII Maze browser entry.
@@ -54,28 +56,77 @@ export const createBrowserEntryHostServices = (
   const telemetryHub = createTelemetryHub<DashboardTelemetryPayload>();
   const runtimeDashboard: DashboardPresentationAdapter = dashboard;
   let latestNetwork: INetwork | null = null;
+  let latestHitAreas: MazeHitArea[] = [];
+  let hoveredNodeIndices: readonly number[] = [];
+
+  const redrawHoveredVisualization = (
+    nextHoveredNodeIndices: readonly number[],
+  ): void => {
+    const hoverChanged =
+      nextHoveredNodeIndices.length !== hoveredNodeIndices.length ||
+      nextHoveredNodeIndices.some(
+        (nodeIndex, nodeIndexOffset) =>
+          nodeIndex !== hoveredNodeIndices[nodeIndexOffset],
+      );
+    if (!hoverChanged) {
+      return;
+    }
+
+    hoveredNodeIndices = [...nextHoveredNodeIndices];
+    latestHitAreas = renderLatestNetworkSnapshot(
+      hostElements.networkCanvasElement,
+      latestNetwork,
+      hoveredNodeIndices,
+    );
+  };
 
   const baseDashboardUpdate = dashboard.update.bind(dashboard);
-  dashboard.update = (...updateArgs: Parameters<DashboardManager['update']>) => {
+  dashboard.update = (
+    ...updateArgs: Parameters<DashboardManager['update']>
+  ) => {
     const networkCandidate = updateArgs[2] ?? null;
     latestNetwork = networkCandidate;
     baseDashboardUpdate(...updateArgs);
-    renderLatestNetworkSnapshot(hostElements.networkCanvasElement, networkCandidate);
+    latestHitAreas = renderLatestNetworkSnapshot(
+      hostElements.networkCanvasElement,
+      networkCandidate,
+      hoveredNodeIndices,
+    );
+    hoverTooltipController.refresh();
   };
 
   runtimeDashboard._telemetryHook = (telemetry: DashboardTelemetryPayload) => {
     telemetryHub.dispatch(telemetry);
   };
 
+  // Install hover tooltip system on the canvas after services are wired.
+  const hoverTooltipController = installHoverTooltip(
+    hostElements.networkCanvasElement,
+    () => latestHitAreas,
+    redrawHoveredVisualization,
+  );
+
+  const disposeResize = installResizeRedraw(
+    hostElements.observeTarget,
+    runtimeDashboard,
+    () => {
+      latestHitAreas = renderLatestNetworkSnapshot(
+        hostElements.networkCanvasElement,
+        latestNetwork,
+        hoveredNodeIndices,
+      );
+      hoverTooltipController.refresh();
+    },
+  );
+
   return {
     dashboard,
     runtimeDashboard,
     telemetryHub,
-    disposeResizeHandling: installResizeRedraw(
-      hostElements.observeTarget,
-      runtimeDashboard,
-      () => renderLatestNetworkSnapshot(hostElements.networkCanvasElement, latestNetwork),
-    ),
+    disposeResizeHandling: () => {
+      hoverTooltipController.dispose();
+      disposeResize();
+    },
   };
 };
 
@@ -183,63 +234,41 @@ function safelyRedrawDashboard(
 /**
  * Render the latest evolved network into the dedicated browser canvas panel.
  *
+ * Returns hit areas from the render so the hover system can update without
+ * a re-render on every pointer event.
+ *
  * @param networkCanvasElement - Canvas target in the browser host.
  * @param networkCandidate - Current best network candidate from dashboard updates.
+ * @returns Hit areas for hover tooltip testing, or empty array on failure.
  */
 function renderLatestNetworkSnapshot(
   networkCanvasElement: HTMLCanvasElement | null,
   networkCandidate: INetwork | null,
-): void {
+  hoveredNodeIndices: readonly number[] = [],
+): MazeHitArea[] {
   if (!networkCanvasElement || !networkCandidate) {
-    return;
+    return [];
   }
 
   if (!isVisualizationCompatibleNetwork(networkCandidate)) {
-    return;
+    return [];
   }
 
   try {
-    syncNetworkCanvasToPanel(networkCanvasElement);
     const visualizationGraph = exportVisualizationGraph(
       networkCandidate as unknown as Network,
     );
-    renderNetworkView(networkCanvasElement, visualizationGraph, {
-      nodeDimensions: { widthPx: 18, heightPx: 18 },
-      panelPaddingPx: { topPx: 16, rightPx: 16, bottomPx: 16, leftPx: 16 },
-    });
+    const resolvedNetwork = networkCandidate as unknown as Network;
+    const result = drawMazeNetworkVisualization(
+      networkCanvasElement,
+      resolvedNetwork,
+      visualizationGraph,
+      hoveredNodeIndices,
+    );
+    return result.hitAreas;
   } catch {
     // Ignore visualization-only failures; dashboard telemetry continues rendering.
-  }
-}
-
-/**
- * Align canvas pixel dimensions to the responsive panel width before drawing.
- *
- * @param networkCanvasElement - Canvas target in the browser host.
- */
-function syncNetworkCanvasToPanel(
-  networkCanvasElement: HTMLCanvasElement,
-): void {
-  const measuredCanvasWidthPx = Math.floor(networkCanvasElement.clientWidth);
-  const resolvedCanvasWidthPx = Math.max(
-    MIN_NETWORK_CANVAS_WIDTH_PX,
-    measuredCanvasWidthPx,
-  );
-  const resolvedCanvasHeightPx = Math.max(
-    MIN_NETWORK_CANVAS_HEIGHT_PX,
-    Math.floor(resolvedCanvasWidthPx * NETWORK_CANVAS_ASPECT_RATIO),
-  );
-
-  // Keep CSS size fluid while matching backing-store pixels for crisp rendering.
-  networkCanvasElement.style.width = '100%';
-  networkCanvasElement.style.height = `${resolvedCanvasHeightPx}px`;
-
-  if (
-    networkCanvasElement.width !== resolvedCanvasWidthPx ||
-    networkCanvasElement.height !== resolvedCanvasHeightPx
-  ) {
-    networkCanvasElement.width = resolvedCanvasWidthPx;
-    networkCanvasElement.height = resolvedCanvasHeightPx;
+    return [];
   }
 }
 
@@ -269,4 +298,243 @@ function isVisualizationCompatibleNetwork(
     Array.isArray(maybeNetwork.outputNodeIds) &&
     typeof maybeNetwork.getTopologyIntent === 'function'
   );
+}
+
+// ---------------------------------------------------------------------------
+// Hover tooltip system
+// ---------------------------------------------------------------------------
+
+/**
+ * Installs mousemove and mouseleave handlers on the network canvas to show
+ * educational hover tooltips above the current pointer position.
+ *
+ * @param canvasElement  - Canvas element to attach listeners to.
+ * @param getHitAreas    - Getter for the latest hit areas from the last render.
+ * @returns Cleanup function that removes the installed listeners.
+ */
+function installHoverTooltip(
+  canvasElement: HTMLCanvasElement | null,
+  getHitAreas: () => MazeHitArea[],
+  onHoverNodesChanged: (hoveredNodeIndices: readonly number[]) => void,
+): {
+  dispose: () => void;
+  refresh: () => void;
+} {
+  if (!canvasElement) {
+    return {
+      dispose: () => {},
+      refresh: () => {},
+    };
+  }
+
+  const tooltipElement = document.getElementById(
+    NETWORK_TOOLTIP_ELEMENT_ID,
+  ) as HTMLElement | null;
+  let lastPointerClientX = 0;
+  let lastPointerClientY = 0;
+  let hasActivePointer = false;
+
+  const refreshTooltipFromPointer = (): void => {
+    if (!tooltipElement || !hasActivePointer) {
+      return;
+    }
+
+    const rect = canvasElement.getBoundingClientRect();
+    const scaleX = canvasElement.width / rect.width;
+    const scaleY = canvasElement.height / rect.height;
+    const canvasX = (lastPointerClientX - rect.left) * scaleX;
+    const canvasY = (lastPointerClientY - rect.top) * scaleY;
+    const pointerInsideCanvas =
+      lastPointerClientX >= rect.left &&
+      lastPointerClientX <= rect.right &&
+      lastPointerClientY >= rect.top &&
+      lastPointerClientY <= rect.bottom;
+
+    if (!pointerInsideCanvas) {
+      hideTooltip(tooltipElement);
+      return;
+    }
+
+    const hitArea = resolveHoveredHitArea(canvasX, canvasY, getHitAreas());
+    if (hitArea) {
+      showTooltip(
+        tooltipElement,
+        hitArea,
+        lastPointerClientX,
+        lastPointerClientY,
+      );
+      return;
+    }
+
+    hideTooltip(tooltipElement);
+  };
+
+  const handleMouseMove = (event: MouseEvent): void => {
+    lastPointerClientX = event.clientX;
+    lastPointerClientY = event.clientY;
+    hasActivePointer = true;
+    const rect = canvasElement.getBoundingClientRect();
+    const scaleX = canvasElement.width / rect.width;
+    const scaleY = canvasElement.height / rect.height;
+    const canvasX = (event.clientX - rect.left) * scaleX;
+    const canvasY = (event.clientY - rect.top) * scaleY;
+    const hitArea = resolveHoveredHitArea(canvasX, canvasY, getHitAreas());
+    onHoverNodesChanged(hitArea?.hoveredNodeIndices ?? []);
+    refreshTooltipFromPointer();
+  };
+
+  const handleMouseLeave = (): void => {
+    hasActivePointer = false;
+    onHoverNodesChanged([]);
+    if (tooltipElement) hideTooltip(tooltipElement);
+  };
+
+  canvasElement.addEventListener('mousemove', handleMouseMove);
+  canvasElement.addEventListener('mouseleave', handleMouseLeave);
+
+  return {
+    refresh: refreshTooltipFromPointer,
+    dispose: () => {
+      hasActivePointer = false;
+      onHoverNodesChanged([]);
+      canvasElement.removeEventListener('mousemove', handleMouseMove);
+      canvasElement.removeEventListener('mouseleave', handleMouseLeave);
+      if (tooltipElement) hideTooltip(tooltipElement);
+    },
+  };
+}
+
+/**
+ * Finds the first hit area that contains the given canvas-space point.
+ *
+ * @param canvasX    - X coordinate in canvas backing-store pixels.
+ * @param canvasY    - Y coordinate in canvas backing-store pixels.
+ * @param hitAreas   - Hit areas from the last render pass.
+ * @returns First matching hit area, or undefined.
+ */
+function resolveHoveredHitArea(
+  canvasX: number,
+  canvasY: number,
+  hitAreas: MazeHitArea[],
+): MazeHitArea | undefined {
+  const directHitArea = hitAreas.find(
+    (area) =>
+      canvasX >= area.leftPx - TOOLTIP_HIT_AREA_PADDING_PX &&
+      canvasX <= area.leftPx + area.widthPx + TOOLTIP_HIT_AREA_PADDING_PX &&
+      canvasY >= area.topPx - TOOLTIP_HIT_AREA_PADDING_PX &&
+      canvasY <= area.topPx + area.heightPx + TOOLTIP_HIT_AREA_PADDING_PX,
+  );
+
+  if (directHitArea) {
+    return directHitArea;
+  }
+
+  return hitAreas
+    .map((area) => ({
+      area,
+      distancePx: resolvePointToAreaDistancePx(canvasX, canvasY, area),
+    }))
+    .filter(({ distancePx }) => distancePx <= TOOLTIP_HIT_AREA_PADDING_PX)
+    .toSorted((leftEntry, rightEntry) => leftEntry.distancePx - rightEntry.distancePx)[0]
+    ?.area;
+}
+
+/**
+ * Resolves the shortest Euclidean distance from a point to a rectangle.
+ *
+ * @param canvasX - X coordinate in canvas pixels.
+ * @param canvasY - Y coordinate in canvas pixels.
+ * @param hitArea - Candidate hit area rectangle.
+ * @returns Distance from the point to the rectangle edge, or 0 for interior points.
+ */
+function resolvePointToAreaDistancePx(
+  canvasX: number,
+  canvasY: number,
+  hitArea: MazeHitArea,
+): number {
+  const horizontalGapPx = Math.max(
+    hitArea.leftPx - canvasX,
+    0,
+    canvasX - (hitArea.leftPx + hitArea.widthPx),
+  );
+  const verticalGapPx = Math.max(
+    hitArea.topPx - canvasY,
+    0,
+    canvasY - (hitArea.topPx + hitArea.heightPx),
+  );
+
+  return Math.hypot(horizontalGapPx, verticalGapPx);
+}
+
+/**
+ * Positions and reveals the tooltip element near the current pointer.
+ *
+ * @param tooltipElement - DOM tooltip div.
+ * @param hitArea        - Hit area providing heading and body paragraphs.
+ * @param clientX        - Pointer X in viewport coordinates.
+ * @param clientY        - Pointer Y in viewport coordinates.
+ */
+function showTooltip(
+  tooltipElement: HTMLElement,
+  hitArea: MazeHitArea,
+  clientX: number,
+  clientY: number,
+): void {
+  const offsetXPx = 14;
+  tooltipElement.innerHTML = resolveTooltipHtml(hitArea);
+  tooltipElement.style.display = 'block';
+
+  const tooltipWidthPx = tooltipElement.offsetWidth;
+  const tooltipHeightPx = tooltipElement.offsetHeight;
+  const viewportWidthPx = window.innerWidth;
+  const viewportHeightPx = window.innerHeight;
+  const preferredLeftPx = clientX + offsetXPx;
+  const preferredTopPx = clientY - tooltipHeightPx - 12;
+  const resolvedLeftPx = Math.min(
+    preferredLeftPx,
+    viewportWidthPx - tooltipWidthPx - 12,
+  );
+  const resolvedTopPx = preferredTopPx >= 12
+    ? preferredTopPx
+    : Math.min(clientY + 18, viewportHeightPx - tooltipHeightPx - 12);
+
+  tooltipElement.style.left = `${Math.max(12, resolvedLeftPx)}px`;
+  tooltipElement.style.top = `${Math.max(12, resolvedTopPx)}px`;
+}
+
+/**
+ * Hides the tooltip element.
+ *
+ * @param tooltipElement - DOM tooltip div.
+ */
+function hideTooltip(tooltipElement: HTMLElement): void {
+  tooltipElement.style.display = 'none';
+}
+
+/**
+ * Builds the inner HTML string for a tooltip from a hit area.
+ *
+ * @param hitArea - Source hit area.
+ * @returns Safe HTML string for the tooltip body.
+ */
+function resolveTooltipHtml(hitArea: MazeHitArea): string {
+  const escapedHeading = escapeHtml(hitArea.heading);
+  const bodyHtml = hitArea.bodyParagraphs
+    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+    .join('');
+  return `<strong class="maze-network-tooltip-heading">${escapedHeading}</strong>${bodyHtml}`;
+}
+
+/**
+ * Escapes HTML special characters in a plain-text string.
+ *
+ * @param text - Input text.
+ * @returns HTML-safe string.
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
 }

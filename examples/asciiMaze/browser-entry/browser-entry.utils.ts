@@ -25,7 +25,9 @@ export const resolveBrowserEntryHostElements = (
     ? (hostElement.querySelector('#ascii-maze-live') as HTMLElement | null)
     : null;
   const networkCanvasElement = hostElement
-    ? (hostElement.querySelector('#ascii-maze-network-canvas') as HTMLCanvasElement | null)
+    ? (hostElement.querySelector(
+        '#ascii-maze-network-canvas',
+      ) as HTMLCanvasElement | null)
     : null;
 
   return {

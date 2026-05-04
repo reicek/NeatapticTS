@@ -342,6 +342,53 @@ Create a minimal telemetry hub backed by a Set of listeners.
 
 Returns: A small hub optimized for browser demo listener counts.
 
+### escapeHtml
+
+```ts
+escapeHtml(
+  text: string,
+): string
+```
+
+Escapes HTML special characters in a plain-text string.
+
+Parameters:
+- `text` - Input text.
+
+Returns: HTML-safe string.
+
+### hideTooltip
+
+```ts
+hideTooltip(
+  tooltipElement: HTMLElement,
+): void
+```
+
+Hides the tooltip element.
+
+Parameters:
+- `tooltipElement` - DOM tooltip div.
+
+### installHoverTooltip
+
+```ts
+installHoverTooltip(
+  canvasElement: HTMLCanvasElement | null,
+  getHitAreas: () => MazeHitArea[],
+  onHoverNodesChanged: (hoveredNodeIndices: readonly number[]) => void,
+): { dispose: () => void; refresh: () => void; }
+```
+
+Installs mousemove and mouseleave handlers on the network canvas to show
+educational hover tooltips above the current pointer position.
+
+Parameters:
+- `canvasElement` - Canvas element to attach listeners to.
+- `getHitAreas` - Getter for the latest hit areas from the last render.
+
+Returns: Cleanup function that removes the installed listeners.
+
 ### installResizeRedraw
 
 ```ts
@@ -381,14 +428,73 @@ Returns: True when the candidate exposes required visualization fields.
 renderLatestNetworkSnapshot(
   networkCanvasElement: HTMLCanvasElement | null,
   networkCandidate: INetwork | null,
-): void
+  hoveredNodeIndices: readonly number[],
+): MazeHitArea[]
 ```
 
 Render the latest evolved network into the dedicated browser canvas panel.
 
+Returns hit areas from the render so the hover system can update without
+a re-render on every pointer event.
+
 Parameters:
 - `networkCanvasElement` - Canvas target in the browser host.
 - `networkCandidate` - Current best network candidate from dashboard updates.
+
+Returns: Hit areas for hover tooltip testing, or empty array on failure.
+
+### resolveHoveredHitArea
+
+```ts
+resolveHoveredHitArea(
+  canvasX: number,
+  canvasY: number,
+  hitAreas: MazeHitArea[],
+): MazeHitArea | undefined
+```
+
+Finds the first hit area that contains the given canvas-space point.
+
+Parameters:
+- `canvasX` - X coordinate in canvas backing-store pixels.
+- `canvasY` - Y coordinate in canvas backing-store pixels.
+- `hitAreas` - Hit areas from the last render pass.
+
+Returns: First matching hit area, or undefined.
+
+### resolvePointToAreaDistancePx
+
+```ts
+resolvePointToAreaDistancePx(
+  canvasX: number,
+  canvasY: number,
+  hitArea: MazeHitArea,
+): number
+```
+
+Resolves the shortest Euclidean distance from a point to a rectangle.
+
+Parameters:
+- `canvasX` - X coordinate in canvas pixels.
+- `canvasY` - Y coordinate in canvas pixels.
+- `hitArea` - Candidate hit area rectangle.
+
+Returns: Distance from the point to the rectangle edge, or 0 for interior points.
+
+### resolveTooltipHtml
+
+```ts
+resolveTooltipHtml(
+  hitArea: MazeHitArea,
+): string
+```
+
+Builds the inner HTML string for a tooltip from a hit area.
+
+Parameters:
+- `hitArea` - Source hit area.
+
+Returns: Safe HTML string for the tooltip body.
 
 ### safelyRedrawDashboard
 
@@ -403,18 +509,24 @@ Safely request a dashboard redraw without letting host issues break the run.
 Parameters:
 - `runtimeDashboard` - Shared dashboard presentation adapter with optional redraw support.
 
-### syncNetworkCanvasToPanel
+### showTooltip
 
 ```ts
-syncNetworkCanvasToPanel(
-  networkCanvasElement: HTMLCanvasElement,
+showTooltip(
+  tooltipElement: HTMLElement,
+  hitArea: MazeHitArea,
+  clientX: number,
+  clientY: number,
 ): void
 ```
 
-Align canvas pixel dimensions to the responsive panel width before drawing.
+Positions and reveals the tooltip element near the current pointer.
 
 Parameters:
-- `networkCanvasElement` - Canvas target in the browser host.
+- `tooltipElement` - DOM tooltip div.
+- `hitArea` - Hit area providing heading and body paragraphs.
+- `clientX` - Pointer X in viewport coordinates.
+- `clientY` - Pointer Y in viewport coordinates.
 
 ## browser-entry/browser-entry.abort.services.ts
 

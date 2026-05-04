@@ -94,13 +94,18 @@ export function renderNetworkView(
 
   // Step 2: Infer topology and layers from the graph.
   const networkLayers = mapGraphToNetworkLayers(graph);
-  const topologyMode = (graph.metadata?.mode ?? 'recurrent') === 'acyclic' ? ('acyclic' as const) : ('recurrent' as const);
+  const topologyMode =
+    (graph.metadata?.mode ?? 'recurrent') === 'acyclic'
+      ? ('acyclic' as const)
+      : ('recurrent' as const);
 
   // Step 3: Calculate drawable area.
   const canvasWidthPx = canvas.width;
   const canvasHeightPx = canvas.height;
-  const drawableWidthPx = canvasWidthPx - panelPadding.leftPx - panelPadding.rightPx;
-  const drawableHeightPx = canvasHeightPx - panelPadding.topPx - panelPadding.bottomPx;
+  const drawableWidthPx =
+    canvasWidthPx - panelPadding.leftPx - panelPadding.rightPx;
+  const drawableHeightPx =
+    canvasHeightPx - panelPadding.topPx - panelPadding.bottomPx;
 
   // Step 4: Position nodes in canvas coordinates.
   const positionedNodes = positionNetworkNodes(
@@ -118,6 +123,7 @@ export function renderNetworkView(
   const centeredPositionedNodes = centerPositionedNodesInDrawableArea(
     positionedNodes,
     drawableWidthPx,
+    panelPadding.leftPx,
   );
 
   // Step 6: Convert graph edges to visual connections.
@@ -154,7 +160,9 @@ export function renderNetworkView(
  * @param graph - Visualization graph.
  * @returns Layered nodes (input, hidden, output).
  */
-function mapGraphToNetworkLayers(graph: VisualizationGraphV1): VisualNetworkNode[][] {
+function mapGraphToNetworkLayers(
+  graph: VisualizationGraphV1,
+): VisualNetworkNode[][] {
   const layers: VisualNetworkNode[][] = [];
 
   // Input nodes.
@@ -284,13 +292,7 @@ function drawNodes(
       context.fillStyle = frame.colorScales.bias;
       context.globalAlpha = Math.min(1, Math.abs(node.bias));
       context.beginPath();
-      context.arc(
-        node.centerXPx,
-        node.centerYPx,
-        radius * 0.4,
-        0,
-        Math.PI * 2,
-      );
+      context.arc(node.centerXPx, node.centerYPx, radius * 0.4, 0, Math.PI * 2);
       context.fill();
       context.globalAlpha = 1;
     }

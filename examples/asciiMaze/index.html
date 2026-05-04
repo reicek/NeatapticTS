@@ -7,9 +7,21 @@
   <link rel="stylesheet" href="../../docs/assets/theme.css" />
   <script defer src="../../docs/assets/theme-tooltips.js"></script>
   <style>
+    body.demo-page .demo-main.demo-main--wide {
+      max-width: min(99vw, 1960px);
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+
+    .starter-demo-shell {
+      width: 100%;
+      padding: 8px;
+    }
+
     #ascii-maze-output {
       display: grid;
       gap: 16px;
+      width: 100%;
     }
 
     #ascii-maze-visualizer-title {
@@ -23,11 +35,11 @@
 
     #ascii-maze-panels {
       display: grid;
-      grid-template-columns: minmax(min-content, max-content) minmax(280px, 1fr);
-      gap: 16px;
+      grid-template-columns: minmax(760px, 1.35fr) minmax(900px, 1.55fr);
+      gap: 18px;
       align-items: start;
       width: 100%;
-      overflow-x: auto;
+      overflow: visible;
     }
 
     .ascii-maze-panel {
@@ -40,13 +52,13 @@
     }
 
     #ascii-maze-panels > .ascii-maze-panel:first-child {
-      width: max-content;
-      max-width: 100%;
-      overflow: auto;
+      width: 100%;
+      max-width: none;
+      overflow: hidden;
     }
 
     #ascii-maze-panels > .ascii-maze-panel:last-child {
-      min-width: 280px;
+      min-width: 900px;
       width: 100%;
     }
 
@@ -61,10 +73,22 @@
 
     #ascii-maze-live {
       min-height: 360px;
-      width: max-content;
-      min-width: 100%;
-      overflow: auto;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: auto;
       white-space: pre;
+    }
+
+    @media (max-width: 1400px) {
+      #ascii-maze-panels {
+        grid-template-columns: minmax(620px, 1.2fr) minmax(760px, 1.4fr);
+      }
+
+      #ascii-maze-panels > .ascii-maze-panel:last-child {
+        min-width: 680px;
+      }
     }
 
     #ascii-maze-network-canvas {
@@ -75,6 +99,49 @@
       background: #050a12;
       border: 1px solid #0e3854;
       border-radius: 6px;
+      cursor: crosshair;
+    }
+
+    /* Hover tooltip displayed over the network canvas */
+    #maze-network-tooltip {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      max-width: 320px;
+      background: linear-gradient(180deg, rgba(7, 16, 28, 0.98), rgba(2, 8, 18, 0.98));
+      border: 1px solid #0fb5ff;
+      border-radius: 8px;
+      padding: 12px 15px;
+      color: #9fdcff;
+      font-family: Consolas, Menlo, Monaco, monospace;
+      font-size: 0.82rem;
+      line-height: 1.58;
+      letter-spacing: 0.01em;
+      pointer-events: none;
+      box-shadow:
+        0 0 18px rgba(15, 181, 255, 0.24),
+        0 0 10px rgba(255, 154, 46, 0.12),
+        inset 0 0 18px rgba(15, 181, 255, 0.05);
+    }
+
+    #maze-network-tooltip strong,
+    #maze-network-tooltip .maze-network-tooltip-heading {
+      display: block;
+      color: #ff9a2e !important;
+      font-size: 0.86rem;
+      margin-bottom: 7px;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px rgba(255, 154, 46, 0.28);
+    }
+
+    #maze-network-tooltip p {
+      margin: 0 0 8px;
+    }
+
+    #maze-network-tooltip p:last-child {
+      margin-bottom: 0;
     }
 
     @media (max-width: 1100px) {
@@ -121,13 +188,15 @@
           </section>
           <section class="ascii-maze-panel" aria-label="Network visualizer panel">
             <h3>Visualizer</h3>
-            <canvas id="ascii-maze-network-canvas" width="700" height="420"></canvas>
+            <canvas id="ascii-maze-network-canvas" width="700" height="504"></canvas>
           </section>
         </div>
         <div id="ascii-maze-archive"></div>
       </div>
     </section>
   </main>
+  <!-- Hover tooltip for network canvas label system -->
+  <div id="maze-network-tooltip" role="tooltip" aria-live="polite"></div>
   <script>
     (function loadAsciiMazeBundle() {
       const statusElement = document.getElementById('ascii-maze-status');

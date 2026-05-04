@@ -142,7 +142,10 @@ export function exportVisualizationGraph(
       outputNodeIds: network.outputNodeIds,
     },
     metadata: {
-      mode: network.getTopologyIntent() === 'feed-forward' ? 'acyclic' : 'recurrent',
+      mode:
+        network.getTopologyIntent() === 'feed-forward'
+          ? 'acyclic'
+          : 'recurrent',
       createdAtIso: new Date().toISOString(),
     },
   };

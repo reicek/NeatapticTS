@@ -9,7 +9,10 @@
  * - Below: Maze grid on left, network visualization on right
  */
 
-import { exportVisualizationGraph, renderNetworkView } from '../../../src/neataptic';
+import {
+  exportVisualizationGraph,
+  renderNetworkView,
+} from '../../../src/neataptic';
 import type Network from '../../../src/architecture/network';
 
 /**
@@ -44,7 +47,9 @@ export function initializeAsciiMazeVisualizer(
 
   const container = document.querySelector(containerSelector) as HTMLDivElement;
   if (!container) {
-    console.warn(`Container "${containerSelector}" not found for ASCII Maze visualizer`);
+    console.warn(
+      `Container "${containerSelector}" not found for ASCII Maze visualizer`,
+    );
     return;
   }
 

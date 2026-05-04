@@ -78,6 +78,7 @@ external tool in the same session.
 centerPositionedNodesInDrawableArea(
   positionedNodes: PositionedNetworkNode[],
   drawableWidthPx: number,
+  drawableLeftPx: number,
 ): PositionedNetworkNode[]
 ```
 

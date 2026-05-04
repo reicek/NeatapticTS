@@ -108,14 +108,18 @@ export function positionNetworkNodes(
     layerNodes.forEach((node, nodeIndexInLayer) => {
       const nodeCenterYPx =
         centeredStackTopPx +
-        nodeIndexInLayer * (nodeDimensions.heightPx + resolvedLayerInterNodeGapPx) +
+        nodeIndexInLayer *
+          (nodeDimensions.heightPx + resolvedLayerInterNodeGapPx) +
         halfNodeHeightPx;
 
       positionedNodes.push({
         index: node.index,
         type: node.type,
         centerXPx: layerXPx,
-        centerYPx: Math.min(maximumNodeCenterYPx, Math.max(minimumNodeCenterYPx, nodeCenterYPx)),
+        centerYPx: Math.min(
+          maximumNodeCenterYPx,
+          Math.max(minimumNodeCenterYPx, nodeCenterYPx),
+        ),
         widthPx: nodeDimensions.widthPx,
         heightPx: nodeDimensions.heightPx,
         bias: node.bias,
@@ -139,6 +143,7 @@ export function positionNetworkNodes(
 export function centerPositionedNodesInDrawableArea(
   positionedNodes: PositionedNetworkNode[],
   drawableWidthPx: number,
+  drawableLeftPx: number = 0,
 ): PositionedNetworkNode[] {
   if (positionedNodes.length === 0) {
     return positionedNodes;
@@ -147,7 +152,7 @@ export function centerPositionedNodesInDrawableArea(
   const minXPx = Math.min(...positionedNodes.map((n) => n.centerXPx));
   const maxXPx = Math.max(...positionedNodes.map((n) => n.centerXPx));
   const currentCenterXPx = (minXPx + maxXPx) * 0.5;
-  const targetCenterXPx = drawableWidthPx * 0.5;
+  const targetCenterXPx = drawableLeftPx + drawableWidthPx * 0.5;
   const shiftXPx = targetCenterXPx - currentCenterXPx;
 
   return positionedNodes.map((node) => ({

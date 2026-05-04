@@ -128,7 +128,8 @@ describe('exportVisualizationGraph()', () => {
         // Assert
         expect(
           graph.nodes.every(
-            (node) => typeof node.activation === 'string' && node.activation.length > 0,
+            (node) =>
+              typeof node.activation === 'string' && node.activation.length > 0,
           ),
         ).toBe(true);
       });
@@ -162,9 +163,7 @@ describe('exportVisualizationGraph()', () => {
         const firstGraph = exportVisualizationGraph(network);
         const secondGraph = exportVisualizationGraph(network);
         // Assert
-        expect(
-          firstGraph.edges.map((edge) => [edge.from, edge.to]),
-        ).toEqual(
+        expect(firstGraph.edges.map((edge) => [edge.from, edge.to])).toEqual(
           secondGraph.edges.map((edge) => [edge.from, edge.to]),
         );
       });
@@ -213,7 +212,9 @@ describe('exportVisualizationGraph()', () => {
         // Arrange
         const network = createSeededMLP();
         // Act
-        const graph = exportVisualizationGraph(network, { includeBiases: false });
+        const graph = exportVisualizationGraph(network, {
+          includeBiases: false,
+        });
         // Assert
         expect(graph.nodes.every((node) => node.bias === undefined)).toBe(true);
       });
@@ -246,9 +247,7 @@ describe('exportVisualizationGraph()', () => {
         // Act
         const graph = exportVisualizationGraph(network);
         // Assert
-        expect(
-          graph.edges.some((edge) => edge.kind === 'self'),
-        ).toBe(true);
+        expect(graph.edges.some((edge) => edge.kind === 'self')).toBe(true);
       });
     });
   });
@@ -299,9 +298,9 @@ describe('toDot()', () => {
         // Act
         const dot = toDot(graph);
         // Assert — each node id should appear at least once in the DOT string
-        expect(
-          graph.nodes.every((node) => dot.includes(String(node.id))),
-        ).toBe(true);
+        expect(graph.nodes.every((node) => dot.includes(String(node.id)))).toBe(
+          true,
+        );
       });
 
       it('includes "invtriangle" for input nodes', () => {

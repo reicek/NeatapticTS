@@ -67,9 +67,7 @@ export function inferEdgeKind(
  * @param sortedNodes - Node array already sorted by geneId ascending.
  * @returns Map from geneId to zero-based position.
  */
-export function buildNodePositionMap(
-  sortedNodes: Node[],
-): Map<number, number> {
+export function buildNodePositionMap(sortedNodes: Node[]): Map<number, number> {
   return new Map<number, number>(
     sortedNodes.map((node, position) => [node.geneId, position]),
   );

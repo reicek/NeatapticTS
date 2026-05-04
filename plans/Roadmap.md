@@ -91,8 +91,10 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 7. Interactive examples + learning path (Node + browser runnable examples, CI smoke checks)
    - Plan: [Interactive_Examples_and_Learning_Path.md](completed/Interactive_Examples_and_Learning_Path.plans.md) [DONE]
 8. NEATchat (tiny online sequence-learning chatbot demo)
-  - Plan: [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
-  - Current internal state: the NEATchat Phase 3 learnability lane is closed for current scope and archived as a completed baseline. The delivered surface remains intentionally toy-scale: near-zero start, short online adaptation, language-agnostic token-stream behavior, and browser or Node experimentation boundaries rather than web-scale training.
+
+- Plan: [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
+- Current internal state: the NEATchat Phase 3 learnability lane is closed for current scope and archived as a completed baseline. The delivered surface remains intentionally toy-scale: near-zero start, short online adaptation, language-agnostic token-stream behavior, and browser or Node experimentation boundaries rather than web-scale training.
+
 9. Visualization export schema (JSON schema + optional DOT output)
    - Plan: [Network_Visualization_Export_Schema.md](completed/Network_Visualization_Export_Schema.plans.md) [DONE]
    - Current internal state: all three lanes are closed. `exportVisualizationGraph` + `toDot` schema/DOT export, shared canvas renderer (`renderNetworkView`), and Lane C documentation examples are complete and tested.

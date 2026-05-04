@@ -82,7 +82,10 @@
  */
 export { default } from './network/network';
 export { formatConstructSummary } from './network/construct/network.construct.summary.utils';
-export { exportVisualizationGraph, toDot } from './network/visualization/network.visualization';
+export {
+  exportVisualizationGraph,
+  toDot,
+} from './network/visualization/network.visualization';
 export type {
   ExportVisualizationOptions,
   VisualizationEdgeV1,

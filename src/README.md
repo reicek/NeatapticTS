@@ -1395,6 +1395,7 @@ const output = network.activate([0, 1]);
 centerPositionedNodesInDrawableArea(
   positionedNodes: PositionedNetworkNode[],
   drawableWidthPx: number,
+  drawableLeftPx: number,
 ): PositionedNetworkNode[]
 ```
 

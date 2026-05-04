@@ -89,7 +89,10 @@ export function resolveNetworkVisualizationTopologyPlan(
   }
 
   // Step 2: Extract topology from the network.
-  const topologyMode = network.getTopologyIntent() === 'feed-forward' ? ('acyclic' as const) : ('recurrent' as const);
+  const topologyMode =
+    network.getTopologyIntent() === 'feed-forward'
+      ? ('acyclic' as const)
+      : ('recurrent' as const);
   const nodes = network.nodes.toSorted((a, b) => {
     if (a.type !== b.type) {
       const typeOrder: Record<string, number> = {
@@ -141,7 +144,9 @@ export function resolveNetworkVisualizationTopologyPlan(
   if (topologyMode === 'recurrent' && hiddenNodes.length > 0) {
     // Try to use network.describeTemporalStructure() if available
     try {
-      const temporalDescription = (network as any).describeTemporalStructure?.();
+      const temporalDescription = (
+        network as any
+      ).describeTemporalStructure?.();
       if (temporalDescription?.recurrentModules) {
         layerAnnotations = temporalDescription.recurrentModules.map(
           (module: any) => ({

@@ -4,12 +4,12 @@
 
 ## Pass history
 
-| Pass | Outcome |
-|------|---------|
-| Lane A — Schema export | `exportVisualizationGraph` + `toDot` implemented and tested in `src/architecture/network/visualization/` |
-| Lane B — Shared renderer | `src/visualization/network-view/` extracted; `renderNetworkView` public API with 3 unit tests; ASCII Maze browser visualizer wired |
-| Lane B Step B3 hardening | CSS Grid split-pane layout in `examples/asciiMaze/index.html`; left pane `minmax(min-content, max-content)`, right pane `minmax(280px, 1fr)`; overflow containment on `#ascii-maze-live` |
-| Lane C — Docs/examples | Module-level JSDoc in `src/visualization/visualization.ts` expanded: canvas drop-in + overlay-hook section (C2); DOT export full/compact section (C1) with Graphviz Online link + Wikipedia citation |
+| Pass                     | Outcome                                                                                                                                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lane A — Schema export   | `exportVisualizationGraph` + `toDot` implemented and tested in `src/architecture/network/visualization/`                                                                                             |
+| Lane B — Shared renderer | `src/visualization/network-view/` extracted; `renderNetworkView` public API with 3 unit tests; ASCII Maze browser visualizer wired                                                                   |
+| Lane B Step B3 hardening | CSS Grid split-pane layout in `examples/asciiMaze/index.html`; left pane `minmax(min-content, max-content)`, right pane `minmax(280px, 1fr)`; overflow containment on `#ascii-maze-live`             |
+| Lane C — Docs/examples   | Module-level JSDoc in `src/visualization/visualization.ts` expanded: canvas drop-in + overlay-hook section (C2); DOT export full/compact section (C1) with Graphviz Online link + Wikipedia citation |
 
 ## Final validation
 

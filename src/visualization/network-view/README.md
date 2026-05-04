@@ -163,6 +163,7 @@ in canvas coordinates and center the final graph within available space.
 centerPositionedNodesInDrawableArea(
   positionedNodes: PositionedNetworkNode[],
   drawableWidthPx: number,
+  drawableLeftPx: number,
 ): PositionedNetworkNode[]
 ```
 

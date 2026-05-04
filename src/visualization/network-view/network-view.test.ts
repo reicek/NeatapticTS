@@ -5,7 +5,10 @@
  * These tests verify type contracts and basic module structure.
  */
 
-import { positionNetworkNodes, centerPositionedNodesInDrawableArea } from './network-view.layout.utils';
+import {
+  positionNetworkNodes,
+  centerPositionedNodesInDrawableArea,
+} from './network-view.layout.utils';
 import { resolveNetworkVisualizationTopologyPlan } from './network-view.topology.utils';
 import type { VisualNetworkNode } from './network-view.layout.utils';
 
@@ -39,14 +42,58 @@ describe('network-view layout utilities', () => {
   describe('centerPositionedNodesInDrawableArea()', () => {
     it('centers nodes horizontally', () => {
       const nodes = [
-        { index: 0, type: 'input' as const, centerXPx: 50, centerYPx: 100, widthPx: 24, heightPx: 24, bias: 0 },
-        { index: 1, type: 'output' as const, centerXPx: 350, centerYPx: 100, widthPx: 24, heightPx: 24, bias: 0 },
+        {
+          index: 0,
+          type: 'input' as const,
+          centerXPx: 50,
+          centerYPx: 100,
+          widthPx: 24,
+          heightPx: 24,
+          bias: 0,
+        },
+        {
+          index: 1,
+          type: 'output' as const,
+          centerXPx: 350,
+          centerYPx: 100,
+          widthPx: 24,
+          heightPx: 24,
+          bias: 0,
+        },
       ];
 
       const centered = centerPositionedNodesInDrawableArea(nodes, 400);
 
       const avgX = (centered[0].centerXPx + centered[1].centerXPx) / 2;
       expect(avgX).toBeCloseTo(200, 1); // centered in 400-width area
+    });
+
+    it('respects drawable-area left padding when centering nodes', () => {
+      const nodes = [
+        {
+          index: 0,
+          type: 'input' as const,
+          centerXPx: 80,
+          centerYPx: 100,
+          widthPx: 24,
+          heightPx: 24,
+          bias: 0,
+        },
+        {
+          index: 1,
+          type: 'output' as const,
+          centerXPx: 220,
+          centerYPx: 100,
+          widthPx: 24,
+          heightPx: 24,
+          bias: 0,
+        },
+      ];
+
+      const centered = centerPositionedNodesInDrawableArea(nodes, 320, 160);
+
+      const avgX = (centered[0].centerXPx + centered[1].centerXPx) / 2;
+      expect(avgX).toBeCloseTo(320, 1);
     });
   });
 
@@ -59,4 +106,3 @@ describe('network-view layout utilities', () => {
     });
   });
 });
-
