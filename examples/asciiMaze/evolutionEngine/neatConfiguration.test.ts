@@ -62,7 +62,9 @@ describe('createNeat', () => {
   });
 
   it('biases the default feed-forward shelf toward topology growth after generation-zero warm start', () => {
-    const neatInstance = createNeat(6, 4, () => 0);
+    const neatInstance = createNeat(6, 4, () => 0, {
+      allowRecurrent: false,
+    });
     const mutationCounts = countConfiguredMutationNames(
       neatInstance.options.mutation,
     );
@@ -79,19 +81,25 @@ describe('createNeat', () => {
   });
 
   it('does not inject fresh provenance genomes after the generation-zero template copy pass', () => {
-    const neatInstance = createNeat(6, 4, () => 0);
+    const neatInstance = createNeat(6, 4, () => 0, {
+      allowRecurrent: false,
+    });
 
     expect(neatInstance.options.provenance).toBe(0);
   });
 
   it('defaults to multiple mutation attempts per admitted genome', () => {
-    const neatInstance = createNeat(6, 4, () => 0);
+    const neatInstance = createNeat(6, 4, () => 0, {
+      allowRecurrent: false,
+    });
 
     expect(neatInstance.options.mutationAmount).toBe(3);
   });
 
   it('drops the legacy hidden-node floor so sparse starters stay sparse at generation zero', () => {
-    const neatInstance = createNeat(6, 4, () => 0);
+    const neatInstance = createNeat(6, 4, () => 0, {
+      allowRecurrent: false,
+    });
 
     expect(neatInstance.options.minHidden).toBe(0);
   });
@@ -102,6 +110,7 @@ describe('createNeat', () => {
       'random-sparse',
     );
     const neatInstance = createNeat(6, 4, () => 0, {
+      allowRecurrent: false,
       network: seedNetwork,
       popSize: 32,
       seed: 42,

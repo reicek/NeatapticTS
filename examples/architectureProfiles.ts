@@ -334,17 +334,11 @@ export function buildExampleArchitectureProfileNetwork(
 
   switch (configuration.family) {
     case 'MLP':
-      return demoId === 'ascii-maze'
-        ? buildSparseStagewiseMlpNetwork(
-            configuration.input,
-            configuration.hiddenLayerSizes,
-            configuration.output,
-          )
-        : buildExactMlpNetwork(
-            configuration.input,
-            configuration.hiddenLayerSizes,
-            configuration.output,
-          );
+      return buildExactMlpNetwork(
+        configuration.input,
+        configuration.hiddenLayerSizes,
+        configuration.output,
+      );
 
     case 'RandomSparse':
       return Architect.randomSparse(
@@ -417,64 +411,4 @@ function buildExactMlpNetwork(
   const network = Architect.construct(orderedLayers);
   network.setTopologyIntent('feed-forward');
   return network;
-}
-
-/**
- * Build a sparse feed-forward MLP seed that keeps the staged hidden shape.
- *
- * The ASCII Maze demo uses this lighter backbone so NEAT can grow routing
- * structure instead of inheriting a fully dense mesh on generation zero.
- */
-function buildSparseStagewiseMlpNetwork(
-  inputSize: number,
-  hiddenLayerSizes: number[],
-  outputSize: number,
-): Network {
-  const inputLayer = Layer.dense(inputSize, 'input');
-  const outputLayer = Layer.dense(outputSize, 'output');
-  const hiddenLayers = hiddenLayerSizes.map((hiddenLayerSize) =>
-    Layer.dense(hiddenLayerSize),
-  );
-  const orderedLayers = [inputLayer, ...hiddenLayers, outputLayer];
-
-  for (
-    let layerIndex = 0;
-    layerIndex < orderedLayers.length - 1;
-    layerIndex += 1
-  ) {
-    connectLayerPairWithSparseBackbone(
-      orderedLayers[layerIndex],
-      orderedLayers[layerIndex + 1],
-    );
-  }
-
-  const network = Architect.construct(orderedLayers);
-  network.setTopologyIntent('feed-forward');
-  return network;
-}
-
-function connectLayerPairWithSparseBackbone(
-  sourceLayer: Layer,
-  targetLayer: Layer,
-): void {
-  if (sourceLayer.nodes.length === 0 || targetLayer.nodes.length === 0) {
-    return;
-  }
-
-  const backboneConnectionCount = Math.max(
-    sourceLayer.nodes.length,
-    targetLayer.nodes.length,
-  );
-
-  for (
-    let connectionIndex = 0;
-    connectionIndex < backboneConnectionCount;
-    connectionIndex += 1
-  ) {
-    const sourceNode =
-      sourceLayer.nodes[connectionIndex % sourceLayer.nodes.length];
-    const targetNode =
-      targetLayer.nodes[connectionIndex % targetLayer.nodes.length];
-    sourceNode.connect(targetNode);
-  }
 }

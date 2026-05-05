@@ -116,7 +116,7 @@ describe('shared example architecture profiles', () => {
         ...networkShapes,
       }).toEqual({
         ascii: {
-          connectionCount: 18,
+          connectionCount: 96,
           inputNodeIds: 6,
           outputNodeIds: 4,
           topologyIntent: 'feed-forward',

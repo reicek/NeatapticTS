@@ -5,12 +5,16 @@
  * These tests verify type contracts and basic module structure.
  */
 
+import { describe, expect, it } from '@jest/globals';
 import {
   positionNetworkNodes,
   centerPositionedNodesInDrawableArea,
 } from './network-view.layout.utils';
 import { renderNetworkView } from './network-view';
-import { resolveNetworkVisualizationTopologyPlan } from './network-view.topology.utils';
+import {
+  resolveNetworkVisualizationLayers,
+  resolveNetworkVisualizationTopologyPlan,
+} from './network-view.topology.utils';
 import type { VisualNetworkNode } from './network-view.layout.utils';
 import type { VisualizationGraphV1 } from '../../architecture/network';
 
@@ -143,11 +147,327 @@ describe('network-view layout utilities', () => {
   });
 
   describe('resolveNetworkVisualizationTopologyPlan()', () => {
+    it('returns the layer array through the layers-only wrapper', () => {
+      expect(resolveNetworkVisualizationLayers(undefined, 2, 1)).toEqual([
+        [
+          { bias: 0, index: 0, type: 'input' },
+          { bias: 0, index: 1, type: 'input' },
+        ],
+        [{ bias: 0, index: 2, type: 'output' }],
+      ]);
+    });
+
     it('returns acyclic mode for undefined network', () => {
       const plan = resolveNetworkVisualizationTopologyPlan(undefined, 2, 1);
 
       expect(plan.networkLayers.length).toBe(2); // input + output
       expect(plan.topologyMode).toBe('acyclic');
     });
+
+    it('builds ordered feed-forward layers from runtime network nodes', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'feed-forward',
+        nodes: [
+          { bias: 0.4, geneId: 40, index: 4, type: 'output' },
+          { bias: 0.2, geneId: 20, index: 2, type: 'hidden' },
+          { bias: 0.1, geneId: 10, index: 1, type: 'input' },
+          { bias: 0.3, geneId: 30, index: 3, type: 'hidden' },
+        ],
+      });
+
+      expect(resolveNetworkVisualizationTopologyPlan(network, 1, 1)).toEqual({
+        layerAnnotations: [],
+        networkLayers: [
+          [{ bias: 0.1, index: 1, type: 'input' }],
+          [
+            { bias: 0.2, index: 2, type: 'hidden' },
+            { bias: 0.3, index: 3, type: 'hidden' },
+          ],
+          [{ bias: 0.4, index: 4, type: 'output' }],
+        ],
+        topologyMode: 'acyclic',
+      });
+    });
+
+    it('sorts input and output layers by runtime index when each layer has multiple nodes', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'feed-forward',
+        nodes: [
+          { bias: 0.4, geneId: 40, index: 4, type: 'output' },
+          { bias: 0.2, geneId: 20, index: 2, type: 'input' },
+          { bias: 0.5, geneId: 50, index: 5, type: 'output' },
+          { bias: 0.1, geneId: 10, index: 1, type: 'input' },
+        ],
+      });
+
+      expect(resolveNetworkVisualizationTopologyPlan(network, 2, 2)).toEqual({
+        layerAnnotations: [],
+        networkLayers: [
+          [
+            { bias: 0.1, index: 1, type: 'input' },
+            { bias: 0.2, index: 2, type: 'input' },
+          ],
+          [
+            { bias: 0.4, index: 4, type: 'output' },
+            { bias: 0.5, index: 5, type: 'output' },
+          ],
+        ],
+        topologyMode: 'acyclic',
+      });
+    });
+
+    it('omits the hidden layer when the runtime network has no hidden nodes', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'feed-forward',
+        nodes: [
+          { bias: 0.1, geneId: 10, index: 1, type: 'input' },
+          { bias: 0.4, geneId: 40, index: 4, type: 'output' },
+        ],
+      });
+
+      expect(resolveNetworkVisualizationTopologyPlan(network, 1, 1)).toEqual({
+        layerAnnotations: [],
+        networkLayers: [
+          [{ bias: 0.1, index: 1, type: 'input' }],
+          [{ bias: 0.4, index: 4, type: 'output' }],
+        ],
+        topologyMode: 'acyclic',
+      });
+    });
+
+    it('keeps only the hidden layer when a runtime network omits input and output nodes', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'feed-forward',
+        nodes: [{ bias: 0.2, geneId: 20, index: 2, type: 'hidden' }],
+      });
+
+      expect(resolveNetworkVisualizationTopologyPlan(network, 1, 1)).toEqual({
+        layerAnnotations: [],
+        networkLayers: [[{ bias: 0.2, index: 2, type: 'hidden' }]],
+        topologyMode: 'acyclic',
+      });
+    });
+
+    it('defaults missing runtime node indices to zero when grouping layers', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'feed-forward',
+        nodes: [
+          { bias: 0.1, geneId: 10, type: 'input' },
+          { bias: 0.2, geneId: 20, type: 'hidden' },
+          { bias: 0.4, geneId: 40, type: 'output' },
+        ],
+      });
+
+      expect(resolveNetworkVisualizationTopologyPlan(network, 1, 1)).toEqual({
+        layerAnnotations: [],
+        networkLayers: [
+          [{ bias: 0.1, index: 0, type: 'input' }],
+          [{ bias: 0.2, index: 0, type: 'hidden' }],
+          [{ bias: 0.4, index: 0, type: 'output' }],
+        ],
+        topologyMode: 'acyclic',
+      });
+    });
+
+    it('sorts same-type nodes by their fallback zero index when runtime indices are missing', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'feed-forward',
+        nodes: [
+          { bias: 0.3, geneId: 30, index: 3, type: 'hidden' },
+          { bias: 0.2, geneId: 20, type: 'hidden' },
+        ],
+      });
+
+      expect(resolveNetworkVisualizationTopologyPlan(network, 1, 1)).toEqual({
+        layerAnnotations: [],
+        networkLayers: [
+          [
+            { bias: 0.2, index: 0, type: 'hidden' },
+            { bias: 0.3, index: 3, type: 'hidden' },
+          ],
+        ],
+        topologyMode: 'acyclic',
+      });
+    });
+
+    it('derives recurrent layer annotations from temporal module descriptors', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'unconstrained',
+        nodes: [
+          { bias: 0.1, geneId: 10, index: 1, type: 'input' },
+          { bias: 0.2, geneId: 20, index: 7, type: 'hidden' },
+          { bias: 0.3, geneId: 30, index: 8, type: 'hidden' },
+          { bias: 0.4, geneId: 40, index: 9, type: 'output' },
+        ],
+        recurrentModules: [
+          {
+            connectionInnovations: [1001],
+            kind: 'gru',
+            moduleId: 'gru-0',
+            moduleLabel: 'Memory Bank',
+            nodeGeneIdsByRole: {
+              memoryCell: [20],
+              output: [30, 999],
+            },
+          },
+        ],
+      });
+
+      expect(resolveNetworkVisualizationTopologyPlan(network, 1, 1)).toEqual({
+        layerAnnotations: [
+          {
+            label: 'Memory Bank',
+            labelLines: ['Memory Bank'],
+            nodeIndices: [7, 8],
+            tooltipBodyParagraphs: ['Roles: memoryCell, output.'],
+            tooltipHeading: 'Memory Bank',
+          },
+        ],
+        networkLayers: [
+          [{ bias: 0.1, index: 1, type: 'input' }],
+          [
+            { bias: 0.2, index: 7, type: 'hidden' },
+            { bias: 0.3, index: 8, type: 'hidden' },
+          ],
+          [{ bias: 0.4, index: 9, type: 'output' }],
+        ],
+        topologyMode: 'recurrent',
+      });
+    });
+
+    it('falls back to a kind label when the recurrent module has no explicit label', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'unconstrained',
+        nodes: [
+          { bias: 0.1, geneId: 10, index: 1, type: 'input' },
+          { bias: 0.2, geneId: 20, index: 7, type: 'hidden' },
+          { bias: 0.4, geneId: 40, index: 9, type: 'output' },
+        ],
+        recurrentModules: [
+          {
+            connectionInnovations: [1001],
+            kind: 'narx-memory',
+            moduleId: 'narx-0',
+            nodeGeneIdsByRole: {
+              delayStep0: [20],
+            },
+          },
+        ],
+      });
+
+      expect(
+        resolveNetworkVisualizationTopologyPlan(network, 1, 1).layerAnnotations,
+      ).toEqual([
+        {
+          label: 'NARX Memory',
+          labelLines: ['NARX Memory'],
+          nodeIndices: [7],
+          tooltipBodyParagraphs: ['Roles: delayStep0.'],
+          tooltipHeading: 'NARX Memory',
+        },
+      ]);
+    });
+
+    it('keeps annotations empty when the recurrent descriptor has no modules', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'unconstrained',
+        nodes: [
+          { bias: 0.1, geneId: 10, index: 1, type: 'input' },
+          { bias: 0.2, geneId: 20, index: 7, type: 'hidden' },
+          { bias: 0.4, geneId: 40, index: 9, type: 'output' },
+        ],
+        recurrentModules: [],
+      });
+
+      expect(
+        resolveNetworkVisualizationTopologyPlan(network, 1, 1).layerAnnotations,
+      ).toEqual([]);
+    });
+
+    it('uses unlabeled recurrent tooltip text when the descriptor exposes no roles', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'unconstrained',
+        nodes: [
+          { bias: 0.1, geneId: 10, index: 1, type: 'input' },
+          { bias: 0.2, geneId: 20, type: 'hidden' },
+          { bias: 0.4, index: 9, type: 'output' },
+        ],
+        recurrentModules: [
+          {
+            connectionInnovations: [1001],
+            kind: 'lstm',
+            moduleId: 'lstm-0',
+            nodeGeneIdsByRole: {},
+          },
+        ],
+      });
+
+      expect(resolveNetworkVisualizationTopologyPlan(network, 1, 1)).toEqual({
+        layerAnnotations: [
+          {
+            label: 'LSTM',
+            labelLines: ['LSTM'],
+            nodeIndices: [],
+            tooltipBodyParagraphs: ['Roles: unlabeled module.'],
+            tooltipHeading: 'LSTM',
+          },
+        ],
+        networkLayers: [
+          [{ bias: 0.1, index: 1, type: 'input' }],
+          [{ bias: 0.2, index: 0, type: 'hidden' }],
+          [{ bias: 0.4, index: 9, type: 'output' }],
+        ],
+        topologyMode: 'recurrent',
+      });
+    });
+
+    it('falls back to empty annotations when temporal introspection throws', () => {
+      const network = createTopologyTestNetwork({
+        topologyIntent: 'unconstrained',
+        nodes: [
+          { bias: 0.1, geneId: 10, index: 1, type: 'input' },
+          { bias: 0.2, geneId: 20, index: 7, type: 'hidden' },
+          { bias: 0.4, geneId: 40, index: 9, type: 'output' },
+        ],
+        throwOnDescribeTemporalStructure: true,
+      });
+
+      expect(
+        resolveNetworkVisualizationTopologyPlan(network, 1, 1).layerAnnotations,
+      ).toEqual([]);
+    });
   });
 });
+
+function createTopologyTestNetwork(options: {
+  nodes: Array<{
+    bias: number;
+    geneId?: number;
+    index?: number;
+    type: 'input' | 'hidden' | 'output';
+  }>;
+  topologyIntent: 'feed-forward' | 'unconstrained';
+  recurrentModules?: Array<{
+    connectionInnovations: number[];
+    kind: 'lstm' | 'gru' | 'narx-memory';
+    moduleId: string;
+    moduleLabel?: string;
+    nodeGeneIdsByRole: Record<string, number[]>;
+  }>;
+  throwOnDescribeTemporalStructure?: boolean;
+}): Parameters<typeof resolveNetworkVisualizationTopologyPlan>[0] {
+  return {
+    describeTemporalStructure: () => {
+      if (options.throwOnDescribeTemporalStructure) {
+        throw new Error('temporal descriptor failed');
+      }
+
+      return {
+        gatedBlocks: [],
+        recurrentModules: options.recurrentModules ?? [],
+      };
+    },
+    getTopologyIntent: () => options.topologyIntent,
+    nodes: options.nodes,
+  } as unknown as Parameters<typeof resolveNetworkVisualizationTopologyPlan>[0];
+}

@@ -56,6 +56,27 @@ type WarmStartNeatLike = Neat & {
   population: TrainableNetwork[];
 };
 
+type IdentifiableNetworkNode = {
+  bias: number;
+  index?: number;
+};
+
+type IdentifiableNetworkConnection = {
+  weight: number;
+  from?: { index?: number };
+  to?: { index?: number };
+};
+
+type WarmStartMutableNetwork = TrainableNetwork & {
+  connect?: (
+    fromNode: IdentifiableNetworkNode,
+    toNode: IdentifiableNetworkNode,
+    weight?: number,
+  ) => unknown;
+  connections?: IdentifiableNetworkConnection[];
+  nodes?: IdentifiableNetworkNode[];
+};
+
 /** Callback used when a helper needs to write node indices of a specific role into scratch. */
 type NodeIndexCollector = (nodes: NetworkNode[], nodeType: string) => number;
 
@@ -379,7 +400,8 @@ export const pretrainPopulationWarmStart = (
   if (!Array.isArray(population) || population.length === 0) return;
 
   // Step 2: Clone one template network so generation-zero fitting does not train every genome independently.
-  const templateNetwork = resolveWarmStartTemplate(population[0]);
+  const templateSourceNetwork = resolveWarmStartTemplateSource(population);
+  const templateNetwork = resolveWarmStartTemplate(templateSourceNetwork);
   if (!templateNetwork || typeof templateNetwork.train !== 'function') return;
 
   // Step 3: Fit the cloned template with the same conservative supervised settings as before.
@@ -419,9 +441,9 @@ export const pretrainPopulationWarmStart = (
   // Step 5: Copy tuned template parameters across the population with small deterministic noise.
   const rngParameters = resolveRngParameters();
   for (const network of population) {
-    if (!network) continue;
+    if (!network || typeof network.train !== 'function') continue;
     try {
-      applyTemplateWeightsWithNoise(
+      applyTemplateStateWithNoise(
         network,
         templateNetwork,
         state,
@@ -437,6 +459,15 @@ export const pretrainPopulationWarmStart = (
     }
   }
 };
+
+function resolveWarmStartTemplateSource(
+  population: readonly TrainableNetwork[],
+): TrainableNetwork | undefined {
+  return population.find((network) => {
+    const templateCandidate = resolveWarmStartTemplate(network);
+    return typeof templateCandidate?.train === 'function';
+  });
+}
 
 function resolveWarmStartTemplate(
   network: TrainableNetwork | undefined,
@@ -454,7 +485,7 @@ function resolveWarmStartTemplate(
   return network;
 }
 
-function applyTemplateWeightsWithNoise(
+function applyTemplateStateWithNoise(
   genome: TrainableNetwork,
   template: TrainableNetwork,
   state: EngineState,
@@ -464,30 +495,111 @@ function applyTemplateWeightsWithNoise(
   const weightStdDev = Math.max(0, noise.weightStdDev);
   const biasStdDev = Math.max(0, noise.biasStdDev);
 
-  const genomeNodes = genome.nodes ?? [];
-  const templateNodes = template.nodes ?? [];
-  const nodeCopyCount = Math.min(genomeNodes.length, templateNodes.length);
-  for (let nodeIndex = 0; nodeIndex < nodeCopyCount; nodeIndex++) {
-    const templateBias = templateNodes[nodeIndex]?.bias ?? 0;
-    genomeNodes[nodeIndex].bias =
-      templateBias + sampleGaussian(state, rngParameters) * biasStdDev;
+  const genomeNetwork = genome as WarmStartMutableNetwork;
+  const templateNetwork = template as WarmStartMutableNetwork;
+  const genomeNodes = genomeNetwork.nodes ?? [];
+  const templateNodes = templateNetwork.nodes ?? [];
+  const genomeNodesByIndex = new Map(
+    genomeNodes
+      .filter((node) => typeof node.index === 'number')
+      .map((node) => [node.index as number, node]),
+  );
+
+  templateNodes.forEach((templateNode) => {
+    const genomeNode =
+      typeof templateNode.index === 'number'
+        ? genomeNodesByIndex.get(templateNode.index)
+        : undefined;
+    if (!genomeNode) {
+      return;
+    }
+
+    genomeNode.bias =
+      templateNode.bias + sampleGaussian(state, rngParameters) * biasStdDev;
+  });
+
+  const genomeConnections = (genomeNetwork.connections ??
+    []) as IdentifiableNetworkConnection[];
+  const templateConnections = (templateNetwork.connections ??
+    []) as IdentifiableNetworkConnection[];
+  const genomeConnectionsByKey = new Map<
+    string,
+    IdentifiableNetworkConnection
+  >();
+  genomeConnections.forEach((connection) => {
+    const connectionKey = resolveConnectionKey(connection);
+    if (!connectionKey) {
+      return;
+    }
+
+    genomeConnectionsByKey.set(connectionKey, connection);
+  });
+
+  templateConnections.forEach((templateConnection) => {
+    const templateConnectionKey = resolveConnectionKey(templateConnection);
+    if (!templateConnectionKey) {
+      return;
+    }
+
+    let genomeConnection: IdentifiableNetworkConnection | undefined =
+      genomeConnectionsByKey.get(templateConnectionKey);
+    if (!genomeConnection) {
+      genomeConnection = connectTemplateConnection(
+        genomeNetwork,
+        genomeNodesByIndex,
+        templateConnection,
+      );
+    }
+    if (!genomeConnection) {
+      return;
+    }
+
+    genomeConnection.weight =
+      templateConnection.weight +
+      sampleGaussian(state, rngParameters) * weightStdDev;
+  });
+}
+
+function resolveConnectionKey(
+  connection: IdentifiableNetworkConnection,
+): string | undefined {
+  const fromIndex = connection.from?.index;
+  const toIndex = connection.to?.index;
+
+  if (typeof fromIndex !== 'number' || typeof toIndex !== 'number') {
+    return undefined;
   }
 
-  const genomeConnections = genome.connections ?? [];
-  const templateConnections = template.connections ?? [];
-  const connectionCopyCount = Math.min(
-    genomeConnections.length,
-    templateConnections.length,
-  );
-  for (
-    let connectionIndex = 0;
-    connectionIndex < connectionCopyCount;
-    connectionIndex++
+  return `${fromIndex}:${toIndex}`;
+}
+
+function connectTemplateConnection(
+  genome: WarmStartMutableNetwork,
+  genomeNodesByIndex: Map<number, IdentifiableNetworkNode>,
+  templateConnection: IdentifiableNetworkConnection,
+): IdentifiableNetworkConnection | undefined {
+  const fromIndex = templateConnection.from?.index;
+  const toIndex = templateConnection.to?.index;
+
+  if (
+    typeof fromIndex !== 'number' ||
+    typeof toIndex !== 'number' ||
+    typeof genome.connect !== 'function'
   ) {
-    const templateWeight = templateConnections[connectionIndex]?.weight ?? 0;
-    genomeConnections[connectionIndex].weight =
-      templateWeight + sampleGaussian(state, rngParameters) * weightStdDev;
+    return undefined;
   }
+
+  const fromNode = genomeNodesByIndex.get(fromIndex);
+  const toNode = genomeNodesByIndex.get(toIndex);
+  if (!fromNode || !toNode) {
+    return undefined;
+  }
+
+  genome.connect(fromNode, toNode, templateConnection.weight);
+  return (genome.connections ?? []).find(
+    (connection) =>
+      connection.from?.index === fromIndex && connection.to?.index === toIndex,
+  );
 }
 
 function sampleGaussian(

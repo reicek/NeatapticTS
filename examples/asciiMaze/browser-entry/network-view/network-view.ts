@@ -48,6 +48,8 @@ import {
   FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX,
   FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX,
   FLAPPY_NETWORK_INFERRED_HIDDEN_LAYER_PREFIX,
+  FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_PX,
+  FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_THRESHOLD_PX,
   FLAPPY_NETWORK_LEGEND_MARGIN_PX,
   FLAPPY_NETWORK_LEGEND_REGULAR_WIDTH_PX,
   FLAPPY_UI_NETWORK_CANVAS_BACKGROUND,
@@ -126,9 +128,6 @@ const MAZE_LAYOUT_PASS_COLOR_SCALES = {
 /** Extra right-side reserve so the Flappy-style legend can sit beside the graph. */
 const MAZE_RIGHT_LEGEND_RESERVE_PX =
   FLAPPY_NETWORK_LEGEND_REGULAR_WIDTH_PX + FLAPPY_NETWORK_LEGEND_MARGIN_PX * 2;
-
-/** Minimum right reserve kept so the legend never fully crowds the graph. */
-const MAZE_MIN_RIGHT_LEGEND_RESERVE_PX = 112;
 
 /** Minimum left reserve kept for readable maze input-label overlays. */
 const MAZE_MIN_LEFT_LABEL_PANEL_WIDTH_PX = 132;
@@ -415,6 +414,8 @@ function resolveMazeNetworkPanelPadding(canvasWidthPx: number): {
 } {
   const preferredLeftPanelWidthPx = resolveMazeLabelPanelWidthPx();
   const preferredRightLegendReservePx = MAZE_RIGHT_LEGEND_RESERVE_PX;
+  const minimumRightLegendReservePx =
+    resolveMazeMinimumLegendReservePx(canvasWidthPx);
 
   let leftPanelWidthPx = preferredLeftPanelWidthPx;
   let rightLegendReservePx = preferredRightLegendReservePx;
@@ -427,7 +428,7 @@ function resolveMazeNetworkPanelPadding(canvasWidthPx: number): {
       MAZE_MIN_DRAWABLE_GRAPH_WIDTH_PX - preferredDrawableWidthPx;
     const rightReserveReductionPx = Math.min(
       requiredHorizontalSpacePx,
-      rightLegendReservePx - MAZE_MIN_RIGHT_LEGEND_RESERVE_PX,
+      rightLegendReservePx - minimumRightLegendReservePx,
     );
 
     rightLegendReservePx -= rightReserveReductionPx;
@@ -448,6 +449,15 @@ function resolveMazeNetworkPanelPadding(canvasWidthPx: number): {
     bottomPx: 24,
     leftPx: leftPanelWidthPx,
   };
+}
+
+function resolveMazeMinimumLegendReservePx(canvasWidthPx: number): number {
+  const legendWidthPx =
+    canvasWidthPx < FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_THRESHOLD_PX
+      ? FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_PX
+      : FLAPPY_NETWORK_LEGEND_REGULAR_WIDTH_PX;
+
+  return legendWidthPx + FLAPPY_NETWORK_LEGEND_MARGIN_PX * 2;
 }
 
 function resolveMazeDescriptionColumnWidthPx(): number {

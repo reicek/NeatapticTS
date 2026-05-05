@@ -51,6 +51,9 @@ export const runBrowserEntryCurriculum = (
     let solved = false;
 
     try {
+      const labelProfileId =
+        context.architectureProfileId ??
+        DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID;
       const result = await EvolutionEngine.runMazeEvolution({
         mazeConfig: { maze: mazeLayout },
         agentSimConfig: { maxSteps: settings.agentMaxSteps },
@@ -72,7 +75,7 @@ export const runBrowserEntryCurriculum = (
           dashboardManager: context.dashboard,
           hostAdapter: context.hostAdapter,
           logEvery: C.PER_GENERATION_LOG_FREQUENCY,
-          label: `browser-procedural-${context.architectureProfileId ?? 'mlp'}-${currentDimension}x${currentDimension}`,
+          label: `browser-procedural-${labelProfileId}-${currentDimension}x${currentDimension}`,
           paceEveryGeneration: true,
         },
         cancellation: { isCancelled: () => context.isCancelled() },
@@ -141,5 +144,8 @@ function resolvePhaseWarmStartNetwork(
 
   const profileId =
     context.architectureProfileId ?? DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID;
-  return buildExampleArchitectureProfileNetwork('ascii-maze', profileId);
+  return buildExampleArchitectureProfileNetwork(
+    'ascii-maze',
+    profileId,
+  ) as unknown as INetwork;
 }

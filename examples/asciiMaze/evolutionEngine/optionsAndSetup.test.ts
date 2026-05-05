@@ -136,6 +136,24 @@ describe('normalizeRunOptions', () => {
     });
   });
 
+  it('enables recurrent growth when a recurrent shared profile is selected without an explicit override', () => {
+    const normalizedOptions = normalizeRunOptions(
+      createRunOptions({ architectureProfileId: 'gru' }),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+    );
+
+    expect({
+      allowRecurrent: normalizedOptions.allowRecurrent,
+      neatAllowRecurrent: normalizedOptions.neatOptions.allowRecurrent,
+    }).toEqual({
+      allowRecurrent: true,
+      neatAllowRecurrent: true,
+    });
+  });
+
   it('adds a builder-backed LSTM seed network when the lstm profile id is requested', () => {
     const normalizedOptions = normalizeRunOptions(
       createRunOptions({ architectureProfileId: 'lstm' }),

@@ -28,6 +28,10 @@ import {
   restoreRuntimeMeta,
 } from './neat.export.runtime.utils';
 import type { NetworkJSON } from '../../architecture/network/network.types';
+import type {
+  NeatControllerForExport,
+  NeatRuntimeMetaJSON,
+} from './neat.export.types';
 
 type ExportGenome = Network & {
   score?: number;
@@ -1395,7 +1399,9 @@ describe('neat export chapter', () => {
         ];
 
         // Act
-        const serialized = serializeRuntimeMeta(neatInstance as any);
+        const serialized = serializeRuntimeMeta(
+          neatInstance as unknown as NeatControllerForExport,
+        );
 
         // Assert
         expect({
@@ -1434,7 +1440,9 @@ describe('neat export chapter', () => {
         neatCasted._speciesHistory = undefined;
 
         // Act
-        const serialized = serializeRuntimeMeta(neatInstance as any);
+        const serialized = serializeRuntimeMeta(
+          neatInstance as unknown as NeatControllerForExport,
+        );
 
         // Assert - optional fields should not be in the output
         expect({
@@ -1478,7 +1486,10 @@ describe('neat export chapter', () => {
         };
 
         // Act
-        restoreRuntimeMeta(neatInstance as any, runtimeMeta);
+        restoreRuntimeMeta(
+          neatInstance as unknown as NeatControllerForExport,
+          runtimeMeta,
+        );
         const restored = neatInstance as unknown as {
           _nextGenomeId: number;
           _lineageEnabled: boolean;
@@ -1527,7 +1538,10 @@ describe('neat export chapter', () => {
         };
 
         // Act
-        restoreRuntimeMeta(neatInstance as any, runtimeMeta);
+        restoreRuntimeMeta(
+          neatInstance as unknown as NeatControllerForExport,
+          runtimeMeta,
+        );
         const afterState = neatInstance as unknown as {
           _nextGenomeId?: number;
           _lineageEnabled?: boolean;
@@ -1559,7 +1573,10 @@ describe('neat export chapter', () => {
         };
 
         // Act
-        restoreRuntimeMeta(neatInstance as any, runtimeMeta);
+        restoreRuntimeMeta(
+          neatInstance as unknown as NeatControllerForExport,
+          runtimeMeta,
+        );
         const afterCounters = readArchitectureCounterSnapshot();
 
         // Assert
@@ -1579,13 +1596,16 @@ describe('neat export chapter', () => {
         const beforeCounters = readArchitectureCounterSnapshot();
         const runtimeMeta = {
           // All fields present but with non-number values to trigger false branches
-          nextConnectionInnovation: 'not-a-number' as any,
-          nextNodeGeneId: null as any,
-          nextNodeIndex: { value: 100 } as any,
-        };
+          nextConnectionInnovation: 'not-a-number',
+          nextNodeGeneId: null,
+          nextNodeIndex: { value: 100 },
+        } as unknown as NeatRuntimeMetaJSON;
 
         // Act
-        restoreRuntimeMeta(neatInstance as any, runtimeMeta);
+        restoreRuntimeMeta(
+          neatInstance as unknown as NeatControllerForExport,
+          runtimeMeta,
+        );
         const afterCounters = readArchitectureCounterSnapshot();
 
         // Assert - counters should not change when non-number values are provided
@@ -1607,10 +1627,13 @@ describe('neat export chapter', () => {
           seed: 998,
         });
         // Clear internal RNG state to simulate uninitialized state
-        (neatInstance as any)._rngState = undefined;
+        (neatInstance as unknown as NeatControllerForExport)._rngState =
+          undefined;
 
         // Act
-        const runtimeMeta = serializeRuntimeMeta(neatInstance as any);
+        const runtimeMeta = serializeRuntimeMeta(
+          neatInstance as unknown as NeatControllerForExport,
+        );
 
         // Assert - rngState field should not be present when _rngState is undefined
         expect(runtimeMeta.rngState).toBeUndefined();
