@@ -32,7 +32,7 @@ describe('normalizeRunOptions', () => {
       outputNodeIds:
         normalizedOptions.neatOptions.network?.outputNodeIds.length,
     }).toEqual({
-      hiddenLayerSizes: [6],
+      hiddenLayerSizes: [12, 8, 6],
       inputNodeIds: 6,
       outputNodeIds: 4,
     });

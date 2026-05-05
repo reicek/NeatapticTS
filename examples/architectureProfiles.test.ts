@@ -40,7 +40,7 @@ describe('shared example architecture profiles', () => {
       }).toEqual({
         asciiConfiguration: {
           family: 'MLP',
-          hiddenLayerSizes: [6],
+          hiddenLayerSizes: [12, 8, 6],
           input: 6,
           output: 4,
         },
