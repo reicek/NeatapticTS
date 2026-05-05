@@ -435,8 +435,9 @@ function resolveHoveredHitArea(
       distancePx: resolvePointToAreaDistancePx(canvasX, canvasY, area),
     }))
     .filter(({ distancePx }) => distancePx <= TOOLTIP_HIT_AREA_PADDING_PX)
-    .toSorted((leftEntry, rightEntry) => leftEntry.distancePx - rightEntry.distancePx)[0]
-    ?.area;
+    .toSorted(
+      (leftEntry, rightEntry) => leftEntry.distancePx - rightEntry.distancePx,
+    )[0]?.area;
 }
 
 /**
@@ -494,9 +495,10 @@ function showTooltip(
     preferredLeftPx,
     viewportWidthPx - tooltipWidthPx - 12,
   );
-  const resolvedTopPx = preferredTopPx >= 12
-    ? preferredTopPx
-    : Math.min(clientY + 18, viewportHeightPx - tooltipHeightPx - 12);
+  const resolvedTopPx =
+    preferredTopPx >= 12
+      ? preferredTopPx
+      : Math.min(clientY + 18, viewportHeightPx - tooltipHeightPx - 12);
 
   tooltipElement.style.left = `${Math.max(12, resolvedLeftPx)}px`;
   tooltipElement.style.top = `${Math.max(12, resolvedTopPx)}px`;

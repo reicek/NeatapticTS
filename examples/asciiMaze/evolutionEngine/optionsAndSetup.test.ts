@@ -49,7 +49,8 @@ describe('normalizeRunOptions', () => {
 
     expect({
       architectureProfileId: normalizedOptions.architectureProfileId,
-      connectionCount: normalizedOptions.neatOptions.network?.connections.length,
+      connectionCount:
+        normalizedOptions.neatOptions.network?.connections.length,
       inputNodeIds: normalizedOptions.neatOptions.network?.inputNodeIds.length,
       outputNodeIds:
         normalizedOptions.neatOptions.network?.outputNodeIds.length,

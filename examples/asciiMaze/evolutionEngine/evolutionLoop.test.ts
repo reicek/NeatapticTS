@@ -26,7 +26,12 @@ describe('resolvePeriodicDashboardSnapshot', () => {
     const bestNetwork = { label: 'best' } as never;
 
     expect(
-      resolvePeriodicDashboardSnapshot(bestResult, bestNetwork, undefined, null),
+      resolvePeriodicDashboardSnapshot(
+        bestResult,
+        bestNetwork,
+        undefined,
+        null,
+      ),
     ).toEqual({
       result: bestResult,
       network: bestNetwork,

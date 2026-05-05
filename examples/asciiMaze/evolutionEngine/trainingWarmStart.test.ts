@@ -104,13 +104,17 @@ describe('pretrainPopulationWarmStart', () => {
         JSON.stringify([1.5, -1.25]),
       firstWeightsMatchTemplate:
         JSON.stringify(
-          firstGenome.network.connections.map((connection) => connection.weight),
+          firstGenome.network.connections.map(
+            (connection) => connection.weight,
+          ),
         ) === JSON.stringify([2.25, -2.5]),
       genomesMatchExactly:
         JSON.stringify(firstGenome.network.nodes.map((node) => node.bias)) ===
           JSON.stringify(secondGenome.network.nodes.map((node) => node.bias)) &&
         JSON.stringify(
-          firstGenome.network.connections.map((connection) => connection.weight),
+          firstGenome.network.connections.map(
+            (connection) => connection.weight,
+          ),
         ) ===
           JSON.stringify(
             secondGenome.network.connections.map(
@@ -142,17 +146,15 @@ function createMockTrainableNetwork(options: {
     score: options.initialScore,
     train,
     clone: jest.fn(() => {
-      const cloneTrain = jest.fn(
-        (_dataset: unknown, _config: unknown) => {
-          clonedNetwork.nodes.forEach((node, nodeIndex) => {
-            node.bias = options.trainedBiases[nodeIndex] ?? node.bias;
-          });
-          clonedNetwork.connections.forEach((connection, connectionIndex) => {
-            connection.weight =
-              options.trainedWeights[connectionIndex] ?? connection.weight;
-          });
-        },
-      );
+      const cloneTrain = jest.fn((_dataset: unknown, _config: unknown) => {
+        clonedNetwork.nodes.forEach((node, nodeIndex) => {
+          node.bias = options.trainedBiases[nodeIndex] ?? node.bias;
+        });
+        clonedNetwork.connections.forEach((connection, connectionIndex) => {
+          connection.weight =
+            options.trainedWeights[connectionIndex] ?? connection.weight;
+        });
+      });
       const clonedNetwork = {
         nodes: options.initialBiases.map((bias) => ({ bias })),
         connections: options.initialWeights.map((weight) => ({ weight })),

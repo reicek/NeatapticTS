@@ -421,10 +421,16 @@ export const pretrainPopulationWarmStart = (
   for (const network of population) {
     if (!network) continue;
     try {
-      applyTemplateWeightsWithNoise(network, templateNetwork, state, rngParameters, {
-        weightStdDev: constants.TEMPLATE_WEIGHT_NOISE_STDDEV,
-        biasStdDev: constants.TEMPLATE_BIAS_NOISE_STDDEV,
-      });
+      applyTemplateWeightsWithNoise(
+        network,
+        templateNetwork,
+        state,
+        rngParameters,
+        {
+          weightStdDev: constants.TEMPLATE_WEIGHT_NOISE_STDDEV,
+          biasStdDev: constants.TEMPLATE_BIAS_NOISE_STDDEV,
+        },
+      );
       network.score = undefined;
     } catch {
       // Per-network copy failure is non-fatal; continue with the rest.
@@ -480,8 +486,7 @@ function applyTemplateWeightsWithNoise(
   ) {
     const templateWeight = templateConnections[connectionIndex]?.weight ?? 0;
     genomeConnections[connectionIndex].weight =
-      templateWeight +
-      sampleGaussian(state, rngParameters) * weightStdDev;
+      templateWeight + sampleGaussian(state, rngParameters) * weightStdDev;
   }
 }
 

@@ -249,7 +249,9 @@ function resolveHiddenNodeDepthById(
 ): Map<number, number> {
   const hiddenNodeIds = new Set(
     graph.nodes
-      .filter((node) => !inputNodeIds.has(node.id) && !outputNodeIds.has(node.id))
+      .filter(
+        (node) => !inputNodeIds.has(node.id) && !outputNodeIds.has(node.id),
+      )
       .map((node) => node.id),
   );
 
@@ -270,7 +272,11 @@ function resolveHiddenNodeDepthById(
 
   // Promote depth through hidden -> hidden forward links until stable.
   const maximumPropagationPasses = Math.max(1, hiddenNodeIds.size);
-  for (let propagationPassIndex = 0; propagationPassIndex < maximumPropagationPasses; propagationPassIndex += 1) {
+  for (
+    let propagationPassIndex = 0;
+    propagationPassIndex < maximumPropagationPasses;
+    propagationPassIndex += 1
+  ) {
     let didPromoteAnyDepth = false;
 
     graph.edges.forEach((edge) => {

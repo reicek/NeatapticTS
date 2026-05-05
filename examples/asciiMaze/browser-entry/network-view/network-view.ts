@@ -244,22 +244,19 @@ export function drawMazeNetworkVisualization(
   );
 
   // Step 5: Draw Flappy-style semantic input overlays and collect hover hit areas.
-  const {
-    inputDescriptionScenes,
-    inputGroupLabelBandScenes,
-    hitAreas,
-  } = resolveAndDrawInputLabelPanel(
-    context,
-    inputNodes,
-    frame.nodeDimensions,
-  );
+  const { inputDescriptionScenes, inputGroupLabelBandScenes, hitAreas } =
+    resolveAndDrawInputLabelPanel(context, inputNodes, frame.nodeDimensions);
 
   drawInputGroupLabelBands(
     context,
     inputGroupLabelBandScenes,
     hoveredNodeIndices,
   );
-  drawInputNodeDescriptions(context, inputDescriptionScenes, hoveredNodeIndices);
+  drawInputNodeDescriptions(
+    context,
+    inputDescriptionScenes,
+    hoveredNodeIndices,
+  );
 
   // Step 6: Draw output direction labels.
   drawOutputNodeLabels(context, outputNodes, frame.nodeDimensions);
@@ -487,7 +484,10 @@ function resolveMazeInputOverlayLayouts(
 
   const relativeLayouts = MAZE_INPUT_GROUP_DEFS.map((groupDef, groupIndex) => {
     const groupColor = MAZE_GROUP_COLORS[groupIndex];
-    const groupNodeStartIndex = MAZE_INPUT_GROUP_DEFS.slice(0, groupIndex).reduce(
+    const groupNodeStartIndex = MAZE_INPUT_GROUP_DEFS.slice(
+      0,
+      groupIndex,
+    ).reduce(
       (runningNodeCount, currentGroupDef) =>
         runningNodeCount + currentGroupDef.nodeCount,
       0,
@@ -519,14 +519,15 @@ function resolveMazeInputOverlayLayouts(
           topPx: 0,
           widthPx: descriptionWidthPx,
           heightPx: descriptionHeightPx,
-          nodeIndex: resolvedGroupNodes[nodeOffset]?.index ?? groupNodeStartIndex + nodeOffset,
+          nodeIndex:
+            resolvedGroupNodes[nodeOffset]?.index ??
+            groupNodeStartIndex + nodeOffset,
         };
       },
     );
 
-    const groupedDescriptionContentHeightPx = resolveGroupedDescriptionContentHeightPx(
-      descriptionScenes,
-    );
+    const groupedDescriptionContentHeightPx =
+      resolveGroupedDescriptionContentHeightPx(descriptionScenes);
     const groupHeightPx = Math.max(
       FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX,
       groupedDescriptionContentHeightPx +
@@ -573,7 +574,8 @@ function resolveMazeInputOverlayLayouts(
 
     return resolvedLayout;
   }).filter(
-    (layout): layout is ResolvedMazeInputGroupLayout => layout.groupColor != null,
+    (layout): layout is ResolvedMazeInputGroupLayout =>
+      layout.groupColor != null,
   );
 
   const totalOverlayHeightPx = relativeLayouts.at(-1)
@@ -673,10 +675,9 @@ function resolveMazeArchitectureLabel(
   ].join(FLAPPY_NETWORK_ARCHITECTURE_COLUMN_SEPARATOR);
   const architectureTotalsLabel = `(${architectureDescriptor.totalNodes} nodes, ${architectureDescriptor.totalConnections} connections)`;
 
-  return [
-    architectureColumnsLabel,
-    architectureTotalsLabel,
-  ].join(FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR);
+  return [architectureColumnsLabel, architectureTotalsLabel].join(
+    FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR,
+  );
 }
 
 function resolveMazeHiddenLayersLabel(
