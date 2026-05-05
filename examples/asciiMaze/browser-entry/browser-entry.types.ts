@@ -4,7 +4,10 @@ import type {
   DashboardPresentationAdapter,
   DashboardTelemetryPayload,
 } from '../dashboardManager/dashboardManager.types';
-import type { EvolutionHostAdapter } from '../evolutionEngine/evolutionEngine.types';
+import type {
+  EvolutionAdaptiveMutationConfig,
+  EvolutionHostAdapter,
+} from '../evolutionEngine/evolutionEngine.types';
 import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
 
 /**
@@ -90,6 +93,8 @@ export interface BrowserEntryHostElements {
 /** Evolution settings used for a single procedural maze phase. */
 export interface BrowserEntryEvolutionSettings {
   agentMaxSteps: number;
+  allowRecurrent: boolean;
+  adaptiveMutation?: EvolutionAdaptiveMutationConfig;
   popSize: number;
   maxStagnantGenerations: number;
   maxGenerations: number;

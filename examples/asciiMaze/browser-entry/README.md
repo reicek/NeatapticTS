@@ -593,6 +593,21 @@ scheduling, frame pacing, and lifecycle completion. Evolution-phase result
 interpretation and winner carry-over refinement live behind the engine-owned
 curriculum helper so browser-entry stays focused on host runtime behavior.
 
+### resolvePhaseWarmStartNetwork
+
+```ts
+resolvePhaseWarmStartNetwork(
+  context: BrowserEntryCurriculumContext,
+  previousBestNetwork: INetwork | undefined,
+): INetwork
+```
+
+Resolve a phase warm-start network.
+
+Step 1: Reuse the previous phase winner when one is available.
+Step 2: Otherwise seed the first phase with a deterministic profile-built
+network so generation zero is less noisy than a pure cold start.
+
 ### runBrowserEntryCurriculum
 
 ```ts

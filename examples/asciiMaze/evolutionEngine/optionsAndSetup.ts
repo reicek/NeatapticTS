@@ -167,9 +167,10 @@ export const normalizeRunOptions = (
 
   // Step 2: pull algorithm-level settings with clear defaults and descriptive locals.
   const {
-    allowRecurrent = true,
+    allowRecurrent = false,
     architectureProfileId,
-    popSize = 500,
+    adaptiveMutation,
+    popSize = 100,
     maxStagnantGenerations = 500,
     minProgressToPass = 95,
     maxGenerations = Infinity,
@@ -268,7 +269,10 @@ export const normalizeRunOptions = (
     neatOptions: {
       popSize,
       allowRecurrent,
-      adaptiveMutation: { enabled: true, strategy: 'twoTier' },
+      adaptiveMutation: adaptiveMutation ?? {
+        enabled: true,
+        strategy: 'twoTier',
+      },
       multiObjective: {
         enabled: true,
         complexityMetric: 'nodes',

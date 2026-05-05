@@ -150,6 +150,22 @@ Parameters:
 
 Returns: Resolved frame with positioned nodes and scene state (reusable for hover).
 
+### resolveHiddenNodeDepthById
+
+```ts
+resolveHiddenNodeDepthById(
+  graph: VisualizationGraphV1,
+  inputNodeIds: Set<number>,
+  outputNodeIds: Set<number>,
+): Map<number, number>
+```
+
+Infer a left-to-right hidden-layer depth using forward-only graph edges.
+
+This keeps acyclic and mostly-feed-forward graphs from collapsing all hidden
+nodes into a single visual column, while still tolerating recurrent edges by
+ignoring non-forward links for depth propagation.
+
 ## visualization/network-view/network-view.layout.utils.ts
 
 Generic layout helpers for browser network visualization.

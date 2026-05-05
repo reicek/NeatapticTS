@@ -99,6 +99,15 @@ Encoded maze representation with cell values.
 
 Encoded maze for simulation.
 
+### EvolutionAdaptiveMutationConfig
+
+Adaptive mutation tuning forwarded to the underlying NEAT runtime.
+
+These knobs let host layers increase exploration pressure without needing to
+know the internal controller implementation details. The ASCII Maze browser
+curriculum uses this to make the first phase more willing to grow topology
+when early generations stall.
+
 ### EvolutionEngineFacadeRuntimeState
 
 Mutable runtime state owned by the public EvolutionEngine facade.
@@ -675,6 +684,23 @@ Example:
 const { flushToFrame, fs, path, safeWrite } = prepareLoopHelpers(opts, engineState.scratch);
 safeWrite('Starting evolution...\n');
 await flushToFrame(); // Yield to host
+
+### resolvePeriodicDashboardSnapshot
+
+```ts
+resolvePeriodicDashboardSnapshot(
+  bestResult: IMazeRunResult | undefined,
+  bestNetwork: default | null,
+  currentResult: IMazeRunResult | undefined,
+  currentNetwork: default | null,
+): { result: IMazeRunResult | undefined; network: default | null; }
+```
+
+Resolve which network snapshot the periodic dashboard should show.
+
+Periodic refreshes should prefer the latest generation champion when one is
+available so the browser view reflects ongoing topology exploration instead
+of replaying the stale global best on every non-improving generation.
 
 ### runEvolutionLoop
 
@@ -2469,14 +2495,15 @@ Configuration Philosophy:
  - Prefer explicit defaults over implicit framework defaults
  - Use nullish coalescing `??` for clarity (avoid falsy semantics)
  - Compute derived settings (elitism, provenance) from population size
+ - Treat generation-zero warm start as the shared-prior phase, then bias later generations toward topology search
  - Enable modern features by default (adaptive mutation, multi-objective, novelty)
 
 Default Constants (from EvolutionEngine):
- - Population size: 150
+ - Population size: 100
  - Elitism fraction: 0.05 (top 5% preserved)
- - Provenance fraction: 0.1 (top 10% used for breeding)
- - Mutation rate: 0.3
- - Mutation amount: 0.05
+ - Provenance count: 0 (no fresh seed reinjection after generation zero)
+ - Adaptive mutation initial rate: 0.55
+ - Mutation amount: 3
  - Min hidden nodes: 0
  - Target species: 8
  - Entropy range: [0.40, 0.60]
@@ -2491,7 +2518,7 @@ Parameters:
 - `cfg` - Optional configuration bag with the following supported properties:
 - popSize: Population size (default: 150)
 - mutation: Array of mutation operators (default: comprehensive set including LSTM)
-- allowRecurrent: Enable recurrent connections (default: true)
+- allowRecurrent: Enable recurrent connections (default: false)
 - network: Optional builder-backed seed network used as the NEAT base graph
 - adaptiveMutation: Adaptive mutation config (default: enabled with 'twoTier' strategy)
 - multiObjective: Multi-objective config (default: enabled with 'nodes' metric)
@@ -2525,11 +2552,11 @@ resolveDefaultMutationShelf(
 
 Resolves the default mutation shelf for the ASCII Maze demo.
 
-The maze example already opts into recurrent-capable search at the
-controller level, so its default mutation shelf should expose the newer
-temporal and gated operators that make that policy meaningful. When callers
-explicitly disable recurrent growth, the shelf falls back to the compact
-feed-forward subset so the controller contract stays aligned with the shelf.
+ASCII Maze now splits responsibilities more deliberately than Flappy Bird:
+generation zero borrows the shared sparse seed and template-copy warm start,
+but later feed-forward generations bias mutation toward structural edits so
+the maze run can explore routing changes instead of repeatedly rediscovering
+similar weight tweaks.
 
 Parameters:
 - `allowRecurrent` - Whether recurrent and gated growth is allowed.
@@ -2978,7 +3005,8 @@ Population-wide warm-start hook used by the public orchestration helper.
 pretrainPopulationWarmStart(
   neat: default,
   lamarckianTrainingSet: LamarckianTrainingCase[],
-  constants: { PRETRAIN_MAX_ITER: number; PRETRAIN_BASE_ITER: number; DEFAULT_TRAIN_ERROR: number; DEFAULT_PRETRAIN_RATE: number; DEFAULT_PRETRAIN_MOMENTUM: number; DEFAULT_TRAIN_BATCH_SMALL: number; },
+  constants: { PRETRAIN_MAX_ITER: number; PRETRAIN_BASE_ITER: number; DEFAULT_TRAIN_ERROR: number; DEFAULT_PRETRAIN_RATE: number; DEFAULT_PRETRAIN_MOMENTUM: number; DEFAULT_TRAIN_BATCH_SMALL: number; TEMPLATE_WEIGHT_NOISE_STDDEV: number; TEMPLATE_BIAS_NOISE_STDDEV: number; },
+  state: EngineState,
   applyCompassWarmStart: WarmStartNetworkCallback,
   centerOutputBiases: WarmStartNetworkCallback,
 ): void
@@ -2987,24 +3015,26 @@ pretrainPopulationWarmStart(
 Pretrain the population using a small supervised dataset and apply warm-start heuristics.
 
 Behaviour & contract:
-- Runs a short supervised training pass on each network in `neat.population`
+- Trains one cloned template network from the current population head
+- Copies the trained template parameters across the population with small noise
 - Treats the training set as a biasing hint, not as a replacement for later evolution
 - Applies lightweight warm-start heuristics after training: compass wiring
   and output-bias centering
-- Isolates failures per network so one bad trainer state does not abort the
-  rest of the population
+- Isolates failures per stage so one bad network state does not abort the pass
 - Stays allocation-light so warm-start remains cheap enough to use as a
   tactical assist instead of a second training regime
 
 Steps:
 1. Validate inputs and obtain `population` (fast-exit on empty populations)
-2. For each network: guard missing `train` method, compute conservative iteration budget, then call `train`
-3. Apply warm-start heuristics (compass wiring + bias centering). Swallow any per-network exceptions.
+2. Clone the lead genome into one trainable template and run the bounded supervised fit there
+3. Apply warm-start heuristics to that template only
+4. Copy tuned template parameters across the population with small Gaussian noise
 
 Parameters:
 - `neat` - NEAT instance exposing a `population` array of networks.
 - `lamarckianTrainingSet` - Array of `{input:number[], output:number[]}` training cases.
 - `constants` - Training hyperparameters (iteration limits, learning rates, etc.).
+- `state` - Shared engine state providing deterministic RNG for copy noise.
 - `applyCompassWarmStart` - Helper function for compass wiring adjustment.
 - `centerOutputBiases` - Helper function for output bias centering.
 

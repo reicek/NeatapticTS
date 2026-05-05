@@ -106,10 +106,34 @@ export interface IAgentSimulationConfig {
   maxSteps: number;
 }
 
+/**
+ * Adaptive mutation tuning forwarded to the underlying NEAT runtime.
+ *
+ * These knobs let host layers increase exploration pressure without needing to
+ * know the internal controller implementation details. The ASCII Maze browser
+ * curriculum uses this to make the first phase more willing to grow topology
+ * when early generations stall.
+ */
+export interface EvolutionAdaptiveMutationConfig {
+  enabled?: boolean;
+  strategy?: string;
+  adaptEvery?: number;
+  sigma?: number;
+  minRate?: number;
+  maxRate?: number;
+  initialRate?: number;
+  adaptAmount?: boolean;
+  minAmount?: number;
+  maxAmount?: number;
+  amountSigma?: number;
+  [key: string]: unknown;
+}
+
 /** Configuration options for the evolutionary algorithm used in the ASCII Maze demos. */
 export interface IEvolutionAlgorithmConfig {
   allowRecurrent?: boolean;
   architectureProfileId?: ExampleArchitectureProfileId;
+  adaptiveMutation?: EvolutionAdaptiveMutationConfig;
   popSize?: number;
   maxStagnantGenerations?: number;
   minProgressToPass?: number;

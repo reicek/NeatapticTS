@@ -127,6 +127,15 @@ const MAZE_LAYOUT_PASS_COLOR_SCALES = {
 const MAZE_RIGHT_LEGEND_RESERVE_PX =
   FLAPPY_NETWORK_LEGEND_REGULAR_WIDTH_PX + FLAPPY_NETWORK_LEGEND_MARGIN_PX * 2;
 
+/** Minimum right reserve kept so the legend never fully crowds the graph. */
+const MAZE_MIN_RIGHT_LEGEND_RESERVE_PX = 112;
+
+/** Minimum left reserve kept for readable maze input-label overlays. */
+const MAZE_MIN_LEFT_LABEL_PANEL_WIDTH_PX = 132;
+
+/** Minimum drawable graph width needed to keep hidden layers visually separate. */
+const MAZE_MIN_DRAWABLE_GRAPH_WIDTH_PX = 420;
+
 type MazeRuntimePositionedNode = {
   xPx: number;
   yPx: number;
@@ -182,18 +191,15 @@ export function drawMazeNetworkVisualization(
   // Step 1: Sync canvas dimensions to the current panel width.
   syncCanvasToPanel(canvas);
 
+  const panelPadding = resolveMazeNetworkPanelPadding(canvas.width);
+
   const dynamicColorScales = resolveNetworkVisualizationColorScales(network);
   const architectureLabel = resolveMazeArchitectureLabel(network, graph);
 
   // Step 2: Render base graph with generous left padding for the label panel.
   const frame = renderNetworkView(canvas, graph, {
     nodeDimensions: { widthPx: 28, heightPx: 10 },
-    panelPaddingPx: {
-      topPx: 18,
-      rightPx: MAZE_RIGHT_LEGEND_RESERVE_PX,
-      bottomPx: 24,
-      leftPx: resolveMazeLabelPanelWidthPx(),
-    },
+    panelPaddingPx: panelPadding,
     colorScales: MAZE_LAYOUT_PASS_COLOR_SCALES,
   });
 
@@ -402,6 +408,49 @@ function resolveMazeLabelPanelWidthPx(): number {
       FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX +
       12,
   );
+}
+
+function resolveMazeNetworkPanelPadding(canvasWidthPx: number): {
+  topPx: number;
+  rightPx: number;
+  bottomPx: number;
+  leftPx: number;
+} {
+  const preferredLeftPanelWidthPx = resolveMazeLabelPanelWidthPx();
+  const preferredRightLegendReservePx = MAZE_RIGHT_LEGEND_RESERVE_PX;
+
+  let leftPanelWidthPx = preferredLeftPanelWidthPx;
+  let rightLegendReservePx = preferredRightLegendReservePx;
+
+  const preferredDrawableWidthPx =
+    canvasWidthPx - leftPanelWidthPx - rightLegendReservePx;
+
+  if (preferredDrawableWidthPx < MAZE_MIN_DRAWABLE_GRAPH_WIDTH_PX) {
+    const requiredHorizontalSpacePx =
+      MAZE_MIN_DRAWABLE_GRAPH_WIDTH_PX - preferredDrawableWidthPx;
+    const rightReserveReductionPx = Math.min(
+      requiredHorizontalSpacePx,
+      rightLegendReservePx - MAZE_MIN_RIGHT_LEGEND_RESERVE_PX,
+    );
+
+    rightLegendReservePx -= rightReserveReductionPx;
+
+    const remainingRequiredHorizontalSpacePx =
+      requiredHorizontalSpacePx - rightReserveReductionPx;
+    if (remainingRequiredHorizontalSpacePx > 0) {
+      leftPanelWidthPx -= Math.min(
+        remainingRequiredHorizontalSpacePx,
+        leftPanelWidthPx - MAZE_MIN_LEFT_LABEL_PANEL_WIDTH_PX,
+      );
+    }
+  }
+
+  return {
+    topPx: 18,
+    rightPx: rightLegendReservePx,
+    bottomPx: 24,
+    leftPx: leftPanelWidthPx,
+  };
 }
 
 function resolveMazeDescriptionColumnWidthPx(): number {

@@ -9,10 +9,55 @@ import {
   positionNetworkNodes,
   centerPositionedNodesInDrawableArea,
 } from './network-view.layout.utils';
+import { renderNetworkView } from './network-view';
 import { resolveNetworkVisualizationTopologyPlan } from './network-view.topology.utils';
 import type { VisualNetworkNode } from './network-view.layout.utils';
+import type { VisualizationGraphV1 } from '../../architecture/network';
 
 describe('network-view layout utilities', () => {
+  describe('renderNetworkView()', () => {
+    it('splits forward hidden chains into separate horizontal columns', () => {
+      const canvas = {
+        width: 760,
+        height: 400,
+        getContext: () => null,
+      } as unknown as HTMLCanvasElement;
+
+      const graph: VisualizationGraphV1 = {
+        version: 1,
+        nodes: [
+          { id: 1, role: 'input', bias: 0 },
+          { id: 2, role: 'input', bias: 0 },
+          { id: 3, role: 'hidden', bias: 0 },
+          { id: 4, role: 'hidden', bias: 0 },
+          { id: 5, role: 'output', bias: 0 },
+        ],
+        edges: [
+          { from: 1, to: 3, weight: 0.5, kind: 'forward' },
+          { from: 2, to: 3, weight: 0.5, kind: 'forward' },
+          { from: 3, to: 4, weight: 0.5, kind: 'forward' },
+          { from: 4, to: 5, weight: 0.5, kind: 'forward' },
+        ],
+        io: {
+          inputNodeIds: [1, 2],
+          outputNodeIds: [5],
+        },
+        metadata: {
+          mode: 'acyclic',
+        },
+      };
+
+      const frame = renderNetworkView(canvas, graph);
+      const hiddenColumns = new Set(
+        frame.positionedNodes
+          .filter((positionedNode) => positionedNode.type === 'hidden')
+          .map((positionedNode) => Math.round(positionedNode.centerXPx)),
+      );
+
+      expect(hiddenColumns.size).toBe(2);
+    });
+  });
+
   describe('positionNetworkNodes()', () => {
     it('positions nodes in layers left to right', () => {
       const layers: VisualNetworkNode[][] = [

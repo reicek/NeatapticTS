@@ -49,13 +49,27 @@ export const resolveBrowserEntryHostElements = (
 export const createBrowserEvolutionSettings = (
   dimension: number,
 ): BrowserEntryEvolutionSettings => {
+  const isInitialCurriculumPhase = dimension === C.INITIAL_MAZE_DIMENSION;
+
   return {
     agentMaxSteps: C.AGENT_MAX_STEPS,
-    popSize: C.POPULATION_SIZE,
+    allowRecurrent: C.ALLOW_RECURRENT,
+    adaptiveMutation: isInitialCurriculumPhase
+      ? { ...C.FIRST_PHASE_ADAPTIVE_MUTATION }
+      : undefined,
+    popSize: isInitialCurriculumPhase
+      ? C.FIRST_PHASE_POPULATION_SIZE
+      : C.POPULATION_SIZE,
     maxStagnantGenerations: C.DEFAULT_MAX_STAGNANT_GENERATIONS,
-    maxGenerations: C.DEFAULT_MAX_GENERATIONS,
-    lamarckianIterations: C.LAMARCKIAN_ITERATIONS,
-    lamarckianSampleSize: C.LAMARCKIAN_SAMPLE_SIZE,
+    maxGenerations: isInitialCurriculumPhase
+      ? C.FIRST_PHASE_MAX_GENERATIONS
+      : C.DEFAULT_MAX_GENERATIONS,
+    lamarckianIterations: isInitialCurriculumPhase
+      ? C.FIRST_PHASE_LAMARCKIAN_ITERATIONS
+      : C.LAMARCKIAN_ITERATIONS,
+    lamarckianSampleSize: isInitialCurriculumPhase
+      ? C.FIRST_PHASE_LAMARCKIAN_SAMPLE_SIZE
+      : C.LAMARCKIAN_SAMPLE_SIZE,
     mazeFactory: () => new MazeGenerator(dimension, dimension).generate(),
   };
 };
