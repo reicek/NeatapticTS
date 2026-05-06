@@ -123,26 +123,24 @@ describe('createBrowserEntryEvolutionHostAdapter', () => {
       });
 
     const adapter = createBrowserEntryEvolutionHostAdapter();
-    let resolved = false;
 
-    await Promise.resolve(
-      adapter.handleStop?.({
-        reason: 'solved',
-        maze: ['S.E'],
-        completedGenerations: 2,
-        progress: 100,
-        result: {
-          path: [[0, 0]],
+    await expect(
+      Promise.resolve(
+        adapter.handleStop?.({
+          reason: 'solved',
+          maze: ['S.E'],
+          completedGenerations: 2,
           progress: 100,
-          success: true,
-        } as never,
-      }),
-    );
-    resolved = true;
+          result: {
+            path: [[0, 0]],
+            progress: 100,
+            success: true,
+          } as never,
+        }),
+      ),
+    ).resolves.toBeUndefined();
 
     dispatchEventSpy.mockRestore();
-
-    expect(resolved).toBe(true);
   });
 
   it('returns a safe no-op adapter when the browser window is unavailable', async () => {
