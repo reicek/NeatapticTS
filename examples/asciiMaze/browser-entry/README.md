@@ -8,6 +8,13 @@ owns search, scoring, and curriculum advancement. The browser-entry boundary
 owns host elements, resize behavior, telemetry fan-out, globals
 compatibility, and the lifecycle handle that embedding code talks to.
 
+The browser host also owns the parts of the experience that should feel
+understandable to a human observer rather than merely correct to the engine.
+When a phase solves a maze, this boundary reveals the winning path step by
+step in the live panel before it lets the curriculum advance. That small
+presentation delay matters because the browser demo is trying to teach route
+discovery, not just report that a solved result existed.
+
 Read it as a boundary between two clocks. One clock belongs to the maze
 curriculum that carries refined winners into larger procedural mazes. The
 other clock belongs to the browser host that has to paint dashboards, react
@@ -25,6 +32,13 @@ fitness, winner refinement, or solve thresholds. Those stay in
 `evolutionEngine/`. The host boundary owns container resolution, dashboard
 plumbing, cooperative abort wiring, and the stable run handle that browser
 callers can stop, await, or subscribe to.
+
+The first tuning stop for the hosted curriculum is
+`browser-entry.constants.ts`. That constants table controls the starting maze
+size, maximum maze size, dimension increment between solved phases, and the
+per-maze step budget. Read it as the host-facing control shelf for how the
+browser curriculum should feel, while the deeper engine folders continue to
+own how evolution itself works.
 
 Read the chapter in three passes. Start with `browser-entry.ts` for the
 public `start(...)` surface. Continue to `browser-entry.services.ts` for host
@@ -244,10 +258,21 @@ Returns: A signal that aborts when either source aborts.
 ### createBrowserEntryEvolutionHostAdapter
 
 ```ts
-createBrowserEntryEvolutionHostAdapter(): EvolutionHostAdapter
+createBrowserEntryEvolutionHostAdapter(
+  input: { liveElement?: HTMLElement | null | undefined; runtimeWindow?: RuntimeWindow | null | undefined; },
+): EvolutionHostAdapter
 ```
 
 Create the browser-owned engine host adapter used for pause polling and solve notifications.
+
+The adapter keeps three host-specific concerns outside the engine:
+
+1. polling browser pause state,
+2. running the solved-path reveal in the live maze panel,
+3. dispatching a browser event only after the host-side reveal finishes.
+
+That ordering is intentional. The engine decides that a maze is solved, but
+the browser host decides how a human should see that solve.
 
 Returns: Host adapter that keeps browser globals and DOM events out of engine internals.
 
@@ -271,6 +296,7 @@ Returns: Dashboard, telemetry hub, runtime dashboard adapter, and resize cleanup
 ```ts
 installBrowserEntryGlobals(
   start: BrowserEntryStartFunction,
+  runtimeWindow: RuntimeWindow | null | undefined,
 ): void
 ```
 
@@ -278,6 +304,7 @@ Install browser globals and one-time auto-start compatibility hooks.
 
 Parameters:
 - `start` - Public browser entry function to expose on the window namespace.
+- `runtimeWindow` - Optional runtime window override used by tests or embedding hosts.
 
 Returns: Nothing.
 
@@ -302,13 +329,39 @@ Shared constants for the browser-hosted ASCII Maze demo lifecycle.
 
 These values keep the browser entry facade declarative while the host,
 resize, and curriculum services consume a single named configuration table.
+Read them as three teaching-focused families rather than as an arbitrary bag
+of numbers:
+
+- curriculum ladder knobs such as `INITIAL_MAZE_DIMENSION`,
+  `MAX_MAZE_DIMENSION`, and `MAZE_DIMENSION_INCREMENT`,
+- per-phase runtime budgets such as `AGENT_MAX_STEPS`,
+  `DEFAULT_MAX_GENERATIONS`, and stagnation limits,
+- browser-host pacing settings such as auto-start delay and redraw debounce.
+
+If you want the hosted demo to begin with smaller mazes, push farther into
+larger ones, or spend more time inside each maze before a phase is judged,
+this table is the intended first stop.
 
 ### BROWSER_ENTRY_CONSTANTS
 
-Shared constants for the browser-hosted ASCII Maze demo lifecycle.
+Browser-hosted ASCII Maze curriculum knobs and host pacing defaults.
 
-These values keep the browser entry facade declarative while the host,
-resize, and curriculum services consume a single named configuration table.
+The most frequently tuned values are the maze-size ladder and the movement
+budget. `INITIAL_MAZE_DIMENSION` decides where the browser curriculum begins,
+`MAX_MAZE_DIMENSION` decides how far it can grow, `MAZE_DIMENSION_INCREMENT`
+decides how abruptly solved phases get harder, and `AGENT_MAX_STEPS` decides
+how much room each candidate gets to explore one maze.
+
+Example:
+
+```ts
+const {
+  INITIAL_MAZE_DIMENSION,
+  MAX_MAZE_DIMENSION,
+  MAZE_DIMENSION_INCREMENT,
+  AGENT_MAX_STEPS,
+} = BROWSER_ENTRY_CONSTANTS;
+```
 
 ## browser-entry/browser-entry.host.services.ts
 
@@ -562,10 +615,21 @@ behavior so runtime orchestration can stay focused on session lifecycle.
 ### createBrowserEntryEvolutionHostAdapter
 
 ```ts
-createBrowserEntryEvolutionHostAdapter(): EvolutionHostAdapter
+createBrowserEntryEvolutionHostAdapter(
+  input: { liveElement?: HTMLElement | null | undefined; runtimeWindow?: RuntimeWindow | null | undefined; },
+): EvolutionHostAdapter
 ```
 
 Create the browser-owned engine host adapter used for pause polling and solve notifications.
+
+The adapter keeps three host-specific concerns outside the engine:
+
+1. polling browser pause state,
+2. running the solved-path reveal in the live maze panel,
+3. dispatching a browser event only after the host-side reveal finishes.
+
+That ordering is intentional. The engine decides that a maze is solved, but
+the browser host decides how a human should see that solve.
 
 Returns: Host adapter that keeps browser globals and DOM events out of engine internals.
 
@@ -574,6 +638,7 @@ Returns: Host adapter that keeps browser globals and DOM events out of engine in
 ```ts
 installBrowserEntryGlobals(
   start: BrowserEntryStartFunction,
+  runtimeWindow: RuntimeWindow | null | undefined,
 ): void
 ```
 
@@ -581,6 +646,7 @@ Install browser globals and one-time auto-start compatibility hooks.
 
 Parameters:
 - `start` - Public browser entry function to expose on the window namespace.
+- `runtimeWindow` - Optional runtime window override used by tests or embedding hosts.
 
 Returns: Nothing.
 
@@ -623,6 +689,66 @@ Parameters:
 
 Returns: Nothing.
 
+## browser-entry/browser-entry.solved-maze-animation.services.ts
+
+Browser-hosted solved-maze reveal helpers.
+
+The evolution engine knows when a maze is solved, but it should not own how
+the browser celebrates or explains that moment. This small boundary turns a
+solved path into a short teaching animation in the live maze panel: show the
+start position first, then reveal one additional route step at a fixed host
+cadence until the path reaches the exit, then hold for one final tick before
+the curriculum advances.
+
+That choice keeps the browser demo readable. A fully solved maze is useful as
+a record, but a progressive reveal is better at teaching which corridor the
+policy actually discovered.
+
+### animateSolvedMazeInBrowserHost
+
+```ts
+animateSolvedMazeInBrowserHost(
+  input: { liveElement: HTMLElement | null; maze: string[]; path?: readonly MazePathStep[] | undefined; },
+): Promise<void>
+```
+
+Animate the solved path inside the browser live-output host.
+
+The reveal sequence is deliberately simple:
+
+1. render the maze with only the start cell active,
+2. wait one host tick,
+3. add one more solved-path step,
+4. repeat until the exit is reached,
+5. wait one final host tick before resolving.
+
+Parameters:
+- `input` - Live host element, maze layout, and solved path to reveal.
+
+Returns: Promise that resolves after the full path and final pause complete.
+
+Example:
+
+```ts
+await animateSolvedMazeInBrowserHost({
+  liveElement,
+  maze: ['S..E'],
+  path: [
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [3, 0],
+  ],
+});
+```
+
+### SOLVED_MAZE_FRAME_DELAY_MS
+
+Delay between solved-path animation frames in the browser host.
+
+The same delay is also used for the final hold after the exit is reached, so
+the viewer gets one extra beat before the next maze replaces the solved one.
+
 ## browser-entry/browser-entry.utils.ts
 
 ### createBrowserEvolutionSettings
@@ -634,6 +760,11 @@ createBrowserEvolutionSettings(
 ```
 
 Build immutable evolution settings for a single maze dimension.
+
+This helper is the point where the browser curriculum's size ladder becomes
+concrete runtime policy. The dimension passed in determines the generated
+maze size, while `BROWSER_ENTRY_CONSTANTS` decides how much movement budget,
+mutation assistance, and generational time each phase receives.
 
 Parameters:
 - `dimension` - Side length in cells for the procedural square maze.
@@ -664,6 +795,10 @@ getNextBrowserMazeDimension(
 ```
 
 Advance the procedural maze dimension without exceeding the configured maximum.
+
+The increment and ceiling both come from `BROWSER_ENTRY_CONSTANTS`, so this
+helper is the single-browser-entry answer to “how quickly do hosted mazes get
+larger?”
 
 Parameters:
 - `currentDimension` - Current maze side length.

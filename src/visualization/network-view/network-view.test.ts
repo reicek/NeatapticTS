@@ -60,6 +60,113 @@ describe('network-view layout utilities', () => {
 
       expect(hiddenColumns.size).toBe(2);
     });
+
+    it('draws valid edges and bias indicators while skipping edges whose endpoints are missing', () => {
+      const drawCalls: string[] = [];
+      const context = createMockCanvasContext(drawCalls);
+      const canvas = {
+        width: 320,
+        height: 240,
+        getContext: () => context,
+      } as unknown as HTMLCanvasElement;
+
+      const frame = renderNetworkView(canvas, {
+        version: 1,
+        nodes: [
+          { id: 1, role: 'input', bias: 0.5 },
+          { id: 2, role: 'output', bias: 0 },
+        ],
+        edges: [
+          { from: 1, to: 2, weight: -0.4, kind: 'forward' },
+          { from: 1, to: 2, weight: 0.6, kind: 'forward' },
+          { from: 99, to: 2, weight: 0.9, kind: 'forward' },
+        ],
+        io: {
+          inputNodeIds: [1],
+          outputNodeIds: [2],
+        },
+      });
+
+      expect({
+        arcCalls: drawCalls.filter((callName) => callName === 'arc').length,
+        lineToCalls: drawCalls.filter((callName) => callName === 'lineTo')
+          .length,
+        topologyMode: frame.topologyMode,
+      }).toEqual({
+        arcCalls: 3,
+        lineToCalls: 2,
+        topologyMode: 'recurrent',
+      });
+    });
+
+    it('keeps hidden-only graphs in a single centered layer when no explicit io nodes exist', () => {
+      const canvas = {
+        width: 320,
+        height: 240,
+        getContext: () => null,
+      } as unknown as HTMLCanvasElement;
+
+      const frame = renderNetworkView(canvas, {
+        version: 1,
+        nodes: [
+          { id: 10, role: 'hidden', bias: 0.1 },
+          { id: 20, role: 'hidden', bias: 0.2 },
+        ],
+        edges: [{ from: 20, to: 10, weight: 0.4, kind: 'recurrent' }],
+        io: {
+          inputNodeIds: [],
+          outputNodeIds: [],
+        },
+      });
+
+      expect(
+        new Set(
+          frame.positionedNodes.map(
+            (positionedNode) => positionedNode.centerXPx,
+          ),
+        ).size,
+      ).toBe(1);
+    });
+
+    it('defaults missing node biases to zero and promotes hidden depth without input seeding', () => {
+      const canvas = {
+        width: 360,
+        height: 240,
+        getContext: () => null,
+      } as unknown as HTMLCanvasElement;
+
+      const frame = renderNetworkView(canvas, {
+        version: 1,
+        nodes: [
+          { id: 1, role: 'input' },
+          { id: 2, role: 'hidden' },
+          { id: 3, role: 'hidden' },
+          { id: 4, role: 'output' },
+        ],
+        edges: [
+          { from: 2, to: 3, weight: 0.4, kind: 'forward' },
+          { from: 3, to: 4, weight: 0.7, kind: 'forward' },
+        ],
+        io: {
+          inputNodeIds: [1],
+          outputNodeIds: [4],
+        },
+      });
+
+      expect({
+        biases: frame.positionedNodes.map(
+          (positionedNode) => positionedNode.bias,
+        ),
+        hiddenColumns: new Set(
+          frame.positionedNodes
+            .filter((positionedNode) => positionedNode.type === 'hidden')
+            .map((positionedNode) => positionedNode.centerXPx),
+        ).size,
+      }).toEqual({
+        biases: [0, 0, 0, 0],
+        hiddenColumns: 2,
+      });
+    });
   });
 
   describe('positionNetworkNodes()', () => {
@@ -89,6 +196,16 @@ describe('network-view layout utilities', () => {
   });
 
   describe('centerPositionedNodesInDrawableArea()', () => {
+    it('returns the original array when there are no positioned nodes to center', () => {
+      const positionedNodes: Parameters<
+        typeof centerPositionedNodesInDrawableArea
+      >[0] = [];
+
+      expect(centerPositionedNodesInDrawableArea(positionedNodes, 240)).toBe(
+        positionedNodes,
+      );
+    });
+
     it('centers nodes horizontally', () => {
       const nodes = [
         {
@@ -143,6 +260,32 @@ describe('network-view layout utilities', () => {
 
       const avgX = (centered[0].centerXPx + centered[1].centerXPx) / 2;
       expect(avgX).toBeCloseTo(320, 1);
+    });
+  });
+
+  describe('positionNetworkNodes()', () => {
+    it('clamps single-node layers inside the drawable vertical bounds', () => {
+      const positionedNodes = positionNetworkNodes(
+        [[{ index: 7, type: 'hidden', bias: 0.3 }]],
+        16,
+        12,
+        64,
+        20,
+        8,
+        { widthPx: 24, heightPx: 24 },
+      );
+
+      expect(positionedNodes).toEqual([
+        {
+          bias: 0.3,
+          centerXPx: 48,
+          centerYPx: 12,
+          heightPx: 24,
+          index: 7,
+          type: 'hidden',
+          widthPx: 24,
+        },
+      ]);
     });
   });
 
@@ -438,6 +581,34 @@ describe('network-view layout utilities', () => {
     });
   });
 });
+
+function createMockCanvasContext(
+  drawCalls: string[],
+): CanvasRenderingContext2D {
+  return {
+    arc: () => {
+      drawCalls.push('arc');
+    },
+    beginPath: () => {
+      drawCalls.push('beginPath');
+    },
+    fill: () => {
+      drawCalls.push('fill');
+    },
+    fillRect: () => {
+      drawCalls.push('fillRect');
+    },
+    lineTo: () => {
+      drawCalls.push('lineTo');
+    },
+    moveTo: () => {
+      drawCalls.push('moveTo');
+    },
+    stroke: () => {
+      drawCalls.push('stroke');
+    },
+  } as unknown as CanvasRenderingContext2D;
+}
 
 function createTopologyTestNetwork(options: {
   nodes: Array<{

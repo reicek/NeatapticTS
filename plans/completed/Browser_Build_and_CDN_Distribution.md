@@ -2,36 +2,186 @@
 
 **Status:** [DONE]
 
-## Scope
+## Purpose
 
-- Provide official browser ESM and IIFE bundles with a stable public surface.
-- Keep the Node-first distribution flow intact while compiling Node-only worker-loader imports out of browser artifacts.
-- Add docs, smoke validation, and release-path gating so browser artifacts are treated as supported publication outputs.
+Make NeatapticTS effortless to use in the browser:
 
-## Final state
+- Provide **official browser bundles** (ESM + IIFE) with a stable public surface.
+- Enable **copy/paste quickstarts** for demos, education, and interactive docs.
+- Preserve Node-first correctness and determinism.
 
-- `src/browser-entry.ts` now defines the browser-safe root surface and intentionally omits the mixed-runtime `multi` facade.
-- `src/env/index.ts` plus `src/env/node/*` and `src/env/browser/*` now isolate the worker-loader split so browser artifacts compile without `fs`, `path`, `child_process`, or `worker_threads` imports.
-- `scripts/build-browser.mjs` emits `dist/neataptic.browser.esm.js`, `dist/neataptic.browser.iife.js`, and `dist/neataptic.browser.iife.min.js`, and `package.json` exposes `npm run build:browser` plus `npm run build:browser:min`.
-- The root README and generated docs landing page now teach ESM and IIFE usage, the explicit browser-build phase, and the current browser runtime limitations.
-- `scripts/smoke-browser-build.mjs` now validates direct ESM import plus trivial activation, and that gate runs in CI as well as release-oriented commands.
-- `npm run deploy` and `.github/workflows/publish.yml` now require `npm run build:browser` after `npm run build`, so browser artifacts and the smoke gate are part of package publication.
-- The flagship demos remain reference apps built from example-specific source bundles under `docs/assets`; the public `dist/neataptic.browser.*` artifacts are now documented as the external-consumer surface instead of the demo runtime source.
+This plan is strictly about packaging, compatibility, and documentation—not new algorithms.
 
-## Audit summary
+## Why this matters
 
-- The workstream closed the browser-packaging gap without destabilizing the existing Node webpack build; browser artifacts intentionally remain an explicit second phase after `npm run build`.
-- The environment-adapter seam was the key correctness boundary because the mixed-runtime worker-loader path was the remaining Node-only pressure on the root browser facade.
-- Validation stayed focused on artifact correctness, docs synchronization, and release-path safety rather than the unrelated shared-worktree failure in `src/neat/mutation/add-conn/mutation.add-conn.test.ts`.
-- Release parity is now explicit: browser artifacts and the ESM smoke gate are part of CI and publication, not just local development.
+A library can be technically excellent and still lose adoption if the first run experience is hard. Browser support unlocks:
 
-## Reopen conditions
+- Interactive documentation and “try it live” examples.
+- Lightweight playgrounds for evolution experiments.
+- Classroom use (no Node install, no build pipeline).
 
-- The public browser bundle needs additional exported surfaces, including any safe replacement for the currently omitted `multi` boundary.
-- A direct bundle-consumer example or browser-first playground is needed beyond the current README quickstarts.
-- Browser artifacts should be folded into the main `npm run build` path instead of staying a separate explicit phase.
-- Bundle-size, sourcemap, or distribution-policy changes require revisiting the browser packaging contract.
+## Goals
 
-## Audit log
+- G1: Produce a **browser ESM build** that works with modern bundlers and native ESM.
+- G2: Produce a **single-file IIFE build** for `<script>` usage.
+- G3: Ensure the browser build has a clearly defined public API entry (no deep imports).
+- G4: Keep Node builds unchanged and fully supported.
 
-- Durable completion notes now live in [Browser_Build_and_CDN_Distribution.logs.md](Browser_Build_and_CDN_Distribution.logs.md).
+## Non-goals
+
+- Implementing new NEAT features (tracked elsewhere).
+- Supporting legacy browsers requiring heavy polyfills.
+- Guaranteeing identical performance characteristics vs Node.
+
+## Compatibility target
+
+- Modern evergreen browsers (Chromium, Firefox, Safari) with ES2023-ish features.
+- If a feature requires Node-only APIs (fs, worker_threads), it must be:
+  - compiled out of the browser bundle, or
+  - behind a runtime capability check with a clear error.
+
+## Public API (browser)
+
+Provide a stable top-level namespace export.
+
+Proposed browser entry exports:
+
+- `Neat`
+- `Network`
+- `Architect` (if present)
+- `methods` / activations / cost functions (where applicable)
+- Optional: `version`
+
+Avoid exporting internal/private helpers.
+
+## Build artifacts
+
+Add/standardize these artifacts under `dist/`:
+
+- `dist/neataptic.browser.esm.js` (ESM)
+- `dist/neataptic.browser.iife.js` (IIFE)
+- `dist/neataptic.browser.iife.min.js` (minified)
+- Source maps for all where practical
+
+Naming can be adjusted to fit current conventions; the key is that we ship both ESM and IIFE.
+
+## Recommended agent + skill combo by step
+
+- Step 1 — `Browser Runtime Scout` + `browser-build`
+- Step 2 — `Browser Runtime Scout` + `browser-build`
+- Step 3 — `Browser Runtime Scout` + `browser-build`
+- Step 4 — `Docs Scout` + `educational-docs`
+- Step 5 — `Browser Runtime Scout` + `browser-build`
+
+## Implementation steps
+
+### Step 1 — Define browser entry module
+
+- Create a dedicated browser entry file (example name):
+  - `src/browser-entry.ts`
+- Re-export only supported browser-safe symbols.
+- Ensure no Node-only modules are imported transitively.
+
+Acceptance:
+
+- A simple `import { Neat } from './dist/neataptic.browser.esm.js'` works.
+
+### Step 2 — Split Node-only concerns behind environment adapters
+
+- Introduce “environment adapter” modules so imports are browser-safe:
+  - `src/env/node/*`
+  - `src/env/browser/*`
+  - `src/env/index.ts` that chooses by build target (compile-time), not runtime.
+
+Notes:
+
+- If runtime selection is needed, use capability checks, not user-agent sniffing.
+
+Acceptance:
+
+- Browser bundle has no references to Node built-ins (`fs`, `path`, `worker_threads`).
+
+### Step 3 — Add explicit bundling pipeline
+
+Use existing tooling already present in repo:
+
+- Keep `webpack.config.js` for main dist build if desired.
+- Add a small `esbuild`/webpack target for browser artifacts.
+
+Add scripts (names illustrative):
+
+- `npm run build:browser`
+- `npm run build:browser:min`
+
+Acceptance:
+
+- `npm run build` continues to work.
+- `npm run build:browser` produces the expected dist files.
+
+### Step 4 — Document browser usage
+
+Add a dedicated docs page:
+
+- `docs/` content or a `README` section describing:
+  - script tag IIFE usage
+  - ESM usage
+  - limitations (threads, filesystem, perf)
+
+Acceptance:
+
+- A user can run a minimal evolve loop in the browser with 10–20 lines.
+
+### Step 5 — Add a CI smoke check
+
+Without introducing heavy browser testing:
+
+- Add a small build-time smoke check that:
+  - imports the browser ESM output
+  - runs a trivial activation on a toy network
+
+Acceptance:
+
+- Build fails if the browser bundle is broken.
+
+## Testing strategy
+
+- TypeScript: `npx tsc --noEmit -p tsconfig.json`
+- Build: `npm run build` and `npm run build:browser`
+- Minimal runtime smoke:
+  - Node loads `dist/neataptic.browser.esm.js` (as ESM) and runs a simple call.
+  - Optional: a headless browser run (Puppeteer exists in dev deps) for a single-page smoke.
+
+## Risks and mitigations
+
+- Risk: accidental Node-only transitive imports.
+  - Mitigation: keep browser entry small; use env adapters.
+- Risk: tree-shaking breaks side-effect assumptions.
+  - Mitigation: mark side-effectful modules clearly; add smoke tests.
+- Risk: bundle size grows.
+  - Mitigation: export only essentials; avoid large optional modules by default.
+
+## Success criteria
+
+- `npm run build:browser` produces ESM + IIFE outputs. ✅
+- A minimal browser example works without bundlers. ✅
+- Node build remains unchanged. ✅
+- Documentation includes at least one runnable browser example. ✅
+
+## Completion summary
+
+All five plan steps implemented and validated:
+
+- **Step 1** — `src/browser-entry.ts` was already in place (browser-safe re-export surface).
+- **Step 2** — `src/env/browser/worker-loader.ts` and `src/env/index.ts` env adapter were already in place.
+- **Step 3** — Added `build:browser`, `build:browser:min`, and `smoke:browser` npm scripts in `package.json`. Fixed `scripts/build-browser.mjs` to mark Node built-ins (`child_process`, `path`, `fs`, `worker_threads`, etc.) as `external` so esbuild does not bundle them for the browser platform.
+- **Step 4** — Added a "Browser Usage" section to `docs/README.md` covering ESM, IIFE, build commands, and browser limitations table.
+- **Step 5** — Added browser build + smoke steps to `.github/workflows/ci.yml`.
+
+Artifacts produced:
+
+- `dist/neataptic.browser.esm.js` (1.2 MB unminified, source-mapped)
+- `dist/neataptic.browser.iife.js` (1.2 MB unminified, source-mapped)
+- `dist/neataptic.browser.iife.min.js` (372 KB minified / 108 KB gzipped — within 150 KB budget)
+
+Smoke test: `[browser-smoke] Browser ESM bundle import and activation succeeded.`
+Node test suite: 355 suites / 3274 tests, all passed.

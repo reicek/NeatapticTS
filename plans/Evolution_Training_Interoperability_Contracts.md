@@ -123,6 +123,37 @@ export async function evaluateCandidate(
 
 Exact naming should align with existing code; the important part is to make policies explicit.
 
+## Downstream unlock — NEATchat follow-up
+
+This plan is one of the hard blockers for `plans/NEATchat.plans.md`.
+NEATchat should not start comparing, fine-tuning, or promoting personalized
+candidates until the repo has an explicit and deterministic training-isolation
+contract.
+
+For NEATchat, this plan is considered ready only when all of the following are
+true:
+
+1. Step 1 and Step 2 are complete, so deterministic parameter layout plus
+   vector export/import are real and roundtrip inference correctly.
+2. Step 3 is complete, so fine-tuning cannot mutate shared candidate state by
+   accident.
+3. Step 4 is complete, so the policy for fitness-only versus persistent
+   training is explicit rather than hidden inside downstream application code.
+4. The public contract is documented clearly enough that NEATchat can compare a
+   frozen base, a personalized variant, and candidate deltas without inventing
+   a parallel private vector format.
+
+This plan does not replace checkpointing or worker execution. It provides the
+promotion and isolation seam that those other NEATchat blockers rely on.
+
+## Recommended agent + skill combo by step
+
+- Step 1 — `Hybrid Interop Scout` + `hybrid-training-interop`
+- Step 2 — `Hybrid Interop Scout` + `hybrid-training-interop`
+- Step 3 — `Hybrid Interop Scout` + `hybrid-training-interop`
+- Step 4 — `Hybrid Interop Scout` + `hybrid-training-interop`
+- Step 5 — `Docs Scout` + `educational-docs`
+
 ## Implementation steps
 
 ### Step 1 — Stabilize deterministic parameter ordering

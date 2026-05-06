@@ -149,12 +149,20 @@ Invoke skills via slash commands — do not re-state their workflow ad hoc:
 | `/tracker-handoff` | Creating, compressing, or closing `.plans.md` / `.logs.md` files |
 | `/educational-docs` | JSDoc quality, README tone, Mermaid diagrams, citations |
 | `/plan-alignment` | Aligning changes with roadmap intent |
+| `/worker-inference-transport` | Worker-friendly inference payloads, transfer ladders, and browser/Node worker parity |
+| `/multithread-evaluation` | Ordered worker-pool batch evaluation, queueing, dataset shipping, and fallback behavior |
+| `/checkpointing-persistence` | Full/light checkpoints, strict restore behavior, and durable resume boundaries |
+| `/hybrid-training-interop` | Parameter vectors, isolated fine-tuning, and explicit persistence policy |
+| `/reproducibility-contracts` | Seed/replay language, RNG state, ordering, and exact-vs-bounded determinism |
 | `/flappy-architecture-polish` | Tuning Flappy Bird architecture profiles |
 | `/visualizer-workflow` | Debugging or improving demo visualizers (layout, overflow, hover/tooltip, parity) |
 | `/architecture-builder` | Adding or extending preconfigured builders (MLP/LSTM/GRU/NARX) |
-| `/onnx-work` | Extending or hardening ONNX export/import (Phase 6 parallel lane) |
-| `/performance-optimization` | Memory/slab/typed-array improvements (Phase 5 parallel lane) |
-| `/browser-build` | ESM/IIFE bundle configuration and CDN distribution (Phase 3) |
+| `/nge-core-algorithm` | Phase 7 DNA, development, lifecycle, memory tiers, neuromodulation, and reproduction core semantics |
+| `/nge-benchmark-workflow` | Phase 7 benchmark methodology, curricula, fairness, observability, and demo harnesses |
+| `/neatchat-systems` | Dependency-gated NEATchat follow-up system with memory tiers, retrieval/routing, and branchable state |
+| `/onnx-work` | ONNX-like export/import hardening, constrained recurrent import, and honest seed-ingestion boundaries |
+| `/performance-optimization` | Measured library hotspots, slab/cache optimizations, and trace-backed implementation passes |
+| `/browser-build` | Root browser artifacts, docs asset bundles, smoke gates, and browser runtime packaging |
 | `/trace-audit-reporting` | Analyzing Chrome/Perfetto traces and producing performance reports |
 | `/trace-analyzer-extension` | Extending `scripts/analyze-trace/analyze-trace.ts` with new rollups |
 
@@ -168,6 +176,15 @@ Invoke skills via slash commands — do not re-state their workflow ad hoc:
 | `Visualizer Scout` | `visualizer-workflow` |
 | `Coverage Scout` | `coverage-tranche` |
 | `Coverage Guard` (agent) | `coverage-guard` |
+| `Worker Payload Scout` | `worker-inference-transport` |
+| `Evaluation Pool Scout` | `multithread-evaluation` |
+| `Checkpoint Scout` | `checkpointing-persistence` |
+| `Hybrid Interop Scout` | `hybrid-training-interop` |
+| `Browser Runtime Scout` | `browser-build` |
+| `Determinism Scout` | `reproducibility-contracts` |
+| `NGE Core Scout` | `nge-core-algorithm` |
+| `NGE Benchmark Scout` | `nge-benchmark-workflow` |
+| `NEATchat Scout` | `neatchat-systems` |
 
 ## Tracker and plans conventions
 

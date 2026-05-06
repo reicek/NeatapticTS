@@ -196,7 +196,7 @@ function mapGraphToNetworkLayers(
 
     const hiddenNodesByDepth = new Map<number, VisualNetworkNode[]>();
     hiddenNodes.forEach((hiddenNode) => {
-      const resolvedDepth = hiddenNodeDepthById.get(hiddenNode.index) ?? 1;
+      const resolvedDepth = hiddenNodeDepthById.get(hiddenNode.index)!;
       const depthLayer = hiddenNodesByDepth.get(resolvedDepth) ?? [];
       depthLayer.push(hiddenNode);
       hiddenNodesByDepth.set(resolvedDepth, depthLayer);
@@ -213,10 +213,7 @@ function mapGraphToNetworkLayers(
     );
 
     sortedDepths.forEach((sortedDepth) => {
-      const hiddenNodesAtDepth = hiddenNodesByDepth.get(sortedDepth);
-      if (hiddenNodesAtDepth && hiddenNodesAtDepth.length > 0) {
-        layers.push(hiddenNodesAtDepth);
-      }
+      layers.push(hiddenNodesByDepth.get(sortedDepth)!);
     });
   }
 

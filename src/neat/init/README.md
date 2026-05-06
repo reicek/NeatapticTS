@@ -143,7 +143,7 @@ second facade.
 
 ```ts
 seedInnovationTrackerAboveConnectionCounter(
-  tracker: InnovationTracker | undefined,
+  tracker: InnovationTracker,
 ): void
 ```
 

@@ -644,6 +644,17 @@ Resolve via a **deterministic seeded policy:**
 
 ## Phased Roadmap
 
+## Recommended agent + skill combo by phase
+
+- Phase 0 — `NGE Core Scout` + `nge-core-algorithm`
+- Phase A — `NGE Core Scout` + `nge-core-algorithm`
+- Phase B — `NGE Core Scout` + `nge-core-algorithm`
+- Phase C — `NGE Core Scout` + `nge-core-algorithm`
+- Phase D — `NGE Core Scout` + `nge-core-algorithm`
+- Phase E — `NGE Core Scout` + `nge-core-algorithm`
+- Phase F — `NGE Core Scout` + `nge-core-algorithm`
+- Phase G — `NGE Core Scout` + `nge-core-algorithm`
+
 ### Phase 0 — Computation Motifs (NGE-local prerequisite)
 
 - Define the `computationType` catalogue and module archetype schema extension.

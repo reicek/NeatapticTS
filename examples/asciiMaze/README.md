@@ -42,7 +42,7 @@ Different readers arrive with different questions. Use the route that matches yo
 | Run a maze evolution programmatically | [evolutionEngine.ts](./evolutionEngine.ts) | [evolutionEngine/README.md](./evolutionEngine/README.md), [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) |
 | Reuse the example from code | [index.ts](./index.ts) | [evolutionEngine.ts](./evolutionEngine.ts), [mazeUtils.ts](./mazeUtils.ts), [interfaces.ts](./interfaces.ts) |
 | Understand how one agent episode works | [mazeMovement.ts](./mazeMovement.ts) | [mazeMovement/README.md](./mazeMovement/README.md), [fitness.ts](./fitness.ts) |
-| Understand the browser demo and telemetry surface | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts) or [index.html](./index.html) | [browser-entry.ts](./browser-entry.ts), [browser-entry/README.md](./browser-entry/README.md), [dashboardManager/README.md](./dashboardManager/README.md) |
+| Understand the browser demo and telemetry surface | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts) or [index.html](./index.html) | [browser-entry.ts](./browser-entry.ts), [browser-entry/README.md](./browser-entry/README.md), [browser-entry/browser-entry.constants.ts](./browser-entry/browser-entry.constants.ts), [dashboardManager/README.md](./dashboardManager/README.md) |
 | Tune reward shaping or progress semantics | [fitness.ts](./fitness.ts) | [mazeMovement/README.md](./mazeMovement/README.md), [mazeUtils.ts](./mazeUtils.ts) |
 | Change curriculum, warm-start, or evolution policy | [evolutionEngine/README.md](./evolutionEngine/README.md) | [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) |
 | Understand the whole example as a system | this README | the module READMEs listed in [Recommended Reading Order](#recommended-reading-order) |
@@ -66,6 +66,29 @@ Important note:
 - `index.html` is a lightweight browser shell that loads the prebuilt demo bundle from `docs/assets`.
 - if you want the real host orchestration source, start with [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts).
 - after browser-code changes, run `npm run docs` or `npm run build:ascii-maze` before expecting the hosted page to reflect them.
+
+### Browser host details worth knowing
+
+The browser demo does two user-facing things that are easy to miss if you only
+read the engine entrypoint.
+
+First, the live maze panel is a host-owned teaching surface rather than a raw
+engine dump. When a maze is solved, the browser host reveals the winning route
+progressively from the start cell toward the exit before the next curriculum
+phase begins. That makes the policy's route legible instead of replacing it
+instantly with a fully solved board.
+
+Second, the browser curriculum is intentionally easy to tune from one place.
+If you want to make the hosted run start smaller, end bigger, grow faster, or
+give each maze more movement budget, the first file to read is
+[browser-entry/browser-entry.constants.ts](./browser-entry/browser-entry.constants.ts).
+
+| Knob | What it changes | Why you would touch it |
+| --- | --- | --- |
+| `INITIAL_MAZE_DIMENSION` | first browser curriculum maze size | make the opening phase easier or more demanding |
+| `MAX_MAZE_DIMENSION` | largest browser curriculum maze size | cap how far the hosted curriculum grows |
+| `MAZE_DIMENSION_INCREMENT` | size jump between solved phases | make progression smoother or steeper |
+| `AGENT_MAX_STEPS` | per-maze movement budget | give larger mazes more time or force shorter routes |
 
 ### Run the curriculum-style end-to-end example with logs
 
@@ -163,6 +186,12 @@ This boundary exists because evolutionary search is much easier to trust when yo
 ### `browser-entry/`: the browser host
 
 The browser entry boundary assembles host elements, telemetry fan-out, resize behavior, and curriculum execution for the browser demo. It does not own the evolution algorithm itself. It owns the host experience around it.
+
+That host experience includes presentation-specific pacing decisions that would
+be awkward inside the engine. The browser layer centers the maze inside the
+live panel when space allows, reveals solved paths step-by-step before
+continuing the curriculum, and keeps those choices outside the search loop so
+the engine does not become DOM-aware.
 
 That separation keeps the browser integration useful without making the engine depend on DOM concerns.
 

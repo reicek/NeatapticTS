@@ -671,6 +671,70 @@ describe('neat mutation chapter', () => {
         expect(() => createGenomeFromNetwork(network)).not.toThrow();
       });
     });
+
+    describe('given an external genome carries self connections and missing innovation metadata', () => {
+      it('raises the tracker above the highest observed self-connection innovation before mutating', async () => {
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          seed: 728,
+        });
+        const network = new Network(2, 1, { seed: 729 });
+        const sourceConnection = network.connections[0];
+
+        if (!sourceConnection) {
+          throw new Error('Expected a starter connection to exist');
+        }
+
+        Reflect.set(network, 'selfconns', [
+          {
+            ...sourceConnection,
+            from: network.nodes[0],
+            innovation: undefined,
+            to: network.nodes[0],
+          },
+          {
+            ...sourceConnection,
+            from: network.nodes[1],
+            innovation: 70,
+            to: network.nodes[1],
+          },
+        ]);
+
+        await mutateAddNodeReuse.call(
+          mutationController as unknown as ThisParameterType<
+            typeof mutateAddNodeReuse
+          >,
+          network as unknown as Parameters<typeof mutateAddNodeReuse>[0],
+        );
+
+        expect(
+          mutationController.toJSON().innovationTracker.nextInnovationId,
+        ).toBeGreaterThan(70);
+      });
+
+      it('still mutates legacy genomes that omit the selfconns list entirely', async () => {
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 0,
+          seed: 730,
+        });
+        const network = new Network(2, 1, { seed: 731 });
+        const nodeCountBeforeMutation = network.nodes.length;
+
+        Reflect.deleteProperty(
+          network as Network & { selfconns?: Network['connections'] },
+          'selfconns',
+        );
+
+        await mutateAddNodeReuse.call(
+          mutationController as unknown as ThisParameterType<
+            typeof mutateAddNodeReuse
+          >,
+          network as unknown as Parameters<typeof mutateAddNodeReuse>[0],
+        );
+
+        expect(network.nodes.length).toBeGreaterThan(nodeCountBeforeMutation);
+      });
+    });
   });
 
   describe('mutateAddConnReuse', () => {

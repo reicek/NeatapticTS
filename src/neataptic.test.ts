@@ -1,7 +1,9 @@
 import {
   Architect,
+  centerPositionedNodesInDrawableArea,
   config,
   Connection,
+  exportVisualizationGraph,
   formatConstructSummary,
   Group,
   Layer,
@@ -10,6 +12,11 @@ import {
   Neat,
   Network,
   Node,
+  positionNetworkNodes,
+  renderNetworkView,
+  resolveNetworkVisualizationLayers,
+  resolveNetworkVisualizationTopologyPlan,
+  toDot,
 } from './neataptic';
 
 describe('neataptic root facade', () => {
@@ -55,5 +62,34 @@ describe('neataptic root facade', () => {
 
   it('exports multi as an object', () => {
     expect(typeof multi).toBe('object');
+  });
+
+  it('exports visualization graph helpers as functions', () => {
+    expect({
+      exportVisualizationGraph: typeof exportVisualizationGraph,
+      toDot: typeof toDot,
+    }).toEqual({
+      exportVisualizationGraph: 'function',
+      toDot: 'function',
+    });
+  });
+
+  it('exports shared network-view helpers as functions', () => {
+    expect({
+      centerPositionedNodesInDrawableArea:
+        typeof centerPositionedNodesInDrawableArea,
+      positionNetworkNodes: typeof positionNetworkNodes,
+      renderNetworkView: typeof renderNetworkView,
+      resolveNetworkVisualizationLayers:
+        typeof resolveNetworkVisualizationLayers,
+      resolveNetworkVisualizationTopologyPlan:
+        typeof resolveNetworkVisualizationTopologyPlan,
+    }).toEqual({
+      centerPositionedNodesInDrawableArea: 'function',
+      positionNetworkNodes: 'function',
+      renderNetworkView: 'function',
+      resolveNetworkVisualizationLayers: 'function',
+      resolveNetworkVisualizationTopologyPlan: 'function',
+    });
   });
 });

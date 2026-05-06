@@ -1,35 +1,39 @@
 ---
 name: onnx-work
-description: 'Extend, harden, or validate ONNX export and import in NeatapticTS. Use when adding new operator support, hardening export determinism, adding roundtrip tests, or updating the supported-subset documentation.'
-argument-hint: 'Describe the ONNX target (layer type, operator, or hardening goal), the current plan phase, and whether this is reconnaissance, implementation, or roundtrip validation.'
+description: 'Extend, harden, or validate ONNX-like export and import in NeatapticTS. Use when adding operator support, hardening constrained recurrent import, validating JSON-first roundtrips, updating honest supported-subset documentation, or enabling external seed ingestion through ONNX or an explicitly documented non-ONNX bridge.'
+argument-hint: 'Describe the ONNX target (export operator / import subset / recurrent hardening / external seed path), the current plan phase, and whether this is implementation, import hardening, documentation, or roundtrip validation.'
 user-invocable: true
 disable-model-invocation: false
 ---
 
 # ONNX Work Playbook
 
-Use this skill when ONNX export or import needs to be extended, hardened, or
-validated in NeatapticTS.
+Use this skill when ONNX-like export or import needs to be extended, hardened,
+or validated in NeatapticTS.
 
 ONNX is Phase 6 in the roadmap and runs as a **parallel lane** (Parallel
 Lane B) after Phase 2 provides stable preconfigured architectures to test
 against. Clean, stable network shapes from the architecture builders are the
 best test input for ONNX export correctness.
 
-This skill owns the durable workflow for ONNX operator extension, roundtrip
-validation, supported-subset documentation, and export determinism hardening.
-When tracker files need updating, `tracker-handoff` owns the plan/log shape.
-When roadmap alignment is needed, use `plan-alignment`.
+This skill owns the durable workflow for operator extension, roundtrip
+validation, constrained import hardening, honest supported-subset
+documentation, and deterministic export or import claims. When tracker files
+need updating, `tracker-handoff` owns the plan/log shape. When roadmap
+alignment is needed, use `plan-alignment`.
 
 ## Scope Boundary
 
-- **In scope:** op-to-ONNX mapping, roundtrip export/import fidelity, output
-  determinism, layer-analysis utilities, supported-subset documentation,
-  ONNX test coverage expansion.
+- **In scope:** op-to-ONNX mapping, JSON-first export/import fidelity, output
+  determinism, recurrent import hardening for explicitly supported subsets,
+  runtime-load utilities, layer-analysis utilities, honest external-seed import
+  contracts, supported-subset documentation, ONNX test coverage expansion.
 - **Out of scope:** general Network topology refactors (owned by Phase 2/3
   plans), performance optimization (owned by `performance-optimization`),
   browser bundling (owned by `browser-build`), algorithm correctness fixes
-  (owned by NEAT plans).
+  (owned by NEAT plans), checkpoint semantics (owned by
+  `checkpointing-persistence`), and parameter-vector training bridges (owned by
+  `hybrid-training-interop`).
 
 ## When to Use
 
@@ -38,52 +42,78 @@ When roadmap alignment is needed, use `plan-alignment`.
 - The ONNX export roundtrip does not preserve a network's inference behavior.
 - An existing operator mapping produces incorrect output shapes or constant
   values.
+- The import path needs to accept or reject a constrained recurrent subset
+  honestly.
 - The supported-subset documentation needs updating after operator additions.
 - ONNX import needs to reconstruct a `Network` from a `.onnx` file correctly.
 - A new architecture builder (from `architecture-builder` skill) needs ONNX
   export coverage added.
+- A downstream consumer such as the planned NEATchat follow-up lane needs an
+  honest recurrent seed-import boundary.
 
 ## Task Packet
 
 Pass a compact packet that includes:
 
-- target (layer type / operator / hardening goal),
+- target (layer type / operator / import subset / external seed path),
 - current plan phase from `plans/ONNX_EXPORT_PLAN.md`,
-- whether this is reconnaissance, implementation, or roundtrip validation,
+- whether this is implementation, import hardening, documentation, or roundtrip
+  validation,
 - required validation (roundtrip test, focused Jest slice, or full suite).
 
 Compact example:
 
 ```text
-Use onnx-work for Conv2D operator in src/architecture/network/onnx/.
+Use onnx-work for recurrent import hardening.
 Plan: plans/ONNX_EXPORT_PLAN.md (Phase 3 — convolutional groundwork).
-Mode: implementation + roundtrip test.
-Validate with: npx jest --testPathPattern=onnx, then npm run test:silent.
+Target: compact recurrent import subset for external seed compatibility.
+Mode: import hardening + supported-subset documentation.
+Validate with: focused ONNX Jest slice, import acceptance/rejection tests, then npm run test:silent.
 ```
 
 ## Required Workflow
 
 1. Read `plans/ONNX_EXPORT_PLAN.md` before editing.
 2. Read `src/architecture/network/onnx/README.md` and the nearest parent README.
-3. Identify the current plan phase and the specific operator or goal in scope.
+3. Identify whether the active pass is:
+  - export operator mapping,
+  - import hardening,
+  - recurrent subset support,
+  - or an explicit non-ONNX bridge decision for a downstream consumer.
 4. For a new operator mapping:
    - Consult the ONNX operator spec at `https://onnx.ai/onnx/operators/` for
      the canonical attribute and type constraints.
    - Identify the nearest existing mapping as a reference pattern.
-5. Implement the mapping in the correct sub-boundary following the repo naming
-   pattern (`network.onnx.export.<target>.ts`, etc.).
-6. Add a roundtrip test:
-   - Build a known network → export to ONNX → import back → compare activation
-     output for the same input vector within float32 tolerance.
-7. Validate with a focused Jest slice for the ONNX boundary.
-8. Run `coverage-guard` on every `src/` file added or changed in this step.
+5. For an import-hardening pass:
+  - Name the exact supported subset and the exact unsupported inputs that must
+    reject cleanly.
+  - If the target is a downstream external seed path, confirm whether ONNX is
+    the honest bridge or whether the plan should document a non-ONNX path
+    instead of widening support claims.
+6. Implement the change in the correct sub-boundary following the repo naming
+  pattern.
+7. Add focused validation:
+  - export or roundtrip: known network → export → import → compare activation
+    output within float32 tolerance,
+  - import hardening: acceptance tests for the supported subset plus rejection
+    tests for unsupported external graphs.
+8. Validate with a focused Jest slice for the ONNX boundary.
+9. Run `coverage-guard` on every `src/` file added or changed in this step.
    100% in all four categories (statements, branches, functions, lines) is
    required before proceeding.
-9. Update the supported-subset operator table in the nearest JSDoc or README
+10. Update the supported-subset operator table in the nearest JSDoc or README
    surface to reflect the new operator.
-10. Run `npm run docs` to verify generated output.
-11. Update `plans/ONNX_EXPORT_PLAN.md` with the completed step.
-12. Run `npm run test:silent` to confirm repo-wide green.
+11. Run `npm run docs` to verify generated output.
+12. Update `plans/ONNX_EXPORT_PLAN.md` with the completed step.
+13. Run `npm run test:silent` to confirm repo-wide green.
+
+## JSON-First Trust Boundary
+
+- The current public boundary is intentionally JSON-first and ONNX-like; it is
+  not yet a promise of universal protobuf or ONNX Runtime compatibility.
+- Treat imported models as untrusted input.
+- Do not widen compatibility claims beyond what the importer validates and what
+  focused tests prove.
 
 ## Supported Subset Rule
 
@@ -96,6 +126,9 @@ ONNX work must maintain honest "supported subset" documentation:
 - When a network graph feature cannot be mapped to ONNX (dynamic recurrent
   connections, custom operators), document the limitation explicitly rather
   than silently omitting it.
+- When a downstream consumer needs a stronger recurrent seed than the supported
+  subset can host honestly, document the approved non-ONNX bridge instead of
+  pretending the ONNX import surface is broader than it is.
 - The supported-subset table is the contract with downstream users — it must
   be accurate, not aspirational.
 
@@ -108,8 +141,19 @@ ONNX export must satisfy:
   float32 tolerance.
 - Recurrent networks must maintain correct state carry-over semantics across
   exported steps.
+- Import hardening must make unsupported recurrent graphs fail clearly rather
+  than reconstructing a misleading best-effort network silently.
 - Do not claim ONNX output is deterministic unless a test verifies it under a
   fixed graph and fixed inputs.
+
+## Recurrent Import Honesty Rule
+
+- Treat recurrent import as a constrained subset, not as arbitrary ONNX chat
+  model hosting.
+- The first supported external-seed target should stay narrow and testable.
+- If NEATchat or another downstream system needs a stronger seed path before the
+  recurrent subset is honest, choose and document a non-ONNX bridge explicitly.
+- Keep the downstream consumer honest about what it can actually host.
 
 ## Guardrails
 
@@ -117,6 +161,8 @@ ONNX export must satisfy:
   identical mapping scaffold.
 - Do not treat an operator as supported until the roundtrip test exists and
   passes.
+- Do not claim arbitrary external ONNX import when only a constrained internal
+  or same-version-family subset is proven.
 - Do not bypass `npm run test:silent` after a focused tranche succeeds.
 - Do not hand-edit generated README files.
 - Do not add an operator mapping that hard-codes shape constants which will
@@ -131,9 +177,10 @@ ONNX export must satisfy:
 
 A strong ONNX work pass should report:
 
-- the operator or layer type targeted,
-- the mapping implementation summary,
-- the roundtrip test result (pass/fail + tolerance used),
+- the operator, import subset, or external-seed bridge targeted,
+- the mapping or hardening summary,
+- the roundtrip or import-hardening test result,
 - the updated supported-subset documentation state,
+- whether a downstream consumer gate such as NEATchat moved forward,
 - the plan step updated,
 - repo-wide suite result.
