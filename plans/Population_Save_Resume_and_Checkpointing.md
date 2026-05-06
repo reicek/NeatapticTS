@@ -120,6 +120,38 @@ If any requirement is missing, load should:
 - either throw (strict mode)
 - or warn and continue best-effort (non-strict)
 
+## Downstream unlock — NEATchat follow-up
+
+This plan is one of the hard blockers for `plans/NEATchat.plans.md`.
+NEATchat should not claim a persistent identity, memory bank, or resumable
+personalization path until checkpointing is more than an abstract
+population-save sketch.
+
+For NEATchat, this plan is considered ready only when all of the following are
+true:
+
+1. Step 2 and Step 3 are complete, so full checkpoint save/load roundtrips are
+   real and deterministic rather than planned.
+2. The stable format can carry NEATchat-owned metadata without forking the
+   checkpoint contract, including vocabulary metadata, memory-bank
+   descriptors, candidate-selection policy state, and replay context.
+3. Strict resume semantics clearly document what must be present for exact
+   replay versus what falls back to best-effort behavior.
+4. The public save/load surface is documented as a reusable orchestration seam,
+   not as a one-off evolution-only persistence helper.
+
+This plan does not by itself unlock background adaptation or imported seeds.
+NEATchat still also depends on worker infrastructure, parameter-vector
+contracts, and recurrent import hardening.
+
+## Recommended agent + skill combo by step
+
+- Step 1 — `Checkpoint Scout` + `checkpointing-persistence`
+- Step 2 — `Checkpoint Scout` + `checkpointing-persistence`
+- Step 3 — `Checkpoint Scout` + `checkpointing-persistence`
+- Step 4 — `Checkpoint Scout` + `checkpointing-persistence`
+- Step 5 — `Docs Scout` + `educational-docs`
+
 ## Implementation steps
 
 ### Step 1 — Inventory required state

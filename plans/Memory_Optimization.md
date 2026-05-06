@@ -118,6 +118,22 @@ Track 1 → Track 2 gate (must pass all):
 4. Phase 7 churn checks and Phase 10 variance/hardening gates are stable.
 5. Baseline/progress artifacts are updated for reproducibility and rollback.
 
+## Recommended agent + skill combo by active phase
+
+- Phase 4 — `Browser Runtime Scout` + `performance-optimization`
+- Phase 5 — `Plan Scout` + `performance-optimization`
+- Phase 6 — `Plan Scout` + `performance-optimization`
+- Phase 7 — `Plan Scout` + `performance-optimization`
+- Phase 8 — `Plan Scout` + `performance-optimization`
+- Phase 9 — `Plan Scout` + `performance-optimization`
+- Phase 10 — `Plan Scout` + `performance-optimization`
+- Phase 11 — `NGE Core Scout` + `nge-core-algorithm`
+- Phase 12 — `NGE Core Scout` + `nge-core-algorithm`
+- Phase 13 — `NGE Core Scout` + `nge-core-algorithm`
+- Phase 14 — `NGE Core Scout` + `nge-core-algorithm`
+- Phase 15 — `NGE Benchmark Scout` + `nge-benchmark-workflow`
+- Phase 16 — `NGE Benchmark Scout` + `nge-benchmark-workflow`
+
 ### Phase 0 – Baseline Instrumentation (Condensed Summary) [Done]
 
 Purpose: Establish reproducible dist‑only performance & memory baseline plus variance framework to support later optimizations.

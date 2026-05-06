@@ -1,4 +1,4 @@
-import { Architect, type Network } from '../src/neataptic';
+import { Architect, Layer, methods, type Network } from '../src/neataptic';
 import {
   FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
   FLAPPY_NETWORK_INPUT_SIZE,
@@ -7,9 +7,9 @@ import {
 
 const ASCII_MAZE_INPUT_SIZE = 6;
 const ASCII_MAZE_OUTPUT_SIZE = 4;
-const ASCII_MAZE_MLP_HIDDEN_LAYER_SIZES = [6] as const;
-const ASCII_MAZE_RANDOM_SPARSE_HIDDEN_SIZE = 6;
-const ASCII_MAZE_RANDOM_SPARSE_CONNECTIONS = 12;
+const ASCII_MAZE_MLP_HIDDEN_LAYER_SIZES = [6, 6] as const;
+const ASCII_MAZE_RANDOM_SPARSE_HIDDEN_SIZE = 8;
+const ASCII_MAZE_RANDOM_SPARSE_CONNECTIONS = 16;
 const ASCII_MAZE_SEQUENCE_BLOCK_SIZES = [6] as const;
 const ASCII_MAZE_NARX_INPUT_MEMORY = 1;
 const ASCII_MAZE_NARX_OUTPUT_MEMORY = 1;
@@ -127,7 +127,7 @@ export const DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID: ExampleArchitectureProfileI
 
 /** Default shared profile id for ASCII Maze when a builder-backed seed is requested. */
 export const DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID: ExampleArchitectureProfileId =
-  'mlp';
+  'random-sparse';
 
 const EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS: Record<
   ExampleArchitectureProfileId,
@@ -141,7 +141,7 @@ const EXAMPLE_ARCHITECTURE_PROFILE_DEFINITIONS: Record<
       'Sparse topology-search baseline that starts with fewer explicit edges.',
     recurrent: false,
     approvalByDemoId: {
-      'ascii-maze': false,
+      'ascii-maze': true,
       'flappy-bird': true,
     },
     resolveConfiguration: (demoId) =>
@@ -334,9 +334,9 @@ export function buildExampleArchitectureProfileNetwork(
 
   switch (configuration.family) {
     case 'MLP':
-      return Architect.perceptron(
+      return buildExactMlpNetwork(
         configuration.input,
-        ...configuration.hiddenLayerSizes,
+        configuration.hiddenLayerSizes,
         configuration.output,
       );
 
@@ -377,4 +377,38 @@ export function buildExampleArchitectureProfileNetwork(
         configuration.output,
       );
   }
+}
+
+/**
+ * Build an exact feed-forward MLP with caller-provided hidden layer sizes.
+ *
+ * Unlike `Architect.perceptron`, this helper does not enforce a minimum hidden
+ * width, so educational presets can intentionally stay very small.
+ */
+function buildExactMlpNetwork(
+  inputSize: number,
+  hiddenLayerSizes: number[],
+  outputSize: number,
+): Network {
+  const inputLayer = Layer.dense(inputSize, 'input');
+  const outputLayer = Layer.dense(outputSize, 'output');
+  const hiddenLayers = hiddenLayerSizes.map((hiddenLayerSize) =>
+    Layer.dense(hiddenLayerSize),
+  );
+  const orderedLayers = [inputLayer, ...hiddenLayers, outputLayer];
+
+  for (
+    let layerIndex = 0;
+    layerIndex < orderedLayers.length - 1;
+    layerIndex += 1
+  ) {
+    orderedLayers[layerIndex].connect(
+      orderedLayers[layerIndex + 1],
+      methods.groupConnection.ALL_TO_ALL,
+    );
+  }
+
+  const network = Architect.construct(orderedLayers);
+  network.setTopologyIntent('feed-forward');
+  return network;
 }

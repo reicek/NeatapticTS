@@ -788,6 +788,35 @@ export const updateDashboardPeriodic = async (
 };
 
 /**
+ * Resolve which network snapshot the periodic dashboard should show.
+ *
+ * Periodic refreshes should prefer the latest generation champion when one is
+ * available so the browser view reflects ongoing topology exploration instead
+ * of replaying the stale global best on every non-improving generation.
+ */
+export const resolvePeriodicDashboardSnapshot = (
+  bestResult: IMazeRunResult | undefined,
+  bestNetwork: NetworkInstance | null,
+  currentResult: IMazeRunResult | undefined,
+  currentNetwork: NetworkInstance | null,
+): {
+  result: IMazeRunResult | undefined;
+  network: NetworkInstance | null;
+} => {
+  if (currentResult && currentNetwork) {
+    return {
+      result: currentResult,
+      network: currentNetwork,
+    };
+  }
+
+  return {
+    result: bestResult,
+    network: bestNetwork,
+  };
+};
+
+/**
  * Emit a formatted profiling summary showing average per-generation timings.
  *
  * This function prints a compact profiling summary with average millisecond timings
@@ -1634,10 +1663,17 @@ export const runEvolutionLoop = async (
       stagnantGenerationsCount += 1;
       if (completedGenerations % (opts.reportingConfig?.logEvery ?? 10) === 0) {
         try {
-          await updateDashboardPeriodic(
-            opts.mazeConfig.maze,
+          const periodicDashboardSnapshot = resolvePeriodicDashboardSnapshot(
             bestRunResult,
             bestNetworkSoFar,
+            generationResult,
+            fittest,
+          );
+
+          await updateDashboardPeriodic(
+            opts.mazeConfig.maze,
+            periodicDashboardSnapshot.result,
+            periodicDashboardSnapshot.network,
             completedGenerations,
             neat,
             opts.reportingConfig?.dashboardManager,

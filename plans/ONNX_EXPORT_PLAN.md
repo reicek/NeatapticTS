@@ -50,6 +50,41 @@ Original plan suggested a per-node mapping (Add / MatMul explicit). Implementati
 4. Graceful degradation: always export a valid subgraph even when certain advanced features need approximation (e.g., replace unsupported activation with Identity + metadata note).
 5. Evolution fidelity: preserve NEAT-relevant metadata (innovation numbers, topology tags) in model metadata without breaking external consumers.
 
+## 4.5 NEATchat Follow-up Unlock Boundary
+
+`plans/NEATchat.plans.md` is a downstream consumer of this plan, but it should
+not treat the current recurrent import work as ready just because recurrent
+groundwork exists.
+
+For NEATchat, this plan is considered ready only when all of the following are
+true:
+
+1. The exact external-seed subset for NEATchat is named explicitly and kept
+   narrow: compact recurrent next-token models only, not arbitrary ONNX chat
+   graphs.
+2. The chosen recurrent import path is documented as supported rather than
+   heuristic best-effort, including what is accepted, what is rejected, and
+   what falls back to conversion or distillation.
+3. Phase 3 Step 6 parity and robustness tests are complete for the chosen seed
+   family, so NEATchat is not built on a "tests still finalizing" boundary.
+4. If the chosen seed family still does not fit the supported subset cleanly,
+   this plan documents the approved non-ONNX bridge or distillation path so
+   NEATchat can remain honest about how imported teachers become native
+   artifacts.
+
+Until those conditions are true, NEATchat should treat this plan as a gating
+dependency, not as an implementation-ready seed-import surface.
+
+## Recommended agent + skill combo by active phase
+
+- Phase 3 — `Plan Scout` + `onnx-work`
+- Phase 4 — `Plan Scout` + `onnx-work`
+- Phase 5 — `Plan Scout` + `onnx-work`
+- Phase 6 — `Plan Scout` + `onnx-work`
+- Phase 7 — `Plan Scout` + `onnx-work`
+- Phase 8 — `Plan Scout` + `onnx-work`
+- Phase 9 — `Plan Scout` + `onnx-work`
+
 ## 5. Phased Roadmap
 
 ### Phase 1 (Immediate Hardening) - COMPLETED

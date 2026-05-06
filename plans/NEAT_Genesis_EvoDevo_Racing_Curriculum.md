@@ -65,6 +65,12 @@ This benchmark belongs to **Phase G (Multi-Agent + Collective Intelligence)** in
 - Two-population NEAT harness is implemented (independent gene pools, independent species tracking).
 - Stigmergy typed-array field primitive is available (shared with ant hive pheromone infrastructure).
 
+## Recommended agent + skill combo for this Phase G benchmark
+
+- Benchmark architecture, curriculum, and rollout work — `NGE Benchmark Scout` + `nge-benchmark-workflow`
+- Upstream NGE prerequisite drift — `NGE Core Scout` + `nge-core-algorithm`
+- Canvas, layout, and interaction polish — `Visualizer Scout` + `visualizer-workflow`
+
 ---
 
 ## Design Pillars

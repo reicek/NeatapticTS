@@ -54,14 +54,15 @@ export interface NeatConfig {
  *  - Prefer explicit defaults over implicit framework defaults
  *  - Use nullish coalescing `??` for clarity (avoid falsy semantics)
  *  - Compute derived settings (elitism, provenance) from population size
+ *  - Treat generation-zero warm start as the shared-prior phase, then bias later generations toward topology search
  *  - Enable modern features by default (adaptive mutation, multi-objective, novelty)
  *
  * Default Constants (from EvolutionEngine):
- *  - Population size: 150
+ *  - Population size: 100
  *  - Elitism fraction: 0.05 (top 5% preserved)
- *  - Provenance fraction: 0.1 (top 10% used for breeding)
- *  - Mutation rate: 0.3
- *  - Mutation amount: 0.05
+ *  - Provenance count: 0 (no fresh seed reinjection after generation zero)
+ *  - Adaptive mutation initial rate: 0.55
+ *  - Mutation amount: 3
  *  - Min hidden nodes: 0
  *  - Target species: 8
  *  - Entropy range: [0.40, 0.60]
@@ -74,7 +75,7 @@ export interface NeatConfig {
  * @param cfg - Optional configuration bag with the following supported properties:
  *  - popSize: Population size (default: 150)
  *  - mutation: Array of mutation operators (default: comprehensive set including LSTM)
- *  - allowRecurrent: Enable recurrent connections (default: true)
+ *  - allowRecurrent: Enable recurrent connections (default: false)
  *  - network: Optional builder-backed seed network used as the NEAT base graph
  *  - adaptiveMutation: Adaptive mutation config (default: enabled with 'twoTier' strategy)
  *  - multiObjective: Multi-objective config (default: enabled with 'nodes' metric)
@@ -108,19 +109,17 @@ export const createNeat = (
   ) => Neat;
 
   // Default constants (extracted from EvolutionEngine static fields)
-  const DEFAULT_POPSIZE = 200;
+  const DEFAULT_POPSIZE = 100;
   const DEFAULT_ELITISM_FRACTION = 0.05;
-  const DEFAULT_PROVENANCE_FRACTION = 0.1;
-  const DEFAULT_MUTATION_RATE = 0.3;
-  const DEFAULT_MUTATION_AMOUNT = 0.05;
-  const DEFAULT_MIN_HIDDEN = 13;
+  const DEFAULT_MUTATION_AMOUNT = 3;
+  const DEFAULT_MIN_HIDDEN = 0;
   const DEFAULT_TARGET_SPECIES = 8;
   const DEFAULT_ENTROPY_RANGE: [number, number] = [0.4, 0.6];
   const DEFAULT_ADAPTIVE_SMOOTH = 0.9;
 
   // Step 1: Normalize configuration bag and derive primary numeric settings.
   const conf = cfg ?? {};
-  const allowRecurrent = conf.allowRecurrent !== false;
+  const allowRecurrent = conf.allowRecurrent === true;
   const popSize: number = Number.isFinite(conf.popSize)
     ? (conf.popSize as number)
     : DEFAULT_POPSIZE;
@@ -130,15 +129,20 @@ export const createNeat = (
 
   // Step 2: Compute derived integer settings with descriptive names.
   const elitism = Math.max(1, Math.floor(popSize * DEFAULT_ELITISM_FRACTION));
-  const provenance = Math.max(
-    1,
-    Math.floor(popSize * DEFAULT_PROVENANCE_FRACTION),
-  );
+  const provenance = Number.isFinite(conf.provenance)
+    ? Math.max(0, Math.floor(conf.provenance as number))
+    : 0;
 
   // Step 3: Compose other option objects using nullish coalescing for defaults.
-  const adaptiveMutation = conf.adaptiveMutation ?? {
+  const adaptiveMutation = {
     enabled: true,
     strategy: 'twoTier',
+    initialRate: 0.55,
+    adaptAmount: true,
+    minAmount: 1,
+    maxAmount: 4,
+    amountSigma: 0.5,
+    ...(conf.adaptiveMutation ?? {}),
   };
   const multiObjective = conf.multiObjective ?? {
     enabled: true,
@@ -169,13 +173,17 @@ export const createNeat = (
     {
       popsize: popSize,
       mutation: mutationOps,
-      mutationRate: DEFAULT_MUTATION_RATE,
-      mutationAmount: DEFAULT_MUTATION_AMOUNT,
+      mutationRate: conf.mutationRate,
+      mutationAmount: conf.mutationAmount ?? DEFAULT_MUTATION_AMOUNT,
       elitism,
       provenance,
       allowRecurrent,
       minHidden: DEFAULT_MIN_HIDDEN,
       adaptiveMutation,
+      operatorAdaptation: conf.operatorAdaptation ?? {
+        enabled: true,
+        boost: 3,
+      },
       multiObjective,
       telemetry,
       lineageTracking,
@@ -186,35 +194,60 @@ export const createNeat = (
     },
   );
 
+  // The core Neat constructor backfills a global mutationRate default. Clear it
+  // here unless the caller explicitly asked for one so adaptive per-genome
+  // rates can actually control ASCII Maze mutation pressure.
+  neatInstance.options.mutationRate = conf.mutationRate;
+
   return neatInstance;
 };
 
 /**
  * Resolves the default mutation shelf for the ASCII Maze demo.
  *
- * The maze example already opts into recurrent-capable search at the
- * controller level, so its default mutation shelf should expose the newer
- * temporal and gated operators that make that policy meaningful. When callers
- * explicitly disable recurrent growth, the shelf falls back to the compact
- * feed-forward subset so the controller contract stays aligned with the shelf.
+ * ASCII Maze now splits responsibilities more deliberately than Flappy Bird:
+ * generation zero borrows the shared sparse seed and template-copy warm start,
+ * but later feed-forward generations bias mutation toward structural edits so
+ * the maze run can explore routing changes instead of repeatedly rediscovering
+ * similar weight tweaks.
  *
  * @param allowRecurrent - Whether recurrent and gated growth is allowed.
  * @returns Demo-aligned default mutation shelf.
  */
 function resolveDefaultMutationShelf(allowRecurrent: boolean): unknown[] {
+  if (!allowRecurrent) {
+    return [
+      methods.mutation.ADD_CONN,
+      methods.mutation.ADD_CONN,
+      methods.mutation.ADD_CONN,
+      methods.mutation.ADD_CONN,
+      methods.mutation.ADD_NODE,
+      methods.mutation.ADD_NODE,
+      methods.mutation.ADD_NODE,
+      methods.mutation.MOD_WEIGHT,
+      methods.mutation.MOD_BIAS,
+      methods.mutation.MOD_ACTIVATION,
+      methods.mutation.SUB_CONN,
+      methods.mutation.SUB_NODE,
+    ];
+  }
+
   const baseMutationShelf = [
+    methods.mutation.MOD_WEIGHT,
+    methods.mutation.MOD_WEIGHT,
+    methods.mutation.MOD_WEIGHT,
+    methods.mutation.MOD_WEIGHT,
+    methods.mutation.MOD_WEIGHT,
     methods.mutation.ADD_NODE,
-    methods.mutation.SUB_NODE,
     methods.mutation.ADD_CONN,
-    methods.mutation.SUB_CONN,
+    methods.mutation.ADD_CONN,
+    methods.mutation.ADD_CONN,
+    methods.mutation.MOD_BIAS,
     methods.mutation.MOD_BIAS,
     methods.mutation.MOD_ACTIVATION,
-    methods.mutation.MOD_WEIGHT,
+    methods.mutation.SUB_CONN,
+    methods.mutation.SUB_NODE,
   ];
-
-  if (!allowRecurrent) {
-    return baseMutationShelf;
-  }
 
   return [
     ...baseMutationShelf,

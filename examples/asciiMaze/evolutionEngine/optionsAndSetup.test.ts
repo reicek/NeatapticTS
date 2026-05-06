@@ -32,13 +32,13 @@ describe('normalizeRunOptions', () => {
       outputNodeIds:
         normalizedOptions.neatOptions.network?.outputNodeIds.length,
     }).toEqual({
-      hiddenLayerSizes: [6],
+      hiddenLayerSizes: [6, 6],
       inputNodeIds: 6,
       outputNodeIds: 4,
     });
   });
 
-  it('defaults to the MLP builder profile when no architecture profile id is provided on a fresh start', () => {
+  it('defaults to the configured builder profile when no architecture profile id is provided on a fresh start', () => {
     const normalizedOptions = normalizeRunOptions(
       createRunOptions({}),
       jest.fn(),
@@ -49,13 +49,36 @@ describe('normalizeRunOptions', () => {
 
     expect({
       architectureProfileId: normalizedOptions.architectureProfileId,
+      connectionCount:
+        normalizedOptions.neatOptions.network?.connections.length,
       inputNodeIds: normalizedOptions.neatOptions.network?.inputNodeIds.length,
       outputNodeIds:
         normalizedOptions.neatOptions.network?.outputNodeIds.length,
+      popSize: normalizedOptions.popSize,
     }).toEqual({
-      architectureProfileId: 'mlp',
+      architectureProfileId: 'random-sparse',
+      connectionCount: 40,
       inputNodeIds: 6,
       outputNodeIds: 4,
+      popSize: 100,
+    });
+  });
+
+  it('defaults the ASCII Maze runtime to feed-forward-only growth unless recurrence is explicitly requested', () => {
+    const normalizedOptions = normalizeRunOptions(
+      createRunOptions({}),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+    );
+
+    expect({
+      allowRecurrent: normalizedOptions.allowRecurrent,
+      neatAllowRecurrent: normalizedOptions.neatOptions.allowRecurrent,
+    }).toEqual({
+      allowRecurrent: false,
+      neatAllowRecurrent: false,
     });
   });
 
@@ -113,6 +136,24 @@ describe('normalizeRunOptions', () => {
     });
   });
 
+  it('enables recurrent growth when a recurrent shared profile is selected without an explicit override', () => {
+    const normalizedOptions = normalizeRunOptions(
+      createRunOptions({ architectureProfileId: 'gru' }),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+    );
+
+    expect({
+      allowRecurrent: normalizedOptions.allowRecurrent,
+      neatAllowRecurrent: normalizedOptions.neatOptions.allowRecurrent,
+    }).toEqual({
+      allowRecurrent: true,
+      neatAllowRecurrent: true,
+    });
+  });
+
   it('adds a builder-backed LSTM seed network when the lstm profile id is requested', () => {
     const normalizedOptions = normalizeRunOptions(
       createRunOptions({ architectureProfileId: 'lstm' }),
@@ -131,6 +172,32 @@ describe('normalizeRunOptions', () => {
       architectureProfileId: 'lstm',
       inputNodeIds: 6,
       outputNodeIds: 4,
+    });
+  });
+
+  it('forwards explicit adaptive-mutation overrides into the NEAT runtime options', () => {
+    const normalizedOptions = normalizeRunOptions(
+      createRunOptions({
+        adaptiveMutation: {
+          enabled: true,
+          strategy: 'twoTier',
+          adaptEvery: 5,
+          sigma: 0.1,
+          minRate: 0.001,
+        },
+      }),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+    );
+
+    expect(normalizedOptions.neatOptions.adaptiveMutation).toEqual({
+      enabled: true,
+      strategy: 'twoTier',
+      adaptEvery: 5,
+      sigma: 0.1,
+      minRate: 0.001,
     });
   });
 });

@@ -72,6 +72,9 @@
     }
 
     #ascii-maze-live {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
       min-height: 360px;
       width: 100%;
       min-width: 0;
@@ -79,6 +82,13 @@
       overflow-x: auto;
       overflow-y: auto;
       white-space: pre;
+    }
+
+    #ascii-maze-live pre {
+      flex: 0 0 auto;
+      width: max-content;
+      min-width: max-content;
+      margin: 0;
     }
 
     @media (max-width: 1400px) {
@@ -187,7 +197,7 @@
             <div id="ascii-maze-live"></div>
           </section>
           <section class="ascii-maze-panel" aria-label="Network visualizer panel">
-            <h3>Visualizer</h3>
+            <h3>Neural Network</h3>
             <canvas id="ascii-maze-network-canvas" width="700" height="504"></canvas>
           </section>
         </div>

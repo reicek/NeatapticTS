@@ -48,6 +48,8 @@ import {
   FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX,
   FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX,
   FLAPPY_NETWORK_INFERRED_HIDDEN_LAYER_PREFIX,
+  FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_PX,
+  FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_THRESHOLD_PX,
   FLAPPY_NETWORK_LEGEND_MARGIN_PX,
   FLAPPY_NETWORK_LEGEND_REGULAR_WIDTH_PX,
   FLAPPY_UI_NETWORK_CANVAS_BACKGROUND,
@@ -127,6 +129,12 @@ const MAZE_LAYOUT_PASS_COLOR_SCALES = {
 const MAZE_RIGHT_LEGEND_RESERVE_PX =
   FLAPPY_NETWORK_LEGEND_REGULAR_WIDTH_PX + FLAPPY_NETWORK_LEGEND_MARGIN_PX * 2;
 
+/** Minimum left reserve kept for readable maze input-label overlays. */
+const MAZE_MIN_LEFT_LABEL_PANEL_WIDTH_PX = 132;
+
+/** Minimum drawable graph width needed to keep hidden layers visually separate. */
+const MAZE_MIN_DRAWABLE_GRAPH_WIDTH_PX = 420;
+
 type MazeRuntimePositionedNode = {
   xPx: number;
   yPx: number;
@@ -182,18 +190,15 @@ export function drawMazeNetworkVisualization(
   // Step 1: Sync canvas dimensions to the current panel width.
   syncCanvasToPanel(canvas);
 
+  const panelPadding = resolveMazeNetworkPanelPadding(canvas.width);
+
   const dynamicColorScales = resolveNetworkVisualizationColorScales(network);
   const architectureLabel = resolveMazeArchitectureLabel(network, graph);
 
   // Step 2: Render base graph with generous left padding for the label panel.
   const frame = renderNetworkView(canvas, graph, {
     nodeDimensions: { widthPx: 28, heightPx: 10 },
-    panelPaddingPx: {
-      topPx: 18,
-      rightPx: MAZE_RIGHT_LEGEND_RESERVE_PX,
-      bottomPx: 24,
-      leftPx: resolveMazeLabelPanelWidthPx(),
-    },
+    panelPaddingPx: panelPadding,
     colorScales: MAZE_LAYOUT_PASS_COLOR_SCALES,
   });
 
@@ -238,22 +243,19 @@ export function drawMazeNetworkVisualization(
   );
 
   // Step 5: Draw Flappy-style semantic input overlays and collect hover hit areas.
-  const {
-    inputDescriptionScenes,
-    inputGroupLabelBandScenes,
-    hitAreas,
-  } = resolveAndDrawInputLabelPanel(
-    context,
-    inputNodes,
-    frame.nodeDimensions,
-  );
+  const { inputDescriptionScenes, inputGroupLabelBandScenes, hitAreas } =
+    resolveAndDrawInputLabelPanel(context, inputNodes, frame.nodeDimensions);
 
   drawInputGroupLabelBands(
     context,
     inputGroupLabelBandScenes,
     hoveredNodeIndices,
   );
-  drawInputNodeDescriptions(context, inputDescriptionScenes, hoveredNodeIndices);
+  drawInputNodeDescriptions(
+    context,
+    inputDescriptionScenes,
+    hoveredNodeIndices,
+  );
 
   // Step 6: Draw output direction labels.
   drawOutputNodeLabels(context, outputNodes, frame.nodeDimensions);
@@ -404,6 +406,60 @@ function resolveMazeLabelPanelWidthPx(): number {
   );
 }
 
+function resolveMazeNetworkPanelPadding(canvasWidthPx: number): {
+  topPx: number;
+  rightPx: number;
+  bottomPx: number;
+  leftPx: number;
+} {
+  const preferredLeftPanelWidthPx = resolveMazeLabelPanelWidthPx();
+  const preferredRightLegendReservePx = MAZE_RIGHT_LEGEND_RESERVE_PX;
+  const minimumRightLegendReservePx =
+    resolveMazeMinimumLegendReservePx(canvasWidthPx);
+
+  let leftPanelWidthPx = preferredLeftPanelWidthPx;
+  let rightLegendReservePx = preferredRightLegendReservePx;
+
+  const preferredDrawableWidthPx =
+    canvasWidthPx - leftPanelWidthPx - rightLegendReservePx;
+
+  if (preferredDrawableWidthPx < MAZE_MIN_DRAWABLE_GRAPH_WIDTH_PX) {
+    const requiredHorizontalSpacePx =
+      MAZE_MIN_DRAWABLE_GRAPH_WIDTH_PX - preferredDrawableWidthPx;
+    const rightReserveReductionPx = Math.min(
+      requiredHorizontalSpacePx,
+      rightLegendReservePx - minimumRightLegendReservePx,
+    );
+
+    rightLegendReservePx -= rightReserveReductionPx;
+
+    const remainingRequiredHorizontalSpacePx =
+      requiredHorizontalSpacePx - rightReserveReductionPx;
+    if (remainingRequiredHorizontalSpacePx > 0) {
+      leftPanelWidthPx -= Math.min(
+        remainingRequiredHorizontalSpacePx,
+        leftPanelWidthPx - MAZE_MIN_LEFT_LABEL_PANEL_WIDTH_PX,
+      );
+    }
+  }
+
+  return {
+    topPx: 18,
+    rightPx: rightLegendReservePx,
+    bottomPx: 24,
+    leftPx: leftPanelWidthPx,
+  };
+}
+
+function resolveMazeMinimumLegendReservePx(canvasWidthPx: number): number {
+  const legendWidthPx =
+    canvasWidthPx < FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_THRESHOLD_PX
+      ? FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_PX
+      : FLAPPY_NETWORK_LEGEND_REGULAR_WIDTH_PX;
+
+  return legendWidthPx + FLAPPY_NETWORK_LEGEND_MARGIN_PX * 2;
+}
+
 function resolveMazeDescriptionColumnWidthPx(): number {
   return Math.max(
     ...MAZE_INPUT_GROUP_DEFS.flatMap((groupDef) =>
@@ -438,7 +494,10 @@ function resolveMazeInputOverlayLayouts(
 
   const relativeLayouts = MAZE_INPUT_GROUP_DEFS.map((groupDef, groupIndex) => {
     const groupColor = MAZE_GROUP_COLORS[groupIndex];
-    const groupNodeStartIndex = MAZE_INPUT_GROUP_DEFS.slice(0, groupIndex).reduce(
+    const groupNodeStartIndex = MAZE_INPUT_GROUP_DEFS.slice(
+      0,
+      groupIndex,
+    ).reduce(
       (runningNodeCount, currentGroupDef) =>
         runningNodeCount + currentGroupDef.nodeCount,
       0,
@@ -470,14 +529,15 @@ function resolveMazeInputOverlayLayouts(
           topPx: 0,
           widthPx: descriptionWidthPx,
           heightPx: descriptionHeightPx,
-          nodeIndex: resolvedGroupNodes[nodeOffset]?.index ?? groupNodeStartIndex + nodeOffset,
+          nodeIndex:
+            resolvedGroupNodes[nodeOffset]?.index ??
+            groupNodeStartIndex + nodeOffset,
         };
       },
     );
 
-    const groupedDescriptionContentHeightPx = resolveGroupedDescriptionContentHeightPx(
-      descriptionScenes,
-    );
+    const groupedDescriptionContentHeightPx =
+      resolveGroupedDescriptionContentHeightPx(descriptionScenes);
     const groupHeightPx = Math.max(
       FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX,
       groupedDescriptionContentHeightPx +
@@ -524,7 +584,8 @@ function resolveMazeInputOverlayLayouts(
 
     return resolvedLayout;
   }).filter(
-    (layout): layout is ResolvedMazeInputGroupLayout => layout.groupColor != null,
+    (layout): layout is ResolvedMazeInputGroupLayout =>
+      layout.groupColor != null,
   );
 
   const totalOverlayHeightPx = relativeLayouts.at(-1)
@@ -624,10 +685,9 @@ function resolveMazeArchitectureLabel(
   ].join(FLAPPY_NETWORK_ARCHITECTURE_COLUMN_SEPARATOR);
   const architectureTotalsLabel = `(${architectureDescriptor.totalNodes} nodes, ${architectureDescriptor.totalConnections} connections)`;
 
-  return [
-    architectureColumnsLabel,
-    architectureTotalsLabel,
-  ].join(FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR);
+  return [architectureColumnsLabel, architectureTotalsLabel].join(
+    FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR,
+  );
 }
 
 function resolveMazeHiddenLayersLabel(

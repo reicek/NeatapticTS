@@ -138,7 +138,7 @@ describe('ASCII Maze Solver using Neuro-Evolution', () => {
         mazeConfig: { maze: new MazeGenerator(dim, dim).generate() },
         agentSimConfig: { maxSteps: 2000 }, // matches browser AGENT_MAX_STEPS
         evolutionAlgorithmConfig: {
-          allowRecurrent: true,
+          allowRecurrent: false,
           popSize: 40,
           autoPauseOnSolve: false,
           maxStagnantGenerations: 50,

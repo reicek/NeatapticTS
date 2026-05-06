@@ -1,5 +1,12 @@
 import Network from '../network';
 import { exportVisualizationGraph, toDot } from './network.visualization';
+import {
+  buildNodePositionMap,
+  collectSortedConnections,
+  connectionToVisualizationDescriptor,
+  nodeToVisualizationDescriptor,
+  resolveActivationName,
+} from './network.visualization.utils';
 import type { VisualizationGraphV1 } from './network.visualization.types';
 
 // ---------------------------------------------------------------------------
@@ -236,6 +243,22 @@ describe('exportVisualizationGraph()', () => {
     });
   });
 
+  describe('given disabled edges are explicitly requested', () => {
+    describe('when exported', () => {
+      it('retains disabled edges in the schema', () => {
+        const network = new Network(2, 1);
+        const disabledConnection = network.connections[0];
+        disabledConnection.enabled = false;
+
+        const graph = exportVisualizationGraph(network, {
+          includeDisabledEdges: true,
+        });
+
+        expect(graph.edges.some((edge) => edge.enabled === false)).toBe(true);
+      });
+    });
+  });
+
   describe('given a network with a self-connection', () => {
     describe('when exported', () => {
       it('labels the self-connection edge kind as "self"', () => {
@@ -320,6 +343,157 @@ describe('toDot()', () => {
         // Assert
         expect(dot).toContain('doublecircle');
       });
+
+      it('falls back to hidden-node circles and omits edge labels when a node role or edge weight is missing', () => {
+        const dot = toDot({
+          version: 1,
+          nodes: [{ id: 1, role: 'input' }, { id: 2 }],
+          edges: [{ from: 1, to: 2 } as never],
+          io: {
+            inputNodeIds: [1],
+            outputNodeIds: [],
+          },
+        });
+
+        expect(dot).toContain('2 [label="2", shape=circle];\n  1 -> 2;');
+      });
+
+      it('renders disabled weighted edges as dashed DOT lines', () => {
+        const dot = toDot({
+          version: 1,
+          nodes: [
+            { id: 1, role: 'input' },
+            { id: 2, role: 'output' },
+          ],
+          edges: [
+            { enabled: false, from: 1, to: 2, weight: 0.5, kind: 'forward' },
+          ],
+          io: {
+            inputNodeIds: [1],
+            outputNodeIds: [2],
+          },
+        });
+
+        expect(dot).toContain('1 -> 2 [label="0.500", style=dashed];');
+      });
     });
+  });
+});
+
+describe('network visualization helper utilities', () => {
+  it('falls back to an unknown activation label when the squash function is unnamed', () => {
+    expect(resolveActivationName({ name: undefined } as never)).toBe('unknown');
+  });
+
+  it('omits optional node label and bias fields when the source node has no label and biases are disabled', () => {
+    const descriptor = nodeToVisualizationDescriptor(
+      {
+        bias: 0.75,
+        geneId: 42,
+        label: null,
+        squash: { name: 'IDENTITY' },
+      } as never,
+      'hidden',
+      false,
+    );
+
+    expect(descriptor).toEqual({
+      activation: 'IDENTITY',
+      id: 42,
+      role: 'hidden',
+    });
+  });
+
+  it('preserves node labels and bias values when the caller requests biases', () => {
+    expect(
+      nodeToVisualizationDescriptor(
+        {
+          bias: -0.5,
+          geneId: 7,
+          label: 'sensor-7',
+          squash: { name: 'TANH' },
+        } as never,
+        'input',
+        true,
+      ),
+    ).toEqual({
+      activation: 'TANH',
+      bias: -0.5,
+      id: 7,
+      label: 'sensor-7',
+      role: 'input',
+    });
+  });
+
+  it('builds recurrent edge descriptors from backward node positions', () => {
+    const positionMap = buildNodePositionMap([
+      { geneId: 1 } as never,
+      { geneId: 2 } as never,
+    ]);
+
+    expect(
+      connectionToVisualizationDescriptor(
+        {
+          enabled: true,
+          from: { geneId: 2 },
+          to: { geneId: 1 },
+          weight: 0.25,
+        } as never,
+        positionMap,
+        true,
+      ),
+    ).toEqual({
+      enabled: true,
+      from: 2,
+      kind: 'recurrent',
+      to: 1,
+      weight: 0.25,
+    });
+  });
+
+  it('falls back to forward edge inference when a node position is missing from the lookup map', () => {
+    expect(
+      connectionToVisualizationDescriptor(
+        {
+          enabled: true,
+          from: { geneId: 9 },
+          to: { geneId: 10 },
+          weight: 0.4,
+        } as never,
+        new Map<number, number>(),
+        true,
+      ),
+    ).toEqual({
+      enabled: true,
+      from: 9,
+      kind: 'forward',
+      to: 10,
+      weight: 0.4,
+    });
+  });
+
+  it('filters disabled connections when disabled-edge export is off', () => {
+    const sortedConnections = collectSortedConnections(
+      [
+        {
+          enabled: false,
+          from: { geneId: 2 },
+          to: { geneId: 3 },
+        },
+        {
+          enabled: true,
+          from: { geneId: 3 },
+          to: { geneId: 4 },
+        },
+      ] as never,
+      false,
+    );
+
+    expect(
+      sortedConnections.map((connection) => [
+        connection.from.geneId,
+        connection.to.geneId,
+      ]),
+    ).toEqual([[3, 4]]);
   });
 });

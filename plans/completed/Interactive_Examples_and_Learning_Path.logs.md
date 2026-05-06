@@ -17,4 +17,4 @@
 
 ## Closed boundary
 
-All deliverables shipped and validated. NEATchat remains a separate follow-up in `plans/NEATchat.md`.
+All deliverables shipped and validated. NEATchat remains a separate follow-up in `plans/NEATchat.plans.md`.

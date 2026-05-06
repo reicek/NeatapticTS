@@ -13,6 +13,14 @@ Where it helps, this roadmap uses **lanes** (things that can proceed in parallel
 
 Active plans stay in `plans/`; terminally closed reopen baselines and their logs live in `plans/completed/`.
 
+## Recommended primary agent + skill combo by active roadmap phase
+
+- Phase 3 — `Browser Runtime Scout` + `browser-build`
+- Phase 4 — `Plan Scout` + `plan-alignment`
+- Phase 5 — `Plan Scout` + `performance-optimization`
+- Phase 6 — `Plan Scout` + `onnx-work`
+- Phase 7 — `Plan Scout` + `plan-alignment`
+
 ## Phase 0 — Hygiene + Refactor Baseline [DONE]
 
 **Outcome:** keep iteration speed high, reduce refactor risk, and finish the structural cleanup needed before broad mechanical modernization.
@@ -87,13 +95,16 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 **Outcome:** reduce friction for new users and make the library “tryable” immediately.
 
 6. Browser build + CDN distribution (ESM + IIFE bundles; stable public surface)
-   - Plan: [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
+
+- Plan: [Browser_Build_and_CDN_Distribution.md](completed/Browser_Build_and_CDN_Distribution.md) [DONE]
+
 7. Interactive examples + learning path (Node + browser runnable examples, CI smoke checks)
    - Plan: [Interactive_Examples_and_Learning_Path.md](completed/Interactive_Examples_and_Learning_Path.plans.md) [DONE]
 8. NEATchat (tiny online sequence-learning chatbot demo)
 
 - Plan: [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
 - Current internal state: the NEATchat Phase 3 learnability lane is closed for current scope and archived as a completed baseline. The delivered surface remains intentionally toy-scale: near-zero start, short online adaptation, language-agnostic token-stream behavior, and browser or Node experimentation boundaries rather than web-scale training.
+- Follow-up lane: [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]. The new lane owns the post-toy conversational-system push, but it remains planning-only until checkpointing, worker payloads, multithread evaluation, parameter-vector contracts, and recurrent ONNX hardening expose usable public seams. It should build on those foundations instead of widening the closed Phase 3 acceptance surface retroactively.
 
 9. Visualization export schema (JSON schema + optional DOT output)
    - Plan: [Network_Visualization_Export_Schema.md](completed/Network_Visualization_Export_Schema.plans.md) [DONE]
@@ -158,11 +169,15 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 - ONNX export/import breadth and hardening
   - Plan: [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
   - Current internal state: Phase 0-2 are complete, recurrent groundwork is implemented and still being hardened, and convolutional/spatial groundwork is in progress.
+- NEATchat follow-up (persistent pretrained conversational system)
+  - Plan: [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]
+  - Current internal state: the Phase 3 NEATchat demo remains closed as a toy-scale learnability baseline, while the follow-up lane is a dependency-gated later plan for stronger pretrained seeds, checkpointed identity, retrieval-like memory, worker-backed background adaptation, and hybrid candidate routing. It should stay planning-only until checkpointing, worker payloads, multithread evaluation, parameter-vector contracts, and recurrent ONNX hardening are usable enough to support an honest external-seed target.
 
 **Recommended timing:**
 
 - Continue ONNX work in parallel after Phase 2 (builders) so we have a clean way to produce supported architectures.
 - Keep ONNX scope honest: focus on deterministic export/import behavior and clear “supported subset” docs.
+- Treat the NEATchat follow-up lane as an applied consumer of Phase 4 plus Phase 6 work, not as a shortcut around those foundations.
 
 ## Phase 7 — Advanced Research Features (Last)
 
@@ -181,11 +196,12 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phases 0, 1, 2, and 3 are complete**. The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, and preconfigured architectures (MLP, RandomSparse, NARX, GRU, LSTM) are all closed. Phase 3 is now also fully closed: the browser-build plan remains [PLANNED] (no implementation started), while the interactive examples + learning path, NEATchat, and visualization export schema (including schema/DOT export, shared canvas renderer, and Lane C documentation examples) are all [DONE]. The standalone-export planning baseline is [DONE], recording the frozen Phase 4 implementation reopen point. **Phase 4 is now the current roadmap stage.**
+Current status: **Phases 0, 1, 2, and 3 are complete**. The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, and preconfigured architectures (MLP, RandomSparse, NARX, GRU, LSTM) are all closed. Phase 3 is now also fully closed: the browser-build plan remains [PLANNED] (no implementation started), while the interactive examples + learning path, the toy-scale NEATchat baseline, and visualization export schema (including schema/DOT export, shared canvas renderer, and Lane C documentation examples) are all [DONE]. The standalone-export planning baseline is [DONE], recording the frozen Phase 4 implementation reopen point. A new planned NEATchat follow-up lane now exists as a later applied surface, but it remains gated on checkpointing, worker infrastructure, parameter-vector contracts, and recurrent ONNX hardening rather than reopening the closed Phase 3 scope directly. **Phase 4 is now the current roadmap stage.**
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
 - **Parallel lane B (interop):** [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) after Phase 2 (or earlier if scoped tightly)
+- **Parallel lane D (applied conversational systems):** [NEATchat.plans.md](NEATchat.plans.md) after checkpointing, worker payload and evaluation infrastructure, parameter-vector contracts, and recurrent ONNX hardening reach a usable baseline
 - **Parallel lane C (quality):** [test-repair-and-coverage.plans.md](completed/test-repair-and-coverage.plans.md) [DONE] — 100% statement/branch/function/line coverage across all of `src/`. 331 suites / 3022 tests green.
 - **Final capstone:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
 
@@ -229,7 +245,7 @@ Completed entries below resolve into `plans/completed/`.
 
 ### Phase 3 inventory
 
-20. [Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md) [PLANNED]
+20. [Browser_Build_and_CDN_Distribution.md](completed/Browser_Build_and_CDN_Distribution.md) [DONE]
 21. [Interactive_Examples_and_Learning_Path.plans.md](completed/Interactive_Examples_and_Learning_Path.plans.md) [DONE]
 22. [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
 23. [Network_Visualization_Export_Schema.plans.md](completed/Network_Visualization_Export_Schema.plans.md) [DONE]
@@ -249,10 +265,11 @@ Completed entries below resolve into `plans/completed/`.
 ### Phase 6 inventory
 
 30. [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
+31. [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]
 
 ### Phase 7 inventory
 
-31. [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) [PLANNED]
-32. [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) [PLANNED]
-33. [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
-34. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]
+32. [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) [PLANNED]
+33. [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) [PLANNED]
+34. [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
+35. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]

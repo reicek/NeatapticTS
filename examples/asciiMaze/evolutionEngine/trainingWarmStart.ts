@@ -27,7 +27,11 @@ import { methods } from '../../../src/neataptic';
 import type { EngineState, RngCacheParameters } from './engineState.types';
 import { initialiseTelemetryScratch } from './engineState';
 import type { NetworkNode } from './evolutionEngine.types';
-import { drawFastRandom, readHighResolutionTime } from './rngAndTiming';
+import {
+  drawFastRandom,
+  readHighResolutionTime,
+  resolveRngParameters,
+} from './rngAndTiming';
 import { sampleArray } from './sampling';
 
 /** Empty array constant for defensive fallbacks. */
@@ -50,6 +54,27 @@ type TrainableNetwork = Network;
  */
 type WarmStartNeatLike = Neat & {
   population: TrainableNetwork[];
+};
+
+type IdentifiableNetworkNode = {
+  bias: number;
+  index?: number;
+};
+
+type IdentifiableNetworkConnection = {
+  weight: number;
+  from?: { index?: number };
+  to?: { index?: number };
+};
+
+type WarmStartMutableNetwork = TrainableNetwork & {
+  connect?: (
+    fromNode: IdentifiableNetworkNode,
+    toNode: IdentifiableNetworkNode,
+    weight?: number,
+  ) => unknown;
+  connections?: IdentifiableNetworkConnection[];
+  nodes?: IdentifiableNetworkNode[];
 };
 
 /** Callback used when a helper needs to write node indices of a specific role into scratch. */
@@ -321,23 +346,25 @@ export const adjustOutputBiasesAfterTraining = (
  * Pretrain the population using a small supervised dataset and apply warm-start heuristics.
  *
  * Behaviour & contract:
- * - Runs a short supervised training pass on each network in `neat.population`
+ * - Trains one cloned template network from the current population head
+ * - Copies the trained template parameters across the population with small noise
  * - Treats the training set as a biasing hint, not as a replacement for later evolution
  * - Applies lightweight warm-start heuristics after training: compass wiring
  *   and output-bias centering
- * - Isolates failures per network so one bad trainer state does not abort the
- *   rest of the population
+ * - Isolates failures per stage so one bad network state does not abort the pass
  * - Stays allocation-light so warm-start remains cheap enough to use as a
  *   tactical assist instead of a second training regime
  *
  * Steps:
  * 1. Validate inputs and obtain `population` (fast-exit on empty populations)
- * 2. For each network: guard missing `train` method, compute conservative iteration budget, then call `train`
- * 3. Apply warm-start heuristics (compass wiring + bias centering). Swallow any per-network exceptions.
+ * 2. Clone the lead genome into one trainable template and run the bounded supervised fit there
+ * 3. Apply warm-start heuristics to that template only
+ * 4. Copy tuned template parameters across the population with small Gaussian noise
  *
  * @param neat - NEAT instance exposing a `population` array of networks.
  * @param lamarckianTrainingSet - Array of `{input:number[], output:number[]}` training cases.
  * @param constants - Training hyperparameters (iteration limits, learning rates, etc.).
+ * @param state - Shared engine state providing deterministic RNG for copy noise.
  * @param applyCompassWarmStart - Helper function for compass wiring adjustment.
  * @param centerOutputBiases - Helper function for output bias centering.
  *
@@ -360,7 +387,10 @@ export const pretrainPopulationWarmStart = (
     DEFAULT_PRETRAIN_RATE: number;
     DEFAULT_PRETRAIN_MOMENTUM: number;
     DEFAULT_TRAIN_BATCH_SMALL: number;
+    TEMPLATE_WEIGHT_NOISE_STDDEV: number;
+    TEMPLATE_BIAS_NOISE_STDDEV: number;
   },
+  state: EngineState,
   applyCompassWarmStart: WarmStartNetworkCallback,
   centerOutputBiases: WarmStartNetworkCallback,
 ): void => {
@@ -369,47 +399,220 @@ export const pretrainPopulationWarmStart = (
   const population = (neat as WarmStartNeatLike).population ?? EMPTY_VEC;
   if (!Array.isArray(population) || population.length === 0) return;
 
-  // Step 2: Iterate population and apply supervised training per network (best-effort).
-  for (let networkIndex = 0; networkIndex < population.length; networkIndex++) {
-    const network = population[networkIndex];
+  // Step 2: Clone one template network so generation-zero fitting does not train every genome independently.
+  const templateSourceNetwork = resolveWarmStartTemplateSource(population);
+  const templateNetwork = resolveWarmStartTemplate(templateSourceNetwork);
+  if (!templateNetwork || typeof templateNetwork.train !== 'function') return;
+
+  // Step 3: Fit the cloned template with the same conservative supervised settings as before.
+  try {
+    const iterations = Math.min(
+      constants.PRETRAIN_MAX_ITER,
+      constants.PRETRAIN_BASE_ITER +
+        Math.floor((lamarckianTrainingSet?.length || 0) / 2),
+    );
+
+    templateNetwork.train(lamarckianTrainingSet, {
+      iterations,
+      error: constants.DEFAULT_TRAIN_ERROR,
+      rate: constants.DEFAULT_PRETRAIN_RATE,
+      momentum: constants.DEFAULT_PRETRAIN_MOMENTUM,
+      batchSize: constants.DEFAULT_TRAIN_BATCH_SMALL,
+      allowRecurrent: true,
+      cost: methods.Cost.softmaxCrossEntropy,
+    });
+  } catch {
+    return;
+  }
+
+  // Step 4: Apply the existing warm-start heuristics to the trained template only.
+  try {
+    applyCompassWarmStart(templateNetwork);
+  } catch {
+    // ignore compass warm-start failures
+  }
+
+  try {
+    centerOutputBiases(templateNetwork);
+  } catch {
+    // ignore bias centering failures
+  }
+
+  // Step 5: Copy tuned template parameters across the population with small deterministic noise.
+  const rngParameters = resolveRngParameters();
+  for (const network of population) {
+    if (!network || typeof network.train !== 'function') continue;
     try {
-      if (!network || typeof network.train !== 'function') continue; // skip non-trainable entries
-
-      // Compute conservative per-network iteration budget (bounded by PRETRAIN_MAX_ITER).
-      const iterations = Math.min(
-        constants.PRETRAIN_MAX_ITER,
-        constants.PRETRAIN_BASE_ITER +
-          Math.floor((lamarckianTrainingSet?.length || 0) / 2),
+      applyTemplateStateWithNoise(
+        network,
+        templateNetwork,
+        state,
+        rngParameters,
+        {
+          weightStdDev: constants.TEMPLATE_WEIGHT_NOISE_STDDEV,
+          biasStdDev: constants.TEMPLATE_BIAS_NOISE_STDDEV,
+        },
       );
-
-      // Delegate to the network's own training routine; options are intentionally conservative.
-      network.train(lamarckianTrainingSet, {
-        iterations,
-        error: constants.DEFAULT_TRAIN_ERROR,
-        rate: constants.DEFAULT_PRETRAIN_RATE,
-        momentum: constants.DEFAULT_PRETRAIN_MOMENTUM,
-        batchSize: constants.DEFAULT_TRAIN_BATCH_SMALL,
-        allowRecurrent: true,
-        cost: methods.Cost.softmaxCrossEntropy,
-      });
-
-      // Step 3: Apply warm-start heuristics after training (best-effort; swallow individual failures).
-      try {
-        applyCompassWarmStart(network);
-      } catch {
-        // ignore compass warm-start failures
-      }
-
-      try {
-        centerOutputBiases(network);
-      } catch {
-        // ignore bias centering failures
-      }
+      network.score = undefined;
     } catch {
-      // Per-network training failure is non-fatal; continue with others.
+      // Per-network copy failure is non-fatal; continue with the rest.
     }
   }
 };
+
+function resolveWarmStartTemplateSource(
+  population: readonly TrainableNetwork[],
+): TrainableNetwork | undefined {
+  return population.find((network) => {
+    const templateCandidate = resolveWarmStartTemplate(network);
+    return typeof templateCandidate?.train === 'function';
+  });
+}
+
+function resolveWarmStartTemplate(
+  network: TrainableNetwork | undefined,
+): TrainableNetwork | undefined {
+  if (!network) return undefined;
+
+  try {
+    if (typeof network.clone === 'function') {
+      return network.clone() as TrainableNetwork;
+    }
+  } catch {
+    // Fall back to the live network when cloning fails.
+  }
+
+  return network;
+}
+
+function applyTemplateStateWithNoise(
+  genome: TrainableNetwork,
+  template: TrainableNetwork,
+  state: EngineState,
+  rngParameters: RngCacheParameters,
+  noise: { weightStdDev: number; biasStdDev: number },
+): void {
+  const weightStdDev = Math.max(0, noise.weightStdDev);
+  const biasStdDev = Math.max(0, noise.biasStdDev);
+
+  const genomeNetwork = genome as WarmStartMutableNetwork;
+  const templateNetwork = template as WarmStartMutableNetwork;
+  const genomeNodes = genomeNetwork.nodes ?? [];
+  const templateNodes = templateNetwork.nodes ?? [];
+  const genomeNodesByIndex = new Map(
+    genomeNodes
+      .filter((node) => typeof node.index === 'number')
+      .map((node) => [node.index as number, node]),
+  );
+
+  templateNodes.forEach((templateNode) => {
+    const genomeNode =
+      typeof templateNode.index === 'number'
+        ? genomeNodesByIndex.get(templateNode.index)
+        : undefined;
+    if (!genomeNode) {
+      return;
+    }
+
+    genomeNode.bias =
+      templateNode.bias + sampleGaussian(state, rngParameters) * biasStdDev;
+  });
+
+  const genomeConnections = (genomeNetwork.connections ??
+    []) as IdentifiableNetworkConnection[];
+  const templateConnections = (templateNetwork.connections ??
+    []) as IdentifiableNetworkConnection[];
+  const genomeConnectionsByKey = new Map<
+    string,
+    IdentifiableNetworkConnection
+  >();
+  genomeConnections.forEach((connection) => {
+    const connectionKey = resolveConnectionKey(connection);
+    if (!connectionKey) {
+      return;
+    }
+
+    genomeConnectionsByKey.set(connectionKey, connection);
+  });
+
+  templateConnections.forEach((templateConnection) => {
+    const templateConnectionKey = resolveConnectionKey(templateConnection);
+    if (!templateConnectionKey) {
+      return;
+    }
+
+    let genomeConnection: IdentifiableNetworkConnection | undefined =
+      genomeConnectionsByKey.get(templateConnectionKey);
+    if (!genomeConnection) {
+      genomeConnection = connectTemplateConnection(
+        genomeNetwork,
+        genomeNodesByIndex,
+        templateConnection,
+      );
+    }
+    if (!genomeConnection) {
+      return;
+    }
+
+    genomeConnection.weight =
+      templateConnection.weight +
+      sampleGaussian(state, rngParameters) * weightStdDev;
+  });
+}
+
+function resolveConnectionKey(
+  connection: IdentifiableNetworkConnection,
+): string | undefined {
+  const fromIndex = connection.from?.index;
+  const toIndex = connection.to?.index;
+
+  if (typeof fromIndex !== 'number' || typeof toIndex !== 'number') {
+    return undefined;
+  }
+
+  return `${fromIndex}:${toIndex}`;
+}
+
+function connectTemplateConnection(
+  genome: WarmStartMutableNetwork,
+  genomeNodesByIndex: Map<number, IdentifiableNetworkNode>,
+  templateConnection: IdentifiableNetworkConnection,
+): IdentifiableNetworkConnection | undefined {
+  const fromIndex = templateConnection.from?.index;
+  const toIndex = templateConnection.to?.index;
+
+  if (
+    typeof fromIndex !== 'number' ||
+    typeof toIndex !== 'number' ||
+    typeof genome.connect !== 'function'
+  ) {
+    return undefined;
+  }
+
+  const fromNode = genomeNodesByIndex.get(fromIndex);
+  const toNode = genomeNodesByIndex.get(toIndex);
+  if (!fromNode || !toNode) {
+    return undefined;
+  }
+
+  genome.connect(fromNode, toNode, templateConnection.weight);
+  return (genome.connections ?? []).find(
+    (connection) =>
+      connection.from?.index === fromIndex && connection.to?.index === toIndex,
+  );
+}
+
+function sampleGaussian(
+  state: EngineState,
+  rngParameters: RngCacheParameters,
+): number {
+  const epsilon = 1e-12;
+  const uniformA = Math.max(epsilon, drawFastRandom(state, rngParameters));
+  const uniformB = Math.max(epsilon, drawFastRandom(state, rngParameters));
+  const magnitude = Math.sqrt(-2 * Math.log(uniformA));
+  const angle = 2 * Math.PI * uniformB;
+  return magnitude * Math.cos(angle);
+}
 
 /**
  * Apply Lamarckian backpropagation training to the entire population with optional profiling.

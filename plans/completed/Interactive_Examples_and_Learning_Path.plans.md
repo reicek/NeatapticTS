@@ -6,7 +6,7 @@
 
 - Execute the Phase 3 starter-examples lane by adding a small set of runnable examples and the supporting learning-path documentation under `examples/`.
 - Reuse the existing browser build, docs copy, and smoke-test surfaces instead of creating a second delivery path.
-- Keep `NEATchat` as a separate follow-up lane owned by [plans/NEATchat.md](NEATchat.md) rather than folding chat-specific work into the starter tranche.
+- Keep `NEATchat` as a separate follow-up lane owned by [plans/NEATchat.plans.md](../NEATchat.plans.md) rather than folding chat-specific work into the starter tranche.
 
 ## Current state
 
@@ -17,7 +17,7 @@
 - The starter browser demos now share the repo's neon retro-arcade direction as well: both pages use TRON-style dark shells, cyan neon double outlines, and consistent framed table presentation instead of separate ad hoc starter styling.
 - The starter learning-path examples are now present and browser-hosted: `helloNetwork`, `evolveXor`, and `sequenceReset` all ship lightweight browser entry pages and are published through the shared docs examples index.
 - The top-level examples documentation does not yet offer a clear starter-to-flagship reading order.
-- `NEATchat` is already tracked separately in [plans/NEATchat.md](NEATchat.md) and should remain a follow-up after the starter tranche is moving.
+- `NEATchat` is already tracked separately in [plans/NEATchat.plans.md](../NEATchat.plans.md) and should remain a follow-up after the starter tranche is moving.
 
 ## Coverage backlog
 
@@ -133,5 +133,5 @@ All steps complete. The starter-examples Phase 3 lane is done.
 
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
-Work on the active Phase 3 starter-examples lane in plans/Interactive_Examples_and_Learning_Path.md. Keep NEATchat separate in plans/NEATchat.md. Reuse the existing examples root plus browser/docs plumbing. `examples/helloNetwork/`, `examples/evolveXor/`, and `examples/sequenceReset/` are done and validated; keep that folder-based pattern. All three starter examples publish as browser-hosted result tables through docs/assets bundles. Step 5 and Step 6 are complete, including the starter-first rewrite of `examples/README.md`. The next active slice is Step 7: add narrow smoke checks that protect the starter examples without turning them into a slow end-to-end lane.
+Work on the active Phase 3 starter-examples lane in plans/Interactive_Examples_and_Learning_Path.md. Keep NEATchat separate in plans/NEATchat.plans.md. Reuse the existing examples root plus browser/docs plumbing. `examples/helloNetwork/`, `examples/evolveXor/`, and `examples/sequenceReset/` are done and validated; keep that folder-based pattern. All three starter examples publish as browser-hosted result tables through docs/assets bundles. Step 5 and Step 6 are complete, including the starter-first rewrite of `examples/README.md`. The next active slice is Step 7: add narrow smoke checks that protect the starter examples without turning them into a slow end-to-end lane.
 ```

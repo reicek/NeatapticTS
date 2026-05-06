@@ -43,19 +43,38 @@ export const resolveBrowserEntryHostElements = (
 /**
  * Build immutable evolution settings for a single maze dimension.
  *
+ * This helper is the point where the browser curriculum's size ladder becomes
+ * concrete runtime policy. The dimension passed in determines the generated
+ * maze size, while `BROWSER_ENTRY_CONSTANTS` decides how much movement budget,
+ * mutation assistance, and generational time each phase receives.
+ *
  * @param dimension - Side length in cells for the procedural square maze.
  * @returns Per-phase evolution settings consumed by the curriculum runtime.
  */
 export const createBrowserEvolutionSettings = (
   dimension: number,
 ): BrowserEntryEvolutionSettings => {
+  const isInitialCurriculumPhase = dimension === C.INITIAL_MAZE_DIMENSION;
+
   return {
     agentMaxSteps: C.AGENT_MAX_STEPS,
-    popSize: C.POPULATION_SIZE,
+    allowRecurrent: C.ALLOW_RECURRENT,
+    adaptiveMutation: isInitialCurriculumPhase
+      ? { ...C.FIRST_PHASE_ADAPTIVE_MUTATION }
+      : undefined,
+    popSize: isInitialCurriculumPhase
+      ? C.FIRST_PHASE_POPULATION_SIZE
+      : C.POPULATION_SIZE,
     maxStagnantGenerations: C.DEFAULT_MAX_STAGNANT_GENERATIONS,
-    maxGenerations: C.DEFAULT_MAX_GENERATIONS,
-    lamarckianIterations: C.LAMARCKIAN_ITERATIONS,
-    lamarckianSampleSize: C.LAMARCKIAN_SAMPLE_SIZE,
+    maxGenerations: isInitialCurriculumPhase
+      ? C.FIRST_PHASE_MAX_GENERATIONS
+      : C.DEFAULT_MAX_GENERATIONS,
+    lamarckianIterations: isInitialCurriculumPhase
+      ? C.FIRST_PHASE_LAMARCKIAN_ITERATIONS
+      : C.LAMARCKIAN_ITERATIONS,
+    lamarckianSampleSize: isInitialCurriculumPhase
+      ? C.FIRST_PHASE_LAMARCKIAN_SAMPLE_SIZE
+      : C.LAMARCKIAN_SAMPLE_SIZE,
     mazeFactory: () => new MazeGenerator(dimension, dimension).generate(),
   };
 };
@@ -90,6 +109,10 @@ export const didSolveBrowserMaze = (progress: unknown): boolean => {
 
 /**
  * Advance the procedural maze dimension without exceeding the configured maximum.
+ *
+ * The increment and ceiling both come from `BROWSER_ENTRY_CONSTANTS`, so this
+ * helper is the single-browser-entry answer to “how quickly do hosted mazes get
+ * larger?”
  *
  * @param currentDimension - Current maze side length.
  * @returns Next side length to use.

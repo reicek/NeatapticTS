@@ -40,7 +40,7 @@ describe('shared example architecture profiles', () => {
       }).toEqual({
         asciiConfiguration: {
           family: 'MLP',
-          hiddenLayerSizes: [6],
+          hiddenLayerSizes: [6, 6],
           input: 6,
           output: 4,
         },
@@ -78,7 +78,7 @@ describe('shared example architecture profiles', () => {
       expect({
         ...approvedProfileIds,
       }).toEqual({
-        ascii: ['mlp', 'narx', 'gru', 'lstm'],
+        ascii: ['mlp', 'random-sparse', 'narx', 'gru', 'lstm'],
         flappy: ['mlp', 'random-sparse', 'narx', 'gru', 'lstm'],
       });
     });
@@ -99,6 +99,7 @@ describe('shared example architecture profiles', () => {
       // Act
       const networkShapes = {
         ascii: {
+          connectionCount: asciiNetwork.connections.length,
           inputNodeIds: asciiNetwork.inputNodeIds.length,
           outputNodeIds: asciiNetwork.outputNodeIds.length,
           topologyIntent: asciiNetwork.getTopologyIntent(),
@@ -115,6 +116,7 @@ describe('shared example architecture profiles', () => {
         ...networkShapes,
       }).toEqual({
         ascii: {
+          connectionCount: 96,
           inputNodeIds: 6,
           outputNodeIds: 4,
           topologyIntent: 'feed-forward',
@@ -219,6 +221,27 @@ describe('shared example architecture profiles', () => {
         }).toEqual({
           inputNodeIds: 6,
           outputNodeIds: 4,
+        });
+      });
+    });
+
+    describe('when the profile is the ASCII Maze sparse preset', () => {
+      it('builds the shared Flappy-style sparse starter shape for maze runs', () => {
+        const asciiSparseNetwork = buildExampleArchitectureProfileNetwork(
+          'ascii-maze',
+          'random-sparse',
+        );
+
+        expect({
+          connectionCount: asciiSparseNetwork.connections.length,
+          inputNodeIds: asciiSparseNetwork.inputNodeIds.length,
+          outputNodeIds: asciiSparseNetwork.outputNodeIds.length,
+          topologyIntent: asciiSparseNetwork.getTopologyIntent(),
+        }).toEqual({
+          connectionCount: 40,
+          inputNodeIds: 6,
+          outputNodeIds: 4,
+          topologyIntent: 'unconstrained',
         });
       });
     });

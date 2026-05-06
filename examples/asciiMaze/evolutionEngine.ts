@@ -222,6 +222,7 @@ export class EvolutionEngine {
           neatInstance,
           trainingSet,
           EVOLUTION_ENGINE_PRETRAIN_CONSTANTS,
+          sharedEngineState,
           (network) =>
             applyCompassWarmStart({ state: sharedEngineState, network }),
           (network) =>

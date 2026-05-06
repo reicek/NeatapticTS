@@ -7,6 +7,13 @@
  * owns host elements, resize behavior, telemetry fan-out, globals
  * compatibility, and the lifecycle handle that embedding code talks to.
  *
+ * The browser host also owns the parts of the experience that should feel
+ * understandable to a human observer rather than merely correct to the engine.
+ * When a phase solves a maze, this boundary reveals the winning path step by
+ * step in the live panel before it lets the curriculum advance. That small
+ * presentation delay matters because the browser demo is trying to teach route
+ * discovery, not just report that a solved result existed.
+ *
  * Read it as a boundary between two clocks. One clock belongs to the maze
  * curriculum that carries refined winners into larger procedural mazes. The
  * other clock belongs to the browser host that has to paint dashboards, react
@@ -24,6 +31,13 @@
  * `evolutionEngine/`. The host boundary owns container resolution, dashboard
  * plumbing, cooperative abort wiring, and the stable run handle that browser
  * callers can stop, await, or subscribe to.
+ *
+ * The first tuning stop for the hosted curriculum is
+ * `browser-entry.constants.ts`. That constants table controls the starting maze
+ * size, maximum maze size, dimension increment between solved phases, and the
+ * per-maze step budget. Read it as the host-facing control shelf for how the
+ * browser curriculum should feel, while the deeper engine folders continue to
+ * own how evolution itself works.
  *
  * Read the chapter in three passes. Start with `browser-entry.ts` for the
  * public `start(...)` surface. Continue to `browser-entry.services.ts` for host
@@ -143,14 +157,16 @@ export const start = async (
   // Step 1: Resolve host elements and attach browser-specific services.
   const hostElements = resolveBrowserEntryHostElements(container);
   const hostServices = createBrowserEntryHostServices(hostElements);
-  const hostAdapter = createBrowserEntryEvolutionHostAdapter();
+  const hostAdapter = createBrowserEntryEvolutionHostAdapter({
+    liveElement: hostElements.liveElement,
+  });
 
   // Step 2: Create lifecycle state and compose cooperative cancellation.
   let cancelled = false;
   let running = true;
   let finalized = false;
   const internalController = new AbortController();
-  let resolveDonePromise = () => {};
+  let resolveDonePromise!: () => void;
   const done = new Promise<void>((resolve) => {
     resolveDonePromise = resolve;
   });
@@ -217,17 +233,11 @@ export const start = async (
   };
 
   _activeRunHandle = handle;
-  handle.done
-    .then(() => {
-      if (_activeRunHandle === handle) {
-        _activeRunHandle = null;
-      }
-    })
-    .catch(() => {
-      if (_activeRunHandle === handle) {
-        _activeRunHandle = null;
-      }
-    });
+  void handle.done.then(() => {
+    if (_activeRunHandle === handle) {
+      _activeRunHandle = null;
+    }
+  });
 
   return handle;
 };

@@ -188,7 +188,33 @@ function mapGraphToNetworkLayers(
       bias: n.bias ?? 0,
     }));
   if (hiddenNodes.length > 0) {
-    layers.push(hiddenNodes);
+    const hiddenNodeDepthById = resolveHiddenNodeDepthById(
+      graph,
+      inputNodeIds,
+      outputNodeIds,
+    );
+
+    const hiddenNodesByDepth = new Map<number, VisualNetworkNode[]>();
+    hiddenNodes.forEach((hiddenNode) => {
+      const resolvedDepth = hiddenNodeDepthById.get(hiddenNode.index)!;
+      const depthLayer = hiddenNodesByDepth.get(resolvedDepth) ?? [];
+      depthLayer.push(hiddenNode);
+      hiddenNodesByDepth.set(resolvedDepth, depthLayer);
+    });
+
+    hiddenNodesByDepth.forEach((hiddenNodesAtDepth) => {
+      hiddenNodesAtDepth.sort((hiddenNodeA, hiddenNodeB) => {
+        return hiddenNodeA.index - hiddenNodeB.index;
+      });
+    });
+
+    const sortedDepths = [...hiddenNodesByDepth.keys()].toSorted(
+      (depthA, depthB) => depthA - depthB,
+    );
+
+    sortedDepths.forEach((sortedDepth) => {
+      layers.push(hiddenNodesByDepth.get(sortedDepth)!);
+    });
   }
 
   // Output nodes.
@@ -204,6 +230,83 @@ function mapGraphToNetworkLayers(
   }
 
   return layers;
+}
+
+/**
+ * Infer a left-to-right hidden-layer depth using forward-only graph edges.
+ *
+ * This keeps acyclic and mostly-feed-forward graphs from collapsing all hidden
+ * nodes into a single visual column, while still tolerating recurrent edges by
+ * ignoring non-forward links for depth propagation.
+ */
+function resolveHiddenNodeDepthById(
+  graph: VisualizationGraphV1,
+  inputNodeIds: Set<number>,
+  outputNodeIds: Set<number>,
+): Map<number, number> {
+  const hiddenNodeIds = new Set(
+    graph.nodes
+      .filter(
+        (node) => !inputNodeIds.has(node.id) && !outputNodeIds.has(node.id),
+      )
+      .map((node) => node.id),
+  );
+
+  const hiddenDepthById = new Map<number, number>();
+
+  // Seed hidden depths from input -> hidden forward edges.
+  graph.edges.forEach((edge) => {
+    if (edge.kind === 'recurrent' || edge.kind === 'self') {
+      return;
+    }
+
+    if (!inputNodeIds.has(edge.from) || !hiddenNodeIds.has(edge.to)) {
+      return;
+    }
+
+    hiddenDepthById.set(edge.to, 1);
+  });
+
+  // Promote depth through hidden -> hidden forward links until stable.
+  const maximumPropagationPasses = Math.max(1, hiddenNodeIds.size);
+  for (
+    let propagationPassIndex = 0;
+    propagationPassIndex < maximumPropagationPasses;
+    propagationPassIndex += 1
+  ) {
+    let didPromoteAnyDepth = false;
+
+    graph.edges.forEach((edge) => {
+      if (edge.kind === 'recurrent' || edge.kind === 'self') {
+        return;
+      }
+
+      if (!hiddenNodeIds.has(edge.from) || !hiddenNodeIds.has(edge.to)) {
+        return;
+      }
+
+      const fromDepth = hiddenDepthById.get(edge.from) ?? 1;
+      const proposedToDepth = fromDepth + 1;
+      const currentToDepth = hiddenDepthById.get(edge.to) ?? 1;
+
+      if (proposedToDepth > currentToDepth) {
+        hiddenDepthById.set(edge.to, proposedToDepth);
+        didPromoteAnyDepth = true;
+      }
+    });
+
+    if (!didPromoteAnyDepth) {
+      break;
+    }
+  }
+
+  hiddenNodeIds.forEach((hiddenNodeId) => {
+    if (!hiddenDepthById.has(hiddenNodeId)) {
+      hiddenDepthById.set(hiddenNodeId, 1);
+    }
+  });
+
+  return hiddenDepthById;
 }
 
 /**

@@ -247,7 +247,7 @@ export function initializeNeatConstructor(
   // already assigned to connections in the initial population. Without this,
   // mutation-assigned IDs start at 0 and eventually collide with connection
   // IDs that were assigned by the Connection constructor counter.
-  seedInnovationTrackerAboveConnectionCounter(host._innovationTracker);
+  seedInnovationTrackerAboveConnectionCounter(host._innovationTracker!);
 
   // Step 4: Enable lineage tracking only after the startup pool attempt.
   enableLineageTracking(host, optionBag, rawOptions);
@@ -358,9 +358,8 @@ function bootstrapInitialPool(
  * @returns Nothing.
  */
 function seedInnovationTrackerAboveConnectionCounter(
-  tracker: InnovationTracker | undefined,
+  tracker: InnovationTracker,
 ): void {
-  if (!tracker) return;
   // Connection._nextInnovation is one past the highest ID already assigned.
   const nextSafeInnovation = Connection.nextInnovation;
   if (tracker.nextInnovationId < nextSafeInnovation) {

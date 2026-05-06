@@ -76,6 +76,12 @@ This benchmark belongs to **Phase G (Multi-Agent + Collective Intelligence)** in
 - Pheromone field infrastructure (typed-array grid, diffusion/decay ops, agent read/write interface) is implemented.
 - The Predator/Prey demo maze infrastructure (`examples/predator_prey/maze/`) is implemented — the ant hive reuses it directly.
 
+## Recommended agent + skill combo for this Phase G benchmark
+
+- Benchmark architecture, colony systems, and rollout work — `NGE Benchmark Scout` + `nge-benchmark-workflow`
+- Upstream NGE prerequisite drift — `NGE Core Scout` + `nge-core-algorithm`
+- Canvas, layout, and interaction polish — `Visualizer Scout` + `visualizer-workflow`
+
 ---
 
 ## Design Pillars

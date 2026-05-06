@@ -99,6 +99,39 @@ Determinism requirements:
 
 - If randomness is used inside fitness, it must be seeded from a deterministic seed passed in `initMessage`.
 
+## Downstream unlock — NEATchat follow-up
+
+This plan is one of the hard blockers for `plans/NEATchat.plans.md`.
+NEATchat should not start worker-backed chat inference, candidate scoring, or
+background adaptation until this plan exposes an execution surface that is more
+concrete than a future pool outline.
+
+For NEATchat, this plan is considered ready only when all of the following are
+true:
+
+1. Step 1 and Step 2 are complete, so both Node and browser worker pools exist
+   with matching ordering semantics.
+2. Results are guaranteed to return in input order with deterministic task
+   scheduling or documented tie-breaking, so candidate comparison is
+   replayable.
+3. The API exposes a clear single-thread fallback path, because NEATchat must
+   stay truthful in environments where workers are unavailable or disabled.
+4. Step 3 is complete, so the worker template and init-task-result protocol are
+   documented well enough for downstream chat jobs to reuse without inventing a
+   NEATchat-specific worker contract.
+
+This plan depends on
+`plans/Worker_Friendly_Network_Serialization_Fastpath.md` for the payload and
+predictor substrate. It does not replace checkpointing or parameter-vector
+contracts, which remain separate NEATchat blockers.
+
+## Recommended agent + skill combo by step
+
+- Step 1 — `Evaluation Pool Scout` + `multithread-evaluation`
+- Step 2 — `Evaluation Pool Scout` + `multithread-evaluation`
+- Step 3 — `Evaluation Pool Scout` + `multithread-evaluation`
+- Step 4 — `Evaluation Pool Scout` + `multithread-evaluation`
+
 ## Implementation steps
 
 ### Step 1 — Node worker pool

@@ -8,6 +8,12 @@
 import Network from '../../architecture/network';
 import type { VisualNetworkNode } from './network-view.layout.utils';
 
+const TEMPORAL_MODULE_LABEL_BY_KIND = {
+  lstm: 'LSTM',
+  gru: 'GRU',
+  'narx-memory': 'NARX Memory',
+} as const;
+
 /**
  * Semantic annotation for one layer of nodes.
  *
@@ -93,70 +99,86 @@ export function resolveNetworkVisualizationTopologyPlan(
     network.getTopologyIntent() === 'feed-forward'
       ? ('acyclic' as const)
       : ('recurrent' as const);
-  const nodes = network.nodes.toSorted((a, b) => {
-    if (a.type !== b.type) {
-      const typeOrder: Record<string, number> = {
-        input: 0,
-        hidden: 1,
-        output: 2,
-      };
-      return (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
-    }
-    return (a.index ?? 0) - (b.index ?? 0);
-  });
 
   // Step 3: Group nodes by type into layers.
-  const inputNodes = nodes.filter((n) => n.type === 'input');
-  const hiddenNodes = nodes.filter((n) => n.type === 'hidden');
-  const outputNodes = nodes.filter((n) => n.type === 'output');
+  const inputNodes = network.nodes
+    .filter((node) => node.type === 'input')
+    .map((node) => ({
+      index: node.index ?? 0,
+      type: 'input' as const,
+      bias: node.bias,
+    }))
+    .toSorted((leftNode, rightNode) => leftNode.index - rightNode.index);
+  const hiddenNodes = network.nodes
+    .filter((node) => node.type === 'hidden')
+    .map((node) => ({
+      index: node.index ?? 0,
+      type: 'hidden' as const,
+      bias: node.bias,
+    }))
+    .toSorted((leftNode, rightNode) => leftNode.index - rightNode.index);
+  const outputNodes = network.nodes
+    .filter((node) => node.type === 'output')
+    .map((node) => ({
+      index: node.index ?? 0,
+      type: 'output' as const,
+      bias: node.bias,
+    }))
+    .toSorted((leftNode, rightNode) => leftNode.index - rightNode.index);
 
   const networkLayers: VisualNetworkNode[][] = [];
   if (inputNodes.length > 0) {
-    networkLayers.push(
-      inputNodes.map((n) => ({
-        index: n.index ?? 0,
-        type: 'input' as const,
-        bias: n.bias,
-      })),
-    );
+    networkLayers.push(inputNodes);
   }
   if (hiddenNodes.length > 0) {
-    networkLayers.push(
-      hiddenNodes.map((n) => ({
-        index: n.index ?? 0,
-        type: 'hidden' as const,
-        bias: n.bias,
-      })),
-    );
+    networkLayers.push(hiddenNodes);
   }
   if (outputNodes.length > 0) {
-    networkLayers.push(
-      outputNodes.map((n) => ({
-        index: n.index ?? 0,
-        type: 'output' as const,
-        bias: n.bias,
-      })),
-    );
+    networkLayers.push(outputNodes);
   }
 
   // Step 4: Try to infer temporal module annotations for recurrent networks.
   let layerAnnotations: NetworkLayerAnnotation[] = [];
   if (topologyMode === 'recurrent' && hiddenNodes.length > 0) {
-    // Try to use network.describeTemporalStructure() if available
+    const nodeIndexByGeneId = new Map<number, number>(
+      network.nodes.flatMap((node) =>
+        typeof node.geneId === 'number'
+          ? [[node.geneId, node.index ?? 0] as const]
+          : [],
+      ),
+    );
+
+    // Try to derive recurrent module annotations from the public descriptor.
     try {
-      const temporalDescription = (
-        network as any
-      ).describeTemporalStructure?.();
-      if (temporalDescription?.recurrentModules) {
+      const temporalDescription = network.describeTemporalStructure();
+      if (temporalDescription.recurrentModules.length > 0) {
         layerAnnotations = temporalDescription.recurrentModules.map(
-          (module: any) => ({
-            label: module.label ?? 'Module',
-            labelLines: module.labelLines ?? [module.label ?? 'Module'],
-            tooltipHeading: module.tooltipHeading ?? module.label ?? 'Module',
-            tooltipBodyParagraphs: module.tooltipBodyParagraphs ?? [],
-            backgroundColor: module.backgroundColor,
-            nodeIndices: module.nodeIndices ?? [],
-          }),
+          (recurrentModule) => {
+            const label =
+              recurrentModule.moduleLabel ??
+              TEMPORAL_MODULE_LABEL_BY_KIND[recurrentModule.kind];
+            const roleLabels = Object.keys(recurrentModule.nodeGeneIdsByRole);
+            const nodeIndices = [
+              ...new Set(
+                Object.values(recurrentModule.nodeGeneIdsByRole)
+                  .flatMap((nodeGeneIds) => nodeGeneIds)
+                  .flatMap((nodeGeneId) => {
+                    const nodeIndex = nodeIndexByGeneId.get(nodeGeneId);
+                    return typeof nodeIndex === 'number' ? [nodeIndex] : [];
+                  }),
+              ),
+            ];
+
+            return {
+              label,
+              labelLines: [label],
+              tooltipHeading: label,
+              tooltipBodyParagraphs: [
+                `Roles: ${roleLabels.join(', ') || 'unlabeled module'}.`,
+              ],
+              nodeIndices,
+            };
+          },
         );
       }
     } catch {

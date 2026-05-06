@@ -32,11 +32,11 @@ Recommended reading order:
 Active selection guide:
 
 - [plans/Roadmap.md](Roadmap.md): dependency-aware execution order across all initiatives.
-- [plans/Browser_Build_and_CDN_Distribution.md](Browser_Build_and_CDN_Distribution.md): browser packaging, CDN usage, and distribution ergonomics.
+- [plans/completed/Browser_Build_and_CDN_Distribution.md](completed/Browser_Build_and_CDN_Distribution.md): browser packaging, CDN usage, and distribution ergonomics. [DONE]
 - [plans/Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md): contracts between evolution workflows and gradient-based training.
-- [plans/NEATchat.md](NEATchat.md): tiny online chatbot example planning, scoped as a learnability demo rather than a large-scale language-model training lane.
+- [plans/NEATchat.plans.md](NEATchat.plans.md): planned NEATchat follow-up lane for turning the closed toy demo into a stronger conversational system, gated on Phase 4 substrate readiness plus recurrent ONNX hardening before implementation starts.
 - [plans/Memory_Optimization.md](Memory_Optimization.md): scaling, memory layout, and strategies for very large networks.
-- [plans/Network_Visualization_Export_Schema.md](Network_Visualization_Export_Schema.md): stable export schema for visualization and inspection tooling.
+- [plans/completed/Network_Visualization_Export_Schema.plans.md](completed/Network_Visualization_Export_Schema.plans.md): archived visualization export schema baseline for inspection tooling and DOT/schema output. [DONE]
 - [plans/ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): ONNX export/import architecture and rollout phases.
 - [plans/Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md): checkpointing, persistence, save/resume workflows.
 - [plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): prebuilt architecture constructors and sequence-oriented builders. [DONE]
@@ -46,14 +46,13 @@ Active selection guide:
 - [plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md): NGE racing benchmark — single-agent sensory specialization and behavioral drives.
 - [plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md): NGE ant hive ecosystem — multi-agent stigmergy, role differentiation, and collective intelligence.
 - [plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md): NGE predator/prey co-evolution — sensory arms race and reproduction mode dynamics.
-- [plans/flappy-network-visualizer-hover-highlight.plans.md](flappy-network-visualizer-hover-highlight.plans.md): active Flappy browser network visualizer hover and highlight work.
 - [plans/completed/README.md](completed/README.md): archive map for reopen-only baselines and their logs.
 
 Task-to-plan trigger phrases:
 
 - roadmap, sequence, dependency order, what comes first: `plans/Roadmap.md`
 - construct from parts, graph assembly, deterministic builder reopen: `plans/completed/Construct_From_Parts_Graph_Assembly.md`
-- browser bundle, CDN, browser-first usage: `plans/Browser_Build_and_CDN_Distribution.md`
+- browser bundle, CDN, browser-first usage: `plans/completed/Browser_Build_and_CDN_Distribution.md`
 - worker serialization, transfer cost, fastpath: `plans/Worker_Friendly_Network_Serialization_Fastpath.md`
 - workers, threads, parallel evaluation: `plans/Turnkey_Multithread_Evaluation_API.md`
 - checkpoint, resume, save population: `plans/Population_Save_Resume_and_Checkpointing.md`
@@ -61,10 +60,9 @@ Task-to-plan trigger phrases:
 - preconfigured models, MLP, LSTM, GRU, NARX builders: `plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
 - ONNX, import/export interoperability: `plans/ONNX_EXPORT_PLAN.md`
 - memory pressure, large networks, compact storage: `plans/Memory_Optimization.md`
-- visualization, schema, inspect network shape: `plans/Network_Visualization_Export_Schema.md`
-- examples, tutorials, learning path, onboarding: `plans/Interactive_Examples_and_Learning_Path.md`
-- neatchat, chatbot, online language learning, tiny conversation bot: `plans/NEATchat.md`
-- flappy visualizer hover, connection highlight, pointer-driven emphasis: `plans/flappy-network-visualizer-hover-highlight.plans.md`
+- visualization, schema, inspect network shape: `plans/completed/Network_Visualization_Export_Schema.plans.md`
+- examples, tutorials, learning path, onboarding: `plans/completed/Interactive_Examples_and_Learning_Path.plans.md`
+- neatchat, chatbot, conversational system, pretrained seed import, retrieval memory, online language learning, tiny conversation bot: `plans/NEATchat.plans.md`
 - evo-devo, NGE, morphology, research-heavy extensions, computation motifs, DNA program, neuromodulation, reproduction: `plans/NEAT_Genesis_EvoDevo.md`
 - racing benchmark, optimal line, behavioral drives, overtaking, self-play racecraft, NGE racing: `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
 - ant hive, stigmergy, pheromone, role differentiation, colony, collective intelligence, multi-agent: `plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md`

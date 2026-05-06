@@ -22,5 +22,9 @@ jobs:
         run: npm run lint
       - name: Build
         run: npm run build
+      - name: Build browser bundle
+        run: npm run build:browser
+      - name: Smoke test browser bundle
+        run: npm run smoke:browser
       - name: Run smoke tests
         run: npm run test:smoke

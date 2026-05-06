@@ -60,6 +60,26 @@ Current intended ownership split:
   structure, `[PLANNED]/[WIP]/[DONE]` status markers, compression,
   active-plan `Handoff query` continuity, and terminal closure into matching
   `.logs.md` records archived under `plans/completed/`.
+- `worker-inference-transport`: canonical workflow for worker-friendly
+  inference payload extraction, transport ladders, transfer semantics, and
+  browser/Node worker parity.
+- `multithread-evaluation`: canonical workflow for ordered worker-pool batch
+  evaluation, queueing, dataset shipping, and single-thread fallback.
+- `checkpointing-persistence`: canonical workflow for versioned full/light
+  checkpoints, strict restore behavior, and durable resume state.
+- `hybrid-training-interop`: canonical workflow for deterministic
+  parameter-vector layouts, isolated fine-tuning, and persistence policy.
+- `reproducibility-contracts`: canonical cross-cutting workflow for seed,
+  replay, ordering, and exact-vs-bounded determinism language.
+- `nge-core-algorithm`: canonical workflow for Phase 7 core semantics such as
+  `NGE_DNA`, deterministic development, lifecycle policy, memory tiers,
+  neuromodulation, and reproduction.
+- `nge-benchmark-workflow`: canonical workflow for Phase 7 benchmark
+  methodology, curricula, fairness contracts, observability, and demo-harness
+  evaluation.
+- `neatchat-systems`: canonical workflow for the dependency-gated NEATchat
+  follow-up system, including multi-tier memory, retrieval/routing, and
+  branchable conversational state.
 - `Boundary Mapper`: read-only seam mapping and structural handoff into
   `solid-split`.
 - `Docs Scout`: read-only documentation reconnaissance and handoff into
@@ -68,6 +88,24 @@ Current intended ownership split:
   `plan-alignment`.
 - `Visualizer Scout`: read-only visualizer reconnaissance and handoff into
   `visualizer-workflow`.
+- `Worker Payload Scout`: read-only payload/transport reconnaissance and handoff
+  into `worker-inference-transport`.
+- `Evaluation Pool Scout`: read-only worker-pool reconnaissance and handoff
+  into `multithread-evaluation`.
+- `Checkpoint Scout`: read-only save/resume reconnaissance and handoff into
+  `checkpointing-persistence`.
+- `Hybrid Interop Scout`: read-only parameter-vector/fine-tuning reconnaissance
+  and handoff into `hybrid-training-interop`.
+- `Browser Runtime Scout`: read-only browser-runtime and bundle reconnaissance
+  and handoff into `browser-build`.
+- `Determinism Scout`: read-only replay and determinism reconnaissance and
+  handoff into `reproducibility-contracts`.
+- `NGE Core Scout`: read-only Phase 7 core-semantics reconnaissance and handoff
+  into `nge-core-algorithm`.
+- `NGE Benchmark Scout`: read-only Phase 7 benchmark reconnaissance and handoff
+  into `nge-benchmark-workflow`.
+- `NEATchat Scout`: read-only NEATchat follow-up reconnaissance and handoff into
+  `neatchat-systems`.
 
 Use `educational-docs` by default when the task is primarily about documentation quality, generated README tone, source-mapped JSDoc improvement, Mermaid diagrams, citations, or Wikimedia-safe visuals.
 
@@ -85,6 +123,19 @@ Use `visualizer-workflow` by default when the task is to debug or improve
 visualizer UI behavior in browser demos, especially layout width allocation,
 overflow scrolling contracts, hover hit-area sync, tooltip reliability, or
 parity with a reference visualizer.
+
+Use `worker-inference-transport`, `multithread-evaluation`,
+`checkpointing-persistence`, `hybrid-training-interop`, and
+`reproducibility-contracts` by default when Phase 4 or adjacent foundation work
+is respectively about payloads, worker pools, checkpoints, parameter vectors,
+or determinism language.
+
+Use `nge-core-algorithm` and `nge-benchmark-workflow` by default when Phase 7
+work needs to keep algorithm-core semantics separate from benchmark/demo
+methodology.
+
+Use `neatchat-systems` by default when the task is about the dependency-gated
+NEATchat follow-up system rather than the closed toy demo baseline.
 
 For split or refactor work with meaningful documentation scope, let `solid-split` own the boundary work and `educational-docs` own documentation quality.
 

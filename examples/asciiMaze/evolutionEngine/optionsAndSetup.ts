@@ -27,6 +27,7 @@ import { FitnessEvaluator } from '../fitness';
 import {
   buildExampleArchitectureProfileNetwork,
   DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID,
+  resolveExampleArchitectureProfile,
   type ExampleArchitectureProfileId,
 } from '../../architectureProfiles';
 import type { IFitnessEvaluationContext } from '../fitness.types';
@@ -167,9 +168,10 @@ export const normalizeRunOptions = (
 
   // Step 2: pull algorithm-level settings with clear defaults and descriptive locals.
   const {
-    allowRecurrent = true,
+    allowRecurrent,
     architectureProfileId,
-    popSize = 500,
+    adaptiveMutation,
+    popSize = 100,
     maxStagnantGenerations = 500,
     minProgressToPass = 95,
     maxGenerations = Infinity,
@@ -222,6 +224,12 @@ export const normalizeRunOptions = (
     (initialPopulation === undefined
       ? DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID
       : undefined);
+  const allowRecurrentByProfile =
+    effectiveProfileId !== undefined
+      ? resolveExampleArchitectureProfile('ascii-maze', effectiveProfileId)
+          .recurrent
+      : false;
+  const effectiveAllowRecurrent = allowRecurrent ?? allowRecurrentByProfile;
   const seedNetwork =
     effectiveProfileId !== undefined
       ? buildExampleArchitectureProfileNetwork('ascii-maze', effectiveProfileId)
@@ -236,7 +244,7 @@ export const normalizeRunOptions = (
     reportingConfig,
     fitnessEvaluator: options?.fitnessEvaluator,
     popSize,
-    allowRecurrent,
+    allowRecurrent: effectiveAllowRecurrent,
     maxStagnantGenerations,
     minProgressToPass,
     maxGenerations,
@@ -267,8 +275,11 @@ export const normalizeRunOptions = (
     disableBaldwinianRefinement,
     neatOptions: {
       popSize,
-      allowRecurrent,
-      adaptiveMutation: { enabled: true, strategy: 'twoTier' },
+      allowRecurrent: effectiveAllowRecurrent,
+      adaptiveMutation: adaptiveMutation ?? {
+        enabled: true,
+        strategy: 'twoTier',
+      },
       multiObjective: {
         enabled: true,
         complexityMetric: 'nodes',

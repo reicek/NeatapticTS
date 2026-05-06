@@ -64,13 +64,46 @@ Both `InferenceChannel` and `SharedInferenceWorker` default to **inline blob** �
 - `src/architecture/network/standalone/network.standalone.utils.setup.ts` — schedule extraction logic. Reused for `extractNetworkInferenceIR`.
 - `src/multithreading/workers/browser/testworker.ts` — existing inline blob pattern. Matched for new worker receivers.
 
+## Downstream unlock — NEATchat follow-up
+
+This plan is one of the hard blockers for `plans/NEATchat.plans.md`.
+NEATchat should not consume this boundary until the worker-payload layer
+exposes a stable predictor substrate rather than only a future transport
+sketch.
+
+For NEATchat, this plan is considered ready only when all of the following are
+true:
+
+1. Phase 0 is complete, so `NetworkInferenceIR` and
+   `extractNetworkInferenceIR(...)` are deterministic and documented.
+2. Phase 1 is complete, so `PortableInferencePayload` and a stable
+   `createInferencePredictor(...)` path exist as the universal fallback.
+3. Predictor reset semantics are explicit enough for recurrent chat sessions:
+   NEATchat must be able to distinguish conversation carry-state from per-job
+   reset behavior without inventing a private protocol.
+4. The public payload surface is documented as reusable by downstream worker
+   APIs instead of being an Astro Bird-only transport experiment.
+
+This plan alone does not unlock background chat adaptation. NEATchat still also
+depends on `plans/Turnkey_Multithread_Evaluation_API.md` for worker-pool
+scheduling and on checkpointing plus parameter-vector contracts for durable
+state and candidate promotion.
+
+## Recommended agent + skill combo by phase
+
+- Phase 0 — `Worker Payload Scout` + `worker-inference-transport`
+- Phase 1 — `Worker Payload Scout` + `worker-inference-transport`
+- Phase 2 — `Worker Payload Scout` + `worker-inference-transport`
+- Phase 3 — `Worker Payload Scout` + `worker-inference-transport`
+- Phase 4 — `Worker Payload Scout` + `worker-inference-transport`
+
 ---
 
 ## Phase 0 — Shared Inference IR [PLANNED]
 
 > Prerequisite — blocks all other phases.
 
-### Step 0.1 — Define `NetworkInferenceIR` type [IN PROGRESS]
+### Step 0.1 — Define `NetworkInferenceIR` type [PLANNED]
 
 File: `network.worker-payload.types.ts`
 
