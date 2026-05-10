@@ -10,6 +10,7 @@ import {
 type FastSlabActivate = (input: number[]) => number[];
 type CanUseFastSlab = () => boolean;
 type ActivateBatch = (inputs: unknown) => unknown;
+type ForwardWindowed = (inputs: unknown, options?: unknown) => unknown;
 
 function setFastSlabHooks(
   network: Network,
@@ -30,6 +31,18 @@ function setFastSlabHooks(
 function invokeActivateBatch(network: Network, inputs: unknown): unknown {
   const activateBatch = Reflect.get(network, 'activateBatch') as ActivateBatch;
   return activateBatch.call(network, inputs);
+}
+
+function invokeForwardWindowed(
+  network: Network,
+  inputs: unknown,
+  options?: unknown,
+): unknown {
+  const forwardWindowed = Reflect.get(
+    network,
+    'forwardWindowed',
+  ) as ForwardWindowed;
+  return forwardWindowed.call(network, inputs, options);
 }
 
 function setTopoDirty(network: Network, isDirty: boolean): void {
@@ -834,6 +847,174 @@ describe('network activate chapter', () => {
     });
   });
 
+  describe('activate()', () => {
+    describe('given sequence-buffer reuse is enabled', () => {
+      it('reuses a two-slot output ring across repeated activations', () => {
+        // Arrange
+        const network = new Network(2, 1, {
+          seed: 19,
+          reuseSequenceBuffers: true,
+        });
+        const firstOutput = network.activate([0.1, 0.2]);
+        const secondOutput = network.activate([0.3, 0.4]);
+
+        // Act
+        const thirdOutput = network.activate([0.5, 0.6]);
+
+        // Assert
+        expect({
+          firstReferenceReused: thirdOutput === firstOutput,
+          secondReferenceReused: thirdOutput === secondOutput,
+        }).toEqual({
+          firstReferenceReused: true,
+          secondReferenceReused: false,
+        });
+      });
+
+      it('preserves sequence output values relative to detached activation', () => {
+        // Arrange
+        const detachedNetwork = new Network(2, 1, {
+          enforceAcyclic: true,
+          seed: 20,
+        });
+        const reusableNetwork = new Network(2, 1, {
+          enforceAcyclic: true,
+          seed: 20,
+          reuseSequenceBuffers: true,
+        });
+        const inputSequence = [
+          [0.1, 0.2],
+          [0.3, 0.4],
+          [0.5, 0.6],
+        ];
+        const detachedOutputs = inputSequence.map((inputVector) =>
+          detachedNetwork.activate(inputVector)[0],
+        );
+
+        // Act
+        const reusableOutputs = inputSequence.map((inputVector) =>
+          reusableNetwork.activate(inputVector)[0],
+        );
+
+        // Assert
+        expect(reusableOutputs).toEqual(detachedOutputs);
+      });
+
+      it('keeps reusable sequence rings isolated per network', () => {
+        // Arrange
+        const firstNetwork = new Network(2, 1, {
+          seed: 21,
+          reuseSequenceBuffers: true,
+        });
+        const secondNetwork = new Network(2, 1, {
+          seed: 22,
+          reuseSequenceBuffers: true,
+        });
+        const firstOutput = firstNetwork.activate([0.2, 0.3]);
+        const firstValue = firstOutput[0];
+
+        // Act
+        const secondOutput = secondNetwork.activate([0.4, 0.5]);
+
+        // Assert
+        expect({
+          firstReferenceShared: firstOutput === secondOutput,
+          firstValueAfterOtherNetworkActivation: firstOutput[0],
+        }).toEqual({
+          firstReferenceShared: false,
+          firstValueAfterOtherNetworkActivation: firstValue,
+        });
+      });
+
+      it('replaces a stale reusable ring when the cached output width is wrong', () => {
+        // Arrange
+        const network = new Network(1, 1, {
+          seed: 23,
+          reuseSequenceBuffers: true,
+        });
+        const runtimeNetwork = network as unknown as {
+          _sequenceOutputRing?: number[][];
+          _sequenceOutputRingIndex?: number;
+        };
+        const staleSequenceOutputRing = [
+          [-1, -1],
+          [-1, -1],
+        ];
+
+        runtimeNetwork._sequenceOutputRing = staleSequenceOutputRing;
+        runtimeNetwork._sequenceOutputRingIndex = 1;
+
+        // Act
+        const output = network.activate([0.7]);
+
+        // Assert
+        expect({
+          outputLength: output.length,
+          reusedStaleReference: output === staleSequenceOutputRing[1],
+        }).toEqual({
+          outputLength: 1,
+          reusedStaleReference: false,
+        });
+      });
+
+      it('replaces a stale reusable ring when the cached ring depth is wrong', () => {
+        // Arrange
+        const network = new Network(1, 1, {
+          seed: 24,
+          reuseSequenceBuffers: true,
+        });
+        const runtimeNetwork = network as unknown as {
+          _sequenceOutputRing?: number[][];
+          _sequenceOutputRingIndex?: number;
+        };
+        const staleSequenceOutputRing = [[-1]];
+
+        runtimeNetwork._sequenceOutputRing = staleSequenceOutputRing;
+        runtimeNetwork._sequenceOutputRingIndex = 0;
+
+        // Act
+        const output = network.activate([0.9]);
+
+        // Assert
+        expect({
+          cachedRingDepth: runtimeNetwork._sequenceOutputRing?.length,
+          reusedStaleReference: output === staleSequenceOutputRing[0],
+        }).toEqual({
+          cachedRingDepth: 2,
+          reusedStaleReference: false,
+        });
+      });
+
+      it('falls back to the first reusable slot when the cached ring cursor is missing', () => {
+        // Arrange
+        const network = new Network(1, 1, {
+          seed: 25,
+          reuseSequenceBuffers: true,
+        });
+        const runtimeNetwork = network as unknown as {
+          _sequenceOutputRing?: number[][];
+          _sequenceOutputRingIndex?: number;
+        };
+        const cachedSequenceOutputRing = [[-1], [-2]];
+
+        runtimeNetwork._sequenceOutputRing = cachedSequenceOutputRing;
+        runtimeNetwork._sequenceOutputRingIndex = undefined;
+
+        // Act
+        const output = network.activate([0.11]);
+
+        // Assert
+        expect({
+          nextRingCursor: runtimeNetwork._sequenceOutputRingIndex,
+          reusedFirstSlot: output === cachedSequenceOutputRing[0],
+        }).toEqual({
+          nextRingCursor: 1,
+          reusedFirstSlot: true,
+        });
+      });
+    });
+  });
+
   describe('activateBatch()', () => {
     describe('given a valid input matrix', () => {
       describe('when multiple rows are activated', () => {
@@ -945,6 +1126,99 @@ describe('network activate chapter', () => {
           expect(activateWithInvalidCollection).toThrow(
             /inputs must be an array/,
           );
+        });
+      });
+    });
+  });
+
+  describe('forwardWindowed()', () => {
+    describe('given one recurrent output depends on carried state across windows', () => {
+      it('matches step-by-step activate() output across window boundaries', () => {
+        // Arrange
+        const network = new Network(1, 1, {
+          enforceAcyclic: false,
+          seed: 26,
+        });
+        const outputNode = network.nodes.find(
+          (nodeEntry) => nodeEntry.type === 'output',
+        );
+
+        if (!outputNode) {
+          throw new Error('Expected one output node to exist');
+        }
+
+        configureDeterministicNode(outputNode);
+        network.connections[0].weight = 1;
+        network.connect(outputNode, outputNode, 0.5);
+        setFastSlabHooks(network, {
+          canUseFastSlab: () => false,
+        });
+
+        const inputSequence = [[1], [0], [0], [1]];
+        const expectedOutputs = inputSequence.map((inputVector) =>
+          network.activate(inputVector),
+        );
+
+        network.clear();
+
+        // Act
+        const windowedOutputs = invokeForwardWindowed(network, inputSequence, {
+          windowSize: 2,
+        }) as number[][];
+
+        // Assert
+        expect(windowedOutputs).toEqual(expectedOutputs);
+      });
+    });
+  });
+
+  describe('forwardWindowedAsync()', () => {
+    describe('given one recurrent output depends on carried state across windows', () => {
+      it('matches step-by-step activate() output while yielding between completed windows', async () => {
+        // Arrange
+        const network = new Network(1, 1, {
+          enforceAcyclic: false,
+          seed: 27,
+        });
+        const outputNode = network.nodes.find(
+          (nodeEntry) => nodeEntry.type === 'output',
+        );
+        let yieldCount = 0;
+
+        if (!outputNode) {
+          throw new Error('Expected one output node to exist');
+        }
+
+        configureDeterministicNode(outputNode);
+        network.connections[0].weight = 1;
+        network.connect(outputNode, outputNode, 0.5);
+        setFastSlabHooks(network, {
+          canUseFastSlab: () => false,
+        });
+
+        const inputSequence = [[1], [0], [0], [1]];
+        const expectedOutputs = inputSequence.map((inputVector) =>
+          network.activate(inputVector),
+        );
+
+        network.clear();
+
+        // Act
+        const windowedOutputs = await network.forwardWindowedAsync(
+          inputSequence,
+          {
+            windowSize: 2,
+            yieldAfterWindows: 1,
+            yieldControl: async () => {
+              yieldCount += 1;
+            },
+          },
+        );
+
+        // Assert
+        expect({ windowedOutputs, yieldCount }).toEqual({
+          windowedOutputs: expectedOutputs,
+          yieldCount: 1,
         });
       });
     });

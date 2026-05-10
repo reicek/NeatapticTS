@@ -55,6 +55,51 @@ const compactTuple: CompactSerializedNetworkTuple = [
 ];
 ```
 
+### CompressedSerializedConnectionBlock
+
+Array-oriented compressed connection payload for compact serialization.
+
+This keeps the compact serializer lossless while removing per-connection key
+repetition and object allocation overhead from the transport payload.
+
+### CompressedSerializedConnectionWeights
+
+Lossless weight-word payload for compressed compact serialization.
+
+The encoding stores each non-zero float64 weight as four signed 16-bit words
+and then delta-encodes those words across the non-zero connection sequence.
+Exact positive-zero spans are represented separately as run metadata.
+
+### CompressedSerializedIndexRun
+
+Index-aligned run metadata used by compressed connection payloads.
+
+A run starts at `startIndex` and covers `length` contiguous connection rows.
+
+### CompressedSerializedNetwork
+
+Compressed compact serialization payload.
+
+This format is additive to the legacy compact tuple API: it keeps the same
+runtime reconstruction semantics while using array-oriented connection data
+to reduce UTF-8 payload size for storage or transport.
+
+### CompressedSerializedNetworkArchive
+
+Node-side archive wrapper around a compressed compact serialization payload.
+
+The wrapped `payload` string stores the UTF-8 JSON form of
+`CompressedSerializedNetwork` after gzip or zstd compression, encoded as
+base64 for portable storage.
+
+### CompressedSerializedNetworkArchiveCompression
+
+Supported Node-side archive compression codecs for compressed payloads.
+
+### CompressedSerializedNetworkArchiveOptions
+
+Optional settings for archiving one compressed network payload.
+
 ### ConnectionInternalsWithEnabled
 
 Connection view with optional enabled flag.
@@ -285,6 +330,25 @@ Parameters:
 
 Returns: Nothing.
 
+### applySerializedRuntimeState
+
+```ts
+applySerializedRuntimeState(
+  rebuiltNetwork: default,
+  activations: number[],
+  states: number[],
+): void
+```
+
+Restore live activation and recurrent-state scalars after structural import.
+
+Parameters:
+- `rebuiltNetwork` - Reconstructed runtime network.
+- `activations` - Activation values aligned to node order.
+- `states` - Recurrent state values aligned to node order.
+
+Returns: Nothing.
+
 ### cloneNetworkJsonExtensions
 
 ```ts
@@ -329,6 +393,108 @@ import { deserialize } from './network.serialize.utils';
 
 const rebuiltNetwork = deserialize(compactTuple, 2, 1);
 ```
+
+### deserializeCompressed
+
+```ts
+deserializeCompressed(
+  data: CompressedSerializedNetwork,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): default
+```
+
+Rebuilds a network instance from the compressed compact payload.
+
+Parameters:
+- `data` - Compressed compact payload.
+- `inputSize` - Optional input-size override.
+- `outputSize` - Optional output-size override.
+
+Returns: Reconstructed network instance.
+
+### deserializeCompressedArchive
+
+```ts
+deserializeCompressedArchive(
+  data: CompressedSerializedNetworkArchive,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): default
+```
+
+Rebuilds a network instance from the compressed archive wrapper.
+
+Parameters:
+- `data` - Archived compressed payload.
+- `inputSize` - Optional input-size override.
+- `outputSize` - Optional output-size override.
+
+Returns: Reconstructed network instance.
+
+### deserializeCompressedArchiveAsync
+
+```ts
+deserializeCompressedArchiveAsync(
+  data: CompressedSerializedNetworkArchive,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+  options: CompressedArchiveDecodeOptions,
+): Promise<default>
+```
+
+Rebuilds a network instance from the compressed archive wrapper with async runtime codecs.
+
+Browser runtimes prefer the archive stream path so payload hydration can stay
+off the synchronous main-thread lane, while Node falls back to the existing
+archive owner when browser streams are unavailable.
+
+Parameters:
+- `data` - Archived compressed payload.
+- `inputSize` - Optional input-size override.
+- `outputSize` - Optional output-size override.
+
+Returns: Reconstructed network instance.
+
+### deserializeCompressedArchiveAsyncWithMetrics
+
+```ts
+deserializeCompressedArchiveAsyncWithMetrics(
+  data: CompressedSerializedNetworkArchive,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+  options: CompressedArchiveDecodeOptions,
+): Promise<CompressedArchiveDecodeResult<default>>
+```
+
+Rebuild a network archive with async codecs and report size plus decode-time metrics.
+
+Parameters:
+- `data` - Archived compressed payload.
+- `inputSize` - Optional input-size override.
+- `outputSize` - Optional output-size override.
+- `options` - Optional incremental decode callbacks.
+
+Returns: Rebuilt network plus decode metrics.
+
+### deserializeCompressedArchiveWithMetrics
+
+```ts
+deserializeCompressedArchiveWithMetrics(
+  data: CompressedSerializedNetworkArchive,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): CompressedArchiveDecodeResult<default>
+```
+
+Rebuild a network archive and report size plus decode-time metrics.
+
+Parameters:
+- `data` - Archived compressed payload.
+- `inputSize` - Optional input-size override.
+- `outputSize` - Optional output-size override.
+
+Returns: Rebuilt network plus decode metrics.
 
 ### fromJSONImpl
 
@@ -395,6 +561,94 @@ const sourceNetwork = new Network(2, 1);
 const compactTuple = serialize.call(sourceNetwork);
 const rebuiltNetwork = deserialize(compactTuple);
 ```
+
+### serializeCompressed
+
+```ts
+serializeCompressed(): CompressedSerializedNetwork
+```
+
+Serializes a network instance into the compressed compact format.
+
+This path keeps round-trip semantics identical to `serialize()` while
+replacing the object-per-connection payload with one array-oriented block.
+
+Parameters:
+- `this` - Bound network instance.
+
+Returns: Compressed compact payload.
+
+### serializeCompressedArchive
+
+```ts
+serializeCompressedArchive(
+  options: CompressedSerializedNetworkArchiveOptions | undefined,
+): CompressedSerializedNetworkArchive
+```
+
+Serializes a network instance into the compressed archive wrapper.
+
+This is the Node-side storage path for `serializeCompressed()`: it first
+builds the exact compressed JSON payload, then applies gzip or zstd above
+that payload without changing replay semantics.
+
+Parameters:
+- `this` - Bound network instance.
+- `options` - Optional archive compression settings.
+
+Returns: Archived compressed payload.
+
+### serializeCompressedArchiveAsync
+
+```ts
+serializeCompressedArchiveAsync(
+  options: CompressedSerializedNetworkArchiveOptions | undefined,
+): Promise<CompressedSerializedNetworkArchive>
+```
+
+Serializes a network instance into the compressed archive wrapper with async runtime codecs.
+
+Browser runtimes prefer the archive stream path so payload compression can stay
+off the synchronous main-thread lane, while Node falls back to the existing
+archive owner when browser streams are unavailable.
+
+Parameters:
+- `this` - Bound network instance.
+- `options` - Optional archive compression settings.
+
+Returns: Archived compressed payload.
+
+### serializeCompressedArchiveAsyncWithMetrics
+
+```ts
+serializeCompressedArchiveAsyncWithMetrics(
+  options: CompressedSerializedNetworkArchiveOptions | undefined,
+): Promise<CompressedArchiveEncodeResult<CompressedSerializedNetworkArchive>>
+```
+
+Serialize a network archive with async codecs and report size plus encode-time metrics.
+
+Parameters:
+- `this` - Bound network instance.
+- `options` - Optional archive compression settings.
+
+Returns: Archived payload plus encode metrics.
+
+### serializeCompressedArchiveWithMetrics
+
+```ts
+serializeCompressedArchiveWithMetrics(
+  options: CompressedSerializedNetworkArchiveOptions | undefined,
+): CompressedArchiveEncodeResult<CompressedSerializedNetworkArchive>
+```
+
+Serialize a network archive and report size plus encode-time metrics.
+
+Parameters:
+- `this` - Bound network instance.
+- `options` - Optional archive compression settings.
+
+Returns: Archived payload plus encode metrics.
 
 ### SerializedConnection
 
@@ -1074,6 +1328,172 @@ Parameters:
 - `formatVersion` - Incoming format version.
 
 Returns: Nothing.
+
+## architecture/network/serialize/network.serialize.genome.utils.ts
+
+### COMPRESSED_GENOME_ARCHIVE_FORMAT
+
+Stable archive wrapper tag used for strict-genome archives.
+
+### COMPRESSED_GENOME_FORMAT
+
+Stable payload tag used for strict-genome archives.
+
+### CompressedSerializedGenomeArchive
+
+JSON-safe archive wrapper for one strict genome contract.
+
+### CompressedSerializedGenomeArchiveOptions
+
+Archive options for strict-genome compression.
+
+### deserializeCompressedGenomeArchive
+
+```ts
+deserializeCompressedGenomeArchive(
+  compressedArchive: CompressedSerializedGenomeArchive,
+  runtimeHints: GenomeMaterializationRuntimeHints,
+): default
+```
+
+Materialize one runnable phenotype from a compressed strict-genome archive.
+
+Parameters:
+- `compressedArchive` - Base64-wrapped strict-genome archive payload.
+- `runtimeHints` - Optional phenotype-only metadata to restore.
+
+Returns: Rebuilt executable runtime phenotype.
+
+### deserializeCompressedGenomeArchiveAsync
+
+```ts
+deserializeCompressedGenomeArchiveAsync(
+  compressedArchive: CompressedSerializedGenomeArchive,
+  runtimeHints: GenomeMaterializationRuntimeHints,
+  options: CompressedArchiveDecodeOptions,
+): Promise<default>
+```
+
+Materialize one runnable phenotype from a compressed strict-genome archive with async decode progress.
+
+Parameters:
+- `compressedArchive` - Base64-wrapped strict-genome archive payload.
+- `runtimeHints` - Optional phenotype-only metadata to restore.
+- `options` - Optional incremental decode callbacks.
+
+Returns: Rebuilt executable runtime phenotype.
+
+### deserializeCompressedGenomeArchiveAsyncWithMetrics
+
+```ts
+deserializeCompressedGenomeArchiveAsyncWithMetrics(
+  compressedArchive: CompressedSerializedGenomeArchive,
+  runtimeHints: GenomeMaterializationRuntimeHints,
+  options: CompressedArchiveDecodeOptions,
+): Promise<CompressedArchiveDecodeResult<default>>
+```
+
+Materialize one runnable phenotype from a compressed strict-genome archive with async decode metrics.
+
+Parameters:
+- `compressedArchive` - Base64-wrapped strict-genome archive payload.
+- `runtimeHints` - Optional phenotype-only metadata to restore.
+- `options` - Optional incremental decode callbacks.
+
+Returns: Rebuilt network plus decode metrics.
+
+### deserializeCompressedGenomeArchiveWithMetrics
+
+```ts
+deserializeCompressedGenomeArchiveWithMetrics(
+  compressedArchive: CompressedSerializedGenomeArchive,
+  runtimeHints: GenomeMaterializationRuntimeHints,
+): CompressedArchiveDecodeResult<default>
+```
+
+Materialize one runnable phenotype from a compressed strict-genome archive and report decode metrics.
+
+Parameters:
+- `compressedArchive` - Base64-wrapped strict-genome archive payload.
+- `runtimeHints` - Optional phenotype-only metadata to restore.
+
+Returns: Rebuilt network plus decode metrics.
+
+### parseCompressedGenomeArchive
+
+```ts
+parseCompressedGenomeArchive(
+  compressedArchive: CompressedSerializedGenomeArchive,
+): NeatGenome
+```
+
+Parse one archived strict genome contract back into validated JSON state.
+
+Parameters:
+- `compressedArchive` - Base64-wrapped strict-genome archive payload.
+
+Returns: Restored strict genome contract.
+
+### parseCompressedGenomeArchiveAsync
+
+```ts
+parseCompressedGenomeArchiveAsync(
+  compressedArchive: CompressedSerializedGenomeArchive,
+  options: CompressedArchiveDecodeOptions,
+): Promise<NeatGenome>
+```
+
+Parse one archived strict genome contract with async runtime codecs and progress callbacks.
+
+Browser runtimes prefer the streaming decode path so large archives can emit
+incremental progress while `DecompressionStream` inflates the wrapped UTF-8
+JSON bytes. Node falls back to one completed snapshot.
+
+Parameters:
+- `compressedArchive` - Base64-wrapped strict-genome archive payload.
+- `options` - Optional incremental decode callbacks.
+
+Returns: Restored strict genome contract.
+
+### serializeCompressedGenomeArchive
+
+```ts
+serializeCompressedGenomeArchive(
+  options: CompressedSerializedGenomeArchiveOptions,
+): CompressedSerializedGenomeArchive
+```
+
+Archive one runtime phenotype through the strict `NeatGenome` contract.
+
+This keeps the payload structural and replay-safe: runtime activation traces,
+slab allocations, and other phenotype-only state remain outside the archive.
+
+Parameters:
+- `options` - Optional archive codec and genome-capture settings.
+
+Returns: Base64-wrapped compressed strict-genome archive.
+
+Example:
+
+```ts
+const archive = serializeCompressedGenomeArchive.call(network);
+const rebuiltNetwork = deserializeCompressedGenomeArchive(archive);
+```
+
+### serializeCompressedGenomeArchiveWithMetrics
+
+```ts
+serializeCompressedGenomeArchiveWithMetrics(
+  options: CompressedSerializedGenomeArchiveOptions,
+): CompressedArchiveEncodeResult<CompressedSerializedGenomeArchive>
+```
+
+Archive one runtime phenotype through the strict genome contract and report encode metrics.
+
+Parameters:
+- `options` - Optional archive codec and genome-capture settings.
+
+Returns: Archived strict-genome payload plus encode metrics.
 
 ## architecture/network/serialize/network.serialize.public.utils.ts
 
@@ -1806,5 +2226,685 @@ Warns about unknown activation and fallback to identity.
 
 Parameters:
 - `squashName` - Unknown activation name.
+
+Returns: Nothing.
+
+## architecture/network/serialize/network.serialize.compression.utils.ts
+
+### collectDecodedArchivePayloadBytes
+
+```ts
+collectDecodedArchivePayloadBytes(
+  decodedStream: ReadableStream<Uint8Array<ArrayBufferLike>>,
+  encodedByteLength: number,
+  options: CompressedArchiveDecodeOptions,
+): Promise<Uint8Array<ArrayBufferLike>>
+```
+
+Collect one decoded archive stream into bytes while surfacing chunk progress.
+
+The implementation buffers one chunk ahead so the final emitted snapshot can
+mark `done: true` on the last real decoded chunk rather than on a synthetic
+zero-byte completion event.
+
+Parameters:
+- `decodedStream` - Stream of decoded UTF-8 payload chunks.
+- `encodedByteLength` - Total compressed archive byte length.
+- `options` - Optional incremental progress callbacks.
+
+Returns: Concatenated decoded payload bytes.
+
+### compressArchivePayloadBytes
+
+```ts
+compressArchivePayloadBytes(
+  payloadBytes: Uint8Array<ArrayBufferLike>,
+  compression: CompressedSerializedNetworkArchiveCompression,
+): Uint8Array<ArrayBufferLike>
+```
+
+Compress UTF-8 payload bytes with one supported Node-side archive codec.
+
+Parameters:
+- `payloadBytes` - UTF-8 payload bytes.
+- `compression` - Archive compression codec.
+
+Returns: Compressed payload bytes.
+
+### compressArchivePayloadBytesAsync
+
+```ts
+compressArchivePayloadBytesAsync(
+  payloadBytes: Uint8Array<ArrayBufferLike>,
+  compression: CompressedSerializedNetworkArchiveCompression,
+): Promise<Uint8Array<ArrayBufferLike>>
+```
+
+Compress UTF-8 payload bytes with the best available async archive codec.
+
+Parameters:
+- `payloadBytes` - UTF-8 payload bytes.
+- `compression` - Archive compression codec.
+
+Returns: Compressed payload bytes.
+
+### COMPRESSED_NETWORK_ARCHIVE_ENCODING
+
+Stable string encoding used for archived compressed payload bytes.
+
+### COMPRESSED_NETWORK_ARCHIVE_FORMAT
+
+Stable format tag for the compressed archive wrapper payload.
+
+### COMPRESSED_NETWORK_FORMAT
+
+Stable format tag for the compressed compact serialization payload.
+
+### COMPRESSED_WEIGHT_ENCODING
+
+Stable format tag for exact weight-word delta encoding.
+
+### CompressedArchiveDecodeMetrics
+
+Decode metrics for one archive deserialization operation.
+
+### CompressedArchiveDecodeOptions
+
+Optional callbacks used while one archive payload is being decoded.
+
+### CompressedArchiveDecodeProgress
+
+Progress snapshot emitted while one archive payload is being decoded.
+
+### CompressedArchiveDecodeResult
+
+Archive result wrapper that includes decode metrics.
+
+### CompressedArchiveEncodeMetrics
+
+Encode metrics for one archive serialization operation.
+
+### CompressedArchiveEncodeResult
+
+Archive result wrapper that includes encode metrics.
+
+### CompressedArchiveMetrics
+
+Shared byte-size metrics for one archive operation.
+
+### compressMatchingRuns
+
+```ts
+compressMatchingRuns(
+  values: Value[],
+  shouldCompressValue: (value: Value) => boolean,
+): CompressedSerializedIndexRun[] | undefined
+```
+
+Collapse contiguous matching entries into run-length metadata.
+
+Parameters:
+- `values` - Ordered values to scan.
+- `shouldCompressValue` - Predicate deciding whether one value belongs to a run.
+
+Returns: Run metadata or `undefined` when no matching span exists.
+
+### compressOptionalNumericSeries
+
+```ts
+compressOptionalNumericSeries(
+  values: (number | null | undefined)[],
+): (number | null)[] | undefined
+```
+
+Collapse optional numeric fields to `undefined` when no entries are present.
+
+Parameters:
+- `values` - Optional numeric series.
+
+Returns: Normalized nullable series or `undefined` when empty of numeric content.
+
+### compressSerializedConnections
+
+```ts
+compressSerializedConnections(
+  serializedConnections: NetworkJSONConnection[],
+): CompressedSerializedConnectionBlock
+```
+
+Compress one serialized connection list into array-oriented exact payload fields.
+
+The weight channel stays lossless by delta-encoding the raw IEEE-754 float64
+words rather than quantizing the numeric values.
+
+Parameters:
+- `serializedConnections` - Compact serialized connection rows.
+
+Returns: Compressed connection block.
+
+### concatenateArchiveByteChunks
+
+```ts
+concatenateArchiveByteChunks(
+  byteChunks: Uint8Array<ArrayBufferLike>[],
+): Uint8Array<ArrayBufferLike>
+```
+
+Concatenate one ordered set of archive byte chunks into a single buffer.
+
+Parameters:
+- `byteChunks` - Ordered archive byte chunks.
+
+Returns: One contiguous byte buffer.
+
+### countRunEntries
+
+```ts
+countRunEntries(
+  runs: CompressedSerializedIndexRun[] | undefined,
+): number
+```
+
+Count how many connection rows are covered by one run list.
+
+Parameters:
+- `runs` - Optional run metadata.
+
+Returns: Total covered row count.
+
+### createCompressedArchiveDecodeMetrics
+
+```ts
+createCompressedArchiveDecodeMetrics(
+  uncompressedByteLength: number,
+  compressedByteLength: number,
+  decodeTimeMs: number,
+): CompressedArchiveDecodeMetrics
+```
+
+Create one metrics snapshot for an archive decode operation.
+
+Parameters:
+- `uncompressedByteLength` - UTF-8 byte length after archive inflation.
+- `compressedByteLength` - Binary byte length before archive inflation.
+- `decodeTimeMs` - Elapsed decode time in milliseconds.
+
+Returns: Archive decode metrics.
+
+### createCompressedArchiveEncodeMetrics
+
+```ts
+createCompressedArchiveEncodeMetrics(
+  uncompressedByteLength: number,
+  compressedByteLength: number,
+  encodeTimeMs: number,
+): CompressedArchiveEncodeMetrics
+```
+
+Create one metrics snapshot for an archive encode operation.
+
+Parameters:
+- `uncompressedByteLength` - UTF-8 byte length before archive compression.
+- `compressedByteLength` - Binary byte length after archive compression.
+- `encodeTimeMs` - Elapsed encode time in milliseconds.
+
+Returns: Archive encode metrics.
+
+### createCompressedNetworkArchive
+
+```ts
+createCompressedNetworkArchive(
+  compressedPayload: CompressedSerializedNetwork,
+  options: CompressedSerializedNetworkArchiveOptions,
+): CompressedSerializedNetworkArchive
+```
+
+Archive one compressed network payload with a Node-side binary codec.
+
+This is intentionally additive: the wrapped payload stays the exact JSON form
+returned by `serializeCompressed`, then gzip or zstd is applied above it.
+
+Parameters:
+- `compressedPayload` - Existing compressed network payload.
+- `options` - Optional archive compression settings.
+
+Returns: Base64-wrapped compressed archive payload.
+
+### createCompressedNetworkArchiveAsync
+
+```ts
+createCompressedNetworkArchiveAsync(
+  compressedPayload: CompressedSerializedNetwork,
+  options: CompressedSerializedNetworkArchiveOptions,
+): Promise<CompressedSerializedNetworkArchive>
+```
+
+Archive one compressed network payload with the best available async runtime codec.
+
+Browser runtimes prefer `CompressionStream` with gzip so large payload work can
+stay off the synchronous main-thread path. Node falls back to the existing zlib
+owner when browser streams are unavailable.
+
+Parameters:
+- `compressedPayload` - Existing compressed network payload.
+- `options` - Optional archive compression settings.
+
+Returns: Base64-wrapped compressed archive payload.
+
+### decodeArchivePayloadBase64
+
+```ts
+decodeArchivePayloadBase64(
+  payload: string,
+): Uint8Array<ArrayBufferLike>
+```
+
+Decode archive payload bytes from base64 without assuming a specific runtime.
+
+Parameters:
+- `payload` - Base64-encoded payload text.
+
+Returns: Binary archive payload bytes.
+
+### decodeExactConnectionWeights
+
+```ts
+decodeExactConnectionWeights(
+  weightWords: CompressedSerializedConnectionWeights,
+  connectionCount: number,
+): number[]
+```
+
+Decode one exact signed-16-bit delta stream back to float64 weights.
+
+Parameters:
+- `weightWords` - Encoded weight-word payload.
+- `connectionCount` - Expected number of weights.
+
+Returns: Exact reconstructed weights.
+
+### decodeSignedInt16WordsToFloat64
+
+```ts
+decodeSignedInt16WordsToFloat64(
+  words: number[],
+): number
+```
+
+Decode four signed 16-bit words back into one float64 number.
+
+Parameters:
+- `words` - Signed 16-bit little-endian words.
+
+Returns: Decoded numeric value.
+
+### decompressArchivePayloadBytes
+
+```ts
+decompressArchivePayloadBytes(
+  payloadBytes: Uint8Array<ArrayBufferLike>,
+  compression: CompressedSerializedNetworkArchiveCompression,
+): Uint8Array<ArrayBufferLike>
+```
+
+Decompress archive payload bytes with one supported Node-side codec.
+
+Parameters:
+- `payloadBytes` - Compressed archive payload bytes.
+- `compression` - Archive compression codec.
+
+Returns: Inflated UTF-8 payload bytes.
+
+### decompressArchivePayloadBytesAsync
+
+```ts
+decompressArchivePayloadBytesAsync(
+  payloadBytes: Uint8Array<ArrayBufferLike>,
+  compression: CompressedSerializedNetworkArchiveCompression,
+  options: CompressedArchiveDecodeOptions,
+): Promise<Uint8Array<ArrayBufferLike>>
+```
+
+Decompress archive payload bytes with the best available async archive codec.
+
+Parameters:
+- `payloadBytes` - Compressed archive payload bytes.
+- `compression` - Archive compression codec.
+
+Returns: Inflated UTF-8 payload bytes.
+
+### decompressArchivePayloadBytesWithBrowserStream
+
+```ts
+decompressArchivePayloadBytesWithBrowserStream(
+  payloadBytes: Uint8Array<ArrayBufferLike>,
+  streamConstructor: BrowserDecompressionStreamConstructor,
+  options: CompressedArchiveDecodeOptions,
+): Promise<Uint8Array<ArrayBufferLike>>
+```
+
+Decompress archive payload bytes through one browser stream while reporting progress.
+
+Parameters:
+- `payloadBytes` - Compressed archive payload bytes.
+- `streamConstructor` - Browser decompression stream constructor.
+- `options` - Optional incremental progress callbacks.
+
+Returns: Inflated UTF-8 payload bytes.
+
+### decompressSerializedConnections
+
+```ts
+decompressSerializedConnections(
+  compressedConnections: CompressedSerializedConnectionBlock,
+): NetworkJSONConnection[]
+```
+
+Decompress one array-oriented connection block back into compact rows.
+
+Parameters:
+- `compressedConnections` - Compressed connection block.
+
+Returns: Reconstructed serialized connection rows.
+
+### emitArchiveDecodeProgress
+
+```ts
+emitArchiveDecodeProgress(
+  options: CompressedArchiveDecodeOptions,
+  progress: CompressedArchiveDecodeProgress,
+): Promise<void>
+```
+
+Notify callers that one decoded archive chunk has been observed.
+
+Parameters:
+- `options` - Optional incremental progress callbacks.
+- `progress` - Progress payload for the decoded chunk.
+
+Returns: Nothing.
+
+### encodeArchivePayloadBase64
+
+```ts
+encodeArchivePayloadBase64(
+  payloadBytes: Uint8Array<ArrayBufferLike>,
+): string
+```
+
+Encode archive payload bytes to base64 without assuming a specific runtime.
+
+Parameters:
+- `payloadBytes` - Binary archive payload bytes.
+
+Returns: Base64-encoded payload text.
+
+### encodeExactConnectionWeights
+
+```ts
+encodeExactConnectionWeights(
+  weights: number[],
+): CompressedSerializedConnectionWeights
+```
+
+Encode float64 weights into one exact signed-16-bit delta stream.
+
+Parameters:
+- `weights` - Connection weights.
+
+Returns: Exact weight-word delta payload.
+
+### encodeFloat64ToSignedInt16Words
+
+```ts
+encodeFloat64ToSignedInt16Words(
+  value: number,
+): number[]
+```
+
+Encode one float64 number into four signed 16-bit words.
+
+Parameters:
+- `value` - Numeric value to encode.
+
+Returns: Signed 16-bit little-endian words.
+
+### estimateSerializedByteLength
+
+```ts
+estimateSerializedByteLength(
+  payload: unknown,
+): number
+```
+
+Estimate the UTF-8 byte length of one serialization payload.
+
+Parameters:
+- `payload` - Payload to measure.
+
+Returns: UTF-8 byte length of the JSON string form.
+
+### expandDecodedNonZeroWeights
+
+```ts
+expandDecodedNonZeroWeights(
+  decodedNonZeroWeights: number[],
+  zeroWeightMask: boolean[] | undefined,
+  connectionCount: number,
+): number[]
+```
+
+Expand the decoded non-zero weight sequence back across zero-weight spans.
+
+Parameters:
+- `decodedNonZeroWeights` - Exact non-zero weights in encoded order.
+- `zeroWeightMask` - Optional zero-run membership mask.
+- `connectionCount` - Total number of serialized connections.
+
+Returns: Connection-aligned exact weight values.
+
+### expandRunsToMask
+
+```ts
+expandRunsToMask(
+  runs: CompressedSerializedIndexRun[] | undefined,
+  entryCount: number,
+): boolean[] | undefined
+```
+
+Expand run-length metadata into one boolean mask aligned to connection order.
+
+Parameters:
+- `runs` - Optional run metadata.
+- `entryCount` - Total number of connection rows.
+
+Returns: Boolean run-membership mask or `undefined` when no runs exist.
+
+### hasNodeCompressionRuntime
+
+```ts
+hasNodeCompressionRuntime(): boolean
+```
+
+Determine whether the current runtime can resolve the Node compression owner.
+
+Returns: Whether Node zlib support is available.
+
+### isPositiveZeroWeightWords
+
+```ts
+isPositiveZeroWeightWords(
+  encodedWeightWords: number[],
+): boolean
+```
+
+Determine whether one encoded float64 word sequence represents exact positive zero.
+
+Parameters:
+- `encodedWeightWords` - Signed 16-bit float64 words.
+
+Returns: Whether the encoded value is exact positive zero.
+
+### normalizeSignedInt16
+
+```ts
+normalizeSignedInt16(
+  value: number,
+): number
+```
+
+Normalize one integer through wrapped signed-16-bit arithmetic.
+
+Parameters:
+- `value` - Integer value to normalize.
+
+Returns: Wrapped signed 16-bit integer.
+
+### parseCompressedNetworkArchive
+
+```ts
+parseCompressedNetworkArchive(
+  compressedArchive: CompressedSerializedNetworkArchive,
+): CompressedSerializedNetwork
+```
+
+Rebuild one compressed network payload from its Node-side archive wrapper.
+
+Parameters:
+- `compressedArchive` - Base64-wrapped compressed archive payload.
+
+Returns: Restored compressed network payload.
+
+### parseCompressedNetworkArchiveAsync
+
+```ts
+parseCompressedNetworkArchiveAsync(
+  compressedArchive: CompressedSerializedNetworkArchive,
+  options: CompressedArchiveDecodeOptions,
+): Promise<CompressedSerializedNetwork>
+```
+
+Rebuild one compressed network payload from its archive wrapper with async runtime codecs.
+
+Browser runtimes prefer `DecompressionStream` with gzip so archive hydration can
+stay off the synchronous main-thread path. Node falls back to the existing zlib
+owner when browser streams are unavailable.
+
+Parameters:
+- `compressedArchive` - Base64-wrapped compressed archive payload.
+
+Returns: Restored compressed network payload.
+
+### resolveBrowserCompressionStreamConstructor
+
+```ts
+resolveBrowserCompressionStreamConstructor(): BrowserCompressionStreamConstructor | undefined
+```
+
+Resolve the browser compression-stream constructor when one is available.
+
+Returns: Browser compression-stream constructor.
+
+### resolveBrowserDecompressionStreamConstructor
+
+```ts
+resolveBrowserDecompressionStreamConstructor(): BrowserDecompressionStreamConstructor | undefined
+```
+
+Resolve the browser decompression-stream constructor when one is available.
+
+Returns: Browser decompression-stream constructor.
+
+### resolveNodeCompressionModule
+
+```ts
+resolveNodeCompressionModule(): NodeCompressionModule
+```
+
+Resolve the Node builtin zlib module without introducing a static browser import.
+
+Returns: Node compression module.
+
+### resolveNodeCompressionModuleOrUndefined
+
+```ts
+resolveNodeCompressionModuleOrUndefined(): NodeCompressionModule | undefined
+```
+
+Resolve the Node builtin zlib module when the runtime exposes it.
+
+Returns: Node compression module when available.
+
+### transformArchivePayloadBytesWithStream
+
+```ts
+transformArchivePayloadBytesWithStream(
+  payloadBytes: Uint8Array<ArrayBufferLike>,
+  streamConstructor: BrowserDecompressionStreamConstructor | BrowserCompressionStreamConstructor,
+): Promise<Uint8Array<ArrayBufferLike>>
+```
+
+Transform archive payload bytes through one browser compression stream.
+
+Parameters:
+- `payloadBytes` - Source payload bytes.
+- `streamConstructor` - Browser stream constructor.
+
+Returns: Transformed payload bytes.
+
+### validateCompressedOptionalVectorLength
+
+```ts
+validateCompressedOptionalVectorLength(
+  fieldName: string,
+  values: unknown[] | undefined,
+  expectedLength: number,
+): void
+```
+
+Validate one optional vector width when the vector is present.
+
+Parameters:
+- `fieldName` - Logical field name.
+- `values` - Optional vector.
+- `expectedLength` - Required vector length.
+
+Returns: Nothing.
+
+### validateCompressedRuns
+
+```ts
+validateCompressedRuns(
+  fieldName: string,
+  runs: CompressedSerializedIndexRun[] | undefined,
+  entryCount: number,
+): void
+```
+
+Validate run metadata for bounds, ordering, and overlap.
+
+Parameters:
+- `fieldName` - Logical field name.
+- `runs` - Optional run metadata.
+- `entryCount` - Total number of connection rows.
+
+Returns: Nothing.
+
+### validateCompressedVectorLength
+
+```ts
+validateCompressedVectorLength(
+  fieldName: string,
+  values: unknown[],
+  expectedLength: number,
+): void
+```
+
+Validate one required vector width inside the compressed connection block.
+
+Parameters:
+- `fieldName` - Logical field name.
+- `values` - Vector to validate.
+- `expectedLength` - Required vector length.
 
 Returns: Nothing.

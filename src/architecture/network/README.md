@@ -107,7 +107,9 @@ activate(
 ```
 
 Standard activation API returning a plain number[] for backward compatibility.
-Internally may use pooled typed arrays; if so they are cloned before returning.
+Internally may use pooled typed arrays; if so they are cloned before returning unless
+`reuseSequenceBuffers` opts the network into a small reusable plain-array ring for
+repeated sequence steps.
 
 #### activateBatch
 
@@ -472,6 +474,47 @@ Parameters:
 - `input` - Input vector.
 
 Returns: Activation output.
+
+#### forwardWindowed
+
+```ts
+forwardWindowed(
+  inputs: number[][],
+  options: NetworkForwardWindowOptions | undefined,
+): number[][]
+```
+
+Activate one input sequence in bounded windows while preserving carried recurrent state.
+
+This keeps the same output contract as repeated `activate()` calls, while
+adding bounded window callbacks and an opt-out from collecting the full
+output matrix when the caller wants lower sequence-retention pressure.
+
+Parameters:
+- `inputs` - Ordered sequence of input vectors.
+- `options` - Optional windowed activation settings.
+
+Returns: Output vectors aligned to the input order.
+
+#### forwardWindowedAsync
+
+```ts
+forwardWindowedAsync(
+  inputs: number[][],
+  options: NetworkForwardWindowAsyncOptions | undefined,
+): Promise<number[][]>
+```
+
+Activate one input sequence in bounded windows with cooperative runtime yields.
+
+Browser runtimes can use this to yield after a configurable number of
+emitted windows so long-running sequence inference remains responsive.
+
+Parameters:
+- `inputs` - Ordered sequence of input vectors.
+- `options` - Optional async windowed activation settings.
+
+Returns: Output vectors aligned to the input order.
 
 #### fromJSON
 
@@ -1631,6 +1674,51 @@ Parameters:
 
 Returns: Output activations (detached plain array) of length `network.output`.
 
+### forwardWindowed
+
+```ts
+forwardWindowed(
+  inputs: number[][],
+  options: NetworkForwardWindowOptions,
+): number[][]
+```
+
+Advance one input sequence in bounded windows while preserving carried recurrent state.
+
+This is the first common-path Phase 9 surface: it keeps the same activation
+semantics as repeated `activate()` calls, but it advances the sequence in
+explicit windows so later browser and low-memory follow-up work has one
+stable orchestration boundary.
+
+Parameters:
+- `this` - Bound network instance.
+- `inputs` - Ordered sequence of input vectors.
+- `options` - Optional activation-window configuration.
+
+Returns: Output vectors aligned to the input order.
+
+### forwardWindowedAsync
+
+```ts
+forwardWindowedAsync(
+  inputs: number[][],
+  options: NetworkForwardWindowAsyncOptions,
+): Promise<number[][]>
+```
+
+Advance one input sequence in bounded windows while yielding between browser-sized slices.
+
+This keeps the same recurrent semantics as `forwardWindowed()`, but it can
+cooperatively yield after a configurable number of completed windows so long
+browser sequences do not monopolize the main thread.
+
+Parameters:
+- `this` - Bound network instance.
+- `inputs` - Ordered sequence of input vectors.
+- `options` - Optional async activation-window configuration.
+
+Returns: Output vectors aligned to the input order.
+
 ### fromJSONImpl
 
 ```ts
@@ -2486,6 +2574,51 @@ const compactTuple: CompactSerializedNetworkTuple = [
 ];
 ```
 
+### CompressedSerializedConnectionBlock
+
+Array-oriented compressed connection payload for compact serialization.
+
+This keeps the compact serializer lossless while removing per-connection key
+repetition and object allocation overhead from the transport payload.
+
+### CompressedSerializedConnectionWeights
+
+Lossless weight-word payload for compressed compact serialization.
+
+The encoding stores each non-zero float64 weight as four signed 16-bit words
+and then delta-encodes those words across the non-zero connection sequence.
+Exact positive-zero spans are represented separately as run metadata.
+
+### CompressedSerializedIndexRun
+
+Index-aligned run metadata used by compressed connection payloads.
+
+A run starts at `startIndex` and covers `length` contiguous connection rows.
+
+### CompressedSerializedNetwork
+
+Compressed compact serialization payload.
+
+This format is additive to the legacy compact tuple API: it keeps the same
+runtime reconstruction semantics while using array-oriented connection data
+to reduce UTF-8 payload size for storage or transport.
+
+### CompressedSerializedNetworkArchive
+
+Node-side archive wrapper around a compressed compact serialization payload.
+
+The wrapped `payload` string stores the UTF-8 JSON form of
+`CompressedSerializedNetwork` after gzip or zstd compression, encoded as
+base64 for portable storage.
+
+### CompressedSerializedNetworkArchiveCompression
+
+Supported Node-side archive compression codecs for compressed payloads.
+
+### CompressedSerializedNetworkArchiveOptions
+
+Optional settings for archiving one compressed network payload.
+
 ### ConnectionGene
 
 Runtime materialization descriptor for one inherited connection gene.
@@ -3038,6 +3171,18 @@ Public constructor options for `Network`.
 `topologyIntent` is the semantic, DX-first contract. `enforceAcyclic`
 remains available for backward compatibility and must not contradict the
 declared topology intent.
+
+### NetworkForwardWindowAsyncOptions
+
+Optional settings for async bounded sequence activation.
+
+### NetworkForwardWindowChunk
+
+One emitted chunk from bounded sequence activation.
+
+### NetworkForwardWindowOptions
+
+Optional settings for bounded sequence activation through `forwardWindowed()`.
 
 ### NetworkGeneticProps
 

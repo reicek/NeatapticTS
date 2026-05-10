@@ -1,4 +1,5 @@
 import Connection from '../../connection';
+import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import type Network from '../../network/network';
 import type {
   NetworkPruningProps,
@@ -134,6 +135,11 @@ export function disconnectConnections(
   connectionsToDisconnect.forEach((connection) => {
     currentNetwork.disconnect(connection.from, connection.to);
   });
+
+  // Step 2: Schedule a deferred activation-pool trim after large prune bursts.
+  activationArrayPool.scheduleCompactionAfterLargePrune(
+    connectionsToDisconnect.length,
+  );
 }
 
 /**

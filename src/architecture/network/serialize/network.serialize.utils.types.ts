@@ -1,4 +1,11 @@
 import type {
+  CompressedSerializedConnectionBlock,
+  CompressedSerializedNetworkArchive,
+  CompressedSerializedNetworkArchiveCompression,
+  CompressedSerializedNetworkArchiveOptions,
+  CompressedSerializedConnectionWeights,
+  CompressedSerializedIndexRun,
+  CompressedSerializedNetwork,
   CompactConnectionRebuildContext,
   CompactNodeRebuildContext,
   CompactPayloadContext,
@@ -17,6 +24,13 @@ import type {
 } from '../network.types';
 
 export type {
+  CompressedSerializedConnectionBlock,
+  CompressedSerializedNetworkArchive,
+  CompressedSerializedNetworkArchiveCompression,
+  CompressedSerializedNetworkArchiveOptions,
+  CompressedSerializedConnectionWeights,
+  CompressedSerializedIndexRun,
+  CompressedSerializedNetwork,
   CompactConnectionRebuildContext,
   CompactNodeRebuildContext,
   CompactPayloadContext,

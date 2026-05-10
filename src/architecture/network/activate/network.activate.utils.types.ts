@@ -120,6 +120,9 @@ export type ActivateRuntimeNetworkProps = {
   _computeTopoOrder: () => void;
   _canUseFastSlab: (training: boolean) => boolean;
   _fastSlabActivate: (input: number[]) => number[];
+  _reuseSequenceBuffers?: boolean;
+  _sequenceOutputRing?: number[][];
+  _sequenceOutputRingIndex?: number;
   _rand: () => number;
   _trainingStep: number;
   _lastStats?: unknown;

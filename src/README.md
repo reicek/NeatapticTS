@@ -3929,7 +3929,9 @@ activate(
 ```
 
 Standard activation API returning a plain number[] for backward compatibility.
-Internally may use pooled typed arrays; if so they are cloned before returning.
+Internally may use pooled typed arrays; if so they are cloned before returning unless
+`reuseSequenceBuffers` opts the network into a small reusable plain-array ring for
+repeated sequence steps.
 
 #### activate
 
@@ -4741,6 +4743,47 @@ Returns: Activation output.
 #### firstMoment
 
 First moment estimate used by Adam-family optimizers.
+
+#### forwardWindowed
+
+```ts
+forwardWindowed(
+  inputs: number[][],
+  options: NetworkForwardWindowOptions | undefined,
+): number[][]
+```
+
+Activate one input sequence in bounded windows while preserving carried recurrent state.
+
+This keeps the same output contract as repeated `activate()` calls, while
+adding bounded window callbacks and an opt-out from collecting the full
+output matrix when the caller wants lower sequence-retention pressure.
+
+Parameters:
+- `inputs` - Ordered sequence of input vectors.
+- `options` - Optional windowed activation settings.
+
+Returns: Output vectors aligned to the input order.
+
+#### forwardWindowedAsync
+
+```ts
+forwardWindowedAsync(
+  inputs: number[][],
+  options: NetworkForwardWindowAsyncOptions | undefined,
+): Promise<number[][]>
+```
+
+Activate one input sequence in bounded windows with cooperative runtime yields.
+
+Browser runtimes can use this to yield after a configurable number of
+emitted windows so long-running sequence inference remains responsive.
+
+Parameters:
+- `inputs` - Ordered sequence of input vectors.
+- `options` - Optional async windowed activation settings.
+
+Returns: Output vectors aligned to the input order.
 
 #### from
 
@@ -7605,7 +7648,9 @@ activate(
 ```
 
 Standard activation API returning a plain number[] for backward compatibility.
-Internally may use pooled typed arrays; if so they are cloned before returning.
+Internally may use pooled typed arrays; if so they are cloned before returning unless
+`reuseSequenceBuffers` opts the network into a small reusable plain-array ring for
+repeated sequence steps.
 
 #### activate
 
@@ -8417,6 +8462,47 @@ Returns: Activation output.
 #### firstMoment
 
 First moment estimate used by Adam-family optimizers.
+
+#### forwardWindowed
+
+```ts
+forwardWindowed(
+  inputs: number[][],
+  options: NetworkForwardWindowOptions | undefined,
+): number[][]
+```
+
+Activate one input sequence in bounded windows while preserving carried recurrent state.
+
+This keeps the same output contract as repeated `activate()` calls, while
+adding bounded window callbacks and an opt-out from collecting the full
+output matrix when the caller wants lower sequence-retention pressure.
+
+Parameters:
+- `inputs` - Ordered sequence of input vectors.
+- `options` - Optional windowed activation settings.
+
+Returns: Output vectors aligned to the input order.
+
+#### forwardWindowedAsync
+
+```ts
+forwardWindowedAsync(
+  inputs: number[][],
+  options: NetworkForwardWindowAsyncOptions | undefined,
+): Promise<number[][]>
+```
+
+Activate one input sequence in bounded windows with cooperative runtime yields.
+
+Browser runtimes can use this to yield after a configurable number of
+emitted windows so long-running sequence inference remains responsive.
+
+Parameters:
+- `inputs` - Ordered sequence of input vectors.
+- `options` - Optional async windowed activation settings.
+
+Returns: Output vectors aligned to the input order.
 
 #### from
 

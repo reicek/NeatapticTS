@@ -10,6 +10,7 @@ import {
   INITIAL_OUTPUT_WRITE_INDEX,
   INPUT_NODE_TYPE,
   OUTPUT_NODE_TYPE,
+  OUTPUT_WRITE_INDEX_INCREMENT,
   UNDEFINED_INPUT_LENGTH_TEXT,
 } from './network.activate.utils.types';
 import type {
@@ -101,8 +102,11 @@ export function activate(
 
   finalizeTrainingStepAndStats(runtimeNetwork, stats, training);
 
-  return releaseBufferAndCreateResult(output);
+  return releaseBufferAndCreateResult(output, runtimeNetwork);
 }
+
+/** Small reusable ring depth for consecutive sequence activations. */
+const SEQUENCE_OUTPUT_RING_SIZE = 2;
 
 /**
  * Ensure compiled activation scheduling is refreshed before activation when topology changed.
@@ -1225,10 +1229,106 @@ function finalizeTrainingStepAndStats(
  * @param outputBuffer Mutable pooled output buffer.
  * @returns Plain array of output values.
  */
-function releaseBufferAndCreateResult(outputBuffer: ActivationArray): number[] {
-  const result = Array.from(outputBuffer) as number[];
+function releaseBufferAndCreateResult(
+  outputBuffer: ActivationArray,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number[] {
+  const result = runtimeNetwork._reuseSequenceBuffers
+    ? copyOutputBufferIntoSequenceRing(outputBuffer, runtimeNetwork)
+    : (Array.from(outputBuffer) as number[]);
+
   activationArrayPool.release(outputBuffer);
   return result;
+}
+
+/**
+ * Copy one pooled activation result into the current reusable sequence-output slot.
+ *
+ * @param outputBuffer Mutable pooled output buffer.
+ * @param runtimeNetwork Runtime activation internals.
+ * @returns Reused plain array slot for the current sequence step.
+ */
+function copyOutputBufferIntoSequenceRing(
+  outputBuffer: ActivationArray,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number[] {
+  const sequenceOutputBuffer = acquireSequenceOutputBuffer(
+    runtimeNetwork,
+    outputBuffer.length,
+  );
+
+  for (
+    let outputIndex = INITIAL_OUTPUT_WRITE_INDEX;
+    outputIndex < outputBuffer.length;
+    outputIndex += OUTPUT_WRITE_INDEX_INCREMENT
+  ) {
+    sequenceOutputBuffer[outputIndex] = outputBuffer[outputIndex]!;
+  }
+
+  return sequenceOutputBuffer;
+}
+
+/**
+ * Acquire the next reusable plain array slot for one sequence activation result.
+ *
+ * @param runtimeNetwork Runtime activation internals.
+ * @param outputSize Required activation output width.
+ * @returns One reusable plain array slot from the network-owned output ring.
+ */
+function acquireSequenceOutputBuffer(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  outputSize: number,
+): number[] {
+  ensureSequenceOutputRing(runtimeNetwork, outputSize);
+
+  const currentRingIndex = runtimeNetwork._sequenceOutputRingIndex ?? 0;
+  const sequenceOutputBuffer = runtimeNetwork._sequenceOutputRing![
+    currentRingIndex
+  ];
+
+  runtimeNetwork._sequenceOutputRingIndex =
+    (currentRingIndex + 1) % runtimeNetwork._sequenceOutputRing!.length;
+
+  return sequenceOutputBuffer;
+}
+
+/**
+ * Ensure the network owns a fixed-depth reusable ring sized for the current output width.
+ *
+ * @param runtimeNetwork Runtime activation internals.
+ * @param outputSize Required activation output width.
+ * @returns Nothing.
+ */
+function ensureSequenceOutputRing(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  outputSize: number,
+): void {
+  const sequenceOutputRing = runtimeNetwork._sequenceOutputRing;
+
+  if (
+    sequenceOutputRing &&
+    sequenceOutputRing.length === SEQUENCE_OUTPUT_RING_SIZE &&
+    sequenceOutputRing.every(
+      (sequenceOutputBuffer) => sequenceOutputBuffer.length === outputSize,
+    )
+  ) {
+    return;
+  }
+
+  runtimeNetwork._sequenceOutputRing = createSequenceOutputRing(outputSize);
+  runtimeNetwork._sequenceOutputRingIndex = 0;
+}
+
+/**
+ * Create a reusable plain-array ring for consecutive sequence outputs.
+ *
+ * @param outputSize Required activation output width.
+ * @returns Fresh fixed-depth ring of plain output arrays.
+ */
+function createSequenceOutputRing(outputSize: number): number[][] {
+  return Array.from({ length: SEQUENCE_OUTPUT_RING_SIZE }, () =>
+    new Array<number>(outputSize).fill(0),
+  );
 }
 
 /**

@@ -6,6 +6,18 @@ import Node from '../../node';
 import { validateNativeGenome } from '../../../neat/validate/neat.validate';
 import Network from '../network';
 import type { NetworkJSON } from '../network.types';
+import {
+  deserializeCompressedArchive,
+  deserializeCompressedArchiveAsync,
+  deserializeCompressedArchiveAsyncWithMetrics,
+  deserializeCompressedArchiveWithMetrics,
+  deserializeCompressed,
+  serializeCompressedArchive,
+  serializeCompressedArchiveAsync,
+  serializeCompressedArchiveAsyncWithMetrics,
+  serializeCompressedArchiveWithMetrics,
+  serializeCompressed,
+} from './network.serialize.utils';
 
 function createSerializableNetwork(seed: number): Network {
   return new Network(2, 1, { seed });
@@ -202,7 +214,572 @@ function readFirstTemporalConnectionInnovation(
 }
 
 describe('network serialize chapter', () => {
+  describe('Network.serializeCompressedArchiveWithMetrics()', () => {
+    describe('given one recurrent runtime is archived with the default codec', () => {
+      it('reports encode metrics while preserving the exact next activation output', () => {
+        // Arrange
+        const network = Architect.lstm(2, 3, 1);
+        const historyInputs = [
+          [0.1, 0.2],
+          [0.3, 0.4],
+        ];
+        const nextInput = [0.5, 0.6];
+
+        historyInputs.forEach((inputValues) => {
+          network.activate(inputValues);
+        });
+
+        // Act
+        const archiveWithMetrics = serializeCompressedArchiveWithMetrics.call(
+          network,
+        );
+        const expectedNextOutput = network.activate(nextInput);
+        const rebuiltNetwork = deserializeCompressedArchive(
+          archiveWithMetrics.archive,
+        );
+
+        // Assert
+        expect({
+          compressionRatioMatches:
+            archiveWithMetrics.metrics.compressionRatio ===
+            archiveWithMetrics.metrics.compressedByteLength /
+              archiveWithMetrics.metrics.uncompressedByteLength,
+          compressedByteLengthPositive:
+            archiveWithMetrics.metrics.compressedByteLength > 0,
+          encodeTimeMsFinite:
+            Number.isFinite(archiveWithMetrics.metrics.encodeTimeMs) &&
+            archiveWithMetrics.metrics.encodeTimeMs >= 0,
+          rebuiltNextOutput: rebuiltNetwork.activate(nextInput),
+          uncompressedByteLengthPositive:
+            archiveWithMetrics.metrics.uncompressedByteLength > 0,
+        }).toEqual({
+          compressionRatioMatches: true,
+          compressedByteLengthPositive: true,
+          encodeTimeMsFinite: true,
+          rebuiltNextOutput: expectedNextOutput,
+          uncompressedByteLengthPositive: true,
+        });
+      });
+    });
+  });
+
+  describe('Network.serializeCompressedArchiveAsyncWithMetrics()', () => {
+    describe('given browser archive compression is used for one recurrent runtime', () => {
+      it('reports encode metrics while preserving the exact next activation output', async () => {
+        // Arrange
+        const network = Architect.lstm(2, 3, 1);
+        const historyInputs = [
+          [0.1, 0.2],
+          [0.3, 0.4],
+        ];
+        const nextInput = [0.5, 0.6];
+        const originalProcess = globalThis.process;
+
+        historyInputs.forEach((inputValues) => {
+          network.activate(inputValues);
+        });
+
+        Object.defineProperty(globalThis, 'process', {
+          configurable: true,
+          value: undefined,
+        });
+
+        try {
+          // Act
+          const archiveWithMetrics =
+            await serializeCompressedArchiveAsyncWithMetrics.call(network);
+          const expectedNextOutput = network.activate(nextInput);
+          const rebuiltNetwork = await deserializeCompressedArchiveAsync(
+            archiveWithMetrics.archive,
+          );
+
+          // Assert
+          expect({
+            compressionRatioMatches:
+              archiveWithMetrics.metrics.compressionRatio ===
+              archiveWithMetrics.metrics.compressedByteLength /
+                archiveWithMetrics.metrics.uncompressedByteLength,
+            compressedByteLengthPositive:
+              archiveWithMetrics.metrics.compressedByteLength > 0,
+            encodeTimeMsFinite:
+              Number.isFinite(archiveWithMetrics.metrics.encodeTimeMs) &&
+              archiveWithMetrics.metrics.encodeTimeMs >= 0,
+            rebuiltNextOutput: rebuiltNetwork.activate(nextInput),
+            uncompressedByteLengthPositive:
+              archiveWithMetrics.metrics.uncompressedByteLength > 0,
+          }).toEqual({
+            compressionRatioMatches: true,
+            compressedByteLengthPositive: true,
+            encodeTimeMsFinite: true,
+            rebuiltNextOutput: expectedNextOutput,
+            uncompressedByteLengthPositive: true,
+          });
+        } finally {
+          Object.defineProperty(globalThis, 'process', {
+            configurable: true,
+            value: originalProcess,
+          });
+        }
+      });
+    });
+  });
+
+  describe('Network.deserializeCompressedArchiveWithMetrics()', () => {
+    describe('given one recurrent runtime is archived with the default codec', () => {
+      it('reports decode metrics while preserving the exact next activation output', () => {
+        // Arrange
+        const network = Architect.lstm(2, 3, 1);
+        const historyInputs = [
+          [0.1, 0.2],
+          [0.3, 0.4],
+        ];
+        const nextInput = [0.5, 0.6];
+
+        historyInputs.forEach((inputValues) => {
+          network.activate(inputValues);
+        });
+
+        const compressedArchive = serializeCompressedArchive.call(network);
+        const expectedNextOutput = network.activate(nextInput);
+
+        // Act
+        const rebuiltNetworkWithMetrics = deserializeCompressedArchiveWithMetrics(
+          compressedArchive,
+        );
+
+        // Assert
+        expect({
+          compressionRatioMatches:
+            rebuiltNetworkWithMetrics.metrics.compressionRatio ===
+            rebuiltNetworkWithMetrics.metrics.compressedByteLength /
+              rebuiltNetworkWithMetrics.metrics.uncompressedByteLength,
+          compressedByteLengthPositive:
+            rebuiltNetworkWithMetrics.metrics.compressedByteLength > 0,
+          decodeTimeMsFinite:
+            Number.isFinite(rebuiltNetworkWithMetrics.metrics.decodeTimeMs) &&
+            rebuiltNetworkWithMetrics.metrics.decodeTimeMs >= 0,
+          rebuiltNextOutput:
+            rebuiltNetworkWithMetrics.value.activate(nextInput),
+          uncompressedByteLengthPositive:
+            rebuiltNetworkWithMetrics.metrics.uncompressedByteLength > 0,
+        }).toEqual({
+          compressionRatioMatches: true,
+          compressedByteLengthPositive: true,
+          decodeTimeMsFinite: true,
+          rebuiltNextOutput: expectedNextOutput,
+          uncompressedByteLengthPositive: true,
+        });
+      });
+    });
+  });
+
+  describe('Network.deserializeCompressedArchiveAsyncWithMetrics()', () => {
+    describe('given optional decode callbacks are omitted', () => {
+      it('rebuilds a runnable network through the default async metrics path', async () => {
+        // Arrange
+        const network = Architect.lstm(2, 3, 1);
+        const historyInputs = [
+          [0.1, 0.2],
+          [0.3, 0.4],
+        ];
+        const nextInput = [0.5, 0.6];
+
+        historyInputs.forEach((inputValues) => {
+          network.activate(inputValues);
+        });
+
+        const compressedArchive = await serializeCompressedArchiveAsync.call(
+          network,
+        );
+        const expectedNextOutput = network.activate(nextInput);
+
+        // Act
+        const rebuiltNetworkWithMetrics =
+          await deserializeCompressedArchiveAsyncWithMetrics(
+            compressedArchive,
+          );
+
+        // Assert
+        expect({
+          decodeTimeMsFinite:
+            Number.isFinite(rebuiltNetworkWithMetrics.metrics.decodeTimeMs) &&
+            rebuiltNetworkWithMetrics.metrics.decodeTimeMs >= 0,
+          rebuiltNextOutput:
+            rebuiltNetworkWithMetrics.value.activate(nextInput),
+          uncompressedByteLengthPositive:
+            rebuiltNetworkWithMetrics.metrics.uncompressedByteLength > 0,
+        }).toEqual({
+          decodeTimeMsFinite: true,
+          rebuiltNextOutput: expectedNextOutput,
+          uncompressedByteLengthPositive: true,
+        });
+      });
+    });
+
+    describe('given browser archive compression is used for one recurrent runtime', () => {
+      it('reports decode metrics while preserving progress snapshots and the exact next activation output', async () => {
+        // Arrange
+        const network = Architect.lstm(2, 3, 1);
+        const historyInputs = [
+          [0.1, 0.2],
+          [0.3, 0.4],
+        ];
+        const nextInput = [0.5, 0.6];
+        const originalProcess = globalThis.process;
+        const progressSnapshots: Array<{ done: boolean }> = [];
+
+        historyInputs.forEach((inputValues) => {
+          network.activate(inputValues);
+        });
+
+        const compressedArchive =
+          await serializeCompressedArchiveAsync.call(network);
+
+        Object.defineProperty(globalThis, 'process', {
+          configurable: true,
+          value: undefined,
+        });
+
+        try {
+          const expectedNextOutput = network.activate(nextInput);
+
+          // Act
+          const rebuiltNetworkWithMetrics =
+            await deserializeCompressedArchiveAsyncWithMetrics(
+              compressedArchive,
+              undefined,
+              undefined,
+              {
+                onProgress(progressUpdate) {
+                  progressSnapshots.push({
+                    done: progressUpdate.done,
+                  });
+                },
+              },
+            );
+
+          // Assert
+          expect({
+            compressionRatioMatches:
+              rebuiltNetworkWithMetrics.metrics.compressionRatio ===
+              rebuiltNetworkWithMetrics.metrics.compressedByteLength /
+                rebuiltNetworkWithMetrics.metrics.uncompressedByteLength,
+            decodeTimeMsFinite:
+              Number.isFinite(rebuiltNetworkWithMetrics.metrics.decodeTimeMs) &&
+              rebuiltNetworkWithMetrics.metrics.decodeTimeMs >= 0,
+            hasProgressSnapshots: progressSnapshots.length > 0,
+            lastProgressDone: progressSnapshots.at(-1)?.done ?? false,
+            rebuiltNextOutput:
+              rebuiltNetworkWithMetrics.value.activate(nextInput),
+          }).toEqual({
+            compressionRatioMatches: true,
+            decodeTimeMsFinite: true,
+            hasProgressSnapshots: true,
+            lastProgressDone: true,
+            rebuiltNextOutput: expectedNextOutput,
+          });
+        } finally {
+          Object.defineProperty(globalThis, 'process', {
+            configurable: true,
+            value: originalProcess,
+          });
+        }
+      });
+    });
+  });
+
+  describe('Network.deserializeCompressedArchiveAsync()', () => {
+    describe('given browser archive compression is used for one recurrent runtime', () => {
+      describe('when incremental decode progress is requested', () => {
+        it('forwards progress snapshots while preserving the exact next activation output', async () => {
+          // Arrange
+          const network = Architect.lstm(2, 3, 1);
+          const historyInputs = [
+            [0.1, 0.2],
+            [0.3, 0.4],
+          ];
+          const nextInput = [0.5, 0.6];
+          const originalProcess = globalThis.process;
+          const progressSnapshots: Array<{ done: boolean }> = [];
+
+          historyInputs.forEach((inputValues) => {
+            network.activate(inputValues);
+          });
+
+          Object.defineProperty(globalThis, 'process', {
+            configurable: true,
+            value: undefined,
+          });
+
+          try {
+            const compressedArchive =
+              await serializeCompressedArchiveAsync.call(network);
+            const expectedNextOutput = network.activate(nextInput);
+
+            // Act
+            const rebuiltNetwork = await deserializeCompressedArchiveAsync(
+              compressedArchive,
+              undefined,
+              undefined,
+              {
+                onProgress(progressUpdate) {
+                  progressSnapshots.push({
+                    done: progressUpdate.done,
+                  });
+                },
+              },
+            );
+
+            // Assert
+            expect({
+              hasProgressSnapshots: progressSnapshots.length > 0,
+              lastProgressDone: progressSnapshots.at(-1)?.done ?? false,
+              rebuiltNextOutput: rebuiltNetwork.activate(nextInput),
+            }).toEqual({
+              hasProgressSnapshots: true,
+              lastProgressDone: true,
+              rebuiltNextOutput: expectedNextOutput,
+            });
+          } finally {
+            Object.defineProperty(globalThis, 'process', {
+              configurable: true,
+              value: originalProcess,
+            });
+          }
+        });
+      });
+
+      describe('when the archived payload is rebuilt and activated again', () => {
+        it('preserves the exact next activation output', async () => {
+          // Arrange
+          const network = Architect.lstm(2, 3, 1);
+          const historyInputs = [
+            [0.1, 0.2],
+            [0.3, 0.4],
+          ];
+          const nextInput = [0.5, 0.6];
+          const originalProcess = globalThis.process;
+
+          historyInputs.forEach((inputValues) => {
+            network.activate(inputValues);
+          });
+
+          Object.defineProperty(globalThis, 'process', {
+            configurable: true,
+            value: undefined,
+          });
+
+          try {
+            const compressedArchive =
+              await serializeCompressedArchiveAsync.call(network);
+            const expectedNextOutput = network.activate(nextInput);
+
+            // Act
+            const rebuiltNetwork = await deserializeCompressedArchiveAsync(
+              compressedArchive,
+            );
+            const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
+
+            // Assert
+            expect(rebuiltNextOutput).toEqual(expectedNextOutput);
+          } finally {
+            Object.defineProperty(globalThis, 'process', {
+              configurable: true,
+              value: originalProcess,
+            });
+          }
+        });
+      });
+    });
+  });
+
+  describe('Network.deserializeCompressedArchive()', () => {
+    describe('given one recurrent runtime is archived with the default gzip codec', () => {
+      describe('when the archived payload is rebuilt and activated again', () => {
+        it('preserves the exact next activation output', () => {
+          // Arrange
+          const network = Architect.lstm(2, 3, 1);
+          const historyInputs = [
+            [0.1, 0.2],
+            [0.3, 0.4],
+          ];
+          const nextInput = [0.5, 0.6];
+
+          historyInputs.forEach((inputValues) => {
+            network.activate(inputValues);
+          });
+
+          const compressedArchive = serializeCompressedArchive.call(network);
+          const expectedNextOutput = network.activate(nextInput);
+
+          // Act
+          const rebuiltNetwork = deserializeCompressedArchive(
+            compressedArchive,
+          );
+          const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
+
+          // Assert
+          expect(rebuiltNextOutput).toEqual(expectedNextOutput);
+        });
+      });
+    });
+
+    describe('given one recurrent runtime is archived with the zstd codec', () => {
+      describe('when the archived payload is rebuilt and activated again', () => {
+        it('preserves the exact next activation output', () => {
+          // Arrange
+          const network = Architect.lstm(2, 3, 1);
+          const historyInputs = [
+            [0.1, 0.2],
+            [0.3, 0.4],
+          ];
+          const nextInput = [0.5, 0.6];
+
+          historyInputs.forEach((inputValues) => {
+            network.activate(inputValues);
+          });
+
+          const compressedArchive = serializeCompressedArchive.call(network, {
+            compression: 'zstd',
+          });
+          const expectedNextOutput = network.activate(nextInput);
+
+          // Act
+          const rebuiltNetwork = deserializeCompressedArchive(
+            compressedArchive,
+          );
+          const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
+
+          // Assert
+          expect(rebuiltNextOutput).toEqual(expectedNextOutput);
+        });
+      });
+    });
+  });
+
+  describe('Network.deserializeCompressed()', () => {
+    describe('given one recurrent runtime is serialized after carrying state forward', () => {
+      describe('when the compressed payload is rebuilt and activated again', () => {
+        it('preserves the exact next activation output', () => {
+          // Arrange
+          const network = Architect.lstm(2, 3, 1);
+          const historyInputs = [
+            [0.1, 0.2],
+            [0.3, 0.4],
+          ];
+          const nextInput = [0.5, 0.6];
+
+          historyInputs.forEach((inputValues) => {
+            network.activate(inputValues);
+          });
+
+          const compressedPayload = serializeCompressed.call(network);
+          const expectedNextOutput = network.activate(nextInput);
+
+          // Act
+          const rebuiltNetwork = deserializeCompressed(
+            compressedPayload,
+          );
+          const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
+
+          // Assert
+          expect(rebuiltNextOutput).toEqual(expectedNextOutput);
+        });
+      });
+    });
+
+    describe('given the compressed payload uses an unknown format tag', () => {
+      describe('when the payload is rebuilt', () => {
+        it('throws an invalid-format error', () => {
+          // Arrange
+          let errorMessage = '';
+
+          // Act
+          try {
+            deserializeCompressed({
+              format: 'unsupported-compressed-format',
+            } as never);
+          } catch (error) {
+            errorMessage = (error as Error).message;
+          }
+
+          // Assert
+          expect(errorMessage).toBe('Invalid compressed network payload format.');
+        });
+      });
+    });
+
+    describe('given explicit size overrides are supplied', () => {
+      describe('when the compressed payload is rebuilt', () => {
+        it('uses the override branch without changing the output width', () => {
+          // Arrange
+          const network = createSerializableNetwork(390);
+          const compressedPayload = serializeCompressed.call(network);
+
+          // Act
+          const rebuiltNetwork = deserializeCompressed(
+            compressedPayload,
+            network.input,
+            network.output,
+          );
+
+          // Assert
+          expect(rebuiltNetwork.output).toBe(network.output);
+        });
+      });
+    });
+
+    describe('given the compressed runtime-state arrays are truncated', () => {
+      describe('when the payload is rebuilt', () => {
+        it('throws an invalid-runtime-state-length error', () => {
+          // Arrange
+          const network = createSerializableNetwork(391);
+          const compressedPayload = serializeCompressed.call(network);
+          let errorMessage = '';
+
+          compressedPayload.states = compressedPayload.states.slice(1);
+
+          // Act
+          try {
+            deserializeCompressed(compressedPayload);
+          } catch (error) {
+            errorMessage = (error as Error).message;
+          }
+
+          // Assert
+          expect(errorMessage).toBe(
+            'Compressed runtime state length is invalid.',
+          );
+        });
+      });
+    });
+  });
+
   describe('Network.deserialize()', () => {
+    describe('given one compact payload omits topology intent metadata', () => {
+      describe('when the payload is rebuilt', () => {
+        it('rebuilds the network without requiring the optional topology slot', () => {
+          // Arrange
+          const network = createSerializableNetwork(359);
+          const serializedNetwork = network.serialize();
+          const compactPayloadWithoutTopologyIntent = serializedNetwork.slice(
+            0,
+            7,
+          ) as never;
+
+          // Act
+          const deserialized = Network.deserialize(
+            compactPayloadWithoutTopologyIntent,
+            network.input,
+            network.output,
+          );
+
+          // Assert
+          expect(deserialized.output).toBe(network.output);
+        });
+      });
+    });
+
     describe('given one construct-built runtime uses explicit public IO ordering', () => {
       describe('when the compact payload is rebuilt', () => {
         it('preserves the ordered IO ids and topology intent', () => {

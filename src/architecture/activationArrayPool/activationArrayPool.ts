@@ -88,6 +88,17 @@ type ActivationArrayBucket = {
   lastTouchedTick: number;
 };
 
+/** Minimum prune size that justifies a deferred activation-pool compaction pass. */
+const BACKGROUND_COMPACTION_PRUNE_THRESHOLD = 32;
+
+/** Fraction of retained buckets kept after a deferred background compaction pass. */
+const BACKGROUND_COMPACTION_RETAINED_BUCKET_FRACTION = 0.5;
+
+/** Lower bound for retained buckets after deferred background compaction. */
+const MIN_BACKGROUND_COMPACTION_RETAINED_BUCKETS = 1;
+
+type IdleTickScheduler = (callback: () => void) => void;
+
 /**
  * A size-bucketed pool of activation arrays.
  *
@@ -112,6 +123,8 @@ class ActivationArrayPool {
   private retainedArrayCount = 0;
   /** Monotonic clock used to approximate least-recently-used bucket order. */
   private accessTick = 0;
+  /** Tracks whether one deferred background compaction pass is already queued. */
+  private backgroundCompactionScheduled = false;
   /** Max arrays retained per size bucket; Infinity by default. */
   private maxPerBucket = Number.POSITIVE_INFINITY;
 
@@ -191,6 +204,7 @@ class ActivationArrayPool {
   clear(): void {
     this.buckets.clear();
     this.accessTick = 0;
+    this.backgroundCompactionScheduled = false;
     this.compactionCount = 0;
     this.created = 0;
     this.retainedArrayCount = 0;
@@ -268,6 +282,93 @@ class ActivationArrayPool {
     this.compactionCount++;
     this.trimmedArrays += compactionResult.trimmedArrays;
     this.trimmedBuckets += compactionResult.trimmedBuckets;
+  }
+
+  /**
+   * Queue one deferred compaction pass after a large prune event.
+   *
+    * Node uses an idle-tick callback so prune-heavy structural edits can finish
+    * their synchronous work before colder retained activation buckets are
+    * trimmed. Browser uses cooperative slices so large prune clean-up can shed
+    * one cold bucket per idle turn instead of blocking one long synchronous pass.
+   *
+   * @param prunedConnectionCount Number of connections removed by the triggering prune pass.
+   * @returns Nothing.
+   */
+  scheduleCompactionAfterLargePrune(prunedConnectionCount: number): void {
+    const environment = defaultMemoryManager.getConfig().environment;
+
+    // Step 1: Skip small or already-coalesced prune events.
+    if (this.shouldSkipDeferredCompaction(prunedConnectionCount)) {
+      return;
+    }
+
+    // Step 2: Resolve the retained bucket budget for this deferred pass.
+    const retainedBucketBudget =
+      resolveBackgroundCompactionRetainedBucketBudget(this.buckets.size);
+
+    // Step 3: Route to the environment-specific scheduler.
+    if (environment === 'browser') {
+      this.scheduleBrowserCooperativeCompaction(retainedBucketBudget);
+      return;
+    }
+
+    this.scheduleNodeBackgroundCompaction(retainedBucketBudget);
+  }
+
+  private scheduleNodeBackgroundCompaction(retainedBucketBudget: number): void {
+    const idleTickScheduler = resolveNodeIdleTickScheduler();
+
+    if (!idleTickScheduler) {
+      return;
+    }
+
+    this.backgroundCompactionScheduled = true;
+    idleTickScheduler(() => {
+      this.backgroundCompactionScheduled = false;
+
+      this.compact(retainedBucketBudget);
+    });
+  }
+
+  private scheduleBrowserCooperativeCompaction(
+    retainedBucketBudget: number,
+  ): void {
+    const cooperativeScheduler = resolveBrowserCompactionScheduler();
+
+    if (!cooperativeScheduler) {
+      return;
+    }
+
+    this.backgroundCompactionScheduled = true;
+    this.runBrowserCooperativeCompactionSlice(
+      retainedBucketBudget,
+      cooperativeScheduler,
+    );
+  }
+
+  private runBrowserCooperativeCompactionSlice(
+    retainedBucketBudget: number,
+    cooperativeScheduler: IdleTickScheduler,
+  ): void {
+    cooperativeScheduler(() => {
+      if (this.buckets.size <= retainedBucketBudget) {
+        this.backgroundCompactionScheduled = false;
+        return;
+      }
+
+      this.compact(this.buckets.size - 1);
+
+      if (this.buckets.size <= retainedBucketBudget) {
+        this.backgroundCompactionScheduled = false;
+        return;
+      }
+
+      this.runBrowserCooperativeCompactionSlice(
+        retainedBucketBudget,
+        cooperativeScheduler,
+      );
+    });
   }
 
   /**
@@ -416,6 +517,14 @@ class ActivationArrayPool {
     this.accessTick += 1;
     return this.accessTick;
   }
+
+  private shouldSkipDeferredCompaction(prunedConnectionCount: number): boolean {
+    return (
+      this.backgroundCompactionScheduled ||
+      this.buckets.size <= MIN_BACKGROUND_COMPACTION_RETAINED_BUCKETS ||
+      prunedConnectionCount < BACKGROUND_COMPACTION_PRUNE_THRESHOLD
+    );
+  }
 }
 
 function normalizeRetainedBucketCap(maxRetainedBuckets: number): number {
@@ -424,6 +533,53 @@ function normalizeRetainedBucketCap(maxRetainedBuckets: number): number {
   }
 
   return Math.max(0, Math.floor(maxRetainedBuckets));
+}
+
+function resolveBackgroundCompactionRetainedBucketBudget(
+  retainedBucketCount: number,
+): number {
+  return Math.max(
+    MIN_BACKGROUND_COMPACTION_RETAINED_BUCKETS,
+    Math.ceil(
+      retainedBucketCount * BACKGROUND_COMPACTION_RETAINED_BUCKET_FRACTION,
+    ),
+  );
+}
+
+function resolveNodeIdleTickScheduler(): IdleTickScheduler | undefined {
+  if (typeof setImmediate === 'function') {
+    return (callback) => {
+      setImmediate(callback);
+    };
+  }
+
+  if (typeof setTimeout === 'function') {
+    return (callback) => {
+      setTimeout(callback, 0);
+    };
+  }
+
+  return undefined;
+}
+
+function resolveBrowserCompactionScheduler(): IdleTickScheduler | undefined {
+  const requestIdleCallback = Reflect.get(globalThis, 'requestIdleCallback');
+
+  if (typeof requestIdleCallback === 'function') {
+    return (callback) => {
+      requestIdleCallback(() => {
+        callback();
+      });
+    };
+  }
+
+  if (typeof setTimeout === 'function') {
+    return (callback) => {
+      setTimeout(callback, 0);
+    };
+  }
+
+  return undefined;
 }
 
 /**

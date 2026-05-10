@@ -5,6 +5,10 @@ export {
   activateRaw,
   activateBatch,
 } from './activate/network.activate.utils';
+export {
+  forwardWindowed,
+  forwardWindowedAsync,
+} from './window/network.window.utils';
 export { connect, connectBatch, disconnect } from './connect/network.connect.utils';
 export {
   setSeed,

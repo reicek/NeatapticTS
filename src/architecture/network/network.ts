@@ -185,6 +185,8 @@ import {
   trainImpl as _trainImpl,
   crossOver as _crossOver,
   describeTemporalStructure as _describeTemporalStructure,
+  forwardWindowed as _forwardWindowed,
+  forwardWindowedAsync as _forwardWindowedAsync,
 } from './network.utils';
 import type {
   ActivationSchedule,
@@ -199,6 +201,8 @@ import type {
   NetworkBootstrapInternals,
   NetworkConnectionRequest,
   NetworkConstructorOptions,
+  NetworkForwardWindowAsyncOptions,
+  NetworkForwardWindowOptions,
   NetworkSparsityBudgetSnapshot,
   NetworkTemporalStructureDescriptor,
   NetworkTopologyIntent,
@@ -867,7 +871,9 @@ export default class Network implements NetworkView {
    */
   /**
    * Standard activation API returning a plain number[] for backward compatibility.
-   * Internally may use pooled typed arrays; if so they are cloned before returning.
+   * Internally may use pooled typed arrays; if so they are cloned before returning unless
+   * `reuseSequenceBuffers` opts the network into a small reusable plain-array ring for
+   * repeated sequence steps.
    */
   activate(
     input: number[],
@@ -923,6 +929,41 @@ export default class Network implements NetworkView {
    */
   activateBatch(inputs: number[][], training = false): number[][] {
     return _activateBatch.call(this, inputs, training);
+  }
+
+  /**
+   * Activate one input sequence in bounded windows while preserving carried recurrent state.
+   *
+    * This keeps the same output contract as repeated `activate()` calls, while
+    * adding bounded window callbacks and an opt-out from collecting the full
+    * output matrix when the caller wants lower sequence-retention pressure.
+   *
+   * @param inputs Ordered sequence of input vectors.
+   * @param options Optional windowed activation settings.
+   * @returns Output vectors aligned to the input order.
+   */
+  forwardWindowed(
+    inputs: number[][],
+    options?: NetworkForwardWindowOptions,
+  ): number[][] {
+    return _forwardWindowed.call(this, inputs, options);
+  }
+
+  /**
+   * Activate one input sequence in bounded windows with cooperative runtime yields.
+   *
+   * Browser runtimes can use this to yield after a configurable number of
+   * emitted windows so long-running sequence inference remains responsive.
+   *
+   * @param inputs Ordered sequence of input vectors.
+   * @param options Optional async windowed activation settings.
+   * @returns Output vectors aligned to the input order.
+   */
+  forwardWindowedAsync(
+    inputs: number[][],
+    options?: NetworkForwardWindowAsyncOptions,
+  ): Promise<number[][]> {
+    return _forwardWindowedAsync.call(this, inputs, options);
   }
 
   /**

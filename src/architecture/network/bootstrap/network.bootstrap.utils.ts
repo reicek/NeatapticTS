@@ -195,6 +195,7 @@ function initializeRuntimeState(
   }
 
   network._reuseActivationArrays = options?.reuseActivationArrays === true;
+  network._reuseSequenceBuffers = options?.reuseSequenceBuffers === true;
   network._returnTypedActivations = options?.returnTypedActivations === true;
 }
 

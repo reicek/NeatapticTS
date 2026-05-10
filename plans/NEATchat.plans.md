@@ -80,7 +80,7 @@ true:
 
 Roadmap sequencing note:
 
-- In the agreed serial pre-NGE sequence, this plan stays after `plans/Memory_Optimization.md` Track 1 through Phase 10, after `plans/ONNX_EXPORT_PLAN.md`, and after `plans/Evolution_Training_Interoperability_Contracts.md`.
+- In the agreed serial pre-NGE sequence, this plan stays after the archived Track 1 stop line in `plans/completed/Memory_Optimization.md`, after `plans/ONNX_EXPORT_PLAN.md`, and after `plans/Evolution_Training_Interoperability_Contracts.md`.
 - Finishing Memory alone is not a handoff into NEATchat; the required stop line still passes through ONNX hardening and hybrid interoperability first.
 
 Before those gates open, work on this file should stay limited to dependency

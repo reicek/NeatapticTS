@@ -4,7 +4,7 @@
 
 This plan defines the ant-hive ecosystem benchmark for [NEAT Genesis EvoDevo (NGE)](NEAT_Genesis_EvoDevo.md). It is the primary stress test for collective intelligence, stigmergy, role differentiation from identical DNA, and neuromodulation-driven behavioral switching — all rendered as a live web canvas simulation.
 
-This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md), [Memory_Optimization.md](Memory_Optimization.md), and [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md). If this plan conflicts with any upstream plan, the upstream plan wins.
+This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md), [completed/Memory_Optimization.md](completed/Memory_Optimization.md), and [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md). If this plan conflicts with any upstream plan, the upstream plan wins.
 
 ---
 
@@ -14,7 +14,7 @@ This is a benchmark-architecture plan, not an implementation-complete spec.
 
 - **In scope:** world design, GeoFront mechanics, food system, pheromone field, Angel patrol system, agent roles and sensory channels, caste differentiation model, NGE feature mapping, web worker architecture, canvas simulation spec, and acceptance criteria.
 - **Out of scope (for now):** exact physics constants, final reward weights, and GeoFront repair animation details.
-- **Authority rule:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [Memory_Optimization.md](Memory_Optimization.md) remain authoritative.
+- **Authority rule:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md) remain authoritative.
 
 ---
 

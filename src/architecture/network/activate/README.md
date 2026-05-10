@@ -338,6 +338,23 @@ Parameters:
 
 Returns: Mutable pooled output buffer.
 
+### acquireSequenceOutputBuffer
+
+```ts
+acquireSequenceOutputBuffer(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  outputSize: number,
+): number[]
+```
+
+Acquire the next reusable plain array slot for one sequence activation result.
+
+Parameters:
+- `runtimeNetwork` - Runtime activation internals.
+- `outputSize` - Required activation output width.
+
+Returns: One reusable plain array slot from the network-owned output ring.
+
 ### activate
 
 ```ts
@@ -633,6 +650,23 @@ Parameters:
 
 Returns: True when one or more probabilities are invalid.
 
+### copyOutputBufferIntoSequenceRing
+
+```ts
+copyOutputBufferIntoSequenceRing(
+  outputBuffer: ActivationArray,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number[]
+```
+
+Copy one pooled activation result into the current reusable sequence-output slot.
+
+Parameters:
+- `outputBuffer` - Mutable pooled output buffer.
+- `runtimeNetwork` - Runtime activation internals.
+
+Returns: Reused plain array slot for the current sequence step.
+
 ### createActivationStats
 
 ```ts
@@ -647,6 +681,21 @@ Parameters:
 - `totalConnections` - Number of network connections.
 
 Returns: Initialized activation stats object.
+
+### createSequenceOutputRing
+
+```ts
+createSequenceOutputRing(
+  outputSize: number,
+): number[][]
+```
+
+Create a reusable plain-array ring for consecutive sequence outputs.
+
+Parameters:
+- `outputSize` - Required activation output width.
+
+Returns: Fresh fixed-depth ring of plain output arrays.
 
 ### createWeightNoiseStats
 
@@ -682,6 +731,23 @@ Parameters:
 - `previousLayerActivations` - Last computed layer activations.
 
 Returns: Skip decision and survival probability for the layer.
+
+### ensureSequenceOutputRing
+
+```ts
+ensureSequenceOutputRing(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  outputSize: number,
+): void
+```
+
+Ensure the network owns a fixed-depth reusable ring sized for the current output width.
+
+Parameters:
+- `runtimeNetwork` - Runtime activation internals.
+- `outputSize` - Required activation output width.
+
+Returns: Nothing.
 
 ### executeActivationPath
 
@@ -930,6 +996,7 @@ Returns: Nothing.
 ```ts
 releaseBufferAndCreateResult(
   outputBuffer: ActivationArray,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
 ): number[]
 ```
 

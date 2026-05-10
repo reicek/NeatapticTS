@@ -17,7 +17,7 @@ Roadmap alignment note:
 - The current ONNX priority is to close the constrained recurrent hardening boundary honestly before broadening downstream claims.
 - Phase 4 spatial work can continue where it strengthens metadata and import shape discipline, but it should not dilute the Phase 3 supported-subset acceptance work.
 - `plans/NEATchat.plans.md` remains gated on this file naming, testing, and documenting an honest recurrent seed-import subset rather than a heuristic best-effort surface.
-- In the agreed serial pre-NGE sequence, this file is the immediate handoff after `plans/Memory_Optimization.md` finishes Track 1 through Phase 10 and before `plans/Evolution_Training_Interoperability_Contracts.md` becomes active.
+- In the agreed serial pre-NGE sequence, this file is the immediate handoff after the archived Track 1 stop line in `plans/completed/Memory_Optimization.md` and before `plans/Evolution_Training_Interoperability_Contracts.md` becomes active.
 
 ## 1. Current Status (Implemented)
 

@@ -17,6 +17,7 @@ type BootstrapNetworkFixture = {
   _rand: () => number;
   _returnTypedActivations?: boolean;
   _reuseActivationArrays?: boolean;
+  _reuseSequenceBuffers?: boolean;
   _topologyIntent?: 'feed-forward' | 'unconstrained';
   addNodeBetween: jest.Mock;
   connect: jest.Mock;
@@ -236,6 +237,7 @@ describe('network bootstrap utility chapter', () => {
             activationPrecision: 'f64',
             minHidden: 2,
             reuseActivationArrays: true,
+            reuseSequenceBuffers: true,
             returnTypedActivations: true,
             seed: 42,
           },
@@ -253,6 +255,7 @@ describe('network bootstrap utility chapter', () => {
           poolMaxCall: setMaxPerBucketSpy.mock.calls[0]?.[0],
           prewarmCall: prewarmSpy.mock.calls[0],
           reuseActivationArrays: network._reuseActivationArrays,
+          reuseSequenceBuffers: network._reuseSequenceBuffers,
           seededWith: network.setSeed.mock.calls[0]?.[0],
           typedActivations: network._returnTypedActivations,
         }).toEqual({
@@ -264,6 +267,7 @@ describe('network bootstrap utility chapter', () => {
           poolMaxCall: 7,
           prewarmCall: [1, 3],
           reuseActivationArrays: true,
+          reuseSequenceBuffers: true,
           seededWith: 42,
           typedActivations: true,
         });

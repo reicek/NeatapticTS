@@ -199,6 +199,13 @@ let persistedPhase5Sparsity:
       records?: unknown[];
     }
   | undefined;
+let persistedLatestHistorySnapshot:
+  | {
+      distBundle?: {
+        hash?: string;
+      };
+    }
+  | undefined;
 // Collected per‑run measurements (build + forward + memory) prior to aggregation.
 // Declared here (before tests) so inner describe blocks can push safely.
 const rawMeasurements: { size: number; metrics: Record<string, number> }[] = [];
@@ -659,9 +666,24 @@ describe('benchmark.memory dist-only', () => {
           };
         });
       };
-      const snapshot = {
+      const snapshot: {
+        commit: string;
+        distBundle?: {
+          bytes?: number;
+          exists: boolean;
+          hash?: string;
+        };
+        fieldAuditCounts?: {
+          Connection?: number;
+          Node?: number;
+        };
+        fwdDeltaPct: never[];
+        generatedAt: string;
+        sizes: number[];
+        summary: Array<Record<string, unknown>>;
+      } = {
         generatedAt: new Date().toISOString(),
-        commit,
+        commit: commit ?? 'unknown',
         sizes: distAggregated
           .map((g) => g.size)
           .sort((a: number, b: number) => a - b),
@@ -723,6 +745,7 @@ describe('benchmark.memory dist-only', () => {
       } catch {
         // Ignore dist bundle hash errors
       }
+      snapshot.distBundle = distBundleMeta;
       // --- optional forward regression annotation (informational, non-failing) ---
       // Criteria: we need at least 2 historical snapshots to compute a rolling median, and variance CV below threshold.
       const regressionAnnotations: Array<Record<string, unknown>> = [];
@@ -817,6 +840,9 @@ describe('benchmark.memory dist-only', () => {
       const hist = Array.isArray(payload.history) ? payload.history : [];
       hist.push(snapshot);
       payload.history = hist.slice(-10);
+      persistedLatestHistorySnapshot = (
+        payload.history as Array<typeof snapshot>
+      ).at(-1);
       fs.writeFileSync(resultsFile, JSON.stringify(payload, null, 2), 'utf-8');
     } catch {
       // Ignore file write errors
@@ -830,6 +856,12 @@ describe('benchmark.memory dist-only', () => {
       }
       expect(g).toBeDefined();
       expect((g as GroupWithMetrics).bytesPerConnMean).toBeGreaterThan(0);
+    });
+
+    it('persists the latest history snapshot dist bundle hash for audit gates', () => {
+      expect(typeof persistedLatestHistorySnapshot?.distBundle?.hash).toBe(
+        'string',
+      );
     });
   });
 

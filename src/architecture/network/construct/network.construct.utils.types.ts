@@ -51,6 +51,7 @@ export interface ConstructOptions extends Pick<
   | 'activationPrecision'
   | 'returnTypedActivations'
   | 'reuseActivationArrays'
+  | 'reuseSequenceBuffers'
   | 'seed'
 > {
   /** Scheduling mode to compile after materializing the runtime graph. */

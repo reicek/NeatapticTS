@@ -1,7 +1,9 @@
 import Connection from '../../connection';
 import Node from '../../node/node';
+import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import {
   buildPruneSelection,
+  disconnectConnections,
   resolvePruningMethod,
   shouldRunScheduledPrune,
 } from './network.prune.schedule.utils';
@@ -114,6 +116,56 @@ describe('network prune schedule utility chapter', () => {
 
         // Assert
         expect(selectedConnections[0]).toBe(lowerSaliencyConnection);
+      });
+    });
+  });
+
+  describe('disconnectConnections()', () => {
+    describe('given many connections are removed at once', () => {
+      it('disconnects every edge and forwards the large-prune size to the activation pool', () => {
+        // Arrange
+        const disconnectSpy = jest.fn();
+        const fakeNetwork = { disconnect: disconnectSpy } as unknown as Parameters<
+          typeof disconnectConnections
+        >[0];
+        const connectionsToDisconnect = Array.from({ length: 64 }, () => {
+          return new Connection(new Node('hidden'), new Node('hidden'), 0.1);
+        });
+        const originalScheduler = Reflect.get(
+          activationArrayPool,
+          'scheduleCompactionAfterLargePrune',
+        );
+        const scheduleSpy = jest.fn();
+        Reflect.set(
+          activationArrayPool,
+          'scheduleCompactionAfterLargePrune',
+          scheduleSpy,
+        );
+
+        // Act
+        disconnectConnections(fakeNetwork, connectionsToDisconnect);
+
+        if (originalScheduler === undefined) {
+          Reflect.deleteProperty(
+            activationArrayPool,
+            'scheduleCompactionAfterLargePrune',
+          );
+        } else {
+          Reflect.set(
+            activationArrayPool,
+            'scheduleCompactionAfterLargePrune',
+            originalScheduler,
+          );
+        }
+
+        // Assert
+        expect({
+          disconnectedEdgeCount: disconnectSpy.mock.calls.length,
+          scheduledPruneCount: scheduleSpy.mock.calls[0]?.[0],
+        }).toEqual({
+          disconnectedEdgeCount: 64,
+          scheduledPruneCount: 64,
+        });
       });
     });
   });
