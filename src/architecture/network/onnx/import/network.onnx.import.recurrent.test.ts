@@ -73,11 +73,12 @@ function buildPartitionedGruNetwork(
 describe('network onnx import recurrent chapter', () => {
   describe('recurrent reconstruction', () => {
     describe('given a partitioned LSTM-like payload', () => {
+      let sourceNetwork: Network;
       let importedNetwork: Network;
 
       beforeEach(() => {
         // Arrange
-        const sourceNetwork = buildPartitionedLstmNetwork(2, 2, 1);
+        sourceNetwork = buildPartitionedLstmNetwork(2, 2, 1);
         const onnxModel = exportToONNX(sourceNetwork, { allowRecurrent: true });
 
         // Act
@@ -93,15 +94,43 @@ describe('network onnx import recurrent chapter', () => {
             ).length,
           ).toBe(2);
         });
+
+        it('restores the exported LSTM gate biases and recurrent self weights', () => {
+          // Arrange
+          const sourceHiddenNodes = getHiddenNodes(sourceNetwork);
+          const importedHiddenNodes = getHiddenNodes(importedNetwork);
+
+          // Assert
+          expect({
+            importedGateBiases: importedHiddenNodes
+              .slice(0, 8)
+              .map((hiddenNode) => Number(hiddenNode.bias.toFixed(9))),
+            importedRecurrentSelfWeights: importedHiddenNodes
+              .slice(4, 6)
+              .map(
+                (hiddenNode) => hiddenNode.connections.self[0]?.weight ?? null,
+              ),
+          }).toEqual({
+            importedGateBiases: sourceHiddenNodes
+              .slice(0, 8)
+              .map((hiddenNode) => Number(hiddenNode.bias.toFixed(9))),
+            importedRecurrentSelfWeights: sourceHiddenNodes
+              .slice(4, 6)
+              .map(
+                (hiddenNode) => hiddenNode.connections.self[0]?.weight ?? null,
+              ),
+          });
+        });
       });
     });
 
     describe('given a partitioned GRU-like payload', () => {
+      let sourceNetwork: Network;
       let importedNetwork: Network;
 
       beforeEach(() => {
         // Arrange
-        const sourceNetwork = buildPartitionedGruNetwork(2, 2, 1);
+        sourceNetwork = buildPartitionedGruNetwork(2, 2, 1);
         const onnxModel = exportToONNX(sourceNetwork, { allowRecurrent: true });
 
         // Act
@@ -116,6 +145,38 @@ describe('network onnx import recurrent chapter', () => {
               (nodeEntry) => nodeEntry.type === 'output',
             ).length,
           ).toBe(1);
+        });
+
+        it('restores the exported GRU gate biases and recurrent self weights', () => {
+          // Arrange
+          const sourceHiddenNodes = getHiddenNodes(sourceNetwork);
+          const importedHiddenNodes = getHiddenNodes(importedNetwork);
+          const importedMemoryCellNodes = importedHiddenNodes.slice(6, 8);
+          const importedPreviousOutputNodes = importedHiddenNodes.slice(10, 12);
+
+          // Assert
+          expect({
+            importedCandidateBiases: importedMemoryCellNodes.map((hiddenNode) =>
+              Number(hiddenNode.bias.toFixed(9)),
+            ),
+            importedCandidateRecurrentWeights:
+              importedMemoryCellNodes.map((hiddenNode, nodeIndex) =>
+                hiddenNode.connections.in.find(
+                  (connection) =>
+                    connection.from === importedPreviousOutputNodes[nodeIndex],
+                )?.weight ?? null,
+              ),
+          }).toEqual({
+            importedCandidateBiases: sourceHiddenNodes
+              .slice(0, 6)
+              .slice(4, 6)
+              .map((hiddenNode) => Number(hiddenNode.bias.toFixed(9))),
+            importedCandidateRecurrentWeights: sourceHiddenNodes
+              .slice(4, 6)
+              .map(
+                (hiddenNode) => hiddenNode.connections.self[0]?.weight ?? null,
+              ),
+          });
         });
       });
     });

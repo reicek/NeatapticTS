@@ -12,6 +12,7 @@ import {
   addGRUNode,
   addLSTMNode,
   addNode,
+  addSelfConn,
   modActivation,
   modBias,
   modWeight,
@@ -76,6 +77,10 @@ function readWeightSignature(network: Network): string {
     .join(',');
 }
 
+function readTotalConnectionCount(network: Network): number {
+  return network.connections.length + network.selfconns.length;
+}
+
 function countTemporalDescriptors(network: Network): number {
   const serializedJson = network.toJSON() as unknown as NetworkJSON;
   const extensionValues = serializedJson.extensions?.values as
@@ -101,6 +106,29 @@ describe('network mutate handler utility chapter', () => {
   });
 
   describe('addNode', () => {
+    describe('given the sparsity budget cannot free enough room for one more split edge', () => {
+      it('returns without removing the original connection or adding a hidden node', () => {
+        // Arrange
+        const network = createSingleConnectionNetwork(10_250);
+        network.configureSparsityBudget({ maxConnections: 1 });
+
+        // Act
+        addNode.call(network);
+        const budgetSnapshot = network.getSparsityBudgetSnapshot();
+
+        // Assert
+        expect({
+          connectionCount: network.connections.length,
+          decision: budgetSnapshot?.decision,
+          hiddenCount: countHiddenNodes(network),
+        }).toEqual({
+          connectionCount: 1,
+          decision: 'deny',
+          hiddenCount: 0,
+        });
+      });
+    });
+
     describe('given deterministic chain mode is enabled without an output endpoint', () => {
       it('returns without adding a hidden node', () => {
         // Arrange
@@ -350,6 +378,79 @@ describe('network mutate handler utility chapter', () => {
   });
 
   describe('addConn', () => {
+    describe('given the sparsity budget cannot free enough room for the missing shortcut edge', () => {
+      it('returns without adding the forward shortcut', () => {
+        // Arrange
+        const network = createAcyclicSingleConnectionNetwork(10_253);
+        addNode.call(network);
+        network.configureSparsityBudget({ maxConnections: 1 });
+        const connectionCountBeforeMutation = network.connections.length;
+
+        // Act
+        addConn.call(network);
+        const budgetSnapshot = network.getSparsityBudgetSnapshot();
+
+        // Assert
+        expect({
+          connectionCount: network.connections.length,
+          decision: budgetSnapshot?.decision,
+          retainedOriginalCount:
+            network.connections.length === connectionCountBeforeMutation,
+        }).toEqual({
+          connectionCount: 2,
+          decision: 'deny',
+          retainedOriginalCount: true,
+        });
+      });
+    });
+
+    describe('given no forward connection candidates remain', () => {
+      it('returns without changing the connection count', () => {
+        // Arrange
+        const network = createAcyclicSingleConnectionNetwork(10_252);
+        const connectionCountBeforeMutation = network.connections.length;
+
+        // Act
+        addConn.call(network);
+
+        // Assert
+        expect(network.connections.length).toBe(connectionCountBeforeMutation);
+      });
+    });
+
+    describe('given the sparsity budget must free one slot before adding the shortcut edge', () => {
+      it('prunes one low-priority edge and still adds one forward connection within the cap', () => {
+        // Arrange
+        const network = createAcyclicSingleConnectionNetwork(10_251);
+        addNode.call(network);
+        network.connections[0].weight = 0.01;
+        network.connections[1].weight = 0.9;
+        network.configureSparsityBudget({ maxConnections: 2 });
+        const inputNode = network.nodes[0];
+        const outputNode = network.nodes.at(-1);
+
+        // Act
+        addConn.call(network);
+        const budgetSnapshot = network.getSparsityBudgetSnapshot();
+        const hasShortcutEdge = network.connections.some(
+          (candidateConnection) =>
+            candidateConnection.from === inputNode &&
+            candidateConnection.to === outputNode,
+        );
+
+        // Assert
+        expect({
+          connectionCount: network.connections.length,
+          decision: budgetSnapshot?.decision,
+          hasShortcutEdge,
+        }).toEqual({
+          connectionCount: 2,
+          decision: 'prune-then-allow',
+          hasShortcutEdge: true,
+        });
+      });
+    });
+
     describe('given acyclic mode adds the only missing forward shortcut', () => {
       it('marks the topology dirty and increases the forward connection count', () => {
         // Arrange
@@ -676,6 +777,36 @@ describe('network mutate handler utility chapter', () => {
     });
   });
 
+  describe('addSelfConn', () => {
+    describe('given a self-loop already consumes the last total-connection budget slot', () => {
+      it('returns without adding another self-loop when pruning cannot free room', () => {
+        // Arrange
+        const network = new Network(1, 2, {
+          seed: 10_268,
+          enforceAcyclic: false,
+        });
+        network.connect(network.nodes[1], network.nodes[1]);
+        network.configureSparsityBudget({ maxConnections: 3 });
+        Reflect.set(network, 'disconnect', () => undefined);
+
+        // Act
+        addSelfConn.call(network);
+        const budgetSnapshot = network.getSparsityBudgetSnapshot();
+
+        // Assert
+        expect({
+          decision: budgetSnapshot?.decision,
+          selfConnectionCount: network.selfconns.length,
+          totalConnectionCount: readTotalConnectionCount(network),
+        }).toEqual({
+          decision: 'deny',
+          selfConnectionCount: 1,
+          totalConnectionCount: 3,
+        });
+      });
+    });
+  });
+
   describe('addGate', () => {
     describe('given every connection is already gated', () => {
       it('emits one warning and keeps the gate count unchanged', () => {
@@ -739,6 +870,35 @@ describe('network mutate handler utility chapter', () => {
   });
 
   describe('addBackConn', () => {
+    describe('given a self-loop already consumes the last total-connection budget slot', () => {
+      it('returns without adding another backward edge when pruning cannot free room', () => {
+        // Arrange
+        const network = new Network(1, 2, {
+          seed: 10_269,
+          enforceAcyclic: false,
+        });
+        network.connect(network.nodes[1], network.nodes[1]);
+        network.configureSparsityBudget({ maxConnections: 3 });
+        Reflect.set(network, '_rand', () => 0);
+        Reflect.set(network, 'disconnect', () => undefined);
+
+        // Act
+        addBackConn.call(network);
+        const budgetSnapshot = network.getSparsityBudgetSnapshot();
+
+        // Assert
+        expect({
+          decision: budgetSnapshot?.decision,
+          forwardConnectionCount: network.connections.length,
+          totalConnectionCount: readTotalConnectionCount(network),
+        }).toEqual({
+          decision: 'deny',
+          forwardConnectionCount: 2,
+          totalConnectionCount: 3,
+        });
+      });
+    });
+
     describe('given no backward candidate pairs exist', () => {
       it('returns without changing the forward connection count', () => {
         // Arrange
@@ -932,6 +1092,30 @@ describe('network mutate handler utility chapter', () => {
   });
 
   describe('addLSTMNode', () => {
+    describe('given the sparsity budget cannot free enough room for the recurrent block expansion', () => {
+      it('returns without changing the node or forward-connection count', () => {
+        // Arrange
+        const network = createSingleConnectionNetwork(10_270);
+        network.configureSparsityBudget({ maxConnections: 1 });
+        const nodeCountBeforeMutation = network.nodes.length;
+
+        // Act
+        addLSTMNode.call(network);
+        const budgetSnapshot = network.getSparsityBudgetSnapshot();
+
+        // Assert
+        expect({
+          connectionCount: network.connections.length,
+          decision: budgetSnapshot?.decision,
+          nodeCount: network.nodes.length,
+        }).toEqual({
+          connectionCount: 1,
+          decision: 'deny',
+          nodeCount: nodeCountBeforeMutation,
+        });
+      });
+    });
+
     describe('given no forward connections remain', () => {
       it('returns without changing the node count', () => {
         // Arrange
@@ -966,6 +1150,30 @@ describe('network mutate handler utility chapter', () => {
   });
 
   describe('addGRUNode', () => {
+    describe('given the sparsity budget cannot free enough room for the recurrent block expansion', () => {
+      it('returns without changing the node or forward-connection count', () => {
+        // Arrange
+        const network = createSingleConnectionNetwork(10_271);
+        network.configureSparsityBudget({ maxConnections: 1 });
+        const nodeCountBeforeMutation = network.nodes.length;
+
+        // Act
+        addGRUNode.call(network);
+        const budgetSnapshot = network.getSparsityBudgetSnapshot();
+
+        // Assert
+        expect({
+          connectionCount: network.connections.length,
+          decision: budgetSnapshot?.decision,
+          nodeCount: network.nodes.length,
+        }).toEqual({
+          connectionCount: 1,
+          decision: 'deny',
+          nodeCount: nodeCountBeforeMutation,
+        });
+      });
+    });
+
     describe('given the expanded connection was previously gated', () => {
       it('preserves the previous gater on the latest reconnection edge', () => {
         // Arrange

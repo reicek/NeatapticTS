@@ -27,6 +27,33 @@ describe('network mutate public utility chapter', () => {
   });
 
   describe('addNodeBetweenImpl', () => {
+    describe('given the sparsity budget cannot free enough room for one more split edge', () => {
+      it('returns without adding a hidden node or changing the connection count', () => {
+        // Arrange
+        const network = createSingleConnectionNetwork();
+        network.configureSparsityBudget({ maxConnections: 1 });
+        const connectionCountBeforeMutation = network.connections.length;
+
+        // Act
+        addNodeBetweenImpl.call(network);
+        const budgetSnapshot = network.getSparsityBudgetSnapshot();
+
+        // Assert
+        expect({
+          connectionCount: network.connections.length,
+          decision: budgetSnapshot?.decision,
+          hiddenCount: countHiddenNodes(network),
+          retainedOriginalCount:
+            network.connections.length === connectionCountBeforeMutation,
+        }).toEqual({
+          connectionCount: 1,
+          decision: 'deny',
+          hiddenCount: 0,
+          retainedOriginalCount: true,
+        });
+      });
+    });
+
     describe('given the network has no remaining connections', () => {
       it('returns without adding a hidden node', () => {
         // Arrange

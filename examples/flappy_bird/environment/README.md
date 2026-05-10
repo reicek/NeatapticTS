@@ -169,6 +169,33 @@ Parameters:
 
 Returns: Nothing.
 
+### stepFlappyStateWithControlSubstepsAsync
+
+```ts
+stepFlappyStateWithControlSubstepsAsync(
+  state: FlappyGameState,
+  rng: FlappyRng,
+  shouldFlapForSubstep: () => boolean | Promise<boolean>,
+  difficultyScale: number,
+  controlSubstepsPerFrame: number,
+): Promise<void>
+```
+
+Advance one logical frame using multiple control/physics substeps with async control.
+
+This variant keeps the environment stepping contract identical to the sync
+path while allowing the control decision to come from an async boundary such
+as a persistent worker-hosted inference channel.
+
+Parameters:
+- `state` - Mutable state object to update in-place.
+- `rng` - Random source used to spawn pipes.
+- `shouldFlapForSubstep` - Async callback deciding flap action per substep.
+- `difficultyScale` - Curriculum difficulty scale in [0, 1].
+- `controlSubstepsPerFrame` - Number of substeps to run this frame.
+
+Returns: Nothing.
+
 ## environment/environment.collision.utils.ts
 
 ### updateCollisionAndProgressState

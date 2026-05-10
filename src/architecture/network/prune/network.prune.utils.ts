@@ -24,6 +24,10 @@ import {
   calculateSparsityFromBaseline,
   readInitialSparsityBaseline,
 } from './network.prune.sparsity.utils';
+export {
+  configureSparsityBudget,
+  getSparsityBudgetSnapshot,
+} from './network.prune.budget.utils';
 import { PRUNING_METHOD_MAGNITUDE } from './network.prune.utils.types';
 
 /**

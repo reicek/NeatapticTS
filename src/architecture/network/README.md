@@ -140,15 +140,15 @@ activateRaw(
 ): ActivationArray
 ```
 
-Raw activation that can return a typed array when pooling is enabled (zero-copy).
-If reuseActivationArrays=false falls back to standard activate().
+Raw activation that can return a reusable typed array when pooling is enabled.
+If `reuseActivationArrays` is disabled this falls back to the standard plain-array activation path.
 
 Parameters:
 - `input` - Input vector.
 - `training` - Whether to enable training-time stochastic paths.
 - `maxActivationDepth` - Maximum graph depth for activation.
 
-Returns: Output activations (typed array when pooling is enabled).
+Returns: Output activations as either a plain array or a reusable typed activation buffer.
 
 #### addNodeBetween
 
@@ -219,6 +219,19 @@ Configure scheduled pruning during training.
 Parameters:
 - `cfg` - Pruning schedule and strategy configuration.
 
+#### configureSparsityBudget
+
+```ts
+configureSparsityBudget(
+  cfg: { maxConnections: number; growthGraceFraction?: number | undefined; method?: "magnitude" | "snip" | undefined; },
+): void
+```
+
+Configure a structural connection-growth budget for future mutations.
+
+Parameters:
+- `cfg` - Absolute connection cap plus optional grace headroom.
+
 #### connect
 
 ```ts
@@ -234,6 +247,25 @@ Handles both regular connections and self-connections.
 Adds the new connection object(s) to the appropriate network list (`connections` or `selfconns`).
 
 Returns: An array containing the newly created connection object(s). Typically contains one connection, but might be empty or contain more in specialized node types.
+
+#### connectBatch
+
+```ts
+connectBatch(
+  requests: readonly NetworkConnectionRequest[],
+): default[]
+```
+
+Creates many connections in one ordered structural edit batch.
+
+This preserves the same legality checks and deterministic default-weight
+behavior as repeated `connect()` calls, but it reserves network-level
+storage once for the whole request shelf.
+
+Parameters:
+- `requests` - Ordered connection requests.
+
+Returns: Flattened created connection objects in request order.
 
 #### connections
 
@@ -555,6 +587,16 @@ getRNGState(): number | undefined
 Read the raw deterministic RNG state word.
 
 Returns: RNG state value when present.
+
+#### getSparsityBudgetSnapshot
+
+```ts
+getSparsityBudgetSnapshot(): NetworkSparsityBudgetSnapshot | undefined
+```
+
+Read the latest structural growth-budget decision snapshot.
+
+Returns: Snapshot when a budgeted growth decision has already run.
 
 #### getTopologyIntent
 
@@ -1067,15 +1109,17 @@ activateRaw(
   input: number[],
   training: boolean,
   maxActivationDepth: number,
-): number[]
+): ActivationArray
 ```
 
-Thin semantic alias to the network's main activation path.
+Raw activation wrapper with optional typed-output reuse semantics.
 
-At present this simply forwards to {@link Network.activate}. The indirection is useful for:
- - Future differentiation between raw (immediate) activation and a mode that performs reuse /
-   staged batching logic.
- - Providing a stable exported symbol for external tooling / instrumentation.
+The heavy math still lives in the main activation path, but this wrapper now
+owns the contract for network-local typed output reuse. When
+`reuseActivationArrays` is enabled, raw activation may copy the detached
+activation result into a reusable typed buffer whose element width follows
+the network's resolved activation precision. Callers that also enable
+`returnTypedActivations` may receive that reusable typed buffer directly.
 
 Parameters:
 - `this` - Bound Network instance.
@@ -1083,7 +1127,7 @@ Parameters:
 - `training` - Whether to retain training traces / gradients (delegated downstream).
 - `maxActivationDepth` - Guard against runaway recursion / cyclic activation attempts.
 
-Returns: Implementation-defined result of Network.activate (typically an output vector).
+Returns: Output vector, either as a plain array or a reusable typed activation buffer.
 
 Example:
 
@@ -1182,6 +1226,27 @@ ordered list. Recurrent mode uses the SCC condensation graph to emit
 deterministic recurrent-component boundaries while leaving the legacy acyclic
 cache empty until the activation path adopts the richer schedule directly.
 
+### configureSparsityBudget
+
+```ts
+configureSparsityBudget(
+  configuration: SparsityBudgetConfiguration,
+): void
+```
+
+Configure a total-connection growth sparsity budget on one network.
+
+The budget is expressed as an absolute cap across forward and self
+connections plus an optional grace fraction. Growth helpers can then prune
+before mutation or deny the request when the graph cannot stay within the
+allowed envelope.
+
+Parameters:
+- `this` - Target network instance.
+- `configuration` - Budget settings for future structural growth.
+
+Returns: Nothing.
+
 ### connect
 
 ```ts
@@ -1231,6 +1296,33 @@ Returns: Array of created  {@link Connection} objects (possibly empty if acyclic
 Example:
 
 const [edge] = net.connect(nodeA, nodeB, 0.5);
+
+### connectBatch
+
+```ts
+connectBatch(
+  requests: readonly NetworkConnectionRequest[],
+): default[]
+```
+
+Create and register many directed connection objects in one structural edit batch.
+
+This preserves the same legality checks and deterministic default-weight
+policy as repeated {@link connect} calls, but it reserves network-level
+connection storage once for the whole request shelf.
+
+Parameters:
+- `this` - Bound Network instance.
+- `requests` - Ordered connection requests.
+
+Returns: Flattened created  {@link Connection} objects in request order.
+
+Example:
+
+const createdConnections = network.connectBatch([
+  { from: network.nodes[0], to: network.nodes[2] },
+  { from: network.nodes[1], to: network.nodes[2], weight: 0.5 },
+]);
 
 ### createMLP
 
@@ -1446,6 +1538,32 @@ Parameters:
 Example:
 
 net.disconnect(nodeA, nodeB);
+
+### ensureGrowthBudget
+
+```ts
+ensureGrowthBudget(
+  currentNetwork: default,
+  requiredAdditionalConnections: number,
+): boolean
+```
+
+Ensure enough total-connection budget remains before a growth mutation writes.
+
+Behavior:
+- allow immediately when the projected total connection count fits the budget,
+- prune lowest-priority connections first when the budget can be satisfied by
+  freeing space,
+- temporarily stop net-new growth when the active Node/browser heap already exceeds
+  its soft memory target,
+- deny without structural writes when the request cannot stay within the
+  minimum remaining-connection invariant.
+
+Parameters:
+- `currentNetwork` - Network about to grow.
+- `requiredAdditionalConnections` - Net total-connection increase requested by the caller.
+
+Returns: True when growth may proceed.
 
 ### evolveNetwork
 
@@ -1694,7 +1812,7 @@ const state = network.getRNGState();
 ### getSlabAllocationStats
 
 ```ts
-getSlabAllocationStats(): { pool: { [x: string]: PoolKeyMetrics; }; fresh: number; pooled: number; }
+getSlabAllocationStats(): { fresh: number; pooled: number; pool: Record<string, PoolKeyMetrics>; }
 ```
 
 Allocation statistics snapshot for slab typed arrays.
@@ -1707,6 +1825,21 @@ Includes:
 NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.
 
 Returns: Plain object copy (safe to serialize) of current allocator counters.
+
+### getSparsityBudgetSnapshot
+
+```ts
+getSparsityBudgetSnapshot(
+  currentNetwork: default,
+): NetworkSparsityBudgetSnapshot | undefined
+```
+
+Read the last recorded sparsity-budget decision snapshot.
+
+Parameters:
+- `currentNetwork` - Network to inspect.
+
+Returns: Snapshot clone when one exists; otherwise undefined.
 
 ### hasPath
 
@@ -1909,7 +2042,7 @@ Cooperative asynchronous slab rebuild (Browser only).
 
 Strategy:
  - Perform capacity decision + allocation up front (mirrors sync path).
- - Populate connection data in microtask slices (yield via resolved Promise) to avoid long main‑thread stalls.
+ - Populate connection data in timer-backed macrotask slices so the browser can service other queued work between chunks.
  - Adaptive slice sizing for very large graphs if `config.browserSlabChunkTargetMs` set.
 
 Metrics: Increments `_slabAsyncBuilds` for observability.
@@ -2836,7 +2969,8 @@ keeping a stable FP32 master copy of parameters when needed.
 Dynamic mixed-precision configuration.
 
 When enabled, training uses a loss-scaling heuristic that attempts to keep gradients
-in a numerically stable range. If an overflow is detected, the scale is reduced.
+in a numerically stable range. Overflow pressure scales the loss down, while
+persistent tiny gradients can scale it back up.
 
 ### MonitoredSmoothingConfig
 
@@ -2888,6 +3022,10 @@ Provenance of hidden-layer architecture information.
 ### NetworkBootstrapInternals
 
 Internal constructor-time surface used by bootstrap helpers.
+
+### NetworkConnectionRequest
+
+One ordered edge request consumed by {@link Network.connectBatch}.
 
 ### NetworkConstructor
 
@@ -2977,6 +3115,14 @@ Internal runtime properties attached to Network instances.
 ### NetworkSlabProps
 
 Internal Network properties for slab operations.
+
+### NetworkSparsityBudgetProps
+
+Internal network properties accessed during sparsity-budget enforcement.
+
+### NetworkSparsityBudgetSnapshot
+
+Read-only snapshot describing the latest growth-budget decision.
 
 ### NetworkStandaloneProps
 
@@ -3779,6 +3925,10 @@ Writable slab arrays targeted during connection serialization.
 ### SourcePeerConnectionCountContext
 
 Context for source-to-peer connection counting.
+
+### SparsityBudgetDecision
+
+Growth-budget decision categories for structural mutations.
 
 ### SpecMetadataAppendContext
 

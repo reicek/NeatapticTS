@@ -104,10 +104,27 @@
  * If you want background reading before the symbol shelf, the MDN Web Workers
  * guide is the fastest practical reference for why this example pushes both
  * evolution and playback off the main thread.
+ *
+ * ## Parallel evaluation ownership
+ *
+ * This worker chapter now sits on top of the public turnkey helper ladder
+ * instead of proving each worker primitive in demo-local code. Flappy uses the
+ * shared library helpers for capability detection, transport auto-selection,
+ * browser worker URL resolution, bounded inference pools, ordered batch
+ * evaluation, and the boolean-first NEAT population helper.
+ *
+ * The worker still owns the parts that are example-specific rather than
+ * transport-generic: deciding which architecture profiles should opt into
+ * parallel evaluation, preparing Flappy-specific rollout payloads, and turning
+ * worker-local results into the compact generation-ready or playback-step
+ * messages the host consumes.
  */
 /// <reference lib="webworker" />
 
-import { Neat } from '../../../src/neataptic';
+import {
+  Neat,
+  resolveBrowserWorkerAssetUrl,
+} from '../../../src/neataptic';
 import Network from '../../../src/architecture/network';
 import {
   DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
@@ -122,6 +139,7 @@ import type {
   WorkerResponseMessage,
   WorkerStartPlaybackMessage,
 } from './flappy-evolution-worker.types';
+import { FlappyEvaluationWorkerPool } from '../evaluation/evaluation.worker-pool';
 import { createInitializedWorkerRuntime } from './flappy-evolution-worker.runtime.service';
 import {
   createWorkerErrorMessage,
@@ -129,7 +147,10 @@ import {
   FLAPPY_WORKER_INIT_FAILED_ERROR_MESSAGE,
 } from './flappy-evolution-worker.errors';
 import { routeWorkerProtocolMessage } from './flappy-evolution-worker.protocol.service';
-import { evolveAndBuildGenerationReadyMessage } from './flappy-evolution-worker.evolution.service';
+import {
+  evolveAndBuildGenerationReadyMessage,
+  resolveGenerationReadyMessageTransferList,
+} from './flappy-evolution-worker.evolution.service';
 import {
   beginWorkerPlaybackSession,
   processWorkerPlaybackStep,
@@ -138,17 +159,24 @@ import {
   createWorkerPlaybackSnapshot,
   resolveWorkerPlaybackSnapshotTransferList,
 } from './flappy-evolution-worker.snapshot.utils';
-import { createWorkerPopulationRenderState } from './flappy-evolution-worker.simulation.utils';
+import {
+  closeWorkerPopulationRenderState,
+  createWorkerPopulationRenderState,
+} from './flappy-evolution-worker.simulation.utils';
 import { stepWorkerPopulationFrame } from './flappy-evolution-worker.simulation.frame.service';
 import { warmStartWorkerGenerationZeroIfNeeded } from './flappy-evolution-worker.warm-start.service';
 
 const FLAPPY_WORKER_INITIAL_SEED = 0;
 const FLAPPY_WORKER_INITIAL_WINNER_INDEX = -1;
+const FLAPPY_WORKER_PROTOCOL_LOG_PREFIX = '[flappy-worker]';
+const SHOULD_LOG_FLAPPY_WORKER_PROTOCOL =
+  resolveNodeEnvForRuntimeLogs() !== 'test';
 
 type WorkerMutableRuntimeState = {
   currentArchitectureProfileId: ExampleArchitectureProfileId;
   stopped: boolean;
   neatRuntime: Neat | undefined;
+  evaluationWorkerPool: FlappyEvaluationWorkerPool | undefined;
   currentPopulation: Network[];
   currentPlaybackState: WorkerPlaybackState | undefined;
   currentPlaybackRng: ReturnType<typeof createXorshift32> | undefined;
@@ -197,6 +225,7 @@ function createWorkerMutableRuntimeState(): WorkerMutableRuntimeState {
     currentArchitectureProfileId: DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
     stopped: false,
     neatRuntime: undefined,
+    evaluationWorkerPool: undefined,
     currentPopulation: [],
     currentPlaybackState: undefined,
     currentPlaybackRng: undefined,
@@ -254,6 +283,8 @@ function createWorkerProtocolHandlers(
   return {
     markStopped: (): void => {
       workerMutableRuntimeState.stopped = true;
+      void workerMutableRuntimeState.evaluationWorkerPool?.dispose();
+      workerMutableRuntimeState.evaluationWorkerPool = undefined;
     },
     beginInitialization: (payload: WorkerInitMessage['payload']): void => {
       beginWorkerInitialization(workerMutableRuntimeState, payload);
@@ -264,14 +295,23 @@ function createWorkerProtocolHandlers(
     hasPopulation: (): boolean =>
       workerMutableRuntimeState.currentPopulation.length > 0,
     startPlayback: (payload: WorkerStartPlaybackMessage['payload']): void => {
-      beginWorkerPlayback(workerMutableRuntimeState, payload);
+      void beginWorkerPlayback(workerMutableRuntimeState, payload).catch(
+        (error: unknown) => {
+          postWorkerMessage(createWorkerErrorMessageFromUnknown(error));
+        },
+      );
     },
     hasPlaybackState: (): boolean =>
       workerMutableRuntimeState.currentPlaybackState != null,
     processPlaybackStep: (
       payload: WorkerRequestPlaybackStepMessage['payload'],
     ): void => {
-      processWorkerPlaybackStepRequest(workerMutableRuntimeState, payload);
+      void processWorkerPlaybackStepRequest(
+        workerMutableRuntimeState,
+        payload,
+      ).catch((error: unknown) => {
+        postWorkerMessage(createWorkerErrorMessageFromUnknown(error));
+      });
     },
     postWorkerMessage,
   };
@@ -296,6 +336,17 @@ async function initializeRuntime(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
   initPayload: WorkerInitMessage['payload'],
 ): Promise<void> {
+  await closeWorkerPopulationRenderState(
+    workerMutableRuntimeState.currentPlaybackState,
+  );
+  await workerMutableRuntimeState.evaluationWorkerPool?.dispose();
+
+  if (SHOULD_LOG_FLAPPY_WORKER_PROTOCOL) {
+    console.info(
+      `${FLAPPY_WORKER_PROTOCOL_LOG_PREFIX} init architecture=${initPayload.architectureProfileId ?? DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID} population=${initPayload.populationSize} elitism=${initPayload.elitismCount}`,
+    );
+  }
+
   // Step 1: Persist the worker seed so warm-start logic can reuse it deterministically.
   workerMutableRuntimeState.workerInitSeed = initPayload.rngSeed;
 
@@ -310,10 +361,14 @@ async function initializeRuntime(
   workerMutableRuntimeState.playbackWinnerIndex =
     FLAPPY_WORKER_INITIAL_WINNER_INDEX;
   workerMutableRuntimeState.generationZeroWarmStartApplied = false;
+  workerMutableRuntimeState.evaluationWorkerPool =
+    createWorkerEvaluationPoolIfSupported(initPayload);
 
   // Step 4: Build and configure the NEAT runtime controller.
   workerMutableRuntimeState.neatRuntime =
-    createInitializedWorkerRuntime(initPayload);
+    createInitializedWorkerRuntime(initPayload, {
+      workerPool: workerMutableRuntimeState.evaluationWorkerPool,
+    });
 }
 
 /**
@@ -350,7 +405,10 @@ async function evolveAndPublishGeneration(
     },
   });
 
-  postWorkerMessage(generationPayload);
+  postWorkerMessage(
+    generationPayload,
+    resolveGenerationReadyMessageTransferList(generationPayload),
+  );
 }
 
 /**
@@ -416,15 +474,38 @@ function beginWorkerGenerationRequest(
  * @param payload - Playback start payload.
  * @returns Nothing.
  */
-function beginWorkerPlayback(
+async function beginWorkerPlayback(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
   payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number },
-): void {
+): Promise<void> {
+  const channelWorkerUrl = resolveBrowserWorkerAssetUrl(
+    'flappy-inference-channel.worker.bundle.js',
+  );
+  const previousPlaybackState = workerMutableRuntimeState.currentPlaybackState;
+  workerMutableRuntimeState.currentPlaybackState = undefined;
+  workerMutableRuntimeState.currentPlaybackRng = undefined;
+  workerMutableRuntimeState.playbackWinnerIndex =
+    FLAPPY_WORKER_INITIAL_WINNER_INDEX;
+
+  await closeWorkerPopulationRenderState(previousPlaybackState);
+
+  if (SHOULD_LOG_FLAPPY_WORKER_PROTOCOL) {
+    console.info(
+      `${FLAPPY_WORKER_PROTOCOL_LOG_PREFIX} playback transport=${channelWorkerUrl ? 'per-bird inference-channel workers' : 'direct network.activate fallback'} population=${workerMutableRuntimeState.currentPopulation.length}`,
+      {
+        channelWorkerUrl,
+        visibleWorldHeightPx: payload.visibleWorldHeightPx,
+        visibleWorldWidthPx: payload.visibleWorldWidthPx,
+      },
+    );
+  }
+
   // Step 1: Create the next playback session from the current population snapshot.
   const nextPlaybackSessionState = beginWorkerPlaybackSession({
     currentPopulation: workerMutableRuntimeState.currentPopulation,
     payload,
     createPopulationRenderState: createWorkerPopulationRenderState,
+    channelWorkerUrl,
   });
 
   // Step 2: Persist the next playback state, RNG, and winner index.
@@ -450,10 +531,10 @@ function beginWorkerPlayback(
  * @param playbackStepPayload - Host-selected simulation-step budget and viewport.
  * @returns Nothing.
  */
-function processWorkerPlaybackStepRequest(
+async function processWorkerPlaybackStepRequest(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
   playbackStepPayload: WorkerRequestPlaybackStepMessage['payload'],
-): void {
+): Promise<void> {
   // Step 1: Guard against playback-step requests before playback state exists.
   if (
     !workerMutableRuntimeState.currentPlaybackState ||
@@ -465,7 +546,7 @@ function processWorkerPlaybackStepRequest(
   }
 
   // Step 2: Advance playback and build the next compact snapshot payload.
-  const nextPlaybackStepState = processWorkerPlaybackStep({
+  const nextPlaybackStepState = await processWorkerPlaybackStep({
     playbackStepPayload,
     currentPlaybackState: workerMutableRuntimeState.currentPlaybackState,
     currentPlaybackRng: workerMutableRuntimeState.currentPlaybackRng,
@@ -505,3 +586,32 @@ function postWorkerMessage(
 ): void {
   self.postMessage(workerMessage, transferList ?? []);
 }
+
+function resolveNodeEnvForRuntimeLogs(): string | undefined {
+  return (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process
+    ?.env?.NODE_ENV;
+}
+
+function createWorkerEvaluationPoolIfSupported(
+  initPayload: WorkerInitMessage['payload'],
+): FlappyEvaluationWorkerPool | undefined {
+  const usesRecurrentArchitecture =
+    initPayload.architectureProfileId === 'narx' ||
+    initPayload.architectureProfileId === 'gru' ||
+    initPayload.architectureProfileId === 'lstm';
+
+  if (!usesRecurrentArchitecture) {
+    return undefined;
+  }
+
+  // Recurrent Flappy rollouts make many short predictor calls per episode.
+  // In the live browser worker this roundtrip-heavy path costs more than the
+  // worker-local evaluator, so the example keeps the shared-memory pool opt-in
+  // disabled until a coarser rollout-level worker path exists.
+  return undefined;
+}
+
+/** @internal Test-only helper surface for worker entrypoint policy coverage. */
+export const FLAPPY_EVOLUTION_WORKER_INTERNALS = {
+  createWorkerEvaluationPoolIfSupported,
+};

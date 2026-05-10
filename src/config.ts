@@ -90,6 +90,26 @@ export interface NeatapticConfig {
   browserSlabChunkTargetMs?: number;
 
   /**
+   * Node-only soft V8 heap target in megabytes.
+   *
+   * When `process.memoryUsage().heapUsed` rises above this value, growth-budgeted
+   * structural mutations stop allowing net-new connections and instead prune first
+   * to keep the graph from expanding while the runtime is already under heap pressure.
+   * Undefined disables the Node soft-budget trigger.
+   */
+  nodeHeapSoftLimitMB?: number;
+
+  /**
+   * Browser-only soft used-heap target in megabytes.
+   *
+   * When `performance.memory.usedJSHeapSize` rises above this value, growth-budgeted
+   * structural mutations stop allowing net-new connections and instead prune first
+   * to avoid pushing the main-thread heap further past its soft target.
+   * Undefined disables the browser soft-budget trigger.
+   */
+  browserMemoryBudgetMB?: number;
+
+  /**
    * Maximum number of typed array slabs retained per (kind:length:bytes) key in the slab array pool.
    * RATIONALE: A very small LRU style cap dramatically limits worst‑case retained memory while
    * still capturing >90% of reuse wins in typical geometric growth / prune churn patterns. Empirically
@@ -100,6 +120,53 @@ export interface NeatapticConfig {
    * Undefined => library default (currently 4). Negative values are treated as 0.
    */
   slabPoolMaxPerKey?: number;
+}
+
+/** Shared activation precision identifiers reused by runtime precision owners. */
+export type ActivationPrecision = 'f16' | 'f32' | 'f64';
+
+/** Canonical activation precision used when no lower-precision mode is requested. */
+export const DEFAULT_ACTIVATION_PRECISION: ActivationPrecision = 'f64';
+
+/** Shared precision configuration resolved for one runtime decision. */
+export interface PrecisionConfig {
+  /** Effective activation precision for the current call boundary. */
+  activationPrecision: ActivationPrecision;
+}
+
+/** Optional precision overrides supplied by one caller-owned boundary. */
+export interface PrecisionConfigOverrides {
+  /** Optional explicit activation precision override. */
+  activationPrecision?: ActivationPrecision;
+}
+
+/**
+ * Resolve one shared precision config from explicit overrides and legacy float32 mode.
+ *
+ * Phase 6 centralizes precision ownership here so constructor bootstrap and
+ * activation-buffer allocation reuse the same precedence rule: explicit
+ * activation precision wins, otherwise the legacy global float32 flag decides
+ * between f32 and the default f64 path.
+ *
+ * @param overrides Optional caller-owned precision overrides.
+ * @param precisionFlags Config-like flag source exposing legacy float32 mode.
+ * @returns Shared precision config for the current runtime decision.
+ */
+export function resolvePrecisionConfig(
+  overrides: PrecisionConfigOverrides = {},
+  precisionFlags: Pick<NeatapticConfig, 'float32Mode'> = config,
+): PrecisionConfig {
+  if (overrides.activationPrecision) {
+    return {
+      activationPrecision: overrides.activationPrecision,
+    };
+  }
+
+  return {
+    activationPrecision: precisionFlags.float32Mode
+      ? 'f32'
+      : DEFAULT_ACTIVATION_PRECISION,
+  };
 }
 
 /**
@@ -118,6 +185,8 @@ export const config: NeatapticConfig = {
   enableSlabArrayPooling: false, // experimental slab typed array pooling
   // slabPoolMaxPerKey: 4,        // optional override for per-key slab retention cap (default internal 4)
   // browserSlabChunkTargetMs: 3, // example: aim for ~3ms per async slab slice in Browser
+  // nodeHeapSoftLimitMB: 512,    // example: freeze net-new growth above ~512 MB of Node heapUsed
+  // browserMemoryBudgetMB: 128,  // example: freeze net-new growth above ~128 MB of used JS heap
   // poolMaxPerBucket: 256,     // example memory cap override
   // poolPrewarmCount: 2,       // example prewarm override
 };

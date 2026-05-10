@@ -307,6 +307,33 @@ describe('network mutate chapter', () => {
       });
     });
 
+    describe('given ADD_NODE would exceed a one-connection hard sparsity budget', () => {
+      describe('when mutate() is called', () => {
+        it('leaves both the node count and the connection count unchanged', () => {
+          // Arrange
+          const network = new Network(1, 1, { seed: 4291 });
+          network.configureSparsityBudget({ maxConnections: 1 });
+          const nodeCountBeforeMutation = network.nodes.length;
+          const connectionCountBeforeMutation = network.connections.length;
+
+          // Act
+          network.mutate(mutation.ADD_NODE);
+          const nodeCountAfterMutation = network.nodes.length;
+          const connectionCountAfterMutation = network.connections.length;
+
+          // Assert
+          expect({
+            connectionDelta:
+              connectionCountAfterMutation - connectionCountBeforeMutation,
+            nodeDelta: nodeCountAfterMutation - nodeCountBeforeMutation,
+          }).toEqual({
+            connectionDelta: 0,
+            nodeDelta: 0,
+          });
+        });
+      });
+    });
+
     describe('given SUB_SELF_CONN runs without self connections', () => {
       describe('when mutate() is called', () => {
         it('keeps the self-connection count at zero', () => {

@@ -973,7 +973,8 @@ evaluatePopulationFullStage(
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
   elitismCount: number,
-): void
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies,
+): Promise<void>
 ```
 
 Executes the full evaluation stage over the top provisional candidates.
@@ -999,7 +1000,8 @@ evaluatePopulationQuickStage(
   generationEvaluationPlan: FlappyGenerationEvaluationPlan,
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
-): void
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies,
+): Promise<void>
 ```
 
 Executes the quick evaluation stage over the full population.
@@ -1037,7 +1039,8 @@ evaluatePopulationReevaluationStage(
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
   elitismCount: number,
-): void
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies,
+): Promise<void>
 ```
 
 Executes the large-seed reevaluation stage over top candidates.

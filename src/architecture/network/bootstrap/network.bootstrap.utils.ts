@@ -11,13 +11,18 @@
  * constructor policy and the ongoing activation or training lifecycle.
  */
 
-import { config } from '../../../config';
+import {
+  DEFAULT_ACTIVATION_PRECISION,
+  resolvePrecisionConfig,
+} from '../../../config';
+import { defaultMemoryManager } from '../../../memory/manager';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import Node from '../../node/node';
 import { acquireNode } from '../../nodePool/nodePool';
 import { NetworkBootstrapTopologyIntentConflictError } from './network.bootstrap.errors';
 import type {
   NetworkBootstrapInternals,
+  NetworkConnectionRequest,
   NetworkConstructorOptions,
   NetworkTopologyIntent,
 } from '../network.types';
@@ -163,6 +168,14 @@ function initializeRuntimeState(
   topologyIntent: NetworkTopologyIntent,
   enforceAcyclic: boolean,
 ): void {
+  const memoryConfig = defaultMemoryManager.getConfig();
+  const precisionConfig = resolvePrecisionConfig(
+    {
+      activationPrecision: options?.activationPrecision,
+    },
+    memoryConfig,
+  );
+
   network.input = input;
   network.output = output;
   network.nodes = [];
@@ -172,11 +185,13 @@ function initializeRuntimeState(
   network.dropout = 0;
   network._topologyIntent = topologyIntent;
   network._enforceAcyclic = enforceAcyclic;
+  network._precisionConfig = precisionConfig;
 
-  if (options?.activationPrecision) {
-    network._activationPrecision = options.activationPrecision;
-  } else if (config.float32Mode) {
-    network._activationPrecision = 'f32';
+  if (
+    options?.activationPrecision !== undefined ||
+    precisionConfig.activationPrecision !== DEFAULT_ACTIVATION_PRECISION
+  ) {
+    network._activationPrecision = precisionConfig.activationPrecision;
   }
 
   network._reuseActivationArrays = options?.reuseActivationArrays === true;
@@ -193,14 +208,14 @@ function initializeRuntimeState(
  * @returns Nothing.
  */
 function prewarmActivationPool(output: number): void {
+  const memoryConfig = defaultMemoryManager.getConfig();
+
   try {
-    if (typeof config.poolMaxPerBucket === 'number') {
-      activationArrayPool.setMaxPerBucket(config.poolMaxPerBucket);
+    if (typeof memoryConfig.poolMaxPerBucket === 'number') {
+      activationArrayPool.setMaxPerBucket(memoryConfig.poolMaxPerBucket);
     }
 
-    const prewarmCount =
-      typeof config.poolPrewarmCount === 'number' ? config.poolPrewarmCount : 2;
-    activationArrayPool.prewarm(output, prewarmCount);
+    activationArrayPool.prewarm(output, memoryConfig.activationPoolPrewarmCount);
   } catch {
     // Pool warmup is best-effort and should never block construction.
   }
@@ -232,13 +247,15 @@ function applySeedOption(
  * @returns Nothing.
  */
 function initializeIONodes(network: NetworkBootstrapInternals): void {
+  const memoryConfig = defaultMemoryManager.getConfig();
+
   for (
     let nodeIndex = 0;
     nodeIndex < network.input + network.output;
     nodeIndex++
   ) {
     const nodeType = nodeIndex < network.input ? 'input' : 'output';
-    const nextNode = config.enableNodePooling
+    const nextNode = memoryConfig.enableNodePooling
       ? acquireNode({ type: nodeType, rng: network._rand })
       : new Node(nodeType, undefined, network._rand);
     network.nodes.push(nextNode);
@@ -257,21 +274,23 @@ function initializeIONodes(network: NetworkBootstrapInternals): void {
 function connectInitialInputToOutputGraph(
   network: NetworkBootstrapInternals,
 ): void {
+  const starterConnectionRequests: NetworkConnectionRequest[] = [];
+
   for (let inputIndex = 0; inputIndex < network.input; inputIndex++) {
     for (
       let outputIndex = network.input;
       outputIndex < network.input + network.output;
       outputIndex++
     ) {
-      const weight =
-        network._rand() * network.input * Math.sqrt(2 / network.input);
-      network.connect(
-        network.nodes[inputIndex],
-        network.nodes[outputIndex],
-        weight,
-      );
+      starterConnectionRequests.push({
+        from: network.nodes[inputIndex],
+        to: network.nodes[outputIndex],
+        weight: network._rand() * network.input * Math.sqrt(2 / network.input),
+      });
     }
   }
+
+  network.connectBatch(starterConnectionRequests);
 }
 
 /**

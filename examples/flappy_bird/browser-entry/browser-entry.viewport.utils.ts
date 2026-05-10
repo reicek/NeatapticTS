@@ -1,5 +1,9 @@
-import { FLAPPY_HALF } from '../constants/constants';
-import { FLAPPY_PIPE_WIDTH_PX } from '../constants/constants';
+import {
+  FLAPPY_BIRD_VIEWPORT_X_RATIO,
+  FLAPPY_BIRD_X_PX,
+  FLAPPY_HALF,
+  FLAPPY_PIPE_WIDTH_PX,
+} from '../constants/constants';
 import type { ViewportInfo } from './browser-entry.types';
 
 /**
@@ -51,8 +55,19 @@ export function resolveVisibleWorldHeightPx(canvas: HTMLCanvasElement): number {
  * Resolves the world-space x spawn position for new pipes.
  *
  * @param visibleWorldWidthPx - Current visible world width.
+ * @param overflowPx - Additional offset relative to the visible right edge.
  * @returns Spawn x-position.
  */
-export function resolvePipeSpawnXPx(visibleWorldWidthPx: number): number {
-  return visibleWorldWidthPx + FLAPPY_PIPE_WIDTH_PX;
+export function resolvePipeSpawnXPx(
+  visibleWorldWidthPx: number,
+  overflowPx = FLAPPY_PIPE_WIDTH_PX,
+): number {
+  return resolveVisibleWorldRightXPx(visibleWorldWidthPx) + overflowPx;
+}
+
+function resolveVisibleWorldRightXPx(visibleWorldWidthPx: number): number {
+  return (
+    FLAPPY_BIRD_X_PX +
+    Math.max(1, visibleWorldWidthPx) * (1 - FLAPPY_BIRD_VIEWPORT_X_RATIO)
+  );
 }

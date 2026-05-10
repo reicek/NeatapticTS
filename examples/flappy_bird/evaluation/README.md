@@ -197,6 +197,72 @@ const aggregate = evaluateFlappyFitnessAcrossSeeds(network, [11, 22, 33], {
 });
 ```
 
+### evaluateFlappyFitnessAcrossSeedsWithInferenceChannel
+
+```ts
+evaluateFlappyFitnessAcrossSeedsWithInferenceChannel(
+  network: default,
+  sharedSeeds: readonly number[],
+  options: { rolloutOptions?: FlappyRolloutOptions | undefined; workerUrl: string; },
+): Promise<FlappySeedBatchEvaluation>
+```
+
+Evaluate a network through one persistent inference channel across shared seeds.
+
+The same worker-side predictor is reset between seeded episodes so the
+browser worker can reuse warm transport state without leaking recurrent
+memory across rollout boundaries.
+
+Parameters:
+- `network` - Network to evaluate through one persistent inference channel.
+- `sharedSeeds` - Shared deterministic seeds used for all genomes.
+- `options` - Rollout controls plus the browser worker bundle URL.
+
+Returns: Robust aggregate metrics for selection/ranking.
+
+### evaluateFlappyFitnessAcrossSeedsWithSharedInferenceWorker
+
+```ts
+evaluateFlappyFitnessAcrossSeedsWithSharedInferenceWorker(
+  sharedInferenceWorker: SharedInferenceWorker,
+  sharedSeeds: readonly number[],
+  options: { networkId?: number | undefined; rolloutOptions?: FlappyRolloutOptions | undefined; },
+): Promise<FlappySeedBatchEvaluation>
+```
+
+Evaluate one shared-memory predictor across a deterministic seed batch.
+
+This helper keeps one `SharedInferenceWorker` warm across the whole seed set
+so the caller can parallelize across genomes without paying one bootstrap
+cost per seeded rollout.
+
+Parameters:
+- `sharedInferenceWorker` - Persistent shared-memory predictor for one genome.
+- `sharedSeeds` - Shared deterministic seeds used for the evaluation batch.
+- `options` - Optional rollout controls plus a stable network id for seed mixing.
+
+Returns: Robust aggregate metrics for selection/ranking.
+
+### evaluateFlappyFitnessWithInferenceChannel
+
+```ts
+evaluateFlappyFitnessWithInferenceChannel(
+  network: default,
+  options: { rolloutOptions?: FlappyRolloutOptions | undefined; workerUrl: string; },
+): Promise<number>
+```
+
+Evaluate a network through one persistent inference channel on a single seeded episode.
+
+This browser-worker-oriented helper reuses one worker-side predictor instead
+of calling `network.activate(...)` directly on the hot rollout path.
+
+Parameters:
+- `network` - Network to evaluate through one persistent inference channel.
+- `options` - Rollout controls plus the browser worker bundle URL.
+
+Returns: Fitness score (higher is better).
+
 ### runClearedRolloutEpisode
 
 ```ts
@@ -290,3 +356,103 @@ const result = rolloutEpisode(network, {
 
 console.log(result.fitness, result.doneReason);
 ```
+
+### rolloutEpisodeWithPredictor
+
+```ts
+rolloutEpisodeWithPredictor(
+  options: { predict: (observationVector: number[]) => Promise<unknown>; rolloutOptions?: FlappyRolloutOptions | undefined; networkId?: number | undefined; },
+): Promise<FlappyEpisodeResult>
+```
+
+Roll out an episode against one async predictor callback.
+
+This browser-worker-oriented variant preserves the same seeded rollout and
+shaping semantics as `rolloutEpisode(...)` while sourcing control decisions
+from an async inference boundary such as `InferenceChannel.predict(...)`.
+
+Parameters:
+- `options` - Predictor callback plus optional rollout controls.
+
+Returns: Episode result details.
+
+## evaluation/evaluation.worker-pool.ts
+
+### FlappyEvaluationWorkerPool
+
+Bounded shared-worker pool for parallel Flappy evaluation across genomes.
+
+The pool parallelizes the expensive cross-genome part of evaluation while
+keeping each individual genome on one persistent predictor for its seed
+batch. That preserves recurrent reset semantics and avoids reopening a worker
+for every single seeded rollout.
+
+#### dispose
+
+```ts
+dispose(): Promise<void>
+```
+
+Releases every active shared worker and clears cached population state.
+
+Returns: Nothing.
+
+#### evaluateGenomesAcrossSeeds
+
+```ts
+evaluateGenomesAcrossSeeds(
+  genomes: readonly WorkerPoolGenome[],
+  sharedSeeds: readonly number[],
+  rolloutOptions: FlappyRolloutOptions,
+): Promise<Map<WorkerPoolGenome, FlappySeedBatchEvaluation>>
+```
+
+Evaluate one genome subset across a shared deterministic seed batch.
+
+Parameters:
+- `genomes` - Ordered genome shelf to score.
+- `sharedSeeds` - Shared deterministic seeds used for each genome.
+- `rolloutOptions` - Rollout controls reused across the whole batch.
+
+Returns: Aggregates keyed by genome in the caller's original order.
+
+#### initialize
+
+```ts
+initialize(
+  genomes: readonly WorkerPoolGenome[],
+): Promise<void>
+```
+
+Prepares exported payloads and empty slot state for one population shelf.
+
+Parameters:
+- `genomes` - Population that may be evaluated during the next generation.
+
+Returns: Nothing.
+
+#### parallelWorkerPool
+
+Exposes the shared generic scheduler for public ordered batch helpers.
+
+#### resolveOrderedPayloads
+
+```ts
+resolveOrderedPayloads(
+  genomes: readonly WorkerPoolGenome[],
+): Promise<TransferableInferencePayload[]>
+```
+
+Resolves the ordered transferable payload shelf for one genome batch.
+
+Parameters:
+- `genomes` - Genome batch that may be evaluated next.
+
+Returns: Ordered transferable payload shelf aligned to the input genomes.
+
+### FlappyEvaluationWorkerPoolOptions
+
+Optional delivery controls for the Flappy shared-worker evaluation pool.
+
+Browser examples usually resolve the worker bundle URL relative to the
+evolution worker location. Tests can omit this and inject mocks instead.

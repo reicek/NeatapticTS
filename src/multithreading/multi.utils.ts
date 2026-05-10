@@ -17,6 +17,12 @@ const DEFAULT_GATE_VALUE = 1;
 const NODE_HEADER_LENGTH = 5;
 const CONNECTION_FIELD_COUNT = 3;
 const SQUARED_EXPONENT = 2;
+const GELU_CDF_SCALE = 0.5;
+const GELU_TANH_COEFFICIENT = 0.044715;
+const GELU_CUBIC_EXPONENT = 3;
+const GELU_SQRT_TWO_DIVIDED_BY_PI = Math.sqrt(2 / Math.PI);
+const SOFTPLUS_POSITIVE_APPROXIMATION_THRESHOLD = 20;
+const SOFTPLUS_NEGATIVE_APPROXIMATION_THRESHOLD = -20;
 
 // SELU constants from Klambauer et al., 2017
 // eslint-disable-next-line no-loss-of-precision
@@ -42,6 +48,9 @@ export const ACTIVATION_FUNCTIONS: ActivationFn[] = [
   inverseActivation,
   seluActivation,
   softplusActivation,
+  swishActivation,
+  geluActivation,
+  mishActivation,
 ];
 
 /**
@@ -241,7 +250,34 @@ export function seluActivation(value: number): number {
 
 /** @param value - Input value. @returns Softplus activation. */
 export function softplusActivation(value: number): number {
-  return Math.log(UNIT_VALUE + Math.exp(value));
+  if (value > SOFTPLUS_POSITIVE_APPROXIMATION_THRESHOLD) {
+    return value;
+  }
+
+  if (value < SOFTPLUS_NEGATIVE_APPROXIMATION_THRESHOLD) {
+    return Math.exp(value);
+  }
+
+  return Math.max(0, value) + Math.log(UNIT_VALUE + Math.exp(-Math.abs(value)));
+}
+
+/** @param value - Input value. @returns Swish activation. */
+export function swishActivation(value: number): number {
+  return value * logisticActivation(value);
+}
+
+/** @param value - Input value. @returns GELU activation. */
+export function geluActivation(value: number): number {
+  const tanhArgument =
+    GELU_SQRT_TWO_DIVIDED_BY_PI *
+    (value + GELU_TANH_COEFFICIENT * Math.pow(value, GELU_CUBIC_EXPONENT));
+  const cdfValue = GELU_CDF_SCALE * (UNIT_VALUE + Math.tanh(tanhArgument));
+  return value * cdfValue;
+}
+
+/** @param value - Input value. @returns Mish activation. */
+export function mishActivation(value: number): number {
+  return value * Math.tanh(softplusActivation(value));
 }
 
 /**

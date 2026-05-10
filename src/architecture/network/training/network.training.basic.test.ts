@@ -20,6 +20,24 @@ import {
 
 type TrainingDataset = Parameters<typeof trainImpl>[1];
 
+type MixedPrecisionTrainingConnection = Network['connections'][number] & {
+  _fp32Weight?: number;
+};
+
+type MixedPrecisionTrainingNode = Network['nodes'][number] & {
+  _fp32Bias?: number;
+};
+
+type MixedPrecisionTrainingState = {
+  goodSteps: number;
+  badSteps: number;
+  minLossScale: number;
+  maxLossScale: number;
+  overflowCount?: number;
+  scaleUpEvents?: number;
+  scaleDownEvents?: number;
+};
+
 interface NetworkInternals {
   _forceNextOverflow: boolean;
   _currentGradClip?: {
@@ -28,6 +46,8 @@ interface NetworkInternals {
     percentile?: number;
   };
   _mixedPrecision: { enabled: boolean; lossScale: number };
+  _mixedPrecisionState: MixedPrecisionTrainingState;
+  _lastOverflowStep: number;
 }
 
 function createSingleSampleDataset(): TrainingDataset {
@@ -85,6 +105,18 @@ function createSingleInputOutputNetwork(seed: number): Network {
   return new Network(1, 1, { seed });
 }
 
+function getOutputTrainingNode(network: Network): MixedPrecisionTrainingNode {
+  const outputNode = network.nodes.find(
+    (nodeEntry) => nodeEntry.type === 'output',
+  );
+
+  if (!outputNode) {
+    throw new Error('Expected one output node to exist');
+  }
+
+  return outputNode as MixedPrecisionTrainingNode;
+}
+
 function setNetworkInternal<Key extends keyof NetworkInternals>(
   network: Network,
   key: Key,
@@ -97,7 +129,7 @@ function getNetworkInternal<Key extends keyof NetworkInternals>(
   network: Network,
   key: Key,
 ): NetworkInternals[Key] {
-  return Reflect.get(network, key) as NetworkInternals[Key];
+  return Reflect.get(network, key) as unknown as NetworkInternals[Key];
 }
 
 describe('network training chapter', () => {
@@ -514,6 +546,162 @@ describe('network training chapter', () => {
     });
 
     describe('mixed precision and stopping behavior', () => {
+      describe('given the network requests f32 activation precision but training mixed precision is omitted', () => {
+        describe('when trainImpl completes one iteration', () => {
+          it('keeps the training mixed-precision runtime disabled', () => {
+            // Arrange
+            const network = new Network(1, 1, {
+              activationPrecision: 'f32',
+              seed: 110,
+            });
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            trainImpl(network, trainingDataset, {
+              iterations: 1,
+              rate: 0.1,
+              optimizer: 'adam',
+            });
+            const mixedPrecisionState = getNetworkInternal(
+              network,
+              '_mixedPrecision',
+            );
+
+            // Assert
+            expect(mixedPrecisionState).toEqual({
+              enabled: false,
+              lossScale: 1,
+            });
+          });
+
+          it('leaves the training-owned master weight and bias mirrors uninitialized', () => {
+            // Arrange
+            const network = new Network(1, 1, {
+              activationPrecision: 'f32',
+              seed: 110,
+            });
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            trainImpl(network, trainingDataset, {
+              iterations: 1,
+              rate: 0.1,
+              optimizer: 'adam',
+            });
+            const outputNode = getOutputTrainingNode(network);
+            const connection =
+              network.connections[0] as MixedPrecisionTrainingConnection;
+
+            // Assert
+            expect({
+              masterBias: outputNode._fp32Bias,
+              masterWeight: connection._fp32Weight,
+            }).toEqual({
+              masterBias: undefined,
+              masterWeight: undefined,
+            });
+          });
+        });
+
+        describe('when the next optimizer step is forced to overflow', () => {
+          let mixedPrecisionState: MixedPrecisionTrainingState;
+          let recordedOverflowStep: number;
+
+          beforeAll(() => {
+            const network = new Network(1, 1, {
+              activationPrecision: 'f32',
+              seed: 120,
+            });
+            const trainingDataset = createSingleSampleDataset();
+
+            setNetworkInternal(network, '_forceNextOverflow', true);
+            trainImpl(network, trainingDataset, {
+              iterations: 1,
+              rate: 0.1,
+              optimizer: 'adam',
+            });
+            mixedPrecisionState = getNetworkInternal(
+              network,
+              '_mixedPrecisionState',
+            );
+            recordedOverflowStep = getNetworkInternal(
+              network,
+              '_lastOverflowStep',
+            );
+          });
+
+          it('keeps the overflow counter at the training-owned default', () => {
+            // Assert
+            expect(mixedPrecisionState.overflowCount).toBe(0);
+          });
+
+          it('keeps the recorded overflow step unset', () => {
+            // Assert
+            expect(recordedOverflowStep).toBe(-1);
+          });
+        });
+      });
+
+      describe('given the network requests f32 activation precision and enables training mixed precision', () => {
+        describe('when trainImpl completes one iteration without overflow', () => {
+          it('uses the training-owned default loss scale instead of activation precision defaults', () => {
+            // Arrange
+            const network = new Network(1, 1, {
+              activationPrecision: 'f32',
+              seed: 110,
+            });
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            trainImpl(network, trainingDataset, {
+              iterations: 1,
+              rate: 0.1,
+              mixedPrecision: true,
+              optimizer: 'adam',
+            });
+            const mixedPrecisionState = getNetworkInternal(
+              network,
+              '_mixedPrecision',
+            );
+
+            // Assert
+            expect(mixedPrecisionState).toEqual({
+              enabled: true,
+              lossScale: 1024,
+            });
+          });
+
+          it('still initializes the training-owned master weight and bias mirrors', () => {
+            // Arrange
+            const network = new Network(1, 1, {
+              activationPrecision: 'f32',
+              seed: 110,
+            });
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            trainImpl(network, trainingDataset, {
+              iterations: 1,
+              rate: 0.1,
+              mixedPrecision: true,
+              optimizer: 'adam',
+            });
+            const outputNode = getOutputTrainingNode(network);
+            const connection =
+              network.connections[0] as MixedPrecisionTrainingConnection;
+
+            // Assert
+            expect({
+              masterBiasType: typeof outputNode._fp32Bias,
+              masterWeightType: typeof connection._fp32Weight,
+            }).toEqual({
+              masterBiasType: 'number',
+              masterWeightType: 'number',
+            });
+          });
+        });
+      });
+
       describe('given mixed precision is enabled and the next step is forced to overflow', () => {
         describe('when trainImpl completes one iteration', () => {
           it('halves the default loss scale', () => {

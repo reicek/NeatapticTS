@@ -67,6 +67,7 @@
  * ```
  */
 import Node from '../node/node';
+import { defaultMemoryManager } from '../../memory/manager';
 
 /** Internal free list (stack) storing recycled Node instances. */
 const pool: Node[] = [];
@@ -216,5 +217,10 @@ export const resetNodePool = (): void => {
   reusedCount = 0;
   freshCount = 0;
 };
+
+defaultMemoryManager.registerPool('nodePool', {
+  reset: resetNodePool,
+  stats: nodePoolStats,
+});
 
 export default { acquireNode, releaseNode, nodePoolStats, resetNodePool };

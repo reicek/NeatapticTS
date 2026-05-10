@@ -99,6 +99,12 @@ export function hydrateGenomeControllerMeta(
 ): number {
   if (typeof controllerMeta?.score === 'number')
     genome.score = controllerMeta.score;
+  if (typeof controllerMeta?.mutationRate === 'number') {
+    genome._mutRate = controllerMeta.mutationRate;
+  }
+  if (typeof controllerMeta?.mutationAmount === 'number') {
+    genome._mutAmount = controllerMeta.mutationAmount;
+  }
   if (
     typeof controllerMeta?.networkRngState === 'number' &&
     typeof genome.setRNGState === 'function'
@@ -182,6 +188,12 @@ function buildGenomeControllerMeta(
 
   if (typeof genome.score === 'number') controllerMeta.score = genome.score;
   if (typeof genome._id === 'number') controllerMeta.genomeId = genome._id;
+  if (typeof genome._mutRate === 'number') {
+    controllerMeta.mutationRate = genome._mutRate;
+  }
+  if (typeof genome._mutAmount === 'number') {
+    controllerMeta.mutationAmount = genome._mutAmount;
+  }
   const networkRngState = genome.getRNGState?.();
   if (typeof networkRngState === 'number') {
     controllerMeta.networkRngState = networkRngState;

@@ -11,6 +11,7 @@ import {
 import { resolveRequiredRuntimeHostElement } from './runtime.errors';
 import {
   resolveAvailableRuntimeArchitectureProfiles,
+  resolveRuntimeArchitectureChampions,
   resolveRuntimeArchitectureHistory,
   resolveRuntimeArchitectureSelectorItems,
   resolveSelectedRuntimeArchitectureProfile,
@@ -114,6 +115,7 @@ function createRuntimeStartConfig(
 
   // Step 1: Fold shared runtime constants into one descriptive config object.
   return {
+    architectureChampionByProfileId: resolveRuntimeArchitectureChampions(),
     architectureHistoryByProfileId: resolveRuntimeArchitectureHistory(),
     availableArchitectureProfiles:
       resolveAvailableRuntimeArchitectureProfiles(),

@@ -41,14 +41,15 @@ hybrid retrieval-plus-generation behavior, and explicit evaluation contracts.
   - no stronger regression harness than the current lightweight metrics.
 - This reopen lane depends on earlier roadmap work that is not yet available
   as a NEATchat-owned implementation substrate:
-  - `plans/Worker_Friendly_Network_Serialization_Fastpath.md` is still
-    [PLANNED], so the shared inference IR and transport APIs do not exist yet.
-  - `plans/Turnkey_Multithread_Evaluation_API.md` is still [PLANNED], so
-    there is no worker-pool evaluation surface for chat inference or
-    background adaptation yet.
-  - `plans/Population_Save_Resume_and_Checkpointing.md` is still [PLANNED],
-    so there is no stable checkpoint or resume contract for a durable
-    NEATchat identity yet.
+  - `plans/completed/Worker_Friendly_Network_Serialization_Fastpath.md` is
+    [DONE], so the shared inference IR and transport APIs now exist as an
+    archived baseline.
+  - `plans/completed/Turnkey_Multithread_Evaluation_API.md` is [DONE], so the
+    worker-pool evaluation surface already exists as an archived baseline for
+    chat inference or background adaptation.
+  - `plans/completed/Population_Save_Resume_and_Checkpointing.md` is [DONE],
+    so a stable checkpoint and resume contract now exists for a durable
+    NEATchat identity baseline.
   - `plans/Evolution_Training_Interoperability_Contracts.md` is still
     [PLANNED], so parameter-vector export/import and isolated fine-tune
     policies are not available yet.
@@ -76,6 +77,11 @@ true:
 4. Recurrent ONNX import hardening can honestly support the exact external
    seed subset chosen for NEATchat, or an explicitly documented non-ONNX
    conversion path replaces it.
+
+Roadmap sequencing note:
+
+- In the agreed serial pre-NGE sequence, this plan stays after `plans/Memory_Optimization.md` Track 1 through Phase 10, after `plans/ONNX_EXPORT_PLAN.md`, and after `plans/Evolution_Training_Interoperability_Contracts.md`.
+- Finishing Memory alone is not a handoff into NEATchat; the required stop line still passes through ONNX hardening and hybrid interoperability first.
 
 Before those gates open, work on this file should stay limited to dependency
 alignment, seed-subset reconnaissance, and acceptance-boundary tightening.
@@ -305,11 +311,11 @@ It should reopen by standing on the active Phase 4 and Phase 6 foundations.
 
 Before any NEATchat-owned implementation starts:
 
-1. `plans/Population_Save_Resume_and_Checkpointing.md` must expose a stable
-   checkpoint surface that can own NEATchat identity and memory state.
-2. `plans/Worker_Friendly_Network_Serialization_Fastpath.md` and
-   `plans/Turnkey_Multithread_Evaluation_API.md` must expose a usable
-   background-execution path with deterministic fallback behavior.
+1. `plans/completed/Population_Save_Resume_and_Checkpointing.md` must remain
+  the stable checkpoint surface that owns NEATchat identity and memory state.
+2. `plans/completed/Worker_Friendly_Network_Serialization_Fastpath.md` and
+  `plans/completed/Turnkey_Multithread_Evaluation_API.md` must remain the
+  usable background-execution path with deterministic fallback behavior.
 3. `plans/Evolution_Training_Interoperability_Contracts.md` must expose the
    parameter-vector or isolated fine-tune seam that personalized candidates
    depend on.

@@ -157,3 +157,103 @@ export function stepFlappyStateWithControlSubsteps(
     state.doneReason = 'timeout';
   }
 }
+
+/**
+ * Advance one logical frame using multiple control/physics substeps with async control.
+ *
+ * This variant keeps the environment stepping contract identical to the sync
+ * path while allowing the control decision to come from an async boundary such
+ * as a persistent worker-hosted inference channel.
+ *
+ * @param state - Mutable state object to update in-place.
+ * @param rng - Random source used to spawn pipes.
+ * @param shouldFlapForSubstep - Async callback deciding flap action per substep.
+ * @param difficultyScale - Curriculum difficulty scale in [0, 1].
+ * @param controlSubstepsPerFrame - Number of substeps to run this frame.
+ * @returns Nothing.
+ */
+export async function stepFlappyStateWithControlSubstepsAsync(
+  state: FlappyGameState,
+  rng: FlappyRng,
+  shouldFlapForSubstep: () => boolean | Promise<boolean>,
+  difficultyScale: FlappyDifficultyScale = FLAPPY_ENVIRONMENT_DEFAULT_DIFFICULTY_SCALE,
+  controlSubstepsPerFrame: number = FLAPPY_ENVIRONMENT_DEFAULT_CONTROL_SUBSTEPS_PER_FRAME,
+): Promise<void> {
+  if (state.done) return;
+
+  const difficultyProfile = resolveAdaptiveDifficultyProfile(
+    state.pipesPassed,
+    difficultyScale,
+  );
+  const substepCount = Math.max(1, Math.trunc(controlSubstepsPerFrame));
+  const substepDelta = 1 / substepCount;
+
+  // Step 1: Run high-frequency control/physics substeps through the async policy hook.
+  for (
+    let controlSubstepIndex = 0;
+    controlSubstepIndex < substepCount && !state.done;
+    controlSubstepIndex++
+  ) {
+    const flap = await shouldFlapForSubstep();
+    if (flap) {
+      state.bird.velocityYPxPerFrame = FLAPPY_FLAP_VELOCITY_PX_PER_FRAME;
+    }
+
+    state.bird.velocityYPxPerFrame = clampValue(
+      state.bird.velocityYPxPerFrame +
+        FLAPPY_GRAVITY_PX_PER_FRAME2 * substepDelta,
+      -Infinity,
+      FLAPPY_MAX_FALL_SPEED_PX_PER_FRAME,
+    );
+    state.bird.yPx += state.bird.velocityYPxPerFrame * substepDelta;
+
+    for (const pipe of state.pipes) {
+      pipe.xPx -= difficultyProfile.pipeSpeedPxPerFrame * substepDelta;
+    }
+    state.pipes = state.pipes.filter(
+      (pipe) => pipe.xPx + FLAPPY_PIPE_WIDTH_PX > 0,
+    );
+
+    state.framesUntilNextPipeSpawn -= substepDelta;
+    if (state.framesUntilNextPipeSpawn <= 0) {
+      const nextGapSizePx = resolveNextSpawnGapSize(
+        state.lastSpawnedPipeGapPx,
+        difficultyProfile,
+        rng,
+      );
+      const nextSpawnIntervalFrames = resolveNextSpawnIntervalFrames(
+        state.lastSpawnedPipeSpawnIntervalFrames,
+        difficultyProfile,
+      );
+      const nextGapCenterYPx = resolveNextSpawnGapCenterY(
+        state.lastSpawnedPipeGapCenterYPx,
+        rng,
+        nextGapSizePx,
+      );
+      state.pipes.push({
+        xPx: FLAPPY_WORLD_WIDTH_PX + FLAPPY_PIPE_WIDTH_PX,
+        gapCenterYPx: nextGapCenterYPx,
+        gapSizePx: nextGapSizePx,
+        passed: false,
+      });
+      state.lastSpawnedPipeGapPx = nextGapSizePx;
+      state.lastSpawnedPipeGapCenterYPx = nextGapCenterYPx;
+      state.lastSpawnedPipeSpawnIntervalFrames = nextSpawnIntervalFrames;
+      state.framesUntilNextPipeSpawn += nextSpawnIntervalFrames;
+    }
+
+    if (!state.done) {
+      updateCollisionAndProgressState(state);
+    }
+  }
+
+  // Step 2: Frame accounting and timeout.
+  state.frameIndex++;
+  if (
+    !state.done &&
+    state.frameIndex >= FLAPPY_ENVIRONMENT_MAX_FRAMES_PER_EPISODE
+  ) {
+    state.done = true;
+    state.doneReason = 'timeout';
+  }
+}

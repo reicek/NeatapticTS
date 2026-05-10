@@ -91,9 +91,9 @@ Each phase notes: (C) Common, (N) Node-specific, (B) Browser-specific, (H) Hyper
 
 Execution status summary (normalized numbering):
 
-- Completed: Phases 0, 1, 2, 3
-- Next Up: Phase 4 (Centralized Memory Management & Browser Validation)
-- Planned (Track 1): Phases 5–10
+- Completed: Phases 0, 1, 2, 3, 4, 5, 6
+- In Progress: Phase 7 (Allocation Churn Reduction)
+- Planned (Track 1): Phases 7–10
 - Planned (Track 2): Phases 11–16
 
 ### Two-Track Execution Model (Numbered)
@@ -102,13 +102,13 @@ Track 1 — **Core Library Foundation (Implementation First)**
 
 - Phases **0–10**
 - Purpose: deliver memory/perf infrastructure that benefits the current library regardless of Hyper adoption.
-- Status: 0–3 complete; 4 next; 5–10 planned.
+- Status: 0–4 complete; 5 active; 6–10 planned.
 
 Track 2 — **NEAT Genesis EvoDevo (NGE) Algorithm Integration**
 
 - Phases **11–16**
 - Purpose: add evo-devo algorithmic capabilities after core memory infrastructure is in place.
-- Sequence rule: Track 2 starts only after Track 1 implementation gates are met.
+- Sequence rule: Track 2 starts only after Track 1 implementation gates are met and the roadmap-level pre-NGE stop line has closed the remaining non-NGE lanes outside this file.
 
 Track 1 → Track 2 gate (must pass all):
 
@@ -117,6 +117,13 @@ Track 1 → Track 2 gate (must pass all):
 3. Phase 6 precision-path parity and regression checks pass.
 4. Phase 7 churn checks and Phase 10 variance/hardening gates are stable.
 5. Baseline/progress artifacts are updated for reproducibility and rollback.
+
+Roadmap alignment note:
+
+- The current active frontier inside this plan is Phase 7.
+- Finishing Track 1 is necessary but not by itself sufficient to begin Track 2; the broader pre-NGE roadmap still requires the parallel ONNX and hybrid-interoperability lanes to reach their stop line first, with the dependency-gated NEATchat follow-up remaining downstream of those foundations.
+- Until those external pre-NGE lanes close, treat Phase 11 as gated even if this plan's internal Track 1 checklist is ready.
+- If the repo chooses serial pre-NGE execution instead of parallel progress, the explicit handoff is: finish Track 1 through Phase 10, stop before Phase 11, then move to `plans/ONNX_EXPORT_PLAN.md`, then `plans/Evolution_Training_Interoperability_Contracts.md`, then the dependency-gated `plans/NEATchat.plans.md`, and only then reopen Track 2.
 
 ## Recommended agent + skill combo by active phase
 
@@ -303,7 +310,7 @@ Notes:
 - Bytes/connection held constant (no regression) despite added optional slabs; gain omission and plasticity pay‑for‑use prevented per-connection inflation. This confirms the pay-for-use principle is working but highlights that progress on the bytes/connection reduction metric is dependent on Phase 5 (Sparsity).
 - Field audit counts: Connection enumerable keys = 9 (stable), Node = 15 (stable) per benchmark `fieldAudit` confirmation.
 
-Results Notes & Next Step: For quantitative deltas see table above; variance & invariant consolidation detailed in Phase 3 Conclusion below. Proceed to Phase 4 centralized memory management and browser-validation work with a stable slab foundation. Track 2 NGE work remains gated behind the Track 1 conditions defined earlier in this document.
+Results Notes & Historical Next Step: For quantitative deltas see table above; variance & invariant consolidation detailed in Phase 3 Conclusion below. This slab foundation enabled the later Phase 4 centralized memory-management and browser-validation pass, while Track 2 NGE work remained gated behind the Track 1 conditions defined earlier in this document.
 
 #### Phase 3 Conclusion (Extended Slab Packing & Validation)
 
@@ -352,19 +359,29 @@ Exit Criteria (Met):
 - Pooling instrumentation exposes measurable reuse (alloc stats).
 - Documentation contains quantitative benchmark comparison and enumerated achievements.
 
-Ready for Next Phase: NEAT Genesis EvoDevo (NGE) work can proceed atop a stable, instrumented slab foundation with confidence in memory invariants and optional feature overhead discipline.
+Historical handoff into Phase 4: The stable, instrumented slab foundation was ready for centralized memory management and browser validation with confidence in memory invariants and optional feature overhead discipline.
 
-### Phase 4 – Centralized Memory Management & Browser Validation [Next]
+### Phase 4 – Centralized Memory Management & Browser Validation [DONE]
 
-**Status: Next Up**
+**Status: [DONE]**
 
 This phase addresses a critical architectural gap by implementing a `Centralized Memory Manager` as the single source of truth for all memory-related operations. It also establishes a formal browser benchmark harness to validate environment-specific features.
+
+Current progress snapshot:
+
+- The Phase 4 foundation is now live via `src/memory/config.ts` and `src/memory/manager.ts`, keeping the existing global config contract while centralizing memory defaults, runtime environment resolution, override lifecycles, and pool registration/stats/reset plumbing.
+- Memory-sensitive runtime paths now consult `defaultMemoryManager`, including the activation array pool, node pool, slab pool, slab rebuild chunk sizing, bootstrap/mutate/remove finalize boundaries, and `memoryStats()` pool snapshot reads.
+- The last allocator-centralization seam is now closed: `MemoryManager` owns typed-array allocation, release, reuse counters, and teardown reset semantics, while `src/architecture/network/slab/network.slab.pool.utils.ts` is reduced to a thin wrapper over that manager-owned allocator state.
+- The browser benchmark side of Phase 4 now has a dedicated reusable harness in `bench-browser/harness.ts`, with `bench-browser/bench-entry.ts` reduced to a thin browser adapter and the placeholder browser-memory test replaced by a real harness contract test.
+- The browser harness now also records an async slab-build probe against the shipped dist helper, capturing elapsed time, microtask yield count, `_slabAsyncBuilds` deltas, macrotask heartbeats, average macrotask gap, and max timer or frame-gap diagnostics. The shipped browser async rebuild helper now yields via timer-backed macrotasks between browser-scale allocation and chunk stages, and the headless browser contract asserts both a positive heartbeat and an average inter-turn gap that stays below one 60 FPS frame budget.
+- Validation for the landed foundation is green: the touched `src/` boundaries were returned to 100% coverage in the focused owner-local slice, `npm run build` passed, `npm run docs` regenerated the generated README surfaces, and `npm run test:silent` stayed green after the allocator reroute.
+- The resulting parity story is now explicit: Node keeps the synchronous throughput-first rebuild path, while browser rebuilds use the cooperative async path plus browser-only responsiveness telemetry; both paths still preserve slab invariants and sync-parity output, and they now share the same manager-owned allocator boundary.
 
 #### Part 1: Centralized Memory Manager
 
 To ensure consistent behavior, feature gating, and pay‑for‑use semantics, this module will be the canonical contract between the runtime, benchmarking harness, and platform-specific adaptations.
 
-**Scope Files:** `src/memory/config.ts`, `src/memory/manager.ts`, `test/memory/manager.test.ts`
+**Representative Scope Files:** `src/memory/config.ts`, `src/memory/manager.ts`, `src/memory/manager.test.ts`, `src/architecture/activationArrayPool/activationArrayPool.ts`, `src/architecture/nodePool/nodePool.ts`, `src/architecture/network/slab/network.slab.pool.utils.ts`, `src/utils/memory.ts`
 
 **Responsibilities & Design:**
 
@@ -390,62 +407,123 @@ To ensure consistent behavior, feature gating, and pay‑for‑use semantics, th
 
 **Key Deliverables:**
 
-1.  **`src/memory/config.ts`**: Will export `const` values for all flags and numeric defaults with detailed JSDoc.
-2.  **`src/memory/manager.ts`**: Will export a `class MemoryManager` and a `defaultMemoryManager` singleton instance.
-3.  **Refactoring**: Existing code in `network.ts` and `network.slab.ts` will be updated to use the `defaultMemoryManager`.
-4.  **Unit Tests**: Tests will be added to assert `getConfig()`/`setFlag()` behavior and verify that `allocate`/`release` operations respect the pay-for-use principle when flags are toggled.
+1.  **`src/memory/config.ts`**: Landed as the shared defaults/types layer for manager snapshots and pool registration contracts.
+2.  **`src/memory/manager.ts`**: Landed with `getConfig()`, `setFlag()`, `registerPool()`, `getPoolStats()`, `allocateTypedArray()`, `releaseTypedArray()`, `getTypedArrayAllocationStats()`, `init()`, and `teardown()` on the `MemoryManager` plus the `defaultMemoryManager` singleton.
+3.  **Runtime reroutes**: Landed for the activation array pool, node pool, slab pool, slab rebuild sizing, bootstrap/mutate/remove finalize paths, and `memoryStats()` snapshot integration so the new manager is on the real controlling path.
+4.  **Unit Tests**: Landed for manager config/default/teardown/pool-registration behavior plus manager-owned typed-array allocation, reuse, default byte-width keying, implicit browser environment resolution, and allocator reset semantics.
 
 #### Part 2: Browser Benchmark Harness
 
-**Scope Files:** `bench-browser/harness.ts`
+**Representative Scope Files:** `bench-browser/harness.ts`, `bench-browser/bench-entry.ts`, `benchmarks/benchmark.browser.memory.test.ts`, `benchmarks/benchmark.browser.headless.test.ts`
 
 **Key Deliverables:**
 
-1.  A dedicated test harness in `bench-browser/` to capture the same core metrics as the Node.js benchmarks (build time, forward pass time, memory usage via `performance.memory`).
-2.  Specific tests to validate browser-only features, such as measuring UI thread blocking during `asyncBuilds` to confirm cooperative scheduling is effective.
-3.  The plan will be updated to document the browser harness setup and results.
+1.  A dedicated reusable harness now lives in `bench-browser/harness.ts`, capturing the same synthetic build/forward metrics as the Node.js benchmark path plus available browser heap readings.
+2.  `bench-browser/bench-entry.ts` now acts as the thin browser adapter that provides the real dist-owned `Network` and transferable payload helpers to the harness.
+3.  The harness now exposes an async slab-build probe record so the headless browser path captures chunked rebuild evidence instead of only sync build/forward timings.
+4.  The shipped browser async rebuild helper now yields timer-backed macrotasks between browser-scale allocation stages and chunk writes, and the headless browser integration test asserts that the probe both observes macrotask heartbeats and keeps its average inter-turn gap below one 60 FPS frame budget.
+5.  `benchmarks/benchmark.browser.memory.test.ts` now validates the harness payload shape directly, while `benchmark.browser.headless.test.ts` continues to exercise the live headless browser path.
+6.  The browser-vs-Node parity interpretation is now documented in this phase: Node remains the sync throughput baseline, while browser owns the cooperative anti-stutter path and its responsiveness telemetry.
+7.  Allocator centralization is complete: the slab typed-array pool now delegates through the manager-owned allocator so browser-harness telemetry and runtime pooling share one ownership surface.
 
-**Status:** Under development. Initial results will be added here once the harness is operational.
+**Status:** Complete. The reusable harness, the async-build probe, the browser-only frame-budget contract, the documented Node-vs-browser parity interpretation, and the allocator-centralization follow-up are all operational, so Phase 5 is the next planned step.
 
-### Phase 5 – Sparse Growth & Prune Budgets [Planned]
+### Phase 5 – Sparse Growth & Prune Budgets [DONE]
 
-**Status: Planned (after Phase 4)**
+**Status: [DONE] Structural budget widening, benchmark/reporting, Node/browser soft-budget follow-through, and repeated-deny backoff are green; the active Track 1 frontier now moves to Phase 6 precision ownership**
 
-Files: `network.prune.ts`, `network.ts`, new `network.sparsityBudget.ts`
+Current execution target:
+
+- Keep the landed sparsity-budget surface stable now that all current mutation-owned structural growth paths are budgeted and the benchmark artifact can report before/after prune deltas.
+- Preserve the current ownership boundary: budget checks belong to growth-owning mutation helpers, not the raw `connect()` surface used by construction, restore, or import flows.
+- Treat the new benchmark artifact as an honesty gate: synthetic fixed-node pruning can reduce total estimated bytes without guaranteeing a lower `bytesPerConnection` ratio.
+
+Landed slices in this pass:
+
+1. Added the shared budget owner at `src/architecture/network/prune/network.prune.budget.utils.ts` with `configureSparsityBudget()`, `getSparsityBudgetSnapshot()`, and `ensureGrowthBudget()`.
+2. Exposed the budget surface through `Network` and the network utility exports without reopening the Phase 4 manager boundary.
+3. Integrated the first pre-write growth checks into `addNode`, `addConn`, and `addNodeBetweenImpl` so prune-or-deny decisions happen before structural overshoot.
+4. Closed the owner-local and integrated coverage loop for this slice and revalidated with `npm run build`, `npm run docs`, and `npm run test:silent` at 100% coverage.
+5. Widened the same budget contract to `addSelfConn`, `addBackConn`, `addLSTMNode`, and `addGRUNode`, and updated the budget owner plus public snapshot docs so total forward-plus-self connection count is the enforced metric.
+6. Extended `benchmarks/benchmark.memory.test.ts` and `benchmarks/benchmark.results.json` with an additive `phase5Sparsity` artifact section that records before/after prune deltas for the synthetic size buckets, including prune latency, connection retention, estimated-byte deltas, and `bytesPerConnection` deltas.
+7. Confirmed the benchmark outcome honestly: the synthetic pass hits the expected `-25%` connection delta and roughly `-23%` to `-25%` estimated-byte delta, while `bytesPerConnection` stays flat or slightly worsens because fixed node overhead remains in the numerator.
+8. Added `nodeHeapSoftLimitMB` and `browserMemoryBudgetMB` to the shared config plus memory-manager snapshot surface so runtime memory policy stays centralized instead of being re-derived inside prune or mutation callers.
+9. Extended `ensureGrowthBudget()` to consult Node/browser runtime memory metrics before allowing new structural growth, and expose `softBudgetTriggered` plus `softBudgetEnvironment` in the budget snapshot so tests and callers can distinguish soft-pressure denial from hard-cap denial.
+10. Added capped exponential backoff for repeated unchanged deny states inside `ensureGrowthBudget()` so impossible structural growth requests skip immediate reevaluation until the retry window expires or the deny fingerprint changes.
+
+Phase 6 handoff observations:
+
+1. The first bounded precision-owner slice is green: `src/config.ts` now owns `ActivationPrecision`, `DEFAULT_ACTIVATION_PRECISION`, and `resolvePrecisionConfig()` so bootstrap and activation-array allocation share one precedence rule.
+2. `src/architecture/activationArrayPool/activationArrayPool.ts` and `src/architecture/network/bootstrap/network.bootstrap.utils.ts` now both consult that shared resolver while preserving the existing implicit `Network` default of `f64` when no explicit activation precision is requested.
+3. The second bounded precision-owner slice is also green: object-graph activation and slab fast-path output collection now pass the network's resolved activation precision into activation-buffer acquisition instead of falling back to the global pool default.
+4. `src/architecture/activationArrayPool/activationArrayPool.ts` now buckets retained buffers by both output length and resolved activation precision so f32 and f64 callers cannot accidentally reuse one another's scratch storage.
+5. The touched `src/` boundaries returned to 100% coverage, and `npm run build`, `npm run docs`, and `npm run test:silent` are green after the runtime reroute.
+6. The remaining unresolved Phase 6 decision is no longer detached output quantization; it is whether `_activationPool`, `_reuseActivationArrays`, and `_returnTypedActivations` should be normalized onto the same precision owner or remain a separate typed-return contract.
+
+Validation expectations for the next Phase 6 pass:
+
+- Run the narrowest touched owner validation first for the next precision edit.
+- Keep `npm run build`, `npm run docs` when public JSDoc changes, and `npm run test:silent` green before widening precision ownership.
+- Keep the next pass above the Phase 4 memory-manager boundary; do not reopen snapshot/config redesign unless the typed-return contract proves it is necessary.
+- Refresh benchmark artifacts only if a later precision pass changes measured runtime behavior rather than only consolidating ownership.
+
+Files: `src/architecture/network/prune/network.prune.budget.utils.ts`, `src/architecture/network/mutate/network.mutate.handlers.utils.ts`, `src/architecture/network/mutate/network.mutate.public.utils.ts`, `src/architecture/network/network.ts`, `src/architecture/network/network.types.ts`, benchmark/reporting follow-up files under `benchmarks/`
 Steps:
 
 1. (C) Track connection count + global sparsity goal; future per-module (Hyper) extension.
 2. (C/H) `ensureBudget()` before growth; triggers prune/regrow cycle if exceeding `maxConnections` (with `growthGraceFraction`).
-3. (N) Integrate soft heap monitor vs `nodeHeapSoftLimitMB` for early pruning.
-4. (B) Use `browserMemoryBudgetMB` soft target; preempt budget breaches proactively.
-5. (C) Exponential backoff for repeated denied growth.
-6. (C) Tests verifying cap adherence and budget-driven pruning.
-7. (C) **Validation:** Add a benchmark scenario to measure and report the `bytes/connection` metric before and after pruning, verifying progress toward the -25% target.
+3. (N) Integrate soft heap monitor vs `nodeHeapSoftLimitMB` for early pruning. [DONE]
+4. (B) Use `browserMemoryBudgetMB` soft target; preempt budget breaches proactively. [DONE]
+5. (C) Exponential backoff for repeated denied growth. [DONE]
+6. (C) Tests verifying cap adherence and budget-driven pruning. [DONE]
+7. (C) **Validation:** Add a benchmark scenario to measure and report honest before/after pruning deltas, including cases where `bytes/connection` stays flat or worsens because fixed node overhead dominates the ratio. [DONE]
 8. (H) While some hooks align with Morphogenesis, the core sparsity and budget logic is independent and critical for the `-25% bytes/connection` target. This work will proceed in parallel.
 
-### Phase 6 – Adaptive Precision & Mixed Precision [Planned]
+### Phase 6 – Adaptive Precision & Mixed Precision [DONE]
 
-Files: `network.ts`, `node.ts`, `activationArrayPool.ts`
+Files: `src/config.ts`, ` src/architecture/activationArrayPool/activationArrayPool.ts`, `src/architecture/network/bootstrap/network.bootstrap.utils.ts`, `src/architecture/network/activate/network.activate.core.utils.ts`, `src/architecture/network/activate/network.activate.notrace.utils.ts`, `src/architecture/network/activate/network.activate.raw.utils.ts`, `src/architecture/network/activate/network.activate.utils.ts`, `src/architecture/network/slab/network.slab.fast-path.helpers.utils.ts`, `src/architecture/network/network.ts`, later `node.ts`
+
+Current precision-owner slice:
+
+1. [DONE] Consolidated the first shared precision owner into `src/config.ts` so explicit activation precision overrides the legacy `float32Mode` fallback through one resolver.
+2. [DONE] Rerouted bootstrap and activation-array allocation through that resolver without widening the implicit `Network` default path.
+3. [DONE] Carried the resolved per-network precision through object-graph activation and slab fast-path output collection so explicit `f64` no longer quantizes through the global float32 pool path.
+4. [DONE] Split activation-array retention by both output size and resolved activation precision so reused f32 buffers cannot bleed into f64 callers.
+5. [DONE] Returned the touched production files to 100% coverage and revalidated with `npm run build`, `npm run docs`, and `npm run test:silent`.
+6. [DONE] Preserve `_activationPool`, `_reuseActivationArrays`, and `_returnTypedActivations` as a separate typed-return contract: `activateRaw()` now reuses a per-network typed output buffer whose constructor follows the resolved activation precision and detaches back to a plain array unless `returnTypedActivations` is enabled.
+7. [DONE] Keep node-owned activation state and training traces outside the activation precision owner: traced activation under explicit `f32` still quantizes only the exported output buffer while node `activation`, `state`, and `eligibility` remain normal JS-number runtime storage.
+8. [DONE] Keep training-specific mixed-precision state as an independent training contract rather than aligning it with activation-precision defaults. Owner-local regressions now confirm `activationPrecision: 'f32'` does not implicitly enable `_mixedPrecision` during training, does not replace the training-owned default loss scale of `1024` when `mixedPrecision: true` is enabled, does not allocate `_fp32Weight` / `_fp32Bias` mirrors unless training mixed precision is explicitly active, and leaves overflow bookkeeping (`overflowCount`, `_lastOverflowStep`) untouched even when a forced overflow is queued without training mixed precision.
+9. [DONE] Persist the shared `PrecisionConfig` as a runtime carrier on `Network` so bootstrap, traced activation, no-trace activation, raw typed activation reuse, slab working/output buffers, and standalone generation all resolve precision from the same source. The only compatibility exception is the legacy raw `_activationPrecision: 'f32'` override, which still wins when it intentionally diverges from the shared config.
+10. [DONE] Landed Action 2 as a standalone-only inference prototype: generated standalone activators now accept `activationPrecision: 'f16'`, persist activation/state storage in `Uint16Array` buffers, decode into per-call `Float32Array` working buffers, and re-encode on return. The direct source measurement path (`node --loader ts-node/esm --experimental-specifier-resolution=node --input-type=module`) recorded `1.7044035849345107e-8` median absolute drift, `4.182057122825711e-8` max absolute drift, and a 50% persistent activation/state storage reduction versus float32 for the measured owner sample. Focused standalone coverage returned to 100% before the final `npm run build` and green repo-wide `npm run test:silent` rerun.
+11. [DONE] Landed Action 4 on the browser-backed shared-memory inference host path: large shared input and output shelf conversions now copy across 16,384-value blocks and yield timer turns between blocks without changing returned values. The change also removes the redundant full input-shelf prefill before `dataView.set(...)`, keeps the chunking decision explicit at the call site, and closed coverage back to 100% on `network.worker-payload.shared.ts`. The direct source probe for a 65,537-value input shelf plus a 65,537-value output shelf recorded 4 timer turns for the input copy and 4 timer turns for the output detach while preserving `0.5` and `65536.5` as the first and last detached output values.
+12. [DONE] Landed Action 5 on the training mixed-precision path: post-clip and post-accumulation gradients now record underflow pressure, increment `underflowCount`, store `lastUnderflowStep`, and scale the training-owned loss scale upward when the scaled gradient range remains below the float16 subnormal guard while overflow handling still scales down and zeros the accumulated gradients. Public training diagnostics now expose both overflow and underflow telemetry, and the touched production files returned to 100% coverage before the final `npm run build`, `npm run docs`, and green `npm run test:silent` validation passes.
+
 Actions:
 
-1. (C) Consolidate precision flags into `PrecisionConfig` object.
-2. (C) Float16 path (Uint16 storage; on-the-fly convert) inference-only; measure drift (<1e-4 median abs diff).
-3. (N) Explore bfloat16 via WASM kernel (if `wasmKernels` enabled).
-4. (B) Chunk large conversions; yield between blocks.
-5. (C) Loss scaling with overflow/underflow counters auto-adjusting scale.
+1. [DONE] (C) Consolidate precision flags into `PrecisionConfig` object.
+2. [DONE] (C) Float16 path (Uint16 storage; on-the-fly convert) inference-only; measure drift (<1e-4 median abs diff). The landed prototype is intentionally bounded to standalone generation rather than live runtime buffers.
+3. (N) Explore bfloat16 via WASM kernel (if `wasmKernels` enabled). Current repo state has no `wasmKernels` owner seam in `src/`, so this remains deferred behind a future runtime/kernel boundary.
+4. [DONE] (B) Chunk large conversions; yield between blocks. The landed slice is intentionally bounded to browser-backed shared-memory inference shelf copies rather than inventing a wider async precision API.
+5. [DONE] (C) Loss scaling with overflow/underflow counters auto-adjusting scale. The training loop now counts post-clip underflow pressure, records `lastUnderflowStep`, scales up immediately on tiny-gradient underflow until `maxScale`, and still scales down on overflow while zeroing the accumulated gradients.
 6. (H) Apply precision modes to large Hyper-generated adjacency/phenotype slabs.
 
-### Phase 7 – Allocation Churn Reduction [Planned]
+Phase 6 is complete. Action 3 remains gated until a real `wasmKernels` owner boundary exists in `src/`, and Action 6 remains Track 2-gated with Hyper. Phase 7 Actions 1 and 2 are complete via the batch connection creation API, starter bootstrap migration, and activation-pool compaction instrumentation. Next bounded slice: Phase 7 Action 3, ring-buffer reuse for temporal sequences (`reuseSequenceBuffers`).
+
+### Phase 7 – Allocation Churn Reduction [WIP]
 
 Files: `activationArrayPool.ts`, `network.connect.ts`
 Steps:
 
-1. (C) Batch connection creation API (reserve capacity upfront per growth event).
-2. (C) Extend activation pool with LRU trimming + compaction stats.
+1. [DONE] (C) Batch connection creation API (reserve capacity upfront per growth event).
+2. [DONE] (C) Extend activation pool with LRU trimming + compaction stats.
 3. (C) Ring-buffer reuse for temporal sequences (`reuseSequenceBuffers`).
 4. (N) Background compaction (idle tick) after large prune.
 5. (B) Cooperative compaction (microtask slices / idle callbacks) to avoid jank.
 6. (H) Morphogenesis growth bursts use batch API to cap reallocations.
+
+Phase 7 Action 1 landed through `Network.connectBatch()` plus starter bootstrap migration to batch starter wiring. Validation closed with focused connect/bootstrap tests and an exact green rerun of `npm run test:silent` (`368` suites / `3559` tests), including the previously suspect in-sequence `examples/evolveXor/evolveXor.test.ts` pass. The refreshed benchmark artifact from `benchmarks/benchmark.memory.test.ts` (`2026-05-10T02:34:53.855Z`) kept `bytesPerConnMean` flat at `69/65/65/64/64` across `1k/10k/50k/100k/200k` synthetic sizes while improving `buildMsMean` by `38%`-`69%` and `fwdAvgMsMean` by `28%`-`63%` versus the prior recorded snapshot (`2026-04-30T20:52:40.376Z`).
+
+Phase 7 Action 2 landed through `activationArrayPool.compact(maxRetainedBuckets)` plus per-bucket recency tracking and cumulative compaction counters (`bucketCount`, `retainedArrayCount`, `compactionCount`, `trimmedArrays`, `trimmedBuckets`). Validation closed with focused activation-array-pool tests, a pooled raw-activation invariance check on the same seeded network and input before versus after compaction, and owner-local coverage at `100/100/100/100` for `src/architecture/activationArrayPool/activationArrayPool.ts`. The refreshed benchmark artifact from `benchmarks/benchmark.memory.test.ts` (`2026-05-10T02:57:23.925Z`) again held `bytesPerConnMean` flat at `69/65/65/64/64`; timing deltas versus the Action 1 snapshot were mixed rather than a clean throughput win (`buildMsMean` improved at `1k/10k/200k`, regressed at `50k/100k`; `fwdAvgMsMean` improved at `1k/100k`, regressed at `10k/50k`, and stayed effectively flat at `200k`). That outcome is acceptable for this slice because Action 2 primarily closes retention trimming, observability, and future background-compaction prerequisites rather than changing the steady-state forward path.
 
 ### Phase 8 – Serialization Compression [Planned]
 

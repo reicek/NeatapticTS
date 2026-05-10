@@ -1,5 +1,6 @@
 import Network from '../network';
 import Node from '../../node';
+import { config } from '../../../config';
 import {
   activateBatch as activateBatchUtils,
   activateRaw as activateRawUtils,
@@ -55,6 +56,111 @@ function runActivationMode(
   return activationMode === 'activate'
     ? network.activate(inputVector)
     : network.noTraceActivate(inputVector);
+}
+
+function createExplicitFloat64PrecisionScenario(): {
+  network: Network;
+  inputVector: number[];
+  expectedOutputValue: number;
+} {
+  const inputValue = Math.PI / 7;
+  const connectionWeight = Math.E / 11;
+  const network = new Network(1, 1, {
+    activationPrecision: 'f64',
+    seed: 901,
+  });
+  const outputNode = network.nodes.find(
+    (nodeEntry) => nodeEntry.type === 'output',
+  );
+
+  if (!outputNode) {
+    throw new Error('Expected one output node to exist');
+  }
+
+  configureDeterministicNode(outputNode);
+  network.connections[0].weight = connectionWeight;
+  setFastSlabHooks(network, {
+    canUseFastSlab: () => false,
+  });
+
+  return {
+    network,
+    inputVector: [inputValue],
+    expectedOutputValue: inputValue * connectionWeight,
+  };
+}
+
+function createRawActivationReuseScenario(
+  options: {
+    activationPrecision: 'f32' | 'f64';
+    returnTypedActivations: boolean;
+  },
+): {
+  network: Network;
+  inputVector: number[];
+  expectedOutputValue: number;
+} {
+  const inputValue = Math.PI / 7;
+  const connectionWeight = Math.E / 11;
+  const network = new Network(1, 1, {
+    activationPrecision: options.activationPrecision,
+    returnTypedActivations: options.returnTypedActivations,
+    reuseActivationArrays: true,
+    seed: 902,
+  });
+  const outputNode = network.nodes.find(
+    (nodeEntry) => nodeEntry.type === 'output',
+  );
+
+  if (!outputNode) {
+    throw new Error('Expected one output node to exist');
+  }
+
+  configureDeterministicNode(outputNode);
+  network.connections[0].weight = connectionWeight;
+  setFastSlabHooks(network, {
+    canUseFastSlab: () => false,
+  });
+
+  return {
+    network,
+    inputVector: [inputValue],
+    expectedOutputValue: inputValue * connectionWeight,
+  };
+}
+
+function createInternalPrecisionBoundaryScenario(): {
+  inputValue: number;
+  network: Network;
+  expectedOutputValue: number;
+  outputNode: Node;
+} {
+  const inputValue = Math.PI / 7;
+  const connectionWeight = Math.E / 11;
+  const network = new Network(1, 1, {
+    activationPrecision: 'f32',
+    seed: 903,
+  });
+  const outputNode = network.nodes.find(
+    (nodeEntry) => nodeEntry.type === 'output',
+  );
+
+  if (!outputNode) {
+    throw new Error('Expected one output node to exist');
+  }
+
+  configureDeterministicNode(outputNode);
+  network.connections[0].weight = connectionWeight;
+  setFastSlabHooks(network, {
+    canUseFastSlab: () => false,
+  });
+
+  return {
+    inputValue,
+    network,
+    expectedOutputValue: inputValue * connectionWeight,
+    outputNode,
+  };
 }
 
 function createAcyclicScheduleAdoptionScenario(
@@ -304,9 +410,119 @@ describe('network activate chapter', () => {
         });
       });
     });
+
+    describe('given the global float32 mode is enabled but the network requests f64 activation precision', () => {
+      it('preserves the explicit float64 output value', () => {
+        // Arrange
+        const previousFloat32Mode = config.float32Mode;
+        config.float32Mode = true;
+
+        try {
+          const activationScenario = createExplicitFloat64PrecisionScenario();
+
+          // Act
+          const output = activationScenario.network.activate(
+            activationScenario.inputVector,
+          );
+
+          // Assert
+          expect(output[0]).toBe(activationScenario.expectedOutputValue);
+        } finally {
+          config.float32Mode = previousFloat32Mode;
+        }
+      });
+    });
+
+    describe('given the network requests f32 activation precision during traced activation', () => {
+      it('keeps internal node activation state and eligibility traces outside the exported float32 buffer contract', () => {
+        // Arrange
+        const precisionScenario = createInternalPrecisionBoundaryScenario();
+
+        // Act
+        const exportedOutput = precisionScenario.network.activate(
+          [precisionScenario.inputValue],
+          true,
+        );
+
+        // Assert
+        expect({
+          eligibility: precisionScenario.outputNode.connections.in[0].eligibility,
+          exportedValue: exportedOutput[0],
+          internalActivation: precisionScenario.outputNode.activation,
+          internalState: precisionScenario.outputNode.state,
+        }).toEqual({
+          eligibility: precisionScenario.inputValue,
+          exportedValue: Math.fround(precisionScenario.expectedOutputValue),
+          internalActivation: precisionScenario.expectedOutputValue,
+          internalState: precisionScenario.expectedOutputValue,
+        });
+      });
+    });
   });
 
   describe('noTraceActivate()', () => {
+    describe('given the global float32 mode is enabled but the network requests f64 activation precision', () => {
+      it('preserves the explicit float64 output value', () => {
+        // Arrange
+        const previousFloat32Mode = config.float32Mode;
+        config.float32Mode = true;
+
+        try {
+          const activationScenario = createExplicitFloat64PrecisionScenario();
+
+          // Act
+          const output = activationScenario.network.noTraceActivate(
+            activationScenario.inputVector,
+          );
+
+          // Assert
+          expect(output[0]).toBe(activationScenario.expectedOutputValue);
+        } finally {
+          config.float32Mode = previousFloat32Mode;
+        }
+      });
+
+      it('uses a legacy raw float32 override when the shared precision config is absent', () => {
+        // Arrange
+        const activationScenario = createExplicitFloat64PrecisionScenario();
+        const runtimeNetwork = activationScenario.network as unknown as {
+          _activationPrecision?: 'f32' | 'f64';
+          _precisionConfig?: { activationPrecision: 'f32' | 'f64' };
+        };
+
+        runtimeNetwork._activationPrecision = 'f32';
+        runtimeNetwork._precisionConfig = undefined;
+
+        // Act
+        const output = activationScenario.network.noTraceActivate(
+          activationScenario.inputVector,
+        );
+
+        // Assert
+        expect(output[0]).toBe(Math.fround(activationScenario.expectedOutputValue));
+      });
+
+      it('falls back to the default float64 output when both runtime precision carriers are absent', () => {
+        // Arrange
+        const activationScenario = createExplicitFloat64PrecisionScenario();
+        const runtimeNetwork = activationScenario.network as unknown as {
+          _activationPrecision?: 'f32' | 'f64';
+          _precisionConfig?: { activationPrecision: 'f32' | 'f64' };
+        };
+
+        runtimeNetwork._activationPrecision = undefined;
+        runtimeNetwork._precisionConfig = undefined;
+
+        // Act
+        const output = activationScenario.network.noTraceActivate(
+          activationScenario.inputVector,
+        );
+
+        // Assert
+        expect(output[0]).toBe(activationScenario.expectedOutputValue);
+      });
+    });
+
     describe('given fast slab execution is available', () => {
       describe('when the fast slab path succeeds', () => {
         it('returns the fast slab output value', () => {
@@ -368,6 +584,18 @@ describe('network activate chapter', () => {
           // Assert
           expect(activateWithInvalidInput).toThrow(/Input size mismatch/);
         });
+
+        it('names undefined input length safely in the mismatch error', () => {
+          // Arrange
+          const network = new Network(2, 1, { seed: 19 });
+
+          // Act
+          const activateWithUndefinedInput = () =>
+            network.noTraceActivate(undefined as unknown as number[]);
+
+          // Assert
+          expect(activateWithUndefinedInput).toThrow(/got undefined/);
+        });
       });
     });
 
@@ -383,6 +611,21 @@ describe('network activate chapter', () => {
 
           // Assert
           expect(output.length).toBe(expectedLength);
+        });
+
+        it('does not recompute topology when the cached order is already clean', () => {
+          // Arrange
+          const network = new Network(2, 1, { seed: 20 });
+          const computeTopoOrderSpy = jest.fn();
+
+          setTopoDirty(network, false);
+          Reflect.set(network, '_computeTopoOrder', computeTopoOrderSpy);
+
+          // Act
+          network.noTraceActivate([1, 2]);
+
+          // Assert
+          expect(computeTopoOrderSpy).toHaveBeenCalledTimes(0);
         });
       });
 
@@ -455,6 +698,139 @@ describe('network activate chapter', () => {
           expect(output.length).toBe(expectedLength);
         });
       });
+
+      describe('when typed activations are returned directly', () => {
+        it('reuses one typed output buffer with the requested float64 precision', () => {
+          // Arrange
+          const previousFloat32Mode = config.float32Mode;
+          config.float32Mode = true;
+
+          try {
+            const activationScenario = createRawActivationReuseScenario({
+              activationPrecision: 'f64',
+              returnTypedActivations: true,
+            });
+            const firstOutput = activationScenario.network.activateRaw(
+              activationScenario.inputVector,
+            );
+
+            // Act
+            const secondOutput = activationScenario.network.activateRaw(
+              activationScenario.inputVector,
+            );
+
+            // Assert
+            expect({
+              constructorName: secondOutput.constructor.name,
+              outputValue: secondOutput[0],
+              sameReference: secondOutput === firstOutput,
+            }).toEqual({
+              constructorName: 'Float64Array',
+              outputValue: activationScenario.expectedOutputValue,
+              sameReference: true,
+            });
+          } finally {
+            config.float32Mode = previousFloat32Mode;
+          }
+        });
+
+        it('replaces a legacy float64 reusable buffer when a legacy raw float32 override is applied without shared precision config', () => {
+          // Arrange
+          const activationScenario = createRawActivationReuseScenario({
+            activationPrecision: 'f64',
+            returnTypedActivations: true,
+          });
+          const runtimeNetwork = activationScenario.network as unknown as {
+            _activationPool?: Float32Array | Float64Array;
+            _activationPrecision?: 'f32' | 'f64';
+            _precisionConfig?: { activationPrecision: 'f32' | 'f64' };
+          };
+
+          runtimeNetwork._activationPool = new Float64Array(1);
+          runtimeNetwork._activationPrecision = 'f32';
+          runtimeNetwork._precisionConfig = undefined;
+
+          // Act
+          const output = activationScenario.network.activateRaw(
+            activationScenario.inputVector,
+          );
+
+          // Assert
+          expect({
+            constructorName: output.constructor.name,
+            outputValue: output[0],
+          }).toEqual({
+            constructorName: 'Float32Array',
+            outputValue: Math.fround(activationScenario.expectedOutputValue),
+          });
+        });
+
+        it('falls back to float64 typed output when both runtime precision carriers are absent', () => {
+          // Arrange
+          const activationScenario = createRawActivationReuseScenario({
+            activationPrecision: 'f64',
+            returnTypedActivations: true,
+          });
+          const runtimeNetwork = activationScenario.network as unknown as {
+            _activationPrecision?: 'f32' | 'f64';
+            _precisionConfig?: { activationPrecision: 'f32' | 'f64' };
+          };
+
+          runtimeNetwork._activationPrecision = undefined;
+          runtimeNetwork._precisionConfig = undefined;
+
+          // Act
+          const output = activationScenario.network.activateRaw(
+            activationScenario.inputVector,
+          );
+
+          // Assert
+          expect({
+            constructorName: output.constructor.name,
+            outputValue: output[0],
+          }).toEqual({
+            constructorName: 'Float64Array',
+            outputValue: activationScenario.expectedOutputValue,
+          });
+        });
+      });
+
+      describe('when typed activations are not returned directly', () => {
+        it('returns a detached plain array while preserving the float64 output value', () => {
+          // Arrange
+          const previousFloat32Mode = config.float32Mode;
+          config.float32Mode = true;
+
+          try {
+            const activationScenario = createRawActivationReuseScenario({
+              activationPrecision: 'f64',
+              returnTypedActivations: false,
+            });
+            const firstOutput = activationScenario.network.activateRaw(
+              activationScenario.inputVector,
+            );
+
+            // Act
+            const secondOutput = activationScenario.network.activateRaw(
+              activationScenario.inputVector,
+            );
+
+            // Assert
+            expect({
+              isArray: Array.isArray(secondOutput),
+              outputValue: secondOutput[0],
+              sameReference: secondOutput === firstOutput,
+            }).toEqual({
+              isArray: true,
+              outputValue: activationScenario.expectedOutputValue,
+              sameReference: false,
+            });
+          } finally {
+            config.float32Mode = previousFloat32Mode;
+          }
+        });
+      });
+
     });
   });
 
@@ -614,4 +990,5 @@ describe('network activate chapter', () => {
       });
     });
   });
+
 });

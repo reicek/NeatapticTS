@@ -50,11 +50,11 @@ import type { WorkerPlaybackFrameContext } from './flappy-evolution-worker.simul
  * @param difficultyProfile - Active dynamic difficulty profile.
  * @returns Number of policy activation calls made in this frame.
  */
-export function stepWorkerPopulationFrame(
+export async function stepWorkerPopulationFrame(
   renderState: WorkerPlaybackState,
   rng: RngLike,
   difficultyProfile: SharedDifficultyProfile,
-): number {
+): Promise<number> {
   const controlSubstepCount = Math.max(1, FLAPPY_CONTROL_SUBSTEPS_PER_FRAME);
   const frameContext: WorkerPlaybackFrameContext = {
     renderState,
@@ -76,7 +76,8 @@ export function stepWorkerPopulationFrame(
     controlSubstepIndex++
   ) {
     // Step 2: Resolve one control/physics/collision substep.
-    activationCallsThisFrame += runWorkerPopulationControlSubstep(frameContext);
+    activationCallsThisFrame +=
+      await runWorkerPopulationControlSubstep(frameContext);
   }
 
   // Step 3: Publish the completed logical frame index.
@@ -121,10 +122,11 @@ function incrementLivingBirdFrameCounters(
  * @param frameContext - Shared frame context for this logical frame.
  * @returns Number of activation calls performed in the substep.
  */
-function runWorkerPopulationControlSubstep(
+async function runWorkerPopulationControlSubstep(
   frameContext: WorkerPlaybackFrameContext,
-): number {
-  const activationCallsThisSubstep = resolveBirdControlActions(frameContext);
+): Promise<number> {
+  const activationCallsThisSubstep =
+    await resolveBirdControlActions(frameContext);
 
   advanceBirdPhysics(frameContext);
   advancePipes(frameContext);
@@ -140,15 +142,15 @@ function runWorkerPopulationControlSubstep(
  * @param frameContext - Shared frame context for this logical frame.
  * @returns Number of activation calls performed in the substep.
  */
-function resolveBirdControlActions(
+async function resolveBirdControlActions(
   frameContext: WorkerPlaybackFrameContext,
-): number {
+): Promise<number> {
   const { difficultyProfile, renderState } = frameContext;
   let activationCallsThisSubstep = 0;
 
-  renderState.birds.forEach((bird) => {
+  for (const bird of renderState.birds) {
     if (bird.done) {
-      return;
+      continue;
     }
 
     const observation = resolveObservationVector(
@@ -161,7 +163,9 @@ function resolveBirdControlActions(
       renderState.lastSpawnedPipeSpawnIntervalFrames,
       bird.observationMemoryState,
     );
-    const outputs = bird.network.activate(observation.observationVector);
+    const outputs = bird.inferenceChannel
+      ? await bird.inferenceChannel.predict(observation.observationVector)
+      : bird.network.activate(observation.observationVector);
     if (FLAPPY_ENABLE_RUNTIME_INSTRUMENTATION) {
       activationCallsThisSubstep += 1;
     }
@@ -176,7 +180,7 @@ function resolveBirdControlActions(
     if (shouldFlap) {
       bird.velocityYPxPerFrame = FLAPPY_FLAP_VELOCITY_PX_PER_FRAME;
     }
-  });
+  }
 
   return activationCallsThisSubstep;
 }

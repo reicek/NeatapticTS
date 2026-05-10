@@ -588,6 +588,36 @@ Parameters:
 
 Returns: HUD-ready summary values with placeholders until playback completes.
 
+### resolveRuntimeArchitectureProgressUpdate
+
+```ts
+resolveRuntimeArchitectureProgressUpdate(
+  options: { candidateBestScore: { pipesPassed: number; framesSurvived: number; }; candidateChampionNetworkJson?: SerializedNetwork | undefined; championByProfileId: Partial<Record<ExampleArchitectureProfileId, SerializedNetwork>>; historyByProfileId: Partial<Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>>; profileId: ExampleArchitectureProfileId; },
+): { championByProfileId: Partial<Record<ExampleArchitectureProfileId, SerializedNetwork>>; didImprove: boolean; historyByProfileId: Partial<Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>>; }
+```
+
+Resolves the next browser-local architecture record state after one playback run.
+
+Parameters:
+- `options` - Current history/champion tables plus the candidate run result.
+
+Returns: Updated history and champion tables plus an improvement flag.
+
+### resolveWorkerInitPayload
+
+```ts
+resolveWorkerInitPayload(
+  options: { architectureProfileId: ExampleArchitectureProfileId; championByProfileId: Partial<Record<ExampleArchitectureProfileId, SerializedNetwork>>; elitismCount: number; populationSize: number; rngSeed: number; },
+): { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; }
+```
+
+Resolves the worker init payload for the selected architecture profile.
+
+Parameters:
+- `options` - Worker startup values plus the browser-local champion table.
+
+Returns: Worker init payload with an optional champion seed override.
+
 ### runRuntimeEvolutionLoop
 
 ```ts
@@ -805,11 +835,10 @@ resolveRuntimePopulationBudget(
 
 Resolves the browser evolution budget for one architecture profile.
 
-Sparse and NARX keep wider browser budgets than the dense MLP baseline so
-the interactive demo still has room to discover pipe-clearing behavior in a
-small number of generations. GRU and LSTM stay smaller than NARX so the live
-demo remains responsive, but LSTM keeps a broader flock than the old default
-because the heavier gate stack needs more exploration headroom.
+These browser budgets are fixed performance caps rather than hardware-scaled
+targets. The live page keeps MLP at its tiny baseline, gives Sparse a modest
+20-bird flock, and caps the heavier recurrent builders at 10 birds so
+initialization and generation turnover stay responsive.
 
 Parameters:
 - `architectureProfileId` - Selected shared Flappy profile id.
@@ -843,6 +872,23 @@ Parameters:
 
 Returns: True when the candidate is strictly better.
 
+### persistRuntimeArchitectureChampions
+
+```ts
+persistRuntimeArchitectureChampions(
+  championByProfileId: Partial<Record<ExampleArchitectureProfileId, SerializedNetwork>>,
+  storage: RuntimeArchitectureHistoryStorage | undefined,
+): void
+```
+
+Persists the current browser-local champion table when storage exists.
+
+Parameters:
+- `championByProfileId` - Champion table to persist.
+- `storage` - Optional storage override for tests.
+
+Returns: Nothing.
+
 ### persistRuntimeArchitectureHistory
 
 ```ts
@@ -860,6 +906,25 @@ Parameters:
 
 Returns: Nothing.
 
+### resetRuntimeArchitectureProgress
+
+```ts
+resetRuntimeArchitectureProgress(
+  storage: RuntimeArchitectureHistoryStorage | undefined,
+): void
+```
+
+Clears all persisted browser-local Flappy score history and champion state.
+
+Resetting the selector should remove both the visible best-score captions and
+the stored champion seeds they were derived from, so the next session starts
+from the shared architecture template instead of reusing a saved winner.
+
+Parameters:
+- `storage` - Optional storage override for tests.
+
+Returns: Nothing.
+
 ### resolveAvailableRuntimeArchitectureProfiles
 
 ```ts
@@ -869,6 +934,21 @@ resolveAvailableRuntimeArchitectureProfiles(): ExampleArchitectureProfile[]
 Resolves the currently approved shared Flappy architecture profiles.
 
 Returns: Approved shared profiles in the curated Flappy selector order.
+
+### resolveRuntimeArchitectureChampions
+
+```ts
+resolveRuntimeArchitectureChampions(
+  storage: RuntimeArchitectureHistoryStorage | undefined,
+): Partial<Record<ExampleArchitectureProfileId, SerializedNetwork>>
+```
+
+Reads persisted browser-local champion networks when storage is available.
+
+Parameters:
+- `storage` - Optional storage override for tests.
+
+Returns: Previously stored champion table or an empty table.
 
 ### resolveRuntimeArchitectureHistory
 
@@ -973,6 +1053,10 @@ Returns: Resolved Flappy-ready shared profile.
 ### RuntimeArchitectureBestScore
 
 Best-known local browser record for one Flappy architecture profile.
+
+### RuntimeArchitectureChampionByProfileId
+
+Browser-local champion table keyed by the shared Flappy architecture profile id.
 
 ### RuntimeArchitectureHistoryByProfileId
 

@@ -17,9 +17,11 @@ type TrainingStatsSnapshot = {
     good: number;
     bad: number;
     overflowCount: number;
+    underflowCount: number;
     scaleUps: number;
     scaleDowns: number;
     lastOverflowStep: number;
+    lastUnderflowStep: number;
   };
 };
 
@@ -149,9 +151,12 @@ export function getTrainingStats(this: Network): TrainingStatsSnapshot {
       good: runtimeNetwork._mixedPrecisionState.goodSteps,
       bad: runtimeNetwork._mixedPrecisionState.badSteps,
       overflowCount: runtimeNetwork._mixedPrecisionState.overflowCount ?? 0,
+      underflowCount: runtimeNetwork._mixedPrecisionState.underflowCount ?? 0,
       scaleUps: runtimeNetwork._mixedPrecisionState.scaleUpEvents ?? 0,
       scaleDowns: runtimeNetwork._mixedPrecisionState.scaleDownEvents ?? 0,
       lastOverflowStep: runtimeNetwork._lastOverflowStep,
+      lastUnderflowStep:
+        runtimeNetwork._mixedPrecisionState.lastUnderflowStep ?? -1,
     },
   };
 }

@@ -1,7 +1,11 @@
 import type Network from '../../network/network';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import type { ActivationArray } from '../../activationArrayPool/activationArrayPool';
-import { config } from '../../../config';
+import {
+  config,
+  type ActivationPrecision,
+  type PrecisionConfig,
+} from '../../../config';
 import {
   INITIAL_OUTPUT_WRITE_INDEX,
   INPUT_NODE_TYPE,
@@ -69,7 +73,10 @@ export function activate(
   const fastSlabOutput = tryFastSlabActivation(runtimeNetwork, input, training);
   if (fastSlabOutput) return fastSlabOutput;
 
-  const output = acquireOutputBuffer(this.output);
+  const output = acquireOutputBuffer(
+    this.output,
+    resolveRuntimeActivationPrecision(runtimeNetwork),
+  );
   validateNetworkNodes(this);
 
   resetSkippedLayers(this);
@@ -158,8 +165,42 @@ function tryFastSlabActivation(
  * @param outputSize Number of output slots.
  * @returns Mutable pooled output buffer.
  */
-function acquireOutputBuffer(outputSize: number): ActivationArray {
-  return activationArrayPool.acquire(outputSize) as ActivationArray;
+function acquireOutputBuffer(
+  outputSize: number,
+  activationPrecision?: ActivationPrecision,
+): ActivationArray {
+  return activationArrayPool.acquire(
+    outputSize,
+    activationPrecision,
+  ) as ActivationArray;
+}
+
+/**
+ * Read the resolved runtime activation precision from the current network.
+ *
+ * @param runtimeNetwork Runtime activation internals.
+ * @returns Active per-network activation precision when present.
+ */
+function resolveRuntimeActivationPrecision(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): ActivationPrecision | undefined {
+  const precisionCarrier = runtimeNetwork as ActivateRuntimeNetworkProps & {
+    _precisionConfig?: PrecisionConfig;
+    _activationPrecision?: ActivationPrecision;
+  };
+
+  if (
+    precisionCarrier._activationPrecision === 'f32' &&
+    precisionCarrier._activationPrecision !==
+      precisionCarrier._precisionConfig?.activationPrecision
+  ) {
+    return precisionCarrier._activationPrecision;
+  }
+
+  return (
+    precisionCarrier._precisionConfig?.activationPrecision ??
+    precisionCarrier._activationPrecision
+  );
 }
 
 /**

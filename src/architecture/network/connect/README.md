@@ -79,6 +79,25 @@ Practical reading order:
 
 ## architecture/network/connect/network.connect.utils.ts
 
+### collectCreatedConnectionBatches
+
+```ts
+collectCreatedConnectionBatches(
+  network: default,
+  networkInternal: ConnectNetworkInternals,
+  requests: readonly NetworkConnectionRequest[],
+): CreatedConnectionBatch[]
+```
+
+Collect created connection groups for one ordered batch request shelf.
+
+Parameters:
+- `network` - Network instance owning node ordering.
+- `networkInternal` - Runtime network internals used by connection pipeline.
+- `requests` - Ordered connection requests.
+
+Returns: Ordered created connection groups for later batch registration.
+
 ### connect
 
 ```ts
@@ -128,6 +147,33 @@ Returns: Array of created  {@link Connection} objects (possibly empty if acyclic
 Example:
 
 const [edge] = net.connect(nodeA, nodeB, 0.5);
+
+### connectBatch
+
+```ts
+connectBatch(
+  requests: readonly NetworkConnectionRequest[],
+): default[]
+```
+
+Create and register many directed connection objects in one structural edit batch.
+
+This preserves the same legality checks and deterministic default-weight
+policy as repeated {@link connect} calls, but it reserves network-level
+connection storage once for the whole request shelf.
+
+Parameters:
+- `this` - Bound Network instance.
+- `requests` - Ordered connection requests.
+
+Returns: Flattened created  {@link Connection} objects in request order.
+
+Example:
+
+const createdConnections = network.connectBatch([
+  { from: network.nodes[0], to: network.nodes[2] },
+  { from: network.nodes[1], to: network.nodes[2], weight: 0.5 },
+]);
 
 ### disconnect
 
@@ -217,6 +263,29 @@ Parameters:
 
 Returns: Nothing.
 
+### registerCreatedConnectionBatches
+
+```ts
+registerCreatedConnectionBatches(
+  network: default,
+  internalState: ConnectNetworkInternals,
+  createdConnectionBatches: readonly CreatedConnectionBatch[],
+): default[]
+```
+
+Register many created connection groups while reserving network-level storage once.
+
+This preserves the same registration semantics as repeated
+{@link registerCreatedConnections} calls, but it grows the top-level
+`connections` and `selfconns` arrays one time for the whole batch.
+
+Parameters:
+- `network` - Network instance owning connection collections.
+- `internalState` - Runtime network internals used by connection pipeline.
+- `createdConnectionBatches` - Ordered connection groups produced from one batch request shelf.
+
+Returns: Flattened created connections in request order.
+
 ### registerCreatedConnections
 
 ```ts
@@ -260,6 +329,23 @@ Parameters:
 - `createdConnection` - Created low-level connection object.
 
 Returns: Nothing.
+
+### resolveConnectionStoragePlan
+
+```ts
+resolveConnectionStoragePlan(
+  createdConnectionBatches: readonly CreatedConnectionBatch[],
+  internalState: ConnectNetworkInternals,
+): ConnectionStoragePlan
+```
+
+Resolve how much top-level connection storage one batch must reserve.
+
+Parameters:
+- `createdConnectionBatches` - Ordered connection groups produced from one batch request shelf.
+- `internalState` - Runtime network internals used by connection pipeline.
+
+Returns: Planned storage counts for flattened, standard, and self connections.
 
 ### shouldRejectConnectionForAcyclicMode
 

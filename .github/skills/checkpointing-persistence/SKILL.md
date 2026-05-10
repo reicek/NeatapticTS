@@ -1,7 +1,7 @@
 ---
 name: checkpointing-persistence
-description: 'Design, implement, or validate versioned save and resume checkpoints in NeatapticTS. Use when working on full or light checkpoints, strict vs best-effort restore, RNG state persistence, innovation or gene counters, species state, migration guards, or resumable long-running evolution and NEATchat identity persistence.'
-argument-hint: 'Describe the checkpoint mode, current step in Population_Save_Resume_and_Checkpointing.md, target orchestration surface, determinism requirement, and whether the pass is design, implementation, migration, or validation.'
+description: 'Design, implement, validate, or actively plan versioned save and resume checkpoints in NeatapticTS. Use when starting or advancing Population_Save_Resume_and_Checkpointing.md, including Step 0 boundary mapping, full vs light checkpoint semantics, strict vs best-effort restore rules, RNG or counter persistence, schema versioning, metadata extension, migration, or exact-resume claims.'
+argument-hint: 'Describe the checkpoint mode, current step in Population_Save_Resume_and_Checkpointing.md (including Step 0 kickoff when relevant), target orchestration surface, determinism requirement, and whether the pass is design, implementation, migration, or validation.'
 user-invocable: true
 disable-model-invocation: false
 ---
@@ -34,6 +34,7 @@ on PRNG state, serialization compatibility, and restore invariants.
 
 ## When to Use
 
+- The task is to start or expand the checkpoint plan before code exists.
 - A checkpoint schema or restore API is being introduced or revised.
 - The repo needs exact resume for long-running deterministic evolution.
 - A saved run must move across machines or sessions safely.
@@ -41,6 +42,20 @@ on PRNG state, serialization compatibility, and restore invariants.
 - ID counters, innovation counters, or RNG state restoration is the active bug.
 - NEATchat needs durable identity or memory metadata on top of a shared
   checkpoint seam.
+
+## Step 0 kickoff
+
+If the active task is planning or Step 0/Step 1 reconnaissance rather than code
+changes:
+
+1. Read [the Step 0 kickoff guide](references/checkpoint-step-0.md).
+2. Produce or update the state-owner matrix, exactness categories, strict
+  restore matrix, and red-phase test shortlist before proposing code work.
+3. Update `plans/Population_Save_Resume_and_Checkpointing.md`,
+  `plans/Roadmap.md`, and `plans/README.md` together if checkpointing becomes
+  the active lane.
+4. Stop and narrow the boundary again if the orchestration save/load entry
+  surface is still ambiguous after the first mapping pass.
 
 ## Resume Contracts
 
@@ -119,7 +134,8 @@ Validate with: save/load roundtrip tests, deterministic replay test, and npm run
 ## Required Workflow
 
 1. Read `plans/README.md`, then
-   `plans/Population_Save_Resume_and_Checkpointing.md`.
+  `plans/Roadmap.md`, then
+  `plans/Population_Save_Resume_and_Checkpointing.md`.
 2. Read the nearest relevant README and restore boundaries before deep source
    edits.
 3. Inventory every stateful input that affects future behavior.
@@ -183,6 +199,8 @@ Validate with: save/load roundtrip tests, deterministic replay test, and npm run
 - Do not claim exact replay if evaluation order or RNG state is not restored.
 - Do not silently migrate incompatible checkpoint versions.
 - Do not bypass schema versioning just because internal code currently lines up.
+- Do not reopen lower-level network serialization design during Step 0 unless a
+  proven checkpoint gap crosses that boundary.
 
 ## Expected Final Output
 

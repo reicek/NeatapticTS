@@ -57,7 +57,7 @@ describe('network slab rebuild helper chapter', () => {
 
   describe('_ensureSlabCapacityAsync', () => {
     describe('given async rebuild capacity already covers the active connections', () => {
-      it('reuses the existing slab capacity without reallocating the core slabs', () => {
+      it('reuses the existing slab capacity without reallocating the core slabs', async () => {
         // Arrange
         const existingWeights = new Float64Array(4);
         const buildContext = createBuildContext({
@@ -69,7 +69,7 @@ describe('network slab rebuild helper chapter', () => {
         });
 
         // Act
-        _ensureSlabCapacityAsync(buildContext);
+        await _ensureSlabCapacityAsync(buildContext);
 
         // Assert
         expect({
@@ -83,8 +83,69 @@ describe('network slab rebuild helper chapter', () => {
       });
     });
 
+    describe('given browser-scale async growth needs cooperative slab allocation', () => {
+      it('yields between staged allocations before publishing the grown slabs', async () => {
+        // Arrange
+        const largeConnectionSet = Array.from({ length: 50_001 }, () =>
+          createConnection(),
+        );
+        const buildContext = createBuildContext({
+          capacity: 1,
+          connections: largeConnectionSet,
+          internalNet: {
+            _connFlags: new Uint8Array(1),
+            _connFrom: new Uint32Array(1),
+            _connTo: new Uint32Array(1),
+            _connWeights: new Float64Array(1),
+          },
+        });
+        const originalSetTimeout = globalThis.setTimeout;
+        let timeoutCallCount = 0;
+
+        globalThis.setTimeout = ((
+          handler: TimerHandler,
+          _timeout?: number,
+          ...callbackArgs: unknown[]
+        ) => {
+          timeoutCallCount += 1;
+
+          if (typeof handler === 'function') {
+            handler(...callbackArgs);
+          }
+
+          return 0 as unknown as ReturnType<typeof setTimeout>;
+        }) as unknown as typeof setTimeout;
+
+        try {
+          // Act
+          await _ensureSlabCapacityAsync(buildContext);
+        } finally {
+          globalThis.setTimeout = originalSetTimeout;
+        }
+
+        // Assert
+        expect({
+          hasFlags: buildContext.internalNet._connFlags instanceof Uint8Array,
+          hasFrom: buildContext.internalNet._connFrom instanceof Uint32Array,
+          hasGain:
+            buildContext.internalNet._connGain instanceof Float64Array,
+          hasTo: buildContext.internalNet._connTo instanceof Uint32Array,
+          hasWeights:
+            buildContext.internalNet._connWeights instanceof Float64Array,
+          timeoutCallCount,
+        }).toEqual({
+          hasFlags: true,
+          hasFrom: true,
+          hasGain: true,
+          hasTo: true,
+          hasWeights: true,
+          timeoutCallCount: 4,
+        });
+      });
+    });
+
     describe('given async rebuild grows a float32 slab that still retains gain and plastic arrays', () => {
-      it('reallocates float32 core slabs, replaces the gain slab, and clears the retained plastic slab', () => {
+      it('reallocates float32 core slabs, replaces the gain slab, and clears the retained plastic slab', async () => {
         // Arrange
         const previousGainArray = new Float32Array(1);
         const previousPlasticArray = new Float32Array(1);
@@ -103,7 +164,7 @@ describe('network slab rebuild helper chapter', () => {
         });
 
         // Act
-        _ensureSlabCapacityAsync(buildContext);
+        await _ensureSlabCapacityAsync(buildContext);
 
         // Assert
         expect({
@@ -236,16 +297,16 @@ describe('network slab rebuild helper chapter', () => {
   });
 
   describe('_resolveAsyncChunkSize', () => {
-    describe('given a large async graph and a positive browser chunk budget', () => {
+    describe('given a browser-scale async graph and a positive browser chunk budget', () => {
       it('caps the requested chunk size with the adaptive budget estimate', () => {
         // Arrange
         config.browserSlabChunkTargetMs = 1;
 
         // Act
-        const chunkSize = _resolveAsyncChunkSize(200_001, 20_000);
+        const chunkSize = _resolveAsyncChunkSize(110_000, 10_000);
 
         // Assert
-        expect(chunkSize).toBe(15_000);
+        expect(chunkSize).toBe(2_000);
       });
     });
 

@@ -112,6 +112,7 @@ describe('network standalone setup utility chapter', () => {
         // Assert
         expect(generationContext).toEqual({
           standaloneProps,
+          resolvedActivationPrecision: 'f64',
           inputNodeIndexes: [],
           activationNodeIndexes: [],
           outputNodeIndexes: [],

@@ -1,5 +1,9 @@
 import type { PopulationRenderState, TrailState } from '../browser-entry.types';
 import {
+  FLAPPY_WORLD_HEIGHT_PX,
+  FLAPPY_WORLD_WIDTH_PX,
+} from '../../constants/constants';
+import {
   resolveVisibleWorldHeightPx,
   resolveVisibleWorldWidthPx,
 } from '../browser-entry.viewport.utils';
@@ -9,6 +13,11 @@ import type {
   PlaybackMutableSummary,
   PlaybackSessionContext,
 } from './playback.orchestration.types';
+
+const FLAPPY_BROWSER_PLAYBACK_LOG_PREFIX = '[flappy-browser]';
+const FLAPPY_PLAYBACK_MIN_READY_VIEWPORT_PX = 2;
+const SHOULD_LOG_FLAPPY_PLAYBACK_STARTUP =
+  resolveNodeEnvForRuntimeLogs() !== 'test';
 
 /**
  * Session initialization and summary-folding helpers for playback.
@@ -22,8 +31,10 @@ import type {
 /**
  * Resolves the current visible playback viewport dimensions from the canvas.
  *
- * Playback sizing is derived from the live canvas rather than a hard-coded
- * constant so resizing can flow into the worker/session boundary cleanly.
+ * Playback normally mirrors the live canvas dimensions, but the browser host
+ * intentionally seeds that canvas at `1x1` before the resize hook applies the
+ * real backing size. When that placeholder size is still active, the playback
+ * worker uses the canonical Flappy world dimensions instead of waiting.
  *
  * @param canvas - Target playback canvas.
  * @returns Visible world width and height in pixels.
@@ -32,11 +43,15 @@ export function resolvePlaybackViewportDimensions(canvas: HTMLCanvasElement): {
   visibleWorldWidthPx: number;
   visibleWorldHeightPx: number;
 } {
-  // Step 1: Read the current world-space viewport dimensions.
-  return {
-    visibleWorldWidthPx: resolveVisibleWorldWidthPx(canvas),
-    visibleWorldHeightPx: resolveVisibleWorldHeightPx(canvas),
-  };
+  const rawViewportDimensions = resolveRawPlaybackViewportDimensions(canvas);
+
+  // Step 1: Fall back to the canonical Flappy world while the canvas still has its 1x1 placeholder size.
+  if (!isPlaybackViewportReady(rawViewportDimensions)) {
+    return resolveFixedPlaybackStartupViewportDimensions();
+  }
+
+  // Step 2: Use the live canvas size once layout has applied a real viewport.
+  return rawViewportDimensions;
 }
 
 /**
@@ -124,8 +139,23 @@ export function initializePlaybackSessionContext(
   canvas: HTMLCanvasElement,
   evolutionWorker: Worker,
 ): PlaybackSessionContext {
-  // Step 1: Resolve the current viewport dimensions.
+  const rawViewportDimensions = resolveRawPlaybackViewportDimensions(canvas);
+
+  // Step 1: Resolve the playback viewport dimensions for the worker/session boundary.
   const viewportDimensions = resolvePlaybackViewportDimensions(canvas);
+
+  if (
+    SHOULD_LOG_FLAPPY_PLAYBACK_STARTUP &&
+    !isPlaybackViewportReady(rawViewportDimensions)
+  ) {
+    console.info(
+      `${FLAPPY_BROWSER_PLAYBACK_LOG_PREFIX} using fixed playback startup viewport while canvas settles`,
+      {
+        rawViewportDimensions,
+        startupViewportDimensions: viewportDimensions,
+      },
+    );
+  }
 
   // Step 2: Start playback in the worker using the current viewport.
   evolutionWorker.postMessage({
@@ -182,4 +212,41 @@ export function resolvePlaybackEpisodeSummary(
     winnerPipesPassed: summary.winnerPipesPassed,
     winnerFramesSurvived: summary.winnerFramesSurvived,
   };
+}
+
+function isPlaybackViewportReady(viewportDimensions: {
+  visibleWorldWidthPx: number;
+  visibleWorldHeightPx: number;
+}): boolean {
+  return (
+    viewportDimensions.visibleWorldWidthPx >=
+      FLAPPY_PLAYBACK_MIN_READY_VIEWPORT_PX &&
+    viewportDimensions.visibleWorldHeightPx >=
+      FLAPPY_PLAYBACK_MIN_READY_VIEWPORT_PX
+  );
+}
+
+function resolveFixedPlaybackStartupViewportDimensions(): {
+  visibleWorldWidthPx: number;
+  visibleWorldHeightPx: number;
+} {
+  return {
+    visibleWorldWidthPx: FLAPPY_WORLD_WIDTH_PX,
+    visibleWorldHeightPx: FLAPPY_WORLD_HEIGHT_PX,
+  };
+}
+
+function resolveRawPlaybackViewportDimensions(canvas: HTMLCanvasElement): {
+  visibleWorldWidthPx: number;
+  visibleWorldHeightPx: number;
+} {
+  return {
+    visibleWorldWidthPx: resolveVisibleWorldWidthPx(canvas),
+    visibleWorldHeightPx: resolveVisibleWorldHeightPx(canvas),
+  };
+}
+
+function resolveNodeEnvForRuntimeLogs(): string | undefined {
+  return (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process
+    ?.env?.NODE_ENV;
 }

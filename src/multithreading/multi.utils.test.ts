@@ -7,10 +7,12 @@ import {
   bipolarSigmoidActivation,
   deserializeDataSet,
   gaussianActivation,
+  geluActivation,
   hardTanhActivation,
   identityActivation,
   inverseActivation,
   logisticActivation,
+  mishActivation,
   reluActivation,
   seluActivation,
   serializeDataSet,
@@ -18,6 +20,7 @@ import {
   softplusActivation,
   softsignActivation,
   stepActivation,
+  swishActivation,
   tanhActivation,
   testSerializedSet,
 } from './multi.utils';
@@ -50,6 +53,9 @@ const ACTIVATION_CASES: Array<[string, ActivationFn]> = [
   ['inverseActivation', inverseActivation],
   ['seluActivation', seluActivation],
   ['softplusActivation', softplusActivation],
+  ['swishActivation', swishActivation],
+  ['geluActivation', geluActivation],
+  ['mishActivation', mishActivation],
 ];
 
 describe('multithreading utility chapter', () => {
@@ -80,6 +86,26 @@ describe('multithreading utility chapter', () => {
         });
       },
     );
+
+    describe('given softplus receives a large positive value', () => {
+      it('uses the positive approximation threshold instead of overflowing exp', () => {
+        // Act
+        const outputValue = softplusActivation(25);
+
+        // Assert
+        expect(outputValue).toBe(25);
+      });
+    });
+
+    describe('given softplus receives a large negative value', () => {
+      it('uses the negative approximation threshold instead of underflowing to zero', () => {
+        // Act
+        const outputValue = softplusActivation(-25);
+
+        // Assert
+        expect(outputValue).toBeCloseTo(Math.exp(-25));
+      });
+    });
   });
 
   describe('serializeDataSet', () => {

@@ -58,6 +58,25 @@ const result = rolloutEpisode(network, {
 console.log(result.fitness, result.doneReason);
 ```
 
+### rolloutEpisodeWithPredictor
+
+```ts
+rolloutEpisodeWithPredictor(
+  options: { predict: (observationVector: number[]) => Promise<unknown>; rolloutOptions?: FlappyRolloutOptions | undefined; networkId?: number | undefined; },
+): Promise<FlappyEpisodeResult>
+```
+
+Roll out an episode against one async predictor callback.
+
+This browser-worker-oriented variant preserves the same seeded rollout and
+shaping semantics as `rolloutEpisode(...)` while sourcing control decisions
+from an async inference boundary such as `InferenceChannel.predict(...)`.
+
+Parameters:
+- `options` - Predictor callback plus optional rollout controls.
+
+Returns: Episode result details.
+
 ## evaluation/rollout/evaluation.rollout.services.ts
 
 Rollout runtime services.
@@ -156,7 +175,7 @@ Returns: Nothing.
 
 ```ts
 resolveRolloutEpisodeContext(
-  network: FlappyNetworkLike,
+  network: Pick<FlappyNetworkLike, "_id">,
   rolloutOptions: FlappyRolloutOptions,
 ): RolloutEpisodeContext
 ```
@@ -236,6 +255,29 @@ rollout still has budget left.
 
 Parameters:
 - `network` - Genome/network to evaluate.
+- `rolloutEpisodeContext` - Normalized rollout configuration.
+- `rolloutEpisodeRuntimeState` - Mutable runtime state.
+
+Returns: Nothing.
+
+### runRolloutEpisodeLoopWithPredictor
+
+```ts
+runRolloutEpisodeLoopWithPredictor(
+  predictOutputs: (observationVector: number[]) => Promise<unknown>,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): Promise<void>
+```
+
+Runs the main rollout loop against one async predictor callback.
+
+This keeps the rollout semantics aligned with the synchronous evaluation
+surface while allowing the control decision itself to come from a persistent
+worker-hosted predictor.
+
+Parameters:
+- `predictOutputs` - Async predictor callback for one observation vector.
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
 

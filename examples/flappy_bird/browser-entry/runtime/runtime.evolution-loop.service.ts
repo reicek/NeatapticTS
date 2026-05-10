@@ -34,12 +34,29 @@ import type {
   ExampleArchitectureProfileId,
 } from '../../../architectureProfiles';
 import {
+  persistRuntimeArchitectureChampions,
   persistRuntimeArchitectureHistory,
   resolveRuntimeArchitectureSelectorItems,
   updateRuntimeArchitectureHistory,
+  type RuntimeArchitectureChampionByProfileId,
   type RuntimeArchitectureHistoryByProfileId,
 } from './runtime.architecture-profile.service';
 import type { RuntimeTelemetryState } from './runtime.telemetry.service';
+import type { SerializedNetwork } from '../browser-entry.worker.types';
+import type { WorkerInitMessage } from '../../flappy-evolution-worker/flappy-evolution-worker.types';
+
+const FLAPPY_BROWSER_CHAMPION_LOG_PREFIX = '[flappy-browser]';
+const RUNTIME_CHAMPION_FINGERPRINT_OFFSET_BASIS = 0x811c9dc5;
+const RUNTIME_CHAMPION_FINGERPRINT_PRIME = 0x01000193;
+
+type RuntimeChampionSummary = {
+  connectionCount: number;
+  fingerprint: string;
+  hiddenNodeCount: number;
+  inputNodeCount: number;
+  nodeCount: number;
+  outputNodeCount: number;
+};
 
 /**
  * Long-running evolution/playback orchestration for the browser runtime.
@@ -65,6 +82,7 @@ export interface RuntimeEvolutionLoopOptions {
   statsValueByKey: FlappyStatsTableCells;
   renderNetworkArchitecture: NetworkVisualizationHandle['renderNetworkArchitecture'];
   availableArchitectureProfiles: ExampleArchitectureProfile[];
+  initialArchitectureChampionByProfileId: RuntimeArchitectureChampionByProfileId;
   initialArchitectureHistoryByProfileId: RuntimeArchitectureHistoryByProfileId;
   populationSize: number;
   elitismCount: number;
@@ -100,6 +118,7 @@ export async function runRuntimeEvolutionLoop(
     statsValueByKey,
     renderNetworkArchitecture,
     availableArchitectureProfiles,
+    initialArchitectureChampionByProfileId,
     initialArchitectureHistoryByProfileId,
     populationSize,
     elitismCount,
@@ -114,6 +133,7 @@ export async function runRuntimeEvolutionLoop(
   // Step 1: Track cross-generation maxima used by architecture-history badges.
   let bestRunFrames = 0;
   let bestRunPipes = 0;
+  let architectureChampionByProfileId = initialArchitectureChampionByProfileId;
   let architectureHistoryByProfileId = initialArchitectureHistoryByProfileId;
   let shouldShowStartupPreview = true;
   let expectedGeneration = 1;
@@ -122,12 +142,13 @@ export async function runRuntimeEvolutionLoop(
 
   evolutionWorker.postMessage({
     type: 'init',
-    payload: {
-      populationSize,
-      elitismCount,
-      rngSeed: FLAPPY_DEFAULT_RNG_SEED,
+    payload: resolveWorkerInitPayload({
       architectureProfileId: selectedArchitectureProfileId,
-    },
+      championByProfileId: architectureChampionByProfileId,
+      elitismCount,
+      populationSize,
+      rngSeed: FLAPPY_DEFAULT_RNG_SEED,
+    }),
   });
 
   // Step 3: Keep iterating generations until a stop signal is observed.
@@ -239,17 +260,24 @@ export async function runRuntimeEvolutionLoop(
     );
     bestRunPipes = Math.max(bestRunPipes, playbackSummary.winnerPipesPassed);
 
-    const nextArchitectureHistoryByProfileId = updateRuntimeArchitectureHistory(
-      architectureHistoryByProfileId,
-      selectedArchitectureProfileId,
-      {
-        pipesPassed: bestRunPipes,
-        framesSurvived: bestRunFrames,
-      },
-    );
-    if (nextArchitectureHistoryByProfileId !== architectureHistoryByProfileId) {
-      architectureHistoryByProfileId = nextArchitectureHistoryByProfileId;
+    const nextArchitectureProgressUpdate =
+      resolveRuntimeArchitectureProgressUpdate({
+        candidateBestScore: {
+          pipesPassed: bestRunPipes,
+          framesSurvived: bestRunFrames,
+        },
+        candidateChampionNetworkJson: generationPayload.bestNetworkJson,
+        championByProfileId: architectureChampionByProfileId,
+        historyByProfileId: architectureHistoryByProfileId,
+        profileId: selectedArchitectureProfileId,
+      });
+    if (nextArchitectureProgressUpdate.didImprove) {
+      architectureHistoryByProfileId =
+        nextArchitectureProgressUpdate.historyByProfileId;
+      architectureChampionByProfileId =
+        nextArchitectureProgressUpdate.championByProfileId;
       persistRuntimeArchitectureHistory(architectureHistoryByProfileId);
+      persistRuntimeArchitectureChampions(architectureChampionByProfileId);
       architectureSelectorController.updateItems(
         resolveRuntimeArchitectureSelectorItems({
           availableProfiles: availableArchitectureProfiles,
@@ -411,6 +439,238 @@ export function resolveGenerationPopulationSize(
   return generationPopulationNetworks.length > 0
     ? generationPopulationNetworks.length
     : fallbackPopulationSize;
+}
+
+/**
+ * Resolves the worker init payload for the selected architecture profile.
+ *
+ * @param options - Worker startup values plus the browser-local champion table.
+ * @returns Worker init payload with an optional champion seed override.
+ */
+export function resolveWorkerInitPayload(options: {
+  architectureProfileId: ExampleArchitectureProfileId;
+  championByProfileId: RuntimeArchitectureChampionByProfileId;
+  elitismCount: number;
+  populationSize: number;
+  rngSeed: number;
+}): WorkerInitMessage['payload'] {
+  const championNetworkJson = options.championByProfileId[
+    options.architectureProfileId
+  ];
+
+  if (championNetworkJson) {
+    logRuntimeChampionLoaded({
+      championNetworkJson,
+      profileId: options.architectureProfileId,
+    });
+  }
+
+  return {
+    architectureProfileId: options.architectureProfileId,
+    ...(championNetworkJson ? { championNetworkJson } : {}),
+    elitismCount: options.elitismCount,
+    populationSize: options.populationSize,
+    rngSeed: options.rngSeed,
+  };
+}
+
+/**
+ * Resolves the next browser-local architecture record state after one playback run.
+ *
+ * @param options - Current history/champion tables plus the candidate run result.
+ * @returns Updated history and champion tables plus an improvement flag.
+ */
+export function resolveRuntimeArchitectureProgressUpdate(options: {
+  candidateBestScore: {
+    pipesPassed: number;
+    framesSurvived: number;
+  };
+  candidateChampionNetworkJson?: SerializedNetwork;
+  championByProfileId: RuntimeArchitectureChampionByProfileId;
+  historyByProfileId: RuntimeArchitectureHistoryByProfileId;
+  profileId: ExampleArchitectureProfileId;
+}): {
+  championByProfileId: RuntimeArchitectureChampionByProfileId;
+  didImprove: boolean;
+  historyByProfileId: RuntimeArchitectureHistoryByProfileId;
+} {
+  const previousBestScore = options.historyByProfileId[options.profileId];
+  const nextHistoryByProfileId = updateRuntimeArchitectureHistory(
+    options.historyByProfileId,
+    options.profileId,
+    options.candidateBestScore,
+  );
+  const didImprove = nextHistoryByProfileId !== options.historyByProfileId;
+
+  if (!didImprove || !options.candidateChampionNetworkJson) {
+    return {
+      championByProfileId: options.championByProfileId,
+      didImprove,
+      historyByProfileId: nextHistoryByProfileId,
+    };
+  }
+
+  logRuntimeChampionSaved({
+    championNetworkJson: options.candidateChampionNetworkJson,
+    currentBestScore: options.candidateBestScore,
+    previousBestScore,
+    profileId: options.profileId,
+  });
+
+  return {
+    championByProfileId: {
+      ...options.championByProfileId,
+      [options.profileId]: options.candidateChampionNetworkJson,
+    },
+    didImprove: true,
+    historyByProfileId: nextHistoryByProfileId,
+  };
+}
+
+function logRuntimeChampionLoaded(options: {
+  championNetworkJson: SerializedNetwork;
+  profileId: ExampleArchitectureProfileId;
+}): void {
+  if (!shouldLogRuntimeChampionPersistence()) {
+    return;
+  }
+
+  const championSummary = resolveRuntimeChampionSummary(
+    options.championNetworkJson,
+  );
+
+  console.info(
+    `${FLAPPY_BROWSER_CHAMPION_LOG_PREFIX} loading saved champion profile=${options.profileId} fingerprint=${championSummary.fingerprint} nodes=${championSummary.nodeCount} connections=${championSummary.connectionCount} inputs=${championSummary.inputNodeCount} hidden=${championSummary.hiddenNodeCount} outputs=${championSummary.outputNodeCount}`,
+  );
+}
+
+function logRuntimeChampionSaved(options: {
+  championNetworkJson: SerializedNetwork;
+  currentBestScore: {
+    pipesPassed: number;
+    framesSurvived: number;
+  };
+  previousBestScore:
+    | {
+        pipesPassed: number;
+        framesSurvived: number;
+      }
+    | undefined;
+  profileId: ExampleArchitectureProfileId;
+}): void {
+  if (!shouldLogRuntimeChampionPersistence()) {
+    return;
+  }
+
+  const championSummary = resolveRuntimeChampionSummary(
+    options.championNetworkJson,
+  );
+  const previousPipesPassed = options.previousBestScore?.pipesPassed ?? 0;
+  const previousFramesSurvived = options.previousBestScore?.framesSurvived ?? 0;
+
+  console.info(
+    `${FLAPPY_BROWSER_CHAMPION_LOG_PREFIX} saving champion profile=${options.profileId} pipes=${options.currentBestScore.pipesPassed} frames=${options.currentBestScore.framesSurvived} previousPipes=${previousPipesPassed} previousFrames=${previousFramesSurvived} fingerprint=${championSummary.fingerprint} nodes=${championSummary.nodeCount} connections=${championSummary.connectionCount} inputs=${championSummary.inputNodeCount} hidden=${championSummary.hiddenNodeCount} outputs=${championSummary.outputNodeCount}`,
+  );
+}
+
+function resolveRuntimeChampionSummary(
+  championNetworkJson: SerializedNetwork,
+): RuntimeChampionSummary {
+  const serializedChampion = resolveSerializedChampionString(championNetworkJson);
+  const serializedNodes = resolveSerializedChampionNodes(championNetworkJson);
+  const connectionCount = resolveSerializedChampionConnections(
+    championNetworkJson,
+  ).length;
+  const inputNodeCount = serializedNodes.filter(
+    (serializedNode) => resolveSerializedChampionNodeType(serializedNode) === 'input',
+  ).length;
+  const outputNodeCount = serializedNodes.filter(
+    (serializedNode) => resolveSerializedChampionNodeType(serializedNode) === 'output',
+  ).length;
+  const nodeCount = serializedNodes.length;
+
+  return {
+    connectionCount,
+    fingerprint: resolveSerializedChampionFingerprint(serializedChampion),
+    hiddenNodeCount: Math.max(
+      0,
+      nodeCount - inputNodeCount - outputNodeCount,
+    ),
+    inputNodeCount,
+    nodeCount,
+    outputNodeCount,
+  };
+}
+
+function resolveSerializedChampionString(
+  championNetworkJson: SerializedNetwork,
+): string {
+  try {
+    return JSON.stringify(championNetworkJson) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function resolveSerializedChampionFingerprint(
+  serializedChampion: string,
+): string {
+  let nextHash = RUNTIME_CHAMPION_FINGERPRINT_OFFSET_BASIS;
+
+  for (
+    let characterIndex = 0;
+    characterIndex < serializedChampion.length;
+    characterIndex += 1
+  ) {
+    nextHash ^= serializedChampion.charCodeAt(characterIndex);
+    nextHash = Math.imul(nextHash, RUNTIME_CHAMPION_FINGERPRINT_PRIME);
+  }
+
+  return `0x${(nextHash >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+function resolveSerializedChampionNodes(
+  championNetworkJson: SerializedNetwork,
+): Array<Record<string, unknown>> {
+  const serializedNodes = championNetworkJson.nodes;
+
+  return Array.isArray(serializedNodes)
+    ? serializedNodes.filter(
+        (serializedNode): serializedNode is Record<string, unknown> =>
+          typeof serializedNode === 'object' && serializedNode !== null,
+      )
+    : [];
+}
+
+function resolveSerializedChampionConnections(
+  championNetworkJson: SerializedNetwork,
+): Array<Record<string, unknown>> {
+  const serializedConnections = championNetworkJson.connections;
+
+  return Array.isArray(serializedConnections)
+    ? serializedConnections.filter(
+        (serializedConnection): serializedConnection is Record<string, unknown> =>
+          typeof serializedConnection === 'object' &&
+          serializedConnection !== null,
+      )
+    : [];
+}
+
+function resolveSerializedChampionNodeType(
+  serializedNode: Record<string, unknown>,
+): string | undefined {
+  return typeof serializedNode.type === 'string'
+    ? serializedNode.type
+    : undefined;
+}
+
+function shouldLogRuntimeChampionPersistence(): boolean {
+  return resolveNodeEnvForRuntimeLogs() !== 'test';
+}
+
+function resolveNodeEnvForRuntimeLogs(): string | undefined {
+  return (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process
+    ?.env?.NODE_ENV;
 }
 
 /**

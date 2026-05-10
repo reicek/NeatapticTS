@@ -1,9 +1,11 @@
+import Network from '../../../src/architecture/network';
 import { Neat, methods } from '../../../src/neataptic';
 import {
   evaluateFlappyFitness,
   evaluateFlappyFitnessAcrossSeeds,
 } from '../flappyEvaluation';
 import type { FlappySeedBatchEvaluation } from '../flappyEvaluation';
+import { FlappyEvaluationWorkerPool } from '../evaluation/evaluation.worker-pool';
 import type { WorkerInitMessage } from './flappy-evolution-worker.types';
 import {
   FLAPPY_MAX_FRAMES_PER_EPISODE,
@@ -17,6 +19,9 @@ import {
   resolveExampleArchitectureProfile,
 } from '../../architectureProfiles';
 
+const FLAPPY_WORKER_RUNTIME_LOG_PREFIX = '[flappy-worker]';
+const SHOULD_LOG_FLAPPY_WORKER_RUNTIME =
+  resolveNodeEnvForRuntimeLogs() !== 'test';
 const FLAPPY_RECURRENT_MUTATION_METHODS = [
   ...methods.mutation.FFW,
   methods.mutation.ADD_BACK_CONN,
@@ -34,6 +39,12 @@ const FLAPPY_WORKER_SHARED_ROLLOUT_GENERATION_XOR_SALT = 0x85eb_ca6b;
 interface WorkerPipeFirstEvaluationPlan {
   sharedRolloutSeedCount: number;
 }
+
+interface WorkerRuntimeDependencies {
+  workerPool?: FlappyEvaluationWorkerPool;
+}
+
+type WorkerPopulationLike = Network[];
 
 /**
  * Creates and configures the worker-local NEAT runtime used by browser evolution playback.
@@ -66,6 +77,7 @@ interface WorkerPipeFirstEvaluationPlan {
  */
 export function createInitializedWorkerRuntime(
   initPayload: WorkerInitMessage['payload'],
+  workerRuntimeDependencies: WorkerRuntimeDependencies = {},
 ): Neat {
   // Step 1: Resolve the selected architecture profile and its seed network.
   const inputSize = FLAPPY_NETWORK_INPUT_SIZE;
@@ -74,8 +86,8 @@ export function createInitializedWorkerRuntime(
     'flappy-bird',
     initPayload.architectureProfileId ?? DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
   );
-  const seedNetwork = buildExampleArchitectureProfileNetwork(
-    'flappy-bird',
+  const seedNetwork = resolveWorkerSeedNetwork(
+    initPayload,
     selectedArchitectureProfile.id,
   );
 
@@ -85,6 +97,10 @@ export function createInitializedWorkerRuntime(
     elitism: initPayload.elitismCount,
     mutationRate: 0.75,
     mutationAmount: 2,
+    fitnessPopulation: shouldUseWorkerPopulationFitness(
+      selectedArchitectureProfile.id,
+      workerRuntimeDependencies,
+    ),
     allowRecurrent: selectedArchitectureProfile.recurrent,
     mutation: selectedArchitectureProfile.recurrent
       ? FLAPPY_RECURRENT_MUTATION_METHODS
@@ -99,6 +115,7 @@ export function createInitializedWorkerRuntime(
     selectedArchitectureProfile.id,
     initPayload.rngSeed,
     () => neatRuntime.generation,
+    workerRuntimeDependencies,
   );
 
   // Step 3: Install the profile-aware worker fitness function and RNG state.
@@ -106,6 +123,33 @@ export function createInitializedWorkerRuntime(
 
   neatRuntime.restoreRNGState(initPayload.rngSeed);
   return neatRuntime;
+}
+
+/**
+ * Resolves the worker seed network from a saved champion override or the shared profile template.
+ *
+ * @param initPayload - Initialization values from the browser host.
+ * @param architectureProfileId - Resolved architecture profile id.
+ * @returns Seed network for the worker-local NEAT runtime.
+ */
+function resolveWorkerSeedNetwork(
+  initPayload: WorkerInitMessage['payload'],
+  architectureProfileId: NonNullable<
+    WorkerInitMessage['payload']['architectureProfileId']
+  >,
+): Network {
+  if (initPayload.championNetworkJson) {
+    try {
+      return Network.fromJSON(initPayload.championNetworkJson);
+    } catch {
+      // Fall back to the shared profile template when browser-local champion state is stale.
+    }
+  }
+
+  return buildExampleArchitectureProfileNetwork(
+    'flappy-bird',
+    architectureProfileId,
+  );
 }
 
 /**
@@ -125,14 +169,36 @@ function createWorkerFitnessEvaluator(
   >,
   workerInitSeed: number,
   resolveCurrentGeneration: () => number,
-): (network: Parameters<Neat['fitness']>[0]) => number {
+  workerRuntimeDependencies: WorkerRuntimeDependencies,
+): Neat['fitness'] {
+  const usesPipeFirstSharedSeeds =
+    architectureProfileId === 'narx' ||
+    architectureProfileId === 'gru' ||
+    architectureProfileId === 'lstm';
+  const workerPool = workerRuntimeDependencies.workerPool;
+
+  if (workerPool && usesPipeFirstSharedSeeds) {
+    return createWorkerPopulationFitnessEvaluator(
+      architectureProfileId,
+      workerInitSeed,
+      resolveCurrentGeneration,
+      workerPool,
+    );
+  }
+
+  logWorkerFitnessTransportMode(
+    architectureProfileId,
+    usesPipeFirstSharedSeeds,
+    false,
+  );
+
   // Step 1: Keep the default browser objective unchanged for profiles that do not need pipe-first pressure.
   if (
     architectureProfileId !== 'narx' &&
     architectureProfileId !== 'gru' &&
     architectureProfileId !== 'lstm'
   ) {
-    return (network) =>
+    return async (network) =>
       evaluateFlappyFitness(network, {
         enableEarlyTermination: true,
         maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
@@ -146,7 +212,7 @@ function createWorkerFitnessEvaluator(
   let cachedGeneration = -1;
   let cachedSharedRolloutSeeds: number[] = [];
 
-  return (network) =>
+  return async (network) =>
     scorePipeFirstWorkerAggregateEvaluation(
       evaluateFlappyFitnessAcrossSeeds(
         network,
@@ -179,6 +245,113 @@ function createWorkerFitnessEvaluator(
 
     return cachedSharedRolloutSeeds;
   }
+}
+
+function createWorkerPopulationFitnessEvaluator(
+  architectureProfileId: NonNullable<
+    WorkerInitMessage['payload']['architectureProfileId']
+  >,
+  workerInitSeed: number,
+  resolveCurrentGeneration: () => number,
+  workerPool: FlappyEvaluationWorkerPool,
+): (population: WorkerPopulationLike) => Promise<void> {
+  const evaluationPlan = resolveWorkerPipeFirstEvaluationPlan(
+    architectureProfileId,
+  );
+  let cachedGeneration = -1;
+  let cachedSharedRolloutSeeds: number[] = [];
+
+  logWorkerFitnessTransportMode(architectureProfileId, true, true);
+
+  return async (population) => {
+    const aggregateByGenome = await workerPool.evaluateGenomesAcrossSeeds(
+      population,
+      resolveSharedRolloutSeedsForGeneration(),
+      {
+        enableEarlyTermination: true,
+        maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
+        normalizeFitness: true,
+        pipeProgressTarget: FLAPPY_WORKER_PIPE_PROGRESS_TARGET,
+      },
+    );
+
+    for (const genome of population) {
+      const aggregateEvaluation = aggregateByGenome.get(genome);
+
+      if (!aggregateEvaluation) {
+        throw new Error(
+          'Worker evaluation pool did not resolve every recurrent genome.',
+        );
+      }
+
+      genome.score = scorePipeFirstWorkerAggregateEvaluation(
+        aggregateEvaluation,
+      );
+    }
+  };
+
+  function resolveSharedRolloutSeedsForGeneration(): number[] {
+    // Step 1: Rebuild the seed batch only when evolution advances to a new generation.
+    const currentGeneration = resolveCurrentGeneration();
+    if (currentGeneration !== cachedGeneration) {
+      cachedGeneration = currentGeneration;
+      cachedSharedRolloutSeeds = buildWorkerSharedRolloutSeedBatch(
+        workerInitSeed,
+        currentGeneration,
+        evaluationPlan.sharedRolloutSeedCount,
+      );
+    }
+
+    return cachedSharedRolloutSeeds;
+  }
+}
+
+/**
+ * Logs the worker-side fitness transport selection.
+ *
+ * @param architectureProfileId - Resolved worker architecture profile id.
+ * @param usesPipeFirstSharedSeeds - Whether the profile uses the shared-seed aggregate evaluator.
+ * @param inferenceChannelWorkerUrl - Nested worker bundle URL when persistent channels are available.
+ * @returns Nothing.
+ */
+function logWorkerFitnessTransportMode(
+  architectureProfileId: NonNullable<
+    WorkerInitMessage['payload']['architectureProfileId']
+  >,
+  usesPipeFirstSharedSeeds: boolean,
+  usesParallelWorkerPool: boolean,
+): void {
+  const workerTransportMode = usesParallelWorkerPool
+    ? 'shared-memory worker pool evaluation'
+    : 'worker-local direct network.activate evaluation';
+  const evaluationShape = usesPipeFirstSharedSeeds
+    ? 'shared-seed aggregate evaluation'
+    : 'single-rollout evaluation';
+
+  if (SHOULD_LOG_FLAPPY_WORKER_RUNTIME) {
+    console.info(
+      `${FLAPPY_WORKER_RUNTIME_LOG_PREFIX} fitness transport=${workerTransportMode} profile=${architectureProfileId} evaluator=${evaluationShape}`,
+    );
+  }
+}
+
+function shouldUseWorkerPopulationFitness(
+  architectureProfileId: NonNullable<
+    WorkerInitMessage['payload']['architectureProfileId']
+  >,
+  workerRuntimeDependencies: WorkerRuntimeDependencies,
+): boolean {
+  return Boolean(
+    workerRuntimeDependencies.workerPool &&
+      (architectureProfileId === 'narx' ||
+        architectureProfileId === 'gru' ||
+        architectureProfileId === 'lstm'),
+  );
+}
+
+function resolveNodeEnvForRuntimeLogs(): string | undefined {
+  return (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process
+    ?.env?.NODE_ENV;
 }
 
 /**

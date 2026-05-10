@@ -3,9 +3,21 @@ import {
   centerPositionedNodesInDrawableArea,
   config,
   Connection,
+  createNeatParallelPopulationEvaluator,
+  createInferencePredictor,
+  detectInferenceWorkerCapabilities,
+  evaluateInWorkers,
+  extractNetworkInferenceIR,
+  getTransferList,
+  openInferenceChannel,
+  openSharedInferenceWorker,
+  ParallelInferencePool,
+  exportPortableInferencePayload,
+  exportTransferableInferencePayload,
   exportVisualizationGraph,
   formatConstructSummary,
   Group,
+  INFERENCE_ACTIVATION_TABLE,
   Layer,
   methods,
   multi,
@@ -14,8 +26,11 @@ import {
   Node,
   positionNetworkNodes,
   renderNetworkView,
+  resolveAutoInferenceTransport,
+  resolveBrowserWorkerAssetUrl,
   resolveNetworkVisualizationLayers,
   resolveNetworkVisualizationTopologyPlan,
+  SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION,
   toDot,
 } from './neataptic';
 
@@ -90,6 +105,48 @@ describe('neataptic root facade', () => {
       renderNetworkView: 'function',
       resolveNetworkVisualizationLayers: 'function',
       resolveNetworkVisualizationTopologyPlan: 'function',
+    });
+  });
+
+  it('exports worker-payload helpers as part of the public facade', () => {
+    expect({
+      createNeatParallelPopulationEvaluator:
+        typeof createNeatParallelPopulationEvaluator,
+      createInferencePredictor: typeof createInferencePredictor,
+      detectInferenceWorkerCapabilities:
+        typeof detectInferenceWorkerCapabilities,
+      evaluateInWorkers: typeof evaluateInWorkers,
+      extractNetworkInferenceIR: typeof extractNetworkInferenceIR,
+      getTransferList: typeof getTransferList,
+      openInferenceChannel: typeof openInferenceChannel,
+      openSharedInferenceWorker: typeof openSharedInferenceWorker,
+      ParallelInferencePool: typeof ParallelInferencePool,
+      resolveAutoInferenceTransport: typeof resolveAutoInferenceTransport,
+      resolveBrowserWorkerAssetUrl: typeof resolveBrowserWorkerAssetUrl,
+      exportPortableInferencePayload: typeof exportPortableInferencePayload,
+      exportTransferableInferencePayload:
+        typeof exportTransferableInferencePayload,
+      inferenceActivationTableIsArray: Array.isArray(
+        INFERENCE_ACTIVATION_TABLE,
+      ),
+      sharedInferenceRequiresCrossOriginIsolation:
+        SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION,
+    }).toEqual({
+      createNeatParallelPopulationEvaluator: 'function',
+      createInferencePredictor: 'function',
+      detectInferenceWorkerCapabilities: 'function',
+      evaluateInWorkers: 'function',
+      extractNetworkInferenceIR: 'function',
+      getTransferList: 'function',
+      openInferenceChannel: 'function',
+      openSharedInferenceWorker: 'function',
+      ParallelInferencePool: 'function',
+      resolveAutoInferenceTransport: 'function',
+      resolveBrowserWorkerAssetUrl: 'function',
+      exportPortableInferencePayload: 'function',
+      exportTransferableInferencePayload: 'function',
+      inferenceActivationTableIsArray: true,
+      sharedInferenceRequiresCrossOriginIsolation: true,
     });
   });
 });

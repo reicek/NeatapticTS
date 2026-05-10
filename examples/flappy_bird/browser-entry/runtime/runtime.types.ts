@@ -8,7 +8,10 @@ import type {
   RuntimeWindow,
 } from '../browser-entry.types';
 import type { RuntimeTelemetryState } from './runtime.telemetry.service';
-import type { RuntimeArchitectureHistoryByProfileId } from './runtime.architecture-profile.service';
+import type {
+  RuntimeArchitectureChampionByProfileId,
+  RuntimeArchitectureHistoryByProfileId,
+} from './runtime.architecture-profile.service';
 
 /**
  * Core runtime contracts for the Flappy Bird browser demo.
@@ -49,6 +52,7 @@ export type RuntimeContainerTarget = string | HTMLElement;
  * browser session.
  */
 export interface RuntimeStartConfig {
+  architectureChampionByProfileId: RuntimeArchitectureChampionByProfileId;
   architectureHistoryByProfileId: RuntimeArchitectureHistoryByProfileId;
   availableArchitectureProfiles: ExampleArchitectureProfile[];
   inputSize: number;

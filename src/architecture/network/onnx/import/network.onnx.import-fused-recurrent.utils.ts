@@ -1,4 +1,5 @@
 import Connection from '../../../connection';
+import Group from '../../../group/group';
 import type Network from '../../network';
 import type NeatapticNode from '../../../node';
 import type {
@@ -42,6 +43,15 @@ const TENSOR_SUFFIX_BIAS = 'B';
 const INPUT_ROW_INDEX = 0;
 const INPUT_COLUMN_INDEX = 1;
 const EMPTY_EDGE_COLLECTION_LENGTH = 0;
+const NATIVE_GRU_GROUP_COUNT = 6;
+const GRU_UPDATE_GATE_GROUP_INDEX = 0;
+const GRU_RESET_GATE_GROUP_INDEX = 2;
+const GRU_MEMORY_CELL_GROUP_INDEX = 3;
+const GRU_PREVIOUS_OUTPUT_GROUP_INDEX = 5;
+
+type PreviousLayerSourceGroup = Group & {
+  output: { nodes: NeatapticNode[] };
+};
 
 /**
  * Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
@@ -527,9 +537,11 @@ export function reconstructFusedRecurrentLayers(
     previousLayerNodes: NeatapticNode[],
     nextLayerNodes: NeatapticNode[],
   ): void {
-    fusedLayerRuntime.input({
-      output: { nodes: previousLayerNodes },
-    } as unknown);
+    const previousLayerSourceGroup = createPreviousLayerSourceGroup(
+      previousLayerNodes,
+    );
+
+    fusedLayerRuntime.input(previousLayerSourceGroup as unknown);
     fusedLayerRuntime.output?.nodes.forEach((outputNode) => {
       const outputNodeInternal = outputNode as unknown as NodeInternals & {
         connect: (to: NeatapticNode) => Connection;
@@ -541,15 +553,33 @@ export function reconstructFusedRecurrentLayers(
   }
 
   /**
+   * Create a source group compatible with both runtime Layer input wiring and
+   * the existing mock fused-layer tests.
+   *
+   * @param previousLayerNodes Previous-layer node slice.
+   * @returns Group-like source wrapper.
+   */
+  function createPreviousLayerSourceGroup(
+    previousLayerNodes: NeatapticNode[],
+  ): PreviousLayerSourceGroup {
+    const sourceGroup = new Group(
+      EMPTY_EDGE_COLLECTION_LENGTH,
+    ) as PreviousLayerSourceGroup;
+    sourceGroup.nodes = previousLayerNodes as unknown as Group['nodes'];
+    sourceGroup.output = { nodes: previousLayerNodes };
+    return sourceGroup;
+  }
+
+  /**
    * Apply imported gate parameters to a reconstructed fused layer.
    *
    * @param context Gate application context.
    * @returns Nothing.
    */
   function applyGateWeights(context: OnnxFusedGateApplicationContext): void {
-    const gateGroups = buildGateGroups(
+    const { gateGroups, recurrentSourceNodes } = resolveGateGroups(
       context.fusedLayer.nodes,
-      context.spec.gateOrder,
+      context.spec,
       context.unitSize,
     );
 
@@ -557,8 +587,10 @@ export function reconstructFusedRecurrentLayers(
       const gateNeurons = gateGroups[gateName];
       gateNeurons.forEach((gateNeuron, rowIndex) =>
         assignGateRow({
+          fusedKind: context.spec.kind,
           gateNeuronInternal: gateNeuron as unknown as NodeInternals,
           gateName,
+          recurrentSourceNodes,
           recurrentGateName: context.spec.recurrentGateName,
           rowOffset: gateIndex * context.unitSize + rowIndex,
           rowIndex,
@@ -574,14 +606,40 @@ export function reconstructFusedRecurrentLayers(
   }
 
   /**
-   * Build per-gate neuron groups from fused layer node order.
+   * Resolve gate groups and recurrent source nodes from one fused runtime layout.
+   *
+   * @param fusedNodes Fused node list.
+   * @param spec Fused family specification.
+   * @param unitSize Units per gate.
+   * @returns Gate groups plus recurrent-source nodes.
+   */
+  function resolveGateGroups(
+    fusedNodes: NeatapticNode[],
+    spec: OnnxFusedRecurrentSpec,
+    unitSize: number,
+  ): {
+    gateGroups: Record<string, NeatapticNode[]>;
+    recurrentSourceNodes: NeatapticNode[];
+  } {
+    if (spec.kind === FUSED_KIND_GRU) {
+      return resolveGruGateGroups(fusedNodes, unitSize);
+    }
+
+    return {
+      gateGroups: buildContiguousGateGroups(fusedNodes, spec.gateOrder, unitSize),
+      recurrentSourceNodes: [],
+    };
+  }
+
+  /**
+   * Build contiguous gate groups from one fused node list.
    *
    * @param fusedNodes Fused node list.
    * @param gateOrder Gate order.
    * @param unitSize Units per gate.
    * @returns Gate-name to neuron-list map.
    */
-  function buildGateGroups(
+  function buildContiguousGateGroups(
     fusedNodes: NeatapticNode[],
     gateOrder: string[],
     unitSize: number,
@@ -597,6 +655,57 @@ export function reconstructFusedRecurrentLayers(
       },
       {},
     );
+  }
+
+  /**
+   * Resolve GRU gate groups for either the native six-group layout or the
+   * compact three-gate mock layout used by owner-local tests.
+   *
+   * @param fusedNodes Fused node list.
+   * @param unitSize Units per gate.
+   * @returns Gate-name to neuron-list map plus recurrent-source nodes.
+   */
+  function resolveGruGateGroups(
+    fusedNodes: NeatapticNode[],
+    unitSize: number,
+  ): {
+    gateGroups: Record<string, NeatapticNode[]>;
+    recurrentSourceNodes: NeatapticNode[];
+  } {
+    const hasNativeGruLayout =
+      fusedNodes.length >= unitSize * NATIVE_GRU_GROUP_COUNT;
+
+    if (!hasNativeGruLayout) {
+      return {
+        gateGroups: buildContiguousGateGroups(
+          fusedNodes,
+          [...GRU_GATE_ORDER],
+          unitSize,
+        ),
+        recurrentSourceNodes: [],
+      };
+    }
+
+    return {
+      gateGroups: {
+        update: fusedNodes.slice(
+          unitSize * GRU_UPDATE_GATE_GROUP_INDEX,
+          unitSize * (GRU_UPDATE_GATE_GROUP_INDEX + 1),
+        ),
+        reset: fusedNodes.slice(
+          unitSize * GRU_RESET_GATE_GROUP_INDEX,
+          unitSize * (GRU_RESET_GATE_GROUP_INDEX + 1),
+        ),
+        candidate: fusedNodes.slice(
+          unitSize * GRU_MEMORY_CELL_GROUP_INDEX,
+          unitSize * (GRU_MEMORY_CELL_GROUP_INDEX + 1),
+        ),
+      },
+      recurrentSourceNodes: fusedNodes.slice(
+        unitSize * GRU_PREVIOUS_OUTPUT_GROUP_INDEX,
+        unitSize * (GRU_PREVIOUS_OUTPUT_GROUP_INDEX + 1),
+      ),
+    };
   }
 
   /**
@@ -616,8 +725,33 @@ export function reconstructFusedRecurrentLayers(
       previousLayerNodes: context.previousLayerNodes,
     });
 
-    if (context.gateName !== context.recurrentGateName) return;
-    assignRecurrentDiagonalWeight(context);
+    assignRecurrentWeights(context);
+  }
+
+  /**
+   * Assign recurrent weights for one fused gate row.
+   *
+   * @param context Gate-row assignment context.
+   * @returns Nothing.
+   */
+  function assignRecurrentWeights(
+    context: OnnxFusedGateRowAssignmentContext,
+  ): void {
+    if (context.fusedKind !== FUSED_KIND_GRU) {
+      if (context.gateName !== context.recurrentGateName) return;
+      assignRecurrentDiagonalWeight(context);
+      return;
+    }
+
+    if (context.recurrentSourceNodes.length === EMPTY_EDGE_COLLECTION_LENGTH) {
+      if (context.gateName !== context.recurrentGateName) return;
+      assignRecurrentDiagonalWeight(context);
+      return;
+    }
+
+    Array.from({ length: context.unitSize }, (_, columnIndex) =>
+      assignRecurrentIncomingWeightAtColumn(context, columnIndex),
+    );
   }
 
   /**
@@ -636,6 +770,32 @@ export function reconstructFusedRecurrentLayers(
     selfConnection.weight =
       context.recurrentWeights[
         context.rowOffset * context.unitSize + context.rowIndex
+      ];
+  }
+
+  /**
+   * Assign one recurrent incoming weight from the native GRU previous-output
+   * carrier into the current gate neuron.
+   *
+   * @param context Gate-row assignment context.
+   * @param columnIndex Recurrent source column index.
+   * @returns Nothing.
+   */
+  function assignRecurrentIncomingWeightAtColumn(
+    context: OnnxFusedGateRowAssignmentContext,
+    columnIndex: number,
+  ): void {
+    const sourceNode = context.recurrentSourceNodes[columnIndex];
+    if (!sourceNode) return;
+
+    const incomingConnection = context.gateNeuronInternal.connections.in.find(
+      (candidateConnection) => candidateConnection.from === sourceNode,
+    );
+    if (!incomingConnection) return;
+
+    incomingConnection.weight =
+      context.recurrentWeights[
+        context.rowOffset * context.unitSize + columnIndex
       ];
   }
 

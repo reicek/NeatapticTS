@@ -3,7 +3,7 @@
  */
 import type Network from '../../network/network';
 import type Connection from '../../connection';
-import { config } from '../../../config';
+import { defaultMemoryManager } from '../../../memory/manager';
 import { _acquireTA, _releaseTA } from './network.slab.pool.utils';
 import type {
   ConnectionInternals,
@@ -21,9 +21,9 @@ const BYTE_WIDTH_U32 = 4;
 const BYTE_WIDTH_F64 = 8;
 const FLAG_MASK_ONE_BYTE = 0xff;
 const PLASTIC_CONNECTION_FLAG = 0b1000;
-const LARGE_ASYNC_GRAPH_THRESHOLD = 200_000;
-const ADAPTIVE_BASE_OPS_PER_MS = 15_000;
-const ADAPTIVE_MIN_OPS = 5_000;
+const LARGE_ASYNC_GRAPH_THRESHOLD = 50_000;
+const ADAPTIVE_BASE_OPS_PER_MS = 2_000;
+const ADAPTIVE_MIN_OPS = 1_000;
 const ADAPTIVE_MAX_OPS = 50_000;
 
 const POOL_KIND_WEIGHTS = 'w';
@@ -103,9 +103,11 @@ export function _ensureSlabCapacitySync(buildContext: SlabBuildContext): void {
  * Ensures async rebuild has enough slab capacity.
  *
  * @param buildContext - Slab build context.
- * @returns Nothing.
+ * @returns Promise resolved after any required cooperative allocations finish.
  */
-export function _ensureSlabCapacityAsync(buildContext: SlabBuildContext): void {
+export async function _ensureSlabCapacityAsync(
+  buildContext: SlabBuildContext,
+): Promise<void> {
   // Step 1: Keep current slabs when capacity is already sufficient.
   if (buildContext.capacity >= buildContext.connectionCount) {
     return;
@@ -118,8 +120,8 @@ export function _ensureSlabCapacityAsync(buildContext: SlabBuildContext): void {
     buildContext.growthFactor,
   );
   _releaseExistingSlabArrays(buildContext);
-  _allocateCoreSlabArrays(buildContext);
-  _allocateGainSlabForAsync(buildContext);
+  await _allocateCoreSlabArraysAsync(buildContext);
+  await _allocateGainSlabForAsync(buildContext);
   // Step 3: Prepare async optional slab defaults.
   buildContext.internalNet._connPlastic = null;
   buildContext.internalNet._connCapacity = buildContext.capacity;
@@ -181,7 +183,12 @@ export async function _populateSlabConnectionsAsync(
   );
   let connectionIndex = ZERO;
 
-  // Step 2: Populate connections in cooperative chunks.
+  // Step 2: Hand one timer turn back before the first heavy chunk when work spans multiple slices.
+  if (buildContext.connectionCount > chunkSize) {
+    await _yieldAsyncChunkMacrotask();
+  }
+
+  // Step 3: Populate connections in cooperative chunks.
   while (connectionIndex < buildContext.connectionCount) {
     const chunkEnd = Math.min(
       buildContext.connectionCount,
@@ -195,14 +202,25 @@ export async function _populateSlabConnectionsAsync(
       chunkEnd,
     );
     connectionIndex = chunkEnd;
-    // Step 3: Yield between chunks to reduce long event-loop blocking.
+    // Step 4: Yield a macrotask between chunks so timers and paint work can run.
     if (connectionIndex < buildContext.connectionCount) {
-      await Promise.resolve();
+      await _yieldAsyncChunkMacrotask();
     }
   }
 
-  // Step 4: Return optional-slab usage summary.
+  // Step 5: Return optional-slab usage summary.
   return populateResult;
+}
+
+/**
+ * Yields one macrotask turn between browser async slab chunks.
+ *
+ * @returns Promise resolved on the next timer turn.
+ */
+async function _yieldAsyncChunkMacrotask(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, ZERO);
+  });
 }
 
 /**
@@ -323,13 +341,15 @@ export function _resolveAsyncChunkSize(
   totalConnections: number,
   requestedChunkSize: number,
 ): number {
+  const memoryConfig = defaultMemoryManager.getConfig('browser');
+
   // Step 1: Keep requested chunking for moderate graph sizes.
   if (totalConnections <= LARGE_ASYNC_GRAPH_THRESHOLD) {
     return requestedChunkSize;
   }
 
   // Step 2: Adapt chunk size from target frame budget when configured.
-  const targetMilliseconds = config.browserSlabChunkTargetMs;
+  const targetMilliseconds = memoryConfig.browserSlabChunkTargetMs;
   if (typeof targetMilliseconds === 'number' && targetMilliseconds > ZERO) {
     const estimatedOps = Math.max(
       ADAPTIVE_MIN_OPS,
@@ -517,13 +537,77 @@ function _allocateCoreSlabArrays(buildContext: SlabBuildContext): void {
 }
 
 /**
+ * Allocates async core slabs with optional timer yields between large allocations.
+ *
+ * @param buildContext - Slab build context.
+ * @returns Promise resolved after async core slabs are ready.
+ */
+async function _allocateCoreSlabArraysAsync(
+  buildContext: SlabBuildContext,
+): Promise<void> {
+  // Step 1: Decide whether browser-scale growth needs cooperative allocation gaps.
+  const shouldYieldBetweenAllocations =
+    buildContext.connectionCount > LARGE_ASYNC_GRAPH_THRESHOLD;
+  const internalNet = buildContext.internalNet;
+  const capacity = buildContext.capacity;
+
+  // Step 2: Allocate/reuse the weight slab first because it is the largest payload.
+  internalNet._connWeights = _acquireTA(
+    POOL_KIND_WEIGHTS,
+    buildContext.weightCtor,
+    capacity,
+    buildContext.weightBytes,
+  ) as Float32Array | Float64Array;
+  if (shouldYieldBetweenAllocations) {
+    await _yieldAsyncChunkMacrotask();
+  }
+
+  // Step 3: Allocate/reuse the source-index slab.
+  internalNet._connFrom = _acquireTA(
+    POOL_KIND_FROM,
+    Uint32Array,
+    capacity,
+    BYTE_WIDTH_U32,
+  ) as Uint32Array;
+  if (shouldYieldBetweenAllocations) {
+    await _yieldAsyncChunkMacrotask();
+  }
+
+  // Step 4: Allocate/reuse the target-index slab.
+  internalNet._connTo = _acquireTA(
+    POOL_KIND_TO,
+    Uint32Array,
+    capacity,
+    BYTE_WIDTH_U32,
+  ) as Uint32Array;
+  if (shouldYieldBetweenAllocations) {
+    await _yieldAsyncChunkMacrotask();
+  }
+
+  // Step 5: Allocate/reuse the flags slab.
+  internalNet._connFlags = _acquireTA(
+    POOL_KIND_FLAGS,
+    Uint8Array,
+    capacity,
+    BYTE_WIDTH_U8,
+  ) as Uint8Array;
+}
+
+/**
  * Allocates gain slab for async pass prefill strategy.
  *
  * @param buildContext - Slab build context.
- * @returns Nothing.
+ * @returns Promise resolved after the gain slab is ready.
  */
-function _allocateGainSlabForAsync(buildContext: SlabBuildContext): void {
-  // Step 1: Prefill async rebuild with an explicit gain slab.
+async function _allocateGainSlabForAsync(
+  buildContext: SlabBuildContext,
+): Promise<void> {
+  // Step 1: Hand one timer turn back before the async gain slab on browser-scale growth.
+  if (buildContext.connectionCount > LARGE_ASYNC_GRAPH_THRESHOLD) {
+    await _yieldAsyncChunkMacrotask();
+  }
+
+  // Step 2: Prefill async rebuild with an explicit gain slab.
   buildContext.internalNet._connGain = _acquireTA(
     POOL_KIND_GAIN,
     buildContext.weightCtor,

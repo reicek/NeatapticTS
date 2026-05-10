@@ -44,21 +44,21 @@ export interface TrainerFitnessServiceDependencies {
     generationEvaluationPlan: FlappyGenerationEvaluationPlan,
     aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
     provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
-  ) => void;
+  ) => Promise<void>;
   evaluatePopulationFullStage: (
     population: readonly FlappyTrainerNetwork[],
     generationEvaluationPlan: FlappyGenerationEvaluationPlan,
     aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
     provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
     elitismCount: number,
-  ) => void;
+  ) => Promise<void>;
   evaluatePopulationReevaluationStage: (
     population: readonly FlappyTrainerNetwork[],
     generationEvaluationPlan: FlappyGenerationEvaluationPlan,
     aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
     provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
     elitismCount: number,
-  ) => void;
+  ) => Promise<void>;
   commitPopulationScores: (
     population: readonly FlappyTrainerNetwork[],
     provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
@@ -136,14 +136,14 @@ export function createPopulationFitnessEvaluator(
       FlappySeedBatchEvaluation
     >();
 
-    dependencies.evaluatePopulationQuickStage(
+    await dependencies.evaluatePopulationQuickStage(
       population,
       generationEvaluationPlan,
       aggregateByGenome,
       provisionalScoresByGenome,
     );
 
-    dependencies.evaluatePopulationFullStage(
+    await dependencies.evaluatePopulationFullStage(
       population,
       generationEvaluationPlan,
       aggregateByGenome,
@@ -151,7 +151,7 @@ export function createPopulationFitnessEvaluator(
       elitismCount,
     );
 
-    dependencies.evaluatePopulationReevaluationStage(
+    await dependencies.evaluatePopulationReevaluationStage(
       population,
       generationEvaluationPlan,
       aggregateByGenome,

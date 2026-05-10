@@ -7,7 +7,7 @@
  * examples landing page from the demos that were actually published.
  */
 
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const DOCS_EXAMPLES_LOG_PREFIX = '[docs:examples]';
@@ -121,6 +121,7 @@ async function main(): Promise<void> {
     await Promise.all(EXAMPLE_DEFINITIONS.map(copyExampleEntryPoint))
   ).filter(isPublishedExample);
 
+  await removeRetiredPublishedExamples(publishedExamples);
   await writeExamplesLandingPage(publishedExamples);
 }
 
@@ -211,6 +212,46 @@ async function writeExamplesLandingPage(
   );
 
   console.log(`${DOCS_EXAMPLES_LOG_PREFIX} Wrote examples landing page`);
+}
+
+/**
+ * Removes stale docs/examples folders for examples that are no longer published.
+ *
+ * @param publishedExamples - Examples kept in the current docs publication set.
+ * @returns Promise resolved when stale folders are removed.
+ */
+async function removeRetiredPublishedExamples(
+  publishedExamples: readonly PublishedExample[],
+): Promise<void> {
+  const hasDocsExamplesDirectory = await pathExists(DOCS_EXAMPLES_DIR);
+  if (!hasDocsExamplesDirectory) {
+    return;
+  }
+
+  const publishedExampleDirectoryNames = new Set(
+    publishedExamples.map((publishedExample) => publishedExample.dirName),
+  );
+  const docsExamplesEntries = await readdir(DOCS_EXAMPLES_DIR, {
+    withFileTypes: true,
+  });
+
+  await Promise.all(
+    docsExamplesEntries
+      .filter((docsExamplesEntry) => docsExamplesEntry.isDirectory())
+      .filter((docsExamplesEntry) => {
+        return !publishedExampleDirectoryNames.has(docsExamplesEntry.name);
+      })
+      .map(async (docsExamplesEntry) => {
+        await rm(path.join(DOCS_EXAMPLES_DIR, docsExamplesEntry.name), {
+          recursive: true,
+          force: true,
+        });
+
+        console.log(
+          `${DOCS_EXAMPLES_LOG_PREFIX} Removed stale published example ${docsExamplesEntry.name}`,
+        );
+      }),
+  );
 }
 
 /**

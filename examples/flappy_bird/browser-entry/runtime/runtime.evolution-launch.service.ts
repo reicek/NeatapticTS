@@ -42,6 +42,8 @@ export function launchRuntimeEvolution(
     statsValueByKey: viewContext.statsValueByKey,
     renderNetworkArchitecture: viewContext.renderNetworkArchitecture,
     availableArchitectureProfiles: config.availableArchitectureProfiles,
+    initialArchitectureChampionByProfileId:
+      config.architectureChampionByProfileId,
     initialArchitectureHistoryByProfileId:
       config.architectureHistoryByProfileId,
     populationSize: config.populationSize,

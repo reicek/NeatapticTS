@@ -2,7 +2,7 @@
 description: 'Use when diagnosing visualizer UI issues such as cramped layout, missing overflow scroll, hover/tooltip instability, or parity drift between demo visualizers. Keywords: visualizer, canvas, tooltip, hover, overflow, layout, parity.'
 name: 'Visualizer Scout'
 tools: [read, search]
-user-invocable: false
+user-invocable: true
 agents: []
 ---
 

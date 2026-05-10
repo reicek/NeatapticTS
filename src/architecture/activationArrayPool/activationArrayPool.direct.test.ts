@@ -1,5 +1,26 @@
+import Network from '../network/network';
 import { config } from '../../config';
 import { activationArrayPool } from './activationArrayPool';
+
+function createIdentityActivation(): (
+  value: number,
+  derivative?: boolean,
+) => number {
+  return (value, derivative = false) => (derivative ? 1 : value);
+}
+
+function configureDeterministicOutputNode(network: Network): void {
+  const outputNode = network.nodes.find(
+    (nodeEntry) => nodeEntry.type === 'output',
+  );
+
+  if (!outputNode) {
+    throw new Error('Expected one output node to exist.');
+  }
+
+  outputNode.bias = 0;
+  outputNode.squash = createIdentityActivation();
+}
 
 describe('activationArrayPool direct coverage chapter', () => {
   beforeEach(() => {
@@ -92,9 +113,128 @@ describe('activationArrayPool direct coverage chapter', () => {
       // Assert
       expect(poolStats).toEqual({
         bucketCount: 1,
+        compactionCount: 0,
         created: 1,
+        retainedArrayCount: 0,
         reused: 1,
+        trimmedArrays: 0,
+        trimmedBuckets: 0,
       });
+    });
+  });
+
+  describe('given compaction runs after three retained buckets were created', () => {
+    it('reports the compaction counters and retained array count', () => {
+      // Arrange
+      activationArrayPool.prewarm(2, 1);
+      activationArrayPool.prewarm(4, 1);
+      activationArrayPool.prewarm(6, 1);
+      const refreshedBucketArray = activationArrayPool.acquire(2);
+      activationArrayPool.release(refreshedBucketArray);
+
+      // Act
+      activationArrayPool.compact(2);
+
+      // Assert
+      expect(activationArrayPool.stats()).toEqual({
+        bucketCount: 2,
+        compactionCount: 1,
+        created: 3,
+        retainedArrayCount: 2,
+        reused: 1,
+        trimmedArrays: 1,
+        trimmedBuckets: 1,
+      });
+    });
+  });
+
+  describe('given the retained bucket cap is lowered after prewarm', () => {
+    it('compacts the retained arrays immediately through setMaxPerBucket', () => {
+      // Arrange
+      activationArrayPool.prewarm(3, 3);
+
+      // Act
+      activationArrayPool.setMaxPerBucket(1);
+
+      // Assert
+      expect(activationArrayPool.stats()).toEqual({
+        bucketCount: 1,
+        compactionCount: 1,
+        created: 3,
+        retainedArrayCount: 1,
+        reused: 0,
+        trimmedArrays: 2,
+        trimmedBuckets: 0,
+      });
+    });
+  });
+
+  describe('given the retained bucket cap is lowered to zero after prewarm', () => {
+    it('drops the emptied bucket during compaction', () => {
+      // Arrange
+      activationArrayPool.prewarm(3, 2);
+
+      // Act
+      activationArrayPool.setMaxPerBucket(0);
+
+      // Assert
+      expect(activationArrayPool.stats()).toEqual({
+        bucketCount: 0,
+        compactionCount: 1,
+        created: 2,
+        retainedArrayCount: 0,
+        reused: 0,
+        trimmedArrays: 2,
+        trimmedBuckets: 1,
+      });
+    });
+  });
+
+  describe('given compaction does not need to evict anything', () => {
+    it('keeps the compaction counters unchanged', () => {
+      // Arrange
+      activationArrayPool.prewarm(5, 1);
+
+      // Act
+      activationArrayPool.compact(2);
+
+      // Assert
+      expect(activationArrayPool.stats()).toEqual({
+        bucketCount: 1,
+        compactionCount: 0,
+        created: 1,
+        retainedArrayCount: 1,
+        reused: 0,
+        trimmedArrays: 0,
+        trimmedBuckets: 0,
+      });
+    });
+  });
+
+  describe('given pooled raw activation compacts between repeated runs', () => {
+    it('keeps the activation output identical for the same network and input', () => {
+      // Arrange
+      const inputValue = Math.PI / 7;
+      const connectionWeight = Math.E / 11;
+      const pooledNetwork = new Network(1, 1, {
+        activationPrecision: 'f64',
+        enforceAcyclic: true,
+        returnTypedActivations: true,
+        reuseActivationArrays: true,
+        seed: 902,
+      });
+      configureDeterministicOutputNode(pooledNetwork);
+      pooledNetwork.connections[0].weight = connectionWeight;
+      const firstOutput = Array.from(pooledNetwork.activateRaw([inputValue]));
+      activationArrayPool.prewarm(2, 1);
+      activationArrayPool.prewarm(4, 1);
+
+      // Act
+      activationArrayPool.compact(1);
+      const secondOutput = Array.from(pooledNetwork.activateRaw([inputValue]));
+
+      // Assert
+      expect(secondOutput).toEqual(firstOutput);
     });
   });
 

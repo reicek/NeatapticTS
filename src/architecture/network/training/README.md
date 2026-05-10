@@ -129,7 +129,8 @@ keeping a stable FP32 master copy of parameters when needed.
 Dynamic mixed-precision configuration.
 
 When enabled, training uses a loss-scaling heuristic that attempts to keep gradients
-in a numerically stable range. If an overflow is detected, the scale is reduced.
+in a numerically stable range. Overflow pressure scales the loss down, while
+persistent tiny gradients can scale it back up.
 
 ### MovingAverageType
 

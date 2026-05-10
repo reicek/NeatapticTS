@@ -42,6 +42,12 @@ const config = {
   experiments: {
     topLevelAwait: true
   },
+  devServer: {
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+  },
   devtool: 'source-map'
 };
 

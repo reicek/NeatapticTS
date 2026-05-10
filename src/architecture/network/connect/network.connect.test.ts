@@ -2,6 +2,59 @@ import { Architect } from '../../../neataptic';
 import Network from '../network';
 import type { NetworkJSON } from '../network.types';
 
+type BatchConnectionRequest = {
+  from: Network['nodes'][number];
+  to: Network['nodes'][number];
+  weight?: number;
+};
+
+function resolveConnectBatch(
+  network: Network,
+): (
+  requests: readonly BatchConnectionRequest[],
+) => ReturnType<Network['connect']> {
+  const connectBatch = Reflect.get(network, 'connectBatch');
+
+  if (typeof connectBatch !== 'function') {
+    throw new Error('Expected Network.connectBatch() to exist.');
+  }
+
+  return connectBatch.bind(network) as (
+    requests: readonly BatchConnectionRequest[],
+  ) => ReturnType<Network['connect']>;
+}
+
+function disconnectAllConnections(network: Network): void {
+  for (const connection of [...network.connections]) {
+    network.disconnect(connection.from, connection.to);
+  }
+
+  for (const selfConnection of [...network.selfconns]) {
+    network.disconnect(selfConnection.from, selfConnection.to);
+  }
+}
+
+function createStarterBatchRequests(network: Network): BatchConnectionRequest[] {
+  return [
+    {
+      from: network.nodes[0],
+      to: network.nodes[2],
+    },
+    {
+      from: network.nodes[1],
+      to: network.nodes[2],
+    },
+    {
+      from: network.nodes[0],
+      to: network.nodes[3],
+    },
+    {
+      from: network.nodes[1],
+      to: network.nodes[3],
+    },
+  ];
+}
+
 function summarizeHydratedTemporalExtensionBag(network: Network): {
   recurrentModuleCount: number;
   gatedBlockCount: number;
@@ -47,6 +100,191 @@ describe('network connect chapter', () => {
 
         // Assert: no connection created → empty array
         expect(result).toEqual([]);
+      });
+    });
+  });
+
+  describe('connectBatch()', () => {
+    describe('given the request shelf is empty', () => {
+      it('returns an empty array without mutating connection storage', () => {
+        // Arrange
+        const network = new Network(1, 1, { seed: 5_700 });
+        const connectBatch = resolveConnectBatch(network);
+
+        disconnectAllConnections(network);
+
+        // Act
+        const createdConnections = connectBatch([]);
+
+        // Assert
+        expect({
+          createdConnectionCount: createdConnections.length,
+          registeredConnectionCount: network.connections.length,
+          registeredSelfConnectionCount: network.selfconns.length,
+        }).toEqual({
+          createdConnectionCount: 0,
+          registeredConnectionCount: 0,
+          registeredSelfConnectionCount: 0,
+        });
+      });
+    });
+
+    describe('given one deterministic starter wiring request shelf', () => {
+      it('matches repeated connect activation output for the same request order', () => {
+        // Arrange
+        const repeatedNetwork = new Network(2, 2, { seed: 5_701 });
+        const batchedNetwork = new Network(2, 2, { seed: 5_701 });
+        const repeatedRequests = createStarterBatchRequests(repeatedNetwork);
+        const batchedRequests = createStarterBatchRequests(batchedNetwork);
+        const connectBatch = resolveConnectBatch(batchedNetwork);
+
+        disconnectAllConnections(repeatedNetwork);
+        disconnectAllConnections(batchedNetwork);
+
+        // Act
+        repeatedRequests.forEach((request) => {
+          repeatedNetwork.connect(request.from, request.to, request.weight);
+        });
+        connectBatch(batchedRequests);
+
+        const repeatedOutput = repeatedNetwork.activate([0.25, -0.5]);
+        const batchedOutput = batchedNetwork.activate([0.25, -0.5]);
+
+        // Assert
+        expect(batchedOutput).toStrictEqual(repeatedOutput);
+      });
+    });
+
+    describe('given one acyclic request shelf mixes forward and backward edges', () => {
+      it('returns only the created forward edges in request order', () => {
+        // Arrange
+        const network = new Network(1, 1, {
+          enforceAcyclic: true,
+          seed: 5_702,
+        });
+        const connectBatch = resolveConnectBatch(network);
+
+        disconnectAllConnections(network);
+
+        // Act
+        const createdConnections = connectBatch([
+          {
+            from: network.nodes[0],
+            to: network.nodes[1],
+            weight: 0.25,
+          },
+          {
+            from: network.nodes[1],
+            to: network.nodes[0],
+            weight: 0.5,
+          },
+        ]);
+
+        // Assert
+        expect({
+          createdConnectionCount: createdConnections.length,
+          registeredPairs: network.connections.map((connection) => {
+            return `${String(network.nodes.indexOf(connection.from))}->${String(network.nodes.indexOf(connection.to))}`;
+          }),
+        }).toEqual({
+          createdConnectionCount: 1,
+          registeredPairs: ['0->1'],
+        });
+      });
+    });
+
+    describe('given one duplicate self-connection request resolves to no created edges', () => {
+      it('skips the no-op request without growing self-connection storage', () => {
+        // Arrange
+        const network = new Network(1, 1, {
+          enforceAcyclic: false,
+          seed: 5_703,
+        });
+        const connectBatch = resolveConnectBatch(network);
+
+        network.connect(network.nodes[0], network.nodes[0], 0.25);
+
+        const baselineSelfConnectionCount = network.selfconns.length;
+
+        // Act
+        const createdConnections = connectBatch([
+          {
+            from: network.nodes[0],
+            to: network.nodes[0],
+            weight: 0.25,
+          },
+        ]);
+
+        // Assert
+        expect({
+          createdConnectionCount: createdConnections.length,
+          registeredSelfConnectionCount: network.selfconns.length,
+        }).toEqual({
+          createdConnectionCount: 0,
+          registeredSelfConnectionCount: baselineSelfConnectionCount,
+        });
+      });
+    });
+
+    describe('given one unconstrained self-connection request is legal', () => {
+      it('registers the created edge in self-connection storage', () => {
+        // Arrange
+        const network = new Network(1, 1, {
+          enforceAcyclic: false,
+          seed: 5_704,
+        });
+        const connectBatch = resolveConnectBatch(network);
+
+        disconnectAllConnections(network);
+
+        // Act
+        const createdConnections = connectBatch([
+          {
+            from: network.nodes[0],
+            to: network.nodes[0],
+            weight: 0.25,
+          },
+        ]);
+
+        // Assert
+        expect({
+          createdConnectionCount: createdConnections.length,
+          registeredSelfConnectionCount: network.selfconns.length,
+        }).toEqual({
+          createdConnectionCount: 1,
+          registeredSelfConnectionCount: 1,
+        });
+      });
+    });
+
+    describe('given one acyclic self-connection request preserves legacy skip semantics', () => {
+      it('returns the created edge without registering it in self-connection storage', () => {
+        // Arrange
+        const network = new Network(1, 1, {
+          enforceAcyclic: true,
+          seed: 5_705,
+        });
+        const connectBatch = resolveConnectBatch(network);
+
+        disconnectAllConnections(network);
+
+        // Act
+        const createdConnections = connectBatch([
+          {
+            from: network.nodes[0],
+            to: network.nodes[0],
+            weight: 0.25,
+          },
+        ]);
+
+        // Assert
+        expect({
+          createdConnectionCount: createdConnections.length,
+          registeredSelfConnectionCount: network.selfconns.length,
+        }).toEqual({
+          createdConnectionCount: 1,
+          registeredSelfConnectionCount: 0,
+        });
       });
     });
   });

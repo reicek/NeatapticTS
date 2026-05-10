@@ -47,11 +47,16 @@ import { getParent } from './neat/selection/selection';
 import {
   exportPopulation,
   importPopulation,
+  exportLightState,
   exportState,
+  importLightStateImpl,
   importStateImpl,
   toJSONImpl,
   fromJSONImpl,
   type GenomeJSON,
+  type NeatCheckpointRestoreOptions as ExportNeatCheckpointRestoreOptions,
+  type NeatLightCheckpointExportOptions as ExportNeatLightCheckpointExportOptions,
+  type NeatLightStateJSON as ExportNeatLightStateJSON,
   type NeatMetaJSON,
   type NeatStateJSON,
 } from './neat/export/neat.export';
@@ -113,8 +118,12 @@ import * as neatTelemetryFacade from './neat/telemetry/facade/telemetry.facade';
  * shelf decides population size, defaults, and reproducibility. The search
  * shelf drives `evaluate()`, `evolve()`, and the public mutation hooks. The
  * observability shelf exposes telemetry, lineage, diversity, species, and
- * Pareto views. The persistence shelf turns a live run into replayable state
- * through `toJSON()`, `exportState()`, and RNG snapshots.
+ * Pareto views. The persistence shelf turns a live run into one of several
+ * transport contracts: population-only snapshots through `export()` and
+ * `import()`, best-effort restart bundles through `exportLightState()` and
+ * `importLightState()`, meta-only controller state through `toJSON()` and
+ * `fromJSON()`, and full pause-and-resume checkpoints through `exportState()`
+ * and `importState()`.
  *
  * The chapter also exists to keep the public class orchestration-first after
  * the internal split. `src/neat/**` now owns the heavier policy chapters:
@@ -123,6 +132,15 @@ import * as neatTelemetryFacade from './neat/telemetry/facade/telemetry.facade';
  * run did, and `export/` plus `rng/` keep experiments reproducible. If you can
  * read the root workflow first, the subchapters become "why does this step
  * work?" reads instead of "where do I even start?" reads.
+ *
+ * Read the persistence shelf as a decision ladder. Use `export()` and
+ * `import()` when only genomes should travel. Use `toJSON()` and `fromJSON()`
+ * when controller bookkeeping should travel without a live population. Use
+ * `exportLightState()` and `importLightState()` when the next run should
+ * restart from retained elites without claiming the same future random stream.
+ * Use `exportState()` and `importState()` when a paused experiment should
+ * resume with controller-owned replay state and explicit strict-versus-
+ * best-effort restore semantics.
  *
  * The guiding historical idea comes from Stanley and Miikkulainen's NEAT
  * paper: evolve both weights and topology while protecting innovation long
@@ -189,6 +207,16 @@ import * as neatTelemetryFacade from './neat/telemetry/facade/telemetry.facade';
  * console.log(exportedState.neat.generation);
  * ```
  *
+ * Example: choose the smaller light-checkpoint path when you want to restart
+ * from retained elites instead of preserving the exact full controller state.
+ *
+ * ```ts
+ * const lightCheckpoint = neat.exportLightState({ eliteCount: 8 });
+ * const restarted = await Neat.importLightState(lightCheckpoint, fitness);
+ *
+ * await restarted.evolve();
+ * ```
+ *
  * Recommended reading after this root chapter:
  * - `./neat/evaluate/README.md` for scoring flow and objective handling
  * - `./neat/evolve/README.md` for reproduction orchestration
@@ -232,6 +260,33 @@ import * as neatTelemetryFacade from './neat/telemetry/facade/telemetry.facade';
  * `src/neat/**` as implementation detail.
  */
 export type NeatOptions = RootNeatOptions;
+
+/**
+ * Public restore options for `Neat.importState()`.
+ *
+ * Use `strict` to preserve the exact-resume contract. Use `best-effort` only
+ * when the caller is explicitly accepting a partial checkpoint that should
+ * continue as a usable run without claiming deterministic replay.
+ */
+export type NeatCheckpointRestoreOptions =
+  ExportNeatCheckpointRestoreOptions;
+
+/**
+ * Export options for `Neat.exportLightState()`.
+ *
+ * Callers use this to choose how many elite genomes the light checkpoint keeps
+ * for approximate restart.
+ */
+export type NeatLightCheckpointExportOptions =
+  ExportNeatLightCheckpointExportOptions;
+
+/**
+ * Public payload shape used by the light-checkpoint save/load path.
+ *
+ * This bundle preserves a curated elite subset plus controller bootstrap state,
+ * but it intentionally omits exact-replay innovation and runtime metadata.
+ */
+export type NeatLightStateJSON = ExportNeatLightStateJSON;
 
 export {
   DEFAULT_COMPATIBILITY_THRESHOLD,
@@ -390,19 +445,70 @@ class Neat {
    *
    * Use this when you want a paused experiment to resume with its controller
    * metadata, population, and archival context intact rather than rebuilding
-   * only the bare genomes.
+    * only the bare genomes.
+    *
+    * Read this as the exact-resume door. In `strict` mode, versioned bundles
+    * must still carry replay-critical runtime and speciation state. Use
+    * `best-effort` only when the caller is deliberately accepting a degraded
+    * restore that should keep running without claiming deterministic replay.
+    *
+    * @example
+    * ```ts
+    * const checkpoint = neat.exportState();
+    * const resumed = await Neat.importState(checkpoint, fitness, {
+    *   restoreMode: 'strict',
+    * });
+    *
+    * await resumed.evolve();
+    * ```
    *
    * @param bundle Serialized object with the shape `{ neat, population }`.
    * @param fitness Fitness function to attach to the restored controller.
+   * @param restoreOptions Explicit restore-mode override. Defaults to strict exact resume.
    * @returns A `Neat` instance ready to continue evolution from the imported state.
    */
   static async importState(
     bundle: NeatStateJSON,
     fitness: NeatFitnessFunction,
+    restoreOptions?: NeatCheckpointRestoreOptions,
   ): Promise<Neat> {
     const fitnessDelegate = fitness as unknown as NeatExportFitnessFunction;
     return (await importStateImpl.call(
       Neat as unknown as ThisParameterType<typeof importStateImpl>,
+      bundle,
+      fitnessDelegate,
+      restoreOptions,
+    )) as unknown as Neat;
+  }
+
+  /**
+   * Restore a light checkpoint produced by `exportLightState()`.
+   *
+   * Use this when you want a smaller, best-effort restart bundle that preserves
+    * retained elites and bootstrap controller settings without claiming exact
+    * future replay. The restored controller keeps only the retained elites from
+    * the bundle and then relies on the ordinary evolution path to refill toward
+    * the saved restart-scale population target.
+    *
+    * @example
+    * ```ts
+    * const checkpoint = neat.exportLightState({ eliteCount: 6 });
+    * const restarted = await Neat.importLightState(checkpoint, fitness);
+    *
+    * await restarted.evolve();
+    * ```
+   *
+   * @param bundle Serialized light-checkpoint bundle.
+   * @param fitness Fitness function to attach to the restored controller.
+   * @returns A `Neat` instance ready for approximate restart.
+   */
+  static async importLightState(
+    bundle: NeatLightStateJSON,
+    fitness: NeatFitnessFunction,
+  ): Promise<Neat> {
+    const fitnessDelegate = fitness as unknown as NeatExportFitnessFunction;
+    return (await importLightStateImpl.call(
+      Neat as unknown as ThisParameterType<typeof importLightStateImpl>,
       bundle,
       fitnessDelegate,
     )) as unknown as Neat;
@@ -413,7 +519,20 @@ class Neat {
    *
    * This is the lighter-weight sibling of `importState()`. It is useful when you
    * want controller defaults, innovation bookkeeping, or archive metadata back,
-   * but you are handling genome population state separately.
+    * but you are handling genome population state separately.
+    *
+    * A common pairing is `const meta = neat.toJSON()` plus `const population =
+    * neat.export()`, followed later by `Neat.fromJSON(meta, fitness)` and
+    * `restored.import(population)`.
+    *
+    * @example
+    * ```ts
+    * const meta = neat.toJSON();
+    * const population = neat.export();
+    *
+    * const restored = Neat.fromJSON(meta, fitness);
+    * await restored.import(population);
+    * ```
    *
    * @param json Serialized controller metadata produced by `toJSON()`.
    * @param fitness Fitness function to attach to the reconstructed controller.
@@ -1098,8 +1217,17 @@ class Neat {
    * Export the current population as plain JSON objects.
    *
    * Choose this lighter snapshot when you only need the genomes themselves and
-   * do not need generation counters, innovation maps, or other controller-level
-   * state.
+    * do not need generation counters, innovation maps, or other controller-level
+    * state. This is the smallest persistence contract on the facade, and it is
+    * intentionally not a full replay artifact.
+    *
+    * @example
+    * ```ts
+    * const population = neat.export();
+    * const destination = new Neat(2, 1, fitness, { popsize: 50 });
+    *
+    * await destination.import(population);
+    * ```
    *
    * @returns JSON-safe population snapshot.
    */
@@ -1114,7 +1242,21 @@ class Neat {
    *
    * This is the population-only restore path. It keeps the current controller
    * instance, options, and metadata while swapping in a different genome set.
-   * Use `importState()` when you want to restore controller metadata too.
+    * Use `importState()` when you want to restore controller metadata too.
+    *
+    * Because this path replaces only genomes, it also treats the imported array
+    * length as the controller's new runtime `popsize`. Use the light or full
+    * checkpoint paths when you need to preserve a larger future population target
+    * separately from the imported genome count.
+    *
+    * @example
+    * ```ts
+    * const population = neat.export();
+    * const destination = new Neat(2, 1, fitness, { popsize: 200 });
+    *
+    * await destination.import(population);
+    * console.log(destination.options.popsize); // imported population length
+    * ```
    *
    * @param json Serialized population to import into the current controller.
    * @returns Promise resolving after the population is loaded.
@@ -1131,7 +1273,22 @@ class Neat {
    *
    * This is the pause-and-resume snapshot. It is the best choice when you want
    * to continue the same run later with the same innovation history, generation
-   * counter, and serialized genomes.
+    * counter, and serialized genomes.
+    *
+    * Full checkpoints are also the bundle shape that owns strict-versus-
+    * best-effort restore policy. Callers may attach a top-level `extensions` bag
+    * for downstream metadata, but that add-on pocket does not redefine the core
+    * full-checkpoint contract.
+    *
+    * @example
+    * ```ts
+    * const checkpoint = neat.exportState();
+    * checkpoint.extensions = {
+    *   neatchat: {
+    *     memoryBankId: 'memory-bank-1',
+    *   },
+    * };
+    * ```
    *
    * @returns Full controller snapshot including metadata and population.
    */
@@ -1142,11 +1299,60 @@ class Neat {
   }
 
   /**
+   * Export a light checkpoint containing retained elites plus bootstrap state.
+   *
+   * This is the best-effort restart sibling of `exportState()`. It keeps only a
+   * curated elite subset and the original restart-scale population target, so
+   * the resulting bundle stays lighter while remaining honest about not being an
+    * exact replay artifact.
+    *
+    * Like the full checkpoint path, light bundles may also carry a top-level
+    * `extensions` bag for downstream metadata. That add-on surface is reserved
+    * for namespaced consumers and does not change the light checkpoint's
+    * bootstrap semantics.
+    *
+    * @example
+    * ```ts
+    * const checkpoint = neat.exportLightState({ eliteCount: 12 });
+    * checkpoint.extensions = {
+    *   neatchat: {
+    *     branchId: 'draft-1',
+    *   },
+    * };
+    * ```
+   *
+   * @param exportOptions Policy describing how many elite genomes to retain.
+   * @returns Light-checkpoint snapshot for approximate restart.
+   */
+  exportLightState(
+    exportOptions: NeatLightCheckpointExportOptions,
+  ): NeatLightStateJSON {
+    return exportLightState.call(
+      this as unknown as ThisParameterType<typeof exportLightState>,
+      exportOptions,
+    );
+  }
+
+  /**
    * Serialize controller metadata without the concrete population.
    *
    * This is useful when you want to preserve run configuration and innovation
    * bookkeeping separately from genome payloads, or when the population will be
-   * reconstructed by other means.
+    * reconstructed by other means.
+    *
+    * Read this as the controller-half of the population-plus-meta pairing. When
+    * a later restore should reconstruct the bookkeeping first and import genomes
+    * separately, pair `toJSON()` with `export()` instead of jumping straight to
+    * the full checkpoint path.
+    *
+    * @example
+    * ```ts
+    * const meta = neat.toJSON();
+    * const population = neat.export();
+    *
+    * const restored = Neat.fromJSON(meta, fitness);
+    * await restored.import(population);
+    * ```
    *
    * @returns JSON-safe metadata snapshot useful for innovation-history persistence.
    */

@@ -41,6 +41,7 @@ import {
   createInitialFlappyState,
   getFlappyObservationFeatures,
   stepFlappyStateWithControlSubsteps,
+  stepFlappyStateWithControlSubstepsAsync,
   type FlappyObservationFeatures,
 } from '../../flappyEnvironment.ts';
 import {
@@ -85,7 +86,7 @@ import {
  * @returns Normalized rollout configuration.
  */
 export function resolveRolloutEpisodeContext(
-  network: FlappyNetworkLike,
+  network: Pick<FlappyNetworkLike, '_id'>,
   rolloutOptions: FlappyRolloutOptions,
 ): RolloutEpisodeContext {
   // Step 1: Resolve the deterministic evaluation seed from the explicit option or genome id.
@@ -186,6 +187,37 @@ export function runRolloutEpisodeLoop(
 }
 
 /**
+ * Runs the main rollout loop against one async predictor callback.
+ *
+ * This keeps the rollout semantics aligned with the synchronous evaluation
+ * surface while allowing the control decision itself to come from a persistent
+ * worker-hosted predictor.
+ *
+ * @param predictOutputs - Async predictor callback for one observation vector.
+ * @param rolloutEpisodeContext - Normalized rollout configuration.
+ * @param rolloutEpisodeRuntimeState - Mutable runtime state.
+ * @returns Nothing.
+ */
+export async function runRolloutEpisodeLoopWithPredictor(
+  predictOutputs: (observationVector: number[]) => Promise<unknown>,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): Promise<void> {
+  // Step 1: Continue stepping while the episode remains active and within the frame cap.
+  while (
+    !rolloutEpisodeRuntimeState.state.done &&
+    rolloutEpisodeRuntimeState.state.frameIndex <
+      rolloutEpisodeContext.maxFramesPerEpisode
+  ) {
+    await runRolloutEpisodeFrameWithPredictor(
+      predictOutputs,
+      rolloutEpisodeContext,
+      rolloutEpisodeRuntimeState,
+    );
+  }
+}
+
+/**
  * Finalizes episode state after the main rollout loop exits.
  *
  * Timeouts are applied here instead of inside the loop body so natural episode
@@ -269,6 +301,49 @@ function runRolloutEpisodeFrame(
   );
 }
 
+async function runRolloutEpisodeFrameWithPredictor(
+  predictOutputs: (observationVector: number[]) => Promise<unknown>,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): Promise<void> {
+  // Step 1: Capture the pre-step observation used by dense shaping.
+  const previousObservationFeatures = getFlappyObservationFeatures(
+    rolloutEpisodeRuntimeState.state,
+    rolloutEpisodeContext.difficultyScale,
+  );
+
+  // Step 2: Advance the environment using predictor-driven flap control.
+  await stepFlappyStateWithControlSubstepsAsync(
+    rolloutEpisodeRuntimeState.state,
+    rolloutEpisodeRuntimeState.rng,
+    () =>
+      resolveRolloutFrameFlapDecisionWithPredictor(
+        predictOutputs,
+        rolloutEpisodeContext,
+        rolloutEpisodeRuntimeState,
+      ),
+    rolloutEpisodeContext.difficultyScale,
+    FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,
+  );
+
+  // Step 3: Update dense shaping from the pre-step and post-step observations.
+  const currentObservationFeatures = getFlappyObservationFeatures(
+    rolloutEpisodeRuntimeState.state,
+    rolloutEpisodeContext.difficultyScale,
+  );
+  rolloutEpisodeRuntimeState.denseShapingFitness += computeDenseShapingReward(
+    previousObservationFeatures,
+    currentObservationFeatures,
+  );
+
+  // Step 4: Apply the optional early-termination heuristic when enabled.
+  applyRolloutEarlyTerminationIfNeeded(
+    rolloutEpisodeContext,
+    rolloutEpisodeRuntimeState,
+    currentObservationFeatures,
+  );
+}
+
 /**
  * Resolves the flap decision for one control substep and commits memory state.
  *
@@ -299,6 +374,34 @@ function resolveRolloutFrameFlapDecision(
     rolloutEpisodeRuntimeState.observationMemoryState,
   );
   const outputs = network.activate(observation);
+  const shouldFlap = resolveFlapDecision(outputs);
+
+  // Step 3: Commit the observation and decision to the shared compatibility state.
+  commitSharedObservationMemoryStep(
+    rolloutEpisodeRuntimeState.observationMemoryState,
+    observationFeatures,
+    shouldFlap,
+  );
+  return shouldFlap;
+}
+
+async function resolveRolloutFrameFlapDecisionWithPredictor(
+  predictOutputs: (observationVector: number[]) => Promise<unknown>,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): Promise<boolean> {
+  // Step 1: Resolve the current observation features from the mutable game state.
+  const observationFeatures = getFlappyObservationFeatures(
+    rolloutEpisodeRuntimeState.state,
+    rolloutEpisodeContext.difficultyScale,
+  );
+
+  // Step 2: Build the current-frame controller input and query the async predictor.
+  const observation = resolveTemporalObservationVector(
+    observationFeatures,
+    rolloutEpisodeRuntimeState.observationMemoryState,
+  );
+  const outputs = await predictOutputs(observation);
   const shouldFlap = resolveFlapDecision(outputs);
 
   // Step 3: Commit the observation and decision to the shared compatibility state.

@@ -16,4 +16,7 @@
  * });
  * ```
  */
-export { rolloutEpisode } from './rollout/evaluation.rollout.service';
+export {
+  rolloutEpisode,
+  rolloutEpisodeWithPredictor,
+} from './rollout/evaluation.rollout.service';

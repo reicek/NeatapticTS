@@ -20,8 +20,12 @@ One helpful mental model is to read the controller as four shelves. The setup
 shelf decides population size, defaults, and reproducibility. The search
 shelf drives `evaluate()`, `evolve()`, and the public mutation hooks. The
 observability shelf exposes telemetry, lineage, diversity, species, and
-Pareto views. The persistence shelf turns a live run into replayable state
-through `toJSON()`, `exportState()`, and RNG snapshots.
+Pareto views. The persistence shelf turns a live run into one of several
+transport contracts: population-only snapshots through `export()` and
+`import()`, best-effort restart bundles through `exportLightState()` and
+`importLightState()`, meta-only controller state through `toJSON()` and
+`fromJSON()`, and full pause-and-resume checkpoints through `exportState()`
+and `importState()`.
 
 The chapter also exists to keep the public class orchestration-first after
 the internal split. `src/neat/**` now owns the heavier policy chapters:
@@ -30,6 +34,15 @@ the internal split. `src/neat/**` now owns the heavier policy chapters:
 run did, and `export/` plus `rng/` keep experiments reproducible. If you can
 read the root workflow first, the subchapters become "why does this step
 work?" reads instead of "where do I even start?" reads.
+
+Read the persistence shelf as a decision ladder. Use `export()` and
+`import()` when only genomes should travel. Use `toJSON()` and `fromJSON()`
+when controller bookkeeping should travel without a live population. Use
+`exportLightState()` and `importLightState()` when the next run should
+restart from retained elites without claiming the same future random stream.
+Use `exportState()` and `importState()` when a paused experiment should
+resume with controller-owned replay state and explicit strict-versus-
+best-effort restore semantics.
 
 The guiding historical idea comes from Stanley and Miikkulainen's NEAT
 paper: evolve both weights and topology while protecting innovation long
@@ -94,6 +107,16 @@ const exportedState = neat.exportState();
 
 console.log(latestTelemetry?.generation);
 console.log(exportedState.neat.generation);
+```
+
+Example: choose the smaller light-checkpoint path when you want to restart
+from retained elites instead of preserving the exact full controller state.
+
+```ts
+const lightCheckpoint = neat.exportLightState({ eliteCount: 8 });
+const restarted = await Neat.importLightState(lightCheckpoint, fitness);
+
+await restarted.evolve();
 ```
 
 Recommended reading after this root chapter:
@@ -666,9 +689,55 @@ Export the current population as plain JSON objects.
 
 Choose this lighter snapshot when you only need the genomes themselves and
 do not need generation counters, innovation maps, or other controller-level
-state.
+state. This is the smallest persistence contract on the facade, and it is
+intentionally not a full replay artifact.
 
 Returns: JSON-safe population snapshot.
+
+Example:
+
+```ts
+const population = neat.export();
+const destination = new Neat(2, 1, fitness, { popsize: 50 });
+
+await destination.import(population);
+```
+
+#### exportLightState
+
+```ts
+exportLightState(
+  exportOptions: NeatLightCheckpointExportOptions,
+): NeatLightStateJSON
+```
+
+Export a light checkpoint containing retained elites plus bootstrap state.
+
+This is the best-effort restart sibling of `exportState()`. It keeps only a
+curated elite subset and the original restart-scale population target, so
+the resulting bundle stays lighter while remaining honest about not being an
+exact replay artifact.
+
+Like the full checkpoint path, light bundles may also carry a top-level
+`extensions` bag for downstream metadata. That add-on surface is reserved
+for namespaced consumers and does not change the light checkpoint's
+bootstrap semantics.
+
+Parameters:
+- `exportOptions` - Policy describing how many elite genomes to retain.
+
+Returns: Light-checkpoint snapshot for approximate restart.
+
+Example:
+
+```ts
+const checkpoint = neat.exportLightState({ eliteCount: 12 });
+checkpoint.extensions = {
+  neatchat: {
+    branchId: 'draft-1',
+  },
+};
+```
 
 #### exportParetoFrontJSONL
 
@@ -746,7 +815,23 @@ This is the pause-and-resume snapshot. It is the best choice when you want
 to continue the same run later with the same innovation history, generation
 counter, and serialized genomes.
 
+Full checkpoints are also the bundle shape that owns strict-versus-
+best-effort restore policy. Callers may attach a top-level `extensions` bag
+for downstream metadata, but that add-on pocket does not redefine the core
+full-checkpoint contract.
+
 Returns: Full controller snapshot including metadata and population.
+
+Example:
+
+```ts
+const checkpoint = neat.exportState();
+checkpoint.extensions = {
+  neatchat: {
+    memoryBankId: 'memory-bank-1',
+  },
+};
+```
 
 #### exportTelemetryCSV
 
@@ -791,11 +876,25 @@ This is the lighter-weight sibling of `importState()`. It is useful when you
 want controller defaults, innovation bookkeeping, or archive metadata back,
 but you are handling genome population state separately.
 
+A common pairing is `const meta = neat.toJSON()` plus `const population =
+neat.export()`, followed later by `Neat.fromJSON(meta, fitness)` and
+`restored.import(population)`.
+
 Parameters:
 - `json` - Serialized controller metadata produced by `toJSON()`.
 - `fitness` - Fitness function to attach to the reconstructed controller.
 
 Returns: Reconstructed `Neat` controller instance.
+
+Example:
+
+```ts
+const meta = neat.toJSON();
+const population = neat.export();
+
+const restored = Neat.fromJSON(meta, fitness);
+await restored.import(population);
+```
 
 #### getAverage
 
@@ -1047,10 +1146,57 @@ This is the population-only restore path. It keeps the current controller
 instance, options, and metadata while swapping in a different genome set.
 Use `importState()` when you want to restore controller metadata too.
 
+Because this path replaces only genomes, it also treats the imported array
+length as the controller's new runtime `popsize`. Use the light or full
+checkpoint paths when you need to preserve a larger future population target
+separately from the imported genome count.
+
 Parameters:
 - `json` - Serialized population to import into the current controller.
 
 Returns: Promise resolving after the population is loaded.
+
+Example:
+
+```ts
+const population = neat.export();
+const destination = new Neat(2, 1, fitness, { popsize: 200 });
+
+await destination.import(population);
+console.log(destination.options.popsize); // imported population length
+```
+
+#### importLightState
+
+```ts
+importLightState(
+  bundle: NeatLightStateJSON,
+  fitness: NeatFitnessFunction,
+): Promise<default>
+```
+
+Restore a light checkpoint produced by `exportLightState()`.
+
+Use this when you want a smaller, best-effort restart bundle that preserves
+retained elites and bootstrap controller settings without claiming exact
+future replay. The restored controller keeps only the retained elites from
+the bundle and then relies on the ordinary evolution path to refill toward
+the saved restart-scale population target.
+
+Parameters:
+- `bundle` - Serialized light-checkpoint bundle.
+- `fitness` - Fitness function to attach to the restored controller.
+
+Returns: A `Neat` instance ready for approximate restart.
+
+Example:
+
+```ts
+const checkpoint = neat.exportLightState({ eliteCount: 6 });
+const restarted = await Neat.importLightState(checkpoint, fitness);
+
+await restarted.evolve();
+```
 
 #### importRNGState
 
@@ -1073,6 +1219,7 @@ Returns: Nothing. This is a compatibility alias for `restoreRNGState()`.
 importState(
   bundle: NeatStateJSON,
   fitness: NeatFitnessFunction,
+  restoreOptions: NeatCheckpointRestoreOptions | undefined,
 ): Promise<default>
 ```
 
@@ -1082,11 +1229,28 @@ Use this when you want a paused experiment to resume with its controller
 metadata, population, and archival context intact rather than rebuilding
 only the bare genomes.
 
+Read this as the exact-resume door. In `strict` mode, versioned bundles
+must still carry replay-critical runtime and speciation state. Use
+`best-effort` only when the caller is deliberately accepting a degraded
+restore that should keep running without claiming deterministic replay.
+
 Parameters:
 - `bundle` - Serialized object with the shape `{ neat, population }`.
 - `fitness` - Fitness function to attach to the restored controller.
+- `restoreOptions` - Explicit restore-mode override. Defaults to strict exact resume.
 
 Returns: A `Neat` instance ready to continue evolution from the imported state.
+
+Example:
+
+```ts
+const checkpoint = neat.exportState();
+const resumed = await Neat.importState(checkpoint, fitness, {
+  restoreMode: 'strict',
+});
+
+await resumed.evolve();
+```
 
 #### mutate
 
@@ -1233,7 +1397,44 @@ This is useful when you want to preserve run configuration and innovation
 bookkeeping separately from genome payloads, or when the population will be
 reconstructed by other means.
 
+Read this as the controller-half of the population-plus-meta pairing. When
+a later restore should reconstruct the bookkeeping first and import genomes
+separately, pair `toJSON()` with `export()` instead of jumping straight to
+the full checkpoint path.
+
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
+
+Example:
+
+```ts
+const meta = neat.toJSON();
+const population = neat.export();
+
+const restored = Neat.fromJSON(meta, fitness);
+await restored.import(population);
+```
+
+### NeatCheckpointRestoreOptions
+
+Public restore options for `Neat.importState()`.
+
+Use `strict` to preserve the exact-resume contract. Use `best-effort` only
+when the caller is explicitly accepting a partial checkpoint that should
+continue as a usable run without claiming deterministic replay.
+
+### NeatLightCheckpointExportOptions
+
+Export options for `Neat.exportLightState()`.
+
+Callers use this to choose how many elite genomes the light checkpoint keeps
+for approximate restart.
+
+### NeatLightStateJSON
+
+Public payload shape used by the light-checkpoint save/load path.
+
+This bundle preserves a curated elite subset plus controller bootstrap state,
+but it intentionally omits exact-replay innovation and runtime metadata.
 
 ### NeatOptions
 
@@ -1294,6 +1495,14 @@ DESIGN NOTES
 - Optional flags are conservative by default (disabled) to preserve legacy stochastic
   behaviour unless a test or user explicitly opts in.
 
+### ActivationPrecision
+
+Shared activation precision identifiers reused by runtime precision owners.
+
+### DEFAULT_ACTIVATION_PRECISION
+
+Canonical activation precision used when no lower-precision mode is requested.
+
 ### NeatapticConfig
 
 Global NeatapticTS configuration contract & default instance.
@@ -1318,6 +1527,36 @@ DESIGN NOTES
 - We intentionally avoid setters / proxies to keep this a plain serializable object.
 - Optional flags are conservative by default (disabled) to preserve legacy stochastic
   behaviour unless a test or user explicitly opts in.
+
+### PrecisionConfig
+
+Shared precision configuration resolved for one runtime decision.
+
+### PrecisionConfigOverrides
+
+Optional precision overrides supplied by one caller-owned boundary.
+
+### resolvePrecisionConfig
+
+```ts
+resolvePrecisionConfig(
+  overrides: PrecisionConfigOverrides,
+  precisionFlags: Pick<NeatapticConfig, "float32Mode">,
+): PrecisionConfig
+```
+
+Resolve one shared precision config from explicit overrides and legacy float32 mode.
+
+Phase 6 centralizes precision ownership here so constructor bootstrap and
+activation-buffer allocation reuse the same precedence rule: explicit
+activation precision wins, otherwise the legacy global float32 flag decides
+between f32 and the default f64 path.
+
+Parameters:
+- `overrides` - Optional caller-owned precision overrides.
+- `precisionFlags` - Config-like flag source exposing legacy float32 mode.
+
+Returns: Shared precision config for the current runtime decision.
 
 ## neataptic.ts
 
@@ -1389,6 +1628,22 @@ const network = Architect.perceptron(2, 4, 1);
 const output = network.activate([0, 1]);
 ```
 
+### AutoInferenceTransport
+
+Automatic transport selection result for the current host.
+
+### BatchEvaluationResult
+
+Ordered result envelope returned by `evaluateInWorkers(...)`.
+
+The helper preserves input order even when individual worker tasks finish out
+of order, and it reports stable task ids so callers can correlate results
+with their original batch shelf without reconstructing indexes manually.
+
+### BrowserWorkerAssetUrlOptions
+
+Options for resolving a browser worker asset URL.
+
 ### centerPositionedNodesInDrawableArea
 
 ```ts
@@ -1410,9 +1665,176 @@ Parameters:
 
 Returns: Centered positioned nodes.
 
+### createInferencePredictor
+
+```ts
+createInferencePredictor(
+  payload: PortableInferencePayload,
+): InferencePredictor
+```
+
+Create a reusable local predictor from a portable or transferable inference payload.
+
+Parameters:
+- `payload` - Portable or transferable inference payload.
+
+Returns: Predictor that mirrors runtime no-trace activation semantics.
+
+Example:
+
+```ts
+const payload = exportPortableInferencePayload(network);
+const predictor = createInferencePredictor(payload);
+const outputValues = predictor.predict([0.25, 0.75]);
+```
+
+### createNeatParallelPopulationEvaluator
+
+```ts
+createNeatParallelPopulationEvaluator(
+  options: NeatParallelPopulationEvaluatorOptions<TGenome, TPayload, TWorker, TResult>,
+): (population: TGenome[]) => Promise<void>
+```
+
+Create a NEAT-compatible population fitness delegate on top of `evaluateInWorkers(...)`.
+
+The returned function matches `fitnessPopulation: true` evaluation mode: it
+scores the whole population in one async call and writes ordered results back
+onto the genomes in place.
+
+Parameters:
+- `options` - Boolean-first population-evaluation options plus advanced worker overrides.
+
+Returns: Population fitness delegate compatible with `fitnessPopulation: true`.
+
+Example:
+
+```ts
+const evaluatePopulation = createNeatParallelPopulationEvaluator({
+  parallel: true,
+  evaluateGenome: async (genome) => genome.score ?? 0,
+  openWorker: (payload) => openSharedInferenceWorker(payload),
+  evaluateWithWorker: async (worker, genome) => worker.infer(genome.activate([0, 1])),
+});
+```
+
+### detectInferenceWorkerCapabilities
+
+```ts
+detectInferenceWorkerCapabilities(
+  options: InferenceWorkerCapabilityOptions,
+): InferenceWorkerCapabilities
+```
+
+Detect the usable worker-backed inference transport tiers for one host.
+
+The probe stays intentionally lightweight. It does not open a worker or fetch
+a script; it only combines runtime facts and delivery availability so callers
+can decide whether to use shared-memory, channel, or transferable fallback.
+
+Parameters:
+- `options` - Runtime and delivery facts for the current host.
+
+Returns: Capability snapshot describing the usable transport tiers.
+
+Example:
+
+```ts
+const capabilities = detectInferenceWorkerCapabilities({
+  hasChannelWorker: true,
+  hasSharedWorker: true,
+  runtime: 'browser',
+});
+```
+
 ### EdgePadding
 
 Padding on all four edges.
+
+### evaluateInWorkers
+
+```ts
+evaluateInWorkers(
+  options: EvaluateInWorkersOptions<TInput, TPayload, TWorker, TResult>,
+): Promise<BatchEvaluationResult<TResult>>
+```
+
+Evaluates an ordered batch through workers when available, otherwise locally.
+
+This helper keeps the honest async boundary visible: callers provide worker
+opening plus task execution when they want parallelism, and they also provide
+a local fallback when they need the same semantics in worker-less hosts.
+
+Parameters:
+- `options` - Ordered inputs plus worker and fallback execution hooks.
+
+Returns: Ordered batch results with elapsed time and stable task ids.
+
+Example:
+
+```ts
+const batchResult = await evaluateInWorkers({
+  inputs: payloads,
+  openWorker: (payload) => openSharedInferenceWorker(payload),
+  evaluateWithWorker: (worker, _payload) => worker.infer([0.25, 0.75]),
+});
+```
+
+### EvaluateInWorkersOptions
+
+Generic ordered batch-evaluation options for worker and fallback execution.
+
+Keep the transport substrate caller-owned: this helper schedules and assembles
+deterministic results, but the caller still decides how a worker is opened,
+how a task is scored, and what the single-thread fallback should do.
+
+### exportPortableInferencePayload
+
+```ts
+exportPortableInferencePayload(
+  network: default,
+): PortableInferencePayload
+```
+
+Export one universal structured-clone-safe inference payload.
+
+Parameters:
+- `network` - Runtime network to serialize for worker transport.
+
+Returns: Portable inference payload.
+
+Example:
+
+```ts
+const payload = exportPortableInferencePayload(network);
+console.log(payload.nodes[0]?.activation);
+```
+
+### exportTransferableInferencePayload
+
+```ts
+exportTransferableInferencePayload(
+  network: default,
+  options: TransferableInferencePayloadOptions,
+): TransferableInferencePayload
+```
+
+Export one typed-array inference payload for lower-copy worker transport.
+
+Parameters:
+- `network` - Runtime network to serialize for worker transport.
+- `options` - Transferable export configuration.
+
+Returns: Transferable inference payload.
+
+Example:
+
+```ts
+const payload = exportTransferableInferencePayload(network, {
+  numericPrecision: 'f32',
+});
+console.log(payload.edgeWeights.length);
+```
 
 ### exportVisualizationGraph
 
@@ -1466,6 +1888,28 @@ const graph = exportVisualizationGraph(network, {
 });
 ```
 
+### extractNetworkInferenceIR
+
+```ts
+extractNetworkInferenceIR(
+  network: default,
+): NetworkInferenceIR
+```
+
+Extract a deterministic inference IR from one live network.
+
+Parameters:
+- `network` - Runtime network to snapshot.
+
+Returns: Worker-friendly inference IR.
+
+Example:
+
+```ts
+const inferenceIr = extractNetworkInferenceIR(network);
+console.log(inferenceIr.outputNodeIndices);
+```
+
 ### formatConstructSummary
 
 ```ts
@@ -1490,6 +1934,131 @@ Example:
 ```ts
 const construction = Network.construct([sensor, hidden, readout]);
 const summary = formatConstructSummary(construction);
+```
+
+### getTransferList
+
+```ts
+getTransferList(
+  payload: TransferableInferencePayload,
+): ArrayBuffer[]
+```
+
+Collect every transferable buffer from one typed-array inference payload.
+
+Transfer these buffers exactly once when posting the payload to a worker.
+After the transfer completes, the sending-side typed arrays are neutered and
+must not be read again.
+
+Parameters:
+- `payload` - Transferable inference payload whose buffers should move.
+
+Returns: ArrayBuffer transfer list aligned to the payload's typed shelves.
+
+Example:
+
+```ts
+const payload = exportTransferableInferencePayload(network);
+worker.postMessage(payload, getTransferList(payload));
+```
+
+### INFERENCE_ACTIVATION_TABLE
+
+Stable activation-function table used by worker inference transport.
+
+Each entry index is part of the public inference payload contract. New worker
+payloads should reference activations by these numeric ids rather than by
+serializing function bodies or relying on runtime function identity.
+
+Example:
+
+```ts
+const activationFunction = INFERENCE_ACTIVATION_TABLE[0];
+const outputValue = activationFunction(0.5);
+```
+
+### InferenceChannel
+
+Persistent worker-backed inference channel.
+
+Channels bootstrap one transferable predictor payload exactly once, then keep
+the worker-side predictor warm across repeated predict or reset requests sent
+through one dedicated `MessageChannel` port pair.
+
+Example:
+
+```ts
+const payload = exportTransferableInferencePayload(network);
+const channel = openInferenceChannel(payload);
+const outputValues = await channel.predict([0.25, 0.75]);
+channel.close();
+```
+
+### InferenceChannelOptions
+
+Configuration for one dedicated inference channel.
+
+Example:
+
+```ts
+const channel = openInferenceChannel(payload, {
+  maxConcurrentRequests: 4,
+});
+```
+
+### InferencePredictor
+
+Runtime predictor created from an exported worker payload.
+
+Predictors intentionally keep mutable activation, recurrent-state, and gain
+buffers private so callers can reuse the same instance across many
+predictions without re-allocating worker state.
+
+Example:
+
+```ts
+const predictor = createInferencePredictor(payload);
+const outputValues = predictor.predict([0.25, 0.75]);
+predictor.reset();
+```
+
+### InferenceWorkerCapabilities
+
+Capability snapshot for the current worker-backed inference host.
+
+This probe answers a narrow question: which worker transport tiers are
+honestly usable in the current runtime before one evaluation pool or batch
+helper commits to a transport strategy?
+
+Example:
+
+```ts
+const capabilities = detectInferenceWorkerCapabilities({
+  crossOriginIsolated: globalThis.crossOriginIsolated === true,
+  hasChannelWorker: true,
+  hasSharedWorker: true,
+  runtime: 'browser',
+});
+const transport = resolveAutoInferenceTransport(capabilities);
+```
+
+### InferenceWorkerCapabilityOptions
+
+Inputs used to probe worker-backed inference transport support.
+
+Keep delivery facts explicit here. Step 1 only answers capability and auto
+selection; Step 2 will own the generic worker-entry and URL resolution
+helpers that feed these booleans.
+
+Example:
+
+```ts
+const capabilities = detectInferenceWorkerCapabilities({
+  crossOriginIsolated: false,
+  hasChannelWorker: true,
+  hasSharedWorker: true,
+  runtime: 'browser',
+});
 ```
 
 ### Neat
@@ -1932,9 +2501,55 @@ Export the current population as plain JSON objects.
 
 Choose this lighter snapshot when you only need the genomes themselves and
 do not need generation counters, innovation maps, or other controller-level
-state.
+state. This is the smallest persistence contract on the facade, and it is
+intentionally not a full replay artifact.
 
 Returns: JSON-safe population snapshot.
+
+Example:
+
+```ts
+const population = neat.export();
+const destination = new Neat(2, 1, fitness, { popsize: 50 });
+
+await destination.import(population);
+```
+
+#### exportLightState
+
+```ts
+exportLightState(
+  exportOptions: NeatLightCheckpointExportOptions,
+): NeatLightStateJSON
+```
+
+Export a light checkpoint containing retained elites plus bootstrap state.
+
+This is the best-effort restart sibling of `exportState()`. It keeps only a
+curated elite subset and the original restart-scale population target, so
+the resulting bundle stays lighter while remaining honest about not being an
+exact replay artifact.
+
+Like the full checkpoint path, light bundles may also carry a top-level
+`extensions` bag for downstream metadata. That add-on surface is reserved
+for namespaced consumers and does not change the light checkpoint's
+bootstrap semantics.
+
+Parameters:
+- `exportOptions` - Policy describing how many elite genomes to retain.
+
+Returns: Light-checkpoint snapshot for approximate restart.
+
+Example:
+
+```ts
+const checkpoint = neat.exportLightState({ eliteCount: 12 });
+checkpoint.extensions = {
+  neatchat: {
+    branchId: 'draft-1',
+  },
+};
+```
 
 #### exportParetoFrontJSONL
 
@@ -2012,7 +2627,23 @@ This is the pause-and-resume snapshot. It is the best choice when you want
 to continue the same run later with the same innovation history, generation
 counter, and serialized genomes.
 
+Full checkpoints are also the bundle shape that owns strict-versus-
+best-effort restore policy. Callers may attach a top-level `extensions` bag
+for downstream metadata, but that add-on pocket does not redefine the core
+full-checkpoint contract.
+
 Returns: Full controller snapshot including metadata and population.
+
+Example:
+
+```ts
+const checkpoint = neat.exportState();
+checkpoint.extensions = {
+  neatchat: {
+    memoryBankId: 'memory-bank-1',
+  },
+};
+```
 
 #### exportTelemetryCSV
 
@@ -2057,11 +2688,25 @@ This is the lighter-weight sibling of `importState()`. It is useful when you
 want controller defaults, innovation bookkeeping, or archive metadata back,
 but you are handling genome population state separately.
 
+A common pairing is `const meta = neat.toJSON()` plus `const population =
+neat.export()`, followed later by `Neat.fromJSON(meta, fitness)` and
+`restored.import(population)`.
+
 Parameters:
 - `json` - Serialized controller metadata produced by `toJSON()`.
 - `fitness` - Fitness function to attach to the reconstructed controller.
 
 Returns: Reconstructed `Neat` controller instance.
+
+Example:
+
+```ts
+const meta = neat.toJSON();
+const population = neat.export();
+
+const restored = Neat.fromJSON(meta, fitness);
+await restored.import(population);
+```
 
 #### getAverage
 
@@ -2313,10 +2958,57 @@ This is the population-only restore path. It keeps the current controller
 instance, options, and metadata while swapping in a different genome set.
 Use `importState()` when you want to restore controller metadata too.
 
+Because this path replaces only genomes, it also treats the imported array
+length as the controller's new runtime `popsize`. Use the light or full
+checkpoint paths when you need to preserve a larger future population target
+separately from the imported genome count.
+
 Parameters:
 - `json` - Serialized population to import into the current controller.
 
 Returns: Promise resolving after the population is loaded.
+
+Example:
+
+```ts
+const population = neat.export();
+const destination = new Neat(2, 1, fitness, { popsize: 200 });
+
+await destination.import(population);
+console.log(destination.options.popsize); // imported population length
+```
+
+#### importLightState
+
+```ts
+importLightState(
+  bundle: NeatLightStateJSON,
+  fitness: NeatFitnessFunction,
+): Promise<default>
+```
+
+Restore a light checkpoint produced by `exportLightState()`.
+
+Use this when you want a smaller, best-effort restart bundle that preserves
+retained elites and bootstrap controller settings without claiming exact
+future replay. The restored controller keeps only the retained elites from
+the bundle and then relies on the ordinary evolution path to refill toward
+the saved restart-scale population target.
+
+Parameters:
+- `bundle` - Serialized light-checkpoint bundle.
+- `fitness` - Fitness function to attach to the restored controller.
+
+Returns: A `Neat` instance ready for approximate restart.
+
+Example:
+
+```ts
+const checkpoint = neat.exportLightState({ eliteCount: 6 });
+const restarted = await Neat.importLightState(checkpoint, fitness);
+
+await restarted.evolve();
+```
 
 #### importRNGState
 
@@ -2339,6 +3031,7 @@ Returns: Nothing. This is a compatibility alias for `restoreRNGState()`.
 importState(
   bundle: NeatStateJSON,
   fitness: NeatFitnessFunction,
+  restoreOptions: NeatCheckpointRestoreOptions | undefined,
 ): Promise<default>
 ```
 
@@ -2348,11 +3041,28 @@ Use this when you want a paused experiment to resume with its controller
 metadata, population, and archival context intact rather than rebuilding
 only the bare genomes.
 
+Read this as the exact-resume door. In `strict` mode, versioned bundles
+must still carry replay-critical runtime and speciation state. Use
+`best-effort` only when the caller is deliberately accepting a degraded
+restore that should keep running without claiming deterministic replay.
+
 Parameters:
 - `bundle` - Serialized object with the shape `{ neat, population }`.
 - `fitness` - Fitness function to attach to the restored controller.
+- `restoreOptions` - Explicit restore-mode override. Defaults to strict exact resume.
 
 Returns: A `Neat` instance ready to continue evolution from the imported state.
+
+Example:
+
+```ts
+const checkpoint = neat.exportState();
+const resumed = await Neat.importState(checkpoint, fitness, {
+  restoreMode: 'strict',
+});
+
+await resumed.evolve();
+```
 
 #### mutate
 
@@ -2499,7 +3209,83 @@ This is useful when you want to preserve run configuration and innovation
 bookkeeping separately from genome payloads, or when the population will be
 reconstructed by other means.
 
+Read this as the controller-half of the population-plus-meta pairing. When
+a later restore should reconstruct the bookkeeping first and import genomes
+separately, pair `toJSON()` with `export()` instead of jumping straight to
+the full checkpoint path.
+
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
+
+Example:
+
+```ts
+const meta = neat.toJSON();
+const population = neat.export();
+
+const restored = Neat.fromJSON(meta, fitness);
+await restored.import(population);
+```
+
+### NeatParallelPopulationEvaluatorOptions
+
+Low-friction NEAT population-evaluation options built on top of `evaluateInWorkers(...)`.
+
+The factory keeps the public surface focused on population evaluation rather
+than transport details. Callers can opt into parallel execution with
+`parallel: true`, keep the local scoring delegate as the honest fallback,
+and add worker-specific overrides only when they need them.
+
+### NetworkInferenceIR
+
+Deterministic, worker-consumable snapshot of one network forward pass.
+
+This IR is the common substrate for portable, transferable, channel, and
+shared-memory worker transport strategies. It intentionally stores plain data
+only so callers can structured-clone it or re-encode it into typed arrays.
+
+Example:
+
+```ts
+const inferenceIr = extractNetworkInferenceIR(network);
+console.log(inferenceIr.activationSteps);
+```
+
+### NetworkInferenceIREdge
+
+One non-self connection snapshot inside the worker-friendly inference IR.
+
+Example:
+
+```ts
+const irEdge: NetworkInferenceIREdge = {
+  from: 0,
+  to: 3,
+  weight: 0.75,
+  gaterIndex: -1,
+};
+```
+
+### NetworkInferenceIRNode
+
+One node snapshot inside the worker-friendly inference IR.
+
+The IR stores runtime inference data only: stable node indexes, activation
+lookup ids, recurrent self-loop metadata, and scalar modifiers that change
+forward-pass output.
+
+Example:
+
+```ts
+const irNode: NetworkInferenceIRNode = {
+  index: 3,
+  bias: 0.15,
+  response: 1,
+  mask: 1,
+  activationId: 4,
+  selfWeight: 0,
+  selfGaterIndex: -1,
+};
+```
 
 ### NetworkLayerAnnotation
 
@@ -2530,12 +3316,214 @@ Full topology plan for layout and rendering.
 Preserves the layer-array input used by layout helpers and adds optional
 semantic annotations for overlays.
 
+### openInferenceChannel
+
+```ts
+openInferenceChannel(
+  payload: TransferableInferencePayload,
+  options: InferenceChannelOptions,
+): InferenceChannel
+```
+
+Open one persistent inference worker channel from a transferable payload.
+
+The channel transfers the predictor payload exactly once during bootstrap,
+then reuses the worker-side predictor state for every later `predict()` or
+`reset()` request sent over one dedicated `MessageChannel` port pair.
+
+Parameters:
+- `payload` - Transferable inference payload used to bootstrap the worker predictor.
+- `options` - Channel concurrency and worker delivery options.
+
+Returns: Persistent inference channel.
+
+Example:
+
+```ts
+const payload = exportTransferableInferencePayload(network);
+const channel = openInferenceChannel(payload);
+const outputValues = await channel.predict([0.25, 0.75]);
+channel.close();
+```
+
+### openSharedInferenceWorker
+
+```ts
+openSharedInferenceWorker(
+  payload: TransferableInferencePayload,
+  options: SharedInferenceWorkerOptions,
+): SharedInferenceWorker
+```
+
+Open one persistent shared-memory inference worker from a transferable payload.
+
+Shared-memory workers keep one predictor alive inside a dedicated worker and
+exchange inputs and outputs through `SharedArrayBuffer` shelves rather than
+cloning request payloads for every inference call.
+
+Browser hosts default to a module-relative worker script emitted alongside
+the library files. Bundled or CSP-constrained hosts can override that entry
+with `workerUrl`.
+
+Parameters:
+- `payload` - Transferable inference payload used to bootstrap the shared worker predictor.
+- `options` - Shared worker delivery options.
+
+Returns: Persistent shared-memory inference worker.
+
+Example:
+
+```ts
+const payload = exportTransferableInferencePayload(network);
+const sharedWorker = openSharedInferenceWorker(payload);
+const outputValues = await sharedWorker.infer([0.25, 0.75]);
+await sharedWorker.release();
+```
+
 ### OverlayFactoryHooks
 
 Optional hook functions that demos can use to inject custom overlays.
 
 Flappy Bird injects input-group label bands and per-input descriptions.
 ASCII Maze could inject custom layer labels, or leave hooks undefined.
+
+### ParallelInferencePool
+
+Generic bounded worker pool for ordered parallel inference tasks.
+
+The pool keeps persistent predictors warm, caps concurrent worker usage, and
+rebuilds results in the caller's original order even when individual jobs
+finish out of order.
+
+Example:
+
+```ts
+const pool = new ParallelInferencePool({
+  openWorker: (payload) => openSharedInferenceWorker(payload),
+  workerCount: 4,
+});
+await pool.initialize(payloads);
+const results = await pool.evaluateOrderedBatch(payloads, async (worker) => {
+  return worker.infer([0.25, 0.75]);
+});
+await pool.dispose();
+```
+
+#### dispose
+
+```ts
+dispose(): Promise<void>
+```
+
+Releases every active worker and clears the slot shelf.
+
+Returns: Nothing.
+
+#### evaluateOrderedBatch
+
+```ts
+evaluateOrderedBatch(
+  payloads: readonly TPayload[],
+  evaluator: (worker: TWorker, payload: TPayload, payloadIndex: number) => Promise<TResult>,
+): Promise<TResult[]>
+```
+
+Evaluates a payload shelf through the bounded worker slots.
+
+The pool schedules work FIFO, lets each slot consume tasks until the queue
+is empty, and returns results in the same order as the input payloads.
+
+Parameters:
+- `payloads` - Ordered payload shelf to evaluate.
+- `evaluator` - Caller-owned evaluation logic for one warm worker slot.
+
+Returns: Results in the caller's original payload order.
+
+#### initialize
+
+```ts
+initialize(
+  payloads: readonly TPayload[],
+): Promise<void>
+```
+
+Prepares empty slot state for the next payload shelf.
+
+Existing workers are released before the new shelf becomes active so slot
+reuse stays deterministic across generations or evaluation batches.
+
+Parameters:
+- `payloads` - Ordered payload shelf that may be evaluated next.
+
+Returns: Nothing.
+
+### ParallelInferencePoolOptions
+
+Configuration for one bounded parallel inference pool.
+
+The opener stays caller-owned so the pool can schedule shared-memory
+workers, inference channels, or future worker-backed predictors without
+coupling this boundary to one transport strategy.
+
+### ParallelInferenceWorkerLike
+
+Minimal worker resource contract required by the generic inference pool.
+
+The pool owns worker lifecycle, not transport internals. Any persistent
+predictor or worker can participate as long as it can release its resources
+deterministically.
+
+### PortableInferencePayload
+
+Structured-clone-safe inference payload for the universal worker fallback.
+
+This payload preserves the exact inference metadata needed to replay a
+forward pass without shipping live `Network`, `Node`, or `Connection`
+instances across the worker boundary.
+
+Example:
+
+```ts
+const payload = exportPortableInferencePayload(network);
+console.log(payload.activationTable);
+```
+
+### PortableInferencePayloadEdge
+
+One portable edge record used by the structured-clone payload surface.
+
+Example:
+
+```ts
+const portableEdge: PortableInferencePayloadEdge = {
+  from: 0,
+  to: 3,
+  weight: 0.75,
+  gaterIndex: -1,
+};
+```
+
+### PortableInferencePayloadNode
+
+One portable node record used by the structured-clone payload surface.
+
+Portable payloads keep human-readable activation names instead of numeric ids
+so they remain self-describing across worker boundaries and versioned message
+logs.
+
+Example:
+
+```ts
+const portableNode: PortableInferencePayloadNode = {
+  id: 3,
+  bias: 0.15,
+  response: 1,
+  mask: 1,
+  activation: 'relu',
+  selfWeight: 0,
+  selfGaterIndex: -1,
+};
+```
 
 ### PositionedNetworkNode
 
@@ -2612,6 +3600,63 @@ Returns: Resolved frame with positioned nodes and scene state (reusable for hove
 
 Options passed to the shared renderer.
 
+### resolveAutoInferenceTransport
+
+```ts
+resolveAutoInferenceTransport(
+  capabilities: InferenceWorkerCapabilities,
+): AutoInferenceTransport
+```
+
+Resolve the honest automatic transport choice for one capability snapshot.
+
+The priority order matches the current transport ladder: shared-memory first,
+then persistent channels, then transferable payload fallback.
+
+Parameters:
+- `capabilities` - Capability snapshot returned by the probe.
+
+Returns: Best automatic transport choice for the current host.
+
+Example:
+
+```ts
+const capabilities = detectInferenceWorkerCapabilities({
+  hasChannelWorker: true,
+  runtime: 'browser',
+});
+const transport = resolveAutoInferenceTransport(capabilities);
+```
+
+### resolveBrowserWorkerAssetUrl
+
+```ts
+resolveBrowserWorkerAssetUrl(
+  workerAssetPath: string,
+  options: BrowserWorkerAssetUrlOptions,
+): string | undefined
+```
+
+Resolves a browser worker asset beside the current script or page URL.
+
+This helper keeps the bundler boundary explicit: callers still name the
+emitted worker asset they expect, while the library handles the common URL
+math for browser demos, nested workers, and side-by-side bundle delivery.
+
+Parameters:
+- `workerAssetPath` - Relative worker asset path emitted by the bundler.
+- `options` - Optional explicit base URL override.
+
+Returns: Absolute worker asset URL when a browser base URL is available.
+
+Example:
+
+```ts
+const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
+  'flappy-shared-inference.worker.bundle.js',
+);
+```
+
 ### resolveNetworkVisualizationLayers
 
 ```ts
@@ -2653,6 +3698,54 @@ Parameters:
 
 Returns: Layered nodes plus semantic layer annotations.
 
+### SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION
+
+Browser `SharedArrayBuffer` inference requires cross-origin isolation.
+
+Node.js workers can use the shared-memory path without `COOP` or `COEP`, but
+browsers only expose `SharedArrayBuffer` reliably when the host page is
+cross-origin isolated.
+
+Example:
+
+```ts
+if (SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION) {
+  console.log('Configure COOP/COEP before enabling shared-memory inference.');
+}
+```
+
+### SharedInferenceWorker
+
+Persistent shared-memory inference worker.
+
+Shared-memory workers keep one predictor alive inside a dedicated worker and
+exchange input and output values through `SharedArrayBuffer` shelves instead
+of cloning or transferring a fresh payload for every request.
+
+Example:
+
+```ts
+const worker = openSharedInferenceWorker(payload);
+const outputValues = await worker.infer([0.25, 0.75]);
+await worker.release();
+```
+
+### SharedInferenceWorkerOptions
+
+Configuration for one dedicated shared-memory inference worker.
+
+Browser hosts default to the module-relative shared worker emitted beside the
+library files. Provide `workerUrl` when bundling moves that worker asset or
+when CSP policy disallows the default delivery path.
+
+Example:
+
+```ts
+const worker = openSharedInferenceWorker(payload, {
+  workerUrl: '/assets/shared-inference.worker.js',
+});
+```
+
 ### toDot
 
 ```ts
@@ -2686,6 +3779,33 @@ Example:
 const graph = exportVisualizationGraph(network);
 const dot = toDot(graph);
 // Paste `dot` into https://dreampuf.github.io/GraphvizOnline/
+```
+
+### TransferableInferencePayload
+
+Typed-array inference payload for lower-copy worker transport.
+
+Transferable payloads keep the same semantic content as portable payloads,
+but pack it into flat typed arrays so callers can move ownership across
+worker boundaries without deep-cloning large object graphs.
+
+Example:
+
+```ts
+const payload = exportTransferableInferencePayload(network);
+console.log(payload.nodeIds.length);
+```
+
+### TransferableInferencePayloadOptions
+
+Configuration for transferable payload export.
+
+Example:
+
+```ts
+const payload = exportTransferableInferencePayload(network, {
+  numericPrecision: 'f32',
+});
 ```
 
 ### VisualizationEdgeV1
@@ -2908,15 +4028,15 @@ activateRaw(
 ): ActivationArray
 ```
 
-Raw activation that can return a typed array when pooling is enabled (zero-copy).
-If reuseActivationArrays=false falls back to standard activate().
+Raw activation that can return a reusable typed array when pooling is enabled.
+If `reuseActivationArrays` is disabled this falls back to the standard plain-array activation path.
 
 Parameters:
 - `input` - Input vector.
 - `training` - Whether to enable training-time stochastic paths.
 - `maxActivationDepth` - Maximum graph depth for activation.
 
-Returns: Output activations (typed array when pooling is enabled).
+Returns: Output activations as either a plain array or a reusable typed activation buffer.
 
 #### activation
 
@@ -3095,6 +4215,19 @@ Configure scheduled pruning during training.
 Parameters:
 - `cfg` - Pruning schedule and strategy configuration.
 
+#### configureSparsityBudget
+
+```ts
+configureSparsityBudget(
+  cfg: { maxConnections: number; growthGraceFraction?: number | undefined; method?: "magnitude" | "snip" | undefined; },
+): void
+```
+
+Configure a structural connection-growth budget for future mutations.
+
+Parameters:
+- `cfg` - Absolute connection cap plus optional grace headroom.
+
 #### connect
 
 ```ts
@@ -3169,6 +4302,25 @@ Parameters:
 - `weight` - Optional fixed weight for all created connections.
 
 Returns: All connection objects created during this wiring step.
+
+#### connectBatch
+
+```ts
+connectBatch(
+  requests: readonly NetworkConnectionRequest[],
+): default[]
+```
+
+Creates many connections in one ordered structural edit batch.
+
+This preserves the same legality checks and deterministic default-weight
+behavior as repeated `connect()` calls, but it reserves network-level
+storage once for the whole request shelf.
+
+Parameters:
+- `requests` - Ordered connection requests.
+
+Returns: Flattened created connection objects in request order.
 
 #### connections
 
@@ -3784,6 +4936,16 @@ getRNGState(): number | undefined
 Read the raw deterministic RNG state word.
 
 Returns: RNG state value when present.
+
+#### getSparsityBudgetSnapshot
+
+```ts
+getSparsityBudgetSnapshot(): NetworkSparsityBudgetSnapshot | undefined
+```
+
+Read the latest structural growth-budget decision snapshot.
+
+Returns: Snapshot when a budgeted growth decision has already run.
 
 #### getTopologyIntent
 
@@ -5646,9 +6808,55 @@ Export the current population as plain JSON objects.
 
 Choose this lighter snapshot when you only need the genomes themselves and
 do not need generation counters, innovation maps, or other controller-level
-state.
+state. This is the smallest persistence contract on the facade, and it is
+intentionally not a full replay artifact.
 
 Returns: JSON-safe population snapshot.
+
+Example:
+
+```ts
+const population = neat.export();
+const destination = new Neat(2, 1, fitness, { popsize: 50 });
+
+await destination.import(population);
+```
+
+#### exportLightState
+
+```ts
+exportLightState(
+  exportOptions: NeatLightCheckpointExportOptions,
+): NeatLightStateJSON
+```
+
+Export a light checkpoint containing retained elites plus bootstrap state.
+
+This is the best-effort restart sibling of `exportState()`. It keeps only a
+curated elite subset and the original restart-scale population target, so
+the resulting bundle stays lighter while remaining honest about not being an
+exact replay artifact.
+
+Like the full checkpoint path, light bundles may also carry a top-level
+`extensions` bag for downstream metadata. That add-on surface is reserved
+for namespaced consumers and does not change the light checkpoint's
+bootstrap semantics.
+
+Parameters:
+- `exportOptions` - Policy describing how many elite genomes to retain.
+
+Returns: Light-checkpoint snapshot for approximate restart.
+
+Example:
+
+```ts
+const checkpoint = neat.exportLightState({ eliteCount: 12 });
+checkpoint.extensions = {
+  neatchat: {
+    branchId: 'draft-1',
+  },
+};
+```
 
 #### exportParetoFrontJSONL
 
@@ -5726,7 +6934,23 @@ This is the pause-and-resume snapshot. It is the best choice when you want
 to continue the same run later with the same innovation history, generation
 counter, and serialized genomes.
 
+Full checkpoints are also the bundle shape that owns strict-versus-
+best-effort restore policy. Callers may attach a top-level `extensions` bag
+for downstream metadata, but that add-on pocket does not redefine the core
+full-checkpoint contract.
+
 Returns: Full controller snapshot including metadata and population.
+
+Example:
+
+```ts
+const checkpoint = neat.exportState();
+checkpoint.extensions = {
+  neatchat: {
+    memoryBankId: 'memory-bank-1',
+  },
+};
+```
 
 #### exportTelemetryCSV
 
@@ -5771,11 +6995,25 @@ This is the lighter-weight sibling of `importState()`. It is useful when you
 want controller defaults, innovation bookkeeping, or archive metadata back,
 but you are handling genome population state separately.
 
+A common pairing is `const meta = neat.toJSON()` plus `const population =
+neat.export()`, followed later by `Neat.fromJSON(meta, fitness)` and
+`restored.import(population)`.
+
 Parameters:
 - `json` - Serialized controller metadata produced by `toJSON()`.
 - `fitness` - Fitness function to attach to the reconstructed controller.
 
 Returns: Reconstructed `Neat` controller instance.
+
+Example:
+
+```ts
+const meta = neat.toJSON();
+const population = neat.export();
+
+const restored = Neat.fromJSON(meta, fitness);
+await restored.import(population);
+```
 
 #### getAverage
 
@@ -6027,10 +7265,57 @@ This is the population-only restore path. It keeps the current controller
 instance, options, and metadata while swapping in a different genome set.
 Use `importState()` when you want to restore controller metadata too.
 
+Because this path replaces only genomes, it also treats the imported array
+length as the controller's new runtime `popsize`. Use the light or full
+checkpoint paths when you need to preserve a larger future population target
+separately from the imported genome count.
+
 Parameters:
 - `json` - Serialized population to import into the current controller.
 
 Returns: Promise resolving after the population is loaded.
+
+Example:
+
+```ts
+const population = neat.export();
+const destination = new Neat(2, 1, fitness, { popsize: 200 });
+
+await destination.import(population);
+console.log(destination.options.popsize); // imported population length
+```
+
+#### importLightState
+
+```ts
+importLightState(
+  bundle: NeatLightStateJSON,
+  fitness: NeatFitnessFunction,
+): Promise<default>
+```
+
+Restore a light checkpoint produced by `exportLightState()`.
+
+Use this when you want a smaller, best-effort restart bundle that preserves
+retained elites and bootstrap controller settings without claiming exact
+future replay. The restored controller keeps only the retained elites from
+the bundle and then relies on the ordinary evolution path to refill toward
+the saved restart-scale population target.
+
+Parameters:
+- `bundle` - Serialized light-checkpoint bundle.
+- `fitness` - Fitness function to attach to the restored controller.
+
+Returns: A `Neat` instance ready for approximate restart.
+
+Example:
+
+```ts
+const checkpoint = neat.exportLightState({ eliteCount: 6 });
+const restarted = await Neat.importLightState(checkpoint, fitness);
+
+await restarted.evolve();
+```
 
 #### importRNGState
 
@@ -6053,6 +7338,7 @@ Returns: Nothing. This is a compatibility alias for `restoreRNGState()`.
 importState(
   bundle: NeatStateJSON,
   fitness: NeatFitnessFunction,
+  restoreOptions: NeatCheckpointRestoreOptions | undefined,
 ): Promise<default>
 ```
 
@@ -6062,11 +7348,28 @@ Use this when you want a paused experiment to resume with its controller
 metadata, population, and archival context intact rather than rebuilding
 only the bare genomes.
 
+Read this as the exact-resume door. In `strict` mode, versioned bundles
+must still carry replay-critical runtime and speciation state. Use
+`best-effort` only when the caller is deliberately accepting a degraded
+restore that should keep running without claiming deterministic replay.
+
 Parameters:
 - `bundle` - Serialized object with the shape `{ neat, population }`.
 - `fitness` - Fitness function to attach to the restored controller.
+- `restoreOptions` - Explicit restore-mode override. Defaults to strict exact resume.
 
 Returns: A `Neat` instance ready to continue evolution from the imported state.
+
+Example:
+
+```ts
+const checkpoint = neat.exportState();
+const resumed = await Neat.importState(checkpoint, fitness, {
+  restoreMode: 'strict',
+});
+
+await resumed.evolve();
+```
 
 #### mutate
 
@@ -6213,7 +7516,22 @@ This is useful when you want to preserve run configuration and innovation
 bookkeeping separately from genome payloads, or when the population will be
 reconstructed by other means.
 
+Read this as the controller-half of the population-plus-meta pairing. When
+a later restore should reconstruct the bookkeeping first and import genomes
+separately, pair `toJSON()` with `export()` instead of jumping straight to
+the full checkpoint path.
+
 Returns: JSON-safe metadata snapshot useful for innovation-history persistence.
+
+Example:
+
+```ts
+const meta = neat.toJSON();
+const population = neat.export();
+
+const restored = Neat.fromJSON(meta, fitness);
+await restored.import(population);
+```
 
 ### default
 
@@ -6386,15 +7704,15 @@ activateRaw(
 ): ActivationArray
 ```
 
-Raw activation that can return a typed array when pooling is enabled (zero-copy).
-If reuseActivationArrays=false falls back to standard activate().
+Raw activation that can return a reusable typed array when pooling is enabled.
+If `reuseActivationArrays` is disabled this falls back to the standard plain-array activation path.
 
 Parameters:
 - `input` - Input vector.
 - `training` - Whether to enable training-time stochastic paths.
 - `maxActivationDepth` - Maximum graph depth for activation.
 
-Returns: Output activations (typed array when pooling is enabled).
+Returns: Output activations as either a plain array or a reusable typed activation buffer.
 
 #### activation
 
@@ -6573,6 +7891,19 @@ Configure scheduled pruning during training.
 Parameters:
 - `cfg` - Pruning schedule and strategy configuration.
 
+#### configureSparsityBudget
+
+```ts
+configureSparsityBudget(
+  cfg: { maxConnections: number; growthGraceFraction?: number | undefined; method?: "magnitude" | "snip" | undefined; },
+): void
+```
+
+Configure a structural connection-growth budget for future mutations.
+
+Parameters:
+- `cfg` - Absolute connection cap plus optional grace headroom.
+
 #### connect
 
 ```ts
@@ -6647,6 +7978,25 @@ Parameters:
 - `weight` - Optional fixed weight for all created connections.
 
 Returns: All connection objects created during this wiring step.
+
+#### connectBatch
+
+```ts
+connectBatch(
+  requests: readonly NetworkConnectionRequest[],
+): default[]
+```
+
+Creates many connections in one ordered structural edit batch.
+
+This preserves the same legality checks and deterministic default-weight
+behavior as repeated `connect()` calls, but it reserves network-level
+storage once for the whole request shelf.
+
+Parameters:
+- `requests` - Ordered connection requests.
+
+Returns: Flattened created connection objects in request order.
 
 #### connections
 
@@ -7262,6 +8612,16 @@ getRNGState(): number | undefined
 Read the raw deterministic RNG state word.
 
 Returns: RNG state value when present.
+
+#### getSparsityBudgetSnapshot
+
+```ts
+getSparsityBudgetSnapshot(): NetworkSparsityBudgetSnapshot | undefined
+```
+
+Read the latest structural growth-budget decision snapshot.
+
+Returns: Snapshot when a budgeted growth decision has already run.
 
 #### getTopologyIntent
 

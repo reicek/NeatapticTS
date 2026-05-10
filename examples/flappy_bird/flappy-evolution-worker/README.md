@@ -106,6 +106,20 @@ If you want background reading before the symbol shelf, the MDN Web Workers
 guide is the fastest practical reference for why this example pushes both
 evolution and playback off the main thread.
 
+## Parallel evaluation ownership
+
+This worker chapter now sits on top of the public turnkey helper ladder
+instead of proving each worker primitive in demo-local code. Flappy uses the
+shared library helpers for capability detection, transport auto-selection,
+browser worker URL resolution, bounded inference pools, ordered batch
+evaluation, and the boolean-first NEAT population helper.
+
+The worker still owns the parts that are example-specific rather than
+transport-generic: deciding which architecture profiles should opt into
+parallel evaluation, preparing Flappy-specific rollout payloads, and turning
+worker-local results into the compact generation-ready or playback-step
+messages the host consumes.
+
 ## flappy-evolution-worker/flappy-evolution-worker.ts
 
 ### beginWorkerGenerationRequest
@@ -132,7 +146,7 @@ Returns: Nothing.
 ```ts
 beginWorkerInitialization(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
-  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
 ): void
 ```
 
@@ -153,7 +167,7 @@ Returns: Nothing.
 beginWorkerPlayback(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
   payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; },
-): void
+): Promise<void>
 ```
 
 Begins a new playback session from the current evolved population.
@@ -213,7 +227,7 @@ Returns: Mutable worker runtime state.
 ```ts
 createWorkerProtocolHandlers(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
-): { markStopped: () => void; beginInitialization: (payload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; }) => void; beginGenerationRequest: () => void; hasPopulation: () => boolean; startPlayback: (payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; hasPlaybackState: () => boolean; processPlaybackStep: (payload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; postWorkerMessage: typeof postWorkerMessage; }
+): { markStopped: () => void; beginInitialization: (payload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; }) => void; beginGenerationRequest: () => void; hasPopulation: () => boolean; startPlayback: (payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; hasPlaybackState: () => boolean; processPlaybackStep: (payload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; postWorkerMessage: typeof postWorkerMessage; }
 ```
 
 Creates protocol handlers bound to the mutable worker runtime state.
@@ -249,7 +263,7 @@ Returns: Promise resolved after generation payload is posted.
 ```ts
 initializeRuntime(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
-  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
 ): Promise<void>
 ```
 
@@ -295,7 +309,7 @@ Returns: Nothing.
 processWorkerPlaybackStepRequest(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
   playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; },
-): void
+): Promise<void>
 ```
 
 Advances playback by a host-requested number of simulation steps.
@@ -320,8 +334,8 @@ Returns: Nothing.
 Loose JSON-compatible network payload used by worker messages.
 
 The worker never posts live `Network` instances back to the browser host.
-Instead it sends the result of `network.toJSON()` so the payload stays
-structured-clone safe and easy to inspect in devtools.
+The transferable inference payload now owns playback-friendly transport,
+while this JSON bridge remains only for the browser-side network-view cache.
 
 ### WorkerErrorMessage
 
@@ -509,7 +523,8 @@ Returns: Shared rollout seed batch.
 
 ```ts
 createInitializedWorkerRuntime(
-  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+  workerRuntimeDependencies: WorkerRuntimeDependencies,
 ): default
 ```
 
@@ -551,7 +566,8 @@ createWorkerFitnessEvaluator(
   architectureProfileId: NonNullable<ExampleArchitectureProfileId | undefined>,
   workerInitSeed: number,
   resolveCurrentGeneration: () => number,
-): (network: never) => number
+  workerRuntimeDependencies: WorkerRuntimeDependencies,
+): NeatFitnessFunction
 ```
 
 Builds the worker fitness evaluator for the selected architecture profile.
@@ -565,6 +581,25 @@ Parameters:
 - `workerInitSeed` - Deterministic worker seed.
 
 Returns: Worker-local scalar fitness function.
+
+### logWorkerFitnessTransportMode
+
+```ts
+logWorkerFitnessTransportMode(
+  architectureProfileId: NonNullable<ExampleArchitectureProfileId | undefined>,
+  usesPipeFirstSharedSeeds: boolean,
+  usesParallelWorkerPool: boolean,
+): void
+```
+
+Logs the worker-side fitness transport selection.
+
+Parameters:
+- `architectureProfileId` - Resolved worker architecture profile id.
+- `usesPipeFirstSharedSeeds` - Whether the profile uses the shared-seed aggregate evaluator.
+- `inferenceChannelWorkerUrl` - Nested worker bundle URL when persistent channels are available.
+
+Returns: Nothing.
 
 ### resolveWorkerPipeFirstEvaluationPlan
 
@@ -584,6 +619,23 @@ Parameters:
 - `architectureProfileId` - Resolved worker architecture profile id.
 
 Returns: Shared-seed batch size for worker fitness.
+
+### resolveWorkerSeedNetwork
+
+```ts
+resolveWorkerSeedNetwork(
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+  architectureProfileId: NonNullable<ExampleArchitectureProfileId | undefined>,
+): default
+```
+
+Resolves the worker seed network from a saved champion override or the shared profile template.
+
+Parameters:
+- `initPayload` - Initialization values from the browser host.
+- `architectureProfileId` - Resolved architecture profile id.
+
+Returns: Seed network for the worker-local NEAT runtime.
 
 ### scorePipeFirstWorkerAggregateEvaluation
 
@@ -667,7 +719,8 @@ Evolves one generation and creates the compact generation-ready response payload
 Educational note:
 The worker does not stream the whole population back to the UI after each
 evolution step. Instead it emits a compact summary containing the generation
-index, best fitness, and a serializable best-network snapshot for inspection.
+index, best fitness, typed transferable inference payloads for playback, and
+the temporary JSON visualization bridge used by the host-side network panel.
 
 Parameters:
 - `options` - Evolution dependencies and runtime state accessors.
@@ -686,6 +739,25 @@ const generationMessage = await evolveAndBuildGenerationReadyMessage({
 });
 ```
 
+### resolveGenerationReadyMessageTransferList
+
+```ts
+resolveGenerationReadyMessageTransferList(
+  workerMessage: WorkerGenerationReadyMessage,
+): ArrayBuffer[]
+```
+
+Collect the transferable buffers owned by one generation-ready response payload.
+
+The transfer list intentionally includes only the typed-array inference
+payloads. The temporary JSON visualization bridge remains structured-clone
+data so the browser can continue rebuilding network-view models separately.
+
+Parameters:
+- `workerMessage` - Generation-ready worker response payload.
+
+Returns: Transfer list for `postMessage(...)`.
+
 ### WorkerEvolutionServiceOptions
 
 Dependencies required to evolve one generation and prepare host payload output.
@@ -702,7 +774,7 @@ slice of behavior.
 
 ```ts
 beginWorkerPlaybackSession(
-  options: { currentPopulation: default[]; payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; createPopulationRenderState: (networks: default[], rng: FlappyRng, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number) => WorkerPlaybackState; },
+  options: { currentPopulation: default[]; payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; createPopulationRenderState: (networks: default[], rng: FlappyRng, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number, channelWorkerUrl?: string | undefined) => WorkerPlaybackState; channelWorkerUrl?: string | undefined; },
 ): { currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; playbackWinnerIndex: number; }
 ```
 
@@ -755,8 +827,8 @@ Returns: Nothing.
 
 ```ts
 processWorkerPlaybackStep(
-  options: { playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; currentPopulation: default[]; neatRuntime: default | undefined; stepPopulationFrame: (renderState: WorkerPlaybackState, rng: FlappyRng, difficultyProfile: SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: WorkerPlaybackState) => WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; },
-): { currentPlaybackState: WorkerPlaybackState | undefined; currentPlaybackRng: FlappyRng | undefined; currentPopulation: default[]; playbackWinnerIndex: number; }
+  options: { playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; currentPopulation: default[]; neatRuntime: default | undefined; stepPopulationFrame: (renderState: WorkerPlaybackState, rng: FlappyRng, difficultyProfile: SharedDifficultyProfile) => Promise<number>; createPlaybackSnapshot: (playbackState: WorkerPlaybackState) => WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; },
+): Promise<{ currentPlaybackState: WorkerPlaybackState | undefined; currentPlaybackRng: FlappyRng | undefined; currentPopulation: default[]; playbackWinnerIndex: number; }>
 ```
 
 Processes one worker playback-step request including completion/finalization logic.
@@ -840,6 +912,21 @@ argument sprawl across helper calls.
 
 ## flappy-evolution-worker/flappy-evolution-worker.simulation.utils.ts
 
+### closeWorkerPopulationRenderState
+
+```ts
+closeWorkerPopulationRenderState(
+  playbackState: WorkerPlaybackState | undefined,
+): Promise<void>
+```
+
+Closes any persistent inference channels carried by a playback state.
+
+Parameters:
+- `playbackState` - Playback state being retired.
+
+Returns: Promise resolved after all bird channels are closed.
+
 ### createWorkerPopulationRenderState
 
 ```ts
@@ -848,6 +935,7 @@ createWorkerPopulationRenderState(
   rng: RngLike,
   initialVisibleWorldWidthPx: number,
   initialVisibleWorldHeightPx: number,
+  channelWorkerUrl: string | undefined,
 ): WorkerPlaybackState
 ```
 
@@ -965,7 +1053,7 @@ Returns: `true` when the bird overlaps the pipe body instead of the gap.
 ```ts
 resolveBirdControlActions(
   frameContext: WorkerPlaybackFrameContext,
-): number
+): Promise<number>
 ```
 
 Runs policy evaluation and commits the resulting observation memory updates.
@@ -1027,7 +1115,7 @@ Returns: Left edge x-position in world coordinates.
 ```ts
 runWorkerPopulationControlSubstep(
   frameContext: WorkerPlaybackFrameContext,
-): number
+): Promise<number>
 ```
 
 Advances one control substep of the worker playback simulation.
@@ -1059,7 +1147,7 @@ stepWorkerPopulationFrame(
   renderState: WorkerPlaybackState,
   rng: RngLike,
   difficultyProfile: SharedDifficultyProfile,
-): number
+): Promise<number>
 ```
 
 Advances the whole population simulation by one logical frame.

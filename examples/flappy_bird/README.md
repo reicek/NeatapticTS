@@ -109,6 +109,115 @@ Read the diagram in two passes:
 
 That split is the heart of the example. Once you understand it, the rest of the folder stops looking like many files and starts looking like a deliberate teaching system.
 
+## Architecture Note: Where True Parallelism Actually Happens
+
+The browser demo uses Web Workers in two different layers, and it helps to keep them separate in your head.
+
+The first layer is always present: the browser host hands evolution and playback authority to one dedicated evolution worker. That keeps the UI thread focused on explanation, rendering, and controls.
+
+The second layer is where the larger performance gain appears. For recurrent browser profiles, when the page is cross-origin isolated and the shared worker bundle is available, the evolution worker opens a bounded [FlappyEvaluationWorkerPool](./evaluation/evaluation.worker-pool.ts). That pool fans genome evaluation out to multiple `SharedInferenceWorker` slots, so multiple predictor instances can score different genomes at the same time on separate Web Workers.
+
+That is the important distinction: the main thread is not evaluating the flock asynchronously by itself, and the browser is not receiving one message per inference call. Instead, true parallelism happens inside the worker-owned evaluation layer, while the host receives compact higher-level results.
+
+The host-side message story stays intentionally simple:
+
+- generation requests return one `generation-ready` summary after the worker finishes the batch,
+- playback requests return near-real-time `playback-step` snapshots so the canvas can stay responsive,
+- raw per-network inference traffic remains inside worker-owned transport boundaries.
+
+This example is also the current proof surface for the library's turnkey
+parallel execution shelf. The public library now owns the reusable helper
+ladder that Flappy helped extract: capability detection,
+`transport: 'auto'` selection, browser worker URL resolution, bounded
+inference pools, ordered batch evaluation, and the boolean-first
+`createNeatParallelPopulationEvaluator(...)` helper.
+
+Flappy still owns the policy layer above that shelf. The example decides when a
+browser profile should opt into parallel evaluation, which payloads are worth
+precomputing, how shared-seed evidence is folded into trainer scores, and which
+compact summaries are posted back to the host. That is the deliberate split:
+the library owns the reusable worker helpers, while Flappy proves where they
+fit inside a real browser-worker runtime without hiding the async boundary.
+
+The detailed map below shows both paths at once.
+
+```mermaid
+flowchart TD
+	classDef boundary fill:#001522,stroke:#0fb5ff,color:#9fdcff,stroke-width:2px;
+	classDef runtime fill:#03111f,stroke:#00e5ff,color:#d8f6ff,stroke-width:2px;
+	classDef highlight fill:#2a1029,stroke:#ff4a8d,color:#ffd7e8,stroke-width:3px;
+	classDef note fill:#0d1a28,stroke:#ffd166,color:#fff2c2,stroke-width:1.5px;
+
+	subgraph Main[Main thread browser host]
+		UI[HUD controls and network view]
+		Requests[Generation and playback requests]
+		Canvas[Canvas renderer and telemetry]
+	end
+
+	subgraph EvolutionWorker[Evolution Web Worker]
+		Protocol[Protocol router]
+		Runtime[NEAT runtime and population state]
+		Playback[Playback session state]
+	end
+
+	subgraph ParallelPool[True parallel evaluation path]
+		Scheduler[FlappyEvaluationWorkerPool]
+		SlotA[SharedInferenceWorker slot A]
+		SlotB[SharedInferenceWorker slot B]
+		SlotN[SharedInferenceWorker slot N]
+	end
+
+	subgraph PlaybackChannels[Playback inference path]
+		ChannelA[InferenceChannel worker for visible bird A]
+		ChannelB[InferenceChannel worker for visible bird B]
+		ChannelN[InferenceChannel worker for visible bird N]
+	end
+
+	Gate[Recurrent profile plus COOP and COEP isolation plus shared worker bundle]:::note
+
+	UI --> Requests
+	Requests -->|init request generation start playback request playback step| Protocol
+	Protocol --> Runtime
+	Protocol --> Playback
+
+	Runtime -->|batch genome evaluation| Scheduler
+	Gate -. enables .-> Scheduler
+
+	Scheduler -->|transferable payload bootstrap| SlotA
+	Scheduler -->|transferable payload bootstrap| SlotB
+	Scheduler -->|transferable payload bootstrap| SlotN
+
+	SlotA -->|SharedArrayBuffer plus Atomics infer and reset| Scheduler
+	SlotB -->|SharedArrayBuffer plus Atomics infer and reset| Scheduler
+	SlotN -->|SharedArrayBuffer plus Atomics infer and reset| Scheduler
+
+	Scheduler -->|aggregate shared seed scores| Runtime
+	Runtime -->|generation ready summary best fitness and transferable payloads| Requests
+	Requests --> UI
+
+	Playback -->|open persistent playback channels| ChannelA
+	Playback -->|open persistent playback channels| ChannelB
+	Playback -->|open persistent playback channels| ChannelN
+
+	ChannelA -->|predict responses| Playback
+	ChannelB -->|predict responses| Playback
+	ChannelN -->|predict responses| Playback
+
+	Playback -->|playback step snapshots| Canvas
+
+	class Main boundary;
+	class EvolutionWorker,ParallelPool,PlaybackChannels runtime;
+	class Scheduler,Runtime,Playback highlight;
+```
+
+Read the diagram in three passes:
+
+1. Main thread: it sends coarse requests and renders coarse results. It never owns the mutable evolution state.
+2. Evolution worker: it owns the NEAT controller, decides when a generation starts or ends, and decides when playback state advances.
+3. Nested worker transport: it uses a bounded shared-memory pool for the true parallel evaluation pass, and separate persistent channel workers for playback-facing predictor calls.
+
+If you want to inspect the concrete implementation after this chapter overview, read [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) for the protocol boundary and [evaluation/README.md](./evaluation/README.md) for the worker-pool and rollout side.
+
 ## What Each Boundary Protects
 
 ### `trainer/`: population policy
@@ -172,7 +281,7 @@ The same example tells two different runtime stories depending on where you ente
 1. [index.html](./index.html) loads the browser shell.
 2. [browser-entry/README.md](./browser-entry/README.md) creates the UI, HUD, and worker channel.
 3. [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) evolves or simulates playback off-thread.
-4. The worker streams packed frame snapshots and generation summaries back to the main thread.
+4. The worker streams packed playback snapshots and returns per-generation summaries back to the main thread.
 5. The browser reconstructs frames, renders the flock, and visualizes the currently interesting network.
 
 The important teaching point is that both stories depend on the same world and observation logic, but they do not collapse into the same runtime boundary.

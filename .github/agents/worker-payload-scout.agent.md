@@ -2,7 +2,7 @@
 description: 'Use when mapping worker payload shapes, structured clone constraints, transfer-list boundaries, SharedArrayBuffer eligibility, fast-path blockers, or deciding whether a worker serialization issue belongs to worker-inference-transport. Keywords: worker payload, transport, structured clone, transfer list, SharedArrayBuffer, workerUrl, inference IR, postMessage.'
 name: 'Worker Payload Scout'
 tools: [read, search]
-user-invocable: false
+user-invocable: true
 agents: []
 ---
 

@@ -1,3 +1,4 @@
+import type { ActivationPrecision, PrecisionConfig } from '../../config';
 import type Network from './network';
 import type Node from '../node';
 import type Connection from '../connection/connection';
@@ -231,12 +232,22 @@ export interface NetworkConstructorOptions {
   enforceAcyclic?: boolean;
   /** Optional public topology intent contract. */
   topologyIntent?: NetworkTopologyIntent;
-  /** Optional slab activation precision. */
-  activationPrecision?: 'f32' | 'f64';
+  /** Optional activation-buffer precision for compiled outputs and reusable activation arrays. Node runtime state and training traces remain normal JS-number storage. */
+  activationPrecision?: ActivationPrecision;
   /** Whether pooled activation arrays should be reused. */
   reuseActivationArrays?: boolean;
   /** Whether pooled typed activations may be returned directly. */
   returnTypedActivations?: boolean;
+}
+
+/** One ordered edge request consumed by {@link Network.connectBatch}. */
+export interface NetworkConnectionRequest {
+  /** Source node that emits the signal. */
+  from: Node;
+  /** Target node that receives the signal. */
+  to: Node;
+  /** Optional explicit starting weight. */
+  weight?: number;
 }
 
 /** Internal constructor-time surface used by bootstrap helpers. */
@@ -261,8 +272,10 @@ export interface NetworkBootstrapInternals {
   _enforceAcyclic: boolean;
   /** Active random number generator. */
   _rand: () => number;
-  /** Typed-array precision used by compiled activation paths. */
-  _activationPrecision: 'f64' | 'f32';
+  /** Typed-array precision used by compiled activation paths and pooled activation buffers. */
+  _precisionConfig: PrecisionConfig;
+  /** Typed-array precision used by compiled activation paths and pooled activation buffers. */
+  _activationPrecision: ActivationPrecision;
   /** Whether pooled activation arrays are reused across activations. */
   _reuseActivationArrays: boolean;
   /** Whether pooled typed activations can be returned directly. */
@@ -273,6 +286,8 @@ export interface NetworkBootstrapInternals {
   setSeed: (seed: number) => void;
   /** Connect two nodes inside the runtime graph. */
   connect: (from: Node, to: Node, weight?: number) => Connection[];
+  /** Connect many node pairs inside the runtime graph. */
+  connectBatch: (requests: readonly NetworkConnectionRequest[]) => Connection[];
   /** Insert a hidden node by splitting an existing connection. */
   addNodeBetween: () => void;
 }
@@ -406,6 +421,8 @@ export interface NetworkRuntimeDiagnosticsInternals {
     minLossScale: number;
     maxLossScale: number;
     overflowCount?: number;
+    underflowCount?: number;
+    lastUnderflowStep?: number;
     scaleUpEvents?: number;
     scaleDownEvents?: number;
   };
@@ -484,7 +501,9 @@ export interface NetworkStandaloneProps {
   /** Output count. */
   output: number;
   /** Optional activation precision flag. */
-  _activationPrecision?: 'f32' | 'f64';
+  _precisionConfig?: PrecisionConfig;
+  /** Optional activation precision flag. */
+  _activationPrecision?: ActivationPrecision;
 }
 
 /** Node with generated index for standalone-code emission. */
@@ -497,6 +516,8 @@ export interface NodeWithIndex extends Node {
 export interface StandaloneGenerationContext {
   /** Standalone network projection. */
   standaloneProps: NetworkStandaloneProps;
+  /** Resolved activation precision for generated standalone storage. */
+  resolvedActivationPrecision?: ActivationPrecision;
   /** Indexed input nodes in public input-vector order. */
   inputNodeIndexes: number[];
   /** Indexed activation traversal in runtime execution order without inputs. */
@@ -563,6 +584,50 @@ export interface ReconnectEndpointPairContext {
 
 /** Pruning strategy identifiers. */
 export type PruningMethod = 'magnitude' | 'snip';
+
+/** Growth-budget decision categories for structural mutations. */
+export type SparsityBudgetDecision = 'allow' | 'prune-then-allow' | 'deny';
+
+/** Read-only snapshot describing the latest growth-budget decision. */
+export interface NetworkSparsityBudgetSnapshot {
+  /** Effective total-connection cap after grace is applied. */
+  allowedConnectionLimit: number;
+  /** Total forward-plus-self connection count when the budget check started. */
+  connectionCountBeforeDecision: number;
+  /** Total forward-plus-self connection count immediately before growth may run. */
+  connectionCountBeforeGrowth: number;
+  /** Final decision emitted by the budget helper. */
+  decision: SparsityBudgetDecision;
+  /** Desired total-connection count before the pending growth write. */
+  desiredConnectionCountBeforeGrowth: number;
+  /** Number of forward or self connections the helper planned to prune. */
+  plannedPruneCount: number;
+  /** Projected total-connection count after the pending growth write. */
+  projectedConnectionCount: number;
+  /** Remaining total-connection headroom after the decision. */
+  remainingHeadroom: number;
+  /** Net total-connection increase requested by the caller. */
+  requiredAdditionalConnections: number;
+  /** Runtime environment whose soft memory target tightened the effective cap. */
+  softBudgetEnvironment?: 'browser' | 'node';
+  /** Whether a Node/browser soft memory target tightened the effective cap. */
+  softBudgetTriggered: boolean;
+}
+
+/** Internal network properties accessed during sparsity-budget enforcement. */
+export interface NetworkSparsityBudgetProps {
+  /** Optional active total-connection growth budget configuration. */
+  _sparsityBudgetConfig?: {
+    /** Hard total-connection cap before grace headroom is applied. */
+    maxConnections: number;
+    /** Optional proportional total-connection growth headroom. */
+    growthGraceFraction: number;
+    /** Pruning heuristic used when space must be freed. */
+    method: PruningMethod;
+  };
+  /** Last recorded read-only budget decision snapshot. */
+  _lastSparsityBudgetSnapshot?: NetworkSparsityBudgetSnapshot;
+}
 
 /** Internal network properties accessed during pruning operations. */
 export interface NetworkPruningProps {
@@ -1059,7 +1124,8 @@ export interface GradientClipConfig {
  * Dynamic mixed-precision configuration.
  *
  * When enabled, training uses a loss-scaling heuristic that attempts to keep gradients
- * in a numerically stable range. If an overflow is detected, the scale is reduced.
+ * in a numerically stable range. Overflow pressure scales the loss down, while
+ * persistent tiny gradients can scale it back up.
  */
 export interface MixedPrecisionDynamicConfig {
   /** Minimum dynamic loss scale. */
@@ -1411,6 +1477,10 @@ export interface TrainingNetworkInternals {
     maxLossScale: number;
     /** Optional overflow event count. */
     overflowCount?: number;
+    /** Optional underflow event count. */
+    underflowCount?: number;
+    /** Optional last underflow step index. */
+    lastUnderflowStep?: number;
     /** Optional scale-up event count. */
     scaleUpEvents?: number;
     /** Optional scale-down event count. */

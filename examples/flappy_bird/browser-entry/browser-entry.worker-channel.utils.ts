@@ -7,6 +7,10 @@ import { resolveEvolutionWorkerBundleUrl } from './worker-channel/worker-channel
 import { requestWorkerGeneration as requestWorkerGenerationService } from './worker-channel/worker-channel.generation.service';
 import { requestWorkerPlaybackStep as requestWorkerPlaybackStepService } from './worker-channel/worker-channel.playback.service';
 
+const FLAPPY_BROWSER_WORKER_LOG_PREFIX = '[flappy-browser]';
+const SHOULD_LOG_FLAPPY_BROWSER_WORKERS =
+  resolveNodeEnvForRuntimeLogs() !== 'test';
+
 /**
  * Creates the evolution worker used to keep heavy NEAT compute off the UI thread.
  *
@@ -15,8 +19,20 @@ import { requestWorkerPlaybackStep as requestWorkerPlaybackStepService } from '.
 export function createEvolutionWorker(): Worker {
   // Step 1: Resolve worker URL from active bundle context.
   const workerUrl = resolveEvolutionWorkerBundleUrl();
+
+  if (SHOULD_LOG_FLAPPY_BROWSER_WORKERS) {
+    console.info(
+      `${FLAPPY_BROWSER_WORKER_LOG_PREFIX} starting evolution Web Worker from ${workerUrl}`,
+    );
+  }
+
   // Step 2: Create worker instance from resolved URL.
   return new Worker(workerUrl);
+}
+
+function resolveNodeEnvForRuntimeLogs(): string | undefined {
+  return (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process
+    ?.env?.NODE_ENV;
 }
 
 /**

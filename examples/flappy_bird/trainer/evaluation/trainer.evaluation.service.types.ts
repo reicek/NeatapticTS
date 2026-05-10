@@ -2,6 +2,7 @@ import type {
   FlappyRolloutOptions,
   FlappySeedBatchEvaluation,
 } from '../../flappyEvaluation';
+import type { FlappyEvaluationWorkerPool } from '../../evaluation/evaluation.worker-pool';
 
 /**
  * Candidate-stage request used by the staged population evaluator.
@@ -30,3 +31,14 @@ export type PopulationAggregateScoringContext = {
   aggregateValues: FlappySeedBatchEvaluation[];
   maximumMeanPipesPassed: number;
 };
+
+/**
+ * Optional evaluation accelerators used by staged trainer helpers.
+ *
+ * Keeping the dependency shelf separate from generation-plan data lets the
+ * staged evaluator opt into parallel worker transport without changing the
+ * meaning of the plan itself.
+ */
+export interface PopulationStageEvaluationDependencies {
+  workerPool?: FlappyEvaluationWorkerPool;
+}

@@ -1,6 +1,6 @@
 import type Node from '../../node';
 import { releaseNode as _releaseNode } from '../../nodePool/nodePool';
-import { config } from '../../../config';
+import { defaultMemoryManager } from '../../../memory/manager';
 import type {
   NetworkRemoveProps,
   NodeRemovalContext,
@@ -58,7 +58,9 @@ function spliceNodeFromNetwork(
 function releaseRemovedNodeWhenPoolingEnabled(
   removedNode: Node | undefined,
 ): void {
-  if (!config.enableNodePooling || !removedNode) {
+  const memoryConfig = defaultMemoryManager.getConfig();
+
+  if (!memoryConfig.enableNodePooling || !removedNode) {
     return;
   }
   _releaseNode(removedNode);

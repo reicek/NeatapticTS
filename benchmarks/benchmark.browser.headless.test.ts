@@ -304,13 +304,61 @@ describe('browser headless benchmark integration', () => {
     expect(Array.isArray(parsed.browserRuns)).toBe(true);
   });
 
-  if (runs.length) {
-    const first = runs[0];
-    it('run record exposes numeric bundleBytes', () => {
-      expect(typeof first.bundleBytes).toBe('number');
-    });
-    it('run record exposes mode string', () => {
-      expect(typeof first.mode).toBe('string');
-    });
-  }
+  it('run record exposes numeric bundleBytes when a browser run is available', () => {
+    expect(runs.length === 0 || typeof runs[0]?.bundleBytes === 'number').toBe(
+      true,
+    );
+  });
+
+  it('run record exposes mode string when a browser run is available', () => {
+    expect(runs.length === 0 || typeof runs[0]?.mode === 'string').toBe(true);
+  });
+
+  it('run record bench exposes a transport comparison array when a browser run is available', () => {
+    expect(
+      runs.length === 0 ||
+        Array.isArray(runs[0]?.bench?.transportComparisons),
+    ).toBe(true);
+  });
+
+  it('run record bench exposes an async build comparison array when a browser run is available', () => {
+    expect(
+      runs.length === 0 ||
+        Array.isArray(runs[0]?.bench?.asyncBuildComparisons),
+    ).toBe(true);
+  });
+
+  it('run record async slab probe yields to the macrotask queue when a browser run is available', () => {
+    const firstAsyncBuildComparison = Array.isArray(
+      runs[0]?.bench?.asyncBuildComparisons,
+    )
+      ? (runs[0]?.bench?.asyncBuildComparisons[0] as
+          | { macrotaskHeartbeatCount?: number }
+          | undefined)
+      : undefined;
+
+    expect(
+      runs.length === 0 ||
+        (firstAsyncBuildComparison?.macrotaskHeartbeatCount ?? 0) > 0,
+    ).toBe(true);
+  });
+
+  it('run record async slab probe keeps average macrotask gaps within one frame budget when a browser run is available', () => {
+    const firstAsyncBuildComparison = Array.isArray(
+      runs[0]?.bench?.asyncBuildComparisons,
+    )
+      ? (runs[0]?.bench?.asyncBuildComparisons[0] as
+          | {
+              averageMacrotaskGapMs?: number;
+              frameBudgetMs?: number;
+            }
+          | undefined)
+      : undefined;
+
+    expect(
+      runs.length === 0 ||
+        (firstAsyncBuildComparison?.averageMacrotaskGapMs ?? Infinity) <=
+          (firstAsyncBuildComparison?.frameBudgetMs ?? 0),
+    ).toBe(true);
+  });
 });

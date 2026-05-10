@@ -5,10 +5,13 @@ import {
   type ExampleArchitectureProfile,
   type ExampleArchitectureProfileId,
 } from '../../../architectureProfiles';
+import type { SerializedNetwork } from '../browser-entry.worker.types';
 import type { HostArchitectureSelectorItem } from '../host/host.types';
 
 const FLAPPY_ARCHITECTURE_HISTORY_STORAGE_KEY =
   'neataptic:flappy-bird:architecture-history:v1';
+const FLAPPY_ARCHITECTURE_CHAMPION_STORAGE_KEY =
+  'neataptic:flappy-bird:architecture-champions:v1';
 
 type RuntimeArchitectureHistoryStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -21,6 +24,11 @@ export interface RuntimeArchitectureBestScore {
 /** Local-browser record table keyed by the shared Flappy architecture profile id. */
 export type RuntimeArchitectureHistoryByProfileId = Partial<
   Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>
+>;
+
+/** Browser-local champion table keyed by the shared Flappy architecture profile id. */
+export type RuntimeArchitectureChampionByProfileId = Partial<
+  Record<ExampleArchitectureProfileId, SerializedNetwork>
 >;
 
 /**
@@ -80,6 +88,38 @@ export function resolveRuntimeArchitectureHistory(
 }
 
 /**
+ * Reads persisted browser-local champion networks when storage is available.
+ *
+ * @param storage - Optional storage override for tests.
+ * @returns Previously stored champion table or an empty table.
+ */
+export function resolveRuntimeArchitectureChampions(
+  storage:
+    | RuntimeArchitectureHistoryStorage
+    | undefined = resolveRuntimeArchitectureHistoryStorage(),
+): RuntimeArchitectureChampionByProfileId {
+  if (!storage) {
+    return {};
+  }
+
+  try {
+    const serializedChampions = storage.getItem(
+      FLAPPY_ARCHITECTURE_CHAMPION_STORAGE_KEY,
+    );
+    if (!serializedChampions) {
+      return {};
+    }
+
+    const parsedChampions = JSON.parse(serializedChampions) as
+      | RuntimeArchitectureChampionByProfileId
+      | undefined;
+    return parsedChampions ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Persists the current browser-local architecture record table when storage exists.
  *
  * @param historyByProfileId - Local history table to persist.
@@ -104,6 +144,52 @@ export function persistRuntimeArchitectureHistory(
   } catch {
     // Ignore storage failures in restrictive browser contexts.
   }
+}
+
+/**
+ * Persists the current browser-local champion table when storage exists.
+ *
+ * @param championByProfileId - Champion table to persist.
+ * @param storage - Optional storage override for tests.
+ * @returns Nothing.
+ */
+export function persistRuntimeArchitectureChampions(
+  championByProfileId: RuntimeArchitectureChampionByProfileId,
+  storage:
+    | RuntimeArchitectureHistoryStorage
+    | undefined = resolveRuntimeArchitectureHistoryStorage(),
+): void {
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.setItem(
+      FLAPPY_ARCHITECTURE_CHAMPION_STORAGE_KEY,
+      JSON.stringify(championByProfileId),
+    );
+  } catch {
+    // Ignore storage failures in restrictive browser contexts.
+  }
+}
+
+/**
+ * Clears all persisted browser-local Flappy score history and champion state.
+ *
+ * Resetting the selector should remove both the visible best-score captions and
+ * the stored champion seeds they were derived from, so the next session starts
+ * from the shared architecture template instead of reusing a saved winner.
+ *
+ * @param storage - Optional storage override for tests.
+ * @returns Nothing.
+ */
+export function resetRuntimeArchitectureProgress(
+  storage:
+    | RuntimeArchitectureHistoryStorage
+    | undefined = resolveRuntimeArchitectureHistoryStorage(),
+): void {
+  persistRuntimeArchitectureHistory({}, storage);
+  persistRuntimeArchitectureChampions({}, storage);
 }
 
 /**

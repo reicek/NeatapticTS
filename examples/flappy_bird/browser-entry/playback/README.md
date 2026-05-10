@@ -243,8 +243,10 @@ resolvePlaybackViewportDimensions(
 
 Resolves the current visible playback viewport dimensions from the canvas.
 
-Playback sizing is derived from the live canvas rather than a hard-coded
-constant so resizing can flow into the worker/session boundary cleanly.
+Playback normally mirrors the live canvas dimensions, but the browser host
+intentionally seeds that canvas at `1x1` before the resize hook applies the
+real backing size. When that placeholder size is still active, the playback
+worker uses the canonical Flappy world dimensions instead of waiting.
 
 Parameters:
 - `canvas` - Target playback canvas.

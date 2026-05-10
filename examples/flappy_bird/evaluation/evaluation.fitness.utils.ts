@@ -1,5 +1,14 @@
+import type Network from '../../../src/architecture/network';
+import {
+  exportTransferableInferencePayload,
+  openInferenceChannel,
+  type SharedInferenceWorker,
+} from '../../../src/neataptic';
 import { FLAPPY_EVALUATION_ROBUST_STDDEV_PENALTY } from './evaluation.constants';
-import { rolloutEpisode } from './evaluation.rollout.service';
+import {
+  rolloutEpisode,
+  rolloutEpisodeWithPredictor,
+} from './evaluation.rollout.service';
 import type {
   FlappyNetworkLike,
   FlappyRolloutOptions,
@@ -59,6 +68,138 @@ export function evaluateFlappyFitnessAcrossSeeds(
       seed: seedValue,
     }),
   );
+  return composeSeedBatchEvaluation(sharedSeeds.length, episodeResults);
+}
+
+/**
+ * Evaluate a network through one persistent inference channel on a single seeded episode.
+ *
+ * This browser-worker-oriented helper reuses one worker-side predictor instead
+ * of calling `network.activate(...)` directly on the hot rollout path.
+ *
+ * @param network - Network to evaluate through one persistent inference channel.
+ * @param options - Rollout controls plus the browser worker bundle URL.
+ * @returns Fitness score (higher is better).
+ */
+export async function evaluateFlappyFitnessWithInferenceChannel(
+  network: Network,
+  options: {
+    rolloutOptions?: FlappyRolloutOptions;
+    workerUrl: string;
+  },
+): Promise<number> {
+  const networkId = typeof network._id === 'number' ? network._id : undefined;
+  const inferenceChannel = openInferenceChannel(
+    exportTransferableInferencePayload(network),
+    {
+      workerUrl: options.workerUrl,
+    },
+  );
+
+  try {
+    const rolloutResult = await runResetChannelRolloutEpisode(
+      inferenceChannel,
+      networkId,
+      options.rolloutOptions ?? {},
+    );
+
+    return rolloutResult.fitness;
+  } finally {
+    await inferenceChannel.close();
+  }
+}
+
+/**
+ * Evaluate a network through one persistent inference channel across shared seeds.
+ *
+ * The same worker-side predictor is reset between seeded episodes so the
+ * browser worker can reuse warm transport state without leaking recurrent
+ * memory across rollout boundaries.
+ *
+ * @param network - Network to evaluate through one persistent inference channel.
+ * @param sharedSeeds - Shared deterministic seeds used for all genomes.
+ * @param options - Rollout controls plus the browser worker bundle URL.
+ * @returns Robust aggregate metrics for selection/ranking.
+ */
+export async function evaluateFlappyFitnessAcrossSeedsWithInferenceChannel(
+  network: Network,
+  sharedSeeds: readonly number[],
+  options: {
+    rolloutOptions?: FlappyRolloutOptions;
+    workerUrl: string;
+  },
+): Promise<FlappySeedBatchEvaluation> {
+  const networkId = typeof network._id === 'number' ? network._id : undefined;
+  const inferenceChannel = openInferenceChannel(
+    exportTransferableInferencePayload(network),
+    {
+      workerUrl: options.workerUrl,
+    },
+  );
+
+  try {
+    const episodeResults = await Promise.all(
+      sharedSeeds.map((seedValue) =>
+        runResetChannelRolloutEpisode(inferenceChannel, networkId, {
+          ...(options.rolloutOptions ?? {}),
+          seed: seedValue,
+        }),
+      ),
+    );
+
+    return composeSeedBatchEvaluation(sharedSeeds.length, episodeResults);
+  } finally {
+    await inferenceChannel.close();
+  }
+}
+
+/**
+ * Evaluate one shared-memory predictor across a deterministic seed batch.
+ *
+ * This helper keeps one `SharedInferenceWorker` warm across the whole seed set
+ * so the caller can parallelize across genomes without paying one bootstrap
+ * cost per seeded rollout.
+ *
+ * @param sharedInferenceWorker - Persistent shared-memory predictor for one genome.
+ * @param sharedSeeds - Shared deterministic seeds used for the evaluation batch.
+ * @param options - Optional rollout controls plus a stable network id for seed mixing.
+ * @returns Robust aggregate metrics for selection/ranking.
+ */
+export async function evaluateFlappyFitnessAcrossSeedsWithSharedInferenceWorker(
+  sharedInferenceWorker: SharedInferenceWorker,
+  sharedSeeds: readonly number[],
+  options: {
+    networkId?: number;
+    rolloutOptions?: FlappyRolloutOptions;
+  } = {},
+): Promise<FlappySeedBatchEvaluation> {
+  const episodeResults = [];
+
+  // Step 1: Reuse one shared-memory predictor across the seeded rollout batch.
+  for (const seedValue of sharedSeeds) {
+    const rolloutResult = await runResetSharedWorkerRolloutEpisode(
+      sharedInferenceWorker,
+      options.networkId,
+      {
+        ...(options.rolloutOptions ?? {}),
+        seed: seedValue,
+      },
+    );
+    episodeResults.push(rolloutResult);
+  }
+
+  // Step 2: Collapse the seeded episode shelf into one ranking aggregate.
+  return composeSeedBatchEvaluation(sharedSeeds.length, episodeResults);
+}
+
+function composeSeedBatchEvaluation(
+  seedCount: number,
+  episodeResults: Array<{
+    fitness: number;
+    pipesPassed: number;
+    framesSurvived: number;
+  }>,
+): FlappySeedBatchEvaluation {
   const rolloutFitnessValues = episodeResults.map(
     (rolloutResult) => rolloutResult.fitness,
   );
@@ -77,7 +218,7 @@ export function evaluateFlappyFitnessAcrossSeeds(
   );
 
   return {
-    seedCount: sharedSeeds.length,
+    seedCount,
     meanFitness: fitnessMean,
     medianFitness: computePercentile(rolloutFitnessValues, 0.5),
     p90Fitness: computePercentile(rolloutFitnessValues, 0.9),
@@ -87,6 +228,40 @@ export function evaluateFlappyFitnessAcrossSeeds(
     meanPipesPassed,
     meanFramesSurvived,
   };
+}
+
+async function runResetChannelRolloutEpisode(
+  inferenceChannel: ReturnType<typeof openInferenceChannel>,
+  networkId: number | undefined,
+  rolloutOptions: FlappyRolloutOptions,
+) {
+  // Step 1: Reset carried predictor state before the new seeded episode begins.
+  await inferenceChannel.reset();
+
+  // Step 2: Run the deterministic rollout from a clean predictor state.
+  return rolloutEpisodeWithPredictor({
+    predict: async (observationVector: number[]) =>
+      inferenceChannel.predict(observationVector),
+    rolloutOptions,
+    networkId,
+  });
+}
+
+async function runResetSharedWorkerRolloutEpisode(
+  sharedInferenceWorker: SharedInferenceWorker,
+  networkId: number | undefined,
+  rolloutOptions: FlappyRolloutOptions,
+) {
+  // Step 1: Reset carried predictor state before the new seeded episode begins.
+  await sharedInferenceWorker.reset();
+
+  // Step 2: Run the deterministic rollout from a clean predictor state.
+  return rolloutEpisodeWithPredictor({
+    predict: async (observationVector: number[]) =>
+      sharedInferenceWorker.infer(observationVector),
+    rolloutOptions,
+    networkId,
+  });
 }
 
 /**

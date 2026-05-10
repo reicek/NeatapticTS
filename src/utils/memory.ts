@@ -91,8 +91,8 @@
  * console.log(pooledSnapshot.slabs.pooledFraction);
  * ```
  */
-import { config } from '../config';
 import { nodePoolStats } from '../architecture/nodePool';
+import { defaultMemoryManager } from '../memory/manager';
 import { getSlabAllocationStats as _getSlabAllocationStats } from '../architecture/network/network.utils';
 import {
   HEURISTIC_BYTES,
@@ -243,15 +243,20 @@ export type SlabAllocStats = { fresh: number; pooled: number } | null;
 export const memoryStats = (
   targetNetworks?: NetworkView | NetworkView[],
 ): MemoryStats => {
+  const memoryConfig = defaultMemoryManager.getConfig();
   const networks = normalizeNetworks(targetNetworks, _trackedNetworks);
   const slabAllocationStats = safeGetSlabAllocationStats(
     _getSlabAllocationStats,
   );
   const networkAccumulators = aggregateNetworkStats(networks, HEURISTIC_BYTES);
   const environmentMetrics = captureEnvironmentMetrics();
-  const flagSnapshot = buildFlagSnapshot(config, slabAllocationStats);
+  const flagSnapshot = buildFlagSnapshot(memoryConfig, slabAllocationStats);
   const nodePoolSnapshot =
-    typeof nodePoolStats === 'function' ? nodePoolStats() : null;
+    typeof nodePoolStats === 'function'
+      ? defaultMemoryManager.getPoolStats<ReturnType<typeof nodePoolStats>>(
+          'nodePool',
+        ) ?? nodePoolStats()
+      : null;
 
   return buildMemoryStatsSnapshot({
     networks,

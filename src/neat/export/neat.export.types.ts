@@ -2,7 +2,9 @@ import type {
   InnovationTracker,
   InnovationTrackerJSON,
 } from '../innovation-tracker/innovation-tracker.types';
+import type { NoveltyArchiveEntry } from '../evaluate/shared/evaluate.types';
 import type {
+  OperatorStatsRecord,
   SpeciesHistoryEntry,
   SpeciesLastStats,
 } from '../shared/neat.shared.types';
@@ -18,6 +20,34 @@ export const CURRENT_STATE_FORMAT_VERSION = 1;
 
 /** Checkpoint mode marker for strict full-resume bundles. */
 export const FULL_CHECKPOINT_MODE = 'full' as const;
+
+/** Checkpoint mode marker for best-effort light-resume bundles. */
+export const LIGHT_CHECKPOINT_MODE = 'light' as const;
+
+/**
+ * Public restore options for full checkpoint imports.
+ *
+ * Strict mode preserves the exact-resume contract by rejecting versioned full
+ * checkpoints when replay-critical runtime state is missing. Best-effort mode
+ * allows an explicit downgrade path for partial bundles that should still
+ * restore as a usable controller without claiming exact future replay.
+ */
+export interface NeatCheckpointRestoreOptions {
+  /** Restore policy for versioned full checkpoints. Defaults to `strict`. */
+  restoreMode?: 'strict' | 'best-effort';
+}
+
+/**
+ * Export options for light checkpoints.
+ *
+ * Light checkpoints intentionally keep only a curated elite subset of the
+ * current population, so callers must choose how many top-scoring genomes to
+ * retain in the bundle.
+ */
+export interface NeatLightCheckpointExportOptions {
+  /** Number of top-scoring genomes to retain in the exported light checkpoint. */
+  eliteCount: number;
+}
 
 /**
  * JSON representation of an individual genome (network). The concrete shape is
@@ -51,6 +81,10 @@ export interface GenomeControllerMetaJSON {
   score?: number;
   /** Stable genome id used by species membership and lineage reads. */
   genomeId?: number;
+  /** Adaptive per-genome mutation rate used by later mutation passes. */
+  mutationRate?: number;
+  /** Adaptive per-genome mutation amount used by later mutation passes. */
+  mutationAmount?: number;
   /** Optional network-local RNG state for deterministic genome-level mutation replay. */
   networkRngState?: number;
   /** Shared-fitness value cached during speciation. */
@@ -133,8 +167,16 @@ export interface NeatRuntimeMetaJSON {
   lastInbreedingCount?: number;
   /** Generation index of the last global improvement checkpoint. */
   lastGlobalImproveGeneration?: number;
+  /** Shared adaptive pruning level reused by later pruning controller passes. */
+  adaptivePruneLevel?: number;
+  /** Baseline metric captured when adaptive pruning began. */
+  adaptivePruneBaseline?: number;
+  /** Novelty archive memory reused by later novelty-search evaluation passes. */
+  noveltyArchive?: NoveltyArchiveEntry[];
   /** Rolling species-history archive used by read-side telemetry. */
   speciesHistory?: SpeciesHistoryEntry[];
+  /** Adaptive operator success and attempt counts used by later mutation selection. */
+  operatorStats?: Array<[string, OperatorStatsRecord]>;
 }
 
 /**
@@ -211,6 +253,24 @@ export interface NeatMetaJSON {
 }
 
 /**
+ * Bootstrap metadata carried by light checkpoints.
+ *
+ * This payload is deliberately smaller than `NeatMetaJSON`: it carries only the
+ * controller fields needed to rebuild a compatible run before importing the
+ * retained elite genomes.
+ */
+export interface NeatLightMetaJSON {
+  /** Number of input nodes expected by restored networks. */
+  input: number;
+  /** Number of output nodes produced by restored networks. */
+  output: number;
+  /** Saved generation marker preserved as restart metadata. */
+  generation: number;
+  /** Saved options bag used to rebuild a compatible destination controller. */
+  options: Record<string, unknown>;
+}
+
+/**
  * Genome with `toJSON()` serialization method.
  *
  * This is the smallest runtime contract needed by the export helpers when they
@@ -229,6 +289,8 @@ export type GenomeControllerCarrier = GenomeWithSerialization & {
   setRNGState?: (state: number) => void;
   score?: number;
   _id?: number;
+  _mutRate?: number;
+  _mutAmount?: number;
   _sharedFitness?: number;
   _crowdingDistance?: number;
   _frontRank?: number;
@@ -290,6 +352,10 @@ export interface NeatControllerForExport {
   _lineageEnabled?: boolean;
   _lastInbreedingCount?: number;
   _lastGlobalImproveGeneration?: number;
+  _adaptivePruneLevel?: number;
+  _adaptivePruneBaseline?: number;
+  _noveltyArchive?: NoveltyArchiveEntry[];
+  _operatorStats?: Map<string, OperatorStatsRecord>;
   _speciesHistory?: SpeciesHistoryEntry[];
   _species?: SpeciesControllerCarrier[];
   _nextSpeciesId?: number;
@@ -351,4 +417,28 @@ export interface NeatStateJSON {
   population: GenomeJSON[];
   /** Species and threshold state needed by the full checkpoint path. */
   speciation?: SpeciationCheckpointJSON;
+  /** Reserved downstream metadata surface that must not redefine core resume semantics. */
+  extensions?: Record<string, unknown>;
+}
+
+/**
+ * Top-level bundle used by the light checkpoint path.
+ *
+ * A light checkpoint keeps a curated elite subset plus enough bootstrap state
+ * to rebuild a compatible controller, but it intentionally omits replay-only
+ * innovation, speciation, and runtime metadata.
+ */
+export interface NeatLightStateJSON {
+  /** Light checkpoint format version. Missing means legacy pre-versioned export. */
+  formatVersion?: number;
+  /** Checkpoint mode marker for the light restart path. */
+  checkpointMode?: typeof LIGHT_CHECKPOINT_MODE;
+  /** Serialized bootstrap metadata for rebuilding the destination controller. */
+  neat: NeatLightMetaJSON;
+  /** Retained elite genomes preserved for approximate restart. */
+  population: GenomeJSON[];
+  /** Intended future population target after the retained elites are imported. */
+  restartPopulationSize: number;
+  /** Reserved downstream metadata surface that must not redefine core restart semantics. */
+  extensions?: Record<string, unknown>;
 }

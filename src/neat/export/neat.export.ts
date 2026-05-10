@@ -14,14 +14,20 @@ import {
   serializeInnovationTracker,
 } from '../innovation-tracker/innovation-tracker';
 import {
+  LEGACY_CHECKPOINT_FORMAT_VERSION,
   CURRENT_META_FORMAT_VERSION,
   CURRENT_STATE_FORMAT_VERSION,
   FULL_CHECKPOINT_MODE,
+  LIGHT_CHECKPOINT_MODE,
 } from './neat.export.types';
 import type {
+  GenomeControllerCarrier,
   GenomeJSON,
   GenomeWithSerialization,
+  NeatCheckpointRestoreOptions,
   NeatControllerForExport,
+  NeatLightCheckpointExportOptions,
+  NeatLightStateJSON,
   NeatMetaJSON,
   NeatStateJSON,
   NeatConstructor,
@@ -56,6 +62,10 @@ import {
 export type {
   GenomeControllerMetaJSON,
   GenomeJSON,
+  NeatCheckpointRestoreOptions,
+  NeatLightCheckpointExportOptions,
+  NeatLightMetaJSON,
+  NeatLightStateJSON,
   NeatMetaJSON,
   NeatRuntimeMetaJSON,
   NeatStateJSON,
@@ -72,15 +82,20 @@ export type {
  * directly, which keeps the serialization flow reusable across the public
  * facade, tests, and static restore entrypoints.
  *
- * Typical usage follows two tracks:
+ * Typical usage follows three tracks:
  * - export or import just the population when you only need genome payloads;
+ * - export or import a light checkpoint when you want to restart from retained
+ *   elites without claiming exact future replay;
  * - export or import the full state when you need innovation history,
  *   generation counters, and population data to resume a run faithfully.
  *
  * A useful way to read this chapter is as a pause-and-resume ladder:
  * - `exportPopulation()` and `importPopulation()` move only candidate genomes
  * - `toJSONImpl()` and `fromJSONImpl()` move only controller meta state
- * - `exportState()` and `importStateImpl()` combine both layers into one full resume bundle
+ * - `exportLightState()` and `importLightStateImpl()` move retained elites plus
+ *   bootstrap controller metadata for best-effort restart
+ * - `exportState()` and `importStateImpl()` combine both layers into one full
+ *   resume bundle
  *
  * Deterministic replay contract (why this boundary exists):
  *
@@ -95,6 +110,9 @@ export type {
  * - **Full checkpoints** are the pause-and-resume surface. When you restore a
  *   full checkpoint into the same codebase, the controller is expected to
  *   continue evolving as if it had never stopped.
+ * - **Light checkpoints** are the restart surface. They keep a curated elite
+ *   subset plus enough bootstrap metadata to repopulate through the ordinary
+ *   evolution path, but they intentionally omit replay-critical runtime state.
  *
  * “Same seed + same checkpoint + same code” is the target replay promise.
  * That promise only holds when controller-owned randomness and architecture
@@ -114,9 +132,16 @@ export type {
  * history. Other times you need a true checkpoint that can continue evolving as
  * if the process had never stopped.
  *
+ * Both full and light checkpoint bundles also reserve a top-level
+ * `extensions` bag for downstream metadata. That pocket exists so consumers
+ * such as NEATchat can attach namespaced descriptors without redefining the
+ * checkpoint semantics that this chapter owns.
+ *
  * Read the chapter in this order:
  * - start with `exportPopulation()` and `importPopulation()` when you only need
  *   candidate genomes,
+ * - then read `exportLightState()` and `importLightStateImpl()` when you need a
+ *   smaller restart artifact built around retained elites,
  * - continue to `toJSONImpl()` and `fromJSONImpl()` when you need controller
  *   metadata without the live population,
  * - finish with `exportState()` and `importStateImpl()` when you need a full
@@ -126,9 +151,11 @@ export type {
  * flowchart TD
  *   Runtime[Live NEAT controller] --> PopOnly[Population-only snapshot]
  *   Runtime --> MetaOnly[Meta-only checkpoint]
+ *   Runtime --> LightState[Light checkpoint]
  *   Runtime --> FullState[Full state bundle]
  *   PopOnly --> ImportPop[Replace population in an existing controller]
  *   MetaOnly --> ImportMeta[Rebuild controller bookkeeping]
+ *   LightState --> Restart[Import retained elites and refill later]
  *   FullState --> Resume[Restore bookkeeping and population together]
  * ```
  *
@@ -169,27 +196,8 @@ export type {
  */
 export function exportPopulation(this: NeatLike): GenomeJSON[] {
   const internal = this as unknown as NeatControllerForExport;
-  const genomeCaptureOptions = resolveGenomeCaptureOptions(internal);
 
-  return internal.population.map((genome, genomeIndex) => {
-    assertCheckpointGenomeIsNative(genome, genomeIndex, 'export');
-
-    const runtimeGenome = genome as unknown as Network;
-    const runtimePayload = serializeNetworkToJson.call(runtimeGenome);
-    const strictGenome = createGenomeFromNetwork(
-      runtimeGenome,
-      genomeCaptureOptions,
-    );
-    const strictNetworkPayload = createNetworkJsonFromGenome(strictGenome, {
-      dropout: runtimePayload.dropout,
-      architecture: runtimePayload.architecture,
-    });
-
-    return serializeGenomeCheckpoint(
-      genome,
-      strictNetworkPayload as unknown as GenomeJSON,
-    );
-  });
+  return exportSelectedPopulation(internal, internal.population);
 }
 
 /**
@@ -300,6 +308,76 @@ function resolveGenomeCaptureOptions(
   };
 }
 
+function exportSelectedPopulation(
+  controller: NeatControllerForExport,
+  selectedPopulation: GenomeControllerCarrier[],
+): GenomeJSON[] {
+  const genomeCaptureOptions = resolveGenomeCaptureOptions(controller);
+
+  return selectedPopulation.map((genome, genomeIndex) => {
+    assertCheckpointGenomeIsNative(genome, genomeIndex, 'export');
+
+    const runtimeGenome = genome as unknown as Network;
+    const runtimePayload = serializeNetworkToJson.call(runtimeGenome);
+    const strictGenome = createGenomeFromNetwork(
+      runtimeGenome,
+      genomeCaptureOptions,
+    );
+    const strictNetworkPayload = createNetworkJsonFromGenome(strictGenome, {
+      dropout: runtimePayload.dropout,
+      architecture: runtimePayload.architecture,
+    });
+
+    return serializeGenomeCheckpoint(
+      genome,
+      strictNetworkPayload as unknown as GenomeJSON,
+    );
+  });
+}
+
+function resolveRetainedEliteCount(
+  requestedEliteCount: number,
+  availableGenomeCount: number,
+): number {
+  if (!Number.isInteger(requestedEliteCount) || requestedEliteCount < 1) {
+    throw new NeatExportPopulationValidationError(
+      'Light checkpoint export requires eliteCount to be a positive integer.',
+    );
+  }
+
+  return Math.min(requestedEliteCount, availableGenomeCount);
+}
+
+function selectRetainedElitePopulation(
+  population: GenomeControllerCarrier[],
+  retainedEliteCount: number,
+): GenomeControllerCarrier[] {
+  return population
+    .map((genome, populationIndex) => ({
+      genome,
+      populationIndex,
+      score:
+        typeof genome.score === 'number'
+          ? genome.score
+          : Number.NEGATIVE_INFINITY,
+    }))
+    .toSorted(
+      (leftEntry, rightEntry) =>
+        rightEntry.score - leftEntry.score ||
+        leftEntry.populationIndex - rightEntry.populationIndex,
+    )
+    .slice(0, retainedEliteCount)
+    .map((entry) => entry.genome);
+}
+
+function resolveRestartPopulationSize(
+  controller: NeatControllerForExport,
+): number {
+  return typeof controller.options.popsize === 'number'
+    ? controller.options.popsize
+    : controller.population.length;
+}
+
 /**
  * Convenience helper that returns a full evolutionary snapshot: both NEAT meta
  * information and the serialized population array. Use this when you want a
@@ -310,10 +388,20 @@ function resolveGenomeCaptureOptions(
  * you care about reproducible continuation rather than only preserving candidate
  * genomes for later inspection.
  *
+ * Callers may attach a top-level `extensions` bag after export for downstream,
+ * non-core metadata. That bag is intentionally outside the strict resume
+ * contract: import validation still decides exact versus best-effort behavior
+ * from the checkpoint-owned fields in `neat`, `population`, and `speciation`.
+ *
  * Example:
  *
  * ```ts
  * const state = neat.exportState();
+ * state.extensions = {
+ *   neatchat: {
+ *     memoryBankId: 'memory-bank-1',
+ *   },
+ * };
  * fs.writeFileSync('state.json', JSON.stringify(state));
  * // ...later / elsewhere...
  * const raw = JSON.parse(fs.readFileSync('state.json', 'utf8')) as NeatStateJSON;
@@ -335,6 +423,61 @@ export function exportState(this: NeatLike): NeatStateJSON {
 }
 
 /**
+ * Export a light checkpoint containing only retained elite genomes plus
+ * bootstrap controller metadata.
+ *
+ * This is the best-effort restart sibling of {@link exportState}. It keeps a
+ * curated high-quality subset of the current population and the original
+ * restart-scale population target, but it intentionally omits replay-critical
+ * innovation, speciation, and runtime metadata.
+ *
+ * Callers may attach a top-level `extensions` bag after export for downstream
+ * metadata that should travel with the bundle. That reserved surface is for
+ * namespaced add-ons, not for overriding the light checkpoint's bootstrap
+ * contract.
+ *
+ * @example
+ * ```ts
+ * const checkpoint = neat.exportLightState({ eliteCount: 4 });
+ * checkpoint.extensions = {
+ *   neatchat: {
+ *     branchId: 'draft-1',
+ *   },
+ * };
+ * ```
+ *
+ * @param exportOptions Export policy describing how many elite genomes to keep.
+ * @returns Light checkpoint bundle for approximate restart.
+ */
+export function exportLightState(
+  this: NeatLike,
+  exportOptions: NeatLightCheckpointExportOptions,
+): NeatLightStateJSON {
+  const internal = this as unknown as NeatControllerForExport;
+  const retainedEliteCount = resolveRetainedEliteCount(
+    exportOptions.eliteCount,
+    internal.population.length,
+  );
+  const retainedElitePopulation = selectRetainedElitePopulation(
+    internal.population,
+    retainedEliteCount,
+  );
+
+  return {
+    formatVersion: CURRENT_STATE_FORMAT_VERSION,
+    checkpointMode: LIGHT_CHECKPOINT_MODE,
+    neat: {
+      input: internal.input,
+      output: internal.output,
+      generation: internal.generation,
+      options: internal.options,
+    },
+    population: exportSelectedPopulation(internal, retainedElitePopulation),
+    restartPopulationSize: resolveRestartPopulationSize(internal),
+  };
+}
+
+/**
  * Static-style helper that rehydrates a full evolutionary state previously
  * produced by {@link exportState}. Invoke this with the NEAT class (not an
  * instance) bound as `this`, e.g. `Neat.importStateImpl(bundle, fitnessFn)`.
@@ -344,6 +487,10 @@ export function exportState(this: NeatLike): NeatStateJSON {
  * This is the most complete restore path in the chapter. If a saved bundle is
  * valid, the caller gets back a fresh controller that knows both where the run
  * was in evolutionary time and which genomes were alive at that moment.
+ *
+ * Any top-level `extensions` bag is treated as downstream metadata only. It is
+ * allowed to travel with the bundle, but it does not weaken the strict checks
+ * around replay-critical speciation and runtime state.
  *
  * Safety and validation:
  * - Throws if the bundle is not an object.
@@ -361,6 +508,7 @@ export function exportState(this: NeatLike): NeatStateJSON {
  *
  * @param stateBundle Full state bundle from {@link exportState}.
  * @param fitnessFunction Fitness evaluation callback used for new instance.
+ * @param restoreOptions Explicit restore-mode override. Defaults to strict exact resume.
  * @returns Rehydrated NEAT instance ready to continue evolving.
  */
 export async function importStateImpl(
@@ -369,6 +517,7 @@ export async function importStateImpl(
   fitnessFunction: (
     network: GenomeWithSerialization,
   ) => number | Promise<number>,
+  restoreOptions?: NeatCheckpointRestoreOptions,
 ): Promise<NeatControllerForExport> {
   if (!stateBundle || typeof stateBundle !== 'object')
     throw new NeatExportStateBundleValidationError('Invalid state bundle');
@@ -397,13 +546,39 @@ export async function importStateImpl(
       'Versioned full checkpoints must declare checkpointMode: "full".',
     );
   }
-  if (
+  const restoreMode = restoreOptions?.restoreMode ?? 'strict';
+  const requireStrictReplayResume =
     checkpointFormatVersion >= CURRENT_STATE_FORMAT_VERSION &&
+    restoreMode === 'strict';
+
+  if (
+    requireStrictReplayResume &&
     (!stateBundle.speciation || typeof stateBundle.speciation !== 'object')
   ) {
     throw new NeatExportStateBundleValidationError(
       'Versioned full checkpoints must include speciation resume state.',
     );
+  }
+  const runtimeMeta =
+    stateBundle.neat.runtime && typeof stateBundle.neat.runtime === 'object'
+      ? stateBundle.neat.runtime
+      : undefined;
+
+  if (requireStrictReplayResume && !runtimeMeta) {
+    throw new NeatExportStateControllerRestoreError(
+      'Versioned full checkpoints must include runtime resume state for exact restore.',
+    );
+  }
+  if (requireStrictReplayResume) {
+    const missingExactResumeRuntimeFields = getMissingExactResumeRuntimeFields(
+      runtimeMeta as NonNullable<typeof runtimeMeta>,
+    );
+
+    if (missingExactResumeRuntimeFields.length > 0) {
+      throw new NeatExportStateControllerRestoreError(
+        `Versioned full checkpoints must include exact-resume runtime fields: ${missingExactResumeRuntimeFields.join(', ')}.`,
+      );
+    }
   }
 
   const neatInstance = (
@@ -433,7 +608,106 @@ export async function importStateImpl(
     );
   }
 
-  restoreRuntimeMeta(neatInstance, stateBundle.neat.runtime);
+  restoreRuntimeMeta(neatInstance, runtimeMeta);
+
+  return neatInstance;
+}
+
+/**
+ * Static-style helper that rehydrates a controller from a light checkpoint.
+ *
+ * Light checkpoints preserve only bootstrap controller metadata plus a retained
+ * elite subset, so this restore path rebuilds a compatible controller, imports
+ * the retained genomes, and then reapplies the original restart-scale
+ * population target without claiming exact replay.
+ *
+ * Any top-level `extensions` bag is preserved as user-owned metadata rather
+ * than part of the restart contract. Import therefore ignores that bag while it
+ * validates the light checkpoint-owned bootstrap fields.
+ *
+ * @param stateBundle Light checkpoint bundle produced by {@link exportLightState}.
+ * @param fitnessFunction Fitness evaluation callback used for the new instance.
+ * @returns Rehydrated NEAT instance ready for approximate restart.
+ */
+export async function importLightStateImpl(
+  this: NeatConstructor,
+  stateBundle: NeatLightStateJSON,
+  fitnessFunction: (
+    network: GenomeWithSerialization,
+  ) => number | Promise<number>,
+): Promise<NeatControllerForExport> {
+  if (!stateBundle || typeof stateBundle !== 'object') {
+    throw new NeatExportStateBundleValidationError(
+      'Invalid light checkpoint bundle',
+    );
+  }
+
+  const checkpointFormatVersion =
+    typeof stateBundle.formatVersion === 'number'
+      ? stateBundle.formatVersion
+      : LEGACY_CHECKPOINT_FORMAT_VERSION;
+
+  if (checkpointFormatVersion > CURRENT_STATE_FORMAT_VERSION) {
+    throw new NeatExportStateBundleValidationError(
+      `Unsupported NEAT light checkpoint format version: ${checkpointFormatVersion}.`,
+    );
+  }
+  if (
+    checkpointFormatVersion >= CURRENT_STATE_FORMAT_VERSION &&
+    stateBundle.checkpointMode !== LIGHT_CHECKPOINT_MODE
+  ) {
+    throw new NeatExportStateBundleValidationError(
+      'Versioned light checkpoints must declare checkpointMode: "light".',
+    );
+  }
+  if (!stateBundle.neat || typeof stateBundle.neat !== 'object') {
+    throw new NeatExportStateBundleValidationError(
+      'Light checkpoint bundles must include serialized NEAT bootstrap state.',
+    );
+  }
+  if (!Array.isArray(stateBundle.population)) {
+    throw new NeatExportStateBundleValidationError(
+      'Light checkpoint bundles must include a retained population array.',
+    );
+  }
+  if (
+    !Number.isInteger(stateBundle.restartPopulationSize) ||
+    stateBundle.restartPopulationSize < 0 ||
+    stateBundle.restartPopulationSize < stateBundle.population.length
+  ) {
+    throw new NeatExportStateBundleValidationError(
+      'Light checkpoint bundles must include a restartPopulationSize that is at least the retained elite count.',
+    );
+  }
+
+  const lightBootstrapMeta = stateBundle.neat;
+  const bootstrapOptions =
+    lightBootstrapMeta.options &&
+    typeof lightBootstrapMeta.options === 'object' &&
+    !Array.isArray(lightBootstrapMeta.options)
+      ? lightBootstrapMeta.options
+      : {};
+  const neatInstance = new this(
+    lightBootstrapMeta.input as number,
+    lightBootstrapMeta.output as number,
+    fitnessFunction,
+    bootstrapOptions,
+  );
+
+  // Step 1: Reapply the saved generation marker before importing elites.
+  neatInstance.generation =
+    typeof lightBootstrapMeta.generation === 'number'
+      ? lightBootstrapMeta.generation
+      : 0;
+
+  // Step 2: Import only the retained elites from the light bundle.
+  await importPopulation.call(
+    neatInstance as unknown as NeatLike,
+    stateBundle.population,
+  );
+
+  // Step 3: Restore the intended future population target after import.
+  neatInstance.options.popsize = stateBundle.restartPopulationSize;
 
   return neatInstance;
 }
@@ -531,4 +805,32 @@ export function fromJSONImpl(
   restoreRuntimeMeta(neatInstance, neatJSON.runtime);
 
   return neatInstance;
+}
+
+function getMissingExactResumeRuntimeFields(runtimeMeta: {
+  nextGenomeId?: number;
+  nextConnectionInnovation?: number;
+  nextNodeGeneId?: number;
+  nextNodeIndex?: number;
+  rngState?: number;
+}): string[] {
+  const missingFieldNames: string[] = [];
+
+  if (typeof runtimeMeta.nextGenomeId !== 'number') {
+    missingFieldNames.push('nextGenomeId');
+  }
+  if (typeof runtimeMeta.nextConnectionInnovation !== 'number') {
+    missingFieldNames.push('nextConnectionInnovation');
+  }
+  if (typeof runtimeMeta.nextNodeGeneId !== 'number') {
+    missingFieldNames.push('nextNodeGeneId');
+  }
+  if (typeof runtimeMeta.nextNodeIndex !== 'number') {
+    missingFieldNames.push('nextNodeIndex');
+  }
+  if (typeof runtimeMeta.rngState !== 'number') {
+    missingFieldNames.push('rngState');
+  }
+
+  return missingFieldNames;
 }

@@ -50,6 +50,13 @@ import {
   splitGruLayerNodes,
   splitLstmLayerNodes,
 } from '../network.temporal.extensions.utils';
+import { ensureGrowthBudget } from '../network.utils';
+
+/** Net new connections created when replacing one edge with a minimal LSTM block. */
+const LSTM_RECURRENT_BLOCK_ADDITIONAL_CONNECTION_COUNT = 5;
+
+/** Net new connections created when replacing one edge with a minimal GRU block. */
+const GRU_RECURRENT_BLOCK_ADDITIONAL_CONNECTION_COUNT = 8;
 
 /**
  * Concrete mutation handler implementations used by the network mutate orchestrator.
@@ -245,6 +252,12 @@ function tryDisconnectConnection(
 export function addNode(this: Network): void {
   const mutationProps = asMutationProps(this);
   markTopoDirtyIfAcyclic(mutationProps);
+
+  const requiredAdditionalConnections =
+    this.connections.length === 0 ? 2 : 1;
+  if (!ensureGrowthBudget(this, requiredAdditionalConnections)) {
+    return;
+  }
 
   if (config.deterministicChainMode) {
     addNodeDeterministicChain(this, mutationProps);
@@ -679,6 +692,10 @@ export function addConn(this: Network): void {
     mutationProps._rand,
   );
   if (!selectedConnectionPair) {
+    return;
+  }
+
+  if (!ensureGrowthBudget(this, 1)) {
     return;
   }
 
@@ -1324,6 +1341,10 @@ export function addSelfConn(this: Network): void {
     return;
   }
 
+  if (!ensureGrowthBudget(this, 1)) {
+    return;
+  }
+
   connectPair(this, [targetNode, targetNode]);
 }
 
@@ -1469,6 +1490,10 @@ export function addBackConn(this: Network): void {
   );
 
   if (!selectedConnectionPair) {
+    return;
+  }
+
+  if (!ensureGrowthBudget(this, 1)) {
     return;
   }
 
@@ -1881,7 +1906,32 @@ function addRecurrentNode(
     return;
   }
 
+  if (
+    !ensureGrowthBudget(
+      network,
+      resolveRecurrentGrowthBudgetRequirement(blockType),
+    )
+  ) {
+    return;
+  }
+
   expandConnectionWithRecurrentBlock(network, selectedConnection, blockType);
+}
+
+/**
+ * Resolve the net connection growth required by a minimal recurrent block.
+ *
+ * @param blockType - Recurrent block type being inserted.
+ * @returns Net additional connections created by the mutation.
+ */
+function resolveRecurrentGrowthBudgetRequirement(
+  blockType: typeof RECURRENT_BLOCK_LSTM | typeof RECURRENT_BLOCK_GRU,
+): number {
+  if (blockType === RECURRENT_BLOCK_LSTM) {
+    return LSTM_RECURRENT_BLOCK_ADDITIONAL_CONNECTION_COUNT;
+  }
+
+  return GRU_RECURRENT_BLOCK_ADDITIONAL_CONNECTION_COUNT;
 }
 
 /**

@@ -33,7 +33,10 @@ import {
   evaluateSpecificGenomesAcrossSeeds,
 } from './trainer.evaluation.service.services';
 import { assignFramePrimaryScores } from './trainer.evaluation.service.utils';
-import type { PopulationStageEvaluationRequest } from './trainer.evaluation.service.types';
+import type {
+  PopulationStageEvaluationDependencies,
+  PopulationStageEvaluationRequest,
+} from './trainer.evaluation.service.types';
 
 /**
  * Executes the quick evaluation stage over the full population.
@@ -58,17 +61,19 @@ import type { PopulationStageEvaluationRequest } from './trainer.evaluation.serv
  * );
  * ```
  */
-export function evaluatePopulationQuickStage(
+export async function evaluatePopulationQuickStage(
   population: readonly FlappyTrainerNetwork[],
   generationEvaluationPlan: FlappyGenerationEvaluationPlan,
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
-): void {
-  evaluateSpecificGenomesAcrossSeeds(
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies = {},
+): Promise<void> {
+  await evaluateSpecificGenomesAcrossSeeds(
     population,
     generationEvaluationPlan.quickSeeds,
     generationEvaluationPlan.quickRolloutOptions,
     aggregateByGenome,
+    populationStageEvaluationDependencies,
   );
 
   assignFramePrimaryScores(
@@ -92,13 +97,14 @@ export function evaluatePopulationQuickStage(
  * @param elitismCount - Configured elitism count.
  * @returns Nothing.
  */
-export function evaluatePopulationFullStage(
+export async function evaluatePopulationFullStage(
   population: readonly FlappyTrainerNetwork[],
   generationEvaluationPlan: FlappyGenerationEvaluationPlan,
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
   elitismCount: number,
-): void {
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies = {},
+): Promise<void> {
   // Step 1: Resolve the candidate-stage request for the full evaluation pass.
   const populationStageEvaluationRequest = {
     candidateCount: resolveFullPassCandidateCount(
@@ -110,11 +116,12 @@ export function evaluatePopulationFullStage(
   } satisfies PopulationStageEvaluationRequest;
 
   // Step 2: Evaluate the selected candidates and refresh provisional scores.
-  evaluatePopulationSelectedCandidateStage(
+  await evaluatePopulationSelectedCandidateStage(
     population,
     populationStageEvaluationRequest,
     aggregateByGenome,
     provisionalScoresByGenome,
+    populationStageEvaluationDependencies,
   );
 }
 
@@ -133,13 +140,14 @@ export function evaluatePopulationFullStage(
  * @param elitismCount - Configured elitism count.
  * @returns Nothing.
  */
-export function evaluatePopulationReevaluationStage(
+export async function evaluatePopulationReevaluationStage(
   population: readonly FlappyTrainerNetwork[],
   generationEvaluationPlan: FlappyGenerationEvaluationPlan,
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
   elitismCount: number,
-): void {
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies = {},
+): Promise<void> {
   // Step 1: Resolve the candidate-stage request for reevaluation.
   const populationStageEvaluationRequest = {
     candidateCount: Math.max(
@@ -151,11 +159,12 @@ export function evaluatePopulationReevaluationStage(
   } satisfies PopulationStageEvaluationRequest;
 
   // Step 2: Evaluate the selected candidates and refresh provisional scores.
-  evaluatePopulationSelectedCandidateStage(
+  await evaluatePopulationSelectedCandidateStage(
     population,
     populationStageEvaluationRequest,
     aggregateByGenome,
     provisionalScoresByGenome,
+    populationStageEvaluationDependencies,
   );
 }
 

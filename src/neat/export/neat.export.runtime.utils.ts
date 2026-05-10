@@ -50,8 +50,32 @@ export function serializeRuntimeMeta(
   if (typeof internal._lastGlobalImproveGeneration === 'number') {
     runtime.lastGlobalImproveGeneration = internal._lastGlobalImproveGeneration;
   }
+  if (typeof internal._adaptivePruneLevel === 'number') {
+    runtime.adaptivePruneLevel = internal._adaptivePruneLevel;
+  }
+  if (typeof internal._adaptivePruneBaseline === 'number') {
+    runtime.adaptivePruneBaseline = internal._adaptivePruneBaseline;
+  }
+  if (
+    Array.isArray(internal._noveltyArchive) &&
+    internal._noveltyArchive.length > 0
+  ) {
+    runtime.noveltyArchive = structuredClone(internal._noveltyArchive);
+  }
   if (Array.isArray(internal._speciesHistory)) {
     runtime.speciesHistory = structuredClone(internal._speciesHistory);
+  }
+  if (
+    internal._operatorStats instanceof Map &&
+    internal._operatorStats.size > 0
+  ) {
+    runtime.operatorStats = Array.from(
+      internal._operatorStats.entries(),
+      ([methodName, operatorStats]) => [
+        methodName,
+        structuredClone(operatorStats),
+      ],
+    );
   }
 
   return runtime;
@@ -93,8 +117,25 @@ export function restoreRuntimeMeta(
     neatInstance._lastGlobalImproveGeneration =
       runtimeMeta.lastGlobalImproveGeneration;
   }
+  if (typeof runtimeMeta.adaptivePruneLevel === 'number') {
+    neatInstance._adaptivePruneLevel = runtimeMeta.adaptivePruneLevel;
+  }
+  if (typeof runtimeMeta.adaptivePruneBaseline === 'number') {
+    neatInstance._adaptivePruneBaseline = runtimeMeta.adaptivePruneBaseline;
+  }
+  if (Array.isArray(runtimeMeta.noveltyArchive)) {
+    neatInstance._noveltyArchive = structuredClone(runtimeMeta.noveltyArchive);
+  }
   if (Array.isArray(runtimeMeta.speciesHistory)) {
     neatInstance._speciesHistory = structuredClone(runtimeMeta.speciesHistory);
+  }
+  if (Array.isArray(runtimeMeta.operatorStats)) {
+    neatInstance._operatorStats = new Map(
+      runtimeMeta.operatorStats.map(([methodName, operatorStats]) => [
+        methodName,
+        structuredClone(operatorStats),
+      ]),
+    );
   }
 }
 

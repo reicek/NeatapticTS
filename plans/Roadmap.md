@@ -122,16 +122,18 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 
 10. Worker-friendly serialization fastpath (clone/transfer payloads; predictor creation)
 
-- Plan: [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
-- Current internal state: planning complete — four transport strategies defined (`PortableInferencePayload`, `TransferableInferencePayload`, `InferenceChannel`, `SharedInferenceWorker`). No implementation has started. Phase 0 (Shared Inference IR) is the first implementation step when this plan becomes active.
+- Plan: [completed/Worker_Friendly_Network_Serialization_Fastpath.md](completed/Worker_Friendly_Network_Serialization_Fastpath.md) [DONE]
+- Current internal state: Phase 0 through Phase 3 are complete and user-confirmed. `PortableInferencePayload`, `TransferableInferencePayload`, `InferenceChannel`, and `SharedInferenceWorker` are implemented, the worker transport substrate and turnkey extraction brief are complete, and the Step 4.8 user-host acceptance gate is closed. The accepted Flappy runtime policy is worker-local recurrent browser evaluation on the isolated host, while the shared-memory pool remains the reusable transport proof surface rather than the active recurrent browser default.
 
 11. Turnkey multithread evaluation API (Node + browser workers)
 
-- Plan: [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md) [PLANNED]
+- Plan: [completed/Turnkey_Multithread_Evaluation_API.md](completed/Turnkey_Multithread_Evaluation_API.md) [DONE]
+- Current internal state: the turnkey extraction lane is complete through all six steps. The library now exposes reusable capability detection, automatic transport selection, a shared browser worker asset resolver, `ParallelInferencePool`, `evaluateInWorkers(...)`, and `createNeatParallelPopulationEvaluator(...)`, and Flappy exercises the full shared helper ladder while the docs explain the split between library-owned worker helpers and example-owned browser-worker policy.
 
 12. Population save/resume + checkpointing (full vs light checkpoints, determinism contracts)
 
-- Plan: [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md) [PLANNED]
+- Plan: [completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md) [DONE]
+- Current internal state: the checkpointing lane is closed. The repo now ships a documented persistence ladder across population-only snapshots, light checkpoints, and strict full checkpoints, including the reserved downstream `extensions` bag across the `Neat` and `src/neat/export/` teaching surfaces.
 
 13. Evolution–training interoperability contracts (parameter vectors, isolation, hybrid policies)
 
@@ -140,9 +142,14 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 **Why this ordering:**
 
 - Standalone export and worker payloads share an “inference IR” concept; building that once reduces duplication.
-- Multithread evaluation becomes straightforward after payloads exist.
+- Worker transport should prove the substrate and the Flappy proof-of-concept first; the turnkey API should then extract the example-owned ergonomics into reusable public helpers.
 - Checkpointing and hybrid evaluation benefit from deterministic scheduling and a clear parameter/vector mapping.
 - Evolution-training parameter vectors are a later unification seam, not a blocker for standalone export or worker payloads unless that contract is deliberately split into an earlier mini-phase.
+
+Next critical-path frontier:
+
+- [completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md) now records the closed Phase 4 checkpointing baseline and the reopen point for future persistence work.
+- There are no stale earlier-phase `[WIP]` plans left in the active root. The active `[WIP]` plans are [Memory_Optimization.md](Memory_Optimization.md) and [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md). Checkpointing is archived as [DONE], while hybrid evaluation remains the next planned Phase 4 interoperability lane.
 
 ## Phase 5 — Scale & Performance (Memory Optimization Track)
 
@@ -152,7 +159,7 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 - Memory & performance multi-layer strategy (Track 1: Phases 0–10; Track 2 gates Hyper work)
   - Plan: [Memory_Optimization.md](Memory_Optimization.md) [WIP]
-  - Current internal state: Phases 0-3 are done, Phase 4 is next, and Track 2 Hyper work remains gated behind Track 1 stability.
+  - Current internal state: Phases 0-4 are done. Phase 4 closed with the manager-backed memory config foundation, runtime reroutes, extracted browser benchmark harness, headless-verified browser async slab contract, and final allocator centralization that moved slab typed-array pooling under `MemoryManager`; `npm run build`, `npm run docs`, and `npm run test:silent` are green, Node remains the sync throughput baseline, browser retains the cooperative anti-stutter path, and Track 2 Hyper work stays gated behind Track 1 stability while Phase 5 becomes the next memory-optimization implementation step.
 
 **Recommended sequencing guidance:**
 
@@ -196,13 +203,16 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phases 0, 1, 2, and 3 are complete**. The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, and preconfigured architectures (MLP, RandomSparse, NARX, GRU, LSTM) are all closed. Phase 3 is now also fully closed: the browser-build plan remains [PLANNED] (no implementation started), while the interactive examples + learning path, the toy-scale NEATchat baseline, and visualization export schema (including schema/DOT export, shared canvas renderer, and Lane C documentation examples) are all [DONE]. The standalone-export planning baseline is [DONE], recording the frozen Phase 4 implementation reopen point. A new planned NEATchat follow-up lane now exists as a later applied surface, but it remains gated on checkpointing, worker infrastructure, parameter-vector contracts, and recurrent ONNX hardening rather than reopening the closed Phase 3 scope directly. **Phase 4 is now the current roadmap stage.**
+Current status: **Phases 0, 1, 2, 3, and Memory Optimization Phase 4 are complete**. The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, and preconfigured architectures (MLP, RandomSparse, NARX, GRU, LSTM) are all closed. Phase 3 is now also fully closed: the browser-build plan remains [PLANNED] (no implementation started), while the interactive examples + learning path, the toy-scale NEATchat baseline, and visualization export schema (including schema/DOT export, shared canvas renderer, and Lane C documentation examples) are all [DONE]. The standalone-export planning baseline is [DONE], recording the frozen Phase 4 implementation reopen point. The turnkey multithread evaluation API, the worker transport fastpath lane, and the checkpointing lane are now all archived as [DONE]; their reusable helper, transport, and persistence baselines remain available, while the accepted Flappy browser runtime policy keeps recurrent evaluation on the worker-local path unless a future reopen proves the shared-memory recurrent path is worth re-enabling. The active root `[WIP]` plans are [Memory_Optimization.md](Memory_Optimization.md) and [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md). Checkpointing is closed after the strict full-checkpoint restore boundary, the light-checkpoint contract, the reserved downstream `extensions` bag, and the current `Neat` plus `src/neat/export/` persistence docs all landed. The next planned pre-NGE foundation after those two active lanes is [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md), and the applied [NEATchat.plans.md](NEATchat.plans.md) follow-up remains gated on checkpointing, worker infrastructure, parameter-vector contracts, and recurrent ONNX hardening rather than reopening the closed Phase 3 scope directly. **Phase 5 is now the current active memory-optimization stage, ONNX remains the other active pre-NGE lane, and a completeness-first stop before Phase 7 means closing Memory, ONNX, hybrid interoperability, and then gated NEATchat before opening NGE.**
 
-- **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
+- **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Memory Optimization Track 1 gate → NGE
 - **Parallel lane A (performance):** [Memory_Optimization.md](Memory_Optimization.md) Track 1 after Phase 1 stabilizes
 - **Parallel lane B (interop):** [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) after Phase 2 (or earlier if scoped tightly)
+- **Parallel lane C (hybrid interoperability):** [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) after the current WIP pre-NGE lanes are stable enough to expose a deterministic parameter-vector seam
 - **Parallel lane D (applied conversational systems):** [NEATchat.plans.md](NEATchat.plans.md) after checkpointing, worker payload and evaluation infrastructure, parameter-vector contracts, and recurrent ONNX hardening reach a usable baseline
-- **Parallel lane C (quality):** [test-repair-and-coverage.plans.md](completed/test-repair-and-coverage.plans.md) [DONE] — 100% statement/branch/function/line coverage across all of `src/`. 331 suites / 3022 tests green.
+- **Parallel lane E (quality):** [test-repair-and-coverage.plans.md](completed/test-repair-and-coverage.plans.md) [DONE] — 100% statement/branch/function/line coverage across all of `src/`. 331 suites / 3022 tests green.
+- **Pre-NGE stop line:** close the two active `[WIP]` lanes first, then the remaining planned pre-NGE lanes in roadmap order, and stop before any Phase 7 / NGE implementation begins
+- **Serial pre-NGE handoff:** if the repo is being executed as one lane at a time instead of in parallel, finish [Memory_Optimization.md](Memory_Optimization.md) through Phase 10, stop before Memory Phase 11, then close [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md), then [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md), then the still-gated [NEATchat.plans.md](NEATchat.plans.md), and only then open Phase 7 / NGE work
 - **Final capstone:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
 
 ## Plan Inventory in Roadmap Order
@@ -253,9 +263,9 @@ Completed entries below resolve into `plans/completed/`.
 ### Phase 4 inventory
 
 24. [Standalone_Inference_Export.md](completed/Standalone_Inference_Export.md) [DONE]
-25. [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md) [PLANNED]
-26. [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md) [PLANNED]
-27. [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md) [PLANNED]
+25. [completed/Worker_Friendly_Network_Serialization_Fastpath.md](completed/Worker_Friendly_Network_Serialization_Fastpath.md) [DONE]
+26. [completed/Turnkey_Multithread_Evaluation_API.md](completed/Turnkey_Multithread_Evaluation_API.md) [DONE]
+27. [completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md) [DONE]
 28. [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
 
 ### Phase 5 inventory

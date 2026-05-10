@@ -74,6 +74,8 @@ import {
   type ActivationFunction,
 } from './activation.utils';
 
+const ACTIVATION_KEY_SYMBOL = Symbol.for('neataptic.activation.key');
+
 /**
  * Runtime registry of built-in and custom activation functions.
  *
@@ -377,6 +379,8 @@ export const Activation: Record<string, ActivationFunction> = {
   mish: mishActivation,
 };
 
+annotateActivationRegistry(Activation);
+
 /**
  * Register a custom activation function at runtime.
  *
@@ -406,7 +410,38 @@ export const registerCustomActivation = (
   activationName: string,
   activationFunction: ActivationFunction,
 ): void => {
+  annotateActivationFunction(activationFunction, activationName);
   Activation[activationName] = activationFunction;
 };
+
+function annotateActivationRegistry(
+  activationRegistry: Record<string, ActivationFunction>,
+): void {
+  for (const [activationKey, activationFunction] of Object.entries(
+    activationRegistry,
+  )) {
+    annotateActivationFunction(activationFunction, activationKey);
+  }
+}
+
+function annotateActivationFunction(
+  activationFunction: ActivationFunction,
+  activationKey: string,
+): void {
+  const keyedActivationFunction = activationFunction as ActivationFunction & {
+    [ACTIVATION_KEY_SYMBOL]?: unknown;
+  };
+
+  if (typeof keyedActivationFunction[ACTIVATION_KEY_SYMBOL] === 'string') {
+    return;
+  }
+
+  Object.defineProperty(keyedActivationFunction, ACTIVATION_KEY_SYMBOL, {
+    configurable: true,
+    enumerable: false,
+    value: activationKey,
+    writable: false,
+  });
+}
 
 export default Activation;

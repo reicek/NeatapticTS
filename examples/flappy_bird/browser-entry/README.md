@@ -182,8 +182,9 @@ whether instrumentation rows should appear and how rows should be colored.
 Worker payload describing evolved generation summary values.
 
 This is the browser-facing summary of one completed NEAT generation: what
-generation finished, how fit the best genome was, and optionally the best
-network for visualization or playback.
+generation finished, how fit the best genome was, which transferable
+inference payloads are ready for playback transport, and which JSON bridge
+values remain available for the network visualization cache.
 
 ### EvolutionGenerationReadyMessage
 
@@ -528,8 +529,9 @@ provides a useful conceptual frame for this boundary.
 Worker payload describing evolved generation summary values.
 
 This is the browser-facing summary of one completed NEAT generation: what
-generation finished, how fit the best genome was, and optionally the best
-network for visualization or playback.
+generation finished, how fit the best genome was, which transferable
+inference payloads are ready for playback transport, and which JSON bridge
+values remain available for the network visualization cache.
 
 ### EvolutionGenerationReadyMessage
 
@@ -1084,6 +1086,7 @@ Returns: Aggregate playback summary for the current episode.
 ```ts
 resolvePipeSpawnXPx(
   visibleWorldWidthPx: number,
+  overflowPx: number,
 ): number
 ```
 
@@ -1091,6 +1094,7 @@ Resolves the world-space x spawn position for new pipes.
 
 Parameters:
 - `visibleWorldWidthPx` - Current visible world width.
+- `overflowPx` - Additional offset relative to the visible right edge.
 
 Returns: Spawn x-position.
 

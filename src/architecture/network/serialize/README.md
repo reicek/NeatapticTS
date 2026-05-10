@@ -1748,8 +1748,8 @@ resolveActivationKey(
 
 Resolves a canonical activation key from a runtime activation function reference.
 
-Resolution order is: direct registry reference match, then the function name,
-then a stable identity fallback key.
+Resolution order is: attached stable key, direct registry reference match,
+then the function name, then a stable identity fallback key.
 
 Parameters:
 - `squashFunction` - Activation function instance.
@@ -1763,6 +1763,21 @@ import * as methods from '../../../methods/methods';
 
 const key = resolveActivationKey(methods.Activation.tanh);
 ```
+
+### resolveAttachedActivationKey
+
+```ts
+resolveAttachedActivationKey(
+  squashFunction: ActivationFunction,
+): string | undefined
+```
+
+Resolves a stable activation key attached directly to the function object.
+
+Parameters:
+- `squashFunction` - Activation function instance.
+
+Returns: Attached activation key or undefined.
 
 ### resolveNamedActivationFromFunction
 

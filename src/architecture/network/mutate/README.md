@@ -1805,6 +1805,21 @@ Parameters:
 
 Returns: Method object view.
 
+### resolveRecurrentGrowthBudgetRequirement
+
+```ts
+resolveRecurrentGrowthBudgetRequirement(
+  blockType: "lstm" | "gru",
+): number
+```
+
+Resolve the net connection growth required by a minimal recurrent block.
+
+Parameters:
+- `blockType` - Recurrent block type being inserted.
+
+Returns: Net additional connections created by the mutation.
+
 ### resolveSelectedBackwardConnectionPair
 
 ```ts

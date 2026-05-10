@@ -16,6 +16,8 @@ type MutableGenome = GenomeControllerCarrier & {
   _depth?: number;
   _frontRank?: number;
   _id?: number;
+  _mutAmount?: number;
+  _mutRate?: number;
   _moCrowd?: number;
   _moRank?: number;
   _novelty?: number;
@@ -82,6 +84,8 @@ describe('neat export population utility chapter', () => {
           _depth: 9,
           _frontRank: 3,
           _id: 91,
+          _mutAmount: 4,
+          _mutRate: 0.375,
           _moCrowd: 6.5,
           _moRank: 5,
           _novelty: 12.5,
@@ -115,6 +119,8 @@ describe('neat export population utility chapter', () => {
             depth: 9,
             frontRank: 3,
             genomeId: 91,
+            mutationAmount: 4,
+            mutationRate: 0.375,
             multiObjectiveCrowding: 6.5,
             multiObjectiveRank: 5,
             networkRngState: 101,
@@ -191,6 +197,8 @@ describe('neat export population utility chapter', () => {
             depth: 8,
             frontRank: 3,
             genomeId: 41,
+            mutationAmount: 6,
+            mutationRate: 0.625,
             multiObjectiveCrowding: 7.5,
             multiObjectiveRank: 6,
             networkRngState: 5,
@@ -214,6 +222,8 @@ describe('neat export population utility chapter', () => {
           depth: hydrationHarness.genome._depth,
           frontRank: hydrationHarness.genome._frontRank,
           genomeId: hydrationHarness.genome._id,
+          mutationAmount: hydrationHarness.genome._mutAmount,
+          mutationRate: hydrationHarness.genome._mutRate,
           multiObjectiveCrowding: hydrationHarness.genome._moCrowd,
           multiObjectiveRank: hydrationHarness.genome._moRank,
           nextAssignedGenomeId,
@@ -233,6 +243,8 @@ describe('neat export population utility chapter', () => {
           depth: 8,
           frontRank: 3,
           genomeId: 41,
+          mutationAmount: 6,
+          mutationRate: 0.625,
           multiObjectiveCrowding: 7.5,
           multiObjectiveRank: 6,
           nextAssignedGenomeId: 42,

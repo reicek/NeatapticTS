@@ -1,36 +1,16 @@
 # architecture/network/prune
 
-Structured and dynamic pruning utilities for networks.
+Error raised when a sparsity-budget max-connection cap is invalid.
 
-Features:
- - Scheduled pruning during gradient-based training ({@link maybePrune}) with linear sparsity ramp.
- - Evolutionary generation pruning toward a target sparsity ({@link pruneToSparsity}).
- - Two ranking heuristics:
-     magnitude: |w|
-     snip: |w * g| approximation (g approximated via accumulated delta stats; falls back to |w|)
- - Optional stochastic regrowth during scheduled pruning (dynamic sparse training), preserving acyclic constraints.
+## architecture/network/prune/network.prune.budget.errors.ts
 
-Internal state fields (attached to Network through a loose internal bridge):
- - _pruningConfig: user-specified schedule & options (start, end, frequency, targetSparsity, method, regrowFraction, lastPruneIter)
- - _initialConnectionCount: baseline connection count captured outside (first training iteration)
- - _evoInitialConnCount: baseline for evolutionary pruning (first invocation of pruneToSparsity)
- - _rand: deterministic RNG function
- - _enforceAcyclic: boolean flag enforcing forward-only connectivity ordering
- - _topoDirty: topology order invalidation flag consumed by activation fast path / topological sorting
+### NetworkPruneBudgetGrowthGraceFractionError
 
-Opportunistically perform scheduled pruning during gradient-based training.
+Error raised when sparsity-budget grace configuration is invalid.
 
-Scheduling model:
- - start / end define an iteration window (inclusive) during which pruning may occur
- - frequency defines cadence (every N iterations inside the window)
- - targetSparsity is linearly annealed from 0 to its final value across the window
- - method chooses ranking heuristic (magnitude | snip)
- - optional regrowFraction allows dynamic sparse training: after removing edges we probabilistically regrow
-   a fraction of them at random unused positions (respecting acyclic constraint if enforced)
+### NetworkPruneBudgetMaxConnectionsError
 
-SNIP heuristic:
- - Uses |w * grad| style saliency approximation (here reusing stored delta stats as gradient proxy)
- - Falls back to pure magnitude if gradient stats absent.
+Error raised when a sparsity-budget max-connection cap is invalid.
 
 ## architecture/network/prune/network.prune.utils.types.ts
 
@@ -72,6 +52,59 @@ Retry multiplier to convert intended regrowth count into max attempts.
 
 ## architecture/network/prune/network.prune.utils.ts
 
+Structured and dynamic pruning utilities for networks.
+
+Features:
+ - Scheduled pruning during gradient-based training ({@link maybePrune}) with linear sparsity ramp.
+ - Evolutionary generation pruning toward a target sparsity ({@link pruneToSparsity}).
+ - Two ranking heuristics:
+     magnitude: |w|
+     snip: |w * g| approximation (g approximated via accumulated delta stats; falls back to |w|)
+ - Optional stochastic regrowth during scheduled pruning (dynamic sparse training), preserving acyclic constraints.
+
+Internal state fields (attached to Network through a loose internal bridge):
+ - _pruningConfig: user-specified schedule & options (start, end, frequency, targetSparsity, method, regrowFraction, lastPruneIter)
+ - _initialConnectionCount: baseline connection count captured outside (first training iteration)
+ - _evoInitialConnCount: baseline for evolutionary pruning (first invocation of pruneToSparsity)
+ - _rand: deterministic RNG function
+ - _enforceAcyclic: boolean flag enforcing forward-only connectivity ordering
+ - _topoDirty: topology order invalidation flag consumed by activation fast path / topological sorting
+
+Opportunistically perform scheduled pruning during gradient-based training.
+
+Scheduling model:
+ - start / end define an iteration window (inclusive) during which pruning may occur
+ - frequency defines cadence (every N iterations inside the window)
+ - targetSparsity is linearly annealed from 0 to its final value across the window
+ - method chooses ranking heuristic (magnitude | snip)
+ - optional regrowFraction allows dynamic sparse training: after removing edges we probabilistically regrow
+   a fraction of them at random unused positions (respecting acyclic constraint if enforced)
+
+SNIP heuristic:
+ - Uses |w * grad| style saliency approximation (here reusing stored delta stats as gradient proxy)
+ - Falls back to pure magnitude if gradient stats absent.
+
+### configureSparsityBudget
+
+```ts
+configureSparsityBudget(
+  configuration: SparsityBudgetConfiguration,
+): void
+```
+
+Configure a total-connection growth sparsity budget on one network.
+
+The budget is expressed as an absolute cap across forward and self
+connections plus an optional grace fraction. Growth helpers can then prune
+before mutation or deny the request when the graph cannot stay within the
+allowed envelope.
+
+Parameters:
+- `this` - Target network instance.
+- `configuration` - Budget settings for future structural growth.
+
+Returns: Nothing.
+
 ### getCurrentSparsity
 
 ```ts
@@ -81,6 +114,21 @@ getCurrentSparsity(): number
 Current sparsity fraction relative to the training-time pruning baseline.
 
 Returns: Current sparsity in the [0,1] range when baseline is available.
+
+### getSparsityBudgetSnapshot
+
+```ts
+getSparsityBudgetSnapshot(
+  currentNetwork: default,
+): NetworkSparsityBudgetSnapshot | undefined
+```
+
+Read the last recorded sparsity-budget decision snapshot.
+
+Parameters:
+- `currentNetwork` - Network to inspect.
+
+Returns: Snapshot clone when one exists; otherwise undefined.
 
 ### maybePrune
 
@@ -116,6 +164,349 @@ Parameters:
 - `method` - Connection ranking heuristic.
 
 Returns: Nothing.
+
+## architecture/network/prune/network.prune.budget.utils.ts
+
+### asSparsityBudgetProps
+
+```ts
+asSparsityBudgetProps(
+  currentNetwork: default,
+): NetworkSparsityBudgetProps
+```
+
+Interpret one network as a sparsity-budget host.
+
+Parameters:
+- `currentNetwork` - Network being inspected.
+
+Returns: Runtime budget props bridge.
+
+### asSparsityBudgetRuntimeProps
+
+```ts
+asSparsityBudgetRuntimeProps(
+  currentNetwork: default,
+): NetworkSparsityBudgetRuntimeProps
+```
+
+Interpret one network as a sparsity-budget host with internal retry state.
+
+Parameters:
+- `currentNetwork` - Network being inspected.
+
+Returns: Runtime budget props bridge including deny-backoff state.
+
+### clearDeniedGrowthBackoffState
+
+```ts
+clearDeniedGrowthBackoffState(
+  currentNetwork: default,
+): void
+```
+
+Reset any deny-backoff state after growth becomes viable again.
+
+Parameters:
+- `currentNetwork` - Network whose retry state should be cleared.
+
+Returns: Nothing.
+
+### collectBudgetedConnections
+
+```ts
+collectBudgetedConnections(
+  currentNetwork: default,
+): default[]
+```
+
+Collect all live connection objects that may be pruned to free budget.
+
+Parameters:
+- `currentNetwork` - Network being inspected.
+
+Returns: Forward and self connections.
+
+### configureSparsityBudget
+
+```ts
+configureSparsityBudget(
+  configuration: SparsityBudgetConfiguration,
+): void
+```
+
+Configure a total-connection growth sparsity budget on one network.
+
+The budget is expressed as an absolute cap across forward and self
+connections plus an optional grace fraction. Growth helpers can then prune
+before mutation or deny the request when the graph cannot stay within the
+allowed envelope.
+
+Parameters:
+- `this` - Target network instance.
+- `configuration` - Budget settings for future structural growth.
+
+Returns: Nothing.
+
+### convertMegabytesToBytes
+
+```ts
+convertMegabytesToBytes(
+  megabytes: number,
+): number
+```
+
+Convert megabytes to bytes for runtime-heap comparisons.
+
+Parameters:
+- `megabytes` - Soft target expressed in megabytes.
+
+Returns: Equivalent byte count.
+
+### countBudgetedConnections
+
+```ts
+countBudgetedConnections(
+  currentNetwork: default,
+): number
+```
+
+Count all connection objects that contribute to structural sparsity.
+
+Parameters:
+- `currentNetwork` - Network being inspected.
+
+Returns: Total number of forward and self connections.
+
+### createDeniedGrowthBackoffFingerprint
+
+```ts
+createDeniedGrowthBackoffFingerprint(
+  input: { allowedConnectionLimit: number; budgetConfig: { maxConnections: number; growthGraceFraction: number; method: PruningMethod; }; connectionCountBeforeDecision: number; requiredAdditionalConnections: number; triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined; },
+): DeniedGrowthBackoffFingerprint
+```
+
+Build the fingerprint used to decide whether one deny state still matches.
+
+Parameters:
+- `input` - Current decision inputs that define one growth dead-end.
+
+Returns: Stable fingerprint for deny-backoff reuse.
+
+### ensureGrowthBudget
+
+```ts
+ensureGrowthBudget(
+  currentNetwork: default,
+  requiredAdditionalConnections: number,
+): boolean
+```
+
+Ensure enough total-connection budget remains before a growth mutation writes.
+
+Behavior:
+- allow immediately when the projected total connection count fits the budget,
+- prune lowest-priority connections first when the budget can be satisfied by
+  freeing space,
+- temporarily stop net-new growth when the active Node/browser heap already exceeds
+  its soft memory target,
+- deny without structural writes when the request cannot stay within the
+  minimum remaining-connection invariant.
+
+Parameters:
+- `currentNetwork` - Network about to grow.
+- `requiredAdditionalConnections` - Net total-connection increase requested by the caller.
+
+Returns: True when growth may proceed.
+
+### getSparsityBudgetSnapshot
+
+```ts
+getSparsityBudgetSnapshot(
+  currentNetwork: default,
+): NetworkSparsityBudgetSnapshot | undefined
+```
+
+Read the last recorded sparsity-budget decision snapshot.
+
+Parameters:
+- `currentNetwork` - Network to inspect.
+
+Returns: Snapshot clone when one exists; otherwise undefined.
+
+### isSameDeniedGrowthFingerprint
+
+```ts
+isSameDeniedGrowthFingerprint(
+  deniedGrowthBackoffState: DeniedGrowthBackoffState,
+  fingerprint: DeniedGrowthBackoffFingerprint,
+): boolean
+```
+
+Compare the current deny fingerprint against the stored backoff state.
+
+Parameters:
+- `deniedGrowthBackoffState` - Previously recorded deny-backoff state.
+- `fingerprint` - Current decision fingerprint.
+
+Returns: True when the deny state is unchanged.
+
+### isSoftBudgetExceeded
+
+```ts
+isSoftBudgetExceeded(
+  measuredBytes: number | undefined,
+  configuredLimitMegabytes: number | undefined,
+): boolean
+```
+
+Compare one runtime memory reading against a configured soft target.
+
+Parameters:
+- `measuredBytes` - Heap bytes reported by the runtime.
+- `configuredLimitMegabytes` - Soft target in megabytes.
+
+Returns: True when the runtime is already over the configured soft target.
+
+### normalizeGrowthGraceFraction
+
+```ts
+normalizeGrowthGraceFraction(
+  growthGraceFraction: number | undefined,
+): number
+```
+
+Validate and normalize the configured growth-grace fraction.
+
+Parameters:
+- `growthGraceFraction` - Raw configured grace fraction.
+
+Returns: Safe non-negative fraction.
+
+### normalizeMaxConnections
+
+```ts
+normalizeMaxConnections(
+  maxConnections: number,
+): number
+```
+
+Validate and normalize the configured max-connection cap.
+
+Parameters:
+- `maxConnections` - Raw configured connection cap.
+
+Returns: Safe integer cap.
+
+### recordSparsityBudgetSnapshot
+
+```ts
+recordSparsityBudgetSnapshot(
+  currentNetwork: default,
+  snapshot: NetworkSparsityBudgetSnapshot,
+): void
+```
+
+Persist the latest read-only decision snapshot.
+
+Parameters:
+- `currentNetwork` - Network being updated.
+- `snapshot` - Snapshot to store.
+
+Returns: Nothing.
+
+### registerDeniedGrowthBackoff
+
+```ts
+registerDeniedGrowthBackoff(
+  currentNetwork: default,
+  fingerprint: DeniedGrowthBackoffFingerprint,
+): void
+```
+
+Record one evaluated deny and expand the retry window for unchanged future attempts.
+
+Parameters:
+- `currentNetwork` - Network that just denied growth.
+- `fingerprint` - Current deny fingerprint.
+
+Returns: Nothing.
+
+### resolveAllowedConnectionLimit
+
+```ts
+resolveAllowedConnectionLimit(
+  budgetConfig: { maxConnections: number; growthGraceFraction: number; method: PruningMethod; },
+): number
+```
+
+Resolve the effective connection budget including grace headroom.
+
+Parameters:
+- `budgetConfig` - Normalized sparsity-budget configuration.
+
+Returns: Effective allowed connection limit.
+
+### resolveDeniedGrowthBackoffWindow
+
+```ts
+resolveDeniedGrowthBackoffWindow(
+  consecutiveEvaluatedDenials: number,
+): number
+```
+
+Resolve how many repeated requests to skip after one evaluated deny.
+
+Parameters:
+- `consecutiveEvaluatedDenials` - Number of full reevaluated denies in the same state.
+
+Returns: Remaining retry slots to skip before the next reevaluation.
+
+### resolveEffectiveAllowedConnectionLimit
+
+```ts
+resolveEffectiveAllowedConnectionLimit(
+  allowedConnectionLimit: number,
+  connectionCountBeforeDecision: number,
+  triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined,
+): number
+```
+
+Tighten the effective connection cap when the runtime is already over a soft heap target.
+
+Parameters:
+- `allowedConnectionLimit` - Hard connection cap resolved from the network budget.
+- `connectionCountBeforeDecision` - Current total connection count.
+- `triggeredSoftBudgetState` - Active soft-budget pressure, if any.
+
+Returns: Effective cap for this growth decision.
+
+### resolveTriggeredSoftBudgetState
+
+```ts
+resolveTriggeredSoftBudgetState(): TriggeredSoftBudgetState | undefined
+```
+
+Detect whether the current runtime heap already exceeds one active soft-memory target.
+
+Returns: Triggered soft-budget details when one environment is over budget.
+
+### shouldSkipDeniedGrowthAttempt
+
+```ts
+shouldSkipDeniedGrowthAttempt(
+  currentNetwork: default,
+  fingerprint: DeniedGrowthBackoffFingerprint,
+): boolean
+```
+
+Skip one repeated growth attempt when the network is still in the same dead-end state.
+
+Parameters:
+- `currentNetwork` - Network about to retry growth.
+- `fingerprint` - Current deny fingerprint.
+
+Returns: True when the retry should be denied without reevaluating prune work.
 
 ## architecture/network/prune/network.prune.regrowth.utils.ts
 

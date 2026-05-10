@@ -32,26 +32,33 @@ import {
 import { createRuntimeStartContext } from './runtime.startup.service';
 
 describe('createRuntimeStartContext', () => {
+  beforeEach(() => {
+    Object.defineProperty(globalThis.navigator, 'hardwareConcurrency', {
+      configurable: true,
+      value: 4,
+    });
+  });
+
   it.each([
     {
       architectureProfileId: 'random-sparse' as const,
-      expectedElitismCount: 6,
-      expectedPopulationSize: 30,
+      expectedElitismCount: 4,
+      expectedPopulationSize: 10,
     },
     {
       architectureProfileId: 'narx' as const,
-      expectedElitismCount: 8,
-      expectedPopulationSize: 40,
+      expectedElitismCount: 2,
+      expectedPopulationSize: 10,
     },
     {
       architectureProfileId: 'gru' as const,
-      expectedElitismCount: 4,
-      expectedPopulationSize: 18,
+      expectedElitismCount: 2,
+      expectedPopulationSize: 10,
     },
     {
       architectureProfileId: 'lstm' as const,
-      expectedElitismCount: 4,
-      expectedPopulationSize: 20,
+      expectedElitismCount: 2,
+      expectedPopulationSize: 10,
     },
     {
       architectureProfileId: 'mlp' as const,
@@ -82,4 +89,27 @@ describe('createRuntimeStartContext', () => {
       });
     },
   );
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis.navigator, 'hardwareConcurrency');
+  });
+
+  it('keeps the tuned recurrent browser budgets fixed on higher-core machines', () => {
+    Object.defineProperty(globalThis.navigator, 'hardwareConcurrency', {
+      configurable: true,
+      value: 8,
+    });
+
+    const runtimeStartContext = createRuntimeStartContext(
+      document.createElement('div'),
+      { architectureProfileId: 'narx' },
+    );
+
+    expect({
+      elitismCount: runtimeStartContext.config.elitismCount,
+      populationSize: runtimeStartContext.config.populationSize,
+    }).toEqual({
+      elitismCount: 2,
+      populationSize: 10,
+    });
+  });
 });

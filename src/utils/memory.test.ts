@@ -169,5 +169,61 @@ describe('utils chapter', () => {
         });
       });
     });
+
+    describe('given the default memory manager has no cached node-pool snapshot', () => {
+      describe('when capturing memoryStats from an isolated module instance', () => {
+        it('falls back to calling the live nodePoolStats export', () => {
+          // Arrange
+          const fallbackNodePoolSnapshot = {
+            size: 1,
+            highWaterMark: 2,
+            reused: 3,
+            fresh: 4,
+            recycledRatio: 0.75,
+          };
+          let nodePoolSnapshot: unknown;
+
+          // Act
+          jest.doMock('../architecture/nodePool', () => ({
+            nodePoolStats: jest.fn(() => fallbackNodePoolSnapshot),
+          }));
+          jest.doMock('../memory/manager', () => {
+            const actualMemoryManagerModule = jest.requireActual(
+              '../memory/manager',
+            ) as typeof import('../memory/manager');
+            const actualDefaultMemoryManager =
+              actualMemoryManagerModule.defaultMemoryManager;
+
+            return {
+              ...actualMemoryManagerModule,
+              defaultMemoryManager: {
+                registerPool:
+                  actualDefaultMemoryManager.registerPool.bind(
+                    actualDefaultMemoryManager,
+                  ),
+                getConfig: () =>
+                  actualDefaultMemoryManager.getConfig('node'),
+                getPoolStats: jest.fn(() => null),
+              },
+            };
+          });
+
+          jest.isolateModules(() => {
+            const isolatedMemoryModule = jest.requireActual(
+              './memory',
+            ) as typeof import('./memory');
+            nodePoolSnapshot = isolatedMemoryModule.memoryStats(
+              buildTrackedNetwork(0, 0),
+            ).pools.nodePool;
+          });
+
+          jest.dontMock('../architecture/nodePool');
+          jest.dontMock('../memory/manager');
+
+          // Assert
+          expect(nodePoolSnapshot).toStrictEqual(fallbackNodePoolSnapshot);
+        });
+      });
+    });
   });
 });
