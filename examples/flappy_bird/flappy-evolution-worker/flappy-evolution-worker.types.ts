@@ -1,5 +1,9 @@
 import type Network from '../../../src/architecture/network';
 import type {
+  InferenceChannel,
+  TransferableInferencePayload,
+} from '../../../src/neataptic';
+import type {
   SharedObservationFeatures,
   SharedObservationMemoryState,
 } from '../flappy.simulation.shared.utils';
@@ -9,8 +13,8 @@ import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
  * Loose JSON-compatible network payload used by worker messages.
  *
  * The worker never posts live `Network` instances back to the browser host.
- * Instead it sends the result of `network.toJSON()` so the payload stays
- * structured-clone safe and easy to inspect in devtools.
+ * The transferable inference payload now owns playback-friendly transport,
+ * while this JSON bridge remains only for the browser-side network-view cache.
  */
 export type SerializedNetwork = Record<string, unknown>;
 
@@ -38,6 +42,7 @@ export interface WorkerPopulationPipe {
  * keeps future opt-in experiments from forking the runtime contracts.
  */
 export interface WorkerPopulationBird {
+  inferenceChannel?: InferenceChannel;
   network: Network;
   observationMemoryState: SharedObservationMemoryState;
   yPx: number;
@@ -164,6 +169,7 @@ export interface WorkerInitMessage {
   type: 'init';
   payload: {
     architectureProfileId?: ExampleArchitectureProfileId;
+    championNetworkJson?: SerializedNetwork;
     populationSize: number;
     elitismCount: number;
     rngSeed: number;
@@ -171,10 +177,11 @@ export interface WorkerInitMessage {
 }
 
 /**
- * Worker request asking to evolve one generation.
+ * Worker request asking for the next playable generation payload.
  *
- * The worker responds with `generation-ready` once the NEAT runtime finishes
- * one evolution pass.
+ * The first response may release the bounded generation-zero warm-start
+ * population before a full recurrent evolution pass. Later responses publish
+ * normally evolved populations.
  */
 export interface WorkerRequestGenerationMessage {
   type: 'request-generation';
@@ -239,8 +246,10 @@ export type WorkerRequestMessage =
 /**
  * Worker generation-ready response message.
  *
- * The browser host uses this message to refresh HUD state and optionally render
- * the current best network visualization.
+ * The browser host uses this message to refresh HUD state, render the current
+ * best network visualization, and start playback for the current population.
+ * Generation zero can be a startup release after warm-start rather than a full
+ * post-selection NEAT generation.
  */
 export interface WorkerGenerationReadyMessage {
   type: 'generation-ready';
@@ -248,7 +257,9 @@ export interface WorkerGenerationReadyMessage {
     architectureProfileId: ExampleArchitectureProfileId;
     generation: number;
     bestFitness: number;
+    bestNetworkPayload?: TransferableInferencePayload;
     bestNetworkJson?: SerializedNetwork;
+    populationNetworkPayloads?: TransferableInferencePayload[];
     populationNetworksJson?: SerializedNetwork[];
   };
 }
@@ -278,6 +289,33 @@ export interface WorkerPlaybackStepMessage {
     p90FramesSurvived?: number;
     winnerPipesPassed?: number;
     winnerFramesSurvived?: number;
+    winnerNetworkJson?: SerializedNetwork;
+  };
+}
+
+/** Worker phase labels surfaced to the browser HUD during long-running work. */
+export type WorkerRuntimeStatusPhase =
+  | 'initializing'
+  | 'evaluating-direct'
+  | 'evaluating-shared-memory'
+  | 'evolving'
+  | 'playing'
+  | 'stopped';
+
+/**
+ * Worker runtime status response message.
+ *
+ * Status messages are informational and never complete a request. The browser
+ * listens for them beside generation/playback responses so long recurrent
+ * waits can explain whether work is initializing, evolving, playing back, or
+ * using a direct-evaluation fallback.
+ */
+export interface WorkerRuntimeStatusMessage {
+  type: 'runtime-status';
+  payload: {
+    phase: WorkerRuntimeStatusPhase;
+    statusText: string;
+    detail?: string;
   };
 }
 
@@ -303,6 +341,7 @@ export interface WorkerErrorMessage {
 export type WorkerResponseMessage =
   | WorkerGenerationReadyMessage
   | WorkerPlaybackStepMessage
+  | WorkerRuntimeStatusMessage
   | WorkerErrorMessage;
 
 /**

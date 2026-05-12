@@ -184,7 +184,7 @@ Returns: Read‑only style view (do not mutate) containing typed arrays + metada
 ### getSlabAllocationStats
 
 ```ts
-getSlabAllocationStats(): { pool: { [x: string]: PoolKeyMetrics; }; fresh: number; pooled: number; }
+getSlabAllocationStats(): { fresh: number; pooled: number; pool: Record<string, PoolKeyMetrics>; }
 ```
 
 Allocation statistics snapshot for slab typed arrays.
@@ -246,7 +246,7 @@ Cooperative asynchronous slab rebuild (Browser only).
 
 Strategy:
  - Perform capacity decision + allocation up front (mirrors sync path).
- - Populate connection data in microtask slices (yield via resolved Promise) to avoid long main‑thread stalls.
+ - Populate connection data in timer-backed macrotask slices so the browser can service other queued work between chunks.
  - Adaptive slice sizing for very large graphs if `config.browserSlabChunkTargetMs` set.
 
 Metrics: Increments `_slabAsyncBuilds` for observability.
@@ -285,31 +285,12 @@ Returns: Acquired typed array.
 ### _getSlabAllocationStatsSnapshot
 
 ```ts
-_getSlabAllocationStatsSnapshot(): { pool: { [x: string]: PoolKeyMetrics; }; fresh: number; pooled: number; }
+_getSlabAllocationStatsSnapshot(): { fresh: number; pooled: number; pool: Record<string, PoolKeyMetrics>; }
 ```
 
 Returns allocation stats snapshot for slab typed arrays.
 
 Returns: Serializable snapshot of fresh, pooled, and per-key metrics.
-
-### _poolKey
-
-```ts
-_poolKey(
-  kind: string,
-  bytes: number,
-  length: number,
-): string
-```
-
-Creates a stable pool key from kind, element width, and length.
-
-Parameters:
-- `kind` - Short pool kind discriminator.
-- `bytes` - Bytes per element.
-- `length` - Typed array logical length.
-
-Returns: Stable pool key.
 
 ### _releaseTA
 
@@ -329,16 +310,6 @@ Parameters:
 - `arr` - Typed array instance to retain when room exists.
 
 Returns: Nothing.
-
-### _slabPoolCap
-
-```ts
-_slabPoolCap(): number
-```
-
-Computes retention cap per key.
-
-Returns: Non-negative max retained arrays per key.
 
 ## architecture/network/slab/network.slab.view.utils.ts
 
@@ -476,12 +447,27 @@ Parameters:
 
 Returns: Nothing.
 
+### _allocateCoreSlabArraysAsync
+
+```ts
+_allocateCoreSlabArraysAsync(
+  buildContext: SlabBuildContext,
+): Promise<void>
+```
+
+Allocates async core slabs with optional timer yields between large allocations.
+
+Parameters:
+- `buildContext` - Slab build context.
+
+Returns: Promise resolved after async core slabs are ready.
+
 ### _allocateGainSlabForAsync
 
 ```ts
 _allocateGainSlabForAsync(
   buildContext: SlabBuildContext,
-): void
+): Promise<void>
 ```
 
 Allocates gain slab for async pass prefill strategy.
@@ -489,7 +475,7 @@ Allocates gain slab for async pass prefill strategy.
 Parameters:
 - `buildContext` - Slab build context.
 
-Returns: Nothing.
+Returns: Promise resolved after the gain slab is ready.
 
 ### _applyGainOmissionPolicy
 
@@ -613,7 +599,7 @@ Returns: Nothing.
 ```ts
 _ensureSlabCapacityAsync(
   buildContext: SlabBuildContext,
-): void
+): Promise<void>
 ```
 
 Ensures async rebuild has enough slab capacity.
@@ -621,7 +607,7 @@ Ensures async rebuild has enough slab capacity.
 Parameters:
 - `buildContext` - Slab build context.
 
-Returns: Nothing.
+Returns: Promise resolved after any required cooperative allocations finish.
 
 ### _ensureSlabCapacitySync
 
@@ -928,6 +914,16 @@ Parameters:
 - `connectionIndex` - Connection index.
 
 Returns: Nothing.
+
+### _yieldAsyncChunkMacrotask
+
+```ts
+_yieldAsyncChunkMacrotask(): Promise<void>
+```
+
+Yields one macrotask turn between browser async slab chunks.
+
+Returns: Promise resolved on the next timer turn.
 
 ## architecture/network/slab/network.slab.adjacency.helpers.utils.ts
 
@@ -1591,3 +1587,33 @@ Parameters:
 - `inputValue` - Input activation value.
 
 Returns: Nothing.
+
+### resolveFastSlabActivationPrecision
+
+```ts
+resolveFastSlabActivationPrecision(
+  network: default,
+): ActivationPrecision | undefined
+```
+
+Read the resolved runtime activation precision for slab output pooling.
+
+Parameters:
+- `network` - Target network.
+
+Returns: Active per-network activation precision when present.
+
+### resolveFastSlabBufferPrecision
+
+```ts
+resolveFastSlabBufferPrecision(
+  internalNet: NetworkSlabProps & { _precisionConfig?: PrecisionConfig | undefined; _activationPrecision?: ActivationPrecision | undefined; },
+): ActivationPrecision | undefined
+```
+
+Read the resolved runtime activation precision for fast slab working buffers.
+
+Parameters:
+- `internalNet` - Internal slab runtime shape.
+
+Returns: Active per-network activation precision when present.

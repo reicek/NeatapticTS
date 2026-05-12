@@ -13,11 +13,15 @@ export const INPUT_LOOP_LINE =
 
 /** Precision token selecting Float32 activation/state buffers. */
 export const ACTIVATION_PRECISION_F32 = 'f32';
+/** Precision token selecting float16-backed Uint16 storage buffers. */
+export const ACTIVATION_PRECISION_F16 = 'f16';
 
 /** Typed-array constructor names used in generated source. */
 export const FLOAT32_ARRAY_TYPE = 'Float32Array';
 /** Typed-array constructor names used in generated source. */
 export const FLOAT64_ARRAY_TYPE = 'Float64Array';
+/** Typed-array constructor names used in generated source. */
+export const UINT16_ARRAY_TYPE = 'Uint16Array';
 
 /** Prefix token used when normalizing function sources. */
 export const FUNCTION_PREFIX = 'function';

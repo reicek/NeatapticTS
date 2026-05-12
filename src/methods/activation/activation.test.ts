@@ -1,5 +1,7 @@
 import Activation, { registerCustomActivation } from './activation';
 
+const ACTIVATION_KEY_SYMBOL = Symbol.for('neataptic.activation.key');
+
 describe('Activation', () => {
   describe('logistic()', () => {
     describe('given a non-zero input', () => {
@@ -840,6 +842,20 @@ describe('Activation', () => {
 
           // Assert
           expect(actualValue).toBe(8);
+        });
+
+        it('keeps the existing activation annotation when the same function is registered twice', () => {
+          // Arrange
+          const activationName = 'copilotReuse';
+          const customActivation = (inputValue: number) => inputValue;
+
+          registerCustomActivation(activationName, customActivation);
+          registerCustomActivation(activationName, customActivation);
+
+          // Assert
+          expect(Reflect.get(customActivation, ACTIVATION_KEY_SYMBOL)).toBe(
+            activationName,
+          );
         });
       });
     });

@@ -13,6 +13,8 @@
 export {
   evaluateFlappyFitness,
   evaluateFlappyFitnessAcrossSeeds,
+  evaluateFlappyFitnessAcrossSeedsWithInferenceChannel,
+  evaluateFlappyFitnessWithInferenceChannel,
 } from './evaluation/evaluation.fitness.utils';
 export { rolloutEpisode } from './evaluation/evaluation.rollout.service';
 export type {

@@ -6,11 +6,13 @@ import {
   WARNING_UNKNOWN_SQUASH_SUFFIX,
 } from './network.serialize.utils.types';
 
+const ACTIVATION_KEY_SYMBOL = Symbol.for('neataptic.activation.key');
+
 /**
  * Resolves a canonical activation key from a runtime activation function reference.
  *
- * Resolution order is: direct registry reference match, then the function name,
- * then a stable identity fallback key.
+ * Resolution order is: attached stable key, direct registry reference match,
+ * then the function name, then a stable identity fallback key.
  *
  * @param squashFunction - Activation function instance.
  * @returns Activation key.
@@ -27,6 +29,11 @@ import {
 export function resolveActivationKey(
   squashFunction: ActivationFunction,
 ): string {
+  const attachedActivationKey = resolveAttachedActivationKey(squashFunction);
+  if (attachedActivationKey) {
+    return attachedActivationKey;
+  }
+
   const activationEntry = findActivationEntryByReference(squashFunction);
   if (activationEntry) {
     return activationEntry[0];
@@ -38,6 +45,31 @@ export function resolveActivationKey(
   }
 
   return FALLBACK_ACTIVATION_KEY;
+}
+
+/**
+ * Resolves a stable activation key attached directly to the function object.
+ *
+ * @param squashFunction - Activation function instance.
+ * @returns Attached activation key or undefined.
+ */
+function resolveAttachedActivationKey(
+  squashFunction: ActivationFunction,
+): string | undefined {
+  const keyedActivationFunction = squashFunction as ActivationFunction & {
+    [ACTIVATION_KEY_SYMBOL]?: unknown;
+  };
+  const attachedActivationKey =
+    keyedActivationFunction?.[ACTIVATION_KEY_SYMBOL];
+
+  if (
+    typeof attachedActivationKey === 'string' &&
+    attachedActivationKey.length > 0
+  ) {
+    return attachedActivationKey;
+  }
+
+  return undefined;
 }
 
 /**

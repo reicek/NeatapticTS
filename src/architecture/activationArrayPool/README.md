@@ -14,11 +14,12 @@ garbage-collector work without changing the model's behavior. This chapter
 keeps the reusable buffer story explicit while leaving graph semantics to
 the node, layer, and network chapters.
 
-The key design choice is that pooling happens by array length, not by caller
-identity. A network slab path and a layer helper can share the same retained
-storage as long as they request the same length and release the buffer after
-use. Acquire always returns a zeroed buffer, so the pool promises clean
-scratch memory rather than cached activations or memoized results.
+The key design choice is that pooling happens by array length and resolved
+activation precision, not by caller identity. A network slab path and a
+layer helper can share the same retained storage as long as they request the
+same length and precision and release the buffer after use. Acquire always
+returns a zeroed buffer, so the pool promises clean scratch memory rather
+than cached activations or memoized results.
 
 That distinction matters when you are debugging correctness. This folder is
 not a semantic cache and it does not preserve intermediate values for later
@@ -50,8 +51,8 @@ Read this chapter in three passes:
    safely recycle,
 2. continue to `activationArrayPool.acquire()` and `.release()` when you need
    the hot-path allocation story,
-3. finish with `stats()`, `setMaxPerBucket()`, and `prewarm()` when you want
-   observability and capacity control.
+3. finish with `stats()`, `setMaxPerBucket()`, `prewarm()`, and `compact()`
+   when you want observability and capacity control.
 
 Example: reuse one scratch buffer around a custom activation-heavy loop.
 
@@ -83,6 +84,56 @@ behavior.
 
 A size-bucketed pool of activation arrays.
 
-Buckets map array length to stacks of reusable buffers. Acquire returns a
-zeroed buffer, either by recycling an existing one or by allocating a new
-array when the requested bucket is empty.
+Buckets map array length plus resolved precision to stacks of reusable
+buffers. Acquire returns a zeroed buffer, either by recycling an existing
+one or by allocating a new array when the requested bucket is empty.
+
+### createActivationArray
+
+```ts
+createActivationArray(
+  size: number,
+  precisionFlags: { float32Mode: boolean; },
+  activationPrecision: ActivationPrecision | undefined,
+): ActivationArray
+```
+
+Create one fresh activation buffer using the shared precision owner.
+
+Parameters:
+- `size` - Required activation-array length.
+- `precisionFlags` - Config-like precision flags for the current runtime.
+
+Returns: Fresh activation buffer with the resolved precision policy.
+
+### createActivationArrayBucketKey
+
+```ts
+createActivationArrayBucketKey(
+  size: number,
+  activationPrecision: ActivationPrecision,
+): string
+```
+
+Build the pool key for one activation-array bucket.
+
+Parameters:
+- `size` - Required activation-array length.
+- `activationPrecision` - Resolved precision for this bucket.
+
+Returns: Stable bucket key string.
+
+### resolveActivationArrayPrecision
+
+```ts
+resolveActivationArrayPrecision(
+  activationArray: ActivationArray,
+): ActivationPrecision
+```
+
+Infer the retained precision for one released activation array.
+
+Parameters:
+- `activationArray` - Activation buffer being returned to the pool.
+
+Returns: Precision bucket that owns this array.

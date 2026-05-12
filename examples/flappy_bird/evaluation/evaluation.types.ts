@@ -61,6 +61,9 @@ export interface FlappyRolloutOptions {
 
   /** Pipe count target used to normalize progress. */
   pipeProgressTarget?: number;
+
+  /** Optional cooperative abort hook checked between rollout frames. */
+  shouldStop?: () => boolean;
 }
 
 /**

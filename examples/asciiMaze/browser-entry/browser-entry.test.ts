@@ -58,6 +58,7 @@ describe('asciiMaze browser entry start()', () => {
       liveElement: null,
       networkCanvasElement: null,
       observeTarget: null,
+      archButtonsElement: null,
     });
     mockedRunBrowserEntryCurriculum.mockClear();
     disposeResizeHandling.mockClear();
@@ -232,5 +233,131 @@ describe('asciiMaze browser entry start()', () => {
     secondHandle.stop();
     await firstHandle.done;
     await secondHandle.done;
+  });
+
+  it('restarts with the selected architecture profile when a different selector button is clicked', async () => {
+    document.body.innerHTML =
+      '<div id="ascii-maze-output"><div class="arch-buttons"></div></div>';
+    const hostElement = document.getElementById('ascii-maze-output');
+    const archButtonsElement = hostElement?.querySelector(
+      '.arch-buttons',
+    ) as HTMLElement | null;
+
+    mockedResolveBrowserEntryHostElements.mockReturnValue({
+      hostElement,
+      archiveElement: null,
+      liveElement: null,
+      networkCanvasElement: null,
+      observeTarget: null,
+      archButtonsElement,
+    });
+
+    const firstHandle = await start('ascii-maze-output');
+    const firstCurriculumContext =
+      mockedRunBrowserEntryCurriculum.mock.calls.at(-1)?.[0];
+    const mlpButton = Array.from(
+      archButtonsElement?.querySelectorAll('button') ?? [],
+    ).find((buttonElement) => buttonElement.textContent === 'MLP');
+
+    if (!mlpButton || !firstCurriculumContext) {
+      throw new Error('Expected the MLP selector button to be rendered');
+    }
+
+    mlpButton.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect({
+      firstHandleRunning: firstHandle.isRunning(),
+      runCountBeforeFinish: mockedRunBrowserEntryCurriculum.mock.calls.length,
+    }).toEqual({
+      firstHandleRunning: false,
+      runCountBeforeFinish: 1,
+    });
+
+    firstCurriculumContext.finish();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const activeHandle = await start('ascii-maze-output');
+
+    expect({
+      runCount: mockedRunBrowserEntryCurriculum.mock.calls.length,
+      restartedProfileId:
+        mockedRunBrowserEntryCurriculum.mock.calls.at(-1)?.[0]
+          .architectureProfileId,
+      firstHandleRunning: firstHandle.isRunning(),
+    }).toEqual({
+      runCount: 2,
+      restartedProfileId: 'mlp',
+      firstHandleRunning: false,
+    });
+
+    activeHandle.stop();
+    await activeHandle.done;
+  });
+
+  it('restarts the simulation with the current architecture when the reset button is clicked', async () => {
+    document.body.innerHTML =
+      '<div id="ascii-maze-output"><div class="arch-buttons"></div></div>';
+    const hostElement = document.getElementById('ascii-maze-output');
+    const archButtonsElement = hostElement?.querySelector(
+      '.arch-buttons',
+    ) as HTMLElement | null;
+
+    mockedResolveBrowserEntryHostElements.mockReturnValue({
+      hostElement,
+      archiveElement: null,
+      liveElement: null,
+      networkCanvasElement: null,
+      observeTarget: null,
+      archButtonsElement,
+    });
+
+    const firstHandle = await start('ascii-maze-output');
+    const firstCurriculumContext =
+      mockedRunBrowserEntryCurriculum.mock.calls.at(-1)?.[0];
+    const resetButton = Array.from(
+      archButtonsElement?.querySelectorAll('button') ?? [],
+    ).find((buttonElement) => buttonElement.textContent === 'Reset Simulation');
+
+    if (!resetButton || !firstCurriculumContext) {
+      throw new Error(
+        'Expected the Reset Simulation selector button to be rendered',
+      );
+    }
+
+    resetButton.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect({
+      firstHandleRunning: firstHandle.isRunning(),
+      runCountBeforeFinish: mockedRunBrowserEntryCurriculum.mock.calls.length,
+    }).toEqual({
+      firstHandleRunning: false,
+      runCountBeforeFinish: 1,
+    });
+
+    firstCurriculumContext.finish();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const activeHandle = await start('ascii-maze-output');
+
+    expect({
+      runCount: mockedRunBrowserEntryCurriculum.mock.calls.length,
+      restartedProfileId:
+        mockedRunBrowserEntryCurriculum.mock.calls.at(-1)?.[0]
+          .architectureProfileId,
+      firstHandleRunning: firstHandle.isRunning(),
+    }).toEqual({
+      runCount: 2,
+      restartedProfileId: 'random-sparse',
+      firstHandleRunning: false,
+    });
+
+    activeHandle.stop();
+    await activeHandle.done;
   });
 });

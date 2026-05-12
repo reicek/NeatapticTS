@@ -82,10 +82,10 @@ values used elsewhere in the playback loop.
 
 ```ts
 resolvePlaybackCompletionSummary(
-  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; },
+  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; },
   latestLeaderPipesPassed: number,
   latestLeaderFramesSurvived: number,
-): { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; }
+): { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; winnerNetworkJson?: Record<string, unknown> | undefined; }
 ```
 
 Resolves final playback summary values when the worker reports completion.
@@ -105,7 +105,7 @@ Returns: Final aggregate playback summary.
 
 ```ts
 resolvePlaybackFrameStats(
-  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; },
+  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; },
   frameIndex: number,
   activeBirdCount: number,
   leaderPipesPassed: number,

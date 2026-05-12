@@ -29,12 +29,16 @@ export const resolveBrowserEntryHostElements = (
         '#ascii-maze-network-canvas',
       ) as HTMLCanvasElement | null)
     : null;
+  const archButtonsElement = hostElement
+    ? (hostElement.querySelector('.arch-buttons') as HTMLElement | null)
+    : null;
 
   return {
     hostElement,
     archiveElement,
     liveElement,
     networkCanvasElement,
+    archButtonsElement,
     observeTarget:
       hostElement ?? document.getElementById(C.DEFAULT_CONTAINER_ID),
   };

@@ -129,11 +129,22 @@ export interface EvolutionAdaptiveMutationConfig {
   [key: string]: unknown;
 }
 
+/** Browser-worker evaluation controls for parallel ASCII Maze genome scoring. */
+export interface EvolutionWorkerEvaluationConfig {
+  /** Attempt browser worker evaluation when true. */
+  enabled?: boolean;
+  /** Dedicated worker bundle URL used for maze-fitness evaluation. */
+  workerUrl?: string;
+  /** Maximum number of concurrently active evaluation workers. */
+  workerCount?: number;
+}
+
 /** Configuration options for the evolutionary algorithm used in the ASCII Maze demos. */
 export interface IEvolutionAlgorithmConfig {
   allowRecurrent?: boolean;
   architectureProfileId?: ExampleArchitectureProfileId;
   adaptiveMutation?: EvolutionAdaptiveMutationConfig;
+  workerEvaluation?: EvolutionWorkerEvaluationConfig;
   popSize?: number;
   maxStagnantGenerations?: number;
   minProgressToPass?: number;

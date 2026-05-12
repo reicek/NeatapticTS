@@ -8,15 +8,20 @@ The helpers here intentionally avoid importing the concrete `Neat` class
 directly, which keeps the serialization flow reusable across the public
 facade, tests, and static restore entrypoints.
 
-Typical usage follows two tracks:
+Typical usage follows three tracks:
 - export or import just the population when you only need genome payloads;
+- export or import a light checkpoint when you want to restart from retained
+  elites without claiming exact future replay;
 - export or import the full state when you need innovation history,
   generation counters, and population data to resume a run faithfully.
 
 A useful way to read this chapter is as a pause-and-resume ladder:
 - `exportPopulation()` and `importPopulation()` move only candidate genomes
 - `toJSONImpl()` and `fromJSONImpl()` move only controller meta state
-- `exportState()` and `importStateImpl()` combine both layers into one full resume bundle
+- `exportLightState()` and `importLightStateImpl()` move retained elites plus
+  bootstrap controller metadata for best-effort restart
+- `exportState()` and `importStateImpl()` combine both layers into one full
+  resume bundle
 
 Deterministic replay contract (why this boundary exists):
 
@@ -31,6 +36,9 @@ Deterministic replay contract (why this boundary exists):
 - **Full checkpoints** are the pause-and-resume surface. When you restore a
   full checkpoint into the same codebase, the controller is expected to
   continue evolving as if it had never stopped.
+- **Light checkpoints** are the restart surface. They keep a curated elite
+  subset plus enough bootstrap metadata to repopulate through the ordinary
+  evolution path, but they intentionally omit replay-critical runtime state.
 
 “Same seed + same checkpoint + same code” is the target replay promise.
 That promise only holds when controller-owned randomness and architecture
@@ -50,9 +58,16 @@ between environments without also freezing the controller's innovation
 history. Other times you need a true checkpoint that can continue evolving as
 if the process had never stopped.
 
+Both full and light checkpoint bundles also reserve a top-level
+`extensions` bag for downstream metadata. That pocket exists so consumers
+such as NEATchat can attach namespaced descriptors without redefining the
+checkpoint semantics that this chapter owns.
+
 Read the chapter in this order:
 - start with `exportPopulation()` and `importPopulation()` when you only need
   candidate genomes,
+- then read `exportLightState()` and `importLightStateImpl()` when you need a
+  smaller restart artifact built around retained elites,
 - continue to `toJSONImpl()` and `fromJSONImpl()` when you need controller
   metadata without the live population,
 - finish with `exportState()` and `importStateImpl()` when you need a full
@@ -62,9 +77,11 @@ Read the chapter in this order:
 flowchart TD
   Runtime[Live NEAT controller] --> PopOnly[Population-only snapshot]
   Runtime --> MetaOnly[Meta-only checkpoint]
+  Runtime --> LightState[Light checkpoint]
   Runtime --> FullState[Full state bundle]
   PopOnly --> ImportPop[Replace population in an existing controller]
   MetaOnly --> ImportMeta[Rebuild controller bookkeeping]
+  LightState --> Restart[Import retained elites and refill later]
   FullState --> Resume[Restore bookkeeping and population together]
 ```
 
@@ -80,6 +97,43 @@ Background reading: Wikipedia contributors,
 [Serialization](https://en.wikipedia.org/wiki/Serialization).
 
 ## neat/export/neat.export.ts
+
+### exportLightState
+
+```ts
+exportLightState(
+  exportOptions: NeatLightCheckpointExportOptions,
+): NeatLightStateJSON
+```
+
+Export a light checkpoint containing only retained elite genomes plus
+bootstrap controller metadata.
+
+This is the best-effort restart sibling of {@link exportState}. It keeps a
+curated high-quality subset of the current population and the original
+restart-scale population target, but it intentionally omits replay-critical
+innovation, speciation, and runtime metadata.
+
+Callers may attach a top-level `extensions` bag after export for downstream
+metadata that should travel with the bundle. That reserved surface is for
+namespaced add-ons, not for overriding the light checkpoint's bootstrap
+contract.
+
+Parameters:
+- `exportOptions` - Export policy describing how many elite genomes to keep.
+
+Returns: Light checkpoint bundle for approximate restart.
+
+Example:
+
+```ts
+const checkpoint = neat.exportLightState({ eliteCount: 4 });
+checkpoint.extensions = {
+  neatchat: {
+    branchId: 'draft-1',
+  },
+};
+```
 
 ### exportPopulation
 
@@ -123,10 +177,20 @@ In practice this is the "checkpoint" export. It is the safest default when
 you care about reproducible continuation rather than only preserving candidate
 genomes for later inspection.
 
+Callers may attach a top-level `extensions` bag after export for downstream,
+non-core metadata. That bag is intentionally outside the strict resume
+contract: import validation still decides exact versus best-effort behavior
+from the checkpoint-owned fields in `neat`, `population`, and `speciation`.
+
 Example:
 
 ```ts
 const state = neat.exportState();
+state.extensions = {
+  neatchat: {
+    memoryBankId: 'memory-bank-1',
+  },
+};
 fs.writeFileSync('state.json', JSON.stringify(state));
 // ...later / elsewhere...
 const raw = JSON.parse(fs.readFileSync('state.json', 'utf8')) as NeatStateJSON;
@@ -192,6 +256,32 @@ broader architecture evolve without forcing this chapter to hard-code every
 possible serialized field, while the reserved `controllerMeta` pocket keeps
 controller-owned resume data explicit and versionable.
 
+### importLightStateImpl
+
+```ts
+importLightStateImpl(
+  stateBundle: NeatLightStateJSON,
+  fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>,
+): Promise<NeatControllerForExport>
+```
+
+Static-style helper that rehydrates a controller from a light checkpoint.
+
+Light checkpoints preserve only bootstrap controller metadata plus a retained
+elite subset, so this restore path rebuilds a compatible controller, imports
+the retained genomes, and then reapplies the original restart-scale
+population target without claiming exact replay.
+
+Any top-level `extensions` bag is preserved as user-owned metadata rather
+than part of the restart contract. Import therefore ignores that bag while it
+validates the light checkpoint-owned bootstrap fields.
+
+Parameters:
+- `stateBundle` - Light checkpoint bundle produced by  {@link exportLightState} .
+- `fitnessFunction` - Fitness evaluation callback used for the new instance.
+
+Returns: Rehydrated NEAT instance ready for approximate restart.
+
 ### importPopulation
 
 ```ts
@@ -233,6 +323,7 @@ controller population has been replaced.
 importStateImpl(
   stateBundle: NeatStateJSON,
   fitnessFunction: (network: GenomeWithSerialization) => number | Promise<number>,
+  restoreOptions: NeatCheckpointRestoreOptions | undefined,
 ): Promise<NeatControllerForExport>
 ```
 
@@ -245,6 +336,10 @@ population (if present).
 This is the most complete restore path in the chapter. If a saved bundle is
 valid, the caller gets back a fresh controller that knows both where the run
 was in evolutionary time and which genomes were alive at that moment.
+
+Any top-level `extensions` bag is treated as downstream metadata only. It is
+allowed to travel with the bundle, but it does not weaken the strict checks
+around replay-critical speciation and runtime state.
 
 Safety and validation:
 - Throws if the bundle is not an object.
@@ -263,8 +358,42 @@ neat.evolve();
 Parameters:
 - `stateBundle` - Full state bundle from  {@link exportState} .
 - `fitnessFunction` - Fitness evaluation callback used for new instance.
+- `restoreOptions` - Explicit restore-mode override. Defaults to strict exact resume.
 
 Returns: Rehydrated NEAT instance ready to continue evolving.
+
+### NeatCheckpointRestoreOptions
+
+Public restore options for full checkpoint imports.
+
+Strict mode preserves the exact-resume contract by rejecting versioned full
+checkpoints when replay-critical runtime state is missing. Best-effort mode
+allows an explicit downgrade path for partial bundles that should still
+restore as a usable controller without claiming exact future replay.
+
+### NeatLightCheckpointExportOptions
+
+Export options for light checkpoints.
+
+Light checkpoints intentionally keep only a curated elite subset of the
+current population, so callers must choose how many top-scoring genomes to
+retain in the bundle.
+
+### NeatLightMetaJSON
+
+Bootstrap metadata carried by light checkpoints.
+
+This payload is deliberately smaller than `NeatMetaJSON`: it carries only the
+controller fields needed to rebuild a compatible run before importing the
+retained elite genomes.
+
+### NeatLightStateJSON
+
+Top-level bundle used by the light checkpoint path.
+
+A light checkpoint keeps a curated elite subset plus enough bootstrap state
+to rebuild a compatible controller, but it intentionally omits replay-only
+innovation, speciation, and runtime metadata.
 
 ### NeatMetaJSON
 
@@ -380,6 +509,19 @@ only care about turning one genome into a JSON payload.
 
 Format version used when a checkpoint predates explicit version tags.
 
+### LIGHT_CHECKPOINT_MODE
+
+Checkpoint mode marker for best-effort light-resume bundles.
+
+### NeatCheckpointRestoreOptions
+
+Public restore options for full checkpoint imports.
+
+Strict mode preserves the exact-resume contract by rejecting versioned full
+checkpoints when replay-critical runtime state is missing. Best-effort mode
+allows an explicit downgrade path for partial bundles that should still
+restore as a usable controller without claiming exact future replay.
+
 ### NeatConstructor
 
 NEAT class constructor interface.
@@ -396,6 +538,30 @@ The persistence helpers intentionally depend on this narrow host shape instead
 of the concrete `Neat` class. That keeps export and restore logic reusable in
 tests and static-style helper flows without coupling the file to the full
 controller implementation.
+
+### NeatLightCheckpointExportOptions
+
+Export options for light checkpoints.
+
+Light checkpoints intentionally keep only a curated elite subset of the
+current population, so callers must choose how many top-scoring genomes to
+retain in the bundle.
+
+### NeatLightMetaJSON
+
+Bootstrap metadata carried by light checkpoints.
+
+This payload is deliberately smaller than `NeatMetaJSON`: it carries only the
+controller fields needed to rebuild a compatible run before importing the
+retained elite genomes.
+
+### NeatLightStateJSON
+
+Top-level bundle used by the light checkpoint path.
+
+A light checkpoint keeps a curated elite subset plus enough bootstrap state
+to rebuild a compatible controller, but it intentionally omits replay-only
+innovation, speciation, and runtime metadata.
 
 ### NeatMetaJSON
 

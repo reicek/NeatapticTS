@@ -1,8 +1,22 @@
 import {
+  resolveRuntimeArchitectureProgressUpdate,
   resolveGenerationSummaryHudValues,
   resolveEvolutionWaitLegendText,
   resolveGenerationPopulationSize,
+  resolveRuntimeChampionCandidateNetworkJson,
+  resolveWorkerInitPayload,
 } from './runtime.evolution-loop.service';
+
+function withNodeEnv<T>(nextNodeEnv: string, callback: () => T): T {
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = nextNodeEnv;
+
+  try {
+    return callback();
+  } finally {
+    process.env.NODE_ENV = previousNodeEnv;
+  }
+}
 
 describe('resolveGenerationPopulationSize', () => {
   it('prefers the actual generation population length when the worker payload provides the full population', () => {
@@ -73,5 +87,152 @@ describe('resolveGenerationSummaryHudValues', () => {
       summaryP90Frames: '2700',
       summaryArchitecture: 'Sparse (10 nodes, 16 connections)',
     });
+  });
+});
+
+describe('resolveRuntimeArchitectureProgressUpdate', () => {
+  it('stores the improved browser-local champion for the selected architecture profile when a new record is set', () => {
+    const championNetworkJson = {
+      connections: [{ weight: 1 }, { weight: 2 }, { weight: 3 }],
+      nodes: [
+        { bias: 0, type: 'input' },
+        { bias: 42, type: 'hidden' },
+        { bias: 1, type: 'output' },
+      ],
+      scope: 'champion',
+    };
+    const consoleInfoSpy = jest
+      .spyOn(console, 'info')
+      .mockImplementation(() => undefined);
+
+    try {
+      const progressUpdate = withNodeEnv('development', () =>
+        resolveRuntimeArchitectureProgressUpdate({
+          candidateBestScore: {
+            pipesPassed: 6,
+            framesSurvived: 280,
+          },
+          candidateChampionNetworkJson: championNetworkJson,
+          championByProfileId: {
+            mlp: { nodes: [{ bias: 1 }], scope: 'previous' },
+          },
+          historyByProfileId: {
+            gru: { pipesPassed: 5, framesSurvived: 310 },
+            mlp: { pipesPassed: 1, framesSurvived: 80 },
+          },
+          profileId: 'gru',
+        }),
+      );
+      const saveLogLine = consoleInfoSpy.mock.calls.at(-1)?.[0];
+
+      expect({
+        didLogSave:
+          typeof saveLogLine === 'string' &&
+          saveLogLine.includes('saving champion profile=gru') &&
+          saveLogLine.includes('pipes=6') &&
+          saveLogLine.includes('frames=280') &&
+          saveLogLine.includes('previousPipes=5') &&
+          saveLogLine.includes('previousFrames=310') &&
+          saveLogLine.includes('nodes=3') &&
+          saveLogLine.includes('connections=3') &&
+          saveLogLine.includes('inputs=1') &&
+          saveLogLine.includes('hidden=1') &&
+          saveLogLine.includes('outputs=1') &&
+          saveLogLine.includes('fingerprint=0x'),
+        progressUpdate,
+      }).toEqual({
+        didLogSave: true,
+        progressUpdate: {
+          championByProfileId: {
+            gru: championNetworkJson,
+            mlp: { nodes: [{ bias: 1 }], scope: 'previous' },
+          },
+          didImprove: true,
+          historyByProfileId: {
+            gru: { pipesPassed: 6, framesSurvived: 280 },
+            mlp: { pipesPassed: 1, framesSurvived: 80 },
+          },
+        },
+      });
+    } finally {
+      consoleInfoSpy.mockRestore();
+    }
+  });
+});
+
+describe('resolveRuntimeChampionCandidateNetworkJson', () => {
+  it('prefers the playback winner network over the generation-best fallback', () => {
+    const playbackWinnerNetworkJson = { scope: 'playback-winner' };
+    const generationBestNetworkJson = { scope: 'generation-best' };
+
+    expect(
+      resolveRuntimeChampionCandidateNetworkJson({
+        generationBestNetworkJson,
+        playbackSummary: {
+          averagePipesPassed: 1,
+          p90FramesSurvived: 2,
+          winnerFramesSurvived: 3,
+          winnerPipesPassed: 4,
+          winnerNetworkJson: playbackWinnerNetworkJson,
+        },
+      }),
+    ).toBe(playbackWinnerNetworkJson);
+  });
+});
+
+describe('resolveWorkerInitPayload', () => {
+  it('includes the saved champion network for the selected architecture profile when one exists', () => {
+    const championNetworkJson = {
+      connections: [{ weight: 1 }, { weight: 2 }],
+      nodes: [
+        { bias: 0, type: 'input' },
+        { bias: 42, type: 'hidden' },
+        { bias: 1, type: 'output' },
+      ],
+      scope: 'champion',
+    };
+    const consoleInfoSpy = jest
+      .spyOn(console, 'info')
+      .mockImplementation(() => undefined);
+
+    try {
+      const workerInitPayload = withNodeEnv('development', () =>
+        resolveWorkerInitPayload({
+          architectureProfileId: 'gru',
+          championByProfileId: {
+            gru: championNetworkJson,
+            narx: { nodes: [{ bias: 3 }], scope: 'other' },
+          },
+          elitismCount: 2,
+          populationSize: 10,
+          rngSeed: 12345,
+        }),
+      );
+      const loadLogLine = consoleInfoSpy.mock.calls.at(-1)?.[0];
+
+      expect({
+        didLogLoad:
+          typeof loadLogLine === 'string' &&
+          loadLogLine.includes('loading saved champion profile=gru') &&
+          loadLogLine.includes('nodes=3') &&
+          loadLogLine.includes('connections=2') &&
+          loadLogLine.includes('inputs=1') &&
+          loadLogLine.includes('hidden=1') &&
+          loadLogLine.includes('outputs=1') &&
+          loadLogLine.includes('fingerprint=0x'),
+        workerInitPayload,
+      }).toEqual({
+        didLogLoad: true,
+        workerInitPayload: {
+          architectureProfileId: 'gru',
+          championNetworkJson,
+          elitismCount: 2,
+          populationSize: 10,
+          rngSeed: 12345,
+        },
+      });
+    } finally {
+      consoleInfoSpy.mockRestore();
+    }
   });
 });

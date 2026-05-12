@@ -46,7 +46,7 @@ Returns: Next generation payload.
 requestWorkerPlaybackStep(
   evolutionWorker: Worker,
   playbackStepRequest: WorkerChannelPlaybackStepRequest,
-): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; }>
 ```
 
 Requests one playback batch step from the worker.
@@ -152,9 +152,9 @@ which inbound worker message should satisfy the request.
 
 Generation request helper for the browser-entry worker channel.
 
-This module asks the worker to evolve until the next generation boundary and
-then returns the summary payload the browser needs for HUD updates and best
-network visualization.
+This module asks the worker for the next playable population boundary. The
+first response may be the warmed generation-zero population so playback can
+begin promptly; subsequent responses are normally evolved generations.
 
 ### requestWorkerGeneration
 
@@ -164,11 +164,12 @@ requestWorkerGeneration(
 ): Promise<EvolutionGenerationPayload>
 ```
 
-Requests the next evolved generation payload from the worker channel.
+Requests the next playable generation payload from the worker channel.
 
-Unlike playback streaming, generation evolution is a simple single-response
-exchange: ask for the next generation and wait for the next
-`generation-ready` message.
+Unlike playback streaming, generation readiness is a simple single-response
+exchange: ask for the next playable population and wait for the next
+`generation-ready` message. Startup may publish generation zero before the
+first full recurrent `evolve()` batch.
 
 Parameters:
 - `evolutionWorker` - Worker emitting generation-ready messages.
@@ -192,7 +193,7 @@ correct reply.
 requestWorkerPlaybackStep(
   evolutionWorker: Worker,
   playbackStepRequest: WorkerChannelPlaybackStepRequest,
-): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; }>
 ```
 
 Requests one playback batch step from the worker channel.

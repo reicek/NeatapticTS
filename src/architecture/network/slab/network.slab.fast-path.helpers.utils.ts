@@ -4,6 +4,7 @@
 import type Network from '../../network/network';
 import type Node from '../../node';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
+import type { ActivationPrecision, PrecisionConfig } from '../../../config';
 import type {
   FastSlabNodeRuntime,
   NetworkActivationRuntime,
@@ -126,7 +127,8 @@ export function _ensureFastSlabBuffers(
   nodeCount: number,
 ): void {
   // Step 1: Resolve activation precision for reusable working buffers.
-  const useFloat32Activation = internalNet._activationPrecision === 'f32';
+  const useFloat32Activation =
+    resolveFastSlabBufferPrecision(internalNet) === 'f32';
   if (
     _needsFastBufferReplacement(
       internalNet._fastA,
@@ -237,6 +239,7 @@ export function _collectFastSlabOutput(
   const outputBaseIndex = nodeCount - network.output;
   const pooledOutputArray = activationArrayPool.acquire(
     network.output,
+    resolveFastSlabActivationPrecision(network),
   ) as Float64Array;
   for (let outputOffset = ZERO; outputOffset < network.output; outputOffset++) {
     pooledOutputArray[outputOffset] =
@@ -246,6 +249,60 @@ export function _collectFastSlabOutput(
   const output = Array.from(pooledOutputArray) as number[];
   activationArrayPool.release(pooledOutputArray);
   return output;
+}
+
+/**
+ * Read the resolved runtime activation precision for slab output pooling.
+ *
+ * @param network Target network.
+ * @returns Active per-network activation precision when present.
+ */
+function resolveFastSlabActivationPrecision(
+  network: Network,
+): ActivationPrecision | undefined {
+  const precisionCarrier = network as unknown as NetworkSlabProps & {
+    _precisionConfig?: PrecisionConfig;
+    _activationPrecision?: ActivationPrecision;
+  };
+
+  if (
+    precisionCarrier._activationPrecision === 'f32' &&
+    precisionCarrier._activationPrecision !==
+      precisionCarrier._precisionConfig?.activationPrecision
+  ) {
+    return precisionCarrier._activationPrecision;
+  }
+
+  return (
+    precisionCarrier._precisionConfig?.activationPrecision ??
+    precisionCarrier._activationPrecision
+  );
+}
+
+/**
+ * Read the resolved runtime activation precision for fast slab working buffers.
+ *
+ * @param internalNet Internal slab runtime shape.
+ * @returns Active per-network activation precision when present.
+ */
+function resolveFastSlabBufferPrecision(
+  internalNet: NetworkSlabProps & {
+    _precisionConfig?: PrecisionConfig;
+    _activationPrecision?: ActivationPrecision;
+  },
+): ActivationPrecision | undefined {
+  if (
+    internalNet._activationPrecision === 'f32' &&
+    internalNet._activationPrecision !==
+      internalNet._precisionConfig?.activationPrecision
+  ) {
+    return internalNet._activationPrecision;
+  }
+
+  return (
+    internalNet._precisionConfig?.activationPrecision ??
+    internalNet._activationPrecision
+  );
 }
 
 /**

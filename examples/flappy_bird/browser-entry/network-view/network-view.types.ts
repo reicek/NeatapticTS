@@ -35,3 +35,25 @@ export interface InputNodeDescriptionLabel {
   tooltipBodyParagraphs: readonly string[];
   nodeIndex: number;
 }
+
+/**
+ * One reusable description definition before it is bound to a concrete node row.
+ */
+export interface InputLabelNodeDefinition {
+  labelLines: readonly string[];
+  tooltipHeading: string;
+  tooltipBodyParagraphs: readonly string[];
+}
+
+/**
+ * One reusable semantic input group definition for the shared network visualizer.
+ */
+export interface InputLabelGroupDefinition {
+  label: string;
+  labelLines: readonly string[];
+  tooltipHeading: string;
+  tooltipBodyParagraphs: readonly string[];
+  nodeDescriptionDefinitions: readonly InputLabelNodeDefinition[];
+  backgroundColor: string;
+  orientation: 'vertical' | 'horizontal';
+}

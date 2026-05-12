@@ -15,17 +15,38 @@ export function resolveFlapDecision(
   rawOutputs: unknown,
   flapThreshold = 0.5,
 ): boolean {
+  const numericOutputs = resolveNumericOutputs(rawOutputs);
+
   if (
-    Array.isArray(rawOutputs) &&
-    typeof rawOutputs[0] === 'number' &&
-    typeof rawOutputs[1] === 'number'
+    numericOutputs &&
+    typeof numericOutputs[0] === 'number' &&
+    typeof numericOutputs[1] === 'number'
   ) {
-    return rawOutputs[1] > rawOutputs[0];
+    return numericOutputs[1] > numericOutputs[0];
   }
 
-  if (Array.isArray(rawOutputs) && typeof rawOutputs[0] === 'number') {
-    return rawOutputs[0] > flapThreshold;
+  if (numericOutputs && typeof numericOutputs[0] === 'number') {
+    return numericOutputs[0] > flapThreshold;
   }
 
   return typeof rawOutputs === 'number' ? rawOutputs > flapThreshold : false;
+}
+
+function resolveNumericOutputs(
+  rawOutputs: unknown,
+): ArrayLike<number> | undefined {
+  if (Array.isArray(rawOutputs)) {
+    return rawOutputs;
+  }
+
+  const typedArrayOutputs = rawOutputs as { length?: unknown } | undefined;
+
+  if (
+    ArrayBuffer.isView(rawOutputs) &&
+    typeof typedArrayOutputs?.length === 'number'
+  ) {
+    return rawOutputs as unknown as ArrayLike<number>;
+  }
+
+  return undefined;
 }

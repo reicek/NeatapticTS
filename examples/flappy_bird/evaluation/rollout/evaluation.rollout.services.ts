@@ -41,6 +41,7 @@ import {
   createInitialFlappyState,
   getFlappyObservationFeatures,
   stepFlappyStateWithControlSubsteps,
+  stepFlappyStateWithControlSubstepsAsync,
   type FlappyObservationFeatures,
 } from '../../flappyEnvironment.ts';
 import {
@@ -85,7 +86,7 @@ import {
  * @returns Normalized rollout configuration.
  */
 export function resolveRolloutEpisodeContext(
-  network: FlappyNetworkLike,
+  network: Pick<FlappyNetworkLike, '_id'>,
   rolloutOptions: FlappyRolloutOptions,
 ): RolloutEpisodeContext {
   // Step 1: Resolve the deterministic evaluation seed from the explicit option or genome id.
@@ -125,6 +126,7 @@ export function resolveRolloutEpisodeContext(
     enableEarlyTermination: rolloutOptions.enableEarlyTermination === true,
     normalizeFitness: rolloutOptions.normalizeFitness === true,
     pipeProgressTarget: rolloutOptions.pipeProgressTarget,
+    shouldStop: rolloutOptions.shouldStop,
   };
 }
 
@@ -173,12 +175,45 @@ export function runRolloutEpisodeLoop(
 ): void {
   // Step 1: Continue stepping while the episode remains active and within the frame cap.
   while (
-    !rolloutEpisodeRuntimeState.state.done &&
-    rolloutEpisodeRuntimeState.state.frameIndex <
-      rolloutEpisodeContext.maxFramesPerEpisode
+    shouldContinueRolloutEpisode(
+      rolloutEpisodeContext,
+      rolloutEpisodeRuntimeState,
+    )
   ) {
     runRolloutEpisodeFrame(
       network,
+      rolloutEpisodeContext,
+      rolloutEpisodeRuntimeState,
+    );
+  }
+}
+
+/**
+ * Runs the main rollout loop against one async predictor callback.
+ *
+ * This keeps the rollout semantics aligned with the synchronous evaluation
+ * surface while allowing the control decision itself to come from a persistent
+ * worker-hosted predictor.
+ *
+ * @param predictOutputs - Async predictor callback for one observation vector.
+ * @param rolloutEpisodeContext - Normalized rollout configuration.
+ * @param rolloutEpisodeRuntimeState - Mutable runtime state.
+ * @returns Nothing.
+ */
+export async function runRolloutEpisodeLoopWithPredictor(
+  predictOutputs: (observationVector: number[]) => Promise<unknown>,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): Promise<void> {
+  // Step 1: Continue stepping while the episode remains active and within the frame cap.
+  while (
+    shouldContinueRolloutEpisode(
+      rolloutEpisodeContext,
+      rolloutEpisodeRuntimeState,
+    )
+  ) {
+    await runRolloutEpisodeFrameWithPredictor(
+      predictOutputs,
       rolloutEpisodeContext,
       rolloutEpisodeRuntimeState,
     );
@@ -270,6 +305,61 @@ function runRolloutEpisodeFrame(
 }
 
 /**
+ * Runs one rollout frame through an asynchronous predictor boundary.
+ *
+ * This mirrors `runRolloutEpisodeFrame(...)` but awaits control output from a
+ * worker-hosted predictor before advancing the environment, which keeps channel
+ * and direct evaluation semantics aligned.
+ *
+ * @param predictOutputs - Async predictor callback for one observation vector.
+ * @param rolloutEpisodeContext - Normalized rollout configuration.
+ * @param rolloutEpisodeRuntimeState - Mutable runtime state.
+ * @returns Promise resolved after the frame has advanced and shaping is updated.
+ */
+async function runRolloutEpisodeFrameWithPredictor(
+  predictOutputs: (observationVector: number[]) => Promise<unknown>,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): Promise<void> {
+  // Step 1: Capture the pre-step observation used by dense shaping.
+  const previousObservationFeatures = getFlappyObservationFeatures(
+    rolloutEpisodeRuntimeState.state,
+    rolloutEpisodeContext.difficultyScale,
+  );
+
+  // Step 2: Advance the environment using predictor-driven flap control.
+  await stepFlappyStateWithControlSubstepsAsync(
+    rolloutEpisodeRuntimeState.state,
+    rolloutEpisodeRuntimeState.rng,
+    () =>
+      resolveRolloutFrameFlapDecisionWithPredictor(
+        predictOutputs,
+        rolloutEpisodeContext,
+        rolloutEpisodeRuntimeState,
+      ),
+    rolloutEpisodeContext.difficultyScale,
+    FLAPPY_CONTROL_SUBSTEPS_PER_FRAME,
+  );
+
+  // Step 3: Update dense shaping from the pre-step and post-step observations.
+  const currentObservationFeatures = getFlappyObservationFeatures(
+    rolloutEpisodeRuntimeState.state,
+    rolloutEpisodeContext.difficultyScale,
+  );
+  rolloutEpisodeRuntimeState.denseShapingFitness += computeDenseShapingReward(
+    previousObservationFeatures,
+    currentObservationFeatures,
+  );
+
+  // Step 4: Apply the optional early-termination heuristic when enabled.
+  applyRolloutEarlyTerminationIfNeeded(
+    rolloutEpisodeContext,
+    rolloutEpisodeRuntimeState,
+    currentObservationFeatures,
+  );
+}
+
+/**
  * Resolves the flap decision for one control substep and commits memory state.
  *
  * The shared memory surface is updated at the same post-decision boundary used
@@ -299,6 +389,46 @@ function resolveRolloutFrameFlapDecision(
     rolloutEpisodeRuntimeState.observationMemoryState,
   );
   const outputs = network.activate(observation);
+  const shouldFlap = resolveFlapDecision(outputs);
+
+  // Step 3: Commit the observation and decision to the shared compatibility state.
+  commitSharedObservationMemoryStep(
+    rolloutEpisodeRuntimeState.observationMemoryState,
+    observationFeatures,
+    shouldFlap,
+  );
+  return shouldFlap;
+}
+
+/**
+ * Resolves one flap decision from an asynchronous predictor and commits memory.
+ *
+ * The predictor path shares the same observation-vector construction and memory
+ * commit point as the direct network path, so recurrent evaluation stays stable
+ * across browser-worker and synchronous rollout surfaces.
+ *
+ * @param predictOutputs - Async predictor callback for one observation vector.
+ * @param rolloutEpisodeContext - Normalized rollout configuration.
+ * @param rolloutEpisodeRuntimeState - Mutable runtime state.
+ * @returns Promise resolving to whether the bird should flap.
+ */
+async function resolveRolloutFrameFlapDecisionWithPredictor(
+  predictOutputs: (observationVector: number[]) => Promise<unknown>,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): Promise<boolean> {
+  // Step 1: Resolve the current observation features from the mutable game state.
+  const observationFeatures = getFlappyObservationFeatures(
+    rolloutEpisodeRuntimeState.state,
+    rolloutEpisodeContext.difficultyScale,
+  );
+
+  // Step 2: Build the current-frame controller input and query the async predictor.
+  const observation = resolveTemporalObservationVector(
+    observationFeatures,
+    rolloutEpisodeRuntimeState.observationMemoryState,
+  );
+  const outputs = await predictOutputs(observation);
   const shouldFlap = resolveFlapDecision(outputs);
 
   // Step 3: Commit the observation and decision to the shared compatibility state.
@@ -358,4 +488,61 @@ function applyRolloutEarlyTerminationIfNeeded(
   rolloutEpisodeRuntimeState.state.done = true;
   rolloutEpisodeRuntimeState.state.doneReason =
     FLAPPY_ROLLOUT_DONE_REASON_COLLISION;
+}
+
+/**
+ * Resolves whether the episode loop should advance another frame.
+ *
+ * Besides the ordinary done and frame-budget guards, this helper owns the
+ * cooperative caller abort hook used by recurrent warm-start deadlines. When
+ * the hook fires, the rollout is marked as a timeout so callers can distinguish
+ * budget exhaustion from a gameplay collision.
+ *
+ * @param rolloutEpisodeContext - Normalized rollout configuration.
+ * @param rolloutEpisodeRuntimeState - Mutable runtime state.
+ * @returns True when the rollout should process another frame.
+ */
+function shouldContinueRolloutEpisode(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): boolean {
+  if (rolloutEpisodeRuntimeState.state.done) {
+    return false;
+  }
+
+  if (
+    rolloutEpisodeRuntimeState.state.frameIndex >=
+    rolloutEpisodeContext.maxFramesPerEpisode
+  ) {
+    return false;
+  }
+
+  if (!shouldStopRolloutEpisode(rolloutEpisodeContext)) {
+    return true;
+  }
+
+  rolloutEpisodeRuntimeState.state.done = true;
+  rolloutEpisodeRuntimeState.state.doneReason =
+    FLAPPY_ROLLOUT_DONE_REASON_TIMEOUT;
+  return false;
+}
+
+/**
+ * Invokes the optional cooperative abort hook for the current rollout.
+ *
+ * Hook failures are treated as a stop request because the hook is a guardrail
+ * around optional warm-start work; a broken guard should yield back to normal
+ * NEAT evolution instead of trapping the worker in refinement.
+ *
+ * @param rolloutEpisodeContext - Normalized rollout configuration.
+ * @returns True when the caller asks the rollout to stop.
+ */
+function shouldStopRolloutEpisode(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+): boolean {
+  try {
+    return rolloutEpisodeContext.shouldStop?.() === true;
+  } catch {
+    return true;
+  }
 }

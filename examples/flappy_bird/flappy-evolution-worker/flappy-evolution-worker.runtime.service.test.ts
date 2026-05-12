@@ -29,8 +29,16 @@ interface WorkerRuntimeWithSeedNetwork {
 }
 
 interface WorkerRuntimeWithPopulation extends Neat {
-  fitness: (network: Network) => number;
+  fitness: (network: Network) => number | Promise<number>;
   population: Network[];
+}
+
+interface WorkerRuntimeWithPopulationFitness extends Neat {
+  fitness: (population: Network[]) => Promise<void>;
+  population: Network[];
+  options: {
+    fitnessPopulation?: boolean;
+  };
 }
 
 afterEach(() => {
@@ -107,6 +115,48 @@ describe('createInitializedWorkerRuntime', () => {
     });
   });
 
+  it('uses the saved browser-local champion network when init payload provides one', () => {
+    const championNetwork = buildExampleArchitectureProfileNetwork(
+      'flappy-bird',
+      'mlp',
+    );
+    const hiddenNode = championNetwork.nodes.find(
+      (candidateNode) => candidateNode.type === 'hidden',
+    );
+
+    if (!hiddenNode) {
+      throw new Error(
+        'Expected the saved champion probe network to have one hidden node.',
+      );
+    }
+
+    hiddenNode.bias = 42;
+
+    const initPayload: WorkerInitMessage['payload'] = {
+      architectureProfileId: 'mlp',
+      championNetworkJson: championNetwork.toJSON(),
+      populationSize: 8,
+      elitismCount: 2,
+      rngSeed: 12345,
+    };
+    const neatRuntime = createInitializedWorkerRuntime(
+      initPayload,
+    ) as unknown as {
+      options: {
+        network: Network;
+      };
+    };
+    const restoredHiddenNode = neatRuntime.options.network.nodes.find(
+      (candidateNode) => candidateNode.type === 'hidden',
+    );
+
+    expect({
+      restoredHiddenBias: restoredHiddenNode?.bias,
+    }).toEqual({
+      restoredHiddenBias: 42,
+    });
+  });
+
   it('enables recurrent mutation growth for temporal Flappy profiles', () => {
     const initPayload: WorkerInitMessage['payload'] = {
       architectureProfileId: 'gru',
@@ -135,7 +185,7 @@ describe('createInitializedWorkerRuntime', () => {
     });
   });
 
-  it('keeps the default worker runtime on the single-rollout browser objective', () => {
+  it('keeps the default worker runtime on the single-rollout browser objective', async () => {
     const singleRolloutFitnessSpy = jest
       .spyOn(flappyEvaluation, 'evaluateFlappyFitness')
       .mockReturnValue(123);
@@ -151,7 +201,9 @@ describe('createInitializedWorkerRuntime', () => {
     const neatRuntime = createInitializedWorkerRuntime(
       initPayload,
     ) as WorkerRuntimeWithPopulation;
-    const resolvedFitness = neatRuntime.fitness(neatRuntime.population[0]);
+    const resolvedFitness = await neatRuntime.fitness(
+      neatRuntime.population[0],
+    );
 
     expect({
       aggregateCallCount: sharedSeedFitnessSpy.mock.calls.length,
@@ -184,7 +236,7 @@ describe('createInitializedWorkerRuntime', () => {
     },
   ])(
     'uses a pipe-first shared-seed browser scalar for the $architectureProfileId worker profile',
-    ({ architectureProfileId, expectedSharedSeedCount }) => {
+    async ({ architectureProfileId, expectedSharedSeedCount }) => {
       const singleRolloutFitnessSpy = jest
         .spyOn(flappyEvaluation, 'evaluateFlappyFitness')
         .mockReturnValue(999);
@@ -209,15 +261,19 @@ describe('createInitializedWorkerRuntime', () => {
       const neatRuntime = createInitializedWorkerRuntime(
         initPayload,
       ) as WorkerRuntimeWithPopulation;
-      const resolvedFitness = neatRuntime.fitness(neatRuntime.population[0]);
+      const resolvedFitness = await neatRuntime.fitness(
+        neatRuntime.population[0],
+      );
       const sharedSeedFitnessCall = sharedSeedFitnessSpy.mock.calls.at(-1);
 
       expect({
+        aggregateCallCount: sharedSeedFitnessSpy.mock.calls.length,
         aggregateOptions: sharedSeedFitnessCall?.[2],
         resolvedFitness,
         sharedSeedCount: sharedSeedFitnessCall?.[1]?.length,
         singleRolloutCallCount: singleRolloutFitnessSpy.mock.calls.length,
       }).toEqual({
+        aggregateCallCount: 2,
         aggregateOptions: {
           enableEarlyTermination: true,
           maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
@@ -231,7 +287,42 @@ describe('createInitializedWorkerRuntime', () => {
     },
   );
 
-  it('rotates the LSTM shared rollout seed batch after each evolved generation', () => {
+  it('keeps zero-pipe recurrent genomes on the first shared seed only', async () => {
+    const sharedSeedFitnessSpy = jest
+      .spyOn(flappyEvaluation, 'evaluateFlappyFitnessAcrossSeeds')
+      .mockReturnValue({
+        seedCount: 1,
+        meanFitness: 0,
+        medianFitness: 0,
+        p90Fitness: 0,
+        fitnessStdDev: 0,
+        robustFitness: 50,
+        meanPipesPassed: 0,
+        meanFramesSurvived: 50,
+      });
+    const neatRuntime = createInitializedWorkerRuntime({
+      architectureProfileId: 'gru',
+      populationSize: 8,
+      elitismCount: 2,
+      rngSeed: 12345,
+    }) as WorkerRuntimeWithPopulation;
+
+    const resolvedFitness = await neatRuntime.fitness(
+      neatRuntime.population[0],
+    );
+
+    expect({
+      aggregateCallCount: sharedSeedFitnessSpy.mock.calls.length,
+      resolvedFitness,
+      sharedSeedCount: sharedSeedFitnessSpy.mock.calls.at(-1)?.[1]?.length,
+    }).toEqual({
+      aggregateCallCount: 1,
+      resolvedFitness: 50,
+      sharedSeedCount: 1,
+    });
+  });
+
+  it('rotates the LSTM shared rollout seed batch after each evolved generation', async () => {
     const sharedSeedFitnessSpy = jest
       .spyOn(flappyEvaluation, 'evaluateFlappyFitnessAcrossSeeds')
       .mockReturnValue({
@@ -251,18 +342,18 @@ describe('createInitializedWorkerRuntime', () => {
       rngSeed: 12345,
     }) as WorkerRuntimeWithPopulation & { generation: number };
 
-    neatRuntime.fitness(neatRuntime.population[0]);
+    await neatRuntime.fitness(neatRuntime.population[0]);
     const firstGenerationSeeds = [
       ...(sharedSeedFitnessSpy.mock.calls.at(-1)?.[1] ?? []),
     ];
 
-    neatRuntime.fitness(neatRuntime.population[0]);
+    await neatRuntime.fitness(neatRuntime.population[0]);
     const repeatedGenerationSeeds = [
       ...(sharedSeedFitnessSpy.mock.calls.at(-1)?.[1] ?? []),
     ];
 
     neatRuntime.generation = 1;
-    neatRuntime.fitness(neatRuntime.population[0]);
+    await neatRuntime.fitness(neatRuntime.population[0]);
     const nextGenerationSeeds = [
       ...(sharedSeedFitnessSpy.mock.calls.at(-1)?.[1] ?? []),
     ];
@@ -354,6 +445,20 @@ describe('createInitializedWorkerRuntime', () => {
   it.each(['gru', 'lstm'] as const)(
     'keeps the first worker generation structurally valid for the %s profile',
     async (architectureProfileId) => {
+      jest
+        .spyOn(flappyEvaluation, 'evaluateFlappyFitnessAcrossSeeds')
+        .mockReturnValue({
+          seedCount: 3,
+          meanFitness: 0,
+          medianFitness: 0,
+          p90Fitness: 0,
+          fitnessStdDev: 0,
+          robustFitness: 0,
+          meanPipesPassed: 0,
+          meanFramesSurvived: 0,
+        });
+      jest.spyOn(flappyEvaluation, 'evaluateFlappyFitness').mockReturnValue(0);
+
       const initPayload: WorkerInitMessage['payload'] = {
         architectureProfileId,
         populationSize: FLAPPY_BROWSER_POPULATION_SIZE,
@@ -396,4 +501,57 @@ describe('createInitializedWorkerRuntime', () => {
       expect(firstInvalidPopulationIndex).toBe(-1);
     },
   );
+
+  it('uses the shared-memory evaluation pool for recurrent browser profiles when one is available', async () => {
+    const workerPool = {
+      evaluateGenomesAcrossSeeds: jest.fn(
+        async (population: Network[]) =>
+          new Map([
+            [population[0], createSharedAggregate(2, 321, 10)],
+            [population[1], createSharedAggregate(1, 100, 0)],
+          ]),
+      ),
+    };
+    const initPayload: WorkerInitMessage['payload'] = {
+      architectureProfileId: 'gru',
+      populationSize: 2,
+      elitismCount: 1,
+      rngSeed: 12345,
+    };
+    const neatRuntime = createInitializedWorkerRuntime(initPayload, {
+      workerPool: workerPool as never,
+    }) as WorkerRuntimeWithPopulationFitness;
+
+    await neatRuntime.fitness(neatRuntime.population);
+
+    expect({
+      fitnessPopulation: neatRuntime.options.fitnessPopulation,
+      scoredPopulation: neatRuntime.population.map((populationNetwork) =>
+        Number(populationNetwork.score ?? 0),
+      ),
+      workerPoolCallCount:
+        workerPool.evaluateGenomesAcrossSeeds.mock.calls.length,
+    }).toEqual({
+      fitnessPopulation: true,
+      scoredPopulation: [20_316, 10_100],
+      workerPoolCallCount: 2,
+    });
+  });
 });
+
+function createSharedAggregate(
+  meanPipesPassed: number,
+  robustFitness: number,
+  fitnessStdDev: number,
+): flappyEvaluation.FlappySeedBatchEvaluation {
+  return {
+    seedCount: 3,
+    meanFitness: robustFitness,
+    medianFitness: robustFitness,
+    p90Fitness: robustFitness,
+    fitnessStdDev,
+    robustFitness,
+    meanPipesPassed,
+    meanFramesSurvived: robustFitness,
+  };
+}

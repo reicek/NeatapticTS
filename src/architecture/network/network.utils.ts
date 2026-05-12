@@ -5,7 +5,15 @@ export {
   activateRaw,
   activateBatch,
 } from './activate/network.activate.utils';
-export { connect, disconnect } from './connect/network.connect.utils';
+export {
+  forwardWindowed,
+  forwardWindowedAsync,
+} from './window/network.window.utils';
+export {
+  connect,
+  connectBatch,
+  disconnect,
+} from './connect/network.connect.utils';
 export {
   setSeed,
   snapshotRNG,
@@ -20,10 +28,13 @@ export { crossOver } from './genetic/network.genetic.utils';
 export { addNodeBetweenImpl } from './mutate/network.mutate.public.utils';
 export { mutateImpl } from './mutate/network.mutate.utils';
 export {
+  configureSparsityBudget,
+  getSparsityBudgetSnapshot,
   maybePrune,
   pruneToSparsity,
   getCurrentSparsity,
 } from './prune/network.prune.utils';
+export { ensureGrowthBudget } from './prune/network.prune.budget.utils';
 export { removeNode } from './remove/network.remove.utils';
 export {
   serialize,
@@ -92,6 +103,7 @@ export * as onnxLayerAnalysisUtils from './onnx/network.onnx.layer-analysis.util
 export * as onnxRuntimeLoadUtils from './onnx/import/network.onnx.runtime-load.utils';
 export * as onnxUtils from './onnx/network.onnx.utils';
 export * as pruneUtils from './prune/network.prune.utils';
+export * as pruneBudgetUtils from './prune/network.prune.budget.utils';
 export * as removeUtils from './remove/network.remove.utils';
 export * as serializePublicUtils from './serialize/network.serialize.public.utils';
 export * as serializeUtils from './serialize/network.serialize.utils';

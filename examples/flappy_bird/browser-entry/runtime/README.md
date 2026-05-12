@@ -457,10 +457,30 @@ Returns: Nothing.
 Long-running evolution/playback orchestration for the browser runtime.
 
 This loop is the heart of the interactive demo. It repeatedly asks the worker
-for the next evolved generation, updates the HUD and network view, plays back
-that generation on the canvas, then folds the outcome into the generation
-summary section and the cross-generation history used by the architecture
-selector.
+for the next playable generation payload, updates the HUD and network view,
+plays back that population on the canvas, then folds the outcome into the
+generation summary section and the cross-generation history used by the
+architecture selector.
+
+### attachWorkerRuntimeStatusHudUpdates
+
+```ts
+attachWorkerRuntimeStatusHudUpdates(
+  options: { evolutionWorker: Worker; statsValueByKey: Partial<Record<FlappyStatsKey, HTMLTableCellElement>>; },
+): () => void
+```
+
+Attaches worker runtime-status messages to the browser HUD status row.
+
+Runtime status messages are non-blocking hints emitted while the worker is
+initializing, choosing its evaluation transport, evolving, or preparing
+playback. Keeping them separate from request responses lets long recurrent
+waits explain themselves without changing the generation/playback promises.
+
+Parameters:
+- `options` - Worker and HUD cell references.
+
+Returns: Cleanup callback that removes the message listener.
 
 ### finalizeStartupPreview
 
@@ -588,6 +608,55 @@ Parameters:
 
 Returns: HUD-ready summary values with placeholders until playback completes.
 
+### resolveRuntimeArchitectureProgressUpdate
+
+```ts
+resolveRuntimeArchitectureProgressUpdate(
+  options: { candidateBestScore: { pipesPassed: number; framesSurvived: number; }; candidateChampionNetworkJson?: SerializedNetwork | undefined; championByProfileId: Partial<Record<ExampleArchitectureProfileId, SerializedNetwork>>; historyByProfileId: Partial<Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>>; profileId: ExampleArchitectureProfileId; },
+): { championByProfileId: Partial<Record<ExampleArchitectureProfileId, SerializedNetwork>>; didImprove: boolean; historyByProfileId: Partial<Record<ExampleArchitectureProfileId, RuntimeArchitectureBestScore>>; }
+```
+
+Resolves the next browser-local architecture record state after one playback run.
+
+Parameters:
+- `options` - Current history/champion tables plus the candidate run result.
+
+Returns: Updated history and champion tables plus an improvement flag.
+
+### resolveRuntimeChampionCandidateNetworkJson
+
+```ts
+resolveRuntimeChampionCandidateNetworkJson(
+  input: { generationBestNetworkJson?: SerializedNetwork | undefined; playbackSummary: PlaybackEpisodeSummary; },
+): SerializedNetwork | undefined
+```
+
+Resolves which network should be persisted for browser-local architecture records.
+
+Playback can crown a different visible winner than the generation-best genome
+selected before playback. Persisting the actual playback winner keeps saved
+champions aligned with the score that improved the local history table.
+
+Parameters:
+- `input` - Playback summary plus generation-best fallback network.
+
+Returns: Playback winner network JSON when available, otherwise generation-best JSON.
+
+### resolveWorkerInitPayload
+
+```ts
+resolveWorkerInitPayload(
+  options: { architectureProfileId: ExampleArchitectureProfileId; championByProfileId: Partial<Record<ExampleArchitectureProfileId, SerializedNetwork>>; elitismCount: number; populationSize: number; rngSeed: number; },
+): { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; }
+```
+
+Resolves the worker init payload for the selected architecture profile.
+
+Parameters:
+- `options` - Worker startup values plus the browser-local champion table.
+
+Returns: Worker init payload with an optional champion seed override.
+
 ### runRuntimeEvolutionLoop
 
 ```ts
@@ -599,8 +668,8 @@ runRuntimeEvolutionLoop(
 Runs generation orchestration and playback until a stop signal is observed.
 
 The loop alternates between two phases:
-1. Evolve off-thread until the worker emits the next best-generation summary.
-2. Play that generation back on the main thread while streaming HUD updates.
+1. Wait off-thread until the worker emits the next playable population summary.
+2. Play that population back on the main thread while streaming HUD updates.
 
 This rhythm makes the demo feel like a live training dashboard instead of a
 one-shot batch job.
@@ -805,11 +874,10 @@ resolveRuntimePopulationBudget(
 
 Resolves the browser evolution budget for one architecture profile.
 
-Sparse and NARX keep wider browser budgets than the dense MLP baseline so
-the interactive demo still has room to discover pipe-clearing behavior in a
-small number of generations. GRU and LSTM stay smaller than NARX so the live
-demo remains responsive, but LSTM keeps a broader flock than the old default
-because the heavier gate stack needs more exploration headroom.
+These browser budgets are fixed performance caps rather than hardware-scaled
+targets. The live page keeps MLP at its tiny baseline, gives LSTM a wider
+14-bird recurrent flock, and keeps the other heavier recurrent builders
+smaller so initialization and generation turnover stay responsive.
 
 Parameters:
 - `architectureProfileId` - Selected shared Flappy profile id.
@@ -843,6 +911,23 @@ Parameters:
 
 Returns: True when the candidate is strictly better.
 
+### persistRuntimeArchitectureChampions
+
+```ts
+persistRuntimeArchitectureChampions(
+  championByProfileId: Partial<Record<ExampleArchitectureProfileId, SerializedNetwork>>,
+  storage: RuntimeArchitectureHistoryStorage | undefined,
+): void
+```
+
+Persists the current browser-local champion table when storage exists.
+
+Parameters:
+- `championByProfileId` - Champion table to persist.
+- `storage` - Optional storage override for tests.
+
+Returns: Nothing.
+
 ### persistRuntimeArchitectureHistory
 
 ```ts
@@ -860,6 +945,25 @@ Parameters:
 
 Returns: Nothing.
 
+### resetRuntimeArchitectureProgress
+
+```ts
+resetRuntimeArchitectureProgress(
+  storage: RuntimeArchitectureHistoryStorage | undefined,
+): void
+```
+
+Clears all persisted browser-local Flappy score history and champion state.
+
+Resetting the selector should remove both the visible best-score captions and
+the stored champion seeds they were derived from, so the next session starts
+from the shared architecture template instead of reusing a saved winner.
+
+Parameters:
+- `storage` - Optional storage override for tests.
+
+Returns: Nothing.
+
 ### resolveAvailableRuntimeArchitectureProfiles
 
 ```ts
@@ -869,6 +973,21 @@ resolveAvailableRuntimeArchitectureProfiles(): ExampleArchitectureProfile[]
 Resolves the currently approved shared Flappy architecture profiles.
 
 Returns: Approved shared profiles in the curated Flappy selector order.
+
+### resolveRuntimeArchitectureChampions
+
+```ts
+resolveRuntimeArchitectureChampions(
+  storage: RuntimeArchitectureHistoryStorage | undefined,
+): Partial<Record<ExampleArchitectureProfileId, SerializedNetwork>>
+```
+
+Reads persisted browser-local champion networks when storage is available.
+
+Parameters:
+- `storage` - Optional storage override for tests.
+
+Returns: Previously stored champion table or an empty table.
 
 ### resolveRuntimeArchitectureHistory
 
@@ -973,6 +1092,10 @@ Returns: Resolved Flappy-ready shared profile.
 ### RuntimeArchitectureBestScore
 
 Best-known local browser record for one Flappy architecture profile.
+
+### RuntimeArchitectureChampionByProfileId
+
+Browser-local champion table keyed by the shared Flappy architecture profile id.
 
 ### RuntimeArchitectureHistoryByProfileId
 

@@ -100,9 +100,11 @@ describe('network runtime diagnostics utility chapter', () => {
             good: 3,
             bad: 1,
             overflowCount: 0,
+            underflowCount: 0,
             scaleUps: 0,
             scaleDowns: 0,
             lastOverflowStep: 7,
+            lastUnderflowStep: -1,
           },
         });
       });

@@ -23,6 +23,7 @@ import type {
   WorkerStartPlaybackMessage,
 } from './flappy-evolution-worker.types';
 import type { Neat } from '../../../src/neataptic';
+import { closeWorkerPopulationRenderState } from './flappy-evolution-worker.simulation.utils';
 
 /**
  * Creates a fresh worker playback session state from the current evolved population.
@@ -54,19 +55,27 @@ export function beginWorkerPlaybackSession(options: {
     rng: ReturnType<typeof createXorshift32>,
     initialVisibleWorldWidthPx: number,
     initialVisibleWorldHeightPx: number,
+    channelWorkerUrl?: string,
   ) => WorkerPlaybackState;
+  channelWorkerUrl?: string;
 }): {
   currentPlaybackState: WorkerPlaybackState;
   currentPlaybackRng: ReturnType<typeof createXorshift32>;
   playbackWinnerIndex: number;
 } {
-  const { currentPopulation, payload, createPopulationRenderState } = options;
+  const {
+    currentPopulation,
+    payload,
+    createPopulationRenderState,
+    channelWorkerUrl,
+  } = options;
   const playbackRng = createXorshift32(0xabcdef01);
   const currentPlaybackState = createPopulationRenderState(
     currentPopulation,
     playbackRng,
     payload.visibleWorldWidthPx,
     payload.visibleWorldHeightPx,
+    channelWorkerUrl,
   );
 
   return {
@@ -88,7 +97,7 @@ export function beginWorkerPlaybackSession(options: {
  * @param options - Playback step dependencies and mutable runtime state.
  * @returns Updated playback runtime state after processing this step.
  */
-export function processWorkerPlaybackStep(options: {
+export async function processWorkerPlaybackStep(options: {
   playbackStepPayload: WorkerRequestPlaybackStepMessage['payload'];
   currentPlaybackState: WorkerPlaybackState;
   currentPlaybackRng: ReturnType<typeof createXorshift32>;
@@ -98,7 +107,7 @@ export function processWorkerPlaybackStep(options: {
     renderState: WorkerPlaybackState,
     rng: ReturnType<typeof createXorshift32>,
     difficultyProfile: SharedDifficultyProfile,
-  ) => number;
+  ) => Promise<number>;
   createPlaybackSnapshot: (
     playbackState: WorkerPlaybackState,
   ) => WorkerPlaybackFrameSnapshot;
@@ -109,12 +118,12 @@ export function processWorkerPlaybackStep(options: {
     workerMessage: WorkerResponseMessage,
     transferList?: Transferable[],
   ) => void;
-}): {
+}): Promise<{
   currentPlaybackState: WorkerPlaybackState | undefined;
   currentPlaybackRng: ReturnType<typeof createXorshift32> | undefined;
   currentPopulation: Network[];
   playbackWinnerIndex: number;
-} {
+}> {
   const {
     playbackStepPayload,
     currentPlaybackState,
@@ -148,7 +157,7 @@ export function processWorkerPlaybackStep(options: {
       resolveLeaderPipesPassed(currentPlaybackState.birds),
       1,
     );
-    totalActivationCalls += stepPopulationFrame(
+    totalActivationCalls += await stepPopulationFrame(
       currentPlaybackState,
       currentPlaybackRng,
       difficultyProfile,
@@ -234,6 +243,9 @@ export function processWorkerPlaybackStep(options: {
     winnerBird?.pipesPassed ?? 0,
   );
 
+  // Step 5: Retire any persistent predictor channels before clearing playback state.
+  await closeWorkerPopulationRenderState(currentPlaybackState);
+
   postWorkerMessage(
     {
       type: 'playback-step',
@@ -246,6 +258,7 @@ export function processWorkerPlaybackStep(options: {
         p90FramesSurvived,
         winnerPipesPassed: winnerBird?.pipesPassed ?? 0,
         winnerFramesSurvived: winnerBird?.framesSurvived ?? 0,
+        winnerNetworkJson: winnerBird?.network.toJSON(),
       },
     },
     snapshotTransferList,

@@ -27,6 +27,14 @@ Aggregate scoring context shared while computing frame-primary scores.
 The context precomputes population-wide reference values so per-genome scoring
 can stay simple and deterministic.
 
+### PopulationStageEvaluationDependencies
+
+Optional evaluation accelerators used by staged trainer helpers.
+
+Keeping the dependency shelf separate from generation-plan data lets the
+staged evaluator opt into parallel worker transport without changing the
+meaning of the plan itself.
+
 ### PopulationStageEvaluationRequest
 
 Candidate-stage request used by the staged population evaluator.
@@ -71,7 +79,8 @@ evaluatePopulationFullStage(
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
   elitismCount: number,
-): void
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies,
+): Promise<void>
 ```
 
 Executes the full evaluation stage over the top provisional candidates.
@@ -97,7 +106,8 @@ evaluatePopulationQuickStage(
   generationEvaluationPlan: FlappyGenerationEvaluationPlan,
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
-): void
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies,
+): Promise<void>
 ```
 
 Executes the quick evaluation stage over the full population.
@@ -135,7 +145,8 @@ evaluatePopulationReevaluationStage(
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
   elitismCount: number,
-): void
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies,
+): Promise<void>
 ```
 
 Executes the large-seed reevaluation stage over top candidates.
@@ -185,7 +196,8 @@ evaluatePopulationSelectedCandidateStage(
   populationStageEvaluationRequest: PopulationStageEvaluationRequest,
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
   provisionalScoresByGenome: Map<FlappyTrainerNetwork, number>,
-): void
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies,
+): Promise<void>
 ```
 
 Evaluates a selected candidate subset for a population stage.
@@ -211,7 +223,8 @@ evaluateSpecificGenomesAcrossSeeds(
   sharedSeeds: readonly number[],
   rolloutOptions: FlappyRolloutOptions,
   aggregateByGenome: Map<FlappyTrainerNetwork, FlappySeedBatchEvaluation>,
-): void
+  populationStageEvaluationDependencies: PopulationStageEvaluationDependencies,
+): Promise<void>
 ```
 
 Evaluates a specific genome subset across shared seeds.
@@ -223,6 +236,14 @@ less noisy than per-genome private seed sampling.
 For background reading, the Wikipedia article on "control variates" is a good
 intuition pump for why holding part of the randomness fixed can reduce
 variance when comparing alternatives.
+
+Educational note:
+When a worker pool is available, this helper now routes through the public
+`createNeatParallelPopulationEvaluator(...)` factory rather than owning a
+demo-local batch loop. Flappy still prepares the rollout payload shelf and
+decides when the staged trainer should opt into workers, but ordered scoring,
+fallback behavior, and population-level assignment now flow through the same
+reusable library helper that other NEAT callers can adopt.
 
 Parameters:
 - `genomes` - Genomes selected for evaluation.

@@ -8,7 +8,7 @@ import {
   createRuntimeLifecycleState,
   createRuntimeRunHandle,
 } from './runtime.lifecycle.service';
-import { persistRuntimeArchitectureHistory } from './runtime.architecture-profile.service';
+import { resetRuntimeArchitectureProgress } from './runtime.architecture-profile.service';
 import {
   createRuntimeStartContext,
   initializeRuntimeHud,
@@ -95,8 +95,8 @@ async function startRuntimeSession(
           return;
         }
 
-        // Clear persisted history so the next session starts with clean captions.
-        persistRuntimeArchitectureHistory({});
+        // Clear both persisted score history and saved champions.
+        resetRuntimeArchitectureProgress();
 
         const currentProfileId =
           runtimeStartContext.config.selectedArchitectureProfile.id;

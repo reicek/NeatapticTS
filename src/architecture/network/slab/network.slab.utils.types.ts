@@ -1,3 +1,4 @@
+import type { ActivationPrecision, PrecisionConfig } from '../../../config';
 import type Network from '../../network/network';
 import type Connection from '../../connection';
 import type Node from '../../node';
@@ -59,7 +60,8 @@ export interface NetworkSlabProps {
   _adjDirty?: boolean;
   _slabVersion?: number;
   _slabAsyncBuilds?: number;
-  _activationPrecision?: 'f32' | 'f64';
+  _precisionConfig?: PrecisionConfig;
+  _activationPrecision?: ActivationPrecision;
   _enforceAcyclic?: boolean;
   _fastA?: Float32Array | Float64Array;
   _fastS?: Float32Array | Float64Array;

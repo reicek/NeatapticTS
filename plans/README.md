@@ -33,15 +33,15 @@ Active selection guide:
 
 - [plans/Roadmap.md](Roadmap.md): dependency-aware execution order across all initiatives.
 - [plans/completed/Browser_Build_and_CDN_Distribution.md](completed/Browser_Build_and_CDN_Distribution.md): browser packaging, CDN usage, and distribution ergonomics. [DONE]
-- [plans/Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md): contracts between evolution workflows and gradient-based training.
-- [plans/NEATchat.plans.md](NEATchat.plans.md): planned NEATchat follow-up lane for turning the closed toy demo into a stronger conversational system, gated on Phase 4 substrate readiness plus recurrent ONNX hardening before implementation starts.
-- [plans/Memory_Optimization.md](Memory_Optimization.md): scaling, memory layout, and strategies for very large networks.
+- [plans/completed/Memory_Optimization.md](completed/Memory_Optimization.md): archived pre-NGE memory foundation baseline through Track 1 / Phase 10. [DONE]
 - [plans/completed/Network_Visualization_Export_Schema.plans.md](completed/Network_Visualization_Export_Schema.plans.md): archived visualization export schema baseline for inspection tooling and DOT/schema output. [DONE]
-- [plans/ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): ONNX export/import architecture and rollout phases.
-- [plans/Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md): checkpointing, persistence, save/resume workflows.
+- [plans/Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md): planned hybrid-interoperability lane for deterministic parameter vectors, training isolation, and explicit persistence policy.
+- [plans/ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): active ONNX export/import architecture and rollout lane. [WIP]
+- [plans/NEATchat.plans.md](NEATchat.plans.md): planned NEATchat follow-up lane for turning the closed toy demo into a stronger conversational system, gated on Phase 4 substrate readiness plus recurrent ONNX hardening before implementation starts.
+- [plans/completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md): archived checkpointing, persistence, and save/resume baseline covering population-only snapshots, light checkpoints, strict full checkpoints, and the standalone persistence walkthrough. [DONE]
 - [plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): prebuilt architecture constructors and sequence-oriented builders. [DONE]
-- [plans/Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md): parallel evaluation API for Node and browser workers.
-- [plans/Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md): four progressive worker inference transport strategies (`PortableInferencePayload`, `TransferableInferencePayload`, `InferenceChannel`, `SharedInferenceWorker`) — [PLANNED], no implementation started.
+- [plans/completed/Turnkey_Multithread_Evaluation_API.md](completed/Turnkey_Multithread_Evaluation_API.md): archived low-friction parallel evaluation API extraction baseline for Node and browser workers. [DONE]
+- [plans/completed/Worker_Friendly_Network_Serialization_Fastpath.md](completed/Worker_Friendly_Network_Serialization_Fastpath.md): archived worker transport substrate baseline covering `PortableInferencePayload`, `TransferableInferencePayload`, `InferenceChannel`, and `SharedInferenceWorker`. [DONE]
 - [plans/NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md): NEAT Genesis EvoDevo (NGE) — evo-devo algorithm with computation motifs, memory architecture, neuromodulation, and reproduction system.
 - [plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md): NGE racing benchmark — single-agent sensory specialization and behavioral drives.
 - [plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md): NGE ant hive ecosystem — multi-agent stigmergy, role differentiation, and collective intelligence.
@@ -53,13 +53,13 @@ Task-to-plan trigger phrases:
 - roadmap, sequence, dependency order, what comes first: `plans/Roadmap.md`
 - construct from parts, graph assembly, deterministic builder reopen: `plans/completed/Construct_From_Parts_Graph_Assembly.md`
 - browser bundle, CDN, browser-first usage: `plans/completed/Browser_Build_and_CDN_Distribution.md`
-- worker serialization, transfer cost, fastpath: `plans/Worker_Friendly_Network_Serialization_Fastpath.md`
-- workers, threads, parallel evaluation: `plans/Turnkey_Multithread_Evaluation_API.md`
-- checkpoint, resume, save population: `plans/Population_Save_Resume_and_Checkpointing.md`
+- worker serialization, transfer cost, fastpath reopen: `plans/completed/Worker_Friendly_Network_Serialization_Fastpath.md`
+- workers, threads, parallel evaluation reopen: `plans/completed/Turnkey_Multithread_Evaluation_API.md`
+- checkpoint, resume, save population, strict restore, checkpoint state inventory: `plans/completed/Population_Save_Resume_and_Checkpointing.md`
 - hybrid evolution plus training, optimizer handoff: `plans/Evolution_Training_Interoperability_Contracts.md`
 - preconfigured models, MLP, LSTM, GRU, NARX builders: `plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
 - ONNX, import/export interoperability: `plans/ONNX_EXPORT_PLAN.md`
-- memory pressure, large networks, compact storage: `plans/Memory_Optimization.md`
+- memory pressure, large networks, compact storage: `plans/completed/Memory_Optimization.md`
 - visualization, schema, inspect network shape: `plans/completed/Network_Visualization_Export_Schema.plans.md`
 - examples, tutorials, learning path, onboarding: `plans/completed/Interactive_Examples_and_Learning_Path.plans.md`
 - neatchat, chatbot, conversational system, pretrained seed import, retrieval memory, online language learning, tiny conversation bot: `plans/NEATchat.plans.md`

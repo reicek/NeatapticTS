@@ -1,4 +1,5 @@
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
+import type { ActivationPrecision, PrecisionConfig } from '../../../config';
 import {
   NO_TRACE_FAST_SLAB_TRAINING_FLAG,
   UNDEFINED_INPUT_LENGTH_TEXT,
@@ -150,6 +151,7 @@ function activateWithoutTraceUsingNodeIteration(
 ): number[] {
   const pooledOutputBuffer = activationArrayPool.acquire(
     activationContext.network.output,
+    resolveNoTraceActivationPrecision(activationContext),
   );
 
   try {
@@ -175,4 +177,33 @@ function detachPooledOutputBuffer(
   pooledOutputBuffer: ReturnType<typeof activationArrayPool.acquire>,
 ): number[] {
   return Array.from(pooledOutputBuffer) as number[];
+}
+
+/**
+ * Read the resolved runtime activation precision for no-trace output pooling.
+ *
+ * @param activationContext Shared no-trace activation state.
+ * @returns Active per-network activation precision when present.
+ */
+function resolveNoTraceActivationPrecision(
+  activationContext: NoTraceActivationContext,
+): ActivationPrecision | undefined {
+  const precisionCarrier =
+    activationContext.networkInternal as NoTraceActivationContext['networkInternal'] & {
+      _precisionConfig?: PrecisionConfig;
+      _activationPrecision?: ActivationPrecision;
+    };
+
+  if (
+    precisionCarrier._activationPrecision === 'f32' &&
+    precisionCarrier._activationPrecision !==
+      precisionCarrier._precisionConfig?.activationPrecision
+  ) {
+    return precisionCarrier._activationPrecision;
+  }
+
+  return (
+    precisionCarrier._precisionConfig?.activationPrecision ??
+    precisionCarrier._activationPrecision
+  );
 }

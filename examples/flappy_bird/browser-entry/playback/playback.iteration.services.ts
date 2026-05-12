@@ -253,4 +253,6 @@ export function updatePlaybackLoopCompletion(
     playbackCompletionSummary.winnerPipesPassed;
   loopState.summary.winnerFramesSurvived =
     playbackCompletionSummary.winnerFramesSurvived;
+  loopState.summary.winnerNetworkJson =
+    playbackCompletionSummary.winnerNetworkJson;
 }

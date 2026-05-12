@@ -138,7 +138,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
  *
  * Strategy:
  *  - Perform capacity decision + allocation up front (mirrors sync path).
- *  - Populate connection data in microtask slices (yield via resolved Promise) to avoid long main‑thread stalls.
+ *  - Populate connection data in timer-backed macrotask slices so the browser can service other queued work between chunks.
  *  - Adaptive slice sizing for very large graphs if `config.browserSlabChunkTargetMs` set.
  *
  * Metrics: Increments `_slabAsyncBuilds` for observability.
@@ -169,7 +169,7 @@ export async function rebuildConnectionSlabAsync(
   _prepareSlabBuildPreconditions(buildContext);
 
   // Step 3: Ensure slab arrays and async gain slab are available.
-  _ensureSlabCapacityAsync(buildContext);
+  await _ensureSlabCapacityAsync(buildContext);
 
   // Step 4: Resolve chunk size and populate slabs in cooperative chunks.
   const resolvedChunkSize = _resolveAsyncChunkSize(

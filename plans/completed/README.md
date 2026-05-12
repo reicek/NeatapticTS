@@ -18,6 +18,10 @@ Archive selection guide:
 - [Construct_From_Parts_Graph_Assembly.md](Construct_From_Parts_Graph_Assembly.md): closed Phase 2 whole-graph assembly and construct diagnostics baseline.
 - [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): closed Phase 2 preconfigured architecture builders baseline (MLP, RandomSparse, NARX, GRU, LSTM) including shared demo profile contract, Flappy Bird and ASCII Maze integration, cross-demo e2e matrix, and profile-aware trainer/worker recurrent evolution settings.
 - [Standalone_Inference_Export.md](Standalone_Inference_Export.md): closed Phase 4 standalone export architecture baseline.
+- [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md): closed Phase 4 checkpointing baseline for population-only snapshots, light checkpoints, strict full checkpoints, and the persistence decision ladder.
+- [Memory_Optimization.md](Memory_Optimization.md): closed pre-NGE memory foundation baseline through Track 1 / Phase 10.
+- [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md): closed Phase 4 ergonomic extraction baseline for capability probes, transport auto-selection, browser worker delivery helpers, reusable pools, ordered batch evaluation, and the NEAT population helper.
+- [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md): closed Phase 4 transport substrate baseline for the shared inference IR, portable and transferable payloads, persistent channels, and shared-memory workers.
 - [ES2023 migration](ES2023%20migration): Phase 0 modernization baseline for ES2023 syntax, named errors, and lint enforcement.
 - [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md): completed Flappy Bird documentation pass.
 - [architecture-solid-split.plans.md](architecture-solid-split.plans.md): completed `src/architecture` split baseline.
@@ -44,6 +48,10 @@ Trigger phrases:
 - construct from parts, graph assembly, deterministic builder reopen: `plans/completed/Construct_From_Parts_Graph_Assembly.md`
 - preconfigured builders, MLP/NARX/GRU/LSTM reopen, shared profile contract, demo profile integration: `plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
 - standalone runtime, exported inference file, Phase 4 export reopen: `plans/completed/Standalone_Inference_Export.md`
+- checkpoint, resume, save population, light checkpoint, strict restore reopen: `plans/completed/Population_Save_Resume_and_Checkpointing.md`
+- memory optimization reopen, release gates, Track 1 memory baseline: `plans/completed/Memory_Optimization.md`
+- turnkey worker evaluation reopen, transport auto-selection, ordered worker batches, reusable NEAT helper: `plans/completed/Turnkey_Multithread_Evaluation_API.md`
+- worker transport substrate reopen, payload fastpath, channel workers, shared-memory workers: `plans/completed/Worker_Friendly_Network_Serialization_Fastpath.md`
 - ES2023, immutable array methods, named errors, no CommonJS in new work: `plans/completed/ES2023 migration`
 - methods docs or split reopen: `plans/completed/methods-docs.plans.md`, `plans/completed/methods-solid-split.plans.md`
 - README opening drift or docs-generator reopen: `plans/completed/readme-first-section-pass.plans.md`, `plans/completed/generate-docs-solid-split.plans.md`, `plans/completed/render-docs-html-solid-split.plans.md`

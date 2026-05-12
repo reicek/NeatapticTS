@@ -13,7 +13,7 @@ The point of this folder is not just to prove that NeatapticTS can evolve agents
 | 1 | [helloNetwork](./helloNetwork) | One tiny forward pass through the public API | It gives you a concrete output immediately, without evolution or browser setup. |
 | 2 | [evolveXor](./evolveXor) | The smallest useful NEAT loop | It adds selection, mutation, and generations without the extra complexity of a large environment. |
 | 3 | [sequenceReset](./sequenceReset) | Recurrent state and `network.clear()` semantics | It shows the first stateful behavior boundary before you move to bigger runtime systems. |
-| 4 | [Starter browser pages](../docs/examples/index.html) | Lightweight browser-hosted walkthroughs | It lets you stay on the same three starter concepts while seeing the docs-published browser path. |
+| 4 | [Starter browser pages](../docs/examples/index.html) | Lightweight browser-hosted walkthroughs | It lets you stay on the same starter concepts while seeing the docs-published browser path. |
 | 5 | [flappy_bird](./flappy_bird) and [asciiMaze](./asciiMaze) | Full-system neuroevolution demos | They are best read after the starter path, once the controller and runtime basics are already familiar. |
 
 If you want the shortest useful route through the folder, follow that order exactly: inference first, minimal evolution second, sequence state third, browser quickstart fourth, then the flagship systems.

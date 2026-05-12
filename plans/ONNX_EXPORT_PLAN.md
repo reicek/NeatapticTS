@@ -2,11 +2,22 @@
 
 **Status:** [WIP]
 
-_Last updated: 2026-02-20 (Phase 4 groundwork in progress; Phase 3 deep parity tests still finalizing)_
-
 ## 0. Purpose
 
 Provide a clear, incremental roadmap from the current minimal MLP ONNX export/import toward broad ONNX compatibility (feed‑forward, recurrent, convolutional, attention, quantized, and extensible custom ops) while preserving NeatapticTS evolutionary features where feasible.
+
+Execution status summary:
+
+- Completed: Phases 0, 1, 2
+- In Progress: Phase 3 recurrent hardening and Phase 4 convolutional/spatial groundwork
+- Planned: Phases 5–9
+
+Roadmap alignment note:
+
+- The current ONNX priority is to close the constrained recurrent hardening boundary honestly before broadening downstream claims.
+- Phase 4 spatial work can continue where it strengthens metadata and import shape discipline, but it should not dilute the Phase 3 supported-subset acceptance work.
+- `plans/NEATchat.plans.md` remains gated on this file naming, testing, and documenting an honest recurrent seed-import subset rather than a heuristic best-effort surface.
+- In the agreed serial pre-NGE sequence, this file is the immediate handoff after the archived Track 1 stop line in `plans/completed/Memory_Optimization.md` and before `plans/Evolution_Training_Interoperability_Contracts.md` becomes active.
 
 ## 1. Current Status (Implemented)
 
@@ -116,7 +127,28 @@ Items originally listed under Phase 2 that were intentionally deferred (moved to
 - Residual & skip connections.
 - Multiple inputs / outputs.
 
-### Phase 3 (Recurrent / Temporal)
+### Phase 3 (Recurrent / Temporal) [WIP]
+
+**Status: [WIP] Current ONNX hardening frontier**
+
+Current execution target:
+
+- Finish Phase 3 Step 6 so the recurrent import surface is backed by explicit acceptance and rejection tests rather than best-effort behavior.
+- Keep the supported recurrent subset narrow and documented: single-step self-recurrent paths plus the heuristic LSTM/GRU family that roundtrips honestly.
+- Use the recurrent hardening result as the gate for downstream consumers, especially the dependency-gated NEATchat follow-up lane.
+
+Immediate next implementation slice:
+
+1. Finish the missing deep parity and robustness tests around fused LSTM/GRU import reconstruction.
+2. Add explicit rejection or fallback coverage for malformed recurrent tensors so unsupported graphs fail honestly instead of silently widening support claims.
+3. Refresh the supported-subset documentation in the nearest ONNX source-owned docs surface once the recurrent tests prove the boundary.
+4. Only after that slice is green, widen the Phase 4 spatial pass again.
+
+Validation expectations for the current Phase 3 pass:
+
+- Run the narrowest ONNX-focused Jest slice first for recurrent export/import coverage.
+- Run `npm run docs` after supported-subset documentation changes.
+- Run `npm run test:silent` after the focused tranche is green so the repo-wide ONNX contract remains honest.
 
 Baseline IMPLEMENTED (extended):
 
@@ -149,9 +181,10 @@ LSTM / GRU Heuristic Sub-plan Progress:
 3. ONNX Node Emission – COMPLETED (emits experimental single-step `LSTM` / `GRU` nodes alongside unfused Gemm path; no pruning yet).
 4. Metadata & Fallback – COMPLETED (`lstm_emitted_layers`, `gru_emitted_layers`, `rnn_pattern_fallback`).
 5. Import Path Extension – COMPLETED (reconstructs Layer.lstm / Layer.gru using emitted tensors; best-effort, silent skip on mismatch).
-6. Testing – FINALIZING (deep parity tests to be integrated):
+6. Testing – [WIP] Deep parity and robustness tranche:
 
 - Unit tests for LSTM/GRU emission presence (initializers + node types) under controlled synthetic layer partitions.
+- Public LSTM round-trip regression now verifies that native `Layer.lstm` reconstruction keeps the exported gate biases and recurrent self-weights instead of silently falling back to default native-layer wiring when fused import rewires the hidden slice.
 - Round-trip reconstruction tests verifying gate weight & bias mapping fidelity within tolerance (1e-9) and self-connection restoration.
 - Negative/fallback tests (near-miss sizes recorded as `rnn_pattern_fallback`, incomplete self-connections skip emission).
 - Import robustness tests (missing one of W/R/B causes fused reconstruction skip but base MLP still loads).
@@ -163,9 +196,11 @@ LSTM / GRU Heuristic Sub-plan Progress:
 - Graph pruning/fusion of redundant unfused paths when fused nodes emitted (feature-flagged optimization).
 - Multi-layer stacked fused LSTM/GRU with consistent sequence/time abstraction.
 
-After Step 6 completes, proceed to Phase 4 (Convolutional / Spatial) groundwork (Conv pattern detection spec + minimal Conv export prototype).
+Phase 4 groundwork has already started, but the roadmap-level ONNX stop line still requires this Step 6 recurrent tranche to close before downstream consumers can treat the recurrent import surface as honest and usable.
 
-### Phase 4 (Convolutional / Spatial)
+### Phase 4 (Convolutional / Spatial) [WIP]
+
+**Status: [WIP] Secondary groundwork lane behind recurrent hardening**
 
 Status (cumulative so far):
 
@@ -222,7 +257,7 @@ Deferred / Remaining Phase 4 Scope (updated):
 - Residual / skip spatial connections.
 - Hybrid recurrent + spatial interleaving semantics.
 
-Next Planned Increment (proposed order):
+Next Phase 4 increment after the current recurrent hardening slice:
 
 1.  Import-time pooling shape simulation stub: record virtual (H,W,C) after each pool to enable future correctness checks (still no numeric pooling yet; weights unaffected).
 2.  Optional dense output adjustment flag: simulate flatten size effect for layers following a flattenAfterPooling site (consistency metadata check only; no weight change yet).
@@ -307,15 +342,13 @@ Backward compatibility: default options reproduce current behavior except correc
 - Risk: Explosion of custom ops reduces interoperability (Mitigation: prefer composition of standard ops; gate custom domain usage behind explicit flag).
 - Risk: Performance regression from per-neuron decomposition (Mitigation: fusion pass before final emission).
 
-## 11. Short-Term Action Items (Post Phase 2 Completion)
+## 11. Cross-phase backlog beyond the current frontier
 
-1. Link schema doc from root README & docs index. (COMPLETED - Link now present in `README.md`)
-2. Provide CLI example for exporting an evolved genome (README snippet). (COMPLETED - Example now present in `README.md`)
-3. Property-based randomized topology tests (1–6 hidden layers; varying sparsity & mixed activations) ensure import/export fidelity. (Planned)
-4. Fusion optimization pass for decomposed layers (homogeneity collapse). (Planned)
-5. Sparse representation design (`sparseFormat` CSR draft spec). (Planned)
-6. ONNX Runtime smoke test harness for unified & decomposed models. (Planned)
-7. Begin design notes for multi-input/output and residual connection representation (branching graph semantics). (Planned)
+1. Property-based randomized topology tests (1–6 hidden layers; varying sparsity & mixed activations) ensure import/export fidelity.
+2. Fusion optimization pass for decomposed layers (homogeneity collapse).
+3. Sparse representation design (`sparseFormat` CSR draft spec).
+4. ONNX Runtime smoke test harness for unified and decomposed models.
+5. Design notes for multi-input or output and residual connection representation (branching graph semantics).
 
 ## 12. Contribution Guidelines (ONNX Area)
 

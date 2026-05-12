@@ -81,10 +81,12 @@ import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';
 import type { NetworkInternals } from './network.connect.utils.types';
+import type { NetworkConnectionRequest } from '../network.types';
 import { synchronizeTemporalDescriptorExtensions } from '../network.temporal.extensions.utils';
 import {
   createConnectionsFromSourceNode,
   markConnectionCachesDirtyWhenNeeded,
+  registerCreatedConnectionBatches,
   registerCreatedConnections,
   shouldRejectConnectionForAcyclicMode,
 } from './network.connect.create.utils';
@@ -94,6 +96,12 @@ import {
   removeFirstMatchingConnection,
   selectConnectionCollection,
 } from './network.connect.remove.utils';
+
+type CreatedConnectionBatch = {
+  sourceNode: Node;
+  targetNode: Node;
+  createdConnections: Connection[];
+};
 
 /**
  * Create and register one (or multiple) directed connection objects between two nodes.
@@ -177,6 +185,61 @@ export function connect(
 }
 
 /**
+ * Create and register many directed connection objects in one structural edit batch.
+ *
+ * This preserves the same legality checks and deterministic default-weight
+ * policy as repeated {@link connect} calls, but it reserves network-level
+ * connection storage once for the whole request shelf.
+ *
+ * @param this - Bound Network instance.
+ * @param requests - Ordered connection requests.
+ * @returns Flattened created {@link Connection} objects in request order.
+ * @example
+ * const createdConnections = network.connectBatch([
+ *   { from: network.nodes[0], to: network.nodes[2] },
+ *   { from: network.nodes[1], to: network.nodes[2], weight: 0.5 },
+ * ]);
+ */
+export function connectBatch(
+  this: Network,
+  requests: readonly NetworkConnectionRequest[],
+): Connection[] {
+  const networkInternal = this as unknown as NetworkInternals;
+
+  // Step 1: Short-circuit empty request shelves.
+  if (requests.length === 0) {
+    return [];
+  }
+
+  // Step 2: Create ordered low-level connection groups for every legal request.
+  const createdConnectionBatches = collectCreatedConnectionBatches(
+    this,
+    networkInternal,
+    requests,
+  );
+
+  // Step 3: Register all created edges with one top-level storage reservation.
+  const createdConnections = registerCreatedConnectionBatches(
+    this,
+    networkInternal,
+    createdConnectionBatches,
+  );
+
+  // Step 4: Invalidate structural caches when connection creation occurred.
+  markConnectionCachesDirtyWhenNeeded(
+    networkInternal,
+    createdConnections.length,
+  );
+
+  // Step 5: Revalidate explicit temporal descriptors after a structural edit.
+  if (createdConnections.length > 0) {
+    synchronizeTemporalDescriptorExtensions(this);
+  }
+
+  return createdConnections;
+}
+
+/**
  * Remove (at most) one directed connection from source 'from' to target 'to'.
  *
  * Only a single direct edge is removed because typical graph configurations maintain at most
@@ -225,4 +288,52 @@ export function disconnect(this: Network, from: Node, to: Node): void {
 
   // Step 5: Revalidate explicit temporal descriptors after structural removal.
   synchronizeTemporalDescriptorExtensions(this);
+}
+
+/**
+ * Collect created connection groups for one ordered batch request shelf.
+ *
+ * @param network - Network instance owning node ordering.
+ * @param networkInternal - Runtime network internals used by connection pipeline.
+ * @param requests - Ordered connection requests.
+ * @returns Ordered created connection groups for later batch registration.
+ */
+function collectCreatedConnectionBatches(
+  network: Network,
+  networkInternal: NetworkInternals,
+  requests: readonly NetworkConnectionRequest[],
+): CreatedConnectionBatch[] {
+  const createdConnectionBatches: CreatedConnectionBatch[] = [];
+
+  for (const request of requests) {
+    if (
+      shouldRejectConnectionForAcyclicMode(
+        network,
+        networkInternal,
+        request.from,
+        request.to,
+      )
+    ) {
+      continue;
+    }
+
+    const createdConnections = createConnectionsFromSourceNode(
+      request.from,
+      request.to,
+      request.weight,
+      networkInternal._rand,
+    );
+
+    if (createdConnections.length === 0) {
+      continue;
+    }
+
+    createdConnectionBatches.push({
+      sourceNode: request.from,
+      targetNode: request.to,
+      createdConnections,
+    });
+  }
+
+  return createdConnectionBatches;
 }

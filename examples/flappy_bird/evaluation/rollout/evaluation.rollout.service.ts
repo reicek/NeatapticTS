@@ -31,6 +31,7 @@ import {
   finalizeRolloutEpisodeState,
   resolveRolloutEpisodeContext,
   runRolloutEpisodeLoop,
+  runRolloutEpisodeLoopWithPredictor,
 } from './evaluation.rollout.services';
 import { composeRolloutEpisodeResult } from './evaluation.rollout.utils';
 import type {
@@ -72,6 +73,54 @@ export function rolloutEpisode(
   // Step 2: Simulate frames until the episode terminates or the frame budget is exhausted.
   runRolloutEpisodeLoop(
     network,
+    rolloutEpisodeContext,
+    rolloutEpisodeRuntimeState,
+  );
+
+  // Step 3: Apply timeout termination when the loop exhausted the frame budget.
+  finalizeRolloutEpisodeState(
+    rolloutEpisodeContext,
+    rolloutEpisodeRuntimeState,
+  );
+
+  // Step 4: Compose the episode result from the final state and accumulated fitness channels.
+  return composeRolloutEpisodeResult(
+    rolloutEpisodeContext,
+    rolloutEpisodeRuntimeState,
+  );
+}
+
+/**
+ * Roll out an episode against one async predictor callback.
+ *
+ * This browser-worker-oriented variant preserves the same seeded rollout and
+ * shaping semantics as `rolloutEpisode(...)` while sourcing control decisions
+ * from an async inference boundary such as `InferenceChannel.predict(...)`.
+ *
+ * @param options - Predictor callback plus optional rollout controls.
+ * @returns Episode result details.
+ */
+export async function rolloutEpisodeWithPredictor(options: {
+  predict: (observationVector: number[]) => Promise<unknown>;
+  rolloutOptions?: FlappyRolloutOptions;
+  networkId?: number;
+}): Promise<FlappyEpisodeResult> {
+  const rolloutOptions = options.rolloutOptions ?? {};
+
+  // Step 1: Resolve rollout configuration and initialize mutable runtime state.
+  const rolloutEpisodeContext = resolveRolloutEpisodeContext(
+    {
+      _id: options.networkId,
+    },
+    rolloutOptions,
+  );
+  const rolloutEpisodeRuntimeState = createRolloutEpisodeRuntimeState(
+    rolloutEpisodeContext,
+  );
+
+  // Step 2: Simulate frames until the episode terminates or the frame budget is exhausted.
+  await runRolloutEpisodeLoopWithPredictor(
+    options.predict,
     rolloutEpisodeContext,
     rolloutEpisodeRuntimeState,
   );

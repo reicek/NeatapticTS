@@ -92,6 +92,7 @@ import {
   positionNetworkNodes,
 } from './network-view.layout.utils';
 import { resolveInputDescriptionColumnWidthPx } from './network-view.labels.utils';
+import type { InputLabelGroupDefinition } from './network-view.types';
 import {
   resolveNetworkVisualizationTopologyPlan,
   type NetworkHiddenColumnAnnotation,
@@ -180,6 +181,7 @@ export function drawNetworkVisualization(
   inputSize: number,
   outputSize: number,
   hoverState?: NetworkVisualizationHoverState,
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
 ): NetworkVisualizationPositionedScene {
   // Step 1: Resolve the reusable frame cache for the current network payload.
   const resolvedNetworkVisualizationFrame = resolveNetworkVisualizationFrame(
@@ -187,6 +189,7 @@ export function drawNetworkVisualization(
     network,
     inputSize,
     outputSize,
+    inputLabelGroupDefinitions,
   );
 
   // Step 2: Paint the resolved frame using the current interactive hover state.
@@ -217,6 +220,7 @@ export function resolveNetworkVisualizationFrame(
   network: Network | undefined,
   inputSize: number,
   outputSize: number,
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
 ): NetworkVisualizationResolvedFrame {
   // Step 1: Resolve canvas, label, overlay, and padding state for this frame.
   const networkVisualizationScene = resolveNetworkVisualizationScene(
@@ -224,6 +228,7 @@ export function resolveNetworkVisualizationFrame(
     network,
     inputSize,
     outputSize,
+    inputLabelGroupDefinitions,
   );
 
   // Step 2: Resolve node layout, node dimensions, and connection lookup state.
@@ -232,6 +237,7 @@ export function resolveNetworkVisualizationFrame(
     network,
     inputSize,
     outputSize,
+    inputLabelGroupDefinitions,
   );
 
   // Step 3: Fold the reusable frame fields that hover-only redraws need later.
@@ -469,6 +475,7 @@ function resolveNetworkVisualizationScene(
   network: Network | undefined,
   inputSize: number,
   outputSize: number,
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
 ): NetworkVisualizationScene {
   // Step 1: Resolve the shared canvas dimensions and overlay label state.
   const canvasWidthPx = context.canvas.width;
@@ -484,6 +491,7 @@ function resolveNetworkVisualizationScene(
     hideNetworkOverlays,
     inputSize,
     network,
+    inputLabelGroupDefinitions,
   );
 
   // Step 2: Adjust graph-side padding when the legend is visible.
@@ -551,6 +559,7 @@ function resolvePositionedNetworkGraphScene(
   network: Network | undefined,
   inputSize: number,
   outputSize: number,
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
 ): PositionedNetworkGraphScene {
   // Step 1: Resolve topology and drawable bounds for the current graph region.
   const networkTopologySummary = resolveNetworkTopologySummary(
@@ -589,7 +598,11 @@ function resolvePositionedNetworkGraphScene(
   const initialInputDescriptionScenes =
     networkVisualizationScene.hideNetworkOverlays
       ? []
-      : resolveInputDescriptionScenes(centeredPositionedNodes, nodeDimensions);
+      : resolveInputDescriptionScenes(
+          centeredPositionedNodes,
+          nodeDimensions,
+          inputLabelGroupDefinitions,
+        );
   const overlayAlignedPositionedNodes =
     networkVisualizationScene.hideNetworkOverlays
       ? centeredPositionedNodes
@@ -603,12 +616,15 @@ function resolvePositionedNetworkGraphScene(
       : resolveInputGroupLabelBandScenes(
           overlayAlignedPositionedNodes,
           nodeDimensions,
+          initialInputDescriptionScenes,
+          inputLabelGroupDefinitions,
         );
   const inputDescriptionScenes = networkVisualizationScene.hideNetworkOverlays
     ? []
     : resolveInputDescriptionScenes(
         overlayAlignedPositionedNodes,
         nodeDimensions,
+        inputLabelGroupDefinitions,
       );
   const hiddenColumnLabelScenes = networkVisualizationScene.hideNetworkOverlays
     ? []
@@ -694,11 +710,15 @@ function resolveBaseGraphPaddingContext(
   hideNetworkOverlays: boolean,
   inputNodeCount: number,
   network: Network | undefined,
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
 ): NetworkGraphPaddingContext {
   // Step 1: Reserve the full input-overlay shelf only when overlays are visible.
   const descriptionColumnReserveWidthPx = hideNetworkOverlays
     ? 0
-    : resolveInputDescriptionColumnWidthPx(inputNodeCount);
+    : resolveInputDescriptionColumnWidthPx(
+        inputNodeCount,
+        inputLabelGroupDefinitions,
+      );
   const groupLabelBandReserveWidthPx =
     hideNetworkOverlays || descriptionColumnReserveWidthPx === 0
       ? 0

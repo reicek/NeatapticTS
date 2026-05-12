@@ -125,6 +125,83 @@ function createMockLayerFactory(): OnnxLayerFactory {
   } as unknown as OnnxLayerFactory;
 }
 
+function createNativeGruLikeLayerFactory(
+  options: {
+    omitMemoryCellRecurrentConnections?: boolean;
+    omitSecondPreviousOutputNode?: boolean;
+  } = {},
+): OnnxLayerFactory {
+  return {
+    gru: (unitSize: number) => {
+      const nodes = Array.from(
+        { length: unitSize * 6 },
+        () => new Node('hidden'),
+      );
+
+      if (options.omitSecondPreviousOutputNode && unitSize > 1) {
+        nodes[unitSize * 5 + 1] = undefined as unknown as Node;
+      }
+
+      const updateGateNodes = nodes.slice(0, unitSize);
+      const inverseUpdateGateNodes = nodes.slice(unitSize, unitSize * 2);
+      const resetGateNodes = nodes.slice(unitSize * 2, unitSize * 3);
+      const memoryCellNodes = nodes.slice(unitSize * 3, unitSize * 4);
+      const outputNodes = nodes.slice(unitSize * 4, unitSize * 5);
+      const previousOutputNodes = nodes.slice(unitSize * 5, unitSize * 6);
+
+      return {
+        input(sourceLayer) {
+          const previousLayerNodes = sourceLayer.output.nodes;
+
+          connectAll(previousLayerNodes, updateGateNodes);
+          connectAll(previousLayerNodes, resetGateNodes);
+          connectAll(previousLayerNodes, memoryCellNodes);
+          connectAll(previousOutputNodes, updateGateNodes);
+          connectAll(previousOutputNodes, resetGateNodes);
+          if (!options.omitMemoryCellRecurrentConnections) {
+            connectAll(previousOutputNodes, memoryCellNodes);
+          }
+          connectOneToOne(updateGateNodes, inverseUpdateGateNodes);
+          connectAll(memoryCellNodes, outputNodes);
+          connectOneToOne(outputNodes, previousOutputNodes);
+        },
+        nodes,
+        output: {
+          nodes: outputNodes,
+        },
+      } satisfies MockFusedLayerRuntime;
+
+      function connectAll(sourceNodes: Node[], targetNodes: Node[]): void {
+        sourceNodes.forEach((sourceNode) => {
+          if (!sourceNode) return;
+
+          targetNodes.forEach((targetNode) => {
+            if (!targetNode) return;
+            sourceNode.connect(targetNode, -1);
+          });
+        });
+      }
+
+      function connectOneToOne(sourceNodes: Node[], targetNodes: Node[]): void {
+        sourceNodes.forEach((sourceNode, nodeIndex) => {
+          if (!sourceNode) return;
+
+          const targetNode = targetNodes[nodeIndex];
+          if (!targetNode) return;
+          sourceNode.connect(targetNode, -1);
+        });
+      }
+    },
+    lstm: (unitSize: number) =>
+      createMockFusedLayerRuntime({
+        gateCount: LSTM_GATE_COUNT,
+        previousConnectionMode: 'first-only',
+        reconnectSelfMode: 'first-only',
+        unitSize,
+      }),
+  } as unknown as OnnxLayerFactory;
+}
+
 function withToSplicedFallback<T>(callback: () => T): T {
   const originalDescriptor = Object.getOwnPropertyDescriptor(
     Array.prototype,
@@ -355,6 +432,81 @@ describe('network onnx fused recurrent import utility chapter', () => {
           outputInboundCount: 1,
           recurrentSelfWeight: 302,
         });
+      });
+
+      it('maps recurrent rows onto the native GRU previous-output carrier when the runtime exposes six internal groups', () => {
+        // Arrange
+        const hiddenLayerSizes = [1];
+        const network = Network.createMLP(2, hiddenLayerSizes, 1);
+        const inputWeights = createNumberSequence(6, 30);
+        const recurrentWeights = createNumberSequence(3, 300);
+        const biases = createNumberSequence(3, 2_000);
+
+        const onnxModel = createOnnxModel([
+          createTensor('GRU_W0', [3, 2], inputWeights),
+          createTensor('GRU_R0', [3, 1], recurrentWeights),
+          createTensor('GRU_B0', [3], biases),
+        ]);
+
+        // Act
+        reconstructFusedRecurrentLayers(
+          network,
+          onnxModel,
+          hiddenLayerSizes,
+          createNativeGruLikeLayerFactory(),
+          [createMetadataProperty('gru_emitted_layers', '[1]')],
+        );
+        const hiddenNodes = getHiddenNodes(network);
+        const previousOutputNode = hiddenNodes[5];
+
+        // Assert
+        expect({
+          candidateBias: hiddenNodes[3]?.bias,
+          candidateRecurrentWeight: hiddenNodes[3]?.connections.in.find(
+            (connection) => connection.from === previousOutputNode,
+          )?.weight,
+          hiddenCount: hiddenNodes.length,
+          resetGateRecurrentWeight: hiddenNodes[2]?.connections.in.find(
+            (connection) => connection.from === previousOutputNode,
+          )?.weight,
+          updateGateRecurrentWeight: hiddenNodes[0]?.connections.in.find(
+            (connection) => connection.from === previousOutputNode,
+          )?.weight,
+        }).toEqual({
+          candidateBias: 2002,
+          candidateRecurrentWeight: 302,
+          hiddenCount: 6,
+          resetGateRecurrentWeight: 301,
+          updateGateRecurrentWeight: 300,
+        });
+      });
+
+      it('keeps reconstruction best-effort when native GRU recurrent carriers are partially missing', () => {
+        // Arrange
+        const hiddenLayerSizes = [2];
+        const network = Network.createMLP(2, hiddenLayerSizes, 1);
+        const inputWeights = createNumberSequence(12, 30);
+        const recurrentWeights = createNumberSequence(12, 300);
+        const biases = createNumberSequence(6, 2_000);
+        const onnxModel = createOnnxModel([
+          createTensor('GRU_W0', [6, 2], inputWeights),
+          createTensor('GRU_R0', [6, 2], recurrentWeights),
+          createTensor('GRU_B0', [6], biases),
+        ]);
+
+        // Assert
+        expect(() => {
+          reconstructFusedRecurrentLayers(
+            network,
+            onnxModel,
+            hiddenLayerSizes,
+            createNativeGruLikeLayerFactory({
+              omitMemoryCellRecurrentConnections: true,
+              omitSecondPreviousOutputNode: true,
+            }),
+            [createMetadataProperty('gru_emitted_layers', '[1]')],
+          );
+        }).not.toThrow();
       });
     });
   });

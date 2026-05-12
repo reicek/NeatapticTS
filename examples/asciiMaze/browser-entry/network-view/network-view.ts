@@ -1,84 +1,48 @@
 /**
- * Rich network-view renderer for the ASCII Maze browser demo.
+ * ASCII Maze adapter over the shared rich browser network visualizer.
  *
- * This module wraps the shared `renderNetworkView` canvas renderer and layers
- * on maze-specific educational overlays: colored input group bands, per-node
- * chip labels, output direction labels, and a weight/bias legend.
- *
- * The result includes hit areas that the host can use for hover tooltip testing
- * without needing to re-render the canvas on every pointer event.
- *
- * ```ts
- * const result = drawMazeNetworkVisualization(canvas, network, graph);
- * // result.hitAreas — hover hit test geometry + tooltip content
- * // result.frame    — positioned nodes (reusable for custom redraws)
- * ```
- *
- * @see {@link https://en.wikipedia.org/wiki/Breadth-first_search BFS distance map (Wikipedia)}
+ * The maze demo should not own its own network-frame math. Instead it reuses
+ * the same resolved frame, padding, node sizing, and connection drawing path
+ * as Flappy Bird, while only swapping the semantic input labels and the short
+ * output tags.
  */
 
 import type Network from '../../../../src/architecture/network';
-import { renderNetworkView } from '../../../../src/visualization/visualization';
 import type { VisualizationGraphV1 } from '../../../../src/neataptic';
+import {
+  drawResolvedNetworkVisualization,
+  resolveNetworkArchitectureLabel as resolveSharedNetworkArchitectureLabel,
+  resolveNetworkVisualizationFrame as resolveSharedNetworkVisualizationFrame,
+  type NetworkVisualizationResolvedFrame,
+} from '../../../flappy_bird/browser-entry/network-view/network-view';
+import type { InputLabelGroupDefinition } from '../../../flappy_bird/browser-entry/network-view/network-view.types';
+import {
+  resolveNetworkVisualizationTopologyPlan as resolveSharedNetworkVisualizationTopologyPlan,
+  type NetworkVisualizationTopologyPlan,
+} from '../../../flappy_bird/browser-entry/network-view/network-view.topology.utils';
+import { resolveNetworkVisualizationColorScales } from '../../../flappy_bird/browser-entry/visualization/visualization.colors.utils';
 import type {
-  NetworkVisualizationResolvedFrame,
-  PositionedNetworkNode,
-  NetworkNodeDimensions,
-} from '../../../../src/visualization/network-view/network-view.types';
+  NetworkVisualizationAnimatedHoveredNode,
+  NetworkVisualizationHoverState,
+  PositionedNetworkNodeLike,
+} from '../../../flappy_bird/browser-entry/browser-entry.visualization.types';
 import {
   MAZE_GROUP_COLORS,
   MAZE_INPUT_GROUP_DEFS,
-  MAZE_LABEL_LEFT_PADDING_PX,
   MAZE_OUTPUT_LABELS,
-  type MazeInputGroupDef,
 } from './network-view.constants';
-import {
-  FLAPPY_NETWORK_ARCHITECTURE_COLUMN_SEPARATOR,
-  FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR,
-  FLAPPY_NETWORK_EMPTY_HIDDEN_LAYER_LABEL,
-  FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR,
-  FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX,
-  FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX,
-  FLAPPY_NETWORK_INPUT_DESCRIPTION_LINE_HEIGHT_PX,
-  FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_HEIGHT_PX,
-  FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_VERTICAL_PADDING_PX,
-  FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX,
-  FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX,
-  FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX,
-  FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX,
-  FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX,
-  FLAPPY_NETWORK_INFERRED_HIDDEN_LAYER_PREFIX,
-  FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_PX,
-  FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_THRESHOLD_PX,
-  FLAPPY_NETWORK_LEGEND_MARGIN_PX,
-  FLAPPY_NETWORK_LEGEND_REGULAR_WIDTH_PX,
-  FLAPPY_UI_NETWORK_CANVAS_BACKGROUND,
-} from '../../../flappy_bird/constants/constants';
-import {
-  drawInputGroupLabelBands,
-  drawInputNodeDescriptions,
-} from '../../../flappy_bird/browser-entry/network-view/network-view.draw.service';
-import { resolveInputDescriptionChipWidthPx } from '../../../flappy_bird/browser-entry/network-view/network-view.labels.utils';
-import {
-  drawBiasNodesLayer,
-  drawNetworkColorLegend,
-  drawWeightedConnectionsLayer,
-} from '../../../flappy_bird/browser-entry/visualization/visualization.draw.service';
-import { resolveNetworkVisualizationColorScales } from '../../../flappy_bird/browser-entry/visualization/visualization.colors.utils';
-import type {
-  NetworkInputDescriptionScene,
-  NetworkInputGroupLabelBandScene,
-} from '../../../flappy_bird/browser-entry/browser-entry.visualization.types';
 
-// ---------------------------------------------------------------------------
-// Public API types
-// ---------------------------------------------------------------------------
+/** Minimum canvas backing-store width. */
+const MIN_CANVAS_WIDTH_PX = 320;
+
+/** Minimum canvas backing-store height. */
+const MIN_CANVAS_HEIGHT_PX = 240;
+
+/** Canvas height expressed as a fraction of the canvas width. */
+const CANVAS_ASPECT_RATIO = 0.64;
 
 /**
  * A canvas-space rectangular hit area with associated tooltip content.
- *
- * Returned in bulk by `drawMazeNetworkVisualization` so the host can test
- * pointer positions against them during mousemove without re-rendering.
  */
 export interface MazeHitArea {
   leftPx: number;
@@ -88,98 +52,25 @@ export interface MazeHitArea {
   heading: string;
   bodyParagraphs: readonly string[];
   hoveredNodeIndices: readonly number[];
+  suppressTooltip?: boolean;
 }
 
 /**
  * Full return value from `drawMazeNetworkVisualization`.
- *
- * The frame gives access to positioned node geometry (useful for custom
- * overlay logic) and the hit areas are ready for pointer hit testing.
  */
 export interface MazeNetworkRenderResult {
-  /** Resolved canvas state including positioned nodes and connections. */
   frame: NetworkVisualizationResolvedFrame;
-  /** Hover hit areas for input groups, per-node chips, and output labels. */
   hitAreas: MazeHitArea[];
 }
 
-// ---------------------------------------------------------------------------
-// Private layout constants
-// ---------------------------------------------------------------------------
-
-/** Canvas height expressed as a fraction of the canvas width. */
-const CANVAS_ASPECT_RATIO = 0.64;
-
-/** Minimum canvas backing-store width. */
-const MIN_CANVAS_WIDTH_PX = 320;
-
-/** Minimum canvas backing-store height. */
-const MIN_CANVAS_HEIGHT_PX = 240;
-
-/** Flat fallback colors used by the shared renderer only for its layout pass. */
-const MAZE_LAYOUT_PASS_COLOR_SCALES = {
-  weightPositive: '#00ff88',
-  weightNegative: '#ff3366',
-  activationHot: '#ffcc00',
-  activationCold: '#0088ff',
-  bias: '#aa44ff',
-};
-
-/** Extra right-side reserve so the Flappy-style legend can sit beside the graph. */
-const MAZE_RIGHT_LEGEND_RESERVE_PX =
-  FLAPPY_NETWORK_LEGEND_REGULAR_WIDTH_PX + FLAPPY_NETWORK_LEGEND_MARGIN_PX * 2;
-
-/** Minimum left reserve kept for readable maze input-label overlays. */
-const MAZE_MIN_LEFT_LABEL_PANEL_WIDTH_PX = 132;
-
-/** Minimum drawable graph width needed to keep hidden layers visually separate. */
-const MAZE_MIN_DRAWABLE_GRAPH_WIDTH_PX = 420;
-
-type MazeRuntimePositionedNode = {
-  xPx: number;
-  yPx: number;
-  node: {
-    index: number;
-    type: 'input' | 'hidden' | 'output';
-    bias: number;
-  };
-};
-
-type MazeRuntimeConnection = {
-  from: { index: number };
-  to: { index: number };
-  weight: number;
-  enabled: boolean;
-};
-
-type ResolvedMazeInputGroupLayout = {
-  groupDef: MazeInputGroupDef;
-  groupColor: (typeof MAZE_GROUP_COLORS)[number];
-  nodeIndices: number[];
-  labelBandLeftPx: number;
-  topPx: number;
-  heightPx: number;
-  descriptionScenes: NetworkInputDescriptionScene[];
-};
-
-// ---------------------------------------------------------------------------
-// Public entry point
-// ---------------------------------------------------------------------------
-
 /**
- * Draws a full educational network visualization for the ASCII Maze demo.
- *
- * Orchestration:
- * 1. Sync canvas backing-store dimensions to the panel.
- * 2. Render the base graph (nodes + connections + background) via the shared renderer.
- * 3. Draw the input label panel in the reserved left padding area.
- * 4. Draw output direction labels to the right of output nodes.
- * 5. Draw the connection weight + bias legend.
+ * Draw the ASCII Maze network panel using the shared Flappy visualizer owner.
  *
  * @param canvas - Canvas element to render onto.
- * @param network - Runtime network used for architecture and dynamic color scales.
- * @param graph  - Exported visualization graph from `exportVisualizationGraph`.
- * @returns Resolved frame plus hover hit areas for the host tooltip system.
+ * @param network - Runtime network used for architecture metadata and weights.
+ * @param graph - Exported graph carrying authoritative input/output counts.
+ * @param hoveredNodeIndices - Host-owned hovered node ids.
+ * @returns Shared resolved frame plus maze hover hit areas.
  */
 export function drawMazeNetworkVisualization(
   canvas: HTMLCanvasElement,
@@ -187,101 +78,145 @@ export function drawMazeNetworkVisualization(
   graph: VisualizationGraphV1,
   hoveredNodeIndices: readonly number[] = [],
 ): MazeNetworkRenderResult {
-  // Step 1: Sync canvas dimensions to the current panel width.
   syncCanvasToPanel(canvas);
-
-  const panelPadding = resolveMazeNetworkPanelPadding(canvas.width);
-
-  const dynamicColorScales = resolveNetworkVisualizationColorScales(network);
-  const architectureLabel = resolveMazeArchitectureLabel(network, graph);
-
-  // Step 2: Render base graph with generous left padding for the label panel.
-  const frame = renderNetworkView(canvas, graph, {
-    nodeDimensions: { widthPx: 28, heightPx: 10 },
-    panelPaddingPx: panelPadding,
-    colorScales: MAZE_LAYOUT_PASS_COLOR_SCALES,
-  });
 
   const context = canvas.getContext('2d');
   if (!context) {
-    return { frame, hitAreas: [] };
+    return {
+      frame: createEmptyMazeResolvedFrame(canvas, network, graph),
+      hitAreas: [],
+    };
   }
 
-  // Step 3: Sort input and output nodes top-to-bottom for consistent ordering.
-  const inputNodes = frame.positionedNodes
-    .filter((node) => node.type === 'input')
-    .toSorted((nodeA, nodeB) => nodeA.centerYPx - nodeB.centerYPx);
-
-  const outputNodes = frame.positionedNodes
-    .filter((node) => node.type === 'output')
-    .toSorted((nodeA, nodeB) => nodeA.centerYPx - nodeB.centerYPx);
-
-  const runtimePositionedNodes = resolveRuntimePositionedNodes(
-    frame.positionedNodes,
-  );
-  const runtimeConnections = resolveRuntimeConnections(graph);
-  const positionByNodeIndex = new Map(
-    runtimePositionedNodes.map((positionedNode) => [
-      positionedNode.node.index,
-      positionedNode,
-    ]),
-  );
-
-  // Step 4: Repaint the graph using the Flappy visual language so the legend remains truthful.
-  paintMazeNetworkBase(context, canvas);
-  drawWeightedConnectionsLayer(
+  const resolvedFrame = resolveSharedNetworkVisualizationFrame(
     context,
-    runtimeConnections,
-    positionByNodeIndex,
-    dynamicColorScales.connectionScale,
+    network,
+    graph.io.inputNodeIds.length,
+    graph.io.outputNodeIds.length,
+    resolveMazeInputLabelGroupDefinitions(),
   );
-  drawBiasNodesLayer(
+  const hoverState = resolveMazeHoverState(hoveredNodeIndices);
+
+  drawResolvedNetworkVisualization(context, resolvedFrame, hoverState);
+  drawOutputNodeLabels(
     context,
-    runtimePositionedNodes,
-    frame.nodeDimensions,
-    dynamicColorScales.biasScale,
+    resolveSortedOutputNodes(resolvedFrame.positionedScene.positionedNodes),
+    MAZE_OUTPUT_LABELS,
   );
 
-  // Step 5: Draw Flappy-style semantic input overlays and collect hover hit areas.
-  const { inputDescriptionScenes, inputGroupLabelBandScenes, hitAreas } =
-    resolveAndDrawInputLabelPanel(context, inputNodes, frame.nodeDimensions);
-
-  drawInputGroupLabelBands(
-    context,
-    inputGroupLabelBandScenes,
-    hoveredNodeIndices,
-  );
-  drawInputNodeDescriptions(
-    context,
-    inputDescriptionScenes,
-    hoveredNodeIndices,
-  );
-
-  // Step 6: Draw output direction labels.
-  drawOutputNodeLabels(context, outputNodes, frame.nodeDimensions);
-
-  // Step 7: Draw Flappy-style architecture summary and full legend table.
-  drawNetworkColorLegend(context, architectureLabel, dynamicColorScales);
-
-  return { frame, hitAreas };
+  return {
+    frame: resolvedFrame,
+    hitAreas: resolveMazeHitAreas(resolvedFrame),
+  };
 }
 
-// ---------------------------------------------------------------------------
-// Canvas sync helper
-// ---------------------------------------------------------------------------
+/**
+ * Resolve the shared visualizer input-label definitions for the maze demo.
+ *
+ * @returns Maze semantic label groups expressed in the shared visualizer format.
+ */
+export function resolveMazeInputLabelGroupDefinitions(): readonly InputLabelGroupDefinition[] {
+  return MAZE_INPUT_GROUP_DEFS.map((mazeInputGroupDefinition, groupIndex) => ({
+    label: mazeInputGroupDefinition.label,
+    labelLines: mazeInputGroupDefinition.labelLines,
+    tooltipHeading: mazeInputGroupDefinition.tooltipHeading,
+    tooltipBodyParagraphs: mazeInputGroupDefinition.tooltipBodyParagraphs,
+    nodeDescriptionDefinitions: mazeInputGroupDefinition.nodeDescriptions.map(
+      (nodeDescriptionDefinition) => ({
+        labelLines: nodeDescriptionDefinition.labelLines,
+        tooltipHeading: nodeDescriptionDefinition.tooltipHeading,
+        tooltipBodyParagraphs: nodeDescriptionDefinition.tooltipBodyParagraphs,
+      }),
+    ),
+    backgroundColor: MAZE_GROUP_COLORS[groupIndex]?.bandFill ?? '#2bd9ff',
+    orientation: 'vertical',
+  }));
+}
 
 /**
- * Aligns canvas backing-store dimensions to the responsive panel width.
+ * Resolve responsive network-canvas dimensions from the host panel shelf.
  *
- * @param canvas - Target canvas.
+ * @param measuredWidthPx - Current measured canvas width from layout.
+ * @param measuredHeightPx - Current measured host-panel height from layout.
+ * @returns Width and height for the canvas backing store.
  */
-function syncCanvasToPanel(canvas: HTMLCanvasElement): void {
-  const measuredWidthPx = Math.floor(canvas.clientWidth);
-  const resolvedWidthPx = Math.max(MIN_CANVAS_WIDTH_PX, measuredWidthPx);
-  const resolvedHeightPx = Math.max(
+export function resolveMazeNetworkCanvasDimensions(
+  measuredWidthPx: number,
+  measuredHeightPx: number,
+): {
+  widthPx: number;
+  heightPx: number;
+} {
+  const resolvedWidthPx = Math.max(
+    MIN_CANVAS_WIDTH_PX,
+    Math.floor(measuredWidthPx),
+  );
+  const widthDrivenHeightPx = Math.max(
     MIN_CANVAS_HEIGHT_PX,
     Math.floor(resolvedWidthPx * CANVAS_ASPECT_RATIO),
   );
+  const panelDrivenHeightPx = Math.max(1, Math.floor(measuredHeightPx));
+  const resolvedHeightPx =
+    panelDrivenHeightPx > 0 ? panelDrivenHeightPx : widthDrivenHeightPx;
+
+  return {
+    widthPx: resolvedWidthPx,
+    heightPx: resolvedHeightPx,
+  };
+}
+
+/**
+ * Resolve the compact architecture summary for the maze network legend.
+ *
+ * @param network - Runtime network being visualized.
+ * @param graph - Exported graph carrying authoritative input/output counts.
+ * @returns Shared architecture label with maze IO counts.
+ */
+export function resolveMazeArchitectureLabel(
+  network: Network,
+  graph: VisualizationGraphV1,
+): string {
+  return resolveSharedNetworkArchitectureLabel(
+    network,
+    graph.io.inputNodeIds.length,
+    graph.io.outputNodeIds.length,
+  );
+}
+
+/**
+ * Resolve the shared topology plan for the maze network.
+ *
+ * @param network - Runtime network being visualized.
+ * @param graph - Exported graph carrying authoritative input/output counts.
+ * @returns Shared topology plan with recurrent annotations when present.
+ */
+export function resolveMazeVisualizationTopologyPlan(
+  network: Network,
+  graph: VisualizationGraphV1,
+): NetworkVisualizationTopologyPlan {
+  return resolveSharedNetworkVisualizationTopologyPlan(
+    network,
+    graph.io.inputNodeIds.length,
+    graph.io.outputNodeIds.length,
+  );
+}
+
+function syncCanvasToPanel(canvas: HTMLCanvasElement): void {
+  const hostElement = canvas.parentElement;
+  const measuredWidthPx = resolveHostContentBoxDimensionPx(
+    hostElement,
+    hostElement?.clientWidth ?? canvas.clientWidth,
+    'paddingLeft',
+    'paddingRight',
+  );
+  const measuredHeightPx = resolveHostContentBoxDimensionPx(
+    hostElement,
+    hostElement?.clientHeight ?? canvas.clientHeight,
+    'paddingTop',
+    'paddingBottom',
+  );
+  const { widthPx: resolvedWidthPx, heightPx: resolvedHeightPx } =
+    resolveMazeNetworkCanvasDimensions(measuredWidthPx, measuredHeightPx);
 
   canvas.style.width = '100%';
   canvas.style.height = `${resolvedHeightPx}px`;
@@ -292,420 +227,174 @@ function syncCanvasToPanel(canvas: HTMLCanvasElement): void {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Input label panel
-// ---------------------------------------------------------------------------
+function resolveHostContentBoxDimensionPx(
+  hostElement: HTMLElement | null,
+  hostClientDimensionPx: number,
+  startPaddingProperty:
+    | 'paddingBottom'
+    | 'paddingLeft'
+    | 'paddingRight'
+    | 'paddingTop',
+  endPaddingProperty:
+    | 'paddingBottom'
+    | 'paddingLeft'
+    | 'paddingRight'
+    | 'paddingTop',
+): number {
+  if (!hostElement) {
+    return hostClientDimensionPx;
+  }
 
-/**
- * Draws colored group bands and per-node chip labels in the left padding area.
- *
- * @param context      - Canvas 2D drawing context.
- * @param inputNodes   - Input nodes sorted top-to-bottom.
- * @param nodeDimensions - Node width/height from the resolved frame.
- * @returns Hit areas for all drawn groups and chips.
- */
-function resolveAndDrawInputLabelPanel(
-  _context: CanvasRenderingContext2D,
-  inputNodes: PositionedNetworkNode[],
-  nodeDimensions: NetworkNodeDimensions,
-): {
-  inputDescriptionScenes: NetworkInputDescriptionScene[];
-  inputGroupLabelBandScenes: NetworkInputGroupLabelBandScene[];
-  hitAreas: MazeHitArea[];
-} {
-  const descriptionColumnWidthPx = resolveMazeDescriptionColumnWidthPx();
-  const inputOverlayLayouts = resolveMazeInputOverlayLayouts(
-    inputNodes,
-    nodeDimensions,
-    descriptionColumnWidthPx,
+  const defaultView = hostElement.ownerDocument?.defaultView;
+  const computedStyle = defaultView?.getComputedStyle(hostElement);
+  const startPaddingPx = Number.parseFloat(
+    computedStyle?.[startPaddingProperty] ?? '0',
   );
+  const endPaddingPx = Number.parseFloat(
+    computedStyle?.[endPaddingProperty] ?? '0',
+  );
+  const resolvedStartPaddingPx = Number.isFinite(startPaddingPx)
+    ? startPaddingPx
+    : 0;
+  const resolvedEndPaddingPx = Number.isFinite(endPaddingPx) ? endPaddingPx : 0;
 
-  const inputDescriptionScenes = inputOverlayLayouts.flatMap(
-    (inputOverlayLayout) => inputOverlayLayout.descriptionScenes,
+  return Math.max(
+    0,
+    hostClientDimensionPx - resolvedStartPaddingPx - resolvedEndPaddingPx,
   );
-  const inputGroupLabelBandScenes = inputOverlayLayouts.map(
-    (inputOverlayLayout) => ({
-      label: inputOverlayLayout.groupDef.label,
-      labelLines: inputOverlayLayout.groupDef.labelLines,
-      tooltipHeading: inputOverlayLayout.groupDef.tooltipHeading,
-      tooltipBodyParagraphs: inputOverlayLayout.groupDef.tooltipBodyParagraphs,
-      leftPx: inputOverlayLayout.labelBandLeftPx,
-      topPx: inputOverlayLayout.topPx,
-      widthPx: FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX,
-      heightPx: inputOverlayLayout.heightPx,
-      backgroundColor: inputOverlayLayout.groupColor.bandFill,
-      orientation: 'vertical' as const,
-      nodeIndices: inputOverlayLayout.nodeIndices,
+}
+
+function resolveMazeHoverState(
+  hoveredNodeIndices: readonly number[],
+): NetworkVisualizationHoverState | undefined {
+  if (hoveredNodeIndices.length === 0) {
+    return undefined;
+  }
+
+  const animatedHoveredNodes: readonly NetworkVisualizationAnimatedHoveredNode[] =
+    hoveredNodeIndices.map((nodeIndex) => ({
+      nodeIndex,
+      intensity: 1,
+    }));
+
+  return {
+    hoveredNodeIndices,
+    animatedHoveredNodes,
+  };
+}
+
+function resolveSortedOutputNodes(
+  positionedNodes: readonly PositionedNetworkNodeLike[],
+): PositionedNetworkNodeLike[] {
+  return positionedNodes
+    .filter((positionedNode) => positionedNode.node.type === 'output')
+    .toSorted(
+      (positionedNodeA, positionedNodeB) =>
+        positionedNodeA.yPx - positionedNodeB.yPx,
+    );
+}
+
+function drawOutputNodeLabels(
+  context: CanvasRenderingContext2D,
+  outputNodes: readonly PositionedNetworkNodeLike[],
+  outputLabels: readonly string[],
+): void {
+  context.save();
+  context.fillStyle = '#8ad8ff';
+  context.font = '700 10px Consolas, Menlo, Monaco, monospace';
+  context.textAlign = 'left';
+  context.textBaseline = 'middle';
+
+  outputNodes.forEach((outputNode, outputIndex) => {
+    const outputLabel = outputLabels[outputIndex] ?? `OUT${outputIndex}`;
+    context.fillText(outputLabel, outputNode.xPx + 18, outputNode.yPx);
+  });
+
+  context.restore();
+}
+
+function resolveMazeHitAreas(
+  resolvedFrame: NetworkVisualizationResolvedFrame,
+): MazeHitArea[] {
+  const nodeDimensions = resolvedFrame.positionedScene.nodeDimensions;
+  const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
+  const halfNodeHeightPx = nodeDimensions.heightPx * 0.5;
+
+  const inputGroupHitAreas =
+    resolvedFrame.positionedScene.inputGroupLabelBandScenes.map(
+      (inputGroupLabelBandScene) => ({
+        leftPx: inputGroupLabelBandScene.leftPx,
+        topPx: inputGroupLabelBandScene.topPx,
+        widthPx: inputGroupLabelBandScene.widthPx,
+        heightPx: inputGroupLabelBandScene.heightPx,
+        heading: inputGroupLabelBandScene.tooltipHeading,
+        bodyParagraphs: inputGroupLabelBandScene.tooltipBodyParagraphs,
+        hoveredNodeIndices: inputGroupLabelBandScene.nodeIndices,
+      }),
+    );
+  const inputDescriptionHitAreas =
+    resolvedFrame.positionedScene.inputDescriptionScenes.map(
+      (inputDescriptionScene) => ({
+        leftPx: inputDescriptionScene.leftPx,
+        topPx: inputDescriptionScene.topPx,
+        widthPx: inputDescriptionScene.widthPx,
+        heightPx: inputDescriptionScene.heightPx,
+        heading: inputDescriptionScene.tooltipHeading,
+        bodyParagraphs: inputDescriptionScene.tooltipBodyParagraphs,
+        hoveredNodeIndices: [inputDescriptionScene.nodeIndex],
+      }),
+    );
+  const hiddenColumnHitAreas = (
+    resolvedFrame.positionedScene.hiddenColumnLabelScenes ?? []
+  ).map((hiddenColumnLabelScene) => ({
+    leftPx: hiddenColumnLabelScene.leftPx,
+    topPx: hiddenColumnLabelScene.topPx,
+    widthPx: hiddenColumnLabelScene.widthPx,
+    heightPx: hiddenColumnLabelScene.heightPx,
+    heading: hiddenColumnLabelScene.tooltipHeading,
+    bodyParagraphs: hiddenColumnLabelScene.tooltipBodyParagraphs,
+    hoveredNodeIndices: hiddenColumnLabelScene.nodeIndices,
+  }));
+  const nodeHitAreas = resolvedFrame.positionedScene.positionedNodes.map(
+    (positionedNode) => ({
+      leftPx: positionedNode.xPx - halfNodeWidthPx,
+      topPx: positionedNode.yPx - halfNodeHeightPx,
+      widthPx: nodeDimensions.widthPx,
+      heightPx: nodeDimensions.heightPx,
+      heading: '',
+      bodyParagraphs: [],
+      hoveredNodeIndices: [positionedNode.node.index],
+      suppressTooltip: true,
     }),
   );
 
-  return {
-    inputDescriptionScenes,
-    inputGroupLabelBandScenes,
-    hitAreas: [
-      ...inputGroupLabelBandScenes.map((bandScene) => ({
-        leftPx: bandScene.leftPx,
-        topPx: bandScene.topPx,
-        widthPx: bandScene.widthPx,
-        heightPx: bandScene.heightPx,
-        heading: bandScene.tooltipHeading,
-        bodyParagraphs: bandScene.tooltipBodyParagraphs,
-        hoveredNodeIndices: bandScene.nodeIndices,
-      })),
-      ...inputDescriptionScenes.map((descriptionScene) => ({
-        leftPx: descriptionScene.leftPx,
-        topPx: descriptionScene.topPx,
-        widthPx: descriptionScene.widthPx,
-        heightPx: descriptionScene.heightPx,
-        heading: descriptionScene.tooltipHeading,
-        bodyParagraphs: descriptionScene.tooltipBodyParagraphs,
-        hoveredNodeIndices: [descriptionScene.nodeIndex],
-      })),
-    ],
-  };
+  return [
+    ...inputGroupHitAreas,
+    ...inputDescriptionHitAreas,
+    ...hiddenColumnHitAreas,
+    ...nodeHitAreas,
+  ];
 }
 
-// ---------------------------------------------------------------------------
-// Output label helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Draws short direction labels (N / E / S / W) to the right of each output node.
- *
- * @param context        - Canvas 2D context.
- * @param outputNodes    - Output nodes sorted top-to-bottom.
- * @param nodeDimensions - Node dimensions for offset calculation.
- */
-function drawOutputNodeLabels(
-  context: CanvasRenderingContext2D,
-  outputNodes: PositionedNetworkNode[],
-  nodeDimensions: NetworkNodeDimensions,
-): void {
-  for (const [outputIndex, node] of outputNodes.entries()) {
-    const label = MAZE_OUTPUT_LABELS[outputIndex] ?? `OUT${outputIndex}`;
-    context.fillStyle = '#8ad8ff';
-    context.font = '700 10px Consolas, Menlo, Monaco, monospace';
-    context.textAlign = 'left';
-    context.textBaseline = 'middle';
-    context.fillText(
-      label,
-      node.centerXPx + nodeDimensions.widthPx * 0.5 + 4,
-      node.centerYPx,
-    );
-  }
-}
-
-function resolveMazeLabelPanelWidthPx(): number {
-  return Math.max(
-    MAZE_LABEL_LEFT_PADDING_PX,
-    resolveMazeDescriptionColumnWidthPx() +
-      FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX +
-      FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX +
-      FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX +
-      12,
-  );
-}
-
-function resolveMazeNetworkPanelPadding(canvasWidthPx: number): {
-  topPx: number;
-  rightPx: number;
-  bottomPx: number;
-  leftPx: number;
-} {
-  const preferredLeftPanelWidthPx = resolveMazeLabelPanelWidthPx();
-  const preferredRightLegendReservePx = MAZE_RIGHT_LEGEND_RESERVE_PX;
-  const minimumRightLegendReservePx =
-    resolveMazeMinimumLegendReservePx(canvasWidthPx);
-
-  let leftPanelWidthPx = preferredLeftPanelWidthPx;
-  let rightLegendReservePx = preferredRightLegendReservePx;
-
-  const preferredDrawableWidthPx =
-    canvasWidthPx - leftPanelWidthPx - rightLegendReservePx;
-
-  if (preferredDrawableWidthPx < MAZE_MIN_DRAWABLE_GRAPH_WIDTH_PX) {
-    const requiredHorizontalSpacePx =
-      MAZE_MIN_DRAWABLE_GRAPH_WIDTH_PX - preferredDrawableWidthPx;
-    const rightReserveReductionPx = Math.min(
-      requiredHorizontalSpacePx,
-      rightLegendReservePx - minimumRightLegendReservePx,
-    );
-
-    rightLegendReservePx -= rightReserveReductionPx;
-
-    const remainingRequiredHorizontalSpacePx =
-      requiredHorizontalSpacePx - rightReserveReductionPx;
-    if (remainingRequiredHorizontalSpacePx > 0) {
-      leftPanelWidthPx -= Math.min(
-        remainingRequiredHorizontalSpacePx,
-        leftPanelWidthPx - MAZE_MIN_LEFT_LABEL_PANEL_WIDTH_PX,
-      );
-    }
-  }
-
-  return {
-    topPx: 18,
-    rightPx: rightLegendReservePx,
-    bottomPx: 24,
-    leftPx: leftPanelWidthPx,
-  };
-}
-
-function resolveMazeMinimumLegendReservePx(canvasWidthPx: number): number {
-  const legendWidthPx =
-    canvasWidthPx < FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_THRESHOLD_PX
-      ? FLAPPY_NETWORK_LEGEND_COMPACT_WIDTH_PX
-      : FLAPPY_NETWORK_LEGEND_REGULAR_WIDTH_PX;
-
-  return legendWidthPx + FLAPPY_NETWORK_LEGEND_MARGIN_PX * 2;
-}
-
-function resolveMazeDescriptionColumnWidthPx(): number {
-  return Math.max(
-    ...MAZE_INPUT_GROUP_DEFS.flatMap((groupDef) =>
-      groupDef.nodeDescriptions.map((nodeDescription) =>
-        resolveInputDescriptionChipWidthPx(nodeDescription.labelLines),
-      ),
-    ),
-  );
-}
-
-function resolveMazeInputOverlayLayouts(
-  inputNodes: PositionedNetworkNode[],
-  nodeDimensions: NetworkNodeDimensions,
-  descriptionColumnWidthPx: number,
-): ResolvedMazeInputGroupLayout[] {
-  const halfNodeWidthPx = nodeDimensions.widthPx * 0.5;
-  const leftmostInputCenterXPx = Math.min(
-    ...inputNodes.map((inputNode) => inputNode.centerXPx),
-  );
-  const inputLeftEdgeXPx = leftmostInputCenterXPx - halfNodeWidthPx;
-  const descriptionRightXPx =
-    inputLeftEdgeXPx - FLAPPY_NETWORK_INPUT_DESCRIPTION_GAP_PX;
-  const descriptionColumnLeftXPx =
-    descriptionRightXPx - descriptionColumnWidthPx;
-  const labelBandRightXPx =
-    descriptionColumnLeftXPx - FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX;
-  const labelBandLeftXPx =
-    labelBandRightXPx - FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_WIDTH_PX;
-  const inputStackCenterYPx = resolveInputStackCenterYPx(inputNodes);
-
-  let runningTopPx = 0;
-
-  const relativeLayouts = MAZE_INPUT_GROUP_DEFS.map((groupDef, groupIndex) => {
-    const groupColor = MAZE_GROUP_COLORS[groupIndex];
-    const groupNodeStartIndex = MAZE_INPUT_GROUP_DEFS.slice(
-      0,
-      groupIndex,
-    ).reduce(
-      (runningNodeCount, currentGroupDef) =>
-        runningNodeCount + currentGroupDef.nodeCount,
-      0,
-    );
-    const resolvedGroupNodes = inputNodes.slice(
-      groupNodeStartIndex,
-      groupNodeStartIndex + groupDef.nodeCount,
-    );
-
-    const descriptionScenes = groupDef.nodeDescriptions.map(
-      (nodeDescription, nodeOffset) => {
-        const descriptionWidthPx = resolveInputDescriptionChipWidthPx(
-          nodeDescription.labelLines,
-        );
-        const descriptionHeightPx = Math.max(
-          FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_HEIGHT_PX,
-          nodeDescription.labelLines.length *
-            FLAPPY_NETWORK_INPUT_DESCRIPTION_LINE_HEIGHT_PX +
-            FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_VERTICAL_PADDING_PX * 2,
-          nodeDimensions.heightPx +
-            FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_VERTICAL_PADDING_PX * 2,
-        );
-
-        return {
-          labelLines: nodeDescription.labelLines,
-          tooltipHeading: nodeDescription.tooltipHeading,
-          tooltipBodyParagraphs: nodeDescription.tooltipBodyParagraphs,
-          leftPx: descriptionRightXPx - descriptionWidthPx,
-          topPx: 0,
-          widthPx: descriptionWidthPx,
-          heightPx: descriptionHeightPx,
-          nodeIndex:
-            resolvedGroupNodes[nodeOffset]?.index ??
-            groupNodeStartIndex + nodeOffset,
-        };
-      },
-    );
-
-    const groupedDescriptionContentHeightPx =
-      resolveGroupedDescriptionContentHeightPx(descriptionScenes);
-    const groupHeightPx = Math.max(
-      FLAPPY_NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX,
-      groupedDescriptionContentHeightPx +
-        FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX * 2,
-    );
-    const descriptionContentTopPx =
-      runningTopPx +
-      Math.max(
-        FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX,
-        (groupHeightPx - groupedDescriptionContentHeightPx) * 0.5,
-      );
-
-    let runningDescriptionTopPx = descriptionContentTopPx;
-    const placedDescriptionScenes = descriptionScenes.map(
-      (descriptionScene, descriptionIndex) => {
-        const resolvedTopPx = runningDescriptionTopPx;
-        runningDescriptionTopPx += descriptionScene.heightPx;
-        if (descriptionIndex < descriptionScenes.length - 1) {
-          runningDescriptionTopPx +=
-            FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX;
-        }
-
-        return {
-          ...descriptionScene,
-          topPx: resolvedTopPx,
-        };
-      },
-    );
-
-    const resolvedLayout: ResolvedMazeInputGroupLayout = {
-      groupDef,
-      groupColor,
-      nodeIndices: resolvedGroupNodes.map((node) => node.index),
-      labelBandLeftPx: labelBandLeftXPx,
-      topPx: runningTopPx,
-      heightPx: groupHeightPx,
-      descriptionScenes: placedDescriptionScenes,
-    };
-
-    runningTopPx += groupHeightPx;
-    if (groupIndex < MAZE_INPUT_GROUP_DEFS.length - 1) {
-      runningTopPx += FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX;
-    }
-
-    return resolvedLayout;
-  }).filter(
-    (layout): layout is ResolvedMazeInputGroupLayout =>
-      layout.groupColor != null,
-  );
-
-  const totalOverlayHeightPx = relativeLayouts.at(-1)
-    ? relativeLayouts.at(-1)!.topPx + relativeLayouts.at(-1)!.heightPx
-    : 0;
-  const overlayTopOffsetPx = inputStackCenterYPx - totalOverlayHeightPx * 0.5;
-
-  return relativeLayouts.map((relativeLayout) => ({
-    ...relativeLayout,
-    topPx: relativeLayout.topPx + overlayTopOffsetPx,
-    descriptionScenes: relativeLayout.descriptionScenes.map(
-      (descriptionScene) => ({
-        ...descriptionScene,
-        topPx: descriptionScene.topPx + overlayTopOffsetPx,
-      }),
-    ),
-  }));
-}
-
-function resolveGroupedDescriptionContentHeightPx(
-  descriptionScenes: readonly NetworkInputDescriptionScene[],
-): number {
-  if (descriptionScenes.length === 0) {
-    return 0;
-  }
-
-  return descriptionScenes.reduce(
-    (runningHeightPx, descriptionScene, descriptionIndex) =>
-      runningHeightPx +
-      descriptionScene.heightPx +
-      (descriptionIndex < descriptionScenes.length - 1
-        ? FLAPPY_NETWORK_INPUT_DESCRIPTION_CHIP_VERTICAL_GAP_PX
-        : 0),
-    0,
-  );
-}
-
-function resolveInputStackCenterYPx(
-  inputNodes: readonly PositionedNetworkNode[],
-): number {
-  const firstInputNode = inputNodes[0];
-  const lastInputNode = inputNodes.at(-1);
-
-  if (!firstInputNode || !lastInputNode) {
-    return 0;
-  }
-
-  return (firstInputNode.centerYPx + lastInputNode.centerYPx) * 0.5;
-}
-
-function resolveRuntimePositionedNodes(
-  positionedNodes: PositionedNetworkNode[],
-): MazeRuntimePositionedNode[] {
-  return positionedNodes.map((positionedNode) => ({
-    xPx: positionedNode.centerXPx,
-    yPx: positionedNode.centerYPx,
-    node: {
-      index: positionedNode.index,
-      type: positionedNode.type,
-      bias: positionedNode.bias,
-    },
-  }));
-}
-
-function resolveRuntimeConnections(
-  graph: VisualizationGraphV1,
-): MazeRuntimeConnection[] {
-  return graph.edges.map((edge) => ({
-    from: { index: edge.from },
-    to: { index: edge.to },
-    weight: edge.weight,
-    enabled: edge.enabled !== false,
-  }));
-}
-
-function paintMazeNetworkBase(
-  context: CanvasRenderingContext2D,
+function createEmptyMazeResolvedFrame(
   canvas: HTMLCanvasElement,
-): void {
-  context.fillStyle = FLAPPY_UI_NETWORK_CANVAS_BACKGROUND;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-function resolveMazeArchitectureLabel(
   network: Network,
   graph: VisualizationGraphV1,
-): string {
-  const architectureDescriptor = network.describeArchitecture();
-  const hiddenLayersLabel = resolveMazeHiddenLayersLabel(
-    architectureDescriptor.hiddenLayerSizes,
-    architectureDescriptor.source,
-  );
-  const architectureColumnsLabel = [
-    graph.io.inputNodeIds.length,
-    hiddenLayersLabel,
-    graph.io.outputNodeIds.length,
-  ].join(FLAPPY_NETWORK_ARCHITECTURE_COLUMN_SEPARATOR);
-  const architectureTotalsLabel = `(${architectureDescriptor.totalNodes} nodes, ${architectureDescriptor.totalConnections} connections)`;
-
-  return [architectureColumnsLabel, architectureTotalsLabel].join(
-    FLAPPY_NETWORK_ARCHITECTURE_LINE_SEPARATOR,
-  );
-}
-
-function resolveMazeHiddenLayersLabel(
-  hiddenLayerSizes: number[],
-  architectureSource: 'layer-metadata' | 'graph-topology' | 'inferred',
-): string {
-  if (hiddenLayerSizes.length === 0) {
-    return FLAPPY_NETWORK_EMPTY_HIDDEN_LAYER_LABEL;
-  }
-
-  if (architectureSource === 'inferred') {
-    return hiddenLayerSizes
-      .map(
-        (hiddenLayerSize) =>
-          `${FLAPPY_NETWORK_INFERRED_HIDDEN_LAYER_PREFIX}${hiddenLayerSize}`,
-      )
-      .join(FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR);
-  }
-
-  return hiddenLayerSizes.join(FLAPPY_NETWORK_HIDDEN_LAYER_SEPARATOR);
+): NetworkVisualizationResolvedFrame {
+  return {
+    canvasWidthPx: canvas.width,
+    canvasHeightPx: canvas.height,
+    architectureLabel: resolveMazeArchitectureLabel(network, graph),
+    colorScales: resolveNetworkVisualizationColorScales(network),
+    hideNetworkOverlays: false,
+    positionedScene: {
+      positionedNodes: [],
+      nodeDimensions: { widthPx: 0, heightPx: 0 },
+      inputGroupLabelBandScenes: [],
+      inputDescriptionScenes: [],
+      hiddenColumnLabelScenes: [],
+    },
+    positionByNodeIndex: new Map(),
+    runtimeConnections: [],
+  };
 }

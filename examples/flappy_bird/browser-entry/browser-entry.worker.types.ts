@@ -1,4 +1,5 @@
 import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
+import type { TransferableInferencePayload } from '../../../src/neataptic';
 
 /**
  * Worker transport contracts for the Flappy Bird browser runtime.
@@ -71,14 +72,17 @@ export interface PackedPlaybackBirdSnapshot {
  * Worker payload describing evolved generation summary values.
  *
  * This is the browser-facing summary of one completed NEAT generation: what
- * generation finished, how fit the best genome was, and optionally the best
- * network for visualization or playback.
+ * generation finished, how fit the best genome was, which transferable
+ * inference payloads are ready for playback transport, and which JSON bridge
+ * values remain available for the network visualization cache.
  */
 export interface EvolutionGenerationPayload {
   architectureProfileId: ExampleArchitectureProfileId;
   generation: number;
   bestFitness: number;
+  bestNetworkPayload?: TransferableInferencePayload;
   bestNetworkJson?: SerializedNetwork;
+  populationNetworkPayloads?: TransferableInferencePayload[];
   populationNetworksJson?: SerializedNetwork[];
 }
 
@@ -136,6 +140,26 @@ export interface EvolutionPlaybackStepMessage {
     p90FramesSurvived?: number;
     winnerPipesPassed?: number;
     winnerFramesSurvived?: number;
+    winnerNetworkJson?: SerializedNetwork;
+  };
+}
+
+/** Worker phase labels surfaced to the browser HUD during long-running work. */
+export type EvolutionRuntimeStatusPhase =
+  | 'initializing'
+  | 'evaluating-direct'
+  | 'evaluating-shared-memory'
+  | 'evolving'
+  | 'playing'
+  | 'stopped';
+
+/** Informational worker message used to keep the HUD phase/status honest. */
+export interface EvolutionRuntimeStatusMessage {
+  type: 'runtime-status';
+  payload: {
+    phase: EvolutionRuntimeStatusPhase;
+    statusText: string;
+    detail?: string;
   };
 }
 
@@ -148,6 +172,7 @@ export interface EvolutionPlaybackStepMessage {
 export type EvolutionWorkerMessage =
   | EvolutionGenerationReadyMessage
   | EvolutionPlaybackStepMessage
+  | EvolutionRuntimeStatusMessage
   | EvolutionWorkerErrorMessage;
 
 /**

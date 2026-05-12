@@ -173,6 +173,19 @@ When a generated `src/**/README.md` appears outdated relative to the code or JSD
 - run `npm run docs` to refresh generated documentation when needed,
 - consider `educational-docs` pre-approved to run `npm run docs` after doc-affecting edits so README files stay synchronized and drift does not confuse later work.
 
+## Generated example publication handling
+
+Published browser demo pages under `docs/examples/**/index.html` are generated artifacts copied from `examples/**/index.html` by `scripts/copy-examples.ts` during `npm run docs`.
+
+When changing browser-demo HTML, CSS, or loader behavior:
+
+- treat `docs/examples/**` as read-only generated output,
+- edit the source entrypoint under `examples/**/index.html`,
+- run `npm run docs` to republish the generated copy,
+- verify the generated page after the docs run instead of patching it directly.
+
+If a change appears to require touching both the source example page and the published docs copy, stop and confirm the generation path first. Do not edit `docs/examples/**` as a shortcut.
+
 ## CI-sensitive docs and tooling validation
 
 When a task touches `.github/workflows/**`, `package.json`, `package-lock.json`, `scripts/**` that launch docs or browser tooling, Mermaid rendering, Puppeteer/Chromium, or any dependency change that can affect those paths:

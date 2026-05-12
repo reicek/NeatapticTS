@@ -175,6 +175,10 @@ Options object passed to evolution functions.
 
 Canonical stop reasons reported by the engine to host adapters.
 
+### EvolutionWorkerEvaluationConfig
+
+Browser-worker evaluation controls for parallel ASCII Maze genome scoring.
+
 ### FileSystem
 
 Node.js fs module type for file operations.
@@ -2480,7 +2484,7 @@ ES2023 Policy:
 createNeat(
   inputCount: number,
   outputCount: number,
-  fitnessCallback: (net: default) => number,
+  fitnessCallback: ((net: default) => number | Promise<number>) | ((population: default[]) => Promise<void>),
   cfg: NeatConfig | undefined,
 ): default
 ```
@@ -3448,6 +3452,35 @@ const collapsed = handleSpeciesHistory(state, neat, historyArray);
 
 Typed or array-based index buffer for sorting
 
+### maybeApplyTopologyShakeupMutation
+
+```ts
+maybeApplyTopologyShakeupMutation(
+  neat: PopulationDynamicsMutateCapableNeatLike,
+  stagnantProgressGenerations: number,
+  safeWrite: (msg: string) => void,
+  completedGenerations: number,
+  threshold: number,
+): Promise<boolean>
+```
+
+Apply one structural-only mutation pass when maze progress has stalled long enough.
+
+The shake-up intentionally reuses the public NEAT mutation flow so innovation
+bookkeeping, topology-intent policy, and adaptive mutation metadata all stay
+coherent. The helper only narrows the active mutation shelf to structural
+operators for the duration of the pass, then restores the caller's original
+mutation configuration.
+
+Parameters:
+- `neat` - NEAT driver exposing the public `mutate()` hook.
+- `stagnantProgressGenerations` - Consecutive generations without progress improvement.
+- `safeWrite` - Best-effort logger used for concise telemetry.
+- `completedGenerations` - Generation count used in the log line.
+- `threshold` - Plateau window that should trigger a structural shake-up.
+
+Returns: True when a shake-up mutation pass was executed.
+
 ### maybeExpandPopulation
 
 ```ts
@@ -3532,6 +3565,10 @@ The real runtime objects are `Network` instances with a few extra evolution-
 time fields such as `score`, `species`, and lineage markers. Capturing that
 shape locally keeps the rest of the helper signatures readable without
 claiming that the entire engine only ever works with plain `Network` values.
+
+### PopulationDynamicsMutateCapableNeatLike
+
+Narrow NEAT shape for topology shake-up passes that use the public mutate hook.
 
 ### PopulationDynamicsNeatLike
 
@@ -3697,6 +3734,10 @@ Example:
 
 const remaining = runSimplifyCycle(state, neat, 5, 'pruneWeak', 0.2);
 
+### TOPOLOGY_SHAKEUP_STAGNATION_GENERATIONS
+
+Progress-plateau window that triggers a structural topology shake-up.
+
 ### updatePlateauState
 
 ```ts
@@ -3853,6 +3894,44 @@ Warm-start curriculum samples used to bias early supervised guidance.
 These values shape the synthetic targets used before the main NEAT loop
 takes over, so they are grouped here instead of being scattered across the
 facade method body.
+
+## evolutionEngine/evolutionEngine.worker-evaluation.ts
+
+### AsciiMazeEvaluationWorkerPayload
+
+Browser-worker bootstrap payload for one ASCII Maze genome evaluator.
+
+### AsciiMazeEvaluationWorkerRequest
+
+Worker bootstrap request sent from the browser host to one evaluator worker.
+
+### AsciiMazeEvaluationWorkerResponse
+
+Worker response emitted by one ASCII Maze evaluator worker.
+
+### createAsciiMazeWorkerPopulationFitnessEvaluator
+
+```ts
+createAsciiMazeWorkerPopulationFitnessEvaluator(
+  fitnessContext: IFitnessEvaluationContext,
+  workerEvaluation: EvolutionWorkerEvaluationConfig | undefined,
+  fitnessEvaluator: FitnessEvaluatorFn,
+): ((population: AsciiMazeWorkerPopulationGenome[]) => Promise<void>) | undefined
+```
+
+Create the browser-worker population evaluator for ASCII Maze genome scoring.
+
+This helper keeps worker transport local to the example runtime. When the
+default maze evaluator is active and browser workers are available, the NEAT
+controller can score one whole population through a worker batch while still
+preserving a local single-thread fallback for unsupported environments.
+
+Parameters:
+- `fitnessContext` - Read-only maze evaluation context shared by the run.
+- `workerEvaluation` - Browser worker controls for this run.
+- `fitnessEvaluator` - Active fitness delegate chosen by the caller.
+
+Returns: Population-wide fitness delegate, or `undefined` when worker mode is unavailable.
 
 ## evolutionEngine/engineState.utils.ts
 

@@ -2,7 +2,7 @@
 description: 'Use when mapping worker-pool scheduling, ordered result assembly, dataset broadcast strategy, worker-count sizing, queue backpressure, or deciding whether a multithread batch-evaluation issue belongs to multithread-evaluation. Keywords: worker pool, evaluateInWorkers, queueing, ordered results, dataset broadcast, backpressure, workerCount, fallback.'
 name: 'Evaluation Pool Scout'
 tools: [read, search]
-user-invocable: false
+user-invocable: true
 agents: []
 ---
 

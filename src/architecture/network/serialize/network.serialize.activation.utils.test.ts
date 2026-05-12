@@ -7,6 +7,10 @@ import { FALLBACK_ACTIVATION_KEY } from './network.serialize.utils.types';
 
 type SerializeActivationFunction = typeof methods.Activation.identity;
 
+const ACTIVATION_KEY_SYMBOL = Symbol.for('neataptic.activation.key');
+const DIRECT_REFERENCE_TEST_ACTIVATION_KEY =
+  'directReferenceCoverageActivation';
+
 function createNamedCustomActivation(): SerializeActivationFunction {
   function customHydrationActivation(
     inputValue: number,
@@ -29,6 +33,30 @@ function createBlankNameActivation(): SerializeActivationFunction {
   return customActivation;
 }
 
+function createTaggedMinifiedActivationCopy(
+  activationKey: string,
+  activationFunction: SerializeActivationFunction,
+): SerializeActivationFunction {
+  const copiedActivation = ((
+    inputValue: number,
+    shouldComputeDerivative = false,
+  ): number => {
+    return activationFunction(inputValue, shouldComputeDerivative);
+  }) as SerializeActivationFunction;
+
+  Object.defineProperty(copiedActivation, ACTIVATION_KEY_SYMBOL, {
+    configurable: true,
+    enumerable: false,
+    value: activationKey,
+  });
+  Object.defineProperty(copiedActivation, 'name', {
+    configurable: true,
+    value: 'fN',
+  });
+
+  return copiedActivation;
+}
+
 describe('network serialize activation utilities chapter', () => {
   describe('resolveActivationKey', () => {
     describe('given the runtime squash function matches a registered activation reference', () => {
@@ -41,6 +69,55 @@ describe('network serialize activation utilities chapter', () => {
 
         // Assert
         expect(activationKey).toBe('relu');
+      });
+    });
+
+    describe('given a minified built-in activation copy carries an attached stable key', () => {
+      it('returns the attached canonical key instead of the minified runtime name', () => {
+        // Arrange
+        const squashFunction = createTaggedMinifiedActivationCopy(
+          'mish',
+          methods.Activation.mish,
+        );
+
+        // Act
+        const activationKey = resolveActivationKey(squashFunction);
+
+        // Assert
+        expect(activationKey).toBe('mish');
+      });
+    });
+
+    describe('given an unannotated activation is only reachable through one direct registry reference', () => {
+      it('returns the direct registry key when no attached key is present', () => {
+        // Arrange
+        const directReferenceActivation = createNamedCustomActivation();
+        Reflect.deleteProperty(
+          directReferenceActivation as object,
+          ACTIVATION_KEY_SYMBOL,
+        );
+        Object.defineProperty(directReferenceActivation, 'name', {
+          configurable: true,
+          value: 'nonMatchingActivationName',
+        });
+        Reflect.set(
+          methods.Activation,
+          DIRECT_REFERENCE_TEST_ACTIVATION_KEY,
+          directReferenceActivation,
+        );
+
+        try {
+          // Act
+          const activationKey = resolveActivationKey(directReferenceActivation);
+
+          // Assert
+          expect(activationKey).toBe(DIRECT_REFERENCE_TEST_ACTIVATION_KEY);
+        } finally {
+          Reflect.deleteProperty(
+            methods.Activation,
+            DIRECT_REFERENCE_TEST_ACTIVATION_KEY,
+          );
+        }
       });
     });
 

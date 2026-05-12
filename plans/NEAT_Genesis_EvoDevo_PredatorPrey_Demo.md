@@ -4,7 +4,7 @@
 
 This plan defines the predator/prey co-evolutionary benchmark for [NEAT Genesis EvoDevo (NGE)](NEAT_Genesis_EvoDevo.md). It is the primary stress test for co-evolutionary dynamics, sensory arms race emergence, structural divergence under non-stationary selection pressure, and reproduction mode diversity — all rendered as a live web canvas simulation in the neon arcade aesthetic used across this project.
 
-This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [Memory_Optimization.md](Memory_Optimization.md). If this plan conflicts with either upstream plan, the upstream plan wins.
+This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md). If this plan conflicts with either upstream plan, the upstream plan wins.
 
 ---
 
@@ -14,7 +14,7 @@ This is a benchmark-architecture plan, not an implementation-complete spec.
 
 - **In scope:** world design, two-population co-evolutionary structure, prey and predator sensory channels, coordination signal design, arms race observables, NGE feature mapping, canvas simulation spec, and acceptance criteria.
 - **Out of scope (for now):** exact physics constants and final reward weights.
-- **Authority rule:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [Memory_Optimization.md](Memory_Optimization.md) remain authoritative.
+- **Authority rule:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md) remain authoritative.
 
 ---
 

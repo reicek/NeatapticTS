@@ -2,7 +2,7 @@
 description: 'Use when identifying the next coverage tranche target from lcov.info, mapping which source boundaries are below 100%, or confirming whether an uncovered path is live or dead code. Keywords: coverage, lcov, untested, branches, lines, coverage gap, next tranche, coverage regression.'
 name: 'Coverage Scout'
 tools: [read, search]
-user-invocable: false
+user-invocable: true
 agents: []
 ---
 

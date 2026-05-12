@@ -2,6 +2,7 @@ import Architect from '../../../../src/architecture/architect/architect';
 import Network from '../../../../src/architecture/network';
 import Node from '../../../../src/architecture/node';
 import {
+  FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX,
   FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX,
   FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX,
   FLAPPY_NETWORK_INPUT_SIZE,
@@ -17,7 +18,66 @@ import {
   resolveInputGroupLabelBands,
   resolveInputNodeDescriptionLabels,
 } from './network-view.labels.utils';
+import type { InputLabelGroupDefinition } from './network-view.types';
 import { resolveNetworkVisualizationTopologyPlan } from './network-view.topology.utils';
+
+const CUSTOM_INPUT_LABEL_GROUP_DEFINITIONS: readonly InputLabelGroupDefinition[] =
+  [
+    {
+      label: 'SENSE',
+      labelLines: ['SENSE'],
+      tooltipHeading: 'Sense',
+      tooltipBodyParagraphs: ['Custom sense group.'],
+      nodeDescriptionDefinitions: [
+        {
+          labelLines: ['Bearing'],
+          tooltipHeading: 'Bearing',
+          tooltipBodyParagraphs: ['Bearing channel.'],
+        },
+      ],
+      backgroundColor: '#2bd9ff',
+      orientation: 'vertical',
+    },
+    {
+      label: 'ACTION',
+      labelLines: ['ACT', 'ION'],
+      tooltipHeading: 'Action',
+      tooltipBodyParagraphs: ['Custom action-prep group.'],
+      nodeDescriptionDefinitions: [
+        {
+          labelLines: ['Open north'],
+          tooltipHeading: 'Open North',
+          tooltipBodyParagraphs: ['North channel.'],
+        },
+        {
+          labelLines: ['Open south'],
+          tooltipHeading: 'Open South',
+          tooltipBodyParagraphs: ['South channel.'],
+        },
+      ],
+      backgroundColor: '#7bff72',
+      orientation: 'vertical',
+    },
+  ] as const;
+
+const WIDE_INPUT_LABEL_GROUP_DEFINITIONS: readonly InputLabelGroupDefinition[] =
+  [
+    {
+      label: 'WIDE',
+      labelLines: ['WIDE'],
+      tooltipHeading: 'Wide',
+      tooltipBodyParagraphs: ['Wide custom overlay group.'],
+      nodeDescriptionDefinitions: [
+        {
+          labelLines: ['Corridor clearance east'],
+          tooltipHeading: 'Corridor Clearance East',
+          tooltipBodyParagraphs: ['Wide custom overlay description.'],
+        },
+      ],
+      backgroundColor: '#ffd166',
+      orientation: 'vertical',
+    },
+  ] as const;
 
 describe('resolveNetworkArchitectureLabel', () => {
   it('prefers explicit runtime IO role sizes over caller-provided fallback hints', () => {
@@ -326,6 +386,32 @@ describe('resolveInputGroupLabelBands', () => {
       },
     ]);
   });
+
+  it('supports custom grouped input definitions for shared demo overlays', () => {
+    expect(
+      resolveInputGroupLabelBands(3, CUSTOM_INPUT_LABEL_GROUP_DEFINITIONS).map(
+        ({ endNodeIndex, label, startNodeIndex, tooltipHeading }) => ({
+          endNodeIndex,
+          label,
+          startNodeIndex,
+          tooltipHeading,
+        }),
+      ),
+    ).toEqual([
+      {
+        endNodeIndex: 0,
+        label: 'SENSE',
+        startNodeIndex: 0,
+        tooltipHeading: 'Sense',
+      },
+      {
+        endNodeIndex: 2,
+        label: 'ACTION',
+        startNodeIndex: 1,
+        tooltipHeading: 'Action',
+      },
+    ]);
+  });
 });
 
 describe('resolveInputNodeDescriptionLabels', () => {
@@ -393,6 +479,35 @@ describe('resolveInputNodeDescriptionLabels', () => {
         nodeIndex: 8,
         tooltipBodyParagraphCount: 3,
         tooltipHeading: 'Second Gap Offset',
+      },
+    ]);
+  });
+
+  it('supports custom per-node descriptions for shared demo overlays', () => {
+    expect(
+      resolveInputNodeDescriptionLabels(
+        3,
+        CUSTOM_INPUT_LABEL_GROUP_DEFINITIONS,
+      ).map(({ labelLines, nodeIndex, tooltipHeading }) => ({
+        labelLines,
+        nodeIndex,
+        tooltipHeading,
+      })),
+    ).toEqual([
+      {
+        labelLines: ['Bearing'],
+        nodeIndex: 0,
+        tooltipHeading: 'Bearing',
+      },
+      {
+        labelLines: ['Open north'],
+        nodeIndex: 1,
+        tooltipHeading: 'Open North',
+      },
+      {
+        labelLines: ['Open south'],
+        nodeIndex: 2,
+        tooltipHeading: 'Open South',
       },
     ]);
   });
@@ -489,6 +604,43 @@ describe('resolveInputDescriptionScenes', () => {
         (inputDescriptionScene) =>
           inputDescriptionScene.topPx + inputDescriptionScene.heightPx * 0.5,
       ),
+    );
+  });
+
+  it('keeps custom group bands separated from wider shared-demo description chips', () => {
+    const positionedNodes = [
+      {
+        node: {
+          index: 0,
+          type: 'input',
+          bias: 0,
+        },
+        xPx: 160,
+        yPx: 60,
+      },
+    ];
+    const nodeDimensions = {
+      widthPx: 10,
+      heightPx: 10,
+    };
+    const inputDescriptionScenes = resolveInputDescriptionScenes(
+      positionedNodes,
+      nodeDimensions,
+      WIDE_INPUT_LABEL_GROUP_DEFINITIONS,
+    );
+    const inputGroupLabelBandScenes = resolveInputGroupLabelBandScenes(
+      positionedNodes,
+      nodeDimensions,
+      inputDescriptionScenes,
+      WIDE_INPUT_LABEL_GROUP_DEFINITIONS,
+    );
+
+    expect(
+      (inputGroupLabelBandScenes[0]?.leftPx ?? 0) +
+        (inputGroupLabelBandScenes[0]?.widthPx ?? 0),
+    ).toBe(
+      (inputDescriptionScenes[0]?.leftPx ?? 0) -
+        FLAPPY_NETWORK_INPUT_GROUP_LABEL_BAND_GAP_PX,
     );
   });
 });

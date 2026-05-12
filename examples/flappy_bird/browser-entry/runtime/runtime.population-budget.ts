@@ -4,14 +4,14 @@ import {
 } from '../../constants/constants';
 import type { ExampleArchitectureProfileId } from '../../../architectureProfiles';
 
-const FLAPPY_BROWSER_SPARSE_POPULATION_SIZE = 30;
-const FLAPPY_BROWSER_SPARSE_ELITISM_COUNT = 6;
-const FLAPPY_BROWSER_NARX_POPULATION_SIZE = 40;
-const FLAPPY_BROWSER_NARX_ELITISM_COUNT = 8;
-const FLAPPY_BROWSER_GRU_POPULATION_SIZE = 18;
-const FLAPPY_BROWSER_GRU_ELITISM_COUNT = 4;
-const FLAPPY_BROWSER_LSTM_POPULATION_SIZE = 20;
-const FLAPPY_BROWSER_LSTM_ELITISM_COUNT = 4;
+const FLAPPY_BROWSER_SPARSE_POPULATION_SIZE = 10;
+const FLAPPY_BROWSER_SPARSE_ELITISM_COUNT = 4;
+const FLAPPY_BROWSER_NARX_POPULATION_SIZE = 10;
+const FLAPPY_BROWSER_NARX_ELITISM_COUNT = 2;
+const FLAPPY_BROWSER_GRU_POPULATION_SIZE = 10;
+const FLAPPY_BROWSER_GRU_ELITISM_COUNT = 2;
+const FLAPPY_BROWSER_LSTM_POPULATION_SIZE = 14;
+const FLAPPY_BROWSER_LSTM_ELITISM_COUNT = 2;
 
 /**
  * Browser-local population budget for one architecture profile.
@@ -28,11 +28,10 @@ export interface RuntimePopulationBudget {
 /**
  * Resolves the browser evolution budget for one architecture profile.
  *
- * Sparse and NARX keep wider browser budgets than the dense MLP baseline so
- * the interactive demo still has room to discover pipe-clearing behavior in a
- * small number of generations. GRU and LSTM stay smaller than NARX so the live
- * demo remains responsive, but LSTM keeps a broader flock than the old default
- * because the heavier gate stack needs more exploration headroom.
+ * These browser budgets are fixed performance caps rather than hardware-scaled
+ * targets. The live page keeps MLP at its tiny baseline, gives LSTM a wider
+ * 14-bird recurrent flock, and keeps the other heavier recurrent builders
+ * smaller so initialization and generation turnover stay responsive.
  *
  * @param architectureProfileId - Selected shared Flappy profile id.
  * @returns Browser-local population and elitism settings.
@@ -40,7 +39,7 @@ export interface RuntimePopulationBudget {
 export function resolveRuntimePopulationBudget(
   architectureProfileId: ExampleArchitectureProfileId,
 ): RuntimePopulationBudget {
-  // Step 1: Widen lighter Sparse runs a bit because they stay comparatively cheap.
+  // Step 1: Keep Sparse modestly above the recurrent profiles without reintroducing heavy startup cost.
   if (architectureProfileId === 'random-sparse') {
     return {
       populationSize: FLAPPY_BROWSER_SPARSE_POPULATION_SIZE,
@@ -48,7 +47,7 @@ export function resolveRuntimePopulationBudget(
     };
   }
 
-  // Step 2: Keep NARX broader than the baseline while trimming its browser cost a bit.
+  // Step 2: Keep NARX intentionally tiny because browser warm startup is already expensive.
   if (architectureProfileId === 'narx') {
     return {
       populationSize: FLAPPY_BROWSER_NARX_POPULATION_SIZE,
@@ -56,7 +55,7 @@ export function resolveRuntimePopulationBudget(
     };
   }
 
-  // Step 3: Keep GRU meaningfully above the MLP baseline without reintroducing visible stutter.
+  // Step 3: Keep GRU on the same tiny flock as NARX so initialization stays responsive.
   if (architectureProfileId === 'gru') {
     return {
       populationSize: FLAPPY_BROWSER_GRU_POPULATION_SIZE,
@@ -64,7 +63,7 @@ export function resolveRuntimePopulationBudget(
     };
   }
 
-  // Step 4: Give LSTM a mid-sized browser flock so it can discover stable pipe progress without matching NARX cost.
+  // Step 4: Give LSTM a wider flock so its heavier memory cell gets enough candidates.
   if (architectureProfileId === 'lstm') {
     return {
       populationSize: FLAPPY_BROWSER_LSTM_POPULATION_SIZE,

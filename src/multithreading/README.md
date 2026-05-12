@@ -528,6 +528,19 @@ Parameters:
 
 Returns: Gaussian activation.
 
+### geluActivation
+
+```ts
+geluActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - Input value.
+
+Returns: GELU activation.
+
 ### hardTanhActivation
 
 ```ts
@@ -579,6 +592,19 @@ Parameters:
 - `value` - Input value.
 
 Returns: Logistic activation.
+
+### mishActivation
+
+```ts
+mishActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - Input value.
+
+Returns: Mish activation.
 
 ### reluActivation
 
@@ -672,6 +698,19 @@ Parameters:
 - `value` - Input value.
 
 Returns: Step activation.
+
+### swishActivation
+
+```ts
+swishActivation(
+  value: number,
+): number
+```
+
+Parameters:
+- `value` - Input value.
+
+Returns: Swish activation.
 
 ### tanhActivation
 

@@ -1,9 +1,11 @@
+import Network from '../../../src/architecture/network';
 import { Neat, methods } from '../../../src/neataptic';
 import {
   evaluateFlappyFitness,
   evaluateFlappyFitnessAcrossSeeds,
 } from '../flappyEvaluation';
 import type { FlappySeedBatchEvaluation } from '../flappyEvaluation';
+import { FlappyEvaluationWorkerPool } from '../evaluation/evaluation.worker-pool';
 import type { WorkerInitMessage } from './flappy-evolution-worker.types';
 import {
   FLAPPY_MAX_FRAMES_PER_EPISODE,
@@ -17,6 +19,9 @@ import {
   resolveExampleArchitectureProfile,
 } from '../../architectureProfiles';
 
+const FLAPPY_WORKER_RUNTIME_LOG_PREFIX = '[flappy-worker]';
+const SHOULD_LOG_FLAPPY_WORKER_RUNTIME =
+  resolveNodeEnvForRuntimeLogs() !== 'test';
 const FLAPPY_RECURRENT_MUTATION_METHODS = [
   ...methods.mutation.FFW,
   methods.mutation.ADD_BACK_CONN,
@@ -31,9 +36,18 @@ const FLAPPY_WORKER_PIPE_PROGRESS_WEIGHT = 10_000;
 const FLAPPY_WORKER_STABILITY_STDDEV_WEIGHT = 0.5;
 const FLAPPY_WORKER_SHARED_ROLLOUT_GENERATION_XOR_SALT = 0x85eb_ca6b;
 
+/** Minimum first-seed pipe progress required before spending the full recurrent seed batch. */
+const FLAPPY_WORKER_MIN_PIPE_PROGRESS_FOR_FULL_BATCH = 0;
+
 interface WorkerPipeFirstEvaluationPlan {
   sharedRolloutSeedCount: number;
 }
+
+interface WorkerRuntimeDependencies {
+  workerPool?: FlappyEvaluationWorkerPool;
+}
+
+type WorkerPopulationLike = Network[];
 
 /**
  * Creates and configures the worker-local NEAT runtime used by browser evolution playback.
@@ -66,6 +80,7 @@ interface WorkerPipeFirstEvaluationPlan {
  */
 export function createInitializedWorkerRuntime(
   initPayload: WorkerInitMessage['payload'],
+  workerRuntimeDependencies: WorkerRuntimeDependencies = {},
 ): Neat {
   // Step 1: Resolve the selected architecture profile and its seed network.
   const inputSize = FLAPPY_NETWORK_INPUT_SIZE;
@@ -74,8 +89,8 @@ export function createInitializedWorkerRuntime(
     'flappy-bird',
     initPayload.architectureProfileId ?? DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
   );
-  const seedNetwork = buildExampleArchitectureProfileNetwork(
-    'flappy-bird',
+  const seedNetwork = resolveWorkerSeedNetwork(
+    initPayload,
     selectedArchitectureProfile.id,
   );
 
@@ -85,6 +100,10 @@ export function createInitializedWorkerRuntime(
     elitism: initPayload.elitismCount,
     mutationRate: 0.75,
     mutationAmount: 2,
+    fitnessPopulation: shouldUseWorkerPopulationFitness(
+      selectedArchitectureProfile.id,
+      workerRuntimeDependencies,
+    ),
     allowRecurrent: selectedArchitectureProfile.recurrent,
     mutation: selectedArchitectureProfile.recurrent
       ? FLAPPY_RECURRENT_MUTATION_METHODS
@@ -99,6 +118,7 @@ export function createInitializedWorkerRuntime(
     selectedArchitectureProfile.id,
     initPayload.rngSeed,
     () => neatRuntime.generation,
+    workerRuntimeDependencies,
   );
 
   // Step 3: Install the profile-aware worker fitness function and RNG state.
@@ -106,6 +126,33 @@ export function createInitializedWorkerRuntime(
 
   neatRuntime.restoreRNGState(initPayload.rngSeed);
   return neatRuntime;
+}
+
+/**
+ * Resolves the worker seed network from a saved champion override or the shared profile template.
+ *
+ * @param initPayload - Initialization values from the browser host.
+ * @param architectureProfileId - Resolved architecture profile id.
+ * @returns Seed network for the worker-local NEAT runtime.
+ */
+function resolveWorkerSeedNetwork(
+  initPayload: WorkerInitMessage['payload'],
+  architectureProfileId: NonNullable<
+    WorkerInitMessage['payload']['architectureProfileId']
+  >,
+): Network {
+  if (initPayload.championNetworkJson) {
+    try {
+      return Network.fromJSON(initPayload.championNetworkJson);
+    } catch {
+      // Fall back to the shared profile template when browser-local champion state is stale.
+    }
+  }
+
+  return buildExampleArchitectureProfileNetwork(
+    'flappy-bird',
+    architectureProfileId,
+  );
 }
 
 /**
@@ -125,14 +172,36 @@ function createWorkerFitnessEvaluator(
   >,
   workerInitSeed: number,
   resolveCurrentGeneration: () => number,
-): (network: Parameters<Neat['fitness']>[0]) => number {
+  workerRuntimeDependencies: WorkerRuntimeDependencies,
+): Neat['fitness'] {
+  const usesPipeFirstSharedSeeds =
+    architectureProfileId === 'narx' ||
+    architectureProfileId === 'gru' ||
+    architectureProfileId === 'lstm';
+  const workerPool = workerRuntimeDependencies.workerPool;
+
+  if (workerPool && usesPipeFirstSharedSeeds) {
+    return createWorkerPopulationFitnessEvaluator(
+      architectureProfileId,
+      workerInitSeed,
+      resolveCurrentGeneration,
+      workerPool,
+    );
+  }
+
+  logWorkerFitnessTransportMode(
+    architectureProfileId,
+    usesPipeFirstSharedSeeds,
+    false,
+  );
+
   // Step 1: Keep the default browser objective unchanged for profiles that do not need pipe-first pressure.
   if (
     architectureProfileId !== 'narx' &&
     architectureProfileId !== 'gru' &&
     architectureProfileId !== 'lstm'
   ) {
-    return (network) =>
+    return async (network) =>
       evaluateFlappyFitness(network, {
         enableEarlyTermination: true,
         maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
@@ -146,19 +215,46 @@ function createWorkerFitnessEvaluator(
   let cachedGeneration = -1;
   let cachedSharedRolloutSeeds: number[] = [];
 
-  return (network) =>
+  return async (network) =>
     scorePipeFirstWorkerAggregateEvaluation(
-      evaluateFlappyFitnessAcrossSeeds(
+      evaluateWorkerNetworkAcrossProgressiveSeeds(
         network,
         resolveSharedRolloutSeedsForGeneration(),
-        {
-          enableEarlyTermination: true,
-          maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
-          normalizeFitness: true,
-          pipeProgressTarget: FLAPPY_WORKER_PIPE_PROGRESS_TARGET,
-        },
       ),
     );
+
+  /**
+   * Evaluates one recurrent genome with a cheap first-seed gate before full scoring.
+   *
+   * @param network - Genome being scored by the browser worker.
+   * @param sharedRolloutSeeds - Deterministic seed batch for the current generation.
+   * @returns Aggregate evaluation from either the first seed or the full batch.
+   */
+  function evaluateWorkerNetworkAcrossProgressiveSeeds(
+    network: Network,
+    sharedRolloutSeeds: readonly number[],
+  ): FlappySeedBatchEvaluation {
+    const firstSeedBatch =
+      resolveFirstSharedRolloutSeedBatch(sharedRolloutSeeds);
+    const firstSeedEvaluation = evaluateFlappyFitnessAcrossSeeds(
+      network,
+      firstSeedBatch,
+      resolveWorkerPipeFirstRolloutOptions(),
+    );
+
+    if (
+      firstSeedBatch.length === sharedRolloutSeeds.length ||
+      !shouldSpendFullWorkerSeedBatch(firstSeedEvaluation)
+    ) {
+      return firstSeedEvaluation;
+    }
+
+    return evaluateFlappyFitnessAcrossSeeds(
+      network,
+      sharedRolloutSeeds,
+      resolveWorkerPipeFirstRolloutOptions(),
+    );
+  }
 
   /**
    * Resolves the deterministic shared rollout seeds for the current worker generation.
@@ -179,6 +275,225 @@ function createWorkerFitnessEvaluator(
 
     return cachedSharedRolloutSeeds;
   }
+}
+
+function createWorkerPopulationFitnessEvaluator(
+  architectureProfileId: NonNullable<
+    WorkerInitMessage['payload']['architectureProfileId']
+  >,
+  workerInitSeed: number,
+  resolveCurrentGeneration: () => number,
+  workerPool: FlappyEvaluationWorkerPool,
+): (population: WorkerPopulationLike) => Promise<void> {
+  const evaluationPlan = resolveWorkerPipeFirstEvaluationPlan(
+    architectureProfileId,
+  );
+  let cachedGeneration = -1;
+  let cachedSharedRolloutSeeds: number[] = [];
+
+  logWorkerFitnessTransportMode(architectureProfileId, true, true);
+
+  return async (population) => {
+    const aggregateByGenome =
+      await evaluateWorkerPopulationAcrossProgressiveSeeds(
+        population,
+        resolveSharedRolloutSeedsForGeneration(),
+        workerPool,
+      );
+
+    for (const genome of population) {
+      const aggregateEvaluation = aggregateByGenome.get(genome);
+
+      if (!aggregateEvaluation) {
+        throw new Error(
+          'Worker evaluation pool did not resolve every recurrent genome.',
+        );
+      }
+
+      genome.score =
+        scorePipeFirstWorkerAggregateEvaluation(aggregateEvaluation);
+    }
+  };
+
+  /**
+   * Evaluates a recurrent population through the shared pool with a first-seed gate.
+   *
+   * @param population - Ordered population shelf to score.
+   * @param sharedRolloutSeeds - Deterministic seed batch for the current generation.
+   * @param workerPool - Shared-memory pool used for candidate evaluation.
+   * @returns Aggregate evidence keyed by genome.
+   */
+  async function evaluateWorkerPopulationAcrossProgressiveSeeds(
+    population: WorkerPopulationLike,
+    sharedRolloutSeeds: readonly number[],
+    workerPool: FlappyEvaluationWorkerPool,
+  ): Promise<Map<Network, FlappySeedBatchEvaluation>> {
+    const rolloutOptions = resolveWorkerPipeFirstRolloutOptions();
+    const firstSeedBatch =
+      resolveFirstSharedRolloutSeedBatch(sharedRolloutSeeds);
+    const firstAggregateByGenome = await workerPool.evaluateGenomesAcrossSeeds(
+      population,
+      firstSeedBatch,
+      rolloutOptions,
+    );
+    const fullBatchPopulation = population.filter((genome) => {
+      const firstAggregate = firstAggregateByGenome.get(genome);
+      return firstAggregate
+        ? shouldSpendFullWorkerSeedBatch(firstAggregate)
+        : false;
+    });
+
+    if (
+      firstSeedBatch.length === sharedRolloutSeeds.length ||
+      fullBatchPopulation.length === 0
+    ) {
+      return firstAggregateByGenome;
+    }
+
+    const fullAggregateByGenome = await workerPool.evaluateGenomesAcrossSeeds(
+      fullBatchPopulation,
+      sharedRolloutSeeds,
+      rolloutOptions,
+    );
+
+    return new Map(
+      population.map((genome) => [
+        genome,
+        fullAggregateByGenome.get(genome) ??
+          resolveRequiredFirstSeedAggregate(firstAggregateByGenome, genome),
+      ]),
+    );
+  }
+
+  function resolveSharedRolloutSeedsForGeneration(): number[] {
+    // Step 1: Rebuild the seed batch only when evolution advances to a new generation.
+    const currentGeneration = resolveCurrentGeneration();
+    if (currentGeneration !== cachedGeneration) {
+      cachedGeneration = currentGeneration;
+      cachedSharedRolloutSeeds = buildWorkerSharedRolloutSeedBatch(
+        workerInitSeed,
+        currentGeneration,
+        evaluationPlan.sharedRolloutSeedCount,
+      );
+    }
+
+    return cachedSharedRolloutSeeds;
+  }
+}
+
+/**
+ * Resolves shared rollout options for the pipe-first browser objective.
+ *
+ * @returns Rollout options used by recurrent worker scoring.
+ */
+function resolveWorkerPipeFirstRolloutOptions(): {
+  enableEarlyTermination: true;
+  maxFrames: number;
+  normalizeFitness: true;
+  pipeProgressTarget: number;
+} {
+  return {
+    enableEarlyTermination: true,
+    maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
+    normalizeFitness: true,
+    pipeProgressTarget: FLAPPY_WORKER_PIPE_PROGRESS_TARGET,
+  };
+}
+
+/**
+ * Resolves the cheap first-seed batch used before full recurrent scoring.
+ *
+ * @param sharedRolloutSeeds - Full deterministic seed batch for the generation.
+ * @returns One-seed batch used for the progressive gate.
+ */
+function resolveFirstSharedRolloutSeedBatch(
+  sharedRolloutSeeds: readonly number[],
+): number[] {
+  const firstSharedRolloutSeed = sharedRolloutSeeds[0];
+  return firstSharedRolloutSeed === undefined ? [] : [firstSharedRolloutSeed];
+}
+
+/**
+ * Resolves whether one genome should receive the full recurrent seed batch.
+ *
+ * @param aggregateEvaluation - First-seed evidence for one genome.
+ * @returns True when the genome showed enough pipe progress to justify full scoring.
+ */
+function shouldSpendFullWorkerSeedBatch(
+  aggregateEvaluation: FlappySeedBatchEvaluation,
+): boolean {
+  return (
+    aggregateEvaluation.meanPipesPassed >
+    FLAPPY_WORKER_MIN_PIPE_PROGRESS_FOR_FULL_BATCH
+  );
+}
+
+/**
+ * Resolves the required first-seed aggregate for a genome.
+ *
+ * @param aggregateByGenome - First-seed aggregate map.
+ * @param genome - Genome whose evidence should exist.
+ * @returns Aggregate evaluation for the genome.
+ */
+function resolveRequiredFirstSeedAggregate(
+  aggregateByGenome: ReadonlyMap<Network, FlappySeedBatchEvaluation>,
+  genome: Network,
+): FlappySeedBatchEvaluation {
+  const aggregateEvaluation = aggregateByGenome.get(genome);
+
+  if (!aggregateEvaluation) {
+    throw new Error('Progressive worker scoring lost first-seed evidence.');
+  }
+
+  return aggregateEvaluation;
+}
+
+/**
+ * Logs the worker-side fitness transport selection.
+ *
+ * @param architectureProfileId - Resolved worker architecture profile id.
+ * @param usesPipeFirstSharedSeeds - Whether the profile uses the shared-seed aggregate evaluator.
+ * @param inferenceChannelWorkerUrl - Nested worker bundle URL when persistent channels are available.
+ * @returns Nothing.
+ */
+function logWorkerFitnessTransportMode(
+  architectureProfileId: NonNullable<
+    WorkerInitMessage['payload']['architectureProfileId']
+  >,
+  usesPipeFirstSharedSeeds: boolean,
+  usesParallelWorkerPool: boolean,
+): void {
+  const workerTransportMode = usesParallelWorkerPool
+    ? 'shared-memory worker pool evaluation'
+    : 'worker-local direct network.activate evaluation';
+  const evaluationShape = usesPipeFirstSharedSeeds
+    ? 'shared-seed aggregate evaluation'
+    : 'single-rollout evaluation';
+
+  if (SHOULD_LOG_FLAPPY_WORKER_RUNTIME) {
+    console.info(
+      `${FLAPPY_WORKER_RUNTIME_LOG_PREFIX} fitness transport=${workerTransportMode} profile=${architectureProfileId} evaluator=${evaluationShape}`,
+    );
+  }
+}
+
+function shouldUseWorkerPopulationFitness(
+  architectureProfileId: NonNullable<
+    WorkerInitMessage['payload']['architectureProfileId']
+  >,
+  workerRuntimeDependencies: WorkerRuntimeDependencies,
+): boolean {
+  return Boolean(
+    workerRuntimeDependencies.workerPool &&
+    (architectureProfileId === 'narx' ||
+      architectureProfileId === 'gru' ||
+      architectureProfileId === 'lstm'),
+  );
+}
+
+function resolveNodeEnvForRuntimeLogs(): string | undefined {
+  return (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process
+    ?.env?.NODE_ENV;
 }
 
 /**

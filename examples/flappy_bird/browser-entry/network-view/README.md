@@ -55,6 +55,7 @@ drawNetworkVisualization(
   inputSize: number,
   outputSize: number,
   hoverState: NetworkVisualizationHoverState | undefined,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): NetworkVisualizationPositionedScene
 ```
 
@@ -198,6 +199,7 @@ resolveBaseGraphPaddingContext(
   hideNetworkOverlays: boolean,
   inputNodeCount: number,
   network: default | undefined,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): NetworkGraphPaddingContext
 ```
 
@@ -311,6 +313,7 @@ resolveNetworkVisualizationFrame(
   network: default | undefined,
   inputSize: number,
   outputSize: number,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): NetworkVisualizationResolvedFrame
 ```
 
@@ -363,6 +366,7 @@ resolveNetworkVisualizationScene(
   network: default | undefined,
   inputSize: number,
   outputSize: number,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): NetworkVisualizationScene
 ```
 
@@ -387,6 +391,7 @@ resolvePositionedNetworkGraphScene(
   network: default | undefined,
   inputSize: number,
   outputSize: number,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): PositionedNetworkGraphScene
 ```
 
@@ -512,6 +517,14 @@ Input-group label band geometry and style contract.
 
 Each band identifies a contiguous span of input nodes and the visual style
 used to render that group marker.
+
+### InputLabelGroupDefinition
+
+One reusable semantic input group definition for the shared network visualizer.
+
+### InputLabelNodeDefinition
+
+One reusable description definition before it is bound to a concrete node row.
 
 ### InputNodeDescriptionLabel
 
@@ -780,6 +793,7 @@ Returns: Positioned hidden-column label scenes.
 resolveInputDescriptionScenes(
   positionedNodes: PositionedNetworkNodeLike[],
   nodeDimensions: NetworkNodeDimensionsLike,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): NetworkInputDescriptionScene[]
 ```
 
@@ -798,6 +812,7 @@ resolveInputGroupLabelBandScenes(
   positionedNodes: PositionedNetworkNodeLike[],
   nodeDimensions: NetworkNodeDimensionsLike,
   inputDescriptionScenes: readonly NetworkInputDescriptionScene[] | undefined,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): NetworkInputGroupLabelBandScene[]
 ```
 
@@ -840,6 +855,7 @@ Returns: Pixel width needed to render the chip without clipping.
 ```ts
 resolveInputDescriptionColumnWidthPx(
   inputNodeCount: number,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): number
 ```
 
@@ -858,6 +874,7 @@ Returns: Maximum chip width needed by the current input-description column.
 ```ts
 resolveInputGroupLabelBands(
   inputNodeCount: number,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): InputGroupLabelBand[]
 ```
 
@@ -876,6 +893,7 @@ Returns: Group label ranges with band colors.
 ```ts
 resolveInputNodeDescriptionLabels(
   inputNodeCount: number,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): InputNodeDescriptionLabel[]
 ```
 

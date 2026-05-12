@@ -4,7 +4,7 @@
 
 This plan defines the team adversarial racing benchmark for [NEAT Genesis EvoDevo (NGE)](NEAT_Genesis_EvoDevo.md). It is designed to be a genuine NGE showcase: two independently evolved teams of three cars each, all teammates sharing identical DNA, roles emerging from experience rather than from role-assignment code, team coordination via a stigmergy-analog radio field, tire degradation as a metabolic budget, and co-evolutionary pressure between the two teams.
 
-This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [Memory_Optimization.md](Memory_Optimization.md). If this plan conflicts with either upstream plan, the upstream plan wins.
+This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md). If this plan conflicts with either upstream plan, the upstream plan wins.
 
 ---
 
@@ -32,7 +32,7 @@ This is a benchmark-architecture plan, not an implementation-complete spec.
 
 - **In scope:** team structure, team radio protocol, tire degradation system, pit stop design, category ladder, carry-state semantics, sensory families, behavioral-drive vocabulary, co-evolutionary dynamics, reproduction policy, canvas rendering spec, and acceptance criteria.
 - **Out of scope (for now):** final vehicle-physics constants, rendering library selection, final reward weights, and worker protocol shape.
-- **Authority rule:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [Memory_Optimization.md](Memory_Optimization.md) remain authoritative.
+- **Authority rule:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md) remain authoritative.
 
 ---
 

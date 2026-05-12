@@ -38,6 +38,8 @@ type LoopNetworkFixture = {
     maxLossScale: number;
     minLossScale: number;
     overflowCount?: number;
+    underflowCount?: number;
+    lastUnderflowStep?: number;
     scaleDownEvents?: number;
     scaleUpEvents?: number;
   };
@@ -95,6 +97,8 @@ function createNetwork(
       maxLossScale: 8,
       minLossScale: 1,
       overflowCount: 0,
+      underflowCount: 0,
+      lastUnderflowStep: -1,
       scaleDownEvents: 0,
       scaleUpEvents: 0,
     },
@@ -387,6 +391,32 @@ describe('network training loop chapter', () => {
       });
     });
 
+    describe('given a cost descriptor exposes a fn callback on a valid training sample', () => {
+      it('uses that fn callback as the active cost function', () => {
+        // Arrange
+        const network = createNetwork({
+          activate: jest.fn(() => [0.25]),
+        });
+
+        // Act
+        const meanError = trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [1] }],
+          1,
+          1,
+          0.1,
+          0,
+          {},
+          {
+            fn: () => 3,
+          } as never,
+        );
+
+        // Assert
+        expect(meanError).toBe(3);
+      });
+    });
+
     describe('given mixed precision detects a non-finite fp32 bias during an optimizer step', () => {
       it('zeros the accumulated self gradients and records a scale-down overflow event', () => {
         // Arrange
@@ -457,6 +487,130 @@ describe('network training loop chapter', () => {
           scaleDownEvents: 1,
           selfGradientAfterOverflow: 0,
           totalDeltaBias: 0,
+        });
+      });
+    });
+
+    describe('given mixed precision sees only tiny accumulated gradients during an optimizer step', () => {
+      it('records an underflow event and increases the loss scale', () => {
+        // Arrange
+        const hiddenNode = createNode({
+          connections: {
+            in: [createConnection({ totalDeltaWeight: 1e-16 })],
+            self: [createConnection({ totalDeltaWeight: 5e-17 })],
+          },
+          totalDeltaBias: 2e-16,
+          type: 'hidden',
+        });
+        const network = createNetwork({
+          _mixedPrecision: {
+            enabled: true,
+            lossScale: 2,
+          },
+          _mixedPrecisionState: {
+            badSteps: 0,
+            goodSteps: 0,
+            maxLossScale: 8,
+            minLossScale: 1,
+            overflowCount: 0,
+            underflowCount: 0,
+            lastUnderflowStep: -1,
+            scaleDownEvents: 0,
+            scaleUpEvents: 0,
+          },
+          activate: jest.fn(() => [0.5]),
+          nodes: [
+            createNode({ type: 'input' }),
+            hiddenNode,
+            createNode({ totalDeltaBias: undefined, type: 'output' }),
+          ],
+        });
+
+        // Act
+        trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [1] }],
+          1,
+          1,
+          0.1,
+          0.9,
+          {},
+          () => 1,
+          { type: 'adam' },
+        );
+
+        // Assert
+        expect({
+          lastUnderflowStep: network._mixedPrecisionState.lastUnderflowStep,
+          lossScale: network._mixedPrecision.lossScale,
+          scaleUpEvents: network._mixedPrecisionState.scaleUpEvents,
+          underflowCount: network._mixedPrecisionState.underflowCount,
+        }).toEqual({
+          lastUnderflowStep: 1,
+          lossScale: 4,
+          scaleUpEvents: 1,
+          underflowCount: 1,
+        });
+      });
+
+      it('records the underflow without scaling past the configured maximum', () => {
+        // Arrange
+        const hiddenNode = createNode({
+          connections: {
+            in: [createConnection({ totalDeltaWeight: 1e-16 })],
+            self: [createConnection({ totalDeltaWeight: 5e-17 })],
+          },
+          totalDeltaBias: 2e-16,
+          type: 'hidden',
+        });
+        const network = createNetwork({
+          _mixedPrecision: {
+            enabled: true,
+            lossScale: 8,
+          },
+          _mixedPrecisionState: {
+            badSteps: 0,
+            goodSteps: 0,
+            maxLossScale: 8,
+            minLossScale: 1,
+            overflowCount: 0,
+            underflowCount: 0,
+            lastUnderflowStep: -1,
+            scaleDownEvents: 0,
+            scaleUpEvents: 0,
+          },
+          activate: jest.fn(() => [0.5]),
+          nodes: [
+            createNode({ type: 'input' }),
+            hiddenNode,
+            createNode({ totalDeltaBias: undefined, type: 'output' }),
+          ],
+        });
+
+        // Act
+        trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [1] }],
+          1,
+          1,
+          0.1,
+          0.9,
+          {},
+          () => 1,
+          { type: 'adam' },
+        );
+
+        // Assert
+        expect({
+          lastUnderflowStep: network._mixedPrecisionState.lastUnderflowStep,
+          lossScale: network._mixedPrecision.lossScale,
+          scaleUpEvents: network._mixedPrecisionState.scaleUpEvents,
+          underflowCount: network._mixedPrecisionState.underflowCount,
+        }).toEqual({
+          lastUnderflowStep: 1,
+          lossScale: 8,
+          scaleUpEvents: 0,
+          underflowCount: 1,
         });
       });
     });

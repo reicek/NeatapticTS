@@ -3,7 +3,10 @@ import type {
   NodeWithIndex,
   StandaloneGenerationContext as GenerationContext,
 } from '../network.types';
-import { SINGLE_TERM_FALLBACK } from './network.standalone.utils.types';
+import {
+  ACTIVATION_PRECISION_F16,
+  SINGLE_TERM_FALLBACK,
+} from './network.standalone.utils.types';
 
 /**
  * Build the pre-activation sum expression for one node.
@@ -13,11 +16,13 @@ import { SINGLE_TERM_FALLBACK } from './network.standalone.utils.types';
  * @returns String expression used for generated `S[index]` assignment.
  */
 export function buildNodeSumExpression(
+  generationContext: GenerationContext,
   currentNode: Node,
   nodeTraversalIndex: number,
 ): string {
-  const incomingTerms = collectIncomingTerms(currentNode);
+  const incomingTerms = collectIncomingTerms(generationContext, currentNode);
   const selfConnectionTerms = collectSelfConnectionTerms(
+    generationContext,
     currentNode,
     nodeTraversalIndex,
   );
@@ -40,13 +45,19 @@ export function collectOutputIndexes(
 /**
  * Format output activation selectors for generated return expression.
  *
+ * @param generationContext Mutable generation context.
  * @param outputIndexes Output node indexes.
  * @returns Comma-separated `A[index]` selector list.
  */
-export function formatOutputArrayValues(outputIndexes: number[]): string {
+export function formatOutputArrayValues(
+  generationContext: GenerationContext,
+  outputIndexes: number[],
+): string {
   const outputTerms: string[] = [];
   for (const outputIndex of outputIndexes) {
-    outputTerms.push(`A[${outputIndex}]`);
+    outputTerms.push(
+      buildStoredValueReadExpression(generationContext, 'A', outputIndex),
+    );
   }
   return outputTerms.join(',');
 }
@@ -57,7 +68,10 @@ export function formatOutputArrayValues(outputIndexes: number[]): string {
  * @param currentNode Current node.
  * @returns Weighted term expressions.
  */
-function collectIncomingTerms(currentNode: Node): string[] {
+function collectIncomingTerms(
+  generationContext: GenerationContext,
+  currentNode: Node,
+): string[] {
   const terms: string[] = [];
 
   for (const incomingConnection of currentNode.connections.in) {
@@ -66,8 +80,13 @@ function collectIncomingTerms(currentNode: Node): string[] {
       continue;
     }
 
-    let connectionTerm = `A[${fromNodeIndex}] * ${incomingConnection.weight}`;
+    let connectionTerm = `${buildStoredValueReadExpression(
+      generationContext,
+      'A',
+      fromNodeIndex,
+    )} * ${incomingConnection.weight}`;
     connectionTerm = appendGateMultiplier(
+      generationContext,
       connectionTerm,
       incomingConnection.gater,
     );
@@ -85,6 +104,7 @@ function collectIncomingTerms(currentNode: Node): string[] {
  * @returns Zero or one recurrent term expressions.
  */
 function collectSelfConnectionTerms(
+  generationContext: GenerationContext,
   currentNode: Node,
   nodeTraversalIndex: number,
 ): string[] {
@@ -93,8 +113,16 @@ function collectSelfConnectionTerms(
   }
 
   const selfConnection = currentNode.connections.self[0];
-  let connectionTerm = `S[${nodeTraversalIndex}] * ${selfConnection.weight}`;
-  connectionTerm = appendGateMultiplier(connectionTerm, selfConnection.gater);
+  let connectionTerm = `${buildStoredValueReadExpression(
+    generationContext,
+    'S',
+    nodeTraversalIndex,
+  )} * ${selfConnection.weight}`;
+  connectionTerm = appendGateMultiplier(
+    generationContext,
+    connectionTerm,
+    selfConnection.gater,
+  );
   return [connectionTerm];
 }
 
@@ -106,6 +134,7 @@ function collectSelfConnectionTerms(
  * @returns Term with optional gate multiplier.
  */
 function appendGateMultiplier(
+  generationContext: GenerationContext,
   connectionTerm: string,
   gateNode: Node | null,
 ): string {
@@ -114,7 +143,11 @@ function appendGateMultiplier(
     return connectionTerm;
   }
 
-  return `${connectionTerm} * A[${gateNodeIndex}]`;
+  return `${connectionTerm} * ${buildStoredValueReadExpression(
+    generationContext,
+    'A',
+    gateNodeIndex,
+  )}`;
 }
 
 /**
@@ -162,4 +195,36 @@ function foldTermsIntoExpression(allTerms: string[]): string {
   }
 
   return allTerms.join(' + ');
+}
+
+/**
+ * Build one storage read expression for generated standalone buffers.
+ *
+ * @param generationContext Mutable generation context.
+ * @param bufferName Generated buffer variable name.
+ * @param nodeIndex Indexed storage slot.
+ * @returns Native array read or float16 decode expression.
+ */
+function buildStoredValueReadExpression(
+  generationContext: GenerationContext,
+  bufferName: 'A' | 'S',
+  nodeIndex: number,
+): string {
+  if (
+    generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16
+  ) {
+    return `${resolveStandaloneBufferName(bufferName)}[${nodeIndex}]`;
+  }
+
+  return `${bufferName}[${nodeIndex}]`;
+}
+
+/**
+ * Resolve the generated working-buffer variable name for one standalone buffer.
+ *
+ * @param bufferName Persistent standalone storage name.
+ * @returns Working-buffer name used during one float16 activation call.
+ */
+function resolveStandaloneBufferName(bufferName: 'A' | 'S'): 'WA' | 'WS' {
+  return bufferName === 'A' ? 'WA' : 'WS';
 }

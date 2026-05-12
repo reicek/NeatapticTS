@@ -106,6 +106,20 @@ If you want background reading before the symbol shelf, the MDN Web Workers
 guide is the fastest practical reference for why this example pushes both
 evolution and playback off the main thread.
 
+## Parallel evaluation ownership
+
+This worker chapter now sits on top of the public turnkey helper ladder
+instead of proving each worker primitive in demo-local code. Flappy uses the
+shared library helpers for capability detection, transport auto-selection,
+browser worker URL resolution, bounded inference pools, ordered batch
+evaluation, and the boolean-first NEAT population helper.
+
+The worker still owns the parts that are example-specific rather than
+transport-generic: deciding which architecture profiles should opt into
+parallel evaluation, preparing Flappy-specific rollout payloads, and turning
+worker-local results into the compact generation-ready or playback-step
+messages the host consumes.
+
 ## flappy-evolution-worker/flappy-evolution-worker.ts
 
 ### beginWorkerGenerationRequest
@@ -132,7 +146,7 @@ Returns: Nothing.
 ```ts
 beginWorkerInitialization(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
-  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
 ): void
 ```
 
@@ -153,7 +167,7 @@ Returns: Nothing.
 beginWorkerPlayback(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
   payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; },
-): void
+): Promise<void>
 ```
 
 Begins a new playback session from the current evolved population.
@@ -167,6 +181,26 @@ Parameters:
 - `payload` - Playback start payload.
 
 Returns: Nothing.
+
+### createWorkerEvaluationPoolIfSupported
+
+```ts
+createWorkerEvaluationPoolIfSupported(
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+): FlappyEvaluationWorkerPool | undefined
+```
+
+Creates the optional shared-memory evaluation pool for recurrent browser profiles.
+
+The pool is useful only when the worker can honestly spawn the emitted shared
+inference worker with `SharedArrayBuffer` transport. Otherwise the runtime
+keeps the worker-local direct evaluator, which avoids a chatty nested-worker
+path on ordinary local servers without COOP/COEP isolation.
+
+Parameters:
+- `initPayload` - Worker initialization payload with the selected profile.
+
+Returns: Shared-memory pool when the host can support it; otherwise undefined.
 
 ### createWorkerMessageHandler
 
@@ -213,7 +247,7 @@ Returns: Mutable worker runtime state.
 ```ts
 createWorkerProtocolHandlers(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
-): { markStopped: () => void; beginInitialization: (payload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; }) => void; beginGenerationRequest: () => void; hasPopulation: () => boolean; startPlayback: (payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; hasPlaybackState: () => boolean; processPlaybackStep: (payload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; postWorkerMessage: typeof postWorkerMessage; }
+): { markStopped: () => void; beginInitialization: (payload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; }) => void; beginGenerationRequest: () => void; hasPopulation: () => boolean; startPlayback: (payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; hasPlaybackState: () => boolean; processPlaybackStep: (payload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }) => void; postWorkerMessage: typeof postWorkerMessage; }
 ```
 
 Creates protocol handlers bound to the mutable worker runtime state.
@@ -249,7 +283,7 @@ Returns: Promise resolved after generation payload is posted.
 ```ts
 initializeRuntime(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
-  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
 ): Promise<void>
 ```
 
@@ -268,6 +302,23 @@ Parameters:
 - `initPayload` - Initialization values from the browser host.
 
 Returns: Promise resolved when runtime setup is complete.
+
+### logWorkerEvaluationPoolFallback
+
+```ts
+logWorkerEvaluationPoolFallback(
+  architectureProfileId: ExampleArchitectureProfileId | undefined,
+  reasons: readonly string[],
+): void
+```
+
+Logs why recurrent evaluation stayed on the direct worker-local evaluator.
+
+Parameters:
+- `architectureProfileId` - Selected recurrent profile id.
+- `reasons` - Capability probe explanations for unavailable transports.
+
+Returns: Nothing.
 
 ### postWorkerMessage
 
@@ -289,13 +340,28 @@ Parameters:
 
 Returns: Nothing.
 
+### postWorkerRuntimeStatus
+
+```ts
+postWorkerRuntimeStatus(
+  payload: { phase: WorkerRuntimeStatusPhase; statusText: string; detail?: string | undefined; },
+): void
+```
+
+Posts an informational runtime-status update from worker to browser host.
+
+Parameters:
+- `payload` - Phase and display text for the HUD status row.
+
+Returns: Nothing.
+
 ### processWorkerPlaybackStepRequest
 
 ```ts
 processWorkerPlaybackStepRequest(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
   playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; },
-): void
+): Promise<void>
 ```
 
 Advances playback by a host-requested number of simulation steps.
@@ -313,6 +379,21 @@ Parameters:
 
 Returns: Nothing.
 
+### resolveWorkerEvaluationRuntimeStatusPayload
+
+```ts
+resolveWorkerEvaluationRuntimeStatusPayload(
+  evaluationWorkerPool: FlappyEvaluationWorkerPool | undefined,
+): { phase: WorkerRuntimeStatusPhase; statusText: string; detail?: string | undefined; }
+```
+
+Resolves the status payload for the active recurrent evaluation transport.
+
+Parameters:
+- `evaluationWorkerPool` - Optional shared-memory evaluation pool.
+
+Returns: Runtime-status payload for the HUD.
+
 ## flappy-evolution-worker/flappy-evolution-worker.types.ts
 
 ### SerializedNetwork
@@ -320,8 +401,8 @@ Returns: Nothing.
 Loose JSON-compatible network payload used by worker messages.
 
 The worker never posts live `Network` instances back to the browser host.
-Instead it sends the result of `network.toJSON()` so the payload stays
-structured-clone safe and easy to inspect in devtools.
+The transferable inference payload now owns playback-friendly transport,
+while this JSON bridge remains only for the browser-side network-view cache.
 
 ### WorkerErrorMessage
 
@@ -348,8 +429,10 @@ though the worker currently sends the packed transport form.
 
 Worker generation-ready response message.
 
-The browser host uses this message to refresh HUD state and optionally render
-the current best network visualization.
+The browser host uses this message to refresh HUD state, render the current
+best network visualization, and start playback for the current population.
+Generation zero can be a startup release after warm-start rather than a full
+post-selection NEAT generation.
 
 ### WorkerHeuristicObservationFeatures
 
@@ -443,10 +526,11 @@ packed snapshot derived from them rather than these live mutable records.
 
 ### WorkerRequestGenerationMessage
 
-Worker request asking to evolve one generation.
+Worker request asking for the next playable generation payload.
 
-The worker responds with `generation-ready` once the NEAT runtime finishes
-one evolution pass.
+The first response may release the bounded generation-zero warm-start
+population before a full recurrent evolution pass. Later responses publish
+normally evolved populations.
 
 ### WorkerRequestMessage
 
@@ -469,6 +553,19 @@ Union of outbound worker response messages.
 
 Together with `WorkerRequestMessage`, this forms the full host/worker
 protocol contract for the demo.
+
+### WorkerRuntimeStatusMessage
+
+Worker runtime status response message.
+
+Status messages are informational and never complete a request. The browser
+listens for them beside generation/playback responses so long recurrent
+waits can explain whether work is initializing, evolving, playing back, or
+using a direct-evaluation fallback.
+
+### WorkerRuntimeStatusPhase
+
+Worker phase labels surfaced to the browser HUD during long-running work.
 
 ### WorkerStartPlaybackMessage
 
@@ -509,7 +606,8 @@ Returns: Shared rollout seed batch.
 
 ```ts
 createInitializedWorkerRuntime(
-  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+  workerRuntimeDependencies: WorkerRuntimeDependencies,
 ): default
 ```
 
@@ -551,7 +649,8 @@ createWorkerFitnessEvaluator(
   architectureProfileId: NonNullable<ExampleArchitectureProfileId | undefined>,
   workerInitSeed: number,
   resolveCurrentGeneration: () => number,
-): (network: never) => number
+  workerRuntimeDependencies: WorkerRuntimeDependencies,
+): NeatFitnessFunction
 ```
 
 Builds the worker fitness evaluator for the selected architecture profile.
@@ -565,6 +664,57 @@ Parameters:
 - `workerInitSeed` - Deterministic worker seed.
 
 Returns: Worker-local scalar fitness function.
+
+### logWorkerFitnessTransportMode
+
+```ts
+logWorkerFitnessTransportMode(
+  architectureProfileId: NonNullable<ExampleArchitectureProfileId | undefined>,
+  usesPipeFirstSharedSeeds: boolean,
+  usesParallelWorkerPool: boolean,
+): void
+```
+
+Logs the worker-side fitness transport selection.
+
+Parameters:
+- `architectureProfileId` - Resolved worker architecture profile id.
+- `usesPipeFirstSharedSeeds` - Whether the profile uses the shared-seed aggregate evaluator.
+- `inferenceChannelWorkerUrl` - Nested worker bundle URL when persistent channels are available.
+
+Returns: Nothing.
+
+### resolveFirstSharedRolloutSeedBatch
+
+```ts
+resolveFirstSharedRolloutSeedBatch(
+  sharedRolloutSeeds: readonly number[],
+): number[]
+```
+
+Resolves the cheap first-seed batch used before full recurrent scoring.
+
+Parameters:
+- `sharedRolloutSeeds` - Full deterministic seed batch for the generation.
+
+Returns: One-seed batch used for the progressive gate.
+
+### resolveRequiredFirstSeedAggregate
+
+```ts
+resolveRequiredFirstSeedAggregate(
+  aggregateByGenome: ReadonlyMap<default, FlappySeedBatchEvaluation>,
+  genome: default,
+): FlappySeedBatchEvaluation
+```
+
+Resolves the required first-seed aggregate for a genome.
+
+Parameters:
+- `aggregateByGenome` - First-seed aggregate map.
+- `genome` - Genome whose evidence should exist.
+
+Returns: Aggregate evaluation for the genome.
 
 ### resolveWorkerPipeFirstEvaluationPlan
 
@@ -585,6 +735,33 @@ Parameters:
 
 Returns: Shared-seed batch size for worker fitness.
 
+### resolveWorkerPipeFirstRolloutOptions
+
+```ts
+resolveWorkerPipeFirstRolloutOptions(): { enableEarlyTermination: true; maxFrames: number; normalizeFitness: true; pipeProgressTarget: number; }
+```
+
+Resolves shared rollout options for the pipe-first browser objective.
+
+Returns: Rollout options used by recurrent worker scoring.
+
+### resolveWorkerSeedNetwork
+
+```ts
+resolveWorkerSeedNetwork(
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+  architectureProfileId: NonNullable<ExampleArchitectureProfileId | undefined>,
+): default
+```
+
+Resolves the worker seed network from a saved champion override or the shared profile template.
+
+Parameters:
+- `initPayload` - Initialization values from the browser host.
+- `architectureProfileId` - Resolved architecture profile id.
+
+Returns: Seed network for the worker-local NEAT runtime.
+
 ### scorePipeFirstWorkerAggregateEvaluation
 
 ```ts
@@ -604,6 +781,21 @@ Parameters:
 - `aggregateEvaluation` - Shared-seed evaluation evidence.
 
 Returns: Scalar fitness consumed by the browser worker NEAT loop.
+
+### shouldSpendFullWorkerSeedBatch
+
+```ts
+shouldSpendFullWorkerSeedBatch(
+  aggregateEvaluation: FlappySeedBatchEvaluation,
+): boolean
+```
+
+Resolves whether one genome should receive the full recurrent seed batch.
+
+Parameters:
+- `aggregateEvaluation` - First-seed evidence for one genome.
+
+Returns: True when the genome showed enough pipe progress to justify full scoring.
 
 ## flappy-evolution-worker/flappy-evolution-worker.protocol.service.ts
 
@@ -654,6 +846,21 @@ the worker-global `self.onmessage` hook.
 
 ## flappy-evolution-worker/flappy-evolution-worker.evolution.service.ts
 
+### buildGenerationReadyMessage
+
+```ts
+buildGenerationReadyMessage(
+  options: { architectureProfileId: ExampleArchitectureProfileId; generation: number; bestNetwork: default; population: default[]; },
+): WorkerGenerationReadyMessage
+```
+
+Builds the generation-ready worker response from a population snapshot.
+
+Parameters:
+- `options` - Generation metadata plus selected best network and population.
+
+Returns: Generation-ready worker response payload.
+
 ### evolveAndBuildGenerationReadyMessage
 
 ```ts
@@ -662,12 +869,16 @@ evolveAndBuildGenerationReadyMessage(
 ): Promise<WorkerGenerationReadyMessage>
 ```
 
-Evolves one generation and creates the compact generation-ready response payload.
+Creates the next compact generation-ready response payload.
 
 Educational note:
-The worker does not stream the whole population back to the UI after each
-evolution step. Instead it emits a compact summary containing the generation
-index, best fitness, and a serializable best-network snapshot for inspection.
+The first browser-visible population should not wait for a full recurrent
+selection batch or optional warm-start assist. When the caller opts in,
+generation zero is released immediately so playback can begin promptly. Later
+requests run the bounded warm-start assist, the normal NEAT `evolve()` pass,
+and emit the same compact summary shape: generation index, best fitness,
+transferable inference payloads for playback, and the temporary JSON
+visualization bridge used by the host network panel.
 
 Parameters:
 - `options` - Evolution dependencies and runtime state accessors.
@@ -686,6 +897,93 @@ const generationMessage = await evolveAndBuildGenerationReadyMessage({
 });
 ```
 
+### resolveBestNetworkFromPopulation
+
+```ts
+resolveBestNetworkFromPopulation(
+  population: readonly default[],
+): default
+```
+
+Chooses the best network from a population snapshot using available scores.
+
+Parameters:
+- `population` - Population snapshot to scan.
+
+Returns: Highest-scored network, falling back to the first network when scores are equal.
+
+### resolveGenerationReadyMessageTransferList
+
+```ts
+resolveGenerationReadyMessageTransferList(
+  workerMessage: WorkerGenerationReadyMessage,
+): ArrayBuffer[]
+```
+
+Collect the transferable buffers owned by one generation-ready response payload.
+
+The transfer list intentionally includes only the typed-array inference
+payloads. The temporary JSON visualization bridge remains structured-clone
+data so the browser can continue rebuilding network-view models separately.
+
+Parameters:
+- `workerMessage` - Generation-ready worker response payload.
+
+Returns: Transfer list for `postMessage(...)`.
+
+### resolveRuntimePopulation
+
+```ts
+resolveRuntimePopulation(
+  runtimeNeat: { population?: default[] | undefined; },
+  fallbackNetwork: default | undefined,
+): default[]
+```
+
+Resolves the current runtime population with an optional best-network fallback.
+
+Parameters:
+- `runtimeNeat` - Runtime population holder.
+- `fallbackNetwork` - Best network returned by an evolution pass.
+
+Returns: Non-empty population when one is available.
+
+### runBestEffortWarmStart
+
+```ts
+runBestEffortWarmStart(
+  warmStartGenerationZeroIfNeeded: (neatController: default) => Promise<void>,
+  neatRuntime: default,
+): Promise<void>
+```
+
+Runs generation-zero warm-start as an optional assist before regular evolution.
+
+Parameters:
+- `warmStartGenerationZeroIfNeeded` - Warm-start callback for the active runtime.
+- `neatRuntime` - Runtime that should evolve even when warm-start fails.
+
+Returns: Promise resolved after warm-start succeeds or is skipped.
+
+### shouldPublishStartupPopulationBeforeEvolution
+
+```ts
+shouldPublishStartupPopulationBeforeEvolution(
+  generation: number,
+  population: readonly default[],
+  publishStartupPopulationBeforeFirstEvolution: boolean | undefined,
+): boolean
+```
+
+Resolves whether the worker should release generation zero before evolving.
+
+Parameters:
+- `generation` - Current NEAT generation index.
+- `population` - Current worker population snapshot.
+- `publishStartupPopulationBeforeFirstEvolution` - Caller startup-release flag.
+
+Returns: True when generation zero can be published immediately for playback.
+
 ### WorkerEvolutionServiceOptions
 
 Dependencies required to evolve one generation and prepare host payload output.
@@ -702,7 +1000,7 @@ slice of behavior.
 
 ```ts
 beginWorkerPlaybackSession(
-  options: { currentPopulation: default[]; payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; createPopulationRenderState: (networks: default[], rng: FlappyRng, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number) => WorkerPlaybackState; },
+  options: { currentPopulation: default[]; payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; createPopulationRenderState: (networks: default[], rng: FlappyRng, initialVisibleWorldWidthPx: number, initialVisibleWorldHeightPx: number, channelWorkerUrl?: string | undefined) => WorkerPlaybackState; channelWorkerUrl?: string | undefined; },
 ): { currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; playbackWinnerIndex: number; }
 ```
 
@@ -755,8 +1053,8 @@ Returns: Nothing.
 
 ```ts
 processWorkerPlaybackStep(
-  options: { playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; currentPopulation: default[]; neatRuntime: default | undefined; stepPopulationFrame: (renderState: WorkerPlaybackState, rng: FlappyRng, difficultyProfile: SharedDifficultyProfile) => number; createPlaybackSnapshot: (playbackState: WorkerPlaybackState) => WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; },
-): { currentPlaybackState: WorkerPlaybackState | undefined; currentPlaybackRng: FlappyRng | undefined; currentPopulation: default[]; playbackWinnerIndex: number; }
+  options: { playbackStepPayload: { requestId: number; simulationSteps: number; visibleWorldWidthPx: number; visibleWorldHeightPx: number; }; currentPlaybackState: WorkerPlaybackState; currentPlaybackRng: FlappyRng; currentPopulation: default[]; neatRuntime: default | undefined; stepPopulationFrame: (renderState: WorkerPlaybackState, rng: FlappyRng, difficultyProfile: SharedDifficultyProfile) => Promise<number>; createPlaybackSnapshot: (playbackState: WorkerPlaybackState) => WorkerPlaybackFrameSnapshot; resolvePlaybackSnapshotTransferList: (snapshot: WorkerPlaybackFrameSnapshot) => Transferable[]; postWorkerMessage: (workerMessage: WorkerResponseMessage, transferList?: Transferable[] | undefined) => void; },
+): Promise<{ currentPlaybackState: WorkerPlaybackState | undefined; currentPlaybackRng: FlappyRng | undefined; currentPopulation: default[]; playbackWinnerIndex: number; }>
 ```
 
 Processes one worker playback-step request including completion/finalization logic.
@@ -773,6 +1071,67 @@ Parameters:
 Returns: Updated playback runtime state after processing this step.
 
 ## flappy-evolution-worker/flappy-evolution-worker.snapshot.utils.ts
+
+### canReuseSharedSnapshotBuffers
+
+```ts
+canReuseSharedSnapshotBuffers(): boolean
+```
+
+Resolves whether this host can reuse shared snapshot buffers safely.
+
+Returns: True when SharedArrayBuffer snapshot storage is available.
+
+### createFloat32SnapshotArray
+
+```ts
+createFloat32SnapshotArray(
+  elementCount: number,
+  useSharedBuffer: boolean,
+): Float32Array<ArrayBufferLike>
+```
+
+Creates one packed float column for snapshot transport.
+
+Parameters:
+- `elementCount` - Number of elements in the column.
+- `useSharedBuffer` - Whether to allocate reusable shared memory.
+
+Returns: Float32 snapshot column.
+
+### createUint32SnapshotArray
+
+```ts
+createUint32SnapshotArray(
+  elementCount: number,
+  useSharedBuffer: boolean,
+): Uint32Array<ArrayBufferLike>
+```
+
+Creates one packed uint32 column for snapshot transport.
+
+Parameters:
+- `elementCount` - Number of elements in the column.
+- `useSharedBuffer` - Whether to allocate reusable shared memory.
+
+Returns: Uint32 snapshot column.
+
+### createUint8SnapshotArray
+
+```ts
+createUint8SnapshotArray(
+  elementCount: number,
+  useSharedBuffer: boolean,
+): Uint8Array<ArrayBufferLike>
+```
+
+Creates one packed uint8 column for snapshot transport.
+
+Parameters:
+- `elementCount` - Number of elements in the column.
+- `useSharedBuffer` - Whether to allocate reusable shared memory.
+
+Returns: Uint8 snapshot column.
 
 ### createWorkerPlaybackSnapshot
 
@@ -802,6 +1161,59 @@ Parameters:
 - `playbackState` - Current mutable playback state.
 
 Returns: Immutable frame snapshot for the host.
+
+### createWorkerPlaybackSnapshotBuffers
+
+```ts
+createWorkerPlaybackSnapshotBuffers(
+  pipeCount: number,
+  birdCount: number,
+  useSharedBuffers: boolean,
+): WorkerPlaybackSnapshotBuffers
+```
+
+Creates typed-array storage for one packed snapshot.
+
+Parameters:
+- `pipeCount` - Number of visible pipes to pack.
+- `birdCount` - Number of playback birds to pack.
+- `useSharedBuffers` - Whether buffers should be reusable shared memory.
+
+Returns: Snapshot buffer shelf.
+
+### isTransferableArrayBuffer
+
+```ts
+isTransferableArrayBuffer(
+  buffer: ArrayBufferLike,
+): boolean
+```
+
+Narrows transfer-list candidates to transferable ArrayBuffers.
+
+Parameters:
+- `buffer` - Typed-array backing buffer.
+
+Returns: True when the buffer can be passed through postMessage transfer list.
+
+### resolveWorkerPlaybackSnapshotBuffers
+
+```ts
+resolveWorkerPlaybackSnapshotBuffers(
+  playbackState: WorkerPlaybackState,
+  pipeCount: number,
+  birdCount: number,
+): WorkerPlaybackSnapshotBuffers
+```
+
+Resolves snapshot column storage for one playback state.
+
+Parameters:
+- `playbackState` - Current mutable playback state.
+- `pipeCount` - Number of visible pipes to pack.
+- `birdCount` - Number of playback birds to pack.
+
+Returns: Snapshot buffers sized for the current frame.
 
 ### resolveWorkerPlaybackSnapshotTransferList
 
@@ -840,6 +1252,21 @@ argument sprawl across helper calls.
 
 ## flappy-evolution-worker/flappy-evolution-worker.simulation.utils.ts
 
+### closeWorkerPopulationRenderState
+
+```ts
+closeWorkerPopulationRenderState(
+  playbackState: WorkerPlaybackState | undefined,
+): Promise<void>
+```
+
+Closes any persistent inference channels carried by a playback state.
+
+Parameters:
+- `playbackState` - Playback state being retired.
+
+Returns: Promise resolved after all bird channels are closed.
+
 ### createWorkerPopulationRenderState
 
 ```ts
@@ -848,6 +1275,7 @@ createWorkerPopulationRenderState(
   rng: RngLike,
   initialVisibleWorldWidthPx: number,
   initialVisibleWorldHeightPx: number,
+  channelWorkerUrl: string | undefined,
 ): WorkerPlaybackState
 ```
 
@@ -965,7 +1393,7 @@ Returns: `true` when the bird overlaps the pipe body instead of the gap.
 ```ts
 resolveBirdControlActions(
   frameContext: WorkerPlaybackFrameContext,
-): number
+): Promise<number>
 ```
 
 Runs policy evaluation and commits the resulting observation memory updates.
@@ -1027,7 +1455,7 @@ Returns: Left edge x-position in world coordinates.
 ```ts
 runWorkerPopulationControlSubstep(
   frameContext: WorkerPlaybackFrameContext,
-): number
+): Promise<number>
 ```
 
 Advances one control substep of the worker playback simulation.
@@ -1059,7 +1487,7 @@ stepWorkerPopulationFrame(
   renderState: WorkerPlaybackState,
   rng: RngLike,
   difficultyProfile: SharedDifficultyProfile,
-): number
+): Promise<number>
 ```
 
 Advances the whole population simulation by one logical frame.
@@ -1127,6 +1555,25 @@ Parameters:
 
 Returns: Nothing.
 
+### applyWarmStartGenerationZero
+
+```ts
+applyWarmStartGenerationZero(
+  neatController: default,
+  warmStartState: WorkerWarmStartState,
+  dependencies: WorkerWarmStartDependencies,
+): void
+```
+
+Applies the generation-zero warm-start body when the runtime is still eligible.
+
+Parameters:
+- `neatController` - Initialized NEAT runtime.
+- `warmStartState` - Mutable warm-start lifecycle state.
+- `dependencies` - Injectable warm-start seams.
+
+Returns: Nothing.
+
 ### buildHeuristicPretrainSet
 
 ```ts
@@ -1168,12 +1615,46 @@ Parameters:
 
 Returns: Shared rollout seed batch.
 
+### composeWarmStartSeedBatchEvaluation
+
+```ts
+composeWarmStartSeedBatchEvaluation(
+  episodeResults: readonly FlappyEpisodeResult[],
+): FlappySeedBatchEvaluation
+```
+
+Composes the completed warm-start rollouts into aggregate evidence.
+
+Parameters:
+- `episodeResults` - Completed rollout results before the deadline fired.
+
+Returns: Aggregate warm-start evaluation metrics.
+
+### createWarmStartDeadline
+
+```ts
+createWarmStartDeadline(
+  architectureProfileId: ExampleArchitectureProfileId,
+  resolveCurrentTimeMs: () => number,
+): WorkerWarmStartDeadline
+```
+
+Creates the optional deadline used by recurrent warm-start refinement.
+
+Parameters:
+- `architectureProfileId` - Selected shared Flappy profile id.
+- `resolveCurrentTimeMs` - Clock source used for deadline checks.
+
+Returns: Warm-start deadline contract.
+
 ### evaluateWarmStartTemplateAcrossRollouts
 
 ```ts
 evaluateWarmStartTemplateAcrossRollouts(
   templateNetwork: default,
   sharedRolloutSeeds: readonly number[],
+  warmStartDeadline: WorkerWarmStartDeadline,
+  runWarmStartRollout: WorkerWarmStartRolloutRunner,
 ): FlappySeedBatchEvaluation
 ```
 
@@ -1182,6 +1663,8 @@ Evaluates one warm-start template across the shared rollout seed batch.
 Parameters:
 - `templateNetwork` - Candidate template to score.
 - `sharedRolloutSeeds` - Shared rollout seeds used for stable comparison.
+- `warmStartDeadline` - Deadline that can stop seed evaluation early.
+- `runWarmStartRollout` - Rollout runner used to evaluate each seed.
 
 Returns: Aggregate shared-seed evaluation.
 
@@ -1204,6 +1687,21 @@ Parameters:
 
 Returns: Interpolated value.
 
+### isWarmStartDeadlineExpired
+
+```ts
+isWarmStartDeadlineExpired(
+  warmStartDeadline: WorkerWarmStartDeadline,
+): boolean
+```
+
+Resolves whether rollout refinement should yield to regular NEAT evolution.
+
+Parameters:
+- `warmStartDeadline` - Deadline contract for the current warm-start pass.
+
+Returns: True when the warm-start assist has spent its allowed budget.
+
 ### isWarmStartEvaluationBetter
 
 ```ts
@@ -1223,6 +1721,7 @@ robust score is identical.
 Parameters:
 - `candidateEvaluation` - Newly scored candidate aggregate.
 - `bestEvaluation` - Current best aggregate.
+- `architectureProfileId` - Selected shared Flappy profile id.
 
 Returns: True when the candidate should replace the incumbent template.
 
@@ -1233,6 +1732,8 @@ optimizeWarmStartTemplateNetwork(
   templateNetwork: default,
   workerInitSeed: number,
   architectureProfileId: ExampleArchitectureProfileId,
+  warmStartDeadline: WorkerWarmStartDeadline,
+  runWarmStartRollout: WorkerWarmStartRolloutRunner,
 ): default
 ```
 
@@ -1248,6 +1749,8 @@ Parameters:
 - `templateNetwork` - Heuristic-pretrained template network.
 - `workerInitSeed` - Deterministic worker seed.
 - `architectureProfileId` - Selected shared Flappy profile id.
+- `warmStartDeadline` - Optional recurrent assist deadline.
+- `runWarmStartRollout` - Rollout runner used to score candidate templates.
 
 Returns: Best rollout-refined template found within the bounded budget.
 
@@ -1340,7 +1843,7 @@ Returns: Scalar score used for candidate comparison.
 ```ts
 resolveWarmStartRolloutOptimizationPlan(
   architectureProfileId: ExampleArchitectureProfileId,
-): { rolloutSeedCount: number; optimizationStepCount: number; }
+): WorkerWarmStartRolloutOptimizationPlan
 ```
 
 Resolves the rollout-refinement budget for one warm-start architecture profile.
@@ -1352,7 +1855,7 @@ shortcut expands the recurrent seed.
 Parameters:
 - `architectureProfileId` - Selected shared Flappy profile id.
 
-Returns: Shared-seed count and optimization-step budget.
+Returns: Shared-seed count, optimization-step budget, and optional time cap.
 
 ### resolveWorkerWarmStartTeacherStrategy
 
@@ -1413,6 +1916,7 @@ between the heuristic teacher used here and the later evolutionary search.
 Parameters:
 - `neatController` - Initialized NEAT runtime.
 - `warmStartState` - Mutable warm-start lifecycle state.
+- `dependencies` - Injectable warm-start seams for tests and runtime customization.
 
 Returns: Promise resolved when warm-start evaluation finishes.
 
@@ -1425,6 +1929,10 @@ await warmStartWorkerGenerationZeroIfNeeded(neatRuntime, {
 });
 ```
 
+### WorkerWarmStartDeadline
+
+Deadline contract used by recurrent rollout refinement.
+
 ### WorkerWarmStartDependencies
 
 Dependency bag for generation-0 warm-start orchestration.
@@ -1432,6 +1940,24 @@ Dependency bag for generation-0 warm-start orchestration.
 The production path uses the real heuristic dataset builder and rollout-guided
 template refinement. Tests can override these seams to keep assertions small
 and deterministic.
+
+### WorkerWarmStartRolloutOptimizationPlan
+
+Rollout-refinement budget resolved for one warm-start architecture profile.
+
+### WorkerWarmStartRolloutRunner
+
+```ts
+WorkerWarmStartRolloutRunner(
+  templateNetwork: default,
+  rolloutOptions: FlappyRolloutOptions,
+): FlappyEpisodeResult
+```
+
+Callable shape used to evaluate one warm-start rollout candidate.
+
+Tests can inject this seam to observe deadline hooks without running the full
+Flappy simulator, while production uses the real rollout service.
 
 ### WorkerWarmStartState
 

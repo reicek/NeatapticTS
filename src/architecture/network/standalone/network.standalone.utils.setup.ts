@@ -1,5 +1,11 @@
 import type Network from '../../network/network';
 import type Node from '../../node';
+import type { ActivationPrecision } from '../../../config';
+import {
+  ACTIVATION_PRECISION_F32,
+  NO_OUTPUT_NODES_ERROR,
+  OUTPUT_NODE_TYPE,
+} from './network.standalone.utils.types';
 import {
   resolveActivationTraversalNodes,
   resolveOrderedOutputNodes,
@@ -9,10 +15,6 @@ import type {
   NodeWithIndex,
   StandaloneGenerationContext as GenerationContext,
 } from '../network.types';
-import {
-  NO_OUTPUT_NODES_ERROR,
-  OUTPUT_NODE_TYPE,
-} from './network.standalone.utils.types';
 import { NetworkStandaloneNoOutputNodesError } from './network.standalone.errors';
 
 /**
@@ -57,6 +59,8 @@ export function createGenerationContext(
 ): GenerationContext {
   return {
     standaloneProps,
+    resolvedActivationPrecision:
+      resolveStandaloneActivationPrecision(standaloneProps),
     inputNodeIndexes: [],
     activationNodeIndexes: [],
     outputNodeIndexes: [],
@@ -68,6 +72,29 @@ export function createGenerationContext(
     initialStates: [],
     bodyLines: [],
   };
+}
+
+/**
+ * Resolve standalone storage precision from shared config and the legacy raw alias.
+ *
+ * @param standaloneProps Internal standalone network view.
+ * @returns Resolved activation precision for generated storage.
+ */
+function resolveStandaloneActivationPrecision(
+  standaloneProps: NetworkStandaloneProps,
+): ActivationPrecision | undefined {
+  const explicitActivationPrecision = standaloneProps._activationPrecision;
+  const sharedActivationPrecision =
+    standaloneProps._precisionConfig?.activationPrecision;
+
+  if (
+    explicitActivationPrecision === ACTIVATION_PRECISION_F32 &&
+    explicitActivationPrecision !== sharedActivationPrecision
+  ) {
+    return explicitActivationPrecision;
+  }
+
+  return sharedActivationPrecision ?? explicitActivationPrecision;
 }
 
 /**

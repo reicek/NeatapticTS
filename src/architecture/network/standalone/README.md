@@ -140,6 +140,21 @@ Parameters:
 
 Returns: Input-node indexes used when seeding generated activation buffers.
 
+### resolveStandaloneActivationPrecision
+
+```ts
+resolveStandaloneActivationPrecision(
+  standaloneProps: NetworkStandaloneProps,
+): ActivationPrecision | undefined
+```
+
+Resolve standalone storage precision from shared config and the legacy raw alias.
+
+Parameters:
+- `standaloneProps` - Internal standalone network view.
+
+Returns: Resolved activation precision for generated storage.
+
 ### resolveStandaloneExecutionMetadata
 
 ```ts
@@ -183,6 +198,7 @@ Returns: Void.
 
 ```ts
 appendGateMultiplier(
+  generationContext: StandaloneGenerationContext,
   connectionTerm: string,
   gateNode: default | null,
 ): string
@@ -200,6 +216,7 @@ Returns: Term with optional gate multiplier.
 
 ```ts
 buildNodeSumExpression(
+  generationContext: StandaloneGenerationContext,
   currentNode: default,
   nodeTraversalIndex: number,
 ): string
@@ -213,10 +230,30 @@ Parameters:
 
 Returns: String expression used for generated `S[index]` assignment.
 
+### buildStoredValueReadExpression
+
+```ts
+buildStoredValueReadExpression(
+  generationContext: StandaloneGenerationContext,
+  bufferName: "A" | "S",
+  nodeIndex: number,
+): string
+```
+
+Build one storage read expression for generated standalone buffers.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+- `bufferName` - Generated buffer variable name.
+- `nodeIndex` - Indexed storage slot.
+
+Returns: Native array read or float16 decode expression.
+
 ### collectIncomingTerms
 
 ```ts
 collectIncomingTerms(
+  generationContext: StandaloneGenerationContext,
   currentNode: default,
 ): string[]
 ```
@@ -247,6 +284,7 @@ Returns: Output indexes used for result array emission.
 
 ```ts
 collectSelfConnectionTerms(
+  generationContext: StandaloneGenerationContext,
   currentNode: default,
   nodeTraversalIndex: number,
 ): string[]
@@ -279,6 +317,7 @@ Returns: Summation expression or fallback zero literal.
 
 ```ts
 formatOutputArrayValues(
+  generationContext: StandaloneGenerationContext,
   outputIndexes: number[],
 ): string
 ```
@@ -286,6 +325,7 @@ formatOutputArrayValues(
 Format output activation selectors for generated return expression.
 
 Parameters:
+- `generationContext` - Mutable generation context.
 - `outputIndexes` - Output node indexes.
 
 Returns: Comma-separated `A[index]` selector list.
@@ -321,6 +361,21 @@ Parameters:
 - `secondTerms` - Second term collection.
 
 Returns: Combined term collection.
+
+### resolveStandaloneBufferName
+
+```ts
+resolveStandaloneBufferName(
+  bufferName: "A" | "S",
+): "WA" | "WS"
+```
+
+Resolve the generated working-buffer variable name for one standalone buffer.
+
+Parameters:
+- `bufferName` - Persistent standalone storage name.
+
+Returns: Working-buffer name used during one float16 activation call.
 
 ## architecture/network/standalone/network.standalone.utils.loop.ts
 
@@ -444,6 +499,61 @@ Parameters:
 - `maskValue` - Multiplicative mask value.
 
 Returns: Empty suffix for identity, otherwise multiplicative fragment.
+
+### buildStoredValueReadExpression
+
+```ts
+buildStoredValueReadExpression(
+  generationContext: StandaloneGenerationContext,
+  bufferName: "A" | "S",
+  nodeIndex: number,
+): string
+```
+
+Build one storage read expression for generated standalone buffers.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+- `bufferName` - Generated buffer variable name.
+- `nodeIndex` - Indexed storage slot.
+
+Returns: Native read or float16 decode expression.
+
+### buildStoredValueWriteStatement
+
+```ts
+buildStoredValueWriteStatement(
+  generationContext: StandaloneGenerationContext,
+  bufferName: "A" | "S",
+  nodeIndex: number,
+  valueExpression: string,
+): string
+```
+
+Build one storage write statement for generated standalone buffers.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+- `bufferName` - Generated buffer variable name.
+- `nodeIndex` - Indexed storage slot.
+- `valueExpression` - Numeric expression being stored.
+
+Returns: Native assignment or float16 encode statement.
+
+### resolveStandaloneBufferName
+
+```ts
+resolveStandaloneBufferName(
+  bufferName: "A" | "S",
+): "WA" | "WS"
+```
+
+Resolve the generated working-buffer variable name for one standalone buffer.
+
+Parameters:
+- `bufferName` - Persistent standalone storage name.
+
+Returns: Working-buffer name used during one float16 activation call.
 
 ## architecture/network/standalone/network.standalone.utils.activation.ts
 
@@ -687,6 +797,24 @@ Parameters:
 
 Returns: Comma-separated activation function names.
 
+### buildInitialBufferLiteral
+
+```ts
+buildInitialBufferLiteral(
+  generationContext: StandaloneGenerationContext,
+  bufferName: "A" | "S",
+  values: number[],
+): string
+```
+
+Build the array literal used to seed one generated storage buffer.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+- `values` - Initial numeric values for the buffer.
+
+Returns: Literal values matching the generated storage precision.
+
 ### buildInputGuardLine
 
 ```ts
@@ -702,10 +830,55 @@ Parameters:
 
 Returns: Guard statement line including trailing newline.
 
-### resolveActivationArrayType
+### buildPrecisionHelperSource
 
 ```ts
-resolveActivationArrayType(
+buildPrecisionHelperSource(
+  generationContext: StandaloneGenerationContext,
+): string
+```
+
+Build generated precision helper functions when standalone storage uses float16.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+
+Returns: Helper function source or an empty string for native precision paths.
+
+### buildWorkingBufferBootstrapSource
+
+```ts
+buildWorkingBufferBootstrapSource(
+  generationContext: StandaloneGenerationContext,
+): string
+```
+
+Build working-buffer bootstrap lines for the float16 standalone path.
+
+Parameters:
+- `generationContext` - Mutable generation context.
+
+Returns: Working-buffer setup lines or an empty string for native precision paths.
+
+### encodeFloat16Value
+
+```ts
+encodeFloat16Value(
+  value: number,
+): number
+```
+
+Encode one JavaScript number into an unsigned float16 storage word.
+
+Parameters:
+- `value` - Numeric value being snapshotted into generated float16 storage.
+
+Returns: Unsigned 16-bit integer containing IEEE 754 binary16 bits.
+
+### resolveActivationBufferType
+
+```ts
+resolveActivationBufferType(
   generationContext: StandaloneGenerationContext,
 ): string
 ```
@@ -720,6 +893,10 @@ Returns: Constructor name used in generated source.
 ## architecture/network/standalone/network.standalone.utils.types.ts
 
 Output node discriminator used for standalone precondition checks.
+
+### ACTIVATION_PRECISION_F16
+
+Precision token selecting float16-backed Uint16 storage buffers.
 
 ### ACTIVATION_PRECISION_F32
 
@@ -829,6 +1006,10 @@ Regex normalizing stray commas near closing parentheses.
 ### STRAY_COMMA_OPEN_REGEX
 
 Regex normalizing stray commas near opening parentheses.
+
+### UINT16_ARRAY_TYPE
+
+Typed-array constructor names used in generated source.
 
 ## architecture/network/standalone/network.standalone.errors.ts
 

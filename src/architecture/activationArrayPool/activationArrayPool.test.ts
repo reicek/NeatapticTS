@@ -1,4 +1,5 @@
 import { config } from '../../config';
+import { defaultMemoryManager } from '../../memory/manager';
 import { activationArrayPool } from './activationArrayPool';
 
 describe('activationArrayPool', () => {
@@ -87,6 +88,39 @@ describe('activationArrayPool', () => {
 
         // Assert
         expect(acquiredArray instanceof Float32Array).toBe(true);
+      });
+    });
+  });
+
+  describe('given the pool is registered with the default memory manager', () => {
+    afterEach(() => {
+      defaultMemoryManager.teardown();
+      activationArrayPool.clear();
+    });
+
+    describe('when the registered pool snapshot and reset callbacks run', () => {
+      it('reports pool stats and clears retained buckets through the manager surface', () => {
+        // Arrange
+        const requestedSize = 4;
+        const acquiredArray = activationArrayPool.acquire(requestedSize);
+        activationArrayPool.release(acquiredArray);
+        defaultMemoryManager.init();
+
+        // Act
+        const snapshot = defaultMemoryManager.getPoolStats<{
+          bucketCount: number;
+        }>('activationArrayPool');
+        defaultMemoryManager.teardown();
+
+        // Assert
+        expect({
+          bucketCount: snapshot?.bucketCount ?? null,
+          bucketSizeAfterTeardown:
+            activationArrayPool.bucketSize(requestedSize),
+        }).toStrictEqual({
+          bucketCount: 1,
+          bucketSizeAfterTeardown: 0,
+        });
       });
     });
   });

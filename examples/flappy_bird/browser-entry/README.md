@@ -182,8 +182,9 @@ whether instrumentation rows should appear and how rows should be colored.
 Worker payload describing evolved generation summary values.
 
 This is the browser-facing summary of one completed NEAT generation: what
-generation finished, how fit the best genome was, and optionally the best
-network for visualization or playback.
+generation finished, how fit the best genome was, which transferable
+inference payloads are ready for playback transport, and which JSON bridge
+values remain available for the network visualization cache.
 
 ### EvolutionGenerationReadyMessage
 
@@ -204,6 +205,14 @@ Per-frame snapshot received from the worker playback channel.
 A snapshot combines geometry, packed population state, and lightweight world
 metadata so the browser can render a deterministic frame without rerunning
 the simulation locally.
+
+### EvolutionRuntimeStatusMessage
+
+Informational worker message used to keep the HUD phase/status honest.
+
+### EvolutionRuntimeStatusPhase
+
+Worker phase labels surfaced to the browser HUD during long-running work.
 
 ### EvolutionWorkerErrorMessage
 
@@ -528,8 +537,9 @@ provides a useful conceptual frame for this boundary.
 Worker payload describing evolved generation summary values.
 
 This is the browser-facing summary of one completed NEAT generation: what
-generation finished, how fit the best genome was, and optionally the best
-network for visualization or playback.
+generation finished, how fit the best genome was, which transferable
+inference payloads are ready for playback transport, and which JSON bridge
+values remain available for the network visualization cache.
 
 ### EvolutionGenerationReadyMessage
 
@@ -550,6 +560,14 @@ Per-frame snapshot received from the worker playback channel.
 A snapshot combines geometry, packed population state, and lightweight world
 metadata so the browser can render a deterministic frame without rerunning
 the simulation locally.
+
+### EvolutionRuntimeStatusMessage
+
+Informational worker message used to keep the HUD phase/status honest.
+
+### EvolutionRuntimeStatusPhase
+
+Worker phase labels surfaced to the browser HUD during long-running work.
 
 ### EvolutionWorkerErrorMessage
 
@@ -1084,6 +1102,7 @@ Returns: Aggregate playback summary for the current episode.
 ```ts
 resolvePipeSpawnXPx(
   visibleWorldWidthPx: number,
+  overflowPx: number,
 ): number
 ```
 
@@ -1091,6 +1110,7 @@ Resolves the world-space x spawn position for new pipes.
 
 Parameters:
 - `visibleWorldWidthPx` - Current visible world width.
+- `overflowPx` - Additional offset relative to the visible right edge.
 
 Returns: Spawn x-position.
 
@@ -1475,6 +1495,7 @@ drawNetworkVisualization(
   inputSize: number,
   outputSize: number,
   hoverState: NetworkVisualizationHoverState | undefined,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): NetworkVisualizationPositionedScene
 ```
 
@@ -1697,6 +1718,7 @@ drawWeightedConnectionsLayer(
   positionByNodeIndex: Map<number, PositionedNetworkNodeLike>,
   connectionScale: DynamicColorScale,
   animatedHoveredNodes: readonly NetworkVisualizationAnimatedHoveredNode[] | undefined,
+  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
 ): void
 ```
 
@@ -1906,7 +1928,7 @@ Returns: Next generation payload.
 requestWorkerPlaybackStep(
   evolutionWorker: Worker,
   playbackStepRequest: WorkerChannelPlaybackStepRequest,
-): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; }>
 ```
 
 Requests one playback batch step from the worker.

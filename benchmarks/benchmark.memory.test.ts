@@ -5,6 +5,8 @@
  *  - Construct synthetic networks at several target connection counts.
  *  - Measure build + forward timing (with light warm-ups on large sizes).
  *  - Capture memoryStats based estimates (bytes/connection, etc.).
+ *  - Capture Phase 5 sparsity-budget before/after deltas without disturbing
+ *    the existing build-forward history baseline.
  *  - Aggregate variance, perform IQR outlier filtering, and (Phase 2) auto escalation
  *    if Coefficient of Variation (CV%) exceeds target thresholds for large sizes.
  *  - Persist an evolving `benchmark.results.json` artifact (≤10 history entries) with
@@ -16,6 +18,7 @@
 import { memoryStats } from '../src/utils/memory';
 import Network from '../src/architecture/network';
 import NeatapticNode from '../src/architecture/node';
+import { ensureGrowthBudget } from '../src/architecture/network/prune/network.prune.budget.utils';
 import type { BenchAggregateGroup } from './benchmark.report.test';
 import { aggregateBenchMeasurements } from './benchmark.report.test';
 import * as fs from 'fs';
@@ -41,6 +44,31 @@ interface BaselineRecord {
   bytesPerConn: number;
   bytesPerNode: number;
 }
+
+interface Phase5SparsityRecord {
+  size: number;
+  targetConnectionCount: number;
+  pruneMs: number;
+  budgetAllowed: boolean;
+  beforeConnections: number;
+  afterConnections: number;
+  connectionDelta: number;
+  connectionDeltaPct: number;
+  beforeEstimatedBytes: number;
+  afterEstimatedBytes: number;
+  estimatedBytesDelta: number;
+  estimatedBytesDeltaPct: number;
+  beforeBytesPerConn: number;
+  afterBytesPerConn: number;
+  bytesPerConnDelta: number;
+  bytesPerConnDeltaPct: number;
+  plannedPruneCount: number;
+  decision: string | undefined;
+}
+
+const SYNTHETIC_BASELINE_SIZES = [1000, 10000, 50000, 100000, 200000] as const;
+const PHASE5_SPARSITY_RETENTION_FRACTION = 0.75;
+const PHASE5_TARGET_BYTES_PER_CONNECTION_REDUCTION_PCT = -25;
 
 /**
  * Build a synthetic feedforward network targeting (approximately) a desired connection count.
@@ -94,9 +122,90 @@ const measureForwardPass = (
   return { totalMs, avgMs: totalMs / iterations };
 };
 
+const roundMetric = (value: number, digits = 3): number => {
+  return +value.toFixed(digits);
+};
+
+const calculatePercentDelta = (
+  beforeValue: number,
+  afterValue: number,
+  digits = 2,
+): number => {
+  if (beforeValue === 0) {
+    return 0;
+  }
+
+  return roundMetric(((afterValue - beforeValue) / beforeValue) * 100, digits);
+};
+
+const measurePhase5SparsityBudget = (
+  targetConnections: number,
+): Phase5SparsityRecord => {
+  const { net } = buildSyntheticNetwork(targetConnections);
+  const beforeMemory = memoryStats(net);
+  const targetConnectionCount = Math.max(
+    1,
+    Math.floor(beforeMemory.connections * PHASE5_SPARSITY_RETENTION_FRACTION),
+  );
+  net.configureSparsityBudget({ maxConnections: targetConnectionCount });
+
+  const pruneStart = performance.now?.() ?? Date.now();
+  const budgetAllowed = ensureGrowthBudget(net, 0);
+  const pruneEnd = performance.now?.() ?? Date.now();
+  const afterMemory = memoryStats(net);
+  const budgetSnapshot = net.getSparsityBudgetSnapshot();
+
+  return {
+    size: targetConnections,
+    targetConnectionCount,
+    pruneMs: roundMetric(pruneEnd - pruneStart, 4),
+    budgetAllowed,
+    beforeConnections: beforeMemory.connections,
+    afterConnections: afterMemory.connections,
+    connectionDelta: afterMemory.connections - beforeMemory.connections,
+    connectionDeltaPct: calculatePercentDelta(
+      beforeMemory.connections,
+      afterMemory.connections,
+    ),
+    beforeEstimatedBytes: beforeMemory.estimatedTotalBytes,
+    afterEstimatedBytes: afterMemory.estimatedTotalBytes,
+    estimatedBytesDelta:
+      afterMemory.estimatedTotalBytes - beforeMemory.estimatedTotalBytes,
+    estimatedBytesDeltaPct: calculatePercentDelta(
+      beforeMemory.estimatedTotalBytes,
+      afterMemory.estimatedTotalBytes,
+    ),
+    beforeBytesPerConn: beforeMemory.bytesPerConnection,
+    afterBytesPerConn: afterMemory.bytesPerConnection,
+    bytesPerConnDelta:
+      afterMemory.bytesPerConnection - beforeMemory.bytesPerConnection,
+    bytesPerConnDeltaPct: calculatePercentDelta(
+      beforeMemory.bytesPerConnection,
+      afterMemory.bytesPerConnection,
+    ),
+    plannedPruneCount: budgetSnapshot?.plannedPruneCount ?? 0,
+    decision: budgetSnapshot?.decision,
+  };
+};
+
 const baselineRecords: BaselineRecord[] = [];
+const phase5SparsityRecords: Phase5SparsityRecord[] = [];
 const warnings: Array<Record<string, unknown>> = [];
 let distAggregated: BenchAggregateGroup[] = [];
+let phase5SparsityAggregated: BenchAggregateGroup[] = [];
+let persistedPhase5Sparsity:
+  | {
+      aggregated?: unknown[];
+      records?: unknown[];
+    }
+  | undefined;
+let persistedLatestHistorySnapshot:
+  | {
+      distBundle?: {
+        hash?: string;
+      };
+    }
+  | undefined;
 // Collected per‑run measurements (build + forward + memory) prior to aggregation.
 // Declared here (before tests) so inner describe blocks can push safely.
 const rawMeasurements: { size: number; metrics: Record<string, number> }[] = [];
@@ -110,7 +219,7 @@ describe('benchmark.memory dist-only', () => {
   });
 
   describe('synthetic baseline capture', () => {
-    const sizes = [1000, 10000, 50000, 100000, 200000];
+    const sizes = SYNTHETIC_BASELINE_SIZES;
     for (const size of sizes) {
       const { net, buildMs } = buildSyntheticNetwork(size);
       const iters =
@@ -144,7 +253,7 @@ describe('benchmark.memory dist-only', () => {
   });
 
   describe('dist aggregation', () => {
-    const sizes = [1000, 10000, 50000, 100000, 200000];
+    const sizes = SYNTHETIC_BASELINE_SIZES;
     const BENCH_REPEAT_LARGE = (() => {
       const raw = process.env.BENCH_REPEAT_LARGE || '';
       const n = parseInt(raw, 10);
@@ -477,6 +586,39 @@ describe('benchmark.memory dist-only', () => {
       .filter((g) => g.size >= 100000 && g.count > 1)
       .map(recomputeVariance);
 
+    if (phase5SparsityRecords.length === 0) {
+      for (const size of SYNTHETIC_BASELINE_SIZES) {
+        const phase5Record = measurePhase5SparsityBudget(size);
+        phase5SparsityRecords.push(phase5Record);
+      }
+
+      phase5SparsityAggregated = aggregateBenchMeasurements(
+        phase5SparsityRecords.map((record) => ({
+          mode: 'dist' as const,
+          scenario: 'phase5Sparsity',
+          size: record.size,
+          metrics: {
+            afterBytesPerConn: record.afterBytesPerConn,
+            afterConnections: record.afterConnections,
+            afterEstimatedBytes: record.afterEstimatedBytes,
+            beforeBytesPerConn: record.beforeBytesPerConn,
+            beforeConnections: record.beforeConnections,
+            beforeEstimatedBytes: record.beforeEstimatedBytes,
+            budgetAllowed: record.budgetAllowed ? 1 : 0,
+            bytesPerConnDelta: record.bytesPerConnDelta,
+            bytesPerConnDeltaPct: record.bytesPerConnDeltaPct,
+            connectionDelta: record.connectionDelta,
+            connectionDeltaPct: record.connectionDeltaPct,
+            estimatedBytesDelta: record.estimatedBytesDelta,
+            estimatedBytesDeltaPct: record.estimatedBytesDeltaPct,
+            plannedPruneCount: record.plannedPruneCount,
+            pruneMs: record.pruneMs,
+            targetConnectionCount: record.targetConnectionCount,
+          },
+        })),
+      );
+    }
+
     // Persist results
     try {
       const resultsFile = path.resolve(__dirname, 'benchmark.results.json');
@@ -524,9 +666,24 @@ describe('benchmark.memory dist-only', () => {
           };
         });
       };
-      const snapshot = {
+      const snapshot: {
+        commit: string;
+        distBundle?: {
+          bytes?: number;
+          exists: boolean;
+          hash?: string;
+        };
+        fieldAuditCounts?: {
+          Connection?: number;
+          Node?: number;
+        };
+        fwdDeltaPct: never[];
+        generatedAt: string;
+        sizes: number[];
+        summary: Array<Record<string, unknown>>;
+      } = {
         generatedAt: new Date().toISOString(),
-        commit,
+        commit: commit ?? 'unknown',
         sizes: distAggregated
           .map((g) => g.size)
           .sort((a: number, b: number) => a - b),
@@ -551,6 +708,18 @@ describe('benchmark.memory dist-only', () => {
       payload.baseline = baselineRecords;
       payload.variantRaw = rawMeasurements;
       payload.aggregated = distAggregated;
+      payload.phase5Sparsity = {
+        aggregated: phase5SparsityAggregated,
+        note: 'Deltas are reported as after - before. Negative values are leaner.',
+        records: phase5SparsityRecords,
+        targetBytesPerConnectionReductionPct:
+          PHASE5_TARGET_BYTES_PER_CONNECTION_REDUCTION_PCT,
+        targetConnectionRetentionFraction: PHASE5_SPARSITY_RETENTION_FRACTION,
+      };
+      persistedPhase5Sparsity = payload.phase5Sparsity as {
+        aggregated?: unknown[];
+        records?: unknown[];
+      };
       payload.deltas = [];
       payload.warnings = warnings;
       // --- dist bundle provenance (Phase 1) ---
@@ -575,6 +744,7 @@ describe('benchmark.memory dist-only', () => {
       } catch {
         // Ignore dist bundle hash errors
       }
+      snapshot.distBundle = distBundleMeta;
       // --- optional forward regression annotation (informational, non-failing) ---
       // Criteria: we need at least 2 historical snapshots to compute a rolling median, and variance CV below threshold.
       const regressionAnnotations: Array<Record<string, unknown>> = [];
@@ -669,6 +839,9 @@ describe('benchmark.memory dist-only', () => {
       const hist = Array.isArray(payload.history) ? payload.history : [];
       hist.push(snapshot);
       payload.history = hist.slice(-10);
+      persistedLatestHistorySnapshot = (
+        payload.history as Array<typeof snapshot>
+      ).at(-1);
       fs.writeFileSync(resultsFile, JSON.stringify(payload, null, 2), 'utf-8');
     } catch {
       // Ignore file write errors
@@ -682,6 +855,28 @@ describe('benchmark.memory dist-only', () => {
       }
       expect(g).toBeDefined();
       expect((g as GroupWithMetrics).bytesPerConnMean).toBeGreaterThan(0);
+    });
+
+    it('persists the latest history snapshot dist bundle hash for audit gates', () => {
+      expect(typeof persistedLatestHistorySnapshot?.distBundle?.hash).toBe(
+        'string',
+      );
+    });
+  });
+
+  describe('phase5 sparsity reporting', () => {
+    it('records one pruning measurement for each configured size bucket', () => {
+      expect(phase5SparsityRecords.length).toBe(5);
+    });
+
+    it('persists a dedicated phase5 sparsity artifact section', () => {
+      expect({
+        aggregated: Array.isArray(persistedPhase5Sparsity?.aggregated),
+        records: Array.isArray(persistedPhase5Sparsity?.records),
+      }).toEqual({
+        aggregated: true,
+        records: true,
+      });
     });
   });
 });

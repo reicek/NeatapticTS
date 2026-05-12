@@ -89,6 +89,7 @@
  */
 
 import type Network from '../../network/network';
+import type { ActivationArray } from '../../activationArrayPool/activationArrayPool';
 export { activate, gaussianRand } from './network.activate.core.utils';
 import {
   createBatchActivationContext,
@@ -146,28 +147,30 @@ export function noTraceActivate(this: Network, input: number[]): number[] {
 }
 
 /**
- * Thin semantic alias to the network's main activation path.
+ * Raw activation wrapper with optional typed-output reuse semantics.
  *
- * At present this simply forwards to {@link Network.activate}. The indirection is useful for:
- *  - Future differentiation between raw (immediate) activation and a mode that performs reuse /
- *    staged batching logic.
- *  - Providing a stable exported symbol for external tooling / instrumentation.
+ * The heavy math still lives in the main activation path, but this wrapper now
+ * owns the contract for network-local typed output reuse. When
+ * `reuseActivationArrays` is enabled, raw activation may copy the detached
+ * activation result into a reusable typed buffer whose element width follows
+ * the network's resolved activation precision. Callers that also enable
+ * `returnTypedActivations` may receive that reusable typed buffer directly.
  *
  * @param this - Bound Network instance.
  * @param input - Input vector (length == network.input).
  * @param training - Whether to retain training traces / gradients (delegated downstream).
  * @param maxActivationDepth - Guard against runaway recursion / cyclic activation attempts.
- * @returns Implementation-defined result of Network.activate (typically an output vector).
+ * @returns Output vector, either as a plain array or a reusable typed activation buffer.
  * @example
  * const y = net.activateRaw([0,1,0]);
- * @remarks Keep this wrapper lightweight; heavy logic should live inside Network.activate itself.
+ * @remarks Keep this wrapper lightweight; heavy logic should still live inside Network.activate itself.
  */
 export function activateRaw(
   this: Network,
   input: number[],
   training = false,
   maxActivationDepth = DEFAULT_MAX_ACTIVATION_DEPTH,
-): number[] {
+): ActivationArray {
   const activationContext = createRawActivationContext(
     this,
     input,

@@ -2,7 +2,7 @@
 description: 'Use when selecting a relevant plan document, checking roadmap alignment, mapping trigger phrases to plans, or preparing an architectural alignment brief before coding. Keywords: plans, roadmap, architecture, NEAT correctness, ONNX, workers, checkpointing, visualization.'
 name: 'Plan Scout'
 tools: [read, search]
-user-invocable: false
+user-invocable: true
 agents: []
 ---
 

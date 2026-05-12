@@ -95,6 +95,7 @@
 import Node from '../node/node';
 import Layer from '../layer/layer';
 import Connection from '../connection/connection';
+import type { ActivationPrecision, PrecisionConfig } from '../../config';
 import type { ActivationArray } from '../activationArrayPool/activationArrayPool';
 import {
   bootstrapNetwork,
@@ -153,6 +154,7 @@ import {
   maybePrune as _maybePrune,
   pruneToSparsity as _pruneToSparsity,
   getCurrentSparsity as _getCurrentSparsity,
+  getSparsityBudgetSnapshot as _getSparsityBudgetSnapshot,
   gate as _gate,
   ungate as _ungate,
   setSeed as _setSeed,
@@ -163,6 +165,7 @@ import {
   getRandomFn as _getRandomFn,
   removeNode as _removeNodeStandalone,
   connect as _connect,
+  connectBatch as _connectBatch,
   disconnect as _disconnect,
   serializeCloneImpl as _cloneImpl,
   serialize as _serialize,
@@ -173,6 +176,7 @@ import {
   activateRaw as _activateRaw,
   activateBatch as _activateBatch,
   addNodeBetweenImpl as _addNodeBetweenImpl,
+  configureSparsityBudget as _configureSparsityBudget,
   mutateImpl as _mutateImpl,
   resolveArchitectureDescriptor as _resolveArchitectureDescriptor,
   applyGradientClippingImpl as _applyGradientClippingImpl,
@@ -181,6 +185,8 @@ import {
   trainImpl as _trainImpl,
   crossOver as _crossOver,
   describeTemporalStructure as _describeTemporalStructure,
+  forwardWindowed as _forwardWindowed,
+  forwardWindowedAsync as _forwardWindowedAsync,
 } from './network.utils';
 import type {
   ActivationSchedule,
@@ -193,7 +199,11 @@ import type {
   NetworkArchitectureDescriptor,
   MutationMethod,
   NetworkBootstrapInternals,
+  NetworkConnectionRequest,
   NetworkConstructorOptions,
+  NetworkForwardWindowAsyncOptions,
+  NetworkForwardWindowOptions,
+  NetworkSparsityBudgetSnapshot,
   NetworkTemporalStructureDescriptor,
   NetworkTopologyIntent,
   RNGSnapshot,
@@ -256,6 +266,8 @@ export default class Network implements NetworkView {
     minLossScale: number;
     maxLossScale: number;
     overflowCount?: number;
+    underflowCount?: number;
+    lastUnderflowStep?: number;
     scaleUpEvents?: number;
     scaleDownEvents?: number;
   } = {
@@ -264,6 +276,8 @@ export default class Network implements NetworkView {
     minLossScale: 1,
     maxLossScale: 65536,
     overflowCount: 0,
+    underflowCount: 0,
+    lastUnderflowStep: -1,
     scaleUpEvents: 0,
     scaleDownEvents: 0,
   };
@@ -320,8 +334,12 @@ export default class Network implements NetworkView {
   private _globalEpoch: number = 0;
   /** @internal Baseline connection count used by evolution-time pruning. */
   private _evoInitialConnCount?: number;
+  /** @internal Shared precision config resolved during bootstrap. */
+  private _precisionConfig: PrecisionConfig = {
+    activationPrecision: 'f64',
+  };
   /** @internal Typed-array precision used by compiled activation paths. */
-  private _activationPrecision: 'f64' | 'f32' = 'f64';
+  private _activationPrecision: ActivationPrecision = 'f64';
   /** @internal Whether pooled activation arrays are reused across activations. */
   private _reuseActivationArrays: boolean = false;
   /** @internal Whether pooled typed activations can be returned directly. */
@@ -640,6 +658,29 @@ export default class Network implements NetworkView {
   }) {
     _configurePruning.call(this, cfg);
   }
+
+  /**
+   * Configure a structural connection-growth budget for future mutations.
+   *
+   * @param cfg - Absolute connection cap plus optional grace headroom.
+   */
+  configureSparsityBudget(cfg: {
+    maxConnections: number;
+    growthGraceFraction?: number;
+    method?: 'magnitude' | 'snip';
+  }) {
+    _configureSparsityBudget.call(this, cfg);
+  }
+
+  /**
+   * Read the latest structural growth-budget decision snapshot.
+   *
+   * @returns Snapshot when a budgeted growth decision has already run.
+   */
+  getSparsityBudgetSnapshot(): NetworkSparsityBudgetSnapshot | undefined {
+    return _getSparsityBudgetSnapshot(this);
+  }
+
   /**
    * Compute the current connection sparsity ratio.
    *
@@ -830,7 +871,9 @@ export default class Network implements NetworkView {
    */
   /**
    * Standard activation API returning a plain number[] for backward compatibility.
-   * Internally may use pooled typed arrays; if so they are cloned before returning.
+   * Internally may use pooled typed arrays; if so they are cloned before returning unless
+   * `reuseSequenceBuffers` opts the network into a small reusable plain-array ring for
+   * repeated sequence steps.
    */
   activate(
     input: number[],
@@ -857,13 +900,13 @@ export default class Network implements NetworkView {
   }
 
   /**
-   * Raw activation that can return a typed array when pooling is enabled (zero-copy).
-   * If reuseActivationArrays=false falls back to standard activate().
+   * Raw activation that can return a reusable typed array when pooling is enabled.
+   * If `reuseActivationArrays` is disabled this falls back to the standard plain-array activation path.
    *
    * @param input Input vector.
    * @param training Whether to enable training-time stochastic paths.
    * @param maxActivationDepth Maximum graph depth for activation.
-   * @returns Output activations (typed array when pooling is enabled).
+   * @returns Output activations as either a plain array or a reusable typed activation buffer.
    */
   activateRaw(
     input: number[],
@@ -886,6 +929,41 @@ export default class Network implements NetworkView {
    */
   activateBatch(inputs: number[][], training = false): number[][] {
     return _activateBatch.call(this, inputs, training);
+  }
+
+  /**
+   * Activate one input sequence in bounded windows while preserving carried recurrent state.
+   *
+   * This keeps the same output contract as repeated `activate()` calls, while
+   * adding bounded window callbacks and an opt-out from collecting the full
+   * output matrix when the caller wants lower sequence-retention pressure.
+   *
+   * @param inputs Ordered sequence of input vectors.
+   * @param options Optional windowed activation settings.
+   * @returns Output vectors aligned to the input order.
+   */
+  forwardWindowed(
+    inputs: number[][],
+    options?: NetworkForwardWindowOptions,
+  ): number[][] {
+    return _forwardWindowed.call(this, inputs, options);
+  }
+
+  /**
+   * Activate one input sequence in bounded windows with cooperative runtime yields.
+   *
+   * Browser runtimes can use this to yield after a configurable number of
+   * emitted windows so long-running sequence inference remains responsive.
+   *
+   * @param inputs Ordered sequence of input vectors.
+   * @param options Optional async windowed activation settings.
+   * @returns Output vectors aligned to the input order.
+   */
+  forwardWindowedAsync(
+    inputs: number[][],
+    options?: NetworkForwardWindowAsyncOptions,
+  ): Promise<number[][]> {
+    return _forwardWindowedAsync.call(this, inputs, options);
   }
 
   /**
@@ -966,6 +1044,20 @@ export default class Network implements NetworkView {
    */
   connect(from: Node, to: Node, weight?: number): Connection[] {
     return _connect.call(this, from, to, weight);
+  }
+
+  /**
+   * Creates many connections in one ordered structural edit batch.
+   *
+   * This preserves the same legality checks and deterministic default-weight
+   * behavior as repeated `connect()` calls, but it reserves network-level
+   * storage once for the whole request shelf.
+   *
+   * @param requests Ordered connection requests.
+   * @returns Flattened created connection objects in request order.
+   */
+  connectBatch(requests: readonly NetworkConnectionRequest[]): Connection[] {
+    return _connectBatch.call(this, requests);
   }
 
   /**

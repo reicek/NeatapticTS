@@ -50,6 +50,9 @@ const NUMERIC_EPSILON_SMALL = 0.01;
 /** Probability for applying 2 mutations instead of 1 (50% by default). */
 const DEFAULT_HALF_PROB = 0.5;
 
+/** Progress-plateau window that triggers a structural topology shake-up. */
+export const TOPOLOGY_SHAKEUP_STAGNATION_GENERATIONS = 5;
+
 /** Fraction of sorted population to use as parent pool (top 25%). */
 const DEFAULT_PARENT_FRACTION = 0.25;
 
@@ -67,6 +70,27 @@ type IndexBuffer = Uint32Array | Int32Array | number[];
 
 /** Runtime parent identifier carried through clone lineage tracking. */
 type PopulationDynamicsParentId = number | string;
+
+/** Narrow NEAT shape for topology shake-up passes that use the public mutate hook. */
+type PopulationDynamicsMutateCapableNeatLike = PopulationDynamicsNeatLike & {
+  mutate?: () => Promise<void> | void;
+};
+
+/** Structural operator names used when the search needs an explicit topology shake-up. */
+const TOPOLOGY_SHAKEUP_MUTATION_NAMES = new Set([
+  'ADD_NODE',
+  'SUB_NODE',
+  'ADD_CONN',
+  'SUB_CONN',
+  'ADD_GATE',
+  'SUB_GATE',
+  'ADD_SELF_CONN',
+  'SUB_SELF_CONN',
+  'ADD_BACK_CONN',
+  'SUB_BACK_CONN',
+  'ADD_LSTM_NODE',
+  'ADD_GRU_NODE',
+]);
 
 /**
  * Narrow genome view used by this module.
@@ -1010,6 +1034,105 @@ const getMutationOps = (
     return EMPTY_VEC;
   }
 };
+
+/**
+ * Apply one structural-only mutation pass when maze progress has stalled long enough.
+ *
+ * The shake-up intentionally reuses the public NEAT mutation flow so innovation
+ * bookkeeping, topology-intent policy, and adaptive mutation metadata all stay
+ * coherent. The helper only narrows the active mutation shelf to structural
+ * operators for the duration of the pass, then restores the caller's original
+ * mutation configuration.
+ *
+ * @param neat - NEAT driver exposing the public `mutate()` hook.
+ * @param stagnantProgressGenerations - Consecutive generations without progress improvement.
+ * @param safeWrite - Best-effort logger used for concise telemetry.
+ * @param completedGenerations - Generation count used in the log line.
+ * @param threshold - Plateau window that should trigger a structural shake-up.
+ * @returns True when a shake-up mutation pass was executed.
+ */
+export const maybeApplyTopologyShakeupMutation = async (
+  neat: PopulationDynamicsMutateCapableNeatLike,
+  stagnantProgressGenerations: number,
+  safeWrite: (msg: string) => void,
+  completedGenerations: number,
+  threshold = TOPOLOGY_SHAKEUP_STAGNATION_GENERATIONS,
+): Promise<boolean> => {
+  const observedStagnationGenerations =
+    Number.isFinite(stagnantProgressGenerations) &&
+    stagnantProgressGenerations > 0
+      ? Math.floor(stagnantProgressGenerations)
+      : 0;
+  const requiredStagnationGenerations =
+    Number.isFinite(threshold) && threshold > 0
+      ? Math.floor(threshold)
+      : TOPOLOGY_SHAKEUP_STAGNATION_GENERATIONS;
+
+  if (
+    observedStagnationGenerations === 0 ||
+    observedStagnationGenerations % requiredStagnationGenerations !== 0 ||
+    typeof neat?.mutate !== 'function'
+  ) {
+    return false;
+  }
+
+  if (!neat.options) {
+    neat.options = {};
+  }
+
+  const structuralMutationOps = getMutationOps(neat).filter(
+    (mutationOperation) =>
+      TOPOLOGY_SHAKEUP_MUTATION_NAMES.has(
+        resolveMutationOperationName(mutationOperation),
+      ),
+  );
+
+  if (structuralMutationOps.length === 0) {
+    return false;
+  }
+
+  const originalMutationShelf = neat.options.mutation;
+  const originalMutationRate = neat.options.mutationRate;
+  const originalMutationAmount = neat.options.mutationAmount;
+
+  try {
+    neat.options.mutation = structuralMutationOps;
+    neat.options.mutationRate = 1;
+    neat.options.mutationAmount = Math.max(
+      1,
+      Math.min(2, structuralMutationOps.length),
+    );
+
+    await neat.mutate();
+
+    try {
+      safeWrite(
+        `[TOPOLOGY_SHAKEUP] gen=${completedGenerations} stagnantProgress=${observedStagnationGenerations} ops=${structuralMutationOps
+          .map(resolveMutationOperationName)
+          .join(',')}
+`,
+      );
+    } catch {
+      // Logging must never block the mutation pass.
+    }
+
+    return true;
+  } catch {
+    return false;
+  } finally {
+    neat.options.mutation = originalMutationShelf;
+    neat.options.mutationRate = originalMutationRate;
+    neat.options.mutationAmount = originalMutationAmount;
+  }
+};
+
+function resolveMutationOperationName(
+  mutationOperation: MutationOperationLike,
+): string {
+  return typeof mutationOperation?.name === 'string'
+    ? mutationOperation.name
+    : '';
+}
 
 /**
  * Ensure all output nodes use identity activation.

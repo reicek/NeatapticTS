@@ -1,11 +1,16 @@
 import type Network from '../../network/network';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import type { ActivationArray } from '../../activationArrayPool/activationArrayPool';
-import { config } from '../../../config';
+import {
+  config,
+  type ActivationPrecision,
+  type PrecisionConfig,
+} from '../../../config';
 import {
   INITIAL_OUTPUT_WRITE_INDEX,
   INPUT_NODE_TYPE,
   OUTPUT_NODE_TYPE,
+  OUTPUT_WRITE_INDEX_INCREMENT,
   UNDEFINED_INPUT_LENGTH_TEXT,
 } from './network.activate.utils.types';
 import type {
@@ -69,7 +74,10 @@ export function activate(
   const fastSlabOutput = tryFastSlabActivation(runtimeNetwork, input, training);
   if (fastSlabOutput) return fastSlabOutput;
 
-  const output = acquireOutputBuffer(this.output);
+  const output = acquireOutputBuffer(
+    this.output,
+    resolveRuntimeActivationPrecision(runtimeNetwork),
+  );
   validateNetworkNodes(this);
 
   resetSkippedLayers(this);
@@ -94,8 +102,11 @@ export function activate(
 
   finalizeTrainingStepAndStats(runtimeNetwork, stats, training);
 
-  return releaseBufferAndCreateResult(output);
+  return releaseBufferAndCreateResult(output, runtimeNetwork);
 }
+
+/** Small reusable ring depth for consecutive sequence activations. */
+const SEQUENCE_OUTPUT_RING_SIZE = 2;
 
 /**
  * Ensure compiled activation scheduling is refreshed before activation when topology changed.
@@ -158,8 +169,42 @@ function tryFastSlabActivation(
  * @param outputSize Number of output slots.
  * @returns Mutable pooled output buffer.
  */
-function acquireOutputBuffer(outputSize: number): ActivationArray {
-  return activationArrayPool.acquire(outputSize) as ActivationArray;
+function acquireOutputBuffer(
+  outputSize: number,
+  activationPrecision?: ActivationPrecision,
+): ActivationArray {
+  return activationArrayPool.acquire(
+    outputSize,
+    activationPrecision,
+  ) as ActivationArray;
+}
+
+/**
+ * Read the resolved runtime activation precision from the current network.
+ *
+ * @param runtimeNetwork Runtime activation internals.
+ * @returns Active per-network activation precision when present.
+ */
+function resolveRuntimeActivationPrecision(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): ActivationPrecision | undefined {
+  const precisionCarrier = runtimeNetwork as ActivateRuntimeNetworkProps & {
+    _precisionConfig?: PrecisionConfig;
+    _activationPrecision?: ActivationPrecision;
+  };
+
+  if (
+    precisionCarrier._activationPrecision === 'f32' &&
+    precisionCarrier._activationPrecision !==
+      precisionCarrier._precisionConfig?.activationPrecision
+  ) {
+    return precisionCarrier._activationPrecision;
+  }
+
+  return (
+    precisionCarrier._precisionConfig?.activationPrecision ??
+    precisionCarrier._activationPrecision
+  );
 }
 
 /**
@@ -1184,10 +1229,105 @@ function finalizeTrainingStepAndStats(
  * @param outputBuffer Mutable pooled output buffer.
  * @returns Plain array of output values.
  */
-function releaseBufferAndCreateResult(outputBuffer: ActivationArray): number[] {
-  const result = Array.from(outputBuffer) as number[];
+function releaseBufferAndCreateResult(
+  outputBuffer: ActivationArray,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number[] {
+  const result = runtimeNetwork._reuseSequenceBuffers
+    ? copyOutputBufferIntoSequenceRing(outputBuffer, runtimeNetwork)
+    : (Array.from(outputBuffer) as number[]);
+
   activationArrayPool.release(outputBuffer);
   return result;
+}
+
+/**
+ * Copy one pooled activation result into the current reusable sequence-output slot.
+ *
+ * @param outputBuffer Mutable pooled output buffer.
+ * @param runtimeNetwork Runtime activation internals.
+ * @returns Reused plain array slot for the current sequence step.
+ */
+function copyOutputBufferIntoSequenceRing(
+  outputBuffer: ActivationArray,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number[] {
+  const sequenceOutputBuffer = acquireSequenceOutputBuffer(
+    runtimeNetwork,
+    outputBuffer.length,
+  );
+
+  for (
+    let outputIndex = INITIAL_OUTPUT_WRITE_INDEX;
+    outputIndex < outputBuffer.length;
+    outputIndex += OUTPUT_WRITE_INDEX_INCREMENT
+  ) {
+    sequenceOutputBuffer[outputIndex] = outputBuffer[outputIndex]!;
+  }
+
+  return sequenceOutputBuffer;
+}
+
+/**
+ * Acquire the next reusable plain array slot for one sequence activation result.
+ *
+ * @param runtimeNetwork Runtime activation internals.
+ * @param outputSize Required activation output width.
+ * @returns One reusable plain array slot from the network-owned output ring.
+ */
+function acquireSequenceOutputBuffer(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  outputSize: number,
+): number[] {
+  ensureSequenceOutputRing(runtimeNetwork, outputSize);
+
+  const currentRingIndex = runtimeNetwork._sequenceOutputRingIndex ?? 0;
+  const sequenceOutputBuffer =
+    runtimeNetwork._sequenceOutputRing![currentRingIndex];
+
+  runtimeNetwork._sequenceOutputRingIndex =
+    (currentRingIndex + 1) % runtimeNetwork._sequenceOutputRing!.length;
+
+  return sequenceOutputBuffer;
+}
+
+/**
+ * Ensure the network owns a fixed-depth reusable ring sized for the current output width.
+ *
+ * @param runtimeNetwork Runtime activation internals.
+ * @param outputSize Required activation output width.
+ * @returns Nothing.
+ */
+function ensureSequenceOutputRing(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  outputSize: number,
+): void {
+  const sequenceOutputRing = runtimeNetwork._sequenceOutputRing;
+
+  if (
+    sequenceOutputRing &&
+    sequenceOutputRing.length === SEQUENCE_OUTPUT_RING_SIZE &&
+    sequenceOutputRing.every(
+      (sequenceOutputBuffer) => sequenceOutputBuffer.length === outputSize,
+    )
+  ) {
+    return;
+  }
+
+  runtimeNetwork._sequenceOutputRing = createSequenceOutputRing(outputSize);
+  runtimeNetwork._sequenceOutputRingIndex = 0;
+}
+
+/**
+ * Create a reusable plain-array ring for consecutive sequence outputs.
+ *
+ * @param outputSize Required activation output width.
+ * @returns Fresh fixed-depth ring of plain output arrays.
+ */
+function createSequenceOutputRing(outputSize: number): number[][] {
+  return Array.from({ length: SEQUENCE_OUTPUT_RING_SIZE }, () =>
+    new Array<number>(outputSize).fill(0),
+  );
 }
 
 /**

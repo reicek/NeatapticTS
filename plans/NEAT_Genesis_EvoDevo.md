@@ -19,7 +19,7 @@ NGE builds neural architectures the same way:
 
 Unlike language models, **NGE targets embodied sensorimotor intelligence** — agents that act in physical and simulated environments, not agents that generate tokens. The canonical benchmark environments are web canvas simulations: a three-car competitive racing benchmark, an ant-hive ecosystem, and a predator/prey co-evolutionary arena.
 
-This plan is constrained by [plans/Memory_Optimization.md](plans/Memory_Optimization.md). If the two conflict, the memory plan wins.
+This plan is constrained by [plans/completed/Memory_Optimization.md](completed/Memory_Optimization.md). If the two conflict, the archived memory baseline wins.
 
 ---
 
@@ -30,7 +30,7 @@ This is a **concept and architecture plan**, not an implementation-complete spec
 - **In scope:** computation motifs, memory architecture, neuromodulation, reproduction system, collective intelligence framework, lifecycle model, deterministic contracts, DNA composition, budget policy, cache boundaries, and acceptance criteria.
 - **Out of scope (for now):** full operator-level API details, final data schemas, and low-level benchmark harness implementation.
 - **Follow-on demo plans:** [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md), [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md).
-- **Authority rule:** if this plan conflicts with `plans/Memory_Optimization.md`, the memory plan remains authoritative.
+- **Authority rule:** if this plan conflicts with `plans/completed/Memory_Optimization.md`, the archived memory baseline remains authoritative.
 
 ---
 
@@ -38,8 +38,8 @@ This is a **concept and architecture plan**, not an implementation-complete spec
 
 This plan executes as **Track 2** in the memory roadmap, sequenced after core implementation phases.
 
-- Track 1 (Memory foundation): phases 0–10 in `plans/Memory_Optimization.md`
-- Track 2 (NGE algorithm): phases 11–17 in `plans/Memory_Optimization.md`
+- Track 1 (Memory foundation): archived in `plans/completed/Memory_Optimization.md`
+- Track 2 (NGE algorithm): owned here and by the downstream Phase 7 benchmark plans
 
 Authoritative mapping:
 
@@ -574,7 +574,7 @@ This creates a cost landscape that naturally preserves the information highway (
 
 Optional (strongly gated): module-level I/O caching only if inputs are quantized/discrete and the module is frozen/state-free.
 
-All memory flags, constants, and accounting must be sourced from the Centralized Memory Manager described in [plans/Memory_Optimization.md](plans/Memory_Optimization.md).
+All memory flags, constants, and accounting must be sourced from the Centralized Memory Manager described in [plans/completed/Memory_Optimization.md](completed/Memory_Optimization.md).
 
 ---
 
@@ -586,7 +586,7 @@ NGE depends on completed memory foundations:
 - L4 sparsity + budgets for the primary bytes/connection improvements
 - L7 caching for adjacency/phenotype reuse
 
-**Gate to Phase 7 (NGE):** Track 1 gates in `Memory_Optimization.md` are met (especially phases 4–7 stability + variance/hardening).
+**Gate to Phase 7 (NGE):** satisfied. The archived Track 1 memory baseline in [plans/completed/Memory_Optimization.md](completed/Memory_Optimization.md) has closed its stop line.
 
 ---
 

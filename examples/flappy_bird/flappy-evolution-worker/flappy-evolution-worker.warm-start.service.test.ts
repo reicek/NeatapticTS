@@ -7,8 +7,11 @@ import {
   resolveWarmStartRolloutOptimizationPlan,
   resolveWorkerWarmStartTeacherStrategy,
   warmStartWorkerGenerationZeroIfNeeded,
+  type WorkerWarmStartDeadline,
   type WorkerWarmStartDependencies,
 } from './flappy-evolution-worker.warm-start.service';
+
+const RECURRENT_WARM_START_TIME_LIMIT_MS = 10_000;
 
 describe('warmStartWorkerGenerationZeroIfNeeded', () => {
   it('seeds generation-zero genomes from the rollout-optimized template', async () => {
@@ -152,6 +155,125 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
     });
   });
 
+  it('passes a 10s deadline to recurrent rollout refinement without waiting for the full limit', async () => {
+    const optimizedTemplateNetwork = createMockNetwork();
+    let capturedWarmStartDeadline: WorkerWarmStartDeadline | undefined;
+    const dependencies: WorkerWarmStartDependencies = {
+      buildHeuristicPretrainSet: jest.fn(() => []),
+      optimizeWarmStartTemplateNetwork: (
+        templateNetwork,
+        _workerInitSeed,
+        _architectureProfileId,
+        warmStartDeadline,
+      ) => {
+        capturedWarmStartDeadline = warmStartDeadline;
+        return optimizedTemplateNetwork ?? templateNetwork;
+      },
+      resolveCurrentTimeMs: jest.fn(() => 1_000),
+    };
+    const neatController = {
+      generation: 0,
+      population: [createMockNetwork()],
+    } as unknown as Neat;
+
+    await warmStartWorkerGenerationZeroIfNeeded(
+      neatController,
+      {
+        architectureProfileId: 'gru',
+        workerInitSeed: 123,
+        generationZeroWarmStartApplied: false,
+      },
+      dependencies,
+    );
+
+    expect({
+      deadlineMs: capturedWarmStartDeadline?.expiresAtMs,
+      clockCalls: (dependencies.resolveCurrentTimeMs as jest.Mock).mock.calls
+        .length,
+      heuristicBuildCalls: (dependencies.buildHeuristicPretrainSet as jest.Mock)
+        .mock.calls.length,
+    }).toEqual({
+      deadlineMs: 11_000,
+      clockCalls: 1,
+      heuristicBuildCalls: 0,
+    });
+  });
+
+  it('passes the recurrent warm-start deadline into active rollouts as a hard stop hook', async () => {
+    let currentTimeMs = 1_000;
+    const shouldStopSnapshots: boolean[] = [];
+    const rolloutEpisode = jest.fn((_templateNetwork, rolloutOptions) => {
+      shouldStopSnapshots.push(rolloutOptions.shouldStop?.() ?? false);
+      currentTimeMs = 11_000;
+      shouldStopSnapshots.push(rolloutOptions.shouldStop?.() ?? false);
+
+      return {
+        done: true,
+        doneReason: 'timeout' as const,
+        fitness: 0,
+        fitnessBreakdown: {
+          denseShaping: 0,
+          pipeProgress: 0,
+          survival: 0,
+          terminalShaping: 0,
+        },
+        framesSurvived: 1,
+        pipesPassed: 0,
+      };
+    });
+    const dependencies: WorkerWarmStartDependencies = {
+      buildHeuristicPretrainSet: jest.fn(() => []),
+      resolveCurrentTimeMs: jest.fn(() => currentTimeMs),
+      rolloutEpisode,
+    };
+
+    await warmStartWorkerGenerationZeroIfNeeded(
+      {
+        generation: 0,
+        population: [createMockNetwork()],
+      } as unknown as Neat,
+      {
+        architectureProfileId: 'lstm',
+        workerInitSeed: 123,
+        generationZeroWarmStartApplied: false,
+      },
+      dependencies,
+    );
+
+    expect({
+      rolloutCallCount: rolloutEpisode.mock.calls.length,
+      shouldStopSnapshots,
+    }).toEqual({
+      rolloutCallCount: 1,
+      shouldStopSnapshots: [false, true],
+    });
+  });
+
+  it('treats warm-start optimizer failures as best-effort and marks the assist complete', async () => {
+    const warmStartState = {
+      architectureProfileId: 'lstm' as const,
+      workerInitSeed: 123,
+      generationZeroWarmStartApplied: false,
+    };
+    const dependencies: WorkerWarmStartDependencies = {
+      buildHeuristicPretrainSet: jest.fn(() => []),
+      optimizeWarmStartTemplateNetwork: () => {
+        throw new Error('synthetic warm-start failure');
+      },
+    };
+
+    await warmStartWorkerGenerationZeroIfNeeded(
+      {
+        generation: 0,
+        population: [createMockNetwork()],
+      } as unknown as Neat,
+      warmStartState,
+      dependencies,
+    );
+
+    expect(warmStartState.generationZeroWarmStartApplied).toBe(true);
+  });
+
   it('skips heuristic teacher fitting for the LSTM profile before rollout refinement', async () => {
     const templateTelemetry = createMockNetworkTelemetry();
     const templateGenome = createMockNetwork({
@@ -201,6 +323,7 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
     expect(resolveWarmStartRolloutOptimizationPlan('gru')).toEqual({
       optimizationStepCount: 8,
       rolloutSeedCount: 4,
+      timeLimitMs: RECURRENT_WARM_START_TIME_LIMIT_MS,
     });
   });
 
@@ -208,6 +331,7 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
     expect(resolveWarmStartRolloutOptimizationPlan('lstm')).toEqual({
       optimizationStepCount: 16,
       rolloutSeedCount: 6,
+      timeLimitMs: RECURRENT_WARM_START_TIME_LIMIT_MS,
     });
   });
 
@@ -251,6 +375,7 @@ describe('warmStartWorkerGenerationZeroIfNeeded', () => {
     expect(resolveWarmStartRolloutOptimizationPlan('narx')).toEqual({
       optimizationStepCount: 20,
       rolloutSeedCount: 7,
+      timeLimitMs: RECURRENT_WARM_START_TIME_LIMIT_MS,
     });
   });
 
@@ -335,6 +460,11 @@ type MockNetworkTelemetry = {
   trainCalls: number;
 };
 
+/**
+ * Creates the call-count telemetry bag shared by mock networks in this suite.
+ *
+ * @returns Mutable telemetry counters for one mock network family.
+ */
 function createMockNetworkTelemetry(): MockNetworkTelemetry {
   return {
     activateCalls: 0,
@@ -344,6 +474,12 @@ function createMockNetworkTelemetry(): MockNetworkTelemetry {
   };
 }
 
+/**
+ * Creates a narrow mock `Network` that exposes the warm-start methods under test.
+ *
+ * @param options - Optional parameters and shared telemetry for the mock network.
+ * @returns Mock network cast to the production `Network` shape.
+ */
 function createMockNetwork(options?: {
   nodeBiases?: number[];
   connectionWeights?: number[];

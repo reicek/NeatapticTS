@@ -1,6 +1,9 @@
 import type Network from '../../network/network';
 import Connection from '../../connection';
 import type {
+  CompressedSerializedNetworkArchive,
+  CompressedSerializedNetworkArchiveOptions,
+  CompressedSerializedNetwork,
   CompactSerializedNetworkTuple,
   NetworkJSON,
 } from './network.serialize.utils.types';
@@ -22,6 +25,22 @@ import {
   refreshNodeIndices,
 } from './network.serialize.compact.utils';
 import {
+  compressSerializedConnections,
+  COMPRESSED_NETWORK_FORMAT,
+  createCompressedArchiveDecodeMetrics,
+  createCompressedArchiveEncodeMetrics,
+  type CompressedArchiveDecodeOptions,
+  type CompressedArchiveDecodeResult,
+  type CompressedArchiveEncodeResult,
+  createCompressedNetworkArchive,
+  createCompressedNetworkArchiveAsync,
+  decodeArchivePayloadBase64,
+  decompressSerializedConnections,
+  estimateSerializedByteLength,
+  parseCompressedNetworkArchive,
+  parseCompressedNetworkArchiveAsync,
+} from './network.serialize.compression.utils';
+import {
   appendJsonForwardConnections,
   appendJsonNodesAndSelfConnections,
   createEmptyNetworkJson,
@@ -33,6 +52,7 @@ import {
 } from './network.serialize.json.utils';
 import {
   asNetworkInternals,
+  asNodeInternals,
   asNetworkInternalsWithDropout,
   createCompactPayloadContext,
   createNetworkInstance,
@@ -99,6 +119,158 @@ export function serialize(this: Network): CompactSerializedNetworkTuple {
     nodeGeneIds,
     networkInternals._topologyIntent,
   ];
+}
+
+/**
+ * Serializes a network instance into the compressed compact format.
+ *
+ * This path keeps round-trip semantics identical to `serialize()` while
+ * replacing the object-per-connection payload with one array-oriented block.
+ *
+ * @param this - Bound network instance.
+ * @returns Compressed compact payload.
+ */
+export function serializeCompressed(
+  this: Network,
+): CompressedSerializedNetwork {
+  const networkInternals = asNetworkInternals(this);
+
+  // Step 1: Build the exact structural snapshot through the verbose serializer.
+  const jsonSnapshot = toJSONImpl.call(this);
+
+  // Step 2: Capture live runtime activation and recurrent-state arrays.
+  const activations = collectNodeActivations(networkInternals.nodes);
+  const states = collectNodeStates(networkInternals.nodes);
+
+  // Step 3: Compress the verbose JSON connection rows.
+  const compressedConnections = compressSerializedConnections(
+    jsonSnapshot.connections,
+  );
+
+  // Step 4: Return the additive compressed payload.
+  return {
+    activations,
+    architecture: jsonSnapshot.architecture,
+    connections: compressedConnections,
+    dropout: jsonSnapshot.dropout,
+    extensions: jsonSnapshot.extensions,
+    format: COMPRESSED_NETWORK_FORMAT,
+    formatVersion: jsonSnapshot.formatVersion,
+    input: networkInternals.input,
+    nodes: jsonSnapshot.nodes,
+    output: networkInternals.output,
+    states,
+    topologyIntent: jsonSnapshot.topologyIntent,
+  };
+}
+
+/**
+ * Serializes a network instance into the compressed archive wrapper.
+ *
+ * This is the Node-side storage path for `serializeCompressed()`: it first
+ * builds the exact compressed JSON payload, then applies gzip or zstd above
+ * that payload without changing replay semantics.
+ *
+ * @param this - Bound network instance.
+ * @param options - Optional archive compression settings.
+ * @returns Archived compressed payload.
+ */
+export function serializeCompressedArchive(
+  this: Network,
+  options?: CompressedSerializedNetworkArchiveOptions,
+): CompressedSerializedNetworkArchive {
+  // Step 1: Build the exact compressed JSON payload.
+  const compressedPayload = serializeCompressed.call(this);
+
+  // Step 2: Wrap the payload in the Node-side archive codec.
+  return createCompressedNetworkArchive(compressedPayload, options);
+}
+
+/**
+ * Serialize a network archive and report size plus encode-time metrics.
+ *
+ * @param this - Bound network instance.
+ * @param options - Optional archive compression settings.
+ * @returns Archived payload plus encode metrics.
+ */
+export function serializeCompressedArchiveWithMetrics(
+  this: Network,
+  options?: CompressedSerializedNetworkArchiveOptions,
+): CompressedArchiveEncodeResult<CompressedSerializedNetworkArchive> {
+  const startedAt = performance.now();
+
+  // Step 1: Build the exact compressed JSON payload.
+  const compressedPayload = serializeCompressed.call(this);
+
+  // Step 2: Wrap the payload in the archive codec.
+  const archive = createCompressedNetworkArchive(compressedPayload, options);
+  const encodeTimeMs = performance.now() - startedAt;
+
+  // Step 3: Report byte-size and encode timing metrics alongside the archive.
+  return {
+    archive,
+    metrics: createCompressedArchiveEncodeMetrics(
+      estimateSerializedByteLength(compressedPayload),
+      decodeArchivePayloadBase64(archive.payload).length,
+      encodeTimeMs,
+    ),
+  };
+}
+
+/**
+ * Serializes a network instance into the compressed archive wrapper with async runtime codecs.
+ *
+ * Browser runtimes prefer the archive stream path so payload compression can stay
+ * off the synchronous main-thread lane, while Node falls back to the existing
+ * archive owner when browser streams are unavailable.
+ *
+ * @param this - Bound network instance.
+ * @param options - Optional archive compression settings.
+ * @returns Archived compressed payload.
+ */
+export async function serializeCompressedArchiveAsync(
+  this: Network,
+  options?: CompressedSerializedNetworkArchiveOptions,
+): Promise<CompressedSerializedNetworkArchive> {
+  // Step 1: Build the exact compressed JSON payload.
+  const compressedPayload = serializeCompressed.call(this);
+
+  // Step 2: Wrap the payload in the best available async archive codec.
+  return createCompressedNetworkArchiveAsync(compressedPayload, options);
+}
+
+/**
+ * Serialize a network archive with async codecs and report size plus encode-time metrics.
+ *
+ * @param this - Bound network instance.
+ * @param options - Optional archive compression settings.
+ * @returns Archived payload plus encode metrics.
+ */
+export async function serializeCompressedArchiveAsyncWithMetrics(
+  this: Network,
+  options?: CompressedSerializedNetworkArchiveOptions,
+): Promise<CompressedArchiveEncodeResult<CompressedSerializedNetworkArchive>> {
+  const startedAt = performance.now();
+
+  // Step 1: Build the exact compressed JSON payload.
+  const compressedPayload = serializeCompressed.call(this);
+
+  // Step 2: Wrap the payload in the best available async archive codec.
+  const archive = await createCompressedNetworkArchiveAsync(
+    compressedPayload,
+    options,
+  );
+  const encodeTimeMs = performance.now() - startedAt;
+
+  // Step 3: Report byte-size and encode timing metrics alongside the archive.
+  return {
+    archive,
+    metrics: createCompressedArchiveEncodeMetrics(
+      estimateSerializedByteLength(compressedPayload),
+      decodeArchivePayloadBase64(archive.payload).length,
+      encodeTimeMs,
+    ),
+  };
 }
 
 /**
@@ -173,6 +345,199 @@ export const deserialize = (
 
   return rebuiltNetwork;
 };
+
+/**
+ * Rebuilds a network instance from the compressed compact payload.
+ *
+ * @param data - Compressed compact payload.
+ * @param inputSize - Optional input-size override.
+ * @param outputSize - Optional output-size override.
+ * @returns Reconstructed network instance.
+ */
+export const deserializeCompressed = (
+  data: CompressedSerializedNetwork,
+  inputSize?: number,
+  outputSize?: number,
+): Network => {
+  if (data.format !== COMPRESSED_NETWORK_FORMAT) {
+    throw new TypeError('Invalid compressed network payload format.');
+  }
+
+  const rebuiltNetwork = fromJSONImpl({
+    architecture: data.architecture,
+    connections: decompressSerializedConnections(data.connections),
+    dropout: data.dropout,
+    extensions: data.extensions,
+    formatVersion: data.formatVersion,
+    input: inputSize ?? data.input,
+    nodes: data.nodes,
+    output: outputSize ?? data.output,
+    topologyIntent: data.topologyIntent,
+  });
+
+  applySerializedRuntimeState(rebuiltNetwork, data.activations, data.states);
+
+  return rebuiltNetwork;
+};
+
+/**
+ * Rebuilds a network instance from the compressed archive wrapper.
+ *
+ * @param data - Archived compressed payload.
+ * @param inputSize - Optional input-size override.
+ * @param outputSize - Optional output-size override.
+ * @returns Reconstructed network instance.
+ */
+export const deserializeCompressedArchive = (
+  data: CompressedSerializedNetworkArchive,
+  inputSize?: number,
+  outputSize?: number,
+): Network => {
+  // Step 1: Inflate the archive back into the exact compressed JSON payload.
+  const compressedPayload = parseCompressedNetworkArchive(data);
+
+  // Step 2: Reuse the existing compressed deserialize flow.
+  return deserializeCompressed(compressedPayload, inputSize, outputSize);
+};
+
+/**
+ * Rebuild a network archive and report size plus decode-time metrics.
+ *
+ * @param data - Archived compressed payload.
+ * @param inputSize - Optional input-size override.
+ * @param outputSize - Optional output-size override.
+ * @returns Rebuilt network plus decode metrics.
+ */
+export const deserializeCompressedArchiveWithMetrics = (
+  data: CompressedSerializedNetworkArchive,
+  inputSize?: number,
+  outputSize?: number,
+): CompressedArchiveDecodeResult<Network> => {
+  const compressedByteLength = decodeArchivePayloadBase64(data.payload).length;
+  const startedAt = performance.now();
+
+  // Step 1: Inflate the archive back into the exact compressed JSON payload.
+  const compressedPayload = parseCompressedNetworkArchive(data);
+
+  // Step 2: Reuse the existing compressed deserialize flow.
+  const rebuiltNetwork = deserializeCompressed(
+    compressedPayload,
+    inputSize,
+    outputSize,
+  );
+  const decodeTimeMs = performance.now() - startedAt;
+
+  // Step 3: Report byte-size and decode timing metrics alongside the network.
+  return {
+    metrics: createCompressedArchiveDecodeMetrics(
+      estimateSerializedByteLength(compressedPayload),
+      compressedByteLength,
+      decodeTimeMs,
+    ),
+    value: rebuiltNetwork,
+  };
+};
+
+/**
+ * Rebuilds a network instance from the compressed archive wrapper with async runtime codecs.
+ *
+ * Browser runtimes prefer the archive stream path so payload hydration can stay
+ * off the synchronous main-thread lane, while Node falls back to the existing
+ * archive owner when browser streams are unavailable.
+ *
+ * @param data - Archived compressed payload.
+ * @param inputSize - Optional input-size override.
+ * @param outputSize - Optional output-size override.
+ * @returns Reconstructed network instance.
+ */
+export const deserializeCompressedArchiveAsync = async (
+  data: CompressedSerializedNetworkArchive,
+  inputSize?: number,
+  outputSize?: number,
+  options: CompressedArchiveDecodeOptions = {},
+): Promise<Network> => {
+  // Step 1: Inflate the archive back into the exact compressed JSON payload.
+  const compressedPayload = await parseCompressedNetworkArchiveAsync(
+    data,
+    options,
+  );
+
+  // Step 2: Reuse the existing compressed deserialize flow.
+  return deserializeCompressed(compressedPayload, inputSize, outputSize);
+};
+
+/**
+ * Rebuild a network archive with async codecs and report size plus decode-time metrics.
+ *
+ * @param data - Archived compressed payload.
+ * @param inputSize - Optional input-size override.
+ * @param outputSize - Optional output-size override.
+ * @param options - Optional incremental decode callbacks.
+ * @returns Rebuilt network plus decode metrics.
+ */
+export const deserializeCompressedArchiveAsyncWithMetrics = async (
+  data: CompressedSerializedNetworkArchive,
+  inputSize?: number,
+  outputSize?: number,
+  options: CompressedArchiveDecodeOptions = {},
+): Promise<CompressedArchiveDecodeResult<Network>> => {
+  const compressedByteLength = decodeArchivePayloadBase64(data.payload).length;
+  const startedAt = performance.now();
+
+  // Step 1: Inflate the archive back into the exact compressed JSON payload.
+  const compressedPayload = await parseCompressedNetworkArchiveAsync(
+    data,
+    options,
+  );
+
+  // Step 2: Reuse the existing compressed deserialize flow.
+  const rebuiltNetwork = deserializeCompressed(
+    compressedPayload,
+    inputSize,
+    outputSize,
+  );
+  const decodeTimeMs = performance.now() - startedAt;
+
+  // Step 3: Report byte-size and decode timing metrics alongside the network.
+  return {
+    metrics: createCompressedArchiveDecodeMetrics(
+      estimateSerializedByteLength(compressedPayload),
+      compressedByteLength,
+      decodeTimeMs,
+    ),
+    value: rebuiltNetwork,
+  };
+};
+
+/**
+ * Restore live activation and recurrent-state scalars after structural import.
+ *
+ * @param rebuiltNetwork - Reconstructed runtime network.
+ * @param activations - Activation values aligned to node order.
+ * @param states - Recurrent state values aligned to node order.
+ * @returns Nothing.
+ */
+function applySerializedRuntimeState(
+  rebuiltNetwork: Network,
+  activations: number[],
+  states: number[],
+): void {
+  const networkInternals = asNetworkInternals(rebuiltNetwork);
+
+  if (
+    activations.length !== networkInternals.nodes.length ||
+    states.length !== networkInternals.nodes.length
+  ) {
+    throw new TypeError('Compressed runtime state length is invalid.');
+  }
+
+  networkInternals.nodes.forEach((nodeReference, nodeIndex) => {
+    const nodeInternals = asNodeInternals(nodeReference);
+
+    nodeInternals.activation = activations[nodeIndex]!;
+    nodeInternals.state = states[nodeIndex]!;
+  });
+}
 
 /**
  * Serializes a network instance into the verbose JSON format.

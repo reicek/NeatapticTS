@@ -1,5 +1,6 @@
 import Connection from '../../connection';
 import Node from '../../node/node';
+import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import type Network from '../network';
 import {
   buildEvolutionaryPruneSelection,
@@ -190,6 +191,52 @@ describe('network prune evolutionary utility chapter', () => {
 
         // Assert
         expect(disconnectSpy).toHaveBeenCalledWith(sourceNode, targetNode);
+      });
+    });
+
+    describe('given many connections are removed at once', () => {
+      it('forwards the large-prune size to the activation pool after disconnecting', () => {
+        // Arrange
+        const disconnectSpy = jest.fn();
+        const fakeNetwork = { disconnect: disconnectSpy } as unknown as Network;
+        const connectionsToDisconnect = Array.from({ length: 64 }, () => {
+          return new Connection(new Node('hidden'), new Node('hidden'), 0.2);
+        });
+        const originalScheduler = Reflect.get(
+          activationArrayPool,
+          'scheduleCompactionAfterLargePrune',
+        );
+        const scheduleSpy = jest.fn();
+        Reflect.set(
+          activationArrayPool,
+          'scheduleCompactionAfterLargePrune',
+          scheduleSpy,
+        );
+
+        // Act
+        disconnectEvolutionaryConnections(fakeNetwork, connectionsToDisconnect);
+
+        if (originalScheduler === undefined) {
+          Reflect.deleteProperty(
+            activationArrayPool,
+            'scheduleCompactionAfterLargePrune',
+          );
+        } else {
+          Reflect.set(
+            activationArrayPool,
+            'scheduleCompactionAfterLargePrune',
+            originalScheduler,
+          );
+        }
+
+        // Assert
+        expect({
+          disconnectedEdgeCount: disconnectSpy.mock.calls.length,
+          scheduledPruneCount: scheduleSpy.mock.calls[0]?.[0],
+        }).toEqual({
+          disconnectedEdgeCount: 64,
+          scheduledPruneCount: 64,
+        });
       });
     });
   });

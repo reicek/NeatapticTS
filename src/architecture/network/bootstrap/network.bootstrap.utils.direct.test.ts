@@ -1,4 +1,4 @@
-import { config } from '../../../config';
+import { config, type PrecisionConfig } from '../../../config';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import Node from '../../node/node';
 import * as nodePoolModule from '../../nodePool/nodePool';
@@ -12,13 +12,16 @@ import {
 
 type BootstrapNetworkFixture = {
   _activationPrecision?: 'f32' | 'f64';
+  _precisionConfig?: PrecisionConfig;
   _enforceAcyclic?: boolean;
   _rand: () => number;
   _returnTypedActivations?: boolean;
   _reuseActivationArrays?: boolean;
+  _reuseSequenceBuffers?: boolean;
   _topologyIntent?: 'feed-forward' | 'unconstrained';
   addNodeBetween: jest.Mock;
   connect: jest.Mock;
+  connectBatch: jest.Mock;
   connections: unknown[];
   dropout: number;
   gates: unknown[];
@@ -37,6 +40,7 @@ function createBootstrapNetwork(): BootstrapNetworkFixture {
       network.nodes.push(new Node('hidden', undefined, network._rand));
     }),
     connect: jest.fn(),
+    connectBatch: jest.fn(),
     connections: [],
     dropout: 0,
     gates: [],
@@ -233,6 +237,7 @@ describe('network bootstrap utility chapter', () => {
             activationPrecision: 'f64',
             minHidden: 2,
             reuseActivationArrays: true,
+            reuseSequenceBuffers: true,
             returnTypedActivations: true,
             seed: 42,
           },
@@ -244,19 +249,25 @@ describe('network bootstrap utility chapter', () => {
         expect({
           activationPrecision: network._activationPrecision,
           addNodeBetweenCalls: network.addNodeBetween.mock.calls.length,
+          batchRequestCount: network.connectBatch.mock.calls[0]?.[0]?.length,
+          connectCalls: network.connect.mock.calls.length,
           nodeCount: network.nodes.length,
           poolMaxCall: setMaxPerBucketSpy.mock.calls[0]?.[0],
           prewarmCall: prewarmSpy.mock.calls[0],
           reuseActivationArrays: network._reuseActivationArrays,
+          reuseSequenceBuffers: network._reuseSequenceBuffers,
           seededWith: network.setSeed.mock.calls[0]?.[0],
           typedActivations: network._returnTypedActivations,
         }).toEqual({
           activationPrecision: 'f64',
           addNodeBetweenCalls: 2,
+          batchRequestCount: 1,
+          connectCalls: 0,
           nodeCount: 4,
           poolMaxCall: 7,
           prewarmCall: [1, 3],
           reuseActivationArrays: true,
+          reuseSequenceBuffers: true,
           seededWith: 42,
           typedActivations: true,
         });
@@ -329,11 +340,14 @@ describe('network bootstrap utility chapter', () => {
         // Assert
         expect({
           activationPrecision: network._activationPrecision,
+          precisionConfigActivationPrecision:
+            network._precisionConfig?.activationPrecision,
           acquiredNodeTypes: acquireNodeSpy.mock.calls.map(
             ([request]) => request?.type ?? 'missing',
           ),
         }).toEqual({
           activationPrecision: undefined,
+          precisionConfigActivationPrecision: 'f64',
           acquiredNodeTypes: ['input', 'output'],
         });
       });

@@ -98,6 +98,12 @@ Sub-modules follow the same pattern: `bar/foo/sub/bar.foo.sub.ts`, etc.
 
 A small number of READMEs (e.g. root `README.md`, `plans/README.md`) are manually maintained — these never have a corresponding docs-script source.
 
+## Published example pages — generated vs manual
+
+`docs/examples/**/index.html` pages are generated artifacts copied from `examples/**/index.html` by `scripts/copy-examples.ts` during `npm run docs`.
+
+Do not edit `docs/examples/**` directly. To change a browser demo page, edit the source file in `examples/**/index.html`, rerun `npm run docs`, and then verify the copied page.
+
 ## Documentation philosophy
 
 This is a **pedagogist-first, research-and-education library**. Documentation quality is a first-class deliverable.

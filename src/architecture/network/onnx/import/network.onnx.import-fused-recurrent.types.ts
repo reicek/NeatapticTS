@@ -78,8 +78,10 @@ export type OnnxFusedGateApplicationContext = {
 
 /** Context for assigning one gate-neuron row from flattened ONNX tensors. */
 export type OnnxFusedGateRowAssignmentContext = {
+  fusedKind: OnnxFusedRecurrentKind;
   gateNeuronInternal: NodeInternals;
   gateName: string;
+  recurrentSourceNodes: NeatapticNode[];
   recurrentGateName: string;
   rowOffset: number;
   rowIndex: number;

@@ -1,5 +1,5 @@
 import type { IRunMazeEvolutionOptions } from './evolutionEngine.types';
-import { normalizeRunOptions } from './optionsAndSetup';
+import { createAndSeedNeat, normalizeRunOptions } from './optionsAndSetup';
 
 function createRunOptions(
   evolutionAlgorithmConfig: IRunMazeEvolutionOptions['evolutionAlgorithmConfig'],
@@ -199,5 +199,45 @@ describe('normalizeRunOptions', () => {
       sigma: 0.1,
       minRate: 0.001,
     });
+  });
+
+  it('enables population-wide evaluation when browser worker scoring is configured', () => {
+    const originalWorker = globalThis.Worker;
+    globalThis.Worker = class MockWorker {} as unknown as typeof Worker;
+
+    const normalizedOptions = normalizeRunOptions(
+      createRunOptions({
+        workerEvaluation: {
+          enabled: true,
+          workerUrl: '/assets/ascii-maze-evaluation.worker.bundle.js',
+        },
+      }),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+      jest.fn(),
+    );
+    const { neat } = createAndSeedNeat(
+      normalizedOptions,
+      6,
+      4,
+      {
+        agentSimConfig: { maxSteps: 8 },
+        distanceMap: [[0, 1]],
+        encodedMaze: [[0, 0]],
+        exitPosition: [1, 0],
+        startPosition: [0, 0],
+      },
+      [],
+      [],
+    );
+
+    expect({
+      fitnessPopulation: neat?.options.fitnessPopulation,
+    }).toEqual({
+      fitnessPopulation: true,
+    });
+
+    globalThis.Worker = originalWorker;
   });
 });

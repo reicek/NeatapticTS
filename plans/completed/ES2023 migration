@@ -53,7 +53,7 @@ What was stale in the earlier version of this plan:
 3. Pattern-first targeting: work by current boundary and pattern, not by stale legacy filenames.
 4. Enforcement follows cleanup: do not harden lint or CI until the current baseline is green.
 5. Runtime honesty: prefer ES2023-only APIs where the repo baseline supports them, but keep intentional fallbacks when they are still required by real browser, workflow, or optional-dependency constraints.
-6. Scope discipline: performance architecture stays in `plans/Memory_Optimization.md`, and correctness architecture stays in `plans/completed/neat.plans.md`.
+6. Scope discipline: performance architecture now reopens from `plans/completed/Memory_Optimization.md`, and correctness architecture stays in `plans/completed/neat.plans.md`.
 7. Folder-local SRP: when multiple files in one folder share error contracts, prefer a folder-local plural `*.errors.ts` module over a root-level mega registry.
 
 ## Locked execution defaults

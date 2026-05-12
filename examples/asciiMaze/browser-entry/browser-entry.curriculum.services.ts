@@ -4,8 +4,10 @@ import type { INetwork } from '../interfaces';
 import {
   buildExampleArchitectureProfileNetwork,
   DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID,
+  resolveExampleArchitectureProfile,
 } from '../../architectureProfiles';
 import { BROWSER_ENTRY_CONSTANTS as C } from './browser-entry.constants';
+import { resolveAsciiMazeEvaluationWorkerBundleUrl } from './browser-entry.worker-url.service';
 import type { BrowserEntryCurriculumContext } from './browser-entry.types';
 import {
   createBrowserEvolutionSettings,
@@ -54,12 +56,20 @@ export const runBrowserEntryCurriculum = (
       const labelProfileId =
         context.architectureProfileId ??
         DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID;
+      const resolvedProfile = resolveExampleArchitectureProfile(
+        'ascii-maze',
+        labelProfileId,
+      );
       const result = await EvolutionEngine.runMazeEvolution({
         mazeConfig: { maze: mazeLayout },
         agentSimConfig: { maxSteps: settings.agentMaxSteps },
         evolutionAlgorithmConfig: {
-          allowRecurrent: settings.allowRecurrent,
+          allowRecurrent: resolvedProfile.recurrent,
           adaptiveMutation: settings.adaptiveMutation,
+          workerEvaluation: {
+            enabled: true,
+            workerUrl: resolveAsciiMazeEvaluationWorkerBundleUrl(),
+          },
           popSize: settings.popSize,
           maxStagnantGenerations: settings.maxStagnantGenerations,
           minProgressToPass: C.MIN_PROGRESS_TO_PASS,

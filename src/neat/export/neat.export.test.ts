@@ -8,6 +8,7 @@ import {
   recordNodeSplitRecord,
 } from '../innovation-tracker/innovation-tracker';
 import type { InnovationTracker } from '../innovation-tracker/innovation-tracker.types';
+import type { NoveltyArchiveEntry } from '../evaluate/shared/evaluate.types';
 import type {
   SpeciesHistoryEntry,
   SpeciesLastStats,
@@ -34,6 +35,8 @@ import type {
 } from './neat.export.types';
 
 type ExportGenome = Network & {
+  _mutAmount?: number;
+  _mutRate?: number;
   score?: number;
   _id?: number;
   _parents?: number[];
@@ -57,6 +60,10 @@ type ExportControllerState = {
   _nextGenomeId?: number;
   _lineageEnabled?: boolean;
   _lastGlobalImproveGeneration?: number;
+  _adaptivePruneLevel?: number;
+  _adaptivePruneBaseline?: number;
+  _noveltyArchive?: NoveltyArchiveEntry[];
+  _operatorStats?: Map<string, { attempts: number; success: number }>;
   _speciesHistory?: SpeciesHistoryEntry[];
   _species?: ExportSpecies[];
   _nextSpeciesId?: number;
@@ -954,6 +961,28 @@ describe('neat export chapter', () => {
         );
       });
 
+      it('still rejects a versioned checkpoint without the full checkpoint marker in best-effort mode', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 345,
+        });
+        const invalidState = {
+          ...neat.exportState(),
+          checkpointMode: 'meta-only',
+        } as unknown as NeatStateJSON;
+
+        // Act
+        const invalidImport = Neat.importState(invalidState, scoreByNodeCount, {
+          restoreMode: 'best-effort',
+        });
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+
       it('throws when a full checkpoint advertises an unsupported state format version', async () => {
         // Arrange
         const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 2, seed: 38 });
@@ -1029,6 +1058,226 @@ describe('neat export chapter', () => {
         await expect(invalidImport).rejects.toThrow(
           NeatExportStateBundleValidationError,
         );
+      });
+
+      it('throws when a versioned full checkpoint omits runtime resume state', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 339,
+          speciation: true,
+        });
+        const invalidState = {
+          ...neat.exportState(),
+          neat: {
+            ...neat.exportState().neat,
+            runtime: undefined,
+          },
+        } as unknown as NeatStateJSON;
+
+        // Act
+        const invalidImport = Neat.importState(invalidState, scoreByNodeCount);
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateControllerRestoreError,
+        );
+      });
+
+      it('throws when a versioned full checkpoint omits nextGenomeId from runtime resume state', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 340,
+          speciation: true,
+        });
+        const exportedState = neat.exportState();
+        const invalidState = {
+          ...exportedState,
+          neat: {
+            ...exportedState.neat,
+            runtime: {
+              ...exportedState.neat.runtime,
+              nextGenomeId: undefined,
+            },
+          },
+        } as unknown as NeatStateJSON;
+
+        // Act
+        const invalidImport = Neat.importState(invalidState, scoreByNodeCount);
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateControllerRestoreError,
+        );
+      });
+
+      it('throws when a versioned full checkpoint omits architecture counters from runtime resume state', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 341,
+          speciation: true,
+        });
+        const exportedState = neat.exportState();
+        const invalidState = {
+          ...exportedState,
+          neat: {
+            ...exportedState.neat,
+            runtime: {
+              ...exportedState.neat.runtime,
+              nextConnectionInnovation: undefined,
+              nextNodeGeneId: undefined,
+              nextNodeIndex: undefined,
+            },
+          },
+        } as unknown as NeatStateJSON;
+
+        // Act
+        const invalidImport = Neat.importState(invalidState, scoreByNodeCount);
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateControllerRestoreError,
+        );
+      });
+
+      it('throws when a versioned full checkpoint omits rngState from runtime resume state', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 342,
+          speciation: true,
+        });
+        const exportedState = neat.exportState();
+        const invalidState = {
+          ...exportedState,
+          neat: {
+            ...exportedState.neat,
+            runtime: {
+              ...exportedState.neat.runtime,
+              rngState: undefined,
+            },
+          },
+        } as unknown as NeatStateJSON;
+
+        // Act
+        const invalidImport = Neat.importState(invalidState, scoreByNodeCount);
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateControllerRestoreError,
+        );
+      });
+
+      it('imports a partial versioned full checkpoint only under explicit best-effort mode', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 343,
+          speciation: true,
+        });
+        neat.sampleRandom(3);
+        const exportedState = neat.exportState();
+        const partialState = {
+          ...exportedState,
+          neat: {
+            ...exportedState.neat,
+            runtime: {
+              ...exportedState.neat.runtime,
+              rngState: undefined,
+            },
+          },
+        } as unknown as NeatStateJSON;
+
+        // Act
+        const restored = await Neat.importState(
+          partialState,
+          scoreByNodeCount,
+          { restoreMode: 'best-effort' },
+        );
+
+        // Assert
+        expect({
+          generation: restored.generation,
+          populationSize: restored.population.length,
+          exactRngStatePreserved:
+            restored.exportRNGState() === exportedState.neat.runtime?.rngState,
+        }).toEqual({
+          generation: exportedState.neat.generation,
+          populationSize: exportedState.population.length,
+          exactRngStatePreserved: false,
+        });
+      });
+
+      it('imports a versioned checkpoint without speciation resume state only under explicit best-effort mode', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 4,
+          seed: 344,
+          speciation: true,
+        });
+        await neat.evolve();
+        const exportedState = neat.exportState();
+        const partialState = {
+          ...exportedState,
+          speciation: undefined,
+        } as unknown as NeatStateJSON;
+
+        // Act
+        const restored = await Neat.importState(
+          partialState,
+          scoreByNodeCount,
+          { restoreMode: 'best-effort' },
+        );
+
+        // Assert
+        expect({
+          generation: restored.generation,
+          populationSize: restored.population.length,
+          exactSpeciesRegistryPreserved:
+            ((restored as unknown as ExportControllerState)._species?.length ??
+              0) === (exportedState.speciation?.species?.length ?? 0),
+        }).toEqual({
+          generation: exportedState.neat.generation,
+          populationSize: exportedState.population.length,
+          exactSpeciesRegistryPreserved: false,
+        });
+      });
+
+      it('accepts a reserved downstream extensions bag on full checkpoint bundles without changing strict restore behavior', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 4,
+          seed: 359,
+          speciation: true,
+        });
+        const extensions: NonNullable<
+          Parameters<typeof Neat.importState>[0]['extensions']
+        > = {
+          neatchat: {
+            memoryBankId: 'memory-bank-1',
+          },
+        };
+        const extendedState: Parameters<typeof Neat.importState>[0] = {
+          ...neat.exportState(),
+          extensions,
+        };
+
+        // Act
+        const restored = await Neat.importState(
+          extendedState,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        expect({
+          restoredGeneration: restored.generation,
+          restoredPopulationCount: restored.population.length,
+        }).toEqual({
+          restoredGeneration: extendedState.neat.generation,
+          restoredPopulationCount: extendedState.population.length,
+        });
       });
 
       it('throws when the controller cannot be rebuilt from serialized meta state', async () => {
@@ -1319,6 +1568,145 @@ describe('neat export chapter', () => {
       });
     });
 
+    describe('given a full checkpoint whose genomes carry adaptive mutation state', () => {
+      it('restores per-genome mutation rate and mutation amount values', async () => {
+        // Arrange
+        const scoreByConnectionCount = (network: Network) =>
+          network.connections.length;
+        const neat = new Neat(2, 1, scoreByConnectionCount, {
+          popsize: 2,
+          seed: 335,
+        });
+        const firstGenome = neat.population[0] as ExportGenome;
+        const secondGenome = neat.population[1] as ExportGenome;
+        firstGenome._mutRate = 0.125;
+        firstGenome._mutAmount = 3;
+        secondGenome._mutRate = 0.875;
+        secondGenome._mutAmount = 5;
+
+        // Act
+        const restored = await Neat.importState(
+          neat.exportState(),
+          scoreByConnectionCount,
+        );
+
+        // Assert
+        expect(
+          restored.population.map((genome) => ({
+            mutationAmount: (genome as ExportGenome)._mutAmount ?? null,
+            mutationRate: (genome as ExportGenome)._mutRate ?? null,
+          })),
+        ).toEqual([
+          {
+            mutationAmount: 3,
+            mutationRate: 0.125,
+          },
+          {
+            mutationAmount: 5,
+            mutationRate: 0.875,
+          },
+        ]);
+      });
+    });
+
+    describe('given a full checkpoint whose controller carries adaptive operator state', () => {
+      it('restores operator success and attempt counts', async () => {
+        // Arrange
+        const scoreByConnectionCount = (network: Network) =>
+          network.connections.length;
+        const neat = new Neat(2, 1, scoreByConnectionCount, {
+          popsize: 2,
+          seed: 336,
+        });
+        const exportController = neat as unknown as ExportControllerState;
+        exportController._operatorStats = new Map([
+          ['ADD_NODE', { attempts: 5, success: 2 }],
+          ['SUB_CONN', { attempts: 4, success: 1 }],
+        ]);
+
+        // Act
+        const restored = await Neat.importState(
+          neat.exportState(),
+          scoreByConnectionCount,
+        );
+
+        // Assert
+        expect(
+          Array.from(
+            (
+              restored as unknown as ExportControllerState
+            )._operatorStats?.entries() ?? [],
+          ),
+        ).toEqual([
+          ['ADD_NODE', { attempts: 5, success: 2 }],
+          ['SUB_CONN', { attempts: 4, success: 1 }],
+        ]);
+      });
+    });
+
+    describe('given a full checkpoint whose controller carries novelty archive state', () => {
+      it('restores novelty archive descriptors and scores', async () => {
+        // Arrange
+        const scoreByConnectionCount = (network: Network) =>
+          network.connections.length;
+        const neat = new Neat(2, 1, scoreByConnectionCount, {
+          popsize: 2,
+          seed: 337,
+        });
+        const exportController = neat as unknown as ExportControllerState;
+        exportController._noveltyArchive = [
+          { desc: [1, 2, 3], novelty: 0.75 },
+          { desc: [5, 8], novelty: 1.25 },
+        ];
+
+        // Act
+        const restored = await Neat.importState(
+          neat.exportState(),
+          scoreByConnectionCount,
+        );
+
+        // Assert
+        expect(
+          (restored as unknown as ExportControllerState)._noveltyArchive ?? [],
+        ).toEqual([
+          { desc: [1, 2, 3], novelty: 0.75 },
+          { desc: [5, 8], novelty: 1.25 },
+        ]);
+      });
+    });
+
+    describe('given a full checkpoint whose controller carries adaptive pruning continuity state', () => {
+      it('restores adaptive pruning level and baseline', async () => {
+        // Arrange
+        const scoreByConnectionCount = (network: Network) =>
+          network.connections.length;
+        const neat = new Neat(2, 1, scoreByConnectionCount, {
+          popsize: 2,
+          seed: 338,
+        });
+        const exportController = neat as unknown as ExportControllerState;
+        exportController._adaptivePruneLevel = 0.35;
+        exportController._adaptivePruneBaseline = 14;
+
+        // Act
+        const restored = await Neat.importState(
+          neat.exportState(),
+          scoreByConnectionCount,
+        );
+
+        // Assert
+        expect({
+          adaptivePruneLevel: (restored as unknown as ExportControllerState)
+            ._adaptivePruneLevel,
+          adaptivePruneBaseline: (restored as unknown as ExportControllerState)
+            ._adaptivePruneBaseline,
+        }).toEqual({
+          adaptivePruneLevel: 0.35,
+          adaptivePruneBaseline: 14,
+        });
+      });
+    });
+
     describe('given the same full checkpoint resumes with the same code and seed', () => {
       it('continues with the same future innovation assignments and species outcomes', async () => {
         // Arrange
@@ -1373,6 +1761,410 @@ describe('neat export chapter', () => {
     });
   });
 
+  describe('light-state restore', () => {
+    const scoreByNodeCount = (network: Network) => network.nodes.length;
+
+    describe('given invalid light checkpoint inputs', () => {
+      it('rejects light checkpoint export when eliteCount is not positive', () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 347,
+        });
+
+        // Act
+        const exportInvalidLightCheckpoint = () =>
+          neat.exportLightState({ eliteCount: 0 });
+
+        // Assert
+        expect(exportInvalidLightCheckpoint).toThrow(
+          NeatExportPopulationValidationError,
+        );
+      });
+
+      it('rejects a missing light checkpoint bundle', async () => {
+        // Arrange
+        const invalidImport = Neat.importLightState(
+          undefined as unknown as Parameters<typeof Neat.importLightState>[0],
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+
+      it('rejects a non-object light checkpoint bundle', async () => {
+        // Arrange
+        const invalidImport = Neat.importLightState(
+          1 as unknown as Parameters<typeof Neat.importLightState>[0],
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+
+      it('rejects a future light checkpoint format version', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 348,
+        });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          formatVersion: 99,
+        } as Parameters<typeof Neat.importLightState>[0];
+
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          'Unsupported NEAT light checkpoint format version: 99.',
+        );
+      });
+
+      it('rejects a versioned light checkpoint without the light checkpoint marker', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 349,
+        });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          checkpointMode: 'full',
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
+
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+
+      it('rejects a light checkpoint that omits bootstrap metadata', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 350,
+        });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          neat: undefined,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
+
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+
+      it('rejects a light checkpoint that omits the retained population array', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 351,
+        });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          population: undefined,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
+
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+
+      it('rejects a light checkpoint whose restartPopulationSize is not an integer', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 352,
+        });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          restartPopulationSize: 2.5,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
+
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+
+      it('rejects a light checkpoint whose restartPopulationSize is negative', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 353,
+        });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          restartPopulationSize: -1,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
+
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+
+      it('rejects a light checkpoint whose restartPopulationSize is smaller than the retained elite count', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 4,
+          seed: 354,
+        });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 2 }),
+          restartPopulationSize: 1,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
+
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+    });
+
+    describe('given a saved light checkpoint from a larger run', () => {
+      it('restores legacy light checkpoints when the explicit format version is absent', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 4,
+          seed: 357,
+        });
+        const legacyLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          formatVersion: undefined,
+          checkpointMode: undefined,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
+
+        // Act
+        const restored = await Neat.importLightState(
+          legacyLightCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        expect({
+          restoredPopulationCount: restored.population.length,
+          restoredPopsize: restored.options.popsize,
+        }).toEqual({
+          restoredPopulationCount: 1,
+          restoredPopsize: 4,
+        });
+      });
+
+      it('falls back to the current population length when the controller popsize option is missing during light export', () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 4,
+          seed: 356,
+        });
+
+        delete (neat.options as { popsize?: number }).popsize;
+
+        // Act
+        const lightCheckpoint = neat.exportLightState({ eliteCount: 1 });
+
+        // Assert
+        expect(lightCheckpoint.restartPopulationSize).toBe(
+          neat.population.length,
+        );
+      });
+
+      it('restores only the retained elite subset while preserving the saved restart-scale population target', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 6,
+          seed: 346,
+        });
+        const scoredPopulation = neat.population as ExportGenome[];
+
+        neat.generation = 7;
+        scoredPopulation[0].score = 1;
+        scoredPopulation[1].score = 5;
+        scoredPopulation[2].score = 2;
+        scoredPopulation[3].score = 6;
+        scoredPopulation[4].score = 3;
+        scoredPopulation[5].score = 4;
+
+        // Act
+        const lightCheckpoint = neat.exportLightState({ eliteCount: 2 });
+        const restored = await Neat.importLightState(
+          lightCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        expect({
+          checkpointMode: lightCheckpoint.checkpointMode,
+          retainedEliteCount: lightCheckpoint.population.length,
+          restoredPopulationCount: restored.population.length,
+          restoredPopsize: restored.options.popsize,
+          restoredGeneration: restored.generation,
+        }).toEqual({
+          checkpointMode: 'light',
+          retainedEliteCount: 2,
+          restoredPopulationCount: 2,
+          restoredPopsize: 6,
+          restoredGeneration: 7,
+        });
+      });
+
+      it('evolves forward from a light-restored elite subset while refilling the saved restart-scale population target', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 6,
+          seed: 358,
+        });
+        const scoredPopulation = neat.population as ExportGenome[];
+
+        neat.generation = 7;
+        scoredPopulation[0].score = 1;
+        scoredPopulation[1].score = 5;
+        scoredPopulation[2].score = 2;
+        scoredPopulation[3].score = 6;
+        scoredPopulation[4].score = 3;
+        scoredPopulation[5].score = 4;
+
+        const restored = await Neat.importLightState(
+          neat.exportLightState({ eliteCount: 2 }),
+          scoreByNodeCount,
+        );
+
+        // Act
+        await restored.evolve();
+
+        // Assert
+        expect({
+          evolvedGeneration: restored.generation,
+          refilledPopulationCount: restored.population.length,
+          retainedRestartPopsize: restored.options.popsize,
+        }).toEqual({
+          evolvedGeneration: 8,
+          refilledPopulationCount: 6,
+          retainedRestartPopsize: 6,
+        });
+      });
+
+      it('accepts a reserved downstream extensions bag on light checkpoint bundles without changing restart behavior', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 5,
+          seed: 360,
+        });
+        const extensions: NonNullable<
+          Parameters<typeof Neat.importLightState>[0]['extensions']
+        > = {
+          neatchat: {
+            branchId: 'branch-1',
+          },
+        };
+        const extendedLightCheckpoint: Parameters<
+          typeof Neat.importLightState
+        >[0] = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          extensions,
+        };
+
+        // Act
+        const restored = await Neat.importLightState(
+          extendedLightCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        expect({
+          restoredGeneration: restored.generation,
+          restoredPopulationCount: restored.population.length,
+          restoredPopsize: restored.options.popsize,
+        }).toEqual({
+          restoredGeneration: extendedLightCheckpoint.neat.generation,
+          restoredPopulationCount: extendedLightCheckpoint.population.length,
+          restoredPopsize: extendedLightCheckpoint.restartPopulationSize,
+        });
+      });
+
+      it('falls back to an empty bootstrap options bag when the light checkpoint options payload is not an object', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 5,
+          seed: 355,
+        });
+        const invalidOptionsCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          neat: {
+            ...neat.exportLightState({ eliteCount: 1 }).neat,
+            generation: undefined,
+            options: 1,
+          },
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
+
+        // Act
+        const restored = await Neat.importLightState(
+          invalidOptionsCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        expect({
+          restoredGeneration: restored.generation,
+          restoredPopulationCount: restored.population.length,
+          restoredPopsize: restored.options.popsize,
+        }).toEqual({
+          restoredGeneration: 0,
+          restoredPopulationCount: 1,
+          restoredPopsize: 5,
+        });
+      });
+    });
+  });
+
   describe('runtime meta serialization and restoration', () => {
     describe('serializeRuntimeMeta', () => {
       it('exercises all optional field branches when fields are populated', () => {
@@ -1385,12 +2177,25 @@ describe('neat export chapter', () => {
           _lineageEnabled: boolean;
           _lastInbreedingCount: number;
           _lastGlobalImproveGeneration: number;
+          _adaptivePruneLevel: number;
+          _adaptivePruneBaseline: number;
+          _noveltyArchive: NoveltyArchiveEntry[];
+          _operatorStats: Map<string, { attempts: number; success: number }>;
           _speciesHistory: SpeciesHistoryEntry[];
         };
         neatInstance._nextGenomeId = 42;
         neatInstance._lineageEnabled = true;
         neatInstance._lastInbreedingCount = 3;
         neatInstance._lastGlobalImproveGeneration = 5;
+        neatInstance._adaptivePruneLevel = 0.2;
+        neatInstance._adaptivePruneBaseline = 11;
+        neatInstance._noveltyArchive = [
+          { desc: [3, 1], novelty: 0.9 },
+          { desc: [4, 1, 5], novelty: 1.1 },
+        ];
+        neatInstance._operatorStats = new Map([
+          ['ADD_NODE', { attempts: 5, success: 2 }],
+        ]);
         neatInstance._speciesHistory = [
           {
             generation: 0,
@@ -1409,12 +2214,23 @@ describe('neat export chapter', () => {
           lineageEnabled: serialized.lineageEnabled,
           lastInbreedingCount: serialized.lastInbreedingCount,
           lastGlobalImproveGeneration: serialized.lastGlobalImproveGeneration,
+          adaptivePruneLevel: serialized.adaptivePruneLevel,
+          adaptivePruneBaseline: serialized.adaptivePruneBaseline,
+          noveltyArchive: serialized.noveltyArchive,
+          operatorStats: serialized.operatorStats,
           hasSpeciesHistory: Array.isArray(serialized.speciesHistory),
         }).toEqual({
           nextGenomeId: 42,
           lineageEnabled: true,
           lastInbreedingCount: 3,
           lastGlobalImproveGeneration: 5,
+          adaptivePruneLevel: 0.2,
+          adaptivePruneBaseline: 11,
+          noveltyArchive: [
+            { desc: [3, 1], novelty: 0.9 },
+            { desc: [4, 1, 5], novelty: 1.1 },
+          ],
+          operatorStats: [['ADD_NODE', { attempts: 5, success: 2 }]],
           hasSpeciesHistory: true,
         });
       });
@@ -1430,6 +2246,10 @@ describe('neat export chapter', () => {
           _lineageEnabled?: boolean;
           _lastInbreedingCount?: number;
           _lastGlobalImproveGeneration?: number;
+          _adaptivePruneLevel?: number;
+          _adaptivePruneBaseline?: number;
+          _noveltyArchive?: NoveltyArchiveEntry[];
+          _operatorStats?: Map<string, { attempts: number; success: number }>;
           _speciesHistory?: SpeciesHistoryEntry[];
         };
         // Explicitly ensure optional fields are undefined
@@ -1437,6 +2257,10 @@ describe('neat export chapter', () => {
         neatCasted._lineageEnabled = undefined;
         neatCasted._lastInbreedingCount = undefined;
         neatCasted._lastGlobalImproveGeneration = undefined;
+        neatCasted._adaptivePruneLevel = undefined;
+        neatCasted._adaptivePruneBaseline = undefined;
+        neatCasted._noveltyArchive = undefined;
+        neatCasted._operatorStats = undefined;
         neatCasted._speciesHistory = undefined;
 
         // Act
@@ -1451,12 +2275,20 @@ describe('neat export chapter', () => {
           hasLastInbreedingCount: 'lastInbreedingCount' in serialized,
           hasLastGlobalImproveGeneration:
             'lastGlobalImproveGeneration' in serialized,
+          hasAdaptivePruneLevel: 'adaptivePruneLevel' in serialized,
+          hasAdaptivePruneBaseline: 'adaptivePruneBaseline' in serialized,
+          hasNoveltyArchive: 'noveltyArchive' in serialized,
+          hasOperatorStats: 'operatorStats' in serialized,
           hasSpeciesHistory: 'speciesHistory' in serialized,
         }).toEqual({
           hasNextGenomeId: false,
           hasLineageEnabled: false,
           hasLastInbreedingCount: false,
           hasLastGlobalImproveGeneration: false,
+          hasAdaptivePruneLevel: false,
+          hasAdaptivePruneBaseline: false,
+          hasNoveltyArchive: false,
+          hasOperatorStats: false,
           hasSpeciesHistory: false,
         });
       });
@@ -1469,7 +2301,7 @@ describe('neat export chapter', () => {
           popsize: 1,
           seed: 998,
         });
-        const runtimeMeta = {
+        const runtimeMeta: NeatRuntimeMetaJSON = {
           nextGenomeId: 55,
           nextConnectionInnovation: 100,
           nextNodeGeneId: 20,
@@ -1477,6 +2309,13 @@ describe('neat export chapter', () => {
           lineageEnabled: false,
           lastInbreedingCount: 2,
           lastGlobalImproveGeneration: 4,
+          adaptivePruneLevel: 0.45,
+          adaptivePruneBaseline: 17,
+          noveltyArchive: [
+            { desc: [8, 13], novelty: 1.5 },
+            { desc: [21], novelty: 0.5 },
+          ],
+          operatorStats: [['ADD_NODE', { attempts: 6, success: 3 }]],
           speciesHistory: [
             {
               generation: 1,
@@ -1495,6 +2334,10 @@ describe('neat export chapter', () => {
           _lineageEnabled: boolean;
           _lastInbreedingCount: number;
           _lastGlobalImproveGeneration: number;
+          _adaptivePruneLevel?: number;
+          _adaptivePruneBaseline?: number;
+          _noveltyArchive?: NoveltyArchiveEntry[];
+          _operatorStats?: Map<string, { attempts: number; success: number }>;
           _speciesHistory: SpeciesHistoryEntry[];
         };
 
@@ -1504,12 +2347,23 @@ describe('neat export chapter', () => {
           lineageEnabled: restored._lineageEnabled,
           lastInbreedingCount: restored._lastInbreedingCount,
           lastGlobalImproveGeneration: restored._lastGlobalImproveGeneration,
+          adaptivePruneLevel: restored._adaptivePruneLevel,
+          adaptivePruneBaseline: restored._adaptivePruneBaseline,
+          noveltyArchive: restored._noveltyArchive,
+          operatorStats: Array.from(restored._operatorStats?.entries() ?? []),
           hasSpeciesHistory: Array.isArray(restored._speciesHistory),
         }).toEqual({
           nextGenomeId: 55,
           lineageEnabled: false,
           lastInbreedingCount: 2,
           lastGlobalImproveGeneration: 4,
+          adaptivePruneLevel: 0.45,
+          adaptivePruneBaseline: 17,
+          noveltyArchive: [
+            { desc: [8, 13], novelty: 1.5 },
+            { desc: [21], novelty: 0.5 },
+          ],
+          operatorStats: [['ADD_NODE', { attempts: 6, success: 3 }]],
           hasSpeciesHistory: true,
         });
       });
@@ -1523,12 +2377,26 @@ describe('neat export chapter', () => {
         const beforeState = neatInstance as unknown as {
           _nextGenomeId?: number;
           _lineageEnabled?: boolean;
+          _adaptivePruneLevel?: number;
+          _adaptivePruneBaseline?: number;
+          _noveltyArchive?: NoveltyArchiveEntry[];
+          _operatorStats?: Map<string, { attempts: number; success: number }>;
           _lastInbreedingCount?: number;
           _lastGlobalImproveGeneration?: number;
           _speciesHistory?: SpeciesHistoryEntry[];
         };
         const beforeGenomeId = beforeState._nextGenomeId;
         const beforeLineageEnabled = beforeState._lineageEnabled;
+        beforeState._adaptivePruneLevel = 0.1;
+        const beforeAdaptivePruneLevel = beforeState._adaptivePruneLevel;
+        beforeState._adaptivePruneBaseline = 9;
+        const beforeAdaptivePruneBaseline = beforeState._adaptivePruneBaseline;
+        beforeState._noveltyArchive = [{ desc: [34], novelty: 0.25 }];
+        const beforeNoveltyArchive = beforeState._noveltyArchive;
+        beforeState._operatorStats = new Map([
+          ['SUB_CONN', { attempts: 4, success: 1 }],
+        ]);
+        const beforeOperatorStats = beforeState._operatorStats;
 
         const runtimeMeta = {
           nextConnectionInnovation: 200,
@@ -1545,6 +2413,10 @@ describe('neat export chapter', () => {
         const afterState = neatInstance as unknown as {
           _nextGenomeId?: number;
           _lineageEnabled?: boolean;
+          _adaptivePruneLevel?: number;
+          _adaptivePruneBaseline?: number;
+          _noveltyArchive?: NoveltyArchiveEntry[];
+          _operatorStats?: Map<string, { attempts: number; success: number }>;
         };
 
         // Assert - optional fields should retain their original values
@@ -1552,9 +2424,21 @@ describe('neat export chapter', () => {
           nextGenomeIdUnchanged: afterState._nextGenomeId === beforeGenomeId,
           lineageEnabledUnchanged:
             afterState._lineageEnabled === beforeLineageEnabled,
+          adaptivePruneLevelUnchanged:
+            afterState._adaptivePruneLevel === beforeAdaptivePruneLevel,
+          adaptivePruneBaselineUnchanged:
+            afterState._adaptivePruneBaseline === beforeAdaptivePruneBaseline,
+          noveltyArchiveUnchanged:
+            afterState._noveltyArchive === beforeNoveltyArchive,
+          operatorStatsUnchanged:
+            afterState._operatorStats === beforeOperatorStats,
         }).toEqual({
           nextGenomeIdUnchanged: true,
           lineageEnabledUnchanged: true,
+          adaptivePruneLevelUnchanged: true,
+          adaptivePruneBaselineUnchanged: true,
+          noveltyArchiveUnchanged: true,
+          operatorStatsUnchanged: true,
         });
       });
 

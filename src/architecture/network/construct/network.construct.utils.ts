@@ -643,6 +643,7 @@ function resolveRuntimeConstructorOptions(
     activationPrecision: options.activationPrecision,
     returnTypedActivations: options.returnTypedActivations,
     reuseActivationArrays: options.reuseActivationArrays,
+    reuseSequenceBuffers: options.reuseSequenceBuffers,
     seed: options.seed,
     topologyIntent: resolveTopologyIntentForMode(options.mode),
   };

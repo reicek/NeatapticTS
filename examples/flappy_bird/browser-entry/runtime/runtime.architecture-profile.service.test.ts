@@ -1,4 +1,7 @@
 import {
+  persistRuntimeArchitectureChampions,
+  persistRuntimeArchitectureHistory,
+  resetRuntimeArchitectureProgress,
   resolveAvailableRuntimeArchitectureProfiles,
   resolveRuntimeArchitectureSelectorItems,
   updateRuntimeArchitectureHistory,
@@ -91,6 +94,50 @@ describe('updateRuntimeArchitectureHistory', () => {
 
     expect(updatedHistory).toEqual({
       narx: { pipesPassed: 4, framesSurvived: 360 },
+    });
+  });
+});
+
+describe('resetRuntimeArchitectureProgress', () => {
+  it('clears both persisted score history and stored champions', () => {
+    const storageState = new Map<string, string>();
+    const storage = {
+      getItem(key: string): string | null {
+        return storageState.get(key) ?? null;
+      },
+      setItem(key: string, value: string): void {
+        storageState.set(key, value);
+      },
+    };
+
+    persistRuntimeArchitectureHistory(
+      {
+        gru: { pipesPassed: 12, framesSurvived: 1_234 },
+      },
+      storage,
+    );
+    persistRuntimeArchitectureChampions(
+      {
+        gru: {
+          connections: [{ weight: 1 }],
+          nodes: [{ type: 'input' }, { type: 'output' }],
+        },
+      },
+      storage,
+    );
+
+    resetRuntimeArchitectureProgress(storage);
+
+    expect({
+      clearedChampionState: storageState.get(
+        'neataptic:flappy-bird:architecture-champions:v1',
+      ),
+      clearedHistoryState: storageState.get(
+        'neataptic:flappy-bird:architecture-history:v1',
+      ),
+    }).toEqual({
+      clearedChampionState: '{}',
+      clearedHistoryState: '{}',
     });
   });
 });

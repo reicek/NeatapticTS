@@ -3,7 +3,9 @@ import type Network from '../../../src/architecture/network';
 import type { ExampleArchitectureProfileId } from '../../architectureProfiles';
 import { createXorshift32 } from '../rng';
 import {
-  evaluateFlappyFitnessAcrossSeeds,
+  rolloutEpisode,
+  type FlappyEpisodeResult,
+  type FlappyRolloutOptions,
   type FlappySeedBatchEvaluation,
 } from '../flappyEvaluation';
 import { resolveObservationVector } from '../browser-entry/browser-entry.observation.utils';
@@ -32,8 +34,12 @@ import {
 } from './flappy-evolution-worker.constants';
 import {
   createSharedObservationMemoryState,
+  computeMean,
+  computePercentile,
+  computePopulationStandardDeviation,
   resolveAdaptiveDifficultyProfile,
 } from '../flappy.simulation.shared.utils';
+import { FLAPPY_EVALUATION_ROBUST_STDDEV_PENALTY } from '../evaluation/evaluation.constants';
 
 const FLAPPY_WORKER_NARX_WARM_START_ROLLOUT_SEED_COUNT = 7;
 const FLAPPY_WORKER_NARX_WARM_START_OPTIMIZATION_STEPS = 20;
@@ -43,6 +49,25 @@ const FLAPPY_WORKER_GRU_WARM_START_ROLLOUT_SEED_COUNT = 4;
 const FLAPPY_WORKER_GRU_WARM_START_OPTIMIZATION_STEPS = 8;
 const FLAPPY_WORKER_LSTM_WARM_START_ROLLOUT_SEED_COUNT = 6;
 const FLAPPY_WORKER_LSTM_WARM_START_OPTIMIZATION_STEPS = 16;
+
+/**
+ * Hard worker-local assist limit for recurrent generation-zero warm-start.
+ *
+ * The browser demo should start evolving promptly: recurrent warm-start is a
+ * helpful prior, not a gate that must fully finish before NEAT can continue.
+ */
+const FLAPPY_WORKER_RECURRENT_WARM_START_TIME_LIMIT_MS = 10_000;
+
+/**
+ * Callable shape used to evaluate one warm-start rollout candidate.
+ *
+ * Tests can inject this seam to observe deadline hooks without running the full
+ * Flappy simulator, while production uses the real rollout service.
+ */
+type WorkerWarmStartRolloutRunner = (
+  templateNetwork: Network,
+  rolloutOptions: FlappyRolloutOptions,
+) => FlappyEpisodeResult;
 
 const FLAPPY_WARM_START_OBSERVATION_INDEX = {
   birdYPx: 0,
@@ -74,16 +99,42 @@ export interface WorkerWarmStartState {
  * and deterministic.
  */
 export interface WorkerWarmStartDependencies {
+  /** Build heuristic supervised samples for feed-forward warm-start families. */
   buildHeuristicPretrainSet: (
     rng: ReturnType<typeof createXorshift32>,
     sampleCount: number,
   ) => Array<{ input: number[]; output: number[] }>;
-  optimizeWarmStartTemplateNetwork: (
+  /** Optional rollout-guided template optimizer used by tests and production. */
+  optimizeWarmStartTemplateNetwork?: (
     templateNetwork: Network,
     workerInitSeed: number,
     architectureProfileId: ExampleArchitectureProfileId,
+    warmStartDeadline: WorkerWarmStartDeadline,
+    runWarmStartRollout: WorkerWarmStartRolloutRunner,
   ) => Network;
+  /** Optional rollout runner injected to observe or replace rollout scoring. */
+  rolloutEpisode?: WorkerWarmStartRolloutRunner;
+  /** Clock source used to create and query warm-start deadlines. */
+  resolveCurrentTimeMs?: () => number;
 }
+
+/** Deadline contract used by recurrent rollout refinement. */
+export interface WorkerWarmStartDeadline {
+  /** Absolute timestamp at which warm-start refinement should yield. */
+  expiresAtMs: number | undefined;
+  /** Clock source used for deadline checks. */
+  resolveCurrentTimeMs: () => number;
+}
+
+/** Rollout-refinement budget resolved for one warm-start architecture profile. */
+export type WorkerWarmStartRolloutOptimizationPlan = {
+  /** Number of deterministic rollout seeds used for candidate comparison. */
+  rolloutSeedCount: number;
+  /** Maximum number of topology-fixed optimization perturbations to try. */
+  optimizationStepCount: number;
+  /** Optional wall-clock assist budget for recurrent warm-start refinement. */
+  timeLimitMs?: number;
+};
 
 const DEFAULT_WORKER_WARM_START_DEPENDENCIES: WorkerWarmStartDependencies = {
   buildHeuristicPretrainSet,
@@ -104,6 +155,7 @@ const DEFAULT_WORKER_WARM_START_DEPENDENCIES: WorkerWarmStartDependencies = {
  *
  * @param neatController - Initialized NEAT runtime.
  * @param warmStartState - Mutable warm-start lifecycle state.
+ * @param dependencies - Injectable warm-start seams for tests and runtime customization.
  * @returns Promise resolved when warm-start evaluation finishes.
  * @example
  * ```ts
@@ -121,32 +173,57 @@ export async function warmStartWorkerGenerationZeroIfNeeded(
   // Step 1: Exit fast when warm-start is already processed.
   if (warmStartState.generationZeroWarmStartApplied) return;
 
+  try {
+    applyWarmStartGenerationZero(neatController, warmStartState, dependencies);
+  } catch {
+    // Warm-start is best-effort; the first NEAT generation should still evolve.
+  } finally {
+    warmStartState.generationZeroWarmStartApplied = true;
+  }
+}
+
+/**
+ * Applies the generation-zero warm-start body when the runtime is still eligible.
+ *
+ * @param neatController - Initialized NEAT runtime.
+ * @param warmStartState - Mutable warm-start lifecycle state.
+ * @param dependencies - Injectable warm-start seams.
+ * @returns Nothing.
+ */
+function applyWarmStartGenerationZero(
+  neatController: Neat,
+  warmStartState: WorkerWarmStartState,
+  dependencies: WorkerWarmStartDependencies,
+): void {
   // Step 2: Warm-start only generation 0 to avoid skewing later evolution.
   if (neatController.generation !== 0) {
-    warmStartState.generationZeroWarmStartApplied = true;
     return;
   }
 
   // Step 3: Validate population availability.
   const population = neatController.population;
   if (!Array.isArray(population) || population.length === 0) {
-    warmStartState.generationZeroWarmStartApplied = true;
     return;
   }
 
-  // Step 4: Build a small synthetic dataset labeled by a simple heuristic.
+  // Step 4: Build synthetic labels only for profiles that use teacher fitting.
   const warmStartRng = createXorshift32(
     warmStartState.workerInitSeed ^ 0x9e37_79b9,
   );
-  const trainingSet = dependencies.buildHeuristicPretrainSet(
-    warmStartRng,
-    FLAPPY_WORKER_GEN0_PRETRAIN_SAMPLE_COUNT,
+  const teacherStrategy = resolveWorkerWarmStartTeacherStrategy(
+    warmStartState.architectureProfileId,
   );
+  const trainingSet =
+    teacherStrategy === 'rollout-only'
+      ? []
+      : dependencies.buildHeuristicPretrainSet(
+          warmStartRng,
+          FLAPPY_WORKER_GEN0_PRETRAIN_SAMPLE_COUNT,
+        );
 
   // Step 5: Train a single template network when the selected profile supports it.
   const templateNetwork = population[0]?.clone();
   if (!templateNetwork) {
-    warmStartState.generationZeroWarmStartApplied = true;
     return;
   }
 
@@ -157,12 +234,22 @@ export async function warmStartWorkerGenerationZeroIfNeeded(
   );
 
   // Step 6: Refine the trained template with a short rollout-guided hill-climb.
-  const optimizedTemplateNetwork =
-    dependencies.optimizeWarmStartTemplateNetwork(
-      templateNetwork,
-      warmStartState.workerInitSeed,
-      warmStartState.architectureProfileId,
-    );
+  const resolveCurrentTimeMs = dependencies.resolveCurrentTimeMs ?? Date.now;
+  const warmStartDeadline = createWarmStartDeadline(
+    warmStartState.architectureProfileId,
+    resolveCurrentTimeMs,
+  );
+  const optimizeWarmStartTemplate =
+    dependencies.optimizeWarmStartTemplateNetwork ??
+    optimizeWarmStartTemplateNetwork;
+  const runWarmStartRollout = dependencies.rolloutEpisode ?? rolloutEpisode;
+  const optimizedTemplateNetwork = optimizeWarmStartTemplate(
+    templateNetwork,
+    warmStartState.workerInitSeed,
+    warmStartState.architectureProfileId,
+    warmStartDeadline,
+    runWarmStartRollout,
+  );
 
   // Step 7: Copy trained weights/biases into each genome with small noise for diversity.
   for (const genome of population) {
@@ -177,8 +264,6 @@ export async function warmStartWorkerGenerationZeroIfNeeded(
     );
     (genome as unknown as { score?: number }).score = undefined;
   }
-
-  warmStartState.generationZeroWarmStartApplied = true;
 }
 
 type WorkerWarmStartTeacherStrategy =
@@ -335,12 +420,19 @@ function buildHeuristicPretrainSet(
  * @param templateNetwork - Heuristic-pretrained template network.
  * @param workerInitSeed - Deterministic worker seed.
  * @param architectureProfileId - Selected shared Flappy profile id.
+ * @param warmStartDeadline - Optional recurrent assist deadline.
+ * @param runWarmStartRollout - Rollout runner used to score candidate templates.
  * @returns Best rollout-refined template found within the bounded budget.
  */
 function optimizeWarmStartTemplateNetwork(
   templateNetwork: Network,
   workerInitSeed: number,
   architectureProfileId: ExampleArchitectureProfileId,
+  warmStartDeadline: WorkerWarmStartDeadline = createWarmStartDeadline(
+    architectureProfileId,
+    Date.now,
+  ),
+  runWarmStartRollout: WorkerWarmStartRolloutRunner = rolloutEpisode,
 ): Network {
   const rolloutOptimizationPlan = resolveWarmStartRolloutOptimizationPlan(
     architectureProfileId,
@@ -359,6 +451,8 @@ function optimizeWarmStartTemplateNetwork(
   let bestTemplateEvaluation = evaluateWarmStartTemplateAcrossRollouts(
     bestTemplateNetwork,
     sharedRolloutSeeds,
+    warmStartDeadline,
+    runWarmStartRollout,
   );
 
   // Step 3: Run a bounded topology-fixed hill-climb on actual rollout fitness.
@@ -367,6 +461,10 @@ function optimizeWarmStartTemplateNetwork(
     optimizationStepIndex < rolloutOptimizationPlan.optimizationStepCount;
     optimizationStepIndex++
   ) {
+    if (isWarmStartDeadlineExpired(warmStartDeadline)) {
+      break;
+    }
+
     const candidateTemplateNetwork = bestTemplateNetwork.clone();
     const annealRatio = resolveWarmStartAnnealRatio(
       optimizationStepIndex,
@@ -389,6 +487,8 @@ function optimizeWarmStartTemplateNetwork(
     const candidateTemplateEvaluation = evaluateWarmStartTemplateAcrossRollouts(
       candidateTemplateNetwork,
       sharedRolloutSeeds,
+      warmStartDeadline,
+      runWarmStartRollout,
     );
     if (
       !isWarmStartEvaluationBetter(
@@ -405,6 +505,45 @@ function optimizeWarmStartTemplateNetwork(
   }
 
   return bestTemplateNetwork;
+}
+
+/**
+ * Creates the optional deadline used by recurrent warm-start refinement.
+ *
+ * @param architectureProfileId - Selected shared Flappy profile id.
+ * @param resolveCurrentTimeMs - Clock source used for deadline checks.
+ * @returns Warm-start deadline contract.
+ */
+function createWarmStartDeadline(
+  architectureProfileId: ExampleArchitectureProfileId,
+  resolveCurrentTimeMs: () => number,
+): WorkerWarmStartDeadline {
+  const rolloutOptimizationPlan = resolveWarmStartRolloutOptimizationPlan(
+    architectureProfileId,
+  );
+  const expiresAtMs = rolloutOptimizationPlan.timeLimitMs
+    ? resolveCurrentTimeMs() + rolloutOptimizationPlan.timeLimitMs
+    : undefined;
+
+  return {
+    expiresAtMs,
+    resolveCurrentTimeMs,
+  };
+}
+
+/**
+ * Resolves whether rollout refinement should yield to regular NEAT evolution.
+ *
+ * @param warmStartDeadline - Deadline contract for the current warm-start pass.
+ * @returns True when the warm-start assist has spent its allowed budget.
+ */
+function isWarmStartDeadlineExpired(
+  warmStartDeadline: WorkerWarmStartDeadline,
+): boolean {
+  return (
+    warmStartDeadline.expiresAtMs !== undefined &&
+    warmStartDeadline.resolveCurrentTimeMs() >= warmStartDeadline.expiresAtMs
+  );
 }
 
 /**
@@ -430,11 +569,15 @@ function buildWarmStartRolloutSeedBatch(
  *
  * @param templateNetwork - Candidate template to score.
  * @param sharedRolloutSeeds - Shared rollout seeds used for stable comparison.
+ * @param warmStartDeadline - Deadline that can stop seed evaluation early.
+ * @param runWarmStartRollout - Rollout runner used to evaluate each seed.
  * @returns Aggregate shared-seed evaluation.
  */
 function evaluateWarmStartTemplateAcrossRollouts(
   templateNetwork: Network,
   sharedRolloutSeeds: readonly number[],
+  warmStartDeadline: WorkerWarmStartDeadline,
+  runWarmStartRollout: WorkerWarmStartRolloutRunner,
 ): FlappySeedBatchEvaluation {
   // Step 1: Reset network state when the runtime exposes a clear hook.
   const maybeClearableNetwork = templateNetwork as Network & {
@@ -442,11 +585,69 @@ function evaluateWarmStartTemplateAcrossRollouts(
   };
   maybeClearableNetwork.clear?.();
 
-  // Step 2: Score the fixed topology on real Flappy rollouts.
-  return evaluateFlappyFitnessAcrossSeeds(templateNetwork, sharedRolloutSeeds, {
-    enableEarlyTermination: true,
-    maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
-  });
+  // Step 2: Score as many shared seeds as the current deadline can still afford.
+  const episodeResults: FlappyEpisodeResult[] = [];
+  for (const seedValue of sharedRolloutSeeds) {
+    if (isWarmStartDeadlineExpired(warmStartDeadline)) {
+      break;
+    }
+
+    maybeClearableNetwork.clear?.();
+    episodeResults.push(
+      runWarmStartRollout(templateNetwork, {
+        enableEarlyTermination: true,
+        maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
+        seed: seedValue,
+        shouldStop: () => isWarmStartDeadlineExpired(warmStartDeadline),
+      }),
+    );
+  }
+
+  // Step 3: Collapse the completed seed evidence into the same aggregate shape.
+  return composeWarmStartSeedBatchEvaluation(episodeResults);
+}
+
+/**
+ * Composes the completed warm-start rollouts into aggregate evidence.
+ *
+ * @param episodeResults - Completed rollout results before the deadline fired.
+ * @returns Aggregate warm-start evaluation metrics.
+ */
+function composeWarmStartSeedBatchEvaluation(
+  episodeResults: readonly FlappyEpisodeResult[],
+): FlappySeedBatchEvaluation {
+  const rolloutFitnessValues = episodeResults.map(
+    (rolloutResult) => rolloutResult.fitness,
+  );
+  const fitnessMean = computeMean(rolloutFitnessValues);
+  const fitnessStdDev = computePopulationStandardDeviation(
+    rolloutFitnessValues,
+    fitnessMean,
+  );
+  const medianFitness =
+    rolloutFitnessValues.length === 0
+      ? 0
+      : computePercentile(rolloutFitnessValues, 0.5);
+  const p90Fitness =
+    rolloutFitnessValues.length === 0
+      ? 0
+      : computePercentile(rolloutFitnessValues, 0.9);
+
+  return {
+    seedCount: episodeResults.length,
+    meanFitness: fitnessMean,
+    medianFitness,
+    p90Fitness,
+    fitnessStdDev,
+    robustFitness:
+      fitnessMean - fitnessStdDev * FLAPPY_EVALUATION_ROBUST_STDDEV_PENALTY,
+    meanPipesPassed: computeMean(
+      episodeResults.map((episodeResult) => episodeResult.pipesPassed),
+    ),
+    meanFramesSurvived: computeMean(
+      episodeResults.map((episodeResult) => episodeResult.framesSurvived),
+    ),
+  };
 }
 
 /**
@@ -458,6 +659,7 @@ function evaluateWarmStartTemplateAcrossRollouts(
  *
  * @param candidateEvaluation - Newly scored candidate aggregate.
  * @param bestEvaluation - Current best aggregate.
+ * @param architectureProfileId - Selected shared Flappy profile id.
  * @returns True when the candidate should replace the incumbent template.
  */
 function isWarmStartEvaluationBetter(
@@ -497,18 +699,16 @@ function isWarmStartEvaluationBetter(
  * shortcut expands the recurrent seed.
  *
  * @param architectureProfileId - Selected shared Flappy profile id.
- * @returns Shared-seed count and optimization-step budget.
+ * @returns Shared-seed count, optimization-step budget, and optional time cap.
  */
 export function resolveWarmStartRolloutOptimizationPlan(
   architectureProfileId: ExampleArchitectureProfileId,
-): {
-  rolloutSeedCount: number;
-  optimizationStepCount: number;
-} {
+): WorkerWarmStartRolloutOptimizationPlan {
   if (architectureProfileId === 'narx') {
     return {
       rolloutSeedCount: FLAPPY_WORKER_NARX_WARM_START_ROLLOUT_SEED_COUNT,
       optimizationStepCount: FLAPPY_WORKER_NARX_WARM_START_OPTIMIZATION_STEPS,
+      timeLimitMs: FLAPPY_WORKER_RECURRENT_WARM_START_TIME_LIMIT_MS,
     };
   }
 
@@ -516,6 +716,7 @@ export function resolveWarmStartRolloutOptimizationPlan(
     return {
       rolloutSeedCount: FLAPPY_WORKER_GRU_WARM_START_ROLLOUT_SEED_COUNT,
       optimizationStepCount: FLAPPY_WORKER_GRU_WARM_START_OPTIMIZATION_STEPS,
+      timeLimitMs: FLAPPY_WORKER_RECURRENT_WARM_START_TIME_LIMIT_MS,
     };
   }
 
@@ -523,6 +724,7 @@ export function resolveWarmStartRolloutOptimizationPlan(
     return {
       rolloutSeedCount: FLAPPY_WORKER_LSTM_WARM_START_ROLLOUT_SEED_COUNT,
       optimizationStepCount: FLAPPY_WORKER_LSTM_WARM_START_OPTIMIZATION_STEPS,
+      timeLimitMs: FLAPPY_WORKER_RECURRENT_WARM_START_TIME_LIMIT_MS,
     };
   }
 

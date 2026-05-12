@@ -28,6 +28,7 @@ export { createInitialFlappyState } from './environment/environment.state.servic
 export {
   stepFlappyState,
   stepFlappyStateWithControlSubsteps,
+  stepFlappyStateWithControlSubstepsAsync,
 } from './environment/environment.step.service';
 export {
   getFlappyObservation,

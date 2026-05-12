@@ -12,8 +12,8 @@
 import {
   exportVisualizationGraph,
   renderNetworkView,
-} from '../../../src/neataptic';
-import type Network from '../../../src/architecture/network';
+} from '../../src/neataptic';
+import type Network from '../../src/architecture/network';
 
 /**
  * Options for the ASCII Maze visualizer.

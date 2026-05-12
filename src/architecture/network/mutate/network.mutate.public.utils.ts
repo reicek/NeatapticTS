@@ -1,8 +1,9 @@
-import { config } from '../../../config';
+import { defaultMemoryManager } from '../../../memory/manager';
 import Node from '../../node/node';
 import { acquireNode } from '../../nodePool/nodePool';
 import type Network from '../network';
 import type { NetworkMutationProps } from '../network.types';
+import { ensureGrowthBudget } from '../network.utils';
 
 /**
  * Public structural-mutation helpers that stay outside the mutation dispatch table.
@@ -24,8 +25,13 @@ import type { NetworkMutationProps } from '../network.types';
  * @returns Nothing.
  */
 export function addNodeBetweenImpl(this: Network): void {
+  const memoryConfig = defaultMemoryManager.getConfig();
   const mutationProps = this as unknown as NetworkMutationProps;
   if (this.connections.length === 0) {
+    return;
+  }
+
+  if (!ensureGrowthBudget(this, 1)) {
     return;
   }
 
@@ -41,7 +47,7 @@ export function addNodeBetweenImpl(this: Network): void {
   this.disconnect(selectedConnection.from, selectedConnection.to);
 
   // Step 2: Create the replacement hidden node using the same pooling policy as the runtime.
-  const insertedNode = config.enableNodePooling
+  const insertedNode = memoryConfig.enableNodePooling
     ? acquireNode({ type: 'hidden', rng: mutationProps._rand })
     : new Node('hidden', undefined, mutationProps._rand);
   this.nodes.push(insertedNode);

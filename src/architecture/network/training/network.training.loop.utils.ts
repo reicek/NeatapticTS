@@ -14,6 +14,12 @@ import type {
   TrainingSample,
 } from './network.training.utils.types';
 
+/** Smallest magnitude that survives float16 subnormal storage. */
+const FLOAT16_SUBNORMAL_MAGNITUDE_FLOOR = 2 ** -24;
+
+/** Power-of-two loss-scale adjustments preserve exact rescaling steps. */
+const LOSS_SCALE_ADJUSTMENT_FACTOR = 2;
+
 /**
  * Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
  *
@@ -174,6 +180,10 @@ export const trainSetCore = (
             ) {
               averageAccumulatedGradients(net, accumulationSteps);
             }
+            const underflowDetected = detectMixedPrecisionUnderflow(
+              net,
+              internalNet,
+            );
             internalNet._lastGradNorm = applyOptimizerStep(
               net,
               optimizer,
@@ -182,7 +192,7 @@ export const trainSetCore = (
               internalNet,
             );
             if (internalNet._mixedPrecision.enabled) {
-              maybeIncreaseLossScale(internalNet);
+              maybeIncreaseLossScale(internalNet, underflowDetected);
             }
           }
         }
@@ -214,6 +224,46 @@ const detectMixedPrecisionOverflow = (
     }
   });
   return overflow;
+};
+
+const detectMixedPrecisionUnderflow = (
+  net: Network,
+  internalNet: NetworkInternals,
+): boolean => {
+  if (!internalNet._mixedPrecision.enabled) return false;
+
+  let hasFiniteNonZeroGradient = false;
+  let maxScaledGradientMagnitude = 0;
+
+  const observeGradient = (gradient: number | undefined): void => {
+    if (typeof gradient !== 'number' || !Number.isFinite(gradient)) return;
+
+    const absoluteGradient = Math.abs(gradient);
+    if (absoluteGradient === 0) return;
+
+    hasFiniteNonZeroGradient = true;
+    maxScaledGradientMagnitude = Math.max(
+      maxScaledGradientMagnitude,
+      absoluteGradient * internalNet._mixedPrecision.lossScale,
+    );
+  };
+
+  net.nodes.forEach((node) => {
+    const nodeInternal = node as unknown as NodeInternals;
+
+    nodeInternal.connections.in.forEach((connection) => {
+      observeGradient(connection.totalDeltaWeight);
+    });
+    nodeInternal.connections.self.forEach((connection) => {
+      observeGradient(connection.totalDeltaWeight);
+    });
+    observeGradient(nodeInternal.totalDeltaBias);
+  });
+
+  return (
+    hasFiniteNonZeroGradient &&
+    maxScaledGradientMagnitude < FLOAT16_SUBNORMAL_MAGNITUDE_FLOOR
+  );
 };
 
 const zeroAccumulatedGradients = (net: Network): void => {
@@ -294,7 +344,32 @@ const applyOptimizerStep = (
   return Math.sqrt(sumSq);
 };
 
-const maybeIncreaseLossScale = (internalNet: NetworkInternals): void => {
+const maybeIncreaseLossScale = (
+  internalNet: NetworkInternals,
+  underflowDetected: boolean,
+): void => {
+  if (underflowDetected) {
+    internalNet._mixedPrecisionState.goodSteps = 0;
+    internalNet._mixedPrecisionState.underflowCount =
+      (internalNet._mixedPrecisionState.underflowCount || 0) + 1;
+    internalNet._mixedPrecisionState.lastUnderflowStep =
+      internalNet._optimizerStep;
+
+    if (
+      internalNet._mixedPrecision.lossScale <
+      internalNet._mixedPrecisionState.maxLossScale
+    ) {
+      internalNet._mixedPrecision.lossScale = Math.min(
+        internalNet._mixedPrecisionState.maxLossScale,
+        internalNet._mixedPrecision.lossScale * LOSS_SCALE_ADJUSTMENT_FACTOR,
+      );
+      internalNet._mixedPrecisionState.scaleUpEvents =
+        (internalNet._mixedPrecisionState.scaleUpEvents || 0) + 1;
+    }
+
+    return;
+  }
+
   internalNet._mixedPrecisionState.goodSteps++;
   const increaseEvery = internalNet._mpIncreaseEvery || 200;
   if (
@@ -302,7 +377,10 @@ const maybeIncreaseLossScale = (internalNet: NetworkInternals): void => {
     internalNet._mixedPrecision.lossScale <
       internalNet._mixedPrecisionState.maxLossScale
   ) {
-    internalNet._mixedPrecision.lossScale *= 2;
+    internalNet._mixedPrecision.lossScale = Math.min(
+      internalNet._mixedPrecisionState.maxLossScale,
+      internalNet._mixedPrecision.lossScale * LOSS_SCALE_ADJUSTMENT_FACTOR,
+    );
     internalNet._mixedPrecisionState.goodSteps = 0;
     internalNet._mixedPrecisionState.scaleUpEvents =
       (internalNet._mixedPrecisionState.scaleUpEvents || 0) + 1;
@@ -314,7 +392,9 @@ const handleOverflow = (internalNet: NetworkInternals): void => {
   internalNet._mixedPrecisionState.goodSteps = 0;
   internalNet._mixedPrecision.lossScale = Math.max(
     internalNet._mixedPrecisionState.minLossScale,
-    Math.floor(internalNet._mixedPrecision.lossScale / 2) || 1,
+    Math.floor(
+      internalNet._mixedPrecision.lossScale / LOSS_SCALE_ADJUSTMENT_FACTOR,
+    ) || 1,
   );
   internalNet._mixedPrecisionState.overflowCount =
     (internalNet._mixedPrecisionState.overflowCount || 0) + 1;

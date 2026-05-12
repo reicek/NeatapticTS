@@ -9,6 +9,8 @@ import {
   describeArchitecture,
   trainSetImpl,
   __trainingInternals,
+  forwardWindowed,
+  forwardWindowedAsync,
 } from './network.utils';
 
 describe('network utils barrel chapter', () => {
@@ -92,6 +94,22 @@ describe('network utils barrel chapter', () => {
       describe('when accessed from the barrel', () => {
         it('is an object', () => {
           expect(typeof __trainingInternals).toBe('object');
+        });
+      });
+    });
+
+    describe('given forwardWindowed is imported through the barrel', () => {
+      describe('when resolved from the barrel', () => {
+        it('is a function', () => {
+          expect(typeof forwardWindowed).toBe('function');
+        });
+      });
+    });
+
+    describe('given forwardWindowedAsync is imported through the barrel', () => {
+      describe('when resolved from the barrel', () => {
+        it('is a function', () => {
+          expect(typeof forwardWindowedAsync).toBe('function');
         });
       });
     });

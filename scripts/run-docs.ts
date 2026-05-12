@@ -48,8 +48,11 @@ async function runFullDocsWorkflow(): Promise<void> {
     { label: 'Evolve XOR bundle', scriptName: 'build:evolve-xor' },
     { label: 'Sequence Reset bundle', scriptName: 'build:sequence-reset' },
     { label: 'ASCII Maze bundle', scriptName: 'build:ascii-maze' },
-    { label: 'Flappy worker bundle', scriptName: 'build:flappy-worker' },
-    { label: 'Flappy Bird bundle', scriptName: 'build:flappy-bird' },
+    {
+      label: 'ASCII Maze worker bundle',
+      scriptName: 'build:ascii-maze-worker',
+    },
+    { label: 'Flappy Bird bundles', scriptName: 'build:flappy-bird' },
     { label: 'NEATchat bundle', scriptName: 'build:neat-chat' },
   ]);
 

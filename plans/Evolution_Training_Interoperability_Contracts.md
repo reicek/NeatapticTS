@@ -12,6 +12,11 @@ Make hybrid workflows (evolution + gradient fine-tuning) predictable and well-ty
 
 This prevents “special-case glue” and improves correctness, reproducibility, and docs.
 
+## Roadmap alignment note
+
+- In the agreed serial pre-NGE sequence, this lane starts after `plans/ONNX_EXPORT_PLAN.md` reaches its stop line and before `plans/NEATchat.plans.md` is allowed to move from dependency-gated planning into implementation.
+- Do not use this file to skip ahead into NEATchat or Phase 7 / NGE work; it is the last non-chat foundation lane before the gated conversational-system follow-up.
+
 ## Goals
 
 - G1: Define a stable way to map a network to/from a parameter vector (“weights + biases”).

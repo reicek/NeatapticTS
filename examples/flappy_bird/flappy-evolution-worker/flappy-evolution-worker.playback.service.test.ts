@@ -8,7 +8,7 @@ type MockNetwork = {
 
 describe('processWorkerPlaybackStep', () => {
   describe('when the completed playback winner clears the browser success target', () => {
-    it('downshifts the future browser population budget before the next generation', () => {
+    it('downshifts the future browser population budget before the next generation', async () => {
       // Arrange
       const postWorkerMessage = jest.fn();
       const runtimeNetwork = createMockNetwork();
@@ -22,7 +22,7 @@ describe('processWorkerPlaybackStep', () => {
       };
 
       // Act
-      processWorkerPlaybackStep({
+      await processWorkerPlaybackStep({
         playbackStepPayload: {
           requestId: 1,
           simulationSteps: 1,
@@ -58,7 +58,7 @@ describe('processWorkerPlaybackStep', () => {
         currentPlaybackRng: createXorshift32(12345),
         currentPopulation: currentPopulation as never,
         neatRuntime: neatRuntime as never,
-        stepPopulationFrame: () => 0,
+        stepPopulationFrame: async () => 0,
         createPlaybackSnapshot: () => ({
           format: 'packed-v1',
           frameIndex: 12,
@@ -90,17 +90,20 @@ describe('processWorkerPlaybackStep', () => {
         done: postWorkerMessage.mock.calls.at(-1)?.[0]?.payload?.done,
         winnerPipesPassed:
           postWorkerMessage.mock.calls.at(-1)?.[0]?.payload?.winnerPipesPassed,
+        winnerNetworkJson:
+          postWorkerMessage.mock.calls.at(-1)?.[0]?.payload?.winnerNetworkJson,
       }).toEqual({
         elitism: 2,
         populationSize: 8,
         done: true,
         winnerPipesPassed: 10,
+        winnerNetworkJson: { connections: [] },
       });
     });
   });
 
   describe('when the completed playback winner stays below the browser success target', () => {
-    it('keeps the existing browser population budget for the next generation', () => {
+    it('keeps the existing browser population budget for the next generation', async () => {
       // Arrange
       const postWorkerMessage = jest.fn();
       const runtimeNetwork = createMockNetwork();
@@ -113,7 +116,7 @@ describe('processWorkerPlaybackStep', () => {
       };
 
       // Act
-      processWorkerPlaybackStep({
+      await processWorkerPlaybackStep({
         playbackStepPayload: {
           requestId: 1,
           simulationSteps: 1,
@@ -143,7 +146,7 @@ describe('processWorkerPlaybackStep', () => {
         currentPlaybackRng: createXorshift32(12345),
         currentPopulation: [runtimeNetwork] as never,
         neatRuntime: neatRuntime as never,
-        stepPopulationFrame: () => 0,
+        stepPopulationFrame: async () => 0,
         createPlaybackSnapshot: () => ({
           format: 'packed-v1',
           frameIndex: 12,
@@ -181,6 +184,84 @@ describe('processWorkerPlaybackStep', () => {
       });
     });
   });
+
+  describe('when playback completes with persistent inference channels', () => {
+    it('closes each bird channel before retiring the playback state', async () => {
+      const firstClose = jest.fn(async () => undefined);
+      const secondClose = jest.fn(async () => undefined);
+
+      await processWorkerPlaybackStep({
+        playbackStepPayload: {
+          requestId: 1,
+          simulationSteps: 1,
+          visibleWorldWidthPx: 1280,
+          visibleWorldHeightPx: 720,
+        },
+        currentPlaybackState: {
+          frameIndex: 12,
+          cumulativePipeTravelPx: 0,
+          visibleWorldWidthPx: 1280,
+          visibleWorldHeightPx: 720,
+          nextPipeId: 0,
+          lastSpawnedPipeGapPx: 0,
+          lastSpawnedPipeGapCenterYPx: 0,
+          lastSpawnedPipeSpawnIntervalFrames: 0,
+          framesUntilNextPipeSpawn: 0,
+          pipes: [],
+          birds: [
+            createPlaybackBird({
+              network: createMockNetwork(),
+              pipesPassed: 2,
+              framesSurvived: 40,
+              done: true,
+              inferenceChannel: { close: firstClose },
+            }),
+            createPlaybackBird({
+              network: createMockNetwork(),
+              pipesPassed: 1,
+              framesSurvived: 30,
+              done: true,
+              inferenceChannel: { close: secondClose },
+            }),
+          ],
+        } as never,
+        currentPlaybackRng: createXorshift32(12345),
+        currentPopulation: [createMockNetwork()] as never,
+        neatRuntime: undefined,
+        stepPopulationFrame: async () => 0,
+        createPlaybackSnapshot: () => ({
+          format: 'packed-v1',
+          frameIndex: 12,
+          cumulativePipeTravelPx: 0,
+          visibleWorldWidthPx: 1280,
+          visibleWorldHeightPx: 720,
+          pipeCount: 0,
+          birdCount: 2,
+          pipes: {
+            xPositionsPx: new Float32Array(),
+            gapCenterYPositionsPx: new Float32Array(),
+            gapSizesPx: new Float32Array(),
+          },
+          birds: {
+            yPositionsPx: new Float32Array(),
+            pipesPassed: new Uint32Array(),
+            framesSurvived: new Uint32Array(),
+            doneFlags: new Uint8Array(),
+          },
+        }),
+        resolvePlaybackSnapshotTransferList: () => [],
+        postWorkerMessage: jest.fn(),
+      });
+
+      expect({
+        firstCloseCalls: firstClose.mock.calls.length,
+        secondCloseCalls: secondClose.mock.calls.length,
+      }).toEqual({
+        firstCloseCalls: 1,
+        secondCloseCalls: 1,
+      });
+    });
+  });
 });
 
 function createMockNetwork(): MockNetwork {
@@ -195,8 +276,12 @@ function createPlaybackBird(options: {
   pipesPassed: number;
   framesSurvived: number;
   done: boolean;
+  inferenceChannel?: {
+    close: jest.Mock<Promise<void>, []>;
+  };
 }) {
   return {
+    inferenceChannel: options.inferenceChannel,
     network: options.network,
     observationMemoryState: {
       previousCoreObservationFrames: [],

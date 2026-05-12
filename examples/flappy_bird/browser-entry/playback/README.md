@@ -243,8 +243,10 @@ resolvePlaybackViewportDimensions(
 
 Resolves the current visible playback viewport dimensions from the canvas.
 
-Playback sizing is derived from the live canvas rather than a hard-coded
-constant so resizing can flow into the worker/session boundary cleanly.
+Playback normally mirrors the live canvas dimensions, but the browser host
+intentionally seeds that canvas at `1x1` before the resize hook applies the
+real backing size. When that placeholder size is still active, the playback
+worker uses the canonical Flappy world dimensions instead of waiting.
 
 Parameters:
 - `canvas` - Target playback canvas.
@@ -353,7 +355,7 @@ Returns: Nothing.
 ```ts
 emitPlaybackFrameStats(
   iterationContext: PlaybackIterationContext,
-  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; },
+  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; },
 ): void
 ```
 
@@ -370,7 +372,7 @@ Returns: Nothing.
 ```ts
 requestPlaybackStepPayload(
   iterationContext: PlaybackIterationContext,
-): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; }>
 ```
 
 Requests one playback step batch from the evolution worker.
@@ -415,7 +417,7 @@ Returns: Nothing.
 ```ts
 updatePlaybackLoopCompletion(
   loopState: PlaybackLoopState,
-  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; },
+  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; },
 ): void
 ```
 
@@ -1159,10 +1161,10 @@ and to package the result for the current viewport dimensions.
 
 ```ts
 resolvePlaybackCompletionSummary(
-  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; },
+  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; },
   latestLeaderPipesPassed: number,
   latestLeaderFramesSurvived: number,
-): { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; }
+): { averagePipesPassed: number; p90FramesSurvived: number; winnerPipesPassed: number; winnerFramesSurvived: number; winnerNetworkJson?: Record<string, unknown> | undefined; }
 ```
 
 Resolves final playback summary values when the worker reports completion.
@@ -1182,7 +1184,7 @@ Returns: Final aggregate playback summary.
 
 ```ts
 resolvePlaybackFrameStats(
-  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; },
+  playbackStepPayload: { requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; },
   frameIndex: number,
   activeBirdCount: number,
   leaderPipesPassed: number,

@@ -145,15 +145,17 @@ activateRaw(
   input: number[],
   training: boolean,
   maxActivationDepth: number,
-): number[]
+): ActivationArray
 ```
 
-Thin semantic alias to the network's main activation path.
+Raw activation wrapper with optional typed-output reuse semantics.
 
-At present this simply forwards to {@link Network.activate}. The indirection is useful for:
- - Future differentiation between raw (immediate) activation and a mode that performs reuse /
-   staged batching logic.
- - Providing a stable exported symbol for external tooling / instrumentation.
+The heavy math still lives in the main activation path, but this wrapper now
+owns the contract for network-local typed output reuse. When
+`reuseActivationArrays` is enabled, raw activation may copy the detached
+activation result into a reusable typed buffer whose element width follows
+the network's resolved activation precision. Callers that also enable
+`returnTypedActivations` may receive that reusable typed buffer directly.
 
 Parameters:
 - `this` - Bound Network instance.
@@ -161,7 +163,7 @@ Parameters:
 - `training` - Whether to retain training traces / gradients (delegated downstream).
 - `maxActivationDepth` - Guard against runaway recursion / cyclic activation attempts.
 
-Returns: Implementation-defined result of Network.activate (typically an output vector).
+Returns: Output vector, either as a plain array or a reusable typed activation buffer.
 
 Example:
 
@@ -325,6 +327,7 @@ Weight-noise telemetry collected during a single activation pass.
 ```ts
 acquireOutputBuffer(
   outputSize: number,
+  activationPrecision: ActivationPrecision | undefined,
 ): ActivationArray
 ```
 
@@ -334,6 +337,23 @@ Parameters:
 - `outputSize` - Number of output slots.
 
 Returns: Mutable pooled output buffer.
+
+### acquireSequenceOutputBuffer
+
+```ts
+acquireSequenceOutputBuffer(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  outputSize: number,
+): number[]
+```
+
+Acquire the next reusable plain array slot for one sequence activation result.
+
+Parameters:
+- `runtimeNetwork` - Runtime activation internals.
+- `outputSize` - Required activation output width.
+
+Returns: One reusable plain array slot from the network-owned output ring.
 
 ### activate
 
@@ -630,6 +650,23 @@ Parameters:
 
 Returns: True when one or more probabilities are invalid.
 
+### copyOutputBufferIntoSequenceRing
+
+```ts
+copyOutputBufferIntoSequenceRing(
+  outputBuffer: ActivationArray,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number[]
+```
+
+Copy one pooled activation result into the current reusable sequence-output slot.
+
+Parameters:
+- `outputBuffer` - Mutable pooled output buffer.
+- `runtimeNetwork` - Runtime activation internals.
+
+Returns: Reused plain array slot for the current sequence step.
+
 ### createActivationStats
 
 ```ts
@@ -644,6 +681,21 @@ Parameters:
 - `totalConnections` - Number of network connections.
 
 Returns: Initialized activation stats object.
+
+### createSequenceOutputRing
+
+```ts
+createSequenceOutputRing(
+  outputSize: number,
+): number[][]
+```
+
+Create a reusable plain-array ring for consecutive sequence outputs.
+
+Parameters:
+- `outputSize` - Required activation output width.
+
+Returns: Fresh fixed-depth ring of plain output arrays.
 
 ### createWeightNoiseStats
 
@@ -679,6 +731,23 @@ Parameters:
 - `previousLayerActivations` - Last computed layer activations.
 
 Returns: Skip decision and survival probability for the layer.
+
+### ensureSequenceOutputRing
+
+```ts
+ensureSequenceOutputRing(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  outputSize: number,
+): void
+```
+
+Ensure the network owns a fixed-depth reusable ring sized for the current output width.
+
+Parameters:
+- `runtimeNetwork` - Runtime activation internals.
+- `outputSize` - Required activation output width.
+
+Returns: Nothing.
 
 ### executeActivationPath
 
@@ -927,6 +996,7 @@ Returns: Nothing.
 ```ts
 releaseBufferAndCreateResult(
   outputBuffer: ActivationArray,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
 ): number[]
 ```
 
@@ -987,6 +1057,21 @@ Parameters:
 - `runtimeNetwork` - Runtime activation internals.
 
 Returns: Effective weight-noise standard deviation for current training step.
+
+### resolveRuntimeActivationPrecision
+
+```ts
+resolveRuntimeActivationPrecision(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): ActivationPrecision | undefined
+```
+
+Read the resolved runtime activation precision from the current network.
+
+Parameters:
+- `runtimeNetwork` - Runtime activation internals.
+
+Returns: Active per-network activation precision when present.
 
 ### restoreDropConnectWeights
 
@@ -1301,7 +1386,7 @@ Returns: Output activation vector detached from pooled storage.
 ```ts
 executeRawActivation(
   activationContext: RawActivationContext,
-): number[]
+): ActivationArray
 ```
 
 Execute raw activation through the network delegate using a compact orchestration flow.
@@ -1347,12 +1432,27 @@ Parameters:
 
 Returns: Activation output vector.
 
+### activateWithReusableOutputBuffer
+
+```ts
+activateWithReusableOutputBuffer(
+  activationContext: RawActivationContext,
+): ActivationArray
+```
+
+Reuse the network-owned activation buffer for raw activation output when enabled.
+
+Parameters:
+- `activationContext` - Shared raw activation state.
+
+Returns: Reused typed buffer or a detached plain array, depending on runtime flags.
+
 ### activateWithSelectedReusePath
 
 ```ts
 activateWithSelectedReusePath(
   activationContext: RawActivationContext,
-): number[]
+): ActivationArray
 ```
 
 Select the raw activation execution path based on runtime reuse configuration.
@@ -1362,12 +1462,61 @@ Parameters:
 
 Returns: Activation output vector.
 
+### copyActivationResultIntoReusableBuffer
+
+```ts
+copyActivationResultIntoReusableBuffer(
+  activationResult: number[],
+  reusableOutputBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+): void
+```
+
+Copy plain activation output values into the reusable typed buffer.
+
+Parameters:
+- `activationResult` - Detached activation result from the main activation path.
+- `reusableOutputBuffer` - Network-owned typed output buffer.
+
+Returns: Nothing.
+
+### detachReusableOutputBuffer
+
+```ts
+detachReusableOutputBuffer(
+  reusableOutputBuffer: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+): number[]
+```
+
+Detach the reusable typed output buffer into a plain array for compatibility callers.
+
+Parameters:
+- `reusableOutputBuffer` - Network-owned typed output buffer.
+
+Returns: Detached plain activation output array.
+
+### ensureReusableActivationOutputBuffer
+
+```ts
+ensureReusableActivationOutputBuffer(
+  activationContext: RawActivationContext,
+  outputSize: number,
+): Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>
+```
+
+Ensure the network owns a reusable typed activation output buffer of the requested size.
+
+Parameters:
+- `activationContext` - Shared raw activation state.
+- `outputSize` - Required output width for the current activation pass.
+
+Returns: Reusable typed activation output buffer.
+
 ### executeRawActivation
 
 ```ts
 executeRawActivation(
   activationContext: RawActivationContext,
-): number[]
+): ActivationArray
 ```
 
 Execute raw activation through the network delegate using a compact orchestration flow.
@@ -1379,6 +1528,53 @@ Parameters:
 - `activationContext` - Shared raw activation state.
 
 Returns: Activation output vector from the network delegate.
+
+### requiresTypedActivationPoolReplacement
+
+```ts
+requiresTypedActivationPoolReplacement(
+  activationPool: Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike>,
+  useFloat32Activation: boolean,
+): boolean
+```
+
+Check whether the current reusable buffer must be replaced for the requested precision.
+
+Parameters:
+- `activationPool` - Existing reusable activation pool buffer.
+- `useFloat32Activation` - True when the caller needs Float32 output.
+
+Returns: True when the current buffer type does not match the requested precision.
+
+### resolveRawActivationPrecision
+
+```ts
+resolveRawActivationPrecision(
+  runtimeNetwork: RawActivationRuntimeProps,
+): ActivationPrecision
+```
+
+Read the resolved runtime activation precision for raw typed-output reuse.
+
+Parameters:
+- `runtimeNetwork` - Raw activation runtime view.
+
+Returns: Active activation precision for reusable raw output.
+
+### shouldReturnTypedActivations
+
+```ts
+shouldReturnTypedActivations(
+  activationContext: RawActivationContext,
+): boolean
+```
+
+Decide whether raw activation may return the reusable typed buffer directly.
+
+Parameters:
+- `activationContext` - Shared raw activation state.
+
+Returns: True when typed activations may escape to the caller.
 
 ## architecture/network/activate/network.activate.batch.utils.ts
 
@@ -1644,6 +1840,21 @@ Parameters:
 - `activationContext` - Shared no-trace activation state.
 
 Returns: Nothing.
+
+### resolveNoTraceActivationPrecision
+
+```ts
+resolveNoTraceActivationPrecision(
+  activationContext: NoTraceActivationContext,
+): ActivationPrecision | undefined
+```
+
+Read the resolved runtime activation precision for no-trace output pooling.
+
+Parameters:
+- `activationContext` - Shared no-trace activation state.
+
+Returns: Active per-network activation precision when present.
 
 ### tryActivateWithFastSlab
 

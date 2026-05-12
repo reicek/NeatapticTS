@@ -1,5 +1,8 @@
 import type { StandaloneGenerationContext as GenerationContext } from '../network.types';
-import { MASK_MULTIPLIER_IDENTITY } from './network.standalone.utils.types';
+import {
+  ACTIVATION_PRECISION_F16,
+  MASK_MULTIPLIER_IDENTITY,
+} from './network.standalone.utils.types';
 import {
   ensureActivationFunctionIndex,
   resolveSquashName,
@@ -19,7 +22,14 @@ export function appendInputSeedLine(
   generationContext: GenerationContext,
 ): void {
   generationContext.inputNodeIndexes.forEach((nodeIndex, inputIndex) => {
-    generationContext.bodyLines.push(`A[${nodeIndex}] = input[${inputIndex}];`);
+    generationContext.bodyLines.push(
+      buildStoredValueWriteStatement(
+        generationContext,
+        'A',
+        nodeIndex,
+        `input[${inputIndex}]`,
+      ),
+    );
   });
 }
 
@@ -48,8 +58,17 @@ export function appendOutputReturnLine(
   generationContext: GenerationContext,
   outputIndexes: number[],
 ): void {
+  if (
+    generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16
+  ) {
+    generationContext.bodyLines.push(
+      `return finalizeStoredOutput([${formatOutputArrayValues(generationContext, outputIndexes)}], WA, WS, A, S);`,
+    );
+    return;
+  }
+
   generationContext.bodyLines.push(
-    `return [${formatOutputArrayValues(outputIndexes)}];`,
+    `return [${formatOutputArrayValues(generationContext, outputIndexes)}];`,
   );
 }
 
@@ -73,7 +92,11 @@ function appendSingleNodeComputationLines(
     currentNode.squash,
     nodeTraversalIndex,
   );
-  const sumExpression = buildNodeSumExpression(currentNode, nodeTraversalIndex);
+  const sumExpression = buildNodeSumExpression(
+    generationContext,
+    currentNode,
+    nodeTraversalIndex,
+  );
   appendStateLine(
     generationContext,
     nodeTraversalIndex,
@@ -104,7 +127,12 @@ function appendStateLine(
   biasValue: number,
 ): void {
   generationContext.bodyLines.push(
-    `S[${nodeTraversalIndex}] = ${sumExpression} + ${biasValue};`,
+    buildStoredValueWriteStatement(
+      generationContext,
+      'S',
+      nodeTraversalIndex,
+      `${sumExpression} + ${biasValue}`,
+    ),
   );
 }
 
@@ -124,8 +152,18 @@ function appendActivationLine(
   maskValue: number,
 ): void {
   const maskSuffix = buildMaskSuffix(maskValue);
+  const stateReadExpression = buildStoredValueReadExpression(
+    generationContext,
+    'S',
+    nodeTraversalIndex,
+  );
   generationContext.bodyLines.push(
-    `A[${nodeTraversalIndex}] = F[${activationFunctionIndex}](S[${nodeTraversalIndex}])${maskSuffix};`,
+    buildStoredValueWriteStatement(
+      generationContext,
+      'A',
+      nodeTraversalIndex,
+      `F[${activationFunctionIndex}](${stateReadExpression})${maskSuffix}`,
+    ),
   );
 }
 
@@ -141,4 +179,60 @@ function buildMaskSuffix(maskValue: number): string {
   }
 
   return ` * ${maskValue}`;
+}
+
+/**
+ * Build one storage write statement for generated standalone buffers.
+ *
+ * @param generationContext Mutable generation context.
+ * @param bufferName Generated buffer variable name.
+ * @param nodeIndex Indexed storage slot.
+ * @param valueExpression Numeric expression being stored.
+ * @returns Native assignment or float16 encode statement.
+ */
+function buildStoredValueWriteStatement(
+  generationContext: GenerationContext,
+  bufferName: 'A' | 'S',
+  nodeIndex: number,
+  valueExpression: string,
+): string {
+  if (
+    generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16
+  ) {
+    return `${resolveStandaloneBufferName(bufferName)}[${nodeIndex}] = ${valueExpression};`;
+  }
+
+  return `${bufferName}[${nodeIndex}] = ${valueExpression};`;
+}
+
+/**
+ * Build one storage read expression for generated standalone buffers.
+ *
+ * @param generationContext Mutable generation context.
+ * @param bufferName Generated buffer variable name.
+ * @param nodeIndex Indexed storage slot.
+ * @returns Native read or float16 decode expression.
+ */
+function buildStoredValueReadExpression(
+  generationContext: GenerationContext,
+  bufferName: 'A' | 'S',
+  nodeIndex: number,
+): string {
+  if (
+    generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16
+  ) {
+    return `${resolveStandaloneBufferName(bufferName)}[${nodeIndex}]`;
+  }
+
+  return `${bufferName}[${nodeIndex}]`;
+}
+
+/**
+ * Resolve the generated working-buffer variable name for one standalone buffer.
+ *
+ * @param bufferName Persistent standalone storage name.
+ * @returns Working-buffer name used during one float16 activation call.
+ */
+function resolveStandaloneBufferName(bufferName: 'A' | 'S'): 'WA' | 'WS' {
+  return bufferName === 'A' ? 'WA' : 'WS';
 }
