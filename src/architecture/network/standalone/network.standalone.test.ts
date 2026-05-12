@@ -86,9 +86,11 @@ function calculateMedianAbsoluteDifference(
       return leftDifference - rightDifference;
     });
 
-  return sortedAbsoluteDifferences.at(
-    Math.floor(sortedAbsoluteDifferences.length / 2),
-  ) ?? 0;
+  return (
+    sortedAbsoluteDifferences.at(
+      Math.floor(sortedAbsoluteDifferences.length / 2),
+    ) ?? 0
+  );
 }
 
 describe('network standalone chapter', () => {
@@ -520,8 +522,12 @@ describe('network standalone chapter', () => {
 
           // Act
           const medianAbsoluteDifference = calculateMedianAbsoluteDifference(
-            sampleInputs.flatMap((inputVector) => network.activate(inputVector)),
-            sampleInputs.flatMap((inputVector) => standaloneActivate(inputVector)),
+            sampleInputs.flatMap((inputVector) =>
+              network.activate(inputVector),
+            ),
+            sampleInputs.flatMap((inputVector) =>
+              standaloneActivate(inputVector),
+            ),
           );
 
           // Assert
@@ -574,7 +580,9 @@ describe('network standalone chapter', () => {
 
           // Assert
           expect(
-            standaloneSource.includes('new Uint16Array([32256,31744,64512,31743,1'),
+            standaloneSource.includes(
+              'new Uint16Array([32256,31744,64512,31743,1',
+            ),
           ).toBe(true);
         });
 
@@ -597,9 +605,9 @@ describe('network standalone chapter', () => {
           const standaloneSource = network.standalone();
 
           // Assert
-          expect(standaloneSource.includes('new Uint16Array([32768,48128')).toBe(
-            true,
-          );
+          expect(
+            standaloneSource.includes('new Uint16Array([32768,48128'),
+          ).toBe(true);
         });
       });
     });
@@ -694,7 +702,8 @@ describe('network standalone chapter', () => {
               gater: null,
             },
           ] as typeof outputNode.connections.in;
-          outputNode.connections.self = [] as typeof outputNode.connections.self;
+          outputNode.connections.self =
+            [] as typeof outputNode.connections.self;
 
           // Act
           const sumExpression = buildNodeSumExpression(

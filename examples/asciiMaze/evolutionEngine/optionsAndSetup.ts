@@ -32,6 +32,7 @@ import {
 } from '../../architectureProfiles';
 import type { IFitnessEvaluationContext } from '../fitness.types';
 import type {
+  EvolutionWorkerEvaluationConfig,
   IEvolutionAlgorithmConfig,
   IMazeConfig,
   IReportingConfig,
@@ -40,12 +41,14 @@ import type {
 } from './evolutionEngine.types';
 import { createNeat, seedInitialPopulation } from './neatConfiguration';
 import type { NeatConfig } from './neatConfiguration';
+import { createAsciiMazeWorkerPopulationFitnessEvaluator } from './evolutionEngine.worker-evaluation';
 
 interface NormalizedRunOptions {
   mazeConfig?: IMazeConfig;
   agentSimConfig: IFitnessEvaluationContext['agentSimConfig'];
   architectureProfileId?: ExampleArchitectureProfileId;
   evolutionAlgorithmConfig: IEvolutionAlgorithmConfig;
+  workerEvaluation?: EvolutionWorkerEvaluationConfig;
   reportingConfig: IReportingConfig | Record<string, never>;
   fitnessEvaluator?: IRunMazeEvolutionOptions['fitnessEvaluator'];
   popSize: number;
@@ -171,6 +174,7 @@ export const normalizeRunOptions = (
     allowRecurrent,
     architectureProfileId,
     adaptiveMutation,
+    workerEvaluation,
     popSize = 100,
     maxStagnantGenerations = 500,
     minProgressToPass = 95,
@@ -241,6 +245,7 @@ export const normalizeRunOptions = (
     agentSimConfig,
     architectureProfileId: effectiveProfileId,
     evolutionAlgorithmConfig,
+    workerEvaluation,
     reportingConfig,
     fitnessEvaluator: options?.fitnessEvaluator,
     popSize,
@@ -461,20 +466,28 @@ export const createAndSeedNeat = (
   scratchSample: unknown[],
 ): CreateAndSeedNeatResult => {
   try {
-    // Step 1: Build a descriptive, bound fitness callback.
-    const fitnessCallback = (network: Network): number =>
-      (opts.fitnessEvaluator ?? FitnessEvaluator.defaultFitnessEvaluator)(
-        network as unknown as import('../interfaces').INetwork,
+    // Step 1: Build the descriptive, bound fitness callbacks.
+    const resolvedFitnessEvaluator =
+      opts.fitnessEvaluator ?? FitnessEvaluator.defaultFitnessEvaluator;
+    const populationFitnessCallback =
+      createAsciiMazeWorkerPopulationFitnessEvaluator(
         fitnessContext,
+        opts.workerEvaluation,
+        resolvedFitnessEvaluator,
       );
+    const fitnessCallback =
+      populationFitnessCallback ??
+      ((network: Network): number =>
+        resolvedFitnessEvaluator(
+          network as unknown as import('../interfaces').INetwork,
+          fitnessContext,
+        ));
 
     // Step 2: Instantiate the NEAT driver with the derived options.
-    const neatDriver = createNeat(
-      inputSize,
-      outputSize,
-      fitnessCallback,
-      opts.neatOptions,
-    );
+    const neatDriver = createNeat(inputSize, outputSize, fitnessCallback, {
+      ...opts.neatOptions,
+      fitnessPopulation: populationFitnessCallback !== undefined,
+    });
 
     // Step 3: Seed the newly created driver using provided initial population / best network.
     scratchPopClone = seedInitialPopulation(

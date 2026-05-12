@@ -127,8 +127,7 @@ describe('network slab rebuild helper chapter', () => {
         expect({
           hasFlags: buildContext.internalNet._connFlags instanceof Uint8Array,
           hasFrom: buildContext.internalNet._connFrom instanceof Uint32Array,
-          hasGain:
-            buildContext.internalNet._connGain instanceof Float64Array,
+          hasGain: buildContext.internalNet._connGain instanceof Float64Array,
           hasTo: buildContext.internalNet._connTo instanceof Uint32Array,
           hasWeights:
             buildContext.internalNet._connWeights instanceof Float64Array,

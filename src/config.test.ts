@@ -36,7 +36,10 @@ describe('config chapter', () => {
         };
 
         // Act
-        const precisionConfig = resolvePrecisionConfig({}, memoryPrecisionFlags);
+        const precisionConfig = resolvePrecisionConfig(
+          {},
+          memoryPrecisionFlags,
+        );
 
         // Assert
         expect(precisionConfig).toStrictEqual({

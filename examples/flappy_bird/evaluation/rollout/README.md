@@ -215,6 +215,29 @@ Parameters:
 
 Returns: Whether the bird should flap.
 
+### resolveRolloutFrameFlapDecisionWithPredictor
+
+```ts
+resolveRolloutFrameFlapDecisionWithPredictor(
+  predictOutputs: (observationVector: number[]) => Promise<unknown>,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): Promise<boolean>
+```
+
+Resolves one flap decision from an asynchronous predictor and commits memory.
+
+The predictor path shares the same observation-vector construction and memory
+commit point as the direct network path, so recurrent evaluation stays stable
+across browser-worker and synchronous rollout surfaces.
+
+Parameters:
+- `predictOutputs` - Async predictor callback for one observation vector.
+- `rolloutEpisodeContext` - Normalized rollout configuration.
+- `rolloutEpisodeRuntimeState` - Mutable runtime state.
+
+Returns: Promise resolving to whether the bird should flap.
+
 ### runRolloutEpisodeFrame
 
 ```ts
@@ -237,6 +260,29 @@ Parameters:
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
 
 Returns: Nothing.
+
+### runRolloutEpisodeFrameWithPredictor
+
+```ts
+runRolloutEpisodeFrameWithPredictor(
+  predictOutputs: (observationVector: number[]) => Promise<unknown>,
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): Promise<void>
+```
+
+Runs one rollout frame through an asynchronous predictor boundary.
+
+This mirrors `runRolloutEpisodeFrame(...)` but awaits control output from a
+worker-hosted predictor before advancing the environment, which keeps channel
+and direct evaluation semantics aligned.
+
+Parameters:
+- `predictOutputs` - Async predictor callback for one observation vector.
+- `rolloutEpisodeContext` - Normalized rollout configuration.
+- `rolloutEpisodeRuntimeState` - Mutable runtime state.
+
+Returns: Promise resolved after the frame has advanced and shaping is updated.
 
 ### runRolloutEpisodeLoop
 
@@ -282,6 +328,47 @@ Parameters:
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
 
 Returns: Nothing.
+
+### shouldContinueRolloutEpisode
+
+```ts
+shouldContinueRolloutEpisode(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): boolean
+```
+
+Resolves whether the episode loop should advance another frame.
+
+Besides the ordinary done and frame-budget guards, this helper owns the
+cooperative caller abort hook used by recurrent warm-start deadlines. When
+the hook fires, the rollout is marked as a timeout so callers can distinguish
+budget exhaustion from a gameplay collision.
+
+Parameters:
+- `rolloutEpisodeContext` - Normalized rollout configuration.
+- `rolloutEpisodeRuntimeState` - Mutable runtime state.
+
+Returns: True when the rollout should process another frame.
+
+### shouldStopRolloutEpisode
+
+```ts
+shouldStopRolloutEpisode(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+): boolean
+```
+
+Invokes the optional cooperative abort hook for the current rollout.
+
+Hook failures are treated as a stop request because the hook is a guardrail
+around optional warm-start work; a broken guard should yield back to normal
+NEAT evolution instead of trapping the worker in refinement.
+
+Parameters:
+- `rolloutEpisodeContext` - Normalized rollout configuration.
+
+Returns: True when the caller asks the rollout to stop.
 
 ## evaluation/rollout/evaluation.rollout.utils.ts
 

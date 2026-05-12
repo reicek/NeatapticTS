@@ -316,15 +316,13 @@ describe('browser headless benchmark integration', () => {
 
   it('run record bench exposes a transport comparison array when a browser run is available', () => {
     expect(
-      runs.length === 0 ||
-        Array.isArray(runs[0]?.bench?.transportComparisons),
+      runs.length === 0 || Array.isArray(runs[0]?.bench?.transportComparisons),
     ).toBe(true);
   });
 
   it('run record bench exposes an async build comparison array when a browser run is available', () => {
     expect(
-      runs.length === 0 ||
-        Array.isArray(runs[0]?.bench?.asyncBuildComparisons),
+      runs.length === 0 || Array.isArray(runs[0]?.bench?.asyncBuildComparisons),
     ).toBe(true);
   });
 

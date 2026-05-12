@@ -253,9 +253,9 @@ export const memoryStats = (
   const flagSnapshot = buildFlagSnapshot(memoryConfig, slabAllocationStats);
   const nodePoolSnapshot =
     typeof nodePoolStats === 'function'
-      ? defaultMemoryManager.getPoolStats<ReturnType<typeof nodePoolStats>>(
+      ? (defaultMemoryManager.getPoolStats<ReturnType<typeof nodePoolStats>>(
           'nodePool',
-        ) ?? nodePoolStats()
+        ) ?? nodePoolStats())
       : null;
 
   return buildMemoryStatsSnapshot({

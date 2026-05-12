@@ -8,8 +8,6 @@ import type {
   TypedArrayConstructor,
 } from './network.slab.utils.types';
 
-const ZERO = 0;
-
 /**
  * Acquires a typed array from pool or allocates a fresh one.
  *

@@ -61,7 +61,10 @@ describe('FlappyEvaluationWorkerPool', () => {
 
         return {
           awaitOutput: jest.fn(async () => new Float64Array([0.75])),
-          infer: jest.fn(async (_input) => new Float64Array([0.75])),
+          infer: jest.fn(async (input) => {
+            void input;
+            return new Float64Array([0.75]);
+          }),
           isReady: true,
           release: jest.fn(async () => {
             activeWorkerCount -= 1;
@@ -92,7 +95,10 @@ describe('FlappyEvaluationWorkerPool', () => {
 
       await new Promise<void>((resolve) => {
         nextDeferredEvaluation.resolve = resolve;
-        deferredEvaluationByGenomeId.set(options.networkId, nextDeferredEvaluation);
+        deferredEvaluationByGenomeId.set(
+          options.networkId,
+          nextDeferredEvaluation,
+        );
       });
 
       return nextDeferredEvaluation.aggregate;
@@ -117,9 +123,12 @@ describe('FlappyEvaluationWorkerPool', () => {
     const orderedEvaluations = await orderedEvaluationsPromise;
 
     expect({
-      exportedGenomeIds: (exportTransferableInferencePayload as jest.Mock).mock
-        .calls.map(([genome]) => genome._id),
-      orderedGenomeIds: [...orderedEvaluations.keys()].map((genome) => genome._id),
+      exportedGenomeIds: (
+        exportTransferableInferencePayload as jest.Mock
+      ).mock.calls.map(([genome]) => genome._id),
+      orderedGenomeIds: [...orderedEvaluations.keys()].map(
+        (genome) => genome._id,
+      ),
       peakWorkerCount,
       resolvedRobustFitnesses: [...orderedEvaluations.values()].map(
         (aggregate) => aggregate.robustFitness,
@@ -142,7 +151,8 @@ describe('FlappyEvaluationWorkerPool', () => {
       { _id: 55 },
       { _id: 66 },
     ];
-    const originalHardwareConcurrency = globalThis.navigator.hardwareConcurrency;
+    const originalHardwareConcurrency =
+      globalThis.navigator.hardwareConcurrency;
     let activeWorkerCount = 0;
     let peakWorkerCount = 0;
 
@@ -158,7 +168,10 @@ describe('FlappyEvaluationWorkerPool', () => {
 
         return {
           awaitOutput: jest.fn(async () => new Float64Array([0.75])),
-          infer: jest.fn(async (_input) => new Float64Array([0.75])),
+          infer: jest.fn(async (input) => {
+            void input;
+            return new Float64Array([0.75]);
+          }),
           isReady: true,
           release: jest.fn(async () => {
             activeWorkerCount -= 1;
@@ -189,7 +202,10 @@ describe('FlappyEvaluationWorkerPool', () => {
 
       await new Promise<void>((resolve) => {
         nextDeferredEvaluation.resolve = resolve;
-        deferredEvaluationByGenomeId.set(options.networkId, nextDeferredEvaluation);
+        deferredEvaluationByGenomeId.set(
+          options.networkId,
+          nextDeferredEvaluation,
+        );
       });
 
       return nextDeferredEvaluation.aggregate;
@@ -221,7 +237,9 @@ describe('FlappyEvaluationWorkerPool', () => {
       const orderedEvaluations = await orderedEvaluationsPromise;
 
       expect({
-        orderedGenomeIds: [...orderedEvaluations.keys()].map((genome) => genome._id),
+        orderedGenomeIds: [...orderedEvaluations.keys()].map(
+          (genome) => genome._id,
+        ),
         peakWorkerCount,
         resolvedRobustFitnesses: [...orderedEvaluations.values()].map(
           (aggregate) => aggregate.robustFitness,
@@ -244,7 +262,11 @@ async function waitForCondition(
   predicate: () => boolean,
   maximumAttempts = 25,
 ): Promise<void> {
-  for (let attemptIndex = 0; attemptIndex < maximumAttempts; attemptIndex += 1) {
+  for (
+    let attemptIndex = 0;
+    attemptIndex < maximumAttempts;
+    attemptIndex += 1
+  ) {
     if (predicate()) {
       return;
     }
@@ -252,5 +274,7 @@ async function waitForCondition(
     await Promise.resolve();
   }
 
-  throw new Error('Timed out while waiting for the worker-pool test condition.');
+  throw new Error(
+    'Timed out while waiting for the worker-pool test condition.',
+  );
 }

@@ -12,6 +12,42 @@ import {
 } from './flappy-evolution-worker.evolution.service';
 
 describe('evolveAndBuildGenerationReadyMessage', () => {
+  it('publishes generation-zero startup population before the first expensive evolve pass', async () => {
+    const firstPopulationNetwork = createConcreteNetwork(3, 0.1);
+    const secondPopulationNetwork = createConcreteNetwork(7, 0.2);
+    const setCurrentPopulation = jest.fn();
+    const markStartupPopulationPublished = jest.fn();
+    const neatRuntime = {
+      generation: 0,
+      population: [firstPopulationNetwork, secondPopulationNetwork],
+      evolve: jest.fn().mockResolvedValue(secondPopulationNetwork),
+    } as unknown as Neat;
+
+    const generationReadyMessage = await evolveAndBuildGenerationReadyMessage({
+      architectureProfileId: 'lstm',
+      neatRuntime,
+      isStopped: () => false,
+      warmStartGenerationZeroIfNeeded: async () => undefined,
+      setCurrentPopulation,
+      publishStartupPopulationBeforeFirstEvolution: true,
+      markStartupPopulationPublished,
+    });
+
+    expect({
+      bestFitness: generationReadyMessage.payload.bestFitness,
+      didMarkPublished: markStartupPopulationPublished.mock.calls.length === 1,
+      didSkipEvolve: (neatRuntime.evolve as jest.Mock).mock.calls.length === 0,
+      generation: generationReadyMessage.payload.generation,
+      population: setCurrentPopulation.mock.calls[0]?.[0],
+    }).toEqual({
+      bestFitness: 7,
+      didMarkPublished: true,
+      didSkipEvolve: true,
+      generation: 0,
+      population: [firstPopulationNetwork, secondPopulationNetwork],
+    });
+  });
+
   it('includes transferable generation payloads in stable playback order alongside the visualization bridge', async () => {
     const bestNetwork = createConcreteNetwork(42, 0.3);
     const firstPopulationNetwork = createConcreteNetwork(0, 0.1);
@@ -82,6 +118,27 @@ describe('evolveAndBuildGenerationReadyMessage', () => {
         (populationNetworkPayload) => getTransferList(populationNetworkPayload),
       ),
     ]);
+  });
+
+  it('evolves normally when optional generation-zero warm-start fails', async () => {
+    const bestNetwork = createConcreteNetwork(42, 0.3);
+    const neatRuntime = {
+      generation: 0,
+      population: [bestNetwork],
+      evolve: jest.fn().mockResolvedValue(bestNetwork),
+    } as unknown as Neat;
+
+    await evolveAndBuildGenerationReadyMessage({
+      architectureProfileId: 'lstm',
+      neatRuntime,
+      isStopped: () => false,
+      warmStartGenerationZeroIfNeeded: async () => {
+        throw new Error('synthetic warm-start failure');
+      },
+      setCurrentPopulation: () => undefined,
+    });
+
+    expect((neatRuntime.evolve as jest.Mock).mock.calls.length).toBe(1);
   });
 });
 

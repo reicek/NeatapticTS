@@ -433,6 +433,7 @@ drawWeightedConnectionsLayer(
   positionByNodeIndex: Map<number, PositionedNetworkNodeLike>,
   connectionScale: DynamicColorScale,
   animatedHoveredNodes: readonly NetworkVisualizationAnimatedHoveredNode[] | undefined,
+  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
 ): void
 ```
 
@@ -557,6 +558,7 @@ resolveWeightedConnectionScene(
   positionByNodeIndex: Map<number, PositionedNetworkNodeLike>,
   connectionScale: DynamicColorScale,
   hoveredNodeAnimationState: HoveredNodeAnimationState,
+  connectionLayerStyle: WeightedConnectionLayerStyle,
 ): WeightedConnectionScene | undefined
 ```
 
@@ -583,6 +585,10 @@ Parameters:
 - `context` - Render context.
 
 Returns: True when the legend should be omitted.
+
+### WeightedConnectionLayerStyle
+
+Optional overrides for connection-layer stroke visibility.
 
 ## browser-entry/visualization/visualization.legend.utils.ts
 

@@ -287,10 +287,10 @@ class ActivationArrayPool {
   /**
    * Queue one deferred compaction pass after a large prune event.
    *
-    * Node uses an idle-tick callback so prune-heavy structural edits can finish
-    * their synchronous work before colder retained activation buckets are
-    * trimmed. Browser uses cooperative slices so large prune clean-up can shed
-    * one cold bucket per idle turn instead of blocking one long synchronous pass.
+   * Node uses an idle-tick callback so prune-heavy structural edits can finish
+   * their synchronous work before colder retained activation buckets are
+   * trimmed. Browser uses cooperative slices so large prune clean-up can shed
+   * one cold bucket per idle turn instead of blocking one long synchronous pass.
    *
    * @param prunedConnectionCount Number of connections removed by the triggering prune pass.
    * @returns Nothing.
@@ -449,7 +449,10 @@ class ActivationArrayPool {
     let trimmedBuckets = 0;
 
     for (const [bucketKey, bucket] of this.buckets.entries()) {
-      const arraysToTrim = Math.max(0, bucket.arrays.length - this.maxPerBucket);
+      const arraysToTrim = Math.max(
+        0,
+        bucket.arrays.length - this.maxPerBucket,
+      );
 
       if (arraysToTrim === 0) {
         continue;
@@ -482,11 +485,7 @@ class ActivationArrayPool {
       },
     );
 
-    for (
-      let bucketIndex = 0;
-      bucketIndex < bucketsToTrim;
-      bucketIndex++
-    ) {
+    for (let bucketIndex = 0; bucketIndex < bucketsToTrim; bucketIndex++) {
       const [bucketKey, bucket] = coldBuckets[bucketIndex];
 
       this.buckets.delete(bucketKey);

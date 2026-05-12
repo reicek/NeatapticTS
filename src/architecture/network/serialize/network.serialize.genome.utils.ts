@@ -33,8 +33,7 @@ export const COMPRESSED_GENOME_FORMAT = 'neat-genome-v1';
 export const COMPRESSED_GENOME_ARCHIVE_FORMAT = 'neat-genome-archive-v1';
 
 /** Archive options for strict-genome compression. */
-export interface CompressedSerializedGenomeArchiveOptions
-  extends CompressedSerializedNetworkArchiveOptions {
+export interface CompressedSerializedGenomeArchiveOptions extends CompressedSerializedNetworkArchiveOptions {
   /** Optional strict-genome capture switches applied before compression. */
   captureOptions?: NeatGenomeCaptureOptions;
 }
@@ -93,7 +92,10 @@ export function serializeCompressedGenomeArchive(
   const payloadBytes = new TextEncoder().encode(JSON.stringify(strictGenome));
 
   // Step 2: Apply the requested archive codec above the genome payload.
-  const compressedBytes = compressArchivePayloadBytes(payloadBytes, compression);
+  const compressedBytes = compressArchivePayloadBytes(
+    payloadBytes,
+    compression,
+  );
 
   // Step 3: Return a JSON-safe base64 wrapper for storage and transport.
   return {
@@ -320,6 +322,7 @@ function resolveGenomeCaptureOptions(
       captureOptions?.disabledConnectionReenableProbability ??
       DEFAULT_GENOME_CAPTURE_OPTIONS.disabledConnectionReenableProbability,
     nodeResponse:
-      captureOptions?.nodeResponse ?? DEFAULT_GENOME_CAPTURE_OPTIONS.nodeResponse,
+      captureOptions?.nodeResponse ??
+      DEFAULT_GENOME_CAPTURE_OPTIONS.nodeResponse,
   };
 }

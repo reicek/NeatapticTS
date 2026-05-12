@@ -84,13 +84,12 @@ describe('memory manager', () => {
         } finally {
           if (typeof originalWindow === 'undefined') {
             Reflect.deleteProperty(globalThis, 'window');
-            return;
+          } else {
+            Object.defineProperty(globalThis, 'window', {
+              configurable: true,
+              value: originalWindow,
+            });
           }
-
-          Object.defineProperty(globalThis, 'window', {
-            configurable: true,
-            value: originalWindow,
-          });
         }
       });
     });

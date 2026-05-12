@@ -216,7 +216,10 @@ function prewarmActivationPool(output: number): void {
       activationArrayPool.setMaxPerBucket(memoryConfig.poolMaxPerBucket);
     }
 
-    activationArrayPool.prewarm(output, memoryConfig.activationPoolPrewarmCount);
+    activationArrayPool.prewarm(
+      output,
+      memoryConfig.activationPoolPrewarmCount,
+    );
   } catch {
     // Pool warmup is best-effort and should never block construction.
   }

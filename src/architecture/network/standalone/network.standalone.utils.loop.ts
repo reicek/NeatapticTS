@@ -58,7 +58,9 @@ export function appendOutputReturnLine(
   generationContext: GenerationContext,
   outputIndexes: number[],
 ): void {
-  if (generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16) {
+  if (
+    generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16
+  ) {
     generationContext.bodyLines.push(
       `return finalizeStoredOutput([${formatOutputArrayValues(generationContext, outputIndexes)}], WA, WS, A, S);`,
     );
@@ -194,7 +196,9 @@ function buildStoredValueWriteStatement(
   nodeIndex: number,
   valueExpression: string,
 ): string {
-  if (generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16) {
+  if (
+    generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16
+  ) {
     return `${resolveStandaloneBufferName(bufferName)}[${nodeIndex}] = ${valueExpression};`;
   }
 
@@ -214,7 +218,9 @@ function buildStoredValueReadExpression(
   bufferName: 'A' | 'S',
   nodeIndex: number,
 ): string {
-  if (generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16) {
+  if (
+    generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16
+  ) {
     return `${resolveStandaloneBufferName(bufferName)}[${nodeIndex}]`;
   }
 

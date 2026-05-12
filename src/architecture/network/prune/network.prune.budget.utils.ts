@@ -93,8 +93,8 @@ export function configureSparsityBudget(
 export function getSparsityBudgetSnapshot(
   currentNetwork: Network,
 ): NetworkSparsityBudgetSnapshot | undefined {
-  const latestSnapshot = asSparsityBudgetProps(currentNetwork)
-    ._lastSparsityBudgetSnapshot;
+  const latestSnapshot =
+    asSparsityBudgetProps(currentNetwork)._lastSparsityBudgetSnapshot;
 
   return latestSnapshot ? { ...latestSnapshot } : undefined;
 }
@@ -136,14 +136,13 @@ export function ensureGrowthBudget(
   );
   const projectedConnectionCount =
     connectionCountBeforeDecision + requiredAdditionalConnections;
-  const deniedGrowthBackoffFingerprint =
-    createDeniedGrowthBackoffFingerprint({
-      allowedConnectionLimit,
-      budgetConfig,
-      connectionCountBeforeDecision,
-      requiredAdditionalConnections,
-      triggeredSoftBudgetState,
-    });
+  const deniedGrowthBackoffFingerprint = createDeniedGrowthBackoffFingerprint({
+    allowedConnectionLimit,
+    budgetConfig,
+    connectionCountBeforeDecision,
+    requiredAdditionalConnections,
+    triggeredSoftBudgetState,
+  });
 
   if (projectedConnectionCount <= allowedConnectionLimit) {
     clearDeniedGrowthBackoffState(currentNetwork);
@@ -349,7 +348,9 @@ function normalizeGrowthGraceFraction(
  * @returns Effective allowed connection limit.
  */
 function resolveAllowedConnectionLimit(
-  budgetConfig: NonNullable<NetworkSparsityBudgetProps['_sparsityBudgetConfig']>,
+  budgetConfig: NonNullable<
+    NetworkSparsityBudgetProps['_sparsityBudgetConfig']
+  >,
 ): number {
   const graceConnectionCount = Math.floor(
     budgetConfig.maxConnections * budgetConfig.growthGraceFraction,
@@ -392,7 +393,9 @@ function resolveEffectiveAllowedConnectionLimit(
  */
 function createDeniedGrowthBackoffFingerprint(input: {
   allowedConnectionLimit: number;
-  budgetConfig: NonNullable<NetworkSparsityBudgetProps['_sparsityBudgetConfig']>;
+  budgetConfig: NonNullable<
+    NetworkSparsityBudgetProps['_sparsityBudgetConfig']
+  >;
   connectionCountBeforeDecision: number;
   requiredAdditionalConnections: number;
   triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined;
@@ -526,7 +529,9 @@ function resolveDeniedGrowthBackoffWindow(
  *
  * @returns Triggered soft-budget details when one environment is over budget.
  */
-function resolveTriggeredSoftBudgetState(): TriggeredSoftBudgetState | undefined {
+function resolveTriggeredSoftBudgetState():
+  | TriggeredSoftBudgetState
+  | undefined {
   const memoryConfig = defaultMemoryManager.getConfig();
   const environmentMetrics = captureEnvironmentMetrics();
 

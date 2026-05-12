@@ -91,7 +91,9 @@ export class FlappyEvaluationWorkerPool {
 
     // Step 3: Prime the shared generic scheduler with the exported payload shelf.
     await this.#workerPool.initialize(
-      genomes.map((genome) => resolveRequiredGenomePayload(this.#payloadByGenome, genome)),
+      genomes.map((genome) =>
+        resolveRequiredGenomePayload(this.#payloadByGenome, genome),
+      ),
     );
   }
 
@@ -122,10 +124,7 @@ export class FlappyEvaluationWorkerPool {
           sharedWorker,
           sharedSeeds,
           {
-            networkId:
-              typeof genome._id === 'number'
-                ? genome._id
-                : undefined,
+            networkId: typeof genome._id === 'number' ? genome._id : undefined,
             rolloutOptions,
           },
         ),
@@ -187,7 +186,9 @@ function resolveRequiredGenomeAggregate(
   const aggregate = orderedAggregates[genomeIndex];
 
   if (!aggregate) {
-    throw new Error('FlappyEvaluationWorkerPool did not resolve every queued genome.');
+    throw new Error(
+      'FlappyEvaluationWorkerPool did not resolve every queued genome.',
+    );
   }
 
   return aggregate;
@@ -200,7 +201,9 @@ function resolveRequiredGenomePayload(
   const payload = payloadByGenome.get(genome);
 
   if (!payload) {
-    throw new Error('FlappyEvaluationWorkerPool genome payload was not initialized.');
+    throw new Error(
+      'FlappyEvaluationWorkerPool genome payload was not initialized.',
+    );
   }
 
   return payload;
@@ -213,7 +216,9 @@ function resolveRequiredOrderedGenomePayload(
   const payload = orderedPayloads[genomeIndex];
 
   if (!payload) {
-    throw new Error('FlappyEvaluationWorkerPool did not resolve every queued genome payload.');
+    throw new Error(
+      'FlappyEvaluationWorkerPool did not resolve every queued genome payload.',
+    );
   }
 
   return payload;

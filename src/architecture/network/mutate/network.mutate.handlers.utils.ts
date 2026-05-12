@@ -253,8 +253,7 @@ export function addNode(this: Network): void {
   const mutationProps = asMutationProps(this);
   markTopoDirtyIfAcyclic(mutationProps);
 
-  const requiredAdditionalConnections =
-    this.connections.length === 0 ? 2 : 1;
+  const requiredAdditionalConnections = this.connections.length === 0 ? 2 : 1;
   if (!ensureGrowthBudget(this, requiredAdditionalConnections)) {
     return;
   }

@@ -230,9 +230,8 @@ describe('network serialize chapter', () => {
         });
 
         // Act
-        const archiveWithMetrics = serializeCompressedArchiveWithMetrics.call(
-          network,
-        );
+        const archiveWithMetrics =
+          serializeCompressedArchiveWithMetrics.call(network);
         const expectedNextOutput = network.activate(nextInput);
         const rebuiltNetwork = deserializeCompressedArchive(
           archiveWithMetrics.archive,
@@ -343,9 +342,8 @@ describe('network serialize chapter', () => {
         const expectedNextOutput = network.activate(nextInput);
 
         // Act
-        const rebuiltNetworkWithMetrics = deserializeCompressedArchiveWithMetrics(
-          compressedArchive,
-        );
+        const rebuiltNetworkWithMetrics =
+          deserializeCompressedArchiveWithMetrics(compressedArchive);
 
         // Assert
         expect({
@@ -388,16 +386,13 @@ describe('network serialize chapter', () => {
           network.activate(inputValues);
         });
 
-        const compressedArchive = await serializeCompressedArchiveAsync.call(
-          network,
-        );
+        const compressedArchive =
+          await serializeCompressedArchiveAsync.call(network);
         const expectedNextOutput = network.activate(nextInput);
 
         // Act
         const rebuiltNetworkWithMetrics =
-          await deserializeCompressedArchiveAsyncWithMetrics(
-            compressedArchive,
-          );
+          await deserializeCompressedArchiveAsyncWithMetrics(compressedArchive);
 
         // Assert
         expect({
@@ -575,9 +570,8 @@ describe('network serialize chapter', () => {
             const expectedNextOutput = network.activate(nextInput);
 
             // Act
-            const rebuiltNetwork = await deserializeCompressedArchiveAsync(
-              compressedArchive,
-            );
+            const rebuiltNetwork =
+              await deserializeCompressedArchiveAsync(compressedArchive);
             const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
             // Assert
@@ -613,9 +607,8 @@ describe('network serialize chapter', () => {
           const expectedNextOutput = network.activate(nextInput);
 
           // Act
-          const rebuiltNetwork = deserializeCompressedArchive(
-            compressedArchive,
-          );
+          const rebuiltNetwork =
+            deserializeCompressedArchive(compressedArchive);
           const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
           // Assert
@@ -645,9 +638,8 @@ describe('network serialize chapter', () => {
           const expectedNextOutput = network.activate(nextInput);
 
           // Act
-          const rebuiltNetwork = deserializeCompressedArchive(
-            compressedArchive,
-          );
+          const rebuiltNetwork =
+            deserializeCompressedArchive(compressedArchive);
           const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
           // Assert
@@ -677,9 +669,7 @@ describe('network serialize chapter', () => {
           const expectedNextOutput = network.activate(nextInput);
 
           // Act
-          const rebuiltNetwork = deserializeCompressed(
-            compressedPayload,
-          );
+          const rebuiltNetwork = deserializeCompressed(compressedPayload);
           const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
           // Assert
@@ -704,7 +694,9 @@ describe('network serialize chapter', () => {
           }
 
           // Assert
-          expect(errorMessage).toBe('Invalid compressed network payload format.');
+          expect(errorMessage).toBe(
+            'Invalid compressed network payload format.',
+          );
         });
       });
     });

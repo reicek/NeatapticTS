@@ -125,9 +125,9 @@ describe('network prune schedule utility chapter', () => {
       it('disconnects every edge and forwards the large-prune size to the activation pool', () => {
         // Arrange
         const disconnectSpy = jest.fn();
-        const fakeNetwork = { disconnect: disconnectSpy } as unknown as Parameters<
-          typeof disconnectConnections
-        >[0];
+        const fakeNetwork = {
+          disconnect: disconnectSpy,
+        } as unknown as Parameters<typeof disconnectConnections>[0];
         const connectionsToDisconnect = Array.from({ length: 64 }, () => {
           return new Connection(new Node('hidden'), new Node('hidden'), 0.1);
         });

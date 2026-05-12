@@ -537,9 +537,8 @@ export function reconstructFusedRecurrentLayers(
     previousLayerNodes: NeatapticNode[],
     nextLayerNodes: NeatapticNode[],
   ): void {
-    const previousLayerSourceGroup = createPreviousLayerSourceGroup(
-      previousLayerNodes,
-    );
+    const previousLayerSourceGroup =
+      createPreviousLayerSourceGroup(previousLayerNodes);
 
     fusedLayerRuntime.input(previousLayerSourceGroup as unknown);
     fusedLayerRuntime.output?.nodes.forEach((outputNode) => {
@@ -626,7 +625,11 @@ export function reconstructFusedRecurrentLayers(
     }
 
     return {
-      gateGroups: buildContiguousGateGroups(fusedNodes, spec.gateOrder, unitSize),
+      gateGroups: buildContiguousGateGroups(
+        fusedNodes,
+        spec.gateOrder,
+        unitSize,
+      ),
       recurrentSourceNodes: [],
     };
   }

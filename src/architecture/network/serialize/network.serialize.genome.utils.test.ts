@@ -77,7 +77,9 @@ function createChunkedBrowserDecompressionStreamConstructor(): typeof Decompress
   return class ChunkedBrowserDecompressionStream {
     public constructor(format: 'gzip') {
       if (format !== 'gzip') {
-        throw new Error('Expected gzip format in the browser decode test shim.');
+        throw new Error(
+          'Expected gzip format in the browser decode test shim.',
+        );
       }
 
       const compressedChunks: Uint8Array[] = [];
@@ -89,9 +91,7 @@ function createChunkedBrowserDecompressionStreamConstructor(): typeof Decompress
               concatenateArchiveByteChunks(compressedChunks),
             ),
           );
-          const firstChunkByteLength = Math.floor(
-            decompressedBytes.length / 2,
-          );
+          const firstChunkByteLength = Math.floor(decompressedBytes.length / 2);
 
           if (firstChunkByteLength > 0) {
             controller.enqueue(
@@ -209,9 +209,7 @@ describe('network serialize genome utilities chapter', () => {
         }
 
         // Assert
-        expect(errorMessage).toBe(
-          'Invalid compressed genome archive format.',
-        );
+        expect(errorMessage).toBe('Invalid compressed genome archive format.');
       });
     });
 
@@ -259,9 +257,7 @@ describe('network serialize genome utilities chapter', () => {
         }
 
         // Assert
-        expect(errorMessage).toBe(
-          'Invalid compressed genome archive format.',
-        );
+        expect(errorMessage).toBe('Invalid compressed genome archive format.');
       });
     });
 
@@ -295,16 +291,13 @@ describe('network serialize genome utilities chapter', () => {
         // Arrange
         const inputValues = [0.35];
         const sourceNetwork = createExtensionAwareNetwork(8_099);
-        const compressedArchive = serializeCompressedGenomeArchive.call(
-          sourceNetwork,
-        );
+        const compressedArchive =
+          serializeCompressedGenomeArchive.call(sourceNetwork);
         const expectedOutput = sourceNetwork.activate(inputValues);
 
         // Act
         const rebuiltNetworkWithMetrics =
-          deserializeCompressedGenomeArchiveWithMetrics(
-            compressedArchive,
-          ) as {
+          deserializeCompressedGenomeArchiveWithMetrics(compressedArchive) as {
             metrics: {
               compressedByteLength: number;
               compressionRatio: number;
@@ -323,9 +316,9 @@ describe('network serialize genome utilities chapter', () => {
           decodeTimeMsFinite:
             Number.isFinite(rebuiltNetworkWithMetrics.metrics.decodeTimeMs) &&
             rebuiltNetworkWithMetrics.metrics.decodeTimeMs >= 0,
-          rebuiltOutput:
-            rebuiltNetworkWithMetrics.value.activate(inputValues),
-          response: rebuiltNetworkWithMetrics.value.nodes.at(-1)?.response ?? null,
+          rebuiltOutput: rebuiltNetworkWithMetrics.value.activate(inputValues),
+          response:
+            rebuiltNetworkWithMetrics.value.nodes.at(-1)?.response ?? null,
         }).toEqual({
           compressionRatioMatches: true,
           decodeTimeMsFinite: true,
@@ -385,9 +378,8 @@ describe('network serialize genome utilities chapter', () => {
         // Arrange
         const inputValues = [0.35];
         const sourceNetwork = createExtensionAwareNetwork(8_097);
-        const compressedArchive = serializeCompressedGenomeArchive.call(
-          sourceNetwork,
-        );
+        const compressedArchive =
+          serializeCompressedGenomeArchive.call(sourceNetwork);
         const expectedOutput = sourceNetwork.activate(inputValues);
 
         // Act
@@ -407,8 +399,7 @@ describe('network serialize genome utilities chapter', () => {
           decodeTimeMsFinite:
             Number.isFinite(rebuiltNetworkWithMetrics.metrics.decodeTimeMs) &&
             rebuiltNetworkWithMetrics.metrics.decodeTimeMs >= 0,
-          rebuiltOutput:
-            rebuiltNetworkWithMetrics.value.activate(inputValues),
+          rebuiltOutput: rebuiltNetworkWithMetrics.value.activate(inputValues),
           uncompressedByteLengthPositive:
             rebuiltNetworkWithMetrics.metrics.uncompressedByteLength > 0,
         }).toEqual({
@@ -424,9 +415,8 @@ describe('network serialize genome utilities chapter', () => {
         // Arrange
         const inputValues = [0.35];
         const sourceNetwork = createExtensionAwareNetwork(8_098);
-        const compressedArchive = serializeCompressedGenomeArchive.call(
-          sourceNetwork,
-        );
+        const compressedArchive =
+          serializeCompressedGenomeArchive.call(sourceNetwork);
         const expectedOutput = sourceNetwork.activate(inputValues);
         const browserDecompressionStreamConstructor =
           createChunkedBrowserDecompressionStreamConstructor();
@@ -507,16 +497,14 @@ describe('network serialize genome utilities chapter', () => {
         // Arrange
         const inputValues = [0.35];
         const sourceNetwork = createExtensionAwareNetwork(8_105);
-        const compressedArchive = serializeCompressedGenomeArchive.call(
-          sourceNetwork,
-        );
+        const compressedArchive =
+          serializeCompressedGenomeArchive.call(sourceNetwork);
         const expectedOutput = sourceNetwork.activate(inputValues);
 
         // Act
-        const rebuiltNetwork =
-          (await deserializeCompressedGenomeArchiveAsync(
-            compressedArchive,
-          )) as ExtensionAwareNetwork;
+        const rebuiltNetwork = (await deserializeCompressedGenomeArchiveAsync(
+          compressedArchive,
+        )) as ExtensionAwareNetwork;
 
         // Assert
         expect(rebuiltNetwork.activate(inputValues)).toEqual(expectedOutput);
@@ -529,9 +517,8 @@ describe('network serialize genome utilities chapter', () => {
         const inputValues = [0.35];
         const sourceNetwork = createExtensionAwareNetwork(8_104);
         const strictGenome = createExpectedStrictGenome(sourceNetwork);
-        const compressedArchive = serializeCompressedGenomeArchive.call(
-          sourceNetwork,
-        );
+        const compressedArchive =
+          serializeCompressedGenomeArchive.call(sourceNetwork);
         const expectedOutput = sourceNetwork.activate(inputValues);
         const expectedGenomeByteLength = new TextEncoder().encode(
           JSON.stringify(strictGenome),
@@ -563,19 +550,18 @@ describe('network serialize genome utilities chapter', () => {
 
         try {
           // Act
-          const rebuiltNetwork =
-            (await deserializeCompressedGenomeArchiveAsync(
-              compressedArchive,
-              {},
-              {
-                onProgress(progressUpdate) {
-                  progressSnapshots.push({
-                    decodedByteLength: progressUpdate.decodedByteLength,
-                    done: progressUpdate.done,
-                  });
-                },
+          const rebuiltNetwork = (await deserializeCompressedGenomeArchiveAsync(
+            compressedArchive,
+            {},
+            {
+              onProgress(progressUpdate) {
+                progressSnapshots.push({
+                  decodedByteLength: progressUpdate.decodedByteLength,
+                  done: progressUpdate.done,
+                });
               },
-            )) as ExtensionAwareNetwork;
+            },
+          )) as ExtensionAwareNetwork;
 
           // Assert
           expect({

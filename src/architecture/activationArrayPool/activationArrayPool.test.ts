@@ -115,7 +115,8 @@ describe('activationArrayPool', () => {
         // Assert
         expect({
           bucketCount: snapshot?.bucketCount ?? null,
-          bucketSizeAfterTeardown: activationArrayPool.bucketSize(requestedSize),
+          bucketSizeAfterTeardown:
+            activationArrayPool.bucketSize(requestedSize),
         }).toStrictEqual({
           bucketCount: 1,
           bucketSizeAfterTeardown: 0,

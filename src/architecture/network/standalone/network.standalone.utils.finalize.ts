@@ -25,9 +25,8 @@ export function assembleStandaloneSource(
   const activationArrayLiteral = buildActivationArrayLiteral(generationContext);
   const activationBufferType = resolveActivationBufferType(generationContext);
   const precisionHelperSource = buildPrecisionHelperSource(generationContext);
-  const workingBufferBootstrapSource = buildWorkingBufferBootstrapSource(
-    generationContext,
-  );
+  const workingBufferBootstrapSource =
+    buildWorkingBufferBootstrapSource(generationContext);
   const expectedInputSize = generationContext.standaloneProps.input;
   const initialActivationLiteral = buildInitialBufferLiteral(
     generationContext,
@@ -111,7 +110,9 @@ function resolveActivationBufferType(
 function buildPrecisionHelperSource(
   generationContext: GenerationContext,
 ): string {
-  if (generationContext.resolvedActivationPrecision !== ACTIVATION_PRECISION_F16) {
+  if (
+    generationContext.resolvedActivationPrecision !== ACTIVATION_PRECISION_F16
+  ) {
     return '';
   }
 
@@ -163,7 +164,9 @@ function buildPrecisionHelperSource(
 function buildWorkingBufferBootstrapSource(
   generationContext: GenerationContext,
 ): string {
-  if (generationContext.resolvedActivationPrecision !== ACTIVATION_PRECISION_F16) {
+  if (
+    generationContext.resolvedActivationPrecision !== ACTIVATION_PRECISION_F16
+  ) {
     return '';
   }
 
@@ -182,7 +185,9 @@ function buildInitialBufferLiteral(
   bufferName: 'A' | 'S',
   values: number[],
 ): string {
-  if (generationContext.resolvedActivationPrecision !== ACTIVATION_PRECISION_F16) {
+  if (
+    generationContext.resolvedActivationPrecision !== ACTIVATION_PRECISION_F16
+  ) {
     return values.join(',');
   }
 

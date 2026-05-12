@@ -130,7 +130,9 @@ export function serialize(this: Network): CompactSerializedNetworkTuple {
  * @param this - Bound network instance.
  * @returns Compressed compact payload.
  */
-export function serializeCompressed(this: Network): CompressedSerializedNetwork {
+export function serializeCompressed(
+  this: Network,
+): CompressedSerializedNetwork {
   const networkInternals = asNetworkInternals(this);
 
   // Step 1: Build the exact structural snapshot through the verbose serializer.

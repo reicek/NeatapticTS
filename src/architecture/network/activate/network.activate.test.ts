@@ -103,12 +103,10 @@ function createExplicitFloat64PrecisionScenario(): {
   };
 }
 
-function createRawActivationReuseScenario(
-  options: {
-    activationPrecision: 'f32' | 'f64';
-    returnTypedActivations: boolean;
-  },
-): {
+function createRawActivationReuseScenario(options: {
+  activationPrecision: 'f32' | 'f64';
+  returnTypedActivations: boolean;
+}): {
   network: Network;
   inputVector: number[];
   expectedOutputValue: number;
@@ -459,7 +457,8 @@ describe('network activate chapter', () => {
 
         // Assert
         expect({
-          eligibility: precisionScenario.outputNode.connections.in[0].eligibility,
+          eligibility:
+            precisionScenario.outputNode.connections.in[0].eligibility,
           exportedValue: exportedOutput[0],
           internalActivation: precisionScenario.outputNode.activation,
           internalState: precisionScenario.outputNode.state,
@@ -512,7 +511,9 @@ describe('network activate chapter', () => {
         );
 
         // Assert
-        expect(output[0]).toBe(Math.fround(activationScenario.expectedOutputValue));
+        expect(output[0]).toBe(
+          Math.fround(activationScenario.expectedOutputValue),
+        );
       });
 
       it('falls back to the default float64 output when both runtime precision carriers are absent', () => {
@@ -843,7 +844,6 @@ describe('network activate chapter', () => {
           }
         });
       });
-
     });
   });
 
@@ -887,13 +887,13 @@ describe('network activate chapter', () => {
           [0.3, 0.4],
           [0.5, 0.6],
         ];
-        const detachedOutputs = inputSequence.map((inputVector) =>
-          detachedNetwork.activate(inputVector)[0],
+        const detachedOutputs = inputSequence.map(
+          (inputVector) => detachedNetwork.activate(inputVector)[0],
         );
 
         // Act
-        const reusableOutputs = inputSequence.map((inputVector) =>
-          reusableNetwork.activate(inputVector)[0],
+        const reusableOutputs = inputSequence.map(
+          (inputVector) => reusableNetwork.activate(inputVector)[0],
         );
 
         // Assert
@@ -1264,5 +1264,4 @@ describe('network activate chapter', () => {
       });
     });
   });
-
 });

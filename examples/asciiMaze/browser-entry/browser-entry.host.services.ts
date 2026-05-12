@@ -2,6 +2,9 @@ import { BrowserTerminalUtility } from '../browserTerminalUtility';
 import { createBrowserLogger } from '../browserLogger';
 import { DashboardManager } from '../dashboardManager';
 import type { INetwork } from '../interfaces';
+import type { IMazeRunResult } from '../interfaces';
+import { MazeUtils } from '../mazeUtils';
+import { MazeVisualization } from '../mazeVisualization';
 import {
   drawMazeNetworkVisualization,
   type MazeHitArea,
@@ -41,20 +44,26 @@ const TOOLTIP_HIT_AREA_PADDING_PX = 10;
 export const createBrowserEntryHostServices = (
   hostElements: BrowserEntryHostElements,
 ): BrowserEntryHostServices => {
-  const clearer = BrowserTerminalUtility.createTerminalClearer(
-    hostElements.liveElement ?? undefined,
-  );
-  const liveLogger = createBrowserLogger(hostElements.liveElement ?? undefined);
-  const archiveLogger = createBrowserLogger(
-    hostElements.archiveElement ?? undefined,
-  );
+  resetBrowserEntryHostPresentation(hostElements);
+
+  const clearLiveMazeOutput = hostElements.liveElement
+    ? BrowserTerminalUtility.createTerminalClearer(hostElements.liveElement)
+    : () => {};
+  const writeLiveMazeLine = hostElements.liveElement
+    ? createBrowserLogger(hostElements.liveElement)
+    : () => {};
+  const archiveLogger = hostElements.archiveElement
+    ? createBrowserLogger(hostElements.archiveElement)
+    : () => {};
   const dashboard = new DashboardManager(
-    clearer,
-    liveLogger as unknown as (...args: unknown[]) => void,
+    () => {},
+    () => {},
     archiveLogger as unknown as (...args: unknown[]) => void,
   );
   const telemetryHub = createTelemetryHub<DashboardTelemetryPayload>();
   const runtimeDashboard: DashboardPresentationAdapter = dashboard;
+  let latestMaze: string[] = [];
+  let latestResult: IMazeRunResult | undefined = undefined;
   let latestNetwork: INetwork | null = null;
   let latestHitAreas: MazeHitArea[] = [];
   let hoveredNodeIndices: readonly number[] = [];
@@ -81,15 +90,43 @@ export const createBrowserEntryHostServices = (
   };
 
   const baseDashboardUpdate = dashboard.update.bind(dashboard);
+  const baseDashboardRedraw = dashboard.redraw.bind(dashboard);
   dashboard.update = (
     ...updateArgs: Parameters<DashboardManager['update']>
   ) => {
+    latestMaze = updateArgs[0];
+    latestResult = updateArgs[1];
     const networkCandidate = updateArgs[2] ?? null;
     latestNetwork = networkCandidate;
     baseDashboardUpdate(...updateArgs);
+    renderBrowserLiveMazeSnapshot(
+      latestMaze,
+      latestResult,
+      clearLiveMazeOutput,
+      writeLiveMazeLine,
+    );
     latestHitAreas = renderLatestNetworkSnapshot(
       hostElements.networkCanvasElement,
       networkCandidate,
+      hoveredNodeIndices,
+    );
+    hoverTooltipController.refresh();
+  };
+
+  dashboard.redraw = (
+    ...redrawArgs: Parameters<DashboardManager['redraw']>
+  ) => {
+    latestMaze = redrawArgs[0];
+    baseDashboardRedraw(...redrawArgs);
+    renderBrowserLiveMazeSnapshot(
+      latestMaze,
+      latestResult,
+      clearLiveMazeOutput,
+      writeLiveMazeLine,
+    );
+    latestHitAreas = renderLatestNetworkSnapshot(
+      hostElements.networkCanvasElement,
+      latestNetwork,
       hoveredNodeIndices,
     );
     hoverTooltipController.refresh();
@@ -160,6 +197,77 @@ function createTelemetryHub<
 }
 
 /**
+ * Clears stale browser-host presentation state before a fresh session starts.
+ *
+ * @param hostElements - Resolved host elements for the current browser session.
+ * @returns Nothing.
+ */
+function resetBrowserEntryHostPresentation(
+  hostElements: BrowserEntryHostElements,
+): void {
+  hostElements.liveElement?.replaceChildren();
+  hostElements.archiveElement?.replaceChildren();
+
+  const networkContext = hostElements.networkCanvasElement?.getContext('2d');
+  if (networkContext && hostElements.networkCanvasElement) {
+    networkContext.clearRect(
+      0,
+      0,
+      hostElements.networkCanvasElement.width,
+      hostElements.networkCanvasElement.height,
+    );
+    networkContext.fillStyle = '#050a12';
+    networkContext.fillRect(
+      0,
+      0,
+      hostElements.networkCanvasElement.width,
+      hostElements.networkCanvasElement.height,
+    );
+  }
+
+  const tooltipElement = document.getElementById(
+    NETWORK_TOOLTIP_ELEMENT_ID,
+  ) as HTMLElement | null;
+  if (tooltipElement) {
+    hideTooltip(tooltipElement);
+  }
+}
+
+/**
+ * Renders the current maze into the browser live pane without the terminal dashboard frame.
+ *
+ * @param latestMaze - Maze currently being evolved.
+ * @param latestResult - Latest run result used for path highlighting.
+ * @param clearLiveMazeOutput - Live-pane clear callback.
+ * @param writeLiveMazeLine - Live-pane line writer.
+ * @returns Nothing.
+ */
+function renderBrowserLiveMazeSnapshot(
+  latestMaze: string[],
+  latestResult: IMazeRunResult | undefined,
+  clearLiveMazeOutput: () => void,
+  writeLiveMazeLine: (...args: unknown[]) => void,
+): void {
+  clearLiveMazeOutput();
+  if (latestMaze.length === 0) {
+    return;
+  }
+
+  const resolvedPath = latestResult?.path;
+  const resolvedAgentPosition =
+    resolvedPath?.at(-1) ?? MazeUtils.findPosition(latestMaze, 'S');
+  const mazeLines = MazeVisualization.visualizeMaze(
+    latestMaze,
+    resolvedAgentPosition,
+    resolvedPath,
+  ).split('\n');
+
+  for (const mazeLine of mazeLines) {
+    writeLiveMazeLine(mazeLine);
+  }
+}
+
+/**
  * Attach dashboard redraw behavior to host resizes and return a cleanup function.
  *
  * @param observeTarget - Element whose width should trigger redraw checks.
@@ -178,11 +286,19 @@ function installResizeRedraw(
   try {
     if (typeof ResizeObserver !== 'undefined') {
       let lastObservedWidth = observeTarget.clientWidth;
+      let lastObservedHeight = observeTarget.clientHeight;
       const resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           const width = entry.contentRect.width;
-          if (Math.abs(width - lastObservedWidth) > C.RESIZE_WIDTH_THRESHOLD) {
+          const height = entry.contentRect.height;
+          const widthChanged =
+            Math.abs(width - lastObservedWidth) > C.RESIZE_WIDTH_THRESHOLD;
+          const heightChanged =
+            Math.abs(height - lastObservedHeight) > C.RESIZE_WIDTH_THRESHOLD;
+
+          if (widthChanged || heightChanged) {
             lastObservedWidth = width;
+            lastObservedHeight = height;
             safelyRedrawDashboard(runtimeDashboard);
             redrawNetworkSnapshot();
           }
@@ -356,7 +472,7 @@ function installHoverTooltip(
     }
 
     const hitArea = resolveHoveredHitArea(canvasX, canvasY, getHitAreas());
-    if (hitArea) {
+    if (hitArea && !hitArea.suppressTooltip) {
       showTooltip(
         tooltipElement,
         hitArea,

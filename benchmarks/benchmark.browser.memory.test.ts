@@ -146,7 +146,10 @@ function createDeterministicBenchNetwork() {
   ];
 
   return {
-    activate: (_inputValues: number[]) => [0.5],
+    activate: (inputValues: number[]) => {
+      void inputValues;
+      return [0.5];
+    },
     connections,
     disconnect: (fromNode: object, toNode: object) => {
       const connectionIndex = connections.findIndex((connection) => {

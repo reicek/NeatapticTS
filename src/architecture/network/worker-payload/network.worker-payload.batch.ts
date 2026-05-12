@@ -57,7 +57,10 @@ export interface EvaluateInWorkersOptions<
     payload: TPayload,
   ) => Promise<TResult>;
   /** Opens one warm worker resource when the helper creates its own transient pool. */
-  readonly openWorker?: ParallelInferencePoolOptions<TPayload, TWorker>['openWorker'];
+  readonly openWorker?: ParallelInferencePoolOptions<
+    TPayload,
+    TWorker
+  >['openWorker'];
   /** Optional prepared worker pool to reuse across repeated batch calls. */
   readonly workerPool?: ParallelInferencePool<TPayload, TWorker>;
   /** Optional worker count used only when the helper creates a transient pool. */
@@ -108,8 +111,10 @@ export async function evaluateInWorkers<
     const workerPool =
       options.workerPool ??
       new ParallelInferencePool<TPayload, TWorker>({
-        openWorker:
-          openWorker as ParallelInferencePoolOptions<TPayload, TWorker>['openWorker'],
+        openWorker: openWorker as ParallelInferencePoolOptions<
+          TPayload,
+          TWorker
+        >['openWorker'],
         workerCount: options.workerCount,
       });
 
@@ -165,21 +170,43 @@ function canUseParallelEvaluation<
   TResult,
 >(
   options: EvaluateInWorkersOptions<TInput, TPayload, TWorker, TResult>,
-): options is EvaluateInWorkersOptions<TInput, TPayload, TWorker, TResult> & {
-  evaluateWithWorker: NonNullable<
-    EvaluateInWorkersOptions<TInput, TPayload, TWorker, TResult>['evaluateWithWorker']
-  >;
-  openWorker: NonNullable<
-    EvaluateInWorkersOptions<TInput, TPayload, TWorker, TResult>['openWorker']
-  >;
-} | (EvaluateInWorkersOptions<TInput, TPayload, TWorker, TResult> & {
-  evaluateWithWorker: NonNullable<
-    EvaluateInWorkersOptions<TInput, TPayload, TWorker, TResult>['evaluateWithWorker']
-  >;
-  workerPool: NonNullable<
-    EvaluateInWorkersOptions<TInput, TPayload, TWorker, TResult>['workerPool']
-  >;
-}) {
+): options is
+  | (EvaluateInWorkersOptions<TInput, TPayload, TWorker, TResult> & {
+      evaluateWithWorker: NonNullable<
+        EvaluateInWorkersOptions<
+          TInput,
+          TPayload,
+          TWorker,
+          TResult
+        >['evaluateWithWorker']
+      >;
+      openWorker: NonNullable<
+        EvaluateInWorkersOptions<
+          TInput,
+          TPayload,
+          TWorker,
+          TResult
+        >['openWorker']
+      >;
+    })
+  | (EvaluateInWorkersOptions<TInput, TPayload, TWorker, TResult> & {
+      evaluateWithWorker: NonNullable<
+        EvaluateInWorkersOptions<
+          TInput,
+          TPayload,
+          TWorker,
+          TResult
+        >['evaluateWithWorker']
+      >;
+      workerPool: NonNullable<
+        EvaluateInWorkersOptions<
+          TInput,
+          TPayload,
+          TWorker,
+          TResult
+        >['workerPool']
+      >;
+    }) {
   return Boolean(
     options.evaluateWithWorker && (options.workerPool || options.openWorker),
   );

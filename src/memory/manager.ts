@@ -57,8 +57,10 @@ export class MemoryManager {
 
   private readonly typedArrayAllocStats = { fresh: 0, pooled: 0 };
 
-  private readonly typedArrayPool: Record<string, Array<MemoryManagedTypedArray>> =
-    Object.create(null);
+  private readonly typedArrayPool: Record<
+    string,
+    Array<MemoryManagedTypedArray>
+  > = Object.create(null);
 
   private readonly typedArrayPoolMetrics: Record<
     string,
@@ -232,7 +234,11 @@ export class MemoryManager {
       return new ctor(length);
     }
 
-    const poolKey = this.resolveTypedArrayPoolKey(kind, bytesPerElement, length);
+    const poolKey = this.resolveTypedArrayPoolKey(
+      kind,
+      bytesPerElement,
+      length,
+    );
     const retainedArrays = this.typedArrayPool[poolKey];
 
     if (retainedArrays && retainedArrays.length > 0) {

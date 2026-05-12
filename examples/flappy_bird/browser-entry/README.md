@@ -1479,6 +1479,7 @@ drawNetworkVisualization(
   inputSize: number,
   outputSize: number,
   hoverState: NetworkVisualizationHoverState | undefined,
+  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
 ): NetworkVisualizationPositionedScene
 ```
 
@@ -1701,6 +1702,7 @@ drawWeightedConnectionsLayer(
   positionByNodeIndex: Map<number, PositionedNetworkNodeLike>,
   connectionScale: DynamicColorScale,
   animatedHoveredNodes: readonly NetworkVisualizationAnimatedHoveredNode[] | undefined,
+  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
 ): void
 ```
 

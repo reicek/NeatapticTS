@@ -69,15 +69,13 @@ export interface CompressedArchiveMetrics {
 }
 
 /** Encode metrics for one archive serialization operation. */
-export interface CompressedArchiveEncodeMetrics
-  extends CompressedArchiveMetrics {
+export interface CompressedArchiveEncodeMetrics extends CompressedArchiveMetrics {
   /** Elapsed encode time in milliseconds. */
   encodeTimeMs: number;
 }
 
 /** Decode metrics for one archive deserialization operation. */
-export interface CompressedArchiveDecodeMetrics
-  extends CompressedArchiveMetrics {
+export interface CompressedArchiveDecodeMetrics extends CompressedArchiveMetrics {
   /** Elapsed decode time in milliseconds. */
   decodeTimeMs: number;
 }
@@ -146,7 +144,10 @@ export function createCompressedNetworkArchive(
   );
 
   // Step 2: Apply the requested Node-side archive codec.
-  const compressedBytes = compressArchivePayloadBytes(payloadBytes, compression);
+  const compressedBytes = compressArchivePayloadBytes(
+    payloadBytes,
+    compression,
+  );
 
   // Step 3: Return a JSON-safe base64 wrapper for storage and transport.
   return {
@@ -220,7 +221,9 @@ export function parseCompressedNetworkArchive(
   );
 
   // Step 3: Parse the original compressed payload object.
-  return JSON.parse(new TextDecoder().decode(payloadBytes)) as CompressedSerializedNetwork;
+  return JSON.parse(
+    new TextDecoder().decode(payloadBytes),
+  ) as CompressedSerializedNetwork;
 }
 
 /**
@@ -252,7 +255,9 @@ export async function parseCompressedNetworkArchiveAsync(
   );
 
   // Step 3: Parse the original compressed payload object.
-  return JSON.parse(new TextDecoder().decode(payloadBytes)) as CompressedSerializedNetwork;
+  return JSON.parse(
+    new TextDecoder().decode(payloadBytes),
+  ) as CompressedSerializedNetwork;
 }
 
 /**
@@ -269,7 +274,9 @@ export function compressSerializedConnections(
 ): CompressedSerializedConnectionBlock {
   const connectionCount = serializedConnections.length;
   const weightWords = encodeExactConnectionWeights(
-    serializedConnections.map((serializedConnection) => serializedConnection.weight),
+    serializedConnections.map(
+      (serializedConnection) => serializedConnection.weight,
+    ),
   );
   const disabledRuns = compressMatchingRuns(
     serializedConnections.map(
@@ -307,7 +314,9 @@ export function compressSerializedConnections(
       ),
     ),
     gainValues: compressOptionalNumericSeries(
-      serializedConnections.map((serializedConnection) => serializedConnection.gain),
+      serializedConnections.map(
+        (serializedConnection) => serializedConnection.gain,
+      ),
     ),
     toGeneIds: compressOptionalNumericSeries(
       serializedConnections.map(
@@ -396,15 +405,14 @@ export function decompressSerializedConnections(
 
   // Step 3: Rebuild compact serialized rows with legacy defaults.
   return Array.from({ length: connectionCount }, (_, connectionIndex) => {
-    const encodedGaterIndex = compressedConnections.gaterIndices?.[
-      connectionIndex
-    ];
+    const encodedGaterIndex =
+      compressedConnections.gaterIndices?.[connectionIndex];
     const isDisabledConnection = disabledMask?.[connectionIndex] === true;
 
     return {
       enabled: isDisabledConnection
         ? false
-        : compressedConnections.enabledStates?.[connectionIndex] ?? true,
+        : (compressedConnections.enabledStates?.[connectionIndex] ?? true),
       from: compressedConnections.fromIndices[connectionIndex]!,
       fromGeneId:
         compressedConnections.fromGeneIds?.[connectionIndex] ?? undefined,
@@ -419,8 +427,7 @@ export function decompressSerializedConnections(
       innovation:
         compressedConnections.innovationIds?.[connectionIndex] ?? undefined,
       to: compressedConnections.toIndices[connectionIndex]!,
-      toGeneId:
-        compressedConnections.toGeneIds?.[connectionIndex] ?? undefined,
+      toGeneId: compressedConnections.toGeneIds?.[connectionIndex] ?? undefined,
       weight: decodedWeights[connectionIndex]!,
     };
   });
@@ -786,7 +793,9 @@ function resolveNodeCompressionModule(): NodeCompressionModule {
   const compressionModule = resolveNodeCompressionModuleOrUndefined();
 
   if (!compressionModule) {
-    throw new TypeError('Compressed network archives require a Node.js runtime.');
+    throw new TypeError(
+      'Compressed network archives require a Node.js runtime.',
+    );
   }
 
   return compressionModule;
@@ -881,7 +890,9 @@ export function encodeArchivePayloadBase64(payloadBytes: Uint8Array): string {
   }
 
   if (typeof Buffer !== 'undefined') {
-    return Buffer.from(payloadBytes).toString(COMPRESSED_NETWORK_ARCHIVE_ENCODING);
+    return Buffer.from(payloadBytes).toString(
+      COMPRESSED_NETWORK_ARCHIVE_ENCODING,
+    );
   }
 
   throw new TypeError(
@@ -1191,9 +1202,11 @@ function compressMatchingRuns<Value>(
 function countRunEntries(
   runs: CompressedSerializedIndexRun[] | undefined,
 ): number {
-  return runs?.reduce((coveredEntryCount, run) => {
-    return coveredEntryCount + run.length;
-  }, 0) ?? 0;
+  return (
+    runs?.reduce((coveredEntryCount, run) => {
+      return coveredEntryCount + run.length;
+    }, 0) ?? 0
+  );
 }
 
 /**

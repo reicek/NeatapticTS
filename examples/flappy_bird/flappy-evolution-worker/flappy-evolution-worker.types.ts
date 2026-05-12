@@ -177,10 +177,11 @@ export interface WorkerInitMessage {
 }
 
 /**
- * Worker request asking to evolve one generation.
+ * Worker request asking for the next playable generation payload.
  *
- * The worker responds with `generation-ready` once the NEAT runtime finishes
- * one evolution pass.
+ * The first response may release the bounded generation-zero warm-start
+ * population before a full recurrent evolution pass. Later responses publish
+ * normally evolved populations.
  */
 export interface WorkerRequestGenerationMessage {
   type: 'request-generation';
@@ -245,8 +246,10 @@ export type WorkerRequestMessage =
 /**
  * Worker generation-ready response message.
  *
- * The browser host uses this message to refresh HUD state and optionally render
- * the current best network visualization.
+ * The browser host uses this message to refresh HUD state, render the current
+ * best network visualization, and start playback for the current population.
+ * Generation zero can be a startup release after warm-start rather than a full
+ * post-selection NEAT generation.
  */
 export interface WorkerGenerationReadyMessage {
   type: 'generation-ready';

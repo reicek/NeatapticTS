@@ -125,13 +125,18 @@ function createMockLayerFactory(): OnnxLayerFactory {
   } as unknown as OnnxLayerFactory;
 }
 
-function createNativeGruLikeLayerFactory(options: {
-  omitMemoryCellRecurrentConnections?: boolean;
-  omitSecondPreviousOutputNode?: boolean;
-} = {}): OnnxLayerFactory {
+function createNativeGruLikeLayerFactory(
+  options: {
+    omitMemoryCellRecurrentConnections?: boolean;
+    omitSecondPreviousOutputNode?: boolean;
+  } = {},
+): OnnxLayerFactory {
   return {
     gru: (unitSize: number) => {
-      const nodes = Array.from({ length: unitSize * 6 }, () => new Node('hidden'));
+      const nodes = Array.from(
+        { length: unitSize * 6 },
+        () => new Node('hidden'),
+      );
 
       if (options.omitSecondPreviousOutputNode && unitSize > 1) {
         nodes[unitSize * 5 + 1] = undefined as unknown as Node;

@@ -125,7 +125,9 @@ describe('createInitializedWorkerRuntime', () => {
     );
 
     if (!hiddenNode) {
-      throw new Error('Expected the saved champion probe network to have one hidden node.');
+      throw new Error(
+        'Expected the saved champion probe network to have one hidden node.',
+      );
     }
 
     hiddenNode.bias = 42;
@@ -465,11 +467,12 @@ describe('createInitializedWorkerRuntime', () => {
 
   it('uses the shared-memory evaluation pool for recurrent browser profiles when one is available', async () => {
     const workerPool = {
-      evaluateGenomesAcrossSeeds: jest.fn(async (population: Network[]) =>
-        new Map([
-          [population[0], createSharedAggregate(2, 321, 10)],
-          [population[1], createSharedAggregate(1, 100, 0)],
-        ]),
+      evaluateGenomesAcrossSeeds: jest.fn(
+        async (population: Network[]) =>
+          new Map([
+            [population[0], createSharedAggregate(2, 321, 10)],
+            [population[1], createSharedAggregate(1, 100, 0)],
+          ]),
       ),
     };
     const initPayload: WorkerInitMessage['payload'] = {
@@ -489,7 +492,8 @@ describe('createInitializedWorkerRuntime', () => {
       scoredPopulation: neatRuntime.population.map((populationNetwork) =>
         Number(populationNetwork.score ?? 0),
       ),
-      workerPoolCallCount: workerPool.evaluateGenomesAcrossSeeds.mock.calls.length,
+      workerPoolCallCount:
+        workerPool.evaluateGenomesAcrossSeeds.mock.calls.length,
     }).toEqual({
       fitnessPopulation: true,
       scoredPopulation: [20_316, 10_100],

@@ -86,7 +86,10 @@ function createTransferableRoundtripOutputs(
   const network = createWorkerPayloadNetwork();
   disableFastSlab(network);
   const portablePayload = exportPortableInferencePayload(network);
-  const transferablePayload = exportTransferableInferencePayload(network, options);
+  const transferablePayload = exportTransferableInferencePayload(
+    network,
+    options,
+  );
   const portablePredictor = createInferencePredictor(portablePayload);
   const transferablePredictor = createInferencePredictor(transferablePayload);
 
@@ -121,7 +124,9 @@ function createWorkerPayloadNetwork() {
   );
 
   if (!hiddenNodes[0] || !hiddenNodes[1] || !outputNode) {
-    throw new Error('Expected a perceptron with two hidden nodes and one output node.');
+    throw new Error(
+      'Expected a perceptron with two hidden nodes and one output node.',
+    );
   }
 
   hiddenNodes[0].squash = methods.Activation.relu;
@@ -143,7 +148,9 @@ function createWorkerPayloadNetworkParts() {
   );
 
   if (!hiddenNodes[0] || !hiddenNodes[1] || !outputNode) {
-    throw new Error('Expected a perceptron with two hidden nodes and one output node.');
+    throw new Error(
+      'Expected a perceptron with two hidden nodes and one output node.',
+    );
   }
 
   return {
@@ -2237,7 +2244,6 @@ describe('network worker payload chapter', () => {
           'getBuiltinModule',
         ) as ((moduleSpecifier: string) => unknown) | undefined;
         const registrationTypes: string[] = [];
-        let result: string[] = [];
 
         Reflect.set(process, 'getBuiltinModule', (moduleSpecifier: string) => {
           if (moduleSpecifier !== 'worker_threads') {
@@ -2258,7 +2264,6 @@ describe('network worker payload chapter', () => {
           registerInferenceChannelWorkerRuntime();
           await Promise.resolve();
           await Promise.resolve();
-          result = [...registrationTypes];
         } finally {
           Reflect.set(
             process,
@@ -2268,7 +2273,7 @@ describe('network worker payload chapter', () => {
         }
 
         // Assert
-        expect(result).toEqual(['message']);
+        expect(registrationTypes).toEqual(['message']);
       });
 
       it('auto-registers one browser runtime when the channel worker module sees a worker-like global scope', () => {
@@ -2971,72 +2976,74 @@ describe('network worker payload chapter', () => {
         const inputValues = [0.5, 0.25];
 
         // Act
-        const result = await withBrowserWorkerGlobals(async ({ createdWorkers }) => {
-          const sharedWorker = openSharedInferenceWorker(
-            exportTransferableInferencePayload(createWorkerPayloadNetwork()),
-            {
-              workerUrl: 'browser-shared-worker.js',
-            },
-          );
-          const browserWorker = createdWorkers[0] as unknown as {
-            emit: (type: string, event: unknown) => void;
-            postedMessages: Array<{
-              message: {
-                controlBuffer: SharedArrayBuffer;
-                dataBuffer: SharedArrayBuffer;
-                payload: { outputCount: number };
-                type: 'bootstrap';
-              };
-              transferList: Transferable[];
-            }>;
-          };
-
-          browserWorker.emit('message', { data: { type: 'ready' } });
-          sharedWorker.submitInput(inputValues);
-
-          const busySubmitError = (() => {
-            try {
-              sharedWorker.submitInput(inputValues);
-              return 'no-error';
-            } catch (error) {
-              return (error as Error).message;
-            }
-          })();
-          const busyResetError = await sharedWorker
-            .reset()
-            .catch((error) => (error as Error).message);
-          const busyReleaseError = await sharedWorker
-            .release()
-            .catch((error) => (error as Error).message);
-
-          const bootstrapMessage = browserWorker.postedMessages[0]?.message;
-          const controlView = new Int32Array(bootstrapMessage.controlBuffer);
-          const dataView = new Float64Array(bootstrapMessage.dataBuffer);
-          const sharedLayout =
-            SHARED_INFERENCE_HOST_INTERNALS.resolveSharedInferenceBufferLayout(
-              inputValues.length,
-              bootstrapMessage.payload.outputCount,
+        const result = await withBrowserWorkerGlobals(
+          async ({ createdWorkers }) => {
+            const sharedWorker = openSharedInferenceWorker(
+              exportTransferableInferencePayload(createWorkerPayloadNetwork()),
+              {
+                workerUrl: 'browser-shared-worker.js',
+              },
             );
-          dataView[sharedLayout.outputOffset] = 0.75;
-          Atomics.store(
-            controlView,
-            sharedLayout.statusIndexes.status,
-            sharedLayout.statusValues.outputReady,
-          );
-          Atomics.notify(controlView, sharedLayout.statusIndexes.status);
+            const browserWorker = createdWorkers[0] as unknown as {
+              emit: (type: string, event: unknown) => void;
+              postedMessages: Array<{
+                message: {
+                  controlBuffer: SharedArrayBuffer;
+                  dataBuffer: SharedArrayBuffer;
+                  payload: { outputCount: number };
+                  type: 'bootstrap';
+                };
+                transferList: Transferable[];
+              }>;
+            };
 
-          const completedOutput = roundVector(
-            Array.from(await sharedWorker.awaitOutput()),
-          );
-          await sharedWorker.release();
+            browserWorker.emit('message', { data: { type: 'ready' } });
+            sharedWorker.submitInput(inputValues);
 
-          return {
-            busyReleaseError,
-            busyResetError,
-            busySubmitError,
-            completedOutputLength: completedOutput.length,
-          };
-        });
+            const busySubmitError = (() => {
+              try {
+                sharedWorker.submitInput(inputValues);
+                return 'no-error';
+              } catch (error) {
+                return (error as Error).message;
+              }
+            })();
+            const busyResetError = await sharedWorker
+              .reset()
+              .catch((error) => (error as Error).message);
+            const busyReleaseError = await sharedWorker
+              .release()
+              .catch((error) => (error as Error).message);
+
+            const bootstrapMessage = browserWorker.postedMessages[0]?.message;
+            const controlView = new Int32Array(bootstrapMessage.controlBuffer);
+            const dataView = new Float64Array(bootstrapMessage.dataBuffer);
+            const sharedLayout =
+              SHARED_INFERENCE_HOST_INTERNALS.resolveSharedInferenceBufferLayout(
+                inputValues.length,
+                bootstrapMessage.payload.outputCount,
+              );
+            dataView[sharedLayout.outputOffset] = 0.75;
+            Atomics.store(
+              controlView,
+              sharedLayout.statusIndexes.status,
+              sharedLayout.statusValues.outputReady,
+            );
+            Atomics.notify(controlView, sharedLayout.statusIndexes.status);
+
+            const completedOutput = roundVector(
+              Array.from(await sharedWorker.awaitOutput()),
+            );
+            await sharedWorker.release();
+
+            return {
+              busyReleaseError,
+              busyResetError,
+              busySubmitError,
+              completedOutputLength: completedOutput.length,
+            };
+          },
+        );
 
         // Assert
         expect(result).toEqual({
@@ -3055,26 +3062,26 @@ describe('network worker payload chapter', () => {
         let timerTurns = 0;
 
         // Act
-        const result = await withBrowserWorkerGlobals(async ({ createdWorkers }) => {
-          const sharedWorker = openSharedInferenceWorker(payload, {
-            workerUrl: 'browser-shared-worker.js',
-          });
-          const browserWorker = createdWorkers[0] as unknown as {
-            emit: (type: string, event: unknown) => void;
-            postedMessages: Array<{
-              message: {
-                controlBuffer: SharedArrayBuffer;
-                dataBuffer: SharedArrayBuffer;
-                payload: { outputCount: number };
-                type: 'bootstrap';
-              };
-              transferList: Transferable[];
-            }>;
-          };
-          const originalSetTimeout = globalThis.setTimeout;
+        const result = await withBrowserWorkerGlobals(
+          async ({ createdWorkers }) => {
+            const sharedWorker = openSharedInferenceWorker(payload, {
+              workerUrl: 'browser-shared-worker.js',
+            });
+            const browserWorker = createdWorkers[0] as unknown as {
+              emit: (type: string, event: unknown) => void;
+              postedMessages: Array<{
+                message: {
+                  controlBuffer: SharedArrayBuffer;
+                  dataBuffer: SharedArrayBuffer;
+                  payload: { outputCount: number };
+                  type: 'bootstrap';
+                };
+                transferList: Transferable[];
+              }>;
+            };
+            const originalSetTimeout = globalThis.setTimeout;
 
-          globalThis.setTimeout = ((
-            (
+            globalThis.setTimeout = ((
               handler: TimerHandler,
               _timeout?: number,
               ...arguments_: unknown[]
@@ -3086,57 +3093,59 @@ describe('network worker payload chapter', () => {
               }
 
               return 0 as unknown as ReturnType<typeof setTimeout>;
-            }
-          ) as unknown) as typeof setTimeout;
+            }) as unknown as typeof setTimeout;
 
-          try {
-            browserWorker.emit('message', { data: { type: 'ready' } });
-            sharedWorker.submitInput([0.25]);
+            try {
+              browserWorker.emit('message', { data: { type: 'ready' } });
+              sharedWorker.submitInput([0.25]);
 
-            const bootstrapMessage = browserWorker.postedMessages[0]?.message;
-            const controlView = new Int32Array(bootstrapMessage.controlBuffer);
-            const dataView = new Float64Array(bootstrapMessage.dataBuffer);
-            const sharedLayout =
-              SHARED_INFERENCE_HOST_INTERNALS.resolveSharedInferenceBufferLayout(
-                payload.inputCount,
-                payload.outputCount,
+              const bootstrapMessage = browserWorker.postedMessages[0]?.message;
+              const controlView = new Int32Array(
+                bootstrapMessage.controlBuffer,
+              );
+              const dataView = new Float64Array(bootstrapMessage.dataBuffer);
+              const sharedLayout =
+                SHARED_INFERENCE_HOST_INTERNALS.resolveSharedInferenceBufferLayout(
+                  payload.inputCount,
+                  payload.outputCount,
+                );
+
+              await SHARED_INFERENCE_HOST_INTERNALS.waitForSharedStatus(
+                controlView,
+                sharedLayout.statusIndexes.status,
+                sharedLayout.statusValues.inputReady,
+                () => undefined,
               );
 
-            await SHARED_INFERENCE_HOST_INTERNALS.waitForSharedStatus(
-              controlView,
-              sharedLayout.statusIndexes.status,
-              sharedLayout.statusValues.inputReady,
-              () => undefined,
-            );
+              for (
+                let outputIndex = 0;
+                outputIndex < payload.outputCount;
+                outputIndex += 1
+              ) {
+                dataView[sharedLayout.outputOffset + outputIndex] =
+                  outputIndex + 0.5;
+              }
 
-            for (
-              let outputIndex = 0;
-              outputIndex < payload.outputCount;
-              outputIndex += 1
-            ) {
-              dataView[sharedLayout.outputOffset + outputIndex] =
-                outputIndex + 0.5;
+              Atomics.store(
+                controlView,
+                sharedLayout.statusIndexes.status,
+                sharedLayout.statusValues.outputReady,
+              );
+              Atomics.notify(controlView, sharedLayout.statusIndexes.status);
+
+              const detachedOutput = await sharedWorker.awaitOutput();
+              await sharedWorker.release();
+
+              return {
+                firstOutputValue: detachedOutput[0],
+                lastOutputValue: detachedOutput.at(-1),
+                timerTurns,
+              };
+            } finally {
+              globalThis.setTimeout = originalSetTimeout;
             }
-
-            Atomics.store(
-              controlView,
-              sharedLayout.statusIndexes.status,
-              sharedLayout.statusValues.outputReady,
-            );
-            Atomics.notify(controlView, sharedLayout.statusIndexes.status);
-
-            const detachedOutput = await sharedWorker.awaitOutput();
-            await sharedWorker.release();
-
-            return {
-              firstOutputValue: detachedOutput[0],
-              lastOutputValue: detachedOutput.at(-1),
-              timerTurns,
-            };
-          } finally {
-            globalThis.setTimeout = originalSetTimeout;
-          }
-        });
+          },
+        );
 
         // Assert
         expect(result).toEqual({
@@ -3866,11 +3875,7 @@ describe('network worker payload chapter', () => {
         );
         let timerTurns = 0;
 
-        for (
-          let outputIndex = 0;
-          outputIndex < outputCount;
-          outputIndex += 1
-        ) {
+        for (let outputIndex = 0; outputIndex < outputCount; outputIndex += 1) {
           dataView[sharedLayout.outputOffset + outputIndex] = outputIndex + 0.5;
         }
 
@@ -3879,20 +3884,18 @@ describe('network worker payload chapter', () => {
           const originalSetTimeout = globalThis.setTimeout;
 
           globalThis.setTimeout = ((
-            (
-              handler: TimerHandler,
-              _timeout?: number,
-              ...arguments_: unknown[]
-            ) => {
-              timerTurns += 1;
+            handler: TimerHandler,
+            _timeout?: number,
+            ...arguments_: unknown[]
+          ) => {
+            timerTurns += 1;
 
-              if (typeof handler === 'function') {
-                handler(...arguments_);
-              }
-
-              return 0 as unknown as ReturnType<typeof setTimeout>;
+            if (typeof handler === 'function') {
+              handler(...arguments_);
             }
-          ) as unknown) as typeof setTimeout;
+
+            return 0 as unknown as ReturnType<typeof setTimeout>;
+          }) as unknown as typeof setTimeout;
 
           try {
             await SHARED_INFERENCE_HOST_INTERNALS.copyInputValuesIntoSharedBuffer(
@@ -3950,12 +3953,9 @@ describe('network worker payload chapter', () => {
         const inputValues = [1.25, 2.25, 3.25, 4.25];
         let timerTurns = 0;
 
-        for (
-          let outputIndex = 0;
-          outputIndex < outputCount;
-          outputIndex += 1
-        ) {
-          dataView[sharedLayout.outputOffset + outputIndex] = outputIndex + 10.5;
+        for (let outputIndex = 0; outputIndex < outputCount; outputIndex += 1) {
+          dataView[sharedLayout.outputOffset + outputIndex] =
+            outputIndex + 10.5;
         }
 
         // Act
@@ -3963,20 +3963,18 @@ describe('network worker payload chapter', () => {
           const originalSetTimeout = globalThis.setTimeout;
 
           globalThis.setTimeout = ((
-            (
-              handler: TimerHandler,
-              _timeout?: number,
-              ...arguments_: unknown[]
-            ) => {
-              timerTurns += 1;
+            handler: TimerHandler,
+            _timeout?: number,
+            ...arguments_: unknown[]
+          ) => {
+            timerTurns += 1;
 
-              if (typeof handler === 'function') {
-                handler(...arguments_);
-              }
-
-              return 0 as unknown as ReturnType<typeof setTimeout>;
+            if (typeof handler === 'function') {
+              handler(...arguments_);
             }
-          ) as unknown) as typeof setTimeout;
+
+            return 0 as unknown as ReturnType<typeof setTimeout>;
+          }) as unknown as typeof setTimeout;
 
           try {
             await SHARED_INFERENCE_HOST_INTERNALS.copyInputValuesIntoSharedBuffer(
@@ -4021,42 +4019,42 @@ describe('network worker payload chapter', () => {
         const payload = createSyntheticTransferablePayload(65_537, 1);
 
         // Act
-        const result = await withBrowserWorkerGlobals(async ({ createdWorkers }) => {
-          const sharedWorker = openSharedInferenceWorker(payload, {
-            workerUrl: 'browser-shared-worker.js',
-          });
-          const browserWorker = createdWorkers[0] as unknown as {
-            emit: (type: string, event: unknown) => void;
-          };
-          const originalSetTimeout = globalThis.setTimeout;
-
-          globalThis.setTimeout = ((
-            (() => {
-              throw new Error('shared chunk timer failed');
-            })
-          ) as unknown) as typeof setTimeout;
-
-          try {
-            browserWorker.emit('message', { data: { type: 'ready' } });
-            sharedWorker.submitInput(
-              Array.from(
-                { length: payload.inputCount },
-                (_, inputIndex) => inputIndex + 0.25,
-              ),
-            );
-            const awaitOutputError = await sharedWorker
-              .awaitOutput()
-              .catch((error) => (error as Error).message);
-            await sharedWorker.release();
-
-            return {
-              awaitOutputError,
-              isReady: sharedWorker.isReady,
+        const result = await withBrowserWorkerGlobals(
+          async ({ createdWorkers }) => {
+            const sharedWorker = openSharedInferenceWorker(payload, {
+              workerUrl: 'browser-shared-worker.js',
+            });
+            const browserWorker = createdWorkers[0] as unknown as {
+              emit: (type: string, event: unknown) => void;
             };
-          } finally {
-            globalThis.setTimeout = originalSetTimeout;
-          }
-        });
+            const originalSetTimeout = globalThis.setTimeout;
+
+            globalThis.setTimeout = (() => {
+              throw new Error('shared chunk timer failed');
+            }) as unknown as typeof setTimeout;
+
+            try {
+              browserWorker.emit('message', { data: { type: 'ready' } });
+              sharedWorker.submitInput(
+                Array.from(
+                  { length: payload.inputCount },
+                  (_, inputIndex) => inputIndex + 0.25,
+                ),
+              );
+              const awaitOutputError = await sharedWorker
+                .awaitOutput()
+                .catch((error) => (error as Error).message);
+              await sharedWorker.release();
+
+              return {
+                awaitOutputError,
+                isReady: sharedWorker.isReady,
+              };
+            } finally {
+              globalThis.setTimeout = originalSetTimeout;
+            }
+          },
+        );
 
         // Assert
         expect(result).toEqual({

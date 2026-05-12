@@ -159,13 +159,13 @@ describe('network onnx import recurrent chapter', () => {
             importedCandidateBiases: importedMemoryCellNodes.map((hiddenNode) =>
               Number(hiddenNode.bias.toFixed(9)),
             ),
-            importedCandidateRecurrentWeights:
-              importedMemoryCellNodes.map((hiddenNode, nodeIndex) =>
+            importedCandidateRecurrentWeights: importedMemoryCellNodes.map(
+              (hiddenNode, nodeIndex) =>
                 hiddenNode.connections.in.find(
                   (connection) =>
                     connection.from === importedPreviousOutputNodes[nodeIndex],
                 )?.weight ?? null,
-              ),
+            ),
           }).toEqual({
             importedCandidateBiases: sourceHiddenNodes
               .slice(0, 6)

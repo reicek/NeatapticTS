@@ -188,10 +188,11 @@ function detachPooledOutputBuffer(
 function resolveNoTraceActivationPrecision(
   activationContext: NoTraceActivationContext,
 ): ActivationPrecision | undefined {
-  const precisionCarrier = activationContext.networkInternal as NoTraceActivationContext['networkInternal'] & {
-    _precisionConfig?: PrecisionConfig;
-    _activationPrecision?: ActivationPrecision;
-  };
+  const precisionCarrier =
+    activationContext.networkInternal as NoTraceActivationContext['networkInternal'] & {
+      _precisionConfig?: PrecisionConfig;
+      _activationPrecision?: ActivationPrecision;
+    };
 
   if (
     precisionCarrier._activationPrecision === 'f32' &&

@@ -475,6 +475,27 @@ Parameters:
 
 Returns: True when the candidate exposes required visualization fields.
 
+### renderBrowserLiveMazeSnapshot
+
+```ts
+renderBrowserLiveMazeSnapshot(
+  latestMaze: string[],
+  latestResult: IMazeRunResult | undefined,
+  clearLiveMazeOutput: () => void,
+  writeLiveMazeLine: (...args: unknown[]) => void,
+): void
+```
+
+Renders the current maze into the browser live pane without the terminal dashboard frame.
+
+Parameters:
+- `latestMaze` - Maze currently being evolved.
+- `latestResult` - Latest run result used for path highlighting.
+- `clearLiveMazeOutput` - Live-pane clear callback.
+- `writeLiveMazeLine` - Live-pane line writer.
+
+Returns: Nothing.
+
 ### renderLatestNetworkSnapshot
 
 ```ts
@@ -495,6 +516,21 @@ Parameters:
 - `networkCandidate` - Current best network candidate from dashboard updates.
 
 Returns: Hit areas for hover tooltip testing, or empty array on failure.
+
+### resetBrowserEntryHostPresentation
+
+```ts
+resetBrowserEntryHostPresentation(
+  hostElements: BrowserEntryHostElements,
+): void
+```
+
+Clears stale browser-host presentation state before a fresh session starts.
+
+Parameters:
+- `hostElements` - Resolved host elements for the current browser session.
+
+Returns: Nothing.
 
 ### resolveHoveredHitArea
 
@@ -650,6 +686,28 @@ Parameters:
 
 Returns: Nothing.
 
+## browser-entry/browser-entry.worker-url.service.ts
+
+Resolve the ASCII Maze evaluation worker bundle URL next to the browser bundle.
+
+The demo build emits the browser bundle and the worker bundle side-by-side
+under `docs/assets`. Resolving the worker relative to the active browser
+bundle keeps the example portable across docs hosting and local static runs.
+
+### resolveAsciiMazeEvaluationWorkerBundleUrl
+
+```ts
+resolveAsciiMazeEvaluationWorkerBundleUrl(): string
+```
+
+Resolve the ASCII Maze evaluation worker bundle URL next to the browser bundle.
+
+The demo build emits the browser bundle and the worker bundle side-by-side
+under `docs/assets`. Resolving the worker relative to the active browser
+bundle keeps the example portable across docs hosting and local static runs.
+
+Returns: Absolute URL string for `ascii-maze-evaluation.worker.bundle.js`.
+
 ## browser-entry/browser-entry.curriculum.services.ts
 
 Browser curriculum-runtime service boundary for the ASCII Maze browser entry.
@@ -688,6 +746,79 @@ Parameters:
 - `context` - Runtime dashboard, cancellation, and completion callbacks for one browser session.
 
 Returns: Nothing.
+
+## browser-entry/browser-entry.architecture-selector.services.ts
+
+### createMazeArchitectureSelector
+
+```ts
+createMazeArchitectureSelector(
+  containerElement: HTMLElement,
+  selectedProfileId: ExampleArchitectureProfileId,
+  onSelect: (profileId: ExampleArchitectureProfileId) => void,
+  onReset: (() => void) | undefined,
+): MazeArchitectureSelectorController
+```
+
+Render a Flappy-style architecture selector into the given container element.
+
+Each button shows an educational hover tooltip describing the architecture
+family. Clicking a button that is not currently selected calls `onSelect`
+with the chosen profile id.
+
+Parameters:
+- `containerElement` - Element whose children will be replaced with the selector buttons.
+- `selectedProfileId` - Initially selected architecture profile id.
+- `onSelect` - Callback invoked with the newly selected profile id on click.
+- `onReset` - Optional callback invoked when the current architecture should restart from scratch.
+
+Returns: Controller for updating selected state and disabling the selector.
+
+Example:
+
+```ts
+const controller = createMazeArchitectureSelector(
+  document.querySelector('.arch-buttons'),
+  'random-sparse',
+  (profileId) => console.log('selected', profileId),
+);
+controller.setDisabled(true);
+```
+
+### MazeArchitectureSelectorController
+
+Controller returned by {@link createMazeArchitectureSelector} for updating
+selector state after the initial render.
+
+### resolveTooltipBodyLines
+
+```ts
+resolveTooltipBodyLines(
+  profile: ExampleArchitectureProfile,
+): string[]
+```
+
+Resolve the educational tooltip body lines for one ASCII Maze architecture profile.
+
+Parameters:
+- `profile` - Architecture profile to describe.
+
+Returns: Array of short explanatory sentences shown below the heading.
+
+### resolveTooltipHeading
+
+```ts
+resolveTooltipHeading(
+  profile: ExampleArchitectureProfile,
+): string
+```
+
+Resolve the punchy tooltip heading for one ASCII Maze architecture profile.
+
+Parameters:
+- `profile` - Architecture profile to describe.
+
+Returns: Short heading string shown above the tooltip body.
 
 ## browser-entry/browser-entry.solved-maze-animation.services.ts
 

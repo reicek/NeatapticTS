@@ -112,7 +112,8 @@ export function registerCreatedConnectionBatches(
   const selfConnectionStartIndex = network.selfconns.length;
 
   network.connections.length =
-    standardConnectionStartIndex + connectionStoragePlan.standardConnectionCount;
+    standardConnectionStartIndex +
+    connectionStoragePlan.standardConnectionCount;
   network.selfconns.length =
     selfConnectionStartIndex + connectionStoragePlan.selfConnectionCount;
 
@@ -207,7 +208,9 @@ function resolveConnectionStoragePlan(
 
     totalCreatedConnectionCount += createdConnectionCount;
 
-    if (createdConnectionBatch.sourceNode !== createdConnectionBatch.targetNode) {
+    if (
+      createdConnectionBatch.sourceNode !== createdConnectionBatch.targetNode
+    ) {
       standardConnectionCount += createdConnectionCount;
       continue;
     }

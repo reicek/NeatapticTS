@@ -25,12 +25,8 @@ export {
   resolveAutoInferenceTransport,
 } from './network.worker-payload.capabilities';
 export { resolveBrowserWorkerAssetUrl } from './network.worker-payload.browser-url';
-export {
-  evaluateInWorkers,
-} from './network.worker-payload.batch';
-export {
-  createNeatParallelPopulationEvaluator,
-} from './network.worker-payload.neat';
+export { evaluateInWorkers } from './network.worker-payload.batch';
+export { createNeatParallelPopulationEvaluator } from './network.worker-payload.neat';
 export { ParallelInferencePool } from './network.worker-payload.pool';
 export type {
   AutoInferenceTransport,

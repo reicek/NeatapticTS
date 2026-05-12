@@ -10,7 +10,7 @@ const FLAPPY_BROWSER_NARX_POPULATION_SIZE = 10;
 const FLAPPY_BROWSER_NARX_ELITISM_COUNT = 2;
 const FLAPPY_BROWSER_GRU_POPULATION_SIZE = 10;
 const FLAPPY_BROWSER_GRU_ELITISM_COUNT = 2;
-const FLAPPY_BROWSER_LSTM_POPULATION_SIZE = 10;
+const FLAPPY_BROWSER_LSTM_POPULATION_SIZE = 14;
 const FLAPPY_BROWSER_LSTM_ELITISM_COUNT = 2;
 
 /**
@@ -29,9 +29,9 @@ export interface RuntimePopulationBudget {
  * Resolves the browser evolution budget for one architecture profile.
  *
  * These browser budgets are fixed performance caps rather than hardware-scaled
- * targets. The live page keeps MLP at its tiny baseline, gives Sparse a modest
- * 20-bird flock, and caps the heavier recurrent builders at 10 birds so
- * initialization and generation turnover stay responsive.
+ * targets. The live page keeps MLP at its tiny baseline, gives LSTM a wider
+ * 14-bird recurrent flock, and keeps the other heavier recurrent builders
+ * smaller so initialization and generation turnover stay responsive.
  *
  * @param architectureProfileId - Selected shared Flappy profile id.
  * @returns Browser-local population and elitism settings.
@@ -63,7 +63,7 @@ export function resolveRuntimePopulationBudget(
     };
   }
 
-  // Step 4: Keep LSTM on the same tiny flock as the other heavy recurrent builders.
+  // Step 4: Give LSTM a wider flock so its heavier memory cell gets enough candidates.
   if (architectureProfileId === 'lstm') {
     return {
       populationSize: FLAPPY_BROWSER_LSTM_POPULATION_SIZE,

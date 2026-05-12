@@ -118,7 +118,11 @@ export function createNeatParallelPopulationEvaluator<
       workerPool: options.parallel ? options.workerPool : undefined,
     });
 
-    applyPopulationEvaluationResults(population, batchResult, options.assignResult);
+    applyPopulationEvaluationResults(
+      population,
+      batchResult,
+      options.assignResult,
+    );
   };
 }
 

@@ -130,7 +130,8 @@ describe('network prune budget utility chapter', () => {
         // Assert
         expect({
           budgetAllowed,
-          connectionCountBeforeDecision: budgetSnapshot?.connectionCountBeforeDecision,
+          connectionCountBeforeDecision:
+            budgetSnapshot?.connectionCountBeforeDecision,
           decision: budgetSnapshot?.decision,
         }).toEqual({
           budgetAllowed: false,

@@ -76,9 +76,7 @@ export class ParallelInferencePool<
    *
    * @param options - Worker opener plus optional concurrency bound.
    */
-  constructor(
-    options: ParallelInferencePoolOptions<TPayload, TWorker>,
-  ) {
+  constructor(options: ParallelInferencePoolOptions<TPayload, TWorker>) {
     this.#openWorker = options.openWorker;
     this.#workerCount = Math.max(
       1,
@@ -132,7 +130,10 @@ export class ParallelInferencePool<
 
     const orderedResults = new Array<TResult>(payloads.length);
     let nextPayloadIndex = 0;
-    const activeSlots = this.#slots.slice(0, Math.min(this.#slots.length, payloads.length));
+    const activeSlots = this.#slots.slice(
+      0,
+      Math.min(this.#slots.length, payloads.length),
+    );
 
     await Promise.all(
       activeSlots.map(async (slot) => {

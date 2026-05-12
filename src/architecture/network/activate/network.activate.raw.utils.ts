@@ -49,7 +49,10 @@ function activateWithReusableOutputBuffer(
     rawActivationResult.length,
   );
 
-  copyActivationResultIntoReusableBuffer(rawActivationResult, reusableOutputBuffer);
+  copyActivationResultIntoReusableBuffer(
+    rawActivationResult,
+    reusableOutputBuffer,
+  );
 
   if (shouldReturnTypedActivations(activationContext)) {
     return reusableOutputBuffer;
@@ -85,7 +88,8 @@ function ensureReusableActivationOutputBuffer(
   activationContext: RawActivationContext,
   outputSize: number,
 ): Float32Array | Float64Array {
-  const runtimeNetwork = activationContext.networkInternal as RawActivationRuntimeProps;
+  const runtimeNetwork =
+    activationContext.networkInternal as RawActivationRuntimeProps;
   const useFloat32Activation =
     resolveRawActivationPrecision(runtimeNetwork) === 'f32';
 

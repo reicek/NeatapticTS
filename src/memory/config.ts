@@ -48,10 +48,7 @@ export type MemoryManagerFlagName = (typeof MEMORY_MANAGER_FLAG_NAMES)[number];
 /**
  * Subset of the shared config object that materially changes memory behavior.
  */
-export type MemoryManagerFlagMap = Pick<
-  NeatapticConfig,
-  MemoryManagerFlagName
->;
+export type MemoryManagerFlagMap = Pick<NeatapticConfig, MemoryManagerFlagName>;
 
 /**
  * Runtime environment labels used by the manager when resolving defaults.
@@ -61,11 +58,10 @@ export type MemoryManagerEnvironment = 'browser' | 'node';
 /**
  * Stable snapshot returned by `MemoryManager.getConfig()`.
  */
-export interface MemoryManagerConfigSnapshot
-  extends Omit<
-    MemoryManagerFlagMap,
-    'browserMemoryBudgetMB' | 'nodeHeapSoftLimitMB' | 'slabPoolMaxPerKey'
-  > {
+export interface MemoryManagerConfigSnapshot extends Omit<
+  MemoryManagerFlagMap,
+  'browserMemoryBudgetMB' | 'nodeHeapSoftLimitMB' | 'slabPoolMaxPerKey'
+> {
   /** Active runtime environment used to resolve environment-sensitive defaults. */
   environment: MemoryManagerEnvironment;
   /** Effective prewarm count after default resolution. */

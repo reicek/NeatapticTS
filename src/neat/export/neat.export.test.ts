@@ -963,18 +963,19 @@ describe('neat export chapter', () => {
 
       it('still rejects a versioned checkpoint without the full checkpoint marker in best-effort mode', async () => {
         // Arrange
-        const neat = new Neat(2, 1, scoreByNodeCount, { popsize: 2, seed: 345 });
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 345,
+        });
         const invalidState = {
           ...neat.exportState(),
           checkpointMode: 'meta-only',
         } as unknown as NeatStateJSON;
 
         // Act
-        const invalidImport = Neat.importState(
-          invalidState,
-          scoreByNodeCount,
-          { restoreMode: 'best-effort' },
-        );
+        const invalidImport = Neat.importState(invalidState, scoreByNodeCount, {
+          restoreMode: 'best-effort',
+        });
 
         // Assert
         await expect(invalidImport).rejects.toThrow(
@@ -1235,8 +1236,8 @@ describe('neat export chapter', () => {
           generation: restored.generation,
           populationSize: restored.population.length,
           exactSpeciesRegistryPreserved:
-            (((restored as unknown as ExportControllerState)._species?.length ??
-              0) === (exportedState.speciation?.species?.length ?? 0)),
+            ((restored as unknown as ExportControllerState)._species?.length ??
+              0) === (exportedState.speciation?.species?.length ?? 0),
         }).toEqual({
           generation: exportedState.neat.generation,
           populationSize: exportedState.population.length,
@@ -1264,7 +1265,10 @@ describe('neat export chapter', () => {
         };
 
         // Act
-        const restored = await Neat.importState(extendedState, scoreByNodeCount);
+        const restored = await Neat.importState(
+          extendedState,
+          scoreByNodeCount,
+        );
 
         // Assert
         expect({
@@ -1692,12 +1696,10 @@ describe('neat export chapter', () => {
 
         // Assert
         expect({
-          adaptivePruneLevel: (
-            restored as unknown as ExportControllerState
-          )._adaptivePruneLevel,
-          adaptivePruneBaseline: (
-            restored as unknown as ExportControllerState
-          )._adaptivePruneBaseline,
+          adaptivePruneLevel: (restored as unknown as ExportControllerState)
+            ._adaptivePruneLevel,
+          adaptivePruneBaseline: (restored as unknown as ExportControllerState)
+            ._adaptivePruneBaseline,
         }).toEqual({
           adaptivePruneLevel: 0.35,
           adaptivePruneBaseline: 14,
@@ -1759,409 +1761,409 @@ describe('neat export chapter', () => {
     });
   });
 
-    describe('light-state restore', () => {
-      const scoreByNodeCount = (network: Network) => network.nodes.length;
+  describe('light-state restore', () => {
+    const scoreByNodeCount = (network: Network) => network.nodes.length;
 
-      describe('given invalid light checkpoint inputs', () => {
-        it('rejects light checkpoint export when eliteCount is not positive', () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 2,
-            seed: 347,
-          });
-
-          // Act
-          const exportInvalidLightCheckpoint = () =>
-            neat.exportLightState({ eliteCount: 0 });
-
-          // Assert
-          expect(exportInvalidLightCheckpoint).toThrow(
-            NeatExportPopulationValidationError,
-          );
+    describe('given invalid light checkpoint inputs', () => {
+      it('rejects light checkpoint export when eliteCount is not positive', () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 2,
+          seed: 347,
         });
 
-        it('rejects a missing light checkpoint bundle', async () => {
-          // Arrange
-          const invalidImport = Neat.importLightState(
-            undefined as unknown as Parameters<typeof Neat.importLightState>[0],
-            scoreByNodeCount,
-          );
+        // Act
+        const exportInvalidLightCheckpoint = () =>
+          neat.exportLightState({ eliteCount: 0 });
 
-          // Assert
-          await expect(invalidImport).rejects.toThrow(
-            NeatExportStateBundleValidationError,
-          );
+        // Assert
+        expect(exportInvalidLightCheckpoint).toThrow(
+          NeatExportPopulationValidationError,
+        );
+      });
+
+      it('rejects a missing light checkpoint bundle', async () => {
+        // Arrange
+        const invalidImport = Neat.importLightState(
+          undefined as unknown as Parameters<typeof Neat.importLightState>[0],
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+
+      it('rejects a non-object light checkpoint bundle', async () => {
+        // Arrange
+        const invalidImport = Neat.importLightState(
+          1 as unknown as Parameters<typeof Neat.importLightState>[0],
+          scoreByNodeCount,
+        );
+
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+
+      it('rejects a future light checkpoint format version', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 348,
         });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          formatVersion: 99,
+        } as Parameters<typeof Neat.importLightState>[0];
 
-        it('rejects a non-object light checkpoint bundle', async () => {
-          // Arrange
-          const invalidImport = Neat.importLightState(
-            1 as unknown as Parameters<typeof Neat.importLightState>[0],
-            scoreByNodeCount,
-          );
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
 
-          // Assert
-          await expect(invalidImport).rejects.toThrow(
-            NeatExportStateBundleValidationError,
-          );
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          'Unsupported NEAT light checkpoint format version: 99.',
+        );
+      });
+
+      it('rejects a versioned light checkpoint without the light checkpoint marker', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 349,
         });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          checkpointMode: 'full',
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
 
-        it('rejects a future light checkpoint format version', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 3,
-            seed: 348,
-          });
-          const invalidLightCheckpoint = {
-            ...neat.exportLightState({ eliteCount: 1 }),
-            formatVersion: 99,
-          } as Parameters<typeof Neat.importLightState>[0];
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
 
-          // Act
-          const invalidImport = Neat.importLightState(
-            invalidLightCheckpoint,
-            scoreByNodeCount,
-          );
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
 
-          // Assert
-          await expect(invalidImport).rejects.toThrow(
-            'Unsupported NEAT light checkpoint format version: 99.',
-          );
+      it('rejects a light checkpoint that omits bootstrap metadata', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 350,
         });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          neat: undefined,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
 
-        it('rejects a versioned light checkpoint without the light checkpoint marker', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 3,
-            seed: 349,
-          });
-          const invalidLightCheckpoint = {
-            ...neat.exportLightState({ eliteCount: 1 }),
-            checkpointMode: 'full',
-          } as unknown as Parameters<typeof Neat.importLightState>[0];
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
 
-          // Act
-          const invalidImport = Neat.importLightState(
-            invalidLightCheckpoint,
-            scoreByNodeCount,
-          );
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
 
-          // Assert
-          await expect(invalidImport).rejects.toThrow(
-            NeatExportStateBundleValidationError,
-          );
+      it('rejects a light checkpoint that omits the retained population array', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 351,
         });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          population: undefined,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
 
-        it('rejects a light checkpoint that omits bootstrap metadata', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 3,
-            seed: 350,
-          });
-          const invalidLightCheckpoint = {
-            ...neat.exportLightState({ eliteCount: 1 }),
-            neat: undefined,
-          } as unknown as Parameters<typeof Neat.importLightState>[0];
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
 
-          // Act
-          const invalidImport = Neat.importLightState(
-            invalidLightCheckpoint,
-            scoreByNodeCount,
-          );
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
 
-          // Assert
-          await expect(invalidImport).rejects.toThrow(
-            NeatExportStateBundleValidationError,
-          );
+      it('rejects a light checkpoint whose restartPopulationSize is not an integer', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 352,
         });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          restartPopulationSize: 2.5,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
 
-        it('rejects a light checkpoint that omits the retained population array', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 3,
-            seed: 351,
-          });
-          const invalidLightCheckpoint = {
-            ...neat.exportLightState({ eliteCount: 1 }),
-            population: undefined,
-          } as unknown as Parameters<typeof Neat.importLightState>[0];
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
 
-          // Act
-          const invalidImport = Neat.importLightState(
-            invalidLightCheckpoint,
-            scoreByNodeCount,
-          );
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
 
-          // Assert
-          await expect(invalidImport).rejects.toThrow(
-            NeatExportStateBundleValidationError,
-          );
+      it('rejects a light checkpoint whose restartPopulationSize is negative', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 3,
+          seed: 353,
         });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          restartPopulationSize: -1,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
 
-        it('rejects a light checkpoint whose restartPopulationSize is not an integer', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 3,
-            seed: 352,
-          });
-          const invalidLightCheckpoint = {
-            ...neat.exportLightState({ eliteCount: 1 }),
-            restartPopulationSize: 2.5,
-          } as unknown as Parameters<typeof Neat.importLightState>[0];
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
 
-          // Act
-          const invalidImport = Neat.importLightState(
-            invalidLightCheckpoint,
-            scoreByNodeCount,
-          );
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
 
-          // Assert
-          await expect(invalidImport).rejects.toThrow(
-            NeatExportStateBundleValidationError,
-          );
+      it('rejects a light checkpoint whose restartPopulationSize is smaller than the retained elite count', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 4,
+          seed: 354,
         });
+        const invalidLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 2 }),
+          restartPopulationSize: 1,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
 
-        it('rejects a light checkpoint whose restartPopulationSize is negative', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 3,
-            seed: 353,
-          });
-          const invalidLightCheckpoint = {
-            ...neat.exportLightState({ eliteCount: 1 }),
-            restartPopulationSize: -1,
-          } as unknown as Parameters<typeof Neat.importLightState>[0];
+        // Act
+        const invalidImport = Neat.importLightState(
+          invalidLightCheckpoint,
+          scoreByNodeCount,
+        );
 
-          // Act
-          const invalidImport = Neat.importLightState(
-            invalidLightCheckpoint,
-            scoreByNodeCount,
-          );
+        // Assert
+        await expect(invalidImport).rejects.toThrow(
+          NeatExportStateBundleValidationError,
+        );
+      });
+    });
 
-          // Assert
-          await expect(invalidImport).rejects.toThrow(
-            NeatExportStateBundleValidationError,
-          );
+    describe('given a saved light checkpoint from a larger run', () => {
+      it('restores legacy light checkpoints when the explicit format version is absent', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 4,
+          seed: 357,
         });
+        const legacyLightCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          formatVersion: undefined,
+          checkpointMode: undefined,
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
 
-        it('rejects a light checkpoint whose restartPopulationSize is smaller than the retained elite count', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 4,
-            seed: 354,
-          });
-          const invalidLightCheckpoint = {
-            ...neat.exportLightState({ eliteCount: 2 }),
-            restartPopulationSize: 1,
-          } as unknown as Parameters<typeof Neat.importLightState>[0];
+        // Act
+        const restored = await Neat.importLightState(
+          legacyLightCheckpoint,
+          scoreByNodeCount,
+        );
 
-          // Act
-          const invalidImport = Neat.importLightState(
-            invalidLightCheckpoint,
-            scoreByNodeCount,
-          );
-
-          // Assert
-          await expect(invalidImport).rejects.toThrow(
-            NeatExportStateBundleValidationError,
-          );
+        // Assert
+        expect({
+          restoredPopulationCount: restored.population.length,
+          restoredPopsize: restored.options.popsize,
+        }).toEqual({
+          restoredPopulationCount: 1,
+          restoredPopsize: 4,
         });
       });
 
-      describe('given a saved light checkpoint from a larger run', () => {
-        it('restores legacy light checkpoints when the explicit format version is absent', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 4,
-            seed: 357,
-          });
-          const legacyLightCheckpoint = {
-            ...neat.exportLightState({ eliteCount: 1 }),
-            formatVersion: undefined,
-            checkpointMode: undefined,
-          } as unknown as Parameters<typeof Neat.importLightState>[0];
-
-          // Act
-          const restored = await Neat.importLightState(
-            legacyLightCheckpoint,
-            scoreByNodeCount,
-          );
-
-          // Assert
-          expect({
-            restoredPopulationCount: restored.population.length,
-            restoredPopsize: restored.options.popsize,
-          }).toEqual({
-            restoredPopulationCount: 1,
-            restoredPopsize: 4,
-          });
+      it('falls back to the current population length when the controller popsize option is missing during light export', () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 4,
+          seed: 356,
         });
 
-        it('falls back to the current population length when the controller popsize option is missing during light export', () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 4,
-            seed: 356,
-          });
+        delete (neat.options as { popsize?: number }).popsize;
 
-          delete (neat.options as { popsize?: number }).popsize;
+        // Act
+        const lightCheckpoint = neat.exportLightState({ eliteCount: 1 });
 
-          // Act
-          const lightCheckpoint = neat.exportLightState({ eliteCount: 1 });
+        // Assert
+        expect(lightCheckpoint.restartPopulationSize).toBe(
+          neat.population.length,
+        );
+      });
 
-          // Assert
-          expect(lightCheckpoint.restartPopulationSize).toBe(
-            neat.population.length,
-          );
+      it('restores only the retained elite subset while preserving the saved restart-scale population target', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 6,
+          seed: 346,
         });
+        const scoredPopulation = neat.population as ExportGenome[];
 
-        it('restores only the retained elite subset while preserving the saved restart-scale population target', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 6,
-            seed: 346,
-          });
-          const scoredPopulation = neat.population as ExportGenome[];
+        neat.generation = 7;
+        scoredPopulation[0].score = 1;
+        scoredPopulation[1].score = 5;
+        scoredPopulation[2].score = 2;
+        scoredPopulation[3].score = 6;
+        scoredPopulation[4].score = 3;
+        scoredPopulation[5].score = 4;
 
-          neat.generation = 7;
-          scoredPopulation[0].score = 1;
-          scoredPopulation[1].score = 5;
-          scoredPopulation[2].score = 2;
-          scoredPopulation[3].score = 6;
-          scoredPopulation[4].score = 3;
-          scoredPopulation[5].score = 4;
+        // Act
+        const lightCheckpoint = neat.exportLightState({ eliteCount: 2 });
+        const restored = await Neat.importLightState(
+          lightCheckpoint,
+          scoreByNodeCount,
+        );
 
-          // Act
-          const lightCheckpoint = neat.exportLightState({ eliteCount: 2 });
-          const restored = await Neat.importLightState(
-            lightCheckpoint,
-            scoreByNodeCount,
-          );
-
-          // Assert
-          expect({
-            checkpointMode: lightCheckpoint.checkpointMode,
-            retainedEliteCount: lightCheckpoint.population.length,
-            restoredPopulationCount: restored.population.length,
-            restoredPopsize: restored.options.popsize,
-            restoredGeneration: restored.generation,
-          }).toEqual({
-            checkpointMode: 'light',
-            retainedEliteCount: 2,
-            restoredPopulationCount: 2,
-            restoredPopsize: 6,
-            restoredGeneration: 7,
-          });
+        // Assert
+        expect({
+          checkpointMode: lightCheckpoint.checkpointMode,
+          retainedEliteCount: lightCheckpoint.population.length,
+          restoredPopulationCount: restored.population.length,
+          restoredPopsize: restored.options.popsize,
+          restoredGeneration: restored.generation,
+        }).toEqual({
+          checkpointMode: 'light',
+          retainedEliteCount: 2,
+          restoredPopulationCount: 2,
+          restoredPopsize: 6,
+          restoredGeneration: 7,
         });
+      });
 
-        it('evolves forward from a light-restored elite subset while refilling the saved restart-scale population target', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 6,
-            seed: 358,
-          });
-          const scoredPopulation = neat.population as ExportGenome[];
-
-          neat.generation = 7;
-          scoredPopulation[0].score = 1;
-          scoredPopulation[1].score = 5;
-          scoredPopulation[2].score = 2;
-          scoredPopulation[3].score = 6;
-          scoredPopulation[4].score = 3;
-          scoredPopulation[5].score = 4;
-
-          const restored = await Neat.importLightState(
-            neat.exportLightState({ eliteCount: 2 }),
-            scoreByNodeCount,
-          );
-
-          // Act
-          await restored.evolve();
-
-          // Assert
-          expect({
-            evolvedGeneration: restored.generation,
-            refilledPopulationCount: restored.population.length,
-            retainedRestartPopsize: restored.options.popsize,
-          }).toEqual({
-            evolvedGeneration: 8,
-            refilledPopulationCount: 6,
-            retainedRestartPopsize: 6,
-          });
+      it('evolves forward from a light-restored elite subset while refilling the saved restart-scale population target', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 6,
+          seed: 358,
         });
+        const scoredPopulation = neat.population as ExportGenome[];
 
-        it('accepts a reserved downstream extensions bag on light checkpoint bundles without changing restart behavior', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 5,
-            seed: 360,
-          });
-          const extensions: NonNullable<
-            Parameters<typeof Neat.importLightState>[0]['extensions']
-          > = {
-            neatchat: {
-              branchId: 'branch-1',
-            },
-          };
-          const extendedLightCheckpoint: Parameters<
-            typeof Neat.importLightState
-          >[0] = {
-            ...neat.exportLightState({ eliteCount: 1 }),
-            extensions,
-          };
+        neat.generation = 7;
+        scoredPopulation[0].score = 1;
+        scoredPopulation[1].score = 5;
+        scoredPopulation[2].score = 2;
+        scoredPopulation[3].score = 6;
+        scoredPopulation[4].score = 3;
+        scoredPopulation[5].score = 4;
 
-          // Act
-          const restored = await Neat.importLightState(
-            extendedLightCheckpoint,
-            scoreByNodeCount,
-          );
+        const restored = await Neat.importLightState(
+          neat.exportLightState({ eliteCount: 2 }),
+          scoreByNodeCount,
+        );
 
-          // Assert
-          expect({
-            restoredGeneration: restored.generation,
-            restoredPopulationCount: restored.population.length,
-            restoredPopsize: restored.options.popsize,
-          }).toEqual({
-            restoredGeneration: extendedLightCheckpoint.neat.generation,
-            restoredPopulationCount: extendedLightCheckpoint.population.length,
-            restoredPopsize: extendedLightCheckpoint.restartPopulationSize,
-          });
+        // Act
+        await restored.evolve();
+
+        // Assert
+        expect({
+          evolvedGeneration: restored.generation,
+          refilledPopulationCount: restored.population.length,
+          retainedRestartPopsize: restored.options.popsize,
+        }).toEqual({
+          evolvedGeneration: 8,
+          refilledPopulationCount: 6,
+          retainedRestartPopsize: 6,
         });
+      });
 
-        it('falls back to an empty bootstrap options bag when the light checkpoint options payload is not an object', async () => {
-          // Arrange
-          const neat = new Neat(2, 1, scoreByNodeCount, {
-            popsize: 5,
-            seed: 355,
-          });
-          const invalidOptionsCheckpoint = {
-            ...neat.exportLightState({ eliteCount: 1 }),
-            neat: {
-              ...neat.exportLightState({ eliteCount: 1 }).neat,
-              generation: undefined,
-              options: 1,
-            },
-          } as unknown as Parameters<typeof Neat.importLightState>[0];
+      it('accepts a reserved downstream extensions bag on light checkpoint bundles without changing restart behavior', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 5,
+          seed: 360,
+        });
+        const extensions: NonNullable<
+          Parameters<typeof Neat.importLightState>[0]['extensions']
+        > = {
+          neatchat: {
+            branchId: 'branch-1',
+          },
+        };
+        const extendedLightCheckpoint: Parameters<
+          typeof Neat.importLightState
+        >[0] = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          extensions,
+        };
 
-          // Act
-          const restored = await Neat.importLightState(
-            invalidOptionsCheckpoint,
-            scoreByNodeCount,
-          );
+        // Act
+        const restored = await Neat.importLightState(
+          extendedLightCheckpoint,
+          scoreByNodeCount,
+        );
 
-          // Assert
-          expect({
-            restoredGeneration: restored.generation,
-            restoredPopulationCount: restored.population.length,
-            restoredPopsize: restored.options.popsize,
-          }).toEqual({
-            restoredGeneration: 0,
-            restoredPopulationCount: 1,
-            restoredPopsize: 5,
-          });
+        // Assert
+        expect({
+          restoredGeneration: restored.generation,
+          restoredPopulationCount: restored.population.length,
+          restoredPopsize: restored.options.popsize,
+        }).toEqual({
+          restoredGeneration: extendedLightCheckpoint.neat.generation,
+          restoredPopulationCount: extendedLightCheckpoint.population.length,
+          restoredPopsize: extendedLightCheckpoint.restartPopulationSize,
+        });
+      });
+
+      it('falls back to an empty bootstrap options bag when the light checkpoint options payload is not an object', async () => {
+        // Arrange
+        const neat = new Neat(2, 1, scoreByNodeCount, {
+          popsize: 5,
+          seed: 355,
+        });
+        const invalidOptionsCheckpoint = {
+          ...neat.exportLightState({ eliteCount: 1 }),
+          neat: {
+            ...neat.exportLightState({ eliteCount: 1 }).neat,
+            generation: undefined,
+            options: 1,
+          },
+        } as unknown as Parameters<typeof Neat.importLightState>[0];
+
+        // Act
+        const restored = await Neat.importLightState(
+          invalidOptionsCheckpoint,
+          scoreByNodeCount,
+        );
+
+        // Assert
+        expect({
+          restoredGeneration: restored.generation,
+          restoredPopulationCount: restored.population.length,
+          restoredPopsize: restored.options.popsize,
+        }).toEqual({
+          restoredGeneration: 0,
+          restoredPopulationCount: 1,
+          restoredPopsize: 5,
         });
       });
     });
+  });
 
   describe('runtime meta serialization and restoration', () => {
     describe('serializeRuntimeMeta', () => {

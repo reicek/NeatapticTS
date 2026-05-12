@@ -126,6 +126,7 @@ export function resolveRolloutEpisodeContext(
     enableEarlyTermination: rolloutOptions.enableEarlyTermination === true,
     normalizeFitness: rolloutOptions.normalizeFitness === true,
     pipeProgressTarget: rolloutOptions.pipeProgressTarget,
+    shouldStop: rolloutOptions.shouldStop,
   };
 }
 
@@ -174,9 +175,10 @@ export function runRolloutEpisodeLoop(
 ): void {
   // Step 1: Continue stepping while the episode remains active and within the frame cap.
   while (
-    !rolloutEpisodeRuntimeState.state.done &&
-    rolloutEpisodeRuntimeState.state.frameIndex <
-      rolloutEpisodeContext.maxFramesPerEpisode
+    shouldContinueRolloutEpisode(
+      rolloutEpisodeContext,
+      rolloutEpisodeRuntimeState,
+    )
   ) {
     runRolloutEpisodeFrame(
       network,
@@ -205,9 +207,10 @@ export async function runRolloutEpisodeLoopWithPredictor(
 ): Promise<void> {
   // Step 1: Continue stepping while the episode remains active and within the frame cap.
   while (
-    !rolloutEpisodeRuntimeState.state.done &&
-    rolloutEpisodeRuntimeState.state.frameIndex <
-      rolloutEpisodeContext.maxFramesPerEpisode
+    shouldContinueRolloutEpisode(
+      rolloutEpisodeContext,
+      rolloutEpisodeRuntimeState,
+    )
   ) {
     await runRolloutEpisodeFrameWithPredictor(
       predictOutputs,
@@ -301,6 +304,18 @@ function runRolloutEpisodeFrame(
   );
 }
 
+/**
+ * Runs one rollout frame through an asynchronous predictor boundary.
+ *
+ * This mirrors `runRolloutEpisodeFrame(...)` but awaits control output from a
+ * worker-hosted predictor before advancing the environment, which keeps channel
+ * and direct evaluation semantics aligned.
+ *
+ * @param predictOutputs - Async predictor callback for one observation vector.
+ * @param rolloutEpisodeContext - Normalized rollout configuration.
+ * @param rolloutEpisodeRuntimeState - Mutable runtime state.
+ * @returns Promise resolved after the frame has advanced and shaping is updated.
+ */
 async function runRolloutEpisodeFrameWithPredictor(
   predictOutputs: (observationVector: number[]) => Promise<unknown>,
   rolloutEpisodeContext: RolloutEpisodeContext,
@@ -385,6 +400,18 @@ function resolveRolloutFrameFlapDecision(
   return shouldFlap;
 }
 
+/**
+ * Resolves one flap decision from an asynchronous predictor and commits memory.
+ *
+ * The predictor path shares the same observation-vector construction and memory
+ * commit point as the direct network path, so recurrent evaluation stays stable
+ * across browser-worker and synchronous rollout surfaces.
+ *
+ * @param predictOutputs - Async predictor callback for one observation vector.
+ * @param rolloutEpisodeContext - Normalized rollout configuration.
+ * @param rolloutEpisodeRuntimeState - Mutable runtime state.
+ * @returns Promise resolving to whether the bird should flap.
+ */
 async function resolveRolloutFrameFlapDecisionWithPredictor(
   predictOutputs: (observationVector: number[]) => Promise<unknown>,
   rolloutEpisodeContext: RolloutEpisodeContext,
@@ -461,4 +488,61 @@ function applyRolloutEarlyTerminationIfNeeded(
   rolloutEpisodeRuntimeState.state.done = true;
   rolloutEpisodeRuntimeState.state.doneReason =
     FLAPPY_ROLLOUT_DONE_REASON_COLLISION;
+}
+
+/**
+ * Resolves whether the episode loop should advance another frame.
+ *
+ * Besides the ordinary done and frame-budget guards, this helper owns the
+ * cooperative caller abort hook used by recurrent warm-start deadlines. When
+ * the hook fires, the rollout is marked as a timeout so callers can distinguish
+ * budget exhaustion from a gameplay collision.
+ *
+ * @param rolloutEpisodeContext - Normalized rollout configuration.
+ * @param rolloutEpisodeRuntimeState - Mutable runtime state.
+ * @returns True when the rollout should process another frame.
+ */
+function shouldContinueRolloutEpisode(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+  rolloutEpisodeRuntimeState: RolloutEpisodeRuntimeState,
+): boolean {
+  if (rolloutEpisodeRuntimeState.state.done) {
+    return false;
+  }
+
+  if (
+    rolloutEpisodeRuntimeState.state.frameIndex >=
+    rolloutEpisodeContext.maxFramesPerEpisode
+  ) {
+    return false;
+  }
+
+  if (!shouldStopRolloutEpisode(rolloutEpisodeContext)) {
+    return true;
+  }
+
+  rolloutEpisodeRuntimeState.state.done = true;
+  rolloutEpisodeRuntimeState.state.doneReason =
+    FLAPPY_ROLLOUT_DONE_REASON_TIMEOUT;
+  return false;
+}
+
+/**
+ * Invokes the optional cooperative abort hook for the current rollout.
+ *
+ * Hook failures are treated as a stop request because the hook is a guardrail
+ * around optional warm-start work; a broken guard should yield back to normal
+ * NEAT evolution instead of trapping the worker in refinement.
+ *
+ * @param rolloutEpisodeContext - Normalized rollout configuration.
+ * @returns True when the caller asks the rollout to stop.
+ */
+function shouldStopRolloutEpisode(
+  rolloutEpisodeContext: RolloutEpisodeContext,
+): boolean {
+  try {
+    return rolloutEpisodeContext.shouldStop?.() === true;
+  } catch {
+    return true;
+  }
 }

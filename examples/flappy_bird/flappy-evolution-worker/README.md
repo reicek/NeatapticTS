@@ -362,8 +362,10 @@ though the worker currently sends the packed transport form.
 
 Worker generation-ready response message.
 
-The browser host uses this message to refresh HUD state and optionally render
-the current best network visualization.
+The browser host uses this message to refresh HUD state, render the current
+best network visualization, and start playback for the current population.
+Generation zero can be a startup release after warm-start rather than a full
+post-selection NEAT generation.
 
 ### WorkerHeuristicObservationFeatures
 
@@ -457,10 +459,11 @@ packed snapshot derived from them rather than these live mutable records.
 
 ### WorkerRequestGenerationMessage
 
-Worker request asking to evolve one generation.
+Worker request asking for the next playable generation payload.
 
-The worker responds with `generation-ready` once the NEAT runtime finishes
-one evolution pass.
+The first response may release the bounded generation-zero warm-start
+population before a full recurrent evolution pass. Later responses publish
+normally evolved populations.
 
 ### WorkerRequestMessage
 
@@ -706,6 +709,21 @@ the worker-global `self.onmessage` hook.
 
 ## flappy-evolution-worker/flappy-evolution-worker.evolution.service.ts
 
+### buildGenerationReadyMessage
+
+```ts
+buildGenerationReadyMessage(
+  options: { architectureProfileId: ExampleArchitectureProfileId; generation: number; bestNetwork: default; population: default[]; },
+): WorkerGenerationReadyMessage
+```
+
+Builds the generation-ready worker response from a population snapshot.
+
+Parameters:
+- `options` - Generation metadata plus selected best network and population.
+
+Returns: Generation-ready worker response payload.
+
 ### evolveAndBuildGenerationReadyMessage
 
 ```ts
@@ -714,13 +732,15 @@ evolveAndBuildGenerationReadyMessage(
 ): Promise<WorkerGenerationReadyMessage>
 ```
 
-Evolves one generation and creates the compact generation-ready response payload.
+Creates the next compact generation-ready response payload.
 
 Educational note:
-The worker does not stream the whole population back to the UI after each
-evolution step. Instead it emits a compact summary containing the generation
-index, best fitness, typed transferable inference payloads for playback, and
-the temporary JSON visualization bridge used by the host-side network panel.
+The first browser-visible population should not wait for a full recurrent
+selection batch. When the caller opts in, generation zero is released after
+the bounded warm-start assist so playback can begin promptly. Later requests
+run the normal NEAT `evolve()` pass and emit the same compact summary shape:
+generation index, best fitness, transferable inference payloads for playback,
+and the temporary JSON visualization bridge used by the host network panel.
 
 Parameters:
 - `options` - Evolution dependencies and runtime state accessors.
@@ -738,6 +758,21 @@ const generationMessage = await evolveAndBuildGenerationReadyMessage({
   setCurrentPopulation,
 });
 ```
+
+### resolveBestNetworkFromPopulation
+
+```ts
+resolveBestNetworkFromPopulation(
+  population: readonly default[],
+): default
+```
+
+Chooses the best network from a population snapshot using available scores.
+
+Parameters:
+- `population` - Population snapshot to scan.
+
+Returns: Highest-scored network, falling back to the first network when scores are equal.
 
 ### resolveGenerationReadyMessageTransferList
 
@@ -757,6 +792,59 @@ Parameters:
 - `workerMessage` - Generation-ready worker response payload.
 
 Returns: Transfer list for `postMessage(...)`.
+
+### resolveRuntimePopulation
+
+```ts
+resolveRuntimePopulation(
+  runtimeNeat: { population?: default[] | undefined; },
+  fallbackNetwork: default | undefined,
+): default[]
+```
+
+Resolves the current runtime population with an optional best-network fallback.
+
+Parameters:
+- `runtimeNeat` - Runtime population holder.
+- `fallbackNetwork` - Best network returned by an evolution pass.
+
+Returns: Non-empty population when one is available.
+
+### runBestEffortWarmStart
+
+```ts
+runBestEffortWarmStart(
+  warmStartGenerationZeroIfNeeded: (neatController: default) => Promise<void>,
+  neatRuntime: default,
+): Promise<void>
+```
+
+Runs generation-zero warm-start as an optional assist before regular evolution.
+
+Parameters:
+- `warmStartGenerationZeroIfNeeded` - Warm-start callback for the active runtime.
+- `neatRuntime` - Runtime that should evolve even when warm-start fails.
+
+Returns: Promise resolved after warm-start succeeds or is skipped.
+
+### shouldPublishStartupPopulationBeforeEvolution
+
+```ts
+shouldPublishStartupPopulationBeforeEvolution(
+  generation: number,
+  population: readonly default[],
+  publishStartupPopulationBeforeFirstEvolution: boolean | undefined,
+): boolean
+```
+
+Resolves whether the worker should release generation zero before evolving.
+
+Parameters:
+- `generation` - Current NEAT generation index.
+- `population` - Current worker population snapshot.
+- `publishStartupPopulationBeforeFirstEvolution` - Caller startup-release flag.
+
+Returns: True when generation zero can be published immediately for playback.
 
 ### WorkerEvolutionServiceOptions
 
@@ -1215,6 +1303,25 @@ Parameters:
 
 Returns: Nothing.
 
+### applyWarmStartGenerationZero
+
+```ts
+applyWarmStartGenerationZero(
+  neatController: default,
+  warmStartState: WorkerWarmStartState,
+  dependencies: WorkerWarmStartDependencies,
+): void
+```
+
+Applies the generation-zero warm-start body when the runtime is still eligible.
+
+Parameters:
+- `neatController` - Initialized NEAT runtime.
+- `warmStartState` - Mutable warm-start lifecycle state.
+- `dependencies` - Injectable warm-start seams.
+
+Returns: Nothing.
+
 ### buildHeuristicPretrainSet
 
 ```ts
@@ -1256,12 +1363,46 @@ Parameters:
 
 Returns: Shared rollout seed batch.
 
+### composeWarmStartSeedBatchEvaluation
+
+```ts
+composeWarmStartSeedBatchEvaluation(
+  episodeResults: readonly FlappyEpisodeResult[],
+): FlappySeedBatchEvaluation
+```
+
+Composes the completed warm-start rollouts into aggregate evidence.
+
+Parameters:
+- `episodeResults` - Completed rollout results before the deadline fired.
+
+Returns: Aggregate warm-start evaluation metrics.
+
+### createWarmStartDeadline
+
+```ts
+createWarmStartDeadline(
+  architectureProfileId: ExampleArchitectureProfileId,
+  resolveCurrentTimeMs: () => number,
+): WorkerWarmStartDeadline
+```
+
+Creates the optional deadline used by recurrent warm-start refinement.
+
+Parameters:
+- `architectureProfileId` - Selected shared Flappy profile id.
+- `resolveCurrentTimeMs` - Clock source used for deadline checks.
+
+Returns: Warm-start deadline contract.
+
 ### evaluateWarmStartTemplateAcrossRollouts
 
 ```ts
 evaluateWarmStartTemplateAcrossRollouts(
   templateNetwork: default,
   sharedRolloutSeeds: readonly number[],
+  warmStartDeadline: WorkerWarmStartDeadline,
+  runWarmStartRollout: WorkerWarmStartRolloutRunner,
 ): FlappySeedBatchEvaluation
 ```
 
@@ -1270,6 +1411,8 @@ Evaluates one warm-start template across the shared rollout seed batch.
 Parameters:
 - `templateNetwork` - Candidate template to score.
 - `sharedRolloutSeeds` - Shared rollout seeds used for stable comparison.
+- `warmStartDeadline` - Deadline that can stop seed evaluation early.
+- `runWarmStartRollout` - Rollout runner used to evaluate each seed.
 
 Returns: Aggregate shared-seed evaluation.
 
@@ -1292,6 +1435,21 @@ Parameters:
 
 Returns: Interpolated value.
 
+### isWarmStartDeadlineExpired
+
+```ts
+isWarmStartDeadlineExpired(
+  warmStartDeadline: WorkerWarmStartDeadline,
+): boolean
+```
+
+Resolves whether rollout refinement should yield to regular NEAT evolution.
+
+Parameters:
+- `warmStartDeadline` - Deadline contract for the current warm-start pass.
+
+Returns: True when the warm-start assist has spent its allowed budget.
+
 ### isWarmStartEvaluationBetter
 
 ```ts
@@ -1311,6 +1469,7 @@ robust score is identical.
 Parameters:
 - `candidateEvaluation` - Newly scored candidate aggregate.
 - `bestEvaluation` - Current best aggregate.
+- `architectureProfileId` - Selected shared Flappy profile id.
 
 Returns: True when the candidate should replace the incumbent template.
 
@@ -1321,6 +1480,8 @@ optimizeWarmStartTemplateNetwork(
   templateNetwork: default,
   workerInitSeed: number,
   architectureProfileId: ExampleArchitectureProfileId,
+  warmStartDeadline: WorkerWarmStartDeadline,
+  runWarmStartRollout: WorkerWarmStartRolloutRunner,
 ): default
 ```
 
@@ -1336,6 +1497,8 @@ Parameters:
 - `templateNetwork` - Heuristic-pretrained template network.
 - `workerInitSeed` - Deterministic worker seed.
 - `architectureProfileId` - Selected shared Flappy profile id.
+- `warmStartDeadline` - Optional recurrent assist deadline.
+- `runWarmStartRollout` - Rollout runner used to score candidate templates.
 
 Returns: Best rollout-refined template found within the bounded budget.
 
@@ -1428,7 +1591,7 @@ Returns: Scalar score used for candidate comparison.
 ```ts
 resolveWarmStartRolloutOptimizationPlan(
   architectureProfileId: ExampleArchitectureProfileId,
-): { rolloutSeedCount: number; optimizationStepCount: number; }
+): WorkerWarmStartRolloutOptimizationPlan
 ```
 
 Resolves the rollout-refinement budget for one warm-start architecture profile.
@@ -1440,7 +1603,7 @@ shortcut expands the recurrent seed.
 Parameters:
 - `architectureProfileId` - Selected shared Flappy profile id.
 
-Returns: Shared-seed count and optimization-step budget.
+Returns: Shared-seed count, optimization-step budget, and optional time cap.
 
 ### resolveWorkerWarmStartTeacherStrategy
 
@@ -1501,6 +1664,7 @@ between the heuristic teacher used here and the later evolutionary search.
 Parameters:
 - `neatController` - Initialized NEAT runtime.
 - `warmStartState` - Mutable warm-start lifecycle state.
+- `dependencies` - Injectable warm-start seams for tests and runtime customization.
 
 Returns: Promise resolved when warm-start evaluation finishes.
 
@@ -1513,6 +1677,10 @@ await warmStartWorkerGenerationZeroIfNeeded(neatRuntime, {
 });
 ```
 
+### WorkerWarmStartDeadline
+
+Deadline contract used by recurrent rollout refinement.
+
 ### WorkerWarmStartDependencies
 
 Dependency bag for generation-0 warm-start orchestration.
@@ -1520,6 +1688,24 @@ Dependency bag for generation-0 warm-start orchestration.
 The production path uses the real heuristic dataset builder and rollout-guided
 template refinement. Tests can override these seams to keep assertions small
 and deterministic.
+
+### WorkerWarmStartRolloutOptimizationPlan
+
+Rollout-refinement budget resolved for one warm-start architecture profile.
+
+### WorkerWarmStartRolloutRunner
+
+```ts
+WorkerWarmStartRolloutRunner(
+  templateNetwork: default,
+  rolloutOptions: FlappyRolloutOptions,
+): FlappyEpisodeResult
+```
+
+Callable shape used to evaluate one warm-start rollout candidate.
+
+Tests can inject this seam to observe deadline hooks without running the full
+Flappy simulator, while production uses the real rollout service.
 
 ### WorkerWarmStartState
 

@@ -23,13 +23,16 @@ describe('evaluateInWorkers', () => {
       release: jest.fn(async () => undefined),
     }));
 
-    const batchResult = await evaluateInWorkers<MockPayload, MockPayload, MockWorker, string>({
+    const batchResult = await evaluateInWorkers<
+      MockPayload,
+      MockPayload,
+      MockWorker,
+      string
+    >({
       inputs: [{ id: 11 }, { id: 22 }],
       openWorker,
-      evaluateWithWorker: async (
-        worker: MockWorker,
-        input: MockPayload,
-      ) => `${String(input.id)}:${String(worker.id)}`,
+      evaluateWithWorker: async (worker: MockWorker, input: MockPayload) =>
+        `${String(input.id)}:${String(worker.id)}`,
     });
 
     expect({
@@ -46,9 +49,15 @@ describe('evaluateInWorkers', () => {
   });
 
   it('falls back to single-thread evaluation when no worker configuration exists', async () => {
-    const batchResult = await evaluateInWorkers<MockPayload, MockPayload, MockWorker, string>({
+    const batchResult = await evaluateInWorkers<
+      MockPayload,
+      MockPayload,
+      MockWorker,
+      string
+    >({
       inputs: [{ id: 11 }, { id: 22 }],
-      evaluateLocally: async (input: MockPayload) => `${String(input.id)}:local`,
+      evaluateLocally: async (input: MockPayload) =>
+        `${String(input.id)}:local`,
     });
 
     expect({
@@ -68,11 +77,21 @@ describe('evaluateInWorkers', () => {
       release: jest.fn(async () => undefined),
     }));
 
-    const batchResult = await evaluateInWorkers<number, MockPayload, MockWorker, string>({
+    const batchResult = await evaluateInWorkers<
+      number,
+      MockPayload,
+      MockWorker,
+      string
+    >({
       inputs: [11, 22],
       openWorker,
       resolvePayload: (input: number) => ({ id: input + 100 }),
-      evaluateWithWorker: async (worker: MockWorker, input: number, _inputIndex: number, payload: MockPayload) => {
+      evaluateWithWorker: async (
+        worker: MockWorker,
+        input: number,
+        _inputIndex: number,
+        payload: MockPayload,
+      ) => {
         return `${String(input)}:${String(payload.id)}:${String(worker.id)}`;
       },
     });
@@ -89,9 +108,15 @@ describe('evaluateInWorkers', () => {
   it('falls back to Date timing when performance.now is unavailable', async () => {
     const restorePerformance = replacePerformance(undefined);
 
-    const batchResult = await evaluateInWorkers<MockPayload, MockPayload, MockWorker, string>({
+    const batchResult = await evaluateInWorkers<
+      MockPayload,
+      MockPayload,
+      MockWorker,
+      string
+    >({
       inputs: [{ id: 11 }],
-      evaluateLocally: async (input: MockPayload) => `${String(input.id)}:local`,
+      evaluateLocally: async (input: MockPayload) =>
+        `${String(input.id)}:local`,
     });
 
     restorePerformance();
@@ -118,21 +143,27 @@ describe('evaluateInWorkers', () => {
       workerCount: 2,
     });
 
-    const firstBatchResult = await evaluateInWorkers<MockPayload, MockPayload, MockWorker, string>({
+    const firstBatchResult = await evaluateInWorkers<
+      MockPayload,
+      MockPayload,
+      MockWorker,
+      string
+    >({
       inputs,
       workerPool,
-      evaluateWithWorker: async (
-        worker: MockWorker,
-        input: MockPayload,
-      ) => `${String(input.id)}:${String(worker.id)}`,
+      evaluateWithWorker: async (worker: MockWorker, input: MockPayload) =>
+        `${String(input.id)}:${String(worker.id)}`,
     });
-    const secondBatchResult = await evaluateInWorkers<MockPayload, MockPayload, MockWorker, string>({
+    const secondBatchResult = await evaluateInWorkers<
+      MockPayload,
+      MockPayload,
+      MockWorker,
+      string
+    >({
       inputs,
       workerPool,
-      evaluateWithWorker: async (
-        worker: MockWorker,
-        input: MockPayload,
-      ) => `${String(input.id)}:${String(worker.id)}`,
+      evaluateWithWorker: async (worker: MockWorker, input: MockPayload) =>
+        `${String(input.id)}:${String(worker.id)}`,
     });
     await workerPool.dispose();
 
@@ -158,10 +189,11 @@ describe('evaluateInWorkers', () => {
   });
 });
 
-function replacePerformance(
-  value: Performance | undefined,
-): () => void {
-  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'performance');
+function replacePerformance(value: Performance | undefined): () => void {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(
+    globalThis,
+    'performance',
+  );
 
   Object.defineProperty(globalThis, 'performance', {
     configurable: true,

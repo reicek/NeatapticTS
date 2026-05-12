@@ -121,10 +121,7 @@
  */
 /// <reference lib="webworker" />
 
-import {
-  Neat,
-  resolveBrowserWorkerAssetUrl,
-} from '../../../src/neataptic';
+import { Neat, resolveBrowserWorkerAssetUrl } from '../../../src/neataptic';
 import Network from '../../../src/architecture/network';
 import {
   DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
@@ -184,6 +181,7 @@ type WorkerMutableRuntimeState = {
   initializationPromise: Promise<void> | undefined;
   workerInitSeed: number;
   generationZeroWarmStartApplied: boolean;
+  startupPopulationPublished: boolean;
 };
 
 const workerMutableRuntimeState = createWorkerMutableRuntimeState();
@@ -233,6 +231,7 @@ function createWorkerMutableRuntimeState(): WorkerMutableRuntimeState {
     initializationPromise: undefined,
     workerInitSeed: FLAPPY_WORKER_INITIAL_SEED,
     generationZeroWarmStartApplied: false,
+    startupPopulationPublished: false,
   };
 }
 
@@ -361,14 +360,17 @@ async function initializeRuntime(
   workerMutableRuntimeState.playbackWinnerIndex =
     FLAPPY_WORKER_INITIAL_WINNER_INDEX;
   workerMutableRuntimeState.generationZeroWarmStartApplied = false;
+  workerMutableRuntimeState.startupPopulationPublished = false;
   workerMutableRuntimeState.evaluationWorkerPool =
     createWorkerEvaluationPoolIfSupported(initPayload);
 
   // Step 4: Build and configure the NEAT runtime controller.
-  workerMutableRuntimeState.neatRuntime =
-    createInitializedWorkerRuntime(initPayload, {
+  workerMutableRuntimeState.neatRuntime = createInitializedWorkerRuntime(
+    initPayload,
+    {
       workerPool: workerMutableRuntimeState.evaluationWorkerPool,
-    });
+    },
+  );
 }
 
 /**
@@ -402,6 +404,11 @@ async function evolveAndPublishGeneration(
       }),
     setCurrentPopulation: (nextPopulation) => {
       workerMutableRuntimeState.currentPopulation = nextPopulation;
+    },
+    publishStartupPopulationBeforeFirstEvolution:
+      !workerMutableRuntimeState.startupPopulationPublished,
+    markStartupPopulationPublished: () => {
+      workerMutableRuntimeState.startupPopulationPublished = true;
     },
   });
 

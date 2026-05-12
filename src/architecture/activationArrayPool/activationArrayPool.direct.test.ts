@@ -353,17 +353,13 @@ describe('activationArrayPool direct coverage chapter', () => {
       activationArrayPool.prewarm(6, 1);
 
       Reflect.set(globalThis, 'setImmediate', undefined);
-      Reflect.set(
-        globalThis,
-        'setTimeout',
-        ((callback: TimerHandler) => {
-          if (typeof callback === 'function') {
-            callback();
-          }
+      Reflect.set(globalThis, 'setTimeout', ((callback: TimerHandler) => {
+        if (typeof callback === 'function') {
+          callback();
+        }
 
-          return 0;
-        }) as unknown as typeof setTimeout,
-      );
+        return 0;
+      }) as unknown as typeof setTimeout);
 
       try {
         // Act
@@ -438,20 +434,18 @@ describe('activationArrayPool direct coverage chapter', () => {
       activationArrayPool.prewarm(8, 1);
 
       Reflect.set(globalThis, 'window', {});
-      Reflect.set(
-        globalThis,
-        'requestIdleCallback',
-        ((callback: IdleRequestCallback) => {
-          idleCallbacks.push(() => {
-            callback({
-              didTimeout: false,
-              timeRemaining: () => 10,
-            } as IdleDeadline);
-          });
+      Reflect.set(globalThis, 'requestIdleCallback', ((
+        callback: IdleRequestCallback,
+      ) => {
+        idleCallbacks.push(() => {
+          callback({
+            didTimeout: false,
+            timeRemaining: () => 10,
+          } as IdleDeadline);
+        });
 
-          return idleCallbacks.length;
-        }) as unknown as typeof requestIdleCallback,
-      );
+        return idleCallbacks.length;
+      }) as unknown as typeof requestIdleCallback);
 
       try {
         runtimePool.scheduleCompactionAfterLargePrune(64);
@@ -525,17 +519,13 @@ describe('activationArrayPool direct coverage chapter', () => {
 
       Reflect.set(globalThis, 'window', {});
       Reflect.set(globalThis, 'requestIdleCallback', undefined);
-      Reflect.set(
-        globalThis,
-        'setTimeout',
-        ((callback: TimerHandler) => {
-          if (typeof callback === 'function') {
-            timerCallbacks.push(callback as () => void);
-          }
+      Reflect.set(globalThis, 'setTimeout', ((callback: TimerHandler) => {
+        if (typeof callback === 'function') {
+          timerCallbacks.push(callback as () => void);
+        }
 
-          return timerCallbacks.length;
-        }) as unknown as typeof setTimeout,
-      );
+        return timerCallbacks.length;
+      }) as unknown as typeof setTimeout);
 
       try {
         runtimePool.scheduleCompactionAfterLargePrune(64);
@@ -652,20 +642,18 @@ describe('activationArrayPool direct coverage chapter', () => {
       activationArrayPool.prewarm(6, 1);
 
       Reflect.set(globalThis, 'window', {});
-      Reflect.set(
-        globalThis,
-        'requestIdleCallback',
-        ((callback: IdleRequestCallback) => {
-          idleCallbacks.push(() => {
-            callback({
-              didTimeout: false,
-              timeRemaining: () => 10,
-            } as IdleDeadline);
-          });
+      Reflect.set(globalThis, 'requestIdleCallback', ((
+        callback: IdleRequestCallback,
+      ) => {
+        idleCallbacks.push(() => {
+          callback({
+            didTimeout: false,
+            timeRemaining: () => 10,
+          } as IdleDeadline);
+        });
 
-          return idleCallbacks.length;
-        }) as unknown as typeof requestIdleCallback,
-      );
+        return idleCallbacks.length;
+      }) as unknown as typeof requestIdleCallback);
 
       try {
         runtimePool.scheduleCompactionAfterLargePrune(64);

@@ -1,8 +1,6 @@
 import { evaluateFlappyFitnessAcrossSeeds } from '../../flappyEvaluation';
 import { evaluateFlappyFitnessAcrossSeedsWithSharedInferenceWorker } from '../../evaluation/evaluation.fitness.utils';
-import {
-  evaluateSpecificGenomesAcrossSeeds,
-} from './trainer.evaluation.service.services';
+import { evaluateSpecificGenomesAcrossSeeds } from './trainer.evaluation.service.services';
 
 jest.mock('../../flappyEvaluation', () => ({
   evaluateFlappyFitnessAcrossSeeds: jest.fn(),
@@ -22,29 +20,33 @@ describe('evaluateSpecificGenomesAcrossSeeds', () => {
     const secondGenome = { _id: 22, activate: () => [0.2, 0.8] };
     const aggregateByGenome = new Map();
     const workerPool = {
-      resolveOrderedPayloads: jest.fn().mockResolvedValue([{ id: 11 }, { id: 22 }]),
+      resolveOrderedPayloads: jest
+        .fn()
+        .mockResolvedValue([{ id: 11 }, { id: 22 }]),
       parallelWorkerPool: {
-        evaluateOrderedBatch: jest.fn(async (
-          payloads: Array<{ id: number }>,
-          evaluateWithWorker: (
-            worker: { id: number; release: jest.Mock<Promise<void>, []> },
-            payload: { id: number },
-            payloadIndex: number,
-          ) => Promise<ReturnType<typeof createAggregate>>,
-        ) => {
-          return Promise.all(
-            payloads.map((payload, payloadIndex) =>
-              evaluateWithWorker(
-                {
-                  id: payload.id,
-                  release: jest.fn(async () => undefined),
-                },
-                payload,
-                payloadIndex,
+        evaluateOrderedBatch: jest.fn(
+          async (
+            payloads: Array<{ id: number }>,
+            evaluateWithWorker: (
+              worker: { id: number; release: jest.Mock<Promise<void>, []> },
+              payload: { id: number },
+              payloadIndex: number,
+            ) => Promise<ReturnType<typeof createAggregate>>,
+          ) => {
+            return Promise.all(
+              payloads.map((payload, payloadIndex) =>
+                evaluateWithWorker(
+                  {
+                    id: payload.id,
+                    release: jest.fn(async () => undefined),
+                  },
+                  payload,
+                  payloadIndex,
+                ),
               ),
-            ),
-          );
-        }),
+            );
+          },
+        ),
       },
     };
 
@@ -68,7 +70,8 @@ describe('evaluateSpecificGenomesAcrossSeeds', () => {
       resolvedFitnesses: [...aggregateByGenome.values()].map(
         (aggregate) => aggregate.robustFitness,
       ),
-      payloadResolutionCallCount: workerPool.resolveOrderedPayloads.mock.calls.length,
+      payloadResolutionCallCount:
+        workerPool.resolveOrderedPayloads.mock.calls.length,
     }).toEqual({
       directEvaluationCalls: 0,
       parallelBatchCallCount: 1,

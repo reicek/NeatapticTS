@@ -210,7 +210,9 @@ function buildStoredValueReadExpression(
   bufferName: 'A' | 'S',
   nodeIndex: number,
 ): string {
-  if (generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16) {
+  if (
+    generationContext.resolvedActivationPrecision === ACTIVATION_PRECISION_F16
+  ) {
     return `${resolveStandaloneBufferName(bufferName)}[${nodeIndex}]`;
   }
 

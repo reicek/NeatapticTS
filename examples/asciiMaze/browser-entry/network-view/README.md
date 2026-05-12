@@ -1,19 +1,11 @@
 # browser-entry/network-view
 
-Rich network-view renderer for the ASCII Maze browser demo.
+ASCII Maze adapter over the shared rich browser network visualizer.
 
-This module wraps the shared `renderNetworkView` canvas renderer and layers
-on maze-specific educational overlays: colored input group bands, per-node
-chip labels, output direction labels, and a weight/bias legend.
-
-The result includes hit areas that the host can use for hover tooltip testing
-without needing to re-render the canvas on every pointer event.
-
-```ts
-const result = drawMazeNetworkVisualization(canvas, network, graph);
-// result.hitAreas — hover hit test geometry + tooltip content
-// result.frame    — positioned nodes (reusable for custom redraws)
-```
+The maze demo should not own its own network-frame math. Instead it reuses
+the same resolved frame, padding, node sizing, and connection drawing path
+as Flappy Bird, while only swapping the semantic input labels and the short
+output tags.
 
 ## browser-entry/network-view/network-view.ts
 
@@ -28,84 +20,84 @@ drawMazeNetworkVisualization(
 ): MazeNetworkRenderResult
 ```
 
-Draws a full educational network visualization for the ASCII Maze demo.
-
-Orchestration:
-1. Sync canvas backing-store dimensions to the panel.
-2. Render the base graph (nodes + connections + background) via the shared renderer.
-3. Draw the input label panel in the reserved left padding area.
-4. Draw output direction labels to the right of output nodes.
-5. Draw the connection weight + bias legend.
+Draw the ASCII Maze network panel using the shared Flappy visualizer owner.
 
 Parameters:
 - `canvas` - Canvas element to render onto.
-- `network` - Runtime network used for architecture and dynamic color scales.
-- `graph` - Exported visualization graph from `exportVisualizationGraph`.
+- `network` - Runtime network used for architecture metadata and weights.
+- `graph` - Exported graph carrying authoritative input/output counts.
+- `hoveredNodeIndices` - Host-owned hovered node ids.
 
-Returns: Resolved frame plus hover hit areas for the host tooltip system.
-
-### drawOutputNodeLabels
-
-```ts
-drawOutputNodeLabels(
-  context: CanvasRenderingContext2D,
-  outputNodes: PositionedNetworkNode[],
-  nodeDimensions: NetworkNodeDimensions,
-): void
-```
-
-Draws short direction labels (N / E / S / W) to the right of each output node.
-
-Parameters:
-- `context` - Canvas 2D context.
-- `outputNodes` - Output nodes sorted top-to-bottom.
-- `nodeDimensions` - Node dimensions for offset calculation.
+Returns: Shared resolved frame plus maze hover hit areas.
 
 ### MazeHitArea
 
 A canvas-space rectangular hit area with associated tooltip content.
 
-Returned in bulk by `drawMazeNetworkVisualization` so the host can test
-pointer positions against them during mousemove without re-rendering.
-
 ### MazeNetworkRenderResult
 
 Full return value from `drawMazeNetworkVisualization`.
 
-The frame gives access to positioned node geometry (useful for custom
-overlay logic) and the hit areas are ready for pointer hit testing.
-
-### resolveAndDrawInputLabelPanel
+### resolveMazeArchitectureLabel
 
 ```ts
-resolveAndDrawInputLabelPanel(
-  _context: CanvasRenderingContext2D,
-  inputNodes: PositionedNetworkNode[],
-  nodeDimensions: NetworkNodeDimensions,
-): { inputDescriptionScenes: NetworkInputDescriptionScene[]; inputGroupLabelBandScenes: NetworkInputGroupLabelBandScene[]; hitAreas: MazeHitArea[]; }
+resolveMazeArchitectureLabel(
+  network: default,
+  graph: VisualizationGraphV1,
+): string
 ```
 
-Draws colored group bands and per-node chip labels in the left padding area.
+Resolve the compact architecture summary for the maze network legend.
 
 Parameters:
-- `context` - Canvas 2D drawing context.
-- `inputNodes` - Input nodes sorted top-to-bottom.
-- `nodeDimensions` - Node width/height from the resolved frame.
+- `network` - Runtime network being visualized.
+- `graph` - Exported graph carrying authoritative input/output counts.
 
-Returns: Hit areas for all drawn groups and chips.
+Returns: Shared architecture label with maze IO counts.
 
-### syncCanvasToPanel
+### resolveMazeInputLabelGroupDefinitions
 
 ```ts
-syncCanvasToPanel(
-  canvas: HTMLCanvasElement,
-): void
+resolveMazeInputLabelGroupDefinitions(): readonly InputLabelGroupDefinition[]
 ```
 
-Aligns canvas backing-store dimensions to the responsive panel width.
+Resolve the shared visualizer input-label definitions for the maze demo.
+
+Returns: Maze semantic label groups expressed in the shared visualizer format.
+
+### resolveMazeNetworkCanvasDimensions
+
+```ts
+resolveMazeNetworkCanvasDimensions(
+  measuredWidthPx: number,
+  measuredHeightPx: number,
+): { widthPx: number; heightPx: number; }
+```
+
+Resolve responsive network-canvas dimensions from the host panel shelf.
 
 Parameters:
-- `canvas` - Target canvas.
+- `measuredWidthPx` - Current measured canvas width from layout.
+- `measuredHeightPx` - Current measured host-panel height from layout.
+
+Returns: Width and height for the canvas backing store.
+
+### resolveMazeVisualizationTopologyPlan
+
+```ts
+resolveMazeVisualizationTopologyPlan(
+  network: default,
+  graph: VisualizationGraphV1,
+): NetworkVisualizationTopologyPlan
+```
+
+Resolve the shared topology plan for the maze network.
+
+Parameters:
+- `network` - Runtime network being visualized.
+- `graph` - Exported graph carrying authoritative input/output counts.
+
+Returns: Shared topology plan with recurrent annotations when present.
 
 ## browser-entry/network-view/network-view.constants.ts
 

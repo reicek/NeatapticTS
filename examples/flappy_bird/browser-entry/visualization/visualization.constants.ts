@@ -76,7 +76,7 @@ export const FLAPPY_NETWORK_LEGEND_MIN_ARCHITECTURE_TOP_PX = 4;
 /**
  * Gap between architecture text and the legend container.
  */
-export const FLAPPY_NETWORK_LEGEND_ARCHITECTURE_GAP_PX = 4;
+export const FLAPPY_NETWORK_LEGEND_ARCHITECTURE_GAP_PX = 8;
 
 /**
  * Shared inner padding used by legend labels and swatches.

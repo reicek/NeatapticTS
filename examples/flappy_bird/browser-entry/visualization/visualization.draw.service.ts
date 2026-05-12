@@ -10,6 +10,7 @@ import {
   FLAPPY_NETWORK_LEGEND_CONNECTION_LINE_WIDTH_PX,
   FLAPPY_NETWORK_LEGEND_CONNECTION_TITLE_COLOR,
   FLAPPY_NETWORK_LEGEND_HEADER_COLOR,
+  FLAPPY_NETWORK_LEGEND_MARGIN_PX,
   FLAPPY_NETWORK_LEGEND_REGULAR_FONT_SIZE_PX,
   FLAPPY_NETWORK_LEGEND_ROW_TEXT_COLOR,
   FLAPPY_NETWORK_MIN_LABEL_HEIGHT_PX,
@@ -105,8 +106,30 @@ type WeightedConnectionScene = {
   toPosition: PositionedNetworkNodeLike;
   connectionColor: string;
   connectionOpacity: number;
+  lineWidthPx: number;
+  underlayColor?: string;
+  underlayOpacity?: number;
+  underlayLineWidthPx?: number;
   dashPattern: number[];
   lineCap: CanvasLineCap;
+};
+
+/** Optional overrides for connection-layer stroke visibility. */
+export interface WeightedConnectionLayerStyle {
+  lineWidthPx: number;
+  defaultConnectionOpacity: number;
+  dimmedConnectionOpacity: number;
+  highlightConnectionOpacity: number;
+  underlayColor?: string;
+  underlayOpacity?: number;
+  underlayLineWidthPx?: number;
+}
+
+const DEFAULT_WEIGHTED_CONNECTION_LAYER_STYLE: WeightedConnectionLayerStyle = {
+  lineWidthPx: FLAPPY_NETWORK_LEGEND_CONNECTION_LINE_WIDTH_PX,
+  defaultConnectionOpacity: FLAPPY_NETWORK_DEFAULT_CONNECTION_ALPHA,
+  dimmedConnectionOpacity: FLAPPY_NETWORK_DIMMED_CONNECTION_ALPHA,
+  highlightConnectionOpacity: FLAPPY_NETWORK_HIGHLIGHT_CONNECTION_ALPHA,
 };
 
 type ConnectionStrokeRequest = {
@@ -173,12 +196,15 @@ export function drawWeightedConnectionsLayer(
   positionByNodeIndex: Map<number, PositionedNetworkNodeLike>,
   connectionScale: DynamicColorScale,
   animatedHoveredNodes?: readonly NetworkVisualizationAnimatedHoveredNode[],
+  connectionLayerStyle?: Partial<WeightedConnectionLayerStyle>,
 ): void {
   context.shadowBlur = 0;
   context.shadowColor = FLAPPY_TRANSPARENT_CANVAS_COLOR;
 
   const hoveredNodeAnimationState =
     resolveHoveredNodeAnimationState(animatedHoveredNodes);
+  const resolvedConnectionLayerStyle =
+    resolveConnectionLayerStyle(connectionLayerStyle);
 
   // Step 1: Resolve and paint each drawable connection without building an intermediate list.
   runtimeConnections.forEach((runtimeConnection) => {
@@ -187,6 +213,7 @@ export function drawWeightedConnectionsLayer(
       positionByNodeIndex,
       connectionScale,
       hoveredNodeAnimationState,
+      resolvedConnectionLayerStyle,
     );
     if (!weightedConnectionScene) {
       return;
@@ -327,6 +354,7 @@ function resolveWeightedConnectionScene(
   positionByNodeIndex: Map<number, PositionedNetworkNodeLike>,
   connectionScale: DynamicColorScale,
   hoveredNodeAnimationState: HoveredNodeAnimationState,
+  connectionLayerStyle: WeightedConnectionLayerStyle,
 ): WeightedConnectionScene | undefined {
   // Step 1: Resolve both endpoint indices and exit early when either side is missing.
   const fromNodeIndex = runtimeConnection.from?.index;
@@ -362,7 +390,12 @@ function resolveWeightedConnectionScene(
     connectionOpacity: resolveConnectionOpacity(
       hoveredNodeAnimationState.maximumIntensity,
       adjacentHoverIntensity,
+      connectionLayerStyle,
     ),
+    lineWidthPx: connectionLayerStyle.lineWidthPx,
+    underlayColor: connectionLayerStyle.underlayColor,
+    underlayOpacity: connectionLayerStyle.underlayOpacity,
+    underlayLineWidthPx: connectionLayerStyle.underlayLineWidthPx,
     dashPattern: resolveConnectionDashPattern(
       connectionWeight < 0,
       connectionEnabled,
@@ -385,6 +418,27 @@ function drawWeightedConnectionScene(
   context: CanvasRenderingContext2D,
   weightedConnectionScene: WeightedConnectionScene,
 ): void {
+  if (
+    weightedConnectionScene.underlayColor &&
+    typeof weightedConnectionScene.underlayOpacity === 'number' &&
+    weightedConnectionScene.underlayOpacity > 0 &&
+    typeof weightedConnectionScene.underlayLineWidthPx === 'number' &&
+    weightedConnectionScene.underlayLineWidthPx >
+      weightedConnectionScene.lineWidthPx
+  ) {
+    drawConnectionStroke(context, {
+      fromXPx: weightedConnectionScene.fromPosition.xPx,
+      fromYPx: weightedConnectionScene.fromPosition.yPx,
+      toXPx: weightedConnectionScene.toPosition.xPx,
+      toYPx: weightedConnectionScene.toPosition.yPx,
+      color: weightedConnectionScene.underlayColor,
+      lineWidthPx: weightedConnectionScene.underlayLineWidthPx,
+      opacity: weightedConnectionScene.underlayOpacity,
+      dashPattern: weightedConnectionScene.dashPattern,
+      lineCap: weightedConnectionScene.lineCap,
+    });
+  }
+
   // Step 1: Paint the resolved connection stroke with the requested alpha and dash style.
   drawConnectionStroke(context, {
     fromXPx: weightedConnectionScene.fromPosition.xPx,
@@ -392,7 +446,7 @@ function drawWeightedConnectionScene(
     toXPx: weightedConnectionScene.toPosition.xPx,
     toYPx: weightedConnectionScene.toPosition.yPx,
     color: weightedConnectionScene.connectionColor,
-    lineWidthPx: FLAPPY_NETWORK_LEGEND_CONNECTION_LINE_WIDTH_PX,
+    lineWidthPx: weightedConnectionScene.lineWidthPx,
     opacity: weightedConnectionScene.connectionOpacity,
     dashPattern: weightedConnectionScene.dashPattern,
     lineCap: weightedConnectionScene.lineCap,
@@ -451,16 +505,17 @@ function resolveAdjacentConnectionHoverIntensity(
 function resolveConnectionOpacity(
   maximumHoverIntensity: number,
   adjacentHoverIntensity: number,
+  connectionLayerStyle: WeightedConnectionLayerStyle,
 ): number {
   // Step 1: Keep the shared default opacity when no animated hover is active.
   if (maximumHoverIntensity <= 0) {
-    return FLAPPY_NETWORK_DEFAULT_CONNECTION_ALPHA;
+    return connectionLayerStyle.defaultConnectionOpacity;
   }
 
   // Step 2: Dim the whole graph while any hover remains active.
   const dimmedConnectionOpacity = interpolateNumber(
-    FLAPPY_NETWORK_DEFAULT_CONNECTION_ALPHA,
-    FLAPPY_NETWORK_DIMMED_CONNECTION_ALPHA,
+    connectionLayerStyle.defaultConnectionOpacity,
+    connectionLayerStyle.dimmedConnectionOpacity,
     maximumHoverIntensity,
   );
 
@@ -471,9 +526,31 @@ function resolveConnectionOpacity(
 
   return interpolateNumber(
     dimmedConnectionOpacity,
-    FLAPPY_NETWORK_HIGHLIGHT_CONNECTION_ALPHA,
+    connectionLayerStyle.highlightConnectionOpacity,
     adjacentHoverIntensity,
   );
+}
+
+function resolveConnectionLayerStyle(
+  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
+): WeightedConnectionLayerStyle {
+  return {
+    lineWidthPx:
+      connectionLayerStyle?.lineWidthPx ??
+      DEFAULT_WEIGHTED_CONNECTION_LAYER_STYLE.lineWidthPx,
+    defaultConnectionOpacity:
+      connectionLayerStyle?.defaultConnectionOpacity ??
+      DEFAULT_WEIGHTED_CONNECTION_LAYER_STYLE.defaultConnectionOpacity,
+    dimmedConnectionOpacity:
+      connectionLayerStyle?.dimmedConnectionOpacity ??
+      DEFAULT_WEIGHTED_CONNECTION_LAYER_STYLE.dimmedConnectionOpacity,
+    highlightConnectionOpacity:
+      connectionLayerStyle?.highlightConnectionOpacity ??
+      DEFAULT_WEIGHTED_CONNECTION_LAYER_STYLE.highlightConnectionOpacity,
+    underlayColor: connectionLayerStyle?.underlayColor,
+    underlayOpacity: connectionLayerStyle?.underlayOpacity,
+    underlayLineWidthPx: connectionLayerStyle?.underlayLineWidthPx,
+  };
 }
 
 function resolveHoveredNodeAnimationState(
@@ -795,20 +872,57 @@ function resolveLegendSceneContext(
   const architectureLines = architectureLabel.split(
     FLAPPY_MULTILINE_LABEL_SEPARATOR,
   );
-  const architectureTextTopPx = Math.max(
-    FLAPPY_NETWORK_LEGEND_MIN_ARCHITECTURE_TOP_PX,
-    networkLegendLayout.legendTopPx -
-      architectureLines.length * FLAPPY_NETWORK_HEADER_LINE_HEIGHT_PX -
-      FLAPPY_NETWORK_LEGEND_ARCHITECTURE_GAP_PX,
+  const architectureLineCount = architectureLines.length;
+  const architectureHeightPx =
+    architectureLineCount * FLAPPY_NETWORK_HEADER_LINE_HEIGHT_PX;
+  const legendStackTopPx = resolveLegendStackTopPx(
+    context,
+    architectureHeightPx,
+    networkLegendLayout.legendHeightPx,
   );
+  const architectureTextTopPx = legendStackTopPx;
+  const legendTopPx =
+    architectureTextTopPx +
+    architectureHeightPx +
+    FLAPPY_NETWORK_LEGEND_ARCHITECTURE_GAP_PX;
 
   return {
     ...networkLegendLayout,
     architectureLines,
+    legendTopPx,
     architectureTextTopPx,
     connectionLegendRows,
     biasLegendRows,
   };
+}
+
+function resolveLegendStackTopPx(
+  context: CanvasRenderingContext2D,
+  architectureHeightPx: number,
+  legendHeightPx: number,
+): number {
+  const totalLegendStackHeightPx =
+    architectureHeightPx +
+    FLAPPY_NETWORK_LEGEND_ARCHITECTURE_GAP_PX +
+    legendHeightPx;
+  const centeredLegendStackTopPx =
+    (context.canvas.height - totalLegendStackHeightPx) * 0.5;
+  const minimumLegendStackTopPx = Math.max(
+    FLAPPY_NETWORK_LEGEND_MARGIN_PX,
+    FLAPPY_NETWORK_LEGEND_MIN_ARCHITECTURE_TOP_PX,
+  );
+  const maximumLegendStackTopPx = Math.max(
+    minimumLegendStackTopPx,
+    context.canvas.height -
+      totalLegendStackHeightPx -
+      FLAPPY_NETWORK_LEGEND_MARGIN_PX,
+  );
+
+  return clamp(
+    centeredLegendStackTopPx,
+    minimumLegendStackTopPx,
+    maximumLegendStackTopPx,
+  );
 }
 
 /**

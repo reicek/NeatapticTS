@@ -312,10 +312,10 @@ It should reopen by standing on the active Phase 4 and Phase 6 foundations.
 Before any NEATchat-owned implementation starts:
 
 1. `plans/completed/Population_Save_Resume_and_Checkpointing.md` must remain
-  the stable checkpoint surface that owns NEATchat identity and memory state.
+   the stable checkpoint surface that owns NEATchat identity and memory state.
 2. `plans/completed/Worker_Friendly_Network_Serialization_Fastpath.md` and
-  `plans/completed/Turnkey_Multithread_Evaluation_API.md` must remain the
-  usable background-execution path with deterministic fallback behavior.
+   `plans/completed/Turnkey_Multithread_Evaluation_API.md` must remain the
+   usable background-execution path with deterministic fallback behavior.
 3. `plans/Evolution_Training_Interoperability_Contracts.md` must expose the
    parameter-vector or isolated fine-tune seam that personalized candidates
    depend on.

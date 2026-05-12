@@ -98,6 +98,10 @@
  * ```
  */
 
+import {
+  DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID,
+  type ExampleArchitectureProfileId,
+} from '../../architectureProfiles';
 import { BROWSER_ENTRY_CONSTANTS as C } from './browser-entry.constants';
 import {
   composeBrowserEntryAbortSignal,
@@ -106,6 +110,10 @@ import {
   installBrowserEntryGlobals,
   runBrowserEntryCurriculum,
 } from './browser-entry.services';
+import {
+  createMazeArchitectureSelector,
+  type MazeArchitectureSelectorController,
+} from './browser-entry.architecture-selector.services';
 import type {
   AsciiMazeRunHandle,
   BrowserEntryStartOptions,
@@ -154,6 +162,9 @@ export const start = async (
     return _activeRunHandle;
   }
 
+  const selectedProfileId: ExampleArchitectureProfileId =
+    opts.architectureProfileId ?? DEFAULT_ASCII_MAZE_ARCHITECTURE_PROFILE_ID;
+
   // Step 1: Resolve host elements and attach browser-specific services.
   const hostElements = resolveBrowserEntryHostElements(container);
   const hostServices = createBrowserEntryHostServices(hostElements);
@@ -165,6 +176,8 @@ export const start = async (
   let cancelled = false;
   let running = true;
   let finalized = false;
+  let pendingRestart = false;
+  let selectorController: MazeArchitectureSelectorController | null = null;
   const internalController = new AbortController();
   let resolveDonePromise!: () => void;
   const done = new Promise<void>((resolve) => {
@@ -180,6 +193,56 @@ export const start = async (
     hostServices.disposeResizeHandling();
     resolveDonePromise();
   };
+
+  const queueRestart = (nextProfileId: ExampleArchitectureProfileId): void => {
+    if (pendingRestart || cancelled) {
+      return;
+    }
+
+    pendingRestart = true;
+    selectorController?.setDisabled(true);
+
+    if (running) {
+      cancelled = true;
+
+      try {
+        internalController.abort();
+      } catch {
+        // Ignore abort failures in older or restricted environments.
+      }
+
+      void done.then(() => {
+        _activeRunHandle = null;
+        void start(container, { architectureProfileId: nextProfileId });
+      });
+      return;
+    }
+
+    _activeRunHandle = null;
+    void start(container, { architectureProfileId: nextProfileId });
+  };
+
+  // Step 3: Wire the architecture selector UI for switching profiles mid-session.
+  const onSelectArchitecture = (
+    newProfileId: ExampleArchitectureProfileId,
+  ): void => {
+    queueRestart(newProfileId);
+  };
+
+  const onResetSimulation = (): void => {
+    queueRestart(selectedProfileId);
+  };
+
+  if (hostElements.archButtonsElement) {
+    selectorController = createMazeArchitectureSelector(
+      hostElements.archButtonsElement,
+      selectedProfileId,
+      onSelectArchitecture,
+      onResetSimulation,
+    );
+  }
+
+  // Step 4: Compose cooperative cancellation signal.
   const combinedSignal = composeBrowserEntryAbortSignal(
     internalController,
     opts.signal,
@@ -194,7 +257,6 @@ export const start = async (
         'abort',
         () => {
           cancelled = true;
-          finalizeRun();
         },
         { once: true },
       );
@@ -203,7 +265,7 @@ export const start = async (
     }
   }
 
-  // Step 3: Start curriculum orchestration only when the run is still active.
+  // Step 5: Start curriculum orchestration only when the run is still active.
   if (!cancelled) {
     runBrowserEntryCurriculum({
       dashboard: hostServices.dashboard,
@@ -211,10 +273,11 @@ export const start = async (
       isCancelled: () => cancelled,
       finish: finalizeRun,
       hostAdapter,
+      architectureProfileId: selectedProfileId,
     });
   }
 
-  // Step 4: Return the stable lifecycle handle for embedding hosts.
+  // Step 6: Return the stable lifecycle handle for embedding hosts.
   const handle: AsciiMazeRunHandle = {
     stop: () => {
       cancelled = true;

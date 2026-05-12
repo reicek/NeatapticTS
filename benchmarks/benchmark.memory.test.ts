@@ -714,8 +714,7 @@ describe('benchmark.memory dist-only', () => {
         records: phase5SparsityRecords,
         targetBytesPerConnectionReductionPct:
           PHASE5_TARGET_BYTES_PER_CONNECTION_REDUCTION_PCT,
-        targetConnectionRetentionFraction:
-          PHASE5_SPARSITY_RETENTION_FRACTION,
+        targetConnectionRetentionFraction: PHASE5_SPARSITY_RETENTION_FRACTION,
       };
       persistedPhase5Sparsity = payload.phase5Sparsity as {
         aggregated?: unknown[];

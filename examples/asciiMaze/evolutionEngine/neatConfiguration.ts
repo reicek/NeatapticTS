@@ -30,6 +30,7 @@ export interface NeatConfig {
   popSize?: number;
   mutation?: unknown[];
   allowRecurrent?: boolean;
+  fitnessPopulation?: boolean;
   elitism?: number;
   provenance?: number;
   mutationRate?: number;
@@ -98,13 +99,17 @@ export interface NeatConfig {
 export const createNeat = (
   inputCount: number,
   outputCount: number,
-  fitnessCallback: (net: Network) => number,
+  fitnessCallback:
+    | ((net: Network) => number | Promise<number>)
+    | ((population: Network[]) => Promise<void>),
   cfg?: NeatConfig,
 ): Neat => {
   const NeatNetworkConstructor = Neat as unknown as new (
     input: number,
     output: number,
-    fitness: (network: Network) => unknown,
+    fitness:
+      | ((network: Network) => unknown)
+      | ((population: Network[]) => unknown),
     options: NeatConfig,
   ) => Neat;
 
@@ -175,6 +180,7 @@ export const createNeat = (
       mutation: mutationOps,
       mutationRate: conf.mutationRate,
       mutationAmount: conf.mutationAmount ?? DEFAULT_MUTATION_AMOUNT,
+      fitnessPopulation: conf.fitnessPopulation,
       elitism,
       provenance,
       allowRecurrent,

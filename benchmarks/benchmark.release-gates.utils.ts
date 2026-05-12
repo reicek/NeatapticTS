@@ -136,7 +136,9 @@ function evaluateVarianceFailures(
   artifact: BenchmarkReleaseGateArtifact,
 ): BenchmarkReleaseGateFailure[] {
   const configuredRepeats = artifact.meta?.varianceRepeatsLarge ?? 0;
-  const varianceEntries = Array.isArray(artifact.variance) ? artifact.variance : [];
+  const varianceEntries = Array.isArray(artifact.variance)
+    ? artifact.variance
+    : [];
 
   if (configuredRepeats <= 1) {
     return [
@@ -149,7 +151,9 @@ function evaluateVarianceFailures(
   }
 
   return VARIANCE_MONITORED_SIZES.flatMap((monitoredSize) => {
-    const matchingEntry = varianceEntries.find((entry) => entry.size === monitoredSize);
+    const matchingEntry = varianceEntries.find(
+      (entry) => entry.size === monitoredSize,
+    );
 
     if (!matchingEntry) {
       return [
@@ -216,7 +220,8 @@ function evaluateMemoryFailures(
     }
 
     const medianBaseline = computeMedian(priorSamples);
-    const deltaPct = ((currentBytesPerConnection - medianBaseline) / medianBaseline) * 100;
+    const deltaPct =
+      ((currentBytesPerConnection - medianBaseline) / medianBaseline) * 100;
 
     if (deltaPct <= MEMORY_REGRESSION_DELTA_PCT_THRESHOLD) {
       return [];
@@ -242,7 +247,8 @@ function evaluateDeterminismFailures(
   if (!determinismReplay) {
     return [
       {
-        message: 'Determinism gate requires a persisted determinismReplay section.',
+        message:
+          'Determinism gate requires a persisted determinismReplay section.',
         name: 'determinism',
       },
     ];
@@ -251,7 +257,8 @@ function evaluateDeterminismFailures(
   if (!determinismReplay.generatedAt) {
     return [
       {
-        message: 'Determinism gate requires determinismReplay.generatedAt for auditability.',
+        message:
+          'Determinism gate requires determinismReplay.generatedAt for auditability.',
         name: 'determinism',
       },
     ];
@@ -260,7 +267,8 @@ function evaluateDeterminismFailures(
   if (!determinismReplay.passed) {
     return [
       {
-        message: 'Determinism gate requires determinismReplay.passed to be true.',
+        message:
+          'Determinism gate requires determinismReplay.passed to be true.',
         name: 'determinism',
       },
     ];
@@ -269,7 +277,8 @@ function evaluateDeterminismFailures(
   if (!determinismChecks.length) {
     return [
       {
-        message: 'Determinism gate requires at least one persisted replay check.',
+        message:
+          'Determinism gate requires at least one persisted replay check.',
         name: 'determinism',
       },
     ];
@@ -292,7 +301,9 @@ function evaluateDeterminismFailures(
 function evaluateAuditFailures(
   artifact: BenchmarkReleaseGateArtifact,
 ): BenchmarkReleaseGateFailure[] {
-  const historyEntries = Array.isArray(artifact.history) ? artifact.history : [];
+  const historyEntries = Array.isArray(artifact.history)
+    ? artifact.history
+    : [];
   const latestHistoryEntry = historyEntries.at(-1);
   const currentDistBundle = artifact.meta?.distBundle;
 
@@ -314,10 +325,14 @@ function evaluateAuditFailures(
     ];
   }
 
-  if (!latestHistoryEntry.generatedAt || latestHistoryEntry.generatedAt !== artifact.generatedAt) {
+  if (
+    !latestHistoryEntry.generatedAt ||
+    latestHistoryEntry.generatedAt !== artifact.generatedAt
+  ) {
     return [
       {
-        message: 'Audit gate requires the latest history snapshot timestamp to match the current artifact timestamp.',
+        message:
+          'Audit gate requires the latest history snapshot timestamp to match the current artifact timestamp.',
         name: 'audit',
       },
     ];
@@ -326,16 +341,22 @@ function evaluateAuditFailures(
   if (!latestHistoryEntry.commit) {
     return [
       {
-        message: 'Audit gate requires the latest history snapshot to record a commit.',
+        message:
+          'Audit gate requires the latest history snapshot to record a commit.',
         name: 'audit',
       },
     ];
   }
 
-  if (!currentDistBundle?.exists || !currentDistBundle.hash || !currentDistBundle.bytes) {
+  if (
+    !currentDistBundle?.exists ||
+    !currentDistBundle.hash ||
+    !currentDistBundle.bytes
+  ) {
     return [
       {
-        message: 'Audit gate requires meta.distBundle with exists, hash, and bytes populated.',
+        message:
+          'Audit gate requires meta.distBundle with exists, hash, and bytes populated.',
         name: 'audit',
       },
     ];
@@ -344,7 +365,8 @@ function evaluateAuditFailures(
   if (!latestHistoryEntry.distBundle?.hash) {
     return [
       {
-        message: 'Audit gate requires the latest history snapshot to persist the dist bundle hash.',
+        message:
+          'Audit gate requires the latest history snapshot to persist the dist bundle hash.',
         name: 'audit',
       },
     ];
@@ -353,7 +375,8 @@ function evaluateAuditFailures(
   if (latestHistoryEntry.distBundle.hash !== currentDistBundle.hash) {
     return [
       {
-        message: 'Audit gate requires the latest history snapshot dist bundle hash to match meta.distBundle.hash.',
+        message:
+          'Audit gate requires the latest history snapshot dist bundle hash to match meta.distBundle.hash.',
         name: 'audit',
       },
     ];

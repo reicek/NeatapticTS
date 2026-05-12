@@ -284,9 +284,8 @@ function createWorkerPopulationFitnessEvaluator(
         );
       }
 
-      genome.score = scorePipeFirstWorkerAggregateEvaluation(
-        aggregateEvaluation,
-      );
+      genome.score =
+        scorePipeFirstWorkerAggregateEvaluation(aggregateEvaluation);
     }
   };
 
@@ -343,9 +342,9 @@ function shouldUseWorkerPopulationFitness(
 ): boolean {
   return Boolean(
     workerRuntimeDependencies.workerPool &&
-      (architectureProfileId === 'narx' ||
-        architectureProfileId === 'gru' ||
-        architectureProfileId === 'lstm'),
+    (architectureProfileId === 'narx' ||
+      architectureProfileId === 'gru' ||
+      architectureProfileId === 'lstm'),
   );
 }
 

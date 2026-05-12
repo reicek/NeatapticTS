@@ -45,6 +45,7 @@ import type {
   NetworkNodeDimensionsLike as NetworkNodeDimensions,
   PositionedNetworkNodeLike as PositionedNetworkNode,
 } from '../browser-entry.types';
+import type { InputLabelGroupDefinition } from './network-view.types';
 import type { NetworkHiddenColumnAnnotation } from './network-view.topology.utils';
 import {
   resolveInputDescriptionChipWidthPx,
@@ -97,6 +98,7 @@ export function resolveInputGroupLabelBandScenes(
   positionedNodes: PositionedNetworkNode[],
   nodeDimensions: NetworkNodeDimensions,
   inputDescriptionScenes?: readonly NetworkInputDescriptionScene[],
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
 ): NetworkInputGroupLabelBandScene[] {
   const inputNodes = resolveSortedInputNodes(positionedNodes);
 
@@ -104,18 +106,28 @@ export function resolveInputGroupLabelBandScenes(
     return [];
   }
 
-  const labelBands = resolveInputGroupLabelBands(inputNodes.length);
+  const labelBands = resolveInputGroupLabelBands(
+    inputNodes.length,
+    inputLabelGroupDefinitions,
+  );
   if (labelBands.length === 0) {
     return [];
   }
   const resolvedInputDescriptionScenes =
     inputDescriptionScenes ??
-    resolveInputDescriptionScenes(positionedNodes, nodeDimensions);
+    resolveInputDescriptionScenes(
+      positionedNodes,
+      nodeDimensions,
+      inputLabelGroupDefinitions,
+    );
 
   const inputOverlayLayout = resolveInputOverlayLayout(
     inputNodes,
     nodeDimensions,
-    resolveInputDescriptionColumnWidthPx(inputNodes.length),
+    resolveInputDescriptionColumnWidthPx(
+      inputNodes.length,
+      inputLabelGroupDefinitions,
+    ),
   );
 
   return labelBands.flatMap((labelBand) => {
@@ -177,6 +189,7 @@ export function resolveInputGroupLabelBandScenes(
 export function resolveInputDescriptionScenes(
   positionedNodes: PositionedNetworkNode[],
   nodeDimensions: NetworkNodeDimensions,
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
 ): NetworkInputDescriptionScene[] {
   const inputNodes = resolveSortedInputNodes(positionedNodes);
 
@@ -186,17 +199,22 @@ export function resolveInputDescriptionScenes(
 
   const inputDescriptions = resolveInputNodeDescriptionLabels(
     inputNodes.length,
+    inputLabelGroupDefinitions,
   );
   if (inputDescriptions.length === 0) {
     return [];
   }
-  const labelBands = resolveInputGroupLabelBands(inputNodes.length);
+  const labelBands = resolveInputGroupLabelBands(
+    inputNodes.length,
+    inputLabelGroupDefinitions,
+  );
   if (labelBands.length === 0) {
     return [];
   }
 
   const descriptionColumnWidthPx = resolveInputDescriptionColumnWidthPx(
     inputNodes.length,
+    inputLabelGroupDefinitions,
   );
   const inputOverlayLayout = resolveInputOverlayLayout(
     inputNodes,

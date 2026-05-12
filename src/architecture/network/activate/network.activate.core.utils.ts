@@ -1282,9 +1282,8 @@ function acquireSequenceOutputBuffer(
   ensureSequenceOutputRing(runtimeNetwork, outputSize);
 
   const currentRingIndex = runtimeNetwork._sequenceOutputRingIndex ?? 0;
-  const sequenceOutputBuffer = runtimeNetwork._sequenceOutputRing![
-    currentRingIndex
-  ];
+  const sequenceOutputBuffer =
+    runtimeNetwork._sequenceOutputRing![currentRingIndex];
 
   runtimeNetwork._sequenceOutputRingIndex =
     (currentRingIndex + 1) % runtimeNetwork._sequenceOutputRing!.length;

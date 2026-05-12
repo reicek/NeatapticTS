@@ -34,7 +34,9 @@ function disconnectAllConnections(network: Network): void {
   }
 }
 
-function createStarterBatchRequests(network: Network): BatchConnectionRequest[] {
+function createStarterBatchRequests(
+  network: Network,
+): BatchConnectionRequest[] {
   return [
     {
       from: network.nodes[0],

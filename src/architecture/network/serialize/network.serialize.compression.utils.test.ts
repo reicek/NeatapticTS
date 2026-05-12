@@ -95,7 +95,9 @@ function createChunkedBrowserDecompressionStreamConstructor(): typeof Decompress
   return class ChunkedBrowserDecompressionStream {
     public constructor(format: 'gzip') {
       if (format !== 'gzip') {
-        throw new Error('Expected gzip format in the browser decode test shim.');
+        throw new Error(
+          'Expected gzip format in the browser decode test shim.',
+        );
       }
 
       const compressedChunks: Uint8Array[] = [];
@@ -107,9 +109,7 @@ function createChunkedBrowserDecompressionStreamConstructor(): typeof Decompress
               concatenateArchiveByteChunks(compressedChunks),
             ),
           );
-          const firstChunkByteLength = Math.floor(
-            decompressedBytes.length / 2,
-          );
+          const firstChunkByteLength = Math.floor(decompressedBytes.length / 2);
 
           if (firstChunkByteLength > 0) {
             controller.enqueue(
@@ -137,10 +137,10 @@ describe('network serialize compression utilities chapter', () => {
       it('reports incremental decode progress while rebuilding the original payload', async () => {
         // Arrange
         const compressedPayload = createCompressedSerializedNetworkPayload();
-        const compressedArchive = createCompressedNetworkArchive(compressedPayload);
-        const expectedPayloadByteLength = estimateSerializedByteLength(
-          compressedPayload,
-        );
+        const compressedArchive =
+          createCompressedNetworkArchive(compressedPayload);
+        const expectedPayloadByteLength =
+          estimateSerializedByteLength(compressedPayload);
         const expectedFirstChunkByteLength = Math.max(
           1,
           Math.floor(expectedPayloadByteLength / 2),
@@ -217,7 +217,10 @@ describe('network serialize compression utilities chapter', () => {
         const payloadBytes = new TextEncoder().encode(
           JSON.stringify(compressedPayload),
         );
-        const compressedBytes = compressArchivePayloadBytes(payloadBytes, 'gzip');
+        const compressedBytes = compressArchivePayloadBytes(
+          payloadBytes,
+          'gzip',
+        );
         const browserDecompressionStreamConstructor =
           createChunkedBrowserDecompressionStreamConstructor();
         const originalProcess = globalThis.process;
@@ -263,7 +266,10 @@ describe('network serialize compression utilities chapter', () => {
       it('returns an empty byte buffer when the streamed decode finishes without chunks', async () => {
         // Arrange
         const payloadBytes = new Uint8Array(0);
-        const compressedBytes = compressArchivePayloadBytes(payloadBytes, 'gzip');
+        const compressedBytes = compressArchivePayloadBytes(
+          payloadBytes,
+          'gzip',
+        );
         const browserDecompressionStreamConstructor =
           createChunkedBrowserDecompressionStreamConstructor();
         const originalProcess = globalThis.process;
@@ -452,9 +458,8 @@ describe('network serialize compression utilities chapter', () => {
         const compressedPayload = createCompressedSerializedNetworkPayload();
 
         // Act
-        const compressedArchive = createCompressedNetworkArchive(
-          compressedPayload,
-        );
+        const compressedArchive =
+          createCompressedNetworkArchive(compressedPayload);
 
         // Assert
         expect({
@@ -600,9 +605,8 @@ describe('network serialize compression utilities chapter', () => {
 
         try {
           // Act
-          const compressedArchive = createCompressedNetworkArchive(
-            compressedPayload,
-          );
+          const compressedArchive =
+            createCompressedNetworkArchive(compressedPayload);
 
           // Assert
           expect(compressedArchive.payload.length > 0).toBe(true);
@@ -678,9 +682,7 @@ describe('network serialize compression utilities chapter', () => {
         }
 
         // Assert
-        expect(errorMessage).toBe(
-          'Invalid compressed network archive format.',
-        );
+        expect(errorMessage).toBe('Invalid compressed network archive format.');
       });
     });
 
@@ -713,7 +715,8 @@ describe('network serialize compression utilities chapter', () => {
       it('falls back to the Buffer decoder', () => {
         // Arrange
         const compressedPayload = createCompressedSerializedNetworkPayload();
-        const compressedArchive = createCompressedNetworkArchive(compressedPayload);
+        const compressedArchive =
+          createCompressedNetworkArchive(compressedPayload);
         const originalBase64Decoder = Reflect.get(globalThis, 'atob');
 
         Object.defineProperty(globalThis, 'atob', {
@@ -723,7 +726,8 @@ describe('network serialize compression utilities chapter', () => {
 
         try {
           // Act
-          const rebuiltPayload = parseCompressedNetworkArchive(compressedArchive);
+          const rebuiltPayload =
+            parseCompressedNetworkArchive(compressedArchive);
 
           // Assert
           expect(rebuiltPayload).toEqual(compressedPayload);
@@ -805,9 +809,7 @@ describe('network serialize compression utilities chapter', () => {
         }
 
         // Assert
-        expect(errorMessage).toBe(
-          'Invalid compressed network archive format.',
-        );
+        expect(errorMessage).toBe('Invalid compressed network archive format.');
       });
     });
 
@@ -815,7 +817,8 @@ describe('network serialize compression utilities chapter', () => {
       it('falls back to the Node archive decoder', async () => {
         // Arrange
         const compressedPayload = createCompressedSerializedNetworkPayload();
-        const compressedArchive = createCompressedNetworkArchive(compressedPayload);
+        const compressedArchive =
+          createCompressedNetworkArchive(compressedPayload);
         const originalDecompressionStream = Reflect.get(
           globalThis,
           'DecompressionStream',
@@ -828,9 +831,8 @@ describe('network serialize compression utilities chapter', () => {
 
         try {
           // Act
-          const rebuiltPayload = await parseCompressedNetworkArchiveAsync(
-            compressedArchive,
-          );
+          const rebuiltPayload =
+            await parseCompressedNetworkArchiveAsync(compressedArchive);
 
           // Assert
           expect(rebuiltPayload).toEqual(compressedPayload);
@@ -983,7 +985,8 @@ describe('network serialize compression utilities chapter', () => {
         expect({
           deltaWordCount: compressedConnections.weightWords.deltaWords.length,
           disabledRuns: compressedConnections.disabledRuns,
-          enabledStatesPresent: compressedConnections.enabledStates !== undefined,
+          enabledStatesPresent:
+            compressedConnections.enabledStates !== undefined,
           zeroWeightRuns: compressedConnections.weightWords.zeroWeightRuns,
         }).toEqual({
           deltaWordCount: 4,
@@ -1057,11 +1060,11 @@ describe('network serialize compression utilities chapter', () => {
 
         // Assert
         expect({
-          enabledStatesPresent: compressedConnections.enabledStates !== undefined,
+          enabledStatesPresent:
+            compressedConnections.enabledStates !== undefined,
           fromGeneIdsPresent: compressedConnections.fromGeneIds !== undefined,
           gainValuesPresent: compressedConnections.gainValues !== undefined,
-          gaterGeneIdsPresent:
-            compressedConnections.gaterGeneIds !== undefined,
+          gaterGeneIdsPresent: compressedConnections.gaterGeneIds !== undefined,
           gaterIndicesPresent: compressedConnections.gaterIndices !== undefined,
           innovationIdsPresent:
             compressedConnections.innovationIds !== undefined,

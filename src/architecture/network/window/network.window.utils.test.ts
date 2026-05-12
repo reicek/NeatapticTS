@@ -1,7 +1,4 @@
-import {
-  forwardWindowed,
-  forwardWindowedAsync,
-} from './network.window.utils';
+import { forwardWindowed, forwardWindowedAsync } from './network.window.utils';
 
 type WindowTestNetwork = {
   activate: jest.Mock<number[], [number[], boolean?]>;
@@ -148,10 +145,11 @@ describe('network window utility chapter', () => {
         const network = createWindowTestNetwork();
 
         // Act
-        const outputRows = await forwardWindowedAsync.call(
-          network as never,
-          [[1], [2], [3]],
-        );
+        const outputRows = await forwardWindowedAsync.call(network as never, [
+          [1],
+          [2],
+          [3],
+        ]);
 
         // Assert
         expect(outputRows).toEqual([[1], [2], [3]]);
@@ -230,15 +228,13 @@ describe('network window utility chapter', () => {
         let frameCount = 0;
 
         Reflect.set(globalThis, 'window', {});
-        Reflect.set(
-          globalThis,
-          'requestAnimationFrame',
-          ((callback: FrameRequestCallback) => {
-            frameCount += 1;
-            callback(0);
-            return frameCount;
-          }) as unknown as typeof requestAnimationFrame,
-        );
+        Reflect.set(globalThis, 'requestAnimationFrame', ((
+          callback: FrameRequestCallback,
+        ) => {
+          frameCount += 1;
+          callback(0);
+          return frameCount;
+        }) as unknown as typeof requestAnimationFrame);
 
         try {
           // Act
@@ -280,19 +276,15 @@ describe('network window utility chapter', () => {
 
         Reflect.set(globalThis, 'window', {});
         Reflect.set(globalThis, 'requestAnimationFrame', undefined);
-        Reflect.set(
-          globalThis,
-          'setTimeout',
-          ((callback: TimerHandler) => {
-            timerCount += 1;
+        Reflect.set(globalThis, 'setTimeout', ((callback: TimerHandler) => {
+          timerCount += 1;
 
-            if (typeof callback === 'function') {
-              callback();
-            }
+          if (typeof callback === 'function') {
+            callback();
+          }
 
-            return timerCount;
-          }) as unknown as typeof setTimeout,
-        );
+          return timerCount;
+        }) as unknown as typeof setTimeout);
 
         try {
           // Act

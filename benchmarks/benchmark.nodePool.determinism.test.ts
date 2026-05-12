@@ -46,7 +46,11 @@ function persistDeterminismReplayResult(
     },
   };
 
-  fs.writeFileSync(resultsPath, JSON.stringify(updatedArtifact, null, 2), 'utf8');
+  fs.writeFileSync(
+    resultsPath,
+    JSON.stringify(updatedArtifact, null, 2),
+    'utf8',
+  );
 
   return updatedArtifact;
 }
@@ -65,7 +69,9 @@ function readDeterminismReplayArtifact(
   }
 
   try {
-    return JSON.parse(fs.readFileSync(resultsPath, 'utf8')) as DeterminismReplayArtifact;
+    return JSON.parse(
+      fs.readFileSync(resultsPath, 'utf8'),
+    ) as DeterminismReplayArtifact;
   } catch {
     return {};
   }
@@ -88,11 +94,14 @@ describe('benchmark.nodePool.determinism', () => {
       const outputWithoutPooling = networkWithoutPooling.activate(
         inputValues.slice(),
       );
-      const outputWithPooling = networkWithPooling.activate(inputValues.slice());
+      const outputWithPooling = networkWithPooling.activate(
+        inputValues.slice(),
+      );
 
       // Step 3: Persist the replay outcome for the Phase 10 release gate.
       determinismReplayArtifact = persistDeterminismReplayResult(
-        JSON.stringify(outputWithoutPooling) === JSON.stringify(outputWithPooling),
+        JSON.stringify(outputWithoutPooling) ===
+          JSON.stringify(outputWithPooling),
       );
     });
 

@@ -99,7 +99,8 @@ export async function forwardWindowedAsync(
     environment,
   );
   const yieldControl =
-    options.yieldControl ?? resolveDefaultForwardWindowYieldControl(environment);
+    options.yieldControl ??
+    resolveDefaultForwardWindowYieldControl(environment);
 
   // Step 1: Advance the sequence in bounded windows and yield between browser slices.
   return collectForwardWindowOutputsAsync(
@@ -162,10 +163,7 @@ function collectForwardWindowOutputs(
       );
     windowRowCount += 1;
 
-    if (
-      windowRowCount === forwardWindowContext.windowSize ||
-      isLastInput
-    ) {
+    if (windowRowCount === forwardWindowContext.windowSize || isLastInput) {
       const windowChunk = createForwardWindowChunk(
         forwardWindowContext.windowBuffer,
         windowRowCount,
@@ -230,10 +228,7 @@ async function collectForwardWindowOutputsAsync(
       );
     windowRowCount += 1;
 
-    if (
-      windowRowCount !== forwardWindowContext.windowSize &&
-      !isLastInput
-    ) {
+    if (windowRowCount !== forwardWindowContext.windowSize && !isLastInput) {
       continue;
     }
 
@@ -324,7 +319,10 @@ function normalizeYieldAfterWindows(
   yieldAfterWindows: number | undefined,
   environment: MemoryManagerEnvironment,
 ): number {
-  if (typeof yieldAfterWindows !== 'number' || !Number.isFinite(yieldAfterWindows)) {
+  if (
+    typeof yieldAfterWindows !== 'number' ||
+    !Number.isFinite(yieldAfterWindows)
+  ) {
     return environment === 'browser'
       ? DEFAULT_BROWSER_WINDOWS_PER_YIELD
       : Number.POSITIVE_INFINITY;
@@ -412,7 +410,10 @@ function createForwardWindowContext(
 ): ForwardWindowContext {
   assertForwardWindowInputsCollection(inputs);
 
-  const windowSize = normalizeForwardWindowSize(options.windowSize, environment);
+  const windowSize = normalizeForwardWindowSize(
+    options.windowSize,
+    environment,
+  );
 
   return {
     collectOutputs: options.collectOutputs !== false,
@@ -448,7 +449,9 @@ function createForwardWindowChunk(
   return {
     done,
     endIndexExclusive,
-    outputs: windowBuffer.slice(0, windowRowCount).map((outputRow) => outputRow!),
+    outputs: windowBuffer
+      .slice(0, windowRowCount)
+      .map((outputRow) => outputRow!),
     startIndex,
     windowIndex,
   };

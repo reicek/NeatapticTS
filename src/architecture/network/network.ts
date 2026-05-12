@@ -900,13 +900,13 @@ export default class Network implements NetworkView {
   }
 
   /**
-  * Raw activation that can return a reusable typed array when pooling is enabled.
-  * If `reuseActivationArrays` is disabled this falls back to the standard plain-array activation path.
+   * Raw activation that can return a reusable typed array when pooling is enabled.
+   * If `reuseActivationArrays` is disabled this falls back to the standard plain-array activation path.
    *
    * @param input Input vector.
    * @param training Whether to enable training-time stochastic paths.
    * @param maxActivationDepth Maximum graph depth for activation.
-  * @returns Output activations as either a plain array or a reusable typed activation buffer.
+   * @returns Output activations as either a plain array or a reusable typed activation buffer.
    */
   activateRaw(
     input: number[],
@@ -934,9 +934,9 @@ export default class Network implements NetworkView {
   /**
    * Activate one input sequence in bounded windows while preserving carried recurrent state.
    *
-    * This keeps the same output contract as repeated `activate()` calls, while
-    * adding bounded window callbacks and an opt-out from collecting the full
-    * output matrix when the caller wants lower sequence-retention pressure.
+   * This keeps the same output contract as repeated `activate()` calls, while
+   * adding bounded window callbacks and an opt-out from collecting the full
+   * output matrix when the caller wants lower sequence-retention pressure.
    *
    * @param inputs Ordered sequence of input vectors.
    * @param options Optional windowed activation settings.
@@ -1056,9 +1056,7 @@ export default class Network implements NetworkView {
    * @param requests Ordered connection requests.
    * @returns Flattened created connection objects in request order.
    */
-  connectBatch(
-    requests: readonly NetworkConnectionRequest[],
-  ): Connection[] {
+  connectBatch(requests: readonly NetworkConnectionRequest[]): Connection[] {
     return _connectBatch.call(this, requests);
   }
 

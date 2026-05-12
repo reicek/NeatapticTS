@@ -167,9 +167,9 @@ describe('benchmark release gates', () => {
       });
 
       // Assert
-      expect(gateResult.failures.some((failure) => failure.name === 'memory')).toBe(
-        true,
-      );
+      expect(
+        gateResult.failures.some((failure) => failure.name === 'memory'),
+      ).toBe(true);
     });
   });
 
@@ -319,9 +319,9 @@ describe('benchmark release gates', () => {
       });
 
       // Assert
-      expect(gateResult.failures.some((failure) => failure.name === 'audit')).toBe(
-        true,
-      );
+      expect(
+        gateResult.failures.some((failure) => failure.name === 'audit'),
+      ).toBe(true);
     });
   });
 
@@ -329,7 +329,10 @@ describe('benchmark release gates', () => {
     it('passes the real artifact release gate', () => {
       // Arrange
       const artifact = JSON.parse(
-        fs.readFileSync(path.resolve(__dirname, 'benchmark.results.json'), 'utf8'),
+        fs.readFileSync(
+          path.resolve(__dirname, 'benchmark.results.json'),
+          'utf8',
+        ),
       ) as Parameters<typeof evaluateBenchmarkReleaseGates>[0];
 
       // Act

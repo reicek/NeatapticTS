@@ -7,80 +7,172 @@
   <link rel="stylesheet" href="../../docs/assets/theme.css" />
   <script defer src="../../docs/assets/theme-tooltips.js"></script>
   <style>
-    body.demo-page .demo-main.demo-main--wide {
-      max-width: min(99vw, 1960px);
-      padding-left: 10px;
-      padding-right: 10px;
-    }
-
-    .starter-demo-shell {
-      width: 100%;
-      padding: 8px;
-    }
-
-    #ascii-maze-output {
-      display: grid;
-      gap: 16px;
-      width: 100%;
-    }
-
-    #ascii-maze-visualizer-title {
+    html,
+    body {
+      height: 100%;
       margin: 0;
+      overflow: hidden;
+    }
+
+    body.demo-page {
+      min-height: 100dvh;
+      box-sizing: border-box;
+      padding: 8px;
+      overflow: hidden;
+    }
+
+    .ascii-maze-main {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow: hidden;
+    }
+
+    #ascii-maze-status {
+      flex: 0 0 auto;
+      margin: 0;
+      min-height: 1rem;
+      font-size: 0.72rem;
+      line-height: 1rem;
+      letter-spacing: 0.06em;
       text-align: center;
-      font-size: 1rem;
-      letter-spacing: 0.08em;
       text-transform: uppercase;
       color: #8ad8ff;
     }
 
-    #ascii-maze-panels {
-      display: grid;
-      grid-template-columns: minmax(760px, 1.35fr) minmax(900px, 1.55fr);
-      gap: 18px;
-      align-items: start;
-      width: 100%;
-      overflow: visible;
+    #ascii-maze-status:empty {
+      display: none;
     }
 
-    .ascii-maze-panel {
+    #ascii-maze-output {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 8px;
+      box-sizing: border-box;
       border: 1px solid #1ea7ff;
-      border-radius: 10px;
-      background: linear-gradient(180deg, rgba(8, 19, 31, 0.92), rgba(4, 10, 18, 0.9));
-      padding: 10px;
-      min-height: 420px;
-      min-width: 0;
-    }
-
-    #ascii-maze-panels > .ascii-maze-panel:first-child {
-      width: 100%;
-      max-width: none;
+      background: linear-gradient(180deg, rgba(6, 15, 26, 0.86), rgba(4, 9, 18, 0.88));
+      box-shadow:
+        inset 0 0 0 1px rgba(30, 167, 255, 0.2),
+        inset 0 0 24px rgba(15, 181, 255, 0.08);
       overflow: hidden;
     }
 
-    #ascii-maze-panels > .ascii-maze-panel:last-child {
-      min-width: 900px;
-      width: 100%;
+    #ascii-maze-title-frame {
+      flex: 0 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2px 0 4px;
     }
 
-    .ascii-maze-panel h3 {
-      margin: 0 0 10px;
+    #ascii-maze-title-bar {
+      width: min(72vw, 980px);
+      min-height: 18px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border: 1px solid #1ea7ff;
+      box-shadow: inset 0 0 0 1px rgba(30, 167, 255, 0.16);
+      color: #9fdcff;
+      font-family: Consolas, Menlo, Monaco, monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 10px rgba(15, 181, 255, 0.18);
+    }
+
+    #ascii-maze-workspace {
+      flex: 1 1 0;
+      min-height: 0;
+      width: 100%;
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .ascii-maze-column {
+      flex: 0 0 calc(50% - 4px);
+      width: calc(50% - 4px);
+      max-width: calc(50% - 4px);
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    #ascii-maze-left-column {
+      flex: 0 0 calc(50% - 4px);
+    }
+
+    #ascii-maze-right-column {
+      flex: 0 0 calc(50% - 4px);
+      overflow: visible;
+    }
+
+    .ascii-maze-pane {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #1ea7ff;
+      background: linear-gradient(180deg, rgba(8, 19, 31, 0.92), rgba(4, 10, 18, 0.9));
+      box-shadow:
+        inset 0 0 0 1px rgba(30, 167, 255, 0.18),
+        inset 0 0 18px rgba(15, 181, 255, 0.05);
+    }
+
+    .ascii-maze-pane-header {
+      flex: 0 0 auto;
+      padding: 4px 10px 3px;
       text-align: center;
       color: #dff6ff;
-      font-size: 0.9rem;
-      letter-spacing: 0.06em;
+      font-family: Consolas, Menlo, Monaco, monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+
+    .ascii-maze-pane-body {
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    #ascii-maze-live-pane {
+      flex: 1 1 0;
+      min-height: 260px;
+    }
+
+    #ascii-maze-archive-pane {
+      flex: 0 0 34%;
+      min-height: 180px;
+    }
+
+    #ascii-maze-network-pane {
+      flex: 1 1 0;
+      min-height: 0;
     }
 
     #ascii-maze-live {
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      min-height: 360px;
+      align-items: center;
       width: 100%;
-      min-width: 0;
-      max-width: 100%;
-      overflow-x: auto;
-      overflow-y: auto;
+      height: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      overflow: auto;
       white-space: pre;
     }
 
@@ -88,35 +180,74 @@
       flex: 0 0 auto;
       width: max-content;
       min-width: max-content;
-      margin: 0;
+      margin: auto;
     }
 
-    @media (max-width: 1400px) {
-      #ascii-maze-panels {
-        grid-template-columns: minmax(620px, 1.2fr) minmax(760px, 1.4fr);
-      }
+    #ascii-maze-archive {
+      width: 100%;
+      height: 100%;
+      padding: 8px 12px;
+      box-sizing: border-box;
+      overflow: auto;
+      white-space: pre;
+    }
 
-      #ascii-maze-panels > .ascii-maze-panel:last-child {
-        min-width: 680px;
-      }
+    #ascii-maze-archive pre {
+      width: max-content;
+      min-width: max-content;
+      margin: 0 auto;
+    }
+
+    #ascii-maze-network-host {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      width: 100%;
+      height: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      overflow: auto;
     }
 
     #ascii-maze-network-canvas {
+      flex: 0 0 auto;
       width: 100%;
       height: auto;
       max-width: 100%;
       display: block;
       background: #050a12;
       border: 1px solid #0e3854;
-      border-radius: 6px;
       cursor: crosshair;
     }
 
-    /* Hover tooltip displayed over the network canvas */
+    #ascii-maze-arch-panel {
+      flex: 0 0 136px;
+      min-height: 136px;
+      overflow: visible;
+      position: relative;
+      z-index: 4;
+    }
+
+    #ascii-maze-arch-panel .ascii-maze-pane-body {
+      overflow: visible;
+      padding: 8px;
+      box-sizing: border-box;
+      position: relative;
+      z-index: 5;
+    }
+
+    .arch-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-content: flex-start;
+      overflow: visible;
+    }
+
     #maze-network-tooltip {
       display: none;
       position: fixed;
-      z-index: 1000;
+      z-index: 9999;
       max-width: 320px;
       background: linear-gradient(180deg, rgba(7, 16, 28, 0.98), rgba(2, 8, 18, 0.98));
       border: 1px solid #0fb5ff;
@@ -154,66 +285,76 @@
       margin-bottom: 0;
     }
 
-    @media (max-width: 1100px) {
-      #ascii-maze-panels {
-        grid-template-columns: 1fr;
+    @media (max-width: 1180px) {
+      #ascii-maze-workspace {
+        flex-direction: column;
       }
 
-      #ascii-maze-panels > .ascii-maze-panel:first-child,
-      #ascii-maze-panels > .ascii-maze-panel:last-child {
+      .ascii-maze-column,
+      #ascii-maze-left-column,
+      #ascii-maze-right-column {
+        flex: 1 1 0;
         width: 100%;
-        min-width: 0;
+        max-width: none;
       }
 
-      #ascii-maze-live {
-        width: 100%;
-        min-width: 0;
+      #ascii-maze-archive-pane {
+        flex-basis: 240px;
       }
     }
   </style>
 </head>
 <body class="demo-page">
-  <main class="demo-main demo-main--wide">
-    <section class="hero">
-      <p class="eyebrow">Flagship Browser Demo</p>
-      <h1>ASCII Maze</h1>
-      <p>
-        This page runs the real browser-hosted curriculum loop: the controller starts in a
-        compact maze, advances through larger procedural layouts, and keeps the live ASCII
-        search trace visible while telemetry-rich evolution unfolds.
-      </p>
-    </section>
-
-    <p id="ascii-maze-status" class="load-status" role="status" aria-live="polite">
+  <main class="ascii-maze-main">
+    <p id="ascii-maze-status" role="status" aria-live="polite">
       Loading ASCII Maze browser bundle...
     </p>
-    <section class="starter-demo-shell">
-      <!-- Internal pause control removed; external host can supply controls using the public API -->
-      <div id="ascii-maze-output">
-        <h2 id="ascii-maze-visualizer-title">Maze and Network Visualizer</h2>
-        <div id="ascii-maze-panels">
-          <section class="ascii-maze-panel" aria-label="Maze panel">
-            <h3>Maze</h3>
-            <div id="ascii-maze-live"></div>
-          </section>
-          <section class="ascii-maze-panel" aria-label="Network visualizer panel">
-            <h3>Neural Network</h3>
-            <canvas id="ascii-maze-network-canvas" width="700" height="504"></canvas>
-          </section>
-        </div>
-        <div id="ascii-maze-archive"></div>
+    <div id="ascii-maze-output">
+      <div id="ascii-maze-title-frame">
+        <div id="ascii-maze-title-bar">ASCII Maze (NeatapticTS)</div>
       </div>
-    </section>
+
+      <div id="ascii-maze-workspace">
+        <section id="ascii-maze-left-column" class="ascii-maze-column" aria-label="Maze panes">
+          <section id="ascii-maze-live-pane" class="ascii-maze-pane" aria-label="Current maze panel">
+            <div class="ascii-maze-pane-header">Current Maze</div>
+            <div id="ascii-maze-live" class="ascii-maze-pane-body"></div>
+          </section>
+
+          <section id="ascii-maze-archive-pane" class="ascii-maze-pane" aria-label="Solved mazes panel">
+            <div class="ascii-maze-pane-header">Past Mazes</div>
+            <div id="ascii-maze-archive" class="ascii-maze-pane-body"></div>
+          </section>
+        </section>
+
+        <section id="ascii-maze-right-column" class="ascii-maze-column" aria-label="Network panes">
+          <section id="ascii-maze-network-pane" class="ascii-maze-pane" aria-label="Network visualizer panel">
+            <div class="ascii-maze-pane-header">Neural Network</div>
+            <div id="ascii-maze-network-host" class="ascii-maze-pane-body">
+              <canvas id="ascii-maze-network-canvas" width="700" height="504"></canvas>
+            </div>
+          </section>
+
+          <section id="ascii-maze-arch-panel" class="ascii-maze-pane" aria-label="Architecture selector panel">
+            <div class="ascii-maze-pane-body">
+              <div class="arch-buttons"></div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </div>
   </main>
   <!-- Hover tooltip for network canvas label system -->
   <div id="maze-network-tooltip" role="tooltip" aria-live="polite"></div>
   <script>
     (function loadAsciiMazeBundle() {
       const statusElement = document.getElementById('ascii-maze-status');
+      const bundleVersion = '20260511-1';
       const isRepositoryExamplePath = /\/examples\//.test(window.location.pathname);
-      const bundleSrc = isRepositoryExamplePath
+      const bundleBaseSrc = isRepositoryExamplePath
         ? '../../docs/assets/ascii-maze.bundle.js'
         : '../../assets/ascii-maze.bundle.js';
+      const bundleSrc = `${bundleBaseSrc}?v=${bundleVersion}`;
 
       const scriptElement = document.createElement('script');
       scriptElement.src = bundleSrc;

@@ -457,10 +457,10 @@ Returns: Nothing.
 Long-running evolution/playback orchestration for the browser runtime.
 
 This loop is the heart of the interactive demo. It repeatedly asks the worker
-for the next evolved generation, updates the HUD and network view, plays back
-that generation on the canvas, then folds the outcome into the generation
-summary section and the cross-generation history used by the architecture
-selector.
+for the next playable generation payload, updates the HUD and network view,
+plays back that population on the canvas, then folds the outcome into the
+generation summary section and the cross-generation history used by the
+architecture selector.
 
 ### finalizeStartupPreview
 
@@ -629,8 +629,8 @@ runRuntimeEvolutionLoop(
 Runs generation orchestration and playback until a stop signal is observed.
 
 The loop alternates between two phases:
-1. Evolve off-thread until the worker emits the next best-generation summary.
-2. Play that generation back on the main thread while streaming HUD updates.
+1. Wait off-thread until the worker emits the next playable population summary.
+2. Play that population back on the main thread while streaming HUD updates.
 
 This rhythm makes the demo feel like a live training dashboard instead of a
 one-shot batch job.
@@ -836,9 +836,9 @@ resolveRuntimePopulationBudget(
 Resolves the browser evolution budget for one architecture profile.
 
 These browser budgets are fixed performance caps rather than hardware-scaled
-targets. The live page keeps MLP at its tiny baseline, gives Sparse a modest
-20-bird flock, and caps the heavier recurrent builders at 10 birds so
-initialization and generation turnover stay responsive.
+targets. The live page keeps MLP at its tiny baseline, gives LSTM a wider
+14-bird recurrent flock, and keeps the other heavier recurrent builders
+smaller so initialization and generation turnover stay responsive.
 
 Parameters:
 - `architectureProfileId` - Selected shared Flappy profile id.

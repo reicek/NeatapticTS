@@ -58,7 +58,7 @@ describe('createRuntimeStartContext', () => {
     {
       architectureProfileId: 'lstm' as const,
       expectedElitismCount: 2,
-      expectedPopulationSize: 10,
+      expectedPopulationSize: 14,
     },
     {
       architectureProfileId: 'mlp' as const,

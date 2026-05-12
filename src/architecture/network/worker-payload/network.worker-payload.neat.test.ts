@@ -53,7 +53,9 @@ describe('createNeatParallelPopulationEvaluator', () => {
       parallel: true,
       openWorker,
       resolvePayload: (genome: MockGenome) => ({ id: genome.id }),
-      evaluateGenome: async (genome: MockGenome) => ({ fitness: genome.localFitness }),
+      evaluateGenome: async (genome: MockGenome) => ({
+        fitness: genome.localFitness,
+      }),
       evaluateWithWorker: async (
         worker: MockWorker,
         genome: MockGenome,

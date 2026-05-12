@@ -24,12 +24,18 @@ describe('ParallelInferencePool', () => {
       workerCount: 2,
     });
 
-    const results = await pool.evaluateOrderedBatch([], async (worker, payload) => {
-      return `${String(payload.id)}:${String(worker.id)}`;
-    });
+    const results = await pool.evaluateOrderedBatch(
+      [],
+      async (worker, payload) => {
+        return `${String(payload.id)}:${String(worker.id)}`;
+      },
+    );
     await pool.dispose();
 
-    expect({ openWorkerCallCount: openWorker.mock.calls.length, results }).toEqual({
+    expect({
+      openWorkerCallCount: openWorker.mock.calls.length,
+      results,
+    }).toEqual({
       openWorkerCallCount: 0,
       results: [],
     });
@@ -158,7 +164,10 @@ describe('ParallelInferencePool', () => {
     await pool.dispose();
     restoreNavigator();
 
-    expect({ openWorkerCallCount: openWorker.mock.calls.length, results }).toEqual({
+    expect({
+      openWorkerCallCount: openWorker.mock.calls.length,
+      results,
+    }).toEqual({
       openWorkerCallCount: 1,
       results: ['11:11'],
     });
@@ -171,10 +180,12 @@ describe('ParallelInferencePool', () => {
       id: payload?.id ?? -1,
       release: jest.fn(async () => undefined),
     }));
-    const pool = new ParallelInferencePool<MockPayload | undefined, MockWorker>({
-      openWorker,
-      workerCount: 2,
-    });
+    const pool = new ParallelInferencePool<MockPayload | undefined, MockWorker>(
+      {
+        openWorker,
+        workerCount: 2,
+      },
+    );
 
     const results = await pool.evaluateOrderedBatch(
       sparsePayloads,
@@ -182,7 +193,10 @@ describe('ParallelInferencePool', () => {
     );
     await pool.dispose();
 
-    expect({ openWorkerCallCount: openWorker.mock.calls.length, results }).toEqual({
+    expect({
+      openWorkerCallCount: openWorker.mock.calls.length,
+      results,
+    }).toEqual({
       openWorkerCallCount: 1,
       results: [undefined, '22:22'],
     });
@@ -214,13 +228,16 @@ describe('ParallelInferencePool', () => {
       },
     });
 
-    const evaluationPromise = pool.evaluateOrderedBatch(payloads, async (worker, payload) => {
-      await new Promise<void>((resolve) => {
-        deferredByPayloadId.set(payload.id, resolve);
-      });
+    const evaluationPromise = pool.evaluateOrderedBatch(
+      payloads,
+      async (worker, payload) => {
+        await new Promise<void>((resolve) => {
+          deferredByPayloadId.set(payload.id, resolve);
+        });
 
-      return `${String(payload.id)}:${String(worker.id)}`;
-    });
+        return `${String(payload.id)}:${String(worker.id)}`;
+      },
+    );
 
     await waitForCondition(() => deferredByPayloadId.size === 4);
     deferredByPayloadId.get(11)?.();
@@ -245,7 +262,11 @@ async function waitForCondition(
   predicate: () => boolean,
   maximumAttempts = 25,
 ): Promise<void> {
-  for (let attemptIndex = 0; attemptIndex < maximumAttempts; attemptIndex += 1) {
+  for (
+    let attemptIndex = 0;
+    attemptIndex < maximumAttempts;
+    attemptIndex += 1
+  ) {
     if (predicate()) {
       return;
     }
@@ -259,7 +280,10 @@ async function waitForCondition(
 function replaceNavigator(
   value: { hardwareConcurrency?: number } | undefined,
 ): () => void {
-  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const originalDescriptor = Object.getOwnPropertyDescriptor(
+    globalThis,
+    'navigator',
+  );
 
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true,
@@ -273,6 +297,7 @@ function replaceNavigator(
       return;
     }
 
-    delete (globalThis as { navigator?: { hardwareConcurrency?: number } }).navigator;
+    delete (globalThis as { navigator?: { hardwareConcurrency?: number } })
+      .navigator;
   };
 }

@@ -43,6 +43,8 @@ export interface AsciiMazeRunHandle {
 export interface BrowserEntryStartOptions {
   /** Optional external abort signal that cooperatively stops the curriculum. */
   signal?: AbortSignal;
+  /** Architecture profile to use for this run. Defaults to the maze default when omitted. */
+  architectureProfileId?: ExampleArchitectureProfileId;
 }
 
 /** Stable callable shape used by globals compatibility wiring. */
@@ -88,6 +90,8 @@ export interface BrowserEntryHostElements {
   liveElement: HTMLElement | null;
   networkCanvasElement: HTMLCanvasElement | null;
   observeTarget: HTMLElement | null;
+  /** Container for architecture selector buttons, populated by JS after mount. */
+  archButtonsElement: HTMLElement | null;
 }
 
 /** Evolution settings used for a single procedural maze phase. */

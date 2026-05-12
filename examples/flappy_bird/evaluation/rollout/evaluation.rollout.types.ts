@@ -29,6 +29,7 @@ export type RolloutEpisodeContext = {
   enableEarlyTermination: boolean;
   normalizeFitness: boolean;
   pipeProgressTarget: number | undefined;
+  shouldStop: (() => boolean) | undefined;
 };
 
 /**

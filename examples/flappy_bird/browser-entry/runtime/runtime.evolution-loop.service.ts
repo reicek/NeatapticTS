@@ -62,10 +62,10 @@ type RuntimeChampionSummary = {
  * Long-running evolution/playback orchestration for the browser runtime.
  *
  * This loop is the heart of the interactive demo. It repeatedly asks the worker
- * for the next evolved generation, updates the HUD and network view, plays back
- * that generation on the canvas, then folds the outcome into the generation
- * summary section and the cross-generation history used by the architecture
- * selector.
+ * for the next playable generation payload, updates the HUD and network view,
+ * plays back that population on the canvas, then folds the outcome into the
+ * generation summary section and the cross-generation history used by the
+ * architecture selector.
  */
 
 /**
@@ -98,8 +98,8 @@ export interface RuntimeEvolutionLoopOptions {
  * Runs generation orchestration and playback until a stop signal is observed.
  *
  * The loop alternates between two phases:
- * 1. Evolve off-thread until the worker emits the next best-generation summary.
- * 2. Play that generation back on the main thread while streaming HUD updates.
+ * 1. Wait off-thread until the worker emits the next playable population summary.
+ * 2. Play that population back on the main thread while streaming HUD updates.
  *
  * This rhythm makes the demo feel like a live training dashboard instead of a
  * one-shot batch job.
@@ -153,7 +153,7 @@ export async function runRuntimeEvolutionLoop(
 
   // Step 3: Keep iterating generations until a stop signal is observed.
   while (!isStopped()) {
-    // Step 3.1: Request and await the next evolved generation payload.
+    // Step 3.1: Request and await the next playable generation payload.
     const generationPayload = await requestGenerationWithOptionalStartupPreview(
       {
         evolutionWorker,
@@ -454,9 +454,8 @@ export function resolveWorkerInitPayload(options: {
   populationSize: number;
   rngSeed: number;
 }): WorkerInitMessage['payload'] {
-  const championNetworkJson = options.championByProfileId[
-    options.architectureProfileId
-  ];
+  const championNetworkJson =
+    options.championByProfileId[options.architectureProfileId];
 
   if (championNetworkJson) {
     logRuntimeChampionLoaded({
@@ -576,26 +575,25 @@ function logRuntimeChampionSaved(options: {
 function resolveRuntimeChampionSummary(
   championNetworkJson: SerializedNetwork,
 ): RuntimeChampionSummary {
-  const serializedChampion = resolveSerializedChampionString(championNetworkJson);
+  const serializedChampion =
+    resolveSerializedChampionString(championNetworkJson);
   const serializedNodes = resolveSerializedChampionNodes(championNetworkJson);
-  const connectionCount = resolveSerializedChampionConnections(
-    championNetworkJson,
-  ).length;
+  const connectionCount =
+    resolveSerializedChampionConnections(championNetworkJson).length;
   const inputNodeCount = serializedNodes.filter(
-    (serializedNode) => resolveSerializedChampionNodeType(serializedNode) === 'input',
+    (serializedNode) =>
+      resolveSerializedChampionNodeType(serializedNode) === 'input',
   ).length;
   const outputNodeCount = serializedNodes.filter(
-    (serializedNode) => resolveSerializedChampionNodeType(serializedNode) === 'output',
+    (serializedNode) =>
+      resolveSerializedChampionNodeType(serializedNode) === 'output',
   ).length;
   const nodeCount = serializedNodes.length;
 
   return {
     connectionCount,
     fingerprint: resolveSerializedChampionFingerprint(serializedChampion),
-    hiddenNodeCount: Math.max(
-      0,
-      nodeCount - inputNodeCount - outputNodeCount,
-    ),
+    hiddenNodeCount: Math.max(0, nodeCount - inputNodeCount - outputNodeCount),
     inputNodeCount,
     nodeCount,
     outputNodeCount,
@@ -649,7 +647,9 @@ function resolveSerializedChampionConnections(
 
   return Array.isArray(serializedConnections)
     ? serializedConnections.filter(
-        (serializedConnection): serializedConnection is Record<string, unknown> =>
+        (
+          serializedConnection,
+        ): serializedConnection is Record<string, unknown> =>
           typeof serializedConnection === 'object' &&
           serializedConnection !== null,
       )

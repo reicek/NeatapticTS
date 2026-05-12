@@ -197,12 +197,10 @@ describe('utils chapter', () => {
             return {
               ...actualMemoryManagerModule,
               defaultMemoryManager: {
-                registerPool:
-                  actualDefaultMemoryManager.registerPool.bind(
-                    actualDefaultMemoryManager,
-                  ),
-                getConfig: () =>
-                  actualDefaultMemoryManager.getConfig('node'),
+                registerPool: actualDefaultMemoryManager.registerPool.bind(
+                  actualDefaultMemoryManager,
+                ),
+                getConfig: () => actualDefaultMemoryManager.getConfig('node'),
                 getPoolStats: jest.fn(() => null),
               },
             };

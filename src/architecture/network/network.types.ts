@@ -269,8 +269,10 @@ export interface NetworkForwardWindowOptions {
 }
 
 /** Optional settings for async bounded sequence activation. */
-export interface NetworkForwardWindowAsyncOptions
-  extends Omit<NetworkForwardWindowOptions, 'onWindow'> {
+export interface NetworkForwardWindowAsyncOptions extends Omit<
+  NetworkForwardWindowOptions,
+  'onWindow'
+> {
   /** Optional async callback invoked after each emitted window. */
   onWindow?: (chunk: NetworkForwardWindowChunk) => void | Promise<void>;
   /** Completed-window cadence used before yielding control back to the runtime. */

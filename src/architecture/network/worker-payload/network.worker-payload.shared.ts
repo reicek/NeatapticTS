@@ -70,7 +70,7 @@ type SharedWorkerResponseMessage =
  * }
  * ```
  */
-export const SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION: true = true;
+export const SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION = true as const;
 
 /**
  * Open one persistent shared-memory inference worker from a transferable payload.
@@ -447,8 +447,11 @@ function createBrowserSharedInferenceWorker(
 }
 
 function resolveBrowserDefaultWorkerPath(
-  browserDocument: { currentScript?: { src?: string | null } | null } | undefined =
-    globalThis.document as { currentScript?: { src?: string | null } | null } | undefined,
+  browserDocument:
+    | { currentScript?: { src?: string | null } | null }
+    | undefined = globalThis.document as
+    | { currentScript?: { src?: string | null } | null }
+    | undefined,
   currentLocationHref: string | undefined = globalThis.location?.href,
 ): string {
   const currentScriptUrl = browserDocument?.currentScript?.src ?? undefined;
@@ -633,20 +636,28 @@ async function copyInputValuesIntoSharedBuffer(
   inputOffset: number,
   useChunkedConversion: boolean,
 ): Promise<void> {
-  if (!shouldChunkSharedNumericConversion(inputValues.length, useChunkedConversion)) {
+  if (
+    !shouldChunkSharedNumericConversion(
+      inputValues.length,
+      useChunkedConversion,
+    )
+  ) {
     dataView.set(inputValues, inputOffset);
     return;
   }
 
-  await copySharedNumericValuesInChunks(inputValues.length, (startIndex, endIndex) => {
-    for (
-      let inputIndex = startIndex;
-      inputIndex < endIndex;
-      inputIndex += 1
-    ) {
-      dataView[inputOffset + inputIndex] = inputValues[inputIndex] as number;
-    }
-  });
+  await copySharedNumericValuesInChunks(
+    inputValues.length,
+    (startIndex, endIndex) => {
+      for (
+        let inputIndex = startIndex;
+        inputIndex < endIndex;
+        inputIndex += 1
+      ) {
+        dataView[inputOffset + inputIndex] = inputValues[inputIndex] as number;
+      }
+    },
+  );
 }
 
 /**
@@ -681,7 +692,9 @@ async function copySharedOutputValues(
       outputIndex < endIndex;
       outputIndex += 1
     ) {
-      detachedOutputValues[outputIndex] = sharedOutputView[outputIndex] as number;
+      detachedOutputValues[outputIndex] = sharedOutputView[
+        outputIndex
+      ] as number;
     }
   });
 
@@ -699,8 +712,10 @@ function shouldChunkSharedNumericConversion(
   valueCount: number,
   useChunkedConversion: boolean,
 ): boolean {
-  return useChunkedConversion &&
-    valueCount > SHARED_INFERENCE_ASYNC_CONVERSION_THRESHOLD;
+  return (
+    useChunkedConversion &&
+    valueCount > SHARED_INFERENCE_ASYNC_CONVERSION_THRESHOLD
+  );
 }
 
 /**

@@ -62,7 +62,10 @@ export interface InferenceWorkerCapabilityOptions {
 }
 
 /** Automatic transport selection result for the current host. */
-export type AutoInferenceTransport = 'channel' | 'shared-memory' | 'transferable';
+export type AutoInferenceTransport =
+  | 'channel'
+  | 'shared-memory'
+  | 'transferable';
 
 /**
  * Detect the usable worker-backed inference transport tiers for one host.
@@ -131,7 +134,8 @@ function detectBrowserInferenceWorkerCapabilities(
 ): InferenceWorkerCapabilities {
   const reasons: string[] = [];
   const workerConstructorAvailable =
-    options.workerConstructorAvailable ?? typeof globalThis.Worker === 'function';
+    options.workerConstructorAvailable ??
+    typeof globalThis.Worker === 'function';
   const hasChannelWorker = options.hasChannelWorker ?? false;
   const hasSharedWorker = options.hasSharedWorker ?? false;
   const sharedArrayBufferAvailable =

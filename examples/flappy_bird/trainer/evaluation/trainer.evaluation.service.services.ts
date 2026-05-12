@@ -104,10 +104,22 @@ export async function evaluateSpecificGenomesAcrossSeeds(
     evaluateGenome: async (genome: FlappyTrainerNetwork) =>
       evaluateFlappyFitnessAcrossSeeds(genome, sharedSeeds, rolloutOptions),
     evaluateWithWorker: workerPool
-      ? async (sharedWorker: SharedInferenceWorker, genome: FlappyTrainerNetwork) => {
+      ? async (
+          sharedWorker: SharedInferenceWorker,
+          genome: FlappyTrainerNetwork,
+        ) => {
           return orderedPayloads
-            ? evaluateWorkerAggregate(sharedWorker, genome, sharedSeeds, rolloutOptions)
-            : evaluateFlappyFitnessAcrossSeeds(genome, sharedSeeds, rolloutOptions);
+            ? evaluateWorkerAggregate(
+                sharedWorker,
+                genome,
+                sharedSeeds,
+                rolloutOptions,
+              )
+            : evaluateFlappyFitnessAcrossSeeds(
+                genome,
+                sharedSeeds,
+                rolloutOptions,
+              );
         }
       : undefined,
     resolvePayload: orderedPayloads
@@ -150,7 +162,9 @@ function resolveRequiredBatchPayload<TPayload>(
   const payload = orderedPayloads[genomeIndex];
 
   if (!payload) {
-    throw new Error('evaluateSpecificGenomesAcrossSeeds did not resolve every queued genome payload.');
+    throw new Error(
+      'evaluateSpecificGenomesAcrossSeeds did not resolve every queued genome payload.',
+    );
   }
 
   return payload;

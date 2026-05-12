@@ -77,6 +77,7 @@ import {
   ensureOutputIdentity,
   handleSpeciesHistory,
   maybeExpandPopulation,
+  maybeApplyTopologyShakeupMutation,
   pruneSaturatedHiddenOutputs,
   antiCollapseRecovery,
   updatePlateauState,
@@ -1473,8 +1474,10 @@ export const runEvolutionLoop = async (
   let bestNetworkSoFar: NetworkInstance | null =
     (opts.initialBestNetwork as NetworkInstance | null) ?? null;
   let bestFitnessSoFar = -Infinity;
+  let bestProgressSoFar = -Infinity;
   let bestRunResult: IMazeRunResult | undefined = undefined;
   let stagnantGenerationsCount = 0;
+  let stagnantProgressGenerationsCount = 0;
   let completedGenerations = 0;
   let plateauCounter = 0;
   let simplifyMode = false;
@@ -1633,6 +1636,18 @@ export const runEvolutionLoop = async (
     const generationResult = simulationResult.generationResult;
     if (doProfile) profileScratch[2] += Number(simulationResult.simTime ?? 0);
 
+    const generationProgress = Number.isFinite(generationResult.progress)
+      ? generationResult.progress
+      : undefined;
+    if (typeof generationProgress === 'number') {
+      if (generationProgress > bestProgressSoFar) {
+        bestProgressSoFar = generationProgress;
+        stagnantProgressGenerationsCount = 0;
+      } else {
+        stagnantProgressGenerationsCount += 1;
+      }
+    }
+
     // Update ring state from simulation result
     updatedLogitsRingCap = simulationResult.updatedRingState.logitsRingCap;
     updatedLogitsRingShared =
@@ -1725,6 +1740,15 @@ export const runEvolutionLoop = async (
       opts.maxGenerations ?? 0,
     );
     if (stopReason) break;
+
+    // Step 8b: When maze progress stays flat for several generations, force a
+    // structural-only mutation pass before the next evolve cycle.
+    await maybeApplyTopologyShakeupMutation(
+      neat,
+      stagnantProgressGenerationsCount,
+      safeWrite,
+      completedGenerations,
+    );
 
     // Step 9: periodic memory compaction and scratch shrinking
     if (

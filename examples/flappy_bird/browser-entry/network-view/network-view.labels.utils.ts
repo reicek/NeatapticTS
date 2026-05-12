@@ -3,31 +3,15 @@ import {
   FLAPPY_NETWORK_INPUT_DESCRIPTION_CHARACTER_WIDTH_PX,
   FLAPPY_NETWORK_INPUT_DESCRIPTION_MIN_WIDTH_PX,
   FLAPPY_NETWORK_INPUT_DESCRIPTION_TEXT_PADDING_PX,
-  FLAPPY_NETWORK_INPUT_SIZE,
 } from '../../constants/constants';
 import { FLAPPY_INPUT_GROUP_LABELS } from './network-view.constants';
 import type {
+  InputLabelGroupDefinition,
   InputGroupLabelBand,
   InputNodeDescriptionLabel,
 } from './network-view.types';
 
-type FlappyInputLabelGroupDefinition = {
-  label: string;
-  labelLines: readonly string[];
-  tooltipHeading: string;
-  tooltipBodyParagraphs: readonly string[];
-  nodeDescriptionDefinitions: readonly FlappyInputDescriptionDefinition[];
-  backgroundColor: string;
-  orientation: 'vertical' | 'horizontal';
-};
-
-type FlappyInputDescriptionDefinition = {
-  labelLines: readonly string[];
-  tooltipHeading: string;
-  tooltipBodyParagraphs: readonly string[];
-};
-
-const FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS: readonly FlappyInputLabelGroupDefinition[] =
+const FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS: readonly InputLabelGroupDefinition[] =
   [
     {
       label: FLAPPY_INPUT_GROUP_LABELS[0] ?? 'BIRD STATE',
@@ -168,14 +152,19 @@ const FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS: readonly FlappyInputLabelGroupDefini
  */
 export function resolveInputGroupLabelBands(
   inputNodeCount: number,
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
 ): InputGroupLabelBand[] {
-  if (inputNodeCount !== FLAPPY_NETWORK_INPUT_SIZE) {
+  const resolvedInputLabelGroupDefinitions = resolveApplicableInputLabelGroups(
+    inputNodeCount,
+    inputLabelGroupDefinitions,
+  );
+  if (resolvedInputLabelGroupDefinitions.length === 0) {
     return [];
   }
 
   const groupBands: InputGroupLabelBand[] = [];
   let runningNodeIndex = 0;
-  FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS.forEach((groupDefinition) => {
+  resolvedInputLabelGroupDefinitions.forEach((groupDefinition) => {
     const groupCount = groupDefinition.nodeDescriptionDefinitions.length;
     const startNodeIndex = runningNodeIndex;
     const endNodeIndex = runningNodeIndex + groupCount - 1;
@@ -206,14 +195,19 @@ export function resolveInputGroupLabelBands(
  */
 export function resolveInputNodeDescriptionLabels(
   inputNodeCount: number,
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
 ): InputNodeDescriptionLabel[] {
-  if (inputNodeCount !== FLAPPY_NETWORK_INPUT_SIZE) {
+  const resolvedInputLabelGroupDefinitions = resolveApplicableInputLabelGroups(
+    inputNodeCount,
+    inputLabelGroupDefinitions,
+  );
+  if (resolvedInputLabelGroupDefinitions.length === 0) {
     return [];
   }
 
   const nodeDescriptions: InputNodeDescriptionLabel[] = [];
   let runningNodeIndex = 0;
-  FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS.forEach((groupDefinition) => {
+  resolvedInputLabelGroupDefinitions.forEach((groupDefinition) => {
     groupDefinition.nodeDescriptionDefinitions.forEach(
       ({ labelLines, tooltipBodyParagraphs, tooltipHeading }) => {
         nodeDescriptions.push({
@@ -241,8 +235,12 @@ export function resolveInputNodeDescriptionLabels(
  */
 export function resolveInputDescriptionColumnWidthPx(
   inputNodeCount: number,
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
 ): number {
-  const inputDescriptions = resolveInputNodeDescriptionLabels(inputNodeCount);
+  const inputDescriptions = resolveInputNodeDescriptionLabels(
+    inputNodeCount,
+    inputLabelGroupDefinitions,
+  );
 
   if (inputDescriptions.length === 0) {
     return 0;
@@ -253,6 +251,24 @@ export function resolveInputDescriptionColumnWidthPx(
       resolveInputDescriptionChipWidthPx(inputDescription.labelLines),
     ),
   );
+}
+
+function resolveApplicableInputLabelGroups(
+  inputNodeCount: number,
+  inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
+): readonly InputLabelGroupDefinition[] {
+  const resolvedInputLabelGroupDefinitions =
+    inputLabelGroupDefinitions ?? FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS;
+  const totalDefinedNodeCount = resolvedInputLabelGroupDefinitions.reduce(
+    (runningNodeCount, inputLabelGroupDefinition) =>
+      runningNodeCount +
+      inputLabelGroupDefinition.nodeDescriptionDefinitions.length,
+    0,
+  );
+
+  return totalDefinedNodeCount === inputNodeCount
+    ? resolvedInputLabelGroupDefinitions
+    : [];
 }
 
 /**

@@ -11,9 +11,8 @@ describe('FLAPPY_EVOLUTION_WORKER_INTERNALS', () => {
     });
 
     try {
-      const { FLAPPY_EVOLUTION_WORKER_INTERNALS } = await import(
-        './flappy-evolution-worker'
-      );
+      const { FLAPPY_EVOLUTION_WORKER_INTERNALS } =
+        await import('./flappy-evolution-worker');
       const evaluationWorkerPool =
         FLAPPY_EVOLUTION_WORKER_INTERNALS.createWorkerEvaluationPoolIfSupported(
           {

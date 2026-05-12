@@ -589,8 +589,8 @@ describe('network training chapter', () => {
               optimizer: 'adam',
             });
             const outputNode = getOutputTrainingNode(network);
-            const connection =
-              network.connections[0] as MixedPrecisionTrainingConnection;
+            const connection = network
+              .connections[0] as MixedPrecisionTrainingConnection;
 
             // Assert
             expect({
@@ -687,8 +687,8 @@ describe('network training chapter', () => {
               optimizer: 'adam',
             });
             const outputNode = getOutputTrainingNode(network);
-            const connection =
-              network.connections[0] as MixedPrecisionTrainingConnection;
+            const connection = network
+              .connections[0] as MixedPrecisionTrainingConnection;
 
             // Assert
             expect({
