@@ -3,6 +3,7 @@ import {
   resolveGenerationSummaryHudValues,
   resolveEvolutionWaitLegendText,
   resolveGenerationPopulationSize,
+  resolveRuntimeChampionCandidateNetworkJson,
   resolveWorkerInitPayload,
 } from './runtime.evolution-loop.service';
 
@@ -156,6 +157,26 @@ describe('resolveRuntimeArchitectureProgressUpdate', () => {
     } finally {
       consoleInfoSpy.mockRestore();
     }
+  });
+});
+
+describe('resolveRuntimeChampionCandidateNetworkJson', () => {
+  it('prefers the playback winner network over the generation-best fallback', () => {
+    const playbackWinnerNetworkJson = { scope: 'playback-winner' };
+    const generationBestNetworkJson = { scope: 'generation-best' };
+
+    expect(
+      resolveRuntimeChampionCandidateNetworkJson({
+        generationBestNetworkJson,
+        playbackSummary: {
+          averagePipesPassed: 1,
+          p90FramesSurvived: 2,
+          winnerFramesSurvived: 3,
+          winnerPipesPassed: 4,
+          winnerNetworkJson: playbackWinnerNetworkJson,
+        },
+      }),
+    ).toBe(playbackWinnerNetworkJson);
   });
 });
 

@@ -118,6 +118,7 @@ export function createInitialPlaybackLoopState(): PlaybackLoopState {
       p90FramesSurvived: 0,
       winnerPipesPassed: 0,
       winnerFramesSurvived: 0,
+      winnerNetworkJson: undefined,
       latestLeaderPipesPassed: 0,
       latestLeaderFramesSurvived: 0,
     },
@@ -211,6 +212,7 @@ export function resolvePlaybackEpisodeSummary(
     p90FramesSurvived: summary.p90FramesSurvived,
     winnerPipesPassed: summary.winnerPipesPassed,
     winnerFramesSurvived: summary.winnerFramesSurvived,
+    winnerNetworkJson: summary.winnerNetworkJson,
   };
 }
 

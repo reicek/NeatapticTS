@@ -267,11 +267,13 @@ describe('createInitializedWorkerRuntime', () => {
       const sharedSeedFitnessCall = sharedSeedFitnessSpy.mock.calls.at(-1);
 
       expect({
+        aggregateCallCount: sharedSeedFitnessSpy.mock.calls.length,
         aggregateOptions: sharedSeedFitnessCall?.[2],
         resolvedFitness,
         sharedSeedCount: sharedSeedFitnessCall?.[1]?.length,
         singleRolloutCallCount: singleRolloutFitnessSpy.mock.calls.length,
       }).toEqual({
+        aggregateCallCount: 2,
         aggregateOptions: {
           enableEarlyTermination: true,
           maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
@@ -284,6 +286,41 @@ describe('createInitializedWorkerRuntime', () => {
       });
     },
   );
+
+  it('keeps zero-pipe recurrent genomes on the first shared seed only', async () => {
+    const sharedSeedFitnessSpy = jest
+      .spyOn(flappyEvaluation, 'evaluateFlappyFitnessAcrossSeeds')
+      .mockReturnValue({
+        seedCount: 1,
+        meanFitness: 0,
+        medianFitness: 0,
+        p90Fitness: 0,
+        fitnessStdDev: 0,
+        robustFitness: 50,
+        meanPipesPassed: 0,
+        meanFramesSurvived: 50,
+      });
+    const neatRuntime = createInitializedWorkerRuntime({
+      architectureProfileId: 'gru',
+      populationSize: 8,
+      elitismCount: 2,
+      rngSeed: 12345,
+    }) as WorkerRuntimeWithPopulation;
+
+    const resolvedFitness = await neatRuntime.fitness(
+      neatRuntime.population[0],
+    );
+
+    expect({
+      aggregateCallCount: sharedSeedFitnessSpy.mock.calls.length,
+      resolvedFitness,
+      sharedSeedCount: sharedSeedFitnessSpy.mock.calls.at(-1)?.[1]?.length,
+    }).toEqual({
+      aggregateCallCount: 1,
+      resolvedFitness: 50,
+      sharedSeedCount: 1,
+    });
+  });
 
   it('rotates the LSTM shared rollout seed batch after each evolved generation', async () => {
     const sharedSeedFitnessSpy = jest
@@ -497,7 +534,7 @@ describe('createInitializedWorkerRuntime', () => {
     }).toEqual({
       fitnessPopulation: true,
       scoredPopulation: [20_316, 10_100],
-      workerPoolCallCount: 1,
+      workerPoolCallCount: 2,
     });
   });
 });

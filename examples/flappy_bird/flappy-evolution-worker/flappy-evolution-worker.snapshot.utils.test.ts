@@ -41,16 +41,85 @@ describe('createWorkerPlaybackSnapshot', () => {
 
   it('returns all typed-array buffers in the transfer list', () => {
     const snapshot = createWorkerPlaybackSnapshot(createPlaybackState());
+    const transferList = resolveWorkerPlaybackSnapshotTransferList(snapshot);
 
-    expect(resolveWorkerPlaybackSnapshotTransferList(snapshot)).toEqual([
-      snapshot.pipes.xPositionsPx.buffer,
-      snapshot.pipes.gapCenterYPositionsPx.buffer,
-      snapshot.pipes.gapSizesPx.buffer,
-      snapshot.birds.yPositionsPx.buffer,
-      snapshot.birds.pipesPassed.buffer,
-      snapshot.birds.framesSurvived.buffer,
-      snapshot.birds.doneFlags.buffer,
-    ]);
+    expect({
+      birdDoneFlagsBuffer: transferList[6] === snapshot.birds.doneFlags.buffer,
+      birdFramesSurvivedBuffer:
+        transferList[5] === snapshot.birds.framesSurvived.buffer,
+      birdPipesPassedBuffer:
+        transferList[4] === snapshot.birds.pipesPassed.buffer,
+      birdYPositionsBuffer:
+        transferList[3] === snapshot.birds.yPositionsPx.buffer,
+      pipeGapCenterBuffer:
+        transferList[1] === snapshot.pipes.gapCenterYPositionsPx.buffer,
+      pipeGapSizesBuffer: transferList[2] === snapshot.pipes.gapSizesPx.buffer,
+      pipeXPositionsBuffer:
+        transferList[0] === snapshot.pipes.xPositionsPx.buffer,
+      transferListLength: transferList.length,
+    }).toEqual({
+      birdDoneFlagsBuffer: true,
+      birdFramesSurvivedBuffer: true,
+      birdPipesPassedBuffer: true,
+      birdYPositionsBuffer: true,
+      pipeGapCenterBuffer: true,
+      pipeGapSizesBuffer: true,
+      pipeXPositionsBuffer: true,
+      transferListLength: 7,
+    });
+  });
+
+  it('reuses shared snapshot buffers when cross-origin isolation allows shared memory', () => {
+    const originalCrossOriginIsolated = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'crossOriginIsolated',
+    );
+    const originalImportScripts = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'importScripts',
+    );
+    const originalWorker = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'Worker',
+    );
+    const playbackState = createPlaybackState();
+
+    Object.defineProperty(globalThis, 'crossOriginIsolated', {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(globalThis, 'Worker', {
+      configurable: true,
+      value: class Worker {},
+    });
+    Object.defineProperty(globalThis, 'importScripts', {
+      configurable: true,
+      value: jest.fn(),
+    });
+
+    try {
+      const firstSnapshot = createWorkerPlaybackSnapshot(playbackState);
+      playbackState.birds[0].yPx = 188;
+      playbackState.frameIndex = 13;
+      const nextSnapshot = createWorkerPlaybackSnapshot(playbackState);
+
+      expect({
+        nextBirdYPx: nextSnapshot.birds.yPositionsPx[0],
+        reusesBirdBuffer:
+          firstSnapshot.birds.yPositionsPx.buffer ===
+          nextSnapshot.birds.yPositionsPx.buffer,
+        transferListLength:
+          resolveWorkerPlaybackSnapshotTransferList(nextSnapshot).length,
+      }).toEqual({
+        nextBirdYPx: 188,
+        reusesBirdBuffer: true,
+        transferListLength: 0,
+      });
+    } finally {
+      restoreGlobalProperty('crossOriginIsolated', originalCrossOriginIsolated);
+      restoreGlobalProperty('importScripts', originalImportScripts);
+      restoreGlobalProperty('Worker', originalWorker);
+    }
   });
 });
 
@@ -91,4 +160,23 @@ function createPlaybackState(): WorkerPlaybackState {
       },
     ],
   };
+}
+
+/**
+ * Restores a temporary global property override used by shared-memory tests.
+ *
+ * @param propertyName - Global property name that was overridden.
+ * @param descriptor - Original descriptor captured before the override.
+ * @returns Nothing.
+ */
+function restoreGlobalProperty(
+  propertyName: 'crossOriginIsolated' | 'importScripts' | 'Worker',
+  descriptor: PropertyDescriptor | undefined,
+): void {
+  if (descriptor) {
+    Object.defineProperty(globalThis, propertyName, descriptor);
+    return;
+  }
+
+  Reflect.deleteProperty(globalThis, propertyName);
 }

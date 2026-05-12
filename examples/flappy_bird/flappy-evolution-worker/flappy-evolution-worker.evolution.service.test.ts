@@ -17,6 +17,7 @@ describe('evolveAndBuildGenerationReadyMessage', () => {
     const secondPopulationNetwork = createConcreteNetwork(7, 0.2);
     const setCurrentPopulation = jest.fn();
     const markStartupPopulationPublished = jest.fn();
+    const warmStartGenerationZeroIfNeeded = jest.fn(async () => undefined);
     const neatRuntime = {
       generation: 0,
       population: [firstPopulationNetwork, secondPopulationNetwork],
@@ -27,7 +28,7 @@ describe('evolveAndBuildGenerationReadyMessage', () => {
       architectureProfileId: 'lstm',
       neatRuntime,
       isStopped: () => false,
-      warmStartGenerationZeroIfNeeded: async () => undefined,
+      warmStartGenerationZeroIfNeeded,
       setCurrentPopulation,
       publishStartupPopulationBeforeFirstEvolution: true,
       markStartupPopulationPublished,
@@ -37,12 +38,14 @@ describe('evolveAndBuildGenerationReadyMessage', () => {
       bestFitness: generationReadyMessage.payload.bestFitness,
       didMarkPublished: markStartupPopulationPublished.mock.calls.length === 1,
       didSkipEvolve: (neatRuntime.evolve as jest.Mock).mock.calls.length === 0,
+      didSkipWarmStart: warmStartGenerationZeroIfNeeded.mock.calls.length === 0,
       generation: generationReadyMessage.payload.generation,
       population: setCurrentPopulation.mock.calls[0]?.[0],
     }).toEqual({
       bestFitness: 7,
       didMarkPublished: true,
       didSkipEvolve: true,
+      didSkipWarmStart: true,
       generation: 0,
       population: [firstPopulationNetwork, secondPopulationNetwork],
     });

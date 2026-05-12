@@ -62,6 +62,7 @@ export function resolvePlaybackCompletionSummary(
   p90FramesSurvived: number;
   winnerPipesPassed: number;
   winnerFramesSurvived: number;
+  winnerNetworkJson?: Record<string, unknown>;
 } {
   return {
     averagePipesPassed: playbackStepPayload.averagePipesPassed ?? 0,
@@ -70,5 +71,6 @@ export function resolvePlaybackCompletionSummary(
       playbackStepPayload.winnerPipesPassed ?? latestLeaderPipesPassed,
     winnerFramesSurvived:
       playbackStepPayload.winnerFramesSurvived ?? latestLeaderFramesSurvived,
+    winnerNetworkJson: playbackStepPayload.winnerNetworkJson,
   };
 }

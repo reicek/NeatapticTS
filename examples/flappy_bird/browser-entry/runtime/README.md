@@ -462,6 +462,26 @@ plays back that population on the canvas, then folds the outcome into the
 generation summary section and the cross-generation history used by the
 architecture selector.
 
+### attachWorkerRuntimeStatusHudUpdates
+
+```ts
+attachWorkerRuntimeStatusHudUpdates(
+  options: { evolutionWorker: Worker; statsValueByKey: Partial<Record<FlappyStatsKey, HTMLTableCellElement>>; },
+): () => void
+```
+
+Attaches worker runtime-status messages to the browser HUD status row.
+
+Runtime status messages are non-blocking hints emitted while the worker is
+initializing, choosing its evaluation transport, evolving, or preparing
+playback. Keeping them separate from request responses lets long recurrent
+waits explain themselves without changing the generation/playback promises.
+
+Parameters:
+- `options` - Worker and HUD cell references.
+
+Returns: Cleanup callback that removes the message listener.
+
 ### finalizeStartupPreview
 
 ```ts
@@ -602,6 +622,25 @@ Parameters:
 - `options` - Current history/champion tables plus the candidate run result.
 
 Returns: Updated history and champion tables plus an improvement flag.
+
+### resolveRuntimeChampionCandidateNetworkJson
+
+```ts
+resolveRuntimeChampionCandidateNetworkJson(
+  input: { generationBestNetworkJson?: SerializedNetwork | undefined; playbackSummary: PlaybackEpisodeSummary; },
+): SerializedNetwork | undefined
+```
+
+Resolves which network should be persisted for browser-local architecture records.
+
+Playback can crown a different visible winner than the generation-best genome
+selected before playback. Persisting the actual playback winner keeps saved
+champions aligned with the score that improved the local history table.
+
+Parameters:
+- `input` - Playback summary plus generation-best fallback network.
+
+Returns: Playback winner network JSON when available, otherwise generation-best JSON.
 
 ### resolveWorkerInitPayload
 

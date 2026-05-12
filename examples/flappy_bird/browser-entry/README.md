@@ -206,6 +206,14 @@ A snapshot combines geometry, packed population state, and lightweight world
 metadata so the browser can render a deterministic frame without rerunning
 the simulation locally.
 
+### EvolutionRuntimeStatusMessage
+
+Informational worker message used to keep the HUD phase/status honest.
+
+### EvolutionRuntimeStatusPhase
+
+Worker phase labels surfaced to the browser HUD during long-running work.
+
 ### EvolutionWorkerErrorMessage
 
 Worker message emitted for simulation/playback errors.
@@ -552,6 +560,14 @@ Per-frame snapshot received from the worker playback channel.
 A snapshot combines geometry, packed population state, and lightweight world
 metadata so the browser can render a deterministic frame without rerunning
 the simulation locally.
+
+### EvolutionRuntimeStatusMessage
+
+Informational worker message used to keep the HUD phase/status honest.
+
+### EvolutionRuntimeStatusPhase
+
+Worker phase labels surfaced to the browser HUD during long-running work.
 
 ### EvolutionWorkerErrorMessage
 
@@ -1912,7 +1928,7 @@ Returns: Next generation payload.
 requestWorkerPlaybackStep(
   evolutionWorker: Worker,
   playbackStepRequest: WorkerChannelPlaybackStepRequest,
-): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; }>
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; }>
 ```
 
 Requests one playback batch step from the worker.

@@ -121,7 +121,11 @@
  */
 /// <reference lib="webworker" />
 
-import { Neat, resolveBrowserWorkerAssetUrl } from '../../../src/neataptic';
+import {
+  detectInferenceWorkerCapabilities,
+  Neat,
+  resolveBrowserWorkerAssetUrl,
+} from '../../../src/neataptic';
 import Network from '../../../src/architecture/network';
 import {
   DEFAULT_FLAPPY_ARCHITECTURE_PROFILE_ID,
@@ -134,6 +138,7 @@ import type {
   WorkerRequestMessage,
   WorkerRequestPlaybackStepMessage,
   WorkerResponseMessage,
+  WorkerRuntimeStatusMessage,
   WorkerStartPlaybackMessage,
 } from './flappy-evolution-worker.types';
 import { FlappyEvaluationWorkerPool } from '../evaluation/evaluation.worker-pool';
@@ -284,6 +289,10 @@ function createWorkerProtocolHandlers(
       workerMutableRuntimeState.stopped = true;
       void workerMutableRuntimeState.evaluationWorkerPool?.dispose();
       workerMutableRuntimeState.evaluationWorkerPool = undefined;
+      postWorkerRuntimeStatus({
+        phase: 'stopped',
+        statusText: 'stopped',
+      });
     },
     beginInitialization: (payload: WorkerInitMessage['payload']): void => {
       beginWorkerInitialization(workerMutableRuntimeState, payload);
@@ -335,6 +344,11 @@ async function initializeRuntime(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
   initPayload: WorkerInitMessage['payload'],
 ): Promise<void> {
+  postWorkerRuntimeStatus({
+    phase: 'initializing',
+    statusText: 'initializing worker',
+  });
+
   await closeWorkerPopulationRenderState(
     workerMutableRuntimeState.currentPlaybackState,
   );
@@ -363,6 +377,11 @@ async function initializeRuntime(
   workerMutableRuntimeState.startupPopulationPublished = false;
   workerMutableRuntimeState.evaluationWorkerPool =
     createWorkerEvaluationPoolIfSupported(initPayload);
+  postWorkerRuntimeStatus(
+    resolveWorkerEvaluationRuntimeStatusPayload(
+      workerMutableRuntimeState.evaluationWorkerPool,
+    ),
+  );
 
   // Step 4: Build and configure the NEAT runtime controller.
   workerMutableRuntimeState.neatRuntime = createInitializedWorkerRuntime(
@@ -462,6 +481,11 @@ function beginWorkerInitialization(
 function beginWorkerGenerationRequest(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
 ): void {
+  postWorkerRuntimeStatus({
+    phase: 'evolving',
+    statusText: 'evolving generation',
+  });
+
   // Step 1: Run the generation pipeline and publish worker errors on failure.
   void evolveAndPublishGeneration(workerMutableRuntimeState).catch(
     (error: unknown) => {
@@ -485,6 +509,11 @@ async function beginWorkerPlayback(
   workerMutableRuntimeState: WorkerMutableRuntimeState,
   payload: { visibleWorldWidthPx: number; visibleWorldHeightPx: number },
 ): Promise<void> {
+  postWorkerRuntimeStatus({
+    phase: 'playing',
+    statusText: 'preparing playback',
+  });
+
   const channelWorkerUrl = resolveBrowserWorkerAssetUrl(
     'flappy-inference-channel.worker.bundle.js',
   );
@@ -594,11 +623,37 @@ function postWorkerMessage(
   self.postMessage(workerMessage, transferList ?? []);
 }
 
+/**
+ * Posts an informational runtime-status update from worker to browser host.
+ *
+ * @param payload - Phase and display text for the HUD status row.
+ * @returns Nothing.
+ */
+function postWorkerRuntimeStatus(
+  payload: WorkerRuntimeStatusMessage['payload'],
+): void {
+  postWorkerMessage({
+    type: 'runtime-status',
+    payload,
+  });
+}
+
 function resolveNodeEnvForRuntimeLogs(): string | undefined {
   return (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process
     ?.env?.NODE_ENV;
 }
 
+/**
+ * Creates the optional shared-memory evaluation pool for recurrent browser profiles.
+ *
+ * The pool is useful only when the worker can honestly spawn the emitted shared
+ * inference worker with `SharedArrayBuffer` transport. Otherwise the runtime
+ * keeps the worker-local direct evaluator, which avoids a chatty nested-worker
+ * path on ordinary local servers without COOP/COEP isolation.
+ *
+ * @param initPayload - Worker initialization payload with the selected profile.
+ * @returns Shared-memory pool when the host can support it; otherwise undefined.
+ */
 function createWorkerEvaluationPoolIfSupported(
   initPayload: WorkerInitMessage['payload'],
 ): FlappyEvaluationWorkerPool | undefined {
@@ -611,14 +666,79 @@ function createWorkerEvaluationPoolIfSupported(
     return undefined;
   }
 
-  // Recurrent Flappy rollouts make many short predictor calls per episode.
-  // In the live browser worker this roundtrip-heavy path costs more than the
-  // worker-local evaluator, so the example keeps the shared-memory pool opt-in
-  // disabled until a coarser rollout-level worker path exists.
-  return undefined;
+  const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
+    'flappy-shared-inference.worker.bundle.js',
+  );
+  const capabilities = detectInferenceWorkerCapabilities({
+    hasSharedWorker: Boolean(sharedWorkerUrl),
+    runtime: 'browser',
+  });
+
+  if (!capabilities.sharedMemory || !sharedWorkerUrl) {
+    logWorkerEvaluationPoolFallback(
+      initPayload.architectureProfileId,
+      capabilities.reasons,
+    );
+    return undefined;
+  }
+
+  if (SHOULD_LOG_FLAPPY_WORKER_PROTOCOL) {
+    console.info(
+      `${FLAPPY_WORKER_PROTOCOL_LOG_PREFIX} enabling shared-memory evaluation pool profile=${initPayload.architectureProfileId}`,
+    );
+  }
+
+  return new FlappyEvaluationWorkerPool(undefined, {
+    workerUrl: sharedWorkerUrl,
+  });
+}
+
+/**
+ * Logs why recurrent evaluation stayed on the direct worker-local evaluator.
+ *
+ * @param architectureProfileId - Selected recurrent profile id.
+ * @param reasons - Capability probe explanations for unavailable transports.
+ * @returns Nothing.
+ */
+function logWorkerEvaluationPoolFallback(
+  architectureProfileId: WorkerInitMessage['payload']['architectureProfileId'],
+  reasons: readonly string[],
+): void {
+  if (!SHOULD_LOG_FLAPPY_WORKER_PROTOCOL) {
+    return;
+  }
+
+  console.info(
+    `${FLAPPY_WORKER_PROTOCOL_LOG_PREFIX} shared-memory evaluation pool unavailable profile=${architectureProfileId} reasons=${reasons.join('; ')}`,
+  );
+}
+
+/**
+ * Resolves the status payload for the active recurrent evaluation transport.
+ *
+ * @param evaluationWorkerPool - Optional shared-memory evaluation pool.
+ * @returns Runtime-status payload for the HUD.
+ */
+function resolveWorkerEvaluationRuntimeStatusPayload(
+  evaluationWorkerPool: FlappyEvaluationWorkerPool | undefined,
+): WorkerRuntimeStatusMessage['payload'] {
+  if (evaluationWorkerPool) {
+    return {
+      phase: 'evaluating-shared-memory',
+      statusText: 'parallel eval ready',
+      detail: 'Shared-memory evaluation pool is available.',
+    };
+  }
+
+  return {
+    phase: 'evaluating-direct',
+    statusText: 'direct eval fallback',
+    detail: 'Worker-local evaluation is active.',
+  };
 }
 
 /** @internal Test-only helper surface for worker entrypoint policy coverage. */
 export const FLAPPY_EVOLUTION_WORKER_INTERNALS = {
   createWorkerEvaluationPoolIfSupported,
+  resolveWorkerEvaluationRuntimeStatusPayload,
 };

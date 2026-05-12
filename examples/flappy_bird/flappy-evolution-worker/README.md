@@ -182,6 +182,26 @@ Parameters:
 
 Returns: Nothing.
 
+### createWorkerEvaluationPoolIfSupported
+
+```ts
+createWorkerEvaluationPoolIfSupported(
+  initPayload: { architectureProfileId?: ExampleArchitectureProfileId | undefined; championNetworkJson?: SerializedNetwork | undefined; populationSize: number; elitismCount: number; rngSeed: number; },
+): FlappyEvaluationWorkerPool | undefined
+```
+
+Creates the optional shared-memory evaluation pool for recurrent browser profiles.
+
+The pool is useful only when the worker can honestly spawn the emitted shared
+inference worker with `SharedArrayBuffer` transport. Otherwise the runtime
+keeps the worker-local direct evaluator, which avoids a chatty nested-worker
+path on ordinary local servers without COOP/COEP isolation.
+
+Parameters:
+- `initPayload` - Worker initialization payload with the selected profile.
+
+Returns: Shared-memory pool when the host can support it; otherwise undefined.
+
 ### createWorkerMessageHandler
 
 ```ts
@@ -283,6 +303,23 @@ Parameters:
 
 Returns: Promise resolved when runtime setup is complete.
 
+### logWorkerEvaluationPoolFallback
+
+```ts
+logWorkerEvaluationPoolFallback(
+  architectureProfileId: ExampleArchitectureProfileId | undefined,
+  reasons: readonly string[],
+): void
+```
+
+Logs why recurrent evaluation stayed on the direct worker-local evaluator.
+
+Parameters:
+- `architectureProfileId` - Selected recurrent profile id.
+- `reasons` - Capability probe explanations for unavailable transports.
+
+Returns: Nothing.
+
 ### postWorkerMessage
 
 ```ts
@@ -300,6 +337,21 @@ done elsewhere so the README can point to one stable worker-to-host boundary.
 Parameters:
 - `workerMessage` - Outbound worker response payload.
 - `transferList` - Optional transferable buffers moved with the payload.
+
+Returns: Nothing.
+
+### postWorkerRuntimeStatus
+
+```ts
+postWorkerRuntimeStatus(
+  payload: { phase: WorkerRuntimeStatusPhase; statusText: string; detail?: string | undefined; },
+): void
+```
+
+Posts an informational runtime-status update from worker to browser host.
+
+Parameters:
+- `payload` - Phase and display text for the HUD status row.
 
 Returns: Nothing.
 
@@ -326,6 +378,21 @@ Parameters:
 - `playbackStepPayload` - Host-selected simulation-step budget and viewport.
 
 Returns: Nothing.
+
+### resolveWorkerEvaluationRuntimeStatusPayload
+
+```ts
+resolveWorkerEvaluationRuntimeStatusPayload(
+  evaluationWorkerPool: FlappyEvaluationWorkerPool | undefined,
+): { phase: WorkerRuntimeStatusPhase; statusText: string; detail?: string | undefined; }
+```
+
+Resolves the status payload for the active recurrent evaluation transport.
+
+Parameters:
+- `evaluationWorkerPool` - Optional shared-memory evaluation pool.
+
+Returns: Runtime-status payload for the HUD.
 
 ## flappy-evolution-worker/flappy-evolution-worker.types.ts
 
@@ -487,6 +554,19 @@ Union of outbound worker response messages.
 Together with `WorkerRequestMessage`, this forms the full host/worker
 protocol contract for the demo.
 
+### WorkerRuntimeStatusMessage
+
+Worker runtime status response message.
+
+Status messages are informational and never complete a request. The browser
+listens for them beside generation/playback responses so long recurrent
+waits can explain whether work is initializing, evolving, playing back, or
+using a direct-evaluation fallback.
+
+### WorkerRuntimeStatusPhase
+
+Worker phase labels surfaced to the browser HUD during long-running work.
+
 ### WorkerStartPlaybackMessage
 
 Worker request asking to initialize playback state.
@@ -604,6 +684,38 @@ Parameters:
 
 Returns: Nothing.
 
+### resolveFirstSharedRolloutSeedBatch
+
+```ts
+resolveFirstSharedRolloutSeedBatch(
+  sharedRolloutSeeds: readonly number[],
+): number[]
+```
+
+Resolves the cheap first-seed batch used before full recurrent scoring.
+
+Parameters:
+- `sharedRolloutSeeds` - Full deterministic seed batch for the generation.
+
+Returns: One-seed batch used for the progressive gate.
+
+### resolveRequiredFirstSeedAggregate
+
+```ts
+resolveRequiredFirstSeedAggregate(
+  aggregateByGenome: ReadonlyMap<default, FlappySeedBatchEvaluation>,
+  genome: default,
+): FlappySeedBatchEvaluation
+```
+
+Resolves the required first-seed aggregate for a genome.
+
+Parameters:
+- `aggregateByGenome` - First-seed aggregate map.
+- `genome` - Genome whose evidence should exist.
+
+Returns: Aggregate evaluation for the genome.
+
 ### resolveWorkerPipeFirstEvaluationPlan
 
 ```ts
@@ -622,6 +734,16 @@ Parameters:
 - `architectureProfileId` - Resolved worker architecture profile id.
 
 Returns: Shared-seed batch size for worker fitness.
+
+### resolveWorkerPipeFirstRolloutOptions
+
+```ts
+resolveWorkerPipeFirstRolloutOptions(): { enableEarlyTermination: true; maxFrames: number; normalizeFitness: true; pipeProgressTarget: number; }
+```
+
+Resolves shared rollout options for the pipe-first browser objective.
+
+Returns: Rollout options used by recurrent worker scoring.
 
 ### resolveWorkerSeedNetwork
 
@@ -659,6 +781,21 @@ Parameters:
 - `aggregateEvaluation` - Shared-seed evaluation evidence.
 
 Returns: Scalar fitness consumed by the browser worker NEAT loop.
+
+### shouldSpendFullWorkerSeedBatch
+
+```ts
+shouldSpendFullWorkerSeedBatch(
+  aggregateEvaluation: FlappySeedBatchEvaluation,
+): boolean
+```
+
+Resolves whether one genome should receive the full recurrent seed batch.
+
+Parameters:
+- `aggregateEvaluation` - First-seed evidence for one genome.
+
+Returns: True when the genome showed enough pipe progress to justify full scoring.
 
 ## flappy-evolution-worker/flappy-evolution-worker.protocol.service.ts
 
@@ -736,11 +873,12 @@ Creates the next compact generation-ready response payload.
 
 Educational note:
 The first browser-visible population should not wait for a full recurrent
-selection batch. When the caller opts in, generation zero is released after
-the bounded warm-start assist so playback can begin promptly. Later requests
-run the normal NEAT `evolve()` pass and emit the same compact summary shape:
-generation index, best fitness, transferable inference payloads for playback,
-and the temporary JSON visualization bridge used by the host network panel.
+selection batch or optional warm-start assist. When the caller opts in,
+generation zero is released immediately so playback can begin promptly. Later
+requests run the bounded warm-start assist, the normal NEAT `evolve()` pass,
+and emit the same compact summary shape: generation index, best fitness,
+transferable inference payloads for playback, and the temporary JSON
+visualization bridge used by the host network panel.
 
 Parameters:
 - `options` - Evolution dependencies and runtime state accessors.
@@ -934,6 +1072,67 @@ Returns: Updated playback runtime state after processing this step.
 
 ## flappy-evolution-worker/flappy-evolution-worker.snapshot.utils.ts
 
+### canReuseSharedSnapshotBuffers
+
+```ts
+canReuseSharedSnapshotBuffers(): boolean
+```
+
+Resolves whether this host can reuse shared snapshot buffers safely.
+
+Returns: True when SharedArrayBuffer snapshot storage is available.
+
+### createFloat32SnapshotArray
+
+```ts
+createFloat32SnapshotArray(
+  elementCount: number,
+  useSharedBuffer: boolean,
+): Float32Array<ArrayBufferLike>
+```
+
+Creates one packed float column for snapshot transport.
+
+Parameters:
+- `elementCount` - Number of elements in the column.
+- `useSharedBuffer` - Whether to allocate reusable shared memory.
+
+Returns: Float32 snapshot column.
+
+### createUint32SnapshotArray
+
+```ts
+createUint32SnapshotArray(
+  elementCount: number,
+  useSharedBuffer: boolean,
+): Uint32Array<ArrayBufferLike>
+```
+
+Creates one packed uint32 column for snapshot transport.
+
+Parameters:
+- `elementCount` - Number of elements in the column.
+- `useSharedBuffer` - Whether to allocate reusable shared memory.
+
+Returns: Uint32 snapshot column.
+
+### createUint8SnapshotArray
+
+```ts
+createUint8SnapshotArray(
+  elementCount: number,
+  useSharedBuffer: boolean,
+): Uint8Array<ArrayBufferLike>
+```
+
+Creates one packed uint8 column for snapshot transport.
+
+Parameters:
+- `elementCount` - Number of elements in the column.
+- `useSharedBuffer` - Whether to allocate reusable shared memory.
+
+Returns: Uint8 snapshot column.
+
 ### createWorkerPlaybackSnapshot
 
 ```ts
@@ -962,6 +1161,59 @@ Parameters:
 - `playbackState` - Current mutable playback state.
 
 Returns: Immutable frame snapshot for the host.
+
+### createWorkerPlaybackSnapshotBuffers
+
+```ts
+createWorkerPlaybackSnapshotBuffers(
+  pipeCount: number,
+  birdCount: number,
+  useSharedBuffers: boolean,
+): WorkerPlaybackSnapshotBuffers
+```
+
+Creates typed-array storage for one packed snapshot.
+
+Parameters:
+- `pipeCount` - Number of visible pipes to pack.
+- `birdCount` - Number of playback birds to pack.
+- `useSharedBuffers` - Whether buffers should be reusable shared memory.
+
+Returns: Snapshot buffer shelf.
+
+### isTransferableArrayBuffer
+
+```ts
+isTransferableArrayBuffer(
+  buffer: ArrayBufferLike,
+): boolean
+```
+
+Narrows transfer-list candidates to transferable ArrayBuffers.
+
+Parameters:
+- `buffer` - Typed-array backing buffer.
+
+Returns: True when the buffer can be passed through postMessage transfer list.
+
+### resolveWorkerPlaybackSnapshotBuffers
+
+```ts
+resolveWorkerPlaybackSnapshotBuffers(
+  playbackState: WorkerPlaybackState,
+  pipeCount: number,
+  birdCount: number,
+): WorkerPlaybackSnapshotBuffers
+```
+
+Resolves snapshot column storage for one playback state.
+
+Parameters:
+- `playbackState` - Current mutable playback state.
+- `pipeCount` - Number of visible pipes to pack.
+- `birdCount` - Number of playback birds to pack.
+
+Returns: Snapshot buffers sized for the current frame.
 
 ### resolveWorkerPlaybackSnapshotTransferList
 

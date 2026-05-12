@@ -21,15 +21,15 @@ The folder matters because it answers all four questions in one coherent system.
 
 Different readers want different first files. Use the route that matches your question instead of reading everything linearly.
 
-| If you want to... | Start here | Then read |
-| --- | --- | --- |
-| Run training immediately | [trainFlappyBird.ts](./trainFlappyBird.ts) | [trainer/README.md](./trainer/README.md), [evaluation/README.md](./evaluation/README.md) |
-| Reuse the example from code | [index.ts](./index.ts) | [flappyEnvironment.ts](./flappyEnvironment.ts), [flappyEvaluation.ts](./flappyEvaluation.ts), [constants/README.md](./constants/README.md) |
-| Open the browser demo and inspect the UI boundary | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts) or [index.html](./index.html) | [browser-entry/README.md](./browser-entry/README.md), [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) |
-| Understand the control problem itself | [environment/README.md](./environment/README.md) | [simulation-shared/README.md](./simulation-shared/README.md), [evaluation/README.md](./evaluation/README.md) |
-| Tune fairness, rollout policy, or fitness shaping | [evaluation/README.md](./evaluation/README.md) | [trainer/README.md](./trainer/README.md) |
-| Change worker playback or browser transport | [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) | [browser-entry/README.md](./browser-entry/README.md) |
-| Understand the whole example as a system | this README | the module READMEs listed in [Recommended Reading Order](#recommended-reading-order) |
+| If you want to...                                 | Start here                                                                                       | Then read                                                                                                                                  |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Run training immediately                          | [trainFlappyBird.ts](./trainFlappyBird.ts)                                                       | [trainer/README.md](./trainer/README.md), [evaluation/README.md](./evaluation/README.md)                                                   |
+| Reuse the example from code                       | [index.ts](./index.ts)                                                                           | [flappyEnvironment.ts](./flappyEnvironment.ts), [flappyEvaluation.ts](./flappyEvaluation.ts), [constants/README.md](./constants/README.md) |
+| Open the browser demo and inspect the UI boundary | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts) or [index.html](./index.html) | [browser-entry/README.md](./browser-entry/README.md), [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md)             |
+| Understand the control problem itself             | [environment/README.md](./environment/README.md)                                                 | [simulation-shared/README.md](./simulation-shared/README.md), [evaluation/README.md](./evaluation/README.md)                               |
+| Tune fairness, rollout policy, or fitness shaping | [evaluation/README.md](./evaluation/README.md)                                                   | [trainer/README.md](./trainer/README.md)                                                                                                   |
+| Change worker playback or browser transport       | [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md)                         | [browser-entry/README.md](./browser-entry/README.md)                                                                                       |
+| Understand the whole example as a system          | this README                                                                                      | the module READMEs listed in [Recommended Reading Order](#recommended-reading-order)                                                       |
 
 ## Run The Example
 
@@ -63,7 +63,7 @@ Important note:
 
 - `index.html` is a lightweight bundle-loading shell, not the source-of-truth browser runtime.
 - the real browser host starts in [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts).
-- the page loads example bundles from `docs/assets`, so after code or documentation changes that affect the published example surface, run `npm run docs` or `npm run build:flappy-bird` to refresh the browser-facing assets and generated docs.
+- the page loads example bundles from `docs/assets`, so after code or documentation changes that affect the published example surface, run `npm run docs` to refresh generated docs plus bundles, or `npm run build:flappy-bird` to refresh both the Flappy host bundle and its worker bundles.
 
 ## The Core Idea In One Glance
 
@@ -322,13 +322,13 @@ Flappy Bird uses the shared [example architecture profile contract](../architect
 
 ### Approved profiles for Flappy Bird
 
-| Profile id | Family | Recurrent | Role |
-| --- | --- | --- | --- |
-| `mlp` | MLP | No | Baseline feed-forward reference. Dense connectivity from the 6-feature current-frame observation to 2 action outputs. |
-| `random-sparse` | RandomSparse | No | Sparse topology-search baseline. Fewer initial edges encourage topology exploration without requiring recurrent state. |
-| `narx` | NARX | Yes | Delay-line memory profile. Carries short-horizon sequences of inputs and outputs without gating. Feed-forward builders already handle current-frame geometry; any temporal advantage here must come from learned carry-over patterns. |
-| `gru` | GRU | Yes | Pedagogical gated-memory profile with a direct input-to-output readout connection. Recurrent blocks learn what to keep and forget across flap decisions. |
-| `lstm` | LSTM | Yes | Pedagogical gated-memory profile with explicit cell state. Structurally heavier than GRU; exposes the full gating vocabulary for teaching purposes. |
+| Profile id      | Family       | Recurrent | Role                                                                                                                                                                                                                                  |
+| --------------- | ------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mlp`           | MLP          | No        | Baseline feed-forward reference. Dense connectivity from the 6-feature current-frame observation to 2 action outputs.                                                                                                                 |
+| `random-sparse` | RandomSparse | No        | Sparse topology-search baseline. Fewer initial edges encourage topology exploration without requiring recurrent state.                                                                                                                |
+| `narx`          | NARX         | Yes       | Delay-line memory profile. Carries short-horizon sequences of inputs and outputs without gating. Feed-forward builders already handle current-frame geometry; any temporal advantage here must come from learned carry-over patterns. |
+| `gru`           | GRU          | Yes       | Pedagogical gated-memory profile with a direct input-to-output readout connection. Recurrent blocks learn what to keep and forget across flap decisions.                                                                              |
+| `lstm`          | LSTM         | Yes       | Pedagogical gated-memory profile with explicit cell state. Structurally heavier than GRU; exposes the full gating vocabulary for teaching purposes.                                                                                   |
 
 ### Selecting a profile in the browser
 
@@ -353,10 +353,10 @@ flowchart LR
 
 The observation vector focuses on control-relevant geometry rather than pixels. The policy sees a compressed description of the next decision, not a screenshot of the scene.
 
-| Signal family | What it tells the policy | Why it matters |
-| --- | --- | --- |
-| Bird state | vertical position and vertical velocity | The network needs immediate kinematic context before deciding whether a flap is corrective or wasteful. |
-| Next gap geometry | distance to the next gap, gap bounds, and relative offset | This is the primary near-term survival problem. |
+| Signal family     | What it tells the policy                                  | Why it matters                                                                                          |
+| ----------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Bird state        | vertical position and vertical velocity                   | The network needs immediate kinematic context before deciding whether a flap is corrective or wasteful. |
+| Next gap geometry | distance to the next gap, gap bounds, and relative offset | This is the primary near-term survival problem.                                                         |
 
 Fitness then combines normalized channels with caps so one lucky dimension does not dominate selection:
 
@@ -371,14 +371,14 @@ The result is a reward surface that still encourages practical flying behavior, 
 
 This is the shortest route to the right boundary when you are modifying the example.
 
-| Change goal | Read first | Why |
-| --- | --- | --- |
-| Adjust gravity, pipe spacing, collision, or deterministic stepping | [environment/README.md](./environment/README.md) | That is where world truth lives. |
-| Change what the network sees | [simulation-shared/README.md](./simulation-shared/README.md) | Observation semantics must stay aligned across training and playback-related helpers. |
-| Change score shaping or fairness policy | [evaluation/README.md](./evaluation/README.md) | This boundary owns rollout scoring and shared-seed aggregation. |
-| Change staged selection or mutation scheduling | [trainer/README.md](./trainer/README.md) | This is the population-policy layer. |
-| Change browser playback, HUD, or network inspection | [browser-entry/README.md](./browser-entry/README.md) | The browser teaching surface lives here. |
-| Change worker transport or off-thread playback behavior | [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) | The worker owns hot-path simulation and packed snapshot transport. |
+| Change goal                                                        | Read first                                                               | Why                                                                                   |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| Adjust gravity, pipe spacing, collision, or deterministic stepping | [environment/README.md](./environment/README.md)                         | That is where world truth lives.                                                      |
+| Change what the network sees                                       | [simulation-shared/README.md](./simulation-shared/README.md)             | Observation semantics must stay aligned across training and playback-related helpers. |
+| Change score shaping or fairness policy                            | [evaluation/README.md](./evaluation/README.md)                           | This boundary owns rollout scoring and shared-seed aggregation.                       |
+| Change staged selection or mutation scheduling                     | [trainer/README.md](./trainer/README.md)                                 | This is the population-policy layer.                                                  |
+| Change browser playback, HUD, or network inspection                | [browser-entry/README.md](./browser-entry/README.md)                     | The browser teaching surface lives here.                                              |
+| Change worker transport or off-thread playback behavior            | [flappy-evolution-worker/README.md](./flappy-evolution-worker/README.md) | The worker owns hot-path simulation and packed snapshot transport.                    |
 
 ## Folder Map
 
@@ -421,8 +421,8 @@ If you only care about one slice:
 
 This folder is readable from the code alone, but two external references genuinely help if you want the broader concepts behind the design:
 
-- Kenneth O. Stanley and Risto Miikkulainen, ["Evolving Neural Networks through Augmenting Topologies"](https://direct.mit.edu/evco/article/10/2/99/998), *Evolutionary Computation* 10(2), 2002. This is the canonical NEAT paper and the best conceptual backdrop for why topology and weights co-evolve.
-- Wikipedia contributors, ["Message passing"](https://en.wikipedia.org/wiki/Message_passing), *Wikipedia, The Free Encyclopedia*. This is useful background for understanding why the browser and worker communicate through an explicit protocol instead of sharing runtime authority.
+- Kenneth O. Stanley and Risto Miikkulainen, ["Evolving Neural Networks through Augmenting Topologies"](https://direct.mit.edu/evco/article/10/2/99/998), _Evolutionary Computation_ 10(2), 2002. This is the canonical NEAT paper and the best conceptual backdrop for why topology and weights co-evolve.
+- Wikipedia contributors, ["Message passing"](https://en.wikipedia.org/wiki/Message_passing), _Wikipedia, The Free Encyclopedia_. This is useful background for understanding why the browser and worker communicate through an explicit protocol instead of sharing runtime authority.
 
 ## Why Start Here
 

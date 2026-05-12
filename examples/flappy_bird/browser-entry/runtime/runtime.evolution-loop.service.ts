@@ -42,7 +42,10 @@ import {
   type RuntimeArchitectureHistoryByProfileId,
 } from './runtime.architecture-profile.service';
 import type { RuntimeTelemetryState } from './runtime.telemetry.service';
-import type { SerializedNetwork } from '../browser-entry.worker.types';
+import type {
+  EvolutionWorkerMessage,
+  SerializedNetwork,
+} from '../browser-entry.worker.types';
 import type { WorkerInitMessage } from '../../flappy-evolution-worker/flappy-evolution-worker.types';
 
 const FLAPPY_BROWSER_CHAMPION_LOG_PREFIX = '[flappy-browser]';
@@ -151,168 +154,241 @@ export async function runRuntimeEvolutionLoop(
     }),
   });
 
+  const stopRuntimeStatusHudUpdates = attachWorkerRuntimeStatusHudUpdates({
+    evolutionWorker,
+    statsValueByKey,
+  });
+
   // Step 3: Keep iterating generations until a stop signal is observed.
-  while (!isStopped()) {
-    // Step 3.1: Request and await the next playable generation payload.
-    const generationPayload = await requestGenerationWithOptionalStartupPreview(
-      {
-        evolutionWorker,
+  try {
+    while (!isStopped()) {
+      // Step 3.1: Request and await the next playable generation payload.
+      const generationPayload =
+        await requestGenerationWithOptionalStartupPreview({
+          evolutionWorker,
+          canvas,
+          context,
+          isStopped,
+          showStartupPreview: shouldShowStartupPreview,
+          waitLegendText: resolveEvolutionWaitLegendText(expectedGeneration),
+        });
+      if (isStopped()) {
+        break;
+      }
+      shouldShowStartupPreview = false;
+
+      // Step 3.2: Resolve generation-level values and best-network visualization model.
+      const bestFitness = generationPayload.bestFitness;
+      const bestNetwork = generationPayload.bestNetworkJson
+        ? Network.fromJSON(generationPayload.bestNetworkJson)
+        : undefined;
+      const generationPopulationNetworks = resolveGenerationPopulationNetworks(
+        generationPayload,
+        bestNetwork,
+      );
+      const generationPopulationSize = resolveGenerationPopulationSize(
+        generationPopulationNetworks,
+        populationSize,
+      );
+      const bestArchitectureLabel = selectedArchitectureProfileLabel;
+
+      // Step 3.3: Hydrate current-generation HUD values before playback begins.
+      updateStatsTableValues(statsValueByKey, {
+        currentHeader: resolveCurrentRunHeaderText(
+          generationPayload.generation,
+        ),
+        currentFrames: FLAPPY_HUD_ZERO_TEXT,
+        currentPipes: FLAPPY_HUD_ZERO_TEXT,
+        currentArchitecture: bestArchitectureLabel,
+        ...resolveInitialRuntimeTelemetryHudValues(),
+        ...resolveGenerationSummaryHudValues({
+          architectureLabel: bestArchitectureLabel,
+          bestFitness,
+        }),
+        birds: `${FLAPPY_HUD_ZERO_TEXT}/${generationPopulationSize}`,
+      });
+
+      // Step 3.4: Render active network architecture in the side panel.
+      renderNetworkArchitecture(bestNetwork, inputSize, outputSize);
+
+      // Step 3.5: Present the ready generation on the main canvas before playback begins.
+      await presentRuntimeGenerationPreview({
         canvas,
         context,
         isStopped,
-        showStartupPreview: shouldShowStartupPreview,
-        waitLegendText: resolveEvolutionWaitLegendText(expectedGeneration),
-      },
-    );
-    if (isStopped()) {
-      break;
-    }
-    shouldShowStartupPreview = false;
-
-    // Step 3.2: Resolve generation-level values and best-network visualization model.
-    const bestFitness = generationPayload.bestFitness;
-    const bestNetwork = generationPayload.bestNetworkJson
-      ? Network.fromJSON(generationPayload.bestNetworkJson)
-      : undefined;
-    const generationPopulationNetworks = resolveGenerationPopulationNetworks(
-      generationPayload,
-      bestNetwork,
-    );
-    const generationPopulationSize = resolveGenerationPopulationSize(
-      generationPopulationNetworks,
-      populationSize,
-    );
-    const bestArchitectureLabel = selectedArchitectureProfileLabel;
-
-    // Step 3.3: Hydrate current-generation HUD values before playback begins.
-    updateStatsTableValues(statsValueByKey, {
-      currentHeader: resolveCurrentRunHeaderText(generationPayload.generation),
-      currentFrames: FLAPPY_HUD_ZERO_TEXT,
-      currentPipes: FLAPPY_HUD_ZERO_TEXT,
-      currentArchitecture: bestArchitectureLabel,
-      ...resolveInitialRuntimeTelemetryHudValues(),
-      ...resolveGenerationSummaryHudValues({
-        architectureLabel: bestArchitectureLabel,
-        bestFitness,
-      }),
-      birds: `${FLAPPY_HUD_ZERO_TEXT}/${generationPopulationSize}`,
-    });
-
-    // Step 3.4: Render active network architecture in the side panel.
-    renderNetworkArchitecture(bestNetwork, inputSize, outputSize);
-
-    // Step 3.5: Present the ready generation on the main canvas before playback begins.
-    await presentRuntimeGenerationPreview({
-      canvas,
-      context,
-      isStopped,
-      legendText: resolveGenerationPresentationLegendText(
-        generationPayload.generation,
-      ),
-    });
-    if (isStopped()) {
-      break;
-    }
-
-    // Step 3.6: Switch the HUD into playing state once the title card has cleared.
-    updateStatsTableValues(statsValueByKey, {
-      status: FLAPPY_STATUS_PLAYING_TEXT,
-    });
-
-    // Step 3.7: Run playback and stream per-frame HUD updates.
-    const playbackSummary = await animatePopulationEpisode(
-      canvas,
-      context,
-      evolutionWorker,
-      (frameStats) => {
-        // Step 3.7.1: Throttle HUD writes to reduce layout/repaint churn.
-        if (frameStats.frameIndex % FLAPPY_HUD_UPDATE_INTERVAL_FRAMES !== 0) {
-          return;
-        }
-
-        // Step 3.7.2: Publish current frame counters + telemetry values.
-        updateStatsTableValues(statsValueByKey, {
-          birds: `${frameStats.activeBirdCount}/${generationPopulationSize}`,
-          currentFrames: String(frameStats.frameIndex),
-          currentPipes: String(frameStats.leaderPipesPassed),
-          ...resolveRuntimeTelemetryHudValues(
-            frameStats,
-            runtimeTelemetryState,
-          ),
-        });
-      },
-      ({ championBirdIndex }) => {
-        // Step 3.7.3: Redraw the side panel from the current champion network.
-        const championNetwork =
-          generationPopulationNetworks[championBirdIndex] ?? bestNetwork;
-        if (!championNetwork) {
-          return;
-        }
-
-        renderNetworkArchitecture(championNetwork, inputSize, outputSize);
-      },
-    );
-
-    // Step 3.8: Fold generation winner into cross-generation maxima.
-    bestRunFrames = Math.max(
-      bestRunFrames,
-      playbackSummary.winnerFramesSurvived,
-    );
-    bestRunPipes = Math.max(bestRunPipes, playbackSummary.winnerPipesPassed);
-
-    const nextArchitectureProgressUpdate =
-      resolveRuntimeArchitectureProgressUpdate({
-        candidateBestScore: {
-          pipesPassed: bestRunPipes,
-          framesSurvived: bestRunFrames,
-        },
-        candidateChampionNetworkJson: generationPayload.bestNetworkJson,
-        championByProfileId: architectureChampionByProfileId,
-        historyByProfileId: architectureHistoryByProfileId,
-        profileId: selectedArchitectureProfileId,
+        legendText: resolveGenerationPresentationLegendText(
+          generationPayload.generation,
+        ),
       });
-    if (nextArchitectureProgressUpdate.didImprove) {
-      architectureHistoryByProfileId =
-        nextArchitectureProgressUpdate.historyByProfileId;
-      architectureChampionByProfileId =
-        nextArchitectureProgressUpdate.championByProfileId;
-      persistRuntimeArchitectureHistory(architectureHistoryByProfileId);
-      persistRuntimeArchitectureChampions(architectureChampionByProfileId);
-      architectureSelectorController.updateItems(
-        resolveRuntimeArchitectureSelectorItems({
-          availableProfiles: availableArchitectureProfiles,
-          selectedProfileId: selectedArchitectureProfileId,
+      if (isStopped()) {
+        break;
+      }
+
+      // Step 3.6: Switch the HUD into playing state once the title card has cleared.
+      updateStatsTableValues(statsValueByKey, {
+        status: FLAPPY_STATUS_PLAYING_TEXT,
+      });
+
+      // Step 3.7: Run playback and stream per-frame HUD updates.
+      const playbackSummary = await animatePopulationEpisode(
+        canvas,
+        context,
+        evolutionWorker,
+        (frameStats) => {
+          // Step 3.7.1: Throttle HUD writes to reduce layout/repaint churn.
+          if (frameStats.frameIndex % FLAPPY_HUD_UPDATE_INTERVAL_FRAMES !== 0) {
+            return;
+          }
+
+          // Step 3.7.2: Publish current frame counters + telemetry values.
+          updateStatsTableValues(statsValueByKey, {
+            birds: `${frameStats.activeBirdCount}/${generationPopulationSize}`,
+            currentFrames: String(frameStats.frameIndex),
+            currentPipes: String(frameStats.leaderPipesPassed),
+            ...resolveRuntimeTelemetryHudValues(
+              frameStats,
+              runtimeTelemetryState,
+            ),
+          });
+        },
+        ({ championBirdIndex }) => {
+          // Step 3.7.3: Redraw the side panel from the current champion network.
+          const championNetwork =
+            generationPopulationNetworks[championBirdIndex] ?? bestNetwork;
+          if (!championNetwork) {
+            return;
+          }
+
+          renderNetworkArchitecture(championNetwork, inputSize, outputSize);
+        },
+      );
+
+      // Step 3.8: Fold generation winner into cross-generation maxima.
+      bestRunFrames = Math.max(
+        bestRunFrames,
+        playbackSummary.winnerFramesSurvived,
+      );
+      bestRunPipes = Math.max(bestRunPipes, playbackSummary.winnerPipesPassed);
+
+      const nextArchitectureProgressUpdate =
+        resolveRuntimeArchitectureProgressUpdate({
+          candidateBestScore: {
+            pipesPassed: bestRunPipes,
+            framesSurvived: bestRunFrames,
+          },
+          candidateChampionNetworkJson:
+            resolveRuntimeChampionCandidateNetworkJson({
+              generationBestNetworkJson: generationPayload.bestNetworkJson,
+              playbackSummary,
+            }),
+          championByProfileId: architectureChampionByProfileId,
           historyByProfileId: architectureHistoryByProfileId,
+          profileId: selectedArchitectureProfileId,
+        });
+      if (nextArchitectureProgressUpdate.didImprove) {
+        architectureHistoryByProfileId =
+          nextArchitectureProgressUpdate.historyByProfileId;
+        architectureChampionByProfileId =
+          nextArchitectureProgressUpdate.championByProfileId;
+        persistRuntimeArchitectureHistory(architectureHistoryByProfileId);
+        persistRuntimeArchitectureChampions(architectureChampionByProfileId);
+        architectureSelectorController.updateItems(
+          resolveRuntimeArchitectureSelectorItems({
+            availableProfiles: availableArchitectureProfiles,
+            selectedProfileId: selectedArchitectureProfileId,
+            historyByProfileId: architectureHistoryByProfileId,
+          }),
+        );
+      }
+
+      const nextExpectedGeneration = generationPayload.generation + 1;
+
+      // Step 3.9: Finalize generation HUD summary and switch status back to evolving.
+      updateStatsTableValues(statsValueByKey, {
+        currentHeader: resolveCurrentRunHeaderText(nextExpectedGeneration),
+        currentFrames: FLAPPY_HUD_ZERO_TEXT,
+        currentPipes: FLAPPY_HUD_ZERO_TEXT,
+        ...resolveGenerationSummaryHudValues({
+          architectureLabel: bestArchitectureLabel,
+          bestFitness,
+          playbackSummary,
         }),
-      );
+        status: FLAPPY_STATUS_EVOLVING_TEXT,
+        birds: `${FLAPPY_HUD_ZERO_TEXT}/${generationPopulationSize}`,
+      });
+      expectedGeneration = nextExpectedGeneration;
+
+      // Step 3.10: Emit compact generation summary to console (best-effort only).
+      try {
+        console.log(
+          `[flappy_bird] gen=${generationPayload.generation} fitness=${bestFitness.toFixed(0)} winnerPipes=${playbackSummary.winnerPipesPassed} winnerFrames=${playbackSummary.winnerFramesSurvived} avgPipes=${playbackSummary.averagePipesPassed.toFixed(2)} p90Frames=${playbackSummary.p90FramesSurvived}`,
+        );
+      } catch {
+        // ignore console write issues
+      }
     }
-
-    const nextExpectedGeneration = generationPayload.generation + 1;
-
-    // Step 3.9: Finalize generation HUD summary and switch status back to evolving.
-    updateStatsTableValues(statsValueByKey, {
-      currentHeader: resolveCurrentRunHeaderText(nextExpectedGeneration),
-      currentFrames: FLAPPY_HUD_ZERO_TEXT,
-      currentPipes: FLAPPY_HUD_ZERO_TEXT,
-      ...resolveGenerationSummaryHudValues({
-        architectureLabel: bestArchitectureLabel,
-        bestFitness,
-        playbackSummary,
-      }),
-      status: FLAPPY_STATUS_EVOLVING_TEXT,
-      birds: `${FLAPPY_HUD_ZERO_TEXT}/${generationPopulationSize}`,
-    });
-    expectedGeneration = nextExpectedGeneration;
-
-    // Step 3.10: Emit compact generation summary to console (best-effort only).
-    try {
-      console.log(
-        `[flappy_bird] gen=${generationPayload.generation} fitness=${bestFitness.toFixed(0)} winnerPipes=${playbackSummary.winnerPipesPassed} winnerFrames=${playbackSummary.winnerFramesSurvived} avgPipes=${playbackSummary.averagePipesPassed.toFixed(2)} p90Frames=${playbackSummary.p90FramesSurvived}`,
-      );
-    } catch {
-      // ignore console write issues
-    }
+  } finally {
+    stopRuntimeStatusHudUpdates();
   }
+}
+
+/**
+ * Attaches worker runtime-status messages to the browser HUD status row.
+ *
+ * Runtime status messages are non-blocking hints emitted while the worker is
+ * initializing, choosing its evaluation transport, evolving, or preparing
+ * playback. Keeping them separate from request responses lets long recurrent
+ * waits explain themselves without changing the generation/playback promises.
+ *
+ * @param options - Worker and HUD cell references.
+ * @returns Cleanup callback that removes the message listener.
+ */
+function attachWorkerRuntimeStatusHudUpdates(options: {
+  evolutionWorker: Worker;
+  statsValueByKey: FlappyStatsTableCells;
+}): () => void {
+  const handleWorkerRuntimeStatusMessage = (
+    event: MessageEvent<EvolutionWorkerMessage>,
+  ): void => {
+    if (event.data.type !== 'runtime-status') {
+      return;
+    }
+
+    updateStatsTableValues(options.statsValueByKey, {
+      status: event.data.payload.statusText,
+    });
+  };
+
+  options.evolutionWorker.addEventListener(
+    'message',
+    handleWorkerRuntimeStatusMessage as EventListener,
+  );
+
+  return () => {
+    options.evolutionWorker.removeEventListener(
+      'message',
+      handleWorkerRuntimeStatusMessage as EventListener,
+    );
+  };
+}
+
+/**
+ * Resolves which network should be persisted for browser-local architecture records.
+ *
+ * Playback can crown a different visible winner than the generation-best genome
+ * selected before playback. Persisting the actual playback winner keeps saved
+ * champions aligned with the score that improved the local history table.
+ *
+ * @param input - Playback summary plus generation-best fallback network.
+ * @returns Playback winner network JSON when available, otherwise generation-best JSON.
+ */
+export function resolveRuntimeChampionCandidateNetworkJson(input: {
+  generationBestNetworkJson?: SerializedNetwork;
+  playbackSummary: PlaybackEpisodeSummary;
+}): SerializedNetwork | undefined {
+  return (
+    input.playbackSummary.winnerNetworkJson ?? input.generationBestNetworkJson
+  );
 }
 
 /**

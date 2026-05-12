@@ -33,11 +33,12 @@ export interface WorkerEvolutionServiceOptions {
  *
  * Educational note:
  * The first browser-visible population should not wait for a full recurrent
- * selection batch. When the caller opts in, generation zero is released after
- * the bounded warm-start assist so playback can begin promptly. Later requests
- * run the normal NEAT `evolve()` pass and emit the same compact summary shape:
- * generation index, best fitness, transferable inference payloads for playback,
- * and the temporary JSON visualization bridge used by the host network panel.
+ * selection batch or optional warm-start assist. When the caller opts in,
+ * generation zero is released immediately so playback can begin promptly. Later
+ * requests run the bounded warm-start assist, the normal NEAT `evolve()` pass,
+ * and emit the same compact summary shape: generation index, best fitness,
+ * transferable inference payloads for playback, and the temporary JSON
+ * visualization bridge used by the host network panel.
  *
  * @example
  * ```ts
@@ -75,8 +76,6 @@ export async function evolveAndBuildGenerationReadyMessage(
     throw new Error('Evolution worker runtime is not initialized.');
   }
 
-  await runBestEffortWarmStart(warmStartGenerationZeroIfNeeded, neatRuntime);
-
   const runtimeNeat = neatRuntime as unknown as { population?: Network[] };
   const startupPopulation = resolveRuntimePopulation(runtimeNeat);
 
@@ -100,6 +99,8 @@ export async function evolveAndBuildGenerationReadyMessage(
       population: startupPopulation,
     });
   }
+
+  await runBestEffortWarmStart(warmStartGenerationZeroIfNeeded, neatRuntime);
 
   const bestNetwork = (await neatRuntime.evolve()) as Network;
   const evolvedPopulation = resolveRuntimePopulation(runtimeNeat, bestNetwork);

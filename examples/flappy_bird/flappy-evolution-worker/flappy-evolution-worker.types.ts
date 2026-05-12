@@ -289,6 +289,33 @@ export interface WorkerPlaybackStepMessage {
     p90FramesSurvived?: number;
     winnerPipesPassed?: number;
     winnerFramesSurvived?: number;
+    winnerNetworkJson?: SerializedNetwork;
+  };
+}
+
+/** Worker phase labels surfaced to the browser HUD during long-running work. */
+export type WorkerRuntimeStatusPhase =
+  | 'initializing'
+  | 'evaluating-direct'
+  | 'evaluating-shared-memory'
+  | 'evolving'
+  | 'playing'
+  | 'stopped';
+
+/**
+ * Worker runtime status response message.
+ *
+ * Status messages are informational and never complete a request. The browser
+ * listens for them beside generation/playback responses so long recurrent
+ * waits can explain whether work is initializing, evolving, playing back, or
+ * using a direct-evaluation fallback.
+ */
+export interface WorkerRuntimeStatusMessage {
+  type: 'runtime-status';
+  payload: {
+    phase: WorkerRuntimeStatusPhase;
+    statusText: string;
+    detail?: string;
   };
 }
 
@@ -314,6 +341,7 @@ export interface WorkerErrorMessage {
 export type WorkerResponseMessage =
   | WorkerGenerationReadyMessage
   | WorkerPlaybackStepMessage
+  | WorkerRuntimeStatusMessage
   | WorkerErrorMessage;
 
 /**

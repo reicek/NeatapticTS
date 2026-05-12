@@ -90,11 +90,14 @@ describe('processWorkerPlaybackStep', () => {
         done: postWorkerMessage.mock.calls.at(-1)?.[0]?.payload?.done,
         winnerPipesPassed:
           postWorkerMessage.mock.calls.at(-1)?.[0]?.payload?.winnerPipesPassed,
+        winnerNetworkJson:
+          postWorkerMessage.mock.calls.at(-1)?.[0]?.payload?.winnerNetworkJson,
       }).toEqual({
         elitism: 2,
         populationSize: 8,
         done: true,
         winnerPipesPassed: 10,
+        winnerNetworkJson: { connections: [] },
       });
     });
   });

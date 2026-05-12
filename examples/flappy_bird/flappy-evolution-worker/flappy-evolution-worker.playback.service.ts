@@ -258,6 +258,7 @@ export async function processWorkerPlaybackStep(options: {
         p90FramesSurvived,
         winnerPipesPassed: winnerBird?.pipesPassed ?? 0,
         winnerFramesSurvived: winnerBird?.framesSurvived ?? 0,
+        winnerNetworkJson: winnerBird?.network.toJSON(),
       },
     },
     snapshotTransferList,

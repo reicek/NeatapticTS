@@ -23,6 +23,7 @@ export type PlaybackEpisodeSummary = {
   p90FramesSurvived: number;
   winnerPipesPassed: number;
   winnerFramesSurvived: number;
+  winnerNetworkJson?: Record<string, unknown>;
 };
 
 /**

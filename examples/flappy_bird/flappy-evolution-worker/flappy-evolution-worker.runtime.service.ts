@@ -36,6 +36,9 @@ const FLAPPY_WORKER_PIPE_PROGRESS_WEIGHT = 10_000;
 const FLAPPY_WORKER_STABILITY_STDDEV_WEIGHT = 0.5;
 const FLAPPY_WORKER_SHARED_ROLLOUT_GENERATION_XOR_SALT = 0x85eb_ca6b;
 
+/** Minimum first-seed pipe progress required before spending the full recurrent seed batch. */
+const FLAPPY_WORKER_MIN_PIPE_PROGRESS_FOR_FULL_BATCH = 0;
+
 interface WorkerPipeFirstEvaluationPlan {
   sharedRolloutSeedCount: number;
 }
@@ -214,17 +217,44 @@ function createWorkerFitnessEvaluator(
 
   return async (network) =>
     scorePipeFirstWorkerAggregateEvaluation(
-      evaluateFlappyFitnessAcrossSeeds(
+      evaluateWorkerNetworkAcrossProgressiveSeeds(
         network,
         resolveSharedRolloutSeedsForGeneration(),
-        {
-          enableEarlyTermination: true,
-          maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
-          normalizeFitness: true,
-          pipeProgressTarget: FLAPPY_WORKER_PIPE_PROGRESS_TARGET,
-        },
       ),
     );
+
+  /**
+   * Evaluates one recurrent genome with a cheap first-seed gate before full scoring.
+   *
+   * @param network - Genome being scored by the browser worker.
+   * @param sharedRolloutSeeds - Deterministic seed batch for the current generation.
+   * @returns Aggregate evaluation from either the first seed or the full batch.
+   */
+  function evaluateWorkerNetworkAcrossProgressiveSeeds(
+    network: Network,
+    sharedRolloutSeeds: readonly number[],
+  ): FlappySeedBatchEvaluation {
+    const firstSeedBatch =
+      resolveFirstSharedRolloutSeedBatch(sharedRolloutSeeds);
+    const firstSeedEvaluation = evaluateFlappyFitnessAcrossSeeds(
+      network,
+      firstSeedBatch,
+      resolveWorkerPipeFirstRolloutOptions(),
+    );
+
+    if (
+      firstSeedBatch.length === sharedRolloutSeeds.length ||
+      !shouldSpendFullWorkerSeedBatch(firstSeedEvaluation)
+    ) {
+      return firstSeedEvaluation;
+    }
+
+    return evaluateFlappyFitnessAcrossSeeds(
+      network,
+      sharedRolloutSeeds,
+      resolveWorkerPipeFirstRolloutOptions(),
+    );
+  }
 
   /**
    * Resolves the deterministic shared rollout seeds for the current worker generation.
@@ -264,16 +294,12 @@ function createWorkerPopulationFitnessEvaluator(
   logWorkerFitnessTransportMode(architectureProfileId, true, true);
 
   return async (population) => {
-    const aggregateByGenome = await workerPool.evaluateGenomesAcrossSeeds(
-      population,
-      resolveSharedRolloutSeedsForGeneration(),
-      {
-        enableEarlyTermination: true,
-        maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
-        normalizeFitness: true,
-        pipeProgressTarget: FLAPPY_WORKER_PIPE_PROGRESS_TARGET,
-      },
-    );
+    const aggregateByGenome =
+      await evaluateWorkerPopulationAcrossProgressiveSeeds(
+        population,
+        resolveSharedRolloutSeedsForGeneration(),
+        workerPool,
+      );
 
     for (const genome of population) {
       const aggregateEvaluation = aggregateByGenome.get(genome);
@@ -289,6 +315,56 @@ function createWorkerPopulationFitnessEvaluator(
     }
   };
 
+  /**
+   * Evaluates a recurrent population through the shared pool with a first-seed gate.
+   *
+   * @param population - Ordered population shelf to score.
+   * @param sharedRolloutSeeds - Deterministic seed batch for the current generation.
+   * @param workerPool - Shared-memory pool used for candidate evaluation.
+   * @returns Aggregate evidence keyed by genome.
+   */
+  async function evaluateWorkerPopulationAcrossProgressiveSeeds(
+    population: WorkerPopulationLike,
+    sharedRolloutSeeds: readonly number[],
+    workerPool: FlappyEvaluationWorkerPool,
+  ): Promise<Map<Network, FlappySeedBatchEvaluation>> {
+    const rolloutOptions = resolveWorkerPipeFirstRolloutOptions();
+    const firstSeedBatch =
+      resolveFirstSharedRolloutSeedBatch(sharedRolloutSeeds);
+    const firstAggregateByGenome = await workerPool.evaluateGenomesAcrossSeeds(
+      population,
+      firstSeedBatch,
+      rolloutOptions,
+    );
+    const fullBatchPopulation = population.filter((genome) => {
+      const firstAggregate = firstAggregateByGenome.get(genome);
+      return firstAggregate
+        ? shouldSpendFullWorkerSeedBatch(firstAggregate)
+        : false;
+    });
+
+    if (
+      firstSeedBatch.length === sharedRolloutSeeds.length ||
+      fullBatchPopulation.length === 0
+    ) {
+      return firstAggregateByGenome;
+    }
+
+    const fullAggregateByGenome = await workerPool.evaluateGenomesAcrossSeeds(
+      fullBatchPopulation,
+      sharedRolloutSeeds,
+      rolloutOptions,
+    );
+
+    return new Map(
+      population.map((genome) => [
+        genome,
+        fullAggregateByGenome.get(genome) ??
+          resolveRequiredFirstSeedAggregate(firstAggregateByGenome, genome),
+      ]),
+    );
+  }
+
   function resolveSharedRolloutSeedsForGeneration(): number[] {
     // Step 1: Rebuild the seed batch only when evolution advances to a new generation.
     const currentGeneration = resolveCurrentGeneration();
@@ -303,6 +379,73 @@ function createWorkerPopulationFitnessEvaluator(
 
     return cachedSharedRolloutSeeds;
   }
+}
+
+/**
+ * Resolves shared rollout options for the pipe-first browser objective.
+ *
+ * @returns Rollout options used by recurrent worker scoring.
+ */
+function resolveWorkerPipeFirstRolloutOptions(): {
+  enableEarlyTermination: true;
+  maxFrames: number;
+  normalizeFitness: true;
+  pipeProgressTarget: number;
+} {
+  return {
+    enableEarlyTermination: true,
+    maxFrames: FLAPPY_MAX_FRAMES_PER_EPISODE,
+    normalizeFitness: true,
+    pipeProgressTarget: FLAPPY_WORKER_PIPE_PROGRESS_TARGET,
+  };
+}
+
+/**
+ * Resolves the cheap first-seed batch used before full recurrent scoring.
+ *
+ * @param sharedRolloutSeeds - Full deterministic seed batch for the generation.
+ * @returns One-seed batch used for the progressive gate.
+ */
+function resolveFirstSharedRolloutSeedBatch(
+  sharedRolloutSeeds: readonly number[],
+): number[] {
+  const firstSharedRolloutSeed = sharedRolloutSeeds[0];
+  return firstSharedRolloutSeed === undefined ? [] : [firstSharedRolloutSeed];
+}
+
+/**
+ * Resolves whether one genome should receive the full recurrent seed batch.
+ *
+ * @param aggregateEvaluation - First-seed evidence for one genome.
+ * @returns True when the genome showed enough pipe progress to justify full scoring.
+ */
+function shouldSpendFullWorkerSeedBatch(
+  aggregateEvaluation: FlappySeedBatchEvaluation,
+): boolean {
+  return (
+    aggregateEvaluation.meanPipesPassed >
+    FLAPPY_WORKER_MIN_PIPE_PROGRESS_FOR_FULL_BATCH
+  );
+}
+
+/**
+ * Resolves the required first-seed aggregate for a genome.
+ *
+ * @param aggregateByGenome - First-seed aggregate map.
+ * @param genome - Genome whose evidence should exist.
+ * @returns Aggregate evaluation for the genome.
+ */
+function resolveRequiredFirstSeedAggregate(
+  aggregateByGenome: ReadonlyMap<Network, FlappySeedBatchEvaluation>,
+  genome: Network,
+): FlappySeedBatchEvaluation {
+  const aggregateEvaluation = aggregateByGenome.get(genome);
+
+  if (!aggregateEvaluation) {
+    throw new Error('Progressive worker scoring lost first-seed evidence.');
+  }
+
+  return aggregateEvaluation;
 }
 
 /**
