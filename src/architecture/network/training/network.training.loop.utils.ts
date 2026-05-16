@@ -20,6 +20,9 @@ const FLOAT16_SUBNORMAL_MAGNITUDE_FLOOR = 2 ** -24;
 /** Power-of-two loss-scale adjustments preserve exact rescaling steps. */
 const LOSS_SCALE_ADJUSTMENT_FACTOR = 2;
 
+const hasOnlyFiniteValues = (values: number[]): boolean =>
+  values.every((value) => Number.isFinite(value));
+
 /**
  * Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
  *
@@ -82,10 +85,24 @@ export const trainSetCore = (
         );
       continue;
     }
+    if (!hasOnlyFiniteValues(input) || !hasOnlyFiniteValues(target)) {
+      if (config.warnings)
+        console.warn(
+          `Data point ${sampleIndex} contains non-finite input or target values, skipping.`,
+        );
+      continue;
+    }
 
     try {
       const networkInternal = net as unknown as NetworkInternals;
       const output = networkInternal.activate(input, true);
+      if (!hasOnlyFiniteValues(output)) {
+        if (config.warnings)
+          console.warn(
+            `Data point ${sampleIndex} produced non-finite activation output, skipping.`,
+          );
+        continue;
+      }
       if (optimizer && optimizer.type && optimizer.type !== 'sgd') {
         for (let outIndex = 0; outIndex < outputNodes.length; outIndex++) {
           const outputNodeInternal = outputNodes[

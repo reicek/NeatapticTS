@@ -15,7 +15,7 @@ import {
   buildDenseWeightsAndBiases,
   buildDiagonalRecurrentWeights,
 } from './network.onnx.export-layer-common.utils';
-import { mapActivationToOnnx } from '../../network.onnx.layer-analysis.utils';
+import { resolveOnnxActivationNodeConfig } from '../../network.onnx.layer-analysis.utils';
 
 /** ONNX float tensor data type id. */
 const ONNX_FLOAT_DATA_TYPE = 1;
@@ -127,6 +127,7 @@ export function emitRecurrentLayer(
     recurrentSumOutputName: graphNames.recurrentSumOutputName,
     layerOutputName: graphNames.layerOutputName,
     activationNodeName: graphNames.activationNodeName,
+    opset: emissionContext.opset,
   });
 
   // Step 5: Return the canonical layer output tensor name.
@@ -345,25 +346,18 @@ function emitRecurrentAddNode(
 function emitRecurrentActivationNode(
   context: RecurrentActivationEmissionContext,
 ): void {
+  const activationConfig = resolveOnnxActivationNodeConfig(
+    readNodeInternals(context.currentLayerNodes[0]).squash,
+    context.opset,
+  );
+
   context.model.graph.node.push({
-    op_type: resolveRecurrentActivationType(context.currentLayerNodes),
+    op_type: activationConfig.operation,
     input: [context.recurrentSumOutputName],
     output: [context.layerOutputName],
     name: context.activationNodeName,
+    attributes: activationConfig.attributes,
   });
-}
-
-/**
- * Resolve ONNX activation type from first node in recurrent layer.
- *
- * @param currentLayerNodes Current recurrent layer nodes.
- * @returns ONNX activation op type.
- */
-function resolveRecurrentActivationType(
-  currentLayerNodes: NeatapticNode[],
-): string {
-  const firstNodeInternals = readNodeInternals(currentLayerNodes[0]);
-  return mapActivationToOnnx(firstNodeInternals.squash);
 }
 
 /**

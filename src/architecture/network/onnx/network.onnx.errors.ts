@@ -39,6 +39,16 @@ export class NetworkOnnxPerceptronSizeValidationError extends Error {
 }
 
 /**
+ * Raised when ONNX export produces inconsistent tensor dimensions.
+ */
+export class NetworkOnnxShapeValidationError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, { cause: options?.cause });
+    this.name = 'NetworkOnnxShapeValidationError';
+  }
+}
+
+/**
  * Raised when recurrent ONNX export encounters unsupported mixed activations.
  */
 export class NetworkOnnxRecurrentMixedActivationsUnsupportedError extends Error {

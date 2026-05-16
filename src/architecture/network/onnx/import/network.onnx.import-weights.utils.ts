@@ -6,6 +6,7 @@ import type {
   OnnxMetadataProperty,
   OnnxModel,
   OnnxTensor,
+  Pool2DMapping,
 } from '../schema/network.onnx.schema.types';
 import type {
   OnnxImportAggregatedLayerAssignmentContext,
@@ -17,6 +18,7 @@ import type {
   OnnxImportConvMetadata,
   OnnxImportConvNodeSlices,
   OnnxImportConvOutputCoordinate,
+  OnnxImportConvSourceLayout,
   OnnxImportConvTensorContext,
   OnnxImportHiddenSizeDerivationContext,
   OnnxImportInboundConnectionMap,
@@ -33,10 +35,13 @@ import type {
   NodeInternals,
   OnnxConvKernelCoordinate,
 } from '../network.onnx.utils.types';
+import { readOnnxTensorFloatData } from '../schema/network.onnx.schema.tensor-data.utils';
 
 const METADATA_KEY_LAYER_SIZES = 'layer_sizes';
 const METADATA_KEY_CONV2D_LAYERS = 'conv2d_layers';
 const METADATA_KEY_CONV2D_SPECS = 'conv2d_specs';
+const METADATA_KEY_POOL2D_SPECS = 'pool2d_specs';
+const METADATA_KEY_SHARED_INITIALIZER_ALIASES = 'shared_initializer_aliases';
 const NODE_TYPE_INPUT = 'input';
 const NODE_TYPE_HIDDEN = 'hidden';
 const NODE_TYPE_OUTPUT = 'output';
@@ -241,7 +246,11 @@ function buildWeightAssignmentContext(
   params: OnnxImportWeightAssignmentBuildParams,
 ): OnnxImportWeightAssignmentContext {
   // Step 1: Build initializer lookup map keyed by tensor name.
-  const initializerMap = buildInitializerMap(params.onnx.graph.initializer);
+  const metadataProps = params.metadataProps ?? [];
+  const initializerMap = buildInitializerMap(
+    params.onnx.graph.initializer,
+    metadataProps,
+  );
 
   // Step 2: Resolve sorted dense layer indices from weight tensor names.
   const sortedLayerIndices = collectSortedUniqueLayerIndices(initializerMap);
@@ -261,7 +270,7 @@ function buildWeightAssignmentContext(
   return {
     onnx: params.onnx,
     hiddenLayerSizes: params.hiddenLayerSizes,
-    metadataProps: params.metadataProps ?? [],
+    metadataProps,
     initializerMap,
     sortedLayerIndices,
     inputNodes,
@@ -306,14 +315,68 @@ function parseWeightTensorName(
  */
 function buildInitializerMap(
   initializers: OnnxTensor[],
+  metadataProps: OnnxMetadataProperty[],
 ): Record<string, OnnxTensor> {
-  return initializers.reduce<Record<string, OnnxTensor>>(
+  const initializerMap = initializers.reduce<Record<string, OnnxTensor>>(
     (mapByName, tensor) => {
       mapByName[tensor.name] = tensor;
       return mapByName;
     },
     {},
   );
+
+  hydrateSharedInitializerAliases(initializerMap, metadataProps);
+  return initializerMap;
+}
+
+/** Hydrate alias tensor names back into the initializer map for metadata-backed shared initializers. */
+function hydrateSharedInitializerAliases(
+  initializerMap: Record<string, OnnxTensor>,
+  metadataProps: OnnxMetadataProperty[],
+): void {
+  const sharedInitializerAliases = parseSharedInitializerAliases(metadataProps);
+  sharedInitializerAliases.forEach((initializerAlias) => {
+    const canonicalTensor =
+      initializerMap[initializerAlias.canonicalTensorName];
+    if (!canonicalTensor) {
+      return;
+    }
+    initializerMap[initializerAlias.aliasTensorName] = canonicalTensor;
+  });
+}
+
+/** Parse valid shared-initializer alias metadata records from ONNX metadata. */
+function parseSharedInitializerAliases(
+  metadataProps: OnnxMetadataProperty[],
+): Array<{ aliasTensorName: string; canonicalTensorName: string }> {
+  const metadataProperty = metadataProps.find(
+    (property) => property.key === METADATA_KEY_SHARED_INITIALIZER_ALIASES,
+  );
+  if (!metadataProperty) {
+    return [];
+  }
+
+  try {
+    const parsedAliases = JSON.parse(metadataProperty.value);
+    if (!Array.isArray(parsedAliases)) {
+      return [];
+    }
+
+    return parsedAliases.filter(
+      (
+        initializerAlias,
+      ): initializerAlias is {
+        aliasTensorName: string;
+        canonicalTensorName: string;
+      } =>
+        Boolean(initializerAlias) &&
+        typeof initializerAlias === 'object' &&
+        typeof initializerAlias.aliasTensorName === 'string' &&
+        typeof initializerAlias.canonicalTensorName === 'string',
+    );
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -364,15 +427,13 @@ function applyDenseWeightAssignments(
   assignmentContext: OnnxImportWeightAssignmentContext,
 ): void {
   // Step 1: Traverse all sorted ONNX layer indices.
-  assignmentContext.sortedLayerIndices.forEach(
-    (layerIndex, sequentialIndex) => {
-      const nodePair = buildLayerNodePair(assignmentContext, {
-        layerIndex,
-        sequentialIndex,
-      });
-      assignLayerWeights(assignmentContext.initializerMap, nodePair);
-    },
-  );
+  assignmentContext.sortedLayerIndices.forEach((layerIndex) => {
+    const nodePair = buildLayerNodePair(assignmentContext, {
+      layerIndex,
+      sequentialIndex: layerIndex,
+    });
+    assignLayerWeights(assignmentContext.initializerMap, nodePair);
+  });
 }
 
 /**
@@ -413,19 +474,19 @@ function buildLayerNodePair(
  */
 function resolveCurrentLayerNodes(
   assignmentContext: OnnxImportWeightAssignmentContext,
-  params: { sequentialIndex: number },
+  params: { layerIndex: number },
 ): NeatapticNode[] {
-  const isHiddenLayer =
-    params.sequentialIndex < assignmentContext.hiddenLayerSizes.length;
+  const layerPosition = params.layerIndex;
+  const isHiddenLayer = layerPosition < assignmentContext.hiddenLayerSizes.length;
   if (!isHiddenLayer) return assignmentContext.outputNodes;
 
   const layerStart = sumHiddenSizesToIndex(
     assignmentContext.hiddenLayerSizes,
-    params.sequentialIndex,
+    layerPosition,
   );
   const layerEnd = sumHiddenSizesToIndex(
     assignmentContext.hiddenLayerSizes,
-    params.sequentialIndex + LAYER_INDEX_OFFSET,
+    layerPosition + LAYER_INDEX_OFFSET,
   );
   return assignmentContext.hiddenNodes.slice(layerStart, layerEnd);
 }
@@ -439,18 +500,19 @@ function resolveCurrentLayerNodes(
  */
 function resolvePreviousLayerNodes(
   assignmentContext: OnnxImportWeightAssignmentContext,
-  params: { sequentialIndex: number },
+  params: { layerIndex: number },
 ): NeatapticNode[] {
-  if (params.sequentialIndex === ZERO_VALUE)
+  const layerPosition = params.layerIndex;
+  if (layerPosition === ZERO_VALUE)
     return assignmentContext.inputNodes;
 
   const previousLayerStart = sumHiddenSizesToIndex(
     assignmentContext.hiddenLayerSizes,
-    params.sequentialIndex - LAYER_INDEX_OFFSET,
+    layerPosition - LAYER_INDEX_OFFSET,
   );
   const previousLayerEnd = sumHiddenSizesToIndex(
     assignmentContext.hiddenLayerSizes,
-    params.sequentialIndex,
+    layerPosition,
   );
   return assignmentContext.hiddenNodes.slice(
     previousLayerStart,
@@ -577,6 +639,10 @@ function applyAggregatedNeuronAssignment(
 ): void {
   // Step 1: Resolve target node internals for bias assignment.
   const targetNodeInternal = neuronContext.targetNode as NodeInternals;
+  const aggregatedWeightValues = readOnnxTensorFloatData(
+    neuronContext.aggregatedWeights,
+  );
+  const biasValues = readOnnxTensorFloatData(neuronContext.biasTensor);
 
   // Step 2: Assign incoming connection weights from previous layer.
   neuronContext.previousLayerNodes.forEach((sourceNode, sourceNodeIndex) => {
@@ -588,12 +654,11 @@ function applyAggregatedNeuronAssignment(
     const weightIndex =
       neuronContext.targetNodeIndex * neuronContext.previousLayerNodes.length +
       sourceNodeIndex;
-    connection.weight = neuronContext.aggregatedWeights.float_data[weightIndex];
+    connection.weight = aggregatedWeightValues[weightIndex];
   });
 
   // Step 3: Assign target neuron bias value.
-  targetNodeInternal.bias =
-    neuronContext.biasTensor.float_data[neuronContext.targetNodeIndex];
+  targetNodeInternal.bias = biasValues[neuronContext.targetNodeIndex];
 }
 
 /**
@@ -659,6 +724,12 @@ function applyPerNeuronAssignment(
   // Step 1: Resolve target node internals.
   const targetNodeInternal =
     perNeuronAssignmentContext.targetNode as NodeInternals;
+  const weightValues = readOnnxTensorFloatData(
+    perNeuronAssignmentContext.weightTensor,
+  );
+  const biasValues = readOnnxTensorFloatData(
+    perNeuronAssignmentContext.biasTensor,
+  );
 
   // Step 2: Assign incoming connection weights from per-neuron vector.
   perNeuronAssignmentContext.previousLayerNodes.forEach(
@@ -668,14 +739,12 @@ function applyPerNeuronAssignment(
         (candidate) => candidate.to === perNeuronAssignmentContext.targetNode,
       );
       if (!connection) return;
-      connection.weight =
-        perNeuronAssignmentContext.weightTensor.float_data[sourceNodeIndex];
+      connection.weight = weightValues[sourceNodeIndex];
     },
   );
 
   // Step 3: Assign per-neuron scalar bias.
-  targetNodeInternal.bias =
-    perNeuronAssignmentContext.biasTensor.float_data[FIRST_BIAS_INDEX];
+  targetNodeInternal.bias = biasValues[FIRST_BIAS_INDEX];
 }
 
 /**
@@ -765,7 +834,29 @@ function buildConvLayerContext(
     inputNodes: params.assignmentContext.inputNodes,
     layerExportIndex: params.layerExportIndex,
     convSpec,
+    convSpecs: params.convMetadata.convSpecs,
+    poolingSpecs: parsePoolingSpecs(params.assignmentContext.metadataProps),
   };
+}
+
+function parsePoolingSpecs(
+  metadataProps: OnnxMetadataProperty[],
+): Pool2DMapping[] {
+  const poolingSpecsMetadata = metadataProps.find(
+    (property) => property.key === METADATA_KEY_POOL2D_SPECS,
+  );
+  if (!poolingSpecsMetadata) {
+    return [];
+  }
+
+  try {
+    const poolingSpecs = JSON.parse(poolingSpecsMetadata.value);
+    return Array.isArray(poolingSpecs)
+      ? (poolingSpecs as Pool2DMapping[])
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -790,6 +881,7 @@ function applyConvLayerReconstruction(
     tensorContext.kernelHeight,
     tensorContext.kernelWidth,
   );
+  const sourceLayout = resolveConvSourceLayout(layerContext);
 
   // Step 4: Traverse all output coordinates and assign weights.
   const outputCoordinates = collectConvOutputCoordinates(
@@ -800,12 +892,81 @@ function applyConvLayerReconstruction(
     applyConvCoordinateAssignment({
       coordinate,
       convSpec: layerContext.convSpec,
+      sourceLayout,
       tensorContext,
       kernelCoordinates,
       layerNodes: nodeSlices.layerNodes,
       previousLayerNodes: nodeSlices.previousLayerNodes,
     });
   });
+}
+
+function resolveConvSourceLayout(
+  layerContext: OnnxImportConvLayerContext,
+): OnnxImportConvSourceLayout {
+  const defaultLayout = {
+    channelStride:
+      layerContext.convSpec.inHeight * layerContext.convSpec.inWidth,
+    sourceHeight: layerContext.convSpec.inHeight,
+    sourceWidth: layerContext.convSpec.inWidth,
+  };
+  const upstreamPoolingSpec = layerContext.poolingSpecs.find(
+    (poolingSpec) =>
+      poolingSpec.afterLayerIndex === layerContext.layerExportIndex - 1,
+  );
+  const upstreamConvSpec = layerContext.convSpecs.find(
+    (convSpec) => convSpec.layerIndex === layerContext.layerExportIndex - 1,
+  );
+  if (!upstreamPoolingSpec || !upstreamConvSpec) {
+    return defaultLayout;
+  }
+
+  const pooledHeight = calculateSpatialOutputSize(
+    upstreamConvSpec.outHeight,
+    upstreamPoolingSpec.kernelHeight,
+    upstreamPoolingSpec.strideHeight,
+    upstreamPoolingSpec.padTop ?? ZERO_VALUE,
+    upstreamPoolingSpec.padBottom ?? ZERO_VALUE,
+  );
+  const pooledWidth = calculateSpatialOutputSize(
+    upstreamConvSpec.outWidth,
+    upstreamPoolingSpec.kernelWidth,
+    upstreamPoolingSpec.strideWidth,
+    upstreamPoolingSpec.padLeft ?? ZERO_VALUE,
+    upstreamPoolingSpec.padRight ?? ZERO_VALUE,
+  );
+  const matchesDerivedPooledShape =
+    pooledHeight === layerContext.convSpec.inHeight &&
+    pooledWidth === layerContext.convSpec.inWidth &&
+    upstreamConvSpec.outChannels === layerContext.convSpec.inChannels;
+  if (!matchesDerivedPooledShape) {
+    return defaultLayout;
+  }
+
+  return {
+    channelStride: upstreamConvSpec.outHeight * upstreamConvSpec.outWidth,
+    sourceHeight: layerContext.convSpec.inHeight,
+    sourceWidth: layerContext.convSpec.inWidth,
+  };
+}
+
+function calculateSpatialOutputSize(
+  inputSize: number,
+  kernelSize: number,
+  strideSize: number,
+  leadingPadding: number,
+  trailingPadding: number,
+): number {
+  if (inputSize <= ZERO_VALUE || kernelSize <= ZERO_VALUE || strideSize <= ZERO_VALUE) {
+    return ZERO_VALUE;
+  }
+
+  return (
+    Math.floor(
+      (inputSize + leadingPadding + trailingPadding - kernelSize) /
+        strideSize,
+    ) + 1
+  );
 }
 
 /**
@@ -934,19 +1095,23 @@ function applyConvCoordinateAssignment(
 
   // Step 2: Resolve neuron internals and assign channel bias.
   const neuronInternal = neuron as NodeInternals;
-  neuronInternal.bias =
-    coordinateContext.tensorContext.convBiasTensor.float_data[
-      coordinateContext.coordinate.outChannelIndex
-    ];
+  const convBiasValues = readOnnxTensorFloatData(
+    coordinateContext.tensorContext.convBiasTensor,
+  );
+  neuronInternal.bias = convBiasValues[coordinateContext.coordinate.outChannelIndex];
 
-  // Step 3: Build inbound map once for this target neuron.
+  // Step 3: Reset all inbound weights so non-receptive positions stay zero.
+  resetInboundConnectionWeights(neuronInternal);
+
+  // Step 4: Build inbound map once for this target neuron.
   const inboundConnectionMap = buildInboundConnectionMap(neuronInternal);
 
-  // Step 4: Assign inbound kernel-based connection weights.
+  // Step 5: Assign inbound kernel-based connection weights.
   coordinateContext.kernelCoordinates.forEach((kernelCoordinate) => {
     assignConvKernelWeight({
       tensorContext: coordinateContext.tensorContext,
       convSpec: coordinateContext.convSpec,
+      sourceLayout: coordinateContext.sourceLayout,
       coordinate: coordinateContext.coordinate,
       inChannelIndex: kernelCoordinate.inChannelIndex,
       kernelRowIndex: kernelCoordinate.kernelRowIndex,
@@ -954,6 +1119,18 @@ function applyConvCoordinateAssignment(
       inboundConnectionMap,
       previousLayerNodes: coordinateContext.previousLayerNodes,
     });
+  });
+}
+
+/**
+ * Reset all inbound weights so Conv reconstruction can write only receptive edges.
+ *
+ * @param neuronInternal Target neuron internals.
+ * @returns Nothing.
+ */
+function resetInboundConnectionWeights(neuronInternal: NodeInternals): void {
+  neuronInternal.connections.in.forEach((connection) => {
+    connection.weight = ZERO_VALUE;
   });
 }
 
@@ -1017,7 +1194,7 @@ function assignConvKernelWeight(
 
   // Step 2: Resolve source node index and outbound source node.
   const sourceNodeIndex = buildInputFeatureLinearIndex(
-    kernelAssignmentContext.convSpec,
+    kernelAssignmentContext.sourceLayout,
     kernelAssignmentContext.inChannelIndex,
     inputCoordinate.inputRow,
     inputCoordinate.inputColumn,
@@ -1073,14 +1250,14 @@ function buildInputCoordinate(
  * @returns Linear input feature index.
  */
 function buildInputFeatureLinearIndex(
-  convSpec: Conv2DMapping,
+  sourceLayout: OnnxImportConvSourceLayout,
   inChannelIndex: number,
   inputRow: number,
   inputColumn: number,
 ): number {
   return (
-    inChannelIndex * (convSpec.inHeight * convSpec.inWidth) +
-    inputRow * convSpec.inWidth +
+    inChannelIndex * sourceLayout.channelStride +
+    inputRow * sourceLayout.sourceWidth +
     inputColumn
   );
 }
@@ -1110,6 +1287,9 @@ function buildInboundConnectionMap(
 function readConvKernelWeight(
   kernelAssignmentContext: OnnxImportConvKernelAssignmentContext,
 ): number {
+  const convWeightValues = readOnnxTensorFloatData(
+    kernelAssignmentContext.tensorContext.convWeightTensor,
+  );
   const weightIndex =
     ((kernelAssignmentContext.coordinate.outChannelIndex *
       kernelAssignmentContext.tensorContext.inChannels +
@@ -1118,7 +1298,5 @@ function readConvKernelWeight(
       kernelAssignmentContext.kernelRowIndex) *
       kernelAssignmentContext.tensorContext.kernelWidth +
     kernelAssignmentContext.kernelColumnIndex;
-  return kernelAssignmentContext.tensorContext.convWeightTensor.float_data[
-    weightIndex
-  ];
+  return convWeightValues[weightIndex];
 }

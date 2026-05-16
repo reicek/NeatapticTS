@@ -3,6 +3,7 @@ import type {
   OnnxGraph,
   OnnxMetadataProperty,
   OnnxModel,
+  OnnxTensor,
 } from '../schema/network.onnx.schema.types';
 import type {
   ConvLayerPairContext,
@@ -87,6 +88,9 @@ const METADATA_KEY_LSTM_EMITTED_LAYERS = 'lstm_emitted_layers';
 /** Metadata key for emitted GRU heuristic layers. */
 const METADATA_KEY_GRU_EMITTED_LAYERS = 'gru_emitted_layers';
 
+/** Metadata key describing dense-family initializer aliases reused during export. */
+const METADATA_KEY_SHARED_INITIALIZER_ALIASES = 'shared_initializer_aliases';
+
 /** Metadata fallback reason for in-between GRU/LSTM size thresholds. */
 const METADATA_REASON_SIZE_BETWEEN_GRU_LSTM_THRESHOLDS =
   'size_between_gru_lstm_thresholds';
@@ -120,6 +124,12 @@ const LSTM_DIAGONAL_GATE_INDEX = 2;
 
 /** Recurrent diagonal gate index for GRU (candidate gate). */
 const GRU_DIAGONAL_GATE_INDEX = 2;
+
+type SharedInitializerAliasRecord = {
+  aliasTensorName: string;
+  canonicalTensorName: string;
+  initializerKind: 'dense_weight' | 'dense_bias' | 'per_neuron_weight' | 'per_neuron_bias';
+};
 
 /**
  * Emit heuristic fused recurrent operators (LSTM/GRU) when recurrent export is enabled.
@@ -183,14 +193,26 @@ export function finalizeExportMetadata(
     return;
   }
 
-  // Step 1: Append baseline export metadata.
+  // Step 1: Reuse exact dense-family initializer aliases before metadata finalization.
+  const sharedInitializerAliases = reuseSharedInitializers(model);
+  if (sharedInitializerAliases.length) {
+    appendMetadataProperty(
+      model,
+      buildMetadataProperty(
+        METADATA_KEY_SHARED_INITIALIZER_ALIASES,
+        sharedInitializerAliases,
+      ),
+    );
+  }
+
+  // Step 2: Append baseline export metadata.
   appendMetadataProperty(
     model,
     buildMetadataProperty(METADATA_KEY_LAYER_SIZES, hiddenSizesMetadata),
   );
   appendRecurrentSingleStepMetadata(model, recurrentLayerIndices);
 
-  // Step 2: Optionally evaluate Conv2D sharing and append summary metadata.
+  // Step 3: Optionally evaluate Conv2D sharing and append summary metadata.
   if (!shouldValidateConvSharing(options)) {
     return;
   }
@@ -199,6 +221,98 @@ export function finalizeExportMetadata(
     mappings: options.conv2dMappings || [],
   });
   appendConvSharingMetadata(model, convSharingResult);
+}
+
+/** Reuse exact dense-family initializers and rewrite later node inputs to the canonical tensors. */
+function reuseSharedInitializers(
+  model: OnnxModel,
+): SharedInitializerAliasRecord[] {
+  const signatureToCanonicalTensorName = new Map<string, string>();
+  const initializerAliases: SharedInitializerAliasRecord[] = [];
+  const aliasTensorNameByRemovedTensorName = new Map<string, string>();
+
+  model.graph.initializer = model.graph.initializer.filter((initializerEntry) => {
+    const initializerKind = classifySharedInitializerKind(initializerEntry.name);
+    if (!initializerKind) {
+      return true;
+    }
+
+    const initializerSignature = buildSharedInitializerSignature(
+      initializerEntry,
+      initializerKind,
+    );
+    const canonicalTensorName =
+      signatureToCanonicalTensorName.get(initializerSignature);
+    if (!canonicalTensorName) {
+      signatureToCanonicalTensorName.set(
+        initializerSignature,
+        initializerEntry.name,
+      );
+      return true;
+    }
+
+    aliasTensorNameByRemovedTensorName.set(
+      initializerEntry.name,
+      canonicalTensorName,
+    );
+    initializerAliases.push({
+      aliasTensorName: initializerEntry.name,
+      canonicalTensorName,
+      initializerKind,
+    });
+    return false;
+  });
+
+  if (!initializerAliases.length) {
+    return [];
+  }
+
+  rewriteInitializerInputs(model.graph, aliasTensorNameByRemovedTensorName);
+  return initializerAliases;
+}
+
+/** Classify the dense-family initializer kinds supported by the Phase 5B alias subset. */
+function classifySharedInitializerKind(
+  initializerName: string,
+): SharedInitializerAliasRecord['initializerKind'] | null {
+  if (/^W\d+$/.test(initializerName)) {
+    return 'dense_weight';
+  }
+  if (/^B\d+$/.test(initializerName)) {
+    return 'dense_bias';
+  }
+  if (/^W\d+_n\d+$/.test(initializerName)) {
+    return 'per_neuron_weight';
+  }
+  if (/^B\d+_n\d+$/.test(initializerName)) {
+    return 'per_neuron_bias';
+  }
+  return null;
+}
+
+/** Build an exact-match signature for dense-family alias reuse. */
+function buildSharedInitializerSignature(
+  initializerEntry: OnnxTensor,
+  initializerKind: SharedInitializerAliasRecord['initializerKind'],
+): string {
+  return JSON.stringify({
+    initializerKind,
+    dims: initializerEntry.dims,
+    floatData: initializerEntry.float_data,
+  });
+}
+
+/** Rewrite graph-node initializer inputs after later aliases collapse into one canonical tensor. */
+function rewriteInitializerInputs(
+  graph: OnnxGraph,
+  aliasTensorNameByRemovedTensorName: Map<string, string>,
+): void {
+  graph.node.forEach((nodeEntry) => {
+    nodeEntry.input = nodeEntry.input.map(
+      (inputName) =>
+        aliasTensorNameByRemovedTensorName.get(inputName) ?? inputName,
+    );
+  });
 }
 
 /**
@@ -713,6 +827,29 @@ function shouldValidateConvSharing(options: OnnxExportOptions): boolean {
   );
 }
 
+/**
+ * Determine whether one Conv mapping behaves like a shared kernel layer.
+ *
+ * @param layers Layered network nodes.
+ * @param convSpec Conv mapping to evaluate.
+ * @returns True when representative kernels stay consistent across outputs.
+ */
+export function isConvMappingWeightShared(
+  layers: NeatapticNode[][],
+  convSpec: ConvLayerPairContext['convSpec'],
+  options?: OnnxExportOptions,
+): boolean {
+  const layerPair = resolveConvLayerPairContext(
+    layers,
+    convSpec.layerIndex,
+    convSpec,
+  );
+  if (!layerPair) {
+    return false;
+  }
+  return isConvLayerPairConsistent(layerPair, options);
+}
+
 /** Validate Conv2D sharing across all declared Conv mappings. */
 function validateConvSharingAcrossMappings(
   context: ConvSharingValidationContext,
@@ -757,16 +894,153 @@ function resolveConvLayerPairContext(
 }
 
 /** Validate one Conv layer pair against representative kernel sharing. */
-function isConvLayerPairConsistent(context: ConvLayerPairContext): boolean {
-  const representativeKernels = collectRepresentativeKernels(context);
+function isConvLayerPairConsistent(
+  context: ConvLayerPairContext,
+  options?: OnnxExportOptions,
+): boolean {
+  const sourceLayout = resolveConvSourceLayout(context, options);
+  const representativeKernels = collectRepresentativeKernels(
+    context,
+    sourceLayout,
+  );
   const outputCoordinates = collectConvOutputCoordinates(context.convSpec);
-  return outputCoordinates.every((outputCoordinate) =>
-    isOutputCoordinateConsistent(
-      context,
-      outputCoordinate,
-      representativeKernels,
-      CONV_WEIGHT_SHARING_TOLERANCE,
-    ),
+  return (
+    outputCoordinates.every((outputCoordinate) =>
+      isOutputCoordinateConsistent(
+        context,
+        outputCoordinate,
+        representativeKernels,
+        CONV_WEIGHT_SHARING_TOLERANCE,
+        sourceLayout,
+      ),
+    ) && hasNoIgnoredSourceWeights(context, sourceLayout)
+  );
+}
+
+type ResolvedConvSourceLayout = {
+  sourceHeight: number;
+  sourceWidth: number;
+  channelStride: number;
+};
+
+function resolveConvSourceLayout(
+  context: ConvLayerPairContext,
+  options?: OnnxExportOptions,
+): ResolvedConvSourceLayout {
+  const defaultSourceLayout = {
+    sourceHeight: context.convSpec.inHeight,
+    sourceWidth: context.convSpec.inWidth,
+    channelStride: context.convSpec.inHeight * context.convSpec.inWidth,
+  };
+
+  const upstreamPoolingSpec = options?.pool2dMappings?.find(
+    (poolingSpec) => poolingSpec.afterLayerIndex === context.convSpec.layerIndex - 1,
+  );
+  const upstreamConvSpec = options?.conv2dMappings?.find(
+    (mapping) => mapping.layerIndex === context.convSpec.layerIndex - 1,
+  );
+  if (!upstreamPoolingSpec || !upstreamConvSpec) {
+    return defaultSourceLayout;
+  }
+
+  const derivedInputHeight = calculateSpatialOutputSize(
+    upstreamConvSpec.outHeight,
+    upstreamPoolingSpec.kernelHeight,
+    upstreamPoolingSpec.strideHeight,
+    upstreamPoolingSpec.padTop ?? 0,
+    upstreamPoolingSpec.padBottom ?? 0,
+  );
+  const derivedInputWidth = calculateSpatialOutputSize(
+    upstreamConvSpec.outWidth,
+    upstreamPoolingSpec.kernelWidth,
+    upstreamPoolingSpec.strideWidth,
+    upstreamPoolingSpec.padLeft ?? 0,
+    upstreamPoolingSpec.padRight ?? 0,
+  );
+  const matchesDerivedPooledShape =
+    derivedInputHeight === context.convSpec.inHeight &&
+    derivedInputWidth === context.convSpec.inWidth &&
+    upstreamConvSpec.outChannels === context.convSpec.inChannels;
+  if (!matchesDerivedPooledShape) {
+    return defaultSourceLayout;
+  }
+
+  return {
+    sourceHeight: upstreamConvSpec.outHeight,
+    sourceWidth: context.convSpec.inWidth,
+    channelStride: upstreamConvSpec.outHeight * upstreamConvSpec.outWidth,
+  };
+}
+
+function calculateSpatialOutputSize(
+  inputSize: number,
+  kernelSize: number,
+  strideSize: number,
+  leadingPadding: number,
+  trailingPadding: number,
+): number {
+  if (inputSize <= 0 || kernelSize <= 0 || strideSize <= 0) {
+    return 0;
+  }
+
+  return (
+    Math.floor(
+      (inputSize + leadingPadding + trailingPadding - kernelSize) /
+        strideSize,
+    ) + 1
+  );
+}
+
+/**
+ * Ensure weights outside the Conv-addressable source slice remain zero.
+ *
+ * @param context Conv layer pair context.
+ * @returns True when ignored dense source nodes carry no extra weight.
+ */
+function hasNoIgnoredSourceWeights(
+  context: ConvLayerPairContext,
+  sourceLayout: ResolvedConvSourceLayout,
+): boolean {
+  const addressedSourceIndices = collectAddressedSourceIndices(
+    context.convSpec,
+    sourceLayout,
+  );
+  if (context.previousLayerNodes.length <= addressedSourceIndices.size) {
+    return true;
+  }
+
+  const ignoredSourceNodes = context.previousLayerNodes.filter(
+    (_sourceNode, sourceIndex) => !addressedSourceIndices.has(sourceIndex),
+  );
+  return context.currentLayerNodes.every((currentNode) => {
+    const currentNodeInternal = asNodeInternals(currentNode);
+    return ignoredSourceNodes.every((ignoredSourceNode) =>
+      areWeightsWithinTolerance({
+        leftWeight: resolveIncomingWeight(currentNodeInternal, ignoredSourceNode),
+        rightWeight: 0,
+        tolerance: CONV_WEIGHT_SHARING_TOLERANCE,
+      }),
+    );
+  });
+}
+
+function collectAddressedSourceIndices(
+  convSpec: ConvLayerPairContext['convSpec'],
+  sourceLayout: ResolvedConvSourceLayout,
+): Set<number> {
+  return new Set(
+    Array.from({ length: convSpec.inChannels }, (_unusedChannel, inChannelIndex) =>
+      Array.from({ length: convSpec.inHeight }, (_unusedRow, inputRow) =>
+        Array.from({ length: convSpec.inWidth }, (_unusedColumn, inputColumn) =>
+          buildConvSourceIndex(
+            sourceLayout,
+            inChannelIndex,
+            inputRow,
+            inputColumn,
+          ),
+        ),
+      ).flat(),
+    ).flat(),
   );
 }
 
@@ -814,6 +1088,7 @@ function appendConvSharingMetadata(
 /** Collect representative kernels for each output channel. */
 function collectRepresentativeKernels(
   context: ConvLayerPairContext,
+  sourceLayout: ResolvedConvSourceLayout,
 ): number[][] {
   const outChannelIndices = Array.from(
     { length: context.convSpec.outChannels },
@@ -825,13 +1100,16 @@ function collectRepresentativeKernels(
       previousLayerNodes: context.previousLayerNodes,
       currentLayerNodes: context.currentLayerNodes,
       outChannelIndex,
+      sourceLayout,
     }),
   );
 }
 
 /** Collect one representative kernel by reading the first output position for a channel. */
 function collectRepresentativeKernelForChannel(
-  context: ConvRepresentativeKernelContext,
+  context: ConvRepresentativeKernelContext & {
+    sourceLayout: ResolvedConvSourceLayout;
+  },
 ): number[] {
   const representativeNeuronIndex =
     context.outChannelIndex *
@@ -849,6 +1127,7 @@ function collectRepresentativeKernelForChannel(
       context.previousLayerNodes,
       representativeInternal,
       kernelCoordinate,
+      context.sourceLayout,
     ),
   );
 }
@@ -913,6 +1192,7 @@ function isOutputCoordinateConsistent(
   outputCoordinate: ConvOutputCoordinate,
   representativeKernels: number[][],
   tolerance: number,
+  sourceLayout: ResolvedConvSourceLayout,
 ): boolean {
   const neuronInternal = resolveNeuronInternalAtOutputCoordinate(
     context,
@@ -934,6 +1214,7 @@ function isOutputCoordinateConsistent(
       representativeKernelWeights,
       kernelPointer,
       tolerance,
+      sourceLayout,
     }),
   );
 }
@@ -954,7 +1235,9 @@ function resolveNeuronInternalAtOutputCoordinate(
 
 /** Validate one kernel coordinate against its representative channel value. */
 function isKernelCoordinateConsistent(
-  context: ConvKernelConsistencyContext,
+  context: ConvKernelConsistencyContext & {
+    sourceLayout: ResolvedConvSourceLayout;
+  },
 ): boolean {
   const inputPosition = resolveInputPosition(context);
   if (
@@ -973,6 +1256,7 @@ function isKernelCoordinateConsistent(
     context.kernelCoordinate.inChannelIndex,
     inputPosition.inputRow,
     inputPosition.inputColumn,
+      context.sourceLayout,
   );
   const currentWeight = sourceNode
     ? resolveIncomingWeight(context.neuronInternal, sourceNode)
@@ -1024,11 +1308,14 @@ function resolveSourceNodeAtInputPosition(
   inChannelIndex: number,
   inputRow: number,
   inputColumn: number,
+  sourceLayout: ResolvedConvSourceLayout,
 ): NeatapticNode | undefined {
-  const inputFeatureIndex =
-    inChannelIndex * (convSpec.inHeight * convSpec.inWidth) +
-    inputRow * convSpec.inWidth +
-    inputColumn;
+  const inputFeatureIndex = buildConvSourceIndex(
+    sourceLayout,
+    inChannelIndex,
+    inputRow,
+    inputColumn,
+  );
   return previousLayerNodes[inputFeatureIndex];
 }
 
@@ -1038,16 +1325,32 @@ function collectRepresentativeKernelWeight(
   previousLayerNodes: NeatapticNode[],
   representativeInternal: NodeInternals,
   kernelCoordinate: OnnxConvKernelCoordinate,
+  sourceLayout: ResolvedConvSourceLayout,
 ): number {
-  const inputFeatureIndex =
-    kernelCoordinate.inChannelIndex * (convSpec.inHeight * convSpec.inWidth) +
-    kernelCoordinate.kernelRowIndex * convSpec.inWidth +
-    kernelCoordinate.kernelColumnIndex;
+  const inputFeatureIndex = buildConvSourceIndex(
+    sourceLayout,
+    kernelCoordinate.inChannelIndex,
+    kernelCoordinate.kernelRowIndex,
+    kernelCoordinate.kernelColumnIndex,
+  );
   const sourceNode = previousLayerNodes[inputFeatureIndex];
   if (!sourceNode) {
     return 0;
   }
   return resolveIncomingWeight(representativeInternal, sourceNode);
+}
+
+function buildConvSourceIndex(
+  sourceLayout: ResolvedConvSourceLayout,
+  inChannelIndex: number,
+  inputRow: number,
+  inputColumn: number,
+): number {
+  return (
+    inChannelIndex * sourceLayout.channelStride +
+    inputRow * sourceLayout.sourceWidth +
+    inputColumn
+  );
 }
 
 /** Compare two scalar weights using configured tolerance. */

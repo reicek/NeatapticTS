@@ -21,9 +21,11 @@ The published flagship page intentionally separates what is live runtime from
 what is contract-preview scaffolding:
 
 - live runtime: tokenization, optional bounded pretraining preview, live
-  exchange updates, session export/import, and A/B metric reporting,
+  exchange updates, session export/import, on-page A/B metric reporting, and
+  the browser-visible corpus preview report,
 - contract-preview scaffolding: staged delivery framing and explanatory copy
-  that describes the boundary and upcoming slices.
+  that describes the boundary and upcoming slices, plus the documented
+  visualizer handoff that is not yet embedded as an inline panel on this page.
 
 This split is intentional so users can inspect real behavior without being led
 to expect web-scale model capability.
@@ -117,6 +119,8 @@ The first NEATchat visualization surface should reuse the existing Flappy Bird n
 - draw layer: [../flappy_bird/browser-entry/visualization/visualization.draw.service.ts](../flappy_bird/browser-entry/visualization/visualization.draw.service.ts)
 
 That reuse rule keeps hover state, redraw ownership, and topology layout semantics consistent across demos while the chat loop is still being shaped.
+
+The current flagship page does not yet embed that network inspector inline. For now the visualizer seam is a documented contract and source-level reuse boundary, while the live browser page focuses on the chat loop, corpus preview, snapshots, and A/B evaluation.
 
 ## References
 

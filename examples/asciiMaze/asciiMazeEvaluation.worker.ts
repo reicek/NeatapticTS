@@ -1,7 +1,7 @@
 import {
   createInferencePredictor,
   type InferencePredictor,
-} from '../../src/neataptic';
+} from '../../src/architecture/network/worker-payload/network.worker-payload';
 import { FitnessEvaluator } from './fitness';
 import type { INetwork } from './interfaces';
 import type {

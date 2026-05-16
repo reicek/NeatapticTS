@@ -36,7 +36,7 @@ Active selection guide:
 - [plans/completed/Memory_Optimization.md](completed/Memory_Optimization.md): archived pre-NGE memory foundation baseline through Track 1 / Phase 10. [DONE]
 - [plans/completed/Network_Visualization_Export_Schema.plans.md](completed/Network_Visualization_Export_Schema.plans.md): archived visualization export schema baseline for inspection tooling and DOT/schema output. [DONE]
 - [plans/Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md): planned hybrid-interoperability lane for deterministic parameter vectors, training isolation, and explicit persistence policy.
-- [plans/ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): active ONNX export/import architecture and rollout lane. [WIP]
+- [plans/ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): active ONNX export/import architecture and rollout lane, with Phases 3-6 closed for the current conservative subset, Phase 7A closed, the first 7B storage-FP16 lane landed, the 7C calibration contract landed, and the current 7D same-family dense qlinear slice landed with explicit bias bridges plus preserved unary activations including focused Softplus, Softsign, Selu, opset-18 Mish, and opset-20 Gelu parity proofs, with Mish below opset 18 now also proven to keep static-8bit dense lowering while the activation itself stays on the honest implicit-identity fallback path. The remaining plan is now explicitly compliance-oriented: broader dense, spatial, and dynamic quantized lowering remain open inside Phase 7, and plan closure now also requires later binary `ModelProto` serialization, checker-backed validation, real runtime parity, and a named external import subset before the ONNX lane can move to `[DONE]`. [WIP]
 - [plans/NEATchat.plans.md](NEATchat.plans.md): planned NEATchat follow-up lane for turning the closed toy demo into a stronger conversational system, gated on Phase 4 substrate readiness plus recurrent ONNX hardening before implementation starts.
 - [plans/completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md): archived checkpointing, persistence, and save/resume baseline covering population-only snapshots, light checkpoints, strict full checkpoints, and the standalone persistence walkthrough. [DONE]
 - [plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): prebuilt architecture constructors and sequence-oriented builders. [DONE]
@@ -58,7 +58,7 @@ Task-to-plan trigger phrases:
 - checkpoint, resume, save population, strict restore, checkpoint state inventory: `plans/completed/Population_Save_Resume_and_Checkpointing.md`
 - hybrid evolution plus training, optimizer handoff: `plans/Evolution_Training_Interoperability_Contracts.md`
 - preconfigured models, MLP, LSTM, GRU, NARX builders: `plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
-- ONNX, import/export interoperability: `plans/ONNX_EXPORT_PLAN.md`
+- ONNX, import/export interoperability, recurrent import hardening, supported subset, seed import honesty: `plans/ONNX_EXPORT_PLAN.md`
 - memory pressure, large networks, compact storage: `plans/completed/Memory_Optimization.md`
 - visualization, schema, inspect network shape: `plans/completed/Network_Visualization_Export_Schema.plans.md`
 - examples, tutorials, learning path, onboarding: `plans/completed/Interactive_Examples_and_Learning_Path.plans.md`

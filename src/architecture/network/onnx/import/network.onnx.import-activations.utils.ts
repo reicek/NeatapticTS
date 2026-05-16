@@ -38,7 +38,7 @@ const INITIAL_HIDDEN_OFFSET = 0;
 const NO_HIDDEN_TRAVERSAL_CONTEXTS = 0;
 
 /** ONNX activation node-name pattern emitted by ONNX export. */
-const ACTIVATION_NODE_NAME_PATTERN = /^act_l(\d+)(?:_n(\d+))?$/i;
+const ACTIVATION_NODE_NAME_PATTERN = /^act(?:_conv)?_l(\d+)(?:_n(\d+))?$/i;
 
 /** Default activation operation when no explicit mapping exists. */
 const DEFAULT_ACTIVATION_OPERATION: OnnxActivationOperation = 'Identity';
@@ -50,6 +50,11 @@ const SUPPORTED_ACTIVATION_OPERATIONS = new Set<OnnxActivationOperation>([
   'Logistic',
   'Relu',
   'Identity',
+  'Softplus',
+  'Softsign',
+  'Selu',
+  'Mish',
+  'Gelu',
 ]);
 
 /** Mapping from ONNX op types to runtime activation functions. */
@@ -62,6 +67,11 @@ const ACTIVATION_OPERATION_TO_FUNCTION = new Map<
   ['Logistic', methods.Activation.sigmoid],
   ['Relu', methods.Activation.relu],
   ['Identity', methods.Activation.identity],
+  ['Softplus', methods.Activation.softplus],
+  ['Softsign', methods.Activation.softsign],
+  ['Selu', methods.Activation.selu],
+  ['Mish', methods.Activation.mish],
+  ['Gelu', methods.Activation.gelu],
 ]);
 
 /**

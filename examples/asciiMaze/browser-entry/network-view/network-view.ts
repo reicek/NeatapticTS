@@ -8,7 +8,7 @@
  */
 
 import type Network from '../../../../src/architecture/network';
-import type { VisualizationGraphV1 } from '../../../../src/neataptic';
+import type { VisualizationGraphV1 } from '../../../../src/architecture/network/visualization/network.visualization.types';
 import {
   drawResolvedNetworkVisualization,
   resolveNetworkArchitectureLabel as resolveSharedNetworkArchitectureLabel,
@@ -155,9 +155,11 @@ export function resolveMazeNetworkCanvasDimensions(
     MIN_CANVAS_HEIGHT_PX,
     Math.floor(resolvedWidthPx * CANVAS_ASPECT_RATIO),
   );
-  const panelDrivenHeightPx = Math.max(1, Math.floor(measuredHeightPx));
+  const measuredPanelHeightPx = Math.floor(measuredHeightPx);
   const resolvedHeightPx =
-    panelDrivenHeightPx > 0 ? panelDrivenHeightPx : widthDrivenHeightPx;
+    Number.isFinite(measuredPanelHeightPx) && measuredPanelHeightPx > 0
+      ? measuredPanelHeightPx
+      : widthDrivenHeightPx;
 
   return {
     widthPx: resolvedWidthPx,
@@ -218,7 +220,7 @@ function syncCanvasToPanel(canvas: HTMLCanvasElement): void {
   const { widthPx: resolvedWidthPx, heightPx: resolvedHeightPx } =
     resolveMazeNetworkCanvasDimensions(measuredWidthPx, measuredHeightPx);
 
-  canvas.style.width = '100%';
+  canvas.style.width = `${resolvedWidthPx}px`;
   canvas.style.height = `${resolvedHeightPx}px`;
 
   if (canvas.width !== resolvedWidthPx || canvas.height !== resolvedHeightPx) {

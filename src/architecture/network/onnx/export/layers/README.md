@@ -367,6 +367,26 @@ Parameters:
 
 Returns: Per-neuron activation output name.
 
+### emitResidualAddLayer
+
+```ts
+emitResidualAddLayer(
+  params: ResidualAddLayerParams,
+): string
+```
+
+Emit a one-hop residual-add dense layer.
+
+This subset preserves one skipped source layer by splitting the target layer
+into two affine branches: the ordinary adjacent-layer Gemm keeps the original
+bias term, and the skipped source layer emits a bias-free branch whose output
+is summed before the layer activation.
+
+Parameters:
+- `params` - Residual-add emission parameters.
+
+Returns: Output tensor name.
+
 ### resolveDenseNodeOrder
 
 ```ts
@@ -642,21 +662,6 @@ Parameters:
 - `layerIndex` - Current recurrent layer index.
 
 Returns: Hidden-state tensor input name.
-
-### resolveRecurrentActivationType
-
-```ts
-resolveRecurrentActivationType(
-  currentLayerNodes: default[],
-): string
-```
-
-Resolve ONNX activation type from first node in recurrent layer.
-
-Parameters:
-- `currentLayerNodes` - Current recurrent layer nodes.
-
-Returns: ONNX activation op type.
 
 ## architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.ts
 

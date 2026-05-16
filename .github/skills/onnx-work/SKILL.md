@@ -22,6 +22,24 @@ documentation, and deterministic export or import claims. When tracker files
 need updating, `tracker-handoff` owns the plan/log shape. When roadmap
 alignment is needed, use `plan-alignment`.
 
+## Local Reference Pack
+
+Before fetching ONNX docs again, read `ONNX_1_22_0_REFERENCE.md` in this skill
+folder.
+
+Use that local pack for:
+
+- ONNX 1.22.0 model and graph concepts,
+- opset and domain rules,
+- converter parity expectations,
+- low-bit type facts (`float8`, `int4`, `float4`, `int2`),
+- and the repo-local audit checklist for deciding whether a claim is
+  JSON-first roundtrip, binary ONNX compatibility, or true runtime
+  interoperability.
+
+Go back to the web only when operator-specific schema details, checker behavior,
+or newer-version deltas are needed.
+
 ## Scope Boundary
 
 - **In scope:** op-to-ONNX mapping, JSON-first export/import fidelity, output

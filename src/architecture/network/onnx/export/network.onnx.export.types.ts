@@ -22,6 +22,7 @@ import type NeatapticNode from '../../../node';
 import type {
   Conv2DMapping,
   OnnxDimension,
+  OnnxAttribute,
   OnnxModel,
   Pool2DMapping,
 } from '../schema/network.onnx.schema.types';
@@ -52,6 +53,34 @@ import type {
  * - `legacyNodeOrdering`: keeps older node ordering for backward compatibility.
  * - `conv2dMappings` / `pool2dMappings`: encode conv/pool semantics for fully-connected
  *   layers via explicit mapping declarations.
+ * - `concatMappings`: opt one skipped source layer into the narrow same-family
+ *   `Concat -> Gemm` merge subset with deterministic `previous_then_source`
+ *   input order.
+ * - `attentionMappings`: opt one target layer into the fixed-width same-family
+ *   self-attention shadow subset.
+ * - `precision`: opt into reduced-precision export. The current landed lane is
+ *   `storage-fp16`, which packs eligible same-family dense and Conv weight or
+ *   bias initializers into float16 storage and inserts deterministic
+ *   `Cast -> float32` bridges so operator inputs stay type-consistent.
+ * - `quantization`: declare an explicit quantization request packet. The
+ *   current exporter can validate static calibration contracts, emit
+ *   deterministic scale or zero-point parameter initializers for the supported
+ *   same-family dense and explicit Conv subset, and lower explicitly targeted
+ *   same-family dense layers into a
+ *   `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
+ *   explicit float-domain bias bridge plus the exporter-owned unary
+ *   activation node when present. Spatial and dynamic quantized lowering
+ *   remains later Phase 7 work.
+ * - `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
+ *   emission only when the exporter can prove the dense weights already behave like a
+ *   shared-kernel spatial layout, including the current conservative multi-channel and
+ *   unpooled stacked-chain subsets, deeper single-channel post-pool chains whose
+ *   pooled tensor shapes can be derived sequentially, and deeper pooled
+ *   multi-channel chains when the pooled tensor shapes can be derived sequentially
+ *   and the pooled source stays compact per channel. The only proven
+ *   flatten-after-pool promotion path is the narrow final hidden-stage
+ *   reshape-bridge subset. Earlier flattened pooled consumers and repeated
+ *   flatten-bridge chains stay on the honest fallback path.
  */
 export interface OnnxExportOptions {
   opset?: number;
@@ -67,8 +96,179 @@ export interface OnnxExportOptions {
   recurrentSingleStep?: boolean;
   conv2dMappings?: Conv2DMapping[];
   pool2dMappings?: Pool2DMapping[];
+  /**
+   * Promote heuristic Conv metadata into real Conv emission only when the inferred
+   * layer passes the shared-kernel safety gate.
+   *
+    * The default remains metadata-only inference so unsupported or ambiguous spatial
+    * layouts stay on the dense fallback path honestly. Promotion can reuse derived
+    * post-pool shapes when the exporter can keep the tensor spatial and the pooled
+    * source stays compact per channel, including deeper single-channel and deeper
+    * pooled multi-channel chains. The currently proven flatten-after-pool surface is
+    * narrower: a final hidden-stage Conv -> Pool -> Flatten bridge can still promote
+    * when the exporter restores the derived pooled `[C,H,W]` shape with an explicit
+    * reshape before the later Conv. Earlier flattened pooled consumers and repeated
+    * flatten-bridge chains stay on the honest fallback path because later Conv
+    * inference stops before inferred metadata or reshape bridges survive.
+   */
+  autoPromoteInferredConv?: boolean;
   validateConvSharing?: boolean;
   flattenAfterPooling?: boolean;
+  concatMappings?: ConcatMapping[];
+  attentionMappings?: AttentionMapping[];
+  precision?: OnnxPrecisionOptions;
+  quantization?: OnnxQuantizationOptions;
+}
+
+/** Opt-in reduced-precision export controls for the Phase 7 storage lane. */
+export type OnnxPrecisionOptions = {
+  mode?: 'float32' | 'storage-fp16';
+  metadata?: boolean;
+};
+
+/** External calibration packet declaration for static quantization requests. */
+export type OnnxQuantizationCalibrationRange = {
+  min: number;
+  max: number;
+};
+
+/** One explicitly calibrated layer target used to build deterministic parameter tensors. */
+export type OnnxQuantizationCalibrationLayerTarget = {
+  target: 'dense' | 'conv';
+  layerIndex: number;
+  inputRange: OnnxQuantizationCalibrationRange;
+  outputRange: OnnxQuantizationCalibrationRange;
+};
+
+/** Supported weight-range reduction policy for the first calibration contract. */
+export type OnnxQuantizationCalibrationWeightRangePolicy = 'min-max';
+
+/** Zero-inclusion policy for exported calibration parameters. */
+export type OnnxQuantizationCalibrationZeroInclusionPolicy = 'required';
+
+/** Symmetry policy for activation and weight quantization parameters. */
+export type OnnxQuantizationCalibrationSymmetry = 'symmetric' | 'asymmetric';
+
+/** Rounding policy for deterministic zero-point resolution. */
+export type OnnxQuantizationCalibrationRoundingMode = 'nearest-even';
+
+/** External calibration packet declaration for static quantization requests. */
+export type OnnxQuantizationCalibrationOptions = {
+  source: 'external';
+  packetId?: string;
+  sampleCount?: number;
+  layerTargets: OnnxQuantizationCalibrationLayerTarget[];
+  weightRangePolicy?: OnnxQuantizationCalibrationWeightRangePolicy;
+  zeroInclusion?: OnnxQuantizationCalibrationZeroInclusionPolicy;
+  activationSymmetry?: OnnxQuantizationCalibrationSymmetry;
+  weightSymmetry?: OnnxQuantizationCalibrationSymmetry;
+  roundingMode?: OnnxQuantizationCalibrationRoundingMode;
+};
+
+/** Resolved calibration packet with exporter-owned defaults applied. */
+export type OnnxResolvedQuantizationCalibrationOptions = {
+  source: 'external';
+  packetId?: string;
+  sampleCount?: number;
+  layerTargets: OnnxQuantizationCalibrationLayerTarget[];
+  weightRangePolicy: OnnxQuantizationCalibrationWeightRangePolicy;
+  zeroInclusion: OnnxQuantizationCalibrationZeroInclusionPolicy;
+  activationSymmetry: OnnxQuantizationCalibrationSymmetry;
+  weightSymmetry: OnnxQuantizationCalibrationSymmetry;
+  roundingMode: OnnxQuantizationCalibrationRoundingMode;
+};
+
+/** Static 8-bit quantization request packet for the narrow first Phase 7 lane. */
+export type OnnxStaticQuantizationOptions = {
+  mode: 'static-8bit';
+  targets: Array<'dense' | 'conv'>;
+  calibration: OnnxQuantizationCalibrationOptions;
+  activationEncoding?: 'uint8' | 'int8';
+  weightEncoding?: 'uint8' | 'int8';
+  activationGranularity?: 'per-tensor';
+  weightGranularity?: 'per-tensor' | 'per-output-channel';
+  representation?: 'qlinear' | 'qdq';
+};
+
+/** Dynamic uint8 quantization request packet for supported dense guidance only. */
+export type OnnxDynamicQuantizationOptions = {
+  mode: 'dynamic-uint8';
+  target?: 'dense';
+  representation?: 'DynamicQuantizeLinear' | 'metadata-only';
+};
+
+/** Supported quantization request packets for the narrow first Phase 7 lane. */
+export type OnnxQuantizationOptions =
+  | OnnxStaticQuantizationOptions
+  | OnnxDynamicQuantizationOptions;
+
+/** Resolved reduced-precision packet used by build orchestration. */
+export type OnnxResolvedPrecisionOptions = {
+  requested: boolean;
+  mode: 'float32' | 'storage-fp16';
+  metadata: boolean;
+};
+
+/** Resolved quantization packet used by build orchestration. */
+export type OnnxResolvedQuantizationOptions =
+  | {
+      requested: false;
+      mode: null;
+      fallbackReasons: string[];
+    }
+  | {
+      requested: true;
+      mode: 'static-8bit';
+      targets: Array<'dense' | 'conv'>;
+      calibration: OnnxResolvedQuantizationCalibrationOptions;
+      activationEncoding: 'uint8' | 'int8';
+      weightEncoding: 'uint8' | 'int8';
+      activationGranularity: 'per-tensor';
+      weightGranularity: 'per-tensor' | 'per-output-channel';
+      representation: 'qlinear' | 'qdq';
+      fallbackReasons: string[];
+    }
+  | {
+      requested: true;
+      mode: 'dynamic-uint8';
+      target: 'dense';
+      representation: 'DynamicQuantizeLinear' | 'metadata-only';
+      fallbackReasons: string[];
+    };
+
+/**
+ * Explicit export-only concat mapping for the narrow Phase 5 merge subset.
+ *
+ * This contract keeps concat source-owned instead of inferred: callers name one
+ * skipped source layer and one target layer, and export preserves the merge as a
+ * deterministic `Concat -> Gemm` path with the default adjacent-layer slice kept
+ * first in the merged input order.
+ */
+export interface ConcatMapping {
+  sourceLayerIndex: number;
+  targetLayerIndex: number;
+  inputOrder?: 'previous_then_source';
+}
+
+/**
+ * Explicit export-only attention mapping for the Phase 5E shadow subset.
+ *
+ * This contract keeps attention source-owned rather than heuristic: callers
+ * opt one target layer into a fixed-width self-attention shadow block while the
+ * stable dense path remains the canonical runtime behavior.
+ */
+export interface AttentionMapping {
+  layerIndex: number;
+  sequenceLength: number;
+  modelWidth: number;
+  heads: number;
+  queryWeights: number[];
+  keyWeights: number[];
+  valueWeights: number[];
+  queryBias: number[];
+  keyBias: number[];
+  valueBias: number[];
+  scaleScores?: boolean;
 }
 
 /** Context for assigning a stable export index to one node. */
@@ -103,14 +303,20 @@ export type ConvInferenceTraversalContext = {
   previousLayerNodes: NeatapticNode[];
   currentLayerNodes: NeatapticNode[];
   declaredMappings: Conv2DMapping[] | undefined;
+  availableConvSpecsByLayerIndex: Map<number, Conv2DMapping>;
+  poolMappingsByAfterLayerIndex: Map<number, Pool2DMapping>;
+  flattenAfterPooling: boolean | undefined;
+  totalHiddenLayerCount: number;
 };
 
 /** Width and shape evaluation context used by Conv inference helpers. */
 export type ConvInferenceEvaluationContext = {
   layerIndex: number;
   currentWidth: number;
-  squareWidth: number;
-  isSquareInputWidth: boolean;
+  inputChannels: number;
+  inputHeight: number;
+  inputWidth: number;
+  allowsExactFitKernel: boolean;
 };
 
 /** Kernel candidate context for one Conv inference evaluation pass. */
@@ -134,6 +340,8 @@ export type OnnxBuildResolvedOptions = {
   producerName: string;
   producerVersion?: string;
   docString?: string;
+  precision: OnnxResolvedPrecisionOptions;
+  quantization: OnnxResolvedQuantizationOptions;
 };
 
 /** Context for constructing input/output ONNX graph dimensions. */
@@ -198,6 +406,7 @@ export type OnnxRecurrentLayerProcessingContext = {
 export type OnnxLayerEmissionResult = {
   previousOutputName: string;
   hiddenSizesMetadata: number[];
+  layerOutputNamesByLayerIndex: Map<number, string>;
 };
 
 /** Context for emitting non-input layers during model build. */
@@ -217,6 +426,7 @@ export type LayerBuildContext = {
   options: OnnxExportOptions;
   layerIndex: number;
   previousOutputName: string;
+  layerOutputNamesByLayerIndex: Map<number, string>;
   recurrentLayerIndices: number[];
   batchDimension: boolean;
   legacyNodeOrdering: boolean;
@@ -353,6 +563,7 @@ export type RecurrentLayerEmissionParams = {
   previousOutputName: string;
   previousLayerNodes: NeatapticNode[];
   currentLayerNodes: NeatapticNode[];
+  opset: number;
 };
 
 /** Derived execution context for single-step recurrent layer emission. */
@@ -412,6 +623,7 @@ export type RecurrentActivationEmissionContext = {
   recurrentSumOutputName: string;
   layerOutputName: string;
   activationNodeName: string;
+  opset: number;
 };
 
 /** Result of Conv sharing validation across declared mappings. */
@@ -475,6 +687,7 @@ export type OnnxConvEmissionParams = {
   previousOutputName: string;
   previousLayerNodes: NeatapticNode[];
   currentLayerNodes: NeatapticNode[];
+  hasLaterHiddenLayers: boolean;
 };
 
 /** Context used after resolving Conv mapping for one layer. */
@@ -517,6 +730,7 @@ export type SharedActivationNodeBuildParams = {
   gemmOutputName: string;
   activationOutputName: string;
   nodeName: string;
+  activationAttributes?: OnnxAttribute[];
 };
 
 /** Shared parameters for optional pooling/flatten output emission. */
@@ -616,6 +830,21 @@ export type DenseLayerParams = {
   options: OnnxExportOptions;
 };
 
+/** Parameters for one-hop residual-add dense layer emission. */
+export type ResidualAddLayerParams = {
+  model: OnnxModel;
+  layerIndex: number;
+  previousOutputName: string;
+  residualSourceOutputName: string;
+  previousLayerNodes: NeatapticNode[];
+  residualSourceLayerNodes: NeatapticNode[];
+  currentLayerNodes: NeatapticNode[];
+  branchTensorName: string;
+  mergeNodeName: string;
+  mergeOutputName: string;
+  options: OnnxExportOptions;
+};
+
 /** Dense layer context enriched with resolved activation function. */
 export type DenseLayerContext = {
   model: OnnxModel;
@@ -654,6 +883,7 @@ export type DenseActivationContext = {
   tensorNames: DenseTensorNames;
   graphNames: DenseGraphNames;
   squash: ActivationSquashFunction;
+  opset: number;
 };
 
 /** Strongly typed Gemm node payload used by dense export helpers. */
@@ -671,6 +901,7 @@ export type DenseActivationNodePayload = {
   input: string[];
   output: string[];
   name: string;
+  attributes?: OnnxAttribute[];
 };
 
 /** Dense node payload union used by ordered append helpers. */
@@ -700,6 +931,7 @@ export type PerNeuronSubgraphContext = {
   previousOutputName: string;
   previousLayerNodes: NeatapticNode[];
   targetNode: NeatapticNode;
+  opset: number;
 };
 
 /** Per-neuron normalized node context. */
@@ -710,6 +942,7 @@ export type PerNeuronNodeContext = {
   previousOutputName: string;
   previousLayerNodes: NeatapticNode[];
   targetNodeInternal: NodeInternals;
+  opset: number;
 };
 
 /** Per-neuron initializer tensor names. */

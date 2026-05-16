@@ -4,6 +4,7 @@ import {
   NetworkOnnxPartialConnectivityUnsupportedError,
   NetworkOnnxPerceptronSizeValidationError,
   NetworkOnnxRecurrentMixedActivationsUnsupportedError,
+  NetworkOnnxShapeValidationError,
 } from './network.onnx.errors';
 
 describe('network onnx errors chapter', () => {
@@ -106,6 +107,32 @@ describe('network onnx errors chapter', () => {
           cause: rootCause,
           message: 'Perceptron metadata must include input and output sizes.',
           name: 'NetworkOnnxPerceptronSizeValidationError',
+        });
+      });
+    });
+  });
+
+  describe('NetworkOnnxShapeValidationError', () => {
+    describe('when the error is created with a cause', () => {
+      it('keeps the custom error name, message, and cause', () => {
+        // Arrange
+        const rootCause = new Error('gemm bias width mismatch');
+
+        // Act
+        const onnxError = new NetworkOnnxShapeValidationError(
+          'ONNX export produced inconsistent tensor dimensions.',
+          { cause: rootCause },
+        );
+
+        // Assert
+        expect({
+          cause: onnxError.cause,
+          message: onnxError.message,
+          name: onnxError.name,
+        }).toEqual({
+          cause: rootCause,
+          message: 'ONNX export produced inconsistent tensor dimensions.',
+          name: 'NetworkOnnxShapeValidationError',
         });
       });
     });

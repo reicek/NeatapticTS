@@ -7,7 +7,13 @@
  *
  * @returns Absolute URL string for `ascii-maze-evaluation.worker.bundle.js`.
  */
-export function resolveAsciiMazeEvaluationWorkerBundleUrl(): string {
+export function resolveAsciiMazeEvaluationWorkerBundleUrl(
+  explicitWorkerUrl?: string,
+): string {
+  if (explicitWorkerUrl) {
+    return explicitWorkerUrl;
+  }
+
   const scriptElements = document.querySelectorAll('script[src]');
   const currentBundleScript = Array.from(scriptElements)
     .map((scriptElement) => scriptElement as HTMLScriptElement)

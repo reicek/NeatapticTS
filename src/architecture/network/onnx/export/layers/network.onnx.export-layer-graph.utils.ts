@@ -29,8 +29,19 @@ import type {
 import type { NodeInternals } from '../../network.onnx.utils.types';
 import { NetworkOnnxRecurrentMixedActivationsUnsupportedError } from '../../network.onnx.errors';
 import {
+  appendConcatMergeMetadata,
+  appendResidualAddMetadata,
+  buildConcatMergeNodeName,
+  buildConcatMergeOutputName,
+  buildResidualBranchTensorName,
+  buildResidualMergeNodeName,
+  buildResidualMergeOutputName,
+  resolveOneHopResidualSourceLayerIndex,
+} from '../network.onnx.export-advanced-graph.utils';
+import {
   emitDenseLayer,
   emitPerNeuronLayer,
+  emitResidualAddLayer,
 } from './network.onnx.export-dense.utils';
 import { tryEmitConvLayer } from './network.onnx.export-conv.utils';
 import { emitRecurrentLayer } from './network.onnx.export-recurrent.utils';
@@ -118,6 +129,8 @@ export function emitLayerGraph(context: LayerBuildContext): string {
     traversalContext: LayerTraversalContext,
   ): string | undefined {
     return tryEmitConvLayer({
+      hasLaterHiddenLayers:
+        traversalContext.layerIndex < traversalContext.layers.length - 2,
       model: traversalContext.model,
       options: traversalContext.options,
       layerIndex: traversalContext.layerIndex,
@@ -218,6 +231,7 @@ export function emitLayerGraph(context: LayerBuildContext): string {
       previousOutputName: traversalContext.previousOutputName,
       previousLayerNodes: traversalContext.previousLayerNodes,
       currentLayerNodes: traversalContext.currentLayerNodes,
+      opset: traversalContext.options.opset ?? 18,
     });
   }
 
@@ -233,9 +247,169 @@ export function emitLayerGraph(context: LayerBuildContext): string {
     activationContext: LayerActivationContext,
   ): string {
     if (!activationContext.hasMixedActivations) {
+      const concatOutputName = tryEmitExplicitConcatMergeBranch(
+        traversalContext,
+      );
+      if (concatOutputName) {
+        return concatOutputName;
+      }
+
+      const residualOutputName = tryEmitResidualAddBranch(traversalContext);
+      if (residualOutputName) {
+        return residualOutputName;
+      }
       return emitDenseBranch(traversalContext);
     }
     return emitPerNeuronBranch(traversalContext);
+  }
+
+  /**
+   * Attempt the narrow one-hop residual-add subset before falling back.
+   *
+   * @param traversalContext Layer traversal context.
+   * @returns Residual-add output tensor name when emitted; otherwise null.
+   */
+  function tryEmitResidualAddBranch(
+    traversalContext: LayerTraversalContext,
+  ): string | undefined {
+    const residualSourceLayerIndex = resolveOneHopResidualSourceLayerIndex(
+      traversalContext.currentLayerNodes,
+      traversalContext.layers,
+      traversalContext.layerIndex,
+    );
+    if (residualSourceLayerIndex === null) {
+      return undefined;
+    }
+
+    const residualSourceOutputName =
+      traversalContext.layerOutputNamesByLayerIndex.get(
+        residualSourceLayerIndex,
+      );
+    if (!residualSourceOutputName) {
+      return undefined;
+    }
+
+    const branchTensorName = buildResidualBranchTensorName(
+      residualSourceLayerIndex,
+      traversalContext.layerIndex,
+    );
+    const mergeNodeName = buildResidualMergeNodeName(
+      traversalContext.layerIndex,
+    );
+    const mergeOutputName = buildResidualMergeOutputName(
+      traversalContext.layerIndex,
+    );
+    const residualOutputName = emitResidualAddLayer({
+      model: traversalContext.model,
+      layerIndex: traversalContext.layerIndex,
+      previousOutputName: traversalContext.previousOutputName,
+      residualSourceOutputName,
+      previousLayerNodes: traversalContext.previousLayerNodes,
+      residualSourceLayerNodes:
+        traversalContext.layers[residualSourceLayerIndex],
+      currentLayerNodes: traversalContext.currentLayerNodes,
+      branchTensorName,
+      mergeNodeName,
+      mergeOutputName,
+      options: traversalContext.options,
+    });
+
+    appendResidualAddMetadata(
+      traversalContext.model,
+      {
+        sourceLayerIndex: residualSourceLayerIndex,
+        targetLayerIndex: traversalContext.layerIndex,
+        branchTensorName,
+        mergeNodeName,
+        mergeOutputName,
+      },
+      traversalContext.options.includeMetadata ?? false,
+    );
+    return residualOutputName;
+  }
+
+  /**
+   * Attempt the narrow explicit concat subset before residual fallback.
+   *
+   * @param traversalContext Layer traversal context.
+   * @returns Concat-merge output tensor name when emitted; otherwise undefined.
+   */
+  function tryEmitExplicitConcatMergeBranch(
+    traversalContext: LayerTraversalContext,
+  ): string | undefined {
+    const concatMapping = traversalContext.options.concatMappings?.find(
+      (mapping) => mapping.targetLayerIndex === traversalContext.layerIndex,
+    );
+    if (!concatMapping) {
+      return undefined;
+    }
+
+    const inputOrder = concatMapping.inputOrder ?? 'previous_then_source';
+    if (
+      inputOrder !== 'previous_then_source' ||
+      concatMapping.sourceLayerIndex >= traversalContext.layerIndex - 1
+    ) {
+      return undefined;
+    }
+
+    const concatSourceLayerNodes =
+      traversalContext.layers[concatMapping.sourceLayerIndex];
+    const concatSourceOutputName =
+      traversalContext.layerOutputNamesByLayerIndex.get(
+        concatMapping.sourceLayerIndex,
+      );
+    if (!concatSourceLayerNodes || !concatSourceOutputName) {
+      return undefined;
+    }
+
+    const concatNodeName = buildConcatMergeNodeName(
+      concatMapping.sourceLayerIndex,
+      traversalContext.layerIndex,
+    );
+    const concatOutputName = buildConcatMergeOutputName(
+      concatMapping.sourceLayerIndex,
+      traversalContext.layerIndex,
+    );
+
+    traversalContext.model.graph.node.push({
+      op_type: 'Concat',
+      input: [traversalContext.previousOutputName, concatSourceOutputName],
+      output: [concatOutputName],
+      name: concatNodeName,
+      attributes: [
+        {
+          name: 'axis',
+          type: 'INT',
+          i: traversalContext.batchDimension ? 1 : 0,
+        },
+      ],
+    });
+
+    const concatBranchOutputName = emitDenseLayer({
+      model: traversalContext.model,
+      layerIndex: traversalContext.layerIndex,
+      previousOutputName: concatOutputName,
+      previousLayerNodes: [
+        ...traversalContext.previousLayerNodes,
+        ...concatSourceLayerNodes,
+      ],
+      currentLayerNodes: traversalContext.currentLayerNodes,
+      legacyNodeOrdering: traversalContext.legacyNodeOrdering,
+      options: traversalContext.options,
+    });
+
+    appendConcatMergeMetadata(
+      traversalContext.model,
+      {
+        sourceLayerIndex: concatMapping.sourceLayerIndex,
+        targetLayerIndex: traversalContext.layerIndex,
+        concatNodeName,
+        concatOutputName,
+        inputOrder,
+      },
+      traversalContext.options.includeMetadata ?? false,
+    );
+    return concatBranchOutputName;
   }
 
   /**

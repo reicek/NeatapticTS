@@ -1,6 +1,8 @@
 import type Network from '../../network/network';
 import Connection from '../../connection';
 import type NeatapticNode from '../../node';
+import * as methods from '../../../methods/methods';
+import type { OnnxAttribute } from './schema/network.onnx.schema.types';
 import type {
   ActivationFunction,
   NodeInternals,
@@ -28,11 +30,21 @@ const ACTIVATION_TOKEN_TANH = 'TANH';
 const ACTIVATION_TOKEN_LOGISTIC = 'LOGISTIC';
 const ACTIVATION_TOKEN_SIGMOID = 'SIGMOID';
 const ACTIVATION_TOKEN_RELU = 'RELU';
+const DEFAULT_ONNX_OPSET = 18;
+const GELU_MINIMUM_ONNX_OPSET = 20;
+const MISH_MINIMUM_ONNX_OPSET = 18;
+const SELU_ALPHA = 1.6732632423543772;
+const SELU_GAMMA = 1.0507009873554805;
 
 const ONNX_ACTIVATION_TANH: OnnxActivationOperation = 'Tanh';
 const ONNX_ACTIVATION_SIGMOID: OnnxActivationOperation = 'Sigmoid';
 const ONNX_ACTIVATION_RELU: OnnxActivationOperation = 'Relu';
 const ONNX_ACTIVATION_IDENTITY: OnnxActivationOperation = 'Identity';
+const ONNX_ACTIVATION_SOFTPLUS: OnnxActivationOperation = 'Softplus';
+const ONNX_ACTIVATION_SOFTSIGN: OnnxActivationOperation = 'Softsign';
+const ONNX_ACTIVATION_SELU: OnnxActivationOperation = 'Selu';
+const ONNX_ACTIVATION_MISH: OnnxActivationOperation = 'Mish';
+const ONNX_ACTIVATION_GELU: OnnxActivationOperation = 'Gelu';
 
 const FIRST_NON_INPUT_LAYER_INDEX = 1;
 
@@ -76,21 +88,39 @@ export function rebuildConnectionsLocal(networkLike: Network): void {
  */
 export function mapActivationToOnnx(
   squash: ActivationFunction,
+  opset: number = DEFAULT_ONNX_OPSET,
 ): OnnxActivationOperation {
-  // Step 1: Normalize runtime function names into a stable comparison token.
-  const normalizedActivationName = normalizeActivationName(squash);
-  // Step 2: Resolve ONNX activation op using token matching.
-  const resolvedActivationOperation = resolveOnnxActivationOperation(
-    normalizedActivationName,
-  );
+  return resolveOnnxActivationNodeConfig(squash, opset).operation;
+}
 
-  // Step 3: Warn when falling back to Identity for unsupported activations.
+/**
+ * Resolve the ONNX activation node payload for one runtime activation.
+ *
+ * @param squash Activation function reference.
+ * @param opset Target ONNX opset.
+ * @returns Activation operator plus any required ONNX attributes.
+ */
+export function resolveOnnxActivationNodeConfig(
+  squash: ActivationFunction,
+  opset: number = DEFAULT_ONNX_OPSET,
+): {
+  operation: OnnxActivationOperation;
+  attributes?: OnnxAttribute[];
+} {
+  // Step 1: Resolve the best exporter-owned activation mapping.
+  const activationResolution = resolveOnnxActivationOperation(squash, opset);
+
+  // Step 2: Warn only when the exporter had to fall back.
   warnWhenActivationFallbackIsUsed({
     squash,
-    resolvedActivationOperation,
+    didUseFallback: activationResolution.didUseFallback,
   });
 
-  return resolvedActivationOperation;
+  // Step 3: Return the caller-facing activation payload.
+  return {
+    operation: activationResolution.operation,
+    attributes: activationResolution.attributes,
+  };
 }
 
 /**
@@ -181,24 +211,79 @@ function normalizeActivationName(squash: ActivationFunction): string {
  * @returns ONNX activation operation.
  */
 function resolveOnnxActivationOperation(
-  normalizedActivationName: string,
-): OnnxActivationOperation {
+  squash: ActivationFunction,
+  opset: number,
+): {
+  operation: OnnxActivationOperation;
+  attributes?: OnnxAttribute[];
+  didUseFallback: boolean;
+} {
+  if (!squash) {
+    return { operation: ONNX_ACTIVATION_IDENTITY, didUseFallback: false };
+  }
+
+  if (squash === methods.Activation.identity) {
+    return { operation: ONNX_ACTIVATION_IDENTITY, didUseFallback: false };
+  }
+
+  if (squash === methods.Activation.softplus) {
+    return { operation: ONNX_ACTIVATION_SOFTPLUS, didUseFallback: false };
+  }
+
+  if (squash === methods.Activation.softsign) {
+    return { operation: ONNX_ACTIVATION_SOFTSIGN, didUseFallback: false };
+  }
+
+  if (squash === methods.Activation.selu) {
+    return {
+      operation: ONNX_ACTIVATION_SELU,
+      didUseFallback: false,
+      attributes: [
+        { name: 'alpha', type: 'FLOAT', f: SELU_ALPHA },
+        { name: 'gamma', type: 'FLOAT', f: SELU_GAMMA },
+      ],
+    };
+  }
+
+  if (squash === methods.Activation.mish) {
+    if (opset >= MISH_MINIMUM_ONNX_OPSET) {
+      return { operation: ONNX_ACTIVATION_MISH, didUseFallback: false };
+    }
+
+    return { operation: ONNX_ACTIVATION_IDENTITY, didUseFallback: true };
+  }
+
+  if (squash === methods.Activation.gelu) {
+    if (opset >= GELU_MINIMUM_ONNX_OPSET) {
+      return {
+        operation: ONNX_ACTIVATION_GELU,
+        didUseFallback: false,
+        attributes: [
+          { name: 'approximate', type: 'STRING', s: 'tanh' },
+        ],
+      };
+    }
+
+    return { operation: ONNX_ACTIVATION_IDENTITY, didUseFallback: true };
+  }
+
+  const normalizedActivationName = normalizeActivationName(squash);
   if (normalizedActivationName.includes(ACTIVATION_TOKEN_TANH)) {
-    return ONNX_ACTIVATION_TANH;
+    return { operation: ONNX_ACTIVATION_TANH, didUseFallback: false };
   }
 
   if (
     normalizedActivationName.includes(ACTIVATION_TOKEN_LOGISTIC) ||
     normalizedActivationName.includes(ACTIVATION_TOKEN_SIGMOID)
   ) {
-    return ONNX_ACTIVATION_SIGMOID;
+    return { operation: ONNX_ACTIVATION_SIGMOID, didUseFallback: false };
   }
 
   if (normalizedActivationName.includes(ACTIVATION_TOKEN_RELU)) {
-    return ONNX_ACTIVATION_RELU;
+    return { operation: ONNX_ACTIVATION_RELU, didUseFallback: false };
   }
 
-  return ONNX_ACTIVATION_IDENTITY;
+  return { operation: ONNX_ACTIVATION_IDENTITY, didUseFallback: true };
 }
 
 /**
@@ -209,13 +294,13 @@ function resolveOnnxActivationOperation(
  */
 function warnWhenActivationFallbackIsUsed(context: {
   squash: ActivationFunction;
-  resolvedActivationOperation: OnnxActivationOperation;
+  didUseFallback: boolean;
 }): void {
   if (!context.squash) {
     return;
   }
 
-  if (context.resolvedActivationOperation !== ONNX_ACTIVATION_IDENTITY) {
+  if (!context.didUseFallback) {
     return;
   }
 

@@ -56,6 +56,8 @@ export type {
   Pool2DMapping,
 } from './schema/network.onnx.schema.types';
 export type {
+  AttentionMapping,
+  ConcatMapping,
   ActivationSquashFunction,
   ConvKernelConsistencyContext,
   ConvLayerPairContext,
@@ -137,13 +139,22 @@ export type {
   WeightToleranceComparisonContext,
 } from './export/network.onnx.export.types';
 export type {
+  OnnxImportAttentionBlock,
+  OnnxImportAdvancedGraphCrossLayerConnection,
+  OnnxImportConcatMerge,
+  OnnxImportAdvancedGraphMetadata,
+  OnnxImportResidualAdd,
+  OnnxImportSharedInitializerAlias,
+  OnnxImportFlattenConsistencyAudit,
   NetworkWithOnnxImportPooling,
+  NetworkWithOnnxImportAdvancedGraph,
   OnnxImportArchitectureContext,
   OnnxImportArchitectureResult,
   OnnxImportDimensionRecord,
   OnnxImportHiddenLayerSpan,
   OnnxImportLayerConnectionContext,
   OnnxImportPoolingMetadata,
+  OnnxImportPoolingVirtualShape,
   OnnxImportRecurrentRestorationContext,
   OnnxImportSelfConnectionUpsertContext,
 } from './import/network.onnx.import-orchestrators.types';
@@ -272,7 +283,12 @@ export type OnnxActivationOperation =
   | 'Sigmoid'
   | 'Logistic'
   | 'Relu'
-  | 'Identity';
+  | 'Identity'
+  | 'Softplus'
+  | 'Softsign'
+  | 'Selu'
+  | 'Mish'
+  | 'Gelu';
 
 /** Layer-indexed activation operator lookup extracted from ONNX graph nodes. */
 export type OnnxActivationLayerOperations = Record<

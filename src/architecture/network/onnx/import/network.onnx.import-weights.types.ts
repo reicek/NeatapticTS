@@ -33,6 +33,7 @@ import type {
   OnnxMetadataProperty,
   OnnxModel,
   OnnxTensor,
+  Pool2DMapping,
 } from '../schema/network.onnx.schema.types';
 import type { OnnxConvKernelCoordinate } from '../network.onnx.utils.types';
 
@@ -131,6 +132,8 @@ export type OnnxImportConvLayerContext = {
   inputNodes: NeatapticNode[];
   layerExportIndex: number;
   convSpec: Conv2DMapping;
+  convSpecs: Conv2DMapping[];
+  poolingSpecs: Pool2DMapping[];
 };
 
 /** Build params for creating one Conv reconstruction layer context. */
@@ -156,6 +159,13 @@ export type OnnxImportConvNodeSlices = {
   previousLayerNodes: NeatapticNode[];
 };
 
+/** Source layout used when replaying Conv weights onto dense source nodes. */
+export type OnnxImportConvSourceLayout = {
+  channelStride: number;
+  sourceHeight: number;
+  sourceWidth: number;
+};
+
 /** Coordinate for one Conv output neuron traversal position. */
 export type OnnxImportConvOutputCoordinate = {
   outChannelIndex: number;
@@ -167,6 +177,7 @@ export type OnnxImportConvOutputCoordinate = {
 export type OnnxImportConvCoordinateAssignmentContext = {
   coordinate: OnnxImportConvOutputCoordinate;
   convSpec: Conv2DMapping;
+  sourceLayout: OnnxImportConvSourceLayout;
   tensorContext: OnnxImportConvTensorContext;
   kernelCoordinates: OnnxConvKernelCoordinate[];
   layerNodes: NeatapticNode[];
@@ -180,6 +191,7 @@ export type OnnxImportInboundConnectionMap = Map<NeatapticNode, Connection>;
 export type OnnxImportConvKernelAssignmentContext = {
   tensorContext: OnnxImportConvTensorContext;
   convSpec: Conv2DMapping;
+  sourceLayout: OnnxImportConvSourceLayout;
   coordinate: OnnxImportConvOutputCoordinate;
   inChannelIndex: number;
   kernelRowIndex: number;

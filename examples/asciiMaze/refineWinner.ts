@@ -1,4 +1,4 @@
-import { methods } from '../../src/neataptic';
+import * as methods from '../../src/methods/methods';
 import Network from '../../src/architecture/network';
 
 /**

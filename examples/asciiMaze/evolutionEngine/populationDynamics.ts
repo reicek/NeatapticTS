@@ -25,7 +25,7 @@
 
 import type Network from '../../../src/architecture/network';
 import type Neat from '../../../src/neat';
-import { methods } from '../../../src/neataptic';
+import * as methods from '../../../src/methods/methods';
 import type { EngineState } from './engineState';
 import { drawFastRandom, resolveRngParameters } from './rngAndTiming';
 import { applySimplifyPruningToPopulation } from './populationPruning';

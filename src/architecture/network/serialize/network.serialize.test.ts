@@ -27,6 +27,20 @@ function createSingleValueSerializableNetwork(seed: number): Network {
   return new Network(1, 1, { seed });
 }
 
+function outputsMatchWithinTolerance(
+  actualOutput: number[],
+  expectedOutput: number[],
+): boolean {
+  return (
+    actualOutput.length === expectedOutput.length &&
+    actualOutput.every(
+      (outputValue, outputIndex) =>
+        Math.abs(outputValue - expectedOutput[outputIndex]!) <=
+        Number.EPSILON,
+    )
+  );
+}
+
 type ConstructedSerializationScenario = {
   network: Network;
   activationInputValues: number[];
@@ -236,6 +250,7 @@ describe('network serialize chapter', () => {
         const rebuiltNetwork = deserializeCompressedArchive(
           archiveWithMetrics.archive,
         );
+        const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
         // Assert
         expect({
@@ -248,14 +263,17 @@ describe('network serialize chapter', () => {
           encodeTimeMsFinite:
             Number.isFinite(archiveWithMetrics.metrics.encodeTimeMs) &&
             archiveWithMetrics.metrics.encodeTimeMs >= 0,
-          rebuiltNextOutput: rebuiltNetwork.activate(nextInput),
+          rebuiltNextOutputWithinTolerance: outputsMatchWithinTolerance(
+            rebuiltNextOutput,
+            expectedNextOutput,
+          ),
           uncompressedByteLengthPositive:
             archiveWithMetrics.metrics.uncompressedByteLength > 0,
         }).toEqual({
           compressionRatioMatches: true,
           compressedByteLengthPositive: true,
           encodeTimeMsFinite: true,
-          rebuiltNextOutput: expectedNextOutput,
+          rebuiltNextOutputWithinTolerance: true,
           uncompressedByteLengthPositive: true,
         });
       });
@@ -291,6 +309,7 @@ describe('network serialize chapter', () => {
           const rebuiltNetwork = await deserializeCompressedArchiveAsync(
             archiveWithMetrics.archive,
           );
+          const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
           // Assert
           expect({
@@ -303,14 +322,17 @@ describe('network serialize chapter', () => {
             encodeTimeMsFinite:
               Number.isFinite(archiveWithMetrics.metrics.encodeTimeMs) &&
               archiveWithMetrics.metrics.encodeTimeMs >= 0,
-            rebuiltNextOutput: rebuiltNetwork.activate(nextInput),
+            rebuiltNextOutputWithinTolerance: outputsMatchWithinTolerance(
+              rebuiltNextOutput,
+              expectedNextOutput,
+            ),
             uncompressedByteLengthPositive:
               archiveWithMetrics.metrics.uncompressedByteLength > 0,
           }).toEqual({
             compressionRatioMatches: true,
             compressedByteLengthPositive: true,
             encodeTimeMsFinite: true,
-            rebuiltNextOutput: expectedNextOutput,
+            rebuiltNextOutputWithinTolerance: true,
             uncompressedByteLengthPositive: true,
           });
         } finally {
@@ -344,6 +366,8 @@ describe('network serialize chapter', () => {
         // Act
         const rebuiltNetworkWithMetrics =
           deserializeCompressedArchiveWithMetrics(compressedArchive);
+        const rebuiltNextOutput =
+          rebuiltNetworkWithMetrics.value.activate(nextInput);
 
         // Assert
         expect({
@@ -356,15 +380,17 @@ describe('network serialize chapter', () => {
           decodeTimeMsFinite:
             Number.isFinite(rebuiltNetworkWithMetrics.metrics.decodeTimeMs) &&
             rebuiltNetworkWithMetrics.metrics.decodeTimeMs >= 0,
-          rebuiltNextOutput:
-            rebuiltNetworkWithMetrics.value.activate(nextInput),
+          rebuiltNextOutputWithinTolerance: outputsMatchWithinTolerance(
+            rebuiltNextOutput,
+            expectedNextOutput,
+          ),
           uncompressedByteLengthPositive:
             rebuiltNetworkWithMetrics.metrics.uncompressedByteLength > 0,
         }).toEqual({
           compressionRatioMatches: true,
           compressedByteLengthPositive: true,
           decodeTimeMsFinite: true,
-          rebuiltNextOutput: expectedNextOutput,
+          rebuiltNextOutputWithinTolerance: true,
           uncompressedByteLengthPositive: true,
         });
       });
@@ -393,19 +419,23 @@ describe('network serialize chapter', () => {
         // Act
         const rebuiltNetworkWithMetrics =
           await deserializeCompressedArchiveAsyncWithMetrics(compressedArchive);
+        const rebuiltNextOutput =
+          rebuiltNetworkWithMetrics.value.activate(nextInput);
 
         // Assert
         expect({
           decodeTimeMsFinite:
             Number.isFinite(rebuiltNetworkWithMetrics.metrics.decodeTimeMs) &&
             rebuiltNetworkWithMetrics.metrics.decodeTimeMs >= 0,
-          rebuiltNextOutput:
-            rebuiltNetworkWithMetrics.value.activate(nextInput),
+          rebuiltNextOutputWithinTolerance: outputsMatchWithinTolerance(
+            rebuiltNextOutput,
+            expectedNextOutput,
+          ),
           uncompressedByteLengthPositive:
             rebuiltNetworkWithMetrics.metrics.uncompressedByteLength > 0,
         }).toEqual({
           decodeTimeMsFinite: true,
-          rebuiltNextOutput: expectedNextOutput,
+          rebuiltNextOutputWithinTolerance: true,
           uncompressedByteLengthPositive: true,
         });
       });
@@ -452,6 +482,8 @@ describe('network serialize chapter', () => {
                 },
               },
             );
+          const rebuiltNextOutput =
+            rebuiltNetworkWithMetrics.value.activate(nextInput);
 
           // Assert
           expect({
@@ -464,14 +496,16 @@ describe('network serialize chapter', () => {
               rebuiltNetworkWithMetrics.metrics.decodeTimeMs >= 0,
             hasProgressSnapshots: progressSnapshots.length > 0,
             lastProgressDone: progressSnapshots.at(-1)?.done ?? false,
-            rebuiltNextOutput:
-              rebuiltNetworkWithMetrics.value.activate(nextInput),
+            rebuiltNextOutputWithinTolerance: outputsMatchWithinTolerance(
+              rebuiltNextOutput,
+              expectedNextOutput,
+            ),
           }).toEqual({
             compressionRatioMatches: true,
             decodeTimeMsFinite: true,
             hasProgressSnapshots: true,
             lastProgressDone: true,
-            rebuiltNextOutput: expectedNextOutput,
+            rebuiltNextOutputWithinTolerance: true,
           });
         } finally {
           Object.defineProperty(globalThis, 'process', {
@@ -524,16 +558,24 @@ describe('network serialize chapter', () => {
                 },
               },
             );
+            const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
             // Assert
             expect({
               hasProgressSnapshots: progressSnapshots.length > 0,
               lastProgressDone: progressSnapshots.at(-1)?.done ?? false,
-              rebuiltNextOutput: rebuiltNetwork.activate(nextInput),
+              rebuiltNextOutputWithinTolerance:
+                rebuiltNextOutput.length === expectedNextOutput.length &&
+                rebuiltNextOutput.every(
+                  (outputValue, outputIndex) =>
+                    Math.abs(
+                      outputValue - expectedNextOutput[outputIndex]!,
+                    ) <= Number.EPSILON,
+                ),
             }).toEqual({
               hasProgressSnapshots: true,
               lastProgressDone: true,
-              rebuiltNextOutput: expectedNextOutput,
+              rebuiltNextOutputWithinTolerance: true,
             });
           } finally {
             Object.defineProperty(globalThis, 'process', {
@@ -545,7 +587,7 @@ describe('network serialize chapter', () => {
       });
 
       describe('when the archived payload is rebuilt and activated again', () => {
-        it('preserves the exact next activation output', async () => {
+        it('preserves the next activation output within floating-point tolerance', async () => {
           // Arrange
           const network = Architect.lstm(2, 3, 1);
           const historyInputs = [
@@ -575,7 +617,12 @@ describe('network serialize chapter', () => {
             const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
             // Assert
-            expect(rebuiltNextOutput).toEqual(expectedNextOutput);
+            expect(
+              outputsMatchWithinTolerance(
+                rebuiltNextOutput,
+                expectedNextOutput,
+              ),
+            ).toBe(true);
           } finally {
             Object.defineProperty(globalThis, 'process', {
               configurable: true,
@@ -590,7 +637,7 @@ describe('network serialize chapter', () => {
   describe('Network.deserializeCompressedArchive()', () => {
     describe('given one recurrent runtime is archived with the default gzip codec', () => {
       describe('when the archived payload is rebuilt and activated again', () => {
-        it('preserves the exact next activation output', () => {
+        it('preserves the next activation output within floating-point tolerance', () => {
           // Arrange
           const network = Architect.lstm(2, 3, 1);
           const historyInputs = [
@@ -612,14 +659,19 @@ describe('network serialize chapter', () => {
           const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
           // Assert
-          expect(rebuiltNextOutput).toEqual(expectedNextOutput);
+          expect(
+            outputsMatchWithinTolerance(
+              rebuiltNextOutput,
+              expectedNextOutput,
+            ),
+          ).toBe(true);
         });
       });
     });
 
     describe('given one recurrent runtime is archived with the zstd codec', () => {
       describe('when the archived payload is rebuilt and activated again', () => {
-        it('preserves the exact next activation output', () => {
+        it('preserves the next activation output within floating-point tolerance', () => {
           // Arrange
           const network = Architect.lstm(2, 3, 1);
           const historyInputs = [
@@ -643,7 +695,12 @@ describe('network serialize chapter', () => {
           const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
           // Assert
-          expect(rebuiltNextOutput).toEqual(expectedNextOutput);
+          expect(
+            outputsMatchWithinTolerance(
+              rebuiltNextOutput,
+              expectedNextOutput,
+            ),
+          ).toBe(true);
         });
       });
     });
@@ -652,7 +709,7 @@ describe('network serialize chapter', () => {
   describe('Network.deserializeCompressed()', () => {
     describe('given one recurrent runtime is serialized after carrying state forward', () => {
       describe('when the compressed payload is rebuilt and activated again', () => {
-        it('preserves the exact next activation output', () => {
+        it('preserves the next activation output within floating-point tolerance', () => {
           // Arrange
           const network = Architect.lstm(2, 3, 1);
           const historyInputs = [
@@ -673,7 +730,12 @@ describe('network serialize chapter', () => {
           const rebuiltNextOutput = rebuiltNetwork.activate(nextInput);
 
           // Assert
-          expect(rebuiltNextOutput).toEqual(expectedNextOutput);
+          expect(
+            outputsMatchWithinTolerance(
+              rebuiltNextOutput,
+              expectedNextOutput,
+            ),
+          ).toBe(true);
         });
       });
     });

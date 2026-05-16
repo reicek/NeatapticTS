@@ -45,6 +45,8 @@ export interface BrowserEntryStartOptions {
   signal?: AbortSignal;
   /** Architecture profile to use for this run. Defaults to the maze default when omitted. */
   architectureProfileId?: ExampleArchitectureProfileId;
+  /** Optional explicit evaluation worker URL for embedded or renamed bundle hosts. */
+  workerUrl?: string;
 }
 
 /** Stable callable shape used by globals compatibility wiring. */
@@ -130,4 +132,6 @@ export interface BrowserEntryCurriculumContext {
   hostAdapter: EvolutionHostAdapter;
   /** Shared architecture profile id used to seed every phase of this curriculum run. */
   architectureProfileId?: ExampleArchitectureProfileId;
+  /** Optional explicit evaluation worker URL supplied by embedding hosts. */
+  workerUrl?: string;
 }

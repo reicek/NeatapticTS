@@ -9,26 +9,25 @@
   <style>
     html,
     body {
-      height: 100%;
+      min-height: 100%;
       margin: 0;
-      overflow: hidden;
+      overflow: auto;
     }
 
     body.demo-page {
       min-height: 100dvh;
       box-sizing: border-box;
       padding: 8px;
-      overflow: hidden;
+      overflow: auto;
     }
 
     .ascii-maze-main {
       width: 100%;
-      height: 100%;
-      min-height: 0;
+      min-height: calc(100dvh - 16px);
       display: flex;
       flex-direction: column;
       gap: 6px;
-      overflow: hidden;
+      overflow: visible;
     }
 
     #ascii-maze-status {
@@ -48,7 +47,7 @@
     }
 
     #ascii-maze-output {
-      flex: 1 1 auto;
+      flex: 1 0 auto;
       min-height: 0;
       width: 100%;
       display: flex;
@@ -61,7 +60,7 @@
       box-shadow:
         inset 0 0 0 1px rgba(30, 167, 255, 0.2),
         inset 0 0 24px rgba(15, 181, 255, 0.08);
-      overflow: hidden;
+      overflow: auto;
     }
 
     #ascii-maze-title-frame {
@@ -94,7 +93,7 @@
       display: flex;
       align-items: stretch;
       gap: 8px;
-      overflow: hidden;
+      overflow: auto;
     }
 
     .ascii-maze-column {
@@ -200,8 +199,8 @@
 
     #ascii-maze-network-host {
       display: flex;
-      justify-content: center;
-      align-items: stretch;
+      justify-content: flex-start;
+      align-items: flex-start;
       width: 100%;
       height: 100%;
       padding: 8px;
@@ -211,9 +210,9 @@
 
     #ascii-maze-network-canvas {
       flex: 0 0 auto;
-      width: 100%;
+      width: 700px;
       height: auto;
-      max-width: 100%;
+      max-width: none;
       display: block;
       background: #050a12;
       border: 1px solid #0e3854;
@@ -287,19 +286,40 @@
 
     @media (max-width: 1180px) {
       #ascii-maze-workspace {
+        flex: 0 0 auto;
         flex-direction: column;
+        overflow: visible;
       }
 
       .ascii-maze-column,
       #ascii-maze-left-column,
       #ascii-maze-right-column {
-        flex: 1 1 0;
+        flex: 0 0 auto;
         width: 100%;
         max-width: none;
       }
 
+      #ascii-maze-network-pane {
+        min-height: 360px;
+      }
+
       #ascii-maze-archive-pane {
         flex-basis: 240px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body.demo-page {
+        padding: 6px;
+      }
+
+      #ascii-maze-output {
+        padding: 6px;
+      }
+
+      #ascii-maze-title-bar {
+        width: 100%;
+        font-size: 10px;
       }
     }
   </style>
@@ -349,11 +369,16 @@
   <script>
     (function loadAsciiMazeBundle() {
       const statusElement = document.getElementById('ascii-maze-status');
-      const bundleVersion = '20260511-1';
       const isRepositoryExamplePath = /\/examples\//.test(window.location.pathname);
       const bundleBaseSrc = isRepositoryExamplePath
         ? '../../docs/assets/ascii-maze.bundle.js'
         : '../../assets/ascii-maze.bundle.js';
+      const lastModifiedTime = Date.parse(document.lastModified);
+      const bundleVersion = isRepositoryExamplePath
+        ? String(Date.now())
+        : Number.isFinite(lastModifiedTime)
+          ? String(lastModifiedTime)
+          : 'published';
       const bundleSrc = `${bundleBaseSrc}?v=${bundleVersion}`;
 
       const scriptElement = document.createElement('script');

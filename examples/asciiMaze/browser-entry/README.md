@@ -363,6 +363,30 @@ const {
 } = BROWSER_ENTRY_CONSTANTS;
 ```
 
+## browser-entry/browser-entry.multi.stub.ts
+
+Browser-host bundle stub for the legacy Node multithreading facade.
+
+ASCII Maze uses the worker-payload evaluator for browser scoring instead of
+`Network.evolve(...)`'s older `child_process`-backed TestWorker path. The
+host bundle aliases the legacy facade to this empty shelf so esbuild can keep
+Node-only worker code out of the browser asset while preserving the shared
+source API for Node builds.
+
+### BROWSER_ENTRY_MULTI_STUB
+
+Empty browser-safe replacement for `src/multithreading/multi`.
+
+### BrowserEntryMultiStub
+
+Browser-host bundle stub for the legacy Node multithreading facade.
+
+ASCII Maze uses the worker-payload evaluator for browser scoring instead of
+`Network.evolve(...)`'s older `child_process`-backed TestWorker path. The
+host bundle aliases the legacy facade to this empty shelf so esbuild can keep
+Node-only worker code out of the browser asset while preserving the shared
+source API for Node builds.
+
 ## browser-entry/browser-entry.host.services.ts
 
 Browser host-service boundary for the ASCII Maze browser entry.
@@ -697,7 +721,9 @@ bundle keeps the example portable across docs hosting and local static runs.
 ### resolveAsciiMazeEvaluationWorkerBundleUrl
 
 ```ts
-resolveAsciiMazeEvaluationWorkerBundleUrl(): string
+resolveAsciiMazeEvaluationWorkerBundleUrl(
+  explicitWorkerUrl: string | undefined,
+): string
 ```
 
 Resolve the ASCII Maze evaluation worker bundle URL next to the browser bundle.

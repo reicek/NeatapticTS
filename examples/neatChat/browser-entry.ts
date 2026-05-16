@@ -1,4 +1,5 @@
 import {
+  createNeatChatAbComparison,
   createNeatChatExampleContract,
   extractNeatChatConversationLines,
   exportNeatChatSession,
@@ -10,11 +11,11 @@ import {
   updateNeatChatSessionContextWindowTokenCount,
   runNeatChatExchange,
   estimateNeatChatRuntime,
+  type NeatChatAbComparisonResult,
   type NeatChatExampleContract,
   type NeatChatPretrainingPreview,
   type NeatChatRuntimeEstimate,
   type NeatChatSession,
-  type NeatChatSessionSnapshot,
   splitNeatChatSeedAndValidationLines,
 } from './index';
 import { DEFAULT_NEATCHAT_PRETRAINED_SESSION_SNAPSHOT } from './default-pretrained-session-snapshot';
@@ -29,6 +30,7 @@ const CONTEXT_WINDOW_EXPLANATION =
   'Controls how many tokens from your message the model processes. Larger windows let the model see more of your input, but may slow inference slightly.';
 const DEFAULT_BROWSER_WARM_START_LINE_COUNT = SAMPLE_PRETRAIN_CHUNK_SIZE;
 const DEFAULT_SNAPSHOT_FILENAME = 'neatchat-session.snapshot.json';
+const NEATCHAT_SPECIAL_TOKEN_COUNT = 4;
 
 declare global {
   interface Window {
@@ -42,7 +44,6 @@ declare global {
 /** Module-level live-chat session — rebuilt when the user updates the preview. */
 let currentSession: NeatChatSession | null = null;
 let sampleConversationCursor = 0;
-let activePretrainedSnapshotRetainedTermCount = 0;
 
 /**
  * Starts the browser-hosted NEATchat contract preview.
@@ -69,22 +70,22 @@ export async function start(
   }
 }
 
-/** Default context window shown in the UI dropdown. */
-const DEFAULT_UI_CONTEXT_WINDOW_TOKEN_COUNT = 300;
-
 function renderContractPreview(
   hostElement: HTMLElement,
   exampleContract: NeatChatExampleContract,
   topWordLimit = exampleContract.pretraining.defaultTopWordLimit,
-  contextWindowTokenCount = DEFAULT_UI_CONTEXT_WINDOW_TOKEN_COUNT,
+  contextWindowTokenCount?: number,
   corpusText = '',
 ): void {
   sampleConversationCursor = 0;
-  activePretrainedSnapshotRetainedTermCount = 0;
+
+  const resolvedContextWindowTokenCount =
+    contextWindowTokenCount ??
+    exampleContract.pretraining.defaultContextWindowTokenCount;
 
   const runtimeEstimate = estimateNeatChatRuntime({
     topWordLimit,
-    contextWindowTokenCount,
+    contextWindowTokenCount: resolvedContextWindowTokenCount,
   });
   const pretrainingPreview = createNeatChatPretrainingPreview({
     corpusText,
@@ -127,10 +128,6 @@ function renderContractPreview(
         DEFAULT_NEATCHAT_PRETRAINED_SESSION_SNAPSHOT,
       );
       usedShippedBaseSnapshot = true;
-      activePretrainedSnapshotRetainedTermCount =
-        resolveSnapshotRetainedTermCount(
-          DEFAULT_NEATCHAT_PRETRAINED_SESSION_SNAPSHOT,
-        );
     } catch {
       currentSession = createNeatChatSession({
         corpusRetainedTerms: pretrainingPreview.retainedTerms,
@@ -147,6 +144,7 @@ function renderContractPreview(
       contextWindowTokenCount: runtimeEstimate.contextWindowTokenCount,
     });
   }
+  synchronizeSessionSurfaceState(hostElement, currentSession);
   updateSessionStatsDisplay(hostElement, currentSession);
 
   if (
@@ -160,7 +158,7 @@ function renderContractPreview(
       );
       updateSessionSnapshotStatus(
         hostElement,
-        'Shipped pretrained basepoint active. Export the session after extra training if it improves.',
+        'Shipped pretrained basepoint active. Live chat now uses the bundled snapshot; the corpus preview report only changes when you paste or sample-train lines.',
       );
     } else {
       appendSystemMessageToHistory(
@@ -169,7 +167,7 @@ function renderContractPreview(
       );
       updateSessionSnapshotStatus(
         hostElement,
-        'Bundled warm start active. Export the session after extra training if it improves.',
+        'Bundled warm start active. Live chat is using the rebuilt sample session; export it if the updated checkpoint performs better.',
       );
     }
   }
@@ -178,6 +176,9 @@ function renderContractPreview(
     '[data-neat-chat-rerender]',
   );
   rerunButton?.addEventListener('click', () => {
+    const topWordLimitField = hostElement.querySelector<HTMLInputElement>(
+      '[data-neat-chat-top-word-limit]',
+    );
     const contextWindowField = hostElement.querySelector<HTMLSelectElement>(
       '[data-neat-chat-context-window-token-count]',
     );
@@ -188,7 +189,7 @@ function renderContractPreview(
     renderContractPreview(
       hostElement,
       exampleContract,
-      runtimeEstimate.topWordLimit,
+      resolveTopWordLimit(topWordLimitField, exampleContract),
       resolveContextWindowTokenCount(contextWindowField, exampleContract),
       corpusField?.value ?? '',
     );
@@ -355,11 +356,7 @@ function renderContractPreview(
       const contextWindowField = hostElement.querySelector<HTMLSelectElement>(
         '[data-neat-chat-context-window-token-count]',
       );
-      if (contextWindowField) {
-        contextWindowField.value = String(
-          currentSession.contextWindowTokenCount,
-        );
-      }
+      synchronizeSessionSurfaceState(hostElement, currentSession);
 
       clearChatHistory(hostElement);
       appendSystemMessageToHistory(
@@ -369,7 +366,7 @@ function renderContractPreview(
       updateSessionStatsDisplay(hostElement, currentSession);
       updateSessionSnapshotStatus(
         hostElement,
-        'Imported a saved session snapshot.',
+        'Imported a saved session snapshot. Live chat now uses the imported weights and retained vocabulary.',
       );
     } catch (error) {
       updateSessionSnapshotStatus(
@@ -380,6 +377,41 @@ function renderContractPreview(
       importSessionInput.value = '';
     }
   });
+
+  const runAbButton = hostElement.querySelector<HTMLButtonElement>(
+    '[data-neat-chat-run-ab]',
+  );
+  runAbButton?.addEventListener('click', () => {
+    if (!currentSession) {
+      return;
+    }
+
+    const abPromptField = hostElement.querySelector<HTMLInputElement>(
+      '[data-neat-chat-ab-prompt]',
+    );
+    const comparisonPrompt = abPromptField?.value.trim() || 'hello there';
+    const comparisonConversationLines =
+      activeCorpusLines.length > 0 ? activeCorpusLines : sampleConversationLines;
+    const comparisonLineSplit = splitNeatChatSeedAndValidationLines(
+      comparisonConversationLines,
+    );
+    const comparisonRetainedTerms = resolveSessionRetainedTerms(
+      currentSession,
+      pretrainingPreview.retainedTerms,
+    );
+    const comparisonResult = createNeatChatAbComparison(comparisonPrompt, {
+      corpusRetainedTerms: comparisonRetainedTerms,
+      seedConversationLines: comparisonLineSplit.seedConversationLines,
+      validationConversationLines:
+        comparisonLineSplit.validationConversationLines,
+      liveChatVocabLimit: Math.max(
+        1,
+        currentSession.vocabulary.size - NEATCHAT_SPECIAL_TOKEN_COUNT,
+      ),
+    });
+
+    updateAbComparisonResults(hostElement, comparisonResult);
+  });
 }
 
 function buildNeatChatMarkup(
@@ -389,6 +421,13 @@ function buildNeatChatMarkup(
   pretrainingPreview: NeatChatPretrainingPreview,
 ): string {
   const selectedContextWindow = runtimeEstimate.contextWindowTokenCount;
+  const previewVocabulary = resolvePreviewVocabularyText(
+    pretrainingPreview,
+    exampleContract.pretraining.unknownToken,
+  );
+  const pretrainingStatus = pretrainingPreview.hasCorpus
+    ? 'preseeded preview ready'
+    : 'paste corpus text to prepare a preseeded preview';
 
   return `<section class="starter-demo-panel">
 <p class="starter-demo-label" data-neat-chat-session-stats>Loading session…</p>
@@ -409,9 +448,14 @@ function buildNeatChatMarkup(
   <div class="starter-demo-header">
     <div>
       <h2>Training</h2>
+      <p>Adjust the retained vocabulary cap, inspect the corpus report, then rebuild the live session from either pasted lines or the shipped warm start.</p>
     </div>
   </div>
   <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+    <label for="neat-chat-top-word-limit">
+      Vocabulary cap:
+      <input id="neat-chat-top-word-limit" data-neat-chat-top-word-limit type="number" min="1" step="1" value="${runtimeEstimate.topWordLimit}" style="width:6.5rem;margin-left:0.25rem;" />
+    </label>
     <label for="neat-chat-context-window-token-count">
       Context window:
       <select id="neat-chat-context-window-token-count" data-neat-chat-context-window-token-count style="margin-left:0.25rem;" data-tooltip-title="Context Window Size" title="${CONTEXT_WINDOW_EXPLANATION}">
@@ -430,9 +474,35 @@ function buildNeatChatMarkup(
     <button type="button" class="starter-demo-button" data-neat-chat-export-session>Export Session</button>
     <button type="button" class="starter-demo-button" data-neat-chat-import-session-button>Import Session</button>
     <input type="file" accept="application/json,.json" data-neat-chat-import-session-input style="display:none;" />
-    <span class="starter-demo-label">Retained terms: <strong data-neat-chat-corpus-retained-term-count>${pretrainingPreview.corpusReport.retainedTermCount}</strong> | Coverage: <strong data-neat-chat-corpus-coverage-percent>${pretrainingPreview.corpusReport.retainedTokenCoveragePercent}%</strong> | Vocab cap: ${runtimeEstimate.topWordLimit} (${exampleContract.pretraining.unknownToken} for unknown words)</span>
     <span class="starter-demo-label" data-neat-chat-session-snapshot-status>Session snapshots let you keep the best talking checkpoint.</span>
   </div>
+  <p class="starter-demo-label">The corpus preview report explains the text you are about to train on. The live session stats above describe the checkpoint the chat box is currently using.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.5rem;margin-top:1rem;">
+    <span class="starter-demo-label">Characters: <strong data-neat-chat-corpus-character-count>${pretrainingPreview.corpusReport.characterCount}</strong></span>
+    <span class="starter-demo-label">Tokens: <strong data-neat-chat-corpus-token-count>${pretrainingPreview.corpusReport.tokenCount}</strong></span>
+    <span class="starter-demo-label">Unique terms: <strong data-neat-chat-corpus-unique-term-count>${pretrainingPreview.corpusReport.uniqueTermCount}</strong></span>
+    <span class="starter-demo-label">Retained terms: <strong data-neat-chat-corpus-retained-term-count>${pretrainingPreview.corpusReport.retainedTermCount}</strong></span>
+    <span class="starter-demo-label">Coverage: <strong data-neat-chat-corpus-coverage-percent>${pretrainingPreview.corpusReport.retainedTokenCoveragePercent}%</strong></span>
+    <span class="starter-demo-label">Chunks: <strong data-neat-chat-corpus-chunk-count>${pretrainingPreview.processedChunkCount}</strong></span>
+  </div>
+  <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-top:0.75rem;">
+    <span class="starter-demo-label">Status: <strong data-neat-chat-pretraining-status>${pretrainingStatus}</strong></span>
+    <span class="starter-demo-label">Preview vocabulary: <strong data-neat-chat-pretraining-preview-vocabulary>${escapeHtml(previewVocabulary)}</strong></span>
+    <span class="starter-demo-label">Unknown-token fallback: ${exampleContract.pretraining.unknownToken}</span>
+  </div>
+</article>
+<article class="starter-demo-surface">
+  <div class="starter-demo-header">
+    <div>
+      <h2>A/B Evaluation</h2>
+      <p>Run one prompt through blank-start and preseeded variants so the lightweight evaluation loop is visible in the flagship page, not only in tests.</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem;">
+    <input type="text" data-neat-chat-ab-prompt value="hello there" placeholder="Prompt for the A/B check" style="flex:1;min-width:220px;" autocomplete="off" />
+    <button type="button" class="starter-demo-button" data-neat-chat-run-ab>Run A/B Check</button>
+  </div>
+  <div class="starter-demo-label" data-neat-chat-ab-results>Run a blank-start versus preseeded comparison to inspect held-out next-token accuracy, repetition rate, and response-length stability.</div>
 </article>
 </section>`;
 }
@@ -443,6 +513,15 @@ function buildLoadingMarkup(): string {
 
 function buildErrorMarkup(errorMessage: string): string {
   return `<section class="starter-demo-surface"><h2>Preview failed</h2><p class="starter-demo-error">${escapeHtml(errorMessage)}</p><button type="button" class="starter-demo-button" data-neat-chat-rerender>Try Again</button></section>`;
+}
+
+function resolvePreviewVocabularyText(
+  pretrainingPreview: NeatChatPretrainingPreview,
+  unknownToken: string,
+): string {
+  return pretrainingPreview.previewTerms.length > 0
+    ? pretrainingPreview.previewTerms.join(', ')
+    : unknownToken;
 }
 
 /**
@@ -517,8 +596,10 @@ function updateSessionStatsDisplay(
   const tokenPairCount = session.learnedTokenPairCount;
   const seededTokenPairCount = session.seededTokenPairCount;
   const contextWindowTokenCount = session.contextWindowTokenCount;
-  const pretrainedSnapshotRetainedTermCount =
-    activePretrainedSnapshotRetainedTermCount;
+  const retainedTermCount = Math.max(
+    0,
+    session.vocabulary.size - NEATCHAT_SPECIAL_TOKEN_COUNT,
+  );
   const replayBufferExchangeCount = session.replayBufferExchangeCount ?? 0;
 
   const cellStyle =
@@ -539,29 +620,19 @@ function updateSessionStatsDisplay(
       <th style="${headStyle}">Seed Token Pairs</th>
       <th style="${headStyle}">Exchanges</th>
       <th style="${headStyle}">Replay Buffer</th>
-      <th style="${headStyle}">Pretrained Terms</th>
+      <th style="${headStyle}">Live Retained Terms</th>
       <th style="${lastHeadStyle}">Token Pairs Learned</th>
     </tr></thead>
     <tbody><tr style="${rowStyle}">
       <td style="${cellStyle}">${vocabTermCount} terms</td>
-      <td style="${cellStyle}">${contextWindowTokenCount} tokens</td>
+      <td style="${cellStyle}" data-neat-chat-stats-context-window>${contextWindowTokenCount} tokens</td>
       <td style="${cellStyle}">${seededTokenPairCount}</td>
       <td style="${cellStyle}">${exchangeCount}</td>
       <td style="${cellStyle}">${replayBufferExchangeCount}</td>
-      <td style="${cellStyle}">${pretrainedSnapshotRetainedTermCount}</td>
+      <td style="${cellStyle}" data-neat-chat-stats-retained-terms>${retainedTermCount}</td>
       <td style="${lastCellStyle}">${tokenPairCount}</td>
     </tr></tbody>
   </table>`;
-}
-
-function resolveSnapshotRetainedTermCount(
-  snapshot: NeatChatSessionSnapshot,
-): number {
-  if (!Array.isArray(snapshot.retainedTerms)) {
-    return 0;
-  }
-
-  return snapshot.retainedTerms.length;
 }
 
 function updateSamplePretrainProgressDisplay(
@@ -644,12 +715,10 @@ function updateOptionalPretrainingSummaryDisplay(
       : 'paste corpus text to prepare a preseeded preview';
   }
   if (previewVocabularyEl) {
-    const resolvedPreviewVocabulary =
-      pretrainingPreview.previewTerms.length > 0
-        ? pretrainingPreview.previewTerms.join(', ')
-        : unknownToken;
-
-    previewVocabularyEl.textContent = resolvedPreviewVocabulary;
+    previewVocabularyEl.textContent = resolvePreviewVocabularyText(
+      pretrainingPreview,
+      unknownToken,
+    );
   }
 
   // Keep the top-word limit field synchronized in case users inspect after sample clicks.
@@ -672,6 +741,33 @@ function updateSessionSnapshotStatus(
   if (!statusEl) return;
 
   statusEl.textContent = statusText;
+}
+
+function updateAbComparisonResults(
+  hostElement: HTMLElement,
+  comparisonResult: NeatChatAbComparisonResult,
+): void {
+  const abResultsEl = hostElement.querySelector<HTMLElement>(
+    '[data-neat-chat-ab-results]',
+  );
+
+  if (!abResultsEl) {
+    return;
+  }
+
+  abResultsEl.innerHTML = comparisonResult.variants
+    .map((variantResult) => {
+      const variantLabel =
+        variantResult.variant === 'blank-start'
+          ? 'Blank-start'
+          : 'Preseeded';
+
+      return `<div style="margin-bottom:0.75rem;">
+        <p><strong>${variantLabel}</strong>: ${escapeHtml(variantResult.response)}</p>
+        <p class="starter-demo-label">Held-out next-token accuracy: ${variantResult.metrics.heldOutNextTokenAccuracy}% | Repetition rate: ${variantResult.metrics.repetitionRate} | Response-length stability: ${variantResult.metrics.responseLengthStability}</p>
+      </div>`;
+    })
+    .join('');
 }
 
 function clearChatHistory(hostElement: HTMLElement): void {
@@ -707,6 +803,82 @@ function resolveContextWindowTokenCount(
   }
 
   return rawValue;
+}
+
+function resolveTopWordLimit(
+  topWordLimitField: HTMLInputElement | null,
+  exampleContract: NeatChatExampleContract,
+): number {
+  const rawValue = Number(topWordLimitField?.value ?? Number.NaN);
+
+  if (!Number.isInteger(rawValue) || rawValue <= 0) {
+    return exampleContract.pretraining.defaultTopWordLimit;
+  }
+
+  return rawValue;
+}
+
+function resolveSessionRetainedTerms(
+  session: NeatChatSession,
+  fallbackRetainedTerms: readonly string[],
+): readonly string[] {
+  const sessionVocabularyTerms = session.vocabulary as {
+    indexToTerm?: readonly string[];
+  };
+
+  if (Array.isArray(sessionVocabularyTerms.indexToTerm)) {
+    return sessionVocabularyTerms.indexToTerm.slice(NEATCHAT_SPECIAL_TOKEN_COUNT);
+  }
+
+  return fallbackRetainedTerms;
+}
+
+function synchronizeSessionSurfaceState(
+  hostElement: HTMLElement,
+  session: NeatChatSession,
+): void {
+  const contextWindowField = hostElement.querySelector<HTMLSelectElement>(
+    '[data-neat-chat-context-window-token-count]',
+  );
+
+  if (!contextWindowField) {
+    return;
+  }
+
+  ensureContextWindowOptionExists(
+    contextWindowField,
+    session.contextWindowTokenCount,
+  );
+  contextWindowField.value = String(session.contextWindowTokenCount);
+}
+
+function ensureContextWindowOptionExists(
+  contextWindowField: HTMLSelectElement,
+  contextWindowTokenCount: number,
+): void {
+  const optionValue = String(contextWindowTokenCount);
+
+  if (
+    Array.from(contextWindowField.options).some(
+      (contextWindowOption) => contextWindowOption.value === optionValue,
+    )
+  ) {
+    return;
+  }
+
+  const insertedOption = new Option(
+    `${contextWindowTokenCount} tokens`,
+    optionValue,
+  );
+  const sortedWindowSizes = [...CONTEXT_WINDOW_OPTIONS, contextWindowTokenCount]
+    .filter(
+      (windowSize, windowIndex, windowSizes) =>
+        windowSizes.indexOf(windowSize) === windowIndex,
+    )
+    .toSorted((leftWindowSize, rightWindowSize) => leftWindowSize - rightWindowSize);
+  const insertionIndex = sortedWindowSizes.indexOf(contextWindowTokenCount);
+
+  contextWindowField.add(insertedOption, insertionIndex);
 }
 
 function resolveHostElement(container: BrowserHostContainer): HTMLElement {

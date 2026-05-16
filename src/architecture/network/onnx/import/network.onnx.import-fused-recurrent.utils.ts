@@ -20,6 +20,7 @@ import type {
   NodeInternals,
   OnnxLayerFactory,
 } from '../network.onnx.utils.types';
+import { readOnnxTensorFloatData } from '../schema/network.onnx.schema.tensor-data.utils';
 
 const FUSED_KIND_LSTM = 'LSTM';
 const FUSED_KIND_GRU = 'GRU';
@@ -259,9 +260,9 @@ export function reconstructFusedRecurrentLayers(
     }
 
     return {
-      inputWeights: inputWeightTensor.float_data,
-      recurrentWeights: recurrentWeightTensor.float_data,
-      biases: biasTensor.float_data,
+      inputWeights: readOnnxTensorFloatData(inputWeightTensor),
+      recurrentWeights: readOnnxTensorFloatData(recurrentWeightTensor),
+      biases: readOnnxTensorFloatData(biasTensor),
       rows: inputWeightTensor.dims[INPUT_ROW_INDEX],
       previousLayerWidth: inputWeightTensor.dims[INPUT_COLUMN_INDEX],
     };

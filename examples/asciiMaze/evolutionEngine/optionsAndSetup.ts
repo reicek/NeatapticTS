@@ -21,7 +21,7 @@
  * @module evolutionEngine/optionsAndSetup
  */
 
-import { Network } from '../../../src/neataptic';
+import Network from '../../../src/architecture/network/network';
 import { MazeUtils } from '../mazeUtils';
 import { FitnessEvaluator } from '../fitness';
 import {

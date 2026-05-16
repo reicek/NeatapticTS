@@ -2514,6 +2514,14 @@ ActivationSquashFunction(
 
 Activation function signature used by ONNX layer emission helpers.
 
+### AttentionMapping
+
+Explicit export-only attention mapping for the Phase 5E shadow subset.
+
+This contract keeps attention source-owned rather than heuristic: callers
+opt one target layer into a fixed-width self-attention shadow block while the
+stable dense path remains the canonical runtime behavior.
+
 ### BackwardCandidateTraversalContext
 
 Immutable context for backward candidate traversal.
@@ -2618,6 +2626,15 @@ Supported Node-side archive compression codecs for compressed payloads.
 ### CompressedSerializedNetworkArchiveOptions
 
 Optional settings for archiving one compressed network payload.
+
+### ConcatMapping
+
+Explicit export-only concat mapping for the narrow Phase 5 merge subset.
+
+This contract keeps concat source-owned instead of inferred: callers name one
+skipped source layer and one target layer, and export preserves the merge as a
+deterministic `Concat -> Gemm` path with the default adjacent-layer slice kept
+first in the merged input order.
 
 ### ConnectionGene
 
@@ -3312,6 +3329,10 @@ cyclic structures may be introduced.
 
 Runtime topology contract used to lazily rebuild topological order.
 
+### NetworkWithOnnxImportAdvancedGraph
+
+Network instance augmented with optional imported advanced-graph metadata.
+
 ### NetworkWithOnnxImportPooling
 
 Network instance augmented with optional imported ONNX pooling metadata.
@@ -3434,6 +3455,34 @@ Key fields (high-level):
 - `legacyNodeOrdering`: keeps older node ordering for backward compatibility.
 - `conv2dMappings` / `pool2dMappings`: encode conv/pool semantics for fully-connected
   layers via explicit mapping declarations.
+- `concatMappings`: opt one skipped source layer into the narrow same-family
+  `Concat -> Gemm` merge subset with deterministic `previous_then_source`
+  input order.
+- `attentionMappings`: opt one target layer into the fixed-width same-family
+  self-attention shadow subset.
+- `precision`: opt into reduced-precision export. The current landed lane is
+  `storage-fp16`, which packs eligible same-family dense and Conv weight or
+  bias initializers into float16 storage and inserts deterministic
+  `Cast -> float32` bridges so operator inputs stay type-consistent.
+- `quantization`: declare an explicit quantization request packet. The
+  current exporter can validate static calibration contracts, emit
+  deterministic scale or zero-point parameter initializers for the supported
+  same-family dense and explicit Conv subset, and lower explicitly targeted
+  same-family dense layers into a
+  `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
+  explicit float-domain bias bridge plus the exporter-owned unary
+  activation node when present. Spatial and dynamic quantized lowering
+  remains later Phase 7 work.
+- `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
+  emission only when the exporter can prove the dense weights already behave like a
+  shared-kernel spatial layout, including the current conservative multi-channel and
+  unpooled stacked-chain subsets, deeper single-channel post-pool chains whose
+  pooled tensor shapes can be derived sequentially, and deeper pooled
+  multi-channel chains when the pooled tensor shapes can be derived sequentially
+  and the pooled source stays compact per channel. The only proven
+  flatten-after-pool promotion path is the narrow final hidden-stage
+  reshape-bridge subset. Earlier flattened pooled consumers and repeated
+  flatten-bridge chains stay on the honest fallback path.
 
 ### OnnxFusedGateApplicationContext
 
@@ -3496,6 +3545,14 @@ Context for constructing input/output ONNX graph dimensions.
 
 Output dimensions used by ONNX graph input/output value info payloads.
 
+### OnnxImportAdvancedGraphCrossLayerConnection
+
+Audit-only cross-layer feed-forward edge carried through Phase 5 import fallback.
+
+### OnnxImportAdvancedGraphMetadata
+
+Parsed advanced-graph metadata attached to imported network instances.
+
 ### OnnxImportAggregatedLayerAssignmentContext
 
 Context for assigning aggregated dense tensors for one layer.
@@ -3511,6 +3568,14 @@ Shared architecture extraction context with resolved graph dimensions.
 ### OnnxImportArchitectureResult
 
 Parsed architecture dimensions extracted from ONNX import graph payloads.
+
+### OnnxImportAttentionBlock
+
+Explicit fixed-width self-attention block carried through Phase 5 import fallback.
+
+### OnnxImportConcatMerge
+
+Explicit concat merge carried through Phase 5 import hardening.
 
 ### OnnxImportConvCoordinateAssignmentContext
 
@@ -3547,6 +3612,10 @@ Resolved Conv initializer tensors and dimensions for one layer.
 ### OnnxImportDimensionRecord
 
 Loose ONNX shape-dimension record used by legacy import payload access.
+
+### OnnxImportFlattenConsistencyAudit
+
+Metadata-only audit record comparing a flattened pooled width to the next dense width.
 
 ### OnnxImportHiddenLayerSpan
 
@@ -3592,13 +3661,25 @@ Context for assigning per-neuron tensors for one layer.
 
 Parsed pooling metadata payload attached to imported network instances.
 
+### OnnxImportPoolingVirtualShape
+
+Virtual spatial shape derived from Conv and Pool metadata during import.
+
 ### OnnxImportRecurrentRestorationContext
 
 Context for recurrent self-connection restoration from ONNX metadata and tensors.
 
+### OnnxImportResidualAdd
+
+Explicit one-hop residual-add merge carried through Phase 5 import hardening.
+
 ### OnnxImportSelfConnectionUpsertContext
 
 Context for upserting one hidden node self-connection from recurrent weight.
+
+### OnnxImportSharedInitializerAlias
+
+Audit-only shared initializer alias carried through Phase 5 import fallback.
 
 ### OnnxImportWeightAssignmentBuildParams
 
@@ -3642,7 +3723,9 @@ const restoredModel = JSON.parse(jsonText) as OnnxModel;
 Notes:
 - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
   conv/pool mappings, etc.). This is where most round-trip hints live.
-- Initializers currently store floating-point weights in `float_data`.
+- Initializers currently store floating-point weights in `float_data`, and the
+  Phase 7 storage-fp16 lane can pack half-precision words into `int32_data`
+  while keeping the logical tensor shape stable.
 
 Security/trust boundary:
 - Treat this as untrusted input if it comes from outside your process.
@@ -3727,7 +3810,9 @@ ONNX tensor type shape.
 Serialized tensor payload stored inside graph initializers.
 
 NeatapticTS currently writes floating-point parameter vectors and matrices to
-`float_data`, along with the tensor name, element type, and logical shape.
+`float_data`, while the storage-fp16 lane can pack float16 words into
+`int32_data` for JSON-first persistence without changing the logical tensor
+shape.
 
 ### OnnxTensorType
 

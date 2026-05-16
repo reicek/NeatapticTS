@@ -19,7 +19,7 @@ import {
   appendMetadataSpec,
   emitOptionalPoolingAndFlatten,
 } from './network.onnx.export-layer-common.utils';
-import { mapActivationToOnnx } from '../../network.onnx.layer-analysis.utils';
+import { resolveOnnxActivationNodeConfig } from '../../network.onnx.layer-analysis.utils';
 
 /**
  * Try to emit one layer as a Conv-shaped ONNX segment when the caller supplied
@@ -54,6 +54,9 @@ import { mapActivationToOnnx } from '../../network.onnx.layer-analysis.utils';
 export function tryEmitConvLayer(
   params: OnnxConvEmissionParams,
 ): string | undefined {
+  const ZERO_LENGTH = 0;
+  const MINIMUM_SPATIAL_OUTPUT_SIZE = 1;
+
   // Step 1: Resolve Conv mapping for this layer index.
   const convSpec = resolveConvMapping(params.options, params.layerIndex);
   if (!convSpec) return undefined;
@@ -145,9 +148,50 @@ export function tryEmitConvLayer(
     // Step 1: Compare expected and actual previous/current widths.
     return (
       getExpectedPreviousWidth(context.convSpec) ===
-        context.previousLayerNodes.length &&
+        getActualPreviousTensorWidth(context) &&
       getExpectedCurrentWidth(context.convSpec) ===
         context.currentLayerNodes.length
+    );
+  }
+
+  /**
+   * Resolve the actual graph-input width seen by this Conv layer.
+   *
+   * @param context Conv emission context.
+   * @returns Previous tensor width after optional pooling.
+   */
+  function getActualPreviousTensorWidth(
+    context: OnnxConvEmissionContext,
+  ): number {
+    const derivedPooledInputShape = resolveDerivedPooledInputShape(context);
+    if (!derivedPooledInputShape) {
+      return context.previousLayerNodes.length;
+    }
+
+    if (!context.options.flattenAfterPooling) {
+      return derivePooledTensorWidth(derivedPooledInputShape);
+    }
+
+    if (!resolveSupportedFlattenedPoolingShape(context)) {
+      return context.previousLayerNodes.length;
+    }
+
+    return derivePooledTensorWidth(derivedPooledInputShape);
+  }
+
+  /**
+   * Resolve pooling configured immediately after the previous layer.
+   *
+   * @param options Export options.
+   * @param layerIndex Current Conv layer index.
+   * @returns Upstream pooling spec when present.
+   */
+  function resolveUpstreamPoolingSpec(
+    options: OnnxExportOptions,
+    layerIndex: number,
+  ): Pool2DMapping | undefined {
+    return options.pool2dMappings?.find(
+      (poolingSpec) => poolingSpec.afterLayerIndex === layerIndex - 1,
     );
   }
 
@@ -182,11 +226,45 @@ export function tryEmitConvLayer(
   function logConvShapeMismatch(context: OnnxConvEmissionContext): void {
     // Step 1: Resolve expected dimensions for warning output.
     const previousWidthExpected = getExpectedPreviousWidth(context.convSpec);
+    const actualPreviousWidth = getActualPreviousTensorWidth(context);
     const currentWidthExpected = getExpectedCurrentWidth(context.convSpec);
 
     // Step 2: Emit warning with expected vs actual widths.
     console.warn(
-      `Conv2D mapping for layer ${context.layerIndex} skipped: dimension mismatch (expected prev=${previousWidthExpected} got ${context.previousLayerNodes.length}; expected this=${currentWidthExpected} got ${context.currentLayerNodes.length}).`,
+      `Conv2D mapping for layer ${context.layerIndex} skipped: dimension mismatch (expected prev=${previousWidthExpected} got ${actualPreviousWidth}; expected this=${currentWidthExpected} got ${context.currentLayerNodes.length}).`,
+    );
+  }
+
+  /**
+   * Calculate one spatial output size from kernel, stride, and padding metadata.
+   *
+   * @param inputSize Pre-op spatial size.
+   * @param kernelSize Kernel size.
+   * @param strideSize Stride size.
+   * @param leadingPadding Leading padding value.
+   * @param trailingPadding Trailing padding value.
+   * @returns Derived spatial output size.
+   */
+  function calculateSpatialOutputSize(
+    inputSize: number,
+    kernelSize: number,
+    strideSize: number,
+    leadingPadding: number,
+    trailingPadding: number,
+  ): number {
+    if (
+      inputSize <= ZERO_LENGTH ||
+      kernelSize <= ZERO_LENGTH ||
+      strideSize <= ZERO_LENGTH
+    ) {
+      return ZERO_LENGTH;
+    }
+
+    return (
+      Math.floor(
+        (inputSize + leadingPadding + trailingPadding - kernelSize) /
+          strideSize,
+      ) + MINIMUM_SPATIAL_OUTPUT_SIZE
     );
   }
 
@@ -399,6 +477,7 @@ export function tryEmitConvLayer(
   ): NeatapticNode {
     // Step 1: Resolve flattened feature index then return corresponding node.
     const inputFeatureIndex = resolveInputFeatureIndex(
+      context,
       context.convSpec,
       kernelCoordinate,
     );
@@ -413,14 +492,186 @@ export function tryEmitConvLayer(
    * @returns Flattened input feature index.
    */
   function resolveInputFeatureIndex(
+    context: OnnxConvEmissionContext,
     convSpec: Conv2DMapping,
     kernelCoordinate: OnnxConvKernelCoordinate,
   ): number {
-    // Step 1: Convert channel/row/column coordinate to flattened index.
+    // Step 1: Resolve the effective source layout for this Conv input.
+    const sourceLayout = resolveConvSourceLayout(context, convSpec);
+
+    // Step 2: Convert channel/row/column coordinate to flattened index.
     return (
-      kernelCoordinate.inChannelIndex * (convSpec.inHeight * convSpec.inWidth) +
-      kernelCoordinate.kernelRowIndex * convSpec.inWidth +
+      kernelCoordinate.inChannelIndex * sourceLayout.channelStride +
+      kernelCoordinate.kernelRowIndex * sourceLayout.sourceWidth +
       kernelCoordinate.kernelColumnIndex
+    );
+  }
+
+  /**
+   * Resolve the source layout used when this Conv layer consumes a pooled predecessor.
+   *
+   * @param context Conv emission context.
+   * @param convSpec Conv mapping spec.
+   * @returns Source layout dimensions used for dense-node indexing.
+   */
+  function resolveConvSourceLayout(
+    context: OnnxConvEmissionContext,
+    convSpec: Conv2DMapping,
+  ): { channelStride: number; sourceHeight: number; sourceWidth: number } {
+    const defaultLayout = {
+      channelStride: convSpec.inHeight * convSpec.inWidth,
+      sourceHeight: convSpec.inHeight,
+      sourceWidth: convSpec.inWidth,
+    };
+
+    const upstreamPoolingSpec = resolveUpstreamPoolingSpec(
+      context.options,
+      context.layerIndex,
+    );
+    const upstreamConvSpec = resolveConvMapping(
+      context.options,
+      context.layerIndex - 1,
+    );
+    if (!upstreamPoolingSpec || !upstreamConvSpec) {
+      return defaultLayout;
+    }
+
+    const pooledHeight = calculateSpatialOutputSize(
+      upstreamConvSpec.outHeight,
+      upstreamPoolingSpec.kernelHeight,
+      upstreamPoolingSpec.strideHeight,
+      upstreamPoolingSpec.padTop ?? ZERO_LENGTH,
+      upstreamPoolingSpec.padBottom ?? ZERO_LENGTH,
+    );
+    const pooledWidth = calculateSpatialOutputSize(
+      upstreamConvSpec.outWidth,
+      upstreamPoolingSpec.kernelWidth,
+      upstreamPoolingSpec.strideWidth,
+      upstreamPoolingSpec.padLeft ?? ZERO_LENGTH,
+      upstreamPoolingSpec.padRight ?? ZERO_LENGTH,
+    );
+    const matchesDerivedPooledShape =
+      pooledHeight === convSpec.inHeight &&
+      pooledWidth === convSpec.inWidth &&
+      upstreamConvSpec.outChannels === convSpec.inChannels;
+    if (!matchesDerivedPooledShape) {
+      return defaultLayout;
+    }
+
+    return {
+      channelStride: upstreamConvSpec.outHeight * upstreamConvSpec.outWidth,
+      sourceHeight: convSpec.inHeight,
+      sourceWidth: convSpec.inWidth,
+    };
+  }
+
+  /**
+   * Resolve pooled input geometry from the immediately previous Conv + Pool metadata.
+   *
+   * @param context Conv emission context.
+   * @returns Derived pooled shape, or undefined when the metadata is unusable.
+   */
+  function resolveDerivedPooledInputShape(
+    context: OnnxConvEmissionContext,
+  ):
+    | {
+        inputChannels: number;
+        inputHeight: number;
+        inputWidth: number;
+      }
+    | undefined {
+    const upstreamPoolingSpec = resolveUpstreamPoolingSpec(
+      context.options,
+      context.layerIndex,
+    );
+    const upstreamConvSpec = resolveConvMapping(
+      context.options,
+      context.layerIndex - 1,
+    );
+    if (!upstreamPoolingSpec || !upstreamConvSpec) {
+      return undefined;
+    }
+
+    const pooledHeight = calculateSpatialOutputSize(
+      upstreamConvSpec.outHeight,
+      upstreamPoolingSpec.kernelHeight,
+      upstreamPoolingSpec.strideHeight,
+      upstreamPoolingSpec.padTop ?? ZERO_LENGTH,
+      upstreamPoolingSpec.padBottom ?? ZERO_LENGTH,
+    );
+    const pooledWidth = calculateSpatialOutputSize(
+      upstreamConvSpec.outWidth,
+      upstreamPoolingSpec.kernelWidth,
+      upstreamPoolingSpec.strideWidth,
+      upstreamPoolingSpec.padLeft ?? ZERO_LENGTH,
+      upstreamPoolingSpec.padRight ?? ZERO_LENGTH,
+    );
+    if (
+      pooledHeight < MINIMUM_SPATIAL_OUTPUT_SIZE ||
+      pooledWidth < MINIMUM_SPATIAL_OUTPUT_SIZE
+    ) {
+      return undefined;
+    }
+
+    return {
+      inputChannels: upstreamConvSpec.outChannels,
+      inputHeight: pooledHeight,
+      inputWidth: pooledWidth,
+    };
+  }
+
+  /**
+  * Resolve the narrow supported flatten-after-pool bridge shape, when present.
+   *
+   * @param context Conv emission context.
+   * @returns Supported flattened pooled shape for the later Conv bridge.
+   */
+  function resolveSupportedFlattenedPoolingShape(
+    context: OnnxConvEmissionContext,
+  ):
+    | {
+        inputChannels: number;
+        inputHeight: number;
+        inputWidth: number;
+      }
+    | undefined {
+    if (!context.options.flattenAfterPooling || context.hasLaterHiddenLayers) {
+      return undefined;
+    }
+
+    const derivedPooledInputShape = resolveDerivedPooledInputShape(context);
+    if (!derivedPooledInputShape) {
+      return undefined;
+    }
+
+    const hasEarlierPoolingBoundary =
+      resolveUpstreamPoolingSpec(context.options, context.layerIndex - 1) !==
+      undefined;
+    const matchesCurrentConvInput =
+      derivedPooledInputShape.inputChannels === context.convSpec.inChannels &&
+      derivedPooledInputShape.inputHeight === context.convSpec.inHeight &&
+      derivedPooledInputShape.inputWidth === context.convSpec.inWidth;
+
+    return !hasEarlierPoolingBoundary && matchesCurrentConvInput
+      ? derivedPooledInputShape
+      : undefined;
+  }
+
+  /**
+   * Fold one derived pooled input shape to its flattened width.
+   *
+   * @param derivedPooledInputShape Derived pooled geometry.
+   * @returns Flattened pooled tensor width.
+   */
+  function derivePooledTensorWidth(derivedPooledInputShape: {
+    inputChannels: number;
+    inputHeight: number;
+    inputWidth: number;
+  }): number {
+    return (
+      derivedPooledInputShape.inputChannels *
+      derivedPooledInputShape.inputHeight *
+      derivedPooledInputShape.inputWidth
     );
   }
 
@@ -545,11 +796,67 @@ export function tryEmitConvLayer(
     // Step 1: Resolve output tensor names.
     const convOutputName = `Conv_${context.layerIndex}`;
     const activationOutputName = `Layer_${context.layerIndex}`;
+    const convInputName = resolveConvInputName(context);
 
     // Step 2: Emit Conv and activation operators.
-    emitConvNode(context, convTensorNames, convOutputName);
+    emitConvNode(context, convTensorNames, convOutputName, convInputName);
     emitActivationNode(context, convOutputName, activationOutputName);
     return activationOutputName;
+  }
+
+  /**
+   * Resolve the tensor name that should feed the Conv node.
+   *
+   * @param context Conv emission context.
+   * @returns Previous output name, or a reshape bridge output for the narrow flatten subset.
+   */
+  function resolveConvInputName(context: OnnxConvEmissionContext): string {
+    const flattenedPoolingShape = resolveSupportedFlattenedPoolingShape(context);
+    if (!flattenedPoolingShape) {
+      return context.previousOutputName;
+    }
+
+    return emitFlattenReshapeBridge(context, flattenedPoolingShape);
+  }
+
+  /**
+   * Emit a reshape bridge that restores `[N,C,H,W]` input rank after flatten.
+   *
+   * @param context Conv emission context.
+   * @param flattenedPoolingShape Supported flattened pooled shape.
+   * @returns Reshape output tensor name.
+   */
+  function emitFlattenReshapeBridge(
+    context: OnnxConvEmissionContext,
+    flattenedPoolingShape: {
+      inputChannels: number;
+      inputHeight: number;
+      inputWidth: number;
+    },
+  ): string {
+    const reshapeShapeName = `ConvReshapeShape_${context.layerIndex}`;
+    const reshapeOutputName = `ConvReshape_${context.layerIndex}`;
+
+    context.model.graph.initializer.push({
+      name: reshapeShapeName,
+      data_type: 7,
+      dims: [4],
+      float_data: [],
+      int64_data: [
+        1,
+        flattenedPoolingShape.inputChannels,
+        flattenedPoolingShape.inputHeight,
+        flattenedPoolingShape.inputWidth,
+      ],
+    });
+    context.model.graph.node.push({
+      op_type: 'Reshape',
+      input: [context.previousOutputName, reshapeShapeName],
+      output: [reshapeOutputName],
+      name: `reshape_before_conv_l${context.layerIndex}`,
+    });
+
+    return reshapeOutputName;
   }
 
   /**
@@ -564,6 +871,7 @@ export function tryEmitConvLayer(
     context: OnnxConvEmissionContext,
     convTensorNames: OnnxConvTensorNames,
     convOutputName: string,
+    convInputName: string,
   ): void {
     // Step 1: Resolve ONNX pads attribute values.
     const convPaddingValues = createConvPaddingValues(context.convSpec);
@@ -572,7 +880,7 @@ export function tryEmitConvLayer(
     context.model.graph.node.push({
       op_type: 'Conv',
       input: [
-        context.previousOutputName,
+        convInputName,
         convTensorNames.convWeightName,
         convTensorNames.convBiasName,
       ],
@@ -623,15 +931,16 @@ export function tryEmitConvLayer(
     convOutputName: string,
     activationOutputName: string,
   ): void {
-    // Step 1: Resolve activation operator name.
-    const activationOperator = resolveActivationOperator(context);
+    // Step 1: Resolve activation operator payload.
+    const activationPayload = resolveActivationPayload(context);
 
     // Step 2: Push activation node.
     context.model.graph.node.push({
-      op_type: activationOperator,
+      op_type: activationPayload.operation,
       input: [convOutputName],
       output: [activationOutputName],
       name: `act_conv_l${context.layerIndex}`,
+      attributes: activationPayload.attributes,
     });
   }
 
@@ -641,11 +950,24 @@ export function tryEmitConvLayer(
    * @param context Conv emission context.
    * @returns Activation operator name.
    */
-  function resolveActivationOperator(context: OnnxConvEmissionContext): string {
+  function resolveActivationPayload(context: OnnxConvEmissionContext): {
+    operation: string;
+    attributes?: {
+      name: string;
+      type?: string;
+      f?: number;
+      i?: number;
+      s?: string;
+    }[];
+  } {
     // Step 1: Prefer explicit mapping activation, otherwise infer from nodes.
-    return (
-      context.convSpec.activation ??
-      mapActivationToOnnx(context.currentLayerNodes[0].squash)
+    if (context.convSpec.activation) {
+      return { operation: context.convSpec.activation };
+    }
+
+    return resolveOnnxActivationNodeConfig(
+      context.currentLayerNodes[0].squash,
+      context.options.opset ?? 18,
     );
   }
 

@@ -31,6 +31,23 @@ ActivationSquashFunction(
 
 Activation function signature used by ONNX layer emission helpers.
 
+### AttentionMapping
+
+Explicit export-only attention mapping for the Phase 5E shadow subset.
+
+This contract keeps attention source-owned rather than heuristic: callers
+opt one target layer into a fixed-width self-attention shadow block while the
+stable dense path remains the canonical runtime behavior.
+
+### ConcatMapping
+
+Explicit export-only concat mapping for the narrow Phase 5 merge subset.
+
+This contract keeps concat source-owned instead of inferred: callers name one
+skipped source layer and one target layer, and export preserves the merge as a
+deterministic `Concat -> Gemm` path with the default adjacent-layer slice kept
+first in the merged input order.
+
 ### ConvInferenceEvaluationContext
 
 Width and shape evaluation context used by Conv inference helpers.
@@ -215,6 +232,10 @@ Flattened Conv parameters for ONNX initializers.
 
 Tensor names generated for Conv parameters.
 
+### OnnxDynamicQuantizationOptions
+
+Dynamic uint8 quantization request packet for supported dense guidance only.
+
 ### OnnxExportOptions
 
 Options controlling ONNX-like export.
@@ -238,6 +259,34 @@ Key fields (high-level):
 - `legacyNodeOrdering`: keeps older node ordering for backward compatibility.
 - `conv2dMappings` / `pool2dMappings`: encode conv/pool semantics for fully-connected
   layers via explicit mapping declarations.
+- `concatMappings`: opt one skipped source layer into the narrow same-family
+  `Concat -> Gemm` merge subset with deterministic `previous_then_source`
+  input order.
+- `attentionMappings`: opt one target layer into the fixed-width same-family
+  self-attention shadow subset.
+- `precision`: opt into reduced-precision export. The current landed lane is
+  `storage-fp16`, which packs eligible same-family dense and Conv weight or
+  bias initializers into float16 storage and inserts deterministic
+  `Cast -> float32` bridges so operator inputs stay type-consistent.
+- `quantization`: declare an explicit quantization request packet. The
+  current exporter can validate static calibration contracts, emit
+  deterministic scale or zero-point parameter initializers for the supported
+  same-family dense and explicit Conv subset, and lower explicitly targeted
+  same-family dense layers into a
+  `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
+  explicit float-domain bias bridge plus the exporter-owned unary
+  activation node when present. Spatial and dynamic quantized lowering
+  remains later Phase 7 work.
+- `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
+  emission only when the exporter can prove the dense weights already behave like a
+  shared-kernel spatial layout, including the current conservative multi-channel and
+  unpooled stacked-chain subsets, deeper single-channel post-pool chains whose
+  pooled tensor shapes can be derived sequentially, and deeper pooled
+  multi-channel chains when the pooled tensor shapes can be derived sequentially
+  and the pooled source stays compact per channel. The only proven
+  flatten-after-pool promotion path is the narrow final hidden-stage
+  reshape-bridge subset. Earlier flattened pooled consumers and repeated
+  flatten-bridge chains stay on the honest fallback path.
 
 ### OnnxGraphDimensionBuildContext
 
@@ -263,6 +312,42 @@ Context for applying optional ONNX model metadata.
 
 Context for post-processing and export metadata finalization.
 
+### OnnxPrecisionOptions
+
+Opt-in reduced-precision export controls for the Phase 7 storage lane.
+
+### OnnxQuantizationCalibrationLayerTarget
+
+One explicitly calibrated layer target used to build deterministic parameter tensors.
+
+### OnnxQuantizationCalibrationOptions
+
+External calibration packet declaration for static quantization requests.
+
+### OnnxQuantizationCalibrationRange
+
+External calibration packet declaration for static quantization requests.
+
+### OnnxQuantizationCalibrationRoundingMode
+
+Rounding policy for deterministic zero-point resolution.
+
+### OnnxQuantizationCalibrationSymmetry
+
+Symmetry policy for activation and weight quantization parameters.
+
+### OnnxQuantizationCalibrationWeightRangePolicy
+
+Supported weight-range reduction policy for the first calibration contract.
+
+### OnnxQuantizationCalibrationZeroInclusionPolicy
+
+Zero-inclusion policy for exported calibration parameters.
+
+### OnnxQuantizationOptions
+
+Supported quantization request packets for the narrow first Phase 7 lane.
+
 ### OnnxRecurrentCollectionContext
 
 Context for collecting recurrent layer indices during model build.
@@ -278,6 +363,22 @@ Execution context for processing one hidden recurrent layer.
 ### OnnxRecurrentLayerTraversalContext
 
 Traversal context for one hidden layer during recurrent-input collection.
+
+### OnnxResolvedPrecisionOptions
+
+Resolved reduced-precision packet used by build orchestration.
+
+### OnnxResolvedQuantizationCalibrationOptions
+
+Resolved calibration packet with exporter-owned defaults applied.
+
+### OnnxResolvedQuantizationOptions
+
+Resolved quantization packet used by build orchestration.
+
+### OnnxStaticQuantizationOptions
+
+Static 8-bit quantization request packet for the narrow first Phase 7 lane.
 
 ### OptionalLayerOutputParams
 
@@ -379,6 +480,10 @@ Parameters for single-step recurrent layer emission.
 
 Context for collecting one recurrent matrix row.
 
+### ResidualAddLayerParams
+
+Parameters for one-hop residual-add dense layer emission.
+
 ### SharedActivationNodeBuildParams
 
 Shared parameters for constructing an activation node payload.
@@ -440,6 +545,10 @@ Parameters:
 - `options` - Export options.
 
 Returns: ONNX model.
+
+### StaticDenseLoweringPlan
+
+Export-owned plan for lowering one dense layer into the current qlinear subset.
 
 ## architecture/network/onnx/export/network.onnx.export-setup.utils.ts
 
@@ -676,6 +785,36 @@ Parameters:
 
 Returns: Nothing.
 
+## architecture/network/onnx/export/network.onnx.export-attention.utils.ts
+
+### emitShadowAttentionMappings
+
+```ts
+emitShadowAttentionMappings(
+  model: OnnxModel,
+  layers: default[][],
+  options: OnnxExportOptions,
+  layerOutputNamesByLayerIndex: ReadonlyMap<number, string>,
+  includeMetadata: boolean,
+): void
+```
+
+Emit explicit shadow attention blocks for the Phase 5E fixed-width subset.
+
+The current runtime does not execute native attention semantics, so this
+pass follows the same strategy used by the fused recurrent heuristics: emit a
+deterministic ONNX attention subgraph without replacing the stable dense path
+that the importer already round-trips.
+
+Parameters:
+- `model` - Target ONNX model.
+- `layers` - Resolved layered network ordering.
+- `options` - Export options.
+- `layerOutputNamesByLayerIndex` - Emitted canonical layer output names.
+- `includeMetadata` - Whether attention metadata should be recorded.
+
+Returns: Nothing.
+
 ## architecture/network/onnx/export/network.onnx.export-postprocess.utils.ts
 
 ### appendConvLayerValidationResult
@@ -882,6 +1021,27 @@ buildRecurrentHeuristicEmissionContext(
 
 Build reusable context for recurrent heuristic traversal.
 
+### buildSharedInitializerSignature
+
+```ts
+buildSharedInitializerSignature(
+  initializerEntry: OnnxTensor,
+  initializerKind: "dense_weight" | "dense_bias" | "per_neuron_weight" | "per_neuron_bias",
+): string
+```
+
+Build an exact-match signature for dense-family alias reuse.
+
+### classifySharedInitializerKind
+
+```ts
+classifySharedInitializerKind(
+  initializerName: string,
+): "dense_weight" | "dense_bias" | "per_neuron_weight" | "per_neuron_bias" | null
+```
+
+Classify the dense-family initializer kinds supported by the Phase 5B alias subset.
+
 ### collectConvKernelCoordinates
 
 ```ts
@@ -956,7 +1116,7 @@ Collect one recurrent gate row payload (inputs, recurrent slice, and bias).
 
 ```ts
 collectRepresentativeKernelForChannel(
-  context: ConvRepresentativeKernelContext,
+  context: ConvRepresentativeKernelContext & { sourceLayout: ResolvedConvSourceLayout; },
 ): number[]
 ```
 
@@ -967,6 +1127,7 @@ Collect one representative kernel by reading the first output position for a cha
 ```ts
 collectRepresentativeKernels(
   context: ConvLayerPairContext,
+  sourceLayout: ResolvedConvSourceLayout,
 ): number[][]
 ```
 
@@ -980,6 +1141,7 @@ collectRepresentativeKernelWeight(
   previousLayerNodes: default[],
   representativeInternal: NodeInternals,
   kernelCoordinate: OnnxConvKernelCoordinate,
+  sourceLayout: ResolvedConvSourceLayout,
 ): number
 ```
 
@@ -1092,15 +1254,50 @@ foldRecurrentGateRows(
 
 Fold recurrent gate rows into flattened ONNX initializer vectors.
 
+### hasNoIgnoredSourceWeights
+
+```ts
+hasNoIgnoredSourceWeights(
+  context: ConvLayerPairContext,
+  sourceLayout: ResolvedConvSourceLayout,
+): boolean
+```
+
+Ensure weights outside the Conv-addressable source slice remain zero.
+
+Parameters:
+- `context` - Conv layer pair context.
+
+Returns: True when ignored dense source nodes carry no extra weight.
+
 ### isConvLayerPairConsistent
 
 ```ts
 isConvLayerPairConsistent(
   context: ConvLayerPairContext,
+  options: OnnxExportOptions | undefined,
 ): boolean
 ```
 
 Validate one Conv layer pair against representative kernel sharing.
+
+### isConvMappingWeightShared
+
+```ts
+isConvMappingWeightShared(
+  layers: default[][],
+  convSpec: Conv2DMapping,
+  options: OnnxExportOptions | undefined,
+): boolean
+```
+
+Determine whether one Conv mapping behaves like a shared kernel layer.
+
+Parameters:
+- `layers` - Layered network nodes.
+- `convSpec` - Conv mapping to evaluate.
+
+Returns: True when representative kernels stay consistent across outputs.
 
 ### isEligibleForGruHeuristic
 
@@ -1148,7 +1345,7 @@ Check whether input row/column falls inside Conv input bounds.
 
 ```ts
 isKernelCoordinateConsistent(
-  context: ConvKernelConsistencyContext,
+  context: ConvKernelConsistencyContext & { sourceLayout: ResolvedConvSourceLayout; },
 ): boolean
 ```
 
@@ -1162,6 +1359,7 @@ isOutputCoordinateConsistent(
   outputCoordinate: ConvOutputCoordinate,
   representativeKernels: number[][],
   tolerance: number,
+  sourceLayout: ResolvedConvSourceLayout,
 ): boolean
 ```
 
@@ -1261,10 +1459,32 @@ resolveSourceNodeAtInputPosition(
   inChannelIndex: number,
   inputRow: number,
   inputColumn: number,
+  sourceLayout: ResolvedConvSourceLayout,
 ): default | undefined
 ```
 
 Resolve source node by Conv input position coordinates.
+
+### reuseSharedInitializers
+
+```ts
+reuseSharedInitializers(
+  model: OnnxModel,
+): SharedInitializerAliasRecord[]
+```
+
+Reuse exact dense-family initializers and rewrite later node inputs to the canonical tensors.
+
+### rewriteInitializerInputs
+
+```ts
+rewriteInitializerInputs(
+  graph: OnnxGraph,
+  aliasTensorNameByRemovedTensorName: Map<string, string>,
+): void
+```
+
+Rewrite graph-node initializer inputs after later aliases collapse into one canonical tensor.
 
 ### shouldValidateConvSharing
 
@@ -1317,6 +1537,23 @@ validateConvSharingAcrossMappings(
 ```
 
 Validate Conv2D sharing across all declared Conv mappings.
+
+## architecture/network/onnx/export/network.onnx.export-optimization.utils.ts
+
+### pruneIdentityActivationNodes
+
+```ts
+pruneIdentityActivationNodes(
+  model: OnnxModel,
+): void
+```
+
+Remove exporter-owned Identity activation nodes by rewiring their consumers.
+
+Parameters:
+- `model` - ONNX-like model to optimize in place.
+
+Returns: Nothing.
 
 ## architecture/network/onnx/export/network.onnx.export-orchestrators.utils.ts
 
@@ -1418,11 +1655,73 @@ Parameters:
 
 Returns: Nothing.
 
+### calculateSpatialOutputSize
+
+```ts
+calculateSpatialOutputSize(
+  inputSize: number,
+  kernelSize: number,
+  strideSize: number,
+  leadingPadding: number,
+  trailingPadding: number,
+): number
+```
+
+Calculate one spatial output size from kernel, stride, and padding metadata.
+
+Parameters:
+- `inputSize` - Pre-op spatial size.
+- `kernelSize` - Kernel size.
+- `strideSize` - Stride size.
+- `leadingPadding` - Leading padding value.
+- `trailingPadding` - Trailing padding value.
+
+Returns: Derived spatial output size.
+
+### canPromoteInferredConvSpec
+
+```ts
+canPromoteInferredConvSpec(
+  layers: default[][],
+  options: OnnxExportOptions,
+  convSpec: Conv2DMapping & { note?: string | undefined; },
+  availableConvSpecs: Conv2DMapping[],
+): boolean
+```
+
+Decide whether an inferred Conv specification is still safe to promote.
+
+Promotion eligibility only checks the shared-kernel safety gate.
+Pooling and flatten boundaries are resolved earlier during inference so
+only spatially valid candidates reach this step.
+
+Parameters:
+- `layers` - Layered network nodes.
+- `options` - Export options.
+- `convSpec` - Inferred Conv specification candidate.
+
+Returns: True when the inferred Conv can be promoted safely.
+
+### collectCandidateInputChannelCounts
+
+```ts
+collectCandidateInputChannelCounts(
+  previousWidth: number,
+): number[]
+```
+
+Collect candidate input-channel counts that evenly partition the previous width.
+
+Parameters:
+- `previousWidth` - Previous-layer width.
+
+Returns: Candidate input-channel counts.
+
 ### collectInferredConvMetadata
 
 ```ts
 collectInferredConvMetadata(
-  context: { layers: default[][]; declaredMappings: Conv2DMapping[] | undefined; },
+  context: { layers: default[][]; declaredMappings: Conv2DMapping[] | undefined; flattenAfterPooling: boolean | undefined; poolMappings: Pool2DMapping[] | undefined; },
 ): ConvInferenceResult
 ```
 
@@ -1469,22 +1768,37 @@ Returns: LSTM pattern stubs.
 
 ```ts
 createConvInferenceEvaluationContext(
-  traversalContext: ConvInferenceTraversalContext,
-): ConvInferenceEvaluationContext
+  params: { allowsExactFitKernel: boolean; layerIndex: number; currentWidth: number; inputChannels: number; inputHeight: number; inputWidth: number; },
+): ConvInferenceEvaluationContext | undefined
 ```
 
-Create width/square-evaluation context for Conv inference.
+Create one width/square-evaluation context for a specific channel partition.
+
+Parameters:
+- `params` - Evaluation parameters.
+
+Returns: Conv evaluation context when the per-channel input width is square.
+
+### createConvInferenceEvaluationContexts
+
+```ts
+createConvInferenceEvaluationContexts(
+  traversalContext: ConvInferenceTraversalContext,
+): ConvInferenceEvaluationContext[]
+```
+
+Create width/square-evaluation contexts for Conv inference.
 
 Parameters:
 - `traversalContext` - Conv traversal context.
 
-Returns: Conv evaluation context.
+Returns: Conv evaluation contexts.
 
 ### createConvTraversalContexts
 
 ```ts
 createConvTraversalContexts(
-  context: { layers: default[][]; declaredMappings: Conv2DMapping[] | undefined; },
+  context: { layers: default[][]; declaredMappings: Conv2DMapping[] | undefined; flattenAfterPooling: boolean | undefined; poolMappings: Pool2DMapping[] | undefined; },
 ): ConvInferenceTraversalContext[]
 ```
 
@@ -1540,6 +1854,21 @@ Parameters:
 
 Returns: LSTM candidate context.
 
+### createPooledConvInferenceEvaluationContext
+
+```ts
+createPooledConvInferenceEvaluationContext(
+  traversalContext: ConvInferenceTraversalContext,
+): ConvInferenceEvaluationContext | undefined
+```
+
+Resolve one pooled previous-layer evaluation context when pooling keeps the graph spatial.
+
+Parameters:
+- `traversalContext` - Conv traversal context.
+
+Returns: Evaluation context anchored to the derived pooled shape, if usable.
+
 ### hasInferredConvMetadata
 
 ```ts
@@ -1569,6 +1898,36 @@ Parameters:
 - `nodeItem` - Node to inspect.
 
 Returns: True when self-connection count matches requirement.
+
+### hasUpstreamPoolingBoundary
+
+```ts
+hasUpstreamPoolingBoundary(
+  traversalContext: ConvInferenceTraversalContext,
+): boolean
+```
+
+Check whether the immediately previous layer has pooling configured.
+
+Parameters:
+- `traversalContext` - Conv traversal context.
+
+Returns: True when the previous layer changes spatial shape through pooling.
+
+### isConvInferenceEvaluationContext
+
+```ts
+isConvInferenceEvaluationContext(
+  evaluationContext: ConvInferenceEvaluationContext | undefined,
+): boolean
+```
+
+Type guard for defined Conv inference evaluation contexts.
+
+Parameters:
+- `evaluationContext` - Candidate evaluation context.
+
+Returns: True when the context is defined.
 
 ### isDeclaredConvLayer
 
@@ -1650,6 +2009,7 @@ Returns: Inferred Conv specification when matched.
 ```ts
 resolveConvSpecForKernel(
   kernelContext: ConvInferenceKernelEvaluationContext,
+  allowExactFitKernel: boolean,
 ): (Conv2DMapping & { note?: string | undefined; }) | undefined
 ```
 
@@ -1675,6 +2035,55 @@ Parameters:
 
 Returns: Inferred Conv specification when matched.
 
+### resolveEffectiveConvMappings
+
+```ts
+resolveEffectiveConvMappings(
+  layers: default[][],
+  options: OnnxExportOptions,
+): Conv2DMapping[] | undefined
+```
+
+Resolve the effective Conv mapping list after optional heuristic promotion.
+
+Parameters:
+- `layers` - Layered network nodes.
+- `options` - Export options.
+
+Returns: Declared mappings plus any safety-gated promoted inferred mappings.
+
+### resolveSingleInferredConvSpec
+
+```ts
+resolveSingleInferredConvSpec(
+  inferredSpecs: (Conv2DMapping & { note?: string | undefined; })[],
+): (Conv2DMapping & { note?: string | undefined; }) | undefined
+```
+
+Keep multi-channel Conv inference conservative when multiple layouts fit.
+
+Parameters:
+- `inferredSpecs` - All inferred Conv specs for the layer.
+
+Returns: The single usable spec, otherwise undefined.
+
+### resolveSquareSpatialWidth
+
+```ts
+resolveSquareSpatialWidth(
+  previousWidth: number,
+  inputChannels: number,
+): number
+```
+
+Resolve the per-channel square width when a dense width can be partitioned evenly.
+
+Parameters:
+- `previousWidth` - Previous-layer dense width.
+- `inputChannels` - Candidate channel count.
+
+Returns: Resolved square spatial width, or zero when the partition is not square.
+
 ### safelyCollectLstmPatternStubs
 
 ```ts
@@ -1689,3 +2098,399 @@ Parameters:
 - `layers` - Layered network nodes.
 
 Returns: LSTM pattern stubs.
+
+### stripInferredConvNote
+
+```ts
+stripInferredConvNote(
+  convSpec: Conv2DMapping & { note?: string | undefined; },
+): Conv2DMapping
+```
+
+Remove inference-only note fields before promoted specs become real mappings.
+
+Parameters:
+- `convSpec` - Inferred Conv specification.
+
+Returns: Clean Conv mapping suitable for real Conv emission.
+
+### supportsFlattenedPostPoolConvSubset
+
+```ts
+supportsFlattenedPostPoolConvSubset(
+  traversalContext: ConvInferenceTraversalContext,
+  previousConvSpec: Conv2DMapping,
+  inputHeight: number,
+  inputWidth: number,
+): boolean
+```
+
+Check whether the current flatten-after-pool bridge fits the narrow supported subset.
+
+Parameters:
+- `traversalContext` - Conv traversal context.
+- `previousConvSpec` - Previously resolved Conv spec.
+- `inputHeight` - Derived pooled input height.
+- `inputWidth` - Derived pooled input width.
+
+Returns: True when the flattened pooled bridge can still feed one final later Conv-like stage.
+
+## architecture/network/onnx/export/network.onnx.export-advanced-graph.utils.ts
+
+### appendAdvancedGraphMetadata
+
+```ts
+appendAdvancedGraphMetadata(
+  model: OnnxModel,
+  network: default,
+  layers: default[][],
+  includeMetadata: boolean,
+): void
+```
+
+Append deterministic advanced-graph metadata for cross-layer feed-forward edges.
+
+Phase 5 starts by making skip-style ancestry visible instead of silently
+dropping it. The current exporter still serializes adjacent-layer dense paths
+only, so this metadata is an audit seam: it records the exact non-adjacent
+feed-forward edges that later residual, concat, and attention passes can
+promote into explicit ONNX graph structure.
+
+Parameters:
+- `model` - Target ONNX model.
+- `network` - Source network.
+- `layers` - Resolved layered ordering.
+- `includeMetadata` - Whether metadata emission is enabled.
+
+Returns: Nothing.
+
+### appendConcatMergeMetadata
+
+```ts
+appendConcatMergeMetadata(
+  model: OnnxModel,
+  concatMerge: AdvancedGraphConcatMerge,
+  includeMetadata: boolean,
+): void
+```
+
+Append concat-merge metadata for an emitted explicit concat branch.
+
+Parameters:
+- `model` - Target ONNX model.
+- `concatMerge` - Emitted concat metadata record.
+- `includeMetadata` - Whether metadata emission is enabled.
+
+Returns: Nothing.
+
+### appendMetadataProperty
+
+```ts
+appendMetadataProperty(
+  model: OnnxModel,
+  metadataProperty: OnnxMetadataProperty,
+): void
+```
+
+Append one metadata property to the ONNX model.
+
+Parameters:
+- `model` - Target model.
+- `metadataProperty` - Metadata property.
+
+Returns: Nothing.
+
+### appendResidualAddMetadata
+
+```ts
+appendResidualAddMetadata(
+  model: OnnxModel,
+  residualAdd: AdvancedGraphResidualAdd,
+  includeMetadata: boolean,
+): void
+```
+
+Append residual-add metadata for an emitted one-hop merge.
+
+Parameters:
+- `model` - Target ONNX model.
+- `residualAdd` - Emitted residual-add metadata record.
+- `includeMetadata` - Whether metadata emission is enabled.
+
+Returns: Nothing.
+
+### buildBranchTensorName
+
+```ts
+buildBranchTensorName(
+  context: { sourceLayerIndex: number; targetLayerIndex: number; sourceNodeIndex: number; targetNodeIndex: number; },
+): string
+```
+
+Build the reserved branch tensor name for one cross-layer edge.
+
+Parameters:
+- `context` - Branch-name context.
+
+Returns: Deterministic branch tensor name.
+
+### buildConcatMergeNodeName
+
+```ts
+buildConcatMergeNodeName(
+  sourceLayerIndex: number,
+  targetLayerIndex: number,
+): string
+```
+
+Build the deterministic concat merge node name for one layer pair.
+
+Parameters:
+- `sourceLayerIndex` - Skipped source layer index.
+- `targetLayerIndex` - Concat target layer index.
+
+Returns: Concat merge node name.
+
+### buildConcatMergeOutputName
+
+```ts
+buildConcatMergeOutputName(
+  sourceLayerIndex: number,
+  targetLayerIndex: number,
+): string
+```
+
+Build the deterministic concat merge output tensor name for one layer pair.
+
+Parameters:
+- `sourceLayerIndex` - Skipped source layer index.
+- `targetLayerIndex` - Concat target layer index.
+
+Returns: Concat merge output tensor name.
+
+### buildLayerIndexByNode
+
+```ts
+buildLayerIndexByNode(
+  layers: default[][],
+): Map<default, number>
+```
+
+Build a stable node->layer index lookup for the resolved layered ordering.
+
+Parameters:
+- `layers` - Resolved layered ordering.
+
+Returns: Node-to-layer lookup.
+
+### buildMetadataProperty
+
+```ts
+buildMetadataProperty(
+  key: string,
+  value: AdvancedGraphCrossLayerConnection[] | AdvancedGraphResidualAdd[] | AdvancedGraphConcatMerge[],
+): OnnxMetadataProperty
+```
+
+Build one metadata property with a JSON payload.
+
+Parameters:
+- `key` - Metadata key.
+- `value` - Metadata value.
+
+Returns: Metadata property.
+
+### buildResidualBranchTensorName
+
+```ts
+buildResidualBranchTensorName(
+  sourceLayerIndex: number,
+  targetLayerIndex: number,
+): string
+```
+
+Build the reserved residual-branch tensor name for one layer pair.
+
+Parameters:
+- `sourceLayerIndex` - Residual source layer index.
+- `targetLayerIndex` - Residual target layer index.
+
+Returns: Deterministic residual branch tensor name.
+
+### buildResidualMergeNodeName
+
+```ts
+buildResidualMergeNodeName(
+  targetLayerIndex: number,
+): string
+```
+
+Build the deterministic residual merge node name for one target layer.
+
+Parameters:
+- `targetLayerIndex` - Target layer index.
+
+Returns: Residual merge node name.
+
+### buildResidualMergeOutputName
+
+```ts
+buildResidualMergeOutputName(
+  targetLayerIndex: number,
+): string
+```
+
+Build the deterministic residual merge output tensor name for one target layer.
+
+Parameters:
+- `targetLayerIndex` - Target layer index.
+
+Returns: Residual merge output tensor name.
+
+### collectCrossLayerConnections
+
+```ts
+collectCrossLayerConnections(
+  network: default,
+  layers: default[][],
+): AdvancedGraphCrossLayerConnection[]
+```
+
+Collect deterministic cross-layer feed-forward edges.
+
+Parameters:
+- `network` - Source network.
+- `layers` - Resolved layered ordering.
+
+Returns: Sorted cross-layer connection descriptors.
+
+### collectSourceNodeCrossLayerConnections
+
+```ts
+collectSourceNodeCrossLayerConnections(
+  sourceNode: default,
+  layerIndexByNode: Map<default, number>,
+): AdvancedGraphCrossLayerConnection[]
+```
+
+Collect cross-layer feed-forward edges from one source node.
+
+Parameters:
+- `sourceNode` - Source node.
+- `layerIndexByNode` - Node-to-layer lookup.
+
+Returns: Cross-layer descriptors for this source node.
+
+### compareCrossLayerConnections
+
+```ts
+compareCrossLayerConnections(
+  left: AdvancedGraphCrossLayerConnection,
+  right: AdvancedGraphCrossLayerConnection,
+): number
+```
+
+Keep metadata emission order deterministic.
+
+Parameters:
+- `left` - Left descriptor.
+- `right` - Right descriptor.
+
+Returns: Sort comparison result.
+
+### createCrossLayerConnectionDescriptor
+
+```ts
+createCrossLayerConnectionDescriptor(
+  sourceNodeInternal: NodeInternalsWithExportIndex,
+  sourceLayerIndex: number,
+  targetNode: default,
+  layerIndexByNode: Map<default, number>,
+): AdvancedGraphCrossLayerConnection | undefined
+```
+
+Create one cross-layer descriptor when the target is non-adjacent.
+
+Parameters:
+- `sourceNodeInternal` - Source-node internals.
+- `sourceLayerIndex` - Source-layer index.
+- `targetNode` - Target node.
+- `layerIndexByNode` - Node-to-layer lookup.
+
+Returns: Descriptor when the edge skips one or more layers.
+
+### isAdvancedGraphCrossLayerConnection
+
+```ts
+isAdvancedGraphCrossLayerConnection(
+  descriptor: AdvancedGraphCrossLayerConnection | undefined,
+): boolean
+```
+
+Type guard for optional cross-layer descriptors.
+
+Parameters:
+- `descriptor` - Optional descriptor.
+
+Returns: Whether the descriptor exists.
+
+### resolveNodeIndex
+
+```ts
+resolveNodeIndex(
+  nodeInternal: NodeInternalsWithExportIndex,
+): number
+```
+
+Resolve a stable node export index.
+
+Parameters:
+- `nodeInternal` - Node internals.
+
+Returns: Stable export index.
+
+### resolveOneHopResidualSourceLayerIndex
+
+```ts
+resolveOneHopResidualSourceLayerIndex(
+  currentLayerNodes: default[],
+  layers: default[][],
+  targetLayerIndex: number,
+): number | null
+```
+
+Resolve the single one-hop residual source layer for a target layer.
+
+The first explicit residual-add subset stays narrow and deterministic:
+exactly one non-adjacent source layer may feed the target layer, and that
+source must skip exactly one intermediate layer.
+
+Parameters:
+- `currentLayerNodes` - Target-layer nodes.
+- `layers` - Resolved layered ordering.
+- `targetLayerIndex` - Target-layer index.
+
+Returns: One-hop residual source layer index, or null when the layer stays on fallback.
+
+## architecture/network/onnx/export/network.onnx.export-shape-validation.utils.ts
+
+### validateOnnxModelShapes
+
+```ts
+validateOnnxModelShapes(
+  model: OnnxModel,
+): void
+```
+
+Validate the exporter-owned ONNX tensor ledger before the model leaves the builder.
+
+This validator is intentionally conservative and repo-shaped rather than a full
+protobuf-level ONNX checker. It understands the operator subset that the
+exporter already emits and verifies that the graph stays dimensionally
+coherent across dense, residual, concat, recurrent, spatial, and attention
+helper paths.
+
+Parameters:
+- `model` - ONNX-like model to validate.
+
+Returns: Nothing.

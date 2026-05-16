@@ -126,5 +126,55 @@ describe('network onnx import-activations utils chapter', () => {
         expect(network.nodes[1].squash).toBe(methods.Activation.identity);
       });
     });
+    describe('given a Softplus activation node', () => {
+      it('assigns the softplus activation to the matching hidden node', () => {
+        // Arrange
+        const network = Network.createMLP(1, [1], 1);
+        const hiddenNode = network.nodes.find((nodeEntry) => nodeEntry.type === 'hidden');
+        const onnx = buildOnnx([
+          { op_type: 'Softplus', name: 'act_l1', input: [], output: [] },
+        ]);
+
+        // Act
+        assignActivationFunctions(network, onnx, [1]);
+
+        // Assert
+        expect(hiddenNode?.squash).toBe(methods.Activation.softplus);
+      });
+    });
+
+    describe('given a Mish activation node', () => {
+      it('assigns the mish activation to the matching hidden node', () => {
+        // Arrange
+        const network = Network.createMLP(1, [1], 1);
+        const hiddenNode = network.nodes.find((nodeEntry) => nodeEntry.type === 'hidden');
+        const onnx = buildOnnx([
+          { op_type: 'Mish', name: 'act_l1', input: [], output: [] },
+        ]);
+
+        // Act
+        assignActivationFunctions(network, onnx, [1]);
+
+        // Assert
+        expect(hiddenNode?.squash).toBe(methods.Activation.mish);
+      });
+    });
+
+    describe('given a Gelu activation node', () => {
+      it('assigns the gelu activation to the matching hidden node', () => {
+        // Arrange
+        const network = Network.createMLP(1, [1], 1);
+        const hiddenNode = network.nodes.find((nodeEntry) => nodeEntry.type === 'hidden');
+        const onnx = buildOnnx([
+          { op_type: 'Gelu', name: 'act_l1', input: [], output: [] },
+        ]);
+
+        // Act
+        assignActivationFunctions(network, onnx, [1]);
+
+        // Assert
+        expect(hiddenNode?.squash).toBe(methods.Activation.gelu);
+      });
+    });
   });
 });

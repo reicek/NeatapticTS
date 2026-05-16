@@ -298,6 +298,10 @@ Layer node slices used while applying Conv reconstruction assignments.
 
 Coordinate for one Conv output neuron traversal position.
 
+### OnnxImportConvSourceLayout
+
+Source layout used when replaying Conv weights onto dense source nodes.
+
 ### OnnxImportConvTensorContext
 
 Resolved Conv initializer tensors and dimensions for one layer.
@@ -616,6 +620,7 @@ Returns: Inbound connection map keyed by source node.
 ```ts
 buildInitializerMap(
   initializers: OnnxTensor[],
+  metadataProps: OnnxMetadataProperty[],
 ): Record<string, OnnxTensor>
 ```
 
@@ -645,7 +650,7 @@ Returns: Input coordinate when in bounds.
 
 ```ts
 buildInputFeatureLinearIndex(
-  convSpec: Conv2DMapping,
+  sourceLayout: OnnxImportConvSourceLayout,
   inChannelIndex: number,
   inputRow: number,
   inputColumn: number,
@@ -856,6 +861,17 @@ Parameters:
 
 Returns: True when aggregated tensor exists.
 
+### hydrateSharedInitializerAliases
+
+```ts
+hydrateSharedInitializerAliases(
+  initializerMap: Record<string, OnnxTensor>,
+  metadataProps: OnnxMetadataProperty[],
+): void
+```
+
+Hydrate alias tensor names back into the initializer map for metadata-backed shared initializers.
+
 ### parseConvMetadata
 
 ```ts
@@ -901,6 +917,16 @@ Parameters:
 
 Returns: Parsed hidden layer sizes when available.
 
+### parseSharedInitializerAliases
+
+```ts
+parseSharedInitializerAliases(
+  metadataProps: OnnxMetadataProperty[],
+): { aliasTensorName: string; canonicalTensorName: string; }[]
+```
+
+Parse valid shared-initializer alias metadata records from ONNX metadata.
+
 ### parseWeightTensorName
 
 ```ts
@@ -931,12 +957,27 @@ Parameters:
 
 Returns: Kernel weight.
 
+### resetInboundConnectionWeights
+
+```ts
+resetInboundConnectionWeights(
+  neuronInternal: NodeInternals,
+): void
+```
+
+Reset all inbound weights so Conv reconstruction can write only receptive edges.
+
+Parameters:
+- `neuronInternal` - Target neuron internals.
+
+Returns: Nothing.
+
 ### resolveCurrentLayerNodes
 
 ```ts
 resolveCurrentLayerNodes(
   assignmentContext: OnnxImportWeightAssignmentContext,
-  params: { sequentialIndex: number; },
+  params: { layerIndex: number; },
 ): default[]
 ```
 
@@ -970,7 +1011,7 @@ Returns: Hidden-layer size.
 ```ts
 resolvePreviousLayerNodes(
   assignmentContext: OnnxImportWeightAssignmentContext,
-  params: { sequentialIndex: number; },
+  params: { layerIndex: number; },
 ): default[]
 ```
 
@@ -1030,9 +1071,21 @@ Keeping them here makes the import chapter explain its own execution state
 without forcing the root ONNX compatibility barrel to remain the ownership
 home for importer-only details.
 
+### NetworkWithOnnxImportAdvancedGraph
+
+Network instance augmented with optional imported advanced-graph metadata.
+
 ### NetworkWithOnnxImportPooling
 
 Network instance augmented with optional imported ONNX pooling metadata.
+
+### OnnxImportAdvancedGraphCrossLayerConnection
+
+Audit-only cross-layer feed-forward edge carried through Phase 5 import fallback.
+
+### OnnxImportAdvancedGraphMetadata
+
+Parsed advanced-graph metadata attached to imported network instances.
 
 ### OnnxImportArchitectureContext
 
@@ -1042,9 +1095,21 @@ Shared architecture extraction context with resolved graph dimensions.
 
 Parsed architecture dimensions extracted from ONNX import graph payloads.
 
+### OnnxImportAttentionBlock
+
+Explicit fixed-width self-attention block carried through Phase 5 import fallback.
+
+### OnnxImportConcatMerge
+
+Explicit concat merge carried through Phase 5 import hardening.
+
 ### OnnxImportDimensionRecord
 
 Loose ONNX shape-dimension record used by legacy import payload access.
+
+### OnnxImportFlattenConsistencyAudit
+
+Metadata-only audit record comparing a flattened pooled width to the next dense width.
 
 ### OnnxImportHiddenLayerSpan
 
@@ -1058,13 +1123,25 @@ Execution context for assigning one hidden-layer recurrent diagonal tensor.
 
 Parsed pooling metadata payload attached to imported network instances.
 
+### OnnxImportPoolingVirtualShape
+
+Virtual spatial shape derived from Conv and Pool metadata during import.
+
 ### OnnxImportRecurrentRestorationContext
 
 Context for recurrent self-connection restoration from ONNX metadata and tensors.
 
+### OnnxImportResidualAdd
+
+Explicit one-hop residual-add merge carried through Phase 5 import hardening.
+
 ### OnnxImportSelfConnectionUpsertContext
 
 Context for upserting one hidden node self-connection from recurrent weight.
+
+### OnnxImportSharedInitializerAlias
+
+Audit-only shared initializer alias carried through Phase 5 import fallback.
 
 ## architecture/network/onnx/import/network.onnx.import-orchestrators.utils.ts
 
@@ -1080,6 +1157,29 @@ Apply one hidden layer diagonal recurrent self-weights.
 
 Parameters:
 - `layerConnectionContext` - Layer connection context.
+
+Returns: Nothing.
+
+### attachOnnxAdvancedGraphMetadata
+
+```ts
+attachOnnxAdvancedGraphMetadata(
+  network: default,
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel | undefined,
+): void
+```
+
+Attach optional advanced-graph audit metadata from ONNX model metadata.
+
+Phase 5 starts with honest fallback: import keeps rebuilding the layered
+baseline, but it can still preserve the exact cross-layer feed-forward edges
+the exporter detected so later residual, concat, and attention passes have a
+deterministic seam to reuse.
+
+Parameters:
+- `network` - Target network.
+- `metadata` - ONNX metadata.
 
 Returns: Nothing.
 
@@ -1147,6 +1247,74 @@ Parameters:
 
 Returns: Hidden-layer span payload list.
 
+### buildImportedLayers
+
+```ts
+buildImportedLayers(
+  network: default,
+  hiddenLayerSizes: number[],
+): default[][]
+```
+
+Build the imported layer ordering from runtime nodes and hidden-layer widths.
+
+### buildVirtualPoolingShape
+
+```ts
+buildVirtualPoolingShape(
+  poolingSpec: Pool2DMapping,
+  convSpec: Conv2DMapping,
+  flattenLayerSet: Set<number>,
+): OnnxImportPoolingVirtualShape | null
+```
+
+Build one virtual pooled shape from the pre-pool Conv output shape.
+
+Parameters:
+- `poolingSpec` - Pool metadata describing the virtual pooling step.
+- `convSpec` - Conv metadata describing the pre-pool spatial shape.
+- `flattenLayerSet` - Layer indices marked with flatten-after-pool metadata.
+
+Returns: Virtual pooled shape when the metadata is usable.
+
+### calculateSpatialOutputSize
+
+```ts
+calculateSpatialOutputSize(
+  inputSize: number,
+  kernelSize: number,
+  strideSize: number,
+  leadingPadding: number,
+  trailingPadding: number,
+): number
+```
+
+Calculate one pooled spatial output size from kernel, stride, and padding metadata.
+
+Parameters:
+- `inputSize` - Pre-pool spatial size.
+- `kernelSize` - Pool kernel size.
+- `strideSize` - Pool stride size.
+- `leadingPadding` - Leading padding value.
+- `trailingPadding` - Trailing padding value.
+
+Returns: Derived output size, or zero when the metadata is unusable.
+
+### collectAvailableConvSpecs
+
+```ts
+collectAvailableConvSpecs(
+  metadata: OnnxMetadataProperty[],
+): Conv2DMapping[]
+```
+
+Collect explicit and inferred Conv specs that can anchor pooling shape simulation.
+
+Parameters:
+- `metadata` - ONNX metadata entries.
+
+Returns: Layer-indexed Conv specs, preferring explicit specs over inferred ones.
+
 ### collectDiagonalRecurrentWeights
 
 ```ts
@@ -1163,6 +1331,42 @@ Parameters:
 - `hiddenLayerSize` - Hidden-layer width.
 
 Returns: Diagonal recurrent self-weights.
+
+### collectFlattenConsistencyAudit
+
+```ts
+collectFlattenConsistencyAudit(
+  virtualShapes: OnnxImportPoolingVirtualShape[],
+  hiddenLayerSizes: number[],
+  outputCount: number,
+): OnnxImportFlattenConsistencyAudit[]
+```
+
+Collect flatten-consistency audit records for virtual pooled shapes with flatten metadata.
+
+Parameters:
+- `virtualShapes` - Derived virtual pooled shapes.
+- `hiddenLayerSizes` - Hidden-layer widths from ONNX metadata.
+- `outputCount` - Imported output width.
+
+Returns: Metadata-only flatten-consistency audit records.
+
+### collectFusedRecurrentGateWeights
+
+```ts
+collectFusedRecurrentGateWeights(
+  recurrentTensorWeights: number[],
+  unitSize: number,
+): number[]
+```
+
+Collect diagonal recurrent weights from the recurrent gate block inside a fused tensor.
+
+Parameters:
+- `recurrentTensorWeights` - Flattened fused recurrent tensor weights.
+- `unitSize` - Fused recurrent unit size.
+
+Returns: Diagonal recurrent self-weights for the recurrent gate slice.
 
 ### collectNodesByType
 
@@ -1211,6 +1415,25 @@ Parameters:
 
 Returns: Hidden-layer spans requiring recurrent restoration.
 
+### collectVirtualPoolingShapes
+
+```ts
+collectVirtualPoolingShapes(
+  poolingSpecs: Pool2DMapping[],
+  convSpecs: Conv2DMapping[],
+  flattenLayers: number[],
+): OnnxImportPoolingVirtualShape[]
+```
+
+Derive virtual pooled shapes from Conv and Pool metadata without changing weights.
+
+Parameters:
+- `poolingSpecs` - Imported pooling metadata specs.
+- `convSpecs` - Available explicit/inferred Conv specs.
+- `flattenLayers` - Layer indices marked with flatten-after-pool metadata.
+
+Returns: Derived virtual pooled shapes for future consistency checks.
+
 ### extractOnnxArchitecture
 
 ```ts
@@ -1225,6 +1448,21 @@ Parameters:
 - `onnx` - Source ONNX model.
 
 Returns: Parsed architecture dimensions.
+
+### findFusedRecurrentInitializer
+
+```ts
+findFusedRecurrentInitializer(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): OnnxTensor | undefined
+```
+
+Resolve a fused recurrent tensor for one hidden-layer span when generic `Rk` is absent.
+
+Parameters:
+- `layerConnectionContext` - Layer connection context.
+
+Returns: Matching fused recurrent tensor when present.
 
 ### findMetadataProperty
 
@@ -1248,7 +1486,7 @@ Returns: Matching metadata property when present.
 ```ts
 findRecurrentInitializer(
   layerConnectionContext: OnnxImportLayerConnectionContext,
-): { name: string; float_data: number[]; } | undefined
+): OnnxTensor | undefined
 ```
 
 Resolve recurrent initializer tensor for one hidden-layer span.
@@ -1257,6 +1495,68 @@ Parameters:
 - `layerConnectionContext` - Layer connection context.
 
 Returns: Recurrent initializer tensor when available.
+
+### inferRecurrentLayerIndicesFromInitializers
+
+```ts
+inferRecurrentLayerIndicesFromInitializers(
+  hiddenLayerSizes: number[],
+  onnx: OnnxModel,
+): number[]
+```
+
+Infer recurrent layer indices from plain recurrent tensors when metadata is absent.
+
+Parameters:
+- `hiddenLayerSizes` - Hidden-layer size list used to bound valid layer indices.
+- `onnx` - Source ONNX model.
+
+Returns: One-based recurrent layer indices inferred from `Rk` tensors.
+
+### isAdvancedGraphCrossLayerConnection
+
+```ts
+isAdvancedGraphCrossLayerConnection(
+  value: unknown,
+): boolean
+```
+
+Validate one parsed cross-layer audit record.
+
+Parameters:
+- `value` - Parsed JSON value.
+
+Returns: Whether the value matches the expected metadata shape.
+
+### isAttentionBlock
+
+```ts
+isAttentionBlock(
+  value: unknown,
+): boolean
+```
+
+Validate one parsed fixed-width self-attention audit record.
+
+### isResidualAdd
+
+```ts
+isResidualAdd(
+  value: unknown,
+): boolean
+```
+
+Validate one parsed residual-add record.
+
+### isSharedInitializerAlias
+
+```ts
+isSharedInitializerAlias(
+  value: unknown,
+): boolean
+```
+
+Validate one parsed shared-initializer alias audit record.
 
 ### isSingleLayerPerceptronImport
 
@@ -1288,10 +1588,82 @@ Parameters:
 
 Returns: Recurrent layer indices.
 
+### parseAdvancedGraphCrossLayerConnections
+
+```ts
+parseAdvancedGraphCrossLayerConnections(
+  metadata: OnnxMetadataProperty[],
+): OnnxImportAdvancedGraphCrossLayerConnection[] | null
+```
+
+Parse valid cross-layer feed-forward audit metadata.
+
+### parseAdvancedGraphMetadata
+
+```ts
+parseAdvancedGraphMetadata(
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel | undefined,
+): OnnxImportAdvancedGraphMetadata | null
+```
+
+Parse advanced-graph cross-layer metadata from ONNX metadata.
+
+Parameters:
+- `metadata` - ONNX metadata entries.
+
+Returns: Parsed advanced-graph metadata, or null when absent or invalid.
+
+### parseAttentionBlockMetadata
+
+```ts
+parseAttentionBlockMetadata(
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel | undefined,
+): OnnxImportAttentionBlock[] | null
+```
+
+Parse valid fixed-width self-attention audit metadata.
+
+### parseOptionalConvSpecs
+
+```ts
+parseOptionalConvSpecs(
+  metadata: OnnxMetadataProperty[],
+  metadataKey: string,
+): Conv2DMapping[]
+```
+
+Parse one optional Conv spec metadata field.
+
+Parameters:
+- `metadata` - ONNX metadata entries.
+- `metadataKey` - Metadata key carrying Conv spec JSON.
+
+Returns: Parsed Conv specs or an empty list when absent/invalid.
+
+### parseOptionalLayerIndicesMetadata
+
+```ts
+parseOptionalLayerIndicesMetadata(
+  metadata: OnnxMetadataProperty[],
+  metadataKey: string,
+): number[]
+```
+
+Parse one optional layer-index metadata field.
+
+Parameters:
+- `metadata` - ONNX metadata entries.
+- `metadataKey` - Metadata key carrying a JSON array of layer indices.
+
+Returns: Parsed layer indices or an empty list when absent/invalid.
+
 ### parsePoolingMetadata
 
 ```ts
 parsePoolingMetadata(
+  network: default,
   metadata: OnnxMetadataProperty[],
 ): OnnxImportPoolingMetadata | null
 ```
@@ -1317,6 +1689,26 @@ Parameters:
 - `rawMetadataValue` - Raw metadata JSON string.
 
 Returns: Normalized recurrent layer indices.
+
+### parseResidualAddMetadata
+
+```ts
+parseResidualAddMetadata(
+  metadata: OnnxMetadataProperty[],
+): OnnxImportResidualAdd[] | null
+```
+
+Parse valid one-hop residual-add metadata.
+
+### parseSharedInitializerAliases
+
+```ts
+parseSharedInitializerAliases(
+  metadata: OnnxMetadataProperty[],
+): OnnxImportSharedInitializerAlias[] | null
+```
+
+Parse valid shared-initializer alias audit metadata.
 
 ### pruneSingleLayerHiddenPlaceholders
 
@@ -1373,11 +1765,32 @@ Parameters:
 
 Returns: Nothing.
 
+### resolveConsumerLayerWidth
+
+```ts
+resolveConsumerLayerWidth(
+  consumerLayerIndex: number,
+  hiddenLayerSizes: number[],
+  outputCount: number,
+): number | undefined
+```
+
+Resolve the width of the next dense consumer after one flattened pooling site.
+
+Parameters:
+- `consumerLayerIndex` - One-based export-layer index for the next dense consumer.
+- `hiddenLayerSizes` - Hidden-layer widths from ONNX metadata.
+- `outputCount` - Imported output width.
+
+Returns: Consumer width when a dense consumer exists.
+
 ### resolveRecurrentLayerIndices
 
 ```ts
 resolveRecurrentLayerIndices(
+  hiddenLayerSizes: number[],
   metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel,
 ): number[]
 ```
 
@@ -1387,6 +1800,19 @@ Parameters:
 - `metadata` - ONNX metadata payload.
 
 Returns: Parsed recurrent layer indices.
+
+### resolveResidualWeight
+
+```ts
+resolveResidualWeight(
+  residualWeights: number[],
+  sourceLayerWidth: number,
+  sourceLayerIndex: number,
+  targetLayerIndex: number,
+): number
+```
+
+Resolve one residual branch weight from a row-major target-by-source matrix.
 
 ### restoreRecurrentSelfConnections
 
@@ -1409,6 +1835,45 @@ Parameters:
 
 Returns: Nothing.
 
+### restoreResidualAddConnections
+
+```ts
+restoreResidualAddConnections(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadata: OnnxMetadataProperty[],
+): void
+```
+
+Restore supported one-hop residual-add skip connections from ONNX metadata.
+
+The import side stays conservative: it only rehydrates skip edges when the
+exporter recorded both the residual merge intent and the exact cross-layer
+edge list, and when the residual branch tensor is still present.
+
+Parameters:
+- `network` - Target network.
+- `onnx` - Source ONNX model.
+- `hiddenLayerSizes` - Hidden layer sizes from architecture extraction.
+- `metadata` - ONNX metadata payload.
+
+Returns: Nothing.
+
+### restoreSingleResidualAddConnections
+
+```ts
+restoreSingleResidualAddConnections(
+  network: default,
+  onnx: OnnxModel,
+  importedLayers: default[][],
+  crossLayerConnections: OnnxImportAdvancedGraphCrossLayerConnection[],
+  residualAdd: OnnxImportResidualAdd,
+): void
+```
+
+Restore one residual-add branch using the recorded edge list and residual weight tensor.
+
 ### sliceLayerHiddenNodes
 
 ```ts
@@ -1423,6 +1888,18 @@ Parameters:
 - `layerConnectionContext` - Layer connection context.
 
 Returns: Hidden nodes belonging to the span.
+
+### upsertFeedForwardConnection
+
+```ts
+upsertFeedForwardConnection(
+  sourceNode: default,
+  targetNode: default,
+  weight: number,
+): void
+```
+
+Upsert one feed-forward connection between two runtime nodes.
 
 ### upsertSelfConnection
 
@@ -1513,3 +1990,175 @@ Parameters:
 - `metadata` - ONNX metadata properties.
 
 Returns: Nothing.
+
+## architecture/network/onnx/import/network.onnx.import-concat.utils.ts
+
+### attachOnnxConcatMergeMetadata
+
+```ts
+attachOnnxConcatMergeMetadata(
+  network: default,
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel | undefined,
+): void
+```
+
+Attach validated concat-merge audit metadata onto an imported network.
+
+Parameters:
+- `network` - Target network.
+- `metadata` - ONNX metadata payload.
+- `onnx` - Source ONNX model used for same-family validation.
+
+Returns: Nothing.
+
+### buildImportedLayers
+
+```ts
+buildImportedLayers(
+  network: default,
+  hiddenLayerSizes: number[],
+): default[][]
+```
+
+Build the imported layer ordering from runtime nodes and hidden-layer widths.
+
+### collectNodesByType
+
+```ts
+collectNodesByType(
+  nodes: default[],
+  nodeType: "hidden" | "input" | "output",
+): default[]
+```
+
+Collect nodes matching one runtime node-type discriminator.
+
+### findInitializer
+
+```ts
+findInitializer(
+  onnx: OnnxModel,
+  tensorName: string,
+): OnnxTensor | undefined
+```
+
+Resolve one initializer by tensor name.
+
+### findMetadataProperty
+
+```ts
+findMetadataProperty(
+  metadata: OnnxMetadataProperty[],
+  metadataKey: string,
+): OnnxMetadataProperty | undefined
+```
+
+Find one ONNX metadata property by key.
+
+### findNodeByName
+
+```ts
+findNodeByName(
+  onnx: OnnxModel,
+  nodeName: string,
+): OnnxNode | undefined
+```
+
+Resolve one node by its deterministic export name.
+
+### isConcatMerge
+
+```ts
+isConcatMerge(
+  value: unknown,
+): boolean
+```
+
+Validate one parsed concat-merge record.
+
+### matchesExportedConcatMergeSubset
+
+```ts
+matchesExportedConcatMergeSubset(
+  onnx: OnnxModel,
+  concatMerge: OnnxImportConcatMerge,
+): boolean
+```
+
+Validate the same-family explicit concat subset emitted by this exporter.
+
+### parseConcatMergeMetadata
+
+```ts
+parseConcatMergeMetadata(
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel,
+): OnnxImportConcatMerge[] | null
+```
+
+Parse valid explicit concat-merge metadata.
+
+### resolveConcatMergeWeight
+
+```ts
+resolveConcatMergeWeight(
+  mergedWeights: number[],
+  mergedSourceWidth: number,
+  previousLayerWidth: number,
+  targetLayerIndex: number,
+  sourceLayerIndex: number,
+): number
+```
+
+Resolve one concat branch weight from the widened row-major target-by-merged-source matrix.
+
+### restoreConcatMergeConnections
+
+```ts
+restoreConcatMergeConnections(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadata: OnnxMetadataProperty[],
+): void
+```
+
+Restore supported concat-merge skip connections from ONNX metadata.
+
+The import side stays narrow and deterministic: it only rebuilds skipped
+source-layer fan-in for the explicit concat subset emitted by the exporter,
+using the widened dense weight tensor tail while the ordinary adjacent-layer
+slice remains assigned by the baseline dense import path.
+
+Parameters:
+- `network` - Target network.
+- `onnx` - Source ONNX model.
+- `hiddenLayerSizes` - Hidden layer sizes from architecture extraction.
+- `metadata` - ONNX metadata payload.
+
+Returns: Nothing.
+
+### restoreSingleConcatMergeConnections
+
+```ts
+restoreSingleConcatMergeConnections(
+  onnx: OnnxModel,
+  importedLayers: default[][],
+  concatMerge: OnnxImportConcatMerge,
+): void
+```
+
+Restore one concat-merge branch using the widened dense weight tensor tail.
+
+### upsertFeedForwardConnection
+
+```ts
+upsertFeedForwardConnection(
+  sourceNode: default,
+  targetNode: default,
+  weight: number,
+): void
+```
+
+Upsert one feed-forward connection between two runtime nodes.

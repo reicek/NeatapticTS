@@ -9,10 +9,8 @@
  * - Below: Maze grid on left, network visualization on right
  */
 
-import {
-  exportVisualizationGraph,
-  renderNetworkView,
-} from '../../src/neataptic';
+import { exportVisualizationGraph } from '../../src/architecture/network/visualization/network.visualization';
+import { renderNetworkView } from '../../src/visualization/visualization';
 import type Network from '../../src/architecture/network';
 
 /**

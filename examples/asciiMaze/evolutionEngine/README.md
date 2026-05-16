@@ -3909,6 +3909,23 @@ Worker bootstrap request sent from the browser host to one evaluator worker.
 
 Worker response emitted by one ASCII Maze evaluator worker.
 
+### createAsciiMazeLocalGenomeEvaluator
+
+```ts
+createAsciiMazeLocalGenomeEvaluator(
+  fitnessContext: IFitnessEvaluationContext,
+  fitnessEvaluator: FitnessEvaluatorFn,
+): AsciiMazeLocalGenomeEvaluator
+```
+
+Create the local ASCII Maze genome evaluator used by both fallback paths.
+
+Parameters:
+- `fitnessContext` - Read-only maze context shared by the active run.
+- `fitnessEvaluator` - Fitness delegate selected by the evolution engine.
+
+Returns: Local evaluator that clears recurrent state before scoring one genome.
+
 ### createAsciiMazeWorkerPopulationFitnessEvaluator
 
 ```ts
@@ -3932,6 +3949,38 @@ Parameters:
 - `fitnessEvaluator` - Active fitness delegate chosen by the caller.
 
 Returns: Population-wide fitness delegate, or `undefined` when worker mode is unavailable.
+
+### evaluateAsciiMazePopulationLocally
+
+```ts
+evaluateAsciiMazePopulationLocally(
+  population: AsciiMazeWorkerPopulationGenome[],
+  evaluateGenome: AsciiMazeLocalGenomeEvaluator,
+): Promise<void>
+```
+
+Score an ASCII Maze population locally after worker evaluation becomes unusable.
+
+Parameters:
+- `population` - Ordered genome shelf to score in place.
+- `evaluateGenome` - Local scorer shared with the worker helper fallback.
+
+Returns: Promise resolved after every genome has a local score.
+
+### reportAsciiMazeWorkerEvaluationFallback
+
+```ts
+reportAsciiMazeWorkerEvaluationFallback(
+  error: unknown,
+): void
+```
+
+Report worker evaluation fallback without making console availability fatal.
+
+Parameters:
+- `error` - Worker startup or evaluation error that triggered local scoring.
+
+Returns: Nothing.
 
 ## evolutionEngine/engineState.utils.ts
 

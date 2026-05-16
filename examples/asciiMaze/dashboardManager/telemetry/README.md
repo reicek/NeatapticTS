@@ -70,6 +70,32 @@ Parameters:
 
 Returns: Public telemetry snapshot used by browser hosts.
 
+### recordCurrentBestFitness
+
+```ts
+recordCurrentBestFitness(
+  state: DashboardManagerState,
+): void
+```
+
+Record the current best score in the public dashboard history.
+
+Parameters:
+- `state` - Mutable dashboard state that owns bounded histories.
+
+### recordCurrentProgress
+
+```ts
+recordCurrentProgress(
+  state: DashboardManagerState,
+): void
+```
+
+Record the current best progress in the public dashboard history.
+
+Parameters:
+- `state` - Mutable dashboard state that owns bounded histories.
+
 ### resolveActivationSchedulingDetails
 
 ```ts

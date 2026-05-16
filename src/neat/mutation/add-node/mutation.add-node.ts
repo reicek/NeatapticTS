@@ -287,6 +287,39 @@ export function applySplitWithExistingRecord(
 }
 
 /**
+ * Determine whether one reused split record would collide with live genome identity.
+ *
+ * Generation-local split reuse is correct across different genomes, but a single
+ * genome must never stamp the same node gene id or connection innovations twice.
+ * This guard detects the collision case so callers can fall back to fresh local
+ * identities while preserving the shared split record for other genomes.
+ *
+ * @param genomeToInspect - genome about to receive the reused split record
+ * @param splitRecord - existing split identity record
+ * @returns True when reusing the record would duplicate live structural identity.
+ */
+export function doesSplitRecordConflictWithGenome(
+  genomeToInspect: GenomeWithMetadata,
+  splitRecord: NodeSplitRecord,
+): boolean {
+  const hasNodeGeneCollision = genomeToInspect.nodes.some(
+    (nodeEntry) => nodeEntry.geneId === splitRecord.newNodeGeneId,
+  );
+  const hasIncomingInnovationCollision = genomeToInspect.connections.some(
+    (connectionEntry) => connectionEntry.innovation === splitRecord.inInnov,
+  );
+  const hasOutgoingInnovationCollision = genomeToInspect.connections.some(
+    (connectionEntry) => connectionEntry.innovation === splitRecord.outInnov,
+  );
+
+  return (
+    hasNodeGeneCollision ||
+    hasIncomingInnovationCollision ||
+    hasOutgoingInnovationCollision
+  );
+}
+
+/**
  * Apply a split and create a new innovation record.
  *
  * This path handles genuinely novel structural growth. It inserts a fresh
@@ -337,6 +370,48 @@ export function applySplitWithNewRecord(
     splitDescriptor.splitKey,
     splitRecord,
   );
+}
+
+/**
+ * Apply a split with fresh local identities without replacing the shared split record.
+ *
+ * This is the escape hatch for the rare case where a genome already carries the
+ * node gene id or replacement connection innovations referenced by the active
+ * generation's shared split record. The local genome still needs a valid split,
+ * but the shared record should remain intact for other genomes that do not have
+ * the collision.
+ *
+ * @param genomeToEdit - genome being modified
+ * @param connectionToSplit - connection being split
+ * @param splitDescriptor - metadata for the split
+ * @param NodeClass - node constructor
+ * @param internal - neat controller context
+ * @returns void
+ */
+export function applySplitWithFreshIdentity(
+  genomeToEdit: GenomeWithMetadata,
+  connectionToSplit: ConnectionWithMetadata,
+  splitDescriptor: { splitKey: string; originalWeight: number },
+  NodeClass: new (
+    type: NodeWithMetadata['type'],
+    customActivation?: (x: number, derivate?: boolean) => number,
+    rng?: () => number,
+  ) => unknown,
+  internal: NeatControllerForMutation,
+): void {
+  // Step 1: create and insert a fresh hidden node.
+  const newNode = createSplitNode(NodeClass, internal._getRNG());
+  const insertIndex = resolveInsertIndex(genomeToEdit, connectionToSplit.to);
+  genomeToEdit.nodes.splice(insertIndex, 0, newNode);
+
+  // Step 2: connect the replacement edges and assign fresh innovations.
+  const splitConnections = connectSplitEdges(
+    genomeToEdit,
+    connectionToSplit,
+    newNode,
+    splitDescriptor.originalWeight,
+  );
+  assignInnovationsForNewSplit(newNode, splitConnections, internal);
 }
 
 /**

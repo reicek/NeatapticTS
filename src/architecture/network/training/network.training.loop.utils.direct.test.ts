@@ -306,6 +306,44 @@ describe('network training loop chapter', () => {
       });
     });
 
+    describe('given activation throws an Error while warnings are enabled', () => {
+      it('uses the Error message in the warning output and returns zero processed error', () => {
+        // Arrange
+        config.warnings = true;
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => undefined);
+        const network = createNetwork({
+          activate: jest.fn(() => {
+            throw new Error('finite-activation-guard');
+          }),
+        });
+
+        // Act
+        const meanError = trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [1] }],
+          1,
+          1,
+          0.1,
+          0,
+          {},
+          () => 1,
+        );
+
+        // Assert
+        expect({
+          meanError,
+          warnedWithErrorMessage: String(warnSpy.mock.calls[0]?.[0]).includes(
+            'finite-activation-guard',
+          ),
+        }).toEqual({
+          meanError: 0,
+          warnedWithErrorMessage: true,
+        });
+      });
+    });
+
     describe('given warnings stay disabled across one mismatched sample and one thrown sample', () => {
       it('skips both bad samples without emitting warning output', () => {
         // Arrange
@@ -341,6 +379,126 @@ describe('network training loop chapter', () => {
           warningCount: warnSpy.mock.calls.length,
         }).toEqual({
           meanError: 0,
+          warningCount: 0,
+        });
+      });
+    });
+
+    describe('given activation returns a non-finite output while warnings are enabled', () => {
+      it('warns once, skips propagation, and returns zero processed error', () => {
+        // Arrange
+        config.warnings = true;
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => undefined);
+        const hiddenNode = createNode({ type: 'hidden' });
+        const outputNode = createNode({ type: 'output' });
+        const network = createNetwork({
+          activate: jest.fn(() => [Number.NaN]),
+          nodes: [createNode({ type: 'input' }), hiddenNode, outputNode],
+        });
+
+        // Act
+        const meanError = trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [1] }],
+          1,
+          1,
+          0.1,
+          0,
+          {},
+          () => 1,
+        );
+
+        // Assert
+        expect({
+          hiddenPropagationCalls: hiddenNode.propagate.mock.calls.length,
+          meanError,
+          outputPropagationCalls: outputNode.propagate.mock.calls.length,
+          warningCount: warnSpy.mock.calls.length,
+        }).toEqual({
+          hiddenPropagationCalls: 0,
+          meanError: 0,
+          outputPropagationCalls: 0,
+          warningCount: 1,
+        });
+      });
+    });
+
+    describe('given a training sample contains a non-finite target while warnings are enabled', () => {
+      it('warns once, skips activation, and returns zero processed error', () => {
+        // Arrange
+        config.warnings = true;
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => undefined);
+        const network = createNetwork({
+          activate: jest.fn(() => [0.5]),
+        });
+
+        // Act
+        const meanError = trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [Number.NaN] }],
+          1,
+          1,
+          0.1,
+          0,
+          {},
+          () => 1,
+        );
+
+        // Assert
+        expect({
+          activationCalls: jest.mocked(network.activate).mock.calls.length,
+          meanError,
+          warningCount: warnSpy.mock.calls.length,
+        }).toEqual({
+          activationCalls: 0,
+          meanError: 0,
+          warningCount: 1,
+        });
+      });
+    });
+
+    describe('given warnings stay disabled for non-finite target and activation-output samples', () => {
+      it('skips both samples without emitting warning output', () => {
+        // Arrange
+        config.warnings = false;
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => undefined);
+        const outputNode = createNode({ type: 'output' });
+        const network = createNetwork({
+          activate: jest.fn().mockReturnValueOnce([Number.NaN]),
+          nodes: [createNode({ type: 'input' }), outputNode],
+        });
+
+        // Act
+        const meanError = trainSetCore(
+          network as unknown as Network,
+          [
+            { input: [1], output: [Number.NaN] },
+            { input: [1], output: [1] },
+          ],
+          1,
+          1,
+          0.1,
+          0,
+          {},
+          () => 1,
+        );
+
+        // Assert
+        expect({
+          activationCalls: jest.mocked(network.activate).mock.calls.length,
+          meanError,
+          outputPropagationCalls: outputNode.propagate.mock.calls.length,
+          warningCount: warnSpy.mock.calls.length,
+        }).toEqual({
+          activationCalls: 1,
+          meanError: 0,
+          outputPropagationCalls: 0,
           warningCount: 0,
         });
       });
@@ -387,6 +545,288 @@ describe('network training loop chapter', () => {
         }).toEqual({
           hiddenUsesImmediateUpdate: true,
           meanError: 2,
+        });
+      });
+    });
+
+    describe('given a deferred optimizer step runs with mixed precision disabled', () => {
+      it('keeps the loss scale unchanged while still completing the optimizer pass', () => {
+        // Arrange
+        const hiddenNode = createNode({
+          connections: {
+            in: [createConnection()],
+            self: [createConnection()],
+          },
+          type: 'hidden',
+        });
+        const outputNode = createNode({ type: 'output' });
+        const network = createNetwork({
+          _currentGradClip: { maxNorm: 1, mode: 'norm' },
+          activate: jest.fn(() => [0.5]),
+          nodes: [createNode({ type: 'input' }), hiddenNode, outputNode],
+        });
+
+        // Act
+        trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [1] }],
+          1,
+          1,
+          0.1,
+          0.9,
+          {},
+          () => 1,
+          { type: 'adam' },
+        );
+
+        // Assert
+        expect({
+          hiddenUsesDeferredPropagation: hiddenNode.propagate.mock.calls[0]?.[2],
+          lossScale: network._mixedPrecision.lossScale,
+          optimizerStep: network._optimizerStep,
+          outputUsesDeferredPropagation: outputNode.propagate.mock.calls[0]?.[2],
+          scaleUpEvents: network._mixedPrecisionState.scaleUpEvents,
+        }).toEqual({
+          hiddenUsesDeferredPropagation: false,
+          lossScale: 1,
+          optimizerStep: 1,
+          outputUsesDeferredPropagation: false,
+          scaleUpEvents: 0,
+        });
+      });
+    });
+
+    describe('given the next optimizer step is forced to overflow', () => {
+      it('consumes the force flag and takes the overflow recovery path', () => {
+        // Arrange
+        const hiddenNode = createNode({
+          connections: {
+            in: [createConnection({ totalDeltaWeight: 5 })],
+            self: [createConnection({ totalDeltaWeight: 7 })],
+          },
+          totalDeltaBias: 3,
+          type: 'hidden',
+        });
+        const network = createNetwork({
+          _forceNextOverflow: true,
+          _mixedPrecision: {
+            enabled: true,
+            lossScale: 2,
+          },
+          _mixedPrecisionState: {
+            badSteps: 0,
+            goodSteps: 0,
+            maxLossScale: 8,
+            minLossScale: 1,
+            overflowCount: 0,
+            scaleDownEvents: 0,
+            scaleUpEvents: 0,
+          },
+          activate: jest.fn(() => [0.5]),
+          nodes: [
+            createNode({ type: 'input' }),
+            hiddenNode,
+            createNode({ totalDeltaBias: undefined, type: 'output' }),
+          ],
+        });
+
+        // Act
+        trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [1] }],
+          1,
+          1,
+          0.1,
+          0.9,
+          {},
+          () => 1,
+          { type: 'adam' },
+        );
+
+        // Assert
+        expect({
+          forceNextOverflow: network._forceNextOverflow,
+          gradNorm: network._lastGradNorm,
+          lossScale: network._mixedPrecision.lossScale,
+          overflowCount: network._mixedPrecisionState.overflowCount,
+          scaleDownEvents: network._mixedPrecisionState.scaleDownEvents,
+        }).toEqual({
+          forceNextOverflow: false,
+          gradNorm: 0,
+          lossScale: 1,
+          overflowCount: 1,
+          scaleDownEvents: 1,
+        });
+      });
+    });
+
+    describe('given a deferred optimizer step flushes on the last sample with an existing optimizer step', () => {
+      it('runs the deferred step even when the batch boundary is only reached by end-of-set', () => {
+        // Arrange
+        const hiddenNode = createNode({
+          connections: {
+            in: [createConnection()],
+            self: [createConnection()],
+          },
+          type: 'hidden',
+        });
+        const outputNode = createNode({ type: 'output' });
+        const network = createNetwork({
+          _optimizerStep: 3,
+          activate: jest.fn(() => [0.5]),
+          nodes: [createNode({ type: 'input' }), hiddenNode, outputNode],
+        });
+
+        // Act
+        trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [1] }],
+          2,
+          1,
+          0.1,
+          0.9,
+          {},
+          () => 1,
+          { type: 'adam' },
+        );
+
+        // Assert
+        expect({
+          hiddenUsesDeferredPropagation: hiddenNode.propagate.mock.calls[0]?.[2],
+          optimizerStep: network._optimizerStep,
+          outputUsesDeferredPropagation: outputNode.propagate.mock.calls[0]?.[2],
+        }).toEqual({
+          hiddenUsesDeferredPropagation: false,
+          optimizerStep: 4,
+          outputUsesDeferredPropagation: false,
+        });
+      });
+    });
+
+    describe('given mixed precision uses a custom increase cadence with finite fp32 bias', () => {
+      it('avoids overflow and increases the loss scale through the configured cadence', () => {
+        // Arrange
+        const hiddenNode = createNode({
+          _fp32Bias: 0,
+          bias: 0,
+          connections: {
+            in: [createConnection({ totalDeltaWeight: 4 })],
+            self: [createConnection({ totalDeltaWeight: 3 })],
+          },
+          totalDeltaBias: 2,
+          type: 'hidden',
+        });
+        const network = createNetwork({
+          _mixedPrecision: {
+            enabled: true,
+            lossScale: 2,
+          },
+          _mixedPrecisionState: {
+            badSteps: 0,
+            goodSteps: 0,
+            maxLossScale: 8,
+            minLossScale: 1,
+            overflowCount: 0,
+            underflowCount: 0,
+            lastUnderflowStep: -1,
+            scaleDownEvents: 0,
+            scaleUpEvents: 0,
+          },
+          _mpIncreaseEvery: 1,
+          activate: jest.fn(() => [0.5]),
+          nodes: [
+            createNode({ type: 'input' }),
+            hiddenNode,
+            createNode({ totalDeltaBias: undefined, type: 'output' }),
+          ],
+        });
+
+        // Act
+        trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [1] }],
+          1,
+          1,
+          0.1,
+          0.9,
+          {},
+          () => 1,
+          { type: 'adam' },
+        );
+
+        // Assert
+        expect({
+          lossScale: network._mixedPrecision.lossScale,
+          overflowCount: network._mixedPrecisionState.overflowCount,
+          scaleUpEvents: network._mixedPrecisionState.scaleUpEvents,
+        }).toEqual({
+          lossScale: 4,
+          overflowCount: 0,
+          scaleUpEvents: 1,
+        });
+      });
+    });
+
+    describe('given mixed precision reaches a custom increase cadence at the maximum loss scale', () => {
+      it('avoids overflow without scaling past the configured maximum', () => {
+        // Arrange
+        const hiddenNode = createNode({
+          _fp32Bias: 0,
+          bias: 0,
+          connections: {
+            in: [createConnection({ totalDeltaWeight: 4 })],
+            self: [createConnection({ totalDeltaWeight: 3 })],
+          },
+          totalDeltaBias: 2,
+          type: 'hidden',
+        });
+        const network = createNetwork({
+          _mixedPrecision: {
+            enabled: true,
+            lossScale: 8,
+          },
+          _mixedPrecisionState: {
+            badSteps: 0,
+            goodSteps: 0,
+            maxLossScale: 8,
+            minLossScale: 1,
+            overflowCount: 0,
+            underflowCount: 0,
+            lastUnderflowStep: -1,
+            scaleDownEvents: 0,
+            scaleUpEvents: 0,
+          },
+          _mpIncreaseEvery: 1,
+          activate: jest.fn(() => [0.5]),
+          nodes: [
+            createNode({ type: 'input' }),
+            hiddenNode,
+            createNode({ totalDeltaBias: undefined, type: 'output' }),
+          ],
+        });
+
+        // Act
+        trainSetCore(
+          network as unknown as Network,
+          [{ input: [1], output: [1] }],
+          1,
+          1,
+          0.1,
+          0.9,
+          {},
+          () => 1,
+          { type: 'adam' },
+        );
+
+        // Assert
+        expect({
+          lossScale: network._mixedPrecision.lossScale,
+          overflowCount: network._mixedPrecisionState.overflowCount,
+          scaleUpEvents: network._mixedPrecisionState.scaleUpEvents,
+        }).toEqual({
+          lossScale: 8,
+          overflowCount: 0,
+          scaleUpEvents: 0,
         });
       });
     });

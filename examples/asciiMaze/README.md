@@ -65,7 +65,7 @@ Important note:
 
 - `index.html` is a lightweight browser shell that loads the prebuilt demo bundle from `docs/assets`.
 - if you want the real host orchestration source, start with [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts).
-- after browser-code changes, run `npm run docs` or `npm run build:ascii-maze` before expecting the hosted page to reflect them.
+- after browser-code changes, run `npm run docs` or `npm run build:ascii-maze` before expecting the hosted page to reflect them. The direct build refreshes both the host bundle and the sidecar evaluation worker.
 
 ### Browser host details worth knowing
 
@@ -101,6 +101,9 @@ npm run test:e2e:logs
 ```bash
 npm run build:ascii-maze
 ```
+
+This direct build refreshes both `docs/assets/ascii-maze.bundle.js` and
+`docs/assets/ascii-maze-evaluation.worker.bundle.js`.
 
 ### Refresh docs and copied example assets
 

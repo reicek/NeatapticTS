@@ -46,6 +46,23 @@ const restored = importFromONNX(modelRoundTrip);
 
 ## architecture/network/onnx/network.onnx.ts
 
+### AttentionMapping
+
+Explicit export-only attention mapping for the Phase 5E shadow subset.
+
+This contract keeps attention source-owned rather than heuristic: callers
+opt one target layer into a fixed-width self-attention shadow block while the
+stable dense path remains the canonical runtime behavior.
+
+### ConcatMapping
+
+Explicit export-only concat mapping for the narrow Phase 5 merge subset.
+
+This contract keeps concat source-owned instead of inferred: callers name one
+skipped source layer and one target layer, and export preserves the merge as a
+deterministic `Concat -> Gemm` path with the default adjacent-layer slice kept
+first in the merged input order.
+
 ### Conv2DMapping
 
 Mapping declaration for treating a fully-connected layer as a 2D convolution during export.
@@ -83,6 +100,47 @@ Tradeoffs:
   runtimes.
 - Some advanced features (partial connectivity, mixed activations, recurrent heuristics)
   may produce graphs that are primarily meant for this library’s importer.
+- Phase 6 closes the first optimization wave conservatively: exact unary activation
+  emission now covers `Softplus`, `Softsign`, `Selu`, `Mish` (opset >= 18), and
+  `Gelu` with explicit `approximate='tanh'` (opset >= 20), while opset-incompatible
+  or unsupported activations stay on the honest Identity baseline.
+- Phase 7 is now active on the first reduced-precision lane: `precision.mode =
+  'storage-fp16'` packs eligible same-family dense and Conv weight or bias
+  initializers as float16 payloads and prepends deterministic `Cast -> float32`
+  bridges so `Gemm` and `Conv` inputs stay type-consistent. Recurrent,
+  advanced-graph, mixed-activation, and partial-connectivity requests stay on
+  float32 with explicit metadata fallback reasons instead of silently widening
+  the supported subset.
+- Quantization packets are now exporter-owned and calibration-backed. Static
+  8-bit requests can carry explicit layer-target calibration ranges and emit
+  deterministic scale or zero-point initializers plus metadata for the
+  supported same-family dense and explicit Conv subset. The current Phase 7D
+  dense slice is now landed: explicitly targeted same-family dense layers
+  can lower into `QuantizeLinear -> QLinearMatMul -> DequantizeLinear`,
+  reattach nonzero bias through an explicit float-domain `Add` bridge,
+  preserve the exporter-owned unary activation node, and emit a
+  deterministic quantized weight tensor with
+  `effective_quantization_mode = static-8bit`.
+  Spatial qlinear lowering, dynamic quantization, and quantized import
+  remain later Phase 7 work, so unsupported requests still record explicit
+  float32 fallback reasons instead of widening the supported subset
+  implicitly.
+- The current spatial subset is still conservative: explicit Conv mappings round-trip,
+  pooling/flatten import remains metadata-driven, and heuristic Conv inference stays
+  metadata-only unless `autoPromoteInferredConv` is enabled and the inferred dense layer
+  passes the shared-kernel safety gate for the current proven subset, including
+  conservative multi-channel layouts, unpooled stacked Conv-like chains, deeper
+  single-channel post-pool chains whose pooled tensor shape can be derived
+  sequentially, and deeper pooled multi-channel chains whose pooled tensor shapes
+  can be derived sequentially while export keeps the pooled source compact per
+  channel. The only proven flatten-after-pool promotion path is the narrow final
+  hidden-stage reshape-bridge subset, where export restores the derived pooled
+  `[C,H,W]` shape before the later Conv. Earlier flattened pooled consumers,
+  repeated flatten-bridge chains, or downstream dense layers that still depend on
+  extra non-pooled inputs keep later inferred stages on the honest fallback path.
+- Export now validates a conservative internal tensor-shape ledger before model
+  finalization and prunes exporter-owned Identity activation scaffolding only when the
+  graph stays semantically equivalent for the already-supported same-family subset.
 
 High-level algorithm:
  1) Normalize/rebuild local connection state for deterministic traversal.
@@ -113,7 +171,12 @@ importFromONNX(
 Reconstruct a NeatapticTS network from an exported `OnnxModel`.
 
 Expected input:
-- A model produced by `exportToONNX()` (same repo/version family).
+- A model produced by `exportToONNX()` (same repo/version family), including the
+  current storage-fp16 subset where eligible weight and bias initializers are
+  packed as float16 payloads and decoded back into the native runtime during import.
+- Quantized Phase 7 exports remain export-only for now. The importer does not
+  yet reconstruct `QLinearMatMul` or other quantized operators back into the
+  native runtime, so quantized ONNX payloads are outside the current import contract.
 
 Trust boundary:
 - Do not import untrusted blobs. A malformed model can be extremely large or internally
@@ -160,6 +223,34 @@ Key fields (high-level):
 - `legacyNodeOrdering`: keeps older node ordering for backward compatibility.
 - `conv2dMappings` / `pool2dMappings`: encode conv/pool semantics for fully-connected
   layers via explicit mapping declarations.
+- `concatMappings`: opt one skipped source layer into the narrow same-family
+  `Concat -> Gemm` merge subset with deterministic `previous_then_source`
+  input order.
+- `attentionMappings`: opt one target layer into the fixed-width same-family
+  self-attention shadow subset.
+- `precision`: opt into reduced-precision export. The current landed lane is
+  `storage-fp16`, which packs eligible same-family dense and Conv weight or
+  bias initializers into float16 storage and inserts deterministic
+  `Cast -> float32` bridges so operator inputs stay type-consistent.
+- `quantization`: declare an explicit quantization request packet. The
+  current exporter can validate static calibration contracts, emit
+  deterministic scale or zero-point parameter initializers for the supported
+  same-family dense and explicit Conv subset, and lower explicitly targeted
+  same-family dense layers into a
+  `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
+  explicit float-domain bias bridge plus the exporter-owned unary
+  activation node when present. Spatial and dynamic quantized lowering
+  remains later Phase 7 work.
+- `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
+  emission only when the exporter can prove the dense weights already behave like a
+  shared-kernel spatial layout, including the current conservative multi-channel and
+  unpooled stacked-chain subsets, deeper single-channel post-pool chains whose
+  pooled tensor shapes can be derived sequentially, and deeper pooled
+  multi-channel chains when the pooled tensor shapes can be derived sequentially
+  and the pooled source stays compact per channel. The only proven
+  flatten-after-pool promotion path is the narrow final hidden-stage
+  reshape-bridge subset. Earlier flattened pooled consumers and repeated
+  flatten-bridge chains stay on the honest fallback path.
 
 ### OnnxModel
 
@@ -175,7 +266,9 @@ const restoredModel = JSON.parse(jsonText) as OnnxModel;
 Notes:
 - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
   conv/pool mappings, etc.). This is where most round-trip hints live.
-- Initializers currently store floating-point weights in `float_data`.
+- Initializers currently store floating-point weights in `float_data`, and the
+  Phase 7 storage-fp16 lane can pack half-precision words into `int32_data`
+  while keeping the logical tensor shape stable.
 
 Security/trust boundary:
 - Treat this as untrusted input if it comes from outside your process.
@@ -219,16 +312,64 @@ Current capability set:
    adding per-recurrent-layer previous state inputs and diagonal R matrices.
  - Experimental: heuristic detection and emission of simplified LSTM / GRU fused nodes
    (no sequence axis, simplified bias and recurrence handling) while retaining original Gemm path.
+ - Phase 5 seam preparation: non-adjacent feed-forward edges are preserved as
+   `advanced_graph_cross_layer_connections` metadata and re-attached on import
+   as `_onnxAdvancedGraph` audit payloads, without yet promoting those paths
+   into explicit residual, concat, or attention reconstruction.
+ - Phase 5 alias reuse subset: exact dense and per-neuron initializer duplicates
+   can reuse one canonical tensor name when `includeMetadata` is enabled,
+   recorded as `shared_initializer_aliases` and re-attached on import as
+   `_onnxAdvancedGraph.sharedInitializerAliases`, while near-equal or
+   unsupported-family tensors remain distinct.
+ - Phase 5 residual subset: dense-family one-hop skip branches now emit an
+   explicit `Add` merge when exactly one skipped source layer feeds the
+   target layer, recorded as `advanced_graph_residual_adds` and re-attached
+   on import as `_onnxAdvancedGraph.residualAdds`, while longer or ambiguous
+   non-adjacent merges stay on the audit-only fallback path.
+  - Conservative spatial subset: explicit Conv mappings round-trip through Conv initializers,
+    while pooling/flatten import stays metadata-only (`_onnxPooling` audit payloads) and
+    heuristic Conv inference stays metadata-only by default unless
+    `autoPromoteInferredConv` is enabled and the inferred layer passes the shared-kernel
+    safety gate for the current proven subset, including conservative
+    multi-channel layouts, unpooled stacked Conv-like chains, deeper
+    single-channel post-pool chains whose pooled tensor shapes can be derived
+    sequentially, and deeper pooled multi-channel chains whose pooled tensor
+    shapes can be derived sequentially while the exporter keeps the pooled
+    source compact per channel. The only proven flatten-after-pool promotion
+    path is the final hidden-stage reshape-bridge subset. Earlier flattened
+    pooled consumers, repeated flatten-bridge chains, and downstream dense
+    stages that still depend on extra non-pooled inputs keep the later
+    inferred stage on the honest fallback path.
 
 Scope & Assumptions (current):
  - Network must be strictly layered and acyclic (feed‑forward between layers; optional self recurrence within
    hidden layers when enabled).
  - Homogeneous activation per layer unless `allowMixedActivations` is true (then per-neuron decomposition used).
  - Only a minimal ONNX tensor / node subset is emitted (no external ONNX proto dependency; pure JSON shape).
+ - Cross-layer feed-forward edges are currently audit-only: export records them in metadata,
+   and import preserves that audit payload while keeping the layered fallback scaffold,
+   except for the current one-hop residual-add subset.
+ - Shared initializer alias reuse is currently metadata-gated and limited to
+   exact dense/per-neuron tensor matches from the same exporter version family.
+ - Explicit residual-add support is currently limited to homogeneous dense-family
+   layers with exactly one skipped source layer and same-family import/export.
  - Recurrent support limited to: (a) self-connections mapped to diagonal Rk matrices (single step),
    (b) experimental fused LSTM/GRU heuristics relying on equal partition patterns (not spec-complete).
  - LSTM / GRU biases currently single segment (Wb only) and recurrent bias (Rb) implicitly zero; ordering of
    gates documented in code comments (may differ from canonical ONNX gate ordering and will be normalized later).
+
+Supported recurrent subset (current):
+ - Models exported by this repo that use single-step self recurrence on hidden layers.
+ - Same-family export/import of heuristic LSTM and GRU layers when the emitted `W`, `R`, and `B`
+   tensors are all present and shape-compatible with the importer.
+
+Fallback and rejection boundary:
+ - Arbitrary external ONNX recurrent graphs are not a supported import target.
+ - If fused recurrent metadata is malformed, or one of the required `W`, `R`, or `B` tensors is
+   missing or incompatible, fused reconstruction is skipped and the importer keeps the base layered
+   reconstruction instead of claiming generic recurrent-graph support.
+ - Near-miss recurrent shapes can emit `rnn_pattern_fallback` metadata for diagnostics, but that
+   metadata is not a promise that the graph is an accepted fused recurrent family.
 
 Metadata Keys (may appear in `model.metadata_props` when `includeMetadata` true):
  - `layer_sizes`: JSON array of hidden layer sizes.
@@ -236,6 +377,21 @@ Metadata Keys (may appear in `model.metadata_props` when `includeMetadata` true)
  - `lstm_groups_stub`: Heuristic grouping stubs for prospective LSTM layers (pre-emission discovery data).
  - `lstm_emitted_layers` / `gru_emitted_layers`: Arrays of export-layer indices where fused nodes were emitted.
  - `rnn_pattern_fallback`: Records near-miss pattern sizes for diagnostic purposes.
+ - `conv2d_layers` / `conv2d_specs`: Explicit Conv export mappings for the current spatial subset,
+   including safety-gated auto-promoted heuristic Conv layers when enabled.
+ - `conv2d_inferred_layers` / `conv2d_inferred_specs`: Heuristic Conv-like spatial metadata that
+   remains advisory unless the auto-promotion gate upgrades a layer into real Conv emission.
+ - `pool2d_layers` / `pool2d_specs` / `flatten_layers`: Pooling and flatten bridge metadata consumed as
+   import-side audit hints rather than runtime graph rewrites.
+ - `advanced_graph_cross_layer_connections`: Audit-only records for non-adjacent
+   feed-forward edges that the current exporter either promotes into the narrow
+   residual subset or keeps on the fallback path for later concat/attention work.
+ - `advanced_graph_residual_adds`: Explicit one-hop residual merge records for the
+   supported dense-family subset. Import uses these together with the residual
+   branch tensors and cross-layer audit edges to rebuild the skipped connections.
+ - `shared_initializer_aliases`: Audit-only records mapping reused dense-family
+   initializer names back to their canonical tensors so import can preserve
+   exact roundtrip fidelity while unsupported alias families stay duplicated.
 
 Design Goals:
  - Zero heavy runtime dependencies; the structure is intentionally lightweight & serializable.
@@ -249,7 +405,8 @@ Known limitations:
  - Richer recurrence (off-diagonal intra-layer connectivity) and gating reconstruction fidelity.
 
 NOTE: Import is only guaranteed to work for models produced by `exportToONNX()`; arbitrary ONNX graphs are
-NOT supported. Experimental fused recurrent nodes are best-effort and may silently degrade if shapes mismatch.
+NOT supported. The recurrent import promise is intentionally narrow: same-family export/import for the supported
+subset above, with explicit fallback to the layered baseline when fused recurrent tensors are incomplete.
 
 ### applyModelMetadata
 
@@ -530,7 +687,9 @@ const restoredModel = JSON.parse(jsonText) as OnnxModel;
 Notes:
 - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
   conv/pool mappings, etc.). This is where most round-trip hints live.
-- Initializers currently store floating-point weights in `float_data`.
+- Initializers currently store floating-point weights in `float_data`, and the
+  Phase 7 storage-fp16 lane can pack half-precision words into `int32_data`
+  while keeping the logical tensor shape stable.
 
 Security/trust boundary:
 - Treat this as untrusted input if it comes from outside your process.
@@ -686,6 +845,23 @@ ActivationSquashFunction(
 ```
 
 Activation function signature used by ONNX layer emission helpers.
+
+### AttentionMapping
+
+Explicit export-only attention mapping for the Phase 5E shadow subset.
+
+This contract keeps attention source-owned rather than heuristic: callers
+opt one target layer into a fixed-width self-attention shadow block while the
+stable dense path remains the canonical runtime behavior.
+
+### ConcatMapping
+
+Explicit export-only concat mapping for the narrow Phase 5 merge subset.
+
+This contract keeps concat source-owned instead of inferred: callers name one
+skipped source layer and one target layer, and export preserves the merge as a
+deterministic `Concat -> Gemm` path with the default adjacent-layer slice kept
+first in the merged input order.
 
 ### Conv2DMapping
 
@@ -852,6 +1028,10 @@ Layer-wise validation context for activation and connectivity checks.
 
 Context for heuristic LSTM emission when a layer matches expected shape.
 
+### NetworkWithOnnxImportAdvancedGraph
+
+Network instance augmented with optional imported advanced-graph metadata.
+
 ### NetworkWithOnnxImportPooling
 
 Network instance augmented with optional imported ONNX pooling metadata.
@@ -954,6 +1134,34 @@ Key fields (high-level):
 - `legacyNodeOrdering`: keeps older node ordering for backward compatibility.
 - `conv2dMappings` / `pool2dMappings`: encode conv/pool semantics for fully-connected
   layers via explicit mapping declarations.
+- `concatMappings`: opt one skipped source layer into the narrow same-family
+  `Concat -> Gemm` merge subset with deterministic `previous_then_source`
+  input order.
+- `attentionMappings`: opt one target layer into the fixed-width same-family
+  self-attention shadow subset.
+- `precision`: opt into reduced-precision export. The current landed lane is
+  `storage-fp16`, which packs eligible same-family dense and Conv weight or
+  bias initializers into float16 storage and inserts deterministic
+  `Cast -> float32` bridges so operator inputs stay type-consistent.
+- `quantization`: declare an explicit quantization request packet. The
+  current exporter can validate static calibration contracts, emit
+  deterministic scale or zero-point parameter initializers for the supported
+  same-family dense and explicit Conv subset, and lower explicitly targeted
+  same-family dense layers into a
+  `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
+  explicit float-domain bias bridge plus the exporter-owned unary
+  activation node when present. Spatial and dynamic quantized lowering
+  remains later Phase 7 work.
+- `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
+  emission only when the exporter can prove the dense weights already behave like a
+  shared-kernel spatial layout, including the current conservative multi-channel and
+  unpooled stacked-chain subsets, deeper single-channel post-pool chains whose
+  pooled tensor shapes can be derived sequentially, and deeper pooled
+  multi-channel chains when the pooled tensor shapes can be derived sequentially
+  and the pooled source stays compact per channel. The only proven
+  flatten-after-pool promotion path is the narrow final hidden-stage
+  reshape-bridge subset. Earlier flattened pooled consumers and repeated
+  flatten-bridge chains stay on the honest fallback path.
 
 ### OnnxFusedGateApplicationContext
 
@@ -1016,6 +1224,14 @@ Context for constructing input/output ONNX graph dimensions.
 
 Output dimensions used by ONNX graph input/output value info payloads.
 
+### OnnxImportAdvancedGraphCrossLayerConnection
+
+Audit-only cross-layer feed-forward edge carried through Phase 5 import fallback.
+
+### OnnxImportAdvancedGraphMetadata
+
+Parsed advanced-graph metadata attached to imported network instances.
+
 ### OnnxImportAggregatedLayerAssignmentContext
 
 Context for assigning aggregated dense tensors for one layer.
@@ -1031,6 +1247,14 @@ Shared architecture extraction context with resolved graph dimensions.
 ### OnnxImportArchitectureResult
 
 Parsed architecture dimensions extracted from ONNX import graph payloads.
+
+### OnnxImportAttentionBlock
+
+Explicit fixed-width self-attention block carried through Phase 5 import fallback.
+
+### OnnxImportConcatMerge
+
+Explicit concat merge carried through Phase 5 import hardening.
 
 ### OnnxImportConvCoordinateAssignmentContext
 
@@ -1067,6 +1291,10 @@ Resolved Conv initializer tensors and dimensions for one layer.
 ### OnnxImportDimensionRecord
 
 Loose ONNX shape-dimension record used by legacy import payload access.
+
+### OnnxImportFlattenConsistencyAudit
+
+Metadata-only audit record comparing a flattened pooled width to the next dense width.
 
 ### OnnxImportHiddenLayerSpan
 
@@ -1112,13 +1340,25 @@ Context for assigning per-neuron tensors for one layer.
 
 Parsed pooling metadata payload attached to imported network instances.
 
+### OnnxImportPoolingVirtualShape
+
+Virtual spatial shape derived from Conv and Pool metadata during import.
+
 ### OnnxImportRecurrentRestorationContext
 
 Context for recurrent self-connection restoration from ONNX metadata and tensors.
 
+### OnnxImportResidualAdd
+
+Explicit one-hop residual-add merge carried through Phase 5 import hardening.
+
 ### OnnxImportSelfConnectionUpsertContext
 
 Context for upserting one hidden node self-connection from recurrent weight.
+
+### OnnxImportSharedInitializerAlias
+
+Audit-only shared initializer alias carried through Phase 5 import fallback.
 
 ### OnnxImportWeightAssignmentBuildParams
 
@@ -1162,7 +1402,9 @@ const restoredModel = JSON.parse(jsonText) as OnnxModel;
 Notes:
 - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
   conv/pool mappings, etc.). This is where most round-trip hints live.
-- Initializers currently store floating-point weights in `float_data`.
+- Initializers currently store floating-point weights in `float_data`, and the
+  Phase 7 storage-fp16 lane can pack half-precision words into `int32_data`
+  while keeping the logical tensor shape stable.
 
 Security/trust boundary:
 - Treat this as untrusted input if it comes from outside your process.
@@ -1247,7 +1489,9 @@ ONNX tensor type shape.
 Serialized tensor payload stored inside graph initializers.
 
 NeatapticTS currently writes floating-point parameter vectors and matrices to
-`float_data`, along with the tensor name, element type, and logical shape.
+`float_data`, while the storage-fp16 lane can pack float16 words into
+`int32_data` for JSON-first persistence without changing the logical tensor
+shape.
 
 ### OnnxTensorType
 
@@ -1408,6 +1652,10 @@ Raised when ONNX import perceptron metadata omits required input/output sizes.
 ### NetworkOnnxRecurrentMixedActivationsUnsupportedError
 
 Raised when recurrent ONNX export encounters unsupported mixed activations.
+
+### NetworkOnnxShapeValidationError
+
+Raised when ONNX export produces inconsistent tensor dimensions.
 
 ## architecture/network/onnx/network.onnx.layer-analysis.utils.ts
 
@@ -1645,6 +1893,7 @@ Returns: Initial mutable state for hidden-layer resolution.
 ```ts
 mapActivationToOnnx(
   squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; },
+  opset: number,
 ): OnnxActivationOperation
 ```
 
@@ -1715,12 +1964,30 @@ Parameters:
 
 Returns: Updated resolution state.
 
+### resolveOnnxActivationNodeConfig
+
+```ts
+resolveOnnxActivationNodeConfig(
+  squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; },
+  opset: number,
+): { operation: OnnxActivationOperation; attributes?: OnnxAttribute[] | undefined; }
+```
+
+Resolve the ONNX activation node payload for one runtime activation.
+
+Parameters:
+- `squash` - Activation function reference.
+- `opset` - Target ONNX opset.
+
+Returns: Activation operator plus any required ONNX attributes.
+
 ### resolveOnnxActivationOperation
 
 ```ts
 resolveOnnxActivationOperation(
-  normalizedActivationName: string,
-): OnnxActivationOperation
+  squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; },
+  opset: number,
+): { operation: OnnxActivationOperation; attributes?: OnnxAttribute[] | undefined; didUseFallback: boolean; }
 ```
 
 Resolve ONNX activation op from a normalized activation name token.
@@ -1828,7 +2095,7 @@ Returns: Nothing.
 
 ```ts
 warnWhenActivationFallbackIsUsed(
-  context: { squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }; resolvedActivationOperation: OnnxActivationOperation; },
+  context: { squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }; didUseFallback: boolean; },
 ): void
 ```
 
