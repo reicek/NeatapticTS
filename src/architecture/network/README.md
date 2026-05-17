@@ -3467,12 +3467,22 @@ Key fields (high-level):
 - `quantization`: declare an explicit quantization request packet. The
   current exporter can validate static calibration contracts, emit
   deterministic scale or zero-point parameter initializers for the supported
-  same-family dense and explicit Conv subset, and lower explicitly targeted
-  same-family dense layers into a
+  same-family dense and spatial subset, and close the dense-only Phase 7D
+  lane for explicitly targeted same-family one-output dense layers. Those
+  layers can lower into a
   `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
   explicit float-domain bias bridge plus the exporter-owned unary
-  activation node when present. Spatial and dynamic quantized lowering
-  remains later Phase 7 work.
+  activation node when present, while the closed 7E Conv subset lowers
+  supported spatial paths into `QuantizeLinear -> QLinearConv ->
+  DequantizeLinear`, emits one `int32` fused-bias value per output channel,
+  and returns to float32 before pooling, flatten, reshape, or downstream
+  dense boundaries. The closed 7F dynamic lane now adds dense-only guidance:
+  supported same-family dense paths can either record `metadata-only`
+  guidance or insert `DynamicQuantizeLinear -> DequantizeLinear` immediately
+  ahead of dense `Gemm` inputs. Wider dense targets, unsupported spatial
+  fallbacks, recurrent, advanced-graph, mixed-activation, and
+  partial-connectivity requests stay on float32 with explicit fallback
+  metadata.
 - `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
   emission only when the exporter can prove the dense weights already behave like a
   shared-kernel spatial layout, including the current conservative multi-channel and

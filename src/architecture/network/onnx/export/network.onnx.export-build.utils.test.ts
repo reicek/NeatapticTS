@@ -429,6 +429,177 @@ describe('network onnx export build utils', () => {
       expect(buildModel).toThrow(/resolved conv mapping/i);
     });
 
+    it('lowers one explicit Conv target into a qlinear spatial path', () => {
+      // Arrange
+      const layers = [createLayer('input', 2), createLayer('output', 1)];
+      layers[1][0]!.squash = methods.Activation.relu;
+      layers[1][0]!.bias = 0.25;
+      const exportOptions = {
+        conv2dMappings: [
+          {
+            layerIndex: 1,
+            inHeight: 1,
+            inWidth: 2,
+            inChannels: 1,
+            kernelHeight: 1,
+            kernelWidth: 2,
+            strideHeight: 1,
+            strideWidth: 1,
+            outHeight: 1,
+            outWidth: 1,
+            outChannels: 1,
+          },
+        ],
+        quantization: {
+          mode: 'static-8bit',
+          targets: ['conv'],
+          calibration: {
+            source: 'external',
+            layerTargets: [
+              {
+                target: 'conv',
+                layerIndex: 1,
+                inputRange: { min: -1, max: 1 },
+                outputRange: { min: -0.5, max: 0.75 },
+              },
+            ],
+          },
+          representation: 'qlinear',
+        },
+      } as unknown as OnnxExportOptions;
+
+      // Act
+      const onnxModel = buildOnnxModel({} as never, layers, exportOptions);
+
+      // Assert
+      expect({
+        qlinearConvCount: onnxModel.graph.node.filter(
+          (graphNode) => graphNode.op_type === 'QLinearConv',
+        ).length,
+        convCount: onnxModel.graph.node.filter(
+          (graphNode) => graphNode.op_type === 'Conv',
+        ).length,
+        quantizeLinearCount: onnxModel.graph.node.filter(
+          (graphNode) => graphNode.op_type === 'QuantizeLinear',
+        ).length,
+        dequantizeLinearCount: onnxModel.graph.node.filter(
+          (graphNode) => graphNode.op_type === 'DequantizeLinear',
+        ).length,
+      }).toEqual({
+        qlinearConvCount: 1,
+        convCount: 0,
+        quantizeLinearCount: 1,
+        dequantizeLinearCount: 1,
+      });
+    });
+
+    it('emits uint8 Conv weight tensors when qlinear lowering requests uint8 weight encoding', () => {
+      // Arrange
+      const layers = [createLayer('input', 2), createLayer('output', 1)];
+      const exportOptions = {
+        conv2dMappings: [
+          {
+            layerIndex: 1,
+            inHeight: 1,
+            inWidth: 2,
+            inChannels: 1,
+            kernelHeight: 1,
+            kernelWidth: 2,
+            strideHeight: 1,
+            strideWidth: 1,
+            outHeight: 1,
+            outWidth: 1,
+            outChannels: 1,
+          },
+        ],
+        quantization: {
+          mode: 'static-8bit',
+          targets: ['conv'],
+          calibration: {
+            source: 'external',
+            layerTargets: [
+              {
+                target: 'conv',
+                layerIndex: 1,
+                inputRange: { min: -1, max: 1 },
+                outputRange: { min: -0.5, max: 0.75 },
+              },
+            ],
+          },
+          weightEncoding: 'uint8',
+          representation: 'qlinear',
+        },
+      } as unknown as OnnxExportOptions;
+
+      // Act
+      const onnxModel = buildOnnxModel({} as never, layers, exportOptions);
+
+      // Assert
+      expect(
+        onnxModel.graph.initializer.find(
+          (initializerTensor) => initializerTensor.name === 'QuantConvWeight_l1',
+        )?.data_type,
+      ).toBe(2);
+    });
+
+    it('keeps qlinear Conv lowering disabled when the targeted layer never emits a Conv pair', () => {
+      // Arrange
+      const layers = [createLayer('input', 10), createLayer('output', 2)];
+      const exportOptions = {
+        conv2dMappings: [
+          {
+            layerIndex: 1,
+            inHeight: 2,
+            inWidth: 2,
+            inChannels: 2,
+            kernelHeight: 2,
+            kernelWidth: 2,
+            strideHeight: 1,
+            strideWidth: 1,
+            outHeight: 1,
+            outWidth: 1,
+            outChannels: 3,
+          },
+        ],
+        quantization: {
+          mode: 'static-8bit',
+          targets: ['conv'],
+          calibration: {
+            source: 'external',
+            layerTargets: [
+              {
+                target: 'conv',
+                layerIndex: 1,
+                inputRange: { min: -1, max: 1 },
+                outputRange: { min: -0.5, max: 0.75 },
+              },
+            ],
+          },
+          representation: 'qlinear',
+        },
+      } as unknown as OnnxExportOptions;
+
+      // Act
+      const onnxModel = buildOnnxModel({} as never, layers, exportOptions);
+
+      // Assert
+      expect({
+        qlinearConvCount: onnxModel.graph.node.filter(
+          (graphNode) => graphNode.op_type === 'QLinearConv',
+        ).length,
+        quantizeLinearCount: onnxModel.graph.node.filter(
+          (graphNode) => graphNode.op_type === 'QuantizeLinear',
+        ).length,
+        dequantizeLinearCount: onnxModel.graph.node.filter(
+          (graphNode) => graphNode.op_type === 'DequantizeLinear',
+        ).length,
+      }).toEqual({
+        qlinearConvCount: 0,
+        quantizeLinearCount: 0,
+        dequantizeLinearCount: 0,
+      });
+    });
+
     it('rejects static-8bit calibration layer targets outside the requested operator families', () => {
       // Arrange
       const layers = [createLayer('input', 2), createLayer('output', 1)];
@@ -728,6 +899,46 @@ describe('network onnx export build utils', () => {
           (graphNode) => graphNode.op_type === 'QLinearMatMul',
         ),
       ).toBe(false);
+    });
+
+    it('keeps multi-output dense targets off the current qlinear subset', () => {
+      // Arrange
+      const layers = [createLayer('input', 2), createLayer('output', 2)];
+      const exportOptions = {
+        quantization: {
+          mode: 'static-8bit',
+          targets: ['dense'],
+          calibration: {
+            source: 'external',
+            layerTargets: [
+              {
+                target: 'dense',
+                layerIndex: 1,
+                inputRange: { min: -1, max: 1 },
+                outputRange: { min: 0, max: 1 },
+              },
+            ],
+          },
+          representation: 'qlinear',
+        },
+      } as unknown as OnnxExportOptions;
+
+      // Act
+      const onnxModel = buildOnnxModel({} as never, layers, exportOptions);
+
+      // Assert
+      expect({
+        hasDenseInputScale:
+          onnxModel.graph.initializer.some(
+            (initializerEntry) => initializerEntry.name === 'QuantDenseInputScale_l1',
+          ),
+        hasQLinearMatMul: onnxModel.graph.node.some(
+          (graphNode) => graphNode.op_type === 'QLinearMatMul',
+        ),
+      }).toEqual({
+        hasDenseInputScale: false,
+        hasQLinearMatMul: false,
+      });
     });
 
     it('emits an explicit bias bridge and preserves the dense activation during qlinear lowering', () => {

@@ -3,6 +3,7 @@ import Node from '../../../node';
 import * as methods from '../../../../methods/methods';
 import { exportToONNX, importFromONNX } from '../network.onnx';
 import type { OnnxModel } from '../network.onnx';
+import type { OnnxExportOptions } from './network.onnx.export.types';
 import { runOnnxExportFlow } from './network.onnx.export-flow.utils';
 import {
   appendAdvancedGraphMetadata,
@@ -41,6 +42,19 @@ type OnnxInitializerView = {
   int32_data?: number[];
 };
 
+type MixedTargetPreservedUnaryActivationCase = {
+  activationFunction: (x: number, derivate?: boolean) => number;
+  activationLabel: string;
+  activationNodeType: string;
+  opset?: number;
+  outputRange: {
+    min: number;
+    max: number;
+  };
+  sampleInput: number[];
+  tolerance: number;
+};
+
 const activationOperations = new Set([
   'Tanh',
   'Sigmoid',
@@ -52,6 +66,68 @@ const activationOperations = new Set([
   'Mish',
   'Gelu',
 ]);
+
+const additionalMixedTargetPreservedUnaryActivationCases: MixedTargetPreservedUnaryActivationCase[] =
+  [
+    {
+      activationFunction: methods.Activation.relu,
+      activationLabel: 'Relu',
+      activationNodeType: 'Relu',
+      outputRange: { min: 0, max: 1 },
+      sampleInput: [0.25, -0.75],
+      tolerance: 2e-2,
+    },
+    {
+      activationFunction: methods.Activation.sigmoid,
+      activationLabel: 'Sigmoid',
+      activationNodeType: 'Sigmoid',
+      outputRange: { min: 0, max: 1 },
+      sampleInput: [0.25, -0.75],
+      tolerance: 2e-2,
+    },
+    {
+      activationFunction: methods.Activation.tanh,
+      activationLabel: 'Tanh',
+      activationNodeType: 'Tanh',
+      outputRange: { min: -1, max: 1 },
+      sampleInput: [0.25, -0.75],
+      tolerance: 2e-2,
+    },
+    {
+      activationFunction: methods.Activation.softsign,
+      activationLabel: 'Softsign',
+      activationNodeType: 'Softsign',
+      outputRange: { min: -1, max: 1 },
+      sampleInput: [0.25, -0.75],
+      tolerance: 2e-2,
+    },
+    {
+      activationFunction: methods.Activation.selu,
+      activationLabel: 'Selu',
+      activationNodeType: 'Selu',
+      outputRange: { min: -1, max: 1 },
+      sampleInput: [0.25, -0.75],
+      tolerance: 2e-2,
+    },
+    {
+      activationFunction: methods.Activation.gelu,
+      activationLabel: 'Gelu',
+      activationNodeType: 'Gelu',
+      opset: 20,
+      outputRange: { min: -0.5, max: 1 },
+      sampleInput: [0.25, -0.75],
+      tolerance: 2e-2,
+    },
+    {
+      activationFunction: methods.Activation.mish,
+      activationLabel: 'Mish',
+      activationNodeType: 'Mish',
+      opset: 18,
+      outputRange: { min: -0.5, max: 1 },
+      sampleInput: [0.25, -0.75],
+      tolerance: 2e-2,
+    },
+  ];
 
 function toInputs(model: OnnxModel): OnnxValueInfo[] {
   return model.graph.inputs as OnnxValueInfo[];
@@ -161,17 +237,17 @@ function roundToNearestEven(value: number): number {
   return lowerInteger % 2 === 0 ? lowerInteger : lowerInteger + 1;
 }
 
-function applySupportedOneOutputActivation(
+function applySupportedDenseActivation(
   model: OnnxModel,
   layerIndex: number,
-  activationInputValue: number,
-): number {
+  activationInputValues: number[],
+): number[] {
   const activationNode = toNodes(model).find(
     (nodeEntry) => nodeEntry.name === `act_l${layerIndex}`,
   );
 
   if (!activationNode || activationNode.op_type === 'Identity') {
-    return activationInputValue;
+    return activationInputValues;
   }
 
   const supportedUnaryActivation = {
@@ -186,12 +262,24 @@ function applySupportedOneOutputActivation(
   }[activationNode.op_type];
 
   if (supportedUnaryActivation) {
-    return supportedUnaryActivation(activationInputValue);
+    return activationInputValues.map((activationInputValue) =>
+      supportedUnaryActivation(activationInputValue),
+    );
   }
 
-  throw new Error(
-    `Unsupported one-output qlinear test activation ${activationNode.op_type}.`,
-  );
+  throw new Error(`Unsupported qlinear test activation ${activationNode.op_type}.`);
+}
+
+function applySupportedOneOutputActivation(
+  model: OnnxModel,
+  layerIndex: number,
+  activationInputValue: number,
+): number {
+  return applySupportedDenseActivation(
+    model,
+    layerIndex,
+    [activationInputValue],
+  )[0]!;
 }
 
 function evaluateOneOutputQLinearDenseLayerOutput(
@@ -283,6 +371,89 @@ function suppressConsoleWarn(callback: () => void): void {
   } finally {
     console.warn = originalWarn;
   }
+}
+
+function createMixedTargetPreservedUnaryFixture(
+  activationFunction: (x: number, derivate?: boolean) => number,
+  sampleInput: number[],
+): {
+  baselineOutput: number;
+  hiddenLayerOutputs: number[];
+  network: Network;
+} {
+  const network = Network.createMLP(2, [2], 1);
+  const hiddenNodes = getHiddenNodes(network);
+  network.connections[0].weight = 0.5;
+  network.connections[1].weight = -0.25;
+  network.connections[2].weight = 0.75;
+  network.connections[3].weight = 0.5;
+  network.connections[4].weight = 1.25;
+  network.connections[5].weight = -0.5;
+  hiddenNodes[0]!.bias = 0.125;
+  hiddenNodes[1]!.bias = -0.25;
+  hiddenNodes[0]!.squash = methods.Activation.relu;
+  hiddenNodes[1]!.squash = methods.Activation.relu;
+  (network.nodes.at(-1) as Node).bias = 0.0625;
+  (network.nodes.at(-1) as Node).squash = activationFunction;
+  const baselineOutput = network.activate(sampleInput)[0] as number;
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
+  const inputValuesByNode = new Map(
+    inputNodes.map((inputNode, inputIndex) => [
+      inputNode,
+      sampleInput[inputIndex]!,
+    ]),
+  );
+  const hiddenLayerOutputs = hiddenNodes.map((hiddenNode) =>
+    hiddenNode.squash(
+      hiddenNode.connections.in.reduce(
+        (weightedSum, inboundConnection) =>
+          weightedSum +
+          (inputValuesByNode.get(inboundConnection.from) ?? 0) *
+            inboundConnection.weight,
+        hiddenNode.bias,
+      ),
+    ),
+  );
+
+  return {
+    baselineOutput,
+    hiddenLayerOutputs,
+    network,
+  };
+}
+
+function createMixedTargetQuantizationOptions(
+  outputRange: { min: number; max: number },
+  opset?: number,
+): OnnxExportOptions {
+  return {
+    includeMetadata: true,
+    ...(opset !== undefined ? { opset } : {}),
+    quantization: {
+      mode: 'static-8bit',
+      targets: ['dense'],
+      calibration: {
+        source: 'external',
+        layerTargets: [
+          {
+            target: 'dense',
+            layerIndex: 1,
+            inputRange: { min: -1, max: 1 },
+            outputRange: { min: 0, max: 1 },
+          },
+          {
+            target: 'dense',
+            layerIndex: 2,
+            inputRange: { min: 0, max: 0.5 },
+            outputRange,
+          },
+        ],
+      },
+      representation: 'qlinear',
+    },
+  };
 }
 
 function createDisconnectedExportNetwork(): Network {
@@ -943,6 +1114,472 @@ describe('network onnx export chapter', () => {
         );
       });
 
+      it('keeps one-output static-8bit dense exports byte-stable across repeated runs', () => {
+        // Arrange
+        const network = Network.createMLP(2, [1], 1);
+        network.connections[0].weight = 0.5;
+        network.connections[1].weight = -0.25;
+        network.connections[2].weight = 1;
+        getHiddenNodes(network)[0].bias = 0.125;
+        getHiddenNodes(network)[0].squash = methods.Activation.relu;
+        (network.nodes.at(-1) as Node).bias = 0;
+        (network.nodes.at(-1) as Node).squash = methods.Activation.identity;
+        const exportOptions: Parameters<typeof exportToONNX>[1] = {
+          includeMetadata: true,
+          quantization: {
+            mode: 'static-8bit',
+            targets: ['dense'],
+            calibration: {
+              source: 'external',
+              layerTargets: [
+                {
+                  target: 'dense',
+                  layerIndex: 1,
+                  inputRange: { min: -1, max: 1 },
+                  outputRange: { min: -0.5, max: 0.75 },
+                },
+              ],
+            },
+            representation: 'qlinear',
+          },
+        };
+        const firstExport = exportToONNX(network, exportOptions);
+
+        // Act
+        const secondExport = exportToONNX(network, exportOptions);
+
+        // Assert
+        expect(JSON.stringify(secondExport)).toBe(JSON.stringify(firstExport));
+      });
+
+      it('keeps multi-output dense quantization requests on float32 with an explicit fallback reason', () => {
+        // Arrange
+        const network = Network.createMLP(2, [], 2);
+        const outputNodes = network.nodes.filter(
+          (nodeEntry) => nodeEntry.type === 'output',
+        );
+        outputNodes.forEach((outputNode) => {
+          outputNode.squash = methods.Activation.sigmoid;
+        });
+
+        // Act
+        const onnxModel = exportToONNX(network, {
+          includeMetadata: true,
+          quantization: {
+            mode: 'static-8bit',
+            targets: ['dense'],
+            calibration: {
+              source: 'external',
+              layerTargets: [
+                {
+                  target: 'dense',
+                  layerIndex: 1,
+                  inputRange: { min: -1, max: 1 },
+                  outputRange: { min: 0, max: 1 },
+                },
+              ],
+            },
+            representation: 'qlinear',
+          },
+        });
+
+        // Assert
+        expect({
+          effectiveQuantizationMode: getMetadataValue(
+            onnxModel,
+            'effective_quantization_mode',
+          ),
+          hasDenseInputScale:
+            getInitializer(onnxModel, 'QuantDenseInputScale_l1') !== undefined,
+          hasQLinearMatMul: toNodes(onnxModel).some(
+            (nodeEntry) => nodeEntry.op_type === 'QLinearMatMul',
+          ),
+          fallbackReasons: getParsedMetadataArray(
+            onnxModel,
+            'quantization_fallback_reasons',
+          ),
+        }).toEqual({
+          effectiveQuantizationMode: 'none',
+          hasDenseInputScale: false,
+          hasQLinearMatMul: false,
+          fallbackReasons: [
+            'static_8bit_not_implemented',
+            'multi_output_dense_boundary_requires_float32',
+          ],
+        });
+      });
+
+      it('lowers the supported one-output dense target while keeping a wider dense target on float32 in the same request', () => {
+        // Arrange
+        const network = Network.createMLP(2, [2], 1);
+
+        // Act
+        const onnxModel = exportToONNX(network, {
+          includeMetadata: true,
+          quantization: {
+            mode: 'static-8bit',
+            targets: ['dense'],
+            calibration: {
+              source: 'external',
+              layerTargets: [
+                {
+                  target: 'dense',
+                  layerIndex: 1,
+                  inputRange: { min: -1, max: 1 },
+                  outputRange: { min: 0, max: 1 },
+                },
+                {
+                  target: 'dense',
+                  layerIndex: 2,
+                  inputRange: { min: 0, max: 0.5 },
+                  outputRange: { min: 0, max: 0.75 },
+                },
+              ],
+            },
+            representation: 'qlinear',
+          },
+        });
+
+        // Assert
+        expect({
+          effectiveQuantizationMode: getMetadataValue(
+            onnxModel,
+            'effective_quantization_mode',
+          ),
+          fallbackReasons: getParsedMetadataArray(
+            onnxModel,
+            'quantization_fallback_reasons',
+          ),
+          qlinearNodes: toNodes(onnxModel)
+            .filter((nodeEntry) => nodeEntry.op_type === 'QLinearMatMul')
+            .map((nodeEntry) => nodeEntry.name),
+          floatDenseNodes: toNodes(onnxModel)
+            .filter((nodeEntry) => nodeEntry.op_type === 'Gemm')
+            .map((nodeEntry) => nodeEntry.name),
+          hasFirstDenseInputScale:
+            getInitializer(onnxModel, 'QuantDenseInputScale_l1') !== undefined,
+          hasSecondDenseInputScale:
+            getInitializer(onnxModel, 'QuantDenseInputScale_l2') !== undefined,
+        }).toEqual({
+          effectiveQuantizationMode: 'static-8bit',
+          fallbackReasons: ['multi_output_dense_boundary_requires_float32'],
+          qlinearNodes: ['qlinear_matmul_l2'],
+          floatDenseNodes: ['gemm_l1'],
+          hasFirstDenseInputScale: false,
+          hasSecondDenseInputScale: true,
+        });
+      });
+
+      it('keeps a mixed-target request within a small tolerance when the supported one-output dense layer lowers and the wider dense layer stays float32', () => {
+        // Arrange
+        const network = Network.createMLP(2, [2], 1);
+        const sampleInput = [0.25, -0.75];
+        const hiddenNodes = getHiddenNodes(network);
+        network.connections[0].weight = 0.5;
+        network.connections[1].weight = -0.25;
+        network.connections[2].weight = 0.75;
+        network.connections[3].weight = 0.5;
+        network.connections[4].weight = 1.25;
+        network.connections[5].weight = -0.5;
+        hiddenNodes[0]!.bias = 0.125;
+        hiddenNodes[1]!.bias = -0.25;
+        hiddenNodes[0]!.squash = methods.Activation.relu;
+        hiddenNodes[1]!.squash = methods.Activation.relu;
+        (network.nodes.at(-1) as Node).bias = 0.0625;
+        (network.nodes.at(-1) as Node).squash = methods.Activation.identity;
+        const baselineOutput = network.activate(sampleInput)[0] as number;
+        const inputNodes = network.nodes.filter(
+          (nodeEntry) => nodeEntry.type === 'input',
+        );
+        const inputValuesByNode = new Map(
+          inputNodes.map((inputNode, inputIndex) => [
+            inputNode,
+            sampleInput[inputIndex]!,
+          ]),
+        );
+        const hiddenLayerOutputs = hiddenNodes.map((hiddenNode) =>
+          hiddenNode.squash(
+            hiddenNode.connections.in.reduce(
+              (weightedSum, inboundConnection) =>
+                weightedSum +
+                (inputValuesByNode.get(inboundConnection.from) ?? 0) *
+                  inboundConnection.weight,
+              hiddenNode.bias,
+            ),
+          ),
+        );
+
+        // Act
+        const onnxModel = exportToONNX(network, {
+          includeMetadata: true,
+          quantization: {
+            mode: 'static-8bit',
+            targets: ['dense'],
+            calibration: {
+              source: 'external',
+              layerTargets: [
+                {
+                  target: 'dense',
+                  layerIndex: 1,
+                  inputRange: { min: -1, max: 1 },
+                  outputRange: { min: 0, max: 1 },
+                },
+                {
+                  target: 'dense',
+                  layerIndex: 2,
+                  inputRange: { min: 0, max: 0.5 },
+                  outputRange: { min: 0, max: 0.75 },
+                },
+              ],
+            },
+            representation: 'qlinear',
+          },
+        });
+        const quantizedOutput = evaluateOneOutputQLinearDenseLayerOutput(
+          onnxModel,
+          2,
+          hiddenLayerOutputs,
+        );
+
+        // Assert
+        expect(Math.abs(quantizedOutput - baselineOutput)).toBeLessThanOrEqual(
+          1e-2,
+        );
+      });
+
+      it('preserves Softplus on the lowered one-output dense target while a wider dense target stays float32 in the same request', () => {
+        // Arrange
+        const network = Network.createMLP(2, [2], 1);
+        const hiddenNodes = getHiddenNodes(network);
+        hiddenNodes[0]!.squash = methods.Activation.relu;
+        hiddenNodes[1]!.squash = methods.Activation.relu;
+        (network.nodes.at(-1) as Node).squash = methods.Activation.softplus;
+
+        // Act
+        const onnxModel = exportToONNX(network, {
+          includeMetadata: true,
+          quantization: {
+            mode: 'static-8bit',
+            targets: ['dense'],
+            calibration: {
+              source: 'external',
+              layerTargets: [
+                {
+                  target: 'dense',
+                  layerIndex: 1,
+                  inputRange: { min: -1, max: 1 },
+                  outputRange: { min: 0, max: 1 },
+                },
+                {
+                  target: 'dense',
+                  layerIndex: 2,
+                  inputRange: { min: 0, max: 0.5 },
+                  outputRange: { min: 0, max: 1.5 },
+                },
+              ],
+            },
+            representation: 'qlinear',
+          },
+        });
+
+        // Assert
+        expect({
+          effectiveQuantizationMode: getMetadataValue(
+            onnxModel,
+            'effective_quantization_mode',
+          ),
+          fallbackReasons: getParsedMetadataArray(
+            onnxModel,
+            'quantization_fallback_reasons',
+          ),
+          qlinearNodes: toNodes(onnxModel)
+            .filter((nodeEntry) => nodeEntry.op_type === 'QLinearMatMul')
+            .map((nodeEntry) => nodeEntry.name),
+          floatDenseNodes: toNodes(onnxModel)
+            .filter((nodeEntry) => nodeEntry.op_type === 'Gemm')
+            .map((nodeEntry) => nodeEntry.name),
+          loweredActivationNodes: toNodes(onnxModel)
+            .filter((nodeEntry) => nodeEntry.name === 'act_l2')
+            .map((nodeEntry) => nodeEntry.op_type),
+          hasFirstDenseInputScale:
+            getInitializer(onnxModel, 'QuantDenseInputScale_l1') !== undefined,
+          hasSecondDenseInputScale:
+            getInitializer(onnxModel, 'QuantDenseInputScale_l2') !== undefined,
+        }).toEqual({
+          effectiveQuantizationMode: 'static-8bit',
+          fallbackReasons: ['multi_output_dense_boundary_requires_float32'],
+          qlinearNodes: ['qlinear_matmul_l2'],
+          floatDenseNodes: ['gemm_l1'],
+          loweredActivationNodes: ['Softplus'],
+          hasFirstDenseInputScale: false,
+          hasSecondDenseInputScale: true,
+        });
+      });
+
+      it('keeps a Softplus mixed-target request within a small tolerance when the lowered one-output dense target preserves its unary activation', () => {
+        // Arrange
+        const network = Network.createMLP(2, [2], 1);
+        const sampleInput = [0.25, -0.75];
+        const hiddenNodes = getHiddenNodes(network);
+        network.connections[0].weight = 0.5;
+        network.connections[1].weight = -0.25;
+        network.connections[2].weight = 0.75;
+        network.connections[3].weight = 0.5;
+        network.connections[4].weight = 1.25;
+        network.connections[5].weight = -0.5;
+        hiddenNodes[0]!.bias = 0.125;
+        hiddenNodes[1]!.bias = -0.25;
+        hiddenNodes[0]!.squash = methods.Activation.relu;
+        hiddenNodes[1]!.squash = methods.Activation.relu;
+        (network.nodes.at(-1) as Node).bias = 0.0625;
+        (network.nodes.at(-1) as Node).squash = methods.Activation.softplus;
+        const baselineOutput = network.activate(sampleInput)[0] as number;
+        const inputNodes = network.nodes.filter(
+          (nodeEntry) => nodeEntry.type === 'input',
+        );
+        const inputValuesByNode = new Map(
+          inputNodes.map((inputNode, inputIndex) => [
+            inputNode,
+            sampleInput[inputIndex]!,
+          ]),
+        );
+        const hiddenLayerOutputs = hiddenNodes.map((hiddenNode) =>
+          hiddenNode.squash(
+            hiddenNode.connections.in.reduce(
+              (weightedSum, inboundConnection) =>
+                weightedSum +
+                (inputValuesByNode.get(inboundConnection.from) ?? 0) *
+                  inboundConnection.weight,
+              hiddenNode.bias,
+            ),
+          ),
+        );
+
+        // Act
+        const onnxModel = exportToONNX(network, {
+          includeMetadata: true,
+          quantization: {
+            mode: 'static-8bit',
+            targets: ['dense'],
+            calibration: {
+              source: 'external',
+              layerTargets: [
+                {
+                  target: 'dense',
+                  layerIndex: 1,
+                  inputRange: { min: -1, max: 1 },
+                  outputRange: { min: 0, max: 1 },
+                },
+                {
+                  target: 'dense',
+                  layerIndex: 2,
+                  inputRange: { min: 0, max: 0.5 },
+                  outputRange: { min: 0, max: 1.5 },
+                },
+              ],
+            },
+            representation: 'qlinear',
+          },
+        });
+        const quantizedOutput = evaluateOneOutputQLinearDenseLayerOutput(
+          onnxModel,
+          2,
+          hiddenLayerOutputs,
+        );
+
+        // Assert
+        expect(Math.abs(quantizedOutput - baselineOutput)).toBeLessThanOrEqual(
+          2e-2,
+        );
+      });
+
+      describe.each(additionalMixedTargetPreservedUnaryActivationCases)(
+        'given a $activationLabel mixed-target preserved-unary request',
+        ({
+          activationFunction,
+          activationLabel,
+          activationNodeType,
+          opset,
+          outputRange,
+          sampleInput,
+          tolerance,
+        }) => {
+          it('preserves the lowered one-output activation while the wider dense target stays float32', () => {
+            // Arrange
+            const { network } = createMixedTargetPreservedUnaryFixture(
+              activationFunction,
+              sampleInput,
+            );
+
+            // Act
+            const onnxModel = exportToONNX(
+              network,
+              createMixedTargetQuantizationOptions(outputRange, opset),
+            );
+
+            // Assert
+            expect({
+              activationLabel,
+              effectiveQuantizationMode: getMetadataValue(
+                onnxModel,
+                'effective_quantization_mode',
+              ),
+              fallbackReasons: getParsedMetadataArray(
+                onnxModel,
+                'quantization_fallback_reasons',
+              ),
+              qlinearNodes: toNodes(onnxModel)
+                .filter((nodeEntry) => nodeEntry.op_type === 'QLinearMatMul')
+                .map((nodeEntry) => nodeEntry.name),
+              floatDenseNodes: toNodes(onnxModel)
+                .filter((nodeEntry) => nodeEntry.op_type === 'Gemm')
+                .map((nodeEntry) => nodeEntry.name),
+              loweredActivationNodes: toNodes(onnxModel)
+                .filter((nodeEntry) => nodeEntry.name === 'act_l2')
+                .map((nodeEntry) => nodeEntry.op_type),
+              hasFirstDenseInputScale:
+                getInitializer(onnxModel, 'QuantDenseInputScale_l1') !== undefined,
+              hasSecondDenseInputScale:
+                getInitializer(onnxModel, 'QuantDenseInputScale_l2') !== undefined,
+            }).toEqual({
+              activationLabel,
+              effectiveQuantizationMode: 'static-8bit',
+              fallbackReasons: ['multi_output_dense_boundary_requires_float32'],
+              qlinearNodes: ['qlinear_matmul_l2'],
+              floatDenseNodes: ['gemm_l1'],
+              loweredActivationNodes: [activationNodeType],
+              hasFirstDenseInputScale: false,
+              hasSecondDenseInputScale: true,
+            });
+          });
+
+          it('keeps the lowered one-output activation within tolerance while the wider dense target stays float32', () => {
+            // Arrange
+            const { baselineOutput, hiddenLayerOutputs, network } =
+              createMixedTargetPreservedUnaryFixture(
+                activationFunction,
+                sampleInput,
+              );
+
+            // Act
+            const onnxModel = exportToONNX(
+              network,
+              createMixedTargetQuantizationOptions(outputRange, opset),
+            );
+            const quantizedOutput = evaluateOneOutputQLinearDenseLayerOutput(
+              onnxModel,
+              2,
+              hiddenLayerOutputs,
+            );
+
+            // Assert
+            expect(Math.abs(quantizedOutput - baselineOutput)).toBeLessThanOrEqual(
+              tolerance,
+            );
+          });
+        },
+      );
+
       it('keeps consecutive targeted qlinear dense layers within a small tolerance of the baseline dense path', () => {
         // Arrange
         const network = Network.createMLP(2, [1], 1);
@@ -1378,6 +2015,107 @@ describe('network onnx export chapter', () => {
         }
       });
 
+      it('emits DynamicQuantizeLinear guidance for the supported dense baseline', () => {
+        // Arrange
+        const network = Network.createMLP(2, [1], 1);
+
+        // Act
+        const onnxModel = exportToONNX(network, {
+          includeMetadata: true,
+          quantization: {
+            mode: 'dynamic-uint8',
+            target: 'dense',
+            representation: 'DynamicQuantizeLinear',
+          },
+        });
+
+        // Assert
+        expect({
+          requestedQuantizationMode: getMetadataValue(
+            onnxModel,
+            'requested_quantization_mode',
+          ),
+          effectiveQuantizationMode: getMetadataValue(
+            onnxModel,
+            'effective_quantization_mode',
+          ),
+          dynamicQuantizeNodeCount: toNodes(onnxModel).filter(
+            (nodeEntry) => nodeEntry.op_type === 'DynamicQuantizeLinear',
+          ).length,
+          dynamicDequantizeNodeCount: toNodes(onnxModel).filter(
+            (nodeEntry) => nodeEntry.name === 'dynamic_dequantize_input_l1',
+          ).length,
+          loweredDenseInputName: toNodes(onnxModel).find(
+            (nodeEntry) => nodeEntry.name === 'gemm_l1',
+          )?.input[0],
+          fallbackReasons: getParsedMetadataArray(
+            onnxModel,
+            'quantization_fallback_reasons',
+          ),
+        }).toEqual({
+          requestedQuantizationMode: 'dynamic-uint8',
+          effectiveQuantizationMode: 'dynamic-uint8',
+          dynamicQuantizeNodeCount: 2,
+          dynamicDequantizeNodeCount: 1,
+          loweredDenseInputName: 'DynamicDenseInputFloat_l1',
+          fallbackReasons: [],
+        });
+      });
+
+      it('keeps DynamicQuantizeLinear dense guidance exports byte-stable across repeated runs', () => {
+        // Arrange
+        const network = Network.createMLP(2, [1], 1);
+        const exportOptions: Parameters<typeof exportToONNX>[1] = {
+          includeMetadata: true,
+          quantization: {
+            mode: 'dynamic-uint8',
+            target: 'dense',
+            representation: 'DynamicQuantizeLinear',
+          },
+        };
+        const firstExport = exportToONNX(network, exportOptions);
+
+        // Act
+        const secondExport = exportToONNX(network, exportOptions);
+
+        // Assert
+        expect(JSON.stringify(secondExport)).toBe(JSON.stringify(firstExport));
+      });
+
+      it('lands metadata-only dynamic guidance for the supported dense baseline', () => {
+        // Arrange
+        const network = Network.createMLP(2, [1], 1);
+
+        // Act
+        const onnxModel = exportToONNX(network, {
+          includeMetadata: true,
+          quantization: {
+            mode: 'dynamic-uint8',
+            target: 'dense',
+            representation: 'metadata-only',
+          },
+        });
+
+        // Assert
+        expect({
+          effectiveQuantizationMode: getMetadataValue(
+            onnxModel,
+            'effective_quantization_mode',
+          ),
+          dynamicQuantizeNodeCount: toNodes(onnxModel).filter(
+            (nodeEntry) => nodeEntry.op_type === 'DynamicQuantizeLinear',
+          ).length,
+          fallbackReasons: getParsedMetadataArray(
+            onnxModel,
+            'quantization_fallback_reasons',
+          ),
+        }).toEqual({
+          effectiveQuantizationMode: 'dynamic-uint8',
+          dynamicQuantizeNodeCount: 0,
+          fallbackReasons: [],
+        });
+      });
+
       it('records a recurrent boundary fallback reason for quantization requests', () => {
         // Arrange
         const network = Network.createMLP(2, [1], 1);
@@ -1399,9 +2137,45 @@ describe('network onnx export chapter', () => {
 
         // Assert
         expect(getParsedMetadataArray(onnxModel, 'quantization_fallback_reasons')).toEqual([
-          'dynamic_uint8_not_implemented',
           'recurrent_boundary_requires_float32',
         ]);
+      });
+
+      it('records an advanced-graph fallback reason for dynamic concat requests', () => {
+        // Arrange
+        const network = createConcatMergeExportNetwork();
+
+        // Act
+        const onnxModel = exportToONNX(network, {
+          includeMetadata: true,
+          concatMappings: [
+            {
+              sourceLayerIndex: 0,
+              targetLayerIndex: 2,
+              inputOrder: 'previous_then_source',
+            },
+          ],
+          quantization: {
+            mode: 'dynamic-uint8',
+            target: 'dense',
+            representation: 'metadata-only',
+          },
+        });
+
+        // Assert
+        expect({
+          effectiveQuantizationMode: getMetadataValue(
+            onnxModel,
+            'effective_quantization_mode',
+          ),
+          fallbackReasons: getParsedMetadataArray(
+            onnxModel,
+            'quantization_fallback_reasons',
+          ),
+        }).toEqual({
+          effectiveQuantizationMode: 'none',
+          fallbackReasons: ['advanced_graph_boundary_requires_float32'],
+        });
       });
 
       it('does not emit static quantization parameter tensors across recurrent boundaries', () => {
@@ -1508,7 +2282,6 @@ describe('network onnx export chapter', () => {
 
         // Assert
         expect(getParsedMetadataArray(onnxModel, 'quantization_fallback_reasons')).toEqual([
-          'dynamic_uint8_not_implemented',
           'mixed_activation_boundary_requires_float32',
           'partial_connectivity_boundary_requires_float32',
         ]);
@@ -1601,6 +2374,24 @@ describe('network onnx export chapter', () => {
           firstGemmInputs: ['W0_fp32', 'B0_fp32'],
           effectivePrecisionMode: 'storage-fp16',
         });
+      });
+
+      it('keeps storage-fp16 exports byte-stable across repeated runs', () => {
+        // Arrange
+        const network = Network.createMLP(2, [1], 1);
+        const exportOptions: Parameters<typeof exportToONNX>[1] = {
+          includeMetadata: true,
+          precision: {
+            mode: 'storage-fp16',
+          },
+        };
+        const firstExport = exportToONNX(network, exportOptions);
+
+        // Act
+        const secondExport = exportToONNX(network, exportOptions);
+
+        // Assert
+        expect(JSON.stringify(secondExport)).toBe(JSON.stringify(firstExport));
       });
 
       it('keeps recurrent storage-fp16 requests on float32 with an explicit fallback reason', () => {

@@ -74,7 +74,7 @@ or newer-version deltas are needed.
 Pass a compact packet that includes:
 
 - target (layer type / operator / import subset / external seed path),
-- current plan phase from `plans/ONNX_EXPORT_PLAN.md`,
+- current ONNX baseline from `plans/completed/ONNX_EXPORT_PLAN.md` and any narrower active follow-up amendment in `plans/` when one exists,
 - whether this is implementation, import hardening, documentation, or roundtrip
   validation,
 - required validation (roundtrip test, focused Jest slice, or full suite).
@@ -83,7 +83,7 @@ Compact example:
 
 ```text
 Use onnx-work for recurrent import hardening.
-Plan: plans/ONNX_EXPORT_PLAN.md (Phase 3 — convolutional groundwork).
+Plan: plans/completed/ONNX_EXPORT_PLAN.md (archived baseline; create or follow a narrower active amendment before widening support).
 Target: compact recurrent import subset for external seed compatibility.
 Mode: import hardening + supported-subset documentation.
 Validate with: focused ONNX Jest slice, import acceptance/rejection tests, then npm run test:silent.
@@ -91,7 +91,7 @@ Validate with: focused ONNX Jest slice, import acceptance/rejection tests, then 
 
 ## Required Workflow
 
-1. Read `plans/ONNX_EXPORT_PLAN.md` before editing.
+1. Read `plans/completed/ONNX_EXPORT_PLAN.md` before editing, plus any newer active ONNX follow-up amendment in `plans/` when one exists.
 2. Read `src/architecture/network/onnx/README.md` and the nearest parent README.
 3. Identify whether the active pass is:
   - export operator mapping,
@@ -122,7 +122,7 @@ Validate with: focused ONNX Jest slice, import acceptance/rejection tests, then 
 10. Update the supported-subset operator table in the nearest JSDoc or README
    surface to reflect the new operator.
 11. Run `npm run docs` to verify generated output.
-12. Update `plans/ONNX_EXPORT_PLAN.md` with the completed step.
+12. Update the active ONNX follow-up amendment with the completed step, or create a narrower active amendment in `plans/` before coding if the work widens support beyond the archived ONNX baseline.
 13. Run `npm run test:silent` to confirm repo-wide green.
 
 ## JSON-First Trust Boundary

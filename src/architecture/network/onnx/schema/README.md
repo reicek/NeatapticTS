@@ -123,6 +123,30 @@ This is represented as metadata and optional graph nodes during export.
 Import uses it to attach pooling-related runtime metadata back onto the reconstructed
 network (when supported).
 
+## architecture/network/onnx/schema/network.onnx.schema.binary.utils.ts
+
+### serializeOnnxModelToBinary
+
+```ts
+serializeOnnxModelToBinary(
+  onnxModel: OnnxModel,
+): Uint8Array<ArrayBufferLike>
+```
+
+Serialize an ONNX-like model into protobuf ModelProto bytes.
+
+This helper turns the shared exporter model view into the deterministic
+binary `ModelProto` surface that Phase 8 and Phase 9 treat as the primary
+runtime-validated artifact for the approved subset.
+It intentionally uses ONNX's typed tensor storage fields such as
+`float_data`, `int32_data`, and `int64_data` rather than widening into
+`raw_data` or `external_data` yet.
+
+Parameters:
+- `onnxModel` - ONNX-like model payload.
+
+Returns: Binary protobuf ModelProto bytes.
+
 ## architecture/network/onnx/schema/network.onnx.schema.tensor-data.utils.ts
 
 ### createFloat16StoragePayload

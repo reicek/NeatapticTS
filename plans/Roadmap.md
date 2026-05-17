@@ -149,7 +149,7 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 Next critical-path frontier:
 
 - [completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md) now records the closed Phase 4 checkpointing baseline and the reopen point for future persistence work.
-- The active pre-NGE frontier now moves to [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md), while [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) remains the next planned non-chat foundation lane and [NEATchat.plans.md](NEATchat.plans.md) remains dependency-gated behind those two stop lines.
+- The archived pre-NGE ONNX baseline now lives at [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md), and the next non-chat foundation handoff moves to [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) while [NEATchat.plans.md](NEATchat.plans.md) remains dependency-gated behind those two stop lines.
 
 ## Phase 5 — Scale & Performance (Memory Optimization Track)
 
@@ -174,16 +174,16 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 **Outcome:** standards-compliant ONNX serialization, checker-backed validation, runtime compatibility for the declared supported subset, and named external import subsets with honest rejection outside that boundary.
 
 - ONNX export/import breadth and hardening
-  - Plan: [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
-  - Current internal state: Phases 0-6 are complete for the current ONNX subset, including recurrent parity, fallback, supported-subset documentation, the closed conservative spatial contract, the closed same-family advanced-graph subset, and the closed first-wave optimization and fidelity contract. Phase 7 is now active: 7A is closed, the first 7B storage-FP16 lane is landed for the same-family dense and spatial subset, the 7C calibration contract is landed for deterministic parameter emission, the current 7D same-family dense qlinear slice is landed with explicit bias bridges plus preserved unary activations, including focused Softplus, Softsign, Selu, and opset-20 Gelu parity proofs, and broader dense, spatial, or dynamic quantized lowering remains the next open stop line inside the phase. The lane is now explicitly aligned to a compliance closure path after Phase 7: Phase 8 must close binary `ModelProto` serialization plus checker validation, and Phase 9 must close runtime parity plus at least one named external import subset before ONNX can move to `[DONE]`.
+  - Plan: [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md) [DONE]
+  - Current internal state: the ONNX lane is archived as done through the current Phase 9 compliance target for the declared lower-opset same-family subset. The archived baseline now covers recurrent hardening, the conservative spatial contract, the same-family advanced-graph contract, the optimization and fidelity contract, the exporter-owned precision contract, deterministic binary `ModelProto` emission, runtime parity for the approved five-lane subset, and the first named external binary import subset through `importFromONNXBinary()`. Future ONNX work should reopen from the archive only through a narrower new amendment.
 - NEATchat follow-up (persistent pretrained conversational system)
   - Plan: [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]
   - Current internal state: the Phase 3 NEATchat demo remains closed as a toy-scale learnability baseline, while the follow-up lane is a dependency-gated later plan for stronger pretrained seeds, checkpointed identity, retrieval-like memory, worker-backed background adaptation, and hybrid candidate routing. It should stay planning-only until checkpointing, worker payloads, multithread evaluation, parameter-vector contracts, and recurrent ONNX hardening are usable enough to support an honest external-seed target.
 
 **Recommended timing:**
 
-- Continue ONNX work in parallel after Phase 2 (builders) so we have a clean way to produce supported architectures.
-- Keep ONNX scope honest: finish the current supported-subset work first, then close the later protobuf, checker, runtime, and external-import gates instead of treating JSON-first parity alone as completion.
+- Treat the archived ONNX baseline as the reopen point for future interoperability widening rather than keeping the old root tracker active.
+- Keep future ONNX scope honest: start from a narrower new amendment when runtime, external-import, or custom-domain claims need to change instead of reopening the archived baseline implicitly.
 - Treat the NEATchat follow-up lane as an applied consumer of Phase 4 plus Phase 6 work, not as a shortcut around those foundations.
 
 ## Phase 7 — Advanced Research Features (Last)
@@ -203,16 +203,16 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phases 0, 1, 2, 3, and 4 are complete for the current roadmap scope, and the pre-NGE memory foundation stop line is archived as done through Track 1 / Phase 10.** The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, preconfigured architectures lane, examples and visualization lanes, worker and checkpointing lanes, and the Phase 5 memory-foundation stop line are closed. **ONNX remains the active pre-NGE `[WIP]` lane, with recurrent hardening, the conservative Phase 4 spatial contract, the Phase 5 advanced-graph contract, and the Phase 6 optimization contract closed for the current subset, Phase 7A closed, the first 7B storage-FP16 lane landed for the same-family dense and spatial subset, the 7C calibration contract landed for deterministic parameter emission, the current 7D same-family dense qlinear slice landed with explicit bias bridges plus preserved unary activations including focused Softplus, Softsign, Selu, opset-18 Mish, and opset-20 Gelu parity proofs, with Mish below opset 18 now also proven to keep static-8bit dense lowering while the activation itself stays on the honest implicit-identity fallback path, broader dense, spatial, and dynamic quantized lowering still open inside Phase 7, and later Phase 8-9 compliance closure now explicitly required for ONNX completion: binary `ModelProto` serialization, checker-backed validation, runtime parity, and at least one named external import subset. Hybrid interoperability remains the next planned non-chat foundation lane, and the NEATchat follow-up stays dependency-gated behind those foundations rather than closed.**
+Current status: **Phases 0, 1, 2, 3, and 4 are complete for the current roadmap scope, and the pre-NGE memory foundation stop line is archived as done through Track 1 / Phase 10.** The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, preconfigured architectures lane, examples and visualization lanes, worker and checkpointing lanes, the Phase 5 memory-foundation stop line, and the full current ONNX compliance target are closed. **The archived ONNX baseline now includes recurrent hardening, the conservative Phase 4 spatial contract, the Phase 5 advanced-graph contract, the Phase 6 optimization contract, the Phase 7 exporter-owned precision contract, the Phase 8 binary contract, and the Phase 9 runtime-parity plus first external-import closure target for the declared lower-opset same-family subset. Hybrid interoperability is now the next non-chat foundation handoff, and the NEATchat follow-up stays dependency-gated behind that lane rather than opening directly from the archived ONNX baseline.**
 
 - **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 memory stop line → Phase 6 ONNX → hybrid interoperability → gated NEATchat follow-up → Phase 7 / NGE
 - **Archived lane A (performance):** [completed/Memory_Optimization.md](completed/Memory_Optimization.md) [DONE]
-- **Active lane B (interop):** [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP] — recurrent hardening, the conservative Phase 4 spatial contract, the same-family Phase 5 advanced-graph contract, and the Phase 6 optimization contract are closed for the current subset, Phase 7A is closed, the first 7B storage-FP16 lane is landed, the 7C calibration contract is landed, the current 7D same-family dense qlinear slice is landed with explicit bias bridges plus preserved unary activations including focused Softplus, Softsign, Selu, opset-18 Mish, and opset-20 Gelu parity proofs, with Mish below opset 18 also proven to keep static-8bit dense lowering while the activation itself stays on the honest implicit-identity fallback path. The near-term stop line is still to continue 7D with dense-only parity and supported-subset hardening before spatial lowering, but the lane is no longer considered complete at JSON-first parity alone: later closure now also requires binary `ModelProto` serialization, checker validation, runtime parity, and at least one named external import subset.
-- **Planned lane C (hybrid interoperability):** [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
+- **Archived lane B (interop):** [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md) [DONE] — the current ONNX compliance target is closed through the declared Phase 9 stop line, including the binary-first runtime-parity seam and the first named external binary import subset for the approved lower-opset same-family boundary.
+- **Next lane C (hybrid interoperability):** [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
 - **Planned lane D (applied conversational systems):** [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]
 - **Parallel lane E (quality):** [test-repair-and-coverage.plans.md](completed/test-repair-and-coverage.plans.md) [DONE] — 100% statement/branch/function/line coverage across all of `src/`. 331 suites / 3022 tests green.
 - **Pre-NGE stop line:** not yet closed
-- **Serial pre-NGE handoff:** after the Phase 5 memory stop line, finish [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md), then [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md), then the still-gated [NEATchat.plans.md](NEATchat.plans.md), and only then open Phase 7 / NGE work
+- **Serial pre-NGE handoff:** after the archived Phase 5 memory stop line and the archived ONNX baseline, move to [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md), then the still-gated [NEATchat.plans.md](NEATchat.plans.md), and only then open Phase 7 / NGE work
 - **Final capstone:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
 
 ## Plan Inventory in Roadmap Order
@@ -274,7 +274,7 @@ Completed entries below resolve into `plans/completed/`.
 
 ### Phase 6 inventory
 
-30. [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
+30. [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md) [DONE]
 31. [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]
 
 ### Phase 7 inventory

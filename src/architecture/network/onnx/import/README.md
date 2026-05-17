@@ -22,6 +22,26 @@ const output = restored.activate([0.2, 0.8]);
 
 ## architecture/network/onnx/import/network.onnx.import-flow.utils.ts
 
+### runExternalOnnxImportFlow
+
+```ts
+runExternalOnnxImportFlow(
+  binaryModel: Uint8Array<ArrayBufferLike>,
+): default
+```
+
+Execute the external binary ONNX import flow for the first supported dense lane.
+
+High-level behavior:
+ 1. Decode and normalize one accepted binary `ModelProto` into an importer-owned dense chain.
+ 2. Fold that chain into the JSON-first model shape used by the existing import flow.
+ 3. Reuse the same reconstruction pipeline to build the runtime network.
+
+Parameters:
+- `binaryModel` - Binary `ModelProto` payload.
+
+Returns: Reconstructed network instance.
+
 ### runOnnxImportFlow
 
 ```ts
@@ -1991,6 +2011,68 @@ Parameters:
 
 Returns: Nothing.
 
+## architecture/network/onnx/import/network.onnx.import-external.types.ts
+
+### DecodedExternalOnnxAttribute
+
+Decoded ONNX attribute payload.
+
+### DecodedExternalOnnxDimension
+
+Decoded ONNX dimension payload.
+
+### DecodedExternalOnnxGraph
+
+Decoded ONNX graph payload.
+
+### DecodedExternalOnnxModel
+
+Decoded ONNX model payload.
+
+### DecodedExternalOnnxNode
+
+Decoded ONNX node payload.
+
+### DecodedExternalOnnxOpsetImport
+
+Decoded ONNX operator-set import payload.
+
+### DecodedExternalOnnxTensor
+
+Decoded ONNX tensor payload.
+
+### DecodedExternalOnnxTensorType
+
+Decoded ONNX tensor-type payload.
+
+### DecodedExternalOnnxValueInfo
+
+Decoded ONNX value-info payload.
+
+### OnnxDecodedBytes
+
+Plain decoded bytes field from `onnx-proto` object conversion.
+
+### OnnxDecodedLongLike
+
+Decoded ONNX long-like field represented by `onnx-proto`.
+
+### OnnxExternalDenseChain
+
+Canonical importer-owned dense chain derived from an accepted external binary graph.
+
+### OnnxExternalDenseLayer
+
+Canonical one-layer affine-plus-activation payload for the external dense lane.
+
+### OnnxExternalImportError
+
+Error raised when an external ONNX binary falls outside the first supported import lane.
+
+### OnnxExternalImportErrorCategory
+
+Named rejection categories for the first external import lane.
+
 ## architecture/network/onnx/import/network.onnx.import-concat.utils.ts
 
 ### attachOnnxConcatMergeMetadata
@@ -2162,3 +2244,35 @@ upsertFeedForwardConnection(
 ```
 
 Upsert one feed-forward connection between two runtime nodes.
+
+## architecture/network/onnx/import/network.onnx.import-external.utils.ts
+
+### normalizeExternalBinaryOnnxModel
+
+```ts
+normalizeExternalBinaryOnnxModel(
+  binaryModel: Uint8Array<ArrayBufferLike>,
+): OnnxModel
+```
+
+Normalize the first supported external binary ONNX subset into an importer-owned model.
+
+Parameters:
+- `binaryModel` - Binary `ModelProto` payload.
+
+Returns: Canonical JSON-first model that the existing import flow can reconstruct.
+
+### normalizeExternalDenseChain
+
+```ts
+normalizeExternalDenseChain(
+  binaryModel: Uint8Array<ArrayBufferLike>,
+): OnnxExternalDenseChain
+```
+
+Normalize the first supported external binary ONNX subset into a canonical dense chain.
+
+Parameters:
+- `binaryModel` - Binary `ModelProto` payload.
+
+Returns: Canonical dense-chain payload for importer reconstruction.

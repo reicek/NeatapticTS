@@ -155,15 +155,16 @@ export function runOnnxExportFlow(
     sourceOptions: OnnxExportOptions,
   ): void {
     const quantizationPacket = sourceOptions.quantization!;
-    const effectiveQuantizationMode = resolveEffectiveQuantizationMode(
-      model,
-      quantizationPacket.mode,
-    );
 
     const quantizationFallbackReasons = buildQuantizationFallbackReasons(
       model,
       networkLayers,
       sourceOptions,
+    );
+    const effectiveQuantizationMode = resolveEffectiveQuantizationMode(
+      model,
+      quantizationPacket.mode,
+      quantizationFallbackReasons,
     );
 
     appendMetadataEntry(
@@ -261,14 +262,24 @@ export function runOnnxExportFlow(
     requestedQuantizationMode: NonNullable<
       OnnxExportOptions['quantization']
     >['mode'],
-  ): 'none' | 'static-8bit' {
+    quantizationFallbackReasons: string[],
+  ): 'none' | 'static-8bit' | 'dynamic-uint8' {
     if (
       requestedQuantizationMode === 'static-8bit' &&
       model.graph.node.some(
-        (graphNode) => graphNode.op_type === 'QLinearMatMul',
+        (graphNode) =>
+          graphNode.op_type === 'QLinearMatMul' ||
+          graphNode.op_type === 'QLinearConv',
       )
     ) {
       return 'static-8bit';
+    }
+
+    if (
+      requestedQuantizationMode === 'dynamic-uint8' &&
+      quantizationFallbackReasons.length === 0
+    ) {
+      return 'dynamic-uint8';
     }
 
     return 'none';
@@ -327,7 +338,14 @@ export function runOnnxExportFlow(
     const fallbackReasons =
       quantizationPacket.mode === 'static-8bit'
         ? resolveStaticQuantizationFallbackReasons(model)
-        : ['dynamic_uint8_not_implemented'];
+        : [];
+
+    if (
+      quantizationPacket.mode === 'static-8bit' &&
+      hasUnsupportedMultiOutputDenseQuantizationTarget(model, quantizationPacket)
+    ) {
+      fallbackReasons.push('multi_output_dense_boundary_requires_float32');
+    }
 
     if (hasRecurrentBoundary(networkLayers, sourceOptions)) {
       fallbackReasons.push('recurrent_boundary_requires_float32');
@@ -335,6 +353,13 @@ export function runOnnxExportFlow(
 
     if (hasAdvancedGraphBoundary(sourceOptions)) {
       fallbackReasons.push('advanced_graph_boundary_requires_float32');
+    }
+
+    if (
+      quantizationPacket.mode === 'dynamic-uint8' &&
+      hasSpatialBoundary(sourceOptions)
+    ) {
+      fallbackReasons.push('spatial_boundary_requires_float32');
     }
 
     if (sourceOptions.allowMixedActivations) {
@@ -349,7 +374,7 @@ export function runOnnxExportFlow(
   }
 
   /**
-   * Resolve static quantization fallback reasons after checking whether qlinear dense lowering landed.
+  * Resolve static quantization fallback reasons after checking whether qlinear lowering landed.
    *
    * @param model Built ONNX model.
    * @returns Ordered static-quantization fallback reasons.
@@ -358,10 +383,53 @@ export function runOnnxExportFlow(
     model: OnnxModel,
   ): string[] {
     return model.graph.node.some(
-      (graphNode) => graphNode.op_type === 'QLinearMatMul',
+      (graphNode) =>
+        graphNode.op_type === 'QLinearMatMul' ||
+        graphNode.op_type === 'QLinearConv',
     )
       ? []
       : ['static_8bit_not_implemented'];
+  }
+
+  /**
+   * Detect whether the current static request includes any targeted multi-output dense layer that stayed on float32.
+   *
+   * @param model Built ONNX model.
+   * @param quantizationPacket Raw static quantization request.
+   * @returns True when a targeted dense layer is wider than the landed one-output qlinear subset.
+   */
+  function hasUnsupportedMultiOutputDenseQuantizationTarget(
+    model: OnnxModel,
+    quantizationPacket: Extract<
+      NonNullable<OnnxExportOptions['quantization']>,
+      { mode: 'static-8bit' }
+    >,
+  ): boolean {
+    return quantizationPacket.calibration.layerTargets.some(
+      (layerTarget) =>
+        layerTarget.target === 'dense' &&
+        resolveDenseQuantizationOutputWidth(model, layerTarget.layerIndex) > 1 &&
+        !model.graph.node.some(
+          (graphNode) => graphNode.name === `qlinear_matmul_l${layerTarget.layerIndex}`,
+        ),
+    );
+  }
+
+  /**
+   * Resolve the dense output width for one targeted layer from its bias initializer.
+   *
+   * @param model Built ONNX model.
+   * @param layerIndex Dense export layer index.
+   * @returns Dense output width.
+   */
+  function resolveDenseQuantizationOutputWidth(
+    model: OnnxModel,
+    layerIndex: number,
+  ): number {
+    const biasInitializer = model.graph.initializer.find(
+      (initializerEntry) => initializerEntry.name === `B${layerIndex - 1}`,
+    )!;
+    return biasInitializer.float_data.length;
   }
 
   /**
@@ -397,6 +465,19 @@ export function runOnnxExportFlow(
     return (
       (sourceOptions.concatMappings?.length ?? 0) > 0 ||
       (sourceOptions.attentionMappings?.length ?? 0) > 0
+    );
+  }
+
+  /**
+   * Detect whether the current export request crosses the spatial boundary.
+   *
+   * @param sourceOptions Raw export options.
+   * @returns True when explicit Conv or pooling mappings are requested.
+   */
+  function hasSpatialBoundary(sourceOptions: OnnxExportOptions): boolean {
+    return (
+      (sourceOptions.conv2dMappings?.length ?? 0) > 0 ||
+      (sourceOptions.pool2dMappings?.length ?? 0) > 0
     );
   }
 

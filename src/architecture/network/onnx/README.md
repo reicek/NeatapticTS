@@ -2,22 +2,32 @@
 
 NeatapticTS ONNX-like serialization for networks.
 
-This module provides the two public entry points:
-- `exportToONNX()` turns a runtime `Network` into a plain JSON object (`OnnxModel`).
+This module provides the four public entry points:
+- `exportToONNXBinary()` turns the approved constrained subset into protobuf
+  `ModelProto` bytes and is the primary runtime-validated artifact for the
+  current Phase 8 and Phase 9 subset.
+- `exportToONNX()` turns a runtime `Network` into a plain JSON object
+  (`OnnxModel`) for same-family debug, roundtrip, and importer-owned workflows.
 - `importFromONNX()` reconstructs a `Network` from that JSON object.
+- `importFromONNXBinary()` reconstructs the first honest external binary ONNX
+  subset through a separate standard-domain `ModelProto` ingress lane.
 
 What this format is (and is not):
-- It is **JSON-first** and intentionally resembles ONNX’s model/graph concepts.
-- It is **not** a full ONNX protobuf implementation and is not guaranteed to run on
-  general ONNX runtimes.
-- The compatibility promise is primarily **within this repo**: models produced by
-  `exportToONNX()` should be accepted by `importFromONNX()` (same version family).
+- It exposes two distinct ONNX-adjacent surfaces with different promises.
+- `exportToONNXBinary()` is the compliance and runtime-evidence surface for the
+  documented supported subset.
+- `exportToONNX()` stays **JSON-first** and intentionally resembles ONNX’s
+  model and graph concepts for same-family inspection and roundtrip import.
+- Neither surface is a blanket promise of arbitrary ONNX runtime portability
+  beyond the named subset and validations.
 
 How to read this chapter:
-- Start here for the public round-trip API and the trust boundary.
+- Start here for the public surface split and the trust boundary.
 - Continue into `export/` to see how layered networks become JSON graph payloads.
 - Continue into `import/` to see how that payload becomes a runtime network again.
 - Continue into `schema/` for the persisted wire-format shapes.
+- Continue into `parity/` for the Phase 9 runtime-executed fixture inventory and
+  binary-first ONNX Runtime comparison seam.
 - Use `network.onnx.utils.ts` and `network.onnx.utils.types.ts` as compatibility and
   bridge surfaces rather than the first place to learn the pipeline.
 
@@ -92,12 +102,17 @@ What you get:
 - A minimal ONNX-ish graph (`model.graph`) plus optional metadata (`model.metadata_props`).
 
 When to use this:
-- You want a portable snapshot that can be inspected/diffed as JSON.
-- You want to reconstruct the network later via `importFromONNX()`.
+- You want a portable same-family snapshot that can be inspected or diffed as JSON.
+- You want the importer-owned roundtrip surface consumed later via `importFromONNX()`.
+- You are debugging export structure rather than producing the primary
+  runtime-validated `.onnx` artifact.
 
 Tradeoffs:
 - The output is ONNX-like, but **not** intended to be universally compatible with all ONNX
   runtimes.
+- This is not the primary runtime-validated artifact for the approved subset;
+  use `exportToONNXBinary()` when the goal is external validation, parity,
+  or the main compliant deliverable.
 - Some advanced features (partial connectivity, mixed activations, recurrent heuristics)
   may produce graphs that are primarily meant for this library’s importer.
 - Phase 6 closes the first optimization wave conservatively: exact unary activation
@@ -114,17 +129,50 @@ Tradeoffs:
 - Quantization packets are now exporter-owned and calibration-backed. Static
   8-bit requests can carry explicit layer-target calibration ranges and emit
   deterministic scale or zero-point initializers plus metadata for the
-  supported same-family dense and explicit Conv subset. The current Phase 7D
-  dense slice is now landed: explicitly targeted same-family dense layers
-  can lower into `QuantizeLinear -> QLinearMatMul -> DequantizeLinear`,
-  reattach nonzero bias through an explicit float-domain `Add` bridge,
-  preserve the exporter-owned unary activation node, and emit a
-  deterministic quantized weight tensor with
-  `effective_quantization_mode = static-8bit`.
-  Spatial qlinear lowering, dynamic quantization, and quantized import
-  remain later Phase 7 work, so unsupported requests still record explicit
-  float32 fallback reasons instead of widening the supported subset
-  implicitly.
+  supported same-family dense and spatial subset. The dense-only Phase 7D
+  lane is now closed for the current explicitly targeted same-family
+  one-output dense subset: those layers can lower into
+  `QuantizeLinear -> QLinearMatMul -> DequantizeLinear`, reattach nonzero
+  bias through an explicit float-domain `Add` bridge, preserve the
+  exporter-owned unary activation node, and emit a deterministic quantized
+  weight tensor with `effective_quantization_mode = static-8bit`. Phase 7E
+  is now also closed for the current explicit Conv subset: supported spatial
+  paths lower into `QuantizeLinear -> QLinearConv -> DequantizeLinear`, emit
+  deterministic quantized Conv weight tensors, quantize the fused bias as
+  one `int32` value per output channel, and return to float32 before pooling,
+  flatten, reshape, or downstream dense boundaries. Phase 7F is now closed
+  for the current dense-only dynamic guidance lane: supported same-family
+  dense paths can either land `metadata-only` guidance or insert
+  `DynamicQuantizeLinear -> DequantizeLinear` ahead of dense `Gemm` inputs
+  while keeping the affine and activation compute on the existing float32
+  path. Wider dense targets, unsupported spatial fallbacks, recurrent,
+  advanced-graph, mixed-activation, and partial-connectivity requests still
+  stay on float32 with explicit fallback metadata instead of widening the
+  supported subset implicitly.
+
+Quantized spatial lowering path:
+
+```mermaid
+flowchart LR
+  Input[Float spatial input] --> Quantize[QuantizeLinear]
+  Quantize --> QConv[QLinearConv]
+  QConv --> Dequantize[DequantizeLinear]
+  Dequantize --> Activation[Unary activation]
+  Activation --> Boundary[Pool flatten reshape dense]
+```
+
+Dynamic dense guidance path:
+
+```mermaid
+flowchart LR
+  Input[Float dense input] --> DQL[DynamicQuantizeLinear]
+  DQL --> DQ[DequantizeLinear]
+  DQ --> Gemm[Gemm]
+  Gemm --> Activation[Unary activation]
+```
+
+The lighter `metadata-only` representation records the same dense-only lane
+without inserting `DynamicQuantizeLinear` nodes.
 - The current spatial subset is still conservative: explicit Conv mappings round-trip,
   pooling/flatten import remains metadata-driven, and heuristic Conv inference stays
   metadata-only unless `autoPromoteInferredConv` is enabled and the inferred dense layer
@@ -160,6 +208,62 @@ Parameters:
 
 Returns: ONNX-like model object suitable for persistence or re-import.
 
+### exportToONNXBinary
+
+```ts
+exportToONNXBinary(
+  network: default,
+  options: OnnxExportOptions,
+): Uint8Array<ArrayBufferLike>
+```
+
+Export a NeatapticTS network to protobuf `ModelProto` bytes.
+
+What you get:
+- A deterministic binary payload whose field layout follows ONNX `ModelProto`.
+- The primary compliant and runtime-validated artifact for the approved
+  lower-opset same-family subset.
+- The same constrained model family as `exportToONNX()`, without widening the
+  importer or runtime-compatibility promise beyond the documented subset.
+
+Important boundary:
+- This binary surface now has a repo-owned external validation lane for the
+  current same-family subset: the companion validator decodes and verifies the
+  `ModelProto` payload and asks ONNX Runtime to accept it under the current
+  explicit lower-opset contract.
+- Phase 9 now layers a separate `parity/` seam on top of that load-acceptance
+  boundary. The parity harness keeps binary `.onnx` as the input artifact,
+  freezes deterministic baseline float32, storage-fp16, static-8bit dense
+  qlinear, explicit-Conv static-8bit, and `DynamicQuantizeLinear`
+  dense-guidance golden fixtures, and now also proves seeded randomized
+  parity over bounded shapes or input ranges for that same five-lane subset
+  through an isolated child Node process backed by the raw ONNX Runtime
+  binding, while keeping the dynamic lane narrow to its explicit
+  float-to-uint8 scalar-parameter tolerance packet.
+- That validation lane is still narrower than Phase 9 runtime parity. It does
+  not widen import support, arbitrary external-consumer support, or cross-opset
+  execution claims beyond the documented Phase 8 subset.
+
+When to use this:
+- You want the primary `.onnx` artifact for the repo's current compliance and
+  runtime-evidence claims.
+- You need the binary input used by the validator and the Phase 9 parity seam.
+- You want to persist the supported subset in a format that real ONNX tooling
+  can decode under the documented lower-opset policy.
+
+High-level behavior:
+ 1) Build the shared exporter model view for the supported subset.
+ 2) Normalize binary-only graph boundaries and required `ModelProto` headers.
+ 3) Serialize the resulting model into deterministic protobuf bytes.
+ 4) Keep validation separate: use the validator seam when you need explicit
+    external acceptance evidence for the current supported subset.
+
+Parameters:
+- `network` - Source network instance to serialize.
+- `options` - Export controls shared with `exportToONNX()`.
+
+Returns: Binary protobuf `ModelProto` bytes.
+
 ### importFromONNX
 
 ```ts
@@ -175,12 +279,20 @@ Expected input:
   current storage-fp16 subset where eligible weight and bias initializers are
   packed as float16 payloads and decoded back into the native runtime during import.
 - Quantized Phase 7 exports remain export-only for now. The importer does not
-  yet reconstruct `QLinearMatMul` or other quantized operators back into the
-  native runtime, so quantized ONNX payloads are outside the current import contract.
+  yet reconstruct `QLinearMatMul`, `QLinearConv`, `DynamicQuantizeLinear`
+  guidance boundaries, or other quantized operators back into the native
+  runtime, so quantized ONNX payloads are outside the current import
+  contract.
 
 Trust boundary:
 - Do not import untrusted blobs. A malformed model can be extremely large or internally
   inconsistent and may cause errors or high memory usage.
+
+Current boundary:
+- `importFromONNX()` continues to consume the repo's JSON-first `OnnxModel` surface.
+- Binary external import now lands through the separate `importFromONNXBinary()` entrypoint
+  for the first standard-domain float32 dense `Gemm -> unary activation` lane only.
+- `importFromONNX()` itself stays scoped to the JSON-first `OnnxModel` surface.
 
 High-level behavior:
  1) Build a perceptron-shaped scaffold from the payload layer sizes.
@@ -199,6 +311,34 @@ Parameters:
 - `onnx` - ONNX-like model to reconstruct.
 
 Returns: Reconstructed network ready for inference/evolution workflows.
+
+### importFromONNXBinary
+
+```ts
+importFromONNXBinary(
+  binaryModel: Uint8Array<ArrayBufferLike>,
+): default
+```
+
+Import the first supported external binary ONNX subset from protobuf `ModelProto` bytes.
+
+Current subset:
+- Exactly one public input, one public output, and one acyclic dense chain.
+- Standard-domain `Gemm` plus zero-or-one trailing unary activation per layer.
+- One final standard-domain `Identity` output alias is accepted when it only republishes
+  the terminal dense tensor as the declared model output.
+- Float32 tensors only, canonical `Gemm` attributes only, and initializer-owned affine terms only.
+- No recurrent, spatial, branching, quantized, custom-domain, or metadata-dependent graphs.
+
+High-level behavior:
+ 1) Decode and verify the binary `ModelProto` payload.
+ 2) Normalize one accepted external dense chain into an importer-owned canonical model.
+ 3) Reuse the existing reconstruction flow to rebuild a runtime network.
+
+Parameters:
+- `binaryModel` - Binary `ModelProto` payload to reconstruct.
+
+Returns: Reconstructed network ready for inference workflows.
 
 ### OnnxExportOptions
 
@@ -235,12 +375,22 @@ Key fields (high-level):
 - `quantization`: declare an explicit quantization request packet. The
   current exporter can validate static calibration contracts, emit
   deterministic scale or zero-point parameter initializers for the supported
-  same-family dense and explicit Conv subset, and lower explicitly targeted
-  same-family dense layers into a
+  same-family dense and spatial subset, and close the dense-only Phase 7D
+  lane for explicitly targeted same-family one-output dense layers. Those
+  layers can lower into a
   `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
   explicit float-domain bias bridge plus the exporter-owned unary
-  activation node when present. Spatial and dynamic quantized lowering
-  remains later Phase 7 work.
+  activation node when present, while the closed 7E Conv subset lowers
+  supported spatial paths into `QuantizeLinear -> QLinearConv ->
+  DequantizeLinear`, emits one `int32` fused-bias value per output channel,
+  and returns to float32 before pooling, flatten, reshape, or downstream
+  dense boundaries. The closed 7F dynamic lane now adds dense-only guidance:
+  supported same-family dense paths can either record `metadata-only`
+  guidance or insert `DynamicQuantizeLinear -> DequantizeLinear` immediately
+  ahead of dense `Gemm` inputs. Wider dense targets, unsupported spatial
+  fallbacks, recurrent, advanced-graph, mixed-activation, and
+  partial-connectivity requests stay on float32 with explicit fallback
+  metadata.
 - `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
   emission only when the exporter can prove the dense weights already behave like a
   shared-kernel spatial layout, including the current conservative multi-channel and
@@ -808,8 +958,10 @@ Practical notes:
 Stability & compatibility expectations:
 - This repo’s importer is only guaranteed to accept models produced by this repo’s
   exporter.
-- The schema is JSON-first and may evolve; prefer re-exporting/importing through the
-  library rather than hand-editing blobs.
+- The importer-facing schema is JSON-first and may evolve; prefer
+  re-exporting/importing through the library rather than hand-editing blobs,
+  and use `exportToONNXBinary()` when you need the primary runtime-validated
+  artifact for the approved subset.
 
 ### ActivationFunction
 
@@ -1146,12 +1298,22 @@ Key fields (high-level):
 - `quantization`: declare an explicit quantization request packet. The
   current exporter can validate static calibration contracts, emit
   deterministic scale or zero-point parameter initializers for the supported
-  same-family dense and explicit Conv subset, and lower explicitly targeted
-  same-family dense layers into a
+  same-family dense and spatial subset, and close the dense-only Phase 7D
+  lane for explicitly targeted same-family one-output dense layers. Those
+  layers can lower into a
   `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
   explicit float-domain bias bridge plus the exporter-owned unary
-  activation node when present. Spatial and dynamic quantized lowering
-  remains later Phase 7 work.
+  activation node when present, while the closed 7E Conv subset lowers
+  supported spatial paths into `QuantizeLinear -> QLinearConv ->
+  DequantizeLinear`, emits one `int32` fused-bias value per output channel,
+  and returns to float32 before pooling, flatten, reshape, or downstream
+  dense boundaries. The closed 7F dynamic lane now adds dense-only guidance:
+  supported same-family dense paths can either record `metadata-only`
+  guidance or insert `DynamicQuantizeLinear -> DequantizeLinear` immediately
+  ahead of dense `Gemm` inputs. Wider dense targets, unsupported spatial
+  fallbacks, recurrent, advanced-graph, mixed-activation, and
+  partial-connectivity requests stay on float32 with explicit fallback
+  metadata.
 - `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
   emission only when the exporter can prove the dense weights already behave like a
   shared-kernel spatial layout, including the current conservative multi-channel and

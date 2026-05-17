@@ -14,13 +14,13 @@ This prevents “special-case glue” and improves correctness, reproducibility,
 
 ## Roadmap alignment note
 
-- In the agreed serial pre-NGE sequence, this lane starts after `plans/ONNX_EXPORT_PLAN.md` reaches its stop line and before `plans/NEATchat.plans.md` is allowed to move from dependency-gated planning into implementation.
+- In the agreed serial pre-NGE sequence, this lane starts after the archived ONNX baseline in `plans/completed/ONNX_EXPORT_PLAN.md` and before `plans/NEATchat.plans.md` is allowed to move from dependency-gated planning into implementation.
 - Do not use this file to skip ahead into NEATchat or Phase 7 / NGE work; it is the last non-chat foundation lane before the gated conversational-system follow-up.
 
 ## Current status in context
 
-- `plans/Roadmap.md` still places this lane after the active `plans/ONNX_EXPORT_PLAN.md` stop line and before `plans/NEATchat.plans.md`.
-- This file should stay planning-only until ONNX closes its current recurrent hardening boundary; expanding this plan is preparation for the next implementation handoff, not a signal to start hybrid work early.
+- `plans/Roadmap.md` now places this lane after the archived `plans/completed/ONNX_EXPORT_PLAN.md` baseline and before `plans/NEATchat.plans.md`.
+- This file should stay planning-only until the user explicitly opens the hybrid-interoperability workstream; the archived ONNX closure is the handoff boundary, not a signal to start hybrid work early by default.
 - The first implementation pass should stay narrow: make deterministic parameter layout plus vector export/import real before adding fine-tuning or NEAT-loop policy hooks.
 - Existing repo seams already relevant to this lane:
   - network and visualization surfaces already sort nodes by stable node gene id for deterministic ordering,

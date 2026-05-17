@@ -17,11 +17,17 @@ import type {
 import type { NodeInternals } from '../network.onnx.utils.types';
 
 const FLOAT_TENSOR_ELEMENT_TYPE = 1;
-const ONNX_IR_VERSION = 9;
+/** Current ONNX IR version used by the repo's declared binary subset. */
+export const ONNX_IR_VERSION = 9;
+/** Current upstream ONNX reference opset for the `ai.onnx` domain. */
+export const CURRENT_ONNX_REFERENCE_OPSET = 27;
 const DEFAULT_MODEL_INPUT_NAME = 'input';
 const DEFAULT_MODEL_OUTPUT_NAME = 'output';
 const SYMBOLIC_BATCH_DIMENSION_NAME = 'N';
-const DEFAULT_METADATA_OPSET_DOMAIN = '';
+/** Canonical ONNX standard-operator domain name. */
+export const ONNX_STANDARD_DOMAIN = 'ai.onnx';
+/** Canonical empty-string alias for the ONNX standard operator-set domain. */
+export const ONNX_STANDARD_DOMAIN_ALIAS = '';
 const DEFAULT_METADATA_PRODUCER_VERSION = '0.0.0';
 const DEFAULT_METADATA_DOC_STRING =
   'Exported from NeatapticTS ONNX exporter (phases 1-2 baseline)';
@@ -96,7 +102,7 @@ export function applyModelMetadata(context: OnnxModelMetadataContext): void {
   // Step 3: Apply metadata fields to the model payload.
   context.model.ir_version = ONNX_IR_VERSION;
   context.model.opset_import = [
-    { version: context.opset, domain: DEFAULT_METADATA_OPSET_DOMAIN },
+    { version: context.opset, domain: ONNX_STANDARD_DOMAIN_ALIAS },
   ];
   context.model.producer_name = context.producerName;
   context.model.producer_version = resolvedProducerVersion;

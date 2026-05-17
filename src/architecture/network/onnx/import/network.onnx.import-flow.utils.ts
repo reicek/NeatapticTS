@@ -1,5 +1,6 @@
 import type Network from '../../network';
 import { assignActivationFunctions } from './network.onnx.import-activations.utils';
+import { normalizeExternalBinaryOnnxModel } from './network.onnx.import-external.utils';
 import {
   attachOnnxAdvancedGraphMetadata,
   attachOnnxPoolingMetadata,
@@ -104,4 +105,23 @@ export function runOnnxImportFlow(onnx: OnnxModel): Network {
   attachOnnxAdvancedGraphMetadata(network, metadata, onnx);
   attachOnnxConcatMergeMetadata(network, metadata, onnx);
   return network;
+}
+
+/**
+ * Execute the external binary ONNX import flow for the first supported dense lane.
+ *
+ * High-level behavior:
+ *  1. Decode and normalize one accepted binary `ModelProto` into an importer-owned dense chain.
+ *  2. Fold that chain into the JSON-first model shape used by the existing import flow.
+ *  3. Reuse the same reconstruction pipeline to build the runtime network.
+ *
+ * @param binaryModel Binary `ModelProto` payload.
+ * @returns Reconstructed network instance.
+ */
+export function runExternalOnnxImportFlow(binaryModel: Uint8Array): Network {
+  // Step 1: Normalize the supported external binary lane into the importer-owned model shape.
+  const normalizedOnnxModel = normalizeExternalBinaryOnnxModel(binaryModel);
+
+  // Step 2: Delegate runtime reconstruction to the existing JSON-first import flow.
+  return runOnnxImportFlow(normalizedOnnxModel);
 }

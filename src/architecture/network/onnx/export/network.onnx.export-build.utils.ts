@@ -38,6 +38,7 @@ const STORAGE_FP16_CAST_SUFFIX = '_fp32';
 const STORAGE_FP16_FLOAT_CAST_TARGET = 1;
 const ONNX_UINT8_DATA_TYPE = 2;
 const ONNX_INT8_DATA_TYPE = 3;
+const ONNX_INT32_DATA_TYPE = 6;
 const STORAGE_FP16_ELIGIBLE_INITIALIZER_PATTERNS = [
   /^W\d+$/,
   /^B\d+$/,
@@ -52,6 +53,18 @@ type StaticDenseLoweringPlan = {
   layerIndex: number;
   activationNode: OnnxModel['graph']['node'][number];
   hasBiasBridge: boolean;
+};
+
+/** Export-owned plan for lowering one Conv layer into the current qlinear subset. */
+type StaticConvLoweringPlan = {
+  layerIndex: number;
+  activationNode: OnnxModel['graph']['node'][number];
+  convNode: OnnxModel['graph']['node'][number];
+};
+
+/** Export-owned plan for inserting one dynamic dense guidance boundary. */
+type DynamicDenseGuidancePlan = {
+  layerIndex: number;
 };
 
 /**
@@ -119,20 +132,36 @@ export function buildOnnxModel(
     recurrentLayerIndices,
   );
 
-  // Step 8: Apply storage-fp16 rewrites only for the narrow supported subset.
+  // Step 8: Lower the narrow same-family Conv subset into qlinear spatial nodes.
+  applyStaticConvQuantizationPostProcessing(
+    model,
+    sourceOptions,
+    resolvedOptions.quantization,
+    recurrentLayerIndices,
+  );
+
+  // Step 9: Insert the narrow dense-only dynamic guidance lane when requested.
+  applyDynamicDenseQuantizationGuidancePostProcessing(
+    model,
+    sourceOptions,
+    resolvedOptions.quantization,
+    recurrentLayerIndices,
+  );
+
+  // Step 10: Apply storage-fp16 rewrites only for the narrow supported subset.
   applyStorageFp16PostProcessing(
     model,
     sourceOptions,
     recurrentLayerIndices,
   );
 
-  // Step 9: Prune exact Identity activation nodes before validation.
+  // Step 11: Prune exact Identity activation nodes before validation.
   pruneIdentityActivationNodes(model);
 
-  // Step 10: Validate exporter-owned tensor dimensions before returning.
+  // Step 12: Validate exporter-owned tensor dimensions before returning.
   validateOnnxModelShapes(model);
 
-  // Step 11: Return fully constructed ONNX model.
+  // Step 13: Return fully constructed ONNX model.
   return model;
 
   /**
@@ -646,8 +675,11 @@ export function buildOnnxModel(
       return;
     }
 
-    const parameterInitializers = resolvedQuantization.calibration.layerTargets.flatMap(
+    const supportedLayerTargets = resolvedQuantization.calibration.layerTargets.filter(
       (layerTarget) =>
+        isSupportedStaticQuantizationLayerTarget(model, layerTarget),
+    );
+    const parameterInitializers = supportedLayerTargets.flatMap((layerTarget) =>
         createStaticQuantizationParameterInitializers(
           model,
           resolvedQuantization,
@@ -722,7 +754,11 @@ export function buildOnnxModel(
 
     const lowerableDenseLayerPlans =
       resolvedQuantization.calibration.layerTargets
-        .filter((layerTarget) => layerTarget.target === 'dense')
+        .filter(
+          (layerTarget) =>
+            layerTarget.target === 'dense' &&
+            isSupportedStaticQuantizationLayerTarget(model, layerTarget),
+        )
         .map((layerTarget) =>
           resolveStaticDenseLoweringPlan(model, layerTarget.layerIndex),
         );
@@ -750,6 +786,206 @@ export function buildOnnxModel(
         lowerableDenseLayerPlansByLayerIndex,
       ),
     );
+  }
+
+  /**
+   * Lower the narrow first-wave Conv subset into exporter-owned qlinear spatial nodes.
+   *
+   * @param model Built ONNX model.
+   * @param sourceOptions Raw export options.
+   * @param resolvedQuantization Normalized quantization packet.
+   * @param recurrentLayerIndices Collected recurrent layer indices.
+   * @returns Nothing.
+   */
+  function applyStaticConvQuantizationPostProcessing(
+    model: OnnxModel,
+    sourceOptions: OnnxExportOptions,
+    resolvedQuantization: OnnxResolvedQuantizationOptions,
+    recurrentLayerIndices: number[],
+  ): void {
+    if (
+      !shouldApplyStaticConvQuantizationLowering(
+        sourceOptions,
+        resolvedQuantization,
+        recurrentLayerIndices,
+      )
+    ) {
+      return;
+    }
+
+    const lowerableConvLayerPlans =
+      resolvedQuantization.calibration.layerTargets
+        .filter((layerTarget) => layerTarget.target === 'conv')
+        .flatMap((layerTarget) => {
+          const loweringPlan = resolveStaticConvLoweringPlan(
+            model,
+            layerTarget.layerIndex,
+          );
+          return loweringPlan ? [loweringPlan] : [];
+        });
+
+    model.graph.initializer.push(
+      ...lowerableConvLayerPlans.flatMap((loweringPlan) => [
+        createQuantizedConvWeightInitializer(
+          model,
+          resolvedQuantization,
+          loweringPlan.layerIndex,
+        ),
+        createQuantizedConvBiasInitializer(
+          model,
+          resolvedQuantization,
+          loweringPlan.layerIndex,
+        ),
+      ]),
+    );
+
+    const lowerableConvLayerPlansByLayerIndex = new Map(
+      lowerableConvLayerPlans.map((loweringPlan) => [
+        loweringPlan.layerIndex,
+        loweringPlan,
+      ]),
+    );
+
+    model.graph.node = model.graph.node.flatMap((graphNode) =>
+      rewriteConvGraphNodeForStaticQuantization(
+        graphNode,
+        lowerableConvLayerPlansByLayerIndex,
+      ),
+    );
+  }
+
+  /**
+   * Insert the narrow Phase 7F dense-only dynamic guidance lane.
+   *
+   * @param model Built ONNX model.
+   * @param sourceOptions Raw export options.
+   * @param resolvedQuantization Normalized quantization packet.
+   * @param recurrentLayerIndices Collected recurrent layer indices.
+   * @returns Nothing.
+   */
+  function applyDynamicDenseQuantizationGuidancePostProcessing(
+    model: OnnxModel,
+    sourceOptions: OnnxExportOptions,
+    resolvedQuantization: OnnxResolvedQuantizationOptions,
+    recurrentLayerIndices: number[],
+  ): void {
+    if (
+      !shouldApplyDynamicDenseQuantizationGuidance(
+        sourceOptions,
+        resolvedQuantization,
+        recurrentLayerIndices,
+      )
+    ) {
+      return;
+    }
+
+    if (resolvedQuantization.representation === 'metadata-only') {
+      return;
+    }
+
+    const lowerableDenseGuidancePlansByLayerIndex = new Map(
+      model.graph.node
+        .filter((graphNode) => graphNode.name.startsWith('gemm_l'))
+        .map((graphNode) => {
+          const layerIndex = Number.parseInt(
+            graphNode.name.slice('gemm_l'.length),
+            10,
+          );
+
+          return [
+            layerIndex,
+            {
+              layerIndex,
+            } satisfies DynamicDenseGuidancePlan,
+          ] as const;
+        }),
+    );
+
+    model.graph.node = model.graph.node.flatMap((graphNode) =>
+      rewriteDenseGraphNodeForDynamicGuidance(
+        graphNode,
+        lowerableDenseGuidancePlansByLayerIndex,
+      ),
+    );
+  }
+
+  /**
+   * Determine whether the current export request fits the first qlinear Conv subset.
+   *
+   * @param sourceOptions Raw export options.
+   * @param resolvedQuantization Normalized quantization packet.
+   * @param recurrentLayerIndices Collected recurrent layer indices.
+   * @returns True when qlinear Conv lowering may be attempted.
+   */
+  function shouldApplyStaticConvQuantizationLowering(
+    sourceOptions: OnnxExportOptions,
+    resolvedQuantization: OnnxResolvedQuantizationOptions,
+    recurrentLayerIndices: number[],
+  ): resolvedQuantization is Extract<
+    OnnxResolvedQuantizationOptions,
+    { mode: 'static-8bit' }
+  > {
+    if (
+      !shouldEmitStaticQuantizationParameters(
+        sourceOptions,
+        resolvedQuantization,
+        recurrentLayerIndices,
+      )
+    ) {
+      return false;
+    }
+
+    if (resolvedQuantization.representation !== 'qlinear') {
+      return false;
+    }
+
+    return (sourceOptions.conv2dMappings?.length ?? 0) > 0;
+  }
+
+  /**
+   * Determine whether the current export request fits the first dynamic dense-guidance subset.
+   *
+   * @param sourceOptions Raw export options.
+   * @param resolvedQuantization Normalized quantization packet.
+   * @param recurrentLayerIndices Collected recurrent layer indices.
+   * @returns True when dynamic guidance may be applied.
+   */
+  function shouldApplyDynamicDenseQuantizationGuidance(
+    sourceOptions: OnnxExportOptions,
+    resolvedQuantization: OnnxResolvedQuantizationOptions,
+    recurrentLayerIndices: number[],
+  ): resolvedQuantization is Extract<
+    OnnxResolvedQuantizationOptions,
+    { mode: 'dynamic-uint8' }
+  > {
+    if (!resolvedQuantization.requested || resolvedQuantization.mode !== 'dynamic-uint8') {
+      return false;
+    }
+
+    if (recurrentLayerIndices.length > 0) {
+      return false;
+    }
+
+    if ((sourceOptions.conv2dMappings?.length ?? 0) > 0) {
+      return false;
+    }
+
+    if ((sourceOptions.pool2dMappings?.length ?? 0) > 0) {
+      return false;
+    }
+
+    if (
+      (sourceOptions.concatMappings?.length ?? 0) > 0 ||
+      (sourceOptions.attentionMappings?.length ?? 0) > 0
+    ) {
+      return false;
+    }
+
+    if (sourceOptions.allowMixedActivations) {
+      return false;
+    }
+
+    return !sourceOptions.allowPartialConnectivity;
   }
 
   /**
@@ -791,6 +1027,39 @@ export function buildOnnxModel(
     }
 
     return true;
+  }
+
+  /**
+   * Determine whether one calibrated operator target fits the current static quantization subset.
+   *
+   * @param model Built ONNX model.
+   * @param layerTarget One calibrated operator target.
+   * @returns True when the target stays inside the landed Phase 7 subset.
+   */
+  function isSupportedStaticQuantizationLayerTarget(
+    model: OnnxModel,
+    layerTarget: OnnxQuantizationCalibrationLayerTarget,
+  ): boolean {
+    if (layerTarget.target === 'conv') {
+      return true;
+    }
+
+    return resolveDenseLayerOutputWidth(model, layerTarget.layerIndex) === 1;
+  }
+
+  /**
+   * Resolve the dense output width for one exported layer from its bias initializer.
+   *
+   * @param model Built ONNX model.
+   * @param layerIndex Dense export layer index.
+   * @returns Output width for the dense layer.
+   */
+  function resolveDenseLayerOutputWidth(
+    model: OnnxModel,
+    layerIndex: number,
+  ): number {
+    const biasInitializer = findInitializerByName(model, `B${layerIndex - 1}`)!;
+    return biasInitializer.float_data.length;
   }
 
   /**
@@ -937,6 +1206,71 @@ export function buildOnnxModel(
   }
 
   /**
+   * Rewrite one supported dense Gemm node with the dynamic guidance boundary.
+   *
+   * @param graphNode Current graph node.
+   * @param lowerableDenseGuidancePlansByLayerIndex Lowerable dense guidance plans.
+   * @returns Replacement node list.
+   */
+  function rewriteDenseGraphNodeForDynamicGuidance(
+    graphNode: OnnxModel['graph']['node'][number],
+    lowerableDenseGuidancePlansByLayerIndex: Map<number, DynamicDenseGuidancePlan>,
+  ): OnnxModel['graph']['node'] {
+    if (!graphNode.name.startsWith('gemm_l')) {
+      return [graphNode];
+    }
+
+    const layerIndex = Number.parseInt(graphNode.name.slice('gemm_l'.length), 10);
+    const guidancePlan = lowerableDenseGuidancePlansByLayerIndex.get(layerIndex)!;
+
+    return createDynamicDenseGuidanceNodes(graphNode, guidancePlan);
+  }
+
+  /**
+   * Create the dynamic guidance nodes that wrap one dense Gemm input.
+   *
+   * @param gemmNode Dense Gemm node being rewritten.
+   * @param guidancePlan Dynamic dense guidance plan.
+   * @returns Dynamic guidance nodes followed by the rewritten Gemm node.
+   */
+  function createDynamicDenseGuidanceNodes(
+    gemmNode: OnnxModel['graph']['node'][number],
+    guidancePlan: DynamicDenseGuidancePlan,
+  ): OnnxModel['graph']['node'] {
+    const quantizedInputName = `DynamicDenseInput_l${guidancePlan.layerIndex}`;
+    const quantizedInputScaleName = `DynamicDenseInputScale_l${guidancePlan.layerIndex}`;
+    const quantizedInputZeroPointName = `DynamicDenseInputZeroPoint_l${guidancePlan.layerIndex}`;
+    const dequantizedInputName = `DynamicDenseInputFloat_l${guidancePlan.layerIndex}`;
+
+    return [
+      {
+        op_type: 'DynamicQuantizeLinear',
+        input: [gemmNode.input[0]],
+        output: [
+          quantizedInputName,
+          quantizedInputScaleName,
+          quantizedInputZeroPointName,
+        ],
+        name: `dynamic_quantize_input_l${guidancePlan.layerIndex}`,
+      },
+      {
+        op_type: 'DequantizeLinear',
+        input: [
+          quantizedInputName,
+          quantizedInputScaleName,
+          quantizedInputZeroPointName,
+        ],
+        output: [dequantizedInputName],
+        name: `dynamic_dequantize_input_l${guidancePlan.layerIndex}`,
+      },
+      {
+        ...gemmNode,
+        input: [dequantizedInputName, ...gemmNode.input.slice(1)],
+      },
+    ];
+  }
+
+  /**
    * Resolve the float-domain tensor name produced immediately after dequantization.
    *
    * @param loweringPlan Dense lowering plan.
@@ -1029,6 +1363,176 @@ export function buildOnnxModel(
   }
 
   /**
+   * Resolve one export-owned lowering plan for the current qlinear Conv subset.
+   *
+   * @param model Built ONNX model.
+   * @param layerIndex Conv export layer index.
+   * @returns Lowering plan for one exporter-owned Conv layer pair.
+   */
+  function resolveStaticConvLoweringPlan(
+    model: OnnxModel,
+    layerIndex: number,
+  ): StaticConvLoweringPlan | undefined {
+    const convNode = findGraphNodeByName(model, `conv_l${layerIndex}`);
+    const activationNode = findGraphNodeByName(model, `act_conv_l${layerIndex}`);
+
+    if (!convNode || !activationNode) {
+      return undefined;
+    }
+
+    findInitializerByName(model, `ConvW${layerIndex - 1}`)!;
+    findInitializerByName(model, `ConvB${layerIndex - 1}`)!;
+
+    return {
+      layerIndex,
+      activationNode,
+      convNode,
+    };
+  }
+
+  /**
+   * Rewrite one supported Conv node into qlinear spatial nodes and drop the paired activation node.
+   *
+   * @param graphNode Current graph node.
+   * @param lowerableConvLayerPlansByLayerIndex Lowerable Conv layer plans.
+   * @returns Replacement node list.
+   */
+  function rewriteConvGraphNodeForStaticQuantization(
+    graphNode: OnnxModel['graph']['node'][number],
+    lowerableConvLayerPlansByLayerIndex: Map<number, StaticConvLoweringPlan>,
+  ): OnnxModel['graph']['node'] {
+    const lowerableLayerIndex = [...lowerableConvLayerPlansByLayerIndex.keys()].find(
+      (layerIndex) =>
+        graphNode.name === `conv_l${layerIndex}` ||
+        graphNode.name === `act_conv_l${layerIndex}`,
+    );
+
+    if (lowerableLayerIndex === undefined) {
+      return [graphNode];
+    }
+
+    const loweringPlan = lowerableConvLayerPlansByLayerIndex.get(
+      lowerableLayerIndex,
+    )!;
+
+    if (graphNode.name === `act_conv_l${loweringPlan.layerIndex}`) {
+      return [];
+    }
+
+    return createStaticConvQuantizedNodes(loweringPlan);
+  }
+
+  /**
+   * Create the qlinear node sequence that replaces one Conv plus activation pair.
+   *
+   * @param loweringPlan Conv lowering plan.
+   * @returns Quantize, qlinear, dequantize, and optional activation nodes in deterministic order.
+   */
+  function createStaticConvQuantizedNodes(
+    loweringPlan: StaticConvLoweringPlan,
+  ): OnnxModel['graph']['node'] {
+    const quantizedInputName = `QuantConvInput_l${loweringPlan.layerIndex}`;
+    const quantizedAffineOutputName = `QuantConvAffine_l${loweringPlan.layerIndex}`;
+    const dequantizedAffineOutputName = resolveStaticConvDequantizedOutputName(
+      loweringPlan,
+    );
+
+    return [
+      {
+        op_type: 'QuantizeLinear',
+        input: [
+          loweringPlan.convNode.input[0],
+          `QuantConvInputScale_l${loweringPlan.layerIndex}`,
+          `QuantConvInputZeroPoint_l${loweringPlan.layerIndex}`,
+        ],
+        output: [quantizedInputName],
+        name: `quantize_conv_input_l${loweringPlan.layerIndex}`,
+      },
+      {
+        op_type: 'QLinearConv',
+        input: [
+          quantizedInputName,
+          `QuantConvInputScale_l${loweringPlan.layerIndex}`,
+          `QuantConvInputZeroPoint_l${loweringPlan.layerIndex}`,
+          `QuantConvWeight_l${loweringPlan.layerIndex}`,
+          `QuantConvWeightScale_l${loweringPlan.layerIndex}`,
+          `QuantConvWeightZeroPoint_l${loweringPlan.layerIndex}`,
+          `QuantConvOutputScale_l${loweringPlan.layerIndex}`,
+          `QuantConvOutputZeroPoint_l${loweringPlan.layerIndex}`,
+          `QuantConvBias_l${loweringPlan.layerIndex}`,
+        ],
+        output: [quantizedAffineOutputName],
+        name: `qlinear_conv_l${loweringPlan.layerIndex}`,
+        attributes: loweringPlan.convNode.attributes,
+      },
+      {
+        op_type: 'DequantizeLinear',
+        input: [
+          quantizedAffineOutputName,
+          `QuantConvOutputScale_l${loweringPlan.layerIndex}`,
+          `QuantConvOutputZeroPoint_l${loweringPlan.layerIndex}`,
+        ],
+        output: [dequantizedAffineOutputName],
+        name: `dequantize_conv_output_l${loweringPlan.layerIndex}`,
+      },
+      ...(shouldEmitStaticConvActivationNode(loweringPlan)
+        ? [
+            createStaticConvActivationNode(
+              loweringPlan,
+              dequantizedAffineOutputName,
+            ),
+          ]
+        : []),
+    ];
+  }
+
+  /**
+   * Resolve the float-domain tensor name produced immediately after qlinear Conv dequantization.
+   *
+   * @param loweringPlan Conv lowering plan.
+   * @returns Dequantized affine output name.
+   */
+  function resolveStaticConvDequantizedOutputName(
+    loweringPlan: StaticConvLoweringPlan,
+  ): string {
+    return shouldEmitStaticConvActivationNode(loweringPlan)
+      ? `ConvAffineFloat_l${loweringPlan.layerIndex}`
+      : `Layer_${loweringPlan.layerIndex}`;
+  }
+
+  /**
+   * Determine whether the paired Conv activation node should survive after qlinear lowering.
+   *
+   * @param loweringPlan Conv lowering plan.
+   * @returns True when the activation node is not Identity.
+   */
+  function shouldEmitStaticConvActivationNode(
+    loweringPlan: StaticConvLoweringPlan,
+  ): boolean {
+    return loweringPlan.activationNode.op_type !== 'Identity';
+  }
+
+  /**
+   * Recreate the exporter-owned post-Conv activation node after qlinear lowering.
+   *
+   * @param loweringPlan Conv lowering plan.
+   * @param activationInputName Float-domain activation input name.
+   * @returns Preserved activation node.
+   */
+  function createStaticConvActivationNode(
+    loweringPlan: StaticConvLoweringPlan,
+    activationInputName: string,
+  ): OnnxModel['graph']['node'][number] {
+    return {
+      op_type: loweringPlan.activationNode.op_type,
+      input: [activationInputName],
+      output: [`Layer_${loweringPlan.layerIndex}`],
+      name: loweringPlan.activationNode.name,
+      attributes: loweringPlan.activationNode.attributes,
+    };
+  }
+
+  /**
    * Create one quantized dense weight initializer for qlinear affine lowering.
    *
    * @param model Built ONNX model.
@@ -1069,6 +1573,103 @@ export function buildOnnxModel(
         weightZeroPointValue,
         resolvedQuantization.weightEncoding,
         resolvedQuantization.calibration.roundingMode,
+      ),
+    };
+  }
+
+  /**
+   * Create one quantized Conv weight initializer for qlinear spatial lowering.
+   *
+   * @param model Built ONNX model.
+   * @param resolvedQuantization Normalized static quantization packet.
+   * @param layerIndex Conv export layer index.
+   * @returns Quantized Conv weight initializer.
+   */
+  function createQuantizedConvWeightInitializer(
+    model: OnnxModel,
+    resolvedQuantization: Extract<
+      OnnxResolvedQuantizationOptions,
+      { mode: 'static-8bit' }
+    >,
+    layerIndex: number,
+  ) {
+    const weightInitializer = findInitializerByName(model, `ConvW${layerIndex - 1}`)!;
+    const weightScaleValues = readRequiredFloatInitializerValues(
+      model,
+      `QuantConvWeightScale_l${layerIndex}`,
+    );
+    const weightZeroPointValues = readRequiredIntegerInitializerValues(
+      model,
+      `QuantConvWeightZeroPoint_l${layerIndex}`,
+    );
+
+    return {
+      name: `QuantConvWeight_l${layerIndex}`,
+      data_type:
+        resolvedQuantization.weightEncoding === 'uint8'
+          ? ONNX_UINT8_DATA_TYPE
+          : ONNX_INT8_DATA_TYPE,
+      dims: [...weightInitializer.dims],
+      float_data: [],
+      int32_data: quantizePerChannelTensorValues(
+        weightInitializer.float_data,
+        weightInitializer.dims[0]!,
+        weightScaleValues,
+        weightZeroPointValues,
+        resolvedQuantization.weightEncoding,
+        resolvedQuantization.calibration.roundingMode,
+      ),
+    };
+  }
+
+  /**
+   * Create one int32 Conv bias initializer for qlinear spatial lowering.
+   *
+   * @param model Built ONNX model.
+   * @param resolvedQuantization Normalized static quantization packet.
+   * @param layerIndex Conv export layer index.
+   * @returns Quantized Conv bias initializer.
+   */
+  function createQuantizedConvBiasInitializer(
+    model: OnnxModel,
+    resolvedQuantization: Extract<
+      OnnxResolvedQuantizationOptions,
+      { mode: 'static-8bit' }
+    >,
+    layerIndex: number,
+  ) {
+    const biasInitializer = findInitializerByName(model, `ConvB${layerIndex - 1}`)!;
+    const inputScaleValue = readRequiredScalarFloatInitializer(
+      model,
+      `QuantConvInputScale_l${layerIndex}`,
+    );
+    const weightScaleValues = readRequiredFloatInitializerValues(
+      model,
+      `QuantConvWeightScale_l${layerIndex}`,
+    );
+    const resolvedWeightScaleValues =
+      weightScaleValues.length === 1
+        ? Array.from(
+            { length: biasInitializer.float_data.length },
+            () => weightScaleValues[0]!,
+          )
+        : weightScaleValues;
+
+    return {
+      name: `QuantConvBias_l${layerIndex}`,
+      data_type: ONNX_INT32_DATA_TYPE,
+      dims: [biasInitializer.float_data.length],
+      float_data: [],
+      int32_data: biasInitializer.float_data.map((biasValue, outputChannelIndex) =>
+        clampInteger(
+          roundQuantizedValue(
+            biasValue /
+              (inputScaleValue * resolvedWeightScaleValues[outputChannelIndex]!),
+            resolvedQuantization.calibration.roundingMode,
+          ),
+          -2147483648,
+          2147483647,
+        ),
       ),
     };
   }
@@ -1140,6 +1741,21 @@ export function buildOnnxModel(
   }
 
   /**
+   * Read one required float initializer payload.
+   *
+   * @param model Built ONNX model.
+   * @param initializerName Initializer name.
+   * @returns Float payload values.
+   */
+  function readRequiredFloatInitializerValues(
+    model: OnnxModel,
+    initializerName: string,
+  ): number[] {
+    const initializerEntry = findInitializerByName(model, initializerName)!;
+    return initializerEntry.float_data;
+  }
+
+  /**
    * Read one required scalar integer initializer.
    *
    * @param model Built ONNX model.
@@ -1152,6 +1768,21 @@ export function buildOnnxModel(
   ): number {
     const initializerEntry = findInitializerByName(model, initializerName)!;
     return initializerEntry.int32_data![0]!;
+  }
+
+  /**
+   * Read one required integer initializer payload.
+   *
+   * @param model Built ONNX model.
+   * @param initializerName Initializer name.
+   * @returns Integer payload values.
+   */
+  function readRequiredIntegerInitializerValues(
+    model: OnnxModel,
+    initializerName: string,
+  ): number[] {
+    const initializerEntry = findInitializerByName(model, initializerName)!;
+    return initializerEntry.int32_data!;
   }
 
   /**
@@ -1184,6 +1815,47 @@ export function buildOnnxModel(
   }
 
   /**
+   * Quantize one tensor payload with scalar or per-output-channel parameter tensors.
+   *
+   * @param floatValues Source float payload.
+   * @param outputChannelCount Number of output channels.
+   * @param scaleValues Scalar or per-output-channel scales.
+   * @param zeroPointValues Scalar or per-output-channel zero points.
+   * @param encoding Integer encoding family.
+   * @param roundingMode Rounding policy.
+   * @returns Quantized integer payload.
+   */
+  function quantizePerChannelTensorValues(
+    floatValues: number[],
+    outputChannelCount: number,
+    scaleValues: number[],
+    zeroPointValues: number[],
+    encoding: 'uint8' | 'int8',
+    roundingMode: 'nearest-even',
+  ): number[] {
+    const resolvedScaleValues =
+      scaleValues.length === 1
+        ? Array.from({ length: outputChannelCount }, () => scaleValues[0]!)
+        : scaleValues;
+    const resolvedZeroPointValues =
+      zeroPointValues.length === 1
+        ? Array.from({ length: outputChannelCount }, () => zeroPointValues[0]!)
+        : zeroPointValues;
+    const elementsPerOutputChannel = floatValues.length / outputChannelCount;
+
+    return floatValues.map((floatValue, valueIndex) => {
+      const outputChannelIndex = Math.floor(valueIndex / elementsPerOutputChannel);
+      return quantizeTensorValues(
+        [floatValue],
+        resolvedScaleValues[outputChannelIndex]!,
+        resolvedZeroPointValues[outputChannelIndex]!,
+        encoding,
+        roundingMode,
+      )[0]!;
+    });
+  }
+
+  /**
    * Create the six scale or zero-point tensors for one calibrated operator target.
    *
    * @param model Built ONNX model.
@@ -1199,6 +1871,16 @@ export function buildOnnxModel(
     >,
     layerTarget: OnnxQuantizationCalibrationLayerTarget,
   ) {
+    const weightParameters = resolveWeightQuantizationParameters(
+      model,
+      resolvedQuantization,
+      layerTarget,
+    );
+
+    if (!weightParameters) {
+      return [];
+    }
+
     const inputParameters = resolveRangeQuantizationParameters(
       layerTarget.inputRange,
       resolvedQuantization.activationEncoding,
@@ -1212,11 +1894,6 @@ export function buildOnnxModel(
       resolvedQuantization.calibration.activationSymmetry,
       resolvedQuantization.calibration.zeroInclusion,
       resolvedQuantization.calibration.roundingMode,
-    );
-    const weightParameters = resolveWeightQuantizationParameters(
-      model,
-      resolvedQuantization,
-      layerTarget,
     );
 
     return [
@@ -1265,12 +1942,17 @@ export function buildOnnxModel(
       { mode: 'static-8bit' }
     >,
     layerTarget: OnnxQuantizationCalibrationLayerTarget,
-  ): { scales: number[]; zeroPoints: number[] } {
+  ): { scales: number[]; zeroPoints: number[] } | undefined {
     const weightRanges = collectWeightRangesForLayer(
       model,
       layerTarget,
       resolvedQuantization.weightGranularity,
     );
+
+    if (!weightRanges) {
+      return undefined;
+    }
+
     const weightParameterEntries = weightRanges.map((weightRange) =>
       resolveRangeQuantizationParameters(
         weightRange,
@@ -1301,14 +1983,18 @@ export function buildOnnxModel(
     model: OnnxModel,
     layerTarget: OnnxQuantizationCalibrationLayerTarget,
     weightGranularity: 'per-tensor' | 'per-output-channel',
-  ): OnnxQuantizationCalibrationRange[] {
+  ): OnnxQuantizationCalibrationRange[] | undefined {
     const weightInitializerName =
       layerTarget.target === 'conv'
         ? `ConvW${layerTarget.layerIndex - 1}`
         : `W${layerTarget.layerIndex - 1}`;
     const weightInitializer = model.graph.initializer.find(
       (initializerTensor) => initializerTensor.name === weightInitializerName,
-    )!;
+    );
+
+    if (!weightInitializer) {
+      return undefined;
+    }
 
     if (weightGranularity === 'per-tensor') {
       return [createMinMaxRange(weightInitializer.float_data)];
@@ -1952,4 +2638,5 @@ export function buildOnnxModel(
       legacyNodeOrdering: context.legacyNodeOrdering,
     });
   }
+
 }

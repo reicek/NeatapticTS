@@ -34,8 +34,10 @@
  * Stability & compatibility expectations:
  * - This repo’s importer is only guaranteed to accept models produced by this repo’s
  *   exporter.
- * - The schema is JSON-first and may evolve; prefer re-exporting/importing through the
- *   library rather than hand-editing blobs.
+ * - The importer-facing schema is JSON-first and may evolve; prefer
+ *   re-exporting/importing through the library rather than hand-editing blobs,
+ *   and use `exportToONNXBinary()` when you need the primary runtime-validated
+ *   artifact for the approved subset.
  */
 
 import Connection from '../../connection';

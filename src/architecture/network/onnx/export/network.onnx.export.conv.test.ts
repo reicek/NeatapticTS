@@ -12,6 +12,14 @@ function getMetadataValue(onnxModel: OnnxModel, key: string): string | undefined
   )?.value;
 }
 
+function getParsedMetadataArray(
+  onnxModel: OnnxModel,
+  key: string,
+): string[] | undefined {
+  const metadataValue = getMetadataValue(onnxModel, key);
+  return metadataValue ? (JSON.parse(metadataValue) as string[]) : undefined;
+}
+
 function hasMetadataKey(onnxModel: OnnxModel, key: string): boolean {
   return (onnxModel.metadata_props ?? []).some(
     (metadataEntry) => metadataEntry.key === key,
@@ -28,6 +36,24 @@ function countGraphNodeType(onnxModel: OnnxModel, operatorType: string): number 
   return onnxModel.graph.node.filter(
     (graphNode) => (graphNode as OnnxGraphNodeView).op_type === operatorType,
   ).length;
+}
+
+function getGraphNodeByName(
+  onnxModel: OnnxModel,
+  graphNodeName: string,
+) {
+  return onnxModel.graph.node.find(
+    (graphNode) => graphNode.name === graphNodeName,
+  );
+}
+
+function getFirstGraphNodeByType(
+  onnxModel: OnnxModel,
+  operatorType: string,
+) {
+  return onnxModel.graph.node.find(
+    (graphNode) => (graphNode as OnnxGraphNodeView).op_type === operatorType,
+  );
 }
 
 function createConvGroundworkScenario(): {
@@ -3177,6 +3203,67 @@ describe('network onnx export conv chapter', () => {
     });
 
     describe('given Phase 7 static quantization calibration targets for the explicit Conv subset', () => {
+      it('lowers one explicit Conv target into QLinearConv and records the landed static metadata', () => {
+        // Arrange
+        const scenario = createConvGroundworkScenario();
+
+        // Act
+        const onnxModel = exportToONNX(scenario.network, {
+          includeMetadata: true,
+          conv2dMappings: scenario.mappings,
+          quantization: {
+            mode: 'static-8bit',
+            targets: ['conv'],
+            calibration: {
+              source: 'external',
+              layerTargets: [
+                {
+                  target: 'conv',
+                  layerIndex: 1,
+                  inputRange: { min: -1, max: 1 },
+                  outputRange: { min: -0.5, max: 0.75 },
+                },
+              ],
+            },
+          },
+        });
+        const quantizedBiasTensor = onnxModel.graph.initializer.find(
+          (initializerTensor) => initializerTensor.name === 'QuantConvBias_l1',
+        );
+
+        // Assert
+        expect({
+          effectiveQuantizationMode: getMetadataValue(
+            onnxModel,
+            'effective_quantization_mode',
+          ),
+          fallbackReasons: getParsedMetadataArray(
+            onnxModel,
+            'quantization_fallback_reasons',
+          ),
+          qlinearConvCount: countGraphNodeType(onnxModel, 'QLinearConv'),
+          convCount: countGraphNodeType(onnxModel, 'Conv'),
+          quantizeLinearCount: countGraphNodeType(onnxModel, 'QuantizeLinear'),
+          dequantizeLinearCount: countGraphNodeType(
+            onnxModel,
+            'DequantizeLinear',
+          ),
+          quantizedBiasType: quantizedBiasTensor?.data_type,
+          quantizedBiasDims: quantizedBiasTensor?.dims,
+          quantizedBiasLength: quantizedBiasTensor?.int32_data?.length,
+        }).toEqual({
+          effectiveQuantizationMode: 'static-8bit',
+          fallbackReasons: [],
+          qlinearConvCount: 1,
+          convCount: 0,
+          quantizeLinearCount: 1,
+          dequantizeLinearCount: 1,
+          quantizedBiasType: 6,
+          quantizedBiasDims: [2],
+          quantizedBiasLength: 2,
+        });
+      });
+
       it('emits per-output-channel Conv weight parameter initializers deterministically', () => {
         // Arrange
         const scenario = createConvGroundworkScenario();
@@ -3226,6 +3313,168 @@ describe('network onnx export conv chapter', () => {
           weightScaleLength: 2,
           weightZeroPointDims: [2],
           weightZeroPointLength: 2,
+        });
+      });
+
+      it('keeps explicit Conv static-8bit exports byte-stable across repeated runs', () => {
+        // Arrange
+        const scenario = createConvGroundworkScenario();
+        const exportOptions: Parameters<typeof exportToONNX>[1] = {
+          includeMetadata: true,
+          conv2dMappings: scenario.mappings,
+          quantization: {
+            mode: 'static-8bit',
+            targets: ['conv'],
+            calibration: {
+              source: 'external',
+              layerTargets: [
+                {
+                  target: 'conv',
+                  layerIndex: 1,
+                  inputRange: { min: -1, max: 1 },
+                  outputRange: { min: -0.5, max: 0.75 },
+                },
+              ],
+            },
+            weightGranularity: 'per-output-channel',
+          },
+        };
+        const firstExport = exportToONNX(scenario.network, exportOptions);
+
+        // Act
+        const secondExport = exportToONNX(scenario.network, exportOptions);
+
+        // Assert
+        expect(JSON.stringify(secondExport)).toBe(JSON.stringify(firstExport));
+      });
+
+      it('dequantizes the Conv result before the first pooling boundary', () => {
+        // Arrange
+        const scenario = createPostPoolStackedHeuristicConvPromotionScenario();
+
+        // Act
+        const onnxModel = exportToONNX(scenario.network, {
+          includeMetadata: true,
+          conv2dMappings: [
+            {
+              ...createPostPoolStackedConvMappings()[0],
+              activation: 'Identity',
+            },
+          ],
+          pool2dMappings: createPoolingMappings(),
+          quantization: {
+            mode: 'static-8bit',
+            targets: ['conv'],
+            calibration: {
+              source: 'external',
+              layerTargets: [
+                {
+                  target: 'conv',
+                  layerIndex: 1,
+                  inputRange: { min: -1, max: 1 },
+                  outputRange: { min: -0.5, max: 0.75 },
+                },
+              ],
+            },
+          },
+        });
+        const dequantizeNode = getGraphNodeByName(
+          onnxModel,
+          'dequantize_conv_output_l1',
+        );
+        const maxPoolNode = getFirstGraphNodeByType(onnxModel, 'MaxPool');
+
+        // Assert
+        expect({
+          effectiveQuantizationMode: getMetadataValue(
+            onnxModel,
+            'effective_quantization_mode',
+          ),
+          fallbackReasons: getParsedMetadataArray(
+            onnxModel,
+            'quantization_fallback_reasons',
+          ),
+          qlinearConvCount: countGraphNodeType(onnxModel, 'QLinearConv'),
+          dequantizeOutputName: dequantizeNode?.output[0],
+          maxPoolInputName: maxPoolNode?.input[0],
+        }).toEqual({
+          effectiveQuantizationMode: 'static-8bit',
+          fallbackReasons: [],
+          qlinearConvCount: 1,
+          dequantizeOutputName: 'Layer_1',
+          maxPoolInputName: 'Layer_1',
+        });
+      });
+
+      it('records a spatial fallback reason for dynamic guidance requests on pooled paths', () => {
+        // Arrange
+        const network = Network.createMLP(6, [4], 2);
+
+        // Act
+        const onnxModel = exportToONNX(network, {
+          includeMetadata: true,
+          pool2dMappings: createPoolingMappings(),
+          quantization: {
+            mode: 'dynamic-uint8',
+            target: 'dense',
+            representation: 'metadata-only',
+          },
+        });
+
+        // Assert
+        expect({
+          effectiveQuantizationMode: getMetadataValue(
+            onnxModel,
+            'effective_quantization_mode',
+          ),
+          dynamicQuantizeNodeCount: countGraphNodeType(
+            onnxModel,
+            'DynamicQuantizeLinear',
+          ),
+          fallbackReasons: getParsedMetadataArray(
+            onnxModel,
+            'quantization_fallback_reasons',
+          ),
+        }).toEqual({
+          effectiveQuantizationMode: 'none',
+          dynamicQuantizeNodeCount: 0,
+          fallbackReasons: ['spatial_boundary_requires_float32'],
+        });
+      });
+
+      it('records a spatial fallback reason for dynamic guidance requests on explicit Conv paths', () => {
+        // Arrange
+        const scenario = createConvGroundworkScenario();
+
+        // Act
+        const onnxModel = exportToONNX(scenario.network, {
+          includeMetadata: true,
+          conv2dMappings: scenario.mappings,
+          quantization: {
+            mode: 'dynamic-uint8',
+            target: 'dense',
+            representation: 'metadata-only',
+          },
+        });
+
+        // Assert
+        expect({
+          effectiveQuantizationMode: getMetadataValue(
+            onnxModel,
+            'effective_quantization_mode',
+          ),
+          dynamicQuantizeNodeCount: countGraphNodeType(
+            onnxModel,
+            'DynamicQuantizeLinear',
+          ),
+          fallbackReasons: getParsedMetadataArray(
+            onnxModel,
+            'quantization_fallback_reasons',
+          ),
+        }).toEqual({
+          effectiveQuantizationMode: 'none',
+          dynamicQuantizeNodeCount: 0,
+          fallbackReasons: ['spatial_boundary_requires_float32'],
         });
       });
     });

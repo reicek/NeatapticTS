@@ -234,7 +234,25 @@ Tensor names generated for Conv parameters.
 
 ### OnnxDynamicQuantizationOptions
 
-Dynamic uint8 quantization request packet for supported dense guidance only.
+Dynamic uint8 quantization request packet for the landed dense-guidance lane only.
+
+The current subset is intentionally narrow:
+- target only the same-family dense baseline,
+- keep the affine and activation compute on the existing float32 path,
+- use `metadata-only` when the graph should stay structurally unchanged, or
+- use `DynamicQuantizeLinear` when the exporter should insert an explicit
+  `DynamicQuantizeLinear -> DequantizeLinear` boundary ahead of supported
+  dense `Gemm` inputs.
+
+Example:
+
+```ts
+const options: OnnxDynamicQuantizationOptions = {
+  mode: 'dynamic-uint8',
+  target: 'dense',
+  representation: 'DynamicQuantizeLinear',
+};
+```
 
 ### OnnxExportOptions
 
@@ -271,12 +289,22 @@ Key fields (high-level):
 - `quantization`: declare an explicit quantization request packet. The
   current exporter can validate static calibration contracts, emit
   deterministic scale or zero-point parameter initializers for the supported
-  same-family dense and explicit Conv subset, and lower explicitly targeted
-  same-family dense layers into a
+  same-family dense and spatial subset, and close the dense-only Phase 7D
+  lane for explicitly targeted same-family one-output dense layers. Those
+  layers can lower into a
   `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
   explicit float-domain bias bridge plus the exporter-owned unary
-  activation node when present. Spatial and dynamic quantized lowering
-  remains later Phase 7 work.
+  activation node when present, while the closed 7E Conv subset lowers
+  supported spatial paths into `QuantizeLinear -> QLinearConv ->
+  DequantizeLinear`, emits one `int32` fused-bias value per output channel,
+  and returns to float32 before pooling, flatten, reshape, or downstream
+  dense boundaries. The closed 7F dynamic lane now adds dense-only guidance:
+  supported same-family dense paths can either record `metadata-only`
+  guidance or insert `DynamicQuantizeLinear -> DequantizeLinear` immediately
+  ahead of dense `Gemm` inputs. Wider dense targets, unsupported spatial
+  fallbacks, recurrent, advanced-graph, mixed-activation, and
+  partial-connectivity requests stay on float32 with explicit fallback
+  metadata.
 - `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
   emission only when the exporter can prove the dense weights already behave like a
   shared-kernel spatial layout, including the current conservative multi-channel and
@@ -378,7 +406,34 @@ Resolved quantization packet used by build orchestration.
 
 ### OnnxStaticQuantizationOptions
 
-Static 8-bit quantization request packet for the narrow first Phase 7 lane.
+Static 8-bit quantization request packet for the current Phase 7 qlinear subset.
+
+The landed exporter-owned subset is deliberately narrow:
+- same-family one-output dense targets can lower through `QLinearMatMul`,
+- the current explicit Conv subset can lower through `QLinearConv`, and
+- both paths return to float32 before unsupported graph families or runtime
+  boundaries widen beyond the current support contract.
+
+Example:
+
+```ts
+const options: OnnxStaticQuantizationOptions = {
+  mode: 'static-8bit',
+  targets: ['conv'],
+  calibration: {
+    source: 'external',
+    layerTargets: [
+      {
+        target: 'conv',
+        layerIndex: 1,
+        inputRange: { min: -1, max: 1 },
+        outputRange: { min: -0.5, max: 0.75 },
+      },
+    ],
+  },
+  representation: 'qlinear',
+};
+```
 
 ### OptionalLayerOutputParams
 
@@ -545,6 +600,14 @@ Parameters:
 - `options` - Export options.
 
 Returns: ONNX model.
+
+### DynamicDenseGuidancePlan
+
+Export-owned plan for inserting one dynamic dense guidance boundary.
+
+### StaticConvLoweringPlan
+
+Export-owned plan for lowering one Conv layer into the current qlinear subset.
 
 ### StaticDenseLoweringPlan
 
@@ -740,6 +803,10 @@ Parameters:
 
 Returns: ONNX dimensions for the vector payload.
 
+### CURRENT_ONNX_REFERENCE_OPSET
+
+Current upstream ONNX reference opset for the `ai.onnx` domain.
+
 ### hasLayerSelfRecurrence
 
 ```ts
@@ -769,6 +836,18 @@ Parameters:
 - `context` - Recurrent collection context.
 
 Returns: True when recurrent collection is enabled.
+
+### ONNX_IR_VERSION
+
+Current ONNX IR version used by the repo's declared binary subset.
+
+### ONNX_STANDARD_DOMAIN
+
+Canonical ONNX standard-operator domain name.
+
+### ONNX_STANDARD_DOMAIN_ALIAS
+
+Canonical empty-string alias for the ONNX standard operator-set domain.
 
 ### processHiddenLayerRecurrence
 

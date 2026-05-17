@@ -53,9 +53,11 @@ hybrid retrieval-plus-generation behavior, and explicit evaluation contracts.
   - `plans/Evolution_Training_Interoperability_Contracts.md` is still
     [PLANNED], so parameter-vector export/import and isolated fine-tune
     policies are not available yet.
-  - `plans/ONNX_EXPORT_PLAN.md` is [WIP], but recurrent import hardening is
-    still in progress and is not yet an honest foundation for the supported
-    external-seed subset this lane wants to consume.
+  - `plans/completed/ONNX_EXPORT_PLAN.md` is [DONE], but the archived ONNX
+    baseline closes only the declared lower-opset same-family subset and the
+    first named dense external binary import lane. The exact NEATchat
+    external-seed target still needs either a narrower recurrent ONNX reopen
+    amendment or an explicitly documented non-ONNX bridge.
 - Until those earlier lanes expose usable public seams, this file is a
   dependency-gated sequencing contract rather than an implementation-ready
   workstream.
@@ -80,7 +82,7 @@ true:
 
 Roadmap sequencing note:
 
-- In the agreed serial pre-NGE sequence, this plan stays after the archived Track 1 stop line in `plans/completed/Memory_Optimization.md`, after `plans/ONNX_EXPORT_PLAN.md`, and after `plans/Evolution_Training_Interoperability_Contracts.md`.
+- In the agreed serial pre-NGE sequence, this plan stays after the archived Track 1 stop line in `plans/completed/Memory_Optimization.md`, after `plans/completed/ONNX_EXPORT_PLAN.md`, and after `plans/Evolution_Training_Interoperability_Contracts.md`.
 - Finishing Memory alone is not a handoff into NEATchat; the required stop line still passes through ONNX hardening and hybrid interoperability first.
 
 Before those gates open, work on this file should stay limited to dependency
@@ -319,8 +321,9 @@ Before any NEATchat-owned implementation starts:
 3. `plans/Evolution_Training_Interoperability_Contracts.md` must expose the
    parameter-vector or isolated fine-tune seam that personalized candidates
    depend on.
-4. `plans/ONNX_EXPORT_PLAN.md` must harden the recurrent import subset, or the
-   repo must choose and document a non-ONNX conversion path for the seed model.
+4. `plans/completed/ONNX_EXPORT_PLAN.md` must already cover the exact
+  recurrent import subset the chosen seed family needs, or the repo must
+  choose and document a non-ONNX conversion path for the seed model.
 
 Once those gates are open, the first NEATchat-owned tasks are:
 

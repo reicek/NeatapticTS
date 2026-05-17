@@ -101,6 +101,8 @@
     "marked": "^17.0.5",
     "mermaid": "^11.14.0",
     "mkdocs": "^0.0.1",
+    "onnx-proto": "^8.0.1",
+    "onnxruntime-node": "^1.26.0",
     "puppeteer": "^23.11.1",
     "ts-jest": "^29.4.6",
     "ts-loader": "^9.5.4",
