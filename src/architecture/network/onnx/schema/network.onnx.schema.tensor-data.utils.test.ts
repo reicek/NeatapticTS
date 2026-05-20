@@ -29,7 +29,11 @@ describe('network onnx schema tensor-data utility chapter', () => {
 
     it('preserves infinity and nan classifications', () => {
       // Arrange
-      const sourceValues = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NaN];
+      const sourceValues = [
+        Number.POSITIVE_INFINITY,
+        Number.NEGATIVE_INFINITY,
+        Number.NaN,
+      ];
 
       // Act
       const decodedValues = decodeFloat16Int32Data(

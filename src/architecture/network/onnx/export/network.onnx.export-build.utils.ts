@@ -149,11 +149,7 @@ export function buildOnnxModel(
   );
 
   // Step 10: Apply storage-fp16 rewrites only for the narrow supported subset.
-  applyStorageFp16PostProcessing(
-    model,
-    sourceOptions,
-    recurrentLayerIndices,
-  );
+  applyStorageFp16PostProcessing(model, sourceOptions, recurrentLayerIndices);
 
   // Step 11: Prune exact Identity activation nodes before validation.
   pruneIdentityActivationNodes(model);
@@ -376,9 +372,7 @@ export function buildOnnxModel(
 
     if (
       weightGranularity === 'per-output-channel' &&
-      resolvedLayerTargets.some(
-        (layerTarget) => layerTarget.target === 'dense',
-      )
+      resolvedLayerTargets.some((layerTarget) => layerTarget.target === 'dense')
     ) {
       throw new Error(
         'Phase 7 static-8bit per-output-channel weight granularity currently requires Conv calibration targets only.',
@@ -675,16 +669,16 @@ export function buildOnnxModel(
       return;
     }
 
-    const supportedLayerTargets = resolvedQuantization.calibration.layerTargets.filter(
-      (layerTarget) =>
+    const supportedLayerTargets =
+      resolvedQuantization.calibration.layerTargets.filter((layerTarget) =>
         isSupportedStaticQuantizationLayerTarget(model, layerTarget),
-    );
+      );
     const parameterInitializers = supportedLayerTargets.flatMap((layerTarget) =>
-        createStaticQuantizationParameterInitializers(
-          model,
-          resolvedQuantization,
-          layerTarget,
-        ),
+      createStaticQuantizationParameterInitializers(
+        model,
+        resolvedQuantization,
+        layerTarget,
+      ),
     );
     model.graph.initializer.push(...parameterInitializers);
   }
@@ -713,7 +707,10 @@ export function buildOnnxModel(
       return false;
     }
 
-    if (sourceOptions.allowMixedActivations || sourceOptions.allowPartialConnectivity) {
+    if (
+      sourceOptions.allowMixedActivations ||
+      sourceOptions.allowPartialConnectivity
+    ) {
       return false;
     }
 
@@ -958,7 +955,10 @@ export function buildOnnxModel(
     OnnxResolvedQuantizationOptions,
     { mode: 'dynamic-uint8' }
   > {
-    if (!resolvedQuantization.requested || resolvedQuantization.mode !== 'dynamic-uint8') {
+    if (
+      !resolvedQuantization.requested ||
+      resolvedQuantization.mode !== 'dynamic-uint8'
+    ) {
       return false;
     }
 
@@ -1098,7 +1098,7 @@ export function buildOnnxModel(
   }
 
   /**
-  * Rewrite one supported dense Gemm node into qlinear affine nodes and drop the paired dense activation node.
+   * Rewrite one supported dense Gemm node into qlinear affine nodes and drop the paired dense activation node.
    *
    * @param graphNode Current graph node.
    * @param lowerableDenseLayerPlansByLayerIndex Lowerable dense layer plans.
@@ -1108,7 +1108,9 @@ export function buildOnnxModel(
     graphNode: OnnxModel['graph']['node'][number],
     lowerableDenseLayerPlansByLayerIndex: Map<number, StaticDenseLoweringPlan>,
   ): OnnxModel['graph']['node'] {
-    const lowerableLayerIndex = [...lowerableDenseLayerPlansByLayerIndex.keys()].find(
+    const lowerableLayerIndex = [
+      ...lowerableDenseLayerPlansByLayerIndex.keys(),
+    ].find(
       (layerIndex) =>
         graphNode.name === `gemm_l${layerIndex}` ||
         graphNode.name === `act_l${layerIndex}`,
@@ -1118,9 +1120,8 @@ export function buildOnnxModel(
       return [graphNode];
     }
 
-    const loweringPlan = lowerableDenseLayerPlansByLayerIndex.get(
-      lowerableLayerIndex,
-    )!;
+    const loweringPlan =
+      lowerableDenseLayerPlansByLayerIndex.get(lowerableLayerIndex)!;
 
     if (graphNode.name === `act_l${loweringPlan.layerIndex}`) {
       return [];
@@ -1142,9 +1143,8 @@ export function buildOnnxModel(
   ): OnnxModel['graph']['node'] {
     const quantizedInputName = `QuantDenseInput_l${loweringPlan.layerIndex}`;
     const quantizedAffineOutputName = `QuantDenseAffine_l${loweringPlan.layerIndex}`;
-    const dequantizedAffineOutputName = resolveStaticDenseDequantizedOutputName(
-      loweringPlan,
-    );
+    const dequantizedAffineOutputName =
+      resolveStaticDenseDequantizedOutputName(loweringPlan);
     const activationInputName = resolveStaticDenseActivationInputName(
       loweringPlan,
       dequantizedAffineOutputName,
@@ -1195,12 +1195,7 @@ export function buildOnnxModel(
           ]
         : []),
       ...(shouldEmitStaticDenseActivationNode(loweringPlan)
-        ? [
-            createStaticDenseActivationNode(
-              loweringPlan,
-              activationInputName,
-            ),
-          ]
+        ? [createStaticDenseActivationNode(loweringPlan, activationInputName)]
         : []),
     ];
   }
@@ -1214,14 +1209,21 @@ export function buildOnnxModel(
    */
   function rewriteDenseGraphNodeForDynamicGuidance(
     graphNode: OnnxModel['graph']['node'][number],
-    lowerableDenseGuidancePlansByLayerIndex: Map<number, DynamicDenseGuidancePlan>,
+    lowerableDenseGuidancePlansByLayerIndex: Map<
+      number,
+      DynamicDenseGuidancePlan
+    >,
   ): OnnxModel['graph']['node'] {
     if (!graphNode.name.startsWith('gemm_l')) {
       return [graphNode];
     }
 
-    const layerIndex = Number.parseInt(graphNode.name.slice('gemm_l'.length), 10);
-    const guidancePlan = lowerableDenseGuidancePlansByLayerIndex.get(layerIndex)!;
+    const layerIndex = Number.parseInt(
+      graphNode.name.slice('gemm_l'.length),
+      10,
+    );
+    const guidancePlan =
+      lowerableDenseGuidancePlansByLayerIndex.get(layerIndex)!;
 
     return createDynamicDenseGuidanceNodes(graphNode, guidancePlan);
   }
@@ -1337,7 +1339,12 @@ export function buildOnnxModel(
     return {
       op_type: 'Add',
       input: [dequantizedAffineOutputName, `B${loweringPlan.layerIndex - 1}`],
-      output: [resolveStaticDenseActivationInputName(loweringPlan, dequantizedAffineOutputName)],
+      output: [
+        resolveStaticDenseActivationInputName(
+          loweringPlan,
+          dequantizedAffineOutputName,
+        ),
+      ],
       name: `bias_add_l${loweringPlan.layerIndex}`,
     };
   }
@@ -1374,7 +1381,10 @@ export function buildOnnxModel(
     layerIndex: number,
   ): StaticConvLoweringPlan | undefined {
     const convNode = findGraphNodeByName(model, `conv_l${layerIndex}`);
-    const activationNode = findGraphNodeByName(model, `act_conv_l${layerIndex}`);
+    const activationNode = findGraphNodeByName(
+      model,
+      `act_conv_l${layerIndex}`,
+    );
 
     if (!convNode || !activationNode) {
       return undefined;
@@ -1401,7 +1411,9 @@ export function buildOnnxModel(
     graphNode: OnnxModel['graph']['node'][number],
     lowerableConvLayerPlansByLayerIndex: Map<number, StaticConvLoweringPlan>,
   ): OnnxModel['graph']['node'] {
-    const lowerableLayerIndex = [...lowerableConvLayerPlansByLayerIndex.keys()].find(
+    const lowerableLayerIndex = [
+      ...lowerableConvLayerPlansByLayerIndex.keys(),
+    ].find(
       (layerIndex) =>
         graphNode.name === `conv_l${layerIndex}` ||
         graphNode.name === `act_conv_l${layerIndex}`,
@@ -1411,9 +1423,8 @@ export function buildOnnxModel(
       return [graphNode];
     }
 
-    const loweringPlan = lowerableConvLayerPlansByLayerIndex.get(
-      lowerableLayerIndex,
-    )!;
+    const loweringPlan =
+      lowerableConvLayerPlansByLayerIndex.get(lowerableLayerIndex)!;
 
     if (graphNode.name === `act_conv_l${loweringPlan.layerIndex}`) {
       return [];
@@ -1433,9 +1444,8 @@ export function buildOnnxModel(
   ): OnnxModel['graph']['node'] {
     const quantizedInputName = `QuantConvInput_l${loweringPlan.layerIndex}`;
     const quantizedAffineOutputName = `QuantConvAffine_l${loweringPlan.layerIndex}`;
-    const dequantizedAffineOutputName = resolveStaticConvDequantizedOutputName(
-      loweringPlan,
-    );
+    const dequantizedAffineOutputName =
+      resolveStaticConvDequantizedOutputName(loweringPlan);
 
     return [
       {
@@ -1548,8 +1558,12 @@ export function buildOnnxModel(
     >,
     layerIndex: number,
   ) {
-    const weightInitializer = findInitializerByName(model, `W${layerIndex - 1}`)!;
-    const transposedWeightValues = transposeDenseWeightValues(weightInitializer);
+    const weightInitializer = findInitializerByName(
+      model,
+      `W${layerIndex - 1}`,
+    )!;
+    const transposedWeightValues =
+      transposeDenseWeightValues(weightInitializer);
     const weightScaleValue = readRequiredScalarFloatInitializer(
       model,
       `QuantDenseWeightScale_l${layerIndex}`,
@@ -1593,7 +1607,10 @@ export function buildOnnxModel(
     >,
     layerIndex: number,
   ) {
-    const weightInitializer = findInitializerByName(model, `ConvW${layerIndex - 1}`)!;
+    const weightInitializer = findInitializerByName(
+      model,
+      `ConvW${layerIndex - 1}`,
+    )!;
     const weightScaleValues = readRequiredFloatInitializerValues(
       model,
       `QuantConvWeightScale_l${layerIndex}`,
@@ -1638,7 +1655,10 @@ export function buildOnnxModel(
     >,
     layerIndex: number,
   ) {
-    const biasInitializer = findInitializerByName(model, `ConvB${layerIndex - 1}`)!;
+    const biasInitializer = findInitializerByName(
+      model,
+      `ConvB${layerIndex - 1}`,
+    )!;
     const inputScaleValue = readRequiredScalarFloatInitializer(
       model,
       `QuantConvInputScale_l${layerIndex}`,
@@ -1660,16 +1680,18 @@ export function buildOnnxModel(
       data_type: ONNX_INT32_DATA_TYPE,
       dims: [biasInitializer.float_data.length],
       float_data: [],
-      int32_data: biasInitializer.float_data.map((biasValue, outputChannelIndex) =>
-        clampInteger(
-          roundQuantizedValue(
-            biasValue /
-              (inputScaleValue * resolvedWeightScaleValues[outputChannelIndex]!),
-            resolvedQuantization.calibration.roundingMode,
+      int32_data: biasInitializer.float_data.map(
+        (biasValue, outputChannelIndex) =>
+          clampInteger(
+            roundQuantizedValue(
+              biasValue /
+                (inputScaleValue *
+                  resolvedWeightScaleValues[outputChannelIndex]!),
+              resolvedQuantization.calibration.roundingMode,
+            ),
+            -2147483648,
+            2147483647,
           ),
-          -2147483648,
-          2147483647,
-        ),
       ),
     };
   }
@@ -1681,18 +1703,21 @@ export function buildOnnxModel(
    * @returns Transposed dense weight payload.
    */
   function transposeDenseWeightValues(
-    weightInitializer: NonNullable<
-      ReturnType<typeof findInitializerByName>
-    >,
+    weightInitializer: NonNullable<ReturnType<typeof findInitializerByName>>,
   ): number[] {
     const outputCount = weightInitializer.dims[0]!;
     const inputCount = weightInitializer.dims[1]!;
 
-    return Array.from({ length: inputCount * outputCount }, (_unused, valueIndex) => {
-      const inputIndex = Math.floor(valueIndex / outputCount);
-      const outputIndex = valueIndex % outputCount;
-      return weightInitializer.float_data[outputIndex * inputCount + inputIndex]!;
-    });
+    return Array.from(
+      { length: inputCount * outputCount },
+      (_unused, valueIndex) => {
+        const inputIndex = Math.floor(valueIndex / outputCount);
+        const outputIndex = valueIndex % outputCount;
+        return weightInitializer.float_data[
+          outputIndex * inputCount + inputIndex
+        ]!;
+      },
+    );
   }
 
   /**
@@ -1716,10 +1741,7 @@ export function buildOnnxModel(
    * @param initializerName Initializer name.
    * @returns Matching initializer when present.
    */
-  function findInitializerByName(
-    model: OnnxModel,
-    initializerName: string,
-  ) {
+  function findInitializerByName(model: OnnxModel, initializerName: string) {
     return model.graph.initializer.find(
       (initializerEntry) => initializerEntry.name === initializerName,
     );
@@ -1807,7 +1829,10 @@ export function buildOnnxModel(
 
     return floatValues.map((floatValue) =>
       clampInteger(
-        roundQuantizedValue(floatValue / scaleValue + zeroPointValue, roundingMode),
+        roundQuantizedValue(
+          floatValue / scaleValue + zeroPointValue,
+          roundingMode,
+        ),
         quantizedMinimum,
         quantizedMaximum,
       ),
@@ -1844,7 +1869,9 @@ export function buildOnnxModel(
     const elementsPerOutputChannel = floatValues.length / outputChannelCount;
 
     return floatValues.map((floatValue, valueIndex) => {
-      const outputChannelIndex = Math.floor(valueIndex / elementsPerOutputChannel);
+      const outputChannelIndex = Math.floor(
+        valueIndex / elementsPerOutputChannel,
+      );
       return quantizeTensorValues(
         [floatValue],
         resolvedScaleValues[outputChannelIndex]!,
@@ -1964,7 +1991,9 @@ export function buildOnnxModel(
     );
 
     return {
-      scales: weightParameterEntries.map((parameterEntry) => parameterEntry.scales[0]),
+      scales: weightParameterEntries.map(
+        (parameterEntry) => parameterEntry.scales[0],
+      ),
       zeroPoints: weightParameterEntries.map(
         (parameterEntry) => parameterEntry.zeroPoints[0],
       ),
@@ -2097,7 +2126,8 @@ export function buildOnnxModel(
   ): { scale: number; zeroPoint: number } {
     const quantizedMinimum = encoding === 'uint8' ? 0 : -128;
     const quantizedMaximum = encoding === 'uint8' ? 255 : 127;
-    const scale = (range.max - range.min) / (quantizedMaximum - quantizedMinimum);
+    const scale =
+      (range.max - range.min) / (quantizedMaximum - quantizedMinimum);
     const unclampedZeroPoint = quantizedMinimum - range.min / scale;
 
     return {
@@ -2120,13 +2150,11 @@ export function buildOnnxModel(
     values: number[],
   ): OnnxQuantizationCalibrationRange {
     const minimumValue = values.reduce(
-      (currentMinimum, currentValue) =>
-        Math.min(currentMinimum, currentValue),
+      (currentMinimum, currentValue) => Math.min(currentMinimum, currentValue),
       Number.POSITIVE_INFINITY,
     );
     const maximumValue = values.reduce(
-      (currentMaximum, currentValue) =>
-        Math.max(currentMaximum, currentValue),
+      (currentMaximum, currentValue) => Math.max(currentMaximum, currentValue),
       Number.NEGATIVE_INFINITY,
     );
 
@@ -2188,7 +2216,8 @@ export function buildOnnxModel(
   ) {
     return {
       name,
-      data_type: encoding === 'uint8' ? ONNX_UINT8_DATA_TYPE : ONNX_INT8_DATA_TYPE,
+      data_type:
+        encoding === 'uint8' ? ONNX_UINT8_DATA_TYPE : ONNX_INT8_DATA_TYPE,
       dims: zeroPointValues.length === 1 ? [] : [zeroPointValues.length],
       float_data: [],
       int32_data: zeroPointValues,
@@ -2257,7 +2286,8 @@ export function buildOnnxModel(
     }
 
     // Step 2: Rewrite eligible initializer payloads to packed float16 storage.
-    const convertedInitializerNames = rewriteEligibleInitializersToFloat16(model);
+    const convertedInitializerNames =
+      rewriteEligibleInitializersToFloat16(model);
     // Step 3: Prepend float32 cast bridges and retarget node inputs deterministically.
     prependFloat32CastBridges(model, convertedInitializerNames);
   }
@@ -2281,7 +2311,10 @@ export function buildOnnxModel(
       return false;
     }
 
-    if (sourceOptions.allowMixedActivations || sourceOptions.allowPartialConnectivity) {
+    if (
+      sourceOptions.allowMixedActivations ||
+      sourceOptions.allowPartialConnectivity
+    ) {
       return false;
     }
 
@@ -2328,8 +2361,8 @@ export function buildOnnxModel(
    * @returns True when the initializer is eligible.
    */
   function isStorageFp16EligibleInitializer(initializerName: string): boolean {
-    return STORAGE_FP16_ELIGIBLE_INITIALIZER_PATTERNS.some((initializerPattern) =>
-      initializerPattern.test(initializerName),
+    return STORAGE_FP16_ELIGIBLE_INITIALIZER_PATTERNS.some(
+      (initializerPattern) => initializerPattern.test(initializerName),
     );
   }
 
@@ -2638,5 +2671,4 @@ export function buildOnnxModel(
       legacyNodeOrdering: context.legacyNodeOrdering,
     });
   }
-
 }

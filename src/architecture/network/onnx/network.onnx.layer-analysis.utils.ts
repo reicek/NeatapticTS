@@ -258,9 +258,7 @@ function resolveOnnxActivationOperation(
       return {
         operation: ONNX_ACTIVATION_GELU,
         didUseFallback: false,
-        attributes: [
-          { name: 'approximate', type: 'STRING', s: 'tanh' },
-        ],
+        attributes: [{ name: 'approximate', type: 'STRING', s: 'tanh' }],
       };
     }
 

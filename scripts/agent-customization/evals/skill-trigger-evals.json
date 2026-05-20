@@ -1,39 +1,153 @@
 {
   "evals": [
     {
-      "id": "phase-planning-agent-positive",
-      "target": "01-planning",
-      "query": "Start a new agent workflow plan and decide which specialists should run first.",
+      "id": "00-helping-agent-positive",
+      "target": "00-helping",
+      "query": "Audit the local agent customization system and fix any workflow gaps you find.",
       "shouldTrigger": true
     },
     {
-      "id": "phase-planning-agent-negative",
+      "id": "00-helping-agent-negative",
+      "target": "00-helping",
+      "query": "Implement a new activation function in the neural-network runtime.",
+      "shouldTrigger": false
+    },
+    {
+      "id": "01-planning-agent-positive",
+      "target": "01-planning",
+      "query": "Plan a new implementation phase, define acceptance criteria, and decide which specialists should run first.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "01-planning-agent-negative",
       "target": "01-planning",
       "query": "Explain how sigmoid activation works in a neural network.",
       "shouldTrigger": false
     },
     {
-      "id": "frontmatter-skill-positive",
+      "id": "02-researching-agent-positive",
+      "target": "02-researching",
+      "query": "Research nearby source patterns and plan evidence before changing the checkpoint system.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "03-red-testing-agent-positive",
+      "target": "03-red-testing",
+      "query": "Write the smallest failing test for this behavior change before implementation.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "04-implementing-agent-positive",
+      "target": "04-implementing",
+      "query": "Make the scoped code changes using existing project patterns after the red test is in place.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "05-green-testing-agent-positive",
+      "target": "05-green-testing",
+      "query": "The implementation is done; run the focused validators and route failures back to the right phase.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "06-documenting-agent-positive",
+      "target": "06-documenting",
+      "query": "Update the JSDoc and generated README source inputs for this new public API.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "07-logging-agent-positive",
+      "target": "07-logging",
+      "query": "Summarize the files changed, validation evidence, risks, and next handoff for this workstream.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "agent-frontmatter-standards-positive",
       "target": "agent-frontmatter-standards",
       "query": "Validate this .agent.md file and tell me if user-invocable or handoffs are wrong.",
       "shouldTrigger": true
     },
     {
-      "id": "frontmatter-skill-negative",
+      "id": "agent-frontmatter-standards-negative",
       "target": "agent-frontmatter-standards",
       "query": "Add a recurrent connection to a NEAT genome and test the scheduler.",
       "shouldTrigger": false
     },
     {
-      "id": "plan-sync-positive",
-      "target": "plan-sync-validation",
-      "query": "I created a new plans/*.plans.md file; make sure README and Roadmap are registered with the same status.",
+      "id": "skill-frontmatter-standards-positive",
+      "target": "skill-frontmatter-standards",
+      "query": "Check whether this SKILL.md has the right name, argument-hint, visibility flag, and local resource links.",
       "shouldTrigger": true
     },
     {
-      "id": "green-validation-positive",
-      "target": "05-green-testing",
-      "query": "The implementation is done; run the focused validators and route failures back to the right phase.",
+      "id": "updating-skill-frontmatter-positive",
+      "target": "updating-skill-frontmatter",
+      "query": "Refine a skill description and argument hint without changing its trigger scope.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "creating-specialist-agent-positive",
+      "target": "creating-specialist-agent",
+      "query": "Create a hidden specialist agent for a narrow recurring validation job and wire it to 00-helping.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "splitting-monolithic-agent-positive",
+      "target": "splitting-monolithic-agent",
+      "query": "This custom agent has planning, implementation, and logging in one file; split it into orchestrator plus specialists.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "summarizing-session-log-positive",
+      "target": "summarizing-session-log",
+      "query": "Prepare a compact continuation summary with files changed, validators, and remaining risks.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "planning-acceptance-criteria-positive",
+      "target": "planning-acceptance-criteria",
+      "query": "Turn this vague feature request into observable acceptance criteria and non-goals.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "creating-unit-tests-positive",
+      "target": "creating-unit-tests",
+      "query": "Add a focused owner-local unit test that should fail before the bug fix.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "running-unit-tests-positive",
+      "target": "running-unit-tests",
+      "query": "Run the focused Jest command and summarize whether the targeted slice is green.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "triaging-test-failures-positive",
+      "target": "triaging-test-failures",
+      "query": "The validator failed; group the failures by owner and decide which are unrelated.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "auditing-js-docs-positive",
+      "target": "auditing-js-docs",
+      "query": "Audit this generated README input for missing examples, citations, and stale public API docs.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "updating-js-docs-positive",
+      "target": "updating-js-docs",
+      "query": "Update the JSDoc example and conceptual notes for this exported helper.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "capturing-learning-event-positive",
+      "target": "capturing-learning-event",
+      "query": "Record a learning event for this agent routing gap after the fix is validated.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "plan-sync-validation-positive",
+      "target": "plan-sync-validation",
+      "query": "I created a new plans/*.plans.md file; make sure README and Roadmap are registered with the same status.",
       "shouldTrigger": true
     }
   ]

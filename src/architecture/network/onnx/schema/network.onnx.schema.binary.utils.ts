@@ -72,14 +72,20 @@ function collectModelFieldChunks(onnxModel: OnnxModel): Uint8Array[] {
     fieldChunks.push(
       encodeMessageField(
         8,
-        collectOperatorSetFieldChunks(operatorSetImport.domain, operatorSetImport.version),
+        collectOperatorSetFieldChunks(
+          operatorSetImport.domain,
+          operatorSetImport.version,
+        ),
       ),
     );
   });
 
   onnxModel.metadata_props?.forEach((metadataProperty) => {
     fieldChunks.push(
-      encodeMessageField(14, collectMetadataPropertyFieldChunks(metadataProperty)),
+      encodeMessageField(
+        14,
+        collectMetadataPropertyFieldChunks(metadataProperty),
+      ),
     );
   });
 
@@ -100,27 +106,34 @@ function collectGraphFieldChunks(onnxGraph: OnnxGraph): Uint8Array[] {
   });
 
   onnxGraph.inputs.forEach((graphInput) => {
-    fieldChunks.push(encodeMessageField(11, collectValueInfoFieldChunks(graphInput)));
+    fieldChunks.push(
+      encodeMessageField(11, collectValueInfoFieldChunks(graphInput)),
+    );
   });
 
   onnxGraph.outputs.forEach((graphOutput) => {
-    fieldChunks.push(encodeMessageField(12, collectValueInfoFieldChunks(graphOutput)));
+    fieldChunks.push(
+      encodeMessageField(12, collectValueInfoFieldChunks(graphOutput)),
+    );
   });
 
   return fieldChunks;
 }
 
-function collectValueInfoFieldChunks(onnxValueInfo: OnnxValueInfo): Uint8Array[] {
+function collectValueInfoFieldChunks(
+  onnxValueInfo: OnnxValueInfo,
+): Uint8Array[] {
   return [
     encodeStringField(1, onnxValueInfo.name),
-    encodeMessageField(2, collectTypeFieldChunks(onnxValueInfo.type.tensor_type)),
+    encodeMessageField(
+      2,
+      collectTypeFieldChunks(onnxValueInfo.type.tensor_type),
+    ),
   ];
 }
 
 function collectTypeFieldChunks(onnxTensorType: OnnxTensorType): Uint8Array[] {
-  return [
-    encodeMessageField(1, collectTensorTypeFieldChunks(onnxTensorType)),
-  ];
+  return [encodeMessageField(1, collectTensorTypeFieldChunks(onnxTensorType))];
 }
 
 function collectTensorTypeFieldChunks(
@@ -128,7 +141,10 @@ function collectTensorTypeFieldChunks(
 ): Uint8Array[] {
   return [
     encodeInt32Field(1, onnxTensorType.elem_type),
-    encodeMessageField(2, collectTensorShapeFieldChunks(onnxTensorType.shape.dim)),
+    encodeMessageField(
+      2,
+      collectTensorShapeFieldChunks(onnxTensorType.shape.dim),
+    ),
   ];
 }
 
@@ -140,7 +156,9 @@ function collectTensorShapeFieldChunks(
   );
 }
 
-function collectDimensionFieldChunks(onnxDimension: OnnxDimension): Uint8Array[] {
+function collectDimensionFieldChunks(
+  onnxDimension: OnnxDimension,
+): Uint8Array[] {
   const fieldChunks: Uint8Array[] = [];
 
   if (onnxDimension.dim_value !== undefined) {
@@ -206,7 +224,9 @@ function collectNodeFieldChunks(onnxNode: OnnxNode): Uint8Array[] {
   return fieldChunks;
 }
 
-function collectAttributeFieldChunks(onnxAttribute: OnnxAttribute): Uint8Array[] {
+function collectAttributeFieldChunks(
+  onnxAttribute: OnnxAttribute,
+): Uint8Array[] {
   const fieldChunks: Uint8Array[] = [encodeStringField(1, onnxAttribute.name)];
   const resolvedTypeCode = resolveAttributeTypeCode(onnxAttribute);
 
@@ -223,11 +243,15 @@ function collectAttributeFieldChunks(onnxAttribute: OnnxAttribute): Uint8Array[]
   }
 
   if (onnxAttribute.t) {
-    fieldChunks.push(encodeMessageField(5, collectTensorFieldChunks(onnxAttribute.t)));
+    fieldChunks.push(
+      encodeMessageField(5, collectTensorFieldChunks(onnxAttribute.t)),
+    );
   }
 
   if (onnxAttribute.g) {
-    fieldChunks.push(encodeMessageField(6, collectGraphFieldChunks(onnxAttribute.g)));
+    fieldChunks.push(
+      encodeMessageField(6, collectGraphFieldChunks(onnxAttribute.g)),
+    );
   }
 
   if (onnxAttribute.floats && onnxAttribute.floats.length > 0) {

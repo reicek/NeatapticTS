@@ -571,9 +571,7 @@ export function tryEmitConvLayer(
    * @param context Conv emission context.
    * @returns Derived pooled shape, or undefined when the metadata is unusable.
    */
-  function resolveDerivedPooledInputShape(
-    context: OnnxConvEmissionContext,
-  ):
+  function resolveDerivedPooledInputShape(context: OnnxConvEmissionContext):
     | {
         inputChannels: number;
         inputHeight: number;
@@ -621,7 +619,7 @@ export function tryEmitConvLayer(
   }
 
   /**
-  * Resolve the narrow supported flatten-after-pool bridge shape, when present.
+   * Resolve the narrow supported flatten-after-pool bridge shape, when present.
    *
    * @param context Conv emission context.
    * @returns Supported flattened pooled shape for the later Conv bridge.
@@ -811,7 +809,8 @@ export function tryEmitConvLayer(
    * @returns Previous output name, or a reshape bridge output for the narrow flatten subset.
    */
   function resolveConvInputName(context: OnnxConvEmissionContext): string {
-    const flattenedPoolingShape = resolveSupportedFlattenedPoolingShape(context);
+    const flattenedPoolingShape =
+      resolveSupportedFlattenedPoolingShape(context);
     if (!flattenedPoolingShape) {
       return context.previousOutputName;
     }

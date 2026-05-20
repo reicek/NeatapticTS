@@ -298,9 +298,8 @@ export function restoreResidualAddConnections(
   metadata: OnnxMetadataProperty[],
 ): void {
   const residualAdds = parseResidualAddMetadata(metadata);
-  const crossLayerConnections = parseAdvancedGraphCrossLayerConnections(
-    metadata,
-  );
+  const crossLayerConnections =
+    parseAdvancedGraphCrossLayerConnections(metadata);
   if (!residualAdds || !crossLayerConnections) {
     return;
   }
@@ -448,7 +447,8 @@ function inferRecurrentLayerIndicesFromInitializers(
         return [];
       }
 
-      const hiddenLayerNumber = Number(rawLayerIndex) + HIDDEN_LAYER_NUMBER_OFFSET;
+      const hiddenLayerNumber =
+        Number(rawLayerIndex) + HIDDEN_LAYER_NUMBER_OFFSET;
       return [hiddenLayerNumber];
     })
     .filter(
@@ -717,9 +717,8 @@ function parseAdvancedGraphMetadata(
   metadata: OnnxMetadataProperty[],
   onnx?: OnnxModel,
 ): OnnxImportAdvancedGraphMetadata | null {
-  const crossLayerConnections = parseAdvancedGraphCrossLayerConnections(
-    metadata,
-  );
+  const crossLayerConnections =
+    parseAdvancedGraphCrossLayerConnections(metadata);
   const residualAdds = parseResidualAddMetadata(metadata);
   const sharedInitializerAliases = parseSharedInitializerAliases(metadata);
   const attentionBlocks = parseAttentionBlockMetadata(metadata, onnx);
@@ -736,9 +735,7 @@ function parseAdvancedGraphMetadata(
   return {
     ...(crossLayerConnections ? { crossLayerConnections } : {}),
     ...(residualAdds ? { residualAdds } : {}),
-    ...(sharedInitializerAliases
-      ? { sharedInitializerAliases }
-      : {}),
+    ...(sharedInitializerAliases ? { sharedInitializerAliases } : {}),
     ...(attentionBlocks ? { attentionBlocks } : {}),
   };
 }
@@ -885,7 +882,8 @@ function isAdvancedGraphCrossLayerConnection(
     return false;
   }
 
-  const candidate = value as Partial<OnnxImportAdvancedGraphCrossLayerConnection>;
+  const candidate =
+    value as Partial<OnnxImportAdvancedGraphCrossLayerConnection>;
   return (
     typeof candidate.sourceNodeIndex === 'number' &&
     typeof candidate.sourceLayerIndex === 'number' &&
@@ -935,10 +933,8 @@ function matchesExportedAttentionShadowSubset(
   const expectedOutputWeightName = `W${attentionBlock.targetLayerIndex - 1}`;
   const expectedOutputBiasName = `B${attentionBlock.targetLayerIndex - 1}`;
   const expectedShadowOutputName = attentionBlock.shadowOutputName;
-  const expectedSoftmaxNodeName =
-    `attention_l${attentionBlock.targetLayerIndex}_softmax`;
-  const expectedProjectionNodeName =
-    `attention_l${attentionBlock.targetLayerIndex}_output_projection`;
+  const expectedSoftmaxNodeName = `attention_l${attentionBlock.targetLayerIndex}_softmax`;
+  const expectedProjectionNodeName = `attention_l${attentionBlock.targetLayerIndex}_output_projection`;
 
   if (
     attentionBlock.sourceLayerIndex !== attentionBlock.targetLayerIndex - 1 ||
@@ -951,9 +947,18 @@ function matchesExportedAttentionShadowSubset(
     return false;
   }
 
-  const queryWeights = findInitializer(onnx, `AttentionQW_l${attentionBlock.targetLayerIndex}`);
-  const keyWeights = findInitializer(onnx, `AttentionKW_l${attentionBlock.targetLayerIndex}`);
-  const valueWeights = findInitializer(onnx, `AttentionVW_l${attentionBlock.targetLayerIndex}`);
+  const queryWeights = findInitializer(
+    onnx,
+    `AttentionQW_l${attentionBlock.targetLayerIndex}`,
+  );
+  const keyWeights = findInitializer(
+    onnx,
+    `AttentionKW_l${attentionBlock.targetLayerIndex}`,
+  );
+  const valueWeights = findInitializer(
+    onnx,
+    `AttentionVW_l${attentionBlock.targetLayerIndex}`,
+  );
   const outputWeights = findInitializer(onnx, expectedOutputWeightName);
   const outputBias = findInitializer(onnx, expectedOutputBiasName);
   const softmaxNode = findNodeByName(onnx, expectedSoftmaxNodeName);
@@ -961,25 +966,28 @@ function matchesExportedAttentionShadowSubset(
 
   return Boolean(
     queryWeights &&
-      keyWeights &&
-      valueWeights &&
-      outputWeights &&
-      outputBias &&
-      softmaxNode?.op_type === 'Softmax' &&
-      hasSoftmaxAxisMinusOne(softmaxNode) &&
-      outputProjectionNode?.op_type === 'Gemm' &&
-      outputProjectionNode.input[1] === expectedOutputWeightName &&
-      outputProjectionNode.input[2] === expectedOutputBiasName &&
-      outputProjectionNode.output[0] === expectedShadowOutputName &&
-      hasSquareProjectionShape(queryWeights, attentionBlock.modelWidth) &&
-      hasSquareProjectionShape(keyWeights, attentionBlock.modelWidth) &&
-      hasSquareProjectionShape(valueWeights, attentionBlock.modelWidth) &&
-      outputWeights.dims.at(-1) ===
-        attentionBlock.sequenceLength * attentionBlock.modelWidth,
+    keyWeights &&
+    valueWeights &&
+    outputWeights &&
+    outputBias &&
+    softmaxNode?.op_type === 'Softmax' &&
+    hasSoftmaxAxisMinusOne(softmaxNode) &&
+    outputProjectionNode?.op_type === 'Gemm' &&
+    outputProjectionNode.input[1] === expectedOutputWeightName &&
+    outputProjectionNode.input[2] === expectedOutputBiasName &&
+    outputProjectionNode.output[0] === expectedShadowOutputName &&
+    hasSquareProjectionShape(queryWeights, attentionBlock.modelWidth) &&
+    hasSquareProjectionShape(keyWeights, attentionBlock.modelWidth) &&
+    hasSquareProjectionShape(valueWeights, attentionBlock.modelWidth) &&
+    outputWeights.dims.at(-1) ===
+      attentionBlock.sequenceLength * attentionBlock.modelWidth,
   );
 }
 
-function findInitializer(onnx: OnnxModel, tensorName: string): OnnxTensor | undefined {
+function findInitializer(
+  onnx: OnnxModel,
+  tensorName: string,
+): OnnxTensor | undefined {
   return onnx.graph.initializer.find(
     (initializerEntry) => initializerEntry.name === tensorName,
   );
@@ -989,11 +997,15 @@ function findNodeByName(onnx: OnnxModel, nodeName: string) {
   return onnx.graph.node.find((nodeEntry) => nodeEntry.name === nodeName);
 }
 
-function hasSoftmaxAxisMinusOne(node: OnnxModel['graph']['node'][number]): boolean {
-  return node.attributes?.some(
-    (attributeEntry) =>
-      attributeEntry.name === 'axis' && attributeEntry.i === -1,
-  ) ?? false;
+function hasSoftmaxAxisMinusOne(
+  node: OnnxModel['graph']['node'][number],
+): boolean {
+  return (
+    node.attributes?.some(
+      (attributeEntry) =>
+        attributeEntry.name === 'axis' && attributeEntry.i === -1,
+    ) ?? false
+  );
 }
 
 function hasSquareProjectionShape(
@@ -1116,7 +1128,9 @@ function resolveResidualWeight(
   sourceLayerIndex: number,
   targetLayerIndex: number,
 ): number {
-  return residualWeights[targetLayerIndex * sourceLayerWidth + sourceLayerIndex] ?? 0;
+  return (
+    residualWeights[targetLayerIndex * sourceLayerWidth + sourceLayerIndex] ?? 0
+  );
 }
 
 /** Upsert one feed-forward connection between two runtime nodes. */
@@ -1180,7 +1194,10 @@ function collectAvailableConvSpecs(
     metadata,
     METADATA_KEY_CONV2D_SPECS,
   );
-  const convSpecsByLayerIndex = [...inferredConvSpecs, ...explicitConvSpecs].reduce(
+  const convSpecsByLayerIndex = [
+    ...inferredConvSpecs,
+    ...explicitConvSpecs,
+  ].reduce(
     (currentSpecMap, convSpec) =>
       currentSpecMap.set(convSpec.layerIndex, convSpec),
     new Map<number, Conv2DMapping>(),
@@ -1303,7 +1320,8 @@ function resolveConsumerLayerWidth(
     return hiddenLayerSizes[consumerLayerIndex - HIDDEN_LAYER_NUMBER_OFFSET];
   }
 
-  return consumerLayerIndex === hiddenLayerSizes.length + HIDDEN_LAYER_NUMBER_OFFSET
+  return consumerLayerIndex ===
+    hiddenLayerSizes.length + HIDDEN_LAYER_NUMBER_OFFSET
     ? outputCount
     : undefined;
 }
@@ -1385,8 +1403,7 @@ function calculateSpatialOutputSize(
 
   return (
     Math.floor(
-      (inputSize + leadingPadding + trailingPadding - kernelSize) /
-        strideSize,
+      (inputSize + leadingPadding + trailingPadding - kernelSize) / strideSize,
     ) + MINIMUM_SPATIAL_OUTPUT_SIZE
   );
 }

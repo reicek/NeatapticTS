@@ -72,7 +72,10 @@ export function validateOnnxModelShapes(model: OnnxModel): void {
     let resolvedGraphNodeCount = 0;
 
     pendingGraphNodes.forEach((graphNode) => {
-      const resolvedInputEntries = resolveInputShapes(tensorShapesByName, graphNode);
+      const resolvedInputEntries = resolveInputShapes(
+        tensorShapesByName,
+        graphNode,
+      );
       if (!resolvedInputEntries) {
         deferredGraphNodes.push(graphNode);
         return;
@@ -114,7 +117,10 @@ export function validateOnnxModelShapes(model: OnnxModel): void {
     }
 
     if (resolvedGraphNodeCount === 0) {
-      throw buildUnresolvedInputError(deferredGraphNodes[0], tensorShapesByName);
+      throw buildUnresolvedInputError(
+        deferredGraphNodes[0],
+        tensorShapesByName,
+      );
     }
 
     pendingGraphNodes = deferredGraphNodes;
@@ -134,7 +140,9 @@ function createInitializerTensorMap(
 
 function validateInitializerPayloadSizes(initializers: OnnxTensor[]): void {
   initializers.forEach((initializerTensor) => {
-    const expectedElementCount = multiplyNumericDimensions(initializerTensor.dims);
+    const expectedElementCount = multiplyNumericDimensions(
+      initializerTensor.dims,
+    );
 
     if (
       initializerTensor.int32_data &&
@@ -173,14 +181,11 @@ function createInitialTensorShapeLedger(
   const tensorShapesByName = new Map<string, TensorShapeLedgerEntry>();
 
   model.graph.inputs.forEach((valueInfo) => {
-    tensorShapesByName.set(
-      valueInfo.name,
-      {
-        resolvedShape: valueInfo.type.tensor_type.shape.dim.map((dimension) =>
-          dimension.dim_param ?? dimension.dim_value ?? 1,
-        ),
-      },
-    );
+    tensorShapesByName.set(valueInfo.name, {
+      resolvedShape: valueInfo.type.tensor_type.shape.dim.map(
+        (dimension) => dimension.dim_param ?? dimension.dim_value ?? 1,
+      ),
+    });
   });
 
   model.graph.initializer.forEach((initializerTensor) => {
@@ -271,8 +276,14 @@ function inferNodeOutputShapes(
   }
 }
 
-function resolveUnaryOutputShape(context: NodeShapeInferenceContext): TensorShape {
-  const sourceShape = readRequiredInputShape(context, 0, 'one unary source tensor');
+function resolveUnaryOutputShape(
+  context: NodeShapeInferenceContext,
+): TensorShape {
+  const sourceShape = readRequiredInputShape(
+    context,
+    0,
+    'one unary source tensor',
+  );
   return [...sourceShape];
 }
 
@@ -294,11 +305,17 @@ function resolveDynamicQuantizeLinearOutputShapes(
     );
   }
 
-  const sourceShape = readRequiredInputShape(context, 0, 'a float source tensor');
+  const sourceShape = readRequiredInputShape(
+    context,
+    0,
+    'a float source tensor',
+  );
   return [[...sourceShape], [], []];
 }
 
-function resolveConcatOutputShape(context: NodeShapeInferenceContext): TensorShape {
+function resolveConcatOutputShape(
+  context: NodeShapeInferenceContext,
+): TensorShape {
   if (context.resolvedInputShapes.length === 0) {
     throw buildShapeValidationError(
       context.graphNode,
@@ -344,7 +361,9 @@ function resolveConcatOutputShape(context: NodeShapeInferenceContext): TensorSha
   return resolvedOutputShape;
 }
 
-function resolveGemmOutputShape(context: NodeShapeInferenceContext): TensorShape {
+function resolveGemmOutputShape(
+  context: NodeShapeInferenceContext,
+): TensorShape {
   const leftShape = readRequiredInputShape(context, 0, 'a left matrix');
   const weightShape = readRequiredInputShape(context, 1, 'a weight matrix');
   const biasShape = readOptionalInputShape(context, 2);
@@ -365,8 +384,10 @@ function resolveGemmOutputShape(context: NodeShapeInferenceContext): TensorShape
     );
   }
 
-  const transposeLeft = readAttributeInt(context.graphNode.attributes, 'transA', 0) === 1;
-  const transposeWeight = readAttributeInt(context.graphNode.attributes, 'transB', 0) === 1;
+  const transposeLeft =
+    readAttributeInt(context.graphNode.attributes, 'transA', 0) === 1;
+  const transposeWeight =
+    readAttributeInt(context.graphNode.attributes, 'transB', 0) === 1;
 
   let effectiveLeftShape = normalizedLeftShape;
   let leftMatrixShape = resolveGemmMatrixShape(
@@ -385,9 +406,8 @@ function resolveGemmOutputShape(context: NodeShapeInferenceContext): TensorShape
     ) &&
     fallbackLeftShape
   ) {
-    const normalizedFallbackLeftShape = normalizeDenseInputShape(
-      fallbackLeftShape,
-    );
+    const normalizedFallbackLeftShape =
+      normalizeDenseInputShape(fallbackLeftShape);
     if (
       normalizedFallbackLeftShape.length >= 1 &&
       normalizedFallbackLeftShape.length <= 2
@@ -415,9 +435,10 @@ function resolveGemmOutputShape(context: NodeShapeInferenceContext): TensorShape
     'Gemm inner dimensions do not align',
   );
 
-  const outputShape = effectiveLeftShape.length === 1
-    ? [weightMatrixShape.columnCount]
-    : [leftMatrixShape.rowCount, weightMatrixShape.columnCount];
+  const outputShape =
+    effectiveLeftShape.length === 1
+      ? [weightMatrixShape.columnCount]
+      : [leftMatrixShape.rowCount, weightMatrixShape.columnCount];
 
   if (biasShape) {
     validateGemmBiasShape(context.graphNode, outputShape, biasShape);
@@ -470,7 +491,11 @@ function resolveGemmMatrixShape(
 function resolveFlattenOutputShape(
   context: NodeShapeInferenceContext,
 ): TensorShape {
-  const inputShape = readRequiredInputShape(context, 0, 'one tensor to flatten');
+  const inputShape = readRequiredInputShape(
+    context,
+    0,
+    'one tensor to flatten',
+  );
   if (inputShape.length < 2) {
     return [...inputShape];
   }
@@ -502,28 +527,31 @@ function resolveReshapeOutputShape(
   }
 
   const targetDimensions = [...shapeTensor.int64_data];
-  const resolvedOutputShape = targetDimensions.map((shapeValue, dimensionIndex) => {
-    if (shapeValue === 0) {
-      return inputShape[dimensionIndex] ?? 0;
-    }
+  const resolvedOutputShape = targetDimensions.map(
+    (shapeValue, dimensionIndex) => {
+      if (shapeValue === 0) {
+        return inputShape[dimensionIndex] ?? 0;
+      }
 
-    if (shapeValue < -1) {
-      throw buildShapeValidationError(
-        context.graphNode,
-        `uses unsupported reshape dimension ${shapeValue}`,
-      );
-    }
+      if (shapeValue < -1) {
+        throw buildShapeValidationError(
+          context.graphNode,
+          `uses unsupported reshape dimension ${shapeValue}`,
+        );
+      }
 
-    return shapeValue;
-  });
+      return shapeValue;
+    },
+  );
 
   const inferDimensionIndex = resolvedOutputShape.findIndex(
     (dimensionValue) => dimensionValue === -1,
   );
   if (
     inferDimensionIndex !== -1 &&
-    resolvedOutputShape.findLastIndex((dimensionValue) => dimensionValue === -1) !==
-      inferDimensionIndex
+    resolvedOutputShape.findLastIndex(
+      (dimensionValue) => dimensionValue === -1,
+    ) !== inferDimensionIndex
   ) {
     throw buildShapeValidationError(
       context.graphNode,
@@ -543,7 +571,8 @@ function resolveReshapeOutputShape(
       knownOutputProduct !== 0 &&
       inputProduct % knownOutputProduct === 0
     ) {
-      resolvedOutputShape[inferDimensionIndex] = inputProduct / knownOutputProduct;
+      resolvedOutputShape[inferDimensionIndex] =
+        inputProduct / knownOutputProduct;
     }
   }
 
@@ -570,11 +599,16 @@ function resolveReshapeOutputShape(
 function resolveTransposeOutputShape(
   context: NodeShapeInferenceContext,
 ): TensorShape {
-  const inputShape = readRequiredInputShape(context, 0, 'a tensor to transpose');
+  const inputShape = readRequiredInputShape(
+    context,
+    0,
+    'a tensor to transpose',
+  );
   const permutation =
     readAttributeInts(context.graphNode.attributes, 'perm') ??
-    Array.from({ length: inputShape.length }, (_, offset) =>
-      inputShape.length - 1 - offset,
+    Array.from(
+      { length: inputShape.length },
+      (_, offset) => inputShape.length - 1 - offset,
     );
 
   if (permutation.length !== inputShape.length) {
@@ -590,7 +624,11 @@ function resolveTransposeOutputShape(
 function resolveSoftmaxOutputShape(
   context: NodeShapeInferenceContext,
 ): TensorShape {
-  const inputShape = readRequiredInputShape(context, 0, 'a tensor to normalize');
+  const inputShape = readRequiredInputShape(
+    context,
+    0,
+    'a tensor to normalize',
+  );
   normalizeAxis(
     readAttributeInt(context.graphNode.attributes, 'axis', -1),
     inputShape.length,
@@ -608,9 +646,7 @@ function resolveMatMulOutputShape(
   const leftWasVector = leftShape.length === 1;
   const rightWasVector = rightShape.length === 1;
   const normalizedLeftShape = leftWasVector ? [1, ...leftShape] : leftShape;
-  const normalizedRightShape = rightWasVector
-    ? [...rightShape, 1]
-    : rightShape;
+  const normalizedRightShape = rightWasVector ? [...rightShape, 1] : rightShape;
 
   if (normalizedLeftShape.length < 2 || normalizedRightShape.length < 2) {
     throw buildShapeValidationError(
@@ -636,7 +672,11 @@ function resolveMatMulOutputShape(
     'MatMul inner dimensions do not align',
   );
 
-  const matrixOutputShape = [...batchOutputShape, leftRowCount, rightColumnCount];
+  const matrixOutputShape = [
+    ...batchOutputShape,
+    leftRowCount,
+    rightColumnCount,
+  ];
 
   if (leftWasVector) {
     matrixOutputShape.splice(matrixOutputShape.length - 2, 1);
@@ -666,9 +706,7 @@ function resolveQLinearMatMulOutputShape(
   const leftWasVector = leftShape.length === 1;
   const rightWasVector = rightShape.length === 1;
   const normalizedLeftShape = leftWasVector ? [1, ...leftShape] : leftShape;
-  const normalizedRightShape = rightWasVector
-    ? [...rightShape, 1]
-    : rightShape;
+  const normalizedRightShape = rightWasVector ? [...rightShape, 1] : rightShape;
 
   if (normalizedLeftShape.length < 2 || normalizedRightShape.length < 2) {
     throw buildShapeValidationError(
@@ -708,11 +746,24 @@ function resolveQLinearMatMulOutputShape(
   return matrixOutputShape;
 }
 
-function resolveConvOutputShape(context: NodeShapeInferenceContext): TensorShape {
-  const rawInputShape = readRequiredInputShape(context, 0, 'a Conv input tensor');
-  const weightShape = readRequiredInputShape(context, 1, 'a Conv weight tensor');
+function resolveConvOutputShape(
+  context: NodeShapeInferenceContext,
+): TensorShape {
+  const rawInputShape = readRequiredInputShape(
+    context,
+    0,
+    'a Conv input tensor',
+  );
+  const weightShape = readRequiredInputShape(
+    context,
+    1,
+    'a Conv weight tensor',
+  );
   const biasShape = readOptionalInputShape(context, 2);
-  const logicalInputShape = resolveLogicalConvInputShape(context, rawInputShape);
+  const logicalInputShape = resolveLogicalConvInputShape(
+    context,
+    rawInputShape,
+  );
   const layerIndex = parseLayerIndexFromNodeName(context.graphNode.name);
   const convSpec = layerIndex
     ? context.convSpecsByLayerIndex.get(layerIndex)
@@ -768,7 +819,10 @@ function resolveQLinearConvOutputShape(
     'a QLinearConv weight tensor',
   );
   const biasShape = readOptionalInputShape(context, 8);
-  const logicalInputShape = resolveLogicalConvInputShape(context, rawInputShape);
+  const logicalInputShape = resolveLogicalConvInputShape(
+    context,
+    rawInputShape,
+  );
   const layerIndex = parseLayerIndexFromNodeName(context.graphNode.name);
   const convSpec = layerIndex
     ? context.convSpecsByLayerIndex.get(layerIndex)
@@ -817,7 +871,9 @@ function resolveConvOutputShapeFromMappingOrKernel(context: {
   weightShape: TensorShape;
   convSpec: Conv2DMapping | undefined;
 }): TensorShape {
-  const rawFeatureWidth = normalizeDenseInputShape(context.rawInputShape).at(-1);
+  const rawFeatureWidth = normalizeDenseInputShape(context.rawInputShape).at(
+    -1,
+  );
   const declaredInputWidth = context.convSpec
     ? context.convSpec.inChannels *
       context.convSpec.inHeight *
@@ -853,14 +909,14 @@ function resolveConvOutputShapeFromMappingOrKernel(context: {
       'Conv kernel width',
     ),
   ];
-  const strides =
-    readAttributeInts(context.context.graphNode.attributes, 'strides') ?? [1, 1];
-  const pads = readAttributeInts(context.context.graphNode.attributes, 'pads') ?? [
-    0,
-    0,
-    0,
-    0,
-  ];
+  const strides = readAttributeInts(
+    context.context.graphNode.attributes,
+    'strides',
+  ) ?? [1, 1];
+  const pads = readAttributeInts(
+    context.context.graphNode.attributes,
+    'pads',
+  ) ?? [0, 0, 0, 0];
 
   return [
     context.logicalInputShape[0],
@@ -919,7 +975,9 @@ function resolveLogicalConvInputShape(
       convSpec.inChannels * convSpec.inHeight * convSpec.inWidth;
     if (dimensionsAreCompatible(rawFeatureWidth!, declaredFeatureWidth)) {
       const batchDimension =
-        rawInputShape.length >= 2 ? normalizeDenseInputShape(rawInputShape)[0] : 1;
+        rawInputShape.length >= 2
+          ? normalizeDenseInputShape(rawInputShape)[0]
+          : 1;
       return [
         batchDimension,
         convSpec.inChannels,
@@ -943,15 +1001,25 @@ function resolveLogicalConvInputShape(
       ];
 }
 
-function resolvePoolOutputShape(context: NodeShapeInferenceContext): TensorShape {
+function resolvePoolOutputShape(
+  context: NodeShapeInferenceContext,
+): TensorShape {
   const inputShape = readRequiredInputShape(context, 0, 'a pooled tensor');
   if (inputShape.length !== 4) {
     return [...inputShape];
   }
 
-  const kernelShape = readAttributeInts(context.graphNode.attributes, 'kernel_shape') ?? [1, 1];
-  const strides = readAttributeInts(context.graphNode.attributes, 'strides') ?? [1, 1];
-  const pads = readAttributeInts(context.graphNode.attributes, 'pads') ?? [0, 0, 0, 0];
+  const kernelShape = readAttributeInts(
+    context.graphNode.attributes,
+    'kernel_shape',
+  ) ?? [1, 1];
+  const strides = readAttributeInts(
+    context.graphNode.attributes,
+    'strides',
+  ) ?? [1, 1];
+  const pads = readAttributeInts(context.graphNode.attributes, 'pads') ?? [
+    0, 0, 0, 0,
+  ];
 
   return [
     inputShape[0],
@@ -978,8 +1046,15 @@ function resolvePoolOutputShape(context: NodeShapeInferenceContext): TensorShape
 function resolveFusedRecurrentOutputShape(
   context: NodeShapeInferenceContext,
 ): TensorShape {
-  const sourceShape = readRequiredInputShape(context, 0, 'a recurrent source tensor');
-  const hiddenSize = readAttributeInt(context.graphNode.attributes, 'hidden_size');
+  const sourceShape = readRequiredInputShape(
+    context,
+    0,
+    'a recurrent source tensor',
+  );
+  const hiddenSize = readAttributeInt(
+    context.graphNode.attributes,
+    'hidden_size',
+  );
   if (hiddenSize === undefined) {
     throw buildShapeValidationError(
       context.graphNode,
@@ -1085,7 +1160,10 @@ function broadcastShapes(
   );
 }
 
-function padShapeToRank(sourceShape: TensorShape, targetRank: number): TensorShape {
+function padShapeToRank(
+  sourceShape: TensorShape,
+  targetRank: number,
+): TensorShape {
   return [
     ...Array.from({ length: targetRank - sourceShape.length }, () => 1),
     ...sourceShape,
@@ -1165,7 +1243,10 @@ function foldDimensionsToToken(sourceShape: TensorShape): ShapeDimension {
 
   const numericProduct = sourceShape
     .filter((dimensionValue) => typeof dimensionValue === 'number')
-    .reduce((product, dimensionValue) => product * (dimensionValue as number), 1);
+    .reduce(
+      (product, dimensionValue) => product * (dimensionValue as number),
+      1,
+    );
   const symbolicTerms = sourceShape.filter(
     (dimensionValue) => typeof dimensionValue === 'string',
   ) as string[];
@@ -1179,11 +1260,16 @@ function foldDimensionsToToken(sourceShape: TensorShape): ShapeDimension {
 }
 
 function multiplyNumericDimensions(dimensions: number[]): number {
-  return dimensions.reduce((product, dimensionValue) => product * dimensionValue, 1);
+  return dimensions.reduce(
+    (product, dimensionValue) => product * dimensionValue,
+    1,
+  );
 }
 
 function multiplyNumericShape(sourceShape: TensorShape): number | null {
-  if (sourceShape.some((dimensionValue) => typeof dimensionValue === 'string')) {
+  if (
+    sourceShape.some((dimensionValue) => typeof dimensionValue === 'string')
+  ) {
     return null;
   }
 
@@ -1214,7 +1300,10 @@ function computeWindowedOutputDimension(
     (numericInputDimension + totalPadding - kernelSize) / stride + 1,
   );
 
-  if (!Number.isFinite(resolvedOutputDimension) || resolvedOutputDimension <= 0) {
+  if (
+    !Number.isFinite(resolvedOutputDimension) ||
+    resolvedOutputDimension <= 0
+  ) {
     return numericInputDimension;
   }
 

@@ -222,9 +222,8 @@ describe('network onnx import recurrent chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const onnxModel = buildPartitionedLstmOnnxModelWithoutInitializer(
-          'LSTM_W',
-        );
+        const onnxModel =
+          buildPartitionedLstmOnnxModelWithoutInitializer('LSTM_W');
 
         // Act
         importedNetwork = importFromONNX(onnxModel);
@@ -255,9 +254,8 @@ describe('network onnx import recurrent chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const onnxModel = buildPartitionedLstmOnnxModelWithoutInitializer(
-          'LSTM_B',
-        );
+        const onnxModel =
+          buildPartitionedLstmOnnxModelWithoutInitializer('LSTM_B');
 
         // Act
         importedNetwork = importFromONNX(onnxModel);
@@ -270,9 +268,11 @@ describe('network onnx import recurrent chapter', () => {
 
           // Assert
           expect(
-            importedHiddenNodes.slice(4, 6).map(
-              (hiddenNode) => hiddenNode.connections.self[0]?.weight ?? null,
-            ),
+            importedHiddenNodes
+              .slice(4, 6)
+              .map(
+                (hiddenNode) => hiddenNode.connections.self[0]?.weight ?? null,
+              ),
           ).toEqual([0.5, 0.51]);
         });
       });

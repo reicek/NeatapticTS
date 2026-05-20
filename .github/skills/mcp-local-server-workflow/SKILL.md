@@ -30,7 +30,7 @@ MCP-backed validation path for NeatapticTS agentic workflow facts.
 6. Treat hooks as deterministic lifecycle automation or audit context, not as a
    substitute for runtime fact APIs or a shortcut around the bridge-required
    versus manual-only boundary.
-7. Update `plans/Agentic_Workflow_Architecture.plans.md` with capability
+7. Update the active customization tracker when one exists with capability
    evidence, bridge blockers, validation results, and the next phase packet.
 
 ## Runtime Fact Classification

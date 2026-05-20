@@ -6,8 +6,11 @@ import {
   createNeatParallelPopulationEvaluator,
   createInferencePredictor,
   detectInferenceWorkerCapabilities,
+  evaluateCandidate,
   evaluateInWorkers,
   extractNetworkInferenceIR,
+  fineTuneVector,
+  fromParameterVector,
   getTransferList,
   openInferenceChannel,
   openSharedInferenceWorker,
@@ -32,6 +35,7 @@ import {
   resolveNetworkVisualizationTopologyPlan,
   SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION,
   toDot,
+  toParameterVector,
 } from './neataptic';
 
 describe('neataptic root facade', () => {
@@ -147,6 +151,20 @@ describe('neataptic root facade', () => {
       exportTransferableInferencePayload: 'function',
       inferenceActivationTableIsArray: true,
       sharedInferenceRequiresCrossOriginIsolation: true,
+    });
+  });
+
+  it('exports vector and hybrid helpers as part of the public facade', () => {
+    expect({
+      evaluateCandidate: typeof evaluateCandidate,
+      fineTuneVector: typeof fineTuneVector,
+      fromParameterVector: typeof fromParameterVector,
+      toParameterVector: typeof toParameterVector,
+    }).toEqual({
+      evaluateCandidate: 'function',
+      fineTuneVector: 'function',
+      fromParameterVector: 'function',
+      toParameterVector: 'function',
     });
   });
 });

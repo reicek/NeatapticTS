@@ -26,7 +26,10 @@ describe('network onnx export orchestrators utility chapter', () => {
       it('returns one heuristic LSTM stub', () => {
         // Arrange
         const inputLayer = [new Node('input')];
-        const hiddenLayer = Array.from({ length: 10 }, () => new Node('hidden'));
+        const hiddenLayer = Array.from(
+          { length: 10 },
+          () => new Node('hidden'),
+        );
         const outputLayer = [new Node('output')];
         hiddenLayer[4].connect(hiddenLayer[4]);
         hiddenLayer[5].connect(hiddenLayer[5]);
@@ -46,7 +49,10 @@ describe('network onnx export orchestrators utility chapter', () => {
       it('returns an empty stub list from the guarded fallback path', () => {
         // Arrange
         const inputLayer = [new Node('input')];
-        const hiddenLayer = Array.from({ length: 10 }, () => new Node('hidden'));
+        const hiddenLayer = Array.from(
+          { length: 10 },
+          () => new Node('hidden'),
+        );
         const outputLayer = [new Node('output')];
         hiddenLayer[4] = {} as unknown as Node;
         hiddenLayer[5].connect(hiddenLayer[5]);

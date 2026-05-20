@@ -1,6 +1,7 @@
 ---
 name: capturing-learning-event
 description: 'Use when: recording an ISO-42001-style local evidence event for agent-system gaps, agent updates, skill updates, routing updates, model changes, or output-contract fixes.'
+argument-hint: 'Describe the gap or update, files changed, agents or skills affected, confirmation status, and resume action.'
 user-invocable: false
 disable-model-invocation: false
 ---

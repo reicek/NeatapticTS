@@ -13,17 +13,24 @@ import {
 
 const options = parseArgs(process.argv.slice(2));
 
-const strictVisibleAgentNames = new Set([
-  '00-helping',
-  '01-planning',
-  '02-researching',
-  '03-red-testing',
-  '04-implementing',
-  '05-green-testing',
-  '06-documenting',
-  '07-logging',
+const strictVisibleAgentPathsByName = new Map([
+  ['00-helping', '.github/agents/00-helping.agent.md'],
+  ['01-planning', '.github/agents/01-planning.agent.md'],
+  ['02-researching', '.github/agents/02-researching.agent.md'],
+  ['03-red-testing', '.github/agents/03-red-testing.agent.md'],
+  ['04-implementing', '.github/agents/04-implementing.agent.md'],
+  ['05-green-testing', '.github/agents/05-green-testing.agent.md'],
+  ['06-documenting', '.github/agents/06-documenting.agent.md'],
+  ['07-logging', '.github/agents/07-logging.agent.md'],
 ]);
+const strictVisibleAgentNames = new Set(strictVisibleAgentPathsByName.keys());
 const strictVisibleAgentPathPattern = /^\.github\/agents\/0[0-7]-/;
+const strictAllowedModels = new Set([
+  'GPT-5.4 (copilot)',
+  'GPT-5.4-mini (copilot)',
+  'Claude Sonnet 4.6 (copilot)',
+  'Claude Haiku 4.6 (copilot)',
+]);
 
 if (options.help) {
   printUsage({
@@ -82,6 +89,10 @@ function validateAgent(agent, agents, { strict }) {
     issues.push(issue('error', relativePath, '`agents` must be an inline array.'));
   }
 
+  if (Array.isArray(data.agents) && data.agents.length > 0 && !data.tools?.includes('agent')) {
+    issues.push(issue('error', relativePath, 'Agents that list subagents must include the `agent` tool.'));
+  }
+
   for (const tool of Array.isArray(data.tools) ? data.tools : []) {
     if (!knownAgentTools.has(tool) && !tool.includes('/')) {
       issues.push(issue('warning', relativePath, `Unknown tool alias '${tool}'.`));
@@ -108,10 +119,21 @@ function validateAgent(agent, agents, { strict }) {
     if (!strictVisibleAgentNames.has(data.name)) {
       issues.push(issue('error', relativePath, `Strict mode expected one of the public SDLC agent names, found '${data.name ?? 'NONE'}'.`));
     }
+    const expectedPath = strictVisibleAgentPathsByName.get(data.name);
+    if (expectedPath && relativePath !== expectedPath) {
+      issues.push(issue('error', relativePath, `Strict mode expected '${data.name}' to live at '${expectedPath}'.`));
+    }
+  }
+
+  if (strict && data['user-invocable'] === false && !hasOutputContract(agent.body)) {
+    issues.push(issue('error', relativePath, 'Hidden agents must define a compact output contract.'));
   }
 
   if (data.model && !isQualifiedModel(data.model)) {
     issues.push(issue('error', relativePath, 'Model must be a qualified model string or fallback array like GPT-5.4 (copilot).'));
+  }
+  if (strict && data.model && !usesOnlyAllowedModels(data.model)) {
+    issues.push(issue('error', relativePath, 'Strict mode allows only the configured SDLC model pool.'));
   }
 
   return issues;
@@ -144,4 +166,13 @@ function validateGlobalAgentRules(agents, { strict }) {
 function isQualifiedModel(model) {
   if (Array.isArray(model)) return model.every(isQualifiedModel);
   return typeof model === 'string' && /^[A-Za-z0-9 ._-]+ \([A-Za-z0-9 ._-]+\)$/.test(model);
+}
+
+function usesOnlyAllowedModels(model) {
+  if (Array.isArray(model)) return model.every(usesOnlyAllowedModels);
+  return strictAllowedModels.has(model);
+}
+
+function hasOutputContract(body) {
+  return /(^|\n)(## Output Format|Return:|Return only:)/.test(body);
 }

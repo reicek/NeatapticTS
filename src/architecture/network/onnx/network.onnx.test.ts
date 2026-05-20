@@ -51,7 +51,9 @@ function buildFlattenAuditMismatchNetwork(seed = 321): Network {
   const strideHeight = 1;
   const strideWidth = 1;
   const network = Network.createMLP(9, [4], 2);
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
@@ -106,7 +108,8 @@ function buildFlattenAuditMismatchNetwork(seed = 321): Network {
         outputNodeIndex * 0.01 +
         connectionIndex * 1e-6;
     });
-    outputNode.bias = (nextRandomValue() * 2 - 1) * 0.05 + outputNodeIndex * 1e-6;
+    outputNode.bias =
+      (nextRandomValue() * 2 - 1) * 0.05 + outputNodeIndex * 1e-6;
   });
 
   return network;
@@ -121,14 +124,18 @@ function buildAutoPromotedHeuristicConvRoundtripNetwork(seed = 777): Network {
   const strideWidth = 1;
   const outputWidth = inputWidth - kernelWidth + 1;
   const network = Network.createMLP(25, [9], 2);
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
   const outputNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'output',
   );
-  const kernelPattern = [0.09, -0.04, 0.02, 0.11, 0.07, -0.03, 0.05, 0.01, 0.08];
+  const kernelPattern = [
+    0.09, -0.04, 0.02, 0.11, 0.07, -0.03, 0.05, 0.01, 0.08,
+  ];
   const nextRandomValue = createLinearCongruentialGenerator(seed);
 
   hiddenNodes.forEach((hiddenNode, hiddenNodeIndex) => {
@@ -176,7 +183,8 @@ function buildAutoPromotedHeuristicConvRoundtripNetwork(seed = 777): Network {
         outputNodeIndex * 0.01 +
         connectionIndex * 1e-6;
     });
-    outputNode.bias = (nextRandomValue() * 2 - 1) * 0.05 + outputNodeIndex * 1e-6;
+    outputNode.bias =
+      (nextRandomValue() * 2 - 1) * 0.05 + outputNodeIndex * 1e-6;
   });
 
   return network;
@@ -194,7 +202,9 @@ function buildAutoPromotedMultiChannelHeuristicConvRoundtripNetwork(): Network {
   const outputHeight = inputHeight - kernelHeight + 1;
   const outputWidth = inputWidth - kernelWidth + 1;
   const network = Network.createMLP(18, [8], 2);
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
@@ -288,7 +298,9 @@ function buildAutoPromotedStackedHeuristicConvRoundtripNetwork(): Network {
   const firstOutputWidth = inputWidth - firstKernelWidth + 1;
   const secondOutputWidth = firstOutputWidth - secondKernelWidth + 1;
   const network = Network.createMLP(25, [9, 4], 2);
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
@@ -297,7 +309,9 @@ function buildAutoPromotedStackedHeuristicConvRoundtripNetwork(): Network {
   const outputNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'output',
   );
-  const firstKernelPattern = [0.09, -0.04, 0.02, 0.11, 0.07, -0.03, 0.05, 0.01, 0.08];
+  const firstKernelPattern = [
+    0.09, -0.04, 0.02, 0.11, 0.07, -0.03, 0.05, 0.01, 0.08,
+  ];
   const secondKernelPattern = [0.06, -0.02, 0.04, 0.1];
 
   firstHiddenNodes.forEach((hiddenNode, hiddenNodeIndex) => {
@@ -323,7 +337,8 @@ function buildAutoPromotedStackedHeuristicConvRoundtripNetwork(): Network {
         const inputRow = inputBaseRow + kernelRowIndex;
         const inputColumn = inputBaseColumn + kernelColumnIndex;
         const sourceIndex = inputRow * inputWidth + inputColumn;
-        const kernelIndex = kernelRowIndex * firstKernelWidth + kernelColumnIndex;
+        const kernelIndex =
+          kernelRowIndex * firstKernelWidth + kernelColumnIndex;
         const sourceNode = inputNodes[sourceIndex];
         const matchingConnection = hiddenNode.connections.in.find(
           (connectionEntry) => connectionEntry.from === sourceNode,
@@ -361,7 +376,8 @@ function buildAutoPromotedStackedHeuristicConvRoundtripNetwork(): Network {
         const inputRow = inputBaseRow + kernelRowIndex;
         const inputColumn = inputBaseColumn + kernelColumnIndex;
         const sourceIndex = inputRow * firstOutputWidth + inputColumn;
-        const kernelIndex = kernelRowIndex * secondKernelWidth + kernelColumnIndex;
+        const kernelIndex =
+          kernelRowIndex * secondKernelWidth + kernelColumnIndex;
         const sourceNode = firstHiddenNodes[sourceIndex];
         const matchingConnection = hiddenNode.connections.in.find(
           (connectionEntry) => connectionEntry.from === sourceNode,
@@ -407,12 +423,13 @@ function buildAutoPromotedPostPoolStackedHeuristicConvRoundtripNetwork(): Networ
       (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const pooledWidth =
-    Math.floor(
-      (firstOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const secondOutputWidth = pooledWidth - secondKernelWidth + 1;
   const network = Network.createMLP(25, [16, 4], 2);
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
@@ -533,12 +550,13 @@ function buildAutoPromotedEarlierFlattenedPostPoolFallbackRoundtripNetwork(): Ne
       (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const pooledWidth =
-    Math.floor(
-      (firstOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const secondOutputWidth = pooledWidth - secondKernelWidth + 1;
   const network = Network.createMLP(25, [16, 4, 3], 2);
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
@@ -669,14 +687,15 @@ function buildAutoPromotedPostPoolMultiChannelHeuristicConvRoundtripNetwork(): N
       (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const pooledWidth =
-    Math.floor(
-      (firstOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const secondOutputHeight = pooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = pooledWidth - secondKernelWidth + 1;
   const outputChannels = 2;
   const network = Network.createMLP(32, [18, 2], 2);
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
@@ -826,7 +845,8 @@ function buildAutoPromotedPostPoolMultiChannelHeuristicConvRoundtripNetwork(): N
 }
 
 function buildUnsafePostPoolMultiChannelHeuristicConvRoundtripNetwork(): Network {
-  const network = buildAutoPromotedPostPoolMultiChannelHeuristicConvRoundtripNetwork();
+  const network =
+    buildAutoPromotedPostPoolMultiChannelHeuristicConvRoundtripNetwork();
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
@@ -865,9 +885,8 @@ function buildAutoPromotedDeepPostPoolStackedHeuristicConvRoundtripNetwork(): Ne
       (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const firstPooledWidth =
-    Math.floor(
-      (firstOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const secondOutputHeight = firstPooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = firstPooledWidth - secondKernelWidth + 1;
   const secondPooledHeight =
@@ -875,11 +894,12 @@ function buildAutoPromotedDeepPostPoolStackedHeuristicConvRoundtripNetwork(): Ne
       (secondOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const secondPooledWidth =
-    Math.floor(
-      (secondOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((secondOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const network = Network.createMLP(36, [25, 9, 1], 2);
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
@@ -1038,9 +1058,8 @@ function buildAutoPromotedDeepPostPoolMultiChannelHeuristicConvRoundtripNetwork(
       (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const firstPooledWidth =
-    Math.floor(
-      (firstOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const secondOutputHeight = firstPooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = firstPooledWidth - secondKernelWidth + 1;
   const secondPooledHeight =
@@ -1048,13 +1067,14 @@ function buildAutoPromotedDeepPostPoolMultiChannelHeuristicConvRoundtripNetwork(
       (secondOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const secondPooledWidth =
-    Math.floor(
-      (secondOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((secondOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const thirdOutputHeight = secondPooledHeight - thirdKernelHeight + 1;
   const thirdOutputWidth = secondPooledWidth - thirdKernelWidth + 1;
   const network = Network.createMLP(72, [50, 18, 2], 2);
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
@@ -1559,11 +1579,9 @@ describe('network onnx root chapter', () => {
         // Arrange
         const sourceNetwork = buildAutoPromotedHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3,
-          0.5, 0.2, -0.6, 0.8, -0.1,
-          0.4, -0.2, 0.9, 0.3, -0.5,
-          0.6, 0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45, 0.65,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -1602,12 +1620,8 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedMultiChannelHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7,
-          0.1, -0.3, 0.5,
-          0.2, -0.6, 0.8,
-          -0.1, 0.4, -0.2,
-          0.9, 0.3, -0.5,
-          0.6, 0.05, -0.7,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -1643,13 +1657,12 @@ describe('network onnx root chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const sourceNetwork = buildAutoPromotedStackedHeuristicConvRoundtripNetwork();
+        const sourceNetwork =
+          buildAutoPromotedStackedHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3,
-          0.5, 0.2, -0.6, 0.8, -0.1,
-          0.4, -0.2, 0.9, 0.3, -0.5,
-          0.6, 0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45, 0.65,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -1688,11 +1701,9 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedPostPoolStackedHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3,
-          0.5, 0.2, -0.6, 0.8, -0.1,
-          0.4, -0.2, 0.9, 0.3, -0.5,
-          0.6, 0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45, 0.65,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -1742,11 +1753,9 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedPostPoolStackedHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3,
-          0.5, 0.2, -0.6, 0.8, -0.1,
-          0.4, -0.2, 0.9, 0.3, -0.5,
-          0.6, 0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45, 0.65,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -1801,11 +1810,9 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedPostPoolStackedHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3,
-          0.5, 0.2, -0.6, 0.8, -0.1,
-          0.4, -0.2, 0.9, 0.3, -0.5,
-          0.6, 0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45, 0.65,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -1855,11 +1862,9 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedEarlierFlattenedPostPoolFallbackRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3,
-          0.5, 0.2, -0.6, 0.8, -0.1,
-          0.4, -0.2, 0.9, 0.3, -0.5,
-          0.6, 0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45, 0.65,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -1911,11 +1916,9 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedEarlierFlattenedPostPoolFallbackRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3,
-          0.5, 0.2, -0.6, 0.8, -0.1,
-          0.4, -0.2, 0.9, 0.3, -0.5,
-          0.6, 0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45, 0.65,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -1975,14 +1978,9 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedPostPoolMultiChannelHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1,
-          -0.3, 0.5, 0.2, -0.6,
-          0.8, -0.1, 0.4, -0.2,
-          0.9, 0.3, -0.5, 0.6,
-          0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45,
-          0.65, -0.15, 0.75, 0.05,
-          -0.35, 0.85, -0.55, 0.95,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65, -0.15, 0.75, 0.05, -0.35, 0.85, -0.55, 0.95,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -2031,14 +2029,9 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedPostPoolMultiChannelHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1,
-          -0.3, 0.5, 0.2, -0.6,
-          0.8, -0.1, 0.4, -0.2,
-          0.9, 0.3, -0.5, 0.6,
-          0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45,
-          0.65, -0.15, 0.75, 0.05,
-          -0.35, 0.85, -0.55, 0.95,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65, -0.15, 0.75, 0.05, -0.35, 0.85, -0.55, 0.95,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -2090,14 +2083,9 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedPostPoolMultiChannelHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1,
-          -0.3, 0.5, 0.2, -0.6,
-          0.8, -0.1, 0.4, -0.2,
-          0.9, 0.3, -0.5, 0.6,
-          0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45,
-          0.65, -0.15, 0.75, 0.05,
-          -0.35, 0.85, -0.55, 0.95,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65, -0.15, 0.75, 0.05, -0.35, 0.85, -0.55, 0.95,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -2157,14 +2145,9 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildUnsafePostPoolMultiChannelHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1,
-          -0.3, 0.5, 0.2, -0.6,
-          0.8, -0.1, 0.4, -0.2,
-          0.9, 0.3, -0.5, 0.6,
-          0.05, -0.7, 0.45, 0.15,
-          -0.25, 0.35, 0.55, -0.45,
-          0.65, -0.15, 0.75, 0.05,
-          -0.35, 0.85, -0.55, 0.95,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65, -0.15, 0.75, 0.05, -0.35, 0.85, -0.55, 0.95,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -2213,12 +2196,10 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedDeepPostPoolStackedHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3, 0.5,
-          0.2, -0.6, 0.8, -0.1, 0.4, -0.2,
-          0.9, 0.3, -0.5, 0.6, 0.05, -0.7,
-          0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
-          0.65, -0.15, 0.75, 0.05, -0.35, 0.85,
-          -0.55, 0.95, -0.65, 0.12, -0.22, 0.32,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65, -0.15, 0.75, 0.05, -0.35, 0.85, -0.55, 0.95, -0.65, 0.12, -0.22,
+          0.32,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -2275,12 +2256,10 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedDeepPostPoolStackedHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3, 0.5,
-          0.2, -0.6, 0.8, -0.1, 0.4, -0.2,
-          0.9, 0.3, -0.5, 0.6, 0.05, -0.7,
-          0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
-          0.65, -0.15, 0.75, 0.05, -0.35, 0.85,
-          -0.55, 0.95, -0.65, 0.12, -0.22, 0.32,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65, -0.15, 0.75, 0.05, -0.35, 0.85, -0.55, 0.95, -0.65, 0.12, -0.22,
+          0.32,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -2340,12 +2319,10 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedDeepPostPoolStackedHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3, 0.5,
-          0.2, -0.6, 0.8, -0.1, 0.4, -0.2,
-          0.9, 0.3, -0.5, 0.6, 0.05, -0.7,
-          0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
-          0.65, -0.15, 0.75, 0.05, -0.35, 0.85,
-          -0.55, 0.95, -0.65, 0.12, -0.22, 0.32,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65, -0.15, 0.75, 0.05, -0.35, 0.85, -0.55, 0.95, -0.65, 0.12, -0.22,
+          0.32,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -2413,18 +2390,13 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedDeepPostPoolMultiChannelHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3, 0.5,
-          0.2, -0.6, 0.8, -0.1, 0.4, -0.2,
-          0.9, 0.3, -0.5, 0.6, 0.05, -0.7,
-          0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
-          0.65, -0.15, 0.75, 0.05, -0.35, 0.85,
-          -0.55, 0.95, -0.65, 0.12, -0.22, 0.32,
-          0.18, -0.28, 0.38, -0.48, 0.58, -0.68,
-          0.78, -0.88, 0.98, -0.14, 0.24, -0.34,
-          0.44, -0.54, 0.64, -0.74, 0.84, -0.94,
-          0.16, -0.26, 0.36, -0.46, 0.56, -0.66,
-          0.76, -0.86, 0.96, -0.11, 0.21, -0.31,
-          0.41, -0.51, 0.61, -0.71, 0.81, -0.91,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65, -0.15, 0.75, 0.05, -0.35, 0.85, -0.55, 0.95, -0.65, 0.12, -0.22,
+          0.32, 0.18, -0.28, 0.38, -0.48, 0.58, -0.68, 0.78, -0.88, 0.98, -0.14,
+          0.24, -0.34, 0.44, -0.54, 0.64, -0.74, 0.84, -0.94, 0.16, -0.26, 0.36,
+          -0.46, 0.56, -0.66, 0.76, -0.86, 0.96, -0.11, 0.21, -0.31, 0.41,
+          -0.51, 0.61, -0.71, 0.81, -0.91,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,
@@ -2481,18 +2453,13 @@ describe('network onnx root chapter', () => {
         const sourceNetwork =
           buildAutoPromotedDeepPostPoolMultiChannelHeuristicConvRoundtripNetwork();
         const inputValues = [
-          0.25, -0.4, 0.7, 0.1, -0.3, 0.5,
-          0.2, -0.6, 0.8, -0.1, 0.4, -0.2,
-          0.9, 0.3, -0.5, 0.6, 0.05, -0.7,
-          0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
-          0.65, -0.15, 0.75, 0.05, -0.35, 0.85,
-          -0.55, 0.95, -0.65, 0.12, -0.22, 0.32,
-          0.18, -0.28, 0.38, -0.48, 0.58, -0.68,
-          0.78, -0.88, 0.98, -0.14, 0.24, -0.34,
-          0.44, -0.54, 0.64, -0.74, 0.84, -0.94,
-          0.16, -0.26, 0.36, -0.46, 0.56, -0.66,
-          0.76, -0.86, 0.96, -0.11, 0.21, -0.31,
-          0.41, -0.51, 0.61, -0.71, 0.81, -0.91,
+          0.25, -0.4, 0.7, 0.1, -0.3, 0.5, 0.2, -0.6, 0.8, -0.1, 0.4, -0.2, 0.9,
+          0.3, -0.5, 0.6, 0.05, -0.7, 0.45, 0.15, -0.25, 0.35, 0.55, -0.45,
+          0.65, -0.15, 0.75, 0.05, -0.35, 0.85, -0.55, 0.95, -0.65, 0.12, -0.22,
+          0.32, 0.18, -0.28, 0.38, -0.48, 0.58, -0.68, 0.78, -0.88, 0.98, -0.14,
+          0.24, -0.34, 0.44, -0.54, 0.64, -0.74, 0.84, -0.94, 0.16, -0.26, 0.36,
+          -0.46, 0.56, -0.66, 0.76, -0.86, 0.96, -0.11, 0.21, -0.31, 0.41,
+          -0.51, 0.61, -0.71, 0.81, -0.91,
         ];
         const expectedOutput = sourceNetwork.activate(
           inputValues,

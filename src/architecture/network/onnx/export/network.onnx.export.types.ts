@@ -110,16 +110,16 @@ export interface OnnxExportOptions {
    * Promote heuristic Conv metadata into real Conv emission only when the inferred
    * layer passes the shared-kernel safety gate.
    *
-    * The default remains metadata-only inference so unsupported or ambiguous spatial
-    * layouts stay on the dense fallback path honestly. Promotion can reuse derived
-    * post-pool shapes when the exporter can keep the tensor spatial and the pooled
-    * source stays compact per channel, including deeper single-channel and deeper
-    * pooled multi-channel chains. The currently proven flatten-after-pool surface is
-    * narrower: a final hidden-stage Conv -> Pool -> Flatten bridge can still promote
-    * when the exporter restores the derived pooled `[C,H,W]` shape with an explicit
-    * reshape before the later Conv. Earlier flattened pooled consumers and repeated
-    * flatten-bridge chains stay on the honest fallback path because later Conv
-    * inference stops before inferred metadata or reshape bridges survive.
+   * The default remains metadata-only inference so unsupported or ambiguous spatial
+   * layouts stay on the dense fallback path honestly. Promotion can reuse derived
+   * post-pool shapes when the exporter can keep the tensor spatial and the pooled
+   * source stays compact per channel, including deeper single-channel and deeper
+   * pooled multi-channel chains. The currently proven flatten-after-pool surface is
+   * narrower: a final hidden-stage Conv -> Pool -> Flatten bridge can still promote
+   * when the exporter restores the derived pooled `[C,H,W]` shape with an explicit
+   * reshape before the later Conv. Earlier flattened pooled consumers and repeated
+   * flatten-bridge chains stay on the honest fallback path because later Conv
+   * inference stops before inferred metadata or reshape bridges survive.
    */
   autoPromoteInferredConv?: boolean;
   validateConvSharing?: boolean;

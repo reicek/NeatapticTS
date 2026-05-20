@@ -149,11 +149,11 @@ function matchesExportedConcatMergeSubset(
 
   return Boolean(
     concatMerge.sourceLayerIndex < concatMerge.targetLayerIndex - 1 &&
-      concatNode?.op_type === 'Concat' &&
-      concatNode.output[0] === concatMerge.concatOutputName &&
-      concatNode.input.length === 2 &&
-      denseWeightTensor &&
-      denseWeightTensor.dims.length === 2,
+    concatNode?.op_type === 'Concat' &&
+    concatNode.output[0] === concatMerge.concatOutputName &&
+    concatNode.input.length === 2 &&
+    denseWeightTensor &&
+    denseWeightTensor.dims.length === 2,
   );
 }
 
@@ -264,7 +264,9 @@ function resolveConcatMergeWeight(
 ): number {
   return (
     mergedWeights[
-      targetLayerIndex * mergedSourceWidth + previousLayerWidth + sourceLayerIndex
+      targetLayerIndex * mergedSourceWidth +
+        previousLayerWidth +
+        sourceLayerIndex
     ] ?? ZERO_VALUE
   );
 }

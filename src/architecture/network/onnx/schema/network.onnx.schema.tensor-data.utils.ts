@@ -24,7 +24,9 @@ const FLOAT16_MANTISSA_ROUNDING_BIAS = 0x1000;
 const float32ValueBuffer = new Float32Array(1);
 const float32BitsBuffer = new Uint32Array(float32ValueBuffer.buffer);
 const float32DecodeBitsBuffer = new Uint32Array(1);
-const float32DecodeValueBuffer = new Float32Array(float32DecodeBitsBuffer.buffer);
+const float32DecodeValueBuffer = new Float32Array(
+  float32DecodeBitsBuffer.buffer,
+);
 
 /**
  * Create a float16-backed tensor payload from float32 values.
@@ -32,10 +34,9 @@ const float32DecodeValueBuffer = new Float32Array(float32DecodeBitsBuffer.buffer
  * @param floatValues Float32-domain values to pack.
  * @returns ONNX tensor storage fields for a float16 initializer.
  */
-export function createFloat16StoragePayload(floatValues: number[]): Pick<
-  OnnxTensor,
-  'data_type' | 'float_data' | 'int32_data'
-> {
+export function createFloat16StoragePayload(
+  floatValues: number[],
+): Pick<OnnxTensor, 'data_type' | 'float_data' | 'int32_data'> {
   return {
     data_type: ONNX_FLOAT16_DATA_TYPE,
     float_data: [],

@@ -1,7 +1,10 @@
 import type { OnnxModel } from './network.onnx.schema.types';
 import { serializeOnnxModelToBinary } from './network.onnx.schema.binary.utils';
 
-function containsBytes(binaryPayload: Uint8Array, byteSequence: number[]): boolean {
+function containsBytes(
+  binaryPayload: Uint8Array,
+  byteSequence: number[],
+): boolean {
   return Buffer.from(binaryPayload).includes(Buffer.from(byteSequence));
 }
 
@@ -184,7 +187,9 @@ describe('network onnx schema binary utility chapter', () => {
         hasDocString: Buffer.from(binaryModel).includes(
           Buffer.from('schema-rich-model'),
         ),
-        hasOpsetDomain: Buffer.from(binaryModel).includes(Buffer.from('ai.onnx')),
+        hasOpsetDomain: Buffer.from(binaryModel).includes(
+          Buffer.from('ai.onnx'),
+        ),
         hasMetadataPair:
           Buffer.from(binaryModel).includes(Buffer.from('stage')) &&
           Buffer.from(binaryModel).includes(Buffer.from('phase8')),
@@ -199,17 +204,23 @@ describe('network onnx schema binary utility chapter', () => {
           Buffer.from(binaryModel).includes(Buffer.from('BiasNoDims')),
         hasNestedNames:
           Buffer.from(binaryModel).includes(Buffer.from('nested_tensor')) &&
-          Buffer.from(binaryModel).includes(Buffer.from('nested_graph_tensor')) &&
+          Buffer.from(binaryModel).includes(
+            Buffer.from('nested_graph_tensor'),
+          ) &&
           Buffer.from(binaryModel).includes(Buffer.from('nested_graph_output')),
         hasAttributeStrings:
           Buffer.from(binaryModel).includes(Buffer.from('tanh')) &&
           Buffer.from(binaryModel).includes(Buffer.from('left')) &&
           Buffer.from(binaryModel).includes(Buffer.from('right')),
-        hasFloatPayload: containsBytes(binaryModel, [0, 0, 0, 63, 0, 0, 160, 191]),
+        hasFloatPayload: containsBytes(
+          binaryModel,
+          [0, 0, 0, 63, 0, 0, 160, 191],
+        ),
         hasPackedIntPayload: containsBytes(binaryModel, [3, 172, 2]),
-        hasNegativeVarintPayload: containsBytes(binaryModel, [
-          255, 255, 255, 255, 255, 255, 255, 255, 255, 1,
-        ]),
+        hasNegativeVarintPayload: containsBytes(
+          binaryModel,
+          [255, 255, 255, 255, 255, 255, 255, 255, 255, 1],
+        ),
         hasAttributeTypeCode: containsBytes(binaryModel, [160, 1, 1]),
         hasBinaryLength: binaryModel.length > 0,
       }).toEqual({
@@ -276,7 +287,9 @@ describe('network onnx schema binary utility chapter', () => {
         hasBinaryLength: binaryModel.length > 0,
         hasInputName: Buffer.from(binaryModel).includes(Buffer.from('input')),
         hasOutputName: Buffer.from(binaryModel).includes(Buffer.from('output')),
-        hasIdentityOp: Buffer.from(binaryModel).includes(Buffer.from('Identity')),
+        hasIdentityOp: Buffer.from(binaryModel).includes(
+          Buffer.from('Identity'),
+        ),
       }).toEqual({
         hasBinaryLength: true,
         hasInputName: true,

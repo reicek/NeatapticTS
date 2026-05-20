@@ -42,7 +42,10 @@ describe('createAsciiMazeWorkerPopulationFitnessEvaluator', () => {
 
   it('falls back to local scoring when the browser worker fails during startup', async () => {
     const fitnessByNetwork = new WeakMap<object, number>();
-    const population = [createNetworkWithFitness(7), createNetworkWithFitness(11)];
+    const population = [
+      createNetworkWithFitness(7),
+      createNetworkWithFitness(11),
+    ];
     const fitnessContext = createFitnessContext();
     const fitnessSpy = jest
       .spyOn(FitnessEvaluator, 'defaultFitnessEvaluator')
@@ -99,14 +102,18 @@ function createFitnessContext(): IFitnessEvaluationContext {
   };
 }
 
-function installWorkerConstructor(workerConstructor: typeof StartupFailingWorker): void {
+function installWorkerConstructor(
+  workerConstructor: typeof StartupFailingWorker,
+): void {
   Object.defineProperty(globalThis, 'Worker', {
     configurable: true,
     value: workerConstructor,
   });
 }
 
-function restoreWorkerConstructor(originalWorker: typeof globalThis.Worker): void {
+function restoreWorkerConstructor(
+  originalWorker: typeof globalThis.Worker,
+): void {
   if (originalWorker) {
     Object.defineProperty(globalThis, 'Worker', {
       configurable: true,

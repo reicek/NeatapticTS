@@ -125,9 +125,9 @@ describe('network onnx export dense utility chapter', () => {
         });
 
         // Assert
-        expect(model.graph.node.some((node) => node.op_type === 'MaxPool')).toBe(
-          true,
-        );
+        expect(
+          model.graph.node.some((node) => node.op_type === 'MaxPool'),
+        ).toBe(true);
       });
     });
   });

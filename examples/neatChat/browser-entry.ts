@@ -391,7 +391,9 @@ function renderContractPreview(
     );
     const comparisonPrompt = abPromptField?.value.trim() || 'hello there';
     const comparisonConversationLines =
-      activeCorpusLines.length > 0 ? activeCorpusLines : sampleConversationLines;
+      activeCorpusLines.length > 0
+        ? activeCorpusLines
+        : sampleConversationLines;
     const comparisonLineSplit = splitNeatChatSeedAndValidationLines(
       comparisonConversationLines,
     );
@@ -758,9 +760,7 @@ function updateAbComparisonResults(
   abResultsEl.innerHTML = comparisonResult.variants
     .map((variantResult) => {
       const variantLabel =
-        variantResult.variant === 'blank-start'
-          ? 'Blank-start'
-          : 'Preseeded';
+        variantResult.variant === 'blank-start' ? 'Blank-start' : 'Preseeded';
 
       return `<div style="margin-bottom:0.75rem;">
         <p><strong>${variantLabel}</strong>: ${escapeHtml(variantResult.response)}</p>
@@ -827,7 +827,9 @@ function resolveSessionRetainedTerms(
   };
 
   if (Array.isArray(sessionVocabularyTerms.indexToTerm)) {
-    return sessionVocabularyTerms.indexToTerm.slice(NEATCHAT_SPECIAL_TOKEN_COUNT);
+    return sessionVocabularyTerms.indexToTerm.slice(
+      NEATCHAT_SPECIAL_TOKEN_COUNT,
+    );
   }
 
   return fallbackRetainedTerms;
@@ -875,7 +877,9 @@ function ensureContextWindowOptionExists(
       (windowSize, windowIndex, windowSizes) =>
         windowSizes.indexOf(windowSize) === windowIndex,
     )
-    .toSorted((leftWindowSize, rightWindowSize) => leftWindowSize - rightWindowSize);
+    .toSorted(
+      (leftWindowSize, rightWindowSize) => leftWindowSize - rightWindowSize,
+    );
   const insertionIndex = sortedWindowSizes.indexOf(contextWindowTokenCount);
 
   contextWindowField.add(insertedOption, insertionIndex);

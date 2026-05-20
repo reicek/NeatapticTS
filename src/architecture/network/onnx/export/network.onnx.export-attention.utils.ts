@@ -146,9 +146,18 @@ function createAttentionEmissionContext(
   }
 
   if (
-    !hasSquareProjection(attentionMapping.queryWeights, attentionMapping.modelWidth) ||
-    !hasSquareProjection(attentionMapping.keyWeights, attentionMapping.modelWidth) ||
-    !hasSquareProjection(attentionMapping.valueWeights, attentionMapping.modelWidth) ||
+    !hasSquareProjection(
+      attentionMapping.queryWeights,
+      attentionMapping.modelWidth,
+    ) ||
+    !hasSquareProjection(
+      attentionMapping.keyWeights,
+      attentionMapping.modelWidth,
+    ) ||
+    !hasSquareProjection(
+      attentionMapping.valueWeights,
+      attentionMapping.modelWidth,
+    ) ||
     !hasBiasWidth(attentionMapping.queryBias, attentionMapping.modelWidth) ||
     !hasBiasWidth(attentionMapping.keyBias, attentionMapping.modelWidth) ||
     !hasBiasWidth(attentionMapping.valueBias, attentionMapping.modelWidth)
@@ -589,7 +598,9 @@ function appendAttentionMetadata(
   if (!existingMetadataProperty) {
     appendMetadataProperty(
       model,
-      buildMetadataProperty(ADVANCED_GRAPH_ATTENTION_BLOCKS_KEY, [attentionMetadata]),
+      buildMetadataProperty(ADVANCED_GRAPH_ATTENTION_BLOCKS_KEY, [
+        attentionMetadata,
+      ]),
     );
     return;
   }

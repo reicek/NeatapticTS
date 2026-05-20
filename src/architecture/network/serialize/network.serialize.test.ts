@@ -38,8 +38,7 @@ function outputsMatchWithinTolerance(
     actualOutput.length === expectedOutput.length &&
     actualOutput.every(
       (outputValue, outputIndex) =>
-        Math.abs(outputValue - expectedOutput[outputIndex]!) <=
-        Number.EPSILON,
+        Math.abs(outputValue - expectedOutput[outputIndex]!) <= Number.EPSILON,
     )
   );
 }
@@ -337,8 +336,7 @@ function createDuplicateFallbackWeightIdentityScenario(): ParameterLayoutExpecte
   });
 
   return {
-    expectedErrorMessage:
-      `ParameterLayoutV1 requires unique stable weight identities. Duplicate identity fallback:${createConnectionDescriptorKey(originalConnection)} is ambiguous.`,
+    expectedErrorMessage: `ParameterLayoutV1 requires unique stable weight identities. Duplicate identity fallback:${createConnectionDescriptorKey(originalConnection)} is ambiguous.`,
     network,
   };
 }
@@ -352,7 +350,10 @@ function createDuplicateBiasNodeIdScenario(): ParameterLayoutExpectedErrorScenar
     throw new Error('Expected two nodes for duplicate-bias layout case.');
   }
 
-  const duplicateNodeId = readRequiredGeneId(originalBiasNode, 'duplicate bias');
+  const duplicateNodeId = readRequiredGeneId(
+    originalBiasNode,
+    'duplicate bias',
+  );
 
   Object.defineProperty(duplicateBiasNode, 'geneId', {
     configurable: true,
@@ -361,8 +362,7 @@ function createDuplicateBiasNodeIdScenario(): ParameterLayoutExpectedErrorScenar
   });
 
   return {
-    expectedErrorMessage:
-      `ParameterLayoutV1 requires unique bias node ids. Duplicate node id ${duplicateNodeId} is ambiguous.`,
+    expectedErrorMessage: `ParameterLayoutV1 requires unique bias node ids. Duplicate node id ${duplicateNodeId} is ambiguous.`,
     network,
   };
 }
@@ -377,8 +377,7 @@ function createDuplicateInnovationWeightIdentityScenario(): ParameterLayoutExpec
   secondaryConnection.innovation = duplicateInnovation;
 
   return {
-    expectedErrorMessage:
-      `ParameterLayoutV1 requires unique stable weight identities. Duplicate identity innovation:${duplicateInnovation} is ambiguous.`,
+    expectedErrorMessage: `ParameterLayoutV1 requires unique stable weight identities. Duplicate identity innovation:${duplicateInnovation} is ambiguous.`,
     network,
   };
 }
@@ -389,7 +388,9 @@ function createMissingWeightSourceGeneIdScenario(): ParameterLayoutExpectedError
   const targetNode = network.nodes.at(-1);
 
   if (targetNode === undefined) {
-    throw new Error('Expected one target node for missing-gene-id layout case.');
+    throw new Error(
+      'Expected one target node for missing-gene-id layout case.',
+    );
   }
 
   Object.defineProperty(sourceNode, 'geneId', {
@@ -409,7 +410,9 @@ function createMissingWeightSourceGeneIdScenario(): ParameterLayoutExpectedError
 function summarizeParameterLayoutOrdering(
   network: Network,
 ): ParameterLayoutOrderingSummary {
-  const parameterLayout = createParameterLayoutV1(network) as ParameterLayoutLike;
+  const parameterLayout = createParameterLayoutV1(
+    network,
+  ) as ParameterLayoutLike;
 
   return {
     version: parameterLayout.version,
@@ -464,7 +467,10 @@ function createExpectedKindOrder(
   summary: ParameterLayoutOrderingSummary,
 ): Array<'bias' | 'weight'> {
   return [
-    ...Array.from({ length: summary.biasNodeIds.length }, () => 'bias' as const),
+    ...Array.from(
+      { length: summary.biasNodeIds.length },
+      () => 'bias' as const,
+    ),
     ...Array.from(
       { length: summary.weightDescriptorKeys.length },
       () => 'weight' as const,
@@ -496,16 +502,13 @@ function compareWeightDescriptorIdentity(
   leftWeightDescriptorIdentity: WeightDescriptorIdentity,
   rightWeightDescriptorIdentity: WeightDescriptorIdentity,
 ): number {
-  const leftHasInnovation =
-    leftWeightDescriptorIdentity.innovation !== null;
-  const rightHasInnovation =
-    rightWeightDescriptorIdentity.innovation !== null;
+  const leftHasInnovation = leftWeightDescriptorIdentity.innovation !== null;
+  const rightHasInnovation = rightWeightDescriptorIdentity.innovation !== null;
 
   if (leftHasInnovation && rightHasInnovation) {
     const leftInnovation = leftWeightDescriptorIdentity.innovation as number;
     const rightInnovation = rightWeightDescriptorIdentity.innovation as number;
-    const innovationDifference =
-      leftInnovation - rightInnovation;
+    const innovationDifference = leftInnovation - rightInnovation;
 
     if (innovationDifference !== 0) {
       return innovationDifference;
@@ -622,7 +625,9 @@ function perturbRuntimeParameterState(network: Network): void {
 function summarizeRuntimeParameterState(
   network: Network,
 ): ParameterRuntimeStateSummary {
-  const parameterLayout = createParameterLayoutV1(network) as ParameterLayoutLike;
+  const parameterLayout = createParameterLayoutV1(
+    network,
+  ) as ParameterLayoutLike;
 
   return {
     descriptorValues: parameterLayout.entries.map((layoutEntry) => ({
@@ -661,17 +666,21 @@ function readParameterValueForLayoutEntry(
     return matchingNode.bias;
   }
 
-  const matchingConnection = [...network.connections, ...network.selfconns].find(
-    (candidateConnection) =>
-      typeof layoutEntry.innovation === 'number'
-        ? candidateConnection.innovation === layoutEntry.innovation
-        : readRequiredGeneId(candidateConnection.from, 'source') ===
-            layoutEntry.from &&
-          readRequiredGeneId(candidateConnection.to, 'target') === layoutEntry.to,
+  const matchingConnection = [
+    ...network.connections,
+    ...network.selfconns,
+  ].find((candidateConnection) =>
+    typeof layoutEntry.innovation === 'number'
+      ? candidateConnection.innovation === layoutEntry.innovation
+      : readRequiredGeneId(candidateConnection.from, 'source') ===
+          layoutEntry.from &&
+        readRequiredGeneId(candidateConnection.to, 'target') === layoutEntry.to,
   );
 
   if (matchingConnection === undefined) {
-    throw new Error('Expected one weight connection while reading parameter state.');
+    throw new Error(
+      'Expected one weight connection while reading parameter state.',
+    );
   }
 
   return matchingConnection.weight;
@@ -1114,9 +1123,8 @@ describe('network serialize chapter', () => {
                 rebuiltNextOutput.length === expectedNextOutput.length &&
                 rebuiltNextOutput.every(
                   (outputValue, outputIndex) =>
-                    Math.abs(
-                      outputValue - expectedNextOutput[outputIndex]!,
-                    ) <= Number.EPSILON,
+                    Math.abs(outputValue - expectedNextOutput[outputIndex]!) <=
+                    Number.EPSILON,
                 ),
             }).toEqual({
               hasProgressSnapshots: true,
@@ -1206,10 +1214,7 @@ describe('network serialize chapter', () => {
 
           // Assert
           expect(
-            outputsMatchWithinTolerance(
-              rebuiltNextOutput,
-              expectedNextOutput,
-            ),
+            outputsMatchWithinTolerance(rebuiltNextOutput, expectedNextOutput),
           ).toBe(true);
         });
       });
@@ -1242,10 +1247,7 @@ describe('network serialize chapter', () => {
 
           // Assert
           expect(
-            outputsMatchWithinTolerance(
-              rebuiltNextOutput,
-              expectedNextOutput,
-            ),
+            outputsMatchWithinTolerance(rebuiltNextOutput, expectedNextOutput),
           ).toBe(true);
         });
       });
@@ -1277,10 +1279,7 @@ describe('network serialize chapter', () => {
 
           // Assert
           expect(
-            outputsMatchWithinTolerance(
-              rebuiltNextOutput,
-              expectedNextOutput,
-            ),
+            outputsMatchWithinTolerance(rebuiltNextOutput, expectedNextOutput),
           ).toBe(true);
         });
       });
@@ -1554,7 +1553,8 @@ describe('network serialize chapter', () => {
         // Arrange
         const { activationInputValues, sourceNetwork, targetNetwork } =
           createParameterVectorRoundTripScenario();
-        const sourceParameterState = summarizeRuntimeParameterState(sourceNetwork);
+        const sourceParameterState =
+          summarizeRuntimeParameterState(sourceNetwork);
         const sourceOutput = sourceNetwork.activate(activationInputValues);
         const parameterVector = toParameterVector(sourceNetwork);
 
@@ -1567,8 +1567,11 @@ describe('network serialize chapter', () => {
         // Act
         fromParameterVector(targetNetwork, parameterVector);
 
-        const importedTargetOutput = targetNetwork.activate(activationInputValues);
-        const importedTargetState = summarizeRuntimeParameterState(targetNetwork);
+        const importedTargetOutput = targetNetwork.activate(
+          activationInputValues,
+        );
+        const importedTargetState =
+          summarizeRuntimeParameterState(targetNetwork);
 
         // Assert
         expect({
@@ -1594,7 +1597,8 @@ describe('network serialize chapter', () => {
         // Arrange
         const { sourceNetwork, targetNetwork } =
           createParameterVectorRoundTripScenario();
-        const baselineParameterState = summarizeRuntimeParameterState(targetNetwork);
+        const baselineParameterState =
+          summarizeRuntimeParameterState(targetNetwork);
         const baseParameterVector: ParameterVectorPayloadLike =
           toParameterVector(sourceNetwork);
         const versionMismatchVector: ParameterVectorPayloadLike = {
@@ -1613,9 +1617,8 @@ describe('network serialize chapter', () => {
 
         // Assert
         expect({
-          errorMessageIncludesVersion: importAttempt.errorMessage.includes(
-            'version',
-          ),
+          errorMessageIncludesVersion:
+            importAttempt.errorMessage.includes('version'),
           targetParameterState: importAttempt.targetParameterState,
         }).toEqual({
           errorMessageIncludesVersion: true,
@@ -1627,7 +1630,8 @@ describe('network serialize chapter', () => {
         // Arrange
         const { sourceNetwork, targetNetwork } =
           createParameterVectorRoundTripScenario();
-        const baselineParameterState = summarizeRuntimeParameterState(targetNetwork);
+        const baselineParameterState =
+          summarizeRuntimeParameterState(targetNetwork);
         const baseParameterVector: ParameterVectorPayloadLike =
           toParameterVector(sourceNetwork);
         const entryCountMismatchVector: ParameterVectorPayloadLike = {
@@ -1647,9 +1651,8 @@ describe('network serialize chapter', () => {
 
         // Assert
         expect({
-          errorMessageIncludesEntryCount: importAttempt.errorMessage.includes(
-            'entry count',
-          ),
+          errorMessageIncludesEntryCount:
+            importAttempt.errorMessage.includes('entry count'),
           targetParameterState: importAttempt.targetParameterState,
         }).toEqual({
           errorMessageIncludesEntryCount: true,
@@ -1661,7 +1664,8 @@ describe('network serialize chapter', () => {
         // Arrange
         const { sourceNetwork, targetNetwork } =
           createParameterVectorRoundTripScenario();
-        const baselineParameterState = summarizeRuntimeParameterState(targetNetwork);
+        const baselineParameterState =
+          summarizeRuntimeParameterState(targetNetwork);
         const baseParameterVector: ParameterVectorPayloadLike =
           toParameterVector(sourceNetwork);
         const valuesLengthMismatchVector: ParameterVectorPayloadLike = {
@@ -1677,9 +1681,8 @@ describe('network serialize chapter', () => {
 
         // Assert
         expect({
-          errorMessageIncludesValuesLength: importAttempt.errorMessage.includes(
-            'values length',
-          ),
+          errorMessageIncludesValuesLength:
+            importAttempt.errorMessage.includes('values length'),
           targetParameterState: importAttempt.targetParameterState,
         }).toEqual({
           errorMessageIncludesValuesLength: true,
@@ -1691,7 +1694,8 @@ describe('network serialize chapter', () => {
         // Arrange
         const { sourceNetwork, targetNetwork } =
           createParameterVectorRoundTripScenario();
-        const baselineParameterState = summarizeRuntimeParameterState(targetNetwork);
+        const baselineParameterState =
+          summarizeRuntimeParameterState(targetNetwork);
         const baseParameterVector: ParameterVectorPayloadLike =
           toParameterVector(sourceNetwork);
         const firstEntry = baseParameterVector.layout.entries.at(0);
@@ -1797,7 +1801,8 @@ describe('network serialize chapter', () => {
         const { sourceNetwork, targetNetwork } =
           createParameterVectorRoundTripScenario();
         const parameterVector = toParameterVector(sourceNetwork);
-        const baselineParameterState = summarizeRuntimeParameterState(targetNetwork);
+        const baselineParameterState =
+          summarizeRuntimeParameterState(targetNetwork);
         const targetConnection = targetNetwork.connections.at(0);
 
         if (targetConnection === undefined) {
@@ -1816,9 +1821,8 @@ describe('network serialize chapter', () => {
 
         // Assert
         expect({
-          errorMessageIncludesConnectionGain: importAttempt.errorMessage.includes(
-            'connection.gain',
-          ),
+          errorMessageIncludesConnectionGain:
+            importAttempt.errorMessage.includes('connection.gain'),
           targetParameterState: importAttempt.targetParameterState,
         }).toEqual({
           errorMessageIncludesConnectionGain: true,

@@ -21,7 +21,7 @@ This prevents “special-case glue” and improves correctness, reproducibility,
 
 - `plans/Roadmap.md` now places this lane after the archived `plans/completed/ONNX_EXPORT_PLAN.md` baseline and before `plans/NEATchat.plans.md`.
 - This lane is now active because the hybrid-interoperability workstream has been explicitly opened; the archived ONNX closure remains the handoff boundary, not a signal to skip directly into later hybrid phases or NEATchat work.
-- The current active frontier is now Phase 3 Step 01. Phase 2 is [DONE]: the serialize-owned `ParameterVector` export/import seam is green, owner-local coverage for the touched serialize source files is back at `100/100/100/100`, the source-doc-only pass refreshed `src/architecture/network/serialize/README.md`, and repo-wide TypeScript still reproduces only the unchanged external ONNX baseline blocker at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135`.
+- The current active frontier is now Phase 5 Step 07 closure after a completed Step 05 rerun from current repo state. Phase 4 is [DONE] from current repo state: Step 02 locked the `src/neat/hybrid/` owner boundary, standalone helper, dataset compatibility, worker-ordering note, and conditional blocked note; Step 03 added owner-local tests for `never`, fitness-only `always`, Lamarckian opt-in `always`, the explicit `conditional` blocker, and the missing-`fineTuneOptions` guard; Step 04 implemented `evaluateCandidate` plus the policy or result types in `src/neat/hybrid/` on top of Phase 3 `fineTuneVector(...)`; Step 05 revalidated the hybrid-policy slice with `1` suite and `5` tests green, confirmed `src/neat/hybrid/neat.hybrid.ts` at `100/100/100/100`, kept `src/neat/hybrid/neat.hybrid.types.ts` as a type-only non-runtime coverage surface, and recorded the unchanged external ONNX baseline blocker at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135`; Step 06 improved source-first JSDoc, ran `npm run docs`, and generated `src/neat/hybrid/README.md` without hand-editing generated output; and Phase 5 Step 04 added the bounded root-facade re-exports in `src/neataptic.ts`, expanded the hybrid module overview and policy guidance, and refreshed generated docs for the cohesive public workflow example. Phase 5 Step 05 first confirmed the generated hybrid README carries the Lamarckian explanation, Baldwin-effect distinction with Wikipedia grounding, the three-rung determinism ladder, the recommended defaults progression, the explicit `conditional` blocker, and a cohesive public API example aligned with `src/neataptic.ts`; re-ran the focused hybrid slice with `1` suite and `5` tests green; re-ran `npm run docs`; kept `src/neat/hybrid/neat.hybrid.ts` at `100/100/100/100`; and confirmed `npx tsc --noEmit -p tsconfig.json` still fails only on the unchanged external ONNX `TS2345` baseline at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135`. The prior root-facade coverage-only miss then closed in the owner-local Step 04 follow-up: `src/neataptic.test.ts` touches `toParameterVector`, `fromParameterVector`, `fineTuneVector`, and `evaluateCandidate`; the focused owner-local facade slice passes with `1` suite and `15` tests green; and focused coverage for `src/neataptic.ts` returns `100/100/100/100`. The final Step 05 rerun then re-ran both focused test slices, `npm run docs`, `npx tsc --noEmit -p tsconfig.json`, and the focused coverage gates for `src/neataptic.ts` plus `src/neat/hybrid/neat.hybrid.ts`; all Phase 5 gates are now green except for the unchanged external ONNX `TS2345` baseline. The next safe step is Phase 5 Step 07 closure and archive work; do not reopen Step 04 or Step 05 unless one of these gates regresses.
 - The execution frontier is now expressed as numbered phases that each begin with a Step 01 planning packet; future sessions should elaborate a phase only when that phase is explicitly opened.
 - The first implementation pass should stay narrow: make deterministic parameter layout plus vector export/import real before adding fine-tuning or NEAT-loop policy hooks.
 - Existing repo seams already relevant to this lane:
@@ -239,19 +239,19 @@ Phase ordering and stop-line guidance:
 ```yaml
 phase: 1
 step: 1
-agent: "01-planning"
-agent_file: ".github/agents/01-planning-architect.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '01-planning'
+agent_file: '.github/agents/01-planning-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 02 — Research deterministic ordering boundary"
+next_step: 'Step 02 — Research deterministic ordering boundary'
 skills:
-  - "hybrid-training-interop"
+  - 'hybrid-training-interop'
 specialists:
-  - "Hybrid Interop Scout"
+  - 'Hybrid Interop Scout'
 validation:
-  - "Manual tracker check that the canonical ordering rule, acceptance gate, and focused validation are preserved before Step 02-07 packets are authored."
+  - 'Manual tracker check that the canonical ordering rule, acceptance gate, and focused validation are preserved before Step 02-07 packets are authored.'
 ```
 
 **User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
@@ -289,20 +289,20 @@ validation:
 ```yaml
 phase: 1
 step: 2
-agent: "02-researching"
-agent_file: ".github/agents/02-research-coordinator.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '02-researching'
+agent_file: '.github/agents/02-research-coordinator.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 03 — Design deterministic ordering red tests"
+next_step: 'Step 03 — Design deterministic ordering red tests'
 skills:
-  - "hybrid-training-interop"
-  - "plan-alignment"
+  - 'hybrid-training-interop'
+  - 'plan-alignment'
 specialists:
-  - "Hybrid Interop Scout"
+  - 'Hybrid Interop Scout'
 validation:
-  - "Read-only research brief names the network owner boundary, stable node and edge identities, likely owner-local test file, and whether Phase 1 ordering can be red-tested without implementing Phase 2 import/export."
+  - 'Read-only research brief names the network owner boundary, stable node and edge identities, likely owner-local test file, and whether Phase 1 ordering can be red-tested without implementing Phase 2 import/export.'
 ```
 
 **User instruction:** Start a fresh session, select `02-researching`, and paste this full step packet.
@@ -351,21 +351,21 @@ validation:
 ```yaml
 phase: 1
 step: 3
-agent: "03-red-testing"
-agent_file: ".github/agents/03-red-test-architect.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '03-red-testing'
+agent_file: '.github/agents/03-red-test-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 04 — Implement ParameterLayoutV1 ordering"
+next_step: 'Step 04 — Implement ParameterLayoutV1 ordering'
 skills:
-  - "hybrid-training-interop"
-  - "red-test-contracts"
-  - "reproducibility-contracts"
+  - 'hybrid-training-interop'
+  - 'red-test-contracts'
+  - 'reproducibility-contracts'
 specialists:
-  - "Determinism Scout"
+  - 'Determinism Scout'
 validation:
-  - "A focused owner-local red test or explicit blocked record proves whether repeated same-runtime layout ordering and equivalent reconstructed network ordering can be tested before Phase 2."
+  - 'A focused owner-local red test or explicit blocked record proves whether repeated same-runtime layout ordering and equivalent reconstructed network ordering can be tested before Phase 2.'
 ```
 
 **User instruction:** Start a fresh session, select `03-red-testing`, and paste this full step packet.
@@ -411,20 +411,20 @@ validation:
 ```yaml
 phase: 1
 step: 4
-agent: "04-implementing"
-agent_file: ".github/agents/04-implementation-architect.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementation-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 05 — Validate deterministic ordering gates"
+next_step: 'Step 05 — Validate deterministic ordering gates'
 skills:
-  - "hybrid-training-interop"
-  - "reproducibility-contracts"
+  - 'hybrid-training-interop'
+  - 'reproducibility-contracts'
 specialists:
-  - "Hybrid Interop Scout"
+  - 'Hybrid Interop Scout'
 validation:
-  - "The Step 03 red test goes green with a network-owned layout ordering implementation and no Phase 2 vector import/export behavior."
+  - 'The Step 03 red test goes green with a network-owned layout ordering implementation and no Phase 2 vector import/export behavior.'
 ```
 
 **User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
@@ -471,22 +471,22 @@ validation:
 ```yaml
 phase: 1
 step: 5
-agent: "05-green-testing"
-agent_file: ".github/agents/05-green-validation-runner.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-validation-runner.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 07 — Log Phase 1 closure or reroute"
+next_step: 'Step 07 — Log Phase 1 closure or reroute'
 skills:
-  - "green-validation-gates"
-  - "coverage-guard"
-  - "hybrid-training-interop"
+  - 'green-validation-gates'
+  - 'coverage-guard'
+  - 'hybrid-training-interop'
 specialists:
-  - "Coverage Guard"
-  - "Determinism Scout"
+  - 'Coverage Guard'
+  - 'Determinism Scout'
 validation:
-  - "Focused deterministic-ordering tests and owner-local coverage pass for every touched serialize src file, and repo-wide TypeScript introduces no new failure into the seam beyond the recorded ONNX baseline blocker."
+  - 'Focused deterministic-ordering tests and owner-local coverage pass for every touched serialize src file, and repo-wide TypeScript introduces no new failure into the seam beyond the recorded ONNX baseline blocker.'
 ```
 
 **User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
@@ -549,21 +549,21 @@ Tracker sync validation still passes for the active workstream after this Step 0
 ```yaml
 phase: 1
 step: 6
-agent: "06-documenting"
-agent_file: ".github/agents/06-educational-docs-curator.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '06-documenting'
+agent_file: '.github/agents/06-educational-docs-curator.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 07 — Log Phase 1 closure or reroute"
+next_step: 'Step 07 — Log Phase 1 closure or reroute'
 skills:
-  - "educational-docs"
-  - "docs-academic-citation-audit"
-  - "hybrid-training-interop"
+  - 'educational-docs'
+  - 'docs-academic-citation-audit'
+  - 'hybrid-training-interop'
 specialists:
-  - "Docs Scout"
+  - 'Docs Scout'
 validation:
-  - "Source-first docs for any exported layout symbols are present, generated docs are refreshed if JSDoc inputs changed, and no Phase 2 or fine-tuning docs are introduced."
+  - 'Source-first docs for any exported layout symbols are present, generated docs are refreshed if JSDoc inputs changed, and no Phase 2 or fine-tuning docs are introduced.'
 ```
 
 **User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
@@ -610,21 +610,21 @@ validation:
 ```yaml
 phase: 1
 step: 7
-agent: "07-logging"
-agent_file: ".github/agents/07-session-log-archivist.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '07-logging'
+agent_file: '.github/agents/07-session-log-archivist.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Phase 2 Step 03 — Design vector roundtrip red tests"
+next_step: 'Phase 2 Step 03 — Design vector roundtrip red tests'
 skills:
-  - "tracker-handoff"
-  - "plan-sync-validation"
-  - "hybrid-training-interop"
+  - 'tracker-handoff'
+  - 'plan-sync-validation'
+  - 'hybrid-training-interop'
 specialists:
-  - "Plan Registration Auditor"
+  - 'Plan Registration Auditor'
 validation:
-  - "Manual tracker review confirms Phase 1 acceptance evidence, Phase 2 coupling state, and the refreshed Handoff query before the next phase opens."
+  - 'Manual tracker review confirms Phase 1 acceptance evidence, Phase 2 coupling state, and the refreshed Handoff query before the next phase opens.'
 ```
 
 **User instruction:** Start a fresh session, select `07-logging`, and paste this full step packet.
@@ -693,19 +693,19 @@ validation:
 ```yaml
 phase: 2
 step: 1
-agent: "01-planning"
-agent_file: ".github/agents/01-planning-architect.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '01-planning'
+agent_file: '.github/agents/01-planning-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 02 — Research vector roundtrip owner boundary"
+next_step: 'Step 02 — Research vector roundtrip owner boundary'
 skills:
-  - "hybrid-training-interop"
+  - 'hybrid-training-interop'
 specialists:
-  - "Hybrid Interop Scout"
+  - 'Hybrid Interop Scout'
 validation:
-  - "Manual tracker check that roundtrip, mismatch-rejection, and network-owned contract details are preserved before Step 02-07 packets are authored."
+  - 'Manual tracker check that roundtrip, mismatch-rejection, and network-owned contract details are preserved before Step 02-07 packets are authored.'
 ```
 
 **User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
@@ -749,20 +749,20 @@ validation:
 ```yaml
 phase: 2
 step: 2
-agent: "02-researching"
-agent_file: ".github/agents/02-research-coordinator.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '02-researching'
+agent_file: '.github/agents/02-research-coordinator.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 03 — Design vector roundtrip red tests"
+next_step: 'Step 03 — Design vector roundtrip red tests'
 skills:
-  - "hybrid-training-interop"
-  - "plan-alignment"
+  - 'hybrid-training-interop'
+  - 'plan-alignment'
 specialists:
-  - "Hybrid Interop Scout"
+  - 'Hybrid Interop Scout'
 validation:
-  - "Read-only research brief names the network owner boundary, the v1 parameter-family inclusion rule, the required mismatch checks, the likely owner-local test file, and any unsupported-family honesty failures needed before red tests."
+  - 'Read-only research brief names the network owner boundary, the v1 parameter-family inclusion rule, the required mismatch checks, the likely owner-local test file, and any unsupported-family honesty failures needed before red tests.'
 ```
 
 **User instruction:** Start a fresh session, select `02-researching`, and paste this full step packet.
@@ -813,21 +813,21 @@ validation:
 ```yaml
 phase: 2
 step: 3
-agent: "03-red-testing"
-agent_file: ".github/agents/03-red-test-architect.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '03-red-testing'
+agent_file: '.github/agents/03-red-test-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 04 — Implement parameter-vector roundtrip boundary"
+next_step: 'Step 04 — Implement parameter-vector roundtrip boundary'
 skills:
-  - "hybrid-training-interop"
-  - "red-test-contracts"
-  - "reproducibility-contracts"
+  - 'hybrid-training-interop'
+  - 'red-test-contracts'
+  - 'reproducibility-contracts'
 specialists:
-  - "Determinism Scout"
+  - 'Determinism Scout'
 validation:
-  - "A focused owner-local red test or explicit blocked record proves whether same-runtime export or import roundtrip and mismatch rejection can fail honestly before implementation."
+  - 'A focused owner-local red test or explicit blocked record proves whether same-runtime export or import roundtrip and mismatch rejection can fail honestly before implementation.'
 ```
 
 **User instruction:** Start a fresh session, select `03-red-testing`, and paste this full step packet.
@@ -874,20 +874,20 @@ validation:
 ```yaml
 phase: 2
 step: 4
-agent: "04-implementing"
-agent_file: ".github/agents/04-implementation-architect.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementation-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 05 — Validate vector roundtrip gates"
+next_step: 'Step 05 — Validate vector roundtrip gates'
 skills:
-  - "hybrid-training-interop"
-  - "reproducibility-contracts"
+  - 'hybrid-training-interop'
+  - 'reproducibility-contracts'
 specialists:
-  - "Hybrid Interop Scout"
+  - 'Hybrid Interop Scout'
 validation:
-  - "The Step 03 red test goes green with a network-owned parameter-vector export or import implementation and no Phase 3 or Phase 4 behavior."
+  - 'The Step 03 red test goes green with a network-owned parameter-vector export or import implementation and no Phase 3 or Phase 4 behavior.'
 ```
 
 **User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
@@ -937,22 +937,22 @@ validation:
 ```yaml
 phase: 2
 step: 5
-agent: "05-green-testing"
-agent_file: ".github/agents/05-green-validation-runner.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-validation-runner.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 06 — Curate vector-contract docs"
+next_step: 'Step 06 — Curate vector-contract docs'
 skills:
-  - "green-validation-gates"
-  - "coverage-guard"
-  - "hybrid-training-interop"
+  - 'green-validation-gates'
+  - 'coverage-guard'
+  - 'hybrid-training-interop'
 specialists:
-  - "Coverage Guard"
-  - "Determinism Scout"
+  - 'Coverage Guard'
+  - 'Determinism Scout'
 validation:
-  - "Focused vector roundtrip and mismatch tests pass, TypeScript validation passes or a pre-existing blocked baseline is recorded explicitly, and coverage guard passes for every touched src file."
+  - 'Focused vector roundtrip and mismatch tests pass, TypeScript validation passes or a pre-existing blocked baseline is recorded explicitly, and coverage guard passes for every touched src file.'
 ```
 
 **User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
@@ -1010,21 +1010,21 @@ Those remaining misses were mixed rather than a pure Step 03 test gap. Lines `39
 ```yaml
 phase: 2
 step: 6
-agent: "06-documenting"
-agent_file: ".github/agents/06-educational-docs-curator.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '06-documenting'
+agent_file: '.github/agents/06-educational-docs-curator.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 07 — Log Phase 2 closure or reroute"
+next_step: 'Step 07 — Log Phase 2 closure or reroute'
 skills:
-  - "educational-docs"
-  - "docs-academic-citation-audit"
-  - "hybrid-training-interop"
+  - 'educational-docs'
+  - 'docs-academic-citation-audit'
+  - 'hybrid-training-interop'
 specialists:
-  - "Docs Scout"
+  - 'Docs Scout'
 validation:
-  - "Source-first docs for any exported vector symbols are present, generated docs are refreshed if JSDoc inputs changed, and no Phase 3 or Phase 4 docs are introduced accidentally."
+  - 'Source-first docs for any exported vector symbols are present, generated docs are refreshed if JSDoc inputs changed, and no Phase 3 or Phase 4 docs are introduced accidentally.'
 ```
 
 **User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
@@ -1075,21 +1075,21 @@ validation:
 ```yaml
 phase: 2
 step: 7
-agent: "07-logging"
-agent_file: ".github/agents/07-session-log-archivist.agent.md"
-status: "[DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '07-logging'
+agent_file: '.github/agents/07-session-log-archivist.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Phase 3 Step 01 — Plan the isolation-helper tranche"
+next_step: 'Phase 3 Step 01 — Plan the isolation-helper tranche'
 skills:
-  - "tracker-handoff"
-  - "plan-sync-validation"
-  - "hybrid-training-interop"
+  - 'tracker-handoff'
+  - 'plan-sync-validation'
+  - 'hybrid-training-interop'
 specialists:
-  - "Plan Registration Auditor"
+  - 'Plan Registration Auditor'
 validation:
-  - "Manual tracker review confirms Phase 2 acceptance evidence, the Phase 1 coupling state, and the refreshed Handoff query before the next phase opens."
+  - 'Manual tracker review confirms Phase 2 acceptance evidence, the Phase 1 coupling state, and the refreshed Handoff query before the next phase opens.'
 ```
 
 **User instruction:** Start a fresh session, select `07-logging`, and paste this full step packet.
@@ -1130,7 +1130,7 @@ validation:
 - Next safe step: activate `01-planning` for Phase 3 `Step 01 — Plan the isolation-helper tranche`. Do not widen into Phase 3 implementation, Phase 4 policy work, or unrelated ONNX fixes.
 - Tracker validation: rerun `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` after this tracker refresh.
 
-### Phase 3 — Add training isolation helpers [WIP]
+### Phase 3 — Add training isolation helpers [DONE]
 
 **Phase objective:** Define one minimal isolated fine-tuning seam that can improve candidates without mutating shared population state by accident.
 
@@ -1154,24 +1154,24 @@ validation:
 - Fine-tuning leaves the original candidate unchanged.
 - Same seed plus same dataset order yields stable fine-tuned output on the same runtime.
 
-#### Step 01: Plan the isolation-helper tranche [WIP]
+#### Step 01: Plan the isolation-helper tranche [DONE]
 
 ```yaml
 phase: 3
 step: 1
-agent: "01-planning"
-agent_file: ".github/agents/01-planning-architect.agent.md"
-status: "[WIP]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '01-planning'
+agent_file: '.github/agents/01-planning-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 02 — Planner-defined by this step"
+next_step: 'Step 02 — Research isolation-helper boundary'
 skills:
-  - "hybrid-training-interop"
+  - 'hybrid-training-interop'
 specialists:
-  - "Hybrid Interop Scout"
+  - 'Hybrid Interop Scout'
 validation:
-  - "Manual tracker check that the isolation rule, vector-first preference, and deterministic-claim guardrails are preserved before Step 02-07 packets are authored."
+  - 'Manual tracker check that the isolation rule, vector-first preference, and deterministic-claim guardrails are preserved before Step 02-07 packets are authored.'
 ```
 
 **User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
@@ -1202,7 +1202,414 @@ validation:
 
 **Plan update requirement:** Update this plan with the new Step 02-07 packets, any skipped-step rationale, validation evidence, and the next active step before ending the session.
 
-### Phase 4 — Define hybrid evaluation policy integration [PLANNED]
+**Planning decisions and validation evidence:** Step 01 preserved the Phase 3 contract, acceptance rule, focused validation, and the no-shared-mutation contract from the current plan text. Phase 1 and Phase 2 are both [DONE] and supply the real parameter-vector contract that Phase 3 isolation requires; the Phase 1-to-Phase 2 coupling gate is already cleared. The unchanged ONNX TypeScript failure at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` (`TS2345`) is still the recorded external baseline and is not a Phase 3 planning blocker. A brief source scan confirmed that the training seam already exposes `TrainingSample`, `trainSetCore`, and a rich `src/architecture/network/training/` boundary that Phase 3 research should map before red tests begin. Research, Red Testing, Implementation, Green Validation, Documentation, and Session Logging all add independent value because Phase 3 introduces a new behavioral isolation contract; no Step 02-07 slot is skipped.
+
+**Next active step:** Phase 3 Step 02 — Research isolation-helper boundary.
+
+#### Step 02: Research isolation-helper boundary [DONE]
+
+```yaml
+phase: 3
+step: 2
+agent: '02-researching'
+agent_file: '.github/agents/02-research-coordinator.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 03 — Design isolation-helper red tests'
+skills:
+  - 'hybrid-training-interop'
+  - 'plan-alignment'
+specialists:
+  - 'Hybrid Interop Scout'
+validation:
+  - 'Read-only research brief names the training-seam owner boundary, the isolation helper signature, the dataset and seed type, the likely owner-local test file, and any clone-path or training-loop dependency that Step 03 must be aware of.'
+```
+
+**User instruction:** Start a fresh session, select `02-researching`, and paste this full step packet.
+
+**Step objective:** Gather the smallest read-only evidence needed to design an honest isolation-helper red test, specifically the training-seam owner boundary, the proposed `fineTuneVector` signature, the existing `TrainingSample` and training-loop surface, and the narrowest owner-local test seam.
+
+**Context the agent must know:**
+
+- Phase 3 must provide a low-level vector-in and trained-vector-out helper first; a clone-based wrapper can follow only after the vector-first path is stable.
+- The helper must not mutate the supplied `ParameterVector` or any `Network` that is part of shared population state; the isolation contract is the entire point of this phase.
+- Any deterministic claim requires explicit seed handling, dataset order, and a named RNG owner; do not widen the determinism language beyond same-runtime ordered determinism on the same topology.
+- The training seam (`src/architecture/network/training/`) is the preferred owner boundary because this is a training operation, not a portability or checkpoint operation.
+- Carry the unchanged ONNX `TS2345` baseline as external context unless the failure surface moves into this seam.
+
+**Execution steps:**
+
+1. Read `plans/README.md`, `plans/Roadmap.md`, this Phase 3 section, and the nearest relevant `src/architecture/network/training/README.md` and `src/architecture/network/serialize/README.md` before individual source files.
+2. Delegate a focused read-only packet to `Hybrid Interop Scout` to map the existing training-loop surface (`TrainingSample`, `trainSetCore`, clone paths, seed or RNG exposure) and identify whether a `fineTuneVector` helper can reuse them without widening the isolation boundary.
+3. Lock the proposed helper signature: whether it requires a base `Network` for topology in addition to the `ParameterVector`, what the `TrainingDataset` or `TrainingSample[]` input shape is, and how `FineTuneOptions` maps to training-loop knobs.
+4. Name the narrowest owner-local test seam for the isolation contract (original vector unchanged) and the determinism contract (same seed plus same dataset order yields same fine-tuned output).
+5. Record any dependency on unresolved Phase 2 vector semantics directly in this plan before handing off to Step 03.
+
+**Stop conditions:**
+
+- Done: research identifies the training-seam owner boundary, proposed signature, dataset shape, test seam, and any unresolved clone-path or RNG dependency.
+- Blocked: the training-loop surface does not expose enough for an honest isolation helper without changing upstream contracts.
+- Route back: research shows the isolation seam cannot remain in the training boundary or requires Phase 4 policy work to be meaningful.
+
+**Required validation:** Manual evidence review confirming the research remains read-only, boundary-local, and aligned with the Phase 3 acceptance rule.
+
+**Plan update requirement:** Update this plan with the research brief, the proposed signature, the named test seam, and the Step 03 handoff before ending the session.
+
+**Research brief and validation evidence:** `plans/README.md` and `plans/Roadmap.md` still align this lane as the last non-chat foundation handoff before the dependency-gated NEATchat follow-up. Phase 2 is fully closed with owner-local coverage at `100/100/100/100` for the serialize-seam files. The nearest relevant README surfaces were `src/architecture/network/training/README.md` and `src/architecture/network/serialize/README.md`; together they confirm the training seam is the correct new owner and the serialize seam stays as the vector-portability supplier consumed by the isolation helper.
+
+- **Owner boundary:** `src/architecture/network/training/` — new implementation file `network.training.isolate.utils.ts`, following the existing training naming convention (alongside `network.training.loop.utils.ts`, `network.training.finalize.utils.ts`, etc.). Types that grow beyond two or three entries should go in a matching `network.training.isolate.utils.types.ts`.
+- **Proposed `fineTuneVector` signature:**
+
+  ```ts
+  export interface FineTuneOptions {
+    steps: number; // Maps to TrainingOptions.iterations
+    learningRate: number; // Maps to TrainingOptions.rate
+    seed?: number; // Optional: called via workingCopy.setSeed(seed) before training
+  }
+
+  export interface FineTuneResult {
+    trainedVector: ParameterVector;
+    metrics?: Record<string, number>;
+  }
+
+  export function fineTuneVector(
+    baseNetwork: Network, // Required: topology source for clone; never mutated
+    vector: ParameterVector, // Required: applied to clone; original never mutated
+    dataset: TrainingSample[], // Required: ordered explicitly by the caller
+    options: FineTuneOptions, // Required: explicit training settings
+  ): FineTuneResult;
+  ```
+
+  `baseNetwork` is required because a `ParameterVector` alone does not carry topology; the isolation path must call `baseNetwork.clone()` to get a temporary working copy before applying the input vector.
+
+- **`TrainingSample` type:** `{ input: number[]; output: number[] }`. It is defined in `src/architecture/network/training/network.training.utils.types.ts` (training-local alias) and matches the public shape in `src/architecture/network/network.types.ts`. The helper should import from the training-local types file to stay in-boundary.
+- **Training-loop reuse:** The internal clone path is: `const workingCopy = baseNetwork.clone(); fromParameterVector(workingCopy, vector); if (options.seed !== undefined) workingCopy.setSeed(options.seed); trainImpl(workingCopy, dataset, { iterations: options.steps, rate: options.learningRate }); return { trainedVector: toParameterVector(workingCopy) }`. `fromParameterVector` and `toParameterVector` are imported from the serialize seam; `trainImpl` is imported from `network.training.utils.ts`; `Network.clone()` is already available on the `Network` class.
+- **Seed and RNG owner:** `Network.setSeed(seed: number)` delegates to `src/architecture/network/deterministic/network.deterministic.utils.ts`, which installs a reproducible random stream. This is the named RNG owner. Without `options.seed`, the training pass is best-effort reproducible (same-runtime ordered determinism still holds for non-stochastic topology when dropout is absent).
+- **Shuffle or random in training loop:** `trainFinalizeCore` (which backs `trainImpl`) does **not** shuffle the dataset. The training pass iterates samples in the order given, so same-runtime ordered determinism is achievable without custom shuffling when the caller controls dataset order explicitly.
+- **Owner-local test seam:** New file `src/architecture/network/training/network.training.isolate.utils.test.ts`, following the same naming pattern as `network.training.advanced.test.ts`, `network.training.basic.test.ts`, and `network.training.dropout.test.ts`. Two test groups cover the two Phase 3 observables: the isolation contract (original `ParameterVector` and `baseNetwork` unchanged after the helper runs) and the same-seed determinism contract (two `fineTuneVector` calls with the same seed plus same dataset order yield the same `trainedVector` values).
+- **Phase 2 dependency:** None unresolved. `ParameterVector`, `toParameterVector`, and `fromParameterVector` are stable in the serialize seam. `Network.clone()` is already available. No upstream contract changes are required.
+- **ONNX `TS2345` baseline:** Unchanged — still at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135`. Not a Phase 3 blocker.
+
+**Step 03 handoff:** Add the smallest failing owner-local tests in `src/architecture/network/training/network.training.isolate.utils.test.ts` for the isolation-helper seam only. Cover two test groups: (1) the isolation contract — the original `ParameterVector` array contents and the `baseNetwork` weights are each bitwise unchanged after `fineTuneVector` returns, and (2) the same-seed determinism contract — two `fineTuneVector` calls with the same `baseNetwork`, same `vector`, same `dataset` order, same `steps`, same `learningRate`, and same explicit `seed` yield `trainedVector` values that are element-wise equal. Keep Step 03 out of Phase 4 policy hooks, Lamarckian persistence, and Phase 5 example constructs.
+
+#### Step 03: Design isolation-helper red tests [DONE]
+
+```yaml
+phase: 3
+step: 3
+agent: '03-red-testing'
+agent_file: '.github/agents/03-red-test-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 04 — Implement fineTuneVector isolation helper'
+skills:
+  - 'hybrid-training-interop'
+  - 'red-test-contracts'
+  - 'reproducibility-contracts'
+specialists:
+  - 'Determinism Scout'
+validation:
+  - 'A focused owner-local red test or explicit blocked record proves that the isolation contract (original unchanged) and the same-seed determinism contract can be tested before implementation.'
+```
+
+**User instruction:** Start a fresh session, select `03-red-testing`, and paste this full step packet.
+
+**Step objective:** Add the smallest failing test contract for Phase 3 isolation before implementation: one test that proves the original `ParameterVector` is unchanged after `fineTuneVector` runs, and one test that proves same seed plus same dataset order yields stable fine-tuned output on the same runtime.
+
+**Context the agent must know:**
+
+- The red surface is the isolation and determinism contract of `fineTuneVector` only; do not pull in Phase 4 policy behavior or Phase 5 examples.
+- The original `ParameterVector` (and any supplied `Network`) must remain unchanged after the helper runs.
+- Determinism tests require explicit seed and dataset-order inputs; do not claim exact cross-runtime replay.
+- Tests must follow repo conventions: owner-local placement, one top-level `expect(...)` per test, AAA structure, nested `describe` blocks.
+- Carry the Step 02 research brief as the primary evidence for owner boundary, signature, and test seam.
+
+**Execution steps:**
+
+1. Read the Step 02 research brief, the named test seam, and the nearest existing owner-local training tests.
+2. Add the smallest failing tests for the isolation contract (original unchanged) and the same-seed determinism contract (stable fine-tuned output).
+3. Ensure the tests do not require Phase 4 policy hooks, Lamarckian persistence, or Phase 5 example constructs.
+4. Run the narrowest practical Jest command for the touched owner-local test file, or record precisely why the red command is blocked.
+5. Update this plan with the failing command, expected failure, and the exact Step 04 green condition before ending the session.
+
+**Stop conditions:**
+
+- Done: focused red tests fail for the missing isolation-helper contract, or a precise blocked record proves Phase 3 cannot be isolated honestly yet.
+- Blocked: Step 02 leaves the owner-local test boundary or observable behavior ambiguous.
+- Route back: the red design requires Phase 4 policy semantics or unresolved Phase 2 vector behavior.
+
+**Required validation:** Focused red-test command evidence, or a manual blocked record that explains why no honest Phase 3-only red test exists yet.
+
+**Plan update requirement:** Update this plan with changed test files or blocked rationale, red evidence, and the Step 04 implementation handoff before ending the session.
+
+**Step 03 red contract and validation evidence:** Added owner-local red tests in `src/architecture/network/training/network.training.isolate.utils.test.ts` that import the planned `fineTuneVector` helper from the training boundary and lock two Phase 3 behavior groups only: the isolation contract (the supplied `ParameterVector` snapshot and the base-network snapshot stay unchanged after the helper returns) and the same-seed determinism contract (two calls with the same seed plus the same dataset order yield identical trained-vector snapshots on the same runtime). The fixture stays Phase 3-scoped by using a minimal `Network(1, 1, { seed })` topology, ordered `TrainingSample[]` input, and explicit `{ steps, learningRate, seed }` options without widening into Lamarckian persistence, policy hooks, or Phase 5 examples.
+
+- Changed test file: `src/architecture/network/training/network.training.isolate.utils.test.ts`
+- Focused command: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/architecture/network/training/network.training.isolate.utils.test.ts`
+- Observed red failure: `TS2307: Cannot find module "./network.training.isolate.utils" or its corresponding type declarations.`
+- Scope guard: Step 03 stays training-owned and Phase 3 scoped; it does not introduce Phase 4 policy behavior, Lamarckian persistence, or example-facing integration.
+
+**Step 04 green condition:** Add the smallest training-owned `src/architecture/network/training/network.training.isolate.utils.ts` surface that exports `fineTuneVector` together with `FineTuneOptions` and `FineTuneResult` so the focused Jest slice goes green. Use the Step 02 clone path (`baseNetwork.clone()` -> `fromParameterVector(...)` -> optional `workingCopy.setSeed(seed)` -> `trainImpl(...)` -> `toParameterVector(...)`), preserve same-runtime ordered determinism for identical seed and dataset-order inputs, and keep the supplied `ParameterVector` and `baseNetwork` snapshots unchanged without introducing Phase 4 policy hooks.
+
+#### Step 04: Implement fineTuneVector isolation helper [DONE]
+
+```yaml
+phase: 3
+step: 4
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementation-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 05 — Validate isolation-helper gates'
+skills:
+  - 'hybrid-training-interop'
+  - 'reproducibility-contracts'
+specialists:
+  - 'Hybrid Interop Scout'
+validation:
+  - 'The Step 03 red tests go green with a training-owned isolation helper and no Phase 4 policy behavior or silent mutation of the supplied network or vector.'
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Implement the smallest training-owned `fineTuneVector` helper (and supporting types `FineTuneOptions`, `FineTuneResult`) that satisfies the Phase 3 red tests while keeping the isolation and determinism contracts honest.
+
+**Context the agent must know:**
+
+- The helper must not mutate the supplied `ParameterVector` or any `Network` that is part of shared population state; use an internal clone or temporary working copy only.
+- Dataset ordering and training settings must be explicit inputs, not inferred defaults.
+- Deterministic behavior is available only when seed and RNG owner are explicit; document the boundary clearly in code and types.
+- The API name must make the mutation or non-mutation contract obvious; `fineTuneVector` signals that it returns a new vector without touching the input.
+- Keep recurrent buffer state, optimizer accumulators, and other transient training fields out of the returned result; the result must be a `ParameterVector` only.
+- Do not introduce Phase 4 policy hooks (eligibility, persistence, Lamarckian opt-in) in this step.
+
+**Execution steps:**
+
+1. Read Phase 3 plan text, the Step 02 research brief, the Step 03 red evidence, and the named source or test files.
+2. Add the minimal training-owned `fineTuneVector` helper, `FineTuneOptions`, and `FineTuneResult` types at the owner boundary confirmed by Step 02.
+3. Implement the clone-or-working-copy approach so that the supplied `ParameterVector` (and any base `Network`) is never mutated.
+4. Keep training-loop settings explicit and add concise JSDoc for all exported types and helpers.
+5. Rerun the focused Step 03 command and update this plan with changed files, isolation decisions, remaining risks, and the Step 05 validation handoff.
+
+**Stop conditions:**
+
+- Done: the focused red tests are green and the implementation remains training-owned and Phase 3 scoped.
+- Blocked: the existing clone path or training-loop surface does not support honest isolation without upstream contract changes.
+- Route back: implementation reveals the isolation seam cannot remain honest without reopening Step 02 research or Step 03 red design.
+
+**Required validation:** The focused Step 03 red-test command passes after the implementation change.
+
+**Plan update requirement:** Update this plan with implementation files, focused validation evidence, isolation decisions, and the Step 05 handoff before ending the session.
+
+**Step 04 implementation and validation evidence:** Added the smallest training-owned isolation helper at `src/architecture/network/training/network.training.isolate.utils.ts`. The new file defines `FineTuneOptions`, `FineTuneResult`, and `fineTuneVector(baseNetwork, vector, dataset, options)` in one boundary-local surface because the Phase 3 type contract is still trivial. The helper stays inside the Step 02 clone path: it clones `baseNetwork`, applies the supplied `ParameterVector` to the working copy, optionally installs `options.seed` through `workingCopy.setSeed(...)`, runs `trainImpl(...)` against the caller-provided ordered dataset, and returns `toParameterVector(workingCopy)` together with numeric training metrics from the training summary.
+
+- Changed implementation file: `src/architecture/network/training/network.training.isolate.utils.ts`
+- Focused command: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/architecture/network/training/network.training.isolate.utils.test.ts`
+- Observed green result: `PASS` for `src/architecture/network/training/network.training.isolate.utils.test.ts`; `1` suite passed and both targeted `fineTuneVector isolation helper` tests passed for unchanged input snapshots and same-seed deterministic trained-vector output on the same runtime.
+- Isolation decision: `fineTuneVector` treats `baseNetwork` and the supplied `ParameterVector` as read-only inputs. All mutation is confined to `baseNetwork.clone()`, so the helper returns a detached `trainedVector` without introducing Lamarckian persistence or any Phase 4 policy hook.
+- Determinism decision: the helper documents only same-runtime ordered determinism when topology, dataset order, training settings, and explicit `seed` all match. It does not claim cross-runtime exact replay, and it does not return transient optimizer, activation, or recurrent runtime state.
+- Scope guard: Step 04 remains training-owned and Phase 3 scoped; it does not add clone-based convenience wrappers, eligibility or persistence policy behavior, or example-facing integration.
+- Remaining risks: Step 05 still needs to rerun the focused Jest slice, run `npx tsc --noEmit -p tsconfig.json` while treating the unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as external unless the failure surface moves into this seam, and run coverage guard on the touched `src/architecture/network/training/network.training.isolate.utils.ts` file.
+
+**Step 05 validation handoff:** Treat `src/architecture/network/training/network.training.isolate.utils.ts` as the touched source boundary and `src/architecture/network/training/network.training.isolate.utils.test.ts` as the owner-local behavior slice. Re-run the focused isolation-helper Jest command first, then run `npx tsc --noEmit -p tsconfig.json`, then run coverage guard on the touched `src/` file. If the focused slice fails inside the clone or vector-export path, route back to Step 04. If coverage is missing for the new helper or its metrics helpers, route back to Step 03 only for the smallest owner-local test additions.
+
+#### Step 05: Validate isolation-helper gates [DONE]
+
+```yaml
+phase: 3
+step: 5
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-validation-runner.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 06 — Curate isolation-helper docs'
+skills:
+  - 'green-validation-gates'
+  - 'coverage-guard'
+  - 'hybrid-training-interop'
+specialists:
+  - 'Coverage Guard'
+  - 'Determinism Scout'
+validation:
+  - 'Focused isolation and determinism tests pass, TypeScript validation passes or the pre-existing ONNX baseline is explicitly confirmed unchanged, and coverage guard passes at 100/100/100/100 for every touched src file.'
+```
+
+**User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
+
+**Step objective:** Prove the Phase 3 implementation satisfies the isolation and determinism contracts with focused validation before documentation or phase closure.
+
+**Context the agent must know:**
+
+- Validate only the Phase 3 isolation-helper boundary and directly touched files.
+- Primary behavior gates are: original `ParameterVector` unchanged after `fineTuneVector`, and same-seed plus same-dataset-order yields stable fine-tuned output.
+- If `src/` files changed, coverage guard at `100/100/100/100` is required for every touched source file.
+- The unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` remains the recorded external baseline unless the failure surface moves into this seam.
+- Failed validation routes back to the smallest prior step that can repair the active seam.
+
+**Execution steps:**
+
+1. Read the Step 04 changed-file summary and expected validation commands.
+2. Rerun the focused isolation-and-determinism Jest slice.
+3. Run `npx tsc --noEmit -p tsconfig.json` after the focused slice is green.
+4. Run coverage guard for every touched `src/` file.
+5. Update this plan with pass or fail evidence and reroute failures to Step 03 or Step 04 as appropriate.
+
+**Stop conditions:**
+
+- Done: focused tests, TypeScript validation, and required coverage gates pass.
+- Blocked: a validation command cannot run or a pre-existing TypeScript baseline still blocks repo-wide validation.
+- Route back: behavior failures return to Step 04; missing or insufficient owner-local coverage returns to Step 03.
+
+**Required validation:** Command evidence for the focused test slice, `npx tsc --noEmit -p tsconfig.json`, and coverage guard on touched `src/` files.
+
+**Plan update requirement:** Update this plan with validation evidence, reroute decisions if any, and the Step 06 documentation handoff before ending the session.
+
+**Step 05 completion from current repo state:** Re-ran the focused isolation-helper slice with `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/architecture/network/training/network.training.isolate.utils.test.ts`. The Phase 3 behavior gate stayed green again: `PASS` for `src/architecture/network/training/network.training.isolate.utils.test.ts`, `1` suite passed, and all `3` targeted `fineTuneVector isolation helper` tests passed for unchanged input snapshots, same-seed deterministic trained-vector output, and the no-seed isolation case.
+
+Repo-wide TypeScript validation still does not clear, but the failure surface remains unchanged. `npx tsc --noEmit -p tsconfig.json` failed only at the recorded external ONNX baseline `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` with `TS2345`, because `standardDomainImports[0]!.version` can be `undefined`. No new TypeScript failure appeared inside the Phase 3 training-isolation seam, so this rerun treats the ONNX error as external baseline context rather than a Phase 3 blocker.
+
+Coverage guard on the touched `src/` file used the owner-local training suite: `npx jest --config=jest.config.mjs --no-cache --coverage --runTestsByPath src/architecture/network/training/network.training.isolate.utils.test.ts --collectCoverageFrom=src/architecture/network/training/network.training.isolate.utils.ts --coverageReporters=text-summary`. The guard passed, and `src/architecture/network/training/network.training.isolate.utils.ts` is now at `100/100/100/100` with `11/11` statements, `2/2` branches, `3/3` functions, and `11/11` lines covered.
+
+- Step 05 gate decision: close Step 05 and hand off to Step 06 documentation.
+- Tracker validation: `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` passed with `0` errors and `0` warnings after this Step 05 tracker refresh.
+- Scope guard: this rerun stayed inside the Phase 3 isolation-helper seam only; no production code, Phase 4 policy behavior, Lamarckian persistence, or unrelated ONNX work changed.
+- Exact next orchestrator: `06-documenting`
+- Exact handoff prompt: see `## Handoff query` below.
+
+#### Step 06: Curate isolation-helper docs [DONE]
+
+```yaml
+phase: 3
+step: 6
+agent: '06-documenting'
+agent_file: '.github/agents/06-educational-docs-curator.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 07 — Log Phase 3 closure or reroute'
+skills:
+  - 'educational-docs'
+  - 'docs-academic-citation-audit'
+  - 'hybrid-training-interop'
+specialists:
+  - 'Docs Scout'
+validation:
+  - 'Source-first docs for all exported isolation-helper symbols are present, generated docs are refreshed if JSDoc inputs changed, and no Phase 4 policy or Lamarckian persistence docs are introduced.'
+```
+
+**User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
+
+**Step objective:** Keep the isolation-helper surface teachable and synchronized with generated docs without turning Phase 3 into the broader Phase 5 documentation closure.
+
+**Context the agent must know:**
+
+- Documentation scope is limited to `fineTuneVector`, `FineTuneOptions`, `FineTuneResult`, the isolation contract (original unchanged), same-runtime determinism wording, and explicit seed or dataset-order semantics.
+- Phase 4 policy (Lamarckian, fitness-only, conditional), Phase 5 examples, and Phase 5 Lamarckian explanation remain out of scope.
+- Generated `src/**/README.md` files and `docs/examples/**` outputs are read-only; update source JSDoc and run generation when needed.
+- Public docs should be atemporal: no tracker phases, roadmap chronology, or chat-only context.
+
+**Execution steps:**
+
+1. Read Step 04 changed public surfaces and Step 05 validation evidence.
+2. Improve only source-owned JSDoc or nearby handwritten docs required by the new isolation-helper surface.
+3. Run `npm run docs` if JSDoc or generated-doc inputs changed; otherwise record a manual no-docs-needed rationale.
+4. Verify that no generated README or published example output was hand-edited as a shortcut.
+5. Update this plan with documentation evidence and any residual docs risk before ending the session.
+
+**Stop conditions:**
+
+- Done: required source docs are aligned and docs generation either passes or is explicitly not needed.
+- Blocked: public naming or determinism wording is unstable enough that docs would mislead downstream consumers.
+- Route back: documentation reveals implementation drift in the isolation contract; route to Step 04 or Step 05 rather than widening docs.
+
+**Required validation:** `npm run docs` when source JSDoc or generated-doc inputs changed, or a manual no-docs-needed record when implementation introduced no doc-facing surface.
+
+**Plan update requirement:** Update this plan with documentation changes, validation evidence, residual gaps, and the Step 07 closure handoff before ending the session.
+
+**Step 06 documentation changes and validation evidence:** Reviewed source JSDoc for `FineTuneOptions`, `FineTuneResult`, and `fineTuneVector` in `src/architecture/network/training/network.training.isolate.utils.ts`. The generated `src/architecture/network/training/README.md` did not yet include any of the three new isolation-helper symbols (the file had been added in Step 04 but `npm run docs` had not been run for this boundary). Source JSDoc was improved as follows, keeping all changes Phase 3 scoped and atemporal:
+
+- `FineTuneOptions`: added a closing paragraph explaining that without `seed` isolation is still guaranteed (original network and vector never mutated) but repeated calls may diverge when the training loop contains stochastic behaviour.
+- `FineTuneResult`: added a closing sentence listing downstream use patterns — compare against original vector, forward to a worker, persist as a checkpoint delta, or discard when only the fitness score matters — without introducing Lamarckian persistence or Phase 4 policy language.
+- `fineTuneVector`: added an `@example` fenced code block showing: export the current parameter vector, call `fineTuneVector` with explicit `steps`, `learningRate`, and `seed`, log the training error metric, and confirm the original candidate and vector are unchanged after the call. No Phase 4 or Phase 5 language was added.
+
+- Changed source file: `src/architecture/network/training/network.training.isolate.utils.ts`
+- Validation command: `npm run docs` — completed successfully with `HTML docs generated.`
+- Generated output verified: `src/architecture/network/training/README.md` now includes `FineTuneOptions`, `FineTuneResult`, and `fineTuneVector` with isolation contract, stochastic-dropout note, downstream-use note, and the full `@example` block rendering correctly.
+- Source-of-truth guard: no generated `src/**/README.md` file or `docs/examples/**` output was hand-edited as a shortcut. The only manual edits were to the source JSDoc file, and the README refresh came from `npm run docs`.
+- Scope guard: no Phase 4 policy, Lamarckian persistence, conditional fine-tuning, or Phase 5 example language was introduced.
+- Citation note: no external citation required; the isolation contract is repo-owned.
+- Tracker validation: `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` passed with `0` errors and `0` warnings before this tracker update.
+- Residual docs risk: none within the Phase 3 isolation-helper seam. Step 07 should decide Phase 3 closure against the preserved Phase 3 acceptance evidence and the unchanged external ONNX TypeScript baseline.
+
+#### Step 07: Log Phase 3 closure or reroute [DONE]
+
+```yaml
+phase: 3
+step: 7
+agent: '07-logging'
+agent_file: '.github/agents/07-session-log-archivist.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Phase 4 Step 01 — Plan the hybrid-policy tranche'
+skills:
+  - 'tracker-handoff'
+  - 'plan-sync-validation'
+  - 'hybrid-training-interop'
+specialists:
+  - 'Plan Registration Auditor'
+validation:
+  - 'Manual tracker review confirms Phase 3 acceptance evidence, the isolation contract and determinism claims are documented, and the refreshed Handoff query points to Phase 4 Step 01 before the next phase opens.'
+```
+
+**User instruction:** Start a fresh session, select `07-logging`, and paste this full step packet.
+
+**Step objective:** Close or reroute Phase 3 based on validated evidence, preserve the isolation and determinism contract decisions, and leave the tracker ready either for Phase 4 planning or for the smallest blocking reroute.
+
+**Context the agent must know:**
+
+- Phase 3 closes only when fine-tuning provably cannot mutate shared population state and same-seed plus same-dataset-order yields stable fine-tuned output.
+- Phase 4 should not open until Phase 3 isolation is green and coverage guard passes for all touched `src/` files.
+- The overall lane remains active; do not archive this tracker unless the full hybrid-interoperability workstream is done.
+- Chat is not the source of truth; the tracker and the `Handoff query` must carry the next session.
+
+**Execution steps:**
+
+1. Read the Phase 3 Step 02-06 evidence and verify that no required validation is missing.
+2. Mark completed Phase 3 steps `[DONE]` or record the smallest reroute if evidence is incomplete.
+3. Record that the isolation contract is now real and that Phase 4 policy integration can begin.
+4. Refresh the `Handoff query` to point either to Phase 4 Step 01 or to the smallest blocking reroute step.
+5. Run `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` after the tracker refresh.
+
+**Stop conditions:**
+
+- Done: Phase 3 evidence is compactly recorded, the next safe step is explicit, and the handoff query is current.
+- Blocked: validation, documentation, or isolation evidence is missing and cannot be reconstructed from the tracker.
+- Route back: missing isolation coverage routes to Step 03, implementation mutation drift routes to Step 04, failed validation routes to Step 05, and doc drift routes to Step 06.
+
+**Required validation:** Manual tracker diff review confirming Phase 3 acceptance evidence, no premature Phase 4 behavior, and a current next-step handoff.
+
+**Plan update requirement:** Update this plan with Phase 3 closure or reroute state, refreshed handoff query, and the next active step before ending the session.
+
+**Step 07 closure review and handoff evidence:** Step 07 reviewed the recorded Phase 3 evidence from Step 02 through Step 06 from current repo state only. Phase 3 can now close. The training-owned isolation seam satisfies the phase acceptance gate: Step 02 locked the training owner boundary, helper signature, dataset shape, clone path, and RNG owner; Step 03 added owner-local tests for isolation and same-seed determinism and expanded the slice with a no-seed isolation follow-up; Step 04 implemented `fineTuneVector`, `FineTuneOptions`, and `FineTuneResult` in `src/architecture/network/training/network.training.isolate.utils.ts`; Step 05 revalidated the focused behavior slice with `1` suite and `3` tests green, confirmed the unchanged external ONNX `TS2345` as the only repo-wide TypeScript baseline failure, and passed coverage guard at `100/100/100/100` for the touched training source file; and Step 06 improved source-first JSDoc and refreshed `src/architecture/network/training/README.md` via `npm run docs` without hand-editing generated output.
+
+- Phase 3 closure decision: close Phase 3. No reroute is required because the isolation contract, same-runtime determinism wording, focused validation, coverage guard, and generated-doc refresh are all durably recorded.
+- Isolation contract decision: `fineTuneVector` now makes the isolation rule real by cloning `baseNetwork`, applying the supplied `ParameterVector` only to the working copy, and returning a detached `trainedVector`; the supplied network and vector remain unchanged. Determinism remains intentionally scoped to same-runtime ordered runs when topology, dataset order, training settings, and explicit `seed` match.
+- Tracker state decision: keep the top-level tracker active in `plans/` as `[WIP]`; mark Phase 3 complete; keep Phase 4 unopened in planning state; do not archive this tracker or create a same-boundary `.logs.md` file because the hybrid-interoperability lane still has Phase 4 and Phase 5 work.
+- Next safe step: activate `01-planning` for Phase 4 `Step 01 — Plan the hybrid-policy tranche`. Keep the next pass planning-only; do not implement policy hooks, Lamarckian persistence behavior, or unrelated ONNX fixes in this closure step.
+- Tracker validation: `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` passed after this tracker refresh with `0` errors and `0` warnings.
+
+### Phase 4 — Define hybrid evaluation policy integration [DONE]
 
 **Phase objective:** Make hybrid evaluation policy explicit at the NEAT surface so users can choose when fine-tuning occurs and whether trained weights are discarded or persisted.
 
@@ -1228,24 +1635,24 @@ validation:
 - Fitness-only fine-tuning returns a trained result without persistence.
 - Lamarckian persistence happens only on explicit opt-in.
 
-#### Step 01: Plan the hybrid-policy tranche [PLANNED]
+#### Step 01: Plan the hybrid-policy tranche [DONE]
 
 ```yaml
 phase: 4
 step: 1
-agent: "01-planning"
-agent_file: ".github/agents/01-planning-architect.agent.md"
-status: "[PLANNED]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '01-planning'
+agent_file: '.github/agents/01-planning-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 02 — Planner-defined by this step"
+next_step: 'Step 02 — Research hybrid-policy boundary'
 skills:
-  - "hybrid-training-interop"
+  - 'hybrid-training-interop'
 specialists:
-  - "Hybrid Interop Scout"
+  - 'Hybrid Interop Scout'
 validation:
-  - "Manual tracker check that the policy split, Lamarckian opt-in rule, and deterministic ranking guardrails are preserved before Step 02-07 packets are authored."
+  - 'Manual tracker check that the policy split, Lamarckian opt-in rule, and deterministic ranking guardrails are preserved before Step 02-07 packets are authored.'
 ```
 
 **User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
@@ -1276,7 +1683,433 @@ validation:
 
 **Plan update requirement:** Update this plan with the new Step 02-07 packets, any skipped-step rationale, validation evidence, and the next active step before ending the session.
 
-### Phase 5 — Docs and examples [PLANNED]
+**Planning decisions and validation evidence:** Step 01 preserved the Phase 4 contract, acceptance rule, focused validation, and three-decision split from the current plan text. Phase 1, Phase 2, and Phase 3 are each [DONE] and supply the real parameter-vector layout, roundtrip, and isolation seams that Phase 4 policy integration requires. The unchanged ONNX TypeScript failure at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` (`TS2345`) remains the recorded external baseline and is not a Phase 4 planning blocker. `plans/README.md` and `plans/Roadmap.md` still align this lane as the last non-chat foundation handoff before the dependency-gated NEATchat follow-up, with no roadmap conflict for a NEAT-evaluation-surface policy hook. Research, Red Testing, Implementation, Green Validation, Documentation, and Session Logging all add independent value because Phase 4 introduces a new behavioral policy surface; no Step 02-07 slot is skipped.
+
+**Worker-ordering dependency note:** The Phase 4 contract requires worker and single-thread evaluation paths to agree on semantic result order before Lamarckian persistence is applied. Step 02 must map the NEAT evaluation surface and worker path before Step 03 can design honest tests for Lamarckian persistence. If Step 02 cannot confirm the ordering constraint from current repo evidence, Step 03 should record an explicit conditional-policy blocked note and scope tests to `never` and `always` paths only.
+
+**Next active step:** Phase 4 Step 02 — Research hybrid-policy boundary.
+
+#### Step 02: Research hybrid-policy boundary [DONE]
+
+```yaml
+phase: 4
+step: 2
+agent: '02-researching'
+agent_file: '.github/agents/02-research-coordinator.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 03 — Design hybrid-policy red tests'
+skills:
+  - 'hybrid-training-interop'
+  - 'plan-alignment'
+specialists:
+  - 'Hybrid Interop Scout'
+validation:
+  - 'Read-only research brief names the NEAT evaluation owner boundary, the natural policy-hook location, worker vs single-thread ordering constraints, and the narrowest owner-local test seam before red tests begin.'
+```
+
+**User instruction:** Start a fresh session, select `02-researching`, and paste this full step packet.
+
+**Step objective:** Gather the smallest read-only evidence needed to design honest red tests for the three policy choices (`never`, `always` fitness-only, `always` Lamarckian) without opening the NEAT evaluation loop, worker threading implementation, or Phase 5 documentation.
+
+**Context the agent must know:**
+
+- Phase 3 supplies `fineTuneVector(baseNetwork, vector, dataset, options): FineTuneResult` from `src/architecture/network/training/network.training.isolate.utils.ts`. Phase 4 wraps that seam with an explicit policy layer.
+- The three decisions are: which candidates fine-tune (eligibility), how the trained variant is scored, whether trained weights persist back (Lamarckian opt-in).
+- Worker and single-thread evaluation paths must agree on semantic result order before Lamarckian persistence is applied; map this ordering constraint before Step 03 designs tests.
+- Carry the unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as external baseline context unless the failure surface moves into this seam.
+
+**Execution steps:**
+
+1. Read `plans/README.md`, `plans/Roadmap.md`, this Phase 4 section, and the nearest relevant `src/neat/evaluate/README.md` plus `src/multithreading/README.md` before individual source files.
+2. Delegate a focused read-only packet to `Hybrid Interop Scout` to map the NEAT evaluation surface: where per-candidate evaluation is called, what the evaluation function signature looks like, and how the worker path differs from the single-thread path.
+3. Identify the smallest honest owner boundary for `HybridEvaluationPolicy` and the policy evaluation helper — whether it belongs in `src/neat/evaluate/`, a dedicated `src/neat/hybrid/`, or alongside the Phase 3 training boundary.
+4. Confirm that the `TrainingSample[]` shape consumed by `fineTuneVector` is compatible with the dataset the NEAT evaluation already carries, or note any shape gap.
+5. Record the worker-vs-single-thread ordering constraint: whether result ordering is safe enough for Lamarckian persistence, and whether a test fixture can simulate both paths honestly without full worker threads.
+
+**Stop conditions:**
+
+- Done: research identifies the owner boundary, proposed policy-hook location, ordering constraints, and the narrowest owner-local test seam.
+- Blocked: the NEAT evaluation surface lacks a clear hook point or the worker ordering constraint cannot be confirmed from read-only evidence.
+- Route back: research shows policy integration requires upstream changes to the worker or evaluation loop before Phase 4 can be honest.
+
+**Required validation:** Manual evidence review confirming the research remains read-only, boundary-local, and aligned with the Phase 4 acceptance rule.
+
+**Plan update requirement:** Update this plan with the research brief, policy hook location, ordering constraint decision, and the Step 03 handoff before ending the session.
+
+**Research brief and validation evidence (Step 02 — [DONE]):**
+
+- **Owner boundary:** New module `src/neat/hybrid/` following the CLAUDE.md folder-based naming convention. Files: `neat.hybrid.ts` (orchestration, public `evaluateCandidate` helper), `neat.hybrid.types.ts` (`HybridEvaluationPolicy`, `EvaluateCandidateOptions`, `HybridEvaluationResult`). This is preferred over injecting into `src/neat/evaluate/` because the policy helper is a **standalone function** the user calls inside their fitness delegate, not a hook into the NEAT evaluation loop itself.
+
+- **Policy hook location:** The per-candidate evaluation loop in `src/neat/evaluate/fitness/evaluate.fitness.ts` iterates `controller.population` sequentially and assigns `genome.score = await controller.fitness(genome)`. The hook is **not** placed inside this loop. Instead, the Phase 4 helper is a standalone `evaluateCandidate(network, dataset, options)` async function the user calls inside their fitness delegate. The NEAT evaluation loop (`runFitnessEvaluation`) stays unchanged.
+
+- **Dataset compatibility:** CONFIRMED. `TrainingSample = { input: number[]; output: number[] }` from `src/architecture/network/training/network.training.utils.types.ts` is identical to what `fineTuneVector` expects. NEAT's fitness delegate receives a `GenomeForEvaluation` object, NOT a dataset; the user always supplies the dataset explicitly to the policy helper. There is no shape gap.
+
+- **Worker vs. single-thread ordering:**
+  - Single-thread: sequential per-genome iteration — deterministic by construction.
+  - Worker path (`evaluateInWorkers`): returns `BatchEvaluationResult<TResult>` with `results: TResult[]` **ordered and index-aligned** to the original population array. `createNeatParallelPopulationEvaluator` applies results via `population.forEach` with `genomeIndex` read from `batchResult.results[genomeIndex]`.
+  - **Lamarckian constraint on worker path:** Workers operate on serialized copies and return scalar scores (`TResult = number`). Applying trained weights back to the live genome in the host process is NOT supported by the default `createNeatParallelPopulationEvaluator` result-assignment path. If Lamarckian persistence on the worker path is needed, the caller must encode trained weights in `TResult` and apply them in `assignResult` — this is a design extension beyond Phase 4 scope.
+  - **Test fixture implication:** Phase 4 Lamarckian tests can be scoped to the single-thread path only. A mock fitness delegate simulates both paths without full worker threads.
+
+- **Conditional policy status:** BLOCKED. The NEAT evaluation loop carries no stable top-K ranking or tie-break surface during per-genome fitness evaluation; ranking happens in `evolve()` after evaluation. Step 03 must record an explicit conditional-policy blocked note and scope tests to `never` and `always` paths only.
+
+- **External baseline unchanged:** ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` remains the only repo-wide TypeScript blocker; it is unrelated to this lane.
+
+**Step 03 handoff:**
+
+Add the smallest failing owner-local tests in a new file `src/neat/hybrid/neat.hybrid.test.ts` covering three behavior groups:
+
+1. `never` policy — `evaluateCandidate` returns the raw fitness score without calling `fineTuneVector` and leaves the candidate weights bitwise unchanged.
+2. `always` fitness-only policy — the helper calls `fineTuneVector`, uses the trained result for scoring, but does NOT apply trained weights back to the original genome.
+3. `always` Lamarckian policy — the helper calls `fineTuneVector` and applies trained weights to the candidate only when `persistTrainedWeights === true`.
+4. Record an explicit conditional-policy blocked note — no stable deterministic ranking surface is confirmed at the current evaluate boundary.
+
+Tests must stay out of full NEAT population wiring, worker threads, and Phase 5 example constructs. One top-level `expect(...)` per test, AAA structure, nested `describe` blocks per repo conventions.
+
+#### Step 03: Design hybrid-policy red tests [DONE]
+
+```yaml
+phase: 4
+step: 3
+agent: '03-red-testing'
+agent_file: '.github/agents/03-red-test-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 04 — Implement hybrid evaluation policy'
+skills:
+  - 'hybrid-training-interop'
+  - 'red-test-contracts'
+  - 'reproducibility-contracts'
+specialists:
+  - 'Determinism Scout'
+validation:
+  - 'Focused owner-local red tests or an explicit blocked record prove that the three policy choices (never, fitness-only, Lamarckian opt-in) can be tested before implementation.'
+```
+
+**User instruction:** Start a fresh session, select `03-red-testing`, and paste this full step packet.
+
+**Step objective:** Add the smallest failing test contract for the three Phase 4 policy behaviors: no-fine-tune leaves candidates untouched, fitness-only fine-tuning returns a trained result without persistence, and Lamarckian persistence applies trained weights back only on explicit `persistTrainedWeights: true`.
+
+**Context the agent must know:**
+
+- The three test groups correspond to three separate behavioral contracts: the `never` policy (no mutation, no extra calls to `fineTuneVector`), the `always` fitness-only policy (trained fitness returned, original candidate weights bitwise unchanged), and the `always` Lamarckian policy (trained weights applied to candidate on explicit `persistTrainedWeights: true`).
+- Conditional fine-tuning (`conditional` policy) requires deterministic ranking or tie-break rules; if Step 02 research cannot identify a stable ranking surface, record an explicit conditional-policy blocked note and keep Step 03 scoped to `never` and `always` paths only.
+- Tests must follow repo conventions: owner-local placement, one top-level `expect(...)` per test, AAA structure, nested `describe` blocks.
+- Carry the Step 02 research brief as the primary evidence for owner boundary and test seam.
+
+**Execution steps:**
+
+1. Read the Step 02 research brief, the named test seam, and the nearest existing owner-local tests.
+2. Add the smallest failing tests for the three policy behaviors, or record an explicit blocked note for conditional policy if deterministic ranking is not yet clear.
+3. Ensure tests do not require Phase 5 example constructs or full NEAT population wiring.
+4. Run the narrowest practical Jest command for the touched owner-local test file, or record precisely why the red command is blocked.
+5. Update this plan with the failing command, expected failure, and the exact Step 04 green condition.
+
+**Stop conditions:**
+
+- Done: focused red tests fail for the missing policy surface, or a precise blocked record proves the policy cannot be tested honestly before Step 02 research is extended.
+- Blocked: Step 02 leaves the policy hook location or observable behavior ambiguous.
+- Route back: the red design requires Phase 5 documentation or upstream evaluation-loop changes that expose new worker ordering constraints.
+
+**Required validation:** Focused red-test command evidence, or a manual blocked record that explains why no honest Phase 4-only red test exists yet.
+
+**Plan update requirement:** Update this plan with changed test files or blocked rationale, red evidence, and the Step 04 implementation handoff before ending the session.
+
+**Step 03 red contract and validation evidence:** Added the smallest owner-local Phase 4 red contract in `src/neat/hybrid/neat.hybrid.test.ts`. The new slice keeps Phase 4 scoped to a standalone helper and avoids full NEAT population wiring, worker threads, and Phase 5 example constructs. The tests assume one owner-local `evaluateCandidate(network, dataset, options)` helper at the new `src/neat/hybrid/` seam and lock three behavior groups only:
+
+1. `never` policy returns the base evaluation, leaves candidate weights bitwise unchanged, and returns no trained result.
+2. `always` fitness-only policy scores the trained variant, returns that trained result, and leaves the original candidate unchanged.
+3. `always` Lamarckian policy scores the trained variant and applies the trained weights back only when `persistTrainedWeights: true`.
+
+The red fixture stays deterministic and boundary-local by reusing the existing Phase 3 `fineTuneVector(...)` helper only to precompute baseline-vs-trained network signatures for a `scoreNetwork` callback. That callback returns distinct numeric scores for the untouched baseline versus the trained variant, so the red assertions prove which network state the future helper used for scoring without widening into worker-ordering or full evaluation-loop integration.
+
+- Changed test file: `src/neat/hybrid/neat.hybrid.test.ts`
+- Focused command: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts`
+- Observed red failure: `TS2307: Cannot find module './neat.hybrid' or its corresponding type declarations.`
+- Conditional-policy blocked note: `conditional` remains explicitly blocked in Step 03. Step 02 confirmed there is no stable deterministic top-K or tie-break surface at the current per-genome evaluate boundary, so this red contract stays scoped to `never` and `always` paths only.
+- Scope guard: Step 03 remains Phase 4 scoped and owner-local to the new hybrid seam. It does not alter `runFitnessEvaluation`, worker result assignment, Lamarckian-on-workers behavior, or Phase 5 docs or example surfaces.
+
+**Step 04 green condition:** Add the smallest `src/neat/hybrid/` production surface so the focused red slice goes green: `src/neat/hybrid/neat.hybrid.ts` exporting `evaluateCandidate`, plus `src/neat/hybrid/neat.hybrid.types.ts` exporting the policy/result types. The helper must accept the Step 03 standalone orchestration shape (`network`, explicit `dataset`, explicit `policy`, `fineTuneOptions`, and a network-scoring callback), skip `fineTuneVector` entirely for `fineTune: 'never'`, score a detached trained variant for `persistTrainedWeights: false`, and apply trained weights back to the candidate only when `persistTrainedWeights === true`. Keep `conditional` blocked for now rather than inventing an unstable ranking rule.
+
+#### Step 04: Implement hybrid evaluation policy [DONE]
+
+```yaml
+phase: 4
+step: 4
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementation-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 05 — Validate hybrid-policy gates'
+skills:
+  - 'hybrid-training-interop'
+  - 'reproducibility-contracts'
+specialists:
+  - 'Hybrid Interop Scout'
+validation:
+  - 'The Step 03 red tests go green with a policy-aware evaluation helper and no default Lamarckian behavior or implicit candidate mutation.'
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Implement the smallest `HybridEvaluationPolicy` surface and the policy evaluation helper that separates the three policy decisions (eligibility, scoring, persistence) so that Lamarckian persistence cannot happen without `persistTrainedWeights: true`.
+
+**Context the agent must know:**
+
+- The three decisions must remain explicit in the API: `fineTune` (eligibility and trigger: `never` | `always` | `conditional`), `persistTrainedWeights` (persistence opt-in boolean), and implicit scoring (always use trained result when `fineTune !== 'never'`).
+- Lamarckian persistence must not be the default; `persistTrainedWeights: false` must be the safe default.
+- The implementation should consume `fineTuneVector` from Phase 3 (`src/architecture/network/training/network.training.isolate.utils.ts`) rather than re-implementing training logic.
+- Worker and single-thread paths must agree on semantic result order for Lamarckian persistence; if this constraint is not yet resolvable, record the blocker and gate Lamarckian persistence on explicit single-thread evidence only.
+- Do not widen into full NEAT population integration or Phase 5 example constructs in this step unless Step 02 research proved the hook point is within the population evaluator itself.
+
+**Execution steps:**
+
+1. Read Phase 4 plan text, the Step 02 research brief, the Step 03 red evidence, and the named source or test files.
+2. Add the minimal `HybridEvaluationPolicy` type (and any supporting types) and the policy evaluation helper at the owner boundary confirmed by Step 02.
+3. Implement the three policy paths with explicit guard-rails: `never` skips `fineTuneVector`, `always` fitness-only calls `fineTuneVector` without applying trained weights back, `always` Lamarckian calls `fineTuneVector` and applies trained weights back only when `persistTrainedWeights === true`.
+4. Add concise JSDoc for all exported types and helpers, emphasizing that `persistTrainedWeights: false` is the safe default.
+5. Rerun the focused Step 03 command and update this plan with changed files, policy decisions, remaining risks, and the Step 05 validation handoff.
+
+**Stop conditions:**
+
+- Done: the focused red tests are green and the implementation remains Phase 4 scoped with no implicit Lamarckian default.
+- Blocked: the worker ordering constraint from Step 02 prevents an honest Lamarckian path from being implemented safely.
+- Route back: implementation reveals the policy hook cannot be isolated without reopening Step 02 research.
+
+**Required validation:** The focused Step 03 red-test command passes after the implementation change.
+
+**Plan update requirement:** Update this plan with implementation files, focused validation evidence, policy decisions, and the Step 05 handoff before ending the session.
+
+**Step 04 implementation and validation evidence:** Added the smallest owner-local hybrid policy surface under `src/neat/hybrid/`. The new `src/neat/hybrid/neat.hybrid.types.ts` file defines `HybridFineTuneMode`, `HybridEvaluationPolicy`, `HybridScoreNetwork`, `EvaluateCandidateOptions`, and `HybridEvaluationResult`, with JSDoc that keeps `persistTrainedWeights: false` as the safe default. The new `src/neat/hybrid/neat.hybrid.ts` file exports `evaluateCandidate(network, dataset, options)` and keeps the three policy decisions explicit: `fineTune: 'never'` scores the live candidate without touching `fineTuneVector`, `fineTune: 'always'` delegates training to Phase 3's `fineTuneVector(...)` and scores a detached trained clone, and Lamarckian persistence applies the trained vector back to the original candidate only when `persistTrainedWeights === true`. The unresolved `conditional` mode now fails explicitly with a deterministic-ranking blocker instead of inventing an unstable policy path.
+
+- Changed implementation files: `src/neat/hybrid/neat.hybrid.ts`, `src/neat/hybrid/neat.hybrid.types.ts`
+- Focused command: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts`
+- Observed green result: `PASS` for `src/neat/hybrid/neat.hybrid.test.ts`; `1` suite passed and all `3` targeted `evaluateCandidate` policy tests passed for `never`, fitness-only `always`, and Lamarckian `always` behavior.
+- Policy decision: scoring is detached from persistence. Whenever `fineTune !== 'never'`, `evaluateCandidate` scores a trained clone built from the `trainedVector`; candidate mutation happens only after successful scoring and only when `persistTrainedWeights === true`.
+- Determinism decision: this step reuses the same-runtime ordered determinism already documented by `fineTuneVector(...)`; it does not add a new cross-runtime replay claim.
+- Conditional-policy decision: `conditional` remains intentionally blocked because Step 02 did not find a stable deterministic ranking or tie-break surface at the current per-genome evaluate boundary.
+- Scope guard: Step 04 stays Phase 4 scoped and owner-local to `src/neat/hybrid/`. It does not change `runFitnessEvaluation`, worker result assignment, Lamarckian persistence on the worker path, or Phase 5 docs and examples.
+- Remaining risks: Step 05 still needs to rerun the focused hybrid Jest slice, run `npx tsc --noEmit -p tsconfig.json` while treating the unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as external unless the failure surface moves into this seam, and run coverage guard for `src/neat/hybrid/neat.hybrid.ts` and `src/neat/hybrid/neat.hybrid.types.ts`.
+
+**Step 05 validation handoff:** Treat `src/neat/hybrid/neat.hybrid.ts` and `src/neat/hybrid/neat.hybrid.types.ts` as the touched source boundary and `src/neat/hybrid/neat.hybrid.test.ts` as the owner-local behavior slice. Re-run the focused hybrid-policy Jest command first, then run `npx tsc --noEmit -p tsconfig.json`, then run coverage guard on both touched `src/` files. If the focused slice fails inside the policy-routing or Lamarckian-persistence path, route back to Step 04. If coverage is missing for the new helper or types file, route back to Step 03 only for the smallest owner-local test additions.
+
+#### Step 05: Validate hybrid-policy gates [DONE]
+
+```yaml
+phase: 4
+step: 5
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-validation-runner.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 06 — Curate hybrid-policy docs'
+skills:
+  - 'green-validation-gates'
+  - 'coverage-guard'
+  - 'hybrid-training-interop'
+specialists:
+  - 'Coverage Guard'
+  - 'Determinism Scout'
+validation:
+  - 'Focused policy-behavior tests pass, TypeScript validation passes or the pre-existing ONNX baseline is explicitly confirmed unchanged, and coverage guard passes at 100/100/100/100 for every touched src file.'
+```
+
+**User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
+
+**Step objective:** Prove the Phase 4 implementation satisfies the three policy contracts with focused validation before documentation or phase closure.
+
+**Context the agent must know:**
+
+- Validate only the Phase 4 policy surface and directly touched files.
+- Primary behavior gates: `never` leaves candidates untouched, `always` fitness-only returns trained fitness without persistence, and Lamarckian persistence applies trained weights only on `persistTrainedWeights: true`.
+- If `src/` files changed, coverage guard at `100/100/100/100` is required for every touched source file.
+- The unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` remains the recorded external baseline unless the failure surface moves into this seam.
+- Failed validation routes back to the smallest prior step that can repair the active seam.
+
+**Execution steps:**
+
+1. Read the Step 04 changed-file summary and expected validation commands.
+2. Rerun the focused policy-behavior Jest slice.
+3. Run `npx tsc --noEmit -p tsconfig.json` after the focused slice is green.
+4. Run coverage guard for every touched `src/` file.
+5. Update this plan with pass or fail evidence and reroute failures to Step 03 or Step 04 as appropriate.
+
+**Stop conditions:**
+
+- Done: focused tests, TypeScript validation, and required coverage gates pass.
+- Blocked: a validation command cannot run or a pre-existing TypeScript baseline still blocks repo-wide validation.
+- Route back: behavior failures return to Step 04; missing or insufficient owner-local coverage returns to Step 03.
+
+**Required validation:** Command evidence for the focused test slice, `npx tsc --noEmit -p tsconfig.json`, and coverage guard on touched `src/` files.
+
+**Plan update requirement:** Update this plan with validation evidence, reroute decisions if any, and the Step 06 documentation handoff before ending the session.
+
+**Step 05 validation evidence and reroute:** Re-ran the focused hybrid-policy slice with `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts`. The Phase 4 behavior gate stayed green: `PASS` for `src/neat/hybrid/neat.hybrid.test.ts`, `1` suite passed, and all `3` targeted `evaluateCandidate` policy tests passed for `never`, fitness-only `always`, and Lamarckian `always` behavior.
+
+Repo-wide TypeScript validation still does not clear, but the failure surface remains unchanged. `npx tsc --noEmit -p tsconfig.json` failed only at the recorded external ONNX baseline `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` with `TS2345`, because `standardDomainImports[0]!.version` can be `undefined`. No new TypeScript failure appeared inside the Phase 4 hybrid-policy seam, so this rerun treats the ONNX error as external baseline context rather than a Phase 4 blocker.
+
+Coverage guard on the touched `src/` files used the owner-local hybrid suite: `npx jest --config=jest.config.mjs --no-cache --coverage --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts --collectCoverageFrom='src/neat/hybrid/neat.hybrid.ts' --collectCoverageFrom='src/neat/hybrid/neat.hybrid.types.ts' --coverageReporters=text --coverageReporters=json-summary`. `src/neat/hybrid/neat.hybrid.types.ts` was not counted by Jest coverage because it is a type-only file with no coverable runtime statements. `src/neat/hybrid/neat.hybrid.ts` failed the guard at `91.3` statements, `75` branches, `100` functions, and `91.3` lines with uncovered lines `50` and `94`. Those gaps map to the explicit `conditional` rejection path and the missing-`fineTuneOptions` guard-rail path, so the validation reroute goes back to Step 03 for the smallest owner-local test additions before Step 05 is rerun.
+
+- Step 05 gate decision: do not advance to Step 06 yet.
+- Exact next orchestrator: `03-red-testing`
+- Updated Step 05 rerun handoff: add the smallest owner-local follow-up cases in `src/neat/hybrid/neat.hybrid.test.ts` for (1) `fineTune: 'conditional'` rejecting with the deterministic-ranking blocker and (2) `fineTune !== 'never'` without `fineTuneOptions` rejecting before training runs. After that Step 03 follow-up, rerun the same Step 05 sequence: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts`, `npx tsc --noEmit -p tsconfig.json`, and the focused coverage command above.
+- Tracker validation: `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` passed with `0` errors and `0` warnings after this Step 05 tracker refresh.
+- Scope guard: this validation pass stayed inside the Phase 4 hybrid-policy seam only; no production code, worker-path behavior, Phase 5 docs, or ONNX fixes changed.
+
+**Step 03 owner-local red follow-up after the Step 05 coverage reroute:** Added the two smallest guard-rail tests to `src/neat/hybrid/neat.hybrid.test.ts` and kept the follow-up test-only. One case requests `fineTune: 'conditional'` with valid `fineTuneOptions` and locks the explicit deterministic-ranking blocker. The other requests `fineTune: 'always'` without `fineTuneOptions` and locks the missing-options rejection before training runs. No production code, worker-path behavior, Phase 5 docs, or ONNX fixes changed.
+
+- Changed test file: `src/neat/hybrid/neat.hybrid.test.ts`
+- Focused behavior follow-up: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts` passed with `1` suite and all `5` targeted `evaluateCandidate` tests green.
+- Focused coverage follow-up: `npx jest --config=jest.config.mjs --no-cache --coverage --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts --collectCoverageFrom='src/neat/hybrid/neat.hybrid.ts' --coverageReporters=text --coverageReporters=json-summary` passed with `src/neat/hybrid/neat.hybrid.ts` at `100/100/100/100`.
+- Updated Step 05 rerun handoff: call `05-green-testing` next. Re-run `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts`, then `npx tsc --noEmit -p tsconfig.json` while treating the unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as the external baseline unless the failure surface moves into `src/neat/hybrid/`. The owner-local hybrid coverage rerun is already green; reopen Step 03 only if a new hybrid coverage gap appears.
+- Scope guard: this follow-up stayed inside the Phase 4 hybrid-policy seam only; no production code, worker-path behavior, Phase 5 docs, or ONNX fixes changed.
+
+**Step 05 rerun after the Step 03 coverage follow-up from current repo state:** Re-ran the required focused hybrid-policy slice with `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts`. The Phase 4 behavior gate stayed green again: `PASS` for `src/neat/hybrid/neat.hybrid.test.ts`, `1` suite passed, and all `5` targeted `evaluateCandidate` tests passed for `never`, the explicit `conditional` blocker, the missing-`fineTuneOptions` guard, fitness-only `always`, and Lamarckian `always` behavior.
+
+Re-ran `npx tsc --noEmit -p tsconfig.json`. Repo-wide TypeScript still does not clear, but the failure surface remains unchanged: the only error is the recorded external ONNX baseline at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` with `TS2345`, because `standardDomainImports[0]!.version` can be `undefined`. No new TypeScript failure appeared inside `src/neat/hybrid/`, so this rerun treats the ONNX error as external baseline context rather than a Phase 4 blocker.
+
+Re-ran the focused coverage guard with `npx jest --config=jest.config.mjs --no-cache --coverage --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts --collectCoverageFrom='src/neat/hybrid/neat.hybrid.ts' --collectCoverageFrom='src/neat/hybrid/neat.hybrid.types.ts' --coverageReporters=text --coverageReporters=json-summary`. The text report and `coverage/coverage-summary.json` count only the runtime-bearing `src/neat/hybrid/neat.hybrid.ts` file, which now passes at `100/100/100/100` with `23/23` lines, `23/23` statements, `4/4` functions, and `8/8` branches covered. `src/neat/hybrid/neat.hybrid.types.ts` remains a type-only file with no runtime statements, so Jest does not count it in coverage totals.
+
+- Tracker validation: `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` passed with `0` errors and `0` warnings after this Step 05 rerun tracker refresh.
+- Step 05 gate decision: close Step 05 and hand off to Step 06 documentation.
+- Exact next orchestrator: `06-documenting`
+- Scope guard: this rerun stayed inside the Phase 4 hybrid-policy seam only; no production code, worker-path behavior, Phase 5 docs, or ONNX fixes changed.
+
+#### Step 06: Curate hybrid-policy docs [DONE]
+
+```yaml
+phase: 4
+step: 6
+agent: '06-documenting'
+agent_file: '.github/agents/06-educational-docs-curator.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 07 — Log Phase 4 closure or reroute'
+skills:
+  - 'educational-docs'
+  - 'docs-academic-citation-audit'
+  - 'hybrid-training-interop'
+specialists:
+  - 'Docs Scout'
+validation:
+  - 'Source-first docs for all exported policy symbols are present, generated docs are refreshed if JSDoc inputs changed, and no Phase 5 example constructs or Lamarckian-is-default language appears.'
+```
+
+**User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
+
+**Step objective:** Keep the policy surface teachable and synchronized with generated docs without turning Phase 4 into the broader Phase 5 documentation closure.
+
+**Context the agent must know:**
+
+- Documentation scope is limited to `HybridEvaluationPolicy`, the policy evaluation helper, the three policy choices (`never`, `always`, `conditional`), the `persistTrainedWeights: false` safe-default note, and the same-runtime determinism wording for the conditional path.
+- Phase 5 content (Lamarckian deep-dive, reproducibility ladder, toy-dataset example) remains out of scope.
+- Generated `src/**/README.md` files and `docs/examples/**` outputs are read-only; update source JSDoc and run generation when needed.
+- Public docs should be atemporal: no tracker phases, roadmap chronology, or chat-only context.
+
+**Execution steps:**
+
+1. Read Step 04 changed public surfaces and Step 05 validation evidence.
+2. Improve only the source-owned JSDoc or nearby handwritten docs required by the new policy surface.
+3. Run `npm run docs` if JSDoc or generated-doc inputs changed; otherwise record a manual no-docs-needed rationale.
+4. Verify that no generated README or published example output was hand-edited as a shortcut.
+5. Update this plan with documentation evidence and any residual docs risk before ending the session.
+
+**Stop conditions:**
+
+- Done: required source docs are aligned and docs generation either passes or is explicitly not needed.
+- Blocked: public naming or determinism wording is unstable enough that docs would mislead downstream consumers.
+- Route back: documentation reveals implementation drift in the policy contract; route to Step 04 or Step 05 rather than widening docs.
+
+**Required validation:** `npm run docs` when source JSDoc or generated-doc inputs changed, or a manual no-docs-needed record when implementation introduced no doc-facing surface.
+
+**Plan update requirement:** Update this plan with documentation changes, validation evidence, residual gaps, and the Step 07 closure handoff before ending the session.
+
+**Step 06 documentation changes and validation evidence:** Reviewed source-owned JSDoc for `HybridFineTuneMode`, `HybridEvaluationPolicy`, `HybridScoreNetwork`, `EvaluateCandidateOptions`, `HybridEvaluationResult` in `src/neat/hybrid/neat.hybrid.types.ts` and for `evaluateCandidate` in `src/neat/hybrid/neat.hybrid.ts`. The generated `src/neat/hybrid/README.md` did not yet exist because this was the first `npm run docs` pass for the new hybrid module. Source JSDoc was improved as follows, keeping all changes Phase 4 scoped and atemporal:
+
+- `HybridFineTuneMode`: expanded description to name all three modes explicitly and clarify that `conditional` requires a deterministic ranking or tie-break contract at the evaluation boundary and throws at runtime until that surface exists.
+- `HybridEvaluationResult`: added a downstream-use note listing typical caller patterns — forwarding fitness to the NEAT population score, comparing trained weights against the original candidate to measure fine-tune delta, checkpointing the trained snapshot, or discarding the result when only fitness matters.
+- `evaluateCandidate`: added an `@example` fenced code block showing fitness-only (persistTrainedWeights: false) and Lamarckian (persistTrainedWeights: true) usage patterns with a minimal XOR-shaped dataset and an explicit seed.
+
+- Changed source files: `src/neat/hybrid/neat.hybrid.types.ts`, `src/neat/hybrid/neat.hybrid.ts`
+- Validation command: `npm run docs` — completed successfully with `HTML docs generated.`
+- Generated output created: `src/neat/hybrid/README.md` now includes `HybridFineTuneMode`, `HybridEvaluationPolicy`, `HybridScoreNetwork`, `EvaluateCandidateOptions`, `HybridEvaluationResult`, and `evaluateCandidate` with the correct policy wording, `persistTrainedWeights: false` safe-default note, `conditional` ranking-requirement note, downstream-use note, and the full `@example` block.
+- Focused behavior rerun: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts` passed with `1` suite and all `5` targeted tests green.
+- Source-of-truth guard: no generated `src/**/README.md` file or `docs/examples/**` output was hand-edited as a shortcut. The only manual edits were to the two source JSDoc files, and the README was created by `npm run docs`.
+- Scope guard: no Phase 5 example constructs, Lamarckian deep-dive, reproducibility ladder, or tracker/roadmap language was introduced in public docs.
+- Citation note: no external citation required; the policy surface is repo-owned.
+- Tracker validation: `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` passed with `0` errors and `0` warnings after this Step 06 tracker update.
+- Residual docs risk: none within the Phase 4 hybrid-policy seam. Step 07 should decide Phase 4 closure against the preserved Phase 4 acceptance evidence and the unchanged external ONNX TypeScript baseline.
+
+#### Step 07: Log Phase 4 closure or reroute [DONE]
+
+```yaml
+phase: 4
+step: 7
+agent: '07-logging'
+agent_file: '.github/agents/07-session-log-archivist.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Phase 5 Step 01 — Plan the docs-and-example closure'
+skills:
+  - 'tracker-handoff'
+  - 'plan-sync-validation'
+  - 'hybrid-training-interop'
+specialists:
+  - 'Plan Registration Auditor'
+validation:
+  - 'Manual tracker review confirms Phase 4 acceptance evidence, Lamarckian persistence is documented as explicit opt-in, and the refreshed Handoff query points to Phase 5 Step 01 before the next phase opens.'
+```
+
+**User instruction:** Start a fresh session, select `07-logging`, and paste this full step packet.
+
+**Step objective:** Close or reroute Phase 4 based on validated evidence, preserve the three-policy-decision split with Lamarckian as explicit opt-in only, and leave the tracker ready for Phase 5 docs-and-examples planning.
+
+**Context the agent must know:**
+
+- Phase 4 closes only when users can demonstrably choose fitness-only fine-tuning or Lamarckian persistence, and Lamarckian persistence is provably gated behind `persistTrainedWeights: true`.
+- Phase 5 should not open until the policy surface is stable, tested, and covered.
+- The overall lane remains active; do not archive this tracker unless the full hybrid-interoperability workstream is done.
+- Chat is not the source of truth; the tracker and the `Handoff query` must carry the next session.
+
+**Execution steps:**
+
+1. Read the Phase 4 Step 02-06 evidence and verify that no required validation is missing.
+2. Mark completed Phase 4 steps `[DONE]` or record the smallest reroute if evidence is incomplete.
+3. Record that the policy surface is now real and that Phase 5 docs closure can begin.
+4. Refresh the `Handoff query` to point either to Phase 5 Step 01 or to the smallest blocking reroute step.
+5. Run `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` after the tracker refresh.
+
+**Stop conditions:**
+
+- Done: Phase 4 evidence is compactly recorded, the next safe step is explicit, and the handoff query is current.
+- Blocked: validation, documentation, or policy ownership evidence is missing and cannot be reconstructed from the tracker.
+- Route back: missing red coverage routes to Step 03, implementation drift routes to Step 04, failed validation routes to Step 05, and doc drift routes to Step 06.
+
+**Required validation:** Manual tracker diff review confirming Phase 4 acceptance evidence, no implicit Lamarckian default, and a current next-step handoff.
+
+**Plan update requirement:** Update this plan with Phase 4 closure or reroute state, refreshed handoff query, and the next active step before ending the session.
+
+**Step 07 closure review and handoff evidence:** Step 07 reviewed the recorded Phase 4 evidence from Step 02 through Step 06 from current repo state only. Phase 4 can now close. The hybrid-policy seam satisfies the phase acceptance gate: Step 02 confirmed the `src/neat/hybrid/` owner boundary, the standalone `evaluateCandidate(...)` hook, dataset compatibility with `TrainingSample[]`, the worker-ordering constraint, and the explicit conditional-policy blocked note; Step 03 added owner-local tests for `never`, fitness-only `always`, Lamarckian opt-in `always`, and later the explicit `conditional` blocker plus missing-`fineTuneOptions` guard; Step 04 implemented `evaluateCandidate`, `HybridFineTuneMode`, `HybridEvaluationPolicy`, `EvaluateCandidateOptions`, and `HybridEvaluationResult` in `src/neat/hybrid/` while consuming Phase 3 `fineTuneVector(...)`; Step 05 revalidated the focused behavior slice with `1` suite and `5` tests green, confirmed the unchanged external ONNX `TS2345` as the only repo-wide TypeScript baseline failure, and passed coverage guard at `100/100/100/100` for `src/neat/hybrid/neat.hybrid.ts` while keeping `src/neat/hybrid/neat.hybrid.types.ts` as a type-only non-runtime coverage surface; and Step 06 improved source-first JSDoc and refreshed `src/neat/hybrid/README.md` via `npm run docs` without hand-editing generated output.
+
+- Phase 4 closure decision: close Phase 4. No reroute is required because the owner boundary, red coverage, implementation, focused validation, and generated-doc refresh are all durably recorded.
+- Policy decision: users can now choose three explicit policy states at the helper surface: no fine-tune with `fineTune: 'never'`, fitness-only fine-tune with `fineTune: 'always'` plus `persistTrainedWeights: false`, and Lamarckian persistence only on explicit opt-in with `fineTune: 'always'` plus `persistTrainedWeights: true`.
+- Conditional-policy decision: `fineTune: 'conditional'` remains intentionally blocked pending a deterministic ranking or tie-break surface at the evaluation boundary; Step 04 and Step 05 keep that blocker explicit instead of inventing unstable policy semantics.
+- Tracker state decision: keep the top-level tracker active in `plans/` as `[WIP]`; mark Phase 4 complete; activate Phase 5 as the single `[WIP]` phase; do not archive this tracker or create a same-boundary `.logs.md` file because the docs-and-examples phase is still real work.
+- Next safe step: activate `01-planning` for Phase 5 `Step 01 — Plan the docs-and-example closure`. Keep the next pass planning-only; do not widen into Phase 5 implementation, unrelated ONNX fixes, or worker-path policy extensions in this closure step.
+
+### Phase 5 — Docs and examples [WIP]
 
 **Phase objective:** Close the lane with source-first documentation and one small example so downstream consumers can understand the determinism scope, isolation semantics, and persistence policy without inventing private conventions.
 
@@ -1306,19 +2139,19 @@ validation:
 ```yaml
 phase: 5
 step: 1
-agent: "01-planning"
-agent_file: ".github/agents/01-planning-architect.agent.md"
-status: "[PLANNED]"
-mode: "fresh-session"
-source_of_truth: "plans/Evolution_Training_Interoperability_Contracts.md"
+agent: '01-planning'
+agent_file: '.github/agents/01-planning-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
 copy_paste: true
-next_step: "Step 02 — Planner-defined by this step"
+next_step: 'Step 02 — Research doc-and-example scope'
 skills:
-  - "educational-docs"
+  - 'educational-docs'
 specialists:
-  - "Docs Scout"
+  - 'Docs Scout'
 validation:
-  - "Manual tracker check that the determinism wording, Lamarckian explanation, and example-validation expectations are preserved before Step 02-07 packets are authored."
+  - 'Manual tracker check that the determinism wording, Lamarckian explanation, and example-validation expectations are preserved before Step 02-07 packets are authored.'
 ```
 
 **User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
@@ -1348,6 +2181,330 @@ validation:
 **Required validation:** Manual diff review confirming that every former Step 5 detail now lives in Phase 5 and that the generated-doc refresh expectation remains explicit.
 
 **Plan update requirement:** Update this plan with the new Step 02-07 packets, any skipped-step rationale, validation evidence, and the next active step before ending the session.
+
+**Planning decisions and validation evidence:** Step 01 preserved the Phase 5 contract, acceptance rule, and focused validation from the current plan text. Phases 1 through 4 are all [DONE] and supply the stable public API surfaces that Phase 5 must document clearly for downstream consumers. The unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` remains the recorded external baseline and is not a Phase 5 blocker. `plans/README.md` and `plans/Roadmap.md` confirm this lane is the last non-chat foundation handoff before the dependency-gated NEATchat follow-up; no roadmap conflict exists for a documentation-and-example closure pass.
+
+- Value-gate decision: Research (Step 02), Authoring (Step 04), and Green Validation (Step 05) are real value gates. Session Logging and Lane Closure (Step 07) is a real gate because it must compress, archive, and update the plans index.
+- Skipped-step decision: Step 03 (Red Testing) and Step 06 (Documentation) are explicit skips for Phase 5.
+  - Step 03 skip: Phase 5 introduces no behavioral change. The acceptance gate — example aligns with the real public API and `npm run docs` succeeds — is a green-validation concern confirmed in Step 05. No failing test is an honest gate for a documentation-only closure pass.
+  - Step 06 skip: the entire phase is a documentation pass. Step 04 is the authoring step and Step 05 is the validation gate. A separate documentation step would be a redundant no-op in this phase structure.
+- Conditional policy carry-forward: `fineTune: 'conditional'` remains intentionally blocked pending deterministic ranking semantics as decided in Phase 4. Phase 5 must document that blocked state honestly without implementing it or pretending it is resolved.
+- Example placement: Step 02 research should confirm whether the cohesive workflow example belongs in a JSDoc `@example` block on an existing public-facing function or in a small standalone `examples/` file following the existing examples naming convention. Given that Phase 3 and Phase 4 already have `@example` blocks on individual helper functions, Phase 5 likely needs a cohesive end-to-end snippet (export → fine-tune → compare or import) either as a module-level overview comment on the hybrid boundary or as a small examples file if one proves more readable.
+- Next active step: Phase 5 Step 02 — Research doc-and-example scope.
+
+#### Step 02: Research doc-and-example scope [DONE]
+
+```yaml
+phase: 5
+step: 2
+agent: '02-researching'
+agent_file: '.github/agents/02-research-coordinator.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 04 — Author doc improvements and example'
+skills:
+  - 'educational-docs'
+  - 'docs-academic-citation-audit'
+specialists:
+  - 'Docs Scout'
+validation:
+  - 'Read-only research brief names which source JSDoc surfaces need the Lamarckian explanation, determinism ladder, and recommended-defaults language, confirms example placement, and identifies any citation gap.'
+```
+
+**User instruction:** Start a fresh session, select `02-researching`, and paste this full step packet.
+
+**Step objective:** Gather the smallest read-only evidence needed to scope the Phase 5 doc-authoring pass without widening into new API surfaces, behavioral changes, or unrelated ONNX fixes.
+
+**Context the agent must know:**
+
+- Phase 5 introduces no behavioral change. The only work is improved source JSDoc plus one cohesive toy-dataset workflow example.
+- The three main public API boundaries from this lane are: `src/architecture/network/serialize/` (parameter vector), `src/architecture/network/training/` (isolation helper), and `src/neat/hybrid/` (evaluation policy).
+- The conditional policy blocker (`fineTune: 'conditional'`) must appear in documentation honestly, not as an undocumented omission.
+- Carry the unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as external baseline context.
+
+**Execution steps:**
+
+1. Read `plans/README.md`, `plans/Roadmap.md`, this Phase 5 section, and the current generated `src/neat/hybrid/README.md`, `src/architecture/network/serialize/README.md`, and `src/architecture/network/training/README.md` for documentation coverage gaps.
+2. Delegate a focused read-only packet to `Docs Scout` to identify: which source JSDoc surfaces need the Lamarckian explanation, determinism ladder wording, and recommended-defaults language, and whether any of those explanations are missing or misleading in the current generated READMEs.
+3. Confirm the example placement decision: whether the cohesive workflow example belongs in a new `@example` JSDoc block on an existing public-facing function, in a synthesized module-level overview comment, or in a standalone `examples/` file following the existing examples naming convention.
+4. Record any citation or attribution gaps for Lamarckian evolution semantics that Phase 5 should address.
+5. Record the exact scope for Step 04 before ending the session.
+
+**Stop conditions:**
+
+- Done: research brief names the JSDoc surfaces to improve, confirms example placement, and records any citation expectations.
+- Blocked: source JSDoc surfaces or generated README outputs are inaccessible or structurally inconsistent.
+- Route back: research shows a named Phase 5 documentation surface requires an upstream API change; update the tracker and return to planning instead of widening implementation.
+
+**Required validation:** Manual evidence review confirming the research remains read-only and boundary-local.
+
+**Plan update requirement:** Update this plan with the research brief, example placement decision, citation notes, and the Step 04 authoring handoff before ending the session.
+
+**Research brief and validation evidence (Step 02 — [DONE]):**
+
+- **Roadmap and README alignment:** `plans/README.md` and `plans/Roadmap.md` still align this lane as the next non-chat foundation handoff after the archived ONNX baseline, with no new roadmap conflict for a documentation-only closure pass. Phases 1–4 are each [DONE] and supply the stable public API surfaces that Phase 5 must document.
+
+- **Generated README current state:**
+  - `src/neat/hybrid/README.md` — Uses "Lamarckian" in passing (safe-default note, example comment) but has no dedicated explanation of what Lamarckian means in this library, no determinism ladder, and no recommended-defaults progression. The `evaluateCandidate` JSDoc has a combined fitness-only-plus-Lamarckian `@example` block but not a cohesive end-to-end workflow example (export → fine-tune → compare → decide).
+  - `src/architecture/network/serialize/README.md` — Contains "does not claim cross-runtime exact replay" on `ParameterLayoutV1` and `ParameterVector` but has no Lamarckian mention, no determinism ladder, and no recommended defaults. That boundary is well-documented for its own contracts.
+  - `src/architecture/network/training/README.md` — Contains "does not claim cross-runtime exact replay" on `fineTuneVector` but has no Lamarckian mention, no determinism ladder, and no recommended defaults. That boundary is well-documented for its own contracts.
+
+- **Doc gap location decision:** The three Phase 5 required items — Lamarckian explanation, determinism ladder, and recommended defaults — are most naturally cohesive at the **hybrid boundary** (`src/neat/hybrid/neat.hybrid.ts`) because the hybrid policy is the highest-level surface that unifies all three lane concerns. The correct vehicle is a **module-level JSDoc overview paragraph** at the top of `neat.hybrid.ts`, above the `evaluateCandidate` function, that teaches the conceptual model before the API surface. `HybridEvaluationPolicy` in `neat.hybrid.types.ts` should also receive a tighter recommended-defaults progression note in its existing JSDoc.
+
+- **Phase 5 item placement:**
+  1. **Lamarckian explanation** — In the `neat.hybrid.ts` module-level JSDoc overview: define Lamarckian as trained weights propagating back to the parent candidate (`persistTrainedWeights: true`). Note why the default is fitness-only (safer, preserves evaluation–population separation) and distinguish it from the Baldwin effect (phenotypic improvement without genotypic change).
+  2. **Determinism ladder** — In the same `neat.hybrid.ts` module-level overview: three rungs — (a) same-runtime ordered deterministic when topology, dataset order, training settings, and explicit `seed` all match; (b) best-effort reproducible when no explicit `seed` is provided; (c) cross-runtime exact replay is out of scope for this lane.
+  3. **Recommended defaults** — In both the `neat.hybrid.ts` module-level overview and the `HybridEvaluationPolicy` JSDoc in `neat.hybrid.types.ts`: start with `fineTune: 'never'`, switch to `fineTune: 'always'` with `persistTrainedWeights: false` for exploratory scoring, and opt into `persistTrainedWeights: true` only when explicit Lamarckian persistence is intentional.
+  4. **Conditional policy blocker** — Already in existing JSDoc, but should be surfaced in the module-level overview as well so it is visible before the API table.
+
+- **Example placement decision:** The cohesive toy-dataset workflow example (export parameter vector → fine-tune → compare trained vs. original → decide whether to import) belongs as a **module-level `@example` block in `src/neat/hybrid/neat.hybrid.ts`** rather than as a standalone `examples/` folder entry. Reason: none of the three new lane surfaces (`toParameterVector`, `fromParameterVector`, `fineTuneVector`, `evaluateCandidate`, and their types) are currently re-exported from `src/neataptic.ts`. A standalone `examples/hybridTraining/` file that must use internal import paths would not satisfy the "real public API" criterion from the Phase 5 contract, and adding re-exports to `neataptic.ts` is an API surface extension that needs a coverage guard pass and is outside the documentation-only scope. A JSDoc `@example` block is honest about its module path, feeds the generated README, and stays source-owned.
+
+- **Public API re-export gap (decision: note and defer):** `toParameterVector`, `fromParameterVector`, `createParameterLayoutV1`, `ParameterVector`, `ParameterLayoutV1`, `ParameterLayoutEntry`, `fineTuneVector`, `FineTuneOptions`, `FineTuneResult`, `evaluateCandidate`, `HybridFineTuneMode`, `HybridEvaluationPolicy`, `HybridScoreNetwork`, `EvaluateCandidateOptions`, and `HybridEvaluationResult` are not re-exported from `src/neataptic.ts`. Phase 5 Step 04 should include adding these re-exports as a bounded scope extension — it is safe for a documentation closure phase because the underlying implementations already exist and are tested. The re-export addition must be followed by coverage guard on `src/neataptic.ts` after the change.
+
+- **Citation gap:** A Wikipedia link to [Lamarckism](https://en.wikipedia.org/wiki/Lamarckism) is recommended in the module-level overview alongside the Baldwin effect distinction. No peer-reviewed citation is required because "Lamarckian fine-tuning" in neuroevolution is well-established vocabulary and the implementation semantics are repo-owned. The `educational-docs` skill prefers external links for grounding; a short Wikipedia attribution satisfies that requirement here.
+
+- **ONNX `TS2345` baseline:** Unchanged at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135`. Not a Phase 5 blocker.
+
+**Step 04 authoring handoff:** Improve source JSDoc for the three Phase 5 required items at the hybrid boundary and add bounded re-exports to `src/neataptic.ts`. Specific scope:
+
+1. Add a module-level JSDoc overview paragraph in `src/neat/hybrid/neat.hybrid.ts` covering: (a) Lamarckian definition plus Baldwin-effect distinction plus Wikipedia link, (b) three-rung determinism ladder, (c) recommended-defaults progression (`never` → fitness-only `always` → Lamarckian `always`), (d) conditional blocker note. Include a cohesive `@example` block covering the full workflow: export vector, fine-tune, compare, and decide whether to import back.
+2. Add a recommended-defaults progression note to the `HybridEvaluationPolicy` JSDoc in `src/neat/hybrid/neat.hybrid.types.ts`.
+3. Add re-exports for all three lane boundaries to `src/neataptic.ts`.
+4. Run `npm run docs` after all source JSDoc changes and confirm generated READMEs are updated.
+5. Run coverage guard on `src/neataptic.ts` if touched.
+   Do not introduce behavioral changes, new training helpers, or Phase 7/NGE content.
+
+#### Step 03: SKIP — No behavioral change in Phase 5 [DONE]
+
+```yaml
+phase: 5
+step: 3
+status: '[DONE]'
+skip_reason: 'Phase 5 introduces no behavioral change. The acceptance gate — example aligns with the real public API and npm run docs succeeds — is a green-validation concern confirmed in Step 05. No failing test is an honest gate for a documentation-only closure pass.'
+```
+
+No red test is authored in Phase 5. The green acceptance gate is Step 05.
+
+#### Step 04: Author doc improvements and example [DONE]
+
+```yaml
+phase: 5
+step: 4
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementation-architect.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 05 — Validate doc-and-example gates'
+skills:
+  - 'educational-docs'
+  - 'docs-academic-citation-audit'
+  - 'hybrid-training-interop'
+specialists:
+  - 'Docs Scout'
+validation:
+  - 'All three Phase 5 contract items are present: Lamarckian explanation, determinism ladder, recommended defaults, and one cohesive toy-dataset example. Generated docs are refreshed. No behavioral change is introduced.'
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Author the three required Phase 5 documentation items across the relevant source JSDoc surfaces — Lamarckian explanation, determinism ladder, and recommended defaults — plus one cohesive toy-dataset workflow example at the location confirmed by Step 02.
+
+**Context the agent must know:**
+
+- This step introduces no behavioral change. All edits are source-owned JSDoc improvements or `@example` blocks.
+- The three Phase 5 items to deliver:
+  1. **Lamarckian explanation**: what "Lamarckian" means here — trained weights propagating back to the parent candidate — and why the default is fitness-only (no persistence) rather than Lamarckian.
+  2. **Determinism ladder**: the three rungs this lane uses — (a) same-runtime ordered deterministic when topology, dataset order, training settings, and seed match, (b) best-effort reproducible when no explicit seed is provided, and (c) cross-runtime exact replay is out of scope.
+  3. **Recommended defaults**: start with `fineTune: 'never'`, switch to `fineTune: 'always'` with `persistTrainedWeights: false` for exploratory scoring, and opt in to `persistTrainedWeights: true` only for explicit Lamarckian persistence.
+- The toy-dataset example must use real public API, cover the full workflow (export parameter vector, call `fineTuneVector`, compare or import), and use a tiny XOR-shaped or similar dataset without importing a large training framework.
+- The conditional policy blocker (`fineTune: 'conditional'`) must appear in documentation as an honest note, not as an undocumented omission.
+- After any source JSDoc change, run `npm run docs` to refresh generated READMEs. Do not hand-edit generated README files.
+
+**Execution steps:**
+
+1. Read the Step 02 research brief, the Phase 5 contract, and the current source JSDoc for the three main boundaries.
+2. Add or improve JSDoc for the Lamarckian explanation, determinism ladder, and recommended defaults at the source surfaces confirmed by Step 02.
+3. Add the cohesive toy-dataset workflow example at the location confirmed by Step 02.
+4. Add any missing academic citation for Lamarckian evolution semantics if Step 02 identified a citation gap.
+5. Run `npm run docs` after all source JSDoc changes and confirm the generated READMEs are updated without hand-editing.
+6. Update this plan with changed files, validation evidence, and the Step 05 handoff before ending the session.
+
+**Stop conditions:**
+
+- Done: all three Phase 5 contract items are documented, the example is present at the confirmed location, and `npm run docs` passes.
+- Blocked: a required source surface cannot be improved without a behavioral API change.
+- Route back: example placement requires a new `examples/` file structure that needs a prior architecture decision; update the plan and return to Step 02.
+
+**Required validation:** `npm run docs` passes after all JSDoc changes, and no generated README or published example page is hand-edited as a shortcut.
+
+**Plan update requirement:** Update this plan with changed source files, doc items confirmed, `npm run docs` result, and the Step 05 handoff before ending the session.
+
+**Step 04 implementation and validation evidence:** Added the Phase 5 closure docs at the hybrid boundary and the bounded public facade gap needed to make the example honest. `src/neat/hybrid/neat.hybrid.ts` now opens with a module-level overview that explains Lamarckian persistence versus the Baldwin effect with Wikipedia grounding, states the three-rung determinism ladder, recommends the default progression `fineTune: 'never'` -> `fineTune: 'always'` fitness-only -> explicit Lamarckian opt-in, surfaces the `conditional` blocker before the API table, and includes one cohesive XOR-shaped public API example that uses `toParameterVector`, `fineTuneVector`, `fromParameterVector`, and `evaluateCandidate` from `neataptic`. `src/neat/hybrid/neat.hybrid.types.ts` now adds the same recommended-defaults progression to `HybridEvaluationPolicy`.
+
+`src/neataptic.ts` now re-exports the example-facing lane surfaces and types: `toParameterVector`, `fromParameterVector`, `ParameterLayoutEntry`, `ParameterLayoutV1`, `ParameterVector`, `fineTuneVector`, `FineTuneOptions`, `FineTuneResult`, `evaluateCandidate`, `HybridFineTuneMode`, `HybridEvaluationPolicy`, `HybridScoreNetwork`, `EvaluateCandidateOptions`, and `HybridEvaluationResult`. `createParameterLayoutV1` remains on the serialize boundary because the public workflow example does not require it and Step 04 stayed bounded to the docs-and-example closure surface rather than widening the root facade beyond the honest example path.
+
+- Changed source files: `src/neataptic.ts`, `src/neat/hybrid/neat.hybrid.ts`, `src/neat/hybrid/neat.hybrid.types.ts`
+- Generated output refreshed by `npm run docs`: `src/neat/hybrid/README.md`
+- Validation command: `npm run docs` completed successfully; the docs pass regenerated per-folder READMEs and progressed into the HTML render stage without reporting a Phase 5 failure.
+- Narrow diagnostics: `get_errors` reported no errors in `src/neataptic.ts`, `src/neat/hybrid/neat.hybrid.ts`, or `src/neat/hybrid/neat.hybrid.types.ts` after the edit.
+- Source-of-truth guard: no generated README or published example page was hand-edited as a shortcut.
+- Residual risks: Step 05 still needs to confirm the generated hybrid README carries all three Phase 5 contract items plus the `conditional` blocker note, that the example-facing root exports remain aligned with `src/neataptic.ts`, and that the existing root-facade coverage slice still covers the touched entrypoint. The unchanged ONNX `TS2345` baseline at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` remains external context.
+
+**Step 05 validation handoff:** Treat `src/neataptic.ts`, `src/neat/hybrid/neat.hybrid.ts`, and `src/neat/hybrid/neat.hybrid.types.ts` as the touched source boundary and `src/neat/hybrid/README.md` as the generated output to inspect. Confirm the example imports are real from `src/neataptic.ts`, rerun `npm run docs` only if output drift is suspected, inspect the generated README for the Lamarckian explanation, the determinism ladder, the recommended defaults, and the `conditional` blocker note, and run the existing root-facade coverage slice against `src/neataptic.ts` because Step 04 added public re-exports there: `npx jest --config=jest.config.mjs --no-cache --coverage --runTestsByPath src/neataptic.test.ts --collectCoverageFrom='src/neataptic.ts' --coverageReporters=text --coverageReporters=json-summary`. If the example references a missing symbol or the generated README drops one of the Phase 5 items, route back to Step 04. If the root-facade coverage slice misses the new export lines, route back to Step 04 only for the smallest root export alignment or test-slice change.
+
+#### Step 05: Validate doc-and-example gates [DONE]
+
+```yaml
+phase: 5
+step: 5
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-validation-runner.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Step 07 — Log Phase 5 closure and archive lane'
+skills:
+  - 'green-validation-gates'
+  - 'coverage-guard'
+  - 'educational-docs'
+  - 'hybrid-training-interop'
+specialists:
+  - 'Docs Scout'
+validation:
+  - 'The generated hybrid README contains the Lamarckian explanation, Baldwin-effect distinction with Wikipedia grounding, the determinism ladder, recommended defaults, the conditional blocker, and a cohesive public API example; the focused hybrid Jest slice passes; npm run docs passes; TypeScript shows only the unchanged ONNX baseline; and focused coverage stays at 100 for src/neat/hybrid/neat.hybrid.ts and src/neataptic.ts.'
+```
+
+**User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
+
+**Step objective:** Confirm the Phase 5 documentation closure satisfies its acceptance gates without widening scope: the example uses real public API, the generated hybrid README contains every required Phase 5 item, docs regeneration still succeeds, the touched runtime file under `src/neat/hybrid/` keeps full coverage, and the touched root facade under `src/neataptic.ts` keeps full coverage after the new re-exports.
+
+**Context the agent must know:**
+
+- Phase 5 introduces no intended behavioral change, but Step 04 touched `src/neataptic.ts`, `src/neat/hybrid/neat.hybrid.ts`, and `src/neat/hybrid/neat.hybrid.types.ts`, so Step 05 still needs one focused hybrid behavior rerun plus owner-local coverage gates on the touched runtime files.
+- The acceptance gates are: (1) example aligns with the real public API — imports exist, function signatures match, no imaginary helpers; (2) `src/neat/hybrid/README.md` includes the Lamarckian explanation, Baldwin-effect distinction with Wikipedia grounding, the determinism ladder, recommended defaults, the conditional blocker or ranking requirement, and the cohesive public API toy example; (3) `npm run docs` passes and no generated README or published example page is hand-edited as a shortcut; (4) `src/neat/hybrid/neat.hybrid.ts` stays at `100/100/100/100`; and (5) `src/neataptic.ts` stays at `100/100/100/100` after the new re-exports.
+- Treat `src/neat/hybrid/neat.hybrid.types.ts` as a type-only non-runtime coverage surface, consistent with the earlier Phase 4 Step 05 ruling.
+- Carry the unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as external baseline context unless a new failure appears inside the Phase 5 surfaces.
+
+**Execution steps:**
+
+1. Read the Step 04 changed-file summary and confirm the required Phase 5 contract items.
+2. Verify the example imports and function calls against the real root facade by checking that the referenced symbols are exported from `src/neataptic.ts`.
+3. Re-run the focused hybrid behavior slice: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts`.
+4. Re-run `npm run docs` to confirm generated output stays synchronized after the source-owned JSDoc pass.
+5. Run `npx tsc --noEmit -p tsconfig.json`, treating the unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as external only if no new failure appears in the Phase 5 surfaces.
+6. Run focused coverage on `src/neataptic.ts` via `src/neataptic.test.ts` and on `src/neat/hybrid/neat.hybrid.ts` via `src/neat/hybrid/neat.hybrid.test.ts`.
+7. Update this plan with pass or fail evidence and route failures to Step 04 or Step 02 as appropriate before ending the session.
+
+**Stop conditions:**
+
+- Done: all acceptance gates pass and the plan is updated with validation evidence.
+- Blocked: `npm run docs` fails for a reason unrelated to Phase 5 source changes.
+- Route back: missing or incorrect exports, missing README closure items, failed hybrid behavior rerun, or focused coverage loss on `src/neataptic.ts` or `src/neat/hybrid/neat.hybrid.ts` returns to Step 04 for the smallest bounded follow-up. Return to Step 02 only if the Phase 5 requirement itself proves to need a different documented placement or public-contract framing than Step 04 assumed.
+
+**Required validation:** README content check, focused hybrid Jest rerun, `npm run docs`, `npx tsc --noEmit -p tsconfig.json`, API alignment check, source-of-truth guard for generated files, and focused coverage evidence for `src/neataptic.ts` plus `src/neat/hybrid/neat.hybrid.ts`.
+
+**Plan update requirement:** Update this plan with validation evidence, any reroute decision, and either the Step 07 lane-closure handoff or the smallest Step 04 or Step 02 recovery handoff before ending the session.
+
+**Step 05 validation evidence and reroute (current repo state):** Inspected the generated `src/neat/hybrid/README.md` and confirmed the Phase 5 closure items are present in generated output: the library-specific Lamarckian explanation at lines `8-10`, the Baldwin-effect distinction with Wikipedia grounding at lines `11-16`, the determinism ladder at lines `19-26`, the recommended-defaults progression at lines `29-35` and again in `HybridEvaluationPolicy` at lines `104-114`, the explicit `conditional` blocker and ranking requirement at lines `38-39`, `138-140`, and `176-178`, and a cohesive public API toy example using `Network`, `toParameterVector`, `fineTuneVector`, `fromParameterVector`, and `evaluateCandidate` at lines `44-87`. The root facade exports those example-facing symbols from `src/neataptic.ts` at lines `53-72`, so the example no longer depends on private import paths.
+
+- Focused behavior gate: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts` passed with `1` suite and all `5` targeted tests green.
+- Docs gate: `npm run docs` passed again, regenerated per-folder README output, validated Mermaid charts through the HTML render stage, and did not require any hand-edited generated file.
+- TypeScript gate: `npx tsc --noEmit -p tsconfig.json` still fails only on the unchanged external ONNX baseline at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` with `TS2345`; no new failure appeared in `src/neataptic.ts`, `src/neat/hybrid/neat.hybrid.ts`, or `src/neat/hybrid/neat.hybrid.types.ts`.
+- Hybrid coverage gate: `npx jest --config=jest.config.mjs --no-cache --coverage --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts --collectCoverageFrom='src/neat/hybrid/neat.hybrid.ts' --coverageReporters=text --coverageReporters=json-summary` passed and kept `src/neat/hybrid/neat.hybrid.ts` at `100/100/100/100`.
+- Root-facade coverage gate: `npx jest --config=jest.config.mjs --no-cache --coverage --runTestsByPath src/neataptic.test.ts --collectCoverageFrom='src/neataptic.ts' --coverageReporters=text --coverageReporters=json-summary` failed the coverage-guard threshold for `src/neataptic.ts`: statements `100`, branches `100`, functions `88.23`, lines `100`. The local cause is visible in the owner-local test file: `src/neataptic.test.ts` does not import or touch the new vector and hybrid re-exports, so the Step 04 root-facade addition is not fully covered yet.
+- Tracker sync validation: `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` passed with `PASS plan sync: 0 errors, 0 warnings`.
+- Reroute decision: return to Step 04 only for the smallest root-facade test-slice or export-alignment follow-up needed to cover the newly added `toParameterVector`, `fromParameterVector`, `fineTuneVector`, `evaluateCandidate`, and related hybrid or vector type re-exports in `src/neataptic.ts`. Do not reopen the hybrid README wording, the hybrid behavior seam, or the unrelated ONNX baseline.
+
+**Step 04 owner-local follow-up after the Step 05 root-facade coverage reroute:** Added the smallest owner-local root-facade follow-up in `src/neataptic.test.ts` only. The new assertion imports and touches `toParameterVector`, `fromParameterVector`, `fineTuneVector`, and `evaluateCandidate` as runtime functions so the root facade covers the newly added public re-exports without changing production code or reopening the hybrid seam.
+
+- Changed test file: `src/neataptic.test.ts`
+- Focused behavior follow-up: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neataptic.test.ts` passed with `PASS`, `1` suite, and all `15` root-facade tests green.
+- Focused coverage follow-up: `npx jest --config=jest.config.mjs --no-cache --coverage --runTestsByPath src/neataptic.test.ts --collectCoverageFrom='src/neataptic.ts' --coverageReporters=text --coverageReporters=json-summary` passed with `src/neataptic.ts` at `100/100/100/100`.
+- Tracker sync validation: `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` passed with `PASS plan sync: 0 errors, 0 warnings` after this Step 04 follow-up update.
+- Scope guard: this follow-up stayed owner-local to the root-facade test slice only. No production code, hybrid docs, generated outputs, or ONNX surfaces changed.
+
+**Step 05 rerun completion from current repo state:** Re-ran the Phase 5 validation sequence after the owner-local root-facade coverage follow-up and all acceptance gates now pass inside the Phase 5 surface. The generated `src/neat/hybrid/README.md` still contains the required closure items in current generated output: the Lamarckian explanation, the Baldwin-effect distinction with Wikipedia grounding, the determinism ladder, the recommended progression, the explicit `conditional` blocker, and the cohesive public API example. The example-facing root exports also remain present in `src/neataptic.ts`: `toParameterVector`, `fromParameterVector`, `ParameterLayoutEntry`, `ParameterLayoutV1`, `ParameterVector`, `fineTuneVector`, `FineTuneOptions`, `FineTuneResult`, `evaluateCandidate`, `EvaluateCandidateOptions`, `HybridEvaluationPolicy`, `HybridEvaluationResult`, `HybridFineTuneMode`, and `HybridScoreNetwork`.
+
+- Focused hybrid behavior rerun: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts` passed with `1` suite and all `5` tests green.
+- Focused root-facade rerun: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neataptic.test.ts` passed with `1` suite and all `15` tests green.
+- Docs gate: `npm run docs` passed again from current repo state and regenerated docs output without any hand-edited generated README or published example file.
+- TypeScript gate: `npx tsc --noEmit -p tsconfig.json` still fails only on the unchanged external ONNX baseline at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` with `TS2345`; no new failure appeared in `src/neataptic.ts`, `src/neat/hybrid/neat.hybrid.ts`, or `src/neat/hybrid/neat.hybrid.types.ts`.
+- Root-facade coverage gate: `npx jest --config=jest.config.mjs --no-cache --coverage --runTestsByPath src/neataptic.test.ts --collectCoverageFrom='src/neataptic.ts' --coverageReporters=text --coverageReporters=json-summary` passed and kept `src/neataptic.ts` at `100/100/100/100`.
+- Hybrid coverage gate: `npx jest --config=jest.config.mjs --no-cache --coverage --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts --collectCoverageFrom='src/neat/hybrid/neat.hybrid.ts' --coverageReporters=text --coverageReporters=json-summary` passed and kept `src/neat/hybrid/neat.hybrid.ts` at `100/100/100/100`.
+- Tracker sync validation: `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` passed with `PASS plan sync: 0 errors, 0 warnings` after this Step 05 rerun update.
+- Reroute decision: none inside the Phase 5 boundary. The only remaining blocker is the unchanged external ONNX `TS2345` baseline, which stays outside this lane.
+
+**Updated Step 07 closure handoff:** Call `07-logging` next. Phase 5 Step 05 is now green from current repo state, so Step 07 may close the lane, compress the tracker, create the same-boundary log, update `plans/README.md` plus `plans/Roadmap.md`, and archive into `plans/completed/` while preserving the unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as external baseline context rather than reopening Phase 5 code or docs.
+
+#### Step 06: SKIP — Documentation pass is the entire phase [DONE]
+
+```yaml
+phase: 5
+step: 6
+status: '[DONE]'
+skip_reason: 'Phase 5 is a documentation-only closure pass. Step 04 is the authoring step and Step 05 is the green-validation gate. A separate Step 06 documentation step would be a redundant no-op in this phase structure.'
+```
+
+No separate Step 06 documentation pass is needed. Step 04 authors and Step 05 validates.
+
+#### Step 07: Log Phase 5 closure and archive lane [PLANNED]
+
+```yaml
+phase: 5
+step: 7
+agent: '07-logging'
+agent_file: '.github/agents/07-session-log-archivist.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Evolution_Training_Interoperability_Contracts.md'
+copy_paste: true
+next_step: 'Lane complete — archive to plans/completed/'
+skills:
+  - 'tracker-handoff'
+  - 'plan-sync-validation'
+specialists:
+  - 'Plan Registration Auditor'
+validation:
+  - 'Compressed closed plan and same-boundary log are in plans/completed/, plans/README.md and plans/Roadmap.md are updated to [DONE], and validate-plan-sync passes.'
+```
+
+**User instruction:** Start a fresh session, select `07-logging`, and paste this full step packet.
+
+**Step objective:** Close the full hybrid-interoperability lane by compressing this tracker to a closed baseline, creating the same-boundary `Evolution_Training_Interoperability_Contracts.logs.md` audit record, moving both files to `plans/completed/`, updating `plans/README.md` and `plans/Roadmap.md` to mark this lane `[DONE]`, and running tracker sync validation before ending the session.
+
+**Context the agent must know:**
+
+- This is the terminal closure step for the entire `Evolution_Training_Interoperability_Contracts` lane. Do not keep the tracker open after this step closes.
+- A compressed closed plan records: what the lane delivered, which files changed in each phase, the external ONNX TypeScript baseline decision, the conditional-policy blocked decision, and the NEATchat unlock conditions that are now met.
+- The same-boundary log must be named `Evolution_Training_Interoperability_Contracts.logs.md` and must contain a concise pass history, files changed, validation evidence, and residual risks.
+- After archiving, update `plans/README.md` to change the entry from active `[WIP]` to `[DONE]` and move the trigger phrases to the completed section.
+- Update `plans/Roadmap.md` to mark this lane complete and unblock the next dependency-gated lane (NEATchat follow-up).
+- Run `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/completed/Evolution_Training_Interoperability_Contracts.md --json` after the archive move.
+
+**Execution steps:**
+
+1. Read Phase 5 Step 04-05 evidence and confirm all lane acceptance gates are satisfied.
+2. Compress the current detailed tracker to a short closed baseline record.
+3. Create `plans/completed/Evolution_Training_Interoperability_Contracts.logs.md` with a concise pass history.
+4. Move `plans/Evolution_Training_Interoperability_Contracts.md` to `plans/completed/`.
+5. Update `plans/README.md` to reflect [DONE] status and move the trigger phrase to the completed section.
+6. Update `plans/Roadmap.md` to mark this lane complete.
+7. Run tracker sync validation and confirm pass.
+
+**Stop conditions:**
+
+- Done: archive files are in `plans/completed/`, plans index and roadmap are updated, and sync validation passes.
+- Blocked: one or more Phase 5 acceptance gates from Step 04-05 are not confirmed; do not archive until those gates are satisfied.
+- Route back: if validation, documentation, or example evidence is incomplete, return to the appropriate Phase 5 step rather than archiving prematurely.
+
+**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/completed/Evolution_Training_Interoperability_Contracts.md --json` passes after archive.
+
+**Plan update requirement:** Archive this plan, create the log, update plans index and roadmap, and confirm sync validation before ending the session.
 
 ## Recommended first implementation frontier after the ONNX stop line
 
@@ -1400,7 +2557,23 @@ validation:
 
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
-The active tracker is plans/Evolution_Training_Interoperability_Contracts.md and the lane is still [WIP]. Phase 1 is [DONE]. Phase 2 is now [DONE] from current repo state: the serialize-owned `ParameterVector` export/import seam is green, owner-local coverage for `src/architecture/network/serialize/network.serialize.utils.ts` and `src/architecture/network/serialize/network.serialize.utils.types.ts` is `100/100/100/100`, and the source-doc-only pass refreshed `src/architecture/network/serialize/README.md` so the generated output now matches the final v1 vector contract.
-The reviewed vector docs now cover the weights-and-biases inclusion rule, explicit rejection of non-neutral `node.response` and `connection.gain`, disabled-connection slot behavior, fallback descriptor semantics when an innovation id is absent, and same-runtime deterministic wording without claiming cross-runtime exact replay. Repo-wide TypeScript still fails only at the unchanged external ONNX baseline `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` with `TS2345` because `standardDomainImports[0]!.version` can be `undefined`; treat that as recorded external baseline context unless the failure surface moves into this lane.
-The next safe step is `01-planning` for Phase 3 Step 01 only. Turn Phase 3 into an executable isolation-helper workset: author Phase 3 Step 02-07 packets or explicit skips, keep the first helper vector-first, preserve the no-shared-mutation contract, and keep any deterministic claim gated on explicit seed handling, dataset order, and a named RNG owner. Run `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` after the tracker update. Do not widen into Phase 3 implementation, Phase 4 policy work, or unrelated ONNX fixes.
+The active tracker is plans/Evolution_Training_Interoperability_Contracts.md and the lane is [WIP]. Phase 1 is [DONE]. Phase 2 is [DONE]. Phase 3 is [DONE]. Phase 4 is [DONE]. Phase 5 is [WIP]. The active frontier is Phase 5 Step 07 closure after a completed Step 05 rerun from current repo state.
+
+Phase 5 Step 05 now confirms from the current repo state:
+- `src/neat/hybrid/README.md` includes the library-specific Lamarckian explanation, the Baldwin-effect distinction with Wikipedia grounding, the three-rung determinism ladder, the recommended defaults progression, the explicit `conditional` blocker or ranking requirement, and a cohesive public API toy example using `Network`, `toParameterVector`, `fineTuneVector`, `fromParameterVector`, and `evaluateCandidate`.
+- `src/neataptic.ts` exports the example-facing lane symbols at the root facade: `toParameterVector`, `fromParameterVector`, `ParameterLayoutEntry`, `ParameterLayoutV1`, `ParameterVector`, `fineTuneVector`, `FineTuneOptions`, `FineTuneResult`, `evaluateCandidate`, `HybridFineTuneMode`, `HybridEvaluationPolicy`, `HybridScoreNetwork`, `EvaluateCandidateOptions`, and `HybridEvaluationResult`.
+- `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neat/hybrid/neat.hybrid.test.ts` passed with `1` suite and all `5` targeted tests green.
+- `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/neataptic.test.ts` passed with `1` suite and all `15` root-facade tests green.
+- `npm run docs` passed again, regenerated per-folder README output, and completed the HTML render stage. No generated README or published example page was hand-edited.
+- `npx tsc --noEmit -p tsconfig.json` still fails only on the unchanged external ONNX `TS2345` baseline at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135`.
+- Focused root-facade coverage passed: `src/neataptic.ts` stayed at `100/100/100/100`.
+- Focused hybrid coverage passed: `src/neat/hybrid/neat.hybrid.ts` stayed at `100/100/100/100`.
+- `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` passed with `PASS plan sync: 0 errors, 0 warnings`.
+
+Next work must stay narrow inside Step 07 closure only:
+1. Read the recorded Phase 5 Step 04-05 evidence and the existing Step 07 packet.
+2. Close the lane with the planned Step 07 archive flow: compress the tracker, create `Evolution_Training_Interoperability_Contracts.logs.md`, move both files into `plans/completed/`, update `plans/README.md` and `plans/Roadmap.md`, and rerun plan-sync validation.
+3. Preserve the unchanged ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as external baseline context rather than reopening Phase 5 implementation, docs, or tests.
+
+Next orchestrator: 07-logging for Phase 5 Step 07 closure and archive lane.
 ```

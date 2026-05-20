@@ -32,7 +32,9 @@ export function pruneIdentityActivationNodes(model: OnnxModel): void {
   }));
 }
 
-function collectIdentityReplacements(graphNodes: OnnxNode[]): Map<string, string> {
+function collectIdentityReplacements(
+  graphNodes: OnnxNode[],
+): Map<string, string> {
   return new Map(
     graphNodes
       .filter((graphNode) => shouldPruneIdentityNode(graphNode))

@@ -3,7 +3,7 @@ description: 'Use when: maintaining .agent.md files, repairing YAML frontmatter,
 name: 'helping-agent-maintenance-coordinator'
 model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, agent]
-agents: ['Agent Frontmatter Auditor', 'Skill Inventory Auditor', 'Model Name Auditor', 'learning-event-capturer']
+agents: ['Agent Frontmatter Auditor', 'skill-frontmatter-auditor', 'Skill Inventory Auditor', 'Model Name Auditor', 'learning-event-capturer']
 user-invocable: false
 ---
 

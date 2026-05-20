@@ -85,9 +85,10 @@ function withPatchedPlainDecodedModel<T>(
   }
 }
 
-function captureExternalImportFailure(
-  callback: () => unknown,
-): { category: string; message: string } {
+function captureExternalImportFailure(callback: () => unknown): {
+  category: string;
+  message: string;
+} {
   try {
     callback();
     return { category: 'no-error', message: '' };
@@ -527,7 +528,9 @@ describe('external ONNX import normalizer', () => {
         baselineBinaryModel,
         (decodedModel) => {
           const decodedGraph = resolveRequiredGraph(decodedModel);
-          const duplicateNode = structuredClone(resolveNamedNode(decodedModel, 'gemm_l1'));
+          const duplicateNode = structuredClone(
+            resolveNamedNode(decodedModel, 'gemm_l1'),
+          );
           duplicateNode.name = 'gemm_l1_branch';
           duplicateNode.output = ['Branch_1'];
           decodedGraph.node?.push(duplicateNode);
@@ -735,9 +738,14 @@ describe('external ONNX import normalizer', () => {
         baselineBinaryModel,
         (plainModel) => {
           const firstGemmOutput = plainModel.graph?.node?.find(
-            (graphNode: { name?: string | null; output?: string[] | null }) => graphNode.name === 'gemm_l1',
+            (graphNode: { name?: string | null; output?: string[] | null }) =>
+              graphNode.name === 'gemm_l1',
           )?.output?.[0];
-          if (!plainModel.graph?.node || !plainModel.graph.output?.[0] || !firstGemmOutput) {
+          if (
+            !plainModel.graph?.node ||
+            !plainModel.graph.output?.[0] ||
+            !firstGemmOutput
+          ) {
             throw new Error('Expected baseline plain model.');
           }
 
@@ -753,7 +761,10 @@ describe('external ONNX import normalizer', () => {
           });
           plainModel.graph.output[0].name = 'Missing_Output';
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -839,7 +850,11 @@ describe('external ONNX import normalizer', () => {
         (decodedModel) => {
           const firstNode = resolveNamedNode(decodedModel, 'gemm_l1');
           const inputNames = firstNode.input ?? [];
-          firstNode.input = [inputNames[1]!, inputNames[0]!, ...(inputNames.slice(2))];
+          firstNode.input = [
+            inputNames[1]!,
+            inputNames[0]!,
+            ...inputNames.slice(2),
+          ];
         },
       );
 
@@ -1090,7 +1105,9 @@ describe('external ONNX import normalizer', () => {
           }
 
           weightTensor.floatData = [];
-          weightTensor.rawData = Buffer.from(rawBytes).toString('base64') as never;
+          weightTensor.rawData = Buffer.from(rawBytes).toString(
+            'base64',
+          ) as never;
         },
       );
 
@@ -1105,7 +1122,9 @@ describe('external ONNX import normalizer', () => {
       // Arrange
       const baselineBinaryModel = createBaselineBinaryModel();
       const rawBytes = encodeFloat32RawData([1, 2, 3, 4]);
-      const originalBuffer = (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer;
+      const originalBuffer = (
+        globalThis as typeof globalThis & { Buffer?: typeof Buffer }
+      ).Buffer;
       const binaryModel = mutateBinaryModel(
         baselineBinaryModel,
         (decodedModel) => {
@@ -1116,7 +1135,9 @@ describe('external ONNX import normalizer', () => {
           }
 
           weightTensor.floatData = [];
-          weightTensor.rawData = Buffer.from(rawBytes).toString('base64') as never;
+          weightTensor.rawData = Buffer.from(rawBytes).toString(
+            'base64',
+          ) as never;
         },
       );
 
@@ -1130,7 +1151,8 @@ describe('external ONNX import normalizer', () => {
         // Assert
         expect(denseChain.layers[0]!.weightValues[2]).toBeCloseTo(3, 5);
       } finally {
-        (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer = originalBuffer;
+        (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer =
+          originalBuffer;
       }
     });
 
@@ -1283,7 +1305,11 @@ describe('external ONNX import normalizer', () => {
         onnxProto.onnx.ModelProto.decode(baselineBinaryModel),
       ) as InstanceType<typeof onnxProto.onnx.ModelProto> & {
         graph: {
-          node: Array<{ name?: string | null; opType?: string | null; attribute?: unknown[] | null }>;
+          node: Array<{
+            name?: string | null;
+            opType?: string | null;
+            attribute?: unknown[] | null;
+          }>;
         };
       };
       decodedModel.opsetImport![0]!.version = 20;
@@ -1376,10 +1402,9 @@ describe('external ONNX import normalizer', () => {
       const normalizedModel = normalizeExternalBinaryOnnxModel(binaryModel);
 
       // Assert
-      expect(normalizedModel.graph.node.map((graphNode) => graphNode.name)).toEqual([
-        'gemm_l1',
-        'gemm_l2',
-      ]);
+      expect(
+        normalizedModel.graph.node.map((graphNode) => graphNode.name),
+      ).toEqual(['gemm_l1', 'gemm_l2']);
     });
 
     it('keeps single-layer identity outputs on the Gemm tensor without inserting an activation node', () => {
@@ -1405,8 +1430,13 @@ describe('external ONNX import normalizer', () => {
       const denseChain = withPatchedPlainDecodedModel(
         binaryModel,
         (plainModel) => {
-          const directOutputTensorName = plainModel.graph?.node?.[0]?.output?.[0];
-          if (!plainModel.graph?.output?.[0] || !plainModel.graph?.node || !directOutputTensorName) {
+          const directOutputTensorName =
+            plainModel.graph?.node?.[0]?.output?.[0];
+          if (
+            !plainModel.graph?.output?.[0] ||
+            !plainModel.graph?.node ||
+            !directOutputTensorName
+          ) {
             throw new Error('Expected single-layer graph output tensor.');
           }
 
@@ -1436,7 +1466,10 @@ describe('external ONNX import normalizer', () => {
 
           plainModel.graph.output[0].name = 'Missing_Output';
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(binaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(binaryModel),
+          ),
       );
 
       // Assert
@@ -1458,11 +1491,16 @@ describe('external ONNX import normalizer', () => {
           plainModel.graph.node = [plainModel.graph.node[0]!];
           plainModel.graph.output[0].name = 'Missing_Output';
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(binaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(binaryModel),
+          ),
       );
 
       // Assert
-      expect(failure.message.includes('ended before reaching the public output')).toBe(true);
+      expect(
+        failure.message.includes('ended before reaching the public output'),
+      ).toBe(true);
     });
 
     it('accepts numeric-array raw data on the plain decoded model surface', () => {
@@ -1504,7 +1542,9 @@ describe('external ONNX import normalizer', () => {
           }
 
           weightTensor.floatData = [];
-          weightTensor.rawData = Buffer.from(rawBytes).toString('base64') as never;
+          weightTensor.rawData = Buffer.from(rawBytes).toString(
+            'base64',
+          ) as never;
         },
         () => normalizeExternalDenseChain(baselineBinaryModel),
       );
@@ -1518,7 +1558,9 @@ describe('external ONNX import normalizer', () => {
       const baselineBinaryModel = createBaselineBinaryModel();
       const rawBytes = encodeFloat32RawData([1, 2, 3, 4]);
       const base64RawBytes = Buffer.from(rawBytes).toString('base64');
-      const originalBuffer = (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer;
+      const originalBuffer = (
+        globalThis as typeof globalThis & { Buffer?: typeof Buffer }
+      ).Buffer;
 
       try {
         (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer =
@@ -1542,7 +1584,8 @@ describe('external ONNX import normalizer', () => {
         // Assert
         expect(denseChain.layers[0]!.weightValues[2]).toBeCloseTo(3, 5);
       } finally {
-        (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer = originalBuffer;
+        (globalThis as typeof globalThis & { Buffer?: typeof Buffer }).Buffer =
+          originalBuffer;
       }
     });
 
@@ -1555,7 +1598,8 @@ describe('external ONNX import normalizer', () => {
         baselineBinaryModel,
         (plainModel) => {
           const secondGemmNode = plainModel.graph?.node?.find(
-            (graphNode: { name?: string | null }) => graphNode.name === 'gemm_l2',
+            (graphNode: { name?: string | null }) =>
+              graphNode.name === 'gemm_l2',
           );
           if (!secondGemmNode?.output || !plainModel.graph?.output?.[0]) {
             throw new Error('Expected baseline second Gemm output.');
@@ -1564,7 +1608,10 @@ describe('external ONNX import normalizer', () => {
           secondGemmNode.output[0] = 'Layer_1';
           plainModel.graph.output[0].name = 'Loop_Output';
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1591,7 +1638,8 @@ describe('external ONNX import normalizer', () => {
               graphNode.name === 'act_l2',
           );
           const outputActivationNode = plainModel.graph.node.find(
-            (graphNode: { name?: string | null }) => graphNode.name === 'act_l2',
+            (graphNode: { name?: string | null }) =>
+              graphNode.name === 'act_l2',
           );
           if (!outputActivationNode?.output) {
             throw new Error('Expected output activation node.');
@@ -1600,7 +1648,10 @@ describe('external ONNX import normalizer', () => {
           outputActivationNode.output[0] = 'input';
           plainModel.graph.output[0].name = 'Loop_Output';
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1624,17 +1675,22 @@ describe('external ONNX import normalizer', () => {
               graphNode.name === 'gemm_l1' || graphNode.name === 'act_l1',
           );
           const outputActivationNode = plainModel.graph.node.find(
-            (graphNode: { name?: string | null }) => graphNode.name === 'act_l1',
+            (graphNode: { name?: string | null }) =>
+              graphNode.name === 'act_l1',
           );
           const activationInputName = outputActivationNode?.input?.[0];
           if (!outputActivationNode || !activationInputName) {
             throw new Error('Expected output activation node.');
           }
 
-          plainModel.graph.output[0].name = outputActivationNode.output?.[0] ?? 'Missing_Output';
+          plainModel.graph.output[0].name =
+            outputActivationNode.output?.[0] ?? 'Missing_Output';
           outputActivationNode.input = [activationInputName, 'Extra_Input'];
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1650,7 +1706,8 @@ describe('external ONNX import normalizer', () => {
         baselineBinaryModel,
         (plainModel) => {
           const outputActivationNode = plainModel.graph?.node?.find(
-            (graphNode: { name?: string | null }) => graphNode.name === 'act_l2',
+            (graphNode: { name?: string | null }) =>
+              graphNode.name === 'act_l2',
           );
           if (!outputActivationNode) {
             throw new Error('Expected baseline output activation node.');
@@ -1658,7 +1715,10 @@ describe('external ONNX import normalizer', () => {
 
           outputActivationNode.input = ['Layer_2', 'Extra_Input'];
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1702,7 +1762,10 @@ describe('external ONNX import normalizer', () => {
           plainModel.graph.initializer = undefined;
           plainModel.graph.input = undefined;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1723,7 +1786,10 @@ describe('external ONNX import normalizer', () => {
 
           plainModel.graph.output = undefined;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1745,7 +1811,10 @@ describe('external ONNX import normalizer', () => {
           plainModel.graph.input[0].name = null;
           plainModel.graph.output[0].name = null;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1766,7 +1835,10 @@ describe('external ONNX import normalizer', () => {
 
           plainModel.opsetImport[0].version = undefined;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1788,7 +1860,10 @@ describe('external ONNX import normalizer', () => {
 
           weightTensor.name = null;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1836,14 +1911,18 @@ describe('external ONNX import normalizer', () => {
       const failure = withPatchedPlainDecodedModel(
         baselineBinaryModel,
         (plainModel) => {
-          const modelInput = plainModel.graph?.input?.[0]?.type?.tensorType?.shape;
+          const modelInput =
+            plainModel.graph?.input?.[0]?.type?.tensorType?.shape;
           if (!modelInput) {
             throw new Error('Expected baseline input shape.');
           }
 
           modelInput.dim = undefined;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1865,7 +1944,10 @@ describe('external ONNX import normalizer', () => {
             output: ['orphan_output'],
           });
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1889,7 +1971,10 @@ describe('external ONNX import normalizer', () => {
           firstNode.opType = null as never;
           firstNode.domain = 'custom.domain';
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1911,7 +1996,10 @@ describe('external ONNX import normalizer', () => {
 
           firstNode.opType = null as never;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1977,7 +2065,10 @@ describe('external ONNX import normalizer', () => {
 
           firstNode.attribute = [{ name: 'transB' }];
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -1999,7 +2090,10 @@ describe('external ONNX import normalizer', () => {
 
           firstNode.attribute = [{ name: null as never, i: 1 }];
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -2021,7 +2115,10 @@ describe('external ONNX import normalizer', () => {
 
           weightTensor.dims = undefined;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -2037,7 +2134,8 @@ describe('external ONNX import normalizer', () => {
         baselineBinaryModel,
         (plainModel) => {
           const outputActivationNode = plainModel.graph?.node?.find(
-            (graphNode: { name?: string | null }) => graphNode.name === 'act_l2',
+            (graphNode: { name?: string | null }) =>
+              graphNode.name === 'act_l2',
           );
           if (!outputActivationNode) {
             throw new Error('Expected baseline output activation node.');
@@ -2045,7 +2143,10 @@ describe('external ONNX import normalizer', () => {
 
           outputActivationNode.opType = null as never;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -2061,7 +2162,8 @@ describe('external ONNX import normalizer', () => {
         baselineBinaryModel,
         (plainModel) => {
           const outputActivationNode = plainModel.graph?.node?.find(
-            (graphNode: { name?: string | null }) => graphNode.name === 'act_l2',
+            (graphNode: { name?: string | null }) =>
+              graphNode.name === 'act_l2',
           );
           if (!outputActivationNode) {
             throw new Error('Expected baseline output activation node.');
@@ -2069,7 +2171,10 @@ describe('external ONNX import normalizer', () => {
 
           outputActivationNode.input = undefined;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -2085,7 +2190,8 @@ describe('external ONNX import normalizer', () => {
         baselineBinaryModel,
         (plainModel) => {
           const outputActivationNode = plainModel.graph?.node?.find(
-            (graphNode: { name?: string | null }) => graphNode.name === 'act_l2',
+            (graphNode: { name?: string | null }) =>
+              graphNode.name === 'act_l2',
           );
           if (!outputActivationNode) {
             throw new Error('Expected baseline output activation node.');
@@ -2093,7 +2199,10 @@ describe('external ONNX import normalizer', () => {
 
           outputActivationNode.output = undefined;
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -2109,7 +2218,8 @@ describe('external ONNX import normalizer', () => {
         baselineBinaryModel,
         (plainModel) => {
           const outputActivationNode = plainModel.graph?.node?.find(
-            (graphNode: { name?: string | null }) => graphNode.name === 'act_l2',
+            (graphNode: { name?: string | null }) =>
+              graphNode.name === 'act_l2',
           );
           if (!outputActivationNode) {
             throw new Error('Expected baseline output activation node.');
@@ -2117,7 +2227,10 @@ describe('external ONNX import normalizer', () => {
 
           outputActivationNode.input = ['Wrong_Tensor'];
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert
@@ -2138,7 +2251,8 @@ describe('external ONNX import normalizer', () => {
 
           plainModel.opsetImport[0].version = 20;
           const outputActivationNode = plainModel.graph?.node?.find(
-            (graphNode: { name?: string | null }) => graphNode.name === 'act_l2',
+            (graphNode: { name?: string | null }) =>
+              graphNode.name === 'act_l2',
           );
           if (!outputActivationNode) {
             throw new Error('Expected baseline output activation node.');
@@ -2149,7 +2263,10 @@ describe('external ONNX import normalizer', () => {
             { name: null as never, s: new TextEncoder().encode('tanh') },
           ];
         },
-        () => captureExternalImportFailure(() => normalizeExternalDenseChain(baselineBinaryModel)),
+        () =>
+          captureExternalImportFailure(() =>
+            normalizeExternalDenseChain(baselineBinaryModel),
+          ),
       );
 
       // Assert

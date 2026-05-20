@@ -1,6 +1,7 @@
 ---
 name: planning-acceptance-criteria
 description: 'Use when: turning user intent into observable acceptance criteria, edge cases, non-goals, validation expectations, and done-state checks.'
+argument-hint: 'Describe the user request, target surface, edge cases, non-goals, and validation or done-state expectations.'
 user-invocable: false
 disable-model-invocation: false
 ---

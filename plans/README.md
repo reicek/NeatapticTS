@@ -32,13 +32,13 @@ Recommended reading order:
 Active selection guide:
 
 - [plans/Roadmap.md](Roadmap.md): dependency-aware execution order across all initiatives.
-- [plans/completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md): archived standalone meta-workflow baseline for the seven-phase agent architecture, hidden specialist delegation, skill-first customization, model routing, validation scripts, skill evals, and MCP runtime-visibility ownership boundaries. [DONE]
+- [plans/completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md): archived standalone meta-workflow baseline for the numbered agent architecture, hidden specialist delegation, skill-first customization, model routing, validation scripts, skill evals, and MCP runtime-visibility ownership boundaries. [DONE]
 - [plans/completed/Browser_Build_and_CDN_Distribution.md](completed/Browser_Build_and_CDN_Distribution.md): browser packaging, CDN usage, and distribution ergonomics. [DONE]
 - [plans/completed/Memory_Optimization.md](completed/Memory_Optimization.md): archived pre-NGE memory foundation baseline through Track 1 / Phase 10. [DONE]
 - [plans/completed/Network_Visualization_Export_Schema.plans.md](completed/Network_Visualization_Export_Schema.plans.md): archived visualization export schema baseline for inspection tooling and DOT/schema output. [DONE]
-- [plans/Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md): active hybrid-interoperability lane for deterministic parameter vectors, training isolation, and explicit persistence policy.
 - [plans/completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md): archived ONNX export/import baseline through the current Phase 9 compliance target, including the closed recurrent, spatial, advanced-graph, optimization, precision, binary, runtime-parity, and first external-import stop lines for the declared lower-opset same-family subset. [DONE]
-- [plans/NEATchat.plans.md](NEATchat.plans.md): planned NEATchat follow-up lane for turning the closed toy demo into a stronger conversational system, gated on Phase 4 substrate readiness plus recurrent ONNX hardening before implementation starts.
+- [plans/completed/Evolution_Training_Interoperability_Contracts.md](completed/Evolution_Training_Interoperability_Contracts.md): archived hybrid-interoperability baseline for deterministic parameter vectors, training isolation, explicit persistence policy, root-facade re-exports, and the docs surface that now feeds the NEATchat follow-up. [DONE]
+- [plans/NEATchat.plans.md](NEATchat.plans.md): planned NEATchat follow-up lane for turning the closed toy demo into a stronger conversational system, now building on the archived ONNX and hybrid baselines while remaining planning-only until explicitly opened.
 - [plans/completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md): archived checkpointing, persistence, and save/resume baseline covering population-only snapshots, light checkpoints, strict full checkpoints, and the standalone persistence walkthrough. [DONE]
 - [plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): prebuilt architecture constructors and sequence-oriented builders. [DONE]
 - [plans/completed/Turnkey_Multithread_Evaluation_API.md](completed/Turnkey_Multithread_Evaluation_API.md): archived low-friction parallel evaluation API extraction baseline for Node and browser workers. [DONE]
@@ -52,13 +52,13 @@ Active selection guide:
 Task-to-plan trigger phrases:
 
 - roadmap, sequence, dependency order, what comes first: `plans/Roadmap.md`
-- agent architecture, custom agents, user-invocable, subagent delegation, model routing, skill evals, agent skills, workflow agents, seven phase agents: `plans/completed/Agentic_Workflow_Architecture.plans.md`
+- agent architecture, custom agents, user-invocable, subagent delegation, model routing, skill evals, agent skills, workflow agents, numbered SDLC orchestrators: `plans/completed/Agentic_Workflow_Architecture.plans.md`
 - construct from parts, graph assembly, deterministic builder reopen: `plans/completed/Construct_From_Parts_Graph_Assembly.md`
 - browser bundle, CDN, browser-first usage: `plans/completed/Browser_Build_and_CDN_Distribution.md`
 - worker serialization, transfer cost, fastpath reopen: `plans/completed/Worker_Friendly_Network_Serialization_Fastpath.md`
 - workers, threads, parallel evaluation reopen: `plans/completed/Turnkey_Multithread_Evaluation_API.md`
 - checkpoint, resume, save population, strict restore, checkpoint state inventory: `plans/completed/Population_Save_Resume_and_Checkpointing.md`
-- hybrid evolution plus training, optimizer handoff: `plans/Evolution_Training_Interoperability_Contracts.md`
+- hybrid evolution plus training, optimizer handoff, parameter vector reopen, fineTuneVector, Lamarckian policy reopen: `plans/completed/Evolution_Training_Interoperability_Contracts.md`
 - preconfigured models, MLP, LSTM, GRU, NARX builders: `plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
 - ONNX, import/export interoperability, recurrent import hardening, supported subset, runtime parity, external import reopen, seed import honesty: `plans/completed/ONNX_EXPORT_PLAN.md`
 - memory pressure, large networks, compact storage: `plans/completed/Memory_Optimization.md`

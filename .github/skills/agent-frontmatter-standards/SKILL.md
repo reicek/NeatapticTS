@@ -29,4 +29,4 @@ Use this skill when a task changes `.github/agents/*.agent.md`.
 ## Sources
 
 - VS Code custom agents documentation defines `.agent.md` fields such as `model`, `agents`, `handoffs`, `user-invocable`, and `disable-model-invocation`.
-- The repo tracker is the authoritative local policy for the seven-phase architecture.
+- The archived meta-workflow tracker records the baseline architecture; active customization work should follow the current eight-orchestrator surface in this skill.

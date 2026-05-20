@@ -42,12 +42,19 @@ function createInitializerTensor(initializerName: string): OnnxTensor {
   };
 }
 
-function createLayer(nodeType: 'input' | 'hidden' | 'output', nodeCount: number): Node[] {
+function createLayer(
+  nodeType: 'input' | 'hidden' | 'output',
+  nodeCount: number,
+): Node[] {
   return Array.from({ length: nodeCount }, () => new Node(nodeType));
 }
 
 function createLayers(): Node[][] {
-  return [createLayer('input', 8), createLayer('hidden', 8), createLayer('output', 2)];
+  return [
+    createLayer('input', 8),
+    createLayer('hidden', 8),
+    createLayer('output', 2),
+  ];
 }
 
 function createLayerOutputNames(): ReadonlyMap<number, string> {
@@ -89,8 +96,9 @@ function getMetadataValue(model: OnnxModel, key: string): string | undefined {
 }
 
 function countNodes(model: OnnxModel, operatorType: string): number {
-  return model.graph.node.filter((nodeEntry) => nodeEntry.op_type === operatorType)
-    .length;
+  return model.graph.node.filter(
+    (nodeEntry) => nodeEntry.op_type === operatorType,
+  ).length;
 }
 
 function hasInitializer(model: OnnxModel, initializerName: string): boolean {
@@ -195,21 +203,24 @@ describe('network onnx export attention chapter', () => {
 
     it('appends attention metadata to an existing array payload', () => {
       // Arrange
-      const model = createOnnxModel(['W0', 'B0'], [
-        {
-          key: 'advanced_graph_attention_blocks',
-          value: JSON.stringify([
-            {
-              sourceLayerIndex: 3,
-              targetLayerIndex: 4,
-              sequenceLength: 5,
-              modelWidth: 6,
-              heads: 2,
-              shadowOutputName: 'AttentionShadow_4',
-            },
-          ]),
-        },
-      ]);
+      const model = createOnnxModel(
+        ['W0', 'B0'],
+        [
+          {
+            key: 'advanced_graph_attention_blocks',
+            value: JSON.stringify([
+              {
+                sourceLayerIndex: 3,
+                targetLayerIndex: 4,
+                sequenceLength: 5,
+                modelWidth: 6,
+                heads: 2,
+                shadowOutputName: 'AttentionShadow_4',
+              },
+            ]),
+          },
+        ],
+      );
 
       // Act
       emitShadowAttentionMappings(
@@ -247,12 +258,15 @@ describe('network onnx export attention chapter', () => {
 
     it('replaces malformed metadata payloads with the new attention record', () => {
       // Arrange
-      const model = createOnnxModel(['W0', 'B0'], [
-        {
-          key: 'advanced_graph_attention_blocks',
-          value: 'not-json',
-        },
-      ]);
+      const model = createOnnxModel(
+        ['W0', 'B0'],
+        [
+          {
+            key: 'advanced_graph_attention_blocks',
+            value: 'not-json',
+          },
+        ],
+      );
 
       // Act
       emitShadowAttentionMappings(
@@ -282,12 +296,15 @@ describe('network onnx export attention chapter', () => {
 
     it('replaces valid non-array metadata payloads with the new attention record array', () => {
       // Arrange
-      const model = createOnnxModel(['W0', 'B0'], [
-        {
-          key: 'advanced_graph_attention_blocks',
-          value: JSON.stringify({ unexpected: true }),
-        },
-      ]);
+      const model = createOnnxModel(
+        ['W0', 'B0'],
+        [
+          {
+            key: 'advanced_graph_attention_blocks',
+            value: JSON.stringify({ unexpected: true }),
+          },
+        ],
+      );
 
       // Act
       emitShadowAttentionMappings(
@@ -410,7 +427,10 @@ describe('network onnx export attention chapter', () => {
         model,
         createLayers(),
         {
-          attentionMappings: [createAttentionMapping(), createAttentionMapping()],
+          attentionMappings: [
+            createAttentionMapping(),
+            createAttentionMapping(),
+          ],
         } as OnnxExportOptions,
         createLayerOutputNames(),
         true,

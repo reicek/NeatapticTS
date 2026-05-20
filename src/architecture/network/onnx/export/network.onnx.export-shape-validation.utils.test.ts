@@ -533,10 +533,7 @@ describe('network onnx export shape-validation utils chapter', () => {
         // Arrange
         const onnxModel = createModel({
           inputs: [createValueInfo('input', [2])],
-          initializer: [
-            createTensor('W0', [3], 3),
-            createTensor('B0', [3], 3),
-          ],
+          initializer: [createTensor('W0', [3], 3), createTensor('B0', [3], 3)],
           node: [
             {
               op_type: 'Gemm',
@@ -1187,7 +1184,11 @@ describe('network onnx export shape-validation utils chapter', () => {
           initializer: [
             createTensor('input_scale', [], [1]),
             createInt32Tensor('input_zero_point', [], [0]),
-            createInt32Tensor('W0', [2, 1, 9], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]),
+            createInt32Tensor(
+              'W0',
+              [2, 1, 9],
+              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            ),
             createTensor('weight_scale', [], [1]),
             createInt32Tensor('weight_zero_point', [], [0]),
             createTensor('output_scale', [], [1]),

@@ -1250,7 +1250,9 @@ describe('network onnx import weights utility chapter', () => {
           onnxModel.metadata_props,
         );
 
-        const sourceSecondHiddenNodes = getHiddenNodes(scenario.network).slice(16);
+        const sourceSecondHiddenNodes = getHiddenNodes(scenario.network).slice(
+          16,
+        );
 
         // Assert
         expect({
@@ -1286,7 +1288,8 @@ describe('network onnx import weights utility chapter', () => {
           conv2dMappings: scenario.convMappings,
           pool2dMappings: scenario.poolMappings,
         });
-        findMetadataEntry(onnxModel.metadata_props, 'pool2d_specs').value = '{}';
+        findMetadataEntry(onnxModel.metadata_props, 'pool2d_specs').value =
+          '{}';
         const targetNetwork = Network.createMLP(25, [16, 4], 1);
         const assignCallback = () =>
           assignWeightsAndBiases(

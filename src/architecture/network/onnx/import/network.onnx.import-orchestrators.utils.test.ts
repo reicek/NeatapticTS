@@ -139,7 +139,9 @@ function createRecurrentMetadata(value: string): OnnxMetadataProperty[] {
 function createAttentionBlockMetadata(
   overrides: Partial<
     NonNullable<
-      NonNullable<AdvancedGraphAwareNetwork['_onnxAdvancedGraph']>['attentionBlocks']
+      NonNullable<
+        AdvancedGraphAwareNetwork['_onnxAdvancedGraph']
+      >['attentionBlocks']
     >[number]
   > = {},
 ): OnnxMetadataProperty[] {
@@ -192,18 +194,37 @@ function createAttentionShadowOnnxModel(
   } = {},
 ): OnnxModel {
   return createOnnxModel({
-    initializer:
-      options.initializer ??
-      [
-        createTensor('AttentionQW_l1', [4, 4], Array.from({ length: 16 }, () => 0)),
-        createTensor('AttentionKW_l1', [4, 4], Array.from({ length: 16 }, () => 0)),
-        createTensor('AttentionVW_l1', [4, 4], Array.from({ length: 16 }, () => 0)),
-        createTensor('W0', [8, 8], Array.from({ length: 64 }, () => 0)),
-        createTensor('B0', [8], Array.from({ length: 8 }, () => 0)),
-      ],
-    node:
-      options.node ??
-      [createAttentionSoftmaxNode(), createAttentionOutputProjectionNode()],
+    initializer: options.initializer ?? [
+      createTensor(
+        'AttentionQW_l1',
+        [4, 4],
+        Array.from({ length: 16 }, () => 0),
+      ),
+      createTensor(
+        'AttentionKW_l1',
+        [4, 4],
+        Array.from({ length: 16 }, () => 0),
+      ),
+      createTensor(
+        'AttentionVW_l1',
+        [4, 4],
+        Array.from({ length: 16 }, () => 0),
+      ),
+      createTensor(
+        'W0',
+        [8, 8],
+        Array.from({ length: 64 }, () => 0),
+      ),
+      createTensor(
+        'B0',
+        [8],
+        Array.from({ length: 8 }, () => 0),
+      ),
+    ],
+    node: options.node ?? [
+      createAttentionSoftmaxNode(),
+      createAttentionOutputProjectionNode(),
+    ],
     metadataProps: options.metadataProps ?? createAttentionBlockMetadata(),
   });
 }
@@ -349,7 +370,9 @@ describe('network onnx import orchestrators utility chapter', () => {
         expect(
           getHiddenNodes(network)
             .slice(4, 6)
-            .map((hiddenNode) => hiddenNode.connections.self[0]?.weight ?? null),
+            .map(
+              (hiddenNode) => hiddenNode.connections.self[0]?.weight ?? null,
+            ),
         ).toEqual([0.5, 0.75]);
       });
     });
@@ -433,7 +456,9 @@ describe('network onnx import orchestrators utility chapter', () => {
 
         // Assert
         expect(
-          getHiddenNodes(network).map((hiddenNode) => hiddenNode.connections.self[0]?.weight ?? null),
+          getHiddenNodes(network).map(
+            (hiddenNode) => hiddenNode.connections.self[0]?.weight ?? null,
+          ),
         ).toEqual([0.6, 0.9]);
       });
     });
@@ -1270,7 +1295,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when cross-layer connection metadata is absent', () => {
       it('leaves the imported network without advanced-graph metadata', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, []);
@@ -1283,7 +1312,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when cross-layer connection metadata is valid JSON', () => {
       it('attaches the parsed advanced-graph audit payload', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1312,7 +1345,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when cross-layer connection metadata parses to a non-array payload', () => {
       it('leaves the imported network without advanced-graph metadata', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1330,7 +1367,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when cross-layer connection metadata contains an invalid record', () => {
       it('rejects the payload and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1348,7 +1389,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when cross-layer connection metadata is malformed JSON', () => {
       it('swallows the parse failure and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1366,7 +1411,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when shared initializer alias metadata is valid JSON', () => {
       it('attaches the parsed shared-initializer audit payload', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1393,7 +1442,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when shared initializer alias metadata parses to a non-array payload', () => {
       it('leaves the imported network without advanced-graph metadata', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1411,7 +1464,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when shared initializer alias metadata contains an invalid record', () => {
       it('rejects the payload and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1429,7 +1486,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when shared initializer alias metadata is malformed JSON', () => {
       it('swallows the parse failure and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1447,7 +1508,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when residual-add metadata contains an invalid record', () => {
       it('rejects the payload and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1465,7 +1530,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when residual-add metadata is valid JSON', () => {
       it('attaches the parsed residual-add audit payload', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1501,7 +1570,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when attention metadata matches the exported fixed-width shadow subset', () => {
       it('attaches the parsed attention-block audit payload', () => {
         // Arrange
-        const network = Network.createMLP(8, [8], 2) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          8,
+          [8],
+          2,
+        ) as AdvancedGraphAwareNetwork;
         const onnxModel = createAttentionShadowOnnxModel();
 
         // Act
@@ -1530,10 +1603,17 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when attention metadata arrives without the ONNX graph context', () => {
       it('leaves the imported network without advanced-graph metadata', () => {
         // Arrange
-        const network = Network.createMLP(8, [8], 2) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          8,
+          [8],
+          2,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
-        attachOnnxAdvancedGraphMetadata(network, createAttentionBlockMetadata());
+        attachOnnxAdvancedGraphMetadata(
+          network,
+          createAttentionBlockMetadata(),
+        );
 
         // Assert
         expect(network._onnxAdvancedGraph).toBeUndefined();
@@ -1543,7 +1623,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when attention metadata parses to a non-array payload', () => {
       it('leaves the imported network without advanced-graph metadata', () => {
         // Arrange
-        const network = Network.createMLP(8, [8], 2) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          8,
+          [8],
+          2,
+        ) as AdvancedGraphAwareNetwork;
         const onnxModel = createAttentionShadowOnnxModel({
           metadataProps: [
             {
@@ -1568,7 +1652,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when attention metadata contains an invalid record', () => {
       it('rejects the payload and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(8, [8], 2) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          8,
+          [8],
+          2,
+        ) as AdvancedGraphAwareNetwork;
         const onnxModel = createAttentionShadowOnnxModel({
           metadataProps: [
             {
@@ -1593,7 +1681,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when attention metadata is malformed JSON', () => {
       it('swallows the parse failure and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(8, [8], 2) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          8,
+          [8],
+          2,
+        ) as AdvancedGraphAwareNetwork;
         const onnxModel = createAttentionShadowOnnxModel({
           metadataProps: [
             {
@@ -1618,14 +1710,38 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when attention metadata declares a malformed head partition', () => {
       it('rejects the payload and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(8, [8], 2) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          8,
+          [8],
+          2,
+        ) as AdvancedGraphAwareNetwork;
         const onnxModel = createAttentionShadowOnnxModel({
           initializer: [
-            createTensor('AttentionQW_l1', [5, 5], Array.from({ length: 25 }, () => 0)),
-            createTensor('AttentionKW_l1', [5, 5], Array.from({ length: 25 }, () => 0)),
-            createTensor('AttentionVW_l1', [5, 5], Array.from({ length: 25 }, () => 0)),
-            createTensor('W0', [8, 10], Array.from({ length: 80 }, () => 0)),
-            createTensor('B0', [8], Array.from({ length: 8 }, () => 0)),
+            createTensor(
+              'AttentionQW_l1',
+              [5, 5],
+              Array.from({ length: 25 }, () => 0),
+            ),
+            createTensor(
+              'AttentionKW_l1',
+              [5, 5],
+              Array.from({ length: 25 }, () => 0),
+            ),
+            createTensor(
+              'AttentionVW_l1',
+              [5, 5],
+              Array.from({ length: 25 }, () => 0),
+            ),
+            createTensor(
+              'W0',
+              [8, 10],
+              Array.from({ length: 80 }, () => 0),
+            ),
+            createTensor(
+              'B0',
+              [8],
+              Array.from({ length: 8 }, () => 0),
+            ),
           ],
           metadataProps: createAttentionBlockMetadata({
             modelWidth: 5,
@@ -1648,7 +1764,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when attention metadata drifts away from the exported softmax contract', () => {
       it('rejects the payload and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(8, [8], 2) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          8,
+          [8],
+          2,
+        ) as AdvancedGraphAwareNetwork;
         const onnxModel = createAttentionShadowOnnxModel({
           node: [
             createAttentionSoftmaxNode(0),
@@ -1671,7 +1791,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when the exported attention softmax omits its axis attribute entirely', () => {
       it('rejects the payload and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(8, [8], 2) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          8,
+          [8],
+          2,
+        ) as AdvancedGraphAwareNetwork;
         const onnxModel = createAttentionShadowOnnxModel({
           node: [
             {
@@ -1699,7 +1823,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when attention metadata drifts into cross-attention ancestry', () => {
       it('rejects the payload and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(8, [8], 2) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          8,
+          [8],
+          2,
+        ) as AdvancedGraphAwareNetwork;
         const onnxModel = createAttentionShadowOnnxModel({
           metadataProps: createAttentionBlockMetadata({
             sourceLayerIndex: 2,
@@ -1721,7 +1849,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when residual-add metadata parses to a non-array payload', () => {
       it('leaves the imported network without advanced-graph metadata', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1739,7 +1871,11 @@ describe('network onnx import orchestrators utility chapter', () => {
     describe('when residual-add metadata is malformed JSON', () => {
       it('swallows the parse failure and leaves the imported network unchanged', () => {
         // Arrange
-        const network = Network.createMLP(2, [2], 1) as AdvancedGraphAwareNetwork;
+        const network = Network.createMLP(
+          2,
+          [2],
+          1,
+        ) as AdvancedGraphAwareNetwork;
 
         // Act
         attachOnnxAdvancedGraphMetadata(network, [
@@ -1773,7 +1909,9 @@ describe('network onnx import orchestrators utility chapter', () => {
           },
         ] satisfies OnnxMetadataProperty[];
         const onnx = createOnnxModel({
-          initializer: [createTensor('ResidualW_l2', [2, 2], [0.75, 0, 0, -0.5])],
+          initializer: [
+            createTensor('ResidualW_l2', [2, 2], [0.75, 0, 0, -0.5]),
+          ],
           metadataProps: metadata,
         });
 
@@ -1806,7 +1944,9 @@ describe('network onnx import orchestrators utility chapter', () => {
           },
         ] satisfies OnnxMetadataProperty[];
         const onnx = createOnnxModel({
-          initializer: [createTensor('ResidualW_l2', [2, 2], [0.75, 0, 0, -0.5])],
+          initializer: [
+            createTensor('ResidualW_l2', [2, 2], [0.75, 0, 0, -0.5]),
+          ],
           metadataProps: metadata,
         });
 
@@ -1840,7 +1980,9 @@ describe('network onnx import orchestrators utility chapter', () => {
           },
         ] satisfies OnnxMetadataProperty[];
         const onnx = createOnnxModel({
-          initializer: [createTensor('ResidualW_l2', [2, 2], [0.75, 0, 0, -0.5])],
+          initializer: [
+            createTensor('ResidualW_l2', [2, 2], [0.75, 0, 0, -0.5]),
+          ],
           metadataProps: metadata,
         });
 

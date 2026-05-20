@@ -150,7 +150,9 @@ async function evaluateAsciiMazePopulationLocally(
   evaluateGenome: AsciiMazeLocalGenomeEvaluator,
 ): Promise<void> {
   const localScores = await Promise.all(
-    population.map((genome, genomeIndex) => evaluateGenome(genome, genomeIndex)),
+    population.map((genome, genomeIndex) =>
+      evaluateGenome(genome, genomeIndex),
+    ),
   );
 
   localScores.forEach((localScore, genomeIndex) => {

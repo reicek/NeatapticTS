@@ -4,7 +4,7 @@ name: '00-helping'
 model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
-agents: ['helping-gap-resolution-coordinator', 'helping-agent-maintenance-coordinator', 'Skill Inventory Auditor', 'Agent Frontmatter Auditor', 'Model Name Auditor', 'Skill Trigger Eval Designer', 'Skill Output Eval Grader', 'learning-event-capturer', 'file-change-summarizer']
+agents: ['helping-gap-resolution-coordinator', 'helping-agent-maintenance-coordinator', 'Skill Inventory Auditor', 'Agent Frontmatter Auditor', 'skill-frontmatter-auditor', 'Model Name Auditor', 'Skill Trigger Eval Designer', 'Skill Output Eval Grader', 'Coverage Guard', 'learning-event-capturer', 'file-change-summarizer']
 handoffs:
   - label: 'Plan Work'
     agent: '01-planning'

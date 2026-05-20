@@ -477,7 +477,8 @@ function resolveCurrentLayerNodes(
   params: { layerIndex: number },
 ): NeatapticNode[] {
   const layerPosition = params.layerIndex;
-  const isHiddenLayer = layerPosition < assignmentContext.hiddenLayerSizes.length;
+  const isHiddenLayer =
+    layerPosition < assignmentContext.hiddenLayerSizes.length;
   if (!isHiddenLayer) return assignmentContext.outputNodes;
 
   const layerStart = sumHiddenSizesToIndex(
@@ -503,8 +504,7 @@ function resolvePreviousLayerNodes(
   params: { layerIndex: number },
 ): NeatapticNode[] {
   const layerPosition = params.layerIndex;
-  if (layerPosition === ZERO_VALUE)
-    return assignmentContext.inputNodes;
+  if (layerPosition === ZERO_VALUE) return assignmentContext.inputNodes;
 
   const previousLayerStart = sumHiddenSizesToIndex(
     assignmentContext.hiddenLayerSizes,
@@ -851,9 +851,7 @@ function parsePoolingSpecs(
 
   try {
     const poolingSpecs = JSON.parse(poolingSpecsMetadata.value);
-    return Array.isArray(poolingSpecs)
-      ? (poolingSpecs as Pool2DMapping[])
-      : [];
+    return Array.isArray(poolingSpecs) ? (poolingSpecs as Pool2DMapping[]) : [];
   } catch {
     return [];
   }
@@ -957,14 +955,17 @@ function calculateSpatialOutputSize(
   leadingPadding: number,
   trailingPadding: number,
 ): number {
-  if (inputSize <= ZERO_VALUE || kernelSize <= ZERO_VALUE || strideSize <= ZERO_VALUE) {
+  if (
+    inputSize <= ZERO_VALUE ||
+    kernelSize <= ZERO_VALUE ||
+    strideSize <= ZERO_VALUE
+  ) {
     return ZERO_VALUE;
   }
 
   return (
     Math.floor(
-      (inputSize + leadingPadding + trailingPadding - kernelSize) /
-        strideSize,
+      (inputSize + leadingPadding + trailingPadding - kernelSize) / strideSize,
     ) + 1
   );
 }
@@ -1098,7 +1099,8 @@ function applyConvCoordinateAssignment(
   const convBiasValues = readOnnxTensorFloatData(
     coordinateContext.tensorContext.convBiasTensor,
   );
-  neuronInternal.bias = convBiasValues[coordinateContext.coordinate.outChannelIndex];
+  neuronInternal.bias =
+    convBiasValues[coordinateContext.coordinate.outChannelIndex];
 
   // Step 3: Reset all inbound weights so non-receptive positions stay zero.
   resetInboundConnectionWeights(neuronInternal);

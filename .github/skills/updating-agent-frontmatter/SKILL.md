@@ -1,6 +1,7 @@
 ---
 name: updating-agent-frontmatter
 description: 'Use when: updating .agent.md YAML frontmatter, names, descriptions, tools, agents allow-lists, model fallback arrays, handoffs, or visibility flags.'
+argument-hint: 'Name the agent file, metadata fields to change, visibility target, allowed subagents, model tier, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
 ---

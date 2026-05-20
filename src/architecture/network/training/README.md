@@ -728,3 +728,78 @@ Raised when lookahead base optimizer type is unknown.
 ### NetworkTrainingUnknownOptimizerTypeError
 
 Raised when optimizer type is unknown.
+
+## architecture/network/training/network.training.isolate.utils.ts
+
+### FineTuneOptions
+
+Explicit settings for one isolated fine-tune pass.
+
+`steps` maps to the training loop iteration count and `learningRate` maps to
+the training rate. `seed` is optional because same-runtime ordered
+determinism only becomes a strong claim when the caller supplies both a
+stable dataset order and an explicit deterministic seed.
+
+Without an explicit `seed`, the helper still guarantees isolation: the
+original network and vector are never mutated, but repeated calls may
+produce different trained vectors when the underlying training loop contains
+stochastic behaviour such as dropout.
+
+### FineTuneResult
+
+Detached result from one isolated fine-tune pass.
+
+The helper returns a trained parameter vector rather than a mutated network
+so shared candidate state stays outside the training-owned boundary. Metrics
+are numeric summaries from the existing training loop, not persisted
+optimizer or runtime state.
+
+The returned `trainedVector` can be compared against the original vector,
+forwarded to a worker for scoring, persisted as a checkpoint delta, or
+discarded when only the fitness score matters.
+
+### fineTuneVector
+
+```ts
+fineTuneVector(
+  baseNetwork: default,
+  vector: ParameterVector,
+  dataset: TrainingSample[],
+  options: FineTuneOptions,
+): FineTuneResult
+```
+
+Fine-tune one parameter vector against an ordered dataset without mutating shared state.
+
+The helper clones `baseNetwork`, applies `vector` to that working copy,
+optionally installs an explicit deterministic seed via `Network.setSeed(...)`,
+runs the existing training loop in the caller-provided dataset order, and
+returns a new `ParameterVector` exported from the trained working copy. The
+supplied `baseNetwork` and `vector` are read-only inputs to this helper.
+
+Determinism is intentionally scoped. On the same runtime, repeated calls can
+return the same trained vector when topology, dataset order, training
+settings, and explicit `seed` all match. This helper does not claim
+cross-runtime exact replay, and it does not return transient optimizer,
+activation, or recurrent runtime state.
+
+```ts
+// Export the current parameter vector, fine-tune a working copy, and
+// inspect fitness metrics without modifying the shared candidate network.
+const vector = toParameterVector(candidate);
+const { trainedVector, metrics } = fineTuneVector(candidate, vector, dataset, {
+  steps: 50,
+  learningRate: 0.01,
+  seed: 42,
+});
+console.log('training error:', metrics?.error);
+// `candidate` and `vector` are unchanged after this call.
+```
+
+Parameters:
+- `baseNetwork` - Topology source cloned for the isolated working copy.
+- `vector` - Ordered parameter payload applied to the working copy only.
+- `dataset` - Ordered training samples consumed without shuffling.
+- `options` - Explicit training settings and optional deterministic seed.
+
+Returns: Detached trained vector plus numeric training metrics.

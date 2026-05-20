@@ -342,7 +342,10 @@ export function runOnnxExportFlow(
 
     if (
       quantizationPacket.mode === 'static-8bit' &&
-      hasUnsupportedMultiOutputDenseQuantizationTarget(model, quantizationPacket)
+      hasUnsupportedMultiOutputDenseQuantizationTarget(
+        model,
+        quantizationPacket,
+      )
     ) {
       fallbackReasons.push('multi_output_dense_boundary_requires_float32');
     }
@@ -374,7 +377,7 @@ export function runOnnxExportFlow(
   }
 
   /**
-  * Resolve static quantization fallback reasons after checking whether qlinear lowering landed.
+   * Resolve static quantization fallback reasons after checking whether qlinear lowering landed.
    *
    * @param model Built ONNX model.
    * @returns Ordered static-quantization fallback reasons.
@@ -408,9 +411,11 @@ export function runOnnxExportFlow(
     return quantizationPacket.calibration.layerTargets.some(
       (layerTarget) =>
         layerTarget.target === 'dense' &&
-        resolveDenseQuantizationOutputWidth(model, layerTarget.layerIndex) > 1 &&
+        resolveDenseQuantizationOutputWidth(model, layerTarget.layerIndex) >
+          1 &&
         !model.graph.node.some(
-          (graphNode) => graphNode.name === `qlinear_matmul_l${layerTarget.layerIndex}`,
+          (graphNode) =>
+            graphNode.name === `qlinear_matmul_l${layerTarget.layerIndex}`,
         ),
     );
   }

@@ -4,7 +4,7 @@ name: '01-planning'
 model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
-agents: ['planning-context-coordinator', 'planning-risk-coordinator', 'planning-test-strategy-coordinator', 'Plan Scout', 'Model Name Auditor', 'Plan Registration Auditor', 'helping-gap-resolution-coordinator']
+agents: ['planning-context-coordinator', 'planning-risk-coordinator', 'planning-test-strategy-coordinator', 'acceptance-criteria-writer', 'Plan Scout', 'Model Name Auditor', 'Plan Registration Auditor', 'helping-gap-resolution-coordinator']
 handoffs:
   - label: 'Start Research'
     agent: '02-researching'

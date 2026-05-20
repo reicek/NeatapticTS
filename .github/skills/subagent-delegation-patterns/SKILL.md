@@ -17,7 +17,7 @@ Use this skill when a phase agent needs specialist help.
 3. Use parallel subagents only for independent read-only discovery.
 4. Use sequential subagents when later work depends on earlier evidence or plan state.
 5. Require specialists to return compact evidence and next-step recommendations, not full workflows owned by skills.
-6. Record durable decisions in `plans/Agentic_Workflow_Architecture.plans.md`.
+6. Record durable decisions in the active tracker when one exists, or in the learning log for reusable customization improvements.
 
 ## Specialist Packet Template
 

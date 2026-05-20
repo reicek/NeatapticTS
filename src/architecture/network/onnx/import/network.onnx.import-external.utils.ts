@@ -4,7 +4,11 @@ import {
   ONNX_STANDARD_DOMAIN_ALIAS,
 } from '../export/network.onnx.export-setup.utils';
 import type { OnnxActivationOperation } from '../network.onnx.utils.types';
-import type { OnnxModel, OnnxNode, OnnxTensor } from '../schema/network.onnx.schema.types';
+import type {
+  OnnxModel,
+  OnnxNode,
+  OnnxTensor,
+} from '../schema/network.onnx.schema.types';
 import { ONNX_FLOAT_DATA_TYPE } from '../schema/network.onnx.schema.tensor-data.utils';
 import type {
   DecodedExternalOnnxAttribute,
@@ -40,7 +44,12 @@ const ALLOWED_ACTIVATION_OPERATIONS = new Set<OnnxActivationOperation>([
   'Mish',
   'Gelu',
 ]);
-const ALLOWED_GEMM_ATTRIBUTE_NAMES = new Set(['alpha', 'beta', 'transA', 'transB']);
+const ALLOWED_GEMM_ATTRIBUTE_NAMES = new Set([
+  'alpha',
+  'beta',
+  'transA',
+  'transB',
+]);
 const CANONICAL_GEMM_ATTRIBUTE_VALUES = new Map<string, number>([
   ['alpha', 1],
   ['beta', 1],
@@ -91,7 +100,10 @@ export function normalizeExternalDenseChain(
 
   // Step 2: Resolve public graph boundaries and initializer ownership.
   const initializerMap = buildInitializerMap(decodedGraph.initializer ?? []);
-  const publicInput = resolvePublicInput(decodedGraph.input ?? [], initializerMap);
+  const publicInput = resolvePublicInput(
+    decodedGraph.input ?? [],
+    initializerMap,
+  );
   const publicOutput = resolvePublicOutput(decodedGraph.output ?? []);
   const inputWidth = readRankTwoFeatureWidth(publicInput, 'model input');
   const outputWidth = readRankTwoFeatureWidth(publicOutput, 'model output');
@@ -126,15 +138,14 @@ function decodeVerifiedExternalModel(
 ): DecodedExternalOnnxModel {
   try {
     const decodedModel = onnxProto.onnx.ModelProto.decode(binaryModel);
-    const plainDecodedModel =
-      onnxProto.onnx.ModelProto.toObject(decodedModel) as DecodedExternalOnnxModel;
-    const verificationError = onnxProto.onnx.ModelProto.verify(plainDecodedModel);
+    const plainDecodedModel = onnxProto.onnx.ModelProto.toObject(
+      decodedModel,
+    ) as DecodedExternalOnnxModel;
+    const verificationError =
+      onnxProto.onnx.ModelProto.verify(plainDecodedModel);
 
     if (verificationError) {
-      throw new OnnxExternalImportError(
-        'invalid-binary',
-        verificationError,
-      );
+      throw new OnnxExternalImportError('invalid-binary', verificationError);
     }
 
     return plainDecodedModel;
@@ -165,7 +176,9 @@ function resolveDecodedGraph(decodedModel: DecodedExternalOnnxModel) {
 function resolveDeclaredOpset(decodedModel: DecodedExternalOnnxModel): number {
   const standardDomainImports = (decodedModel.opsetImport ?? []).filter(
     (operatorSetImport) =>
-      STANDARD_DOMAIN_NAMES.has(operatorSetImport.domain ?? ONNX_STANDARD_DOMAIN_ALIAS),
+      STANDARD_DOMAIN_NAMES.has(
+        operatorSetImport.domain ?? ONNX_STANDARD_DOMAIN_ALIAS,
+      ),
   );
 
   if (standardDomainImports.length !== 1) {
@@ -175,7 +188,9 @@ function resolveDeclaredOpset(decodedModel: DecodedExternalOnnxModel): number {
     );
   }
 
-  const declaredOpset = readLongLikeNumber(standardDomainImports[0]!.version ?? 0);
+  const declaredOpset = readLongLikeNumber(
+    standardDomainImports[0]!.version ?? 0,
+  );
   if (declaredOpset < FIRST_EXTERNAL_IMPORT_ONNX_OPSET) {
     throw new OnnxExternalImportError(
       'unsupported-opset',
@@ -248,7 +263,10 @@ function validateSupportingValueInfo(
   supportingValueInfo: DecodedExternalOnnxValueInfo[],
 ): void {
   supportingValueInfo.forEach((valueInfo) => {
-    readRankTwoFeatureWidth(valueInfo, `value-info tensor '${valueInfo.name ?? ''}'`);
+    readRankTwoFeatureWidth(
+      valueInfo,
+      `value-info tensor '${valueInfo.name ?? ''}'`,
+    );
   });
 }
 
@@ -286,7 +304,10 @@ function readRankTwoFeatureWidth(
   }
 
   const featureDimension = dimensions[VALUE_INFO_FEATURE_DIMENSION_INDEX];
-  if (featureDimension?.dimValue === undefined || featureDimension.dimValue === null) {
+  if (
+    featureDimension?.dimValue === undefined ||
+    featureDimension.dimValue === null
+  ) {
     throw new OnnxExternalImportError(
       'rank-mismatch',
       `${valueInfoLabel} must declare a concrete positive feature width.`,
@@ -448,7 +469,8 @@ function tryResolveFinalOutputAlias(context: {
   publicOutputName: string;
   declaredOpset: number;
 }): DecodedExternalOnnxNode | null {
-  const nextConsumers = context.consumerMap.get(context.currentTensorName) ?? [];
+  const nextConsumers =
+    context.consumerMap.get(context.currentTensorName) ?? [];
   if (nextConsumers.length !== 1) {
     return null;
   }
@@ -537,7 +559,10 @@ function normalizeDenseLayer(context: {
     );
   }
 
-  const weightValues = readFloat32TensorValues(weightTensor, outputWidth * inputWidth);
+  const weightValues = readFloat32TensorValues(
+    weightTensor,
+    outputWidth * inputWidth,
+  );
   const biasTensorName = context.gemmNode.input?.[GEMM_BIAS_INPUT_INDEX];
   const biasValues = biasTensorName
     ? readBiasValues(context.initializerMap, biasTensorName, outputWidth)
@@ -557,7 +582,10 @@ function validateCanonicalGemmNode(
   expectedInputTensorName: string,
 ): void {
   const inputNames = gemmNode.input!;
-  if (inputNames.length < GEMM_WEIGHT_INPUT_INDEX + 1 || inputNames.length > GEMM_BIAS_INPUT_INDEX + 1) {
+  if (
+    inputNames.length < GEMM_WEIGHT_INPUT_INDEX + 1 ||
+    inputNames.length > GEMM_BIAS_INPUT_INDEX + 1
+  ) {
     throw new OnnxExternalImportError(
       'unsupported-topology',
       'External Gemm nodes must declare input activation, weight initializer, and optional bias initializer only.',
@@ -582,7 +610,8 @@ function validateCanonicalGemmNode(
     }
 
     const expectedValue = CANONICAL_GEMM_ATTRIBUTE_VALUES.get(attributeName)!;
-    const actualValue = attributeEntry.f ?? readLongLikeNumber(attributeEntry.i ?? 0);
+    const actualValue =
+      attributeEntry.f ?? readLongLikeNumber(attributeEntry.i ?? 0);
     if (actualValue !== expectedValue) {
       throw new OnnxExternalImportError(
         'unsupported-attribute',
@@ -617,7 +646,9 @@ function resolveInitializerTensor(
 function readPositiveTensorDimensions(
   initializerTensor: DecodedExternalOnnxTensor,
 ): number[] {
-  const tensorDimensions = (initializerTensor.dims ?? []).map(readLongLikeNumber);
+  const tensorDimensions = (initializerTensor.dims ?? []).map(
+    readLongLikeNumber,
+  );
   if (tensorDimensions.some((dimensionValue) => dimensionValue < 1)) {
     throw new OnnxExternalImportError(
       'shape-mismatch',
@@ -646,7 +677,9 @@ function readFloat32TensorValues(
   return floatValues;
 }
 
-function decodeRawFloat32Data(rawData: OnnxDecodedBytes | null | undefined): number[] {
+function decodeRawFloat32Data(
+  rawData: OnnxDecodedBytes | null | undefined,
+): number[] {
   if (!rawData) {
     return [];
   }
@@ -697,7 +730,8 @@ function readBiasValues(
   const biasTensor = resolveInitializerTensor(initializerMap, biasTensorName);
   const biasShape = readPositiveTensorDimensions(biasTensor);
   const isVectorBias =
-    biasShape.length === BIAS_VECTOR_DIMENSIONS && biasShape[0] === expectedOutputWidth;
+    biasShape.length === BIAS_VECTOR_DIMENSIONS &&
+    biasShape[0] === expectedOutputWidth;
   const isSingleRowBias =
     biasShape.length === BIAS_MATRIX_DIMENSIONS &&
     biasShape[0] === 1 &&
@@ -762,7 +796,11 @@ function resolveLayerActivation(context: {
     );
   }
 
-  validateActivationNode(nextNode, context.declaredOpset, context.gemmOutputName);
+  validateActivationNode(
+    nextNode,
+    context.declaredOpset,
+    context.gemmOutputName,
+  );
   return {
     activation: activationOperation,
     activationNode: nextNode,
@@ -783,7 +821,10 @@ function validateActivationNode(
     );
   }
 
-  if (activationNode.opType === GELU_NODE_TYPE && declaredOpset < GELU_EXTERNAL_IMPORT_MINIMUM_OPSET) {
+  if (
+    activationNode.opType === GELU_NODE_TYPE &&
+    declaredOpset < GELU_EXTERNAL_IMPORT_MINIMUM_OPSET
+  ) {
     throw new OnnxExternalImportError(
       'unsupported-opset',
       `External ONNX Gelu import requires opset ${GELU_EXTERNAL_IMPORT_MINIMUM_OPSET} or newer.`,
@@ -824,7 +865,9 @@ function validateGeluAttributes(
   });
 }
 
-function readAttributeString(attributeEntry: DecodedExternalOnnxAttribute): string {
+function readAttributeString(
+  attributeEntry: DecodedExternalOnnxAttribute,
+): string {
   const rawAttributeValue = attributeEntry.s;
   if (!rawAttributeValue) {
     return '';
@@ -896,7 +939,9 @@ function buildImporterOwnedOnnxModel(
     ],
     graph: {
       inputs: [createCanonicalValueInfo('input', denseChain.inputWidth)],
-      outputs: [createCanonicalValueInfo(currentOutputName, denseChain.outputWidth)],
+      outputs: [
+        createCanonicalValueInfo(currentOutputName, denseChain.outputWidth),
+      ],
       initializer: initializerTensors,
       node: graphNodes,
     },

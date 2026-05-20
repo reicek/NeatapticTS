@@ -325,9 +325,7 @@ export function emitPerNeuronLayer(params: PerNeuronLayerParams): string {
  * @param params Residual-add emission parameters.
  * @returns Output tensor name.
  */
-export function emitResidualAddLayer(
-  params: ResidualAddLayerParams,
-): string {
+export function emitResidualAddLayer(params: ResidualAddLayerParams): string {
   const activationSquash = (
     params.currentLayerNodes[0] as unknown as NodeInternals
   ).squash;
@@ -379,7 +377,10 @@ export function emitResidualAddLayer(
     name: residualBiasTensorName,
     data_type: 1,
     dims: [params.currentLayerNodes.length],
-    float_data: Array.from({ length: params.currentLayerNodes.length }, () => 0),
+    float_data: Array.from(
+      { length: params.currentLayerNodes.length },
+      () => 0,
+    ),
   });
 
   // Step 3: Emit the main Gemm, residual Gemm, Add, and activation nodes.

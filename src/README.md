@@ -1751,6 +1751,73 @@ const capabilities = detectInferenceWorkerCapabilities({
 
 Padding on all four edges.
 
+### evaluateCandidate
+
+```ts
+evaluateCandidate(
+  network: default,
+  dataset: TrainingSample[],
+  options: EvaluateCandidateOptions,
+): Promise<HybridEvaluationResult>
+```
+
+Evaluate one candidate under an explicit hybrid fine-tune policy.
+
+The helper keeps policy decisions visible: `fineTune` controls whether
+training runs, `scoreNetwork` decides how the selected network state is
+scored, and `persistTrainedWeights` controls whether the trained vector is
+applied back to the original candidate after a successful score.
+`persistTrainedWeights: false` is the safe default because the trained
+variant is otherwise discarded after scoring.
+
+`conditional` remains blocked until the NEAT evaluation surface exposes a
+deterministic ranking or tie-break contract. This helper inherits the
+same-runtime ordered determinism limits of `fineTuneVector(...)`; it does
+not claim cross-runtime exact replay.
+
+```ts
+import { Network, evaluateCandidate } from 'neataptic';
+
+const network = new Network(2, 1);
+const dataset = [
+  { input: [0, 0], output: [0] },
+  { input: [1, 1], output: [0] },
+  { input: [1, 0], output: [1] },
+  { input: [0, 1], output: [1] },
+];
+
+// Fitness-only: fine-tune a detached clone, score it, discard trained weights.
+const fitnessOnly = await evaluateCandidate(network, dataset, {
+  policy: { fineTune: 'always', persistTrainedWeights: false },
+  fineTuneOptions: { steps: 50, learningRate: 0.01, seed: 42 },
+  scoreNetwork: (candidate) => -candidate.test(dataset, { cost: 'mse' }).error,
+});
+console.log('fitness:', fitnessOnly.fitness); // original candidate unchanged
+
+// Lamarckian: apply trained weights back to the candidate on explicit opt-in.
+const lamarckian = await evaluateCandidate(network, dataset, {
+  policy: { fineTune: 'always', persistTrainedWeights: true },
+  fineTuneOptions: { steps: 50, learningRate: 0.01, seed: 42 },
+  scoreNetwork: (candidate) => -candidate.test(dataset, { cost: 'mse' }).error,
+});
+console.log('fitness after persistence:', lamarckian.fitness);
+```
+
+Parameters:
+- `network` - Live candidate selected by the caller's fitness delegate.
+- `dataset` - Ordered training samples passed to `fineTuneVector(...)` when training runs.
+- `options` - Explicit policy, training settings, and scoring callback.
+
+Returns: Fitness plus the detached trained network when fine-tuning runs.
+
+### EvaluateCandidateOptions
+
+Inputs for one standalone hybrid candidate evaluation.
+
+`fineTuneOptions` is required whenever `policy.fineTune !== 'never'`
+because this helper delegates training to `fineTuneVector(...)` rather than
+guessing learning settings.
+
 ### evaluateInWorkers
 
 ```ts
@@ -1910,6 +1977,79 @@ const inferenceIr = extractNetworkInferenceIR(network);
 console.log(inferenceIr.outputNodeIndices);
 ```
 
+### FineTuneOptions
+
+Explicit settings for one isolated fine-tune pass.
+
+`steps` maps to the training loop iteration count and `learningRate` maps to
+the training rate. `seed` is optional because same-runtime ordered
+determinism only becomes a strong claim when the caller supplies both a
+stable dataset order and an explicit deterministic seed.
+
+Without an explicit `seed`, the helper still guarantees isolation: the
+original network and vector are never mutated, but repeated calls may
+produce different trained vectors when the underlying training loop contains
+stochastic behaviour such as dropout.
+
+### FineTuneResult
+
+Detached result from one isolated fine-tune pass.
+
+The helper returns a trained parameter vector rather than a mutated network
+so shared candidate state stays outside the training-owned boundary. Metrics
+are numeric summaries from the existing training loop, not persisted
+optimizer or runtime state.
+
+The returned `trainedVector` can be compared against the original vector,
+forwarded to a worker for scoring, persisted as a checkpoint delta, or
+discarded when only the fitness score matters.
+
+### fineTuneVector
+
+```ts
+fineTuneVector(
+  baseNetwork: default,
+  vector: ParameterVector,
+  dataset: TrainingSample[],
+  options: FineTuneOptions,
+): FineTuneResult
+```
+
+Fine-tune one parameter vector against an ordered dataset without mutating shared state.
+
+The helper clones `baseNetwork`, applies `vector` to that working copy,
+optionally installs an explicit deterministic seed via `Network.setSeed(...)`,
+runs the existing training loop in the caller-provided dataset order, and
+returns a new `ParameterVector` exported from the trained working copy. The
+supplied `baseNetwork` and `vector` are read-only inputs to this helper.
+
+Determinism is intentionally scoped. On the same runtime, repeated calls can
+return the same trained vector when topology, dataset order, training
+settings, and explicit `seed` all match. This helper does not claim
+cross-runtime exact replay, and it does not return transient optimizer,
+activation, or recurrent runtime state.
+
+```ts
+// Export the current parameter vector, fine-tune a working copy, and
+// inspect fitness metrics without modifying the shared candidate network.
+const vector = toParameterVector(candidate);
+const { trainedVector, metrics } = fineTuneVector(candidate, vector, dataset, {
+  steps: 50,
+  learningRate: 0.01,
+  seed: 42,
+});
+console.log('training error:', metrics?.error);
+// `candidate` and `vector` are unchanged after this call.
+```
+
+Parameters:
+- `baseNetwork` - Topology source cloned for the isolated working copy.
+- `vector` - Ordered parameter payload applied to the working copy only.
+- `dataset` - Ordered training samples consumed without shuffling.
+- `options` - Explicit training settings and optional deterministic seed.
+
+Returns: Detached trained vector plus numeric training metrics.
+
 ### formatConstructSummary
 
 ```ts
@@ -1936,6 +2076,34 @@ const construction = Network.construct([sensor, hidden, readout]);
 const summary = formatConstructSummary(construction);
 ```
 
+### fromParameterVector
+
+```ts
+fromParameterVector(
+  network: default,
+  parameterVector: ParameterVector,
+): void
+```
+
+Import one versioned parameter vector into a compatible live network runtime.
+
+The target layout is rebuilt fresh and validated against the incoming vector
+before any bias or weight mutation occurs. Version `1` applies only live
+node biases and live forward-connection or self-connection weights, so
+disabled connections still consume slots whenever they still exist in the
+target runtime graph. Ordered descriptor compatibility stays innovation-first
+and falls back to stable endpoint gene ids when an innovation id is absent,
+which keeps same-runtime imports aligned with the export layout contract.
+Import rejects non-neutral `node.response` and `connection.gain` explicitly
+and also rejects version, entry-count, values-length, or descriptor mismatch
+before mutation.
+
+Parameters:
+- `network` - Live target network instance.
+- `parameterVector` - Versioned payload to apply.
+
+Returns: Nothing. The target runtime mutates only after compatibility checks pass.
+
 ### getTransferList
 
 ```ts
@@ -1961,6 +2129,61 @@ Example:
 const payload = exportTransferableInferencePayload(network);
 worker.postMessage(payload, getTransferList(payload));
 ```
+
+### HybridEvaluationPolicy
+
+Explicit hybrid policy for one candidate evaluation.
+
+Recommended progression keeps the policy easy to reason about: start with
+`fineTune: 'never'` to measure the evolutionary baseline, move to
+`fineTune: 'always'` with `persistTrainedWeights: false` for fitness-only
+Baldwin-style scoring, and opt into `persistTrainedWeights: true` only when
+deliberate Lamarckian carry-forward is part of the experiment. `conditional`
+remains blocked until the caller can supply a deterministic ranking or
+tie-break contract.
+
+Persistence stays separate from the fine-tune trigger so fitness-only
+scoring remains the safe default. Callers should keep
+`persistTrainedWeights` false unless they explicitly want Lamarckian
+persistence after a successful score.
+
+### HybridEvaluationResult
+
+Result from one hybrid candidate evaluation pass.
+
+`trainedNetwork` is present only when fine-tuning runs. Fitness-only callers
+can inspect the detached trained variant without mutating the canonical
+candidate, while Lamarckian callers receive the same trained snapshot that
+was scored before explicit persistence is applied.
+
+Typical downstream uses include: forwarding `fitness` to the NEAT population
+score, comparing `trainedNetwork` weights against the original candidate to
+measure fine-tune delta, checkpointing the trained snapshot, or discarding
+the result entirely when only the fitness score matters.
+
+### HybridFineTuneMode
+
+Explicit fine-tune trigger for one hybrid evaluation pass.
+
+- `never` evaluates the live candidate as-is without calling any training helper.
+- `always` fine-tunes a detached clone before scoring; whether trained weights
+  persist back is controlled separately by `HybridEvaluationPolicy.persistTrainedWeights`.
+- `conditional` requires a deterministic ranking or tie-break contract at the
+  evaluation boundary before it can be unblocked. Passing `conditional` to
+  `evaluateCandidate` throws at runtime until that surface exists.
+
+### HybridScoreNetwork
+
+```ts
+HybridScoreNetwork(
+  candidate: default,
+): number | Promise<number>
+```
+
+Scoring callback used after the helper resolves the network state to score.
+
+The callback may be synchronous or async, but it should treat the supplied
+network as the exact candidate state selected by the hybrid policy.
 
 ### INFERENCE_ACTIVATION_TABLE
 
@@ -3473,6 +3696,48 @@ The pool owns worker lifecycle, not transport internals. Any persistent
 predictor or worker can participate as long as it can release its resources
 deterministically.
 
+### ParameterLayoutEntry
+
+One ordered descriptor inside parameter-layout version `1`.
+
+Bias entries use the stable node gene id in `nodeId`.
+Weight entries prefer the live connection `innovation` when it exists and
+otherwise fall back to the stable endpoint gene ids in `from` and `to`.
+Duplicate innovation ids or duplicate fallback endpoint pairs are rejected
+as ambiguous instead of inheriting incidental container order.
+
+### ParameterLayoutV1
+
+Deterministic parameter-layout descriptor owned by the network serialize boundary.
+
+Version `1` keeps one stable fold order: all bias entries first, then all
+weight entries. For a fixed topology with stable historical ids, this gives
+ordered determinism on the same runtime.
+The layout documents descriptor order only; it does not claim cross-runtime
+exact replay by itself.
+
+### ParameterVector
+
+Versioned parameter payload for same-runtime vector roundtrips.
+
+Layout metadata and scalar values travel together so imports can reject
+incompatible payloads before mutating a live network. Version `1` exports
+exactly one bias slot for every live runtime node and one weight slot for
+every live forward connection plus self-connection in `ParameterLayoutV1`
+order, including disabled connections when they still exist in the runtime
+graph.
+
+Weight descriptors still prefer `innovation` and otherwise fall back to the
+stable endpoint gene ids in `from` and `to`, so the same runtime-owned slot
+identity survives export and import even when a live connection has no
+innovation id. For a fixed topology with stable historical ids, this payload
+is ordered deterministic on the same runtime. It does not claim cross-runtime
+exact replay by itself.
+
+Non-neutral `node.response` and `connection.gain` remain explicit rejection
+cases for the runtime helpers instead of silently widening the weights-and-
+biases v1 contract.
+
 ### PortableInferencePayload
 
 Structured-clone-safe inference payload for the universal worker fallback.
@@ -3780,6 +4045,32 @@ const graph = exportVisualizationGraph(network);
 const dot = toDot(graph);
 // Paste `dot` into https://dreampuf.github.io/GraphvizOnline/
 ```
+
+### toParameterVector
+
+```ts
+toParameterVector(
+  network: default,
+): ParameterVector
+```
+
+Export one versioned parameter vector from a live network runtime.
+
+Version `1` keeps ordered `ParameterLayoutV1` metadata and the aligned bias
+and weight scalars together so same-runtime imports can verify compatibility
+before mutating another network. The payload includes every live node bias
+and every live forward-connection or self-connection weight in layout order,
+including disabled connections when they still exist in the runtime graph.
+Weight slots still prefer innovation-backed descriptors and fall back to
+stable endpoint gene ids when a live connection has no innovation id.
+Export rejects non-neutral `node.response` and `connection.gain` explicitly
+instead of flattening those deferred families into the weights-and-biases v1
+payload.
+
+Parameters:
+- `network` - Live network instance to export.
+
+Returns: Ordered layout metadata plus aligned scalar values for same-runtime deterministic roundtrips.
 
 ### TransferableInferencePayload
 

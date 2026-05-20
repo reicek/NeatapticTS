@@ -61,8 +61,8 @@ function readTensorShapeDimensions(
   valueInfo: DecodedValueInfo | undefined,
 ): Array<number | string> {
   return (
-    valueInfo?.type?.tensorType?.shape?.dim?.map((dimension) =>
-      dimension.dimParam ?? Number(dimension.dimValue ?? 0),
+    valueInfo?.type?.tensorType?.shape?.dim?.map(
+      (dimension) => dimension.dimParam ?? Number(dimension.dimValue ?? 0),
     ) ?? []
   );
 }
@@ -178,7 +178,9 @@ describe('network onnx binary export chapter', () => {
       });
 
       // Assert
-      expect(Array.from(firstBinaryModel)).toEqual(Array.from(secondBinaryModel));
+      expect(Array.from(firstBinaryModel)).toEqual(
+        Array.from(secondBinaryModel),
+      );
     });
 
     it('preserves explicit producer metadata overrides in the binary payload', () => {
@@ -199,7 +201,9 @@ describe('network onnx binary export chapter', () => {
           Buffer.from('phase8-producer'),
         ),
         hasCustomProducerVersion: binaryBuffer.includes(Buffer.from('1.2.3')),
-        hasCustomDocString: binaryBuffer.includes(Buffer.from('binary-model-doc')),
+        hasCustomDocString: binaryBuffer.includes(
+          Buffer.from('binary-model-doc'),
+        ),
       }).toEqual({
         hasCustomProducerName: true,
         hasCustomProducerVersion: true,
@@ -218,8 +222,12 @@ describe('network onnx binary export chapter', () => {
 
       // Assert
       expect({
-        inputDimensions: readTensorShapeDimensions(binaryModel.graph?.input?.[0]),
-        outputDimensions: readTensorShapeDimensions(binaryModel.graph?.output?.[0]),
+        inputDimensions: readTensorShapeDimensions(
+          binaryModel.graph?.input?.[0],
+        ),
+        outputDimensions: readTensorShapeDimensions(
+          binaryModel.graph?.output?.[0],
+        ),
       }).toEqual({
         inputDimensions: ['N', 2],
         outputDimensions: ['N', 1],
@@ -258,7 +266,9 @@ describe('network onnx binary export chapter', () => {
 
       // Assert
       expect({
-        inputDimensions: readTensorShapeDimensions(binaryModel.graph?.input?.[0]),
+        inputDimensions: readTensorShapeDimensions(
+          binaryModel.graph?.input?.[0],
+        ),
         flattenNodeOperation: flattenNode?.opType ?? null,
         flattenNodeInput: flattenNode?.input?.[0] ?? null,
         flattenNodeOutput: flattenNode?.output?.[0] ?? null,

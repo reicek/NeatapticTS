@@ -16,7 +16,10 @@ const ONNX_RUNTIME_NODE_VALIDATOR = 'onnxruntime-node' as const;
 type OnnxLongLike = number | { toString(): string };
 
 type DecodedBinaryValidationResult =
-  | { isValid: true; decodedModel: InstanceType<typeof onnxProto.onnx.ModelProto> }
+  | {
+      isValid: true;
+      decodedModel: InstanceType<typeof onnxProto.onnx.ModelProto>;
+    }
   | { isValid: false; errorMessage: string };
 
 type CompatibilityPolicyResolutionResult =
@@ -87,7 +90,8 @@ function decodeAndVerifyBinaryModel(
   try {
     const decodedModel = onnxProto.onnx.ModelProto.decode(binaryModel);
     const plainDecodedModel = onnxProto.onnx.ModelProto.toObject(decodedModel);
-    const verificationError = onnxProto.onnx.ModelProto.verify(plainDecodedModel);
+    const verificationError =
+      onnxProto.onnx.ModelProto.verify(plainDecodedModel);
 
     if (verificationError) {
       return {
@@ -136,7 +140,8 @@ function resolveCompatibilityPolicy(
   if (declaredOpset < 1) {
     return {
       isValid: false,
-      errorMessage: 'Binary ModelProto must declare a positive standard-domain opset.',
+      errorMessage:
+        'Binary ModelProto must declare a positive standard-domain opset.',
     };
   }
 
@@ -156,7 +161,9 @@ function resolveCompatibilityPolicy(
   };
 }
 
-async function validateExternalRuntimeLoad(binaryModel: Uint8Array): Promise<void> {
+async function validateExternalRuntimeLoad(
+  binaryModel: Uint8Array,
+): Promise<void> {
   const inferenceSession = await InferenceSession.create(binaryModel);
   inferenceSession.release();
 }

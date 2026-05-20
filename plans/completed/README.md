@@ -12,7 +12,7 @@ How to use this archive:
 
 Archive selection guide:
 
-- [Agentic_Workflow_Architecture.plans.md](Agentic_Workflow_Architecture.plans.md): closed standalone meta-workflow baseline for the seven numbered phase agents, hidden specialist delegation, skill-first customization, validation scripts and evals, and the MCP runtime-visibility ownership model.
+- [Agentic_Workflow_Architecture.plans.md](Agentic_Workflow_Architecture.plans.md): closed standalone meta-workflow baseline for numbered phase agents, hidden specialist delegation, skill-first customization, validation scripts and evals, and the MCP runtime-visibility ownership model.
 - [neat.plans.md](neat.plans.md): Phase 1 proper-NEAT correctness baseline.
 - [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md): deterministic execution ordering and explicit input/output role baseline.
 - [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md): closed primitive DX baseline for `Node`, `Group`, and `Layer`.
@@ -20,6 +20,7 @@ Archive selection guide:
 - [Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md](Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md): closed Phase 2 preconfigured architecture builders baseline (MLP, RandomSparse, NARX, GRU, LSTM) including shared demo profile contract, Flappy Bird and ASCII Maze integration, cross-demo e2e matrix, and profile-aware trainer/worker recurrent evolution settings.
 - [Standalone_Inference_Export.md](Standalone_Inference_Export.md): closed Phase 4 standalone export architecture baseline.
 - [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md): closed Phase 4 checkpointing baseline for population-only snapshots, light checkpoints, strict full checkpoints, and the persistence decision ladder.
+- [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md): closed hybrid-interoperability baseline for deterministic parameter vectors, isolated fine-tuning, explicit hybrid persistence policy, root-facade exports, and the docs surface now consumed by the NEATchat follow-up.
 - [Memory_Optimization.md](Memory_Optimization.md): closed pre-NGE memory foundation baseline through Track 1 / Phase 10.
 - [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): closed ONNX export/import baseline through the current Phase 9 compliance target, including binary-first runtime parity for the approved five-lane subset and the first named external binary import subset.
 - [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md): closed Phase 4 ergonomic extraction baseline for capability probes, transport auto-selection, browser worker delivery helpers, reusable pools, ordered batch evaluation, and the NEAT population helper.
@@ -52,6 +53,7 @@ Trigger phrases:
 - preconfigured builders, MLP/NARX/GRU/LSTM reopen, shared profile contract, demo profile integration: `plans/completed/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md`
 - standalone runtime, exported inference file, Phase 4 export reopen: `plans/completed/Standalone_Inference_Export.md`
 - checkpoint, resume, save population, light checkpoint, strict restore reopen: `plans/completed/Population_Save_Resume_and_Checkpointing.md`
+- hybrid evolution plus training reopen, parameter vectors, fineTuneVector, Lamarckian persistence policy: `plans/completed/Evolution_Training_Interoperability_Contracts.md`
 - memory optimization reopen, release gates, Track 1 memory baseline: `plans/completed/Memory_Optimization.md`
 - ONNX export/import reopen, runtime parity, external import subset, supported-subset honesty: `plans/completed/ONNX_EXPORT_PLAN.md`
 - turnkey worker evaluation reopen, transport auto-selection, ordered worker batches, reusable NEAT helper: `plans/completed/Turnkey_Multithread_Evaluation_API.md`

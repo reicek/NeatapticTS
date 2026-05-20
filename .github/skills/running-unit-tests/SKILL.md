@@ -1,6 +1,7 @@
 ---
 name: running-unit-tests
 description: 'Use when: running focused unit tests, confirming red or green status, choosing Jest command scope, or summarizing bounded test output.'
+argument-hint: 'Provide the focused command or test path, expected red/green state, and whether output should be summarized or rerouted.'
 user-invocable: false
 disable-model-invocation: false
 ---

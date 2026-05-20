@@ -1,7 +1,11 @@
 import Network from '../../network';
 import * as methods from '../../../../methods/methods';
 import { exportToONNX, importFromONNX } from '../network.onnx';
-import type { AttentionMapping, ConcatMapping, OnnxModel } from '../network.onnx';
+import type {
+  AttentionMapping,
+  ConcatMapping,
+  OnnxModel,
+} from '../network.onnx';
 
 type AdvancedGraphAwareNetwork = Network & {
   _onnxAdvancedGraph?: {
@@ -12,33 +16,33 @@ type AdvancedGraphAwareNetwork = Network & {
       targetLayerIndex: number;
       branchTensorName: string;
     }[];
-      concatMerges?: {
-        sourceLayerIndex: number;
-        targetLayerIndex: number;
-        concatNodeName: string;
-        concatOutputName: string;
-        inputOrder: 'previous_then_source';
-      }[];
-      residualAdds?: {
-        sourceLayerIndex: number;
-        targetLayerIndex: number;
-        branchTensorName: string;
-        mergeNodeName: string;
-        mergeOutputName: string;
-      }[];
-      sharedInitializerAliases?: {
-        aliasTensorName: string;
-        canonicalTensorName: string;
-        initializerKind: string;
-      }[];
-      attentionBlocks?: {
-        sourceLayerIndex: number;
-        targetLayerIndex: number;
-        sequenceLength: number;
-        modelWidth: number;
-        heads: number;
-        shadowOutputName: string;
-      }[];
+    concatMerges?: {
+      sourceLayerIndex: number;
+      targetLayerIndex: number;
+      concatNodeName: string;
+      concatOutputName: string;
+      inputOrder: 'previous_then_source';
+    }[];
+    residualAdds?: {
+      sourceLayerIndex: number;
+      targetLayerIndex: number;
+      branchTensorName: string;
+      mergeNodeName: string;
+      mergeOutputName: string;
+    }[];
+    sharedInitializerAliases?: {
+      aliasTensorName: string;
+      canonicalTensorName: string;
+      initializerKind: string;
+    }[];
+    attentionBlocks?: {
+      sourceLayerIndex: number;
+      targetLayerIndex: number;
+      sequenceLength: number;
+      modelWidth: number;
+      heads: number;
+      shadowOutputName: string;
+    }[];
   };
 };
 
@@ -79,7 +83,9 @@ function createConcatMergeRoundTripNetwork(): Network {
 
 function createSharedInitializerAliasNetwork(): Network {
   const network = Network.createMLP(2, [2, 2], 1);
-  const hiddenNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'hidden');
+  const hiddenNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'hidden',
+  );
 
   hiddenNodes[0].bias = 0.5;
   hiddenNodes[1].bias = -0.25;
@@ -358,7 +364,9 @@ describe('network onnx import chapter', () => {
           expect(
             importedNetwork.nodes
               .filter((nodeEntry) => nodeEntry.type === 'hidden')
-              .every((hiddenNode) => hiddenNode.squash === methods.Activation.relu),
+              .every(
+                (hiddenNode) => hiddenNode.squash === methods.Activation.relu,
+              ),
           ).toBe(true);
         });
       });
@@ -560,7 +568,8 @@ describe('network onnx import chapter', () => {
                   Math.abs(outputValue - expectedOutput[outputIndex]!) <=
                   Number.EPSILON,
               ),
-            attentionBlocks: importedNetwork._onnxAdvancedGraph?.attentionBlocks,
+            attentionBlocks:
+              importedNetwork._onnxAdvancedGraph?.attentionBlocks,
           }).toEqual({
             inferenceMatches: true,
             attentionBlocks: [

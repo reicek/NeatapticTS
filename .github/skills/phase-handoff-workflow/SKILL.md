@@ -27,7 +27,7 @@ Use this skill when adding or reviewing `handoffs` between numbered phase agents
    session would only duplicate evidence.
 8. Route failed Green Testing back to the smallest relevant prior phase instead
    of continuing forward.
-9. Update `plans/Agentic_Workflow_Architecture.plans.md` after each phase step.
+9. Update the active tracker after each phase step when one exists.
 
 ## Phase Step Standard
 
@@ -107,4 +107,4 @@ and validation required before advancing.
 ## Sources
 
 - VS Code custom agents documentation describes handoff buttons and `handoffs` frontmatter.
-- The repo tracker defines the seven-phase sequence and central plan update rule.
+- The active phase packet defines the current numbered sequence and tracker update rule.

@@ -53,9 +53,10 @@ User-facing custom agent workflow:
 - Legacy scouts, auditors, and implementation specialists are hidden subagents.
   They should keep `user-invocable: false` and be reached through the phase
   agents' explicit `agents: [...]` allow-lists.
-- Use [plans/Agentic_Workflow_Architecture.plans.md](../plans/Agentic_Workflow_Architecture.plans.md)
-  as the central source of truth for agent, skill, model-routing, validation,
-  and eval changes. Update that plan after every completed customization step.
+- Use [plans/completed/Agentic_Workflow_Architecture.plans.md](../plans/completed/Agentic_Workflow_Architecture.plans.md)
+  as the archived baseline for agent, skill, model-routing, validation, and
+  eval decisions. For new customization work, update the active tracker when
+  one exists and append learning events for durable local improvements.
 - Active implementation phases in `.plans.md` files should be step-based
   packets: start each active or planned phase with only Step 01 for
   `01-planning`, and require that step to author the remaining
@@ -86,7 +87,7 @@ Current intended ownership split:
   tools, model arrays, handoffs, visibility, and frontmatter validation.
 - `model-routing-and-budget`: canonical workflow for assigning Full vs Mini
   model tiers and validating qualified Copilot model strings.
-- `phase-handoff-workflow`: canonical workflow for seven-phase handoff prompts,
+- `phase-handoff-workflow`: canonical workflow for numbered SDLC handoff prompts,
   stop conditions, and forward-only phase transitions.
 - `subagent-delegation-patterns`: canonical workflow for compact specialist
   task packets, sequential vs parallel delegation, and output contracts.

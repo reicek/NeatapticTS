@@ -24,7 +24,7 @@
   remains the provisional `bridge-required` owner for model snapshots or hook
   observations only, and selected active agent, the full live agent list,
   tool-picker state, and the current selected model UI state remain `manual
-  until a documented API exists`.
+until a documented API exists`.
 - Internal MCP workflow documentation is aligned at
   `.github/skills/mcp-local-server-workflow/SKILL.md`, and no public or
   generated documentation surface required closure-time widening.
@@ -47,7 +47,7 @@
   `node scripts/agent-customization/validate-plan-phase-packets.mjs --plan=plans/Agentic_Workflow_Architecture.plans.md`
   and `node scripts/agent-customization/validate-plan-sync.mjs` both passed
   with `0 errors, 0 warnings`, and `git diff --check --
-  plans/Agentic_Workflow_Architecture.plans.md` produced no output while the
+plans/Agentic_Workflow_Architecture.plans.md` produced no output while the
   active tracker still lived in `plans/` as an untracked file.
 
 ## Reopen conditions

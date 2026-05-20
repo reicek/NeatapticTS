@@ -50,9 +50,10 @@ hybrid retrieval-plus-generation behavior, and explicit evaluation contracts.
   - `plans/completed/Population_Save_Resume_and_Checkpointing.md` is [DONE],
     so a stable checkpoint and resume contract now exists for a durable
     NEATchat identity baseline.
-  - `plans/Evolution_Training_Interoperability_Contracts.md` is still
-    [PLANNED], so parameter-vector export/import and isolated fine-tune
-    policies are not available yet.
+  - `plans/completed/Evolution_Training_Interoperability_Contracts.md` is
+    [DONE], so parameter-vector export/import, isolated fine-tune, and
+    explicit persistence policy seams are now available as an archived
+    baseline.
   - `plans/completed/ONNX_EXPORT_PLAN.md` is [DONE], but the archived ONNX
     baseline closes only the declared lower-opset same-family subset and the
     first named dense external binary import lane. The exact NEATchat
@@ -82,7 +83,7 @@ true:
 
 Roadmap sequencing note:
 
-- In the agreed serial pre-NGE sequence, this plan stays after the archived Track 1 stop line in `plans/completed/Memory_Optimization.md`, after `plans/completed/ONNX_EXPORT_PLAN.md`, and after `plans/Evolution_Training_Interoperability_Contracts.md`.
+- In the agreed serial pre-NGE sequence, this plan stays after the archived Track 1 stop line in `plans/completed/Memory_Optimization.md`, after `plans/completed/ONNX_EXPORT_PLAN.md`, and after `plans/completed/Evolution_Training_Interoperability_Contracts.md`.
 - Finishing Memory alone is not a handoff into NEATchat; the required stop line still passes through ONNX hardening and hybrid interoperability first.
 
 Before those gates open, work on this file should stay limited to dependency
@@ -318,12 +319,12 @@ Before any NEATchat-owned implementation starts:
 2. `plans/completed/Worker_Friendly_Network_Serialization_Fastpath.md` and
    `plans/completed/Turnkey_Multithread_Evaluation_API.md` must remain the
    usable background-execution path with deterministic fallback behavior.
-3. `plans/Evolution_Training_Interoperability_Contracts.md` must expose the
-   parameter-vector or isolated fine-tune seam that personalized candidates
-   depend on.
+3. `plans/completed/Evolution_Training_Interoperability_Contracts.md` must
+   remain the archived parameter-vector and isolated fine-tune seam that
+   personalized candidates depend on.
 4. `plans/completed/ONNX_EXPORT_PLAN.md` must already cover the exact
-  recurrent import subset the chosen seed family needs, or the repo must
-  choose and document a non-ONNX conversion path for the seed model.
+   recurrent import subset the chosen seed family needs, or the repo must
+   choose and document a non-ONNX conversion path for the seed model.
 
 Once those gates are open, the first NEATchat-owned tasks are:
 

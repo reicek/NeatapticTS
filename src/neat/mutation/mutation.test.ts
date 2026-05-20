@@ -713,7 +713,11 @@ describe('neat mutation chapter', () => {
           network as unknown as Parameters<typeof mutateAddNodeReuse>[0],
         );
 
-        const recreatedConnection = network.connect(sourceNode, targetNode, originalWeight)[0];
+        const recreatedConnection = network.connect(
+          sourceNode,
+          targetNode,
+          originalWeight,
+        )[0];
 
         if (!recreatedConnection) {
           throw new Error('Expected to recreate the original edge.');

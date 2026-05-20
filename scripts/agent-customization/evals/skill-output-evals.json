@@ -20,7 +20,7 @@
     {
       "id": "agent-inventory-output",
       "target": "agent-inventory-audit",
-      "prompt": "Inventory current agents and skills after the seven-phase migration.",
+      "prompt": "Inventory current agents and skills after the numbered SDLC orchestrator migration.",
       "assertions": [
         {
           "text": "The inventory includes total and user-invocable agent counts.",

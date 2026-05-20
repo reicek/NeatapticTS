@@ -130,7 +130,9 @@ describe('network onnx import-activations utils chapter', () => {
       it('assigns the softplus activation to the matching hidden node', () => {
         // Arrange
         const network = Network.createMLP(1, [1], 1);
-        const hiddenNode = network.nodes.find((nodeEntry) => nodeEntry.type === 'hidden');
+        const hiddenNode = network.nodes.find(
+          (nodeEntry) => nodeEntry.type === 'hidden',
+        );
         const onnx = buildOnnx([
           { op_type: 'Softplus', name: 'act_l1', input: [], output: [] },
         ]);
@@ -147,7 +149,9 @@ describe('network onnx import-activations utils chapter', () => {
       it('assigns the mish activation to the matching hidden node', () => {
         // Arrange
         const network = Network.createMLP(1, [1], 1);
-        const hiddenNode = network.nodes.find((nodeEntry) => nodeEntry.type === 'hidden');
+        const hiddenNode = network.nodes.find(
+          (nodeEntry) => nodeEntry.type === 'hidden',
+        );
         const onnx = buildOnnx([
           { op_type: 'Mish', name: 'act_l1', input: [], output: [] },
         ]);
@@ -164,7 +168,9 @@ describe('network onnx import-activations utils chapter', () => {
       it('assigns the gelu activation to the matching hidden node', () => {
         // Arrange
         const network = Network.createMLP(1, [1], 1);
-        const hiddenNode = network.nodes.find((nodeEntry) => nodeEntry.type === 'hidden');
+        const hiddenNode = network.nodes.find(
+          (nodeEntry) => nodeEntry.type === 'hidden',
+        );
         const onnx = buildOnnx([
           { op_type: 'Gelu', name: 'act_l1', input: [], output: [] },
         ]);

@@ -1,6 +1,7 @@
 ---
 name: triaging-test-failures
 description: 'Use when: a validation command fails and the workflow needs failure ownership, root-cause grouping, reroute decisions, or unrelated-failure separation.'
+argument-hint: 'Provide the failing command, relevant output summary, changed files, and whether failures may be unrelated or environment-owned.'
 user-invocable: false
 disable-model-invocation: false
 ---

@@ -128,7 +128,11 @@ const GRU_DIAGONAL_GATE_INDEX = 2;
 type SharedInitializerAliasRecord = {
   aliasTensorName: string;
   canonicalTensorName: string;
-  initializerKind: 'dense_weight' | 'dense_bias' | 'per_neuron_weight' | 'per_neuron_bias';
+  initializerKind:
+    | 'dense_weight'
+    | 'dense_bias'
+    | 'per_neuron_weight'
+    | 'per_neuron_bias';
 };
 
 /**
@@ -231,37 +235,41 @@ function reuseSharedInitializers(
   const initializerAliases: SharedInitializerAliasRecord[] = [];
   const aliasTensorNameByRemovedTensorName = new Map<string, string>();
 
-  model.graph.initializer = model.graph.initializer.filter((initializerEntry) => {
-    const initializerKind = classifySharedInitializerKind(initializerEntry.name);
-    if (!initializerKind) {
-      return true;
-    }
-
-    const initializerSignature = buildSharedInitializerSignature(
-      initializerEntry,
-      initializerKind,
-    );
-    const canonicalTensorName =
-      signatureToCanonicalTensorName.get(initializerSignature);
-    if (!canonicalTensorName) {
-      signatureToCanonicalTensorName.set(
-        initializerSignature,
+  model.graph.initializer = model.graph.initializer.filter(
+    (initializerEntry) => {
+      const initializerKind = classifySharedInitializerKind(
         initializerEntry.name,
       );
-      return true;
-    }
+      if (!initializerKind) {
+        return true;
+      }
 
-    aliasTensorNameByRemovedTensorName.set(
-      initializerEntry.name,
-      canonicalTensorName,
-    );
-    initializerAliases.push({
-      aliasTensorName: initializerEntry.name,
-      canonicalTensorName,
-      initializerKind,
-    });
-    return false;
-  });
+      const initializerSignature = buildSharedInitializerSignature(
+        initializerEntry,
+        initializerKind,
+      );
+      const canonicalTensorName =
+        signatureToCanonicalTensorName.get(initializerSignature);
+      if (!canonicalTensorName) {
+        signatureToCanonicalTensorName.set(
+          initializerSignature,
+          initializerEntry.name,
+        );
+        return true;
+      }
+
+      aliasTensorNameByRemovedTensorName.set(
+        initializerEntry.name,
+        canonicalTensorName,
+      );
+      initializerAliases.push({
+        aliasTensorName: initializerEntry.name,
+        canonicalTensorName,
+        initializerKind,
+      });
+      return false;
+    },
+  );
 
   if (!initializerAliases.length) {
     return [];
@@ -934,7 +942,8 @@ function resolveConvSourceLayout(
   };
 
   const upstreamPoolingSpec = options?.pool2dMappings?.find(
-    (poolingSpec) => poolingSpec.afterLayerIndex === context.convSpec.layerIndex - 1,
+    (poolingSpec) =>
+      poolingSpec.afterLayerIndex === context.convSpec.layerIndex - 1,
   );
   const upstreamConvSpec = options?.conv2dMappings?.find(
     (mapping) => mapping.layerIndex === context.convSpec.layerIndex - 1,
@@ -985,8 +994,7 @@ function calculateSpatialOutputSize(
 
   return (
     Math.floor(
-      (inputSize + leadingPadding + trailingPadding - kernelSize) /
-        strideSize,
+      (inputSize + leadingPadding + trailingPadding - kernelSize) / strideSize,
     ) + 1
   );
 }
@@ -1016,7 +1024,10 @@ function hasNoIgnoredSourceWeights(
     const currentNodeInternal = asNodeInternals(currentNode);
     return ignoredSourceNodes.every((ignoredSourceNode) =>
       areWeightsWithinTolerance({
-        leftWeight: resolveIncomingWeight(currentNodeInternal, ignoredSourceNode),
+        leftWeight: resolveIncomingWeight(
+          currentNodeInternal,
+          ignoredSourceNode,
+        ),
         rightWeight: 0,
         tolerance: CONV_WEIGHT_SHARING_TOLERANCE,
       }),
@@ -1029,17 +1040,21 @@ function collectAddressedSourceIndices(
   sourceLayout: ResolvedConvSourceLayout,
 ): Set<number> {
   return new Set(
-    Array.from({ length: convSpec.inChannels }, (_unusedChannel, inChannelIndex) =>
-      Array.from({ length: convSpec.inHeight }, (_unusedRow, inputRow) =>
-        Array.from({ length: convSpec.inWidth }, (_unusedColumn, inputColumn) =>
-          buildConvSourceIndex(
-            sourceLayout,
-            inChannelIndex,
-            inputRow,
-            inputColumn,
+    Array.from(
+      { length: convSpec.inChannels },
+      (_unusedChannel, inChannelIndex) =>
+        Array.from({ length: convSpec.inHeight }, (_unusedRow, inputRow) =>
+          Array.from(
+            { length: convSpec.inWidth },
+            (_unusedColumn, inputColumn) =>
+              buildConvSourceIndex(
+                sourceLayout,
+                inChannelIndex,
+                inputRow,
+                inputColumn,
+              ),
           ),
-        ),
-      ).flat(),
+        ).flat(),
     ).flat(),
   );
 }
@@ -1256,7 +1271,7 @@ function isKernelCoordinateConsistent(
     context.kernelCoordinate.inChannelIndex,
     inputPosition.inputRow,
     inputPosition.inputColumn,
-      context.sourceLayout,
+    context.sourceLayout,
   );
   const currentWeight = sourceNode
     ? resolveIncomingWeight(context.neuronInternal, sourceNode)

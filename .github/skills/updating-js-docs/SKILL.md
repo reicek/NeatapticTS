@@ -1,6 +1,7 @@
 ---
 name: updating-js-docs
 description: 'Use when: updating JSDoc/TSDoc, API examples, generated README source inputs, conceptual docs, or public documentation comments.'
+argument-hint: 'Describe the API or docs surface, source files to edit, example or citation needs, and docs generation decision.'
 user-invocable: false
 disable-model-invocation: false
 ---

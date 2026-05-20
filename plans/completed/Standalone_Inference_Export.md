@@ -18,7 +18,7 @@
 
 ## Audit summary
 
-- Cross-plan alignment is frozen against [plans/Roadmap.md](../Roadmap.md), [plans/completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md), [plans/Worker_Friendly_Network_Serialization_Fastpath.md](../Worker_Friendly_Network_Serialization_Fastpath.md), and [plans/Evolution_Training_Interoperability_Contracts.md](../Evolution_Training_Interoperability_Contracts.md).
+- Cross-plan alignment is frozen against [plans/Roadmap.md](../Roadmap.md), [plans/completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md), [plans/Worker_Friendly_Network_Serialization_Fastpath.md](../Worker_Friendly_Network_Serialization_Fastpath.md), and [plans/completed/Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md).
 - The completed groundwork is captured as prerequisite coverage instead of being misreported as full export completion.
 - The first implementation reopen step is stable: create `src/architecture/network/export/`, freeze `InferenceIRv1`, then build the shared renderer and public facade around that IR.
 - The underlying hardening pass previously validated focused standalone parity plus `npm run build`, `npm run test:silent`, and `npm run docs`; this tracker-closure pass did not rerun runtime validations because it only changed planning artifacts.

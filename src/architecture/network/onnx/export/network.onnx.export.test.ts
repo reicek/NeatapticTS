@@ -267,7 +267,9 @@ function applySupportedDenseActivation(
     );
   }
 
-  throw new Error(`Unsupported qlinear test activation ${activationNode.op_type}.`);
+  throw new Error(
+    `Unsupported qlinear test activation ${activationNode.op_type}.`,
+  );
 }
 
 function applySupportedOneOutputActivation(
@@ -275,11 +277,9 @@ function applySupportedOneOutputActivation(
   layerIndex: number,
   activationInputValue: number,
 ): number {
-  return applySupportedDenseActivation(
-    model,
-    layerIndex,
-    [activationInputValue],
-  )[0]!;
+  return applySupportedDenseActivation(model, layerIndex, [
+    activationInputValue,
+  ])[0]!;
 }
 
 function evaluateOneOutputQLinearDenseLayerOutput(
@@ -313,7 +313,10 @@ function evaluateOneOutputQLinearDenseLayerOutput(
     `QuantDenseOutputZeroPoint_l${layerIndex}`,
   );
   const outputZeroPoint = outputZeroPointInitializer.int32_data?.[0]!;
-  const biasValues = getRequiredInitializer(model, `B${layerIndex - 1}`).float_data!;
+  const biasValues = getRequiredInitializer(
+    model,
+    `B${layerIndex - 1}`,
+  ).float_data!;
   const quantizedWeightValues = getRequiredInitializer(
     model,
     `QuantDenseWeight_l${layerIndex}`,
@@ -343,7 +346,10 @@ function evaluateOneOutputQLinearDenseLayerOutput(
     (_unused, inputIndex) =>
       (quantizedInputValues[inputIndex]! - inputZeroPoint) *
       (quantizedWeightValues[inputIndex]! - weightZeroPoint),
-  ).reduce((runningTotal, accumulatorValue) => runningTotal + accumulatorValue, 0);
+  ).reduce(
+    (runningTotal, accumulatorValue) => runningTotal + accumulatorValue,
+    0,
+  );
   const quantizedOutputValue = clampQuantizedInteger(
     roundToNearestEven(
       (inputScale * weightScale * quantizedAccumulator) / outputScale +
@@ -640,7 +646,8 @@ describe('network onnx export chapter', () => {
               nodeEntry.attributes?.some(
                 (attributeEntry) =>
                   attributeEntry.name === 'approximate' &&
-                  (attributeEntry as OnnxAttributeView & { s?: string }).s === 'tanh',
+                  (attributeEntry as OnnxAttributeView & { s?: string }).s ===
+                    'tanh',
               ) === true,
           ),
         ).toBe(true);
@@ -763,10 +770,8 @@ describe('network onnx export chapter', () => {
             onnxModel,
             'quantization_rounding_mode',
           ),
-          denseInputScale: getInitializer(
-            onnxModel,
-            'QuantDenseInputScale_l1',
-          )?.float_data?.[0],
+          denseInputScale: getInitializer(onnxModel, 'QuantDenseInputScale_l1')
+            ?.float_data?.[0],
           denseInputZeroPointType: getInitializer(
             onnxModel,
             'QuantDenseInputZeroPoint_l1',
@@ -1038,10 +1043,12 @@ describe('network onnx export chapter', () => {
             (nodeEntry) => nodeEntry.op_type === 'DequantizeLinear',
           ).length,
           biasAddCount: toNodes(onnxModel).filter(
-            (nodeEntry) => nodeEntry.op_type === 'Add' && nodeEntry.name === 'bias_add_l1',
+            (nodeEntry) =>
+              nodeEntry.op_type === 'Add' && nodeEntry.name === 'bias_add_l1',
           ).length,
           reluCount: toNodes(onnxModel).filter(
-            (nodeEntry) => nodeEntry.op_type === 'Relu' && nodeEntry.name === 'act_l1',
+            (nodeEntry) =>
+              nodeEntry.op_type === 'Relu' && nodeEntry.name === 'act_l1',
           ).length,
           gemmCount: toNodes(onnxModel).filter(
             (nodeEntry) => nodeEntry.op_type === 'Gemm',
@@ -1109,9 +1116,9 @@ describe('network onnx export chapter', () => {
         );
 
         // Assert
-        expect(Math.abs(quantizedLayerOutput - baselineOutput)).toBeLessThanOrEqual(
-          1e-2,
-        );
+        expect(
+          Math.abs(quantizedLayerOutput - baselineOutput),
+        ).toBeLessThanOrEqual(1e-2);
       });
 
       it('keeps one-output static-8bit dense exports byte-stable across repeated runs', () => {
@@ -1538,9 +1545,11 @@ describe('network onnx export chapter', () => {
                 .filter((nodeEntry) => nodeEntry.name === 'act_l2')
                 .map((nodeEntry) => nodeEntry.op_type),
               hasFirstDenseInputScale:
-                getInitializer(onnxModel, 'QuantDenseInputScale_l1') !== undefined,
+                getInitializer(onnxModel, 'QuantDenseInputScale_l1') !==
+                undefined,
               hasSecondDenseInputScale:
-                getInitializer(onnxModel, 'QuantDenseInputScale_l2') !== undefined,
+                getInitializer(onnxModel, 'QuantDenseInputScale_l2') !==
+                undefined,
             }).toEqual({
               activationLabel,
               effectiveQuantizationMode: 'static-8bit',
@@ -1573,9 +1582,9 @@ describe('network onnx export chapter', () => {
             );
 
             // Assert
-            expect(Math.abs(quantizedOutput - baselineOutput)).toBeLessThanOrEqual(
-              tolerance,
-            );
+            expect(
+              Math.abs(quantizedOutput - baselineOutput),
+            ).toBeLessThanOrEqual(tolerance);
           });
         },
       );
@@ -1619,11 +1628,8 @@ describe('network onnx export chapter', () => {
             representation: 'qlinear',
           },
         });
-        const firstQuantizedLayerOutput = evaluateOneOutputQLinearDenseLayerOutput(
-          onnxModel,
-          1,
-          sampleInput,
-        );
+        const firstQuantizedLayerOutput =
+          evaluateOneOutputQLinearDenseLayerOutput(onnxModel, 1, sampleInput);
         const finalQuantizedOutput = evaluateOneOutputQLinearDenseLayerOutput(
           onnxModel,
           2,
@@ -1631,9 +1637,9 @@ describe('network onnx export chapter', () => {
         );
 
         // Assert
-        expect(Math.abs(finalQuantizedOutput - baselineOutput)).toBeLessThanOrEqual(
-          2e-2,
-        );
+        expect(
+          Math.abs(finalQuantizedOutput - baselineOutput),
+        ).toBeLessThanOrEqual(2e-2);
       });
 
       it('keeps a Tanh-to-Sigmoid qlinear dense chain within a small tolerance of the baseline dense path', () => {
@@ -1675,11 +1681,8 @@ describe('network onnx export chapter', () => {
             representation: 'qlinear',
           },
         });
-        const firstQuantizedLayerOutput = evaluateOneOutputQLinearDenseLayerOutput(
-          onnxModel,
-          1,
-          sampleInput,
-        );
+        const firstQuantizedLayerOutput =
+          evaluateOneOutputQLinearDenseLayerOutput(onnxModel, 1, sampleInput);
         const finalQuantizedOutput = evaluateOneOutputQLinearDenseLayerOutput(
           onnxModel,
           2,
@@ -1687,9 +1690,9 @@ describe('network onnx export chapter', () => {
         );
 
         // Assert
-        expect(Math.abs(finalQuantizedOutput - baselineOutput)).toBeLessThanOrEqual(
-          2e-2,
-        );
+        expect(
+          Math.abs(finalQuantizedOutput - baselineOutput),
+        ).toBeLessThanOrEqual(2e-2);
       });
 
       it('keeps a Softplus qlinear dense layer within a small tolerance of the baseline dense path', () => {
@@ -1732,9 +1735,9 @@ describe('network onnx export chapter', () => {
         );
 
         // Assert
-        expect(Math.abs(quantizedLayerOutput - baselineOutput)).toBeLessThanOrEqual(
-          2e-2,
-        );
+        expect(
+          Math.abs(quantizedLayerOutput - baselineOutput),
+        ).toBeLessThanOrEqual(2e-2);
       });
 
       it('keeps a Softsign qlinear dense layer within a small tolerance of the baseline dense path', () => {
@@ -1777,9 +1780,9 @@ describe('network onnx export chapter', () => {
         );
 
         // Assert
-        expect(Math.abs(quantizedLayerOutput - baselineOutput)).toBeLessThanOrEqual(
-          2e-2,
-        );
+        expect(
+          Math.abs(quantizedLayerOutput - baselineOutput),
+        ).toBeLessThanOrEqual(2e-2);
       });
 
       it('keeps a Gelu qlinear dense layer within a small tolerance of the baseline dense path', () => {
@@ -1823,9 +1826,9 @@ describe('network onnx export chapter', () => {
         );
 
         // Assert
-        expect(Math.abs(quantizedLayerOutput - baselineOutput)).toBeLessThanOrEqual(
-          2e-2,
-        );
+        expect(
+          Math.abs(quantizedLayerOutput - baselineOutput),
+        ).toBeLessThanOrEqual(2e-2);
       });
 
       it('keeps a Selu qlinear dense layer within a small tolerance of the baseline dense path', () => {
@@ -1868,9 +1871,9 @@ describe('network onnx export chapter', () => {
         );
 
         // Assert
-        expect(Math.abs(quantizedLayerOutput - baselineOutput)).toBeLessThanOrEqual(
-          2e-2,
-        );
+        expect(
+          Math.abs(quantizedLayerOutput - baselineOutput),
+        ).toBeLessThanOrEqual(2e-2);
       });
 
       it('keeps a Mish qlinear dense layer within a small tolerance of the baseline dense path', () => {
@@ -1914,9 +1917,9 @@ describe('network onnx export chapter', () => {
         );
 
         // Assert
-        expect(Math.abs(quantizedLayerOutput - baselineOutput)).toBeLessThanOrEqual(
-          2e-2,
-        );
+        expect(
+          Math.abs(quantizedLayerOutput - baselineOutput),
+        ).toBeLessThanOrEqual(2e-2);
       });
 
       it('keeps below-opset Mish qlinear dense requests on the static-8bit path without quantization fallback metadata', () => {
@@ -2136,9 +2139,9 @@ describe('network onnx export chapter', () => {
         });
 
         // Assert
-        expect(getParsedMetadataArray(onnxModel, 'quantization_fallback_reasons')).toEqual([
-          'recurrent_boundary_requires_float32',
-        ]);
+        expect(
+          getParsedMetadataArray(onnxModel, 'quantization_fallback_reasons'),
+        ).toEqual(['recurrent_boundary_requires_float32']);
       });
 
       it('records an advanced-graph fallback reason for dynamic concat requests', () => {
@@ -2209,10 +2212,8 @@ describe('network onnx export chapter', () => {
 
         // Assert
         expect({
-          hasDenseInputScale: getInitializer(
-            onnxModel,
-            'QuantDenseInputScale_l1',
-          ) !== undefined,
+          hasDenseInputScale:
+            getInitializer(onnxModel, 'QuantDenseInputScale_l1') !== undefined,
           fallbackReasons: getParsedMetadataArray(
             onnxModel,
             'quantization_fallback_reasons',
@@ -2258,7 +2259,9 @@ describe('network onnx export chapter', () => {
         });
 
         // Assert
-        expect(getParsedMetadataArray(onnxModel, 'quantization_fallback_reasons')).toEqual([
+        expect(
+          getParsedMetadataArray(onnxModel, 'quantization_fallback_reasons'),
+        ).toEqual([
           'static_8bit_not_implemented',
           'advanced_graph_boundary_requires_float32',
         ]);
@@ -2281,7 +2284,9 @@ describe('network onnx export chapter', () => {
         });
 
         // Assert
-        expect(getParsedMetadataArray(onnxModel, 'quantization_fallback_reasons')).toEqual([
+        expect(
+          getParsedMetadataArray(onnxModel, 'quantization_fallback_reasons'),
+        ).toEqual([
           'mixed_activation_boundary_requires_float32',
           'partial_connectivity_boundary_requires_float32',
         ]);
@@ -2314,10 +2319,8 @@ describe('network onnx export chapter', () => {
 
         // Assert
         expect({
-          hasDenseInputScale: getInitializer(
-            onnxModel,
-            'QuantDenseInputScale_l1',
-          ) !== undefined,
+          hasDenseInputScale:
+            getInitializer(onnxModel, 'QuantDenseInputScale_l1') !== undefined,
           fallbackReasons: getParsedMetadataArray(
             onnxModel,
             'quantization_fallback_reasons',
@@ -2348,17 +2351,20 @@ describe('network onnx export chapter', () => {
         // Assert
         expect({
           weightDataType: getInitializer(onnxModel, 'W0')?.data_type,
-          weightFloatDataLength: getInitializer(onnxModel, 'W0')?.float_data?.length,
-          weightPackedLength: getInitializer(onnxModel, 'W0')?.int32_data?.length,
+          weightFloatDataLength: getInitializer(onnxModel, 'W0')?.float_data
+            ?.length,
+          weightPackedLength: getInitializer(onnxModel, 'W0')?.int32_data
+            ?.length,
           biasDataType: getInitializer(onnxModel, 'B0')?.data_type,
-          biasFloatDataLength: getInitializer(onnxModel, 'B0')?.float_data?.length,
+          biasFloatDataLength: getInitializer(onnxModel, 'B0')?.float_data
+            ?.length,
           biasPackedLength: getInitializer(onnxModel, 'B0')?.int32_data?.length,
           castInputs: toNodes(onnxModel)
             .filter((nodeEntry) => nodeEntry.op_type === 'Cast')
             .map((nodeEntry) => nodeEntry.input[0]),
-          firstGemmInputs: toNodes(onnxModel).find(
-            (nodeEntry) => nodeEntry.op_type === 'Gemm',
-          )?.input.slice(1),
+          firstGemmInputs: toNodes(onnxModel)
+            .find((nodeEntry) => nodeEntry.op_type === 'Gemm')
+            ?.input.slice(1),
           effectivePrecisionMode: getMetadataValue(
             onnxModel,
             'effective_precision_mode',
@@ -2438,7 +2444,9 @@ describe('network onnx export chapter', () => {
         const repeatedExport = exportToONNX(network, {});
 
         // Assert
-        expect(JSON.stringify(repeatedExport)).toBe(JSON.stringify(baselineExport));
+        expect(JSON.stringify(repeatedExport)).toBe(
+          JSON.stringify(baselineExport),
+        );
       });
 
       it('keeps same-family dense roundtrip outputs within a small tolerance', () => {
@@ -2455,7 +2463,9 @@ describe('network onnx export chapter', () => {
             },
           }),
         );
-        const restoredOutput = restoredNetwork.activate(sampleInput)[0] as number;
+        const restoredOutput = restoredNetwork.activate(
+          sampleInput,
+        )[0] as number;
 
         // Assert
         expect(Math.abs(restoredOutput - baselineOutput) < 1e-3).toBe(true);
@@ -2476,7 +2486,9 @@ describe('network onnx export chapter', () => {
         });
 
         // Assert
-        expect(getParsedMetadataArray(onnxModel, 'precision_fallback_reasons')).toEqual([
+        expect(
+          getParsedMetadataArray(onnxModel, 'precision_fallback_reasons'),
+        ).toEqual([
           'mixed_activation_boundary_requires_float32',
           'partial_connectivity_boundary_requires_float32',
         ]);
@@ -3150,7 +3162,12 @@ describe('network onnx export chapter', () => {
           expect(
             resolveOneHopResidualSourceLayerIndex(
               [outputNode],
-              [[inputNode], [firstHiddenNode], [secondHiddenNode], [outputNode]],
+              [
+                [inputNode],
+                [firstHiddenNode],
+                [secondHiddenNode],
+                [outputNode],
+              ],
               3,
             ),
           ).toBeNull();
@@ -3247,13 +3264,17 @@ describe('network onnx export chapter', () => {
             concatOutputName: 'ConcatMerge_0_to_2',
             inputOrder: 'previous_then_source' as const,
           };
-          const model = createMinimalOnnxModel([{ key: 'existing', value: '1' }]);
+          const model = createMinimalOnnxModel([
+            { key: 'existing', value: '1' },
+          ]);
 
           // Act
           appendConcatMergeMetadata(model, concatMerge, false);
 
           // Assert
-          expect(model.metadata_props).toEqual([{ key: 'existing', value: '1' }]);
+          expect(model.metadata_props).toEqual([
+            { key: 'existing', value: '1' },
+          ]);
         });
 
         it('appends concat-merge metadata to an existing metadata entry', () => {
@@ -3347,7 +3368,9 @@ describe('network onnx export chapter', () => {
           const network = {
             nodes: [inputNode, hiddenNode, outputNode],
           } as Network;
-          const model = createMinimalOnnxModel([{ key: 'existing', value: '1' }]);
+          const model = createMinimalOnnxModel([
+            { key: 'existing', value: '1' },
+          ]);
 
           inputNode.connect(hiddenNode, 0.2);
           hiddenNode.connect(outputNode, 0.3);
@@ -3362,7 +3385,9 @@ describe('network onnx export chapter', () => {
           );
 
           // Assert
-          expect(model.metadata_props).toEqual([{ key: 'existing', value: '1' }]);
+          expect(model.metadata_props).toEqual([
+            { key: 'existing', value: '1' },
+          ]);
         });
 
         it('ignores connections whose source node is outside the resolved layered ordering', () => {
@@ -3374,7 +3399,9 @@ describe('network onnx export chapter', () => {
           const network = {
             nodes: [inputNode, hiddenNode, outputNode, detachedSourceNode],
           } as Network;
-          const model = createMinimalOnnxModel([{ key: 'existing', value: '1' }]);
+          const model = createMinimalOnnxModel([
+            { key: 'existing', value: '1' },
+          ]);
 
           inputNode.connect(hiddenNode, 0.2);
           hiddenNode.connect(outputNode, 0.3);
@@ -3389,7 +3416,9 @@ describe('network onnx export chapter', () => {
           );
 
           // Assert
-          expect(model.metadata_props).toEqual([{ key: 'existing', value: '1' }]);
+          expect(model.metadata_props).toEqual([
+            { key: 'existing', value: '1' },
+          ]);
         });
 
         it('sorts multiple cross-layer records by target index when the source index matches', () => {

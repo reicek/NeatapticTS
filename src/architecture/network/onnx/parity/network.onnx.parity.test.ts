@@ -308,9 +308,8 @@ describe('network onnx runtime parity chapter', () => {
 
     it('executes the storage-fp16 dense fixture after the raw binding is already initialized', async () => {
       // Arrange
-      const fixtureDescriptor = findPhase9RuntimeParityFixture(
-        'storage-fp16-dense',
-      );
+      const fixtureDescriptor =
+        findPhase9RuntimeParityFixture('storage-fp16-dense');
 
       // Act
       const parityResult = await runOnnxRuntimeParityFixture(fixtureDescriptor);
@@ -347,7 +346,8 @@ describe('network onnx runtime parity chapter', () => {
       const goldenFixtureSummaries = [];
       for (const fixtureId of executeFixtureIds) {
         const fixtureDescriptor = findPhase9RuntimeParityFixture(fixtureId);
-        const parityResult = await runOnnxRuntimeParityFixture(fixtureDescriptor);
+        const parityResult =
+          await runOnnxRuntimeParityFixture(fixtureDescriptor);
 
         if (parityResult.skipped) {
           throw new Error(parityResult.skipReason);
@@ -361,7 +361,9 @@ describe('network onnx runtime parity chapter', () => {
           runtimeOutput: parityResult.runtimeOutput.map((outputValue) =>
             Number(outputValue.toFixed(6)),
           ),
-          meanSquaredError: Number(parityResult.meanSquaredError.toExponential(6)),
+          meanSquaredError: Number(
+            parityResult.meanSquaredError.toExponential(6),
+          ),
           maxAbsoluteDifference: Number(
             parityResult.maxAbsoluteDifference.toExponential(6),
           ),
@@ -437,7 +439,8 @@ describe('network onnx runtime parity chapter', () => {
             (randomizedResult) => randomizedResult.nativeInputValues.length,
           ),
           runtimeInputDimensions: randomizedResults.map(
-            (randomizedResult) => randomizedResult.runtimeInputDimensions ?? null,
+            (randomizedResult) =>
+              randomizedResult.runtimeInputDimensions ?? null,
           ),
           allWithinTolerance: randomizedResults.every(
             (randomizedResult) => randomizedResult.isWithinTolerance,
@@ -553,14 +556,12 @@ describe('network onnx runtime parity chapter', () => {
       jest.unmock('node:child_process');
     });
 
-    async function loadParityModuleWithMockedSpawnSync(
-      mockSpawnSyncResult: {
-        error?: Error;
-        status: number | null;
-        stdout: string;
-        stderr: string;
-      },
-    ): Promise<typeof import('./network.onnx.parity')> {
+    async function loadParityModuleWithMockedSpawnSync(mockSpawnSyncResult: {
+      error?: Error;
+      status: number | null;
+      stdout: string;
+      stderr: string;
+    }): Promise<typeof import('./network.onnx.parity')> {
       jest.doMock('node:child_process', () => ({
         spawnSync: jest.fn(() => mockSpawnSyncResult),
       }));

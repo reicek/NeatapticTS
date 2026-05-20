@@ -49,6 +49,28 @@ export type {
   VisualizationMetadataV1,
   VisualizationNodeV1,
 } from './architecture/network';
+export {
+  fromParameterVector,
+  toParameterVector,
+} from './architecture/network/serialize/network.serialize.utils';
+export type {
+  ParameterLayoutEntry,
+  ParameterLayoutV1,
+  ParameterVector,
+} from './architecture/network/serialize/network.serialize.utils.types';
+export { fineTuneVector } from './architecture/network/training/network.training.isolate.utils';
+export type {
+  FineTuneOptions,
+  FineTuneResult,
+} from './architecture/network/training/network.training.isolate.utils';
+export { evaluateCandidate } from './neat/hybrid/neat.hybrid';
+export type {
+  EvaluateCandidateOptions,
+  HybridEvaluationPolicy,
+  HybridEvaluationResult,
+  HybridFineTuneMode,
+  HybridScoreNetwork,
+} from './neat/hybrid/neat.hybrid.types';
 export { default as Node } from './architecture/node';
 export { default as Layer } from './architecture/layer';
 export { default as Group } from './architecture/group';

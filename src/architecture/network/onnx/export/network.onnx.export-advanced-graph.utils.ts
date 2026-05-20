@@ -111,7 +111,9 @@ export function resolveOneHopResidualSourceLayerIndex(
         });
       }),
     ),
-  ).toSorted((leftLayerIndex, rightLayerIndex) => leftLayerIndex - rightLayerIndex);
+  ).toSorted(
+    (leftLayerIndex, rightLayerIndex) => leftLayerIndex - rightLayerIndex,
+  );
 
   if (nonAdjacentSourceLayerIndices.length !== 1) {
     return null;

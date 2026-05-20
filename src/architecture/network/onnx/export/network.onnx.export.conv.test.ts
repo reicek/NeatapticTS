@@ -6,7 +6,10 @@ type OnnxGraphNodeView = { op_type: string };
 
 jest.retryTimes(2, { logErrorsBeforeRetry: true });
 
-function getMetadataValue(onnxModel: OnnxModel, key: string): string | undefined {
+function getMetadataValue(
+  onnxModel: OnnxModel,
+  key: string,
+): string | undefined {
   return (onnxModel.metadata_props ?? []).find(
     (metadataEntry) => metadataEntry.key === key,
   )?.value;
@@ -32,25 +35,22 @@ function hasGraphNodeType(onnxModel: OnnxModel, operatorType: string): boolean {
   );
 }
 
-function countGraphNodeType(onnxModel: OnnxModel, operatorType: string): number {
+function countGraphNodeType(
+  onnxModel: OnnxModel,
+  operatorType: string,
+): number {
   return onnxModel.graph.node.filter(
     (graphNode) => (graphNode as OnnxGraphNodeView).op_type === operatorType,
   ).length;
 }
 
-function getGraphNodeByName(
-  onnxModel: OnnxModel,
-  graphNodeName: string,
-) {
+function getGraphNodeByName(onnxModel: OnnxModel, graphNodeName: string) {
   return onnxModel.graph.node.find(
     (graphNode) => graphNode.name === graphNodeName,
   );
 }
 
-function getFirstGraphNodeByType(
-  onnxModel: OnnxModel,
-  operatorType: string,
-) {
+function getFirstGraphNodeByType(onnxModel: OnnxModel, operatorType: string) {
   return onnxModel.graph.node.find(
     (graphNode) => (graphNode as OnnxGraphNodeView).op_type === operatorType,
   );
@@ -282,7 +282,9 @@ function createHeuristicConvPromotionScenario(): {
   const outputNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'output',
   );
-  const kernelPattern = [0.09, -0.04, 0.02, 0.11, 0.07, -0.03, 0.05, 0.01, 0.08];
+  const kernelPattern = [
+    0.09, -0.04, 0.02, 0.11, 0.07, -0.03, 0.05, 0.01, 0.08,
+  ];
 
   hiddenNodes.forEach((hiddenNode, hiddenNodeIndex) => {
     const outputRow = Math.floor(hiddenNodeIndex / outputWidth);
@@ -503,8 +505,7 @@ function createStackedHeuristicConvPromotionScenario(): {
   const strideWidth = 1;
   const firstOutputHeight = inputHeight - firstKernelHeight + 1;
   const firstOutputWidth = inputWidth - firstKernelWidth + 1;
-  const secondOutputHeight =
-    firstOutputHeight - secondKernelHeight + 1;
+  const secondOutputHeight = firstOutputHeight - secondKernelHeight + 1;
   const secondOutputWidth = firstOutputWidth - secondKernelWidth + 1;
   const network = Network.createMLP(25, [9, 4], 2);
   const inputNodes = network.nodes.filter(
@@ -519,15 +520,7 @@ function createStackedHeuristicConvPromotionScenario(): {
     (nodeEntry) => nodeEntry.type === 'output',
   );
   const firstKernelPattern = [
-    0.09,
-    -0.04,
-    0.02,
-    0.11,
-    0.07,
-    -0.03,
-    0.05,
-    0.01,
-    0.08,
+    0.09, -0.04, 0.02, 0.11, 0.07, -0.03, 0.05, 0.01, 0.08,
   ];
   const secondKernelPattern = [0.06, -0.02, 0.04, 0.1];
 
@@ -642,9 +635,8 @@ function createPostPoolStackedHeuristicConvPromotionScenario(): {
       (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const pooledWidth =
-    Math.floor(
-      (firstOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const secondOutputHeight = pooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = pooledWidth - secondKernelWidth + 1;
   const network = Network.createMLP(25, [16, 4], 2);
@@ -774,9 +766,8 @@ function createPostPoolMultiChannelHeuristicConvPromotionScenario(): {
       (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const pooledWidth =
-    Math.floor(
-      (firstOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const secondOutputHeight = pooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = pooledWidth - secondKernelWidth + 1;
   const outputChannels = 2;
@@ -956,9 +947,8 @@ function createDeepPostPoolStackedHeuristicConvPromotionScenario(): {
       (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const firstPooledWidth =
-    Math.floor(
-      (firstOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const secondOutputHeight = firstPooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = firstPooledWidth - secondKernelWidth + 1;
   const secondPooledHeight =
@@ -966,9 +956,8 @@ function createDeepPostPoolStackedHeuristicConvPromotionScenario(): {
       (secondOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const secondPooledWidth =
-    Math.floor(
-      (secondOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((secondOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const thirdOutputHeight = secondPooledHeight - thirdKernelHeight + 1;
   const thirdOutputWidth = secondPooledWidth - thirdKernelWidth + 1;
   const network = Network.createMLP(36, [25, 9, 1], 2);
@@ -1081,7 +1070,8 @@ function createDeepPostPoolStackedHeuristicConvPromotionScenario(): {
         kernelColumnIndex < thirdKernelWidth;
         kernelColumnIndex += 1
       ) {
-        const pooledIndex = kernelRowIndex * secondPooledWidth + kernelColumnIndex;
+        const pooledIndex =
+          kernelRowIndex * secondPooledWidth + kernelColumnIndex;
         const sourceNode = secondHiddenNodes[pooledIndex];
         const matchingConnection = hiddenNode.connections.in.find(
           (connectionEntry) => connectionEntry.from === sourceNode,
@@ -1134,9 +1124,8 @@ function createDeepPostPoolMultiChannelHeuristicConvPromotionScenario(): {
       (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const firstPooledWidth =
-    Math.floor(
-      (firstOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const secondOutputHeight = firstPooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = firstPooledWidth - secondKernelWidth + 1;
   const secondPooledHeight =
@@ -1144,9 +1133,8 @@ function createDeepPostPoolMultiChannelHeuristicConvPromotionScenario(): {
       (secondOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const secondPooledWidth =
-    Math.floor(
-      (secondOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((secondOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const thirdOutputHeight = secondPooledHeight - thirdKernelHeight + 1;
   const thirdOutputWidth = secondPooledWidth - thirdKernelWidth + 1;
   const outputChannels = 2;
@@ -1429,9 +1417,8 @@ function createEarlierFlattenedPostPoolConsumerFallbackScenario(): {
       (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
     ) + 1;
   const pooledWidth =
-    Math.floor(
-      (firstOutputWidth - poolingKernelWidth) / poolingStrideWidth,
-    ) + 1;
+    Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
+    1;
   const secondOutputWidth = pooledWidth - secondKernelWidth + 1;
   const network = Network.createMLP(25, [16, 4, 3], 2);
   const inputNodes = network.nodes.filter(
@@ -1841,7 +1828,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createPostPoolMultiChannelHeuristicConvPromotionScenario();
+        const scenario =
+          createPostPoolMultiChannelHeuristicConvPromotionScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -1901,7 +1889,8 @@ describe('network onnx export conv chapter', () => {
 
         it('keeps reshape metadata initializers out of storage-fp16 rewriting', () => {
           // Arrange
-          const scenario = createPostPoolMultiChannelHeuristicConvPromotionScenario();
+          const scenario =
+            createPostPoolMultiChannelHeuristicConvPromotionScenario();
 
           // Act
           const storageFp16Model = exportToONNX(scenario.network, {
@@ -1948,18 +1937,20 @@ describe('network onnx export conv chapter', () => {
               mode: 'storage-fp16',
             },
           });
-          const convertedConvInitializer = storageFp16Model.graph.initializer.find(
-            (initializerTensor) => initializerTensor.name === 'ConvW0',
-          );
-          const nonEligibleInitializer = storageFp16Model.graph.initializer.find(
-            (initializerTensor) =>
-              !/^W\d+$/.test(initializerTensor.name) &&
-              !/^B\d+$/.test(initializerTensor.name) &&
-              !/^W\d+_n\d+$/.test(initializerTensor.name) &&
-              !/^B\d+_n\d+$/.test(initializerTensor.name) &&
-              !/^ConvW\d+$/.test(initializerTensor.name) &&
-              !/^ConvB\d+$/.test(initializerTensor.name),
-          );
+          const convertedConvInitializer =
+            storageFp16Model.graph.initializer.find(
+              (initializerTensor) => initializerTensor.name === 'ConvW0',
+            );
+          const nonEligibleInitializer =
+            storageFp16Model.graph.initializer.find(
+              (initializerTensor) =>
+                !/^W\d+$/.test(initializerTensor.name) &&
+                !/^B\d+$/.test(initializerTensor.name) &&
+                !/^W\d+_n\d+$/.test(initializerTensor.name) &&
+                !/^B\d+_n\d+$/.test(initializerTensor.name) &&
+                !/^ConvW\d+$/.test(initializerTensor.name) &&
+                !/^ConvB\d+$/.test(initializerTensor.name),
+            );
 
           // Assert
           expect(
@@ -1976,7 +1967,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createEarlierFlattenedPostPoolConsumerFallbackScenario();
+        const scenario =
+          createEarlierFlattenedPostPoolConsumerFallbackScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -2006,7 +1998,6 @@ describe('network onnx export conv chapter', () => {
             reshapeCount: 0,
           });
         });
-
       });
     });
 
@@ -2015,7 +2006,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createDeepPostPoolStackedHeuristicConvPromotionScenario();
+        const scenario =
+          createDeepPostPoolStackedHeuristicConvPromotionScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -2164,7 +2156,9 @@ describe('network onnx export conv chapter', () => {
 
         it('records the promoted multi-channel Conv spec', () => {
           // Assert
-          expect(JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]')).toEqual([
+          expect(
+            JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]'),
+          ).toEqual([
             {
               inChannels: 2,
               inHeight: 3,
@@ -2183,7 +2177,9 @@ describe('network onnx export conv chapter', () => {
 
         it('does not keep multi-channel inference metadata once promoted', () => {
           // Assert
-          expect(hasMetadataKey(onnxModel, 'conv2d_inferred_specs')).toBe(false);
+          expect(hasMetadataKey(onnxModel, 'conv2d_inferred_specs')).toBe(
+            false,
+          );
         });
       });
     });
@@ -2193,7 +2189,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createUnsafeMultiChannelHeuristicConvPromotionScenario();
+        const scenario =
+          createUnsafeMultiChannelHeuristicConvPromotionScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -2211,7 +2208,9 @@ describe('network onnx export conv chapter', () => {
         it('keeps the inferred multi-channel Conv spec as metadata only', () => {
           // Assert
           expect(
-            JSON.parse(getMetadataValue(onnxModel, 'conv2d_inferred_specs') ?? '[]'),
+            JSON.parse(
+              getMetadataValue(onnxModel, 'conv2d_inferred_specs') ?? '[]',
+            ),
           ).toEqual([
             {
               inChannels: 2,
@@ -2310,7 +2309,9 @@ describe('network onnx export conv chapter', () => {
 
         it('records the second promoted Conv spec with the pooled 3x3 input shape', () => {
           // Assert
-          expect(JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]')).toEqual([
+          expect(
+            JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]'),
+          ).toEqual([
             {
               inChannels: 1,
               inHeight: 5,
@@ -2386,7 +2387,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createEarlierFlattenedPostPoolConsumerFallbackScenario();
+        const scenario =
+          createEarlierFlattenedPostPoolConsumerFallbackScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -2429,7 +2431,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createPostPoolMultiChannelHeuristicConvPromotionScenario();
+        const scenario =
+          createPostPoolMultiChannelHeuristicConvPromotionScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -2456,7 +2459,9 @@ describe('network onnx export conv chapter', () => {
 
         it('records the second promoted Conv spec with the pooled 2x2x2 input shape', () => {
           // Assert
-          expect(JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]')).toEqual([
+          expect(
+            JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]'),
+          ).toEqual([
             {
               inChannels: 2,
               inHeight: 4,
@@ -2522,7 +2527,9 @@ describe('network onnx export conv chapter', () => {
         it('keeps the second multi-channel stage as inferred metadata only', () => {
           // Assert
           expect(
-            JSON.parse(getMetadataValue(onnxModel, 'conv2d_inferred_specs') ?? '[]'),
+            JSON.parse(
+              getMetadataValue(onnxModel, 'conv2d_inferred_specs') ?? '[]',
+            ),
           ).toEqual([
             {
               inChannels: 2,
@@ -2548,7 +2555,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createPostPoolMultiChannelHeuristicConvPromotionScenario();
+        const scenario =
+          createPostPoolMultiChannelHeuristicConvPromotionScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -2582,7 +2590,9 @@ describe('network onnx export conv chapter', () => {
 
         it('records the second promoted Conv spec with the pooled 2x2x2 input shape', () => {
           // Assert
-          expect(JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]')).toEqual([
+          expect(
+            JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]'),
+          ).toEqual([
             {
               inChannels: 2,
               inHeight: 4,
@@ -2619,7 +2629,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createDeepPostPoolStackedHeuristicConvPromotionScenario();
+        const scenario =
+          createDeepPostPoolStackedHeuristicConvPromotionScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -2654,7 +2665,9 @@ describe('network onnx export conv chapter', () => {
 
         it('records the third promoted Conv spec with the second pooled 2x2 input shape', () => {
           // Assert
-          expect(JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]')).toEqual([
+          expect(
+            JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]'),
+          ).toEqual([
             {
               inChannels: 1,
               inHeight: 6,
@@ -2704,7 +2717,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createDeepPostPoolStackedHeuristicConvPromotionScenario();
+        const scenario =
+          createDeepPostPoolStackedHeuristicConvPromotionScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -2741,7 +2755,9 @@ describe('network onnx export conv chapter', () => {
         it('drops later Conv inference before reshape or metadata survive', () => {
           // Assert
           expect({
-            convSpecs: JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]'),
+            convSpecs: JSON.parse(
+              getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]',
+            ),
             inferredSpecs: JSON.parse(
               getMetadataValue(onnxModel, 'conv2d_inferred_specs') ?? '[]',
             ),
@@ -2774,7 +2790,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createDeepPostPoolMultiChannelHeuristicConvPromotionScenario();
+        const scenario =
+          createDeepPostPoolMultiChannelHeuristicConvPromotionScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -2809,7 +2826,9 @@ describe('network onnx export conv chapter', () => {
 
         it('records the third promoted Conv spec with the second pooled 2x2x2 input shape', () => {
           // Assert
-          expect(JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]')).toEqual([
+          expect(
+            JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]'),
+          ).toEqual([
             {
               inChannels: 2,
               inHeight: 6,
@@ -2859,7 +2878,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createDeepPostPoolMultiChannelHeuristicConvPromotionScenario();
+        const scenario =
+          createDeepPostPoolMultiChannelHeuristicConvPromotionScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -2896,7 +2916,9 @@ describe('network onnx export conv chapter', () => {
         it('drops later multi-channel Conv inference before reshape or metadata survive', () => {
           // Assert
           expect({
-            convSpecs: JSON.parse(getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]'),
+            convSpecs: JSON.parse(
+              getMetadataValue(onnxModel, 'conv2d_specs') ?? '[]',
+            ),
             inferredSpecs: JSON.parse(
               getMetadataValue(onnxModel, 'conv2d_inferred_specs') ?? '[]',
             ),
@@ -2975,7 +2997,8 @@ describe('network onnx export conv chapter', () => {
 
       beforeEach(() => {
         // Arrange
-        const scenario = createUnsafePostPoolStackedHeuristicConvPromotionScenario();
+        const scenario =
+          createUnsafePostPoolStackedHeuristicConvPromotionScenario();
 
         // Act
         onnxModel = exportToONNX(scenario.network, {
@@ -3002,7 +3025,11 @@ describe('network onnx export conv chapter', () => {
 
         it('keeps the second stage as inferred metadata only', () => {
           // Assert
-          expect(JSON.parse(getMetadataValue(onnxModel, 'conv2d_inferred_specs') ?? '[]')).toEqual([
+          expect(
+            JSON.parse(
+              getMetadataValue(onnxModel, 'conv2d_inferred_specs') ?? '[]',
+            ),
+          ).toEqual([
             {
               inChannels: 1,
               inHeight: 3,
@@ -3290,7 +3317,8 @@ describe('network onnx export conv chapter', () => {
           },
         });
         const weightScaleTensor = onnxModel.graph.initializer.find(
-          (initializerTensor) => initializerTensor.name === 'QuantConvWeightScale_l1',
+          (initializerTensor) =>
+            initializerTensor.name === 'QuantConvWeightScale_l1',
         );
         const weightZeroPointTensor = onnxModel.graph.initializer.find(
           (initializerTensor) =>

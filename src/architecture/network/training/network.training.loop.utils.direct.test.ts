@@ -581,10 +581,12 @@ describe('network training loop chapter', () => {
 
         // Assert
         expect({
-          hiddenUsesDeferredPropagation: hiddenNode.propagate.mock.calls[0]?.[2],
+          hiddenUsesDeferredPropagation:
+            hiddenNode.propagate.mock.calls[0]?.[2],
           lossScale: network._mixedPrecision.lossScale,
           optimizerStep: network._optimizerStep,
-          outputUsesDeferredPropagation: outputNode.propagate.mock.calls[0]?.[2],
+          outputUsesDeferredPropagation:
+            outputNode.propagate.mock.calls[0]?.[2],
           scaleUpEvents: network._mixedPrecisionState.scaleUpEvents,
         }).toEqual({
           hiddenUsesDeferredPropagation: false,
@@ -692,9 +694,11 @@ describe('network training loop chapter', () => {
 
         // Assert
         expect({
-          hiddenUsesDeferredPropagation: hiddenNode.propagate.mock.calls[0]?.[2],
+          hiddenUsesDeferredPropagation:
+            hiddenNode.propagate.mock.calls[0]?.[2],
           optimizerStep: network._optimizerStep,
-          outputUsesDeferredPropagation: outputNode.propagate.mock.calls[0]?.[2],
+          outputUsesDeferredPropagation:
+            outputNode.propagate.mock.calls[0]?.[2],
         }).toEqual({
           hiddenUsesDeferredPropagation: false,
           optimizerStep: 4,

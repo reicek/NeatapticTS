@@ -161,7 +161,8 @@ validation scripts.
 
 13. Evolution–training interoperability contracts (parameter vectors, isolation, hybrid policies)
 
-- Plan: [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [WIP]
+- Plan: [completed/Evolution_Training_Interoperability_Contracts.md](completed/Evolution_Training_Interoperability_Contracts.md) [DONE]
+- Current internal state: the hybrid-interoperability lane is archived as done. The closed baseline now covers deterministic `ParameterLayoutV1` ordering, parameter-vector export/import, `fineTuneVector(...)` isolation, explicit hybrid evaluation policy with Lamarckian opt-in, root-facade re-exports, and generated docs closure. The unchanged external ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` remains outside this lane.
 
 **Why this ordering:**
 
@@ -173,7 +174,7 @@ validation scripts.
 Next critical-path frontier:
 
 - [completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md) now records the closed Phase 4 checkpointing baseline and the reopen point for future persistence work.
-- The archived pre-NGE ONNX baseline now lives at [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md), and the next non-chat foundation handoff moves to [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) while [NEATchat.plans.md](NEATchat.plans.md) remains dependency-gated behind those two stop lines.
+- The archived pre-NGE ONNX baseline now lives at [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md), and the archived hybrid baseline now lives at [completed/Evolution_Training_Interoperability_Contracts.md](completed/Evolution_Training_Interoperability_Contracts.md). [NEATchat.plans.md](NEATchat.plans.md) is now the next dependency-cleared pre-NGE lane, but it remains planning-only until that workstream is explicitly opened.
 
 ## Phase 5 — Scale & Performance (Memory Optimization Track)
 
@@ -227,17 +228,17 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phases 0, 1, 2, 3, and 4 are complete for the current roadmap scope, and the pre-NGE memory foundation stop line is archived as done through Track 1 / Phase 10.** The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, preconfigured architectures lane, examples and visualization lanes, worker and checkpointing lanes, the Phase 5 memory-foundation stop line, and the full current ONNX compliance target are closed. **The archived ONNX baseline now includes recurrent hardening, the conservative Phase 4 spatial contract, the Phase 5 advanced-graph contract, the Phase 6 optimization contract, the Phase 7 exporter-owned precision contract, the Phase 8 binary contract, and the Phase 9 runtime-parity plus first external-import closure target for the declared lower-opset same-family subset. Hybrid interoperability is now the next non-chat foundation handoff, and the NEATchat follow-up stays dependency-gated behind that lane rather than opening directly from the archived ONNX baseline.**
+Current status: **Phases 0, 1, 2, 3, and 4 are complete for the current roadmap scope, and the pre-NGE memory foundation stop line is archived as done through Track 1 / Phase 10.** The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, preconfigured architectures lane, examples and visualization lanes, worker and checkpointing lanes, the Phase 5 memory-foundation stop line, the full current ONNX compliance target, and the hybrid-interoperability lane are closed. **The archived ONNX baseline now includes recurrent hardening, the conservative Phase 4 spatial contract, the Phase 5 advanced-graph contract, the Phase 6 optimization contract, the Phase 7 exporter-owned precision contract, the Phase 8 binary contract, and the Phase 9 runtime-parity plus first external-import closure target for the declared lower-opset same-family subset. The archived hybrid-interoperability baseline now carries deterministic parameter vectors, isolation, explicit persistence policy, and the public docs surface needed by downstream consumers. The NEATchat follow-up is now the next dependency-cleared pre-NGE lane while remaining planning-only until explicitly opened.**
 
-- **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 memory stop line → Phase 6 ONNX → hybrid interoperability → gated NEATchat follow-up → Phase 7 / NGE
+- **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 memory stop line → Phase 6 ONNX → archived hybrid interoperability baseline → planned NEATchat follow-up → Phase 7 / NGE
 - **Archived lane A (performance):** [completed/Memory_Optimization.md](completed/Memory_Optimization.md) [DONE]
 - **Archived lane B (interop):** [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md) [DONE] — the current ONNX compliance target is closed through the declared Phase 9 stop line, including the binary-first runtime-parity seam and the first named external binary import subset for the approved lower-opset same-family boundary.
-- **Active lane C (hybrid interoperability):** [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [WIP]
-- **Planned lane D (applied conversational systems):** [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]
+- **Archived lane C (hybrid interoperability):** [completed/Evolution_Training_Interoperability_Contracts.md](completed/Evolution_Training_Interoperability_Contracts.md) [DONE] — deterministic parameter vectors, isolated fine-tuning, explicit persistence policy, root-facade re-exports, and generated docs closure.
+- **Planned lane D (applied conversational systems):** [NEATchat.plans.md](NEATchat.plans.md) [PLANNED] — next dependency-cleared pre-NGE lane, still planning-only until explicitly opened.
 - **Parallel lane E (quality):** [test-repair-and-coverage.plans.md](completed/test-repair-and-coverage.plans.md) [DONE] — 100% statement/branch/function/line coverage across all of `src/`. 331 suites / 3022 tests green.
-- **Standalone meta-workflow lane F:** [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) [DONE] — seven-phase user-invocable agent architecture, hidden specialist delegation, skill-first customization, model routing, validators, evals, and the closed MCP runtime-visibility ownership baseline.
+- **Standalone meta-workflow lane F:** [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) [DONE] — numbered user-invocable agent architecture, hidden specialist delegation, skill-first customization, model routing, validators, evals, and the closed MCP runtime-visibility ownership baseline.
 - **Pre-NGE stop line:** not yet closed
-- **Serial pre-NGE handoff:** after the archived Phase 5 memory stop line and the archived ONNX baseline, move to [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md), then the still-gated [NEATchat.plans.md](NEATchat.plans.md), and only then open Phase 7 / NGE work
+- **Serial pre-NGE handoff:** after the archived Phase 5 memory stop line, the archived ONNX baseline, and the archived hybrid-interoperability baseline, the next lane is [NEATchat.plans.md](NEATchat.plans.md); open Phase 7 / NGE only after that lane's stop conditions are closed.
 - **Final capstone:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
 
 ## Plan Inventory in Roadmap Order
@@ -295,7 +296,7 @@ M1. [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflo
 25. [completed/Worker_Friendly_Network_Serialization_Fastpath.md](completed/Worker_Friendly_Network_Serialization_Fastpath.md) [DONE]
 26. [completed/Turnkey_Multithread_Evaluation_API.md](completed/Turnkey_Multithread_Evaluation_API.md) [DONE]
 27. [completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md) [DONE]
-28. [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [WIP]
+28. [completed/Evolution_Training_Interoperability_Contracts.md](completed/Evolution_Training_Interoperability_Contracts.md) [DONE]
 
 ### Phase 5 inventory
 

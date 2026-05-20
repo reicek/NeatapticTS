@@ -53,7 +53,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/storage-fp16.*quantization/i);
@@ -69,7 +70,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/dynamic-uint8/i);
@@ -85,10 +87,13 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
-      expect(buildModel).toThrow(/precision mode must be float32 or storage-fp16/i);
+      expect(buildModel).toThrow(
+        /precision mode must be float32 or storage-fp16/i,
+      );
     });
 
     it('rejects dynamic quantization requests that target conv operators', () => {
@@ -103,7 +108,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/dynamic quantization.*dense/i);
@@ -155,7 +161,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/DynamicQuantizeLinear or metadata-only/i);
@@ -175,7 +182,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/at least one dense or conv target/i);
@@ -203,7 +211,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/at least one dense or conv target/i);
@@ -220,7 +229,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/external calibration packet/i);
@@ -279,7 +289,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/calibration layer targets/i);
@@ -308,7 +319,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/per-output-channel.*conv/i);
@@ -337,10 +349,13 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
-      expect(buildModel).toThrow(/supports the min-max weight range policy only/i);
+      expect(buildModel).toThrow(
+        /supports the min-max weight range policy only/i,
+      );
     });
 
     it('rejects static-8bit calibration packets with unsupported zero-inclusion policies', () => {
@@ -366,7 +381,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/requires zero-inclusive ranges/i);
@@ -395,7 +411,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/supports nearest-even rounding only/i);
@@ -423,7 +440,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/resolved conv mapping/i);
@@ -537,7 +555,8 @@ describe('network onnx export build utils', () => {
       // Assert
       expect(
         onnxModel.graph.initializer.find(
-          (initializerTensor) => initializerTensor.name === 'QuantConvWeight_l1',
+          (initializerTensor) =>
+            initializerTensor.name === 'QuantConvWeight_l1',
         )?.data_type,
       ).toBe(2);
     });
@@ -622,10 +641,13 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
-      expect(buildModel).toThrow(/must stay within the requested operator families/i);
+      expect(buildModel).toThrow(
+        /must stay within the requested operator families/i,
+      );
     });
 
     it('rejects duplicate static-8bit calibration layer targets', () => {
@@ -656,10 +678,13 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
-      expect(buildModel).toThrow(/must be unique per operator family and layer index/i);
+      expect(buildModel).toThrow(
+        /must be unique per operator family and layer index/i,
+      );
     });
 
     it('rejects static-8bit calibration layer targets that are not objects', () => {
@@ -677,7 +702,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/layer targets must be objects/i);
@@ -705,7 +731,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/must name a dense or conv operator family/i);
@@ -733,10 +760,13 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
-      expect(buildModel).toThrow(/must reference a valid non-input export layer/i);
+      expect(buildModel).toThrow(
+        /must reference a valid non-input export layer/i,
+      );
     });
 
     it('rejects static-8bit dense calibration targets that point at Conv-mapped layers', () => {
@@ -776,10 +806,13 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
-      expect(buildModel).toThrow(/cannot target layers emitted as Conv operators/i);
+      expect(buildModel).toThrow(
+        /cannot target layers emitted as Conv operators/i,
+      );
     });
 
     it('rejects static-8bit calibration targets whose output range is unstable', () => {
@@ -804,7 +837,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/requires min strictly less than max/i);
@@ -832,7 +866,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/requires finite input min and max values/i);
@@ -861,7 +896,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/sample counts must be positive integers/i);
@@ -928,10 +964,10 @@ describe('network onnx export build utils', () => {
 
       // Assert
       expect({
-        hasDenseInputScale:
-          onnxModel.graph.initializer.some(
-            (initializerEntry) => initializerEntry.name === 'QuantDenseInputScale_l1',
-          ),
+        hasDenseInputScale: onnxModel.graph.initializer.some(
+          (initializerEntry) =>
+            initializerEntry.name === 'QuantDenseInputScale_l1',
+        ),
         hasQLinearMatMul: onnxModel.graph.node.some(
           (graphNode) => graphNode.op_type === 'QLinearMatMul',
         ),
@@ -974,10 +1010,12 @@ describe('network onnx export build utils', () => {
           (graphNode) => graphNode.op_type === 'QLinearMatMul',
         ),
         hasBiasAddBridge: onnxModel.graph.node.some(
-          (graphNode) => graphNode.op_type === 'Add' && graphNode.name === 'bias_add_l1',
+          (graphNode) =>
+            graphNode.op_type === 'Add' && graphNode.name === 'bias_add_l1',
         ),
         hasReluActivation: onnxModel.graph.node.some(
-          (graphNode) => graphNode.op_type === 'Relu' && graphNode.name === 'act_l1',
+          (graphNode) =>
+            graphNode.op_type === 'Relu' && graphNode.name === 'act_l1',
         ),
       }).toEqual({
         hasQLinearMatMul: true,
@@ -1019,7 +1057,8 @@ describe('network onnx export build utils', () => {
           (graphNode) => graphNode.op_type === 'QLinearMatMul',
         ),
         hasBiasAddBridge: onnxModel.graph.node.some(
-          (graphNode) => graphNode.op_type === 'Add' && graphNode.name === 'bias_add_l1',
+          (graphNode) =>
+            graphNode.op_type === 'Add' && graphNode.name === 'bias_add_l1',
         ),
         hasActivationNode: onnxModel.graph.node.some(
           (graphNode) => graphNode.name === 'act_l1',
@@ -1093,7 +1132,8 @@ describe('network onnx export build utils', () => {
       } as unknown as OnnxExportOptions;
 
       // Act
-      const buildModel = () => buildOnnxModel({} as never, layers, exportOptions);
+      const buildModel = () =>
+        buildOnnxModel({} as never, layers, exportOptions);
 
       // Assert
       expect(buildModel).toThrow(/requires a input range object/i);

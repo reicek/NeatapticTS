@@ -250,7 +250,12 @@ describe('network onnx import concat utility chapter', () => {
       const outputNode = network.nodes.at(-1)!;
 
       // Act
-      restoreConcatMergeConnections(network, onnxModel, [], onnxModel.metadata_props ?? []);
+      restoreConcatMergeConnections(
+        network,
+        onnxModel,
+        [],
+        onnxModel.metadata_props ?? [],
+      );
 
       // Assert
       expect(outputNode.connections.in.length).toBe(2);

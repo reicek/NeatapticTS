@@ -216,8 +216,7 @@ const PHASE_9_RUNTIME_PARITY_INVENTORY = [
  *
  * @returns The current Phase 9A fixture inventory in deterministic order.
  */
-export function getPhase9RuntimeParityInventory():
-  readonly OnnxRuntimeParityFixtureDescriptor[] {
+export function getPhase9RuntimeParityInventory(): readonly OnnxRuntimeParityFixtureDescriptor[] {
   return PHASE_9_RUNTIME_PARITY_INVENTORY;
 }
 
@@ -332,7 +331,9 @@ export async function runSeededOnnxRuntimeParitySamples(
 
   // Step 2: Materialize lane-approved randomized fixtures and reuse the Phase 9A runner.
   for (const sampleIndex of sampleIndexes) {
-    const sampleSeed = Math.floor(sampleSeedGenerator() * SEEDED_RANDOM_DIVISOR);
+    const sampleSeed = Math.floor(
+      sampleSeedGenerator() * SEEDED_RANDOM_DIVISOR,
+    );
     const randomizedFixtureDescriptor = createRandomizedParityFixture(
       fixtureDescriptor,
       sampleSeed,
@@ -351,7 +352,8 @@ export async function runSeededOnnxRuntimeParitySamples(
         ...(randomizedFixtureDescriptor.runtimeInputValues ??
           randomizedFixtureDescriptor.nativeInputValues),
       ],
-      runtimeInputDimensions: randomizedFixtureDescriptor.runtimeInputDimensions,
+      runtimeInputDimensions:
+        randomizedFixtureDescriptor.runtimeInputDimensions,
       nativeOutput: parityResult.nativeOutput,
       runtimeOutput: parityResult.runtimeOutput,
       meanSquaredError: parityResult.meanSquaredError,
@@ -381,7 +383,8 @@ function executeRuntimeParityInSubprocess(
   const parityPayload: OnnxRuntimeParitySubprocessPayload = {
     binaryModelBase64: Buffer.from(binaryModel).toString('base64'),
     runtimeInputValues: [
-      ...(fixtureDescriptor.runtimeInputValues ?? fixtureDescriptor.nativeInputValues),
+      ...(fixtureDescriptor.runtimeInputValues ??
+        fixtureDescriptor.nativeInputValues),
     ],
     runtimeInputDimensions: fixtureDescriptor.runtimeInputDimensions,
   };
@@ -402,7 +405,9 @@ function executeRuntimeParityInSubprocess(
     throw new Error(resolveRuntimeSubprocessError(subprocessResult));
   }
 
-  return JSON.parse(subprocessResult.stdout) as OnnxRuntimeParitySubprocessResult;
+  return JSON.parse(
+    subprocessResult.stdout,
+  ) as OnnxRuntimeParitySubprocessResult;
 }
 
 /**
@@ -411,9 +416,10 @@ function executeRuntimeParityInSubprocess(
  * @param subprocessResult Child-process execution result.
  * @returns Human-readable error message.
  */
-function resolveRuntimeSubprocessError(
-  subprocessResult: { stderr: string; stdout: string },
-): string {
+function resolveRuntimeSubprocessError(subprocessResult: {
+  stderr: string;
+  stdout: string;
+}): string {
   const stderrText = subprocessResult.stderr.trim();
   if (stderrText.length > 0) {
     return stderrText;
@@ -672,7 +678,8 @@ function assignDeterministicParameters(
     (nodeEntry) => nodeEntry.type !== 'input',
   );
   nonInputNodes.forEach((nodeEntry, nodeIndex) => {
-    nodeEntry.bias = parameterSeed.biasStart + nodeIndex * parameterSeed.biasStep;
+    nodeEntry.bias =
+      parameterSeed.biasStart + nodeIndex * parameterSeed.biasStep;
   });
 }
 
@@ -693,7 +700,10 @@ function buildExecutedResult(
   nativeOutput: number[],
   runtimeOutput: number[],
 ): OnnxRuntimeParityExecutedResult {
-  const meanSquaredError = calculateMeanSquaredError(nativeOutput, runtimeOutput);
+  const meanSquaredError = calculateMeanSquaredError(
+    nativeOutput,
+    runtimeOutput,
+  );
   const maxAbsoluteDifference = calculateMaxAbsoluteDifference(
     nativeOutput,
     runtimeOutput,
@@ -1128,6 +1138,9 @@ function createRandomizedParameterSeed(
       sampleGenerator,
       parameterSeedBounds.biasStart,
     ),
-    biasStep: sampleNumberInRange(sampleGenerator, parameterSeedBounds.biasStep),
+    biasStep: sampleNumberInRange(
+      sampleGenerator,
+      parameterSeedBounds.biasStep,
+    ),
   };
 }

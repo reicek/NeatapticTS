@@ -322,65 +322,73 @@ function normalizeBinarySpatialToDenseBoundaries(
 
   const emittedFlattenOutputNamesByLayerIndex = new Map<number, string>();
 
-  binaryReadyModel.graph.node = binaryReadyModel.graph.node.flatMap((graphNode) => {
-    const requiredFlattenLayerIndices = graphNode.input.flatMap((inputName) => {
-      const referencedSpatialLayerIndex = resolveReferencedSpatialLayerIndex(
-        inputName,
-        spatialLayerIndices,
-      );
-
-      if (
-        referencedSpatialLayerIndex === undefined ||
-        !BINARY_DENSE_CONSUMER_OPERATIONS.has(graphNode.op_type)
-      ) {
-        return [];
-      }
-
-      return [referencedSpatialLayerIndex];
-    });
-    const missingFlattenLayerIndices = requiredFlattenLayerIndices.filter(
-      (layerIndex) => !emittedFlattenOutputNamesByLayerIndex.has(layerIndex),
-    );
-    const flattenNodes = missingFlattenLayerIndices.map((layerIndex) => {
-      const flattenOutputName = `BinaryFlatten_l${layerIndex}`;
-      emittedFlattenOutputNamesByLayerIndex.set(layerIndex, flattenOutputName);
-
-      return {
-        op_type: 'Flatten',
-        input: [`Layer_${layerIndex}`],
-        output: [flattenOutputName],
-        name: `binary_flatten_l${layerIndex}`,
-        attributes: [{ name: 'axis', type: 'INT', i: 1 }],
-      };
-    });
-
-    return [
-      ...flattenNodes,
-      {
-        ...graphNode,
-        input: graphNode.input.map((inputName) => {
-          const referencedSpatialLayerIndex = resolveReferencedSpatialLayerIndex(
-            inputName,
-            spatialLayerIndices,
-          );
+  binaryReadyModel.graph.node = binaryReadyModel.graph.node.flatMap(
+    (graphNode) => {
+      const requiredFlattenLayerIndices = graphNode.input.flatMap(
+        (inputName) => {
+          const referencedSpatialLayerIndex =
+            resolveReferencedSpatialLayerIndex(inputName, spatialLayerIndices);
 
           if (
             referencedSpatialLayerIndex === undefined ||
             !BINARY_DENSE_CONSUMER_OPERATIONS.has(graphNode.op_type)
           ) {
-            return inputName;
+            return [];
           }
 
-          return emittedFlattenOutputNamesByLayerIndex.get(
-            referencedSpatialLayerIndex,
-          )!;
-        }),
-      },
-    ];
-  });
+          return [referencedSpatialLayerIndex];
+        },
+      );
+      const missingFlattenLayerIndices = requiredFlattenLayerIndices.filter(
+        (layerIndex) => !emittedFlattenOutputNamesByLayerIndex.has(layerIndex),
+      );
+      const flattenNodes = missingFlattenLayerIndices.map((layerIndex) => {
+        const flattenOutputName = `BinaryFlatten_l${layerIndex}`;
+        emittedFlattenOutputNamesByLayerIndex.set(
+          layerIndex,
+          flattenOutputName,
+        );
+
+        return {
+          op_type: 'Flatten',
+          input: [`Layer_${layerIndex}`],
+          output: [flattenOutputName],
+          name: `binary_flatten_l${layerIndex}`,
+          attributes: [{ name: 'axis', type: 'INT', i: 1 }],
+        };
+      });
+
+      return [
+        ...flattenNodes,
+        {
+          ...graphNode,
+          input: graphNode.input.map((inputName) => {
+            const referencedSpatialLayerIndex =
+              resolveReferencedSpatialLayerIndex(
+                inputName,
+                spatialLayerIndices,
+              );
+
+            if (
+              referencedSpatialLayerIndex === undefined ||
+              !BINARY_DENSE_CONSUMER_OPERATIONS.has(graphNode.op_type)
+            ) {
+              return inputName;
+            }
+
+            return emittedFlattenOutputNamesByLayerIndex.get(
+              referencedSpatialLayerIndex,
+            )!;
+          }),
+        },
+      ];
+    },
+  );
 }
 
-function normalizeBinaryDeclaredOutputAliases(binaryReadyModel: OnnxModel): void {
+function normalizeBinaryDeclaredOutputAliases(
+  binaryReadyModel: OnnxModel,
+): void {
   const terminalOutputName = [
     resolveBinaryTerminalOutputName(binaryReadyModel),
     binaryReadyModel.graph.outputs[0]?.name,
@@ -436,7 +444,9 @@ function createBinaryConvInputValueInfo(
   };
 }
 
-function prependBinaryBatchDimension(onnxValueInfo: OnnxValueInfo): OnnxValueInfo {
+function prependBinaryBatchDimension(
+  onnxValueInfo: OnnxValueInfo,
+): OnnxValueInfo {
   const existingDimensions = onnxValueInfo.type.tensor_type.shape.dim;
 
   if (isLeadingBinaryBatchDimension(existingDimensions[0])) {
@@ -469,7 +479,9 @@ function resolveReferencedSpatialLayerIndex(
   inputName: string,
   spatialLayerIndices: Set<number>,
 ): number | undefined {
-  const spatialLayerMatch = inputName.match(BINARY_SPATIAL_LAYER_OUTPUT_PATTERN);
+  const spatialLayerMatch = inputName.match(
+    BINARY_SPATIAL_LAYER_OUTPUT_PATTERN,
+  );
   if (!spatialLayerMatch) {
     return undefined;
   }

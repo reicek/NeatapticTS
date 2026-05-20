@@ -1,6 +1,7 @@
 ---
 name: creating-unit-tests
 description: 'Use when: writing focused unit tests, red tests, failing tests, test fixtures, mocks, assertions, or coverage for a scoped change.'
+argument-hint: 'Describe the behavior under test, owner-local test file or folder, expected red/green state, and focused command.'
 user-invocable: false
 disable-model-invocation: false
 ---

@@ -247,9 +247,8 @@ export function emitLayerGraph(context: LayerBuildContext): string {
     activationContext: LayerActivationContext,
   ): string {
     if (!activationContext.hasMixedActivations) {
-      const concatOutputName = tryEmitExplicitConcatMergeBranch(
-        traversalContext,
-      );
+      const concatOutputName =
+        tryEmitExplicitConcatMergeBranch(traversalContext);
       if (concatOutputName) {
         return concatOutputName;
       }

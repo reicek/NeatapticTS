@@ -388,7 +388,10 @@ function createConvTraversalContexts(context: {
   poolMappings: Pool2DMapping[] | undefined;
 }): ConvInferenceTraversalContext[] {
   const availableConvSpecsByLayerIndex = new Map(
-    (context.declaredMappings ?? []).map((mapping) => [mapping.layerIndex, mapping]),
+    (context.declaredMappings ?? []).map((mapping) => [
+      mapping.layerIndex,
+      mapping,
+    ]),
   );
   const poolMappingsByAfterLayerIndex = new Map(
     (context.poolMappings ?? []).map((poolingMapping) => [
@@ -421,9 +424,8 @@ function resolveConvInferenceForLayer(
   traversalContext: ConvInferenceTraversalContext,
 ): (Conv2DMapping & { note?: string }) | undefined {
   if (isDeclaredConvLayer(traversalContext)) return undefined;
-  const evaluationContexts = createConvInferenceEvaluationContexts(
-    traversalContext,
-  );
+  const evaluationContexts =
+    createConvInferenceEvaluationContexts(traversalContext);
   const inferredSpecs = evaluationContexts
     .map(resolveConvSpecFromKernelCandidates)
     .filter(isInferredConvSpec);
@@ -439,9 +441,8 @@ function resolveConvInferenceForLayer(
 function createConvInferenceEvaluationContexts(
   traversalContext: ConvInferenceTraversalContext,
 ): ConvInferenceEvaluationContext[] {
-  const pooledEvaluationContext = createPooledConvInferenceEvaluationContext(
-    traversalContext,
-  );
+  const pooledEvaluationContext =
+    createPooledConvInferenceEvaluationContext(traversalContext);
   if (pooledEvaluationContext) {
     return [pooledEvaluationContext];
   }
@@ -546,9 +547,10 @@ function supportsFlattenedPostPoolConvSubset(
   inputHeight: number,
   inputWidth: number,
 ): boolean {
-  const hasEarlierPoolingBoundary = traversalContext.poolMappingsByAfterLayerIndex.has(
-    traversalContext.layerIndex - 2,
-  );
+  const hasEarlierPoolingBoundary =
+    traversalContext.poolMappingsByAfterLayerIndex.has(
+      traversalContext.layerIndex - 2,
+    );
 
   return (
     previousConvSpec.outChannels > ZERO_LENGTH &&
@@ -580,10 +582,10 @@ function hasUpstreamPoolingBoundary(
  * @returns Candidate input-channel counts.
  */
 function collectCandidateInputChannelCounts(previousWidth: number): number[] {
-  return Array.from({ length: previousWidth }, (_unused, offset) => offset + 1)
-    .filter(
-      (inputChannelCount) => previousWidth % inputChannelCount === 0,
-    );
+  return Array.from(
+    { length: previousWidth },
+    (_unused, offset) => offset + 1,
+  ).filter((inputChannelCount) => previousWidth % inputChannelCount === 0);
 }
 
 /**
@@ -671,12 +673,11 @@ function resolveConvSpecForKernel(
   kernelContext: ConvInferenceKernelEvaluationContext,
   allowExactFitKernel: boolean,
 ): (Conv2DMapping & { note?: string }) | undefined {
-  const isKernelTooLarge =
-    allowExactFitKernel
-      ? kernelContext.kernelSize > kernelContext.evaluationContext.inputHeight ||
-        kernelContext.kernelSize > kernelContext.evaluationContext.inputWidth
-      : kernelContext.kernelSize >= kernelContext.evaluationContext.inputHeight ||
-        kernelContext.kernelSize >= kernelContext.evaluationContext.inputWidth;
+  const isKernelTooLarge = allowExactFitKernel
+    ? kernelContext.kernelSize > kernelContext.evaluationContext.inputHeight ||
+      kernelContext.kernelSize > kernelContext.evaluationContext.inputWidth
+    : kernelContext.kernelSize >= kernelContext.evaluationContext.inputHeight ||
+      kernelContext.kernelSize >= kernelContext.evaluationContext.inputWidth;
   if (isKernelTooLarge) return undefined;
   const outputHeight =
     kernelContext.evaluationContext.inputHeight - kernelContext.kernelSize + 1;
@@ -731,8 +732,7 @@ function calculateSpatialOutputSize(
 
   return (
     Math.floor(
-      (inputSize + leadingPadding + trailingPadding - kernelSize) /
-        strideSize,
+      (inputSize + leadingPadding + trailingPadding - kernelSize) / strideSize,
     ) + MINIMUM_SPATIAL_OUTPUT_SIZE
   );
 }

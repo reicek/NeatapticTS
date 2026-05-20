@@ -23,6 +23,7 @@ const inputPath = options.input ?? 'scripts/agent-customization/evals/skill-trig
 const fixture = JSON.parse(await readWorkspaceFile(inputPath));
 const evals = Array.isArray(fixture) ? fixture : fixture.evals ?? [];
 const issues = [];
+issues.push(...evals.flatMap(validateEvalCase));
 const results = evals.map(gradeEval);
 
 if (evals.length === 0) {
@@ -32,7 +33,8 @@ if (evals.length === 0) {
 const failures = results.filter((result) => result.passed === false).length;
 const pending = results.filter((result) => result.passed === null).length;
 if (failures > 0) issues.push(issue('error', inputPath, `${failures} trigger evals failed.`));
-if (pending > 0) issues.push(issue('warning', inputPath, `${pending} trigger evals are pending observed results.`));
+if (pending > 0 && options.strict) issues.push(issue('error', inputPath, `${pending} trigger evals are pending observed results.`));
+else if (pending > 0) issues.push(issue('warning', inputPath, `${pending} trigger evals are pending observed results.`));
 
 const report = {
   ...summarizeIssues('skill trigger evals', issues),
@@ -59,6 +61,28 @@ function gradeEval(evalCase) {
     query: evalCase.query,
     shouldTrigger: expected,
     observedTriggered: observed ?? null,
+    observedTarget: evalCase.observedTarget ?? null,
+    observedNotes: evalCase.observedNotes ?? '',
     passed,
   };
+}
+
+function validateEvalCase(evalCase) {
+  const issues = [];
+  const allowedObservedKeys = new Set(['observedTriggered', 'observedTarget', 'observedNotes']);
+  for (const key of Object.keys(evalCase)) {
+    if (key.startsWith('observed') && !allowedObservedKeys.has(key)) {
+      issues.push(issue('error', inputPath, `${evalCase.id ?? 'UNKNOWN'} uses unsupported observed field '${key}'.`));
+    }
+  }
+  if ('observedTriggered' in evalCase && typeof evalCase.observedTriggered !== 'boolean') {
+    issues.push(issue('error', inputPath, `${evalCase.id ?? 'UNKNOWN'} observedTriggered must be boolean when present.`));
+  }
+  if ('observedTarget' in evalCase && typeof evalCase.observedTarget !== 'string') {
+    issues.push(issue('error', inputPath, `${evalCase.id ?? 'UNKNOWN'} observedTarget must be a string when present.`));
+  }
+  if ('observedNotes' in evalCase && typeof evalCase.observedNotes !== 'string') {
+    issues.push(issue('error', inputPath, `${evalCase.id ?? 'UNKNOWN'} observedNotes must be a string when present.`));
+  }
+  return issues;
 }

@@ -77,6 +77,9 @@ async function validateSkill(skill, { strict }) {
   if (strict && !('user-invocable' in data)) {
     issues.push(issue('warning', relativePath, 'Strict mode prefers an explicit `user-invocable` decision.'));
   }
+  if (strict && !data['argument-hint']) {
+    issues.push(issue('error', relativePath, 'Strict mode requires an `argument-hint` for discoverable task shaping.'));
+  }
 
   for (const localLink of extractMarkdownLinks(body)) {
     const target = path.posix.normalize(path.posix.join(path.posix.dirname(relativePath), localLink));

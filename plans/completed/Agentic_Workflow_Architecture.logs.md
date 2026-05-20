@@ -53,14 +53,14 @@
   archive move: `node scripts/agent-customization/validate-plan-phase-packets.mjs --plan=plans/Agentic_Workflow_Architecture.plans.md`
   and `node scripts/agent-customization/validate-plan-sync.mjs` both passed
   with `0 errors, 0 warnings`, and `git diff --check --
-  plans/Agentic_Workflow_Architecture.plans.md` produced no output while the
+plans/Agentic_Workflow_Architecture.plans.md` produced no output while the
   active plan path remained untracked.
 - Final archive validation for Step 07 ran
   `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/completed/Agentic_Workflow_Architecture.plans.md`
   plus `git diff --check -- plans/README.md plans/Roadmap.md
-  plans/completed/README.md
-  plans/completed/Agentic_Workflow_Architecture.plans.md
-  plans/completed/Agentic_Workflow_Architecture.logs.md`.
+plans/completed/README.md
+plans/completed/Agentic_Workflow_Architecture.plans.md
+plans/completed/Agentic_Workflow_Architecture.logs.md`.
 
 ## Reopen triggers
 

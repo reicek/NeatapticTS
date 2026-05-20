@@ -1,6 +1,7 @@
 ---
 name: auditing-js-docs
 description: 'Use when: auditing JSDoc/TSDoc quality, generated README inputs, missing examples, stale public API docs, or educational documentation gaps.'
+argument-hint: 'Describe the documentation surface, source files or generated README to inspect, and whether the pass is read-only or should recommend updates.'
 user-invocable: false
 disable-model-invocation: false
 ---

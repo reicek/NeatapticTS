@@ -59,7 +59,9 @@ function createPooledSecondLayerSharingScenario(): {
   poolOptions: OnnxExportOptions;
 } {
   const network = Network.createMLP(25, [16, 4], 1);
-  const inputNodes = network.nodes.filter((nodeEntry) => nodeEntry.type === 'input');
+  const inputNodes = network.nodes.filter(
+    (nodeEntry) => nodeEntry.type === 'input',
+  );
   const hiddenNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'hidden',
   );
@@ -474,9 +476,19 @@ describe('network onnx export postprocess chapter', () => {
         const exportOptions: OnnxExportOptions = {};
 
         onnxModel.graph.initializer.push(
-          { name: 'W0', data_type: 1, dims: [2, 2], float_data: [0.1, 0.2, 0.3, 0.4] },
+          {
+            name: 'W0',
+            data_type: 1,
+            dims: [2, 2],
+            float_data: [0.1, 0.2, 0.3, 0.4],
+          },
           { name: 'B0', data_type: 1, dims: [2], float_data: [0.5, -0.6] },
-          { name: 'W1', data_type: 1, dims: [2, 2], float_data: [0.1, 0.2, 0.3, 0.4] },
+          {
+            name: 'W1',
+            data_type: 1,
+            dims: [2, 2],
+            float_data: [0.1, 0.2, 0.3, 0.4],
+          },
           { name: 'B1', data_type: 1, dims: [2], float_data: [0.5, -0.6] },
         );
         onnxModel.graph.node.push(
@@ -506,7 +518,10 @@ describe('network onnx export postprocess chapter', () => {
 
         // Assert
         expect({
-          aliasMetadata: getMetadataValue(onnxModel, 'shared_initializer_aliases'),
+          aliasMetadata: getMetadataValue(
+            onnxModel,
+            'shared_initializer_aliases',
+          ),
           initializerNames: onnxModel.graph.initializer.map(
             (initializerEntry) => initializerEntry.name,
           ),
@@ -533,10 +548,25 @@ describe('network onnx export postprocess chapter', () => {
         const exportOptions: OnnxExportOptions = {};
 
         onnxModel.graph.initializer.push(
-          { name: 'W0', data_type: 1, dims: [2, 2], float_data: [0.1, 0.2, 0.3, 0.4] },
+          {
+            name: 'W0',
+            data_type: 1,
+            dims: [2, 2],
+            float_data: [0.1, 0.2, 0.3, 0.4],
+          },
           { name: 'B0', data_type: 1, dims: [2], float_data: [0.5, -0.6] },
-          { name: 'W1', data_type: 1, dims: [2, 2], float_data: [0.1, 0.2, 0.3, 0.4000000001] },
-          { name: 'B1', data_type: 1, dims: [2], float_data: [0.5, -0.6000000001] },
+          {
+            name: 'W1',
+            data_type: 1,
+            dims: [2, 2],
+            float_data: [0.1, 0.2, 0.3, 0.4000000001],
+          },
+          {
+            name: 'B1',
+            data_type: 1,
+            dims: [2],
+            float_data: [0.5, -0.6000000001],
+          },
         );
         onnxModel.graph.node.push({
           op_type: 'Gemm',
@@ -557,7 +587,10 @@ describe('network onnx export postprocess chapter', () => {
 
         // Assert
         expect({
-          aliasMetadata: getMetadataValue(onnxModel, 'shared_initializer_aliases'),
+          aliasMetadata: getMetadataValue(
+            onnxModel,
+            'shared_initializer_aliases',
+          ),
           initializerNames: onnxModel.graph.initializer.map(
             (initializerEntry) => initializerEntry.name,
           ),
@@ -605,7 +638,10 @@ describe('network onnx export postprocess chapter', () => {
 
         // Assert
         expect({
-          aliasMetadata: getMetadataValue(onnxModel, 'shared_initializer_aliases'),
+          aliasMetadata: getMetadataValue(
+            onnxModel,
+            'shared_initializer_aliases',
+          ),
           initializerNames: onnxModel.graph.initializer.map(
             (initializerEntry) => initializerEntry.name,
           ),
@@ -703,8 +739,12 @@ describe('network onnx export postprocess chapter', () => {
         const sourceNetwork = Network.createMLP(2, [2], 1);
         const layers = [
           sourceNetwork.nodes.filter((nodeEntry) => nodeEntry.type === 'input'),
-          sourceNetwork.nodes.filter((nodeEntry) => nodeEntry.type === 'hidden'),
-          sourceNetwork.nodes.filter((nodeEntry) => nodeEntry.type === 'output'),
+          sourceNetwork.nodes.filter(
+            (nodeEntry) => nodeEntry.type === 'hidden',
+          ),
+          sourceNetwork.nodes.filter(
+            (nodeEntry) => nodeEntry.type === 'output',
+          ),
         ];
         const exportOptions: OnnxExportOptions = {
           validateConvSharing: true,

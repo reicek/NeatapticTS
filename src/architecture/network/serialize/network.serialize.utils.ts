@@ -220,15 +220,18 @@ function collectParameterLayoutBiasEntries(
 ): ParameterLayoutBiasDescriptor[] {
   const biasEntries = networkInternals.nodes
     .map((node) => createParameterLayoutBiasDescriptor(node))
-    .toSorted((leftBiasEntry, rightBiasEntry) =>
-      leftBiasEntry.nodeId - rightBiasEntry.nodeId,
+    .toSorted(
+      (leftBiasEntry, rightBiasEntry) =>
+        leftBiasEntry.nodeId - rightBiasEntry.nodeId,
     );
 
   assertDistinctBiasOrdering(biasEntries);
   return biasEntries;
 }
 
-function createParameterLayoutBiasDescriptor(node: Node): ParameterLayoutBiasDescriptor {
+function createParameterLayoutBiasDescriptor(
+  node: Node,
+): ParameterLayoutBiasDescriptor {
   return {
     kind: 'bias',
     nodeId: readRequiredLayoutNodeGeneId(node, 'bias node'),
@@ -280,10 +283,9 @@ function createParameterLayoutWeightOrderingIdentity(
     connectionInstance.to,
     'weight target node',
   );
-  const innovation =
-    Number.isFinite(connectionInstance.innovation)
-      ? connectionInstance.innovation
-      : null;
+  const innovation = Number.isFinite(connectionInstance.innovation)
+    ? connectionInstance.innovation
+    : null;
 
   return {
     descriptor:
@@ -384,7 +386,9 @@ function readRequiredLayoutNodeGeneId(
   return nodeGeneId;
 }
 
-function createParameterRuntimeContext(network: Network): ParameterRuntimeContext {
+function createParameterRuntimeContext(
+  network: Network,
+): ParameterRuntimeContext {
   const networkInternals = asNetworkInternals(network);
 
   // Step 1: Reject unsupported parameter families before creating a payload.
@@ -394,7 +398,10 @@ function createParameterRuntimeContext(network: Network): ParameterRuntimeContex
   const layout = createParameterLayoutV1(network);
 
   // Step 3: Resolve one ordered read-write binding per layout descriptor.
-  const runtimeBindings = collectParameterRuntimeBindings(networkInternals, layout);
+  const runtimeBindings = collectParameterRuntimeBindings(
+    networkInternals,
+    layout,
+  );
 
   // Step 4: Return the ordered binding context for export or import.
   return {
@@ -430,9 +437,8 @@ function collectParameterRuntimeBindings(
   layout: ParameterLayoutV1,
 ): ParameterRuntimeBinding[] {
   const nodesByGeneId = createNodesByGeneId(networkInternals.nodes);
-  const connectionsByDescriptorKey = createConnectionsByDescriptorKey(
-    networkInternals,
-  );
+  const connectionsByDescriptorKey =
+    createConnectionsByDescriptorKey(networkInternals);
 
   return layout.entries.map((layoutEntry) =>
     createParameterRuntimeBinding(
@@ -443,11 +449,12 @@ function collectParameterRuntimeBindings(
   );
 }
 
-function createNodesByGeneId(
-  nodes: ReadonlyArray<Node>,
-): Map<number, Node> {
+function createNodesByGeneId(nodes: ReadonlyArray<Node>): Map<number, Node> {
   return new Map(
-    nodes.map((node) => [readRequiredLayoutNodeGeneId(node, 'bias node'), node]),
+    nodes.map((node) => [
+      readRequiredLayoutNodeGeneId(node, 'bias node'),
+      node,
+    ]),
   );
 }
 
@@ -457,9 +464,8 @@ function createConnectionsByDescriptorKey(
   return new Map(
     [...networkInternals.connections, ...networkInternals.selfconns].map(
       (connection) => {
-        const weightDescriptor = createParameterLayoutWeightOrderingIdentity(
-          connection,
-        ).descriptor;
+        const weightDescriptor =
+          createParameterLayoutWeightOrderingIdentity(connection).descriptor;
 
         return [
           createParameterLayoutEntryKey(weightDescriptor),
