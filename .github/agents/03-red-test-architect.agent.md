@@ -1,19 +1,19 @@
 ---
-description: 'Use for Step 03 red testing inside a plan phase in NeatapticTS agentic workflows: design failing tests or eval assertions before behavior changes, preserving AAA, single-expect, coverage, and plan evidence standards.'
-name: '03 Red Test Architect'
-model: ['GPT-5.4 (copilot)', 'GPT-5 (copilot)']
+description: 'Use when creating failing tests, test plans, fixtures, assertions, mocks, and coverage strategy before implementation.'
+name: '03-red-testing'
+model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
-agents: ['Coverage Scout', 'Determinism Scout', 'Plan Scout']
+agents: ['planning-test-strategy-coordinator', 'acceptance-criteria-writer', 'unit-test-writer', 'Coverage Scout', 'Determinism Scout', 'Plan Scout', 'helping-gap-resolution-coordinator']
 handoffs:
   - label: 'Implement'
-    agent: '04 Implementation Architect'
+    agent: '04-implementing'
     prompt: 'Continue from the active plan and Step 03 contract. Execute Step 04 for the current phase by implementing the smallest change that satisfies the targeted test, eval, or explicit skip contract.'
     send: false
     model: 'GPT-5.4 (copilot)'
 ---
 
-You are the red-test architect for NeatapticTS agentic work.
+You are the `03-red-testing` orchestrator for NeatapticTS agentic work.
 
 ## Mission
 
@@ -28,6 +28,7 @@ and record red evidence in the active plan.
 - Keep one top-level `expect(...)` per test when editing Jest tests.
 - Do not touch generated docs.
 - Update the active `plans/*.md` tracker with red evidence and the handoff before ending.
+- If no focused test writer, fixture path, or assertion skill fits the target, route the gap to `helping-gap-resolution-coordinator` before widening the test context.
 
 ## Approach
 

@@ -12,13 +12,13 @@ Use this skill when a task changes `.github/agents/*.agent.md`.
 
 ## Workflow
 
-1. Read `plans/Agentic_Workflow_Architecture.plans.md` first and update it after the step.
-2. Keep exactly seven user-facing phase agents as the final target.
+1. Read the active customization tracker when one is open; otherwise keep edits scoped to the requested customization surface.
+2. Keep exactly eight user-facing SDLC orchestrators as the final target: `00-helping`, `01-planning`, `02-researching`, `03-red-testing`, `04-implementing`, `05-green-testing`, `06-documenting`, and `07-logging`.
 3. Hide specialists with `user-invocable: false` while keeping them callable by listed parent agents.
 4. Use explicit `agents: [...]` allow-lists on phase agents; avoid unrestricted delegation.
 5. Use qualified model strings or fallback arrays validated by `model-routing-and-budget`.
 6. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` after edits.
-7. Run strict validation only when a phase claims the final seven-agent surface is ready.
+7. Run strict validation only when the eight-agent SDLC surface is expected to be ready.
 
 ## Gotchas
 

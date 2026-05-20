@@ -13,6 +13,18 @@ import {
 
 const options = parseArgs(process.argv.slice(2));
 
+const strictVisibleAgentNames = new Set([
+  '00-helping',
+  '01-planning',
+  '02-researching',
+  '03-red-testing',
+  '04-implementing',
+  '05-green-testing',
+  '06-documenting',
+  '07-logging',
+]);
+const strictVisibleAgentPathPattern = /^\.github\/agents\/0[0-7]-/;
+
 if (options.help) {
   printUsage({
     title: 'Validate NeatapticTS custom agent frontmatter.',
@@ -86,13 +98,16 @@ function validateAgent(agent, agents, { strict }) {
     }
   }
 
-  if (strict && data['user-invocable'] !== false && !/^\.github\/agents\/0[1-7]-/.test(relativePath)) {
-    issues.push(issue('error', relativePath, 'Strict mode allows only numbered phase agents to be user-invocable.'));
+  if (strict && data['user-invocable'] !== false && !strictVisibleAgentPathPattern.test(relativePath)) {
+    issues.push(issue('error', relativePath, 'Strict mode allows only numbered SDLC orchestrators to be user-invocable.'));
   }
 
-  if (strict && /^\.github\/agents\/0[1-7]-/.test(relativePath)) {
-    if (!data.model) issues.push(issue('error', relativePath, 'Phase agents must declare a model or fallback array.'));
-    if (data['user-invocable'] !== true) issues.push(issue('error', relativePath, 'Phase agents must be user-invocable.'));
+  if (strict && strictVisibleAgentPathPattern.test(relativePath)) {
+    if (!data.model) issues.push(issue('error', relativePath, 'SDLC orchestrators must declare a model or fallback array.'));
+    if (data['user-invocable'] !== true) issues.push(issue('error', relativePath, 'SDLC orchestrators must be user-invocable.'));
+    if (!strictVisibleAgentNames.has(data.name)) {
+      issues.push(issue('error', relativePath, `Strict mode expected one of the public SDLC agent names, found '${data.name ?? 'NONE'}'.`));
+    }
   }
 
   if (data.model && !isQualifiedModel(data.model)) {
@@ -106,11 +121,24 @@ function validateGlobalAgentRules(agents, { strict }) {
   if (!strict) return [];
 
   const visibleAgents = agents.filter((agent) => agent.data['user-invocable'] !== false);
-  if (visibleAgents.length !== 7) {
-    return [issue('error', '.github/agents', `Strict mode expected exactly 7 user-invocable agents, found ${visibleAgents.length}.`)];
+  const issues = [];
+
+  if (visibleAgents.length !== strictVisibleAgentNames.size) {
+    issues.push(issue('error', '.github/agents', `Strict mode expected exactly ${strictVisibleAgentNames.size} user-invocable agents, found ${visibleAgents.length}.`));
   }
 
-  return [];
+  const visibleNames = new Set(visibleAgents.map((agent) => agent.name));
+  for (const expectedName of strictVisibleAgentNames) {
+    if (!visibleNames.has(expectedName)) issues.push(issue('error', '.github/agents', `Missing user-invocable SDLC agent '${expectedName}'.`));
+  }
+
+  for (const visibleAgent of visibleAgents) {
+    if (!strictVisibleAgentNames.has(visibleAgent.name)) {
+      issues.push(issue('error', visibleAgent.path, `Unexpected user-invocable agent '${visibleAgent.name}'.`));
+    }
+  }
+
+  return issues;
 }
 
 function isQualifiedModel(model) {

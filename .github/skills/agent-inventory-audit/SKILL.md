@@ -16,7 +16,7 @@ Use this skill before and after customization changes.
 2. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json`.
 3. Run `node scripts/agent-customization/validate-skill-frontmatter.mjs --json`.
 4. Run `node scripts/agent-customization/validate-agent-graph.mjs --json`.
-5. Use `--strict` only when the final seven-agent surface should already be true.
+5. Use `--strict` only when the final eight-agent SDLC surface should already be true.
 6. Summarize counts, errors, warnings, and expected pre-migration drift in the active plan.
 
 ## Evidence Contract

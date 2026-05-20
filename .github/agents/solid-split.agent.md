@@ -1,7 +1,7 @@
 ---
 description: 'Use when executing a deliberate SOLID module split, folderizing a large file, starting from a user-specified root such as #file:flappy_bird, following or creating a durable split plan, improving JSDoc so generated README files read naturally, updating plan progress, and either ending an active step with a handoff prompt or terminally closing the plan with compression plus logs. Keywords: SOLID split, split plan, folderize, module boundary, orchestration-first, compatibility re-export, generated README, JSDoc, handoff prompt, logs.'
 name: 'solid-split'
-model: ['GPT-5.4 (copilot)', 'GPT-5 (copilot)']
+model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, edit, search, execute, todo, agent]
 argument-hint: 'Describe the module to split, the plan file to follow or create, and the single current step to complete.'
 agents: ['Boundary Mapper', 'Plan Scout', 'Docs Scout']

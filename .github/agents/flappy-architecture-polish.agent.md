@@ -1,7 +1,7 @@
 ---
 description: 'Use when tuning, rerunning, or hardening one Flappy Bird architecture profile with a reusable browser-worker polish loop. Keywords: Flappy, LSTM, GRU, NARX, MLP, sparse, warm-start, probe, worker fairness, architecture polish.'
 name: 'flappy-architecture-polish'
-model: ['GPT-5.4 (copilot)', 'GPT-5 (copilot)']
+model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, edit, search, execute, todo, agent]
 argument-hint: 'Describe the architecture profile, current symptom, desired polish target, and whether this pass should implement changes or rerun validation only.'
 agents: ['Plan Scout']

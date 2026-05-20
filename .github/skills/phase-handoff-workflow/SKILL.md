@@ -36,7 +36,7 @@ be organized as a phase boundary plus numbered step packets. The user should be
 able to start a fresh session, select the agent named in the current step, and
 paste that step packet without relying on prior chat history.
 
-Step 01 always belongs to `01 Planning Architect`. It is responsible for
+Step 01 always belongs to `01-planning`. It is responsible for
 planning the rest of that phase and authoring Step 02-07 packets, or explicit
 skipped-step packets, before execution continues.
 
@@ -56,7 +56,7 @@ phase can advance.
 ```yaml
 phase: N
 step: 1
-agent: "01 Planning Architect"
+agent: "01-planning"
 agent_file: ".github/agents/01-planning-architect.agent.md"
 status: "[WIP|PLANNED|DONE]"
 mode: "fresh-session"

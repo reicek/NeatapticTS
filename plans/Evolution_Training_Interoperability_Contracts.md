@@ -239,7 +239,7 @@ Phase ordering and stop-line guidance:
 ```yaml
 phase: 1
 step: 1
-agent: "01 Planning Architect"
+agent: "01-planning"
 agent_file: ".github/agents/01-planning-architect.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -254,7 +254,7 @@ validation:
   - "Manual tracker check that the canonical ordering rule, acceptance gate, and focused validation are preserved before Step 02-07 packets are authored."
 ```
 
-**User instruction:** Start a fresh session, select `01 Planning Architect`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
 
 **Step objective:** Turn Phase 1 into an executable deterministic-ordering workset by authoring Phase 1 Step 02-07 packets, deciding which value-gate steps are real versus explicit skips, and preserving the existing ordering contract without widening scope into policy or fine-tuning work.
 
@@ -289,7 +289,7 @@ validation:
 ```yaml
 phase: 1
 step: 2
-agent: "02 Research Coordinator"
+agent: "02-researching"
 agent_file: ".github/agents/02-research-coordinator.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -305,7 +305,7 @@ validation:
   - "Read-only research brief names the network owner boundary, stable node and edge identities, likely owner-local test file, and whether Phase 1 ordering can be red-tested without implementing Phase 2 import/export."
 ```
 
-**User instruction:** Start a fresh session, select `02 Research Coordinator`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `02-researching`, and paste this full step packet.
 
 **Step objective:** Gather the smallest read-only evidence needed to design a deterministic ordering red test without widening into vector import/export, fine-tuning, hybrid policy, or downstream consumer formats.
 
@@ -351,7 +351,7 @@ validation:
 ```yaml
 phase: 1
 step: 3
-agent: "03 Red Test Architect"
+agent: "03-red-testing"
 agent_file: ".github/agents/03-red-test-architect.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -368,7 +368,7 @@ validation:
   - "A focused owner-local red test or explicit blocked record proves whether repeated same-runtime layout ordering and equivalent reconstructed network ordering can be tested before Phase 2."
 ```
 
-**User instruction:** Start a fresh session, select `03 Red Test Architect`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `03-red-testing`, and paste this full step packet.
 
 **Step objective:** Add or define the smallest failing test contract for deterministic layout ordering before implementation, while keeping vector values, import validation, and roundtrip inference in Phase 2.
 
@@ -411,7 +411,7 @@ validation:
 ```yaml
 phase: 1
 step: 4
-agent: "04 Implementation Architect"
+agent: "04-implementing"
 agent_file: ".github/agents/04-implementation-architect.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -427,7 +427,7 @@ validation:
   - "The Step 03 red test goes green with a network-owned layout ordering implementation and no Phase 2 vector import/export behavior."
 ```
 
-**User instruction:** Start a fresh session, select `04 Implementation Architect`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
 
 **Step objective:** Implement the smallest network-owned `ParameterLayoutV1` and `ParameterLayoutEntry` ordering surface that satisfies Step 03 without adding value import, roundtrip inference, fine-tuning, or hybrid policy behavior.
 
@@ -471,7 +471,7 @@ validation:
 ```yaml
 phase: 1
 step: 5
-agent: "05 Green Validation Runner"
+agent: "05-green-testing"
 agent_file: ".github/agents/05-green-validation-runner.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -489,7 +489,7 @@ validation:
   - "Focused deterministic-ordering tests and owner-local coverage pass for every touched serialize src file, and repo-wide TypeScript introduces no new failure into the seam beyond the recorded ONNX baseline blocker."
 ```
 
-**User instruction:** Start a fresh session, select `05 Green Validation Runner`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
 
 **Step objective:** Prove the Phase 1 implementation satisfies the deterministic-ordering contract with focused validation before documentation or phase closure.
 
@@ -538,7 +538,7 @@ Tracker sync validation still passes for the active workstream after this Step 0
 - Focused command: `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/architecture/network/serialize/network.serialize.test.ts --testNamePattern="ParameterLayoutV1 ordering"`
 - Observed follow-up result: the focused owner-local slice stayed green with `1` suite passed and all `7` targeted `ParameterLayoutV1 ordering` tests passed. The layout-ordering seam is now covered for repeated same-runtime reads, equivalent rebuild ordering, finite-innovation-before-fallback ordering, duplicate fallback identity ambiguity, duplicate bias node-id ambiguity, same-innovation ambiguity across distinct source nodes, and missing stable weight-endpoint gene ids.
 
-**Updated Step 05 rerun handoff:** Call `05 Green Validation Runner` next. Re-run `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/architecture/network/serialize/network.serialize.test.ts --testNamePattern="ParameterLayoutV1 ordering"`, then `npx tsc --noEmit -p tsconfig.json`, then the owner-local coverage guard command for `src/architecture/network/serialize/network.serialize.utils.ts` and `src/architecture/network/serialize/network.serialize.utils.types.ts`. Treat the existing `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as the unchanged repo baseline blocker unless a new failure appears inside the serialize seam. If the focused slice or coverage guard fails inside layout ordering, route back to Step 03 for missing guard-rail tests or Step 04 for implementation defects. Do not activate Phase 2.
+**Updated Step 05 rerun handoff:** Call `05-green-testing` next. Re-run `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/architecture/network/serialize/network.serialize.test.ts --testNamePattern="ParameterLayoutV1 ordering"`, then `npx tsc --noEmit -p tsconfig.json`, then the owner-local coverage guard command for `src/architecture/network/serialize/network.serialize.utils.ts` and `src/architecture/network/serialize/network.serialize.utils.types.ts`. Treat the existing `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as the unchanged repo baseline blocker unless a new failure appears inside the serialize seam. If the focused slice or coverage guard fails inside layout ordering, route back to Step 03 for missing guard-rail tests or Step 04 for implementation defects. Do not activate Phase 2.
 
 **Exact next orchestrator prompt:** Re-run Phase 1 Step 05 for the layout-ordering seam only. Use `npx jest --config=jest.config.mjs --no-cache --runTestsByPath src/architecture/network/serialize/network.serialize.test.ts --testNamePattern="ParameterLayoutV1 ordering"` first, then `npx tsc --noEmit -p tsconfig.json` while treating the existing `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` as the unchanged repo baseline blocker unless the failure surface moves into serialize ordering, then run the owner-local coverage guard command for `src/architecture/network/serialize/network.serialize.utils.ts` and `src/architecture/network/serialize/network.serialize.utils.types.ts`. If the focused slice or coverage guard fails inside the layout-ordering seam, route to Step 03 for missing guard-rail coverage or Step 04 for implementation defects. Do not activate Phase 2.
 
@@ -549,7 +549,7 @@ Tracker sync validation still passes for the active workstream after this Step 0
 ```yaml
 phase: 1
 step: 6
-agent: "06 Educational Docs Curator"
+agent: "06-documenting"
 agent_file: ".github/agents/06-educational-docs-curator.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -566,7 +566,7 @@ validation:
   - "Source-first docs for any exported layout symbols are present, generated docs are refreshed if JSDoc inputs changed, and no Phase 2 or fine-tuning docs are introduced."
 ```
 
-**User instruction:** Start a fresh session, select `06 Educational Docs Curator`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
 
 **Step objective:** Keep the deterministic layout-ordering surface teachable and synchronized with generated docs without turning Phase 1 into the broader Phase 5 documentation closure.
 
@@ -610,7 +610,7 @@ validation:
 ```yaml
 phase: 1
 step: 7
-agent: "07 Session Log Archivist"
+agent: "07-logging"
 agent_file: ".github/agents/07-session-log-archivist.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -627,7 +627,7 @@ validation:
   - "Manual tracker review confirms Phase 1 acceptance evidence, Phase 2 coupling state, and the refreshed Handoff query before the next phase opens."
 ```
 
-**User instruction:** Start a fresh session, select `07 Session Log Archivist`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `07-logging`, and paste this full step packet.
 
 **Step objective:** Close or reroute Phase 1 based on validated evidence, preserve the Phase 1 to Phase 2 coupling decision, and leave the tracker ready for the next narrow step.
 
@@ -662,7 +662,7 @@ validation:
 - External baseline decision: do not keep Phase 1 open solely because `npx tsc --noEmit -p tsconfig.json` still fails at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` with `TS2345` because `standardDomainImports[0]!.version` can be `undefined`. No new failure moved into the serialize seam, so that error remains a recorded repo baseline blocker rather than a Phase 1 reroute.
 - Coupling decision: preserve the Phase 1 to Phase 2 coupling note. Phase 1 and Phase 2 still form the opening implementation tranche, but the coupling no longer blocks activation because the Phase 1 ordering seam is now closed.
 - Tracker state decision: keep the top-level tracker active in `plans/` as `[WIP]`; mark Phase 1 complete; move the active frontier to Phase 2; do not archive the plan or create a same-boundary `.logs.md` record because the overall hybrid-interoperability lane still has real next steps.
-- Next safe step: activate `03 Red Test Architect` for Phase 2 `Step 03 — Design vector roundtrip red tests`. Do not skip ahead to Phase 2 Step 04 or later packets.
+- Next safe step: activate `03-red-testing` for Phase 2 `Step 03 — Design vector roundtrip red tests`. Do not skip ahead to Phase 2 Step 04 or later packets.
 - Tracker validation: rerun `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` after this tracker refresh.
 
 ### Phase 2 — Implement vector export/import [WIP]
@@ -693,7 +693,7 @@ validation:
 ```yaml
 phase: 2
 step: 1
-agent: "01 Planning Architect"
+agent: "01-planning"
 agent_file: ".github/agents/01-planning-architect.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -708,7 +708,7 @@ validation:
   - "Manual tracker check that roundtrip, mismatch-rejection, and network-owned contract details are preserved before Step 02-07 packets are authored."
 ```
 
-**User instruction:** Start a fresh session, select `01 Planning Architect`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
 
 **Step objective:** Turn Phase 2 into an executable vector export/import workset by authoring Phase 2 Step 02-07 packets, preserving the roundtrip and mismatch contracts, and keeping the phase aligned with the coupled Phase 1 opening tranche.
 
@@ -749,7 +749,7 @@ validation:
 ```yaml
 phase: 2
 step: 2
-agent: "02 Research Coordinator"
+agent: "02-researching"
 agent_file: ".github/agents/02-research-coordinator.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -765,7 +765,7 @@ validation:
   - "Read-only research brief names the network owner boundary, the v1 parameter-family inclusion rule, the required mismatch checks, the likely owner-local test file, and any unsupported-family honesty failures needed before red tests."
 ```
 
-**User instruction:** Start a fresh session, select `02 Research Coordinator`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `02-researching`, and paste this full step packet.
 
 **Step objective:** Gather the smallest read-only evidence needed to lock the Phase 2 owner boundary, v1 parameter-family scope, and red-test seam for vector export/import without widening into isolation helpers, persistence policy, or downstream consumer formats.
 
@@ -813,7 +813,7 @@ validation:
 ```yaml
 phase: 2
 step: 3
-agent: "03 Red Test Architect"
+agent: "03-red-testing"
 agent_file: ".github/agents/03-red-test-architect.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -830,7 +830,7 @@ validation:
   - "A focused owner-local red test or explicit blocked record proves whether same-runtime export or import roundtrip and mismatch rejection can fail honestly before implementation."
 ```
 
-**User instruction:** Start a fresh session, select `03 Red Test Architect`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `03-red-testing`, and paste this full step packet.
 
 **Step objective:** Add or define the smallest failing test contract for Phase 2 vector export/import roundtrip and mismatch rejection before implementation, while keeping training isolation and persistence policy work out of scope.
 
@@ -874,7 +874,7 @@ validation:
 ```yaml
 phase: 2
 step: 4
-agent: "04 Implementation Architect"
+agent: "04-implementing"
 agent_file: ".github/agents/04-implementation-architect.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -890,7 +890,7 @@ validation:
   - "The Step 03 red test goes green with a network-owned parameter-vector export or import implementation and no Phase 3 or Phase 4 behavior."
 ```
 
-**User instruction:** Start a fresh session, select `04 Implementation Architect`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
 
 **Step objective:** Implement the smallest network-owned `ParameterVector` export/import surface that satisfies the Phase 2 red tests while keeping the contract honest about supported v1 parameter families and same-runtime determinism only.
 
@@ -937,7 +937,7 @@ validation:
 ```yaml
 phase: 2
 step: 5
-agent: "05 Green Validation Runner"
+agent: "05-green-testing"
 agent_file: ".github/agents/05-green-validation-runner.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -955,7 +955,7 @@ validation:
   - "Focused vector roundtrip and mismatch tests pass, TypeScript validation passes or a pre-existing blocked baseline is recorded explicitly, and coverage guard passes for every touched src file."
 ```
 
-**User instruction:** Start a fresh session, select `05 Green Validation Runner`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
 
 **Step objective:** Prove the Phase 2 implementation satisfies the same-runtime roundtrip and mismatch-rejection contract with focused validation before documentation or phase closure.
 
@@ -1003,14 +1003,14 @@ Those remaining misses were mixed rather than a pure Step 03 test gap. Lines `39
 - Repo TypeScript rerun: `npx tsc --noEmit -p tsconfig.json`
 - TypeScript result: still fails only at the unchanged external ONNX baseline `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` with `TS2345` because `standardDomainImports[0]!.version` can be `undefined`.
 
-**Updated Step 06 handoff:** Call `06 Educational Docs Curator` next. Keep the next pass source-doc-only and scoped to the serialize-owned vector surface: review `ParameterVector`, `toParameterVector`, and `fromParameterVector` JSDoc plus the generated `src/architecture/network/serialize/README.md` output for alignment with the now-final v1 contract, including the weights-and-biases inclusion rule, explicit unsupported-family rejection for non-neutral `node.response` and `connection.gain`, disabled-connection slot behavior, fallback descriptor semantics when an innovation id is absent, and same-runtime determinism wording. Run `npm run docs` only if source JSDoc changes are required. Do not widen into Phase 3 isolation, Phase 4 policy, or unrelated ONNX work.
+**Updated Step 06 handoff:** Call `06-documenting` next. Keep the next pass source-doc-only and scoped to the serialize-owned vector surface: review `ParameterVector`, `toParameterVector`, and `fromParameterVector` JSDoc plus the generated `src/architecture/network/serialize/README.md` output for alignment with the now-final v1 contract, including the weights-and-biases inclusion rule, explicit unsupported-family rejection for non-neutral `node.response` and `connection.gain`, disabled-connection slot behavior, fallback descriptor semantics when an innovation id is absent, and same-runtime determinism wording. Run `npm run docs` only if source JSDoc changes are required. Do not widen into Phase 3 isolation, Phase 4 policy, or unrelated ONNX work.
 
 #### Step 06: Curate vector-contract docs [DONE]
 
 ```yaml
 phase: 2
 step: 6
-agent: "06 Educational Docs Curator"
+agent: "06-documenting"
 agent_file: ".github/agents/06-educational-docs-curator.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -1027,7 +1027,7 @@ validation:
   - "Source-first docs for any exported vector symbols are present, generated docs are refreshed if JSDoc inputs changed, and no Phase 3 or Phase 4 docs are introduced accidentally."
 ```
 
-**User instruction:** Start a fresh session, select `06 Educational Docs Curator`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
 
 **Step objective:** Keep the new vector export/import surface teachable and synchronized with generated docs without turning Phase 2 into the broader Phase 5 documentation closure.
 
@@ -1067,7 +1067,7 @@ validation:
 - Source-of-truth guard: no generated `src/**/README.md` file or `docs/examples/**` output was hand-edited as a shortcut.
 - Citation note: no external citation or license update was required because this pass only documents a repo-owned serialize contract.
 - Residual docs risk: none within the Phase 2 vector seam; Step 07 should decide whether Phase 2 can close against the unchanged external ONNX TypeScript baseline.
-- Exact next orchestrator: `07 Session Log Archivist`
+- Exact next orchestrator: `07-logging`
 - Exact handoff prompt: see `## Handoff query` below.
 
 #### Step 07: Log Phase 2 closure or reroute [DONE]
@@ -1075,7 +1075,7 @@ validation:
 ```yaml
 phase: 2
 step: 7
-agent: "07 Session Log Archivist"
+agent: "07-logging"
 agent_file: ".github/agents/07-session-log-archivist.agent.md"
 status: "[DONE]"
 mode: "fresh-session"
@@ -1092,7 +1092,7 @@ validation:
   - "Manual tracker review confirms Phase 2 acceptance evidence, the Phase 1 coupling state, and the refreshed Handoff query before the next phase opens."
 ```
 
-**User instruction:** Start a fresh session, select `07 Session Log Archivist`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `07-logging`, and paste this full step packet.
 
 **Step objective:** Close or reroute Phase 2 based on validated evidence, preserve the Phase 1 coupling state honestly, and leave the tracker ready either for Phase 3 planning or for the smallest blocking reroute.
 
@@ -1127,7 +1127,7 @@ validation:
 - External baseline decision: do not keep Phase 2 open solely because `npx tsc --noEmit -p tsconfig.json` still fails at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` with `TS2345` because `standardDomainImports[0]!.version` can be `undefined`. No new TypeScript failure moved into the serialize-owned vector seam, so that result remains a recorded external ONNX baseline rather than a Phase 2 reroute.
 - Coupling decision: record that the Phase 1 coupling gate is cleared. Phase 1 and Phase 2 now stand as the completed opening implementation tranche, which is sufficient to open Phase 3 planning without widening into implementation.
 - Tracker state decision: keep the top-level tracker active in `plans/` as `[WIP]`; mark Phase 2 complete; move the active frontier to Phase 3 Step 01; do not archive this tracker or create a same-boundary `.logs.md` file because the hybrid-interoperability lane still has real next phases.
-- Next safe step: activate `01 Planning Architect` for Phase 3 `Step 01 — Plan the isolation-helper tranche`. Do not widen into Phase 3 implementation, Phase 4 policy work, or unrelated ONNX fixes.
+- Next safe step: activate `01-planning` for Phase 3 `Step 01 — Plan the isolation-helper tranche`. Do not widen into Phase 3 implementation, Phase 4 policy work, or unrelated ONNX fixes.
 - Tracker validation: rerun `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` after this tracker refresh.
 
 ### Phase 3 — Add training isolation helpers [WIP]
@@ -1159,7 +1159,7 @@ validation:
 ```yaml
 phase: 3
 step: 1
-agent: "01 Planning Architect"
+agent: "01-planning"
 agent_file: ".github/agents/01-planning-architect.agent.md"
 status: "[WIP]"
 mode: "fresh-session"
@@ -1174,7 +1174,7 @@ validation:
   - "Manual tracker check that the isolation rule, vector-first preference, and deterministic-claim guardrails are preserved before Step 02-07 packets are authored."
 ```
 
-**User instruction:** Start a fresh session, select `01 Planning Architect`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
 
 **Step objective:** Turn Phase 3 into an executable isolation-helper workset by authoring Phase 3 Step 02-07 packets, keeping the first pass vector-first, and preserving the no-shared-mutation contract.
 
@@ -1233,7 +1233,7 @@ validation:
 ```yaml
 phase: 4
 step: 1
-agent: "01 Planning Architect"
+agent: "01-planning"
 agent_file: ".github/agents/01-planning-architect.agent.md"
 status: "[PLANNED]"
 mode: "fresh-session"
@@ -1248,7 +1248,7 @@ validation:
   - "Manual tracker check that the policy split, Lamarckian opt-in rule, and deterministic ranking guardrails are preserved before Step 02-07 packets are authored."
 ```
 
-**User instruction:** Start a fresh session, select `01 Planning Architect`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
 
 **Step objective:** Turn Phase 4 into an executable hybrid-policy workset by authoring Phase 4 Step 02-07 packets, preserving the explicit persistence-policy split, and keeping the phase gated on successful completion of the earlier parameter-vector and isolation phases.
 
@@ -1306,7 +1306,7 @@ validation:
 ```yaml
 phase: 5
 step: 1
-agent: "01 Planning Architect"
+agent: "01-planning"
 agent_file: ".github/agents/01-planning-architect.agent.md"
 status: "[PLANNED]"
 mode: "fresh-session"
@@ -1321,7 +1321,7 @@ validation:
   - "Manual tracker check that the determinism wording, Lamarckian explanation, and example-validation expectations are preserved before Step 02-07 packets are authored."
 ```
 
-**User instruction:** Start a fresh session, select `01 Planning Architect`, and paste this full step packet.
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
 
 **Step objective:** Turn Phase 5 into an executable documentation closure workset by authoring Phase 5 Step 02-07 packets, preserving the determinism ladder and example expectations, and keeping generated docs aligned with source-owned public contracts.
 
@@ -1402,5 +1402,5 @@ validation:
 Continue from the current repo state only. Do not rely on prior chat history.
 The active tracker is plans/Evolution_Training_Interoperability_Contracts.md and the lane is still [WIP]. Phase 1 is [DONE]. Phase 2 is now [DONE] from current repo state: the serialize-owned `ParameterVector` export/import seam is green, owner-local coverage for `src/architecture/network/serialize/network.serialize.utils.ts` and `src/architecture/network/serialize/network.serialize.utils.types.ts` is `100/100/100/100`, and the source-doc-only pass refreshed `src/architecture/network/serialize/README.md` so the generated output now matches the final v1 vector contract.
 The reviewed vector docs now cover the weights-and-biases inclusion rule, explicit rejection of non-neutral `node.response` and `connection.gain`, disabled-connection slot behavior, fallback descriptor semantics when an innovation id is absent, and same-runtime deterministic wording without claiming cross-runtime exact replay. Repo-wide TypeScript still fails only at the unchanged external ONNX baseline `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` with `TS2345` because `standardDomainImports[0]!.version` can be `undefined`; treat that as recorded external baseline context unless the failure surface moves into this lane.
-The next safe step is `01 Planning Architect` for Phase 3 Step 01 only. Turn Phase 3 into an executable isolation-helper workset: author Phase 3 Step 02-07 packets or explicit skips, keep the first helper vector-first, preserve the no-shared-mutation contract, and keep any deterministic claim gated on explicit seed handling, dataset order, and a named RNG owner. Run `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` after the tracker update. Do not widen into Phase 3 implementation, Phase 4 policy work, or unrelated ONNX fixes.
+The next safe step is `01-planning` for Phase 3 Step 01 only. Turn Phase 3 into an executable isolation-helper workset: author Phase 3 Step 02-07 packets or explicit skips, keep the first helper vector-first, preserve the no-shared-mutation contract, and keep any deterministic claim gated on explicit seed handling, dataset order, and a named RNG owner. Run `node scripts/agent-customization/validate-plan-sync.mjs --plan=plans/Evolution_Training_Interoperability_Contracts.md --json` after the tracker update. Do not widen into Phase 3 implementation, Phase 4 policy work, or unrelated ONNX fixes.
 ```

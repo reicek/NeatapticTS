@@ -2,13 +2,13 @@
   "evals": [
     {
       "id": "phase-planning-agent-positive",
-      "target": "01 Planning Architect",
+      "target": "01-planning",
       "query": "Start a new agent workflow plan and decide which specialists should run first.",
       "shouldTrigger": true
     },
     {
       "id": "phase-planning-agent-negative",
-      "target": "01 Planning Architect",
+      "target": "01-planning",
       "query": "Explain how sigmoid activation works in a neural network.",
       "shouldTrigger": false
     },
@@ -32,7 +32,7 @@
     },
     {
       "id": "green-validation-positive",
-      "target": "05 Green Validation Runner",
+      "target": "05-green-testing",
       "query": "The implementation is done; run the focused validators and route failures back to the right phase.",
       "shouldTrigger": true
     }

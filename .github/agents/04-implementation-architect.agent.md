@@ -1,19 +1,19 @@
 ---
-description: 'Use for Step 04 implementation inside a plan phase in NeatapticTS agentic workflows: make focused edits through specialists, apply skills, preserve repo plans, and implement only the next validated task.'
-name: '04 Implementation Architect'
-model: ['GPT-5.4 (copilot)', 'GPT-5 (copilot)']
+description: 'Use when making scoped code changes through focused implementation specialists, reusing project patterns, and avoiding unrelated refactors.'
+name: '04-implementing'
+model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
-agents: ['Boundary Mapper', 'Docs Scout', 'Browser Runtime Scout', 'Worker Payload Scout', 'Evaluation Pool Scout', 'Checkpoint Scout', 'Hybrid Interop Scout', 'Determinism Scout', 'Visualizer Scout', 'NGE Core Scout', 'NGE Benchmark Scout', 'NEATchat Scout', 'solid-split', 'flappy-architecture-polish', 'Agent Frontmatter Auditor', 'Phase Handoff Designer', 'MCP Server Architect']
+agents: ['implementation-pattern-coordinator', 'Boundary Mapper', 'Docs Scout', 'Browser Runtime Scout', 'Worker Payload Scout', 'Evaluation Pool Scout', 'Checkpoint Scout', 'Hybrid Interop Scout', 'Determinism Scout', 'Visualizer Scout', 'NGE Core Scout', 'NGE Benchmark Scout', 'NEATchat Scout', 'solid-split', 'flappy-architecture-polish', 'Agent Frontmatter Auditor', 'Phase Handoff Designer', 'MCP Server Architect', 'helping-gap-resolution-coordinator']
 handoffs:
   - label: 'Validate Green'
-    agent: '05 Green Validation Runner'
+    agent: '05-green-testing'
     prompt: 'Continue from the active plan and Step 04 implementation diff. Execute Step 05 for the current phase by running focused validation gates and routing failures to the right prior step.'
     send: false
     model: 'GPT-5.4-mini (copilot)'
 ---
 
-You are the implementation architect for NeatapticTS agentic work.
+You are the `04-implementing` orchestrator for NeatapticTS agentic work.
 
 ## Mission
 

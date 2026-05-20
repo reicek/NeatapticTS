@@ -15,7 +15,7 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 
 ## Recommended primary agent + skill combo by active roadmap phase
 
-- Meta-workflow reopen — `01 Planning Architect` + `tracker-handoff` when reopening [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md)
+- Meta-workflow reopen — `01-planning` + `tracker-handoff` when reopening [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md)
 - Phase 3 — `Browser Runtime Scout` + `browser-build`
 - Phase 4 — `Plan Scout` + `plan-alignment`
 - Phase 5 — `Plan Scout` + `performance-optimization`

@@ -44,10 +44,12 @@ Use this boundary intentionally:
 
 User-facing custom agent workflow:
 
-- Only the seven numbered phase agents should be directly user-invocable:
-  `01 Planning Architect`, `02 Research Coordinator`, `03 Red Test Architect`,
-  `04 Implementation Architect`, `05 Green Validation Runner`,
-  `06 Educational Docs Curator`, and `07 Session Log Archivist`.
+- Only the eight numbered SDLC orchestrators should be directly user-invocable:
+  `00-helping`, `01-planning`, `02-researching`, `03-red-testing`,
+  `04-implementing`, `05-green-testing`, `06-documenting`, and `07-logging`.
+- For SDLC work, route through the smallest relevant numbered orchestrator and
+  let that agent delegate into hidden coordinators, specialists, auxiliaries,
+  and skills. Do not copy the full orchestration rules into this always-on file.
 - Legacy scouts, auditors, and implementation specialists are hidden subagents.
   They should keep `user-invocable: false` and be reached through the phase
   agents' explicit `agents: [...]` allow-lists.
@@ -56,7 +58,7 @@ User-facing custom agent workflow:
   and eval changes. Update that plan after every completed customization step.
 - Active implementation phases in `.plans.md` files should be step-based
   packets: start each active or planned phase with only Step 01 for
-  `01 Planning Architect`, and require that step to author the remaining
+  `01-planning`, and require that step to author the remaining
   numbered step packets or explicit skips before execution continues. Do not
   add a second nested copy-paste prompt block.
 - New customization scripts belong under `scripts/agent-customization/` and
