@@ -1,8 +1,9 @@
 ---
 description: 'Use when diagnosing visualizer UI issues such as cramped layout, missing overflow scroll, hover/tooltip instability, or parity drift between demo visualizers. Keywords: visualizer, canvas, tooltip, hover, overflow, layout, parity.'
 name: 'Visualizer Scout'
+model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
-user-invocable: true
+user-invocable: false
 agents: []
 ---
 

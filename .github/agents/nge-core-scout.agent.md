@@ -1,8 +1,9 @@
 ---
 description: 'Use when mapping NGE algorithm-core boundaries such as NGE_DNA, deterministic development, lifecycle transitions, computation motifs, memory tiers, neuromodulation, reproduction modes, or deciding whether a Phase 7 issue belongs to nge-core-algorithm. Keywords: NGE core, NGE_DNA, computationType, deterministic development, lifecycle, neuromodulation, reproduction, stigmergy.'
 name: 'NGE Core Scout'
+model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
-user-invocable: true
+user-invocable: false
 agents: []
 ---
 

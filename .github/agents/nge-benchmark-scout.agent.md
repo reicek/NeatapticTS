@@ -1,8 +1,9 @@
 ---
 description: 'Use when mapping NGE benchmark methodology such as predator/prey coevolution, ant-hive observability, racing curriculum tiers, rolling opponent snapshots, fairness contracts, or deciding whether a Phase 7 demo issue belongs to nge-benchmark-workflow. Keywords: NGE benchmark, predator prey, ant hive, racing curriculum, rolling snapshot, fairness, observability, ablation.'
 name: 'NGE Benchmark Scout'
+model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
-user-invocable: true
+user-invocable: false
 agents: []
 ---
 

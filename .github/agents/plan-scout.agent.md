@@ -1,8 +1,9 @@
 ---
 description: 'Use when selecting a relevant plan document, checking roadmap alignment, mapping trigger phrases to plans, or preparing an architectural alignment brief before coding. Keywords: plans, roadmap, architecture, NEAT correctness, ONNX, workers, checkpointing, visualization.'
 name: 'Plan Scout'
+model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
-user-invocable: true
+user-invocable: false
 agents: []
 ---
 

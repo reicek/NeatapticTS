@@ -42,6 +42,26 @@ Use this boundary intentionally:
 - Prefer passing compact task packets and reconnaissance handoffs into skills
   over re-stating full workflow rules in each agent.
 
+User-facing custom agent workflow:
+
+- Only the seven numbered phase agents should be directly user-invocable:
+  `01 Planning Architect`, `02 Research Coordinator`, `03 Red Test Architect`,
+  `04 Implementation Architect`, `05 Green Validation Runner`,
+  `06 Educational Docs Curator`, and `07 Session Log Archivist`.
+- Legacy scouts, auditors, and implementation specialists are hidden subagents.
+  They should keep `user-invocable: false` and be reached through the phase
+  agents' explicit `agents: [...]` allow-lists.
+- Use [plans/Agentic_Workflow_Architecture.plans.md](../plans/Agentic_Workflow_Architecture.plans.md)
+  as the central source of truth for agent, skill, model-routing, validation,
+  and eval changes. Update that plan after every completed customization step.
+- Active implementation phases in `.plans.md` files should be step-based
+  packets: start each active or planned phase with only Step 01 for
+  `01 Planning Architect`, and require that step to author the remaining
+  numbered step packets or explicit skips before execution continues. Do not
+  add a second nested copy-paste prompt block.
+- New customization scripts belong under `scripts/agent-customization/` and
+  should be noninteractive, JSON-capable, and validation-friendly.
+
 Current intended ownership split:
 
 - `solid-split`: canonical split/refactor workflow and step sequencing.
@@ -60,6 +80,32 @@ Current intended ownership split:
   structure, `[PLANNED]/[WIP]/[DONE]` status markers, compression,
   active-plan `Handoff query` continuity, and terminal closure into matching
   `.logs.md` records archived under `plans/completed/`.
+- `agent-frontmatter-standards`: canonical workflow for `.agent.md` naming,
+  tools, model arrays, handoffs, visibility, and frontmatter validation.
+- `model-routing-and-budget`: canonical workflow for assigning Full vs Mini
+  model tiers and validating qualified Copilot model strings.
+- `phase-handoff-workflow`: canonical workflow for seven-phase handoff prompts,
+  stop conditions, and forward-only phase transitions.
+- `subagent-delegation-patterns`: canonical workflow for compact specialist
+  task packets, sequential vs parallel delegation, and output contracts.
+- `agent-inventory-audit`: canonical workflow for agent/skill inventory and
+  customization drift evidence.
+- `skill-description-evals`: canonical workflow for should-trigger and
+  should-not-trigger description evals.
+- `skill-output-evals`: canonical workflow for evidence-backed skill output
+  grading and baseline comparisons.
+- `agent-script-tooling`: canonical workflow for noninteractive customization
+  scripts with `--help`, JSON output, stderr diagnostics, and idempotency.
+- `license-attribution-audit`: canonical workflow for source attribution and
+  license notes when external workflow standards inform repo customizations.
+- `plan-sync-validation`: canonical workflow for keeping active trackers,
+  `plans/README.md`, and `plans/Roadmap.md` aligned.
+- `red-test-contracts`: canonical workflow for red-phase tests or eval
+  assertions before behavior changes.
+- `green-validation-gates`: canonical workflow for focused post-change
+  validation and rerouting failed checks.
+- `docs-academic-citation-audit`: canonical workflow for educational docs,
+  Mermaid, citations, and generated README quality audits.
 - `worker-inference-transport`: canonical workflow for worker-friendly
   inference payload extraction, transport ladders, transfer semantics, and
   browser/Node worker parity.

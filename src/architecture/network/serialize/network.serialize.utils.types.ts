@@ -49,6 +49,63 @@ export type {
 };
 
 /**
+ * One ordered descriptor inside parameter-layout version `1`.
+ *
+ * Bias entries use the stable node gene id in `nodeId`.
+ * Weight entries prefer the live connection `innovation` when it exists and
+ * otherwise fall back to the stable endpoint gene ids in `from` and `to`.
+ * Duplicate innovation ids or duplicate fallback endpoint pairs are rejected
+ * as ambiguous instead of inheriting incidental container order.
+ */
+export type ParameterLayoutEntry =
+  | { kind: 'bias'; nodeId: number }
+  | { kind: 'weight'; from: number; to: number; innovation?: number };
+
+/**
+ * Deterministic parameter-layout descriptor owned by the network serialize boundary.
+ *
+ * Version `1` keeps one stable fold order: all bias entries first, then all
+ * weight entries. For a fixed topology with stable historical ids, this gives
+ * ordered determinism on the same runtime.
+ * The layout documents descriptor order only; it does not claim cross-runtime
+ * exact replay by itself.
+ */
+export interface ParameterLayoutV1 {
+  /** Layout schema version. */
+  version: 1;
+  /** Ordered parameter descriptors for the current network topology. */
+  entries: ParameterLayoutEntry[];
+}
+
+/**
+ * Versioned parameter payload for same-runtime vector roundtrips.
+ *
+ * Layout metadata and scalar values travel together so imports can reject
+ * incompatible payloads before mutating a live network. Version `1` exports
+ * exactly one bias slot for every live runtime node and one weight slot for
+ * every live forward connection plus self-connection in `ParameterLayoutV1`
+ * order, including disabled connections when they still exist in the runtime
+ * graph.
+ *
+ * Weight descriptors still prefer `innovation` and otherwise fall back to the
+ * stable endpoint gene ids in `from` and `to`, so the same runtime-owned slot
+ * identity survives export and import even when a live connection has no
+ * innovation id. For a fixed topology with stable historical ids, this payload
+ * is ordered deterministic on the same runtime. It does not claim cross-runtime
+ * exact replay by itself.
+ *
+ * Non-neutral `node.response` and `connection.gain` remain explicit rejection
+ * cases for the runtime helpers instead of silently widening the weights-and-
+ * biases v1 contract.
+ */
+export interface ParameterVector {
+  /** Ordered descriptor metadata aligned with `values`. */
+  layout: ParameterLayoutV1;
+  /** Scalar parameter values in the exact order described by `layout.entries`. */
+  values: Float64Array;
+}
+
+/**
  * Default format version for verbose serialization payloads.
  *
  * Consumers can use this value to identify the JSON schema revision.

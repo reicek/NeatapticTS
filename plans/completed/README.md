@@ -12,6 +12,7 @@ How to use this archive:
 
 Archive selection guide:
 
+- [Agentic_Workflow_Architecture.plans.md](Agentic_Workflow_Architecture.plans.md): closed standalone meta-workflow baseline for the seven numbered phase agents, hidden specialist delegation, skill-first customization, validation scripts and evals, and the MCP runtime-visibility ownership model.
 - [neat.plans.md](neat.plans.md): Phase 1 proper-NEAT correctness baseline.
 - [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md): deterministic execution ordering and explicit input/output role baseline.
 - [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md): closed primitive DX baseline for `Node`, `Group`, and `Layer`.
@@ -43,6 +44,7 @@ Archive selection guide:
 
 Trigger phrases:
 
+- agent architecture, custom agents, user-invocable, subagent delegation, model routing, skill evals, MCP runtime visibility reopen: `plans/completed/Agentic_Workflow_Architecture.plans.md`
 - proper NEAT, innovation IDs, crossover, compatibility distance, speciation: `plans/completed/neat.plans.md`
 - activation order, explicit IO roles, deterministic scheduling: `plans/completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md`
 - architecture primitives, node/group/layer DX, primitive descriptors: `plans/completed/Architecture_Primitives_Node_Group_Layer.md`

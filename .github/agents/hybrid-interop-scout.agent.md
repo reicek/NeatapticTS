@@ -1,8 +1,9 @@
 ---
 description: 'Use when mapping parameter-vector layouts, deterministic export/import order, clone-vs-vector isolation, Lamarckian persistence policy, or deciding whether a hybrid evolution-plus-training issue belongs to hybrid-training-interop. Keywords: parameter vector, fine-tuning, Lamarckian, isolation, export, import, layout version, hybrid training.'
 name: 'Hybrid Interop Scout'
+model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
-user-invocable: true
+user-invocable: false
 agents: []
 ---
 

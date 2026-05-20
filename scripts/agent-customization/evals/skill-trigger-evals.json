@@ -1,0 +1,40 @@
+{
+  "evals": [
+    {
+      "id": "phase-planning-agent-positive",
+      "target": "01 Planning Architect",
+      "query": "Start a new agent workflow plan and decide which specialists should run first.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "phase-planning-agent-negative",
+      "target": "01 Planning Architect",
+      "query": "Explain how sigmoid activation works in a neural network.",
+      "shouldTrigger": false
+    },
+    {
+      "id": "frontmatter-skill-positive",
+      "target": "agent-frontmatter-standards",
+      "query": "Validate this .agent.md file and tell me if user-invocable or handoffs are wrong.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "frontmatter-skill-negative",
+      "target": "agent-frontmatter-standards",
+      "query": "Add a recurrent connection to a NEAT genome and test the scheduler.",
+      "shouldTrigger": false
+    },
+    {
+      "id": "plan-sync-positive",
+      "target": "plan-sync-validation",
+      "query": "I created a new plans/*.plans.md file; make sure README and Roadmap are registered with the same status.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "green-validation-positive",
+      "target": "05 Green Validation Runner",
+      "query": "The implementation is done; run the focused validators and route failures back to the right phase.",
+      "shouldTrigger": true
+    }
+  ]
+}

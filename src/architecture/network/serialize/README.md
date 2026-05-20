@@ -196,6 +196,48 @@ Node type literal used for input layer nodes.
 
 Node type literal used for output layer nodes.
 
+### ParameterLayoutEntry
+
+One ordered descriptor inside parameter-layout version `1`.
+
+Bias entries use the stable node gene id in `nodeId`.
+Weight entries prefer the live connection `innovation` when it exists and
+otherwise fall back to the stable endpoint gene ids in `from` and `to`.
+Duplicate innovation ids or duplicate fallback endpoint pairs are rejected
+as ambiguous instead of inheriting incidental container order.
+
+### ParameterLayoutV1
+
+Deterministic parameter-layout descriptor owned by the network serialize boundary.
+
+Version `1` keeps one stable fold order: all bias entries first, then all
+weight entries. For a fixed topology with stable historical ids, this gives
+ordered determinism on the same runtime.
+The layout documents descriptor order only; it does not claim cross-runtime
+exact replay by itself.
+
+### ParameterVector
+
+Versioned parameter payload for same-runtime vector roundtrips.
+
+Layout metadata and scalar values travel together so imports can reject
+incompatible payloads before mutating a live network. Version `1` exports
+exactly one bias slot for every live runtime node and one weight slot for
+every live forward connection plus self-connection in `ParameterLayoutV1`
+order, including disabled connections when they still exist in the runtime
+graph.
+
+Weight descriptors still prefer `innovation` and otherwise fall back to the
+stable endpoint gene ids in `from` and `to`, so the same runtime-owned slot
+identity survives export and import even when a live connection has no
+innovation id. For a fixed topology with stable historical ids, this payload
+is ordered deterministic on the same runtime. It does not claim cross-runtime
+exact replay by itself.
+
+Non-neutral `node.response` and `connection.gain` remain explicit rejection
+cases for the runtime helpers instead of silently widening the weights-and-
+biases v1 contract.
+
 ### ResolvedNetworkSizeContext
 
 Resolved input/output sizes for rebuild.
@@ -364,6 +406,37 @@ Parameters:
 
 Returns: Cloned extension bag or `undefined` when shape is invalid.
 
+### createParameterLayoutV1
+
+```ts
+createParameterLayoutV1(
+  network: default,
+): ParameterLayoutV1
+```
+
+Build the deterministic descriptor order for parameter-layout version `1`.
+
+Version `1` folds all bias entries before all weight entries. Biases are
+ordered by stable node gene id. Weights prefer connection innovation when it
+exists and fall back to stable endpoint gene ids when it does not.
+Ambiguous or missing ordering identity fails explicitly instead of inheriting
+incidental runtime array order. For a fixed topology with stable historical
+identities, the result is ordered deterministic on the same runtime.
+This helper describes layout order only; it is not a cross-runtime exact
+replay promise.
+
+Parameters:
+- `network` - Live network instance to inspect.
+
+Returns: Versioned ordered layout descriptors for the current topology.
+
+Example:
+
+```ts
+const layout = createParameterLayoutV1(network);
+console.log(layout.entries[0]);
+```
+
 ### deserialize
 
 ```ts
@@ -522,6 +595,34 @@ import { fromJSONImpl } from './network.serialize.utils';
 const rebuiltNetwork = fromJSONImpl(snapshotJson);
 ```
 
+### fromParameterVector
+
+```ts
+fromParameterVector(
+  network: default,
+  parameterVector: ParameterVector,
+): void
+```
+
+Import one versioned parameter vector into a compatible live network runtime.
+
+The target layout is rebuilt fresh and validated against the incoming vector
+before any bias or weight mutation occurs. Version `1` applies only live
+node biases and live forward-connection or self-connection weights, so
+disabled connections still consume slots whenever they still exist in the
+target runtime graph. Ordered descriptor compatibility stays innovation-first
+and falls back to stable endpoint gene ids when an innovation id is absent,
+which keeps same-runtime imports aligned with the export layout contract.
+Import rejects non-neutral `node.response` and `connection.gain` explicitly
+and also rejects version, entry-count, values-length, or descriptor mismatch
+before mutation.
+
+Parameters:
+- `network` - Live target network instance.
+- `parameterVector` - Versioned payload to apply.
+
+Returns: Nothing. The target runtime mutates only after compatibility checks pass.
+
 ### isArchitectureDescriptorShapeValid
 
 ```ts
@@ -534,6 +635,48 @@ Parameters:
 - `architectureDescriptor` - Optional descriptor candidate.
 
 Returns: True when minimal descriptor shape is valid.
+
+### ParameterLayoutEntry
+
+One ordered descriptor inside parameter-layout version `1`.
+
+Bias entries use the stable node gene id in `nodeId`.
+Weight entries prefer the live connection `innovation` when it exists and
+otherwise fall back to the stable endpoint gene ids in `from` and `to`.
+Duplicate innovation ids or duplicate fallback endpoint pairs are rejected
+as ambiguous instead of inheriting incidental container order.
+
+### ParameterLayoutV1
+
+Deterministic parameter-layout descriptor owned by the network serialize boundary.
+
+Version `1` keeps one stable fold order: all bias entries first, then all
+weight entries. For a fixed topology with stable historical ids, this gives
+ordered determinism on the same runtime.
+The layout documents descriptor order only; it does not claim cross-runtime
+exact replay by itself.
+
+### ParameterVector
+
+Versioned parameter payload for same-runtime vector roundtrips.
+
+Layout metadata and scalar values travel together so imports can reject
+incompatible payloads before mutating a live network. Version `1` exports
+exactly one bias slot for every live runtime node and one weight slot for
+every live forward connection plus self-connection in `ParameterLayoutV1`
+order, including disabled connections when they still exist in the runtime
+graph.
+
+Weight descriptors still prefer `innovation` and otherwise fall back to the
+stable endpoint gene ids in `from` and `to`, so the same runtime-owned slot
+identity survives export and import even when a live connection has no
+innovation id. For a fixed topology with stable historical ids, this payload
+is ordered deterministic on the same runtime. It does not claim cross-runtime
+exact replay by itself.
+
+Non-neutral `node.response` and `connection.gain` remain explicit rejection
+cases for the runtime helpers instead of silently widening the weights-and-
+biases v1 contract.
 
 ### serialize
 
@@ -683,6 +826,32 @@ const sourceNetwork = new Network(3, 1);
 const snapshotJson = toJSONImpl.call(sourceNetwork);
 const rebuiltNetwork = fromJSONImpl(snapshotJson);
 ```
+
+### toParameterVector
+
+```ts
+toParameterVector(
+  network: default,
+): ParameterVector
+```
+
+Export one versioned parameter vector from a live network runtime.
+
+Version `1` keeps ordered `ParameterLayoutV1` metadata and the aligned bias
+and weight scalars together so same-runtime imports can verify compatibility
+before mutating another network. The payload includes every live node bias
+and every live forward-connection or self-connection weight in layout order,
+including disabled connections when they still exist in the runtime graph.
+Weight slots still prefer innovation-backed descriptors and fall back to
+stable endpoint gene ids when a live connection has no innovation id.
+Export rejects non-neutral `node.response` and `connection.gain` explicitly
+instead of flattening those deferred families into the weights-and-biases v1
+payload.
+
+Parameters:
+- `network` - Live network instance to export.
+
+Returns: Ordered layout metadata plus aligned scalar values for same-runtime deterministic roundtrips.
 
 ### default
 

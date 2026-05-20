@@ -1,8 +1,9 @@
 ---
 description: 'Use when starting or scoping save and resume work, expanding Population_Save_Resume_and_Checkpointing.md Step 0 or Step 1, mapping strict versus best-effort restore behavior, RNG or counter persistence, full versus light checkpoints, or deciding whether a persistence issue belongs to checkpointing-persistence. Keywords: checkpoint, save, resume, restore, step 0, state inventory, strict restore, schema version, RNG state, full checkpoint, light checkpoint, migration.'
 name: 'Checkpoint Scout'
+model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
-user-invocable: true
+user-invocable: false
 agents: []
 ---
 

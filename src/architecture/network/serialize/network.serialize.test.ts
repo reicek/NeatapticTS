@@ -7,16 +7,19 @@ import { validateNativeGenome } from '../../../neat/validate/neat.validate';
 import Network from '../network';
 import type { NetworkJSON } from '../network.types';
 import {
+  createParameterLayoutV1,
   deserializeCompressedArchive,
   deserializeCompressedArchiveAsync,
   deserializeCompressedArchiveAsyncWithMetrics,
   deserializeCompressedArchiveWithMetrics,
   deserializeCompressed,
+  fromParameterVector,
   serializeCompressedArchive,
   serializeCompressedArchiveAsync,
   serializeCompressedArchiveAsyncWithMetrics,
   serializeCompressedArchiveWithMetrics,
   serializeCompressed,
+  toParameterVector,
 } from './network.serialize.utils';
 
 function createSerializableNetwork(seed: number): Network {
@@ -225,6 +228,549 @@ function readFirstTemporalConnectionInnovation(
   }
 
   return connectionInnovation;
+}
+
+type ParameterLayoutOrderingSummary = {
+  version: number;
+  kindOrder: Array<'bias' | 'weight'>;
+  biasNodeIds: number[];
+  weightDescriptorKeys: string[];
+};
+
+type ParameterLayoutEntryLike = {
+  kind: 'bias' | 'weight';
+  nodeId?: number;
+  from?: number;
+  innovation?: number;
+  to?: number;
+};
+
+type ParameterLayoutLike = {
+  version: number;
+  entries: ParameterLayoutEntryLike[];
+};
+
+type ParameterRuntimeStateSummary = {
+  descriptorValues: Array<{
+    descriptorKey: string;
+    value: number;
+  }>;
+  layoutVersion: number;
+};
+
+type ParameterVectorPayloadLike = {
+  layout: {
+    version: number;
+    entries: ParameterLayoutEntryLike[];
+  };
+  values: Float64Array;
+};
+
+type ParameterVectorRoundTripScenario = {
+  activationInputValues: number[];
+  sourceNetwork: Network;
+  targetNetwork: Network;
+};
+
+type WeightDescriptorIdentity = {
+  descriptorKey: string;
+  fromGeneId: number;
+  innovation: number | null;
+  toGeneId: number;
+};
+
+type ParameterLayoutExpectedErrorScenario = {
+  expectedErrorMessage: string;
+  network: Network;
+};
+
+type MissingInnovationOrderingScenario = {
+  expectedWeightDescriptorKeys: string[];
+  network: Network;
+};
+
+function createParameterLayoutOrderingNetwork(): Network {
+  return createConstructedSerializationScenario().network;
+}
+
+function createMissingInnovationOrderingScenario(): MissingInnovationOrderingScenario {
+  const network = new Network(2, 1, { seed: 421 });
+  const fallbackConnection = readRequiredLayoutConnection(
+    network,
+    0,
+    'fallback',
+  );
+  const innovationConnection = readRequiredLayoutConnection(
+    network,
+    1,
+    'innovation',
+  );
+
+  fallbackConnection.innovation = Number.NaN;
+  innovationConnection.innovation = 1;
+
+  return {
+    expectedWeightDescriptorKeys: [
+      createConnectionDescriptorKey(innovationConnection),
+      createConnectionDescriptorKey(fallbackConnection),
+    ],
+    network,
+  };
+}
+
+function createDuplicateFallbackWeightIdentityScenario(): ParameterLayoutExpectedErrorScenario {
+  const network = createSingleValueSerializableNetwork(431);
+  const originalConnection = readRequiredLayoutConnection(
+    network,
+    0,
+    'original',
+  );
+  const duplicateConnection = new Connection(
+    originalConnection.from,
+    originalConnection.to,
+    0.25,
+  );
+
+  network.connections.push(duplicateConnection);
+  network.connections.forEach((connection) => {
+    connection.innovation = Number.NaN;
+  });
+
+  return {
+    expectedErrorMessage:
+      `ParameterLayoutV1 requires unique stable weight identities. Duplicate identity fallback:${createConnectionDescriptorKey(originalConnection)} is ambiguous.`,
+    network,
+  };
+}
+
+function createDuplicateBiasNodeIdScenario(): ParameterLayoutExpectedErrorScenario {
+  const network = createSingleValueSerializableNetwork(432);
+  const originalBiasNode = network.nodes.at(0);
+  const duplicateBiasNode = network.nodes.at(1);
+
+  if (originalBiasNode === undefined || duplicateBiasNode === undefined) {
+    throw new Error('Expected two nodes for duplicate-bias layout case.');
+  }
+
+  const duplicateNodeId = readRequiredGeneId(originalBiasNode, 'duplicate bias');
+
+  Object.defineProperty(duplicateBiasNode, 'geneId', {
+    configurable: true,
+    value: duplicateNodeId,
+    writable: true,
+  });
+
+  return {
+    expectedErrorMessage:
+      `ParameterLayoutV1 requires unique bias node ids. Duplicate node id ${duplicateNodeId} is ambiguous.`,
+    network,
+  };
+}
+
+function createDuplicateInnovationWeightIdentityScenario(): ParameterLayoutExpectedErrorScenario {
+  const network = createParameterLayoutOrderingNetwork();
+  const duplicateInnovation = 9_001;
+  const [primaryConnection, secondaryConnection] =
+    readDistinctSourceLayoutConnections(network);
+
+  primaryConnection.innovation = duplicateInnovation;
+  secondaryConnection.innovation = duplicateInnovation;
+
+  return {
+    expectedErrorMessage:
+      `ParameterLayoutV1 requires unique stable weight identities. Duplicate identity innovation:${duplicateInnovation} is ambiguous.`,
+    network,
+  };
+}
+
+function createMissingWeightSourceGeneIdScenario(): ParameterLayoutExpectedErrorScenario {
+  const network = createSingleValueSerializableNetwork(433);
+  const sourceNode = new Node('hidden');
+  const targetNode = network.nodes.at(-1);
+
+  if (targetNode === undefined) {
+    throw new Error('Expected one target node for missing-gene-id layout case.');
+  }
+
+  Object.defineProperty(sourceNode, 'geneId', {
+    configurable: true,
+    value: undefined,
+    writable: true,
+  });
+  network.connections.push(new Connection(sourceNode, targetNode, 0.125));
+
+  return {
+    expectedErrorMessage:
+      'ParameterLayoutV1 requires a stable weight source node gene id.',
+    network,
+  };
+}
+
+function summarizeParameterLayoutOrdering(
+  network: Network,
+): ParameterLayoutOrderingSummary {
+  const parameterLayout = createParameterLayoutV1(network) as ParameterLayoutLike;
+
+  return {
+    version: parameterLayout.version,
+    kindOrder: parameterLayout.entries.map(
+      (entry: ParameterLayoutEntryLike) => entry.kind,
+    ),
+    biasNodeIds: parameterLayout.entries
+      .filter(
+        (
+          entry: ParameterLayoutEntryLike,
+        ): entry is {
+          kind: 'bias';
+          nodeId?: number;
+        } => entry.kind === 'bias',
+      )
+      .map((entry: { kind: 'bias'; nodeId?: number }) => entry.nodeId)
+      .filter(
+        (nodeId: number | undefined): nodeId is number =>
+          typeof nodeId === 'number',
+      ),
+    weightDescriptorKeys: parameterLayout.entries
+      .filter(
+        (
+          entry: ParameterLayoutEntryLike,
+        ): entry is {
+          kind: 'weight';
+          from?: number;
+          to?: number;
+        } => entry.kind === 'weight',
+      )
+      .map((entry: { kind: 'weight'; from?: number; to?: number }) =>
+        createWeightDescriptorKey(entry.from, entry.to),
+      ),
+  };
+}
+
+function createExpectedParameterLayoutOrderingSummary(
+  summary: ParameterLayoutOrderingSummary,
+  expectedWeightDescriptorKeys: string[],
+): ParameterLayoutOrderingSummary {
+  return {
+    version: 1,
+    kindOrder: createExpectedKindOrder(summary),
+    biasNodeIds: summary.biasNodeIds.toSorted(
+      (leftNodeId, rightNodeId) => leftNodeId - rightNodeId,
+    ),
+    weightDescriptorKeys: expectedWeightDescriptorKeys,
+  };
+}
+
+function createExpectedKindOrder(
+  summary: ParameterLayoutOrderingSummary,
+): Array<'bias' | 'weight'> {
+  return [
+    ...Array.from({ length: summary.biasNodeIds.length }, () => 'bias' as const),
+    ...Array.from(
+      { length: summary.weightDescriptorKeys.length },
+      () => 'weight' as const,
+    ),
+  ];
+}
+
+function collectExpectedWeightDescriptorKeys(network: Network): string[] {
+  return network.connections
+    .map((connection) => {
+      const fromGeneId = readRequiredGeneId(connection.from, 'source');
+      const toGeneId = readRequiredGeneId(connection.to, 'target');
+
+      return {
+        descriptorKey: createWeightDescriptorKey(fromGeneId, toGeneId),
+        fromGeneId,
+        innovation:
+          typeof connection.innovation === 'number'
+            ? connection.innovation
+            : null,
+        toGeneId,
+      };
+    })
+    .toSorted(compareWeightDescriptorIdentity)
+    .map((weightDescriptorIdentity) => weightDescriptorIdentity.descriptorKey);
+}
+
+function compareWeightDescriptorIdentity(
+  leftWeightDescriptorIdentity: WeightDescriptorIdentity,
+  rightWeightDescriptorIdentity: WeightDescriptorIdentity,
+): number {
+  const leftHasInnovation =
+    leftWeightDescriptorIdentity.innovation !== null;
+  const rightHasInnovation =
+    rightWeightDescriptorIdentity.innovation !== null;
+
+  if (leftHasInnovation && rightHasInnovation) {
+    const leftInnovation = leftWeightDescriptorIdentity.innovation as number;
+    const rightInnovation = rightWeightDescriptorIdentity.innovation as number;
+    const innovationDifference =
+      leftInnovation - rightInnovation;
+
+    if (innovationDifference !== 0) {
+      return innovationDifference;
+    }
+  }
+
+  if (leftHasInnovation !== rightHasInnovation) {
+    return leftHasInnovation ? -1 : 1;
+  }
+
+  if (
+    leftWeightDescriptorIdentity.fromGeneId !==
+    rightWeightDescriptorIdentity.fromGeneId
+  ) {
+    return (
+      leftWeightDescriptorIdentity.fromGeneId -
+      rightWeightDescriptorIdentity.fromGeneId
+    );
+  }
+
+  return (
+    leftWeightDescriptorIdentity.toGeneId -
+    rightWeightDescriptorIdentity.toGeneId
+  );
+}
+
+function createWeightDescriptorKey(
+  fromGeneId: number | undefined,
+  toGeneId: number | undefined,
+): string {
+  return `${fromGeneId ?? 'missing'}->${toGeneId ?? 'missing'}`;
+}
+
+function readRequiredGeneId(node: Node, endpointLabel: string): number {
+  if (typeof node.geneId !== 'number') {
+    throw new Error(`Expected one ${endpointLabel} node gene id.`);
+  }
+
+  return node.geneId;
+}
+
+function readRequiredLayoutConnection(
+  network: Network,
+  connectionIndex: number,
+  connectionRoleLabel: string,
+): Connection {
+  const connection = network.connections.at(connectionIndex);
+
+  if (connection === undefined) {
+    throw new Error(
+      `Expected one ${connectionRoleLabel} connection for layout ordering.`,
+    );
+  }
+
+  return connection;
+}
+
+function readDistinctSourceLayoutConnections(
+  network: Network,
+): [Connection, Connection] {
+  for (const primaryConnection of network.connections) {
+    const primarySourceGeneId = readRequiredGeneId(
+      primaryConnection.from,
+      'source',
+    );
+    const secondaryConnection = network.connections.find(
+      (candidateConnection) =>
+        candidateConnection !== primaryConnection &&
+        readRequiredGeneId(candidateConnection.from, 'source') !==
+          primarySourceGeneId,
+    );
+
+    if (secondaryConnection !== undefined) {
+      return [primaryConnection, secondaryConnection];
+    }
+  }
+
+  throw new Error(
+    'Expected two layout-ordering connections with distinct source gene ids.',
+  );
+}
+
+function createConnectionDescriptorKey(connection: Connection): string {
+  return createWeightDescriptorKey(
+    readRequiredGeneId(connection.from, 'source'),
+    readRequiredGeneId(connection.to, 'target'),
+  );
+}
+
+function createParameterVectorRoundTripScenario(): ParameterVectorRoundTripScenario {
+  const sourceNetwork = new Network(2, 1, { seed: 551 });
+
+  return {
+    activationInputValues: [0.25, 0.75],
+    sourceNetwork,
+    targetNetwork: Network.fromJSON(sourceNetwork.toJSON()),
+  };
+}
+
+function perturbRuntimeParameterState(network: Network): void {
+  network.nodes.forEach((node, nodeIndex) => {
+    node.bias += (nodeIndex + 1) * 2.5;
+  });
+
+  network.connections.forEach((connection, connectionIndex) => {
+    connection.weight -= (connectionIndex + 1) * 1.75;
+  });
+
+  network.selfconns.forEach((connection, connectionIndex) => {
+    connection.weight += (connectionIndex + 1) * 1.25;
+  });
+}
+
+function summarizeRuntimeParameterState(
+  network: Network,
+): ParameterRuntimeStateSummary {
+  const parameterLayout = createParameterLayoutV1(network) as ParameterLayoutLike;
+
+  return {
+    descriptorValues: parameterLayout.entries.map((layoutEntry) => ({
+      descriptorKey: createParameterRuntimeDescriptorKey(layoutEntry),
+      value: readParameterValueForLayoutEntry(network, layoutEntry),
+    })),
+    layoutVersion: parameterLayout.version,
+  };
+}
+
+function createParameterRuntimeDescriptorKey(
+  layoutEntry: ParameterLayoutEntryLike,
+): string {
+  if (layoutEntry.kind === 'bias') {
+    return `bias:${layoutEntry.nodeId}`;
+  }
+
+  return typeof layoutEntry.innovation === 'number'
+    ? `weight:innovation:${layoutEntry.innovation}`
+    : `weight:fallback:${layoutEntry.from}->${layoutEntry.to}`;
+}
+
+function readParameterValueForLayoutEntry(
+  network: Network,
+  layoutEntry: ParameterLayoutEntryLike,
+): number {
+  if (layoutEntry.kind === 'bias') {
+    const matchingNode = network.nodes.find(
+      (candidateNode) => candidateNode.geneId === layoutEntry.nodeId,
+    );
+
+    if (matchingNode === undefined) {
+      throw new Error('Expected one bias node while reading parameter state.');
+    }
+
+    return matchingNode.bias;
+  }
+
+  const matchingConnection = [...network.connections, ...network.selfconns].find(
+    (candidateConnection) =>
+      typeof layoutEntry.innovation === 'number'
+        ? candidateConnection.innovation === layoutEntry.innovation
+        : readRequiredGeneId(candidateConnection.from, 'source') ===
+            layoutEntry.from &&
+          readRequiredGeneId(candidateConnection.to, 'target') === layoutEntry.to,
+  );
+
+  if (matchingConnection === undefined) {
+    throw new Error('Expected one weight connection while reading parameter state.');
+  }
+
+  return matchingConnection.weight;
+}
+
+function attemptParameterImportAndCaptureFailure(
+  targetNetwork: Network,
+  parameterVector: ParameterVectorPayloadLike,
+): {
+  errorMessage: string;
+  targetParameterState: ParameterRuntimeStateSummary;
+} {
+  let errorMessage = '';
+
+  try {
+    fromParameterVector(targetNetwork, parameterVector as never);
+  } catch (error) {
+    errorMessage = (error as Error).message;
+  }
+
+  return {
+    errorMessage,
+    targetParameterState: summarizeRuntimeParameterState(targetNetwork),
+  };
+}
+
+function rebuildEquivalentNetworkFromReorderedJson(network: Network): Network {
+  const serializedJson = network.toJSON() as unknown as NetworkJSON;
+  const reorderedNodeEntries = [
+    ...collectNodeEntriesByType(serializedJson, 'input'),
+    ...collectNodeEntriesByType(serializedJson, 'hidden').toReversed(),
+    ...collectNodeEntriesByType(serializedJson, 'output'),
+  ];
+  const remappedIndexByOriginalIndex = new Map(
+    reorderedNodeEntries.map((nodeEntry, reorderedIndex) => [
+      nodeEntry.originalIndex,
+      reorderedIndex,
+    ]),
+  );
+  const reorderedNodes = reorderedNodeEntries.map(
+    ({ nodeJsonEntry }, reorderedIndex) => ({
+      ...nodeJsonEntry,
+      index: reorderedIndex,
+    }),
+  );
+  const reorderedConnections = serializedJson.connections
+    .toReversed()
+    .map((connectionJsonEntry) => ({
+      ...connectionJsonEntry,
+      from: remapConnectionEndpointIndex(
+        remappedIndexByOriginalIndex,
+        connectionJsonEntry.from,
+      ),
+      to: remapConnectionEndpointIndex(
+        remappedIndexByOriginalIndex,
+        connectionJsonEntry.to,
+      ),
+      gater:
+        connectionJsonEntry.gater == null
+          ? null
+          : remapConnectionEndpointIndex(
+              remappedIndexByOriginalIndex,
+              connectionJsonEntry.gater,
+            ),
+    }));
+
+  return Network.fromJSON({
+    ...serializedJson,
+    connections: reorderedConnections,
+    nodes: reorderedNodes,
+  });
+}
+
+function collectNodeEntriesByType(
+  serializedJson: NetworkJSON,
+  nodeType: NetworkJSON['nodes'][number]['type'],
+): Array<{
+  nodeJsonEntry: NetworkJSON['nodes'][number];
+  originalIndex: number;
+}> {
+  return serializedJson.nodes
+    .map((nodeJsonEntry, originalIndex) => ({
+      nodeJsonEntry,
+      originalIndex,
+    }))
+    .filter(({ nodeJsonEntry }) => nodeJsonEntry.type === nodeType);
+}
+
+function remapConnectionEndpointIndex(
+  remappedIndexByOriginalIndex: Map<number, number>,
+  originalIndex: number,
+): number {
+  const remappedIndex = remappedIndexByOriginalIndex.get(originalIndex);
+
+  if (typeof remappedIndex !== 'number') {
+    throw new Error('Expected one remapped node index for layout ordering.');
+  }
+
+  return remappedIndex;
 }
 
 describe('network serialize chapter', () => {
@@ -804,6 +1350,479 @@ describe('network serialize chapter', () => {
           expect(errorMessage).toBe(
             'Compressed runtime state length is invalid.',
           );
+        });
+      });
+    });
+  });
+
+  describe('ParameterLayoutV1 ordering', () => {
+    describe('given one live runtime is inspected twice', () => {
+      it('keeps the same descriptor ordering between repeated reads', () => {
+        // Arrange
+        const network = createParameterLayoutOrderingNetwork();
+        const expectedWeightDescriptorKeys =
+          collectExpectedWeightDescriptorKeys(network);
+
+        // Act
+        const firstLayoutSummary = summarizeParameterLayoutOrdering(network);
+        const secondLayoutSummary = summarizeParameterLayoutOrdering(network);
+        const expectedLayoutSummary =
+          createExpectedParameterLayoutOrderingSummary(
+            firstLayoutSummary,
+            expectedWeightDescriptorKeys,
+          );
+
+        // Assert
+        expect({
+          firstLayoutSummary,
+          secondLayoutSummary,
+        }).toEqual({
+          firstLayoutSummary: expectedLayoutSummary,
+          secondLayoutSummary: expectedLayoutSummary,
+        });
+      });
+    });
+
+    describe('given equivalent restore paths perturb incidental payload order', () => {
+      it('keeps the same descriptor ordering across rebuilds', () => {
+        // Arrange
+        const network = createParameterLayoutOrderingNetwork();
+        const expectedWeightDescriptorKeys =
+          collectExpectedWeightDescriptorKeys(network);
+        const rebuiltFromReorderedJson =
+          rebuildEquivalentNetworkFromReorderedJson(network);
+        const rebuiltFromCompactPayload = Network.deserialize(
+          network.serialize(),
+          network.input,
+          network.output,
+        );
+
+        // Act
+        const liveLayoutSummary = summarizeParameterLayoutOrdering(network);
+        const reorderedJsonLayoutSummary = summarizeParameterLayoutOrdering(
+          rebuiltFromReorderedJson,
+        );
+        const compactLayoutSummary = summarizeParameterLayoutOrdering(
+          rebuiltFromCompactPayload,
+        );
+        const expectedLayoutSummary =
+          createExpectedParameterLayoutOrderingSummary(
+            liveLayoutSummary,
+            expectedWeightDescriptorKeys,
+          );
+
+        // Assert
+        expect({
+          compactLayoutSummary,
+          liveLayoutSummary,
+          reorderedJsonLayoutSummary,
+        }).toEqual({
+          compactLayoutSummary: expectedLayoutSummary,
+          liveLayoutSummary: expectedLayoutSummary,
+          reorderedJsonLayoutSummary: expectedLayoutSummary,
+        });
+      });
+    });
+
+    describe('given one weight is missing an innovation id', () => {
+      it('places finite innovations before fallback endpoint identities', () => {
+        // Arrange
+        const { expectedWeightDescriptorKeys, network } =
+          createMissingInnovationOrderingScenario();
+
+        // Act
+        const layoutSummary = summarizeParameterLayoutOrdering(network);
+
+        // Assert
+        expect(layoutSummary.weightDescriptorKeys).toEqual(
+          expectedWeightDescriptorKeys,
+        );
+      });
+    });
+
+    describe('given one fallback weight follows a finite innovation in runtime order', () => {
+      it('still places finite innovations before fallback endpoint identities', () => {
+        // Arrange
+        const network = new Network(2, 1, { seed: 434 });
+        const innovationConnection = readRequiredLayoutConnection(
+          network,
+          0,
+          'innovation',
+        );
+        const fallbackConnection = readRequiredLayoutConnection(
+          network,
+          1,
+          'fallback',
+        );
+        innovationConnection.innovation = 1;
+        fallbackConnection.innovation = Number.NaN;
+        const expectedWeightDescriptorKeys = [
+          createConnectionDescriptorKey(innovationConnection),
+          createConnectionDescriptorKey(fallbackConnection),
+        ];
+
+        // Act
+        const layoutSummary = summarizeParameterLayoutOrdering(network);
+
+        // Assert
+        expect(layoutSummary.weightDescriptorKeys).toEqual(
+          expectedWeightDescriptorKeys,
+        );
+      });
+    });
+
+    describe('given fallback weight identities are ambiguous', () => {
+      it('throws instead of inheriting connection array order', () => {
+        // Arrange
+        const { expectedErrorMessage, network } =
+          createDuplicateFallbackWeightIdentityScenario();
+        let errorMessage = '';
+
+        // Act
+        try {
+          createParameterLayoutV1(network);
+        } catch (error) {
+          errorMessage = (error as Error).message;
+        }
+
+        // Assert
+        expect(errorMessage).toBe(expectedErrorMessage);
+      });
+    });
+
+    describe('given bias node ids are ambiguous', () => {
+      it('throws instead of inheriting node array order', () => {
+        // Arrange
+        const { expectedErrorMessage, network } =
+          createDuplicateBiasNodeIdScenario();
+        let errorMessage = '';
+
+        // Act
+        try {
+          createParameterLayoutV1(network);
+        } catch (error) {
+          errorMessage = (error as Error).message;
+        }
+
+        // Assert
+        expect(errorMessage).toBe(expectedErrorMessage);
+      });
+    });
+
+    describe('given equal innovations collide across distinct source nodes', () => {
+      it('throws instead of treating the secondary source-order tie break as identity', () => {
+        // Arrange
+        const { expectedErrorMessage, network } =
+          createDuplicateInnovationWeightIdentityScenario();
+        let errorMessage = '';
+
+        // Act
+        try {
+          createParameterLayoutV1(network);
+        } catch (error) {
+          errorMessage = (error as Error).message;
+        }
+
+        // Assert
+        expect(errorMessage).toBe(expectedErrorMessage);
+      });
+    });
+
+    describe('given a weight endpoint is missing a stable gene id', () => {
+      it('throws instead of emitting an unstable descriptor', () => {
+        // Arrange
+        const { expectedErrorMessage, network } =
+          createMissingWeightSourceGeneIdScenario();
+        let errorMessage = '';
+
+        // Act
+        try {
+          createParameterLayoutV1(network);
+        } catch (error) {
+          errorMessage = (error as Error).message;
+        }
+
+        // Assert
+        expect(errorMessage).toBe(expectedErrorMessage);
+      });
+    });
+  });
+
+  describe('ParameterVector v1 roundtrip', () => {
+    describe('given one compatible runtime clone is perturbed before import', () => {
+      it('restores the same-runtime inference outputs for the same topology', () => {
+        // Arrange
+        const { activationInputValues, sourceNetwork, targetNetwork } =
+          createParameterVectorRoundTripScenario();
+        const sourceParameterState = summarizeRuntimeParameterState(sourceNetwork);
+        const sourceOutput = sourceNetwork.activate(activationInputValues);
+        const parameterVector = toParameterVector(sourceNetwork);
+
+        perturbRuntimeParameterState(targetNetwork);
+
+        const perturbedTargetOutput = targetNetwork.activate(
+          activationInputValues,
+        );
+
+        // Act
+        fromParameterVector(targetNetwork, parameterVector);
+
+        const importedTargetOutput = targetNetwork.activate(activationInputValues);
+        const importedTargetState = summarizeRuntimeParameterState(targetNetwork);
+
+        // Assert
+        expect({
+          importedTargetOutputWithinTolerance: outputsMatchWithinTolerance(
+            importedTargetOutput,
+            sourceOutput,
+          ),
+          importedTargetState,
+          perturbedTargetOutputWithinTolerance: outputsMatchWithinTolerance(
+            perturbedTargetOutput,
+            sourceOutput,
+          ),
+        }).toEqual({
+          importedTargetOutputWithinTolerance: true,
+          importedTargetState: sourceParameterState,
+          perturbedTargetOutputWithinTolerance: false,
+        });
+      });
+    });
+
+    describe('given an imported payload is incompatible with the target layout', () => {
+      it('rejects a layout version mismatch before mutating the target network', () => {
+        // Arrange
+        const { sourceNetwork, targetNetwork } =
+          createParameterVectorRoundTripScenario();
+        const baselineParameterState = summarizeRuntimeParameterState(targetNetwork);
+        const baseParameterVector: ParameterVectorPayloadLike =
+          toParameterVector(sourceNetwork);
+        const versionMismatchVector: ParameterVectorPayloadLike = {
+          ...baseParameterVector,
+          layout: {
+            ...baseParameterVector.layout,
+            version: 2 as 1,
+          },
+        };
+
+        // Act
+        const importAttempt = attemptParameterImportAndCaptureFailure(
+          targetNetwork,
+          versionMismatchVector,
+        );
+
+        // Assert
+        expect({
+          errorMessageIncludesVersion: importAttempt.errorMessage.includes(
+            'version',
+          ),
+          targetParameterState: importAttempt.targetParameterState,
+        }).toEqual({
+          errorMessageIncludesVersion: true,
+          targetParameterState: baselineParameterState,
+        });
+      });
+
+      it('rejects a layout entry-count mismatch before mutating the target network', () => {
+        // Arrange
+        const { sourceNetwork, targetNetwork } =
+          createParameterVectorRoundTripScenario();
+        const baselineParameterState = summarizeRuntimeParameterState(targetNetwork);
+        const baseParameterVector: ParameterVectorPayloadLike =
+          toParameterVector(sourceNetwork);
+        const entryCountMismatchVector: ParameterVectorPayloadLike = {
+          ...baseParameterVector,
+          layout: {
+            ...baseParameterVector.layout,
+            entries: baseParameterVector.layout.entries.slice(1),
+          },
+          values: baseParameterVector.values.slice(1),
+        };
+
+        // Act
+        const importAttempt = attemptParameterImportAndCaptureFailure(
+          targetNetwork,
+          entryCountMismatchVector,
+        );
+
+        // Assert
+        expect({
+          errorMessageIncludesEntryCount: importAttempt.errorMessage.includes(
+            'entry count',
+          ),
+          targetParameterState: importAttempt.targetParameterState,
+        }).toEqual({
+          errorMessageIncludesEntryCount: true,
+          targetParameterState: baselineParameterState,
+        });
+      });
+
+      it('rejects a values-length mismatch before mutating the target network', () => {
+        // Arrange
+        const { sourceNetwork, targetNetwork } =
+          createParameterVectorRoundTripScenario();
+        const baselineParameterState = summarizeRuntimeParameterState(targetNetwork);
+        const baseParameterVector: ParameterVectorPayloadLike =
+          toParameterVector(sourceNetwork);
+        const valuesLengthMismatchVector: ParameterVectorPayloadLike = {
+          ...baseParameterVector,
+          values: baseParameterVector.values.slice(1),
+        };
+
+        // Act
+        const importAttempt = attemptParameterImportAndCaptureFailure(
+          targetNetwork,
+          valuesLengthMismatchVector,
+        );
+
+        // Assert
+        expect({
+          errorMessageIncludesValuesLength: importAttempt.errorMessage.includes(
+            'values length',
+          ),
+          targetParameterState: importAttempt.targetParameterState,
+        }).toEqual({
+          errorMessageIncludesValuesLength: true,
+          targetParameterState: baselineParameterState,
+        });
+      });
+
+      it('rejects an ordered descriptor mismatch before mutating the target network', () => {
+        // Arrange
+        const { sourceNetwork, targetNetwork } =
+          createParameterVectorRoundTripScenario();
+        const baselineParameterState = summarizeRuntimeParameterState(targetNetwork);
+        const baseParameterVector: ParameterVectorPayloadLike =
+          toParameterVector(sourceNetwork);
+        const firstEntry = baseParameterVector.layout.entries.at(0);
+        const secondEntry = baseParameterVector.layout.entries.at(1);
+
+        if (firstEntry === undefined || secondEntry === undefined) {
+          throw new Error(
+            'Expected two layout entries for descriptor mismatch coverage.',
+          );
+        }
+
+        const descriptorMismatchVector: ParameterVectorPayloadLike = {
+          ...baseParameterVector,
+          layout: {
+            ...baseParameterVector.layout,
+            entries: baseParameterVector.layout.entries
+              .with(0, secondEntry)
+              .with(1, firstEntry),
+          },
+        };
+
+        // Act
+        const importAttempt = attemptParameterImportAndCaptureFailure(
+          targetNetwork,
+          descriptorMismatchVector,
+        );
+
+        // Assert
+        expect({
+          errorMessageIncludesDescriptorMismatch:
+            importAttempt.errorMessage.includes('descriptor mismatch'),
+          targetParameterState: importAttempt.targetParameterState,
+        }).toEqual({
+          errorMessageIncludesDescriptorMismatch: true,
+          targetParameterState: baselineParameterState,
+        });
+      });
+    });
+
+    describe('given one source runtime has a non-neutral node response', () => {
+      it('rejects ParameterVector export explicitly', () => {
+        // Arrange
+        const network = createSingleValueSerializableNetwork(552);
+        const responseNode = network.nodes.at(0);
+
+        if (responseNode === undefined) {
+          throw new Error(
+            'Expected one node for unsupported node.response coverage.',
+          );
+        }
+
+        responseNode.response = 0.5;
+        let errorMessage = '';
+
+        // Act
+        try {
+          toParameterVector(network);
+        } catch (error) {
+          errorMessage = (error as Error).message;
+        }
+
+        // Assert
+        expect(errorMessage.includes('node.response')).toBe(true);
+      });
+    });
+
+    describe('given one exported weight lacks an innovation id', () => {
+      it('uses fallback endpoint ids in the ParameterVector layout', () => {
+        // Arrange
+        const { network } = createMissingInnovationOrderingScenario();
+        const fallbackConnection = network.connections.find(
+          (connection) => !Number.isFinite(connection.innovation),
+        );
+
+        if (fallbackConnection === undefined) {
+          throw new Error(
+            'Expected one fallback connection for ParameterVector coverage.',
+          );
+        }
+
+        const expectedFallbackDescriptor = {
+          kind: 'weight' as const,
+          from: readRequiredGeneId(fallbackConnection.from, 'source'),
+          to: readRequiredGeneId(fallbackConnection.to, 'target'),
+        };
+
+        // Act
+        const parameterVector = toParameterVector(network);
+        const fallbackDescriptor = parameterVector.layout.entries.find(
+          (layoutEntry) =>
+            layoutEntry.kind === 'weight' &&
+            typeof layoutEntry.innovation !== 'number',
+        );
+
+        // Assert
+        expect(fallbackDescriptor).toEqual(expectedFallbackDescriptor);
+      });
+    });
+
+    describe('given one target runtime has a non-neutral connection gain', () => {
+      it('rejects ParameterVector import before mutating the target runtime', () => {
+        // Arrange
+        const { sourceNetwork, targetNetwork } =
+          createParameterVectorRoundTripScenario();
+        const parameterVector = toParameterVector(sourceNetwork);
+        const baselineParameterState = summarizeRuntimeParameterState(targetNetwork);
+        const targetConnection = targetNetwork.connections.at(0);
+
+        if (targetConnection === undefined) {
+          throw new Error(
+            'Expected one connection for unsupported connection.gain coverage.',
+          );
+        }
+
+        targetConnection.gain = 0.5;
+
+        // Act
+        const importAttempt = attemptParameterImportAndCaptureFailure(
+          targetNetwork,
+          parameterVector,
+        );
+
+        // Assert
+        expect({
+          errorMessageIncludesConnectionGain: importAttempt.errorMessage.includes(
+            'connection.gain',
+          ),
+          targetParameterState: importAttempt.targetParameterState,
+        }).toEqual({
+          errorMessageIncludesConnectionGain: true,
+          targetParameterState: baselineParameterState,
         });
       });
     });

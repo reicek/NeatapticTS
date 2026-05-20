@@ -1,8 +1,9 @@
 ---
 description: 'Use when planning a refactor, splitting a large module, identifying orchestration files versus helpers, or mapping module boundaries before edits. Keywords: refactor, split file, boundaries, helpers, orchestration, module map.'
 name: 'Boundary Mapper'
+model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, todo]
-user-invocable: true
+user-invocable: false
 agents: []
 ---
 
