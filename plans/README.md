@@ -52,7 +52,7 @@ Active selection guide:
 - [plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md): NGE racing benchmark — single-agent sensory specialization and behavioral drives.
 - [plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md): NGE ant hive ecosystem — multi-agent stigmergy, role differentiation, and collective intelligence.
 - [plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md): NGE predator/prey co-evolution — sensory arms race and reproduction mode dynamics.
-- [plans/Semantic_Knowledge_Foundation.plans.md](Semantic_Knowledge_Foundation.plans.md): Repo Cortex Layer 1 — SQLite corpus index, BM25 full-text search, freshness proofs (mtime + size + SHA-256), corpus scanner over generated READMEs / skills / agents / plans / demos, and the `validate-index` gate. [PLANNED]
+- [plans/completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md): archived Repo Cortex Layer 1 baseline — SQLite corpus index, BM25 full-text search, freshness proofs (mtime + size + SHA-256), corpus scanner over generated READMEs / skills / agents / plans / demos, and the `validate-index` gate. [DONE]
 - [plans/Semantic_Knowledge_MCP_Tools.plans.md](Semantic_Knowledge_MCP_Tools.plans.md): Repo Cortex Layer 2 — `neataptic-cortex-mcp` MCP server exposing `search_corpus`, `load_chunk`, `load_document`, `freshness_check`, `index_stats`, and `list_families` tools for the full repo/library/demos surface. [PLANNED]
 - [plans/Semantic_Knowledge_Browser_Snapshot.plans.md](Semantic_Knowledge_Browser_Snapshot.plans.md): Repo Cortex Layer 3 — generated browser JSON snapshot, docs pipeline integration, IndexedDB cache/loader for all demos, and generated-output contract clarification. [PLANNED]
 - [plans/Delegation_Tier_Enforcement.plans.md](Delegation_Tier_Enforcement.plans.md): 5-layer agent delegation tier graph, frontmatter tier inventory, `validate-agent-graph.mjs` extension, MCP gate tool, and audit/escalation policy. [PLANNED]
@@ -81,7 +81,7 @@ Task-to-plan trigger phrases:
 - examples, tutorials, learning path, onboarding: `plans/completed/Interactive_Examples_and_Learning_Path.plans.md`
 - neatchat, chatbot, conversational system, pretrained seed import, retrieval memory, online language learning, tiny conversation bot: `plans/completed/NEATchat_Followup.plans.md`
 - neatchat live safety, live exchange safety gate, checkSafety, live flow safety, live-flow safety, neatChat-live-safety-red: `plans/completed/neatChat-live-safety-red.plans.md`
-- repo cortex, semantic index, corpus scanner, BM25, SQLite index, freshness proof, build-index, validate-index, semantic knowledge foundation: `plans/Semantic_Knowledge_Foundation.plans.md`
+- repo cortex, semantic index, corpus scanner, BM25, SQLite index, freshness proof, build-index, validate-index, semantic knowledge foundation: `plans/completed/Semantic_Knowledge_Foundation.plans.md`
 - repo cortex MCP, neataptic-cortex-mcp, search corpus, load chunk, cortex MCP tools, cortex mcp smoke: `plans/Semantic_Knowledge_MCP_Tools.plans.md`
 - browser snapshot, semantic snapshot, IndexedDB cache, docs snapshot, semantic-snapshot-loader, build-browser-snapshot: `plans/Semantic_Knowledge_Browser_Snapshot.plans.md`
 - delegation tier, tier graph, validate-agent-graph, tier inventory, tier enforcement, 5-layer delegation: `plans/Delegation_Tier_Enforcement.plans.md`

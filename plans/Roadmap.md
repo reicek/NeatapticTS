@@ -275,7 +275,7 @@ proceed in parallel with Phase 7 / NGE work. The five Repo Cortex layers execute
 ### Repo Cortex layers (sequential)
 
 1. Corpus index foundation (SQLite, BM25, freshness)
-   - Plan: [Semantic_Knowledge_Foundation.plans.md](Semantic_Knowledge_Foundation.plans.md) [PLANNED]
+  - Plan: [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) [DONE]
    - Artifacts: `scripts/semantic-index/`, `data/semantic-index.sqlite`
 2. MCP tools (search, load, freshness, stats)
    - Plan: [Semantic_Knowledge_MCP_Tools.plans.md](Semantic_Knowledge_MCP_Tools.plans.md) [PLANNED]
@@ -357,7 +357,7 @@ M3. [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows
 
 ### Repo Cortex / Semantic Helping inventory (standalone meta-workflow lane)
 
-M4. [Semantic_Knowledge_Foundation.plans.md](Semantic_Knowledge_Foundation.plans.md) [PLANNED]
+M4. [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) [DONE]
 M5. [Semantic_Knowledge_MCP_Tools.plans.md](Semantic_Knowledge_MCP_Tools.plans.md) [PLANNED]
 M6. [Semantic_Knowledge_Browser_Snapshot.plans.md](Semantic_Knowledge_Browser_Snapshot.plans.md) [PLANNED]
 M7. [Delegation_Tier_Enforcement.plans.md](Delegation_Tier_Enforcement.plans.md) [PLANNED]

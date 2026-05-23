@@ -4,7 +4,7 @@
 
 > Exposes the Repo Cortex SQLite corpus index as first-class MCP tools for AI agents
 > helping with the full NeatapticTS library, all demos, and the agentic workflow itself.
-> Depends on [Semantic_Knowledge_Foundation.plans.md](Semantic_Knowledge_Foundation.plans.md).
+> Depends on the archived [Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) baseline.
 
 ## Purpose
 
@@ -36,7 +36,7 @@ serves the entire repo, not any single demo.
 
 ## Dependencies
 
-- [Semantic_Knowledge_Foundation.plans.md](Semantic_Knowledge_Foundation.plans.md) [PLANNED] —
+- [Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) [DONE] —
   `data/semantic-index.sqlite` must exist and be queryable before this server is usable.
 - Existing MCP server infrastructure in `scripts/agent-customization/mcp/`.
 - `.vscode/mcp.json` registration (additive, does not replace existing servers).
@@ -116,7 +116,7 @@ gate: "semantic-foundation-exists"
 gate_check: "node scripts/semantic-index/validate-index.mjs --json"
 ```
 
-**Step objective:** Confirm `Semantic_Knowledge_Foundation` is [DONE] and the index exists.
+**Step objective:** Confirm `Semantic_Knowledge_Foundation` is [DONE] in `plans/completed/` and the index exists.
 Read existing MCP server scripts in `scripts/agent-customization/mcp/` to identify reusable
 JSON-RPC patterns. Author Step 02 through Step 07 packets with concrete file targets.
 
