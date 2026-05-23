@@ -36,9 +36,9 @@ Dense embeddings produced by a locally cached ONNX sentence-transformer model cl
 
 ## Dependencies
 
-- [Semantic_Knowledge_Foundation.plans.md](Semantic_Knowledge_Foundation.plans.md) [PLANNED] —
+- [Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) [DONE] —
   SQLite corpus index must be [DONE].
-- [Semantic_Knowledge_MCP_Tools.plans.md](Semantic_Knowledge_MCP_Tools.plans.md) [PLANNED] —
+- [Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowledge_MCP_Tools.plans.md) [DONE] —
   MCP tools must be [DONE] so dense re-ranking can be toggled via existing `search_corpus` tool.
 - ONNX Runtime for Node (`onnxruntime-node`) — confirm availability or add to devDependencies.
 - A sentence-transformer ONNX model (e.g., `all-MiniLM-L6-v2`) downloaded to the local model cache.
@@ -48,23 +48,23 @@ Dense embeddings produced by a locally cached ONNX sentence-transformer model cl
 
 ### ONNX model cache
 
-| Path | Notes |
-|---|---|
-| `scripts/semantic-index/models/` | Local model cache directory (gitignored) |
+| Path                                        | Notes                                               |
+| ------------------------------------------- | --------------------------------------------------- |
+| `scripts/semantic-index/models/`            | Local model cache directory (gitignored)            |
 | `scripts/semantic-index/download-model.mjs` | Downloads and validates the ONNX model on first use |
-| `.gitignore` addition | `scripts/semantic-index/models/` |
+| `.gitignore` addition                       | `scripts/semantic-index/models/`                    |
 
 ### Embedding index
 
-| Artifact | Path | Notes |
-|---|---|---|
-| Embedding builder | `scripts/semantic-index/embed-index.mjs` | Reads chunks → runs ONNX → stores vectors |
-| Embedding storage | `data/embeddings.sqlite` (or main DB `embeddings` table) | Gitignored |
-| Hybrid ranker | `scripts/semantic-index/hybrid-rank.mjs` | BM25 + cosine score linear combination |
-| Dense query CLI | `scripts/semantic-index/query-dense.mjs` | CLI: `--query`, `--dense`, `--alpha`, `--json` |
-| Embedding validation | `scripts/semantic-index/validate-embeddings.mjs` | Assert vector count matches chunk count |
-| Eval query set | `scripts/semantic-index/eval-queries.json` | 20 canonical queries + expected top results |
-| Eval runner | `scripts/semantic-index/eval-embeddings.mjs` | Runs eval queries; reports MRR@5 for BM25 vs hybrid |
+| Artifact             | Path                                                     | Notes                                               |
+| -------------------- | -------------------------------------------------------- | --------------------------------------------------- |
+| Embedding builder    | `scripts/semantic-index/embed-index.mjs`                 | Reads chunks → runs ONNX → stores vectors           |
+| Embedding storage    | `data/embeddings.sqlite` (or main DB `embeddings` table) | Gitignored                                          |
+| Hybrid ranker        | `scripts/semantic-index/hybrid-rank.mjs`                 | BM25 + cosine score linear combination              |
+| Dense query CLI      | `scripts/semantic-index/query-dense.mjs`                 | CLI: `--query`, `--dense`, `--alpha`, `--json`      |
+| Embedding validation | `scripts/semantic-index/validate-embeddings.mjs`         | Assert vector count matches chunk count             |
+| Eval query set       | `scripts/semantic-index/eval-queries.json`               | 20 canonical queries + expected top results         |
+| Eval runner          | `scripts/semantic-index/eval-embeddings.mjs`             | Runs eval queries; reports MRR@5 for BM25 vs hybrid |
 
 ### `eval-queries.json` format
 
@@ -73,13 +73,13 @@ Dense embeddings produced by a locally cached ONNX sentence-transformer model cl
   {
     "query": "how does NEAT crossover work",
     "expected_doc_families": ["readme", "plan"],
-    "expected_heading_contains": "crossover"
+    "expected_heading_contains": "crossover",
   },
   {
     "query": "worker pool evaluation ordered results",
     "expected_doc_families": ["readme", "plan"],
-    "expected_heading_contains": "worker"
-  }
+    "expected_heading_contains": "worker",
+  },
 ]
 ```
 
@@ -97,19 +97,22 @@ $\mathbf{e}_q$ are L2-normalized dense embedding vectors.
 The existing `search_corpus` tool in `neataptic-cortex-mcp` gains an optional `use_dense` parameter:
 
 ```json
-{ "tool": "search_corpus", "args": { "query": "...", "use_dense": true, "alpha": 0.5 } }
+{
+  "tool": "search_corpus",
+  "args": { "query": "...", "use_dense": true, "alpha": 0.5 }
+}
 ```
 
 When `use_dense: false` (default), behavior is identical to the BM25-only path.
 
 ### `package.json` scripts
 
-| Script | Command |
-|---|---|
-| `index:embed` | `node scripts/semantic-index/embed-index.mjs` |
+| Script                      | Command                                                      |
+| --------------------------- | ------------------------------------------------------------ |
+| `index:embed`               | `node scripts/semantic-index/embed-index.mjs`                |
 | `index:validate-embeddings` | `node scripts/semantic-index/validate-embeddings.mjs --json` |
-| `index:eval` | `node scripts/semantic-index/eval-embeddings.mjs --json` |
-| `index:download-model` | `node scripts/semantic-index/download-model.mjs` |
+| `index:eval`                | `node scripts/semantic-index/eval-embeddings.mjs --json`     |
+| `index:download-model`      | `node scripts/semantic-index/download-model.mjs`             |
 
 ## Implementation phases
 
@@ -120,14 +123,14 @@ When `use_dense: false` (default), behavior is identical to the BM25-only path.
 ```yaml
 phase: 1
 step: 1
-agent: "01-planning"
-agent_file: ".github/agents/01-planning.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Semantic_Knowledge_Embeddings.plans.md"
-skills: "tracker-handoff, plan-sync-validation, onnx-work"
-gate: "semantic-mcp-tools-done"
-gate_check: "node scripts/agent-customization/gates/cortex-mcp-smoke.mjs --json"
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Semantic_Knowledge_Embeddings.plans.md'
+skills: 'tracker-handoff, plan-sync-validation, onnx-work'
+gate: 'semantic-mcp-tools-done'
+gate_check: 'node scripts/agent-customization/gates/cortex-mcp-smoke.mjs --json'
 validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Semantic_Knowledge_Embeddings.plans.md
 ```
@@ -144,12 +147,12 @@ strong sentence similarity). Author remaining step packets.
 ```yaml
 phase: 2
 step: 2
-agent: "02-researching"
-agent_file: ".github/agents/02-researching.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Semantic_Knowledge_Embeddings.plans.md"
-skills: "onnx-work, plan-alignment"
+agent: '02-researching'
+agent_file: '.github/agents/02-researching.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Semantic_Knowledge_Embeddings.plans.md'
+skills: 'onnx-work, plan-alignment'
 validation:
   - Read src/architecture/network/onnx/ for existing onnxruntime-node usage patterns
   - Confirm sqlite-vec or blob-column approach for vector storage
@@ -168,21 +171,22 @@ else use a `BLOB` column with manual cosine computation).
 ```yaml
 phase: 3
 step: 3
-agent: "03-red-testing"
-agent_file: ".github/agents/03-red-testing.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Semantic_Knowledge_Embeddings.plans.md"
-skills: "red-test-contracts, onnx-work"
+agent: '03-red-testing'
+agent_file: '.github/agents/03-red-testing.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Semantic_Knowledge_Embeddings.plans.md'
+skills: 'red-test-contracts, onnx-work'
 validation:
   - npx jest --config=jest.config.mjs --no-cache --testPathPattern=scripts/semantic-index/embed
 ```
 
 **Step objective:** Write failing tests for:
+
 - `embed-index.mjs`: given a seeded mini corpus (3 chunks), produces 3 embedding vectors of expected dimension.
 - `hybrid-rank.mjs`: given BM25 scores and cosine scores, produces correctly weighted combined ranks.
 - `validate-embeddings.mjs`: fails when embedding count does not match chunk count, passes when equal.
-Use a tiny mock ONNX model or a pre-computed fixture to avoid downloading a real model in CI.
+  Use a tiny mock ONNX model or a pre-computed fixture to avoid downloading a real model in CI.
 
 ### Phase 4 — Implementation [PLANNED]
 
@@ -191,12 +195,12 @@ Use a tiny mock ONNX model or a pre-computed fixture to avoid downloading a real
 ```yaml
 phase: 4
 step: 4
-agent: "04-implementing"
-agent_file: ".github/agents/04-implementing.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Semantic_Knowledge_Embeddings.plans.md"
-skills: "onnx-work, agent-script-tooling"
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Semantic_Knowledge_Embeddings.plans.md'
+skills: 'onnx-work, agent-script-tooling'
 validation:
   - node scripts/semantic-index/download-model.mjs
   - node scripts/semantic-index/embed-index.mjs --dry-run
@@ -206,6 +210,7 @@ validation:
 ```
 
 **Step objective:** Implement all artifacts:
+
 1. `download-model.mjs` — fetch ONNX model to `scripts/semantic-index/models/`, verify checksum.
 2. `embed-index.mjs` — load model via `onnxruntime-node`, embed all chunks, store vectors.
 3. `hybrid-rank.mjs` — BM25 + cosine linear combination with configurable `alpha`.
@@ -223,12 +228,12 @@ validation:
 ```yaml
 phase: 5
 step: 5
-agent: "05-green-testing"
-agent_file: ".github/agents/05-green-testing.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Semantic_Knowledge_Embeddings.plans.md"
-skills: "green-validation-gates, onnx-work"
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-testing.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Semantic_Knowledge_Embeddings.plans.md'
+skills: 'green-validation-gates, onnx-work'
 validation:
   - node scripts/semantic-index/validate-embeddings.mjs --json
   - node scripts/semantic-index/eval-embeddings.mjs --json
@@ -247,12 +252,12 @@ classes, document the failure modes and adjust `alpha` or the eval set. Unit tes
 ```yaml
 phase: 6
 step: 6
-agent: "06-documenting"
-agent_file: ".github/agents/06-documenting.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Semantic_Knowledge_Embeddings.plans.md"
-skills: "educational-docs"
+agent: '06-documenting'
+agent_file: '.github/agents/06-documenting.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Semantic_Knowledge_Embeddings.plans.md'
+skills: 'educational-docs'
 ```
 
 **Step objective:** Update `scripts/semantic-index/README.md` to document the embedding
@@ -267,12 +272,12 @@ Include the MRR@5 results from Step 05.
 ```yaml
 phase: 7
 step: 7
-agent: "07-logging"
-agent_file: ".github/agents/07-logging.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Semantic_Knowledge_Embeddings.plans.md"
-skills: "tracker-handoff, summarizing-session-log"
+agent: '07-logging'
+agent_file: '.github/agents/07-logging.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Semantic_Knowledge_Embeddings.plans.md'
+skills: 'tracker-handoff, summarizing-session-log'
 ```
 
 **Step objective:** Record eval evidence. Decide whether to flip the default from
@@ -281,16 +286,16 @@ done-state log. Update this tracker to [DONE].
 
 ## Acceptance criteria and validation gates
 
-| Gate | Command | Expected |
-|---|---|---|
-| Model downloads | `node scripts/semantic-index/download-model.mjs` | Exit 0; model present in `scripts/semantic-index/models/` |
-| Embeddings build | `node scripts/semantic-index/embed-index.mjs` | Exit 0; vector count = chunk count |
-| Embedding validation | `node scripts/semantic-index/validate-embeddings.mjs --json` | `{ pass: true }` |
-| Dense query returns results | `node scripts/semantic-index/query-dense.mjs --query "NEAT" --json` | JSON array ≥ 3 results |
-| Eval set runs | `node scripts/semantic-index/eval-embeddings.mjs --json` | JSON with MRR@5 BM25 and hybrid |
-| Hybrid does not regress | Eval output | hybrid MRR@5 ≥ BM25-only MRR@5 |
-| Unit tests green | `npx jest --testPathPattern=scripts/semantic-index/embed` | All pass |
-| Gitignore clean | `git status scripts/semantic-index/models/ data/embeddings.sqlite` | Both ignored |
+| Gate                        | Command                                                             | Expected                                                  |
+| --------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
+| Model downloads             | `node scripts/semantic-index/download-model.mjs`                    | Exit 0; model present in `scripts/semantic-index/models/` |
+| Embeddings build            | `node scripts/semantic-index/embed-index.mjs`                       | Exit 0; vector count = chunk count                        |
+| Embedding validation        | `node scripts/semantic-index/validate-embeddings.mjs --json`        | `{ pass: true }`                                          |
+| Dense query returns results | `node scripts/semantic-index/query-dense.mjs --query "NEAT" --json` | JSON array ≥ 3 results                                    |
+| Eval set runs               | `node scripts/semantic-index/eval-embeddings.mjs --json`            | JSON with MRR@5 BM25 and hybrid                           |
+| Hybrid does not regress     | Eval output                                                         | hybrid MRR@5 ≥ BM25-only MRR@5                            |
+| Unit tests green            | `npx jest --testPathPattern=scripts/semantic-index/embed`           | All pass                                                  |
+| Gitignore clean             | `git status scripts/semantic-index/models/ data/embeddings.sqlite`  | Both ignored                                              |
 
 ## Handoff query
 
@@ -300,8 +305,8 @@ Continue from the current repo state only. Do not rely on prior chat history.
 Active plan: plans/Semantic_Knowledge_Embeddings.plans.md [PLANNED]
 
 Prerequisites (must all be [DONE] before this plan starts):
-  - plans/Semantic_Knowledge_Foundation.plans.md
-  - plans/Semantic_Knowledge_MCP_Tools.plans.md
+  - plans/completed/Semantic_Knowledge_Foundation.plans.md
+  - plans/completed/Semantic_Knowledge_MCP_Tools.plans.md
   Verify: node scripts/agent-customization/gates/cortex-mcp-smoke.mjs --json
 
 Goal: Add ONNX-backed local dense embeddings and hybrid BM25+dense ranking to the Repo Cortex.

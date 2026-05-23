@@ -58,7 +58,10 @@ describe('neatChat session services', () => {
     });
 
     // Act
-    const result = runNeatChatExchange(session, createRepeatedPrompt('hello', 11));
+    const result = runNeatChatExchange(
+      session,
+      createRepeatedPrompt('hello', 11),
+    );
 
     // Assert
     expect(result.response).toBe('hello');
@@ -140,7 +143,10 @@ describe('neatChat session services', () => {
     });
 
     // Act
-    const result = runNeatChatExchange(session, createRepeatedPrompt('hello', 11));
+    const result = runNeatChatExchange(
+      session,
+      createRepeatedPrompt('hello', 11),
+    );
 
     // Assert
     expect(result.updatedSession.replayBufferExchangeCount).toBe(2);
@@ -169,7 +175,9 @@ describe('neatChat session services', () => {
     runNeatChatExchange(session, 'hello');
 
     // Assert
-    expect(recordingNetwork.getRecordedTrainingCaseIndices().slice(5, 9)).toEqual([
+    expect(
+      recordingNetwork.getRecordedTrainingCaseIndices().slice(5, 9),
+    ).toEqual([
       { inputTokenIndex: 1, outputTokenIndex: 0 },
       { inputTokenIndex: 0, outputTokenIndex: 3 },
       { inputTokenIndex: 3, outputTokenIndex: 4 },

@@ -90,6 +90,23 @@ const config = {
         setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
         testTimeout: 300000,
       },
+      {
+        displayName: 'mcp-semantic-scripts',
+        testMatch: [
+          '**/scripts/mcp-semantic/**/*.test.ts',
+        ],
+        preset: 'ts-jest/presets/default-esm',
+        testEnvironment: 'node',
+        extensionsToTreatAsEsm: ['.ts'],
+        transform: {
+          '^.+\\.ts$': [
+            'ts-jest',
+            { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true }
+          ]
+        },
+        setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
+        testTimeout: 300000,
+      },
   ],
   testMatch: [
     '**/src/**/*.test.ts',

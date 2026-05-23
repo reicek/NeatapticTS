@@ -9,9 +9,7 @@ import type {
   NeatChatRoutingPath,
 } from './neatChat.routing.types';
 import { toParameterVector } from '../../../src/neataptic.ts';
-import {
-  createNeatChatAdaptationManager,
-} from './neatChat.adaptation.services';
+import { createNeatChatAdaptationManager } from './neatChat.adaptation.services';
 import type {
   NeatChatAdaptationCandidate,
   NeatChatAdaptationManager,
@@ -21,9 +19,7 @@ import {
   retrieveNeatChatMemories,
 } from './neatChat.memory.services';
 import type { NeatChatMemoryRetrievalResult } from './neatChat.memory.types';
-import {
-  createNeatChatSession,
-} from './neatChat.session.services';
+import { createNeatChatSession } from './neatChat.session.services';
 import {
   exportNeatChatSessionV2,
   importNeatChatSessionV2,
@@ -246,10 +242,9 @@ describe('neatChat routing services', () => {
       const secondSelection = selectNeatChatCandidate(candidates);
 
       // Assert
-      expect([
-        firstSelection.routingPath,
-        secondSelection.routingPath,
-      ]).toEqual(['personalized', 'personalized']);
+      expect([firstSelection.routingPath, secondSelection.routingPath]).toEqual(
+        ['personalized', 'personalized'],
+      );
     });
 
     it('breaks equal-score ties in favor of the base path', () => {
@@ -295,11 +290,7 @@ describe('neatChat routing services', () => {
         selectedPath: appendedEntry?.selectedPath,
       }).toEqual({
         candidateCount: 3,
-        comparedCandidatePaths: [
-          'base',
-          'personalized',
-          'retrieval-grounded',
-        ],
+        comparedCandidatePaths: ['base', 'personalized', 'retrieval-grounded'],
         logLength: 1,
         scores: {
           base: 0.3,
@@ -486,9 +477,11 @@ function readRoutingPaths(
   return candidates.map((candidate) => candidate.routingPath);
 }
 
-function createRoutingFallbackSession(options: {
-  readonly exchanges?: NeatChatSession['exchanges'];
-} = {}): NeatChatSession {
+function createRoutingFallbackSession(
+  options: {
+    readonly exchanges?: NeatChatSession['exchanges'];
+  } = {},
+): NeatChatSession {
   const session = createRoutingFixtureSession();
 
   return {
@@ -500,7 +493,8 @@ function createRoutingFallbackSession(options: {
 
 function createEmptyOutputRoutingNetwork(vocabularySize: number) {
   return {
-    activate: () => new Array<number>(vocabularySize).fill(Number.NEGATIVE_INFINITY),
+    activate: () =>
+      new Array<number>(vocabularySize).fill(Number.NEGATIVE_INFINITY),
     clear: () => undefined,
   };
 }

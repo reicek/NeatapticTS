@@ -84,9 +84,8 @@ type SeedTrainingPhasePlan = {
  */
 async function main(): Promise<void> {
   const generationConfig = resolveGenerationConfig(process.argv.slice(2));
-  const sourceConversationLines = collectSourceConversationLines(
-    generationConfig,
-  );
+  const sourceConversationLines =
+    collectSourceConversationLines(generationConfig);
   const progressStartedAtMs = Date.now();
   const corpusText = sourceConversationLines.join('\n');
   const preview = createNeatChatPretrainingPreview({
@@ -94,129 +93,128 @@ async function main(): Promise<void> {
     topWordLimit: generationConfig.topWordLimit,
   });
 
-  const session = withSeededMathRandom(
-    generationConfig.generationSeed,
-    () => {
-      const sourceConversationLineChunks = chunkConversationLines(
-        sourceConversationLines,
-        NEATCHAT_MAX_SEED_CONVERSATION_LINES,
-      );
-      emitProgressLine(generationConfig, {
-        event: 'start',
-        sourceLineCount: sourceConversationLines.length,
-        chunkCount: sourceConversationLineChunks.length,
-        extraReinforcementPasses:
-          generationConfig.extraReinforcementPasses,
-        topWordLimit: generationConfig.topWordLimit,
-        maxCasesPerPhase: generationConfig.maxCasesPerPhase,
-      });
-      const initialSeedConversationPhasePlan = resolveSeedTrainingPhasePlan(
-        sourceConversationLineChunks[0] ?? [],
+  const session = withSeededMathRandom(generationConfig.generationSeed, () => {
+    const sourceConversationLineChunks = chunkConversationLines(
+      sourceConversationLines,
+      NEATCHAT_MAX_SEED_CONVERSATION_LINES,
+    );
+    emitProgressLine(generationConfig, {
+      event: 'start',
+      sourceLineCount: sourceConversationLines.length,
+      chunkCount: sourceConversationLineChunks.length,
+      extraReinforcementPasses: generationConfig.extraReinforcementPasses,
+      topWordLimit: generationConfig.topWordLimit,
+      maxCasesPerPhase: generationConfig.maxCasesPerPhase,
+    });
+    const initialSeedConversationPhasePlan = resolveSeedTrainingPhasePlan(
+      sourceConversationLineChunks[0] ?? [],
+      generationConfig.maxCasesPerPhase,
+    );
+    let generatedSession = createNeatChatSession({
+      corpusRetainedTerms: preview.retainedTerms,
+      seedConversationLines:
+        initialSeedConversationPhasePlan.selectedConversationLines,
+      liveChatVocabLimit: generationConfig.topWordLimit,
+      contextWindowTokenCount: generationConfig.contextWindowTokenCount,
+    });
+    let initialPassProcessedLineCount =
+      initialSeedConversationPhasePlan.selectedConversationLines.length;
+    emitProgressLine(
+      generationConfig,
+      createChunkDoneProgressEvent({
+        passIndex: 0,
+        chunkIndex: 0,
+        chunkLineCount:
+          initialSeedConversationPhasePlan.selectedConversationLines.length,
+        originalChunkLineCount:
+          initialSeedConversationPhasePlan.originalChunkLineCount,
+        phaseCaseCount: initialSeedConversationPhasePlan.phaseCaseCount,
+        processedLineCount: initialPassProcessedLineCount,
+        totalLineCount: sourceConversationLines.length,
+        progressStartedAtMs,
+      }),
+    );
+
+    for (const [
+      additionalChunkOffset,
+      additionalSeedChunk,
+    ] of sourceConversationLineChunks.slice(1).entries()) {
+      const additionalSeedConversationPhasePlan = resolveSeedTrainingPhasePlan(
+        additionalSeedChunk,
         generationConfig.maxCasesPerPhase,
       );
-      let generatedSession = createNeatChatSession({
-        corpusRetainedTerms: preview.retainedTerms,
-        seedConversationLines:
-          initialSeedConversationPhasePlan.selectedConversationLines,
-        liveChatVocabLimit: generationConfig.topWordLimit,
-        contextWindowTokenCount: generationConfig.contextWindowTokenCount,
-      });
-      let initialPassProcessedLineCount =
-        initialSeedConversationPhasePlan.selectedConversationLines.length;
+      generatedSession = pretrainNeatChatSessionWithConversationLines(
+        generatedSession,
+        additionalSeedConversationPhasePlan.selectedConversationLines,
+      );
+      initialPassProcessedLineCount +=
+        additionalSeedConversationPhasePlan.selectedConversationLines.length;
       emitProgressLine(
         generationConfig,
         createChunkDoneProgressEvent({
           passIndex: 0,
-          chunkIndex: 0,
+          chunkIndex: additionalChunkOffset + 1,
           chunkLineCount:
-            initialSeedConversationPhasePlan.selectedConversationLines.length,
+            additionalSeedConversationPhasePlan.selectedConversationLines
+              .length,
           originalChunkLineCount:
-            initialSeedConversationPhasePlan.originalChunkLineCount,
-          phaseCaseCount: initialSeedConversationPhasePlan.phaseCaseCount,
+            additionalSeedConversationPhasePlan.originalChunkLineCount,
+          phaseCaseCount: additionalSeedConversationPhasePlan.phaseCaseCount,
           processedLineCount: initialPassProcessedLineCount,
           totalLineCount: sourceConversationLines.length,
           progressStartedAtMs,
         }),
       );
+    }
 
-      for (const [additionalChunkOffset, additionalSeedChunk] of
-        sourceConversationLineChunks.slice(1).entries()) {
-        const additionalSeedConversationPhasePlan =
-          resolveSeedTrainingPhasePlan(
-            additionalSeedChunk,
-            generationConfig.maxCasesPerPhase,
-          );
+    for (
+      let reinforcementPassIndex = 0;
+      reinforcementPassIndex < generationConfig.extraReinforcementPasses;
+      reinforcementPassIndex++
+    ) {
+      const progressPassIndex = reinforcementPassIndex + 1;
+      let passProcessedLineCount = 0;
+
+      for (const [
+        sourceConversationChunkIndex,
+        sourceConversationLineChunk,
+      ] of sourceConversationLineChunks.entries()) {
+        const reinforcementPhasePlan = resolveSeedTrainingPhasePlan(
+          sourceConversationLineChunk,
+          generationConfig.maxCasesPerPhase,
+        );
         generatedSession = pretrainNeatChatSessionWithConversationLines(
           generatedSession,
-          additionalSeedConversationPhasePlan.selectedConversationLines,
+          reinforcementPhasePlan.selectedConversationLines,
         );
-        initialPassProcessedLineCount +=
-          additionalSeedConversationPhasePlan.selectedConversationLines.length;
+        passProcessedLineCount +=
+          reinforcementPhasePlan.selectedConversationLines.length;
         emitProgressLine(
           generationConfig,
           createChunkDoneProgressEvent({
-            passIndex: 0,
-            chunkIndex: additionalChunkOffset + 1,
+            passIndex: progressPassIndex,
+            chunkIndex: sourceConversationChunkIndex,
             chunkLineCount:
-              additionalSeedConversationPhasePlan.selectedConversationLines.length,
+              reinforcementPhasePlan.selectedConversationLines.length,
             originalChunkLineCount:
-              additionalSeedConversationPhasePlan.originalChunkLineCount,
-            phaseCaseCount:
-              additionalSeedConversationPhasePlan.phaseCaseCount,
-            processedLineCount: initialPassProcessedLineCount,
+              reinforcementPhasePlan.originalChunkLineCount,
+            phaseCaseCount: reinforcementPhasePlan.phaseCaseCount,
+            processedLineCount: passProcessedLineCount,
             totalLineCount: sourceConversationLines.length,
             progressStartedAtMs,
           }),
         );
       }
 
-      for (
-        let reinforcementPassIndex = 0;
-        reinforcementPassIndex < generationConfig.extraReinforcementPasses;
-        reinforcementPassIndex++
-      ) {
-        const progressPassIndex = reinforcementPassIndex + 1;
-        let passProcessedLineCount = 0;
+      emitProgressLine(generationConfig, {
+        event: 'passDone',
+        pass: progressPassIndex,
+        elapsedMs: elapsedMsSince(progressStartedAtMs),
+      });
+    }
 
-        for (const [sourceConversationChunkIndex, sourceConversationLineChunk] of
-          sourceConversationLineChunks.entries()) {
-          const reinforcementPhasePlan = resolveSeedTrainingPhasePlan(
-            sourceConversationLineChunk,
-            generationConfig.maxCasesPerPhase,
-          );
-          generatedSession = pretrainNeatChatSessionWithConversationLines(
-            generatedSession,
-            reinforcementPhasePlan.selectedConversationLines,
-          );
-          passProcessedLineCount +=
-            reinforcementPhasePlan.selectedConversationLines.length;
-          emitProgressLine(
-            generationConfig,
-            createChunkDoneProgressEvent({
-              passIndex: progressPassIndex,
-              chunkIndex: sourceConversationChunkIndex,
-              chunkLineCount:
-                reinforcementPhasePlan.selectedConversationLines.length,
-              originalChunkLineCount:
-                reinforcementPhasePlan.originalChunkLineCount,
-              phaseCaseCount: reinforcementPhasePlan.phaseCaseCount,
-              processedLineCount: passProcessedLineCount,
-              totalLineCount: sourceConversationLines.length,
-              progressStartedAtMs,
-            }),
-          );
-        }
-
-        emitProgressLine(generationConfig, {
-          event: 'passDone',
-          pass: progressPassIndex,
-          elapsedMs: elapsedMsSince(progressStartedAtMs),
-        });
-      }
-
-      return generatedSession;
-    },
-  );
+    return generatedSession;
+  });
 
   emitProgressLine(generationConfig, {
     event: 'generationDone',
@@ -438,8 +436,8 @@ function resolveSeedTrainingPhasePlan(
     };
   }
 
-  const seedLineTokenCounts = seedConversationLines.map((seedConversationLine) =>
-    tokenizeNeatChatText(seedConversationLine).length,
+  const seedLineTokenCounts = seedConversationLines.map(
+    (seedConversationLine) => tokenizeNeatChatText(seedConversationLine).length,
   );
   let cumulativeTokenCount = 0;
   let cumulativeNonEmptyLineCount = 0;
@@ -449,7 +447,10 @@ function resolveSeedTrainingPhasePlan(
   let selectedCaseCount = 0;
   let minimumEligibleCaseCount = 0;
 
-  for (const [lineIndex, currentLineTokenCount] of seedLineTokenCounts.entries()) {
+  for (const [
+    lineIndex,
+    currentLineTokenCount,
+  ] of seedLineTokenCounts.entries()) {
     cumulativeTokenCount += currentLineTokenCount;
 
     if (currentLineTokenCount > 0) {
@@ -486,7 +487,10 @@ function resolveSeedTrainingPhasePlan(
   }
 
   return {
-    selectedConversationLines: seedConversationLines.slice(0, selectedLineCount),
+    selectedConversationLines: seedConversationLines.slice(
+      0,
+      selectedLineCount,
+    ),
     originalChunkLineCount: seedConversationLines.length,
     phaseCaseCount: selectedCaseCount,
   };
@@ -512,7 +516,8 @@ function resolveRequiredPositiveInteger(
   fieldName: string,
   fallbackValue: number,
 ): number {
-  const resolvedValue = rawValue === undefined ? fallbackValue : Number(rawValue);
+  const resolvedValue =
+    rawValue === undefined ? fallbackValue : Number(rawValue);
 
   if (!Number.isInteger(resolvedValue) || resolvedValue <= 0) {
     throw new Error(`${fieldName} must be a positive integer.`);
@@ -526,7 +531,8 @@ function resolveRequiredNonNegativeInteger(
   fieldName: string,
   fallbackValue: number,
 ): number {
-  const resolvedValue = rawValue === undefined ? fallbackValue : Number(rawValue);
+  const resolvedValue =
+    rawValue === undefined ? fallbackValue : Number(rawValue);
 
   if (!Number.isInteger(resolvedValue) || resolvedValue < 0) {
     throw new Error(`${fieldName} must be a non-negative integer.`);
@@ -554,10 +560,7 @@ function resolveOptionalBoolean(
   }
 }
 
-function withSeededMathRandom<T>(
-  generationSeed: number,
-  callback: () => T,
-): T {
+function withSeededMathRandom<T>(generationSeed: number, callback: () => T): T {
   const originalRandom = Math.random;
   const seededRandom = createSeededRandom(generationSeed);
 

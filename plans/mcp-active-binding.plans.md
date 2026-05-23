@@ -29,14 +29,14 @@ workstream plan.
 ```yaml
 phase: 1
 step: 1
-agent: "00-helping"
-agent_file: ".github/agents/00-helping.agent.md"
-status: "[WIP]"
-mode: "perpetual"
-source_of_truth: "plans/mcp-active-binding.plans.md"
+agent: '00-helping'
+agent_file: '.github/agents/00-helping.agent.md'
+status: '[WIP]'
+mode: 'perpetual'
+source_of_truth: 'plans/mcp-active-binding.plans.md'
 copy_paste: false
-next_step: "null"
-skills: "mcp-local-server-workflow"
+next_step: 'null'
+skills: 'mcp-local-server-workflow'
 validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md
 ```

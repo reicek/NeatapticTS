@@ -268,34 +268,51 @@ retrieval as the final advanced step. NeatChat also gains its own separate local
 memory layer for conversational quality.
 
 This lane is **meta-workflow infrastructure**. It does not change `src/` library code and can
-proceed in parallel with Phase 7 / NGE work. The five Repo Cortex layers execute sequentially
-(each layer depends on the one before it), while `Delegation_Tier_Enforcement.plans.md` and
+proceed in parallel with Phase 7 / NGE work. The four Repo Cortex layers (1–3 archived, Layer 4
+and Layer 5 planned) execute sequentially. The Agentic Workflow Enforcement Prerequisite
+(`Delegation_Tier_Enforcement.plans.md`) has no dependency on the SQLite corpus index and can
+run in parallel with Layers 1–3, but **must complete before Layer 4** begins, since that plan
+adds new hidden specialist agents which must pass tier graph validation.
 `NeatChat_Local_Retrieval_Memory.plans.md` can proceed in parallel with Layers 1–3.
 
 ### Repo Cortex layers (sequential)
 
 1. Corpus index foundation (SQLite, BM25, freshness)
-  - Plan: [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) [DONE]
-   - Artifacts: `scripts/semantic-index/`, `data/semantic-index.sqlite`
+
+- Plan: [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) [DONE]
+- Artifacts: `scripts/semantic-index/`, `data/semantic-index.sqlite`
+
 2. MCP tools (search, load, freshness, stats)
-   - Plan: [Semantic_Knowledge_MCP_Tools.plans.md](Semantic_Knowledge_MCP_Tools.plans.md) [PLANNED]
-   - Gate: Layer 1 [DONE] required
-   - Artifacts: `scripts/mcp-semantic/`, `neataptic-cortex-mcp` in `.vscode/mcp.json`
+
+- Plan: [completed/Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowledge_MCP_Tools.plans.md) [DONE]
+- Gate: Layer 1 [DONE] satisfied
+- Artifacts: `scripts/mcp-semantic/`, `neataptic-cortex-mcp` in `.vscode/mcp.json`
+
 3. Browser snapshot and IndexedDB loader (all demos)
-   - Plan: [Semantic_Knowledge_Browser_Snapshot.plans.md](Semantic_Knowledge_Browser_Snapshot.plans.md) [PLANNED]
-   - Gate: Layer 1 [DONE] required
-   - Artifacts: `docs/assets/semantic-snapshot.json`, `examples/shared/semantic/`
+
+- Plan: [completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_Knowledge_Browser_Snapshot.plans.md) [DONE]
+- Gate: Layers 1 and 2 [DONE] satisfied; Layer 3 archived
+- Artifacts: `docs/assets/semantic-snapshot.json`, `examples/shared/semantic/`
+
+4. Cortex MCP reliability hardening (Layer 4 — agents, skill, lifecycle gate, MCP enhancements)
+   - Plan: [Repo_Cortex_MCP_Reliability.plans.md](Repo_Cortex_MCP_Reliability.plans.md) [PLANNED]
+   - Gate: Layers 1, 2, and 3 [DONE] required; Delegation Tier Enforcement must be [DONE]; `neataptic-workflow-mcp.mjs` must be active
+   - Artifacts: `.github/agents/repo-cortex-scout.agent.md`, `.github/agents/cortex-embeddings-scout.agent.md`, `.github/skills/repo-cortex-workflow/SKILL.md`, `scripts/agent-customization/gates/cortex-index.gate.mjs`, `scripts/agent-customization/plan-session-redirect.mjs`, `scripts/agent-customization/validate-tsconfig-docs.mjs`
 5. ONNX embeddings + hybrid BM25+dense ranking (final advanced step)
    - Plan: [Semantic_Knowledge_Embeddings.plans.md](Semantic_Knowledge_Embeddings.plans.md) [PLANNED]
    - Gate: Layers 1 and 2 [DONE] required
    - Artifacts: `scripts/semantic-index/embed-index.mjs`, `data/embeddings.sqlite`, ONNX model cache
 
-### Parallel tracks (can run alongside Layers 1–3)
+### Agentic Workflow Enforcement Prerequisite (must complete before Layer 4)
 
 - 5-layer agent delegation tier enforcement
   - Plan: [Delegation_Tier_Enforcement.plans.md](Delegation_Tier_Enforcement.plans.md) [PLANNED]
-  - No dependency on SQLite corpus index; reads `.github/agents/*.agent.md` only
+  - No dependency on SQLite corpus index; reads `.github/agents/*.agent.md` only; can run in parallel with Repo Cortex Layers 1–3
+  - Must complete before Layer 4 (Repo Cortex MCP Reliability) — that plan adds new hidden specialist agents which must pass tier graph validation
   - Artifacts: `scripts/agent-customization/tier-inventory.mjs`, `validate-agent-graph.mjs`, `tier-enforcement-gate.mjs`
+
+### Parallel tracks (can run alongside Layers 1–3 and the prerequisite)
+
 - NeatChat local retrieval and memory (separate from Repo Cortex)
   - Plan: [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [PLANNED]
   - Depends on archived [completed/neatChat-live-safety-red.plans.md](completed/neatChat-live-safety-red.plans.md) [DONE] as the closed live safety baseline (no conflict; guarded integration)
@@ -303,8 +320,8 @@ proceed in parallel with Phase 7 / NGE work. The five Repo Cortex layers execute
   - Artifacts: `examples/neatChat/memory/` (types, DB adapters, retrieval, services, tests)
 
 **Coordination rules:**
-- Layer 4 in this list (Delegation Tier Enforcement) is numbered separately from the Repo Cortex
-  layers to avoid confusion: it is not a Repo Cortex corpus layer.
+
+- `Delegation_Tier_Enforcement.plans.md` is an Agentic Workflow Enforcement Prerequisite, not a Repo Cortex corpus layer. It has no "Layer N" designation.
 - `data/semantic-index.sqlite` and `data/embeddings.sqlite` are gitignored generated artifacts.
 - `docs/assets/semantic-snapshot.json` is a generated artifact; treat it as read-only.
 - NeatChat memory (`examples/neatChat/memory/`) must never import from `scripts/semantic-index/`.
@@ -358,9 +375,10 @@ M3. [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows
 ### Repo Cortex / Semantic Helping inventory (standalone meta-workflow lane)
 
 M4. [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) [DONE]
-M5. [Semantic_Knowledge_MCP_Tools.plans.md](Semantic_Knowledge_MCP_Tools.plans.md) [PLANNED]
-M6. [Semantic_Knowledge_Browser_Snapshot.plans.md](Semantic_Knowledge_Browser_Snapshot.plans.md) [PLANNED]
-M7. [Delegation_Tier_Enforcement.plans.md](Delegation_Tier_Enforcement.plans.md) [PLANNED]
+M5. [completed/Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowledge_MCP_Tools.plans.md) [DONE]
+M6. [completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_Knowledge_Browser_Snapshot.plans.md) [DONE]
+M6b. [Delegation_Tier_Enforcement.plans.md](Delegation_Tier_Enforcement.plans.md) [PLANNED]
+M7. [Repo_Cortex_MCP_Reliability.plans.md](Repo_Cortex_MCP_Reliability.plans.md) [PLANNED]
 M8. [Semantic_Knowledge_Embeddings.plans.md](Semantic_Knowledge_Embeddings.plans.md) [PLANNED]
 M9. [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [PLANNED]
 

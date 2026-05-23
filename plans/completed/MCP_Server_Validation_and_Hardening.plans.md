@@ -24,7 +24,7 @@ This workstream hardened the three workspace MCP servers after restart-oriented 
 
 - [.vscode/mcp.json](../../.vscode/mcp.json)
 - [scripts/agent-customization/mcp/mcp-utils.mjs](../../scripts/agent-customization/mcp/mcp-utils.mjs)
-- [scripts/agent-customization/mcp/__tests__/mcp.red.test.mjs](../../scripts/agent-customization/mcp/__tests__/mcp.red.test.mjs)
+- [scripts/agent-customization/mcp/**tests**/mcp.red.test.mjs](../../scripts/agent-customization/mcp/__tests__/mcp.red.test.mjs)
 - [.github/ai-learning/learning-log.jsonl](../../.github/ai-learning/learning-log.jsonl)
 - [plans/README.md](../README.md)
 - [plans/Roadmap.md](../Roadmap.md)

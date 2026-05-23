@@ -323,7 +323,9 @@ function validateNeatChatSessionSnapshotV2(
     formatVersion: 2,
     retainedTerms: retainedTerms.map((term) => String(term)),
     networkJson: structuredClone(networkJson),
-    parameterVector: normalizeParameterVectorSnapshot(bundleRecord.parameterVector),
+    parameterVector: normalizeParameterVectorSnapshot(
+      bundleRecord.parameterVector,
+    ),
     exchanges: normalizeExchangeRecords(exchanges),
     learnedExchangeCount: resolveNonNegativeInteger(
       resolveIntegerField(
@@ -438,7 +440,8 @@ function normalizeSnapshotExtensions(
     routingLog: ignoredRawRoutingLog,
     ...remainingNeatchatExtension
   } = neatchatExtension;
-  const expectedVocabularySize = retainedTermCount + NEATCHAT_SPECIAL_TOKENS.length;
+  const expectedVocabularySize =
+    retainedTermCount + NEATCHAT_SPECIAL_TOKENS.length;
 
   void ignoredRawRoutingLog;
 
@@ -471,7 +474,11 @@ function normalizeOptionalCandidateLog(
     normalizeOptionalCandidateLogEntry,
   );
 
-  if (normalizedCandidateLog.some((candidateLogEntry) => candidateLogEntry == null)) {
+  if (
+    normalizedCandidateLog.some(
+      (candidateLogEntry) => candidateLogEntry == null,
+    )
+  ) {
     return undefined;
   }
 
@@ -486,7 +493,9 @@ function normalizeOptionalCandidateLogEntry(
   }
 
   const decidedAt = Number(candidateLogEntry.decidedAt);
-  const trainedOnExchangeCount = Number(candidateLogEntry.trainedOnExchangeCount);
+  const trainedOnExchangeCount = Number(
+    candidateLogEntry.trainedOnExchangeCount,
+  );
 
   if (
     !isCandidateLogStatus(candidateLogEntry.status) ||
@@ -601,7 +610,9 @@ function isDefinedRoutingLogEntry(
 }
 
 function isDefinedRoutingPath(
-  routingPath: NeatChatSession['routingLog'][number]['selectedPath'] | undefined,
+  routingPath:
+    | NeatChatSession['routingLog'][number]['selectedPath']
+    | undefined,
 ): routingPath is NeatChatSession['routingLog'][number]['selectedPath'] {
   return routingPath != null;
 }
@@ -628,7 +639,11 @@ function isRoutingNumericRecord(
 
 function normalizeOptionalRoutingNumericRecord(
   value: unknown,
-): Partial<Record<NeatChatSession['routingLog'][number]['selectedPath'], number>> | undefined {
+):
+  | Partial<
+      Record<NeatChatSession['routingLog'][number]['selectedPath'], number>
+    >
+  | undefined {
   if (!isRoutingNumericRecord(value)) {
     return undefined;
   }
@@ -638,12 +653,21 @@ function normalizeOptionalRoutingNumericRecord(
       recordKey,
       Number(recordValue),
     ]),
-  ) as Partial<Record<NeatChatSession['routingLog'][number]['selectedPath'], number>>;
+  ) as Partial<
+    Record<NeatChatSession['routingLog'][number]['selectedPath'], number>
+  >;
 }
 
 function normalizeOptionalRoutingStringArrayRecord(
   value: unknown,
-): Partial<Record<NeatChatSession['routingLog'][number]['selectedPath'], readonly string[]>> | undefined {
+):
+  | Partial<
+      Record<
+        NeatChatSession['routingLog'][number]['selectedPath'],
+        readonly string[]
+      >
+    >
+  | undefined {
   if (!isNonArrayRecord(value)) {
     return undefined;
   }
@@ -667,13 +691,20 @@ function normalizeOptionalRoutingStringArrayRecord(
       [...(recordValue as readonly string[])],
     ]),
   ) as Partial<
-    Record<NeatChatSession['routingLog'][number]['selectedPath'], readonly string[]>
+    Record<
+      NeatChatSession['routingLog'][number]['selectedPath'],
+      readonly string[]
+    >
   >;
 }
 
 function normalizeOptionalRoutingStringRecord(
   value: unknown,
-): Partial<Record<NeatChatSession['routingLog'][number]['selectedPath'], string>> | undefined {
+):
+  | Partial<
+      Record<NeatChatSession['routingLog'][number]['selectedPath'], string>
+    >
+  | undefined {
   if (!isNonArrayRecord(value)) {
     return undefined;
   }
@@ -705,10 +736,14 @@ function isNumericRecord(value: unknown): value is Record<string, number> {
     return false;
   }
 
-  return Object.values(value).every((recordValue) => Number.isFinite(Number(recordValue)));
+  return Object.values(value).every((recordValue) =>
+    Number.isFinite(Number(recordValue)),
+  );
 }
 
-function cloneNumericRecord(record: Record<string, number>): Record<string, number> {
+function cloneNumericRecord(
+  record: Record<string, number>,
+): Record<string, number> {
   return Object.fromEntries(
     Object.entries(record).map(([recordKey, recordValue]) => [
       recordKey,
@@ -738,7 +773,9 @@ function normalizeOptionalMemoryBank(
     return undefined;
   }
 
-  const normalizedRecords = memoryBank.records.map(normalizeOptionalMemoryRecord);
+  const normalizedRecords = memoryBank.records.map(
+    normalizeOptionalMemoryRecord,
+  );
 
   if (normalizedRecords.some((memoryRecord) => memoryRecord == null)) {
     return undefined;
@@ -875,10 +912,7 @@ function resolveParameterLayoutEntries(
   }
 
   return layoutEntries.map((layoutEntry, layoutIndex) =>
-    resolveParameterLayoutEntry(
-      layoutEntry,
-      `${fieldName}[${layoutIndex}]`,
-    ),
+    resolveParameterLayoutEntry(layoutEntry, `${fieldName}[${layoutIndex}]`),
   );
 }
 
@@ -939,10 +973,7 @@ function resolveParameterLayoutVersion(
   return SUPPORTED_PARAMETER_VECTOR_LAYOUT_VERSION;
 }
 
-function resolveParameterValues(
-  values: unknown,
-  fieldName: string,
-): number[] {
+function resolveParameterValues(values: unknown, fieldName: string): number[] {
   if (!isParameterValueCollection(values)) {
     throw new NeatChatSnapshotShapeError(
       `NEATchat session snapshot ${fieldName} must be an array or Float64Array.`,

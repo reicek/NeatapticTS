@@ -1,5 +1,8 @@
 import type { NeatChatSession } from './neatChat.types';
-import type { SafetyCheckResult, SafetyViolation } from './neatChat.safety.types';
+import type {
+  SafetyCheckResult,
+  SafetyViolation,
+} from './neatChat.safety.types';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -69,7 +72,10 @@ const INCOMPLETE_FRAGMENT_TERMINAL_TOKENS = new Set([
  * @returns Ordered array of whitespace-delimited tokens; empty for blank input.
  */
 function splitRawTokens(text: string): readonly string[] {
-  return text.trim().split(/\s+/).filter(token => token.length > 0);
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.length > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +92,11 @@ function splitRawTokens(text: string): readonly string[] {
  * @returns Ordered array of normalized token strings; empty when `text` is blank.
  */
 function tokenizeResponse(text: string): readonly string[] {
-  return text.trim().toLowerCase().split(/\s+/).filter(token => token.length > 0);
+  return text
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((token) => token.length > 0);
 }
 
 /**
@@ -120,9 +130,9 @@ function isIncompleteFragment(response: string): boolean {
  */
 function buildBigrams(tokens: readonly string[]): readonly string[] {
   if (tokens.length < REPETITION_BIGRAM_WINDOW) return [];
-  return tokens.slice(0, tokens.length - 1).map(
-    (token, tokenIndex) => `${token} ${tokens[tokenIndex + 1]}`,
-  );
+  return tokens
+    .slice(0, tokens.length - 1)
+    .map((token, tokenIndex) => `${token} ${tokens[tokenIndex + 1]}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -213,7 +223,10 @@ export function isRepetitionCollapse(
  * isUnknownToken('HELLO', session); // false (lowercased match)
  * ```
  */
-export function isUnknownToken(token: string, session: NeatChatSession): boolean {
+export function isUnknownToken(
+  token: string,
+  session: NeatChatSession,
+): boolean {
   if (token.length === 0) return true;
   // Step 1: Try original form first (catches uppercase special tokens: UNK, BOS, EOS, TURN_BREAK).
   if (session.vocabulary.termToIndex.has(token)) return false;
@@ -306,7 +319,9 @@ export function checkSafety(
   }
 
   /** @returns A fail result for literal placeholder tokens, or null. */
-  function checkPlaceholderSurfaceTokens(text: string): SafetyCheckResult | null {
+  function checkPlaceholderSurfaceTokens(
+    text: string,
+  ): SafetyCheckResult | null {
     const tokens = splitRawTokens(text);
     const firstPlaceholderToken = tokens.find(isPunctuationPlaceholderToken);
     if (firstPlaceholderToken === undefined) return null;
@@ -324,7 +339,9 @@ export function checkSafety(
     // Use splitRawTokens (preserves case) so uppercase special tokens such as
     // 'UNK' are matched against the vocabulary's original-form entries.
     const tokens = splitRawTokens(text);
-    const firstUnknown = tokens.find(token => isUnknownToken(token, chatSession));
+    const firstUnknown = tokens.find((token) =>
+      isUnknownToken(token, chatSession),
+    );
     if (firstUnknown === undefined) return null;
     return buildFailResult(
       'unknown-token',

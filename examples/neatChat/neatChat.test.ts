@@ -147,10 +147,8 @@ describe('neatChat public contract behavior', () => {
 
     // Assert
     expect({
-      gruArchitectureFamily:
-        gruSeedNetworkResult.summary.architectureFamily,
-      narxArchitectureFamily:
-        narxSeedNetworkResult.summary.architectureFamily,
+      gruArchitectureFamily: gruSeedNetworkResult.summary.architectureFamily,
+      narxArchitectureFamily: narxSeedNetworkResult.summary.architectureFamily,
     }).toEqual({
       gruArchitectureFamily: 'gru',
       narxArchitectureFamily: 'narx',
@@ -321,7 +319,12 @@ describe('neatChat online learning behavior', () => {
       const vocabulary = buildNeatChatVocabulary();
 
       // Assert
-      expect(vocabulary.indexToTerm).toEqual(['UNK', 'BOS', 'EOS', 'TURN_BREAK']);
+      expect(vocabulary.indexToTerm).toEqual([
+        'UNK',
+        'BOS',
+        'EOS',
+        'TURN_BREAK',
+      ]);
     });
 
     it('buildNeatChatVocabulary places special tokens at stable indices 0–3', () => {
@@ -853,7 +856,9 @@ describe('neatChat online learning behavior', () => {
       runNeatChatExchange(session, 'hello');
 
       // Assert
-      expect(recordingNetwork.getRecordedTrainingCaseIndices().slice(5, 9)).toEqual([
+      expect(
+        recordingNetwork.getRecordedTrainingCaseIndices().slice(5, 9),
+      ).toEqual([
         { inputTokenIndex: 1, outputTokenIndex: 0 },
         { inputTokenIndex: 0, outputTokenIndex: 3 },
         { inputTokenIndex: 3, outputTokenIndex: 4 },
@@ -886,7 +891,10 @@ describe('neatChat helper edge cases', () => {
     const vocabulary = buildNeatChatVocabulary(['hello']);
 
     // Act
-    const tokenIndices = mapTextToVocabularyIndices(vocabulary, 'hello mystery');
+    const tokenIndices = mapTextToVocabularyIndices(
+      vocabulary,
+      'hello mystery',
+    );
 
     // Assert
     expect(tokenIndices).toEqual([4, 0]);

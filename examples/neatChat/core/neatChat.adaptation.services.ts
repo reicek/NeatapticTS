@@ -263,7 +263,10 @@ function buildReplayTrainingCases(
   exchangeRecords: readonly NeatChatExchangeRecord[],
 ): NeatChatAdaptationTrainingCase[] {
   return exchangeRecords.flatMap((exchangeRecord) => {
-    const userIndices = mapTokensToIndices(vocabulary, exchangeRecord.userTokens);
+    const userIndices = mapTokensToIndices(
+      vocabulary,
+      exchangeRecord.userTokens,
+    );
     const responseIndices = mapTokensToIndices(
       vocabulary,
       exchangeRecord.responseTokens,
@@ -309,7 +312,10 @@ function buildTrainingCasesFromSequence(
 ): NeatChatAdaptationTrainingCase[] {
   return tokenSequence.slice(0, -1).map((tokenIndex, tokenPairIndex) => ({
     input: buildOneHotVector(tokenIndex, vocabularySize),
-    output: buildOneHotVector(tokenSequence[tokenPairIndex + 1]!, vocabularySize),
+    output: buildOneHotVector(
+      tokenSequence[tokenPairIndex + 1]!,
+      vocabularySize,
+    ),
   }));
 }
 
@@ -324,9 +330,7 @@ function buildOneHotVector(
   return oneHotVector;
 }
 
-function createFineTuneOptions(
-  options: ScheduleNeatChatAdaptationOptions,
-): {
+function createFineTuneOptions(options: ScheduleNeatChatAdaptationOptions): {
   steps: number;
   learningRate: number;
   seed?: number;

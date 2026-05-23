@@ -28,7 +28,7 @@ Key validation evidence captured during the workstream:
 - `node scripts/semantic-index/validate-index.mjs --json` passed with 830 documents and at least 27,726 chunks before final archive refresh.
 - `node scripts/semantic-index/build-index.mjs --json; node scripts/semantic-index/validate-index.mjs --json` passed immediately before Step 07 started.
 
-Layer 2 readiness: `plans/Semantic_Knowledge_MCP_Tools.plans.md` is ready to proceed. Its Step 01 gate can use the archived foundation baseline plus the live `node scripts/semantic-index/validate-index.mjs --json` freshness gate.
+Layer 2 closeout: `plans/completed/Semantic_Knowledge_MCP_Tools.plans.md` is archived as [DONE]. Its implementation used the archived foundation baseline plus the live `node scripts/semantic-index/validate-index.mjs --json` freshness gate.
 
 ## Reopen conditions
 
@@ -36,7 +36,7 @@ Reopen this archive only if the offline corpus index contract changes materially
 
 Routine follow-up should start from active downstream plans instead:
 
-- `plans/Semantic_Knowledge_MCP_Tools.plans.md` for MCP tool exposure.
+- `plans/completed/Semantic_Knowledge_MCP_Tools.plans.md` for the archived MCP tool exposure baseline.
 - `plans/Semantic_Knowledge_Browser_Snapshot.plans.md` for browser JSON snapshots and IndexedDB loading.
 - `plans/Semantic_Knowledge_Embeddings.plans.md` for hybrid BM25 plus dense retrieval.
 

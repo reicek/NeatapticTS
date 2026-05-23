@@ -159,23 +159,23 @@ jest.mock('./index', () => {
       return {
         response,
         responseTokens,
-      userTokens: ['hello'],
-      trainedTokenPairCount: 3,
-      updatedSession: {
-        ...session,
-        exchanges: [
-          ...session.exchanges,
-          {
-            userMessage,
-            response,
-            trainedTokenPairCount: 3,
-            userTokens: ['hello'],
-            responseTokens,
-          },
-        ],
-        learnedExchangeCount: session.learnedExchangeCount + 1,
-        learnedTokenPairCount: session.learnedTokenPairCount + 3,
-      },
+        userTokens: ['hello'],
+        trainedTokenPairCount: 3,
+        updatedSession: {
+          ...session,
+          exchanges: [
+            ...session.exchanges,
+            {
+              userMessage,
+              response,
+              trainedTokenPairCount: 3,
+              userTokens: ['hello'],
+              responseTokens,
+            },
+          ],
+          learnedExchangeCount: session.learnedExchangeCount + 1,
+          learnedTokenPairCount: session.learnedTokenPairCount + 3,
+        },
       };
     }),
     createNeatChatAbComparison: jest.fn((prompt: string) => ({

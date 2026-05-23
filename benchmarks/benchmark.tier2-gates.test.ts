@@ -40,7 +40,10 @@ function runGateJson(scriptName: string): Record<string, unknown> {
  * Run a helper script with extra args and return parsed stdout.
  * Throws if stdout is not valid JSON — intentionally red when the script does not exist.
  */
-function runHelperJson(scriptName: string, args: string[]): Record<string, unknown> {
+function runHelperJson(
+  scriptName: string,
+  args: string[],
+): Record<string, unknown> {
   const scriptPath = path.join(GATES_DIR, scriptName);
   const result = spawnSync('node', [scriptPath, '--json', ...args], {
     encoding: 'utf8',
@@ -57,160 +60,224 @@ describe('Tier-2 gate scripts — output contract', () => {
   // 00-helping: output-resolution-evidence gate
   describe('00-helping: output-resolution-evidence gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('output-resolution-evidence.gate.mjs')['pass']).toBe('boolean');
+      expect(
+        typeof runGateJson('output-resolution-evidence.gate.mjs')['pass'],
+      ).toBe('boolean');
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('output-resolution-evidence.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('output-resolution-evidence.gate.mjs')['fixHint']).toBe('string');
+      expect(
+        typeof runGateJson('output-resolution-evidence.gate.mjs')['fixHint'],
+      ).toBe('string');
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('output-resolution-evidence.gate.mjs')['owner']).toBe('string');
+      expect(
+        typeof runGateJson('output-resolution-evidence.gate.mjs')['owner'],
+      ).toBe('string');
     });
   });
 
   // 01-planning: planning-output-contract gate
   describe('01-planning: planning-output-contract gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('planning-output-contract.gate.mjs')['pass']).toBe('boolean');
+      expect(
+        typeof runGateJson('planning-output-contract.gate.mjs')['pass'],
+      ).toBe('boolean');
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('planning-output-contract.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('planning-output-contract.gate.mjs')['fixHint']).toBe('string');
+      expect(
+        typeof runGateJson('planning-output-contract.gate.mjs')['fixHint'],
+      ).toBe('string');
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('planning-output-contract.gate.mjs')['owner']).toBe('string');
+      expect(
+        typeof runGateJson('planning-output-contract.gate.mjs')['owner'],
+      ).toBe('string');
     });
   });
 
   // 02-researching: research-findings-evidence gate
   describe('02-researching: research-findings-evidence gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('research-findings-evidence.gate.mjs')['pass']).toBe('boolean');
+      expect(
+        typeof runGateJson('research-findings-evidence.gate.mjs')['pass'],
+      ).toBe('boolean');
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('research-findings-evidence.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('research-findings-evidence.gate.mjs')['fixHint']).toBe('string');
+      expect(
+        typeof runGateJson('research-findings-evidence.gate.mjs')['fixHint'],
+      ).toBe('string');
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('research-findings-evidence.gate.mjs')['owner']).toBe('string');
+      expect(
+        typeof runGateJson('research-findings-evidence.gate.mjs')['owner'],
+      ).toBe('string');
     });
   });
 
   // 03-red-testing: red-test-confirmation gate
   describe('03-red-testing: red-test-confirmation gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('red-test-confirmation.gate.mjs')['pass']).toBe('boolean');
+      expect(typeof runGateJson('red-test-confirmation.gate.mjs')['pass']).toBe(
+        'boolean',
+      );
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('red-test-confirmation.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('red-test-confirmation.gate.mjs')['fixHint']).toBe('string');
+      expect(
+        typeof runGateJson('red-test-confirmation.gate.mjs')['fixHint'],
+      ).toBe('string');
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('red-test-confirmation.gate.mjs')['owner']).toBe('string');
+      expect(
+        typeof runGateJson('red-test-confirmation.gate.mjs')['owner'],
+      ).toBe('string');
     });
   });
 
   // 04-implementing: implementation-artifact-paths gate
   describe('04-implementing: implementation-artifact-paths gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('implementation-artifact-paths.gate.mjs')['pass']).toBe('boolean');
+      expect(
+        typeof runGateJson('implementation-artifact-paths.gate.mjs')['pass'],
+      ).toBe('boolean');
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('implementation-artifact-paths.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('implementation-artifact-paths.gate.mjs')['fixHint']).toBe('string');
+      expect(
+        typeof runGateJson('implementation-artifact-paths.gate.mjs')['fixHint'],
+      ).toBe('string');
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('implementation-artifact-paths.gate.mjs')['owner']).toBe('string');
+      expect(
+        typeof runGateJson('implementation-artifact-paths.gate.mjs')['owner'],
+      ).toBe('string');
     });
   });
 
   // 05-green-testing: green-validation-evidence gate
   describe('05-green-testing: green-validation-evidence gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('green-validation-evidence.gate.mjs')['pass']).toBe('boolean');
+      expect(
+        typeof runGateJson('green-validation-evidence.gate.mjs')['pass'],
+      ).toBe('boolean');
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('green-validation-evidence.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('green-validation-evidence.gate.mjs')['fixHint']).toBe('string');
+      expect(
+        typeof runGateJson('green-validation-evidence.gate.mjs')['fixHint'],
+      ).toBe('string');
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('green-validation-evidence.gate.mjs')['owner']).toBe('string');
+      expect(
+        typeof runGateJson('green-validation-evidence.gate.mjs')['owner'],
+      ).toBe('string');
     });
   });
 
   // 06-documenting: docs-artifact-reference gate
   describe('06-documenting: docs-artifact-reference gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('docs-artifact-reference.gate.mjs')['pass']).toBe('boolean');
+      expect(
+        typeof runGateJson('docs-artifact-reference.gate.mjs')['pass'],
+      ).toBe('boolean');
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('docs-artifact-reference.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('docs-artifact-reference.gate.mjs')['fixHint']).toBe('string');
+      expect(
+        typeof runGateJson('docs-artifact-reference.gate.mjs')['fixHint'],
+      ).toBe('string');
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('docs-artifact-reference.gate.mjs')['owner']).toBe('string');
+      expect(
+        typeof runGateJson('docs-artifact-reference.gate.mjs')['owner'],
+      ).toBe('string');
     });
   });
 
   // 07-logging: log-completion-marker gate
   describe('07-logging: log-completion-marker gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('log-completion-marker.gate.mjs')['pass']).toBe('boolean');
+      expect(typeof runGateJson('log-completion-marker.gate.mjs')['pass']).toBe(
+        'boolean',
+      );
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('log-completion-marker.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('log-completion-marker.gate.mjs')['fixHint']).toBe('string');
+      expect(
+        typeof runGateJson('log-completion-marker.gate.mjs')['fixHint'],
+      ).toBe('string');
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('log-completion-marker.gate.mjs')['owner']).toBe('string');
+      expect(
+        typeof runGateJson('log-completion-marker.gate.mjs')['owner'],
+      ).toBe('string');
     });
   });
 });
@@ -239,7 +306,10 @@ describe('record_gate_exception helper — output contract', () => {
 
   it('returns an exception-evidence object', () => {
     const output = runHelperJson('record-gate-exception.mjs', EXCEPTION_ARGS);
-    expect(output['exception-evidence'] !== null && typeof output['exception-evidence'] === 'object').toBe(true);
+    expect(
+      output['exception-evidence'] !== null &&
+        typeof output['exception-evidence'] === 'object',
+    ).toBe(true);
   });
 
   it('returns an agent string', () => {

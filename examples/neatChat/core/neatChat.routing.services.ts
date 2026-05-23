@@ -9,7 +9,10 @@ import {
   NEATCHAT_SPECIAL_TOKENS,
 } from './neatChat.constants';
 import { tokenizeNeatChatText } from './neatChat.tokenization.utils';
-import type { NeatChatAdaptationCandidate, NeatChatAdaptationManager } from './neatChat.adaptation.types';
+import type {
+  NeatChatAdaptationCandidate,
+  NeatChatAdaptationManager,
+} from './neatChat.adaptation.types';
 import type { NeatChatMemoryRetrievalResult } from './neatChat.memory.types';
 import type {
   NeatChatRoutingCandidate,
@@ -157,7 +160,10 @@ export function appendNeatChatRoutingDecision(
       retrievedMemoryKeysByPath: buildRetrievedMemoryKeysByPath(candidates),
       retrievedMemoryCountByPath: buildRetrievedMemoryCountByPath(candidates),
       responsesByPath: Object.fromEntries(
-        candidates.map((candidate) => [candidate.routingPath, candidate.response]),
+        candidates.map((candidate) => [
+          candidate.routingPath,
+          candidate.response,
+        ]),
       ) as Partial<Record<NeatChatRoutingPath, string>>,
     },
   ];
@@ -167,7 +173,11 @@ function createBaseRoutingCandidate(
   session: NeatChatSession,
   promptText: string,
 ): NeatChatRoutingCandidate {
-  const responseResult = generateCandidateResponse(session, session.network, promptText);
+  const responseResult = generateCandidateResponse(
+    session,
+    session.network,
+    promptText,
+  );
 
   return {
     routingPath: 'base',
@@ -224,8 +234,11 @@ function createRetrievalGroundedCandidate(
     return undefined;
   }
 
-  const retrievedMemoryKeys = retrievedMemories.map((memoryResult) => memoryResult.key);
-  const groundingPromptText = `${promptText} ${buildRetrievedMemoryContext(retrievedMemories)}`.trim();
+  const retrievedMemoryKeys = retrievedMemories.map(
+    (memoryResult) => memoryResult.key,
+  );
+  const groundingPromptText =
+    `${promptText} ${buildRetrievedMemoryContext(retrievedMemories)}`.trim();
   const responseResult = generateCandidateResponse(
     session,
     session.network,
@@ -241,7 +254,8 @@ function createRetrievalGroundedCandidate(
     response: responseResult.response,
     responseTokens: responseResult.responseTokens,
     score: clampToUnitInterval(
-      (responseResult.averageSelectedTokenConfidence + retrievalSupportScore) / 2,
+      (responseResult.averageSelectedTokenConfidence + retrievalSupportScore) /
+        2,
     ),
     retrievedMemoryCount: retrievedMemories.length,
     retrievedMemoryKeys,
@@ -263,9 +277,11 @@ function generateCandidateResponse(
   );
   const promptIndices = promptTokens.map(
     (token) =>
-      session.vocabulary.termToIndex.get(token) ?? NEATCHAT_SPECIAL_TOKEN_INDICES.UNK,
+      session.vocabulary.termToIndex.get(token) ??
+      NEATCHAT_SPECIAL_TOKEN_INDICES.UNK,
   );
-  const workingNetwork = cloneNetworkIfAvailable(sourceNetwork) ?? sourceNetwork;
+  const workingNetwork =
+    cloneNetworkIfAvailable(sourceNetwork) ?? sourceNetwork;
 
   workingNetwork.clear();
 
@@ -342,10 +358,7 @@ function resolveResponseTokens(
     return [];
   }
 
-  const fallbackToken = resolveFallbackToken(
-    vocabulary,
-    promptIndices.at(-1)!,
-  );
+  const fallbackToken = resolveFallbackToken(vocabulary, promptIndices.at(-1)!);
 
   return [fallbackToken];
 }
@@ -358,7 +371,8 @@ function resolveFallbackToken(
 
   if (
     requestedToken !== undefined &&
-    requestedToken !== vocabulary.indexToTerm[NEATCHAT_SPECIAL_TOKEN_INDICES.UNK] &&
+    requestedToken !==
+      vocabulary.indexToTerm[NEATCHAT_SPECIAL_TOKEN_INDICES.UNK] &&
     requestedToken !== 'BOS' &&
     requestedToken !== 'EOS' &&
     requestedToken !== 'TURN_BREAK'
@@ -385,14 +399,19 @@ function inferRoutingResponseTokenSelection(
   readonly responseIndices: number[];
   readonly averageSelectedTokenConfidence: number;
 } {
-  network.activate(buildOneHotVector(NEATCHAT_SPECIAL_TOKEN_INDICES.BOS, vocabularySize));
+  network.activate(
+    buildOneHotVector(NEATCHAT_SPECIAL_TOKEN_INDICES.BOS, vocabularySize),
+  );
 
   for (const tokenIndex of userIndices) {
     network.activate(buildOneHotVector(tokenIndex, vocabularySize));
   }
 
   network.activate(
-    buildOneHotVector(NEATCHAT_SPECIAL_TOKEN_INDICES.TURN_BREAK, vocabularySize),
+    buildOneHotVector(
+      NEATCHAT_SPECIAL_TOKEN_INDICES.TURN_BREAK,
+      vocabularySize,
+    ),
   );
 
   const responseIndices: number[] = [];
@@ -400,8 +419,11 @@ function inferRoutingResponseTokenSelection(
   let selectedTokenConfidenceSum = 0;
 
   for (let step = 0; step < NEATCHAT_MAX_RESPONSE_TOKENS; step++) {
-    const output = network.activate(buildOneHotVector(currentIndex, vocabularySize));
-    const canTerminate = responseIndices.length >= NEATCHAT_MINIMUM_RESPONSE_LENGTH;
+    const output = network.activate(
+      buildOneHotVector(currentIndex, vocabularySize),
+    );
+    const canTerminate =
+      responseIndices.length >= NEATCHAT_MINIMUM_RESPONSE_LENGTH;
     const nextIndex = selectNextResponseTokenIndex(
       output,
       vocabularySize,
@@ -451,7 +473,9 @@ function selectNextResponseTokenIndex(
 ): number {
   let bestTokenIndex: number = NEATCHAT_SPECIAL_TOKEN_INDICES.EOS;
   let bestTokenScore = -Infinity;
-  const recentWindow = recentResponseIndices.slice(-NEATCHAT_REPETITION_WINDOW_SIZE);
+  const recentWindow = recentResponseIndices.slice(
+    -NEATCHAT_REPETITION_WINDOW_SIZE,
+  );
   const recentIndexSet = new Set(recentWindow);
 
   for (let tokenIndex = 0; tokenIndex < vocabularySize; tokenIndex++) {
@@ -566,7 +590,10 @@ function buildRetrievedMemoryKeysByPath(
 ): NeatChatRoutingDecisionLogEntry['retrievedMemoryKeysByPath'] {
   const entries = candidates
     .filter((candidate) => candidate.retrievedMemoryKeys.length > 0)
-    .map((candidate) => [candidate.routingPath, [...candidate.retrievedMemoryKeys]] as const);
+    .map(
+      (candidate) =>
+        [candidate.routingPath, [...candidate.retrievedMemoryKeys]] as const,
+    );
 
   return entries.length === 0
     ? undefined
@@ -580,11 +607,16 @@ function buildRetrievedMemoryCountByPath(
 ): NeatChatRoutingDecisionLogEntry['retrievedMemoryCountByPath'] {
   const entries = candidates
     .filter((candidate) => candidate.retrievedMemoryCount > 0)
-    .map((candidate) => [candidate.routingPath, candidate.retrievedMemoryCount] as const);
+    .map(
+      (candidate) =>
+        [candidate.routingPath, candidate.retrievedMemoryCount] as const,
+    );
 
   return entries.length === 0
     ? undefined
-    : (Object.fromEntries(entries) as Partial<Record<NeatChatRoutingPath, number>>);
+    : (Object.fromEntries(entries) as Partial<
+        Record<NeatChatRoutingPath, number>
+      >);
 }
 
 function clampToUnitInterval(score: number): number {

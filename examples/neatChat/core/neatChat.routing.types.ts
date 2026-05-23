@@ -68,5 +68,7 @@ export interface NeatChatRoutingDecisionLogEntry {
     Partial<Record<NeatChatRoutingPath, number>>
   >;
   /** Response text per candidate for reproducible debugging. */
-  readonly responsesByPath?: Readonly<Partial<Record<NeatChatRoutingPath, string>>>;
+  readonly responsesByPath?: Readonly<
+    Partial<Record<NeatChatRoutingPath, string>>
+  >;
 }

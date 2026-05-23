@@ -35,9 +35,8 @@ async function main(): Promise<void> {
     evaluationConfig.heldOutLineCount,
   );
   const snapshotModule = await import(
-    pathToFileURL(
-      resolve(process.cwd(), evaluationConfig.snapshotModulePath),
-    ).href
+    pathToFileURL(resolve(process.cwd(), evaluationConfig.snapshotModulePath))
+      .href
   );
   const exportedSnapshot = snapshotModule[evaluationConfig.snapshotExportName];
 
@@ -133,7 +132,8 @@ function resolvePositiveInteger(
   fieldName: string,
   fallbackValue: number,
 ): number {
-  const resolvedValue = rawValue === undefined ? fallbackValue : Number(rawValue);
+  const resolvedValue =
+    rawValue === undefined ? fallbackValue : Number(rawValue);
 
   if (!Number.isInteger(resolvedValue) || resolvedValue <= 0) {
     throw new Error(`${fieldName} must be a positive integer.`);

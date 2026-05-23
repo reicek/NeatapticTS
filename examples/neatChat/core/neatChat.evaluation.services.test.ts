@@ -15,7 +15,9 @@ const runNeatChatRegressionSuite = (
   ...args: Parameters<typeof EvalServices.runNeatChatRegressionSuite>
 ): ReturnType<typeof EvalServices.runNeatChatRegressionSuite> => {
   if (!evaluationServicesModule)
-    throw new Error('W6-03 red: neatChat.evaluation.services not yet implemented');
+    throw new Error(
+      'W6-03 red: neatChat.evaluation.services not yet implemented',
+    );
   return evaluationServicesModule.runNeatChatRegressionSuite(...args);
 };
 
@@ -23,7 +25,9 @@ const attributeToFailureBucket = (
   ...args: Parameters<typeof EvalServices.attributeToFailureBucket>
 ): ReturnType<typeof EvalServices.attributeToFailureBucket> => {
   if (!evaluationServicesModule)
-    throw new Error('W6-03 red: neatChat.evaluation.services not yet implemented');
+    throw new Error(
+      'W6-03 red: neatChat.evaluation.services not yet implemented',
+    );
   return evaluationServicesModule.attributeToFailureBucket(...args);
 };
 
@@ -31,7 +35,9 @@ const scoreNextTokenAccuracy = (
   ...args: Parameters<typeof EvalServices.scoreNextTokenAccuracy>
 ): ReturnType<typeof EvalServices.scoreNextTokenAccuracy> => {
   if (!evaluationServicesModule)
-    throw new Error('W6-03 red: neatChat.evaluation.services not yet implemented');
+    throw new Error(
+      'W6-03 red: neatChat.evaluation.services not yet implemented',
+    );
   return evaluationServicesModule.scoreNextTokenAccuracy(...args);
 };
 
@@ -39,7 +45,9 @@ const scoreRepetitionRate = (
   ...args: Parameters<typeof EvalServices.scoreRepetitionRate>
 ): ReturnType<typeof EvalServices.scoreRepetitionRate> => {
   if (!evaluationServicesModule)
-    throw new Error('W6-03 red: neatChat.evaluation.services not yet implemented');
+    throw new Error(
+      'W6-03 red: neatChat.evaluation.services not yet implemented',
+    );
   return evaluationServicesModule.scoreRepetitionRate(...args);
 };
 
@@ -47,7 +55,9 @@ const scoreResponseLengthStability = (
   ...args: Parameters<typeof EvalServices.scoreResponseLengthStability>
 ): ReturnType<typeof EvalServices.scoreResponseLengthStability> => {
   if (!evaluationServicesModule)
-    throw new Error('W6-03 red: neatChat.evaluation.services not yet implemented');
+    throw new Error(
+      'W6-03 red: neatChat.evaluation.services not yet implemented',
+    );
   return evaluationServicesModule.scoreResponseLengthStability(...args);
 };
 
@@ -55,7 +65,9 @@ const scoreUnknownHandling = (
   ...args: Parameters<typeof EvalServices.scoreUnknownHandling>
 ): ReturnType<typeof EvalServices.scoreUnknownHandling> => {
   if (!evaluationServicesModule)
-    throw new Error('W6-03 red: neatChat.evaluation.services not yet implemented');
+    throw new Error(
+      'W6-03 red: neatChat.evaluation.services not yet implemented',
+    );
   return evaluationServicesModule.scoreUnknownHandling(...args);
 };
 
@@ -63,7 +75,9 @@ const scoreFactualConsistency = (
   ...args: Parameters<typeof EvalServices.scoreFactualConsistency>
 ): ReturnType<typeof EvalServices.scoreFactualConsistency> => {
   if (!evaluationServicesModule)
-    throw new Error('W6-03 red: neatChat.evaluation.services not yet implemented');
+    throw new Error(
+      'W6-03 red: neatChat.evaluation.services not yet implemented',
+    );
   return evaluationServicesModule.scoreFactualConsistency(...args);
 };
 import type {
@@ -73,9 +87,7 @@ import type {
   RegressionEntry,
   RegressionSuiteResult,
 } from './neatChat.evaluation.types';
-import {
-  addNeatChatMemoryRecord,
-} from './neatChat.memory.services';
+import { addNeatChatMemoryRecord } from './neatChat.memory.services';
 import {
   createNeatChatSession,
   runNeatChatExchange,
@@ -145,9 +157,11 @@ describe('runNeatChatRegressionSuite', () => {
     it('includes perMetricMeans for next-token-accuracy across corpus entries', () => {
       // Arrange
       const session = createEvaluationFixtureSession();
-      const harnessInput = createMinimalHarnessInput(session, [
-        { inputPrompt: 'hello', expectedResponse: 'there' },
-      ], { 'next-token-accuracy': 0 });
+      const harnessInput = createMinimalHarnessInput(
+        session,
+        [{ inputPrompt: 'hello', expectedResponse: 'there' }],
+        { 'next-token-accuracy': 0 },
+      );
 
       // Act
       const result: RegressionSuiteResult = runNeatChatRegressionSuite(
@@ -156,21 +170,23 @@ describe('runNeatChatRegressionSuite', () => {
       );
 
       // Assert
-      expect(
-        typeof result.perMetricMeans['next-token-accuracy'],
-      ).toBe('number');
+      expect(typeof result.perMetricMeans['next-token-accuracy']).toBe(
+        'number',
+      );
     });
 
     it('returns totalRegressions of 0 when all entries meet or exceed baseline', () => {
       // Arrange
       const session = createEvaluationFixtureSession();
-      const harnessInput = createMinimalHarnessInput(session, [
-        { inputPrompt: 'hello', expectedResponse: 'there' },
-      ], {
-        'next-token-accuracy': 0,
-        'repetition-rate': 1,
-        'response-length-stability': 0,
-      });
+      const harnessInput = createMinimalHarnessInput(
+        session,
+        [{ inputPrompt: 'hello', expectedResponse: 'there' }],
+        {
+          'next-token-accuracy': 0,
+          'repetition-rate': 1,
+          'response-length-stability': 0,
+        },
+      );
 
       // Act
       const result: RegressionSuiteResult = runNeatChatRegressionSuite(
@@ -185,11 +201,13 @@ describe('runNeatChatRegressionSuite', () => {
     it('includes a bucketBreakdown entry when a regression is attributed', () => {
       // Arrange
       const session = createEvaluationFixtureSession();
-      const harnessInput = createMinimalHarnessInput(session, [
-        { inputPrompt: 'hello', expectedResponse: 'there' },
-      ], {
-        'next-token-accuracy': 1.0,
-      });
+      const harnessInput = createMinimalHarnessInput(
+        session,
+        [{ inputPrompt: 'hello', expectedResponse: 'there' }],
+        {
+          'next-token-accuracy': 1.0,
+        },
+      );
 
       // Act
       const result: RegressionSuiteResult = runNeatChatRegressionSuite(
@@ -198,7 +216,9 @@ describe('runNeatChatRegressionSuite', () => {
       );
 
       // Assert
-      expect(Object.keys(result.bucketBreakdown).length).toBeGreaterThanOrEqual(0);
+      expect(Object.keys(result.bucketBreakdown).length).toBeGreaterThanOrEqual(
+        0,
+      );
     });
   });
 
@@ -209,12 +229,16 @@ describe('runNeatChatRegressionSuite', () => {
         key: 'favorite color',
         value: 'blue',
       });
-      const harnessInput = createMinimalHarnessInput(sessionWithMemory, [
-        {
-          inputPrompt: 'what is my favorite color',
-          expectedResponse: 'your favorite color is blue',
-        },
-      ], { 'factual-consistency': 0 });
+      const harnessInput = createMinimalHarnessInput(
+        sessionWithMemory,
+        [
+          {
+            inputPrompt: 'what is my favorite color',
+            expectedResponse: 'your favorite color is blue',
+          },
+        ],
+        { 'factual-consistency': 0 },
+      );
 
       // Act
       const result: RegressionSuiteResult = runNeatChatRegressionSuite(
@@ -223,9 +247,9 @@ describe('runNeatChatRegressionSuite', () => {
       );
 
       // Assert
-      expect(
-        typeof result.perMetricMeans['factual-consistency'],
-      ).toBe('number');
+      expect(typeof result.perMetricMeans['factual-consistency']).toBe(
+        'number',
+      );
     });
 
     it('does not mutate session state or memory bank during harness evaluation', () => {
@@ -243,7 +267,9 @@ describe('runNeatChatRegressionSuite', () => {
       runNeatChatRegressionSuite(sessionWithMemory, harnessInput);
 
       // Assert
-      expect(sessionWithMemory.memoryBank.records.length).toBe(originalRecordCount);
+      expect(sessionWithMemory.memoryBank.records.length).toBe(
+        originalRecordCount,
+      );
     });
   });
 
@@ -251,9 +277,11 @@ describe('runNeatChatRegressionSuite', () => {
     it('scores repetition-rate and includes it in perMetricMeans', () => {
       // Arrange
       const session = createEvaluationFixtureSession();
-      const harnessInput = createMinimalHarnessInput(session, [
-        { inputPrompt: 'hello', expectedResponse: 'hello hello hello' },
-      ], { 'repetition-rate': 0 });
+      const harnessInput = createMinimalHarnessInput(
+        session,
+        [{ inputPrompt: 'hello', expectedResponse: 'hello hello hello' }],
+        { 'repetition-rate': 0 },
+      );
 
       // Act
       const result: RegressionSuiteResult = runNeatChatRegressionSuite(
@@ -262,9 +290,7 @@ describe('runNeatChatRegressionSuite', () => {
       );
 
       // Assert
-      expect(
-        typeof result.perMetricMeans['repetition-rate'],
-      ).toBe('number');
+      expect(typeof result.perMetricMeans['repetition-rate']).toBe('number');
     });
   });
 
@@ -272,9 +298,11 @@ describe('runNeatChatRegressionSuite', () => {
     it('scores response-length-stability and includes it in perMetricMeans', () => {
       // Arrange
       const session = createEvaluationFixtureSession();
-      const harnessInput = createMinimalHarnessInput(session, [
-        { inputPrompt: 'hello', expectedResponse: 'hello there how are you' },
-      ], { 'response-length-stability': 0 });
+      const harnessInput = createMinimalHarnessInput(
+        session,
+        [{ inputPrompt: 'hello', expectedResponse: 'hello there how are you' }],
+        { 'response-length-stability': 0 },
+      );
 
       // Act
       const result: RegressionSuiteResult = runNeatChatRegressionSuite(
@@ -283,9 +311,9 @@ describe('runNeatChatRegressionSuite', () => {
       );
 
       // Assert
-      expect(
-        typeof result.perMetricMeans['response-length-stability'],
-      ).toBe('number');
+      expect(typeof result.perMetricMeans['response-length-stability']).toBe(
+        'number',
+      );
     });
   });
 
@@ -293,16 +321,19 @@ describe('runNeatChatRegressionSuite', () => {
     it('does not throw when the input prompt contains tokens absent from the vocabulary', () => {
       // Arrange
       const session = createEvaluationFixtureSession();
-      const harnessInput = createMinimalHarnessInput(session, [
-        {
-          inputPrompt: 'zzzzquux_not_in_vocab',
-          expectedResponse: 'hello',
-        },
-      ], {});
+      const harnessInput = createMinimalHarnessInput(
+        session,
+        [
+          {
+            inputPrompt: 'zzzzquux_not_in_vocab',
+            expectedResponse: 'hello',
+          },
+        ],
+        {},
+      );
 
       // Act
-      const runSuite = () =>
-        runNeatChatRegressionSuite(session, harnessInput);
+      const runSuite = () => runNeatChatRegressionSuite(session, harnessInput);
 
       // Assert
       expect(runSuite).not.toThrow();
@@ -330,9 +361,7 @@ describe('runNeatChatRegressionSuite', () => {
       );
 
       // Assert
-      expect(
-        (result.perMetricMeans['unknown-handling'] ?? 1) < 1,
-      ).toBe(true);
+      expect((result.perMetricMeans['unknown-handling'] ?? 1) < 1).toBe(true);
     });
   });
 
@@ -341,9 +370,11 @@ describe('runNeatChatRegressionSuite', () => {
       // Arrange
       const session = createEvaluationFixtureSession();
       const { updatedSession } = runNeatChatExchange(session, 'hello');
-      const harnessInput = createMinimalHarnessInput(updatedSession, [
-        { inputPrompt: 'hello', expectedResponse: 'there' },
-      ], { 'next-token-accuracy': 0 });
+      const harnessInput = createMinimalHarnessInput(
+        updatedSession,
+        [{ inputPrompt: 'hello', expectedResponse: 'there' }],
+        { 'next-token-accuracy': 0 },
+      );
 
       // Act
       const runSuite = () =>
@@ -561,10 +592,7 @@ describe('scoreResponseLengthStability', () => {
 
   it('returns a value in [0, 1] when actual and expected differ', () => {
     // Arrange / Act
-    const score: number = scoreResponseLengthStability(
-      'hello',
-      10,
-    );
+    const score: number = scoreResponseLengthStability('hello', 10);
 
     // Assert
     expect(score >= 0 && score <= 1).toBe(true);
@@ -611,7 +639,10 @@ describe('scoreUnknownHandling', () => {
     const session = createEvaluationFixtureSession();
 
     // Act
-    const score: number = scoreUnknownHandling('zzzzquux_not_in_vocab hello', session);
+    const score: number = scoreUnknownHandling(
+      'zzzzquux_not_in_vocab hello',
+      session,
+    );
 
     // Assert
     expect(score < 1).toBe(true);
@@ -704,14 +735,18 @@ describe('scoreFactualConsistency', () => {
 
   it('returns 1.0 when records exist but all key and value fields are empty strings', () => {
     // Arrange — records exist but tokenize to empty arrays, so factTokens is empty.
-    const emptyTokenMemoryBank: import('./neatChat.memory.types').NeatChatEpisodicMemoryBank = {
-      records: [{ key: '', value: '', addedAt: 0, hitCount: 0 }],
-      maxRecords: 10,
-      lastConsolidatedAt: null,
-    };
+    const emptyTokenMemoryBank: import('./neatChat.memory.types').NeatChatEpisodicMemoryBank =
+      {
+        records: [{ key: '', value: '', addedAt: 0, hitCount: 0 }],
+        maxRecords: 10,
+        lastConsolidatedAt: null,
+      };
 
     // Act
-    const score: number = scoreFactualConsistency('any response', emptyTokenMemoryBank);
+    const score: number = scoreFactualConsistency(
+      'any response',
+      emptyTokenMemoryBank,
+    );
 
     // Assert
     expect(score).toBe(1);
@@ -730,9 +765,10 @@ function createEvaluationFixtureSession(): NeatChatSession {
   });
 }
 
-function createSessionWithMemoryFact(
-  fact: { readonly key: string; readonly value: string },
-): NeatChatSession {
+function createSessionWithMemoryFact(fact: {
+  readonly key: string;
+  readonly value: string;
+}): NeatChatSession {
   const session = createEvaluationFixtureSession();
 
   return {

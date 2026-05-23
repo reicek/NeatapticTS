@@ -1,11 +1,13 @@
-# Delegation Tier Enforcement (Repo Cortex — Layer 4)
+# Delegation Tier Enforcement (Agentic Workflow Enforcement Prerequisite)
 
 **Status:** [PLANNED]
 
 > Defines a formal 5-layer agent delegation tier graph for the NeatapticTS agentic workflow,
 > inventories all agent frontmatter against that graph, extends `validate-agent-graph.mjs`,
 > adds an MCP gate tool, and establishes an audit/escalation policy.
-> Does not depend on the SQLite corpus index; can execute in parallel with Repo Cortex Layers 1–3.
+> Does not depend on the SQLite corpus index; can execute in parallel with Repo Cortex Layers 1–3,
+> but **must complete before any plan that adds or reshapes custom agents or skills**,
+> including Repo Cortex Layer 4 (`Repo_Cortex_MCP_Reliability.plans.md`).
 
 ## Purpose
 
@@ -31,15 +33,16 @@ at runtime.
 
 ## Tier graph definition
 
-| Tier | Label | Examples | user-invocable |
-|---|---|---|---|
-| 0 | Default / Main | Default VS Code Copilot agent | — |
-| 1 | Numbered SDLC Orchestrators | `00-helping` through `07-logging` | Yes |
-| 2 | Named coordinators / sub-orchestrators | `planning-context-coordinator`, `green-test-failure-triage-coordinator`, etc. | No |
-| 3 | Hidden scouts and specialists | `Boundary Mapper`, `Coverage Scout`, `Plan Scout`, etc. | No |
-| 4 | Auxiliaries and one-shot helpers | `acceptance-criteria-writer`, `docs-example-writer`, etc. | No |
+| Tier | Label                                  | Examples                                                                      | user-invocable |
+| ---- | -------------------------------------- | ----------------------------------------------------------------------------- | -------------- |
+| 0    | Default / Main                         | Default VS Code Copilot agent                                                 | —              |
+| 1    | Numbered SDLC Orchestrators            | `00-helping` through `07-logging`                                             | Yes            |
+| 2    | Named coordinators / sub-orchestrators | `planning-context-coordinator`, `green-test-failure-triage-coordinator`, etc. | No             |
+| 3    | Hidden scouts and specialists          | `Boundary Mapper`, `Coverage Scout`, `Plan Scout`, etc.                       | No             |
+| 4    | Auxiliaries and one-shot helpers       | `acceptance-criteria-writer`, `docs-example-writer`, etc.                     | No             |
 
 **Delegation rules enforced:**
+
 - Tier 1 agents may call Tier 2, 3, 4.
 - Tier 2 agents may call Tier 3, 4.
 - Tier 3 agents may call Tier 4.
@@ -54,19 +57,21 @@ at runtime.
 - `scripts/agent-customization/` directory and existing scripts (reuse patterns).
 - MCP server registration in `.vscode/mcp.json` for the gate tool (additive).
 - Does not require SQLite corpus index.
+- **Must complete before** [Repo_Cortex_MCP_Reliability.plans.md](Repo_Cortex_MCP_Reliability.plans.md)
+  begins — that plan adds new hidden specialist agents which must pass tier graph validation.
 
 ## Scope
 
 ### Artifacts
 
-| Artifact | Path | Notes |
-|---|---|---|
-| Tier inventory script | `scripts/agent-customization/tier-inventory.mjs` | Reads all .agent.md files; emits tier assignments |
-| Agent graph validator | `scripts/agent-customization/validate-agent-graph.mjs` | Enforce tier rules; exit non-zero on violation |
+| Artifact              | Path                                                          | Notes                                               |
+| --------------------- | ------------------------------------------------------------- | --------------------------------------------------- |
+| Tier inventory script | `scripts/agent-customization/tier-inventory.mjs`              | Reads all .agent.md files; emits tier assignments   |
+| Agent graph validator | `scripts/agent-customization/validate-agent-graph.mjs`        | Enforce tier rules; exit non-zero on violation      |
 | Tier enforcement gate | `scripts/agent-customization/gates/tier-enforcement-gate.mjs` | Gate contract: `{ pass, evidence, fixHint, owner }` |
-| MCP gate tool | `scripts/agent-customization/mcp/cortex-tier-tool.mjs` | Exposes `query_tier_graph` MCP tool |
-| Audit report | `scripts/agent-customization/tier-audit-report.mjs` | Emits full tier inventory as JSON/markdown |
-| Frontmatter updates | `.github/agents/*.agent.md` | Add `tier:` field to frontmatter where missing |
+| MCP gate tool         | `scripts/agent-customization/mcp/cortex-tier-tool.mjs`        | Exposes `query_tier_graph` MCP tool                 |
+| Audit report          | `scripts/agent-customization/tier-audit-report.mjs`           | Emits full tier inventory as JSON/markdown          |
+| Frontmatter updates   | `.github/agents/*.agent.md`                                   | Add `tier:` field to frontmatter where missing      |
 
 ### `tier-inventory.mjs` output contract
 
@@ -80,11 +85,11 @@ at runtime.
       "tier": 1,
       "user_invocable": true,
       "delegates_to": ["02-researching", "03-red-testing", "..."],
-      "violations": []
-    }
+      "violations": [],
+    },
   ],
   "violations": [],
-  "summary": { "total": 42, "by_tier": { "1": 8, "2": 12, "3": 15, "4": 7 } }
+  "summary": { "total": 42, "by_tier": { "1": 8, "2": 12, "3": 15, "4": 7 } },
 }
 ```
 
@@ -105,6 +110,7 @@ depending on what Step 01 determines is the cleaner fit.
 ### Escalation policy
 
 When `validate-agent-graph.mjs` detects a violation:
+
 1. Report violation with `file`, `tier`, `rule`, and `fixHint`.
 2. Three consecutive violations in a session escalate to `00-helping` via `00.cross-tier-helper`.
 3. Record violations as learning events in `.github/ai-learning/learning-log.jsonl`.
@@ -118,12 +124,12 @@ When `validate-agent-graph.mjs` detects a violation:
 ```yaml
 phase: 1
 step: 1
-agent: "01-planning"
-agent_file: ".github/agents/01-planning.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Delegation_Tier_Enforcement.plans.md"
-skills: "tracker-handoff, agent-frontmatter-standards, agent-inventory-audit"
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Delegation_Tier_Enforcement.plans.md'
+skills: 'tracker-handoff, agent-frontmatter-standards, agent-inventory-audit'
 validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Delegation_Tier_Enforcement.plans.md
 ```
@@ -139,12 +145,12 @@ absent (requiring addition). Author Step 02 through Step 07 packets with concret
 ```yaml
 phase: 2
 step: 2
-agent: "02-researching"
-agent_file: ".github/agents/02-researching.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Delegation_Tier_Enforcement.plans.md"
-skills: "agent-inventory-audit, agent-frontmatter-standards"
+agent: '02-researching'
+agent_file: '.github/agents/02-researching.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Delegation_Tier_Enforcement.plans.md'
+skills: 'agent-inventory-audit, agent-frontmatter-standards'
 validation:
   - Count .github/agents/*.agent.md files
   - Read each file for name, user-invocable, agents allow-list
@@ -163,17 +169,18 @@ Hand off the inventory brief to Step 04 (implementing).
 ```yaml
 phase: 3
 step: 3
-agent: "03-red-testing"
-agent_file: ".github/agents/03-red-testing.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Delegation_Tier_Enforcement.plans.md"
-skills: "red-test-contracts"
+agent: '03-red-testing'
+agent_file: '.github/agents/03-red-testing.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Delegation_Tier_Enforcement.plans.md'
+skills: 'red-test-contracts'
 validation:
   - npx jest --config=jest.config.mjs --no-cache --testPathPattern=scripts/agent-customization/validate-agent-graph
 ```
 
 **Step objective:** Write failing tests for:
+
 - `validate-agent-graph.mjs`: given a mock agent with `user-invocable: true` at Tier 3, reports violation.
 - `validate-agent-graph.mjs`: given a valid Tier 1 agent with correct `user-invocable: true`, reports no violation.
 - `tier-enforcement-gate.mjs`: returns `{ pass: false }` when violations exist, `{ pass: true }` when clean.
@@ -185,12 +192,12 @@ validation:
 ```yaml
 phase: 4
 step: 4
-agent: "04-implementing"
-agent_file: ".github/agents/04-implementing.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Delegation_Tier_Enforcement.plans.md"
-skills: "agent-frontmatter-standards, updating-agent-frontmatter, agent-script-tooling"
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Delegation_Tier_Enforcement.plans.md'
+skills: 'agent-frontmatter-standards, updating-agent-frontmatter, agent-script-tooling'
 validation:
   - node scripts/agent-customization/tier-inventory.mjs --json
   - node scripts/agent-customization/validate-agent-graph.mjs --json
@@ -198,6 +205,7 @@ validation:
 ```
 
 **Step objective:** Implement all artifacts:
+
 1. `tier-inventory.mjs` — reads all `.agent.md` files, assigns tiers, emits JSON.
 2. Add `tier: <N>` frontmatter field to all `.github/agents/*.agent.md` files per the tier graph.
 3. `validate-agent-graph.mjs` — enforce tier rules, `user-invocable` constraints, delegation chain depth.
@@ -212,12 +220,12 @@ validation:
 ```yaml
 phase: 5
 step: 5
-agent: "05-green-testing"
-agent_file: ".github/agents/05-green-testing.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Delegation_Tier_Enforcement.plans.md"
-skills: "green-validation-gates"
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-testing.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Delegation_Tier_Enforcement.plans.md'
+skills: 'green-validation-gates'
 validation:
   - node scripts/agent-customization/tier-inventory.mjs --json
   - node scripts/agent-customization/validate-agent-graph.mjs --json
@@ -236,12 +244,12 @@ agent set after frontmatter updates, gate passes, unit tests green.
 ```yaml
 phase: 6
 step: 6
-agent: "06-documenting"
-agent_file: ".github/agents/06-documenting.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Delegation_Tier_Enforcement.plans.md"
-skills: "educational-docs"
+agent: '06-documenting'
+agent_file: '.github/agents/06-documenting.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Delegation_Tier_Enforcement.plans.md'
+skills: 'educational-docs'
 ```
 
 **Step objective:** Add a `## Tier graph` section to the relevant agent skill or
@@ -256,24 +264,24 @@ to include the new scripts.
 ```yaml
 phase: 7
 step: 7
-agent: "07-logging"
-agent_file: ".github/agents/07-logging.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/Delegation_Tier_Enforcement.plans.md"
-skills: "tracker-handoff, summarizing-session-log"
+agent: '07-logging'
+agent_file: '.github/agents/07-logging.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/Delegation_Tier_Enforcement.plans.md'
+skills: 'tracker-handoff, summarizing-session-log'
 ```
 
 ## Acceptance criteria and validation gates
 
-| Gate | Command | Expected |
-|---|---|---|
-| Tier inventory emits JSON | `node scripts/agent-customization/tier-inventory.mjs --json` | Valid JSON; all agents assigned tiers |
-| Validator clean | `node scripts/agent-customization/validate-agent-graph.mjs --json` | `{ violations: [] }` or exit 0 |
-| Gate passes | `node scripts/agent-customization/gates/tier-enforcement-gate.mjs --json` | `{ pass: true }` |
-| Unit tests green | `npx jest --testPathPattern=scripts/agent-customization/validate-agent-graph` | All pass |
-| No Tier 3/4 user-invocable | Output of `tier-inventory.mjs` | `user-invocable: true` only on Tier 1 agents |
-| All 8 SDLC orchestrators are Tier 1 | Inventory | `00-helping` through `07-logging` all Tier 1 |
+| Gate                                | Command                                                                       | Expected                                     |
+| ----------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------- |
+| Tier inventory emits JSON           | `node scripts/agent-customization/tier-inventory.mjs --json`                  | Valid JSON; all agents assigned tiers        |
+| Validator clean                     | `node scripts/agent-customization/validate-agent-graph.mjs --json`            | `{ violations: [] }` or exit 0               |
+| Gate passes                         | `node scripts/agent-customization/gates/tier-enforcement-gate.mjs --json`     | `{ pass: true }`                             |
+| Unit tests green                    | `npx jest --testPathPattern=scripts/agent-customization/validate-agent-graph` | All pass                                     |
+| No Tier 3/4 user-invocable          | Output of `tier-inventory.mjs`                                                | `user-invocable: true` only on Tier 1 agents |
+| All 8 SDLC orchestrators are Tier 1 | Inventory                                                                     | `00-helping` through `07-logging` all Tier 1 |
 
 ## Handoff query
 

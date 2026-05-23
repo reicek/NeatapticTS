@@ -614,9 +614,9 @@ describe('neatChat snapshot v2 services', () => {
       const restoredOutput = session.network.activate(activationInput);
 
       // Assert
-      expect(Math.abs((restoredOutput[0] ?? 0) - (originalOutput[0] ?? 0)) < 1e-10).toBe(
-        true,
-      );
+      expect(
+        Math.abs((restoredOutput[0] ?? 0) - (originalOutput[0] ?? 0)) < 1e-10,
+      ).toBe(true);
     });
 
     it('importNeatChatSessionV2 accepts runtime ParameterVector objects from the public serializer surface', () => {
@@ -856,7 +856,8 @@ describe('neatChat snapshot v2 services', () => {
     it('rejects parameter vectors whose values length does not match layoutEntries length', () => {
       // Arrange
       const invalidBundle = createStructuredBundleMutation((bundle) => {
-        const originalValues = bundle.parameterVector.values as readonly number[];
+        const originalValues = bundle.parameterVector
+          .values as readonly number[];
 
         bundle.parameterVector.values = originalValues.slice(1);
       });
@@ -912,9 +913,7 @@ describe('neatChat snapshot v2 services', () => {
     it('rejects invalid layout entry kinds with NeatChatSnapshotShapeError', () => {
       // Arrange
       const invalidBundle = createStructuredBundleMutation((bundle) => {
-        bundle.parameterVector.layoutEntries = [
-          { kind: 'mystery', nodeId: 1 },
-        ];
+        bundle.parameterVector.layoutEntries = [{ kind: 'mystery', nodeId: 1 }];
         bundle.parameterVector.values = [1];
         bundle.parameterVector.descriptorHash = 'f72f51e1';
       });
@@ -1027,16 +1026,20 @@ function createCandidateV2Bundle() {
 }
 
 function createStructuredBundleMutation(
-  mutateBundle: (bundle: {
-    parameterVector: {
-      descriptorHash: string;
-      layoutEntries: unknown;
-      layoutVersion: number;
-      values: unknown;
-    };
-  } & Record<string, unknown>) => void,
+  mutateBundle: (
+    bundle: {
+      parameterVector: {
+        descriptorHash: string;
+        layoutEntries: unknown;
+        layoutVersion: number;
+        values: unknown;
+      };
+    } & Record<string, unknown>,
+  ) => void,
 ) {
-  const bundle = exportNeatChatSessionV2(createSnapshotSession()) as unknown as {
+  const bundle = exportNeatChatSessionV2(
+    createSnapshotSession(),
+  ) as unknown as {
     parameterVector: {
       descriptorHash: string;
       layoutEntries: unknown;
@@ -1051,7 +1054,9 @@ function createStructuredBundleMutation(
 }
 
 function createMemoryBankBundle(memoryBank: unknown) {
-  const bundle = exportNeatChatSessionV2(createSnapshotSession()) as unknown as {
+  const bundle = exportNeatChatSessionV2(
+    createSnapshotSession(),
+  ) as unknown as {
     readonly extensions: {
       readonly neatchat: {
         readonly vocabularySize: number;
@@ -1071,7 +1076,9 @@ function createMemoryBankBundle(memoryBank: unknown) {
 }
 
 function createCandidateLogBundle(candidateLog: unknown) {
-  const bundle = exportNeatChatSessionV2(createSnapshotSession()) as unknown as {
+  const bundle = exportNeatChatSessionV2(
+    createSnapshotSession(),
+  ) as unknown as {
     readonly extensions: {
       readonly neatchat: {
         readonly vocabularySize: number;
@@ -1091,7 +1098,9 @@ function createCandidateLogBundle(candidateLog: unknown) {
 }
 
 function createRoutingLogBundle(routingLog: unknown) {
-  const bundle = exportNeatChatSessionV2(createSnapshotSession()) as unknown as {
+  const bundle = exportNeatChatSessionV2(
+    createSnapshotSession(),
+  ) as unknown as {
     readonly extensions: {
       readonly neatchat: {
         readonly vocabularySize: number;
@@ -1148,9 +1157,7 @@ function summarizeTestLayoutEntry(
   }
 
   const innovationSummary =
-    layoutEntry.innovation == null
-      ? 'none'
-      : String(layoutEntry.innovation);
+    layoutEntry.innovation == null ? 'none' : String(layoutEntry.innovation);
 
   return `weight:${String(layoutEntry.from)}->${String(layoutEntry.to)}:innovation:${innovationSummary}`;
 }

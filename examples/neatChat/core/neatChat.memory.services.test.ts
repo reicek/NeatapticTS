@@ -154,9 +154,9 @@ describe('neatChat memory services', () => {
       const updatedBank = addNeatChatMemoryRecord(originalBank, incomingRecord);
 
       // Assert
-      expect(updatedBank.records.map((memoryRecord) => memoryRecord.key)).toEqual(
-        ['favorite color'],
-      );
+      expect(
+        updatedBank.records.map((memoryRecord) => memoryRecord.key),
+      ).toEqual(['favorite color']);
     });
   });
 
@@ -301,10 +301,9 @@ describe('neatChat memory services', () => {
       );
 
       // Assert
-      expect(retrievedMemories.map((memoryRecord) => memoryRecord.key)).toEqual([
-        'favorite note',
-        'favorite update',
-      ]);
+      expect(retrievedMemories.map((memoryRecord) => memoryRecord.key)).toEqual(
+        ['favorite note', 'favorite update'],
+      );
     });
 
     it('does not mutate the session network while retrieving memories', () => {
@@ -369,10 +368,9 @@ describe('neatChat memory services', () => {
       const prunedBank = pruneNeatChatMemoryBank(overfilledBank);
 
       // Assert
-      expect(prunedBank.records.map((memoryRecord) => memoryRecord.key)).toEqual([
-        'newer low-hit',
-        'high-hit keeper',
-      ]);
+      expect(
+        prunedBank.records.map((memoryRecord) => memoryRecord.key),
+      ).toEqual(['newer low-hit', 'high-hit keeper']);
     });
 
     it('breaks equal-priority pruning ties by original index order', () => {
@@ -402,10 +400,9 @@ describe('neatChat memory services', () => {
       const prunedBank = pruneNeatChatMemoryBank(overfilledBank);
 
       // Assert
-      expect(prunedBank.records.map((memoryRecord) => memoryRecord.key)).toEqual([
-        'second equal-priority record',
-        'protected record',
-      ]);
+      expect(
+        prunedBank.records.map((memoryRecord) => memoryRecord.key),
+      ).toEqual(['second equal-priority record', 'protected record']);
     });
   });
 
@@ -475,7 +472,8 @@ describe('neatChat memory services', () => {
       const sessionRecord = session as unknown as Record<string, unknown>;
 
       // Act
-      const hasMemoryBankField = typeof sessionRecord.memoryBank !== 'undefined';
+      const hasMemoryBankField =
+        typeof sessionRecord.memoryBank !== 'undefined';
 
       // Assert
       expect(hasMemoryBankField).toBe(true);

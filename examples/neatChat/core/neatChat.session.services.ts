@@ -374,7 +374,8 @@ export function runNeatChatExchange(
     promptText: string,
   ): NeatChatRoutingCandidate {
     const topCandidate = selectNeatChatCandidate(candidates);
-    const recentResponseSignatures = resolveRecentResponseSignatures(chatSession);
+    const recentResponseSignatures =
+      resolveRecentResponseSignatures(chatSession);
     let remainingCandidates = [...candidates];
     const rejectedViolations: SafetyViolation[] = [];
 
@@ -403,8 +404,12 @@ export function runNeatChatExchange(
         rejectedViolations.push(safetyResult.violation);
       }
 
-      const currentCandidateIndex = remainingCandidates.indexOf(currentCandidate);
-      remainingCandidates = remainingCandidates.toSpliced(currentCandidateIndex, 1);
+      const currentCandidateIndex =
+        remainingCandidates.indexOf(currentCandidate);
+      remainingCandidates = remainingCandidates.toSpliced(
+        currentCandidateIndex,
+        1,
+      );
     }
 
     // Step 2: Replace an all-unsafe candidate set with a bounded floor.
@@ -466,7 +471,9 @@ export function runNeatChatExchange(
     ].filter(
       (responseTokens): responseTokens is readonly string[] =>
         responseTokens !== undefined &&
-        responseTokens.every((token) => chatSession.vocabulary.termToIndex.has(token)),
+        responseTokens.every((token) =>
+          chatSession.vocabulary.termToIndex.has(token),
+        ),
     );
     const freshFallbackResponseTokens = orderedFallbackResponseTokens.find(
       (responseTokens) =>
@@ -477,8 +484,10 @@ export function runNeatChatExchange(
       return freshFallbackResponseTokens;
     }
 
-    return orderedFallbackResponseTokens[0] ??
-      NEATCHAT_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS;
+    return (
+      orderedFallbackResponseTokens[0] ??
+      NEATCHAT_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS
+    );
   }
 
   function resolvePromptAwareNoSafeCandidateFallbackResponseTokens(
@@ -498,7 +507,9 @@ export function runNeatChatExchange(
     responseTokens: readonly string[],
     recentResponseSignatures: ReadonlySet<string>,
   ): boolean {
-    return recentResponseSignatures.has(createResponseSignature(responseTokens));
+    return recentResponseSignatures.has(
+      createResponseSignature(responseTokens),
+    );
   }
 
   function resolveRecentResponseSignatures(
@@ -1031,7 +1042,11 @@ function buildSeedTrigramTrainingCases(
     ];
 
     // Extract consecutive pair patterns from the extended sequence
-    for (let sequenceIndex = 0; sequenceIndex < extendedSequence.length - 1; sequenceIndex++) {
+    for (
+      let sequenceIndex = 0;
+      sequenceIndex < extendedSequence.length - 1;
+      sequenceIndex++
+    ) {
       const currentTokenIndex = extendedSequence[sequenceIndex]!;
       const nextTokenIndex = extendedSequence[sequenceIndex + 1]!;
 

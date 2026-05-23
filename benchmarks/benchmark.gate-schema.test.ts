@@ -43,11 +43,15 @@ describe('Tier-1 gate scripts — output contract', () => {
 
     it('returns an evidence object', () => {
       const output = runGateJson('plan-sync.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('plan-sync.gate.mjs')['fixHint']).toBe('string');
+      expect(typeof runGateJson('plan-sync.gate.mjs')['fixHint']).toBe(
+        'string',
+      );
     });
 
     it('returns an owner string', () => {
@@ -58,60 +62,84 @@ describe('Tier-1 gate scripts — output contract', () => {
   // step-packet gate
   describe('step-packet gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('step-packet.gate.mjs')['pass']).toBe('boolean');
+      expect(typeof runGateJson('step-packet.gate.mjs')['pass']).toBe(
+        'boolean',
+      );
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('step-packet.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('step-packet.gate.mjs')['fixHint']).toBe('string');
+      expect(typeof runGateJson('step-packet.gate.mjs')['fixHint']).toBe(
+        'string',
+      );
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('step-packet.gate.mjs')['owner']).toBe('string');
+      expect(typeof runGateJson('step-packet.gate.mjs')['owner']).toBe(
+        'string',
+      );
     });
   });
 
   // agent-graph gate
   describe('agent-graph gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('agent-graph.gate.mjs')['pass']).toBe('boolean');
+      expect(typeof runGateJson('agent-graph.gate.mjs')['pass']).toBe(
+        'boolean',
+      );
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('agent-graph.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('agent-graph.gate.mjs')['fixHint']).toBe('string');
+      expect(typeof runGateJson('agent-graph.gate.mjs')['fixHint']).toBe(
+        'string',
+      );
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('agent-graph.gate.mjs')['owner']).toBe('string');
+      expect(typeof runGateJson('agent-graph.gate.mjs')['owner']).toBe(
+        'string',
+      );
     });
   });
 
   // learning-event gate
   describe('learning-event gate', () => {
     it('returns a pass boolean', () => {
-      expect(typeof runGateJson('learning-event.gate.mjs')['pass']).toBe('boolean');
+      expect(typeof runGateJson('learning-event.gate.mjs')['pass']).toBe(
+        'boolean',
+      );
     });
 
     it('returns an evidence object', () => {
       const output = runGateJson('learning-event.gate.mjs');
-      expect(output['evidence'] !== null && typeof output['evidence'] === 'object').toBe(true);
+      expect(
+        output['evidence'] !== null && typeof output['evidence'] === 'object',
+      ).toBe(true);
     });
 
     it('returns a fixHint string', () => {
-      expect(typeof runGateJson('learning-event.gate.mjs')['fixHint']).toBe('string');
+      expect(typeof runGateJson('learning-event.gate.mjs')['fixHint']).toBe(
+        'string',
+      );
     });
 
     it('returns an owner string', () => {
-      expect(typeof runGateJson('learning-event.gate.mjs')['owner']).toBe('string');
+      expect(typeof runGateJson('learning-event.gate.mjs')['owner']).toBe(
+        'string',
+      );
     });
   });
 });

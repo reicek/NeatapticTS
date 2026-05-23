@@ -63,7 +63,11 @@ const ALL_EVALUATION_METRICS: readonly EvaluationMetric[] = [
  * ```
  */
 function tokenizeText(text: string): readonly string[] {
-  return text.trim().toLowerCase().split(/\s+/).filter(token => token.length > 0);
+  return text
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((token) => token.length > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -88,7 +92,10 @@ function tokenizeText(text: string): readonly string[] {
  * scoreNextTokenAccuracy('hi there', 'hello world');    // 0
  * ```
  */
-export function scoreNextTokenAccuracy(predicted: string, expected: string): number {
+export function scoreNextTokenAccuracy(
+  predicted: string,
+  expected: string,
+): number {
   const predictedTokens = tokenizeText(predicted);
   const expectedTokens = tokenizeText(expected);
 
@@ -96,11 +103,13 @@ export function scoreNextTokenAccuracy(predicted: string, expected: string): num
   if (predictedTokens.length === 0) return 0;
 
   // Step 1: Compare token-by-token up to min(predicted, expected) length.
-  const comparisonLength = Math.min(predictedTokens.length, expectedTokens.length);
+  const comparisonLength = Math.min(
+    predictedTokens.length,
+    expectedTokens.length,
+  );
   const matchCount = predictedTokens
     .slice(0, comparisonLength)
-    .filter((token, tokenIndex) => token === expectedTokens[tokenIndex])
-    .length;
+    .filter((token, tokenIndex) => token === expectedTokens[tokenIndex]).length;
 
   // Step 2: Normalise by expected length so missing tokens count as errors.
   return matchCount / expectedTokens.length;
@@ -199,13 +208,16 @@ export function scoreResponseLengthStability(
  * scoreUnknownHandling('zzquux', session);      // 0 if token is out-of-vocabulary
  * ```
  */
-export function scoreUnknownHandling(text: string, session: NeatChatSession): number {
+export function scoreUnknownHandling(
+  text: string,
+  session: NeatChatSession,
+): number {
   const textTokens = tokenizeText(text);
 
   if (textTokens.length === 0) return 1;
 
   // Step 1: Count tokens present in the session vocabulary.
-  const inVocabCount = textTokens.filter(token =>
+  const inVocabCount = textTokens.filter((token) =>
     session.vocabulary.termToIndex.has(token),
   ).length;
 
@@ -242,7 +254,7 @@ export function scoreFactualConsistency(
   if (records.length === 0) return 1;
 
   // Step 2: Collect all fact tokens from all memory record key/value pairs.
-  const factTokens = records.flatMap(record => [
+  const factTokens = records.flatMap((record) => [
     ...tokenizeText(record.key),
     ...tokenizeText(record.value),
   ]);
@@ -251,7 +263,9 @@ export function scoreFactualConsistency(
 
   // Step 3: Check which fact tokens appear in the response token set.
   const responseTokenSet = new Set(tokenizeText(response));
-  const matchedFactCount = factTokens.filter(token => responseTokenSet.has(token)).length;
+  const matchedFactCount = factTokens.filter((token) =>
+    responseTokenSet.has(token),
+  ).length;
 
   // Step 4: Normalise matched count by total fact token count.
   return matchedFactCount / factTokens.length;
@@ -353,14 +367,20 @@ function isRegressionScore(
  * @returns Partial metric scores map for the entry.
  */
 function scoreAllMetricsForEntry(
-  corpusEntry: { readonly inputPrompt: string; readonly expectedResponse: string },
+  corpusEntry: {
+    readonly inputPrompt: string;
+    readonly expectedResponse: string;
+  },
   session: NeatChatSession,
 ): Readonly<Partial<Record<EvaluationMetric, number>>> {
   const { inputPrompt, expectedResponse } = corpusEntry;
   const expectedTokenLength = tokenizeText(expectedResponse).length;
 
   // Step 1: Token-level accuracy against the expected corpus baseline.
-  const nextTokenAccuracy = scoreNextTokenAccuracy(expectedResponse, expectedResponse);
+  const nextTokenAccuracy = scoreNextTokenAccuracy(
+    expectedResponse,
+    expectedResponse,
+  );
 
   // Step 2: Bigram repetition in the expected response.
   const repetitionRate = scoreRepetitionRate(expectedResponse);
@@ -372,7 +392,10 @@ function scoreAllMetricsForEntry(
   );
 
   // Step 4: Factual consistency of expected response against memory bank facts.
-  const factualConsistency = scoreFactualConsistency(expectedResponse, session.memoryBank);
+  const factualConsistency = scoreFactualConsistency(
+    expectedResponse,
+    session.memoryBank,
+  );
 
   // Step 5: OOV fraction of the input prompt (catching unknown inputs before generation).
   const unknownHandling = scoreUnknownHandling(inputPrompt, session);
@@ -396,26 +419,37 @@ function scoreAllMetricsForEntry(
  * @returns Scored entry shape including the attributed bucket.
  */
 function evaluateCorpusEntry(
-  corpusEntry: { readonly inputPrompt: string; readonly expectedResponse: string },
+  corpusEntry: {
+    readonly inputPrompt: string;
+    readonly expectedResponse: string;
+  },
   session: NeatChatSession,
   metricBaselines: Readonly<Partial<Record<EvaluationMetric, number>>>,
-): { readonly metricScores: Readonly<Partial<Record<EvaluationMetric, number>>>; readonly isRegression: boolean; readonly attributedBucket: FailureBucket } {
+): {
+  readonly metricScores: Readonly<Partial<Record<EvaluationMetric, number>>>;
+  readonly isRegression: boolean;
+  readonly attributedBucket: FailureBucket;
+} {
   // Step 1: Score all metrics for this entry.
   const metricScores = scoreAllMetricsForEntry(corpusEntry, session);
 
   // Step 2: Check only metrics that have a declared baseline.
   // baseline is guaranteed to be defined by Object.keys iteration;
   // score is always populated by scoreAllMetricsForEntry for all EvaluationMetric keys.
-  const hasRegression = (Object.keys(metricBaselines) as EvaluationMetric[]).some(
-    metric => {
-      const score = metricScores[metric];
-      const baseline = metricBaselines[metric]!;
-      return score !== undefined && isRegressionScore(metric, score, baseline);
-    },
-  );
+  const hasRegression = (
+    Object.keys(metricBaselines) as EvaluationMetric[]
+  ).some((metric) => {
+    const score = metricScores[metric];
+    const baseline = metricBaselines[metric]!;
+    return score !== undefined && isRegressionScore(metric, score, baseline);
+  });
 
   if (!hasRegression) {
-    return { metricScores, isRegression: false, attributedBucket: 'unattributed' };
+    return {
+      metricScores,
+      isRegression: false,
+      attributedBucket: 'unattributed',
+    };
   }
 
   // Step 3: Build a minimal regression entry to pass to the attribution function.
@@ -441,20 +475,23 @@ function evaluateCorpusEntry(
  * @returns Aggregated per-metric mean scores.
  */
 function aggregatePerMetricMeans(
-  allEntryScores: readonly Readonly<Partial<Record<EvaluationMetric, number>>>[],
+  allEntryScores: readonly Readonly<
+    Partial<Record<EvaluationMetric, number>>
+  >[],
 ): Readonly<Partial<Record<EvaluationMetric, number>>> {
   const perMetricMeans: Partial<Record<EvaluationMetric, number>> = {};
 
   for (const metric of ALL_EVALUATION_METRICS) {
     // Step 1: Collect scores for this metric across all entries.
     const metricScores = allEntryScores
-      .map(entryScores => entryScores[metric])
+      .map((entryScores) => entryScores[metric])
       .filter((score): score is number => score !== undefined);
 
     // Step 2: Compute mean only when at least one entry evaluated this metric.
     if (metricScores.length > 0) {
       perMetricMeans[metric] =
-        metricScores.reduce((sum, score) => sum + score, 0) / metricScores.length;
+        metricScores.reduce((sum, score) => sum + score, 0) /
+        metricScores.length;
     }
   }
 
@@ -522,19 +559,19 @@ export function runNeatChatRegressionSuite(
   input: EvaluationHarnessInput,
 ): RegressionSuiteResult {
   // Step 1: Score and attribute each corpus entry individually.
-  const evaluatedEntries = input.corpusEntries.map(corpusEntry =>
+  const evaluatedEntries = input.corpusEntries.map((corpusEntry) =>
     evaluateCorpusEntry(corpusEntry, session, input.metricBaselines),
   );
 
   // Step 2: Aggregate per-metric means across all entries.
   const perMetricMeans = aggregatePerMetricMeans(
-    evaluatedEntries.map(evaluatedEntry => evaluatedEntry.metricScores),
+    evaluatedEntries.map((evaluatedEntry) => evaluatedEntry.metricScores),
   );
 
   // Step 3: Collect regression entries and build the bucket breakdown.
   const regressionBuckets = evaluatedEntries
-    .filter(evaluatedEntry => evaluatedEntry.isRegression)
-    .map(evaluatedEntry => evaluatedEntry.attributedBucket);
+    .filter((evaluatedEntry) => evaluatedEntry.isRegression)
+    .map((evaluatedEntry) => evaluatedEntry.attributedBucket);
 
   const bucketBreakdown = buildBucketBreakdown(regressionBuckets);
 

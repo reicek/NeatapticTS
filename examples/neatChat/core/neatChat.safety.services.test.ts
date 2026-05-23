@@ -44,7 +44,10 @@ const isDegenerateResponse = (
 };
 
 import { createNeatChatSession } from './neatChat.session.services';
-import type { SafetyCheckResult, SafetyViolation } from './neatChat.safety.types';
+import type {
+  SafetyCheckResult,
+  SafetyViolation,
+} from './neatChat.safety.types';
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -118,7 +121,9 @@ describe('isRepetitionCollapse', () => {
   });
 
   it('returns true for a bigram repeat loop', () => {
-    expect(isRepetitionCollapse('hello there hello there hello there hello there')).toBe(true);
+    expect(
+      isRepetitionCollapse('hello there hello there hello there hello there'),
+    ).toBe(true);
   });
 
   it('returns false for a single-token input (no bigrams to check)', () => {
@@ -278,13 +283,19 @@ describe('checkSafety — unknown-token', () => {
 describe('checkSafety — passing responses', () => {
   it('returns ok:true and null violation for a well-formed in-vocabulary response', () => {
     const session = makeSession();
-    const result: SafetyCheckResult = checkSafety(session, 'hello there how are you');
+    const result: SafetyCheckResult = checkSafety(
+      session,
+      'hello there how are you',
+    );
     expect(result.ok).toBe(true);
   });
 
   it('sets violation to null for a safe response', () => {
     const session = makeSession();
-    const result = checkSafety(session, 'the quick brown fox jumps over the lazy dog');
+    const result = checkSafety(
+      session,
+      'the quick brown fox jumps over the lazy dog',
+    );
     expect(result.violation).toBe(null);
   });
 

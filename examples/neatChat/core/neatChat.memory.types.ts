@@ -46,17 +46,16 @@ export type NeatChatEpisodicMemoryBank = {
   readonly records: readonly NeatChatMemoryRecord[];
   /** Maximum number of records kept before pruning is required. */
   readonly maxRecords: number;
-} &
-  (
-    | {
-        /** Epoch milliseconds of the most recent consolidation pass, if any. */
-        readonly lastConsolidatedAt: number | null;
-      }
-    | {
-        /** Optional compatibility form used by older owner-local fixtures. */
-        readonly lastConsolidatedAt?: number | null;
-      }
-  );
+} & (
+  | {
+      /** Epoch milliseconds of the most recent consolidation pass, if any. */
+      readonly lastConsolidatedAt: number | null;
+    }
+  | {
+      /** Optional compatibility form used by older owner-local fixtures. */
+      readonly lastConsolidatedAt?: number | null;
+    }
+);
 
 /**
  * Options for creating an empty NEATchat episodic memory bank.

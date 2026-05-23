@@ -5,7 +5,12 @@ import {
   scheduleNeatChatAdaptation,
 } from './neatChat.adaptation.services';
 // @ts-ignore -- W4-03 red contract: adaptation helper types land in W4-04.
-import type { NeatChatAdaptationCandidate, NeatChatAdaptationManager, NeatChatCandidateLogEntry, ScheduleNeatChatAdaptationOptions } from './neatChat.adaptation.types';
+import type {
+  NeatChatAdaptationCandidate,
+  NeatChatAdaptationManager,
+  NeatChatCandidateLogEntry,
+  ScheduleNeatChatAdaptationOptions,
+} from './neatChat.adaptation.types';
 import {
   Network,
   toParameterVector,
@@ -158,7 +163,11 @@ describe('neatChat adaptation services', () => {
       const manager = createNeatChatAdaptationManager(session);
 
       // Act
-      await scheduleNeatChatAdaptation(manager, session, createAdaptationOptions());
+      await scheduleNeatChatAdaptation(
+        manager,
+        session,
+        createAdaptationOptions(),
+      );
 
       // Assert
       expect(readPendingCandidates(manager)).toHaveLength(1);
@@ -182,7 +191,9 @@ describe('neatChat adaptation services', () => {
         );
 
         // Assert
-        expect(readPendingCandidates(manager).at(0)?.evaluationScores).toEqual({});
+        expect(readPendingCandidates(manager).at(0)?.evaluationScores).toEqual(
+          {},
+        );
       } finally {
         fineTuneVectorSpy.mockRestore();
       }
@@ -228,13 +239,21 @@ describe('neatChat adaptation services', () => {
       // Arrange
       const session = createSessionWithExchange();
       const manager = createNeatChatAdaptationManager(session);
-      const originalNetworkJson = JSON.stringify(cloneSessionNetwork(session).toJSON());
+      const originalNetworkJson = JSON.stringify(
+        cloneSessionNetwork(session).toJSON(),
+      );
 
       // Act
-      await scheduleNeatChatAdaptation(manager, session, createAdaptationOptions());
+      await scheduleNeatChatAdaptation(
+        manager,
+        session,
+        createAdaptationOptions(),
+      );
 
       // Assert
-      expect(JSON.stringify(session.network.toJSON())).toBe(originalNetworkJson);
+      expect(JSON.stringify(session.network.toJSON())).toBe(
+        originalNetworkJson,
+      );
     });
 
     it('resolves even when the session has no exchanges', async () => {
@@ -285,7 +304,9 @@ describe('neatChat adaptation services', () => {
     it('changes the promoted session parameter vector relative to the source session', async () => {
       // Arrange
       const { manager, session } = await createScheduledCandidateFixture();
-      const sourceVectorValues = Array.from(toParameterVector(session.network).values);
+      const sourceVectorValues = Array.from(
+        toParameterVector(session.network).values,
+      );
 
       // Act
       const promotedSession = promoteNeatChatAdaptationCandidate(
@@ -295,9 +316,9 @@ describe('neatChat adaptation services', () => {
       );
 
       // Assert
-      expect(Array.from(toParameterVector(promotedSession.network).values)).not.toEqual(
-        sourceVectorValues,
-      );
+      expect(
+        Array.from(toParameterVector(promotedSession.network).values),
+      ).not.toEqual(sourceVectorValues);
     });
 
     it('appends a promoted candidate log entry to the manager', async () => {
@@ -459,7 +480,9 @@ function readPendingCandidates(
     : [];
 }
 
-function readCandidateLogEntries(value: unknown): readonly NeatChatCandidateLogEntry[] {
+function readCandidateLogEntries(
+  value: unknown,
+): readonly NeatChatCandidateLogEntry[] {
   const candidateLog =
     value && typeof value === 'object' && 'candidateLog' in value
       ? (value as { readonly candidateLog?: unknown }).candidateLog
@@ -479,7 +502,9 @@ function readCandidateLogSummary(value: unknown) {
   };
 }
 
-function cloneSessionNetwork(session: ReturnType<typeof createNeatChatSession>) {
+function cloneSessionNetwork(
+  session: ReturnType<typeof createNeatChatSession>,
+) {
   return Network.fromJSON(session.network.toJSON());
 }
 
@@ -537,8 +562,8 @@ function isParameterVector(value: unknown): value is ParameterVector {
 
   return Boolean(
     parameterVector.layout &&
-      typeof parameterVector.layout === 'object' &&
-      parameterVector.values instanceof Float64Array,
+    typeof parameterVector.layout === 'object' &&
+    parameterVector.values instanceof Float64Array,
   );
 }
 

@@ -18,7 +18,10 @@ import type {
   NeatChatSeedMetadata,
   NeatChatSupportedSeedFamily,
 } from './neatChat.seed-import.types';
-import type { NeatChatSession, NeatChatSessionSnapshotV2 } from './neatChat.types';
+import type {
+  NeatChatSession,
+  NeatChatSessionSnapshotV2,
+} from './neatChat.types';
 
 type SeedImportNetwork = Parameters<typeof fromParameterVector>[0];
 
@@ -276,7 +279,10 @@ function resolveExternalSeedDescriptor(
 ): ResolvedSeedDescriptor {
   const family = resolveSupportedSeedFamily(descriptor.family);
   const vocabSize = resolvePositiveInteger(descriptor.vocabSize, 'vocabSize');
-  const hiddenSize = resolvePositiveInteger(descriptor.hiddenSize, 'hiddenSize');
+  const hiddenSize = resolvePositiveInteger(
+    descriptor.hiddenSize,
+    'hiddenSize',
+  );
 
   if (options.requireSupportedRange) {
     assertSupportedDirectImportRange(vocabSize, hiddenSize);
@@ -503,7 +509,10 @@ function resolveCompatibleNetworkShape(
         hiddenSize * outputCount +
         inputCount * outputCount;
 
-  if (inputCount !== descriptor.vocabSize || outputCount !== descriptor.vocabSize) {
+  if (
+    inputCount !== descriptor.vocabSize ||
+    outputCount !== descriptor.vocabSize
+  ) {
     throw new NeatChatSeedImportError(
       'NEATchat seed descriptor vocabSize must match the native network input and output width.',
       'DIMENSION_MISMATCH',
@@ -922,8 +931,10 @@ function createDeterministicRetainedTerms(vocabSize: number): string[] {
     );
   }
 
-  return Array.from({ length: retainedTermCount }, (_, termIndex) =>
-    `external_seed_term_${String(termIndex).padStart(4, '0')}`,
+  return Array.from(
+    { length: retainedTermCount },
+    (_, termIndex) =>
+      `external_seed_term_${String(termIndex).padStart(4, '0')}`,
   );
 }
 
@@ -938,7 +949,9 @@ function createSeedMetadata(
   };
 }
 
-function createUnsupportedOperatorError(message: string): NeatChatSeedImportError {
+function createUnsupportedOperatorError(
+  message: string,
+): NeatChatSeedImportError {
   return new NeatChatSeedImportError(
     message,
     'UNSUPPORTED_OPERATOR',

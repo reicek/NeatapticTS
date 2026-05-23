@@ -50,10 +50,10 @@ Cortex being present. NeatChat's memory must be self-contained and runnable in b
 
 NeatChat memory has two tiers:
 
-| Tier | Storage | Scope | Retention |
-|---|---|---|---|
-| Session memory | In-process (Map / array) | Current session only | Cleared on session reset |
-| Durable memory | SQLite (Node) / IndexedDB (browser) | Persists across sessions | Pruned by LRU cap |
+| Tier           | Storage                             | Scope                    | Retention                |
+| -------------- | ----------------------------------- | ------------------------ | ------------------------ |
+| Session memory | In-process (Map / array)            | Current session only     | Cleared on session reset |
+| Durable memory | SQLite (Node) / IndexedDB (browser) | Persists across sessions | Pruned by LRU cap        |
 
 ### Retrieval engine
 
@@ -64,17 +64,17 @@ NeatChat memory has two tiers:
 
 ### Artifacts
 
-| Artifact | Path | Notes |
-|---|---|---|
-| Memory type definitions | `examples/neatChat/memory/neatChat.memory.types.ts` | MemoryEntry, MemoryQuery, MemoryResult |
-| Memory DB wrapper | `examples/neatChat/memory/neatChat.memory.db.ts` | SQLite (Node) / IndexedDB (browser) adapter |
-| Retrieval engine | `examples/neatChat/memory/neatChat.retrieval.ts` | BM25 + token-overlap retrieval |
-| Memory services | `examples/neatChat/memory/neatChat.memory.services.ts` | Store, retrieve, prune, export |
-| Memory constants | `examples/neatChat/memory/neatChat.memory.constants.ts` | Cap sizes, TTL, BM25 params |
-| Memory unit tests | `examples/neatChat/memory/neatChat.memory.services.test.ts` | AAA, single-expect-per-test |
-| Retrieval unit tests | `examples/neatChat/memory/neatChat.retrieval.test.ts` | AAA, single-expect-per-test |
-| Session integration hook | `examples/neatChat/core/neatChat.session.services.ts` | Extend to read/write memory layer |
-| Browser memory adapter | `examples/neatChat/memory/neatChat.memory.idb.ts` | IndexedDB adapter for browser runtime |
+| Artifact                 | Path                                                        | Notes                                       |
+| ------------------------ | ----------------------------------------------------------- | ------------------------------------------- |
+| Memory type definitions  | `examples/neatChat/memory/neatChat.memory.types.ts`         | MemoryEntry, MemoryQuery, MemoryResult      |
+| Memory DB wrapper        | `examples/neatChat/memory/neatChat.memory.db.ts`            | SQLite (Node) / IndexedDB (browser) adapter |
+| Retrieval engine         | `examples/neatChat/memory/neatChat.retrieval.ts`            | BM25 + token-overlap retrieval              |
+| Memory services          | `examples/neatChat/memory/neatChat.memory.services.ts`      | Store, retrieve, prune, export              |
+| Memory constants         | `examples/neatChat/memory/neatChat.memory.constants.ts`     | Cap sizes, TTL, BM25 params                 |
+| Memory unit tests        | `examples/neatChat/memory/neatChat.memory.services.test.ts` | AAA, single-expect-per-test                 |
+| Retrieval unit tests     | `examples/neatChat/memory/neatChat.retrieval.test.ts`       | AAA, single-expect-per-test                 |
+| Session integration hook | `examples/neatChat/core/neatChat.session.services.ts`       | Extend to read/write memory layer           |
+| Browser memory adapter   | `examples/neatChat/memory/neatChat.memory.idb.ts`           | IndexedDB adapter for browser runtime       |
 
 ### SQLite schema (Node runtime)
 
@@ -103,6 +103,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
 ### IndexedDB schema (browser runtime)
 
 Object store `neatchat_memory`:
+
 - Key: `entry_id` (auto-increment)
 - Indexes: `session_id`, `last_used`, `entry_type`
 - Same fields as the SQLite schema above.
@@ -130,12 +131,12 @@ unavailable, session services continue without memory context.
 ```yaml
 phase: 1
 step: 1
-agent: "01-planning"
-agent_file: ".github/agents/01-planning.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/NeatChat_Local_Retrieval_Memory.plans.md"
-skills: "tracker-handoff, plan-sync-validation, neatchat-systems"
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/NeatChat_Local_Retrieval_Memory.plans.md'
+skills: 'tracker-handoff, plan-sync-validation, neatchat-systems'
 validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NeatChat_Local_Retrieval_Memory.plans.md
 ```
@@ -152,12 +153,12 @@ Confirm `better-sqlite3` is available for Node use inside `examples/`. Author St
 ```yaml
 phase: 2
 step: 2
-agent: "02-researching"
-agent_file: ".github/agents/02-researching.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/NeatChat_Local_Retrieval_Memory.plans.md"
-skills: "neatchat-systems, plan-alignment"
+agent: '02-researching'
+agent_file: '.github/agents/02-researching.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/NeatChat_Local_Retrieval_Memory.plans.md'
+skills: 'neatchat-systems, plan-alignment'
 validation:
   - Read examples/neatChat/core/ for session service integration points
   - Read plans/completed/NEATchat_Followup.plans.md W3 section for episodic memory baseline
@@ -176,22 +177,23 @@ hand off a compact brief to Step 04.
 ```yaml
 phase: 3
 step: 3
-agent: "03-red-testing"
-agent_file: ".github/agents/03-red-testing.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/NeatChat_Local_Retrieval_Memory.plans.md"
-skills: "red-test-contracts, neatchat-systems"
+agent: '03-red-testing'
+agent_file: '.github/agents/03-red-testing.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/NeatChat_Local_Retrieval_Memory.plans.md'
+skills: 'red-test-contracts, neatchat-systems'
 validation:
   - npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPattern=examples/neatChat/memory
 ```
 
 **Step objective:** Write failing tests for:
+
 - `neatChat.memory.services.ts`: `storeExchangeMemory` stores an entry and returns the entry ID.
 - `neatChat.retrieval.ts`: `retrieveMemoryContext` returns entries ranked by token-overlap score.
 - `neatChat.memory.services.ts`: when entry count exceeds `MAX_MEMORY_ENTRIES`, pruning removes oldest entries.
 - `neatChat.retrieval.ts`: retrieval returns empty array gracefully when memory is empty.
-Each `it()` has exactly one top-level `expect(...)`.
+  Each `it()` has exactly one top-level `expect(...)`.
 
 ### Phase 4 — Implementation [PLANNED]
 
@@ -200,18 +202,19 @@ Each `it()` has exactly one top-level `expect(...)`.
 ```yaml
 phase: 4
 step: 4
-agent: "04-implementing"
-agent_file: ".github/agents/04-implementing.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/NeatChat_Local_Retrieval_Memory.plans.md"
-skills: "neatchat-systems, agent-script-tooling"
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/NeatChat_Local_Retrieval_Memory.plans.md'
+skills: 'neatchat-systems, agent-script-tooling'
 validation:
   - npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPattern=examples/neatChat/memory
   - npx tsc --noEmit -p tsconfig.json
 ```
 
 **Step objective:** Implement all artifacts in the Scope section:
+
 1. `neatChat.memory.types.ts` — MemoryEntry, MemoryQuery, MemoryResult interfaces.
 2. `neatChat.memory.constants.ts` — MAX_MEMORY_ENTRIES (1000), TTL, BM25 default params.
 3. `neatChat.memory.db.ts` — SQLite adapter for Node (via `better-sqlite3`).
@@ -229,12 +232,12 @@ validation:
 ```yaml
 phase: 5
 step: 5
-agent: "05-green-testing"
-agent_file: ".github/agents/05-green-testing.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/NeatChat_Local_Retrieval_Memory.plans.md"
-skills: "green-validation-gates, neatchat-systems"
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-testing.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/NeatChat_Local_Retrieval_Memory.plans.md'
+skills: 'green-validation-gates, neatchat-systems'
 validation:
   - npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPattern=examples/neatChat/memory
   - npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPattern=examples/neatChat/core/neatChat.session.services
@@ -253,22 +256,23 @@ clean with no new errors.
 ```yaml
 phase: 6
 step: 6
-agent: "06-documenting"
-agent_file: ".github/agents/06-documenting.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/NeatChat_Local_Retrieval_Memory.plans.md"
-skills: "educational-docs, neatchat-systems"
+agent: '06-documenting'
+agent_file: '.github/agents/06-documenting.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/NeatChat_Local_Retrieval_Memory.plans.md'
+skills: 'educational-docs, neatchat-systems'
 ```
 
 **Step objective:** Write `examples/neatChat/memory/README.md` documenting:
+
 - How the memory layer differs from the Repo Cortex corpus index.
 - The two-tier memory model (session vs durable).
 - The SQLite schema and IndexedDB store shape.
 - The LRU pruning policy.
 - The retrieval ranking formula.
 - How to clear or export the memory DB for debugging.
-Add JSDoc to all exported functions in the memory module.
+  Add JSDoc to all exported functions in the memory module.
 
 ### Phase 7 — Logging [PLANNED]
 
@@ -277,26 +281,26 @@ Add JSDoc to all exported functions in the memory module.
 ```yaml
 phase: 7
 step: 7
-agent: "07-logging"
-agent_file: ".github/agents/07-logging.agent.md"
-status: "[PLANNED]"
-mode: "sequential"
-source_of_truth: "plans/NeatChat_Local_Retrieval_Memory.plans.md"
-skills: "tracker-handoff, summarizing-session-log"
+agent: '07-logging'
+agent_file: '.github/agents/07-logging.agent.md'
+status: '[PLANNED]'
+mode: 'sequential'
+source_of_truth: 'plans/NeatChat_Local_Retrieval_Memory.plans.md'
+skills: 'tracker-handoff, summarizing-session-log'
 ```
 
 ## Acceptance criteria and validation gates
 
-| Gate | Command | Expected |
-|---|---|---|
-| Memory unit tests green | `npx jest --testPathPattern=examples/neatChat/memory` | All pass |
-| Session service tests unbroken | `npx jest --testPathPattern=examples/neatChat/core/neatChat.session.services` | All pass |
-| TypeScript clean | `npx tsc --noEmit -p tsconfig.json` | 0 new errors |
-| Store + retrieve round-trip | Unit test | Entry stored → retrieved with correct tokens |
-| Pruning at cap | Unit test | After 1001 entries, count returns to MAX_MEMORY_ENTRIES |
-| Empty retrieval graceful | Unit test | Returns `[]` without throwing when memory is empty |
-| Memory layer is guarded | Unit test | Session services work normally when DB adapter returns null |
-| No Repo Cortex dependency | Manual check | `examples/neatChat/memory/` imports nothing from `scripts/semantic-index/` |
+| Gate                           | Command                                                                       | Expected                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Memory unit tests green        | `npx jest --testPathPattern=examples/neatChat/memory`                         | All pass                                                                   |
+| Session service tests unbroken | `npx jest --testPathPattern=examples/neatChat/core/neatChat.session.services` | All pass                                                                   |
+| TypeScript clean               | `npx tsc --noEmit -p tsconfig.json`                                           | 0 new errors                                                               |
+| Store + retrieve round-trip    | Unit test                                                                     | Entry stored → retrieved with correct tokens                               |
+| Pruning at cap                 | Unit test                                                                     | After 1001 entries, count returns to MAX_MEMORY_ENTRIES                    |
+| Empty retrieval graceful       | Unit test                                                                     | Returns `[]` without throwing when memory is empty                         |
+| Memory layer is guarded        | Unit test                                                                     | Session services work normally when DB adapter returns null                |
+| No Repo Cortex dependency      | Manual check                                                                  | `examples/neatChat/memory/` imports nothing from `scripts/semantic-index/` |
 
 ## Handoff query
 

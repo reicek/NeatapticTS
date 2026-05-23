@@ -590,13 +590,12 @@ describe('neatChat seed import services', () => {
 
       // Assert
       expect({
-        cellGateInputWeight: mappedParameterVector.values[cellGateWeightStartIndex],
+        cellGateInputWeight:
+          mappedParameterVector.values[cellGateWeightStartIndex],
         inputGateBias: mappedParameterVector.values[inputGateBiasStartIndex],
       }).toEqual({
         cellGateInputWeight:
-          seedDescriptor.layers[0]!.weightIh[
-            SMALL_MAPPING_HIDDEN_SIZE * 2
-          ]![0],
+          seedDescriptor.layers[0]!.weightIh[SMALL_MAPPING_HIDDEN_SIZE * 2]![0],
         inputGateBias:
           seedDescriptor.layers[0]!.biasIh[0]! +
           seedDescriptor.layers[0]!.biasHh[0]!,
@@ -718,9 +717,8 @@ describe('neatChat seed import services', () => {
       // Assert
       expect({
         code: readSeedImportErrorCode(thrownError),
-        hasDistillationSuggestion: hasNonEmptyDistillationSuggestion(
-          thrownError,
-        ),
+        hasDistillationSuggestion:
+          hasNonEmptyDistillationSuggestion(thrownError),
         isSeedImportError:
           thrownError instanceof seedImportErrors.NeatChatSeedImportError,
         isStandardError: thrownError instanceof Error,
@@ -778,9 +776,7 @@ function loadSeedImportServicesModuleWithSpecialTokenReserve(
   return seedImportServices!;
 }
 
-function captureSeedImportErrorSummary(
-  action: () => unknown,
-): {
+function captureSeedImportErrorSummary(action: () => unknown): {
   readonly code: string | null;
   readonly hasDistillationSuggestion: boolean;
 } {
@@ -892,16 +888,14 @@ function createGruDescriptor(
   return {
     family: overrides.family ?? 'gru',
     hiddenSize,
-    layers:
-      overrides.layers ??
-      [
-        createExternalSeedLayerWeights(
-          SMALL_GRU_GATE_COUNT,
-          vocabSize,
-          hiddenSize,
-          0.005,
-        ),
-      ],
+    layers: overrides.layers ?? [
+      createExternalSeedLayerWeights(
+        SMALL_GRU_GATE_COUNT,
+        vocabSize,
+        hiddenSize,
+        0.005,
+      ),
+    ],
     linearBias: overrides.linearBias,
     linearWeight: overrides.linearWeight,
     vocabSize,
@@ -917,16 +911,14 @@ function createLstmDescriptor(
   return {
     family: overrides.family ?? 'lstm',
     hiddenSize,
-    layers:
-      overrides.layers ??
-      [
-        createExternalSeedLayerWeights(
-          SMALL_LSTM_GATE_COUNT,
-          vocabSize,
-          hiddenSize,
-          0.0075,
-        ),
-      ],
+    layers: overrides.layers ?? [
+      createExternalSeedLayerWeights(
+        SMALL_LSTM_GATE_COUNT,
+        vocabSize,
+        hiddenSize,
+        0.0075,
+      ),
+    ],
     linearBias: overrides.linearBias,
     linearWeight: overrides.linearWeight,
     vocabSize,
@@ -965,11 +957,7 @@ function createExternalSeedLayerWeights(
   const totalGateRows = gateCount * hiddenCount;
 
   return {
-    weightIh: createDeterministicMatrix(
-      totalGateRows,
-      inputCount,
-      baseValue,
-    ),
+    weightIh: createDeterministicMatrix(totalGateRows, inputCount, baseValue),
     weightHh: createDeterministicMatrix(
       totalGateRows,
       hiddenCount,
@@ -987,13 +975,7 @@ function createDeterministicMatrix(
 ): readonly (readonly number[])[] {
   return Array.from({ length: rowCount }, (_, rowIndex) =>
     Array.from({ length: columnCount }, (_, columnIndex) =>
-      Number(
-        (
-          baseValue +
-          rowIndex * 0.01 +
-          columnIndex * 0.001
-        ).toFixed(6),
-      ),
+      Number((baseValue + rowIndex * 0.01 + columnIndex * 0.001).toFixed(6)),
     ),
   );
 }

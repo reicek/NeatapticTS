@@ -1,8 +1,7 @@
 jest.mock('./neatChat.routing.services', () => {
-  const actualRoutingServices =
-    jest.requireActual<typeof import('./neatChat.routing.services')>(
-      './neatChat.routing.services',
-    );
+  const actualRoutingServices = jest.requireActual<
+    typeof import('./neatChat.routing.services')
+  >('./neatChat.routing.services');
 
   return {
     ...actualRoutingServices,
@@ -13,10 +12,9 @@ jest.mock('./neatChat.routing.services', () => {
 });
 
 jest.mock('./neatChat.safety.services', () => {
-  const actualSafetyServices =
-    jest.requireActual<typeof import('./neatChat.safety.services')>(
-      './neatChat.safety.services',
-    );
+  const actualSafetyServices = jest.requireActual<
+    typeof import('./neatChat.safety.services')
+  >('./neatChat.safety.services');
 
   return {
     ...actualSafetyServices,
@@ -34,19 +32,14 @@ import type {
   NeatChatRoutingCandidate,
   NeatChatRoutingPath,
 } from './neatChat.routing.types';
-import type {
-  NeatChatExchangeRecord,
-  NeatChatSession,
-} from './neatChat.types';
+import type { NeatChatExchangeRecord, NeatChatSession } from './neatChat.types';
 
-const actualRoutingServices =
-  jest.requireActual<typeof import('./neatChat.routing.services')>(
-    './neatChat.routing.services',
-  );
-const actualSafetyServices =
-  jest.requireActual<typeof import('./neatChat.safety.services')>(
-    './neatChat.safety.services',
-  );
+const actualRoutingServices = jest.requireActual<
+  typeof import('./neatChat.routing.services')
+>('./neatChat.routing.services');
+const actualSafetyServices = jest.requireActual<
+  typeof import('./neatChat.safety.services')
+>('./neatChat.safety.services');
 
 const mockedGenerateNeatChatCandidates = jest.mocked(
   generateNeatChatCandidates,
@@ -115,7 +108,8 @@ describe('neatChat live-flow safety contract', () => {
     mockedCheckSafety.mockReturnValueOnce({
       ok: false,
       violation: 'repetition-collapse',
-      detail: 'Response bigram repetition fraction exceeds the collapse threshold; the network may be looping.',
+      detail:
+        'Response bigram repetition fraction exceeds the collapse threshold; the network may be looping.',
     });
     mockedCheckSafety.mockReturnValueOnce({
       ok: true,
