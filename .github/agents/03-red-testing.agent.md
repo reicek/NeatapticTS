@@ -1,6 +1,7 @@
 ---
 description: 'Use when creating failing tests, test plans, fixtures, assertions, mocks, and coverage strategy before implementation.'
 name: '03-red-testing'
+tier: 1
 model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true

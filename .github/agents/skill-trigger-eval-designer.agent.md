@@ -1,6 +1,7 @@
 ---
 description: 'Use as a hidden specialist for designing trigger evals for NeatapticTS skills and phase agents. Keywords: should trigger, should not trigger, description evals, false positive, trigger rate.'
 name: 'Skill Trigger Eval Designer'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, execute]
 user-invocable: false

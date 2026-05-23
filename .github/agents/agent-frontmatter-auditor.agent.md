@@ -1,6 +1,7 @@
 ---
 description: 'Use as a hidden specialist for validating .agent.md frontmatter, tools, models, subagent allow-lists, handoffs, and user-invocable decisions in NeatapticTS. Keywords: agent frontmatter, handoffs, tools, agents, model, YAML.'
 name: 'Agent Frontmatter Auditor'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, execute]
 user-invocable: false

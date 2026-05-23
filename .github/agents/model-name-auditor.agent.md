@@ -1,6 +1,7 @@
 ---
 description: 'Use as a hidden specialist for discovering and validating qualified Copilot model names before NeatapticTS agent frontmatter changes. Keywords: model routing, GPT-5.4, GPT-5.4-mini, fallback array, qualified model.'
 name: 'Model Name Auditor'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
 user-invocable: false

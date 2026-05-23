@@ -1,6 +1,7 @@
 ---
 description: 'Use as a hidden specialist for checking source references and license notes when external workflow standards inform NeatapticTS agents, skills, scripts, or plans. Keywords: license, attribution, Agent Skills, OpenSpec, Superpowers, VS Code docs.'
 name: 'License Attribution Auditor'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
 user-invocable: false

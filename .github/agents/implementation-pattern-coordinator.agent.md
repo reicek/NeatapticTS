@@ -1,9 +1,10 @@
 ---
 description: 'Use when: implementation needs existing pattern discovery, scoped refactor routing, compatibility facade decisions, or reusable specialist assignment.'
 name: 'implementation-pattern-coordinator'
+tier: 2
 model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, agent]
-agents: ['implementation-pattern-scout', 'Boundary Mapper', 'Docs Scout', 'solid-split', 'Agent Frontmatter Auditor']
+agents: ['implementation-pattern-scout', 'Boundary Mapper', 'Docs Scout', 'Agent Frontmatter Auditor']
 user-invocable: false
 ---
 

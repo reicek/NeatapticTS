@@ -1,6 +1,7 @@
 ---
 description: 'Use when mapping worker payload shapes, structured clone constraints, transfer-list boundaries, SharedArrayBuffer eligibility, fast-path blockers, or deciding whether a worker serialization issue belongs to worker-inference-transport. Keywords: worker payload, transport, structured clone, transfer list, SharedArrayBuffer, workerUrl, inference IR, postMessage.'
 name: 'Worker Payload Scout'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
 user-invocable: false

@@ -1,6 +1,7 @@
 ---
 description: 'Use when making scoped code changes through focused implementation specialists, reusing project patterns, and avoiding unrelated refactors.'
 name: '04-implementing'
+tier: 1
 model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true

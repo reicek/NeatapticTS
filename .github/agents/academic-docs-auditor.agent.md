@@ -1,6 +1,7 @@
 ---
 description: 'Use as a hidden specialist for auditing NeatapticTS educational documentation, JSDoc, Mermaid diagrams, citations, and generated README quality. Keywords: academic docs, citation, JSDoc, Mermaid, generated README.'
 name: 'Academic Docs Auditor'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
 user-invocable: false

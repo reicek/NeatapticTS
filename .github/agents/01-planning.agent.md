@@ -1,6 +1,7 @@
 ---
 description: 'Use when planning implementation work, decomposing user requests, identifying risks, defining acceptance criteria, and preparing test strategy.'
 name: '01-planning'
+tier: 1
 model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true

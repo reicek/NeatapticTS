@@ -33,6 +33,8 @@ Dense embeddings produced by a locally cached ONNX sentence-transformer model cl
   dense search is server/Node-side only).
 - Changes to `src/` library code.
 - NeatChat-internal memory (separate plan: `NeatChat_Local_Retrieval_Memory.plans.md`).
+- Flipping `use_dense: true` as the MCP default and defining the prewarm/readiness contract
+  (that is the direct follow-up: [Semantic_Knowledge_Dense_Prewarm.plans.md](Semantic_Knowledge_Dense_Prewarm.plans.md)).
 
 ## Dependencies
 

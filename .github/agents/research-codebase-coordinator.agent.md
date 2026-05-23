@@ -1,6 +1,7 @@
 ---
 description: 'Use when: research spans multiple source areas, domain scouts, generated-doc boundaries, worker/runtime seams, or prior plan evidence.'
 name: 'research-codebase-coordinator'
+tier: 2
 model: ['GPT-5.4-mini (copilot)', 'Claude Haiku 4.6 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 tools: [read, search, agent]
 agents: ['Plan Scout', 'Docs Scout', 'Boundary Mapper', 'Browser Runtime Scout', 'Worker Payload Scout', 'Evaluation Pool Scout', 'Checkpoint Scout', 'Hybrid Interop Scout', 'Determinism Scout', 'Visualizer Scout', 'NGE Core Scout', 'NGE Benchmark Scout', 'NEATchat Scout']

@@ -1,6 +1,7 @@
 ---
 description: 'Use when: running focused unit test commands, checking a red or green result, or summarizing test output for a bounded validation target.'
 name: 'unit-test-runner'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'Claude Haiku 4.6 (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, execute]
 agents: []

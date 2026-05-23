@@ -1,6 +1,7 @@
 ---
 description: 'Use as a hidden specialist for inventorying NeatapticTS skills and custom agents, counting user-invocable surfaces, and preparing before/after customization drift evidence. Keywords: inventory, skills, agents, visibility, drift.'
 name: 'Skill Inventory Auditor'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, execute]
 user-invocable: false

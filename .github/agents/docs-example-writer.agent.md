@@ -1,6 +1,7 @@
 ---
 description: 'Use when: documentation needs a concise example, JSDoc usage snippet, README usage note, or docs-safe sample aligned with the current public API.'
 name: 'docs-example-writer'
+tier: 4
 model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, edit]
 agents: []

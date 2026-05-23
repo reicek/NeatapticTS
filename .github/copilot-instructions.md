@@ -45,6 +45,55 @@ via `00.cross-tier-helper`. Cross-tier helper calls from any numbered agent (01-
 route to `00-helping`, which resolves the blocker and returns a resolution summary;
 all cross-tier calls are logged as learning events visible to `00.workflow-gap-audit`.
 
+### Agent delegation tier graph
+
+The NeatapticTS repo enforces a **5-layer agent delegation tier graph**. Every
+`.github/agents/*.agent.md` file must carry a `tier: <N>` YAML frontmatter field.
+The tier field is the delegation-policy field; it is distinct from the uppercase
+`TIER:` key that appears inside structured-v1 output-contract body text.
+
+| Tier | Label                                  | Examples                                                  | `user-invocable` |
+| ---- | -------------------------------------- | --------------------------------------------------------- | ---------------- |
+| 0    | Default / Main                         | Default VS Code Copilot agent                             | —                |
+| 1    | Numbered SDLC Orchestrators            | `00-helping` through `07-logging` (8 agents)              | `true`           |
+| 2    | Named coordinators / sub-orchestrators | `planning-context-coordinator`, `solid-split`, etc.       | `false`          |
+| 3    | Hidden scouts and specialists          | `Boundary Mapper`, `Coverage Scout`, `Plan Scout`, etc.   | `false`          |
+| 4    | Auxiliaries and one-shot helpers       | `acceptance-criteria-writer`, `file-change-summarizer`    | `false`          |
+
+**Enforced delegation rules:**
+
+- Tier 1 may delegate to Tier 2, 3, or 4.
+- Tier 2 may delegate to Tier 3 or 4.
+- Tier 3 may delegate to Tier 4 only.
+- Tier 4 may not delegate to any agent.
+- No tier may call a higher-numbered tier except via the `00.cross-tier-helper` escalation path.
+- `user-invocable: true` is valid **only** for Tier 1 agents (the 8 SDLC orchestrators).
+
+**Validated counts (enforced, 55 agents total):** Tier 1 = 8, Tier 2 = 10, Tier 3 = 33, Tier 4 = 4.
+
+**Operator commands:**
+
+```sh
+# Full tier inventory (JSON)
+node scripts/agent-customization/tier-inventory.mjs --json
+
+# Validate delegation graph against tier rules
+node scripts/agent-customization/validate-agent-graph.mjs --json
+
+# Tier enforcement gate (standard { pass, evidence, fixHint, owner } contract)
+node scripts/agent-customization/gates/tier-enforcement-gate.mjs --json
+
+# Human-readable tier audit report (markdown)
+node scripts/agent-customization/tier-audit-report.mjs
+
+# Live MCP query (via neataptic-gate-mcp server, tool: query_tier_graph)
+# Returns current inventory, violation list, and summary counts at runtime.
+```
+
+When adding or reshaping any agent, re-run `validate-agent-graph.mjs` to confirm the tier
+contract is intact. Any new agent without a valid `tier:` field, or with a `user-invocable: true`
+flag at Tier 2–4, will cause the gate to fail with a structured violation report.
+
 ---
 
 ## Purpose

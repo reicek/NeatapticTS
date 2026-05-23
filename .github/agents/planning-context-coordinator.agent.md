@@ -1,6 +1,7 @@
 ---
 description: 'Use when: planning needs compact project context, existing plans, ownership clues, source boundaries, or nearest README evidence before decomposition.'
 name: 'planning-context-coordinator'
+tier: 2
 model: ['GPT-5.4-mini (copilot)', 'Claude Haiku 4.6 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 tools: [read, search, agent]
 agents: ['Plan Scout', 'Docs Scout', 'Boundary Mapper']

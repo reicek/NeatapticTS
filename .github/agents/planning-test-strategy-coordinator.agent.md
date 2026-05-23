@@ -1,6 +1,7 @@
 ---
 description: 'Use when: planning or red-testing needs acceptance criteria, red-test scope, coverage expectations, deterministic claims, fixtures, or validation order.'
 name: 'planning-test-strategy-coordinator'
+tier: 2
 model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, agent]
 agents: ['Coverage Scout', 'Determinism Scout', 'acceptance-criteria-writer', 'unit-test-writer']

@@ -1,6 +1,7 @@
 ---
 description: 'Use when checking generated folder README context, JSDoc drift, missing examples, stale docs, or deciding whether to update source comments versus run npm run docs. Keywords: README, JSDoc, docs, generated docs, drift, examples.'
 name: 'Docs Scout'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
 user-invocable: false

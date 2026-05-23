@@ -1,6 +1,7 @@
 ---
 description: 'Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation.'
 name: '05-green-testing'
+tier: 1
 model: ['GPT-5.4-mini (copilot)', 'Claude Haiku 4.6 (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true

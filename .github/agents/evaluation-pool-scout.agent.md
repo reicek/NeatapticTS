@@ -1,6 +1,7 @@
 ---
 description: 'Use when mapping worker-pool scheduling, ordered result assembly, dataset broadcast strategy, worker-count sizing, queue backpressure, or deciding whether a multithread batch-evaluation issue belongs to multithread-evaluation. Keywords: worker pool, evaluateInWorkers, queueing, ordered results, dataset broadcast, backpressure, workerCount, fallback.'
 name: 'Evaluation Pool Scout'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search]
 user-invocable: false

@@ -1,6 +1,7 @@
 ---
 description: 'Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps.'
 name: '07-logging'
+tier: 1
 model: ['Claude Haiku 4.6 (copilot)', 'GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true

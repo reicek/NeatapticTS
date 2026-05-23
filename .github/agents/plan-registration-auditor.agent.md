@@ -1,6 +1,7 @@
 ---
 description: 'Use as a hidden specialist for validating NeatapticTS plan registration across .plans.md files, plans/README.md, and plans/Roadmap.md. Keywords: plan sync, roadmap status, trigger phrase, tracker registration.'
 name: 'Plan Registration Auditor'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, execute]
 user-invocable: false

@@ -1,6 +1,7 @@
 ---
 description: 'Use when maintaining the local AI customization system, troubleshooting workflow gaps, checking configuration, supporting CI, and applying safe continuous-improvement updates.'
 name: '00-helping'
+tier: 1
 model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true

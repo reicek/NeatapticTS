@@ -1,6 +1,7 @@
 ---
 description: 'Use when verifying that a set of recently changed src/ files still have 100% coverage in all four categories, or when a quick coverage regression check is needed before marking a task complete. Keywords: coverage regression, 100%, guard, verify coverage, post-change check.'
 name: 'Coverage Guard'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, bash]
 user-invocable: false

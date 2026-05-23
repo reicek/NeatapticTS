@@ -55,7 +55,7 @@ Additionally:
 - NeatChat local retrieval memory (separate plan: `NeatChat_Local_Retrieval_Memory.plans.md`).
 - Changing the numbered SDLC orchestrator routing policy in `.github/copilot-instructions.md`
   beyond the additive agent/skill registrations this plan requires.
-- Changing the 5-layer tier graph enforcement (see `Delegation_Tier_Enforcement.plans.md`).
+- Changing the 5-layer tier graph enforcement (see `plans/completed/Delegation_Tier_Enforcement.plans.md`).
 
 ## Dependencies
 
@@ -75,10 +75,10 @@ Additionally:
 - All existing `.github/agents/*.agent.md` files must pass frontmatter validation before new
   agents are added. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json`
   first.
-- [Delegation_Tier_Enforcement.plans.md](Delegation_Tier_Enforcement.plans.md) [PLANNED] —
-  Agentic Workflow Enforcement Prerequisite; the 5-layer tier graph must be formally defined
-  and `validate-agent-graph.mjs` must pass before new hidden specialist agents are added
-  by this plan.
+- [completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_Enforcement.plans.md)
+  [DONE] — archived Agentic Workflow Enforcement Prerequisite baseline; the 5-layer tier graph
+  is formally defined and `validate-agent-graph.mjs` must remain clean before new hidden
+  specialist agents are added by this plan.
 - `validate-agent-graph.mjs` must exist (it does) so new agents can be tier-checked on add.
 
 ## Scope

@@ -1,14 +1,12 @@
 #!/usr/bin/env node
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import { parseArgs, printUsage, writeReport } from './customization-utils.mjs';
 import {
-  issue,
-  listMarkdownFiles,
-  parseArgs,
-  parseFrontmatter,
-  printUsage,
-  readWorkspaceFile,
-  summarizeIssues,
-  writeReport,
-} from './customization-utils.mjs';
+  collectTierInventory,
+  runValidateAgentGraph,
+} from './tier-graph-utils.mjs';
 
 const options = parseArgs(process.argv.slice(2));
 
@@ -20,69 +18,17 @@ if (options.help) {
   process.exit(0);
 }
 
-const agents = await collectAgents();
-const byName = new Map(agents.map((agent) => [agent.name, agent]));
-const issues = [];
+export {
+  collectTierInventory,
+  runValidateAgentGraph,
+} from './tier-graph-utils.mjs';
 
-for (const agent of agents) {
-  for (const childName of agent.children) {
-    if (!byName.has(childName)) {
-      issues.push(issue('error', agent.path, `Unknown subagent '${childName}'.`));
-    }
-  }
+async function main() {
+  const report = await runValidateAgentGraph();
+  writeReport(report, options);
+  process.exitCode = report.ok ? 0 : 1;
 }
 
-for (const cycle of findCycles(agents, byName)) {
-  issues.push(issue('error', '.github/agents', `Delegation cycle detected: ${cycle.join(' -> ')}`));
-}
-
-const report = {
-  ...summarizeIssues('agent graph', issues),
-  graph: agents.map((agent) => ({ name: agent.name, path: agent.path, agents: agent.children })),
-};
-
-writeReport(report, options);
-process.exitCode = report.ok ? 0 : 1;
-
-async function collectAgents() {
-  const paths = await listMarkdownFiles('.github/agents', (relativePath) => relativePath.endsWith('.agent.md'));
-  return Promise.all(
-    paths.map(async (relativePath) => {
-      const { data } = parseFrontmatter(await readWorkspaceFile(relativePath), relativePath);
-      return {
-        path: relativePath,
-        name: data.name ?? relativePath.split('/').at(-1)?.replace('.agent.md', ''),
-        children: Array.isArray(data.agents) ? data.agents : [],
-      };
-    }),
-  );
-}
-
-function findCycles(agents, byName) {
-  const cycles = [];
-  const visiting = new Set();
-  const visited = new Set();
-
-  for (const agent of agents) {
-    visit(agent.name, []);
-  }
-
-  return cycles;
-
-  function visit(name, stack) {
-    if (visiting.has(name)) {
-      const cycleStart = stack.indexOf(name);
-      cycles.push([...stack.slice(cycleStart), name]);
-      return;
-    }
-    if (visited.has(name)) return;
-
-    const agent = byName.get(name);
-    if (!agent) return;
-
-    visiting.add(name);
-    for (const child of agent.children) visit(child, [...stack, name]);
-    visiting.delete(name);
-    visited.add(name);
-  }
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  await main();
 }

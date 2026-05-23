@@ -8,6 +8,7 @@
  * Tools:
  *   - list_gates      — Return the available Tier-1 gate IDs and their owners.
  *   - run_gate_check  — Run a named gate and return its structured contract result.
+ *   - query_tier_graph — Return the current tier inventory and validation summary.
  *
  * Usage:
  *   node scripts/agent-customization/mcp/neataptic-gate-mcp.mjs [--self-check] [--json]
@@ -30,6 +31,7 @@ import {
   runStdioMcpServer,
   selfCheckError,
 } from './mcp-utils.mjs';
+import { createTierGraphTool } from './cortex-tier-tool.mjs';
 
 const SERVER_NAME = 'neataptic-gate-mcp';
 const SERVER_VERSION = '0.1.0';
@@ -49,6 +51,11 @@ const TIER_1_GATES = [
     id: 'agent-graph',
     owner: 'validate-agent-graph.mjs',
     description: 'Checks that all agent delegation references resolve and no cycles exist.',
+  },
+  {
+    id: 'tier-enforcement',
+    owner: 'validate-agent-graph.mjs',
+    description: 'Checks that every agent has a valid tier assignment and only legal tier edges exist.',
   },
   {
     id: 'learning-event',
@@ -113,7 +120,7 @@ function createGateTools() {
           gate: {
             type: 'string',
             enum: TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
-            description: 'Gate ID to run (plan-sync, step-packet, agent-graph, or learning-event).',
+            description: 'Gate ID to run (plan-sync, step-packet, agent-graph, tier-enforcement, or learning-event).',
           },
         },
         required: ['gate'],
@@ -139,6 +146,7 @@ function createGateTools() {
         }
       },
     }),
+    createTierGraphTool(),
   ];
 }
 
@@ -166,7 +174,7 @@ async function runGateSelfCheck({ server }) {
 
   // Step 2: Confirm tool count.
   const toolListResult = await invokeServerRequest(server, { method: 'tools/list' });
-  const expectedToolCount = 2;
+  const expectedToolCount = 3;
 
   if (!Array.isArray(toolListResult.tools) || toolListResult.tools.length !== expectedToolCount) {
     issues.push(
@@ -198,8 +206,27 @@ async function runGateSelfCheck({ server }) {
     issues.push(selfCheckError('gate-mcp', 'Gate result missing required "pass" boolean field.'));
   }
 
+  // Step 4: Run the tier graph query to confirm the new tool surface is live.
+  const tierGraphResult = await invokeServerRequest(server, {
+    method: 'tools/call',
+    params: {
+      name: 'query_tier_graph',
+      arguments: { includeAgents: false },
+    },
+  });
+
+  if (tierGraphResult.isError) {
+    issues.push(selfCheckError('gate-mcp', 'query_tier_graph returned an error during self-check.'));
+  }
+
+  const tierGraphPayload = tierGraphResult.structuredContent ?? {};
+  if (typeof tierGraphPayload.summary?.total !== 'number' || tierGraphPayload.summary.total < 1) {
+    issues.push(selfCheckError('gate-mcp', 'query_tier_graph did not report a valid agent total.'));
+  }
+
   return createSelfCheckReport('gate-mcp self-check', issues, {
     gatesTested: ['learning-event'],
+    toolsTested: ['run_gate_check', 'query_tier_graph'],
     toolCount: Array.isArray(toolListResult.tools) ? toolListResult.tools.length : 0,
   });
 }

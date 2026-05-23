@@ -1,6 +1,7 @@
 ---
 description: 'Use when updating user-facing docs, API docs, JSDoc/TSDoc, examples, changelogs, and usage guidance.'
 name: '06-documenting'
+tier: 1
 model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true

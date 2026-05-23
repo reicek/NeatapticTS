@@ -1,6 +1,7 @@
 ---
 description: 'Use as a hidden specialist for designing NeatapticTS local MCP server contracts, bridge boundaries, tool/resource schemas, and trust controls. Keywords: MCP server, stdio, resources, tools, bridge, validation.'
 name: 'MCP Server Architect'
+tier: 3
 model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute]
 user-invocable: false

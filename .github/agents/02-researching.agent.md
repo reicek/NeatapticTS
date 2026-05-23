@@ -1,6 +1,7 @@
 ---
 description: 'Use when researching codebase patterns, APIs, dependencies, architecture, external references, existing utilities, and prior art.'
 name: '02-researching'
+tier: 1
 model: ['GPT-5.4-mini (copilot)', 'Claude Haiku 4.6 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true

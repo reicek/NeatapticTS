@@ -1,6 +1,7 @@
 ---
 description: 'Use when: a focused validation fails and the workflow needs root-cause triage, owner mapping, smallest reroute, or known-unrelated failure separation.'
 name: 'failure-triage-specialist'
+tier: 3
 model: ['GPT-5.4-mini (copilot)', 'Claude Haiku 4.6 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 tools: [read, search, execute]
 agents: []
