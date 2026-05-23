@@ -1,3 +1,17 @@
+/**
+ * @description Run a BM25 full-text search against `data/semantic-index.sqlite` and print
+ * ranked results. Accepts a positional query argument or `--query`. Optionally restricts
+ * results to a single corpus family (readme, skill, agent, plan, ts-source, demo, …).
+ *
+ * @param {string}  [--query <text>]   - Query text (also accepted as positional argument).
+ * @param {number}  [--limit <n>]      - Maximum result count (default: 10).
+ * @param {string}  [--family <name>]  - Restrict results to one document family.
+ * @param {boolean} [--json]           - Emit JSON results array.
+ * @param {string}  [--database <path>] - Path to the SQLite database file (default: `data/semantic-index.sqlite`).
+ * @param {boolean} [--help]           - Show help and exit.
+ *
+ * @returns {void} Exits 0 on success, 1 on error. JSON results written to stdout when `--json` is passed.
+ */
 import Database from 'better-sqlite3';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';

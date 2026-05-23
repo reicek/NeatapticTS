@@ -11,7 +11,7 @@ override support, a docs TSConfig precheck, and richer semantic-index diagnostic
 `validate-index.mjs` `fixHint` output and `build-index.mjs --json-health` summaries.
 This archive is the durable reopen baseline between
 [Semantic_Knowledge_Browser_Snapshot.plans.md](Semantic_Knowledge_Browser_Snapshot.plans.md)
-and [../Semantic_Knowledge_Embeddings.plans.md](../Semantic_Knowledge_Embeddings.plans.md).
+and [Semantic_Knowledge_Embeddings.plans.md](Semantic_Knowledge_Embeddings.plans.md).
 
 ## Artifact summary
 

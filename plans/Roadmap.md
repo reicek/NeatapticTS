@@ -268,8 +268,8 @@ hybrid dense retrieval as the final advanced step. NeatChat also gains its own s
 retrieval and memory layer for conversational quality.
 
 This lane is **meta-workflow infrastructure**. It does not change `src/` library code and can
-proceed in parallel with Phase 7 / NGE work. The six Repo Cortex layers (1–3 archived, Layers 4,
-5, and 6 planned) execute sequentially. The archived Agentic Workflow Enforcement
+proceed in parallel with Phase 7 / NGE work. The six Repo Cortex layers execute sequentially;
+Layers 1-5 are archived and Layer 6 remains planned. The archived Agentic Workflow Enforcement
 Prerequisite ([completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_Enforcement.plans.md))
 had no dependency on the SQLite corpus index and ran in parallel with Layers 1–3; it is now
 [DONE] and no longer blocks Layer 4.
@@ -295,13 +295,17 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 - Artifacts: `docs/assets/semantic-snapshot.json`, `examples/shared/semantic/`
 
 4. Cortex MCP reliability hardening (Layer 4 — agents, skill, lifecycle gate, MCP enhancements)
-  - Plan: [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
-   - Gate: Layers 1, 2, and 3 [DONE] required; Delegation Tier Enforcement must be [DONE]; `neataptic-workflow-mcp.mjs` must be active
-   - Artifacts: `.github/agents/repo-cortex-scout.agent.md`, `.github/agents/cortex-embeddings-scout.agent.md`, `.github/skills/repo-cortex-workflow/SKILL.md`, `scripts/agent-customization/gates/cortex-index.gate.mjs`, `scripts/agent-customization/plan-session-redirect.mjs`, `scripts/agent-customization/validate-tsconfig-docs.mjs`
+
+- Plan: [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
+- Gate: Layers 1, 2, and 3 [DONE] required; Delegation Tier Enforcement must be [DONE]; `neataptic-workflow-mcp.mjs` must be active
+- Artifacts: `.github/agents/repo-cortex-scout.agent.md`, `.github/agents/cortex-embeddings-scout.agent.md`, `.github/skills/repo-cortex-workflow/SKILL.md`, `scripts/agent-customization/gates/cortex-index.gate.mjs`, `scripts/agent-customization/plan-session-redirect.mjs`, `scripts/agent-customization/validate-tsconfig-docs.mjs`
+
 5. ONNX embeddings + hybrid BM25+dense ranking (Layer 5)
-   - Plan: [Semantic_Knowledge_Embeddings.plans.md](Semantic_Knowledge_Embeddings.plans.md) [PLANNED]
-   - Gate: Layers 1 and 2 [DONE] required
-   - Artifacts: `scripts/semantic-index/embed-index.mjs`, `data/embeddings.sqlite`, ONNX model cache
+
+- Plan: [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
+- Gate: Layers 1 and 2 [DONE] required
+- Artifacts: `scripts/semantic-index/embed-index.mjs`, `data/embeddings.sqlite`, ONNX model cache
+
 6. Embedding prewarm + default-on dense contract (Layer 6)
    - Plan: [Semantic_Knowledge_Dense_Prewarm.plans.md](Semantic_Knowledge_Dense_Prewarm.plans.md) [PLANNED]
    - Gate: Layer 5 [DONE] required; `validate-embeddings.mjs --json` must return `{pass: true}` on the active corpus
@@ -384,7 +388,7 @@ M5. [completed/Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowled
 M6. [completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_Knowledge_Browser_Snapshot.plans.md) [DONE]
 M6b. [completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_Enforcement.plans.md) [DONE]
 M7. [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
-M8. [Semantic_Knowledge_Embeddings.plans.md](Semantic_Knowledge_Embeddings.plans.md) [PLANNED]
+M8. [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
 M8b. [Semantic_Knowledge_Dense_Prewarm.plans.md](Semantic_Knowledge_Dense_Prewarm.plans.md) [PLANNED]
 M9. [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [PLANNED]
 

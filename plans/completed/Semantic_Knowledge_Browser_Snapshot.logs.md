@@ -8,7 +8,7 @@
 - [DONE] Browser demo utilities now live under `examples/shared/semantic/`: snapshot types, IndexedDB-backed loader, term-frequency search, focused tests, and README documentation.
 - [DONE] Public loader/search exports and constants received JSDoc coverage, including examples and generated-output guidance for downstream demos.
 - [DONE] Validation evidence recorded before archive: `node scripts/semantic-index/build-browser-snapshot.mjs` PASS (832 documents / 27,685 chunks), semantic Jest slice PASS (3 suites / 5 tests), `npm run docs` PASS, `npx tsc --noEmit -p tsconfig.test.json` PASS, and `npm run test:silent` PASS with 100% coverage.
-- [DONE] Closure confirmed `plans/Semantic_Knowledge_Embeddings.plans.md` exists as Repo Cortex Layer 5 and the final advanced semantic retrieval layer.
+- [DONE] Closure confirmed `plans/completed/Semantic_Knowledge_Embeddings.plans.md` now archives Repo Cortex Layer 5 and the final advanced semantic retrieval layer.
 
 ## Closure Validation
 
@@ -17,5 +17,5 @@
 
 ## Residual Risks
 
-- Browser snapshot search remains lightweight term-frequency scoring by design; dense semantic retrieval is intentionally deferred to `plans/Semantic_Knowledge_Embeddings.plans.md`.
+- Browser snapshot search remains lightweight term-frequency scoring by design; the server-side dense retrieval baseline now lives in `plans/completed/Semantic_Knowledge_Embeddings.plans.md`, while default-on dense readiness remains deferred to `plans/Semantic_Knowledge_Dense_Prewarm.plans.md`.
 - `docs/assets/semantic-snapshot.json` freshness depends on the docs pipeline or explicit snapshot generator reruns; it must remain treated as generated output.

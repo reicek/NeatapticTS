@@ -21,8 +21,10 @@ and nearby retrieval code, and you do not implement indexing or model changes.
 ## Constraints
 
 - ALWAYS stay read-only.
-- ALWAYS treat `Semantic_Knowledge_Embeddings.plans.md` as the planning owner
-  when the issue is roadmap-shaped.
+- ALWAYS treat `plans/completed/Semantic_Knowledge_Embeddings.plans.md` as the
+   Layer 5 baseline owner when the issue is roadmap-shaped.
+- Route default-on dense, prewarm, or readiness-contract follow-up questions to
+   `plans/Semantic_Knowledge_Dense_Prewarm.plans.md`.
 - DO NOT create caches, rebuild indices, or edit files.
 - DO NOT assume the embeddings skill exists; say `embeddings skill when
   available` when naming the downstream owner.

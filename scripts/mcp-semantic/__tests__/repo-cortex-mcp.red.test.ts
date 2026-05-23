@@ -48,6 +48,7 @@ describe('repo cortex MCP red contracts', () => {
         'freshness_check',
         'index_stats',
         'list_families',
+        'scan_code_quality',
       ]);
     });
 

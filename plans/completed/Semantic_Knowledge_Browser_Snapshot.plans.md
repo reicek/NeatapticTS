@@ -30,7 +30,7 @@ The snapshot remains generated output. Rebuild it from the SQLite corpus index t
 
 Reopen only for a browser snapshot schema version change, a new generated-output publication path, a shared semantic-loader API change, or a browser demo requirement that cannot use the archived Layer 3 contract.
 
-The next Repo Cortex corpus layer is `plans/Semantic_Knowledge_Embeddings.plans.md` [PLANNED], which remains active as the final advanced ONNX embeddings and hybrid BM25+dense retrieval layer.
+The next Repo Cortex corpus layer is archived at `plans/completed/Semantic_Knowledge_Embeddings.plans.md` [DONE], covering the final advanced ONNX embeddings and hybrid BM25+dense retrieval layer.
 
 ## Audit Log
 

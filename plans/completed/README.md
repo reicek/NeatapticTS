@@ -18,6 +18,7 @@ Archive selection guide:
 - [MCP_Server_Validation_and_Hardening.plans.md](MCP_Server_Validation_and_Hardening.plans.md): closed MCP server hardening baseline for post-restart stdio validation, JSON-RPC method coverage, allow-list extraction, and the stable `mcp-active-binding` handoff.
 - [Semantic_Knowledge_MCP_Tools.plans.md](Semantic_Knowledge_MCP_Tools.plans.md): closed Repo Cortex Layer 2 baseline for the `neataptic-cortex-mcp` server, semantic corpus MCP tools, smoke gate, registration, and documentation.
 - [Semantic_Knowledge_Browser_Snapshot.plans.md](Semantic_Knowledge_Browser_Snapshot.plans.md): closed Repo Cortex Layer 3 baseline for the generated browser JSON snapshot, docs pipeline integration, IndexedDB-backed shared loader/search utilities, and generated-output contract.
+- [Semantic_Knowledge_Embeddings.plans.md](Semantic_Knowledge_Embeddings.plans.md): closed Repo Cortex Layer 5 baseline for local ONNX embeddings, BLOB vector storage, `ts-source` corpus chunks, hybrid BM25 + dense ranking, MRR@5 evaluation, and opt-in dense policy.
 - [Delegation_Tier_Enforcement.plans.md](Delegation_Tier_Enforcement.plans.md): closed Agentic Workflow Enforcement Prerequisite baseline for the 5-layer delegation tier graph, the enforced 55-agent `tier:` frontmatter map, `validate-agent-graph.mjs`, `tier-enforcement-gate.mjs`, the human-readable audit report, and the `query_tier_graph` MCP tool.
 - [neat.plans.md](neat.plans.md): Phase 1 proper-NEAT correctness baseline.
 - [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md): deterministic execution ordering and explicit input/output role baseline.
@@ -58,6 +59,7 @@ Trigger phrases:
 - MCP server validation, post-restart stdio, JSON-RPC framing, gate MCP, workflow MCP, validation MCP, allow-list contracts reopen: `plans/completed/MCP_Server_Validation_and_Hardening.plans.md`
 - repo cortex MCP, neataptic-cortex-mcp, search corpus, load chunk, cortex MCP tools, cortex mcp smoke reopen: `plans/completed/Semantic_Knowledge_MCP_Tools.plans.md`
 - browser snapshot, semantic snapshot, IndexedDB cache, docs snapshot, semantic-snapshot-loader, build-browser-snapshot reopen: `plans/completed/Semantic_Knowledge_Browser_Snapshot.plans.md`
+- semantic embeddings, ONNX embeddings, dense retrieval, hybrid BM25 dense, vector storage, embed-index, eval-embeddings, MRR reopen: `plans/completed/Semantic_Knowledge_Embeddings.plans.md`
 - delegation tier, tier graph, validate-agent-graph, tier inventory, tier enforcement, 5-layer delegation reopen: `plans/completed/Delegation_Tier_Enforcement.plans.md`
 - proper NEAT, innovation IDs, crossover, compatibility distance, speciation: `plans/completed/neat.plans.md`
 - activation order, explicit IO roles, deterministic scheduling: `plans/completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md`

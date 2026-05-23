@@ -1,3 +1,20 @@
+/**
+ * @description Scan the NeatapticTS corpus, chunk documents by family, and populate
+ * `data/semantic-index.sqlite` with BM25-searchable content. Includes `ts-source` family
+ * chunks produced by ts-morph AST traversal of `src/**\/*.ts` (non-test files). Uses a
+ * freshness proof `(mtime_ms, file_size, sha256)` to skip unchanged documents on
+ * incremental rebuilds.
+ *
+ * @param {boolean} [--dry-run] - Scan corpus without writing SQLite rows.
+ * @param {boolean} [--force] - Re-index unchanged documents even if freshness proof matches.
+ * @param {boolean} [--json] - Emit JSON summary `{ scanned, indexed, skipped, chunks, elapsedMs }`.
+ * @param {boolean} [--json-health] - Emit compact health summary JSON.
+ * @param {string}  [--database <path>] - Path to the SQLite database file (default: `data/semantic-index.sqlite`).
+ * @param {boolean} [--help] - Show help and exit.
+ *
+ * @returns {void} Exits 0 on success, 1 on fatal error. JSON summary written to stdout
+ *   when `--json` is passed.
+ */
 import fg from 'fast-glob';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -6,9 +23,11 @@ import { chunkMarkdown } from './chunker.mjs';
 import { fail, parseCliArgs, printHelp, toRepoRelative, writeJsonOrText } from './cli-utils.mjs';
 import { getFreshnessProof, isFreshDocument } from './freshness.mjs';
 import { defaultDatabasePath, initSemanticIndex, repoRoot } from './init-schema.mjs';
+import { chunkTypeScriptSources } from './ts-chunker.mjs';
 
 const CORPUS_SOURCES = [
   { family: 'readme', patterns: ['src/**/README.md'] },
+  { family: 'ts-source', patterns: ['src/**/*.ts'], ignore: ['src/**/*.d.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'] },
   { family: 'skill', patterns: ['.github/skills/**/SKILL.md'] },
   { family: 'agent', patterns: ['.github/agents/*.agent.md'] },
   { family: 'plan', patterns: ['plans/**/*.md'], ignore: ['plans/completed/**'] },
@@ -22,6 +41,7 @@ const CORPUS_SOURCES = [
 export async function buildSemanticIndex(options = {}) {
   const databasePath = path.resolve(options.databasePath ?? defaultDatabasePath);
   const documents = options.corpusDocuments ?? await collectCorpusDocuments();
+  const tsSourceChunksByFilePath = await collectTypeScriptChunksByFilePath(documents);
   const summary = {
     databasePath,
     scanned: documents.length,
@@ -79,8 +99,7 @@ export async function buildSemanticIndex(options = {}) {
 
     if (!currentRow) summary.newDocuments += 1;
 
-    const markdownText = await readFile(absolutePath, 'utf8');
-    const chunks = chunkMarkdown(markdownText);
+    const chunks = await chunkDocument(documentRecord, absolutePath, tsSourceChunksByFilePath);
     indexDocument(documentRecord, freshnessProof, chunks);
     summary.indexed += 1;
     summary.chunks += chunks.length;
@@ -124,6 +143,30 @@ async function collectCorpusDocuments() {
   }));
 
   return records.flat();
+}
+
+async function chunkDocument(documentRecord, absolutePath, tsSourceChunksByFilePath) {
+  if (documentRecord.family === 'ts-source') {
+    return tsSourceChunksByFilePath.get(documentRecord.filePath) ?? [];
+  }
+
+  const markdownText = await readFile(absolutePath, 'utf8');
+  return chunkMarkdown(markdownText);
+}
+
+async function collectTypeScriptChunksByFilePath(documents) {
+  const tsSourcePaths = documents
+    .filter(({ family }) => family === 'ts-source')
+    .map(({ filePath }) => path.join(repoRoot, filePath));
+  if (tsSourcePaths.length === 0) return new Map();
+
+  const tsSourceChunks = await chunkTypeScriptSources({ sourcePaths: tsSourcePaths });
+  return tsSourceChunks.reduce((chunksByFilePath, chunk) => {
+    const existingChunks = chunksByFilePath.get(chunk.file_path) ?? [];
+    existingChunks.push(chunk);
+    chunksByFilePath.set(chunk.file_path, existingChunks);
+    return chunksByFilePath;
+  }, new Map());
 }
 
 async function main() {

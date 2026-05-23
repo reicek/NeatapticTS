@@ -37,8 +37,8 @@ Reopen this archive only if the offline corpus index contract changes materially
 Routine follow-up should start from active downstream plans instead:
 
 - `plans/completed/Semantic_Knowledge_MCP_Tools.plans.md` for the archived MCP tool exposure baseline.
-- `plans/Semantic_Knowledge_Browser_Snapshot.plans.md` for browser JSON snapshots and IndexedDB loading.
-- `plans/Semantic_Knowledge_Embeddings.plans.md` for hybrid BM25 plus dense retrieval.
+- `plans/completed/Semantic_Knowledge_Browser_Snapshot.plans.md` for the archived browser JSON snapshot and IndexedDB loading baseline.
+- `plans/completed/Semantic_Knowledge_Embeddings.plans.md` for the archived hybrid BM25 plus dense retrieval baseline.
 
 ## Audit log
 

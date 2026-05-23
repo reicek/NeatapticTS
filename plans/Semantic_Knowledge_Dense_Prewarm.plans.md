@@ -2,7 +2,7 @@
 
 **Status:** [PLANNED]
 
-> Direct follow-up to Repo Cortex Layer 5 (Semantic_Knowledge_Embeddings). Operationalizes
+> Direct follow-up to archived Repo Cortex Layer 5 (completed/Semantic_Knowledge_Embeddings). Operationalizes
 > full embedding prewarm so `use_dense: true` can become the MCP server default from day 1
 > and dense scores are warm for the whole project corpus on any machine that runs the bootstrap.
 >
@@ -10,7 +10,7 @@
 > operational contract, readiness states, prewarm bootstrap, graceful degradation path, and
 > gate that collectively make default-on dense safe and honest.
 >
-> **Dependency:** `Semantic_Knowledge_Embeddings.plans.md` must be [DONE] before this plan starts.
+> **Dependency:** `completed/Semantic_Knowledge_Embeddings.plans.md` must be [DONE] before this plan starts.
 
 ## Purpose
 
@@ -186,7 +186,7 @@ source_of_truth: 'plans/Semantic_Knowledge_Dense_Prewarm.plans.md'
 skills: 'tracker-handoff, plan-sync-validation'
 gate: 'semantic-embeddings-done'
 gate_check: |
-  Verify plans/Semantic_Knowledge_Embeddings.plans.md status is [DONE].
+  Verify plans/completed/Semantic_Knowledge_Embeddings.plans.md status is [DONE].
   Verify data/embeddings.sqlite exists and validate-embeddings.mjs --json returns { pass: true }.
   Verify scripts/mcp-semantic/ contains the search_corpus handler with use_dense parameter.
 validation:
@@ -417,7 +417,7 @@ Continue from the current repo state only. Do not rely on prior chat history.
 Active plan: plans/Semantic_Knowledge_Dense_Prewarm.plans.md [PLANNED]
 
 Hard prerequisite (must be [DONE] before this plan starts):
-  - plans/Semantic_Knowledge_Embeddings.plans.md [DONE]
+  - plans/completed/Semantic_Knowledge_Embeddings.plans.md [DONE]
   Verify: node scripts/semantic-index/validate-embeddings.mjs --json  →  { pass: true }
 
 Soft prerequisite (helps but not a blocker):
@@ -440,7 +440,7 @@ Key artifacts to create:
   package.json scripts: index:prewarm, index:dense-readiness
   CLAUDE.md and scripts/semantic-index/README.md: bootstrap contract docs
 
-Start with Step 01 (01-planning): confirm Semantic_Knowledge_Embeddings.plans.md is [DONE],
+Start with Step 01 (01-planning): confirm plans/completed/Semantic_Knowledge_Embeddings.plans.md is [DONE],
 confirm data/embeddings.sqlite exists, map current use_dense default in MCP handler.
 
 Plan sync check:

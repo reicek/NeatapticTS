@@ -1,3 +1,17 @@
+/**
+ * @description Assert the health of `data/semantic-index.sqlite`: minimum document and
+ * chunk row counts, per-document freshness proof validity, and optional staleness age
+ * enforcement. Emits the standard gate JSON contract `{ ok, pass, documents, chunks, failures }`.
+ *
+ * @param {boolean} [--json]                - Emit JSON validation result.
+ * @param {number}  [--min-documents <n>]   - Minimum expected document rows (default: 1).
+ * @param {number}  [--min-chunks <n>]      - Minimum expected chunk rows (default: 1).
+ * @param {number}  [--max-age-ms <ms>]     - Maximum allowed row age in milliseconds (default: 86 400 000 / 24 h).
+ * @param {string}  [--database <path>]     - Path to the SQLite database file (default: `data/semantic-index.sqlite`).
+ * @param {boolean} [--help]                - Show help and exit.
+ *
+ * @returns {void} Exits 0 when the index is healthy, 1 when any assertion fails.
+ */
 import Database from 'better-sqlite3';
 import { existsSync } from 'node:fs';
 import path from 'node:path';

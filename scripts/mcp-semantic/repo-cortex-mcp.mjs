@@ -16,6 +16,7 @@ import { indexStats } from './tools/index-stats.mjs';
 import { listFamilies } from './tools/list-families.mjs';
 import { loadChunk } from './tools/load-chunk.mjs';
 import { loadDocument } from './tools/load-document.mjs';
+import { scanCodeQuality } from '../semantic-index/code-quality-scanner.mjs';
 import { searchCorpus } from './tools/search-corpus.mjs';
 
 const SERVER_VERSION = '0.1.0';
@@ -35,13 +36,15 @@ export function createRepoCortexTools(databasePath) {
   return [
     createTool({
       name: 'search_corpus',
-      description: 'BM25 full-text search over indexed repository chunks.',
+      description: 'BM25 full-text search over indexed repository chunks with optional hybrid dense reranking.',
       inputSchema: {
         type: 'object',
         properties: {
           query: { type: 'string' },
           limit: { type: 'number' },
           family: { type: 'string' },
+          use_dense: { type: 'boolean' },
+          alpha: { type: 'number' },
         },
         required: ['query'],
         additionalProperties: false,
@@ -92,6 +95,27 @@ export function createRepoCortexTools(databasePath) {
       name: 'list_families',
       description: 'List indexed document families with document and chunk counts.',
       handler: () => listFamilies({ databasePath }),
+    }),
+    createTool({
+      name: 'scan_code_quality',
+      description: 'Scan exported TypeScript symbols for missing or weak JSDoc and high cyclomatic complexity.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          complexity_threshold: { type: 'number' },
+          min_jsdoc_words: { type: 'number' },
+          source_paths: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+        },
+        additionalProperties: false,
+      },
+      handler: (argumentsObject) => scanCodeQuality({
+        complexityThreshold: argumentsObject.complexity_threshold,
+        minJsdocWords: argumentsObject.min_jsdoc_words,
+        sourcePaths: Array.isArray(argumentsObject.source_paths) ? argumentsObject.source_paths : undefined,
+      }),
     }),
   ];
 }

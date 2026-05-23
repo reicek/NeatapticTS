@@ -1,10 +1,32 @@
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
-import { normalizeLimit, openCortexDatabase, readChunkRow } from './cortex-db.mjs';
+import { queryDenseIndex } from '../../semantic-index/query-dense.mjs';
+import { normalizeLimit, openCortexDatabase, readChunkRow, sanitizeFtsQuery } from './cortex-db.mjs';
 
 export async function searchCorpus(options = {}) {
-  const query = requireString(options.query, 'query');
+  const rawQuery = requireString(options.query, 'query');
+  const query = sanitizeFtsQuery(rawQuery);
   const limit = normalizeLimit(options.limit, 10);
   const family = typeof options.family === 'string' && options.family.trim() ? options.family.trim() : null;
+  const useDense = options.use_dense === true;
+
+  if (!query) {
+    return { query: rawQuery, limit, ...(family ? { family } : {}), ...(useDense ? { alpha: Number(options.alpha ?? 0.5), use_dense: true } : { use_dense: false }), results: [] };
+  }
+
+  if (useDense) {
+    return queryDenseIndex({
+      alpha: options.alpha,
+      corpusDatabasePath: options.databasePath,
+      dense: true,
+      embeddingsDatabasePath: options.embeddingsDatabasePath,
+      family,
+      limit,
+      modelDirectory: options.modelDirectory,
+      modelId: options.modelId,
+      query: rawQuery,
+    });
+  }
+
   const database = openCortexDatabase(options.databasePath);
 
   try {
@@ -24,6 +46,7 @@ export async function searchCorpus(options = {}) {
       query,
       limit,
       ...(family ? { family } : {}),
+      use_dense: false,
       results: rows.map((row) => ({ ...readChunkRow(row), score: Number(row.score) })),
     };
   } finally {
