@@ -29,7 +29,24 @@ Use this skill when adding or reviewing `handoffs` between numbered phase agents
    of continuing forward.
 9. Update the active tracker after each phase step when one exists.
 
-## Phase Step Standard
+## Flow-Aware Handoff Contract
+
+Each numbered agent selects a named flow from `.github/flows/` that matches
+the current task shape. Flows declare exit gates; every gate must return
+`{pass: true, evidence, fixHint, owner}` JSON before the flow is considered
+complete. Post-phase fan-out from the flow definition runs after the flow body.
+
+- Gate exceptions are recorded via `scripts/agent-customization/gates/record-gate-exception.mjs`
+  and appended to `.github/ai-learning/learning-log.jsonl`.
+- Three consecutive gate failures in a session escalate automatically to
+  `00-helping` via the `00.cross-tier-helper` flow.
+- Cross-tier helper calls from any numbered agent route to `00-helping`, which
+  resolves the blocker and returns a resolution summary. All cross-tier calls
+  are logged as learning events visible to `00.workflow-gap-audit`.
+- When a phase step completes its declared flow, the structured-v1 output block
+  must include gate evidence in `VALIDATION_EVIDENCE` before handing off.
+
+
 
 Every active or planned executable phase in an active `.plans.md` file should
 be organized as a phase boundary plus numbered step packets. The user should be
@@ -97,6 +114,10 @@ Completed phases may keep compressed legacy coverage notes until reopened, and
 completed steps inside active phases should also be compressed to concise done
 notes. Active and newly planned phases should use step packets and keep only
 the current step copy-pasteable.
+
+Tracker YAML step packets are workflow artifacts. They do not replace the
+required Tier-0 or Tier-1 `structured-v1` chat envelope, which remains the
+mandatory response shape when those agents answer in chat.
 
 ## Output Contract
 

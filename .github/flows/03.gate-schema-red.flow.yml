@@ -1,0 +1,35 @@
+id: "03.gate-schema-red"
+name: "Gate or Schema Contract Red"
+agent: "03-red-testing"
+description: >
+  Authors failing tests for a planned gate script, validation rule, or
+  schema contract before implementation begins. Reads the gate contract
+  fields from the active plan step (id, tier, check, pass, evidence,
+  fixHint, owner) and writes one test per field asserting the expected
+  output shape. Follows the repo single-expect-per-it() convention. Confirms
+  all tests are red against the current codebase (gate scripts absent or
+  returning wrong shape). Does not implement gate logic.
+
+triggers:
+  - "New gate script or validation rule planned; failing test must precede implementation"
+  - "Phase plan defines a gate contract that has no test coverage yet"
+  - "MCP tool output shape needs a failing contract test before implementation"
+  - "Schema field added to flow.schema.yml requires a contract test"
+
+gates:
+  - "plan-sync"
+  - "red-test-confirmation"
+
+post-phase-fanout:
+  - "04-implementing"
+
+skills:
+  - "creating-unit-tests"
+  - "red-test-contracts"
+  - "plan-alignment"
+
+specialists:
+  - "unit-test-writer"
+  - "acceptance-criteria-writer"
+
+timeout-minutes: 15

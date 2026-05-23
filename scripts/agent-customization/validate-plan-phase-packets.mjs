@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import {
+  extractStatus,
   fileExists,
   issue,
   parseArgs,
@@ -63,7 +64,7 @@ const options = parseArgs(process.argv.slice(2));
 if (options.help) {
   printUsage({
     title: 'Validate copy-pasteable plan phase step packets.',
-    usage: 'node scripts/agent-customization/validate-plan-phase-packets.mjs [--json] [--plan=plans/Agentic_Workflow_Architecture.plans.md]',
+    usage: 'node scripts/agent-customization/validate-plan-phase-packets.mjs [--json] [--plan=plans/completed/Agentic_Workflow_Architecture.plans.md]',
     options: [['--plan=<path>', 'Plan file whose implementation phases should be validated.']],
   });
   process.exit(0);
@@ -71,13 +72,16 @@ if (options.help) {
 
 const planPath = options.plan;
 const planText = await readWorkspaceFile(planPath);
+const planStatus = extractStatus(planText);
+const normalizedPlanPath = planPath.replaceAll('\\', '/');
+const isArchivedClosedPlan = planStatus === 'DONE' && normalizedPlanPath.startsWith('plans/completed/');
 const issues = [];
 const phases = [...extractPhaseBlocks(planText)].map((phaseBlock) => ({
   ...phaseBlock,
   stepBlocks: [...extractStepBlocks(phaseBlock.body)],
 }));
 
-if (phases.length === 0) {
+if (phases.length === 0 && !isArchivedClosedPlan) {
   issues.push(issue('error', planPath, 'No implementation phase packets found.'));
 }
 
@@ -86,7 +90,11 @@ for (const [phaseIndex, phaseBlock] of phases.entries()) {
 }
 
 const wipCount = phases.filter((phaseBlock) => phaseBlock.headingStatus === 'WIP').length;
-if (wipCount !== 1) {
+if (isArchivedClosedPlan && wipCount !== 0) {
+  issues.push(issue('error', planPath, `Archived [DONE] plans must not contain [WIP] phases, found ${wipCount}.`));
+}
+
+if (!isArchivedClosedPlan && wipCount !== 1) {
   issues.push(issue('warning', planPath, `Expected exactly one [WIP] phase, found ${wipCount}.`));
 }
 
@@ -311,8 +319,8 @@ async function validateStepPhase(phaseBlock, phasePath) {
       issues.push(issue('error', stepPath, `Metadata agent_file does not exist: ${stepBlock.metadata.agent_file}.`));
     }
 
-    const expectedAgentPrefix = `${String(stepBlock.headingStep).padStart(2, '0')} `;
-    if (!stepBlock.metadata.agent?.startsWith(expectedAgentPrefix)) {
+    const expectedStepNumber = String(stepBlock.headingStep).padStart(2, '0');
+    if (!usesMatchingNumberedAgent(stepBlock.metadata.agent, expectedStepNumber)) {
       issues.push(issue('error', stepPath, `Step ${String(stepBlock.headingStep).padStart(2, '0')} must use the matching numbered agent.`));
     }
 
@@ -365,4 +373,10 @@ function normalizeScalar(value) {
 
 function stripStatus(value) {
   return value?.replace(/^\[/, '').replace(/]$/, '') ?? null;
+}
+
+function usesMatchingNumberedAgent(agentName, expectedStepNumber) {
+  if (!agentName) return false;
+
+  return agentName.startsWith(`${expectedStepNumber}-`) || agentName.startsWith(`${expectedStepNumber} `);
 }

@@ -1,0 +1,32 @@
+id: "05.regression-fix-validation"
+name: "Regression Fix Validation"
+agent: "05-green-testing"
+description: >
+  Validates that a regression fix implemented by 04-implementing has restored
+  the expected behavior. Runs a targeted Jest slice on the previously failing
+  test file, confirms it is now green, confirms no new failures were introduced,
+  and records the result as evidence in the plan. If the fix is incomplete,
+  routes back to 04-implementing with the remaining failure output.
+
+triggers:
+  - "Regression introduced in a previous phase; fix has been implemented"
+  - "04-implementing returns with a regression repair; targeted validation needed"
+  - "Specific failing test path identified; focused slice validation preferred over full suite"
+  - "Regression fix must be confirmed green before the phase log can be written"
+
+gates:
+  - "plan-sync"
+  - "green-validation-evidence"
+
+post-phase-fanout:
+  - "07-logging"
+
+skills:
+  - "running-unit-tests"
+  - "triaging-test-failures"
+
+specialists:
+  - "unit-test-runner"
+  - "failure-triage-specialist"
+
+timeout-minutes: 15

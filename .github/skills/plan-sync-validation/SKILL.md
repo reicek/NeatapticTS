@@ -17,7 +17,7 @@ Use this skill when a plan is created, registered, updated, or closed.
 3. Confirm `plans/README.md` has relevant trigger phrases.
 4. Confirm `plans/Roadmap.md` has the plan in the correct lane or phase.
 5. Keep statuses aligned across all three files.
-6. Run `node scripts/agent-customization/validate-plan-sync.mjs --json` for this workflow plan.
+6. Run `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=<path-to-active-plan>` for this workflow plan. The `--plan` argument is required and must name the active plan path (e.g. `plans/NEATchat.plans.md`), not the completed archive. Omitting it causes the validator to abort with an error.
 7. Use `tracker-handoff` for tracker shape and closure rules.
 
 ## Sources

@@ -1,0 +1,29 @@
+id: "06.readme-refresh"
+name: "Generated README Refresh"
+agent: "06-documenting"
+description: >
+  Runs `npm run docs` to regenerate all src/**/README.md files after JSDoc
+  changes. Confirms that the regenerated README accurately reflects the
+  updated JSDoc. Does not edit generated README files directly. Reports any
+  docs generation failure as a blocker before logging can begin.
+
+triggers:
+  - "JSDoc changes made in a previous phase; src/**/README.md needs regeneration"
+  - "06.jsdoc-update completed; generated README is now stale"
+  - "npm run docs must be run to publish updated documentation"
+  - "Generated README appears outdated relative to current JSDoc"
+
+gates:
+  - "plan-sync"
+  - "docs-artifact-reference"
+
+post-phase-fanout:
+  - "07-logging"
+
+skills:
+  - "educational-docs"
+
+specialists:
+  - "Docs Scout"
+
+timeout-minutes: 15

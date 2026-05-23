@@ -28,6 +28,7 @@ contract. Delegate domain work to hidden specialists and durable skills.
 - Do not copy durable workflow rules from skills into agents.
 - Keep changes scoped to the active plan boundary.
 - Update the active `plans/*.md` tracker before validation handoff so chat is not the source of truth.
+- **Terminal ownership**: If a required long-running terminal command was started during this step (candidate generation, build, large test run, etc.), either await confirmed completion before returning, or set `TASK_STATUS: PARTIAL`, list the active job in `BLOCKERS`, and explicitly describe a safe detached-job contract before handing off. Do not return `TASK_STATUS: SUCCESS` while a required background process is still running.
 
 ## Approach
 
@@ -40,5 +41,34 @@ contract. Delegate domain work to hidden specialists and durable skills.
 
 ## Output Format
 
-Return files changed, implementation summary, specialist calls, unresolved risks,
-and validation handoff.
+Return exactly one fenced `structured-v1` block and no prose before or after it.
+Use the exact keys below in the exact order shown. The position of every field is mandatory: `FILES_CHANGED` must appear immediately before `KEY_FINDINGS`, even when one or both values are `NONE`. Do not add extra keys, commentary, or duplicate fields.
+Report participants, files, validations, blockers, and gaps truthfully. Use `NONE` when nothing applies.
+
+```structured-v1
+OUTPUT_CONTRACT: structured-v1
+TASK_STATUS: SUCCESS | PARTIAL | FAILED
+TIER: 0
+ROLE: 04-implementing
+TASK_RECEIVED: <brief restatement>
+FILES_READ:
+- <path or NONE>
+FILES_CHANGED:
+- <path or NONE>
+KEY_FINDINGS:
+- <finding or NONE>
+ACTIONS_TAKEN:
+- <action or NONE>
+VALIDATION_EVIDENCE:
+- <command/result or NOT RUN>
+BLOCKERS:
+- <blocker or NONE>
+RISKS_OR_GAPS:
+- <risk or NONE>
+LEARNING_EVENT_NEEDED: true | false
+SUGGESTED_NEXT_AGENT: <agent name or NONE>
+PHASE_COMPLETE: true | false
+SUB_ORCHESTRATORS_USED:
+- <agent or NONE>
+SUMMARY: <brief truthful summary>
+```

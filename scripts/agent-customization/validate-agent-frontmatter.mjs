@@ -25,6 +25,55 @@ const strictVisibleAgentPathsByName = new Map([
 ]);
 const strictVisibleAgentNames = new Set(strictVisibleAgentPathsByName.keys());
 const strictVisibleAgentPathPattern = /^\.github\/agents\/0[0-7]-/;
+const strictTier0StructuredFields = [
+  'OUTPUT_CONTRACT',
+  'TASK_STATUS',
+  'TIER',
+  'ROLE',
+  'TASK_RECEIVED',
+  'FILES_READ',
+  'FILES_CHANGED',
+  'KEY_FINDINGS',
+  'ACTIONS_TAKEN',
+  'VALIDATION_EVIDENCE',
+  'BLOCKERS',
+  'RISKS_OR_GAPS',
+  'LEARNING_EVENT_NEEDED',
+  'SUGGESTED_NEXT_AGENT',
+  'PHASE_COMPLETE',
+  'SUB_ORCHESTRATORS_USED',
+  'SUMMARY',
+];
+const strictTier1CoordinatorPathsByName = new Map([
+  ['green-test-failure-triage-coordinator', '.github/agents/green-test-failure-triage-coordinator.agent.md'],
+  ['helping-agent-maintenance-coordinator', '.github/agents/helping-agent-maintenance-coordinator.agent.md'],
+  ['helping-gap-resolution-coordinator', '.github/agents/helping-gap-resolution-coordinator.agent.md'],
+  ['implementation-pattern-coordinator', '.github/agents/implementation-pattern-coordinator.agent.md'],
+  ['planning-context-coordinator', '.github/agents/planning-context-coordinator.agent.md'],
+  ['planning-risk-coordinator', '.github/agents/planning-risk-coordinator.agent.md'],
+  ['planning-test-strategy-coordinator', '.github/agents/planning-test-strategy-coordinator.agent.md'],
+  ['research-codebase-coordinator', '.github/agents/research-codebase-coordinator.agent.md'],
+]);
+const strictTier1CoordinatorPaths = new Set(strictTier1CoordinatorPathsByName.values());
+const strictTier1StructuredFields = [
+  'OUTPUT_CONTRACT',
+  'TASK_STATUS',
+  'TIER',
+  'ROLE',
+  'TASK_RECEIVED',
+  'FILES_READ',
+  'FILES_CHANGED',
+  'KEY_FINDINGS',
+  'ACTIONS_TAKEN',
+  'VALIDATION_EVIDENCE',
+  'SPECIALISTS_USED',
+  'HANDOFF',
+  'BLOCKERS',
+  'RISKS_OR_GAPS',
+  'LEARNING_EVENT_NEEDED',
+  'SUGGESTED_NEXT_AGENT',
+  'SUMMARY',
+];
 const strictAllowedModels = new Set([
   'GPT-5.4 (copilot)',
   'GPT-5.4-mini (copilot)',
@@ -125,7 +174,12 @@ function validateAgent(agent, agents, { strict }) {
     }
   }
 
-  if (strict && data['user-invocable'] === false && !hasOutputContract(agent.body)) {
+  const structuredPromptContract = resolveStructuredPromptContract(agent);
+  if (strict && structuredPromptContract) {
+    issues.push(...validateStructuredV1PromptContract(agent, structuredPromptContract));
+  }
+
+  if (strict && data['user-invocable'] === false && !structuredPromptContract && !hasOutputContract(agent.body)) {
     issues.push(issue('error', relativePath, 'Hidden agents must define a compact output contract.'));
   }
 
@@ -175,4 +229,88 @@ function usesOnlyAllowedModels(model) {
 
 function hasOutputContract(body) {
   return /(^|\n)(## Output Format|Return:|Return only:)/.test(body);
+}
+
+function resolveStructuredPromptContract(agent) {
+  if (strictVisibleAgentPathPattern.test(agent.path)) {
+    return {
+      tier: '0',
+      requiredFields: strictTier0StructuredFields,
+      expectedRole: agent.name,
+    };
+  }
+
+  if (strictTier1CoordinatorPaths.has(agent.path)) {
+    return {
+      tier: '1',
+      requiredFields: strictTier1StructuredFields,
+      expectedRole: agent.name,
+    };
+  }
+
+  return null;
+}
+
+function validateStructuredV1PromptContract(agent, contract) {
+  const issues = [];
+  const structuredFenceMatches = [...agent.body.matchAll(/```structured-v1\r?\n(?<body>[\s\S]*?)\r?\n```/gu)];
+
+  if (structuredFenceMatches.length !== 1) {
+    issues.push(issue('error', agent.path, 'Strict mode requires exactly one fenced ```structured-v1``` prompt template.'));
+    return issues;
+  }
+
+  const fenceBody = structuredFenceMatches[0].groups?.body ?? '';
+  const parsedFields = parsePromptFields(fenceBody);
+  const detectedFields = parsedFields.map(({ field }) => field);
+
+  if (detectedFields.length !== contract.requiredFields.length || detectedFields.some((field, index) => field !== contract.requiredFields[index])) {
+    issues.push(issue('error', agent.path, `Structured-v1 prompt fields must match the exact ${contract.tier === '0' ? 'Tier-0' : 'Tier-1'} order: ${contract.requiredFields.join(', ')}.`));
+  }
+
+  for (const requiredField of contract.requiredFields) {
+    if (!detectedFields.includes(requiredField)) {
+      issues.push(issue('error', agent.path, `Structured-v1 prompt template is missing required field '${requiredField}'.`));
+    }
+  }
+
+  const outputContractField = parsedFields.find(({ field }) => field === 'OUTPUT_CONTRACT');
+  if (outputContractField?.value !== 'structured-v1') {
+    issues.push(issue('error', agent.path, "Structured-v1 prompt template must set 'OUTPUT_CONTRACT: structured-v1'."));
+  }
+
+  const tierField = parsedFields.find(({ field }) => field === 'TIER');
+  if (tierField?.value !== contract.tier) {
+    issues.push(issue('error', agent.path, `Structured-v1 prompt template must set 'TIER: ${contract.tier}'.`));
+  }
+
+  const roleField = parsedFields.find(({ field }) => field === 'ROLE');
+  if (roleField?.value !== contract.expectedRole) {
+    issues.push(issue('error', agent.path, `Structured-v1 prompt template must set 'ROLE: ${contract.expectedRole}'.`));
+  }
+
+  return issues;
+}
+
+function parsePromptFields(fenceBody) {
+  const parsedFields = [];
+
+  for (const rawLine of fenceBody.split(/\r?\n/u)) {
+    const trimmedLine = rawLine.trim();
+    if (!trimmedLine || trimmedLine.startsWith('- ')) {
+      continue;
+    }
+
+    const fieldMatch = /^(?<field>[A-Z_]+):\s*(?<value>.*)$/u.exec(trimmedLine);
+    if (!fieldMatch?.groups) {
+      continue;
+    }
+
+    parsedFields.push({
+      field: fieldMatch.groups.field,
+      value: fieldMatch.groups.value.trim(),
+    });
+  }
+
+  return parsedFields;
 }

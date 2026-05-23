@@ -13,6 +13,9 @@ How to use this archive:
 Archive selection guide:
 
 - [Agentic_Workflow_Architecture.plans.md](Agentic_Workflow_Architecture.plans.md): closed standalone meta-workflow baseline for numbered phase agents, hidden specialist delegation, skill-first customization, validation scripts and evals, and the MCP runtime-visibility ownership model.
+- [Agentic_Flows_and_Gates_Upgrade.plans.md](Agentic_Flows_and_Gates_Upgrade.plans.md): closed standalone meta-workflow amendment for named agent flows, deterministic exit gates, flow-aware MCP resources and prompts, gate exceptions, and universal `00-helping` escalation.
+- [workspace-mcp-registration.plans.md](workspace-mcp-registration.plans.md): closed workspace MCP registration baseline for `.vscode/mcp.json`, direct MCP discovery, fixed plan binding, plan-sync alignment, and the shared stdio transport closeout.
+- [MCP_Server_Validation_and_Hardening.plans.md](MCP_Server_Validation_and_Hardening.plans.md): closed MCP server hardening baseline for post-restart stdio validation, JSON-RPC method coverage, allow-list extraction, and the stable `mcp-active-binding` handoff.
 - [neat.plans.md](neat.plans.md): Phase 1 proper-NEAT correctness baseline.
 - [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md): deterministic execution ordering and explicit input/output role baseline.
 - [Architecture_Primitives_Node_Group_Layer.md](Architecture_Primitives_Node_Group_Layer.md): closed primitive DX baseline for `Node`, `Group`, and `Layer`.
@@ -25,6 +28,7 @@ Archive selection guide:
 - [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): closed ONNX export/import baseline through the current Phase 9 compliance target, including binary-first runtime parity for the approved five-lane subset and the first named external binary import subset.
 - [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md): closed Phase 4 ergonomic extraction baseline for capability probes, transport auto-selection, browser worker delivery helpers, reusable pools, ordered batch evaluation, and the NEAT population helper.
 - [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md): closed Phase 4 transport substrate baseline for the shared inference IR, portable and transferable payloads, persistent channels, and shared-memory workers.
+- [neatChat-live-safety-red.plans.md](neatChat-live-safety-red.plans.md): closed NEATchat live exchange safety baseline for reconnecting `checkSafety`, bounded vocabulary-aware fallback selection, and the shipped-browser four-turn quality bar.
 - [ES2023 migration](ES2023%20migration): Phase 0 modernization baseline for ES2023 syntax, named errors, and lint enforcement.
 - [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md): completed Flappy Bird documentation pass.
 - [architecture-solid-split.plans.md](architecture-solid-split.plans.md): completed `src/architecture` split baseline.
@@ -46,6 +50,9 @@ Archive selection guide:
 Trigger phrases:
 
 - agent architecture, custom agents, user-invocable, subagent delegation, model routing, skill evals, MCP runtime visibility reopen: `plans/completed/Agentic_Workflow_Architecture.plans.md`
+- agentic flows and gates upgrade, workflow gates, validation gates, flow routing, gate exceptions, universal helper escape, flow-aware MCP reopen: `plans/completed/Agentic_Flows_and_Gates_Upgrade.plans.md`
+- workspace MCP, `.vscode/mcp.json`, direct MCP registration, workflow MCP, validation MCP, fixed plan binding reopen: `plans/completed/workspace-mcp-registration.plans.md`
+- MCP server validation, post-restart stdio, JSON-RPC framing, gate MCP, workflow MCP, validation MCP, allow-list contracts reopen: `plans/completed/MCP_Server_Validation_and_Hardening.plans.md`
 - proper NEAT, innovation IDs, crossover, compatibility distance, speciation: `plans/completed/neat.plans.md`
 - activation order, explicit IO roles, deterministic scheduling: `plans/completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md`
 - architecture primitives, node/group/layer DX, primitive descriptors: `plans/completed/Architecture_Primitives_Node_Group_Layer.md`
@@ -63,6 +70,7 @@ Trigger phrases:
 - README opening drift or docs-generator reopen: `plans/completed/readme-first-section-pass.plans.md`, `plans/completed/generate-docs-solid-split.plans.md`, `plans/completed/render-docs-html-solid-split.plans.md`
 - trace analyzer split reopen: `plans/completed/analyze-trace-solid-split.plans.md`
 - Flappy docs or startup preview reopen: `plans/completed/Flappy_Bird_Folder_Documentation_Pass.md`, `plans/completed/flappy-startup-loading-preview.plans.md`
+- neatchat live safety, live exchange safety gate, checkSafety, live flow safety, live-flow safety, neatChat-live-safety-red reopen: `plans/completed/neatChat-live-safety-red.plans.md`
 - starter examples, learning path, helloNetwork, evolveXor, sequenceReset, browser quickstart, smoke validation reopen: `plans/completed/Interactive_Examples_and_Learning_Path.plans.md`
 
 Archive rule:

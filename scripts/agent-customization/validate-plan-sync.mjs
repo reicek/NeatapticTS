@@ -14,10 +14,21 @@ const options = parseArgs(process.argv.slice(2));
 if (options.help) {
   printUsage({
     title: 'Validate agentic workflow plan registration.',
-    usage: 'node scripts/agent-customization/validate-plan-sync.mjs [--json] [--plan=plans/Agentic_Workflow_Architecture.plans.md]',
-    options: [['--plan=<path>', 'Plan file to compare against the index and roadmap.']],
+    usage: 'node scripts/agent-customization/validate-plan-sync.mjs --plan=<path> [--json]',
+    options: [['--plan=<path>', '(Required) Active plan file to compare against the index and roadmap.']],
   });
   process.exit(0);
+}
+
+// Require --plan to be supplied explicitly so the validator never silently
+// targets the completed archive plan instead of the active plan.
+const planExplicit = process.argv.slice(2).some((arg) => arg.startsWith('--plan='));
+if (!planExplicit) {
+  console.error(
+    'ERROR: --plan=<path> is required. Pass the active plan path explicitly, e.g. --plan=plans/NEATchat.plans.md'
+  );
+  process.exitCode = 1;
+  process.exit(1);
 }
 
 const planPath = options.plan;
@@ -51,8 +62,11 @@ if (!roadmapText.includes('Standalone Meta-Workflow Lane')) {
   issues.push(issue('error', 'plans/Roadmap.md', 'Missing standalone meta-workflow lane section.'));
 }
 
+const baseReport = summarizeIssues('plan sync', issues);
 const report = {
-  ...summarizeIssues('plan sync', issues),
+  ...baseReport,
+  // Surface the validated plan path so callers can confirm the right plan was checked.
+  summaryText: `${baseReport.summaryText} (plan: ${planPath})`,
   plan: { path: planPath, status: planStatus },
 };
 

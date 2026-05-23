@@ -363,6 +363,31 @@ describe('network onnx validation chapter', () => {
       );
     });
 
+    it('rejects binary models that omit the standard-domain opset version', async () => {
+      // Arrange
+      const network = Network.createMLP(2, [3], 1);
+      const binaryModel = mutateBinaryModel(
+        exportToONNXBinary(network),
+        (decodedModel) => {
+          decodedModel.opsetImport[0]!.version = undefined;
+        },
+      );
+
+      // Act
+      const validationResult = validateOnnxBinaryModel(binaryModel);
+
+      // Assert
+      await expect(validationResult).resolves.toEqual(
+        expect.objectContaining({
+          isValid: false,
+          validator: 'onnxruntime-node',
+          errorCategory: 'invalid-model',
+          errorMessage:
+            'Binary ModelProto must declare a positive standard-domain opset.',
+        }),
+      );
+    });
+
     it('surfaces protobuf verification failures before the external runtime runs', async () => {
       // Arrange
       const verifySpy = jest

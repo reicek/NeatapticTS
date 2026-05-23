@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process';
 import { Buffer } from 'node:buffer';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   issue,
@@ -7,26 +9,75 @@ import {
   writeReport,
 } from '../customization-utils.mjs';
 
-export const DEFAULT_PLAN_PATH = 'plans/Agentic_Workflow_Architecture.plans.md';
 export const MCP_PROTOCOL_VERSION = '2024-11-05';
+export const MCP_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
 const DEFAULT_OUTPUT_LIMIT = 24_576;
+const CONTENT_LENGTH_FRAME = 'content-length';
 const CONTENT_LENGTH_HEADER = 'content-length';
 const HEADER_SEPARATOR = Buffer.from('\r\n\r\n');
+const NEWLINE_DELIMITED_FRAME = 'newline-delimited';
 const SHELL_METACHARACTER_PATTERN = /[|&;<>]/;
 
 /**
  * Parse the bounded CLI flags shared by the direct-MCP entrypoints.
  *
  * @param {string[]} argv - Raw CLI arguments without the node executable and script path.
- * @returns {{ help: boolean, json: boolean, selfCheck: boolean, plan: string }} Parsed options.
+ * @returns {{ help: boolean, json: boolean, selfCheck: boolean, plan?: string }} Parsed options.
  */
 export function parseMcpCliArgs(argv) {
   return {
     help: argv.includes('--help') || argv.includes('-h'),
     json: argv.includes('--json'),
     selfCheck: argv.includes('--self-check'),
-    plan: argv.find((argument) => argument.startsWith('--plan='))?.slice('--plan='.length) ?? DEFAULT_PLAN_PATH,
+    plan: argv.find((argument) => argument.startsWith('--plan='))?.slice('--plan='.length),
+  };
+}
+
+/**
+ * Require an explicit plan path for direct-MCP entrypoints.
+ *
+ * @param {string | undefined} planPath - CLI plan path.
+ * @returns {string} Trimmed plan path.
+ */
+export function requireExplicitPlanPath(planPath) {
+  if (typeof planPath !== 'string' || !planPath.trim()) {
+    throw new Error('MCP entrypoints require --plan=<path>; no default plan path is assumed.');
+  }
+
+  return planPath.trim();
+}
+
+/**
+ * Resolve a repo-relative or absolute path against the repository root.
+ *
+ * @param {string} candidatePath - Repo-relative or absolute path.
+ * @returns {string} Absolute path.
+ */
+export function resolveRepoRootPath(candidatePath) {
+  const normalizedCandidatePath = requireString(candidatePath, 'path');
+  return path.isAbsolute(normalizedCandidatePath)
+    ? path.normalize(normalizedCandidatePath)
+    : path.resolve(MCP_REPO_ROOT, normalizedCandidatePath);
+}
+
+/**
+ * Resolve and normalize an explicit plan path for MCP consumers.
+ *
+ * @param {string | undefined} planPath - CLI plan path.
+ * @returns {{ absolutePath: string, displayPath: string }} Resolved plan path details.
+ */
+export function resolveExplicitPlanPath(planPath) {
+  const explicitPlanPath = requireExplicitPlanPath(planPath);
+  const absolutePath = resolveRepoRootPath(explicitPlanPath);
+  const repoRelativePath = path.relative(MCP_REPO_ROOT, absolutePath);
+  const isRepoRelativePath = repoRelativePath !== ''
+    && !repoRelativePath.startsWith('..')
+    && !path.isAbsolute(repoRelativePath);
+
+  return {
+    absolutePath,
+    displayPath: normalizePath(isRepoRelativePath ? repoRelativePath : absolutePath),
   };
 }
 
@@ -40,13 +91,15 @@ export function printMcpUsage({ title, entrypoint, summary, tools }) {
   console.log(`${title}\n`);
   console.log(`${summary}\n`);
   console.log('Usage:');
-  console.log(`  node ${entrypoint} [--help] [--self-check] [--json] [--plan=${DEFAULT_PLAN_PATH}]`);
-  console.log(`  node ${entrypoint}`);
+  console.log(`  node ${entrypoint} --plan=<path> [--self-check] [--json]`);
+  console.log(`  node ${entrypoint} --help`);
   console.log('');
   console.log('Modes:');
+  console.log('  --plan=<path> Required workflow plan path resolved from the repository root.');
   console.log('  --help        Show this help text.');
+  console.log('  --json        Write machine-readable self-check output.');
   console.log('  --self-check  Run bounded local checks instead of starting the stdio server.');
-  console.log('  default       Start the stdio MCP server on stdin/stdout.');
+  console.log('  default       Start the stdio MCP server on stdin/stdout using the explicit plan path.');
   console.log('');
   console.log('Tools:');
 
@@ -134,6 +187,12 @@ export function createMcpServer({ serverName, serverVersion, tools }) {
         case 'tools/call':
           return await callTool(request.params);
 
+        case 'resources/list':
+          return { resources: [] };
+
+        case 'prompts/list':
+          return { prompts: [] };
+
         default:
           throw createJsonRpcError(-32601, `Unsupported method: ${String(request.method)}`);
       }
@@ -165,13 +224,13 @@ export function createMcpServer({ serverName, serverVersion, tools }) {
 }
 
 /**
- * Run a dependency-light stdio MCP server using Content-Length framed JSON-RPC.
+ * Run a dependency-light stdio MCP server using Content-Length or newline-delimited JSON-RPC.
  *
  * @param {{ serverInfo: { name: string, version: string }, dispatch: (request: Record<string, unknown>) => Promise<unknown> }} server - Server implementation.
  * @returns {Promise<void>} Resolves when stdin closes.
  */
 export async function runStdioMcpServer(server) {
-  const parser = createContentLengthParser(async (messageBuffer) => {
+  const parser = createStdioJsonRpcParser(async ({ messageBuffer, framing }) => {
     let request;
 
     try {
@@ -181,7 +240,7 @@ export async function runStdioMcpServer(server) {
         jsonrpc: '2.0',
         id: null,
         error: { code: -32700, message: 'Invalid JSON payload.' },
-      });
+      }, framing);
       return;
     }
 
@@ -192,7 +251,7 @@ export async function runStdioMcpServer(server) {
           jsonrpc: '2.0',
           id: request.id,
           result,
-        });
+        }, framing);
       }
     } catch (error) {
       if (request?.id === undefined) {
@@ -208,7 +267,7 @@ export async function runStdioMcpServer(server) {
           message: error instanceof Error ? error.message : String(error),
           ...(error?.jsonRpcData === undefined ? {} : { data: error.jsonRpcData }),
         },
-      });
+      }, framing);
     }
   });
 
@@ -259,7 +318,7 @@ export async function runShellFreeCommand(commandString, options = {}) {
 
   return await new Promise((resolve, reject) => {
     const childProcess = spawn(executable, argv, {
-      cwd: process.cwd(),
+      cwd: MCP_REPO_ROOT,
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
     });
@@ -453,8 +512,14 @@ function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function writeJsonRpcMessage(payload) {
+function writeJsonRpcMessage(payload, framing = CONTENT_LENGTH_FRAME) {
   const serializedPayload = JSON.stringify(payload);
+
+  if (framing === NEWLINE_DELIMITED_FRAME) {
+    process.stdout.write(`${serializedPayload}\n`);
+    return;
+  }
+
   const contentLength = Buffer.byteLength(serializedPayload, 'utf8');
   process.stdout.write(`Content-Length: ${contentLength}\r\n\r\n${serializedPayload}`);
 }
@@ -463,37 +528,93 @@ function writeDiagnostic(message) {
   process.stderr.write(`${message}\n`);
 }
 
-function createContentLengthParser(onMessage) {
+function createStdioJsonRpcParser(onMessage) {
   let buffer = Buffer.alloc(0);
 
   return {
     async push(chunk) {
       buffer = Buffer.concat([buffer, Buffer.from(chunk)]);
 
-      while (true) {
-        const headerEndIndex = buffer.indexOf(HEADER_SEPARATOR);
-        if (headerEndIndex === -1) {
+      while (buffer.length > 0) {
+        buffer = dropLeadingLineBreaks(buffer);
+        if (buffer.length === 0) {
           return;
         }
 
-        const headerText = buffer.subarray(0, headerEndIndex).toString('utf8');
-        const contentLength = extractContentLength(headerText);
-        if (contentLength === null) {
-          throw new Error('Received an MCP message without a valid Content-Length header.');
+        if (startsWithContentLengthHeader(buffer)) {
+          const parsedFrame = readContentLengthFrame(buffer);
+          if (parsedFrame === null) {
+            return;
+          }
+
+          buffer = parsedFrame.remainingBuffer;
+          await onMessage({
+            messageBuffer: parsedFrame.messageBuffer,
+            framing: CONTENT_LENGTH_FRAME,
+          });
+          continue;
         }
 
-        const bodyStartIndex = headerEndIndex + HEADER_SEPARATOR.length;
-        const bodyEndIndex = bodyStartIndex + contentLength;
-        if (buffer.length < bodyEndIndex) {
+        const lineEndIndex = buffer.indexOf('\n');
+        if (lineEndIndex === -1) {
           return;
         }
 
-        const messageBuffer = buffer.subarray(bodyStartIndex, bodyEndIndex);
-        buffer = buffer.subarray(bodyEndIndex);
-        await onMessage(messageBuffer);
+        const messageBuffer = trimTrailingCarriageReturn(buffer.subarray(0, lineEndIndex));
+        buffer = buffer.subarray(lineEndIndex + 1);
+        if (messageBuffer.toString('utf8').trim() === '') {
+          continue;
+        }
+
+        await onMessage({
+          messageBuffer,
+          framing: NEWLINE_DELIMITED_FRAME,
+        });
       }
     },
   };
+}
+
+function startsWithContentLengthHeader(buffer) {
+  const leadingText = buffer.subarray(0, Math.min(buffer.length, 64)).toString('utf8');
+  return /^content-length\s*:/iu.test(leadingText);
+}
+
+function readContentLengthFrame(buffer) {
+  const headerEndIndex = buffer.indexOf(HEADER_SEPARATOR);
+  if (headerEndIndex === -1) {
+    return null;
+  }
+
+  const headerText = buffer.subarray(0, headerEndIndex).toString('utf8');
+  const contentLength = extractContentLength(headerText);
+  if (contentLength === null) {
+    throw new Error('Received an MCP message without a valid Content-Length header.');
+  }
+
+  const bodyStartIndex = headerEndIndex + HEADER_SEPARATOR.length;
+  const bodyEndIndex = bodyStartIndex + contentLength;
+  if (buffer.length < bodyEndIndex) {
+    return null;
+  }
+
+  return {
+    messageBuffer: buffer.subarray(bodyStartIndex, bodyEndIndex),
+    remainingBuffer: buffer.subarray(bodyEndIndex),
+  };
+}
+
+function dropLeadingLineBreaks(buffer) {
+  let firstContentIndex = 0;
+  while (firstContentIndex < buffer.length && (buffer[firstContentIndex] === 10 || buffer[firstContentIndex] === 13)) {
+    firstContentIndex += 1;
+  }
+
+  return firstContentIndex === 0 ? buffer : buffer.subarray(firstContentIndex);
+}
+
+function trimTrailingCarriageReturn(buffer) {
+  return buffer.at(-1) === 13 ? buffer.subarray(0, -1) : buffer;
 }
 
 function extractContentLength(headerText) {
@@ -521,4 +642,8 @@ function finalizeCapturedOutput(output, truncated) {
   }
 
   return `${output}\n[output truncated]`;
+}
+
+function normalizePath(value) {
+  return value.replaceAll(path.sep, '/');
 }

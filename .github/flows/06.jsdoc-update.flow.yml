@@ -1,0 +1,33 @@
+id: "06.jsdoc-update"
+name: "JSDoc Quality Update"
+agent: "06-documenting"
+description: >
+  Updates JSDoc comments in a source file that was recently touched. Checks
+  that all exported symbols have JSDoc with @param, @returns, and at least
+  one @example where behavior is non-obvious. Improves conceptual depth and
+  educational clarity without changing implementation. Does not edit generated
+  src/**/README.md files directly.
+
+triggers:
+  - "Source file touched in a previous phase; JSDoc is missing, incomplete, or stale"
+  - "New exported symbol added without JSDoc during implementation"
+  - "Educational docs audit identified a JSDoc gap for a public API boundary"
+  - "Phase implementation done; JSDoc pass required before README refresh"
+
+gates:
+  - "plan-sync"
+  - "docs-artifact-reference"
+
+post-phase-fanout:
+  - "07-logging"
+
+skills:
+  - "updating-js-docs"
+  - "educational-docs"
+  - "auditing-js-docs"
+
+specialists:
+  - "Docs Scout"
+  - "docs-example-writer"
+
+timeout-minutes: 20

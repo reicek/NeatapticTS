@@ -1,0 +1,33 @@
+id: "07.learning-event-log"
+name: "Learning Event Capture"
+agent: "07-logging"
+description: >
+  Records a structured learning event in .github/ai-learning/learning-log.jsonl
+  for a gate exception, cross-tier helper call, or discovered agent system gap.
+  Uses the capturing-learning-event skill to produce a valid ISO-42001-style
+  evidence entry. Ensures the learning-event gate will pass for subsequent
+  phases. Routes to 00-helping if gap resolution is needed beyond logging.
+
+triggers:
+  - "A gate exception was recorded during the current phase"
+  - "A cross-tier helper call to 00-helping was observed"
+  - "An agent system gap or recurring routing failure was discovered"
+  - "A gate infrastructure bug was found and fixed; evidence must be durably recorded"
+
+gates:
+  - "plan-sync"
+  - "learning-event"
+  - "log-completion-marker"
+
+post-phase-fanout:
+  - "00-helping"
+
+skills:
+  - "capturing-learning-event"
+  - "tracker-handoff"
+
+specialists:
+  - "learning-event-capturer"
+  - "helping-gap-resolution-coordinator"
+
+timeout-minutes: 10

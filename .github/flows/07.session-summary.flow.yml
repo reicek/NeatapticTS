@@ -1,0 +1,31 @@
+id: "07.session-summary"
+name: "Session Activity Summary"
+agent: "07-logging"
+description: >
+  Writes a compressed session activity summary covering changed files,
+  validation evidence, decisions made, residual risks, and next steps.
+  Uses the summarizing-session-log skill to produce a durable pass-style
+  log entry. Intended for long-running or multi-pass sessions approaching
+  their end where continuity across sessions is required.
+
+triggers:
+  - "Long-running or multi-pass session approaching end; activity needs a durable log record"
+  - "Session produced significant changes that must survive context loss"
+  - "Handoff to a future session is planned; summary needed for continuity"
+  - "Multiple phases completed in one session; consolidated summary required"
+
+gates:
+  - "plan-sync"
+  - "log-completion-marker"
+
+post-phase-fanout:
+  - "NONE"
+
+skills:
+  - "summarizing-session-log"
+  - "tracker-handoff"
+
+specialists:
+  - "file-change-summarizer"
+
+timeout-minutes: 15

@@ -423,7 +423,10 @@ function assertSupportedParameterFamilies(
 
   [...networkInternals.connections, ...networkInternals.selfconns].forEach(
     (connection, connectionIndex) => {
-      if (connection.gain !== NEUTRAL_CONNECTION_GAIN) {
+      if (
+        connection.gain !== NEUTRAL_CONNECTION_GAIN &&
+        connection.gater === null
+      ) {
         throw new Error(
           `ParameterVector v1 does not support non-neutral connection.gain. Connection at runtime index ${connectionIndex} has gain ${connection.gain}.`,
         );

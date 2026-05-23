@@ -1,0 +1,39 @@
+id: "00.workflow-gap-audit"
+name: "Workflow Gap Audit and Learning Event Capture"
+agent: "00-helping"
+description: >
+  Aggregates recently observed workflow gaps (failed gates, escalated blockers,
+  agent or flow selection drift) and converts them into structured learning
+  events in .github/ai-learning/learning-log.jsonl. Reviews the active plans
+  tracker for open BLOCKERS, consults the agent and skill inventory for
+  coverage drift, and proposes minimal frontmatter or skill updates. Does not
+  implement changes; produces a structured action list for downstream phases.
+
+triggers:
+  - "Learning-event analytics pass requested"
+  - "Multiple gate exceptions observed across recent sessions"
+  - "Agent or flow selection drift identified"
+  - "00.workflow-gap-audit referenced in plan fan-out"
+  - "Periodic maintenance audit of the agentic workflow surface"
+
+gates:
+  - "plan-sync"
+  - "learning-event"
+  - "agent-graph"
+
+post-phase-fanout:
+  - "learning-event-capturer"
+  - "01-planning"
+
+skills:
+  - "capturing-learning-event"
+  - "agent-inventory-audit"
+  - "tracker-handoff"
+  - "skill-description-evals"
+
+specialists:
+  - "Skill Inventory Auditor"
+  - "helping-gap-resolution-coordinator"
+  - "Plan Scout"
+
+timeout-minutes: 30

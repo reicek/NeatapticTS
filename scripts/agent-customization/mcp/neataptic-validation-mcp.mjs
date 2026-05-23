@@ -7,6 +7,7 @@ import {
   invokeServerRequest,
   parseMcpCliArgs,
   printMcpUsage,
+  requireExplicitPlanPath,
   requireString,
   runShellFreeCommand,
   runStdioMcpServer,
@@ -24,24 +25,26 @@ const SERVER_VERSION = '0.1.0';
 const SELF_CHECK_COMMAND_PATTERN = /neataptic-(workflow|validation)-mcp\.mjs|--self-check/iu;
 
 const options = parseMcpCliArgs(process.argv.slice(2));
-const server = createMcpServer({
-  serverName: SERVER_NAME,
-  serverVersion: SERVER_VERSION,
-  tools: createValidationTools(options.plan),
-});
 
 if (options.help) {
   printMcpUsage({
     title: 'Expose active-step allow-listed validation commands as a direct MCP server.',
     entrypoint: 'scripts/agent-customization/mcp/neataptic-validation-mcp.mjs',
     summary: 'Without flags this script starts a dependency-light stdio MCP server. Use --self-check to confirm that the current active step packet is the only allow-list authority and that bounded validation commands still execute without a shell.',
-    tools: server.tools,
+    tools: createValidationTools('plans/help-only.md'),
   });
   process.exit(0);
 }
 
+const planPath = requireExplicitPlanPath(options.plan);
+const server = createMcpServer({
+  serverName: SERVER_NAME,
+  serverVersion: SERVER_VERSION,
+  tools: createValidationTools(planPath),
+});
+
 if (options.selfCheck) {
-  const report = await runValidationSelfCheck({ server, planPath: options.plan });
+  const report = await runValidationSelfCheck({ server, planPath });
   emitSelfCheckReport(report, options);
   process.exitCode = report.ok ? 0 : 1;
 } else {

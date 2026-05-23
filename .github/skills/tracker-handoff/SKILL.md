@@ -60,7 +60,20 @@ close it deliberately.
 - If there is still a real next step from the plan's own context, the plan is
   not closed yet and should stay active with a `Handoff query`.
 
-### Status Markers
+### Flow-Aware Tracker Closure
+
+Tracker closure now runs through the `07.tracker-closure` flow. The flow
+requires the `log-completion-marker` gate to pass before the workstream is
+considered closed. The gate confirms that a compressed log entry is present and
+the target phase is marked `[DONE]`.
+
+When closing a tracker that was run with flow-aware phase steps:
+- The `VALIDATION_EVIDENCE` section of the final structured-v1 output block
+  must include `log-completion-marker gate: pass` evidence.
+- If the workstream produced gate exceptions, confirm they are recorded in
+  `.github/ai-learning/learning-log.jsonl` before compressing.
+
+
 
 Every durable tracker should use the same three states:
 

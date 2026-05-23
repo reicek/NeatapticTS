@@ -1,0 +1,35 @@
+id: "01.plan-registration"
+name: "New Plan Registration and Sync"
+agent: "01-planning"
+description: >
+  Registers a newly created plan file in plans/README.md and plans/Roadmap.md,
+  confirms the plan-sync gate passes, and activates the first phase step.
+  Prefers the neataptic-validation-mcp run_allowlisted_validation tool
+  (validate-plan-sync gate) to confirm registration status before opening
+  any file directly. Uses Plan Registration Auditor only when the MCP check
+  returns inconclusive or the plan path is non-standard. Does not modify
+  src/ or numbered agent frontmatter.
+
+triggers:
+  - "New plan file created but not yet registered in README or Roadmap"
+  - "plan-sync gate fails because plan is missing from plans/README.md"
+  - "User asks 01-planning to register a new workstream plan"
+  - "Roadmap entry is stale or plan status marker is inconsistent"
+
+gates:
+  - "plan-sync"
+  - "planning-output-contract"
+
+post-phase-fanout:
+  - "02-researching"
+
+skills:
+  - "plan-alignment"
+  - "plan-sync-validation"
+  - "tracker-handoff"
+
+specialists:
+  - "Plan Registration Auditor"
+  - "Plan Scout"
+
+timeout-minutes: 15

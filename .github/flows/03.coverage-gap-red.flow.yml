@@ -1,0 +1,35 @@
+id: "03.coverage-gap-red"
+name: "Coverage Gap Red Contract"
+agent: "03-red-testing"
+description: >
+  Authors a targeted failing test for an uncovered branch or line in a
+  src/ file that was recently touched. Reads the nearest lcov.info or runs
+  a focused jest --coverage slice to identify the exact uncovered path.
+  Uses Coverage Scout for gap identification when the boundary is complex.
+  Adds the smallest owner-local test that exercises the uncovered path,
+  confirms it is red (coverage below 100%), and records the test file path
+  in the plan for 04-implementing to reference.
+
+triggers:
+  - "lcov shows uncovered branch or line in a src/ file just touched"
+  - "Coverage Guard reports a gap after an implementation step"
+  - "100% coverage requirement is not met on a recently changed boundary"
+  - "Tranche expansion step: uncovered path needs a red test before a fix"
+
+gates:
+  - "plan-sync"
+  - "red-test-confirmation"
+
+post-phase-fanout:
+  - "04-implementing"
+
+skills:
+  - "creating-unit-tests"
+  - "coverage-tranche"
+  - "red-test-contracts"
+
+specialists:
+  - "unit-test-writer"
+  - "Coverage Scout"
+
+timeout-minutes: 20

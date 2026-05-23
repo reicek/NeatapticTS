@@ -1,7 +1,9 @@
+import { readFile } from 'node:fs/promises';
+
 import {
   parseFrontmatterValue,
-  readWorkspaceFile,
 } from '../customization-utils.mjs';
+import { resolveExplicitPlanPath } from './mcp-utils.mjs';
 
 const PHASE_PATTERN = /^### Phase (?<phase>\d+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 const STEP_PATTERN = /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
@@ -13,7 +15,19 @@ const STEP_PATTERN = /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<
  * @returns {Promise<{ planPath: string, activePhase: { number: number, title: string, status: string }, activeStep: { number: number, title: string, status: string, metadata: Record<string, unknown>, stepObjective: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean } }>} Active plan context.
  */
 export async function loadActivePlanContext(planPath) {
-  const planText = await readWorkspaceFile(planPath);
+  const resolvedPlanPath = resolveExplicitPlanPath(planPath);
+  let planText;
+
+  try {
+    planText = await readFile(resolvedPlanPath.absolutePath, 'utf8');
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      throw new Error(`Plan file not found: ${resolvedPlanPath.displayPath}`);
+    }
+
+    throw error;
+  }
+
   const phases = [...extractPhaseBlocks(planText)];
   const activePhases = phases.filter((phaseBlock) => phaseBlock.status === 'WIP');
 
@@ -35,7 +49,7 @@ export async function loadActivePlanContext(planPath) {
   const requiredValidationCommands = normalizeCommands(extractRequiredValidationCommands(activeStep.body));
 
   return {
-    planPath,
+    planPath: resolvedPlanPath.displayPath,
     activePhase: {
       number: activePhase.number,
       title: activePhase.title,

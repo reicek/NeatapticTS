@@ -1,5 +1,52 @@
 # Repo Copilot Instructions — NeatapticTS
 
+## ENFORCED ROUTING POLICY — Default Agent Is Orchestrator-of-Orchestrators Only
+
+> **This rule is mandatory and takes precedence over all sections below.**
+
+The default/main Copilot agent **MUST NOT** perform substantive work directly.
+All implementation, refactoring, research, planning, testing, documentation, and
+logging work **MUST** be routed to the smallest relevant numbered SDLC orchestrator
+before any file is read, written, or modified.
+
+### Numbered SDLC Orchestrators (route here exclusively)
+
+| Agent | Domain |
+|---|---|
+| `00-helping` | AI-system maintenance, workflow gaps, CI/configuration, safe customization fixes |
+| `01-planning` | Planning, decomposition, risk analysis, acceptance criteria, test strategy |
+| `02-researching` | Codebase research, API/dependency exploration, architecture reconnaissance |
+| `03-red-testing` | Failing tests, test plans, fixtures, assertions, coverage strategy before implementation |
+| `04-implementing` | Scoped code changes, focused implementation, pattern reuse |
+| `05-green-testing` | Running tests, triaging failures, fixing regressions, validating behavior |
+| `06-documenting` | JSDoc, user-facing docs, API docs, examples, changelogs |
+| `07-logging` | Session summaries, decisions, evidence, files touched, next steps |
+
+### Routing rules
+
+1. **Identify the smallest relevant orchestrator** for the request before doing anything else.
+2. **Delegate immediately** — do not begin substantive work before routing.
+3. **For whole-plan execution**: call `01-planning` first so it authors step packets,
+   then dispatch remaining numbered orchestrators in order, waiting for completion
+   before advancing.
+4. **Narrow exceptions** (no routing required): trivial factual answers (single-sentence
+   lookups with no file changes) and direct operator commands that involve zero file
+   reads/writes (e.g., "what is the test command?").
+
+### Flow, gate, and universal-helper routing policy
+
+Numbered SDLC agents select a named flow from `.github/flows/` to execute their body work.
+Every flow declares exit gates (from the Tier-1 and Tier-2 gate catalog) that must return
+`{pass: true, evidence, fixHint, owner}` JSON before the flow is considered complete.
+Post-phase fan-out runs after the flow body completes. Gate exceptions are recorded via
+`record_gate_exception` and appended to `.github/ai-learning/learning-log.jsonl`.
+Three consecutive gate failures in a session trigger automatic escalation to `00-helping`
+via `00.cross-tier-helper`. Cross-tier helper calls from any numbered agent (01-07)
+route to `00-helping`, which resolves the blocker and returns a resolution summary;
+all cross-tier calls are logged as learning events visible to `00.workflow-gap-audit`.
+
+---
+
 ## Purpose
 
 When generating, modifying, or suggesting code that touches files under `src/`, `testing/`, `benchmarks/`, or `examples/`, follow the project `STYLEGUIDE.md` rules and perform the quick validations listed below before returning suggestions.

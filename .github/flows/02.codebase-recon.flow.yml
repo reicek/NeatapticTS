@@ -1,0 +1,35 @@
+id: "02.codebase-recon"
+name: "Source Boundary Reconnaissance"
+agent: "02-researching"
+description: >
+  Maps module boundaries, existing utilities, API surfaces, and naming
+  conventions in src/, testing/, benchmarks/, or examples/ before an
+  implementation step begins. Reads the nearest folder README.md first
+  (auto-generated from JSDoc) as a compressed module overview, then reads
+  individual source files only for targeted seam verification. Hands off
+  a compact integration surface map to 04-implementing so the agent can
+  implement without additional research. Does not modify any file.
+
+triggers:
+  - "Implementation step needs module map, existing utilities, or API surface"
+  - "04-implementing requests a read-only recon before editing"
+  - "Refactor or split requires seam identification"
+  - "New subsystem needs neighbor-module contract mapping"
+
+gates:
+  - "plan-sync"
+  - "research-findings-evidence"
+
+post-phase-fanout:
+  - "04-implementing"
+
+skills:
+  - "plan-alignment"
+  - "solid-split"
+
+specialists:
+  - "Boundary Mapper"
+  - "implementation-pattern-scout"
+  - "research-codebase-coordinator"
+
+timeout-minutes: 20

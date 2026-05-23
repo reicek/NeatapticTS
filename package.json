@@ -7,7 +7,7 @@
   "types": "./dist/neataptic.d.ts",
   "type": "module",
   "scripts": {
-    "jest:base": "cross-env NODE_OPTIONS=--no-experimental-webstorage jest --config=jest.config.mjs",
+    "jest:base": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=8192\" jest --config=jest.config.mjs",
     "test": "npm run jest:base -- --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --testPathIgnorePatterns=benchmark\\..*\\.test\\.ts$ --verbose",
     "pretest": "npm run build",
     "test:bench": "npm run jest:base -- --no-cache --runInBand --verbose --testPathPatterns=benchmark",
@@ -33,7 +33,8 @@
     "build:flappy-bird:host": "npx esbuild examples/flappy_bird/browser-entry/browser-entry.ts --bundle --outfile=docs/assets/flappy-bird.bundle.js --platform=browser --format=iife --minify --sourcemap --external:fs --external:child_process --external:path",
     "build:flappy-bird": "npm run build:flappy-worker && npm run build:flappy-bird:host",
     "build:neat-chat": "npx esbuild examples/neatChat/browser-entry.ts --bundle --outfile=docs/assets/neat-chat.bundle.js --platform=browser --format=iife --minify --sourcemap --external:fs --external:child_process --external:path",
-    "generate:neat-chat-default-snapshot": "npx esbuild examples/neatChat/generate-default-pretrained-session-snapshot.ts --bundle --platform=node --format=esm --outfile=dist-docs/scripts/generate-neat-chat-default-snapshot.js && node ./dist-docs/scripts/generate-neat-chat-default-snapshot.js",
+    "generate:neat-chat-default-snapshot": "node scripts/generate-neat-chat-default-snapshot.mjs",
+    "evaluate:neat-chat-regression-pack": "npx esbuild examples/neatChat/evaluate-regression-pack.ts --bundle --platform=node --format=esm --outfile=dist-docs/scripts/evaluate-neat-chat-regression-pack.js && node ./dist-docs/scripts/evaluate-neat-chat-regression-pack.js",
     "trace:analyze": "npm run docs:build-scripts && node ./dist-docs/scripts/analyze-trace/analyze-trace.js",
     "start": "npx http-server . -p 8080 -c-1",
     "start:ts": "ts-node src/neataptic.ts",

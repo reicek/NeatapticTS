@@ -16,12 +16,15 @@ jest.mock('./default-pretrained-session-snapshot', () => ({
 import { start } from './browser-entry';
 import {
   createNeatChatAbComparison,
+  createNeatChatAdaptationManager,
   createNeatChatSession,
   createNeatChatPretrainingPreview,
   exportNeatChatSession,
   getNeatChatSampleConversationLines,
   importNeatChatSession,
   pretrainNeatChatSessionWithConversationLines,
+  runNeatChatExchange,
+  scheduleNeatChatAdaptation,
   updateNeatChatSessionContextWindowTokenCount,
 } from './index';
 
@@ -110,6 +113,9 @@ jest.mock('./index', () => {
       learnedTokenPairCount: 0,
       seededTokenPairCount: 0,
       contextWindowTokenCount: 24,
+      pendingCandidates: [],
+      candidateLog: [],
+      routingLog: [],
       network: {},
     })),
     updateNeatChatSessionContextWindowTokenCount: jest.fn(
@@ -124,21 +130,54 @@ jest.mock('./index', () => {
         seededTokenPairCount: session.seededTokenPairCount + seedLines.length,
       }),
     ),
-    runNeatChatExchange: jest.fn((session) => ({
-      response:
-        session.seededTokenPairCount > 0 ? 'learned reply' : 'blank reply',
-      responseTokens:
-        session.seededTokenPairCount > 0
-          ? ['learned', 'reply']
-          : ['blank', 'reply'],
+    createNeatChatAdaptationManager: jest.fn(() => ({
+      pendingCandidates: [],
+      candidateLog: [],
+    })),
+    scheduleNeatChatAdaptation: jest.fn(async (manager, session) => ({
+      ...manager,
+      pendingCandidates: [
+        {
+          createdAt: 123,
+          sourceExchangeCount: session.learnedExchangeCount,
+          trainedVector: [session.learnedExchangeCount],
+          evaluationScores: {
+            heldOutNextTokenAccuracy: 0.75,
+          },
+        },
+      ],
+    })),
+    runNeatChatExchange: jest.fn((session, userMessage: string) => {
+      const hasPendingCandidate = session.pendingCandidates.length > 0;
+      const response = hasPendingCandidate
+        ? 'personalized reply'
+        : session.seededTokenPairCount > 0
+          ? 'learned reply'
+          : 'blank reply';
+      const responseTokens = response.split(' ');
+
+      return {
+        response,
+        responseTokens,
       userTokens: ['hello'],
       trainedTokenPairCount: 3,
       updatedSession: {
         ...session,
+        exchanges: [
+          ...session.exchanges,
+          {
+            userMessage,
+            response,
+            trainedTokenPairCount: 3,
+            userTokens: ['hello'],
+            responseTokens,
+          },
+        ],
         learnedExchangeCount: session.learnedExchangeCount + 1,
         learnedTokenPairCount: session.learnedTokenPairCount + 3,
       },
-    })),
+      };
+    }),
     createNeatChatAbComparison: jest.fn((prompt: string) => ({
       prompt,
       variants: [
@@ -185,6 +224,9 @@ jest.mock('./index', () => {
       learnedTokenPairCount: snapshot.learnedTokenPairCount,
       seededTokenPairCount: snapshot.seededTokenPairCount,
       contextWindowTokenCount: snapshot.contextWindowTokenCount,
+      pendingCandidates: snapshot.pendingCandidates ?? [],
+      candidateLog: snapshot.candidateLog ?? [],
+      routingLog: snapshot.routingLog ?? [],
       network: {},
     })),
     tokenizeNeatChatText: jest.fn(() => ['hello']),
@@ -195,8 +237,15 @@ jest.mock('./index', () => {
 const mockedPretrainNeatChatSessionWithConversationLines = jest.mocked(
   pretrainNeatChatSessionWithConversationLines,
 );
+const mockedCreateNeatChatAdaptationManager = jest.mocked(
+  createNeatChatAdaptationManager,
+);
 const mockedCreateNeatChatSession = jest.mocked(createNeatChatSession);
 const mockedExportNeatChatSession = jest.mocked(exportNeatChatSession);
+const mockedRunNeatChatExchange = jest.mocked(runNeatChatExchange);
+const mockedScheduleNeatChatAdaptation = jest.mocked(
+  scheduleNeatChatAdaptation,
+);
 const mockedUpdateNeatChatSessionContextWindowTokenCount = jest.mocked(
   updateNeatChatSessionContextWindowTokenCount,
 );
@@ -214,10 +263,13 @@ const mockedCreateNeatChatAbComparison = jest.mocked(
 describe('neatChat browser-entry sample pretraining', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="neat-chat-output"></div>';
+    mockedCreateNeatChatAdaptationManager.mockClear();
     mockedCreateNeatChatSession.mockClear();
     mockedExportNeatChatSession.mockClear();
     mockedImportNeatChatSession.mockClear();
     mockedPretrainNeatChatSessionWithConversationLines.mockClear();
+    mockedRunNeatChatExchange.mockClear();
+    mockedScheduleNeatChatAdaptation.mockClear();
     mockedUpdateNeatChatSessionContextWindowTokenCount.mockClear();
     mockedCreateNeatChatPretrainingPreview.mockClear();
     mockedCreateNeatChatAbComparison.mockClear();
@@ -334,6 +386,52 @@ describe('neatChat browser-entry sample pretraining', () => {
       hasBlankReply: false,
       hasLearnedReply: true,
       hasSystemPretrainMessage: true,
+    });
+  });
+
+  it('schedules adaptation after turn 1 so turn 2 can see a personalized candidate', async () => {
+    await start('neat-chat-output');
+    const liveInput = document.querySelector<HTMLInputElement>(
+      '[data-neat-chat-live-input]',
+    );
+    const liveForm = document.querySelector<HTMLFormElement>(
+      '[data-neat-chat-live-form]',
+    );
+
+    if (liveInput && liveForm) {
+      liveInput.value = 'first message';
+      liveForm.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
+    }
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    if (liveInput && liveForm) {
+      liveInput.value = 'second message';
+      liveForm.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      );
+    }
+
+    const historyText =
+      document.querySelector<HTMLElement>('[data-neat-chat-history]')
+        ?.textContent ?? '';
+
+    expect({
+      scheduleCallCount: mockedScheduleNeatChatAdaptation.mock.calls.length,
+      scheduledExchangeCount:
+        mockedScheduleNeatChatAdaptation.mock.calls[0]?.[1]
+          ?.learnedExchangeCount,
+      secondTurnPendingCandidateCount:
+        mockedRunNeatChatExchange.mock.calls[1]?.[0]?.pendingCandidates.length,
+      hasPersonalizedTurnTwoReply: historyText.includes('personalized reply'),
+    }).toEqual({
+      scheduleCallCount: 1,
+      scheduledExchangeCount: 1,
+      secondTurnPendingCandidateCount: 1,
+      hasPersonalizedTurnTwoReply: true,
     });
   });
 

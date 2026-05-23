@@ -31,6 +31,12 @@
 - Repo-wide TypeScript validation via `npx tsc --noEmit -p tsconfig.json`, with only the unchanged external ONNX `TS2345` baseline at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135`.
 - Final focused coverage evidence confirmed `src/architecture/network/training/network.training.isolate.utils.ts`, `src/neat/hybrid/neat.hybrid.ts`, and `src/neataptic.ts` at `100/100/100/100`, with `src/neat/hybrid/neat.hybrid.types.ts` treated as a type-only non-runtime surface.
 
+## Residual baseline notes
+
+- The unchanged external ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` remains outside this archived lane and is not a closure blocker here.
+- `fineTune: 'conditional'` remains an explicit blocker until the repo has a deterministic ranking surface honest enough to own that policy.
+- The hybrid-interoperability dependency for the NEATchat follow-up is satisfied; any future widening should reopen from this archived baseline rather than restore the old active tracker.
+
 ## Reopen triggers
 
 - A future consumer needs parameter-vector versioning or parameter-family coverage beyond the archived v1 contract.

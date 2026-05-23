@@ -1,0 +1,34 @@
+id: "04.coverage-repair"
+name: "Coverage Tranche Expansion"
+agent: "04-implementing"
+description: >
+  Expands test coverage for a specific source boundary toward 100% statements,
+  branches, functions, and lines. Reads the lcov gap from coverage/lcov.info
+  or a focused coverage run, adds the smallest owner-local tests that exercise
+  uncovered paths, and confirms 100% on the touched files before handing off
+  to the coverage guard. Does not fix failing tests; use 04.scoped-fix for that.
+
+triggers:
+  - "Coverage below 100% on a src/ file"
+  - "Coverage tranche needed for a touched boundary"
+  - "Uncovered branch or function detected after implementation"
+  - "Coverage guard reports a gap after a code change"
+
+gates:
+  - "plan-sync"
+  - "agent-graph"
+  - "learning-event"
+
+post-phase-fanout:
+  - "coverage-guard"
+
+skills:
+  - "coverage-tranche"
+  - "coverage-guard"
+
+specialists:
+  - "Coverage Scout"
+  - "Coverage Guard"
+  - "unit-test-writer"
+
+timeout-minutes: 30

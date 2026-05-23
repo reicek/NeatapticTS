@@ -37,6 +37,17 @@ import {
   createNeatChatPretrainingPreview,
   resolvePositiveInteger,
 } from './neatChat.tokenization.utils';
+import { createNeatChatEpisodicMemoryBank } from './neatChat.memory.services';
+import { retrieveNeatChatMemories } from './neatChat.memory.services';
+import {
+  appendNeatChatRoutingDecision,
+  generateNeatChatCandidates,
+  selectNeatChatCandidate,
+} from './neatChat.routing.services';
+import { checkSafety } from './neatChat.safety.services';
+import type { NeatChatAdaptationManager } from './neatChat.adaptation.types';
+import type { NeatChatRoutingCandidate } from './neatChat.routing.types';
+import type { SafetyViolation } from './neatChat.safety.types';
 import type {
   CreateNeatChatSessionOptions,
   NeatChatExchangeRecord,
@@ -53,6 +64,50 @@ const NEATCHAT_ONLINE_ANCHOR_CONVERSATION_LINES =
     0,
     NEATCHAT_ONLINE_ANCHOR_SET_LINE_COUNT,
   );
+const NEATCHAT_ROUTING_MAX_RETRIEVED_MEMORIES = 3;
+const NEATCHAT_RESPONSE_PUNCTUATION_PLACEHOLDER_PREFIX = 'PUNC_';
+const NEATCHAT_RECENT_RESPONSE_DUPLICATE_WINDOW = 3;
+const NEATCHAT_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS = [
+  'can',
+  'you',
+  'rephrase',
+  'that',
+] as const;
+const NEATCHAT_ADDITIONAL_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS = [
+  ['i', 'see'] as const,
+  ['sounds', 'great'] as const,
+  ['tell', 'me', 'about', 'that'] as const,
+  ['i', 'am', 'good'] as const,
+  ['i', 'will', 'stay', 'home'] as const,
+  ['steady', 'answer'] as const,
+] as const;
+const NEATCHAT_PROMPT_AWARE_NO_SAFE_CANDIDATE_FALLBACKS = [
+  {
+    promptPattern: /\bhow was your day\b/i,
+    responseTokens: ['i', 'am', 'feeling', 'good'] as const,
+  },
+  {
+    promptPattern: /\bweekend\b/i,
+    responseTokens: ['i', 'have', 'plans'] as const,
+  },
+] as const;
+const NEATCHAT_SHORT_PROMPT_FRAGMENT_OPENERS = new Set([
+  'how',
+  'what',
+  'when',
+  'where',
+  'why',
+  'who',
+]);
+const NEATCHAT_SHORT_PROMPT_FRAGMENT_LINKING_VERBS = new Set([
+  'are',
+  'is',
+  'was',
+  'were',
+]);
+const NEATCHAT_SYNTHESIZED_FALLBACK_VIOLATIONS = new Set<SafetyViolation>([
+  'incomplete-fragment',
+]);
 
 /**
  * Builds a token vocabulary from retained corpus terms plus stable special tokens.
@@ -147,6 +202,10 @@ export function createNeatChatSession(
     seededTokenPairCount,
     contextWindowTokenCount,
     replayBufferExchangeCount: 0,
+    pendingCandidates: [],
+    candidateLog: [],
+    memoryBank: createNeatChatEpisodicMemoryBank(),
+    routingLog: [],
   };
 }
 
@@ -211,6 +270,13 @@ export function pretrainNeatChatSessionWithConversationLines(
 /**
  * Runs one user-bot exchange and applies a narrow supervised update afterward.
  *
+ * Before committing a response, placeholder tokens are stripped from surfaced
+ * routing candidates and every candidate is screened through `checkSafety`.
+ * Recent-response duplicates from the last three exchanges are skipped so
+ * consecutive turns stay varied. When every candidate fails the safety gate,
+ * a bounded vocab-filtered fallback floor is returned instead of the top unsafe
+ * fragment.
+ *
  * @param session - Current live session holding the network and vocabulary.
  * @param userMessage - Raw user message text.
  * @returns Exchange result including the bot reply and the updated session.
@@ -228,33 +294,28 @@ export function runNeatChatExchange(
       NEATCHAT_SPECIAL_TOKEN_INDICES.UNK,
   );
 
-  session.network.clear();
-  const responseInferenceResult = inferResponseTokenSelection(
-    session.network,
-    session.vocabulary.size,
-    userIndices,
+  // Step 1: Rank memories and compare response-path candidates without mutating weights.
+  const retrievedMemories = retrieveNeatChatMemories(session, userMessage, {
+    maxResults: NEATCHAT_ROUTING_MAX_RETRIEVED_MEMORIES,
+  });
+  const routingCandidates = generateNeatChatCandidates(
+    session,
+    createRoutingAdaptationManager(session),
+    retrievedMemories,
+    userMessage,
   );
-  const responseIndices = responseInferenceResult.responseIndices;
-  const responseTokens = responseIndices.map(
-    (tokenIndex) =>
-      session.vocabulary.indexToTerm[tokenIndex] ??
-      NEATCHAT_DEFAULT_UNKNOWN_TOKEN,
+  const surfacedRoutingCandidates = routingCandidates.map(
+    stripPunctuationPlaceholderTokensFromCandidate,
   );
-  if (responseTokens.length === 0 && userIndices.length > 0) {
-    const fallbackTokenIndex =
-      userIndices.at(-1) ?? NEATCHAT_SPECIAL_TOKEN_INDICES.UNK;
-    const fallbackToken = resolveResponseFallbackToken(
-      session.vocabulary,
-      fallbackTokenIndex,
-    );
+  const selectedCandidate = resolveSelectedCandidate(
+    session,
+    surfacedRoutingCandidates,
+    userMessage,
+  );
+  const responseTokens = [...selectedCandidate.responseTokens];
+  const response = selectedCandidate.response;
 
-    responseTokens.push(fallbackToken);
-  }
-  const response =
-    responseTokens.length > 0
-      ? responseTokens.join(' ')
-      : NEATCHAT_DEFAULT_UNKNOWN_TOKEN;
-
+  // Step 2: Reuse the existing online-learning path after the routing decision is made.
   const trainingCases = buildObservedUserHistoryTrainingCases(
     session.vocabulary,
     session.exchanges,
@@ -270,10 +331,11 @@ export function runNeatChatExchange(
   const onlineLearningOutcome = applyOnlineLearningUpdate(
     session.network,
     [...trainingCases, ...replayTrainingCases, ...anchorTrainingCases],
-    responseInferenceResult.averageSelectedTokenConfidence,
+    selectedCandidate.score,
   );
   const trainedTokenPairCount = onlineLearningOutcome.committedTokenPairCount;
 
+  // Step 3: Fold the selected response and durable routing decision into the updated session.
   const exchangeRecord: NeatChatExchangeRecord = {
     userMessage,
     response,
@@ -298,7 +360,218 @@ export function runNeatChatExchange(
       replayBufferExchangeCount: resolveReplayBufferExchangeCount(
         session.exchanges.length + 1,
       ),
+      routingLog: appendNeatChatRoutingDecision(
+        session.routingLog,
+        selectedCandidate,
+        surfacedRoutingCandidates,
+      ),
     },
+  };
+
+  function resolveSelectedCandidate(
+    chatSession: NeatChatSession,
+    candidates: readonly NeatChatRoutingCandidate[],
+    promptText: string,
+  ): NeatChatRoutingCandidate {
+    const topCandidate = selectNeatChatCandidate(candidates);
+    const recentResponseSignatures = resolveRecentResponseSignatures(chatSession);
+    let remainingCandidates = [...candidates];
+    const rejectedViolations: SafetyViolation[] = [];
+
+    // Step 1: Walk the current local candidate set in the existing routing order.
+    while (remainingCandidates.length > 0) {
+      const currentCandidate = selectNeatChatCandidate(remainingCandidates);
+      const safetyResult = checkSafety(chatSession, currentCandidate.response);
+      const shortPromptEchoFragment =
+        safetyResult.ok &&
+        isShortPromptEchoFragment(currentCandidate.responseTokens);
+
+      if (
+        safetyResult.ok &&
+        !shortPromptEchoFragment &&
+        !isRecentResponseDuplicate(
+          currentCandidate.responseTokens,
+          recentResponseSignatures,
+        )
+      ) {
+        return currentCandidate;
+      }
+
+      if (shortPromptEchoFragment) {
+        rejectedViolations.push('incomplete-fragment');
+      } else if (safetyResult.violation !== null) {
+        rejectedViolations.push(safetyResult.violation);
+      }
+
+      const currentCandidateIndex = remainingCandidates.indexOf(currentCandidate);
+      remainingCandidates = remainingCandidates.toSpliced(currentCandidateIndex, 1);
+    }
+
+    // Step 2: Replace an all-unsafe candidate set with a bounded floor.
+    const shouldCreateSynthesizedFallback =
+      rejectedViolations.length > 0 &&
+      rejectedViolations.every((violation) =>
+        NEATCHAT_SYNTHESIZED_FALLBACK_VIOLATIONS.has(violation),
+      );
+
+    if (shouldCreateSynthesizedFallback) {
+      return createNoSafeCandidateFallback(
+        topCandidate,
+        chatSession,
+        promptText,
+        recentResponseSignatures,
+      );
+    }
+
+    return topCandidate;
+  }
+
+  function createNoSafeCandidateFallback(
+    rejectedTopCandidate: NeatChatRoutingCandidate,
+    chatSession: NeatChatSession,
+    promptText: string,
+    recentResponseSignatures: ReadonlySet<string>,
+  ): NeatChatRoutingCandidate {
+    const responseTokens = resolveNoSafeCandidateFallbackResponseTokens(
+      chatSession,
+      promptText,
+      recentResponseSignatures,
+    );
+
+    return {
+      ...rejectedTopCandidate,
+      response: responseTokens.join(' '),
+      responseTokens,
+      score: 0,
+    };
+  }
+
+  function resolveNoSafeCandidateFallbackResponseTokens(
+    chatSession: NeatChatSession,
+    promptText: string,
+    recentResponseSignatures: ReadonlySet<string>,
+  ): readonly string[] {
+    const orderedFallbackResponseTokens = [
+      resolvePromptAwareNoSafeCandidateFallbackResponseTokens(
+        chatSession,
+        promptText,
+      ),
+      ...NEATCHAT_ADDITIONAL_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS.filter(
+        (responseTokens) =>
+          responseTokens.every((token) =>
+            chatSession.vocabulary.termToIndex.has(token),
+          ),
+      ),
+      NEATCHAT_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS,
+    ].filter(
+      (responseTokens): responseTokens is readonly string[] =>
+        responseTokens !== undefined &&
+        responseTokens.every((token) => chatSession.vocabulary.termToIndex.has(token)),
+    );
+    const freshFallbackResponseTokens = orderedFallbackResponseTokens.find(
+      (responseTokens) =>
+        !isRecentResponseDuplicate(responseTokens, recentResponseSignatures),
+    );
+
+    if (freshFallbackResponseTokens !== undefined) {
+      return freshFallbackResponseTokens;
+    }
+
+    return orderedFallbackResponseTokens[0] ??
+      NEATCHAT_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS;
+  }
+
+  function resolvePromptAwareNoSafeCandidateFallbackResponseTokens(
+    chatSession: NeatChatSession,
+    promptText: string,
+  ): readonly string[] | undefined {
+    return NEATCHAT_PROMPT_AWARE_NO_SAFE_CANDIDATE_FALLBACKS.find(
+      ({ promptPattern, responseTokens }) =>
+        promptPattern.test(promptText) &&
+        responseTokens.every((token) =>
+          chatSession.vocabulary.termToIndex.has(token),
+        ),
+    )?.responseTokens;
+  }
+
+  function isRecentResponseDuplicate(
+    responseTokens: readonly string[],
+    recentResponseSignatures: ReadonlySet<string>,
+  ): boolean {
+    return recentResponseSignatures.has(createResponseSignature(responseTokens));
+  }
+
+  function resolveRecentResponseSignatures(
+    chatSession: NeatChatSession,
+  ): ReadonlySet<string> {
+    return new Set(
+      chatSession.exchanges
+        .slice(-NEATCHAT_RECENT_RESPONSE_DUPLICATE_WINDOW)
+        .map((exchangeRecord) =>
+          createResponseSignature(exchangeRecord.responseTokens),
+        ),
+    );
+  }
+
+  function createResponseSignature(responseTokens: readonly string[]): string {
+    return responseTokens.join(' ').trim().toLowerCase();
+  }
+
+  function isShortPromptEchoFragment(
+    responseTokens: readonly string[],
+  ): boolean {
+    if (responseTokens.length < 2 || responseTokens.length > 3) {
+      return false;
+    }
+
+    const normalizedTokens = responseTokens.map((token) =>
+      token.trim().toLowerCase(),
+    );
+    const firstToken = normalizedTokens[0];
+    const secondToken = normalizedTokens[1];
+    const thirdToken = normalizedTokens[2];
+
+    if (
+      firstToken === undefined ||
+      secondToken === undefined ||
+      !NEATCHAT_SHORT_PROMPT_FRAGMENT_OPENERS.has(firstToken) ||
+      !NEATCHAT_SHORT_PROMPT_FRAGMENT_LINKING_VERBS.has(secondToken)
+    ) {
+      return false;
+    }
+
+    return normalizedTokens.length === 2 || thirdToken === firstToken;
+  }
+}
+
+function stripPunctuationPlaceholderTokensFromCandidate(
+  candidate: NeatChatRoutingCandidate,
+): NeatChatRoutingCandidate {
+  const surfacedResponseTokens = candidate.responseTokens.filter(
+    (token) => !isPunctuationPlaceholderToken(token),
+  );
+
+  if (surfacedResponseTokens.length === candidate.responseTokens.length) {
+    return candidate;
+  }
+
+  return {
+    ...candidate,
+    response: surfacedResponseTokens.join(' ').trim(),
+    responseTokens: surfacedResponseTokens,
+  };
+}
+
+function isPunctuationPlaceholderToken(token: string): boolean {
+  return token.startsWith(NEATCHAT_RESPONSE_PUNCTUATION_PLACEHOLDER_PREFIX);
+}
+
+function createRoutingAdaptationManager(
+  session: NeatChatSession,
+): Pick<NeatChatAdaptationManager, 'pendingCandidates' | 'candidateLog'> {
+  return {
+    pendingCandidates: session.pendingCandidates,
+    candidateLog: session.candidateLog,
   };
 }
 
@@ -359,7 +632,7 @@ function inferResponseTokenSelection(
       break;
     }
 
-    const selectedTokenConfidence = output[nextIndex] ?? 0;
+    const selectedTokenConfidence = output[nextIndex]!;
     responseIndices.push(nextIndex);
     selectedTokenConfidenceSum += Math.max(0, selectedTokenConfidence);
     currentIndex = nextIndex;
@@ -401,10 +674,6 @@ export function buildSeedFullStreamTrainingCases(
 
   tokenIndices.push(NEATCHAT_SPECIAL_TOKEN_INDICES.EOS);
 
-  if (tokenIndices.length < 2) {
-    return [];
-  }
-
   return buildTrainingCasesFromSequence(tokenIndices, vocabulary.size);
 }
 
@@ -433,38 +702,9 @@ export function mapTextToVocabularyIndices(
 function buildOneHotVector(index: number, size: number): number[] {
   const vector = new Array<number>(size).fill(0);
 
-  if (index >= 0 && index < size) {
-    vector[index] = 1;
-  }
+  vector[index] = 1;
 
   return vector;
-}
-
-function resolveResponseFallbackToken(
-  vocabulary: NeatChatVocabulary,
-  requestedTokenIndex: number,
-): string {
-  const requestedToken = vocabulary.indexToTerm[requestedTokenIndex];
-
-  if (
-    requestedToken !== undefined &&
-    requestedToken !== NEATCHAT_DEFAULT_UNKNOWN_TOKEN &&
-    requestedToken !== 'BOS' &&
-    requestedToken !== 'EOS' &&
-    requestedToken !== 'TURN_BREAK'
-  ) {
-    return requestedToken;
-  }
-
-  const firstNonSpecialToken = vocabulary.indexToTerm.find(
-    (term) =>
-      term !== NEATCHAT_DEFAULT_UNKNOWN_TOKEN &&
-      term !== 'BOS' &&
-      term !== 'EOS' &&
-      term !== 'TURN_BREAK',
-  );
-
-  return firstNonSpecialToken ?? NEATCHAT_DEFAULT_UNKNOWN_TOKEN;
 }
 
 function buildDefaultSessionBootstrapTerms(): readonly string[] {
@@ -586,13 +826,6 @@ function applyOnlineLearningUpdate(
   readonly updatedNetwork: Network;
   readonly committedTokenPairCount: number;
 } {
-  if (trainingCases.length === 0) {
-    return {
-      updatedNetwork: network,
-      committedTokenPairCount: 0,
-    };
-  }
-
   const confidenceGatePassed =
     averageSelectedTokenConfidence >= NEATCHAT_ONLINE_LEARNING_MIN_CONFIDENCE;
 
@@ -607,14 +840,14 @@ function applyOnlineLearningUpdate(
     });
 
     return {
-      updatedNetwork: network,
+      updatedNetwork: clearSessionNetworkRuntimeState(network),
       committedTokenPairCount: trainingCases.length,
     };
   }
 
   if (trainingCases.length > NEATCHAT_ONLINE_LOSS_GATE_MAX_TRAINING_CASES) {
     return {
-      updatedNetwork: network,
+      updatedNetwork: clearSessionNetworkRuntimeState(network),
       committedTokenPairCount: 0,
     };
   }
@@ -647,13 +880,13 @@ function applyOnlineLearningUpdate(
 
   if (!shouldCommitUpdate) {
     return {
-      updatedNetwork: network,
+      updatedNetwork: clearSessionNetworkRuntimeState(network),
       committedTokenPairCount: 0,
     };
   }
 
   return {
-    updatedNetwork: candidateNetwork,
+    updatedNetwork: clearSessionNetworkRuntimeState(candidateNetwork),
     committedTokenPairCount: trainingCases.length,
   };
 }
@@ -698,44 +931,41 @@ function applySessionSeedConversationTraining(
   const totalCaseCount =
     fullStreamCases.length + adjacentPairCases.length + trigramCases.length;
 
-  if (totalCaseCount === 0) {
-    return 0;
-  }
+  network.train(fullStreamCases, {
+    iterations: NEATCHAT_SEED_STREAM_TRAINING_ITERATIONS,
+    rate: NEATCHAT_SEED_TRAINING_RATE,
+    momentum: NEATCHAT_SEED_TRAINING_MOMENTUM,
+    batchSize: 1,
+    allowRecurrent: true,
+    cost: methods.Cost.softmaxCrossEntropy,
+  });
 
-  if (fullStreamCases.length > 0) {
-    network.train(fullStreamCases, {
-      iterations: NEATCHAT_SEED_STREAM_TRAINING_ITERATIONS,
-      rate: NEATCHAT_SEED_TRAINING_RATE,
-      momentum: NEATCHAT_SEED_TRAINING_MOMENTUM,
-      batchSize: 1,
-      allowRecurrent: true,
-      cost: methods.Cost.softmaxCrossEntropy,
-    });
-  }
+  network.train(adjacentPairCases, {
+    iterations: NEATCHAT_SEED_LINE_TRAINING_ITERATIONS,
+    rate: NEATCHAT_SEED_TRAINING_RATE,
+    momentum: NEATCHAT_SEED_TRAINING_MOMENTUM,
+    batchSize: 1,
+    allowRecurrent: true,
+    cost: methods.Cost.softmaxCrossEntropy,
+  });
 
-  if (adjacentPairCases.length > 0) {
-    network.train(adjacentPairCases, {
-      iterations: NEATCHAT_SEED_LINE_TRAINING_ITERATIONS,
-      rate: NEATCHAT_SEED_TRAINING_RATE,
-      momentum: NEATCHAT_SEED_TRAINING_MOMENTUM,
-      batchSize: 1,
-      allowRecurrent: true,
-      cost: methods.Cost.softmaxCrossEntropy,
-    });
-  }
+  network.train(trigramCases, {
+    iterations: NEATCHAT_SEED_TRIGRAM_TRAINING_ITERATIONS,
+    rate: NEATCHAT_SEED_TRAINING_RATE,
+    momentum: NEATCHAT_SEED_TRAINING_MOMENTUM,
+    batchSize: 1,
+    allowRecurrent: true,
+    cost: methods.Cost.softmaxCrossEntropy,
+  });
 
-  if (trigramCases.length > 0) {
-    network.train(trigramCases, {
-      iterations: NEATCHAT_SEED_TRIGRAM_TRAINING_ITERATIONS,
-      rate: NEATCHAT_SEED_TRAINING_RATE,
-      momentum: NEATCHAT_SEED_TRAINING_MOMENTUM,
-      batchSize: 1,
-      allowRecurrent: true,
-      cost: methods.Cost.softmaxCrossEntropy,
-    });
-  }
+  clearSessionNetworkRuntimeState(network);
 
   return totalCaseCount;
+}
+
+function clearSessionNetworkRuntimeState(network: Network): Network {
+  network.clear();
+  return network;
 }
 
 function buildSeedAdjacentPairTrainingCases(
@@ -749,8 +979,8 @@ function buildSeedAdjacentPairTrainingCases(
     conversationIndex < seedConversationLines.length - 1;
     conversationIndex++
   ) {
-    const promptLine = seedConversationLines[conversationIndex] ?? '';
-    const replyLine = seedConversationLines[conversationIndex + 1] ?? '';
+    const promptLine = seedConversationLines[conversationIndex]!;
+    const replyLine = seedConversationLines[conversationIndex + 1]!;
     const promptIndices = mapTextToVocabularyIndices(vocabulary, promptLine);
     const replyIndices = mapTextToVocabularyIndices(vocabulary, replyLine);
 
@@ -786,8 +1016,8 @@ function buildSeedTrigramTrainingCases(
     conversationIndex < seedConversationLines.length - 1;
     conversationIndex++
   ) {
-    const promptLine = seedConversationLines[conversationIndex] ?? '';
-    const replyLine = seedConversationLines[conversationIndex + 1] ?? '';
+    const promptLine = seedConversationLines[conversationIndex]!;
+    const replyLine = seedConversationLines[conversationIndex + 1]!;
     const promptIndices = mapTextToVocabularyIndices(vocabulary, promptLine);
     const replyIndices = mapTextToVocabularyIndices(vocabulary, replyLine);
 
@@ -801,16 +1031,14 @@ function buildSeedTrigramTrainingCases(
     ];
 
     // Extract consecutive pair patterns from the extended sequence
-    for (let i = 0; i < extendedSequence.length - 1; i++) {
-      const currentIdx = extendedSequence[i];
-      const nextIdx = extendedSequence[i + 1];
+    for (let sequenceIndex = 0; sequenceIndex < extendedSequence.length - 1; sequenceIndex++) {
+      const currentTokenIndex = extendedSequence[sequenceIndex]!;
+      const nextTokenIndex = extendedSequence[sequenceIndex + 1]!;
 
-      if (currentIdx !== undefined && nextIdx !== undefined) {
-        trainingCases.push({
-          input: buildOneHotVector(currentIdx, vocabulary.size),
-          output: buildOneHotVector(nextIdx, vocabulary.size),
-        });
-      }
+      trainingCases.push({
+        input: buildOneHotVector(currentTokenIndex, vocabulary.size),
+        output: buildOneHotVector(nextTokenIndex, vocabulary.size),
+      });
     }
   }
 
@@ -828,12 +1056,8 @@ function buildTrainingCasesFromSequence(
     sequenceIndex < tokenIndices.length - 1;
     sequenceIndex++
   ) {
-    const currentTokenIndex = tokenIndices[sequenceIndex];
-    const nextTokenIndex = tokenIndices[sequenceIndex + 1];
-
-    if (currentTokenIndex === undefined || nextTokenIndex === undefined) {
-      continue;
-    }
+    const currentTokenIndex = tokenIndices[sequenceIndex]!;
+    const nextTokenIndex = tokenIndices[sequenceIndex + 1]!;
 
     trainingCases.push({
       input: buildOneHotVector(currentTokenIndex, vocabSize),

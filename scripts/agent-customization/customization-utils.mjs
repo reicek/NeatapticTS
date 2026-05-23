@@ -19,13 +19,15 @@ export function parseArgs(argv) {
     json: false,
     strict: false,
     help: false,
-    plan: 'plans/Agentic_Workflow_Architecture.plans.md',
+    contract: 'tier0',
+    plan: 'plans/completed/Agentic_Workflow_Architecture.plans.md',
   };
 
   for (const rawArg of argv) {
     if (rawArg === '--json') options.json = true;
     else if (rawArg === '--strict') options.strict = true;
     else if (rawArg === '--help' || rawArg === '-h') options.help = true;
+    else if (rawArg.startsWith('--contract=')) options.contract = rawArg.slice('--contract='.length);
     else if (rawArg.startsWith('--input=')) options.input = rawArg.slice('--input='.length);
     else if (rawArg.startsWith('--plan=')) options.plan = rawArg.slice('--plan='.length);
   }

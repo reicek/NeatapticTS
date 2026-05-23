@@ -40,6 +40,12 @@ import type {
 } from './core/neatChat.types';
 
 export type {
+  NeatChatAdaptationCandidate,
+  NeatChatAdaptationManager,
+  NeatChatCandidateLogEntry,
+  ScheduleNeatChatAdaptationOptions,
+} from './core/neatChat.adaptation.types';
+export type {
   CreateNeatChatAbComparisonOptions,
   CreateNeatChatPretrainingPreviewOptions,
   CreateNeatChatSeedNetworkOptions,
@@ -69,15 +75,35 @@ export type {
   NeatChatSeedValidationSplit,
   NeatChatSession,
   NeatChatSessionSnapshot,
+  NeatChatSessionSnapshotV2,
   NeatChatVisualizationContract,
   NeatChatVocabulary,
 } from './core/neatChat.types';
+export type {
+  NeatChatMemoryRecord,
+  NeatChatEpisodicMemoryBank,
+  NeatChatMemoryRetrievalResult,
+  CreateNeatChatEpisodicMemoryBankOptions,
+  RetrieveNeatChatMemoriesOptions,
+} from './core/neatChat.memory.types';
+export type {
+  NeatChatExternalSeedDescriptor,
+  NeatChatSeedImportResult,
+  NeatChatSeedMetadata,
+  NeatChatSupportedSeedFamily,
+} from './core/neatChat.seed-import.types';
 export {
   createNeatChatPretrainingPreview,
   estimateNeatChatRuntime,
   extractNeatChatConversationLines,
   tokenizeNeatChatText,
 } from './core/neatChat.tokenization.utils';
+export {
+  createNeatChatAdaptationManager,
+  promoteNeatChatAdaptationCandidate,
+  rejectNeatChatAdaptationCandidate,
+  scheduleNeatChatAdaptation,
+} from './core/neatChat.adaptation.services.ts';
 export {
   buildNeatChatVocabulary,
   createNeatChatSession,
@@ -90,6 +116,60 @@ export {
   exportNeatChatSession,
   importNeatChatSession,
 } from './core/neatChat.snapshot.services';
+export {
+  exportNeatChatPortablePayload,
+  exportNeatChatSessionV2,
+  importNeatChatSessionV2,
+} from './core/neatChat.snapshot.v2.services';
+export {
+  NEATCHAT_DEFAULT_MEMORY_BANK_MAX_RECORDS,
+  createNeatChatEpisodicMemoryBank,
+  addNeatChatMemoryRecord,
+  retrieveNeatChatMemories,
+  pruneNeatChatMemoryBank,
+} from './core/neatChat.memory.services';
+export { NeatChatSeedImportError } from './core/neatChat.seed-import.errors.ts';
+export {
+  buildSeedSnapshotFromExternalWeights,
+  mapExternalRecurrentWeightsToParameterVector,
+  validateNeatChatSeedFamily,
+} from './core/neatChat.seed-import.services.ts';
+export type {
+  EvaluationMetric,
+  FailureBucket,
+  RegressionEntry,
+  RegressionSuiteResult,
+  EvaluationHarnessInput,
+} from './core/neatChat.evaluation.types';
+export {
+  runNeatChatRegressionSuite,
+  attributeToFailureBucket,
+  scoreNextTokenAccuracy,
+  scoreRepetitionRate,
+  scoreResponseLengthStability,
+  scoreUnknownHandling,
+  scoreFactualConsistency,
+} from './core/neatChat.evaluation.services';
+export type {
+  SafetyViolation,
+  SafetyCheckResult,
+} from './core/neatChat.safety.types';
+export {
+  checkSafety,
+  isUnknownToken,
+  isRepetitionCollapse,
+  isDegenerateResponse,
+} from './core/neatChat.safety.services';
+export type {
+  NeatChatRoutingCandidate,
+  NeatChatRoutingDecisionLogEntry,
+  NeatChatRoutingPath,
+} from './core/neatChat.routing.types';
+export {
+  generateNeatChatCandidates,
+  selectNeatChatCandidate,
+  appendNeatChatRoutingDecision,
+} from './core/neatChat.routing.services';
 
 /**
  * Returns the initial public contract for the NEATchat example.
@@ -98,6 +178,77 @@ export {
  * an optional pretraining surface with bounded vocabulary growth, a strict UNK
  * policy, one-session A or B comparison semantics, and an explicit promise to
  * reuse the Flappy visualizer baseline before adding any NEATchat-specific UI.
+ *
+ * ## Scale and limitations
+ *
+ * NEATchat is a toy sequence-learning demo with explicit boundaries:
+ * - **One-hot vocabulary**: tokens are discrete one-hot vectors, not learned embeddings.
+ *   Vocabulary is capped to the top-N most frequent terms; all other terms map to `UNK`.
+ * - **Context window cap**: each exchange sees a short fixed-length token window.
+ *   Long histories are truncated — there is no sliding attention or memory compression.
+ * - **No transformer parity**: the architecture is a local LSTM, GRU, or NARX builder.
+ *   It does not replicate transformer self-attention, positional encoding, or
+ *   multi-head behavior and should not be compared against transformer-scale outputs.
+ * - **Seed-import eligibility**: only single-layer GRU or LSTM models with one-hot IO,
+ *   vocabulary between 300 and 3000, and sigmoid/tanh activations are eligible for
+ *   direct parameter-vector import. Incompatible shapes route to supervised distillation.
+ *
+ * ## Feature lanes
+ *
+ * **Live (stable)**: tokenization, bounded pretraining, online exchange updates,
+ * session export/import (`exportNeatChatSessionV2` / `importNeatChatSessionV2`),
+ * episodic memory bank, and A/B metric comparison.
+ *
+ * **Experimental — observability only**: multi-path routing
+ * (`generateNeatChatCandidates`, `selectNeatChatCandidate`) compares candidates
+ * across base, personalized, and retrieval-grounded paths. The routing log is
+ * an observability record only — routing does not promote weights or mutate
+ * session state. Do not rely on routing decisions as durable training signal.
+ *
+ * **Experimental — explicit background job**: background adaptation
+ * (`scheduleNeatChatAdaptation`) defers fine-tuning to the microtask queue.
+ * The base session network is frozen during the job. Candidates must be
+ * explicitly promoted via `promoteNeatChatAdaptationCandidate` or rejected via
+ * `rejectNeatChatAdaptationCandidate`. Adaptation currently runs on the main
+ * thread; a real worker-thread backend is not yet present.
+ *
+ * **Stable (W6 addition)**: the regression harness (`runNeatChatRegressionSuite`,
+ * `attributeToFailureBucket`, and score helpers) runs held-out corpus evaluation
+ * across five metrics. Baseline scores from the shipped default seed:
+ * `heldOutNextTokenAccuracy = 12.29`, `repetitionRate = 0`,
+ * `responseLengthStability = 1`. The safety gate (`checkSafety`,
+ * `isUnknownToken`, `isRepetitionCollapse`, `isDegenerateResponse`) classifies
+ * three failure modes — unknown-token, repetition-collapse, and degenerate
+ * response — without throwing. All current baseline outputs pass `ok: true`.
+ *
+ * **External seed import**: the module also exports `validateNeatChatSeedFamily`,
+ * `mapExternalRecurrentWeightsToParameterVector`, and `buildSeedSnapshotFromExternalWeights`
+ * for the offline non-ONNX parameter-vector conversion flow. Compatible external
+ * checkpoints are single-layer GRU or LSTM models with one-hot IO, exported in PyTorch
+ * gate-row order. Incompatible models should use the supervised-distillation path instead.
+ *
+ * **Episodic memory bank**: the module also exports `addNeatChatMemoryRecord`,
+ * `retrieveNeatChatMemories`, and `exportNeatChatSessionV2` for short-term
+ * persistent memory of user-specific facts. Create a bank with
+ * `createNeatChatEpisodicMemoryBank`, store facts with `addNeatChatMemoryRecord`,
+ * retrieve relevant records by prompt-token overlap with `retrieveNeatChatMemories`
+ * before generating each reply, and checkpoint the full bank state via
+ * `exportNeatChatSessionV2` for durable session persistence.
+ *
+ * **Background adaptation (experimental)**: the module also exports
+ * `createNeatChatAdaptationManager`, `scheduleNeatChatAdaptation`,
+ * `promoteNeatChatAdaptationCandidate`, and `rejectNeatChatAdaptationCandidate`
+ * for explicit, non-destructive personalization. `scheduleNeatChatAdaptation`
+ * is async and non-blocking: it defers the fine-tune pass to the microtask queue
+ * and returns a new manager view with the ready candidate appended to
+ * `pendingCandidates`. The base session network is frozen throughout — it is
+ * never mutated during a running job. `promoteNeatChatAdaptationCandidate`
+ * applies explicit promotion by cloning the session network and writing the
+ * trained weights via `fromParameterVector`; the original network is unaffected.
+ * Rejected candidates are discarded via `rejectNeatChatAdaptationCandidate`.
+ * Every promote or reject decision is appended to `session.candidateLog`, which
+ * is persisted across `exportNeatChatSessionV2` / `importNeatChatSessionV2`
+ * round-trips for a durable audit trail of personalization decisions.
  *
  * @returns Public contract summary for the first NEATchat slice.
  *

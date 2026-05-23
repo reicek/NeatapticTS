@@ -8,6 +8,7 @@ import {
   invokeServerRequest,
   parseMcpCliArgs,
   printMcpUsage,
+  requireExplicitPlanPath,
   runShellFreeCommand,
   runStdioMcpServer,
   selfCheckError,
@@ -31,24 +32,26 @@ const BANNED_LIVE_FACT_KEYS = [
 ];
 
 const options = parseMcpCliArgs(process.argv.slice(2));
-const server = createMcpServer({
-  serverName: SERVER_NAME,
-  serverVersion: SERVER_VERSION,
-  tools: createWorkflowTools(options.plan),
-});
 
 if (options.help) {
   printMcpUsage({
     title: 'Expose repo-static workflow facts as a direct MCP server.',
     entrypoint: 'scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs',
     summary: 'Without flags this script starts a dependency-light stdio MCP server. Use --self-check for a machine-checkable local audit of the current active workflow packet and deterministic customization inventory.',
-    tools: server.tools,
+    tools: createWorkflowTools('plans/help-only.md'),
   });
   process.exit(0);
 }
 
+const planPath = requireExplicitPlanPath(options.plan);
+const server = createMcpServer({
+  serverName: SERVER_NAME,
+  serverVersion: SERVER_VERSION,
+  tools: createWorkflowTools(planPath),
+});
+
 if (options.selfCheck) {
-  const report = await runWorkflowSelfCheck({ server, planPath: options.plan });
+  const report = await runWorkflowSelfCheck({ server, planPath });
   emitSelfCheckReport(report, options);
   process.exitCode = report.ok ? 0 : 1;
 } else {

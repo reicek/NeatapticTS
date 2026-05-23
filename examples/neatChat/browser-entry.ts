@@ -1,5 +1,6 @@
 import {
   createNeatChatAbComparison,
+  createNeatChatAdaptationManager,
   createNeatChatExampleContract,
   extractNeatChatConversationLines,
   exportNeatChatSession,
@@ -12,10 +13,12 @@ import {
   runNeatChatExchange,
   estimateNeatChatRuntime,
   type NeatChatAbComparisonResult,
+  type NeatChatAdaptationManager,
   type NeatChatExampleContract,
   type NeatChatPretrainingPreview,
   type NeatChatRuntimeEstimate,
   type NeatChatSession,
+  scheduleNeatChatAdaptation,
   splitNeatChatSeedAndValidationLines,
 } from './index';
 import { DEFAULT_NEATCHAT_PRETRAINED_SESSION_SNAPSHOT } from './default-pretrained-session-snapshot';
@@ -43,6 +46,8 @@ declare global {
 
 /** Module-level live-chat session — rebuilt when the user updates the preview. */
 let currentSession: NeatChatSession | null = null;
+let currentAdaptationManager: NeatChatAdaptationManager | null = null;
+let isAdaptationPending = false;
 let sampleConversationCursor = 0;
 
 /**
@@ -144,6 +149,8 @@ function renderContractPreview(
       contextWindowTokenCount: runtimeEstimate.contextWindowTokenCount,
     });
   }
+  currentAdaptationManager = createBrowserAdaptationManager(currentSession);
+  isAdaptationPending = false;
   synchronizeSessionSurfaceState(hostElement, currentSession);
   updateSessionStatsDisplay(hostElement, currentSession);
 
@@ -234,6 +241,7 @@ function renderContractPreview(
 
     const result = runNeatChatExchange(currentSession, userMessage);
     currentSession = result.updatedSession;
+    queueBrowserAdaptationForCurrentSession();
 
     appendExchangeToHistory(
       hostElement,
@@ -352,6 +360,8 @@ function renderContractPreview(
     try {
       const snapshotText = await selectedFile.text();
       currentSession = importNeatChatSession(JSON.parse(snapshotText));
+      currentAdaptationManager = createBrowserAdaptationManager(currentSession);
+      isAdaptationPending = false;
 
       const contextWindowField = hostElement.querySelector<HTMLSelectElement>(
         '[data-neat-chat-context-window-token-count]',
@@ -524,6 +534,59 @@ function resolvePreviewVocabularyText(
   return pretrainingPreview.previewTerms.length > 0
     ? pretrainingPreview.previewTerms.join(', ')
     : unknownToken;
+}
+
+function createBrowserAdaptationManager(
+  session: NeatChatSession,
+): NeatChatAdaptationManager {
+  const emptyManager = createNeatChatAdaptationManager(session);
+
+  return {
+    ...emptyManager,
+    pendingCandidates: session.pendingCandidates,
+    candidateLog: session.candidateLog,
+  };
+}
+
+function applyBrowserAdaptationState(
+  session: NeatChatSession,
+  manager: NeatChatAdaptationManager,
+): NeatChatSession {
+  return {
+    ...session,
+    pendingCandidates: manager.pendingCandidates,
+    candidateLog: manager.candidateLog,
+  };
+}
+
+function queueBrowserAdaptationForCurrentSession(): void {
+  if (!currentSession || isAdaptationPending) {
+    return;
+  }
+
+  const activeManager =
+    currentAdaptationManager ?? createBrowserAdaptationManager(currentSession);
+
+  if (activeManager.pendingCandidates.length > 0) {
+    currentAdaptationManager = activeManager;
+    currentSession = applyBrowserAdaptationState(currentSession, activeManager);
+    return;
+  }
+
+  isAdaptationPending = true;
+  void scheduleNeatChatAdaptation(activeManager, currentSession)
+    .then((nextManager) => {
+      currentAdaptationManager = nextManager;
+
+      if (!currentSession) {
+        return;
+      }
+
+      currentSession = applyBrowserAdaptationState(currentSession, nextManager);
+    })
+    .finally(() => {
+      isAdaptationPending = false;
+    });
 }
 
 /**

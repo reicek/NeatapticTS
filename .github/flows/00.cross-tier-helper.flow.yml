@@ -1,0 +1,42 @@
+id: "00.cross-tier-helper"
+name: "Cross-Tier Helper Call from Any Numbered Agent"
+agent: "00-helping"
+description: >
+  Handles explicit cross-tier helper requests originating from any numbered SDLC
+  agent (01-07). When a numbered agent determines that it cannot unblock itself
+  using its own specialists, it delegates to 00-helping via this flow. The flow
+  reads the caller's blocker context, applies the smallest relevant fix (e.g.,
+  frontmatter correction, model-routing adjustment, gate-exception recording,
+  skill gap filing), and returns a resolution summary back to the originating
+  agent. All cross-tier calls are logged as learning events so recurrent patterns
+  can be surfaced by 00.workflow-gap-audit.
+  This flow is callable from any tier (01–07) and is the universal escape path
+  that satisfies the AC-5 cross-tier-visibility requirement.
+
+triggers:
+  - "Numbered agent (01-07) emits SUGGESTED_NEXT_AGENT: 00-helping"
+  - "Three consecutive gate failures trigger escalation in the active session"
+  - "Agent cannot resolve a model-routing, frontmatter, or skill-gap blocker"
+  - "Cross-tier helper call explicitly named in a step packet or fan-out list"
+  - "Agent system gap requires a fix outside the requesting agent's scope"
+
+gates:
+  - "plan-sync"
+  - "output-resolution-evidence"
+
+post-phase-fanout:
+  - "<requesting-numbered-agent>"
+  - "learning-event-capturer"
+
+skills:
+  - "capturing-learning-event"
+  - "agent-frontmatter-standards"
+  - "model-routing-and-budget"
+  - "tracker-handoff"
+
+specialists:
+  - "helping-gap-resolution-coordinator"
+  - "helping-agent-maintenance-coordinator"
+  - "failure-triage-specialist"
+
+timeout-minutes: 15

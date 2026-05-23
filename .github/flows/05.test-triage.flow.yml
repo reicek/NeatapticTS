@@ -1,0 +1,32 @@
+id: "05.test-triage"
+name: "Test Failure Triage"
+agent: "05-green-testing"
+description: >
+  Triages one or more failing tests after an implementation step completes.
+  Reads the failure output, maps ownership to the smallest implementing agent
+  or script, and either routes for a regression fix or escalates to 00-helping
+  when the failure is unresolvable. Does not implement fixes directly.
+
+triggers:
+  - "Implementation step completed and one or more tests are failing"
+  - "CI reports a failing suite after a merge or code change"
+  - "Test failure ownership is unclear after 04-implementing returns"
+  - "Multiple test failures need a triage pass before repair routing"
+
+gates:
+  - "plan-sync"
+  - "green-validation-evidence"
+
+post-phase-fanout:
+  - "04-implementing"
+
+skills:
+  - "triaging-test-failures"
+  - "test-fix-workflow"
+  - "running-unit-tests"
+
+specialists:
+  - "failure-triage-specialist"
+  - "green-test-failure-triage-coordinator"
+
+timeout-minutes: 15

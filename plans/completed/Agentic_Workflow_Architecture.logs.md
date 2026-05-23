@@ -41,6 +41,16 @@
   `plans/README.md`, `plans/Roadmap.md`, and `plans/completed/README.md` to
   the terminal `[DONE]` state.
 
+### [DONE] Post-closure Tier-0 structured-v1 maintenance
+
+- Tightened the eight numbered Tier-0 agent prompt templates so field
+  position is explicit in-context, including the requirement that
+  `FILES_CHANGED` appear immediately before `KEY_FINDINGS` even when one or
+  both values are `NONE`.
+- Removed the output-validator length gate that had suppressed exact-order
+  diagnostics when a required Tier-0 field was missing, so missing-field and
+  shifted-order failures now report together.
+
 ## Controls and evidence
 
 - Active-workstream validation covered

@@ -136,7 +136,8 @@ function resolveCompatibilityPolicy(
     };
   }
 
-  const declaredOpset = readLongLikeNumber(standardDomainImports[0]!.version);
+  const standardDomainImport = standardDomainImports[0]!;
+  const declaredOpset = readLongLikeNumber(standardDomainImport.version!);
   if (declaredOpset < 1) {
     return {
       isValid: false,
@@ -151,7 +152,7 @@ function resolveCompatibilityPolicy(
       irVersion: resolvedIrVersion,
       standardDomain: ONNX_STANDARD_DOMAIN,
       encodedStandardDomain:
-        standardDomainImports[0]!.domain === ONNX_STANDARD_DOMAIN
+        standardDomainImport.domain === ONNX_STANDARD_DOMAIN
           ? ONNX_STANDARD_DOMAIN
           : ONNX_STANDARD_DOMAIN_ALIAS,
       declaredOpset,

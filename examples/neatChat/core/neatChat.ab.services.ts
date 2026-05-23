@@ -114,6 +114,44 @@ export function createNeatChatAbComparison(
   };
 }
 
+/**
+ * Scores one live NEATchat session with the same lightweight metrics used by the A/B boundary.
+ *
+ * This helper exists for regression-pack measurement against already-imported
+ * bundled snapshots or candidate artifacts. It reuses the exact held-out
+ * accuracy, repetition-rate, and response-length-stability formulas from the
+ * A/B comparison surface instead of approximating them through a warm-start
+ * proxy session.
+ *
+ * @param session - Existing live session to score.
+ * @param prompt - Representative prompt used to generate one response sample.
+ * @param validationConversationLines - Held-out lines used by the metric pack.
+ * @returns Prompt, generated response, and lightweight metric values.
+ */
+export function evaluateNeatChatSessionMetrics(
+  session: NeatChatSession,
+  prompt: string,
+  validationConversationLines: readonly string[] = [],
+): {
+  readonly prompt: string;
+  readonly response: string;
+  readonly responseTokens: readonly string[];
+  readonly metrics: NeatChatLightweightMetrics;
+} {
+  const inferenceResult = runAbInferenceOnlyExchange(session, prompt);
+
+  return {
+    prompt,
+    response: inferenceResult.response,
+    responseTokens: inferenceResult.responseTokens,
+    metrics: buildLightweightMetrics(
+      inferenceResult.updatedSession,
+      inferenceResult.responseTokens,
+      validationConversationLines,
+    ),
+  };
+}
+
 function runAbInferenceOnlyExchange(
   session: NeatChatSession,
   prompt: string,
