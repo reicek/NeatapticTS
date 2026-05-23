@@ -9,6 +9,11 @@ import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
 const DEFAULT_MIN_DOCUMENTS = 1;
 const DEFAULT_MIN_CHUNKS = 1;
 const DEFAULT_MAX_STALENESS_MS = 24 * 60 * 60 * 1000;
+const REBUILD_COMMAND = 'node scripts/semantic-index/build-index.mjs';
+const STALE_FIX_HINT = `Stale paths detected. Run: ${REBUILD_COMMAND}`;
+const MISSING_FIX_HINT = `Missing paths detected. Run: ${REBUILD_COMMAND}`;
+const OVER_AGE_FIX_HINT = `Over-age paths detected. Run: ${REBUILD_COMMAND}`;
+const GENERIC_FIX_HINT = `Run: ${REBUILD_COMMAND}`;
 
 export async function validateSemanticIndex(input = {}) {
   const documents = input.documents ?? [];
@@ -19,6 +24,9 @@ export async function validateSemanticIndex(input = {}) {
   const now = Number(input.now ?? Date.now());
   const maxStalenessMs = Number(input.maxStalenessMs ?? DEFAULT_MAX_STALENESS_MS);
   const failures = [];
+  const stalePaths = [];
+  const missingPaths = [];
+  const overAgePaths = [];
 
   if (documents.length < minDocuments) failures.push(`Expected at least ${minDocuments} documents; found ${documents.length}.`);
   if (chunks < minChunks) failures.push(`Expected at least ${minChunks} chunks; found ${chunks}.`);
@@ -26,28 +34,96 @@ export async function validateSemanticIndex(input = {}) {
   const freshnessByPath = new Map(freshnessChecks.map((proof) => [proof.file_path, proof]));
   for (const documentRow of documents) {
     const freshnessProof = freshnessByPath.get(documentRow.file_path);
-    if (freshnessProof && !isFreshDocument(documentRow, freshnessProof)) failures.push(`Stale freshness proof for ${documentRow.file_path}.`);
-    if (documentRow.indexed_at && now - Number(documentRow.indexed_at) > maxStalenessMs) failures.push(`Index row too old for ${documentRow.file_path}.`);
+    if (freshnessProof?.missing === true) {
+      failures.push(`Indexed file is missing: ${documentRow.file_path}.`);
+      pushUnique(missingPaths, documentRow.file_path);
+      continue;
+    }
+
+    if (freshnessProof && !isFreshDocument(documentRow, freshnessProof)) {
+      failures.push(`Stale freshness proof for ${documentRow.file_path}.`);
+      pushUnique(stalePaths, documentRow.file_path);
+    }
+
+    if (documentRow.indexed_at && now - Number(documentRow.indexed_at) > maxStalenessMs) {
+      failures.push(`Index row too old for ${documentRow.file_path}.`);
+      pushUnique(overAgePaths, documentRow.file_path);
+    }
   }
 
-  return { ok: failures.length === 0, pass: failures.length === 0, failures, documents: documents.length, chunks };
+  return createValidationResult({
+    failures,
+    documents: documents.length,
+    chunks,
+    stalePaths,
+    missingPaths,
+    overAgePaths,
+  });
 }
 
 export async function validateDatabase(options = {}) {
   const databasePath = path.resolve(options.databasePath ?? defaultDatabasePath);
-  if (!existsSync(databasePath)) return { ok: false, pass: false, failures: [`Database not found: ${databasePath}`], documents: 0, chunks: 0 };
+  if (!existsSync(databasePath)) {
+    return createValidationResult({
+      failures: [`Database not found: ${databasePath}`],
+      documents: 0,
+      chunks: 0,
+    });
+  }
 
   const database = new Database(databasePath, { readonly: true, fileMustExist: true });
   const documents = database.prepare('SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents ORDER BY file_path').all();
   const [{ count: chunkCount }] = database.prepare('SELECT COUNT(*) AS count FROM chunks').all();
   database.close();
 
-  const freshnessChecks = await Promise.all(documents.map(async (documentRow) => ({
-    file_path: documentRow.file_path,
-    ...(await getFreshnessProof(path.join(repoRoot, documentRow.file_path))),
-  })));
+  const freshnessChecks = await Promise.all(documents.map(async (documentRow) => {
+    const absolutePath = path.join(repoRoot, documentRow.file_path);
+
+    try {
+      return {
+        file_path: documentRow.file_path,
+        ...(await getFreshnessProof(absolutePath)),
+      };
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+        return {
+          file_path: documentRow.file_path,
+          missing: true,
+        };
+      }
+
+      throw error;
+    }
+  }));
 
   return validateSemanticIndex({ documents, freshnessChecks, chunks: chunkCount, minDocuments: options.minDocuments, minChunks: options.minChunks, maxStalenessMs: options.maxStalenessMs });
+}
+
+function createValidationResult({ failures, documents, chunks, stalePaths = [], missingPaths = [], overAgePaths = [] }) {
+  const pass = failures.length === 0;
+
+  return {
+    ok: pass,
+    pass,
+    failures,
+    documents,
+    chunks,
+    stale_paths: stalePaths,
+    missing_paths: missingPaths,
+    over_age_paths: overAgePaths,
+    fixHint: pass ? null : resolveFixHint({ stalePaths, missingPaths, overAgePaths, failures }),
+  };
+}
+
+function resolveFixHint({ stalePaths, missingPaths, overAgePaths, failures }) {
+  if (stalePaths.length > 0) return STALE_FIX_HINT;
+  if (missingPaths.length > 0) return MISSING_FIX_HINT;
+  if (overAgePaths.length > 0) return OVER_AGE_FIX_HINT;
+  return failures.length > 0 ? GENERIC_FIX_HINT : null;
+}
+
+function pushUnique(values, value) {
+  if (!values.includes(value)) values.push(value);
 }
 
 async function main() {

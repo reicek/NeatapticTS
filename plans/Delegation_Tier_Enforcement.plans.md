@@ -7,7 +7,7 @@
 > adds an MCP gate tool, and establishes an audit/escalation policy.
 > Does not depend on the SQLite corpus index; can execute in parallel with Repo Cortex Layers 1–3,
 > but **must complete before any plan that adds or reshapes custom agents or skills**,
-> including Repo Cortex Layer 4 (`Repo_Cortex_MCP_Reliability.plans.md`).
+> including Repo Cortex Layer 4 ([completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md)).
 
 ## Purpose
 
@@ -57,7 +57,7 @@ at runtime.
 - `scripts/agent-customization/` directory and existing scripts (reuse patterns).
 - MCP server registration in `.vscode/mcp.json` for the gate tool (additive).
 - Does not require SQLite corpus index.
-- **Must complete before** [Repo_Cortex_MCP_Reliability.plans.md](Repo_Cortex_MCP_Reliability.plans.md)
+- **Must complete before** [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md)
   begins — that plan adds new hidden specialist agents which must pass tier graph validation.
 
 ## Scope

@@ -22,6 +22,7 @@ pnpm-debug.log*
 /test-results/
 /ascii_maze_snapshots/
 data/semantic-index.sqlite
+data/mcp-session-override.json
 
 # Environment/secret files
 .env

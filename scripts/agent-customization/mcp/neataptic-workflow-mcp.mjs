@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
 import { issue } from '../customization-utils.mjs';
 import {
   createMcpServer,
@@ -9,10 +13,12 @@ import {
   parseMcpCliArgs,
   printMcpUsage,
   requireExplicitPlanPath,
+  requireString,
   runShellFreeCommand,
   runStdioMcpServer,
   selfCheckError,
   MCP_PROTOCOL_VERSION,
+  MCP_REPO_ROOT,
 } from './mcp-utils.mjs';
 import {
   createWorkflowSnapshot,
@@ -22,6 +28,8 @@ import {
 const SERVER_NAME = 'neataptic-workflow-mcp';
 const SERVER_VERSION = '0.1.0';
 const INVENTORY_COMMAND = 'node scripts/agent-customization/inventory-customizations.mjs --json';
+const PLANS_ROOT = path.join(MCP_REPO_ROOT, 'plans');
+const SESSION_OVERRIDE_PATH = path.join(MCP_REPO_ROOT, 'data', 'mcp-session-override.json');
 const BANNED_LIVE_FACT_KEYS = [
   'selectedActiveAgent',
   'currentSelectedModel',
@@ -64,7 +72,20 @@ function createWorkflowTools(planPath) {
       name: 'get_active_workflow_snapshot',
       description: 'Return the current repo-static workflow snapshot from the active phase and step packet.',
       annotations: { readOnlyHint: true },
-      handler: async () => createWorkflowSnapshot(await loadActivePlanContext(planPath)),
+      inputSchema: {
+        type: 'object',
+        properties: {
+          plan_path: {
+            type: 'string',
+            description: 'Optional repo-relative plan path within plans/ to load for this call only.',
+          },
+        },
+        additionalProperties: false,
+      },
+      handler: async (argumentsObject) => {
+        const effectivePlanPath = await resolveEffectivePlanPath(argumentsObject, planPath);
+        return createWorkflowSnapshot(await loadActivePlanContext(effectivePlanPath));
+      },
     }),
     createTool({
       name: 'get_customization_inventory',
@@ -77,7 +98,8 @@ function createWorkflowTools(planPath) {
 
 async function runWorkflowSelfCheck({ server, planPath }) {
   const issues = [];
-  const activePlanContext = await loadActivePlanContext(planPath);
+  const effectivePlanPath = await resolveEffectivePlanPath({}, planPath);
+  const activePlanContext = await loadActivePlanContext(effectivePlanPath);
   const initializeResult = await invokeServerRequest(server, {
     method: 'initialize',
     params: {
@@ -138,7 +160,7 @@ async function runWorkflowSelfCheck({ server, planPath }) {
 
   return createSelfCheckReport('neataptic-workflow-mcp self-check', issues, {
     server: { name: SERVER_NAME, version: SERVER_VERSION },
-    plan: planPath,
+    plan: effectivePlanPath,
     toolNames: server.tools.map((tool) => tool.name),
     snapshot: {
       phase: workflowSnapshot.activePhase?.number ?? null,
@@ -163,4 +185,58 @@ async function loadCustomizationInventory() {
   } catch {
     throw new Error('Customization inventory command did not return valid JSON.');
   }
+}
+
+async function resolveEffectivePlanPath(argumentsObject, startupPlanPath) {
+  if (argumentsObject?.plan_path !== undefined) {
+    return resolvePlansScopedPath(argumentsObject.plan_path, 'plan_path');
+  }
+
+  const sessionOverridePlanPath = await readSessionOverridePlanPath();
+  return sessionOverridePlanPath ?? startupPlanPath;
+}
+
+async function readSessionOverridePlanPath() {
+  if (!existsSync(SESSION_OVERRIDE_PATH)) {
+    return null;
+  }
+
+  try {
+    const rawOverride = await readFile(SESSION_OVERRIDE_PATH, 'utf8');
+    const overridePayload = JSON.parse(rawOverride);
+    if (typeof overridePayload?.plan_path !== 'string' || !overridePayload.plan_path.trim()) {
+      return null;
+    }
+
+    return resolvePlansScopedPath(overridePayload.plan_path, 'session override plan_path');
+  } catch {
+    return null;
+  }
+}
+
+function resolvePlansScopedPath(candidatePath, fieldName) {
+  const requestedPlanPath = requireString(candidatePath, fieldName);
+  const absolutePlanPath = path.isAbsolute(requestedPlanPath)
+    ? path.normalize(requestedPlanPath)
+    : path.resolve(MCP_REPO_ROOT, requestedPlanPath);
+  const relativeToPlans = path.relative(PLANS_ROOT, absolutePlanPath);
+  const staysWithinPlans = relativeToPlans !== ''
+    && !relativeToPlans.startsWith('..')
+    && !path.isAbsolute(relativeToPlans);
+
+  if (!staysWithinPlans) {
+    throw invalidParamsError(`${fieldName} must resolve within plans/. Received: ${requestedPlanPath}`);
+  }
+
+  return normalizePath(path.relative(MCP_REPO_ROOT, absolutePlanPath));
+}
+
+function invalidParamsError(message) {
+  const error = new Error(message);
+  error.jsonRpcCode = -32602;
+  return error;
+}
+
+function normalizePath(value) {
+  return value.replaceAll(path.sep, '/');
 }

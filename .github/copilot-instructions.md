@@ -69,7 +69,7 @@ The tier field is the delegation-policy field; it is distinct from the uppercase
 - No tier may call a higher-numbered tier except via the `00.cross-tier-helper` escalation path.
 - `user-invocable: true` is valid **only** for Tier 1 agents (the 8 SDLC orchestrators).
 
-**Validated counts (enforced, 55 agents total):** Tier 1 = 8, Tier 2 = 10, Tier 3 = 33, Tier 4 = 4.
+**Validated counts (enforced, 57 agents total):** Tier 1 = 8, Tier 2 = 10, Tier 3 = 35, Tier 4 = 4.
 
 **Operator commands:**
 
@@ -225,6 +225,11 @@ Current intended ownership split:
 - `neatchat-systems`: canonical workflow for the dependency-gated NEATchat
   follow-up system, including multi-tier memory, retrieval/routing, and
   branchable conversational state.
+- `repo-cortex-workflow`: canonical workflow for Cortex index freshness checks,
+  corpus rebuild sequencing, snapshot regeneration, `cortex-index.gate.mjs`
+  invocation, and MCP plan path override. Use when diagnosing stale index,
+  triggering a corpus rebuild, validating MCP binding, or redirecting the active
+  plan path.
 - `Boundary Mapper`: read-only seam mapping and structural handoff into
   `solid-split`.
 - `Docs Scout`: read-only documentation reconnaissance and handoff into
@@ -251,6 +256,10 @@ Current intended ownership split:
   into `nge-benchmark-workflow`.
 - `NEATchat Scout`: read-only NEATchat follow-up reconnaissance and handoff into
   `neatchat-systems`.
+- `Repo Cortex Scout`: read-only Cortex index state reconnaissance and handoff into
+  `repo-cortex-workflow`.
+- `Cortex Embeddings Scout`: read-only ONNX embedding model cache and embeddings index
+  reconnaissance and handoff into `Semantic_Knowledge_Embeddings`.
 
 Use `educational-docs` by default when the task is primarily about documentation quality, generated README tone, source-mapped JSDoc improvement, Mermaid diagrams, citations, or Wikimedia-safe visuals.
 

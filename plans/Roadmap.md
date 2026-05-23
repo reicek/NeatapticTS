@@ -295,7 +295,7 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1â€
 - Artifacts: `docs/assets/semantic-snapshot.json`, `examples/shared/semantic/`
 
 4. Cortex MCP reliability hardening (Layer 4 â€” agents, skill, lifecycle gate, MCP enhancements)
-   - Plan: [Repo_Cortex_MCP_Reliability.plans.md](Repo_Cortex_MCP_Reliability.plans.md) [PLANNED]
+  - Plan: [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
    - Gate: Layers 1, 2, and 3 [DONE] required; Delegation Tier Enforcement must be [DONE]; `neataptic-workflow-mcp.mjs` must be active
    - Artifacts: `.github/agents/repo-cortex-scout.agent.md`, `.github/agents/cortex-embeddings-scout.agent.md`, `.github/skills/repo-cortex-workflow/SKILL.md`, `scripts/agent-customization/gates/cortex-index.gate.mjs`, `scripts/agent-customization/plan-session-redirect.mjs`, `scripts/agent-customization/validate-tsconfig-docs.mjs`
 5. ONNX embeddings + hybrid BM25+dense ranking (Layer 5)
@@ -383,7 +383,7 @@ M4. [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowle
 M5. [completed/Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowledge_MCP_Tools.plans.md) [DONE]
 M6. [completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_Knowledge_Browser_Snapshot.plans.md) [DONE]
 M6b. [completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_Enforcement.plans.md) [DONE]
-M7. [Repo_Cortex_MCP_Reliability.plans.md](Repo_Cortex_MCP_Reliability.plans.md) [PLANNED]
+M7. [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
 M8. [Semantic_Knowledge_Embeddings.plans.md](Semantic_Knowledge_Embeddings.plans.md) [PLANNED]
 M8b. [Semantic_Knowledge_Dense_Prewarm.plans.md](Semantic_Knowledge_Dense_Prewarm.plans.md) [PLANNED]
 M9. [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [PLANNED]

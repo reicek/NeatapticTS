@@ -22,7 +22,18 @@ const CORPUS_SOURCES = [
 export async function buildSemanticIndex(options = {}) {
   const databasePath = path.resolve(options.databasePath ?? defaultDatabasePath);
   const documents = options.corpusDocuments ?? await collectCorpusDocuments();
-  const summary = { databasePath, scanned: documents.length, indexed: 0, skipped: 0, chunks: 0, purged: 0, dryRun: Boolean(options.dryRun) };
+  const summary = {
+    databasePath,
+    scanned: documents.length,
+    indexed: 0,
+    skipped: 0,
+    chunks: 0,
+    purged: 0,
+    dryRun: Boolean(options.dryRun),
+    totalDocuments: documents.length,
+    newDocuments: 0,
+    elapsedMs: 0,
+  };
 
   if (options.dryRun) return summary;
 
@@ -45,6 +56,7 @@ export async function buildSemanticIndex(options = {}) {
     INSERT INTO chunks(doc_id, chunk_index, heading_path, body_text, char_start, char_end)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
+  const buildLoopStartTime = Date.now();
 
   const indexDocument = database.transaction((documentRecord, freshnessProof, chunks) => {
     upsertDocument.run(documentRecord.filePath, documentRecord.family, freshnessProof.mtime_ms, freshnessProof.size, freshnessProof.sha256, Date.now());
@@ -65,12 +77,16 @@ export async function buildSemanticIndex(options = {}) {
       continue;
     }
 
+    if (!currentRow) summary.newDocuments += 1;
+
     const markdownText = await readFile(absolutePath, 'utf8');
     const chunks = chunkMarkdown(markdownText);
     indexDocument(documentRecord, freshnessProof, chunks);
     summary.indexed += 1;
     summary.chunks += chunks.length;
   }
+
+  summary.elapsedMs = Date.now() - buildLoopStartTime;
 
   database.exec("INSERT INTO chunks_fts(chunks_fts) VALUES('optimize')");
   database.close();
@@ -116,17 +132,55 @@ async function main() {
     printHelp({
       title: 'Semantic index builder',
       usage: 'node scripts/semantic-index/build-index.mjs [--dry-run] [--force] [--json] [--database path]',
-      options: ['--dry-run         Scan corpus without writing SQLite rows', '--force           Re-index unchanged documents even if freshness proof matches', '--json            Emit JSON summary', '--database <path> Path to SQLite database file (default: data/semantic-index.sqlite)', '--help            Show this help'],
+      options: ['--dry-run         Scan corpus without writing SQLite rows', '--force           Re-index unchanged documents even if freshness proof matches', '--json            Emit JSON summary', '--json-health     Emit compact health summary JSON', '--database <path> Path to SQLite database file (default: data/semantic-index.sqlite)', '--help            Show this help'],
     });
     return;
   }
 
+  const emitJsonHealth = Boolean(args['json-health']);
+
   try {
     const summary = await buildSemanticIndex({ dryRun: Boolean(args['dry-run']), force: Boolean(args.force), databasePath: args.database });
+    if (emitJsonHealth) {
+      console.log(JSON.stringify(createJsonHealthSummary(summary), null, 2));
+      return;
+    }
+
     writeJsonOrText(summary, Boolean(args.json), (payload) => `Semantic index: scanned ${payload.scanned}, indexed ${payload.indexed}, skipped ${payload.skipped}, chunks ${payload.chunks}${payload.dryRun ? ' (dry run)' : ''}`);
   } catch (error) {
+    if (emitJsonHealth) {
+      console.log(JSON.stringify(createJsonHealthFailure(error, args.database), null, 2));
+      process.exitCode = 1;
+      return;
+    }
+
     fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
   }
+}
+
+function createJsonHealthSummary(summary) {
+  return {
+    status: 'ok',
+    total_documents: Number(summary.totalDocuments ?? summary.scanned ?? 0),
+    new_documents: Number(summary.newDocuments ?? 0),
+    removed_documents: Number(summary.purged ?? 0),
+    elapsed_ms: Number(summary.elapsedMs ?? 0),
+    index_path: toRepoRelative(path.resolve(summary.databasePath ?? defaultDatabasePath)),
+  };
+}
+
+function createJsonHealthFailure(error, databasePath) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return {
+    status: 'error',
+    total_documents: 0,
+    new_documents: 0,
+    removed_documents: 0,
+    elapsed_ms: 0,
+    index_path: toRepoRelative(path.resolve(databasePath ?? defaultDatabasePath)),
+    message,
+  };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

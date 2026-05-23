@@ -1,6 +1,11 @@
 // Pure ESM Jest configuration.
 // We avoid CommonJS entirely; Jest 29+ supports loading ESM config (.mjs).
 
+const experimentalVmModulesFlag = '--experimental-vm-modules';
+if (!process.env.NODE_OPTIONS?.includes(experimentalVmModulesFlag)) {
+  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS ?? ''} ${experimentalVmModulesFlag}`.trim();
+}
+
 /** @type {import('jest').Config} */
 const config = {
   preset: 'ts-jest/presets/default-esm',

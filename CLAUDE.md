@@ -172,7 +172,7 @@ Invoke skills via slash commands — do not re-state their workflow ad hoc:
 | `/trace-audit-reporting` | Analyzing Chrome/Perfetto traces and producing performance reports |
 | `/trace-analyzer-extension` | Extending `scripts/analyze-trace/analyze-trace.ts` with new rollups |
 
-**Flow-aware routing** — numbered agents pick a named flow from `.github/flows/` for each task shape. Every flow declares exit gates that must return `{pass, evidence, fixHint, owner}` JSON. Gate failures use `scripts/agent-customization/gates/record-gate-exception.mjs`; three consecutive failures in a session escalate to `00-helping` via the `00.cross-tier-helper` flow. Run `node scripts/agent-customization/workflow-gap-audit.mjs --json` to inspect gate health and flow-mention drift.
+**Flow-aware routing** — numbered agents pick a named flow from `.github/flows/` for each task shape. Every flow declares exit gates that must return `{pass, evidence, fixHint, owner}` JSON. Gate failures use `scripts/agent-customization/gates/record-gate-exception.mjs`; three consecutive failures in a session escalate to `00-helping` via the `00.cross-tier-helper` flow. Run `node scripts/agent-customization/workflow-gap-audit.mjs --json` to inspect gate health and flow-mention drift. Run `node scripts/agent-customization/gates/cortex-index.gate.mjs --json` to validate Cortex lifecycle health (index freshness, MCP availability, snapshot currency).
 
 **Companion agents** — do read-only recon then hand off into the relevant skill:
 
@@ -193,6 +193,8 @@ Invoke skills via slash commands — do not re-state their workflow ad hoc:
 | `NGE Core Scout` | `nge-core-algorithm` |
 | `NGE Benchmark Scout` | `nge-benchmark-workflow` |
 | `NEATchat Scout` | `neatchat-systems` |
+| `Repo Cortex Scout` | `repo-cortex-workflow` |
+| `Cortex Embeddings Scout` | `Semantic_Knowledge_Embeddings` (planned) |
 
 ## Tracker and plans conventions
 

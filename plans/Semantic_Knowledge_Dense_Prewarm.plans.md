@@ -82,7 +82,7 @@ The readiness probe (`dense-readiness.mjs`) returns one of these three states pl
 This plan depends only on Layer 5 ([DONE]) and the existing Layer 2 MCP server
 (`neataptic-cortex-mcp`, also [DONE]).
 
-If Repo Cortex Layer 4 (`Repo_Cortex_MCP_Reliability.plans.md`) is also [DONE] by the time
+If Repo Cortex Layer 4 ([completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md)) is also [DONE] by the time
 this plan executes, its lifecycle gate and MCP reliability hardening will help the cortex server
 start warm; but Layer 4 is a **soft dependency** here — this plan can execute whether Layer 4
 is [DONE] or still [PLANNED], since the graceful degradation path covers the cold-start case.
@@ -421,7 +421,7 @@ Hard prerequisite (must be [DONE] before this plan starts):
   Verify: node scripts/semantic-index/validate-embeddings.mjs --json  →  { pass: true }
 
 Soft prerequisite (helps but not a blocker):
-  - plans/Repo_Cortex_MCP_Reliability.plans.md (Layer 4 cortex reliability hardening)
+  - plans/completed/Repo_Cortex_MCP_Reliability.plans.md (Layer 4 cortex reliability hardening)
 
 Goal: operationalize full embedding prewarm so use_dense: true is the MCP default and dense
 scores are warm for the whole corpus from day 1 on any machine that runs the bootstrap.

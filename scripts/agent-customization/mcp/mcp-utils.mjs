@@ -218,6 +218,10 @@ export function createMcpServer({ serverName, serverVersion, tools }) {
       const handlerResult = await tool.handler(isPlainObject(params.arguments) ? params.arguments : {});
       return formatToolResult(handlerResult);
     } catch (error) {
+      if (error && typeof error === 'object' && 'jsonRpcCode' in error && typeof error.jsonRpcCode === 'number') {
+        throw error;
+      }
+
       return createToolErrorResult(error);
     }
   }
