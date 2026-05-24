@@ -8,8 +8,10 @@ layers provide complementary coverage:
   root docs. Exact keyword and phrase matching.
 - **Dense embedding layer** — locally cached `all-MiniLM-L6-v2` ONNX
   sentence-transformer producing 384-dimensional float32 vectors for each corpus
-  chunk. Enables semantic (paraphrase-tolerant) retrieval and hybrid ranking when
-  `--dense` / `use_dense: true` is passed. Opt-in; BM25 remains the default.
+  chunk. Enables semantic (paraphrase-tolerant) retrieval and hybrid ranking. The
+  CLI enables this with `--dense`; the MCP `search_corpus` tool defaults
+  `use_dense` to `true` and falls back honestly to BM25 when the dense runtime is
+  not warm.
 
 AI agents and MCP tools use this index to retrieve accurate, up-to-date context
 without exhaustive codebase traversal. This directory is the **offline build-time
@@ -41,6 +43,8 @@ layer only**. MCP tool exposure is handled in
 |---|---|
 | `download-model.mjs` | CLI — downloads ONNX model + tokenizer assets to `scripts/semantic-index/models/` |
 | `embed-index.mjs` | CLI — runs ONNX inference, stores BLOB vectors in `data/embeddings.sqlite` |
+| `prewarm-dense.mjs` | CLI — idempotent bootstrap that downloads the model when needed, embeds changed chunks, then validates the dense store |
+| `dense-readiness.mjs` | CLI probe — reports `cold`, `model-only`, or `warm` with counts and a human-readable reason |
 | `validate-embeddings.mjs` | CLI gate — asserts vector count matches corpus chunk count |
 | `eval-embeddings.mjs` | CLI — MRR@5 evaluation of BM25-only vs hybrid retrieval quality |
 | `hybrid-rank.mjs` | Library — BM25 + cosine linear combination with configurable alpha |
@@ -51,7 +55,73 @@ layer only**. MCP tool exposure is handled in
 
 The generated database lives at `data/semantic-index.sqlite` (repo root) and is
 excluded from version control via `.gitignore`. Rebuild it at any time with
-`npm run index:build`.
+`npm run index:build`. Prepare the dense sidecar with `npm run index:prewarm`
+after the corpus exists.
+
+---
+
+## Bootstrap contract
+
+Fresh clones do not contain `data/embeddings.sqlite` or
+`scripts/semantic-index/models/` because both are generated, gitignored runtime
+artifacts. After `npm install` and `npm run build`, run the dense bootstrap before
+expecting MCP dense search to be warm:
+
+```sh
+npm run index:prewarm
+```
+
+The bootstrap is idempotent. It downloads the ONNX model only when
+`scripts/semantic-index/models/model.onnx` is missing, incrementally embeds only
+chunks whose content hash changed, then validates that the embedding count matches
+the corpus chunk count.
+
+Use the readiness probe to check the current state without issuing a search:
+
+```sh
+npm run index:dense-readiness
+```
+
+Example readiness outputs:
+
+```json
+{ "ready": false, "state": "cold", "reason": "Dense model assets are absent.", "chunk_count": null, "embedding_count": null }
+```
+
+```json
+{ "ready": false, "state": "model-only", "reason": "Dense model is present but the embeddings database is absent.", "chunk_count": null, "embedding_count": null }
+```
+
+```json
+{ "ready": true, "state": "warm", "reason": "All 29300 chunks have embeddings.", "chunk_count": 29300, "embedding_count": 29300 }
+```
+
+Readiness states map directly to MCP behavior:
+
+| State | Meaning | MCP `search_corpus` behavior |
+|---|---|---|
+| `cold` | Model assets are absent. | Returns BM25 results with `dense_degraded: true`, `dense_state: "cold"`, and `dense_reason`. |
+| `model-only` | Model exists, but embeddings are absent or incomplete. | Returns BM25 results with `dense_degraded: true`, `dense_state: "model-only"`, and `dense_reason`. |
+| `warm` | Model exists and embedding count equals corpus chunk count. | Uses hybrid dense ranking by default and emits `dense_state: "warm"`. |
+
+Rewarm whenever the corpus changes: source JSDoc regenerated into `src/**/README.md`,
+plans, skills, agents, examples, benchmarks, or root docs. The standard rewarm
+cycle is:
+
+```sh
+npm run index:build
+npm run index:prewarm
+npm run index:dense-readiness
+```
+
+For CI or orchestrator gates, use the standard readiness gate:
+
+```sh
+node scripts/agent-customization/gates/dense-readiness.gate.mjs --json
+```
+
+The gate passes only when readiness is `warm`; otherwise it returns a structured
+failure with a fix hint that points operators back to `npm run index:prewarm`.
 
 ---
 
@@ -276,6 +346,40 @@ Options:
 
 **npm alias:** `npm run index:validate-embeddings`
 
+### prewarm-dense.mjs
+
+Bootstrap dense search for a local checkout. The command ensures model assets exist,
+embeds any missing or changed chunks, and validates the embedding count.
+
+```
+node scripts/semantic-index/prewarm-dense.mjs [options]
+
+Options:
+  --dry-run  Log the planned bootstrap steps without spawning subprocesses
+  --json     Emit a machine-readable success or failure summary
+  --help     Show help
+```
+
+**npm alias:** `npm run index:prewarm`
+
+### dense-readiness.mjs
+
+Report whether dense search can run without degrading to BM25-only.
+
+```
+node scripts/semantic-index/dense-readiness.mjs [options]
+
+Options:
+  --json                       Emit the readiness report as JSON
+  --database <path>            Override the semantic-index corpus database path
+  --embeddings-database <p>    Override the embeddings database path
+  --model-directory <path>     Override the local dense model directory
+  --model-id <id>              Override the embedding model identifier
+  --help                       Show help
+```
+
+**npm alias:** `npm run index:dense-readiness`
+
 ### eval-embeddings.mjs
 
 Evaluate hybrid retrieval quality using the canonical 20-query eval set. Reports
@@ -408,21 +512,26 @@ where:
 - The candidate set is the union of the BM25 pool and the nearest-neighbour dense pool
   (so dense search can surface chunks with no lexical overlap with the query).
 
-### Opt-in policy
+### Default-on MCP and CLI opt-in policy
 
-Dense reranking is **opt-in**. `use_dense` defaults to `false` in all contexts:
+The MCP `search_corpus` tool defaults `use_dense` to `true`. On a warm machine,
+that means hybrid dense ranking is used without an explicit tool argument. On a
+cold or model-only machine, the MCP server degrades to BM25 and reports
+`dense_degraded`, `dense_state`, and `dense_reason` so callers can tell the
+difference between a true hybrid result and a fallback.
 
-| Context | Opt-in flag |
+The standalone CLI remains explicit so local debugging can choose BM25-only or
+hybrid behavior per command:
+
+| Context | Dense behavior |
 |---|---|
-| `query-dense.mjs` CLI | `--dense` |
-| `search_corpus` MCP tool | `"use_dense": true` in tool args |
+| `query-dense.mjs` CLI | Pass `--dense` to enable hybrid reranking |
+| `search_corpus` MCP tool | Defaults to `"use_dense": true`; pass `"use_dense": false` for BM25-only |
 | Direct API call | `{ useDense: true }` in options |
 
-BM25-only behavior is identical whether or not the embeddings database exists, so
-the dense layer is safe to ignore until `download-model.mjs` and `embed-index.mjs`
-have been run. The rationale: BM25 is deterministic, fast, and produces consistent
-results; dense retrieval adds value but requires the local model cache and a completed
-embedding build.
+BM25-only behavior is identical whether or not the embeddings database exists. Dense
+retrieval adds semantic recall, but it requires the local model cache and a completed
+embedding build; run `npm run index:prewarm` to make default-on MCP dense search warm.
 
 ### Eval methodology and MRR@5 results
 
@@ -473,7 +582,7 @@ node scripts/semantic-index/query-index.mjs "checkpointing restore" --family pla
 # Restrict to skill files
 node scripts/semantic-index/query-index.mjs "coverage tranche" --family skill
 
-# Hybrid dense search (requires download-model.mjs + embed-index.mjs run once)
+# Hybrid dense search (requires npm run index:prewarm)
 node scripts/semantic-index/query-dense.mjs --query "NEAT activation forward pass" --dense --json
 
 # Hybrid search restricted to ts-source family, top 5
@@ -498,19 +607,19 @@ npm run docs
 # 2. Incrementally re-index only changed files (freshness proof detects the update)
 npm run index:build
 
-# 3. Incrementally re-embed only changed chunks (chunk_sha256 detects the update)
-npm run index:embed
+# 3. Incrementally re-embed only changed chunks and validate the dense store
+npm run index:prewarm
 
 # 4. Confirm index health
 npm run index:validate
-node scripts/semantic-index/validate-embeddings.mjs --json
+npm run index:dense-readiness
 ```
 
 The incremental BM25 rebuild in step 2 typically re-indexes only the handful of changed
 README files and completes in well under a second. The incremental embedding rebuild in
-step 3 re-embeds only chunks whose `chunk_sha256` changed. Use `--force` on `build-index.mjs`
-only when you need to reprocess every document from scratch (e.g., after changing the
-chunking window size or schema).
+step 3 re-embeds only chunks whose `chunk_sha256` changed. Use `--force` on
+`build-index.mjs` only when you need to reprocess every document from scratch (e.g.,
+after changing the chunking window size or schema).
 
 ---
 
@@ -527,13 +636,10 @@ Both paths are excluded from version control via `.gitignore`. Each developer or
 job that needs these databases must build them locally:
 
 ```sh
-# Initial setup — run once (requires network for model download)
-npm run index:download-model
-
 # Standard full setup
 npm run docs            # generate src/**/README.md from JSDoc
 npm run index:build     # build BM25 index
-npm run index:embed     # build dense embedding index (~30 min on first run)
+npm run index:prewarm   # download model if absent, build embeddings, validate readiness
 ```
 
 ---
@@ -580,3 +686,10 @@ node scripts/agent-customization/gates/cortex-embeddings.gate.mjs --json
 
 If the index is missing or stale, `pass` will be `false` and `evidence` will list
 the specific failing checks with `fixHint` guidance.
+
+Run the readiness gate when CI only needs to prove that default-on MCP dense search
+is warm:
+
+```sh
+node scripts/agent-customization/gates/dense-readiness.gate.mjs --json
+```

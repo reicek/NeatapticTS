@@ -307,10 +307,10 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1â€
 - Artifacts: `scripts/semantic-index/embed-index.mjs`, `data/embeddings.sqlite`, ONNX model cache
 
 6. Embedding prewarm + default-on dense contract (Layer 6)
-   - Plan: [Semantic_Knowledge_Dense_Prewarm.plans.md](Semantic_Knowledge_Dense_Prewarm.plans.md) [PLANNED]
-   - Gate: Layer 5 [DONE] required; `validate-embeddings.mjs --json` must return `{pass: true}` on the active corpus
-   - Soft dependency: Layer 4 [DONE] improves MCP lifecycle management but is not a hard gate
-   - Artifacts: `scripts/semantic-index/prewarm-dense.mjs`, `scripts/semantic-index/dense-readiness.mjs`, `scripts/agent-customization/gates/dense-readiness.gate.mjs`; MCP `search_corpus` default `use_dense: true` with graceful cold-state degradation
+  - Plan: [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
+  - Gate: Layer 5 [DONE] satisfied; Layer 6 archived after final prewarm, readiness, gate, MCP degradation, and tracker-closure validation
+  - Soft dependency: Layer 4 [DONE] improved MCP lifecycle management but was not required to close Layer 6
+  - Artifacts: `scripts/semantic-index/prewarm-dense.mjs`, `scripts/semantic-index/dense-readiness.mjs`, `scripts/agent-customization/gates/dense-readiness.gate.mjs`; MCP `search_corpus` now defaults `use_dense: true` with graceful cold-state degradation and warm-state `dense_state` provenance
 
 ### Agentic Workflow Enforcement Prerequisite [DONE]
 
@@ -389,7 +389,7 @@ M6. [completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_
 M6b. [completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_Enforcement.plans.md) [DONE]
 M7. [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
 M8. [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
-M8b. [Semantic_Knowledge_Dense_Prewarm.plans.md](Semantic_Knowledge_Dense_Prewarm.plans.md) [PLANNED]
+M8b. [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
 M9. [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [PLANNED]
 
 ### Phase 0 inventory

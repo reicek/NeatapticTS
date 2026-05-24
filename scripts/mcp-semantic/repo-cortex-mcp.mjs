@@ -36,18 +36,51 @@ export function createRepoCortexTools(databasePath) {
   return [
     createTool({
       name: 'search_corpus',
-      description: 'BM25 full-text search over indexed repository chunks with optional hybrid dense reranking.',
+      description: 'BM25 full-text search over indexed repository chunks with default-on hybrid dense reranking. If embeddings are cold or model-only, the tool returns BM25 results with dense_state, dense_degraded, and dense_reason; run npm run index:prewarm to warm dense search.',
       inputSchema: {
         type: 'object',
         properties: {
           query: { type: 'string' },
           limit: { type: 'number' },
           family: { type: 'string' },
-          use_dense: { type: 'boolean' },
+          use_dense: {
+            type: 'boolean',
+            default: true,
+            description: 'Defaults to true. Set false for BM25-only search; run npm run index:prewarm when dense_state reports cold or model-only.',
+          },
           alpha: { type: 'number' },
         },
         required: ['query'],
         additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string' },
+          limit: { type: 'number' },
+          family: { type: 'string' },
+          alpha: { type: 'number' },
+          use_dense: { type: 'boolean' },
+          dense_degraded: {
+            type: 'boolean',
+            description: 'True when default-on or requested dense search degraded to BM25 because embeddings were cold or model-only.',
+          },
+          dense_state: {
+            type: 'string',
+            enum: ['cold', 'model-only', 'warm'],
+            description: 'Dense-readiness provenance emitted on default-on dense responses: cold, model-only, or warm.',
+          },
+          dense_reason: {
+            type: 'string',
+            description: 'Human-readable degradation reason when dense search falls back to BM25; operators should run npm run index:prewarm.',
+          },
+          results: {
+            type: 'array',
+            items: { type: 'object' },
+          },
+        },
+        required: ['query', 'limit', 'use_dense', 'results'],
+        additionalProperties: true,
       },
       handler: (argumentsObject) => searchCorpus({ ...argumentsObject, databasePath }),
     }),

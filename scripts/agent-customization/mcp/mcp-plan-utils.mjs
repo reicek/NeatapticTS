@@ -7,6 +7,7 @@ import { resolveExplicitPlanPath } from './mcp-utils.mjs';
 
 const PHASE_PATTERN = /^### Phase (?<phase>\d+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 const STEP_PATTERN = /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+const IMPLEMENTATION_SECTION_PATTERN = /^## Implementation phases\s*(?<body>[\s\S]*?)(?=^## [^\n]*\bvalidation gates\b[^\n]*$)/imu;
 
 /**
  * Load the single active phase and step from the workflow plan.
@@ -122,7 +123,7 @@ export function createValidationAllowlistSnapshot(activePlanContext) {
 }
 
 function* extractPhaseBlocks(planText) {
-  const implementationSection = /## Implementation phases\s*(?<body>[\s\S]*?)(?=^## Validation gates)/mu.exec(planText)?.groups?.body;
+  const implementationSection = IMPLEMENTATION_SECTION_PATTERN.exec(planText)?.groups?.body;
   if (!implementationSection) {
     return;
   }

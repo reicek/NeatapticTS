@@ -9,6 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run build               # webpack + tsc
 npm run build:ts            # tsc only (faster for type checking)
 
+# Dense semantic bootstrap (post-clone after install/build)
+npm run index:prewarm       # warms MCP dense search; rerun after corpus-changing docs/source/plan edits
+
 # Type-check without emitting
 npx tsc --noEmit -p tsconfig.json
 npx tsc --noEmit -p tsconfig.test.json

@@ -67,5 +67,18 @@ describe('MCP hardening red contracts', () => {
 
       await assert.rejects(completedPlanLoad, /Expected exactly one \[WIP\] phase/);
     });
+
+    it('loads active context when the validation heading includes validation gates', async () => {
+      const activePlanContext = await loadActivePlanContext('plans/mcp-active-binding.plans.md');
+
+      assert.deepStrictEqual(
+        {
+          phase: activePlanContext.activePhase.number,
+          step: activePlanContext.activeStep.number,
+          agent: activePlanContext.activeStep.metadata.agent,
+        },
+        { phase: 1, step: 1, agent: '00-helping' },
+      );
+    });
   });
 });

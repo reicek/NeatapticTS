@@ -45,6 +45,8 @@ export async function validateEmbeddings(options = {}) {
     }
 
     return {
+      chunk_count: Number(chunkCount),
+      embedding_count: Number(embeddingCount),
       pass: evidence.length === 0,
       evidence,
       fixHint: evidence.length === 0 ? null : 'Run: node scripts/semantic-index/embed-index.mjs',
