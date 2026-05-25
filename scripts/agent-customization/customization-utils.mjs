@@ -1,8 +1,23 @@
+/**
+ * @module customization-utils
+ *
+ * Shared utilities for NeatapticTS agent-customization validation scripts.
+ *
+ * Provides helpers for: CLI argument parsing, human/JSON report output, recursive
+ * Markdown file discovery, YAML frontmatter parsing, and issue-aggregation
+ * primitives consumed by `tier-inventory.mjs`, `validate-agent-graph.mjs`,
+ * `validate-plan-sync.mjs`, and related scripts under `scripts/agent-customization/`.
+ */
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
+/** Absolute path to the repository root (the current working directory at startup). */
 export const repoRoot = process.cwd();
 
+/**
+ * Recognized tool identifiers that may appear in an agent's `tools:` frontmatter list.
+ * Used by validators to flag unknown or unsupported tool names.
+ */
 export const knownAgentTools = new Set([
   'agent',
   'bash',
@@ -14,6 +29,15 @@ export const knownAgentTools = new Set([
   'web',
 ]);
 
+/**
+ * Parses CLI argument strings into a structured options object.
+ *
+ * Recognized flags: `--json`, `--strict`, `--help` / `-h`,
+ * `--contract=<value>`, `--input=<value>`, `--plan=<value>`.
+ *
+ * @param argv - Argument strings from `process.argv.slice(2)`.
+ * @returns Parsed options with typed fields and sane defaults.
+ */
 export function parseArgs(argv) {
   const options = {
     json: false,
@@ -35,6 +59,14 @@ export function parseArgs(argv) {
   return options;
 }
 
+/**
+ * Prints a human-readable usage block to stdout.
+ *
+ * @param options - Descriptor object.
+ * @param options.title - Script name / headline printed as the first line.
+ * @param options.usage - Example invocation string shown under `Usage:`.
+ * @param options.options - Extra `[flag, description]` pairs appended after the standard flags.
+ */
 export function printUsage({ title, usage, options = [] }) {
   const optionLines = [
     ['--json', 'Write machine-readable JSON to stdout.'],
@@ -49,6 +81,17 @@ export function printUsage({ title, usage, options = [] }) {
   }
 }
 
+/**
+ * Writes a validation report to stdout in either JSON or human-readable format.
+ *
+ * When `json` is `true` the full report object is serialized with two-space
+ * indentation. Otherwise the `summaryText` (or a default `PASS/FAIL <name>`
+ * line) is printed followed by one line per issue.
+ *
+ * @param report - Validation report with at least `ok`, `name`, and optional `issues` / `summaryText`.
+ * @param opts - Output options.
+ * @param opts.json - When `true`, serializes the full report as JSON.
+ */
 export function writeReport(report, { json }) {
   if (json) {
     console.log(JSON.stringify(report, null, 2));
@@ -61,6 +104,16 @@ export function writeReport(report, { json }) {
   }
 }
 
+/**
+ * Recursively discovers Markdown files under a repo-relative directory path.
+ *
+ * Silently skips directories that cannot be read. The returned array is sorted
+ * lexicographically by repo-relative path.
+ *
+ * @param rootRelativePath - Directory path relative to {@link repoRoot} to scan.
+ * @param predicate - Receives each repo-relative file path; return `true` to include it.
+ * @returns Sorted array of repo-relative paths that satisfy the predicate.
+ */
 export async function listMarkdownFiles(rootRelativePath, predicate) {
   const root = path.join(repoRoot, rootRelativePath);
   const discovered = [];
@@ -89,10 +142,22 @@ export async function listMarkdownFiles(rootRelativePath, predicate) {
   return discovered.toSorted();
 }
 
+/**
+ * Reads a workspace file as a UTF-8 string.
+ *
+ * @param relativePath - Path relative to {@link repoRoot}.
+ * @returns File contents as a string.
+ */
 export async function readWorkspaceFile(relativePath) {
   return readFile(path.join(repoRoot, relativePath), 'utf8');
 }
 
+/**
+ * Checks whether a regular file exists at the given repo-relative path.
+ *
+ * @param relativePath - Path relative to {@link repoRoot}.
+ * @returns `true` when the path resolves to an existing file (not a directory).
+ */
 export async function fileExists(relativePath) {
   try {
     return (await stat(path.join(repoRoot, relativePath))).isFile();
@@ -101,6 +166,18 @@ export async function fileExists(relativePath) {
   }
 }
 
+/**
+ * Parses YAML frontmatter from a Markdown document.
+ *
+ * Recognizes the `---` fence convention used by `.agent.md`, `.prompt.md`,
+ * and `SKILL.md` files. Scalar, boolean, and inline-array values are converted
+ * to their native JavaScript types; multi-line YAML blocks are not supported.
+ *
+ * @param text - Raw file contents (BOM-stripped automatically).
+ * @param relativePath - Repo-relative file path, used to annotate issue records.
+ * @returns Object with `data` map, `body` (post-frontmatter text), `raw` frontmatter
+ *   string, and a `issues` array of any parse warnings or errors.
+ */
 export function parseFrontmatter(text, relativePath) {
   const normalized = text.replace(/^\uFEFF/, '');
   const lines = normalized.split(/\r?\n/);
@@ -151,6 +228,19 @@ export function parseFrontmatter(text, relativePath) {
   };
 }
 
+/**
+ * Converts a raw frontmatter scalar string to its native JavaScript value.
+ *
+ * Conversion rules:
+ * - Empty string → `true` (bare key with no value)
+ * - `"true"` → `true`, `"false"` → `false`
+ * - Quoted string → stripped string
+ * - Inline array `[...]` → `string[]` via {@link parseInlineArray}
+ * - Anything else → trimmed string with trailing inline `# comment` removed
+ *
+ * @param value - Raw value substring from the frontmatter line (after the colon).
+ * @returns Typed JavaScript value.
+ */
 export function parseFrontmatterValue(value) {
   if (value === '') return true;
   if (value === 'true') return true;
@@ -160,6 +250,12 @@ export function parseFrontmatterValue(value) {
   return value.replace(/\s+#.*$/, '').trim();
 }
 
+/**
+ * Parses a YAML-style inline array literal such as `[foo, "bar", 'baz']`.
+ *
+ * @param value - Raw value string including the surrounding `[` and `]` brackets.
+ * @returns Array of unquoted, trimmed, non-empty string elements.
+ */
 export function parseInlineArray(value) {
   const inner = value.slice(1, -1).trim();
   if (!inner) return [];
@@ -170,14 +266,40 @@ export function parseInlineArray(value) {
     .filter(Boolean);
 }
 
+/**
+ * Converts a file-system path to forward-slash form for cross-platform stability.
+ *
+ * On Windows `path.sep` is `\`; this helper replaces all separators so that
+ * repo-relative path strings are consistent between Windows and Linux runners.
+ *
+ * @param value - Path that may use the platform-native `path.sep`.
+ * @returns Path with all separators replaced by `'/'`.
+ */
 export function normalizePath(value) {
   return value.replaceAll(path.sep, '/');
 }
 
+/**
+ * Creates a typed validation issue record.
+ *
+ * @param severity - `'error'` for blocking violations; `'warning'` for advisory findings.
+ * @param relativePath - Repo-relative source file path where the issue was detected.
+ * @param message - Human-readable description of the violation.
+ * @returns Issue object consumed by {@link summarizeIssues} and report writers.
+ */
 export function issue(severity, relativePath, message) {
   return { severity, path: relativePath, message };
 }
 
+/**
+ * Aggregates a list of issues into a structured validation report.
+ *
+ * The `ok` field is `true` only when there are zero errors (warnings are allowed).
+ *
+ * @param name - Short label for the validation surface (e.g. `'agent graph'`).
+ * @param issues - Issue records produced by one or more validators.
+ * @returns Report with `ok`, `counts` (`errors`/`warnings`), `summaryText`, and `issues`.
+ */
 export function summarizeIssues(name, issues) {
   const errors = issues.filter((currentIssue) => currentIssue.severity === 'error').length;
   const warnings = issues.filter((currentIssue) => currentIssue.severity === 'warning').length;
@@ -190,10 +312,28 @@ export function summarizeIssues(name, issues) {
   };
 }
 
+/**
+ * Extracts all local Markdown link targets that start with `./` from a body string.
+ *
+ * Matches the pattern `[label](./relative/path)`. Absolute URLs and anchor-only
+ * links are not included.
+ *
+ * @param body - Markdown document body (frontmatter should be excluded before calling).
+ * @returns Array of relative link target strings starting with `'./'`.
+ */
 export function extractMarkdownLinks(body) {
   return [...body.matchAll(/\[[^\]]+]\((\.\/[^)]+)\)/g)].map((match) => match[1]);
 }
 
+/**
+ * Extracts the `[DONE|WIP|PLANNED]` status marker from a plan body.
+ *
+ * Matches the pattern `**Status:** [DONE]` (or `WIP` / `PLANNED`) used in
+ * NeatapticTS tracker files.
+ *
+ * @param text - Plan document body text to scan.
+ * @returns `'DONE'`, `'WIP'`, `'PLANNED'`, or `null` when the pattern is absent.
+ */
 export function extractStatus(text) {
   return /\*\*Status:\*\* \[(?<status>DONE|WIP|PLANNED)\]/.exec(text)?.groups?.status ?? null;
 }

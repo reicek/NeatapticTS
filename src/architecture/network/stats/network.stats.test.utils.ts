@@ -1,4 +1,4 @@
-import * as methods from '../../../methods/methods';
+﻿import * as methods from '../../../methods/methods';
 import type Network from '../../network/network';
 import {
   NetworkStatsTestSampleInputSizeMismatchError,

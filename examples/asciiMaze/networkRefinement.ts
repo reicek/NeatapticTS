@@ -1,3 +1,31 @@
+/**
+ * @module networkRefinement
+ *
+ * Class-based API for post-evolution network refinement via supervised
+ * backpropagation for the ASCII Maze NEAT demo.
+ *
+ * ### Lamarckian / Baldwinian fine-tune pair
+ *
+ * This module (`networkRefinement.ts`) and its sibling `refineWinner.ts`
+ * together implement an optional fine-tune pass applied after NEAT selects a
+ * winning genome:
+ *
+ * - **`networkRefinement.ts`** (this file) — class-based `NetworkRefinement`
+ *   API using pooled `Float32Array` scratch buffers and a compact 4-sample
+ *   training set. Designed for repeated calls within an engine that manages
+ *   its own object lifetimes across curriculum phases.
+ * - **`refineWinner.ts`** — functional `refineWinnerWithBackprop` export using
+ *   `network.train()` with softmax cross-entropy cost and a 16-sample dataset
+ *   that varies `progressDelta` for robustness. Preferred for one-shot use in
+ *   a curriculum loop.
+ *
+ * Both functions clone the winner before training and return the refined clone,
+ * leaving the original evolutionary genome unmodified. In a strict Baldwinian
+ * interpretation, trained weights are _not_ written back into the population;
+ * the refinement improves the individual’s performance for the current
+ * generation only. Carrying the refined weights into the next population
+ * initialization seed makes this Lamarckian learning.
+ */
 // Network refinement logic (backpropagation after evolution)
 // Exports: NetworkRefinement class with static method
 

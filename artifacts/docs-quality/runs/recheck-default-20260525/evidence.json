@@ -1,0 +1,47 @@
+{
+  "evidence": [
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "high complexity",
+      "numericValue": 34,
+      "symbol": "openInferenceChannel"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "high complexity",
+      "numericValue": 16,
+      "symbol": "openSharedInferenceWorker"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "AutoInferenceTransport"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "BrowserWorkerAssetUrlOptions"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ConstructGraphConnectionSummary"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ConstructGraphNodeSummary"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "VisualizationMetadataV1"
+    }
+  ],
+  "normalizedEvidenceDigest": "6a24827a755fc26f5f69e492727d59c5d565d92ddcdcef4392adbb308711b9da"
+}

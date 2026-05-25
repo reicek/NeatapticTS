@@ -31,67 +31,67 @@ import type {
   OnnxConvKernelCoordinate,
 } from '../network.onnx.utils.types';
 
-/** Minimum hidden-node count for LSTM heuristic eligibility. */
+/** Minimum hidden-node count for LSTM heuristic eligibility */
 const LSTM_MIN_SIZE = 10;
 
-/** Hidden-node divisor for the LSTM heuristic gate layout (5 slices). */
+/** Hidden-node divisor for the LSTM heuristic gate layout (5 slices) */
 const LSTM_UNIT_DIVISOR = 5;
 
-/** Minimum hidden-node count for GRU heuristic eligibility. */
+/** Minimum hidden-node count for GRU heuristic eligibility */
 const GRU_MIN_SIZE = 8;
 
-/** Hidden-node divisor for the GRU heuristic gate layout (4 slices). */
+/** Hidden-node divisor for the GRU heuristic gate layout (4 slices) */
 const GRU_UNIT_DIVISOR = 4;
 
-/** Lower-bound inclusive fallback threshold used for ambiguous recurrent sizing metadata. */
+/** Lower-bound inclusive fallback threshold used for ambiguous recurrent sizing metadata */
 const RECURRENT_FALLBACK_MIN_SIZE = 8;
 
-/** Upper-bound exclusive fallback threshold used for ambiguous recurrent sizing metadata. */
+/** Upper-bound exclusive fallback threshold used for ambiguous recurrent sizing metadata */
 const RECURRENT_FALLBACK_MAX_SIZE = 10;
 
-/** Numeric tolerance used for Conv2D sharing consistency checks. */
+/** Numeric tolerance used for Conv2D sharing consistency checks */
 const CONV_WEIGHT_SHARING_TOLERANCE = 1e-9;
 
-/** ONNX tensor float data type enum value for FLOAT tensors. */
+/** ONNX tensor float data type enum value for FLOAT tensors */
 const ONNX_FLOAT_DATA_TYPE = 1;
 
-/** ONNX attribute type literal for integer attributes. */
+/** ONNX attribute type literal for integer attributes */
 const ONNX_ATTRIBUTE_TYPE_INT = 'INT';
 
-/** ONNX hidden-size attribute key for recurrent nodes. */
+/** ONNX hidden-size attribute key for recurrent nodes */
 const ONNX_ATTRIBUTE_HIDDEN_SIZE_KEY = 'hidden_size';
 
-/** ONNX layout attribute key for recurrent nodes. */
+/** ONNX layout attribute key for recurrent nodes */
 const ONNX_ATTRIBUTE_LAYOUT_KEY = 'layout';
 
-/** Default ONNX recurrent layout attribute value. */
+/** Default ONNX recurrent layout attribute value */
 const ONNX_LAYOUT_DEFAULT = 0;
 
-/** Metadata key for hidden-layer size collection. */
+/** Metadata key for hidden-layer size collection */
 const METADATA_KEY_LAYER_SIZES = 'layer_sizes';
 
-/** Metadata key for recurrent single-step layers. */
+/** Metadata key for recurrent single-step layers */
 const METADATA_KEY_RECURRENT_SINGLE_STEP = 'recurrent_single_step';
 
-/** Metadata key for ambiguous recurrent-size fallback annotation. */
+/** Metadata key for ambiguous recurrent-size fallback annotation */
 const METADATA_KEY_RNN_PATTERN_FALLBACK = 'rnn_pattern_fallback';
 
-/** Metadata key for Conv sharing verified layer indices. */
+/** Metadata key for Conv sharing verified layer indices */
 const METADATA_KEY_CONV2D_SHARING_VERIFIED = 'conv2d_sharing_verified';
 
-/** Metadata key for Conv sharing mismatch layer indices. */
+/** Metadata key for Conv sharing mismatch layer indices */
 const METADATA_KEY_CONV2D_SHARING_MISMATCH = 'conv2d_sharing_mismatch';
 
-/** Metadata key for emitted LSTM heuristic layers. */
+/** Metadata key for emitted LSTM heuristic layers */
 const METADATA_KEY_LSTM_EMITTED_LAYERS = 'lstm_emitted_layers';
 
-/** Metadata key for emitted GRU heuristic layers. */
+/** Metadata key for emitted GRU heuristic layers */
 const METADATA_KEY_GRU_EMITTED_LAYERS = 'gru_emitted_layers';
 
-/** Metadata key describing dense-family initializer aliases reused during export. */
+/** Metadata key describing dense-family initializer aliases reused during export */
 const METADATA_KEY_SHARED_INITIALIZER_ALIASES = 'shared_initializer_aliases';
 
-/** Metadata fallback reason for in-between GRU/LSTM size thresholds. */
+/** Metadata fallback reason for in-between GRU/LSTM size thresholds */
 const METADATA_REASON_SIZE_BETWEEN_GRU_LSTM_THRESHOLDS =
   'size_between_gru_lstm_thresholds';
 
@@ -101,28 +101,28 @@ const ONNX_OPERATOR_LSTM = 'LSTM';
 /** ONNX operator label for GRU. */
 const ONNX_OPERATOR_GRU = 'GRU';
 
-/** Node naming prefix for LSTM layers. */
+/** Node naming prefix for LSTM layers */
 const LSTM_NODE_PREFIX = 'lstm';
 
-/** Node naming prefix for GRU layers. */
+/** Node naming prefix for GRU layers */
 const GRU_NODE_PREFIX = 'gru';
 
-/** Output naming suffix for LSTM hidden tensors. */
+/** Output naming suffix for LSTM hidden tensors */
 const LSTM_OUTPUT_SUFFIX = 'lstm_hidden';
 
-/** Output naming suffix for GRU hidden tensors. */
+/** Output naming suffix for GRU hidden tensors */
 const GRU_OUTPUT_SUFFIX = 'gru_hidden';
 
-/** Prefix for generated layer output tensor names. */
+/** Prefix for generated layer output tensor names */
 const GENERATED_LAYER_OUTPUT_PREFIX = 'Layer';
 
-/** Base graph input tensor name for first recurrent layer. */
+/** Base graph input tensor name for first recurrent layer */
 const GRAPH_INPUT_NAME = 'input';
 
-/** Recurrent diagonal gate index for LSTM (cell gate). */
+/** Recurrent diagonal gate index for LSTM (cell gate) */
 const LSTM_DIAGONAL_GATE_INDEX = 2;
 
-/** Recurrent diagonal gate index for GRU (candidate gate). */
+/** Recurrent diagonal gate index for GRU (candidate gate) */
 const GRU_DIAGONAL_GATE_INDEX = 2;
 
 type SharedInitializerAliasRecord = {
@@ -136,13 +136,15 @@ type SharedInitializerAliasRecord = {
 };
 
 /**
- * Emit heuristic fused recurrent operators (LSTM/GRU) when recurrent export is enabled.
+ * Append heuristic fused recurrent nodes for hidden layers that match GRU/LSTM sizing patterns.
  *
- * @param model Target ONNX model.
- * @param layers Layered network nodes.
- * @param allowRecurrent Whether recurrent export is enabled.
- * @param previousOutputName Current graph output name (kept for backward-compatible emission semantics).
- * @returns Nothing.
+ * The pass is a metadata-guided postprocess step: it inspects hidden-layer widths,
+ * emits compatible recurrent operators, and keeps legacy output-name threading intact.
+ *
+ * @param model Mutable ONNX model receiving emitted recurrent nodes.
+ * @param layers Layered network nodes used for hidden-layer traversal.
+ * @param allowRecurrent Gate that enables recurrent heuristic emission.
+ * @param previousOutputName Upstream graph output tensor name carried through compatibility flow.
  */
 export function emitFusedRecurrentHeuristics(
   model: OnnxModel,
@@ -175,15 +177,14 @@ export function emitFusedRecurrentHeuristics(
 }
 
 /**
- * Finalize export metadata and optional conv-sharing validation.
+ * Finalize model metadata after graph emission, including alias reuse and optional Conv sharing diagnostics.
  *
- * @param model Target ONNX model.
- * @param layers Layered network nodes.
- * @param options Export options.
- * @param includeMetadata Whether metadata emission is enabled.
- * @param hiddenSizesMetadata Hidden-layer sizes collected during emission.
- * @param recurrentLayerIndices Recurrent layer indices.
- * @returns Nothing.
+ * @param model Mutable ONNX model receiving metadata properties.
+ * @param layers Layered network nodes used for Conv sharing checks.
+ * @param options Export options controlling optional validation passes.
+ * @param includeMetadata Gate that enables metadata emission.
+ * @param hiddenSizesMetadata Hidden-layer size series captured during export.
+ * @param recurrentLayerIndices Hidden-layer indices emitted as recurrent operators.
  */
 export function finalizeExportMetadata(
   model: OnnxModel,
@@ -227,7 +228,9 @@ export function finalizeExportMetadata(
   appendConvSharingMetadata(model, convSharingResult);
 }
 
-/** Reuse exact dense-family initializers and rewrite later node inputs to the canonical tensors. */
+/**
+ * Canonicalize byte-identical dense initializers and rewrite node inputs to shared tensor names.
+ */
 function reuseSharedInitializers(
   model: OnnxModel,
 ): SharedInitializerAliasRecord[] {
@@ -279,7 +282,7 @@ function reuseSharedInitializers(
   return initializerAliases;
 }
 
-/** Classify the dense-family initializer kinds supported by the Phase 5B alias subset. */
+/** Classify the dense-family initializer kinds supported by the Phase 5B alias subset */
 function classifySharedInitializerKind(
   initializerName: string,
 ): SharedInitializerAliasRecord['initializerKind'] | null {
@@ -298,7 +301,7 @@ function classifySharedInitializerKind(
   return null;
 }
 
-/** Build an exact-match signature for dense-family alias reuse. */
+/** Build an exact-match signature for dense-family alias reuse */
 function buildSharedInitializerSignature(
   initializerEntry: OnnxTensor,
   initializerKind: SharedInitializerAliasRecord['initializerKind'],
@@ -310,7 +313,7 @@ function buildSharedInitializerSignature(
   });
 }
 
-/** Rewrite graph-node initializer inputs after later aliases collapse into one canonical tensor. */
+/** Rewrite graph-node initializer inputs after later aliases collapse into one canonical tensor */
 function rewriteInitializerInputs(
   graph: OnnxGraph,
   aliasTensorNameByRemovedTensorName: Map<string, string>,
@@ -324,7 +327,7 @@ function rewriteInitializerInputs(
 }
 
 /**
- * Try emitting heuristic fused LSTM node and metadata.
+ * Try emitting heuristic fused LSTM node and metadata
  */
 function tryEmitFusedLstm(context: HiddenLayerHeuristicContext): void {
   if (!isEligibleForLstmHeuristic(context.currentSize)) {
@@ -339,7 +342,7 @@ function tryEmitFusedLstm(context: HiddenLayerHeuristicContext): void {
   emitFusedRecurrentLayer(executionContext);
 }
 
-/** Build shared fused-recurrent execution context for LSTM. */
+/** Build shared fused-recurrent execution context for LSTM */
 function buildFusedLstmExecutionContext(
   context: LstmEmissionContext,
 ): FusedRecurrentEmissionExecutionContext {
@@ -359,7 +362,7 @@ function buildFusedLstmExecutionContext(
 }
 
 /**
- * Try emitting heuristic fused GRU node and metadata.
+ * Try emitting heuristic fused GRU node and metadata
  */
 function tryEmitFusedGru(context: HiddenLayerHeuristicContext): void {
   if (!isEligibleForGruHeuristic(context.currentSize)) {
@@ -374,7 +377,7 @@ function tryEmitFusedGru(context: HiddenLayerHeuristicContext): void {
   emitFusedRecurrentLayer(executionContext);
 }
 
-/** Build shared fused-recurrent execution context for GRU. */
+/** Build shared fused-recurrent execution context for GRU */
 function buildFusedGruExecutionContext(
   context: GruEmissionContext,
 ): FusedRecurrentEmissionExecutionContext {
@@ -393,7 +396,7 @@ function buildFusedGruExecutionContext(
   };
 }
 
-/** Emit shared fused recurrent payload (initializers, node, metadata). */
+/** Emit shared fused recurrent payload (initializers, node, metadata) */
 function emitFusedRecurrentLayer(
   context: FusedRecurrentEmissionExecutionContext,
 ): void {
@@ -439,7 +442,7 @@ function emitFusedRecurrentLayer(
 }
 
 /**
- * Append a unique layer index to metadata array key.
+ * Append a unique layer index to metadata array key
  */
 function appendIndexMetadata(
   model: OnnxModel,
@@ -459,7 +462,7 @@ function appendIndexMetadata(
   metadataProperties.push({ key, value: JSON.stringify([layerIndex]) });
 }
 
-/** Find metadata property index by key. */
+/** Find metadata property index by key */
 function findMetadataPropertyIndex(
   metadataProperties: OnnxMetadataProperty[],
   key: string,
@@ -467,7 +470,7 @@ function findMetadataPropertyIndex(
   return metadataProperties.findIndex((property) => property.key === key);
 }
 
-/** Upsert one layer index into metadata array-like JSON value. */
+/** Upsert one layer index into metadata array-like JSON value */
 function upsertLayerIndexMetadataValue(
   metadataProperties: OnnxMetadataProperty[],
   metadataIndex: number,
@@ -485,7 +488,7 @@ function upsertLayerIndexMetadataValue(
   ]);
 }
 
-/** Parse metadata JSON value into a numeric layer-index array. */
+/** Parse metadata JSON value into a numeric layer-index array */
 function parseMetadataLayerIndices(metadataValue: string): number[] {
   try {
     const parsedValue = JSON.parse(metadataValue);
@@ -499,7 +502,7 @@ function parseMetadataLayerIndices(metadataValue: string): number[] {
   }
 }
 
-/** Build reusable context for recurrent heuristic traversal. */
+/** Build reusable context for recurrent heuristic traversal */
 function buildRecurrentHeuristicEmissionContext(
   model: OnnxModel,
   layers: NeatapticNode[][],
@@ -508,7 +511,7 @@ function buildRecurrentHeuristicEmissionContext(
   return { model, layers, previousOutputName };
 }
 
-/** Collect hidden-layer indices for recurrent traversal. */
+/** Collect hidden-layer indices for recurrent traversal */
 function collectHiddenLayerIndices(layers: NeatapticNode[][]): number[] {
   const hiddenLayerCount = Math.max(layers.length - 2, 0);
   return Array.from(
@@ -533,7 +536,7 @@ function buildHiddenLayerHeuristicContext(
   };
 }
 
-/** Emit fallback metadata for recurrent-size ambiguity. */
+/** Emit fallback metadata for recurrent-size ambiguity */
 function emitFallbackRecurrentPatternMetadata(
   context: HiddenLayerHeuristicContext,
 ): void {
@@ -549,7 +552,7 @@ function emitFallbackRecurrentPatternMetadata(
   );
 }
 
-/** Check whether hidden size should emit recurrent fallback metadata. */
+/** Check whether hidden size should emit recurrent fallback metadata */
 function isFallbackRecurrentPatternSize(currentSize: number): boolean {
   return (
     currentSize >= RECURRENT_FALLBACK_MIN_SIZE &&
@@ -557,12 +560,12 @@ function isFallbackRecurrentPatternSize(currentSize: number): boolean {
   );
 }
 
-/** Check LSTM heuristic eligibility by size and gate divisibility. */
+/** Check LSTM heuristic eligibility by size and gate divisibility */
 function isEligibleForLstmHeuristic(currentSize: number): boolean {
   return currentSize >= LSTM_MIN_SIZE && currentSize % LSTM_UNIT_DIVISOR === 0;
 }
 
-/** Build LSTM emission context from one hidden-layer traversal record. */
+/** Build LSTM emission context from one hidden-layer traversal record */
 function buildLstmEmissionContext(
   context: HiddenLayerHeuristicContext,
 ): LstmEmissionContext {
@@ -576,7 +579,7 @@ function buildLstmEmissionContext(
   };
 }
 
-/** Collect LSTM gate node groups in canonical export order. */
+/** Collect LSTM gate node groups in canonical export order */
 function collectLstmGateNodeGroups(
   context: LstmEmissionContext,
 ): NeatapticNode[][] {
@@ -597,12 +600,12 @@ function collectLstmGateNodeGroups(
   return [inputGateNodes, forgetGateNodes, cellGateNodes, outputGateNodes];
 }
 
-/** Check GRU heuristic eligibility by size and gate divisibility. */
+/** Check GRU heuristic eligibility by size and gate divisibility */
 function isEligibleForGruHeuristic(currentSize: number): boolean {
   return currentSize >= GRU_MIN_SIZE && currentSize % GRU_UNIT_DIVISOR === 0;
 }
 
-/** Build GRU emission context from one hidden-layer traversal record. */
+/** Build GRU emission context from one hidden-layer traversal record */
 function buildGruEmissionContext(
   context: HiddenLayerHeuristicContext,
 ): GruEmissionContext {
@@ -615,7 +618,7 @@ function buildGruEmissionContext(
   };
 }
 
-/** Collect GRU gate node groups in canonical export order. */
+/** Collect GRU gate node groups in canonical export order */
 function collectGruGateNodeGroups(
   context: GruEmissionContext,
 ): NeatapticNode[][] {
@@ -632,7 +635,7 @@ function collectGruGateNodeGroups(
   return [updateGateNodes, resetGateNodes, candidateGateNodes];
 }
 
-/** Collect flattened parameter vectors for one gate node block. */
+/** Collect flattened parameter vectors for one gate node block */
 function collectRecurrentGateBlockParameters(
   context: RecurrentGateBlockCollectionContext,
 ): RecurrentGateParameterCollectionResult {
@@ -648,7 +651,7 @@ function collectRecurrentGateBlockParameters(
   return foldRecurrentGateRows(gateRows);
 }
 
-/** Collect one recurrent gate row payload (inputs, recurrent slice, and bias). */
+/** Collect one recurrent gate row payload (inputs, recurrent slice, and bias) */
 function collectRecurrentGateRow(
   context: RecurrentGateRowCollectionContext,
 ): RecurrentGateRow {
@@ -666,7 +669,7 @@ function collectRecurrentGateRow(
   };
 }
 
-/** Resolve one recurrent row value at the requested column. */
+/** Resolve one recurrent row value at the requested column */
 function resolveRecurrentRowWeight(
   context: RecurrentGateRowCollectionContext,
   columnIndex: number,
@@ -680,7 +683,7 @@ function resolveRecurrentRowWeight(
   return resolveSelfConnectionWeight(context.targetNodeInternal);
 }
 
-/** Fold recurrent gate rows into flattened ONNX initializer vectors. */
+/** Fold recurrent gate rows into flattened ONNX initializer vectors */
 function foldRecurrentGateRows(
   gateRows: RecurrentGateRow[],
 ): RecurrentGateParameterCollectionResult {
@@ -697,7 +700,7 @@ function foldRecurrentGateRows(
   );
 }
 
-/** Fold gate blocks into a single fused parameter payload. */
+/** Fold gate blocks into a single fused parameter payload */
 function foldRecurrentGateBlocks(
   gateParameterBlocks: RecurrentGateParameterCollectionResult[],
 ): RecurrentGateParameterCollectionResult {
@@ -714,7 +717,7 @@ function foldRecurrentGateBlocks(
   );
 }
 
-/** Build fused recurrent initializer names for the current layer. */
+/** Build fused recurrent initializer names for the current layer */
 function buildFusedRecurrentInitializerNames(
   operatorType: 'LSTM' | 'GRU',
   layerIndex: number,
@@ -727,7 +730,7 @@ function buildFusedRecurrentInitializerNames(
   };
 }
 
-/** Build fused recurrent graph names for node and output. */
+/** Build fused recurrent graph names for node and output */
 function buildFusedRecurrentGraphNames(
   nodePrefix: string,
   outputSuffix: string,
@@ -739,7 +742,7 @@ function buildFusedRecurrentGraphNames(
   };
 }
 
-/** Append fused recurrent initializer tensors to the ONNX graph. */
+/** Append fused recurrent initializer tensors to the ONNX graph */
 function appendFusedRecurrentInitializers(
   model: OnnxModel,
   initializerNames: FusedRecurrentInitializerNames,
@@ -768,7 +771,7 @@ function appendFusedRecurrentInitializers(
   });
 }
 
-/** Append fused recurrent operator node to the ONNX graph. */
+/** Append fused recurrent operator node to the ONNX graph */
 function appendFusedRecurrentNode(
   graph: OnnxGraph,
   operatorType: 'LSTM' | 'GRU',
@@ -802,14 +805,14 @@ function appendFusedRecurrentNode(
   });
 }
 
-/** Resolve previous output naming semantics for GRU heuristic emission. */
+/** Resolve previous output naming semantics for GRU heuristic emission */
 function resolveGruPreviousOutputName(layerIndex: number): string {
   return layerIndex === 1
     ? GRAPH_INPUT_NAME
     : `${GENERATED_LAYER_OUTPUT_PREFIX}_${layerIndex - 1}`;
 }
 
-/** Append recurrent single-step metadata when recurrent layers exist. */
+/** Append recurrent single-step metadata when recurrent layers exist */
 function appendRecurrentSingleStepMetadata(
   model: OnnxModel,
   recurrentLayerIndices: number[],
@@ -826,7 +829,7 @@ function appendRecurrentSingleStepMetadata(
   );
 }
 
-/** Determine whether Conv2D sharing validation is enabled and configured. */
+/** Determine whether Conv2D sharing validation is enabled and configured */
 function shouldValidateConvSharing(options: OnnxExportOptions): boolean {
   return Boolean(
     options.validateConvSharing &&
@@ -858,7 +861,7 @@ export function isConvMappingWeightShared(
   return isConvLayerPairConsistent(layerPair, options);
 }
 
-/** Validate Conv2D sharing across all declared Conv mappings. */
+/** Validate Conv2D sharing across all declared Conv mappings */
 function validateConvSharingAcrossMappings(
   context: ConvSharingValidationContext,
 ): ConvSharingValidationResult {
@@ -887,7 +890,7 @@ function validateConvSharingAcrossMappings(
   return validationResult;
 }
 
-/** Resolve one Conv mapping layer pair or return undefined for invalid layout. */
+/** Resolve one Conv mapping layer pair or return undefined for invalid layout */
 function resolveConvLayerPairContext(
   layers: NeatapticNode[][],
   layerIndex: number,
@@ -901,7 +904,7 @@ function resolveConvLayerPairContext(
   return { convSpec, previousLayerNodes, currentLayerNodes };
 }
 
-/** Validate one Conv layer pair against representative kernel sharing. */
+/** Validate one Conv layer pair against representative kernel sharing */
 function isConvLayerPairConsistent(
   context: ConvLayerPairContext,
   options?: OnnxExportOptions,
@@ -1059,7 +1062,7 @@ function collectAddressedSourceIndices(
   );
 }
 
-/** Append one Conv-layer validation outcome and optional warning. */
+/** Append one Conv-layer validation outcome and optional warning */
 function appendConvLayerValidationResult(
   result: ConvSharingValidationResult,
   layerIndex: number,
@@ -1100,7 +1103,7 @@ function appendConvSharingMetadata(
   }
 }
 
-/** Collect representative kernels for each output channel. */
+/** Collect representative kernels for each output channel */
 function collectRepresentativeKernels(
   context: ConvLayerPairContext,
   sourceLayout: ResolvedConvSourceLayout,
@@ -1120,7 +1123,7 @@ function collectRepresentativeKernels(
   );
 }
 
-/** Collect one representative kernel by reading the first output position for a channel. */
+/** Collect one representative kernel by reading the first output position for a channel */
 function collectRepresentativeKernelForChannel(
   context: ConvRepresentativeKernelContext & {
     sourceLayout: ResolvedConvSourceLayout;
@@ -1147,7 +1150,7 @@ function collectRepresentativeKernelForChannel(
   );
 }
 
-/** Collect output coordinates for full Conv traversal. */
+/** Collect output coordinates for full Conv traversal */
 function collectConvOutputCoordinates(
   convSpec: ConvLayerPairContext['convSpec'],
 ): ConvOutputCoordinate[] {
@@ -1174,7 +1177,7 @@ function collectConvOutputCoordinates(
   );
 }
 
-/** Collect kernel coordinates for one Conv kernel traversal. */
+/** Collect kernel coordinates for one Conv kernel traversal */
 function collectConvKernelCoordinates(
   convSpec: ConvLayerPairContext['convSpec'],
 ): OnnxConvKernelCoordinate[] {
@@ -1201,7 +1204,7 @@ function collectConvKernelCoordinates(
   );
 }
 
-/** Validate one output coordinate against channel representative kernel weights. */
+/** Validate one output coordinate against channel representative kernel weights */
 function isOutputCoordinateConsistent(
   context: ConvLayerPairContext,
   outputCoordinate: ConvOutputCoordinate,
@@ -1234,7 +1237,7 @@ function isOutputCoordinateConsistent(
   );
 }
 
-/** Resolve runtime internals for output coordinate neuron, if present. */
+/** Resolve runtime internals for output coordinate neuron, if present */
 function resolveNeuronInternalAtOutputCoordinate(
   context: ConvLayerPairContext,
   outputCoordinate: ConvOutputCoordinate,
@@ -1248,7 +1251,7 @@ function resolveNeuronInternalAtOutputCoordinate(
   return neuron ? asNodeInternals(neuron) : undefined;
 }
 
-/** Validate one kernel coordinate against its representative channel value. */
+/** Validate one kernel coordinate against its representative channel value */
 function isKernelCoordinateConsistent(
   context: ConvKernelConsistencyContext & {
     sourceLayout: ResolvedConvSourceLayout;
@@ -1285,7 +1288,7 @@ function isKernelCoordinateConsistent(
   });
 }
 
-/** Resolve input row/column projected by output and kernel coordinates. */
+/** Resolve input row/column projected by output and kernel coordinates */
 function resolveInputPosition(context: ConvKernelConsistencyContext): {
   inputRow: number;
   inputColumn: number;
@@ -1302,7 +1305,7 @@ function resolveInputPosition(context: ConvKernelConsistencyContext): {
   };
 }
 
-/** Check whether input row/column falls inside Conv input bounds. */
+/** Check whether input row/column falls inside Conv input bounds */
 function isInputPositionInsideBounds(
   convSpec: ConvLayerPairContext['convSpec'],
   inputRow: number,
@@ -1316,7 +1319,7 @@ function isInputPositionInsideBounds(
   );
 }
 
-/** Resolve source node by Conv input position coordinates. */
+/** Resolve source node by Conv input position coordinates */
 function resolveSourceNodeAtInputPosition(
   convSpec: ConvLayerPairContext['convSpec'],
   previousLayerNodes: NeatapticNode[],
@@ -1334,7 +1337,7 @@ function resolveSourceNodeAtInputPosition(
   return previousLayerNodes[inputFeatureIndex];
 }
 
-/** Collect representative kernel value using top-left receptive field indexing. */
+/** Collect representative kernel value using top-left receptive field indexing */
 function collectRepresentativeKernelWeight(
   convSpec: ConvLayerPairContext['convSpec'],
   previousLayerNodes: NeatapticNode[],
@@ -1368,7 +1371,7 @@ function buildConvSourceIndex(
   );
 }
 
-/** Compare two scalar weights using configured tolerance. */
+/** Compare two scalar weights using configured tolerance */
 function areWeightsWithinTolerance(
   context: WeightToleranceComparisonContext,
 ): boolean {
@@ -1377,12 +1380,12 @@ function areWeightsWithinTolerance(
   );
 }
 
-/** Resolve runtime node internals in one typed helper. */
+/** Resolve runtime node internals in one typed helper */
 function asNodeInternals(node: NeatapticNode): NodeInternals {
   return node as unknown as NodeInternals;
 }
 
-/** Resolve incoming connection weight from a specific source node. */
+/** Resolve incoming connection weight from a specific source node */
 function resolveIncomingWeight(
   targetNodeInternal: NodeInternals,
   sourceNode: NeatapticNode,
@@ -1393,7 +1396,7 @@ function resolveIncomingWeight(
   return connection ? connection.weight : 0;
 }
 
-/** Resolve self-connection weight for diagonal recurrent matrix entries. */
+/** Resolve self-connection weight for diagonal recurrent matrix entries */
 function resolveSelfConnectionWeight(
   targetNodeInternal: NodeInternals,
 ): number {
@@ -1401,7 +1404,7 @@ function resolveSelfConnectionWeight(
   return selfConnection ? selfConnection.weight : 0;
 }
 
-/** Build a metadata key/value property with JSON string serialization. */
+/** Build a metadata key/value property with JSON string serialization */
 function buildMetadataProperty(
   key: string,
   value: unknown,
@@ -1412,7 +1415,7 @@ function buildMetadataProperty(
   };
 }
 
-/** Append metadata property to model metadata_props list. */
+/** Append metadata property to model metadata_props list */
 function appendMetadataProperty(
   model: OnnxModel,
   metadataProperty: OnnxMetadataProperty,
@@ -1421,7 +1424,7 @@ function appendMetadataProperty(
   metadataProperties.push(metadataProperty);
 }
 
-/** Ensure metadata_props array exists and return it. */
+/** Ensure metadata_props array exists and return it */
 function ensureMetadataProps(model: OnnxModel): OnnxMetadataProperty[] {
   model.metadata_props = model.metadata_props || [];
   return model.metadata_props;

@@ -1,72 +1,72 @@
-/**
- * Shared dataset compatibility error message.
+﻿/**
+ * Error message emitted when the supplied dataset dimensions do not match the network input or output size.
  */
 export const DATASET_COMPATIBILITY_ERROR_MESSAGE =
   'Dataset is invalid or dimensions do not match network input/output size!';
 
 /**
- * Shared evolve stopping-condition validation error.
+ * Error message emitted when an evolution call is started with neither an iteration limit nor an error target specified.
  */
 export const STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE =
   'At least one stopping condition (`iterations` or `error`) must be specified for evolution.';
 
 /**
- * Default target error used when omitted.
+ * Default target error threshold used when no explicit error stopping condition is provided to the evolve call.
  */
 export const DEFAULT_TARGET_ERROR = 0.05;
 
 /**
- * Default complexity growth penalty.
+ * Default per-connection complexity growth penalty applied when computing fitness-adjusted complexity scores in the evolve loop.
  */
 export const DEFAULT_GROWTH = 0.0001;
 
 /**
- * Default repeated evaluation amount.
+ * Default number of repeated fitness evaluations used when no explicit evaluation amount is specified per genome.
  */
 export const DEFAULT_EVALUATION_AMOUNT = 1;
 
 /**
- * Default logging frequency value.
+ * Default generation logging frequency; zero disables per-generation log output during the evolve loop.
  */
 export const DEFAULT_LOG_INTERVAL = 0;
 
 /**
- * Default single-thread worker count.
+ * Default worker thread count used when no explicit thread override is provided to single-thread evolve calls.
  */
 export const DEFAULT_THREAD_COUNT = 1;
 
 /**
- * Sentinel target error indicating that error-based stopping is disabled.
+ * Sentinel error value indicating that error-based stopping is explicitly disabled and only iteration limits apply.
  */
 export const DISABLED_TARGET_ERROR = -1;
 
 /**
- * Explicit zero-iteration value.
+ * Explicit zero used as an initial iteration counter and for stopping-condition comparisons during evolve loop entry.
  */
 export const ZERO_ITERATIONS = 0;
 
 /**
- * Population threshold considered "small" for mutation heuristics.
+ * Population size threshold below which the evolve loop applies more aggressive fallback mutation rates and amounts.
  */
 export const SMALL_POPULATION_THRESHOLD = 10;
 
 /**
- * Mutation rate fallback used for very small populations.
+ * Mutation rate fallback applied when the active population falls below the small-population threshold during evolution.
  */
 export const SMALL_POPULATION_MUTATION_RATE = 0.5;
 
 /**
- * Mutation amount fallback used for very small populations.
+ * Mutation amount fallback applied when the active population falls below the small-population threshold during evolution.
  */
 export const SMALL_POPULATION_MUTATION_AMOUNT = 1;
 
 /**
- * Maximum consecutive invalid errors tolerated before loop abort.
+ * Maximum number of consecutive NaN or Infinity fitness values tolerated before the evolve loop aborts early.
  */
 export const MAX_CONSECUTIVE_INVALID_ERRORS = 5;
 
 /**
- * Shared evolution summary payload.
+ * Shared summary payload returned by the evolve loop containing the best error, generation count, and wall-clock time.
  */
 export type EvolutionSummary = {
   error: number;
@@ -75,7 +75,7 @@ export type EvolutionSummary = {
 };
 
 /**
- * Structural counts used by complexity heuristics.
+ * Structural node, connection, and gate counts used by complexity growth-penalty heuristics during fitness adjustment.
  */
 export type GenomeStructureCounts = {
   nodeCount: number;

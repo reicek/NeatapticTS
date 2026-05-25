@@ -46,7 +46,10 @@ export async function scanCodeQuality(options = {}) {
 }
 
 function collectDocumentationIssues(exportedDeclaration, minJsdocWords) {
-  const jsdocText = resolveJsdocSummaryText(exportedDeclaration.declaration);
+  const jsdocText = resolveJsdocSummaryText(
+    exportedDeclaration.declaration,
+    exportedDeclaration.jsdoc_source_node,
+  );
   if (!jsdocText) {
     return [{
       file: exportedDeclaration.file_path,
@@ -143,7 +146,7 @@ function calculateCyclomaticComplexity(node) {
 }
 
 async function main() {
-  const args = parseCliArgs(process.argv.slice(2));
+  const args = parseCliArgs(process.argv.slice(2), { repeatableFlags: ['source'] });
   if (args.help) {
     printHelp({
       title: 'Code quality scanner',

@@ -16,11 +16,12 @@ Error raised when a sparsity-budget max-connection cap is invalid.
 
 ### ActivePruningConfig
 
-Non-nullable pruning schedule configuration shape used by helpers.
+Normalized pruning-config shape consumed by internal helpers after boundary
+guards confirm that runtime options are present.
 
 ### DEFAULT_PRUNE_FREQUENCY
 
-Fallback prune cadence when schedule frequency is omitted or invalid.
+Default prune cadence used when schedule frequency is absent or invalid.
 
 ### MAX_EVOLUTIONARY_TARGET_SPARSITY
 
@@ -28,27 +29,30 @@ Safety cap below full sparsity to avoid degenerate zero-connection networks.
 
 ### MAX_PROGRESS_FRACTION
 
-Maximum normalized schedule progress value.
+Maximum normalized schedule progress value used by clamp logic before
+deriving sparsity targets inside schedule helpers.
 
 ### MIN_PROGRESS_FRACTION
 
-Minimum normalized schedule progress value.
+Minimum normalized schedule progress value used by clamp logic before
+deriving sparsity targets inside schedule helpers.
 
 ### MIN_REMAINING_CONNECTION_COUNT
 
-Lower bound to ensure at least one connection remains after pruning.
+Lower bound that guarantees at least one connection remains after pruning.
 
 ### PRUNING_METHOD_MAGNITUDE
 
-Pruning method identifier for absolute-weight ranking.
+Pruning method identifier for absolute-weight ranking (`|w|`) used by
+default scheduled and evolutionary pruning selection helpers.
 
 ### PRUNING_METHOD_SNIP
 
-Pruning method identifier for SNIP-like saliency ranking.
+Pruning method identifier for SNIP-like saliency ranking (`|w * g|` proxy).
 
 ### REGROW_ATTEMPT_MULTIPLIER
 
-Retry multiplier to convert intended regrowth count into max attempts.
+Retry multiplier used to translate desired regrowth count into max attempts.
 
 ## architecture/network/prune/network.prune.utils.ts
 
@@ -69,20 +73,6 @@ Internal state fields (attached to Network through a loose internal bridge):
  - _rand: deterministic RNG function
  - _enforceAcyclic: boolean flag enforcing forward-only connectivity ordering
  - _topoDirty: topology order invalidation flag consumed by activation fast path / topological sorting
-
-Opportunistically perform scheduled pruning during gradient-based training.
-
-Scheduling model:
- - start / end define an iteration window (inclusive) during which pruning may occur
- - frequency defines cadence (every N iterations inside the window)
- - targetSparsity is linearly annealed from 0 to its final value across the window
- - method chooses ranking heuristic (magnitude | snip)
- - optional regrowFraction allows dynamic sparse training: after removing edges we probabilistically regrow
-   a fraction of them at random unused positions (respecting acyclic constraint if enforced)
-
-SNIP heuristic:
- - Uses |w * grad| style saliency approximation (here reusing stored delta stats as gradient proxy)
- - Falls back to pure magnitude if gradient stats absent.
 
 ### configureSparsityBudget
 
@@ -111,7 +101,7 @@ Returns: Nothing.
 getCurrentSparsity(): number
 ```
 
-Current sparsity fraction relative to the training-time pruning baseline.
+Return current sparsity relative to the captured pruning baseline connection count.
 
 Returns: Current sparsity in the [0,1] range when baseline is available.
 
@@ -123,7 +113,7 @@ getSparsityBudgetSnapshot(
 ): NetworkSparsityBudgetSnapshot | undefined
 ```
 
-Read the last recorded sparsity-budget decision snapshot.
+Return the latest recorded sparsity-budget decision snapshot for diagnostics and telemetry.
 
 Parameters:
 - `currentNetwork` - Network to inspect.
@@ -140,11 +130,15 @@ maybePrune(
 
 Perform scheduled pruning at a given training iteration if conditions are met.
 
-Scheduling fields (cfg): start, end, frequency, targetSparsity, method ('magnitude' | 'snip'), regrowFraction.
-The target sparsity ramps linearly from 0 at start to cfg.targetSparsity at end.
+Uses schedule fields from `_pruningConfig` (`start`, `end`, `frequency`,
+`targetSparsity`, `method`, and optional `regrowFraction`) to decide whether
+this iteration should prune, then removes low-ranked connections and can
+optionally regrow a bounded subset.
 
 Parameters:
 - `iteration` - Current (0-based or 1-based) training iteration counter used for scheduling.
+
+Returns: Nothing.
 
 ### pruneToSparsity
 
@@ -327,7 +321,7 @@ getSparsityBudgetSnapshot(
 ): NetworkSparsityBudgetSnapshot | undefined
 ```
 
-Read the last recorded sparsity-budget decision snapshot.
+Return the latest recorded sparsity-budget decision snapshot for diagnostics and telemetry.
 
 Parameters:
 - `currentNetwork` - Network to inspect.
@@ -602,7 +596,7 @@ maybeRunRegrowth(
 ): void
 ```
 
-Build and execute a regrowth plan when enabled.
+Build and execute a bounded connection-regrowth plan when regrowth is enabled.
 
 Parameters:
 - `currentNetwork` - Network to regrow.
@@ -707,7 +701,8 @@ buildPruneSelection(
 ): PruneSelectionResult
 ```
 
-Build a connection removal selection from current ranking context.
+Build a connection removal selection from ranking context so pruning removes the lowest-priority edges first.
+This helper isolates ordering and slicing rules from orchestration code that manages structural side effects.
 
 Parameters:
 - `context` - Inputs for ranking and slicing removable connections.
@@ -723,7 +718,8 @@ buildScheduledTarget(
 ): ScheduledTargetResult
 ```
 
-Build current scheduled pruning targets from schedule context.
+Build current scheduled pruning targets from schedule context and current connection totals for this iteration.
+The output combines desired remaining edges and immediate excess so callers can prune deterministically.
 
 Parameters:
 - `context` - Inputs required to compute desired remaining connections.
@@ -793,7 +789,8 @@ disconnectConnections(
 ): void
 ```
 
-Disconnect all selected connections from the network.
+Disconnect all selected connections from the network and schedule post-prune activation-pool compaction when needed.
+Grouping removal side effects here keeps pruning orchestration compact and consistent across pruning strategies.
 
 Parameters:
 - `currentNetwork` - Network to mutate.
@@ -809,7 +806,8 @@ getInitialConnectionBaseline(
 ): number | undefined
 ```
 
-Read the scheduled-pruning baseline connection count.
+Read the scheduled-pruning baseline connection count used to compute progressive sparsity targets over time.
+Keeping this baseline explicit prevents schedule drift when connection totals fluctuate across pruning iterations.
 
 Parameters:
 - `currentNetwork` - Network instance to inspect.
@@ -824,7 +822,8 @@ getPruningConfig(
 ): { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; } | undefined
 ```
 
-Read the active pruning schedule from network internals.
+Read the active pruning schedule from network internals so scheduled pruning logic can run against current runtime policy.
+Returning the optional config directly keeps orchestration code declarative and avoids repeated unsafe internal casts.
 
 Parameters:
 - `currentNetwork` - Network instance to inspect.
@@ -874,7 +873,8 @@ markPruneIteration(
 ): void
 ```
 
-Persist the iteration that last performed pruning.
+Persist the iteration that last performed pruning so duplicate schedule triggers within the same step are ignored.
+This marker is essential for idempotent training loops that may re-enter pruning checks.
 
 Parameters:
 - `currentPruningConfig` - Active pruning configuration.
@@ -983,7 +983,8 @@ shouldRunScheduledPrune(
 ): boolean
 ```
 
-Determine whether scheduled pruning should run at this iteration.
+Determine whether scheduled pruning should run at this iteration using configured window bounds and cadence guards.
+The decision also prevents duplicate pruning passes within the same iteration when callers retry training steps.
 
 Parameters:
 - `currentIteration` - Training iteration being processed.
@@ -1002,7 +1003,7 @@ calculateSparsityFromBaseline(
 ): number
 ```
 
-Convert current density into sparsity ratio.
+Convert current connection density into a normalized sparsity ratio value.
 
 Parameters:
 - `currentConnectionCount` - Current connection count.
@@ -1036,6 +1037,7 @@ buildEvolutionaryPruneSelection(
 ```
 
 Build evolutionary pruning connection selection.
+Ranking and slicing happen in one deterministic pass so stochastic training variance does not reorder equal-score candidates across repeated pruning runs.
 
 Parameters:
 - `context` - Inputs for ranking and slicing.
@@ -1052,6 +1054,7 @@ buildEvolutionaryTarget(
 ```
 
 Compute evolutionary pruning target counts.
+This conversion translates a normalized sparsity objective into concrete connection counts while enforcing the minimum remaining edge safety floor.
 
 Parameters:
 - `context` - Inputs for sparsity-to-count conversion.
@@ -1084,6 +1087,7 @@ disconnectEvolutionaryConnections(
 ```
 
 Disconnect selected evolutionary pruning edges.
+Removal is followed by deferred activation-pool compaction scheduling so large structural contractions can reclaim memory without forcing immediate synchronous pool reshaping.
 
 Parameters:
 - `currentNetwork` - Network to mutate.
@@ -1100,6 +1104,7 @@ getOrCaptureEvolutionaryBaseline(
 ```
 
 Capture evolutionary baseline once and reuse it for subsequent pruning calls.
+The baseline anchors target sparsity to the original connection budget so repeated prune cycles converge predictably instead of drifting with the current graph size.
 
 Parameters:
 - `currentNetwork` - Network to inspect and possibly initialize.

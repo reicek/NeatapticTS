@@ -94,11 +94,11 @@ base64 for portable storage.
 
 ### CompressedSerializedNetworkArchiveCompression
 
-Supported Node-side archive compression codecs for compressed payloads.
+Supported Node-side archive compression codecs for compressed payloads
 
 ### CompressedSerializedNetworkArchiveOptions
 
-Optional settings for archiving one compressed network payload.
+Optional settings for archiving one compressed network payload
 
 ### ConnectionInternalsWithEnabled
 
@@ -109,19 +109,18 @@ as implicitly enabled.
 
 ### DEFAULT_NUMERIC_VALUE
 
-Default numeric fallback for absent scalar values.
-
-This keeps import logic deterministic when optional numeric fields are missing.
+Neutral numeric fallback applied whenever optional scalar fields are absent in serialized payloads during rebuild normalization.
+Using a single constant keeps rebuild defaults predictable across compact and verbose import paths.
 
 ### ERROR_INVALID_NETWORK_JSON
 
-Error text emitted for invalid verbose JSON payload roots.
+Stable error text thrown when verbose JSON root validation fails before any field-level reconstruction logic executes.
+Keeping this message deterministic helps tests and diagnostics tooling match invalid-payload failures.
 
 ### FALLBACK_ACTIVATION_KEY
 
-Fallback activation key used when no mapping is found.
-
-Identity is selected as the safest non-disruptive activation fallback.
+Activation key used when a serialized squash name cannot be resolved to any registered runtime activation function safely.
+Identity preserves import continuity while warning paths surface the unknown key to diagnostics.
 
 ### FIRST_CONNECTION_INDEX
 
@@ -143,9 +142,8 @@ Node entries are rebuilt in order and pushed into mutable runtime internals.
 
 ### NETWORK_JSON_FORMAT_VERSION
 
-Default format version for verbose serialization payloads.
-
-Consumers can use this value to identify the JSON schema revision.
+Current verbose `NetworkJSON` schema version used by serializer and deserializer boundaries to coordinate compatibility checks and migration warnings.
+Readers should treat mismatches as migration signals rather than silently assuming field parity.
 
 ### NetworkInternalsWithDropout
 
@@ -155,22 +153,8 @@ Verbose JSON snapshots normalize this value so readers can treat dropout as nume
 
 ### NetworkJSON
 
-Verbose JSON payload representation used by `toJSONImpl` and `fromJSONImpl`.
-
-`formatVersion` enables compatibility checks and migration handling.
-
-Example:
-
-```ts
-const payload: NetworkJSON = {
-  formatVersion: 2,
-  input: 2,
-  output: 1,
-  dropout: 0,
-  nodes: [{ type: 'input', bias: 0, squash: 'identity', index: 0 }],
-  connections: [],
-};
-```
+Canonical verbose network JSON contract used across serializer and deserializer entry points in persistence, migration, and diagnostics workflows.
+This local alias keeps payload-shape ownership discoverable from the serialize boundary without requiring deep type imports.
 
 ### NetworkJSONConnection
 
@@ -213,30 +197,13 @@ Deterministic parameter-layout descriptor owned by the network serialize boundar
 Version `1` keeps one stable fold order: all bias entries first, then all
 weight entries. For a fixed topology with stable historical ids, this gives
 ordered determinism on the same runtime.
-The layout documents descriptor order only; it does not claim cross-runtime
-exact replay by itself.
 
 ### ParameterVector
 
 Versioned parameter payload for same-runtime vector roundtrips.
 
 Layout metadata and scalar values travel together so imports can reject
-incompatible payloads before mutating a live network. Version `1` exports
-exactly one bias slot for every live runtime node and one weight slot for
-every live forward connection plus self-connection in `ParameterLayoutV1`
-order, including disabled connections when they still exist in the runtime
-graph.
-
-Weight descriptors still prefer `innovation` and otherwise fall back to the
-stable endpoint gene ids in `from` and `to`, so the same runtime-owned slot
-identity survives export and import even when a live connection has no
-innovation id. For a fixed topology with stable historical ids, this payload
-is ordered deterministic on the same runtime. It does not claim cross-runtime
-exact replay by itself.
-
-Non-neutral `node.response` and `connection.gain` remain explicit rejection
-cases for the runtime helpers instead of silently widening the weights-and-
-biases v1 contract.
+incompatible payloads before mutating a live network.
 
 ### ResolvedNetworkSizeContext
 
@@ -282,7 +249,8 @@ Warning emitted when JSON deserialize sees an invalid gater index.
 
 ### WARNING_UNKNOWN_FORMAT_VERSION
 
-Warning emitted for unknown verbose format versions.
+Warning emitted for unknown verbose format versions encountered during JSON import boundaries with best-effort fallback semantics.
+Keep this message stable so diagnostics tooling can classify unknown-format imports consistently.
 
 ### WARNING_UNKNOWN_SQUASH_PREFIX
 
@@ -477,7 +445,8 @@ deserializeCompressed(
 ): default
 ```
 
-Rebuilds a network instance from the compressed compact payload.
+Rebuild a network instance from the compressed compact payload and restore runtime activation/state vectors after structure import.
+The function validates payload format first so incompatible compressed data fails before partial reconstruction occurs.
 
 Parameters:
 - `data` - Compressed compact payload.
@@ -496,7 +465,8 @@ deserializeCompressedArchive(
 ): default
 ```
 
-Rebuilds a network instance from the compressed archive wrapper.
+Rebuild a network instance from the compressed archive wrapper by inflating archive bytes and delegating to compressed deserialization.
+This keeps archive-specific decode concerns separate from structural reconstruction and runtime-state restoration.
 
 Parameters:
 - `data` - Archived compressed payload.
@@ -540,7 +510,8 @@ deserializeCompressedArchiveAsyncWithMetrics(
 ): Promise<CompressedArchiveDecodeResult<default>>
 ```
 
-Rebuild a network archive with async codecs and report size plus decode-time metrics.
+Rebuild a network archive with async codecs and report size plus decode-time metrics for streaming or browser import paths.
+This helper preserves deterministic reconstruction while exposing decode telemetry for responsiveness tuning.
 
 Parameters:
 - `data` - Archived compressed payload.
@@ -560,7 +531,8 @@ deserializeCompressedArchiveWithMetrics(
 ): CompressedArchiveDecodeResult<default>
 ```
 
-Rebuild a network archive and report size plus decode-time metrics.
+Rebuild a network archive and report size plus decode-time metrics for import performance and payload diagnostics.
+The returned metrics quantify archive inflation and reconstruction overhead alongside the rebuilt runtime.
 
 Parameters:
 - `data` - Archived compressed payload.
@@ -653,30 +625,13 @@ Deterministic parameter-layout descriptor owned by the network serialize boundar
 Version `1` keeps one stable fold order: all bias entries first, then all
 weight entries. For a fixed topology with stable historical ids, this gives
 ordered determinism on the same runtime.
-The layout documents descriptor order only; it does not claim cross-runtime
-exact replay by itself.
 
 ### ParameterVector
 
 Versioned parameter payload for same-runtime vector roundtrips.
 
 Layout metadata and scalar values travel together so imports can reject
-incompatible payloads before mutating a live network. Version `1` exports
-exactly one bias slot for every live runtime node and one weight slot for
-every live forward connection plus self-connection in `ParameterLayoutV1`
-order, including disabled connections when they still exist in the runtime
-graph.
-
-Weight descriptors still prefer `innovation` and otherwise fall back to the
-stable endpoint gene ids in `from` and `to`, so the same runtime-owned slot
-identity survives export and import even when a live connection has no
-innovation id. For a fixed topology with stable historical ids, this payload
-is ordered deterministic on the same runtime. It does not claim cross-runtime
-exact replay by itself.
-
-Non-neutral `node.response` and `connection.gain` remain explicit rejection
-cases for the runtime helpers instead of silently widening the weights-and-
-biases v1 contract.
+incompatible payloads before mutating a live network.
 
 ### serialize
 
@@ -769,7 +724,8 @@ serializeCompressedArchiveAsyncWithMetrics(
 ): Promise<CompressedArchiveEncodeResult<CompressedSerializedNetworkArchive>>
 ```
 
-Serialize a network archive with async codecs and report size plus encode-time metrics.
+Serialize a network archive with async codecs and report size plus encode-time metrics for responsive environments.
+This variant keeps the same archive semantics while allowing non-blocking compression paths in browser runtimes.
 
 Parameters:
 - `this` - Bound network instance.
@@ -785,7 +741,8 @@ serializeCompressedArchiveWithMetrics(
 ): CompressedArchiveEncodeResult<CompressedSerializedNetworkArchive>
 ```
 
-Serialize a network archive and report size plus encode-time metrics.
+Serialize a network archive and report size plus encode-time metrics for deterministic storage and transport audits.
+The metrics payload helps compare archive codecs without changing the underlying compressed network contract.
 
 Parameters:
 - `this` - Bound network instance.
@@ -1089,9 +1046,8 @@ appendJsonForwardConnections(
 ): void
 ```
 
-Appends JSON entries for forward connections.
-
-Non-finite endpoint indices are ignored to prevent malformed output records.
+Append JSON entries for forward connections after validating that each endpoint still maps to canonical node indices.
+Invalid or stale endpoints are skipped to prevent malformed rows from contaminating serialized payloads.
 
 Parameters:
 - `networkInternals` - Runtime internals.
@@ -1382,9 +1338,8 @@ rebuildConnectionsFromJsonPayload(
 ): void
 ```
 
-Rebuilds runtime connections from verbose JSON entries.
-
-Invalid entries are skipped with warnings so import continues for valid records.
+Rebuild runtime connections from verbose JSON entries while preserving best-effort import behavior for mixed-quality payloads.
+Invalid rows are skipped with warnings so valid edge records still reconstruct successfully.
 
 Parameters:
 - `jsonConnectionContext` - JSON connection rebuild context.
@@ -1408,7 +1363,8 @@ rebuildNodesFromJsonPayload(
 ): void
 ```
 
-Rebuilds runtime nodes from verbose JSON entries.
+Rebuild runtime nodes from verbose JSON entries while restoring scalar fields and optional historical identifiers.
+Unknown squash names are normalized through activation fallback logic to keep import paths resilient.
 
 Parameters:
 - `jsonNodeContext` - JSON node rebuild context.
@@ -1446,7 +1402,8 @@ resolveDropout(
 ): number
 ```
 
-Resolves dropout with a numeric fallback when the value is absent.
+Resolve dropout with a numeric fallback when the serialized value is absent or undefined.
+Normalizing this value at one boundary keeps verbose JSON payloads stable for downstream consumers.
 
 Parameters:
 - `dropout` - Optional dropout value.
@@ -1476,7 +1433,8 @@ validateNetworkJsonOrThrow(
 ): void
 ```
 
-Validates the verbose JSON payload root shape.
+Validate the verbose JSON payload root shape before node and connection rebuild routines process individual fields.
+This early guard prevents non-object payloads from entering best-effort rebuild paths.
 
 Parameters:
 - `json` - Payload candidate.
@@ -1491,7 +1449,8 @@ warnWhenJsonFormatVersionIsUnknown(
 ): void
 ```
 
-Warns when incoming verbose format version differs from the expected one.
+Warn when incoming verbose format version differs from the expected serializer schema version.
+The warning-only policy allows controlled migration attempts without forcing immediate import failure.
 
 Parameters:
 - `formatVersion` - Incoming format version.
@@ -1514,7 +1473,8 @@ JSON-safe archive wrapper for one strict genome contract.
 
 ### CompressedSerializedGenomeArchiveOptions
 
-Archive options for strict-genome compression.
+Archive options for strict-genome compression that combine binary codec choices with capture-time genome field toggles.
+These options let callers tune payload size and fidelity without introducing phenotype-only runtime state.
 
 ### deserializeCompressedGenomeArchive
 
@@ -1525,7 +1485,8 @@ deserializeCompressedGenomeArchive(
 ): default
 ```
 
-Materialize one runnable phenotype from a compressed strict-genome archive.
+Materialize one runnable phenotype from a compressed strict-genome archive using validated contract data.
+Runtime hints are applied only after strict-genome restoration so deterministic genotype state stays authoritative.
 
 Parameters:
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
@@ -1543,7 +1504,8 @@ deserializeCompressedGenomeArchiveAsync(
 ): Promise<default>
 ```
 
-Materialize one runnable phenotype from a compressed strict-genome archive with async decode progress.
+Materialize one runnable phenotype from a compressed strict-genome archive with async decode progress callbacks.
+This path is suited for browser or streaming contexts where large payload inflation should stay responsive.
 
 Parameters:
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
@@ -1562,7 +1524,8 @@ deserializeCompressedGenomeArchiveAsyncWithMetrics(
 ): Promise<CompressedArchiveDecodeResult<default>>
 ```
 
-Materialize one runnable phenotype from a compressed strict-genome archive with async decode metrics.
+Materialize one runnable phenotype from a compressed strict-genome archive with async decode metrics and progress support.
+The returned telemetry helps compare streaming decode strategies while preserving the same strict reconstruction contract.
 
 Parameters:
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
@@ -1580,7 +1543,8 @@ deserializeCompressedGenomeArchiveWithMetrics(
 ): CompressedArchiveDecodeResult<default>
 ```
 
-Materialize one runnable phenotype from a compressed strict-genome archive and report decode metrics.
+Materialize one runnable phenotype from a compressed strict-genome archive and report decode metrics for runtime analysis.
+This variant keeps decode telemetry alongside the rebuilt network for reproducibility and performance audits.
 
 Parameters:
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
@@ -1596,7 +1560,8 @@ parseCompressedGenomeArchive(
 ): NeatGenome
 ```
 
-Parse one archived strict genome contract back into validated JSON state.
+Parse one archived strict genome contract back into validated JSON state before any runtime materialization begins.
+This boundary enforces archive tags and schema validity so malformed payloads fail with clear diagnostics.
 
 Parameters:
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
@@ -1657,7 +1622,8 @@ serializeCompressedGenomeArchiveWithMetrics(
 ): CompressedArchiveEncodeResult<CompressedSerializedGenomeArchive>
 ```
 
-Archive one runtime phenotype through the strict genome contract and report encode metrics.
+Archive one runtime phenotype through the strict genome contract and report deterministic encode metrics for observability.
+The metrics payload helps compare codec and capture-option tradeoffs without changing archive semantics.
 
 Parameters:
 - `options` - Optional archive codec and genome-capture settings.
@@ -1751,7 +1717,8 @@ collectNodeActivations(
 ): number[]
 ```
 
-Collects node activation values in positional order.
+Collect node activation values in positional order so compact payload slot alignment stays deterministic across export and import paths.
+The returned vector is index-stable relative to the current node list order.
 
 Parameters:
 - `nodes` - Node list.
@@ -1784,9 +1751,8 @@ collectNodeSquashKeys(
 ): string[]
 ```
 
-Collects node activation keys in positional order.
-
-Each function reference is normalized to a string key for compact transfer.
+Collect node activation keys in positional order by normalizing function references to stable string identifiers.
+This keeps compact payloads portable across runtimes where function identity values cannot be serialized directly.
 
 Parameters:
 - `nodes` - Node list.
@@ -1801,7 +1767,8 @@ collectNodeStates(
 ): number[]
 ```
 
-Collects node state values in positional order.
+Collect node state values in positional order so recurrent runtime state can be restored exactly after compact deserialization.
+This preserves alignment with activation and squash-key arrays in the compact tuple.
 
 Parameters:
 - `nodes` - Node list.
@@ -1816,7 +1783,8 @@ collectSerializedConnections(
 ): SerializedConnection[]
 ```
 
-Collects compact connection records from forward and self connection groups.
+Collect compact connection records from forward and self-connection groups while preserving historical identity metadata.
+Callers should refresh node indices first so endpoint references remain canonical.
 
 Parameters:
 - `networkInternals` - Runtime internals.
@@ -1936,9 +1904,8 @@ rebuildNodesFromCompactPayload(
 ): void
 ```
 
-Rebuilds runtime nodes from compact payload arrays.
-
-Node type is inferred from index position relative to input/output boundaries.
+Rebuild runtime nodes from compact payload arrays by restoring type, scalar state, activation key, and optional gene identifiers.
+Node type is inferred from positional input/output boundaries to keep payload shape compact.
 
 Parameters:
 - `networkInternals` - Runtime internals.
@@ -2055,7 +2022,7 @@ asNetworkInternals(
 ): SerializeNetworkInternals
 ```
 
-Casts a network instance to the internal runtime shape used by serializer helpers.
+Cast a public network instance to the internal serializer runtime shape so low-level deserialization helpers can access mutable fields without duplicating bridge-cast logic.
 
 Parameters:
 - `network` - Network instance.
@@ -2070,7 +2037,7 @@ asNetworkInternalsWithDropout(
 ): NetworkInternalsWithDropout
 ```
 
-Casts a network instance to internals that include optional dropout metadata.
+Cast a public network instance to serializer internals that include optional dropout metadata so verbose restore and export paths can read dropout fields consistently.
 
 Parameters:
 - `network` - Network instance.
@@ -2085,7 +2052,7 @@ asNodeInternals(
 ): SerializeNodeInternals
 ```
 
-Casts a node instance to its internal runtime representation.
+Cast a node instance to its internal runtime representation so serializer helpers can read and write persisted node metadata through one shared bridge.
 
 Parameters:
 - `node` - Node instance.
@@ -2125,7 +2092,7 @@ createNetworkInstance(
 ): default
 ```
 
-Creates a new network instance for deserialize workflows.
+Create a fresh network instance for deserialize workflows so restoration code can hydrate graph state onto a clean runtime object.
 
 Parameters:
 - `input` - Input size.
@@ -2161,7 +2128,7 @@ isFiniteIndex(
 ): boolean
 ```
 
-Checks whether a candidate index value is a finite number.
+Check whether a candidate index value is finite so endpoint validation can reject NaN and infinite references before bounds checks execute.
 
 Parameters:
 - `index` - Candidate index value.
@@ -2177,7 +2144,7 @@ isNodeIndexInBounds(
 ): boolean
 ```
 
-Checks whether an index is inside the bounds of a node array.
+Check whether a candidate node index falls inside the valid array bounds so restore logic can reject malformed serialized endpoint references.
 
 Parameters:
 - `nodes` - Node list.
@@ -2193,7 +2160,7 @@ resetMutableRuntimeCollections(
 ): void
 ```
 
-Clears mutable runtime collections before reconstruction.
+Clear mutable runtime collections before reconstruction so node, connection, self-connection, and gate arrays are reset to a predictable empty baseline.
 
 Parameters:
 - `networkInternals` - Runtime internals.
@@ -2210,7 +2177,7 @@ resolveNetworkSize(
 ): ResolvedNetworkSizeContext
 ```
 
-Resolves effective input/output dimensions using optional explicit overrides.
+Resolve effective input and output dimensions using optional explicit overrides so compact payload restore paths can apply caller-provided sizes deterministically.
 
 When an override is provided, it takes precedence over serialized values.
 
@@ -2230,7 +2197,7 @@ resolveSizeOverride(
 ): number
 ```
 
-Resolves one size value with override-first semantics.
+Resolve one size value with override-first semantics so deserialization can prioritize explicit caller intent while preserving serialized fallbacks when overrides are absent.
 
 Parameters:
 - `overrideValue` - Optional explicit override.
@@ -2400,6 +2367,11 @@ Returns: Nothing.
 
 ## architecture/network/serialize/network.serialize.compression.utils.ts
 
+Archive one compressed network payload with a Node-side binary codec.
+
+This is intentionally additive: the wrapped payload stays the exact JSON form
+returned by `serializeCompressed`, then gzip or zstd is applied above it.
+
 ### collectDecodedArchivePayloadBytes
 
 ```ts
@@ -2432,7 +2404,7 @@ compressArchivePayloadBytes(
 ): Uint8Array<ArrayBufferLike>
 ```
 
-Compress UTF-8 payload bytes with one supported Node-side archive codec.
+Compress UTF-8 payload bytes with one supported Node-side archive codec so binary wrappers stay compact while preserving exact JSON payload semantics.
 
 Parameters:
 - `payloadBytes` - UTF-8 payload bytes.
@@ -2541,15 +2513,7 @@ compressSerializedConnections(
 ): CompressedSerializedConnectionBlock
 ```
 
-Compress one serialized connection list into array-oriented exact payload fields.
-
-The weight channel stays lossless by delta-encoding the raw IEEE-754 float64
-words rather than quantizing the numeric values.
-
-Parameters:
-- `serializedConnections` - Compact serialized connection rows.
-
-Returns: Compressed connection block.
+Exported contract for compressSerializedConnections.
 
 ### concatenateArchiveByteChunks
 
@@ -2591,7 +2555,7 @@ createCompressedArchiveDecodeMetrics(
 ): CompressedArchiveDecodeMetrics
 ```
 
-Create one metrics snapshot for an archive decode operation.
+Create one metrics snapshot for an archive decode operation so callers can inspect decompression efficiency and elapsed decoding cost consistently.
 
 Parameters:
 - `uncompressedByteLength` - UTF-8 byte length after archive inflation.
@@ -2610,7 +2574,7 @@ createCompressedArchiveEncodeMetrics(
 ): CompressedArchiveEncodeMetrics
 ```
 
-Create one metrics snapshot for an archive encode operation.
+Create one metrics snapshot for an archive encode operation so callers can log compression efficiency and elapsed encoding cost consistently.
 
 Parameters:
 - `uncompressedByteLength` - UTF-8 byte length before archive compression.
@@ -2628,16 +2592,7 @@ createCompressedNetworkArchive(
 ): CompressedSerializedNetworkArchive
 ```
 
-Archive one compressed network payload with a Node-side binary codec.
-
-This is intentionally additive: the wrapped payload stays the exact JSON form
-returned by `serializeCompressed`, then gzip or zstd is applied above it.
-
-Parameters:
-- `compressedPayload` - Existing compressed network payload.
-- `options` - Optional archive compression settings.
-
-Returns: Base64-wrapped compressed archive payload.
+Exported contract for createCompressedNetworkArchive.
 
 ### createCompressedNetworkArchiveAsync
 
@@ -2648,17 +2603,7 @@ createCompressedNetworkArchiveAsync(
 ): Promise<CompressedSerializedNetworkArchive>
 ```
 
-Archive one compressed network payload with the best available async runtime codec.
-
-Browser runtimes prefer `CompressionStream` with gzip so large payload work can
-stay off the synchronous main-thread path. Node falls back to the existing zlib
-owner when browser streams are unavailable.
-
-Parameters:
-- `compressedPayload` - Existing compressed network payload.
-- `options` - Optional archive compression settings.
-
-Returns: Base64-wrapped compressed archive payload.
+Exported contract for createCompressedNetworkArchiveAsync.
 
 ### decodeArchivePayloadBase64
 
@@ -2668,7 +2613,7 @@ decodeArchivePayloadBase64(
 ): Uint8Array<ArrayBufferLike>
 ```
 
-Decode archive payload bytes from base64 without assuming a specific runtime.
+Decode archive payload bytes from base64 without assuming a specific runtime so compressed archives can hydrate reliably in browser and Node.
 
 Parameters:
 - `payload` - Base64-encoded payload text.
@@ -2716,7 +2661,7 @@ decompressArchivePayloadBytes(
 ): Uint8Array<ArrayBufferLike>
 ```
 
-Decompress archive payload bytes with one supported Node-side codec.
+Decompress archive payload bytes with one supported Node-side codec so compressed archive wrappers recover deterministic UTF-8 serialization payload bytes.
 
 Parameters:
 - `payloadBytes` - Compressed archive payload bytes.
@@ -2734,7 +2679,7 @@ decompressArchivePayloadBytesAsync(
 ): Promise<Uint8Array<ArrayBufferLike>>
 ```
 
-Decompress archive payload bytes with the best available async archive codec.
+Decompress archive payload bytes with the best available async archive codec so browser and Node runtimes can share one non-blocking restore flow.
 
 Parameters:
 - `payloadBytes` - Compressed archive payload bytes.
@@ -2769,7 +2714,7 @@ decompressSerializedConnections(
 ): NetworkJSONConnection[]
 ```
 
-Decompress one array-oriented connection block back into compact rows.
+Decompress one array-oriented connection block back into compact rows so archived connection payloads regain legacy-friendly per-edge field records.
 
 Parameters:
 - `compressedConnections` - Compressed connection block.
@@ -2801,7 +2746,7 @@ encodeArchivePayloadBase64(
 ): string
 ```
 
-Encode archive payload bytes to base64 without assuming a specific runtime.
+Encode archive payload bytes to base64 without assuming a specific runtime so archive wrappers remain portable across browser and Node environments.
 
 Parameters:
 - `payloadBytes` - Binary archive payload bytes.
@@ -2846,7 +2791,7 @@ estimateSerializedByteLength(
 ): number
 ```
 
-Estimate the UTF-8 byte length of one serialization payload.
+Estimate the UTF-8 byte length of one serialization payload so archive ratio metrics can compare compressed and uncompressed storage cost.
 
 Parameters:
 - `payload` - Payload to measure.
@@ -2937,7 +2882,7 @@ parseCompressedNetworkArchive(
 ): CompressedSerializedNetwork
 ```
 
-Rebuild one compressed network payload from its Node-side archive wrapper.
+Rebuild one compressed network payload from its Node-side archive wrapper so persisted archives can be restored into deterministic compact serialization objects.
 
 Parameters:
 - `compressedArchive` - Base64-wrapped compressed archive payload.
@@ -2953,16 +2898,7 @@ parseCompressedNetworkArchiveAsync(
 ): Promise<CompressedSerializedNetwork>
 ```
 
-Rebuild one compressed network payload from its archive wrapper with async runtime codecs.
-
-Browser runtimes prefer `DecompressionStream` with gzip so archive hydration can
-stay off the synchronous main-thread path. Node falls back to the existing zlib
-owner when browser streams are unavailable.
-
-Parameters:
-- `compressedArchive` - Base64-wrapped compressed archive payload.
-
-Returns: Restored compressed network payload.
+Exported contract for parseCompressedNetworkArchiveAsync.
 
 ### resolveBrowserCompressionStreamConstructor
 

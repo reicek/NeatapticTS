@@ -214,4 +214,11 @@ function runCrossOver(
   return crossoverContext.offspring;
 }
 
-export default { crossOver, crossOverWithRandomGenerator };
+/**
+ * Default export bundle for the genetic crossover utilities chapter.
+ *
+ * Bundles the crossover entry points so the network facade can bind them as methods
+ * without importing each function individually.
+ */
+const networkGeneticUtils = { crossOver, crossOverWithRandomGenerator };
+export default networkGeneticUtils;

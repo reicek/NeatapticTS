@@ -7,4 +7,7 @@
  */
 // Backward compatibility shim: logic moved to network/network.onnx.ts
 export * from './network/onnx/network.onnx';
-export { default } from './network/onnx/network.onnx';
+import _networkOnnxDefault from './network/onnx/network.onnx';
+/** Default ONNX-like serialization bundle re-exported from the implementation chapter for backward-compatible architecture-level imports. */
+const networkOnnxBundle = _networkOnnxDefault;
+export default networkOnnxBundle;

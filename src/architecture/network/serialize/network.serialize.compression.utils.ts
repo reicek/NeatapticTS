@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   CompressedSerializedConnectionBlock,
   CompressedSerializedNetwork,
   CompressedSerializedNetworkArchive,
@@ -9,17 +9,17 @@ import type {
   NetworkJSONConnection,
 } from '../network.types';
 
-/** Stable format tag for the compressed compact serialization payload. */
+/** Stable format tag identifying the compressed compact serialization payload version consumed by decompression utilities. */
 export const COMPRESSED_NETWORK_FORMAT = 'compact-compressed-v1';
 
-/** Stable format tag for the compressed archive wrapper payload. */
+/** Stable format tag identifying the compressed archive wrapper payload version used by archive encode and decode utilities. */
 export const COMPRESSED_NETWORK_ARCHIVE_FORMAT =
   'compact-compressed-archive-v1';
 
-/** Stable string encoding used for archived compressed payload bytes. */
+/** Base64 string encoding applied to archived compressed bytes for safe JSON transport and storage of binary payloads. */
 export const COMPRESSED_NETWORK_ARCHIVE_ENCODING = 'base64';
 
-/** Stable format tag for exact weight-word delta encoding. */
+/** Stable format tag identifying the IEEE-754 float64 signed-int16 delta encoding used for compact weight storage. */
 export const COMPRESSED_WEIGHT_ENCODING = 'ieee754-f64-int16-delta-v1';
 
 /** Default Node-side archive compression codec. */
@@ -58,7 +58,7 @@ type BrowserDecompressionStreamConstructor = new (
   format: BrowserCompressionFormat,
 ) => DecompressionStream;
 
-/** Shared byte-size metrics for one archive operation. */
+/** Shared byte-size and compression-ratio metrics recorded for a single archive encode or decode operation. */
 export interface CompressedArchiveMetrics {
   /** Binary archive byte length after compression and before base64 wrapping. */
   compressedByteLength: number;
@@ -68,19 +68,19 @@ export interface CompressedArchiveMetrics {
   uncompressedByteLength: number;
 }
 
-/** Encode metrics for one archive serialization operation. */
+/** Encode metrics extending the shared archive metrics with elapsed encode time in milliseconds. */
 export interface CompressedArchiveEncodeMetrics extends CompressedArchiveMetrics {
   /** Elapsed encode time in milliseconds. */
   encodeTimeMs: number;
 }
 
-/** Decode metrics for one archive deserialization operation. */
+/** Decode metrics extending the shared archive metrics with elapsed decode time in milliseconds. */
 export interface CompressedArchiveDecodeMetrics extends CompressedArchiveMetrics {
   /** Elapsed decode time in milliseconds. */
   decodeTimeMs: number;
 }
 
-/** Archive result wrapper that includes encode metrics. */
+/** Typed result wrapper pairing the encoded archive payload with its byte-size and timing metrics. */
 export interface CompressedArchiveEncodeResult<Archive> {
   /** Archived payload emitted by the encode operation. */
   archive: Archive;
@@ -88,7 +88,7 @@ export interface CompressedArchiveEncodeResult<Archive> {
   metrics: CompressedArchiveEncodeMetrics;
 }
 
-/** Archive result wrapper that includes decode metrics. */
+/** Typed result wrapper pairing the decoded value with byte-size and timing metrics from the decode operation. */
 export interface CompressedArchiveDecodeResult<Value> {
   /** Decoded value rebuilt from the archive payload. */
   value: Value;
@@ -96,7 +96,7 @@ export interface CompressedArchiveDecodeResult<Value> {
   metrics: CompressedArchiveDecodeMetrics;
 }
 
-/** Progress snapshot emitted while one archive payload is being decoded. */
+/** Progress snapshot emitted incrementally while an archive payload is being decoded so callers can surface decode progress. */
 export interface CompressedArchiveDecodeProgress {
   /** Size of the most recently decoded UTF-8 chunk. */
   chunkByteLength: number;
@@ -108,7 +108,7 @@ export interface CompressedArchiveDecodeProgress {
   done: boolean;
 }
 
-/** Optional callbacks used while one archive payload is being decoded. */
+/** Optional progress and lifecycle callbacks supplied by the caller while an archive payload is being decoded. */
 export interface CompressedArchiveDecodeOptions {
   /**
    * Called after each decoded chunk so browser callers can surface progress.
@@ -170,6 +170,9 @@ export function createCompressedNetworkArchive(
  * @param options - Optional archive compression settings.
  * @returns Base64-wrapped compressed archive payload.
  */
+/**
+ * Exported contract for createCompressedNetworkArchiveAsync.
+ */
 export async function createCompressedNetworkArchiveAsync(
   compressedPayload: CompressedSerializedNetwork,
   options: CompressedSerializedNetworkArchiveOptions = {},
@@ -199,7 +202,7 @@ export async function createCompressedNetworkArchiveAsync(
 }
 
 /**
- * Rebuild one compressed network payload from its Node-side archive wrapper.
+ * Rebuild one compressed network payload from its Node-side archive wrapper so persisted archives can be restored into deterministic compact serialization objects.
  *
  * @param compressedArchive - Base64-wrapped compressed archive payload.
  * @returns Restored compressed network payload.
@@ -236,6 +239,9 @@ export function parseCompressedNetworkArchive(
  * @param compressedArchive - Base64-wrapped compressed archive payload.
  * @returns Restored compressed network payload.
  */
+/**
+ * Exported contract for parseCompressedNetworkArchiveAsync.
+ */
 export async function parseCompressedNetworkArchiveAsync(
   compressedArchive: CompressedSerializedNetworkArchive,
   options: CompressedArchiveDecodeOptions = {},
@@ -268,6 +274,9 @@ export async function parseCompressedNetworkArchiveAsync(
  *
  * @param serializedConnections - Compact serialized connection rows.
  * @returns Compressed connection block.
+ */
+/**
+ * Exported contract for compressSerializedConnections.
  */
 export function compressSerializedConnections(
   serializedConnections: NetworkJSONConnection[],
@@ -331,7 +340,7 @@ export function compressSerializedConnections(
 }
 
 /**
- * Decompress one array-oriented connection block back into compact rows.
+ * Decompress one array-oriented connection block back into compact rows so archived connection payloads regain legacy-friendly per-edge field records.
  *
  * @param compressedConnections - Compressed connection block.
  * @returns Reconstructed serialized connection rows.
@@ -434,7 +443,7 @@ export function decompressSerializedConnections(
 }
 
 /**
- * Estimate the UTF-8 byte length of one serialization payload.
+ * Estimate the UTF-8 byte length of one serialization payload so archive ratio metrics can compare compressed and uncompressed storage cost.
  *
  * @param payload - Payload to measure.
  * @returns UTF-8 byte length of the JSON string form.
@@ -445,7 +454,7 @@ export function estimateSerializedByteLength(payload: unknown): number {
 }
 
 /**
- * Create one metrics snapshot for an archive encode operation.
+ * Create one metrics snapshot for an archive encode operation so callers can log compression efficiency and elapsed encoding cost consistently.
  *
  * @param uncompressedByteLength - UTF-8 byte length before archive compression.
  * @param compressedByteLength - Binary byte length after archive compression.
@@ -469,7 +478,7 @@ export function createCompressedArchiveEncodeMetrics(
 }
 
 /**
- * Create one metrics snapshot for an archive decode operation.
+ * Create one metrics snapshot for an archive decode operation so callers can inspect decompression efficiency and elapsed decoding cost consistently.
  *
  * @param uncompressedByteLength - UTF-8 byte length after archive inflation.
  * @param compressedByteLength - Binary byte length before archive inflation.
@@ -493,7 +502,7 @@ export function createCompressedArchiveDecodeMetrics(
 }
 
 /**
- * Compress UTF-8 payload bytes with one supported Node-side archive codec.
+ * Compress UTF-8 payload bytes with one supported Node-side archive codec so binary wrappers stay compact while preserving exact JSON payload semantics.
  *
  * @param payloadBytes - UTF-8 payload bytes.
  * @param compression - Archive compression codec.
@@ -556,7 +565,7 @@ async function compressArchivePayloadBytesAsync(
 }
 
 /**
- * Decompress archive payload bytes with one supported Node-side codec.
+ * Decompress archive payload bytes with one supported Node-side codec so compressed archive wrappers recover deterministic UTF-8 serialization payload bytes.
  *
  * @param payloadBytes - Compressed archive payload bytes.
  * @param compression - Archive compression codec.
@@ -581,7 +590,7 @@ export function decompressArchivePayloadBytes(
 }
 
 /**
- * Decompress archive payload bytes with the best available async archive codec.
+ * Decompress archive payload bytes with the best available async archive codec so browser and Node runtimes can share one non-blocking restore flow.
  *
  * @param payloadBytes - Compressed archive payload bytes.
  * @param compression - Archive compression codec.
@@ -865,7 +874,7 @@ function resolveBrowserDecompressionStreamConstructor():
 }
 
 /**
- * Encode archive payload bytes to base64 without assuming a specific runtime.
+ * Encode archive payload bytes to base64 without assuming a specific runtime so archive wrappers remain portable across browser and Node environments.
  *
  * @param payloadBytes - Binary archive payload bytes.
  * @returns Base64-encoded payload text.
@@ -901,7 +910,7 @@ export function encodeArchivePayloadBase64(payloadBytes: Uint8Array): string {
 }
 
 /**
- * Decode archive payload bytes from base64 without assuming a specific runtime.
+ * Decode archive payload bytes from base64 without assuming a specific runtime so compressed archives can hydrate reliably in browser and Node.
  *
  * @param payload - Base64-encoded payload text.
  * @returns Binary archive payload bytes.

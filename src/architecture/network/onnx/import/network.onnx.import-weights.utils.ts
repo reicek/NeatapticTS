@@ -1,4 +1,4 @@
-import type Network from '../../network';
+﻿import type Network from '../../network';
 import Connection from '../../../connection';
 import type NeatapticNode from '../../../node';
 import type {
@@ -57,7 +57,7 @@ const FIRST_BIAS_INDEX = 0;
 const WEIGHT_TENSOR_PATTERN = /^W(\d+)(?:_n(\d+))?$/i;
 
 /**
- * Extract hidden layer sizes from ONNX initializers (weight tensors).
+ * Derive hidden-layer sizes from ONNX weight initializers in export order.
  *
  * @param initializers ONNX initializer tensors.
  * @param metadataProps Optional ONNX metadata properties.
@@ -100,6 +100,9 @@ export function deriveHiddenLayerSizes(
  * @param hiddenLayerSizes Hidden layer sizes.
  * @param metadataProps Optional ONNX metadata properties.
  * @returns Nothing.
+ */
+/**
+ * Contract for assignWeightsAndBiases.
  */
 export function assignWeightsAndBiases(
   network: Network,

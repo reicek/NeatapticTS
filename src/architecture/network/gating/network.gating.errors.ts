@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when a gating node does not belong to the target network.
  */
 export class NetworkGatingNodeMembershipError extends Error {

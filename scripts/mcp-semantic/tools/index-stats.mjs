@@ -1,5 +1,19 @@
+/**
+ * @module index-stats
+ * @description Corpus index statistics tool for the Repo Cortex MCP server.
+ *
+ * Returns document, chunk, and family row counts plus the timestamp of the
+ * most recent indexing run, useful for confirming index health in CI gates.
+ */
 import { asIsoTimestamp, openCortexDatabase } from './cortex-db.mjs';
 
+/**
+ * Return aggregate statistics for the indexed corpus.
+ *
+ * @param {object} [options={}] - Tool options.
+ * @param {string} [options.databasePath] - Override corpus database path.
+ * @returns {Promise<{ total_documents: number, total_chunks: number, total_families: number, last_build_timestamp: string | null }>} Index statistics.
+ */
 export async function indexStats(options = {}) {
   const database = openCortexDatabase(options.databasePath);
 

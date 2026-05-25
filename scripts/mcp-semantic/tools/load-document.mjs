@@ -1,5 +1,24 @@
+/**
+ * @module load-document
+ * @description Full-document loader tool for the Repo Cortex MCP server.
+ *
+ * Loads all ordered chunks for one indexed repository path, allowing agents
+ * to read the full indexed content of a source file or document.
+ */
 import { normalizeRepoPath, openCortexDatabase, readChunkRow } from './cortex-db.mjs';
 
+/**
+ * Load all ordered chunks for one indexed repository path.
+ *
+ * Validates the path with {@link normalizeRepoPath} to prevent path traversal
+ * before querying the database.
+ *
+ * @param {object} [options={}] - Tool options.
+ * @param {string} options.file_path - Repo-relative file path to load.
+ * @param {string} [options.databasePath] - Override corpus database path.
+ * @returns {Promise<{ file_path: string, chunks: Array<object> }>} Ordered chunks for the document.
+ * @throws {Error} When `file_path` escapes the repository root or is not found in the index.
+ */
 export async function loadDocument(options = {}) {
   const filePath = normalizeRepoPath(options.file_path);
   const database = openCortexDatabase(options.databasePath);

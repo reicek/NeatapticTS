@@ -1,4 +1,4 @@
-import type Network from '../network';
+﻿import type Network from '../network';
 import type Node from '../../node';
 
 import type {
@@ -8,6 +8,13 @@ import type {
 } from '../network.types';
 import { NetworkRuntimeDropConnectProbabilityRangeError } from './network.runtime.errors';
 
+/**
+ * Snapshot of key training-health metrics collected from the most recent backward pass.
+ *
+ * Aggregates gradient norm readings, dynamic loss scale state, optimizer step index, and
+ * mixed-precision event counters so the public diagnostic reader can return a coherent bundle
+ * instead of requiring separate calls for each individual metric.
+ */
 type TrainingStatsSnapshot = {
   gradNorm: number;
   gradNormRaw: number;
@@ -53,7 +60,7 @@ export function enableDropConnect(this: Network, probability: number): void {
 }
 
 /**
- * Disable DropConnect.
+ * Disable DropConnect by resetting the drop probability to zero on the target network instance.
  *
  * @param this Target network instance.
  * @returns Nothing.
@@ -101,7 +108,7 @@ export function resetDropoutMasks(this: Network): void {
 }
 
 /**
- * Read the last recorded raw gradient norm.
+ * Read the raw (pre-clip) gradient norm recorded during the most recent backward pass.
  *
  * @param this Target network instance.
  * @returns Last raw gradient norm.
@@ -112,7 +119,7 @@ export function getRawGradientNorm(this: Network): number {
 }
 
 /**
- * Read the active mixed-precision loss scale.
+ * Read the currently active mixed-precision dynamic loss scale from the network training state.
  *
  * @param this Target network instance.
  * @returns Current loss scale.
@@ -123,7 +130,7 @@ export function getLossScale(this: Network): number {
 }
 
 /**
- * Read the last recorded gradient-clipping group count.
+ * Read the last recorded gradient-clipping group count from the most recent optimizer step.
  *
  * @param this Target network instance.
  * @returns Last gradient-clipping group count.
@@ -134,7 +141,7 @@ export function getLastGradClipGroupCount(this: Network): number {
 }
 
 /**
- * Read a consolidated training-health snapshot.
+ * Read a consolidated training-health snapshot including gradient norms, loss scale, and mixed-precision event counters.
  *
  * @param this Target network instance.
  * @returns Training statistics snapshot.

@@ -42,7 +42,7 @@ export interface NetworkVisualizationTopologyPlan {
 }
 
 /**
- * Resolves layered node groups for network layout.
+ * Resolve ordered layered node groups from the topology plan, used by canvas layout and topology-aware rendering helpers.
  *
  * @param network - Runtime network instance (or undefined for fallback).
  * @param inputSize - Input count (used if network is undefined).

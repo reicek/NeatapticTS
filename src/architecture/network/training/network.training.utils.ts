@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Training pipeline utilities (migrated from legacy architecture/network.train.ts).
  *
  * Provides:
@@ -15,6 +15,9 @@
  *  - Refactor changes here are documentation & naming only; numerical behavior preserved.
  */
 import type Network from '../../network/network';
+/**
+ * Re-export backpropagation entrypoints used by the public training facade layer.
+ */
 export { propagate, clearState } from './network.training.backprop.utils';
 import type {
   CostFunction,
@@ -133,6 +136,9 @@ export function trainSetImpl(
  * const result = net.train(set, { iterations: 500, rate: 0.3 });
  * console.log(result.error);
  * ```
+ */
+/**
+ * Contract for trainImpl.
  */
 export function trainImpl(
   net: Network,

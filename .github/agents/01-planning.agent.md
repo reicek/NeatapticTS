@@ -5,7 +5,8 @@ tier: 1
 model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
-agents: ['planning-context-coordinator', 'planning-risk-coordinator', 'planning-test-strategy-coordinator', 'acceptance-criteria-writer', 'Plan Scout', 'Model Name Auditor', 'Plan Registration Auditor', 'helping-gap-resolution-coordinator']
+agents: ['planning-context-coordinator', 'planning-risk-coordinator', 'planning-test-strategy-coordinator', 'acceptance-criteria-writer', 'plan-scout', 'model-name-auditor', 'plan-registration-auditor', 'helping-gap-resolution-coordinator']
+skills: ['plan-alignment', 'tracker-handoff', 'phase-handoff-workflow', 'agent-frontmatter-standards', 'model-routing-and-budget', 'license-attribution-audit']
 handoffs:
   - label: 'Start Research'
     agent: '02-researching'
@@ -43,7 +44,7 @@ any production work begins.
 - Delegate read-only plan reconnaissance to `Plan Scout` when roadmap context is needed.
 - If planning exposes a reusable agent or skill gap, delegate the gap packet to `helping-gap-resolution-coordinator` and continue the planning task after the small local improvement is applied or deferred.
 
-## Approach
+## Default Flow
 
 1. Read the active plan, the current phase, and the nearest plan index or roadmap entry.
 2. Identify the current phase objective, required validations, blockers, and which numbered downstream steps are value-adding, folded into another step, or skipped.
@@ -51,6 +52,12 @@ any production work begins.
 4. Author Step 02-07 packets for value-adding work, or explicit skipped-step packets for non-value gates, and set the next active step.
 5. Record decisions, validation evidence, and the next step handoff in the plan.
 6. Run plan or customization validation when the active step requires it.
+
+## If Blocked
+
+- If roadmap context is ambiguous, delegate recon to `Plan Scout` before writing step packets.
+- If a reusable agent or skill gap surfaces, delegate it to `helping-gap-resolution-coordinator` and continue planning after the local fix is applied or deferred.
+- If plan registration or model-routing assumptions cannot be resolved, set `TASK_STATUS: PARTIAL`, document the blocker, and escalate via `00.cross-tier-helper`.
 
 ## Output Format
 
@@ -61,7 +68,7 @@ Report participants, files, validations, blockers, and gaps truthfully. Use `NON
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
 TASK_STATUS: SUCCESS | PARTIAL | FAILED
-TIER: 0
+TIER: 1
 ROLE: 01-planning
 TASK_RECEIVED: <brief restatement>
 FILES_READ:

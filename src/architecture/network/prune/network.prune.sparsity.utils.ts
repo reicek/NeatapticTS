@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import type { NetworkPruningProps } from '../network.types';
 
 /**
@@ -14,7 +14,7 @@ export function readInitialSparsityBaseline(
 }
 
 /**
- * Convert current density into sparsity ratio.
+ * Convert current connection density into a normalized sparsity ratio value.
  * @param currentConnectionCount - Current connection count.
  * @param baselineConnectionCount - Baseline connection count.
  * @returns Sparsity ratio in [0,1] for valid baselines.

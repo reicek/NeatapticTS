@@ -1,3 +1,34 @@
+/**
+ * @module fitness
+ *
+ * Fitness evaluation for the ASCII Maze NEAT demo.
+ *
+ * Computes a scalar score that guides NEAT selection by rewarding maze-solving
+ * behaviours along four axes, accumulated in `evaluateNetworkFitness`:
+ *
+ * ```mermaid
+ * flowchart TD
+ *     SIM["simulateAgent()\nbase fitness + path"] --> EX
+ *     EX["Exploration bonus\nper unique cell × proximity multiplier"] --> SUM
+ *     SUM["fitness = base + exploration"] --> Q{reached exit?}
+ *     Q -- yes --> SUC["+ SUCCESS_BONUS (5 000)"]
+ *     Q -- yes --> EFF["+ Efficiency bonus\n8 000 − overhead% × 80"]
+ *     Q -- no  --> DONE["return fitness"]
+ *     SUC --> DONE
+ *     EFF --> DONE
+ * ```
+ *
+ * **Proximity multiplier** scales each unique-cell exploration reward by how
+ * close that cell is to the exit: `1.5 − 0.5 × (distanceToExit / (H + W))`,
+ * so cells near the exit earn up to 50 % more than cells at the far edge.
+ *
+ * **Efficiency bonus** penalises path overhead: a perfect shortest-path run
+ * earns the full 8 000; every percent of excess path length reduces the bonus
+ * by 80 points until it floors at 0.
+ *
+ * Visit-count tracking uses a pooled `Uint16Array` scratch buffer (`VISIT_COUNT_SCRATCH`)
+ * keyed by flattened `cellY * width + cellX` index to avoid per-call allocations.
+ */
 // Fitness evaluation logic for maze solving
 // Exports: FitnessEvaluator class with static methods
 

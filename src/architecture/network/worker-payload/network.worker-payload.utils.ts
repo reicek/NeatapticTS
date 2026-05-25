@@ -1,4 +1,4 @@
-import type Connection from '../../connection';
+﻿import type Connection from '../../connection';
 import type Node from '../../node';
 import type {
   NodeWithIndex,
@@ -75,7 +75,8 @@ export const INFERENCE_ACTIVATION_TABLE: ReadonlyArray<ActivationFn> =
   ACTIVATION_FUNCTIONS;
 
 /**
- * Export one universal structured-clone-safe inference payload.
+ * Export one structured-clone-safe inference payload from a live runtime network.
+ * The resulting payload keeps deterministic activation ordering, stable node or edge indexing, and canonical activation names so a worker can replay inference semantics without shipping live graph objects.
  *
  * @param network Runtime network to serialize for worker transport.
  * @returns Portable inference payload.
@@ -112,7 +113,8 @@ export function exportPortableInferencePayload(
 }
 
 /**
- * Export one typed-array inference payload for lower-copy worker transport.
+ * Export one typed-array inference payload optimized for low-copy worker transport.
+ * This variant preserves the same deterministic IR semantics as the portable payload while flattening fields into transfer-friendly typed shelves that can be moved across worker boundaries efficiently.
  *
  * @param network Runtime network to serialize for worker transport.
  * @param options Transferable export configuration.
@@ -229,7 +231,8 @@ export function getTransferList(
 }
 
 /**
- * Create a reusable local predictor from a portable or transferable inference payload.
+ * Create a reusable local predictor from either portable or transferable inference payload contracts.
+ * The factory normalizes both transport strategies into one inference interface so callers can benchmark or run fallback execution paths without special-case runtime branching.
  *
  * @param payload Portable or transferable inference payload.
  * @returns Predictor that mirrors runtime no-trace activation semantics.
@@ -420,7 +423,8 @@ function createTransferableInferencePredictor(
 }
 
 /**
- * Extract a deterministic inference IR from one live network.
+ * Extract a deterministic inference IR from one live network snapshot.
+ * This extraction pass captures exactly the runtime data required for worker-side forward execution, including node scalars, filtered forward edges, grouped activation steps, and stable output indexing.
  *
  * @param network Runtime network to snapshot.
  * @returns Worker-friendly inference IR.

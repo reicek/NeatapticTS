@@ -1,4 +1,4 @@
-import Connection from '../../../connection';
+﻿import Connection from '../../../connection';
 import Group from '../../../group/group';
 import type Network from '../../network';
 import type NeatapticNode from '../../../node';
@@ -63,6 +63,9 @@ type PreviousLayerSourceGroup = Group & {
  * @param layerFactory Dynamic layer module.
  * @param metadata ONNX metadata properties.
  * @returns Nothing.
+ */
+/**
+ * Contract for reconstructFusedRecurrentLayers.
  */
 export function reconstructFusedRecurrentLayers(
   network: Network,

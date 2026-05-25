@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import Connection from '../../connection';
 import type NeatapticNode from '../../node';
 import * as methods from '../../../methods/methods';
@@ -67,6 +67,7 @@ const WARNING_UNSUPPORTED_ACTIVATION_SUFFIX =
 
 /**
  * Rebuild the network's flat connections array from each node's outgoing list.
+ * Rehydrating this cache from node-owned adjacency shelves keeps exporter traversal deterministic after structural edits that may leave the flat cache stale.
  *
  * @param networkLike Network-like instance to mutate.
  * @returns Nothing.
@@ -82,6 +83,7 @@ export function rebuildConnectionsLocal(networkLike: Network): void {
 
 /**
  * Map an internal activation function (squash) to an ONNX op_type.
+ * Mapping flows through the exporter activation resolver so opset-gated operators and identity fallbacks stay centralized in one compatibility decision path.
  *
  * @param squash Activation function reference.
  * @returns ONNX activation operator name.
@@ -95,6 +97,7 @@ export function mapActivationToOnnx(
 
 /**
  * Resolve the ONNX activation node payload for one runtime activation.
+ * The payload includes both the resolved operator and any mandatory attributes, allowing downstream graph emission to stay declarative and free of activation-specific branching.
  *
  * @param squash Activation function reference.
  * @param opset Target ONNX opset.
@@ -154,6 +157,7 @@ export function inferLayerOrdering(network: Network): NeatapticNode[][] {
 
 /**
  * Validate connectivity and activation homogeneity constraints per layer.
+ * Validation enforces exporter baseline assumptions before node emission so unsupported mixed-activation or sparse connectivity cases are surfaced with actionable errors.
  *
  * @param layers Layered node arrays.
  * @param network Source network (reserved for compatibility).

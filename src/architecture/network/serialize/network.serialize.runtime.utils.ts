@@ -12,7 +12,7 @@ import type {
 import { DEFAULT_NUMERIC_VALUE } from './network.serialize.utils.types';
 
 /**
- * Casts a network instance to the internal runtime shape used by serializer helpers.
+ * Cast a public network instance to the internal serializer runtime shape so low-level deserialization helpers can access mutable fields without duplicating bridge-cast logic.
  *
  * @param network - Network instance.
  * @returns Runtime internals.
@@ -25,7 +25,7 @@ export function asNetworkInternals(network: Network): NetworkInternals {
 }
 
 /**
- * Casts a network instance to internals that include optional dropout metadata.
+ * Cast a public network instance to serializer internals that include optional dropout metadata so verbose restore and export paths can read dropout fields consistently.
  *
  * @param network - Network instance.
  * @returns Runtime internals with optional dropout.
@@ -39,7 +39,7 @@ export function asNetworkInternalsWithDropout(
 }
 
 /**
- * Casts a node instance to its internal runtime representation.
+ * Cast a node instance to its internal runtime representation so serializer helpers can read and write persisted node metadata through one shared bridge.
  *
  * @param node - Node instance.
  * @returns Node internals.
@@ -92,7 +92,7 @@ export function createCompactPayloadContext(
 }
 
 /**
- * Resolves effective input/output dimensions using optional explicit overrides.
+ * Resolve effective input and output dimensions using optional explicit overrides so compact payload restore paths can apply caller-provided sizes deterministically.
  *
  * When an override is provided, it takes precedence over serialized values.
  *
@@ -121,7 +121,7 @@ export function resolveNetworkSize(
 }
 
 /**
- * Resolves one size value with override-first semantics.
+ * Resolve one size value with override-first semantics so deserialization can prioritize explicit caller intent while preserving serialized fallbacks when overrides are absent.
  *
  * @param overrideValue - Optional explicit override.
  * @param serializedValue - Serialized fallback value.
@@ -140,7 +140,7 @@ export function resolveSizeOverride(
 }
 
 /**
- * Creates a new network instance for deserialize workflows.
+ * Create a fresh network instance for deserialize workflows so restoration code can hydrate graph state onto a clean runtime object.
  *
  * @param input - Input size.
  * @param output - Output size.
@@ -153,7 +153,7 @@ export function createNetworkInstance(input: number, output: number): Network {
 }
 
 /**
- * Clears mutable runtime collections before reconstruction.
+ * Clear mutable runtime collections before reconstruction so node, connection, self-connection, and gate arrays are reset to a predictable empty baseline.
  *
  * @param networkInternals - Runtime internals.
  * @returns Nothing.
@@ -170,7 +170,7 @@ export function resetMutableRuntimeCollections(
 }
 
 /**
- * Checks whether an index is inside the bounds of a node array.
+ * Check whether a candidate node index falls inside the valid array bounds so restore logic can reject malformed serialized endpoint references.
  *
  * @param nodes - Node list.
  * @param index - Candidate index.
@@ -183,7 +183,7 @@ export function isNodeIndexInBounds(nodes: Node[], index: number): boolean {
 }
 
 /**
- * Checks whether a candidate index value is a finite number.
+ * Check whether a candidate index value is finite so endpoint validation can reject NaN and infinite references before bounds checks execute.
  *
  * @param index - Candidate index value.
  * @returns True when finite number.

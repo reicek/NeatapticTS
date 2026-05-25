@@ -237,8 +237,8 @@ export function fastSlabActivate(this: Network, input: number[]): number[] {
 }
 
 /**
- * Public convenience wrapper exposing fast path eligibility.
- * Mirrors `_canUseFastSlab` internal predicate.
+ * Report whether current network state can use slab fast activation without fallback.
+ * Mirrors `_canUseFastSlab` while exposing eligibility to callers and diagnostics.
  * @param training Whether caller is performing training (disables fast path if true).
  * @returns True when slab fast path predicates hold.
  */
@@ -248,7 +248,7 @@ export function canUseFastSlab(this: Network, training: boolean): boolean {
 }
 
 /**
- * Retrieve current monotonic slab version (increments on each successful rebuild).
+ * Return the monotonic slab rebuild version used to detect stale packed views.
  * @returns Non‑negative integer (0 if slab never built yet).
  */
 export function getSlabVersion(this: Network): number {

@@ -1560,30 +1560,58 @@ Returns: Shared precision config for the current runtime decision.
 
 ## neataptic.ts
 
-### neataptic
+Root public entry point for the NeatapticTS library.
 
-Node (Neuron)
-=============
-Fundamental computational unit: aggregates weighted inputs, applies an activation
-function (squash) and emits an activation value. Supports:
- - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
- - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
- - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
-   a variety of learning rules beyond simple backprop).
- - Optional descriptors via `describe({ label, intent, metadata })` when a
-   low-level node should keep a stable human-facing identity inside a larger
-   architecture story.
+Import everything you need for NEAT-based neuroevolution from this single
+surface. The library organizes its exports into four cooperating layers:
 
-Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
-assignment works in algorithms like RTRL / policy gradients. They are updated only when
-using the traced activation path (`activate`) vs `noTraceActivate` (inference fast path).
+- **`Neat`** — the NEAT evolutionary controller: population management,
+  speciation, selection, mutation, and crossover.
+- **`Network`** — the mutable graph: activation, training, structural
+  editing, serialization, and ONNX export.
+- **Primitives** — `Node`, `Connection`, `Group`, `Layer`, `Architect` for
+  hand-assembling custom architectures.
+- **Namespaces** — `methods` (activation functions, cost functions, mutation
+  and selection operators), `config` (global library settings), `multi`
+  (worker-thread parallel evaluation).
 
-Most architecture code should only attach a descriptor when a node boundary
-matters outside the current function. That keeps the primitive cheap for raw
-graph math while still letting later passes recover names such as
-`readoutNode`, `memoryCell`, or `temperatureGate`.
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+  classDef entry fill:#0f1f10,stroke:#39d353,color:#d4fcd7,stroke-width:1.5px;
+
+  neataptic[neataptic.ts root entry]:::entry
+  neataptic --> Neat[Neat evolutionary controller]:::accent
+  neataptic --> Network[Network graph facade]:::accent
+  neataptic --> Primitives[Node Connection Group Layer Architect]:::base
+  neataptic --> Namespaces[methods config multi namespaces]:::base
+  Neat --> Network
+  Network --> Workers[worker inference transport]:::base
+  Network --> ONNX[ONNX export and import]:::base
+```
 
 Examples:
+
+```ts
+import { Neat, Network, methods, config } from 'neataptic';
+
+// Configure global settings
+config.backend = 'float32';
+
+// Build a feed-forward network directly
+const network = Network.createMLP(2, [4], 1);
+const output = network.activate([0.5, 0.8]);
+
+// Run NEAT evolution on a population
+const neat = new Neat(2, 1, fitnessFunction, { popsize: 50 });
+await neat.evolve();
+```
+
+```ts
+const network = Network.createMLP(2, [4], 1);
+const output = network.activate([0, 1]);
+```
 
 ```ts
 const sensor = new Node('input');
@@ -1673,20 +1701,7 @@ createInferencePredictor(
 ): InferencePredictor
 ```
 
-Create a reusable local predictor from a portable or transferable inference payload.
-
-Parameters:
-- `payload` - Portable or transferable inference payload.
-
-Returns: Predictor that mirrors runtime no-trace activation semantics.
-
-Example:
-
-```ts
-const payload = exportPortableInferencePayload(network);
-const predictor = createInferencePredictor(payload);
-const outputValues = predictor.predict([0.25, 0.75]);
-```
+Create an inference predictor adapter so callers can execute compiled network inference repeatedly with transport-aware worker or local execution backends.
 
 ### createNeatParallelPopulationEvaluator
 
@@ -1749,7 +1764,7 @@ const capabilities = detectInferenceWorkerCapabilities({
 
 ### EdgePadding
 
-Padding on all four edges.
+Define drawable edge padding constraints so visualization layout helpers can reserve safe margins around graph links, labels, and annotation overlays across canvas and SVG render targets.
 
 ### evaluateCandidate
 
@@ -1863,19 +1878,7 @@ exportPortableInferencePayload(
 ): PortableInferencePayload
 ```
 
-Export one universal structured-clone-safe inference payload.
-
-Parameters:
-- `network` - Runtime network to serialize for worker transport.
-
-Returns: Portable inference payload.
-
-Example:
-
-```ts
-const payload = exportPortableInferencePayload(network);
-console.log(payload.nodes[0]?.activation);
-```
+Export a portable inference payload so non-transferable runtimes can hydrate prediction graphs from plain structured-clone-safe objects while preserving stable node-edge ordering for reproducible inference behavior.
 
 ### exportTransferableInferencePayload
 
@@ -1886,22 +1889,7 @@ exportTransferableInferencePayload(
 ): TransferableInferencePayload
 ```
 
-Export one typed-array inference payload for lower-copy worker transport.
-
-Parameters:
-- `network` - Runtime network to serialize for worker transport.
-- `options` - Transferable export configuration.
-
-Returns: Transferable inference payload.
-
-Example:
-
-```ts
-const payload = exportTransferableInferencePayload(network, {
-  numericPrecision: 'f32',
-});
-console.log(payload.edgeWeights.length);
-```
+Export a transferable inference payload so worker channels can move typed-array-heavy inference data efficiently between threads with explicit ownership transfer and minimal serialization overhead.
 
 ### exportVisualizationGraph
 
@@ -1963,19 +1951,7 @@ extractNetworkInferenceIR(
 ): NetworkInferenceIR
 ```
 
-Extract a deterministic inference IR from one live network.
-
-Parameters:
-- `network` - Runtime network to snapshot.
-
-Returns: Worker-friendly inference IR.
-
-Example:
-
-```ts
-const inferenceIr = extractNetworkInferenceIR(network);
-console.log(inferenceIr.outputNodeIndices);
-```
+Extract network inference intermediate representation so worker transport helpers and portable payload exporters can serialize deterministic execution structures without requiring the original mutable network instance at runtime.
 
 ### FineTuneOptions
 
@@ -2219,15 +2195,7 @@ channel.close();
 
 ### InferenceChannelOptions
 
-Configuration for one dedicated inference channel.
-
-Example:
-
-```ts
-const channel = openInferenceChannel(payload, {
-  maxConcurrentRequests: 4,
-});
-```
+Configure inference channel behavior so request multiplexing, worker lifecycle transitions, and batching semantics remain explicit for asynchronous prediction clients across browser and node worker transports.
 
 ### InferencePredictor
 
@@ -3475,18 +3443,7 @@ console.log(inferenceIr.activationSteps);
 
 ### NetworkInferenceIREdge
 
-One non-self connection snapshot inside the worker-friendly inference IR.
-
-Example:
-
-```ts
-const irEdge: NetworkInferenceIREdge = {
-  from: 0,
-  to: 3,
-  weight: 0.75,
-  gaterIndex: -1,
-};
-```
+Describe one inference-graph edge in the network intermediate representation so transport, replay, and debugging tools can reconstruct connectivity deterministically across payload and channel boundaries.
 
 ### NetworkInferenceIRNode
 
@@ -3713,30 +3670,13 @@ Deterministic parameter-layout descriptor owned by the network serialize boundar
 Version `1` keeps one stable fold order: all bias entries first, then all
 weight entries. For a fixed topology with stable historical ids, this gives
 ordered determinism on the same runtime.
-The layout documents descriptor order only; it does not claim cross-runtime
-exact replay by itself.
 
 ### ParameterVector
 
 Versioned parameter payload for same-runtime vector roundtrips.
 
 Layout metadata and scalar values travel together so imports can reject
-incompatible payloads before mutating a live network. Version `1` exports
-exactly one bias slot for every live runtime node and one weight slot for
-every live forward connection plus self-connection in `ParameterLayoutV1`
-order, including disabled connections when they still exist in the runtime
-graph.
-
-Weight descriptors still prefer `innovation` and otherwise fall back to the
-stable endpoint gene ids in `from` and `to`, so the same runtime-owned slot
-identity survives export and import even when a live connection has no
-innovation id. For a fixed topology with stable historical ids, this payload
-is ordered deterministic on the same runtime. It does not claim cross-runtime
-exact replay by itself.
-
-Non-neutral `node.response` and `connection.gain` remain explicit rejection
-cases for the runtime helpers instead of silently widening the weights-and-
-biases v1 contract.
+incompatible payloads before mutating a live network.
 
 ### PortableInferencePayload
 
@@ -3755,18 +3695,7 @@ console.log(payload.activationTable);
 
 ### PortableInferencePayloadEdge
 
-One portable edge record used by the structured-clone payload surface.
-
-Example:
-
-```ts
-const portableEdge: PortableInferencePayloadEdge = {
-  from: 0,
-  to: 3,
-  weight: 0.75,
-  gaterIndex: -1,
-};
-```
+Describe one portable payload edge so serialized inference artifacts can preserve weighted topology connections and directional metadata in runtime-agnostic JSON form.
 
 ### PortableInferencePayloadNode
 
@@ -3932,14 +3861,7 @@ resolveNetworkVisualizationLayers(
 ): VisualNetworkNode[][]
 ```
 
-Resolves layered node groups for network layout.
-
-Parameters:
-- `network` - Runtime network instance (or undefined for fallback).
-- `inputSize` - Input count (used if network is undefined).
-- `outputSize` - Output count (used if network is undefined).
-
-Returns: Layered nodes for rendering.
+Resolve network visualization layers so renderers receive stable, ordered groups suitable for node placement, edge routing passes, and annotation alignment in deterministic graph layout workflows.
 
 ### resolveNetworkVisualizationTopologyPlan
 
@@ -4089,21 +4011,11 @@ console.log(payload.nodeIds.length);
 
 ### TransferableInferencePayloadOptions
 
-Configuration for transferable payload export.
-
-Example:
-
-```ts
-const payload = exportTransferableInferencePayload(network, {
-  numericPrecision: 'f32',
-});
-```
+Configure transferable payload export so callers can choose cloning and ownership strategies for typed buffers crossing worker boundaries in high-throughput prediction scenarios.
 
 ### VisualizationEdgeV1
 
-A single directed edge in a versioned visualization graph.
-
-`from` and `to` are stable gene ids matching {@link VisualizationNodeV1.id}.
+Describe one visualization edge record so renderers can draw weighted directed links with consistent metadata across interactive, static, and documentation-oriented UI surfaces.
 
 ### VisualizationGraphV1
 
@@ -4341,7 +4253,24 @@ The output value of the node after applying the activation function. This is the
 addNodeBetween(): void
 ```
 
-Split a random existing connection by inserting one hidden node.
+Insert a new hidden node by splitting a randomly chosen existing connection.
+
+The selected connection `from → to` is replaced by two new connections:
+`from → newNode` and `newNode → to`. The new node's activation function
+defaults to linear so the network's behavior is unchanged immediately
+after the split — evolution pressure then shapes the new node over time.
+
+This is one of the canonical NEAT structural mutations. It increases
+network depth without changing connectivity density significantly.
+See Stanley & Miikkulainen (2002) for the motivating analysis.
+
+Example:
+
+```ts
+const network = new Network(2, 1);
+network.connect(network.nodes[0], network.nodes[2]);
+network.addNodeBetween(); // splits one connection, adds a hidden node
+```
 
 #### adjustRateForAccumulation
 
@@ -5181,7 +5110,7 @@ Network gates collection.
 
 #### geneId
 
-Stable per-node gene identifier for NEAT innovation reuse
+Stable per-node gene identifier for NEAT innovation reuse.
 
 #### getActivationSchedulingDiagnostics
 
@@ -5473,7 +5402,7 @@ Optional semantic intent for architecture tooling and diagnostics.
 
 #### isActivating
 
-Internal flag to detect cycles during activation
+Internal flag to detect cycles during activation.
 
 #### isConnectedTo
 
@@ -5986,12 +5915,39 @@ pruneToSparsity(
 ): void
 ```
 
-Immediately prune connections to reach (or approach) a target sparsity fraction.
-Used by evolutionary pruning (generation-based) independent of training iteration schedule.
+Immediately prune connections until the graph reaches (or approaches)
+a target sparsity fraction.
+
+Sparsity is defined as the fraction of connections removed relative to
+the baseline connection count captured on the first call. A
+`targetSparsity` of `0.8` means approximately 80% of the original
+connections will be removed, leaving 20% intact.
+
+Two ranking strategies are available:
+
+- `'magnitude'` (default): removes the connections with the smallest
+  absolute weight values — a fast, weight-magnitude heuristic.
+- `'snip'`: removes connections ranked by a SNIP-style first-order
+  gradient-magnitude saliency score.
+
+This method is suitable for evolutionary generation-based pruning
+independent of a training-iteration schedule. For schedule-based
+pruning during gradient training, use `configureSparsityBudget()`.
 
 Parameters:
-- `targetSparsity` - fraction in (0,1). 0.8 means keep 20% of original (if first call sets baseline)
-- `method` - 'magnitude' | 'snip'
+- `targetSparsity` - Fraction of original connections to remove,
+in the open interval `(0, 1)`. Values close to 1 produce very
+sparse networks.
+- `method` - Ranking strategy: `'magnitude'` or `'snip'`.
+Defaults to `'magnitude'`.
+
+Example:
+
+```ts
+const network = Network.createMLP(4, [16, 16], 2);
+// Remove 70% of connections by weight magnitude:
+network.pruneToSparsity(0.7);
+```
 
 #### random
 
@@ -6631,6 +6587,11 @@ import { Neat, Network, methods } from './browser-entry';
 const network = new Network(2, 1);
 const output = network.activate([0.5, 0.5]);
 console.log(output, methods.activation.LOGISTIC);
+```
+
+```ts
+const network = Network.createMLP(2, [4], 1);
+const output = network.activate([0, 1]);
 ```
 
 ```ts
@@ -8060,7 +8021,24 @@ The output value of the node after applying the activation function. This is the
 addNodeBetween(): void
 ```
 
-Split a random existing connection by inserting one hidden node.
+Insert a new hidden node by splitting a randomly chosen existing connection.
+
+The selected connection `from → to` is replaced by two new connections:
+`from → newNode` and `newNode → to`. The new node's activation function
+defaults to linear so the network's behavior is unchanged immediately
+after the split — evolution pressure then shapes the new node over time.
+
+This is one of the canonical NEAT structural mutations. It increases
+network depth without changing connectivity density significantly.
+See Stanley & Miikkulainen (2002) for the motivating analysis.
+
+Example:
+
+```ts
+const network = new Network(2, 1);
+network.connect(network.nodes[0], network.nodes[2]);
+network.addNodeBetween(); // splits one connection, adds a hidden node
+```
 
 #### adjustRateForAccumulation
 
@@ -8900,7 +8878,7 @@ Network gates collection.
 
 #### geneId
 
-Stable per-node gene identifier for NEAT innovation reuse
+Stable per-node gene identifier for NEAT innovation reuse.
 
 #### getActivationSchedulingDiagnostics
 
@@ -9192,7 +9170,7 @@ Optional semantic intent for architecture tooling and diagnostics.
 
 #### isActivating
 
-Internal flag to detect cycles during activation
+Internal flag to detect cycles during activation.
 
 #### isConnectedTo
 
@@ -9705,12 +9683,39 @@ pruneToSparsity(
 ): void
 ```
 
-Immediately prune connections to reach (or approach) a target sparsity fraction.
-Used by evolutionary pruning (generation-based) independent of training iteration schedule.
+Immediately prune connections until the graph reaches (or approaches)
+a target sparsity fraction.
+
+Sparsity is defined as the fraction of connections removed relative to
+the baseline connection count captured on the first call. A
+`targetSparsity` of `0.8` means approximately 80% of the original
+connections will be removed, leaving 20% intact.
+
+Two ranking strategies are available:
+
+- `'magnitude'` (default): removes the connections with the smallest
+  absolute weight values — a fast, weight-magnitude heuristic.
+- `'snip'`: removes connections ranked by a SNIP-style first-order
+  gradient-magnitude saliency score.
+
+This method is suitable for evolutionary generation-based pruning
+independent of a training-iteration schedule. For schedule-based
+pruning during gradient training, use `configureSparsityBudget()`.
 
 Parameters:
-- `targetSparsity` - fraction in (0,1). 0.8 means keep 20% of original (if first call sets baseline)
-- `method` - 'magnitude' | 'snip'
+- `targetSparsity` - Fraction of original connections to remove,
+in the open interval `(0, 1)`. Values close to 1 produce very
+sparse networks.
+- `method` - Ranking strategy: `'magnitude'` or `'snip'`.
+Defaults to `'magnitude'`.
+
+Example:
+
+```ts
+const network = Network.createMLP(4, [16, 16], 2);
+// Remove 70% of connections by weight magnitude:
+network.pruneToSparsity(0.7);
+```
 
 #### random
 

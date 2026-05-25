@@ -93,6 +93,25 @@ import {
   DEFAULT_LABEL_SMOOTHING,
 } from './cost.utils';
 
+/**
+ * Collection of cost (loss) functions for training and evaluating neural networks.
+ *
+ * Each static method accepts a `targets` array (desired outputs) and an `outputs`
+ * array (network predictions) and returns a scalar loss. Lower values indicate
+ * better predictions. Choose the function that matches the error geometry of
+ * your task:
+ *
+ * - **`crossEntropy` / `binary`** — classification with probabilistic outputs
+ * - **`mse` / `mae`** — regression with continuous outputs
+ * - **`hinge`** — margin-based classification (SVM-style)
+ * - **`focalLoss` / `labelSmoothing`** — calibration and hard-example tuning
+ *
+ * @example
+ * ```ts
+ * import { Cost } from 'neataptic';
+ * const loss = Cost.mse([1, 0], [0.9, 0.1]); // 0.01
+ * ```
+ */
 export default class Cost {
   /**
    * Calculates the Cross Entropy error, commonly used for classification tasks.

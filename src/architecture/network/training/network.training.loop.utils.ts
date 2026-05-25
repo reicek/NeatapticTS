@@ -1,4 +1,4 @@
-import { config } from '../../../config';
+﻿import { config } from '../../../config';
 import type Network from '../../network/network';
 import type {
   CostFunction,
@@ -36,6 +36,9 @@ const hasOnlyFiniteValues = (values: number[]): boolean =>
  * @param costFunction - Cost function or cost-function object.
  * @param optimizer - Optional optimizer configuration.
  * @returns Mean cost over processed samples.
+ */
+/**
+ * Contract for trainSetCore.
  */
 export const trainSetCore = (
   net: Network,

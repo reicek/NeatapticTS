@@ -274,12 +274,12 @@ connectionToVisualizationDescriptor(
 ): VisualizationEdgeV1
 ```
 
-Converts a runtime `Connection` to a {@link VisualizationEdgeV1} descriptor.
+Convert a runtime connection into the exported edge schema with deterministic edge-kind inference.
 
 Parameters:
 - `connection` - Source connection instance.
 - `nodePositionByGeneId` - Sorted position lookup built by  {@link buildNodePositionMap} .
-- `includeWeight` - Whether to include the weight field.
+- `includeWeight` - Whether the emitted descriptor should preserve the runtime weight.
 
 Returns: Immutable edge descriptor for the visualization schema.
 
@@ -317,7 +317,7 @@ nodeToVisualizationDescriptor(
 ): VisualizationNodeV1
 ```
 
-Converts a runtime `Node` to a {@link VisualizationNodeV1} descriptor.
+Convert a runtime node into a deterministic visualization node descriptor.
 
 Parameters:
 - `node` - Source node instance.
@@ -353,7 +353,7 @@ resolveNodeRole(
 ): "hidden" | "input" | "output"
 ```
 
-Resolves the semantic role of a node from the explicit I/O id sets.
+Resolve node role by explicit stable-id membership, defaulting to hidden for all remaining nodes.
 
 Parameters:
 - `node` - Node to classify.

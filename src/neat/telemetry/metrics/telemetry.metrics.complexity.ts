@@ -8,7 +8,7 @@ import type {
 } from '../types/telemetry.types';
 
 /**
- * Collect node and connection counts for the population.
+ * Collect node and connection counts for the current population snapshot so telemetry can report structural scale trends with deterministic, generation-aligned diagnostics context.
  *
  * @param populationSnapshot - Population snapshot.
  * @returns Node and connection counts arrays.
@@ -27,7 +27,7 @@ export function collectPopulationCounts(populationSnapshot: GenomeDetailed[]): {
 }
 
 /**
- * Compute mean node and connection counts.
+ * Compute mean node and connection counts from per-genome structural totals so recorder entries can summarize average topology growth without storing every raw sample.
  *
  * @param counts - Node and connection counts arrays.
  * @returns Mean node and connection counts.
@@ -47,7 +47,7 @@ export function computeMeanCounts(counts: {
 }
 
 /**
- * Compute max node and connection counts.
+ * Compute maximum node and connection counts across the same population snapshot so telemetry highlights peak structural complexity pressure in the active generation.
  *
  * @param counts - Node and connection counts arrays.
  * @returns Max node and connection counts.
@@ -67,7 +67,7 @@ export function computeMaxCounts(counts: {
 }
 
 /**
- * Compute enabled ratios per genome.
+ * Compute enabled-connection ratios for each genome so telemetry can separate dormant structure from actively contributing edges when analyzing search efficiency.
  *
  * @param populationSnapshot - Population snapshot.
  * @returns Array of enabled ratios.
@@ -89,7 +89,7 @@ export function computeEnabledRatios(
 }
 
 /**
- * Compute mean of enabled ratios.
+ * Compute the mean enabled-connection ratio across genomes so the entry captures overall connection activity density rather than only raw edge counts.
  *
  * @param enabledRatios - Enabled ratios per genome.
  * @returns Mean enabled ratio.
@@ -103,7 +103,7 @@ export function computeMeanEnabledRatio(enabledRatios: number[]): number {
 }
 
 /**
- * Compute growth values and store the latest means on the context.
+ * Compute generation-over-generation growth deltas and persist latest means on the telemetry context so future entries can report directional structural drift.
  *
  * @param context - Neat-like context with previous mean values.
  * @param meanCounts - Current mean node/connection counts.
@@ -135,7 +135,7 @@ export function computeAndStoreGrowthValues(
 }
 
 /**
- * Build the complexity entry payload for multi-objective mode.
+ * Build the complexity telemetry payload for the current generation, combining rounded aggregates and budget ceilings into one recorder-ready evidence packet.
  *
  * @param telemetryOptions - Options controlling complexity telemetry.
  * @param meanCounts - Mean node/connection counts.
@@ -176,7 +176,7 @@ export function buildComplexityEntry(
 }
 
 /**
- * Attach complexity stats for multi-objective mode.
+ * Attach complexity statistics for multi-objective runs by deriving counts, enabled ratios, and growth signals before writing a single normalized entry block.
  *
  * @param telemetryContext - Neat-like context with population state.
  * @param telemetryOptions - Options controlling complexity telemetry.
@@ -215,7 +215,7 @@ export function applyComplexityStatsMultiObjective(
 }
 
 /**
- * Attach complexity stats for mono-objective mode.
+ * Attach complexity statistics for mono-objective runs using the same aggregation pipeline so dashboards stay comparable across optimization modes and long-run audits.
  *
  * @param telemetryContext - Neat-like context with population state.
  * @param telemetryOptions - Options controlling complexity telemetry.

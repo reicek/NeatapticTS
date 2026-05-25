@@ -1,7 +1,7 @@
 import type { OperatorStatsMap } from '../types/telemetry.types';
 
 /**
- * Snapshot operator statistics into a telemetry-friendly array.
+ * Snapshot operator statistics into a telemetry-friendly array so generation reports can compare mutation effectiveness without exposing internal map structures or internals.
  *
  * @param operatorStats - Operator stats map (opName -> success/attempts).
  * @returns Operator stats snapshot array.
@@ -20,7 +20,7 @@ export function computeOperatorStatsSnapshot(
 }
 
 /**
- * Convert operator stats map into the public accessor shape.
+ * Convert operator stats map into the public accessor shape so dashboards and external tooling receive stable, serialization-friendly field names across releases.
  *
  * @param operatorStats - Operator stats map stored on the host.
  * @returns Public operator summaries for dashboards and tests.

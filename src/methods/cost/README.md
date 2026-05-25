@@ -39,7 +39,35 @@ The functions cluster into three families:
 - calibration helpers (`focalLoss`, `labelSmoothing`) — change how harshly
   easy examples or overconfident predictions are treated.
 
+Example:
+
+```ts
+import { Cost } from 'neataptic';
+const loss = Cost.mse([1, 0], [0.9, 0.1]); // 0.01
+```
+
 ## methods/cost/cost.ts
+
+### Cost
+
+Collection of cost (loss) functions for training and evaluating neural networks.
+
+Each static method accepts a `targets` array (desired outputs) and an `outputs`
+array (network predictions) and returns a scalar loss. Lower values indicate
+better predictions. Choose the function that matches the error geometry of
+your task:
+
+- **`crossEntropy` / `binary`** — classification with probabilistic outputs
+- **`mse` / `mae`** — regression with continuous outputs
+- **`hinge`** — margin-based classification (SVM-style)
+- **`focalLoss` / `labelSmoothing`** — calibration and hard-example tuning
+
+Example:
+
+```ts
+import { Cost } from 'neataptic';
+const loss = Cost.mse([1, 0], [0.9, 0.1]); // 0.01
+```
 
 ### default
 
@@ -258,7 +286,7 @@ computeBinaryError(
 ): number
 ```
 
-Computes binary classification error rate.
+Compute binary classification error rate so evaluation can report misclassification frequency after thresholding probabilistic predictions into hard labels with a consistent decision boundary.
 
 Parameters:
 - `targets` - Target labels (0 or 1).
@@ -275,7 +303,7 @@ computeCrossEntropy(
 ): number
 ```
 
-Computes the Cross Entropy error over the provided targets and outputs.
+Compute cross-entropy error over provided targets and outputs so probabilistic classification penalties remain numerically stable and interpretable across binary-style supervision.
 
 Parameters:
 - `targets` - Desired target probabilities (may be soft labels between 0 and 1).
@@ -294,7 +322,7 @@ computeFocalLoss(
 ): number
 ```
 
-Computes focal loss for imbalanced classification tasks.
+Compute focal loss for imbalanced classification tasks so easy examples are down-weighted and rare hard cases dominate learning updates through tunable focusing and class-balance factors.
 
 Parameters:
 - `targets` - Target labels (0 or 1) or soft labels.
@@ -313,7 +341,7 @@ computeHingeLoss(
 ): number
 ```
 
-Computes hinge loss for margin-based classification.
+Compute hinge loss for margin-based classification so predictions inside the safety margin continue receiving corrective pressure and separating hyperplanes stay robust.
 
 Parameters:
 - `targets` - Target labels encoded as -1 or 1.
@@ -331,7 +359,7 @@ computeLabelSmoothingLoss(
 ): number
 ```
 
-Computes cross entropy with label smoothing applied to targets.
+Compute cross-entropy with label smoothing applied to targets so overconfident supervision is softened and generalization remains more robust under noisy or uncertain labels.
 
 Parameters:
 - `targets` - Target labels (0 or 1) or soft labels.
@@ -349,7 +377,7 @@ computeMeanAbsoluteError(
 ): number
 ```
 
-Computes mean absolute error between targets and outputs.
+Compute mean absolute error between targets and outputs so regression quality reflects linear deviation magnitude without amplifying outliers through quadratic penalties.
 
 Parameters:
 - `targets` - Desired target values.
@@ -366,7 +394,7 @@ computeMeanAbsolutePercentageError(
 ): number
 ```
 
-Computes mean absolute percentage error between targets and outputs.
+Compute mean absolute percentage error between targets and outputs so relative miss size remains comparable across different target scales and unit ranges.
 
 Parameters:
 - `targets` - Desired target values.
@@ -383,7 +411,7 @@ computeMeanSquaredError(
 ): number
 ```
 
-Computes mean squared error between targets and outputs.
+Computes mean squared error between targets and outputs so regression penalties scale quadratically with prediction distance and highlight large misses.
 
 Parameters:
 - `targets` - Desired target values.
@@ -400,7 +428,7 @@ computeMeanSquaredLogarithmicError(
 ): number
 ```
 
-Computes mean squared logarithmic error between targets and outputs.
+Compute mean squared logarithmic error between targets and outputs so multiplicative-growth deviations are penalized symmetrically in log space for scale-sensitive forecasting tasks.
 
 Parameters:
 - `targets` - Desired non-negative target values.
@@ -417,7 +445,7 @@ computeSoftmaxCrossEntropy(
 ): number
 ```
 
-Computes the softmax cross entropy given targets and raw score outputs.
+Computes softmax cross entropy from target probabilities and raw score outputs so multi-class training feedback remains numerically stable and informative.
 
 Parameters:
 - `targets` - Desired target probabilities that should sum to 1 (will be normalized if not).

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Contracts for the NEAT innovation-tracker boundary.
  *
  * NEAT needs two kinds of innovation memory at the same time:

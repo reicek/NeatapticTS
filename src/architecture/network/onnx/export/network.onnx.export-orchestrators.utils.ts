@@ -1,4 +1,4 @@
-import type Network from '../../network';
+﻿import type Network from '../../network';
 import type NeatapticNode from '../../../node';
 import type {
   Conv2DMapping,
@@ -44,6 +44,7 @@ export function assignExportNodeIndices(network: Network): void {
 
 /**
  * Collect heuristic LSTM grouping stubs from hidden layers.
+ * Stub collection is intentionally conservative and side-effect free so exporter metadata can communicate likely recurrent structure without committing to fused recurrent graph emission.
  *
  * @param layers Layered network nodes.
  * @param allowRecurrent Whether recurrent export heuristics are enabled.
@@ -59,6 +60,7 @@ export function collectLstmPatternStubs(
 
 /**
  * Append heuristic conv inference metadata when requested.
+ * Inferred metadata records spatial interpretation hints for downstream tooling while leaving declared mapping behavior untouched, so diagnostics can improve without silently changing emitted operator topology.
  *
  * @param model Target ONNX model.
  * @param layers Layered network nodes.
@@ -92,6 +94,7 @@ export function appendConvInferenceMetadata(
 
 /**
  * Resolve the effective Conv mapping list after optional heuristic promotion.
+ * Promotion merges user-declared mappings with vetted inferred candidates only when safety gates pass, preserving explicit caller intent while enabling ergonomic auto-discovery for compatible layouts.
  *
  * @param layers Layered network nodes.
  * @param options Export options.
@@ -154,6 +157,7 @@ function canPromoteInferredConvSpec(
 
 /**
  * Append LSTM pattern stub metadata.
+ * Stub metadata gives import-side or diagnostics tools a lightweight recurrent hint surface when full fused recurrent emission is not enabled for the active export pass.
  *
  * @param model Target ONNX model.
  * @param lstmPatternStubs Pattern stubs.

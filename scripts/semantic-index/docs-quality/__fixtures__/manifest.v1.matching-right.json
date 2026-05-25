@@ -1,0 +1,12 @@
+{
+  "metricVersion": 1,
+  "threshold": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeType": "paths",
+  "scopeDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
+  "scannerVersion": "1.0.0",
+  "summaryPath": "artifacts/docs-quality/runs/candidate/summary.json",
+  "evidencePath": "artifacts/docs-quality/runs/candidate/evidence.json"
+}

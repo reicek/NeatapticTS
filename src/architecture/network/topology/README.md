@@ -88,15 +88,7 @@ createMLP(
 ): default
 ```
 
-Build a strictly layered and fully connected MLP network.
-
-Parameters:
-- `this` - Network constructor.
-- `inputCount` - Number of input nodes.
-- `hiddenCounts` - Hidden-layer node counts.
-- `outputCount` - Number of output nodes.
-
-Returns: Newly created MLP network.
+Contract for createMLP.
 
 ### getTopologyIntent
 
@@ -260,7 +252,7 @@ compareNodesByStableTieBreak(
 ): number
 ```
 
-Compare two nodes by stable activation tie-break order.
+Compare two nodes using a stable deterministic activation tie-break order.
 
 Parameters:
 - `leftNode` - First node.
@@ -591,7 +583,8 @@ applyIncomingEdgeCounts(
 ): void
 ```
 
-Apply in-degree increments from non-self connections.
+Apply in-degree increments from non-self connections so topological scheduling reflects only true inter-node dependencies.
+Self loops are excluded because they do not participate in feed-forward ordering.
 
 Parameters:
 - `buildContext` - Mutable build context.
@@ -638,7 +631,8 @@ clearCachedTopoOrder(
 ): void
 ```
 
-Clear cached topological order state.
+Clear cached topological order state and reset compiled scheduling diagnostics when topology changes invalidate previous results.
+This keeps later activation passes from reusing stale ordering data.
 
 Parameters:
 - `internalTopologyProps` - Internal topology props view.
@@ -703,7 +697,8 @@ createTopologyBuildContext(
 ): TopologyBuildContext
 ```
 
-Create mutable build context for Kahn traversal.
+Create mutable build context for Kahn traversal so in-degree maps, queues, and output buffers share one typed state object.
+Centralizing this context keeps scheduling helpers composable and deterministic.
 
 Parameters:
 - `network` - Network instance.
@@ -768,7 +763,8 @@ initializeAllNodeInDegreeCounts(
 ): void
 ```
 
-Initialize all nodes with zero in-degree.
+Initialize all nodes with zero in-degree before incoming-edge counting populates the mutable Kahn traversal state.
+This explicit reset prevents stale counts when contexts are reused across rebuilds.
 
 Parameters:
 - `buildContext` - Mutable build context.
@@ -962,7 +958,8 @@ shouldBuildRecurrentSchedule(
 ): boolean
 ```
 
-Determine whether recurrent scheduling should be used.
+Determine whether recurrent scheduling should be used based on topology enforcement flags stored on internal runtime props.
+This gate decides whether Kahn-style acyclic ordering or recurrent schedule compilation is executed.
 
 Parameters:
 - `internalTopologyProps` - Internal topology props view.
@@ -987,6 +984,8 @@ Parameters:
 Returns: Sorted component indexes.
 
 ## architecture/network/topology/network.topology.factory.utils.ts
+
+Build a strictly layered, fully connected MLP network from layer sizes.
 
 ### addOutgoingConnectionsToSet
 
@@ -1101,15 +1100,7 @@ createMLP(
 ): default
 ```
 
-Build a strictly layered and fully connected MLP network.
-
-Parameters:
-- `this` - Network constructor.
-- `inputCount` - Number of input nodes.
-- `hiddenCounts` - Hidden-layer node counts.
-- `outputCount` - Number of output nodes.
-
-Returns: Newly created MLP network.
+Contract for createMLP.
 
 ### createMlpNodeLayers
 

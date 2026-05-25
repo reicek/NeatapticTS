@@ -145,7 +145,7 @@ network.mutate({ name: 'MOD_WEIGHT', min: -0.1, max: 0.1 });
 
 ### MutationMethod
 
-Mutation method descriptor shape.
+Mutation method descriptor shape
 
 ## architecture/network/mutate/network.mutate.public.utils.ts
 
@@ -309,8 +309,7 @@ Behavioral notes:
 addBackConn(): void
 ```
 
-Adds one backward (recurrent) connection between eligible node pairs.
-
+Add one backward recurrent connection between eligible node pairs when topology intent allows cyclic graph structure changes.
 This operation is skipped in acyclic mode.
 
 Parameters:
@@ -339,8 +338,7 @@ Returns: Nothing.
 addGate(): void
 ```
 
-Assigns a random eligible node as gater for a random ungated connection.
-
+Assign a random eligible node as gater for a random ungated connection to evolve dynamic modulation behavior.
 Candidate pool includes normal and self-connections.
 
 Parameters:
@@ -1470,8 +1468,7 @@ modActivation(
 ): void
 ```
 
-Mutates activation function on one random non-input node.
-
+Mutate the activation function on one random non-input node using method-controlled output eligibility guards.
 Output-node eligibility is controlled by `method.mutateOutput` when provided.
 
 Parameters:
@@ -1488,8 +1485,7 @@ modBias(
 ): void
 ```
 
-Mutates bias parameters on one random non-input node.
-
+Mutate bias parameters on one random non-input node so scalar offsets can drift without changing graph topology.
 Output nodes remain eligible for this operator.
 
 Parameters:
@@ -1506,8 +1502,7 @@ modWeight(
 ): void
 ```
 
-Perturbs one connection weight using a uniform delta sampled from configured bounds.
-
+Perturb one randomly selected connection weight by a sampled uniform delta while honoring configured mutation bounds.
 The candidate pool includes standard and self-connections.
 
 Parameters:
@@ -1960,8 +1955,7 @@ Returns: Nothing.
 subConn(): void
 ```
 
-Removes one forward connection when structural redundancy constraints are satisfied.
-
+Remove one forward connection only when redundancy checks prove the mutation will not collapse endpoint connectivity or peer-layer coverage.
 Constraints require endpoint redundancy and avoid disconnecting peer-layer groups.
 
 Parameters:

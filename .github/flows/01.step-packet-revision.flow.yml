@@ -5,7 +5,7 @@ description: >
   Updates an active or blocked step packet when scope changes, blockers
   emerge, or the original packet is ambiguous. Pulls current plan state via
   neataptic-workflow-mcp: get_active_workflow_snapshot first; falls back to
-  direct plan file read if unavailable. Revises only the affected step
+  direct plan file read if unavailable or if scope is "no-active-phase". Revises only the affected step
   packet without touching downstream planned steps unless they are directly
   invalidated by the scope change. Records the revision reason in the tracker
   and confirms plan validators still pass.

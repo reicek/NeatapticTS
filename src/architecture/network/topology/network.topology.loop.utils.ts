@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   TopologyBuildContext,
   TopologyNode,
 } from './network.topology.utils.types';
@@ -206,7 +206,7 @@ export function sortNodesByStableTieBreak(
 }
 
 /**
- * Compare two nodes by stable activation tie-break order.
+ * Compare two nodes using a stable deterministic activation tie-break order.
  *
  * @param leftNode First node.
  * @param rightNode Second node.

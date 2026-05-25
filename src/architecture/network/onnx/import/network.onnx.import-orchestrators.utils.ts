@@ -1,4 +1,4 @@
-import Connection from '../../../connection';
+﻿import Connection from '../../../connection';
 import type Network from '../../network';
 import type NeatapticNode from '../../../node';
 import { deriveHiddenLayerSizes } from './network.onnx.import-weights.utils';
@@ -32,6 +32,10 @@ import type {
 } from './network.onnx.import-orchestrators.types';
 import { readOnnxTensorFloatData } from '../schema/network.onnx.schema.tensor-data.utils';
 
+/**
+ * Re-export fused recurrent layer reconstruction so import orchestration can expose one stable entrypoint for advanced recurrent restoration workflows.
+ * Keeping the re-export documented here helps callers discover the fused path alongside the surrounding ONNX import orchestration utilities.
+ */
 export { reconstructFusedRecurrentLayers };
 
 const METADATA_KEY_RECURRENT_SINGLE_STEP = 'recurrent_single_step';
@@ -66,6 +70,7 @@ const EMPTY_POOLING_SPECS: Pool2DMapping[] = [];
 
 /**
  * Extract input/output counts and hidden layer sizes from ONNX model.
+ * This architecture probe normalizes graph terminal dimensions and initializer-derived hidden spans into one deterministic result contract used by all downstream reconstruction passes.
  *
  * @param onnx Source ONNX model.
  * @returns Parsed architecture dimensions.
@@ -114,12 +119,16 @@ export function pruneSingleLayerHiddenPlaceholders(
 
 /**
  * Restore recurrent self-connections from recurrent metadata and R tensors.
+ * Restoration uses metadata-gated span resolution and diagonal tensor extraction so imported recurrent units recover their self-feedback semantics without guessing hidden-node layout.
  *
  * @param network Target network.
  * @param onnx Source ONNX model.
  * @param hiddenLayerSizes Hidden layer sizes.
  * @param metadata Parsed metadata properties.
  * @returns Nothing.
+ */
+/**
+ * Contract for restoreRecurrentSelfConnections.
  */
 export function restoreRecurrentSelfConnections(
   network: Network,
@@ -152,6 +161,7 @@ export function restoreRecurrentSelfConnections(
 
 /**
  * Attach optional pooling metadata from ONNX model to network instance.
+ * The importer keeps pooling metadata as additive diagnostics state so later runtime or visualization tooling can reason about spatial stages without modifying core graph wiring.
  *
  * @param network Target network.
  * @param metadata ONNX metadata.

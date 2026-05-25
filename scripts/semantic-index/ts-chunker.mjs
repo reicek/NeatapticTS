@@ -46,6 +46,9 @@ export async function resolveTypeScriptSourcePaths(options = {}) {
 export function createTypeScriptProject(options = {}) {
   const tsConfigFilePath = path.resolve(options.tsConfigFilePath ?? DEFAULT_TSCONFIG_PATH);
   return new Project({
+    compilerOptions: {
+      allowJs: true,
+    },
     skipAddingFilesFromTsConfig: true,
     skipFileDependencyResolution: true,
     tsConfigFilePath,
@@ -69,6 +72,7 @@ export async function loadExportedTypeScriptDeclarations(options = {}) {
       return [{
         declaration,
         file_path: toRepoRelative(sourceFile.getFilePath()),
+        jsdoc_source_node: resolveExportJsdocSourceNode(sourceFile, exportName, declaration),
         sourceFile,
         symbol_name: resolveSymbolName(declaration, exportName),
       }];
@@ -83,8 +87,8 @@ export async function loadExportedTypeScriptDeclarations(options = {}) {
 
 export async function chunkTypeScriptSources(options = {}) {
   const exportedDeclarations = await loadExportedTypeScriptDeclarations(options);
-  return exportedDeclarations.map(({ declaration, file_path, symbol_name }) => {
-    const jsdoc_text = resolveJsdocSummaryText(declaration);
+  return exportedDeclarations.map(({ declaration, file_path, jsdoc_source_node, symbol_name }) => {
+    const jsdoc_text = resolveJsdocSummaryText(declaration, jsdoc_source_node);
     const signature_text = resolveSignatureText(declaration);
     const body_text = [
       `Symbol: ${symbol_name}`,
@@ -108,12 +112,15 @@ export async function chunkTypeScriptSources(options = {}) {
   });
 }
 
-export function resolveJsdocSummaryText(declaration) {
-  const jsDocs = resolveJsdocNodes(declaration);
-  const description = jsDocs
-    .map((jsDoc) => cleanWhitespace(jsDoc.getDescription?.() ?? ''))
-    .find(Boolean);
-  return description ?? '';
+export function resolveJsdocSummaryText(declaration, jsdocSourceNode = null) {
+  const directDescription = resolveNodeJsdocSummaryText(declaration);
+  if (directDescription) return directDescription;
+
+  if (jsdocSourceNode && jsdocSourceNode !== declaration) {
+    return resolveNodeJsdocSummaryText(jsdocSourceNode);
+  }
+
+  return '';
 }
 
 export function countWords(value) {
@@ -131,6 +138,38 @@ function resolveJsdocNodes(declaration) {
   }
 
   return [];
+}
+
+function resolveNodeJsdocSummaryText(node) {
+  const directDescription = resolveJsdocNodes(node)
+    .map((jsDoc) => cleanWhitespace(jsDoc.getDescription?.() ?? ''))
+    .find(Boolean);
+  if (directDescription) return directDescription;
+
+  return node?.compilerNode?.jsDoc
+    ?.map((jsDoc) => cleanWhitespace(resolveCompilerJsdocComment(jsDoc.comment)))
+    .find(Boolean) ?? '';
+}
+
+function resolveCompilerJsdocComment(comment) {
+  if (typeof comment === 'string') return comment;
+  if (!Array.isArray(comment)) return '';
+
+  return comment
+    .map((commentPart) => {
+      if (typeof commentPart === 'string') return commentPart;
+      return typeof commentPart?.text === 'string' ? commentPart.text : '';
+    })
+    .join(' ');
+}
+
+function resolveExportJsdocSourceNode(sourceFile, exportName, declaration) {
+  if (!Node.isSourceFile(declaration)) return null;
+
+  return sourceFile.getExportDeclarations().find((exportDeclaration) => {
+    const namespaceExport = exportDeclaration.getNamespaceExport?.();
+    return namespaceExport?.getText?.() === `* as ${exportName}`;
+  }) ?? null;
 }
 
 function resolveSignatureText(declaration) {

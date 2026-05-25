@@ -1,3 +1,46 @@
+/**
+ * @module neatChat.session.services
+ *
+ * Core session lifecycle and exchange-loop services for NEATchat.
+ *
+ * Provides three public surface categories:
+ * - **Vocabulary** — {@link buildNeatChatVocabulary}
+ * - **Session creation / pretraining** — {@link createNeatChatSession},
+ *   {@link pretrainNeatChatSessionWithConversationLines},
+ *   {@link updateNeatChatSessionContextWindowTokenCount}
+ * - **Exchange loop** — {@link runNeatChatExchange}
+ *
+ * ### Exchange loop flow (`runNeatChatExchange`)
+ *
+ * ```mermaid
+ * sequenceDiagram
+ *     participant U as User
+ *     participant E as runNeatChatExchange
+ *     participant M as Memory bank
+ *     participant R as Routing / candidates
+ *     participant S as Safety gate
+ *     participant L as Online learning
+ *
+ *     U->>E: userMessage
+ *     E->>M: retrieveNeatChatMemories (top-3)
+ *     M-->>E: retrievedMemories
+ *     E->>R: generateNeatChatCandidates
+ *     R-->>E: surfacedCandidates (placeholder tokens stripped)
+ *     loop resolveSelectedCandidate
+ *         E->>S: checkSafety(candidate)
+ *         S-->>E: safetyResult
+ *         E->>E: recentDuplicateCheck
+ *     end
+ *     E->>L: applyOnlineLearningUpdate (observed + replay + anchor cases)
+ *     L-->>E: updatedNetwork + committedTokenPairCount
+ *     E-->>U: response + updatedSession
+ * ```
+ *
+ * The online-learning step (Step 2 inside `runNeatChatExchange`) commits weight
+ * updates unconditionally after the routing decision. Candidate generation runs
+ * _before_ any weight mutation so all scoring is based on the pre-update network
+ * state, keeping routing and learning decoupled within a single exchange.
+ */
 import { Architect, Network, methods } from '../../../src/browser-entry.ts';
 import {
   NEATCHAT_DEFAULT_ARCHITECTURE_FAMILY,

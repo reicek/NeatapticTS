@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Global NeatapticTS configuration contract & default instance.
  *
  * WHY THIS EXISTS

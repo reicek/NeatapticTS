@@ -1,8 +1,7 @@
 import { EPSILON } from '../../neat.constants';
 
 /**
- * Read a cached entropy value if it exists and belongs to the current
- * generation.
+ * Read a cached entropy value when it exists for the current generation so repeated telemetry calculations can skip redundant structural entropy recomputation safely.
  *
  * @param generation - Current generation number.
  * @param entropyGraph - Genome-like graph object.
@@ -21,7 +20,7 @@ export function getCachedEntropy(
 }
 
 /**
- * Compute per-node degree counts for enabled connections.
+ * Compute per-node degree counts for enabled connections so entropy metrics reflect active topology rather than dormant edges during current-generation telemetry analysis.
  *
  * @param entropyGraph - Genome-like graph object.
  * @returns Map geneId -> degree count.
@@ -52,7 +51,7 @@ export function computeDegreeCounts(entropyGraph: {
 }
 
 /**
- * Build a histogram of degree frequencies from a degree-count table.
+ * Build a histogram of degree frequencies from a degree-count table so downstream entropy computation receives normalized structural distribution evidence for trend analysis.
  *
  * @param counts - Map geneId -> degree count.
  * @returns Map degree -> number of nodes with that degree.
@@ -70,7 +69,7 @@ export function buildDegreeHistogram(
 }
 
 /**
- * Compute entropy from a degree-frequency histogram.
+ * Compute entropy from a degree-frequency histogram so telemetry captures structure dispersion as a stable scalar comparable across generations and runs.
  *
  * @param histogram - Map degree -> number of nodes.
  * @param totalNodes - Total node count used to normalize into probabilities.
@@ -92,7 +91,7 @@ export function computeEntropyFromHistogram(
 }
 
 /**
- * Cache an entropy value for the current generation on the graph object.
+ * Cache an entropy value for the current generation on the graph object so repeated metric builders can reuse deterministic results without recalculation.
  *
  * @param generation - Current generation number.
  * @param entropyGraph - Genome-like graph object.

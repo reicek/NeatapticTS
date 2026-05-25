@@ -1,3 +1,29 @@
+/**
+ * @module mcp-plan-utils
+ * @description Markdown plan parser and workflow-snapshot builders for the NeatapticTS MCP servers.
+ *
+ * Extracts the single active `[WIP]` phase and step from a `plans/*.plans.md`
+ * file and converts the structured context into typed snapshot objects that
+ * the workflow and validation MCP tools expose to AI agents.
+ *
+ * @remarks
+ * ### Plan Parsing Pipeline
+ *
+ * ```mermaid
+ * flowchart TD
+ *   A[Plan markdown text] --> B[extractPhaseBlocks<br/>PHASE_PATTERN]
+ *   B --> C{Exactly one WIP phase?}
+ *   C -- no  --> D[throw Error]
+ *   C -- yes --> E[extractStepBlocks<br/>STEP_PATTERN]
+ *   E --> F{Exactly one WIP step?}
+ *   F -- no  --> G[throw Error]
+ *   F -- yes --> H[parseStepMetadata<br/>YAML fenced block]
+ *   H --> I[extractRequiredValidationCommands<br/>prose backtick scan]
+ *   I --> J[Active plan context]
+ *   J --> K[createWorkflowSnapshot]
+ *   J --> L[createValidationAllowlistSnapshot]
+ * ```
+ */
 import { readFile } from 'node:fs/promises';
 
 import {
@@ -5,8 +31,11 @@ import {
 } from '../customization-utils.mjs';
 import { resolveExplicitPlanPath } from './mcp-utils.mjs';
 
+/** Matches a phase header line, e.g. `### Phase 2 — Title [WIP]`. */
 const PHASE_PATTERN = /^### Phase (?<phase>\d+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+/** Matches a step header line, e.g. `#### Step 03 — Title [PLANNED]`. */
 const STEP_PATTERN = /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+/** Captures the body of the `## Implementation phases` section up to the first validation-gates heading. */
 const IMPLEMENTATION_SECTION_PATTERN = /^## Implementation phases\s*(?<body>[\s\S]*?)(?=^## [^\n]*\bvalidation gates\b[^\n]*$)/imu;
 
 /**
@@ -122,6 +151,16 @@ export function createValidationAllowlistSnapshot(activePlanContext) {
   };
 }
 
+/**
+ * Yield structured phase descriptors from the implementation-phases section of a plan file.
+ *
+ * Slices each phase body as the text between one phase heading and the next,
+ * so step extraction can operate on a bounded substring without rescanning the
+ * full document.
+ *
+ * @param {string} planText - Full plan file text.
+ * @yields {{ number: number, title: string, status: string, body: string }} Phase descriptors.
+ */
 function* extractPhaseBlocks(planText) {
   const implementationSection = IMPLEMENTATION_SECTION_PATTERN.exec(planText)?.groups?.body;
   if (!implementationSection) {
@@ -146,6 +185,12 @@ function* extractPhaseBlocks(planText) {
   }
 }
 
+/**
+ * Yield structured step descriptors from the body of a single phase.
+ *
+ * @param {string} phaseBody - Phase body text extracted by {@link extractPhaseBlocks}.
+ * @yields {{ number: number, title: string, status: string, body: string }} Step descriptors.
+ */
 function* extractStepBlocks(phaseBody) {
   const stepMatches = [...phaseBody.matchAll(STEP_PATTERN)];
   for (const [stepIndex, stepMatch] of stepMatches.entries()) {
@@ -165,6 +210,18 @@ function* extractStepBlocks(phaseBody) {
   }
 }
 
+/**
+ * Parse the YAML metadata block from a step body into a key–value map.
+ *
+ * Looks for a fenced ` ```yaml ` block and walks it line by line. Values are
+ * parsed with {@link parseFrontmatterValue} so quoted strings, booleans, and
+ * YAML list items are handled correctly. Throws if no YAML block is found,
+ * because a missing metadata block is always a plan-authoring error.
+ *
+ * @param {string} stepBody - Step body text extracted by {@link extractStepBlocks}.
+ * @returns {Record<string, unknown>} Parsed metadata map.
+ * @throws {Error} When no YAML metadata block is present in the step.
+ */
 function parseStepMetadata(stepBody) {
   const yamlBlock = /```yaml\r?\n(?<yaml>[\s\S]*?)```/u.exec(stepBody)?.groups?.yaml;
   if (!yamlBlock) {
@@ -205,15 +262,42 @@ function parseStepMetadata(stepBody) {
   return metadata;
 }
 
+/**
+ * Extract validation command strings from the `Required validation` prose section.
+ *
+ * Scans backtick-delimited code spans in the section body so the validation
+ * MCP can compare the structured YAML list against the prose description and
+ * detect drift between the two sources of truth.
+ *
+ * @param {string} stepBody - Step body text.
+ * @returns {string[]} Array of required validation command strings.
+ */
 function extractRequiredValidationCommands(stepBody) {
   const requiredValidationBody = extractSectionBody(stepBody, 'Required validation');
   return [...requiredValidationBody.matchAll(/`([^`]+)`/gu)].map((match) => match[1]);
 }
 
+/**
+ * Return a single-line summary of a step section by collapsing internal whitespace.
+ *
+ * @param {string} stepBody - Step body text.
+ * @param {string} sectionName - Bold-key section heading to locate (e.g. `Step objective`).
+ * @returns {string} Collapsed single-line summary, or empty string when the section is absent.
+ */
 function extractSectionSummary(stepBody, sectionName) {
   return extractSectionBody(stepBody, sectionName).replace(/\s+/gu, ' ').trim();
 }
 
+/**
+ * Extract the raw body of a named section from a step body.
+ *
+ * Sections are delimited by `**Name:**` bold markers. The body extends from
+ * the opening marker to the next such marker or end of text.
+ *
+ * @param {string} stepBody - Step body text.
+ * @param {string} sectionName - Section heading without the `**...**:` wrapping.
+ * @returns {string} Trimmed section body, or empty string if the section is absent.
+ */
 function extractSectionBody(stepBody, sectionName) {
   const marker = `**${sectionName}:**`;
   const markerIndex = stepBody.indexOf(marker);
@@ -230,6 +314,12 @@ function extractSectionBody(stepBody, sectionName) {
   return afterMarker.slice(0, nextSectionMatch.index).trim();
 }
 
+/**
+ * Filter and trim a raw command array, dropping non-strings and blank values.
+ *
+ * @param {unknown[]} commands - Raw command array from parsed YAML or prose.
+ * @returns {string[]} Normalized non-empty command strings.
+ */
 function normalizeCommands(commands) {
   return commands
     .filter((command) => typeof command === 'string')
@@ -237,6 +327,17 @@ function normalizeCommands(commands) {
     .filter(Boolean);
 }
 
+/**
+ * Check whether the left command list is a prefix-match of the right list.
+ *
+ * Returns `true` when every command in `leftCommands` appears at the same
+ * position in `rightCommands`. The right list may have additional trailing
+ * commands. Returns `false` when the right list is shorter than the left.
+ *
+ * @param {string[]} leftCommands - Canonical YAML command list.
+ * @param {string[]} rightCommands - Required-validation prose command list.
+ * @returns {boolean} `true` when the YAML list is a prefix of the prose list.
+ */
 function compareCommands(leftCommands, rightCommands) {
   if (rightCommands.length < leftCommands.length) {
     return false;

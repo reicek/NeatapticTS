@@ -566,12 +566,8 @@ applyModelMetadata(
 ): void
 ```
 
-Attach producer and opset metadata to a model when metadata emission is enabled.
-
-Parameters:
-- `context` - Metadata application context.
-
-Returns: Nothing.
+Apply model metadata to exported artifacts so downstream tools can inspect capability flags and advanced graph hints.
+This alias preserves a stable public seam for metadata population while implementation details stay split by concern.
 
 ### assignActivationFunctions
 
@@ -583,14 +579,8 @@ assignActivationFunctions(
 ): void
 ```
 
-Assign node activation functions from ONNX activation nodes.
-
-Parameters:
-- `network` - Target network to mutate.
-- `onnx` - Source ONNX model.
-- `hiddenLayerSizes` - Hidden layer size list.
-
-Returns: Nothing.
+Assign activation functions during import reconstruction so each rebuilt layer preserves nonlinear behavior captured by export metadata.
+This forwarding seam keeps root ONNX callers stable while the concrete activation mapping logic evolves in import internals.
 
 ### assignWeightsAndBiases
 
@@ -603,15 +593,8 @@ assignWeightsAndBiases(
 ): void
 ```
 
-Assign weights and biases from ONNX initializers to a newly created network.
-
-Parameters:
-- `network` - Target network to mutate.
-- `onnx` - Source ONNX model.
-- `hiddenLayerSizes` - Hidden layer sizes.
-- `metadataProps` - Optional ONNX metadata properties.
-
-Returns: Nothing.
+Assign weights and biases onto imported layers so reconstructed parameters match serialized ONNX tensor values from export.
+Keeping this alias documented at the compatibility barrel helps users discover parameter hydration behavior without reading nested modules first.
 
 ### buildOnnxModel
 
@@ -664,12 +647,8 @@ collectRecurrentLayerIndices(
 ): number[]
 ```
 
-Detect hidden layers with self-recurrence and add matching previous-state graph inputs.
-
-Parameters:
-- `context` - Recurrent collection context.
-
-Returns: Export-layer indices with recurrent self-connections.
+Collect recurrent layer indices so post-processing can identify hidden stages that use supported single-step recurrence.
+Export metadata and import diagnostics both depend on this deterministic recurrent-stage inventory.
 
 ### createBaseModel
 
@@ -679,12 +658,7 @@ createBaseModel(
 ): OnnxModel
 ```
 
-Create the base ONNX model shell with graph input/output declarations.
-
-Parameters:
-- `context` - Base model build context.
-
-Returns: Initialized ONNX model with empty initializer/node lists.
+Create the base ONNX-like model scaffold so later export stages can append graph nodes, initializers, and metadata in deterministic order.
 
 ### createGraphDimensions
 
@@ -694,12 +668,8 @@ createGraphDimensions(
 ): OnnxGraphDimensions
 ```
 
-Build tensor dimensions for model input and output, optionally with symbolic batch dimension.
-
-Parameters:
-- `context` - Dimension construction context.
-
-Returns: Input and output dimension arrays for ONNX value info.
+Create graph dimension metadata so emitted tensor shapes stay explicit and consistent across exporter and importer paths.
+Clear dimension records also improve debugging when validating compatibility between serialized tensors and rebuilt layers.
 
 ### deriveHiddenLayerSizes
 
@@ -710,13 +680,8 @@ deriveHiddenLayerSizes(
 ): number[]
 ```
 
-Extract hidden layer sizes from ONNX initializers (weight tensors).
-
-Parameters:
-- `initializers` - ONNX initializer tensors.
-- `metadataProps` - Optional ONNX metadata properties.
-
-Returns: Hidden layer sizes in order.
+Derive hidden layer sizes from exported graph structures so import routines allocate correctly shaped intermediate containers.
+The helper also centralizes size inference assumptions used by reconstruction and compatibility diagnostics.
 
 ### emitFusedRecurrentHeuristics
 
@@ -729,15 +694,7 @@ emitFusedRecurrentHeuristics(
 ): void
 ```
 
-Emit heuristic fused recurrent operators (LSTM/GRU) when recurrent export is enabled.
-
-Parameters:
-- `model` - Target ONNX model.
-- `layers` - Layered network nodes.
-- `allowRecurrent` - Whether recurrent export is enabled.
-- `previousOutputName` - Current graph output name (kept for backward-compatible emission semantics).
-
-Returns: Nothing.
+Emit fused recurrent heuristic nodes so eligible LSTM and GRU patterns can be represented compactly within the current conservative subset.
 
 ### emitLayerGraph
 
@@ -796,17 +753,8 @@ finalizeExportMetadata(
 ): void
 ```
 
-Finalize export metadata and optional conv-sharing validation.
-
-Parameters:
-- `model` - Target ONNX model.
-- `layers` - Layered network nodes.
-- `options` - Export options.
-- `includeMetadata` - Whether metadata emission is enabled.
-- `hiddenSizesMetadata` - Hidden-layer sizes collected during emission.
-- `recurrentLayerIndices` - Recurrent layer indices.
-
-Returns: Nothing.
+Finalize export metadata so generated models include complete capability records and audit hints for compatibility diagnostics.
+The finalization step normalizes emitted annotations before artifacts are returned to callers or saved.
 
 ### inferLayerOrdering
 
@@ -852,12 +800,7 @@ rebuildConnectionsLocal(
 ): void
 ```
 
-Rebuild the network's flat connections array from each node's outgoing list.
-
-Parameters:
-- `networkLike` - Network-like instance to mutate.
-
-Returns: Nothing.
+Rebuild local connections from layered ONNX-like data so import flows can restore deterministic adjacency wiring before activation or serialization passes.
 
 ### runOnnxExportFlow
 
@@ -912,14 +855,7 @@ validateLayerHomogeneityAndConnectivity(
 ): void
 ```
 
-Validate connectivity and activation homogeneity constraints per layer.
-
-Parameters:
-- `layers` - Layered node arrays.
-- `network` - Source network (reserved for compatibility).
-- `options` - Export options.
-
-Returns: Nothing.
+Validate layer homogeneity and connectivity so export and import paths fail early when topology assumptions required by the supported ONNX subset are broken.
 
 ## architecture/network/onnx/network.onnx.utils.types.ts
 
@@ -1428,7 +1364,8 @@ Context for assigning one concrete Conv kernel connection weight.
 
 ### OnnxImportConvLayerContext
 
-Context for reconstructing one Conv layer's imported connectivity.
+Context payload used when rebuilding one imported convolution layer from ONNX graph metadata and tensor shelves.
+The contract captures grouped node slices, tensor mappings, and assignment state so reconstruction stays deterministic across import passes.
 
 ### OnnxImportConvLayerContextBuildParams
 
@@ -1548,7 +1485,10 @@ Runtime factory map used to construct dynamic recurrent layer modules.
 
 ### OnnxMetadataProperty
 
-Canonical metadata key-value pair used in ONNX model metadata_props.
+Canonical metadata key-value pair used by `OnnxModel.metadata_props`.
+
+Keys are exporter-defined semantic hints (for example layout or fallback
+reasons) and values are serialized as plain strings.
 
 ### OnnxModel
 
@@ -1644,7 +1584,8 @@ Runtime perceptron factory signature used by ONNX import orchestration.
 
 ### OnnxShape
 
-ONNX tensor type shape.
+Canonical shape descriptor for ONNX tensors used by export, import, and schema validation paths.
+Each entry preserves axis intent so runtime bridges can validate rank-sensitive operators without guessing dimension semantics.
 
 ### OnnxTensor
 
@@ -1657,11 +1598,13 @@ shape.
 
 ### OnnxTensorType
 
-ONNX tensor type.
+Canonical tensor element type shelf used by schema, import coercion, and export metadata emission.
+Keep this alias at the ONNX root so callers can depend on one stable type name while chapter ownership remains in schema contracts.
 
 ### OnnxValueInfo
 
-ONNX value info (input/output description).
+Canonical tensor value-info descriptor used to name and type graph inputs, outputs, and intermediate values.
+This alias keeps metadata surfaces consistent across ONNX schema parsing, importer reconstruction, and exporter graph emission.
 
 ### OptionalLayerOutputParams
 
@@ -2060,6 +2003,7 @@ mapActivationToOnnx(
 ```
 
 Map an internal activation function (squash) to an ONNX op_type.
+Mapping flows through the exporter activation resolver so opset-gated operators and identity fallbacks stay centralized in one compatibility decision path.
 
 Parameters:
 - `squash` - Activation function reference.
@@ -2090,6 +2034,7 @@ rebuildConnectionsLocal(
 ```
 
 Rebuild the network's flat connections array from each node's outgoing list.
+Rehydrating this cache from node-owned adjacency shelves keeps exporter traversal deterministic after structural edits that may leave the flat cache stale.
 
 Parameters:
 - `networkLike` - Network-like instance to mutate.
@@ -2136,6 +2081,7 @@ resolveOnnxActivationNodeConfig(
 ```
 
 Resolve the ONNX activation node payload for one runtime activation.
+The payload includes both the resolved operator and any mandatory attributes, allowing downstream graph emission to stay declarative and free of activation-specific branching.
 
 Parameters:
 - `squash` - Activation function reference.
@@ -2200,6 +2146,7 @@ validateLayerHomogeneityAndConnectivity(
 ```
 
 Validate connectivity and activation homogeneity constraints per layer.
+Validation enforces exporter baseline assumptions before node emission so unsupported mixed-activation or sparse connectivity cases are surfaced with actionable errors.
 
 Parameters:
 - `layers` - Layered node arrays.

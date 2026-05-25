@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Contracts for the NEAT innovation-tracker boundary.
  *
  * NEAT needs two kinds of innovation memory at the same time:
@@ -178,7 +178,8 @@ export function prepareInnovationTrackerForMutation(
 }
 
 /**
- * Look up a reusable split record for the active generation.
+ * Look up a reusable split record for the active generation so repeated node-split mutations can share deterministic ids.
+ * Stable split-key reuse keeps homologous mutations aligned within one generation boundary.
  *
  * @param tracker Live tracker.
  * @param splitKey Stable split-event identity, usually the split connection innovation.
@@ -192,7 +193,8 @@ export function getNodeSplitRecord(
 }
 
 /**
- * Record a reusable split result for the active generation.
+ * Record a reusable split result for the active generation so equivalent split events keep the same innovation structure.
+ * This prevents duplicate node-lineage ids from drifting across identical mutations in one generation.
  *
  * @param tracker Live tracker.
  * @param splitKey Stable split-event identity, usually the split connection innovation.
@@ -208,7 +210,8 @@ export function recordNodeSplitRecord(
 }
 
 /**
- * Look up a reusable connection innovation for the active generation.
+ * Look up a reusable connection innovation for the active generation using the caller-defined connection identity key.
+ * Reuse allows homologous edge additions to remain historically aligned across genomes in the same pass.
  *
  * @param tracker Live tracker.
  * @param connectionKey Caller-defined exact connection identity.
@@ -222,7 +225,8 @@ export function getConnectionInnovation(
 }
 
 /**
- * Record a reusable connection innovation for the active generation.
+ * Record a reusable connection innovation for the active generation so matching structural mutations share one canonical id.
+ * This write path is paired with lookup helpers to preserve deterministic innovation genealogy.
  *
  * @param tracker Live tracker.
  * @param connectionKey Caller-defined exact connection identity.
@@ -238,7 +242,8 @@ export function recordConnectionInnovation(
 }
 
 /**
- * Consume the next global innovation id from the tracker.
+ * Consume the next global innovation id from the tracker and advance the monotonic innovation counter by one.
+ * The returned id should be recorded immediately on the matching mutation event to preserve deterministic history.
  *
  * @param tracker Live tracker.
  * @returns Newly reserved innovation id.

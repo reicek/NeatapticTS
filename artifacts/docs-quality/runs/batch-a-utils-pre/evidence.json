@@ -1,0 +1,287 @@
+{
+  "evidence": [
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkWithOnnxImportPooling"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NodeInternalsWithExportIndex"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxActivationLayerOperations"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxFusedRecurrentKind"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportAggregatedLayerAssignmentContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportAggregatedNeuronAssignmentContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportArchitectureResult"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportConcatMerge"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportConvKernelAssignmentContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportConvLayerContextBuildParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportConvMetadata"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportConvNodeSlices"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportConvTensorContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportLayerConnectionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportLayerNodePair"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportLayerNodePairBuildParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportLayerWeightBucket"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportPoolingMetadata"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxImportWeightAssignmentBuildParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxPerceptronSizeValidationContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxRuntimeLayerFactoryMap"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxRuntimeLayerModule"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxRuntimePerceptronFactory"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "HiddenLayerActivationTraversalContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "LayerConnectivityValidationContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "LayerOrderingNodeGroups"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "LayerValidationTraversalContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkWithOnnxImportAdvancedGraph"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxActivationAssignmentContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxActivationOperation"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxFusedGateApplicationContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxFusedLayerNeighborhood"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxFusedLayerReconstructionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxImportAdvancedGraphMetadata"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxImportArchitectureContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxImportConvOutputCoordinate"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxImportLayerTensorNames"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxImportPerNeuronAssignmentContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxImportPerNeuronLayerAssignmentContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxImportWeightAssignmentContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxRuntimeFactories"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxRuntimeLayerFactory"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "LayerActivationValidationContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "LayerOrderingResolutionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "OnnxConvKernelCoordinate"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "OnnxActivationParseResult"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "OutputLayerActivationContext"
+    }
+  ],
+  "normalizedEvidenceDigest": "7d8eceeef1fcf94dcfbb3cef4366e727303ca017bbe93674fc437cb455551748"
+}

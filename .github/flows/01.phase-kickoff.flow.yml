@@ -5,8 +5,9 @@ description: >
   Converts a new phase objective into numbered step packets ready for
   downstream SDLC agents. Pulls the current plan state via the MCP workflow
   snapshot first (neataptic-workflow-mcp: get_active_workflow_snapshot),
-  then reads the plan file directly only if the snapshot is stale or
-  unavailable. Selects the Plan Scout only when registration or roadmap
+  then reads the plan file directly if the snapshot is stale, unavailable,
+  or returns scope "no-active-phase" (meaning no [WIP] phase/step exists
+  yet — normal at fresh session start). Selects the Plan Scout only when registration or roadmap
   placement is uncertain. Emits paste-ready step packets covering
   01-planning through 07-logging, with explicit skipped-step records
   where a red, green, docs, or logging step adds no value.

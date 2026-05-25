@@ -8,6 +8,10 @@ import type {
 /**
  * Compute monitored training error using the configured smoothing strategy.
  *
+ * The helper returns the raw error when smoothing is effectively disabled.
+ * For stateful modes (`ema`, `adaptive-ema`), the provided state object is
+ * updated in place so callers can keep continuity across iterations.
+ *
  * @param trainError - Raw training error for the current iteration.
  * @param recentErrors - Chronological recent error window (oldest to newest).
  * @param cfg - Monitored smoothing configuration.
@@ -103,6 +107,9 @@ export const computeMonitoredError = (
 
 /**
  * Compute plateau metric using the configured plateau smoothing strategy.
+ *
+ * This metric is intentionally independent from the primary monitored metric so
+ * plateau detection can use a different noise profile.
  *
  * @param trainError - Raw training error for the current iteration.
  * @param plateauErrors - Plateau window of recent raw errors.

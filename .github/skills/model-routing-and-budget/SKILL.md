@@ -8,17 +8,56 @@ disable-model-invocation: false
 
 # Model Routing And Budget
 
-Use this skill before writing or changing an agent `model` field.
+Use this skill before writing or changing an agent `model` field, and whenever
+a frontmatter model string must be verified as a valid qualified name before
+it is committed.
 
-## Workflow
+This skill owns the phase-default routing table, qualified name validation
+process, and fallback array design for NeatapticTS custom agents.
 
-1. Discover the exact qualified model names available in the active Copilot client.
-2. Use `GPT-5.4 (copilot)` for coding-heavy implementation and red-test synthesis when available.
-3. Use `Claude Sonnet 4.6 (copilot)` for planning, documentation synthesis, nuanced maintenance, and ambiguity-heavy coordination when available.
-4. Use `GPT-5.4-mini (copilot)` for bounded research, validation, and subagent work where coding/tool strength still matters.
-5. Use `Claude Haiku 4.6 (copilot)` for narrow checklist, summarization, and mechanical assistant work; if the model picker exposes only a different Haiku generation, update the qualified name before strict validation.
-6. Use fallback arrays so agents degrade to an available qualified Copilot model.
-7. Validate frontmatter shape with `validate-agent-frontmatter.mjs`.
+## When to Use
+
+- A new agent file is being created and its `model` field needs a phase-
+  appropriate qualified name and fallback array.
+- An existing agent's model string is producing routing errors or resolving to
+  an unexpected model tier.
+- The available Copilot model list has changed and agent frontmatter needs to
+  be updated to match.
+- A phase is being delegated to a lower-cost tier and the routing change needs
+  to be validated before wiring.
+- Frontmatter shape needs to be confirmed with `validate-agent-frontmatter.mjs`
+  before the agent is used in a gate or handoff.
+
+## Task Packet
+
+Pass a compact packet describing the agent, its phase, and the routing decision
+to validate.
+
+```text
+Use model-routing-and-budget for the 03-red-testing agent frontmatter.
+Agent: .github/agents/03-red-testing.agent.md.
+Phase: 03 Red Testing.
+Desired tier: Full (GPT-5.4 or Claude Sonnet 4.6).
+Validation: advisory — confirm qualified name before committing.
+```
+
+## Required Workflow
+
+1. Discover the exact qualified model names available in the active Copilot
+   client before assigning any name.
+2. Use `GPT-5.4 (copilot)` for coding-heavy implementation and red-test
+   synthesis when available.
+3. Use `Claude Sonnet 4.6 (copilot)` for planning, documentation synthesis,
+   nuanced maintenance, and ambiguity-heavy coordination when available.
+4. Use `GPT-5.4-mini (copilot)` for bounded research, validation, and subagent
+   work where coding or tool strength still matters.
+5. Use `Claude Haiku 4.6 (copilot)` for narrow checklist, summarization, and
+   mechanical assistant work. If the model picker exposes only a different Haiku
+   generation, update the qualified name before strict validation.
+6. Use fallback arrays so agents degrade to an available qualified Copilot model
+   when the primary is unavailable.
+7. Validate frontmatter shape with
+   `node scripts/agent-customization/validate-agent-frontmatter.mjs`.
 
 ## Phase Defaults
 
@@ -33,8 +72,24 @@ Use this skill before writing or changing an agent `model` field.
 | 06 Documentation | Sonnet / Mini | Educational docs benefit from stronger writing after facts exist. |
 | 07 Logging | Haiku / Mini | Summarization and tracker updates should be lightweight. |
 
-## Sources
+## Guardrails
 
-- VS Code custom agents documentation allows a single `model` string or prioritized fallback array with qualified names such as `GPT-5.4 (copilot)` or `Claude Sonnet 4.5 (copilot)`.
-- OpenAI model guidance positions GPT-5.4 for coding and professional work and GPT-5.4-mini for lower-latency, lower-cost coding and subagent workloads.
-- Anthropic model guidance positions Claude Sonnet 4.6 as the best combination of speed and intelligence, and Haiku-class models as the fastest economical tier.
+- Do not commit a model string that has not been confirmed as a valid qualified
+  name in the active Copilot client; an invalid name causes silent fallback or
+  routing errors.
+- Do not assign a Full-tier model to phases where a Mini or Haiku tier is
+  sufficient; unnecessary cost undermines the budget design.
+- Do not omit a fallback array for agents that must be resilient to model
+  availability changes.
+- Do not hand-edit qualified names without re-running
+  `validate-agent-frontmatter.mjs`; the validator catches typos and schema
+  drift that manual review misses.
+
+## Expected Final Output
+
+A strong model-routing pass should produce:
+
+- the confirmed qualified model name for the target agent and phase,
+- the fallback array if the model has known availability constraints,
+- the `validate-agent-frontmatter.mjs` result confirming schema validity,
+- an updated agent frontmatter `model` field ready to commit.

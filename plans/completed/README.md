@@ -20,6 +20,7 @@ Archive selection guide:
 - [Semantic_Knowledge_Browser_Snapshot.plans.md](Semantic_Knowledge_Browser_Snapshot.plans.md): closed Repo Cortex Layer 3 baseline for the generated browser JSON snapshot, docs pipeline integration, IndexedDB-backed shared loader/search utilities, and generated-output contract.
 - [Semantic_Knowledge_Embeddings.plans.md](Semantic_Knowledge_Embeddings.plans.md): closed Repo Cortex Layer 5 baseline for local ONNX embeddings, BLOB vector storage, `ts-source` corpus chunks, hybrid BM25 + dense ranking, MRR@5 evaluation, and opt-in dense policy.
 - [Semantic_Knowledge_Dense_Prewarm.plans.md](Semantic_Knowledge_Dense_Prewarm.plans.md): closed Repo Cortex Layer 6 baseline for the default-on dense bootstrap contract, idempotent prewarm, readiness probe and gate, warm-state `dense_state` provenance, and graceful cold/model-only degradation.
+- [Docs_Quality_Metrics_Contract_and_Parity.plans.md](Docs_Quality_Metrics_Contract_and_Parity.plans.md): closed docs-quality metrics contract baseline for canonical versioned manifests, deterministic run artifacts, strict comparator reason-code guards, MCP and CLI parity, docs-quality CI gate wiring, and migration runbook closure.
 - [Delegation_Tier_Enforcement.plans.md](Delegation_Tier_Enforcement.plans.md): closed Agentic Workflow Enforcement Prerequisite baseline for the 5-layer delegation tier graph, the enforced 55-agent `tier:` frontmatter map, `validate-agent-graph.mjs`, `tier-enforcement-gate.mjs`, the human-readable audit report, and the `query_tier_graph` MCP tool.
 - [neat.plans.md](neat.plans.md): Phase 1 proper-NEAT correctness baseline.
 - [Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md): deterministic execution ordering and explicit input/output role baseline.
@@ -62,6 +63,7 @@ Trigger phrases:
 - browser snapshot, semantic snapshot, IndexedDB cache, docs snapshot, semantic-snapshot-loader, build-browser-snapshot reopen: `plans/completed/Semantic_Knowledge_Browser_Snapshot.plans.md`
 - semantic embeddings, ONNX embeddings, dense retrieval, hybrid BM25 dense, vector storage, embed-index, eval-embeddings, MRR reopen: `plans/completed/Semantic_Knowledge_Embeddings.plans.md`
 - dense prewarm, embedding prewarm, default-on dense, dense readiness, prewarm bootstrap, graceful degradation, warm dense provenance reopen: `plans/completed/Semantic_Knowledge_Dense_Prewarm.plans.md`
+- weak-doc metric inconsistency reopen, docs quality metrics reopen, docs:quality:metrics, docs:quality:compare, docs-quality comparator reason codes, docs-quality run artifacts, docs-quality MCP CLI parity: `plans/completed/Docs_Quality_Metrics_Contract_and_Parity.plans.md`
 - delegation tier, tier graph, validate-agent-graph, tier inventory, tier enforcement, 5-layer delegation reopen: `plans/completed/Delegation_Tier_Enforcement.plans.md`
 - proper NEAT, innovation IDs, crossover, compatibility distance, speciation: `plans/completed/neat.plans.md`
 - activation order, explicit IO roles, deterministic scheduling: `plans/completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md`

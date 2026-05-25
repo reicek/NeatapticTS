@@ -91,6 +91,9 @@ export {
 } from './network-view/network-view.layout.utils';
 export type { VisualNetworkNode } from './network-view/network-view.layout.utils';
 export {
+  /**
+   * Re-export of the layer resolution helper used by browser visualization layout passes to extract ordered layer annotations from a topology plan.
+   */
   resolveNetworkVisualizationLayers,
   resolveNetworkVisualizationTopologyPlan,
 } from './network-view/network-view.topology.utils';

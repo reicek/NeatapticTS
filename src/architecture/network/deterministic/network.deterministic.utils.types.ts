@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   DeterministicNetworkInternals as DeterministicNetworkInternalsType,
   RNGSnapshot,
 } from '../network.types';

@@ -5,8 +5,7 @@ import type {
 } from '../types/telemetry.types';
 
 /**
- * Build a snapshot of the core telemetry fields present on the entry; does
- * not mutate the source entry.
+ * Build a snapshot of core telemetry fields from one entry so later selection filtering can preserve required recorder invariants without mutating source state.
  *
  * @param sourceEntry - Source telemetry object.
  * @param fields - Core telemetry field keys to preserve.
@@ -31,8 +30,7 @@ export function getTelemetryCoreSnapshot(
 }
 
 /**
- * Remove non-core keys that are not whitelisted by the selection set.
- * Mutates the provided entry in-place for efficiency.
+ * Remove non-core keys that are not whitelisted by the selection set so telemetry payloads stay compact while preserving recorder-required fields.
  *
  * @param sourceEntry - Telemetry entry being filtered.
  * @param selection - Whitelist of additional telemetry keys.
@@ -59,8 +57,7 @@ export function stripUnselectedTelemetryKeys(
 }
 
 /**
- * Re-attach core fields to the filtered entry.
- * Mutates the entry so the caller keeps the original reference.
+ * Re-attach core fields to the filtered entry so selection logic never removes mandatory telemetry anchors needed by downstream consumers and audits.
  *
  * @param sourceEntry - Filtered telemetry entry to update.
  * @param coreSnapshot - Snapshot of core fields to ensure presence.
@@ -80,7 +77,7 @@ export function mergeTelemetryCoreFields(
 }
 
 /**
- * Apply telemetry selection while swallowing selection errors.
+ * Apply telemetry selection while swallowing selection errors so non-critical projection failures cannot block generation-level telemetry recording in production runs reliably.
  *
  * @param telemetryContext - Neat-like context with telemetry selection.
  * @param telemetryEntry - Entry to filter in place.

@@ -25,7 +25,7 @@ const strictVisibleAgentPathsByName = new Map([
 ]);
 const strictVisibleAgentNames = new Set(strictVisibleAgentPathsByName.keys());
 const strictVisibleAgentPathPattern = /^\.github\/agents\/0[0-7]-/;
-const strictTier0StructuredFields = [
+const strictTier1StructuredFields = [
   'OUTPUT_CONTRACT',
   'TASK_STATUS',
   'TIER',
@@ -44,7 +44,8 @@ const strictTier0StructuredFields = [
   'SUB_ORCHESTRATORS_USED',
   'SUMMARY',
 ];
-const strictTier1CoordinatorPathsByName = new Map([
+const strictTier2CoordinatorPathsByName = new Map([
+  ['flappy-architecture-polish', '.github/agents/flappy-architecture-polish.agent.md'],
   ['green-test-failure-triage-coordinator', '.github/agents/green-test-failure-triage-coordinator.agent.md'],
   ['helping-agent-maintenance-coordinator', '.github/agents/helping-agent-maintenance-coordinator.agent.md'],
   ['helping-gap-resolution-coordinator', '.github/agents/helping-gap-resolution-coordinator.agent.md'],
@@ -53,9 +54,10 @@ const strictTier1CoordinatorPathsByName = new Map([
   ['planning-risk-coordinator', '.github/agents/planning-risk-coordinator.agent.md'],
   ['planning-test-strategy-coordinator', '.github/agents/planning-test-strategy-coordinator.agent.md'],
   ['research-codebase-coordinator', '.github/agents/research-codebase-coordinator.agent.md'],
+  ['solid-split', '.github/agents/solid-split.agent.md'],
 ]);
-const strictTier1CoordinatorPaths = new Set(strictTier1CoordinatorPathsByName.values());
-const strictTier1StructuredFields = [
+const strictTier2CoordinatorPaths = new Set(strictTier2CoordinatorPathsByName.values());
+const strictTier2StructuredFields = [
   'OUTPUT_CONTRACT',
   'TASK_STATUS',
   'TIER',
@@ -90,7 +92,8 @@ if (options.help) {
 }
 
 const agents = await collectAgents();
-const issues = agents.flatMap((agent) => validateAgent(agent, agents, options));
+const skillNames = await collectSkillNames();
+const issues = agents.flatMap((agent) => validateAgent(agent, agents, skillNames, options));
 issues.push(...validateGlobalAgentRules(agents, options));
 
 const report = {
@@ -119,7 +122,20 @@ async function collectAgents() {
   );
 }
 
-function validateAgent(agent, agents, { strict }) {
+async function collectSkillNames() {
+  const paths = await listMarkdownFiles('.github/skills', (relativePath) => relativePath.endsWith('/SKILL.md'));
+  const skills = await Promise.all(
+    paths.map(async (relativePath) => {
+      const text = await readWorkspaceFile(relativePath);
+      const parsed = parseFrontmatter(text, relativePath);
+      return parsed.data.name ?? relativePath.split('/').at(-2) ?? '';
+    }),
+  );
+
+  return new Set(skills.filter(Boolean));
+}
+
+function validateAgent(agent, agents, skillNames, { strict }) {
   const issues = [...agent.parseIssues];
   const { data, path: relativePath } = agent;
 
@@ -136,6 +152,12 @@ function validateAgent(agent, agents, { strict }) {
   }
   if ('agents' in data && !Array.isArray(data.agents)) {
     issues.push(issue('error', relativePath, '`agents` must be an inline array.'));
+  }
+  if (!('skills' in data)) {
+    issues.push(issue('error', relativePath, '`skills` is required and must be an inline array.'));
+  }
+  if ('skills' in data && !Array.isArray(data.skills)) {
+    issues.push(issue('error', relativePath, '`skills` must be an inline array.'));
   }
 
   if (Array.isArray(data.agents) && data.agents.length > 0 && !data.tools?.includes('agent')) {
@@ -155,6 +177,12 @@ function validateAgent(agent, agents, { strict }) {
     }
     if (childAgent === agent.name) {
       issues.push(issue('error', relativePath, 'Agent cannot list itself as a subagent.'));
+    }
+  }
+
+  for (const skillName of Array.isArray(data.skills) ? data.skills : []) {
+    if (!skillNames.has(skillName)) {
+      issues.push(issue('error', relativePath, `Unknown skill '${skillName}'.`));
     }
   }
 
@@ -234,16 +262,16 @@ function hasOutputContract(body) {
 function resolveStructuredPromptContract(agent) {
   if (strictVisibleAgentPathPattern.test(agent.path)) {
     return {
-      tier: '0',
-      requiredFields: strictTier0StructuredFields,
+      tier: '1',
+      requiredFields: strictTier1StructuredFields,
       expectedRole: agent.name,
     };
   }
 
-  if (strictTier1CoordinatorPaths.has(agent.path)) {
+  if (strictTier2CoordinatorPaths.has(agent.path)) {
     return {
-      tier: '1',
-      requiredFields: strictTier1StructuredFields,
+      tier: '2',
+      requiredFields: strictTier2StructuredFields,
       expectedRole: agent.name,
     };
   }
@@ -265,7 +293,7 @@ function validateStructuredV1PromptContract(agent, contract) {
   const detectedFields = parsedFields.map(({ field }) => field);
 
   if (detectedFields.length !== contract.requiredFields.length || detectedFields.some((field, index) => field !== contract.requiredFields[index])) {
-    issues.push(issue('error', agent.path, `Structured-v1 prompt fields must match the exact ${contract.tier === '0' ? 'Tier-0' : 'Tier-1'} order: ${contract.requiredFields.join(', ')}.`));
+    issues.push(issue('error', agent.path, `Structured-v1 prompt fields must match the exact ${contract.tier === '1' ? 'Tier-1' : 'Tier-2'} order: ${contract.requiredFields.join(', ')}.`));
   }
 
   for (const requiredField of contract.requiredFields) {

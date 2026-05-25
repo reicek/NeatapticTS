@@ -472,7 +472,7 @@ Checkpoint mode marker for strict full-resume bundles.
 
 ### GenomeControllerCarrier
 
-Internal genome view combining network serialization with controller-owned
+Internal genome view combining network serialization with controller-owned.
 metadata used by export and restore helpers.
 
 ### GenomeControllerMetaJSON

@@ -18,7 +18,8 @@ import type {
 import { NetworkStandaloneNoOutputNodesError } from './network.standalone.errors';
 
 /**
- * Cast a network instance to the internal standalone generation view.
+ * Reinterpret the runtime `Network` instance as the internal standalone
+ * property surface used by generator setup utilities.
  *
  * @param net Network instance to cast.
  * @returns Internal network properties used by the standalone generator.
@@ -28,7 +29,8 @@ export function asStandaloneProps(net: Network): NetworkStandaloneProps {
 }
 
 /**
- * Validate that the network has at least one output node.
+ * Enforce the standalone precondition that at least one output node exists
+ * before source generation proceeds.
  *
  * @param standaloneProps Internal standalone network view.
  * @returns Void.
@@ -49,10 +51,11 @@ export function ensureOutputNodesExist(
 }
 
 /**
- * Create a fresh generation context used across orchestration steps.
+ * Allocate a fresh emit-pass context that accumulates node indexes, cached
+ * activation sources, and generated body lines.
  *
  * @param standaloneProps Internal standalone network view.
- * @returns Initialized generation context.
+ * @returns Generation context with precision, index buffers, and emission state.
  */
 export function createGenerationContext(
   standaloneProps: NetworkStandaloneProps,
@@ -75,7 +78,8 @@ export function createGenerationContext(
 }
 
 /**
- * Resolve standalone storage precision from shared config and the legacy raw alias.
+ * Resolve standalone numeric precision by reconciling shared precision config
+ * with the legacy `_activationPrecision` override.
  *
  * @param standaloneProps Internal standalone network view.
  * @returns Resolved activation precision for generated storage.
@@ -98,7 +102,8 @@ function resolveStandaloneActivationPrecision(
 }
 
 /**
- * Seed index, activation, and state arrays from network nodes.
+ * Stamp stable per-node indexes and snapshot initial activation/state buffers
+ * used by emitted standalone runtime state.
  *
  * @param generationContext Mutable generation context.
  * @returns Void.

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when ONNX export cannot resolve a valid layered ordering.
  */
 export class NetworkOnnxLayerOrderingUnresolvableError extends Error {

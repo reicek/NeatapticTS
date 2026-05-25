@@ -1,4 +1,4 @@
-import Connection from '../../../connection';
+﻿import Connection from '../../../connection';
 import type Network from '../../network';
 import type NeatapticNode from '../../../node';
 import type {
@@ -53,7 +53,7 @@ export function restoreConcatMergeConnections(
 }
 
 /**
- * Attach validated concat-merge audit metadata onto an imported network.
+ * Attach validated concat-merge audit metadata to an imported network instance.
  *
  * @param network Target network.
  * @param metadata ONNX metadata payload.

@@ -95,6 +95,13 @@ const evolutionaryPolicy = {
 };
 ```
 
+Example:
+
+```ts
+import { Cost } from 'neataptic';
+const loss = Cost.mse([1, 0], [0.9, 0.1]); // 0.01
+```
+
 ## methods/methods.ts
 
 ### Activation

@@ -5,7 +5,8 @@ tier: 1
 model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
-agents: ['helping-gap-resolution-coordinator', 'helping-agent-maintenance-coordinator', 'Skill Inventory Auditor', 'Agent Frontmatter Auditor', 'skill-frontmatter-auditor', 'Model Name Auditor', 'Skill Trigger Eval Designer', 'Skill Output Eval Grader', 'Coverage Guard', 'learning-event-capturer', 'file-change-summarizer']
+agents: ['helping-gap-resolution-coordinator', 'helping-agent-maintenance-coordinator', 'skill-inventory-auditor', 'agent-frontmatter-auditor', 'skill-frontmatter-auditor', 'model-name-auditor', 'skill-trigger-eval-designer', 'skill-output-eval-grader', 'coverage-guard', 'learning-event-capturer', 'file-change-summarizer']
+skills: ['agent-frontmatter-standards', 'model-routing-and-budget', 'agent-inventory-audit', 'subagent-delegation-patterns']
 handoffs:
   - label: 'Plan Work'
     agent: '01-planning'
@@ -27,6 +28,7 @@ support CI/configuration checks, and return control to the active SDLC agent.
 - Do not create a session log unless the user asks for one.
 - Do not edit global user settings.
 - Keep always-on instructions short; put reusable workflow detail in agents or skills.
+- Use the generated canonical routing table at [../agent-skill-routing-table.md](../agent-skill-routing-table.md) when checking current agent and skill mappings or freshness.
 - Use `agent-frontmatter-standards`, `model-routing-and-budget`, `agent-inventory-audit`, and `subagent-delegation-patterns` instead of copying their durable policies here.
 - Apply low-risk local AI customization fixes immediately; ask before changing project behavior, coding standards, broad visibility, or runtime policy.
 
@@ -38,6 +40,12 @@ support CI/configuration checks, and return control to the active SDLC agent.
 4. Capture a learning event when an agent-system gap or reusable improvement was applied.
 5. Hand back to the relevant numbered SDLC orchestrator when the original work should continue.
 
+## If Blocked
+
+- If a gap cannot be resolved locally, escalate via the `00.cross-tier-helper` flow with the blocking evidence in `BLOCKERS`.
+- If the request requires changes outside the customization system boundary (production code, runtime policy), hand off to `01-planning` with a clear problem statement.
+- Set `TASK_STATUS: PARTIAL` and document the stall reason before returning.
+
 ## Output Format
 
 Return exactly one fenced `structured-v1` block and no prose before or after it.
@@ -47,7 +55,7 @@ Report participants, files, validations, blockers, and gaps truthfully. Use `NON
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
 TASK_STATUS: SUCCESS | PARTIAL | FAILED
-TIER: 0
+TIER: 1
 ROLE: 00-helping
 TASK_RECEIVED: <brief restatement>
 FILES_READ:

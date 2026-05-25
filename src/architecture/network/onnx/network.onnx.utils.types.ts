@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Types for NeatapticTS’s ONNX-like JSON export/import.
  *
  * This file is now the root compatibility barrel for shared ONNX type surfaces.
@@ -43,6 +43,14 @@
 import Connection from '../../connection';
 import type NeatapticNode from '../../node';
 import type { OnnxExportOptions } from './export/network.onnx.export.types';
+import type {
+  OnnxShape as OnnxShapeContract,
+  OnnxTensorType as OnnxTensorTypeContract,
+  OnnxValueInfo as OnnxValueInfoContract,
+} from './schema/network.onnx.schema.types';
+import type { OnnxImportConvLayerContext as OnnxImportConvLayerContextContract } from './import/network.onnx.import-weights.types';
+
+// Schema re-exports expose persisted wire-format contracts.
 export type {
   Conv2DMapping,
   OnnxAttribute,
@@ -51,12 +59,11 @@ export type {
   OnnxMetadataProperty,
   OnnxModel,
   OnnxNode,
-  OnnxShape,
   OnnxTensor,
-  OnnxTensorType,
-  OnnxValueInfo,
   Pool2DMapping,
 } from './schema/network.onnx.schema.types';
+
+// Export re-exports expose exporter-owned orchestration payloads.
 export type {
   AttentionMapping,
   ConcatMapping,
@@ -140,6 +147,8 @@ export type {
   SpecMetadataAppendContext,
   WeightToleranceComparisonContext,
 } from './export/network.onnx.export.types';
+
+// Import re-exports expose reconstruction-only payload and restoration contracts.
 export type {
   OnnxImportAttentionBlock,
   OnnxImportAdvancedGraphCrossLayerConnection,
@@ -165,7 +174,6 @@ export type {
   OnnxImportAggregatedNeuronAssignmentContext,
   OnnxImportConvCoordinateAssignmentContext,
   OnnxImportConvKernelAssignmentContext,
-  OnnxImportConvLayerContext,
   OnnxImportConvLayerContextBuildParams,
   OnnxImportConvMetadata,
   OnnxImportConvNodeSlices,
@@ -203,6 +211,30 @@ export type {
 } from './import/network.onnx.runtime-load.types';
 
 /**
+ * Canonical shape descriptor for ONNX tensors used by export, import, and schema validation paths.
+ * Each entry preserves axis intent so runtime bridges can validate rank-sensitive operators without guessing dimension semantics.
+ */
+export type OnnxShape = OnnxShapeContract;
+
+/**
+ * Canonical tensor element type shelf used by schema, import coercion, and export metadata emission.
+ * Keep this alias at the ONNX root so callers can depend on one stable type name while chapter ownership remains in schema contracts.
+ */
+export type OnnxTensorType = OnnxTensorTypeContract;
+
+/**
+ * Canonical tensor value-info descriptor used to name and type graph inputs, outputs, and intermediate values.
+ * This alias keeps metadata surfaces consistent across ONNX schema parsing, importer reconstruction, and exporter graph emission.
+ */
+export type OnnxValueInfo = OnnxValueInfoContract;
+
+/**
+ * Context payload used when rebuilding one imported convolution layer from ONNX graph metadata and tensor shelves.
+ * The contract captures grouped node slices, tensor mappings, and assignment state so reconstruction stays deterministic across import passes.
+ */
+export type OnnxImportConvLayerContext = OnnxImportConvLayerContextContract;
+
+/**
  * Runtime interface for accessing node internal properties.
  *
  * This is intentionally "internal": it exposes mutable fields that the ONNX exporter/importer
@@ -219,7 +251,7 @@ export interface NodeInternals {
   squash: ((x: number, derivate?: boolean) => number) & { name?: string };
 }
 
-/** Runtime node internals augmented with optional export index metadata. */
+/** Runtime node internals augmented with optional export index metadata, used for deterministic ONNX graph ordering. */
 export type NodeInternalsWithExportIndex = NodeInternals & {
   index?: number;
 };
@@ -242,21 +274,21 @@ export type NodeInternalsWithExportIndex = NodeInternals & {
  */
 export type ActivationFunction = NodeInternals['squash'];
 
-/** Node partitions used by ONNX layered-ordering inference traversal. */
+/** Node partitions used by ONNX layered-ordering inference traversal, grouping input, hidden, and output nodes. */
 export type LayerOrderingNodeGroups = {
   inputNodes: NeatapticNode[];
   hiddenNodes: NeatapticNode[];
   outputNodes: NeatapticNode[];
 };
 
-/** Mutable traversal state while resolving hidden-layer ordering. */
+/** Mutable traversal state while resolving hidden-layer ordering, carrying remaining nodes and accumulated layer groups. */
 export type LayerOrderingResolutionContext = {
   remainingHiddenNodes: NeatapticNode[];
   previousLayerNodes: NeatapticNode[];
   orderedLayers: NeatapticNode[][];
 };
 
-/** Layer-wise validation context for activation and connectivity checks. */
+/** Layer-wise validation context for activation and connectivity checks, supplying layer index and adjacent node lists. */
 export type LayerValidationTraversalContext = {
   layerIndex: number;
   previousLayerNodes: NeatapticNode[];
@@ -264,14 +296,14 @@ export type LayerValidationTraversalContext = {
   options: OnnxExportOptions;
 };
 
-/** Activation-homogeneity decision context for one current layer. */
+/** Activation-homogeneity decision context for one current layer, capturing activation names and mixed-activation policy. */
 export type LayerActivationValidationContext = {
   layerIndex: number;
   activationNames: (string | undefined)[];
   allowMixedActivations: boolean;
 };
 
-/** Connectivity decision context for one source-target node pair. */
+/** Connectivity decision context for one source-target node pair, including layer index and partial-connectivity policy. */
 export type LayerConnectivityValidationContext = {
   layerIndex: number;
   sourceNode: NeatapticNode;
@@ -279,7 +311,7 @@ export type LayerConnectivityValidationContext = {
   allowPartialConnectivity: boolean;
 };
 
-/** Supported ONNX activation operators recognized during activation import. */
+/** Supported ONNX activation operator strings recognized and mapped during network activation import traversal. */
 export type OnnxActivationOperation =
   | 'Tanh'
   | 'Sigmoid'
@@ -292,19 +324,19 @@ export type OnnxActivationOperation =
   | 'Mish'
   | 'Gelu';
 
-/** Layer-indexed activation operator lookup extracted from ONNX graph nodes. */
+/** Layer-indexed activation operator lookup extracted from ONNX graph nodes for import assignment passes. */
 export type OnnxActivationLayerOperations = Record<
   number,
   OnnxActivationOperation[]
 >;
 
-/** Parsed ONNX activation-node naming payload. */
+/** Parsed ONNX activation-node naming payload, carrying the extracted layer index and optional neuron index. */
 export type OnnxActivationParseResult = {
   layerIndex: number;
   neuronIndex?: number;
 };
 
-/** Shared activation-assignment context for hidden and output traversal. */
+/** Shared activation-assignment context for hidden and output traversal, grouping node lists and per-layer operations. */
 export type OnnxActivationAssignmentContext = {
   hiddenLayerSizes: number[];
   hiddenNodes: NodeInternals[];
@@ -312,7 +344,7 @@ export type OnnxActivationAssignmentContext = {
   operationsByLayer: OnnxActivationLayerOperations;
 };
 
-/** Hidden-layer traversal context for assigning imported activation functions. */
+/** Hidden-layer traversal context for assigning imported activation functions, carrying layer index, size, and node lists. */
 export type HiddenLayerActivationTraversalContext = {
   hiddenLayerIndex: number;
   hiddenLayerSize: number;
@@ -321,7 +353,7 @@ export type HiddenLayerActivationTraversalContext = {
   operationsByLayer: OnnxActivationLayerOperations;
 };
 
-/** Output-layer activation assignment context. */
+/** Output-layer activation assignment context, carrying output layer index, node list, and activation operations map. */
 export type OutputLayerActivationContext = {
   outputLayerIndex: number;
   outputNodes: NodeInternals[];
@@ -334,7 +366,7 @@ export type OnnxActivationOperationResolutionContext = {
   neuronIndex: number;
 };
 
-/** Coordinate for one Conv kernel weight lookup. */
+/** Coordinate for one Conv kernel weight lookup, encoding input channel index, kernel row, and column position. */
 export type OnnxConvKernelCoordinate = {
   inChannelIndex: number;
   kernelRowIndex: number;
@@ -344,7 +376,7 @@ export type OnnxConvKernelCoordinate = {
 /** Runtime factory map used to construct dynamic recurrent layer modules. */
 export type OnnxLayerFactory = Record<string, (...args: unknown[]) => unknown>;
 
-/** Runtime layer module shape widened for fused-recurrent reconstruction wiring. */
+/** Runtime layer module shape widened for fused-recurrent reconstruction wiring and dynamic layer factory dispatch. */
 export type OnnxRuntimeLayerFactoryMap =
   import('./import/network.onnx.runtime-load.types').OnnxRuntimeLayerModule &
     OnnxLayerFactory;

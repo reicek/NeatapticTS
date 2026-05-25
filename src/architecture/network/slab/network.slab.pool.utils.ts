@@ -1,5 +1,5 @@
 /**
- * Internal slab pool/stat helpers extracted from network.slab.utils.ts.
+ * Internal helpers for typed-array slab allocation, release, and pool stats.
  */
 import { defaultMemoryManager } from '../../../memory/manager';
 import type {
@@ -9,7 +9,8 @@ import type {
 } from './network.slab.utils.types';
 
 /**
- * Acquires a typed array from pool or allocates a fresh one.
+ * Acquire a typed-array slab for the requested key, reusing pooled capacity
+ * when available and allocating only on pool miss.
  *
  * @param kind - Pool kind discriminator.
  * @param ctor - Typed array constructor.
@@ -32,7 +33,8 @@ export function _acquireTA(
 }
 
 /**
- * Releases a typed array back to bounded per-key pool.
+ * Return a typed array to its bounded per-key slab pool so later activation
+ * passes can reuse capacity without reallocating.
  *
  * @param kind - Pool kind discriminator.
  * @param bytesPerElement - Element byte width for keying.
@@ -48,9 +50,10 @@ export function _releaseTA(
 }
 
 /**
- * Returns allocation stats snapshot for slab typed arrays.
+ * Produce a serializable view of slab allocation telemetry, including global
+ * fresh-versus-pooled counts and per-key pool depth.
  *
- * @returns Serializable snapshot of fresh, pooled, and per-key metrics.
+ * @returns Snapshot containing fresh, pooled, and per-key counters.
  */
 export function _getSlabAllocationStatsSnapshot() {
   return defaultMemoryManager.getTypedArrayAllocationStats() as {

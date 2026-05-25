@@ -3,7 +3,7 @@ import type { OnnxModel, OnnxNode } from '../schema/network.onnx.schema.types';
 const ACTIVATION_NODE_NAME_PATTERN = /^act(?:_conv)?_l\d+(?:_n\d+)?$/i;
 
 /**
- * Remove exporter-owned Identity activation nodes by rewiring their consumers.
+ * Remove exporter-owned Identity activation nodes and rewire all dependent consumers.
  *
  * @param model - ONNX-like model to optimize in place.
  * @returns Nothing.

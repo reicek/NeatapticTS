@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Error raised when a sparsity-budget max-connection cap is invalid.
  */
 export class NetworkPruneBudgetMaxConnectionsError extends RangeError {

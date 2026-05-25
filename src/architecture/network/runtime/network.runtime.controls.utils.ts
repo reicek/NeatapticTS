@@ -154,7 +154,7 @@ export function enableWeightNoise(
 }
 
 /**
- * Disable all configured weight noise.
+ * Disable all configured weight-noise mechanisms so subsequent training and inference passes execute without global or per-hidden-layer perturbation state, schedule updates, or hidden-layer noise carryover.
  *
  * @param this Target network instance.
  * @returns Nothing.
@@ -166,7 +166,7 @@ export function disableWeightNoise(this: Network): void {
 }
 
 /**
- * Set a dynamic scheduler for global weight noise.
+ * Set a dynamic scheduler for global weight noise so each training step can derive a new standard deviation from one explicit and testable policy function.
  *
  * @param this Target network instance.
  * @param schedule Function mapping the current training step to a standard deviation.
@@ -181,7 +181,7 @@ export function setWeightNoiseSchedule(
 }
 
 /**
- * Clear the dynamic global weight-noise schedule.
+ * Clear the dynamic global weight-noise schedule so future steps stop applying schedule-driven standard-deviation updates and keep only explicit static configuration.
  *
  * @param this Target network instance.
  * @returns Nothing.
@@ -221,7 +221,7 @@ export function testForceOverflow(this: Network): void {
 }
 
 /**
- * Read the current training-step counter.
+ * Read the current training-step counter so external schedulers, dashboards, and callback logic can align runtime control decisions with iteration progress.
  *
  * @param this Target network instance.
  * @returns Current training step.
@@ -232,7 +232,7 @@ export function getTrainingStep(this: Network): number {
 }
 
 /**
- * Read the last hidden-layer indices skipped by stochastic depth.
+ * Read the last hidden-layer indices skipped by stochastic depth so diagnostics can inspect which layers were bypassed in the most recent forward pass.
  *
  * @param this Target network instance.
  * @returns Snapshot of the last skipped hidden-layer indices.
@@ -243,7 +243,7 @@ export function getLastSkippedLayers(this: Network): number[] {
 }
 
 /**
- * Set the stochastic-depth schedule function.
+ * Set the stochastic-depth schedule function that updates survival probabilities over time using the current training step and previous schedule state.
  *
  * @param this Target network instance.
  * @param schedule Function mapping the current step and schedule to a new schedule.
@@ -258,7 +258,7 @@ export function setStochasticDepthSchedule(
 }
 
 /**
- * Clear the stochastic-depth schedule function.
+ * Clear the stochastic-depth schedule function so runtime behavior reverts to the currently stored static survival probabilities without additional per-step schedule adjustments.
  *
  * @param this Target network instance.
  * @returns Nothing.
@@ -269,7 +269,7 @@ export function clearStochasticDepthSchedule(this: Network): void {
 }
 
 /**
- * Read regularization statistics collected during training.
+ * Read regularization statistics collected during training so callers can inspect dropout, noise, and penalty telemetry without direct access to internal runtime fields.
  *
  * @param this Target network instance.
  * @returns Last regularization stats payload or `null` when none exists yet.
@@ -328,7 +328,7 @@ export function setStochasticDepth(
 }
 
 /**
- * Disable stochastic depth.
+ * Disable stochastic depth entirely so all hidden layers participate in every pass and no layer-skipping regularization is applied at runtime.
  *
  * @param this Target network instance.
  * @returns Nothing.

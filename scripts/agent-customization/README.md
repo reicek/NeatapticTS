@@ -19,6 +19,7 @@ frontmatter surface. They are noninteractive, JSON-capable, and idempotent.
 
 | Script | Command | Output |
 | --- | --- | --- |
+| `validate-agent-quality.mjs` | `node scripts/agent-customization/validate-agent-quality.mjs [--json]` | Validates agent body structure and `structured-v1` output-contract compliance for all `.agent.md` files |
 | `validate-agent-frontmatter.mjs` | `node scripts/agent-customization/validate-agent-frontmatter.mjs [--json]` | Validates required YAML frontmatter fields for all `.agent.md` files |
 | `validate-skill-frontmatter.mjs` | `node scripts/agent-customization/validate-skill-frontmatter.mjs [--json]` | Validates required YAML frontmatter fields for all `SKILL.md` files |
 | `validate-sdlc-skill-coverage.mjs` | `node scripts/agent-customization/validate-sdlc-skill-coverage.mjs [--json]` | Confirms numbered SDLC orchestrators reference the expected canonical skills |
@@ -31,6 +32,7 @@ frontmatter surface. They are noninteractive, JSON-capable, and idempotent.
 | Script | Command | Output |
 | --- | --- | --- |
 | `inventory-customizations.mjs` | `node scripts/agent-customization/inventory-customizations.mjs [--json]` | Inventories all customization files (agents, skills, flows, instructions) |
+| `generate-agent-skill-routing-table.mjs` | `node scripts/agent-customization/generate-agent-skill-routing-table.mjs [--json]` | Regenerates `.github/agent-skill-routing-table.md` from current agent and skill frontmatter with a normalized source hash |
 | `workflow-gap-audit.mjs` | `node scripts/agent-customization/workflow-gap-audit.mjs [--json]` | Audits workflow gaps: missing skills, gate health, flow-mention drift |
 
 ### Eval runners
@@ -47,6 +49,8 @@ Gates return a standard contract: `{ pass: boolean, evidence: object, fixHint: s
 | Gate | Command | Purpose |
 | --- | --- | --- |
 | `tier-enforcement-gate.mjs` | `node scripts/agent-customization/gates/tier-enforcement-gate.mjs [--json]` | Confirms all agents have valid `tier:` assignments and legal delegation edges |
+| `routing-table-freshness.gate.mjs` | `node scripts/agent-customization/gates/routing-table-freshness.gate.mjs [--json]` | Confirms the generated canonical routing table matches current `.github/agents/**` and `.github/skills/**` sources |
+| `agent-quality.gate.mjs` | `node scripts/agent-customization/gates/agent-quality.gate.mjs [--json]` | Wraps `validate-agent-quality.mjs`; confirms agent body structure and output-contract compliance |
 | `agent-graph.gate.mjs` | `node scripts/agent-customization/gates/agent-graph.gate.mjs [--json]` | Wraps `validate-agent-graph.mjs`; reports unknown refs and cycle violations |
 | `plan-sync.gate.mjs` | `node scripts/agent-customization/gates/plan-sync.gate.mjs [--json]` | Confirms active plans are registered in `plans/README.md` and `plans/Roadmap.md` |
 | `planning-output-contract.gate.mjs` | `node scripts/agent-customization/gates/planning-output-contract.gate.mjs [--json]` | Validates that planning phase output meets the structured-v1 contract |
@@ -76,7 +80,7 @@ These scripts run as stdio MCP servers registered in `.vscode/mcp.json`.
 
 | Server | Registration key | Registered tools |
 | --- | --- | --- |
-| `neataptic-gate-mcp.mjs` | `neataptic-gate-mcp` | `run_gate_check`, `run_tier_enforcement_gate`, `query_tier_graph` |
+| `neataptic-gate-mcp.mjs` | `neataptic-gate-mcp` | `run_gate_check`, `run_tier_enforcement_gate`, `query_tier_graph`, `query_customization_routing_table` |
 | `neataptic-validation-mcp.mjs` | `neataptic-validation-mcp` | Validation surface tools |
 | `neataptic-workflow-mcp.mjs` | `neataptic-workflow-mcp` | Workflow surface tools |
 
@@ -84,6 +88,11 @@ The `query_tier_graph` tool (served by `neataptic-gate-mcp`) returns the current
 inventory, violation list, and summary at runtime. It accepts optional boolean parameters:
 - `includeAgents` (default `true`): include per-agent inventory in the response.
 - `includeViolations` (default `true`): include the validation issue list in the response.
+
+The `query_customization_routing_table` tool returns the generated canonical routing-table
+rows plus freshness status for `.github/agent-skill-routing-table.md`. It accepts:
+- `includeRows` (default `true`): include agent and skill row data.
+- `includeMarkdown` (default `false`): include the full generated markdown body.
 
 After adding or modifying agent files, restart the `neataptic-gate-mcp` MCP server (or
 reload VS Code) for `query_tier_graph` to reflect the updated inventory.
@@ -141,4 +150,5 @@ npx jest --config=jest.config.mjs --selectProjects=agent-customization-scripts \
 3. Ensure `user-invocable: false` for Tiers 2–4.
 4. Declare only downward or same-lateral delegation in `agents: [...]` (Tier 4 must have an
    empty `agents:` list or omit it entirely).
-5. Run `node scripts/agent-customization/validate-agent-graph.mjs --json` to confirm zero violations.
+5. Declare `skills: [...]` explicitly on every agent, even when the list is empty.
+6. Run `node scripts/agent-customization/validate-agent-graph.mjs --json` to confirm zero violations.

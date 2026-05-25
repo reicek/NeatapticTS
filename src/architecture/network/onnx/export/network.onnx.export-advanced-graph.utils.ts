@@ -1,4 +1,4 @@
-import type Network from '../../network';
+﻿import type Network from '../../network';
 import type NeatapticNode from '../../../node';
 import type {
   OnnxMetadataProperty,
@@ -128,7 +128,8 @@ export function resolveOneHopResidualSourceLayerIndex(
 }
 
 /**
- * Build the reserved residual-branch tensor name for one layer pair.
+ * Build the reserved residual-branch tensor name for one layer pair in the explicit one-hop residual export subset.
+ * Deterministic naming keeps metadata, emitted nodes, and import reconstruction aligned across repeated exports.
  *
  * @param sourceLayerIndex Residual source layer index.
  * @param targetLayerIndex Residual target layer index.
@@ -142,7 +143,8 @@ export function buildResidualBranchTensorName(
 }
 
 /**
- * Build the deterministic residual merge node name for one target layer.
+ * Build the deterministic residual merge node name for one target layer in the residual-add emission path.
+ * Stable node identifiers simplify metadata correlation and reduce ambiguity during diagnostics.
  *
  * @param targetLayerIndex Target layer index.
  * @returns Residual merge node name.
@@ -152,7 +154,8 @@ export function buildResidualMergeNodeName(targetLayerIndex: number): string {
 }
 
 /**
- * Build the deterministic residual merge output tensor name for one target layer.
+ * Build the deterministic residual merge output tensor name for one target layer in advanced graph metadata.
+ * The naming contract ensures import-side residual mapping can trace merged outputs without heuristics.
  *
  * @param targetLayerIndex Target layer index.
  * @returns Residual merge output tensor name.
@@ -162,7 +165,8 @@ export function buildResidualMergeOutputName(targetLayerIndex: number): string {
 }
 
 /**
- * Build the deterministic concat merge node name for one layer pair.
+ * Build the deterministic concat merge node name for one layer pair in the explicit concat-branch subset.
+ * Consistent naming makes emitted merge structure easier to audit from metadata and exported graph nodes.
  *
  * @param sourceLayerIndex Skipped source layer index.
  * @param targetLayerIndex Concat target layer index.
@@ -176,7 +180,8 @@ export function buildConcatMergeNodeName(
 }
 
 /**
- * Build the deterministic concat merge output tensor name for one layer pair.
+ * Build the deterministic concat merge output tensor name for one layer pair used by advanced graph promotion.
+ * The output name contract allows import diagnostics to map concat merges back to source and target layers.
  *
  * @param sourceLayerIndex Skipped source layer index.
  * @param targetLayerIndex Concat target layer index.
@@ -190,7 +195,8 @@ export function buildConcatMergeOutputName(
 }
 
 /**
- * Append residual-add metadata for an emitted one-hop merge.
+ * Append residual-add metadata for an emitted one-hop merge while preserving existing metadata arrays deterministically.
+ * This keeps advanced graph records append-only and resilient when previous metadata payloads are malformed.
  *
  * @param model Target ONNX model.
  * @param residualAdd Emitted residual-add metadata record.
@@ -230,7 +236,8 @@ export function appendResidualAddMetadata(
 }
 
 /**
- * Append concat-merge metadata for an emitted explicit concat branch.
+ * Append concat-merge metadata for an emitted explicit concat branch while preserving prior metadata entries.
+ * The fallback parsing logic guarantees concat records stay recoverable even after unexpected metadata payload drift.
  *
  * @param model Target ONNX model.
  * @param concatMerge Emitted concat metadata record.

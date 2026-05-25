@@ -57,7 +57,11 @@ export function buildDenseWeightsAndBiases(
 }
 
 /**
- * Build a diagonal recurrent matrix from self-connections.
+ * Build a diagonal recurrent weight matrix from per-node self-connections.
+ *
+ * Only diagonal entries are populated because this helper encodes recurrent
+ * carry as one-step self-feedback for each destination neuron. Off-diagonal
+ * entries are emitted as zero to keep the matrix rectangular and deterministic.
  *
  * @param currentLayerNodes Layer nodes.
  * @returns Flattened row-major recurrent matrix.
@@ -105,7 +109,7 @@ export function emitOptionalPoolingAndFlatten(
 }
 
 /**
- * Append an integer index to JSON-array metadata key.
+ * Append a layer index to a JSON-array metadata field on the ONNX model.
  *
  * @param model Target model.
  * @param key Metadata key.
@@ -134,7 +138,7 @@ export function appendIndexedMetadata(
 }
 
 /**
- * Append a JSON object to JSON-array metadata key.
+ * Append a structured metadata object to a JSON-array metadata field safely.
  *
  * @param model Target model.
  * @param key Metadata key.
@@ -184,7 +188,10 @@ function collectDenseRows(context: DenseWeightBuildContext): DenseWeightRow[] {
 }
 
 /**
- * Fold dense rows into flattened ONNX initializer arrays.
+ * Fold per-target dense rows into ONNX initializer buffers.
+ *
+ * The fold preserves row-major order by destination neuron so downstream
+ * tensor shapes remain stable across exports of the same topology.
  *
  * @param denseRows Dense rows.
  * @returns Flattened dense initializer result.
@@ -198,7 +205,10 @@ function foldDenseRowsToInitializers(
 }
 
 /**
- * Collect source-to-target weights for one dense row.
+ * Collect one destination neuron's inbound weights in source-node order.
+ *
+ * Missing inbound edges are encoded as zeros to preserve a full rectangular
+ * matrix even for sparse connectivity.
  *
  * @param context Dense row collection context.
  * @returns Row weights in source-node order.
@@ -229,7 +239,10 @@ function resolveInboundWeight(
 }
 
 /**
- * Normalize a public node instance into ONNX export internals.
+ * Normalize a public node instance to the internal shape used by ONNX export helpers.
+ *
+ * This cast is intentionally localized so collection helpers stay strongly
+ * typed without repeating assertions at each call site.
  *
  * @param node Source node.
  * @returns Internal runtime-facing node representation.
@@ -239,7 +252,10 @@ function asNodeInternals(node: NeatapticNode): NodeInternals {
 }
 
 /**
- * Collect recurrent matrix rows for one layer.
+ * Collect all recurrent matrix rows for the current layer.
+ *
+ * Each row corresponds to one destination neuron and is assembled with
+ * diagonal-only recurrent semantics.
  *
  * @param context Recurrent matrix build context.
  * @returns Recurrent row collection.
@@ -258,7 +274,10 @@ function collectRecurrentRows(
 }
 
 /**
- * Collect one recurrent matrix row.
+ * Collect one recurrent matrix row for a destination neuron.
+ *
+ * Diagonal entries read the neuron's self-connection weight; all other
+ * coordinates remain zero.
  *
  * @param context Row collection context.
  * @returns Recurrent row values.
@@ -288,7 +307,9 @@ function resolveDiagonalRecurrentWeight(
 }
 
 /**
- * Resolve pooling emission context from optional pooling parameters.
+ * Resolve a normalized pooling emission context from optional export parameters.
+ *
+ * This helper centralizes optional-to-required conversion before node emission.
  *
  * @param params Optional pooling and flatten parameters.
  * @returns Pooling emission context.
@@ -335,7 +356,10 @@ function emitPoolingNode(context: PoolingEmissionContext): string {
 }
 
 /**
- * Collect ONNX pooling attributes from one pooling spec.
+ * Collect ONNX pooling attribute arrays from one pooling spec.
+ *
+ * Optional pad fields default to zero so exported nodes always carry explicit
+ * 2D padding metadata.
  *
  * @param poolSpec Pooling spec.
  * @returns Pooling attributes for ONNX node payload.
@@ -354,7 +378,9 @@ function collectPoolingAttributes(poolSpec: Pool2DMapping): PoolingAttributes {
 }
 
 /**
- * Conditionally emit flatten node after pooling.
+ * Conditionally emit a `Flatten` node after pooling.
+ *
+ * When disabled, the pooled tensor name is returned unchanged.
  *
  * @param context Flatten emission context.
  * @returns Output tensor name after optional flatten.
@@ -378,7 +404,9 @@ function emitOptionalFlattenAfterPooling(
 }
 
 /**
- * Append pooling metadata for one emitted pooling layer.
+ * Append pooling-layer metadata after a pooling node is emitted.
+ *
+ * Stores both the layer index list and the serialized pooling specification.
  *
  * @param context Pooling emission context.
  * @returns Nothing.
@@ -389,7 +417,9 @@ function appendPoolingMetadata(context: PoolingEmissionContext): void {
 }
 
 /**
- * Ensure model metadata registry exists.
+ * Ensure the ONNX model metadata registry exists and return it.
+ *
+ * The returned array is mutable and shared with `model.metadata_props`.
  *
  * @param model Target model.
  * @returns Mutable metadata registry.
@@ -415,7 +445,7 @@ function findMetadataProperty(
 }
 
 /**
- * Build a new index-array metadata property.
+ * Build a metadata property whose value is a JSON array of layer indexes.
  *
  * @param key Metadata key.
  * @param layerIndex Layer index.
@@ -429,7 +459,7 @@ function buildIndexedMetadataProperty(
 }
 
 /**
- * Build a new spec-array metadata property.
+ * Build a metadata property whose value is a JSON array of mapping specs.
  *
  * @param key Metadata key.
  * @param spec Mapping spec.
@@ -483,6 +513,8 @@ function serializeSpecMetadataValue(
 
 /**
  * Parse a metadata JSON array value safely.
+ *
+ * Returns `undefined` when parsing fails or when the payload is not an array.
  *
  * @param metadataValue Metadata JSON string.
  * @returns Parsed array when valid, otherwise undefined.

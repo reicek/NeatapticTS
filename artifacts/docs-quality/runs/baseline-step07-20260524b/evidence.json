@@ -1,0 +1,1031 @@
+{
+  "evidence": [
+    {
+      "file": "src/architecture/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 24,
+      "symbol": "default.construct"
+    },
+    {
+      "file": "src/architecture/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 14,
+      "symbol": "default.enforceMinimumHiddenLayerSizes"
+    },
+    {
+      "file": "src/architecture/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "default.gru"
+    },
+    {
+      "file": "src/architecture/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "default.lstm"
+    },
+    {
+      "file": "src/architecture/architect/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 24,
+      "symbol": "default.construct"
+    },
+    {
+      "file": "src/architecture/architect/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 14,
+      "symbol": "default.enforceMinimumHiddenLayerSizes"
+    },
+    {
+      "file": "src/architecture/architect/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "default.gru"
+    },
+    {
+      "file": "src/architecture/architect/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "default.lstm"
+    },
+    {
+      "file": "src/architecture/group.ts",
+      "issue": "high complexity",
+      "numericValue": 19,
+      "symbol": "default.connect"
+    },
+    {
+      "file": "src/architecture/group.ts",
+      "issue": "high complexity",
+      "numericValue": 26,
+      "symbol": "default.disconnect"
+    },
+    {
+      "file": "src/architecture/group.ts",
+      "issue": "high complexity",
+      "numericValue": 15,
+      "symbol": "default.gate"
+    },
+    {
+      "file": "src/architecture/group/group.ts",
+      "issue": "high complexity",
+      "numericValue": 19,
+      "symbol": "default.connect"
+    },
+    {
+      "file": "src/architecture/group/group.ts",
+      "issue": "high complexity",
+      "numericValue": 26,
+      "symbol": "default.disconnect"
+    },
+    {
+      "file": "src/architecture/group/group.ts",
+      "issue": "high complexity",
+      "numericValue": 15,
+      "symbol": "default.gate"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "high complexity",
+      "numericValue": 34,
+      "symbol": "openInferenceChannel"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "high complexity",
+      "numericValue": 16,
+      "symbol": "openSharedInferenceWorker"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "default"
+    },
+    {
+      "file": "src/architecture/network/deterministic/network.deterministic.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/genetic/network.genetic.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/network.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "default"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "activateUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "connectUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "deterministicUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "evolveUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "gatingUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "geneticUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "mutatePublicUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "mutateUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportBuildUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportConvUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportDenseUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportLayerCommonUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportLayerGraphUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportOrchestratorsUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportPostprocessUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportRecurrentUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportSetupUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxImportActivationsUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxImportFusedRecurrentUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxImportOrchestratorsUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxImportWeightsUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxLayerAnalysisUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxRuntimeLoadUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "pruneBudgetUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "pruneUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "removeUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "serializePublicUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "serializeUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabAdjacencyHelpersUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabFastPathHelpersUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabPoolUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabRebuildHelpersUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabSharedHelpersUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "standaloneUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "statsUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "topologyUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "trainingUtils"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/layers/network.onnx.export-conv.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 43,
+      "symbol": "tryEmitConvLayer"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "emitLayerGraph"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export-build.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 164,
+      "symbol": "buildOnnxModel"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export-flow.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 50,
+      "symbol": "runOnnxExportFlow"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-activations.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 15,
+      "symbol": "assignActivationFunctions"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 29,
+      "symbol": "reconstructFusedRecurrentLayers"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-orchestrators.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 29,
+      "symbol": "reconstructFusedRecurrentLayers"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "emitLayerGraph"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 50,
+      "symbol": "runOnnxExportFlow"
+    },
+    {
+      "file": "src/architecture/network/remove/network.remove.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/slab/network.slab.fast-path.helpers.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "_canUseFastSlab"
+    },
+    {
+      "file": "src/architecture/network/stats/network.stats.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.finalize.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 96,
+      "symbol": "trainFinalizeCore"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.gradient-clip.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 41,
+      "symbol": "applyGradientClippingCore"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.loop.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 47,
+      "symbol": "trainSetCore"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.smoothing.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 17,
+      "symbol": "computeMonitoredError"
+    },
+    {
+      "file": "src/architecture/network/worker-payload/network.worker-payload.channel.ts",
+      "issue": "high complexity",
+      "numericValue": 34,
+      "symbol": "openInferenceChannel"
+    },
+    {
+      "file": "src/architecture/network/worker-payload/network.worker-payload.channel.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "INFERENCE_CHANNEL_HOST_INTERNALS"
+    },
+    {
+      "file": "src/architecture/network/worker-payload/network.worker-payload.channel.worker.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "INFERENCE_CHANNEL_WORKER_INTERNALS"
+    },
+    {
+      "file": "src/architecture/network/worker-payload/network.worker-payload.shared.ts",
+      "issue": "high complexity",
+      "numericValue": 16,
+      "symbol": "openSharedInferenceWorker"
+    },
+    {
+      "file": "src/architecture/network/worker-payload/network.worker-payload.shared.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "SHARED_INFERENCE_HOST_INTERNALS"
+    },
+    {
+      "file": "src/architecture/network/worker-payload/network.worker-payload.shared.worker.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "SHARED_INFERENCE_WORKER_INTERNALS"
+    },
+    {
+      "file": "src/architecture/network/worker-payload/network.worker-payload.ts",
+      "issue": "high complexity",
+      "numericValue": 34,
+      "symbol": "openInferenceChannel"
+    },
+    {
+      "file": "src/architecture/network/worker-payload/network.worker-payload.ts",
+      "issue": "high complexity",
+      "numericValue": 16,
+      "symbol": "openSharedInferenceWorker"
+    },
+    {
+      "file": "src/architecture/node.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "default._activateCore"
+    },
+    {
+      "file": "src/architecture/node.ts",
+      "issue": "high complexity",
+      "numericValue": 111,
+      "symbol": "default.applyBatchUpdatesWithOptimizer"
+    },
+    {
+      "file": "src/architecture/node.ts",
+      "issue": "high complexity",
+      "numericValue": 20,
+      "symbol": "default.mutate"
+    },
+    {
+      "file": "src/architecture/node.ts",
+      "issue": "high complexity",
+      "numericValue": 52,
+      "symbol": "default.propagate"
+    },
+    {
+      "file": "src/architecture/node/node.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "default._activateCore"
+    },
+    {
+      "file": "src/architecture/node/node.ts",
+      "issue": "high complexity",
+      "numericValue": 111,
+      "symbol": "default.applyBatchUpdatesWithOptimizer"
+    },
+    {
+      "file": "src/architecture/node/node.ts",
+      "issue": "high complexity",
+      "numericValue": 20,
+      "symbol": "default.mutate"
+    },
+    {
+      "file": "src/architecture/node/node.ts",
+      "issue": "high complexity",
+      "numericValue": 52,
+      "symbol": "default.propagate"
+    },
+    {
+      "file": "src/architecture/nodePool.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/nodePool/nodePool.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/onnx.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 24,
+      "symbol": "Architect.construct"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 14,
+      "symbol": "Architect.enforceMinimumHiddenLayerSizes"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "Architect.gru"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "Architect.lstm"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 19,
+      "symbol": "Group.connect"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 26,
+      "symbol": "Group.disconnect"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 15,
+      "symbol": "Group.gate"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "Node._activateCore"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 111,
+      "symbol": "Node.applyBatchUpdatesWithOptimizer"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 20,
+      "symbol": "Node.mutate"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 52,
+      "symbol": "Node.propagate"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "config"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "methods"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "Network"
+    },
+    {
+      "file": "src/methods/cost/cost.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "default"
+    },
+    {
+      "file": "src/methods/methods.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "Cost"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "absoluteActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "ACTIVATION_FUNCTIONS"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "bentIdentityActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "bipolarActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "bipolarSigmoidActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "gaussianActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "geluActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "hardTanhActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "identityActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "inverseActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "logisticActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "mishActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "reluActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "seluActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "sinusoidActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "softplusActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "softsignActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "stepActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "swishActivation"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "tanhActivation"
+    },
+    {
+      "file": "src/multithreading/types.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "SerializableNetwork"
+    },
+    {
+      "file": "src/multithreading/types.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "SerializedSample"
+    },
+    {
+      "file": "src/multithreading/types.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "TestWorkerConstructor"
+    },
+    {
+      "file": "src/multithreading/types.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "TestWorkerInstance"
+    },
+    {
+      "file": "src/neat/adaptive/mutation/adaptive.mutation.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "resolveMutationSettings"
+    },
+    {
+      "file": "src/neat/adaptive/mutation/adaptive.mutation.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "resolveMutationSettings"
+    },
+    {
+      "file": "src/neat/evaluate/evaluate.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/neat/evolve/adaptive/evolve.adaptive.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 13,
+      "symbol": "applyAutoCompatibilityTuning"
+    },
+    {
+      "file": "src/neat/evolve/objectives/evolve.objectives.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 12,
+      "symbol": "applyDynamicObjectiveSchedule"
+    },
+    {
+      "file": "src/neat/export/neat.export.population.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 22,
+      "symbol": "hydrateGenomeControllerMeta"
+    },
+    {
+      "file": "src/neat/export/neat.export.runtime.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 13,
+      "symbol": "restoreRuntimeMeta"
+    },
+    {
+      "file": "src/neat/export/neat.export.runtime.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 13,
+      "symbol": "serializeRuntimeMeta"
+    },
+    {
+      "file": "src/neat/export/neat.export.speciation.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 18,
+      "symbol": "restoreSpeciationCheckpoint"
+    },
+    {
+      "file": "src/neat/export/neat.export.ts",
+      "issue": "high complexity",
+      "numericValue": 17,
+      "symbol": "importLightStateImpl"
+    },
+    {
+      "file": "src/neat/export/neat.export.ts",
+      "issue": "high complexity",
+      "numericValue": 22,
+      "symbol": "importStateImpl"
+    },
+    {
+      "file": "src/neat/export/neat.export.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 17,
+      "symbol": "assertSerializedGenomeCarriesCheckpointIdentity"
+    },
+    {
+      "file": "src/neat/init/neat.init.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "NeatConstructorDefaults"
+    },
+    {
+      "file": "src/neat/speciation/sharing/speciation.sharing.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 12,
+      "symbol": "applyFitnessSharing"
+    },
+    {
+      "file": "src/neat/telemetry/recorder/telemetry.recorder.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "buildTelemetryEntry"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 24,
+      "symbol": "Architect.construct"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 14,
+      "symbol": "Architect.enforceMinimumHiddenLayerSizes"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "Architect.gru"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "Architect.lstm"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 19,
+      "symbol": "Group.connect"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 26,
+      "symbol": "Group.disconnect"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 15,
+      "symbol": "Group.gate"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "Node._activateCore"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 111,
+      "symbol": "Node.applyBatchUpdatesWithOptimizer"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 20,
+      "symbol": "Node.mutate"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 52,
+      "symbol": "Node.propagate"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 34,
+      "symbol": "openInferenceChannel"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 16,
+      "symbol": "openSharedInferenceWorker"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 18,
+      "symbol": "resolveNetworkVisualizationTopologyPlan"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "config"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "methods"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "multi"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "Network"
+    },
+    {
+      "file": "src/visualization/network-view/network-view.topology.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 18,
+      "symbol": "resolveNetworkVisualizationTopologyPlan"
+    },
+    {
+      "file": "src/visualization/visualization.ts",
+      "issue": "high complexity",
+      "numericValue": 18,
+      "symbol": "resolveNetworkVisualizationTopologyPlan"
+    }
+  ],
+  "normalizedEvidenceDigest": "3f1306c9074f8803989750ff8ee0b72f20960fa017a4d9655a280d01d0d3a983"
+}

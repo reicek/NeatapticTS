@@ -1,8 +1,19 @@
+﻿/**
+ * Memory manager configuration — constants, types, and registry shapes.
+ *
+ * This module owns the stable, side-effect-free vocabulary consumed by
+ * `MemoryManager`. Splitting config from the manager class keeps the constant
+ * and type surface independently importable: tests, diagnostics tooling, and
+ * worker payloads can reference `MemoryManagerFlagName` or
+ * `MEMORY_DEFAULT_SLAB_POOL_MAX_PER_KEY` without pulling in the manager's
+ * mutable state or constructor dependencies.
+ *
+ * @module memory/config
+ */
 import type { NeatapticConfig } from '../config';
 
 /**
- * Default retained prewarm count for activation-pool warmup when callers leave
- * the global memory config unset.
+ * Default retained prewarm count for activation-pool warmup when callers leave the global memory config unset.
  */
 export const MEMORY_DEFAULT_ACTIVATION_POOL_PREWARM_COUNT = 2;
 
@@ -12,8 +23,7 @@ export const MEMORY_DEFAULT_ACTIVATION_POOL_PREWARM_COUNT = 2;
 export const MEMORY_DEFAULT_SLAB_POOL_MAX_PER_KEY = 4;
 
 /**
- * Browser slab-growth factor used to trade smaller reallocations for lower
- * retained memory pressure in constrained heaps.
+ * Browser slab-growth factor used to trade smaller reallocations for lower retained memory pressure in constrained heaps.
  */
 export const MEMORY_SLAB_GROWTH_FACTOR_BROWSER = 1.25;
 

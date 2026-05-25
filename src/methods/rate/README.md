@@ -277,7 +277,7 @@ createCosineAnnealingRateSchedule(
 ): RateSchedule
 ```
 
-Returns a cosine annealing learning rate schedule.
+Return a cosine-annealing learning-rate schedule that oscillates between base and minimum rates within each period to encourage periodic exploratory updates.
 
 Parameters:
 - `period` - Length of a full cosine cycle.
@@ -295,7 +295,7 @@ createCosineAnnealingWarmRestartsSchedule(
 ): RateSchedule
 ```
 
-Returns a cosine annealing schedule with warm restarts and growing cycles.
+Return a cosine-annealing schedule with warm restarts and optional period growth so each cycle can reset aggressiveness while gradually lengthening exploration windows.
 
 Parameters:
 - `initialPeriod` - Length of the initial cycle.
@@ -312,7 +312,7 @@ createExponentialRateSchedule(
 ): RateSchedule
 ```
 
-Returns an exponential decay learning rate schedule.
+Return an exponential-decay learning-rate schedule that scales the base rate every iteration, producing smooth monotonic annealing across long training runs.
 
 Parameters:
 - `decayFactor` - Multiplicative decay applied every iteration.
@@ -325,7 +325,7 @@ Returns: A learning rate schedule implementing exponential decay.
 createFixedRateSchedule(): RateSchedule
 ```
 
-Returns a schedule that always yields the base learning rate.
+Return a schedule that always yields the base learning rate so callers can disable dynamic decay while still using the shared scheduler pipeline.
 
 Returns: A learning rate schedule that ignores iteration and returns baseRate.
 
@@ -338,7 +338,7 @@ createInverseRateSchedule(
 ): RateSchedule
 ```
 
-Returns an inverse decay learning rate schedule.
+Return an inverse-decay learning-rate schedule whose denominator grows with iteration so decay slows over time while remaining continuous and stable.
 
 Parameters:
 - `decayFactor` - Decay factor controlling the decay rate.
@@ -356,7 +356,7 @@ createLinearWarmupDecaySchedule(
 ): RateSchedule
 ```
 
-Returns a linear warmup followed by linear decay schedule.
+Return a linear warmup followed by linear decay schedule so optimization ramps safely from small initial steps before annealing toward a configurable terminal rate.
 
 Parameters:
 - `totalStepCount` - Total number of steps in the schedule (must be positive).
@@ -373,7 +373,7 @@ createReduceOnPlateauSchedule(
 ): ReduceOnPlateauSchedule
 ```
 
-Returns a ReduceLROnPlateau-style schedule that lowers the rate when no improvement is seen.
+Return a ReduceLROnPlateau-style schedule that lowers the rate when monitored error stops improving, with explicit patience, cooldown, and minimum-rate guardrails for stable adaptive decay.
 
 Parameters:
 - `options` - Optional configuration for factor, patience, minDelta, cooldown, and minimum rate.
@@ -389,7 +389,7 @@ createStepRateSchedule(
 ): RateSchedule
 ```
 
-Returns a step decay learning rate schedule.
+Return a step-decay learning-rate schedule that applies multiplicative drops at fixed iteration intervals for predictable staircase-style annealing behavior in long-running optimization loops.
 
 Parameters:
 - `decayFactor` - Multiplicative decay applied at each decay step.

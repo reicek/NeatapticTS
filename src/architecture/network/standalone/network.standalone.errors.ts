@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when standalone generation is requested for a network without output nodes.
  */
 export class NetworkStandaloneNoOutputNodesError extends Error {

@@ -91,8 +91,8 @@ export function createGenomeFromNetwork(
 }
 
 /**
- * Convert one versioned network JSON payload into the strict NEAT genome
- * contract.
+ * Convert one versioned network JSON payload into the strict NEAT genome contract with canonical node ordering and validated edge identities.
+ * This conversion isolates phenotype serialization details from genome-native heredity and compatibility workflows.
  *
  * @param networkJson - Versioned phenotype JSON payload.
  * @param captureOptions - Optional opt-in runtime-to-genome extension capture settings.
@@ -133,8 +133,8 @@ export function createGenomeFromNetworkJson(
 }
 
 /**
- * Convert one strict genome contract into the versioned network JSON payload
- * understood by the runtime phenotype serializer.
+ * Convert one strict genome contract into the versioned network JSON payload understood by the runtime phenotype serializer.
+ * The mapping preserves historical identifiers so roundtrips remain deterministic for replay and checkpoint lanes.
  *
  * @param genome - Strict structural genome contract.
  * @param runtimeHints - Optional phenotype-only metadata to preserve.
@@ -216,7 +216,8 @@ export function createNetworkJsonFromGenome(
 }
 
 /**
- * Materialize one executable phenotype from the strict genome contract.
+ * Materialize one executable phenotype from the strict genome contract after validation and JSON reconstruction.
+ * Runtime-only hints and optional extension-derived knobs are applied after structural materialization completes.
  *
  * @param genome - Strict structural genome contract.
  * @param runtimeHints - Optional phenotype-only metadata to preserve.
@@ -242,7 +243,8 @@ export function createNetworkFromGenome(
 }
 
 /**
- * Validate one strict genome contract.
+ * Validate one strict genome contract and return a structured report covering size, node, connection, and extension invariants.
+ * Callers can use the report for diagnostics-first flows without throwing on first failure.
  *
  * @param genome - Strict structural genome contract.
  * @returns Structured validation report.
@@ -269,7 +271,8 @@ export function validateGenomeContract(
 }
 
 /**
- * Assert that one strict genome contract is valid.
+ * Assert that one strict genome contract is valid and throw a rich validation error when any invariant fails.
+ * This guard keeps downstream genome operators free from repetitive defensive contract checks.
  *
  * @param genome - Strict structural genome contract.
  * @returns Nothing.

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when a node mutation call receives a null or undefined method.
  */
 export class NodeMutationMethodRequiredError extends Error {

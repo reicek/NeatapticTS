@@ -1,9 +1,12 @@
-type BrowserDocumentLike = {
+﻿type BrowserDocumentLike = {
   currentScript?: { src?: string | null } | null;
 };
 
 /**
- * Options for resolving a browser worker asset URL.
+ * Options for resolving a browser worker asset URL relative to the current script or an explicit base URL override.
+ *
+ * When `baseUrl` is omitted the helper falls back to `document.currentScript.src`
+ * and then `location.href`, keeping the worker and host bundle co-located by default.
  */
 export interface BrowserWorkerAssetUrlOptions {
   /**

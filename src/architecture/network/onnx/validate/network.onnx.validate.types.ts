@@ -1,4 +1,4 @@
-/** External validator identifier for the current Phase 8 validation lane. */
+﻿/** External validator identifier for the current Phase 8 validation lane. */
 export type OnnxBinaryValidatorName = 'onnxruntime-node';
 
 /** Failure categories surfaced by the current Phase 8 binary validation lane. */

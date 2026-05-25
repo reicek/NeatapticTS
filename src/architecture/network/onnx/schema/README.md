@@ -64,7 +64,10 @@ The exporter writes three main collections here:
 
 ### OnnxMetadataProperty
 
-Canonical metadata key-value pair used in ONNX model metadata_props.
+Canonical metadata key-value pair used by `OnnxModel.metadata_props`.
+
+Keys are exporter-defined semantic hints (for example layout or fallback
+reasons) and values are serialized as plain strings.
 
 ### OnnxModel
 
@@ -96,7 +99,9 @@ exported payload easy to serialize, inspect, and diff as plain JSON.
 
 ### OnnxShape
 
-ONNX tensor type shape.
+Tensor-shape envelope used by ONNX value and initializer descriptors.
+
+The `dim` array preserves rank and per-axis declarations in order.
 
 ### OnnxTensor
 
@@ -109,11 +114,14 @@ shape.
 
 ### OnnxTensorType
 
-ONNX tensor type.
+ONNX tensor type descriptor combining element type and shape metadata.
 
 ### OnnxValueInfo
 
-ONNX value info (input/output description).
+Input or output boundary descriptor for an ONNX graph.
+
+Export uses this to declare the tensor contracts expected at graph entry and
+produced at graph exit.
 
 ### Pool2DMapping
 
@@ -158,6 +166,7 @@ createFloat16StoragePayload(
 ```
 
 Create a float16-backed tensor payload from float32 values.
+This helper emits the exact storage fields expected by ONNX initializer writers so callers can downgrade precision while keeping exporter and importer tensor contracts structurally consistent.
 
 Parameters:
 - `floatValues` - Float32-domain values to pack.
@@ -188,6 +197,7 @@ decodeFloat16Int32Data(
 ```
 
 Decode packed float16 words stored as int32 entries into float32-domain values.
+Decoder output is normalized to JavaScript number values so upstream importer logic can reuse one scalar path regardless of original tensor storage precision.
 
 Parameters:
 - `packedValues` - Packed float16 words.
@@ -218,6 +228,7 @@ encodeFloat16Int32Data(
 ```
 
 Encode float32-domain values into packed float16 words stored as int32 entries.
+Packing through this utility keeps round-trip behavior aligned with the paired decoder used by import and schema audit paths, including special-value handling.
 
 Parameters:
 - `floatValues` - Float values to encode.
@@ -241,6 +252,7 @@ readOnnxTensorFloatData(
 ```
 
 Read a tensor's floating-point values regardless of whether it is stored as float32 or float16.
+This abstraction gives importer and analysis utilities one read entrypoint that transparently handles native float shelves and packed float16 compatibility shelves.
 
 Parameters:
 - `tensor` - Source ONNX tensor.

@@ -1,4 +1,4 @@
-import Layer from '../../../layer/layer';
+﻿import Layer from '../../../layer/layer';
 import Network from '../../network';
 import type {
   OnnxPerceptronBuildContext,

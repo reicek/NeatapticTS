@@ -417,7 +417,7 @@ computeSlope(
 ): number
 ```
 
-Compute linear regression slope using ordinary least squares.
+Compute the best-fit trend slope for score history using ordinary least squares.
 
 Parameters:
 - `history` - Rolling history of best scores.
@@ -488,7 +488,7 @@ normalizeSlope(
 ): number
 ```
 
-Normalize slope magnitude relative to initial score.
+Normalize slope magnitude against the initial score for stable comparisons.
 
 Parameters:
 - `slope` - Raw OLS slope.

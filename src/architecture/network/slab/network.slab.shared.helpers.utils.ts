@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import type Node from '../../node';
 import type { NetworkSlabProps } from './network.slab.utils.types';
 

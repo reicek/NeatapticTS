@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Core neuron chapter for the architecture surface.
  *
  * This folder now owns the library's lowest-level unit of computation: the
@@ -51,10 +51,22 @@ interface NodeOptimizerProps {
   batchNorm?: boolean;
 }
 
-/** Runtime-supported primitive roles for architecture-building surfaces. */
+/**
+ * Runtime-supported primitive roles for architecture-building surfaces.
+ *
+ * - `'input'`: receives the external stimulus vector; no bias computation.
+ * - `'hidden'`: standard neuron with bias, activation function, and trace storage.
+ * - `'output'`: emits the network result; error and gradient accumulation begin here during back-propagation.
+ */
 export type PrimitiveNodeType = 'input' | 'hidden' | 'output';
 
-/** Small semantic hints that later architecture tooling can read safely. */
+/**
+ * Semantic role hints that later architecture tooling can attach to individual primitives.
+ *
+ * These labels do not change activation math — they let diagnostics, visualizers, and
+ * builders identify what a node represents conceptually (e.g. `'gate'` for gating neurons,
+ * `'memory'` for LSTM cell nodes, `'attention'` for attention-head units).
+ */
 export type PrimitiveIntent =
   | 'attention'
   | 'convolution'
@@ -67,10 +79,10 @@ export type PrimitiveIntent =
   | 'recurrent'
   | 'state';
 
-/** Scalar metadata values retained on architecture primitives. */
+/** Scalar metadata value types retained on architecture primitives. Kept narrow so metadata bags are safe to serialize and diff across checkpoints. */
 export type PrimitiveMetadataValue = boolean | null | number | string;
 
-/** Lightweight metadata bag for architecture primitives. */
+/** Lightweight key-value metadata bag attached to architecture primitives. Keys are free-form strings; values are restricted to serializable scalars. */
 export type PrimitiveMetadata = Record<string, PrimitiveMetadataValue>;
 
 /**
@@ -97,7 +109,14 @@ export interface PrimitiveDescriptor {
   metadata?: PrimitiveMetadata;
 }
 
-/** Resolve public primitive intent from a runtime node type when possible. */
+/**
+ * Resolve a public primitive intent from a runtime node type string.
+ *
+ * Returns the intent that matches the type when the type is one of the
+ * three standard roles (`'input'`, `'hidden'`, `'output'`), or `null`
+ * for any other string. Used by descriptor helpers to stamp a default
+ * intent without requiring the caller to repeat the role mapping.
+ */
 export function resolvePrimitiveIntent(
   nodeType: string,
 ): PrimitiveIntent | null {
@@ -235,10 +254,10 @@ export default class Node {
    */
   index?: number;
   /**
-   * Internal flag to detect cycles during activation
+   * Internal flag to detect cycles during activation.
    */
   private isActivating?: boolean;
-  /** Stable per-node gene identifier for NEAT innovation reuse */
+  /** Stable per-node gene identifier for NEAT innovation reuse. */
   geneId: number;
 
   /**

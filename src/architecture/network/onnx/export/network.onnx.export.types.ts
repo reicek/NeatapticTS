@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Export-owned execution and payload types for NeatapticTS ONNX serialization.
  *
  * This chapter holds the types that belong to the exporter implementation:
@@ -19,6 +19,7 @@
  */
 
 import type NeatapticNode from '../../../node';
+// Schema contracts define persisted ONNX-like JSON nodes, tensors, and attributes.
 import type {
   Conv2DMapping,
   OnnxDimension,
@@ -26,6 +27,7 @@ import type {
   OnnxModel,
   Pool2DMapping,
 } from '../schema/network.onnx.schema.types';
+// Root utility contracts expose runtime bridge types reused by export helpers.
 import type {
   NodeInternals,
   OnnxConvKernelCoordinate,
@@ -136,7 +138,7 @@ export type OnnxPrecisionOptions = {
   metadata?: boolean;
 };
 
-/** External calibration packet declaration for static quantization requests. */
+/** External calibration packet for one quantization layer target, capturing min and max float bounds. */
 export type OnnxQuantizationCalibrationRange = {
   min: number;
   max: number;
@@ -150,19 +152,19 @@ export type OnnxQuantizationCalibrationLayerTarget = {
   outputRange: OnnxQuantizationCalibrationRange;
 };
 
-/** Supported weight-range reduction policy for the first calibration contract. */
+/** Supported weight-range reduction policy for the first calibration contract; only 'min-max' is accepted. */
 export type OnnxQuantizationCalibrationWeightRangePolicy = 'min-max';
 
-/** Zero-inclusion policy for exported calibration parameters. */
+/** Zero-inclusion policy for exported calibration parameters; controls whether zero must fall within the quantization range. */
 export type OnnxQuantizationCalibrationZeroInclusionPolicy = 'required';
 
-/** Symmetry policy for activation and weight quantization parameters. */
+/** Symmetry policy for activation and weight quantization parameters; 'symmetric' or 'asymmetric' options are both accepted. */
 export type OnnxQuantizationCalibrationSymmetry = 'symmetric' | 'asymmetric';
 
-/** Rounding policy for deterministic zero-point resolution. */
+/** Rounding policy for deterministic zero-point resolution; only 'nearest-even' is currently accepted by the exporter. */
 export type OnnxQuantizationCalibrationRoundingMode = 'nearest-even';
 
-/** External calibration packet declaration for static quantization requests. */
+/** External calibration packet for static quantization, grouping source tag, layer targets, and policy selections. */
 export type OnnxQuantizationCalibrationOptions = {
   source: 'external';
   packetId?: string;
@@ -175,7 +177,7 @@ export type OnnxQuantizationCalibrationOptions = {
   roundingMode?: OnnxQuantizationCalibrationRoundingMode;
 };
 
-/** Resolved calibration packet with exporter-owned defaults applied. */
+/** Resolved calibration packet with exporter-owned defaults applied; all optional policy fields are filled in before emission. */
 export type OnnxResolvedQuantizationCalibrationOptions = {
   source: 'external';
   packetId?: string;
@@ -261,14 +263,14 @@ export type OnnxQuantizationOptions =
   | OnnxStaticQuantizationOptions
   | OnnxDynamicQuantizationOptions;
 
-/** Resolved reduced-precision packet used by build orchestration. */
+/** Resolved reduced-precision packet for build orchestration, carrying the requested flag, mode, and metadata inclusion decision. */
 export type OnnxResolvedPrecisionOptions = {
   requested: boolean;
   mode: 'float32' | 'storage-fp16';
   metadata: boolean;
 };
 
-/** Resolved quantization packet used by build orchestration. */
+/** Resolved quantization packet for build orchestration, covering unresolved, static-8bit, and dynamic-uint8 branches. */
 export type OnnxResolvedQuantizationOptions =
   | {
       requested: false;
@@ -336,7 +338,7 @@ export type ExportNodeIndexAssignmentContext = {
   exportIndex: number;
 };
 
-/** Heuristic LSTM pattern stub for metadata output. */
+/** Heuristic LSTM pattern stub for metadata output, holding the detected layer index and unit size. */
 export type LstmPatternStub = {
   layerIndex: number;
   unitSize: number;
@@ -348,7 +350,7 @@ export type LstmLayerTraversalContext = {
   hiddenLayerNodes: NeatapticNode[];
 };
 
-/** Candidate context for validating one LSTM-like hidden layer pattern. */
+/** Candidate context for validating one LSTM-like hidden layer pattern against the expected node count. */
 export type LstmCandidateContext = {
   layerIndex: number;
   totalNodes: number;
@@ -356,7 +358,7 @@ export type LstmCandidateContext = {
   memorySliceNodes: NeatapticNode[];
 };
 
-/** Traversal context for one hidden layer during Conv inference. */
+/** Traversal context for one hidden layer during Conv inference, including declared mappings and pool specs per layer. */
 export type ConvInferenceTraversalContext = {
   layerIndex: number;
   previousLayerNodes: NeatapticNode[];
@@ -378,19 +380,19 @@ export type ConvInferenceEvaluationContext = {
   allowsExactFitKernel: boolean;
 };
 
-/** Kernel candidate context for one Conv inference evaluation pass. */
+/** Kernel candidate context for one Conv inference evaluation pass, carrying kernel size and width bounds. */
 export type ConvInferenceKernelEvaluationContext = {
   evaluationContext: ConvInferenceEvaluationContext;
   kernelSize: number;
 };
 
-/** Collected inferred Conv metadata payload. */
+/** Collected inferred Conv metadata payload, holding inferred layer indices and their derived Conv2DMapping specs. */
 export type ConvInferenceResult = {
   inferredLayers: number[];
   inferredSpecs: (Conv2DMapping & { note?: string })[];
 };
 
-/** Resolved options used by ONNX model build orchestration. */
+/** Resolved options for ONNX model build orchestration, with all export option defaults already applied and normalized. */
 export type OnnxBuildResolvedOptions = {
   includeMetadata: boolean;
   opset: number;
@@ -403,7 +405,7 @@ export type OnnxBuildResolvedOptions = {
   quantization: OnnxResolvedQuantizationOptions;
 };
 
-/** Context for constructing input/output ONNX graph dimensions. */
+/** Context for constructing input/output ONNX graph dimensions, carrying width values and the batch-dimension flag. */
 export type OnnxGraphDimensionBuildContext = {
   inputWidth: number;
   outputWidth: number;
@@ -416,13 +418,13 @@ export type OnnxGraphDimensions = {
   outputDims: OnnxDimension[];
 };
 
-/** Context for constructing a base ONNX model shell. */
+/** Context for constructing a base ONNX model shell, supplying input and output dimension arrays for the graph. */
 export type OnnxBaseModelBuildContext = {
   inputDims: OnnxDimension[];
   outputDims: OnnxDimension[];
 };
 
-/** Context for applying optional ONNX model metadata. */
+/** Context for applying optional ONNX model metadata, carrying model reference, opset, producer info, and inclusion flags. */
 export type OnnxModelMetadataContext = {
   model: OnnxModel;
   includeMetadata: boolean;
@@ -432,7 +434,7 @@ export type OnnxModelMetadataContext = {
   docString?: string;
 };
 
-/** Context for collecting recurrent layer indices during model build. */
+/** Context for collecting recurrent layer indices during model build, providing the layer list and export options. */
 export type OnnxRecurrentCollectionContext = {
   model: OnnxModel;
   layers: NeatapticNode[][];
@@ -440,35 +442,35 @@ export type OnnxRecurrentCollectionContext = {
   batchDimension: boolean;
 };
 
-/** Traversal context for one hidden layer during recurrent-input collection. */
+/** Traversal context for one hidden layer during recurrent-input collection, supplying layer index and batch-dimension flag. */
 export type OnnxRecurrentLayerTraversalContext = {
   layerIndex: number;
   hiddenLayerNodes: NeatapticNode[];
   batchDimension: boolean;
 };
 
-/** Context for constructing one recurrent previous-state graph input payload. */
+/** Context for constructing one recurrent previous-state graph input payload, carrying name, hidden width, and batch flag. */
 export type OnnxRecurrentInputValueInfoContext = {
   previousStateInputName: string;
   hiddenLayerWidth: number;
   batchDimension: boolean;
 };
 
-/** Execution context for processing one hidden recurrent layer. */
+/** Execution context for processing one hidden recurrent layer during model build traversal and emission. */
 export type OnnxRecurrentLayerProcessingContext = {
   model: OnnxModel;
   traversalContext: OnnxRecurrentLayerTraversalContext;
   recurrentLayerIndices: number[];
 };
 
-/** Result of emitting non-input export layers. */
+/** Result of emitting non-input export layers, carrying the last output name and the layer output name map. */
 export type OnnxLayerEmissionResult = {
   previousOutputName: string;
   hiddenSizesMetadata: number[];
   layerOutputNamesByLayerIndex: Map<number, string>;
 };
 
-/** Context for emitting non-input layers during model build. */
+/** Context for emitting non-input layers during model build, including layer list, options, and ordering flags. */
 export type OnnxLayerEmissionContext = {
   model: OnnxModel;
   layers: NeatapticNode[][];
@@ -491,26 +493,26 @@ export type LayerBuildContext = {
   legacyNodeOrdering: boolean;
 };
 
-/** Layer traversal context with adjacent layers and output classification. */
+/** Layer traversal context with adjacent layers, output classification, and the full LayerBuildContext fields. */
 export type LayerTraversalContext = LayerBuildContext & {
   previousLayerNodes: NeatapticNode[];
   currentLayerNodes: NeatapticNode[];
   isOutputLayer: boolean;
 };
 
-/** Activation analysis context for one layer. */
+/** Activation analysis context for one layer, capturing whether the layer contains mixed activation functions. */
 export type LayerActivationContext = {
   hasMixedActivations: boolean;
 };
 
-/** Context used to decide recurrent emission branch usage. */
+/** Context used to decide recurrent emission branch usage, carrying layer index and recurrent layer index list. */
 export type LayerRecurrentDecisionContext = {
   recurrentLayerIndices: number[];
   layerIndex: number;
   isOutputLayer: boolean;
 };
 
-/** Context for post-processing and export metadata finalization. */
+/** Context for post-processing and export metadata finalization, holding model, layers, options, and layer emission result. */
 export type OnnxPostProcessingContext = {
   model: OnnxModel;
   layers: NeatapticNode[][];
@@ -520,14 +522,14 @@ export type OnnxPostProcessingContext = {
   layerEmissionResult: OnnxLayerEmissionResult;
 };
 
-/** Context for heuristic recurrent operator emission traversal. */
+/** Context for heuristic recurrent operator emission traversal, carrying model, layer list, and previous output tensor name. */
 export type RecurrentHeuristicEmissionContext = {
   model: OnnxModel;
   layers: NeatapticNode[][];
   previousOutputName: string;
 };
 
-/** Context for one hidden layer during heuristic recurrent emission. */
+/** Context for one hidden layer during heuristic recurrent emission, tracking layer index and model state. */
 export type HiddenLayerHeuristicContext = {
   model: OnnxModel;
   layers: NeatapticNode[][];
@@ -556,7 +558,7 @@ export type GruEmissionContext = {
   unitSize: number;
 };
 
-/** Context for collecting one recurrent gate row (one neuron). */
+/** Context for collecting one recurrent gate row (one neuron), supplying the previous layer node list and unit size. */
 export type RecurrentGateRowCollectionContext = {
   previousLayerNodes: NeatapticNode[];
   targetNodeInternal: NodeInternals;
@@ -565,21 +567,21 @@ export type RecurrentGateRowCollectionContext = {
   useDiagonalSelfWeights: boolean;
 };
 
-/** One recurrent gate row payload before flatten fold. */
+/** One recurrent gate row payload before flatten fold, containing input weights, recurrent weights, and bias. */
 export type RecurrentGateRow = {
   inputWeights: number[];
   recurrentWeights: number[];
   bias: number;
 };
 
-/** Flattened recurrent gate parameter vectors for one fused operator. */
+/** Flattened recurrent gate parameter vectors for one fused operator, grouping input, recurrent, and bias arrays. */
 export type RecurrentGateParameterCollectionResult = {
   inputWeights: number[];
   recurrentWeights: number[];
   biases: number[];
 };
 
-/** Context for collecting one gate parameter block. */
+/** Context for collecting one gate parameter block, supplying gate nodes, previous layer, unit size, and diagonal flag. */
 export type RecurrentGateBlockCollectionContext = {
   gateNodes: NeatapticNode[];
   previousLayerNodes: NeatapticNode[];
@@ -587,14 +589,14 @@ export type RecurrentGateBlockCollectionContext = {
   useDiagonalSelfWeights: boolean;
 };
 
-/** Context for ONNX fused recurrent initializer names. */
+/** Context for ONNX fused recurrent initializer names, grouping weight, recurrent-weight, and bias tensor name strings. */
 export type FusedRecurrentInitializerNames = {
   weightName: string;
   recurrentWeightName: string;
   biasName: string;
 };
 
-/** Context for ONNX fused recurrent node payload names. */
+/** Context for ONNX fused recurrent node payload names, holding the graph node name and its output tensor name. */
 export type FusedRecurrentGraphNames = {
   nodeName: string;
   outputName: string;
@@ -615,7 +617,7 @@ export type FusedRecurrentEmissionExecutionContext = {
   outputSuffix: string;
 };
 
-/** Parameters for single-step recurrent layer emission. */
+/** Parameters for single-step recurrent layer emission, supplying model, layer index, and adjacent node lists. */
 export type RecurrentLayerEmissionParams = {
   model: OnnxModel;
   layerIndex: number;
@@ -625,28 +627,28 @@ export type RecurrentLayerEmissionParams = {
   opset: number;
 };
 
-/** Derived execution context for single-step recurrent layer emission. */
+/** Derived execution context for single-step recurrent layer emission, extending params with layer slot and widths. */
 export type RecurrentLayerEmissionContext = RecurrentLayerEmissionParams & {
   layerSlot: number;
   previousLayerWidth: number;
   currentLayerWidth: number;
 };
 
-/** Initializer tensor names for one single-step recurrent layer. */
+/** Initializer tensor names for one single-step recurrent layer, naming weight, bias, and recurrent-weight tensors. */
 export type RecurrentInitializerNames = {
   weightTensorName: string;
   biasTensorName: string;
   recurrentTensorName: string;
 };
 
-/** Collected initializer vectors for one single-step recurrent layer. */
+/** Collected initializer vectors for one single-step recurrent layer, storing weight matrix, biases, and recurrent weights. */
 export type RecurrentInitializerValues = {
   weightMatrixValues: number[];
   biasVector: number[];
   recurrentWeights: number[];
 };
 
-/** Context for pushing recurrent initializers into ONNX graph state. */
+/** Context for pushing recurrent initializers into ONNX graph state, carrying widths, tensor names, and value arrays. */
 export type RecurrentInitializerEmissionContext = {
   model: OnnxModel;
   previousLayerWidth: number;
@@ -663,7 +665,7 @@ export type RecurrentGemmEmissionContext = {
   nodeName: string;
 };
 
-/** Derived graph names for one recurrent single-step layer payload. */
+/** Derived graph names for one recurrent single-step layer payload, with all tensor and node names resolved. */
 export type RecurrentGraphNames = {
   inputGemmOutputName: string;
   recurrentGemmOutputName: string;
@@ -675,7 +677,7 @@ export type RecurrentGraphNames = {
   activationNodeName: string;
 };
 
-/** Context for selecting and emitting recurrent activation node payload. */
+/** Context for selecting and emitting recurrent activation node payload using the layer's dominant squash function. */
 export type RecurrentActivationEmissionContext = {
   model: OnnxModel;
   currentLayerNodes: NeatapticNode[];
@@ -685,33 +687,33 @@ export type RecurrentActivationEmissionContext = {
   opset: number;
 };
 
-/** Result of Conv sharing validation across declared mappings. */
+/** Result of Conv sharing validation across declared mappings, reporting verified and mismatched layer indices. */
 export type ConvSharingValidationResult = {
   verifiedLayers: number[];
   mismatchedLayers: number[];
 };
 
-/** Context for validating Conv sharing across all declared mappings. */
+/** Context for validating Conv sharing across all declared mappings, holding layer nodes and mapping specifications. */
 export type ConvSharingValidationContext = {
   layers: NeatapticNode[][];
   mappings: Conv2DMapping[];
 };
 
-/** Context for one resolved Conv mapping layer pair. */
+/** Context for one resolved Conv mapping layer pair, supplying the Conv spec and adjacent layer node lists. */
 export type ConvLayerPairContext = {
   convSpec: Conv2DMapping;
   previousLayerNodes: NeatapticNode[];
   currentLayerNodes: NeatapticNode[];
 };
 
-/** Coordinate for one Conv output neuron position. */
+/** Coordinate for one Conv output neuron, encoding the output channel, row, and column indices together. */
 export type ConvOutputCoordinate = {
   outChannelIndex: number;
   outRowIndex: number;
   outColumnIndex: number;
 };
 
-/** Context for representative Conv kernel collection per output channel. */
+/** Context for representative Conv kernel collection per output channel, supplying neuron lists and the Conv spec. */
 export type ConvRepresentativeKernelContext = {
   convSpec: Conv2DMapping;
   previousLayerNodes: NeatapticNode[];
@@ -719,7 +721,7 @@ export type ConvRepresentativeKernelContext = {
   outChannelIndex: number;
 };
 
-/** Context for kernel-coordinate consistency checks at one output position. */
+/** Context for kernel-coordinate consistency checks at one output position, comparing representative weights with tolerance. */
 export type ConvKernelConsistencyContext = {
   convSpec: Conv2DMapping;
   previousLayerNodes: NeatapticNode[];
@@ -731,14 +733,14 @@ export type ConvKernelConsistencyContext = {
   tolerance: number;
 };
 
-/** Context for comparing two scalar weights with numeric tolerance. */
+/** Context for comparing two scalar weights with numeric tolerance, used by Conv sharing validation helpers. */
 export type WeightToleranceComparisonContext = {
   leftWeight: number;
   rightWeight: number;
   tolerance: number;
 };
 
-/** Parameters accepted by Conv layer emission. */
+/** Parameters accepted by Conv layer emission, grouping model, options, layer index, previous output, and adjacent node lists. */
 export type OnnxConvEmissionParams = {
   model: OnnxModel;
   options: OnnxExportOptions;
@@ -749,24 +751,24 @@ export type OnnxConvEmissionParams = {
   hasLaterHiddenLayers: boolean;
 };
 
-/** Context used after resolving Conv mapping for one layer. */
+/** Context used after resolving Conv mapping for one layer, extending OnnxConvEmissionParams with the resolved Conv2DMapping spec. */
 export type OnnxConvEmissionContext = OnnxConvEmissionParams & {
   convSpec: Conv2DMapping;
 };
 
-/** Flattened Conv parameters for ONNX initializers. */
+/** Flattened Conv parameters for ONNX initializers, containing weight and bias arrays derived from Conv layer neurons. */
 export type OnnxConvParameters = {
   weights: number[];
   biases: number[];
 };
 
-/** Tensor names generated for Conv parameters. */
+/** Tensor names generated for Conv parameters, holding weight and bias initializer name strings for one layer. */
 export type OnnxConvTensorNames = {
   convWeightName: string;
   convBiasName: string;
 };
 
-/** Activation function signature used by ONNX layer emission helpers. */
+/** Activation function signature used by ONNX layer emission helpers for encoding activation operator type attributes. */
 export type ActivationSquashFunction = ((
   x: number,
   derivate?: boolean,
@@ -774,7 +776,7 @@ export type ActivationSquashFunction = ((
   name?: string;
 };
 
-/** Shared parameters for constructing a Gemm node payload. */
+/** Shared parameters for constructing a Gemm node payload, carrying weight, bias, output tensor names, and node name. */
 export type SharedGemmNodeBuildParams = {
   previousOutputName: string;
   weightTensorName: string;
@@ -783,7 +785,7 @@ export type SharedGemmNodeBuildParams = {
   nodeName: string;
 };
 
-/** Shared parameters for constructing an activation node payload. */
+/** Shared parameters for constructing an activation node payload, carrying activation type and output name strings. */
 export type SharedActivationNodeBuildParams = {
   activationType: string;
   gemmOutputName: string;
@@ -792,7 +794,7 @@ export type SharedActivationNodeBuildParams = {
   activationAttributes?: OnnxAttribute[];
 };
 
-/** Shared parameters for optional pooling/flatten output emission. */
+/** Shared parameters for optional pooling or flatten output emission after one dense layer output tensor. */
 export type OptionalLayerOutputParams = {
   model: OnnxModel;
   options: OnnxExportOptions;
@@ -806,30 +808,30 @@ export type DenseWeightBuildContext = {
   currentLayerNodes: NeatapticNode[];
 };
 
-/** One collected dense row before fold to flattened initializers. */
+/** One collected dense row before fold to flattened initializers, containing per-neuron weights and bias value. */
 export type DenseWeightRow = {
   bias: number;
   weights: number[];
 };
 
-/** Dense layer initializer fold output. */
+/** Dense layer initializer fold output, containing the flattened weight matrix values and bias vector. */
 export type DenseWeightBuildResult = {
   weightMatrixValues: number[];
   biasVector: number[];
 };
 
-/** Context for collecting one dense row. */
+/** Context for collecting one dense row, supplying previous layer nodes and the target neuron internals. */
 export type DenseWeightRowCollectionContext = {
   previousLayerNodes: NeatapticNode[];
   targetNodeInternal: NodeInternals;
 };
 
-/** Context for building a diagonal recurrent matrix from self-connections. */
+/** Context for building a diagonal recurrent matrix from self-connections, supplying the current layer node list. */
 export type DiagonalRecurrentBuildContext = {
   currentLayerNodes: NeatapticNode[];
 };
 
-/** Context for collecting one recurrent matrix row. */
+/** Context for collecting one recurrent matrix row, supplying the layer node list and the row index to extract. */
 export type RecurrentRowCollectionContext = {
   currentLayerNodes: NeatapticNode[];
   rowIndex: number;
@@ -840,7 +842,7 @@ export type OptionalPoolingAndFlattenParams = OptionalLayerOutputParams & {
   poolSpec?: Pool2DMapping;
 };
 
-/** Pooling emission context resolved for one layer output. */
+/** Pooling emission context resolved for one layer output, extending OptionalLayerOutputParams with the Pool2DMapping spec. */
 export type PoolingEmissionContext = {
   model: OnnxModel;
   options: OnnxExportOptions;
@@ -849,7 +851,7 @@ export type PoolingEmissionContext = {
   poolSpec: Pool2DMapping;
 };
 
-/** Flatten emission context after optional pooling. */
+/** Flatten emission context after optional pooling, carrying model, flatten flag, layer index, and source output name. */
 export type FlattenAfterPoolingContext = {
   model: OnnxModel;
   flattenAfterPooling: boolean | undefined;
@@ -857,28 +859,28 @@ export type FlattenAfterPoolingContext = {
   sourceOutputName: string;
 };
 
-/** Pooling tensor attributes for ONNX node payloads. */
+/** Pooling tensor attributes for ONNX node payloads, grouping kernel shape, strides, and padding values. */
 export type PoolingAttributes = {
   kernelShape: number[];
   strides: number[];
   pads: number[];
 };
 
-/** Append-an-index metadata context for JSON-array metadata keys. */
+/** Append-an-index metadata context for JSON-array metadata keys, supplying model, key, and layer index. */
 export type IndexedMetadataAppendContext = {
   model: OnnxModel;
   key: string;
   layerIndex: number;
 };
 
-/** Append-a-spec metadata context for JSON-array metadata keys. */
+/** Append-a-spec metadata context for JSON-array metadata keys, supplying model, key, and Conv or Pool spec. */
 export type SpecMetadataAppendContext = {
   model: OnnxModel;
   key: string;
   spec: Conv2DMapping | Pool2DMapping;
 };
 
-/** Parameters for dense layer emission. */
+/** Parameters for dense layer emission, grouping model, layer index, node lists, ordering flag, and export options. */
 export type DenseLayerParams = {
   model: OnnxModel;
   layerIndex: number;
@@ -889,7 +891,7 @@ export type DenseLayerParams = {
   options: OnnxExportOptions;
 };
 
-/** Parameters for one-hop residual-add dense layer emission. */
+/** Parameters for one-hop residual-add dense layer emission, carrying source, residual, and merge node name strings. */
 export type ResidualAddLayerParams = {
   model: OnnxModel;
   layerIndex: number;
@@ -904,7 +906,7 @@ export type ResidualAddLayerParams = {
   options: OnnxExportOptions;
 };
 
-/** Dense layer context enriched with resolved activation function. */
+/** Dense layer context enriched with the resolved activation squash function derived from the current layer nodes. */
 export type DenseLayerContext = {
   model: OnnxModel;
   layerIndex: number;
@@ -916,25 +918,25 @@ export type DenseLayerContext = {
   activationSquash: ActivationSquashFunction;
 };
 
-/** Dense initializer tensor names. */
+/** Dense initializer tensor names for one emitted layer, naming the weight and bias initializer tensors. */
 export type DenseTensorNames = {
   weightTensorName: string;
   biasTensorName: string;
 };
 
-/** Dense initializer value arrays. */
+/** Dense initializer value arrays holding the flattened weight matrix values and bias vector for one layer. */
 export type DenseInitializerValues = {
   weightMatrixValues: number[];
   biasVector: number[];
 };
 
-/** Dense graph tensor names. */
+/** Dense graph tensor names identifying the Gemm output and activation output tensors for one layer. */
 export type DenseGraphNames = {
   gemmOutputName: string;
   activationOutputName: string;
 };
 
-/** Dense activation emission context. */
+/** Dense activation emission context carrying layer index, tensor names, graph names, squash function, and opset version. */
 export type DenseActivationContext = {
   layerIndex: number;
   previousOutputName: string;
@@ -963,12 +965,12 @@ export type DenseActivationNodePayload = {
   attributes?: OnnxAttribute[];
 };
 
-/** Dense node payload union used by ordered append helpers. */
+/** Dense node payload union used by ordered append helpers, covering Gemm and activation node payloads. */
 export type DenseOrderedNodePayload =
   | DenseGemmNodePayload
   | DenseActivationNodePayload;
 
-/** Parameters for per-neuron layer emission. */
+/** Parameters for per-neuron layer emission, grouping model, layer index, node lists, options, and batch-dimension flag. */
 export type PerNeuronLayerParams = {
   model: OnnxModel;
   layerIndex: number;
@@ -979,10 +981,10 @@ export type PerNeuronLayerParams = {
   batchDimension: boolean;
 };
 
-/** Per-neuron layer context alias. */
+/** Per-neuron layer context alias for PerNeuronLayerParams, used at the per-neuron layer traversal boundary. */
 export type PerNeuronLayerContext = PerNeuronLayerParams;
 
-/** Per-neuron subgraph emission context. */
+/** Per-neuron subgraph emission context carrying layer index, neuron index, previous output name, and opset version. */
 export type PerNeuronSubgraphContext = {
   model: OnnxModel;
   layerIndex: number;
@@ -993,7 +995,7 @@ export type PerNeuronSubgraphContext = {
   opset: number;
 };
 
-/** Per-neuron normalized node context. */
+/** Per-neuron normalized node context replacing raw Node references with resolved NodeInternals for safe emission. */
 export type PerNeuronNodeContext = {
   model: OnnxModel;
   layerIndex: number;
@@ -1004,19 +1006,19 @@ export type PerNeuronNodeContext = {
   opset: number;
 };
 
-/** Per-neuron initializer tensor names. */
+/** Per-neuron initializer tensor names identifying weight and bias tensors for one neuron subgraph. */
 export type PerNeuronTensorNames = {
   weightTensorName: string;
   biasTensorName: string;
 };
 
-/** Per-neuron graph tensor names. */
+/** Per-neuron graph tensor names identifying the Gemm output and activation output for one neuron subgraph. */
 export type PerNeuronGraphNames = {
   gemmOutputName: string;
   activationOutputName: string;
 };
 
-/** Per-neuron concat node payload. */
+/** Per-neuron concat node payload used to merge individual neuron outputs into one combined layer tensor. */
 export type PerNeuronConcatNodePayload = {
   op_type: string;
   input: string[];

@@ -131,30 +131,94 @@ import type { OnnxExportOptions } from './network.onnx.utils.types';
 import type { OnnxModel } from './schema/network.onnx.schema.types';
 export type { OnnxModel } from './schema/network.onnx.schema.types';
 
-export {
+import {
   inferLayerOrdering,
-  rebuildConnectionsLocal,
-  validateLayerHomogeneityAndConnectivity,
+  rebuildConnectionsLocal as rebuildConnectionsLocalImpl,
+  validateLayerHomogeneityAndConnectivity as validateLayerHomogeneityAndConnectivityImpl,
 } from './network.onnx.layer-analysis.utils';
+export { inferLayerOrdering };
 export { runOnnxExportFlow } from './export/network.onnx.export-flow.utils';
 export { runOnnxImportFlow } from './import/network.onnx.import-flow.utils';
 import { buildOnnxModel as buildOnnxModelImpl } from './export/network.onnx.export-build.utils';
-export { assignActivationFunctions } from './import/network.onnx.import-activations.utils';
-export {
-  assignWeightsAndBiases,
-  deriveHiddenLayerSizes,
+import { assignActivationFunctions as assignActivationFunctionsImpl } from './import/network.onnx.import-activations.utils';
+import {
+  assignWeightsAndBiases as assignWeightsAndBiasesImpl,
+  deriveHiddenLayerSizes as deriveHiddenLayerSizesImpl,
 } from './import/network.onnx.import-weights.utils';
-export {
-  applyModelMetadata,
-  collectRecurrentLayerIndices,
-  createBaseModel,
-  createGraphDimensions,
+import {
+  applyModelMetadata as applyModelMetadataImpl,
+  collectRecurrentLayerIndices as collectRecurrentLayerIndicesImpl,
+  createBaseModel as createBaseModelImpl,
+  createGraphDimensions as createGraphDimensionsImpl,
 } from './export/network.onnx.export-setup.utils';
 export { emitLayerGraph } from './export/layers/network.onnx.export-layer-graph.utils';
-export {
-  emitFusedRecurrentHeuristics,
-  finalizeExportMetadata,
+import {
+  emitFusedRecurrentHeuristics as emitFusedRecurrentHeuristicsImpl,
+  finalizeExportMetadata as finalizeExportMetadataImpl,
 } from './export/network.onnx.export-postprocess.utils';
+
+/**
+ * Rebuild local connections from layered ONNX-like data so import flows can restore deterministic adjacency wiring before activation or serialization passes.
+ */
+export const rebuildConnectionsLocal = rebuildConnectionsLocalImpl;
+
+/**
+ * Validate layer homogeneity and connectivity so export and import paths fail early when topology assumptions required by the supported ONNX subset are broken.
+ */
+export const validateLayerHomogeneityAndConnectivity =
+  validateLayerHomogeneityAndConnectivityImpl;
+
+/**
+ * Assign activation functions during import reconstruction so each rebuilt layer preserves nonlinear behavior captured by export metadata.
+ * This forwarding seam keeps root ONNX callers stable while the concrete activation mapping logic evolves in import internals.
+ */
+export const assignActivationFunctions = assignActivationFunctionsImpl;
+
+/**
+ * Assign weights and biases onto imported layers so reconstructed parameters match serialized ONNX tensor values from export.
+ * Keeping this alias documented at the compatibility barrel helps users discover parameter hydration behavior without reading nested modules first.
+ */
+export const assignWeightsAndBiases = assignWeightsAndBiasesImpl;
+
+/**
+ * Derive hidden layer sizes from exported graph structures so import routines allocate correctly shaped intermediate containers.
+ * The helper also centralizes size inference assumptions used by reconstruction and compatibility diagnostics.
+ */
+export const deriveHiddenLayerSizes = deriveHiddenLayerSizesImpl;
+
+/**
+ * Apply model metadata to exported artifacts so downstream tools can inspect capability flags and advanced graph hints.
+ * This alias preserves a stable public seam for metadata population while implementation details stay split by concern.
+ */
+export const applyModelMetadata = applyModelMetadataImpl;
+
+/**
+ * Collect recurrent layer indices so post-processing can identify hidden stages that use supported single-step recurrence.
+ * Export metadata and import diagnostics both depend on this deterministic recurrent-stage inventory.
+ */
+export const collectRecurrentLayerIndices = collectRecurrentLayerIndicesImpl;
+
+/**
+ * Create the base ONNX-like model scaffold so later export stages can append graph nodes, initializers, and metadata in deterministic order.
+ */
+export const createBaseModel = createBaseModelImpl;
+
+/**
+ * Create graph dimension metadata so emitted tensor shapes stay explicit and consistent across exporter and importer paths.
+ * Clear dimension records also improve debugging when validating compatibility between serialized tensors and rebuilt layers.
+ */
+export const createGraphDimensions = createGraphDimensionsImpl;
+
+/**
+ * Emit fused recurrent heuristic nodes so eligible LSTM and GRU patterns can be represented compactly within the current conservative subset.
+ */
+export const emitFusedRecurrentHeuristics = emitFusedRecurrentHeuristicsImpl;
+
+/**
+ * Finalize export metadata so generated models include complete capability records and audit hints for compatibility diagnostics.
+ * The finalization step normalizes emitted annotations before artifacts are returned to callers or saved.
+ */
+export const finalizeExportMetadata = finalizeExportMetadataImpl;
 
 // ---------------------------------------------------------------------------
 // Helper functions consumed by network.onnx.ts

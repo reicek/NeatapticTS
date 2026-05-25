@@ -1,4 +1,4 @@
-import type Node from '../../node';
+﻿import type Node from '../../node';
 import type {
   NodeWithIndex,
   StandaloneGenerationContext as GenerationContext,
@@ -9,11 +9,21 @@ import {
 } from './network.standalone.utils.types';
 
 /**
- * Build the pre-activation sum expression for one node.
+ * Build the generated pre-activation summation expression for one node.
  *
+ * The expression combines inbound weighted terms and optional recurrent
+ * self-connection terms, then folds them into a single JavaScript expression
+ * emitted into standalone network source.
+ *
+ * @param generationContext Standalone code-generation context.
  * @param currentNode Current node.
  * @param nodeTraversalIndex Node index.
  * @returns String expression used for generated `S[index]` assignment.
+ * @example
+ * ```ts
+ * const sumExpression = buildNodeSumExpression(context, node, nodeIndex);
+ * // Example output: "A[2] * 0.5 + S[4] * 0.9"
+ * ```
  */
 export function buildNodeSumExpression(
   generationContext: GenerationContext,
@@ -31,10 +41,18 @@ export function buildNodeSumExpression(
 }
 
 /**
- * Collect output node indexes from the output tail segment.
+ * Collect the output-node index sequence used by generated return paths.
+ *
+ * The returned array preserves traversal order so emitted output selectors map
+ * consistently to the public standalone activation result vector.
  *
  * @param generationContext Mutable generation context.
  * @returns Output indexes used for result array emission.
+ * @example
+ * ```ts
+ * const outputIndexes = collectOutputIndexes(context);
+ * // outputIndexes can be passed to formatOutputArrayValues
+ * ```
  */
 export function collectOutputIndexes(
   generationContext: GenerationContext,
@@ -43,11 +61,19 @@ export function collectOutputIndexes(
 }
 
 /**
- * Format output activation selectors for generated return expression.
+ * Format output activation selectors for the generated return expression.
+ *
+ * Each output index is translated into a storage-buffer read expression and
+ * joined as a comma-separated selector list for emitted array literals.
  *
  * @param generationContext Mutable generation context.
  * @param outputIndexes Output node indexes.
  * @returns Comma-separated `A[index]` selector list.
+ * @example
+ * ```ts
+ * const selectorList = formatOutputArrayValues(context, [3, 4]);
+ * // Example output: "A[3],A[4]"
+ * ```
  */
 export function formatOutputArrayValues(
   generationContext: GenerationContext,

@@ -130,8 +130,8 @@ canUseFastSlab(
 ): boolean
 ```
 
-Public convenience wrapper exposing fast path eligibility.
-Mirrors `_canUseFastSlab` internal predicate.
+Report whether current network state can use slab fast activation without fallback.
+Mirrors `_canUseFastSlab` while exposing eligibility to callers and diagnostics.
 
 Parameters:
 - `training` - Whether caller is performing training (disables fast path if true).
@@ -204,7 +204,7 @@ Returns: Plain object copy (safe to serialize) of current allocator counters.
 getSlabVersion(): number
 ```
 
-Retrieve current monotonic slab version (increments on each successful rebuild).
+Return the monotonic slab rebuild version used to detect stale packed views.
 
 Returns: Non‑negative integer (0 if slab never built yet).
 
@@ -259,7 +259,7 @@ Returns: Promise resolving once rebuild completes.
 
 ## architecture/network/slab/network.slab.pool.utils.ts
 
-Internal slab pool/stat helpers extracted from network.slab.utils.ts.
+Internal helpers for typed-array slab allocation, release, and pool stats.
 
 ### _acquireTA
 
@@ -272,7 +272,8 @@ _acquireTA(
 ): TypedArray
 ```
 
-Acquires a typed array from pool or allocates a fresh one.
+Acquire a typed-array slab for the requested key, reusing pooled capacity
+when available and allocating only on pool miss.
 
 Parameters:
 - `kind` - Pool kind discriminator.
@@ -288,9 +289,10 @@ Returns: Acquired typed array.
 _getSlabAllocationStatsSnapshot(): { fresh: number; pooled: number; pool: Record<string, PoolKeyMetrics>; }
 ```
 
-Returns allocation stats snapshot for slab typed arrays.
+Produce a serializable view of slab allocation telemetry, including global
+fresh-versus-pooled counts and per-key pool depth.
 
-Returns: Serializable snapshot of fresh, pooled, and per-key metrics.
+Returns: Snapshot containing fresh, pooled, and per-key counters.
 
 ### _releaseTA
 
@@ -302,7 +304,8 @@ _releaseTA(
 ): void
 ```
 
-Releases a typed array back to bounded per-key pool.
+Return a typed array to its bounded per-key slab pool so later activation
+passes can reuse capacity without reallocating.
 
 Parameters:
 - `kind` - Pool kind discriminator.
@@ -486,7 +489,7 @@ _applyGainOmissionPolicy(
 ): void
 ```
 
-Applies gain omission rule by releasing neutral gain slab.
+Applies gain omission rule by releasing a fully neutral gain slab so optional gain storage remains absent unless non-default values are present.
 
 Parameters:
 - `buildContext` - Slab build context.
@@ -503,7 +506,7 @@ _applyPlasticPolicyAsync(
 ): void
 ```
 
-Applies async plastic slab allocation/release policy.
+Applies async plastic slab allocation and release policy so chunked rebuilds keep plastic-rate arrays aligned with observed plastic connection flags.
 
 Parameters:
 - `buildContext` - Slab build context.
@@ -520,7 +523,7 @@ _applyPlasticPolicySync(
 ): void
 ```
 
-Applies sync plastic slab allocation/release policy.
+Applies sync plastic slab allocation and release policy so plasticity-rate storage exists only when plastic connections appear in the packed set.
 
 Parameters:
 - `buildContext` - Slab build context.
@@ -552,7 +555,7 @@ _createSlabBuildContext(
 ): SlabBuildContext
 ```
 
-Creates immutable slab build context for one rebuild pass.
+Creates immutable slab build context for one rebuild pass so capacity, precision, and runtime pointers stay consistent across helper calls.
 
 Parameters:
 - `network` - Target network.
@@ -602,7 +605,7 @@ _ensureSlabCapacityAsync(
 ): Promise<void>
 ```
 
-Ensures async rebuild has enough slab capacity.
+Ensures async rebuild has enough slab capacity so cooperative chunked population can proceed without mid-pass reallocations or pointer invalidation hazards.
 
 Parameters:
 - `buildContext` - Slab build context.
@@ -617,7 +620,7 @@ _ensureSlabCapacitySync(
 ): void
 ```
 
-Ensures sync rebuild has enough slab capacity.
+Ensures sync rebuild has enough slab capacity so packed arrays can hold every active connection before synchronous field population begins.
 
 Parameters:
 - `buildContext` - Slab build context.
@@ -670,7 +673,7 @@ _finalizeAsyncSlabRebuild(
 ): void
 ```
 
-Finalizes async rebuild bookkeeping fields.
+Finalizes async rebuild bookkeeping fields so runtime counters and slab-version invalidation match the completed cooperative population pass in production telemetry.
 
 Parameters:
 - `buildContext` - Slab build context.
@@ -702,7 +705,7 @@ _finalizeSyncSlabRebuild(
 ): void
 ```
 
-Finalizes sync rebuild bookkeeping fields.
+Finalizes sync rebuild bookkeeping fields so connection counts, dirty flags, and slab versions remain coherent for downstream runtime caches and adapters.
 
 Parameters:
 - `buildContext` - Slab build context.
@@ -741,7 +744,7 @@ _populateSlabConnectionsAsync(
 ): Promise<SlabPopulateResult>
 ```
 
-Populates core slab arrays in cooperative async chunks.
+Populates core slab arrays in cooperative async chunks so large graphs remain responsive while preserving deterministic packed ordering semantics for replayability.
 
 Parameters:
 - `buildContext` - Slab build context.
@@ -757,7 +760,7 @@ _populateSlabConnectionsSync(
 ): SlabPopulateResult
 ```
 
-Populates core slab arrays in synchronous single pass.
+Populates core slab arrays in a synchronous single pass so all connection fields are packed deterministically for the active network snapshot.
 
 Parameters:
 - `buildContext` - Slab build context.
@@ -803,7 +806,7 @@ _resolveAsyncChunkSize(
 ): number
 ```
 
-Resolves effective async chunk size using adaptive heuristics.
+Resolves effective async chunk size using adaptive heuristics so very large rebuilds honor browser frame budgets without starving throughput under load.
 
 Parameters:
 - `totalConnections` - Number of active connections.
@@ -820,7 +823,7 @@ _shouldSkipSlabRebuild(
 ): boolean
 ```
 
-Determines whether slab rebuild can be skipped.
+Determines whether slab rebuild can be skipped so callers avoid unnecessary typed-array churn when no topology mutation invalidated packed connection buffers.
 
 Parameters:
 - `internalNet` - Internal slab runtime shape.
@@ -1250,7 +1253,7 @@ Returns: Nothing.
 
 ## architecture/network/slab/network.slab.fast-path.helpers.utils.ts
 
-Internal fast slab activation helpers extracted from network.slab.utils.ts.
+Internal fast-slab activation helpers extracted from slab utilities so the hot-path orchestration remains testable, readable, and isolated from broader runtime wiring concerns.
 
 ### _activateThroughLegacyPath
 
@@ -1277,7 +1280,7 @@ _canUseFastSlab(
 ): boolean
 ```
 
-Predicate gating usage of high-performance slab forward pass.
+Evaluate whether the high-performance slab forward pass is currently safe to use under runtime, topology, gating, dropout, and stochastic-regularization constraints.
 
 Parameters:
 - `training` - Whether caller is in training mode.
@@ -1294,7 +1297,7 @@ _collectFastSlabOutput(
 ): number[]
 ```
 
-Collects output activations into detached number array.
+Collect output activations from the slab working buffer into a detached plain array so callers receive stable values independent of pooled buffer reuse.
 
 Parameters:
 - `network` - Target network.
@@ -1329,7 +1332,7 @@ _ensureFastSlabBuffers(
 ): void
 ```
 
-Ensures fast activation/state buffers are allocated and shape-compatible.
+Ensure reusable fast activation and state buffers are allocated with the correct length and numeric precision for the upcoming slab propagation pass.
 
 Parameters:
 - `internalNet` - Internal slab runtime shape.
@@ -1404,7 +1407,7 @@ _prepareFastSlabRuntime(
 ): void
 ```
 
-Prepares topology and indices for fast slab pass.
+Prepare topology ordering and node indexing prerequisites before a fast slab pass so activation loops can run on up-to-date structural metadata.
 
 Parameters:
 - `network` - Target network.
@@ -1425,7 +1428,7 @@ _propagateFastSlabActivations(
 ): void
 ```
 
-Propagates activations through topology using slab arrays.
+Propagate activations through topological order using packed slab arrays so weighted fan-out executes with contiguous memory access patterns and deterministic node-to-node accumulation behavior.
 
 Parameters:
 - `network` - Target network.
@@ -1489,7 +1492,7 @@ _resolveFastTopoOrder(
 ): FastSlabNodeRuntime[]
 ```
 
-Resolves topological iteration order for fast slab pass.
+Resolve the node iteration order used by fast slab propagation, preferring cached topological order and falling back to node storage order when needed.
 
 Parameters:
 - `network` - Target network.
@@ -1526,7 +1529,7 @@ _seedFastInputLayer(
 ): void
 ```
 
-Seeds input-layer activations for fast slab pass.
+Seed input-layer activation values into the working buffer and mirror those values onto runtime node fields before hidden-layer propagation begins.
 
 Parameters:
 - `network` - Target network.
@@ -1544,7 +1547,7 @@ _tryFastSlabFallbackForGating(
 ): number[] | null
 ```
 
-Falls back to legacy activation when gating is present.
+Attempt an immediate fallback to legacy activation when gating structures are present because gated connections violate the slab fast-path assumptions.
 
 Parameters:
 - `network` - Target network.
@@ -1562,7 +1565,7 @@ _tryFastSlabFallbackForMissingPrerequisites(
 ): number[] | null
 ```
 
-Falls back to legacy activation when slab prerequisites are missing.
+Attempt an immediate fallback to legacy activation when required slab arrays or adjacency prerequisites are missing from runtime state so incomplete slab snapshots never execute unsafe fast-path logic.
 
 Parameters:
 - `network` - Target network.

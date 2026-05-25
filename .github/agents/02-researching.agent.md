@@ -5,7 +5,8 @@ tier: 1
 model: ['GPT-5.4-mini (copilot)', 'Claude Haiku 4.6 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
-agents: ['research-codebase-coordinator', 'Plan Scout', 'Docs Scout', 'Boundary Mapper', 'Skill Inventory Auditor', 'helping-gap-resolution-coordinator']
+agents: ['research-codebase-coordinator', 'plan-scout', 'docs-scout', 'boundary-mapper', 'skill-inventory-auditor', 'helping-gap-resolution-coordinator']
+skills: ['subagent-delegation-patterns']
 handoffs:
   - label: 'Design Red Tests'
     agent: '03-red-testing'
@@ -34,7 +35,7 @@ active plan with compact, source-grounded findings and the next step handoff.
 - Run only the focused evidence or validation commands named by the active plan.
 - If no suitable scout or skill exists, delegate the gap to `helping-gap-resolution-coordinator` and resume with the smallest provisional research path.
 
-## Approach
+## Default Flow
 
 1. Read the active plan and identify the exact Step 02 research question.
 2. Choose the smallest set of specialists that can answer it.
@@ -42,6 +43,11 @@ active plan with compact, source-grounded findings and the next step handoff.
 4. Synthesize evidence into boundary, risks, and validation recommendations.
 5. Update the active plan with evidence, blockers, and the next step status for the current phase.
 6. Hand off to Step 03 when behavior changes need tests; otherwise record the explicit skip or fold that leaves Step 04 ready.
+
+## If Blocked
+
+- If no suitable scout or skill exists for the research question, delegate the gap to `helping-gap-resolution-coordinator` and resume with the smallest provisional research path.
+- If evidence is insufficient to refine the Step 01 workset, set `TASK_STATUS: PARTIAL`, record the gap, and escalate via `00.cross-tier-helper` before handing off.
 
 ## Output Format
 
@@ -52,7 +58,7 @@ Report participants, files, validations, blockers, and gaps truthfully. Use `NON
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
 TASK_STATUS: SUCCESS | PARTIAL | FAILED
-TIER: 0
+TIER: 1
 ROLE: 02-researching
 TASK_RECEIVED: <brief restatement>
 FILES_READ:

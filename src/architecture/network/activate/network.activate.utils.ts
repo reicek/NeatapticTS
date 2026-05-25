@@ -90,6 +90,12 @@
 
 import type Network from '../../network/network';
 import type { ActivationArray } from '../../activationArrayPool/activationArrayPool';
+/**
+ * Re-export the core forward-pass entry points used by the `Network` facade.
+ *
+ * `activate` is the trace-aware default activation path.
+ * `gaussianRand` is the RNG helper consumed by stochastic activation internals.
+ */
 export { activate, gaussianRand } from './network.activate.core.utils';
 import {
   createBatchActivationContext,

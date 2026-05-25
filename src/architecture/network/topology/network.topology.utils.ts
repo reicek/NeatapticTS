@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import type Node from '../../node';
 import {
   getTopologyIntent,
@@ -95,7 +95,13 @@ export function hasPath(this: Network, from: Node, to: Node): boolean {
   return traversePathSearch(searchContext);
 }
 
-export default {
+/**
+ * Default export bundle for the topology utilities chapter.
+ *
+ * Bundles the core topology helpers so the network facade can bind them as methods
+ * without importing each function individually.
+ */
+const networkTopologyUtils = {
   computeTopoOrder,
   getTopologyIntent,
   hasPath,
@@ -103,3 +109,4 @@ export default {
   setEnforceAcyclic,
   setTopologyIntent,
 };
+export default networkTopologyUtils;

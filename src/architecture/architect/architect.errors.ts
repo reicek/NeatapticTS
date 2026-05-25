@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when architect construction cannot infer input/output nodes from supplied primitives.
  */
 export class ArchitectInputOutputTypeResolutionError extends Error {
@@ -69,7 +69,7 @@ export class ArchitectInvalidGruConfigurationError extends Error {
 }
 
 /**
- * Raised when a sparse architect builder receives invalid dimensions or
+ * Raised when a sparse architect builder receives invalid dimensions or.
  * requests more structural edits than the graph can satisfy.
  */
 export class ArchitectInvalidRandomSparseConfigurationError extends Error {

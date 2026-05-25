@@ -1,4 +1,17 @@
 #!/usr/bin/env node
+/**
+ * @module neataptic-validation-mcp
+ * @description Validation MCP server — exposes the active-step allow-listed commands as MCP tools.
+ *
+ * Reads the active `[WIP]` step from the plan file and restricts runnable
+ * commands to the exact set declared in that step's YAML metadata block.
+ * This server is the sole allow-list authority for AI-driven validation in
+ * the NeatapticTS SDLC workflow — no command outside the list can be executed.
+ *
+ * Commands are run shell-free via {@link runShellFreeCommand} using `spawn`
+ * with `shell: false`, so shell metacharacters (`|`, `&`, `;`, `<`, `>`) are
+ * tokenizer-rejected before any process is launched.
+ */
 import {
   createMcpServer,
   createSelfCheckReport,
@@ -51,6 +64,21 @@ if (options.selfCheck) {
   await runStdioMcpServer(server);
 }
 
+/**
+ * Build the tool list for the validation MCP server.
+ *
+ * Provides two tools:
+ * - `get_active_validation_allowlist` — returns the step-packet command list.
+ * - `run_allowlisted_validation` — executes one exact allow-listed command.
+ *
+ * **Security:** `run_allowlisted_validation` checks the requested command
+ * against `validationCommands` from the active step packet before any process
+ * is launched. Any command not in the list is rejected with an error regardless
+ * of whether it is otherwise a valid or safe command string.
+ *
+ * @param {string} planPath - Repo-relative plan path.
+ * @returns {Array<{ name: string, description: string, inputSchema: Record<string, unknown>, handler: Function }>} Tool list.
+ */
 function createValidationTools(planPath) {
   return [
     createTool({
@@ -93,6 +121,20 @@ function createValidationTools(planPath) {
   ];
 }
 
+/**
+ * Run an end-to-end self-check of the validation MCP server.
+ *
+ * Validates protocol version, tool count, allow-list snapshot correctness, and
+ * executes up to two non-recursive allow-listed commands. Also verifies that:
+ * - An out-of-list command is rejected with an error.
+ * - The tokenizer rejects shell metacharacters.
+ *
+ * Both verifications confirm the security boundary is intact before marking
+ * the self-check as passing.
+ *
+ * @param {{ server: object, planPath: string }} params - Server instance and plan path.
+ * @returns {Promise<Record<string, unknown>>} Self-check report.
+ */
 async function runValidationSelfCheck({ server, planPath }) {
   const issues = [];
   const activePlanContext = await loadActivePlanContext(planPath);

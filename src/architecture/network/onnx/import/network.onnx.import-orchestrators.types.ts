@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Import-owned type surface for ONNX architecture reconstruction orchestration.
  *
  * These payloads stay close to the orchestration helpers that parse terminal
@@ -19,14 +19,14 @@ import type {
   Pool2DMapping,
 } from '../schema/network.onnx.schema.types';
 
-/** Parsed architecture dimensions extracted from ONNX import graph payloads. */
+/** Parsed architecture dimensions extracted from ONNX import graph payloads, with input, output, and hidden sizes. */
 export type OnnxImportArchitectureResult = {
   inputCount: number;
   outputCount: number;
   hiddenLayerSizes: number[];
 };
 
-/** Shared architecture extraction context with resolved graph dimensions. */
+/** Shared architecture extraction context with resolved graph dimensions, initializers, and metadata properties. */
 export type OnnxImportArchitectureContext = {
   inputShapeDimensions: OnnxDimension[];
   outputShapeDimensions: OnnxDimension[];
@@ -51,7 +51,7 @@ export type OnnxImportHiddenLayerSpan = {
   hiddenStart: number;
 };
 
-/** Execution context for assigning one hidden-layer recurrent diagonal tensor. */
+/** Execution context for assigning one hidden-layer recurrent diagonal tensor, carrying model, nodes, and span. */
 export type OnnxImportLayerConnectionContext = {
   onnx: OnnxModel;
   hiddenNodes: NeatapticNode[];
@@ -85,7 +85,7 @@ export type OnnxImportFlattenConsistencyAudit = {
   matches: boolean;
 };
 
-/** Parsed pooling metadata payload attached to imported network instances. */
+/** Parsed pooling metadata payload attached to imported network instances, listing pool specs and virtual shapes. */
 export type OnnxImportPoolingMetadata = {
   layers: number[];
   specs: Pool2DMapping[];
@@ -119,7 +119,7 @@ export type OnnxImportResidualAdd = {
   mergeOutputName: string;
 };
 
-/** Explicit concat merge carried through Phase 5 import hardening. */
+/** Explicit concat merge carried through Phase 5 import hardening, identifying layer indices and merge tensor names. */
 export type OnnxImportConcatMerge = {
   sourceLayerIndex: number;
   targetLayerIndex: number;
@@ -138,7 +138,7 @@ export type OnnxImportAttentionBlock = {
   shadowOutputName: string;
 };
 
-/** Parsed advanced-graph metadata attached to imported network instances. */
+/** Parsed advanced-graph metadata attached to imported network instances, grouping merges, residual adds, and blocks. */
 export type OnnxImportAdvancedGraphMetadata = {
   crossLayerConnections?: OnnxImportAdvancedGraphCrossLayerConnection[];
   concatMerges?: OnnxImportConcatMerge[];
@@ -147,12 +147,12 @@ export type OnnxImportAdvancedGraphMetadata = {
   attentionBlocks?: OnnxImportAttentionBlock[];
 };
 
-/** Network instance augmented with optional imported ONNX pooling metadata. */
+/** Network instance augmented with optional imported ONNX pooling metadata via the _onnxPooling field. */
 export type NetworkWithOnnxImportPooling = Network & {
   _onnxPooling?: OnnxImportPoolingMetadata;
 };
 
-/** Network instance augmented with optional imported advanced-graph metadata. */
+/** Network instance augmented with optional imported advanced-graph metadata via the _onnxAdvancedGraph field. */
 export type NetworkWithOnnxImportAdvancedGraph = Network & {
   _onnxAdvancedGraph?: OnnxImportAdvancedGraphMetadata;
 };

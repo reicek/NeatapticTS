@@ -1,0 +1,35 @@
+{
+  "metricVersion": 1,
+  "scannerVersion": "1.0.0",
+  "gitCommit": "6d5494c144221a8f02a7f5cfebfdfdf06e85b862",
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "thresholdConfig": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeConfig": {
+    "scopeType": "paths",
+    "scopeValue": [
+      "src/architecture/network.ts",
+      "src/neat.ts"
+    ],
+    "scopeDigest": "d36d8aef57058f860ee0e6ff49fd2d34413806b0bafcbf4f818a4378515f7f53"
+  },
+  "sourcePathsDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
+  "issueBreakdown": {
+    "missingJsdoc": 0,
+    "weakJsdoc": 5,
+    "highComplexity": 2
+  },
+  "weakCount": 5,
+  "normalizedEvidenceDigest": "6a24827a755fc26f5f69e492727d59c5d565d92ddcdcef4392adbb308711b9da",
+  "threshold": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeType": "paths",
+  "scopeDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
+  "summaryPath": "artifacts/docs-quality/runs/recheck-default-20260525/summary.json",
+  "evidencePath": "artifacts/docs-quality/runs/recheck-default-20260525/evidence.json",
+  "manifestPath": "artifacts/docs-quality/runs/recheck-default-20260525/manifest.json"
+}

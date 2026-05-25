@@ -1,5 +1,24 @@
+/**
+ * @module load-chunk
+ * @description Single-chunk loader tool for the Repo Cortex MCP server.
+ *
+ * Loads one indexed corpus chunk by its numeric ID, useful for retrieving
+ * a specific passage identified by a prior `search_corpus` result.
+ */
 import { openCortexDatabase, readChunkRow } from './cortex-db.mjs';
 
+/**
+ * Load one indexed corpus chunk by its numeric chunk ID.
+ *
+ * When `chunk_id` is 1 and no exact row is found, falls back to the
+ * lowest-ID chunk in the index for compatibility with empty-index probes.
+ *
+ * @param {object} [options={}] - Tool options.
+ * @param {number} options.chunk_id - Numeric chunk identifier.
+ * @param {string} [options.databasePath] - Override corpus database path.
+ * @returns {Promise<{ chunk: object }>} The loaded chunk descriptor.
+ * @throws {Error} When `chunk_id` is not a positive integer or the chunk is not found.
+ */
 export async function loadChunk(options = {}) {
   const chunkId = Number(options.chunk_id);
   if (!Number.isInteger(chunkId) || chunkId < 1) {

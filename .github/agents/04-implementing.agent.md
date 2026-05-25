@@ -5,7 +5,8 @@ tier: 1
 model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
-agents: ['implementation-pattern-coordinator', 'Boundary Mapper', 'Docs Scout', 'Browser Runtime Scout', 'Worker Payload Scout', 'Evaluation Pool Scout', 'Checkpoint Scout', 'Hybrid Interop Scout', 'Determinism Scout', 'Visualizer Scout', 'NGE Core Scout', 'NGE Benchmark Scout', 'NEATchat Scout', 'solid-split', 'flappy-architecture-polish', 'Agent Frontmatter Auditor', 'Phase Handoff Designer', 'MCP Server Architect', 'helping-gap-resolution-coordinator']
+agents: ['implementation-pattern-coordinator', 'boundary-mapper', 'docs-scout', 'browser-runtime-scout', 'worker-payload-scout', 'evaluation-pool-scout', 'checkpoint-scout', 'hybrid-interop-scout', 'determinism-scout', 'visualizer-scout', 'nge-core-scout', 'nge-benchmark-scout', 'neatchat-scout', 'solid-split', 'flappy-architecture-polish', 'agent-frontmatter-auditor', 'phase-handoff-designer', 'mcp-server-architect', 'helping-gap-resolution-coordinator']
+skills: []
 handoffs:
   - label: 'Validate Green'
     agent: '05-green-testing'
@@ -31,7 +32,7 @@ contract. Delegate domain work to hidden specialists and durable skills.
 - Update the active `plans/*.md` tracker before validation handoff so chat is not the source of truth.
 - **Terminal ownership**: If a required long-running terminal command was started during this step (candidate generation, build, large test run, etc.), either await confirmed completion before returning, or set `TASK_STATUS: PARTIAL`, list the active job in `BLOCKERS`, and explicitly describe a safe detached-job contract before handing off. Do not return `TASK_STATUS: SUCCESS` while a required background process is still running.
 
-## Approach
+## Default Flow
 
 1. Read the active plan, the current phase step contract, and relevant source files.
 2. Use specialists for domain-specific reconnaissance or narrow implementation packets.
@@ -39,6 +40,12 @@ contract. Delegate domain work to hidden specialists and durable skills.
 4. Keep scripts noninteractive, deterministic, and validation-friendly.
 5. Update the active plan with changed files, risks, and expected Step 05 validation commands.
 6. Hand off to Step 05 with the touched files and expected commands.
+
+## If Blocked
+
+- If a required specialist or domain scout is missing, route the gap to `helping-gap-resolution-coordinator` before proceeding with a provisional implementation.
+- If a long-running terminal command is still active, set `TASK_STATUS: PARTIAL`, list the job in `BLOCKERS`, and document a safe detached-job contract before returning.
+- For scope ambiguity or plan boundary conflicts, escalate via `00.cross-tier-helper` with the conflict evidence.
 
 ## Output Format
 
@@ -49,7 +56,7 @@ Report participants, files, validations, blockers, and gaps truthfully. Use `NON
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
 TASK_STATUS: SUCCESS | PARTIAL | FAILED
-TIER: 0
+TIER: 1
 ROLE: 04-implementing
 TASK_RECEIVED: <brief restatement>
 FILES_READ:

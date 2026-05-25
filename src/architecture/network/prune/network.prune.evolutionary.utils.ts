@@ -1,4 +1,4 @@
-import Connection from '../../connection';
+﻿import Connection from '../../connection';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import type Network from '../../network/network';
 import type {
@@ -30,6 +30,7 @@ export function normalizeEvolutionaryTargetSparsity(
 
 /**
  * Capture evolutionary baseline once and reuse it for subsequent pruning calls.
+ * The baseline anchors target sparsity to the original connection budget so repeated prune cycles converge predictably instead of drifting with the current graph size.
  * @param currentNetwork - Network to inspect and possibly initialize.
  * @returns Evolutionary baseline connection count.
  */
@@ -48,6 +49,7 @@ export function getOrCaptureEvolutionaryBaseline(
 
 /**
  * Compute evolutionary pruning target counts.
+ * This conversion translates a normalized sparsity objective into concrete connection counts while enforcing the minimum remaining edge safety floor.
  * @param context - Inputs for sparsity-to-count conversion.
  * @param currentConnectionCount - Current number of network connections.
  * @returns Desired remaining and excess connection counts.
@@ -70,6 +72,7 @@ export function buildEvolutionaryTarget(
 
 /**
  * Build evolutionary pruning connection selection.
+ * Ranking and slicing happen in one deterministic pass so stochastic training variance does not reorder equal-score candidates across repeated pruning runs.
  * @param context - Inputs for ranking and slicing.
  * @returns Connections selected for removal.
  */
@@ -89,6 +92,7 @@ export function buildEvolutionaryPruneSelection(
 
 /**
  * Disconnect selected evolutionary pruning edges.
+ * Removal is followed by deferred activation-pool compaction scheduling so large structural contractions can reclaim memory without forcing immediate synchronous pool reshaping.
  * @param currentNetwork - Network to mutate.
  * @param connectionsToDisconnect - Edges to remove.
  * @returns Nothing.

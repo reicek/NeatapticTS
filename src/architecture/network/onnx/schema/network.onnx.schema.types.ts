@@ -86,18 +86,29 @@ export type OnnxDimension = {
   dim_param?: string;
 };
 
-/** ONNX tensor type shape. */
+/**
+ * Tensor-shape envelope used by ONNX value and initializer descriptors.
+ *
+ * The `dim` array preserves rank and per-axis declarations in order.
+ */
 export type OnnxShape = {
   dim: OnnxDimension[];
 };
 
-/** ONNX tensor type. */
+/**
+ * ONNX tensor type descriptor combining element type and shape metadata.
+ */
 export type OnnxTensorType = {
   elem_type: number;
   shape: OnnxShape;
 };
 
-/** ONNX value info (input/output description). */
+/**
+ * Input or output boundary descriptor for an ONNX graph.
+ *
+ * Export uses this to declare the tensor contracts expected at graph entry and
+ * produced at graph exit.
+ */
 export type OnnxValueInfo = {
   name: string;
   type: {
@@ -201,7 +212,12 @@ export type OnnxNode = {
   attributes?: OnnxAttribute[];
 };
 
-/** Canonical metadata key-value pair used in ONNX model metadata_props. */
+/**
+ * Canonical metadata key-value pair used by `OnnxModel.metadata_props`.
+ *
+ * Keys are exporter-defined semantic hints (for example layout or fallback
+ * reasons) and values are serialized as plain strings.
+ */
 export type OnnxMetadataProperty = {
   key: string;
   value: string;

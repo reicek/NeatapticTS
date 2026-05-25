@@ -89,6 +89,23 @@ resources/prompts/tools, evidence-bearing gate exceptions, and universal
 as the archived baseline for existing agent, skill, model-routing, validation,
 and MCP ownership contracts.
 
+## Standalone Documentation Metrics Contract Lane [DONE]
+
+**Outcome:** permanently eliminate weak-doc metric inconsistency by shipping a canonical
+versioned metric contract, deterministic runner artifacts, strict compare guards, MCP/CLI parity,
+and CI-enforced validation.
+
+- Docs quality metrics contract and parity
+  - Plan: [completed/Docs_Quality_Metrics_Contract_and_Parity.plans.md](completed/Docs_Quality_Metrics_Contract_and_Parity.plans.md) [DONE]
+  - Current internal state: this lane is archived as a reopen-only baseline after closing all seven
+    steps, including canonical command wiring (`docs:quality:metrics`, `docs:quality:compare`),
+    deterministic normalization and run artifacts, fail-fast mismatch reason codes, MCP and CLI
+    parity, docs-quality CI gate wiring, and migration runbook closure.
+
+**Coordination rule:** keep this lane constrained to docs-quality metric ownership surfaces
+(`scripts/semantic-index/**`, `scripts/agent-customization/mcp/**`, gate scripts, package scripts,
+CI workflow wiring, and documentation). Avoid unrelated architecture or runtime refactors.
+
 ## Phase 0 â€” Hygiene + Refactor Baseline [DONE]
 
 **Outcome:** keep iteration speed high, reduce refactor risk, and finish the structural cleanup needed before broad mechanical modernization.
@@ -307,10 +324,11 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1â€
 - Artifacts: `scripts/semantic-index/embed-index.mjs`, `data/embeddings.sqlite`, ONNX model cache
 
 6. Embedding prewarm + default-on dense contract (Layer 6)
-  - Plan: [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
-  - Gate: Layer 5 [DONE] satisfied; Layer 6 archived after final prewarm, readiness, gate, MCP degradation, and tracker-closure validation
-  - Soft dependency: Layer 4 [DONE] improved MCP lifecycle management but was not required to close Layer 6
-  - Artifacts: `scripts/semantic-index/prewarm-dense.mjs`, `scripts/semantic-index/dense-readiness.mjs`, `scripts/agent-customization/gates/dense-readiness.gate.mjs`; MCP `search_corpus` now defaults `use_dense: true` with graceful cold-state degradation and warm-state `dense_state` provenance
+
+- Plan: [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
+- Gate: Layer 5 [DONE] satisfied; Layer 6 archived after final prewarm, readiness, gate, MCP degradation, and tracker-closure validation
+- Soft dependency: Layer 4 [DONE] improved MCP lifecycle management but was not required to close Layer 6
+- Artifacts: `scripts/semantic-index/prewarm-dense.mjs`, `scripts/semantic-index/dense-readiness.mjs`, `scripts/agent-customization/gates/dense-readiness.gate.mjs`; MCP `search_corpus` now defaults `use_dense: true` with graceful cold-state degradation and warm-state `dense_state` provenance
 
 ### Agentic Workflow Enforcement Prerequisite [DONE]
 
@@ -323,7 +341,7 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1â€
 ### Parallel tracks (can run alongside Layers 1â€“3 and the prerequisite)
 
 - NeatChat local retrieval and memory (separate from Repo Cortex)
-  - Plan: [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [PLANNED]
+  - Plan: [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [WIP]
   - Depends on archived [completed/neatChat-live-safety-red.plans.md](completed/neatChat-live-safety-red.plans.md) [DONE] as the closed live safety baseline (no conflict; guarded integration)
   - May reuse chunking and BM25 patterns from Layers 1â€“3 but must not import from `scripts/semantic-index/`
   - Artifacts: `examples/neatChat/memory/` (types, DB adapters, retrieval, services, tests)
@@ -390,7 +408,7 @@ M6b. [completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_
 M7. [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
 M8. [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
 M8b. [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
-M9. [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [PLANNED]
+M9. [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [WIP]
 
 ### Phase 0 inventory
 

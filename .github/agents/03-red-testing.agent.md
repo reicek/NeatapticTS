@@ -5,7 +5,8 @@ tier: 1
 model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
-agents: ['planning-test-strategy-coordinator', 'acceptance-criteria-writer', 'unit-test-writer', 'Coverage Scout', 'Determinism Scout', 'Plan Scout', 'helping-gap-resolution-coordinator']
+agents: ['planning-test-strategy-coordinator', 'acceptance-criteria-writer', 'unit-test-writer', 'coverage-scout', 'determinism-scout', 'plan-scout', 'helping-gap-resolution-coordinator']
+skills: ['red-test-contracts', 'test-fix-workflow', 'coverage-tranche']
 handoffs:
   - label: 'Implement'
     agent: '04-implementing'
@@ -31,7 +32,7 @@ and record red evidence in the active plan.
 - Update the active `plans/*.md` tracker with red evidence and the handoff before ending.
 - If no focused test writer, fixture path, or assertion skill fits the target, route the gap to `helping-gap-resolution-coordinator` before widening the test context.
 
-## Approach
+## Default Flow
 
 1. Read the active plan and research evidence.
 2. Identify the smallest observable behavior or customization invariant.
@@ -39,6 +40,11 @@ and record red evidence in the active plan.
 4. Run the narrow command when practical and record the failure.
 5. Update the active plan with files changed, command evidence, and the expected Step 04 green condition or skip rationale.
 6. Hand off to Step 04 with the exact command, expected green condition, or recorded skip.
+
+## If Blocked
+
+- If no focused test writer, fixture path, or assertion skill fits the target, route the gap to `helping-gap-resolution-coordinator` before widening the test context.
+- If the observable behavior cannot be isolated to a single failing assertion, set `TASK_STATUS: PARTIAL`, document the ambiguity, and escalate via `00.cross-tier-helper`.
 
 ## Output Format
 
@@ -49,7 +55,7 @@ Report participants, files, validations, blockers, and gaps truthfully. Use `NON
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
 TASK_STATUS: SUCCESS | PARTIAL | FAILED
-TIER: 0
+TIER: 1
 ROLE: 03-red-testing
 TASK_RECEIVED: <brief restatement>
 FILES_READ:

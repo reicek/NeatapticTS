@@ -1,4 +1,4 @@
-import type { StandaloneGenerationContext as GenerationContext } from '../network.types';
+﻿import type { StandaloneGenerationContext as GenerationContext } from '../network.types';
 import {
   ACTIVATION_PRECISION_F16,
   ACTIVATION_PRECISION_F32,

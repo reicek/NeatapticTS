@@ -1,4 +1,31 @@
 #!/usr/bin/env node
+/**
+ * @module neataptic-workflow-mcp
+ * @description Workflow MCP server — exposes repo-static workflow facts as MCP tools.
+ *
+ * Reads the active `[WIP]` phase and step from the plan file specified at
+ * startup and serves two read-only tools to AI agents:
+ * `get_active_workflow_snapshot` and `get_customization_inventory`. All facts
+ * are derived from deterministic file-based sources; live host state (selected
+ * model, active agent, tool-picker state) is explicitly banned via
+ * {@link BANNED_LIVE_FACT_KEYS}.
+ *
+ * @remarks
+ * ### Plan-Path Resolution Chain
+ *
+ * ```mermaid
+ * flowchart TD
+ *   A[Tool call] --> B{plan_path arg provided?}
+ *   B -- yes --> C[resolvePlansScopedPath<br/>validate within plans/]
+ *   B -- no  --> D{SESSION_OVERRIDE_PATH exists?}
+ *   D -- yes --> E[readSessionOverridePlanPath<br/>parse JSON override]
+ *   E --> F{Valid plan_path in override?}
+ *   F -- yes --> G[resolvePlansScopedPath]
+ *   F -- no  --> H[Use startup planPath]
+ *   D -- no  --> H
+ *   C & G & H --> I[loadActivePlanContext<br/>parse WIP phase + step]
+ * ```
+ */
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -30,6 +57,17 @@ const SERVER_VERSION = '0.1.0';
 const INVENTORY_COMMAND = 'node scripts/agent-customization/inventory-customizations.mjs --json';
 const PLANS_ROOT = path.join(MCP_REPO_ROOT, 'plans');
 const SESSION_OVERRIDE_PATH = path.join(MCP_REPO_ROOT, 'data', 'mcp-session-override.json');
+/**
+ * Keys that must never appear in the workflow snapshot payload.
+ *
+ * These represent live host-state facts (selected model, active agent, tool-picker
+ * state, hook observations) that are only available via a bridge and cannot be
+ * reliably served by a file-based MCP server. Exposing them would mislead agents
+ * into treating stale or missing data as authoritative live context.
+ *
+ * The self-check asserts that none of these keys are present in a snapshot
+ * returned by `get_active_workflow_snapshot`.
+ */
 const BANNED_LIVE_FACT_KEYS = [
   'selectedActiveAgent',
   'currentSelectedModel',
@@ -66,6 +104,12 @@ if (options.selfCheck) {
   await runStdioMcpServer(server);
 }
 
+/**
+ * Build the tool list for the workflow MCP server.
+ *
+ * @param {string} planPath - Repo-relative plan path used as the startup default.
+ * @returns {Array<{ name: string, description: string, inputSchema: Record<string, unknown>, handler: Function }>} Tool list.
+ */
 function createWorkflowTools(planPath) {
   return [
     createTool({
@@ -84,7 +128,33 @@ function createWorkflowTools(planPath) {
       },
       handler: async (argumentsObject) => {
         const effectivePlanPath = await resolveEffectivePlanPath(argumentsObject, planPath);
-        return createWorkflowSnapshot(await loadActivePlanContext(effectivePlanPath));
+        try {
+          return createWorkflowSnapshot(await loadActivePlanContext(effectivePlanPath));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          const isNoWipPhase = message.includes('[WIP] phase') || message.includes('[WIP] step');
+          if (!isNoWipPhase) {
+            throw error;
+          }
+
+          // Graceful degradation: plan exists but no [WIP] phase/step is set yet.
+          // Return a structured "no-active-phase" snapshot instead of an error so
+          // agents can detect session-start state and fall back to direct plan reads
+          // rather than spinning on a hard tool failure.
+          return {
+            scope: 'no-active-phase',
+            plan: effectivePlanPath,
+            activePhase: null,
+            activeStep: null,
+            reason: message,
+            fallbackAdvice: [
+              'No [WIP] phase or step found in the plan.',
+              'If starting a new workstream: mark Phase 1 as [WIP] and Step 01 as [WIP] in the plan file, then retry.',
+              'If redirecting the session: run plan-session-redirect.mjs --clear to revert to the perpetual binding (plans/mcp-active-binding.plans.md).',
+              'Use direct plan file read as the fallback for current phase/step context.',
+            ],
+          };
+        }
       },
     }),
     createTool({
@@ -96,6 +166,16 @@ function createWorkflowTools(planPath) {
   ];
 }
 
+/**
+ * Run an end-to-end self-check of the workflow MCP server.
+ *
+ * Validates protocol version, tool count, snapshot correctness, absence of
+ * banned live-fact keys, and inventory response shape. Returns a structured
+ * report compatible with the standard self-check format.
+ *
+ * @param {{ server: object, planPath: string }} params - Server instance and plan path.
+ * @returns {Promise<Record<string, unknown>>} Self-check report.
+ */
 async function runWorkflowSelfCheck({ server, planPath }) {
   const issues = [];
   const effectivePlanPath = await resolveEffectivePlanPath({}, planPath);
@@ -174,6 +254,16 @@ async function runWorkflowSelfCheck({ server, planPath }) {
   });
 }
 
+/**
+ * Load the deterministic customization inventory by running the inventory script.
+ *
+ * Executes `node scripts/agent-customization/inventory-customizations.mjs --json`
+ * via {@link runShellFreeCommand} and parses the JSON output. Throws on non-zero
+ * exit or invalid JSON so callers receive a clear error rather than silent data loss.
+ *
+ * @returns {Promise<Record<string, unknown>>} Parsed inventory payload.
+ * @throws {Error} When the command fails or its output is not valid JSON.
+ */
 async function loadCustomizationInventory() {
   const commandResult = await runShellFreeCommand(INVENTORY_COMMAND, { maxOutputBytes: 200_000 });
   if (commandResult.exitCode !== 0) {
@@ -187,6 +277,16 @@ async function loadCustomizationInventory() {
   }
 }
 
+/**
+ * Determine the effective plan path for a tool call.
+ *
+ * Priority order: (1) per-call `plan_path` argument, (2) session override file
+ * at `data/mcp-session-override.json`, (3) startup `planPath`.
+ *
+ * @param {Record<string, unknown>} argumentsObject - Tool call arguments.
+ * @param {string} startupPlanPath - Startup plan path to fall back to.
+ * @returns {Promise<string>} Resolved effective plan path.
+ */
 async function resolveEffectivePlanPath(argumentsObject, startupPlanPath) {
   if (argumentsObject?.plan_path !== undefined) {
     return resolvePlansScopedPath(argumentsObject.plan_path, 'plan_path');
@@ -196,6 +296,14 @@ async function resolveEffectivePlanPath(argumentsObject, startupPlanPath) {
   return sessionOverridePlanPath ?? startupPlanPath;
 }
 
+/**
+ * Read the active session override plan path from the session override file.
+ *
+ * Returns `null` when the file is absent, malformed JSON, or does not contain
+ * a usable `plan_path` string, so the caller falls back to the startup plan path.
+ *
+ * @returns {Promise<string | null>} Resolved plan path from the session override, or `null`.
+ */
 async function readSessionOverridePlanPath() {
   if (!existsSync(SESSION_OVERRIDE_PATH)) {
     return null;
@@ -214,6 +322,18 @@ async function readSessionOverridePlanPath() {
   }
 }
 
+/**
+ * Resolve and validate a plan path so it stays within the `plans/` directory.
+ *
+ * Throws a JSON-RPC -32602 invalid-params error when the resolved path escapes
+ * `plans/`, preventing callers from using the workflow tool to read arbitrary
+ * filesystem paths through plan-path injection.
+ *
+ * @param {string} candidatePath - Raw plan path from the caller or session override.
+ * @param {string} fieldName - Human-readable field name for error messages.
+ * @returns {string} Normalized repo-relative plan path within `plans/`.
+ * @throws {Error} When the path resolves outside `plans/` (JSON-RPC error code -32602).
+ */
 function resolvePlansScopedPath(candidatePath, fieldName) {
   const requestedPlanPath = requireString(candidatePath, fieldName);
   const absolutePlanPath = path.isAbsolute(requestedPlanPath)

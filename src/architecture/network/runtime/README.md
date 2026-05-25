@@ -16,7 +16,7 @@ Provides:
 clearStochasticDepthSchedule(): void
 ```
 
-Clear the stochastic-depth schedule function.
+Clear the stochastic-depth schedule function so runtime behavior reverts to the currently stored static survival probabilities without additional per-step schedule adjustments.
 
 Parameters:
 - `this` - Target network instance.
@@ -29,7 +29,7 @@ Returns: Nothing.
 clearWeightNoiseSchedule(): void
 ```
 
-Clear the dynamic global weight-noise schedule.
+Clear the dynamic global weight-noise schedule so future steps stop applying schedule-driven standard-deviation updates and keep only explicit static configuration.
 
 Parameters:
 - `this` - Target network instance.
@@ -61,7 +61,7 @@ Returns: Nothing.
 disableStochasticDepth(): void
 ```
 
-Disable stochastic depth.
+Disable stochastic depth entirely so all hidden layers participate in every pass and no layer-skipping regularization is applied at runtime.
 
 Parameters:
 - `this` - Target network instance.
@@ -74,7 +74,7 @@ Returns: Nothing.
 disableWeightNoise(): void
 ```
 
-Disable all configured weight noise.
+Disable all configured weight-noise mechanisms so subsequent training and inference passes execute without global or per-hidden-layer perturbation state, schedule updates, or hidden-layer noise carryover.
 
 Parameters:
 - `this` - Target network instance.
@@ -107,7 +107,7 @@ Returns: Nothing.
 getLastSkippedLayers(): number[]
 ```
 
-Read the last hidden-layer indices skipped by stochastic depth.
+Read the last hidden-layer indices skipped by stochastic depth so diagnostics can inspect which layers were bypassed in the most recent forward pass.
 
 Parameters:
 - `this` - Target network instance.
@@ -120,7 +120,7 @@ Returns: Snapshot of the last skipped hidden-layer indices.
 getRuntimeRegularizationStats(): Record<string, unknown> | null
 ```
 
-Read regularization statistics collected during training.
+Read regularization statistics collected during training so callers can inspect dropout, noise, and penalty telemetry without direct access to internal runtime fields.
 
 Parameters:
 - `this` - Target network instance.
@@ -133,7 +133,7 @@ Returns: Last regularization stats payload or `null` when none exists yet.
 getTrainingStep(): number
 ```
 
-Read the current training-step counter.
+Read the current training-step counter so external schedulers, dashboards, and callback logic can align runtime control decisions with iteration progress.
 
 Parameters:
 - `this` - Target network instance.
@@ -186,7 +186,7 @@ setStochasticDepthSchedule(
 ): void
 ```
 
-Set the stochastic-depth schedule function.
+Set the stochastic-depth schedule function that updates survival probabilities over time using the current training step and previous schedule state.
 
 Parameters:
 - `this` - Target network instance.
@@ -202,7 +202,7 @@ setWeightNoiseSchedule(
 ): void
 ```
 
-Set a dynamic scheduler for global weight noise.
+Set a dynamic scheduler for global weight noise so each training step can derive a new standard deviation from one explicit and testable policy function.
 
 Parameters:
 - `this` - Target network instance.

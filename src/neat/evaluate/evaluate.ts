@@ -179,4 +179,11 @@ export async function evaluate(this: NeatControllerForEval): Promise<void> {
   runAutoEntropyObjectiveInjection(this, evaluationOptions);
 }
 
-export default { evaluate };
+/**
+ * Default export bundle for the NEAT population evaluation chapter.
+ *
+ * Bundles the evaluate function so the Neat facade can bind it as a method
+ * without importing it individually.
+ */
+const evaluateUtils = { evaluate };
+export default evaluateUtils;

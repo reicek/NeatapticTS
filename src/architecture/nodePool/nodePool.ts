@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Core node-pool chapter for the architecture surface.
  *
  * This folder owns the reusable pool that recycles `Node` instances after
@@ -120,13 +120,15 @@ const resetNode = (
   node.geneId = nextGeneId++;
 };
 
-/** Options bag for acquiring a node. */
+/**
+ * Options bag for acquiring a node from the recycled pool or constructing a fresh one when the pool is empty.
+ */
 export interface AcquireNodeOptions {
-  /** Node type (`input` | `hidden` | `output` | `constant`). Defaults to `hidden`. */
+  /** Node role type (`'input'` | `'hidden'` | `'output'` | `'constant'`). Defaults to `'hidden'` when not supplied. */
   type?: string;
-  /** Optional custom activation function. */
+  /** Optional custom activation function to assign immediately after acquisition, replacing the node's default squash. */
   activationFn?: (x: number, derivate?: boolean) => number;
-  /** Optional RNG for deterministic bias initialization. */
+  /** Optional seeded random number generator for deterministic bias initialization when reproducibility is required. */
   rng?: () => number;
 }
 
@@ -161,10 +163,11 @@ export const acquireNode = (opts: AcquireNodeOptions = {}): Node => {
 };
 
 /**
- * Release a detached node back into the pool.
+ * Release a detached node back into the pool so it can be reused by the next `acquireNode` caller.
  *
- * Callers must ensure the node is no longer part of a live graph. The pool
- * keeps the object shell, not the prior topology membership.
+ * Callers must ensure the node is fully removed from any live graph before releasing it. The pool
+ * retains the object shell and clears connection lists, but does not reset activation or bias state;
+ * that scrub happens at acquisition time inside `acquireNode`.
  *
  * @param node Detached node instance to recycle.
  * @returns Nothing.
@@ -183,9 +186,9 @@ export const releaseNode = (node: Node): void => {
 };
 
 /**
- * Get current pool statistics for diagnostics and memory reporting.
+ * Return current pool statistics for diagnostics, memory reporting, and recycling efficiency evaluation.
  *
- * @returns Pool size, reuse counters, and the long-run recycled ratio.
+ * @returns Pool size, high-water mark, reuse and fresh allocation counts, and the long-run recycled ratio.
  */
 export const nodePoolStats = (): {
   size: number;
@@ -207,7 +210,7 @@ export const nodePoolStats = (): {
 };
 
 /**
- * Drop all retained pooled nodes and reset instrumentation counters.
+ * Drop all retained pooled nodes and reset instrumentation counters to zero for deterministic test harness cleanup or memory-probe baselines.
  *
  * @returns Nothing.
  */
@@ -223,4 +226,18 @@ defaultMemoryManager.registerPool('nodePool', {
   stats: nodePoolStats,
 });
 
-export default { acquireNode, releaseNode, nodePoolStats, resetNodePool };
+/**
+ * Convenience namespace grouping all four public node-pool operations for callers that prefer
+ * a single default import over named imports.
+ *
+ * Prefer named imports (`acquireNode`, `releaseNode`, `nodePoolStats`, `resetNodePool`) when
+ * only a subset of the API is needed, and prefer this default import when the full surface
+ * is required in one destructure.
+ */
+const nodePoolNamespace = {
+  acquireNode,
+  releaseNode,
+  nodePoolStats,
+  resetNodePool,
+};
+export default nodePoolNamespace;

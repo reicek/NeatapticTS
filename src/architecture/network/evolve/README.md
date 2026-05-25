@@ -112,7 +112,7 @@ applySmallPopulationHeuristics(
 ): void
 ```
 
-Increase mutation aggressiveness for tiny populations.
+Apply conservative mutation-rate and mutation-amount defaults for tiny populations to reduce early stagnation risk while avoiding aggressive overrides when callers already configured explicit mutation controls.
 
 Parameters:
 - `neatInstance` - Active NEAT instance.
@@ -129,7 +129,7 @@ assertEvolutionDatasetCompatibility(
 ): void
 ```
 
-Validate dataset existence and dimensional compatibility with network I/O.
+Validate that training samples exist and that each sample shape matches the network input and output arity before any evolution work starts.
 
 Parameters:
 - `network` - Network being evolved.
@@ -146,7 +146,7 @@ configureNeatOptions(
 ): void
 ```
 
-Normalize options used by NEAT constructor.
+Normalize options consumed by the NEAT constructor, including compatibility mapping between populationSize and popsize, plus default speciation behavior needed for historical evolve-call consistency.
 
 Parameters:
 - `network` - Network instance being evolved.
@@ -162,7 +162,7 @@ createEvolutionConfig(
 ): EvolutionConfig | undefined
 ```
 
-Build optional structured evolution config summary.
+Build a structured evolution-config snapshot for diagnostics, callback payloads, and log hooks whenever scheduling metadata exists, while keeping omitted schedule paths represented as an explicit undefined result.
 
 Parameters:
 - `settingsToSummarize` - Scalar evolution settings.
@@ -179,7 +179,7 @@ createNeatInstance(
 ): Promise<NeatRuntime>
 ```
 
-Lazy-load and create NEAT instance.
+Lazy-load the NEAT runtime class and create an instance bound to the prepared fitness evaluator and normalized options so evolution setup can remain lightweight until construction is truly needed.
 
 Parameters:
 - `network` - Network instance being evolved.
@@ -196,7 +196,7 @@ getNormalizedOptions(
 ): EvolveOptions
 ```
 
-Ensure options object exists.
+Return the normalized evolve-options object that every downstream setup helper reads so defaults, compatibility shims, and diagnostics all start from one stable and predictable structure.
 
 Parameters:
 - `evolveOptions` - Incoming evolve options.
@@ -213,7 +213,7 @@ prepareFitnessFunction(
 ): Promise<FitnessSetup>
 ```
 
-Build fitness function according to threading configuration.
+Build the effective fitness evaluator by selecting either single-thread or worker-backed execution from resolved threading settings, then return both the callable function and the resolved runtime thread count.
 
 Parameters:
 - `dataSet` - Supervised dataset.
@@ -230,7 +230,7 @@ resolveEvolutionSettings(
 ): EvolutionSettings
 ```
 
-Resolve normalized scalar settings with defaults.
+Resolve scalar evolution settings with explicit and stable defaults so later setup phases can run deterministically without repeating option-default logic in several different orchestration branches.
 
 Parameters:
 - `evolveOptions` - Evolve options object.
@@ -246,7 +246,7 @@ resolveStopConditions(
 ): EvolutionStopConditions
 ```
 
-Resolve stopping-condition semantics while preserving legacy behavior.
+Resolve stopping conditions while preserving legacy iteration-and-error semantics so existing callers keep the same termination behavior, including compatibility with historical zero-iteration and disabled-error workflows.
 
 Parameters:
 - `evolveOptions` - Evolve options object.
@@ -263,7 +263,7 @@ warnIfNoBestGenomeMayOccur(
 ): void
 ```
 
-Emit warning when zero-iteration configuration may produce no best genome.
+Emit a best-genome advisory warning for zero-iteration runs where legacy flows can complete without setting a champion, preventing silent confusion when a caller expects a populated best network.
 
 Parameters:
 - `neatInstance` - Active NEAT instance.
@@ -286,7 +286,8 @@ buildMultiThreadFitness(
 ): Promise<FitnessSetup>
 ```
 
-Build worker-based population fitness setup.
+Build worker-based population fitness setup that serializes the dataset once and assigns a population-scoring function.
+When worker construction fails, this helper falls back to the single-thread evaluator automatically.
 
 Parameters:
 - `set` - Dataset.
@@ -326,7 +327,8 @@ buildSingleThreadFitness(
 ): SingleGenomeFitnessFunction
 ```
 
-Build a single-threaded genome fitness evaluator.
+Build a single-threaded genome fitness evaluator that repeats scoring, applies complexity penalty, and normalizes by evaluation count.
+This path is the deterministic fallback when worker-based evaluation is unavailable.
 
 Parameters:
 - `set` - Dataset of training samples.
@@ -396,7 +398,8 @@ computeComplexityPenalty(
 ): number
 ```
 
-Compute structural complexity penalty scaled by growth.
+Compute structural complexity penalty scaled by growth so larger genomes receive deterministic parsimony pressure during fitness scoring.
+Cached structure counts avoid repeated recomputation for unchanged genome objects.
 
 Parameters:
 - `genome` - Candidate network whose complexity to measure.
@@ -513,7 +516,8 @@ evaluateGenomeWithWorker(
 ): Promise<void>
 ```
 
-Evaluate one genome with a worker and assign penalized score.
+Evaluate one genome with a worker and assign a penalized score that includes structural complexity pressure.
+Non-numeric worker results are ignored so calling loops can continue safely.
 
 Parameters:
 - `worker` - Worker instance.
@@ -593,7 +597,8 @@ installWorkerTerminationHook(
 ): void
 ```
 
-Register worker termination hook onto options object.
+Register a worker termination hook onto the evolve options object so spawned workers can be cleaned up deterministically.
+Termination errors are swallowed to avoid masking primary evolution outcomes.
 
 Parameters:
 - `options` - Evolve options object.
@@ -768,7 +773,7 @@ runEvolutionLoop(
 ): Promise<{ error: number; bestGenome: default | undefined; }>
 ```
 
-Run core evolution loop until stop condition is met.
+Run the core evolution loop until error target or iteration limit is reached.
 
 Parameters:
 - `neatInstance` - Active NEAT instance.
@@ -888,15 +893,11 @@ adoptBestGenomeOrWarn(
 ): void
 ```
 
-Adopt best genome structure or emit warning when unavailable.
+Finalization helper that adopts the best evolved genome into the caller's
+network when one exists.
 
-Parameters:
-- `network` - Network instance being evolved.
-- `neatInstance` - Active NEAT instance.
-- `bestGenome` - Best genome snapshot.
-- `clearState` - Whether to clear network after adoption.
-
-Returns: Nothing.
+If no best genome is available, the optional NEAT warning hook is invoked so
+callers can surface diagnostic context without throwing from finalize flow.
 
 ### buildEvolutionSummary
 
@@ -908,7 +909,7 @@ buildEvolutionSummary(
 ): EvolutionSummary
 ```
 
-Build final evolve return payload.
+Build the final evolution summary payload returned by the evolve loop.
 
 Parameters:
 - `error` - Final loop error.
@@ -925,7 +926,10 @@ terminateWorkersSafely(
 ): void
 ```
 
-Terminate worker resources registered in options.
+Best-effort shutdown for worker terminators attached to evolve options.
+
+This keeps finalize paths resilient when background evaluators were used and
+avoids leaking worker resources if teardown throws.
 
 Parameters:
 - `evolveOptions` - Evolve options object.
@@ -1010,24 +1014,8 @@ throw new NetworkEvolveDatasetCompatibilityError(
 
 ### NetworkEvolveDatasetCompatibilityError
 
-Raised when the evolve dataset is missing or does not match network IO.
-
-Example:
-
-```ts
-throw new NetworkEvolveDatasetCompatibilityError(
-  'Dataset should have at least one sample and matching input/output sizes.',
-);
-```
+Contract for NetworkEvolveDatasetCompatibilityError.
 
 ### NetworkEvolveStoppingConditionRequiredError
 
-Raised when evolve options do not declare any stopping condition.
-
-Example:
-
-```ts
-throw new NetworkEvolveStoppingConditionRequiredError(
-  'Evolution requires either iterations or error to be set.',
-);
-```
+Contract for NetworkEvolveStoppingConditionRequiredError.

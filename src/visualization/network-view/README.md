@@ -262,7 +262,7 @@ resolveNetworkVisualizationLayers(
 ): VisualNetworkNode[][]
 ```
 
-Resolves layered node groups for network layout.
+Resolve layered node groups used by canvas layout and topology-aware rendering.
 
 Parameters:
 - `network` - Runtime network instance (or undefined for fallback).

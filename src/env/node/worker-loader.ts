@@ -1,4 +1,4 @@
-import type { TestWorkerConstructor } from '../../multithreading/types';
+﻿import type { TestWorkerConstructor } from '../../multithreading/types';
 
 /**
  * Resolve the browser worker wrapper from the Node-oriented environment shelf.

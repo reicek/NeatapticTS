@@ -657,7 +657,8 @@ applyModelMetadata(
 ): void
 ```
 
-Attach producer and opset metadata to a model when metadata emission is enabled.
+Attach producer, opset, and documentation metadata to a model when metadata emission is enabled for export diagnostics.
+Fallback values keep metadata deterministic even when optional producer fields are omitted.
 
 Parameters:
 - `context` - Metadata application context.
@@ -672,7 +673,8 @@ collectRecurrentLayerIndices(
 ): number[]
 ```
 
-Detect hidden layers with self-recurrence and add matching previous-state graph inputs.
+Detect hidden layers with self-recurrence and add matching previous-state graph inputs required by single-step recurrent export.
+Collected indices are reused by metadata and recurrent post-processing lanes.
 
 Parameters:
 - `context` - Recurrent collection context.
@@ -687,7 +689,8 @@ createBaseModel(
 ): OnnxModel
 ```
 
-Create the base ONNX model shell with graph input/output declarations.
+Create the base ONNX model shell with graph input and output declarations before operator emission starts.
+Initializer and node arrays are intentionally empty so later export phases append deterministic content.
 
 Parameters:
 - `context` - Base model build context.
@@ -702,7 +705,8 @@ createGraphDimensions(
 ): OnnxGraphDimensions
 ```
 
-Build tensor dimensions for model input and output, optionally with symbolic batch dimension.
+Build tensor dimensions for model input and output boundaries, optionally prepending a symbolic batch axis for runtime-sized payloads.
+The result is reused by value-info generation so shape contracts stay deterministic.
 
 Parameters:
 - `context` - Dimension construction context.
@@ -843,7 +847,7 @@ Current ONNX IR version used by the repo's declared binary subset.
 
 ### ONNX_STANDARD_DOMAIN
 
-Canonical ONNX standard-operator domain name.
+Canonical ONNX standard-operator domain name used by opset metadata, schema annotations, and exporter compatibility checks across baseline graph emission paths.
 
 ### ONNX_STANDARD_DOMAIN_ALIAS
 
@@ -906,7 +910,7 @@ appendConvLayerValidationResult(
 ): void
 ```
 
-Append one Conv-layer validation outcome and optional warning.
+Append one Conv-layer validation outcome and optional warning
 
 ### appendConvSharingMetadata
 
@@ -932,7 +936,7 @@ appendFusedRecurrentInitializers(
 ): void
 ```
 
-Append fused recurrent initializer tensors to the ONNX graph.
+Append fused recurrent initializer tensors to the ONNX graph
 
 ### appendFusedRecurrentNode
 
@@ -947,7 +951,7 @@ appendFusedRecurrentNode(
 ): void
 ```
 
-Append fused recurrent operator node to the ONNX graph.
+Append fused recurrent operator node to the ONNX graph
 
 ### appendIndexMetadata
 
@@ -959,7 +963,7 @@ appendIndexMetadata(
 ): void
 ```
 
-Append a unique layer index to metadata array key.
+Append a unique layer index to metadata array key
 
 ### appendMetadataProperty
 
@@ -970,7 +974,7 @@ appendMetadataProperty(
 ): void
 ```
 
-Append metadata property to model metadata_props list.
+Append metadata property to model metadata_props list
 
 ### appendRecurrentSingleStepMetadata
 
@@ -981,7 +985,7 @@ appendRecurrentSingleStepMetadata(
 ): void
 ```
 
-Append recurrent single-step metadata when recurrent layers exist.
+Append recurrent single-step metadata when recurrent layers exist
 
 ### areWeightsWithinTolerance
 
@@ -991,7 +995,7 @@ areWeightsWithinTolerance(
 ): boolean
 ```
 
-Compare two scalar weights using configured tolerance.
+Compare two scalar weights using configured tolerance
 
 ### asNodeInternals
 
@@ -1001,7 +1005,7 @@ asNodeInternals(
 ): NodeInternals
 ```
 
-Resolve runtime node internals in one typed helper.
+Resolve runtime node internals in one typed helper
 
 ### buildFusedGruExecutionContext
 
@@ -1011,7 +1015,7 @@ buildFusedGruExecutionContext(
 ): FusedRecurrentEmissionExecutionContext
 ```
 
-Build shared fused-recurrent execution context for GRU.
+Build shared fused-recurrent execution context for GRU
 
 ### buildFusedLstmExecutionContext
 
@@ -1021,7 +1025,7 @@ buildFusedLstmExecutionContext(
 ): FusedRecurrentEmissionExecutionContext
 ```
 
-Build shared fused-recurrent execution context for LSTM.
+Build shared fused-recurrent execution context for LSTM
 
 ### buildFusedRecurrentGraphNames
 
@@ -1033,7 +1037,7 @@ buildFusedRecurrentGraphNames(
 ): FusedRecurrentGraphNames
 ```
 
-Build fused recurrent graph names for node and output.
+Build fused recurrent graph names for node and output
 
 ### buildFusedRecurrentInitializerNames
 
@@ -1044,7 +1048,7 @@ buildFusedRecurrentInitializerNames(
 ): FusedRecurrentInitializerNames
 ```
 
-Build fused recurrent initializer names for the current layer.
+Build fused recurrent initializer names for the current layer
 
 ### buildGruEmissionContext
 
@@ -1054,7 +1058,7 @@ buildGruEmissionContext(
 ): GruEmissionContext
 ```
 
-Build GRU emission context from one hidden-layer traversal record.
+Build GRU emission context from one hidden-layer traversal record
 
 ### buildHiddenLayerHeuristicContext
 
@@ -1075,7 +1079,7 @@ buildLstmEmissionContext(
 ): LstmEmissionContext
 ```
 
-Build LSTM emission context from one hidden-layer traversal record.
+Build LSTM emission context from one hidden-layer traversal record
 
 ### buildMetadataProperty
 
@@ -1086,7 +1090,7 @@ buildMetadataProperty(
 ): OnnxMetadataProperty
 ```
 
-Build a metadata key/value property with JSON string serialization.
+Build a metadata key/value property with JSON string serialization
 
 ### buildRecurrentHeuristicEmissionContext
 
@@ -1098,7 +1102,7 @@ buildRecurrentHeuristicEmissionContext(
 ): RecurrentHeuristicEmissionContext
 ```
 
-Build reusable context for recurrent heuristic traversal.
+Build reusable context for recurrent heuristic traversal
 
 ### buildSharedInitializerSignature
 
@@ -1109,7 +1113,7 @@ buildSharedInitializerSignature(
 ): string
 ```
 
-Build an exact-match signature for dense-family alias reuse.
+Build an exact-match signature for dense-family alias reuse
 
 ### classifySharedInitializerKind
 
@@ -1119,7 +1123,7 @@ classifySharedInitializerKind(
 ): "dense_weight" | "dense_bias" | "per_neuron_weight" | "per_neuron_bias" | null
 ```
 
-Classify the dense-family initializer kinds supported by the Phase 5B alias subset.
+Classify the dense-family initializer kinds supported by the Phase 5B alias subset
 
 ### collectConvKernelCoordinates
 
@@ -1129,7 +1133,7 @@ collectConvKernelCoordinates(
 ): OnnxConvKernelCoordinate[]
 ```
 
-Collect kernel coordinates for one Conv kernel traversal.
+Collect kernel coordinates for one Conv kernel traversal
 
 ### collectConvOutputCoordinates
 
@@ -1139,7 +1143,7 @@ collectConvOutputCoordinates(
 ): ConvOutputCoordinate[]
 ```
 
-Collect output coordinates for full Conv traversal.
+Collect output coordinates for full Conv traversal
 
 ### collectGruGateNodeGroups
 
@@ -1149,7 +1153,7 @@ collectGruGateNodeGroups(
 ): default[][]
 ```
 
-Collect GRU gate node groups in canonical export order.
+Collect GRU gate node groups in canonical export order
 
 ### collectHiddenLayerIndices
 
@@ -1159,7 +1163,7 @@ collectHiddenLayerIndices(
 ): number[]
 ```
 
-Collect hidden-layer indices for recurrent traversal.
+Collect hidden-layer indices for recurrent traversal
 
 ### collectLstmGateNodeGroups
 
@@ -1169,7 +1173,7 @@ collectLstmGateNodeGroups(
 ): default[][]
 ```
 
-Collect LSTM gate node groups in canonical export order.
+Collect LSTM gate node groups in canonical export order
 
 ### collectRecurrentGateBlockParameters
 
@@ -1179,7 +1183,7 @@ collectRecurrentGateBlockParameters(
 ): RecurrentGateParameterCollectionResult
 ```
 
-Collect flattened parameter vectors for one gate node block.
+Collect flattened parameter vectors for one gate node block
 
 ### collectRecurrentGateRow
 
@@ -1189,7 +1193,7 @@ collectRecurrentGateRow(
 ): RecurrentGateRow
 ```
 
-Collect one recurrent gate row payload (inputs, recurrent slice, and bias).
+Collect one recurrent gate row payload (inputs, recurrent slice, and bias)
 
 ### collectRepresentativeKernelForChannel
 
@@ -1199,7 +1203,7 @@ collectRepresentativeKernelForChannel(
 ): number[]
 ```
 
-Collect one representative kernel by reading the first output position for a channel.
+Collect one representative kernel by reading the first output position for a channel
 
 ### collectRepresentativeKernels
 
@@ -1210,7 +1214,7 @@ collectRepresentativeKernels(
 ): number[][]
 ```
 
-Collect representative kernels for each output channel.
+Collect representative kernels for each output channel
 
 ### collectRepresentativeKernelWeight
 
@@ -1224,7 +1228,7 @@ collectRepresentativeKernelWeight(
 ): number
 ```
 
-Collect representative kernel value using top-left receptive field indexing.
+Collect representative kernel value using top-left receptive field indexing
 
 ### emitFallbackRecurrentPatternMetadata
 
@@ -1234,7 +1238,7 @@ emitFallbackRecurrentPatternMetadata(
 ): void
 ```
 
-Emit fallback metadata for recurrent-size ambiguity.
+Emit fallback metadata for recurrent-size ambiguity
 
 ### emitFusedRecurrentHeuristics
 
@@ -1247,15 +1251,16 @@ emitFusedRecurrentHeuristics(
 ): void
 ```
 
-Emit heuristic fused recurrent operators (LSTM/GRU) when recurrent export is enabled.
+Append heuristic fused recurrent nodes for hidden layers that match GRU/LSTM sizing patterns.
+
+The pass is a metadata-guided postprocess step: it inspects hidden-layer widths,
+emits compatible recurrent operators, and keeps legacy output-name threading intact.
 
 Parameters:
-- `model` - Target ONNX model.
-- `layers` - Layered network nodes.
-- `allowRecurrent` - Whether recurrent export is enabled.
-- `previousOutputName` - Current graph output name (kept for backward-compatible emission semantics).
-
-Returns: Nothing.
+- `model` - Mutable ONNX model receiving emitted recurrent nodes.
+- `layers` - Layered network nodes used for hidden-layer traversal.
+- `allowRecurrent` - Gate that enables recurrent heuristic emission.
+- `previousOutputName` - Upstream graph output tensor name carried through compatibility flow.
 
 ### emitFusedRecurrentLayer
 
@@ -1265,7 +1270,7 @@ emitFusedRecurrentLayer(
 ): void
 ```
 
-Emit shared fused recurrent payload (initializers, node, metadata).
+Emit shared fused recurrent payload (initializers, node, metadata)
 
 ### ensureMetadataProps
 
@@ -1275,7 +1280,7 @@ ensureMetadataProps(
 ): OnnxMetadataProperty[]
 ```
 
-Ensure metadata_props array exists and return it.
+Ensure metadata_props array exists and return it
 
 ### finalizeExportMetadata
 
@@ -1290,17 +1295,15 @@ finalizeExportMetadata(
 ): void
 ```
 
-Finalize export metadata and optional conv-sharing validation.
+Finalize model metadata after graph emission, including alias reuse and optional Conv sharing diagnostics.
 
 Parameters:
-- `model` - Target ONNX model.
-- `layers` - Layered network nodes.
-- `options` - Export options.
-- `includeMetadata` - Whether metadata emission is enabled.
-- `hiddenSizesMetadata` - Hidden-layer sizes collected during emission.
-- `recurrentLayerIndices` - Recurrent layer indices.
-
-Returns: Nothing.
+- `model` - Mutable ONNX model receiving metadata properties.
+- `layers` - Layered network nodes used for Conv sharing checks.
+- `options` - Export options controlling optional validation passes.
+- `includeMetadata` - Gate that enables metadata emission.
+- `hiddenSizesMetadata` - Hidden-layer size series captured during export.
+- `recurrentLayerIndices` - Hidden-layer indices emitted as recurrent operators.
 
 ### findMetadataPropertyIndex
 
@@ -1311,7 +1314,7 @@ findMetadataPropertyIndex(
 ): number
 ```
 
-Find metadata property index by key.
+Find metadata property index by key
 
 ### foldRecurrentGateBlocks
 
@@ -1321,7 +1324,7 @@ foldRecurrentGateBlocks(
 ): RecurrentGateParameterCollectionResult
 ```
 
-Fold gate blocks into a single fused parameter payload.
+Fold gate blocks into a single fused parameter payload
 
 ### foldRecurrentGateRows
 
@@ -1331,7 +1334,7 @@ foldRecurrentGateRows(
 ): RecurrentGateParameterCollectionResult
 ```
 
-Fold recurrent gate rows into flattened ONNX initializer vectors.
+Fold recurrent gate rows into flattened ONNX initializer vectors
 
 ### hasNoIgnoredSourceWeights
 
@@ -1358,7 +1361,7 @@ isConvLayerPairConsistent(
 ): boolean
 ```
 
-Validate one Conv layer pair against representative kernel sharing.
+Validate one Conv layer pair against representative kernel sharing
 
 ### isConvMappingWeightShared
 
@@ -1386,7 +1389,7 @@ isEligibleForGruHeuristic(
 ): boolean
 ```
 
-Check GRU heuristic eligibility by size and gate divisibility.
+Check GRU heuristic eligibility by size and gate divisibility
 
 ### isEligibleForLstmHeuristic
 
@@ -1396,7 +1399,7 @@ isEligibleForLstmHeuristic(
 ): boolean
 ```
 
-Check LSTM heuristic eligibility by size and gate divisibility.
+Check LSTM heuristic eligibility by size and gate divisibility
 
 ### isFallbackRecurrentPatternSize
 
@@ -1406,7 +1409,7 @@ isFallbackRecurrentPatternSize(
 ): boolean
 ```
 
-Check whether hidden size should emit recurrent fallback metadata.
+Check whether hidden size should emit recurrent fallback metadata
 
 ### isInputPositionInsideBounds
 
@@ -1418,7 +1421,7 @@ isInputPositionInsideBounds(
 ): boolean
 ```
 
-Check whether input row/column falls inside Conv input bounds.
+Check whether input row/column falls inside Conv input bounds
 
 ### isKernelCoordinateConsistent
 
@@ -1428,7 +1431,7 @@ isKernelCoordinateConsistent(
 ): boolean
 ```
 
-Validate one kernel coordinate against its representative channel value.
+Validate one kernel coordinate against its representative channel value
 
 ### isOutputCoordinateConsistent
 
@@ -1442,7 +1445,7 @@ isOutputCoordinateConsistent(
 ): boolean
 ```
 
-Validate one output coordinate against channel representative kernel weights.
+Validate one output coordinate against channel representative kernel weights
 
 ### parseMetadataLayerIndices
 
@@ -1452,7 +1455,7 @@ parseMetadataLayerIndices(
 ): number[]
 ```
 
-Parse metadata JSON value into a numeric layer-index array.
+Parse metadata JSON value into a numeric layer-index array
 
 ### resolveConvLayerPairContext
 
@@ -1464,7 +1467,7 @@ resolveConvLayerPairContext(
 ): ConvLayerPairContext | undefined
 ```
 
-Resolve one Conv mapping layer pair or return undefined for invalid layout.
+Resolve one Conv mapping layer pair or return undefined for invalid layout
 
 ### resolveGruPreviousOutputName
 
@@ -1474,7 +1477,7 @@ resolveGruPreviousOutputName(
 ): string
 ```
 
-Resolve previous output naming semantics for GRU heuristic emission.
+Resolve previous output naming semantics for GRU heuristic emission
 
 ### resolveIncomingWeight
 
@@ -1485,7 +1488,7 @@ resolveIncomingWeight(
 ): number
 ```
 
-Resolve incoming connection weight from a specific source node.
+Resolve incoming connection weight from a specific source node
 
 ### resolveInputPosition
 
@@ -1495,7 +1498,7 @@ resolveInputPosition(
 ): { inputRow: number; inputColumn: number; }
 ```
 
-Resolve input row/column projected by output and kernel coordinates.
+Resolve input row/column projected by output and kernel coordinates
 
 ### resolveNeuronInternalAtOutputCoordinate
 
@@ -1506,7 +1509,7 @@ resolveNeuronInternalAtOutputCoordinate(
 ): NodeInternals | undefined
 ```
 
-Resolve runtime internals for output coordinate neuron, if present.
+Resolve runtime internals for output coordinate neuron, if present
 
 ### resolveRecurrentRowWeight
 
@@ -1517,7 +1520,7 @@ resolveRecurrentRowWeight(
 ): number
 ```
 
-Resolve one recurrent row value at the requested column.
+Resolve one recurrent row value at the requested column
 
 ### resolveSelfConnectionWeight
 
@@ -1527,7 +1530,7 @@ resolveSelfConnectionWeight(
 ): number
 ```
 
-Resolve self-connection weight for diagonal recurrent matrix entries.
+Resolve self-connection weight for diagonal recurrent matrix entries
 
 ### resolveSourceNodeAtInputPosition
 
@@ -1542,7 +1545,7 @@ resolveSourceNodeAtInputPosition(
 ): default | undefined
 ```
 
-Resolve source node by Conv input position coordinates.
+Resolve source node by Conv input position coordinates
 
 ### reuseSharedInitializers
 
@@ -1552,7 +1555,7 @@ reuseSharedInitializers(
 ): SharedInitializerAliasRecord[]
 ```
 
-Reuse exact dense-family initializers and rewrite later node inputs to the canonical tensors.
+Canonicalize byte-identical dense initializers and rewrite node inputs to shared tensor names.
 
 ### rewriteInitializerInputs
 
@@ -1563,7 +1566,7 @@ rewriteInitializerInputs(
 ): void
 ```
 
-Rewrite graph-node initializer inputs after later aliases collapse into one canonical tensor.
+Rewrite graph-node initializer inputs after later aliases collapse into one canonical tensor
 
 ### shouldValidateConvSharing
 
@@ -1573,7 +1576,7 @@ shouldValidateConvSharing(
 ): boolean
 ```
 
-Determine whether Conv2D sharing validation is enabled and configured.
+Determine whether Conv2D sharing validation is enabled and configured
 
 ### tryEmitFusedGru
 
@@ -1583,7 +1586,7 @@ tryEmitFusedGru(
 ): void
 ```
 
-Try emitting heuristic fused GRU node and metadata.
+Try emitting heuristic fused GRU node and metadata
 
 ### tryEmitFusedLstm
 
@@ -1593,7 +1596,7 @@ tryEmitFusedLstm(
 ): void
 ```
 
-Try emitting heuristic fused LSTM node and metadata.
+Try emitting heuristic fused LSTM node and metadata
 
 ### upsertLayerIndexMetadataValue
 
@@ -1605,7 +1608,7 @@ upsertLayerIndexMetadataValue(
 ): void
 ```
 
-Upsert one layer index into metadata array-like JSON value.
+Upsert one layer index into metadata array-like JSON value
 
 ### validateConvSharingAcrossMappings
 
@@ -1615,7 +1618,7 @@ validateConvSharingAcrossMappings(
 ): ConvSharingValidationResult
 ```
 
-Validate Conv2D sharing across all declared Conv mappings.
+Validate Conv2D sharing across all declared Conv mappings
 
 ## architecture/network/onnx/export/network.onnx.export-optimization.utils.ts
 
@@ -1627,7 +1630,7 @@ pruneIdentityActivationNodes(
 ): void
 ```
 
-Remove exporter-owned Identity activation nodes by rewiring their consumers.
+Remove exporter-owned Identity activation nodes and rewire all dependent consumers.
 
 Parameters:
 - `model` - ONNX-like model to optimize in place.
@@ -1647,6 +1650,7 @@ appendConvInferenceMetadata(
 ```
 
 Append heuristic conv inference metadata when requested.
+Inferred metadata records spatial interpretation hints for downstream tooling while leaving declared mapping behavior untouched, so diagnostics can improve without silently changing emitted operator topology.
 
 Parameters:
 - `model` - Target ONNX model.
@@ -1665,6 +1669,7 @@ appendLstmPatternStubMetadata(
 ```
 
 Append LSTM pattern stub metadata.
+Stub metadata gives import-side or diagnostics tools a lightweight recurrent hint surface when full fused recurrent emission is not enabled for the active export pass.
 
 Parameters:
 - `model` - Target ONNX model.
@@ -1821,6 +1826,7 @@ collectLstmPatternStubs(
 ```
 
 Collect heuristic LSTM grouping stubs from hidden layers.
+Stub collection is intentionally conservative and side-effect free so exporter metadata can communicate likely recurrent structure without committing to fused recurrent graph emission.
 
 Parameters:
 - `layers` - Layered network nodes.
@@ -2124,6 +2130,7 @@ resolveEffectiveConvMappings(
 ```
 
 Resolve the effective Conv mapping list after optional heuristic promotion.
+Promotion merges user-declared mappings with vetted inferred candidates only when safety gates pass, preserving explicit caller intent while enabling ergonomic auto-discovery for compatible layouts.
 
 Parameters:
 - `layers` - Layered network nodes.
@@ -2253,7 +2260,8 @@ appendConcatMergeMetadata(
 ): void
 ```
 
-Append concat-merge metadata for an emitted explicit concat branch.
+Append concat-merge metadata for an emitted explicit concat branch while preserving prior metadata entries.
+The fallback parsing logic guarantees concat records stay recoverable even after unexpected metadata payload drift.
 
 Parameters:
 - `model` - Target ONNX model.
@@ -2289,7 +2297,8 @@ appendResidualAddMetadata(
 ): void
 ```
 
-Append residual-add metadata for an emitted one-hop merge.
+Append residual-add metadata for an emitted one-hop merge while preserving existing metadata arrays deterministically.
+This keeps advanced graph records append-only and resilient when previous metadata payloads are malformed.
 
 Parameters:
 - `model` - Target ONNX model.
@@ -2322,7 +2331,8 @@ buildConcatMergeNodeName(
 ): string
 ```
 
-Build the deterministic concat merge node name for one layer pair.
+Build the deterministic concat merge node name for one layer pair in the explicit concat-branch subset.
+Consistent naming makes emitted merge structure easier to audit from metadata and exported graph nodes.
 
 Parameters:
 - `sourceLayerIndex` - Skipped source layer index.
@@ -2339,7 +2349,8 @@ buildConcatMergeOutputName(
 ): string
 ```
 
-Build the deterministic concat merge output tensor name for one layer pair.
+Build the deterministic concat merge output tensor name for one layer pair used by advanced graph promotion.
+The output name contract allows import diagnostics to map concat merges back to source and target layers.
 
 Parameters:
 - `sourceLayerIndex` - Skipped source layer index.
@@ -2388,7 +2399,8 @@ buildResidualBranchTensorName(
 ): string
 ```
 
-Build the reserved residual-branch tensor name for one layer pair.
+Build the reserved residual-branch tensor name for one layer pair in the explicit one-hop residual export subset.
+Deterministic naming keeps metadata, emitted nodes, and import reconstruction aligned across repeated exports.
 
 Parameters:
 - `sourceLayerIndex` - Residual source layer index.
@@ -2404,7 +2416,8 @@ buildResidualMergeNodeName(
 ): string
 ```
 
-Build the deterministic residual merge node name for one target layer.
+Build the deterministic residual merge node name for one target layer in the residual-add emission path.
+Stable node identifiers simplify metadata correlation and reduce ambiguity during diagnostics.
 
 Parameters:
 - `targetLayerIndex` - Target layer index.
@@ -2419,7 +2432,8 @@ buildResidualMergeOutputName(
 ): string
 ```
 
-Build the deterministic residual merge output tensor name for one target layer.
+Build the deterministic residual merge output tensor name for one target layer in advanced graph metadata.
+The naming contract ensures import-side residual mapping can trace merged outputs without heuristics.
 
 Parameters:
 - `targetLayerIndex` - Target layer index.

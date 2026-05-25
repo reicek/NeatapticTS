@@ -1,10 +1,11 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';
 import type { NetworkInternals } from './network.connect.utils.types';
 
 /**
  * Select the relevant collection to search for the edge.
+ * Self-loops live in `selfconns` while all other edges live in `connections`, so this helper centralizes that branching and keeps removal orchestration deterministic.
  *
  * @param network - Network instance owning connection collections.
  * @param sourceNode - Source node.
@@ -21,6 +22,7 @@ export function selectConnectionCollection(
 
 /**
  * Remove first connection that matches source and target nodes.
+ * The helper removes at most one edge per call to preserve historical behavior for APIs that intentionally manage duplicate parallel edges over multiple mutation steps.
  *
  * @param network - Network instance used for ungating.
  * @param candidateConnections - Candidate collection to search.
@@ -46,6 +48,7 @@ export function removeFirstMatchingConnection(
 
 /**
  * Delegate per-node disconnect cleanup.
+ * Node-level disconnect ensures inbound and outbound adjacency shelves remain coherent even when top-level network collections are being manipulated by higher-level orchestration.
  *
  * @param sourceNode - Source node.
  * @param targetNode - Target node.
@@ -57,6 +60,7 @@ export function disconnectNodes(sourceNode: Node, targetNode: Node): void {
 
 /**
  * Mark topology/slab caches dirty after structural mutation.
+ * This invalidation guarantees that both execution ordering and pooled activation storage are recalculated against the post-removal graph before subsequent inference or training calls.
  *
  * @param internalState - Runtime network internals used by connection pipeline.
  * @returns Nothing.

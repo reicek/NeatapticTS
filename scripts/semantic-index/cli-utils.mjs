@@ -1,8 +1,9 @@
 import path from 'node:path';
 import { repoRoot } from './init-schema.mjs';
 
-export function parseCliArgs(argv) {
+export function parseCliArgs(argv, options = {}) {
   const flags = { _: [] };
+  const repeatableFlags = new Set(options.repeatableFlags ?? []);
 
   for (let argumentIndex = 0; argumentIndex < argv.length; argumentIndex += 1) {
     const argument = argv[argumentIndex];
@@ -14,7 +15,14 @@ export function parseCliArgs(argv) {
     const [rawKey, inlineValue] = argument.slice(2).split('=', 2);
     const nextValue = argv[argumentIndex + 1];
     const hasSeparateValue = nextValue !== undefined && !nextValue.startsWith('--');
-    flags[rawKey] = inlineValue ?? (hasSeparateValue ? nextValue : true);
+    const resolvedValue = inlineValue ?? (hasSeparateValue ? nextValue : true);
+
+    if (repeatableFlags.has(rawKey) && flags[rawKey] !== undefined) {
+      flags[rawKey] = [flags[rawKey], resolvedValue].flat();
+    } else {
+      flags[rawKey] = resolvedValue;
+    }
+
     if (inlineValue === undefined && hasSeparateValue) argumentIndex += 1;
   }
 

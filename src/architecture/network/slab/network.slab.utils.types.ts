@@ -1,4 +1,4 @@
-import type { ActivationPrecision, PrecisionConfig } from '../../../config';
+﻿import type { ActivationPrecision, PrecisionConfig } from '../../../config';
 import type Network from '../../network/network';
 import type Connection from '../../connection';
 import type Node from '../../node';
@@ -14,12 +14,12 @@ export const SLAB_ZERO = 0;
 export const SLAB_ONE = 1;
 
 /**
- * Capacity growth factor for Node.js slab allocations.
+ * Capacity growth factor for Node.js runtime slab allocations, scaled conservatively to allow large networks.
  */
 export const SLAB_GROWTH_FACTOR_NODE = 1.75;
 
 /**
- * Capacity growth factor for browser slab allocations.
+ * Capacity growth factor for browser runtime slab allocations, tuned for tighter memory environments.
  */
 export const SLAB_GROWTH_FACTOR_BROWSER = 1.25;
 
@@ -29,7 +29,7 @@ export const SLAB_GROWTH_FACTOR_BROWSER = 1.25;
 export const SLAB_DEFAULT_ASYNC_CHUNK_SIZE = 50_000;
 
 /**
- * Internal Connection properties accessed during slab operations.
+ * Internal Connection properties accessed during slab build, serialization, and typed-array buffer write operations.
  */
 export interface ConnectionInternals {
   _flags: number;
@@ -39,7 +39,7 @@ export interface ConnectionInternals {
 }
 
 /**
- * Internal Network properties for slab operations.
+ * Internal Network properties used by slab orchestration for typed-array buffer management and dirty tracking.
  */
 export interface NetworkSlabProps {
   _slabDirty?: boolean;
@@ -74,7 +74,7 @@ export interface NetworkSlabProps {
 }
 
 /**
- * Per-pool-key allocation & reuse counters (educational / diagnostics).
+ * Per-pool-key allocation and reuse counters used for educational diagnostics and memory-pool observability.
  */
 export interface PoolKeyMetrics {
   created: number;
@@ -83,12 +83,12 @@ export interface PoolKeyMetrics {
 }
 
 /**
- * Union of slab typed array element container types.
+ * Union of slab typed array element container types supported by activation buffer allocation.
  */
 export type TypedArray = Float32Array | Float64Array | Uint32Array | Uint8Array;
 
 /**
- * Constructor type for typed arrays used in slabs.
+ * Constructor type for typed arrays used in activation slab allocation and dynamic buffer growth.
  */
 export type TypedArrayConstructor =
   | Float32ArrayConstructor
@@ -97,21 +97,21 @@ export type TypedArrayConstructor =
   | Uint8ArrayConstructor;
 
 /**
- * Runtime activation contract used by slab-based execution paths.
+ * Runtime activation contract consumed by slab-based forward-pass execution paths for network inference.
  */
 export interface NetworkActivationRuntime {
   activate(input: number[], training: boolean): number[];
 }
 
 /**
- * Runtime topology contract used to lazily rebuild topological order.
+ * Runtime topology contract used to lazily rebuild topological order when the activation cache is dirty.
  */
 export interface NetworkTopoRuntime {
   _computeTopoOrder(): void;
 }
 
 /**
- * Node shape required by fast slab activation kernels.
+ * Node shape required by fast slab activation kernels for typed-array forward pass inference.
  */
 export interface FastSlabNodeRuntime extends Node {
   index: number;
@@ -135,7 +135,7 @@ export interface SlabBuildContext {
 }
 
 /**
- * Result of scanning and populating optional gain/plastic slab arrays.
+ * Result of scanning and populating optional gain and plastic typed-array slab buffers.
  */
 export interface SlabPopulateResult {
   anyNonNeutralGain: boolean;
@@ -145,7 +145,7 @@ export interface SlabPopulateResult {
 }
 
 /**
- * Writable slab arrays targeted during connection serialization.
+ * Writable typed-array slab buffers targeted during connection serialization and buffer population.
  */
 export interface SlabWriteArrays {
   weightArray: Float32Array | Float64Array;
@@ -155,7 +155,7 @@ export interface SlabWriteArrays {
 }
 
 /**
- * Shape returned by getConnectionSlab describing the packed SoA view.
+ * Packed SoA view returned by getConnectionSlab exposing typed-array weight, index, and flag buffers.
  */
 export interface ConnectionSlabView {
   weights: Float32Array | Float64Array;
@@ -170,7 +170,7 @@ export interface ConnectionSlabView {
 }
 
 /**
- * Shared immutable inputs used across the adjacency build pipeline.
+ * Shared immutable inputs used across the CSR adjacency build pipeline for outgoing-order construction.
  */
 export type BuildAdjacencyContext = {
   internalNet: NetworkSlabProps;
@@ -196,7 +196,7 @@ export type StartIndicesBuildContext = {
 };
 
 /**
- * Context for constructing source-grouped outgoing connection order.
+ * Context for constructing the source-grouped outgoing connection order from precomputed CSR start indices.
  */
 export type OutgoingOrderBuildContext = {
   buildContext: BuildAdjacencyContext;

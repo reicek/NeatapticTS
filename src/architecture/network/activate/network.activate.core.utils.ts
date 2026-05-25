@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import type { ActivationArray } from '../../activationArrayPool/activationArrayPool';
 import {

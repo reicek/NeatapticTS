@@ -762,8 +762,16 @@ export function importFromONNXBinary(binaryModel: Uint8Array): Network {
  * const output = restored.activate([0.2, 0.8]);
  * ```
  */
-export default {
+
+/**
+ * Default export bundle for the ONNX-like serialization chapter.
+ *
+ * Bundles the primary ONNX entry points so the network facade can bind them as
+ * methods without importing each function individually.
+ */
+const networkOnnxUtils = {
   exportToONNX,
   importFromONNXBinary,
   importFromONNX,
 };
+export default networkOnnxUtils;

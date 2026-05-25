@@ -1,4 +1,4 @@
-import * as methods from '../../../../methods/methods';
+﻿import * as methods from '../../../../methods/methods';
 import type Network from '../../network';
 import type { OnnxModel } from '../schema/network.onnx.schema.types';
 import type {
@@ -75,7 +75,7 @@ const ACTIVATION_OPERATION_TO_FUNCTION = new Map<
 ]);
 
 /**
- * Assign node activation functions from ONNX activation nodes.
+ * Assign runtime node activation functions from ONNX activation graph operations.
  *
  * @param network Target network to mutate.
  * @param onnx Source ONNX model.

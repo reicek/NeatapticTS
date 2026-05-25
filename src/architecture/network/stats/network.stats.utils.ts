@@ -1,4 +1,7 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
+/**
+ * Contract for testNetwork.
+ */
 export { testNetwork } from './network.stats.test.utils';
 import { safeStructuredClone } from '../../../utils/safeStructuredClone';
 import type { StatsNetworkProps as NetworkStatsProps } from '../network.types';
@@ -37,4 +40,11 @@ export function getRegularizationStats(this: Network) {
   return lastStatsSnapshot ? safeStructuredClone(lastStatsSnapshot) : null;
 }
 
-export default { getRegularizationStats };
+/**
+ * Default export bundle for the network statistics utilities chapter.
+ *
+ * Bundles getRegularizationStats so the network facade can bind it as a method
+ * without importing it individually.
+ */
+const networkStatsUtils = { getRegularizationStats };
+export default networkStatsUtils;

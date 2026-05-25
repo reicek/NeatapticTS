@@ -65,9 +65,19 @@ export async function buildEmbeddingIndex(options = {}) {
     embedded: 0,
     embeddingsDatabasePath,
     modelId,
+    purged: 0,
     queued: 0,
     skipped: 0,
   };
+
+  if (!dryRun) {
+    summary.purged = purgeOrphanedEmbeddings({
+      corpusDatabase,
+      corpusDatabasePath,
+      embeddingsDatabase,
+      modelId,
+    });
+  }
 
   const chunkRows = corpusDatabase.prepare(`
     SELECT c.chunk_id, c.chunk_index, c.heading_path, c.body_text, c.char_start, c.char_end,
@@ -184,6 +194,36 @@ function initializeEmbeddingsSchema(database) {
     CREATE INDEX IF NOT EXISTS chunk_embeddings_model_idx
       ON chunk_embeddings(model_id, chunk_sha256);
   `);
+}
+
+function purgeOrphanedEmbeddings({ corpusDatabase, corpusDatabasePath, embeddingsDatabase, modelId }) {
+  embeddingsDatabase.prepare('ATTACH DATABASE ? AS corpus').run(corpusDatabasePath);
+
+  try {
+    const orphanedChunkRows = embeddingsDatabase.prepare(`
+      SELECT chunk_embeddings.chunk_id
+      FROM chunk_embeddings
+      LEFT JOIN corpus.chunks ON corpus.chunks.chunk_id = chunk_embeddings.chunk_id
+      WHERE chunk_embeddings.model_id = ?
+        AND corpus.chunks.chunk_id IS NULL
+    `);
+    const orphanedRows = orphanedChunkRows.all(modelId);
+    if (orphanedRows.length === 0) return 0;
+
+    const deleteEmbedding = embeddingsDatabase.prepare(`
+      DELETE FROM chunk_embeddings
+      WHERE chunk_id = ?
+        AND model_id = ?
+    `);
+    const purgeTransaction = embeddingsDatabase.transaction((rowsToDelete) => {
+      for (const { chunk_id: chunkId } of rowsToDelete) deleteEmbedding.run(chunkId, modelId);
+    });
+
+    purgeTransaction(orphanedRows);
+    return orphanedRows.length;
+  } finally {
+    embeddingsDatabase.prepare('DETACH DATABASE corpus').run();
+  }
 }
 
 function createChunkSha256(chunkRow) {

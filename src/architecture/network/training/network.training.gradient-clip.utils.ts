@@ -6,7 +6,7 @@ import type {
 import type { GradientClipRuntimeConfig } from './network.training.utils.types';
 
 /**
- * Apply gradient clipping to accumulated connection and bias deltas.
+ * Apply gradient clipping to accumulated connection and bias delta buffers.
  *
  * @param net - Network instance whose accumulated gradients are clipped.
  * @param cfg - Runtime clipping configuration.

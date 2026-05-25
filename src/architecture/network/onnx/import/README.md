@@ -368,6 +368,8 @@ Shared weight-assignment context built once per ONNX import.
 
 ## architecture/network/onnx/import/network.onnx.import-weights.utils.ts
 
+Assign weights and biases from ONNX initializers to a newly created network.
+
 ### applyAggregatedLayerWeights
 
 ```ts
@@ -531,15 +533,7 @@ assignWeightsAndBiases(
 ): void
 ```
 
-Assign weights and biases from ONNX initializers to a newly created network.
-
-Parameters:
-- `network` - Target network to mutate.
-- `onnx` - Source ONNX model.
-- `hiddenLayerSizes` - Hidden layer sizes.
-- `metadataProps` - Optional ONNX metadata properties.
-
-Returns: Nothing.
+Contract for assignWeightsAndBiases.
 
 ### buildConvLayerContext
 
@@ -858,7 +852,7 @@ deriveHiddenLayerSizes(
 ): number[]
 ```
 
-Extract hidden layer sizes from ONNX initializers (weight tensors).
+Derive hidden-layer sizes from ONNX weight initializers in export order.
 
 Parameters:
 - `initializers` - ONNX initializer tensors.
@@ -1072,7 +1066,7 @@ assignActivationFunctions(
 ): void
 ```
 
-Assign node activation functions from ONNX activation nodes.
+Assign runtime node activation functions from ONNX activation graph operations.
 
 Parameters:
 - `network` - Target network to mutate.
@@ -1165,6 +1159,9 @@ Audit-only shared initializer alias carried through Phase 5 import fallback.
 
 ## architecture/network/onnx/import/network.onnx.import-orchestrators.utils.ts
 
+Restore recurrent self-connections from recurrent metadata and R tensors.
+Restoration uses metadata-gated span resolution and diagonal tensor extraction so imported recurrent units recover their self-feedback semantics without guessing hidden-node layout.
+
 ### applyLayerSelfConnections
 
 ```ts
@@ -1213,6 +1210,7 @@ attachOnnxPoolingMetadata(
 ```
 
 Attach optional pooling metadata from ONNX model to network instance.
+The importer keeps pooling metadata as additive diagnostics state so later runtime or visualization tooling can reason about spatial stages without modifying core graph wiring.
 
 Parameters:
 - `network` - Target network.
@@ -1463,6 +1461,7 @@ extractOnnxArchitecture(
 ```
 
 Extract input/output counts and hidden layer sizes from ONNX model.
+This architecture probe normalizes graph terminal dimensions and initializer-derived hidden spans into one deterministic result contract used by all downstream reconstruction passes.
 
 Parameters:
 - `onnx` - Source ONNX model.
@@ -1774,16 +1773,7 @@ reconstructFusedRecurrentLayers(
 ): void
 ```
 
-Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
-
-Parameters:
-- `network` - Target network.
-- `onnx` - Source ONNX model.
-- `hiddenLayerSizes` - Hidden layer sizes.
-- `layerFactory` - Dynamic layer module.
-- `metadata` - ONNX metadata properties.
-
-Returns: Nothing.
+Contract for reconstructFusedRecurrentLayers.
 
 ### resolveConsumerLayerWidth
 
@@ -1845,15 +1835,7 @@ restoreRecurrentSelfConnections(
 ): void
 ```
 
-Restore recurrent self-connections from recurrent metadata and R tensors.
-
-Parameters:
-- `network` - Target network.
-- `onnx` - Source ONNX model.
-- `hiddenLayerSizes` - Hidden layer sizes.
-- `metadata` - Parsed metadata properties.
-
-Returns: Nothing.
+Contract for restoreRecurrentSelfConnections.
 
 ### restoreResidualAddConnections
 
@@ -1988,6 +1970,8 @@ Context for assigning dense incoming weights for one gate-neuron row.
 
 ## architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts
 
+Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
+
 ### reconstructFusedRecurrentLayers
 
 ```ts
@@ -2000,38 +1984,34 @@ reconstructFusedRecurrentLayers(
 ): void
 ```
 
-Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
-
-Parameters:
-- `network` - Target network.
-- `onnx` - Source ONNX model.
-- `hiddenLayerSizes` - Hidden layer sizes.
-- `layerFactory` - Dynamic layer module.
-- `metadata` - ONNX metadata properties.
-
-Returns: Nothing.
+Contract for reconstructFusedRecurrentLayers.
 
 ## architecture/network/onnx/import/network.onnx.import-external.types.ts
 
 ### DecodedExternalOnnxAttribute
 
-Decoded ONNX attribute payload.
+Decoded ONNX attribute payload preserving scalar, integer, and byte-string forms emitted by the protobuf decoder.
+Attribute decoding uses this shape before operation-specific coercion into importer contracts.
 
 ### DecodedExternalOnnxDimension
 
-Decoded ONNX dimension payload.
+Decoded ONNX dimension payload used by external import parsing to preserve symbolic and numeric shape information from protobuf conversion.
+Import normalization relies on this shape to reconstruct rank and axis semantics before tensor compatibility checks run.
 
 ### DecodedExternalOnnxGraph
 
-Decoded ONNX graph payload.
+Decoded ONNX graph payload containing decoded graph interfaces, initializer tables, and ordered node records for external import orchestration.
+Graph traversal, initializer indexing, and topology validation all begin from this representation.
 
 ### DecodedExternalOnnxModel
 
-Decoded ONNX model payload.
+Decoded ONNX model payload containing optional graph content and operator-set imports used to validate supported external import lanes.
+External import entrypoints decode into this shape before compatibility and topology checks proceed.
 
 ### DecodedExternalOnnxNode
 
-Decoded ONNX node payload.
+Decoded ONNX node payload describing operator identity, wiring, and decoded attribute list for importer normalization passes.
+Node-level validation and operator support checks consume this schema directly.
 
 ### DecodedExternalOnnxOpsetImport
 
@@ -2039,15 +2019,18 @@ Decoded ONNX operator-set import payload.
 
 ### DecodedExternalOnnxTensor
 
-Decoded ONNX tensor payload.
+Decoded ONNX tensor payload containing name, data type, shape dimensions, and raw or float initializer storage fields.
+Initializer extraction and shape-matching code paths depend on this decoded tensor contract.
 
 ### DecodedExternalOnnxTensorType
 
-Decoded ONNX tensor-type payload.
+Decoded ONNX tensor-type payload describing element type and optional shape dimensions after external binary decode.
+This type bridges raw protobuf decode output and importer-owned tensor validation routines.
 
 ### DecodedExternalOnnxValueInfo
 
-Decoded ONNX value-info payload.
+Decoded ONNX value-info payload carrying named tensor metadata for graph inputs, outputs, and intermediate value descriptors.
+It allows importer passes to align tensor names, element types, and shapes across graph boundaries.
 
 ### OnnxDecodedBytes
 
@@ -2085,7 +2068,7 @@ attachOnnxConcatMergeMetadata(
 ): void
 ```
 
-Attach validated concat-merge audit metadata onto an imported network.
+Attach validated concat-merge audit metadata to an imported network instance.
 
 Parameters:
 - `network` - Target network.

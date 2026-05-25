@@ -43,12 +43,68 @@ export type {
   ParallelInferencePoolOptions,
   ParallelInferenceWorkerLike,
 } from './network.worker-payload.pool';
+import {
+  createInferencePredictor as createInferencePredictorImpl,
+  exportPortableInferencePayload as exportPortableInferencePayloadImpl,
+  exportTransferableInferencePayload as exportTransferableInferencePayloadImpl,
+  extractNetworkInferenceIR as extractNetworkInferenceIRImpl,
+} from './network.worker-payload.utils';
+import type {
+  InferenceChannelOptions as InferenceChannelOptionsType,
+  NetworkInferenceIREdge as NetworkInferenceIREdgeType,
+  PortableInferencePayloadEdge as PortableInferencePayloadEdgeType,
+  TransferableInferencePayloadOptions as TransferableInferencePayloadOptionsType,
+} from './network.worker-payload.types';
+
+/**
+ * Create an inference predictor from a portable or transferable payload so repeated forward evaluations can run without reconstructing a mutable network instance.
+ */
+export const createInferencePredictor = createInferencePredictorImpl;
+
+/**
+ * Extract a deterministic inference intermediate representation from a live network so transport and payload-export helpers can share one stable graph contract.
+ */
+export const extractNetworkInferenceIR = extractNetworkInferenceIRImpl;
+
+/**
+ * Export a portable inference payload with structured-clone-safe data so browser and node runtimes can persist and reload predictor artifacts reliably.
+ */
+export const exportPortableInferencePayload =
+  exportPortableInferencePayloadImpl;
+
+/**
+ * Export a transferable inference payload so typed-array-heavy artifacts can cross worker boundaries with explicit ownership transfer and reduced copy overhead.
+ */
+export const exportTransferableInferencePayload =
+  exportTransferableInferencePayloadImpl;
+
+/**
+ * Channel options that configure request batching, queueing, and lifecycle behavior for asynchronous inference transport endpoints across browser and node worker runtimes.
+ * These options define how inference requests are buffered, dispatched, and finalized over long-lived channel sessions.
+ */
+export type InferenceChannelOptions = InferenceChannelOptionsType;
+
+/**
+ * Directed edge record in the inference graph representation used by payload export, replay, and worker predictor execution pipelines.
+ * The edge contract preserves stable source-target linkage and weight metadata during transport and reconstruction.
+ */
+export type NetworkInferenceIREdge = NetworkInferenceIREdgeType;
+
+/**
+ * Portable payload edge schema preserving source-target linkage and connection metadata in runtime-agnostic JSON-style artifacts.
+ * This shape is intentionally serialization-friendly so offline tooling can inspect and replay predictor graphs deterministically.
+ */
+export type PortableInferencePayloadEdge = PortableInferencePayloadEdgeType;
+
+/**
+ * Transfer options that control buffer packing and transfer-list behavior for worker-friendly inference payload publication.
+ * They allow callers to tune ownership and copy semantics for high-throughput cross-thread prediction workloads.
+ */
+export type TransferableInferencePayloadOptions =
+  TransferableInferencePayloadOptionsType;
+
 export {
-  createInferencePredictor,
-  exportTransferableInferencePayload,
-  extractNetworkInferenceIR,
   getTransferList,
-  exportPortableInferencePayload,
   INFERENCE_ACTIVATION_TABLE,
 } from './network.worker-payload.utils';
 export { openInferenceChannel } from './network.worker-payload.channel';
@@ -58,16 +114,12 @@ export {
 } from './network.worker-payload.shared';
 export type {
   InferenceChannel,
-  InferenceChannelOptions,
   InferencePredictor,
   NetworkInferenceIR,
-  NetworkInferenceIREdge,
   NetworkInferenceIRNode,
   PortableInferencePayload,
-  PortableInferencePayloadEdge,
   PortableInferencePayloadNode,
   SharedInferenceWorker,
   SharedInferenceWorkerOptions,
   TransferableInferencePayload,
-  TransferableInferencePayloadOptions,
 } from './network.worker-payload.types';

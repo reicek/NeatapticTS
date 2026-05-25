@@ -1,4 +1,4 @@
-import type Node from '../../node';
+﻿import type Node from '../../node';
 import { releaseNode as _releaseNode } from '../../nodePool/nodePool';
 import { defaultMemoryManager } from '../../../memory/manager';
 import type {

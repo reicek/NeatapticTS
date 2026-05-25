@@ -290,7 +290,15 @@ function asError(error: unknown): Error {
   return new Error(String(error));
 }
 
-/** @internal Test-only helper surface for owner-local worker-channel coverage. */
+/**
+ * Test-only internal helper surface exposing private functions for owner-local coverage
+ * of the dedicated inference-channel worker runtime.
+ *
+ * Not part of the public API. Exported only so unit tests can exercise runtime branches
+ * unreachable through the public {@link registerInferenceChannelWorkerRuntime} entry point.
+ *
+ * @internal
+ */
 export const INFERENCE_CHANNEL_WORKER_INTERNALS = {
   autoRegisterInferenceChannelWorkerRuntime,
   asError,

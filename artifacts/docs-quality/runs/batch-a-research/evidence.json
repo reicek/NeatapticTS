@@ -1,0 +1,347 @@
+{
+  "evidence": [
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ACCEPTANCE_LOWER_MULTIPLIER"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "DEFAULT_CB_INCREASE_FACTOR"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "FIVE"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "MUTATION_STRATEGY_ANNEAL"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ONE"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "PHASE_COMPLEXIFY"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "PHASE_LENGTH_DEFAULT"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "PHASE_SIMPLIFY"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "ADJUST_RATE_DEFAULT"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "ANCESTOR_UNIQ_MODE_LINEAGE_PRESSURE"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "DEFAULT_ADAPT_EVERY"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "DEFAULT_LINEAGE_PRESSURE_STRENGTH"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "DEFAULT_MAX_MUTATION_RATE"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "DEFAULT_MIN_MUTATION_RATE"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "DEFAULT_MUTATION_AMOUNT"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "TEN"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "COMPLEXITY_MODE_LINEAR"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "DEFAULT_IMPROVEMENT_WINDOW"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "DEFAULT_MUTATION_AMOUNT_SIGMA"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "DEFAULT_MUTATION_SIGMA"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "EXPLORE_LOW_DECREASE_MULTIPLIER"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "EXPLORE_LOW_INCREASE_MULTIPLIER"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "FOUR"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "HALF_INDEX_DIVISOR"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "MINIMAL_TOPOLOGY_OFFSET"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "MUTATION_SIGMA_SCALE"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "MUTATION_STRATEGY_TWO_TIER"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "SLOPE_BOOST_MULTIPLIER"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "TARGET_ACCEPTANCE_DEFAULT"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "ANCESTOR_UNIQ_MODE_EPSILON"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "ANNEAL_PROGRESS_MAX"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "COMPLEXITY_MODE_ADAPTIVE"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "DEFAULT_ANCESTOR_UNIQ_ADJUST"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "DEFAULT_ANCESTOR_UNIQ_COOLDOWN"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "HISTORY_MIN_IMPROVEMENT_COUNT"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "HISTORY_MIN_SLOPE_COUNT"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "LINEAGE_PRESSURE_DECREASE_MULTIPLIER"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "LINEAGE_PRESSURE_INCREASE_MULTIPLIER"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "NOVELTY_FACTOR_DEFAULT"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "NOVELTY_FACTOR_SMALL"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "ONE_HUNDRED"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "RNG_SPREAD_MULTIPLIER"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "SLOPE_PENALTY_MULTIPLIER"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "ANNEAL_BASELINE_GENERATIONS"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "DENOMINATOR_FALLBACK"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "LINEAR_HORIZON_DEFAULT"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "PROGRESS_RATIO_MAX"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "RNG_CENTER_OFFSET"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "SLOPE_NORMALIZE_CLAMP"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "BUDGET_GROWTH_MULTIPLIER"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "DEFAULT_MAX_MUTATION_AMOUNT"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "DEFAULT_MIN_MUTATION_AMOUNT"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "LINEAGE_PRESSURE_MODE_SPREAD"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "NOVELTY_ARCHIVE_MIN_SIZE"
+    },
+    {
+      "file": "src/neat/adaptive/core/adaptive.core.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "OPERATOR_DECAY_DEFAULT"
+    }
+  ],
+  "normalizedEvidenceDigest": "239c776f8e8f812247a0c4367f730736986e1a5fe5133c20012f56ac5a504dbc"
+}

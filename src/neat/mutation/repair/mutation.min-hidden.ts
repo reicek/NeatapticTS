@@ -1,4 +1,4 @@
-import { allowsRecurrentConnectionMutation } from '../../topology-intent/neat.topology-intent';
+﻿import { allowsRecurrentConnectionMutation } from '../../topology-intent/neat.topology-intent';
 import * as mutationAddConn from '../add-conn/mutation.add-conn';
 import type {
   GenomeWithMetadata,

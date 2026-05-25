@@ -174,16 +174,7 @@ propagate(
 ): void
 ```
 
-Propagate output and hidden errors backward through the network.
-
-Parameters:
-- `this` - Bound network instance.
-- `rate` - Learning rate.
-- `momentum` - Momentum factor.
-- `update` - Whether to apply updates immediately.
-- `target` - Output target values.
-- `regularization` - L2 regularization factor.
-- `costDerivative` - Optional output-node derivative override.
+Contract for propagate.
 
 ### ScheduleConfig
 
@@ -209,23 +200,7 @@ trainImpl(
 ): { error: number; iterations: number; time: number; }
 ```
 
-High-level training orchestration with early stopping, smoothing & callbacks.
-
-This is the main entrypoint used by `Network.train(...)`-style APIs.
-
-Parameters:
-- `net` - Network instance to train.
-- `set` - Training dataset.
-- `options` - Training options (stopping conditions, optimizer, hooks, etc.).
-
-Returns: Summary payload containing final error, iteration count, and elapsed time.
-
-Example:
-
-```ts
-const result = net.train(set, { iterations: 500, rate: 0.3 });
-console.log(result.error);
-```
+Contract for trainImpl.
 
 ### TrainingOptions
 
@@ -290,7 +265,8 @@ Returns: Mean cost across the processed samples.
 
 ### ALLOWED_OPTIMIZERS
 
-Set of supported optimizer identifiers accepted by training options.
+Allow-list of optimizer identifiers accepted by training options before
+optimizer-specific runtime state is initialized.
 
 ### buildMonitoredSmoothingConfig
 
@@ -304,6 +280,9 @@ buildMonitoredSmoothingConfig(
 ```
 
 Build monitored smoothing configuration from options and defaults.
+
+This keeps call sites declarative by normalizing all monitored-smoothing
+fields into one explicit configuration object.
 
 Parameters:
 - `type` - Selected monitored smoothing mode.
@@ -322,27 +301,42 @@ CostDerivative(
 ): number
 ```
 
-Cost-derivative callback shape for output-node backpropagation.
+Derivative callback used by output-node backpropagation.
+
+Inputs are `(target, output)` so custom objectives can match the built-in
+training loop without changing node internals.
 
 ### GradientClipRuntimeConfig
 
-Runtime gradient clipping configuration normalized from training options.
+Normalized runtime gradient clipping configuration.
+
+Optional fields are mode-dependent (`maxNorm` for norm modes, `percentile`
+for percentile modes).
 
 ### NetworkNode
 
-Local node shape alias used by training utility modules.
+Node instance type used by training helpers.
+
+This alias keeps helper signatures short while preserving the exact node
+contract exposed by the owning `Network` instance.
 
 ### OutputNodeWithCostDerivative
 
-Extended output-node contract that supports custom cost derivatives.
+Output-node contract for propagation paths that provide a custom derivative.
 
 ### PropagationContext
 
-Shared immutable context for network propagation helpers.
+Immutable context shared by propagation helpers.
+
+Keeping these values in a single object avoids argument drift across helper
+boundaries and keeps orchestration code declarative.
 
 ### RegularizationArgument
 
-Regularization argument accepted by node-level propagation.
+Regularization payload accepted by `Node.propagate`.
+
+Helpers pass this through unchanged so callers can centralize L1/L2
+configuration at the training entrypoint.
 
 ### resolveEmaAlpha
 
@@ -355,6 +349,9 @@ resolveEmaAlpha(
 
 Resolve default EMA alpha using a window length.
 
+When the caller omits a valid explicit alpha, this helper applies the
+standard EMA conversion `2 / (window + 1)`.
+
 Parameters:
 - `smoothingWindow` - Window length for moving average operations.
 - `explicitAlpha` - Optional user-provided alpha override.
@@ -363,7 +360,8 @@ Returns: A valid EMA alpha in the range (0, 1].
 
 ### TrainingSample
 
-Training sample consumed by training set loops.
+Input/output pair consumed by dataset training loops for one supervision
+step during iterative optimization.
 
 ## architecture/network/training/network.training.finalize.utils.ts
 
@@ -387,6 +385,8 @@ Parameters:
 Returns: Final training summary including error, iteration count, and elapsed time.
 
 ## architecture/network/training/network.training.backprop.utils.ts
+
+Propagate output and hidden error signals backward through the network graph.
 
 ### clearNodeState
 
@@ -480,16 +480,7 @@ propagate(
 ): void
 ```
 
-Propagate output and hidden errors backward through the network.
-
-Parameters:
-- `this` - Bound network instance.
-- `rate` - Learning rate.
-- `momentum` - Momentum factor.
-- `update` - Whether to apply updates immediately.
-- `target` - Output target values.
-- `regularization` - L2 regularization factor.
-- `costDerivative` - Optional output-node derivative override.
+Contract for propagate.
 
 ### propagateHiddenLayer
 
@@ -587,6 +578,8 @@ Parameters:
 
 ## architecture/network/training/network.training.loop.utils.ts
 
+Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
+
 ### trainSetCore
 
 ```ts
@@ -603,20 +596,7 @@ trainSetCore(
 ): number
 ```
 
-Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
-
-Parameters:
-- `net` - Network instance being trained.
-- `set` - Training sample set.
-- `batchSize` - Mini-batch size.
-- `accumulationSteps` - Micro-batches per optimizer step.
-- `currentRate` - Learning rate for this pass.
-- `momentum` - Momentum value used by propagation paths.
-- `regularization` - Regularization settings passed into propagation calls.
-- `costFunction` - Cost function or cost-function object.
-- `optimizer` - Optional optimizer configuration.
-
-Returns: Mean cost over processed samples.
+Contract for trainSetCore.
 
 ## architecture/network/training/network.training.smoothing.utils.ts
 
@@ -632,6 +612,10 @@ computeMonitoredError(
 ```
 
 Compute monitored training error using the configured smoothing strategy.
+
+The helper returns the raw error when smoothing is effectively disabled.
+For stateful modes (`ema`, `adaptive-ema`), the provided state object is
+updated in place so callers can keep continuity across iterations.
 
 Parameters:
 - `trainError` - Raw training error for the current iteration.
@@ -654,6 +638,9 @@ computePlateauMetric(
 
 Compute plateau metric using the configured plateau smoothing strategy.
 
+This metric is intentionally independent from the primary monitored metric so
+plateau detection can use a different noise profile.
+
 Parameters:
 - `trainError` - Raw training error for the current iteration.
 - `plateauErrors` - Plateau window of recent raw errors.
@@ -673,7 +660,7 @@ applyGradientClippingCore(
 ): void
 ```
 
-Apply gradient clipping to accumulated connection and bias deltas.
+Apply gradient clipping to accumulated connection and bias delta buffers.
 
 Parameters:
 - `net` - Network instance whose accumulated gradients are clipped.

@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import Node from '../../node';
 import Connection from '../../connection';
 import mutation from '../../../methods/mutation/mutation';
@@ -15,7 +15,7 @@ import type {
 } from './network.gating.utils.types';
 
 /**
- * Ensure a node can be removed and return its index in the network node list.
+ * Ensure a node is eligible for removal and return its index in the network node list so structural anchors and missing nodes fail fast with explicit diagnostics.
  *
  * @param network - Network containing the node.
  * @param node - Node to validate.
@@ -55,7 +55,8 @@ export function resolveSubNodeMutationConfig(): NodeRemovalMutationConfig {
 }
 
 /**
- * Disconnect a node self-loop before broader edge rewiring.
+ * Disconnect a node self-loop before broader edge rewiring so self-referential activation state does not survive node-removal mutation flows.
+ * This keeps removal semantics consistent with later bridge reconstruction and gater reassignment stages.
  *
  * @param network - Network being updated.
  * @param node - Node whose self-loop should be removed.
@@ -66,7 +67,8 @@ export function disconnectNodeSelfLoop(network: Network, node: Node): void {
 }
 
 /**
- * Disconnect all inbound connections for a node while collecting predecessors.
+ * Disconnect all inbound connections for a node while collecting predecessor nodes so bridge-connection reconstruction can preserve upstream reachability.
+ * The collected predecessor set defines candidate source nodes for post-removal connectivity restoration.
  *
  * @param network - Network being updated.
  * @param node - Node being removed.
@@ -99,7 +101,8 @@ export function disconnectInboundConnections(
 }
 
 /**
- * Disconnect all outbound connections for a node while collecting successors.
+ * Disconnect all outbound connections for a node while collecting successor nodes so bridge-connection reconstruction can preserve downstream projection coverage.
+ * The collected successor set defines candidate targets for bridging after structural deletion.
  *
  * @param network - Network being updated.
  * @param node - Node being removed.
@@ -132,7 +135,7 @@ export function disconnectOutboundConnections(
 }
 
 /**
- * Create bridging connections from each predecessor to each successor when valid.
+ * Create bridging connections from each predecessor to each successor when valid so node removal can maintain coarse connectivity without duplicating existing projections.
  *
  * @param network - Network where bridge connections are created.
  * @param predecessorNodes - Source nodes collected from inbound edges.
@@ -167,7 +170,7 @@ export function createBridgingConnections(
 }
 
 /**
- * Reattach preserved gaters to randomly selected newly-created bridge connections.
+ * Reattach preserved gaters to randomly selected bridge connections so gate ownership can survive node removal when keep-gates mutation policy is enabled.
  *
  * @param network - Network performing reassignment.
  * @param preservedGaters - Gaters retained during node removal.
@@ -193,7 +196,7 @@ export function reassignPreservedGaters(
 }
 
 /**
- * Ungate all connections that are currently gated by the removed node.
+ * Ungate all connections currently gated by the removed node so detached gating references do not remain after structural mutation completes.
  *
  * @param network - Network performing ungate operations.
  * @param node - Node whose gated connections should be released.
@@ -213,7 +216,7 @@ export function ungateConnectionsGatedByNode(
 }
 
 /**
- * Remove a node from the network list and mark node indexing as dirty.
+ * Remove a node from the runtime node list and mark index caches dirty so later activation and topology helpers rebuild index-based lookup state.
  *
  * @param network - Network being mutated.
  * @param nodeIndex - Index of the node to remove.

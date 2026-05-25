@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when a linear warmup-decay schedule receives a non-positive step count.
  */
 export class RateLinearWarmupTotalStepsError extends Error {

@@ -1,3 +1,32 @@
+/**
+ * @module evaluate-regression-pack
+ *
+ * CLI harness for running a reproducible regression evaluation against a
+ * NEATchat pretrained session snapshot.
+ *
+ * Usage:
+ * ```sh
+ * npx ts-node examples/neatChat/evaluate-regression-pack.ts \
+ *   --snapshotModulePath=examples/neatChat/default-pretrained-session-snapshot.ts \
+ *   --snapshotExportName=DEFAULT_NEATCHAT_PRETRAINED_SESSION_SNAPSHOT \
+ *   --snapshotVersion=1 \
+ *   --prompt="Hello, how are you?" \
+ *   --heldOutLineCount=16
+ * ```
+ *
+ * Steps:
+ * 1. Combines `NEATCHAT_SAMPLE_CONVERSATION_LINES` with the default pretraining
+ *    corpus and splits them into seed and held-out validation sets using
+ *    `splitNeatChatSeedAndValidationLines`.
+ * 2. Dynamically imports the named snapshot export from the given module path
+ *    via a `file://` URL (supports both v1 and v2 snapshot formats).
+ * 3. Restores the session, runs one evaluation exchange via
+ *    `evaluateNeatChatSessionMetrics`, and prints a JSON report to stdout with
+ *    the response tokens, perplexity-style metrics, and vocabulary statistics.
+ *
+ * All CLI arguments use `--key=value` format; see `resolveEvaluationConfig` for
+ * the full option list and defaults.
+ */
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 

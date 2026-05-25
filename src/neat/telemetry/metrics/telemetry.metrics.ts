@@ -49,12 +49,107 @@
  * "how was the entry recorded?" but "why do these numbers exist, and what do
  * they reveal about the search?"
  */
-export * from './telemetry.metrics.entropy';
-export * from './telemetry.metrics.selection';
-export * from './telemetry.metrics.diversity';
-export * from './telemetry.metrics.operator';
-export * from './telemetry.metrics.objectives';
-export * from './telemetry.metrics.rng';
-export * from './telemetry.metrics.lineage';
-export * from './telemetry.metrics.complexity';
-export * from './telemetry.metrics.performance';
+/** Re-export entropy-cache reader with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { getCachedEntropy } from './telemetry.metrics.entropy';
+/** Re-export degree counter helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeDegreeCounts } from './telemetry.metrics.entropy';
+/** Re-export degree histogram helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { buildDegreeHistogram } from './telemetry.metrics.entropy';
+/** Re-export entropy-from-histogram helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeEntropyFromHistogram } from './telemetry.metrics.entropy';
+/** Re-export entropy-cache writer with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { setCachedEntropy } from './telemetry.metrics.entropy';
+
+/** Re-export telemetry core snapshot helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { getTelemetryCoreSnapshot } from './telemetry.metrics.selection';
+/** Re-export telemetry key stripping helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { stripUnselectedTelemetryKeys } from './telemetry.metrics.selection';
+/** Re-export telemetry core merge helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { mergeTelemetryCoreFields } from './telemetry.metrics.selection';
+/** Re-export safe telemetry selection helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { safelyApplyTelemetrySelect } from './telemetry.metrics.selection';
+
+/** Re-export fast-mode defaults helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyFastModeDefaults } from './telemetry.metrics.diversity';
+/** Re-export compatibility statistics helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeCompatibilityStats } from './telemetry.metrics.diversity';
+/** Re-export entropy statistics helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeEntropyStats } from './telemetry.metrics.diversity';
+/** Re-export graphlet entropy helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeGraphletEntropy } from './telemetry.metrics.diversity';
+/** Re-export distinct-index sampler with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { pickDistinctIndices } from './telemetry.metrics.diversity';
+/** Re-export enabled-edge counter with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { countEnabledEdges } from './telemetry.metrics.diversity';
+
+/** Re-export operator stats snapshot helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeOperatorStatsSnapshot } from './telemetry.metrics.operator';
+/** Re-export operator stats reader with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { readOperatorStats } from './telemetry.metrics.operator';
+
+/** Re-export hypervolume proxy helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeHyperVolumeProxy } from './telemetry.metrics.objectives';
+/** Re-export Pareto front sizing helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeParetoFrontSizes } from './telemetry.metrics.objectives';
+/** Re-export objective-importance applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyObjectiveImportance } from './telemetry.metrics.objectives';
+/** Re-export objective-age applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyObjectiveAges } from './telemetry.metrics.objectives';
+/** Re-export objective-event applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyObjectiveEvents } from './telemetry.metrics.objectives';
+/** Re-export species allocation applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applySpeciesAllocation } from './telemetry.metrics.objectives';
+/** Re-export objective snapshot applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyObjectivesSnapshot } from './telemetry.metrics.objectives';
+/** Re-export hypervolume telemetry applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyHypervolumeTelemetry } from './telemetry.metrics.objectives';
+
+/** Re-export RNG state applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyRngState } from './telemetry.metrics.rng';
+
+/** Re-export lineage statistics helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeLineageStats } from './telemetry.metrics.lineage';
+/** Re-export multi-objective lineage applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyLineageStatsMultiObjective } from './telemetry.metrics.lineage';
+/** Re-export mono-objective lineage applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyLineageStatsMonoObjective } from './telemetry.metrics.lineage';
+/** Re-export lineage eligibility guard with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { isLineageEligible } from './telemetry.metrics.lineage';
+/** Re-export lineage depth collector with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { collectDepths } from './telemetry.metrics.lineage';
+/** Re-export lineage mean-depth helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeMeanDepth } from './telemetry.metrics.lineage';
+/** Re-export sampled ancestor-uniqueness helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeAncestorUniquenessSampled } from './telemetry.metrics.lineage';
+/** Re-export distinct-pair sampler with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { pickDistinctPairIndices } from './telemetry.metrics.lineage';
+/** Re-export pairwise Jaccard distance helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computePairJaccardDistance } from './telemetry.metrics.lineage';
+/** Re-export lineage context builder with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { buildLineageContext } from './telemetry.metrics.lineage';
+/** Re-export ancestor intersection counter with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { countAncestorIntersection } from './telemetry.metrics.lineage';
+/** Re-export lineage entry builder with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { buildLineageEntry } from './telemetry.metrics.lineage';
+
+/** Re-export population count collector with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { collectPopulationCounts } from './telemetry.metrics.complexity';
+/** Re-export mean-count helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeMeanCounts } from './telemetry.metrics.complexity';
+/** Re-export max-count helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeMaxCounts } from './telemetry.metrics.complexity';
+/** Re-export enabled-ratio helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeEnabledRatios } from './telemetry.metrics.complexity';
+/** Re-export mean enabled-ratio helper with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeMeanEnabledRatio } from './telemetry.metrics.complexity';
+/** Re-export growth-value updater with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { computeAndStoreGrowthValues } from './telemetry.metrics.complexity';
+/** Re-export complexity entry builder with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { buildComplexityEntry } from './telemetry.metrics.complexity';
+/** Re-export multi-objective complexity applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyComplexityStatsMultiObjective } from './telemetry.metrics.complexity';
+/** Re-export mono-objective complexity applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyComplexityStatsMonoObjective } from './telemetry.metrics.complexity';
+
+/** Re-export performance telemetry applier with recorder-facing semantics and durable documentation intent for generated guides, runtime diagnostics, and evidence interpretation during telemetry entry assembly. */
+export { applyPerformanceStats } from './telemetry.metrics.performance';

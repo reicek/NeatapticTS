@@ -35,7 +35,7 @@ import {
 } from './network.evolve.errors';
 
 /**
- * Validate dataset existence and dimensional compatibility with network I/O.
+ * Validate that training samples exist and that each sample shape matches the network input and output arity before any evolution work starts.
  *
  * @param network - Network being evolved.
  * @param dataSet - Supervised dataset.
@@ -62,7 +62,7 @@ export function assertEvolutionDatasetCompatibility(
 }
 
 /**
- * Ensure options object exists.
+ * Return the normalized evolve-options object that every downstream setup helper reads so defaults, compatibility shims, and diagnostics all start from one stable and predictable structure.
  *
  * @param evolveOptions - Incoming evolve options.
  * @returns Safe options object.
@@ -74,7 +74,7 @@ export function getNormalizedOptions(
 }
 
 /**
- * Resolve normalized scalar settings with defaults.
+ * Resolve scalar evolution settings with explicit and stable defaults so later setup phases can run deterministically without repeating option-default logic in several different orchestration branches.
  *
  * @param evolveOptions - Evolve options object.
  * @returns Normalized scalar settings.
@@ -98,7 +98,7 @@ export function resolveEvolutionSettings(
 }
 
 /**
- * Resolve stopping-condition semantics while preserving legacy behavior.
+ * Resolve stopping conditions while preserving legacy iteration-and-error semantics so existing callers keep the same termination behavior, including compatibility with historical zero-iteration and disabled-error workflows.
  *
  * @param evolveOptions - Evolve options object.
  * @param initialTargetError - Target error resolved from options.
@@ -128,7 +128,7 @@ export function resolveStopConditions(
 }
 
 /**
- * Build optional structured evolution config summary.
+ * Build a structured evolution-config snapshot for diagnostics, callback payloads, and log hooks whenever scheduling metadata exists, while keeping omitted schedule paths represented as an explicit undefined result.
  *
  * @param settingsToSummarize - Scalar evolution settings.
  * @returns Optional summary config.
@@ -151,7 +151,7 @@ export function createEvolutionConfig(
 }
 
 /**
- * Build fitness function according to threading configuration.
+ * Build the effective fitness evaluator by selecting either single-thread or worker-backed execution from resolved threading settings, then return both the callable function and the resolved runtime thread count.
  *
  * @param dataSet - Supervised dataset.
  * @param resolvedSettings - Scalar evolution settings.
@@ -191,7 +191,7 @@ export async function prepareFitnessFunction(
 }
 
 /**
- * Normalize options used by NEAT constructor.
+ * Normalize options consumed by the NEAT constructor, including compatibility mapping between populationSize and popsize, plus default speciation behavior needed for historical evolve-call consistency.
  *
  * @param network - Network instance being evolved.
  * @param evolveOptions - Evolve options object.
@@ -209,7 +209,7 @@ export function configureNeatOptions(
 }
 
 /**
- * Lazy-load and create NEAT instance.
+ * Lazy-load the NEAT runtime class and create an instance bound to the prepared fitness evaluator and normalized options so evolution setup can remain lightweight until construction is truly needed.
  *
  * @param network - Network instance being evolved.
  * @param fitnessFunction - Prepared fitness evaluator.
@@ -231,7 +231,7 @@ export async function createNeatInstance(
 }
 
 /**
- * Emit warning when zero-iteration configuration may produce no best genome.
+ * Emit a best-genome advisory warning for zero-iteration runs where legacy flows can complete without setting a champion, preventing silent confusion when a caller expects a populated best network.
  *
  * @param neatInstance - Active NEAT instance.
  * @param evolveOptions - Evolve options object.
@@ -257,7 +257,7 @@ export function warnIfNoBestGenomeMayOccur(
 }
 
 /**
- * Increase mutation aggressiveness for tiny populations.
+ * Apply conservative mutation-rate and mutation-amount defaults for tiny populations to reduce early stagnation risk while avoiding aggressive overrides when callers already configured explicit mutation controls.
  *
  * @param neatInstance - Active NEAT instance.
  * @param evolveOptions - Evolve options object.

@@ -209,21 +209,21 @@ import type {
   RNGSnapshot,
   TrainingOptions,
 } from './network.types';
+import type { NetworkView } from '../../utils/memory';
 
 /**
  * Public graph runtime that combines execution, editing, and portability.
  *
- * `Network` is the instance callers reach for when one directed graph should be
- * activated immediately, mutated structurally, regularized during training, or
- * shipped across a checkpoint or export boundary without changing types.
+ * `Network` is the instance callers use when one directed graph should be
+ * activated, mutated, regularized, checkpointed, or exported without changing
+ * the public shape of the object.
  *
- * Read the class as an orchestration facade over the helper chapters in this
- * folder. The public methods stay on the instance so older imports and examples
- * remain stable, while the heavier activation, topology, deterministic, and
- * interoperability policies live in narrower modules below this surface.
+ * @example
+ * ```ts
+ * const network = Network.createMLP(2, [4], 1);
+ * const output = network.activate([0, 1]);
+ * ```
  */
-import type { NetworkView } from '../../utils/memory';
-
 export default class Network implements NetworkView {
   /** @internal DropConnect probability. */
   protected _dropConnectProb: number = 0;
@@ -568,7 +568,23 @@ export default class Network implements NetworkView {
   }
 
   /**
-   * Split a random existing connection by inserting one hidden node.
+   * Insert a new hidden node by splitting a randomly chosen existing connection.
+   *
+   * The selected connection `from → to` is replaced by two new connections:
+   * `from → newNode` and `newNode → to`. The new node's activation function
+   * defaults to linear so the network's behavior is unchanged immediately
+   * after the split — evolution pressure then shapes the new node over time.
+   *
+   * This is one of the canonical NEAT structural mutations. It increases
+   * network depth without changing connectivity density significantly.
+   * See Stanley & Miikkulainen (2002) for the motivating analysis.
+   *
+   * @example
+   * ```ts
+   * const network = new Network(2, 1);
+   * network.connect(network.nodes[0], network.nodes[2]);
+   * network.addNodeBetween(); // splits one connection, adds a hidden node
+   * ```
    */
   addNodeBetween(): void {
     _addNodeBetweenImpl.call(this);
@@ -691,10 +707,37 @@ export default class Network implements NetworkView {
   }
 
   /**
-   * Immediately prune connections to reach (or approach) a target sparsity fraction.
-   * Used by evolutionary pruning (generation-based) independent of training iteration schedule.
-   * @param targetSparsity fraction in (0,1). 0.8 means keep 20% of original (if first call sets baseline)
-   * @param method 'magnitude' | 'snip'
+   * Immediately prune connections until the graph reaches (or approaches)
+   * a target sparsity fraction.
+   *
+   * Sparsity is defined as the fraction of connections removed relative to
+   * the baseline connection count captured on the first call. A
+   * `targetSparsity` of `0.8` means approximately 80% of the original
+   * connections will be removed, leaving 20% intact.
+   *
+   * Two ranking strategies are available:
+   *
+   * - `'magnitude'` (default): removes the connections with the smallest
+   *   absolute weight values — a fast, weight-magnitude heuristic.
+   * - `'snip'`: removes connections ranked by a SNIP-style first-order
+   *   gradient-magnitude saliency score.
+   *
+   * This method is suitable for evolutionary generation-based pruning
+   * independent of a training-iteration schedule. For schedule-based
+   * pruning during gradient training, use `configureSparsityBudget()`.
+   *
+   * @param targetSparsity - Fraction of original connections to remove,
+   *   in the open interval `(0, 1)`. Values close to 1 produce very
+   *   sparse networks.
+   * @param method - Ranking strategy: `'magnitude'` or `'snip'`.
+   *   Defaults to `'magnitude'`.
+   *
+   * @example
+   * ```ts
+   * const network = Network.createMLP(4, [16, 16], 2);
+   * // Remove 70% of connections by weight magnitude:
+   * network.pruneToSparsity(0.7);
+   * ```
    */
   pruneToSparsity(
     targetSparsity: number,

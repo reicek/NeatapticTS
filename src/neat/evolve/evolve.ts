@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The evolution chapter is where one NEAT generation actually turns into the next.
  *
  * If the root `Neat` controller explains the public lifecycle, this module explains the
@@ -132,9 +132,13 @@ export const EVOLVE_TARGET_FRONT_LOWER_RATIO = 0.8;
  * The value is intentionally small because epsilon changes should steer ranking gradually rather than jerk it.
  */
 export const EVOLVE_DEFAULT_EPSILON_ADJUST = 0.002;
-/** Minimum dominance epsilon floor used by adaptive Pareto tuning. */
+/**
+ * Minimum dominance epsilon floor; the adaptive Pareto tuning controller never allows the epsilon value to fall below this boundary.
+ */
 export const EVOLVE_DEFAULT_EPSILON_MIN = 0;
-/** Maximum dominance epsilon ceiling used by adaptive Pareto tuning. */
+/**
+ * Maximum dominance epsilon ceiling; the adaptive Pareto tuning controller never allows the epsilon value to rise above this boundary.
+ */
 export const EVOLVE_DEFAULT_EPSILON_MAX = 0.5;
 /**
  * Default cooldown in generations between epsilon adjustments.
@@ -143,14 +147,16 @@ export const EVOLVE_DEFAULT_EPSILON_MAX = 0.5;
  */
 export const EVOLVE_DEFAULT_EPSILON_COOLDOWN = 2;
 /**
- * Default inactivity window used before adaptive objective pruning considers removal.
+ * Default inactivity window in generations that must elapse before adaptive objective pruning considers removing a stagnant objective.
  */
 export const EVOLVE_PRUNE_WINDOW_DEFAULT = 5;
 /**
  * Default numerical range epsilon for deciding whether an objective has effectively gone flat.
  */
 export const EVOLVE_PRUNE_RANGE_EPS_DEFAULT = 1e-6;
-/** Generation threshold below which a species is still treated as young. */
+/**
+ * Generation age threshold below which a species is still classified as young and receives a fitness-sharing bonus to encourage early exploration.
+ */
 export const EVOLVE_YOUNG_THRESHOLD_DEFAULT = 5;
 /** Fitness-sharing multiplier applied to species that are still in their early growth window. */
 export const EVOLVE_YOUNG_MULTIPLIER_DEFAULT = 1.3;
@@ -159,11 +165,11 @@ export const EVOLVE_OLD_THRESHOLD_DEFAULT = 30;
 /** Fitness-sharing multiplier applied to older species so stale lineages lose selection privilege. */
 export const EVOLVE_OLD_MULTIPLIER_DEFAULT = 0.7;
 /**
- * Minimum offspring allocation reserved for a surviving species during speciated reproduction.
+ * Minimum offspring allocation reserved for each surviving species during speciated reproduction so no viable lineage is starved out entirely.
  */
 export const EVOLVE_MIN_OFFSPRING_DEFAULT = 1;
 /**
- * Survivor fraction used when choosing the parent pool inside each species.
+ * Survivor fraction used when choosing the parent pool inside each species during speciated offspring production.
  */
 export const EVOLVE_SURVIVAL_THRESHOLD_DEFAULT = 0.5;
 /**
@@ -171,7 +177,7 @@ export const EVOLVE_SURVIVAL_THRESHOLD_DEFAULT = 0.5;
  */
 export const EVOLVE_CROSS_SPECIES_GUARD_LIMIT = 5;
 /**
- * Default generation at which automatic entropy objective scheduling becomes eligible.
+ * Default generation index at which automatic entropy objective scheduling becomes eligible for addition to the active objective set.
  */
 export const EVOLVE_AUTO_ENTROPY_ADD_AT = 3;
 /**
@@ -179,18 +185,24 @@ export const EVOLVE_AUTO_ENTROPY_ADD_AT = 3;
  */
 export const EVOLVE_GLOBAL_STAGNATION_REPLACE_FRACTION = 0.2;
 /**
- * Minimum re-enable observations required before the controller trusts its adaptation signal.
+ * Minimum number of re-enable observations required before the adaptive controller trusts its success-rate signal and adjusts probability.
  */
 export const EVOLVE_REENABLE_MIN_SAMPLES = 20;
-/** Desired success ratio for connection re-enable attempts during adaptive mutation control. */
+/**
+ * Desired success ratio for connection re-enable attempts; the adaptive controller steers probability toward this target fraction each generation.
+ */
 export const EVOLVE_REENABLE_TARGET = 0.3;
 /**
- * Scale factor that converts re-enable success error into a probability update.
+ * Scale factor that converts the re-enable success-rate error signal into a probability update step during adaptive mutation control.
  */
 export const EVOLVE_REENABLE_DELTA_SCALE = 0.1;
-/** Lower bound for adaptive connection re-enable probability. */
+/**
+ * Lower bound for the adaptive connection re-enable probability; the controller clamps downward adjustments at this floor to preserve some re-enable activity.
+ */
 export const EVOLVE_REENABLE_MIN = 0.05;
-/** Upper bound for adaptive connection re-enable probability. */
+/**
+ * Upper bound for the adaptive connection re-enable probability; the controller clamps upward adjustments at this ceiling to avoid over-enabling.
+ */
 export const EVOLVE_REENABLE_MAX = 0.9;
 /**
  * Minimum target species count used by automatic compatibility tuning.
@@ -202,9 +214,13 @@ export const EVOLVE_AUTO_COMPAT_TARGET_MIN = 2;
  * Default rate used when nudging compatibility coefficients toward the desired species count.
  */
 export const EVOLVE_AUTO_COMPAT_ADJUST_RATE = 0.01;
-/** Minimum compatibility coefficient allowed during automatic tuning. */
+/**
+ * Minimum compatibility coefficient allowed during automatic tuning; prevents the coefficient from collapsing all population diversity into one species.
+ */
 export const EVOLVE_AUTO_COMPAT_MIN_COEFF = 0.1;
-/** Maximum compatibility coefficient allowed during automatic tuning. */
+/**
+ * Maximum compatibility coefficient allowed during automatic tuning; prevents the coefficient from fragmenting the population into too many tiny short-lived species.
+ */
 export const EVOLVE_AUTO_COMPAT_MAX_COEFF = 5;
 /**
  * Random perturbation scale used when compatibility tuning has no directional error to follow.

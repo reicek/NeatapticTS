@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Odd scramble factor used while deriving a default seed from time and host
  * context.
  *

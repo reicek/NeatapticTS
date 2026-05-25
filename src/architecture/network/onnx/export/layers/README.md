@@ -721,7 +721,7 @@ appendIndexedMetadata(
 ): void
 ```
 
-Append an integer index to JSON-array metadata key.
+Append a layer index to a JSON-array metadata field on the ONNX model.
 
 Parameters:
 - `model` - Target model.
@@ -740,7 +740,7 @@ appendMetadataSpec(
 ): void
 ```
 
-Append a JSON object to JSON-array metadata key.
+Append a structured metadata object to a JSON-array metadata field safely.
 
 Parameters:
 - `model` - Target model.
@@ -757,7 +757,9 @@ appendPoolingMetadata(
 ): void
 ```
 
-Append pooling metadata for one emitted pooling layer.
+Append pooling-layer metadata after a pooling node is emitted.
+
+Stores both the layer index list and the serialized pooling specification.
 
 Parameters:
 - `context` - Pooling emission context.
@@ -772,7 +774,10 @@ asNodeInternals(
 ): NodeInternals
 ```
 
-Normalize a public node instance into ONNX export internals.
+Normalize a public node instance to the internal shape used by ONNX export helpers.
+
+This cast is intentionally localized so collection helpers stay strongly
+typed without repeating assertions at each call site.
 
 Parameters:
 - `node` - Source node.
@@ -819,7 +824,11 @@ buildDiagonalRecurrentWeights(
 ): number[]
 ```
 
-Build a diagonal recurrent matrix from self-connections.
+Build a diagonal recurrent weight matrix from per-node self-connections.
+
+Only diagonal entries are populated because this helper encodes recurrent
+carry as one-step self-feedback for each destination neuron. Off-diagonal
+entries are emitted as zero to keep the matrix rectangular and deterministic.
 
 Parameters:
 - `currentLayerNodes` - Layer nodes.
@@ -835,7 +844,7 @@ buildIndexedMetadataProperty(
 ): OnnxMetadataProperty
 ```
 
-Build a new index-array metadata property.
+Build a metadata property whose value is a JSON array of layer indexes.
 
 Parameters:
 - `key` - Metadata key.
@@ -852,7 +861,7 @@ buildSpecMetadataProperty(
 ): OnnxMetadataProperty
 ```
 
-Build a new spec-array metadata property.
+Build a metadata property whose value is a JSON array of mapping specs.
 
 Parameters:
 - `key` - Metadata key.
@@ -883,7 +892,10 @@ collectDenseRowWeights(
 ): number[]
 ```
 
-Collect source-to-target weights for one dense row.
+Collect one destination neuron's inbound weights in source-node order.
+
+Missing inbound edges are encoded as zeros to preserve a full rectangular
+matrix even for sparse connectivity.
 
 Parameters:
 - `context` - Dense row collection context.
@@ -898,7 +910,10 @@ collectPoolingAttributes(
 ): PoolingAttributes
 ```
 
-Collect ONNX pooling attributes from one pooling spec.
+Collect ONNX pooling attribute arrays from one pooling spec.
+
+Optional pad fields default to zero so exported nodes always carry explicit
+2D padding metadata.
 
 Parameters:
 - `poolSpec` - Pooling spec.
@@ -913,7 +928,10 @@ collectRecurrentRow(
 ): number[]
 ```
 
-Collect one recurrent matrix row.
+Collect one recurrent matrix row for a destination neuron.
+
+Diagonal entries read the neuron's self-connection weight; all other
+coordinates remain zero.
 
 Parameters:
 - `context` - Row collection context.
@@ -928,7 +946,10 @@ collectRecurrentRows(
 ): number[][]
 ```
 
-Collect recurrent matrix rows for one layer.
+Collect all recurrent matrix rows for the current layer.
+
+Each row corresponds to one destination neuron and is assembled with
+diagonal-only recurrent semantics.
 
 Parameters:
 - `context` - Recurrent matrix build context.
@@ -943,7 +964,9 @@ emitOptionalFlattenAfterPooling(
 ): string
 ```
 
-Conditionally emit flatten node after pooling.
+Conditionally emit a `Flatten` node after pooling.
+
+When disabled, the pooled tensor name is returned unchanged.
 
 Parameters:
 - `context` - Flatten emission context.
@@ -988,7 +1011,9 @@ ensureMetadataRegistry(
 ): OnnxMetadataProperty[]
 ```
 
-Ensure model metadata registry exists.
+Ensure the ONNX model metadata registry exists and return it.
+
+The returned array is mutable and shared with `model.metadata_props`.
 
 Parameters:
 - `model` - Target model.
@@ -1020,7 +1045,10 @@ foldDenseRowsToInitializers(
 ): DenseWeightBuildResult
 ```
 
-Fold dense rows into flattened ONNX initializer arrays.
+Fold per-target dense rows into ONNX initializer buffers.
+
+The fold preserves row-major order by destination neuron so downstream
+tensor shapes remain stable across exports of the same topology.
 
 Parameters:
 - `denseRows` - Dense rows.
@@ -1036,6 +1064,8 @@ parseMetadataArray(
 ```
 
 Parse a metadata JSON array value safely.
+
+Returns `undefined` when parsing fails or when the payload is not an array.
 
 Parameters:
 - `metadataValue` - Metadata JSON string.
@@ -1118,7 +1148,9 @@ toPoolingEmissionContext(
 ): PoolingEmissionContext
 ```
 
-Resolve pooling emission context from optional pooling parameters.
+Resolve a normalized pooling emission context from optional export parameters.
+
+This helper centralizes optional-to-required conversion before node emission.
 
 Parameters:
 - `params` - Optional pooling and flatten parameters.

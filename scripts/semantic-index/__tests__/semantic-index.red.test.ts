@@ -24,6 +24,44 @@ const runModuleEvaluation = <Result>(source: string): Result => {
 };
 
 describe('semantic-index red contracts', () => {
+  describe('cli-utils.mjs', () => {
+    it('accumulates repeatable source flags when requested', () => {
+      const parsedArgs = runModuleEvaluation<{ _: string[], source: string[] }>(`
+        import { parseCliArgs } from './scripts/semantic-index/cli-utils.mjs';
+
+        const parsedArgs = parseCliArgs([
+          '--json',
+          '--source',
+          'scripts/agent-customization/mcp/mcp-utils.mjs',
+          '--source=scripts/agent-customization/mcp/mcp-plan-utils.mjs',
+        ], {
+          repeatableFlags: ['source'],
+        });
+        console.log(JSON.stringify(parsedArgs));
+      `);
+
+      expect(parsedArgs).toEqual(expect.objectContaining({
+        source: [
+          'scripts/agent-customization/mcp/mcp-utils.mjs',
+          'scripts/agent-customization/mcp/mcp-plan-utils.mjs',
+        ],
+      }));
+    });
+
+    it('preserves scalar flag parsing when repeatable mode is not enabled', () => {
+      const parsedArgs = runModuleEvaluation<{ _: string[], source: string }>(`
+        import { parseCliArgs } from './scripts/semantic-index/cli-utils.mjs';
+
+        const parsedArgs = parseCliArgs(['--source', 'scripts/semantic-index/cli-utils.mjs']);
+        console.log(JSON.stringify(parsedArgs));
+      `);
+
+      expect(parsedArgs).toEqual(expect.objectContaining({
+        source: 'scripts/semantic-index/cli-utils.mjs',
+      }));
+    });
+  });
+
   describe('freshness.mjs', () => {
     it('returns mtime_ms, size, and sha256 for a known file', async () => {
       const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'semantic-index-freshness-'));

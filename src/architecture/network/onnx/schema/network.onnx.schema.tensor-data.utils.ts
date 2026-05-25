@@ -1,4 +1,4 @@
-import type { OnnxTensor } from './network.onnx.schema.types';
+﻿import type { OnnxTensor } from './network.onnx.schema.types';
 
 /** ONNX TensorProto enum value for float32 tensors. */
 export const ONNX_FLOAT_DATA_TYPE = 1;
@@ -30,6 +30,7 @@ const float32DecodeValueBuffer = new Float32Array(
 
 /**
  * Create a float16-backed tensor payload from float32 values.
+ * This helper emits the exact storage fields expected by ONNX initializer writers so callers can downgrade precision while keeping exporter and importer tensor contracts structurally consistent.
  *
  * @param floatValues Float32-domain values to pack.
  * @returns ONNX tensor storage fields for a float16 initializer.
@@ -46,6 +47,7 @@ export function createFloat16StoragePayload(
 
 /**
  * Encode float32-domain values into packed float16 words stored as int32 entries.
+ * Packing through this utility keeps round-trip behavior aligned with the paired decoder used by import and schema audit paths, including special-value handling.
  *
  * @param floatValues Float values to encode.
  * @returns Packed float16 words.
@@ -56,6 +58,7 @@ export function encodeFloat16Int32Data(floatValues: number[]): number[] {
 
 /**
  * Decode packed float16 words stored as int32 entries into float32-domain values.
+ * Decoder output is normalized to JavaScript number values so upstream importer logic can reuse one scalar path regardless of original tensor storage precision.
  *
  * @param packedValues Packed float16 words.
  * @returns Decoded float values.
@@ -66,6 +69,7 @@ export function decodeFloat16Int32Data(packedValues: number[]): number[] {
 
 /**
  * Read a tensor's floating-point values regardless of whether it is stored as float32 or float16.
+ * This abstraction gives importer and analysis utilities one read entrypoint that transparently handles native float shelves and packed float16 compatibility shelves.
  *
  * @param tensor Source ONNX tensor.
  * @returns Decoded floating-point values.

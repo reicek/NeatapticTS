@@ -9,6 +9,7 @@
  *   - list_gates      — Return the available Tier-1 gate IDs and their owners.
  *   - run_gate_check  — Run a named gate and return its structured contract result.
  *   - query_tier_graph — Return the current tier inventory and validation summary.
+ *   - query_customization_routing_table — Return the canonical routing table and freshness status.
  *
  * Usage:
  *   node scripts/agent-customization/mcp/neataptic-gate-mcp.mjs [--self-check] [--json]
@@ -31,6 +32,7 @@ import {
   runStdioMcpServer,
   selfCheckError,
 } from './mcp-utils.mjs';
+import { createCustomizationRoutingTableTool } from './customization-routing-table-tool.mjs';
 import { createTierGraphTool } from './cortex-tier-tool.mjs';
 
 const SERVER_NAME = 'neataptic-gate-mcp';
@@ -53,9 +55,19 @@ const TIER_1_GATES = [
     description: 'Checks that all agent delegation references resolve and no cycles exist.',
   },
   {
+    id: 'agent-quality',
+    owner: 'validate-agent-quality.mjs',
+    description: 'Checks that every agent body has the required sections and tier-specific structured-v1 contract.',
+  },
+  {
     id: 'tier-enforcement',
     owner: 'validate-agent-graph.mjs',
     description: 'Checks that every agent has a valid tier assignment and only legal tier edges exist.',
+  },
+  {
+    id: 'routing-table-freshness',
+    owner: 'generate-agent-skill-routing-table.mjs',
+    description: 'Checks that the generated canonical routing table matches current agent and skill sources.',
   },
   {
     id: 'learning-event',
@@ -120,7 +132,7 @@ function createGateTools() {
           gate: {
             type: 'string',
             enum: TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
-            description: 'Gate ID to run (plan-sync, step-packet, agent-graph, tier-enforcement, or learning-event).',
+            description: 'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, or learning-event).',
           },
         },
         required: ['gate'],
@@ -147,6 +159,7 @@ function createGateTools() {
       },
     }),
     createTierGraphTool(),
+    createCustomizationRoutingTableTool(),
   ];
 }
 
@@ -174,7 +187,7 @@ async function runGateSelfCheck({ server }) {
 
   // Step 2: Confirm tool count.
   const toolListResult = await invokeServerRequest(server, { method: 'tools/list' });
-  const expectedToolCount = 3;
+  const expectedToolCount = 4;
 
   if (!Array.isArray(toolListResult.tools) || toolListResult.tools.length !== expectedToolCount) {
     issues.push(
@@ -224,9 +237,46 @@ async function runGateSelfCheck({ server }) {
     issues.push(selfCheckError('gate-mcp', 'query_tier_graph did not report a valid agent total.'));
   }
 
+  // Step 5: Run the routing-table query to confirm freshness reporting is live.
+  const routingTableResult = await invokeServerRequest(server, {
+    method: 'tools/call',
+    params: {
+      name: 'query_customization_routing_table',
+      arguments: { includeRows: false },
+    },
+  });
+
+  if (routingTableResult.isError) {
+    issues.push(
+      selfCheckError(
+        'gate-mcp',
+        'query_customization_routing_table returned an error during self-check.',
+      ),
+    );
+  }
+
+  const routingTablePayload = routingTableResult.structuredContent ?? {};
+  if (typeof routingTablePayload.summary?.agents !== 'number' || routingTablePayload.summary.agents < 1) {
+    issues.push(
+      selfCheckError(
+        'gate-mcp',
+        'query_customization_routing_table did not report a valid agent total.',
+      ),
+    );
+  }
+
+  if (typeof routingTablePayload.freshness?.pass !== 'boolean') {
+    issues.push(
+      selfCheckError(
+        'gate-mcp',
+        'query_customization_routing_table did not report a freshness result.',
+      ),
+    );
+  }
+
   return createSelfCheckReport('gate-mcp self-check', issues, {
     gatesTested: ['learning-event'],
-    toolsTested: ['run_gate_check', 'query_tier_graph'],
+    toolsTested: ['run_gate_check', 'query_tier_graph', 'query_customization_routing_table'],
     toolCount: Array.isArray(toolListResult.tools) ? toolListResult.tools.length : 0,
   });
 }

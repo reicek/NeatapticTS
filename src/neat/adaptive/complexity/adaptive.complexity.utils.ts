@@ -1,4 +1,4 @@
-import { EPSILON } from '../../neat.constants';
+﻿import { EPSILON } from '../../neat.constants';
 import {
   BUDGET_GROWTH_MULTIPLIER,
   COMPLEXITY_MODE_ADAPTIVE,
@@ -190,7 +190,7 @@ export function computeTrends(history: number[]): {
 }
 
 /**
- * Compute linear regression slope using ordinary least squares.
+ * Compute the best-fit trend slope for score history using ordinary least squares.
  *
  * @param history - Rolling history of best scores.
  * @returns OLS slope estimate.
@@ -245,7 +245,7 @@ export function computeAdjustmentFactors(
 }
 
 /**
- * Normalize slope magnitude relative to initial score.
+ * Normalize slope magnitude against the initial score for stable comparisons.
  *
  * @param slope - Raw OLS slope.
  * @param initialScore - First score in history window.

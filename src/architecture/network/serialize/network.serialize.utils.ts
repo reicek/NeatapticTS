@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import Connection from '../../connection';
 import type Node from '../../node';
 import type {
@@ -686,7 +686,8 @@ export function serializeCompressedArchive(
 }
 
 /**
- * Serialize a network archive and report size plus encode-time metrics.
+ * Serialize a network archive and report size plus encode-time metrics for deterministic storage and transport audits.
+ * The metrics payload helps compare archive codecs without changing the underlying compressed network contract.
  *
  * @param this - Bound network instance.
  * @param options - Optional archive compression settings.
@@ -739,7 +740,8 @@ export async function serializeCompressedArchiveAsync(
 }
 
 /**
- * Serialize a network archive with async codecs and report size plus encode-time metrics.
+ * Serialize a network archive with async codecs and report size plus encode-time metrics for responsive environments.
+ * This variant keeps the same archive semantics while allowing non-blocking compression paths in browser runtimes.
  *
  * @param this - Bound network instance.
  * @param options - Optional archive compression settings.
@@ -846,7 +848,8 @@ export const deserialize = (
 };
 
 /**
- * Rebuilds a network instance from the compressed compact payload.
+ * Rebuild a network instance from the compressed compact payload and restore runtime activation/state vectors after structure import.
+ * The function validates payload format first so incompatible compressed data fails before partial reconstruction occurs.
  *
  * @param data - Compressed compact payload.
  * @param inputSize - Optional input-size override.
@@ -880,7 +883,8 @@ export const deserializeCompressed = (
 };
 
 /**
- * Rebuilds a network instance from the compressed archive wrapper.
+ * Rebuild a network instance from the compressed archive wrapper by inflating archive bytes and delegating to compressed deserialization.
+ * This keeps archive-specific decode concerns separate from structural reconstruction and runtime-state restoration.
  *
  * @param data - Archived compressed payload.
  * @param inputSize - Optional input-size override.
@@ -900,7 +904,8 @@ export const deserializeCompressedArchive = (
 };
 
 /**
- * Rebuild a network archive and report size plus decode-time metrics.
+ * Rebuild a network archive and report size plus decode-time metrics for import performance and payload diagnostics.
+ * The returned metrics quantify archive inflation and reconstruction overhead alongside the rebuilt runtime.
  *
  * @param data - Archived compressed payload.
  * @param inputSize - Optional input-size override.
@@ -966,7 +971,8 @@ export const deserializeCompressedArchiveAsync = async (
 };
 
 /**
- * Rebuild a network archive with async codecs and report size plus decode-time metrics.
+ * Rebuild a network archive with async codecs and report size plus decode-time metrics for streaming or browser import paths.
+ * This helper preserves deterministic reconstruction while exposing decode telemetry for responsiveness tuning.
  *
  * @param data - Archived compressed payload.
  * @param inputSize - Optional input-size override.

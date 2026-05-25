@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import type Connection from '../../connection';
 import type {
   NodeConnectionSnapshotContext,

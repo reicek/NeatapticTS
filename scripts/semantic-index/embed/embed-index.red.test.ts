@@ -5,6 +5,7 @@ import path from 'node:path';
 
 interface EmbeddingIndexContractReport {
   firstSummary: { embedded: number; skipped: number };
+  purgeSummary: { embedded: number; purged: number; skipped: number };
   rows: { blobBytes: number[]; count: number; dimensions: number[] };
   secondSummary: { embedded: number; skipped: number };
 }
@@ -81,6 +82,22 @@ describe('embed-index.mjs', () => {
         const firstSummary = await buildEmbeddingIndex(sharedOptions);
         const secondSummary = await buildEmbeddingIndex(sharedOptions);
 
+        const orphanedDatabase = new Database(${JSON.stringify(embeddingsDatabasePath)});
+        orphanedDatabase.prepare(
+          'INSERT OR REPLACE INTO chunk_embeddings (chunk_id, embedding, chunk_sha256, model_id, model_sha256, dimension, embedded_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).run(
+          999,
+          Buffer.from(new Float32Array([1, 1, 1]).buffer),
+          'orphaned-sha',
+          'all-MiniLM-L6-v2',
+          'fixture-model-sha256',
+          3,
+          '2026-05-24T00:00:00.000Z'
+        );
+        orphanedDatabase.close();
+
+        const purgeSummary = await buildEmbeddingIndex(sharedOptions);
+
         const embeddingsDatabase = new Database(${JSON.stringify(embeddingsDatabasePath)}, { readonly: true });
         const rows = embeddingsDatabase.prepare(\`
           SELECT COUNT(*) AS count,
@@ -96,6 +113,7 @@ describe('embed-index.mjs', () => {
 
         console.log(JSON.stringify({
           firstSummary: { embedded: firstSummary.embedded, skipped: firstSummary.skipped },
+          purgeSummary: { embedded: purgeSummary.embedded, purged: purgeSummary.purged, skipped: purgeSummary.skipped },
           secondSummary: { embedded: secondSummary.embedded, skipped: secondSummary.skipped },
           rows: {
             blobBytes: String(rows.blobBytes).split(',').map(Number),
@@ -110,6 +128,7 @@ describe('embed-index.mjs', () => {
       expect(result).toEqual(expect.objectContaining({
         report: {
           firstSummary: { embedded: 3, skipped: 0 },
+          purgeSummary: { embedded: 0, purged: 1, skipped: 3 },
           rows: { blobBytes: [12, 12, 12], count: 3, dimensions: [3, 3, 3] },
           secondSummary: { embedded: 0, skipped: 3 },
         },

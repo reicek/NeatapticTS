@@ -8,12 +8,56 @@ disable-model-invocation: false
 
 # Running Unit Tests
 
-Use this skill to validate a narrow test boundary before widening.
+This skill executes a focused Jest command against a bounded test surface and reports the outcome with a minimal, actionable summary. It enforces the rule of running the narrowest possible scope first, separates pre-existing failures from active-change failures, and routes failures to `triaging-test-failures` when ownership is unclear.
 
-Rules:
-- Prefer focused Jest commands before broad suite runs.
-- Report command, exit status, and the smallest meaningful failure summary.
-- Separate unrelated pre-existing failures from failures caused by the active change.
-- Do not claim green until the requested command passes.
+## When to Use
 
-Return commands run, pass/fail evidence, reroute recommendation, and residual risk.
+- Validating that a new or modified test file is in the expected red or green state.
+- Confirming that a targeted implementation change passes its owner-local tests before widening to the full suite.
+- Selecting the correct Jest command scope (single file, folder pattern, or full suite) for the current task.
+- Producing a bounded summary of test output for a tracker note or handoff packet.
+- Checking whether a pre-existing failure is unrelated to the active change before reporting it as a defect.
+- Running `npm run test:silent` for repo-wide coverage analysis without verbose output noise.
+
+## Task Packet
+
+Include the focused Jest command or test path pattern, the expected state, and whether failures should be summarized or rerouted to `triaging-test-failures`.
+
+```text
+Use running-unit-tests for <test file path or pattern>.
+Command: npx jest --config=jest.config.mjs --no-cache --testPathPattern=<path>
+Expected state: <red | green>
+On failure: <summarize | reroute to triaging-test-failures>
+```
+
+## Required Workflow
+
+1. Choose the narrowest Jest scope appropriate for the active change:
+   - Single file: `--testPathPattern=src/neat/mutation/neat.mutation.ts`
+   - Folder: `--testPathPattern=src/neat/mutation`
+   - Full suite (coverage): `npm run test:silent`
+2. Run the focused command; do not run `npm test` (which triggers a full build) until the targeted slice is green.
+3. Read the exit status and failure output; do not declare green until the requested command passes cleanly.
+4. Separate failures into two groups: caused by the active change, and pre-existing/unrelated.
+5. For pre-existing failures: note them and confirm they were present before the active change.
+6. For active-change failures: report the command, the failing test name, and the first meaningful error line.
+7. If failure ownership is unclear or multiple failures span unrelated files, route to `triaging-test-failures`.
+8. For coverage runs: report statement, branch, function, and line percentages for touched files.
+9. Report command run, pass/fail evidence, and reroute recommendation in the session output.
+
+## Guardrails
+
+- Do not run `npm test` or the full suite until the focused slice is in the expected state.
+- Do not claim green until the requested command exits with code 0.
+- Do not conflate pre-existing failures with active-change failures; always separate them.
+- Do not attempt to fix failures within this skill; diagnosis belongs to `triaging-test-failures` and fixes belong to the appropriate implementation skill.
+- Do not widen the test scope prematurely; a focused red test is more actionable than a noisy full-suite run.
+- Do not omit the `--no-cache` flag when running focused Jest commands; stale cache can produce misleading results.
+
+## Expected Final Output
+
+- Commands run, exit status, and pass/fail evidence (pass count, fail count, first error for each failure).
+- Separation of active-change failures from pre-existing/unrelated failures.
+- If green: confirmation that the focused slice passes and readiness to widen scope.
+- If failing and scope is clear: summary for the `triaging-test-failures` skill.
+- If coverage was requested: per-file statement/branch/function/line percentages for touched files.

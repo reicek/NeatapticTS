@@ -1,4 +1,4 @@
-import type Network from '../../network';
+﻿import type Network from '../../network';
 import type { OnnxExportOptions } from '../network.onnx';
 
 /**

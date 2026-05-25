@@ -2105,6 +2105,78 @@ describe('network worker payload chapter', () => {
         });
       });
 
+      it('keeps browser channels open when worker responses omit result ids', async () => {
+        // Arrange
+        const payload = exportTransferableInferencePayload(
+          createWorkerPayloadNetwork(),
+        );
+
+        // Act
+        const result = await withBrowserWorkerGlobals(
+          async ({ createdChannels }) => {
+            const predictChannel = openInferenceChannel(payload, {
+              workerUrl: 'worker-entry.js',
+            });
+            createdChannels[0]?.port1.emit('message', { type: 'ready' });
+            const pendingPrediction = predictChannel.predict([0.25, 0.75]);
+            const resetChannel = openInferenceChannel(payload, {
+              workerUrl: 'worker-entry.js',
+            });
+            createdChannels[1]?.port1.emit('message', { type: 'ready' });
+            const pendingReset = resetChannel.reset();
+            await Promise.resolve();
+            createdChannels[0]?.port1.emit('message', {
+              output: new Float64Array([1]),
+              type: 'predict-result',
+            });
+            const predictState = await Promise.race([
+              pendingPrediction.then(
+                () => 'resolved',
+                () => 'rejected',
+              ),
+              new Promise<'pending'>((resolve) => {
+                queueMicrotask(() => {
+                  resolve('pending');
+                });
+              }),
+            ]);
+            const predictOpenBeforeClose = predictChannel.isOpen;
+            createdChannels[1]?.port1.emit('message', {
+              type: 'reset-result',
+            });
+            const resetState = await Promise.race([
+              pendingReset.then(
+                () => 'resolved',
+                () => 'rejected',
+              ),
+              new Promise<'pending'>((resolve) => {
+                queueMicrotask(() => {
+                  resolve('pending');
+                });
+              }),
+            ]);
+            const resetOpenBeforeClose = resetChannel.isOpen;
+            await predictChannel.close();
+            await resetChannel.close();
+
+            return {
+              predictOpenBeforeClose,
+              predictState,
+              resetOpenBeforeClose,
+              resetState,
+            };
+          },
+        );
+
+        // Assert
+        expect(result).toEqual({
+          predictOpenBeforeClose: true,
+          predictState: 'pending',
+          resetOpenBeforeClose: true,
+          resetState: 'pending',
+        });
+      });
+
       it('wires event-target ports and workers for message and failure delivery', () => {
         // Arrange
         const portHarness = createEventTargetPortHarness();

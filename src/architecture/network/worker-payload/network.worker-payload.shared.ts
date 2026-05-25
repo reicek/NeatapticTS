@@ -56,6 +56,34 @@ type SharedWorkerResponseMessage =
       type: typeof SHARED_INFERENCE_REQUEST_ERROR_MESSAGE_TYPE;
     };
 
+type SharedInferenceBufferLayout = ReturnType<
+  typeof resolveSharedInferenceBufferLayout
+>;
+
+type SharedInferenceWorkerState = {
+  bootstrapReject?: (reason?: unknown) => void;
+  bootstrapResolve?: () => void;
+  closePromise?: Promise<void>;
+  fatalError?: Error;
+  isBusy: boolean;
+  isOpen: boolean;
+  isReady: boolean;
+  pendingInputCopyPromise?: Promise<void>;
+  revokeWorkerUrl?: () => void;
+  workerHandle?: WorkerLike;
+};
+
+type SharedInferenceWorkerRuntime = {
+  controlBuffer: SharedArrayBuffer;
+  controlView: Int32Array;
+  dataBuffer: SharedArrayBuffer;
+  dataView: Float64Array;
+  layout: SharedInferenceBufferLayout;
+  payload: TransferableInferencePayload;
+  shouldUseChunkedConversions: boolean;
+  state: SharedInferenceWorkerState;
+};
+
 /**
  * Browser `SharedArrayBuffer` inference requires cross-origin isolation.
  *
@@ -99,7 +127,32 @@ export function openSharedInferenceWorker(
   options: SharedInferenceWorkerOptions = {},
 ): SharedInferenceWorker {
   ensureSharedArrayBufferSupport();
+  const runtime = createSharedInferenceWorkerRuntime(payload);
+  const bootstrapPromise = createSharedInferenceBootstrapPromise(
+    runtime,
+    options,
+  );
+  void bootstrapPromise.catch((error) => {
+    handleFatalSharedWorkerError(runtime, asError(error));
+  });
 
+  return {
+    awaitOutput: () => awaitSharedInferenceOutput(runtime, bootstrapPromise),
+    infer: (input) =>
+      inferWithSharedInferenceWorker(runtime, bootstrapPromise, input),
+    get isReady(): boolean {
+      return runtime.state.isOpen && runtime.state.isReady;
+    },
+    release: () => releaseSharedInferenceWorker(runtime),
+    reset: () => resetSharedInferenceWorker(runtime, bootstrapPromise),
+    strategy: 'shared-memory',
+    submitInput: (input) => submitSharedInferenceInput(runtime, input),
+  };
+}
+
+function createSharedInferenceWorkerRuntime(
+  payload: TransferableInferencePayload,
+): SharedInferenceWorkerRuntime {
   const layout = resolveSharedInferenceBufferLayout(
     payload.inputCount,
     payload.outputCount,
@@ -111,272 +164,310 @@ export function openSharedInferenceWorker(
     Float64Array.BYTES_PER_ELEMENT * layout.dataElementCount,
   );
   const controlView = new Int32Array(controlBuffer);
-  const dataView = new Float64Array(dataBuffer);
-  const shouldUseChunkedConversions = typeof globalThis.Worker === 'function';
-  let bootstrapReject: ((reason?: unknown) => void) | undefined;
-  let bootstrapResolve: (() => void) | undefined;
-  let closePromise: Promise<void> | undefined;
-  let fatalError: Error | undefined;
-  let isBusy = false;
-  let isOpen = true;
-  let isReady = false;
-  let pendingInputCopyPromise: Promise<void> | undefined;
-  let revokeWorkerUrl: (() => void) | undefined;
-  let workerHandle: WorkerLike | undefined;
-
-  const bootstrapReadyPromise = new Promise<void>((resolve, reject) => {
-    bootstrapResolve = resolve;
-    bootstrapReject = reject;
-  });
-
-  Atomics.store(
-    controlView,
-    layout.statusIndexes.inputCount,
-    layout.inputCount,
-  );
-  Atomics.store(
-    controlView,
-    layout.statusIndexes.status,
-    layout.statusValues.idle,
-  );
-
-  const bootstrapPromise = createBootstrapPromise();
-  void bootstrapPromise.catch((error) => {
-    handleFatalSharedWorkerError(asError(error));
-  });
-
-  return {
-    async awaitOutput(): Promise<Float64Array> {
-      await bootstrapPromise;
-      ensureSharedWorkerOpen(fatalError, isOpen);
-
-      if (!isBusy) {
-        throw new Error('SharedInferenceWorker has no in-flight request.');
-      }
-
-      await pendingInputCopyPromise;
-
-      await waitForSharedStatus(
-        controlView,
-        layout.statusIndexes.status,
-        layout.statusValues.outputReady,
-        () => ensureSharedWorkerOpen(fatalError, isOpen),
-      );
-
-      const outputValues = await copySharedOutputValues(
-        dataView,
-        layout.outputOffset,
-        layout.outputCount,
-        shouldUseChunkedConversions,
-      );
-
-      Atomics.store(
-        controlView,
-        layout.statusIndexes.status,
-        layout.statusValues.idle,
-      );
-      Atomics.notify(controlView, layout.statusIndexes.status);
-      isBusy = false;
-      return outputValues;
-    },
-    async infer(input: ReadonlyArray<number>): Promise<Float64Array> {
-      await bootstrapPromise;
-      submitInputValues(input);
-      return await this.awaitOutput();
-    },
-    get isReady(): boolean {
-      return isOpen && isReady;
-    },
-    async release(): Promise<void> {
-      if (closePromise) {
-        await closePromise;
-        return;
-      }
-
-      if (isBusy) {
-        throw new Error(
-          'SharedInferenceWorker cannot release while one request is in flight.',
-        );
-      }
-
-      closePromise = shutdownSharedWorker();
-      await closePromise;
-    },
-    async reset(): Promise<void> {
-      await bootstrapPromise;
-      ensureSharedWorkerOpen(fatalError, isOpen);
-
-      if (isBusy) {
-        throw new Error(
-          'SharedInferenceWorker cannot reset while one request is in flight.',
-        );
-      }
-
-      Atomics.store(
-        controlView,
-        layout.statusIndexes.status,
-        layout.statusValues.resetRequested,
-      );
-      Atomics.notify(controlView, layout.statusIndexes.status);
-
-      await waitForSharedStatus(
-        controlView,
-        layout.statusIndexes.status,
-        layout.statusValues.idle,
-        () => ensureSharedWorkerOpen(fatalError, isOpen),
-      );
-    },
-    strategy: 'shared-memory',
-    submitInput(input: ReadonlyArray<number>): void {
-      submitInputValues(input);
-    },
+  const state: SharedInferenceWorkerState = {
+    isBusy: false,
+    isOpen: true,
+    isReady: false,
   };
 
-  function submitInputValues(input: ReadonlyArray<number>): void {
-    ensureSharedWorkerOpen(fatalError, isOpen);
+  const runtime = {
+    controlBuffer,
+    controlView,
+    dataBuffer,
+    dataView: new Float64Array(dataBuffer),
+    layout,
+    payload,
+    shouldUseChunkedConversions: typeof globalThis.Worker === 'function',
+    state,
+  };
 
-    if (!isReady) {
-      throw new Error('SharedInferenceWorker is not ready.');
-    }
+  Atomics.store(
+    runtime.controlView,
+    runtime.layout.statusIndexes.inputCount,
+    runtime.layout.inputCount,
+  );
+  Atomics.store(
+    runtime.controlView,
+    runtime.layout.statusIndexes.status,
+    runtime.layout.statusValues.idle,
+  );
 
-    if (isBusy) {
-      throw new Error('SharedInferenceWorker is busy.');
-    }
+  return runtime;
+}
 
-    if (input.length !== layout.inputCount) {
-      throw new Error(
-        `SharedInferenceWorker expected ${String(layout.inputCount)} inputs but received ${String(input.length)}.`,
+function createSharedInferenceBootstrapPromise(
+  runtime: SharedInferenceWorkerRuntime,
+  options: SharedInferenceWorkerOptions,
+): Promise<void> {
+  const initializedWorker = initializeSharedInferenceWorker(options);
+  const bootstrapReadyPromise = new Promise<void>((resolve, reject) => {
+    runtime.state.bootstrapResolve = resolve;
+    runtime.state.bootstrapReject = reject;
+  });
+
+  if (isPromiseLike(initializedWorker)) {
+    return initializedWorker.then((resolvedWorker) => {
+      return startSharedInferenceWorkerBootstrap(
+        runtime,
+        resolvedWorker,
+        bootstrapReadyPromise,
       );
-    }
-
-    isBusy = true;
-    const nextInputCopyPromise = copyInputValuesIntoSharedBuffer(
-      dataView,
-      input,
-      layout.inputOffset,
-      shouldUseChunkedConversions,
-    )
-      .then(() => {
-        Atomics.store(
-          controlView,
-          layout.statusIndexes.status,
-          layout.statusValues.inputReady,
-        );
-        Atomics.notify(controlView, layout.statusIndexes.status);
-      })
-      .catch((error) => {
-        const normalizedError = asError(error);
-
-        handleFatalSharedWorkerError(normalizedError);
-        throw normalizedError;
-      })
-      .finally(() => {
-        pendingInputCopyPromise = undefined;
-      });
-
-    pendingInputCopyPromise = nextInputCopyPromise;
+    });
   }
 
-  function createBootstrapPromise(): Promise<void> {
-    const initializedWorker = initializeSharedInferenceWorker(options);
+  return startSharedInferenceWorkerBootstrap(
+    runtime,
+    initializedWorker,
+    bootstrapReadyPromise,
+  );
+}
 
-    if (isPromiseLike(initializedWorker)) {
-      return initializedWorker.then((resolvedWorker) => {
-        return startSharedWorkerBootstrap(resolvedWorker);
-      });
-    }
+function startSharedInferenceWorkerBootstrap(
+  runtime: SharedInferenceWorkerRuntime,
+  initializedWorker: InitializedSharedInferenceWorker,
+  bootstrapReadyPromise: Promise<void>,
+): Promise<void> {
+  runtime.state.workerHandle = initializedWorker.worker;
+  runtime.state.revokeWorkerUrl = initializedWorker.revokeWorkerUrl;
 
-    return startSharedWorkerBootstrap(initializedWorker);
+  runtime.state.workerHandle.unref?.();
+
+  attachSharedWorkerMessageListener(
+    initializedWorker.worker,
+    (message) => {
+      handleSharedWorkerResponse(runtime, message);
+    },
+    (error) => {
+      handleFatalSharedWorkerError(runtime, error);
+    },
+  );
+  attachSharedWorkerLifecycleListeners(initializedWorker.worker, (error) => {
+    handleFatalSharedWorkerError(runtime, error);
+  });
+
+  postMessageToSharedWorker(
+    initializedWorker.worker,
+    {
+      controlBuffer: runtime.controlBuffer,
+      dataBuffer: runtime.dataBuffer,
+      payload: runtime.payload,
+      type: 'bootstrap',
+    } satisfies SharedWorkerBootstrapMessage,
+    getTransferList(runtime.payload),
+  );
+
+  return bootstrapReadyPromise;
+}
+
+function handleSharedWorkerResponse(
+  runtime: SharedInferenceWorkerRuntime,
+  message: unknown,
+): void {
+  const responseMessage = message as Partial<SharedWorkerResponseMessage>;
+
+  if (responseMessage.type === SHARED_INFERENCE_READY_MESSAGE_TYPE) {
+    runtime.state.isReady = true;
+    runtime.state.bootstrapResolve?.();
+    clearSharedInferenceBootstrapState(runtime.state);
+    return;
   }
 
-  function startSharedWorkerBootstrap(
-    initializedWorker: InitializedSharedInferenceWorker,
-  ): Promise<void> {
-    workerHandle = initializedWorker.worker;
-    revokeWorkerUrl = initializedWorker.revokeWorkerUrl;
-
-    workerHandle.unref?.();
-
-    attachSharedWorkerMessageListener(
-      initializedWorker.worker,
-      (message) => {
-        handleSharedWorkerResponse(message);
-      },
-      (error) => {
-        handleFatalSharedWorkerError(error);
-      },
+  if (responseMessage.type === SHARED_INFERENCE_REQUEST_ERROR_MESSAGE_TYPE) {
+    handleFatalSharedWorkerError(
+      runtime,
+      new Error(
+        responseMessage.message ?? 'SharedInferenceWorker bootstrap failed.',
+      ),
     );
-    attachSharedWorkerLifecycleListeners(initializedWorker.worker, (error) => {
-      handleFatalSharedWorkerError(error);
+  }
+}
+
+function clearSharedInferenceBootstrapState(
+  state: SharedInferenceWorkerState,
+): void {
+  state.bootstrapResolve = undefined;
+  state.bootstrapReject = undefined;
+}
+
+function handleFatalSharedWorkerError(
+  runtime: SharedInferenceWorkerRuntime,
+  error: Error,
+): void {
+  runtime.state.fatalError = error;
+
+  if (!runtime.state.isOpen) {
+    return;
+  }
+
+  runtime.state.bootstrapReject?.(error);
+  clearSharedInferenceBootstrapState(runtime.state);
+  runtime.state.closePromise ??= shutdownSharedInferenceWorker(runtime);
+  void runtime.state.closePromise;
+}
+
+async function awaitSharedInferenceOutput(
+  runtime: SharedInferenceWorkerRuntime,
+  bootstrapPromise: Promise<void>,
+): Promise<Float64Array> {
+  await bootstrapPromise;
+  ensureSharedWorkerOpen(runtime.state.fatalError, runtime.state.isOpen);
+
+  if (!runtime.state.isBusy) {
+    throw new Error('SharedInferenceWorker has no in-flight request.');
+  }
+
+  await runtime.state.pendingInputCopyPromise;
+
+  await waitForSharedStatus(
+    runtime.controlView,
+    runtime.layout.statusIndexes.status,
+    runtime.layout.statusValues.outputReady,
+    () =>
+      ensureSharedWorkerOpen(runtime.state.fatalError, runtime.state.isOpen),
+  );
+
+  const outputValues = await copySharedOutputValues(
+    runtime.dataView,
+    runtime.layout.outputOffset,
+    runtime.layout.outputCount,
+    runtime.shouldUseChunkedConversions,
+  );
+
+  Atomics.store(
+    runtime.controlView,
+    runtime.layout.statusIndexes.status,
+    runtime.layout.statusValues.idle,
+  );
+  Atomics.notify(runtime.controlView, runtime.layout.statusIndexes.status);
+  runtime.state.isBusy = false;
+  return outputValues;
+}
+
+async function inferWithSharedInferenceWorker(
+  runtime: SharedInferenceWorkerRuntime,
+  bootstrapPromise: Promise<void>,
+  input: ReadonlyArray<number>,
+): Promise<Float64Array> {
+  await bootstrapPromise;
+  submitSharedInferenceInput(runtime, input);
+  return await awaitSharedInferenceOutput(runtime, bootstrapPromise);
+}
+
+async function releaseSharedInferenceWorker(
+  runtime: SharedInferenceWorkerRuntime,
+): Promise<void> {
+  if (runtime.state.closePromise) {
+    await runtime.state.closePromise;
+    return;
+  }
+
+  if (runtime.state.isBusy) {
+    throw new Error(
+      'SharedInferenceWorker cannot release while one request is in flight.',
+    );
+  }
+
+  runtime.state.closePromise = shutdownSharedInferenceWorker(runtime);
+  await runtime.state.closePromise;
+}
+
+async function resetSharedInferenceWorker(
+  runtime: SharedInferenceWorkerRuntime,
+  bootstrapPromise: Promise<void>,
+): Promise<void> {
+  await bootstrapPromise;
+  ensureSharedWorkerOpen(runtime.state.fatalError, runtime.state.isOpen);
+
+  if (runtime.state.isBusy) {
+    throw new Error(
+      'SharedInferenceWorker cannot reset while one request is in flight.',
+    );
+  }
+
+  Atomics.store(
+    runtime.controlView,
+    runtime.layout.statusIndexes.status,
+    runtime.layout.statusValues.resetRequested,
+  );
+  Atomics.notify(runtime.controlView, runtime.layout.statusIndexes.status);
+
+  await waitForSharedStatus(
+    runtime.controlView,
+    runtime.layout.statusIndexes.status,
+    runtime.layout.statusValues.idle,
+    () =>
+      ensureSharedWorkerOpen(runtime.state.fatalError, runtime.state.isOpen),
+  );
+}
+
+function submitSharedInferenceInput(
+  runtime: SharedInferenceWorkerRuntime,
+  input: ReadonlyArray<number>,
+): void {
+  ensureSharedWorkerOpen(runtime.state.fatalError, runtime.state.isOpen);
+
+  if (!runtime.state.isReady) {
+    throw new Error('SharedInferenceWorker is not ready.');
+  }
+
+  if (runtime.state.isBusy) {
+    throw new Error('SharedInferenceWorker is busy.');
+  }
+
+  if (input.length !== runtime.layout.inputCount) {
+    throw new Error(
+      `SharedInferenceWorker expected ${String(runtime.layout.inputCount)} inputs but received ${String(input.length)}.`,
+    );
+  }
+
+  runtime.state.isBusy = true;
+  const nextInputCopyPromise = copyInputValuesIntoSharedBuffer(
+    runtime.dataView,
+    input,
+    runtime.layout.inputOffset,
+    runtime.shouldUseChunkedConversions,
+  )
+    .then(() => {
+      Atomics.store(
+        runtime.controlView,
+        runtime.layout.statusIndexes.status,
+        runtime.layout.statusValues.inputReady,
+      );
+      Atomics.notify(runtime.controlView, runtime.layout.statusIndexes.status);
+    })
+    .catch((error) => {
+      const normalizedError = asError(error);
+
+      handleFatalSharedWorkerError(runtime, normalizedError);
+      throw normalizedError;
+    })
+    .finally(() => {
+      runtime.state.pendingInputCopyPromise = undefined;
     });
 
-    postMessageToSharedWorker(
-      initializedWorker.worker,
-      {
-        controlBuffer,
-        dataBuffer,
-        payload,
-        type: 'bootstrap',
-      } satisfies SharedWorkerBootstrapMessage,
-      getTransferList(payload),
-    );
+  runtime.state.pendingInputCopyPromise = nextInputCopyPromise;
+}
 
-    return bootstrapReadyPromise;
-  }
+async function shutdownSharedInferenceWorker(
+  runtime: SharedInferenceWorkerRuntime,
+): Promise<void> {
+  runtime.state.isOpen = false;
+  runtime.state.isReady = false;
+  runtime.state.isBusy = false;
 
-  function handleSharedWorkerResponse(message: unknown): void {
-    const responseMessage = message as Partial<SharedWorkerResponseMessage>;
+  const workerTermination = runtime.state.workerHandle?.terminate();
 
-    if (responseMessage.type === SHARED_INFERENCE_READY_MESSAGE_TYPE) {
-      isReady = true;
-      bootstrapResolve?.();
-      bootstrapResolve = undefined;
-      bootstrapReject = undefined;
-      return;
-    }
-
-    if (responseMessage.type === SHARED_INFERENCE_REQUEST_ERROR_MESSAGE_TYPE) {
-      handleFatalSharedWorkerError(
-        new Error(
-          responseMessage.message ?? 'SharedInferenceWorker bootstrap failed.',
-        ),
-      );
+  if (workerTermination instanceof Promise) {
+    try {
+      await workerTermination;
+    } catch {
+      // Ignore worker termination races because local teardown already won.
     }
   }
 
-  function handleFatalSharedWorkerError(error: Error): void {
-    fatalError = error;
-
-    if (!isOpen) {
-      return;
-    }
-
-    bootstrapReject?.(error);
-    bootstrapResolve = undefined;
-    bootstrapReject = undefined;
-    closePromise ??= shutdownSharedWorker();
-    void closePromise;
-  }
-
-  async function shutdownSharedWorker(): Promise<void> {
-    isOpen = false;
-    isReady = false;
-    isBusy = false;
-
-    const workerTermination = workerHandle?.terminate();
-
-    if (workerTermination instanceof Promise) {
-      try {
-        await workerTermination;
-      } catch {
-        // Ignore worker termination races because local teardown already won.
-      }
-    }
-
-    revokeWorkerUrl?.();
-    workerHandle = undefined;
-    revokeWorkerUrl = undefined;
-  }
+  runtime.state.revokeWorkerUrl?.();
+  runtime.state.workerHandle = undefined;
+  runtime.state.revokeWorkerUrl = undefined;
 }
 
 function resolveSharedInferenceBufferLayout(
@@ -845,7 +936,11 @@ function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
   return value instanceof Promise;
 }
 
-/** @internal Test-only helper surface for owner-local shared-memory coverage. */
+/**
+ * Test-only helper surface exposing private shared-memory helpers for owner-local coverage.
+ *
+ * @internal
+ */
 export const SHARED_INFERENCE_HOST_INTERNALS = {
   asError,
   attachSharedWorkerLifecycleListeners,

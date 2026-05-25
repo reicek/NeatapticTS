@@ -1,4 +1,4 @@
-import type NeatapticNode from '../../../node';
+﻿import type NeatapticNode from '../../../node';
 import type {
   OnnxDimension,
   OnnxModel,
@@ -24,7 +24,9 @@ export const CURRENT_ONNX_REFERENCE_OPSET = 27;
 const DEFAULT_MODEL_INPUT_NAME = 'input';
 const DEFAULT_MODEL_OUTPUT_NAME = 'output';
 const SYMBOLIC_BATCH_DIMENSION_NAME = 'N';
-/** Canonical ONNX standard-operator domain name. */
+/**
+ * Canonical ONNX standard-operator domain name used by opset metadata, schema annotations, and exporter compatibility checks across baseline graph emission paths.
+ */
 export const ONNX_STANDARD_DOMAIN = 'ai.onnx';
 /** Canonical empty-string alias for the ONNX standard operator-set domain. */
 export const ONNX_STANDARD_DOMAIN_ALIAS = '';
@@ -36,7 +38,8 @@ const RECURRENT_PREVIOUS_STATE_PRIMARY_INPUT_NAME = 'hidden_prev';
 const RECURRENT_PREVIOUS_STATE_LAYER_PREFIX = 'hidden_prev_l';
 
 /**
- * Build tensor dimensions for model input and output, optionally with symbolic batch dimension.
+ * Build tensor dimensions for model input and output boundaries, optionally prepending a symbolic batch axis for runtime-sized payloads.
+ * The result is reused by value-info generation so shape contracts stay deterministic.
  *
  * @param context Dimension construction context.
  * @returns Input and output dimension arrays for ONNX value info.
@@ -59,7 +62,8 @@ export function createGraphDimensions(
 }
 
 /**
- * Create the base ONNX model shell with graph input/output declarations.
+ * Create the base ONNX model shell with graph input and output declarations before operator emission starts.
+ * Initializer and node arrays are intentionally empty so later export phases append deterministic content.
  *
  * @param context Base model build context.
  * @returns Initialized ONNX model with empty initializer/node lists.
@@ -85,7 +89,8 @@ export function createBaseModel(context: OnnxBaseModelBuildContext): OnnxModel {
 }
 
 /**
- * Attach producer and opset metadata to a model when metadata emission is enabled.
+ * Attach producer, opset, and documentation metadata to a model when metadata emission is enabled for export diagnostics.
+ * Fallback values keep metadata deterministic even when optional producer fields are omitted.
  *
  * @param context Metadata application context.
  * @returns Nothing.
@@ -110,7 +115,8 @@ export function applyModelMetadata(context: OnnxModelMetadataContext): void {
 }
 
 /**
- * Detect hidden layers with self-recurrence and add matching previous-state graph inputs.
+ * Detect hidden layers with self-recurrence and add matching previous-state graph inputs required by single-step recurrent export.
+ * Collected indices are reused by metadata and recurrent post-processing lanes.
  *
  * @param context Recurrent collection context.
  * @returns Export-layer indices with recurrent self-connections.

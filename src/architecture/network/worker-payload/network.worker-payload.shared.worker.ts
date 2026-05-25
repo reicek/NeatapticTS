@@ -375,7 +375,15 @@ function asError(error: unknown): Error {
   return new Error(String(error));
 }
 
-/** @internal Test-only helper surface for owner-local shared-memory coverage. */
+/**
+ * Test-only internal helper surface exposing private functions for owner-local coverage
+ * of the shared-memory inference worker runtime.
+ *
+ * Not part of the public API. Exported only so unit tests can exercise runtime branches
+ * unreachable through the public {@link registerSharedInferenceWorkerRuntime} entry point.
+ *
+ * @internal
+ */
 export const SHARED_INFERENCE_WORKER_INTERNALS = {
   autoRegisterSharedInferenceWorkerRuntime,
   asError,

@@ -40,7 +40,7 @@ traces stay outside this contract.
 
 ### NeatGenomeCaptureOptions
 
-Opt-in capture settings used when projecting runtime payloads into the
+Opt-in capture settings used when projecting runtime payloads into the.
 strict genome contract.
 
 ### NeatGenomeConnectionGene
@@ -119,12 +119,8 @@ assertValidGenomeContract(
 ): void
 ```
 
-Assert that one strict genome contract is valid.
-
-Parameters:
-- `genome` - Strict structural genome contract.
-
-Returns: Nothing.
+Assert that one strict genome contract is structurally valid before crossover, mutation, import, replay, or serialization boundaries consume it.
+This forwarding seam keeps barrel-level API docs explicit while implementation details remain in the utility chapter.
 
 ### createCompatibilityGenomeView
 
@@ -134,16 +130,8 @@ createCompatibilityGenomeView(
 ): GenomeLike
 ```
 
-Create the compatibility-layer view for a runtime phenotype or strict genome.
-
-Native explicit-innovation flows are normalized through the strict genome
-contract. Deliberate fallback-innovation flows remain on the legacy runtime
-edge path so compatibility can keep using endpoint-derived synthetic ids.
-
-Parameters:
-- `source` - Runtime genome or strict genome contract.
-
-Returns: Compatibility-layer genome view.
+Create the compatibility-layer genome view used by legacy paths that still bridge strict genome contracts and runtime phenotypes safely.
+The view preserves adapter behavior while allowing strict-genome-first internals to evolve independently.
 
 ### createGenomeFromNetwork
 
@@ -154,17 +142,8 @@ createGenomeFromNetwork(
 ): NeatGenome
 ```
 
-Convert one executable phenotype into the strict NEAT genome contract.
-
-This is the phenotype-to-genome adapter introduced in Step 7.1. It strips
-runtime-only state and keeps only structural identity plus portable gene
-attributes.
-
-Parameters:
-- `network` - Executable phenotype.
-- `captureOptions` - Optional opt-in runtime-to-genome extension capture settings.
-
-Returns: Strict structural genome contract.
+Capture one runtime phenotype network into the strict genome contract while preserving only explicitly modeled extension families and invariants.
+This documented export keeps genome capture semantics discoverable from the chapter entrypoint.
 
 ### createGenomeFromNetworkJson
 
@@ -175,14 +154,8 @@ createGenomeFromNetworkJson(
 ): NeatGenome
 ```
 
-Convert one versioned network JSON payload into the strict NEAT genome
-contract.
-
-Parameters:
-- `networkJson` - Versioned phenotype JSON payload.
-- `captureOptions` - Optional opt-in runtime-to-genome extension capture settings.
-
-Returns: Strict structural genome contract.
+Convert one versioned network JSON payload into a validated strict genome contract for deterministic NEAT-core heredity and evaluation workflows.
+The conversion route is intentionally explicit at the barrel surface for docs consumers.
 
 ### createNetworkFromGenome
 
@@ -193,13 +166,8 @@ createNetworkFromGenome(
 ): default
 ```
 
-Materialize one executable phenotype from the strict genome contract.
-
-Parameters:
-- `genome` - Strict structural genome contract.
-- `runtimeHints` - Optional phenotype-only metadata to preserve.
-
-Returns: Executable runtime phenotype.
+Materialize one executable runtime phenotype from a validated strict genome contract plus optional runtime-only hints and diagnostics metadata.
+Keeping this forwarder documented helps users discover genome-to-network materialization from the public chapter.
 
 ### createNetworkJsonFromGenome
 
@@ -210,14 +178,8 @@ createNetworkJsonFromGenome(
 ): NetworkJSON
 ```
 
-Convert one strict genome contract into the versioned network JSON payload
-understood by the runtime phenotype serializer.
-
-Parameters:
-- `genome` - Strict structural genome contract.
-- `runtimeHints` - Optional phenotype-only metadata to preserve.
-
-Returns: Versioned network JSON payload.
+Convert one strict genome contract back into the versioned network JSON payload consumed by runtime serializers and import seams consistently.
+This export documents the genome-to-json bridge as a first-class persistence boundary.
 
 ### GenomeHereditySelectionContext
 
@@ -251,7 +213,7 @@ traces stay outside this contract.
 
 ### NeatGenomeCaptureOptions
 
-Opt-in capture settings used when projecting runtime payloads into the
+Opt-in capture settings used when projecting runtime payloads into the.
 strict genome contract.
 
 ### NeatGenomeConnectionGene
@@ -260,7 +222,7 @@ Pure connection-gene contract owned by the NEAT subtree.
 
 ### NeatGenomeConversionError
 
-Raised when one boundary tries to project malformed state into the strict
+Raised when one boundary tries to project malformed state into the strict.
 genome contract.
 
 ### NeatGenomeExtensions
@@ -387,18 +349,14 @@ validateGenomeContract(
 ): NeatGenomeValidationReport
 ```
 
-Validate one strict genome contract.
-
-Parameters:
-- `genome` - Strict structural genome contract.
-
-Returns: Structured validation report.
+Validate one strict genome contract and return a structured report that callers can inspect before deciding to throw validation errors.
+This forwarding seam supports diagnostics-first workflows while sharing one canonical validator implementation.
 
 ## neat/genome/genome.errors.ts
 
 ### NeatGenomeConversionError
 
-Raised when one boundary tries to project malformed state into the strict
+Raised when one boundary tries to project malformed state into the strict.
 genome contract.
 
 ### NeatGenomeValidationError
@@ -419,7 +377,8 @@ assertValidGenomeContract(
 ): void
 ```
 
-Assert that one strict genome contract is valid.
+Assert that one strict genome contract is valid and throw a rich validation error when any invariant fails.
+This guard keeps downstream genome operators free from repetitive defensive contract checks.
 
 Parameters:
 - `genome` - Strict structural genome contract.
@@ -475,8 +434,8 @@ createGenomeFromNetworkJson(
 ): NeatGenome
 ```
 
-Convert one versioned network JSON payload into the strict NEAT genome
-contract.
+Convert one versioned network JSON payload into the strict NEAT genome contract with canonical node ordering and validated edge identities.
+This conversion isolates phenotype serialization details from genome-native heredity and compatibility workflows.
 
 Parameters:
 - `networkJson` - Versioned phenotype JSON payload.
@@ -493,7 +452,8 @@ createNetworkFromGenome(
 ): default
 ```
 
-Materialize one executable phenotype from the strict genome contract.
+Materialize one executable phenotype from the strict genome contract after validation and JSON reconstruction.
+Runtime-only hints and optional extension-derived knobs are applied after structural materialization completes.
 
 Parameters:
 - `genome` - Strict structural genome contract.
@@ -510,8 +470,8 @@ createNetworkJsonFromGenome(
 ): NetworkJSON
 ```
 
-Convert one strict genome contract into the versioned network JSON payload
-understood by the runtime phenotype serializer.
+Convert one strict genome contract into the versioned network JSON payload understood by the runtime phenotype serializer.
+The mapping preserves historical identifiers so roundtrips remain deterministic for replay and checkpoint lanes.
 
 Parameters:
 - `genome` - Strict structural genome contract.
@@ -527,7 +487,8 @@ validateGenomeContract(
 ): NeatGenomeValidationReport
 ```
 
-Validate one strict genome contract.
+Validate one strict genome contract and return a structured report covering size, node, connection, and extension invariants.
+Callers can use the report for diagnostics-first flows without throwing on first failure.
 
 Parameters:
 - `genome` - Strict structural genome contract.

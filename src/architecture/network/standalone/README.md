@@ -88,7 +88,8 @@ asStandaloneProps(
 ): NetworkStandaloneProps
 ```
 
-Cast a network instance to the internal standalone generation view.
+Reinterpret the runtime `Network` instance as the internal standalone
+property surface used by generator setup utilities.
 
 Parameters:
 - `net` - Network instance to cast.
@@ -103,12 +104,13 @@ createGenerationContext(
 ): StandaloneGenerationContext
 ```
 
-Create a fresh generation context used across orchestration steps.
+Allocate a fresh emit-pass context that accumulates node indexes, cached
+activation sources, and generated body lines.
 
 Parameters:
 - `standaloneProps` - Internal standalone network view.
 
-Returns: Initialized generation context.
+Returns: Generation context with precision, index buffers, and emission state.
 
 ### ensureOutputNodesExist
 
@@ -118,7 +120,8 @@ ensureOutputNodesExist(
 ): void
 ```
 
-Validate that the network has at least one output node.
+Enforce the standalone precondition that at least one output node exists
+before source generation proceeds.
 
 Parameters:
 - `standaloneProps` - Internal standalone network view.
@@ -148,7 +151,8 @@ resolveStandaloneActivationPrecision(
 ): ActivationPrecision | undefined
 ```
 
-Resolve standalone storage precision from shared config and the legacy raw alias.
+Resolve standalone numeric precision by reconciling shared precision config
+with the legacy `_activationPrecision` override.
 
 Parameters:
 - `standaloneProps` - Internal standalone network view.
@@ -185,7 +189,8 @@ seedNodeIndexesAndState(
 ): void
 ```
 
-Seed index, activation, and state arrays from network nodes.
+Stamp stable per-node indexes and snapshot initial activation/state buffers
+used by emitted standalone runtime state.
 
 Parameters:
 - `generationContext` - Mutable generation context.
@@ -222,13 +227,25 @@ buildNodeSumExpression(
 ): string
 ```
 
-Build the pre-activation sum expression for one node.
+Build the generated pre-activation summation expression for one node.
+
+The expression combines inbound weighted terms and optional recurrent
+self-connection terms, then folds them into a single JavaScript expression
+emitted into standalone network source.
 
 Parameters:
+- `generationContext` - Standalone code-generation context.
 - `currentNode` - Current node.
 - `nodeTraversalIndex` - Node index.
 
 Returns: String expression used for generated `S[index]` assignment.
+
+Example:
+
+```ts
+const sumExpression = buildNodeSumExpression(context, node, nodeIndex);
+// Example output: "A[2] * 0.5 + S[4] * 0.9"
+```
 
 ### buildStoredValueReadExpression
 
@@ -273,12 +290,22 @@ collectOutputIndexes(
 ): number[]
 ```
 
-Collect output node indexes from the output tail segment.
+Collect the output-node index sequence used by generated return paths.
+
+The returned array preserves traversal order so emitted output selectors map
+consistently to the public standalone activation result vector.
 
 Parameters:
 - `generationContext` - Mutable generation context.
 
 Returns: Output indexes used for result array emission.
+
+Example:
+
+```ts
+const outputIndexes = collectOutputIndexes(context);
+// outputIndexes can be passed to formatOutputArrayValues
+```
 
 ### collectSelfConnectionTerms
 
@@ -322,13 +349,23 @@ formatOutputArrayValues(
 ): string
 ```
 
-Format output activation selectors for generated return expression.
+Format output activation selectors for the generated return expression.
+
+Each output index is translated into a storage-buffer read expression and
+joined as a comma-separated selector list for emitted array literals.
 
 Parameters:
 - `generationContext` - Mutable generation context.
 - `outputIndexes` - Output node indexes.
 
 Returns: Comma-separated `A[index]` selector list.
+
+Example:
+
+```ts
+const selectorList = formatOutputArrayValues(context, [3, 4]);
+// Example output: "A[3],A[4]"
+```
 
 ### getOptionalNodeIndex
 
@@ -585,7 +622,7 @@ ensureActivationFunctionIndex(
 ): number
 ```
 
-Ensure an activation function is registered and return its table index.
+Register an activation implementation once and return its stable index in the generated activation table.
 
 Parameters:
 - `generationContext` - Mutable generation context.
@@ -620,7 +657,10 @@ normalizeArrowBody(
 ): string
 ```
 
-Normalize arrow body into a function-body block.
+Normalize an arrow body to a function-body block.
+
+Preserves block bodies and wraps expression bodies with an explicit return
+so generated standalone activation functions remain syntactically stable.
 
 Parameters:
 - `bodySegment` - Raw arrow body segment.
@@ -688,14 +728,12 @@ registerActivationFunction(
 ): void
 ```
 
-Register a function source and allocate its numeric index.
+Persist a normalized activation source and bind its name to the next generated activation index.
 
 Parameters:
 - `generationContext` - Mutable generation context.
 - `squashName` - Activation function name.
 - `functionSource` - Named function source to store.
-
-Returns: Void.
 
 ### resolveActivationFunctionSource
 
@@ -707,7 +745,7 @@ resolveActivationFunctionSource(
 ): string
 ```
 
-Resolve emitted source for built-in or custom activation functions.
+Resolve standalone-ready activation source by preferring built-in snippets and normalizing custom bodies.
 
 Parameters:
 - `squashName` - Activation function name.
@@ -740,7 +778,7 @@ resolveSquashName(
 ): string
 ```
 
-Resolve a stable activation function name for emission.
+Resolve a stable activation function identifier for standalone code emission.
 
 Parameters:
 - `currentNode` - Current node.
@@ -758,7 +796,7 @@ stripCoverage(
 ): string
 ```
 
-Remove instrumentation artifacts and formatting detritus from function sources.
+Remove coverage artifacts and formatting noise from generated function sources.
 
 Parameters:
 - `code` - Source text potentially containing coverage wrappers.

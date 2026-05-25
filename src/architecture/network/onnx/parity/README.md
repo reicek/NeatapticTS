@@ -158,7 +158,7 @@ Returns: Mean squared error across the compared output vector.
 createBaselineFloat32DenseFixture(): OnnxRuntimeParityFixtureDescriptor
 ```
 
-Create the deterministic Phase 9A baseline float32 dense fixture.
+Create the Phase 9A dense baseline fixture with float32 export and strict tolerances.
 
 Returns: Baseline same-family dense runtime-parity descriptor.
 
@@ -178,7 +178,7 @@ Returns: Deterministic network factory, mappings, and sample inputs for the expl
 createDynamicUint8DenseGuidanceFixture(): OnnxRuntimeParityFixtureDescriptor
 ```
 
-Create the deterministic DynamicQuantizeLinear dense-guidance descriptor.
+Create the dynamic-uint8 dense fixture that validates DynamicQuantizeLinear guidance export.
 
 Returns: Dynamic-guidance runtime-parity descriptor with an explicit tolerance packet.
 
@@ -316,7 +316,7 @@ Returns: Deterministic floating-point generator in the range [0, 1).
 createStatic8BitConvQlinearFixture(): OnnxRuntimeParityFixtureDescriptor
 ```
 
-Create the deterministic explicit-Conv static-8bit fixture descriptor.
+Create the explicit-conv static-8bit fixture for conv-lane runtime parity checks.
 
 Returns: Static-8bit explicit-Conv runtime-parity descriptor.
 
@@ -326,7 +326,7 @@ Returns: Static-8bit explicit-Conv runtime-parity descriptor.
 createStatic8BitDenseQlinearFixture(): OnnxRuntimeParityFixtureDescriptor
 ```
 
-Create the deterministic one-output static-8bit dense fixture descriptor.
+Create the static-8bit dense qlinear fixture with external calibration metadata.
 
 Returns: Static-8bit dense qlinear runtime-parity descriptor.
 
@@ -336,7 +336,7 @@ Returns: Static-8bit dense qlinear runtime-parity descriptor.
 createStorageFp16DenseFixture(): OnnxRuntimeParityFixtureDescriptor
 ```
 
-Create the deterministic storage-fp16 dense fixture descriptor.
+Create the storage-fp16 dense fixture used to validate cast-bridge parity behavior.
 
 Returns: Storage-fp16 cast-bridge runtime-parity descriptor.
 
@@ -386,7 +386,7 @@ findPhase9RuntimeParityFixture(
 ): OnnxRuntimeParityFixtureDescriptor
 ```
 
-Resolve one named Phase 9 runtime-parity fixture.
+Resolve one named Phase 9 runtime-parity fixture from the frozen inventory.
 
 Parameters:
 - `fixtureId` - Named fixture identifier from the frozen Phase 9A inventory.
@@ -431,7 +431,7 @@ resolveRuntimeSubprocessError(
 ): string
 ```
 
-Resolve the best available child-process failure text.
+Resolve a stable parity-subprocess error message from stderr, stdout, or fallback text.
 
 Parameters:
 - `subprocessResult` - Child-process execution result.

@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import { defaultMemoryManager } from '../../../memory/manager';
 import { captureEnvironmentMetrics } from '../../../utils/memory.utils';
 import type {
@@ -85,7 +85,7 @@ export function configureSparsityBudget(
 }
 
 /**
- * Read the last recorded sparsity-budget decision snapshot.
+ * Return the latest recorded sparsity-budget decision snapshot for diagnostics and telemetry.
  *
  * @param currentNetwork - Network to inspect.
  * @returns Snapshot clone when one exists; otherwise undefined.

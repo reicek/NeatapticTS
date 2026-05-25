@@ -6,45 +6,52 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
-# Trace Audit Reporting
+# Trace Audit Reporting Playbook
 
 Use this skill when an agent needs to inspect a Chrome or Perfetto trace,
 summarize hotspots, connect them back to workspace code, and produce a durable
 performance report.
 
-When the report lives in a continuing tracker file, `tracker-handoff` owns the
-canonical plan/log structure and copy-paste continuation format.
+This skill owns the durable workflow for trace-based performance diagnosis in
+NeatapticTS. It converts raw trace data into layered, source-mapped findings and
+a prioritized action plan. When the report lives in a continuing tracker file,
+`tracker-handoff` owns the canonical plan/log structure and copy-paste
+continuation format. When a trace reveals a library-level bottleneck that needs
+implementation, hand off to `performance-optimization`.
 
 ## When to Use
 
-- Analyze a Chrome trace export or Perfetto JSON capture.
-- Investigate renderer, worker, GPU, `requestAnimationFrame`, or `postMessage`
+- Analyzing a Chrome trace export or Perfetto JSON capture.
+- Investigating renderer, worker, GPU, `requestAnimationFrame`, or `postMessage`
   bottlenecks.
-- Explain whether a regression is demo-layer, protocol-layer, or core-library.
-- Write a report into a plan file such as `performance.plan.md`.
-- Reuse the repository trace tooling instead of manually inspecting raw JSON.
+- Determining whether a regression is demo-layer, protocol-layer, or
+  core-library in origin.
+- Writing a report into a plan file such as `performance.plan.md`.
+- Reusing the repository trace tooling instead of manually inspecting raw JSON.
+- A `performance-optimization` or `flappy-architecture-polish` pass needs an
+  evidence baseline before implementation begins.
 
-## Demo-to-library policy
+## Task Packet
 
-When a trace captured from a demo or example exposes a mismatch between obvious
-user intent and the library's public behavior, treat the demo as a diagnostic
-surface for the library rather than the final destination for a workaround.
+Pass a compact packet that names the trace file, the audit target area, and
+where the report should be written.
 
-- Prefer recommending a library-level API/default/runtime fix when the same gap
-  could affect downstream users.
-- Recommend demo-local optimizations only for genuinely demo-specific rendering,
-  protocol, or presentation issues.
-- In reports and action plans, state clearly whether a finding should be fixed
-  in the library, in shared infrastructure, or only in the demo.
+```text
+Use trace-audit-reporting for examples/flappy_bird worker regression.
+Trace file: traces/flappy-worker-2026-05.json.
+Target area: worker evaluation loop and postMessage overhead.
+Report destination: plans/performance.plan.md.
+Top events to focus: RunTask, HandlePostMessage, FireAnimationFrame.
+```
 
 ## Primary Resources
 
 - [Trace analysis workflow](./references/trace-analysis-workflow.md)
 - [Performance report template](./assets/performance-report-template.md)
 - Companion skill: `trace-analyzer-extension` for modifying
-  `scripts/analyze-trace/analyze-trace.ts` itself when new rollups or comparisons are needed.
+  `scripts/analyze-trace/analyze-trace.ts` when new rollups or comparisons are needed.
 
-## Standard Workflow
+## Required Workflow
 
 1. Confirm the trace file path and the target area being audited.
 2. Read the nearest folder `README.md` files before opening implementation
@@ -62,22 +69,28 @@ surface for the library rather than the final destination for a workaround.
    - longest `RunTask`, `FunctionCall`, `FireAnimationFrame`, and
      `HandlePostMessage` events,
    - hottest bundle or script names.
+
 5. Read only the code needed to explain the top hotspots.
+
 6. Separate findings into layers:
    - demo or app rendering,
    - worker or protocol,
    - core NeatapticTS runtime.
-7. Write a report using the template resource, then tailor it to the actual
-   trace evidence.
 
-## Required Output Standards
+7. Apply the demo-to-library policy: when a trace from a demo exposes a
+   mismatch between obvious user intent and the library's public behavior, treat
+   the demo as a diagnostic surface for the library first. Prefer recommending a
+   library-level fix when the same gap could affect downstream users. Recommend
+   demo-local optimizations only for genuinely demo-specific rendering or
+   presentation issues.
 
-- Do not stop at trace numbers. Tie each major hotspot to concrete source files.
-- Distinguish user-visible stutter from background or scalability issues.
-- State what is primary versus secondary in the trace.
-- End with a prioritized action plan, not a flat list of ideas.
-- Prefer reusable scripts under `scripts/` if the existing analyzer is missing
-  an important aggregation.
+8. Write a report using the performance report template, then tailor it to the
+   actual trace evidence. Each major hotspot must be tied to a concrete source
+   file, not just a trace number.
+
+9. End the report with a prioritized action plan that states clearly whether
+   each finding should be fixed in the library, in shared infrastructure, or
+   only in the demo.
 
 ## Guardrails
 
@@ -93,7 +106,22 @@ surface for the library rather than the final destination for a workaround.
   `Handoff query` structure.
 - Do not edit generated `src/**/README.md` files. Improve source JSDoc instead.
 - If you modify trace tooling, keep the script deterministic and documented with
-  JSDoc.
+  JSDoc. Hand trace-tooling changes to `trace-analyzer-extension` instead of
+  making ad hoc modifications here.
+
+## Expected Final Output
+
+A strong trace audit report should include:
+
+- the trace file audited and the feature area targeted,
+- high-signal metrics: trace window, dropped frames, thread totals, longest
+  events, hottest scripts,
+- layered findings: demo-layer, protocol-layer, and core-library hotspots
+  identified separately,
+- source-file attribution for each major hotspot,
+- whether the finding calls for a library fix or a demo-local fix,
+- a prioritized action plan with concrete next steps,
+- the report destination (plan file path) and its updated state.
 
 ## Repo-Specific Notes
 

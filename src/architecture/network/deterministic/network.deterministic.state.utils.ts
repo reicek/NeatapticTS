@@ -2,7 +2,7 @@ import type Network from '../../network/network';
 import type { NetworkInternals } from './network.deterministic.utils.types';
 
 /**
- * Get the current internal 32-bit RNG state value.
+ * Return the current internal 32-bit RNG state used for deterministic sampling.
  *
  * @param this - Bound Network instance.
  * @returns Unsigned 32-bit state integer or undefined if generator not yet seeded or was reset.
@@ -30,7 +30,7 @@ export function setRNGState(this: Network, state: number): void {
 }
 
 /**
- * Retrieve the active random function reference.
+ * Return the active random number generator function bound to this network.
  *
  * @param this - Bound Network instance.
  * @returns Function producing numbers in [0,1). May be undefined if never seeded.
@@ -41,17 +41,23 @@ export function getRandomFn(this: Network): (() => number) | undefined {
 }
 
 /**
- * Check whether incoming state is numeric.
+ * Validate that a candidate RNG state is representable as a numeric value.
+ *
+ * This guard keeps state writes predictable by ignoring non-number payloads
+ * before uint32 normalization.
  *
  * @param candidateState - Candidate state value.
- * @returns True when state is numeric.
+ * @returns True when the candidate is a number.
  */
 function isNumericState(candidateState: number): boolean {
   return typeof candidateState === 'number';
 }
 
 /**
- * Convert numeric state to unsigned 32-bit representation.
+ * Normalize a numeric RNG state into unsigned 32-bit form.
+ *
+ * This mirrors the internal LCG-style state representation expected by the
+ * deterministic helpers.
  *
  * @param numericState - Numeric state value.
  * @returns Unsigned 32-bit state.

@@ -155,6 +155,9 @@ function resolveMetadataEntry(metadataEntry) {
   };
 }
 
+/**
+ * Normalize runtime shape metadata so unknown or symbolic dimensions fall back to scalar size 1.
+ */
 function resolveRuntimeTensorDimensions(runtimeShape) {
   return runtimeShape.map((shapeDimension) => {
     if (typeof shapeDimension === 'number' && shapeDimension > 0) {
@@ -221,7 +224,7 @@ export function getPhase9RuntimeParityInventory(): readonly OnnxRuntimeParityFix
 }
 
 /**
- * Resolve one named Phase 9 runtime-parity fixture.
+ * Resolve one named Phase 9 runtime-parity fixture from the frozen inventory.
  *
  * @param fixtureId Named fixture identifier from the frozen Phase 9A inventory.
  * @returns The matching deterministic fixture descriptor.
@@ -411,7 +414,7 @@ function executeRuntimeParityInSubprocess(
 }
 
 /**
- * Resolve the best available child-process failure text.
+ * Resolve a stable parity-subprocess error message from stderr, stdout, or fallback text.
  *
  * @param subprocessResult Child-process execution result.
  * @returns Human-readable error message.
@@ -473,7 +476,7 @@ export function createRuntimeParityTensor(
 }
 
 /**
- * Create the deterministic Phase 9A baseline float32 dense fixture.
+ * Create the Phase 9A dense baseline fixture with float32 export and strict tolerances.
  *
  * @returns Baseline same-family dense runtime-parity descriptor.
  */
@@ -501,7 +504,7 @@ function createBaselineFloat32DenseFixture(): OnnxRuntimeParityFixtureDescriptor
 }
 
 /**
- * Create the deterministic storage-fp16 dense fixture descriptor.
+ * Create the storage-fp16 dense fixture used to validate cast-bridge parity behavior.
  *
  * @returns Storage-fp16 cast-bridge runtime-parity descriptor.
  */
@@ -535,7 +538,7 @@ function createStorageFp16DenseFixture(): OnnxRuntimeParityFixtureDescriptor {
 }
 
 /**
- * Create the deterministic one-output static-8bit dense fixture descriptor.
+ * Create the static-8bit dense qlinear fixture with external calibration metadata.
  *
  * @returns Static-8bit dense qlinear runtime-parity descriptor.
  */
@@ -582,7 +585,7 @@ function createStatic8BitDenseQlinearFixture(): OnnxRuntimeParityFixtureDescript
 }
 
 /**
- * Create the deterministic explicit-Conv static-8bit fixture descriptor.
+ * Create the explicit-conv static-8bit fixture for conv-lane runtime parity checks.
  *
  * @returns Static-8bit explicit-Conv runtime-parity descriptor.
  */
@@ -624,7 +627,7 @@ function createStatic8BitConvQlinearFixture(): OnnxRuntimeParityFixtureDescripto
 }
 
 /**
- * Create the deterministic DynamicQuantizeLinear dense-guidance descriptor.
+ * Create the dynamic-uint8 dense fixture that validates DynamicQuantizeLinear guidance export.
  *
  * @returns Dynamic-guidance runtime-parity descriptor with an explicit tolerance packet.
  */

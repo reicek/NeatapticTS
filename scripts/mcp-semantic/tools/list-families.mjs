@@ -1,5 +1,19 @@
+/**
+ * @module list-families
+ * @description Document family listing tool for the Repo Cortex MCP server.
+ *
+ * Returns all indexed document families with their document and chunk counts,
+ * useful for scoping corpus searches to a specific project area.
+ */
 import { openCortexDatabase } from './cortex-db.mjs';
 
+/**
+ * List all indexed document families with document and chunk counts.
+ *
+ * @param {object} [options={}] - Tool options.
+ * @param {string} [options.databasePath] - Override corpus database path.
+ * @returns {Promise<{ families: Array<{ family: string, documents: number, chunks: number }> }>} Family list.
+ */
 export async function listFamilies(options = {}) {
   const database = openCortexDatabase(options.databasePath);
 

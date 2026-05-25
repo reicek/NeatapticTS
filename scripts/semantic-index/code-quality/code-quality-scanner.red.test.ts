@@ -65,6 +65,89 @@ describe('code-quality-scanner.mjs', () => {
         status: 0,
       }));
     });
+
+    it('does not report a namespace re-export as missing JSDoc when the barrel statement has a leading JSDoc block', async () => {
+      // Arrange
+      const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'semantic-code-quality-red-namespace-'));
+      const fixtureSourceDirectory = path.join(fixtureDirectory, 'src');
+      const fixtureBarrelPath = path.join(fixtureSourceDirectory, 'network.utils.ts');
+      const fixtureTargetPath = path.join(fixtureSourceDirectory, 'target.ts');
+      await mkdir(fixtureSourceDirectory, { recursive: true });
+      await writeFile(fixtureTargetPath, [
+        'export function undocumentedTarget(rate: number) {',
+        '  return rate * 2;',
+        '}',
+      ].join('\n'), 'utf8');
+      await writeFile(fixtureBarrelPath, [
+        '/**',
+        ' * Descriptive namespace export summary with enough words to satisfy the JSDoc quality threshold for the barrel re-export statement.',
+        ' */',
+        "export * as someNamespace from './target';",
+      ].join('\n'), 'utf8');
+
+      // Act
+      const result = runModuleEvaluation<CodeQualityContractReport>(`
+        import { scanCodeQuality } from './scripts/semantic-index/code-quality-scanner.mjs';
+
+        const report = await scanCodeQuality({
+          complexityThreshold: 10,
+          minJsdocWords: 10,
+          sourcePaths: [${JSON.stringify(fixtureBarrelPath)}],
+        });
+        console.log(JSON.stringify({
+          evidence: report.evidence.map(({ issue, symbol }) => ({ issue, symbol })),
+          pass: report.pass,
+        }));
+      `);
+      await rm(fixtureDirectory, { recursive: true, force: true });
+
+      // Assert
+      expect(result).toEqual(expect.objectContaining({
+        report: {
+          evidence: [],
+          pass: true,
+        },
+        status: 0,
+      }));
+    });
+
+    it('returns a failing report for an undocumented exported function in a .mjs file', async () => {
+      // Arrange
+      const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'semantic-code-quality-red-mjs-'));
+      const fixtureSourceDirectory = path.join(fixtureDirectory, 'src');
+      const fixtureSourcePath = path.join(fixtureSourceDirectory, 'mutation.mjs');
+      await mkdir(fixtureSourceDirectory, { recursive: true });
+      await writeFile(fixtureSourcePath, [
+        'export function undocumentedMutation(rate) {',
+        '  return rate * 2;',
+        '}',
+      ].join('\n'), 'utf8');
+
+      // Act
+      const result = runModuleEvaluation<CodeQualityContractReport>(`
+        import { scanCodeQuality } from './scripts/semantic-index/code-quality-scanner.mjs';
+
+        const report = await scanCodeQuality({
+          complexityThreshold: 10,
+          minJsdocWords: 10,
+          sourcePaths: [${JSON.stringify(fixtureSourcePath)}],
+        });
+        console.log(JSON.stringify({
+          evidence: report.evidence.map(({ issue, symbol }) => ({ issue, symbol })),
+          pass: report.pass,
+        }));
+      `);
+      await rm(fixtureDirectory, { recursive: true, force: true });
+
+      // Assert
+      expect(result).toEqual(expect.objectContaining({
+        report: {
+          evidence: [{ issue: 'missing JSDoc', symbol: 'undocumentedMutation' }],
+          pass: false,
+        },
+        status: 0,
+      }));
+    });
   });
 });
 

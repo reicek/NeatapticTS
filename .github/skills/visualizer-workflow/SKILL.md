@@ -48,17 +48,9 @@ This skill does not replace `educational-docs` for long-form teaching docs.
 
 ## Task Packet
 
-Provide a compact packet containing:
-
-- visualizer file boundary,
-- reference visualizer (if parity is expected),
-- exact symptom,
-- expected behavior,
-- rendering surface (`canvas`, `svg`, or `dom`),
-- pass mode (`recon`, `implementation`, or `validation-only`),
-- required final checks.
-
-Compact example:
+Provide a compact packet that includes the visualizer file boundary, the exact
+symptom, the expected behavior, the rendering surface, the pass mode, and
+required final checks.
 
 ```text
 Use visualizer-workflow for examples/asciiMaze/browser-entry/network-view.

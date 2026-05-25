@@ -138,7 +138,8 @@ assertGaterNodeBelongsToNetwork(
 ): void
 ```
 
-Validate that a candidate gater node belongs to the target network.
+Validate that a candidate gater node belongs to the target network before mutating connection gate ownership.
+This guard prevents cross-network node references that would corrupt reverse gate bookkeeping.
 
 Parameters:
 - `network` - Network performing the gating operation.
@@ -156,7 +157,8 @@ attachGaterToConnection(
 ): void
 ```
 
-Attach a gater to a connection and track that connection in the network gate list.
+Attach a gater to a connection and track that connection in the network gate list used by ungate routines.
+The helper keeps connection-level and network-level gate bookkeeping synchronized.
 
 Parameters:
 - `network` - Network being updated.
@@ -173,7 +175,8 @@ detachConnectionFromGater(
 ): void
 ```
 
-Remove reverse gater bookkeeping from a connection's gater node.
+Remove reverse gater bookkeeping from a connection's gater node when ungating a previously tracked edge.
+Keeping this step explicit prevents stale gated-connection references on the gater node.
 
 Parameters:
 - `connection` - Connection to detach from its gater.
@@ -189,7 +192,8 @@ findGateIndex(
 ): number
 ```
 
-Find a connection position within the network global gates list.
+Find a connection position within the network global gates list used for deterministic ungate updates.
+Returning a stable index allows callers to remove tracked gates without scanning extra structures.
 
 Parameters:
 - `network` - Network containing global gate references.
@@ -205,7 +209,8 @@ isConnectionAlreadyGated(
 ): boolean
 ```
 
-Determine whether a connection already has a gater node assigned.
+Determine whether a connection already has a gater node assigned before applying a new gate operation.
+This check is used to keep gate lists idempotent and avoid duplicate ownership updates.
 
 Parameters:
 - `connection` - Connection candidate.
@@ -221,7 +226,8 @@ removeGateAtIndex(
 ): void
 ```
 
-Remove a gated connection from the network global gate list.
+Remove a gated connection from the network global gate list after ownership checks pass.
+This mutation helper isolates gate-list updates so higher-level ungate flow stays declarative.
 
 Parameters:
 - `network` - Network being updated.
@@ -260,7 +266,7 @@ assertNodeRemovableAndGetIndex(
 ): number
 ```
 
-Ensure a node can be removed and return its index in the network node list.
+Ensure a node is eligible for removal and return its index in the network node list so structural anchors and missing nodes fail fast with explicit diagnostics.
 
 Parameters:
 - `network` - Network containing the node.
@@ -278,7 +284,7 @@ createBridgingConnections(
 ): BridgingConnectionList
 ```
 
-Create bridging connections from each predecessor to each successor when valid.
+Create bridging connections from each predecessor to each successor when valid so node removal can maintain coarse connectivity without duplicating existing projections.
 
 Parameters:
 - `network` - Network where bridge connections are created.
@@ -298,7 +304,8 @@ disconnectInboundConnections(
 ): ConnectedNodeList
 ```
 
-Disconnect all inbound connections for a node while collecting predecessors.
+Disconnect all inbound connections for a node while collecting predecessor nodes so bridge-connection reconstruction can preserve upstream reachability.
+The collected predecessor set defines candidate source nodes for post-removal connectivity restoration.
 
 Parameters:
 - `network` - Network being updated.
@@ -317,7 +324,8 @@ disconnectNodeSelfLoop(
 ): void
 ```
 
-Disconnect a node self-loop before broader edge rewiring.
+Disconnect a node self-loop before broader edge rewiring so self-referential activation state does not survive node-removal mutation flows.
+This keeps removal semantics consistent with later bridge reconstruction and gater reassignment stages.
 
 Parameters:
 - `network` - Network being updated.
@@ -336,7 +344,8 @@ disconnectOutboundConnections(
 ): ConnectedNodeList
 ```
 
-Disconnect all outbound connections for a node while collecting successors.
+Disconnect all outbound connections for a node while collecting successor nodes so bridge-connection reconstruction can preserve downstream projection coverage.
+The collected successor set defines candidate targets for bridging after structural deletion.
 
 Parameters:
 - `network` - Network being updated.
@@ -377,7 +386,7 @@ reassignPreservedGaters(
 ): void
 ```
 
-Reattach preserved gaters to randomly selected newly-created bridge connections.
+Reattach preserved gaters to randomly selected bridge connections so gate ownership can survive node removal when keep-gates mutation policy is enabled.
 
 Parameters:
 - `network` - Network performing reassignment.
@@ -395,7 +404,7 @@ removeNodeAtIndex(
 ): void
 ```
 
-Remove a node from the network list and mark node indexing as dirty.
+Remove a node from the runtime node list and mark index caches dirty so later activation and topology helpers rebuild index-based lookup state.
 
 Parameters:
 - `network` - Network being mutated.
@@ -454,7 +463,7 @@ ungateConnectionsGatedByNode(
 ): void
 ```
 
-Ungate all connections that are currently gated by the removed node.
+Ungate all connections currently gated by the removed node so detached gating references do not remain after structural mutation completes.
 
 Parameters:
 - `network` - Network performing ungate operations.

@@ -1,6 +1,24 @@
+/**
+ * @module cortex-tier-tool
+ * @description MCP tool factory for the `query_tier_graph` tool.
+ *
+ * Exposes the agent-tier inventory and validation results as a single
+ * read-only MCP tool, used by the Repo Cortex MCP server to let agents
+ * inspect the delegation graph without running scripts directly.
+ */
 import { collectTierInventory, runValidateAgentGraph } from '../validate-agent-graph.mjs';
 import { createTool, MCP_REPO_ROOT } from './mcp-utils.mjs';
 
+/**
+ * Create the `query_tier_graph` MCP tool descriptor.
+ *
+ * Returns the current agent tier inventory and validation issues. The
+ * `includeAgents` and `includeViolations` options allow callers to trim
+ * the response when only summary counts are needed.
+ *
+ * @param {{ workspaceRoot?: string }} [options={}] - Optional workspace root override.
+ * @returns {{ name: string, description: string, inputSchema: Record<string, unknown>, handler: Function }} Tool descriptor.
+ */
 export function createTierGraphTool({ workspaceRoot = MCP_REPO_ROOT } = {}) {
   return createTool({
     name: 'query_tier_graph',

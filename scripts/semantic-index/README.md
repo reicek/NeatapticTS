@@ -445,6 +445,96 @@ Options:
 
 **npm alias:** `npm run index:code-quality`
 
+### docs-quality.metrics.mjs
+
+Run the canonical docs-quality metrics pipeline and write deterministic run artifacts.
+
+```
+node scripts/semantic-index/docs-quality/docs-quality.metrics.mjs [options]
+
+Options:
+  --json                       Emit full run payload as JSON
+  --scope <src|paths>          Scope type (default: src)
+  --source <path>              Explicit source path when --scope=paths (repeatable)
+  --min-jsdoc-words <n>        Minimum non-whitespace JSDoc words (default: 10)
+  --complexity-threshold <n>   Maximum allowed cyclomatic complexity (default: 10)
+  --run-id <value>             Run folder ID under artifacts/docs-quality/runs/ (default: default)
+  --help                       Show help
+```
+
+**npm alias:** `npm run docs:quality:metrics`
+
+### docs-quality.compare.mjs
+
+Compare two docs-quality runs with strict compatibility checks. Comparisons are
+accepted only when all required dimensions match exactly.
+
+```
+node scripts/semantic-index/docs-quality/docs-quality.compare.mjs --left=<manifest> --right=<manifest> [--json]
+
+Options:
+  --left <manifestPath>        Left run manifest path (required)
+  --right <manifestPath>       Right run manifest path (required)
+  --json                       Emit comparison payload as JSON
+  --help                       Show help
+```
+
+**npm alias:** `npm run docs:quality:compare`
+
+Strict compare requirements and rejection reason codes:
+
+| Requirement | Reason code on mismatch |
+|---|---|
+| `metricVersion` must match | `METRIC_VERSION_MISMATCH` |
+| `threshold.minJsdocWords` and `threshold.complexityThreshold` must match | `THRESHOLD_MISMATCH` |
+| `scopeType` must match (`src` vs `paths`) | `SCOPE_TYPE_MISMATCH` |
+| `scopeDigest` must match | `SCOPE_DIGEST_MISMATCH` |
+| `scannerVersion` must match | `SCANNER_VERSION_MISMATCH` |
+
+### docs-quality-metrics.gate.mjs
+
+Run CI-safe docs-quality contract checks (schema validity, deterministic ordering,
+comparator guard behavior, CLI/MCP parity, and invalid-contract rejection).
+
+```
+node scripts/agent-customization/gates/docs-quality-metrics.gate.mjs [--json]
+```
+
+**npm alias:** `npm run docs:quality:gate`
+
+### Docs-quality artifact layout
+
+Each run is written under `artifacts/docs-quality/runs/<run-id>/` with three
+canonical files:
+
+| File | Purpose |
+|---|---|
+| `summary.json` | Aggregated counts (`evidenceCount`, issue totals) |
+| `evidence.json` | Canonical normalized evidence rows plus evidence digest |
+| `manifest.json` | Contract metadata and pointers to summary/evidence artifacts |
+
+### Migration note: retire ad hoc measurement flows
+
+Use the canonical `docs:quality:metrics` + `docs:quality:compare` +
+`docs:quality:gate` commands for all current docs-quality checks.
+
+The older ad hoc flow pattern (including `scripts/semantic-index/tmp-weak-scan.mjs`
+and one-off scanner JSON parsing commands) is deprecated for routine measurement
+and should only be referenced for historical migration context.
+
+### Parallel-run baseline runbook
+
+When running docs-quality in parallel batches, use one locked baseline and keep
+all candidate runs comparable to that same baseline configuration.
+
+1. Create and lock a baseline run id with final compare dimensions:
+   `docs:quality:metrics -- --scope=... --min-jsdoc-words=... --complexity-threshold=... --run-id=<baseline-id>`
+2. Run candidate batches in parallel from that baseline using unique run ids,
+   without changing scope or thresholds.
+3. Compare each candidate to the same baseline manifest via `docs:quality:compare`.
+4. After reconciliation, run one final candidate with identical configuration to
+   the locked baseline and compare once more before promotion.
+
 ---
 
 ## Dense embedding layer

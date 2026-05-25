@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Capability snapshot for the current worker-backed inference host.
  *
  * This probe answers a narrow question: which worker transport tiers are
@@ -61,7 +61,13 @@ export interface InferenceWorkerCapabilityOptions {
   readonly workerConstructorAvailable?: boolean;
 }
 
-/** Automatic transport selection result for the current host. */
+/**
+ * Automatically selected worker-backed inference transport tier for the current host.
+ *
+ * - `'shared-memory'` — SharedArrayBuffer transfer path when cross-origin isolation is active.
+ * - `'channel'` — Persistent channel worker when a channel-worker script was delivered.
+ * - `'transferable'` — Universal typed-array fallback when higher tiers are unavailable.
+ */
 export type AutoInferenceTransport =
   | 'channel'
   | 'shared-memory'

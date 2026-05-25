@@ -1,8 +1,9 @@
-import type { ActivationPrecision, PrecisionConfig } from '../../config';
+﻿import type { ActivationPrecision, PrecisionConfig } from '../../config';
 import type Network from './network';
 import type Node from '../node';
 import type Connection from '../connection/connection';
 import type { TestWorkerInstance } from '../../multithreading/types';
+import type { ConstructResult as ConstructResultContract } from './construct/network.construct.utils.types';
 export type {
   ConstructDiagnostics,
   ConstructGraphConnectionSummary,
@@ -11,54 +12,77 @@ export type {
   ConstructNodeId,
   ConstructOptions,
   ConstructPart,
-  ConstructResult,
   ConstructValidationOptions,
 } from './construct/network.construct.utils.types';
 
+/**
+ * Structured result contract returned by construct utilities after graph assembly, validation, and diagnostics collation complete.
+ * This alias keeps the construct outcome type discoverable from the network root type surface.
+ */
+export type ConstructResult = ConstructResultContract;
+
+// Keep construct types at the top because they are the most common import path
+// for graph-build diagnostics used by tests, docs, and runtime helpers.
 export * from './onnx/network.onnx.utils.types';
+// Re-export slab types here so network consumers can import allocation contracts
+// without reaching into the slab chapter directly.
 export * from './slab/network.slab.utils.types';
 
-/** Internal runtime properties attached to Network instances. */
+/**
+ * Diagnostic runtime properties optionally attached to Network instances.
+ *
+ * These underscored fields carry side-channel state for observability,
+ * architecture reconstruction, and cross-boundary tooling. They are not
+ * required for normal activation or training, but their presence enables
+ * richer diagnostics, UI rendering, and checkpoint fidelity.
+ */
 export interface NetworkRuntimeProps {
-  /** Last skipped layer indices. */
+  /** Indices of hidden layers skipped by stochastic-depth during the most recent activation. Useful for dropout diagnostics and variance analysis. */
   _lastSkippedLayers?: number[];
-  /** Last aggregated stats payload. */
+  /** Most recent aggregated statistics payload cached after the last `testNetwork` or training iteration, available for quick diagnostics access. */
   _lastStats?: unknown;
-  /** Optional runtime layers cache. */
+  /** Runtime layer cache used by tools that traverse a network as an ordered list of node groups rather than a flat array. */
   layers?: unknown[];
-  /** Optional architecture descriptor hydrated from serialization metadata. */
+  /** Architecture descriptor deserialized from checkpoint metadata. Allows UI and telemetry tools to reconstruct hidden-layer shape without re-analyzing the live graph. */
   _serializedArchitectureDescriptor?: NetworkArchitectureDescriptor;
-  /** Optional generic extension bag hydrated from serialization metadata. */
+  /** Arbitrary extension bag loaded from serialized checkpoints. Keeps forward-compatible metadata accessible without requiring schema changes to the core JSON shape. */
   _serializedExtensions?: NetworkJSONExtensions;
-  /** Optional public topology intent preserved across runtime boundaries. */
+  /** Public topology intent preserved across serialization round-trips so feed-forward enforcement survives checkpointing. */
   _topologyIntent?: NetworkTopologyIntent;
 }
 
-/** Provenance of hidden-layer architecture information. */
+/**
+ * Provenance of hidden-layer architecture information.
+ *
+ * - `'layer-metadata'`: sizes were read directly from stored layer objects.
+ * - `'graph-topology'`: sizes were inferred by traversing the live graph.
+ * - `'inferred'`: sizes were estimated when no authoritative source was available.
+ */
 export type NetworkArchitectureSource =
   | 'layer-metadata'
   | 'graph-topology'
   | 'inferred';
 
 /**
- * Stable architecture descriptor for UI/telemetry consumers.
+ * Stable architecture descriptor for UI and telemetry consumers.
  *
- * Hidden-layer sizes are ordered from input-side to output-side.
+ * Hidden-layer sizes are ordered from input-side to output-side. Visualizers
+ * and loggers can rely on this snapshot without re-traversing the live graph.
  */
 export interface NetworkArchitectureDescriptor {
-  /** Hidden-layer widths in forward order. */
+  /** Hidden-layer widths in forward-pass order (input side to output side). */
   hiddenLayerSizes: number[];
-  /** True when the graph contains at least one directed cycle. */
+  /** True when the graph contains at least one directed cycle, indicating recurrent or gated structure. */
   hasCycles: boolean;
-  /** Source used to resolve hidden-layer sizing. */
+  /** How hidden-layer sizing was determined â€” from stored layer metadata, graph traversal, or estimation. */
   source: NetworkArchitectureSource;
-  /** Total runtime node count. */
+  /** Total node count across all layers (input, hidden, output). */
   totalNodes: number;
-  /** Total runtime connection count. */
+  /** Total connection count in the live graph, including gates and self-connections. */
   totalConnections: number;
 }
 
-/** Supported explicit recurrent-module descriptor kinds. */
+/** Explicit recurrent-module family tags carried by temporal descriptor snapshots. Each tag identifies the gated-cell variant built by the corresponding `Architect` preset. */
 export type NetworkTemporalRecurrentModuleKind = 'lstm' | 'gru' | 'narx-memory';
 
 /**
@@ -69,15 +93,15 @@ export type NetworkTemporalRecurrentModuleKind = 'lstm' | 'gru' | 'narx-memory';
  * meaning of each hidden node from raw graph topology alone.
  */
 export interface NetworkTemporalRecurrentModuleDescriptor {
-  /** Stable module identity preserved across runtime synchronization. */
+  /** Stable identity string that survives runtime synchronization and graph edits. Used to correlate descriptors across diagnostic snapshots. */
   moduleId: string;
-  /** Public recurrent-module family. */
+  /** Recurrent-module family tag (e.g. `'lstm'`, `'gru'`, `'narx-memory'`). Allows visualizers to label gate nodes without re-deriving topology. */
   kind: NetworkTemporalRecurrentModuleKind;
-  /** Ordered node gene ids grouped by semantic role within the module. */
+  /** Ordered node gene ids grouped by semantic role (e.g. `inputGate`, `forgetGate`, `cell`). Keys are defined by the builder that created the module. */
   nodeGeneIdsByRole: Record<string, number[]>;
-  /** Connection innovations that still define the live module boundary. */
+  /** Innovation numbers of connections that define the live module boundary. Stale innovations are pruned during synchronization. */
   connectionInnovations: number[];
-  /** Optional user-facing sub-label, currently used by NARX delay shelves. */
+  /** Optional human-readable sub-label. Currently used by NARX delay shelves to identify their time-step offset. */
   moduleLabel?: string;
 }
 
@@ -88,11 +112,11 @@ export interface NetworkTemporalRecurrentModuleDescriptor {
  * structural edges without exposing the raw private extension bag directly.
  */
 export interface NetworkTemporalGatedBlockDescriptor {
-  /** Stable block identity preserved across runtime synchronization. */
+  /** Stable block identity that persists across synchronization so tooling can track the same gated structure across diagnostic snapshots. */
   blockId: string;
-  /** Ordered gate-owner gene ids attached to the block. */
+  /** Gene ids of the nodes acting as gate owners for this block, in the order they were registered. */
   gaterGeneIds: number[];
-  /** Connection innovations gated by this block. */
+  /** Innovation numbers of connections gated by this block. Pruned when the live graph no longer includes the corresponding connection. */
   connectionInnovations: number[];
 }
 
@@ -104,9 +128,9 @@ export interface NetworkTemporalGatedBlockDescriptor {
  * extension records have been synchronized against the live graph.
  */
 export interface NetworkTemporalStructureDescriptor {
-  /** Explicit recurrent modules that still match the runtime graph. */
+  /** Recurrent modules (LSTM, GRU, NARX) validated against the live graph. Stale modules whose innovations no longer exist are removed during synchronization. */
   recurrentModules: NetworkTemporalRecurrentModuleDescriptor[];
-  /** Explicit gated blocks that still match the runtime graph. */
+  /** Gated blocks validated against the live graph. Used by visualizers and diagnostics to highlight which connections are modulated by gate nodes. */
   gatedBlocks: NetworkTemporalGatedBlockDescriptor[];
 }
 
@@ -125,40 +149,46 @@ export type NetworkTopologyIntent = 'feed-forward' | 'unconstrained';
  * The order of each array defines the public input and output vector semantics.
  */
 export interface ExplicitIORoles {
-  /** Ordered stable gene ids for input-role nodes. */
+  /** Stable gene ids for input-role nodes in public input-vector order. Position in this array defines which slot of the activation input each node reads. */
   inputNodeIds: number[];
-  /** Ordered stable gene ids for output-role nodes. */
+  /** Stable gene ids for output-role nodes in public output-vector order. Position in this array defines which slot of the result array each node writes. */
   outputNodeIds: number[];
 }
 
-/** Supported activation-schedule modes. */
+/** Execution mode used by the activation scheduler. `'acyclic'` uses a deterministic Kahn wave schedule; `'recurrent'` permits cycles and uses fixed-iteration SCC unrolling. */
 export type ActivationMode = 'acyclic' | 'recurrent';
 
-/** Execution path used by the most recent activation scheduling decision. */
+/**
+ * Which execution path the most recent scheduling decision chose.
+ *
+ * - `'compiled-schedule'`: a deterministic Kahn-ordered schedule was built and is in use.
+ * - `'cycle-fallback-order'`: a cycle was detected; the runtime falls back to node-array iteration.
+ * - `'raw-node-order'`: no schedule exists; nodes are activated in their raw storage order.
+ */
 export type ActivationSchedulingExecutionPath =
   | 'compiled-schedule'
   | 'cycle-fallback-order'
   | 'raw-node-order';
 
-/** High-level issue attached to the latest scheduling decision. */
+/** High-level issue attached to the latest scheduling decision. `'cycle-detected'` means acyclic enforcement found a back-edge; `'schedule-missing'` means topology was dirty and recompilation was needed. `null` means scheduling succeeded cleanly. */
 export type ActivationSchedulingIssue =
   | 'cycle-detected'
   | 'schedule-missing'
   | null;
 
-/** Supported step kinds inside one activation schedule. */
+/** Execution step shape inside a compiled activation schedule. `'wave'` steps are plain feed-forward Kahn waves; `'recurrent-component'` steps unroll one strongly-connected component for a fixed iteration count. */
 export type ActivationScheduleStepKind = 'wave' | 'recurrent-component';
 
-/** State-handling rule for recurrent schedule execution. */
+/** State-handling rule for recurrent schedule execution. `'carry'` means previous activation state is retained across calls, which is the expected semantic for sequence-processing networks. */
 export type RecurrentStateSemantics = 'carry';
 
-/** One deterministic activation step inside a compiled schedule. */
+/** One deterministic activation step inside a compiled Kahn-ordered network activation schedule. */
 export interface ActivationScheduleStep {
-  /** Whether the step is a plain feed-forward wave or a recurrent SCC boundary. */
+  /** Whether this step is a plain feed-forward wave or a recurrent SCC boundary that requires fixed-iteration unrolling. */
   kind: ActivationScheduleStepKind;
-  /** Stable node gene ids executed by this step in deterministic order. */
+  /** Stable node gene ids to activate in this step, in deterministic topological order. */
   nodeIds: ReadonlyArray<number>;
-  /** Fixed iteration count for recurrent components. */
+  /** Fixed iteration count for recurrent-component steps. Absent for plain wave steps. */
   iterations?: number;
 }
 
@@ -169,13 +199,13 @@ export interface ActivationScheduleStep {
  * recurrent strongly-connected components.
  */
 export interface ActivationSchedule {
-  /** Execution mode used to derive this schedule. */
+  /** Execution mode (acyclic or recurrent) used to derive this schedule. */
   mode: ActivationMode;
-  /** Deterministic activation steps stored as stable node gene ids. */
+  /** Ordered execution steps, each covering a Kahn wave or a recurrent SCC. */
   steps: ReadonlyArray<ActivationScheduleStep>;
-  /** Ordered output-role node gene ids aligned with output vector semantics. */
+  /** Stable output-role node gene ids in public output-vector order. */
   outputNodeIds: number[];
-  /** Recurrent runtime state policy for recurrent schedules. */
+  /** How recurrent state is carried between activation calls. Present only when `mode` is `'recurrent'`. */
   stateSemantics?: RecurrentStateSemantics;
 }
 
@@ -188,31 +218,31 @@ export interface ActivationSchedule {
  * when a cycle or stale cache prevents the preferred path.
  */
 export interface ActivationSchedulingDiagnostics {
-  /** Semantic topology contract currently advertised by the network. */
+  /** Semantic topology contract advertised by the network (`'feed-forward'` or `'unconstrained'`). */
   topologyIntent: NetworkTopologyIntent;
   /** Scheduling mode requested by the current topology contract. */
   requestedMode: ActivationMode;
-  /** Whether structural edits marked the scheduling cache as stale. */
+  /** True when a structural edit has dirtied the scheduling cache and recompilation is pending. */
   topologyDirty: boolean;
   /** Execution path currently selected for activation traversal. */
   executionPath: ActivationSchedulingExecutionPath;
-  /** High-level issue attached to the current scheduling result, when one exists. */
+  /** Scheduling issue detected in the last recompilation attempt, or `null` when none. */
   issue: ActivationSchedulingIssue;
-  /** Human-readable summary of the scheduling result. */
+  /** Human-readable summary of the scheduling outcome for logging and UI display. */
   message: string;
-  /** Ordered input-role node ids that define public input-vector semantics. */
+  /** Stable input-role node ids defining public input-vector semantics. */
   inputNodeIds: number[];
-  /** Ordered output-role node ids that define public output-vector semantics. */
+  /** Stable output-role node ids defining public output-vector semantics. */
   outputNodeIds: number[];
-  /** Number of execution steps in the compiled schedule when one exists. */
+  /** Number of steps in the compiled schedule. Zero when no compiled schedule exists. */
   stepCount: number;
   /** Number of recurrent-component steps in the compiled schedule. */
   recurrentComponentCount: number;
-  /** Recurrent state policy for the current schedule, when one exists. */
+  /** Recurrent state policy for the current schedule, or `null` when the schedule is acyclic. */
   stateSemantics: RecurrentStateSemantics | null;
-  /** Node ids implicated in a cycle fallback, when one was detected. */
+  /** Node ids implicated in a detected cycle, populated only when `issue === 'cycle-detected'`. */
   cycleNodeIds: number[];
-  /** Suggested next actions for callers who want a different scheduling result. */
+  /** Actionable suggestions for callers who want to change the current scheduling outcome. */
   suggestions: string[];
 }
 
@@ -224,146 +254,148 @@ export interface ActivationSchedulingDiagnostics {
  * declared topology intent.
  */
 export interface NetworkConstructorOptions {
-  /** Optional minimum hidden-node count to synthesize via node splitting. */
+  /** Minimum number of hidden nodes to pre-populate by node-splitting during construction. Useful when an evolutionary search should start from a non-trivial topology. */
   minHidden?: number;
-  /** Optional deterministic RNG seed. */
+  /** Deterministic RNG seed. Produces reproducible initial weights and mutation decisions when set. */
   seed?: number;
-  /** Optional legacy low-level acyclic enforcement flag. */
+  /** Low-level acyclic enforcement flag. Deprecated in favor of `topologyIntent`; provided for backward compatibility. Must not contradict a declared topology intent. */
   enforceAcyclic?: boolean;
-  /** Optional public topology intent contract. */
+  /** Semantic topology contract for the network. `'feed-forward'` enforces acyclic structure; `'unconstrained'` allows recurrent and gated connections. */
   topologyIntent?: NetworkTopologyIntent;
-  /** Optional activation-buffer precision for compiled outputs and reusable activation arrays. Node runtime state and training traces remain normal JS-number storage. */
+  /** Typed-array precision for compiled activation paths and pooled activation buffers. Node runtime state and training traces remain standard JS number storage. */
   activationPrecision?: ActivationPrecision;
-  /** Whether pooled activation arrays should be reused. */
+  /** When true, pooled activation arrays are reused across activation calls to reduce GC pressure in tight inference loops. */
   reuseActivationArrays?: boolean;
-  /** Whether plain activation outputs may rotate through a small reusable sequence ring. */
+  /** When true, plain activation output arrays rotate through a small reusable sequence ring, reducing allocations in windowed sequence scenarios. */
   reuseSequenceBuffers?: boolean;
-  /** Whether pooled typed activations may be returned directly. */
+  /** When true, pooled typed activation arrays may be returned directly rather than copied into plain JS arrays, trading aliasing risk for zero-copy throughput. */
   returnTypedActivations?: boolean;
 }
 
-/** One emitted chunk from bounded sequence activation. */
+/** One emitted chunk from bounded sequence activation through the windowed forward-pass API. */
 export interface NetworkForwardWindowChunk {
-  /** Whether this chunk closes the requested sequence. */
+  /** True when this chunk closes the requested sequence window, signalling that no further chunks will be emitted. */
   done: boolean;
-  /** Exclusive end index covered by this chunk. */
+  /** Exclusive end index (row number in the input sequence) covered by this chunk. */
   endIndexExclusive: number;
-  /** Output rows emitted for this chunk. */
+  /** Output rows emitted for input rows in `[startIndex, endIndexExclusive)`. One row per activation call. */
   outputs: number[][];
-  /** Inclusive start index covered by this chunk. */
+  /** Inclusive start index (row number in the input sequence) covered by this chunk. */
   startIndex: number;
-  /** Zero-based emitted chunk index. */
+  /** Zero-based chunk index within the overall windowed pass. */
   windowIndex: number;
 }
 
-/** Optional settings for bounded sequence activation through `forwardWindowed()`. */
+/** Optional settings for bounded sequence activation through the `forwardWindowed()` streaming API. */
 export interface NetworkForwardWindowOptions {
-  /** Whether all outputs should be collected into the returned result matrix. */
+  /** When true, all outputs are collected into the returned result matrix. When false, callers rely on the `onWindow` callback instead. */
   collectOutputs?: boolean;
-  /** Optional synchronous callback invoked after each emitted window. */
+  /** Optional synchronous callback invoked after each emitted window chunk, allowing streaming consumers to process partial results immediately. */
   onWindow?: (chunk: NetworkForwardWindowChunk) => void;
-  /** Whether each activation step should keep training traces. */
+  /** When true, each activation call keeps training traces for gradient computation. Set to false for inference-only windowed passes. */
   training?: boolean;
-  /** Number of input rows processed per window before advancing the next slice. */
+  /** Number of input rows processed per chunk before emitting a window. Controls the granularity of streaming output. */
   windowSize?: number;
 }
 
-/** Optional settings for async bounded sequence activation. */
+/** Optional settings for async bounded sequence activation. Extends the synchronous variant with async windowing and a configurable yield cadence. */
 export interface NetworkForwardWindowAsyncOptions extends Omit<
   NetworkForwardWindowOptions,
   'onWindow'
 > {
-  /** Optional async callback invoked after each emitted window. */
+  /** Optional async callback invoked after each emitted window chunk. May `await` inside the handler without blocking the scheduler. */
   onWindow?: (chunk: NetworkForwardWindowChunk) => void | Promise<void>;
-  /** Completed-window cadence used before yielding control back to the runtime. */
+  /** Number of completed windows between yield calls. Higher values reduce scheduler overhead; lower values improve UI responsiveness. */
   yieldAfterWindows?: number;
-  /** Optional explicit yield hook used instead of the runtime default scheduler. */
+  /** Optional custom yield hook used instead of the default `setTimeout(0)` scheduler. Useful in environments where microtask or RAF-based yielding is preferred. */
   yieldControl?: () => Promise<void>;
 }
 
-/** One ordered edge request consumed by {@link Network.connectBatch}. */
+/**
+ * One ordered edge request consumed by {@link Network.connectBatch} when callers add multiple connections with deterministic endpoint sequencing.
+ */
 export interface NetworkConnectionRequest {
   /** Source node that emits the signal. */
   from: Node;
-  /** Target node that receives the signal. */
+  /** Target node that receives the weighted signal. */
   to: Node;
-  /** Optional explicit starting weight. */
+  /** Optional explicit initial weight. When omitted the network's RNG provides a random default. */
   weight?: number;
 }
 
-/** Internal constructor-time surface used by bootstrap helpers. */
+/** Internal constructor-time surface used by bootstrap helpers to assemble the initial graph state before the public Network facade is returned. */
 export interface NetworkBootstrapInternals {
-  /** Input node count. */
+  /** Number of input-role nodes allocated during construction. */
   input: number;
-  /** Output node count. */
+  /** Number of output-role nodes allocated during construction. */
   output: number;
-  /** Network node collection. */
+  /** Flat node collection shared by activation, mutation, and serialization. */
   nodes: Node[];
-  /** Connection list. */
+  /** All non-self, non-gate connections in the graph. */
   connections: Connection[];
-  /** Network gates collection. */
+  /** Gate connections that modulate other connection weights. */
   gates: Connection[];
-  /** Self-connection list. */
+  /** Self-connections (recurrent loops) on individual nodes. */
   selfconns: Connection[];
-  /** Dropout probability. */
+  /** Dropout probability applied during training forward passes. */
   dropout: number;
-  /** Public topology intent used to preserve semantic API choices. */
+  /** Topology intent (`'feed-forward'` or `'unconstrained'`) set at construction time. */
   _topologyIntent: NetworkTopologyIntent;
-  /** Whether to enforce acyclic connectivity. */
+  /** Whether acyclic connectivity is enforced at the low level. Deprecated in favor of `_topologyIntent`. */
   _enforceAcyclic: boolean;
-  /** Active random number generator. */
+  /** Active random number generator. Replaced by `setSeed` for deterministic runs. */
   _rand: () => number;
-  /** Typed-array precision used by compiled activation paths and pooled activation buffers. */
+  /** Mixed-precision configuration for typed-array activation buffers. */
   _precisionConfig: PrecisionConfig;
-  /** Typed-array precision used by compiled activation paths and pooled activation buffers. */
+  /** Requested activation precision label (`'float32'`, `'float64'`, etc.). */
   _activationPrecision: ActivationPrecision;
-  /** Whether pooled activation arrays are reused across activations. */
+  /** When true, pooled activation arrays are reused across calls to reduce GC pressure. */
   _reuseActivationArrays: boolean;
-  /** Whether plain activation outputs may rotate through a small reusable sequence ring. */
+  /** When true, plain activation outputs rotate through a small reusable sequence ring. */
   _reuseSequenceBuffers: boolean;
-  /** Whether pooled typed activations can be returned directly. */
+  /** When true, pooled typed activation arrays may be returned directly without copying. */
   _returnTypedActivations: boolean;
-  /** Refresh explicit ordered input/output role ids from the current node list. */
+  /** Rebuild the cached ordered input/output role id arrays from the current node list. */
   refreshExplicitIORoles: () => void;
-  /** Seed the internal deterministic RNG. */
+  /** Seed the internal deterministic RNG. Called by the constructor when `seed` is provided. */
   setSeed: (seed: number) => void;
-  /** Connect two nodes inside the runtime graph. */
+  /** Add one directed edge between two nodes and return the new Connection objects. */
   connect: (from: Node, to: Node, weight?: number) => Connection[];
-  /** Connect many node pairs inside the runtime graph. */
+  /** Add multiple directed edges in one deterministic pass. Returns all new Connection objects. */
   connectBatch: (requests: readonly NetworkConnectionRequest[]) => Connection[];
-  /** Insert a hidden node by splitting an existing connection. */
+  /** Split a randomly chosen connection by inserting one new hidden node. */
   addNodeBetween: () => void;
 }
 
-/** Internal runtime properties attached to Connection instances. */
+/** Runtime weight-noise and DropConnect scratch props attached to Connection instances by the regularization layer. */
 export interface ConnectionWeightNoiseProps {
-  /** Original weight before noise application. */
+  /** Stashed original weight before noise was applied. Used to restore the base weight after each activation step. */
   _origWeightNoise?: number;
-  /** Last sampled noise value. */
+  /** Most recently sampled noise perturbation. Kept for diagnostics and schedule-aware noise policies. */
   _wnLast?: number;
-  /** Original weight before DropConnect mask. */
+  /** Stashed original weight before DropConnect masking. Restored when the mask clears. */
   _origWeight?: number;
-  /** Cached DropConnect mask. */
+  /** Current DropConnect binary mask (0 or 1). Cached so the same mask applies across forward and backward passes in one training step. */
   dcMask?: number;
 }
 
-/** Runtime interface for activation internals. */
+/** Internal network surface projected by activation helpers to access scheduling, slab, and traversal state without depending on the full Network class. */
 export interface ActivateNetworkInternals {
-  /** Acyclic mode enforcement flag. */
+  /** When true, acyclic enforcement is active and cycles will raise an error rather than falling back to raw-node-order traversal. */
   _enforceAcyclic?: boolean;
-  /** Topology dirty marker. */
+  /** Dirty flag set after structural edits. When true, the activation helper must recompute the topological order before the next activation. */
   _topoDirty: boolean;
-  /** Topology recomputation hook. */
+  /** Hook that triggers a topological-order recomputation when `_topoDirty` is set. */
   _computeTopoOrder: () => void;
-  /** Fast-slab support predicate. */
+  /** Predicate that returns true when the slab fast path is safe to use under current topology and training mode. */
   _canUseFastSlab: (training: boolean) => boolean;
-  /** Fast-slab activation hook. */
+  /** Typed-array fast path that bypasses node-object traversal when eligible. */
   _fastSlabActivate: (input: number[]) => number[];
-  /** Activation-array reuse flag. */
+  /** When true, pooled activation arrays are reused to reduce allocations. */
   _reuseActivationArrays?: boolean;
-  /** Sequence-output reuse flag for repeated plain activation calls. */
+  /** When true, plain activation outputs rotate through a reusable sequence ring. */
   _reuseSequenceBuffers?: boolean;
-  /** Generic activate API. */
+  /** Standard `activate` method used when the slab fast path is not eligible. */
   activate: (
     input: number[],
     training?: boolean,
@@ -371,95 +403,95 @@ export interface ActivateNetworkInternals {
   ) => number[];
 }
 
-/** Runtime interface for connect internals. */
+/** Internal network surface projected by connection helpers to access enforcement flags and dirty markers. */
 export interface ConnectNetworkInternals {
-  /** Acyclic mode enforcement flag. */
+  /** When true, new connections that would create a cycle are rejected. */
   _enforceAcyclic?: boolean;
   /** Network-owned RNG used for deterministic default connection weights. */
   _rand?: () => number;
-  /** Topology dirty marker. */
+  /** Dirty flag set after structural edits to invalidate the cached topological order. */
   _topoDirty: boolean;
-  /** Slab dirty marker. */
+  /** Dirty flag set after structural edits to invalidate the cached connection slab. */
   _slabDirty: boolean;
 }
 
-/** Runtime interface for deterministic internals. */
+/** Internal network surface projected by deterministic helpers for RNG snapshot and restore operations. */
 export interface DeterministicNetworkInternals {
-  /** Raw RNG state word. */
+  /** Raw xorshift RNG state word. `undefined` when no seed has been set. */
   _rngState: number | undefined;
-  /** Active random function. */
+  /** Active random function, either the seeded xorshift or `Math.random`. */
   _rand: (() => number) | undefined;
-  /** Current training step (if tracked). */
+  /** Current training step counter used by snapshot/restore for exact-resume workflows. */
   _trainingStep: number | undefined;
 }
 
-/** Snapshot payload for RNG state restore flows. */
+/** Point-in-time snapshot for RNG state restore. Captures both the xorshift state word and the training step so an exact-resume restore can replay from the same position. */
 export interface RNGSnapshot {
-  /** Captured training step. */
+  /** Training step at the time of the snapshot. Used by exact-resume workflows. */
   step: number | undefined;
-  /** Captured RNG state word. */
+  /** Xorshift RNG state word at the time of the snapshot. */
   state: number | undefined;
 }
 
-/** Internal network properties accessed by runtime-control helpers. */
+/** Internal network properties accessed by runtime-control helpers for dropout, noise, and iteration state. */
 export interface NetworkRuntimeControlInternals {
-  /** Connection list. */
+  /** Connection list */
   connections: Connection[];
-  /** Optional layered network view. */
+  /** Optional layered network view */
   layers?: { nodes: Node[] }[];
-  /** Active random generator. */
+  /** Active random generator */
   _rand: () => number;
-  /** Current training step. */
+  /** Current training step */
   _trainingStep: number;
-  /** Optional forced-overflow test hook. */
+  /** Optional forced-overflow test hook */
   _forceNextOverflow?: boolean;
-  /** Scheduled pruning configuration. */
+  /** Scheduled pruning configuration */
   _pruningConfig?: NetworkPruningProps['_pruningConfig'];
-  /** Scheduled-pruning baseline connection count. */
+  /** Scheduled-pruning baseline connection count */
   _initialConnectionCount?: number;
-  /** Global weight-noise standard deviation. */
+  /** Global weight-noise standard deviation */
   _weightNoiseStd: number;
-  /** Per-hidden-layer weight-noise standard deviations. */
+  /** Per-hidden-layer weight-noise standard deviations */
   _weightNoisePerHidden: number[];
-  /** Optional dynamic weight-noise schedule. */
+  /** Optional dynamic weight-noise schedule */
   _weightNoiseSchedule?: (step: number) => number;
-  /** Active stochastic-depth survival probabilities. */
+  /** Active stochastic-depth survival probabilities */
   _stochasticDepth: number[];
-  /** Optional dynamic stochastic-depth schedule. */
+  /** Optional dynamic stochastic-depth schedule */
   _stochasticDepthSchedule?: (step: number, current: number[]) => number[];
-  /** Last skipped hidden-layer indices. */
+  /** Last skipped hidden-layer indices */
   _lastSkippedLayers?: number[];
 }
 
-/** Internal network properties accessed by runtime diagnostics helpers. */
+/** Internal network properties accessed by runtime diagnostics helpers for topology and optimizer state. */
 export interface NetworkRuntimeDiagnosticsInternals {
-  /** Optional layered network view. */
+  /** Optional layered network view */
   layers?: { nodes: Node[] }[];
-  /** Flat network node collection. */
+  /** Flat network node collection */
   nodes: Node[];
-  /** Ordered input-role node ids. */
+  /** Ordered input-role node ids */
   inputNodeIds: number[];
-  /** Ordered output-role node ids. */
+  /** Ordered output-role node ids */
   outputNodeIds: number[];
-  /** Public topology intent preserved on the runtime seam. */
+  /** Public topology intent preserved on the runtime seam */
   _topologyIntent?: NetworkTopologyIntent;
-  /** Cached compiled activation schedule. */
+  /** Cached compiled activation schedule */
   _activationSchedule?: ActivationSchedule | null;
-  /** Cached scheduling diagnostics snapshot. */
+  /** Cached scheduling diagnostics snapshot */
   _activationSchedulingDiagnostics?: ActivationSchedulingDiagnostics | null;
-  /** Topology dirty marker. */
+  /** Topology dirty marker */
   _topoDirty?: boolean;
-  /** Acyclic mode enforcement flag. */
+  /** Acyclic mode enforcement flag */
   _enforceAcyclic?: boolean;
-  /** Active DropConnect probability. */
+  /** Active DropConnect probability */
   _dropConnectProb: number;
-  /** Last recorded gradient norm. */
+  /** Last recorded gradient norm */
   _lastGradNorm?: number;
-  /** Optimizer step counter. */
+  /** Optimizer step counter */
   _optimizerStep: number;
-  /** Mixed-precision runtime configuration. */
+  /** Mixed-precision runtime configuration */
   _mixedPrecision: { enabled: boolean; lossScale: number };
-  /** Mixed-precision state counters. */
+  /** Mixed-precision state counters */
   _mixedPrecisionState: {
     goodSteps: number;
     badSteps: number;
@@ -471,187 +503,187 @@ export interface NetworkRuntimeDiagnosticsInternals {
     scaleUpEvents?: number;
     scaleDownEvents?: number;
   };
-  /** Last recorded raw gradient norm. */
+  /** Last recorded raw gradient norm */
   _lastRawGradNorm: number;
-  /** Last gradient-clipping group count. */
+  /** Last gradient-clipping group count */
   _lastGradClipGroupCount: number;
-  /** Last overflow training step index. */
+  /** Last overflow training step index */
   _lastOverflowStep: number;
 }
 
-/** Internal network properties accessed during gating operations. */
+/** Internal network properties accessed during gating operations for node-index dirty flag management. */
 export interface GatingNetworkProps {
-  /** Node-index dirty marker. */
+  /** Node-index dirty marker */
   _nodeIndexDirty?: boolean;
 }
 
-/** Mutation keep-gates option surface used by sub-node removal logic. */
+/** Mutation keep-gates option surface used by sub-node removal logic and gate reassignment. */
 export interface SubNodeMutationConfig {
-  /** Preserve and reassign gated connections during node removal. */
+  /** Preserve and reassign gated connections during node removal */
   keep_gates?: boolean;
 }
 
-/** Internal network properties used by stats operations. */
+/** Internal network properties used by stats operations to cache the last aggregated metrics payload. */
 export interface StatsNetworkProps {
-  /** Last aggregated stats payload. */
+  /** Last aggregated stats payload */
   _lastStats?: Record<string, unknown>;
 }
 
-/** Internal topology state carrier. */
+/** Internal topology state carrier for acyclic enforcement, cached schedule, and dirty markers. */
 export interface TopologyNetworkProps {
-  /** Acyclic mode enforcement flag. */
+  /** Acyclic mode enforcement flag */
   _enforceAcyclic?: boolean;
-  /** Cached deterministic activation schedule for acyclic execution. */
+  /** Cached deterministic activation schedule for acyclic execution */
   _activationSchedule?: ActivationSchedule | null;
-  /** Cached human-friendly scheduling diagnostics snapshot. */
+  /** Cached human-friendly scheduling diagnostics snapshot */
   _activationSchedulingDiagnostics?: ActivationSchedulingDiagnostics | null;
-  /** Cached topological order. */
+  /** Cached topological order */
   _topoOrder: Node[] | null;
-  /** Topology dirty marker. */
+  /** Topology dirty marker */
   _topoDirty?: boolean;
 }
 
-/** Mutable context used while building topological ordering. */
+/** Mutable context assembled when building Kahn-ordered topological node activation waves. */
 export interface TopologyBuildContext {
-  /** Target network. */
+  /** Target network */
   network: Network;
-  /** Internal topology state holder. */
+  /** Internal topology state holder */
   internalTopologyProps: TopologyNetworkProps;
-  /** In-degree tracking table. */
+  /** In-degree tracking table */
   inDegreeByNode: Map<Node, number>;
-  /** Pending processing queue. */
+  /** Pending processing queue */
   processingQueue: Node[];
-  /** Deterministic wave groups captured during Kahn traversal. */
+  /** Deterministic wave groups captured during Kahn traversal */
   activationSteps: number[][];
-  /** Built topological order. */
+  /** Built topological order */
   topoOrder: Node[];
 }
 
-/** Mutable context used while running iterative path search. */
+/** Mutable context used when running iterative DFS-style path search for reachability checks. */
 export interface PathSearchContext {
-  /** Target node for reachability check. */
+  /** Target node for reachability check */
   targetNode: Node;
-  /** Already visited nodes. */
+  /** Already visited nodes */
   visitedNodes: Set<Node>;
-  /** DFS stack of nodes pending visitation. */
+  /** DFS stack of nodes pending visitation */
   nodesToVisitStack: Node[];
 }
 
-/** Internal standalone generation network view. */
+/** Internal standalone generation network view exposing node count and precision for code emission. */
 export interface NetworkStandaloneProps {
-  /** Network node collection. */
+  /** Network node collection */
   nodes: Node[];
-  /** Input count. */
+  /** Input count */
   input: number;
-  /** Output count. */
+  /** Output count */
   output: number;
-  /** Optional activation precision flag. */
+  /** Optional activation precision flag */
   _precisionConfig?: PrecisionConfig;
-  /** Optional activation precision flag. */
+  /** Optional activation precision flag */
   _activationPrecision?: ActivationPrecision;
 }
 
-/** Node with generated index for standalone-code emission. */
+/** Node with a generated contiguous index used during standalone function source emission. */
 export interface NodeWithIndex extends Node {
-  /** Assigned contiguous index for code generation. */
+  /** Assigned contiguous index for code generation */
   index: number;
 }
 
-/** Shared mutable state for standalone source generation. */
+/** Shared mutable state assembled for one standalone network function source generation pass. */
 export interface StandaloneGenerationContext {
-  /** Standalone network projection. */
+  /** Standalone network projection */
   standaloneProps: NetworkStandaloneProps;
-  /** Resolved activation precision for generated standalone storage. */
+  /** Resolved activation precision for generated standalone storage */
   resolvedActivationPrecision?: ActivationPrecision;
-  /** Indexed input nodes in public input-vector order. */
+  /** Input node indexes in public input-vector order, used for emitting the read loop in the generated function. */
   inputNodeIndexes: number[];
-  /** Indexed activation traversal in runtime execution order without inputs. */
+  /** Activation-only node indexes in runtime execution order (excludes inputs), used for emitting the forward-pass body. */
   activationNodeIndexes: number[];
-  /** Indexed output nodes in public output-vector order. */
+  /** Output node indexes in public output-vector order, used for emitting the result-collection loop. */
   outputNodeIndexes: number[];
-  /** Already emitted activation source by name. */
+  /** Map of activation-function name to already-emitted source snippet, preventing duplicate function declarations. */
   emittedActivationSource: Record<string, string>;
-  /** Activation source snippets in order. */
+  /** Ordered activation-function source snippets collected for the generated function preamble. */
   activationFunctionSources: string[];
-  /** Function-name to index lookup. */
+  /** Lookup from activation-function name to its assigned array index in the generated function. */
   activationFunctionIndexMap: Record<string, number>;
-  /** Next activation index counter. */
+  /** Counter for assigning unique array indices to activation functions in the generated source. */
   nextActivationFunctionIndex: number;
-  /** Seed activation buffer values. */
+  /** Initial activation values seeded from the live network state at generation time. */
   initialActivations: number[];
-  /** Seed state buffer values. */
+  /** Initial recurrent state values seeded from the live network state at generation time. */
   initialStates: number[];
-  /** Output function body lines. */
+  /** Accumulated forward-pass body lines, assembled in execution order before being joined into the final source string. */
   bodyLines: string[];
 }
 
-/** Internal network properties accessed during remove operations. */
+/** Internal network dirty-flag surface used by node-removal helpers to invalidate affected caches after graph surgery. */
 export interface NetworkRemoveProps {
-  /** Topology dirty marker. */
+  /** Set to true after node removal to invalidate the cached topological order. */
   _topoDirty?: boolean;
-  /** Node-index dirty marker. */
+  /** Set to true after node removal to invalidate the node-index lookup table. */
   _nodeIndexDirty?: boolean;
-  /** Slab dirty marker. */
+  /** Set to true after node removal to invalidate the connection slab. */
   _slabDirty?: boolean;
-  /** Adjacency dirty marker. */
+  /** Set to true after node removal to invalidate the adjacency index. */
   _adjDirty?: boolean;
 }
 
-/** Immutable context for validated node-removal request. */
+/** Validated, immutable context assembled before node removal begins. Passed through the removal pipeline to avoid re-deriving the target node and its index at each step. */
 export interface NodeRemovalContext {
   /** Owning network instance. */
   network: Network;
-  /** Internal mutable network flags. */
+  /** Internal mutable dirty-flag surface for cache invalidation. */
   internalNetwork: NetworkRemoveProps;
-  /** Node requested for removal. */
+  /** The node to be removed. */
   targetNode: Node;
-  /** Index of target node in network list. */
+  /** Position of the target node in `network.nodes` at the time the context was created. */
   targetNodeIndex: number;
 }
 
-/** Snapshot of node adjacency prior to removal. */
+/** Adjacency snapshot captured before a node is removed. Passed to reconnection helpers so inbound and outbound paths can be bridged without re-inspecting the live (partially mutated) graph. */
 export interface NodeConnectionSnapshotContext {
-  /** Incoming connections to removed node. */
+  /** Connections pointing into the removed node from other nodes. */
   inboundConnections: Connection[];
-  /** Outgoing connections from removed node. */
+  /** Connections pointing out of the removed node to other nodes. */
   outboundConnections: Connection[];
-  /** Number of removed self-connections. */
+  /** Number of self-connections that were removed along with the node. */
   selfConnectionCount: number;
 }
 
-/** Endpoint pair for reconnecting bridged paths. */
+/** One candidate source-target pair for reconnecting paths across a removed node. Used by the bridging helper to reconstruct connectivity without the removed intermediary. */
 export interface ReconnectEndpointPairContext {
-  /** Source node of candidate reconnect edge. */
+  /** Source node of the candidate reconnect edge. */
   sourceNode: Node;
-  /** Target node of candidate reconnect edge. */
+  /** Target node of the candidate reconnect edge. */
   targetNode: Node;
 }
 
-/** Pruning strategy identifiers. */
+/** Pruning strategy identifiers specifying available connection removal approaches such as magnitude and SNIP. */
 export type PruningMethod = 'magnitude' | 'snip';
 
-/** Growth-budget decision categories for structural mutations. */
+/** Growth-budget decision categories controlling structural mutation allow, deny, and prune-then-allow paths. */
 export type SparsityBudgetDecision = 'allow' | 'prune-then-allow' | 'deny';
 
-/** Read-only snapshot describing the latest growth-budget decision. */
+/** Read-only snapshot describing the latest growth-budget decision and connection count metrics. */
 export interface NetworkSparsityBudgetSnapshot {
-  /** Effective total-connection cap after grace is applied. */
+  /** Effective total-connection cap after grace is applied */
   allowedConnectionLimit: number;
   /** Total forward-plus-self connection count when the budget check started. */
   connectionCountBeforeDecision: number;
   /** Total forward-plus-self connection count immediately before growth may run. */
   connectionCountBeforeGrowth: number;
-  /** Final decision emitted by the budget helper. */
+  /** Final decision emitted by the budget helper */
   decision: SparsityBudgetDecision;
-  /** Desired total-connection count before the pending growth write. */
+  /** Desired total-connection count before the pending growth write */
   desiredConnectionCountBeforeGrowth: number;
   /** Number of forward or self connections the helper planned to prune. */
   plannedPruneCount: number;
-  /** Projected total-connection count after the pending growth write. */
+  /** Projected total-connection count after the pending growth write */
   projectedConnectionCount: number;
-  /** Remaining total-connection headroom after the decision. */
+  /** Remaining total-connection headroom after the decision */
   remainingHeadroom: number;
-  /** Net total-connection increase requested by the caller. */
+  /** Net total-connection increase requested by the caller */
   requiredAdditionalConnections: number;
   /** Runtime environment whose soft memory target tightened the effective cap. */
   softBudgetEnvironment?: 'browser' | 'node';
@@ -659,131 +691,131 @@ export interface NetworkSparsityBudgetSnapshot {
   softBudgetTriggered: boolean;
 }
 
-/** Internal network properties accessed during sparsity-budget enforcement. */
+/** Internal network properties accessed during sparsity-budget enforcement and last snapshot storage. */
 export interface NetworkSparsityBudgetProps {
-  /** Optional active total-connection growth budget configuration. */
+  /** Optional active total-connection growth budget configuration */
   _sparsityBudgetConfig?: {
-    /** Hard total-connection cap before grace headroom is applied. */
+    /** Hard total-connection cap before grace headroom is applied */
     maxConnections: number;
-    /** Optional proportional total-connection growth headroom. */
+    /** Optional proportional total-connection growth headroom */
     growthGraceFraction: number;
-    /** Pruning heuristic used when space must be freed. */
+    /** Pruning heuristic used when space must be freed */
     method: PruningMethod;
   };
-  /** Last recorded read-only budget decision snapshot. */
+  /** Last recorded read-only budget decision snapshot */
   _lastSparsityBudgetSnapshot?: NetworkSparsityBudgetSnapshot;
 }
 
-/** Internal network properties accessed during pruning operations. */
+/** Internal network properties accessed during pruning operations including scheduled configuration and baseline. */
 export interface NetworkPruningProps {
-  /** Optional active pruning config. */
+  /** Optional active pruning config */
   _pruningConfig?: {
-    /** Start iteration for pruning window. */
+    /** Start iteration for pruning window */
     start: number;
-    /** End iteration for pruning window. */
+    /** End iteration for pruning window */
     end: number;
-    /** Pruning frequency in iterations. */
+    /** Pruning frequency in iterations */
     frequency: number;
-    /** Target sparsity at end of schedule. */
+    /** Target sparsity at end of schedule */
     targetSparsity: number;
-    /** Ranking method for connection removal. */
+    /** Ranking method for connection removal */
     method: PruningMethod;
-    /** Fraction of removed edges to regrow. */
+    /** Fraction of removed edges to regrow */
     regrowFraction: number;
-    /** Last iteration where pruning was performed. */
+    /** Last iteration where pruning was performed */
     lastPruneIter?: number;
   };
-  /** Baseline connection count captured for scheduled pruning. */
+  /** Baseline connection count captured for scheduled pruning */
   _initialConnectionCount?: number;
-  /** Baseline connection count for evolutionary pruning. */
+  /** Baseline connection count for evolutionary pruning */
   _evoInitialConnCount?: number;
-  /** Active random generator. */
+  /** Active random generator */
   _rand: () => number;
-  /** Acyclic mode enforcement flag. */
+  /** Acyclic mode enforcement flag */
   _enforceAcyclic?: boolean;
-  /** Topology dirty marker. */
+  /** Topology dirty marker */
   _topoDirty?: boolean;
 }
 
-/** Context for scheduled-pruning target computation. */
+/** Context for scheduled-pruning target computation providing iteration position and schedule bounds. */
 export interface ScheduledTargetContext {
-  /** Current iteration. */
+  /** Current iteration */
   iteration: number;
-  /** Start of schedule window. */
+  /** Start of schedule window */
   scheduleStart: number;
-  /** End of schedule window. */
+  /** End of schedule window */
   scheduleEnd: number;
-  /** Final target sparsity. */
+  /** Final target sparsity */
   targetSparsity: number;
-  /** Baseline connection count. */
+  /** Baseline connection count */
   baselineConnectionCount: number;
 }
 
-/** Result of scheduled-pruning target computation. */
+/** Result of scheduled-pruning target computation for the number of connections to remove. */
 export interface ScheduledTargetResult {
-  /** Desired number of connections to keep. */
+  /** Desired number of connections to keep */
   desiredRemainingConnections: number;
-  /** Number of connections to prune now. */
+  /** Number of connections to prune now */
   excessConnectionCount: number;
 }
 
-/** Context for selecting prune candidates. */
+/** Context for selecting prune candidate connections by magnitude or SNIP scoring. */
 export interface PruneSelectionContext {
-  /** Candidate connection pool. */
+  /** Candidate connection pool */
   connections: Connection[];
-  /** Requested number of removals. */
+  /** Requested number of removals */
   removalCount: number;
-  /** Ranking method used for selection. */
+  /** Ranking method used for selection */
   method: PruningMethod;
 }
 
-/** Result of prune candidate selection. */
+/** Result of prune candidate selection listing the connections scheduled for removal. */
 export interface PruneSelectionResult {
-  /** Selected connections for removal. */
+  /** Selected connections for removal */
   connectionsToPrune: Connection[];
 }
 
-/** Context for deriving regrowth plan. */
+/** Context for deriving regrowth plan from prune count, fraction, and remaining target. */
 export interface RegrowthPlanContext {
-  /** Number of pruned connections. */
+  /** Number of pruned connections */
   prunedConnectionCount: number;
-  /** Fraction requested for regrowth. */
+  /** Fraction requested for regrowth */
   regrowFraction: number;
-  /** Desired remaining connection count target. */
+  /** Desired remaining connection count target */
   desiredRemainingConnections: number;
 }
 
-/** Derived regrowth execution plan. */
+/** Derived regrowth execution plan specifying the max regrowth attempts and connection target. */
 export interface RegrowthPlan {
-  /** Desired remaining connection count target. */
+  /** Desired remaining connection count target */
   desiredRemainingConnections: number;
-  /** Maximum random regrowth attempts. */
+  /** Maximum random regrowth attempts */
   maxAttempts: number;
 }
 
-/** Context for regrowth execution routine. */
+/** Context for regrowth execution routine specifying target, network, and maximum attempts. */
 export interface RegrowthExecutionContext {
-  /** Target network for regrowth. */
+  /** Target network for regrowth */
   network: Network;
-  /** Desired remaining connection count target. */
+  /** Desired remaining connection count target */
   desiredRemainingConnections: number;
-  /** Maximum random regrowth attempts. */
+  /** Maximum random regrowth attempts */
   maxAttempts: number;
 }
 
-/** Context for evolutionary sparsity target computation. */
+/** Context for evolutionary sparsity target computation during pruning callbacks in evolve. */
 export interface EvolutionaryTargetContext {
-  /** Target sparsity ratio. */
+  /** Target sparsity ratio */
   targetSparsity: number;
-  /** Baseline connection count. */
+  /** Baseline connection count */
   baselineConnectionCount: number;
 }
 
-/** Result of evolutionary sparsity target computation. */
+/** Result of evolutionary sparsity target computation for evolution-driven connection pruning. */
 export interface EvolutionaryTargetResult {
-  /** Desired number of connections to keep. */
+  /** Desired number of connections to keep */
   desiredRemainingConnections: number;
-  /** Number of connections to prune now. */
+  /** Number of connections to prune now */
   excessConnectionCount: number;
 }
 
@@ -794,23 +826,23 @@ export interface EvolutionaryTargetResult {
  * topology without exposing private implementation details in public APIs.
  */
 export interface SerializeNetworkInternals {
-  /** Network node list. */
+  /** Network node list */
   nodes: Node[];
-  /** Directed connection list. */
+  /** Directed connection list */
   connections: Connection[];
-  /** Self-connection list. */
+  /** Self-connection list */
   selfconns: Connection[];
-  /** Gated connection list. */
+  /** Gated connection list */
   gates: Connection[];
-  /** Input count. */
+  /** Input count */
   input: number;
-  /** Output count. */
+  /** Output count */
   output: number;
-  /** Connect API used during reconstruction. */
+  /** Connect API used during reconstruction */
   connect: (from: Node, to: Node, weight: number) => Connection[];
-  /** Gate API used during reconstruction. */
+  /** Gate API used during reconstruction */
   gate: (gater: Node, connection: Connection) => void;
-  /** Optional public topology intent contract. */
+  /** Optional public topology intent contract */
   _topologyIntent?: NetworkTopologyIntent;
 }
 
@@ -820,7 +852,7 @@ export interface SerializeNetworkInternals {
  * Verbose JSON snapshots normalize this value so readers can treat dropout as numeric data.
  */
 export interface NetworkInternalsWithDropout extends SerializeNetworkInternals {
-  /** Optional dropout probability. */
+  /** Optional dropout probability */
   dropout?: number;
 }
 
@@ -830,21 +862,21 @@ export interface NetworkInternalsWithDropout extends SerializeNetworkInternals {
  * These fields are the minimal node state required to round-trip compact and JSON payloads.
  */
 export interface SerializeNodeInternals {
-  /** Node index in network ordering. */
+  /** Node index in network ordering */
   index: number;
-  /** Current activation value. */
+  /** Current activation value */
   activation: number;
-  /** Current recurrent state value. */
+  /** Current recurrent state value */
   state: number;
-  /** Node bias value. */
+  /** Node bias value */
   bias: number;
-  /** Node response multiplier applied before squashing. */
+  /** Node response multiplier applied before squashing */
   response: number;
-  /** Optional stable gene identifier. */
+  /** Optional stable gene identifier */
   geneId?: number;
-  /** Node self-connection holder. */
+  /** Node self-connection holder */
   connections: { self: Connection[] };
-  /** Activation function with exposed name. */
+  /** Activation function with exposed name */
   squash: ((x: number, derivate?: boolean) => number) & { name: string };
 }
 
@@ -855,7 +887,7 @@ export interface SerializeNodeInternals {
  * as implicitly enabled.
  */
 export type ConnectionInternalsWithEnabled = Connection & {
-  /** Optional enabled marker used by some formats. */
+  /** Optional enabled marker used by some formats */
   enabled?: boolean;
 };
 
@@ -867,11 +899,11 @@ export type ConnectionInternalsWithEnabled = Connection & {
  * historical identifiers that survive reindexing.
  */
 export interface ConnectionHistoricalIdentity {
-  /** Stable innovation number for this connection gene. */
+  /** Stable innovation number for this connection gene */
   innovation?: number;
-  /** Stable gene id of the source node. */
+  /** Stable gene id of the source node */
   fromGeneId?: number;
-  /** Stable gene id of the target node. */
+  /** Stable gene id of the target node */
   toGeneId?: number;
   /** Stable gene id of the gater node when one exists. */
   gaterGeneId?: number | null;
@@ -884,15 +916,15 @@ export interface ConnectionHistoricalIdentity {
  * historical fields preserve NEAT identity across clone, export, and restore flows.
  */
 export interface SerializedConnection extends ConnectionHistoricalIdentity {
-  /** Source node index. */
+  /** Source node index */
   from: number;
-  /** Target node index. */
+  /** Target node index */
   to: number;
-  /** Connection weight. */
+  /** Connection weight */
   weight: number;
-  /** Optional gater node index. */
+  /** Optional gater node index */
   gater: number | null;
-  /** Optional explicit enabled state for compact historical payloads. */
+  /** Optional explicit enabled state for compact historical payloads */
   enabled?: boolean;
 }
 
@@ -902,9 +934,9 @@ export interface SerializedConnection extends ConnectionHistoricalIdentity {
  * A run starts at `startIndex` and covers `length` contiguous connection rows.
  */
 export interface CompressedSerializedIndexRun {
-  /** First connection-row index covered by the run. */
+  /** First connection-row index covered by the run */
   startIndex: number;
-  /** Number of contiguous rows covered by the run. */
+  /** Number of contiguous rows covered by the run */
   length: number;
 }
 
@@ -916,13 +948,13 @@ export interface CompressedSerializedIndexRun {
  * Exact positive-zero spans are represented separately as run metadata.
  */
 export interface CompressedSerializedConnectionWeights {
-  /** Stable encoding identifier for exact float64 reconstruction. */
+  /** Stable encoding identifier for exact float64 reconstruction */
   encoding: 'ieee754-f64-int16-delta-v1';
   /** Raw signed 16-bit words for the first encoded non-zero weight. */
   firstWeightWords: number[];
   /** Flattened signed 16-bit word deltas for the remaining encoded non-zero weights. */
   deltaWords: number[];
-  /** Optional exact positive-zero spans aligned to connection order. */
+  /** Optional exact positive-zero spans aligned to connection order */
   zeroWeightRuns?: CompressedSerializedIndexRun[];
 }
 
@@ -933,23 +965,23 @@ export interface CompressedSerializedConnectionWeights {
  * repetition and object allocation overhead from the transport payload.
  */
 export interface CompressedSerializedConnectionBlock {
-  /** Total serialized connection row count. */
+  /** Total serialized connection row count */
   connectionCount: number;
-  /** Source node indices aligned by connection order. */
+  /** Source node indices aligned by connection order */
   fromIndices: number[];
-  /** Target node indices aligned by connection order. */
+  /** Target node indices aligned by connection order */
   toIndices: number[];
-  /** Exact compressed weight payload. */
+  /** Exact compressed weight payload */
   weightWords: CompressedSerializedConnectionWeights;
   /** Optional gater node indices using `-1` as the null sentinel. */
   gaterIndices?: number[];
-  /** Legacy enabled-state vector retained for backward-compatible decode. */
+  /** Legacy enabled-state vector retained for backward-compatible decode */
   enabledStates?: boolean[];
-  /** Optional disabled connection spans aligned to connection order. */
+  /** Optional disabled connection spans aligned to connection order */
   disabledRuns?: CompressedSerializedIndexRun[];
-  /** Optional innovation identifiers aligned by connection order. */
+  /** Optional innovation identifiers aligned by connection order */
   innovationIds?: Array<number | null>;
-  /** Optional non-neutral gain values aligned by connection order. */
+  /** Optional non-neutral gain values aligned by connection order */
   gainValues?: Array<number | null>;
   /** Optional source node gene ids aligned by connection order. */
   fromGeneIds?: Array<number | null>;
@@ -959,12 +991,12 @@ export interface CompressedSerializedConnectionBlock {
   gaterGeneIds?: Array<number | null>;
 }
 
-/** Supported Node-side archive compression codecs for compressed payloads. */
+/** Supported Node-side compression codecs for writing compressed serialized network archive payloads. */
 export type CompressedSerializedNetworkArchiveCompression = 'gzip' | 'zstd';
 
-/** Optional settings for archiving one compressed network payload. */
+/** Optional codec settings for archiving one compressed network payload in binary form. */
 export interface CompressedSerializedNetworkArchiveOptions {
-  /** Compression codec used for the archive wrapper. */
+  /** Compression codec used for the archive wrapper */
   compression?: CompressedSerializedNetworkArchiveCompression;
 }
 
@@ -976,17 +1008,17 @@ export interface CompressedSerializedNetworkArchiveOptions {
  * to reduce UTF-8 payload size for storage or transport.
  */
 export interface CompressedSerializedNetwork {
-  /** Stable format tag for the compressed compact payload. */
+  /** Stable format tag for the compressed compact payload */
   format: 'compact-compressed-v1';
   /** Serialization format version inherited from the verbose JSON payload. */
   formatVersion: number;
-  /** Compressed connection payload. */
+  /** Compressed connection payload */
   connections: CompressedSerializedConnectionBlock;
-  /** Serialized input width. */
+  /** Serialized input width */
   input: number;
-  /** Serialized output width. */
+  /** Serialized output width */
   output: number;
-  /** Serialized dropout value. */
+  /** Serialized dropout value */
   dropout: number;
   /** Verbose JSON node records preserved without compression in Action 1. */
   nodes: NetworkJSONNode[];
@@ -994,7 +1026,7 @@ export interface CompressedSerializedNetwork {
   activations: number[];
   /** Runtime recurrent state values aligned to the serialized node order. */
   states: number[];
-  /** Optional topology intent preserved from the runtime network. */
+  /** Optional topology intent preserved from the runtime network */
   topologyIntent?: NetworkTopologyIntent;
   /** Optional additive extension bag mirrored from the verbose JSON payload. */
   extensions?: NetworkJSONExtensions;
@@ -1010,15 +1042,15 @@ export interface CompressedSerializedNetwork {
  * base64 for portable storage.
  */
 export interface CompressedSerializedNetworkArchive {
-  /** Stable format tag for the archive wrapper. */
+  /** Stable format tag for the archive wrapper */
   format: 'compact-compressed-archive-v1';
-  /** Compression codec used for the base64 payload. */
+  /** Compression codec used for the base64 payload */
   compression: CompressedSerializedNetworkArchiveCompression;
-  /** Wrapped compressed payload format tag. */
+  /** Wrapped compressed payload format tag */
   compressedFormat: CompressedSerializedNetwork['format'];
-  /** String encoding applied to the binary archive payload. */
+  /** String encoding applied to the binary archive payload */
   payloadEncoding: 'base64';
-  /** Base64-encoded compressed JSON payload bytes. */
+  /** Base64-encoded compressed JSON payload bytes */
   payload: string;
 }
 
@@ -1061,17 +1093,17 @@ export type CompactSerializedNetworkTuple = [
  * Node entries are self-describing and intended for readable, versioned snapshots.
  */
 export interface NetworkJSONNode {
-  /** Node type discriminator. */
+  /** Node type discriminator */
   type: string;
-  /** Node bias value. */
+  /** Node bias value */
   bias: number;
   /** Optional non-neutral response multiplier. Missing means the neutral response value `1`. */
   response?: number;
-  /** Squash function name. */
+  /** Squash function name */
   squash: string;
-  /** Node index in topology. */
+  /** Node index in topology */
   index: number;
-  /** Optional stable gene identifier. */
+  /** Optional stable gene identifier */
   geneId?: number;
 }
 
@@ -1081,17 +1113,17 @@ export interface NetworkJSONNode {
  * Includes optional gater and explicit enabled state for portability.
  */
 export interface NetworkJSONConnection extends ConnectionHistoricalIdentity {
-  /** Source node index. */
+  /** Source node index */
   from: number;
-  /** Target node index. */
+  /** Target node index */
   to: number;
-  /** Connection weight. */
+  /** Connection weight */
   weight: number;
   /** Optional non-neutral gain. Missing means the neutral gain value `1`. */
   gain?: number;
-  /** Optional gater node index. */
+  /** Optional gater node index */
   gater: number | null;
-  /** Explicit enabled state. */
+  /** Explicit enabled state */
   enabled: boolean;
 }
 
@@ -1103,9 +1135,9 @@ export interface NetworkJSONConnection extends ConnectionHistoricalIdentity {
  * the network layer to understand each feature-specific field.
  */
 export interface NetworkJSONExtensions {
-  /** Monotonic extension-bag version. */
+  /** Monotonic extension-bag version */
   version: number;
-  /** Plain-object extension payload. */
+  /** Plain-object extension payload */
   values: Record<string, unknown>;
 }
 
@@ -1125,24 +1157,28 @@ export interface NetworkJSONExtensions {
  * };
  * ```
  */
+/**
+ * Verbose JSON payload contract used as the canonical long-lived snapshot for network persistence, migration checkpoints, diagnostics export, and worker/runtime handoff workflows where explicit, inspectable node and connection rows are required.
+ * The schema preserves explicit node and connection rows so payloads remain inspectable, versioned, and safely replayable in educational and production contexts.
+ */
 export interface NetworkJSON {
-  /** Serialization format version. */
+  /** Serialization format version */
   formatVersion: number;
-  /** Input count. */
+  /** Input count */
   input: number;
-  /** Output count. */
+  /** Output count */
   output: number;
-  /** Dropout value. */
+  /** Dropout value */
   dropout: number;
-  /** Optional public topology intent contract. */
+  /** Optional public topology intent contract */
   topologyIntent?: NetworkTopologyIntent;
-  /** Serialized nodes. */
+  /** Serialized nodes */
   nodes: NetworkJSONNode[];
-  /** Serialized connections. */
+  /** Serialized connections */
   connections: NetworkJSONConnection[];
-  /** Optional additive extension bag preserved for higher-level bridges. */
+  /** Optional additive extension bag preserved for higher-level bridges */
   extensions?: NetworkJSONExtensions;
-  /** Optional architecture metadata for diagnostics/UI consumers. */
+  /** Optional architecture metadata for diagnostics/UI consumers */
   architecture?: NetworkArchitectureDescriptor;
 }
 
@@ -1152,21 +1188,21 @@ export interface NetworkJSON {
  * This named-object form replaces tuple index access in internal orchestration code.
  */
 export interface CompactPayloadContext {
-  /** Serialized node activations. */
+  /** Serialized node activations */
   activations: number[];
-  /** Serialized node states. */
+  /** Serialized node states */
   states: number[];
-  /** Serialized squash names. */
+  /** Serialized squash names */
   squashes: string[];
-  /** Serialized connections. */
+  /** Serialized connections */
   connections: SerializedConnection[];
-  /** Serialized input size. */
+  /** Serialized input size */
   serializedInput: number;
-  /** Serialized output size. */
+  /** Serialized output size */
   serializedOutput: number;
   /** Optional stable node gene ids aligned to node order. */
   nodeGeneIds?: Array<number | null>;
-  /** Optional topology intent contract for compact restore. */
+  /** Optional topology intent contract for compact restore */
   topologyIntent?: NetworkTopologyIntent;
 }
 
@@ -1176,9 +1212,9 @@ export interface CompactPayloadContext {
  * Values reflect override-first resolution semantics used during deserialization.
  */
 export interface ResolvedNetworkSizeContext {
-  /** Input count. */
+  /** Input count */
   input: number;
-  /** Output count. */
+  /** Output count */
   output: number;
 }
 
@@ -1194,17 +1230,17 @@ export interface ResolvedNetworkSizeContext {
  * homologous structure is matched by historical markings (innovation ids), not by array indices.
  */
 export interface CompactNodeRebuildContext {
-  /** Activation values. */
+  /** Activation values */
   activations: number[];
-  /** State values. */
+  /** State values */
   states: number[];
-  /** Squash function names. */
+  /** Squash function names */
   squashes: string[];
   /** Optional stable node gene ids aligned to node order. */
   nodeGeneIds?: Array<number | null>;
-  /** Input size. */
+  /** Input size */
   input: number;
-  /** Output size. */
+  /** Output size */
   output: number;
 }
 
@@ -1214,9 +1250,9 @@ export interface CompactNodeRebuildContext {
  * Connection rows are processed independently so malformed entries can be skipped without aborting import.
  */
 export interface CompactConnectionRebuildContext {
-  /** Internal mutable network view. */
+  /** Internal mutable network view */
   networkInternals: SerializeNetworkInternals;
-  /** Serialized connection rows. */
+  /** Serialized connection rows */
   serializedConnections: SerializedConnection[];
 }
 
@@ -1226,9 +1262,9 @@ export interface CompactConnectionRebuildContext {
  * Node entries are rebuilt in order and pushed into mutable runtime internals.
  */
 export interface JsonNodeRebuildContext {
-  /** Internal mutable network view. */
+  /** Internal mutable network view */
   networkInternals: SerializeNetworkInternals;
-  /** JSON node entries. */
+  /** JSON node entries */
   nodeJsonEntries: NetworkJSONNode[];
 }
 
@@ -1238,9 +1274,9 @@ export interface JsonNodeRebuildContext {
  * Connection rows may include optional gater and enabled metadata.
  */
 export interface JsonConnectionRebuildContext {
-  /** Internal mutable network view. */
+  /** Internal mutable network view */
   networkInternals: SerializeNetworkInternals;
-  /** JSON connection entries. */
+  /** JSON connection entries */
   connectionJsonEntries: NetworkJSONConnection[];
 }
 
@@ -1281,13 +1317,13 @@ export type CostFunction = (target: number[], output: number[]) => number;
  * - `layerwise*`: apply the same idea per-layer (useful when layers have very different scales).
  */
 export interface GradientClipConfig {
-  /** Clipping strategy mode. */
+  /** Clipping strategy mode */
   mode?: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
-  /** Maximum norm for norm-based clipping. */
+  /** Maximum norm for norm-based clipping */
   maxNorm?: number;
-  /** Percentile for percentile-based clipping. */
+  /** Percentile for percentile-based clipping */
   percentile?: number;
-  /** Optional bias-handling hint. */
+  /** Optional bias-handling hint */
   separateBias?: boolean;
 }
 
@@ -1299,13 +1335,13 @@ export interface GradientClipConfig {
  * persistent tiny gradients can scale it back up.
  */
 export interface MixedPrecisionDynamicConfig {
-  /** Minimum dynamic loss scale. */
+  /** Minimum dynamic loss scale */
   minScale?: number;
-  /** Maximum dynamic loss scale. */
+  /** Maximum dynamic loss scale */
   maxScale?: number;
-  /** Steps before automatic scale increase. */
+  /** Steps before automatic scale increase */
   increaseEvery?: number;
-  /** Legacy alias for stable-step threshold. */
+  /** Legacy alias for stable-step threshold */
   stableStepsForIncrease?: number;
 }
 
@@ -1316,9 +1352,9 @@ export interface MixedPrecisionDynamicConfig {
  * keeping a stable FP32 master copy of parameters when needed.
  */
 export interface MixedPrecisionConfig {
-  /** Initial loss scale. */
+  /** Initial loss scale */
   lossScale?: number;
-  /** Optional dynamic-scaling options. */
+  /** Optional dynamic-scaling options */
   dynamic?: MixedPrecisionDynamicConfig;
 }
 
@@ -1344,23 +1380,23 @@ export interface MixedPrecisionConfig {
  * - Unspecified fields fall back to sensible defaults per optimizer.
  */
 export interface OptimizerConfigBase {
-  /** Optimizer identifier. */
+  /** Optimizer identifier */
   type: string;
   /** Base optimizer when wrapping (e.g., lookahead). */
   baseType?: string;
-  /** Adam/RMS first-moment coefficient. */
+  /** Adam/RMS first-moment coefficient */
   beta1?: number;
-  /** Adam/RMS second-moment coefficient. */
+  /** Adam/RMS second-moment coefficient */
   beta2?: number;
-  /** Numeric epsilon for stability. */
+  /** Numeric epsilon for stability */
   eps?: number;
-  /** Weight decay factor. */
+  /** Weight decay factor */
   weightDecay?: number;
-  /** Momentum coefficient. */
+  /** Momentum coefficient */
   momentum?: number;
-  /** Lookahead sync interval. */
+  /** Lookahead sync interval */
   la_k?: number;
-  /** Lookahead interpolation factor. */
+  /** Lookahead interpolation factor */
   la_alpha?: number;
 }
 
@@ -1379,19 +1415,19 @@ export type SerializedNetwork = Record<string, unknown>;
  * You can persist these snapshots to disk, upload them, or keep them in-memory.
  */
 export interface CheckpointConfig {
-  /** Save latest state flag. */
+  /** Save latest state flag */
   last?: boolean;
-  /** Save best state flag. */
+  /** Save best state flag */
   best?: boolean;
-  /** Callback invoked with checkpoint payload. */
+  /** Callback invoked with checkpoint payload */
   save: (payload: {
-    /** Checkpoint kind. */
+    /** Checkpoint kind */
     type: 'last' | 'best';
-    /** Iteration number. */
+    /** Iteration number */
     iteration: number;
-    /** Training error at checkpoint time. */
+    /** Training error at checkpoint time */
     error: number;
-    /** Serialized network payload. */
+    /** Serialized network payload */
     network: SerializedNetwork;
   }) => void;
 }
@@ -1403,9 +1439,9 @@ export interface CheckpointConfig {
  * Typical uses include logging, custom learning-rate schedules, or diagnostics.
  */
 export interface ScheduleConfig {
-  /** Callback frequency in iterations. */
+  /** Callback frequency in iterations */
   iterations: number;
-  /** Callback invoked on schedule ticks. */
+  /** Callback invoked on schedule ticks */
   function: (info: { error: number; iteration: number }) => void;
 }
 
@@ -1416,13 +1452,13 @@ export interface ScheduleConfig {
  * It is designed for lightweight telemetry, not heavy data export.
  */
 export type MetricsHook = (m: {
-  /** Iteration number. */
+  /** Iteration number */
   iteration: number;
-  /** Current monitored error. */
+  /** Current monitored error */
   error: number;
-  /** Optional plateau-smoothed error. */
+  /** Optional plateau-smoothed error */
   plateauError?: number;
-  /** Gradient norm after clipping. */
+  /** Gradient norm after clipping */
   gradNorm: number;
 }) => void;
 
@@ -1466,138 +1502,138 @@ export type MovingAverageType =
  * - `earlyStopPatience` adds an additional "stop when no improvement" guard.
  */
 export interface TrainingOptions {
-  /** Max iterations stopping condition. */
+  /** Max iterations stopping condition */
   iterations?: number;
-  /** Target error stopping condition. */
+  /** Target error stopping condition */
   error?: number;
-  /** Learning rate. */
+  /** Learning rate */
   rate?: number;
-  /** SGD momentum. */
+  /** SGD momentum */
   momentum?: number;
-  /** Optimizer selection/config. */
+  /** Optimizer selection/config */
   optimizer?: string | OptimizerConfigBase;
-  /** Dropout probability. */
+  /** Dropout probability */
   dropout?: number;
-  /** Mini-batch size. */
+  /** Mini-batch size */
   batchSize?: number;
-  /** Gradient accumulation steps. */
+  /** Gradient accumulation steps */
   accumulationSteps?: number;
-  /** Reduction strategy for accumulation. */
+  /** Reduction strategy for accumulation */
   accumulationReduction?: 'average' | 'sum';
-  /** Gradient clipping configuration. */
+  /** Gradient clipping configuration */
   gradientClip?: GradientClipConfig;
-  /** Mixed precision toggle/config. */
+  /** Mixed precision toggle/config */
   mixedPrecision?: boolean | MixedPrecisionConfig;
-  /** Cost function selector. */
+  /** Cost function selector */
   cost?: CostFunction | { fn?: CostFunction; calculate?: CostFunction };
-  /** Monitoring moving-average window size. */
+  /** Monitoring moving-average window size */
   movingAverageWindow?: number;
-  /** Monitoring moving-average strategy. */
+  /** Monitoring moving-average strategy */
   movingAverageType?: MovingAverageType;
-  /** EMA alpha override. */
+  /** EMA alpha override */
   emaAlpha?: number;
-  /** Adaptive EMA base alpha hint. */
+  /** Adaptive EMA base alpha hint */
   adaptiveEmaBaseAlpha?: number;
-  /** Trimmed-mean trim ratio. */
+  /** Trimmed-mean trim ratio */
   trimmedRatio?: number;
-  /** Plateau moving-average window size. */
+  /** Plateau moving-average window size */
   plateauMovingAverageWindow?: number;
-  /** Plateau moving-average strategy. */
+  /** Plateau moving-average strategy */
   plateauMovingAverageType?: MovingAverageType;
-  /** Plateau EMA alpha override. */
+  /** Plateau EMA alpha override */
   plateauEmaAlpha?: number;
-  /** Early-stop patience iterations. */
+  /** Early-stop patience iterations */
   earlyStopPatience?: number;
-  /** Early-stop minimum improvement delta. */
+  /** Early-stop minimum improvement delta */
   earlyStopMinDelta?: number;
-  /** Checkpoint configuration. */
+  /** Checkpoint configuration */
   checkpoint?: CheckpointConfig;
-  /** Periodic callback configuration. */
+  /** Periodic callback configuration */
   schedule?: ScheduleConfig;
-  /** Optional metrics callback. */
+  /** Optional metrics callback */
   metricsHook?: MetricsHook;
 }
 
-/** Mutable smoothing state for monitored error. */
+/** Mutable smoothing state for monitored error updated each supervised training iteration. */
 export interface PrimarySmoothingState {
-  /** EMA value. */
+  /** EMA value */
   emaValue?: number;
-  /** Base adaptive EMA value. */
+  /** Base adaptive EMA value */
   adaptiveBaseEmaValue?: number;
-  /** Fast adaptive EMA value. */
+  /** Fast adaptive EMA value */
   adaptiveEmaValue?: number;
 }
 
-/** Mutable smoothing state for plateau metric. */
+/** Mutable smoothing state for plateau error metric tracked during supervised training. */
 export interface PlateauSmoothingState {
-  /** Plateau EMA value. */
+  /** Plateau EMA value */
   plateauEmaValue?: number;
 }
 
-/** Config for monitored smoothing computation. */
+/** Config for monitored error smoothing computation driving early stopping and progress tracking. */
 export interface MonitoredSmoothingConfig {
-  /** Moving-average strategy. */
+  /** Moving-average strategy */
   type: MovingAverageType;
-  /** Window size. */
+  /** Window size */
   window: number;
-  /** Optional EMA alpha override. */
+  /** Optional EMA alpha override */
   emaAlpha?: number;
-  /** Optional trim ratio for trimmed mean. */
+  /** Optional trim ratio for trimmed mean */
   trimmedRatio?: number;
 }
 
-/** Config for plateau smoothing computation. */
+/** Config for plateau error smoothing computation during supervised training progress monitoring. */
 export interface PlateauSmoothingConfig {
-  /** Moving-average strategy. */
+  /** Moving-average strategy */
   type: MovingAverageType;
-  /** Window size. */
+  /** Window size */
   window: number;
-  /** Optional EMA alpha override. */
+  /** Optional EMA alpha override */
   emaAlpha?: number;
 }
 
-/** Runtime connection view used by training internals. */
+/** Runtime connection view used by training internals for delta-weight accumulation and optimizer updates. */
 export interface TrainingConnectionInternals {
-  /** Accumulated delta weight. */
+  /** Accumulated delta weight */
   totalDeltaWeight: number;
-  /** Previous step delta weight. */
+  /** Previous step delta weight */
   previousDeltaWeight: number;
-  /** Current weight value. */
+  /** Current weight value */
   weight: number;
-  /** Source node runtime reference. */
+  /** Source node runtime reference */
   from: unknown;
-  /** Target node runtime reference. */
+  /** Target node runtime reference */
   to: unknown;
-  /** Optional gater runtime reference. */
+  /** Optional gater runtime reference */
   gater: unknown | null;
-  /** Optional FP32 master weight in mixed precision. */
+  /** Optional FP32 master weight in mixed precision */
   _fp32Weight?: number;
 }
 
-/** Runtime node view used by training internals. */
+/** Runtime node view used by training internals for bias delta accumulation and optimizer application. */
 export interface TrainingNodeInternals {
-  /** Node connection groups. */
+  /** Node connection groups */
   connections: {
-    /** Incoming connections. */
+    /** Incoming connections */
     in: TrainingConnectionInternals[];
-    /** Outgoing connections. */
+    /** Outgoing connections */
     out: TrainingConnectionInternals[];
-    /** Self connections. */
+    /** Self connections */
     self: TrainingConnectionInternals[];
-    /** Gated connections. */
+    /** Gated connections */
     gated: TrainingConnectionInternals[];
   };
-  /** Optional FP32 master bias in mixed precision. */
+  /** Optional FP32 master bias in mixed precision */
   _fp32Bias?: number;
-  /** Current bias value. */
+  /** Current bias value */
   bias: number;
-  /** Accumulated delta bias. */
+  /** Accumulated delta bias */
   totalDeltaBias: number;
-  /** Previous step delta bias. */
+  /** Previous step delta bias */
   previousDeltaBias: number;
-  /** Node type discriminator. */
+  /** Node type discriminator */
   type: string;
-  /** Batch optimizer application hook. */
+  /** Batch optimizer application hook */
   applyBatchUpdatesWithOptimizer: (config: {
     type: string;
     baseType?: string;
@@ -1611,7 +1647,7 @@ export interface TrainingNodeInternals {
     la_k?: number;
     la_alpha?: number;
   }) => void;
-  /** Backprop propagation hook. */
+  /** Backprop propagation hook */
   propagate: (
     rate: number,
     momentum: number,
@@ -1621,298 +1657,298 @@ export interface TrainingNodeInternals {
   ) => void;
 }
 
-/** Runtime network view used by training internals. */
+/** Runtime network view used by training internals for optimizer step tracking and mixed-precision state. */
 export interface TrainingNetworkInternals {
-  /** Node collection. */
+  /** Node collection */
   nodes: TrainingNodeInternals[];
-  /** Optional grouped layers. */
+  /** Optional grouped layers */
   layers?: { nodes: TrainingNodeInternals[] }[];
-  /** Mixed-precision status. */
+  /** Mixed-precision status */
   _mixedPrecision: {
-    /** Mixed precision enabled flag. */
+    /** Mixed precision enabled flag */
     enabled: boolean;
-    /** Active loss scale. */
+    /** Active loss scale */
     lossScale: number;
   };
-  /** Forced-overflow test hook. */
+  /** Forced-overflow test hook */
   _forceNextOverflow?: boolean;
-  /** Dynamic mixed-precision counters. */
+  /** Dynamic mixed-precision counters */
   _mixedPrecisionState: {
-    /** Stable step counter. */
+    /** Stable step counter */
     goodSteps: number;
-    /** Overflow step counter. */
+    /** Overflow step counter */
     badSteps: number;
-    /** Minimum loss scale bound. */
+    /** Minimum loss scale bound */
     minLossScale: number;
-    /** Maximum loss scale bound. */
+    /** Maximum loss scale bound */
     maxLossScale: number;
-    /** Optional overflow event count. */
+    /** Optional overflow event count */
     overflowCount?: number;
-    /** Optional underflow event count. */
+    /** Optional underflow event count */
     underflowCount?: number;
-    /** Optional last underflow step index. */
+    /** Optional last underflow step index */
     lastUnderflowStep?: number;
-    /** Optional scale-up event count. */
+    /** Optional scale-up event count */
     scaleUpEvents?: number;
-    /** Optional scale-down event count. */
+    /** Optional scale-down event count */
     scaleDownEvents?: number;
   };
-  /** Scale increase cadence. */
+  /** Scale increase cadence */
   _mpIncreaseEvery?: number;
-  /** Optimizer step counter. */
+  /** Optimizer step counter */
   _optimizerStep: number;
-  /** Last overflow step index. */
+  /** Last overflow step index */
   _lastOverflowStep?: number;
-  /** Micro-batches accumulated for gradients. */
+  /** Micro-batches accumulated for gradients */
   _gradAccumMicroBatches: number;
-  /** Last gradient norm. */
+  /** Last gradient norm */
   _lastGradNorm: number | null;
-  /** Last clip-group count. */
+  /** Last clip-group count */
   _lastGradClipGroupCount?: number;
-  /** Optional global epoch counter. */
+  /** Optional global epoch counter */
   _globalEpoch?: number;
-  /** Best checkpointed error value. */
+  /** Best checkpointed error value */
   _checkpointBestError?: number;
-  /** Last gradient clip configuration. */
+  /** Last gradient clip configuration */
   _currentGradClip?: {
-    /** Clip mode. */
+    /** Clip mode */
     mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
-    /** Max norm threshold. */
+    /** Max norm threshold */
     maxNorm?: number;
-    /** Percentile threshold. */
+    /** Percentile threshold */
     percentile?: number;
   };
-  /** Gradient accumulation reduction mode. */
+  /** Gradient accumulation reduction mode */
   _accumulationReduction?: 'average' | 'sum';
-  /** Separate-bias clipping flag. */
+  /** Separate-bias clipping flag */
   _gradClipSeparateBias?: boolean;
-  /** Activation hook. */
+  /** Activation hook */
   activate: (input: number[], training?: boolean) => number[];
-  /** Optional pruning callback hook. */
+  /** Optional pruning callback hook */
   _maybePrune?: (epoch: number) => void;
 }
 
-/** L1/L2 regularization configuration. */
+/** L1/L2 regularization configuration for applying per-weight decay penalties during backpropagation. */
 export interface RegularizationConfig {
-  /** L1 regularization factor. */
+  /** L1 regularization factor */
   l1?: number;
-  /** L2 regularization factor. */
+  /** L2 regularization factor */
   l2?: number;
 }
 
-/** Cost function object compatibility shape. */
+/** Cost function object compatibility shape bridging legacy and modern cost function interfaces. */
 export interface CostFunctionOrObject {
-  /** Optional cost function entry point. */
+  /** Optional cost function entry point */
   fn?: (target: number[], output: number[]) => number;
-  /** Optional legacy cost function entry point. */
+  /** Optional legacy cost function entry point */
   calculate?: (target: number[], output: number[]) => number;
 }
 
-/** A single supervised training sample used in evolution scoring. */
+/** A single supervised training sample used in network evolution fitness scoring. */
 export interface TrainingSample {
-  /** Input vector. */
+  /** Input vector */
   input: number[];
-  /** Expected output vector. */
+  /** Expected output vector */
   output: number[];
 }
 
-/** Evolve-side cost function signature. */
+/** Evolve-side cost function signature comparing target and output vectors for fitness scoring. */
 export type EvolveCostFunction = (target: number[], output: number[]) => number;
 
-/** Evolve-side serializable cost-function reference. */
+/** Evolve-side serializable cost-function reference accepting either an inline function or a named string. */
 export type CostFunctionOrRef = EvolveCostFunction | { name: string };
 
-/** Internal normalized evolution config. */
+/** Internal normalized evolution config built from user-supplied EvolveOptions for orchestration. */
 export interface EvolutionConfig {
-  /** Error target. */
+  /** Error target */
   targetError: number;
-  /** Complexity growth penalty factor. */
+  /** Complexity growth penalty factor */
   growth: number;
-  /** Cost function selector. */
+  /** Cost function selector */
   cost: CostFunctionOrRef;
-  /** Evaluation repetitions per genome. */
+  /** Evaluation repetitions per genome */
   amount: number;
-  /** Logging frequency. */
+  /** Logging frequency */
   log: number;
-  /** Optional schedule callback config. */
+  /** Optional schedule callback config */
   schedule: {
-    /** Callback frequency. */
+    /** Callback frequency */
     iterations: number;
-    /** Callback function. */
+    /** Callback function */
     function: (stats: {
-      /** Fitness value. */
+      /** Fitness value */
       fitness: number;
-      /** Error value. */
+      /** Error value */
       error: number;
-      /** Iteration value. */
+      /** Iteration value */
       iteration: number;
     }) => void;
   };
-  /** Whether to clear network traces per evaluation. */
+  /** Whether to clear network traces per evaluation */
   clear: boolean;
-  /** Worker thread count. */
+  /** Worker thread count */
   threads: number;
 }
 
-/** Scalar evolution settings used by orchestration. */
+/** Scalar evolution settings extracted from EvolveOptions and used by orchestration helpers. */
 export interface EvolutionSettings {
-  /** Error target. */
+  /** Error target */
   targetError: number;
-  /** Complexity growth penalty factor. */
+  /** Complexity growth penalty factor */
   growth: number;
-  /** Cost function selector. */
+  /** Cost function selector */
   cost: CostFunctionOrRef;
-  /** Evaluation repetitions per genome. */
+  /** Evaluation repetitions per genome */
   amount: number;
-  /** Logging frequency. */
+  /** Logging frequency */
   log: number;
-  /** Optional schedule callback config. */
+  /** Optional schedule callback config */
   schedule: EvolveOptions['schedule'];
-  /** Whether to clear network traces per evaluation. */
+  /** Whether to clear network traces per evaluation */
   clear: boolean;
-  /** Worker thread count. */
+  /** Worker thread count */
   threads: number;
 }
 
-/** Effective evolution stopping conditions. */
+/** Effective evolution stopping conditions extracted from raw evolve options for orchestration use. */
 export interface EvolutionStopConditions {
-  /** Error target. */
+  /** Error target */
   targetError: number;
 }
 
-/** Mutable state tracked during evolution loop. */
+/** Mutable state tracked across iterations during the evolve main loop execution. */
 export interface EvolutionLoopState {
-  /** Current monitored error. */
+  /** Current monitored error */
   currentError: number;
-  /** Current best fitness. */
+  /** Current best fitness */
   bestFitness: number;
-  /** Current best genome. */
+  /** Current best genome */
   bestGenome: Network | undefined;
-  /** Number of consecutive invalid-error iterations. */
+  /** Number of consecutive invalid-error iterations */
   consecutiveInvalidErrorCount: number;
 }
 
-/** Evolve options bag. */
+/** Evolve options bag controlling iteration budget, fitness callback, cost function, and stopping conditions. */
 export interface EvolveOptions extends Record<string, unknown> {
-  /** Target error. */
+  /** Target error */
   error?: number;
-  /** Maximum iterations. */
+  /** Maximum iterations */
   iterations?: number;
-  /** Complexity growth factor. */
+  /** Complexity growth factor */
   growth?: number;
-  /** Cost function selector. */
+  /** Cost function selector */
   cost?: CostFunctionOrRef;
-  /** Evaluation repetitions per genome. */
+  /** Evaluation repetitions per genome */
   amount?: number;
-  /** Logging frequency. */
+  /** Logging frequency */
   log?: number;
-  /** Optional schedule callback config. */
+  /** Optional schedule callback config */
   schedule?: {
-    /** Callback frequency. */
+    /** Callback frequency */
     iterations: number;
-    /** Callback function. */
+    /** Callback function */
     function: (stats: {
-      /** Fitness value. */
+      /** Fitness value */
       fitness: number;
-      /** Error value. */
+      /** Error value */
       error: number;
-      /** Iteration value. */
+      /** Iteration value */
       iteration: number;
     }) => void;
   };
-  /** Whether to clear traces per evaluation. */
+  /** Whether to clear traces per evaluation */
   clear?: boolean;
-  /** Worker thread count. */
+  /** Worker thread count */
   threads?: number;
-  /** Population-level fitness callback flag. */
+  /** Population-level fitness callback flag */
   fitnessPopulation?: boolean;
-  /** Optional seed network. */
+  /** Optional seed network */
   network?: Network;
-  /** Population size alias. */
+  /** Population size alias */
   populationSize?: number;
-  /** Legacy population size alias. */
+  /** Legacy population size alias */
   popsize?: number;
-  /** Enable speciation flag. */
+  /** Enable speciation flag */
   speciation?: boolean;
-  /** Optional worker terminator callback. */
+  /** Optional worker terminator callback */
   _workerTerminators?: () => void;
 }
 
-/** Fitness signature evaluating one genome. */
+/** Fitness signature evaluating one genome and returning a scalar fitness score. */
 export type SingleGenomeFitnessFunction = (genome: Network) => number;
 
-/** Fitness signature evaluating full population asynchronously. */
+/** Fitness signature evaluating the full population asynchronously and storing results in-place. */
 export type PopulationFitnessFunction = (
   population: Network[],
 ) => Promise<void>;
 
-/** Unified evolution fitness callback shape. */
+/** Unified evolution fitness callback shape accepting either a single-genome or population callback. */
 export type EvolutionFitnessFunction =
   | SingleGenomeFitnessFunction
   | PopulationFitnessFunction;
 
-/** Result of fitness-strategy setup. */
+/** Result of fitness-strategy setup describing the resolved callback and worker thread count. */
 export interface FitnessSetup {
-  /** Fitness callback reference. */
+  /** Fitness callback reference */
   fitnessFunction: EvolutionFitnessFunction;
-  /** Worker thread count. */
+  /** Worker thread count */
   threads: number;
 }
 
-/** Shared context for one population worker evaluation run. */
+/** Shared mutable context coordinating one parallel population worker evaluation run. */
 export interface PopulationWorkerEvaluationContext {
-  /** Worker instances. */
+  /** Worker instances */
   workers: TestWorkerInstance[];
-  /** Population list. */
+  /** Population list */
   population: Network[];
-  /** Next genome index pointer. */
+  /** Next genome index pointer */
   nextGenomeIndex: number;
-  /** Active worker count. */
+  /** Active worker count */
   activeWorkerCount: number;
-  /** Complexity growth penalty factor. */
+  /** Complexity growth penalty factor */
   growth: number;
-  /** Completion callback. */
+  /** Completion callback */
   resolve: () => void;
 }
 
-/** Worker-local traversal context. */
+/** Worker-local traversal context pairing one worker instance with its shared evaluation context. */
 export interface WorkerTraversalContext {
-  /** Shared evaluation context. */
+  /** Shared evaluation context */
   evaluationContext: PopulationWorkerEvaluationContext;
-  /** Current worker instance. */
+  /** Current worker instance */
   worker: TestWorkerInstance;
 }
 
-/** Minimal runtime contract consumed from NEAT in evolve utilities. */
+/** Minimal runtime contract consumed from the NEAT controller within evolve orchestration utilities. */
 export interface NeatRuntime {
-  /** Current generation index. */
+  /** Current generation index */
   generation: number;
-  /** Mutable options bag. */
+  /** Mutable options bag */
   options: {
-    /** Mutation rate. */
+    /** Mutation rate */
     mutationRate?: number;
-    /** Mutation amount. */
+    /** Mutation amount */
     mutationAmount?: number;
   };
-  /** Async evolve function. */
+  /** Async evolve function */
   evolve: () => Promise<Network>;
-  /** Optional warning hook. */
+  /** Optional warning hook */
   _warnIfNoBestGenome?: () => void;
 }
 
-/** Runtime properties used during genetic operations. */
+/** Runtime properties projected from Network for genetic operations such as crossover scoring. */
 export interface NetworkGeneticProps {
-  /** Directed connection list. */
+  /** Directed connection list */
   connections: Connection[];
-  /** Node list. */
+  /** Node list */
   nodes: Node[];
-  /** Self-connection list. */
+  /** Self-connection list */
   selfconns: Connection[];
-  /** Gated connection list. */
+  /** Gated connection list */
   gates: Connection[];
-  /** Optional fitness score. */
+  /** Optional fitness score */
   score?: number;
-  /** Optional re-enable probability for disabled genes. */
+  /** Optional re-enable probability for disabled genes */
   _reenableProb?: number;
 }
 
@@ -1926,34 +1962,34 @@ export interface NetworkGeneticProps {
  * the offspring node set is rebuilt.
  */
 export interface ConnectionGene extends ConnectionHistoricalIdentity {
-  /** Weight value. */
+  /** Weight value */
   weight: number;
-  /** Stable innovation number used for historical alignment. */
+  /** Stable innovation number used for historical alignment */
   innovation: number;
-  /** Stable gene id for the source node. */
+  /** Stable gene id for the source node */
   fromGeneId: number;
-  /** Stable gene id for the target node. */
+  /** Stable gene id for the target node */
   toGeneId: number;
   /** Stable gene id for the gater node when one exists. */
   gaterGeneId: number | null;
-  /** Enabled state. */
+  /** Enabled state */
   enabled: boolean;
 }
 
-/** Extended connection shape used during genetic crossover. */
+/** Extended connection shape carrying the enabled state used during NEAT genetic crossover. */
 export interface ConnectionGeneticProps {
-  /** Optional enabled state. */
+  /** Optional enabled state */
   enabled?: boolean;
 }
 
-/** Runtime network shape used by crossover internals. */
+/** Runtime network shape intersecting Network with genetic properties for crossover helper access. */
 export type GeneticNetwork = Network & NetworkGeneticProps;
 
-/** Immutable context for offspring materialization. */
+/** Immutable context for NEAT offspring materialization during gene-aligned crossover reconstruction. */
 export interface OffspringMaterializationContext {
-  /** Mutable offspring reference. */
+  /** Mutable offspring reference */
   offspring: GeneticNetwork;
-  /** Public topology intent guiding recurrent/self-gene pruning. */
+  /** Public topology intent guiding recurrent/self-gene pruning */
   topologyIntent: NetworkTopologyIntent;
   /** Gene-id lookup for resolving inherited endpoints after node reindexing. */
   offspringNodesByGeneId: Map<number, Node>;
@@ -1963,272 +1999,272 @@ export interface OffspringMaterializationContext {
   sourceNodeInterfaceOrdinalsByGeneId: Map<number, number>;
 }
 
-/** Traversal context for one connection gene. */
+/** Traversal context for one connection gene during crossover offspring gene-aligned materialization. */
 export interface GeneTraversalContext {
-  /** Shared materialization context. */
+  /** Shared materialization context */
   materializationContext: OffspringMaterializationContext;
-  /** Current connection gene. */
+  /** Current connection gene */
   connectionGene: ConnectionGene;
 }
 
-/** Endpoints for one gene traversal step. */
+/** Resolved endpoint pair for one gene traversal step during crossover offspring materialization. */
 export interface GeneEndpointsContext {
-  /** Gene traversal context. */
+  /** Gene traversal context */
   traversalContext: GeneTraversalContext;
-  /** Resolved source node. */
+  /** Resolved source node */
   fromNode: Node;
-  /** Resolved target node. */
+  /** Resolved target node */
   toNode: Node;
 }
 
-/** Immutable context for selecting inherited genes. */
+/** Immutable context for selecting inherited genes during NEAT crossover gene alignment. */
 export interface ConnectionGeneSelectionContext {
-  /** Parent 1 runtime view. */
+  /** Parent 1 runtime view */
   parent1: GeneticNetwork;
-  /** Parent 2 runtime view. */
+  /** Parent 2 runtime view */
   parent2: GeneticNetwork;
-  /** Parent metrics summary. */
+  /** Parent metrics summary */
   parentMetrics: ParentMetrics;
-  /** Equal-treatment mode flag. */
+  /** Equal-treatment mode flag */
   equal: boolean;
-  /** Random generator. */
+  /** Random generator */
   randomGenerator: () => number;
-  /** Parent 1 gene map by innovation id. */
+  /** Parent 1 gene map by innovation id */
   parent1Genes: Record<string, ConnectionGene>;
-  /** Parent 2 gene map by innovation id. */
+  /** Parent 2 gene map by innovation id */
   parent2Genes: Record<string, ConnectionGene>;
 }
 
-/** Traversal state for parent-1 innovation walk. */
+/** Traversal state for one parent-1 innovation during the NEAT crossover gene walk. */
 export interface Parent1GeneTraversalContext {
-  /** Selection context. */
+  /** Selection context */
   selectionContext: ConnectionGeneSelectionContext;
-  /** Innovation identifier. */
+  /** Innovation identifier */
   innovationId: string;
-  /** Parent-1 gene entry. */
+  /** Parent-1 gene entry */
   parent1Gene: ConnectionGene;
-  /** Optional parent-2 matching gene. */
+  /** Optional parent-2 matching gene */
   parent2Gene: ConnectionGene | undefined;
 }
 
-/** Fold result for parent-1 traversal selection. */
+/** Fold result from parent-1 traversal selection during NEAT crossover gene alignment. */
 export interface Parent1TraversalSelectionResult {
-  /** Chosen genes in traversal order. */
+  /** Chosen genes in traversal order */
   selectedGenes: ConnectionGene[];
-  /** Parent-2 innovation ids consumed during overlap handling. */
+  /** Parent-2 innovation ids consumed during overlap handling */
   consumedParent2InnovationIds: string[];
 }
 
-/** Immutable baseline context for one crossover run. */
+/** Immutable baseline context for one NEAT crossover run assembling parents and offspring references. */
 export interface CrossoverContext {
-  /** Parent network 1. */
+  /** Parent network 1 */
   parentNetwork1: Network;
-  /** Parent network 2. */
+  /** Parent network 2 */
   parentNetwork2: Network;
-  /** Equal-treatment mode flag. */
+  /** Equal-treatment mode flag */
   equal: boolean;
-  /** Parent 1 runtime view. */
+  /** Parent 1 runtime view */
   parent1: GeneticNetwork;
-  /** Parent 2 runtime view. */
+  /** Parent 2 runtime view */
   parent2: GeneticNetwork;
-  /** Offspring runtime view. */
+  /** Offspring runtime view */
   offspring: GeneticNetwork;
-  /** Parent metrics summary. */
+  /** Parent metrics summary */
   parentMetrics: ParentMetrics;
-  /** Random generator. */
+  /** Random generator */
   randomGenerator: () => number;
 }
 
-/** Node-build context derived from crossover baseline. */
+/** Node-build context derived from crossover baseline used during offspring node pool construction. */
 export interface CrossoverNodeBuildContext {
-  /** Crossover baseline context. */
+  /** Crossover baseline context */
   crossoverContext: CrossoverContext;
-  /** Chosen offspring node count. */
+  /** Chosen offspring node count */
   offspringNodeCount: number;
 }
 
-/** Compact parent metrics summary. */
+/** Compact parent metrics summary comparing fitness scores and node counts across both parents. */
 export interface ParentMetrics {
-  /** Parent-1 score. */
+  /** Parent-1 score */
   score1: number;
-  /** Parent-2 score. */
+  /** Parent-2 score */
   score2: number;
-  /** Parent-1 node count. */
+  /** Parent-1 node count */
   nodeCount1: number;
-  /** Parent-2 node count. */
+  /** Parent-2 node count */
   nodeCount2: number;
-  /** Shared output size. */
+  /** Shared output size */
   outputSize: number;
 }
 
-/** Constructor signature for runtime Network import. */
+/** Constructor signature for runtime Network import used during crossover offspring instantiation. */
 export interface NetworkConstructor {
-  /** Construct a network with input/output dimensions. */
+  /** Construct a network with input/output dimensions */
   new (input: number, output: number): Network;
 }
 
-/** Mutation method descriptor shape. */
+/** Mutation method descriptor shape used across all mutation strategy dispatch and planning logic. */
 export type MutationMethod =
   | string
   | {
-      /** Optional method name. */
+      /** Optional method name */
       name?: string;
-      /** Optional method type. */
+      /** Optional method type */
       type?: string;
-      /** Optional method identity token. */
+      /** Optional method identity token */
       identity?: string;
-      /** Optional max value override. */
+      /** Optional max value override */
       max?: number;
-      /** Optional min value override. */
+      /** Optional min value override */
       min?: number;
-      /** Optional mutate-output flag. */
+      /** Optional mutate-output flag */
       mutateOutput?: boolean;
-      /** Additional method-specific fields. */
+      /** Additional method-specific fields */
       [key: string]: unknown;
     };
 
-/** Object-only form of mutation method descriptor. */
+/** Object-only form of the mutation method descriptor excluding string-shorthand aliases. */
 export type MutationMethodObject = Exclude<MutationMethod, string>;
 
-/** Internal network properties accessed during mutations. */
+/** Internal network properties accessed by mutation helpers for topology enforcement and dirty flags. */
 export interface NetworkMutationProps {
-  /** Acyclic mode enforcement flag. */
+  /** Acyclic mode enforcement flag */
   _enforceAcyclic?: boolean;
-  /** Topology dirty marker. */
+  /** Topology dirty marker */
   _topoDirty?: boolean;
-  /** Optional deterministic-chain cache. */
+  /** Optional deterministic-chain cache */
   _detChain?: Node[];
-  /** Active random function. */
+  /** Active random function */
   _rand: () => number;
-  /** Node-index dirty marker. */
+  /** Node-index dirty marker */
   _nodeIndexDirty?: boolean;
-  /** Preferred chain edge cache. */
+  /** Preferred chain edge cache */
   _preferredChainEdge?: unknown;
 }
 
-/** Mutation handler function contract. */
+/** Mutation handler function contract binding a network method to apply one mutation type. */
 export interface MutationHandler {
-  /** Apply one mutation method to bound network. */
+  /** Apply one mutation method to bound network */
   (this: Network, method?: MutationMethod): void;
 }
 
-/** Immutable context for forward candidate traversal. */
+/** Immutable context for forward candidate connection traversal in acyclic mutation helpers. */
 export interface ForwardCandidateTraversalContext {
-  /** Target network. */
+  /** Target network */
   network: Network;
-  /** Source index. */
+  /** Source index */
   sourceNodeIndex: number;
-  /** Source node. */
+  /** Source node */
   sourceNode: Node;
-  /** Target traversal start index. */
+  /** Target traversal start index */
   targetStartIndex: number;
 }
 
-/** Immutable context for backward candidate traversal. */
+/** Immutable context for backward candidate traversal in recurrent connection mutation helpers. */
 export interface BackwardCandidateTraversalContext {
-  /** Target network. */
+  /** Target network */
   network: Network;
-  /** Later node index. */
+  /** Later node index */
   laterNodeIndex: number;
-  /** Later node reference. */
+  /** Later node reference */
   laterNode: Node;
 }
 
-/** Indexed context for directional connection metadata. */
+/** Indexed context for directional connection metadata used during acyclic mutation candidate checks. */
 export interface DirectionalConnectionContext {
-  /** Target network. */
+  /** Target network */
   network: Network;
-  /** Candidate connection. */
+  /** Candidate connection */
   candidateConnection: Connection;
-  /** Source node index. */
+  /** Source node index */
   fromNodeIndex: number;
-  /** Target node index. */
+  /** Target node index */
   toNodeIndex: number;
 }
 
-/** Required endpoint pair for input/output edge seeding. */
+/** Required input and output endpoint pair used when seeding initial feed-forward edge connections. */
 export interface InputOutputEndpoints {
-  /** Input anchor node. */
+  /** Input anchor node */
   inputNode: Node;
-  /** Output anchor node. */
+  /** Output anchor node */
   outputNode: Node;
 }
 
-/** Result of replacing a connection with split hidden node. */
+/** Result of replacing a connection with a newly inserted split hidden node. */
 export interface ConnectionSplitResult {
-  /** Inserted hidden node. */
+  /** Inserted hidden node */
   hiddenNode: Node;
-  /** Previous gater assigned to original edge. */
+  /** Previous gater assigned to original edge */
   previousGater: Connection['gater'];
-  /** New source-to-hidden edge. */
+  /** New source-to-hidden edge */
   sourceToHiddenConnection: Connection | undefined;
-  /** New hidden-to-target edge. */
+  /** New hidden-to-target edge */
   hiddenToTargetConnection: Connection | undefined;
 }
 
-/** Minimal recurrent-layer shape used by mutation expanders. */
+/** Minimal recurrent-layer shape consumed by mutation expanders when adding recurrent hidden nodes. */
 export interface RecurrentLayerShape {
-  /** Layer nodes. */
+  /** Layer nodes */
   nodes: Node[];
-  /** Output node wrapper. */
+  /** Output node wrapper */
   output: { nodes: Node[] };
 }
 
-/** Context for deterministic-chain add-node mutation. */
+/** Context for deterministic-chain add-node mutation targeting a terminal connection for splitting. */
 export interface DeterministicChainMutationContext {
-  /** Deterministic chain snapshot. */
+  /** Deterministic chain snapshot */
   deterministicChain: Node[];
-  /** Output node in chain terminal path. */
+  /** Output node in chain terminal path */
   outputNode: Node;
-  /** Terminal connection used for split. */
+  /** Terminal connection used for split */
   terminalConnection: Connection;
 }
 
-/** Selected distinct node pair for swap mutation. */
+/** Selected distinct node pair returned when sampling two different nodes for swap mutation. */
 export interface DistinctNodePair {
-  /** First sampled node. */
+  /** First sampled node */
   firstNode: Node;
-  /** Second sampled node. */
+  /** Second sampled node */
   secondNode: Node;
 }
 
-/** Context for target-layer peer traversal. */
+/** Context for target-layer peer traversal when seeding feed-forward connection candidates. */
 export interface TargetLayerPeerContext {
-  /** Target node type discriminator. */
+  /** Target node type discriminator */
   targetNodeType: Node['type'];
-  /** Target node index. */
+  /** Target node index */
   targetIndex: number;
-  /** Max peer distance. */
+  /** Max peer distance */
   maxDistance: number;
 }
 
-/** Context for source-to-peer connection counting. */
+/** Context for source-to-peer connection counting during feed-forward mutation candidate selection. */
 export interface SourcePeerConnectionCountContext {
-  /** Source node reference. */
+  /** Source node reference */
   sourceNode: Node;
-  /** Candidate target peers. */
+  /** Candidate target peers */
   targetLayerPeers: Node[];
 }
 
-/** Context for sampling one random weight value. */
+/** Context for sampling one random weight value within a configurable minimum and maximum range. */
 export interface WeightSamplingRangeContext {
-  /** Random function. */
+  /** Random function */
   randomValue: () => number;
-  /** Minimum sampled value. */
+  /** Minimum sampled value */
   minValue: number;
-  /** Maximum sampled value. */
+  /** Maximum sampled value */
   maxValue: number;
 }
 
-/** Context for reinitializing connection group weights. */
+/** Context for reinitializing a connection group's weights during mutation weight resetting. */
 export interface ConnectionGroupReinitContext {
-  /** Random function. */
+  /** Random function */
   randomValue: () => number;
-  /** Minimum sampled value. */
+  /** Minimum sampled value */
   minWeight: number;
-  /** Maximum sampled value. */
+  /** Maximum sampled value */
   maxWeight: number;
 }
 
-/** Canonical source-target node pair tuple. */
+/** Canonical ordered source-target node pair tuple used in connection candidate selection. */
 export type NodePair = [Node, Node];

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when a network is constructed without the required input or output sizes.
  */
 export class NetworkConstructorDimensionRequiredError extends Error {

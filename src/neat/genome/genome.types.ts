@@ -1,15 +1,15 @@
-import type {
+﻿import type {
   NetworkArchitectureDescriptor,
   NetworkTopologyIntent,
 } from '../../architecture/network/network.types';
 
 /**
- * Canonical node-role literals supported by the first-pass NEAT genome boundary.
+ * Canonical node-role literals supported by the first-pass NEAT genome boundary for input, hidden, and output nodes.
  */
 export type NeatGenomeNodeType = 'input' | 'hidden' | 'output';
 
 /**
- * Supported recurrent-module kinds tracked by the Step 7.4 extension lane.
+ * Supported recurrent-module family identifiers tracked by the Step 7.4 temporal extension lane for LSTM, GRU, and NARX.
  */
 export type NeatGenomeRecurrentModuleKind = 'lstm' | 'gru' | 'narx-memory';
 
@@ -53,7 +53,7 @@ export interface NeatGenomeGatedBlockDescriptor {
 }
 
 /**
- * Typed extension payload reserved for additive beyond-paper genome traits.
+ * Typed extension payload reserved for additive beyond-paper genome traits that augment canonical genes without widening the base connection or node contracts.
  */
 export interface NeatGenomeExtensionValues extends Record<string, unknown> {
   /**
@@ -105,7 +105,7 @@ export interface NeatGenomeExtensions {
 }
 
 /**
- * Opt-in capture settings used when projecting runtime payloads into the
+ * Opt-in capture settings used when projecting runtime payloads into the.
  * strict genome contract.
  */
 export interface NeatGenomeCaptureOptions {
@@ -136,7 +136,7 @@ export interface NeatGenomeNodeGene {
 }
 
 /**
- * Pure connection-gene contract owned by the NEAT subtree.
+ * Pure structural connection-gene contract owned by the NEAT genome subtree, carrying innovation identity, endpoint gene ids, weight, enabled state, and optional gater.
  */
 export interface NeatGenomeConnectionGene {
   /** Stable historical connection identity. */
@@ -191,7 +191,7 @@ export interface GenomeMaterializationRuntimeHints {
 }
 
 /**
- * Stable issue codes reported by the pure genome validator.
+ * Stable machine-readable issue codes produced by the pure genome validator for each detected structural violation.
  */
 export type NeatGenomeValidationIssueCode =
   | 'invalid-input-count'
@@ -218,7 +218,7 @@ export type NeatGenomeValidationIssueCode =
   | 'invalid-extensions-bag';
 
 /**
- * One finding produced by the pure genome validator.
+ * One structured finding produced by the pure genome validator carrying a stable code, path, and human-readable message.
  */
 export interface NeatGenomeValidationIssue {
   /** Stable machine-readable issue code. */
@@ -232,7 +232,7 @@ export interface NeatGenomeValidationIssue {
 }
 
 /**
- * Validation report for one strict genome contract.
+ * Complete validation report returned for one strict genome contract containing all structural findings and summary counts.
  */
 export interface NeatGenomeValidationReport {
   /** Whether the strict genome contract passed all checks. */

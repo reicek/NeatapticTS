@@ -1,0 +1,34 @@
+{
+  "metricVersion": 1,
+  "scannerVersion": "1.0.0",
+  "gitCommit": "6d5494c144221a8f02a7f5cfebfdfdf06e85b862",
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "thresholdConfig": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeConfig": {
+    "scopeType": "src",
+    "scopeValue": [
+      "src"
+    ],
+    "scopeDigest": "d6ca942726b8a69d898c20c8b28d26532e08eca8c3226322463b5f2df41ef4e8"
+  },
+  "sourcePathsDigest": "8a5ddc82a12b33bd1f871e54d98212e1e63dc8150e183c40b0c2d6086f41cd8c",
+  "issueBreakdown": {
+    "missingJsdoc": 18,
+    "weakJsdoc": 80,
+    "highComplexity": 74
+  },
+  "weakCount": 80,
+  "normalizedEvidenceDigest": "45063e28d54cc0b716f8afc60c5d8af7c22b12f85876f433bbbb07ae62525924",
+  "threshold": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeType": "src",
+  "scopeDigest": "8a5ddc82a12b33bd1f871e54d98212e1e63dc8150e183c40b0c2d6086f41cd8c",
+  "summaryPath": "artifacts/docs-quality/runs/post-tranche-202605251134/summary.json",
+  "evidencePath": "artifacts/docs-quality/runs/post-tranche-202605251134/evidence.json",
+  "manifestPath": "artifacts/docs-quality/runs/post-tranche-202605251134/manifest.json"
+}

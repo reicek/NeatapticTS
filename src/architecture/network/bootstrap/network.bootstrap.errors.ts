@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when constructor topology intent conflicts with legacy acyclic flags.
  */
 export class NetworkBootstrapTopologyIntentConflictError extends Error {

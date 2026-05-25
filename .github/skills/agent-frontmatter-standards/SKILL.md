@@ -8,25 +8,53 @@ disable-model-invocation: false
 
 # Agent Frontmatter Standards
 
-Use this skill when a task changes `.github/agents/*.agent.md`.
+This skill governs the design and validation of YAML frontmatter in `.github/agents/*.agent.md` files. It ensures that every agent in the NeatapticTS customization system carries correct visibility flags, bounded delegation, valid model strings, and passes automated frontmatter and graph validation scripts.
 
-## Workflow
+## When to Use
 
-1. Read the active customization tracker when one is open; otherwise keep edits scoped to the requested customization surface.
-2. Keep exactly eight user-facing SDLC orchestrators as the final target: `00-helping`, `01-planning`, `02-researching`, `03-red-testing`, `04-implementing`, `05-green-testing`, `06-documenting`, and `07-logging`.
-3. Hide specialists with `user-invocable: false` while keeping them callable by listed parent agents.
-4. Use explicit `agents: [...]` allow-lists on phase agents; avoid unrestricted delegation.
-5. Use qualified model strings or fallback arrays validated by `model-routing-and-budget`.
-6. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` after edits.
-7. Run strict validation only when the eight-agent SDLC surface is expected to be ready.
+- Creating a new `.agent.md` file and need to establish correct initial frontmatter.
+- Editing tools, `agents` allow-lists, model strings, or handoff fields in an existing agent.
+- Diagnosing why a customization change appears to have no effect (silent loading failure).
+- Reviewing whether the eight SDLC orchestrators (`00-helping` through `07-logging`) are correctly surfaced as `user-invocable: true`.
+- Auditing hidden specialists to confirm they carry `user-invocable: false` and bounded `agents: []`.
+- Preparing validation evidence before or after a customization batch.
 
-## Gotchas
+## Task Packet
 
-- YAML frontmatter failures can be silent. Prefer single-line quoted descriptions and explicit booleans.
-- `agents: []` means no subagents. Omitted `agents` can allow broader delegation in VS Code.
-- Do not copy durable workflow policy into agent bodies; put it in skills and have the agent invoke the skill.
+Include the agent filename, the specific frontmatter fields being changed, whether this is a user-facing orchestrator or hidden specialist, intended subagent allow-list, and which validation mode to use (normal vs. `--strict`).
 
-## Sources
+```text
+Use agent-frontmatter-standards for <agent-name>.agent.md.
+Fields: <e.g. model, agents, user-invocable>
+Visibility: <user-facing orchestrator | hidden specialist>
+Subagents: <explicit list or none>
+Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs --json
+```
 
-- VS Code custom agents documentation defines `.agent.md` fields such as `model`, `agents`, `handoffs`, `user-invocable`, and `disable-model-invocation`.
-- The archived meta-workflow tracker records the baseline architecture; active customization work should follow the current eight-orchestrator surface in this skill.
+## Required Workflow
+
+1. Read the active customization tracker if one is open; otherwise scope edits only to the requested agent file.
+2. Confirm the eight user-facing SDLC orchestrators are the target surface: `00-helping`, `01-planning`, `02-researching`, `03-red-testing`, `04-implementing`, `05-green-testing`, `06-documenting`, `07-logging`.
+3. Set `user-invocable: false` on every hidden specialist or auxiliary agent; set `true` only for the eight orchestrators.
+4. Use an explicit `agents: [...]` allow-list on phase agents; never omit `agents` where broader delegation is not intended.
+5. Include `agent` in the `tools` list whenever `agents` is non-empty.
+6. Use qualified model strings (e.g. `claude-opus-4-5`) or validated fallback arrays; prefer the form documented in `model-routing-and-budget`.
+7. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` after every edit.
+8. Run with `--strict` only when the full eight-agent SDLC surface is expected to be complete and correct.
+9. Record validation output in the active plan or tracker as evidence.
+
+## Guardrails
+
+- Do not copy durable workflow policy into agent body text; put procedure in skills and have the agent invoke the skill by name.
+- Do not use `agents: '*'` or omit `agents` on orchestrators that should have bounded delegation.
+- Do not use unqualified or invented model strings; always use strings validated by the model-routing-and-budget skill.
+- Do not run `--strict` validation during a migration that has not yet reached the eight-agent target state.
+- YAML frontmatter parse failures are silent in VS Code; always prefer single-line quoted descriptions and explicit boolean values.
+- Do not grant a hidden specialist `user-invocable: true` without explicit intent and user approval.
+
+## Expected Final Output
+
+- The target `.agent.md` file has correct, validated frontmatter with explicit `user-invocable`, `disable-model-invocation`, `agents`, and `model` fields.
+- `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` exits cleanly with no errors.
+- If the eight-orchestrator surface is complete, `--strict` also passes.
+- Validation output is recorded in the active plan or chat summary.

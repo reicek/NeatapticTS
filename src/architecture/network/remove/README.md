@@ -451,7 +451,7 @@ createValidatedNodeRemovalContext(
 ): NodeRemovalContext
 ```
 
-Creates validated immutable context for a node-removal operation.
+Create a validated immutable context object for one node-removal operation.
 
 Parameters:
 - `network` - Target network.

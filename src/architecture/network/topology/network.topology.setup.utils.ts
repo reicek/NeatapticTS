@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   ActivationSchedule,
   ActivationSchedulingDiagnostics,
   ActivationScheduleStep,
@@ -29,7 +29,8 @@ export function asTopologyProps(
 }
 
 /**
- * Determine whether recurrent scheduling should be used.
+ * Determine whether recurrent scheduling should be used based on topology enforcement flags stored on internal runtime props.
+ * This gate decides whether Kahn-style acyclic ordering or recurrent schedule compilation is executed.
  *
  * @param internalTopologyProps Internal topology props view.
  * @returns True when acyclic mode is disabled.
@@ -63,7 +64,8 @@ export function finalizeRecurrentSchedule(
 }
 
 /**
- * Clear cached topological order state.
+ * Clear cached topological order state and reset compiled scheduling diagnostics when topology changes invalidate previous results.
+ * This keeps later activation passes from reusing stale ordering data.
  *
  * @param internalTopologyProps Internal topology props view.
  * @returns Void.
@@ -78,7 +80,8 @@ export function clearCachedTopoOrder(
 }
 
 /**
- * Create mutable build context for Kahn traversal.
+ * Create mutable build context for Kahn traversal so in-degree maps, queues, and output buffers share one typed state object.
+ * Centralizing this context keeps scheduling helpers composable and deterministic.
  *
  * @param network Network instance.
  * @param internalTopologyProps Internal topology props view.
@@ -99,7 +102,8 @@ export function createTopologyBuildContext(
 }
 
 /**
- * Initialize all nodes with zero in-degree.
+ * Initialize all nodes with zero in-degree before incoming-edge counting populates the mutable Kahn traversal state.
+ * This explicit reset prevents stale counts when contexts are reused across rebuilds.
  *
  * @param buildContext Mutable build context.
  * @returns Void.
@@ -113,7 +117,8 @@ export function initializeAllNodeInDegreeCounts(
 }
 
 /**
- * Apply in-degree increments from non-self connections.
+ * Apply in-degree increments from non-self connections so topological scheduling reflects only true inter-node dependencies.
+ * Self loops are excluded because they do not participate in feed-forward ordering.
  *
  * @param buildContext Mutable build context.
  * @returns Void.

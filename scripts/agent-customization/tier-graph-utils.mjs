@@ -1,3 +1,21 @@
+/**
+ * @module tier-graph-utils
+ *
+ * Tier-graph model and validation helpers for the NeatapticTS agent-customization system.
+ *
+ * Defines the five-tier delegation hierarchy (Tier 0 = default VS Code agent,
+ * Tiers 1–4 = custom agents), enforces agent tier assignments and
+ * `user-invocable` flag rules, validates delegation-direction constraints,
+ * detects delegation cycles, and produces the structured inventory reports
+ * consumed by `tier-inventory.mjs`, `validate-agent-graph.mjs`, and the
+ * Tier Enforcement Gate.
+ *
+ * Allowed delegation directions:
+ * - Tier 1 → Tier 2, 3, or 4
+ * - Tier 2 → Tier 3 or 4
+ * - Tier 3 → Tier 4 only
+ * - Tier 4 → no delegation (auxiliaries are leaf nodes)
+ */
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -8,8 +26,10 @@ import {
   summarizeIssues,
 } from './customization-utils.mjs';
 
+/** Repo-relative path to the folder containing all `.agent.md` definition files. */
 export const AGENT_DIRECTORY = '.github/agents';
 
+/** Human-readable display names for each delegation tier (1–4). */
 export const TIER_LABELS = Object.freeze({
   1: 'Numbered SDLC Orchestrators',
   2: 'Named coordinators / sub-orchestrators',
@@ -17,6 +37,10 @@ export const TIER_LABELS = Object.freeze({
   4: 'Auxiliaries and one-shot helpers',
 });
 
+/**
+ * Canonical names of the eight numbered SDLC orchestrators (Tier 1).
+ * These are the only agents permitted to set `user-invocable: true`.
+ */
 export const TIER_1_AGENT_NAMES = new Set([
   '00-helping',
   '01-planning',
@@ -28,6 +52,10 @@ export const TIER_1_AGENT_NAMES = new Set([
   '07-logging',
 ]);
 
+/**
+ * Canonical names of named coordinators and sub-orchestrators (Tier 2).
+ * Must set `user-invocable: false` and may only delegate to Tiers 3 or 4.
+ */
 export const TIER_2_AGENT_NAMES = new Set([
   'planning-context-coordinator',
   'planning-risk-coordinator',
@@ -41,6 +69,10 @@ export const TIER_2_AGENT_NAMES = new Set([
   'flappy-architecture-polish',
 ]);
 
+/**
+ * Canonical names of auxiliary / one-shot helper agents (Tier 4).
+ * Must set `user-invocable: false` and may not delegate to any other agent.
+ */
 export const TIER_4_AGENT_NAMES = new Set([
   'acceptance-criteria-writer',
   'docs-example-writer',
@@ -48,6 +80,18 @@ export const TIER_4_AGENT_NAMES = new Set([
   'file-change-summarizer',
 ]);
 
+/**
+ * Collects the full tier inventory from `.agent.md` files and validates every
+ * agent's tier assignment, `user-invocable` flag, and delegation edges.
+ *
+ * Detected violations include: missing/invalid `tier` field, tier-assignment
+ * mismatch, wrong `user-invocable` value, unknown subagent names,
+ * forbidden delegation directions, and delegation cycles.
+ *
+ * @param options - Optional configuration.
+ * @param options.workspaceRoot - Absolute path to the repository root; defaults to `process.cwd()`.
+ * @returns Structured report with `agents`, `violations`, and `summary` counts.
+ */
 export async function collectTierInventory({ workspaceRoot = process.cwd() } = {}) {
   const collectedAgents = await collectAgents({ workspaceRoot });
   const issues = [];
@@ -106,6 +150,17 @@ export async function collectTierInventory({ workspaceRoot = process.cwd() } = {
   };
 }
 
+/**
+ * Runs the full agent-graph validation and returns a structured report
+ * suitable for JSON output or a human-readable summary.
+ *
+ * Delegates to {@link collectTierInventory} and reshapes the result into
+ * the flat `graph` array format expected by `validate-agent-graph.mjs`.
+ *
+ * @param options - Optional configuration.
+ * @param options.workspaceRoot - Absolute path to the repository root; defaults to `process.cwd()`.
+ * @returns Validation report with `ok`, `graph`, `inventory`, and the raw violation list.
+ */
 export async function runValidateAgentGraph({ workspaceRoot = process.cwd() } = {}) {
   const inventory = await collectTierInventory({ workspaceRoot });
 
@@ -127,6 +182,13 @@ export async function runValidateAgentGraph({ workspaceRoot = process.cwd() } = 
   };
 }
 
+/**
+ * Resolves the canonical tier for a given agent name based on the three
+ * fixed allow-lists (Tier 1, 2, 4) and defaults to Tier 3 for all others.
+ *
+ * @param agentName - Agent filename stem (without the `.agent.md` extension).
+ * @returns Expected tier number in the range 1–4.
+ */
 export function resolveExpectedTier(agentName) {
   if (TIER_1_AGENT_NAMES.has(agentName)) return 1;
   if (TIER_2_AGENT_NAMES.has(agentName)) return 2;
@@ -134,10 +196,25 @@ export function resolveExpectedTier(agentName) {
   return 3;
 }
 
+/**
+ * Returns the human-readable label for a tier number.
+ *
+ * @param tier - Tier number (1–4).
+ * @returns Label string from {@link TIER_LABELS}, or `'Unknown Tier'` for out-of-range values.
+ */
 export function resolveTierLabel(tier) {
   return TIER_LABELS[tier] ?? 'Unknown Tier';
 }
 
+/**
+ * Parses a raw frontmatter `tier` value into a validated integer (1–4).
+ *
+ * Accepts a number or a numeric string. Returns `null` when the value is
+ * missing, non-numeric, or outside the 1–4 range.
+ *
+ * @param value - Raw YAML value from the `tier:` frontmatter field (may be `undefined`).
+ * @returns Integer tier (1–4), or `null` when invalid.
+ */
 export function parseTier(value) {
   const parsedValue = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
   if (!Number.isInteger(parsedValue) || parsedValue < 1 || parsedValue > 4) {
@@ -147,6 +224,22 @@ export function parseTier(value) {
   return parsedValue;
 }
 
+/**
+ * Checks whether a Tier `parentTier` agent may delegate to a Tier `childTier` agent.
+ *
+ * Enforcement table:
+ *
+ * | Parent tier | Allowed child tiers |
+ * |-------------|---------------------|
+ * | 1           | 2, 3, 4             |
+ * | 2           | 3, 4                |
+ * | 3           | 4                   |
+ * | 4           | none (leaf node)    |
+ *
+ * @param parentTier - Delegating agent's tier.
+ * @param childTier - Target agent's tier.
+ * @returns `true` when the delegation direction is permitted by the policy.
+ */
 export function isAllowedDelegation(parentTier, childTier) {
   switch (parentTier) {
     case 1:

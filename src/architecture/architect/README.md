@@ -460,7 +460,7 @@ Raised when an MLP builder receives too few layer sizes.
 
 ### ArchitectInvalidRandomSparseConfigurationError
 
-Raised when a sparse architect builder receives invalid dimensions or
+Raised when a sparse architect builder receives invalid dimensions or.
 requests more structural edits than the graph can satisfy.
 
 ### ArchitectZeroInputOutputNodesError

@@ -1,7 +1,7 @@
-import type NeatapticNode from '../../../node';
+﻿import type NeatapticNode from '../../../node';
 import type { NodeInternals } from '../network.onnx.utils.types';
 
-/** Supported fused recurrent operator families recognized during ONNX import. */
+/** Supported fused recurrent operator families recognized during ONNX import, currently limited to LSTM and GRU. */
 export type OnnxFusedRecurrentKind = 'LSTM' | 'GRU';
 
 /**
@@ -32,7 +32,7 @@ export type OnnxFusedRecurrentSpec = {
   metadataKey: string;
 };
 
-/** Hidden-layer neighborhood slices around a reconstructed fused layer. */
+/** Hidden-layer neighborhood slices around a reconstructed fused layer, including old, previous, and next node lists. */
 export type OnnxFusedLayerNeighborhood = {
   hiddenNodes: NeatapticNode[];
   oldLayerNodes: NeatapticNode[];
@@ -57,14 +57,14 @@ export type OnnxFusedTensorPayload = {
   previousLayerWidth: number;
 };
 
-/** Execution context for one fused recurrent layer reconstruction. */
+/** Execution context for one fused recurrent layer reconstruction, carrying spec, export index, and hidden layer index. */
 export type OnnxFusedLayerReconstructionContext = {
   spec: OnnxFusedRecurrentSpec;
   exportLayerIndex: number;
   hiddenLayerIndex: number;
 };
 
-/** Gate-weight application context for one reconstructed fused layer. */
+/** Gate-weight application context for one reconstructed fused layer, carrying spec, unit size, and weight arrays. */
 export type OnnxFusedGateApplicationContext = {
   fusedLayer: OnnxFusedLayerRuntime;
   spec: OnnxFusedRecurrentSpec;
