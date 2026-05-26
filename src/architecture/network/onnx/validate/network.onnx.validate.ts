@@ -2,7 +2,6 @@ import onnxProto from 'onnx-proto';
 import { InferenceSession } from 'onnxruntime-node';
 import {
   CURRENT_ONNX_REFERENCE_OPSET,
-  ONNX_IR_VERSION,
   ONNX_STANDARD_DOMAIN,
   ONNX_STANDARD_DOMAIN_ALIAS,
 } from '../export/network.onnx.export-setup.utils';

@@ -47,8 +47,9 @@ const DEFAULT_ADAPTATION_STEP_COUNT = 1;
  * ```
  */
 export function createNeatChatAdaptationManager(
-  _session: NeatChatSession,
+  session: NeatChatSession,
 ): NeatChatAdaptationManager {
+  void session;
   return buildAdaptationManager([], []);
 }
 

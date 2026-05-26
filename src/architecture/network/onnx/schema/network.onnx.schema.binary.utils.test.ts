@@ -298,7 +298,7 @@ describe('network onnx schema binary utility chapter', () => {
       });
     });
 
-    it('falls back to URI-based UTF-8 encoding when TextEncoder is unavailable', () => {
+    it('falls back to URI-based UTF-8 encoding when TextEncoder is unavailable', async () => {
       // Arrange
       const originalTextEncoder = globalThis.TextEncoder;
       const globalScope = globalThis as typeof globalThis & {
@@ -347,7 +347,7 @@ describe('network onnx schema binary utility chapter', () => {
 
       try {
         const { serializeOnnxModelToBinary: serializeWithoutTextEncoder } =
-          require('./network.onnx.schema.binary.utils') as typeof import('./network.onnx.schema.binary.utils');
+          await import('./network.onnx.schema.binary.utils');
         const binaryModel = serializeWithoutTextEncoder(onnxModel);
 
         // Assert

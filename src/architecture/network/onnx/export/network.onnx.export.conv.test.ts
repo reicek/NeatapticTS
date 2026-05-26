@@ -264,13 +264,11 @@ function createConvSharingMismatchScenario(): {
 function createHeuristicConvPromotionScenario(): {
   network: Network;
 } {
-  const inputHeight = 5;
   const inputWidth = 5;
   const kernelHeight = 3;
   const kernelWidth = 3;
   const strideHeight = 1;
   const strideWidth = 1;
-  const outputHeight = inputHeight - kernelHeight + 1;
   const outputWidth = inputWidth - kernelWidth + 1;
   const network = Network.createMLP(25, [9], 2);
   const inputNodes = network.nodes.filter(
@@ -375,7 +373,6 @@ function createMultiChannelHeuristicConvPromotionScenario(): {
   const kernelWidth = 2;
   const strideHeight = 1;
   const strideWidth = 1;
-  const outputChannels = 2;
   const outputHeight = inputHeight - kernelHeight + 1;
   const outputWidth = inputWidth - kernelWidth + 1;
   const network = Network.createMLP(18, [8], 2);
@@ -495,7 +492,6 @@ function createUnsafeMultiChannelHeuristicConvPromotionScenario(): {
 function createStackedHeuristicConvPromotionScenario(): {
   network: Network;
 } {
-  const inputHeight = 5;
   const inputWidth = 5;
   const firstKernelHeight = 3;
   const firstKernelWidth = 3;
@@ -503,9 +499,7 @@ function createStackedHeuristicConvPromotionScenario(): {
   const secondKernelWidth = 2;
   const strideHeight = 1;
   const strideWidth = 1;
-  const firstOutputHeight = inputHeight - firstKernelHeight + 1;
   const firstOutputWidth = inputWidth - firstKernelWidth + 1;
-  const secondOutputHeight = firstOutputHeight - secondKernelHeight + 1;
   const secondOutputWidth = firstOutputWidth - secondKernelWidth + 1;
   const network = Network.createMLP(25, [9, 4], 2);
   const inputNodes = network.nodes.filter(
@@ -616,28 +610,19 @@ function createStackedHeuristicConvPromotionScenario(): {
 function createPostPoolStackedHeuristicConvPromotionScenario(): {
   network: Network;
 } {
-  const inputHeight = 5;
   const inputWidth = 5;
   const firstKernelHeight = 2;
   const firstKernelWidth = 2;
-  const poolingKernelHeight = 2;
   const poolingKernelWidth = 2;
-  const poolingStrideHeight = 1;
   const poolingStrideWidth = 1;
   const secondKernelHeight = 2;
   const secondKernelWidth = 2;
   const strideHeight = 1;
   const strideWidth = 1;
-  const firstOutputHeight = inputHeight - firstKernelHeight + 1;
   const firstOutputWidth = inputWidth - firstKernelWidth + 1;
-  const pooledHeight =
-    Math.floor(
-      (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
-    ) + 1;
   const pooledWidth =
     Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
     1;
-  const secondOutputHeight = pooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = pooledWidth - secondKernelWidth + 1;
   const network = Network.createMLP(25, [16, 4], 2);
   const inputNodes = network.nodes.filter(
@@ -770,7 +755,6 @@ function createPostPoolMultiChannelHeuristicConvPromotionScenario(): {
     1;
   const secondOutputHeight = pooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = pooledWidth - secondKernelWidth + 1;
-  const outputChannels = 2;
   const network = Network.createMLP(32, [18, 2], 2);
   const inputNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'input',
@@ -926,13 +910,10 @@ function createPostPoolMultiChannelHeuristicConvPromotionScenario(): {
 function createDeepPostPoolStackedHeuristicConvPromotionScenario(): {
   network: Network;
 } {
-  const inputHeight = 6;
   const inputWidth = 6;
   const firstKernelHeight = 2;
   const firstKernelWidth = 2;
-  const poolingKernelHeight = 2;
   const poolingKernelWidth = 2;
-  const poolingStrideHeight = 1;
   const poolingStrideWidth = 1;
   const secondKernelHeight = 2;
   const secondKernelWidth = 2;
@@ -940,26 +921,14 @@ function createDeepPostPoolStackedHeuristicConvPromotionScenario(): {
   const thirdKernelWidth = 2;
   const strideHeight = 1;
   const strideWidth = 1;
-  const firstOutputHeight = inputHeight - firstKernelHeight + 1;
   const firstOutputWidth = inputWidth - firstKernelWidth + 1;
-  const firstPooledHeight =
-    Math.floor(
-      (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
-    ) + 1;
   const firstPooledWidth =
     Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
     1;
-  const secondOutputHeight = firstPooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = firstPooledWidth - secondKernelWidth + 1;
-  const secondPooledHeight =
-    Math.floor(
-      (secondOutputHeight - poolingKernelHeight) / poolingStrideHeight,
-    ) + 1;
   const secondPooledWidth =
     Math.floor((secondOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
     1;
-  const thirdOutputHeight = secondPooledHeight - thirdKernelHeight + 1;
-  const thirdOutputWidth = secondPooledWidth - thirdKernelWidth + 1;
   const network = Network.createMLP(36, [25, 9, 1], 2);
   const inputNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'input',
@@ -1137,7 +1106,6 @@ function createDeepPostPoolMultiChannelHeuristicConvPromotionScenario(): {
     1;
   const thirdOutputHeight = secondPooledHeight - thirdKernelHeight + 1;
   const thirdOutputWidth = secondPooledWidth - thirdKernelWidth + 1;
-  const outputChannels = 2;
   const network = Network.createMLP(72, [50, 18, 2], 2);
   const inputNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'input',
@@ -1398,24 +1366,16 @@ function createUnsafePostPoolMultiChannelHeuristicConvPromotionScenario(): {
 function createEarlierFlattenedPostPoolConsumerFallbackScenario(): {
   network: Network;
 } {
-  const inputHeight = 5;
   const inputWidth = 5;
   const firstKernelHeight = 2;
   const firstKernelWidth = 2;
-  const poolingKernelHeight = 2;
   const poolingKernelWidth = 2;
-  const poolingStrideHeight = 1;
   const poolingStrideWidth = 1;
   const secondKernelHeight = 2;
   const secondKernelWidth = 2;
   const strideHeight = 1;
   const strideWidth = 1;
-  const firstOutputHeight = inputHeight - firstKernelHeight + 1;
   const firstOutputWidth = inputWidth - firstKernelWidth + 1;
-  const pooledHeight =
-    Math.floor(
-      (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
-    ) + 1;
   const pooledWidth =
     Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
     1;

@@ -13,13 +13,6 @@ import type {
 // ---------------------------------------------------------------------------
 
 /**
- * Default OOV-fraction threshold used when `maxUnknownTokenFraction` is omitted
- * from `EvaluationHarnessInput`. A value of `0` means any OOV token triggers
- * the `'unknown-handling'` metric score.
- */
-const DEFAULT_MAX_UNKNOWN_TOKEN_FRACTION = 0;
-
-/**
  * Sliding window size for bigram-based repetition detection.
  *
  * Bigrams (consecutive token pairs) are the smallest repeatable unit that
@@ -304,8 +297,10 @@ export function scoreFactualConsistency(
  */
 export function attributeToFailureBucket(
   session: NeatChatSession,
-  _entry: RegressionEntry,
+  entry: RegressionEntry,
 ): FailureBucket {
+  void entry;
+
   // Step 1: Inspect the most recent routing decision if any exist.
   const lastRoutingDecision = session.routingLog.at(-1);
 

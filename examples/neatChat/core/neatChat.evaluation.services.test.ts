@@ -1,85 +1,3 @@
-// @ts-ignore -- W6-03 red contract: evaluation services land in W6-04; module does not exist yet.
-import type * as EvalServices from './neatChat.evaluation.services';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const evaluationServicesModule = (() => {
-  try {
-    // @ts-ignore -- W6-03 red contract: will throw MODULE_NOT_FOUND before W6-04 implementation lands.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return require('./neatChat.evaluation.services') as typeof EvalServices;
-  } catch {
-    return undefined;
-  }
-})();
-
-const runNeatChatRegressionSuite = (
-  ...args: Parameters<typeof EvalServices.runNeatChatRegressionSuite>
-): ReturnType<typeof EvalServices.runNeatChatRegressionSuite> => {
-  if (!evaluationServicesModule)
-    throw new Error(
-      'W6-03 red: neatChat.evaluation.services not yet implemented',
-    );
-  return evaluationServicesModule.runNeatChatRegressionSuite(...args);
-};
-
-const attributeToFailureBucket = (
-  ...args: Parameters<typeof EvalServices.attributeToFailureBucket>
-): ReturnType<typeof EvalServices.attributeToFailureBucket> => {
-  if (!evaluationServicesModule)
-    throw new Error(
-      'W6-03 red: neatChat.evaluation.services not yet implemented',
-    );
-  return evaluationServicesModule.attributeToFailureBucket(...args);
-};
-
-const scoreNextTokenAccuracy = (
-  ...args: Parameters<typeof EvalServices.scoreNextTokenAccuracy>
-): ReturnType<typeof EvalServices.scoreNextTokenAccuracy> => {
-  if (!evaluationServicesModule)
-    throw new Error(
-      'W6-03 red: neatChat.evaluation.services not yet implemented',
-    );
-  return evaluationServicesModule.scoreNextTokenAccuracy(...args);
-};
-
-const scoreRepetitionRate = (
-  ...args: Parameters<typeof EvalServices.scoreRepetitionRate>
-): ReturnType<typeof EvalServices.scoreRepetitionRate> => {
-  if (!evaluationServicesModule)
-    throw new Error(
-      'W6-03 red: neatChat.evaluation.services not yet implemented',
-    );
-  return evaluationServicesModule.scoreRepetitionRate(...args);
-};
-
-const scoreResponseLengthStability = (
-  ...args: Parameters<typeof EvalServices.scoreResponseLengthStability>
-): ReturnType<typeof EvalServices.scoreResponseLengthStability> => {
-  if (!evaluationServicesModule)
-    throw new Error(
-      'W6-03 red: neatChat.evaluation.services not yet implemented',
-    );
-  return evaluationServicesModule.scoreResponseLengthStability(...args);
-};
-
-const scoreUnknownHandling = (
-  ...args: Parameters<typeof EvalServices.scoreUnknownHandling>
-): ReturnType<typeof EvalServices.scoreUnknownHandling> => {
-  if (!evaluationServicesModule)
-    throw new Error(
-      'W6-03 red: neatChat.evaluation.services not yet implemented',
-    );
-  return evaluationServicesModule.scoreUnknownHandling(...args);
-};
-
-const scoreFactualConsistency = (
-  ...args: Parameters<typeof EvalServices.scoreFactualConsistency>
-): ReturnType<typeof EvalServices.scoreFactualConsistency> => {
-  if (!evaluationServicesModule)
-    throw new Error(
-      'W6-03 red: neatChat.evaluation.services not yet implemented',
-    );
-  return evaluationServicesModule.scoreFactualConsistency(...args);
-};
 import type {
   EvaluationHarnessInput,
   EvaluationMetric,
@@ -87,6 +5,15 @@ import type {
   RegressionEntry,
   RegressionSuiteResult,
 } from './neatChat.evaluation.types';
+import {
+  attributeToFailureBucket,
+  runNeatChatRegressionSuite,
+  scoreFactualConsistency,
+  scoreNextTokenAccuracy,
+  scoreRepetitionRate,
+  scoreResponseLengthStability,
+  scoreUnknownHandling,
+} from './neatChat.evaluation.services';
 import { addNeatChatMemoryRecord } from './neatChat.memory.services';
 import {
   createNeatChatSession,

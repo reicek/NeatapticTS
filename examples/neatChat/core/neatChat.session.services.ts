@@ -331,11 +331,6 @@ export function runNeatChatExchange(
   const contextWindow = session.contextWindowTokenCount;
 
   const userTokens = tokenizeNeatChatText(userMessage, contextWindow);
-  const userIndices = userTokens.map(
-    (token) =>
-      session.vocabulary.termToIndex.get(token) ??
-      NEATCHAT_SPECIAL_TOKEN_INDICES.UNK,
-  );
 
   // Step 1: Rank memories and compare response-path candidates without mutating weights.
   const retrievedMemories = retrieveNeatChatMemories(session, userMessage, {

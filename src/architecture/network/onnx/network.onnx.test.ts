@@ -44,7 +44,6 @@ function createLinearCongruentialGenerator(seed: number): () => number {
 }
 
 function buildFlattenAuditMismatchNetwork(seed = 321): Network {
-  const inputHeight = 3;
   const inputWidth = 3;
   const kernelHeight = 2;
   const kernelWidth = 2;
@@ -116,7 +115,6 @@ function buildFlattenAuditMismatchNetwork(seed = 321): Network {
 }
 
 function buildAutoPromotedHeuristicConvRoundtripNetwork(seed = 777): Network {
-  const inputHeight = 5;
   const inputWidth = 5;
   const kernelHeight = 3;
   const kernelWidth = 3;
@@ -198,7 +196,6 @@ function buildAutoPromotedMultiChannelHeuristicConvRoundtripNetwork(): Network {
   const kernelWidth = 2;
   const strideHeight = 1;
   const strideWidth = 1;
-  const outputChannels = 2;
   const outputHeight = inputHeight - kernelHeight + 1;
   const outputWidth = inputWidth - kernelWidth + 1;
   const network = Network.createMLP(18, [8], 2);
@@ -286,7 +283,6 @@ function buildAutoPromotedMultiChannelHeuristicConvRoundtripNetwork(): Network {
 }
 
 function buildAutoPromotedStackedHeuristicConvRoundtripNetwork(): Network {
-  const inputHeight = 5;
   const inputWidth = 5;
   const firstKernelHeight = 3;
   const firstKernelWidth = 3;
@@ -294,7 +290,6 @@ function buildAutoPromotedStackedHeuristicConvRoundtripNetwork(): Network {
   const secondKernelWidth = 2;
   const strideHeight = 1;
   const strideWidth = 1;
-  const firstOutputHeight = inputHeight - firstKernelHeight + 1;
   const firstOutputWidth = inputWidth - firstKernelWidth + 1;
   const secondOutputWidth = firstOutputWidth - secondKernelWidth + 1;
   const network = Network.createMLP(25, [9, 4], 2);
@@ -404,24 +399,16 @@ function buildAutoPromotedStackedHeuristicConvRoundtripNetwork(): Network {
 }
 
 function buildAutoPromotedPostPoolStackedHeuristicConvRoundtripNetwork(): Network {
-  const inputHeight = 5;
   const inputWidth = 5;
   const firstKernelHeight = 2;
   const firstKernelWidth = 2;
-  const poolingKernelHeight = 2;
   const poolingKernelWidth = 2;
-  const poolingStrideHeight = 1;
   const poolingStrideWidth = 1;
   const secondKernelHeight = 2;
   const secondKernelWidth = 2;
   const strideHeight = 1;
   const strideWidth = 1;
-  const firstOutputHeight = inputHeight - firstKernelHeight + 1;
   const firstOutputWidth = inputWidth - firstKernelWidth + 1;
-  const pooledHeight =
-    Math.floor(
-      (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
-    ) + 1;
   const pooledWidth =
     Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
     1;
@@ -531,24 +518,16 @@ function buildAutoPromotedPostPoolStackedHeuristicConvRoundtripNetwork(): Networ
 }
 
 function buildAutoPromotedEarlierFlattenedPostPoolFallbackRoundtripNetwork(): Network {
-  const inputHeight = 5;
   const inputWidth = 5;
   const firstKernelHeight = 2;
   const firstKernelWidth = 2;
-  const poolingKernelHeight = 2;
   const poolingKernelWidth = 2;
-  const poolingStrideHeight = 1;
   const poolingStrideWidth = 1;
   const secondKernelHeight = 2;
   const secondKernelWidth = 2;
   const strideHeight = 1;
   const strideWidth = 1;
-  const firstOutputHeight = inputHeight - firstKernelHeight + 1;
   const firstOutputWidth = inputWidth - firstKernelWidth + 1;
-  const pooledHeight =
-    Math.floor(
-      (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
-    ) + 1;
   const pooledWidth =
     Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
     1;
@@ -691,7 +670,6 @@ function buildAutoPromotedPostPoolMultiChannelHeuristicConvRoundtripNetwork(): N
     1;
   const secondOutputHeight = pooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = pooledWidth - secondKernelWidth + 1;
-  const outputChannels = 2;
   const network = Network.createMLP(32, [18, 2], 2);
   const inputNodes = network.nodes.filter(
     (nodeEntry) => nodeEntry.type === 'input',
@@ -864,13 +842,10 @@ function buildUnsafePostPoolMultiChannelHeuristicConvRoundtripNetwork(): Network
 }
 
 function buildAutoPromotedDeepPostPoolStackedHeuristicConvRoundtripNetwork(): Network {
-  const inputHeight = 6;
   const inputWidth = 6;
   const firstKernelHeight = 2;
   const firstKernelWidth = 2;
-  const poolingKernelHeight = 2;
   const poolingKernelWidth = 2;
-  const poolingStrideHeight = 1;
   const poolingStrideWidth = 1;
   const secondKernelHeight = 2;
   const secondKernelWidth = 2;
@@ -878,21 +853,11 @@ function buildAutoPromotedDeepPostPoolStackedHeuristicConvRoundtripNetwork(): Ne
   const thirdKernelWidth = 2;
   const strideHeight = 1;
   const strideWidth = 1;
-  const firstOutputHeight = inputHeight - firstKernelHeight + 1;
   const firstOutputWidth = inputWidth - firstKernelWidth + 1;
-  const firstPooledHeight =
-    Math.floor(
-      (firstOutputHeight - poolingKernelHeight) / poolingStrideHeight,
-    ) + 1;
   const firstPooledWidth =
     Math.floor((firstOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
     1;
-  const secondOutputHeight = firstPooledHeight - secondKernelHeight + 1;
   const secondOutputWidth = firstPooledWidth - secondKernelWidth + 1;
-  const secondPooledHeight =
-    Math.floor(
-      (secondOutputHeight - poolingKernelHeight) / poolingStrideHeight,
-    ) + 1;
   const secondPooledWidth =
     Math.floor((secondOutputWidth - poolingKernelWidth) / poolingStrideWidth) +
     1;

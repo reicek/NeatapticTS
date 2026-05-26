@@ -1,48 +1,9 @@
-// @ts-ignore -- W6-06 red contract: safety services land in W6-06 implementation; module does not exist yet.
-import type * as SafetyServices from './neatChat.safety.services';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const safetyServicesModule = (() => {
-  try {
-    // W6-06 red contract: will throw MODULE_NOT_FOUND before implementation lands.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return require('./neatChat.safety.services') as typeof SafetyServices;
-  } catch {
-    return undefined;
-  }
-})();
-
-const checkSafety = (
-  ...args: Parameters<typeof SafetyServices.checkSafety>
-): ReturnType<typeof SafetyServices.checkSafety> => {
-  if (!safetyServicesModule)
-    throw new Error('W6-06 red: neatChat.safety.services not yet implemented');
-  return safetyServicesModule.checkSafety(...args);
-};
-
-const isUnknownToken = (
-  ...args: Parameters<typeof SafetyServices.isUnknownToken>
-): ReturnType<typeof SafetyServices.isUnknownToken> => {
-  if (!safetyServicesModule)
-    throw new Error('W6-06 red: neatChat.safety.services not yet implemented');
-  return safetyServicesModule.isUnknownToken(...args);
-};
-
-const isRepetitionCollapse = (
-  ...args: Parameters<typeof SafetyServices.isRepetitionCollapse>
-): ReturnType<typeof SafetyServices.isRepetitionCollapse> => {
-  if (!safetyServicesModule)
-    throw new Error('W6-06 red: neatChat.safety.services not yet implemented');
-  return safetyServicesModule.isRepetitionCollapse(...args);
-};
-
-const isDegenerateResponse = (
-  ...args: Parameters<typeof SafetyServices.isDegenerateResponse>
-): ReturnType<typeof SafetyServices.isDegenerateResponse> => {
-  if (!safetyServicesModule)
-    throw new Error('W6-06 red: neatChat.safety.services not yet implemented');
-  return safetyServicesModule.isDegenerateResponse(...args);
-};
-
+import {
+  checkSafety,
+  isDegenerateResponse,
+  isRepetitionCollapse,
+  isUnknownToken,
+} from './neatChat.safety.services';
 import { createNeatChatSession } from './neatChat.session.services';
 import type {
   SafetyCheckResult,

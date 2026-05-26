@@ -11,7 +11,6 @@
 import type Network from '../../network';
 import type NeatapticNode from '../../../node';
 import type {
-  Conv2DMapping,
   OnnxDimension,
   OnnxMetadataProperty,
   OnnxModel,

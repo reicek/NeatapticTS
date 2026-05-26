@@ -1,21 +1,20 @@
 {
   "metricVersion": 1,
   "scannerVersion": "1.0.0",
-  "gitCommit": "2cad6fa66bb8d559eba042b809e11ff321783026",
+  "gitCommit": "4f72661a529a3711c84d9a7bf1dae1f721a485eb",
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "thresholdConfig": {
     "minJsdocWords": 10,
     "complexityThreshold": 10
   },
   "scopeConfig": {
-    "scopeType": "paths",
+    "scopeType": "src",
     "scopeValue": [
-      "src/architecture/network.ts",
-      "src/neat.ts"
+      "src"
     ],
-    "scopeDigest": "d36d8aef57058f860ee0e6ff49fd2d34413806b0bafcbf4f818a4378515f7f53"
+    "scopeDigest": "d6ca942726b8a69d898c20c8b28d26532e08eca8c3226322463b5f2df41ef4e8"
   },
-  "sourcePathsDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
+  "sourcePathsDigest": "8a5ddc82a12b33bd1f871e54d98212e1e63dc8150e183c40b0c2d6086f41cd8c",
   "issueBreakdown": {
     "missingJsdoc": 0,
     "weakJsdoc": 0,
@@ -27,8 +26,8 @@
     "minJsdocWords": 10,
     "complexityThreshold": 10
   },
-  "scopeType": "paths",
-  "scopeDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
+  "scopeType": "src",
+  "scopeDigest": "8a5ddc82a12b33bd1f871e54d98212e1e63dc8150e183c40b0c2d6086f41cd8c",
   "coverage": {
     "available": true,
     "totalFiles": 360,

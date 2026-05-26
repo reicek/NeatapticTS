@@ -362,10 +362,6 @@ function renderContractPreview(
       currentSession = importNeatChatSession(JSON.parse(snapshotText));
       currentAdaptationManager = createBrowserAdaptationManager(currentSession);
       isAdaptationPending = false;
-
-      const contextWindowField = hostElement.querySelector<HTMLSelectElement>(
-        '[data-neat-chat-context-window-token-count]',
-      );
       synchronizeSessionSurfaceState(hostElement, currentSession);
 
       clearChatHistory(hostElement);

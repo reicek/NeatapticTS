@@ -434,16 +434,12 @@ function normalizeSnapshotExtensions(
     neatchatExtension.candidateLog,
   );
   const routingLog = normalizeOptionalRoutingLog(neatchatExtension.routingLog);
-  const {
-    memoryBank: ignoredRawMemoryBank,
-    candidateLog: ignoredRawCandidateLog,
-    routingLog: ignoredRawRoutingLog,
-    ...remainingNeatchatExtension
-  } = neatchatExtension;
+  const remainingNeatchatExtension = { ...neatchatExtension };
+  Reflect.deleteProperty(remainingNeatchatExtension, 'memoryBank');
+  Reflect.deleteProperty(remainingNeatchatExtension, 'candidateLog');
+  Reflect.deleteProperty(remainingNeatchatExtension, 'routingLog');
   const expectedVocabularySize =
     retainedTermCount + NEATCHAT_SPECIAL_TOKENS.length;
-
-  void ignoredRawRoutingLog;
 
   if (vocabularySize !== expectedVocabularySize) {
     throw new NeatChatSnapshotShapeError(

@@ -341,7 +341,8 @@ function hasRequiredSelfConnectionCount(nodeItem: NeatapticNode): boolean {
 function stripInferredConvNote(
   convSpec: Conv2DMapping & { note?: string },
 ): Conv2DMapping {
-  const { note: _ignoredNote, ...cleanConvSpec } = convSpec;
+  const cleanConvSpec = { ...convSpec };
+  Reflect.deleteProperty(cleanConvSpec, 'note');
   return cleanConvSpec;
 }
 

@@ -2,7 +2,6 @@ import type NeatapticNode from '../../../node';
 import type { OnnxModel } from '../schema/network.onnx.schema.types';
 import type {
   OnnxBuildResolvedOptions,
-  OnnxExportOptions,
   OnnxGraphDimensions,
   OnnxLayerEmissionContext,
   OnnxLayerEmissionResult,

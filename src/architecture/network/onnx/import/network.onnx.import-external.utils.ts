@@ -813,6 +813,8 @@ function validateActivationNode(
   declaredOpset: number,
   expectedInputTensorName: string,
 ): void {
+  void expectedInputTensorName;
+
   const inputNames = activationNode.input!;
   if (inputNames.length !== 1) {
     throw new OnnxExternalImportError(

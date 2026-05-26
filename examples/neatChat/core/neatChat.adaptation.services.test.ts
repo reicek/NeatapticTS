@@ -4,7 +4,6 @@ import {
   rejectNeatChatAdaptationCandidate,
   scheduleNeatChatAdaptation,
 } from './neatChat.adaptation.services';
-// @ts-ignore -- W4-03 red contract: adaptation helper types land in W4-04.
 import type {
   NeatChatAdaptationCandidate,
   NeatChatAdaptationManager,
@@ -516,8 +515,8 @@ function createLegacySnapshotWithoutCandidateLog(
       readonly neatchat: Record<string, unknown>;
     };
   } & Record<string, unknown>;
-  const { candidateLog: _candidateLog, ...legacyNeatChatExtension } =
-    snapshot.extensions.neatchat;
+  const legacyNeatChatExtension = { ...snapshot.extensions.neatchat };
+  Reflect.deleteProperty(legacyNeatChatExtension, 'candidateLog');
 
   return {
     ...snapshot,

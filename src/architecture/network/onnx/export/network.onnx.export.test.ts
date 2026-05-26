@@ -197,6 +197,38 @@ function getRequiredInitializer(
   return initializerEntry;
 }
 
+function getRequiredFloatDataValue(
+  initializerEntry: OnnxInitializerView,
+  initializerName: string,
+  entryIndex = 0,
+): number {
+  const floatDataValue = initializerEntry.float_data?.[entryIndex];
+
+  if (floatDataValue === undefined) {
+    throw new Error(
+      `Missing float_data[${String(entryIndex)}] in initializer ${initializerName}.`,
+    );
+  }
+
+  return floatDataValue;
+}
+
+function getRequiredInt32DataValue(
+  initializerEntry: OnnxInitializerView,
+  initializerName: string,
+  entryIndex = 0,
+): number {
+  const int32DataValue = initializerEntry.int32_data?.[entryIndex];
+
+  if (int32DataValue === undefined) {
+    throw new Error(
+      `Missing int32_data[${String(entryIndex)}] in initializer ${initializerName}.`,
+    );
+  }
+
+  return int32DataValue;
+}
+
 function resolveQuantizedIntegerBounds(dataType: number | undefined): {
   minimumValue: number;
   maximumValue: number;
@@ -287,32 +319,38 @@ function evaluateOneOutputQLinearDenseLayerOutput(
   layerIndex: number,
   inputValues: number[],
 ): number {
-  const inputScale = getRequiredInitializer(
-    model,
+  const inputScale = getRequiredFloatDataValue(
+    getRequiredInitializer(model, `QuantDenseInputScale_l${layerIndex}`),
     `QuantDenseInputScale_l${layerIndex}`,
-  ).float_data?.[0]!;
+  );
   const inputZeroPointInitializer = getRequiredInitializer(
     model,
     `QuantDenseInputZeroPoint_l${layerIndex}`,
   );
-  const inputZeroPoint = inputZeroPointInitializer.int32_data?.[0]!;
-  const weightScale = getRequiredInitializer(
-    model,
+  const inputZeroPoint = getRequiredInt32DataValue(
+    inputZeroPointInitializer,
+    `QuantDenseInputZeroPoint_l${layerIndex}`,
+  );
+  const weightScale = getRequiredFloatDataValue(
+    getRequiredInitializer(model, `QuantDenseWeightScale_l${layerIndex}`),
     `QuantDenseWeightScale_l${layerIndex}`,
-  ).float_data?.[0]!;
-  const weightZeroPoint = getRequiredInitializer(
-    model,
+  );
+  const weightZeroPoint = getRequiredInt32DataValue(
+    getRequiredInitializer(model, `QuantDenseWeightZeroPoint_l${layerIndex}`),
     `QuantDenseWeightZeroPoint_l${layerIndex}`,
-  ).int32_data?.[0]!;
-  const outputScale = getRequiredInitializer(
-    model,
+  );
+  const outputScale = getRequiredFloatDataValue(
+    getRequiredInitializer(model, `QuantDenseOutputScale_l${layerIndex}`),
     `QuantDenseOutputScale_l${layerIndex}`,
-  ).float_data?.[0]!;
+  );
   const outputZeroPointInitializer = getRequiredInitializer(
     model,
     `QuantDenseOutputZeroPoint_l${layerIndex}`,
   );
-  const outputZeroPoint = outputZeroPointInitializer.int32_data?.[0]!;
+  const outputZeroPoint = getRequiredInt32DataValue(
+    outputZeroPointInitializer,
+    `QuantDenseOutputZeroPoint_l${layerIndex}`,
+  );
   const biasValues = getRequiredInitializer(
     model,
     `B${layerIndex - 1}`,
