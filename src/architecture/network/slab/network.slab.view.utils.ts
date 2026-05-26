@@ -34,7 +34,7 @@ export function _createConnectionSlabView(
 }
 
 /**
- * Reads the current monotonic slab version from network internals.
+ * Reads the current monotonic slab version counter from network internals.
  *
  * @param network - Target network.
  * @returns Non-negative slab version counter.

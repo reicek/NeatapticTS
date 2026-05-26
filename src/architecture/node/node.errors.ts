@@ -9,7 +9,7 @@ export class NodeMutationMethodRequiredError extends Error {
 }
 
 /**
- * Raised when a node mutation method name is unknown.
+ * Raised when a node mutation method name is not recognized.
  */
 export class NodeUnknownMutationMethodError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -29,7 +29,7 @@ export class NodeUnsupportedMutationMethodError extends Error {
 }
 
 /**
- * Raised when a node connection target is missing.
+ * Raised when a node connection target reference is missing or undefined.
  */
 export class NodeUndefinedConnectionTargetError extends Error {
   constructor(message: string, options?: ErrorOptions) {

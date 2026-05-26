@@ -24,17 +24,59 @@ const ONE = 1;
 export function _canUseFastSlab(this: Network, training: boolean): boolean {
   // Step 1: Evaluate deterministic fast-path eligibility predicates.
   const internalNet = this as unknown as NetworkSlabProps;
-  return !!(
-    !training &&
-    internalNet._enforceAcyclic &&
-    !internalNet._topoDirty &&
-    this.gates.length === 0 &&
-    this.selfconns.length === 0 &&
-    this.dropout === 0 &&
-    internalNet._weightNoiseStd === 0 &&
-    (internalNet._weightNoisePerHidden?.length || 0) === 0 &&
-    (internalNet._stochasticDepth?.length || 0) === 0
-  );
+  if (training) {
+    return false;
+  }
+  if (!_hasFastSlabStructuralEligibility(this, internalNet)) {
+    return false;
+  }
+  return !_hasFastSlabRegularizationBlockers(this, internalNet);
+}
+
+/**
+ * Check topology and structure constraints that must hold before the slab fast path can execute.
+ *
+ * @param network - Target network.
+ * @param internalNet - Internal slab runtime shape.
+ * @returns True when structure-level fast-path constraints hold.
+ */
+function _hasFastSlabStructuralEligibility(
+  network: Network,
+  internalNet: NetworkSlabProps,
+): boolean {
+  if (!internalNet._enforceAcyclic) {
+    return false;
+  }
+  if (internalNet._topoDirty) {
+    return false;
+  }
+  if (network.gates.length !== ZERO) {
+    return false;
+  }
+  return network.selfconns.length === ZERO;
+}
+
+/**
+ * Check runtime regularization features that invalidate slab fast-path execution.
+ *
+ * @param network - Target network.
+ * @param internalNet - Internal slab runtime shape.
+ * @returns True when a blocker is present.
+ */
+function _hasFastSlabRegularizationBlockers(
+  network: Network,
+  internalNet: NetworkSlabProps,
+): boolean {
+  if (network.dropout !== ZERO) {
+    return true;
+  }
+  if (internalNet._weightNoiseStd !== ZERO) {
+    return true;
+  }
+  if ((internalNet._weightNoisePerHidden?.length ?? ZERO) !== ZERO) {
+    return true;
+  }
+  return (internalNet._stochasticDepth?.length ?? ZERO) !== ZERO;
 }
 
 /**

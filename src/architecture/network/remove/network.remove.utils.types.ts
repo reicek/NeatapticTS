@@ -45,7 +45,7 @@ export interface NetworkRemoveProps {
   _adjDirty?: boolean;
 }
 
-/** Immutable context for validated node-removal request. */
+/** Immutable context object used to carry one validated node-removal orchestration request. */
 export interface NodeRemovalContext {
   /** Owning network instance. */
   network: Network;
@@ -57,7 +57,7 @@ export interface NodeRemovalContext {
   targetNodeIndex: number;
 }
 
-/** Snapshot of node adjacency prior to removal. */
+/** Snapshot of all node adjacency connection lists captured prior to removal. */
 export interface NodeConnectionSnapshotContext {
   /** Incoming connections to removed node. */
   inboundConnections: Connection[];
@@ -67,7 +67,7 @@ export interface NodeConnectionSnapshotContext {
   selfConnectionCount: number;
 }
 
-/** Endpoint pair for reconnecting bridged paths. */
+/** Endpoint pair describing source and target nodes for reconnecting bridged paths. */
 export interface ReconnectEndpointPairContext {
   /** Source node of candidate reconnect edge. */
   sourceNode: Node;

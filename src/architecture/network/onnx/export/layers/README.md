@@ -21,6 +21,636 @@ flowchart TD
 
 ## architecture/network/onnx/export/layers/network.onnx.export-conv.utils.ts
 
+### appendConvBiasInitializer
+
+```ts
+appendConvBiasInitializer(
+  context: OnnxConvEmissionContext,
+  convTensorNames: OnnxConvTensorNames,
+  biasValues: number[],
+): void
+```
+
+Append Conv bias initializer.
+
+Parameters:
+- `context` - Conv emission context.
+- `convTensorNames` - Conv tensor names.
+- `biasValues` - Conv bias values.
+
+Returns: Nothing.
+
+### appendConvExportMetadata
+
+```ts
+appendConvExportMetadata(
+  context: OnnxConvEmissionContext,
+): void
+```
+
+Append Conv export metadata entries.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Nothing.
+
+### appendConvWeightInitializer
+
+```ts
+appendConvWeightInitializer(
+  context: OnnxConvEmissionContext,
+  convTensorNames: OnnxConvTensorNames,
+  weightValues: number[],
+): void
+```
+
+Append Conv weight initializer.
+
+Parameters:
+- `context` - Conv emission context.
+- `convTensorNames` - Conv tensor names.
+- `weightValues` - Conv weight values.
+
+Returns: Nothing.
+
+### buildKernelCoordinatesForInputChannel
+
+```ts
+buildKernelCoordinatesForInputChannel(
+  convSpec: Conv2DMapping,
+  inputChannelIndex: number,
+): OnnxConvKernelCoordinate[]
+```
+
+Build kernel coordinates for one input channel.
+
+Parameters:
+- `convSpec` - Conv mapping spec.
+- `inputChannelIndex` - Input channel index.
+
+Returns: Kernel coordinates for the input channel.
+
+### calculateSpatialOutputSize
+
+```ts
+calculateSpatialOutputSize(
+  inputSize: number,
+  kernelSize: number,
+  strideSize: number,
+  leadingPadding: number,
+  trailingPadding: number,
+): number
+```
+
+Calculate one spatial output size from kernel, stride, and padding metadata.
+
+Parameters:
+- `inputSize` - Pre-op spatial size.
+- `kernelSize` - Kernel size.
+- `strideSize` - Stride size.
+- `leadingPadding` - Leading padding value.
+- `trailingPadding` - Trailing padding value.
+
+Returns: Derived spatial output size.
+
+### collectConvBiasValues
+
+```ts
+collectConvBiasValues(
+  representativeNeuronInternals: NodeInternals[],
+): number[]
+```
+
+Collect Conv bias values from representative neurons.
+
+Parameters:
+- `representativeNeuronInternals` - Representative internals.
+
+Returns: Bias values.
+
+### collectConvParameters
+
+```ts
+collectConvParameters(
+  context: OnnxConvEmissionContext,
+): OnnxConvParameters
+```
+
+Collect flattened Conv weights and biases.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Conv initializer parameters.
+
+### collectConvWeightValues
+
+```ts
+collectConvWeightValues(
+  context: OnnxConvEmissionContext,
+  representativeNeuronInternals: NodeInternals[],
+): number[]
+```
+
+Collect flattened Conv weight values.
+
+Parameters:
+- `context` - Conv emission context.
+- `representativeNeuronInternals` - Representative internals.
+
+Returns: Flattened Conv weights.
+
+### collectRepresentativeNeuronInternals
+
+```ts
+collectRepresentativeNeuronInternals(
+  context: OnnxConvEmissionContext,
+  outputChannelIndices: number[],
+): NodeInternals[]
+```
+
+Collect representative neuron internals for each output channel.
+
+Parameters:
+- `context` - Conv emission context.
+- `outputChannelIndices` - Output channel indices.
+
+Returns: Representative internals.
+
+### createConvPaddingValues
+
+```ts
+createConvPaddingValues(
+  convSpec: Conv2DMapping,
+): number[]
+```
+
+Create ONNX pads values for Conv node.
+
+Parameters:
+- `convSpec` - Conv mapping spec.
+
+Returns: Padding values in ONNX order.
+
+### createConvTensorNames
+
+```ts
+createConvTensorNames(
+  layerIndex: number,
+): OnnxConvTensorNames
+```
+
+Create deterministic Conv parameter tensor names.
+
+Parameters:
+- `layerIndex` - Layer index.
+
+Returns: Conv tensor names.
+
+### createKernelCoordinates
+
+```ts
+createKernelCoordinates(
+  convSpec: Conv2DMapping,
+): OnnxConvKernelCoordinate[]
+```
+
+Create all Conv kernel coordinates across input channels.
+
+Parameters:
+- `convSpec` - Conv mapping spec.
+
+Returns: Kernel coordinates.
+
+### createOutputChannelIndices
+
+```ts
+createOutputChannelIndices(
+  convSpec: Conv2DMapping,
+): number[]
+```
+
+Create output channel index list.
+
+Parameters:
+- `convSpec` - Conv mapping spec.
+
+Returns: Output channel indices.
+
+### derivePooledTensorWidth
+
+```ts
+derivePooledTensorWidth(
+  derivedPooledInputShape: { inputChannels: number; inputHeight: number; inputWidth: number; },
+): number
+```
+
+Fold one derived pooled input shape to its flattened width.
+
+Parameters:
+- `derivedPooledInputShape` - Derived pooled geometry.
+
+Returns: Flattened pooled tensor width.
+
+### emitActivationNode
+
+```ts
+emitActivationNode(
+  context: OnnxConvEmissionContext,
+  convOutputName: string,
+  activationOutputName: string,
+): void
+```
+
+Emit activation node for Conv output.
+
+Parameters:
+- `context` - Conv emission context.
+- `convOutputName` - Conv output tensor name.
+- `activationOutputName` - Activation output tensor name.
+
+Returns: Nothing.
+
+### emitConvAndActivationGraph
+
+```ts
+emitConvAndActivationGraph(
+  context: OnnxConvEmissionContext,
+  convTensorNames: OnnxConvTensorNames,
+): string
+```
+
+Emit Conv and activation nodes and return activation output name.
+
+Parameters:
+- `context` - Conv emission context.
+- `convTensorNames` - Conv tensor names.
+
+Returns: Activation output name.
+
+### emitConvNode
+
+```ts
+emitConvNode(
+  context: OnnxConvEmissionContext,
+  convTensorNames: OnnxConvTensorNames,
+  convOutputName: string,
+  convInputName: string,
+): void
+```
+
+Emit ONNX Conv node.
+
+Parameters:
+- `context` - Conv emission context.
+- `convTensorNames` - Conv tensor names.
+- `convOutputName` - Conv output tensor name.
+- `convInputName` - Conv input tensor name.
+
+Returns: Nothing.
+
+### emitConvParameterInitializers
+
+```ts
+emitConvParameterInitializers(
+  context: OnnxConvEmissionContext,
+  convParameters: OnnxConvParameters,
+): OnnxConvTensorNames
+```
+
+Emit Conv parameter initializers and return tensor names.
+
+Parameters:
+- `context` - Conv emission context.
+- `convParameters` - Conv parameters.
+
+Returns: Conv tensor names.
+
+### emitFlattenReshapeBridge
+
+```ts
+emitFlattenReshapeBridge(
+  context: OnnxConvEmissionContext,
+  flattenedPoolingShape: { inputChannels: number; inputHeight: number; inputWidth: number; },
+): string
+```
+
+Emit a reshape bridge that restores `[N,C,H,W]` input rank after flatten.
+
+Parameters:
+- `context` - Conv emission context.
+- `flattenedPoolingShape` - Supported flattened pooled shape.
+
+Returns: Reshape output tensor name.
+
+### emitOptionalPoolingAndFlattenForConv
+
+```ts
+emitOptionalPoolingAndFlattenForConv(
+  context: OnnxConvEmissionContext,
+  activationOutputName: string,
+): string
+```
+
+Emit optional pooling and flatten nodes for Conv output.
+
+Parameters:
+- `context` - Conv emission context.
+- `activationOutputName` - Activation output name.
+
+Returns: Final output tensor name.
+
+### getActualPreviousTensorWidth
+
+```ts
+getActualPreviousTensorWidth(
+  context: OnnxConvEmissionContext,
+): number
+```
+
+Resolve the actual graph-input width seen by this Conv layer.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Previous tensor width after optional pooling.
+
+### getExpectedCurrentWidth
+
+```ts
+getExpectedCurrentWidth(
+  convSpec: Conv2DMapping,
+): number
+```
+
+Get expected current-layer width for Conv mapping.
+
+Parameters:
+- `convSpec` - Conv mapping spec.
+
+Returns: Expected current-layer width.
+
+### getExpectedPreviousWidth
+
+```ts
+getExpectedPreviousWidth(
+  convSpec: Conv2DMapping,
+): number
+```
+
+Get expected previous-layer width for Conv mapping.
+
+Parameters:
+- `convSpec` - Conv mapping spec.
+
+Returns: Expected previous-layer width.
+
+### isConvShapeCompatible
+
+```ts
+isConvShapeCompatible(
+  context: OnnxConvEmissionContext,
+): boolean
+```
+
+Determine whether declared Conv dimensions match layer widths.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Whether Conv dimensions match the network layers.
+
+### logConvShapeMismatch
+
+```ts
+logConvShapeMismatch(
+  context: OnnxConvEmissionContext,
+): void
+```
+
+Log Conv mapping shape mismatch warning.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Nothing.
+
+### resolveActivationPayload
+
+```ts
+resolveActivationPayload(
+  context: OnnxConvEmissionContext,
+): { operation: string; attributes?: { name: string; type?: string | undefined; f?: number | undefined; i?: number | undefined; s?: string | undefined; }[] | undefined; }
+```
+
+Resolve activation operator for Conv output.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Activation operator name.
+
+### resolveConvInputName
+
+```ts
+resolveConvInputName(
+  context: OnnxConvEmissionContext,
+): string
+```
+
+Resolve the tensor name that should feed the Conv node.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Previous output name, or a reshape bridge output for the narrow flatten subset.
+
+### resolveConvSourceLayout
+
+```ts
+resolveConvSourceLayout(
+  context: OnnxConvEmissionContext,
+  convSpec: Conv2DMapping,
+): { channelStride: number; sourceHeight: number; sourceWidth: number; }
+```
+
+Resolve the source layout used when this Conv layer consumes a pooled predecessor.
+
+Parameters:
+- `context` - Conv emission context.
+- `convSpec` - Conv mapping spec.
+
+Returns: Source layout dimensions used for dense-node indexing.
+
+### resolveConvSourceNode
+
+```ts
+resolveConvSourceNode(
+  context: OnnxConvEmissionContext,
+  kernelCoordinate: OnnxConvKernelCoordinate,
+): default
+```
+
+Resolve source node referenced by one kernel coordinate.
+
+Parameters:
+- `context` - Conv emission context.
+- `kernelCoordinate` - Kernel coordinate.
+
+Returns: Source node.
+
+### resolveDerivedPooledInputShape
+
+```ts
+resolveDerivedPooledInputShape(
+  context: OnnxConvEmissionContext,
+): { inputChannels: number; inputHeight: number; inputWidth: number; } | undefined
+```
+
+Resolve pooled input geometry from the immediately previous Conv + Pool metadata.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Derived pooled shape, or undefined when the metadata is unusable.
+
+### resolveInboundWeightOrZero
+
+```ts
+resolveInboundWeightOrZero(
+  representativeNeuronInternal: NodeInternals,
+  sourceNode: default,
+): number
+```
+
+Resolve inbound weight or zero when missing.
+
+Parameters:
+- `representativeNeuronInternal` - Representative neuron internals.
+- `sourceNode` - Source node.
+
+Returns: Inbound weight value.
+
+### resolveInputFeatureIndex
+
+```ts
+resolveInputFeatureIndex(
+  context: OnnxConvEmissionContext,
+  convSpec: Conv2DMapping,
+  kernelCoordinate: OnnxConvKernelCoordinate,
+): number
+```
+
+Resolve flattened input feature index for one kernel coordinate.
+
+Parameters:
+- `context` - Conv emission context.
+- `convSpec` - Conv mapping spec.
+- `kernelCoordinate` - Kernel coordinate.
+
+Returns: Flattened input feature index.
+
+### resolvePoolingSpec
+
+```ts
+resolvePoolingSpec(
+  context: OnnxConvEmissionContext,
+): Pool2DMapping | undefined
+```
+
+Resolve pooling spec for current layer.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Pool mapping spec, if configured.
+
+### resolveRepresentativeNeuronIndex
+
+```ts
+resolveRepresentativeNeuronIndex(
+  convSpec: Conv2DMapping,
+  outputChannelIndex: number,
+): number
+```
+
+Resolve representative neuron index for one output channel.
+
+Parameters:
+- `convSpec` - Conv mapping spec.
+- `outputChannelIndex` - Output channel index.
+
+Returns: Representative neuron index.
+
+### resolveRepresentativeNeuronInternal
+
+```ts
+resolveRepresentativeNeuronInternal(
+  context: OnnxConvEmissionContext,
+  outputChannelIndex: number,
+): NodeInternals
+```
+
+Resolve representative neuron internals for one output channel.
+
+Parameters:
+- `context` - Conv emission context.
+- `outputChannelIndex` - Output channel index.
+
+Returns: Representative neuron internals.
+
+### resolveSupportedFlattenedPoolingShape
+
+```ts
+resolveSupportedFlattenedPoolingShape(
+  context: OnnxConvEmissionContext,
+): { inputChannels: number; inputHeight: number; inputWidth: number; } | undefined
+```
+
+Resolve the narrow supported flatten-after-pool bridge shape, when present.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Supported flattened pooled shape for the later Conv bridge.
+
+### resolveUpstreamPoolingSpec
+
+```ts
+resolveUpstreamPoolingSpec(
+  options: OnnxExportOptions,
+  layerIndex: number,
+): Pool2DMapping | undefined
+```
+
+Resolve pooling configured immediately after the previous layer.
+
+Parameters:
+- `options` - Export options.
+- `layerIndex` - Current Conv layer index.
+
+Returns: Upstream pooling spec when present.
+
+### resolveWeightForCoordinate
+
+```ts
+resolveWeightForCoordinate(
+  context: OnnxConvEmissionContext,
+  representativeNeuronInternal: NodeInternals,
+  kernelCoordinate: OnnxConvKernelCoordinate,
+): number
+```
+
+Resolve weight for one kernel coordinate.
+
+Parameters:
+- `context` - Conv emission context.
+- `representativeNeuronInternal` - Representative neuron internals.
+- `kernelCoordinate` - Kernel coordinate.
+
+Returns: Weight value or zero when connection is missing.
+
 ### tryEmitConvLayer
 
 ```ts
@@ -61,6 +691,21 @@ const outputName = tryEmitConvLayer({
   currentLayerNodes,
 });
 ```
+
+### validateConvShapeOrWarn
+
+```ts
+validateConvShapeOrWarn(
+  context: OnnxConvEmissionContext,
+): boolean
+```
+
+Validate Conv dimensions and log mismatch details when invalid.
+
+Parameters:
+- `context` - Conv emission context.
+
+Returns: Whether Conv shape is compatible.
 
 ## architecture/network/onnx/export/layers/network.onnx.export-dense.utils.ts
 
@@ -665,6 +1310,115 @@ Returns: Hidden-state tensor input name.
 
 ## architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.ts
 
+### collectActivationNames
+
+```ts
+collectActivationNames(
+  currentLayerNodes: default[],
+): Set<string | undefined>
+```
+
+Collect activation names for current-layer nodes.
+
+Parameters:
+- `currentLayerNodes` - Current layer nodes.
+
+Returns: Activation name set.
+
+### createLayerActivationContext
+
+```ts
+createLayerActivationContext(
+  traversalContext: LayerTraversalContext,
+): LayerActivationContext
+```
+
+Build activation analysis context for non-convolution branches.
+
+Parameters:
+- `traversalContext` - Layer traversal context.
+
+Returns: Activation analysis context.
+
+### createLayerTraversalContext
+
+```ts
+createLayerTraversalContext(
+  input: LayerBuildContext,
+): LayerTraversalContext
+```
+
+Build a compact traversal context with adjacent layers.
+
+Parameters:
+- `input` - Base layer build context.
+
+Returns: Traversal context.
+
+### createRecurrentDecisionContext
+
+```ts
+createRecurrentDecisionContext(
+  traversalContext: LayerTraversalContext,
+): LayerRecurrentDecisionContext
+```
+
+Build recurrent decision context with no extra parameters.
+
+Parameters:
+- `traversalContext` - Layer traversal context.
+
+Returns: Recurrent decision context.
+
+### detectMixedActivations
+
+```ts
+detectMixedActivations(
+  currentLayerNodes: default[],
+  options: OnnxExportOptions,
+): boolean
+```
+
+Determine whether a layer has mixed activation functions.
+
+Parameters:
+- `currentLayerNodes` - Current layer nodes.
+- `options` - Export options.
+
+Returns: Whether mixed activations are present and enabled.
+
+### emitDenseBranch
+
+```ts
+emitDenseBranch(
+  traversalContext: LayerTraversalContext,
+): string
+```
+
+Emit standard dense layer branch.
+
+Parameters:
+- `traversalContext` - Layer traversal context.
+
+Returns: Dense output tensor name.
+
+### emitDenseFamilyBranch
+
+```ts
+emitDenseFamilyBranch(
+  traversalContext: LayerTraversalContext,
+  activationContext: LayerActivationContext,
+): string
+```
+
+Emit dense or per-neuron layer branch from activation analysis.
+
+Parameters:
+- `traversalContext` - Layer traversal context.
+- `activationContext` - Activation analysis context.
+
+Returns: Output tensor name.
+
 ### emitLayerGraph
 
 ```ts
@@ -708,6 +1462,147 @@ const outputName = emitLayerGraph({
   legacyNodeOrdering: false,
 });
 ```
+
+### emitNonConvolutionBranch
+
+```ts
+emitNonConvolutionBranch(
+  traversalContext: LayerTraversalContext,
+  activationContext: LayerActivationContext,
+): string
+```
+
+Emit recurrent or dense/per-neuron branch output.
+
+Parameters:
+- `traversalContext` - Layer traversal context.
+- `activationContext` - Activation analysis context.
+
+Returns: Output tensor name.
+
+### emitPerNeuronBranch
+
+```ts
+emitPerNeuronBranch(
+  traversalContext: LayerTraversalContext,
+): string
+```
+
+Emit per-neuron decomposition branch for mixed activations.
+
+Parameters:
+- `traversalContext` - Layer traversal context.
+
+Returns: Per-neuron output tensor name.
+
+### emitRecurrentBranch
+
+```ts
+emitRecurrentBranch(
+  traversalContext: LayerTraversalContext,
+  activationContext: LayerActivationContext,
+): string
+```
+
+Emit recurrent layer branch with mixed-activation validation.
+
+Parameters:
+- `traversalContext` - Layer traversal context.
+- `activationContext` - Activation analysis context.
+
+Returns: Recurrent output tensor name.
+
+### ensureRecurrentSupportsActivations
+
+```ts
+ensureRecurrentSupportsActivations(
+  layerIndex: number,
+  activationContext: LayerActivationContext,
+): void
+```
+
+Ensure recurrent layers do not use unsupported mixed activations.
+
+Parameters:
+- `layerIndex` - Layer index.
+- `activationContext` - Activation analysis context.
+
+Returns: Nothing.
+
+### resolveActivationName
+
+```ts
+resolveActivationName(
+  node: default,
+): string | undefined
+```
+
+Resolve the activation name for one node.
+
+Parameters:
+- `node` - Current layer node.
+
+Returns: Activation name when present.
+
+### shouldEmitRecurrentBranch
+
+```ts
+shouldEmitRecurrentBranch(
+  decisionContext: LayerRecurrentDecisionContext,
+): boolean
+```
+
+Determine whether recurrent single-step emission applies.
+
+Parameters:
+- `decisionContext` - Recurrent branch decision context.
+
+Returns: Whether recurrent branch should be emitted.
+
+### tryEmitConvolutionBranch
+
+```ts
+tryEmitConvolutionBranch(
+  traversalContext: LayerTraversalContext,
+): string | undefined
+```
+
+Attempt convolution emission and return produced output when mapped.
+
+Parameters:
+- `traversalContext` - Layer traversal context.
+
+Returns: Convolution output name when emitted; otherwise null.
+
+### tryEmitExplicitConcatMergeBranch
+
+```ts
+tryEmitExplicitConcatMergeBranch(
+  traversalContext: LayerTraversalContext,
+): string | undefined
+```
+
+Attempt the narrow explicit concat subset before residual fallback.
+
+Parameters:
+- `traversalContext` - Layer traversal context.
+
+Returns: Concat-merge output tensor name when emitted; otherwise undefined.
+
+### tryEmitResidualAddBranch
+
+```ts
+tryEmitResidualAddBranch(
+  traversalContext: LayerTraversalContext,
+): string | undefined
+```
+
+Attempt the narrow one-hop residual-add subset before falling back.
+
+Parameters:
+- `traversalContext` - Layer traversal context.
+
+Returns: Residual-add output tensor name when emitted; otherwise null.
 
 ## architecture/network/onnx/export/layers/network.onnx.export-layer-common.utils.ts
 

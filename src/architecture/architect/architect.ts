@@ -76,6 +76,34 @@ type NormalizedArchitectRandomSparseOptions = {
   gates: number;
 };
 
+type ArchitectConstructState = {
+  connections: Set<Connection>;
+  gates: Set<Connection>;
+  inputSize: number;
+  outputSize: number;
+  selfconns: Set<Connection>;
+  uniqueNodes: Set<Node>;
+};
+
+type ArchitectRecurrentBuilderConfig = {
+  hiddenLayerSizes: number[];
+  inputLayerSize: number;
+  inputToOutput: boolean;
+  outputLayerSize: number;
+};
+
+type ArchitectRecurrentBuildResult = {
+  nodes: Array<Group | Layer>;
+  recurrentLayers: Array<{ layer: Layer; size: number }>;
+};
+
+type ArchitectRecurrentBuilderErrors = {
+  invalidConfigurationError: new (message: string) => Error;
+  invalidConfigurationMessage: string;
+  invalidLayerArgumentsError: new (message: string) => Error;
+  invalidLayerArgumentsMessage: string;
+};
+
 /**
  * Provides static methods for constructing predefined neural network
  * architectures.
@@ -119,88 +147,17 @@ export default class Architect {
    */
   static construct(list: Array<Group | Layer | Node>): Network {
     const network = new Network(0, 0);
-    const uniqueNodes = new Set<Node>();
-    const connections = new Set<Connection>();
-    const gates = new Set<Connection>();
-    const selfconns = new Set<Connection>();
-    let inputSize = 0;
-    let outputSize = 0;
+    const constructState = createArchitectConstructState();
+
     for (const item of list) {
-      let currentNodes: Node[] = [];
-
-      if (item instanceof Group) {
-        currentNodes = item.nodes;
-      } else if (item instanceof Layer) {
-        for (const layerNode of item.nodes) {
-          if (layerNode instanceof Group) {
-            currentNodes.push(...layerNode.nodes);
-          } else if (layerNode instanceof Node) {
-            currentNodes.push(layerNode);
-          }
-        }
-      } else if (item instanceof Node) {
-        currentNodes = [item];
-      }
-
-      for (const node of currentNodes) {
-        if (!uniqueNodes.has(node)) {
-          uniqueNodes.add(node);
-
-          if (node.type === 'input') {
-            inputSize++;
-          } else if (node.type === 'output') {
-            outputSize++;
-          }
-
-          if (node.connections) {
-            if (Array.isArray(node.connections.out)) {
-              node.connections.out.forEach((connection) => {
-                if (connection instanceof Connection) {
-                  connections.add(connection);
-                }
-              });
-            }
-
-            if (Array.isArray(node.connections.gated)) {
-              node.connections.gated.forEach((connection) => {
-                if (connection instanceof Connection) {
-                  gates.add(connection);
-                }
-              });
-            }
-
-            if (
-              node.connections.self.length > 0 &&
-              node.connections.self[0] instanceof Connection &&
-              node.connections.self[0].weight !== 0
-            ) {
-              selfconns.add(node.connections.self[0]);
-            }
-          }
-        }
-      }
+      collectArchitectNodesFromItem(constructState, item);
     }
 
-    if (inputSize > 0 && outputSize > 0) {
-      network.input = inputSize;
-      network.output = outputSize;
-    } else {
-      throw new ArchitectInputOutputTypeResolutionError(
-        'Could not determine input/output nodes. Ensure nodes have their `type` property set to "input" or "output".',
-      );
-    }
-
-    network.nodes = Array.from(uniqueNodes);
-    network.connections = Array.from(connections);
-    network.gates = Array.from(gates);
-    network.selfconns = Array.from(selfconns);
+    assignConstructedNetworkInterfaceCounts(network, constructState);
+    populateConstructedNetwork(network, constructState);
     network.refreshExplicitIORoles();
 
-    if (network.input === 0 || network.output === 0) {
-      throw new ArchitectZeroInputOutputNodesError(
-        'Constructed network has zero input or output nodes.',
-      );
-    }
+    assertConstructedNetworkHasInterface(network);
 
     return network;
   }
@@ -493,76 +450,32 @@ export default class Architect {
   static lstm(
     ...layerArgs: (number | ArchitectRecurrentShortcutOptions)[]
   ): Network {
-    let options: ArchitectRecurrentShortcutOptions = {};
-    const trailingArgument = layerArgs.at(-1);
-
-    if (
-      layerArgs.length > 0 &&
-      typeof trailingArgument === 'object' &&
-      trailingArgument !== null &&
-      !Array.isArray(trailingArgument)
-    ) {
-      options = layerArgs.pop() as ArchitectRecurrentShortcutOptions;
-    }
-
-    if (
-      !layerArgs.every(
-        (argument): argument is number =>
-          typeof argument === 'number' &&
-          Number.isFinite(argument) &&
-          argument > 0,
-      )
-    ) {
-      throw new ArchitectInvalidLstmLayerArgumentsError(
-        'Invalid LSTM layer arguments: All layer sizes must be positive finite numbers.',
-      );
-    }
-
-    const layers = layerArgs as number[];
-
-    if (layers.length < 3) {
-      throw new ArchitectInvalidLstmConfigurationError(
-        'Invalid LSTM configuration: You must specify at least 3 layer sizes (input, hidden..., output).',
-      );
-    }
-
-    const { inputToOutput = true } = options;
-    const inputLayerSize = layers.shift()!;
-    const outputLayerSize = layers.pop()!;
-
-    const inputLayer = Layer.dense(inputLayerSize, 'input');
-
-    const outputLayer = Layer.dense(outputLayerSize, 'output');
-
-    const nodes: (Layer | Group)[] = [inputLayer];
-    const recurrentLayers: Array<{ layer: Layer; size: number }> = [];
-    let previousLayer: Layer | Group = inputLayer;
-
-    for (const layerSize of layers) {
-      const lstmLayer = Layer.lstm(layerSize);
-      (previousLayer as Layer).connect(lstmLayer);
-      nodes.push(lstmLayer);
-      recurrentLayers.push({ layer: lstmLayer, size: layerSize });
-      previousLayer = lstmLayer;
-    }
-
-    (previousLayer as Layer).connect(outputLayer);
-    nodes.push(outputLayer);
-
-    if (inputToOutput) {
-      inputLayer.connect(outputLayer, methods.groupConnection.ALL_TO_ALL);
-    }
-
-    const network = Architect.construct(nodes);
-    network.input = inputLayerSize;
-    network.output = outputLayerSize;
-    recurrentLayers.forEach(({ layer, size }) => {
-      const roleNodes = splitLstmLayerNodes(layer.nodes, size)!;
-      appendTemporalDescriptorSet(
-        network,
-        buildLstmTemporalDescriptorSet(network, roleNodes),
-      );
+    const recurrentConfig = resolveArchitectRecurrentBuilderConfig(
+      layerArgs,
+      {
+        invalidConfigurationError: ArchitectInvalidLstmConfigurationError,
+        invalidConfigurationMessage:
+          'Invalid LSTM configuration: You must specify at least 3 layer sizes (input, hidden..., output).',
+        invalidLayerArgumentsError: ArchitectInvalidLstmLayerArgumentsError,
+        invalidLayerArgumentsMessage:
+          'Invalid LSTM layer arguments: All layer sizes must be positive finite numbers.',
+      },
+      true,
+    );
+    const inputLayer = Layer.dense(recurrentConfig.inputLayerSize, 'input');
+    const outputLayer = Layer.dense(recurrentConfig.outputLayerSize, 'output');
+    const recurrentBuild = buildArchitectRecurrentLayers({
+      buildLayer: (layerSize) => Layer.lstm(layerSize),
+      hiddenLayerSizes: recurrentConfig.hiddenLayerSizes,
+      inputLayer,
+      inputToOutput: recurrentConfig.inputToOutput,
+      outputLayer,
     });
+
+    const network = Architect.construct(recurrentBuild.nodes);
+    network.input = recurrentConfig.inputLayerSize;
+    network.output = recurrentConfig.outputLayerSize;
+    appendLstmTemporalDescriptors(network, recurrentBuild.recurrentLayers);
 
     return network;
   }
@@ -614,77 +527,32 @@ export default class Architect {
   static gru(
     ...layerArgs: (number | ArchitectRecurrentShortcutOptions)[]
   ): Network {
-    let options: ArchitectRecurrentShortcutOptions = {};
-    const trailingArgument = layerArgs.at(-1);
-
-    if (
-      layerArgs.length > 0 &&
-      typeof trailingArgument === 'object' &&
-      trailingArgument !== null &&
-      !Array.isArray(trailingArgument)
-    ) {
-      options = layerArgs.pop() as ArchitectRecurrentShortcutOptions;
-    }
-
-    if (
-      !layerArgs.every(
-        (argument): argument is number =>
-          typeof argument === 'number' &&
-          Number.isFinite(argument) &&
-          argument > 0,
-      )
-    ) {
-      throw new ArchitectInvalidGruLayerArgumentsError(
-        'Invalid GRU layer arguments: All layer sizes must be positive finite numbers.',
-      );
-    }
-
-    const layers = layerArgs as number[];
-
-    if (layers.length < 3) {
-      throw new ArchitectInvalidGruConfigurationError(
-        'Invalid GRU configuration: You must specify at least 3 layer sizes (input, hidden..., output).',
-      );
-    }
-
-    const { inputToOutput = false } = options;
-
-    const inputLayerSize = layers.shift()!;
-    const outputLayerSize = layers.pop()!;
-
-    const inputLayer = Layer.dense(inputLayerSize, 'input');
-
-    const outputLayer = Layer.dense(outputLayerSize, 'output');
-
-    const nodes: (Layer | Group)[] = [inputLayer];
-    const recurrentLayers: Array<{ layer: Layer; size: number }> = [];
-    let previousLayer: Layer | Group = inputLayer;
-
-    for (const blockSize of layers) {
-      const gruLayer = Layer.gru(blockSize);
-      (previousLayer as Layer).connect(gruLayer);
-      nodes.push(gruLayer);
-      recurrentLayers.push({ layer: gruLayer, size: blockSize });
-      previousLayer = gruLayer;
-    }
-
-    (previousLayer as Layer).connect(outputLayer);
-    nodes.push(outputLayer);
-
-    if (inputToOutput) {
-      inputLayer.connect(outputLayer, methods.groupConnection.ALL_TO_ALL);
-    }
-
-    const network = Architect.construct(nodes);
-    network.input = inputLayerSize;
-    network.output = outputLayerSize;
-    recurrentLayers.forEach(({ layer, size }) => {
-      const roleNodes = splitGruLayerNodes(layer.nodes, size)!;
-      appendTemporalDescriptorSet(
-        network,
-        buildGruTemporalDescriptorSet(network, roleNodes),
-      );
+    const recurrentConfig = resolveArchitectRecurrentBuilderConfig(
+      layerArgs,
+      {
+        invalidConfigurationError: ArchitectInvalidGruConfigurationError,
+        invalidConfigurationMessage:
+          'Invalid GRU configuration: You must specify at least 3 layer sizes (input, hidden..., output).',
+        invalidLayerArgumentsError: ArchitectInvalidGruLayerArgumentsError,
+        invalidLayerArgumentsMessage:
+          'Invalid GRU layer arguments: All layer sizes must be positive finite numbers.',
+      },
+      false,
+    );
+    const inputLayer = Layer.dense(recurrentConfig.inputLayerSize, 'input');
+    const outputLayer = Layer.dense(recurrentConfig.outputLayerSize, 'output');
+    const recurrentBuild = buildArchitectRecurrentLayers({
+      buildLayer: (layerSize) => Layer.gru(layerSize),
+      hiddenLayerSizes: recurrentConfig.hiddenLayerSizes,
+      inputLayer,
+      inputToOutput: recurrentConfig.inputToOutput,
+      outputLayer,
     });
+
+    const network = Architect.construct(recurrentBuild.nodes);
+    network.input = recurrentConfig.inputLayerSize;
+    network.output = recurrentConfig.outputLayerSize;
+    appendGruTemporalDescriptors(network, recurrentBuild.recurrentLayers);
 
     return network;
   }
@@ -859,46 +727,18 @@ export default class Architect {
       return network;
     }
 
-    const minSize = Math.min(network.input, network.output) + 1;
+    const minimumHiddenLayerSize = Math.min(network.input, network.output) + 1;
 
     for (
       let layerIndex = 1;
       layerIndex < network.layers.length - 1;
       layerIndex++
     ) {
-      const hiddenLayer = network.layers[layerIndex];
-      const currentSize = hiddenLayer.nodes.length;
-
-      if (currentSize < minSize) {
-        for (let nodeIndex = currentSize; nodeIndex < minSize; nodeIndex++) {
-          const newNode = new Node('hidden');
-          hiddenLayer.nodes.push(newNode);
-          network.nodes.push(newNode);
-
-          if (layerIndex > 0 && network.layers[layerIndex - 1].output) {
-            for (const previousNode of network.layers[layerIndex - 1].output!
-              .nodes) {
-              const connections = previousNode.connect(newNode);
-              network.connections.push(...connections);
-            }
-          }
-
-          if (
-            layerIndex < network.layers.length - 1 &&
-            network.layers[layerIndex + 1].output
-          ) {
-            for (const nextNode of network.layers[layerIndex + 1].output!
-              .nodes) {
-              const connections = newNode.connect(nextNode);
-              network.connections.push(...connections);
-            }
-          }
-
-          if (hiddenLayer.output && Array.isArray(hiddenLayer.output.nodes)) {
-            hiddenLayer.output.nodes.push(newNode);
-          }
-        }
-      }
+      growArchitectHiddenLayerToMinimum(
+        network,
+        layerIndex,
+        minimumHiddenLayerSize,
+      );
     }
 
     return network;
@@ -909,6 +749,349 @@ function resolveMemoryBlockNodes(memoryLayer: Layer): Node[][] {
   return (memoryLayer.nodes as unknown as Group[])
     .filter((layerNode) => layerNode instanceof Group)
     .map((memoryBlock) => memoryBlock.nodes);
+}
+
+function createArchitectConstructState(): ArchitectConstructState {
+  return {
+    connections: new Set<Connection>(),
+    gates: new Set<Connection>(),
+    inputSize: 0,
+    outputSize: 0,
+    selfconns: new Set<Connection>(),
+    uniqueNodes: new Set<Node>(),
+  };
+}
+
+function collectArchitectNodesFromItem(
+  constructState: ArchitectConstructState,
+  item: Group | Layer | Node,
+): void {
+  const currentNodes = resolveArchitectItemNodes(item);
+
+  for (const node of currentNodes) {
+    collectArchitectNode(constructState, node);
+  }
+}
+
+function resolveArchitectItemNodes(item: Group | Layer | Node): Node[] {
+  if (item instanceof Group) {
+    return item.nodes;
+  }
+
+  if (item instanceof Layer) {
+    return item.nodes.flatMap((layerNode) => {
+      if (layerNode instanceof Group) {
+        return layerNode.nodes;
+      }
+
+      return layerNode instanceof Node ? [layerNode] : [];
+    });
+  }
+
+  return item instanceof Node ? [item] : [];
+}
+
+function collectArchitectNode(
+  constructState: ArchitectConstructState,
+  node: Node,
+): void {
+  if (constructState.uniqueNodes.has(node)) {
+    return;
+  }
+
+  constructState.uniqueNodes.add(node);
+  incrementArchitectRoleCounts(constructState, node);
+  collectArchitectConnectionBucket(
+    constructState.connections,
+    node.connections?.out,
+  );
+  collectArchitectConnectionBucket(
+    constructState.gates,
+    node.connections?.gated,
+  );
+  collectArchitectSelfConnection(
+    constructState.selfconns,
+    node.connections?.self,
+  );
+}
+
+function incrementArchitectRoleCounts(
+  constructState: ArchitectConstructState,
+  node: Node,
+): void {
+  if (node.type === 'input') {
+    constructState.inputSize++;
+    return;
+  }
+
+  if (node.type === 'output') {
+    constructState.outputSize++;
+  }
+}
+
+function collectArchitectConnectionBucket(
+  bucket: Set<Connection>,
+  candidateConnections: unknown,
+): void {
+  if (!Array.isArray(candidateConnections)) {
+    return;
+  }
+
+  candidateConnections.forEach((connection) => {
+    if (connection instanceof Connection) {
+      bucket.add(connection);
+    }
+  });
+}
+
+function collectArchitectSelfConnection(
+  selfConnections: Set<Connection>,
+  candidateSelfConnections: unknown,
+): void {
+  if (
+    !Array.isArray(candidateSelfConnections) ||
+    candidateSelfConnections.length === 0
+  ) {
+    return;
+  }
+
+  const selfConnection = candidateSelfConnections[0];
+
+  if (selfConnection instanceof Connection && selfConnection.weight !== 0) {
+    selfConnections.add(selfConnection);
+  }
+}
+
+function assignConstructedNetworkInterfaceCounts(
+  network: Network,
+  constructState: ArchitectConstructState,
+): void {
+  if (constructState.inputSize === 0 || constructState.outputSize === 0) {
+    throw new ArchitectInputOutputTypeResolutionError(
+      'Could not determine input/output nodes. Ensure nodes have their `type` property set to "input" or "output".',
+    );
+  }
+
+  network.input = constructState.inputSize;
+  network.output = constructState.outputSize;
+}
+
+function populateConstructedNetwork(
+  network: Network,
+  constructState: ArchitectConstructState,
+): void {
+  network.nodes = Array.from(constructState.uniqueNodes);
+  network.connections = Array.from(constructState.connections);
+  network.gates = Array.from(constructState.gates);
+  network.selfconns = Array.from(constructState.selfconns);
+}
+
+function assertConstructedNetworkHasInterface(network: Network): void {
+  if (network.input === 0 || network.output === 0) {
+    throw new ArchitectZeroInputOutputNodesError(
+      'Constructed network has zero input or output nodes.',
+    );
+  }
+}
+
+function resolveArchitectRecurrentBuilderConfig(
+  layerArgs: Array<number | ArchitectRecurrentShortcutOptions>,
+  errors: ArchitectRecurrentBuilderErrors,
+  defaultInputToOutput: boolean,
+): ArchitectRecurrentBuilderConfig {
+  const resolvedArgs = [...layerArgs];
+  const shortcutOptions = extractArchitectShortcutOptions(resolvedArgs);
+  const layerSizes = resolveArchitectLayerSizes(resolvedArgs, errors);
+
+  return {
+    hiddenLayerSizes: layerSizes.slice(1, -1),
+    inputLayerSize: layerSizes[0],
+    inputToOutput: shortcutOptions.inputToOutput ?? defaultInputToOutput,
+    outputLayerSize: layerSizes.at(-1)!,
+  };
+}
+
+function extractArchitectShortcutOptions(
+  layerArgs: Array<number | ArchitectRecurrentShortcutOptions>,
+): ArchitectRecurrentShortcutOptions {
+  const trailingArgument = layerArgs.at(-1);
+
+  if (
+    layerArgs.length === 0 ||
+    typeof trailingArgument !== 'object' ||
+    trailingArgument === null ||
+    Array.isArray(trailingArgument)
+  ) {
+    return {};
+  }
+
+  layerArgs.pop();
+  return trailingArgument as ArchitectRecurrentShortcutOptions;
+}
+
+function resolveArchitectLayerSizes(
+  layerArgs: Array<number | ArchitectRecurrentShortcutOptions>,
+  errors: ArchitectRecurrentBuilderErrors,
+): number[] {
+  if (
+    !layerArgs.every(
+      (argument): argument is number =>
+        typeof argument === 'number' &&
+        Number.isFinite(argument) &&
+        argument > 0,
+    )
+  ) {
+    throw new errors.invalidLayerArgumentsError(
+      errors.invalidLayerArgumentsMessage,
+    );
+  }
+
+  if (layerArgs.length < 3) {
+    throw new errors.invalidConfigurationError(
+      errors.invalidConfigurationMessage,
+    );
+  }
+
+  return layerArgs;
+}
+
+function buildArchitectRecurrentLayers({
+  buildLayer,
+  hiddenLayerSizes,
+  inputLayer,
+  inputToOutput,
+  outputLayer,
+}: {
+  buildLayer: (layerSize: number) => Layer;
+  hiddenLayerSizes: number[];
+  inputLayer: Layer;
+  inputToOutput: boolean;
+  outputLayer: Layer;
+}): ArchitectRecurrentBuildResult {
+  const nodes: Array<Group | Layer> = [inputLayer];
+  const recurrentLayers: Array<{ layer: Layer; size: number }> = [];
+  let previousLayer: Layer | Group = inputLayer;
+
+  for (const hiddenLayerSize of hiddenLayerSizes) {
+    const recurrentLayer = buildLayer(hiddenLayerSize);
+    (previousLayer as Layer).connect(recurrentLayer);
+    nodes.push(recurrentLayer);
+    recurrentLayers.push({ layer: recurrentLayer, size: hiddenLayerSize });
+    previousLayer = recurrentLayer;
+  }
+
+  (previousLayer as Layer).connect(outputLayer);
+  nodes.push(outputLayer);
+
+  if (inputToOutput) {
+    inputLayer.connect(outputLayer, methods.groupConnection.ALL_TO_ALL);
+  }
+
+  return { nodes, recurrentLayers };
+}
+
+function appendLstmTemporalDescriptors(
+  network: Network,
+  recurrentLayers: Array<{ layer: Layer; size: number }>,
+): void {
+  recurrentLayers.forEach(({ layer, size }) => {
+    const roleNodes = splitLstmLayerNodes(layer.nodes, size)!;
+    appendTemporalDescriptorSet(
+      network,
+      buildLstmTemporalDescriptorSet(network, roleNodes),
+    );
+  });
+}
+
+function appendGruTemporalDescriptors(
+  network: Network,
+  recurrentLayers: Array<{ layer: Layer; size: number }>,
+): void {
+  recurrentLayers.forEach(({ layer, size }) => {
+    const roleNodes = splitGruLayerNodes(layer.nodes, size)!;
+    appendTemporalDescriptorSet(
+      network,
+      buildGruTemporalDescriptorSet(network, roleNodes),
+    );
+  });
+}
+
+function growArchitectHiddenLayerToMinimum(
+  network: Network,
+  layerIndex: number,
+  minimumHiddenLayerSize: number,
+): void {
+  const hiddenLayer = network.layers?.[layerIndex];
+
+  if (!hiddenLayer) {
+    return;
+  }
+
+  const missingNodeCount = Math.max(
+    0,
+    minimumHiddenLayerSize - hiddenLayer.nodes.length,
+  );
+
+  for (let nodeIndex = 0; nodeIndex < missingNodeCount; nodeIndex++) {
+    addArchitectHiddenLayerNode(
+      network,
+      hiddenLayer,
+      network.layers?.[layerIndex - 1]?.output?.nodes,
+      network.layers?.[layerIndex + 1]?.output?.nodes,
+    );
+  }
+}
+
+function addArchitectHiddenLayerNode(
+  network: Network,
+  hiddenLayer: Layer,
+  previousLayerOutputNodes: Node[] | undefined,
+  nextLayerOutputNodes: Node[] | undefined,
+): void {
+  const newNode = new Node('hidden');
+
+  hiddenLayer.nodes.push(newNode);
+  network.nodes.push(newNode);
+  connectArchitectSourceNodes(previousLayerOutputNodes, newNode, network);
+  connectArchitectTargetNodes(newNode, nextLayerOutputNodes, network);
+  appendArchitectHiddenLayerOutputNode(hiddenLayer, newNode);
+}
+
+function connectArchitectSourceNodes(
+  sourceNodes: Node[] | undefined,
+  targetNode: Node,
+  network: Network,
+): void {
+  if (!sourceNodes) {
+    return;
+  }
+
+  for (const sourceNode of sourceNodes) {
+    network.connections.push(...sourceNode.connect(targetNode));
+  }
+}
+
+function connectArchitectTargetNodes(
+  sourceNode: Node,
+  targetNodes: Node[] | undefined,
+  network: Network,
+): void {
+  if (!targetNodes) {
+    return;
+  }
+
+  for (const targetNode of targetNodes) {
+    network.connections.push(...sourceNode.connect(targetNode));
+  }
+}
+
+function appendArchitectHiddenLayerOutputNode(
+  hiddenLayer: Layer,
+  newNode: Node,
+): void {
+  if (hiddenLayer.output && Array.isArray(hiddenLayer.output.nodes)) {
+    hiddenLayer.output.nodes.push(newNode);
+  }
 }
 
 function validateRandomSparseDimensions(

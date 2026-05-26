@@ -268,7 +268,11 @@ const outputNodeIndexes = inferenceIr.outputNodeIndices;
 
 ### AutoInferenceTransport
 
-Automatic transport selection result for the current host.
+Automatically selected worker-backed inference transport tier for the current host.
+
+- `'shared-memory'` — SharedArrayBuffer transfer path when cross-origin isolation is active.
+- `'channel'` — Persistent channel worker when a channel-worker script was delivered.
+- `'transferable'` — Universal typed-array fallback when higher tiers are unavailable.
 
 ### BatchEvaluationResult
 
@@ -280,7 +284,10 @@ with their original batch shelf without reconstructing indexes manually.
 
 ### BrowserWorkerAssetUrlOptions
 
-Options for resolving a browser worker asset URL.
+Options for resolving a browser worker asset URL relative to the current script or an explicit base URL override.
+
+When `baseUrl` is omitted the helper falls back to `document.currentScript.src`
+and then `location.href`, keeping the worker and host bundle co-located by default.
 
 ### createInferencePredictor
 
@@ -1265,7 +1272,10 @@ channel.close();
 
 ### BrowserWorkerAssetUrlOptions
 
-Options for resolving a browser worker asset URL.
+Options for resolving a browser worker asset URL relative to the current script or an explicit base URL override.
+
+When `baseUrl` is omitted the helper falls back to `document.currentScript.src`
+and then `location.href`, keeping the worker and host bundle co-located by default.
 
 ### resolveBrowserWorkerAssetUrl
 
@@ -1318,7 +1328,11 @@ const transport = resolveAutoInferenceTransport(capabilities);
 
 ### AutoInferenceTransport
 
-Automatic transport selection result for the current host.
+Automatically selected worker-backed inference transport tier for the current host.
+
+- `'shared-memory'` — SharedArrayBuffer transfer path when cross-origin isolation is active.
+- `'channel'` — Persistent channel worker when a channel-worker script was delivered.
+- `'transferable'` — Universal typed-array fallback when higher tiers are unavailable.
 
 ### detectInferenceWorkerCapabilities
 

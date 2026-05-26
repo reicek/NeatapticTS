@@ -138,6 +138,13 @@ Example:
 const state = network.getRNGState();
 ```
 
+### networkDeterministicUtils
+
+Default export bundle for the deterministic RNG utilities chapter.
+
+Bundles the seed, checkpoint, and restore helpers so the network facade can
+bind them as methods without importing each function individually.
+
 ### restoreRNG
 
 ```ts
@@ -255,7 +262,7 @@ Internal deterministic network state shape used across deterministic utility mod
 
 ### RNG_WEYL_INCREMENT
 
-Fixed Weyl increment used to advance deterministic PRNG state.
+Fixed Weyl increment used to advance the deterministic PRNG state.
 
 ### RNGSnapshot
 

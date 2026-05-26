@@ -89,7 +89,11 @@ can highlight the I/O boundary and map external input/output indices.
 
 ### VisualizationMetadataV1
 
-Optional metadata block attached to a visualization graph.
+Optional metadata block attached to a {@link VisualizationGraphV1} export.
+
+Carries a human-readable network name, a scheduling mode hint so renderers
+can annotate recurrent edges correctly, and an ISO 8601 creation timestamp
+for traceability in logging and checkpoint pipelines.
 
 ### VisualizationNodeV1
 

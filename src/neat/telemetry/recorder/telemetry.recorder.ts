@@ -129,6 +129,9 @@ interface TelemetryContext extends NeatLike {
   _fastModeTuned?: boolean;
 }
 
+type TelemetryBuildOptions = NeatOptions & TelemetryDiversityOptions;
+type TelemetryMutableEntry = TelemetryEntry & Record<string, unknown>;
+
 /**
  * Create a strict baseline telemetry entry with required fields populated.
  *
@@ -411,141 +414,247 @@ export function buildTelemetryEntry(
   fittest: Record<string, unknown>,
 ): TelemetryEntry {
   const ctx = this as TelemetryContext;
-  const options = ctx.options || {};
+  const telemetryOptions = resolveTelemetryBuildOptions(ctx);
   const generationIndex = ctx.generation ?? 0;
-  const isMultiObjectiveEnabled = options.multiObjective?.enabled ?? false;
 
   // Step 1: Select multi-objective or mono-objective telemetry path.
-  if (isMultiObjectiveEnabled)
-    return buildMultiObjectiveEntry(ctx, options, generationIndex, fittest);
+  if (telemetryOptions.multiObjective?.enabled ?? false) {
+    return buildMultiObjectiveEntry(
+      ctx,
+      telemetryOptions,
+      generationIndex,
+      fittest,
+    );
+  }
 
   // Step 2: Fallback path (mono-objective) retained for parity with legacy behavior.
-  return buildMonoObjectiveEntry(ctx, options, generationIndex, fittest);
+  return buildMonoObjectiveEntry(
+    ctx,
+    telemetryOptions,
+    generationIndex,
+    fittest,
+  );
+}
 
-  /**
-   * Build a telemetry entry for multi-objective mode.
-   *
-   * @param telemetryContext - Neat-like context with population state.
-   * @param telemetryOptions - Options controlling telemetry behavior.
-   * @param generation - Generation index for this snapshot.
-   * @param fittestGenome - Fittest genome record with score.
-   * @returns Telemetry entry object for MO mode.
-   */
-  function buildMultiObjectiveEntry(
-    telemetryContext: TelemetryContext,
-    telemetryOptions: NeatOptions & TelemetryDiversityOptions,
-    generation: number,
-    fittestGenome: Record<string, unknown>,
-  ): TelemetryEntry {
-    // Step 1: Resolve population snapshot.
-    const population = (telemetryContext.population as GenomeDetailed[]) ?? [];
+/**
+ * Resolve telemetry build options from the current recorder context.
+ *
+ * @param telemetryContext - Neat-like context with telemetry settings.
+ * @returns Telemetry build options.
+ */
+function resolveTelemetryBuildOptions(
+  telemetryContext: TelemetryContext,
+): TelemetryBuildOptions {
+  return telemetryContext.options || {};
+}
 
-    // Step 2: Compute MO proxy metrics (hypervolume proxy + pareto fronts).
-    const hyperVolumeProxy = computeHyperVolumeProxy(
-      telemetryOptions,
-      population,
-    );
-    const paretoFrontSizes = computeParetoFrontSizes(population);
+/**
+ * Build a telemetry entry for multi-objective mode.
+ *
+ * @param telemetryContext - Neat-like context with population state.
+ * @param telemetryOptions - Options controlling telemetry behavior.
+ * @param generation - Generation index for this snapshot.
+ * @param fittestGenome - Fittest genome record with score.
+ * @returns Telemetry entry object for MO mode.
+ */
+function buildMultiObjectiveEntry(
+  telemetryContext: TelemetryContext,
+  telemetryOptions: TelemetryBuildOptions,
+  generation: number,
+  fittestGenome: Record<string, unknown>,
+): TelemetryEntry {
+  const population = resolveTelemetryPopulation(telemetryContext);
+  const hyperVolumeProxy = computeHyperVolumeProxy(
+    telemetryOptions,
+    population,
+  );
+  const entry = createMultiObjectiveTelemetryEntry(
+    telemetryContext,
+    generation,
+    fittestGenome,
+    hyperVolumeProxy,
+    computeParetoFrontSizes(population),
+    computeOperatorStatsSnapshot(telemetryContext._operatorStats),
+  );
 
-    // Step 3: Snapshot operator statistics.
-    const operatorStatsSnapshot = computeOperatorStatsSnapshot(
-      telemetryContext._operatorStats,
-    );
+  applySharedTelemetrySnapshots(
+    telemetryContext,
+    telemetryOptions,
+    generation,
+    entry,
+  );
+  applyLineageStatsMultiObjective(telemetryContext, population, entry);
+  applyHypervolumeTelemetry(telemetryOptions, hyperVolumeProxy, entry);
+  applyComplexityStatsMultiObjective(
+    telemetryContext,
+    telemetryOptions,
+    population,
+    entry,
+  );
+  applyPerformanceStats(telemetryContext, telemetryOptions, entry);
+  return entry;
+}
 
-    // Step 4: Assemble base entry.
-    const entry: TelemetryEntry & Record<string, unknown> = {
-      gen: generation,
-      best: (fittestGenome.score as number) ?? 0,
-      species: telemetryContext._species?.length ?? 0,
-      hyper: hyperVolumeProxy,
-      fronts: paretoFrontSizes,
-      diversity: telemetryContext._diversityStats,
-      ops: operatorStatsSnapshot,
-      objImportance: {},
-    };
+/**
+ * Build a telemetry entry for mono-objective mode.
+ *
+ * @param telemetryContext - Neat-like context with population state.
+ * @param telemetryOptions - Options controlling telemetry behavior.
+ * @param generation - Generation index for this snapshot.
+ * @param fittestGenome - Fittest genome record with score.
+ * @returns Telemetry entry object for mono mode.
+ */
+function buildMonoObjectiveEntry(
+  telemetryContext: TelemetryContext,
+  telemetryOptions: TelemetryBuildOptions,
+  generation: number,
+  fittestGenome: Record<string, unknown>,
+): TelemetryEntry {
+  const population = resolveTelemetryPopulation(telemetryContext);
+  const entry = createMonoObjectiveTelemetryEntry(
+    telemetryContext,
+    generation,
+    fittestGenome,
+    computeOperatorStatsSnapshot(telemetryContext._operatorStats),
+  );
 
-    // Step 5: Attach objective/meta snapshots.
-    applyObjectiveImportance(telemetryContext, entry);
-    applyObjectiveAges(telemetryContext, entry);
-    applyObjectiveEvents(telemetryContext, entry, generation);
-    applySpeciesAllocation(telemetryContext, entry);
-    applyObjectivesSnapshot(telemetryContext, entry);
-    applyRngState(telemetryContext, telemetryOptions, entry);
+  applySharedTelemetrySnapshots(
+    telemetryContext,
+    telemetryOptions,
+    generation,
+    entry,
+  );
+  applyLineageStatsMonoObjective(telemetryContext, population, entry);
+  applyHypervolumeTelemetry(telemetryOptions, 0, entry);
+  applyComplexityStatsMonoObjective(
+    telemetryContext,
+    telemetryOptions,
+    population,
+    entry,
+  );
+  applyPerformanceStats(telemetryContext, telemetryOptions, entry);
+  return entry;
+}
 
-    // Step 6: Attach lineage stats when enabled.
-    applyLineageStatsMultiObjective(telemetryContext, population, entry);
+/**
+ * Resolve the current population snapshot used by telemetry builders.
+ *
+ * @param telemetryContext - Neat-like context with population state.
+ * @returns Population snapshot.
+ */
+function resolveTelemetryPopulation(
+  telemetryContext: TelemetryContext,
+): GenomeDetailed[] {
+  return (telemetryContext.population as GenomeDetailed[]) ?? [];
+}
 
-    // Step 7: Attach optional telemetry expansions.
-    applyHypervolumeTelemetry(telemetryOptions, hyperVolumeProxy, entry);
-    applyComplexityStatsMultiObjective(
+/**
+ * Create the common telemetry base for one generation snapshot.
+ *
+ * @param telemetryContext - Neat-like context with species state.
+ * @param generation - Generation index for this snapshot.
+ * @param fittestGenome - Fittest genome record with score.
+ * @returns Strict baseline telemetry entry.
+ */
+function createGenerationTelemetryBase(
+  telemetryContext: TelemetryContext,
+  generation: number,
+  fittestGenome: Record<string, unknown>,
+): TelemetryEntry {
+  return createTelemetryEntryBase(
+    generation,
+    resolveFittestScore(fittestGenome),
+    telemetryContext._species?.length ?? 0,
+  );
+}
+
+/**
+ * Create the initial multi-objective telemetry payload before optional expansions are attached.
+ *
+ * @param telemetryContext - Neat-like context with species state.
+ * @param generation - Generation index for this snapshot.
+ * @param fittestGenome - Fittest genome record with score.
+ * @param hyperVolumeProxy - Hypervolume proxy value.
+ * @param paretoFrontSizes - Pareto front size summary.
+ * @param operatorStatsSnapshot - Operator statistics snapshot.
+ * @returns Mutable telemetry entry.
+ */
+function createMultiObjectiveTelemetryEntry(
+  telemetryContext: TelemetryContext,
+  generation: number,
+  fittestGenome: Record<string, unknown>,
+  hyperVolumeProxy: number,
+  paretoFrontSizes: number[],
+  operatorStatsSnapshot: ReturnType<typeof computeOperatorStatsSnapshot>,
+): TelemetryMutableEntry {
+  return {
+    ...createGenerationTelemetryBase(
       telemetryContext,
-      telemetryOptions,
-      population,
-      entry,
-    );
-    applyPerformanceStats(telemetryContext, telemetryOptions, entry);
+      generation,
+      fittestGenome,
+    ),
+    hyper: hyperVolumeProxy,
+    fronts: paretoFrontSizes,
+    diversity: telemetryContext._diversityStats,
+    ops: operatorStatsSnapshot,
+  };
+}
 
-    // Step 8: Return the assembled entry.
-    return entry;
-  }
-
-  /**
-   * Build a telemetry entry for mono-objective mode.
-   *
-   * @param telemetryContext - Neat-like context with population state.
-   * @param telemetryOptions - Options controlling telemetry behavior.
-   * @param generation - Generation index for this snapshot.
-   * @param fittestGenome - Fittest genome record with score.
-   * @returns Telemetry entry object for mono mode.
-   */
-  function buildMonoObjectiveEntry(
-    telemetryContext: TelemetryContext,
-    telemetryOptions: NeatOptions & TelemetryDiversityOptions,
-    generation: number,
-    fittestGenome: Record<string, unknown>,
-  ): TelemetryEntry {
-    // Step 1: Resolve population snapshot.
-    const populationSnapshot =
-      (telemetryContext.population as GenomeDetailed[]) ?? [];
-
-    // Step 2: Snapshot operator statistics.
-    const operatorStatsSnapshot = computeOperatorStatsSnapshot(
-      telemetryContext._operatorStats,
-    );
-
-    // Step 2: Assemble base entry.
-    const entry: TelemetryEntry & Record<string, unknown> = {
-      gen: generation,
-      best: (fittestGenome.score as number) ?? 0,
-      species: telemetryContext._species?.length ?? 0,
-      hyper: 0,
-      diversity: telemetryContext._diversityStats,
-      ops: operatorStatsSnapshot,
-      objImportance: {},
-    };
-
-    // Step 3: Attach objective/meta snapshots.
-    applyObjectiveImportance(telemetryContext, entry);
-    applyObjectiveAges(telemetryContext, entry);
-    applyObjectiveEvents(telemetryContext, entry, generation);
-    applySpeciesAllocation(telemetryContext, entry);
-    applyObjectivesSnapshot(telemetryContext, entry);
-    applyRngState(telemetryContext, telemetryOptions, entry);
-
-    // Step 4: Attach lineage stats when enabled.
-    applyLineageStatsMonoObjective(telemetryContext, populationSnapshot, entry);
-
-    // Step 5: Attach optional telemetry expansions.
-    applyHypervolumeTelemetry(telemetryOptions, 0, entry);
-    applyComplexityStatsMonoObjective(
+/**
+ * Create the initial mono-objective telemetry payload before optional expansions are attached.
+ *
+ * @param telemetryContext - Neat-like context with species state.
+ * @param generation - Generation index for this snapshot.
+ * @param fittestGenome - Fittest genome record with score.
+ * @param operatorStatsSnapshot - Operator statistics snapshot.
+ * @returns Mutable telemetry entry.
+ */
+function createMonoObjectiveTelemetryEntry(
+  telemetryContext: TelemetryContext,
+  generation: number,
+  fittestGenome: Record<string, unknown>,
+  operatorStatsSnapshot: ReturnType<typeof computeOperatorStatsSnapshot>,
+): TelemetryMutableEntry {
+  return {
+    ...createGenerationTelemetryBase(
       telemetryContext,
-      telemetryOptions,
-      populationSnapshot,
-      entry,
-    );
-    applyPerformanceStats(telemetryContext, telemetryOptions, entry);
+      generation,
+      fittestGenome,
+    ),
+    diversity: telemetryContext._diversityStats,
+    ops: operatorStatsSnapshot,
+  };
+}
 
-    // Step 6: Return the assembled entry.
-    return entry;
-  }
+/**
+ * Attach objective, species, and RNG snapshots shared by both telemetry modes.
+ *
+ * @param telemetryContext - Neat-like context with cached telemetry state.
+ * @param telemetryOptions - Options controlling telemetry behavior.
+ * @param generation - Generation index for this snapshot.
+ * @param entry - Mutable telemetry entry.
+ * @returns Nothing.
+ */
+function applySharedTelemetrySnapshots(
+  telemetryContext: TelemetryContext,
+  telemetryOptions: TelemetryBuildOptions,
+  generation: number,
+  entry: TelemetryMutableEntry,
+): void {
+  applyObjectiveImportance(telemetryContext, entry);
+  applyObjectiveAges(telemetryContext, entry);
+  applyObjectiveEvents(telemetryContext, entry, generation);
+  applySpeciesAllocation(telemetryContext, entry);
+  applyObjectivesSnapshot(telemetryContext, entry);
+  applyRngState(telemetryContext, telemetryOptions, entry);
+}
+
+/**
+ * Resolve the best score from the current fittest genome snapshot.
+ *
+ * @param fittestGenome - Fittest genome record with optional score.
+ * @returns Best score value.
+ */
+function resolveFittestScore(fittestGenome: Record<string, unknown>): number {
+  return (fittestGenome.score as number) ?? 0;
 }

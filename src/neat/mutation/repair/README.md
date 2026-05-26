@@ -421,7 +421,7 @@ Returns: true when inputs and outputs are present
 
 ### MINIMUM_HIDDEN_BASELINE
 
-Baseline minimum hidden nodes when no configuration is provided.
+Baseline minimum hidden node count used when no controller configuration is provided.
 
 ### rebuildNetworkConnectionsForMinHidden
 

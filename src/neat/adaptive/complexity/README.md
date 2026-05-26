@@ -473,7 +473,7 @@ initializeNodeBudget(
 ): void
 ```
 
-Initialize node budget if undefined.
+Initialize the maximum-node complexity budget when it has not been set yet.
 
 Parameters:
 - `engine` - NEAT engine instance.

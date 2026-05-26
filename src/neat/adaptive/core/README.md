@@ -385,7 +385,7 @@ each control loop.
 
 ### ACCEPTANCE_LOWER_MULTIPLIER
 
-Lower multiplier used when the controller relaxes acceptance pressure.
+Lower multiplier applied when the adaptive controller relaxes acceptance threshold pressure.
 
 ### ACCEPTANCE_UPPER_MULTIPLIER
 
@@ -393,59 +393,59 @@ Upper multiplier used when the controller nudges acceptance pressure upward.
 
 ### ADJUST_RATE_DEFAULT
 
-Default adjustment step for adaptive minimal-criterion threshold updates.
+Default adjustment step size for adaptive minimal-criterion acceptance threshold updates.
 
 ### ANCESTOR_UNIQ_MODE_EPSILON
 
-Mode label for epsilon-style ancestor-uniqueness feedback.
+Mode label for epsilon-style ancestor-uniqueness feedback, adjusting the pressure threshold directly.
 
 ### ANCESTOR_UNIQ_MODE_LINEAGE_PRESSURE
 
-Mode label for ancestor-uniqueness control via lineage-pressure tuning.
+Mode label for ancestor-uniqueness control achieved through lineage-pressure strength tuning.
 
 ### ANNEAL_BASELINE_GENERATIONS
 
-Baseline generations for annealing progress.
+Baseline generation count used when computing annealing schedule progress towards maximum.
 
 ### ANNEAL_PROGRESS_MAX
 
-Maximum progress ratio used in annealing.
+Maximum progress ratio clamp applied in annealing schedule pressure calculations.
 
 ### BUDGET_GROWTH_MULTIPLIER
 
-Default budget growth multiplier.
+Default complexity budget growth multiplier applied when the controller detects sustained fitness improvement.
 
 ### COMPLEXITY_MODE_ADAPTIVE
 
-Mode label for feedback-driven complexity-budget scheduling.
+Mode label for feedback-driven adaptive complexity-budget scheduling with slope detection.
 
 ### COMPLEXITY_MODE_LINEAR
 
-Mode label for pre-planned linear complexity-budget scheduling.
+Mode label for pre-planned linear complexity-budget scheduling with a fixed generation horizon.
 
 ### DEFAULT_ADAPT_EVERY
 
-Default cadence for refreshing per-genome adaptive mutation settings.
+Default generation cadence for refreshing per-genome adaptive mutation rate settings.
 
 ### DEFAULT_ANCESTOR_UNIQ_ADJUST
 
-Default adjustment magnitude for uniqueness nudges.
+Default adjustment magnitude applied when nudging ancestor-uniqueness pressure thresholds upward or downward.
 
 ### DEFAULT_ANCESTOR_UNIQ_COOLDOWN
 
-Default cooldown (generations) for ancestor-uniqueness adjustments.
+Default generation cooldown between consecutive ancestor-uniqueness acceptance threshold adjustment steps.
 
 ### DEFAULT_ANCESTOR_UNIQ_HIGH_THRESHOLD
 
-Default upper bound for acceptable ancestor uniqueness.
+Default upper bound for acceptable ancestor uniqueness, above which pressure is relaxed.
 
 ### DEFAULT_ANCESTOR_UNIQ_LOW_THRESHOLD
 
-Default lower bound for acceptable ancestor uniqueness.
+Default lower bound for acceptable ancestor uniqueness, below which pressure is increased.
 
 ### DEFAULT_CB_INCREASE_FACTOR
 
-Default multiplier used when adaptive complexity budgeting detects improvement.
+Default multiplier applied when adaptive complexity budgeting detects a fitness improvement.
 
 ### DEFAULT_CB_STAGNATION_FACTOR
 
@@ -453,7 +453,7 @@ Default multiplier used when adaptive complexity budgeting responds to stagnatio
 
 ### DEFAULT_IMPROVEMENT_WINDOW
 
-Default score-history window for trend-aware complexity budgeting.
+Default score-history window length used by trend-aware adaptive complexity budgeting.
 
 ### DEFAULT_INITIAL_MUTATION_RATE
 
@@ -461,103 +461,103 @@ Default initial mutation rate used before adaptive balancing specializes genomes
 
 ### DEFAULT_LINEAGE_PRESSURE_STRENGTH
 
-Default lineage pressure strength when initializing the option.
+Default lineage pressure strength applied when initializing the ancestor-uniqueness option.
 
 ### DEFAULT_MAX_MUTATION_AMOUNT
 
-Default maximum mutation amount.
+Default upper bound for the per-genome adaptive mutation amount value.
 
 ### DEFAULT_MAX_MUTATION_RATE
 
-Default upper clamp for per-genome adaptive mutation rates.
+Default upper clamp applied to per-genome adaptive mutation rate evolution.
 
 ### DEFAULT_MIN_MUTATION_AMOUNT
 
-Default minimum mutation amount.
+Default lower bound for the per-genome adaptive mutation amount value.
 
 ### DEFAULT_MIN_MUTATION_RATE
 
-Default lower clamp for per-genome adaptive mutation rates.
+Default lower clamp applied to per-genome adaptive mutation rate evolution.
 
 ### DEFAULT_MUTATION_AMOUNT
 
-Default mutation amount when genome value is missing.
+Default mutation amount applied when a genome's target value is missing or not set.
 
 ### DEFAULT_MUTATION_AMOUNT_SIGMA
 
-Default perturbation spread for adaptive mutation-amount updates.
+Default Gaussian perturbation spread used for adaptive mutation-amount self-adaptation rate evolution.
 
 ### DEFAULT_MUTATION_SIGMA
 
-Default perturbation spread for adaptive mutation-rate updates.
+Default Gaussian perturbation spread used for adaptive mutation-rate self-adaptation rate evolution.
 
 ### DENOMINATOR_FALLBACK
 
-Fallback denominator to avoid divide-by-zero.
+Fallback denominator substituted when the real denominator is zero or missing.
 
 ### EXPLORE_LOW_DECREASE_MULTIPLIER
 
-Multiplicative decay for explore-low strategy (top half).
+Multiplicative decay applied to top-half genomes under the explore-low adaptive strategy.
 
 ### EXPLORE_LOW_INCREASE_MULTIPLIER
 
-Multiplicative boost for explore-low strategy (bottom half).
+Multiplicative boost applied to bottom-half genomes under the explore-low adaptive strategy.
 
 ### FIVE
 
-Small count baseline reused by archive-size and cooldown defaults.
+Small count baseline reused by archive-size, cooldown, and neighbor-count defaults.
 
 ### FOUR
 
-Small multiplier reused by adaptive-budget growth defaults.
+Small numeric constant reused by adaptive-budget growth defaults and initialisation helpers.
 
 ### HALF_INDEX_DIVISOR
 
-Divisor used to split populations in half.
+Divisor applied when splitting ranked populations into top and bottom halves.
 
 ### HISTORY_MIN_IMPROVEMENT_COUNT
 
-Minimum history length to compute improvement.
+Minimum score-history length required to compute an improvement signal reliably.
 
 ### HISTORY_MIN_SLOPE_COUNT
 
-Minimum history length to compute slope.
+Minimum score-history length required to compute a trend slope value.
 
 ### LINEAGE_PRESSURE_DECREASE_MULTIPLIER
 
-Multiplier when decreasing lineage pressure strength.
+Multiplier applied when the controller decreases lineage pressure strength after over-pressure.
 
 ### LINEAGE_PRESSURE_INCREASE_MULTIPLIER
 
-Multiplier when increasing lineage pressure strength.
+Multiplier applied when the controller increases lineage pressure strength to drive diversity.
 
 ### LINEAGE_PRESSURE_MODE_SPREAD
 
-Lineage pressure spread mode.
+Lineage pressure spread mode label for population-wide diversity pressure distribution.
 
 ### LINEAR_HORIZON_DEFAULT
 
-Default horizon for linear schedule.
+Default generation horizon used by the pre-planned linear complexity-budget schedule.
 
 ### MINIMAL_TOPOLOGY_OFFSET
 
-Offset added to input/output for minimal topology.
+Offset added to input and output width for minimal feed-forward topology sizing.
 
 ### MUTATION_SIGMA_SCALE
 
-Scale applied to mutation sigma for perturbations.
+Scale factor applied to mutation sigma when computing self-adaptation perturbation bounds.
 
 ### MUTATION_STRATEGY_ANNEAL
 
-Strategy label for annealed mutation pressure across run progress.
+Strategy label for annealed mutation pressure that decreases across run progress.
 
 ### MUTATION_STRATEGY_EXPLORE_LOW
 
-Strategy label for boosting structural risk on the lower-ranked half.
+Strategy label for boosting structural risk on the lower-ranked population half.
 
 ### MUTATION_STRATEGY_TWO_TIER
 
-Strategy label for ranking-sensitive two-tier adaptive mutation.
+Strategy label for ranking-sensitive two-tier adaptive mutation with separate top and bottom behavior.
 
 ### NEGATIVE_ONE
 
@@ -565,71 +565,71 @@ Last-index sentinel reused when helpers need the final recorded item.
 
 ### NOVELTY_ARCHIVE_MIN_SIZE
 
-Novelty archive minimum size.
+Minimum number of entries required in the novelty archive for reliable scoring.
 
 ### NOVELTY_FACTOR_DEFAULT
 
-Novelty factor when archive is sufficient.
+Novelty scaling factor applied when the archive holds enough neighbor candidates.
 
 ### NOVELTY_FACTOR_SMALL
 
-Novelty factor when archive is small.
+Novelty scaling factor applied when the archive holds too few neighbor candidates.
 
 ### ONE
 
-Unit baseline reused by clamp, ratio, and fallback calculations.
+Unit baseline reused by clamp, ratio, fallback, and normalisation calculations.
 
 ### ONE_HUNDRED
 
-Large round-number default for long-horizon scheduling.
+Large round-number constant used as a default for long-horizon adaptive scheduling.
 
 ### OPERATOR_DECAY_DEFAULT
 
-Default operator decay factor.
+Default decay factor applied per generation to unused adaptive mutation operator weights.
 
 ### PHASE_COMPLEXIFY
 
-Phase label for the structure-growth side of phased complexity.
+Phase label for the structure-growth side of phased complexity scheduling.
 
 ### PHASE_LENGTH_DEFAULT
 
-Default phase length in generations for phased complexify/simplify schedules.
+Default phase length in generations for phased complexify and simplify schedule cycling.
 
 ### PHASE_SIMPLIFY
 
-Phase label for the structure-pruning side of phased complexity.
+Phase label for the structure-pruning side of phased complexity scheduling.
 
 ### PROGRESS_RATIO_MAX
 
-Maximum progress ratio for scheduling.
+Maximum progress ratio clamp for linear and annealing complexity schedule calculations.
 
 ### RNG_CENTER_OFFSET
 
-Random offset for signed deltas.
+Random center offset subtracted when mapping uniform samples to signed perturbation deltas.
 
 ### RNG_SPREAD_MULTIPLIER
 
-Random range multiplier for signed deltas.
+Random range multiplier used when computing signed self-adaptation perturbation deltas.
 
 ### SLOPE_BOOST_MULTIPLIER
 
-Slope boost multiplier for adaptive increase factor.
+Slope boost multiplier applied to the adaptive increase factor under improving fitness trends.
 
 ### SLOPE_NORMALIZE_CLAMP
 
-Clamp magnitude for slope normalization.
+Clamp magnitude applied when normalizing fitness trend slopes to bounded values.
 
 ### SLOPE_PENALTY_MULTIPLIER
 
-Slope penalty multiplier for stagnation factor.
+Slope penalty multiplier applied to the stagnation factor under declining fitness trends.
 
 ### TARGET_ACCEPTANCE_DEFAULT
 
-Default acceptance target for adaptive minimal-criterion control.
+Default acceptance probability target used by adaptive minimal-criterion acceptance control.
 
 ### TEN
 
-Round-number default reused by windows and phase lengths.
+Round-number constant reused by improvement windows and default phase lengths.
 
 ### THREE
 

@@ -16,6 +16,9 @@ const STORAGE_FP16_ELIGIBLE_INITIALIZER_PATTERNS = [
   /^ConvB\d+$/,
 ];
 
+/**
+ * Rewrites eligible weight and bias initializers from FP32 to FP16 storage and prepends Cast-to-FP32 bridge nodes.
+ */
 export function applyStorageFp16PostProcessing(
   model: OnnxModel,
   sourceOptions: OnnxExportOptions,

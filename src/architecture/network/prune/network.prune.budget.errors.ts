@@ -1,5 +1,5 @@
 ﻿/**
- * Error raised when a sparsity-budget max-connection cap is invalid.
+ * Error raised when a sparsity-budget max-connection count cap is invalid.
  */
 export class NetworkPruneBudgetMaxConnectionsError extends RangeError {
   /**
@@ -14,7 +14,7 @@ export class NetworkPruneBudgetMaxConnectionsError extends RangeError {
 }
 
 /**
- * Error raised when sparsity-budget grace configuration is invalid.
+ * Error raised when the sparsity-budget growth-grace fraction configuration is invalid.
  */
 export class NetworkPruneBudgetGrowthGraceFractionError extends RangeError {
   /**

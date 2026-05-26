@@ -247,7 +247,7 @@ Using the pool avoids per-call allocation in tight inference loops.
 
 ### ActivationStats
 
-Activation telemetry collected during a single activation pass.
+Activation telemetry collected during a single forward pass, tracking dropped nodes, skipped layers, dropped connections, and weight-noise statistics.
 
 ### BATCH_INPUTS_COLLECTION_ERROR_MESSAGE
 
@@ -256,11 +256,12 @@ Kept as a named constant so it can be matched in tests without coupling to a raw
 
 ### BatchActivationContext
 
-Shared state used by batch activation orchestration.
+Shared orchestration state for batch activation, carrying the internal network, the full batch input array, expected input size, and training flag.
 
 ### BatchRowActivationContext
 
-Shared state used while validating and activating one row in a batch.
+Shared state used while validating and activating one row from a batch input collection,
+carrying the input slice, its position index within the batch, and the expected input size for validation.
 
 ### DEFAULT_MAX_ACTIVATION_DEPTH
 
@@ -280,11 +281,11 @@ Input nodes do not aggregate incoming connections; they read directly from the i
 
 ### NetworkLayer
 
-Layer container type used by the layered activation paths.
+Layer container type derived from the network's optional layers array for use by layered activation paths.
 
 ### NetworkLayerNodes
 
-Node collection type attached to a single network layer.
+Node collection type derived from one network layer, used by layered dropout and stochastic-depth traversal helpers.
 
 ### NO_TRACE_FAST_SLAB_TRAINING_FLAG
 
@@ -316,11 +317,11 @@ Using an explicit constant (rather than `++`) keeps the protocol visible and tes
 
 ### RawActivationContext
 
-Shared state used by raw activation orchestration.
+Shared orchestration state for the raw (non-slab) activation path, carrying the network internals and the caller-supplied input vector.
 
 ### SingleNodeNoTraceActivationContext
 
-Shared state used while activating one node during no-trace traversal.
+Shared activation state for a single node during no-trace traversal, carrying the accumulated input map and the current network node reference.
 
 ### UNDEFINED_INPUT_LENGTH_TEXT
 
@@ -329,11 +330,11 @@ Prevents `'undefined'` from appearing as a raw JS coercion artifact in user-faci
 
 ### WeightNoiseApplyResult
 
-Marker returned by weight-noise application to drive safe restore logic.
+Marker interface returned by the weight-noise application helper to signal whether noise was applied and whether a restore pass is needed.
 
 ### WeightNoiseStats
 
-Weight-noise telemetry collected during a single activation pass.
+Weight-noise telemetry collected during a single activation pass, capturing perturbation count, absolute sum, maximum, and mean magnitude.
 
 ## architecture/network/activate/network.activate.core.utils.ts
 

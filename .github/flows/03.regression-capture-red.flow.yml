@@ -1,6 +1,6 @@
-id: "03.regression-capture-red"
-name: "Regression Capture"
-agent: "03-red-testing"
+id: '03.regression-capture-red'
+name: 'Regression Capture'
+agent: '03-red-testing'
 description: >
   Authors a failing test that reproduces a reported bug or CI failure before
   any fix is applied. Reads the bug report or CI failure output, identifies
@@ -11,25 +11,25 @@ description: >
   a precise regression target.
 
 triggers:
-  - "Bug reported in an issue or by the user with no reproducing test"
-  - "CI failure in a recently merged change without a targeted test"
-  - "Regression introduced by a refactor that broke an implicit invariant"
-  - "Existing test suite is green but observable behavior is wrong"
+  - 'Bug reported in an issue or by the user with no reproducing test'
+  - 'CI failure in a recently merged change without a targeted test'
+  - 'Regression introduced by a refactor that broke an implicit invariant'
+  - 'Existing test suite is green but observable behavior is wrong'
 
 gates:
-  - "plan-sync"
-  - "red-test-confirmation"
+  - 'plan-sync'
+  - 'red-test-confirmation'
 
 post-phase-fanout:
-  - "04-implementing"
+  - '04-implementing'
 
 skills:
-  - "creating-unit-tests"
-  - "red-test-contracts"
-  - "triaging-test-failures"
+  - 'creating-unit-tests'
+  - 'red-test-contracts'
+  - 'triaging-test-failures'
 
 specialists:
-  - "unit-test-writer"
-  - "failure-triage-specialist"
+  - 'unit-test-writer'
+  - 'failure-triage-specialist'
 
 timeout-minutes: 20

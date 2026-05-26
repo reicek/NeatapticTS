@@ -5,7 +5,7 @@
 import { ZERO_COUNT } from './network.topology.utils.types';
 
 /**
- * Create DFS search context.
+ * Create a depth-first search context for reachability testing between two topology nodes.
  *
  * @param from Origin node.
  * @param to Target node.
@@ -23,7 +23,7 @@ export function createPathSearchContext(
 }
 
 /**
- * Traverse DFS search stack and test reachability.
+ * Traverse the DFS search stack and test whether the target node is reachable.
  *
  * @param searchContext Mutable search context.
  * @returns True when target node is reachable.
@@ -48,7 +48,7 @@ export function traversePathSearch(searchContext: PathSearchContext): boolean {
 }
 
 /**
- * Compare node identity.
+ * Compare two node references by strict identity and return true when they refer to the same node.
  *
  * @param leftNode Left node.
  * @param rightNode Right node.

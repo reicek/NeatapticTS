@@ -444,7 +444,7 @@ Raised when a GRU builder receives too few layer sizes.
 
 ### ArchitectInvalidGruLayerArgumentsError
 
-Raised when GRU builder arguments contain invalid layer-size values.
+Raised when GRU builder arguments contain any invalid layer-size values.
 
 ### ArchitectInvalidLstmConfigurationError
 
@@ -452,7 +452,7 @@ Raised when an LSTM builder receives too few layer sizes.
 
 ### ArchitectInvalidLstmLayerArgumentsError
 
-Raised when LSTM builder arguments contain invalid layer-size values.
+Raised when LSTM builder arguments contain any invalid layer-size values.
 
 ### ArchitectInvalidPerceptronConfigurationError
 

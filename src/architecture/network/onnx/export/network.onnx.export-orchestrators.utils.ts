@@ -32,7 +32,7 @@ const ZERO_LENGTH = 0;
 const MINIMUM_SPATIAL_OUTPUT_SIZE = 1;
 
 /**
- * Assign stable index values to nodes for export diagnostics.
+ * Assign stable sequential index values to nodes for ONNX export diagnostics.
  *
  * @param network Source network.
  * @returns Nothing.

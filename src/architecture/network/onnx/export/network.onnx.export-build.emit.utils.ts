@@ -22,6 +22,9 @@ import {
 } from './network.onnx.export-postprocess.utils';
 import { emitShadowAttentionMappings } from './network.onnx.export-attention.utils';
 
+/**
+ * Creates an initialized ONNX model with graph dimensions and metadata derived from the resolved build options.
+ */
 export function createInitializedModel(
   networkLayers: NeatapticNode[][],
   currentOptions: OnnxBuildResolvedOptions,
@@ -40,12 +43,18 @@ export function createInitializedModel(
   return initializedModel;
 }
 
+/**
+ * Collects the layer indices of all recurrent layers present in the export context.
+ */
 export function collectRecurrentIndices(
   context: OnnxRecurrentCollectionContext,
 ): number[] {
   return collectRecurrentLayerIndices(context);
 }
 
+/**
+ * Emits ONNX graph nodes for every layer after the input layer and returns the accumulated emission result.
+ */
 export function emitNonInputLayers(
   context: OnnxLayerEmissionContext,
 ): OnnxLayerEmissionResult {
@@ -72,6 +81,9 @@ export function emitNonInputLayers(
   };
 }
 
+/**
+ * Applies all post-processing passes (recurrent heuristics, attention mappings, export metadata) to the model in place.
+ */
 export function applyPostProcessing(context: OnnxPostProcessingContext): void {
   emitFusedRecurrentHeuristics(
     context.model,

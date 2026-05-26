@@ -170,7 +170,7 @@ export { default as Architect } from './architecture/architect';
 export * as methods from './methods/methods';
 /** Global library configuration namespace. Controls backend precision, debug flags, and runtime behavior. */
 export * as config from './config';
-/** Worker-thread parallel population evaluation utilities for Node.js environments. */
+/** Worker-thread parallel genome population evaluation utilities for Node.js runtime environments. */
 export * as multi from './multithreading/multi';
 export {
   renderNetworkView,

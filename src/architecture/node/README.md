@@ -158,6 +158,16 @@ Parameters:
 
 Global index counter for assigning unique indices to nodes.
 
+#### _safeUpdateBias
+
+```ts
+_safeUpdateBias(
+  delta: number,
+): void
+```
+
+Internal helper to safely update the node bias with clipping and NaN checks.
+
 #### _safeUpdateWeight
 
 ```ts
@@ -219,7 +229,7 @@ Parameters:
 
 ```ts
 applyBatchUpdatesWithOptimizer(
-  opts: { type: "sgd" | "rmsprop" | "adagrad" | "adam" | "adamw" | "amsgrad" | "adamax" | "nadam" | "radam" | "lion" | "adabelief" | "lookahead"; momentum?: number | undefined; beta1?: number | undefined; beta2?: number | undefined; eps?: number | undefined; weightDecay?: number | undefined; lrScale?: number | undefined; t?: number | undefined; baseType?: string | undefined; la_k?: number | undefined; la_alpha?: number | undefined; },
+  opts: BatchOptimizerOptions,
 ): void
 ```
 
@@ -647,11 +657,11 @@ Raised when a node mutation call receives a null or undefined method.
 
 ### NodeUndefinedConnectionTargetError
 
-Raised when a node connection target is missing.
+Raised when a node connection target reference is missing or undefined.
 
 ### NodeUnknownMutationMethodError
 
-Raised when a node mutation method name is unknown.
+Raised when a node mutation method name is not recognized.
 
 ### NodeUnsupportedMutationMethodError
 

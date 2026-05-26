@@ -42,6 +42,27 @@ A useful reading order is:
 
 ## neat/telemetry/recorder/telemetry.recorder.ts
 
+### applySharedTelemetrySnapshots
+
+```ts
+applySharedTelemetrySnapshots(
+  telemetryContext: TelemetryContext,
+  telemetryOptions: TelemetryBuildOptions,
+  generation: number,
+  entry: TelemetryMutableEntry,
+): void
+```
+
+Attach objective, species, and RNG snapshots shared by both telemetry modes.
+
+Parameters:
+- `telemetryContext` - Neat-like context with cached telemetry state.
+- `telemetryOptions` - Options controlling telemetry behavior.
+- `generation` - Generation index for this snapshot.
+- `entry` - Mutable telemetry entry.
+
+Returns: Nothing.
+
 ### applyTelemetrySelect
 
 ```ts
@@ -69,6 +90,48 @@ Example:
 neat._telemetrySelect = new Set(['diversity']);
 applyTelemetrySelect.call(neat, entry);
 ```
+
+### buildMonoObjectiveEntry
+
+```ts
+buildMonoObjectiveEntry(
+  telemetryContext: TelemetryContext,
+  telemetryOptions: TelemetryBuildOptions,
+  generation: number,
+  fittestGenome: Record<string, unknown>,
+): TelemetryEntry
+```
+
+Build a telemetry entry for mono-objective mode.
+
+Parameters:
+- `telemetryContext` - Neat-like context with population state.
+- `telemetryOptions` - Options controlling telemetry behavior.
+- `generation` - Generation index for this snapshot.
+- `fittestGenome` - Fittest genome record with score.
+
+Returns: Telemetry entry object for mono mode.
+
+### buildMultiObjectiveEntry
+
+```ts
+buildMultiObjectiveEntry(
+  telemetryContext: TelemetryContext,
+  telemetryOptions: TelemetryBuildOptions,
+  generation: number,
+  fittestGenome: Record<string, unknown>,
+): TelemetryEntry
+```
+
+Build a telemetry entry for multi-objective mode.
+
+Parameters:
+- `telemetryContext` - Neat-like context with population state.
+- `telemetryOptions` - Options controlling telemetry behavior.
+- `generation` - Generation index for this snapshot.
+- `fittestGenome` - Fittest genome record with score.
+
+Returns: Telemetry entry object for MO mode.
 
 ### buildTelemetryEntry
 
@@ -132,6 +195,71 @@ neat.computeDiversityStats();
 console.log(neat._diversityStats.meanCompat);
 ```
 
+### createGenerationTelemetryBase
+
+```ts
+createGenerationTelemetryBase(
+  telemetryContext: TelemetryContext,
+  generation: number,
+  fittestGenome: Record<string, unknown>,
+): TelemetryEntry
+```
+
+Create the common telemetry base for one generation snapshot.
+
+Parameters:
+- `telemetryContext` - Neat-like context with species state.
+- `generation` - Generation index for this snapshot.
+- `fittestGenome` - Fittest genome record with score.
+
+Returns: Strict baseline telemetry entry.
+
+### createMonoObjectiveTelemetryEntry
+
+```ts
+createMonoObjectiveTelemetryEntry(
+  telemetryContext: TelemetryContext,
+  generation: number,
+  fittestGenome: Record<string, unknown>,
+  operatorStatsSnapshot: { op: string; succ: number; att: number; }[],
+): TelemetryMutableEntry
+```
+
+Create the initial mono-objective telemetry payload before optional expansions are attached.
+
+Parameters:
+- `telemetryContext` - Neat-like context with species state.
+- `generation` - Generation index for this snapshot.
+- `fittestGenome` - Fittest genome record with score.
+- `operatorStatsSnapshot` - Operator statistics snapshot.
+
+Returns: Mutable telemetry entry.
+
+### createMultiObjectiveTelemetryEntry
+
+```ts
+createMultiObjectiveTelemetryEntry(
+  telemetryContext: TelemetryContext,
+  generation: number,
+  fittestGenome: Record<string, unknown>,
+  hyperVolumeProxy: number,
+  paretoFrontSizes: number[],
+  operatorStatsSnapshot: { op: string; succ: number; att: number; }[],
+): TelemetryMutableEntry
+```
+
+Create the initial multi-objective telemetry payload before optional expansions are attached.
+
+Parameters:
+- `telemetryContext` - Neat-like context with species state.
+- `generation` - Generation index for this snapshot.
+- `fittestGenome` - Fittest genome record with score.
+- `hyperVolumeProxy` - Hypervolume proxy value.
+- `paretoFrontSizes` - Pareto front size summary.
+- `operatorStatsSnapshot` - Operator statistics snapshot.
+
+Returns: Mutable telemetry entry.
+
 ### createTelemetryEntryBase
 
 ```ts
@@ -186,6 +314,51 @@ Example:
 // record a simple telemetry entry from inside the evolve loop
 neat.recordTelemetryEntry({ gen: neat.generation, best: neat.population[0].score });
 ```
+
+### resolveFittestScore
+
+```ts
+resolveFittestScore(
+  fittestGenome: Record<string, unknown>,
+): number
+```
+
+Resolve the best score from the current fittest genome snapshot.
+
+Parameters:
+- `fittestGenome` - Fittest genome record with optional score.
+
+Returns: Best score value.
+
+### resolveTelemetryBuildOptions
+
+```ts
+resolveTelemetryBuildOptions(
+  telemetryContext: TelemetryContext,
+): TelemetryBuildOptions
+```
+
+Resolve telemetry build options from the current recorder context.
+
+Parameters:
+- `telemetryContext` - Neat-like context with telemetry settings.
+
+Returns: Telemetry build options.
+
+### resolveTelemetryPopulation
+
+```ts
+resolveTelemetryPopulation(
+  telemetryContext: TelemetryContext,
+): GenomeDetailed[]
+```
+
+Resolve the current population snapshot used by telemetry builders.
+
+Parameters:
+- `telemetryContext` - Neat-like context with population state.
+
+Returns: Population snapshot.
 
 ### structuralEntropy
 

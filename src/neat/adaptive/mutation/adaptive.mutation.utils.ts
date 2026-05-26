@@ -134,34 +134,74 @@ export function resolveMutationSettings(
   engine: NeatLikeWithAdaptive,
   config: AdaptiveMutationConfig,
 ): MutationSettings {
-  const sigmaBase =
-    (config.sigma ?? DEFAULT_MUTATION_SIGMA) * MUTATION_SIGMA_SCALE;
-  const minRate = config.minRate ?? DEFAULT_MIN_MUTATION_RATE;
-  const maxRate = config.maxRate ?? DEFAULT_MAX_MUTATION_RATE;
-  const strategy = config.strategy ?? MUTATION_STRATEGY_TWO_TIER;
-  const initialRate = config.initialRate ?? DEFAULT_INITIAL_MUTATION_RATE;
-  const adaptAmount = config.adaptAmount ?? false;
-  const amountSigma = config.amountSigma ?? DEFAULT_MUTATION_AMOUNT_SIGMA;
-  const minAmount = config.minAmount ?? DEFAULT_MIN_MUTATION_AMOUNT;
-  const maxAmount = config.maxAmount ?? DEFAULT_MAX_MUTATION_AMOUNT;
-  const mutationAmountDefault =
-    engine.options.mutationAmount ?? DEFAULT_MUTATION_AMOUNT;
-  const generation = engine.generation;
-  const populationSize = engine.population.length;
-
   return {
-    strategy,
-    sigmaBase,
-    minRate,
-    maxRate,
-    initialRate,
-    adaptAmount,
-    amountSigma,
-    minAmount,
-    maxAmount,
-    mutationAmountDefault,
-    generation,
-    populationSize,
+    ...resolveMutationRateSettings(config),
+    ...resolveMutationAmountSettings(engine, config),
+    ...resolveMutationRuntimeSettings(engine),
+  };
+}
+
+/**
+ * Resolve mutation-rate settings controlled directly by adaptive config.
+ *
+ * @param config - Adaptive mutation configuration.
+ * @returns Rate-related mutation settings.
+ */
+function resolveMutationRateSettings(
+  config: AdaptiveMutationConfig,
+): Pick<
+  MutationSettings,
+  'initialRate' | 'maxRate' | 'minRate' | 'sigmaBase' | 'strategy'
+> {
+  return {
+    sigmaBase: (config.sigma ?? DEFAULT_MUTATION_SIGMA) * MUTATION_SIGMA_SCALE,
+    minRate: config.minRate ?? DEFAULT_MIN_MUTATION_RATE,
+    maxRate: config.maxRate ?? DEFAULT_MAX_MUTATION_RATE,
+    strategy: config.strategy ?? MUTATION_STRATEGY_TWO_TIER,
+    initialRate: config.initialRate ?? DEFAULT_INITIAL_MUTATION_RATE,
+  };
+}
+
+/**
+ * Resolve mutation-amount settings from adaptive config and engine defaults.
+ *
+ * @param engine - NEAT engine instance.
+ * @param config - Adaptive mutation configuration.
+ * @returns Amount-related mutation settings.
+ */
+function resolveMutationAmountSettings(
+  engine: NeatLikeWithAdaptive,
+  config: AdaptiveMutationConfig,
+): Pick<
+  MutationSettings,
+  | 'adaptAmount'
+  | 'amountSigma'
+  | 'maxAmount'
+  | 'minAmount'
+  | 'mutationAmountDefault'
+> {
+  return {
+    adaptAmount: config.adaptAmount ?? false,
+    amountSigma: config.amountSigma ?? DEFAULT_MUTATION_AMOUNT_SIGMA,
+    minAmount: config.minAmount ?? DEFAULT_MIN_MUTATION_AMOUNT,
+    maxAmount: config.maxAmount ?? DEFAULT_MAX_MUTATION_AMOUNT,
+    mutationAmountDefault:
+      engine.options.mutationAmount ?? DEFAULT_MUTATION_AMOUNT,
+  };
+}
+
+/**
+ * Resolve generation-scoped runtime counters consumed by adaptive mutation.
+ *
+ * @param engine - NEAT engine instance.
+ * @returns Runtime counters mirrored into mutation settings.
+ */
+function resolveMutationRuntimeSettings(
+  engine: NeatLikeWithAdaptive,
+): Pick<MutationSettings, 'generation' | 'populationSize'> {
+  return {
+    generation: engine.generation,
+    populationSize: engine.population.length,
   };
 }
 

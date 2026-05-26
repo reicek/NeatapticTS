@@ -1,9 +1,9 @@
 ﻿import type { OnnxTensor } from './network.onnx.schema.types';
 
-/** ONNX TensorProto enum value for float32 tensors. */
+/** ONNX TensorProto numeric data-type enum value used for float32 tensors. */
 export const ONNX_FLOAT_DATA_TYPE = 1;
 
-/** ONNX TensorProto enum value for float16 tensors. */
+/** ONNX TensorProto numeric data-type enum value used for float16 tensors. */
 export const ONNX_FLOAT16_DATA_TYPE = 10;
 
 const FLOAT32_EXPONENT_BIAS = 127;

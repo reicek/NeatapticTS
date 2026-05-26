@@ -106,6 +106,24 @@ and CI-enforced validation.
 (`scripts/semantic-index/**`, `scripts/agent-customization/mcp/**`, gate scripts, package scripts,
 CI workflow wiring, and documentation). Avoid unrelated architecture or runtime refactors.
 
+## Standalone Docs-Quality Complexity Cleanup Lane [DONE]
+
+**Outcome:** reduce `npm run docs:quality:metrics` `highComplexity` findings in `src/` to zero by decomposing high-cyclomatic owners into orchestration-first private helpers without changing public APIs or the docs-quality metric contract.
+
+- Docs quality complexity cleanup
+  - Plan: [completed/docs-quality-complexity-cleanup.plans.md](completed/docs-quality-complexity-cleanup.plans.md) [DONE]
+  - Current internal state: this lane is archived after reaching a clean docs-quality metrics summary, a clean TypeScript typecheck, and owned `src/architecture/node/node.ts` coverage at `100/100/100/100`; the unrelated `examples/neatChat/core/neatChat.live-flow.safety.test.ts` baseline stays outside this closed boundary.
+
+**Coordination rule:** keep this lane constrained to `src/` complexity decomposition, owner-local test validation, and tracker evidence. Reopen the archived docs-quality contract lane only when changing the metrics contract, artifact schema, or CLI/MCP parity surfaces.
+
+## Standalone Coverage Metrics + Gap Closure Lane [DONE]
+
+**Outcome:** archived standalone docs-quality coverage lane for additive `summary.coverage` reporting in `npm run docs:quality:metrics`, deterministic per-file deficit rows, and final `src` coverage closure at `100/100/100/100`.
+
+- Coverage metrics + gap closure
+  - Plan: [completed/coverage-metrics-and-gap-closure.plans.md](completed/coverage-metrics-and-gap-closure.plans.md) [DONE]
+  - Current internal state: archived after `npm run test:silent` passed at `427` suites / `4654` tests with `All files` and `src` at `100/100/100/100`, `npm run --silent docs:quality:metrics` reported `filesBelow100: 0`, and `npm run --silent docs:quality:gate` passed.
+
 ## Phase 0 — Hygiene + Refactor Baseline [DONE]
 
 **Outcome:** keep iteration speed high, reduce refactor risk, and finish the structural cleanup needed before broad mechanical modernization.

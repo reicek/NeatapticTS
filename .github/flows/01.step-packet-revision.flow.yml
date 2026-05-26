@@ -1,6 +1,6 @@
-id: "01.step-packet-revision"
-name: "Step Packet Revision"
-agent: "01-planning"
+id: '01.step-packet-revision'
+name: 'Step Packet Revision'
+agent: '01-planning'
 description: >
   Updates an active or blocked step packet when scope changes, blockers
   emerge, or the original packet is ambiguous. Pulls current plan state via
@@ -11,26 +11,26 @@ description: >
   and confirms plan validators still pass.
 
 triggers:
-  - "Active step blocked or scope changed mid-phase"
-  - "Step packet is missing required fields or stop conditions"
-  - "User asks to revise or unblock the current active step"
-  - "Blocker routed back from 00-helping with revised scope"
+  - 'Active step blocked or scope changed mid-phase'
+  - 'Step packet is missing required fields or stop conditions'
+  - 'User asks to revise or unblock the current active step'
+  - 'Blocker routed back from 00-helping with revised scope'
 
 gates:
-  - "plan-sync"
-  - "step-packet"
-  - "planning-output-contract"
+  - 'plan-sync'
+  - 'step-packet'
+  - 'planning-output-contract'
 
 post-phase-fanout:
-  - "<next-active-step-agent>"
+  - '<next-active-step-agent>'
 
 skills:
-  - "tracker-handoff"
-  - "phase-handoff-workflow"
-  - "plan-sync-validation"
+  - 'tracker-handoff'
+  - 'phase-handoff-workflow'
+  - 'plan-sync-validation'
 
 specialists:
-  - "Plan Scout"
-  - "helping-gap-resolution-coordinator"
+  - 'Plan Scout'
+  - 'helping-gap-resolution-coordinator'
 
 timeout-minutes: 15

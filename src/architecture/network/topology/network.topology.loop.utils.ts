@@ -27,7 +27,7 @@ export function seedProcessingQueue(buildContext: TopologyBuildContext): void {
 }
 
 /**
- * Process queue until all available nodes are emitted.
+ * Process the Kahn queue until all available topology nodes are emitted.
  *
  * @param buildContext Mutable build context.
  * @returns Void.
@@ -194,7 +194,7 @@ function isSelfConnection(from: TopologyNode, to: TopologyNode): boolean {
 }
 
 /**
- * Sort one node collection by the deterministic activation tie-break.
+ * Sort one node collection by the deterministic activation wave tie-break order.
  *
  * @param nodes Candidate nodes.
  * @returns Sorted node collection.

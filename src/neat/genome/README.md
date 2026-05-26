@@ -45,7 +45,7 @@ strict genome contract.
 
 ### NeatGenomeConnectionGene
 
-Pure connection-gene contract owned by the NEAT subtree.
+Pure structural connection-gene contract owned by the NEAT genome subtree, carrying innovation identity, endpoint gene ids, weight, enabled state, and optional gater.
 
 ### NeatGenomeExtensions
 
@@ -58,7 +58,7 @@ node-gene and connection-gene shapes.
 
 ### NeatGenomeExtensionValues
 
-Typed extension payload reserved for additive beyond-paper genome traits.
+Typed extension payload reserved for additive beyond-paper genome traits that augment canonical genes without widening the base connection or node contracts.
 
 ### NeatGenomeGatedBlockDescriptor
 
@@ -80,7 +80,7 @@ materialization.
 
 ### NeatGenomeNodeType
 
-Canonical node-role literals supported by the first-pass NEAT genome boundary.
+Canonical node-role literals supported by the first-pass NEAT genome boundary for input, hidden, and output nodes.
 
 ### NeatGenomeRecurrentModuleDescriptor
 
@@ -95,19 +95,19 @@ valid until the referenced genes or gating ownership disappear structurally.
 
 ### NeatGenomeRecurrentModuleKind
 
-Supported recurrent-module kinds tracked by the Step 7.4 extension lane.
+Supported recurrent-module family identifiers tracked by the Step 7.4 temporal extension lane for LSTM, GRU, and NARX.
 
 ### NeatGenomeValidationIssue
 
-One finding produced by the pure genome validator.
+One structured finding produced by the pure genome validator carrying a stable code, path, and human-readable message.
 
 ### NeatGenomeValidationIssueCode
 
-Stable issue codes reported by the pure genome validator.
+Stable machine-readable issue codes produced by the pure genome validator for each detected structural violation.
 
 ### NeatGenomeValidationReport
 
-Validation report for one strict genome contract.
+Complete validation report returned for one strict genome contract containing all structural findings and summary counts.
 
 ## neat/genome/genome.ts
 
@@ -192,7 +192,7 @@ re-enable behavior.
 
 ### GenomeHereditySourceParent
 
-Stable parent labels used by the genome-owned heredity selector.
+Stable string literal labels identifying which parent contributed a given connection gene during the genome-owned heredity selection pass.
 
 ### GenomeMaterializationRuntimeHints
 
@@ -218,7 +218,7 @@ strict genome contract.
 
 ### NeatGenomeConnectionGene
 
-Pure connection-gene contract owned by the NEAT subtree.
+Pure structural connection-gene contract owned by the NEAT genome subtree, carrying innovation identity, endpoint gene ids, weight, enabled state, and optional gater.
 
 ### NeatGenomeConversionError
 
@@ -236,7 +236,7 @@ node-gene and connection-gene shapes.
 
 ### NeatGenomeExtensionValues
 
-Typed extension payload reserved for additive beyond-paper genome traits.
+Typed extension payload reserved for additive beyond-paper genome traits that augment canonical genes without widening the base connection or node contracts.
 
 ### NeatGenomeGatedBlockDescriptor
 
@@ -258,7 +258,7 @@ materialization.
 
 ### NeatGenomeNodeType
 
-Canonical node-role literals supported by the first-pass NEAT genome boundary.
+Canonical node-role literals supported by the first-pass NEAT genome boundary for input, hidden, and output nodes.
 
 ### NeatGenomeRecurrentModuleDescriptor
 
@@ -273,11 +273,11 @@ valid until the referenced genes or gating ownership disappear structurally.
 
 ### NeatGenomeRecurrentModuleKind
 
-Supported recurrent-module kinds tracked by the Step 7.4 extension lane.
+Supported recurrent-module family identifiers tracked by the Step 7.4 temporal extension lane for LSTM, GRU, and NARX.
 
 ### NeatGenomeValidationError
 
-Raised when a strict genome contract fails validation.
+Raised when a strict genome contract fails structural validation, carrying a structured issue list for diagnostics-first callers.
 
 #### issues
 
@@ -285,15 +285,15 @@ Structured validator findings attached to the thrown error.
 
 ### NeatGenomeValidationIssue
 
-One finding produced by the pure genome validator.
+One structured finding produced by the pure genome validator carrying a stable code, path, and human-readable message.
 
 ### NeatGenomeValidationIssueCode
 
-Stable issue codes reported by the pure genome validator.
+Stable machine-readable issue codes produced by the pure genome validator for each detected structural violation.
 
 ### NeatGenomeValidationReport
 
-Validation report for one strict genome contract.
+Complete validation report returned for one strict genome contract containing all structural findings and summary counts.
 
 ### SelectedGenomeConnectionGene
 
@@ -361,7 +361,7 @@ genome contract.
 
 ### NeatGenomeValidationError
 
-Raised when a strict genome contract fails validation.
+Raised when a strict genome contract fails structural validation, carrying a structured issue list for diagnostics-first callers.
 
 #### issues
 

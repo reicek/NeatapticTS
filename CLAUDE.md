@@ -9,7 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run build               # webpack + tsc
 npm run build:ts            # tsc only (faster for type checking)
 
-# Dense semantic bootstrap (post-clone after install/build)
+# Semantic index — run at every session start to prevent 24-hour indexed_at drift
+npm run index:session-start # touch-refreshes unchanged rows + incremental build for changed files
 npm run index:prewarm       # warms MCP dense search; rerun after corpus-changing docs/source/plan edits
 
 # Type-check without emitting

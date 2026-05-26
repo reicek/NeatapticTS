@@ -45,38 +45,44 @@ Validation: advisory — confirm qualified name before committing.
 
 1. Discover the exact qualified model names available in the active Copilot
    client before assigning any name.
-2. Use `GPT-5.4 (copilot)` for coding-heavy implementation and red-test
+2. Treat session-local availability constraints as controlling for frontmatter
+   edits. Under the current cost-tier restriction, `GPT-5.5 (copilot)` must
+   not be written to frontmatter.
+3. Use `GPT-5.4 (copilot)` for coding-heavy implementation and red-test
    synthesis when available.
-3. Use `Claude Sonnet 4.6 (copilot)` for planning, documentation synthesis,
+4. Use `Claude Sonnet 4.6 (copilot)` for planning, documentation synthesis,
    nuanced maintenance, and ambiguity-heavy coordination when available.
-4. Use `GPT-5.4-mini (copilot)` for bounded research, validation, and subagent
+5. Use `GPT-5.4-mini (copilot)` for bounded research, validation, and subagent
    work where coding or tool strength still matters.
-5. Use `Claude Haiku 4.6 (copilot)` for narrow checklist, summarization, and
+6. Use `Claude Haiku 4.6 (copilot)` for narrow checklist, summarization, and
    mechanical assistant work. If the model picker exposes only a different Haiku
    generation, update the qualified name before strict validation.
-6. Use fallback arrays so agents degrade to an available qualified Copilot model
+7. Use fallback arrays so agents degrade to an available qualified Copilot model
    when the primary is unavailable.
-7. Validate frontmatter shape with
+8. Validate frontmatter shape with
    `node scripts/agent-customization/validate-agent-frontmatter.mjs`.
 
 ## Phase Defaults
 
-| Phase | Tier | Reason |
-|---|---|---|
-| 00 Helping | Sonnet / Full | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
-| 01 Planning | Sonnet / Full | Architecture decisions and cross-plan tradeoffs need broad reasoning. |
-| 02 Research | Mini / Haiku | Retrieval and summarization should be cheap and bounded. |
-| 03 Red Testing | Full | Test contracts need careful judgment. |
-| 04 Implementation | Full | Implementation needs deeper reasoning and edge-case handling. |
-| 05 Green Testing | Mini / Haiku | Verification is mostly mechanical. |
-| 06 Documentation | Sonnet / Mini | Educational docs benefit from stronger writing after facts exist. |
-| 07 Logging | Haiku / Mini | Summarization and tracker updates should be lightweight. |
+| Phase             | Tier          | Reason                                                                    |
+| ----------------- | ------------- | ------------------------------------------------------------------------- |
+| 00 Helping        | Sonnet / Full | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
+| 01 Planning       | Sonnet / Full | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
+| 02 Research       | Mini / Haiku  | Retrieval and summarization should be cheap and bounded.                  |
+| 03 Red Testing    | Full          | Test contracts need careful judgment.                                     |
+| 04 Implementation | Full          | Implementation needs deeper reasoning and edge-case handling.             |
+| 05 Green Testing  | Mini / Haiku  | Verification is mostly mechanical.                                        |
+| 06 Documentation  | Sonnet / Mini | Educational docs benefit from stronger writing after facts exist.         |
+| 07 Logging        | Haiku / Mini  | Summarization and tracker updates should be lightweight.                  |
 
 ## Guardrails
 
 - Do not commit a model string that has not been confirmed as a valid qualified
   name in the active Copilot client; an invalid name causes silent fallback or
   routing errors.
+- When a model is rejected by the active session, keep that session-local
+  restriction out of frontmatter. Under the current cost-tier restriction,
+  `GPT-5.5 (copilot)` must not be written to frontmatter.
 - Do not assign a Full-tier model to phases where a Mini or Haiku tier is
   sufficient; unnecessary cost undermines the budget design.
 - Do not omit a fallback array for agents that must be resilient to model

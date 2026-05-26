@@ -27,6 +27,9 @@ type DynamicDenseGuidancePlan = {
   layerIndex: number;
 };
 
+/**
+ * Appends calibrated static INT8 scale and zero-point initializers to the model graph for each supported layer target.
+ */
 export function applyStaticQuantizationCalibrationPostProcessing(
   model: OnnxModel,
   sourceOptions: OnnxExportOptions,
@@ -57,6 +60,9 @@ export function applyStaticQuantizationCalibrationPostProcessing(
   model.graph.initializer.push(...parameterInitializers);
 }
 
+/**
+ * Rewrites dense GEMM graph nodes to QLinearMatMul sequences and appends quantized weight initializers for static INT8 lowering.
+ */
 export function applyStaticDenseQuantizationPostProcessing(
   model: OnnxModel,
   sourceOptions: OnnxExportOptions,
@@ -108,6 +114,9 @@ export function applyStaticDenseQuantizationPostProcessing(
   );
 }
 
+/**
+ * Rewrites Conv graph nodes to QLinearConv sequences and appends quantized weight and bias initializers for static INT8 lowering.
+ */
 export function applyStaticConvQuantizationPostProcessing(
   model: OnnxModel,
   sourceOptions: OnnxExportOptions,
@@ -164,6 +173,9 @@ export function applyStaticConvQuantizationPostProcessing(
   );
 }
 
+/**
+ * Wraps each dense GEMM node with DynamicQuantizeLinear/DequantizeLinear guidance nodes for dynamic UINT8 quantization.
+ */
 export function applyDynamicDenseQuantizationGuidancePostProcessing(
   model: OnnxModel,
   sourceOptions: OnnxExportOptions,

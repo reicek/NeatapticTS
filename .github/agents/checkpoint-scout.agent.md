@@ -31,14 +31,14 @@ If tracker updates are needed, assume `tracker-handoff` owns that format. If the
 ## Approach
 
 1. Read the smallest relevant plan or README surface first, especially
-  `plans/Population_Save_Resume_and_Checkpointing.md` when the task is
-  roadmap-shaped, and pair it with `plans/Roadmap.md` when kickoff priority is
-  part of the question.
+   `plans/Population_Save_Resume_and_Checkpointing.md` when the task is
+   roadmap-shaped, and pair it with `plans/Roadmap.md` when kickoff priority is
+   part of the question.
 2. Find the controlling boundary: full checkpoint, light checkpoint, strict
    restore, migration, metadata extension, or orchestration save/load API.
 3. If the task is Step 0 or plan expansion, stop at the owner map, exactness
-  blockers, and the smallest next handoff instead of drifting into
-  implementation details.
+   blockers, and the smallest next handoff instead of drifting into
+   implementation details.
 4. Identify the nearest code or plan surface that decides saved state,
    validation rules, or restore failure behavior.
 5. Separate true checkpoint problems from neighboring concerns:

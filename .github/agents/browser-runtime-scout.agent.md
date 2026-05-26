@@ -30,7 +30,7 @@ If tracker updates are needed, assume `tracker-handoff` owns that format. If the
 ## Approach
 
 1. Read the smallest relevant plan or README surface first, especially
-  `plans/completed/Browser_Build_and_CDN_Distribution.md` when the task is roadmap-shaped.
+   `plans/completed/Browser_Build_and_CDN_Distribution.md` when the task is roadmap-shaped.
 2. Find the controlling boundary: ESM output, IIFE output, smoke test,
    worker-delivery packaging, public API exposure, or size audit.
 3. Identify the nearest code or plan surface that decides bundler behavior,

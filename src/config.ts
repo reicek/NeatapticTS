@@ -122,19 +122,19 @@ export interface NeatapticConfig {
   slabPoolMaxPerKey?: number;
 }
 
-/** Shared activation precision identifiers reused by runtime precision owners. */
+/** Shared activation precision identifiers reused by all runtime precision owners. */
 export type ActivationPrecision = 'f16' | 'f32' | 'f64';
 
 /** Canonical activation precision used when no lower-precision mode is requested. */
 export const DEFAULT_ACTIVATION_PRECISION: ActivationPrecision = 'f64';
 
-/** Shared precision configuration resolved for one runtime decision. */
+/** Shared precision configuration resolved for one concrete activation-path runtime decision. */
 export interface PrecisionConfig {
   /** Effective activation precision for the current call boundary. */
   activationPrecision: ActivationPrecision;
 }
 
-/** Optional precision overrides supplied by one caller-owned boundary. */
+/** Optional explicit activation precision overrides supplied by one caller-owned boundary. */
 export interface PrecisionConfigOverrides {
   /** Optional explicit activation precision override. */
   activationPrecision?: ActivationPrecision;

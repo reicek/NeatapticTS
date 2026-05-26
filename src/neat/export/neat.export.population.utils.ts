@@ -5,6 +5,11 @@ import type {
   GenomeJSON,
 } from './neat.export.types';
 
+type NumericGenomeMetaAssignment = {
+  value: number | undefined;
+  apply(value: number): void;
+};
+
 /**
  * Population genome checkpoint helpers.
  *
@@ -97,66 +102,178 @@ export function hydrateGenomeControllerMeta(
   seenGenomeIds: Set<number>,
   nextAssignedGenomeId: number,
 ): number {
-  if (typeof controllerMeta?.score === 'number')
-    genome.score = controllerMeta.score;
-  if (typeof controllerMeta?.mutationRate === 'number') {
-    genome._mutRate = controllerMeta.mutationRate;
+  restoreNumericGenomeMeta(genome, controllerMeta);
+  restoreGenomeNetworkRngState(genome, controllerMeta);
+  restoreGenomeParents(genome, controllerMeta);
+  restoreOptionalGenomeString(
+    controllerMeta?.compatInnovationMode,
+    (compatInnovationMode) => {
+      genome._compatInnovationMode = compatInnovationMode;
+    },
+  );
+
+  const restoredGenomeId = resolveRestoredGenomeId(
+    controllerMeta,
+    nextAssignedGenomeId,
+  );
+
+  assignRestoredGenomeId(genome, restoredGenomeId, seenGenomeIds);
+
+  return resolveNextAssignedGenomeId(
+    controllerMeta,
+    nextAssignedGenomeId,
+    restoredGenomeId,
+  );
+}
+
+function restoreNumericGenomeMeta(
+  genome: GenomeControllerCarrier,
+  controllerMeta: GenomeControllerMetaJSON | undefined,
+): void {
+  applyNumericGenomeMetaAssignments([
+    {
+      value: controllerMeta?.score,
+      apply(value) {
+        genome.score = value;
+      },
+    },
+    {
+      value: controllerMeta?.mutationRate,
+      apply(value) {
+        genome._mutRate = value;
+      },
+    },
+    {
+      value: controllerMeta?.mutationAmount,
+      apply(value) {
+        genome._mutAmount = value;
+      },
+    },
+    {
+      value: controllerMeta?.sharedFitness,
+      apply(value) {
+        genome._sharedFitness = value;
+      },
+    },
+    {
+      value: controllerMeta?.crowdingDistance,
+      apply(value) {
+        genome._crowdingDistance = value;
+      },
+    },
+    {
+      value: controllerMeta?.frontRank,
+      apply(value) {
+        genome._frontRank = value;
+      },
+    },
+    {
+      value: controllerMeta?.structuralEntropy,
+      apply(value) {
+        genome._structuralEntropy = value;
+      },
+    },
+    {
+      value: controllerMeta?.multiObjectiveRank,
+      apply(value) {
+        genome._moRank = value;
+      },
+    },
+    {
+      value: controllerMeta?.multiObjectiveCrowding,
+      apply(value) {
+        genome._moCrowd = value;
+      },
+    },
+    {
+      value: controllerMeta?.depth,
+      apply(value) {
+        genome._depth = value;
+      },
+    },
+    {
+      value: controllerMeta?.reenableProb,
+      apply(value) {
+        genome._reenableProb = value;
+      },
+    },
+    {
+      value: controllerMeta?.reenableSuccess,
+      apply(value) {
+        genome._reenableSuccess = value;
+      },
+    },
+    {
+      value: controllerMeta?.reenableAttempts,
+      apply(value) {
+        genome._reenableAttempts = value;
+      },
+    },
+    {
+      value: controllerMeta?.novelty,
+      apply(value) {
+        genome._novelty = value;
+      },
+    },
+  ]);
+}
+
+function applyNumericGenomeMetaAssignments(
+  assignments: NumericGenomeMetaAssignment[],
+): void {
+  for (const assignment of assignments) {
+    if (typeof assignment.value === 'number') {
+      assignment.apply(assignment.value);
+    }
   }
-  if (typeof controllerMeta?.mutationAmount === 'number') {
-    genome._mutAmount = controllerMeta.mutationAmount;
-  }
+}
+
+function restoreGenomeNetworkRngState(
+  genome: GenomeControllerCarrier,
+  controllerMeta: GenomeControllerMetaJSON | undefined,
+): void {
   if (
     typeof controllerMeta?.networkRngState === 'number' &&
     typeof genome.setRNGState === 'function'
   ) {
     genome.setRNGState(controllerMeta.networkRngState);
   }
-  if (typeof controllerMeta?.sharedFitness === 'number') {
-    genome._sharedFitness = controllerMeta.sharedFitness;
-  }
-  if (typeof controllerMeta?.crowdingDistance === 'number') {
-    genome._crowdingDistance = controllerMeta.crowdingDistance;
-  }
-  if (typeof controllerMeta?.frontRank === 'number') {
-    genome._frontRank = controllerMeta.frontRank;
-  }
-  if (typeof controllerMeta?.structuralEntropy === 'number') {
-    genome._structuralEntropy = controllerMeta.structuralEntropy;
-  }
-  if (typeof controllerMeta?.multiObjectiveRank === 'number') {
-    genome._moRank = controllerMeta.multiObjectiveRank;
-  }
-  if (typeof controllerMeta?.multiObjectiveCrowding === 'number') {
-    genome._moCrowd = controllerMeta.multiObjectiveCrowding;
-  }
+}
+
+function restoreGenomeParents(
+  genome: GenomeControllerCarrier,
+  controllerMeta: GenomeControllerMetaJSON | undefined,
+): void {
   if (Array.isArray(controllerMeta?.parents)) {
     genome._parents = controllerMeta.parents.filter(
       (parentId): parentId is number => typeof parentId === 'number',
     );
   }
-  if (typeof controllerMeta?.depth === 'number')
-    genome._depth = controllerMeta.depth;
-  if (typeof controllerMeta?.reenableProb === 'number') {
-    genome._reenableProb = controllerMeta.reenableProb;
-  }
-  if (typeof controllerMeta?.reenableSuccess === 'number') {
-    genome._reenableSuccess = controllerMeta.reenableSuccess;
-  }
-  if (typeof controllerMeta?.reenableAttempts === 'number') {
-    genome._reenableAttempts = controllerMeta.reenableAttempts;
-  }
-  if (typeof controllerMeta?.compatInnovationMode === 'string') {
-    genome._compatInnovationMode = controllerMeta.compatInnovationMode;
-  }
-  if (typeof controllerMeta?.novelty === 'number') {
-    genome._novelty = controllerMeta.novelty;
-  }
+}
 
-  const restoredGenomeId =
-    typeof controllerMeta?.genomeId === 'number'
-      ? controllerMeta.genomeId
-      : nextAssignedGenomeId;
+function restoreOptionalGenomeString<T extends string>(
+  value: T | undefined,
+  apply: (value: T) => void,
+): void {
+  if (typeof value === 'string') {
+    apply(value as T);
+  }
+}
 
+function resolveRestoredGenomeId(
+  controllerMeta: GenomeControllerMetaJSON | undefined,
+  nextAssignedGenomeId: number,
+): number {
+  return typeof controllerMeta?.genomeId === 'number'
+    ? controllerMeta.genomeId
+    : nextAssignedGenomeId;
+}
+
+function assignRestoredGenomeId(
+  genome: GenomeControllerCarrier,
+  restoredGenomeId: number,
+  seenGenomeIds: Set<number>,
+): void {
   if (seenGenomeIds.has(restoredGenomeId)) {
     throw new NeatExportPopulationValidationError(
       `Population snapshots must not reuse genome id ${restoredGenomeId}.`,
@@ -165,7 +282,13 @@ export function hydrateGenomeControllerMeta(
 
   genome._id = restoredGenomeId;
   seenGenomeIds.add(restoredGenomeId);
+}
 
+function resolveNextAssignedGenomeId(
+  controllerMeta: GenomeControllerMetaJSON | undefined,
+  nextAssignedGenomeId: number,
+  restoredGenomeId: number,
+): number {
   return typeof controllerMeta?.genomeId === 'number'
     ? Math.max(nextAssignedGenomeId, restoredGenomeId + 1)
     : nextAssignedGenomeId + 1;

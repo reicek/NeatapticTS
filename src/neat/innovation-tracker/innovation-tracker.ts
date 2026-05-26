@@ -45,10 +45,10 @@ import type {
   NodeSplitRecord,
 } from './innovation-tracker.types';
 
-/** Initial active generation for a newly created tracker. */
+/** Initial active generation number for a newly created innovation tracker. */
 export const INITIAL_TRACKER_GENERATION = 0;
 
-/** Initial next-innovation cursor for a newly created tracker. */
+/** Initial next-innovation id cursor for a newly created innovation tracker. */
 export const INITIAL_NEXT_INNOVATION_ID = 0;
 
 /**

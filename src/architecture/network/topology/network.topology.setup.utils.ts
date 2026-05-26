@@ -17,7 +17,7 @@ import {
 } from './network.topology.loop.utils';
 
 /**
- * Cast network to internal topology props view.
+ * Cast a network instance to the internal topology props view for flag access.
  *
  * @param network Network instance.
  * @returns Internal topology props view.
@@ -42,7 +42,7 @@ export function shouldBuildRecurrentSchedule(
 }
 
 /**
- * Build and cache the deterministic recurrent schedule.
+ * Build and cache the deterministic recurrent activation schedule for the network.
  *
  * @param network Network instance.
  * @param internalTopologyProps Internal topology props view.

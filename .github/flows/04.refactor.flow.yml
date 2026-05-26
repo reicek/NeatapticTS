@@ -1,6 +1,6 @@
-id: "04.refactor"
-name: "SOLID-Bounded Module Refactor"
-agent: "04-implementing"
+id: '04.refactor'
+name: 'SOLID-Bounded Module Refactor'
+agent: '04-implementing'
 description: >
   Executes a deliberate SOLID module split or structural refactor within a
   declared boundary. Reads the boundary map from the plan or Boundary Mapper
@@ -9,26 +9,26 @@ description: >
   green-testing for suite confirmation. Does not modify src/ public API.
 
 triggers:
-  - "Refactor a large module"
-  - "SOLID split requested"
-  - "Folderize a file into a module boundary"
-  - "Implement a declared split plan step"
+  - 'Refactor a large module'
+  - 'SOLID split requested'
+  - 'Folderize a file into a module boundary'
+  - 'Implement a declared split plan step'
 
 gates:
-  - "plan-sync"
-  - "step-packet"
-  - "agent-graph"
+  - 'plan-sync'
+  - 'step-packet'
+  - 'agent-graph'
 
 post-phase-fanout:
-  - "05-green-testing"
+  - '05-green-testing'
 
 skills:
-  - "solid-split"
-  - "coverage-guard"
+  - 'solid-split'
+  - 'coverage-guard'
 
 specialists:
-  - "Boundary Mapper"
-  - "Coverage Guard"
-  - "implementation-pattern-coordinator"
+  - 'Boundary Mapper'
+  - 'Coverage Guard'
+  - 'implementation-pattern-coordinator'
 
 timeout-minutes: 45

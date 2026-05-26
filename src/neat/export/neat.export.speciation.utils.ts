@@ -113,9 +113,24 @@ export function restoreSpeciationCheckpoint(
   speciationCheckpoint: SpeciationCheckpointJSON,
   networkClass: NetworkClass,
 ): void {
+  const genomesById = buildGenomesById(neatInstance.population);
+
+  restoreNextSpeciesId(neatInstance, speciationCheckpoint.nextSpeciesId);
+  neatInstance._species = restoreSpeciesRows(
+    speciationCheckpoint.species ?? [],
+    genomesById,
+    networkClass,
+  );
+  restoreSpeciationCollections(neatInstance, speciationCheckpoint);
+  restoreSpeciationThresholdState(neatInstance, speciationCheckpoint);
+}
+
+function buildGenomesById(
+  population: GenomeControllerCarrier[],
+): Map<number, GenomeControllerCarrier> {
   const genomesById = new Map<number, GenomeControllerCarrier>();
 
-  for (const genome of neatInstance.population) {
+  for (const genome of population) {
     if (typeof genome._id !== 'number') {
       throw new NeatExportStateControllerRestoreError(
         'Full checkpoint restore requires stable genome ids on every imported genome.',
@@ -126,57 +141,127 @@ export function restoreSpeciationCheckpoint(
         `Full checkpoint restore encountered duplicate genome id ${genome._id}.`,
       );
     }
+
     genomesById.set(genome._id, genome);
   }
 
-  neatInstance._nextSpeciesId =
-    typeof speciationCheckpoint.nextSpeciesId === 'number'
-      ? speciationCheckpoint.nextSpeciesId
-      : neatInstance._nextSpeciesId;
-  neatInstance._species = (speciationCheckpoint.species ?? []).map(
-    (species) => {
-      const representativeAnchor = restoreRepresentativeAnchor(
-        species.representativeGenome,
-        genomesById,
-        networkClass,
-      );
-      const members = species.memberGenomeIds.map((genomeId) => {
-        const member = genomesById.get(genomeId);
-        if (member) {
-          return member;
-        }
+  return genomesById;
+}
 
-        if (representativeAnchor && representativeAnchor._id === genomeId) {
-          return representativeAnchor;
-        }
+function restoreNextSpeciesId(
+  neatInstance: NeatControllerForExport,
+  nextSpeciesId: number | undefined,
+): void {
+  if (typeof nextSpeciesId === 'number') {
+    neatInstance._nextSpeciesId = nextSpeciesId;
+  }
+}
 
-        return createCheckpointMemberPlaceholder(genomeId);
-      });
-      const representative =
-        typeof species.representativeGenomeId === 'number'
-          ? (genomesById.get(species.representativeGenomeId) ??
-            representativeAnchor)
-          : members[0];
-
-      if (species.representativeGenomeId != null && !representative) {
-        throw new NeatExportStateControllerRestoreError(
-          `Species checkpoint ${species.id} references missing representative genome id ${species.representativeGenomeId}. Export the checkpoint again with the current replay-aware contract before resuming this speciation boundary.`,
-        );
-      }
-
-      return {
-        id: species.id,
-        members,
-        representative,
-        bestScore: species.bestScore,
-        lastImproved: species.lastImproved,
-        sharedFitness: species.sharedFitness,
-        avgSharedFitness: species.avgSharedFitness,
-        offspring: species.offspring,
-        generation: species.generation,
-      };
-    },
+function restoreSpeciesRows(
+  speciesRows: NonNullable<SpeciationCheckpointJSON['species']>,
+  genomesById: Map<number, GenomeControllerCarrier>,
+  networkClass: NetworkClass,
+) {
+  return speciesRows.map((species) =>
+    restoreSpeciesRow(species, genomesById, networkClass),
   );
+}
+
+function restoreSpeciesRow(
+  species: NonNullable<SpeciationCheckpointJSON['species']>[number],
+  genomesById: Map<number, GenomeControllerCarrier>,
+  networkClass: NetworkClass,
+) {
+  const representativeAnchor = restoreRepresentativeAnchor(
+    species.representativeGenome,
+    genomesById,
+    networkClass,
+  );
+  const members = restoreSpeciesMembers(
+    species.memberGenomeIds,
+    genomesById,
+    representativeAnchor,
+  );
+  const representative = resolveRestoredSpeciesRepresentative(
+    species,
+    genomesById,
+    representativeAnchor,
+    members,
+  );
+
+  assertRepresentativeGenomeResolved(
+    species.id,
+    species.representativeGenomeId,
+    representative,
+  );
+
+  return {
+    id: species.id,
+    members,
+    representative,
+    bestScore: species.bestScore,
+    lastImproved: species.lastImproved,
+    sharedFitness: species.sharedFitness,
+    avgSharedFitness: species.avgSharedFitness,
+    offspring: species.offspring,
+    generation: species.generation,
+  };
+}
+
+function restoreSpeciesMembers(
+  memberGenomeIds: number[],
+  genomesById: Map<number, GenomeControllerCarrier>,
+  representativeAnchor: GenomeControllerCarrier | undefined,
+): GenomeControllerCarrier[] {
+  return memberGenomeIds.map((genomeId) =>
+    resolveRestoredSpeciesMember(genomeId, genomesById, representativeAnchor),
+  );
+}
+
+function resolveRestoredSpeciesMember(
+  genomeId: number,
+  genomesById: Map<number, GenomeControllerCarrier>,
+  representativeAnchor: GenomeControllerCarrier | undefined,
+): GenomeControllerCarrier {
+  const liveMember = genomesById.get(genomeId);
+
+  if (liveMember) {
+    return liveMember;
+  }
+  if (representativeAnchor && representativeAnchor._id === genomeId) {
+    return representativeAnchor;
+  }
+
+  return createCheckpointMemberPlaceholder(genomeId);
+}
+
+function resolveRestoredSpeciesRepresentative(
+  species: NonNullable<SpeciationCheckpointJSON['species']>[number],
+  genomesById: Map<number, GenomeControllerCarrier>,
+  representativeAnchor: GenomeControllerCarrier | undefined,
+  members: GenomeControllerCarrier[],
+): GenomeControllerCarrier | undefined {
+  return typeof species.representativeGenomeId === 'number'
+    ? (genomesById.get(species.representativeGenomeId) ?? representativeAnchor)
+    : members[0];
+}
+
+function assertRepresentativeGenomeResolved(
+  speciesId: number,
+  representativeGenomeId: number | undefined,
+  representative: GenomeControllerCarrier | undefined,
+): void {
+  if (representativeGenomeId != null && !representative) {
+    throw new NeatExportStateControllerRestoreError(
+      `Species checkpoint ${speciesId} references missing representative genome id ${representativeGenomeId}. Export the checkpoint again with the current replay-aware contract before resuming this speciation boundary.`,
+    );
+  }
+}
+
+function restoreSpeciationCollections(
+  neatInstance: NeatControllerForExport,
+  speciationCheckpoint: SpeciationCheckpointJSON,
+): void {
   neatInstance._speciesCreated = new Map(
     speciationCheckpoint.speciesCreated ?? [],
   );
@@ -188,7 +273,12 @@ export function restoreSpeciationCheckpoint(
   neatInstance._speciesLastStats = new Map(
     speciationCheckpoint.speciesLastStats ?? [],
   );
+}
 
+function restoreSpeciationThresholdState(
+  neatInstance: NeatControllerForExport,
+  speciationCheckpoint: SpeciationCheckpointJSON,
+): void {
   if (typeof speciationCheckpoint.compatIntegral === 'number') {
     neatInstance._compatIntegral = speciationCheckpoint.compatIntegral;
   }

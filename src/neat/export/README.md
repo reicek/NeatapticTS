@@ -420,7 +420,7 @@ state needed by the strict full-checkpoint restore path.
 
 ### SpeciationCheckpointJSON
 
-Speciation-specific checkpoint state required by the full resume path.
+Speciation-specific checkpoint state required by the full-resume path, preserving species registry, age markers, and compatibility-tuning history.
 
 ### SpeciesCheckpointJSON
 
@@ -460,20 +460,20 @@ const neat2 = Neat.fromJSONImpl(metaLoaded, fitnessFn); // empty population
 
 ### CURRENT_META_FORMAT_VERSION
 
-Format version for controller-only meta checkpoints.
+Format version for controller-only meta checkpoint bundles that omit full population state and are intended for lightweight persistence between runs.
 
 ### CURRENT_STATE_FORMAT_VERSION
 
-Format version for strict full-state checkpoint bundles.
+Format version for strict full-state checkpoint bundles that carry the complete population, RNG state, and replay metadata for exact-resume runs.
 
 ### FULL_CHECKPOINT_MODE
 
-Checkpoint mode marker for strict full-resume bundles.
+Checkpoint mode string that marks a bundle as a strict full-resume checkpoint preserving all controller state required for deterministic future replay.
 
 ### GenomeControllerCarrier
 
-Internal genome view combining network serialization with controller-owned.
-metadata used by export and restore helpers.
+Internal genome view combining network serialization with controller-owned metadata,
+used by export and restore helpers to carry scores, stable ids, and adaptive genome state.
 
 ### GenomeControllerMetaJSON
 
@@ -507,11 +507,11 @@ only care about turning one genome into a JSON payload.
 
 ### LEGACY_CHECKPOINT_FORMAT_VERSION
 
-Format version used when a checkpoint predates explicit version tags.
+Format version assigned to checkpoints that predate explicit version tagging; used as the fallback during migration and compatibility validation passes.
 
 ### LIGHT_CHECKPOINT_MODE
 
-Checkpoint mode marker for best-effort light-resume bundles.
+Checkpoint mode string that marks a bundle as a best-effort light checkpoint retaining only the elite genome subset without full replay guarantees.
 
 ### NeatCheckpointRestoreOptions
 
@@ -595,7 +595,7 @@ without needing to know the concrete network implementation details.
 
 ### SpeciationCheckpointJSON
 
-Speciation-specific checkpoint state required by the full resume path.
+Speciation-specific checkpoint state required by the full-resume path, preserving species registry, age markers, and compatibility-tuning history.
 
 ### SpeciesCheckpointJSON
 
@@ -607,7 +607,7 @@ import path can rebind the live species registry onto the freshly restored
 
 ### SpeciesControllerCarrier
 
-Internal species row shape used while serializing and restoring checkpoints.
+Internal species row shape used while serializing and restoring checkpoint snapshots, carrying the member list and per-species aggregate stats.
 
 ## neat/export/neat.export.utils.ts
 

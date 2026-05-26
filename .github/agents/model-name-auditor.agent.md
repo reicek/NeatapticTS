@@ -19,7 +19,7 @@ Confirm which qualified model names are known, which still require local model-p
 
 - ALWAYS stay read-only.
 - DO NOT edit agent frontmatter without explicit approval.
-- ALWAYS validate model strings against known qualified names (GPT-5.4, GPT-5.4-mini, Claude Sonnet 4.6, Claude Haiku 4.6, Claude Opus 4.5, etc.).
+- ALWAYS validate model strings against confirmed qualified names (GPT-5.4, GPT-5.4-mini, Claude Sonnet 4.6, Claude Haiku 4.6).
 - DO NOT make assumptions about model availability; note unverified names as gaps.
 - This agent is intentionally thin. Model routing policy and Copilot integration belong to VS Code and Copilot product teams.
 

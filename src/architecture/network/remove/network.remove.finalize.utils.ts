@@ -21,7 +21,7 @@ export function removeNodeFromNetworkStorage(
 }
 
 /**
- * Marks all cached removal-sensitive structures as dirty.
+ * Marks all cached removal-sensitive network structures as dirty after node removal.
  *
  * @param internalNetwork - Internal mutable network props.
  * @returns Nothing.

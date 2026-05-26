@@ -105,7 +105,7 @@ export type OnnxRuntimeParityExecutedResult = {
 };
 
 /**
- * Result for one inventory-only Phase 9 runtime-parity fixture.
+ * Result for one inventory-only skipped Phase 9 runtime-parity test fixture.
  */
 export type OnnxRuntimeParitySkippedResult = {
   fixture: OnnxRuntimeParityFixtureDescriptor;
@@ -114,7 +114,7 @@ export type OnnxRuntimeParitySkippedResult = {
 };
 
 /**
- * Runtime-parity result union for the Phase 9 harness seam.
+ * Runtime-parity result union type for the Phase 9 test harness seam.
  */
 export type OnnxRuntimeParityResult =
   | OnnxRuntimeParityExecutedResult

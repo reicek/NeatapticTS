@@ -94,33 +94,39 @@ Validate with: focused ONNX Jest slice, import acceptance/rejection tests, then 
 1. Read `plans/completed/ONNX_EXPORT_PLAN.md` before editing, plus any newer active ONNX follow-up amendment in `plans/` when one exists.
 2. Read `src/architecture/network/onnx/README.md` and the nearest parent README.
 3. Identify whether the active pass is:
-  - export operator mapping,
-  - import hardening,
-  - recurrent subset support,
-  - or an explicit non-ONNX bridge decision for a downstream consumer.
+
+- export operator mapping,
+- import hardening,
+- recurrent subset support,
+- or an explicit non-ONNX bridge decision for a downstream consumer.
+
 4. For a new operator mapping:
    - Consult the ONNX operator spec at `https://onnx.ai/onnx/operators/` for
      the canonical attribute and type constraints.
    - Identify the nearest existing mapping as a reference pattern.
 5. For an import-hardening pass:
-  - Name the exact supported subset and the exact unsupported inputs that must
-    reject cleanly.
-  - If the target is a downstream external seed path, confirm whether ONNX is
-    the honest bridge or whether the plan should document a non-ONNX path
-    instead of widening support claims.
+
+- Name the exact supported subset and the exact unsupported inputs that must
+  reject cleanly.
+- If the target is a downstream external seed path, confirm whether ONNX is
+  the honest bridge or whether the plan should document a non-ONNX path
+  instead of widening support claims.
+
 6. Implement the change in the correct sub-boundary following the repo naming
-  pattern.
+   pattern.
 7. Add focused validation:
-  - export or roundtrip: known network → export → import → compare activation
-    output within float32 tolerance,
-  - import hardening: acceptance tests for the supported subset plus rejection
-    tests for unsupported external graphs.
+
+- export or roundtrip: known network → export → import → compare activation
+  output within float32 tolerance,
+- import hardening: acceptance tests for the supported subset plus rejection
+  tests for unsupported external graphs.
+
 8. Validate with a focused Jest slice for the ONNX boundary.
 9. Run `coverage-guard` on every `src/` file added or changed in this step.
    100% in all four categories (statements, branches, functions, lines) is
    required before proceeding.
 10. Update the supported-subset operator table in the nearest JSDoc or README
-   surface to reflect the new operator.
+    surface to reflect the new operator.
 11. Run `npm run docs` to verify generated output.
 12. Update the active ONNX follow-up amendment with the completed step, or create a narrower active amendment in `plans/` before coding if the work widens support beyond the archived ONNX baseline.
 13. Run `npm run test:silent` to confirm repo-wide green.

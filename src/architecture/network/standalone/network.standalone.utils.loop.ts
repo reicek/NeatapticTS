@@ -13,7 +13,7 @@ import {
 } from './network.standalone.utils.graph';
 
 /**
- * Append the generated input-copy loop to the standalone body.
+ * Append the generated input-copy initialization loop to the standalone body.
  *
  * @param generationContext Mutable generation context.
  * @returns Void.
@@ -34,7 +34,7 @@ export function appendInputSeedLine(
 }
 
 /**
- * Append compute lines for all non-input nodes.
+ * Append generated computation lines for all active non-input network nodes.
  *
  * @param generationContext Mutable generation context.
  * @returns Void.
@@ -48,7 +48,7 @@ export function appendAllNodeComputationLines(
 }
 
 /**
- * Append generated return line for output activations.
+ * Append the final generated return statement for collected output activations.
  *
  * @param generationContext Mutable generation context.
  * @param outputIndexes Output node indexes.

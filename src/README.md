@@ -1497,7 +1497,7 @@ DESIGN NOTES
 
 ### ActivationPrecision
 
-Shared activation precision identifiers reused by runtime precision owners.
+Shared activation precision identifiers reused by all runtime precision owners.
 
 ### DEFAULT_ACTIVATION_PRECISION
 
@@ -1530,11 +1530,11 @@ DESIGN NOTES
 
 ### PrecisionConfig
 
-Shared precision configuration resolved for one runtime decision.
+Shared precision configuration resolved for one concrete activation-path runtime decision.
 
 ### PrecisionConfigOverrides
 
-Optional precision overrides supplied by one caller-owned boundary.
+Optional explicit activation precision overrides supplied by one caller-owned boundary.
 
 ### resolvePrecisionConfig
 
@@ -1658,7 +1658,11 @@ const output = network.activate([0, 1]);
 
 ### AutoInferenceTransport
 
-Automatic transport selection result for the current host.
+Automatically selected worker-backed inference transport tier for the current host.
+
+- `'shared-memory'` — SharedArrayBuffer transfer path when cross-origin isolation is active.
+- `'channel'` — Persistent channel worker when a channel-worker script was delivered.
+- `'transferable'` — Universal typed-array fallback when higher tiers are unavailable.
 
 ### BatchEvaluationResult
 
@@ -1670,7 +1674,10 @@ with their original batch shelf without reconstructing indexes manually.
 
 ### BrowserWorkerAssetUrlOptions
 
-Options for resolving a browser worker asset URL.
+Options for resolving a browser worker asset URL relative to the current script or an explicit base URL override.
+
+When `baseUrl` is omitted the helper falls back to `document.currentScript.src`
+and then `location.href`, keeping the worker and host bundle co-located by default.
 
 ### centerPositionedNodesInDrawableArea
 
@@ -3476,11 +3483,11 @@ For example, recurrent networks can label hidden columns as "input gate",
 
 ### NetworkNodeDimensions
 
-Dimensions shared across all nodes in a rendering pass.
+Pixel dimensions shared by every node in a single rendering pass, controlling both the visual node size and the hit-test bounding box for hover interactions.
 
 ### NetworkVisualizationColorScales
 
-Color scale for weight and activation visualization.
+Color palette strings used to encode positive and negative weights, hot and cold activations, and bias magnitudes during canvas rendering passes.
 
 ### NetworkVisualizationResolvedFrame
 
@@ -3721,7 +3728,7 @@ const portableNode: PortableInferencePayloadNode = {
 
 ### PositionedNetworkNode
 
-A node with its position and dimensions resolved in canvas coordinates.
+A network node with its center position and pixel dimensions resolved in canvas space, ready for hit-testing and rendering passes.
 
 ### positionNetworkNodes
 
@@ -3792,7 +3799,7 @@ Returns: Resolved frame with positioned nodes and scene state (reusable for hove
 
 ### RenderNetworkViewOptions
 
-Options passed to the shared renderer.
+Configuration bag passed to the shared canvas renderer to override default node dimensions, padding, color scales, and optional demo overlay hooks.
 
 ### resolveAutoInferenceTransport
 
@@ -4043,7 +4050,11 @@ can highlight the I/O boundary and map external input/output indices.
 
 ### VisualizationMetadataV1
 
-Optional metadata block attached to a visualization graph.
+Optional metadata block attached to a {@link VisualizationGraphV1} export.
+
+Carries a human-readable network name, a scheduling mode hint so renderers
+can annotate recurrent edges correctly, and an ISO 8601 creation timestamp
+for traceability in logging and checkpoint pipelines.
 
 ### VisualizationNodeV1
 
@@ -4054,11 +4065,11 @@ serialization, crossover, and round-trips through evolution.
 
 ### VisualNetworkConnection
 
-A visual connection between two positioned nodes.
+A visual edge between two positioned network nodes, carrying the synapse weight and enabled state for color-coded rendering.
 
 ### VisualNetworkNode
 
-A simple node representation for layout input.
+Minimal node representation used as input to the layout engine, carrying only the index, type role, and bias value needed for positioning.
 
 ### default
 
@@ -4089,6 +4100,16 @@ bits4+ reserved.
 #### _globalNodeIndex
 
 Global index counter for assigning unique indices to nodes.
+
+#### _safeUpdateBias
+
+```ts
+_safeUpdateBias(
+  delta: number,
+): void
+```
+
+Internal helper to safely update the node bias with clipping and NaN checks.
 
 #### _safeUpdateWeight
 
@@ -4303,7 +4324,7 @@ Parameters:
 
 ```ts
 applyBatchUpdatesWithOptimizer(
-  opts: { type: "sgd" | "rmsprop" | "adagrad" | "adam" | "adamw" | "amsgrad" | "adamax" | "nadam" | "radam" | "lion" | "adabelief" | "lookahead"; momentum?: number | undefined; beta1?: number | undefined; beta2?: number | undefined; eps?: number | undefined; weightDecay?: number | undefined; lrScale?: number | undefined; t?: number | undefined; baseType?: string | undefined; la_k?: number | undefined; la_alpha?: number | undefined; },
+  opts: BatchOptimizerOptions,
 ): void
 ```
 
@@ -7858,6 +7879,16 @@ bits4+ reserved.
 
 Global index counter for assigning unique indices to nodes.
 
+#### _safeUpdateBias
+
+```ts
+_safeUpdateBias(
+  delta: number,
+): void
+```
+
+Internal helper to safely update the node bias with clipping and NaN checks.
+
 #### _safeUpdateWeight
 
 ```ts
@@ -8071,7 +8102,7 @@ Parameters:
 
 ```ts
 applyBatchUpdatesWithOptimizer(
-  opts: { type: "sgd" | "rmsprop" | "adagrad" | "adam" | "adamw" | "amsgrad" | "adamax" | "nadam" | "radam" | "lion" | "adabelief" | "lookahead"; momentum?: number | undefined; beta1?: number | undefined; beta2?: number | undefined; eps?: number | undefined; weightDecay?: number | undefined; lrScale?: number | undefined; t?: number | undefined; baseType?: string | undefined; la_k?: number | undefined; la_alpha?: number | undefined; },
+  opts: BatchOptimizerOptions,
 ): void
 ```
 

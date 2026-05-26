@@ -105,7 +105,7 @@ export function createCrossoverContext(
 }
 
 /**
- * Creates the node-build context for offspring node selection.
+ * Creates the immutable node-build context used for offspring node selection.
  *
  * @param context Crossover baseline context.
  * @returns Node-build context.
@@ -125,7 +125,7 @@ export function createNodeBuildContext(
 }
 
 /**
- * Builds and reindexes offspring nodes.
+ * Builds and reindexes offspring nodes using the supplied node-build context.
  *
  * @param nodeContext Node-build context.
  * @returns Nothing.

@@ -47,8 +47,20 @@ Resume action: <how work continues after this event>
 8. Do not rewrite or delete existing log entries; the file is append-only.
 
 Schema:
+
 ```json
-{"timestamp":"<ISO timestamp>","eventType":"agent-system-gap|agent-update|skill-update|routing-update|output-contract-fix","triggeringTask":"<brief>","gap":"<what was missing>","resolution":"<what changed>","filesChanged":["<path>"],"agentsAffected":["<agent-name>"],"skillsAffected":["<skill-name>"],"confirmation":"not-required|user-confirmed|deferred","resumeAction":"<how work continued>"}
+{
+  "timestamp": "<ISO timestamp>",
+  "eventType": "agent-system-gap|agent-update|skill-update|routing-update|output-contract-fix",
+  "triggeringTask": "<brief>",
+  "gap": "<what was missing>",
+  "resolution": "<what changed>",
+  "filesChanged": ["<path>"],
+  "agentsAffected": ["<agent-name>"],
+  "skillsAffected": ["<skill-name>"],
+  "confirmation": "not-required|user-confirmed|deferred",
+  "resumeAction": "<how work continued>"
+}
 ```
 
 ## Guardrails

@@ -278,7 +278,7 @@ export function computeNoveltyFactor(engine: NeatLikeWithAdaptive): number {
 }
 
 /**
- * Initialize node budget if undefined.
+ * Initialize the maximum-node complexity budget when it has not been set yet.
  *
  * @param engine - NEAT engine instance.
  * @param config - Complexity budget configuration.

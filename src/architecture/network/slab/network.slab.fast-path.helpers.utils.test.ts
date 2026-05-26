@@ -1,13 +1,42 @@
+import { jest } from '@jest/globals';
+
 import type Network from '../../network/network';
 import { config } from '../../../config';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import type { NetworkSlabProps } from './network.slab.utils.types';
 import {
+  _canUseFastSlab,
   _collectFastSlabOutput,
   _ensureFastSlabBuffers,
   _prepareFastSlabRuntime,
   _resolveFastTopoOrder,
 } from './network.slab.fast-path.helpers.utils';
+
+function createFastSlabEligibleNetwork(
+  overrides: Partial<
+    Pick<Network, 'dropout' | 'gates' | 'selfconns'> &
+      Pick<
+        NetworkSlabProps,
+        | '_enforceAcyclic'
+        | '_stochasticDepth'
+        | '_topoDirty'
+        | '_weightNoisePerHidden'
+        | '_weightNoiseStd'
+      >
+  > = {},
+): Network & NetworkSlabProps {
+  return {
+    _enforceAcyclic: true,
+    _stochasticDepth: undefined,
+    _topoDirty: false,
+    _weightNoisePerHidden: undefined,
+    _weightNoiseStd: 0,
+    dropout: 0,
+    gates: [],
+    selfconns: [],
+    ...overrides,
+  } as unknown as Network & NetworkSlabProps;
+}
 
 describe('network slab fast-path helper chapter', () => {
   afterEach(() => {
@@ -41,6 +70,88 @@ describe('network slab fast-path helper chapter', () => {
           computeTopoOrderCalls: 1,
           reindexCalls: [[network]],
         });
+      });
+    });
+  });
+
+  describe('_canUseFastSlab', () => {
+    describe('given activation is running in training mode', () => {
+      it('rejects the fast path before evaluating structural predicates', () => {
+        const network = createFastSlabEligibleNetwork();
+
+        expect(_canUseFastSlab.call(network, true)).toBe(false);
+      });
+    });
+
+    describe('given the cached topology order is dirty', () => {
+      it('rejects the fast path', () => {
+        const network = createFastSlabEligibleNetwork({ _topoDirty: true });
+
+        expect(_canUseFastSlab.call(network, false)).toBe(false);
+      });
+    });
+
+    describe('given acyclic enforcement is disabled', () => {
+      it('rejects the fast path', () => {
+        const network = createFastSlabEligibleNetwork({
+          _enforceAcyclic: false,
+        });
+
+        expect(_canUseFastSlab.call(network, false)).toBe(false);
+      });
+    });
+
+    describe('given dropout is enabled', () => {
+      it('rejects the fast path immediately', () => {
+        const network = createFastSlabEligibleNetwork({ dropout: 0.1 });
+
+        expect(_canUseFastSlab.call(network, false)).toBe(false);
+      });
+    });
+
+    describe('given gated connections are present', () => {
+      it('rejects the fast path', () => {
+        const network = createFastSlabEligibleNetwork({
+          gates: [{}] as unknown as Network['gates'],
+        });
+
+        expect(_canUseFastSlab.call(network, false)).toBe(false);
+      });
+    });
+
+    describe('given self-connections are present', () => {
+      it('rejects the fast path', () => {
+        const network = createFastSlabEligibleNetwork({
+          selfconns: [{}] as unknown as Network['selfconns'],
+        });
+
+        expect(_canUseFastSlab.call(network, false)).toBe(false);
+      });
+    });
+
+    describe('given global weight noise is enabled', () => {
+      it('rejects the fast path', () => {
+        const network = createFastSlabEligibleNetwork({ _weightNoiseStd: 0.2 });
+
+        expect(_canUseFastSlab.call(network, false)).toBe(false);
+      });
+    });
+
+    describe('given per-hidden weight noise is configured', () => {
+      it('rejects the fast path', () => {
+        const network = createFastSlabEligibleNetwork({
+          _weightNoisePerHidden: [0.3],
+        });
+
+        expect(_canUseFastSlab.call(network, false)).toBe(false);
+      });
+    });
+
+    describe('given optional regularization arrays are absent', () => {
+      it('keeps the fast path eligible', () => {
+        const network = createFastSlabEligibleNetwork();
+
+        expect(_canUseFastSlab.call(network, false)).toBe(true);
       });
     });
   });

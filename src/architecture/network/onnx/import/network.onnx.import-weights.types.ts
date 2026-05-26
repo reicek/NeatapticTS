@@ -124,7 +124,7 @@ export type OnnxImportConvMetadata = {
   convSpecs: Conv2DMapping[];
 };
 
-/** Context for reconstructing one Conv layer's imported connectivity. */
+/** Context object for reconstructing one Conv layer's imported connectivity weights. */
 export type OnnxImportConvLayerContext = {
   onnx: OnnxModel;
   hiddenLayerSizes: number[];

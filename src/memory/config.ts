@@ -51,7 +51,7 @@ export const MEMORY_MANAGER_FLAG_NAMES = [
 ] as const;
 
 /**
- * Narrow flag names controlled by the memory manager.
+ * Narrow union of config flag names controlled exclusively by the memory manager.
  */
 export type MemoryManagerFlagName = (typeof MEMORY_MANAGER_FLAG_NAMES)[number];
 
@@ -66,7 +66,7 @@ export type MemoryManagerFlagMap = Pick<NeatapticConfig, MemoryManagerFlagName>;
 export type MemoryManagerEnvironment = 'browser' | 'node';
 
 /**
- * Stable snapshot returned by `MemoryManager.getConfig()`.
+ * Stable resolved configuration snapshot returned by the `MemoryManager.getConfig()` accessor method.
  */
 export interface MemoryManagerConfigSnapshot extends Omit<
   MemoryManagerFlagMap,

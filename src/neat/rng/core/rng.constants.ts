@@ -17,11 +17,11 @@ export const RNG_TIME_SCRAMBLE_CONSTANT = 0x9e3779b1;
  */
 export const RNG_DEFAULT_SEED_FALLBACK = 0x1a2b3c4d;
 
-/** Left-shift used by the first xorshift32 mixing step. */
+/** Left-shift amount used by the first xorshift32 state mixing step. */
 export const RNG_SHIFT_LEFT_PRIMARY = 13;
-/** Right-shift used by the middle xorshift32 mixing step. */
+/** Right-shift amount used by the middle xorshift32 state mixing step. */
 export const RNG_SHIFT_RIGHT_PRIMARY = 17;
-/** Left-shift used by the final xorshift32 mixing step. */
+/** Left-shift amount used by the final xorshift32 state mixing step. */
 export const RNG_SHIFT_LEFT_SECONDARY = 5;
 
 /**

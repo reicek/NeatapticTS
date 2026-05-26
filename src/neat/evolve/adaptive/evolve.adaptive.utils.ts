@@ -149,40 +149,115 @@ export function applyAutoCompatibilityTuning(
 ): void {
   // Step 1: Guard for missing config.
   try {
-    const { options } = internal;
-    if (!options.autoCompatTuning?.enabled) return;
-    // Step 2: Compute target species count and error.
-    const target =
-      options.autoCompatTuning.target ??
-      options.targetSpecies ??
-      Math.max(
-        config.targetMin,
-        Math.round(Math.sqrt(internal.population.length)),
-      );
-    const observed = (internal._species?.length ?? 0) || 1;
-    const error = target - observed;
-    const rate = options.autoCompatTuning.adjustRate ?? config.adjustRate;
-    const minCoeff = options.autoCompatTuning.minCoeff ?? config.minCoeff;
-    const maxCoeff = options.autoCompatTuning.maxCoeff ?? config.maxCoeff;
-    const excessCoeff = options.excessCoeff ?? minCoeff;
-    const disjointCoeff = options.disjointCoeff ?? minCoeff;
-    // Step 3: Compute adjustment factor.
-    let factor = 1 - rate * Math.sign(error);
-    if (error === 0) {
-      factor = 1 + (internal._getRNG()() - 0.5) * rate * config.randomScale;
-    }
-    // Step 4: Apply coefficient updates.
-    options.excessCoeff = Math.min(
-      maxCoeff,
-      Math.max(minCoeff, excessCoeff * factor),
+    const tuningInputs = resolveAutoCompatibilityTuningInputs(internal, config);
+    if (!tuningInputs) return;
+
+    // Step 2: Compute the next shared compatibility multiplier.
+    const factor = resolveAutoCompatibilityAdjustmentFactor(
+      internal,
+      tuningInputs.error,
+      tuningInputs.rate,
+      config.randomScale,
     );
-    options.disjointCoeff = Math.min(
-      maxCoeff,
-      Math.max(minCoeff, disjointCoeff * factor),
-    );
+
+    // Step 3: Apply the coefficient updates.
+    applyAutoCompatibilityCoefficientUpdate(tuningInputs, factor);
   } catch {
     // Empty catch: auto-compatibility tuning is optional.
   }
+}
+
+function resolveAutoCompatibilityTuningInputs(
+  internal: NeatControllerForEvolution,
+  config: {
+    targetMin: number;
+    adjustRate: number;
+    minCoeff: number;
+    maxCoeff: number;
+    randomScale: number;
+  },
+):
+  | {
+      options: NeatControllerForEvolution['options'];
+      error: number;
+      rate: number;
+      minCoeff: number;
+      maxCoeff: number;
+      excessCoeff: number;
+      disjointCoeff: number;
+    }
+  | undefined {
+  const { options } = internal;
+  if (!options.autoCompatTuning?.enabled) return undefined;
+
+  const target = resolveAutoCompatibilityTarget(internal, config.targetMin);
+  const observedSpeciesCount = (internal._species?.length ?? 0) || 1;
+  const minCoeff = options.autoCompatTuning.minCoeff ?? config.minCoeff;
+
+  return {
+    options,
+    error: target - observedSpeciesCount,
+    rate: options.autoCompatTuning.adjustRate ?? config.adjustRate,
+    minCoeff,
+    maxCoeff: options.autoCompatTuning.maxCoeff ?? config.maxCoeff,
+    excessCoeff: options.excessCoeff ?? minCoeff,
+    disjointCoeff: options.disjointCoeff ?? minCoeff,
+  };
+}
+
+function resolveAutoCompatibilityTarget(
+  internal: NeatControllerForEvolution,
+  targetMin: number,
+): number {
+  const { options } = internal;
+  return (
+    options.autoCompatTuning?.target ??
+    options.targetSpecies ??
+    Math.max(targetMin, Math.round(Math.sqrt(internal.population.length)))
+  );
+}
+
+function resolveAutoCompatibilityAdjustmentFactor(
+  internal: NeatControllerForEvolution,
+  error: number,
+  rate: number,
+  randomScale: number,
+): number {
+  if (error !== 0) {
+    return 1 - rate * Math.sign(error);
+  }
+
+  return 1 + (internal._getRNG()() - 0.5) * rate * randomScale;
+}
+
+function applyAutoCompatibilityCoefficientUpdate(
+  tuningInputs: {
+    options: NeatControllerForEvolution['options'];
+    minCoeff: number;
+    maxCoeff: number;
+    excessCoeff: number;
+    disjointCoeff: number;
+  },
+  factor: number,
+): void {
+  tuningInputs.options.excessCoeff = clampAutoCompatibilityCoefficient(
+    tuningInputs.excessCoeff * factor,
+    tuningInputs.minCoeff,
+    tuningInputs.maxCoeff,
+  );
+  tuningInputs.options.disjointCoeff = clampAutoCompatibilityCoefficient(
+    tuningInputs.disjointCoeff * factor,
+    tuningInputs.minCoeff,
+    tuningInputs.maxCoeff,
+  );
+}
+
+function clampAutoCompatibilityCoefficient(
+  value: number,
+  minCoeff: number,
+  maxCoeff: number,
+): number {
+  return Math.min(maxCoeff, Math.max(minCoeff, value));
 }
 
 /**

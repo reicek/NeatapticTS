@@ -110,19 +110,19 @@ phase can advance.
 ```yaml
 phase: N
 step: 1
-agent: "01-planning"
-agent_file: ".github/agents/01-planning-architect.agent.md"
-status: "[WIP|PLANNED|DONE]"
-mode: "fresh-session"
-source_of_truth: "plans/<PlanName>.plans.md"
+agent: '01-planning'
+agent_file: '.github/agents/01-planning-architect.agent.md'
+status: '[WIP|PLANNED|DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/<PlanName>.plans.md'
 copy_paste: true
-next_step: "Step 02 — Planner-defined by this step"
+next_step: 'Step 02 — Planner-defined by this step'
 skills:
-  - "<canonical-skill>"
+  - '<canonical-skill>'
 specialists:
-  - "<hidden specialist agent, if useful>"
+  - '<hidden specialist agent, if useful>'
 validation:
-  - "<focused command or manual evidence gate>"
+  - '<focused command or manual evidence gate>'
 ```
 
 **User instruction:** Start a fresh session, select `<agent>`, and paste this

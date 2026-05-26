@@ -149,7 +149,7 @@ export function disconnectConnections(
 }
 
 /**
- * Normalize optional pruning method to a concrete value.
+ * Normalize an optional pruning method to a concrete default value.
  * @param method - Optional configured pruning method.
  * @returns Concrete pruning method.
  */
@@ -174,7 +174,7 @@ export function markPruneIteration(
 }
 
 /**
- * Mark topology cache as dirty after structural updates.
+ * Mark the topology cache as dirty after scheduled pruning structural updates.
  * @param currentNetwork - Network with modified connectivity.
  * @returns Nothing.
  */

@@ -100,7 +100,7 @@ export function extractOnnxArchitecture(
 }
 
 /**
- * Remove placeholder hidden nodes for single-layer perceptron imports.
+ * Remove placeholder hidden nodes that arise from single-layer perceptron imports.
  *
  * @param network Target network.
  * @param hiddenLayerSizes Hidden layer sizes.

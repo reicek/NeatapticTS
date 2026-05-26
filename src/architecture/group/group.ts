@@ -230,89 +230,20 @@ export default class Group {
     method?: unknown,
     weight?: number,
   ): Connection[] {
-    let connections: Connection[] = [];
-
     if (target instanceof Group) {
-      if (method === undefined) {
-        if (this !== target) {
-          if (config.warnings) {
-            console.warn(
-              'No group connection specified, using ALL_TO_ALL by default.',
-            );
-          }
-          method = methods.groupConnection.ALL_TO_ALL;
-        } else {
-          if (config.warnings) {
-            console.warn(
-              'Connecting group to itself, using ONE_TO_ONE by default.',
-            );
-          }
-          method = methods.groupConnection.ONE_TO_ONE;
-        }
-      }
-
-      if (
-        method === methods.groupConnection.ALL_TO_ALL ||
-        method === methods.groupConnection.ALL_TO_ELSE
-      ) {
-        for (
-          let sourceNodeIndex = 0;
-          sourceNodeIndex < this.nodes.length;
-          sourceNodeIndex++
-        ) {
-          for (
-            let targetNodeIndex = 0;
-            targetNodeIndex < target.nodes.length;
-            targetNodeIndex++
-          ) {
-            if (
-              method === methods.groupConnection.ALL_TO_ELSE &&
-              this.nodes[sourceNodeIndex] === target.nodes[targetNodeIndex]
-            ) {
-              continue;
-            }
-
-            const connection = this.nodes[sourceNodeIndex].connect(
-              target.nodes[targetNodeIndex],
-              weight,
-            );
-            this.connections.out.push(connection[0]);
-            target.connections.in.push(connection[0]);
-            connections.push(connection[0]);
-          }
-        }
-      } else if (method === methods.groupConnection.ONE_TO_ONE) {
-        if (this.nodes.length !== target.nodes.length) {
-          throw new GroupOneToOneSizeMismatchError(
-            'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.',
-          );
-        }
-
-        for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++) {
-          const connection = this.nodes[nodeIndex].connect(
-            target.nodes[nodeIndex],
-            weight,
-          );
-          if (this === target) {
-            this.connections.self.push(connection[0]);
-          } else {
-            this.connections.out.push(connection[0]);
-            target.connections.in.push(connection[0]);
-          }
-          connections.push(connection[0]);
-        }
-      }
-    } else if (target instanceof Layer) {
-      connections = target.input(this, method, weight);
-    } else if (target instanceof Node) {
-      for (let nodeIndex = 0; nodeIndex < this.nodes.length; nodeIndex++) {
-        const connection = this.nodes[nodeIndex].connect(target, weight);
-        this.connections.out.push(connection[0]);
-        connections.push(connection[0]);
-      }
+      const resolvedMethod = resolveGroupConnectionMethod(this, target, method);
+      return connectGroupToGroup(this, target, resolvedMethod, weight);
     }
 
-    return connections;
+    if (target instanceof Layer) {
+      return target.input(this, method, weight);
+    }
+
+    if (target instanceof Node) {
+      return connectGroupToNode(this, target, weight);
+    }
+
+    return [];
   }
 
   /**
@@ -330,72 +261,21 @@ export default class Group {
       );
     }
 
-    const gatedConnections = Array.isArray(connections)
-      ? connections
-      : [connections];
-    const sourceNodes: Node[] = [];
-
-    for (
-      let connectionIndex = 0;
-      connectionIndex < gatedConnections.length;
-      connectionIndex++
-    ) {
-      const connection = gatedConnections[connectionIndex];
-      if (!sourceNodes.includes(connection.from)) {
-        sourceNodes.push(connection.from);
-      }
-    }
+    const gatedConnections = normalizeGatedConnections(connections);
+    const sourceNodes = collectUniqueSourceNodes(gatedConnections);
+    const gatedConnectionSet = new Set(gatedConnections);
 
     switch (method) {
       case methods.gating.INPUT:
-        for (
-          let connectionIndex = 0;
-          connectionIndex < gatedConnections.length;
-          connectionIndex++
-        ) {
-          const connection = gatedConnections[connectionIndex];
-          const gater = this.nodes[connectionIndex % this.nodes.length];
-          gater.gate(connection);
-        }
+        gateInputConnections(this, gatedConnections);
         break;
 
       case methods.gating.OUTPUT:
-        for (
-          let sourceNodeIndex = 0;
-          sourceNodeIndex < sourceNodes.length;
-          sourceNodeIndex++
-        ) {
-          const node = sourceNodes[sourceNodeIndex];
-          const gater = this.nodes[sourceNodeIndex % this.nodes.length];
-
-          for (
-            let connectionIndex = 0;
-            connectionIndex < node.connections.out.length;
-            connectionIndex++
-          ) {
-            const connection = node.connections.out[connectionIndex];
-            if (gatedConnections.includes(connection)) {
-              gater.gate(connection);
-            }
-          }
-        }
+        gateOutputConnections(this, sourceNodes, gatedConnectionSet);
         break;
 
       case methods.gating.SELF:
-        for (
-          let sourceNodeIndex = 0;
-          sourceNodeIndex < sourceNodes.length;
-          sourceNodeIndex++
-        ) {
-          const node = sourceNodes[sourceNodeIndex];
-          const gater = this.nodes[sourceNodeIndex % this.nodes.length];
-          const selfConnection = Array.isArray(node.connections.self)
-            ? node.connections.self[0]
-            : node.connections.self;
-          if (gatedConnections.includes(selfConnection)) {
-            gater.gate(selfConnection);
-          }
-        }
+        gateSelfConnections(this, sourceNodes, gatedConnectionSet);
         break;
     }
   }
@@ -438,124 +318,12 @@ export default class Group {
    */
   disconnect(target: Group | Node, twosided: boolean = false): void {
     if (target instanceof Group) {
-      for (
-        let sourceNodeIndex = 0;
-        sourceNodeIndex < this.nodes.length;
-        sourceNodeIndex++
-      ) {
-        for (
-          let targetNodeIndex = 0;
-          targetNodeIndex < target.nodes.length;
-          targetNodeIndex++
-        ) {
-          this.nodes[sourceNodeIndex].disconnect(
-            target.nodes[targetNodeIndex],
-            twosided,
-          );
+      disconnectGroupFromGroup(this, target, twosided);
+      return;
+    }
 
-          for (
-            let connectionIndex = this.connections.out.length - 1;
-            connectionIndex >= 0;
-            connectionIndex--
-          ) {
-            const connection = this.connections.out[connectionIndex];
-            if (
-              connection.from === this.nodes[sourceNodeIndex] &&
-              connection.to === target.nodes[targetNodeIndex]
-            ) {
-              this.connections.out.splice(connectionIndex, 1);
-              break;
-            }
-          }
-
-          for (
-            let connectionIndex = target.connections.in.length - 1;
-            connectionIndex >= 0;
-            connectionIndex--
-          ) {
-            const connection = target.connections.in[connectionIndex];
-            if (
-              connection.from === this.nodes[sourceNodeIndex] &&
-              connection.to === target.nodes[targetNodeIndex]
-            ) {
-              target.connections.in.splice(connectionIndex, 1);
-              break;
-            }
-          }
-
-          if (twosided) {
-            for (
-              let connectionIndex = this.connections.in.length - 1;
-              connectionIndex >= 0;
-              connectionIndex--
-            ) {
-              const connection = this.connections.in[connectionIndex];
-              if (
-                connection.from === target.nodes[targetNodeIndex] &&
-                connection.to === this.nodes[sourceNodeIndex]
-              ) {
-                this.connections.in.splice(connectionIndex, 1);
-                break;
-              }
-            }
-
-            for (
-              let connectionIndex = target.connections.out.length - 1;
-              connectionIndex >= 0;
-              connectionIndex--
-            ) {
-              const connection = target.connections.out[connectionIndex];
-              if (
-                connection.from === target.nodes[targetNodeIndex] &&
-                connection.to === this.nodes[sourceNodeIndex]
-              ) {
-                target.connections.out.splice(connectionIndex, 1);
-                break;
-              }
-            }
-          }
-        }
-      }
-    } else if (target instanceof Node) {
-      for (
-        let sourceNodeIndex = 0;
-        sourceNodeIndex < this.nodes.length;
-        sourceNodeIndex++
-      ) {
-        this.nodes[sourceNodeIndex].disconnect(target, twosided);
-
-        for (
-          let connectionIndex = this.connections.out.length - 1;
-          connectionIndex >= 0;
-          connectionIndex--
-        ) {
-          const connection = this.connections.out[connectionIndex];
-          if (
-            connection.from === this.nodes[sourceNodeIndex] &&
-            connection.to === target
-          ) {
-            this.connections.out.splice(connectionIndex, 1);
-            break;
-          }
-        }
-
-        if (twosided) {
-          for (
-            let connectionIndex = this.connections.in.length - 1;
-            connectionIndex >= 0;
-            connectionIndex--
-          ) {
-            const connection = this.connections.in[connectionIndex];
-            if (
-              connection.from === target &&
-              connection.to === this.nodes[sourceNodeIndex]
-            ) {
-              this.connections.in.splice(connectionIndex, 1);
-              break;
-            }
-          }
-        }
-      }
+    if (target instanceof Node) {
+      disconnectGroupFromNode(this, target, twosided);
     }
   }
 
@@ -585,5 +353,315 @@ export default class Group {
         self: this.connections.self.length,
       },
     };
+  }
+}
+
+function resolveGroupConnectionMethod(
+  sourceGroup: Group,
+  targetGroup: Group,
+  method: unknown,
+): unknown {
+  if (method !== undefined) {
+    return method;
+  }
+
+  if (sourceGroup !== targetGroup) {
+    if (config.warnings) {
+      console.warn(
+        'No group connection specified, using ALL_TO_ALL by default.',
+      );
+    }
+
+    return methods.groupConnection.ALL_TO_ALL;
+  }
+
+  if (config.warnings) {
+    console.warn('Connecting group to itself, using ONE_TO_ONE by default.');
+  }
+
+  return methods.groupConnection.ONE_TO_ONE;
+}
+
+function connectGroupToGroup(
+  sourceGroup: Group,
+  targetGroup: Group,
+  method: unknown,
+  weight?: number,
+): Connection[] {
+  if (
+    method === methods.groupConnection.ALL_TO_ALL ||
+    method === methods.groupConnection.ALL_TO_ELSE
+  ) {
+    return createDenseGroupConnections(
+      sourceGroup,
+      targetGroup,
+      method,
+      weight,
+    );
+  }
+
+  if (method === methods.groupConnection.ONE_TO_ONE) {
+    return createOneToOneGroupConnections(sourceGroup, targetGroup, weight);
+  }
+
+  return [];
+}
+
+function createDenseGroupConnections(
+  sourceGroup: Group,
+  targetGroup: Group,
+  method: unknown,
+  weight?: number,
+): Connection[] {
+  const createdConnections: Connection[] = [];
+
+  for (const sourceNode of sourceGroup.nodes) {
+    for (const targetNode of targetGroup.nodes) {
+      if (shouldSkipGroupPairConnection(method, sourceNode, targetNode)) {
+        continue;
+      }
+
+      const connection = connectNodePair(sourceNode, targetNode, weight);
+      recordOutboundGroupConnection(sourceGroup, targetGroup, connection);
+      createdConnections.push(connection);
+    }
+  }
+
+  return createdConnections;
+}
+
+function shouldSkipGroupPairConnection(
+  method: unknown,
+  sourceNode: Node,
+  targetNode: Node,
+): boolean {
+  return (
+    method === methods.groupConnection.ALL_TO_ELSE && sourceNode === targetNode
+  );
+}
+
+function createOneToOneGroupConnections(
+  sourceGroup: Group,
+  targetGroup: Group,
+  weight?: number,
+): Connection[] {
+  if (sourceGroup.nodes.length !== targetGroup.nodes.length) {
+    throw new GroupOneToOneSizeMismatchError(
+      'Cannot create ONE_TO_ONE connection: source and target groups must have the same size.',
+    );
+  }
+
+  const createdConnections: Connection[] = [];
+
+  for (let nodeIndex = 0; nodeIndex < sourceGroup.nodes.length; nodeIndex++) {
+    const connection = connectNodePair(
+      sourceGroup.nodes[nodeIndex],
+      targetGroup.nodes[nodeIndex],
+      weight,
+    );
+
+    if (sourceGroup === targetGroup) {
+      sourceGroup.connections.self.push(connection);
+    } else {
+      recordOutboundGroupConnection(sourceGroup, targetGroup, connection);
+    }
+
+    createdConnections.push(connection);
+  }
+
+  return createdConnections;
+}
+
+function connectGroupToNode(
+  sourceGroup: Group,
+  targetNode: Node,
+  weight?: number,
+): Connection[] {
+  const createdConnections: Connection[] = [];
+
+  for (const sourceNode of sourceGroup.nodes) {
+    const connection = connectNodePair(sourceNode, targetNode, weight);
+    sourceGroup.connections.out.push(connection);
+    createdConnections.push(connection);
+  }
+
+  return createdConnections;
+}
+
+function connectNodePair(
+  sourceNode: Node,
+  targetNode: Node,
+  weight?: number,
+): Connection {
+  return sourceNode.connect(targetNode, weight)[0];
+}
+
+function recordOutboundGroupConnection(
+  sourceGroup: Group,
+  targetGroup: Group,
+  connection: Connection,
+): void {
+  sourceGroup.connections.out.push(connection);
+  targetGroup.connections.in.push(connection);
+}
+
+function normalizeGatedConnections(
+  connections: Connection | Connection[],
+): Connection[] {
+  return Array.isArray(connections) ? connections : [connections];
+}
+
+function collectUniqueSourceNodes(gatedConnections: Connection[]): Node[] {
+  return Array.from(
+    new Set(gatedConnections.map((connection) => connection.from)),
+  );
+}
+
+function gateInputConnections(
+  group: Group,
+  gatedConnections: Connection[],
+): void {
+  gatedConnections.forEach((connection, connectionIndex) => {
+    const gater = group.nodes[connectionIndex % group.nodes.length];
+    gater.gate(connection);
+  });
+}
+
+function gateOutputConnections(
+  group: Group,
+  sourceNodes: Node[],
+  gatedConnectionSet: Set<Connection>,
+): void {
+  sourceNodes.forEach((sourceNode, sourceNodeIndex) => {
+    const gater = group.nodes[sourceNodeIndex % group.nodes.length];
+
+    for (const connection of sourceNode.connections.out) {
+      if (gatedConnectionSet.has(connection)) {
+        gater.gate(connection);
+      }
+    }
+  });
+}
+
+function gateSelfConnections(
+  group: Group,
+  sourceNodes: Node[],
+  gatedConnectionSet: Set<Connection>,
+): void {
+  sourceNodes.forEach((sourceNode, sourceNodeIndex) => {
+    const gater = group.nodes[sourceNodeIndex % group.nodes.length];
+    const selfConnection = resolvePrimarySelfConnection(sourceNode);
+
+    if (
+      selfConnection !== undefined &&
+      gatedConnectionSet.has(selfConnection)
+    ) {
+      gater.gate(selfConnection);
+    }
+  });
+}
+
+function resolvePrimarySelfConnection(
+  sourceNode: Node,
+): Connection | undefined {
+  const selfConnections = (
+    sourceNode as Node & { connections: { self: Connection[] | Connection } }
+  ).connections.self;
+
+  return Array.isArray(selfConnections) ? selfConnections[0] : selfConnections;
+}
+
+function disconnectGroupFromGroup(
+  sourceGroup: Group,
+  targetGroup: Group,
+  twosided: boolean,
+): void {
+  for (const sourceNode of sourceGroup.nodes) {
+    for (const targetNode of targetGroup.nodes) {
+      disconnectGroupPair(
+        sourceGroup,
+        targetGroup,
+        sourceNode,
+        targetNode,
+        twosided,
+      );
+    }
+  }
+}
+
+function disconnectGroupPair(
+  sourceGroup: Group,
+  targetGroup: Group,
+  sourceNode: Node,
+  targetNode: Node,
+  twosided: boolean,
+): void {
+  sourceNode.disconnect(targetNode, twosided);
+  removeFirstMatchingConnection(
+    sourceGroup.connections.out,
+    sourceNode,
+    targetNode,
+  );
+  removeFirstMatchingConnection(
+    targetGroup.connections.in,
+    sourceNode,
+    targetNode,
+  );
+
+  if (!twosided) {
+    return;
+  }
+
+  removeFirstMatchingConnection(
+    sourceGroup.connections.in,
+    targetNode,
+    sourceNode,
+  );
+  removeFirstMatchingConnection(
+    targetGroup.connections.out,
+    targetNode,
+    sourceNode,
+  );
+}
+
+function disconnectGroupFromNode(
+  sourceGroup: Group,
+  targetNode: Node,
+  twosided: boolean,
+): void {
+  for (const sourceNode of sourceGroup.nodes) {
+    sourceNode.disconnect(targetNode, twosided);
+    removeFirstMatchingConnection(
+      sourceGroup.connections.out,
+      sourceNode,
+      targetNode,
+    );
+
+    if (twosided) {
+      removeFirstMatchingConnection(
+        sourceGroup.connections.in,
+        targetNode,
+        sourceNode,
+      );
+    }
+  }
+}
+
+function removeFirstMatchingConnection(
+  connections: Connection[],
+  fromNode: Node,
+  toNode: Node,
+): void {
+  for (
+    let connectionIndex = connections.length - 1;
+    connectionIndex >= 0;
+    connectionIndex--
+  ) {
+    const connection = connections[connectionIndex];
+
+    if (connection.from === fromNode && connection.to === toNode) {
+      connections.splice(connectionIndex, 1);
+      return;
+    }
   }
 }

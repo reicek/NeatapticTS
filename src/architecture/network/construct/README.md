@@ -65,11 +65,18 @@ fields.
 
 ### ConstructGraphConnectionSummary
 
-One detached edge row in the construct graph snapshot.
+One detached, JSON-serializable edge row in the construct graph snapshot.
+
+Carries stable innovation id, source/target identity, current weight and
+enabled state, gater identity when present, and self-loop classification.
 
 ### ConstructGraphNodeSummary
 
-One detached node row in the construct graph snapshot.
+One detached, JSON-serializable node row in the construct graph snapshot.
+
+Carries stable gene identity, semantic role, and public I/O ordering metadata
+so developer tooling can inspect the materialized graph without accessing
+mutable `Network` internals directly.
 
 ### ConstructGraphSnapshot
 
@@ -107,11 +114,11 @@ provided part set.
 
 ### ConstructResult
 
-Return payload for `Network.construct(...)`.
+Return payload emitted by `Network.construct(...)` bundling the network, diagnostics, and graph.
 
 ### ConstructValidationOptions
 
-Extra validation switches for construct-from-parts materialization.
+Extra structural validation switches for the construct-from-parts network materialization pipeline.
 
 ## architecture/network/construct/network.construct.summary.utils.ts
 
@@ -145,7 +152,7 @@ const summary = formatConstructSummary(construction);
 
 ### NetworkConstructAmbiguousNodeIdError
 
-Raised when one explicit string node id matches multiple labeled nodes.
+Raised when a single explicit string node id matches more than one labeled node in the provided parts list during network construction.
 
 ### NetworkConstructCycleModeError
 
@@ -153,15 +160,15 @@ Raised when a cyclic graph is compiled while acyclic mode is required.
 
 ### NetworkConstructDuplicateEdgeError
 
-Raised when duplicate source-to-target edges are forbidden during construction.
+Raised when the same source-to-target node pair appears more than once while duplicate edges are explicitly disallowed by the construction policy.
 
 ### NetworkConstructInputNodeIncomingEdgeError
 
-Raised when a public input node receives one or more incoming edges.
+Raised when an input-role node is wired as a connection target while the active construction policy forbids incoming edges on input nodes.
 
 ### NetworkConstructIsolatedHiddenNodeError
 
-Raised when hidden nodes are disconnected while isolated hidden nodes are disallowed.
+Raised when the construction pass finds hidden nodes with no connections while the active construction policy forbids isolated hidden neurons in the graph.
 
 ### NetworkConstructMissingReferencedNodeError
 
@@ -173,11 +180,11 @@ Raised when construct-from-parts cannot resolve an explicit input or output node
 
 ### NetworkConstructNoInputNodesError
 
-Raised when construction cannot identify any input-role nodes.
+Raised when the network construction pass cannot find any nodes classified with an input role in the provided node list.
 
 ### NetworkConstructNoOutputNodesError
 
-Raised when construction cannot identify any output-role nodes.
+Raised when the network construction pass cannot find any nodes classified with an output role in the provided node list.
 
 ### NetworkConstructOutputNodeGatedConnectionError
 
@@ -189,4 +196,4 @@ Raised when a public output node emits one or more outgoing edges while sink-onl
 
 ### NetworkConstructSelfEdgeError
 
-Raised when self edges are forbidden during construction.
+Raised when a connection loops from a node back to itself while self-edges are explicitly forbidden by the active construction policy.

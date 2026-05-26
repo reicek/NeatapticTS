@@ -245,7 +245,7 @@ Targets may be soft labels and are expected to sum to 1 (will be re-normalized i
 
 ### BINARY_CLASSIFICATION_THRESHOLD
 
-Threshold for binarizing probabilities into class predictions.
+Decision threshold applied when binarizing continuous output probabilities into hard positive or negative class predictions.
 
 ### clampProbability
 
@@ -472,31 +472,31 @@ Returns: Cross-entropy term for the sample.
 
 ### DEFAULT_FOCAL_ALPHA
 
-Default class balancing parameter for focal loss.
+Default class-balancing weight applied to the positive class term in focal loss for imbalanced datasets.
 
 ### DEFAULT_FOCAL_GAMMA
 
-Default focusing parameter for focal loss.
+Default modulating exponent applied to the probability factor term in focal loss to down-weight easy examples.
 
 ### DEFAULT_LABEL_SMOOTHING
 
-Default smoothing factor for label smoothing.
+Default label smoothing factor applied when blending hard targets toward a uniform soft-label distribution.
 
 ### HINGE_MARGIN
 
-Margin enforced by hinge loss.
+Hinge loss decision margin requiring the correct class score to exceed the best competing score by at least this value.
 
 ### LABEL_SMOOTHING_BASELINE
 
-Baseline probability used when smoothing targets.
+Baseline probability toward which hard labels are smoothed before computing label-smoothed cross-entropy loss.
 
 ### LENGTH_MISMATCH_MESSAGE
 
-Error message thrown when target and output arrays differ in length.
+Error message thrown when target and output arrays differ in length, preventing element-wise cost computation.
 
 ### NEGATIVE_CLASS_LABEL
 
-Canonical negative label used by binary-oriented helpers.
+Canonical negative class label used by binary cross-entropy and binary error classification helpers.
 
 ### normalizeTargets
 
@@ -515,7 +515,7 @@ Returns: Normalized target probabilities; returns a shallow copy when the sum is
 
 ### POSITIVE_CLASS_LABEL
 
-Canonical positive label used by binary-oriented helpers.
+Canonical positive class label used by binary cross-entropy and binary error classification helpers.
 
 ### smoothTarget
 
@@ -536,7 +536,7 @@ Returns: Smoothed target probability.
 
 ### SOFTMAX_SUM_GUARD
 
-Lower bound for softmax denominator to avoid division by zero.
+Lower bound applied to the softmax denominator sum to prevent division by zero in degenerate one-hot cases.
 
 ### stableSoftmax
 

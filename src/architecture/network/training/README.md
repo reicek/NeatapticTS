@@ -56,7 +56,7 @@ You can persist these snapshots to disk, upload them, or keep them in-memory.
 clearState(): void
 ```
 
-Clear all node runtime traces and states.
+Clear all accumulated per-node runtime traces and saved activation states.
 
 Parameters:
 - `this` - Bound network instance.
@@ -407,7 +407,7 @@ Parameters:
 clearState(): void
 ```
 
-Clear all node runtime traces and states.
+Clear all accumulated per-node runtime traces and saved activation states.
 
 Parameters:
 - `this` - Bound network instance.
@@ -674,11 +674,11 @@ Raised when the training dataset is missing or does not match network IO dimensi
 
 ### NetworkTrainingAccumulationStepsError
 
-Raised when accumulation steps is invalid.
+Raised when accumulation step count is zero, negative, or not a whole number as required for valid gradient accumulation.
 
 ### NetworkTrainingBatchSizeError
 
-Raised when configured batch size exceeds dataset size.
+Raised when the configured batch size exceeds the total dataset size, making mini-batch gradient accumulation impossible.
 
 ### NetworkTrainingDatasetCompatibilityError
 
@@ -686,19 +686,19 @@ Raised when the training dataset is missing or does not match network IO dimensi
 
 ### NetworkTrainingDropoutRangeError
 
-Raised when dropout is outside the expected range [0, 1).
+Raised when the dropout probability falls outside the required half-open interval [0, 1) accepted by the training configuration validator.
 
 ### NetworkTrainingInvalidCostFunctionError
 
-Raised when the provided cost function is not callable or recognized.
+Raised when the provided cost function is not callable or does not match any recognized cost-function identifier in the registry.
 
 ### NetworkTrainingInvalidOptimizerOptionError
 
-Raised when optimizer option type is not supported.
+Raised when an optimizer configuration option carries a type that the selected optimizer does not recognize or accept.
 
 ### NetworkTrainingNestedLookaheadError
 
-Raised when lookahead is configured with a nested lookahead base type.
+Raised when lookahead is configured with another lookahead optimizer as its base, which is not a supported inner optimizer combination.
 
 ### NetworkTrainingOutputTargetLengthError
 
@@ -706,15 +706,15 @@ Raised when output target length does not match the network output width.
 
 ### NetworkTrainingStoppingConditionRequiredError
 
-Raised when no stopping condition is provided to training.
+Raised when training is started without a stopping condition such as a maximum error target or iteration limit.
 
 ### NetworkTrainingUnknownLookaheadBaseTypeError
 
-Raised when lookahead base optimizer type is unknown.
+Raised when the lookahead base optimizer type does not match any supported inner optimizer in the current training stack configuration.
 
 ### NetworkTrainingUnknownOptimizerTypeError
 
-Raised when optimizer type is unknown.
+Raised when the optimizer type string does not match any registered optimizer in the network training configuration registry.
 
 ## architecture/network/training/network.training.isolate.utils.ts
 

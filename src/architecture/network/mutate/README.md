@@ -16,87 +16,87 @@ Raised when recurrent mutation helpers cannot access the created layer output no
 
 ### BATCH_NORM_FLAG_KEY
 
-Internal node field used to enable batch normalization.
+Internal node property key used to flag batch normalization participation during forward-pass activation computation.
 
 ### DEFAULT_MUTATION_MAX
 
-Default maximum mutation value when no method override is provided.
+Default maximum mutation perturbation value applied when the active mutation method provides no explicit range override.
 
 ### DEFAULT_MUTATION_MIN
 
-Default minimum mutation value when no method override is provided.
+Default minimum mutation perturbation value applied when the active mutation method provides no explicit range override.
 
 ### ERROR_NO_MUTATE_METHOD
 
-Error emitted when mutate is called without a valid method.
+Error message thrown when the mutate dispatcher is called without a recognized or valid mutation method argument.
 
 ### GATE_REASSIGN_THRESHOLD
 
-Threshold used for random 50/50 gating decisions.
+Probability threshold used for random 50/50 gating decisions during gate-reassignment mutation passes.
 
 ### MIN_REDUNDANT_CONNECTION_COUNT
 
-Minimum redundant in/out degree required before removing a connection.
+Minimum redundant in-degree or out-degree required on both endpoints before a connection may be safely removed.
 
 ### MIN_SWAPPABLE_NODE_COUNT
 
-Minimum node count required to perform swap-node mutation.
+Minimum number of nodes that must exist in the network before swap-node mutation can safely select two distinct candidates.
 
 ### NODE_TYPE_HIDDEN
 
-Canonical node-type literal for hidden nodes.
+Canonical node-type literal for hidden nodes used as a discriminant in mutation eligibility guards.
 
 ### NODE_TYPE_INPUT
 
-Canonical node-type literal for input nodes.
+Canonical node-type literal for input nodes used as a discriminant in mutation eligibility guards.
 
 ### NODE_TYPE_OUTPUT
 
-Canonical node-type literal for output nodes.
+Canonical node-type literal for output nodes used as a discriminant in mutation eligibility guards.
 
 ### RECURRENT_BLOCK_GRU
 
-Canonical recurrent block literal for GRU expansion.
+Canonical recurrent block literal for GRU expansion used when inserting a gated recurrent unit block.
 
 ### RECURRENT_BLOCK_LSTM
 
-Canonical recurrent block literal for LSTM expansion.
+Canonical recurrent block literal for LSTM expansion used when inserting a long short-term memory block.
 
 ### SINGLE_UNIT_RECURRENT_BLOCK_WIDTH
 
-Width used when creating a minimal recurrent block.
+Width used when creating a minimal single-unit recurrent block during LSTM or GRU insertion mutations.
 
 ### SUB_NODE_STABILITY_WEIGHT_DELTA
 
-Weight delta used to keep mutation side effects numerically observable.
+Small weight delta applied to sub-node connections to keep mutation side effects numerically observable and non-degenerate.
 
 ### UNKNOWN_MUTATION_WARNING_PREFIX
 
-Prefix for unknown-mutation warning logs.
+Log message prefix used when the mutate dispatcher encounters and discards an unrecognized mutation method identifier.
 
 ### WARNING_ALL_CONNECTIONS_GATED
 
-Message emitted when gating cannot be added because all are already gated.
+Warning message emitted when add-gate mutation cannot proceed because all eligible connections are already gated.
 
 ### WARNING_NO_ACTIVATION_MUTATION_TARGETS
 
-Message emitted when activation mutation has no eligible nodes.
+Warning message emitted when activation mutation finds no nodes eligible for squash-function replacement based on current config.
 
 ### WARNING_NO_GATED_CONNECTIONS_TO_REMOVE
 
-Message emitted when no gate exists to remove.
+Warning message emitted when remove-gate mutation finds no gated connections eligible to ungate in the current network.
 
 ### WARNING_NO_HIDDEN_NODES_TO_REMOVE
 
-Message emitted when no hidden node can be removed.
+Warning message emitted when remove-node mutation finds no hidden nodes eligible for removal in the current topology.
 
 ### WARNING_NO_SELF_CONNECTIONS_TO_REMOVE
 
-Message emitted when no self-connections are available to remove.
+Warning message emitted when remove-self-connection mutation finds no eligible self-connections to remove from the network.
 
 ### WARNING_SELF_CONNECTIONS_ALREADY_PRESENT
 
-Message emitted when all self-connection candidates are already occupied.
+Warning message emitted when all self-connection candidates are already occupied and no new self-connection can be added.
 
 ## architecture/network/mutate/network.mutate.utils.ts
 
@@ -145,7 +145,7 @@ network.mutate({ name: 'MOD_WEIGHT', min: -0.1, max: 0.1 });
 
 ### MutationMethod
 
-Mutation method descriptor shape
+Mutation method descriptor shape used across all mutation strategy dispatch and planning logic.
 
 ## architecture/network/mutate/network.mutate.public.utils.ts
 
@@ -1942,7 +1942,7 @@ Returns: Split result values.
 subBackConn(): void
 ```
 
-Removes one backward connection that satisfies redundancy constraints.
+Removes one backward connection that satisfies per-endpoint structural redundancy constraints.
 
 Parameters:
 - `this` - Bound network.
@@ -1969,7 +1969,7 @@ Returns: Nothing.
 subGate(): void
 ```
 
-Removes gating from one randomly selected gated connection.
+Removes active gating from one randomly selected currently gated connection.
 
 Parameters:
 - `this` - Bound network.
@@ -1998,7 +1998,7 @@ Returns: Nothing.
 subSelfConn(): void
 ```
 
-Removes one existing self-connection chosen at random.
+Removes one existing hidden node self-connection chosen uniformly at random.
 
 Parameters:
 - `this` - Bound network.

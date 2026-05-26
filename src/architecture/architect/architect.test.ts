@@ -1,3 +1,5 @@
+import { jest } from '@jest/globals';
+
 import Group from '../group';
 import Layer from '../layer';
 import Node from '../node';
@@ -396,6 +398,31 @@ describe('Architect', () => {
             output: 1,
             selfconns: 1,
           });
+        });
+      });
+    });
+
+    describe('given one hidden node exposes a zero-weight self connection', () => {
+      describe('when constructing the network from the primitive list', () => {
+        it('ignores that self connection in the constructed self-connection shelf', () => {
+          // Arrange
+          const inputNode = new Node('input');
+          const hiddenNode = new Node('hidden');
+          const outputNode = new Node('output');
+          const zeroWeightSelfConnection = hiddenNode.connect(hiddenNode)[0];
+          zeroWeightSelfConnection.weight = 0;
+          inputNode.connect(hiddenNode);
+          hiddenNode.connect(outputNode);
+
+          // Act
+          const network = Architect.construct([
+            inputNode,
+            hiddenNode,
+            outputNode,
+          ]);
+
+          // Assert
+          expect(network.selfconns).toStrictEqual([]);
         });
       });
     });
@@ -1219,6 +1246,27 @@ describe('Architect', () => {
 
           // Assert
           expect(normalizedNetwork).toBe(network);
+        });
+      });
+    });
+
+    describe('given one hidden-layer slot is missing from the layer metadata array', () => {
+      describe('when normalizing hidden layer sizes', () => {
+        it('returns without mutating the network', () => {
+          // Arrange
+          const network = {
+            connections: [],
+            input: 3,
+            layers: [{ output: null }, undefined, { output: null }],
+            nodes: [],
+            output: 2,
+          } as unknown as ArchitectLayeredNetwork;
+
+          // Act
+          Architect.enforceMinimumHiddenLayerSizes(network);
+
+          // Assert
+          expect(network.nodes).toStrictEqual([]);
         });
       });
     });

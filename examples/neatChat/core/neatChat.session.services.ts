@@ -504,13 +504,13 @@ export function runNeatChatExchange(
         chatSession,
         promptText,
       ),
+      NEATCHAT_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS,
       ...NEATCHAT_ADDITIONAL_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS.filter(
         (responseTokens) =>
           responseTokens.every((token) =>
             chatSession.vocabulary.termToIndex.has(token),
           ),
       ),
-      NEATCHAT_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS,
     ].filter(
       (responseTokens): responseTokens is readonly string[] =>
         responseTokens !== undefined &&

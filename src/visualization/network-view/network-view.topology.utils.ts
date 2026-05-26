@@ -76,120 +76,176 @@ export function resolveNetworkVisualizationTopologyPlan(
 ): NetworkVisualizationTopologyPlan {
   // Step 1: Build fallback layers when no runtime network is available.
   if (!network) {
-    return {
-      networkLayers: [
-        Array.from({ length: inputSize }, (_unusedValue, inputNodeIndex) => ({
-          index: inputNodeIndex,
-          type: 'input',
-          bias: 0,
-        })),
-        Array.from({ length: outputSize }, (_unusedValue, outputNodeIndex) => ({
-          index: inputSize + outputNodeIndex,
-          type: 'output',
-          bias: 0,
-        })),
-      ],
-      layerAnnotations: [],
-      topologyMode: 'acyclic',
-    };
+    return createFallbackTopologyPlan(inputSize, outputSize);
   }
 
   // Step 2: Extract topology from the network.
-  const topologyMode =
-    network.getTopologyIntent() === 'feed-forward'
-      ? ('acyclic' as const)
-      : ('recurrent' as const);
+  const topologyMode = resolveTopologyMode(network);
 
   // Step 3: Group nodes by type into layers.
-  const inputNodes = network.nodes
-    .filter((node) => node.type === 'input')
-    .map((node) => ({
-      index: node.index ?? 0,
-      type: 'input' as const,
-      bias: node.bias,
-    }))
-    .toSorted((leftNode, rightNode) => leftNode.index - rightNode.index);
-  const hiddenNodes = network.nodes
-    .filter((node) => node.type === 'hidden')
-    .map((node) => ({
-      index: node.index ?? 0,
-      type: 'hidden' as const,
-      bias: node.bias,
-    }))
-    .toSorted((leftNode, rightNode) => leftNode.index - rightNode.index);
-  const outputNodes = network.nodes
-    .filter((node) => node.type === 'output')
-    .map((node) => ({
-      index: node.index ?? 0,
-      type: 'output' as const,
-      bias: node.bias,
-    }))
-    .toSorted((leftNode, rightNode) => leftNode.index - rightNode.index);
-
-  const networkLayers: VisualNetworkNode[][] = [];
-  if (inputNodes.length > 0) {
-    networkLayers.push(inputNodes);
-  }
-  if (hiddenNodes.length > 0) {
-    networkLayers.push(hiddenNodes);
-  }
-  if (outputNodes.length > 0) {
-    networkLayers.push(outputNodes);
-  }
+  const { inputNodes, hiddenNodes, outputNodes } =
+    groupVisualNodesByType(network);
+  const networkLayers = buildNetworkLayers(
+    inputNodes,
+    hiddenNodes,
+    outputNodes,
+  );
 
   // Step 4: Try to infer temporal module annotations for recurrent networks.
-  let layerAnnotations: NetworkLayerAnnotation[] = [];
-  if (topologyMode === 'recurrent' && hiddenNodes.length > 0) {
-    const nodeIndexByGeneId = new Map<number, number>(
-      network.nodes.flatMap((node) =>
-        typeof node.geneId === 'number'
-          ? [[node.geneId, node.index ?? 0] as const]
-          : [],
-      ),
-    );
-
-    // Try to derive recurrent module annotations from the public descriptor.
-    try {
-      const temporalDescription = network.describeTemporalStructure();
-      if (temporalDescription.recurrentModules.length > 0) {
-        layerAnnotations = temporalDescription.recurrentModules.map(
-          (recurrentModule) => {
-            const label =
-              recurrentModule.moduleLabel ??
-              TEMPORAL_MODULE_LABEL_BY_KIND[recurrentModule.kind];
-            const roleLabels = Object.keys(recurrentModule.nodeGeneIdsByRole);
-            const nodeIndices = [
-              ...new Set(
-                Object.values(recurrentModule.nodeGeneIdsByRole)
-                  .flatMap((nodeGeneIds) => nodeGeneIds)
-                  .flatMap((nodeGeneId) => {
-                    const nodeIndex = nodeIndexByGeneId.get(nodeGeneId);
-                    return typeof nodeIndex === 'number' ? [nodeIndex] : [];
-                  }),
-              ),
-            ];
-
-            return {
-              label,
-              labelLines: [label],
-              tooltipHeading: label,
-              tooltipBodyParagraphs: [
-                `Roles: ${roleLabels.join(', ') || 'unlabeled module'}.`,
-              ],
-              nodeIndices,
-            };
-          },
-        );
-      }
-    } catch {
-      // Silently fall back to empty annotations if temporal description fails
-      layerAnnotations = [];
-    }
-  }
+  const layerAnnotations = resolveLayerAnnotations(
+    network,
+    topologyMode,
+    hiddenNodes,
+  );
 
   return {
     networkLayers,
     layerAnnotations,
     topologyMode,
   };
+}
+
+function createFallbackTopologyPlan(
+  inputSize: number,
+  outputSize: number,
+): NetworkVisualizationTopologyPlan {
+  return {
+    networkLayers: [
+      Array.from({ length: inputSize }, (_unusedValue, inputNodeIndex) => ({
+        index: inputNodeIndex,
+        type: 'input',
+        bias: 0,
+      })),
+      Array.from({ length: outputSize }, (_unusedValue, outputNodeIndex) => ({
+        index: inputSize + outputNodeIndex,
+        type: 'output',
+        bias: 0,
+      })),
+    ],
+    layerAnnotations: [],
+    topologyMode: 'acyclic',
+  };
+}
+
+function resolveTopologyMode(
+  network: Network,
+): NetworkVisualizationTopologyPlan['topologyMode'] {
+  return network.getTopologyIntent() === 'feed-forward'
+    ? 'acyclic'
+    : 'recurrent';
+}
+
+function groupVisualNodesByType(network: Network): {
+  inputNodes: VisualNetworkNode[];
+  hiddenNodes: VisualNetworkNode[];
+  outputNodes: VisualNetworkNode[];
+} {
+  return {
+    inputNodes: collectVisualNodesByType(network, 'input'),
+    hiddenNodes: collectVisualNodesByType(network, 'hidden'),
+    outputNodes: collectVisualNodesByType(network, 'output'),
+  };
+}
+
+function collectVisualNodesByType(
+  network: Network,
+  nodeType: VisualNetworkNode['type'],
+): VisualNetworkNode[] {
+  return network.nodes
+    .filter((node) => node.type === nodeType)
+    .map((node) => ({
+      index: node.index ?? 0,
+      type: nodeType,
+      bias: node.bias,
+    }))
+    .toSorted((leftNode, rightNode) => leftNode.index - rightNode.index);
+}
+
+function buildNetworkLayers(
+  inputNodes: VisualNetworkNode[],
+  hiddenNodes: VisualNetworkNode[],
+  outputNodes: VisualNetworkNode[],
+): VisualNetworkNode[][] {
+  return [inputNodes, hiddenNodes, outputNodes].filter(
+    (layer): layer is VisualNetworkNode[] => layer.length > 0,
+  );
+}
+
+function resolveLayerAnnotations(
+  network: Network,
+  topologyMode: NetworkVisualizationTopologyPlan['topologyMode'],
+  hiddenNodes: VisualNetworkNode[],
+): NetworkLayerAnnotation[] {
+  if (topologyMode !== 'recurrent' || hiddenNodes.length === 0) {
+    return [];
+  }
+
+  const nodeIndexByGeneId = createNodeIndexByGeneId(network);
+
+  try {
+    const temporalDescription = network.describeTemporalStructure();
+    return temporalDescription.recurrentModules.length > 0
+      ? temporalDescription.recurrentModules.map((recurrentModule) =>
+          mapTemporalModuleToLayerAnnotation(
+            recurrentModule,
+            nodeIndexByGeneId,
+          ),
+        )
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function createNodeIndexByGeneId(network: Network): Map<number, number> {
+  return new Map<number, number>(
+    network.nodes.flatMap((node) =>
+      typeof node.geneId === 'number'
+        ? [[node.geneId, node.index ?? 0] as const]
+        : [],
+    ),
+  );
+}
+
+function mapTemporalModuleToLayerAnnotation(
+  recurrentModule: ReturnType<
+    Network['describeTemporalStructure']
+  >['recurrentModules'][number],
+  nodeIndexByGeneId: Map<number, number>,
+): NetworkLayerAnnotation {
+  const label =
+    recurrentModule.moduleLabel ??
+    TEMPORAL_MODULE_LABEL_BY_KIND[recurrentModule.kind];
+  const roleLabels = Object.keys(recurrentModule.nodeGeneIdsByRole);
+
+  return {
+    label,
+    labelLines: [label],
+    tooltipHeading: label,
+    tooltipBodyParagraphs: [
+      `Roles: ${roleLabels.join(', ') || 'unlabeled module'}.`,
+    ],
+    nodeIndices: resolveTemporalModuleNodeIndices(
+      recurrentModule.nodeGeneIdsByRole,
+      nodeIndexByGeneId,
+    ),
+  };
+}
+
+function resolveTemporalModuleNodeIndices(
+  nodeGeneIdsByRole: ReturnType<
+    Network['describeTemporalStructure']
+  >['recurrentModules'][number]['nodeGeneIdsByRole'],
+  nodeIndexByGeneId: Map<number, number>,
+): number[] {
+  return [
+    ...new Set(
+      Object.values(nodeGeneIdsByRole)
+        .flatMap((nodeGeneIds) => nodeGeneIds)
+        .flatMap((nodeGeneId) => {
+          const nodeIndex = nodeIndexByGeneId.get(nodeGeneId);
+          return typeof nodeIndex === 'number' ? [nodeIndex] : [];
+        }),
+    ),
+  ];
 }

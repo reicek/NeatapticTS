@@ -29,7 +29,7 @@ ActivationSquashFunction(
 ): number
 ```
 
-Activation function signature used by ONNX layer emission helpers.
+Activation function signature used by ONNX layer emission helpers for encoding activation operator type attributes.
 
 ### AttentionMapping
 
@@ -54,43 +54,43 @@ Width and shape evaluation context used by Conv inference helpers.
 
 ### ConvInferenceKernelEvaluationContext
 
-Kernel candidate context for one Conv inference evaluation pass.
+Kernel candidate context for one Conv inference evaluation pass, carrying kernel size and width bounds.
 
 ### ConvInferenceResult
 
-Collected inferred Conv metadata payload.
+Collected inferred Conv metadata payload, holding inferred layer indices and their derived Conv2DMapping specs.
 
 ### ConvInferenceTraversalContext
 
-Traversal context for one hidden layer during Conv inference.
+Traversal context for one hidden layer during Conv inference, including declared mappings and pool specs per layer.
 
 ### ConvKernelConsistencyContext
 
-Context for kernel-coordinate consistency checks at one output position.
+Context for kernel-coordinate consistency checks at one output position, comparing representative weights with tolerance.
 
 ### ConvLayerPairContext
 
-Context for one resolved Conv mapping layer pair.
+Context for one resolved Conv mapping layer pair, supplying the Conv spec and adjacent layer node lists.
 
 ### ConvOutputCoordinate
 
-Coordinate for one Conv output neuron position.
+Coordinate for one Conv output neuron, encoding the output channel, row, and column indices together.
 
 ### ConvRepresentativeKernelContext
 
-Context for representative Conv kernel collection per output channel.
+Context for representative Conv kernel collection per output channel, supplying neuron lists and the Conv spec.
 
 ### ConvSharingValidationContext
 
-Context for validating Conv sharing across all declared mappings.
+Context for validating Conv sharing across all declared mappings, holding layer nodes and mapping specifications.
 
 ### ConvSharingValidationResult
 
-Result of Conv sharing validation across declared mappings.
+Result of Conv sharing validation across declared mappings, reporting verified and mismatched layer indices.
 
 ### DenseActivationContext
 
-Dense activation emission context.
+Dense activation emission context carrying layer index, tensor names, graph names, squash function, and opset version.
 
 ### DenseActivationNodePayload
 
@@ -102,27 +102,27 @@ Strongly typed Gemm node payload used by dense export helpers.
 
 ### DenseGraphNames
 
-Dense graph tensor names.
+Dense graph tensor names identifying the Gemm output and activation output tensors for one layer.
 
 ### DenseInitializerValues
 
-Dense initializer value arrays.
+Dense initializer value arrays holding the flattened weight matrix values and bias vector for one layer.
 
 ### DenseLayerContext
 
-Dense layer context enriched with resolved activation function.
+Dense layer context enriched with the resolved activation squash function derived from the current layer nodes.
 
 ### DenseLayerParams
 
-Parameters for dense layer emission.
+Parameters for dense layer emission, grouping model, layer index, node lists, ordering flag, and export options.
 
 ### DenseOrderedNodePayload
 
-Dense node payload union used by ordered append helpers.
+Dense node payload union used by ordered append helpers, covering Gemm and activation node payloads.
 
 ### DenseTensorNames
 
-Dense initializer tensor names.
+Dense initializer tensor names for one emitted layer, naming the weight and bias initializer tensors.
 
 ### DenseWeightBuildContext
 
@@ -130,19 +130,19 @@ Context for building dense layer initializers from two adjacent layers.
 
 ### DenseWeightBuildResult
 
-Dense layer initializer fold output.
+Dense layer initializer fold output, containing the flattened weight matrix values and bias vector.
 
 ### DenseWeightRow
 
-One collected dense row before fold to flattened initializers.
+One collected dense row before fold to flattened initializers, containing per-neuron weights and bias value.
 
 ### DenseWeightRowCollectionContext
 
-Context for collecting one dense row.
+Context for collecting one dense row, supplying previous layer nodes and the target neuron internals.
 
 ### DiagonalRecurrentBuildContext
 
-Context for building a diagonal recurrent matrix from self-connections.
+Context for building a diagonal recurrent matrix from self-connections, supplying the current layer node list.
 
 ### ExportNodeIndexAssignmentContext
 
@@ -150,7 +150,7 @@ Context for assigning a stable export index to one node.
 
 ### FlattenAfterPoolingContext
 
-Flatten emission context after optional pooling.
+Flatten emission context after optional pooling, carrying model, flatten flag, layer index, and source output name.
 
 ### FusedRecurrentEmissionExecutionContext
 
@@ -158,11 +158,11 @@ Shared execution context for emitting one fused recurrent layer payload.
 
 ### FusedRecurrentGraphNames
 
-Context for ONNX fused recurrent node payload names.
+Context for ONNX fused recurrent node payload names, holding the graph node name and its output tensor name.
 
 ### FusedRecurrentInitializerNames
 
-Context for ONNX fused recurrent initializer names.
+Context for ONNX fused recurrent initializer names, grouping weight, recurrent-weight, and bias tensor name strings.
 
 ### GruEmissionContext
 
@@ -170,15 +170,15 @@ Context for heuristic GRU emission when a layer matches expected shape.
 
 ### HiddenLayerHeuristicContext
 
-Context for one hidden layer during heuristic recurrent emission.
+Context for one hidden layer during heuristic recurrent emission, tracking layer index and model state.
 
 ### IndexedMetadataAppendContext
 
-Append-an-index metadata context for JSON-array metadata keys.
+Append-an-index metadata context for JSON-array metadata keys, supplying model, key, and layer index.
 
 ### LayerActivationContext
 
-Activation analysis context for one layer.
+Activation analysis context for one layer, capturing whether the layer contains mixed activation functions.
 
 ### LayerBuildContext
 
@@ -186,15 +186,15 @@ Layer build context used while emitting one ONNX graph layer segment.
 
 ### LayerRecurrentDecisionContext
 
-Context used to decide recurrent emission branch usage.
+Context used to decide recurrent emission branch usage, carrying layer index and recurrent layer index list.
 
 ### LayerTraversalContext
 
-Layer traversal context with adjacent layers and output classification.
+Layer traversal context with adjacent layers, output classification, and the full LayerBuildContext fields.
 
 ### LstmCandidateContext
 
-Candidate context for validating one LSTM-like hidden layer pattern.
+Candidate context for validating one LSTM-like hidden layer pattern against the expected node count.
 
 ### LstmEmissionContext
 
@@ -206,31 +206,31 @@ Traversal context for one hidden layer during LSTM stub collection.
 
 ### LstmPatternStub
 
-Heuristic LSTM pattern stub for metadata output.
+Heuristic LSTM pattern stub for metadata output, holding the detected layer index and unit size.
 
 ### OnnxBaseModelBuildContext
 
-Context for constructing a base ONNX model shell.
+Context for constructing a base ONNX model shell, supplying input and output dimension arrays for the graph.
 
 ### OnnxBuildResolvedOptions
 
-Resolved options used by ONNX model build orchestration.
+Resolved options for ONNX model build orchestration, with all export option defaults already applied and normalized.
 
 ### OnnxConvEmissionContext
 
-Context used after resolving Conv mapping for one layer.
+Context used after resolving Conv mapping for one layer, extending OnnxConvEmissionParams with the resolved Conv2DMapping spec.
 
 ### OnnxConvEmissionParams
 
-Parameters accepted by Conv layer emission.
+Parameters accepted by Conv layer emission, grouping model, options, layer index, previous output, and adjacent node lists.
 
 ### OnnxConvParameters
 
-Flattened Conv parameters for ONNX initializers.
+Flattened Conv parameters for ONNX initializers, containing weight and bias arrays derived from Conv layer neurons.
 
 ### OnnxConvTensorNames
 
-Tensor names generated for Conv parameters.
+Tensor names generated for Conv parameters, holding weight and bias initializer name strings for one layer.
 
 ### OnnxDynamicQuantizationOptions
 
@@ -318,7 +318,7 @@ Key fields (high-level):
 
 ### OnnxGraphDimensionBuildContext
 
-Context for constructing input/output ONNX graph dimensions.
+Context for constructing input/output ONNX graph dimensions, carrying width values and the batch-dimension flag.
 
 ### OnnxGraphDimensions
 
@@ -326,19 +326,19 @@ Output dimensions used by ONNX graph input/output value info payloads.
 
 ### OnnxLayerEmissionContext
 
-Context for emitting non-input layers during model build.
+Context for emitting non-input layers during model build, including layer list, options, and ordering flags.
 
 ### OnnxLayerEmissionResult
 
-Result of emitting non-input export layers.
+Result of emitting non-input export layers, carrying the last output name and the layer output name map.
 
 ### OnnxModelMetadataContext
 
-Context for applying optional ONNX model metadata.
+Context for applying optional ONNX model metadata, carrying model reference, opset, producer info, and inclusion flags.
 
 ### OnnxPostProcessingContext
 
-Context for post-processing and export metadata finalization.
+Context for post-processing and export metadata finalization, holding model, layers, options, and layer emission result.
 
 ### OnnxPrecisionOptions
 
@@ -350,27 +350,27 @@ One explicitly calibrated layer target used to build deterministic parameter ten
 
 ### OnnxQuantizationCalibrationOptions
 
-External calibration packet declaration for static quantization requests.
+External calibration packet for static quantization, grouping source tag, layer targets, and policy selections.
 
 ### OnnxQuantizationCalibrationRange
 
-External calibration packet declaration for static quantization requests.
+External calibration packet for one quantization layer target, capturing min and max float bounds.
 
 ### OnnxQuantizationCalibrationRoundingMode
 
-Rounding policy for deterministic zero-point resolution.
+Rounding policy for deterministic zero-point resolution; only 'nearest-even' is currently accepted by the exporter.
 
 ### OnnxQuantizationCalibrationSymmetry
 
-Symmetry policy for activation and weight quantization parameters.
+Symmetry policy for activation and weight quantization parameters; 'symmetric' or 'asymmetric' options are both accepted.
 
 ### OnnxQuantizationCalibrationWeightRangePolicy
 
-Supported weight-range reduction policy for the first calibration contract.
+Supported weight-range reduction policy for the first calibration contract; only 'min-max' is accepted.
 
 ### OnnxQuantizationCalibrationZeroInclusionPolicy
 
-Zero-inclusion policy for exported calibration parameters.
+Zero-inclusion policy for exported calibration parameters; controls whether zero must fall within the quantization range.
 
 ### OnnxQuantizationOptions
 
@@ -378,31 +378,31 @@ Supported quantization request packets for the narrow first Phase 7 lane.
 
 ### OnnxRecurrentCollectionContext
 
-Context for collecting recurrent layer indices during model build.
+Context for collecting recurrent layer indices during model build, providing the layer list and export options.
 
 ### OnnxRecurrentInputValueInfoContext
 
-Context for constructing one recurrent previous-state graph input payload.
+Context for constructing one recurrent previous-state graph input payload, carrying name, hidden width, and batch flag.
 
 ### OnnxRecurrentLayerProcessingContext
 
-Execution context for processing one hidden recurrent layer.
+Execution context for processing one hidden recurrent layer during model build traversal and emission.
 
 ### OnnxRecurrentLayerTraversalContext
 
-Traversal context for one hidden layer during recurrent-input collection.
+Traversal context for one hidden layer during recurrent-input collection, supplying layer index and batch-dimension flag.
 
 ### OnnxResolvedPrecisionOptions
 
-Resolved reduced-precision packet used by build orchestration.
+Resolved reduced-precision packet for build orchestration, carrying the requested flag, mode, and metadata inclusion decision.
 
 ### OnnxResolvedQuantizationCalibrationOptions
 
-Resolved calibration packet with exporter-owned defaults applied.
+Resolved calibration packet with exporter-owned defaults applied; all optional policy fields are filled in before emission.
 
 ### OnnxResolvedQuantizationOptions
 
-Resolved quantization packet used by build orchestration.
+Resolved quantization packet for build orchestration, covering unresolved, static-8bit, and dynamic-uint8 branches.
 
 ### OnnxStaticQuantizationOptions
 
@@ -437,7 +437,7 @@ const options: OnnxStaticQuantizationOptions = {
 
 ### OptionalLayerOutputParams
 
-Shared parameters for optional pooling/flatten output emission.
+Shared parameters for optional pooling or flatten output emission after one dense layer output tensor.
 
 ### OptionalPoolingAndFlattenParams
 
@@ -445,59 +445,59 @@ Parameters for optional pooling + flatten emission after a layer output.
 
 ### PerNeuronConcatNodePayload
 
-Per-neuron concat node payload.
+Per-neuron concat node payload used to merge individual neuron outputs into one combined layer tensor.
 
 ### PerNeuronGraphNames
 
-Per-neuron graph tensor names.
+Per-neuron graph tensor names identifying the Gemm output and activation output for one neuron subgraph.
 
 ### PerNeuronLayerContext
 
-Per-neuron layer context alias.
+Per-neuron layer context alias for PerNeuronLayerParams, used at the per-neuron layer traversal boundary.
 
 ### PerNeuronLayerParams
 
-Parameters for per-neuron layer emission.
+Parameters for per-neuron layer emission, grouping model, layer index, node lists, options, and batch-dimension flag.
 
 ### PerNeuronNodeContext
 
-Per-neuron normalized node context.
+Per-neuron normalized node context replacing raw Node references with resolved NodeInternals for safe emission.
 
 ### PerNeuronSubgraphContext
 
-Per-neuron subgraph emission context.
+Per-neuron subgraph emission context carrying layer index, neuron index, previous output name, and opset version.
 
 ### PerNeuronTensorNames
 
-Per-neuron initializer tensor names.
+Per-neuron initializer tensor names identifying weight and bias tensors for one neuron subgraph.
 
 ### PoolingAttributes
 
-Pooling tensor attributes for ONNX node payloads.
+Pooling tensor attributes for ONNX node payloads, grouping kernel shape, strides, and padding values.
 
 ### PoolingEmissionContext
 
-Pooling emission context resolved for one layer output.
+Pooling emission context resolved for one layer output, extending OptionalLayerOutputParams with the Pool2DMapping spec.
 
 ### RecurrentActivationEmissionContext
 
-Context for selecting and emitting recurrent activation node payload.
+Context for selecting and emitting recurrent activation node payload using the layer's dominant squash function.
 
 ### RecurrentGateBlockCollectionContext
 
-Context for collecting one gate parameter block.
+Context for collecting one gate parameter block, supplying gate nodes, previous layer, unit size, and diagonal flag.
 
 ### RecurrentGateParameterCollectionResult
 
-Flattened recurrent gate parameter vectors for one fused operator.
+Flattened recurrent gate parameter vectors for one fused operator, grouping input, recurrent, and bias arrays.
 
 ### RecurrentGateRow
 
-One recurrent gate row payload before flatten fold.
+One recurrent gate row payload before flatten fold, containing input weights, recurrent weights, and bias.
 
 ### RecurrentGateRowCollectionContext
 
-Context for collecting one recurrent gate row (one neuron).
+Context for collecting one recurrent gate row (one neuron), supplying the previous layer node list and unit size.
 
 ### RecurrentGemmEmissionContext
 
@@ -505,57 +505,280 @@ Context for emitting one Gemm node for recurrent single-step export.
 
 ### RecurrentGraphNames
 
-Derived graph names for one recurrent single-step layer payload.
+Derived graph names for one recurrent single-step layer payload, with all tensor and node names resolved.
 
 ### RecurrentHeuristicEmissionContext
 
-Context for heuristic recurrent operator emission traversal.
+Context for heuristic recurrent operator emission traversal, carrying model, layer list, and previous output tensor name.
 
 ### RecurrentInitializerEmissionContext
 
-Context for pushing recurrent initializers into ONNX graph state.
+Context for pushing recurrent initializers into ONNX graph state, carrying widths, tensor names, and value arrays.
 
 ### RecurrentInitializerNames
 
-Initializer tensor names for one single-step recurrent layer.
+Initializer tensor names for one single-step recurrent layer, naming weight, bias, and recurrent-weight tensors.
 
 ### RecurrentInitializerValues
 
-Collected initializer vectors for one single-step recurrent layer.
+Collected initializer vectors for one single-step recurrent layer, storing weight matrix, biases, and recurrent weights.
 
 ### RecurrentLayerEmissionContext
 
-Derived execution context for single-step recurrent layer emission.
+Derived execution context for single-step recurrent layer emission, extending params with layer slot and widths.
 
 ### RecurrentLayerEmissionParams
 
-Parameters for single-step recurrent layer emission.
+Parameters for single-step recurrent layer emission, supplying model, layer index, and adjacent node lists.
 
 ### RecurrentRowCollectionContext
 
-Context for collecting one recurrent matrix row.
+Context for collecting one recurrent matrix row, supplying the layer node list and the row index to extract.
 
 ### ResidualAddLayerParams
 
-Parameters for one-hop residual-add dense layer emission.
+Parameters for one-hop residual-add dense layer emission, carrying source, residual, and merge node name strings.
 
 ### SharedActivationNodeBuildParams
 
-Shared parameters for constructing an activation node payload.
+Shared parameters for constructing an activation node payload, carrying activation type and output name strings.
 
 ### SharedGemmNodeBuildParams
 
-Shared parameters for constructing a Gemm node payload.
+Shared parameters for constructing a Gemm node payload, carrying weight, bias, output tensor names, and node name.
 
 ### SpecMetadataAppendContext
 
-Append-a-spec metadata context for JSON-array metadata keys.
+Append-a-spec metadata context for JSON-array metadata keys, supplying model, key, and Conv or Pool spec.
 
 ### WeightToleranceComparisonContext
 
-Context for comparing two scalar weights with numeric tolerance.
+Context for comparing two scalar weights with numeric tolerance, used by Conv sharing validation helpers.
 
 ## architecture/network/onnx/export/network.onnx.export-flow.utils.ts
+
+### appendMetadataEntry
+
+```ts
+appendMetadataEntry(
+  model: OnnxModel,
+  key: string,
+  value: string,
+): void
+```
+
+Append one metadata entry to the model-level metadata registry.
+
+Parameters:
+- `model` - Built ONNX model.
+- `key` - Metadata key.
+- `value` - Metadata value.
+
+Returns: Nothing.
+
+### appendPhaseSevenRequestMetadata
+
+```ts
+appendPhaseSevenRequestMetadata(
+  model: OnnxModel,
+  networkLayers: default[][],
+  sourceOptions: OnnxExportOptions,
+): void
+```
+
+Append Phase 7 request metadata without implying that reduced-precision lowering has landed.
+
+Parameters:
+- `model` - Built ONNX model.
+- `networkLayers` - Layered network nodes.
+- `sourceOptions` - Raw export options.
+
+Returns: Nothing.
+
+### appendQuantizationRequestMetadata
+
+```ts
+appendQuantizationRequestMetadata(
+  model: OnnxModel,
+  networkLayers: default[][],
+  sourceOptions: OnnxExportOptions,
+): void
+```
+
+Append quantization request metadata and explicit float32 fallback reasons.
+
+Parameters:
+- `model` - Built ONNX model.
+- `networkLayers` - Layered network nodes.
+- `sourceOptions` - Raw export options.
+
+Returns: Nothing.
+
+### buildPrecisionFallbackReasons
+
+```ts
+buildPrecisionFallbackReasons(
+  networkLayers: default[][],
+  sourceOptions: OnnxExportOptions,
+): string[]
+```
+
+Build the explicit float32 fallback reasons for a Phase 7 precision request.
+
+Parameters:
+- `networkLayers` - Layered network nodes.
+- `sourceOptions` - Raw export options.
+
+Returns: Ordered fallback reason codes.
+
+### buildQuantizationFallbackReasons
+
+```ts
+buildQuantizationFallbackReasons(
+  model: OnnxModel,
+  networkLayers: default[][],
+  sourceOptions: OnnxExportOptions,
+): string[]
+```
+
+Build the explicit float32 fallback reasons for a Phase 7 quantization request.
+
+Parameters:
+- `networkLayers` - Layered network nodes.
+- `sourceOptions` - Raw export options.
+
+Returns: Ordered fallback reason codes.
+
+### hasAdvancedGraphBoundary
+
+```ts
+hasAdvancedGraphBoundary(
+  sourceOptions: OnnxExportOptions,
+): boolean
+```
+
+Detect whether the current export request crosses the explicit advanced-graph boundary.
+
+Parameters:
+- `sourceOptions` - Raw export options.
+
+Returns: True when explicit merge or attention mappings are requested.
+
+### hasRecurrentBoundary
+
+```ts
+hasRecurrentBoundary(
+  networkLayers: default[][],
+  sourceOptions: OnnxExportOptions,
+): boolean
+```
+
+Detect whether the current export request crosses the recurrent boundary.
+
+Parameters:
+- `networkLayers` - Layered network nodes.
+- `sourceOptions` - Raw export options.
+
+Returns: True when recurrent export is requested and a hidden layer carries self-state.
+
+### hasSpatialBoundary
+
+```ts
+hasSpatialBoundary(
+  sourceOptions: OnnxExportOptions,
+): boolean
+```
+
+Detect whether the current export request crosses the spatial boundary.
+
+Parameters:
+- `sourceOptions` - Raw export options.
+
+Returns: True when explicit Conv or pooling mappings are requested.
+
+### hasUnsupportedMultiOutputDenseQuantizationTarget
+
+```ts
+hasUnsupportedMultiOutputDenseQuantizationTarget(
+  model: OnnxModel,
+  quantizationPacket: OnnxStaticQuantizationOptions,
+): boolean
+```
+
+Detect whether the current static request includes any targeted multi-output dense layer that stayed on float32.
+
+Parameters:
+- `model` - Built ONNX model.
+- `quantizationPacket` - Raw static quantization request.
+
+Returns: True when a targeted dense layer is wider than the landed one-output qlinear subset.
+
+### resolveDenseQuantizationOutputWidth
+
+```ts
+resolveDenseQuantizationOutputWidth(
+  model: OnnxModel,
+  layerIndex: number,
+): number
+```
+
+Resolve the dense output width for one targeted layer from its bias initializer.
+
+Parameters:
+- `model` - Built ONNX model.
+- `layerIndex` - Dense export layer index.
+
+Returns: Dense output width.
+
+### resolveEffectiveExportOptions
+
+```ts
+resolveEffectiveExportOptions(
+  networkLayers: default[][],
+  sourceOptions: OnnxExportOptions,
+): OnnxExportOptions
+```
+
+Resolve effective export options without mutating caller-owned state.
+
+Parameters:
+- `networkLayers` - Layered network nodes.
+- `sourceOptions` - Raw export options.
+
+Returns: Effective export options for this export pass.
+
+### resolveEffectiveQuantizationMode
+
+```ts
+resolveEffectiveQuantizationMode(
+  model: OnnxModel,
+  requestedQuantizationMode: "static-8bit" | "dynamic-uint8",
+  quantizationFallbackReasons: string[],
+): "static-8bit" | "dynamic-uint8" | "none"
+```
+
+Resolve the effective quantization mode from the emitted graph payload.
+
+Parameters:
+- `model` - Built ONNX model.
+- `requestedQuantizationMode` - Requested quantization mode.
+
+Returns: Effective quantization mode for metadata emission.
+
+### resolveStaticQuantizationFallbackReasons
+
+```ts
+resolveStaticQuantizationFallbackReasons(
+  model: OnnxModel,
+): string[]
+```
+
+Resolve static quantization fallback reasons after checking whether qlinear lowering landed.
+
+Parameters:
+- `model` - Built ONNX model.
+
+Returns: Ordered static-quantization fallback reasons.
 
 ### runOnnxExportFlow
 
@@ -600,18 +823,6 @@ Parameters:
 - `options` - Export options.
 
 Returns: ONNX model.
-
-### DynamicDenseGuidancePlan
-
-Export-owned plan for inserting one dynamic dense guidance boundary.
-
-### StaticConvLoweringPlan
-
-Export-owned plan for lowering one Conv layer into the current qlinear subset.
-
-### StaticDenseLoweringPlan
-
-Export-owned plan for lowering one dense layer into the current qlinear subset.
 
 ## architecture/network/onnx/export/network.onnx.export-setup.utils.ts
 
@@ -809,7 +1020,7 @@ Returns: ONNX dimensions for the vector payload.
 
 ### CURRENT_ONNX_REFERENCE_OPSET
 
-Current upstream ONNX reference opset for the `ai.onnx` domain.
+Current upstream ONNX reference opset version for the `ai.onnx` standard domain.
 
 ### hasLayerSelfRecurrence
 
@@ -851,7 +1062,7 @@ Canonical ONNX standard-operator domain name used by opset metadata, schema anno
 
 ### ONNX_STANDARD_DOMAIN_ALIAS
 
-Canonical empty-string alias for the ONNX standard operator-set domain.
+Canonical empty-string alias for the ONNX standard operator-set domain identifier.
 
 ### processHiddenLayerRecurrence
 
@@ -897,6 +1108,49 @@ Parameters:
 - `includeMetadata` - Whether attention metadata should be recorded.
 
 Returns: Nothing.
+
+## architecture/network/onnx/export/network.onnx.export-build.emit.utils.ts
+
+### applyPostProcessing
+
+```ts
+applyPostProcessing(
+  context: OnnxPostProcessingContext,
+): void
+```
+
+Applies all post-processing passes (recurrent heuristics, attention mappings, export metadata) to the model in place.
+
+### collectRecurrentIndices
+
+```ts
+collectRecurrentIndices(
+  context: OnnxRecurrentCollectionContext,
+): number[]
+```
+
+Collects the layer indices of all recurrent layers present in the export context.
+
+### createInitializedModel
+
+```ts
+createInitializedModel(
+  networkLayers: default[][],
+  currentOptions: OnnxBuildResolvedOptions,
+): OnnxModel
+```
+
+Creates an initialized ONNX model with graph dimensions and metadata derived from the resolved build options.
+
+### emitNonInputLayers
+
+```ts
+emitNonInputLayers(
+  context: OnnxLayerEmissionContext,
+): OnnxLayerEmissionResult
+```
+
+Emits ONNX graph nodes for every layer after the input layer and returns the accumulated emission result.
 
 ## architecture/network/onnx/export/network.onnx.export-postprocess.utils.ts
 
@@ -1637,6 +1891,55 @@ Parameters:
 
 Returns: Nothing.
 
+## architecture/network/onnx/export/network.onnx.export-build.options.utils.ts
+
+### resolveBuildOptions
+
+```ts
+resolveBuildOptions(
+  sourceOptions: OnnxExportOptions,
+  networkLayerCount: number,
+): OnnxBuildResolvedOptions
+```
+
+Resolve export options with all defaults required by model construction.
+
+Parameters:
+- `sourceOptions` - Raw export options.
+
+Returns: Resolved options used by this builder.
+
+### resolvePrecisionOptions
+
+```ts
+resolvePrecisionOptions(
+  sourceOptions: OnnxExportOptions,
+): OnnxResolvedPrecisionOptions
+```
+
+Resolve precision options with stable defaults and supported modes only.
+
+Parameters:
+- `sourceOptions` - Raw export options.
+
+Returns: Normalized precision packet.
+
+### resolveQuantizationOptions
+
+```ts
+resolveQuantizationOptions(
+  sourceOptions: OnnxExportOptions,
+  networkLayerCount: number,
+): OnnxResolvedQuantizationOptions
+```
+
+Resolve quantization options with stable defaults and supported first-wave modes only.
+
+Parameters:
+- `sourceOptions` - Raw export options.
+
+Returns: Normalized quantization packet.
+
 ## architecture/network/onnx/export/network.onnx.export-orchestrators.utils.ts
 
 ### appendConvInferenceMetadata
@@ -1732,7 +2035,7 @@ assignExportNodeIndices(
 ): void
 ```
 
-Assign stable index values to nodes for export diagnostics.
+Assign stable sequential index values to nodes for ONNX export diagnostics.
 
 Parameters:
 - `network` - Source network.
@@ -2587,3 +2890,71 @@ Parameters:
 - `model` - ONNX-like model to validate.
 
 Returns: Nothing.
+
+## architecture/network/onnx/export/network.onnx.export-build.quantization.utils.ts
+
+### applyDynamicDenseQuantizationGuidancePostProcessing
+
+```ts
+applyDynamicDenseQuantizationGuidancePostProcessing(
+  model: OnnxModel,
+  sourceOptions: OnnxExportOptions,
+  resolvedQuantization: OnnxResolvedQuantizationOptions,
+  recurrentLayerIndices: number[],
+): void
+```
+
+Wraps each dense GEMM node with DynamicQuantizeLinear/DequantizeLinear guidance nodes for dynamic UINT8 quantization.
+
+### applyStaticConvQuantizationPostProcessing
+
+```ts
+applyStaticConvQuantizationPostProcessing(
+  model: OnnxModel,
+  sourceOptions: OnnxExportOptions,
+  resolvedQuantization: OnnxResolvedQuantizationOptions,
+  recurrentLayerIndices: number[],
+): void
+```
+
+Rewrites Conv graph nodes to QLinearConv sequences and appends quantized weight and bias initializers for static INT8 lowering.
+
+### applyStaticDenseQuantizationPostProcessing
+
+```ts
+applyStaticDenseQuantizationPostProcessing(
+  model: OnnxModel,
+  sourceOptions: OnnxExportOptions,
+  resolvedQuantization: OnnxResolvedQuantizationOptions,
+  recurrentLayerIndices: number[],
+): void
+```
+
+Rewrites dense GEMM graph nodes to QLinearMatMul sequences and appends quantized weight initializers for static INT8 lowering.
+
+### applyStaticQuantizationCalibrationPostProcessing
+
+```ts
+applyStaticQuantizationCalibrationPostProcessing(
+  model: OnnxModel,
+  sourceOptions: OnnxExportOptions,
+  resolvedQuantization: OnnxResolvedQuantizationOptions,
+  recurrentLayerIndices: number[],
+): void
+```
+
+Appends calibrated static INT8 scale and zero-point initializers to the model graph for each supported layer target.
+
+## architecture/network/onnx/export/network.onnx.export-build.storage-fp16.utils.ts
+
+### applyStorageFp16PostProcessing
+
+```ts
+applyStorageFp16PostProcessing(
+  model: OnnxModel,
+  sourceOptions: OnnxExportOptions,
+  recurrentLayerIndices: number[],
+): void
+```
+
+Rewrites eligible weight and bias initializers from FP32 to FP16 storage and prepends Cast-to-FP32 bridge nodes.

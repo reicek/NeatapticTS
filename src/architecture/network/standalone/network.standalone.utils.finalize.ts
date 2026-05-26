@@ -14,7 +14,7 @@ import {
 } from './network.standalone.errors';
 
 /**
- * Assemble the final standalone IIFE source string.
+ * Assemble the final standalone IIFE source string from the generation context.
  *
  * @param generationContext Mutable generation context.
  * @returns Final generated source string.

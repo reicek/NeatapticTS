@@ -1,6 +1,6 @@
-id: "00.diagnose-blocker"
-name: "Diagnose and Route a Workflow Blocker"
-agent: "00-helping"
+id: '00.diagnose-blocker'
+name: 'Diagnose and Route a Workflow Blocker'
+agent: '00-helping'
 description: >
   Universal escape path for any numbered SDLC phase that hits a blocker it
   cannot resolve. Reads the blocker description from the active plan step,
@@ -10,30 +10,30 @@ description: >
   This flow is callable from any tier (00–07).
 
 triggers:
-  - "TASK_STATUS: FAILED or PARTIAL with a recorded BLOCKER"
-  - "Cross-tier helper call needed"
-  - "Unknown gate failure requiring root-cause triage"
-  - "Model-routing or frontmatter conflict discovered during implementation"
-  - "Workflow gap identified that no existing skill covers"
+  - 'TASK_STATUS: FAILED or PARTIAL with a recorded BLOCKER'
+  - 'Cross-tier helper call needed'
+  - 'Unknown gate failure requiring root-cause triage'
+  - 'Model-routing or frontmatter conflict discovered during implementation'
+  - 'Workflow gap identified that no existing skill covers'
 
 gates:
-  - "plan-sync"
-  - "learning-event"
+  - 'plan-sync'
+  - 'learning-event'
 
 post-phase-fanout:
-  - "learning-event-capturer"
-  - "<smallest-relevant-numbered-agent>"
+  - 'learning-event-capturer'
+  - '<smallest-relevant-numbered-agent>'
 
 skills:
-  - "capturing-learning-event"
-  - "tracker-handoff"
-  - "agent-frontmatter-standards"
-  - "model-routing-and-budget"
+  - 'capturing-learning-event'
+  - 'tracker-handoff'
+  - 'agent-frontmatter-standards'
+  - 'model-routing-and-budget'
 
 specialists:
-  - "helping-gap-resolution-coordinator"
-  - "helping-agent-maintenance-coordinator"
-  - "Plan Scout"
-  - "failure-triage-specialist"
+  - 'helping-gap-resolution-coordinator'
+  - 'helping-agent-maintenance-coordinator'
+  - 'Plan Scout'
+  - 'failure-triage-specialist'
 
 timeout-minutes: 20

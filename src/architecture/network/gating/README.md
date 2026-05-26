@@ -418,7 +418,7 @@ Returns: Nothing.
 resolveSubNodeMutationConfig(): NodeRemovalMutationConfig
 ```
 
-Resolve the active SUB_NODE mutation configuration shape.
+Resolve the active SUB_NODE mutation configuration shape for node removal.
 
 Returns: Normalized SUB_NODE config when available; otherwise undefined.
 
@@ -475,23 +475,23 @@ Returns: Nothing.
 
 ### BridgingConnectionList
 
-Newly created connections that can be assigned preserved gaters.
+List of newly created bridging connections that can each receive a reassigned gater from the node-removal rewiring operation.
 
 ### ConnectedNodeList
 
-Predecessor or successor node collection used during bridge construction.
+Ordered list of predecessor or successor nodes collected during bridge construction when a hidden node is removed from the network graph.
 
 ### MutableNetworkGatingProps
 
-Network shape extension used to flag node index cache invalidation.
+Network shape extension that exposes the mutable flag used to invalidate the node index cache after structural gating changes alter the graph.
 
 ### NodeRemovalMutationConfig
 
-Normalized SUB_NODE mutation configuration used during node-removal rewiring.
+Normalized SUB_NODE mutation configuration resolved before node-removal rewiring begins; undefined when no mutation config is present in the caller context.
 
 ### PreservedGaters
 
-Mutable gater collection retained while removing a hidden node.
+Mutable collection of gater nodes retained during hidden-node removal so they can be reassigned to the bridging connections created by the rewiring pass.
 
 ## architecture/network/gating/network.gating.errors.ts
 

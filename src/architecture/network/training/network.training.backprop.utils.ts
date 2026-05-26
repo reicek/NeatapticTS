@@ -52,7 +52,7 @@ export function propagate(
 }
 
 /**
- * Clear all node runtime traces and states.
+ * Clear all accumulated per-node runtime traces and saved activation states.
  *
  * @param this Bound network instance.
  */

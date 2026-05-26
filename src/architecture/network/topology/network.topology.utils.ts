@@ -83,7 +83,7 @@ export function computeTopoOrder(this: Network): void {
   finalizeTopoOrder(buildContext);
 }
 
-/** Depth-first reachability test (avoids infinite loops via visited set). */
+/** Depth-first reachability test that avoids infinite loops using a visited set. */
 export function hasPath(this: Network, from: Node, to: Node): boolean {
   // Step 1: Handle trivial reachability.
   if (isSameNode(from, to)) {

@@ -687,10 +687,16 @@ mishActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Mish smooth non-monotonic activation function.
 
-Returns: Mish activation.
+Computes `x * tanh(softplus(x))` where `softplus(x) = ln(1 + e^x)`.
+Mish avoids hard zero-saturation and provides better gradient flow than ReLU
+in many deep architectures. See Misra, 2019, "Mish: A Self Regularized Non-Monotonic Activation Function".
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: Mish-activated output.
 
 ### reluActivation
 

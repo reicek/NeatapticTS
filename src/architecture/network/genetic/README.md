@@ -177,6 +177,13 @@ Parameters:
 
 Returns: Offspring network instance.
 
+### networkGeneticUtils
+
+Default export bundle for the genetic crossover utilities chapter.
+
+Bundles the crossover entry points so the network facade can bind them as methods
+without importing each function individually.
+
 ## architecture/network/genetic/network.genetic.setup.utils.ts
 
 Crossover setup helpers for the network genetic boundary.
@@ -235,7 +242,7 @@ assignOffspringNodes(
 ): void
 ```
 
-Builds and reindexes offspring nodes.
+Builds and reindexes offspring nodes using the supplied node-build context.
 
 Parameters:
 - `nodeContext` - Node-build context.
@@ -336,7 +343,7 @@ createNodeBuildContext(
 ): CrossoverNodeBuildContext
 ```
 
-Creates the node-build context for offspring node selection.
+Creates the immutable node-build context used for offspring node selection.
 
 Parameters:
 - `context` - Crossover baseline context.
@@ -1142,23 +1149,23 @@ Most of these are not user-facing tuning knobs. They are intended to:
 
 ### DEFAULT_REENABLE_PROBABILITY
 
-Default probability for re-enabling disabled genes during crossover.
+Default probability for re-enabling a disabled gene when both parents carry it in their gene lists during NEAT crossover.
 
 ### FIRST_INDEX
 
-First element index used when reading newly created connections.
+Zero-based first-element index used when reading the first item from newly created connection arrays after crossover gene assembly.
 
 ### NO_GATER_INDEX
 
-Sentinel index representing that no gater node is assigned.
+Sentinel index value indicating that a connection has no gating node assigned after crossover or network construction.
 
 ### PARENT_COMPATIBILITY_ERROR_MESSAGE
 
-Shared compatibility error message for crossover parent validation.
+Shared error message text for the crossover parent compatibility guard; thrown when parent networks have mismatched input or output dimension counts.
 
 ### RANDOM_BINARY_SELECTION_THRESHOLD
 
-Canonical threshold used for random binary parent/gene choice.
+Canonical 50% probability threshold for binary parent or gene selection during crossover; values above this choose one parent, values below choose the other.
 
 ### RandomGenerator
 
@@ -1166,7 +1173,7 @@ Canonical threshold used for random binary parent/gene choice.
 RandomGenerator(): number
 ```
 
-Shared random generator signature for genetic operators.
+Shared random number generator signature consumed by genetic operators; each call returns a uniform float in the half-open interval [0, 1).
 
 ## architecture/network/genetic/network.genetic.errors.ts
 

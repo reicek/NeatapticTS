@@ -1069,8 +1069,20 @@ describe('Node', () => {
           withIgnoredWriteProperties(
             [
               {
+                propertyName: 'firstMoment',
+                targetObject: adamaxFallbackHarness.incomingConnection,
+              },
+              {
                 propertyName: 'infinityNorm',
                 targetObject: adamaxFallbackHarness.incomingConnection,
+              },
+              {
+                propertyName: 'firstMoment',
+                targetObject: adamaxFallbackHarness.selfConnection,
+              },
+              {
+                propertyName: 'opt_mB',
+                targetObject: adamaxFallbackHarness.trainingNode,
               },
               {
                 propertyName: 'opt_uB',
@@ -1169,6 +1181,210 @@ describe('Node', () => {
             amsgradBiasFinite: true,
             lionBiasFinite: true,
             lookaheadBias: undefined,
+          });
+        });
+      });
+    });
+
+    describe('given adam-style optimizers that cannot retain their second-moment state', () => {
+      describe('when applying targeted optimizer variants', () => {
+        it('falls back to zero variance inputs while keeping each update finite', () => {
+          // Arrange
+          const adamHarness = createBatchOptimizerHarness('hidden');
+          adamHarness.trainingNode.totalDeltaBias = 2;
+          adamHarness.incomingConnection.totalDeltaWeight = 2;
+          adamHarness.selfConnection.totalDeltaWeight = 2;
+
+          const nadamHarness = createBatchOptimizerHarness('hidden');
+          nadamHarness.trainingNode.totalDeltaBias = 2;
+          nadamHarness.incomingConnection.totalDeltaWeight = 2;
+          nadamHarness.selfConnection.totalDeltaWeight = 2;
+
+          const radamHarness = createBatchOptimizerHarness('hidden');
+          radamHarness.trainingNode.totalDeltaBias = 2;
+          radamHarness.incomingConnection.totalDeltaWeight = 2;
+          radamHarness.selfConnection.totalDeltaWeight = 2;
+
+          // Act
+          withIgnoredWriteProperties(
+            [
+              {
+                propertyName: 'secondMoment',
+                targetObject: adamHarness.incomingConnection,
+              },
+              {
+                propertyName: 'secondMoment',
+                targetObject: adamHarness.selfConnection,
+              },
+              {
+                propertyName: 'opt_vB',
+                targetObject: adamHarness.trainingNode,
+              },
+            ],
+            () => {
+              adamHarness.trainingNode.applyBatchUpdatesWithOptimizer({
+                type: 'adam',
+              });
+            },
+          );
+
+          withIgnoredWriteProperties(
+            [
+              {
+                propertyName: 'secondMoment',
+                targetObject: nadamHarness.incomingConnection,
+              },
+              {
+                propertyName: 'secondMoment',
+                targetObject: nadamHarness.selfConnection,
+              },
+              {
+                propertyName: 'opt_vB',
+                targetObject: nadamHarness.trainingNode,
+              },
+            ],
+            () => {
+              nadamHarness.trainingNode.applyBatchUpdatesWithOptimizer({
+                type: 'nadam',
+              });
+            },
+          );
+
+          withIgnoredWriteProperties(
+            [
+              {
+                propertyName: 'secondMoment',
+                targetObject: radamHarness.incomingConnection,
+              },
+              {
+                propertyName: 'secondMoment',
+                targetObject: radamHarness.selfConnection,
+              },
+              {
+                propertyName: 'opt_vB',
+                targetObject: radamHarness.trainingNode,
+              },
+            ],
+            () => {
+              radamHarness.trainingNode.applyBatchUpdatesWithOptimizer({
+                type: 'radam',
+                t: 10,
+              });
+            },
+          );
+
+          // Assert
+          expect({
+            adamBiasFinite: Number.isFinite(adamHarness.trainingNode.bias),
+            adamIncomingFinite: Number.isFinite(
+              adamHarness.incomingConnection.weight,
+            ),
+            nadamBiasFinite: Number.isFinite(nadamHarness.trainingNode.bias),
+            nadamIncomingFinite: Number.isFinite(
+              nadamHarness.incomingConnection.weight,
+            ),
+            radamBiasFinite: Number.isFinite(radamHarness.trainingNode.bias),
+            radamIncomingFinite: Number.isFinite(
+              radamHarness.incomingConnection.weight,
+            ),
+          }).toStrictEqual({
+            adamBiasFinite: true,
+            adamIncomingFinite: true,
+            nadamBiasFinite: true,
+            nadamIncomingFinite: true,
+            radamBiasFinite: true,
+            radamIncomingFinite: true,
+          });
+        });
+      });
+    });
+
+    describe('given optimizer fallbacks that depend on undefined prior state or unknown step tables', () => {
+      describe('when applying targeted optimizer variants', () => {
+        it('uses the sgd and adamw fallback paths without producing invalid values', () => {
+          // Arrange
+          const unknownOptimizerHarness = createBatchOptimizerHarness('hidden');
+          unknownOptimizerHarness.trainingNode.previousDeltaBias =
+            undefined as unknown as number;
+          unknownOptimizerHarness.trainingNode.totalDeltaBias = 2;
+          unknownOptimizerHarness.incomingConnection.previousDeltaWeight =
+            undefined as unknown as number;
+          unknownOptimizerHarness.incomingConnection.totalDeltaWeight = 2;
+          unknownOptimizerHarness.selfConnection.previousDeltaWeight =
+            undefined as unknown as number;
+          unknownOptimizerHarness.selfConnection.totalDeltaWeight = 2;
+
+          const adamaxFallbackHarness = createBatchOptimizerHarness('hidden');
+          adamaxFallbackHarness.trainingNode.totalDeltaBias = 2;
+          adamaxFallbackHarness.incomingConnection.totalDeltaWeight = 2;
+          adamaxFallbackHarness.selfConnection.totalDeltaWeight = 2;
+
+          const zeroBiasAdamwHarness = createBatchOptimizerHarness('hidden');
+          zeroBiasAdamwHarness.trainingNode.bias = 0;
+          zeroBiasAdamwHarness.trainingNode.totalDeltaBias = 0;
+          zeroBiasAdamwHarness.incomingConnection.weight = 0;
+          zeroBiasAdamwHarness.incomingConnection.totalDeltaWeight = 0;
+          zeroBiasAdamwHarness.selfConnection.weight = 0;
+          zeroBiasAdamwHarness.selfConnection.totalDeltaWeight = 0;
+
+          // Act
+          unknownOptimizerHarness.trainingNode.applyBatchUpdatesWithOptimizer({
+            type: 'mystery' as unknown as OptimizerOptions['type'],
+          });
+
+          withIgnoredWriteProperties(
+            [
+              {
+                propertyName: 'infinityNorm',
+                targetObject: adamaxFallbackHarness.incomingConnection,
+              },
+              {
+                propertyName: 'infinityNorm',
+                targetObject: adamaxFallbackHarness.selfConnection,
+              },
+              {
+                propertyName: 'opt_uB',
+                targetObject: adamaxFallbackHarness.trainingNode,
+              },
+            ],
+            () => {
+              adamaxFallbackHarness.trainingNode.applyBatchUpdatesWithOptimizer(
+                {
+                  type: 'adamax',
+                },
+              );
+            },
+          );
+
+          zeroBiasAdamwHarness.trainingNode.applyBatchUpdatesWithOptimizer({
+            type: 'adamw',
+            weightDecay: 0.1,
+          });
+
+          // Assert
+          expect({
+            adamaxBiasFinite: Number.isFinite(
+              adamaxFallbackHarness.trainingNode.bias,
+            ),
+            adamaxIncomingFinite: Number.isFinite(
+              adamaxFallbackHarness.incomingConnection.weight,
+            ),
+            unknownOptimizerBiasFinite: Number.isFinite(
+              unknownOptimizerHarness.trainingNode.bias,
+            ),
+            unknownOptimizerIncomingFinite: Number.isFinite(
+              unknownOptimizerHarness.incomingConnection.weight,
+            ),
+            zeroBiasAdamwBias: zeroBiasAdamwHarness.trainingNode.bias,
+            zeroBiasAdamwIncomingWeight:
+              zeroBiasAdamwHarness.incomingConnection.weight,
+          }).toStrictEqual({
+            adamaxBiasFinite: true,
+            adamaxIncomingFinite: true,
+            unknownOptimizerBiasFinite: true,
+            unknownOptimizerIncomingFinite: true,
+            zeroBiasAdamwBias: 0,
+            zeroBiasAdamwIncomingWeight: 0,
           });
         });
       });

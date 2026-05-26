@@ -2,7 +2,7 @@
 import type { NetworkPruningProps } from '../network.types';
 
 /**
- * Read baseline used for sparsity reporting.
+ * Read the initial connection-count baseline value used for sparsity ratio reporting.
  * @param currentNetwork - Network to inspect.
  * @returns Baseline connection count when available.
  */

@@ -15,36 +15,36 @@
 
 # id (string): Unique flow identifier in the form "<agent-prefix>.<slug>".
 #   Example: "04.scoped-fix"
-id: "<agent-prefix>.<slug>"
+id: '<agent-prefix>.<slug>'
 
 # name (string): Human-readable display name for the flow.
-name: "<Human-readable name>"
+name: '<Human-readable name>'
 
 # agent (string): Owning numbered SDLC agent (e.g., "04-implementing").
-agent: "<numbered-agent-name>"
+agent: '<numbered-agent-name>'
 
 # triggers (string[]): Natural-language conditions that activate this flow.
 #   The owning agent uses these descriptions to select the appropriate flow.
 triggers:
-  - "<Trigger condition 1>"
+  - '<Trigger condition 1>'
 
 # gates (string[]): Gate IDs that must pass before the flow is considered
 #   complete. At least one gate is required. The Tier-1 gate catalog is:
 #   plan-sync, step-packet, agent-graph, learning-event.
 gates:
-  - "<gate-id>"
+  - '<gate-id>'
 
 # post-phase-fanout (string[]): Agents, gate scripts, or named actions to
 #   invoke after the flow body completes. Must be non-empty.
 post-phase-fanout:
-  - "<agent-or-action>"
+  - '<agent-or-action>'
 
 # ---------------------------------------------------------------------------
 # Optional fields
 # ---------------------------------------------------------------------------
 
 # description (string): Brief explanation of flow purpose and scope.
-description: ""
+description: ''
 
 # skills (string[]): Skill names the owning agent should load during this flow.
 skills: []

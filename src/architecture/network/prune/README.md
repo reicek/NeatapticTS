@@ -1,16 +1,16 @@
 # architecture/network/prune
 
-Error raised when a sparsity-budget max-connection cap is invalid.
+Error raised when a sparsity-budget max-connection count cap is invalid.
 
 ## architecture/network/prune/network.prune.budget.errors.ts
 
 ### NetworkPruneBudgetGrowthGraceFractionError
 
-Error raised when sparsity-budget grace configuration is invalid.
+Error raised when the sparsity-budget growth-grace fraction configuration is invalid.
 
 ### NetworkPruneBudgetMaxConnectionsError
 
-Error raised when a sparsity-budget max-connection cap is invalid.
+Error raised when a sparsity-budget max-connection count cap is invalid.
 
 ## architecture/network/prune/network.prune.utils.types.ts
 
@@ -890,7 +890,7 @@ markTopologyDirty(
 ): void
 ```
 
-Mark topology cache as dirty after structural updates.
+Mark the topology cache as dirty after scheduled pruning structural updates.
 
 Parameters:
 - `currentNetwork` - Network with modified connectivity.
@@ -967,7 +967,7 @@ resolvePruningMethod(
 ): PruningMethod
 ```
 
-Normalize optional pruning method to a concrete value.
+Normalize an optional pruning method to a concrete default value.
 
 Parameters:
 - `method` - Optional configured pruning method.
@@ -1019,7 +1019,7 @@ readInitialSparsityBaseline(
 ): number | undefined
 ```
 
-Read baseline used for sparsity reporting.
+Read the initial connection-count baseline value used for sparsity ratio reporting.
 
 Parameters:
 - `currentNetwork` - Network to inspect.
@@ -1119,7 +1119,7 @@ markEvolutionaryTopologyDirty(
 ): void
 ```
 
-Mark topology cache as dirty after evolutionary pruning.
+Mark the topology cache as dirty after evolutionary pruning removes connections.
 
 Parameters:
 - `currentNetwork` - Network with changed structure.
@@ -1134,7 +1134,7 @@ normalizeEvolutionaryTargetSparsity(
 ): number
 ```
 
-Clamp evolutionary target sparsity to safe operational bounds.
+Clamp evolutionary target sparsity to safe operational bounds for pruning.
 
 Parameters:
 - `rawTargetSparsity` - Requested target sparsity.

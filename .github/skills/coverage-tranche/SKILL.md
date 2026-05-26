@@ -22,12 +22,12 @@ When this skill updates the coverage tracker, `tracker-handoff` owns the
 
 ## Skill Relationships
 
-| Situation | Correct skill |
-|---|---|
-| Tests are failing | `test-fix-workflow` first, then `coverage-guard` |
-| Tests pass, file below 100% | `coverage-tranche` (this skill) |
-| Change just landed, verify no regression | `coverage-guard` |
-| Identify next file below 100% | `Coverage Scout` agent |
+| Situation                                | Correct skill                                    |
+| ---------------------------------------- | ------------------------------------------------ |
+| Tests are failing                        | `test-fix-workflow` first, then `coverage-guard` |
+| Tests pass, file below 100%              | `coverage-tranche` (this skill)                  |
+| Change just landed, verify no regression | `coverage-guard`                                 |
+| Identify next file below 100%            | `Coverage Scout` agent                           |
 
 Do not invoke this skill when tests are red. Fix failures first, then
 return to coverage expansion.

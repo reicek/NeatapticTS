@@ -43,7 +43,7 @@ export function assertNodeRemovableAndGetIndex(
 }
 
 /**
- * Resolve the active SUB_NODE mutation configuration shape.
+ * Resolve the active SUB_NODE mutation configuration shape for node removal.
  *
  * @returns Normalized SUB_NODE config when available; otherwise undefined.
  */

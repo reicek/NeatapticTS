@@ -2,7 +2,7 @@
 import type { SlabBuildContext } from './network.slab.utils.types';
 
 /**
- * Applies prerequisite normalization for slab rebuild passes.
+ * Applies all required prerequisite normalization steps before starting slab rebuild passes.
  *
  * @param buildContext - Slab build context.
  * @returns Nothing.

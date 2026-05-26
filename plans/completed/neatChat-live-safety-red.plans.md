@@ -12,6 +12,7 @@
 
 - `runNeatChatExchange` now safety-screens routing candidates before commit, strips placeholder punctuation tokens, rejects incomplete prompt-echo fragments, and skips recent duplicate replies from the last three exchanges.
 - When every surfaced candidate is unsafe, the live path now uses a vocabulary-aware deterministic fallback palette instead of resurfacing the top unsafe fragment or collapsing to the same reply across the accepted four-turn probe.
+- Archived maintenance follow-up kept that fallback path deterministic while restoring the intended token precedence inside `resolveNoSafeCandidateFallbackResponseTokens`: `NEATCHAT_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS` now comes before `NEATCHAT_ADDITIONAL_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS`.
 - The only requested documentation follow-up is already in place at `examples/neatChat/core/neatChat.session.services.ts` and `examples/neatChat/README.md`.
 
 ## Audit summary
@@ -19,6 +20,7 @@
 - Final owner-local Jest gate stayed green: `npx jest --config=jest.config.mjs --no-cache --runInBand --runTestsByPath examples/neatChat/core/neatChat.live-flow.safety.test.ts --testNamePattern "does not loop the shipped-snapshot fallback floor when rephrase tell and plans are unavailable"` -> PASS (`1 passed, 11 skipped`).
 - Browser build stayed green: `npm run build:neat-chat` -> PASS.
 - Final shipped-browser probe cleared the requested four-turn bar on the shipped snapshot: `hello agent` -> `i see`, `how are you today?` -> `sounds great`, `what was that?` -> `i am good`, `looping?` -> `i see`.
+- Archived maintenance validation stayed green after the fallback-order repair: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="neatChat.live-flow.safety"` -> PASS.
 - Tracker sync passed before archive: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/neatChat-live-safety-red.plans.md` -> PASS (`0 errors, 0 warnings`).
 
 ## Reopen conditions

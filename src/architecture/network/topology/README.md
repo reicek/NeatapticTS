@@ -20,47 +20,47 @@ Design Notes:
 
 ### ActivationSchedule
 
-Deterministic activation schedule type used by topology helpers.
+Deterministic activation schedule type produced by topology helpers and consumed by the activation chapter.
 
 ### ActivationScheduleStep
 
-Deterministic activation schedule step type used by topology helpers.
+One ordered step in the deterministic activation schedule produced by the topology sort and consumed at inference time.
 
 ### ActivationSchedulingDiagnostics
 
-Human-friendly activation scheduling diagnostics type used by topology helpers.
+Human-readable activation scheduling diagnostics type carrying node counts, depth, and coverage metadata for inspection.
 
 ### IN_DEGREE_DECREMENT
 
-Unit decrement/increment used for in-degree tally updates.
+Unit step value applied when decrementing or incrementing in-degree tally entries during Kahn queue processing.
 
 ### INPUT_NODE_TYPE
 
-Input node-type discriminator used for queue seeding.
+Input node-type discriminator used to seed the Kahn topological sort with source nodes that have no predecessors.
 
 ### PathSearchContext
 
-Mutable context used while running iterative DFS reachability checks.
+Mutable scratch context allocated and carried while running iterative depth-first reachability checks across the graph.
 
 ### TopologyBuildContext
 
-Mutable context used while building Kahn topological order.
+Mutable scratch context allocated and carried while building the Kahn-algorithm topological activation order.
 
 ### TopologyNetwork
 
-Network instance type used by topology helpers.
+Network instance type alias used by topology helpers to avoid direct runtime imports at the utility boundary.
 
 ### TopologyNetworkProps
 
-Internal topology state view carried across helper groups.
+Internal topology state view carrying network node and connection lists across all topology helper groups consistently.
 
 ### TopologyNode
 
-Node instance type used by topology helpers.
+Node instance type alias used by topology helpers to avoid direct runtime imports at the utility boundary.
 
 ### ZERO_COUNT
 
-Zero baseline used for degree counts and empty-size checks.
+Zero baseline value used to initialize degree counters and empty-size comparisons during topological scheduling.
 
 ## architecture/network/topology/network.topology.utils.ts
 
@@ -137,7 +137,14 @@ hasPath(
 ): boolean
 ```
 
-Depth-first reachability test (avoids infinite loops via visited set).
+Depth-first reachability test that avoids infinite loops using a visited set.
+
+### networkTopologyUtils
+
+Default export bundle for the topology utilities chapter.
+
+Bundles the core topology helpers so the network facade can bind them as methods
+without importing each function individually.
 
 ### rebuildConnections
 
@@ -147,7 +154,7 @@ rebuildConnections(
 ): void
 ```
 
-Rebuild the canonical connection array from per-node outgoing lists.
+Rebuild the canonical connection array from all per-node outgoing lists.
 
 Parameters:
 - `networkInstance` - Target network.
@@ -351,7 +358,7 @@ processKahnQueue(
 ): void
 ```
 
-Process queue until all available nodes are emitted.
+Process the Kahn queue until all available topology nodes are emitted.
 
 Parameters:
 - `buildContext` - Mutable build context.
@@ -417,7 +424,7 @@ sortNodesByStableTieBreak(
 ): default[]
 ```
 
-Sort one node collection by the deterministic activation tie-break.
+Sort one node collection by the deterministic activation wave tie-break order.
 
 Parameters:
 - `nodes` - Candidate nodes.
@@ -450,7 +457,7 @@ createPathSearchContext(
 ): PathSearchContext
 ```
 
-Create DFS search context.
+Create a depth-first search context for reachability testing between two topology nodes.
 
 Parameters:
 - `from` - Origin node.
@@ -484,7 +491,7 @@ isSameNode(
 ): boolean
 ```
 
-Compare node identity.
+Compare two node references by strict identity and return true when they refer to the same node.
 
 Parameters:
 - `leftNode` - Left node.
@@ -566,7 +573,7 @@ traversePathSearch(
 ): boolean
 ```
 
-Traverse DFS search stack and test reachability.
+Traverse the DFS search stack and test whether the target node is reachable.
 
 Parameters:
 - `searchContext` - Mutable search context.
@@ -599,7 +606,7 @@ asTopologyProps(
 ): TopologyNetworkProps
 ```
 
-Cast network to internal topology props view.
+Cast a network instance to the internal topology props view for flag access.
 
 Parameters:
 - `network` - Network instance.
@@ -715,7 +722,7 @@ finalizeRecurrentSchedule(
 ): void
 ```
 
-Build and cache the deterministic recurrent schedule.
+Build and cache the deterministic recurrent activation schedule for the network.
 
 Parameters:
 - `network` - Network instance.
@@ -1208,7 +1215,7 @@ rebuildConnections(
 ): void
 ```
 
-Rebuild the canonical connection array from per-node outgoing lists.
+Rebuild the canonical connection array from all per-node outgoing lists.
 
 Parameters:
 - `networkInstance` - Target network.

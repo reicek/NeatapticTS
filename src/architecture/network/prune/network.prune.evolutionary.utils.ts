@@ -16,7 +16,7 @@ import {
 } from './network.prune.utils.types';
 
 /**
- * Clamp evolutionary target sparsity to safe operational bounds.
+ * Clamp evolutionary target sparsity to safe operational bounds for pruning.
  * @param rawTargetSparsity - Requested target sparsity.
  * @returns Normalized target sparsity.
  */
@@ -113,7 +113,7 @@ export function disconnectEvolutionaryConnections(
 }
 
 /**
- * Mark topology cache as dirty after evolutionary pruning.
+ * Mark the topology cache as dirty after evolutionary pruning removes connections.
  * @param currentNetwork - Network with changed structure.
  * @returns Nothing.
  */

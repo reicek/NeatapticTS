@@ -278,3 +278,207 @@ Raised when ONE_TO_ONE group connections are requested for groups of different s
 ### GroupSizeMismatchError
 
 Raised when caller-provided group values do not match the number of nodes.
+
+## architecture/group/group.utils.ts
+
+Structural helper utilities for the Group connect, gate, and disconnect operations.
+
+These helpers are extracted from the Group class methods to keep each public
+method below the complexity threshold. All functions are pure structural
+utilities — they do not hold state and have no side-effects beyond the
+explicit mutation of the arguments they receive.
+
+### collectUniqueSourceNodes
+
+```ts
+collectUniqueSourceNodes(
+  connections: default[],
+): default[]
+```
+
+Collect unique source nodes referenced by a set of connections.
+
+Preserves first-seen order so gating index assignment is deterministic.
+
+### connectAllToAll
+
+```ts
+connectAllToAll(
+  source: default,
+  target: default,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
+
+Connect source group to target group using ALL_TO_ALL or ALL_TO_ELSE semantics.
+
+Skips self-pairs when ALL_TO_ELSE is requested. Registers every created
+connection on both groups' bookkeeping lists.
+
+### connectGroupToGroup
+
+```ts
+connectGroupToGroup(
+  source: default,
+  target: default,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
+
+Connect source group to target group, dispatching to the correct connection method.
+
+Resolves a default method when none is provided and delegates to ALL_TO_ALL,
+ALL_TO_ELSE, or ONE_TO_ONE helpers.
+
+### connectGroupToLayer
+
+```ts
+connectGroupToLayer(
+  source: default,
+  target: default,
+  method: unknown,
+  weight: number | undefined,
+): default[]
+```
+
+Connect source group to target layer, delegating to the layer's input method.
+
+### connectGroupToNode
+
+```ts
+connectGroupToNode(
+  source: default,
+  target: default,
+  weight: number | undefined,
+): default[]
+```
+
+Connect every node in source group to a single target node.
+
+Registers each created connection on the source group's outbound list.
+
+### connectOneToOne
+
+```ts
+connectOneToOne(
+  source: default,
+  target: default,
+  weight: number | undefined,
+): default[]
+```
+
+Connect source group to target group using ONE_TO_ONE semantics.
+
+Throws when the groups differ in size. Registers self-connections on
+the self shelf when source and target are the same group object.
+
+### disconnectGroupFromGroup
+
+```ts
+disconnectGroupFromGroup(
+  source: default,
+  target: default,
+  twosided: boolean,
+): void
+```
+
+Disconnect every source node in the group from every target node in another group.
+
+Also removes the disconnected connections from both groups' bookkeeping lists.
+When twosided is true, the reverse connections are removed as well.
+
+### disconnectGroupFromNode
+
+```ts
+disconnectGroupFromNode(
+  source: default,
+  target: default,
+  twosided: boolean,
+): void
+```
+
+Disconnect every node in the group from a single target node.
+
+Removes the disconnected connections from the source group's outbound list.
+When twosided is true, reverse connections are removed from the inbound list.
+
+### gateByInput
+
+```ts
+gateByInput(
+  group: default,
+  gatedConnections: default[],
+): void
+```
+
+Apply INPUT gating: assign each connection to the group node at connection-index modulo group size.
+
+### gateByOutput
+
+```ts
+gateByOutput(
+  group: default,
+  gatedConnections: default[],
+  sourceNodes: default[],
+): void
+```
+
+Apply OUTPUT gating: for each source node, gate its matching outbound connections.
+
+### gateBySelf
+
+```ts
+gateBySelf(
+  group: default,
+  gatedConnections: default[],
+  sourceNodes: default[],
+): void
+```
+
+Apply SELF gating: for each source node, gate its self-connection when present in the set.
+
+### removeInboundConnection
+
+```ts
+removeInboundConnection(
+  connectionList: default[],
+  from: default,
+  to: default,
+): void
+```
+
+Remove the first matching inbound connection from a connection list.
+
+Mirrors `removeOutboundConnection` for the receiving side of an edge.
+
+### removeOutboundConnection
+
+```ts
+removeOutboundConnection(
+  connectionList: default[],
+  from: default,
+  to: default,
+): void
+```
+
+Remove the first matching outbound connection from a connection list.
+
+Walks the list in reverse to avoid index-shift errors during splice. Stops
+after the first removal because each source/target pair appears at most once.
+
+### resolveDefaultGroupConnectionMethod
+
+```ts
+resolveDefaultGroupConnectionMethod(
+  source: default,
+  target: default,
+): unknown
+```
+
+Resolve the default group-connection method when none is provided by the caller.
+
+Returns ALL_TO_ALL for distinct source/target groups and ONE_TO_ONE when a
+group is wired to itself, emitting a console warning for each case when
+warnings are enabled.

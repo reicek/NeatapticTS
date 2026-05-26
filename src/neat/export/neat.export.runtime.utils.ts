@@ -6,6 +6,19 @@ import type {
   NeatRuntimeMetaJSON,
 } from './neat.export.types';
 
+type NumericRuntimeFieldName =
+  | 'nextGenomeId'
+  | 'nextConnectionInnovation'
+  | 'nextNodeGeneId'
+  | 'nextNodeIndex'
+  | 'rngState'
+  | 'lastInbreedingCount'
+  | 'lastGlobalImproveGeneration'
+  | 'adaptivePruneLevel'
+  | 'adaptivePruneBaseline';
+
+type BooleanRuntimeFieldName = 'lineageEnabled';
+
 /**
  * Serialize controller runtime state that is independent of the live population.
  *
@@ -30,53 +43,50 @@ export function serializeRuntimeMeta(
   const runtime: NeatRuntimeMetaJSON = {};
   const architectureCounters = readArchitectureCounters();
 
-  if (typeof internal._nextGenomeId === 'number') {
-    runtime.nextGenomeId = internal._nextGenomeId;
-  }
-  runtime.nextConnectionInnovation =
-    architectureCounters.nextConnectionInnovation;
-  runtime.nextNodeGeneId = architectureCounters.nextNodeGeneId;
-  runtime.nextNodeIndex = architectureCounters.nextNodeIndex;
-  if (typeof internal._lineageEnabled === 'boolean') {
-    runtime.lineageEnabled = internal._lineageEnabled;
-  }
-  const rngState = exportRngState(internal);
-  if (typeof rngState === 'number') {
-    runtime.rngState = rngState;
-  }
-  if (typeof internal._lastInbreedingCount === 'number') {
-    runtime.lastInbreedingCount = internal._lastInbreedingCount;
-  }
-  if (typeof internal._lastGlobalImproveGeneration === 'number') {
-    runtime.lastGlobalImproveGeneration = internal._lastGlobalImproveGeneration;
-  }
-  if (typeof internal._adaptivePruneLevel === 'number') {
-    runtime.adaptivePruneLevel = internal._adaptivePruneLevel;
-  }
-  if (typeof internal._adaptivePruneBaseline === 'number') {
-    runtime.adaptivePruneBaseline = internal._adaptivePruneBaseline;
-  }
-  if (
-    Array.isArray(internal._noveltyArchive) &&
-    internal._noveltyArchive.length > 0
-  ) {
-    runtime.noveltyArchive = structuredClone(internal._noveltyArchive);
-  }
-  if (Array.isArray(internal._speciesHistory)) {
-    runtime.speciesHistory = structuredClone(internal._speciesHistory);
-  }
-  if (
-    internal._operatorStats instanceof Map &&
-    internal._operatorStats.size > 0
-  ) {
-    runtime.operatorStats = Array.from(
-      internal._operatorStats.entries(),
-      ([methodName, operatorStats]) => [
-        methodName,
-        structuredClone(operatorStats),
-      ],
-    );
-  }
+  assignOptionalRuntimeNumber(runtime, 'nextGenomeId', internal._nextGenomeId);
+  assignOptionalRuntimeNumber(
+    runtime,
+    'nextConnectionInnovation',
+    architectureCounters.nextConnectionInnovation,
+  );
+  assignOptionalRuntimeNumber(
+    runtime,
+    'nextNodeGeneId',
+    architectureCounters.nextNodeGeneId,
+  );
+  assignOptionalRuntimeNumber(
+    runtime,
+    'nextNodeIndex',
+    architectureCounters.nextNodeIndex,
+  );
+  assignOptionalRuntimeBoolean(
+    runtime,
+    'lineageEnabled',
+    internal._lineageEnabled,
+  );
+  assignOptionalRuntimeNumber(runtime, 'rngState', exportRngState(internal));
+  assignOptionalRuntimeNumber(
+    runtime,
+    'lastInbreedingCount',
+    internal._lastInbreedingCount,
+  );
+  assignOptionalRuntimeNumber(
+    runtime,
+    'lastGlobalImproveGeneration',
+    internal._lastGlobalImproveGeneration,
+  );
+  assignOptionalRuntimeNumber(
+    runtime,
+    'adaptivePruneLevel',
+    internal._adaptivePruneLevel,
+  );
+  assignOptionalRuntimeNumber(
+    runtime,
+    'adaptivePruneBaseline',
+    internal._adaptivePruneBaseline,
+  );
+  serializeRuntimeCollections(runtime, internal);
+  serializeRuntimeOperatorStats(runtime, internal);
 
   return runtime;
 }
@@ -100,29 +110,121 @@ export function restoreRuntimeMeta(
     return;
   }
 
-  if (typeof runtimeMeta.nextGenomeId === 'number') {
-    neatInstance._nextGenomeId = runtimeMeta.nextGenomeId;
-  }
+  restoreOptionalRuntimeNumber(runtimeMeta.nextGenomeId, (nextGenomeId) => {
+    neatInstance._nextGenomeId = nextGenomeId;
+  });
   restoreArchitectureCounters(runtimeMeta);
-  if (typeof runtimeMeta.lineageEnabled === 'boolean') {
-    neatInstance._lineageEnabled = runtimeMeta.lineageEnabled;
+  restoreOptionalRuntimeBoolean(
+    runtimeMeta.lineageEnabled,
+    (lineageEnabled) => {
+      neatInstance._lineageEnabled = lineageEnabled;
+    },
+  );
+  restoreOptionalRuntimeNumber(runtimeMeta.rngState, (rngState) => {
+    restoreRngState(neatInstance, rngState);
+  });
+  restoreOptionalRuntimeNumber(
+    runtimeMeta.lastInbreedingCount,
+    (lastInbreedingCount) => {
+      neatInstance._lastInbreedingCount = lastInbreedingCount;
+    },
+  );
+  restoreOptionalRuntimeNumber(
+    runtimeMeta.lastGlobalImproveGeneration,
+    (lastGlobalImproveGeneration) => {
+      neatInstance._lastGlobalImproveGeneration = lastGlobalImproveGeneration;
+    },
+  );
+  restoreOptionalRuntimeNumber(
+    runtimeMeta.adaptivePruneLevel,
+    (adaptivePruneLevel) => {
+      neatInstance._adaptivePruneLevel = adaptivePruneLevel;
+    },
+  );
+  restoreOptionalRuntimeNumber(
+    runtimeMeta.adaptivePruneBaseline,
+    (adaptivePruneBaseline) => {
+      neatInstance._adaptivePruneBaseline = adaptivePruneBaseline;
+    },
+  );
+  restoreRuntimeCollections(neatInstance, runtimeMeta);
+}
+
+function assignOptionalRuntimeNumber(
+  runtime: NeatRuntimeMetaJSON,
+  fieldName: NumericRuntimeFieldName,
+  value: number | undefined,
+): void {
+  if (typeof value === 'number') {
+    runtime[fieldName] = value;
   }
-  if (typeof runtimeMeta.rngState === 'number') {
-    restoreRngState(neatInstance, runtimeMeta.rngState);
+}
+
+function assignOptionalRuntimeBoolean(
+  runtime: NeatRuntimeMetaJSON,
+  fieldName: BooleanRuntimeFieldName,
+  value: boolean | undefined,
+): void {
+  if (typeof value === 'boolean') {
+    runtime[fieldName] = value;
   }
-  if (typeof runtimeMeta.lastInbreedingCount === 'number') {
-    neatInstance._lastInbreedingCount = runtimeMeta.lastInbreedingCount;
+}
+
+function serializeRuntimeCollections(
+  runtime: NeatRuntimeMetaJSON,
+  internal: NeatControllerForExport,
+): void {
+  if (
+    Array.isArray(internal._noveltyArchive) &&
+    internal._noveltyArchive.length > 0
+  ) {
+    runtime.noveltyArchive = structuredClone(internal._noveltyArchive);
   }
-  if (typeof runtimeMeta.lastGlobalImproveGeneration === 'number') {
-    neatInstance._lastGlobalImproveGeneration =
-      runtimeMeta.lastGlobalImproveGeneration;
+  if (Array.isArray(internal._speciesHistory)) {
+    runtime.speciesHistory = structuredClone(internal._speciesHistory);
   }
-  if (typeof runtimeMeta.adaptivePruneLevel === 'number') {
-    neatInstance._adaptivePruneLevel = runtimeMeta.adaptivePruneLevel;
+}
+
+function serializeRuntimeOperatorStats(
+  runtime: NeatRuntimeMetaJSON,
+  internal: NeatControllerForExport,
+): void {
+  if (
+    internal._operatorStats instanceof Map &&
+    internal._operatorStats.size > 0
+  ) {
+    runtime.operatorStats = Array.from(
+      internal._operatorStats.entries(),
+      ([methodName, operatorStats]) => [
+        methodName,
+        structuredClone(operatorStats),
+      ],
+    );
   }
-  if (typeof runtimeMeta.adaptivePruneBaseline === 'number') {
-    neatInstance._adaptivePruneBaseline = runtimeMeta.adaptivePruneBaseline;
+}
+
+function restoreOptionalRuntimeNumber(
+  value: number | undefined,
+  apply: (value: number) => void,
+): void {
+  if (typeof value === 'number') {
+    apply(value);
   }
+}
+
+function restoreOptionalRuntimeBoolean(
+  value: boolean | undefined,
+  apply: (value: boolean) => void,
+): void {
+  if (typeof value === 'boolean') {
+    apply(value);
+  }
+}
+
+function restoreRuntimeCollections(
+  neatInstance: NeatControllerForExport,
+  runtimeMeta: NeatRuntimeMetaJSON,
+): void {
   if (Array.isArray(runtimeMeta.noveltyArchive)) {
     neatInstance._noveltyArchive = structuredClone(runtimeMeta.noveltyArchive);
   }

@@ -127,7 +127,7 @@ export function resolveOnnxActivationNodeConfig(
 }
 
 /**
- * Infer strictly layered ordering from a network.
+ * Infer a strictly layered node ordering from an analyzed network structure.
  *
  * @param network Source network.
  * @returns Ordered layers: input, hidden..., output.

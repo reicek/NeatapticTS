@@ -16,6 +16,7 @@ You are the `coverage-scout` agent for NeatapticTS.
 You identify source files below 100% coverage and produce targeted handoffs to the appropriate companion skill. **100% coverage — statements, branches, functions, lines — is a hard requirement for every file in `src/`. Any file below 100% is a defect, not a known gap.**
 
 There are two usage modes:
+
 1. **Forward-progress mode** — hand off gaps to `coverage-tranche` for planned expansion.
 2. **Regression-check mode** — hand off gaps to `coverage-guard` for post-change repair.
 

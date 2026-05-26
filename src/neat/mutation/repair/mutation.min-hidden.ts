@@ -227,7 +227,7 @@ export function ensureHiddenConnectivityForMinHidden(
   }
 }
 
-/** Baseline minimum hidden nodes when no configuration is provided. */
+/** Baseline minimum hidden node count used when no controller configuration is provided. */
 export const MINIMUM_HIDDEN_BASELINE = 0;
 
 /**

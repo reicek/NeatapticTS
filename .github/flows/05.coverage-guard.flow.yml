@@ -1,6 +1,6 @@
-id: "05.coverage-guard"
-name: "Coverage Guard Confirmation"
-agent: "05-green-testing"
+id: '05.coverage-guard'
+name: 'Coverage Guard Confirmation'
+agent: '05-green-testing'
 description: >
   Confirms that every src/ file touched in the current phase maintains 100%
   statements, branches, functions, and lines. Runs a focused coverage slice
@@ -8,24 +8,24 @@ description: >
   before any implementation phase can be marked DONE when src/ was touched.
 
 triggers:
-  - "Any src/ file was touched in the current phase"
-  - "Coverage verification required before marking an implementation step done"
-  - "04-implementing returns with FILES_CHANGED containing src/ paths"
-  - "Coverage tranche step completed; full 100% confirmation required"
+  - 'Any src/ file was touched in the current phase'
+  - 'Coverage verification required before marking an implementation step done'
+  - '04-implementing returns with FILES_CHANGED containing src/ paths'
+  - 'Coverage tranche step completed; full 100% confirmation required'
 
 gates:
-  - "plan-sync"
-  - "green-validation-evidence"
+  - 'plan-sync'
+  - 'green-validation-evidence'
 
 post-phase-fanout:
-  - "07-logging"
+  - '07-logging'
 
 skills:
-  - "coverage-guard"
-  - "running-unit-tests"
+  - 'coverage-guard'
+  - 'running-unit-tests'
 
 specialists:
-  - "Coverage Guard"
-  - "Coverage Scout"
+  - 'Coverage Guard'
+  - 'Coverage Scout'
 
 timeout-minutes: 20

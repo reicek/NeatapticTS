@@ -1,6 +1,6 @@
-id: "01.plan-registration"
-name: "New Plan Registration and Sync"
-agent: "01-planning"
+id: '01.plan-registration'
+name: 'New Plan Registration and Sync'
+agent: '01-planning'
 description: >
   Registers a newly created plan file in plans/README.md and plans/Roadmap.md,
   confirms the plan-sync gate passes, and activates the first phase step.
@@ -11,25 +11,25 @@ description: >
   src/ or numbered agent frontmatter.
 
 triggers:
-  - "New plan file created but not yet registered in README or Roadmap"
-  - "plan-sync gate fails because plan is missing from plans/README.md"
-  - "User asks 01-planning to register a new workstream plan"
-  - "Roadmap entry is stale or plan status marker is inconsistent"
+  - 'New plan file created but not yet registered in README or Roadmap'
+  - 'plan-sync gate fails because plan is missing from plans/README.md'
+  - 'User asks 01-planning to register a new workstream plan'
+  - 'Roadmap entry is stale or plan status marker is inconsistent'
 
 gates:
-  - "plan-sync"
-  - "planning-output-contract"
+  - 'plan-sync'
+  - 'planning-output-contract'
 
 post-phase-fanout:
-  - "02-researching"
+  - '02-researching'
 
 skills:
-  - "plan-alignment"
-  - "plan-sync-validation"
-  - "tracker-handoff"
+  - 'plan-alignment'
+  - 'plan-sync-validation'
+  - 'tracker-handoff'
 
 specialists:
-  - "Plan Registration Auditor"
-  - "Plan Scout"
+  - 'Plan Registration Auditor'
+  - 'Plan Scout'
 
 timeout-minutes: 15

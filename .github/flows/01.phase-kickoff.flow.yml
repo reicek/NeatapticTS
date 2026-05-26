@@ -1,6 +1,6 @@
-id: "01.phase-kickoff"
-name: "Phase Kickoff and Step Packet Authoring"
-agent: "01-planning"
+id: '01.phase-kickoff'
+name: 'Phase Kickoff and Step Packet Authoring'
+agent: '01-planning'
 description: >
   Converts a new phase objective into numbered step packets ready for
   downstream SDLC agents. Pulls the current plan state via the MCP workflow
@@ -13,30 +13,30 @@ description: >
   where a red, green, docs, or logging step adds no value.
 
 triggers:
-  - "New phase objective approved and plan has no step packets yet"
-  - "Phase transition needed after previous phase marked [DONE]"
-  - "User asks 01-planning to start a new migration phase"
-  - "Plan tracker has a NEXT: item pointing to a new phase start"
+  - 'New phase objective approved and plan has no step packets yet'
+  - 'Phase transition needed after previous phase marked [DONE]'
+  - 'User asks 01-planning to start a new migration phase'
+  - 'Plan tracker has a NEXT: item pointing to a new phase start'
 
 gates:
-  - "plan-sync"
-  - "step-packet"
-  - "planning-output-contract"
+  - 'plan-sync'
+  - 'step-packet'
+  - 'planning-output-contract'
 
 post-phase-fanout:
-  - "02-researching"
-  - "04-implementing"
+  - '02-researching'
+  - '04-implementing'
 
 skills:
-  - "plan-alignment"
-  - "tracker-handoff"
-  - "phase-handoff-workflow"
-  - "plan-sync-validation"
+  - 'plan-alignment'
+  - 'tracker-handoff'
+  - 'phase-handoff-workflow'
+  - 'plan-sync-validation'
 
 specialists:
-  - "Plan Scout"
-  - "planning-risk-coordinator"
-  - "planning-test-strategy-coordinator"
-  - "Plan Registration Auditor"
+  - 'Plan Scout'
+  - 'planning-risk-coordinator'
+  - 'planning-test-strategy-coordinator'
+  - 'Plan Registration Auditor'
 
 timeout-minutes: 25

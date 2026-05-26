@@ -34,15 +34,15 @@ console.log('First weight from->to', slab.weights[0], slab.from[0], slab.to[0]);
 
 ### BuildAdjacencyContext
 
-Shared immutable inputs used across the adjacency build pipeline.
+Shared immutable inputs used across the CSR adjacency build pipeline for outgoing-order construction.
 
 ### ConnectionInternals
 
-Internal Connection properties accessed during slab operations.
+Internal Connection properties accessed during slab build, serialization, and typed-array buffer write operations.
 
 ### ConnectionSlabView
 
-Shape returned by getConnectionSlab describing the packed SoA view.
+Packed SoA view returned by getConnectionSlab exposing typed-array weight, index, and flag buffers.
 
 ### FanOutCollectionContext
 
@@ -50,27 +50,27 @@ Context for fan-out collection: build inputs plus the output count buffer.
 
 ### FastSlabNodeRuntime
 
-Node shape required by fast slab activation kernels.
+Node shape required by fast slab activation kernels for typed-array forward pass inference.
 
 ### NetworkActivationRuntime
 
-Runtime activation contract used by slab-based execution paths.
+Runtime activation contract consumed by slab-based forward-pass execution paths for network inference.
 
 ### NetworkSlabProps
 
-Internal Network properties for slab operations.
+Internal Network properties used by slab orchestration for typed-array buffer management and dirty tracking.
 
 ### NetworkTopoRuntime
 
-Runtime topology contract used to lazily rebuild topological order.
+Runtime topology contract used to lazily rebuild topological order when the activation cache is dirty.
 
 ### OutgoingOrderBuildContext
 
-Context for constructing source-grouped outgoing connection order.
+Context for constructing the source-grouped outgoing connection order from precomputed CSR start indices.
 
 ### PoolKeyMetrics
 
-Per-pool-key allocation & reuse counters (educational / diagnostics).
+Per-pool-key allocation and reuse counters used for educational diagnostics and memory-pool observability.
 
 ### PublishAdjacencyContext
 
@@ -82,11 +82,11 @@ Default async slab rebuild chunk size when no override is provided.
 
 ### SLAB_GROWTH_FACTOR_BROWSER
 
-Capacity growth factor for browser slab allocations.
+Capacity growth factor for browser runtime slab allocations, tuned for tighter memory environments.
 
 ### SLAB_GROWTH_FACTOR_NODE
 
-Capacity growth factor for Node.js slab allocations.
+Capacity growth factor for Node.js runtime slab allocations, scaled conservatively to allow large networks.
 
 ### SLAB_ONE
 
@@ -102,11 +102,11 @@ Immutable inputs required to build or grow connection slab buffers.
 
 ### SlabPopulateResult
 
-Result of scanning and populating optional gain/plastic slab arrays.
+Result of scanning and populating optional gain and plastic typed-array slab buffers.
 
 ### SlabWriteArrays
 
-Writable slab arrays targeted during connection serialization.
+Writable typed-array slab buffers targeted during connection serialization and buffer population.
 
 ### StartIndicesBuildContext
 
@@ -114,11 +114,11 @@ Context for constructing CSR start offsets from precomputed fan-out counts.
 
 ### TypedArray
 
-Union of slab typed array element container types.
+Union of slab typed array element container types supported by activation buffer allocation.
 
 ### TypedArrayConstructor
 
-Constructor type for typed arrays used in slabs.
+Constructor type for typed arrays used in activation slab allocation and dynamic buffer growth.
 
 ## architecture/network/slab/network.slab.utils.ts
 
@@ -140,7 +140,7 @@ Returns: True when slab fast path predicates hold.
 
 ### ConnectionSlabView
 
-Shape returned by getConnectionSlab describing the packed SoA view.
+Packed SoA view returned by getConnectionSlab exposing typed-array weight, index, and flag buffers.
 
 ### fastSlabActivate
 
@@ -339,7 +339,7 @@ _readSlabVersion(
 ): number
 ```
 
-Reads the current monotonic slab version from network internals.
+Reads the current monotonic slab version counter from network internals.
 
 Parameters:
 - `network` - Target network.
@@ -388,7 +388,7 @@ _prepareSlabBuildPreconditions(
 ): void
 ```
 
-Applies prerequisite normalization for slab rebuild passes.
+Applies all required prerequisite normalization steps before starting slab rebuild passes.
 
 Parameters:
 - `buildContext` - Slab build context.
@@ -1354,6 +1354,40 @@ Parameters:
 - `internalNet` - Internal slab runtime shape.
 
 Returns: True when all required slabs/adjacency arrays exist.
+
+### _hasFastSlabRegularizationBlockers
+
+```ts
+_hasFastSlabRegularizationBlockers(
+  network: default,
+  internalNet: NetworkSlabProps,
+): boolean
+```
+
+Check runtime regularization features that invalidate slab fast-path execution.
+
+Parameters:
+- `network` - Target network.
+- `internalNet` - Internal slab runtime shape.
+
+Returns: True when a blocker is present.
+
+### _hasFastSlabStructuralEligibility
+
+```ts
+_hasFastSlabStructuralEligibility(
+  network: default,
+  internalNet: NetworkSlabProps,
+): boolean
+```
+
+Check topology and structure constraints that must hold before the slab fast path can execute.
+
+Parameters:
+- `network` - Target network.
+- `internalNet` - Internal slab runtime shape.
+
+Returns: True when structure-level fast-path constraints hold.
 
 ### _maybeActivateNonInputNode
 

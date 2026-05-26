@@ -10,6 +10,27 @@ interface MetricsContractReport {
   isSchemaValid: boolean;
   lastKey?: string;
   missingFields: string[];
+  summary?: {
+    coverage?: {
+      available: boolean;
+      filesBelow100: number;
+      filesBelow100Detail: Array<{
+        branches: number;
+        file: string;
+        functions: number;
+        lines: number;
+        statementCoverageSource: string;
+        statements: number;
+        uncoveredBranches: Array<{ branch: string; block: string; line: number; taken: number | null }>;
+        uncoveredFunctions: string[];
+        uncoveredLines: number[];
+      }>;
+      overallBranches: number;
+      overallFunctions: number;
+      overallLines: number;
+      totalFiles: number;
+    };
+  };
 }
 
 interface SpawnedJsonResult<ReportType> {
@@ -114,6 +135,17 @@ describe('docs-quality metrics red contracts', () => {
       report: expect.objectContaining({
         firstKey: 'summary',
         lastKey: 'evidence',
+        summary: expect.objectContaining({
+          coverage: expect.objectContaining({
+            available: true,
+            totalFiles: expect.any(Number),
+            filesBelow100: expect.any(Number),
+            filesBelow100Detail: expect.any(Array),
+            overallLines: expect.any(Number),
+            overallBranches: expect.any(Number),
+            overallFunctions: expect.any(Number),
+          }),
+        }),
       }),
       status: 0,
     }));

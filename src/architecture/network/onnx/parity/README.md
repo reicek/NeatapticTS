@@ -65,11 +65,11 @@ deterministic summaries without reimplementing the execution seam.
 
 ### OnnxRuntimeParityResult
 
-Runtime-parity result union for the Phase 9 harness seam.
+Runtime-parity result union type for the Phase 9 test harness seam.
 
 ### OnnxRuntimeParitySkippedResult
 
-Result for one inventory-only Phase 9 runtime-parity fixture.
+Result for one inventory-only skipped Phase 9 runtime-parity test fixture.
 
 ### OnnxRuntimeParityTolerancePacket
 

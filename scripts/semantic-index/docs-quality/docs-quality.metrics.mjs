@@ -38,6 +38,7 @@ export async function runDocsQualityMetrics(options = {}) {
     minJsdocWords: thresholds.minJsdocWords,
     sourcePaths: scopeConfig.scopeType === 'paths' ? scopeConfig.scopeValue : undefined,
   });
+  const coverage = await parseLcovSummary(path.resolve(process.cwd(), 'coverage', 'lcov.info'));
 
   const canonicalEvidence = normalizeDocsQualityEvidence(scannerReport.evidence);
   const issueBreakdown = summarizeIssueBreakdown(canonicalEvidence);
@@ -47,6 +48,7 @@ export async function runDocsQualityMetrics(options = {}) {
     missingJsdoc: issueBreakdown.missingJsdoc,
     weakCount: issueBreakdown.weakJsdoc,
     weakJsdoc: issueBreakdown.weakJsdoc,
+    coverage,
   };
 
   const normalizedEvidenceDigest = computeNormalizedEvidenceDigest(canonicalEvidence);
@@ -78,6 +80,7 @@ export async function runDocsQualityMetrics(options = {}) {
     },
     scopeType: scopeConfig.scopeType,
     scopeDigest: sourcePathsDigest,
+    coverage,
   };
 
   const validation = validateDocsQualityManifestV1(manifest);
@@ -160,6 +163,257 @@ function summarizeIssueBreakdown(canonicalEvidence) {
   }
 
   return issueBreakdown;
+}
+
+/**
+ * Parse a repo coverage artifact into a small additive summary.
+ *
+ * @param {string} lcovPath - Absolute path to coverage/lcov.info.
+ * @returns {Promise<{ available: false } | { available: true, filesBelow100: number, overallBranches: number, overallFunctions: number, overallLines: number, totalFiles: number }>} Coverage summary.
+ */
+async function parseLcovSummary(lcovPath) {
+  if (!existsSync(lcovPath)) {
+    return { available: false };
+  }
+
+  const statementCoverageByFile = await readStatementCoverageByFile(
+    path.resolve(process.cwd(), 'coverage', 'coverage-summary.json'),
+  );
+  const lcovContent = await readFile(lcovPath, 'utf8');
+  const coverageRecords = lcovContent
+    .split('end_of_record')
+    .map((record) => record.trim())
+    .filter(Boolean);
+
+  const aggregate = {
+    totalFiles: 0,
+    filesBelow100: 0,
+    lineHits: 0,
+    lineFound: 0,
+    branchHits: 0,
+    branchFound: 0,
+    functionHits: 0,
+    functionFound: 0,
+    filesBelow100Detail: [],
+  };
+
+  for (const coverageRecord of coverageRecords) {
+    if (!coverageRecord.includes('SF:')) continue;
+
+    const coverageFilePath = normalizeCoverageFilePath(readLcovSourceFile(coverageRecord));
+    const lineHits = readLcovCounter(coverageRecord, /^LH:(\d+)$/m);
+    const lineFound = readLcovCounter(coverageRecord, /^LF:(\d+)$/m);
+    const branchHits = readLcovCounter(coverageRecord, /^BRH:(\d+)$/m);
+    const branchFound = readLcovCounter(coverageRecord, /^BRF:(\d+)$/m);
+    const functionHits = readLcovCounter(coverageRecord, /^FNH:(\d+)$/m);
+    const functionFound = readLcovCounter(coverageRecord, /^FNF:(\d+)$/m);
+
+    aggregate.totalFiles += 1;
+    aggregate.lineHits += lineHits;
+    aggregate.lineFound += lineFound;
+    aggregate.branchHits += branchHits;
+    aggregate.branchFound += branchFound;
+    aggregate.functionHits += functionHits;
+    aggregate.functionFound += functionFound;
+
+    const lineCoverage = toCoveragePercent(lineHits, lineFound);
+    const branchCoverage = toCoveragePercent(branchHits, branchFound);
+    const functionCoverage = toCoveragePercent(functionHits, functionFound);
+    if (lineCoverage < 100 || branchCoverage < 100 || functionCoverage < 100) {
+      aggregate.filesBelow100 += 1;
+      const statementCoverage = statementCoverageByFile.get(coverageFilePath);
+      aggregate.filesBelow100Detail.push({
+        file: coverageFilePath,
+        statements: Number.isFinite(statementCoverage) ? statementCoverage : lineCoverage,
+        statementCoverageSource: Number.isFinite(statementCoverage) ? 'coverage-summary' : 'lcov-line-fallback',
+        branches: branchCoverage,
+        functions: functionCoverage,
+        lines: lineCoverage,
+        uncoveredLines: readUncoveredLineNumbers(coverageRecord),
+        uncoveredBranches: readUncoveredBranches(coverageRecord),
+        uncoveredFunctions: readUncoveredFunctionNames(coverageRecord),
+      });
+    }
+  }
+
+  return {
+    available: true,
+    totalFiles: aggregate.totalFiles,
+    filesBelow100: aggregate.filesBelow100,
+    filesBelow100Detail: aggregate.filesBelow100Detail.toSorted(compareCoverageDetailRows),
+    overallLines: toCoveragePercent(aggregate.lineHits, aggregate.lineFound),
+    overallBranches: toCoveragePercent(aggregate.branchHits, aggregate.branchFound),
+    overallFunctions: toCoveragePercent(aggregate.functionHits, aggregate.functionFound),
+  };
+}
+
+/**
+ * Read per-file statement percentages from Istanbul's coverage summary when available.
+ *
+ * @param {string} coverageSummaryPath - Absolute path to coverage/coverage-summary.json.
+ * @returns {Promise<Map<string, number>>} Statement coverage percentages keyed by normalized repo path.
+ */
+async function readStatementCoverageByFile(coverageSummaryPath) {
+  if (!existsSync(coverageSummaryPath)) {
+    return new Map();
+  }
+
+  try {
+    const coverageSummary = JSON.parse(await readFile(coverageSummaryPath, 'utf8'));
+    const coverageSummaryEntries = Object.entries(coverageSummary)
+      .filter(([coverageFilePath]) => coverageFilePath !== 'total');
+
+    return new Map(coverageSummaryEntries
+      .map(([coverageFilePath, coverageEntry]) => {
+        if (!isPlainObject(coverageEntry) || !isPlainObject(coverageEntry.statements)) {
+          return null;
+        }
+
+        const statementPercent = Number(coverageEntry.statements.pct);
+        if (!Number.isFinite(statementPercent)) {
+          return null;
+        }
+
+        return [normalizeCoverageFilePath(coverageFilePath), statementPercent];
+      })
+      .filter(Boolean));
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * Read the source file path from an LCOV record.
+ *
+ * @param {string} coverageRecord - One LCOV file record.
+ * @returns {string} Source file path as emitted by LCOV.
+ */
+function readLcovSourceFile(coverageRecord) {
+  const sourceFileMatch = coverageRecord.match(/^SF:(.+)$/m);
+  return sourceFileMatch?.[1]?.trim() ?? 'unknown';
+}
+
+/**
+ * Normalize a coverage source path to a stable repo-relative path when possible.
+ *
+ * @param {string} coverageFilePath - Source file path from coverage artifacts.
+ * @returns {string} Normalized coverage file path.
+ */
+function normalizeCoverageFilePath(coverageFilePath) {
+  if (!coverageFilePath || coverageFilePath === 'unknown') {
+    return 'unknown';
+  }
+
+  if (path.isAbsolute(coverageFilePath)) {
+    const relativePath = path.relative(process.cwd(), coverageFilePath);
+    if (!relativePath.startsWith('..')) {
+      return toRepoRelativePath(relativePath);
+    }
+  }
+
+  return toRepoRelativePath(coverageFilePath);
+}
+
+/**
+ * Read uncovered line numbers from an LCOV record.
+ *
+ * @param {string} coverageRecord - One LCOV file record.
+ * @returns {number[]} Uncovered line numbers.
+ */
+function readUncoveredLineNumbers(coverageRecord) {
+  return coverageRecord
+    .split('\n')
+    .filter((coverageLine) => coverageLine.startsWith('DA:'))
+    .map((coverageLine) => coverageLine.slice(3).split(','))
+    .filter(([, hitCount]) => Number.parseInt(hitCount ?? '0', 10) === 0)
+    .map(([lineNumber]) => Number.parseInt(lineNumber ?? '0', 10))
+    .filter((lineNumber) => Number.isFinite(lineNumber));
+}
+
+/**
+ * Read uncovered branch descriptors from an LCOV record.
+ *
+ * @param {string} coverageRecord - One LCOV file record.
+ * @returns {Array<{ branch: string, block: string, line: number, taken: number | null }>} Uncovered branch metadata.
+ */
+function readUncoveredBranches(coverageRecord) {
+  return coverageRecord
+    .split('\n')
+    .filter((coverageLine) => coverageLine.startsWith('BRDA:'))
+    .map((coverageLine) => coverageLine.slice(5).split(','))
+    .filter(([, , , takenCount]) => takenCount === '-' || Number.parseInt(takenCount ?? '0', 10) === 0)
+    .map(([lineNumber, blockNumber, branchNumber, takenCount]) => ({
+      line: Number.parseInt(lineNumber ?? '0', 10),
+      block: blockNumber ?? '0',
+      branch: branchNumber ?? '0',
+      taken: takenCount === '-' ? null : Number.parseInt(takenCount ?? '0', 10),
+    }))
+    .filter((branchEntry) => Number.isFinite(branchEntry.line));
+}
+
+/**
+ * Read uncovered function names from an LCOV record.
+ *
+ * @param {string} coverageRecord - One LCOV file record.
+ * @returns {string[]} Uncovered function names.
+ */
+function readUncoveredFunctionNames(coverageRecord) {
+  return coverageRecord
+    .split('\n')
+    .filter((coverageLine) => coverageLine.startsWith('FNDA:'))
+    .map((coverageLine) => coverageLine.slice(5).split(','))
+    .filter(([hitCount]) => Number.parseInt(hitCount ?? '0', 10) === 0)
+    .map(([, functionName]) => functionName ?? 'unknown')
+    .filter(Boolean);
+}
+
+/**
+ * Compare per-file coverage rows so the lowest-coverage files sort first.
+ *
+ * @param {{ branches: number, file: string, functions: number, lines: number, statements: number }} leftEntry - Left detail row.
+ * @param {{ branches: number, file: string, functions: number, lines: number, statements: number }} rightEntry - Right detail row.
+ * @returns {number} Sort comparator result.
+ */
+function compareCoverageDetailRows(leftEntry, rightEntry) {
+  const leftWorstCoverage = Math.min(leftEntry.statements, leftEntry.branches, leftEntry.functions, leftEntry.lines);
+  const rightWorstCoverage = Math.min(rightEntry.statements, rightEntry.branches, rightEntry.functions, rightEntry.lines);
+
+  if (leftWorstCoverage !== rightWorstCoverage) {
+    return leftWorstCoverage - rightWorstCoverage;
+  }
+
+  return leftEntry.file.localeCompare(rightEntry.file);
+}
+
+/**
+ * Read one integer counter from an LCOV record.
+ *
+ * @param {string} coverageRecord - One LCOV file record.
+ * @param {RegExp} counterPattern - Regex for the target counter.
+ * @returns {number} Parsed counter value.
+ */
+function readLcovCounter(coverageRecord, counterPattern) {
+  const match = coverageRecord.match(counterPattern);
+  return Number.parseInt(match?.[1] ?? '0', 10);
+}
+
+/**
+ * Convert hit/found counters into an integer coverage percentage.
+ *
+ * @param {number} coveredCount - Covered item count.
+ * @param {number} totalCount - Total item count.
+ * @returns {number} Rounded percentage.
+ */
+function toCoveragePercent(coveredCount, totalCount) {
+  if (totalCount === 0) {
+    return 100;
+  }
+
+  return Math.round((coveredCount / totalCount) * 100);
+}
+
+function isPlainObject(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function resolveGitCommit() {

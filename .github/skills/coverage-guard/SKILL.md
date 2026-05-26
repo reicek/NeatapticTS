@@ -81,6 +81,7 @@ A file is only clear when all four categories show 100%.
 If any category is below 100%, classify the uncovered path before acting:
 
 **Reachable live path** — a legal combination of inputs can reach it:
+
 - Add the **smallest** owner-local test that exercises it.
 - Add it to the nearest existing test file for that boundary.
 - Never create a new test file when an owner-local file already exists.
@@ -88,6 +89,7 @@ If any category is below 100%, classify the uncovered path before acting:
 - Re-run the focused slice to confirm 100%.
 
 **Dead code** — no legal input can reach it:
+
 - Remove the unreachable production branch.
 - Do not write a contorted test to force an unreachable path.
 - Note the removal so the decision is visible in the change.
@@ -145,15 +147,15 @@ now owns the path.
 
 ## Interaction with Other Skills
 
-| Skill | Coverage obligation |
-|---|---|
-| `test-fix-workflow` | Run `coverage-guard` after all fixes are green |
-| `solid-split` | Run `coverage-guard` on every file moved or created |
-| `architecture-builder` | Run `coverage-guard` on every new or modified builder file |
-| `onnx-work` | Run `coverage-guard` on every changed `src/` file |
-| `performance-optimization` | Run `coverage-guard` on every changed `src/` file |
-| `browser-build` | Run `coverage-guard` on every changed `src/` file |
-| `coverage-tranche` | Already enforces 100% per file — no separate gate needed |
+| Skill                      | Coverage obligation                                        |
+| -------------------------- | ---------------------------------------------------------- |
+| `test-fix-workflow`        | Run `coverage-guard` after all fixes are green             |
+| `solid-split`              | Run `coverage-guard` on every file moved or created        |
+| `architecture-builder`     | Run `coverage-guard` on every new or modified builder file |
+| `onnx-work`                | Run `coverage-guard` on every changed `src/` file          |
+| `performance-optimization` | Run `coverage-guard` on every changed `src/` file          |
+| `browser-build`            | Run `coverage-guard` on every changed `src/` file          |
+| `coverage-tranche`         | Already enforces 100% per file — no separate gate needed   |
 
 ## Dead Code Rule
 

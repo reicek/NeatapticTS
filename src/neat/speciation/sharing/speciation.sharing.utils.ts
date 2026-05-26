@@ -109,115 +109,87 @@ export function applyFitnessSharing(
   speciationContext: FitnessSharingContext,
   sharingSigma: number,
 ): void {
-  const useSigmaSharing = sharingSigma > 0;
-
   // Step 1: Route to the sigma-aware or uniform strategy.
-  if (useSigmaSharing) {
+  if (sharingSigma > 0) {
     applySigmaSharing(speciationContext, sharingSigma);
     return;
   }
+
   applyUniformSharing(speciationContext);
+}
 
-  /**
-   * @param context - Fitness sharing context.
-   * @param sigmaValue - Sharing radius used for distance weighting.
-   * @returns Nothing.
-   */
-  function applySigmaSharing(
-    context: FitnessSharingContext,
-    sigmaValue: number,
-  ): void {
-    // Step 1: Apply sigma-based sharing to each species.
-    for (const species of context._species) {
-      const members = species.members as GenomeDetailed[];
-      applySigmaSharingToMembers(context, members, sigmaValue);
+function applySigmaSharing(
+  context: FitnessSharingContext,
+  sigmaValue: number,
+): void {
+  // Step 1: Apply sigma-based sharing to each species.
+  for (const species of context._species) {
+    const members = species.members as GenomeDetailed[];
+    applySigmaSharingToMembers(context, members, sigmaValue);
+  }
+}
+
+function applyUniformSharing(context: FitnessSharingContext): void {
+  // Step 1: Apply uniform sharing across each species.
+  for (const species of context._species) {
+    const members = species.members as GenomeDetailed[];
+    applyUniformSharingToMembers(members);
+  }
+}
+
+function applySigmaSharingToMembers(
+  context: FitnessSharingContext,
+  members: GenomeDetailed[],
+  sigmaValue: number,
+): void {
+  // Step 1: Normalize each member score by its sharing sum.
+  for (let memberIndex = 0; memberIndex < members.length; memberIndex++) {
+    const member = members[memberIndex];
+    if (typeof member.score === 'number') {
+      const sharingSum = computeSharingSum(
+        context,
+        members,
+        memberIndex,
+        member,
+        sigmaValue,
+      );
+      const safeSharingSum = Math.max(sharingSum, SHARING_SUM_FLOOR);
+      member.score = member.score / safeSharingSum;
     }
   }
+}
 
-  /**
-   * @param context - Fitness sharing context.
-   * @returns Nothing.
-   */
-  function applyUniformSharing(context: FitnessSharingContext): void {
-    // Step 1: Apply uniform sharing across each species.
-    for (const species of context._species) {
-      const members = species.members as GenomeDetailed[];
-      applyUniformSharingToMembers(members);
+function applyUniformSharingToMembers(members: GenomeDetailed[]): void {
+  // Step 1: Normalize scores by member count.
+  const memberCount = members.length || DEFAULT_MEMBER_COUNT_FALLBACK;
+  for (const member of members) {
+    if (typeof member.score === 'number') {
+      member.score = member.score / memberCount;
     }
   }
+}
 
-  /**
-   * @param context - Fitness sharing context.
-   * @param members - Members to share fitness within.
-   * @param sigmaValue - Sharing radius used for distance weighting.
-   * @returns Nothing.
-   */
-  function applySigmaSharingToMembers(
-    context: FitnessSharingContext,
-    members: GenomeDetailed[],
-    sigmaValue: number,
-  ): void {
-    // Step 1: Normalize each member score by its sharing sum.
-    for (let memberIndex = 0; memberIndex < members.length; memberIndex++) {
-      const member = members[memberIndex];
-      if (typeof member.score === 'number') {
-        const sharingSum = computeSharingSum(
-          context,
-          members,
-          memberIndex,
-          member,
-          sigmaValue,
-        );
-        const safeSharingSum = Math.max(sharingSum, SHARING_SUM_FLOOR);
-        member.score = member.score / safeSharingSum;
-      }
+function computeSharingSum(
+  context: FitnessSharingContext,
+  members: GenomeDetailed[],
+  memberIndex: number,
+  member: GenomeDetailed,
+  sigmaValue: number,
+): number {
+  // Step 1: Accumulate distance-based sharing contributions.
+  let sharingSum = 0;
+  for (let peerIndex = 0; peerIndex < members.length; peerIndex++) {
+    const peerMember = members[peerIndex];
+    const distance =
+      memberIndex === peerIndex
+        ? SHARING_SELF_DISTANCE
+        : context._compatibilityDistance(member, peerMember);
+    if (distance < sigmaValue) {
+      const ratio = distance / sigmaValue;
+      sharingSum += SHARING_MAX_CONTRIBUTION - ratio * ratio;
     }
   }
-
-  /**
-   * @param members - Members to share fitness within.
-   * @returns Nothing.
-   */
-  function applyUniformSharingToMembers(members: GenomeDetailed[]): void {
-    // Step 1: Normalize scores by member count.
-    const memberCount = members.length || DEFAULT_MEMBER_COUNT_FALLBACK;
-    for (const member of members) {
-      if (typeof member.score === 'number') {
-        member.score = member.score / memberCount;
-      }
-    }
-  }
-
-  /**
-   * @param context - Fitness sharing context.
-   * @param members - All members in the species.
-   * @param memberIndex - Index of the current member.
-   * @param member - Current member being normalized.
-   * @param sigmaValue - Sharing radius used for distance weighting.
-   * @returns Sharing sum for the member.
-   */
-  function computeSharingSum(
-    context: FitnessSharingContext,
-    members: GenomeDetailed[],
-    memberIndex: number,
-    member: GenomeDetailed,
-    sigmaValue: number,
-  ): number {
-    // Step 1: Accumulate distance-based sharing contributions.
-    let sharingSum = 0;
-    for (let peerIndex = 0; peerIndex < members.length; peerIndex++) {
-      const peerMember = members[peerIndex];
-      const distance =
-        memberIndex === peerIndex
-          ? SHARING_SELF_DISTANCE
-          : context._compatibilityDistance(member, peerMember);
-      if (distance < sigmaValue) {
-        const ratio = distance / sigmaValue;
-        sharingSum += SHARING_MAX_CONTRIBUTION - ratio * ratio;
-      }
-    }
-    return sharingSum;
-  }
+  return sharingSum;
 }
 
 /**

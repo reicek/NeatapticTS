@@ -512,6 +512,53 @@ Parameters:
 
 Returns: Signed mutation amount delta.
 
+### resolveMutationAmountSettings
+
+```ts
+resolveMutationAmountSettings(
+  engine: NeatLikeWithAdaptive,
+  config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; },
+): Pick<MutationSettings, "adaptAmount" | "amountSigma" | "maxAmount" | "minAmount" | "mutationAmountDefault">
+```
+
+Resolve mutation-amount settings from adaptive config and engine defaults.
+
+Parameters:
+- `engine` - NEAT engine instance.
+- `config` - Adaptive mutation configuration.
+
+Returns: Amount-related mutation settings.
+
+### resolveMutationRateSettings
+
+```ts
+resolveMutationRateSettings(
+  config: { enabled?: boolean | undefined; learningRate?: number | undefined; min?: number | undefined; max?: number | undefined; adaptEvery?: number | undefined; sigma?: number | undefined; minRate?: number | undefined; maxRate?: number | undefined; strategy?: string | undefined; adaptAmount?: boolean | undefined; minAmount?: number | undefined; maxAmount?: number | undefined; initialRate?: number | undefined; amountSigma?: number | undefined; },
+): Pick<MutationSettings, "initialRate" | "maxRate" | "minRate" | "sigmaBase" | "strategy">
+```
+
+Resolve mutation-rate settings controlled directly by adaptive config.
+
+Parameters:
+- `config` - Adaptive mutation configuration.
+
+Returns: Rate-related mutation settings.
+
+### resolveMutationRuntimeSettings
+
+```ts
+resolveMutationRuntimeSettings(
+  engine: NeatLikeWithAdaptive,
+): Pick<MutationSettings, "generation" | "populationSize">
+```
+
+Resolve generation-scoped runtime counters consumed by adaptive mutation.
+
+Parameters:
+- `engine` - NEAT engine instance.
+
+Returns: Runtime counters mirrored into mutation settings.
+
 ### resolveMutationSettings
 
 ```ts

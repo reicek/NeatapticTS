@@ -59,6 +59,11 @@ health at any time.
 ### Latest validation evidence
 
 - 2026-05-22: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md` -> PASS (`ok: true`, `0 errors`, `0 warnings`, plan status `WIP`).
+- 2026-05-25: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md` -> PASS (`ok: true`, `0 errors`, `0 warnings`, plan status `WIP`).
+- 2026-05-25: `node scripts/agent-customization/mcp/neataptic-gate-mcp.mjs --self-check --json` -> PASS (`ok: true`, `0 errors`, `0 warnings`; `run_gate_check`, `query_tier_graph`, and `query_customization_routing_table` remained healthy after `cortex-first-search` gate registration).
+- 2026-05-25: `node scripts/agent-customization/gates/cortex-first-search.gate.mjs --json` -> EXPECTED ENVIRONMENT FAIL (`pass: false`; semantic index stale at `data/semantic-index.sqlite`; actionable `fixHint`: `node scripts/semantic-index/build-index.mjs`; not treated as an MCP wiring defect because `corpus_mcp_alive: true` and the gate honestly reports a prerequisite miss rather than claiming runtime tool-order validation).
+- 2026-05-25: `node scripts/semantic-index/session-start-index.mjs --json` -> PASS (`databasePath: C:\NeatapticTS\data\semantic-index.sqlite`, `touched: 1257`, `contentChanged: 0`, `onDiskMissing: 0`, `buildPassRan: true`, `buildPassExitCode: 0`, `fatalError: null`), confirming the session-start refresh succeeds locally and the incremental build path stays green on an unchanged workspace.
+- 2026-05-25: `node scripts/agent-customization/gates/cortex-index.gate.mjs --json` -> PASS (`pass: true`; `index_documents: 1257`; `index_fresh: true`; `corpus_mcp_alive: true`; `workflow_mcp_alive: true`; `snapshot_age_seconds: 5209`), confirming the session-start refresh clears the index freshness gate in the current workspace.
 
 ## Handoff query
 

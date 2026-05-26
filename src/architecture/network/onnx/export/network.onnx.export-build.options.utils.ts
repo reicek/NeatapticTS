@@ -8,8 +8,20 @@ import type {
   OnnxResolvedQuantizationOptions,
 } from './network.onnx.export.types';
 
+type RawQuantizationPacket = {
+  mode?: unknown;
+  target?: unknown;
+  targets?: unknown;
+  calibration?: unknown;
+  activationEncoding?: unknown;
+  weightEncoding?: unknown;
+  activationGranularity?: unknown;
+  weightGranularity?: unknown;
+  representation?: unknown;
+};
+
 /**
- * Resolve export options with defaults required by model construction.
+ * Resolve export options with all defaults required by model construction.
  *
  * @param sourceOptions Raw export options.
  * @returns Resolved options used by this builder.
@@ -82,110 +94,184 @@ export function resolveQuantizationOptions(
   networkLayerCount: number,
 ): OnnxResolvedQuantizationOptions {
   if (!sourceOptions.quantization) {
-    return {
-      requested: false,
-      mode: null,
-      fallbackReasons: [],
-    };
+    return createDefaultQuantizationOptions();
   }
 
-  const quantizationPacket = sourceOptions.quantization as {
-    mode?: unknown;
-    target?: unknown;
-    targets?: unknown;
-    calibration?: unknown;
-    activationEncoding?: unknown;
-    weightEncoding?: unknown;
-    activationGranularity?: unknown;
-    weightGranularity?: unknown;
-    representation?: unknown;
-  };
+  const quantizationPacket = asRawQuantizationPacket(sourceOptions);
 
-  if (quantizationPacket.mode === 'dynamic-uint8') {
-    const dynamicTarget = quantizationPacket.target ?? 'dense';
-    if (dynamicTarget !== 'dense') {
-      throw new Error(
-        'Phase 7 dynamic quantization currently supports dense targets only.',
-      );
-    }
-
-    const dynamicRepresentation =
-      quantizationPacket.representation ?? 'metadata-only';
-    if (
-      dynamicRepresentation !== 'DynamicQuantizeLinear' &&
-      dynamicRepresentation !== 'metadata-only'
-    ) {
-      throw new Error(
-        'Phase 7 dynamic quantization must use DynamicQuantizeLinear or metadata-only representation.',
-      );
-    }
-
-    return {
-      requested: true,
-      mode: 'dynamic-uint8',
-      target: 'dense',
-      representation: dynamicRepresentation,
-      fallbackReasons: [],
-    };
+  if (isDynamicQuantizationPacket(quantizationPacket)) {
+    return resolveDynamicQuantizationOptions(quantizationPacket);
   }
 
-  if (quantizationPacket.mode === 'static-8bit') {
-    const staticTargets = Array.isArray(quantizationPacket.targets)
-      ? quantizationPacket.targets.filter(
-          (target): target is 'dense' | 'conv' =>
-            target === 'dense' || target === 'conv',
-        )
-      : [];
-    const calibrationPacket = quantizationPacket.calibration;
-    const resolvedWeightGranularity =
-      quantizationPacket.weightGranularity === 'per-output-channel'
-        ? 'per-output-channel'
-        : 'per-tensor';
-
-    if (!staticTargets.length) {
-      throw new Error(
-        'Phase 7 static-8bit quantization requires at least one dense or conv target.',
-      );
-    }
-
-    if (
-      !calibrationPacket ||
-      typeof calibrationPacket !== 'object' ||
-      (calibrationPacket as { source?: unknown }).source !== 'external'
-    ) {
-      throw new Error(
-        'Phase 7 static-8bit quantization requires an external calibration packet.',
-      );
-    }
-
-    const resolvedCalibration = resolveStaticCalibrationOptions(
-      calibrationPacket,
-      staticTargets,
-      resolvedWeightGranularity,
+  if (isStaticQuantizationPacket(quantizationPacket)) {
+    return resolveStaticQuantizationPacket(
+      quantizationPacket,
       sourceOptions,
       networkLayerCount,
     );
-
-    return {
-      requested: true,
-      mode: 'static-8bit',
-      targets: staticTargets,
-      calibration: resolvedCalibration,
-      activationEncoding:
-        quantizationPacket.activationEncoding === 'int8' ? 'int8' : 'uint8',
-      weightEncoding:
-        quantizationPacket.weightEncoding === 'uint8' ? 'uint8' : 'int8',
-      activationGranularity: 'per-tensor',
-      weightGranularity: resolvedWeightGranularity,
-      representation:
-        quantizationPacket.representation === 'qdq' ? 'qdq' : 'qlinear',
-      fallbackReasons: [],
-    };
   }
 
   throw new Error(
     'Phase 7 dynamic quantization must use the documented dynamic-uint8 lane.',
   );
+}
+
+function createDefaultQuantizationOptions(): OnnxResolvedQuantizationOptions {
+  return {
+    requested: false,
+    mode: null,
+    fallbackReasons: [],
+  };
+}
+
+function asRawQuantizationPacket(
+  sourceOptions: OnnxExportOptions,
+): RawQuantizationPacket {
+  return sourceOptions.quantization as RawQuantizationPacket;
+}
+
+function isDynamicQuantizationPacket(
+  quantizationPacket: RawQuantizationPacket,
+): boolean {
+  return quantizationPacket.mode === 'dynamic-uint8';
+}
+
+function isStaticQuantizationPacket(
+  quantizationPacket: RawQuantizationPacket,
+): boolean {
+  return quantizationPacket.mode === 'static-8bit';
+}
+
+function resolveDynamicQuantizationOptions(
+  quantizationPacket: RawQuantizationPacket,
+): OnnxResolvedQuantizationOptions {
+  validateDynamicQuantizationTarget(quantizationPacket.target ?? 'dense');
+
+  const dynamicRepresentation = resolveDynamicQuantizationRepresentation(
+    quantizationPacket.representation,
+  );
+
+  return {
+    requested: true,
+    mode: 'dynamic-uint8',
+    target: 'dense',
+    representation: dynamicRepresentation,
+    fallbackReasons: [],
+  };
+}
+
+function validateDynamicQuantizationTarget(dynamicTarget: unknown): void {
+  if (dynamicTarget === 'dense') {
+    return;
+  }
+
+  throw new Error(
+    'Phase 7 dynamic quantization currently supports dense targets only.',
+  );
+}
+
+function resolveDynamicQuantizationRepresentation(
+  representation: unknown,
+): 'DynamicQuantizeLinear' | 'metadata-only' {
+  const dynamicRepresentation = representation ?? 'metadata-only';
+  if (
+    dynamicRepresentation === 'DynamicQuantizeLinear' ||
+    dynamicRepresentation === 'metadata-only'
+  ) {
+    return dynamicRepresentation;
+  }
+
+  throw new Error(
+    'Phase 7 dynamic quantization must use DynamicQuantizeLinear or metadata-only representation.',
+  );
+}
+
+function resolveStaticQuantizationPacket(
+  quantizationPacket: RawQuantizationPacket,
+  sourceOptions: OnnxExportOptions,
+  networkLayerCount: number,
+): OnnxResolvedQuantizationOptions {
+  const staticTargets = resolveStaticQuantizationTargets(
+    quantizationPacket.targets,
+  );
+  assertStaticQuantizationTargets(staticTargets);
+
+  const calibrationPacket = resolveExternalCalibrationPacket(
+    quantizationPacket.calibration,
+  );
+  const resolvedWeightGranularity = resolveWeightGranularity(
+    quantizationPacket.weightGranularity,
+  );
+  const resolvedCalibration = resolveStaticCalibrationOptions(
+    calibrationPacket,
+    staticTargets,
+    resolvedWeightGranularity,
+    sourceOptions,
+    networkLayerCount,
+  );
+
+  return {
+    requested: true,
+    mode: 'static-8bit',
+    targets: staticTargets,
+    calibration: resolvedCalibration,
+    activationEncoding:
+      quantizationPacket.activationEncoding === 'int8' ? 'int8' : 'uint8',
+    weightEncoding:
+      quantizationPacket.weightEncoding === 'uint8' ? 'uint8' : 'int8',
+    activationGranularity: 'per-tensor',
+    weightGranularity: resolvedWeightGranularity,
+    representation:
+      quantizationPacket.representation === 'qdq' ? 'qdq' : 'qlinear',
+    fallbackReasons: [],
+  };
+}
+
+function resolveStaticQuantizationTargets(
+  targets: unknown,
+): Array<'dense' | 'conv'> {
+  if (!Array.isArray(targets)) {
+    return [];
+  }
+
+  return targets.filter(
+    (target): target is 'dense' | 'conv' =>
+      target === 'dense' || target === 'conv',
+  );
+}
+
+function assertStaticQuantizationTargets(
+  staticTargets: Array<'dense' | 'conv'>,
+): void {
+  if (staticTargets.length > 0) {
+    return;
+  }
+
+  throw new Error(
+    'Phase 7 static-8bit quantization requires at least one dense or conv target.',
+  );
+}
+
+function resolveExternalCalibrationPacket(calibrationPacket: unknown): object {
+  if (
+    calibrationPacket &&
+    typeof calibrationPacket === 'object' &&
+    (calibrationPacket as { source?: unknown }).source === 'external'
+  ) {
+    return calibrationPacket;
+  }
+
+  throw new Error(
+    'Phase 7 static-8bit quantization requires an external calibration packet.',
+  );
+}
+
+function resolveWeightGranularity(
+  weightGranularity: unknown,
+): 'per-tensor' | 'per-output-channel' {
+  return weightGranularity === 'per-output-channel'
+    ? 'per-output-channel'
+    : 'per-tensor';
 }
 
 function resolveStaticCalibrationOptions(

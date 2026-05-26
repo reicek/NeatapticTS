@@ -938,67 +938,67 @@ Returns: Nothing.
 
 ## architecture/network/evolve/network.evolve.utils.types.ts
 
-Shared dataset compatibility error message.
+Error message emitted when the supplied dataset dimensions do not match the network input or output size.
 
 ### DATASET_COMPATIBILITY_ERROR_MESSAGE
 
-Shared dataset compatibility error message.
+Error message emitted when the supplied dataset dimensions do not match the network input or output size.
 
 ### DEFAULT_EVALUATION_AMOUNT
 
-Default repeated evaluation amount.
+Default number of repeated fitness evaluations used when no explicit evaluation amount is specified per genome.
 
 ### DEFAULT_GROWTH
 
-Default complexity growth penalty.
+Default per-connection complexity growth penalty applied when computing fitness-adjusted complexity scores in the evolve loop.
 
 ### DEFAULT_LOG_INTERVAL
 
-Default logging frequency value.
+Default generation logging frequency; zero disables per-generation log output during the evolve loop.
 
 ### DEFAULT_TARGET_ERROR
 
-Default target error used when omitted.
+Default target error threshold used when no explicit error stopping condition is provided to the evolve call.
 
 ### DEFAULT_THREAD_COUNT
 
-Default single-thread worker count.
+Default worker thread count used when no explicit thread override is provided to single-thread evolve calls.
 
 ### DISABLED_TARGET_ERROR
 
-Sentinel target error indicating that error-based stopping is disabled.
+Sentinel error value indicating that error-based stopping is explicitly disabled and only iteration limits apply.
 
 ### EvolutionSummary
 
-Shared evolution summary payload.
+Shared summary payload returned by the evolve loop containing the best error, generation count, and wall-clock time.
 
 ### GenomeStructureCounts
 
-Structural counts used by complexity heuristics.
+Structural node, connection, and gate counts used by complexity growth-penalty heuristics during fitness adjustment.
 
 ### MAX_CONSECUTIVE_INVALID_ERRORS
 
-Maximum consecutive invalid errors tolerated before loop abort.
+Maximum number of consecutive NaN or Infinity fitness values tolerated before the evolve loop aborts early.
 
 ### SMALL_POPULATION_MUTATION_AMOUNT
 
-Mutation amount fallback used for very small populations.
+Mutation amount fallback applied when the active population falls below the small-population threshold during evolution.
 
 ### SMALL_POPULATION_MUTATION_RATE
 
-Mutation rate fallback used for very small populations.
+Mutation rate fallback applied when the active population falls below the small-population threshold during evolution.
 
 ### SMALL_POPULATION_THRESHOLD
 
-Population threshold considered "small" for mutation heuristics.
+Population size threshold below which the evolve loop applies more aggressive fallback mutation rates and amounts.
 
 ### STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE
 
-Shared evolve stopping-condition validation error.
+Error message emitted when an evolution call is started with neither an iteration limit nor an error target specified.
 
 ### ZERO_ITERATIONS
 
-Explicit zero-iteration value.
+Explicit zero used as an initial iteration counter and for stopping-condition comparisons during evolve loop entry.
 
 ## architecture/network/evolve/network.evolve.errors.ts
 

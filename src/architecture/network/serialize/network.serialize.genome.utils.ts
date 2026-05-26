@@ -26,10 +26,10 @@ import {
   estimateSerializedByteLength,
 } from './network.serialize.compression.utils';
 
-/** Stable payload tag used for strict-genome archives. */
+/** Stable payload format tag used for reliably identifying strict-genome archives. */
 export const COMPRESSED_GENOME_FORMAT = 'neat-genome-v1';
 
-/** Stable archive wrapper tag used for strict-genome archives. */
+/** Stable archive wrapper format tag used for identifying strict-genome archives. */
 export const COMPRESSED_GENOME_ARCHIVE_FORMAT = 'neat-genome-archive-v1';
 
 /**
@@ -41,7 +41,7 @@ export interface CompressedSerializedGenomeArchiveOptions extends CompressedSeri
   captureOptions?: NeatGenomeCaptureOptions;
 }
 
-/** JSON-safe archive wrapper for one strict genome contract. */
+/** JSON-safe archive wrapper for one strict genome serialization checkpoint contract. */
 export interface CompressedSerializedGenomeArchive {
   /** Stable archive wrapper tag for strict-genome payloads. */
   format: typeof COMPRESSED_GENOME_ARCHIVE_FORMAT;

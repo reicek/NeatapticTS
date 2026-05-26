@@ -158,7 +158,7 @@ export interface ConstructGraphSnapshot {
 }
 
 /**
- * Return payload for `Network.construct(...)`.
+ * Return payload emitted by `Network.construct(...)` bundling the network, diagnostics, and graph.
  */
 export interface ConstructResult {
   /** Fully materialized runtime network. */

@@ -93,12 +93,12 @@ Latest failure: agent-graph gate — missing skill reference in step 3.
 
 ## Tier-1 Gate Catalog
 
-| Gate ID | Check | Owner |
-|---|---|---|
-| `plan-sync` | Plan registered in README + Roadmap; status coherent | `scripts/agent-customization/gates/plan-sync.gate.mjs` |
-| `step-packet` | Active step has yaml block, status, next_step, validation, stop conditions | `scripts/agent-customization/gates/step-packet.gate.mjs` |
-| `agent-graph` | All flow/gate/agent references resolve to real files | `scripts/agent-customization/gates/agent-graph.gate.mjs` |
-| `learning-event` | A learning event exists for any gate exception or cross-tier call | `scripts/agent-customization/gates/learning-event.gate.mjs` |
+| Gate ID          | Check                                                                      | Owner                                                       |
+| ---------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `plan-sync`      | Plan registered in README + Roadmap; status coherent                       | `scripts/agent-customization/gates/plan-sync.gate.mjs`      |
+| `step-packet`    | Active step has yaml block, status, next_step, validation, stop conditions | `scripts/agent-customization/gates/step-packet.gate.mjs`    |
+| `agent-graph`    | All flow/gate/agent references resolve to real files                       | `scripts/agent-customization/gates/agent-graph.gate.mjs`    |
+| `learning-event` | A learning event exists for any gate exception or cross-tier call          | `scripts/agent-customization/gates/learning-event.gate.mjs` |
 
 ## Guardrails
 

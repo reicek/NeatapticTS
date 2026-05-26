@@ -340,6 +340,13 @@ Parameters:
 
 Returns: Reconstructed network ready for inference workflows.
 
+### networkOnnxUtils
+
+Default export bundle for the ONNX-like serialization chapter.
+
+Bundles the primary ONNX entry points so the network facade can bind them as
+methods without importing each function individually.
+
 ### OnnxExportOptions
 
 Options controlling ONNX-like export.
@@ -764,7 +771,7 @@ inferLayerOrdering(
 ): default[][]
 ```
 
-Infer strictly layered ordering from a network.
+Infer a strictly layered node ordering from an analyzed network structure.
 
 Parameters:
 - `network` - Source network.
@@ -932,7 +939,7 @@ ActivationSquashFunction(
 ): number
 ```
 
-Activation function signature used by ONNX layer emission helpers.
+Activation function signature used by ONNX layer emission helpers for encoding activation operator type attributes.
 
 ### AttentionMapping
 
@@ -966,31 +973,31 @@ may reject the model.
 
 ### ConvKernelConsistencyContext
 
-Context for kernel-coordinate consistency checks at one output position.
+Context for kernel-coordinate consistency checks at one output position, comparing representative weights with tolerance.
 
 ### ConvLayerPairContext
 
-Context for one resolved Conv mapping layer pair.
+Context for one resolved Conv mapping layer pair, supplying the Conv spec and adjacent layer node lists.
 
 ### ConvOutputCoordinate
 
-Coordinate for one Conv output neuron position.
+Coordinate for one Conv output neuron, encoding the output channel, row, and column indices together.
 
 ### ConvRepresentativeKernelContext
 
-Context for representative Conv kernel collection per output channel.
+Context for representative Conv kernel collection per output channel, supplying neuron lists and the Conv spec.
 
 ### ConvSharingValidationContext
 
-Context for validating Conv sharing across all declared mappings.
+Context for validating Conv sharing across all declared mappings, holding layer nodes and mapping specifications.
 
 ### ConvSharingValidationResult
 
-Result of Conv sharing validation across declared mappings.
+Result of Conv sharing validation across declared mappings, reporting verified and mismatched layer indices.
 
 ### DenseActivationContext
 
-Dense activation emission context.
+Dense activation emission context carrying layer index, tensor names, graph names, squash function, and opset version.
 
 ### DenseActivationNodePayload
 
@@ -1002,27 +1009,27 @@ Strongly typed Gemm node payload used by dense export helpers.
 
 ### DenseGraphNames
 
-Dense graph tensor names.
+Dense graph tensor names identifying the Gemm output and activation output tensors for one layer.
 
 ### DenseInitializerValues
 
-Dense initializer value arrays.
+Dense initializer value arrays holding the flattened weight matrix values and bias vector for one layer.
 
 ### DenseLayerContext
 
-Dense layer context enriched with resolved activation function.
+Dense layer context enriched with the resolved activation squash function derived from the current layer nodes.
 
 ### DenseLayerParams
 
-Parameters for dense layer emission.
+Parameters for dense layer emission, grouping model, layer index, node lists, ordering flag, and export options.
 
 ### DenseOrderedNodePayload
 
-Dense node payload union used by ordered append helpers.
+Dense node payload union used by ordered append helpers, covering Gemm and activation node payloads.
 
 ### DenseTensorNames
 
-Dense initializer tensor names.
+Dense initializer tensor names for one emitted layer, naming the weight and bias initializer tensors.
 
 ### DenseWeightBuildContext
 
@@ -1030,23 +1037,23 @@ Context for building dense layer initializers from two adjacent layers.
 
 ### DenseWeightBuildResult
 
-Dense layer initializer fold output.
+Dense layer initializer fold output, containing the flattened weight matrix values and bias vector.
 
 ### DenseWeightRow
 
-One collected dense row before fold to flattened initializers.
+One collected dense row before fold to flattened initializers, containing per-neuron weights and bias value.
 
 ### DenseWeightRowCollectionContext
 
-Context for collecting one dense row.
+Context for collecting one dense row, supplying previous layer nodes and the target neuron internals.
 
 ### DiagonalRecurrentBuildContext
 
-Context for building a diagonal recurrent matrix from self-connections.
+Context for building a diagonal recurrent matrix from self-connections, supplying the current layer node list.
 
 ### FlattenAfterPoolingContext
 
-Flatten emission context after optional pooling.
+Flatten emission context after optional pooling, carrying model, flatten flag, layer index, and source output name.
 
 ### FusedRecurrentEmissionExecutionContext
 
@@ -1054,11 +1061,11 @@ Shared execution context for emitting one fused recurrent layer payload.
 
 ### FusedRecurrentGraphNames
 
-Context for ONNX fused recurrent node payload names.
+Context for ONNX fused recurrent node payload names, holding the graph node name and its output tensor name.
 
 ### FusedRecurrentInitializerNames
 
-Context for ONNX fused recurrent initializer names.
+Context for ONNX fused recurrent initializer names, grouping weight, recurrent-weight, and bias tensor name strings.
 
 ### GruEmissionContext
 
@@ -1066,23 +1073,23 @@ Context for heuristic GRU emission when a layer matches expected shape.
 
 ### HiddenLayerActivationTraversalContext
 
-Hidden-layer traversal context for assigning imported activation functions.
+Hidden-layer traversal context for assigning imported activation functions, carrying layer index, size, and node lists.
 
 ### HiddenLayerHeuristicContext
 
-Context for one hidden layer during heuristic recurrent emission.
+Context for one hidden layer during heuristic recurrent emission, tracking layer index and model state.
 
 ### IndexedMetadataAppendContext
 
-Append-an-index metadata context for JSON-array metadata keys.
+Append-an-index metadata context for JSON-array metadata keys, supplying model, key, and layer index.
 
 ### LayerActivationContext
 
-Activation analysis context for one layer.
+Activation analysis context for one layer, capturing whether the layer contains mixed activation functions.
 
 ### LayerActivationValidationContext
 
-Activation-homogeneity decision context for one current layer.
+Activation-homogeneity decision context for one current layer, capturing activation names and mixed-activation policy.
 
 ### LayerBuildContext
 
@@ -1090,27 +1097,27 @@ Layer build context used while emitting one ONNX graph layer segment.
 
 ### LayerConnectivityValidationContext
 
-Connectivity decision context for one source-target node pair.
+Connectivity decision context for one source-target node pair, including layer index and partial-connectivity policy.
 
 ### LayerOrderingNodeGroups
 
-Node partitions used by ONNX layered-ordering inference traversal.
+Node partitions used by ONNX layered-ordering inference traversal, grouping input, hidden, and output nodes.
 
 ### LayerOrderingResolutionContext
 
-Mutable traversal state while resolving hidden-layer ordering.
+Mutable traversal state while resolving hidden-layer ordering, carrying remaining nodes and accumulated layer groups.
 
 ### LayerRecurrentDecisionContext
 
-Context used to decide recurrent emission branch usage.
+Context used to decide recurrent emission branch usage, carrying layer index and recurrent layer index list.
 
 ### LayerTraversalContext
 
-Layer traversal context with adjacent layers and output classification.
+Layer traversal context with adjacent layers, output classification, and the full LayerBuildContext fields.
 
 ### LayerValidationTraversalContext
 
-Layer-wise validation context for activation and connectivity checks.
+Layer-wise validation context for activation and connectivity checks, supplying layer index and adjacent node lists.
 
 ### LstmEmissionContext
 
@@ -1118,11 +1125,11 @@ Context for heuristic LSTM emission when a layer matches expected shape.
 
 ### NetworkWithOnnxImportAdvancedGraph
 
-Network instance augmented with optional imported advanced-graph metadata.
+Network instance augmented with optional imported advanced-graph metadata via the _onnxAdvancedGraph field.
 
 ### NetworkWithOnnxImportPooling
 
-Network instance augmented with optional imported ONNX pooling metadata.
+Network instance augmented with optional imported ONNX pooling metadata via the _onnxPooling field.
 
 ### NodeInternals
 
@@ -1134,19 +1141,19 @@ the public `Node` API instead.
 
 ### NodeInternalsWithExportIndex
 
-Runtime node internals augmented with optional export index metadata.
+Runtime node internals augmented with optional export index metadata, used for deterministic ONNX graph ordering.
 
 ### OnnxActivationAssignmentContext
 
-Shared activation-assignment context for hidden and output traversal.
+Shared activation-assignment context for hidden and output traversal, grouping node lists and per-layer operations.
 
 ### OnnxActivationLayerOperations
 
-Layer-indexed activation operator lookup extracted from ONNX graph nodes.
+Layer-indexed activation operator lookup extracted from ONNX graph nodes for import assignment passes.
 
 ### OnnxActivationOperation
 
-Supported ONNX activation operators recognized during activation import.
+Supported ONNX activation operator strings recognized and mapped during network activation import traversal.
 
 ### OnnxActivationOperationResolutionContext
 
@@ -1154,7 +1161,7 @@ Activation operation resolution context for one neuron or layer default.
 
 ### OnnxActivationParseResult
 
-Parsed ONNX activation-node naming payload.
+Parsed ONNX activation-node naming payload, carrying the extracted layer index and optional neuron index.
 
 ### OnnxAttribute
 
@@ -1166,31 +1173,31 @@ still preserving the attribute variants needed by the importer.
 
 ### OnnxBaseModelBuildContext
 
-Context for constructing a base ONNX model shell.
+Context for constructing a base ONNX model shell, supplying input and output dimension arrays for the graph.
 
 ### OnnxBuildResolvedOptions
 
-Resolved options used by ONNX model build orchestration.
+Resolved options for ONNX model build orchestration, with all export option defaults already applied and normalized.
 
 ### OnnxConvEmissionContext
 
-Context used after resolving Conv mapping for one layer.
+Context used after resolving Conv mapping for one layer, extending OnnxConvEmissionParams with the resolved Conv2DMapping spec.
 
 ### OnnxConvEmissionParams
 
-Parameters accepted by Conv layer emission.
+Parameters accepted by Conv layer emission, grouping model, options, layer index, previous output, and adjacent node lists.
 
 ### OnnxConvKernelCoordinate
 
-Coordinate for one Conv kernel weight lookup.
+Coordinate for one Conv kernel weight lookup, encoding input channel index, kernel row, and column position.
 
 ### OnnxConvParameters
 
-Flattened Conv parameters for ONNX initializers.
+Flattened Conv parameters for ONNX initializers, containing weight and bias arrays derived from Conv layer neurons.
 
 ### OnnxConvTensorNames
 
-Tensor names generated for Conv parameters.
+Tensor names generated for Conv parameters, holding weight and bias initializer name strings for one layer.
 
 ### OnnxDimension
 
@@ -1263,7 +1270,7 @@ Key fields (high-level):
 
 ### OnnxFusedGateApplicationContext
 
-Gate-weight application context for one reconstructed fused layer.
+Gate-weight application context for one reconstructed fused layer, carrying spec, unit size, and weight arrays.
 
 ### OnnxFusedGateRowAssignmentContext
 
@@ -1271,11 +1278,11 @@ Context for assigning one gate-neuron row from flattened ONNX tensors.
 
 ### OnnxFusedLayerNeighborhood
 
-Hidden-layer neighborhood slices around a reconstructed fused layer.
+Hidden-layer neighborhood slices around a reconstructed fused layer, including old, previous, and next node lists.
 
 ### OnnxFusedLayerReconstructionContext
 
-Execution context for one fused recurrent layer reconstruction.
+Execution context for one fused recurrent layer reconstruction, carrying spec, export index, and hidden layer index.
 
 ### OnnxFusedLayerRuntime
 
@@ -1287,7 +1294,7 @@ can be reconnected to the next restored layer.
 
 ### OnnxFusedRecurrentKind
 
-Supported fused recurrent operator families recognized during ONNX import.
+Supported fused recurrent operator families recognized during ONNX import, currently limited to LSTM and GRU.
 
 ### OnnxFusedRecurrentSpec
 
@@ -1316,7 +1323,7 @@ The exporter writes three main collections here:
 
 ### OnnxGraphDimensionBuildContext
 
-Context for constructing input/output ONNX graph dimensions.
+Context for constructing input/output ONNX graph dimensions, carrying width values and the batch-dimension flag.
 
 ### OnnxGraphDimensions
 
@@ -1328,23 +1335,23 @@ Audit-only cross-layer feed-forward edge carried through Phase 5 import fallback
 
 ### OnnxImportAdvancedGraphMetadata
 
-Parsed advanced-graph metadata attached to imported network instances.
+Parsed advanced-graph metadata attached to imported network instances, grouping merges, residual adds, and blocks.
 
 ### OnnxImportAggregatedLayerAssignmentContext
 
-Context for assigning aggregated dense tensors for one layer.
+Context for assigning aggregated dense tensors for one layer, supplying the initializer map and layer node pair.
 
 ### OnnxImportAggregatedNeuronAssignmentContext
 
-Context for assigning one aggregated dense target neuron row.
+Context for assigning one aggregated dense target neuron row, carrying previous nodes, target, and tensor refs.
 
 ### OnnxImportArchitectureContext
 
-Shared architecture extraction context with resolved graph dimensions.
+Shared architecture extraction context with resolved graph dimensions, initializers, and metadata properties.
 
 ### OnnxImportArchitectureResult
 
-Parsed architecture dimensions extracted from ONNX import graph payloads.
+Parsed architecture dimensions extracted from ONNX import graph payloads, with input, output, and hidden sizes.
 
 ### OnnxImportAttentionBlock
 
@@ -1352,7 +1359,7 @@ Explicit fixed-width self-attention block carried through Phase 5 import fallbac
 
 ### OnnxImportConcatMerge
 
-Explicit concat merge carried through Phase 5 import hardening.
+Explicit concat merge carried through Phase 5 import hardening, identifying layer indices and merge tensor names.
 
 ### OnnxImportConvCoordinateAssignmentContext
 
@@ -1360,7 +1367,7 @@ Context for applying Conv weights and bias at one output coordinate.
 
 ### OnnxImportConvKernelAssignmentContext
 
-Context for assigning one concrete Conv kernel connection weight.
+Context for assigning one concrete Conv kernel connection weight, carrying tensor context, coordinate, and channels.
 
 ### OnnxImportConvLayerContext
 
@@ -1369,23 +1376,23 @@ The contract captures grouped node slices, tensor mappings, and assignment state
 
 ### OnnxImportConvLayerContextBuildParams
 
-Build params for creating one Conv reconstruction layer context.
+Build params for creating one Conv reconstruction layer context, supplying assignment context and Conv metadata.
 
 ### OnnxImportConvMetadata
 
-Parsed Conv metadata payload used for optional reconstruction pass.
+Parsed Conv metadata payload used for optional reconstruction pass, listing Conv layer indices and mapping specs.
 
 ### OnnxImportConvNodeSlices
 
-Layer node slices used while applying Conv reconstruction assignments.
+Layer node slices used while applying Conv reconstruction assignments, carrying target and previous layer nodes.
 
 ### OnnxImportConvOutputCoordinate
 
-Coordinate for one Conv output neuron traversal position.
+Coordinate for one Conv output neuron traversal position, encoding output channel, row, and column indices.
 
 ### OnnxImportConvTensorContext
 
-Resolved Conv initializer tensors and dimensions for one layer.
+Resolved Conv initializer tensors and dimensions for one layer, including channels, kernel height, and width.
 
 ### OnnxImportDimensionRecord
 
@@ -1409,35 +1416,35 @@ Inbound connection lookup map keyed by source node for one target neuron.
 
 ### OnnxImportLayerConnectionContext
 
-Execution context for assigning one hidden-layer recurrent diagonal tensor.
+Execution context for assigning one hidden-layer recurrent diagonal tensor, carrying model, nodes, and span.
 
 ### OnnxImportLayerNodePair
 
-Node slices for one sequential imported layer assignment pass.
+Node slices for one sequential imported layer assignment pass, carrying current and previous layer node lists.
 
 ### OnnxImportLayerNodePairBuildParams
 
-Build params for one sequential layer node-pair slice operation.
+Build params for one sequential layer node-pair slice operation, specifying layer index and sequential position.
 
 ### OnnxImportLayerTensorNames
 
-Weight tensor names for one imported layer index.
+Weight tensor names for one imported layer index, identifying weight and bias initializer name strings.
 
 ### OnnxImportLayerWeightBucket
 
-Bucketed ONNX dense/per-neuron tensors for one exported layer index.
+Bucketed ONNX dense/per-neuron tensors for one exported layer index, holding the aggregated and per-neuron lists.
 
 ### OnnxImportPerNeuronAssignmentContext
 
-Context for assigning one per-neuron imported target node.
+Context for assigning one per-neuron imported target node, carrying previous nodes and weight and bias tensors.
 
 ### OnnxImportPerNeuronLayerAssignmentContext
 
-Context for assigning per-neuron tensors for one layer.
+Context for assigning per-neuron tensors for one layer, supplying the initializer map and sequential layer node pair.
 
 ### OnnxImportPoolingMetadata
 
-Parsed pooling metadata payload attached to imported network instances.
+Parsed pooling metadata payload attached to imported network instances, listing pool specs and virtual shapes.
 
 ### OnnxImportPoolingVirtualShape
 
@@ -1461,11 +1468,11 @@ Audit-only shared initializer alias carried through Phase 5 import fallback.
 
 ### OnnxImportWeightAssignmentBuildParams
 
-Build params for creating shared ONNX import weight-assignment context.
+Build params for creating shared ONNX import weight-assignment context, supplying network, model, and hidden sizes.
 
 ### OnnxImportWeightAssignmentContext
 
-Shared weight-assignment context built once per ONNX import.
+Shared weight-assignment context built once per ONNX import, carrying model, layers, metadata, and initializer map.
 
 ### OnnxIncomingWeightAssignmentContext
 
@@ -1473,11 +1480,11 @@ Context for assigning dense incoming weights for one gate-neuron row.
 
 ### OnnxLayerEmissionContext
 
-Context for emitting non-input layers during model build.
+Context for emitting non-input layers during model build, including layer list, options, and ordering flags.
 
 ### OnnxLayerEmissionResult
 
-Result of emitting non-input export layers.
+Result of emitting non-input export layers, carrying the last output name and the layer output name map.
 
 ### OnnxLayerFactory
 
@@ -1513,7 +1520,7 @@ Security/trust boundary:
 
 ### OnnxModelMetadataContext
 
-Context for applying optional ONNX model metadata.
+Context for applying optional ONNX model metadata, carrying model reference, opset, producer info, and inclusion flags.
 
 ### OnnxNode
 
@@ -1528,31 +1535,31 @@ Build context for mapping ONNX layer sizes into a Neataptic MLP factory call.
 
 ### OnnxPerceptronSizeValidationContext
 
-Validation context for perceptron size-list checks during ONNX import.
+Validation context for perceptron size-list checks during ONNX import, supplying sizes, minimum count, and message.
 
 ### OnnxPostProcessingContext
 
-Context for post-processing and export metadata finalization.
+Context for post-processing and export metadata finalization, holding model, layers, options, and layer emission result.
 
 ### OnnxRecurrentCollectionContext
 
-Context for collecting recurrent layer indices during model build.
+Context for collecting recurrent layer indices during model build, providing the layer list and export options.
 
 ### OnnxRecurrentInputValueInfoContext
 
-Context for constructing one recurrent previous-state graph input payload.
+Context for constructing one recurrent previous-state graph input payload, carrying name, hidden width, and batch flag.
 
 ### OnnxRecurrentLayerProcessingContext
 
-Execution context for processing one hidden recurrent layer.
+Execution context for processing one hidden recurrent layer during model build traversal and emission.
 
 ### OnnxRecurrentLayerTraversalContext
 
-Traversal context for one hidden layer during recurrent-input collection.
+Traversal context for one hidden layer during recurrent-input collection, supplying layer index and batch-dimension flag.
 
 ### OnnxRuntimeFactories
 
-Runtime factories consumed during ONNX import network reconstruction.
+Runtime factories consumed during ONNX import network reconstruction, grouping the perceptron and layer module.
 
 ### OnnxRuntimeLayerFactory
 
@@ -1562,15 +1569,15 @@ OnnxRuntimeLayerFactory(
 ): default
 ```
 
-Runtime layer-constructor signature used for recurrent layer reconstruction.
+Runtime layer-constructor signature used for recurrent layer reconstruction, accepting size and returning a Layer.
 
 ### OnnxRuntimeLayerFactoryMap
 
-Runtime layer module shape widened for fused-recurrent reconstruction wiring.
+Runtime layer module shape widened for fused-recurrent reconstruction wiring and dynamic layer factory dispatch.
 
 ### OnnxRuntimeLayerModule
 
-Runtime layer module shape consumed by ONNX import orchestration.
+Runtime layer module shape consumed by ONNX import orchestration, exposing LSTM and GRU factory constructors.
 
 ### OnnxRuntimePerceptronFactory
 
@@ -1580,7 +1587,7 @@ OnnxRuntimePerceptronFactory(
 ): default
 ```
 
-Runtime perceptron factory signature used by ONNX import orchestration.
+Runtime perceptron factory signature used by ONNX import orchestration, producing a Network from size arguments.
 
 ### OnnxShape
 
@@ -1608,7 +1615,7 @@ This alias keeps metadata surfaces consistent across ONNX schema parsing, import
 
 ### OptionalLayerOutputParams
 
-Shared parameters for optional pooling/flatten output emission.
+Shared parameters for optional pooling or flatten output emission after one dense layer output tensor.
 
 ### OptionalPoolingAndFlattenParams
 
@@ -1616,35 +1623,35 @@ Parameters for optional pooling + flatten emission after a layer output.
 
 ### OutputLayerActivationContext
 
-Output-layer activation assignment context.
+Output-layer activation assignment context, carrying output layer index, node list, and activation operations map.
 
 ### PerNeuronConcatNodePayload
 
-Per-neuron concat node payload.
+Per-neuron concat node payload used to merge individual neuron outputs into one combined layer tensor.
 
 ### PerNeuronGraphNames
 
-Per-neuron graph tensor names.
+Per-neuron graph tensor names identifying the Gemm output and activation output for one neuron subgraph.
 
 ### PerNeuronLayerContext
 
-Per-neuron layer context alias.
+Per-neuron layer context alias for PerNeuronLayerParams, used at the per-neuron layer traversal boundary.
 
 ### PerNeuronLayerParams
 
-Parameters for per-neuron layer emission.
+Parameters for per-neuron layer emission, grouping model, layer index, node lists, options, and batch-dimension flag.
 
 ### PerNeuronNodeContext
 
-Per-neuron normalized node context.
+Per-neuron normalized node context replacing raw Node references with resolved NodeInternals for safe emission.
 
 ### PerNeuronSubgraphContext
 
-Per-neuron subgraph emission context.
+Per-neuron subgraph emission context carrying layer index, neuron index, previous output name, and opset version.
 
 ### PerNeuronTensorNames
 
-Per-neuron initializer tensor names.
+Per-neuron initializer tensor names identifying weight and bias tensors for one neuron subgraph.
 
 ### Pool2DMapping
 
@@ -1656,31 +1663,31 @@ network (when supported).
 
 ### PoolingAttributes
 
-Pooling tensor attributes for ONNX node payloads.
+Pooling tensor attributes for ONNX node payloads, grouping kernel shape, strides, and padding values.
 
 ### PoolingEmissionContext
 
-Pooling emission context resolved for one layer output.
+Pooling emission context resolved for one layer output, extending OptionalLayerOutputParams with the Pool2DMapping spec.
 
 ### RecurrentActivationEmissionContext
 
-Context for selecting and emitting recurrent activation node payload.
+Context for selecting and emitting recurrent activation node payload using the layer's dominant squash function.
 
 ### RecurrentGateBlockCollectionContext
 
-Context for collecting one gate parameter block.
+Context for collecting one gate parameter block, supplying gate nodes, previous layer, unit size, and diagonal flag.
 
 ### RecurrentGateParameterCollectionResult
 
-Flattened recurrent gate parameter vectors for one fused operator.
+Flattened recurrent gate parameter vectors for one fused operator, grouping input, recurrent, and bias arrays.
 
 ### RecurrentGateRow
 
-One recurrent gate row payload before flatten fold.
+One recurrent gate row payload before flatten fold, containing input weights, recurrent weights, and bias.
 
 ### RecurrentGateRowCollectionContext
 
-Context for collecting one recurrent gate row (one neuron).
+Context for collecting one recurrent gate row (one neuron), supplying the previous layer node list and unit size.
 
 ### RecurrentGemmEmissionContext
 
@@ -1688,51 +1695,51 @@ Context for emitting one Gemm node for recurrent single-step export.
 
 ### RecurrentGraphNames
 
-Derived graph names for one recurrent single-step layer payload.
+Derived graph names for one recurrent single-step layer payload, with all tensor and node names resolved.
 
 ### RecurrentHeuristicEmissionContext
 
-Context for heuristic recurrent operator emission traversal.
+Context for heuristic recurrent operator emission traversal, carrying model, layer list, and previous output tensor name.
 
 ### RecurrentInitializerEmissionContext
 
-Context for pushing recurrent initializers into ONNX graph state.
+Context for pushing recurrent initializers into ONNX graph state, carrying widths, tensor names, and value arrays.
 
 ### RecurrentInitializerNames
 
-Initializer tensor names for one single-step recurrent layer.
+Initializer tensor names for one single-step recurrent layer, naming weight, bias, and recurrent-weight tensors.
 
 ### RecurrentInitializerValues
 
-Collected initializer vectors for one single-step recurrent layer.
+Collected initializer vectors for one single-step recurrent layer, storing weight matrix, biases, and recurrent weights.
 
 ### RecurrentLayerEmissionContext
 
-Derived execution context for single-step recurrent layer emission.
+Derived execution context for single-step recurrent layer emission, extending params with layer slot and widths.
 
 ### RecurrentLayerEmissionParams
 
-Parameters for single-step recurrent layer emission.
+Parameters for single-step recurrent layer emission, supplying model, layer index, and adjacent node lists.
 
 ### RecurrentRowCollectionContext
 
-Context for collecting one recurrent matrix row.
+Context for collecting one recurrent matrix row, supplying the layer node list and the row index to extract.
 
 ### SharedActivationNodeBuildParams
 
-Shared parameters for constructing an activation node payload.
+Shared parameters for constructing an activation node payload, carrying activation type and output name strings.
 
 ### SharedGemmNodeBuildParams
 
-Shared parameters for constructing a Gemm node payload.
+Shared parameters for constructing a Gemm node payload, carrying weight, bias, output tensor names, and node name.
 
 ### SpecMetadataAppendContext
 
-Append-a-spec metadata context for JSON-array metadata keys.
+Append-a-spec metadata context for JSON-array metadata keys, supplying model, key, and Conv or Pool spec.
 
 ### WeightToleranceComparisonContext
 
-Context for comparing two scalar weights with numeric tolerance.
+Context for comparing two scalar weights with numeric tolerance, used by Conv sharing validation helpers.
 
 ## architecture/network/onnx/network.onnx.errors.ts
 
@@ -1756,11 +1763,11 @@ Raised when ONNX import perceptron metadata omits required input/output sizes.
 
 ### NetworkOnnxRecurrentMixedActivationsUnsupportedError
 
-Raised when recurrent ONNX export encounters unsupported mixed activations.
+Raised when recurrent ONNX export encounters unsupported mixed activation functions.
 
 ### NetworkOnnxShapeValidationError
 
-Raised when ONNX export produces inconsistent tensor dimensions.
+Raised when ONNX export produces inconsistent or mismatched tensor dimensions.
 
 ## architecture/network/onnx/network.onnx.layer-analysis.utils.ts
 
@@ -1971,7 +1978,7 @@ inferLayerOrdering(
 ): default[][]
 ```
 
-Infer strictly layered ordering from a network.
+Infer a strictly layered node ordering from an analyzed network structure.
 
 Parameters:
 - `network` - Source network.

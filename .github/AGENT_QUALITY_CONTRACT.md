@@ -34,12 +34,12 @@ The structured output block inside the body must set `TIER:` to the same numeric
 
 The validator enforces these heading sets exactly.
 
-| Tier | Required sections |
-| --- | --- |
-| 1 | `## Mission`, `## Constraints`, `## Default Flow`, `## If Blocked`, `## Output Format` |
-| 2 | `## Mission`, `## Constraints`, `## Required Workflow`, `## If Blocked`, `## Output Format` |
-| 3 | `## Mission`, `## Constraints`, `## Approach`, `## If Blocked`, `## Output Format` |
-| 4 | `## Mission`, `## Constraints`, `## Default Flow`, `## If Blocked`, `## Output Format` |
+| Tier | Required sections                                                                           |
+| ---- | ------------------------------------------------------------------------------------------- |
+| 1    | `## Mission`, `## Constraints`, `## Default Flow`, `## If Blocked`, `## Output Format`      |
+| 2    | `## Mission`, `## Constraints`, `## Required Workflow`, `## If Blocked`, `## Output Format` |
+| 3    | `## Mission`, `## Constraints`, `## Approach`, `## If Blocked`, `## Output Format`          |
+| 4    | `## Mission`, `## Constraints`, `## Default Flow`, `## If Blocked`, `## Output Format`      |
 
 ### Structured Output Contract
 

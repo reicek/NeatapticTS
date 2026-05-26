@@ -237,11 +237,11 @@ Returns: Packed float16 words.
 
 ### ONNX_FLOAT_DATA_TYPE
 
-ONNX TensorProto enum value for float32 tensors.
+ONNX TensorProto numeric data-type enum value used for float32 tensors.
 
 ### ONNX_FLOAT16_DATA_TYPE
 
-ONNX TensorProto enum value for float16 tensors.
+ONNX TensorProto numeric data-type enum value used for float16 tensors.
 
 ### readOnnxTensorFloatData
 

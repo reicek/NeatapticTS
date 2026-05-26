@@ -243,6 +243,13 @@ Target variance used by entropy-sharing tuning.
 The controller nudges sharing sigma toward a population whose entropy spread is neither too flat
 nor too unstable.
 
+### evaluateUtils
+
+Default export bundle for the NEAT population evaluation chapter.
+
+Bundles the evaluate function so the Neat facade can bind it as a method
+without importing it individually.
+
 ### NeatControllerForEval
 
 NEAT controller interface for evaluation.

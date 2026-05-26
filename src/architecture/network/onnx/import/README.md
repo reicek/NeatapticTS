@@ -84,11 +84,11 @@ Build context for mapping ONNX layer sizes into a Neataptic MLP factory call.
 
 ### OnnxPerceptronSizeValidationContext
 
-Validation context for perceptron size-list checks during ONNX import.
+Validation context for perceptron size-list checks during ONNX import, supplying sizes, minimum count, and message.
 
 ### OnnxRuntimeFactories
 
-Runtime factories consumed during ONNX import network reconstruction.
+Runtime factories consumed during ONNX import network reconstruction, grouping the perceptron and layer module.
 
 ### OnnxRuntimeLayerFactory
 
@@ -98,11 +98,11 @@ OnnxRuntimeLayerFactory(
 ): default
 ```
 
-Runtime layer-constructor signature used for recurrent layer reconstruction.
+Runtime layer-constructor signature used for recurrent layer reconstruction, accepting size and returning a Layer.
 
 ### OnnxRuntimeLayerModule
 
-Runtime layer module shape consumed by ONNX import orchestration.
+Runtime layer module shape consumed by ONNX import orchestration, exposing LSTM and GRU factory constructors.
 
 ### OnnxRuntimePerceptronFactory
 
@@ -112,7 +112,7 @@ OnnxRuntimePerceptronFactory(
 ): default
 ```
 
-Runtime perceptron factory signature used by ONNX import orchestration.
+Runtime perceptron factory signature used by ONNX import orchestration, producing a Network from size arguments.
 
 ## architecture/network/onnx/import/network.onnx.runtime-load.utils.ts
 
@@ -221,7 +221,7 @@ Returns: Runtime layer module.
 loadRuntimeFactories(): OnnxRuntimeFactories
 ```
 
-Resolve runtime factories used by ONNX import orchestration.
+Resolve runtime constructor factories used by the ONNX import orchestration.
 
 Returns: Perceptron factory and layer module object.
 
@@ -284,11 +284,11 @@ const assignmentContext: OnnxImportWeightAssignmentContext = {
 
 ### OnnxImportAggregatedLayerAssignmentContext
 
-Context for assigning aggregated dense tensors for one layer.
+Context for assigning aggregated dense tensors for one layer, supplying the initializer map and layer node pair.
 
 ### OnnxImportAggregatedNeuronAssignmentContext
 
-Context for assigning one aggregated dense target neuron row.
+Context for assigning one aggregated dense target neuron row, carrying previous nodes, target, and tensor refs.
 
 ### OnnxImportConvCoordinateAssignmentContext
 
@@ -296,27 +296,27 @@ Context for applying Conv weights and bias at one output coordinate.
 
 ### OnnxImportConvKernelAssignmentContext
 
-Context for assigning one concrete Conv kernel connection weight.
+Context for assigning one concrete Conv kernel connection weight, carrying tensor context, coordinate, and channels.
 
 ### OnnxImportConvLayerContext
 
-Context for reconstructing one Conv layer's imported connectivity.
+Context object for reconstructing one Conv layer's imported connectivity weights.
 
 ### OnnxImportConvLayerContextBuildParams
 
-Build params for creating one Conv reconstruction layer context.
+Build params for creating one Conv reconstruction layer context, supplying assignment context and Conv metadata.
 
 ### OnnxImportConvMetadata
 
-Parsed Conv metadata payload used for optional reconstruction pass.
+Parsed Conv metadata payload used for optional reconstruction pass, listing Conv layer indices and mapping specs.
 
 ### OnnxImportConvNodeSlices
 
-Layer node slices used while applying Conv reconstruction assignments.
+Layer node slices used while applying Conv reconstruction assignments, carrying target and previous layer nodes.
 
 ### OnnxImportConvOutputCoordinate
 
-Coordinate for one Conv output neuron traversal position.
+Coordinate for one Conv output neuron traversal position, encoding output channel, row, and column indices.
 
 ### OnnxImportConvSourceLayout
 
@@ -324,7 +324,7 @@ Source layout used when replaying Conv weights onto dense source nodes.
 
 ### OnnxImportConvTensorContext
 
-Resolved Conv initializer tensors and dimensions for one layer.
+Resolved Conv initializer tensors and dimensions for one layer, including channels, kernel height, and width.
 
 ### OnnxImportHiddenSizeDerivationContext
 
@@ -336,35 +336,35 @@ Inbound connection lookup map keyed by source node for one target neuron.
 
 ### OnnxImportLayerNodePair
 
-Node slices for one sequential imported layer assignment pass.
+Node slices for one sequential imported layer assignment pass, carrying current and previous layer node lists.
 
 ### OnnxImportLayerNodePairBuildParams
 
-Build params for one sequential layer node-pair slice operation.
+Build params for one sequential layer node-pair slice operation, specifying layer index and sequential position.
 
 ### OnnxImportLayerTensorNames
 
-Weight tensor names for one imported layer index.
+Weight tensor names for one imported layer index, identifying weight and bias initializer name strings.
 
 ### OnnxImportLayerWeightBucket
 
-Bucketed ONNX dense/per-neuron tensors for one exported layer index.
+Bucketed ONNX dense/per-neuron tensors for one exported layer index, holding the aggregated and per-neuron lists.
 
 ### OnnxImportPerNeuronAssignmentContext
 
-Context for assigning one per-neuron imported target node.
+Context for assigning one per-neuron imported target node, carrying previous nodes and weight and bias tensors.
 
 ### OnnxImportPerNeuronLayerAssignmentContext
 
-Context for assigning per-neuron tensors for one layer.
+Context for assigning per-neuron tensors for one layer, supplying the initializer map and sequential layer node pair.
 
 ### OnnxImportWeightAssignmentBuildParams
 
-Build params for creating shared ONNX import weight-assignment context.
+Build params for creating shared ONNX import weight-assignment context, supplying network, model, and hidden sizes.
 
 ### OnnxImportWeightAssignmentContext
 
-Shared weight-assignment context built once per ONNX import.
+Shared weight-assignment context built once per ONNX import, carrying model, layers, metadata, and initializer map.
 
 ## architecture/network/onnx/import/network.onnx.import-weights.utils.ts
 
@@ -1056,6 +1056,117 @@ Returns: Prefix sum.
 
 ## architecture/network/onnx/import/network.onnx.import-activations.utils.ts
 
+### appendOperationToLayer
+
+```ts
+appendOperationToLayer(
+  operationsByLayer: OnnxActivationLayerOperations,
+  layerIndex: number,
+  operation: OnnxActivationOperation,
+): void
+```
+
+Append one operation to the lookup bucket for a layer.
+
+Parameters:
+- `operationsByLayer` - Layer-indexed operation lookup.
+- `layerIndex` - Export-layer index.
+- `operation` - Supported activation operation.
+
+Returns: Nothing.
+
+### applyHiddenLayerActivations
+
+```ts
+applyHiddenLayerActivations(
+  context: OnnxActivationAssignmentContext,
+): void
+```
+
+Apply imported activation operations to hidden layer nodes.
+
+Parameters:
+- `context` - Shared assignment context.
+
+Returns: Nothing.
+
+### applyHiddenLayerTraversalActivation
+
+```ts
+applyHiddenLayerTraversalActivation(
+  traversalContext: HiddenLayerActivationTraversalContext,
+): void
+```
+
+Apply activation operations for one hidden-layer traversal context.
+
+Parameters:
+- `traversalContext` - Hidden-layer traversal context.
+
+Returns: Nothing.
+
+### applyHiddenLayerTraversalContexts
+
+```ts
+applyHiddenLayerTraversalContexts(
+  traversalContexts: HiddenLayerActivationTraversalContext[],
+): void
+```
+
+Apply hidden-layer activation assignment for each traversal context.
+
+Parameters:
+- `traversalContexts` - Ordered hidden-layer traversal contexts.
+
+Returns: Nothing.
+
+### applyHiddenNeuronActivation
+
+```ts
+applyHiddenNeuronActivation(
+  traversalContext: HiddenLayerActivationTraversalContext,
+  neuronIndex: number,
+): void
+```
+
+Apply one hidden neuron activation if the target node exists.
+
+Parameters:
+- `traversalContext` - Hidden-layer traversal context.
+- `neuronIndex` - Neuron index in current hidden layer.
+
+Returns: Nothing.
+
+### applyOutputLayerActivation
+
+```ts
+applyOutputLayerActivation(
+  context: OnnxActivationAssignmentContext,
+): void
+```
+
+Apply imported activation to all output nodes.
+
+Parameters:
+- `context` - Shared assignment context.
+
+Returns: Nothing.
+
+### asNodeInternals
+
+```ts
+asNodeInternals(
+  node: unknown,
+): NodeInternals
+```
+
+Cast one public node instance to runtime node internals.
+
+Parameters:
+- `node` - Source node object.
+
+Returns: Runtime node internals.
+
 ### assignActivationFunctions
 
 ```ts
@@ -1075,6 +1186,194 @@ Parameters:
 
 Returns: Nothing.
 
+### asSupportedActivationOperation
+
+```ts
+asSupportedActivationOperation(
+  operationName: string,
+): OnnxActivationOperation | null
+```
+
+Convert an ONNX op type to a supported activation operation.
+
+Parameters:
+- `operationName` - ONNX graph node operation type.
+
+Returns: Supported activation operation or null when unsupported.
+
+### buildActivationAssignmentContext
+
+```ts
+buildActivationAssignmentContext(
+  sourceNetwork: default,
+  sourceOnnx: OnnxModel,
+  sourceHiddenLayerSizes: number[],
+): OnnxActivationAssignmentContext
+```
+
+Build immutable assignment context for hidden/output activation import.
+
+Parameters:
+- `sourceNetwork` - Target network to mutate.
+- `sourceOnnx` - Source ONNX model.
+- `sourceHiddenLayerSizes` - Hidden layer widths in export order.
+
+Returns: Prepared assignment context.
+
+### buildHiddenLayerTraversalContexts
+
+```ts
+buildHiddenLayerTraversalContexts(
+  context: OnnxActivationAssignmentContext,
+): HiddenLayerActivationTraversalContext[]
+```
+
+Build traversal contexts for each hidden layer.
+
+Parameters:
+- `context` - Shared assignment context.
+
+Returns: Ordered hidden-layer traversal contexts.
+
+### buildHiddenNeuronIndices
+
+```ts
+buildHiddenNeuronIndices(
+  hiddenLayerSize: number,
+): number[]
+```
+
+Build contiguous hidden-neuron index list for one layer.
+
+Parameters:
+- `hiddenLayerSize` - Hidden-layer width.
+
+Returns: Ordered neuron indices.
+
+### collectNodeInternalsByType
+
+```ts
+collectNodeInternalsByType(
+  sourceNetwork: default,
+  targetType: string,
+): NodeInternals[]
+```
+
+Collect node internals by runtime node type.
+
+Parameters:
+- `sourceNetwork` - Network with runtime nodes.
+- `targetType` - Runtime node type to collect.
+
+Returns: Runtime node internals matching the requested type.
+
+### collectOperationsByLayer
+
+```ts
+collectOperationsByLayer(
+  sourceOnnx: OnnxModel,
+): OnnxActivationLayerOperations
+```
+
+Collect ONNX activation operations grouped by export-layer index.
+
+Parameters:
+- `sourceOnnx` - Source ONNX model.
+
+Returns: Layer-indexed activation operation lookup.
+
+### parseActivationNode
+
+```ts
+parseActivationNode(
+  nodeName: string,
+): OnnxActivationParseResult | null
+```
+
+Parse one ONNX activation node name.
+
+Parameters:
+- `nodeName` - ONNX graph node name.
+
+Returns: Parsed layer/neuron metadata or null when not a supported activation node.
+
+### resolveActivationFunction
+
+```ts
+resolveActivationFunction(
+  context: OnnxActivationOperationResolutionContext,
+): ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }
+```
+
+Resolve runtime activation function from operation context.
+
+Parameters:
+- `context` - Operation-resolution context.
+
+Returns: Runtime activation function.
+
+### resolveHiddenNode
+
+```ts
+resolveHiddenNode(
+  traversalContext: HiddenLayerActivationTraversalContext,
+  neuronIndex: number,
+): NodeInternals | undefined
+```
+
+Resolve one hidden node by traversal/offset metadata.
+
+Parameters:
+- `traversalContext` - Hidden-layer traversal context.
+- `neuronIndex` - Neuron index in current hidden layer.
+
+Returns: Hidden node internals when present.
+
+### resolveLayerOperations
+
+```ts
+resolveLayerOperations(
+  traversalContext: HiddenLayerActivationTraversalContext,
+): OnnxActivationOperation[]
+```
+
+Resolve operations list for one hidden layer.
+
+Parameters:
+- `traversalContext` - Hidden-layer traversal context.
+
+Returns: Ordered operations for target export layer.
+
+### resolveOperationByPriority
+
+```ts
+resolveOperationByPriority(
+  context: OnnxActivationOperationResolutionContext,
+): OnnxActivationOperation
+```
+
+Resolve activation operation by neuron-first then layer-default fallback.
+
+Parameters:
+- `context` - Operation-resolution context.
+
+Returns: Supported activation operation.
+
+### resolveOutputOperations
+
+```ts
+resolveOutputOperations(
+  context: OutputLayerActivationContext,
+): OnnxActivationOperation[]
+```
+
+Resolve output-layer operations from shared lookup.
+
+Parameters:
+- `context` - Output-layer assignment context.
+
+Returns: Ordered output-layer operations.
+
 ## architecture/network/onnx/import/network.onnx.import-orchestrators.types.ts
 
 Import-owned type surface for ONNX architecture reconstruction orchestration.
@@ -1087,11 +1386,11 @@ home for importer-only details.
 
 ### NetworkWithOnnxImportAdvancedGraph
 
-Network instance augmented with optional imported advanced-graph metadata.
+Network instance augmented with optional imported advanced-graph metadata via the _onnxAdvancedGraph field.
 
 ### NetworkWithOnnxImportPooling
 
-Network instance augmented with optional imported ONNX pooling metadata.
+Network instance augmented with optional imported ONNX pooling metadata via the _onnxPooling field.
 
 ### OnnxImportAdvancedGraphCrossLayerConnection
 
@@ -1099,15 +1398,15 @@ Audit-only cross-layer feed-forward edge carried through Phase 5 import fallback
 
 ### OnnxImportAdvancedGraphMetadata
 
-Parsed advanced-graph metadata attached to imported network instances.
+Parsed advanced-graph metadata attached to imported network instances, grouping merges, residual adds, and blocks.
 
 ### OnnxImportArchitectureContext
 
-Shared architecture extraction context with resolved graph dimensions.
+Shared architecture extraction context with resolved graph dimensions, initializers, and metadata properties.
 
 ### OnnxImportArchitectureResult
 
-Parsed architecture dimensions extracted from ONNX import graph payloads.
+Parsed architecture dimensions extracted from ONNX import graph payloads, with input, output, and hidden sizes.
 
 ### OnnxImportAttentionBlock
 
@@ -1115,7 +1414,7 @@ Explicit fixed-width self-attention block carried through Phase 5 import fallbac
 
 ### OnnxImportConcatMerge
 
-Explicit concat merge carried through Phase 5 import hardening.
+Explicit concat merge carried through Phase 5 import hardening, identifying layer indices and merge tensor names.
 
 ### OnnxImportDimensionRecord
 
@@ -1131,11 +1430,11 @@ Hidden-layer span payload with one-based layer numbering and global offset.
 
 ### OnnxImportLayerConnectionContext
 
-Execution context for assigning one hidden-layer recurrent diagonal tensor.
+Execution context for assigning one hidden-layer recurrent diagonal tensor, carrying model, nodes, and span.
 
 ### OnnxImportPoolingMetadata
 
-Parsed pooling metadata payload attached to imported network instances.
+Parsed pooling metadata payload attached to imported network instances, listing pool specs and virtual shapes.
 
 ### OnnxImportPoolingVirtualShape
 
@@ -1738,7 +2037,7 @@ pruneSingleLayerHiddenPlaceholders(
 ): void
 ```
 
-Remove placeholder hidden nodes for single-layer perceptron imports.
+Remove placeholder hidden nodes that arise from single-layer perceptron imports.
 
 Parameters:
 - `network` - Target network.
@@ -1922,7 +2221,7 @@ Returns: Nothing.
 
 ### OnnxFusedGateApplicationContext
 
-Gate-weight application context for one reconstructed fused layer.
+Gate-weight application context for one reconstructed fused layer, carrying spec, unit size, and weight arrays.
 
 ### OnnxFusedGateRowAssignmentContext
 
@@ -1930,11 +2229,11 @@ Context for assigning one gate-neuron row from flattened ONNX tensors.
 
 ### OnnxFusedLayerNeighborhood
 
-Hidden-layer neighborhood slices around a reconstructed fused layer.
+Hidden-layer neighborhood slices around a reconstructed fused layer, including old, previous, and next node lists.
 
 ### OnnxFusedLayerReconstructionContext
 
-Execution context for one fused recurrent layer reconstruction.
+Execution context for one fused recurrent layer reconstruction, carrying spec, export index, and hidden layer index.
 
 ### OnnxFusedLayerRuntime
 
@@ -1946,7 +2245,7 @@ can be reconnected to the next restored layer.
 
 ### OnnxFusedRecurrentKind
 
-Supported fused recurrent operator families recognized during ONNX import.
+Supported fused recurrent operator families recognized during ONNX import, currently limited to LSTM and GRU.
 
 ### OnnxFusedRecurrentSpec
 
@@ -1972,6 +2271,418 @@ Context for assigning dense incoming weights for one gate-neuron row.
 
 Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.
 
+### applyGateWeights
+
+```ts
+applyGateWeights(
+  context: OnnxFusedGateApplicationContext,
+): void
+```
+
+Apply imported gate parameters to a reconstructed fused layer.
+
+Parameters:
+- `context` - Gate application context.
+
+Returns: Nothing.
+
+### assignGateRow
+
+```ts
+assignGateRow(
+  context: OnnxFusedGateRowAssignmentContext,
+): void
+```
+
+Assign one gate-neuron row parameters.
+
+Parameters:
+- `context` - Gate-row assignment context.
+
+Returns: Nothing.
+
+### assignIncomingWeightAtColumn
+
+```ts
+assignIncomingWeightAtColumn(
+  context: OnnxIncomingWeightAssignmentContext,
+  columnIndex: number,
+): void
+```
+
+Assign one incoming connection weight by source-column index.
+
+Parameters:
+- `context` - Incoming-weight assignment context.
+- `columnIndex` - Source column index.
+
+Returns: Nothing.
+
+### assignIncomingWeights
+
+```ts
+assignIncomingWeights(
+  context: OnnxIncomingWeightAssignmentContext,
+): void
+```
+
+Assign dense incoming weights for one gate neuron.
+
+Parameters:
+- `context` - Incoming-weight assignment context.
+
+Returns: Nothing.
+
+### assignRecurrentDiagonalWeight
+
+```ts
+assignRecurrentDiagonalWeight(
+  context: OnnxFusedGateRowAssignmentContext,
+): void
+```
+
+Assign one recurrent diagonal self-weight.
+
+Parameters:
+- `context` - Gate-row assignment context.
+
+Returns: Nothing.
+
+### assignRecurrentIncomingWeightAtColumn
+
+```ts
+assignRecurrentIncomingWeightAtColumn(
+  context: OnnxFusedGateRowAssignmentContext,
+  columnIndex: number,
+): void
+```
+
+Assign one recurrent incoming weight from the native GRU previous-output
+carrier into the current gate neuron.
+
+Parameters:
+- `context` - Gate-row assignment context.
+- `columnIndex` - Recurrent source column index.
+
+Returns: Nothing.
+
+### assignRecurrentWeights
+
+```ts
+assignRecurrentWeights(
+  context: OnnxFusedGateRowAssignmentContext,
+): void
+```
+
+Assign recurrent weights for one fused gate row.
+
+Parameters:
+- `context` - Gate-row assignment context.
+
+Returns: Nothing.
+
+### buildContiguousGateGroups
+
+```ts
+buildContiguousGateGroups(
+  fusedNodes: default[],
+  gateOrder: string[],
+  unitSize: number,
+): Record<string, default[]>
+```
+
+Build contiguous gate groups from one fused node list.
+
+Parameters:
+- `fusedNodes` - Fused node list.
+- `gateOrder` - Gate order.
+- `unitSize` - Units per gate.
+
+Returns: Gate-name to neuron-list map.
+
+### createFusedLayerRuntime
+
+```ts
+createFusedLayerRuntime(
+  layerFactory: OnnxLayerFactory,
+  spec: OnnxFusedRecurrentSpec,
+  unitSize: number,
+): OnnxFusedLayerRuntime
+```
+
+Create one fused recurrent runtime layer instance.
+
+Parameters:
+- `layerFactory` - Dynamic layer module.
+- `spec` - Fused family spec.
+- `unitSize` - Unit count.
+
+Returns: Runtime fused layer.
+
+### createFusedRecurrentSpecs
+
+```ts
+createFusedRecurrentSpecs(): OnnxFusedRecurrentSpec[]
+```
+
+Build fused recurrent family specifications.
+
+Returns: Family specifications.
+
+### createHiddenLayerRange
+
+```ts
+createHiddenLayerRange(
+  hiddenLayerSizes: number[],
+  hiddenLayerIndex: number,
+): { start: number; end: number; }
+```
+
+Create hidden-range boundaries for one hidden-layer index.
+
+Parameters:
+- `hiddenLayerSizes` - Hidden-layer widths.
+- `hiddenLayerIndex` - Hidden-layer index.
+
+Returns: Start and end boundaries.
+
+### createImmutableSplicedArray
+
+```ts
+createImmutableSplicedArray(
+  source: TItem[],
+  start: number,
+  deleteCount: number,
+  insertItems: TItem[],
+): TItem[]
+```
+
+Create an immutable spliced copy, with a compatibility fallback when ES2023
+`toSpliced` is typed as optional in ambient declarations.
+
+Parameters:
+- `source` - Source array.
+- `start` - Start index.
+- `deleteCount` - Number of removed items.
+- `insertItems` - Items to insert.
+
+Returns: New array containing the splice result.
+
+### createPreviousLayerSourceGroup
+
+```ts
+createPreviousLayerSourceGroup(
+  previousLayerNodes: default[],
+): PreviousLayerSourceGroup
+```
+
+Create a source group compatible with both runtime Layer input wiring and
+the existing mock fused-layer tests.
+
+Parameters:
+- `previousLayerNodes` - Previous-layer node slice.
+
+Returns: Group-like source wrapper.
+
+### deriveLayerNeighborhood
+
+```ts
+deriveLayerNeighborhood(
+  network: default,
+  hiddenLayerSizes: number[],
+  hiddenLayerIndex: number,
+): OnnxFusedLayerNeighborhood
+```
+
+Derive hidden-layer neighborhood slices for replacement traversal.
+
+Parameters:
+- `network` - Target network.
+- `hiddenLayerSizes` - Hidden-layer widths.
+- `hiddenLayerIndex` - Hidden-layer index.
+
+Returns: Layer neighborhood.
+
+### deriveNextLayerNodes
+
+```ts
+deriveNextLayerNodes(
+  network: default,
+  hiddenLayerSizes: number[],
+  hiddenLayerIndex: number,
+  hiddenNodes: default[],
+): default[]
+```
+
+Derive next-layer nodes for a hidden layer.
+
+Parameters:
+- `network` - Target network.
+- `hiddenLayerSizes` - Hidden-layer widths.
+- `hiddenLayerIndex` - Hidden-layer index.
+- `hiddenNodes` - All hidden nodes.
+
+Returns: Next-layer nodes.
+
+### derivePreviousLayerNodes
+
+```ts
+derivePreviousLayerNodes(
+  network: default,
+  hiddenLayerSizes: number[],
+  hiddenLayerIndex: number,
+  hiddenNodes: default[],
+): default[]
+```
+
+Derive previous-layer nodes for a hidden layer.
+
+Parameters:
+- `network` - Target network.
+- `hiddenLayerSizes` - Hidden-layer widths.
+- `hiddenLayerIndex` - Hidden-layer index.
+- `hiddenNodes` - All hidden nodes.
+
+Returns: Previous-layer nodes.
+
+### deriveUnitSize
+
+```ts
+deriveUnitSize(
+  rows: number,
+  gateCount: number,
+): number | null
+```
+
+Derive hidden unit size from recurrent row count and gate count.
+
+Parameters:
+- `rows` - Recurrent rows.
+- `gateCount` - Gate count.
+
+Returns: Unit size when compatible.
+
+### detachOldLayerConnections
+
+```ts
+detachOldLayerConnections(
+  network: default,
+  neighborhood: OnnxFusedLayerNeighborhood,
+): void
+```
+
+Detach all connections touching replaced hidden-layer nodes.
+
+Parameters:
+- `network` - Target network.
+- `neighborhood` - Layer neighborhood.
+
+Returns: Nothing.
+
+### filterNodesByType
+
+```ts
+filterNodesByType(
+  network: default,
+  nodeType: string,
+): default[]
+```
+
+Filter network nodes by semantic type.
+
+Parameters:
+- `network` - Target network.
+- `nodeType` - Node type name.
+
+Returns: Filtered node collection.
+
+### findInitializerTensor
+
+```ts
+findInitializerTensor(
+  onnx: OnnxModel,
+  kind: OnnxFusedRecurrentKind,
+  suffix: string,
+  hiddenLayerIndex: number,
+): OnnxTensor | undefined
+```
+
+Find one initializer tensor by fused family naming convention.
+
+Parameters:
+- `onnx` - Source ONNX model.
+- `kind` - Fused family kind.
+- `suffix` - Tensor suffix.
+- `hiddenLayerIndex` - Hidden-layer index.
+
+Returns: Initializer tensor when found.
+
+### isValidHiddenLayerIndex
+
+```ts
+isValidHiddenLayerIndex(
+  hiddenLayerSizes: number[],
+  hiddenLayerIndex: number,
+): boolean
+```
+
+Validate hidden-layer index boundaries.
+
+Parameters:
+- `hiddenLayerSizes` - Hidden-layer widths.
+- `hiddenLayerIndex` - Hidden-layer index.
+
+Returns: True when index is valid.
+
+### parseEmittedLayerIndices
+
+```ts
+parseEmittedLayerIndices(
+  metadata: OnnxMetadataProperty[],
+  spec: OnnxFusedRecurrentSpec,
+): number[]
+```
+
+Parse exported layer indices from metadata for one fused family.
+
+Parameters:
+- `metadata` - ONNX metadata properties.
+- `spec` - Fused family spec.
+
+Returns: Export-layer indices.
+
+### parseMetadataJsonArray
+
+```ts
+parseMetadataJsonArray(
+  metadataValue: string,
+): number[]
+```
+
+Parse metadata JSON payload as an array of indices.
+
+Parameters:
+- `metadataValue` - Serialized metadata payload.
+
+Returns: Parsed index array.
+
+### reconstructAllFusedFamilies
+
+```ts
+reconstructAllFusedFamilies(
+  scope: FusedRecurrentImportScope,
+  specs: OnnxFusedRecurrentSpec[],
+): void
+```
+
+Reconstruct all fused recurrent families declared by metadata.
+
+Parameters:
+- `scope` - Import scope.
+- `specs` - Fused family specs.
+
+Returns: Nothing.
+
 ### reconstructFusedRecurrentLayers
 
 ```ts
@@ -1985,6 +2696,166 @@ reconstructFusedRecurrentLayers(
 ```
 
 Contract for reconstructFusedRecurrentLayers.
+
+### reconstructOneFusedFamily
+
+```ts
+reconstructOneFusedFamily(
+  scope: FusedRecurrentImportScope,
+  spec: OnnxFusedRecurrentSpec,
+): void
+```
+
+Reconstruct one fused family across all emitted layer indices.
+
+Parameters:
+- `scope` - Import scope.
+- `spec` - Fused family spec.
+
+Returns: Nothing.
+
+### reconstructOneFusedLayer
+
+```ts
+reconstructOneFusedLayer(
+  scope: FusedRecurrentImportScope,
+  context: OnnxFusedLayerReconstructionContext,
+): void
+```
+
+Reconstruct one fused layer from metadata and ONNX initializers.
+
+Parameters:
+- `scope` - Import scope.
+- `context` - Layer reconstruction context.
+
+Returns: Nothing.
+
+### replaceHiddenNodes
+
+```ts
+replaceHiddenNodes(
+  network: default,
+  neighborhood: OnnxFusedLayerNeighborhood,
+  replacementNodes: default[],
+): void
+```
+
+Replace hidden node segment with reconstructed fused layer nodes.
+
+Parameters:
+- `network` - Target network.
+- `neighborhood` - Layer neighborhood.
+- `replacementNodes` - Replacement nodes.
+
+Returns: Nothing.
+
+### resolveFusedTensors
+
+```ts
+resolveFusedTensors(
+  onnx: OnnxModel,
+  context: OnnxFusedLayerReconstructionContext,
+): OnnxFusedTensorPayload | null
+```
+
+Resolve ONNX fused tensors for one hidden layer.
+
+Parameters:
+- `onnx` - Source ONNX model.
+- `context` - Layer reconstruction context.
+
+Returns: Tensor payload when fully available.
+
+### resolveGateGroups
+
+```ts
+resolveGateGroups(
+  fusedNodes: default[],
+  spec: OnnxFusedRecurrentSpec,
+  unitSize: number,
+): { gateGroups: Record<string, default[]>; recurrentSourceNodes: default[]; }
+```
+
+Resolve gate groups and recurrent source nodes from one fused runtime layout.
+
+Parameters:
+- `fusedNodes` - Fused node list.
+- `spec` - Fused family specification.
+- `unitSize` - Units per gate.
+
+Returns: Gate groups plus recurrent-source nodes.
+
+### resolveGruGateGroups
+
+```ts
+resolveGruGateGroups(
+  fusedNodes: default[],
+  unitSize: number,
+): { gateGroups: Record<string, default[]>; recurrentSourceNodes: default[]; }
+```
+
+Resolve GRU gate groups for either the native six-group layout or the
+compact three-gate mock layout used by owner-local tests.
+
+Parameters:
+- `fusedNodes` - Fused node list.
+- `unitSize` - Units per gate.
+
+Returns: Gate-name to neuron-list map plus recurrent-source nodes.
+
+### sumHiddenLayerSizes
+
+```ts
+sumHiddenLayerSizes(
+  hiddenLayerSizes: number[],
+  startIndex: number,
+  endIndex: number,
+): number
+```
+
+Sum hidden-layer sizes over a half-open range.
+
+Parameters:
+- `hiddenLayerSizes` - Hidden-layer widths.
+- `startIndex` - Inclusive start.
+- `endIndex` - Exclusive end.
+
+Returns: Summed size.
+
+### toHiddenLayerIndex
+
+```ts
+toHiddenLayerIndex(
+  exportLayerIndex: number,
+): number
+```
+
+Convert export-layer index to hidden-layer index.
+
+Parameters:
+- `exportLayerIndex` - Export-layer index.
+
+Returns: Hidden-layer index.
+
+### wireFusedLayer
+
+```ts
+wireFusedLayer(
+  fusedLayerRuntime: OnnxFusedLayerRuntime,
+  previousLayerNodes: default[],
+  nextLayerNodes: default[],
+): void
+```
+
+Wire fused layer between previous and next layer slices.
+
+Parameters:
+- `fusedLayerRuntime` - Reconstructed fused layer runtime.
+- `previousLayerNodes` - Previous-layer nodes.
+- `nextLayerNodes` - Next-layer nodes.
+
+Returns: Nothing.
 
 ## architecture/network/onnx/import/network.onnx.import-external.types.ts
 
@@ -2015,7 +2886,7 @@ Node-level validation and operator support checks consume this schema directly.
 
 ### DecodedExternalOnnxOpsetImport
 
-Decoded ONNX operator-set import payload.
+Decoded ONNX operator-set import payload carrying the domain string and version number used by external import compatibility checks.
 
 ### DecodedExternalOnnxTensor
 
@@ -2034,19 +2905,19 @@ It allows importer passes to align tensor names, element types, and shapes acros
 
 ### OnnxDecodedBytes
 
-Plain decoded bytes field from `onnx-proto` object conversion.
+Union type for raw byte fields emitted by `onnx-proto` object conversion; accepts string, Uint8Array, or number-array representations.
 
 ### OnnxDecodedLongLike
 
-Decoded ONNX long-like field represented by `onnx-proto`.
+Union type for ONNX 64-bit integer fields decoded by `onnx-proto`; includes numeric, string, and toString-capable object forms to handle platform-specific long encoding.
 
 ### OnnxExternalDenseChain
 
-Canonical importer-owned dense chain derived from an accepted external binary graph.
+Canonical importer-owned dense chain derived from an accepted external binary graph, collecting opset version, IO widths, and an ordered layer list.
 
 ### OnnxExternalDenseLayer
 
-Canonical one-layer affine-plus-activation payload for the external dense lane.
+Canonical single-layer payload for the external dense import lane, carrying input and output widths, weight values, biases, and the resolved activation operator.
 
 ### OnnxExternalImportError
 
@@ -2054,7 +2925,7 @@ Error raised when an external ONNX binary falls outside the first supported impo
 
 ### OnnxExternalImportErrorCategory
 
-Named rejection categories for the first external import lane.
+Named rejection category set for the external import lane; each string label identifies a distinct failure class so callers can route errors without string matching.
 
 ## architecture/network/onnx/import/network.onnx.import-concat.utils.ts
 

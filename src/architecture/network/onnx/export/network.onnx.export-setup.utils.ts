@@ -19,7 +19,7 @@ import type { NodeInternals } from '../network.onnx.utils.types';
 const FLOAT_TENSOR_ELEMENT_TYPE = 1;
 /** Current ONNX IR version used by the repo's declared binary subset. */
 export const ONNX_IR_VERSION = 9;
-/** Current upstream ONNX reference opset for the `ai.onnx` domain. */
+/** Current upstream ONNX reference opset version for the `ai.onnx` standard domain. */
 export const CURRENT_ONNX_REFERENCE_OPSET = 27;
 const DEFAULT_MODEL_INPUT_NAME = 'input';
 const DEFAULT_MODEL_OUTPUT_NAME = 'output';
@@ -28,7 +28,7 @@ const SYMBOLIC_BATCH_DIMENSION_NAME = 'N';
  * Canonical ONNX standard-operator domain name used by opset metadata, schema annotations, and exporter compatibility checks across baseline graph emission paths.
  */
 export const ONNX_STANDARD_DOMAIN = 'ai.onnx';
-/** Canonical empty-string alias for the ONNX standard operator-set domain. */
+/** Canonical empty-string alias for the ONNX standard operator-set domain identifier. */
 export const ONNX_STANDARD_DOMAIN_ALIAS = '';
 const DEFAULT_METADATA_PRODUCER_VERSION = '0.0.0';
 const DEFAULT_METADATA_DOC_STRING =

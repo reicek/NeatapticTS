@@ -94,11 +94,11 @@ base64 for portable storage.
 
 ### CompressedSerializedNetworkArchiveCompression
 
-Supported Node-side archive compression codecs for compressed payloads
+Supported Node-side compression codecs for writing compressed serialized network archive payloads.
 
 ### CompressedSerializedNetworkArchiveOptions
 
-Optional settings for archiving one compressed network payload
+Optional codec settings for archiving one compressed network payload in binary form.
 
 ### ConnectionInternalsWithEnabled
 
@@ -170,15 +170,15 @@ Node entries are self-describing and intended for readable, versioned snapshots.
 
 ### NODE_TYPE_HIDDEN
 
-Node type literal used for hidden layer nodes.
+Node type literal for hidden layer nodes used during JSON serialization and deserialization rebuilds.
 
 ### NODE_TYPE_INPUT
 
-Node type literal used for input layer nodes.
+Node type literal for input layer nodes used during JSON serialization and deserialization rebuilds.
 
 ### NODE_TYPE_OUTPUT
 
-Node type literal used for output layer nodes.
+Node type literal for output layer nodes used during JSON serialization and deserialization rebuilds.
 
 ### ParameterLayoutEntry
 
@@ -233,19 +233,19 @@ These fields are the minimal node state required to round-trip compact and JSON 
 
 ### WARNING_INVALID_CONNECTION_DURING_DESERIALIZE
 
-Warning emitted when compact deserialize sees invalid edge endpoints.
+Warning emitted when compact deserialize encounters invalid edge endpoints and skips the connection reconstruction silently.
 
 ### WARNING_INVALID_CONNECTION_DURING_FROM_JSON
 
-Warning emitted when JSON deserialize sees invalid edge endpoints.
+Warning emitted when JSON verbose deserialize encounters invalid edge endpoints and skips the connection reconstruction silently.
 
 ### WARNING_INVALID_GATER_DURING_DESERIALIZE
 
-Warning emitted when compact deserialize sees an invalid gater index.
+Warning emitted when compact deserialize encounters an invalid gater index and skips the gater assignment silently.
 
 ### WARNING_INVALID_GATER_DURING_FROM_JSON
 
-Warning emitted when JSON deserialize sees an invalid gater index.
+Warning emitted when JSON verbose deserialize encounters an invalid gater index and skips the gater assignment silently.
 
 ### WARNING_UNKNOWN_FORMAT_VERSION
 
@@ -254,11 +254,11 @@ Keep this message stable so diagnostics tooling can classify unknown-format impo
 
 ### WARNING_UNKNOWN_SQUASH_PREFIX
 
-Prefix used when warning about unknown activation keys.
+Prefix used when emitting a warning about an unknown activation squash key encountered during deserialization.
 
 ### WARNING_UNKNOWN_SQUASH_SUFFIX
 
-Suffix used when warning about unknown activation keys.
+Suffix appended when emitting a warning about an unknown activation squash key encountered during deserialization.
 
 ## architecture/network/serialize/network.serialize.utils.ts
 
@@ -1461,15 +1461,15 @@ Returns: Nothing.
 
 ### COMPRESSED_GENOME_ARCHIVE_FORMAT
 
-Stable archive wrapper tag used for strict-genome archives.
+Stable archive wrapper format tag used for identifying strict-genome archives.
 
 ### COMPRESSED_GENOME_FORMAT
 
-Stable payload tag used for strict-genome archives.
+Stable payload format tag used for reliably identifying strict-genome archives.
 
 ### CompressedSerializedGenomeArchive
 
-JSON-safe archive wrapper for one strict genome contract.
+JSON-safe archive wrapper for one strict genome serialization checkpoint contract.
 
 ### CompressedSerializedGenomeArchiveOptions
 
@@ -2367,10 +2367,11 @@ Returns: Nothing.
 
 ## architecture/network/serialize/network.serialize.compression.utils.ts
 
-Archive one compressed network payload with a Node-side binary codec.
+Archive one compressed network payload with the best available async runtime codec.
 
-This is intentionally additive: the wrapped payload stays the exact JSON form
-returned by `serializeCompressed`, then gzip or zstd is applied above it.
+Browser runtimes prefer `CompressionStream` with gzip so large payload work can
+stay off the synchronous main-thread path. Node falls back to the existing zlib
+owner when browser streams are unavailable.
 
 ### collectDecodedArchivePayloadBytes
 
@@ -2431,47 +2432,47 @@ Returns: Compressed payload bytes.
 
 ### COMPRESSED_NETWORK_ARCHIVE_ENCODING
 
-Stable string encoding used for archived compressed payload bytes.
+Base64 string encoding applied to archived compressed bytes for safe JSON transport and storage of binary payloads.
 
 ### COMPRESSED_NETWORK_ARCHIVE_FORMAT
 
-Stable format tag for the compressed archive wrapper payload.
+Stable format tag identifying the compressed archive wrapper payload version used by archive encode and decode utilities.
 
 ### COMPRESSED_NETWORK_FORMAT
 
-Stable format tag for the compressed compact serialization payload.
+Stable format tag identifying the compressed compact serialization payload version consumed by decompression utilities.
 
 ### COMPRESSED_WEIGHT_ENCODING
 
-Stable format tag for exact weight-word delta encoding.
+Stable format tag identifying the IEEE-754 float64 signed-int16 delta encoding used for compact weight storage.
 
 ### CompressedArchiveDecodeMetrics
 
-Decode metrics for one archive deserialization operation.
+Decode metrics extending the shared archive metrics with elapsed decode time in milliseconds.
 
 ### CompressedArchiveDecodeOptions
 
-Optional callbacks used while one archive payload is being decoded.
+Optional progress and lifecycle callbacks supplied by the caller while an archive payload is being decoded.
 
 ### CompressedArchiveDecodeProgress
 
-Progress snapshot emitted while one archive payload is being decoded.
+Progress snapshot emitted incrementally while an archive payload is being decoded so callers can surface decode progress.
 
 ### CompressedArchiveDecodeResult
 
-Archive result wrapper that includes decode metrics.
+Typed result wrapper pairing the decoded value with byte-size and timing metrics from the decode operation.
 
 ### CompressedArchiveEncodeMetrics
 
-Encode metrics for one archive serialization operation.
+Encode metrics extending the shared archive metrics with elapsed encode time in milliseconds.
 
 ### CompressedArchiveEncodeResult
 
-Archive result wrapper that includes encode metrics.
+Typed result wrapper pairing the encoded archive payload with its byte-size and timing metrics.
 
 ### CompressedArchiveMetrics
 
-Shared byte-size metrics for one archive operation.
+Shared byte-size and compression-ratio metrics recorded for a single archive encode or decode operation.
 
 ### compressMatchingRuns
 
@@ -2592,7 +2593,16 @@ createCompressedNetworkArchive(
 ): CompressedSerializedNetworkArchive
 ```
 
-Exported contract for createCompressedNetworkArchive.
+Archive one compressed network payload with a Node-side binary codec.
+
+This is intentionally additive: the wrapped payload stays the exact JSON form
+returned by `serializeCompressed`, then gzip or zstd is applied above it.
+
+Parameters:
+- `compressedPayload` - Existing compressed network payload.
+- `options` - Optional archive compression settings.
+
+Returns: Base64-wrapped compressed archive payload.
 
 ### createCompressedNetworkArchiveAsync
 

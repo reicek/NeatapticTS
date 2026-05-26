@@ -230,11 +230,11 @@ Default rate used when nudging compatibility coefficients toward the desired spe
 
 ### EVOLVE_AUTO_COMPAT_MAX_COEFF
 
-Maximum compatibility coefficient allowed during automatic tuning.
+Maximum compatibility coefficient allowed during automatic tuning; prevents the coefficient from fragmenting the population into too many tiny short-lived species.
 
 ### EVOLVE_AUTO_COMPAT_MIN_COEFF
 
-Minimum compatibility coefficient allowed during automatic tuning.
+Minimum compatibility coefficient allowed during automatic tuning; prevents the coefficient from collapsing all population diversity into one species.
 
 ### EVOLVE_AUTO_COMPAT_RANDOM_SCALE
 
@@ -248,7 +248,7 @@ The controller never tries to collapse diversity below this floor when adjusting
 
 ### EVOLVE_AUTO_ENTROPY_ADD_AT
 
-Default generation at which automatic entropy objective scheduling becomes eligible.
+Default generation index at which automatic entropy objective scheduling becomes eligible for addition to the active objective set.
 
 ### EVOLVE_CROSS_SPECIES_GUARD_LIMIT
 
@@ -268,11 +268,11 @@ This prevents the controller from reacting to every short-lived fluctuation in f
 
 ### EVOLVE_DEFAULT_EPSILON_MAX
 
-Maximum dominance epsilon ceiling used by adaptive Pareto tuning.
+Maximum dominance epsilon ceiling; the adaptive Pareto tuning controller never allows the epsilon value to rise above this boundary.
 
 ### EVOLVE_DEFAULT_EPSILON_MIN
 
-Minimum dominance epsilon floor used by adaptive Pareto tuning.
+Minimum dominance epsilon floor; the adaptive Pareto tuning controller never allows the epsilon value to fall below this boundary.
 
 ### EVOLVE_GLOBAL_STAGNATION_REPLACE_FRACTION
 
@@ -280,7 +280,7 @@ Fraction of the population replaced with fresh genomes when global stagnation re
 
 ### EVOLVE_MIN_OFFSPRING_DEFAULT
 
-Minimum offspring allocation reserved for a surviving species during speciated reproduction.
+Minimum offspring allocation reserved for each surviving species during speciated reproduction so no viable lineage is starved out entirely.
 
 ### EVOLVE_OLD_MULTIPLIER_DEFAULT
 
@@ -303,27 +303,27 @@ Default numerical range epsilon for deciding whether an objective has effectivel
 
 ### EVOLVE_PRUNE_WINDOW_DEFAULT
 
-Default inactivity window used before adaptive objective pruning considers removal.
+Default inactivity window in generations that must elapse before adaptive objective pruning considers removing a stagnant objective.
 
 ### EVOLVE_REENABLE_DELTA_SCALE
 
-Scale factor that converts re-enable success error into a probability update.
+Scale factor that converts the re-enable success-rate error signal into a probability update step during adaptive mutation control.
 
 ### EVOLVE_REENABLE_MAX
 
-Upper bound for adaptive connection re-enable probability.
+Upper bound for the adaptive connection re-enable probability; the controller clamps upward adjustments at this ceiling to avoid over-enabling.
 
 ### EVOLVE_REENABLE_MIN
 
-Lower bound for adaptive connection re-enable probability.
+Lower bound for the adaptive connection re-enable probability; the controller clamps downward adjustments at this floor to preserve some re-enable activity.
 
 ### EVOLVE_REENABLE_MIN_SAMPLES
 
-Minimum re-enable observations required before the controller trusts its adaptation signal.
+Minimum number of re-enable observations required before the adaptive controller trusts its success-rate signal and adjusts probability.
 
 ### EVOLVE_REENABLE_TARGET
 
-Desired success ratio for connection re-enable attempts during adaptive mutation control.
+Desired success ratio for connection re-enable attempts; the adaptive controller steers probability toward this target fraction each generation.
 
 ### EVOLVE_SPECIES_HISTORY_MAX
 
@@ -331,7 +331,7 @@ Maximum number of species-history snapshots to retain for telemetry and later ex
 
 ### EVOLVE_SURVIVAL_THRESHOLD_DEFAULT
 
-Survivor fraction used when choosing the parent pool inside each species.
+Survivor fraction used when choosing the parent pool inside each species during speciated offspring production.
 
 ### EVOLVE_TARGET_FRONT_LOWER_RATIO
 
@@ -357,4 +357,4 @@ Fitness-sharing multiplier applied to species that are still in their early grow
 
 ### EVOLVE_YOUNG_THRESHOLD_DEFAULT
 
-Generation threshold below which a species is still treated as young.
+Generation age threshold below which a species is still classified as young and receives a fitness-sharing bonus to encourage early exploration.

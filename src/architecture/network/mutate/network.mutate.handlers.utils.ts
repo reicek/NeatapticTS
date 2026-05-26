@@ -1381,7 +1381,7 @@ function isNodeWithoutSelfLoop(candidateNode: Node): boolean {
 }
 
 /**
- * Removes one existing self-connection chosen at random.
+ * Removes one existing hidden node self-connection chosen uniformly at random.
  *
  * @param this - Bound network.
  * @returns Nothing.
@@ -1448,7 +1448,7 @@ function isUngatedConnection(candidateConnection: Connection): boolean {
 }
 
 /**
- * Removes gating from one randomly selected gated connection.
+ * Removes active gating from one randomly selected currently gated connection.
  *
  * @param this - Bound network.
  * @returns Nothing.
@@ -1627,7 +1627,7 @@ function isBackwardCandidateTargetAvailable(
 }
 
 /**
- * Removes one backward connection that satisfies redundancy constraints.
+ * Removes one backward connection that satisfies per-endpoint structural redundancy constraints.
  *
  * @param this - Bound network.
  * @returns Nothing.

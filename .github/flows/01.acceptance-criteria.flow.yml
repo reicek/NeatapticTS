@@ -1,6 +1,6 @@
-id: "01.acceptance-criteria"
-name: "Acceptance Criteria and Risk Envelope"
-agent: "01-planning"
+id: '01.acceptance-criteria'
+name: 'Acceptance Criteria and Risk Envelope'
+agent: '01-planning'
 description: >
   Produces observable acceptance criteria, edge cases, non-goals, and a
   risk envelope for an ambiguous user request before red tests are authored.
@@ -11,28 +11,28 @@ description: >
   active plan step so 03-red-testing can use it as a contract.
 
 triggers:
-  - "User request is ambiguous or acceptance criteria are missing"
-  - "Acceptance criteria needed before 03-red-testing begins"
-  - "New feature or refactor lacks a done-state definition"
-  - "Step packet is missing observable success conditions"
+  - 'User request is ambiguous or acceptance criteria are missing'
+  - 'Acceptance criteria needed before 03-red-testing begins'
+  - 'New feature or refactor lacks a done-state definition'
+  - 'Step packet is missing observable success conditions'
 
 gates:
-  - "plan-sync"
-  - "step-packet"
-  - "planning-output-contract"
+  - 'plan-sync'
+  - 'step-packet'
+  - 'planning-output-contract'
 
 post-phase-fanout:
-  - "03-red-testing"
+  - '03-red-testing'
 
 skills:
-  - "planning-acceptance-criteria"
-  - "plan-alignment"
-  - "tracker-handoff"
+  - 'planning-acceptance-criteria'
+  - 'plan-alignment'
+  - 'tracker-handoff'
 
 specialists:
-  - "planning-risk-coordinator"
-  - "planning-test-strategy-coordinator"
-  - "acceptance-criteria-writer"
-  - "Plan Scout"
+  - 'planning-risk-coordinator'
+  - 'planning-test-strategy-coordinator'
+  - 'acceptance-criteria-writer'
+  - 'Plan Scout'
 
 timeout-minutes: 20

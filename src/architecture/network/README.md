@@ -1301,7 +1301,7 @@ Returns: True when slab fast-path activation is valid.
 clearState(): void
 ```
 
-Clear all node runtime traces and states.
+Clear all accumulated per-node runtime traces and saved activation states.
 
 Parameters:
 - `this` - Bound network instance.
@@ -2004,7 +2004,7 @@ hasPath(
 ): boolean
 ```
 
-Depth-first reachability test (avoids infinite loops via visited set).
+Depth-first reachability test that avoids infinite loops using a visited set.
 
 ### maybePrune
 
@@ -2157,7 +2157,7 @@ rebuildConnections(
 ): void
 ```
 
-Rebuild the canonical connection array from per-node outgoing lists.
+Rebuild the canonical connection array from all per-node outgoing lists.
 
 Parameters:
 - `networkInstance` - Target network.
@@ -2558,7 +2558,7 @@ recurrent strongly-connected components.
 
 ### ActivationScheduleStep
 
-One deterministic activation step inside a compiled schedule
+One deterministic activation step inside a compiled Kahn-ordered network activation schedule.
 
 ### ActivationScheduleStepKind
 
@@ -2594,7 +2594,7 @@ ActivationSquashFunction(
 ): number
 ```
 
-Activation function signature used by ONNX layer emission helpers.
+Activation function signature used by ONNX layer emission helpers for encoding activation operator type attributes.
 
 ### AttentionMapping
 
@@ -2606,11 +2606,11 @@ stable dense path remains the canonical runtime behavior.
 
 ### BackwardCandidateTraversalContext
 
-Immutable context for backward candidate traversal
+Immutable context for backward candidate traversal in recurrent connection mutation helpers.
 
 ### BuildAdjacencyContext
 
-Shared immutable inputs used across the adjacency build pipeline.
+Shared immutable inputs used across the CSR adjacency build pipeline for outgoing-order construction.
 
 ### CheckpointConfig
 
@@ -2703,11 +2703,11 @@ base64 for portable storage.
 
 ### CompressedSerializedNetworkArchiveCompression
 
-Supported Node-side archive compression codecs for compressed payloads
+Supported Node-side compression codecs for writing compressed serialized network archive payloads.
 
 ### CompressedSerializedNetworkArchiveOptions
 
-Optional settings for archiving one compressed network payload
+Optional codec settings for archiving one compressed network payload in binary form.
 
 ### ConcatMapping
 
@@ -2730,15 +2730,15 @@ the offspring node set is rebuilt.
 
 ### ConnectionGeneSelectionContext
 
-Immutable context for selecting inherited genes
+Immutable context for selecting inherited genes during NEAT crossover gene alignment.
 
 ### ConnectionGeneticProps
 
-Extended connection shape used during genetic crossover
+Extended connection shape carrying the enabled state used during NEAT genetic crossover.
 
 ### ConnectionGroupReinitContext
 
-Context for reinitializing connection group weights
+Context for reinitializing a connection group's weights during mutation weight resetting.
 
 ### ConnectionHistoricalIdentity
 
@@ -2750,7 +2750,7 @@ historical identifiers that survive reindexing.
 
 ### ConnectionInternals
 
-Internal Connection properties accessed during slab operations.
+Internal Connection properties accessed during slab build, serialization, and typed-array buffer write operations.
 
 ### ConnectionInternalsWithEnabled
 
@@ -2761,11 +2761,11 @@ as implicitly enabled.
 
 ### ConnectionSlabView
 
-Shape returned by getConnectionSlab describing the packed SoA view.
+Packed SoA view returned by getConnectionSlab exposing typed-array weight, index, and flag buffers.
 
 ### ConnectionSplitResult
 
-Result of replacing a connection with split hidden node.
+Result of replacing a connection with a newly inserted split hidden node.
 
 ### ConnectionWeightNoiseProps
 
@@ -2785,11 +2785,18 @@ fields.
 
 ### ConstructGraphConnectionSummary
 
-One detached edge row in the construct graph snapshot.
+One detached, JSON-serializable edge row in the construct graph snapshot.
+
+Carries stable innovation id, source/target identity, current weight and
+enabled state, gater identity when present, and self-loop classification.
 
 ### ConstructGraphNodeSummary
 
-One detached node row in the construct graph snapshot.
+One detached, JSON-serializable node row in the construct graph snapshot.
+
+Carries stable gene identity, semantic role, and public I/O ordering metadata
+so developer tooling can inspect the materialized graph without accessing
+mutable `Network` internals directly.
 
 ### ConstructGraphSnapshot
 
@@ -2832,7 +2839,7 @@ This alias keeps the construct outcome type discoverable from the network root t
 
 ### ConstructValidationOptions
 
-Extra validation switches for construct-from-parts materialization.
+Extra structural validation switches for the construct-from-parts network materialization pipeline.
 
 ### Conv2DMapping
 
@@ -2849,27 +2856,27 @@ may reject the model.
 
 ### ConvKernelConsistencyContext
 
-Context for kernel-coordinate consistency checks at one output position.
+Context for kernel-coordinate consistency checks at one output position, comparing representative weights with tolerance.
 
 ### ConvLayerPairContext
 
-Context for one resolved Conv mapping layer pair.
+Context for one resolved Conv mapping layer pair, supplying the Conv spec and adjacent layer node lists.
 
 ### ConvOutputCoordinate
 
-Coordinate for one Conv output neuron position.
+Coordinate for one Conv output neuron, encoding the output channel, row, and column indices together.
 
 ### ConvRepresentativeKernelContext
 
-Context for representative Conv kernel collection per output channel.
+Context for representative Conv kernel collection per output channel, supplying neuron lists and the Conv spec.
 
 ### ConvSharingValidationContext
 
-Context for validating Conv sharing across all declared mappings.
+Context for validating Conv sharing across all declared mappings, holding layer nodes and mapping specifications.
 
 ### ConvSharingValidationResult
 
-Result of Conv sharing validation across declared mappings.
+Result of Conv sharing validation across declared mappings, reporting verified and mismatched layer indices.
 
 ### CostFunction
 
@@ -2904,23 +2911,23 @@ export const mse: CostFunction = (target, output) => {
 
 ### CostFunctionOrObject
 
-Cost function object compatibility shape
+Cost function object compatibility shape bridging legacy and modern cost function interfaces.
 
 ### CostFunctionOrRef
 
-Evolve-side serializable cost-function reference
+Evolve-side serializable cost-function reference accepting either an inline function or a named string.
 
 ### CrossoverContext
 
-Immutable baseline context for one crossover run
+Immutable baseline context for one NEAT crossover run assembling parents and offspring references.
 
 ### CrossoverNodeBuildContext
 
-Node-build context derived from crossover baseline
+Node-build context derived from crossover baseline used during offspring node pool construction.
 
 ### DenseActivationContext
 
-Dense activation emission context.
+Dense activation emission context carrying layer index, tensor names, graph names, squash function, and opset version.
 
 ### DenseActivationNodePayload
 
@@ -2932,27 +2939,27 @@ Strongly typed Gemm node payload used by dense export helpers.
 
 ### DenseGraphNames
 
-Dense graph tensor names.
+Dense graph tensor names identifying the Gemm output and activation output tensors for one layer.
 
 ### DenseInitializerValues
 
-Dense initializer value arrays.
+Dense initializer value arrays holding the flattened weight matrix values and bias vector for one layer.
 
 ### DenseLayerContext
 
-Dense layer context enriched with resolved activation function.
+Dense layer context enriched with the resolved activation squash function derived from the current layer nodes.
 
 ### DenseLayerParams
 
-Parameters for dense layer emission.
+Parameters for dense layer emission, grouping model, layer index, node lists, ordering flag, and export options.
 
 ### DenseOrderedNodePayload
 
-Dense node payload union used by ordered append helpers.
+Dense node payload union used by ordered append helpers, covering Gemm and activation node payloads.
 
 ### DenseTensorNames
 
-Dense initializer tensor names.
+Dense initializer tensor names for one emitted layer, naming the weight and bias initializer tensors.
 
 ### DenseWeightBuildContext
 
@@ -2960,19 +2967,19 @@ Context for building dense layer initializers from two adjacent layers.
 
 ### DenseWeightBuildResult
 
-Dense layer initializer fold output.
+Dense layer initializer fold output, containing the flattened weight matrix values and bias vector.
 
 ### DenseWeightRow
 
-One collected dense row before fold to flattened initializers.
+One collected dense row before fold to flattened initializers, containing per-neuron weights and bias value.
 
 ### DenseWeightRowCollectionContext
 
-Context for collecting one dense row.
+Context for collecting one dense row, supplying previous layer nodes and the target neuron internals.
 
 ### DeterministicChainMutationContext
 
-Context for deterministic-chain add-node mutation
+Context for deterministic-chain add-node mutation targeting a terminal connection for splitting.
 
 ### DeterministicNetworkInternals
 
@@ -2980,27 +2987,27 @@ Internal network surface projected by deterministic helpers for RNG snapshot and
 
 ### DiagonalRecurrentBuildContext
 
-Context for building a diagonal recurrent matrix from self-connections.
+Context for building a diagonal recurrent matrix from self-connections, supplying the current layer node list.
 
 ### DirectionalConnectionContext
 
-Indexed context for directional connection metadata
+Indexed context for directional connection metadata used during acyclic mutation candidate checks.
 
 ### DistinctNodePair
 
-Selected distinct node pair for swap mutation
+Selected distinct node pair returned when sampling two different nodes for swap mutation.
 
 ### EvolutionaryTargetContext
 
-Context for evolutionary sparsity target computation
+Context for evolutionary sparsity target computation during pruning callbacks in evolve.
 
 ### EvolutionaryTargetResult
 
-Result of evolutionary sparsity target computation
+Result of evolutionary sparsity target computation for evolution-driven connection pruning.
 
 ### EvolutionConfig
 
-Internal normalized evolution config
+Internal normalized evolution config built from user-supplied EvolveOptions for orchestration.
 
 ### EvolutionFitnessFunction
 
@@ -3010,19 +3017,19 @@ EvolutionFitnessFunction(
 ): number | Promise<void>
 ```
 
-Unified evolution fitness callback shape
+Unified evolution fitness callback shape accepting either a single-genome or population callback.
 
 ### EvolutionLoopState
 
-Mutable state tracked during evolution loop
+Mutable state tracked across iterations during the evolve main loop execution.
 
 ### EvolutionSettings
 
-Scalar evolution settings used by orchestration
+Scalar evolution settings extracted from EvolveOptions and used by orchestration helpers.
 
 ### EvolutionStopConditions
 
-Effective evolution stopping conditions
+Effective evolution stopping conditions extracted from raw evolve options for orchestration use.
 
 ### EvolveCostFunction
 
@@ -3033,11 +3040,11 @@ EvolveCostFunction(
 ): number
 ```
 
-Evolve-side cost function signature
+Evolve-side cost function signature comparing target and output vectors for fitness scoring.
 
 ### EvolveOptions
 
-Evolve options bag
+Evolve options bag controlling iteration budget, fitness callback, cost function, and stopping conditions.
 
 ### ExplicitIORoles
 
@@ -3051,19 +3058,19 @@ Context for fan-out collection: build inputs plus the output count buffer.
 
 ### FastSlabNodeRuntime
 
-Node shape required by fast slab activation kernels.
+Node shape required by fast slab activation kernels for typed-array forward pass inference.
 
 ### FitnessSetup
 
-Result of fitness-strategy setup
+Result of fitness-strategy setup describing the resolved callback and worker thread count.
 
 ### FlattenAfterPoolingContext
 
-Flatten emission context after optional pooling.
+Flatten emission context after optional pooling, carrying model, flatten flag, layer index, and source output name.
 
 ### ForwardCandidateTraversalContext
 
-Immutable context for forward candidate traversal
+Immutable context for forward candidate connection traversal in acyclic mutation helpers.
 
 ### FusedRecurrentEmissionExecutionContext
 
@@ -3071,27 +3078,27 @@ Shared execution context for emitting one fused recurrent layer payload.
 
 ### FusedRecurrentGraphNames
 
-Context for ONNX fused recurrent node payload names.
+Context for ONNX fused recurrent node payload names, holding the graph node name and its output tensor name.
 
 ### FusedRecurrentInitializerNames
 
-Context for ONNX fused recurrent initializer names.
+Context for ONNX fused recurrent initializer names, grouping weight, recurrent-weight, and bias tensor name strings.
 
 ### GatingNetworkProps
 
-Internal network properties accessed during gating operations
+Internal network properties accessed during gating operations for node-index dirty flag management.
 
 ### GeneEndpointsContext
 
-Endpoints for one gene traversal step
+Resolved endpoint pair for one gene traversal step during crossover offspring materialization.
 
 ### GeneticNetwork
 
-Runtime network shape used by crossover internals
+Runtime network shape intersecting Network with genetic properties for crossover helper access.
 
 ### GeneTraversalContext
 
-Traversal context for one connection gene
+Traversal context for one connection gene during crossover offspring gene-aligned materialization.
 
 ### GradientClipConfig
 
@@ -3111,19 +3118,19 @@ Context for heuristic GRU emission when a layer matches expected shape.
 
 ### HiddenLayerActivationTraversalContext
 
-Hidden-layer traversal context for assigning imported activation functions.
+Hidden-layer traversal context for assigning imported activation functions, carrying layer index, size, and node lists.
 
 ### HiddenLayerHeuristicContext
 
-Context for one hidden layer during heuristic recurrent emission.
+Context for one hidden layer during heuristic recurrent emission, tracking layer index and model state.
 
 ### IndexedMetadataAppendContext
 
-Append-an-index metadata context for JSON-array metadata keys.
+Append-an-index metadata context for JSON-array metadata keys, supplying model, key, and layer index.
 
 ### InputOutputEndpoints
 
-Required endpoint pair for input/output edge seeding
+Required input and output endpoint pair used when seeding initial feed-forward edge connections.
 
 ### JsonConnectionRebuildContext
 
@@ -3139,11 +3146,11 @@ Node entries are rebuilt in order and pushed into mutable runtime internals.
 
 ### LayerActivationContext
 
-Activation analysis context for one layer.
+Activation analysis context for one layer, capturing whether the layer contains mixed activation functions.
 
 ### LayerActivationValidationContext
 
-Activation-homogeneity decision context for one current layer.
+Activation-homogeneity decision context for one current layer, capturing activation names and mixed-activation policy.
 
 ### LayerBuildContext
 
@@ -3151,27 +3158,27 @@ Layer build context used while emitting one ONNX graph layer segment.
 
 ### LayerConnectivityValidationContext
 
-Connectivity decision context for one source-target node pair.
+Connectivity decision context for one source-target node pair, including layer index and partial-connectivity policy.
 
 ### LayerOrderingNodeGroups
 
-Node partitions used by ONNX layered-ordering inference traversal.
+Node partitions used by ONNX layered-ordering inference traversal, grouping input, hidden, and output nodes.
 
 ### LayerOrderingResolutionContext
 
-Mutable traversal state while resolving hidden-layer ordering.
+Mutable traversal state while resolving hidden-layer ordering, carrying remaining nodes and accumulated layer groups.
 
 ### LayerRecurrentDecisionContext
 
-Context used to decide recurrent emission branch usage.
+Context used to decide recurrent emission branch usage, carrying layer index and recurrent layer index list.
 
 ### LayerTraversalContext
 
-Layer traversal context with adjacent layers and output classification.
+Layer traversal context with adjacent layers, output classification, and the full LayerBuildContext fields.
 
 ### LayerValidationTraversalContext
 
-Layer-wise validation context for activation and connectivity checks.
+Layer-wise validation context for activation and connectivity checks, supplying layer index and adjacent node lists.
 
 ### LstmEmissionContext
 
@@ -3207,7 +3214,7 @@ persistent tiny gradients can scale it back up.
 
 ### MonitoredSmoothingConfig
 
-Config for monitored smoothing computation
+Config for monitored error smoothing computation driving early stopping and progress tracking.
 
 ### MovingAverageType
 
@@ -3224,23 +3231,23 @@ MutationHandler(
 ): void
 ```
 
-Mutation handler function contract
+Mutation handler function contract binding a network method to apply one mutation type.
 
 ### MutationMethod
 
-Mutation method descriptor shape
+Mutation method descriptor shape used across all mutation strategy dispatch and planning logic.
 
 ### MutationMethodObject
 
-Object-only form of mutation method descriptor
+Object-only form of the mutation method descriptor excluding string-shorthand aliases.
 
 ### NeatRuntime
 
-Minimal runtime contract consumed from NEAT in evolve utilities.
+Minimal runtime contract consumed from the NEAT controller within evolve orchestration utilities.
 
 ### NetworkActivationRuntime
 
-Runtime activation contract used by slab-based execution paths.
+Runtime activation contract consumed by slab-based forward-pass execution paths for network inference.
 
 ### NetworkArchitectureDescriptor
 
@@ -3267,7 +3274,7 @@ One ordered edge request consumed by {@link Network.connectBatch} when callers a
 
 ### NetworkConstructor
 
-Constructor signature for runtime Network import
+Constructor signature for runtime Network import used during crossover offspring instantiation.
 
 ### NetworkConstructorOptions
 
@@ -3283,15 +3290,15 @@ Optional settings for async bounded sequence activation. Extends the synchronous
 
 ### NetworkForwardWindowChunk
 
-One emitted chunk from bounded sequence activation
+One emitted chunk from bounded sequence activation through the windowed forward-pass API.
 
 ### NetworkForwardWindowOptions
 
-Optional settings for bounded sequence activation through `forwardWindowed()`.
+Optional settings for bounded sequence activation through the `forwardWindowed()` streaming API.
 
 ### NetworkGeneticProps
 
-Runtime properties used during genetic operations
+Runtime properties projected from Network for genetic operations such as crossover scoring.
 
 ### NetworkInternalsWithDropout
 
@@ -3326,11 +3333,11 @@ Node entries are self-describing and intended for readable, versioned snapshots.
 
 ### NetworkMutationProps
 
-Internal network properties accessed during mutations
+Internal network properties accessed by mutation helpers for topology enforcement and dirty flags.
 
 ### NetworkPruningProps
 
-Internal network properties accessed during pruning operations
+Internal network properties accessed during pruning operations including scheduled configuration and baseline.
 
 ### NetworkRemoveProps
 
@@ -3338,11 +3345,11 @@ Internal network dirty-flag surface used by node-removal helpers to invalidate a
 
 ### NetworkRuntimeControlInternals
 
-Internal network properties accessed by runtime-control helpers
+Internal network properties accessed by runtime-control helpers for dropout, noise, and iteration state.
 
 ### NetworkRuntimeDiagnosticsInternals
 
-Internal network properties accessed by runtime diagnostics helpers
+Internal network properties accessed by runtime diagnostics helpers for topology and optimizer state.
 
 ### NetworkRuntimeProps
 
@@ -3355,19 +3362,19 @@ richer diagnostics, UI rendering, and checkpoint fidelity.
 
 ### NetworkSlabProps
 
-Internal Network properties for slab operations.
+Internal Network properties used by slab orchestration for typed-array buffer management and dirty tracking.
 
 ### NetworkSparsityBudgetProps
 
-Internal network properties accessed during sparsity-budget enforcement
+Internal network properties accessed during sparsity-budget enforcement and last snapshot storage.
 
 ### NetworkSparsityBudgetSnapshot
 
-Read-only snapshot describing the latest growth-budget decision
+Read-only snapshot describing the latest growth-budget decision and connection count metrics.
 
 ### NetworkStandaloneProps
 
-Internal standalone generation network view
+Internal standalone generation network view exposing node count and precision for code emission.
 
 ### NetworkTemporalGatedBlockDescriptor
 
@@ -3406,15 +3413,15 @@ cyclic structures may be introduced.
 
 ### NetworkTopoRuntime
 
-Runtime topology contract used to lazily rebuild topological order.
+Runtime topology contract used to lazily rebuild topological order when the activation cache is dirty.
 
 ### NetworkWithOnnxImportAdvancedGraph
 
-Network instance augmented with optional imported advanced-graph metadata.
+Network instance augmented with optional imported advanced-graph metadata via the _onnxAdvancedGraph field.
 
 ### NetworkWithOnnxImportPooling
 
-Network instance augmented with optional imported ONNX pooling metadata.
+Network instance augmented with optional imported ONNX pooling metadata via the _onnxPooling field.
 
 ### NodeConnectionSnapshotContext
 
@@ -3430,11 +3437,11 @@ the public `Node` API instead.
 
 ### NodeInternalsWithExportIndex
 
-Runtime node internals augmented with optional export index metadata.
+Runtime node internals augmented with optional export index metadata, used for deterministic ONNX graph ordering.
 
 ### NodePair
 
-Canonical source-target node pair tuple
+Canonical ordered source-target node pair tuple used in connection candidate selection.
 
 ### NodeRemovalContext
 
@@ -3442,23 +3449,23 @@ Validated, immutable context assembled before node removal begins. Passed throug
 
 ### NodeWithIndex
 
-Node with generated index for standalone-code emission
+Node with a generated contiguous index used during standalone function source emission.
 
 ### OffspringMaterializationContext
 
-Immutable context for offspring materialization
+Immutable context for NEAT offspring materialization during gene-aligned crossover reconstruction.
 
 ### OnnxActivationAssignmentContext
 
-Shared activation-assignment context for hidden and output traversal.
+Shared activation-assignment context for hidden and output traversal, grouping node lists and per-layer operations.
 
 ### OnnxActivationLayerOperations
 
-Layer-indexed activation operator lookup extracted from ONNX graph nodes.
+Layer-indexed activation operator lookup extracted from ONNX graph nodes for import assignment passes.
 
 ### OnnxActivationOperation
 
-Supported ONNX activation operators recognized during activation import.
+Supported ONNX activation operator strings recognized and mapped during network activation import traversal.
 
 ### OnnxActivationOperationResolutionContext
 
@@ -3466,7 +3473,7 @@ Activation operation resolution context for one neuron or layer default.
 
 ### OnnxActivationParseResult
 
-Parsed ONNX activation-node naming payload.
+Parsed ONNX activation-node naming payload, carrying the extracted layer index and optional neuron index.
 
 ### OnnxAttribute
 
@@ -3478,31 +3485,31 @@ still preserving the attribute variants needed by the importer.
 
 ### OnnxBaseModelBuildContext
 
-Context for constructing a base ONNX model shell.
+Context for constructing a base ONNX model shell, supplying input and output dimension arrays for the graph.
 
 ### OnnxBuildResolvedOptions
 
-Resolved options used by ONNX model build orchestration.
+Resolved options for ONNX model build orchestration, with all export option defaults already applied and normalized.
 
 ### OnnxConvEmissionContext
 
-Context used after resolving Conv mapping for one layer.
+Context used after resolving Conv mapping for one layer, extending OnnxConvEmissionParams with the resolved Conv2DMapping spec.
 
 ### OnnxConvEmissionParams
 
-Parameters accepted by Conv layer emission.
+Parameters accepted by Conv layer emission, grouping model, options, layer index, previous output, and adjacent node lists.
 
 ### OnnxConvKernelCoordinate
 
-Coordinate for one Conv kernel weight lookup.
+Coordinate for one Conv kernel weight lookup, encoding input channel index, kernel row, and column position.
 
 ### OnnxConvParameters
 
-Flattened Conv parameters for ONNX initializers.
+Flattened Conv parameters for ONNX initializers, containing weight and bias arrays derived from Conv layer neurons.
 
 ### OnnxConvTensorNames
 
-Tensor names generated for Conv parameters.
+Tensor names generated for Conv parameters, holding weight and bias initializer name strings for one layer.
 
 ### OnnxDimension
 
@@ -3575,7 +3582,7 @@ Key fields (high-level):
 
 ### OnnxFusedGateApplicationContext
 
-Gate-weight application context for one reconstructed fused layer.
+Gate-weight application context for one reconstructed fused layer, carrying spec, unit size, and weight arrays.
 
 ### OnnxFusedGateRowAssignmentContext
 
@@ -3583,11 +3590,11 @@ Context for assigning one gate-neuron row from flattened ONNX tensors.
 
 ### OnnxFusedLayerNeighborhood
 
-Hidden-layer neighborhood slices around a reconstructed fused layer.
+Hidden-layer neighborhood slices around a reconstructed fused layer, including old, previous, and next node lists.
 
 ### OnnxFusedLayerReconstructionContext
 
-Execution context for one fused recurrent layer reconstruction.
+Execution context for one fused recurrent layer reconstruction, carrying spec, export index, and hidden layer index.
 
 ### OnnxFusedLayerRuntime
 
@@ -3599,7 +3606,7 @@ can be reconnected to the next restored layer.
 
 ### OnnxFusedRecurrentKind
 
-Supported fused recurrent operator families recognized during ONNX import.
+Supported fused recurrent operator families recognized during ONNX import, currently limited to LSTM and GRU.
 
 ### OnnxFusedRecurrentSpec
 
@@ -3628,7 +3635,7 @@ The exporter writes three main collections here:
 
 ### OnnxGraphDimensionBuildContext
 
-Context for constructing input/output ONNX graph dimensions.
+Context for constructing input/output ONNX graph dimensions, carrying width values and the batch-dimension flag.
 
 ### OnnxGraphDimensions
 
@@ -3640,23 +3647,23 @@ Audit-only cross-layer feed-forward edge carried through Phase 5 import fallback
 
 ### OnnxImportAdvancedGraphMetadata
 
-Parsed advanced-graph metadata attached to imported network instances.
+Parsed advanced-graph metadata attached to imported network instances, grouping merges, residual adds, and blocks.
 
 ### OnnxImportAggregatedLayerAssignmentContext
 
-Context for assigning aggregated dense tensors for one layer.
+Context for assigning aggregated dense tensors for one layer, supplying the initializer map and layer node pair.
 
 ### OnnxImportAggregatedNeuronAssignmentContext
 
-Context for assigning one aggregated dense target neuron row.
+Context for assigning one aggregated dense target neuron row, carrying previous nodes, target, and tensor refs.
 
 ### OnnxImportArchitectureContext
 
-Shared architecture extraction context with resolved graph dimensions.
+Shared architecture extraction context with resolved graph dimensions, initializers, and metadata properties.
 
 ### OnnxImportArchitectureResult
 
-Parsed architecture dimensions extracted from ONNX import graph payloads.
+Parsed architecture dimensions extracted from ONNX import graph payloads, with input, output, and hidden sizes.
 
 ### OnnxImportAttentionBlock
 
@@ -3664,7 +3671,7 @@ Explicit fixed-width self-attention block carried through Phase 5 import fallbac
 
 ### OnnxImportConcatMerge
 
-Explicit concat merge carried through Phase 5 import hardening.
+Explicit concat merge carried through Phase 5 import hardening, identifying layer indices and merge tensor names.
 
 ### OnnxImportConvCoordinateAssignmentContext
 
@@ -3672,7 +3679,7 @@ Context for applying Conv weights and bias at one output coordinate.
 
 ### OnnxImportConvKernelAssignmentContext
 
-Context for assigning one concrete Conv kernel connection weight.
+Context for assigning one concrete Conv kernel connection weight, carrying tensor context, coordinate, and channels.
 
 ### OnnxImportConvLayerContext
 
@@ -3681,23 +3688,23 @@ The contract captures grouped node slices, tensor mappings, and assignment state
 
 ### OnnxImportConvLayerContextBuildParams
 
-Build params for creating one Conv reconstruction layer context.
+Build params for creating one Conv reconstruction layer context, supplying assignment context and Conv metadata.
 
 ### OnnxImportConvMetadata
 
-Parsed Conv metadata payload used for optional reconstruction pass.
+Parsed Conv metadata payload used for optional reconstruction pass, listing Conv layer indices and mapping specs.
 
 ### OnnxImportConvNodeSlices
 
-Layer node slices used while applying Conv reconstruction assignments.
+Layer node slices used while applying Conv reconstruction assignments, carrying target and previous layer nodes.
 
 ### OnnxImportConvOutputCoordinate
 
-Coordinate for one Conv output neuron traversal position.
+Coordinate for one Conv output neuron traversal position, encoding output channel, row, and column indices.
 
 ### OnnxImportConvTensorContext
 
-Resolved Conv initializer tensors and dimensions for one layer.
+Resolved Conv initializer tensors and dimensions for one layer, including channels, kernel height, and width.
 
 ### OnnxImportDimensionRecord
 
@@ -3721,35 +3728,35 @@ Inbound connection lookup map keyed by source node for one target neuron.
 
 ### OnnxImportLayerConnectionContext
 
-Execution context for assigning one hidden-layer recurrent diagonal tensor.
+Execution context for assigning one hidden-layer recurrent diagonal tensor, carrying model, nodes, and span.
 
 ### OnnxImportLayerNodePair
 
-Node slices for one sequential imported layer assignment pass.
+Node slices for one sequential imported layer assignment pass, carrying current and previous layer node lists.
 
 ### OnnxImportLayerNodePairBuildParams
 
-Build params for one sequential layer node-pair slice operation.
+Build params for one sequential layer node-pair slice operation, specifying layer index and sequential position.
 
 ### OnnxImportLayerTensorNames
 
-Weight tensor names for one imported layer index.
+Weight tensor names for one imported layer index, identifying weight and bias initializer name strings.
 
 ### OnnxImportLayerWeightBucket
 
-Bucketed ONNX dense/per-neuron tensors for one exported layer index.
+Bucketed ONNX dense/per-neuron tensors for one exported layer index, holding the aggregated and per-neuron lists.
 
 ### OnnxImportPerNeuronAssignmentContext
 
-Context for assigning one per-neuron imported target node.
+Context for assigning one per-neuron imported target node, carrying previous nodes and weight and bias tensors.
 
 ### OnnxImportPerNeuronLayerAssignmentContext
 
-Context for assigning per-neuron tensors for one layer.
+Context for assigning per-neuron tensors for one layer, supplying the initializer map and sequential layer node pair.
 
 ### OnnxImportPoolingMetadata
 
-Parsed pooling metadata payload attached to imported network instances.
+Parsed pooling metadata payload attached to imported network instances, listing pool specs and virtual shapes.
 
 ### OnnxImportPoolingVirtualShape
 
@@ -3773,11 +3780,11 @@ Audit-only shared initializer alias carried through Phase 5 import fallback.
 
 ### OnnxImportWeightAssignmentBuildParams
 
-Build params for creating shared ONNX import weight-assignment context.
+Build params for creating shared ONNX import weight-assignment context, supplying network, model, and hidden sizes.
 
 ### OnnxImportWeightAssignmentContext
 
-Shared weight-assignment context built once per ONNX import.
+Shared weight-assignment context built once per ONNX import, carrying model, layers, metadata, and initializer map.
 
 ### OnnxIncomingWeightAssignmentContext
 
@@ -3785,11 +3792,11 @@ Context for assigning dense incoming weights for one gate-neuron row.
 
 ### OnnxLayerEmissionContext
 
-Context for emitting non-input layers during model build.
+Context for emitting non-input layers during model build, including layer list, options, and ordering flags.
 
 ### OnnxLayerEmissionResult
 
-Result of emitting non-input export layers.
+Result of emitting non-input export layers, carrying the last output name and the layer output name map.
 
 ### OnnxLayerFactory
 
@@ -3825,7 +3832,7 @@ Security/trust boundary:
 
 ### OnnxModelMetadataContext
 
-Context for applying optional ONNX model metadata.
+Context for applying optional ONNX model metadata, carrying model reference, opset, producer info, and inclusion flags.
 
 ### OnnxNode
 
@@ -3840,31 +3847,31 @@ Build context for mapping ONNX layer sizes into a Neataptic MLP factory call.
 
 ### OnnxPerceptronSizeValidationContext
 
-Validation context for perceptron size-list checks during ONNX import.
+Validation context for perceptron size-list checks during ONNX import, supplying sizes, minimum count, and message.
 
 ### OnnxPostProcessingContext
 
-Context for post-processing and export metadata finalization.
+Context for post-processing and export metadata finalization, holding model, layers, options, and layer emission result.
 
 ### OnnxRecurrentCollectionContext
 
-Context for collecting recurrent layer indices during model build.
+Context for collecting recurrent layer indices during model build, providing the layer list and export options.
 
 ### OnnxRecurrentInputValueInfoContext
 
-Context for constructing one recurrent previous-state graph input payload.
+Context for constructing one recurrent previous-state graph input payload, carrying name, hidden width, and batch flag.
 
 ### OnnxRecurrentLayerProcessingContext
 
-Execution context for processing one hidden recurrent layer.
+Execution context for processing one hidden recurrent layer during model build traversal and emission.
 
 ### OnnxRecurrentLayerTraversalContext
 
-Traversal context for one hidden layer during recurrent-input collection.
+Traversal context for one hidden layer during recurrent-input collection, supplying layer index and batch-dimension flag.
 
 ### OnnxRuntimeFactories
 
-Runtime factories consumed during ONNX import network reconstruction.
+Runtime factories consumed during ONNX import network reconstruction, grouping the perceptron and layer module.
 
 ### OnnxRuntimeLayerFactory
 
@@ -3874,15 +3881,15 @@ OnnxRuntimeLayerFactory(
 ): default
 ```
 
-Runtime layer-constructor signature used for recurrent layer reconstruction.
+Runtime layer-constructor signature used for recurrent layer reconstruction, accepting size and returning a Layer.
 
 ### OnnxRuntimeLayerFactoryMap
 
-Runtime layer module shape widened for fused-recurrent reconstruction wiring.
+Runtime layer module shape widened for fused-recurrent reconstruction wiring and dynamic layer factory dispatch.
 
 ### OnnxRuntimeLayerModule
 
-Runtime layer module shape consumed by ONNX import orchestration.
+Runtime layer module shape consumed by ONNX import orchestration, exposing LSTM and GRU factory constructors.
 
 ### OnnxRuntimePerceptronFactory
 
@@ -3892,7 +3899,7 @@ OnnxRuntimePerceptronFactory(
 ): default
 ```
 
-Runtime perceptron factory signature used by ONNX import orchestration.
+Runtime perceptron factory signature used by ONNX import orchestration, producing a Network from size arguments.
 
 ### OnnxShape
 
@@ -3942,7 +3949,7 @@ Notes:
 
 ### OptionalLayerOutputParams
 
-Shared parameters for optional pooling/flatten output emission.
+Shared parameters for optional pooling or flatten output emission after one dense layer output tensor.
 
 ### OptionalPoolingAndFlattenParams
 
@@ -3950,63 +3957,63 @@ Parameters for optional pooling + flatten emission after a layer output.
 
 ### OutgoingOrderBuildContext
 
-Context for constructing source-grouped outgoing connection order.
+Context for constructing the source-grouped outgoing connection order from precomputed CSR start indices.
 
 ### OutputLayerActivationContext
 
-Output-layer activation assignment context.
+Output-layer activation assignment context, carrying output layer index, node list, and activation operations map.
 
 ### Parent1GeneTraversalContext
 
-Traversal state for parent-1 innovation walk
+Traversal state for one parent-1 innovation during the NEAT crossover gene walk.
 
 ### Parent1TraversalSelectionResult
 
-Fold result for parent-1 traversal selection
+Fold result from parent-1 traversal selection during NEAT crossover gene alignment.
 
 ### ParentMetrics
 
-Compact parent metrics summary
+Compact parent metrics summary comparing fitness scores and node counts across both parents.
 
 ### PathSearchContext
 
-Mutable context used while running iterative path search
+Mutable context used when running iterative DFS-style path search for reachability checks.
 
 ### PerNeuronConcatNodePayload
 
-Per-neuron concat node payload.
+Per-neuron concat node payload used to merge individual neuron outputs into one combined layer tensor.
 
 ### PerNeuronGraphNames
 
-Per-neuron graph tensor names.
+Per-neuron graph tensor names identifying the Gemm output and activation output for one neuron subgraph.
 
 ### PerNeuronLayerContext
 
-Per-neuron layer context alias.
+Per-neuron layer context alias for PerNeuronLayerParams, used at the per-neuron layer traversal boundary.
 
 ### PerNeuronLayerParams
 
-Parameters for per-neuron layer emission.
+Parameters for per-neuron layer emission, grouping model, layer index, node lists, options, and batch-dimension flag.
 
 ### PerNeuronNodeContext
 
-Per-neuron normalized node context.
+Per-neuron normalized node context replacing raw Node references with resolved NodeInternals for safe emission.
 
 ### PerNeuronSubgraphContext
 
-Per-neuron subgraph emission context.
+Per-neuron subgraph emission context carrying layer index, neuron index, previous output name, and opset version.
 
 ### PerNeuronTensorNames
 
-Per-neuron initializer tensor names.
+Per-neuron initializer tensor names identifying weight and bias tensors for one neuron subgraph.
 
 ### PlateauSmoothingConfig
 
-Config for plateau smoothing computation
+Config for plateau error smoothing computation during supervised training progress monitoring.
 
 ### PlateauSmoothingState
 
-Mutable smoothing state for plateau metric
+Mutable smoothing state for plateau error metric tracked during supervised training.
 
 ### Pool2DMapping
 
@@ -4018,15 +4025,15 @@ network (when supported).
 
 ### PoolingAttributes
 
-Pooling tensor attributes for ONNX node payloads.
+Pooling tensor attributes for ONNX node payloads, grouping kernel shape, strides, and padding values.
 
 ### PoolingEmissionContext
 
-Pooling emission context resolved for one layer output.
+Pooling emission context resolved for one layer output, extending OptionalLayerOutputParams with the Pool2DMapping spec.
 
 ### PoolKeyMetrics
 
-Per-pool-key allocation & reuse counters (educational / diagnostics).
+Per-pool-key allocation and reuse counters used for educational diagnostics and memory-pool observability.
 
 ### PopulationFitnessFunction
 
@@ -4036,27 +4043,27 @@ PopulationFitnessFunction(
 ): Promise<void>
 ```
 
-Fitness signature evaluating full population asynchronously
+Fitness signature evaluating the full population asynchronously and storing results in-place.
 
 ### PopulationWorkerEvaluationContext
 
-Shared context for one population worker evaluation run
+Shared mutable context coordinating one parallel population worker evaluation run.
 
 ### PrimarySmoothingState
 
-Mutable smoothing state for monitored error
+Mutable smoothing state for monitored error updated each supervised training iteration.
 
 ### PruneSelectionContext
 
-Context for selecting prune candidates
+Context for selecting prune candidate connections by magnitude or SNIP scoring.
 
 ### PruneSelectionResult
 
-Result of prune candidate selection
+Result of prune candidate selection listing the connections scheduled for removal.
 
 ### PruningMethod
 
-Pruning strategy identifiers
+Pruning strategy identifiers specifying available connection removal approaches such as magnitude and SNIP.
 
 ### PublishAdjacencyContext
 
@@ -4068,23 +4075,23 @@ One candidate source-target pair for reconnecting paths across a removed node. U
 
 ### RecurrentActivationEmissionContext
 
-Context for selecting and emitting recurrent activation node payload.
+Context for selecting and emitting recurrent activation node payload using the layer's dominant squash function.
 
 ### RecurrentGateBlockCollectionContext
 
-Context for collecting one gate parameter block.
+Context for collecting one gate parameter block, supplying gate nodes, previous layer, unit size, and diagonal flag.
 
 ### RecurrentGateParameterCollectionResult
 
-Flattened recurrent gate parameter vectors for one fused operator.
+Flattened recurrent gate parameter vectors for one fused operator, grouping input, recurrent, and bias arrays.
 
 ### RecurrentGateRow
 
-One recurrent gate row payload before flatten fold.
+One recurrent gate row payload before flatten fold, containing input weights, recurrent weights, and bias.
 
 ### RecurrentGateRowCollectionContext
 
-Context for collecting one recurrent gate row (one neuron).
+Context for collecting one recurrent gate row (one neuron), supplying the previous layer node list and unit size.
 
 ### RecurrentGemmEmissionContext
 
@@ -4092,39 +4099,39 @@ Context for emitting one Gemm node for recurrent single-step export.
 
 ### RecurrentGraphNames
 
-Derived graph names for one recurrent single-step layer payload.
+Derived graph names for one recurrent single-step layer payload, with all tensor and node names resolved.
 
 ### RecurrentHeuristicEmissionContext
 
-Context for heuristic recurrent operator emission traversal.
+Context for heuristic recurrent operator emission traversal, carrying model, layer list, and previous output tensor name.
 
 ### RecurrentInitializerEmissionContext
 
-Context for pushing recurrent initializers into ONNX graph state.
+Context for pushing recurrent initializers into ONNX graph state, carrying widths, tensor names, and value arrays.
 
 ### RecurrentInitializerNames
 
-Initializer tensor names for one single-step recurrent layer.
+Initializer tensor names for one single-step recurrent layer, naming weight, bias, and recurrent-weight tensors.
 
 ### RecurrentInitializerValues
 
-Collected initializer vectors for one single-step recurrent layer.
+Collected initializer vectors for one single-step recurrent layer, storing weight matrix, biases, and recurrent weights.
 
 ### RecurrentLayerEmissionContext
 
-Derived execution context for single-step recurrent layer emission.
+Derived execution context for single-step recurrent layer emission, extending params with layer slot and widths.
 
 ### RecurrentLayerEmissionParams
 
-Parameters for single-step recurrent layer emission.
+Parameters for single-step recurrent layer emission, supplying model, layer index, and adjacent node lists.
 
 ### RecurrentLayerShape
 
-Minimal recurrent-layer shape used by mutation expanders
+Minimal recurrent-layer shape consumed by mutation expanders when adding recurrent hidden nodes.
 
 ### RecurrentRowCollectionContext
 
-Context for collecting one recurrent matrix row.
+Context for collecting one recurrent matrix row, supplying the layer node list and the row index to extract.
 
 ### RecurrentStateSemantics
 
@@ -4132,19 +4139,19 @@ State-handling rule for recurrent schedule execution. `'carry'` means previous a
 
 ### RegrowthExecutionContext
 
-Context for regrowth execution routine
+Context for regrowth execution routine specifying target, network, and maximum attempts.
 
 ### RegrowthPlan
 
-Derived regrowth execution plan
+Derived regrowth execution plan specifying the max regrowth attempts and connection target.
 
 ### RegrowthPlanContext
 
-Context for deriving regrowth plan
+Context for deriving regrowth plan from prune count, fraction, and remaining target.
 
 ### RegularizationConfig
 
-L1/L2 regularization configuration
+L1/L2 regularization configuration for applying per-weight decay penalties during backpropagation.
 
 ### ResolvedNetworkSizeContext
 
@@ -4165,11 +4172,11 @@ Typical uses include logging, custom learning-rate schedules, or diagnostics.
 
 ### ScheduledTargetContext
 
-Context for scheduled-pruning target computation
+Context for scheduled-pruning target computation providing iteration position and schedule bounds.
 
 ### ScheduledTargetResult
 
-Result of scheduled-pruning target computation
+Result of scheduled-pruning target computation for the number of connections to remove.
 
 ### SerializedConnection
 
@@ -4200,11 +4207,11 @@ These fields are the minimal node state required to round-trip compact and JSON 
 
 ### SharedActivationNodeBuildParams
 
-Shared parameters for constructing an activation node payload.
+Shared parameters for constructing an activation node payload, carrying activation type and output name strings.
 
 ### SharedGemmNodeBuildParams
 
-Shared parameters for constructing a Gemm node payload.
+Shared parameters for constructing a Gemm node payload, carrying weight, bias, output tensor names, and node name.
 
 ### SingleGenomeFitnessFunction
 
@@ -4214,7 +4221,7 @@ SingleGenomeFitnessFunction(
 ): number
 ```
 
-Fitness signature evaluating one genome
+Fitness signature evaluating one genome and returning a scalar fitness score.
 
 ### SLAB_DEFAULT_ASYNC_CHUNK_SIZE
 
@@ -4222,11 +4229,11 @@ Default async slab rebuild chunk size when no override is provided.
 
 ### SLAB_GROWTH_FACTOR_BROWSER
 
-Capacity growth factor for browser slab allocations.
+Capacity growth factor for browser runtime slab allocations, tuned for tighter memory environments.
 
 ### SLAB_GROWTH_FACTOR_NODE
 
-Capacity growth factor for Node.js slab allocations.
+Capacity growth factor for Node.js runtime slab allocations, scaled conservatively to allow large networks.
 
 ### SLAB_ONE
 
@@ -4242,27 +4249,27 @@ Immutable inputs required to build or grow connection slab buffers.
 
 ### SlabPopulateResult
 
-Result of scanning and populating optional gain/plastic slab arrays.
+Result of scanning and populating optional gain and plastic typed-array slab buffers.
 
 ### SlabWriteArrays
 
-Writable slab arrays targeted during connection serialization.
+Writable typed-array slab buffers targeted during connection serialization and buffer population.
 
 ### SourcePeerConnectionCountContext
 
-Context for source-to-peer connection counting
+Context for source-to-peer connection counting during feed-forward mutation candidate selection.
 
 ### SparsityBudgetDecision
 
-Growth-budget decision categories for structural mutations
+Growth-budget decision categories controlling structural mutation allow, deny, and prune-then-allow paths.
 
 ### SpecMetadataAppendContext
 
-Append-a-spec metadata context for JSON-array metadata keys.
+Append-a-spec metadata context for JSON-array metadata keys, supplying model, key, and Conv or Pool spec.
 
 ### StandaloneGenerationContext
 
-Shared mutable state for standalone source generation
+Shared mutable state assembled for one standalone network function source generation pass.
 
 ### StartIndicesBuildContext
 
@@ -4270,35 +4277,35 @@ Context for constructing CSR start offsets from precomputed fan-out counts.
 
 ### StatsNetworkProps
 
-Internal network properties used by stats operations
+Internal network properties used by stats operations to cache the last aggregated metrics payload.
 
 ### SubNodeMutationConfig
 
-Mutation keep-gates option surface used by sub-node removal logic.
+Mutation keep-gates option surface used by sub-node removal logic and gate reassignment.
 
 ### TargetLayerPeerContext
 
-Context for target-layer peer traversal
+Context for target-layer peer traversal when seeding feed-forward connection candidates.
 
 ### TopologyBuildContext
 
-Mutable context used while building topological ordering
+Mutable context assembled when building Kahn-ordered topological node activation waves.
 
 ### TopologyNetworkProps
 
-Internal topology state carrier
+Internal topology state carrier for acyclic enforcement, cached schedule, and dirty markers.
 
 ### TrainingConnectionInternals
 
-Runtime connection view used by training internals
+Runtime connection view used by training internals for delta-weight accumulation and optimizer updates.
 
 ### TrainingNetworkInternals
 
-Runtime network view used by training internals
+Runtime network view used by training internals for optimizer step tracking and mixed-precision state.
 
 ### TrainingNodeInternals
 
-Runtime node view used by training internals
+Runtime node view used by training internals for bias delta accumulation and optimizer application.
 
 ### TrainingOptions
 
@@ -4327,27 +4334,27 @@ Stopping conditions:
 
 ### TrainingSample
 
-A single supervised training sample used in evolution scoring.
+A single supervised training sample used in network evolution fitness scoring.
 
 ### TypedArray
 
-Union of slab typed array element container types.
+Union of slab typed array element container types supported by activation buffer allocation.
 
 ### TypedArrayConstructor
 
-Constructor type for typed arrays used in slabs.
+Constructor type for typed arrays used in activation slab allocation and dynamic buffer growth.
 
 ### WeightSamplingRangeContext
 
-Context for sampling one random weight value
+Context for sampling one random weight value within a configurable minimum and maximum range.
 
 ### WeightToleranceComparisonContext
 
-Context for comparing two scalar weights with numeric tolerance.
+Context for comparing two scalar weights with numeric tolerance, used by Conv sharing validation helpers.
 
 ### WorkerTraversalContext
 
-Worker-local traversal context
+Worker-local traversal context pairing one worker instance with its shared evaluation context.
 
 ## architecture/network/network.errors.ts
 

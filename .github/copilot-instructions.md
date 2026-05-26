@@ -10,16 +10,16 @@ The default/main Copilot agent **MUST NOT** perform substantive work directly. A
 
 ### Numbered SDLC orchestrators (route here exclusively)
 
-| Agent | Domain |
-|---|---|
-| `00-helping` | AI-system maintenance, workflow gaps, CI/configuration, safe customization fixes |
-| `01-planning` | Planning, decomposition, risk analysis, acceptance criteria, test strategy |
-| `02-researching` | Codebase research, API/dependency exploration, architecture reconnaissance |
-| `03-red-testing` | Failing tests, test plans, fixtures, assertions, coverage strategy before implementation |
-| `04-implementing` | Scoped code changes, focused implementation, pattern reuse |
-| `05-green-testing` | Running tests, triaging failures, fixing regressions, validating behavior |
-| `06-documenting` | JSDoc, user-facing docs, API docs, examples, changelogs |
-| `07-logging` | Session summaries, decisions, evidence, files touched, next steps |
+| Agent              | Domain                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| `00-helping`       | AI-system maintenance, workflow gaps, CI/configuration, safe customization fixes         |
+| `01-planning`      | Planning, decomposition, risk analysis, acceptance criteria, test strategy               |
+| `02-researching`   | Codebase research, API/dependency exploration, architecture reconnaissance               |
+| `03-red-testing`   | Failing tests, test plans, fixtures, assertions, coverage strategy before implementation |
+| `04-implementing`  | Scoped code changes, focused implementation, pattern reuse                               |
+| `05-green-testing` | Running tests, triaging failures, fixing regressions, validating behavior                |
+| `06-documenting`   | JSDoc, user-facing docs, API docs, examples, changelogs                                  |
+| `07-logging`       | Session summaries, decisions, evidence, files touched, next steps                        |
 
 ### Routing rules
 
@@ -49,13 +49,13 @@ These thresholds govern every routing decision and every user-facing response.
 
 The NeatapticTS repo enforces a **5-layer agent delegation tier graph**. Every `.github/agents/*.agent.md` file must carry a `tier: <N>` YAML frontmatter field. The tier field is the delegation-policy field; it is distinct from the uppercase `TIER:` key that appears inside structured-v1 output-contract body text.
 
-| Tier | Label | Examples | `user-invocable` |
-|---|---|---|---|
-| 0 | Default / Main | Default VS Code Copilot agent | — |
-| 1 | Numbered SDLC Orchestrators | `00-helping` through `07-logging` (8 agents) | `true` |
-| 2 | Named coordinators / sub-orchestrators | `planning-context-coordinator`, `solid-split`, etc. | `false` |
-| 3 | Hidden scouts and specialists | `Boundary Mapper`, `Coverage Scout`, `Plan Scout`, etc. | `false` |
-| 4 | Auxiliaries and one-shot helpers | `acceptance-criteria-writer`, `file-change-summarizer` | `false` |
+| Tier | Label                                  | Examples                                                | `user-invocable` |
+| ---- | -------------------------------------- | ------------------------------------------------------- | ---------------- |
+| 0    | Default / Main                         | Default VS Code Copilot agent                           | —                |
+| 1    | Numbered SDLC Orchestrators            | `00-helping` through `07-logging` (8 agents)            | `true`           |
+| 2    | Named coordinators / sub-orchestrators | `planning-context-coordinator`, `solid-split`, etc.     | `false`          |
+| 3    | Hidden scouts and specialists          | `Boundary Mapper`, `Coverage Scout`, `Plan Scout`, etc. | `false`          |
+| 4    | Auxiliaries and one-shot helpers       | `acceptance-criteria-writer`, `file-change-summarizer`  | `false`          |
 
 ### Enforced delegation rules
 
@@ -109,61 +109,61 @@ When adding or reshaping any agent, re-run `validate-agent-graph.mjs` to confirm
 
 ### Skills
 
-| Skill | Invoke when |
-|---|---|
-| `solid-split` | Splitting or refactoring a medium/large module into folder-based submodules with stepwise sequencing |
-| `educational-docs` | Documentation quality, JSDoc improvement, generated-README tone, Mermaid diagrams, citations, Wikimedia-safe visuals |
-| `flappy-architecture-polish` | Tuning, rerunning, or hardening one Flappy Bird architecture profile in the browser-worker path |
-| `visualizer-workflow` | Browser-demo visualizer layout, overflow, hover/tooltip reliability, or cross-demo parity |
-| `test-fix-workflow` | Systematically repairing multiple failing tests (red suite) |
-| `plan-alignment` | Aligning a change with roadmap intent or a specific plan document |
-| `tracker-handoff` | Creating, compressing, or closing `.plans.md` / `.logs.md` files, `Handoff query` sections, terminal closure |
-| `agent-frontmatter-standards` | `.agent.md` naming, tools, model arrays, handoffs, visibility, frontmatter validation |
-| `model-routing-and-budget` | Assigning Full vs Mini model tiers and validating qualified Copilot model strings |
-| `phase-handoff-workflow` | Numbered SDLC handoff prompts, stop conditions, forward-only phase transitions |
-| `subagent-delegation-patterns` | Compact specialist task packets, sequential vs parallel delegation, output contracts |
-| `agent-inventory-audit` | Agent/skill inventory and customization drift evidence |
-| `skill-description-evals` | Should-trigger and should-not-trigger description evals for skills |
-| `skill-output-evals` | Evidence-backed skill output grading and baseline comparisons |
-| `agent-script-tooling` | Noninteractive customization scripts with `--help`, JSON output, stderr diagnostics, idempotency |
-| `license-attribution-audit` | Source attribution and license notes when external standards inform repo customizations |
-| `plan-sync-validation` | Keeping active trackers, `plans/README.md`, and `plans/Roadmap.md` aligned |
-| `red-test-contracts` | Red-phase tests or eval assertions authored before behavior changes |
-| `green-validation-gates` | Focused post-change validation and rerouting failed checks |
-| `docs-academic-citation-audit` | Educational docs, Mermaid, citations, and generated-README quality audits |
-| `worker-inference-transport` | Worker-friendly inference payloads, transport ladders, transfer semantics, browser/Node worker parity |
-| `multithread-evaluation` | Ordered worker-pool batch evaluation, queueing, dataset shipping, single-thread fallback |
-| `checkpointing-persistence` | Versioned full/light checkpoints, strict restore behavior, durable resume state |
-| `hybrid-training-interop` | Deterministic parameter-vector layouts, isolated fine-tuning, persistence policy |
-| `reproducibility-contracts` | Seed/replay/ordering language and exact-vs-bounded determinism contracts |
-| `nge-core-algorithm` | Phase 7 `NGE_DNA`, deterministic development, lifecycle policy, memory tiers, neuromodulation, reproduction |
-| `nge-benchmark-workflow` | Phase 7 benchmark methodology, curricula, fairness contracts, observability, demo-harness evaluation |
-| `neatchat-systems` | Dependency-gated NEATchat follow-up system: memory tiers, retrieval/routing, branchable conversational state |
-| `repo-cortex-workflow` | Cortex index freshness, corpus rebuild, snapshot regeneration, `cortex-index.gate.mjs`, MCP plan path override |
-| `coverage-tranche` | Expanding coverage on passing code toward 100%; file-by-file tranche progression from the lowest-covered boundary |
-| `coverage-guard` | Enforcing 100% statements, branches, functions, and lines after any `src/` file is touched; an enforcement gate, not an expansion workflow |
-| `browser-build` | Browser runtime artifacts, docs asset bundles, smoke gates, CDN/runtime packaging, and browser-env aliasing |
+| Skill                          | Invoke when                                                                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `solid-split`                  | Splitting or refactoring a medium/large module into folder-based submodules with stepwise sequencing                                       |
+| `educational-docs`             | Documentation quality, JSDoc improvement, generated-README tone, Mermaid diagrams, citations, Wikimedia-safe visuals                       |
+| `flappy-architecture-polish`   | Tuning, rerunning, or hardening one Flappy Bird architecture profile in the browser-worker path                                            |
+| `visualizer-workflow`          | Browser-demo visualizer layout, overflow, hover/tooltip reliability, or cross-demo parity                                                  |
+| `test-fix-workflow`            | Systematically repairing multiple failing tests (red suite)                                                                                |
+| `plan-alignment`               | Aligning a change with roadmap intent or a specific plan document                                                                          |
+| `tracker-handoff`              | Creating, compressing, or closing `.plans.md` / `.logs.md` files, `Handoff query` sections, terminal closure                               |
+| `agent-frontmatter-standards`  | `.agent.md` naming, tools, model arrays, handoffs, visibility, frontmatter validation                                                      |
+| `model-routing-and-budget`     | Assigning Full vs Mini model tiers and validating qualified Copilot model strings                                                          |
+| `phase-handoff-workflow`       | Numbered SDLC handoff prompts, stop conditions, forward-only phase transitions                                                             |
+| `subagent-delegation-patterns` | Compact specialist task packets, sequential vs parallel delegation, output contracts                                                       |
+| `agent-inventory-audit`        | Agent/skill inventory and customization drift evidence                                                                                     |
+| `skill-description-evals`      | Should-trigger and should-not-trigger description evals for skills                                                                         |
+| `skill-output-evals`           | Evidence-backed skill output grading and baseline comparisons                                                                              |
+| `agent-script-tooling`         | Noninteractive customization scripts with `--help`, JSON output, stderr diagnostics, idempotency                                           |
+| `license-attribution-audit`    | Source attribution and license notes when external standards inform repo customizations                                                    |
+| `plan-sync-validation`         | Keeping active trackers, `plans/README.md`, and `plans/Roadmap.md` aligned                                                                 |
+| `red-test-contracts`           | Red-phase tests or eval assertions authored before behavior changes                                                                        |
+| `green-validation-gates`       | Focused post-change validation and rerouting failed checks                                                                                 |
+| `docs-academic-citation-audit` | Educational docs, Mermaid, citations, and generated-README quality audits                                                                  |
+| `worker-inference-transport`   | Worker-friendly inference payloads, transport ladders, transfer semantics, browser/Node worker parity                                      |
+| `multithread-evaluation`       | Ordered worker-pool batch evaluation, queueing, dataset shipping, single-thread fallback                                                   |
+| `checkpointing-persistence`    | Versioned full/light checkpoints, strict restore behavior, durable resume state                                                            |
+| `hybrid-training-interop`      | Deterministic parameter-vector layouts, isolated fine-tuning, persistence policy                                                           |
+| `reproducibility-contracts`    | Seed/replay/ordering language and exact-vs-bounded determinism contracts                                                                   |
+| `nge-core-algorithm`           | Phase 7 `NGE_DNA`, deterministic development, lifecycle policy, memory tiers, neuromodulation, reproduction                                |
+| `nge-benchmark-workflow`       | Phase 7 benchmark methodology, curricula, fairness contracts, observability, demo-harness evaluation                                       |
+| `neatchat-systems`             | Dependency-gated NEATchat follow-up system: memory tiers, retrieval/routing, branchable conversational state                               |
+| `repo-cortex-workflow`         | Cortex index freshness, corpus rebuild, snapshot regeneration, `cortex-index.gate.mjs`, MCP plan path override                             |
+| `coverage-tranche`             | Expanding coverage on passing code toward 100%; file-by-file tranche progression from the lowest-covered boundary                          |
+| `coverage-guard`               | Enforcing 100% statements, branches, functions, and lines after any `src/` file is touched; an enforcement gate, not an expansion workflow |
+| `browser-build`                | Browser runtime artifacts, docs asset bundles, smoke gates, CDN/runtime packaging, and browser-env aliasing                                |
 
 ### Companion agents
 
-| Agent | Hands off to |
-|---|---|
-| `Boundary Mapper` | `solid-split` |
-| `Coverage Scout` | `coverage-tranche` |
-| `Coverage Guard` (agent) | `coverage-guard` |
-| `Docs Scout` | `educational-docs` |
-| `Plan Scout` | `plan-alignment` |
-| `Visualizer Scout` | `visualizer-workflow` |
-| `Worker Payload Scout` | `worker-inference-transport` |
-| `Evaluation Pool Scout` | `multithread-evaluation` |
-| `Checkpoint Scout` | `checkpointing-persistence` |
-| `Hybrid Interop Scout` | `hybrid-training-interop` |
-| `Browser Runtime Scout` | `browser-build` |
-| `Determinism Scout` | `reproducibility-contracts` |
-| `NGE Core Scout` | `nge-core-algorithm` |
-| `NGE Benchmark Scout` | `nge-benchmark-workflow` |
-| `NEATchat Scout` | `neatchat-systems` |
-| `Repo Cortex Scout` | `repo-cortex-workflow` |
+| Agent                     | Hands off to                                                      |
+| ------------------------- | ----------------------------------------------------------------- |
+| `Boundary Mapper`         | `solid-split`                                                     |
+| `Coverage Scout`          | `coverage-tranche`                                                |
+| `Coverage Guard` (agent)  | `coverage-guard`                                                  |
+| `Docs Scout`              | `educational-docs`                                                |
+| `Plan Scout`              | `plan-alignment`                                                  |
+| `Visualizer Scout`        | `visualizer-workflow`                                             |
+| `Worker Payload Scout`    | `worker-inference-transport`                                      |
+| `Evaluation Pool Scout`   | `multithread-evaluation`                                          |
+| `Checkpoint Scout`        | `checkpointing-persistence`                                       |
+| `Hybrid Interop Scout`    | `hybrid-training-interop`                                         |
+| `Browser Runtime Scout`   | `browser-build`                                                   |
+| `Determinism Scout`       | `reproducibility-contracts`                                       |
+| `NGE Core Scout`          | `nge-core-algorithm`                                              |
+| `NGE Benchmark Scout`     | `nge-benchmark-workflow`                                          |
+| `NEATchat Scout`          | `neatchat-systems`                                                |
+| `Repo Cortex Scout`       | `repo-cortex-workflow`                                            |
 | `Cortex Embeddings Scout` | `Semantic_Knowledge_Embeddings` (planned — skill not yet on disk) |
 
 ### Canonical routing table

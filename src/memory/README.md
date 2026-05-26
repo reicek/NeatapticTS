@@ -33,7 +33,7 @@ Node slab-growth factor used to reduce rebuild churn on larger server heaps.
 
 ### MemoryManagerConfigSnapshot
 
-Stable snapshot returned by `MemoryManager.getConfig()`.
+Stable resolved configuration snapshot returned by the `MemoryManager.getConfig()` accessor method.
 
 ### MemoryManagerEnvironment
 
@@ -45,7 +45,7 @@ Subset of the shared config object that materially changes memory behavior.
 
 ### MemoryManagerFlagName
 
-Narrow flag names controlled by the memory manager.
+Narrow union of config flag names controlled exclusively by the memory manager.
 
 ### RegisteredMemoryPool
 

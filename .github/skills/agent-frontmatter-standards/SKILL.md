@@ -38,7 +38,7 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 3. Set `user-invocable: false` on every hidden specialist or auxiliary agent; set `true` only for the eight orchestrators.
 4. Use an explicit `agents: [...]` allow-list on phase agents; never omit `agents` where broader delegation is not intended.
 5. Include `agent` in the `tools` list whenever `agents` is non-empty.
-6. Use qualified model strings (e.g. `claude-opus-4-5`) or validated fallback arrays; prefer the form documented in `model-routing-and-budget`.
+6. Use confirmed qualified model strings (for example `GPT-5.4 (copilot)`) or validated fallback arrays; prefer the form documented in `model-routing-and-budget`.
 7. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` after every edit.
 8. Run with `--strict` only when the full eight-agent SDLC surface is expected to be complete and correct.
 9. Record validation output in the active plan or tracker as evidence.
@@ -49,7 +49,7 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 - Do not use `agents: '*'` or omit `agents` on orchestrators that should have bounded delegation.
 - Do not use unqualified or invented model strings; always use strings validated by the model-routing-and-budget skill.
 - Do not run `--strict` validation during a migration that has not yet reached the eight-agent target state.
-- YAML frontmatter parse failures are silent in VS Code; always prefer single-line quoted descriptions and explicit boolean values.
+- YAML frontmatter parse failures are silent in VS Code; always prefer single-line quoted descriptions, same-line inline arrays, and explicit boolean values.
 - Do not grant a hidden specialist `user-invocable: true` without explicit intent and user approval.
 
 ## Expected Final Output

@@ -9,7 +9,7 @@ export class NetworkStandaloneNoOutputNodesError extends Error {
 }
 
 /**
- * Stable error name emitted into generated standalone input guards.
+ * Stable error name string emitted into generated standalone function input guards.
  */
 export const NETWORK_STANDALONE_INPUT_SIZE_MISMATCH_ERROR_NAME =
   'NetworkStandaloneInputSizeMismatchError';

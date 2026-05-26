@@ -304,7 +304,8 @@ See the visual rules in [Astro Bird visual style guide](./assets/visual-style-gu
 3. Read before rewriting.
    - Read the nearest folder README, then the nearest useful parent README.
    - Read the smallest set of source files that own the public story.
-  - Identify and remove user-facing plan labels, tracker language, or repo before/after framing when they leak into public docs.
+
+- Identify and remove user-facing plan labels, tracker language, or repo before/after framing when they leak into public docs.
 
 - Judge the README's flow like a chapter outline: opening promise, reading
   order, conceptual bridges, and whether the symbol sequence helps or hurts

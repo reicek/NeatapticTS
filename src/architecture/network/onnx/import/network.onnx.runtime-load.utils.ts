@@ -36,7 +36,7 @@ const HIDDEN_LAYER_SLICE_END_OFFSET = -1;
 const OUTPUT_SIZE_FALLBACK_COUNT = 0;
 
 /**
- * Resolve runtime factories used by ONNX import orchestration.
+ * Resolve runtime constructor factories used by the ONNX import orchestration.
  *
  * @returns Perceptron factory and layer module object.
  */

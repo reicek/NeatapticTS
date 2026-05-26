@@ -107,11 +107,11 @@ Returns: Previously recorded split data, if present.
 
 ### INITIAL_NEXT_INNOVATION_ID
 
-Initial next-innovation cursor for a newly created tracker.
+Initial next-innovation id cursor for a newly created innovation tracker.
 
 ### INITIAL_TRACKER_GENERATION
 
-Initial active generation for a newly created tracker.
+Initial active generation number for a newly created innovation tracker.
 
 ### prepareInnovationTrackerForGeneration
 
@@ -291,7 +291,7 @@ registries so restore can continue without silently reassigning identities.
 
 ### ConnectionInnovationEntry
 
-JSON tuple entry used when serializing connection innovations.
+JSON tuple entry format used when serializing connection innovation numbers.
 
 ### ConnectionInnovationRegistry
 
@@ -316,7 +316,7 @@ still has outstanding structural reuse information.
 
 ### NodeSplitInnovationEntry
 
-JSON tuple entry used when serializing node-split records.
+JSON tuple entry format used when serializing node-split innovation records.
 
 ### NodeSplitInnovationRegistry
 

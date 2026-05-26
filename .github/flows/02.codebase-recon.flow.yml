@@ -1,6 +1,6 @@
-id: "02.codebase-recon"
-name: "Source Boundary Reconnaissance"
-agent: "02-researching"
+id: '02.codebase-recon'
+name: 'Source Boundary Reconnaissance'
+agent: '02-researching'
 description: >
   Maps module boundaries, existing utilities, API surfaces, and naming
   conventions in src/, testing/, benchmarks/, or examples/ before an
@@ -11,25 +11,32 @@ description: >
   implement without additional research. Does not modify any file.
 
 triggers:
-  - "Implementation step needs module map, existing utilities, or API surface"
-  - "04-implementing requests a read-only recon before editing"
-  - "Refactor or split requires seam identification"
-  - "New subsystem needs neighbor-module contract mapping"
+  - 'Implementation step needs module map, existing utilities, or API surface'
+  - '04-implementing requests a read-only recon before editing'
+  - 'Refactor or split requires seam identification'
+  - 'New subsystem needs neighbor-module contract mapping'
 
 gates:
-  - "plan-sync"
-  - "research-findings-evidence"
+  - 'plan-sync'
+  - 'research-findings-evidence'
 
 post-phase-fanout:
-  - "04-implementing"
+  - '04-implementing'
 
 skills:
-  - "plan-alignment"
-  - "solid-split"
+  - 'plan-alignment'
+  - 'solid-split'
 
 specialists:
-  - "Boundary Mapper"
-  - "implementation-pattern-scout"
-  - "research-codebase-coordinator"
+  - 'Boundary Mapper'
+  - 'implementation-pattern-scout'
+  - 'research-codebase-coordinator'
 
 timeout-minutes: 20
+
+search-policy:
+  broad-discovery: 'neataptic-cortex-mcp: search_corpus (BM25 corpus index, preferred for architecture and pattern queries)'
+  exact-match: 'grep_search or file_search (for exact symbol names, literal strings, or regex)'
+  freshness-gate: 'neataptic-cortex-mcp: freshness_check — required before broad discovery when session follows corpus-changing work'
+  fallback: 'semantic_search + grep_search when Cortex MCP is unavailable or freshness_check reports stale index'
+  residual-gap: 'invoke repo-cortex-scout after task if index was stale and could not be rebuilt mid-task'
