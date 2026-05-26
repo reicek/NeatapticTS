@@ -16,43 +16,43 @@ Raised when node removal targets an input or output anchor node.
 
 ### ERROR_CANNOT_REMOVE_ANCHOR_NODE
 
-Error emitted when trying to remove structural anchor nodes.
+Error emitted when a caller attempts to remove an input or output anchor node from the network topology.
 
 ### ERROR_NODE_NOT_IN_NETWORK
 
-Error emitted when target node is not part of the network.
+Error emitted when the target node passed to remove is not present in the network node list.
 
 ### FIRST_REMOVED_NODE_INDEX
 
-Index for selecting first spliced node.
+Array index used to retrieve the first element spliced from the node list during a single-node removal operation.
 
 ### NetworkRemoveProps
 
-Internal network properties accessed during remove operations.
+Internal network properties accessed by the remove utilities to manage dirty-state flags after node removal.
 
 ### NODE_NOT_FOUND_INDEX
 
-Sentinel index used when node is not found.
+Sentinel index value returned when a node search yields no match in the network node list.
 
 ### NODE_TYPE_INPUT
 
-Node type literal for input anchors.
+Node type literal for input anchors that cannot be removed from the network topology.
 
 ### NODE_TYPE_OUTPUT
 
-Node type literal for output anchors.
+Node type literal for output anchors that cannot be removed from the network topology.
 
 ### NodeConnectionSnapshotContext
 
-Snapshot of node adjacency prior to removal.
+Snapshot of all node adjacency connection lists captured prior to removal.
 
 ### NodeRemovalContext
 
-Immutable context for validated node-removal request.
+Immutable context object used to carry one validated node-removal orchestration request.
 
 ### ReconnectEndpointPairContext
 
-Endpoint pair for reconnecting bridged paths.
+Endpoint pair describing source and target nodes for reconnecting bridged paths.
 
 ## architecture/network/remove/network.remove.utils.ts
 
@@ -80,6 +80,13 @@ Notes / Limitations:
    change—callers relying heavily on gating may want a custom remap strategy.
  - Self connections are simply removed; no attempt is made to emulate recursion via alternative
    structures.
+
+### networkRemoveUtils
+
+Default export bundle for the node removal utilities chapter.
+
+Bundles removeNode so the network facade can bind it as a method
+without importing it individually.
 
 ### removeNode
 
@@ -171,7 +178,7 @@ markNetworkRemovalDirtyFlags(
 ): void
 ```
 
-Marks all cached removal-sensitive structures as dirty.
+Marks all cached removal-sensitive network structures as dirty after node removal.
 
 Parameters:
 - `internalNetwork` - Internal mutable network props.
@@ -278,7 +285,7 @@ createNodeConnectionSnapshot(
 ): NodeConnectionSnapshotContext
 ```
 
-Creates immutable snapshots of node adjacency lists before mutation.
+Creates immutable snapshots of all node adjacency lists before mutation.
 
 Parameters:
 - `removalContext` - Immutable removal context.
@@ -451,7 +458,7 @@ createValidatedNodeRemovalContext(
 ): NodeRemovalContext
 ```
 
-Creates validated immutable context for a node-removal operation.
+Create a validated immutable context object for one node-removal operation.
 
 Parameters:
 - `network` - Target network.

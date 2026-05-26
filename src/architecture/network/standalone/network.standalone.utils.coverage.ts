@@ -12,7 +12,7 @@ import {
 } from './network.standalone.utils.types';
 
 /**
- * Remove instrumentation artifacts and formatting detritus from function sources.
+ * Remove coverage artifacts and formatting noise from generated function sources.
  *
  * @param code Source text potentially containing coverage wrappers.
  * @returns Cleaned source text suitable for deterministic standalone emission.

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when node removal targets a node that is not in the network.
  */
 export class NetworkRemoveNodeNotFoundError extends Error {

@@ -1,0 +1,38 @@
+id: '01.acceptance-criteria'
+name: 'Acceptance Criteria and Risk Envelope'
+agent: '01-planning'
+description: >
+  Produces observable acceptance criteria, edge cases, non-goals, and a
+  risk envelope for an ambiguous user request before red tests are authored.
+  Pulls current plan state via neataptic-workflow-mcp first; falls back to
+  direct file read if unavailable. Invokes planning-risk-coordinator for
+  blast-radius analysis and planning-test-strategy-coordinator for coverage
+  and validation strategy. Output is a compact criteria block recorded in the
+  active plan step so 03-red-testing can use it as a contract.
+
+triggers:
+  - 'User request is ambiguous or acceptance criteria are missing'
+  - 'Acceptance criteria needed before 03-red-testing begins'
+  - 'New feature or refactor lacks a done-state definition'
+  - 'Step packet is missing observable success conditions'
+
+gates:
+  - 'plan-sync'
+  - 'step-packet'
+  - 'planning-output-contract'
+
+post-phase-fanout:
+  - '03-red-testing'
+
+skills:
+  - 'planning-acceptance-criteria'
+  - 'plan-alignment'
+  - 'tracker-handoff'
+
+specialists:
+  - 'planning-risk-coordinator'
+  - 'planning-test-strategy-coordinator'
+  - 'acceptance-criteria-writer'
+  - 'Plan Scout'
+
+timeout-minutes: 20

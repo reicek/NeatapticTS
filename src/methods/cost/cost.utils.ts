@@ -1,35 +1,35 @@
-import { PROB_EPSILON } from '../../neat/neat.constants';
+﻿import { PROB_EPSILON } from '../../neat/neat.constants';
 import { CostTargetOutputLengthMismatchError } from './cost.errors';
 
-/** Error message thrown when target and output arrays differ in length. */
+/** Error message thrown when target and output arrays differ in length, preventing element-wise cost computation. */
 export const LENGTH_MISMATCH_MESSAGE =
   'Target and output arrays must have the same length.';
 
-/** Canonical positive label used by binary-oriented helpers. */
+/** Canonical positive class label used by binary cross-entropy and binary error classification helpers. */
 export const POSITIVE_CLASS_LABEL = 1;
 
-/** Canonical negative label used by binary-oriented helpers. */
+/** Canonical negative class label used by binary cross-entropy and binary error classification helpers. */
 export const NEGATIVE_CLASS_LABEL = 0;
 
-/** Threshold for binarizing probabilities into class predictions. */
+/** Decision threshold applied when binarizing continuous output probabilities into hard positive or negative class predictions. */
 export const BINARY_CLASSIFICATION_THRESHOLD = 0.5;
 
-/** Margin enforced by hinge loss. */
+/** Hinge loss decision margin requiring the correct class score to exceed the best competing score by at least this value. */
 export const HINGE_MARGIN = 1;
 
-/** Default focusing parameter for focal loss. */
+/** Default modulating exponent applied to the probability factor term in focal loss to down-weight easy examples. */
 export const DEFAULT_FOCAL_GAMMA = 2;
 
-/** Default class balancing parameter for focal loss. */
+/** Default class-balancing weight applied to the positive class term in focal loss for imbalanced datasets. */
 export const DEFAULT_FOCAL_ALPHA = 0.25;
 
-/** Default smoothing factor for label smoothing. */
+/** Default label smoothing factor applied when blending hard targets toward a uniform soft-label distribution. */
 export const DEFAULT_LABEL_SMOOTHING = 0.1;
 
-/** Baseline probability used when smoothing targets. */
+/** Baseline probability toward which hard labels are smoothed before computing label-smoothed cross-entropy loss. */
 export const LABEL_SMOOTHING_BASELINE = 0.5;
 
-/** Lower bound for softmax denominator to avoid division by zero. */
+/** Lower bound applied to the softmax denominator sum to prevent division by zero in degenerate one-hot cases. */
 export const SOFTMAX_SUM_GUARD = 1;
 
 const PROBABILITY_LOWER_BOUND = PROB_EPSILON;
@@ -37,7 +37,7 @@ const PROBABILITY_UPPER_BOUND = 1 - PROB_EPSILON;
 const NON_NEGATIVE_FLOOR = 0;
 
 /**
- * Computes the Cross Entropy error over the provided targets and outputs.
+ * Compute cross-entropy error over provided targets and outputs so probabilistic classification penalties remain numerically stable and interpretable across binary-style supervision.
  *
  * @param targets - Desired target probabilities (may be soft labels between 0 and 1).
  * @param outputs - Model output probabilities.
@@ -66,7 +66,7 @@ export function computeCrossEntropy(
 }
 
 /**
- * Computes the softmax cross entropy given targets and raw score outputs.
+ * Computes softmax cross entropy from target probabilities and raw score outputs so multi-class training feedback remains numerically stable and informative.
  *
  * @param targets - Desired target probabilities that should sum to 1 (will be normalized if not).
  * @param outputs - Raw logits or scores for each class.
@@ -94,7 +94,7 @@ export function computeSoftmaxCrossEntropy(
 }
 
 /**
- * Computes mean squared error between targets and outputs.
+ * Computes mean squared error between targets and outputs so regression penalties scale quadratically with prediction distance and highlight large misses.
  *
  * @param targets - Desired target values.
  * @param outputs - Model outputs.
@@ -119,7 +119,7 @@ export function computeMeanSquaredError(
 }
 
 /**
- * Computes binary classification error rate.
+ * Compute binary classification error rate so evaluation can report misclassification frequency after thresholding probabilistic predictions into hard labels with a consistent decision boundary.
  *
  * @param targets - Target labels (0 or 1).
  * @param outputs - Predicted probabilities.
@@ -145,7 +145,7 @@ export function computeBinaryError(
 }
 
 /**
- * Computes mean absolute error between targets and outputs.
+ * Compute mean absolute error between targets and outputs so regression quality reflects linear deviation magnitude without amplifying outliers through quadratic penalties.
  *
  * @param targets - Desired target values.
  * @param outputs - Model outputs.
@@ -170,7 +170,7 @@ export function computeMeanAbsoluteError(
 }
 
 /**
- * Computes mean absolute percentage error between targets and outputs.
+ * Compute mean absolute percentage error between targets and outputs so relative miss size remains comparable across different target scales and unit ranges.
  *
  * @param targets - Desired target values.
  * @param outputs - Model outputs.
@@ -201,7 +201,7 @@ export function computeMeanAbsolutePercentageError(
 }
 
 /**
- * Computes mean squared logarithmic error between targets and outputs.
+ * Compute mean squared logarithmic error between targets and outputs so multiplicative-growth deviations are penalized symmetrically in log space for scale-sensitive forecasting tasks.
  *
  * @param targets - Desired non-negative target values.
  * @param outputs - Model outputs (expected non-negative).
@@ -228,7 +228,7 @@ export function computeMeanSquaredLogarithmicError(
 }
 
 /**
- * Computes hinge loss for margin-based classification.
+ * Compute hinge loss for margin-based classification so predictions inside the safety margin continue receiving corrective pressure and separating hyperplanes stay robust.
  *
  * @param targets - Target labels encoded as -1 or 1.
  * @param outputs - Model outputs (raw scores).
@@ -253,7 +253,7 @@ export function computeHingeLoss(targets: number[], outputs: number[]): number {
 }
 
 /**
- * Computes focal loss for imbalanced classification tasks.
+ * Compute focal loss for imbalanced classification tasks so easy examples are down-weighted and rare hard cases dominate learning updates through tunable focusing and class-balance factors.
  *
  * @param targets - Target labels (0 or 1) or soft labels.
  * @param outputs - Predicted probabilities.
@@ -291,7 +291,7 @@ export function computeFocalLoss(
 }
 
 /**
- * Computes cross entropy with label smoothing applied to targets.
+ * Compute cross-entropy with label smoothing applied to targets so overconfident supervision is softened and generalization remains more robust under noisy or uncertain labels.
  *
  * @param targets - Target labels (0 or 1) or soft labels.
  * @param outputs - Predicted probabilities.

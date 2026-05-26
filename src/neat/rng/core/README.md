@@ -301,15 +301,15 @@ fallback path, not to encode a meaningful NEAT population heuristic.
 
 ### RNG_SHIFT_LEFT_PRIMARY
 
-Left-shift used by the first xorshift32 mixing step.
+Left-shift amount used by the first xorshift32 state mixing step.
 
 ### RNG_SHIFT_LEFT_SECONDARY
 
-Left-shift used by the final xorshift32 mixing step.
+Left-shift amount used by the final xorshift32 state mixing step.
 
 ### RNG_SHIFT_RIGHT_PRIMARY
 
-Right-shift used by the middle xorshift32 mixing step.
+Right-shift amount used by the middle xorshift32 state mixing step.
 
 ### RNG_TIME_SCRAMBLE_CONSTANT
 

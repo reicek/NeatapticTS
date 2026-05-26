@@ -1,4 +1,4 @@
-import type Connection from '../../connection';
+﻿import type Connection from '../../connection';
 import type Node from '../../node';
 import { synchronizeTemporalDescriptorExtensions } from '../network.temporal.extensions.utils';
 import type { NodeRemovalContext } from './network.remove.utils.types';

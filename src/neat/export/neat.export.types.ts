@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   InnovationTracker,
   InnovationTrackerJSON,
 } from '../innovation-tracker/innovation-tracker.types';
@@ -9,19 +9,29 @@ import type {
   SpeciesLastStats,
 } from '../shared/neat.shared.types';
 
-/** Format version used when a checkpoint predates explicit version tags. */
+/**
+ * Format version assigned to checkpoints that predate explicit version tagging; used as the fallback during migration and compatibility validation passes.
+ */
 export const LEGACY_CHECKPOINT_FORMAT_VERSION = 0;
 
-/** Format version for controller-only meta checkpoints. */
+/**
+ * Format version for controller-only meta checkpoint bundles that omit full population state and are intended for lightweight persistence between runs.
+ */
 export const CURRENT_META_FORMAT_VERSION = 1;
 
-/** Format version for strict full-state checkpoint bundles. */
+/**
+ * Format version for strict full-state checkpoint bundles that carry the complete population, RNG state, and replay metadata for exact-resume runs.
+ */
 export const CURRENT_STATE_FORMAT_VERSION = 1;
 
-/** Checkpoint mode marker for strict full-resume bundles. */
+/**
+ * Checkpoint mode string that marks a bundle as a strict full-resume checkpoint preserving all controller state required for deterministic future replay.
+ */
 export const FULL_CHECKPOINT_MODE = 'full' as const;
 
-/** Checkpoint mode marker for best-effort light-resume bundles. */
+/**
+ * Checkpoint mode string that marks a bundle as a best-effort light checkpoint retaining only the elite genome subset without full replay guarantees.
+ */
 export const LIGHT_CHECKPOINT_MODE = 'light' as const;
 
 /**
@@ -187,45 +197,45 @@ export interface NeatRuntimeMetaJSON {
  * `Network` instances.
  */
 export interface SpeciesCheckpointJSON {
-  /** Stable species id. */
+  /** Stable numeric species identifier used for registry lookups and checkpoint rebinding during restore passes. */
   id: number;
-  /** Member genome ids currently assigned to the species. */
+  /** Ordered list of stable genome ids identifying all members currently assigned to this species entry. */
   memberGenomeIds: number[];
-  /** Representative genome id used for the next assignment pass. */
+  /** Stable genome id of the current representative used for compatibility distance measurements in the next assignment pass. */
   representativeGenomeId?: number;
   /** Serialized representative anchor when it no longer lives in the current population. */
   representativeGenome?: GenomeJSON;
-  /** Best score observed for the species so far. */
+  /** Peak fitness score observed across any member of this species since creation, used for stagnation detection thresholds. */
   bestScore?: number;
-  /** Generation index when the species last improved. */
+  /** Generation index at which this species last recorded a new best fitness score, used by stagnation counters. */
   lastImproved?: number;
-  /** Shared-fitness aggregate kept for allocation/telemetry. */
+  /** Summed shared-fitness aggregate across all current species members, retained for offspring allocation and telemetry output. */
   sharedFitness?: number;
-  /** Average shared fitness across the species' current members. */
+  /** Mean shared-fitness value across all current species members, used by offspring allocation and proportional selection helpers. */
   avgSharedFitness?: number;
-  /** Offspring allocation snapshot when available. */
+  /** Integer offspring count allocated to this species for the upcoming generation, captured during proportional selection. */
   offspring?: number;
-  /** Optional creation-generation style metadata from richer species records. */
+  /** Generation index when this species was first created, preserved for age-based fitness-sharing penalty calculations. */
   generation?: number;
 }
 
 /**
- * Speciation-specific checkpoint state required by the full resume path.
+ * Speciation-specific checkpoint state required by the full-resume path, preserving species registry, age markers, and compatibility-tuning history.
  */
 export interface SpeciationCheckpointJSON {
-  /** Next species id reserved for future new-species allocation. */
+  /** Next available integer species id reserved for assigning to newly formed species during future generations. */
   nextSpeciesId?: number;
-  /** Live species registry, stored by stable genome id references. */
+  /** Serialized registry of all surviving species, with members identified by stable genome ids for import rebinding. */
   species?: SpeciesCheckpointJSON[];
-  /** Species creation generations used by age protection. */
+  /** Per-species creation-generation map used by age-based fitness-sharing bonuses and stagnation detection thresholds. */
   speciesCreated?: Array<[number, number]>;
-  /** Previous-generation member ids used by continuity-aware reads. */
+  /** Previous-generation species-member id map preserved for continuity checks during compatibility assignment passes. */
   prevSpeciesMembers?: Array<[number, number[]]>;
-  /** Rolling per-species aggregate stats. */
+  /** Per-species rolling aggregate statistics used by telemetry, offspring allocation, and convergence monitoring. */
   speciesLastStats?: Array<[number, SpeciesLastStats]>;
-  /** Compatibility-threshold integral accumulator. */
+  /** Running integral accumulator for the compatibility-threshold controller, used by adaptive PID tuning algorithms. */
   compatIntegral?: number;
-  /** Optional EMA of observed species counts. */
+  /** Exponential moving average of observed species counts across generations, used by the adaptive threshold controller. */
   compatSpeciesEMA?: number;
 }
 
@@ -236,19 +246,19 @@ export interface SpeciationCheckpointJSON {
  * controller counters and history that do not depend on live genome instances.
  */
 export interface NeatMetaJSON {
-  /** Meta checkpoint format version. Missing means legacy pre-versioned export. */
+  /** Meta checkpoint format version; a missing field indicates a legacy pre-versioned export payload requiring migration. */
   formatVersion?: number;
-  /** Number of input nodes expected by evolved networks. */
+  /** Number of input nodes required by evolved networks; must match the source network IO dimensions. */
   input: number;
-  /** Number of output nodes produced by evolved networks. */
+  /** Number of output nodes produced by evolved networks; must match the source network IO dimensions. */
   output: number;
-  /** Current evolutionary generation index (0-based). */
+  /** Current evolutionary generation index, zero-based, incremented once per successful call to evolve(). */
   generation: number;
-  /** Full options object (hyper-parameters) used to configure NEAT. */
+  /** Full options object containing all NEAT hyper-parameters used to configure this controller run. */
   options: Record<string, unknown>;
-  /** Innovation tracker payload for deterministic structural mutation resume. */
+  /** Serialized innovation tracker payload required for deterministic structural mutation resume after checkpoint import. */
   innovationTracker: InnovationTrackerJSON;
-  /** Controller runtime state that can travel without the population array. */
+  /** Serialized controller runtime state that can travel the meta-only checkpoint path without the full population array. */
   runtime?: NeatRuntimeMetaJSON;
 }
 
@@ -260,13 +270,13 @@ export interface NeatMetaJSON {
  * retained elite genomes.
  */
 export interface NeatLightMetaJSON {
-  /** Number of input nodes expected by restored networks. */
+  /** Number of input nodes expected by all networks in the restored elite population slice. */
   input: number;
-  /** Number of output nodes produced by restored networks. */
+  /** Number of output nodes produced by all networks in the restored elite population slice. */
   output: number;
-  /** Saved generation marker preserved as restart metadata. */
+  /** Generation index marker saved at export time, preserved as restart metadata for the resumed run. */
   generation: number;
-  /** Saved options bag used to rebuild a compatible destination controller. */
+  /** Saved options bag used to reconstruct a compatible destination NEAT controller before importing elite genomes. */
   options: Record<string, unknown>;
 }
 
@@ -281,8 +291,8 @@ export interface GenomeWithSerialization {
 }
 
 /**
- * Internal genome view combining network serialization with controller-owned
- * metadata used by export and restore helpers.
+ * Internal genome view combining network serialization with controller-owned metadata,
+ * used by export and restore helpers to carry scores, stable ids, and adaptive genome state.
  */
 export type GenomeControllerCarrier = GenomeWithSerialization & {
   getRNGState?: () => number | undefined;
@@ -307,7 +317,7 @@ export type GenomeControllerCarrier = GenomeWithSerialization & {
 };
 
 /**
- * Internal species row shape used while serializing and restoring checkpoints.
+ * Internal species row shape used while serializing and restoring checkpoint snapshots, carrying the member list and per-species aggregate stats.
  */
 export type SpeciesControllerCarrier = {
   id: number;

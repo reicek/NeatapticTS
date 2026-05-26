@@ -254,8 +254,9 @@ export interface SpeciationHarnessContext<
 // Shared contract symbols continue below.
 
 /**
- * Generic map type used as a stop‑gap where the precise shape is still in flux.
- * Prefer a specific interface once the surface stabilises.
+ * Generic key-value map for temporary shared payloads when helper boundaries
+ * are still being extracted and no stable chapter-specific contract exists yet.
+ * Replace this alias with a dedicated interface as each call boundary settles.
  */
 export type AnyObj = Record<string, unknown>;
 
@@ -378,7 +379,9 @@ export interface GenomeLike {
 }
 
 /**
- * Lightweight node representation used by telemetry and structural helpers.
+ * Lightweight node shape used by shared telemetry, lineage, and compatibility
+ * contracts that need stable identifiers plus extensible metadata, while
+ * intentionally avoiding coupling to the full runtime `Node` implementation.
  */
 export interface NodeLike {
   /**
@@ -395,7 +398,9 @@ export interface NodeLike {
 }
 
 /**
- * Lightweight connection representation used by telemetry and structural helpers.
+ * Lightweight connection shape used by shared telemetry, compatibility, and
+ * history helpers to preserve source/target linkage and optional innovation
+ * provenance without importing runtime connection implementation details.
  */
 export interface ConnectionLike {
   /**
@@ -414,8 +419,8 @@ export interface ConnectionLike {
   enabled?: boolean;
 
   /**
-   * Optional innovation identifier for tracking the historical origin of a
-   * connection.
+   * Optional innovation identifier used to track the historical origin of this
+   * connection across crossover, speciation, and lineage reporting paths.
    */
   innovation?: number;
 
@@ -835,7 +840,11 @@ export interface OperatorStat {
    */
   att: number;
 }
-/** Aggregated success / attempt counters over a window or entire run. */
+/**
+ * Aggregated operator attempt and success counters folded over a telemetry
+ * window, allowing dashboards and adaptive schedules to compute stable
+ * operator hit rates without replaying per-generation operator rows.
+ */
 export interface OperatorStatsRecord {
   /** Total successful operations. */
   success: number;
@@ -844,8 +853,9 @@ export interface OperatorStatsRecord {
 }
 
 /**
- * Contribution / dispersion metrics for an objective over a recent window.
- * Used to gauge whether an objective meaningfully influences selection.
+ * Dispersion metrics for one objective over a recent sampling window, used to
+ * estimate whether that objective still contributes meaningful ranking signal
+ * before dynamic objective policies decide to keep, demote, or remove it.
  *
  * @property range Difference between max & min observed objective values.
  * @property var Statistical variance across the sampled objective values.
@@ -856,21 +866,35 @@ export interface ObjImportanceEntry {
   /** Statistical variance across the sampled objective values. */
   var: number;
 }
-/** Map of objective key to its importance metrics (range / variance). */
+/**
+ * Lookup table from objective key to per-objective dispersion metrics, so
+ * dynamic objective scheduling can identify stale, collapsed, or low-signal
+ * objectives without recomputing full per-genome objective distributions.
+ */
 export interface ObjImportance {
   [key: string]: ObjImportanceEntry;
 }
-/** Map of objective key to age in generations since introduction. */
+/**
+ * Lookup table from objective key to objective age in generations, used by
+ * dynamic add/remove policies, cooldown gating, and telemetry timeline
+ * reconstruction when objective sets evolve during a run.
+ */
 export interface ObjAges {
   [key: string]: number;
 }
 /**
- * Dynamic objective lifecycle event (addition or removal).
+ * Backward-compatible alias for objective lifecycle events emitted when
+ * objective sets change during dynamic multi-objective runs, preserving older
+ * helper signatures that still reference the historical type name.
  *
  * @deprecated Use `ObjectiveEvent` instead.
  */
 export type ObjEvent = ObjectiveEvent;
-/** Offspring allocation for a species during reproduction. */
+/**
+ * Per-species offspring allocation result used by reproduction orchestration
+ * to decide how many children each species contributes to the next generation,
+ * whether represented as absolute counts or normalized allocation weights.
+ */
 export interface SpeciesAlloc {
   /** Species identifier. */
   id: number;
@@ -912,17 +936,9 @@ export interface LineageSnapshot {
 }
 
 /**
- * Aggregate structural complexity metrics capturing size & growth pressure.
- *
- * @property meanNodes Mean number of nodes across population.
- * @property meanConns Mean number of connections across population.
- * @property maxNodes Maximum node count encountered this generation.
- * @property maxConns Maximum connection count encountered this generation.
- * @property meanEnabledRatio Mean proportion of enabled vs total connections.
- * @property growthNodes Net node growth (current mean - previous mean).
- * @property growthConns Net connection growth (current mean - previous mean).
- * @property budgetMaxNodes Node budget ceiling (constraint parameter) at eval time.
- * @property budgetMaxConns Connection budget ceiling at eval time.
+ * Aggregated structural complexity signals for one generation, shared by
+ * telemetry exports, diagnostics summaries, and adaptive budget controllers to
+ * track growth pressure against configured node and connection ceilings.
  */
 export interface ComplexityMetrics {
   /** Mean number of nodes across the population. */
@@ -1067,7 +1083,9 @@ export interface TelemetryEntry {
 }
 
 /**
- * Species statistics at a single historical snapshot (generation boundary).
+ * Per-species summary row captured at a generation boundary so species-history
+ * exports can report species size, best score trajectory, and stagnation
+ * progression without reading mutable live registry state.
  *
  * @property id Species identifier.
  * @property size Number of genomes presently in the species.
@@ -1099,8 +1117,9 @@ export interface SpeciesHistoryEntry {
 }
 
 /**
- * Extended per-species historical snapshot with optional backfilled metrics
- * that may be computed lazily (innovationRange, enabledRatio).
+ * Extended per-species historical snapshot that adds optional lazily computed
+ * metrics, such as innovation-id spread and enabled-connection ratio, when a
+ * caller requests richer history output beyond the base summary row.
  */
 export interface SpeciesHistoryStatExtended extends SpeciesHistoryStat {
   /** Range of innovation ids observed among members (max - min), if computed. */
@@ -1128,7 +1147,9 @@ export interface ParetoArchiveEntry {
 }
 
 /**
- * Objective add/remove lifecycle event for telemetry and auditing.
+ * Objective lifecycle event emitted whenever a dynamic objective policy adds
+ * or removes an objective during evolution, allowing telemetry and audits to
+ * reconstruct objective-set changes generation by generation.
  */
 export interface ObjectiveEvent {
   /** Generation index where the event occurred. */

@@ -1,0 +1,42 @@
+id: '02.prior-art-scan'
+name: 'Prior Art and Dependency Scan'
+agent: '02-researching'
+description: >
+  Checks whether a planned feature, helper, or pattern already exists in
+  the codebase or is constrained by a third-party dependency. Reads
+  src/**/*.ts, testing/, benchmarks/, and examples/ selectively to surface
+  existing utilities, naming collisions, and import contract boundaries.
+  Reads package.json and relevant tsconfig files for dependency and
+  module-format constraints. Returns a compact findings block suitable for
+  04-implementing to reuse existing patterns instead of duplicating logic.
+  Read-only; no file edits permitted.
+
+triggers:
+  - 'Feature or refactor may duplicate existing helpers'
+  - 'New module depends on third-party contracts that need verification'
+  - 'Implementation step asks: does this already exist?'
+  - 'Naming collision suspected before adding a new export'
+
+gates:
+  - 'plan-sync'
+  - 'research-findings-evidence'
+
+post-phase-fanout:
+  - '04-implementing'
+
+skills:
+  - 'plan-alignment'
+
+specialists:
+  - 'implementation-pattern-scout'
+  - 'research-codebase-coordinator'
+  - 'Boundary Mapper'
+
+timeout-minutes: 20
+
+search-policy:
+  broad-discovery: 'neataptic-cortex-mcp: search_corpus (BM25 corpus index, preferred for cross-module pattern and prior-art queries)'
+  exact-match: 'grep_search or file_search (for exact symbol names, literal strings, or regex)'
+  freshness-gate: 'neataptic-cortex-mcp: freshness_check — required before broad discovery when session follows corpus-changing work'
+  fallback: 'semantic_search + grep_search when Cortex MCP is unavailable or freshness_check reports stale index'
+  residual-gap: 'invoke repo-cortex-scout after task if index was stale and could not be rebuilt mid-task'

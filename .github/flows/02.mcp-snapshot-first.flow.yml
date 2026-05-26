@@ -1,0 +1,35 @@
+id: '02.mcp-snapshot-first'
+name: 'MCP Workflow Snapshot Pull'
+agent: '02-researching'
+description: >
+  Dedicated MCP-first reconnaissance flow for plan state and customization
+  inventory. Calls neataptic-workflow-mcp: get_active_workflow_snapshot and
+  neataptic-workflow-mcp: get_customization_inventory as the primary data
+  sources before any manual file search. Falls back to direct plan and
+  agent file reads only if the MCP tools return errors or stale data.
+  Suitable for any research step that needs fresh plan context, agent
+  allow-list state, or active gate status without a full codebase scan.
+
+triggers:
+  - 'Fresh plan state or customization inventory needed before codebase search'
+  - 'Agent needs to know which step is active before starting research'
+  - 'Customization drift check required at the start of a phase'
+  - 'MCP resources can answer the research question without a file scan'
+
+gates:
+  - 'plan-sync'
+  - 'research-findings-evidence'
+
+post-phase-fanout:
+  - '03-red-testing'
+  - '04-implementing'
+
+skills:
+  - 'plan-alignment'
+  - 'mcp-local-server-workflow'
+
+specialists:
+  - 'Plan Scout'
+  - 'MCP Runtime Scout'
+
+timeout-minutes: 15

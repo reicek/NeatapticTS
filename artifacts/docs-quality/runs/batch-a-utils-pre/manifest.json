@@ -1,0 +1,34 @@
+{
+  "metricVersion": 1,
+  "scannerVersion": "1.0.0",
+  "gitCommit": "6d5494c144221a8f02a7f5cfebfdfdf06e85b862",
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "thresholdConfig": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeConfig": {
+    "scopeType": "paths",
+    "scopeValue": [
+      "src/architecture/network/onnx/network.onnx.utils.types.ts"
+    ],
+    "scopeDigest": "d2d8b39973a6d74773e6415fc276a87de2aac1a8a2973420c10042c82675be02"
+  },
+  "sourcePathsDigest": "618c6af8a9b93b22c3fca95e9fe24c4c6218d0cc43d0a1b62bba6990f5bc7fff",
+  "issueBreakdown": {
+    "missingJsdoc": 0,
+    "weakJsdoc": 47,
+    "highComplexity": 0
+  },
+  "weakCount": 47,
+  "normalizedEvidenceDigest": "7d8eceeef1fcf94dcfbb3cef4366e727303ca017bbe93674fc437cb455551748",
+  "threshold": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeType": "paths",
+  "scopeDigest": "618c6af8a9b93b22c3fca95e9fe24c4c6218d0cc43d0a1b62bba6990f5bc7fff",
+  "summaryPath": "artifacts/docs-quality/runs/batch-a-utils-pre/summary.json",
+  "evidencePath": "artifacts/docs-quality/runs/batch-a-utils-pre/evidence.json",
+  "manifestPath": "artifacts/docs-quality/runs/batch-a-utils-pre/manifest.json"
+}

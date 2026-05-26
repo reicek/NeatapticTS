@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when the training dataset is missing or does not match network IO dimensions.
  */
 export class NetworkTrainingDatasetCompatibilityError extends Error {
@@ -9,7 +9,7 @@ export class NetworkTrainingDatasetCompatibilityError extends Error {
 }
 
 /**
- * Raised when no stopping condition is provided to training.
+ * Raised when training is started without a stopping condition such as a maximum error target or iteration limit.
  */
 export class NetworkTrainingStoppingConditionRequiredError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -19,7 +19,7 @@ export class NetworkTrainingStoppingConditionRequiredError extends Error {
 }
 
 /**
- * Raised when the provided cost function is not callable or recognized.
+ * Raised when the provided cost function is not callable or does not match any recognized cost-function identifier in the registry.
  */
 export class NetworkTrainingInvalidCostFunctionError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -29,7 +29,7 @@ export class NetworkTrainingInvalidCostFunctionError extends Error {
 }
 
 /**
- * Raised when dropout is outside the expected range [0, 1).
+ * Raised when the dropout probability falls outside the required half-open interval [0, 1) accepted by the training configuration validator.
  */
 export class NetworkTrainingDropoutRangeError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -39,7 +39,7 @@ export class NetworkTrainingDropoutRangeError extends Error {
 }
 
 /**
- * Raised when configured batch size exceeds dataset size.
+ * Raised when the configured batch size exceeds the total dataset size, making mini-batch gradient accumulation impossible.
  */
 export class NetworkTrainingBatchSizeError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -49,7 +49,7 @@ export class NetworkTrainingBatchSizeError extends Error {
 }
 
 /**
- * Raised when accumulation steps is invalid.
+ * Raised when accumulation step count is zero, negative, or not a whole number as required for valid gradient accumulation.
  */
 export class NetworkTrainingAccumulationStepsError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -59,7 +59,7 @@ export class NetworkTrainingAccumulationStepsError extends Error {
 }
 
 /**
- * Raised when optimizer option type is not supported.
+ * Raised when an optimizer configuration option carries a type that the selected optimizer does not recognize or accept.
  */
 export class NetworkTrainingInvalidOptimizerOptionError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -69,7 +69,7 @@ export class NetworkTrainingInvalidOptimizerOptionError extends Error {
 }
 
 /**
- * Raised when optimizer type is unknown.
+ * Raised when the optimizer type string does not match any registered optimizer in the network training configuration registry.
  */
 export class NetworkTrainingUnknownOptimizerTypeError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -79,7 +79,7 @@ export class NetworkTrainingUnknownOptimizerTypeError extends Error {
 }
 
 /**
- * Raised when lookahead is configured with a nested lookahead base type.
+ * Raised when lookahead is configured with another lookahead optimizer as its base, which is not a supported inner optimizer combination.
  */
 export class NetworkTrainingNestedLookaheadError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -89,7 +89,7 @@ export class NetworkTrainingNestedLookaheadError extends Error {
 }
 
 /**
- * Raised when lookahead base optimizer type is unknown.
+ * Raised when the lookahead base optimizer type does not match any supported inner optimizer in the current training stack configuration.
  */
 export class NetworkTrainingUnknownLookaheadBaseTypeError extends Error {
   constructor(message: string, options?: ErrorOptions) {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when network test helpers receive a missing or empty evaluation set.
  */
 export class NetworkStatsTestSetValidationError extends Error {

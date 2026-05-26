@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import type Node from '../../node';
 import type Connection from '../../connection';
 import type {
@@ -7,7 +7,7 @@ import type {
 } from './network.remove.utils.types';
 
 /**
- * Creates immutable snapshots of node adjacency lists before mutation.
+ * Creates immutable snapshots of all node adjacency lists before mutation.
  *
  * @param removalContext - Immutable removal context.
  * @returns Snapshot context.

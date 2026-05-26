@@ -5,7 +5,7 @@ import type {
 } from '../types/telemetry.types';
 
 /**
- * Apply fast-mode tuning to diversity sampling and novelty defaults.
+ * Apply fast-mode tuning to diversity sampling and novelty defaults so expensive telemetry paths remain bounded when users explicitly favor speed-oriented evaluation.
  *
  * @param telemetryContext - Context object storing fast-mode tuning flag.
  * @param telemetryOptions - Options with diversity and novelty settings.
@@ -35,7 +35,7 @@ export function applyFastModeDefaults(
 }
 
 /**
- * Compute pairwise compatibility statistics via sampling.
+ * Compute pairwise compatibility statistics via sampling so telemetry can estimate structural divergence without paying full quadratic population comparison cost per generation.
  *
  * @param genomes - Population snapshot.
  * @param size - Population size.
@@ -85,7 +85,7 @@ export function computeCompatibilityStats(
 }
 
 /**
- * Compute structural entropy mean and variance across the population.
+ * Compute structural entropy mean and variance across the population so recorder output captures both central tendency and dispersion of topology complexity.
  *
  * @param genomes - Population snapshot.
  * @param structuralEntropyFn - Function to compute entropy for a genome.
@@ -115,7 +115,7 @@ export function computeEntropyStats(
 }
 
 /**
- * Sample graphlet motifs and compute entropy over their edge counts.
+ * Sample graphlet motifs and compute entropy over their edge counts so local pattern diversity remains observable without full motif enumeration.
  *
  * @param genomes - Population snapshot.
  * @param size - Population size.
@@ -165,7 +165,7 @@ export function computeGraphletEntropy(
 }
 
 /**
- * Pick a fixed number of distinct random indices.
+ * Pick a fixed number of distinct random indices so motif and pair samplers remain reproducible and avoid accidental duplicate selections.
  *
  * @param upperBound - Exclusive upper bound for random indices.
  * @param count - Number of distinct indices to pick.
@@ -187,7 +187,7 @@ export function pickDistinctIndices(
 }
 
 /**
- * Count enabled edges between the selected nodes in a genome.
+ * Count enabled edges between selected nodes in one genome so graphlet buckets map directly to active local wiring patterns during motif sampling.
  *
  * @param genome - Genome with connections to inspect.
  * @param selectedNodes - Nodes forming the graphlet sample.

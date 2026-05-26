@@ -1,0 +1,33 @@
+id: '06.docs-audit'
+name: 'Educational Docs Quality Audit'
+agent: '06-documenting'
+description: >
+  Audits documentation quality for a newly added module or major refactor.
+  Checks for Mermaid diagrams, academic citations, external references,
+  conceptual depth, and Wikimedia-safe visuals. Produces a prioritized list
+  of gaps and either fixes them inline or records them as follow-up items
+  for a subsequent 06.jsdoc-update or 06.readme-refresh pass.
+
+triggers:
+  - 'New module or major refactor completed; docs quality has not been audited'
+  - 'Folder README lacks a Mermaid diagram or external reference'
+  - 'JSDoc is present but reads as a type signature without conceptual context'
+  - 'Phase F closure requires documentation quality evidence across all touched modules'
+
+gates:
+  - 'plan-sync'
+  - 'docs-artifact-reference'
+
+post-phase-fanout:
+  - '07-logging'
+
+skills:
+  - 'educational-docs'
+  - 'docs-academic-citation-audit'
+  - 'auditing-js-docs'
+
+specialists:
+  - 'Academic Docs Auditor'
+  - 'Docs Scout'
+
+timeout-minutes: 25

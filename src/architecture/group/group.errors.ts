@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when caller-provided group values do not match the number of nodes.
  */
 export class GroupSizeMismatchError extends Error {

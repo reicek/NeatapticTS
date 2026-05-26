@@ -32,6 +32,10 @@ function getHiddenNodes(network: Network) {
   return network.nodes.filter((nodeEntry) => nodeEntry.type === 'hidden');
 }
 
+function getOutputNodes(network: Network) {
+  return network.nodes.filter((nodeEntry) => nodeEntry.type === 'output');
+}
+
 function readInboundWeight(
   targetNode: Network['nodes'][number],
   sourceNode: Network['nodes'][number],
@@ -208,6 +212,140 @@ function createSecondLayerConvScenario(): {
   };
 }
 
+function createPostPoolSecondLayerConvScenario(): {
+  network: Network;
+  convMappings: Conv2DMapping[];
+  poolMappings: Array<{
+    afterLayerIndex: number;
+    type: 'MaxPool';
+    kernelHeight: number;
+    kernelWidth: number;
+    strideHeight: number;
+    strideWidth: number;
+  }>;
+} {
+  const network = Network.createMLP(25, [16, 4], 1);
+  const inputNodes = getInputNodes(network);
+  const hiddenNodes = getHiddenNodes(network);
+  const outputNodes = getOutputNodes(network);
+  const firstHiddenNodes = hiddenNodes.slice(0, 16);
+  const secondHiddenNodes = hiddenNodes.slice(16);
+  const firstKernelPattern = [0.04, -0.06, 0.08, 0.11];
+  const secondKernelPattern = [0.07, -0.02, 0.05, 0.09];
+
+  firstHiddenNodes.forEach((hiddenNode, hiddenNodeIndex) => {
+    const outputRow = Math.floor(hiddenNodeIndex / 4);
+    const outputColumn = hiddenNodeIndex % 4;
+
+    hiddenNode.connections.in.forEach((connectionEntry) => {
+      connectionEntry.weight = 0;
+    });
+
+    for (let kernelRowIndex = 0; kernelRowIndex < 2; kernelRowIndex += 1) {
+      for (
+        let kernelColumnIndex = 0;
+        kernelColumnIndex < 2;
+        kernelColumnIndex += 1
+      ) {
+        const sourceIndex =
+          (outputRow + kernelRowIndex) * 5 + outputColumn + kernelColumnIndex;
+        const kernelIndex = kernelRowIndex * 2 + kernelColumnIndex;
+        const sourceNode = inputNodes[sourceIndex];
+        const matchingConnection = hiddenNode.connections.in.find(
+          (connectionEntry) => connectionEntry.from === sourceNode,
+        );
+
+        if (matchingConnection) {
+          matchingConnection.weight = firstKernelPattern[kernelIndex];
+        }
+      }
+    }
+
+    hiddenNode.bias = 0.025;
+  });
+
+  secondHiddenNodes.forEach((hiddenNode, hiddenNodeIndex) => {
+    const outputRow = Math.floor(hiddenNodeIndex / 2);
+    const outputColumn = hiddenNodeIndex % 2;
+
+    hiddenNode.connections.in.forEach((connectionEntry) => {
+      connectionEntry.weight = 0;
+    });
+
+    for (let kernelRowIndex = 0; kernelRowIndex < 2; kernelRowIndex += 1) {
+      for (
+        let kernelColumnIndex = 0;
+        kernelColumnIndex < 2;
+        kernelColumnIndex += 1
+      ) {
+        const pooledIndex =
+          (outputRow + kernelRowIndex) * 3 + outputColumn + kernelColumnIndex;
+        const kernelIndex = kernelRowIndex * 2 + kernelColumnIndex;
+        const sourceNode = firstHiddenNodes[pooledIndex];
+        const matchingConnection = hiddenNode.connections.in.find(
+          (connectionEntry) => connectionEntry.from === sourceNode,
+        );
+
+        if (matchingConnection) {
+          matchingConnection.weight = secondKernelPattern[kernelIndex];
+        }
+      }
+    }
+
+    hiddenNode.bias = 0.035;
+  });
+
+  outputNodes.forEach((outputNode, outputNodeIndex) => {
+    outputNode.connections.in.forEach((connectionEntry, connectionIndex) => {
+      connectionEntry.weight =
+        0.02 + outputNodeIndex * 0.015 + connectionIndex * 0.004;
+    });
+    outputNode.bias = 0.01 + outputNodeIndex * 0.01;
+  });
+
+  return {
+    network,
+    convMappings: [
+      {
+        layerIndex: 1,
+        inHeight: 5,
+        inWidth: 5,
+        inChannels: 1,
+        kernelHeight: 2,
+        kernelWidth: 2,
+        strideHeight: 1,
+        strideWidth: 1,
+        outHeight: 4,
+        outWidth: 4,
+        outChannels: 1,
+      },
+      {
+        layerIndex: 2,
+        inHeight: 3,
+        inWidth: 3,
+        inChannels: 1,
+        kernelHeight: 2,
+        kernelWidth: 2,
+        strideHeight: 1,
+        strideWidth: 1,
+        outHeight: 2,
+        outWidth: 2,
+        outChannels: 1,
+      },
+    ],
+    poolMappings: [
+      {
+        afterLayerIndex: 1,
+        type: 'MaxPool',
+        kernelHeight: 2,
+        kernelWidth: 2,
+        strideHeight: 1,
+        strideWidth: 1,
+      },
+    ],
+  };
+}
+
 describe('network onnx import weights utility chapter', () => {
   describe('deriveHiddenLayerSizes', () => {
     describe('when metadata includes an explicit layer-size array', () => {
@@ -293,6 +431,217 @@ describe('network onnx import weights utility chapter', () => {
   });
 
   describe('assignWeightsAndBiases', () => {
+    describe('when shared initializer alias metadata remaps a later aggregated layer', () => {
+      it('hydrates that later hidden layer from the canonical dense tensors', () => {
+        // Arrange
+        const sourceNetwork = Network.createMLP(2, [2, 2], 1);
+        const sourceHiddenNodes = getHiddenNodes(sourceNetwork);
+
+        sourceHiddenNodes[0].bias = 0.5;
+        sourceHiddenNodes[1].bias = -0.25;
+        sourceHiddenNodes[2].bias = 0.5;
+        sourceHiddenNodes[3].bias = -0.25;
+
+        sourceHiddenNodes[0].connections.in[0].weight = 0.1;
+        sourceHiddenNodes[0].connections.in[1].weight = 0.2;
+        sourceHiddenNodes[1].connections.in[0].weight = 0.3;
+        sourceHiddenNodes[1].connections.in[1].weight = 0.4;
+        sourceHiddenNodes[2].connections.in[0].weight = 0.1;
+        sourceHiddenNodes[2].connections.in[1].weight = 0.2;
+        sourceHiddenNodes[3].connections.in[0].weight = 0.3;
+        sourceHiddenNodes[3].connections.in[1].weight = 0.4;
+
+        const onnxModel = exportToONNX(sourceNetwork, {
+          includeMetadata: true,
+        });
+        onnxModel.graph.initializer = onnxModel.graph.initializer.filter(
+          (tensor) => tensor.name !== 'W1' && tensor.name !== 'B1',
+        );
+        onnxModel.metadata_props = [
+          ...(onnxModel.metadata_props ?? []),
+          {
+            key: 'shared_initializer_aliases',
+            value:
+              '[{"aliasTensorName":"W1","canonicalTensorName":"W0","initializerKind":"dense_weight"},{"aliasTensorName":"B1","canonicalTensorName":"B0","initializerKind":"dense_bias"}]',
+          },
+        ];
+
+        const targetNetwork = Network.createMLP(2, [2, 2], 1);
+        setHiddenLayerSentinelState(targetNetwork, -9, -9);
+
+        // Act
+        assignWeightsAndBiases(
+          targetNetwork,
+          onnxModel,
+          [2, 2],
+          onnxModel.metadata_props,
+        );
+
+        // Assert
+        expect({
+          secondHiddenBiases: getHiddenNodes(targetNetwork)
+            .slice(2)
+            .map((hiddenNode) => hiddenNode.bias),
+          secondHiddenWeights: getHiddenNodes(targetNetwork)
+            .slice(2)
+            .map((hiddenNode) =>
+              hiddenNode.connections.in.map(
+                (connectionEntry) => connectionEntry.weight,
+              ),
+            ),
+        }).toEqual({
+          secondHiddenBiases: [0.5, -0.25],
+          secondHiddenWeights: [
+            [0.1, 0.2],
+            [0.3, 0.4],
+          ],
+        });
+      });
+    });
+
+    describe('when shared initializer alias metadata points at a missing canonical tensor', () => {
+      it('leaves that later hidden layer on the target network untouched', () => {
+        // Arrange
+        const sourceNetwork = Network.createMLP(2, [2, 2], 1);
+        const onnxModel = exportToONNX(sourceNetwork, {
+          includeMetadata: true,
+        });
+
+        onnxModel.graph.initializer = onnxModel.graph.initializer.filter(
+          (tensor) => tensor.name !== 'W1' && tensor.name !== 'B1',
+        );
+        onnxModel.metadata_props = [
+          ...(onnxModel.metadata_props ?? []),
+          {
+            key: 'shared_initializer_aliases',
+            value:
+              '[{"aliasTensorName":"W1","canonicalTensorName":"W9","initializerKind":"dense_weight"},{"aliasTensorName":"B1","canonicalTensorName":"B9","initializerKind":"dense_bias"}]',
+          },
+        ];
+
+        const targetNetwork = Network.createMLP(2, [2, 2], 1);
+        setHiddenLayerSentinelState(targetNetwork, -8, -8);
+
+        // Act
+        assignWeightsAndBiases(
+          targetNetwork,
+          onnxModel,
+          [2, 2],
+          onnxModel.metadata_props,
+        );
+
+        // Assert
+        expect({
+          secondHiddenBiases: getHiddenNodes(targetNetwork)
+            .slice(2)
+            .map((hiddenNode) => hiddenNode.bias),
+          secondHiddenWeights: getHiddenNodes(targetNetwork)
+            .slice(2)
+            .map((hiddenNode) =>
+              hiddenNode.connections.in.map(
+                (connectionEntry) => connectionEntry.weight,
+              ),
+            ),
+        }).toEqual({
+          secondHiddenBiases: [-8, -8],
+          secondHiddenWeights: [
+            [-8, -8],
+            [-8, -8],
+          ],
+        });
+      });
+    });
+
+    describe('when shared initializer alias metadata parses to a non-array payload', () => {
+      it('ignores the alias metadata and leaves the later hidden layer untouched', () => {
+        // Arrange
+        const sourceNetwork = Network.createMLP(2, [2, 2], 1);
+        const onnxModel = exportToONNX(sourceNetwork, {
+          includeMetadata: true,
+        });
+
+        onnxModel.graph.initializer = onnxModel.graph.initializer.filter(
+          (tensor) => tensor.name !== 'W1' && tensor.name !== 'B1',
+        );
+        onnxModel.metadata_props = [
+          ...(onnxModel.metadata_props ?? []),
+          {
+            key: 'shared_initializer_aliases',
+            value: '{}',
+          },
+        ];
+
+        const targetNetwork = Network.createMLP(2, [2, 2], 1);
+        setHiddenLayerSentinelState(targetNetwork, -7, -7);
+
+        // Act
+        assignWeightsAndBiases(
+          targetNetwork,
+          onnxModel,
+          [2, 2],
+          onnxModel.metadata_props,
+        );
+
+        // Assert
+        expect(
+          getHiddenNodes(targetNetwork)
+            .slice(2)
+            .every(
+              (hiddenNode) =>
+                hiddenNode.bias === -7 &&
+                hiddenNode.connections.in.every(
+                  (connectionEntry) => connectionEntry.weight === -7,
+                ),
+            ),
+        ).toBe(true);
+      });
+    });
+
+    describe('when shared initializer alias metadata is malformed JSON', () => {
+      it('ignores the alias metadata and leaves the later hidden layer untouched', () => {
+        // Arrange
+        const sourceNetwork = Network.createMLP(2, [2, 2], 1);
+        const onnxModel = exportToONNX(sourceNetwork, {
+          includeMetadata: true,
+        });
+
+        onnxModel.graph.initializer = onnxModel.graph.initializer.filter(
+          (tensor) => tensor.name !== 'W1' && tensor.name !== 'B1',
+        );
+        onnxModel.metadata_props = [
+          ...(onnxModel.metadata_props ?? []),
+          {
+            key: 'shared_initializer_aliases',
+            value: '{',
+          },
+        ];
+
+        const targetNetwork = Network.createMLP(2, [2, 2], 1);
+        setHiddenLayerSentinelState(targetNetwork, -6, -6);
+
+        // Act
+        assignWeightsAndBiases(
+          targetNetwork,
+          onnxModel,
+          [2, 2],
+          onnxModel.metadata_props,
+        );
+
+        // Assert
+        expect(
+          getHiddenNodes(targetNetwork)
+            .slice(2)
+            .every(
+              (hiddenNode) =>
+                hiddenNode.bias === -6 &&
+                hiddenNode.connections.in.every(
+                  (connectionEntry) => connectionEntry.weight === -6,
+                ),
+            ),
+        ).toBe(true);
+      });
+    });
+
     describe('when an aggregated layer is missing its bias tensor', () => {
       it('leaves that hidden layer on the target network untouched', () => {
         // Arrange
@@ -500,7 +849,7 @@ describe('network onnx import weights utility chapter', () => {
     });
 
     describe('when Conv metadata and tensors are present for a valid mapping', () => {
-      it('reconstructs the receptive-field kernel weights and channel bias', () => {
+      it('reconstructs the receptive-field kernel weights, channel bias, and downstream dense layer tensors', () => {
         // Arrange
         const scenario = createConvSharingVerifiedScenario();
         const onnxModel = exportToONNX(scenario.network, {
@@ -521,6 +870,20 @@ describe('network onnx import weights utility chapter', () => {
         // Assert
         expect({
           firstHiddenBias: getHiddenNodes(targetNetwork)[0].bias,
+          nonReceptiveWeights: [2, 5, 6, 7, 8].map((inputIndex) =>
+            readInboundWeight(
+              getHiddenNodes(targetNetwork)[0],
+              getInputNodes(targetNetwork)[inputIndex],
+            ),
+          ),
+          outputBiases: getOutputNodes(targetNetwork).map(
+            (outputNode) => outputNode.bias,
+          ),
+          outputWeights: getOutputNodes(targetNetwork).map((outputNode) =>
+            outputNode.connections.in.map(
+              (connectionEntry) => connectionEntry.weight,
+            ),
+          ),
           receptiveWeights: [0, 1, 3, 4].map((inputIndex) =>
             readInboundWeight(
               getHiddenNodes(targetNetwork)[0],
@@ -529,6 +892,15 @@ describe('network onnx import weights utility chapter', () => {
           ),
         }).toEqual({
           firstHiddenBias: 0.123,
+          nonReceptiveWeights: [0, 0, 0, 0, 0],
+          outputBiases: getOutputNodes(scenario.network).map(
+            (outputNode) => outputNode.bias,
+          ),
+          outputWeights: getOutputNodes(scenario.network).map((outputNode) =>
+            outputNode.connections.in.map(
+              (connectionEntry) => connectionEntry.weight,
+            ),
+          ),
           receptiveWeights: scenario.kernelPattern,
         });
       });
@@ -826,6 +1198,172 @@ describe('network onnx import weights utility chapter', () => {
             targetNetwork,
             onnxModel,
             [3],
+            onnxModel.metadata_props,
+          );
+
+        // Assert
+        expect(assignCallback).not.toThrow();
+      });
+    });
+
+    describe('when pooled Conv reconstruction metadata uses malformed pool2d_specs JSON', () => {
+      it('falls back to an empty pooling list without throwing', () => {
+        // Arrange
+        const scenario = createPostPoolSecondLayerConvScenario();
+        const onnxModel = exportToONNX(scenario.network, {
+          includeMetadata: true,
+          conv2dMappings: scenario.convMappings,
+          pool2dMappings: scenario.poolMappings,
+        });
+        findMetadataEntry(onnxModel.metadata_props, 'pool2d_specs').value = '{';
+        const targetNetwork = Network.createMLP(25, [16, 4], 1);
+        const assignCallback = () =>
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [16, 4],
+            onnxModel.metadata_props,
+          );
+
+        // Assert
+        expect(assignCallback).not.toThrow();
+      });
+    });
+
+    describe('when pooled Conv reconstruction metadata matches the second layer input shape exactly', () => {
+      it('rebuilds the later hidden layer from the pooled predecessor layout', () => {
+        // Arrange
+        const scenario = createPostPoolSecondLayerConvScenario();
+        const onnxModel = exportToONNX(scenario.network, {
+          includeMetadata: true,
+          conv2dMappings: scenario.convMappings,
+          pool2dMappings: scenario.poolMappings,
+        });
+        const targetNetwork = Network.createMLP(25, [16, 4], 1);
+        setHiddenLayerSentinelState(targetNetwork, -5, -5);
+
+        // Act
+        assignWeightsAndBiases(
+          targetNetwork,
+          onnxModel,
+          [16, 4],
+          onnxModel.metadata_props,
+        );
+
+        const sourceSecondHiddenNodes = getHiddenNodes(scenario.network).slice(
+          16,
+        );
+
+        // Assert
+        expect({
+          secondHiddenBiases: getHiddenNodes(targetNetwork)
+            .slice(16)
+            .map((hiddenNode) => hiddenNode.bias),
+          secondHiddenWeights: getHiddenNodes(targetNetwork)
+            .slice(16)
+            .map((hiddenNode) =>
+              hiddenNode.connections.in.map(
+                (connectionEntry) => connectionEntry.weight,
+              ),
+            ),
+        }).toEqual({
+          secondHiddenBiases: sourceSecondHiddenNodes.map(
+            (hiddenNode) => hiddenNode.bias,
+          ),
+          secondHiddenWeights: sourceSecondHiddenNodes.map((hiddenNode) =>
+            hiddenNode.connections.in.map(
+              (connectionEntry) => connectionEntry.weight,
+            ),
+          ),
+        });
+      });
+    });
+
+    describe('when pooled Conv reconstruction metadata stores a non-array pool2d_specs payload', () => {
+      it('treats the payload as an empty pooling list without throwing', () => {
+        // Arrange
+        const scenario = createPostPoolSecondLayerConvScenario();
+        const onnxModel = exportToONNX(scenario.network, {
+          includeMetadata: true,
+          conv2dMappings: scenario.convMappings,
+          pool2dMappings: scenario.poolMappings,
+        });
+        findMetadataEntry(onnxModel.metadata_props, 'pool2d_specs').value =
+          '{}';
+        const targetNetwork = Network.createMLP(25, [16, 4], 1);
+        const assignCallback = () =>
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [16, 4],
+            onnxModel.metadata_props,
+          );
+
+        // Assert
+        expect(assignCallback).not.toThrow();
+      });
+    });
+
+    describe('when pooled Conv reconstruction metadata derives a shape that no longer matches the second layer', () => {
+      it('falls back to the default dense source layout without throwing', () => {
+        // Arrange
+        const scenario = createPostPoolSecondLayerConvScenario();
+        const onnxModel = exportToONNX(scenario.network, {
+          includeMetadata: true,
+          conv2dMappings: scenario.convMappings,
+          pool2dMappings: scenario.poolMappings,
+        });
+        findMetadataEntry(onnxModel.metadata_props, 'pool2d_specs').value =
+          JSON.stringify([
+            {
+              afterLayerIndex: 1,
+              type: 'MaxPool',
+              kernelHeight: 2,
+              kernelWidth: 2,
+              strideHeight: 2,
+              strideWidth: 2,
+            },
+          ]);
+        const targetNetwork = Network.createMLP(25, [16, 4], 1);
+        const assignCallback = () =>
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [16, 4],
+            onnxModel.metadata_props,
+          );
+
+        // Assert
+        expect(assignCallback).not.toThrow();
+      });
+    });
+
+    describe('when pooled Conv reconstruction metadata uses an invalid zero stride', () => {
+      it('treats the derived pooled shape as unusable without throwing', () => {
+        // Arrange
+        const scenario = createPostPoolSecondLayerConvScenario();
+        const onnxModel = exportToONNX(scenario.network, {
+          includeMetadata: true,
+          conv2dMappings: scenario.convMappings,
+          pool2dMappings: scenario.poolMappings,
+        });
+        findMetadataEntry(onnxModel.metadata_props, 'pool2d_specs').value =
+          JSON.stringify([
+            {
+              afterLayerIndex: 1,
+              type: 'MaxPool',
+              kernelHeight: 2,
+              kernelWidth: 2,
+              strideHeight: 0,
+              strideWidth: 0,
+            },
+          ]);
+        const targetNetwork = Network.createMLP(25, [16, 4], 1);
+        const assignCallback = () =>
+          assignWeightsAndBiases(
+            targetNetwork,
+            onnxModel,
+            [16, 4],
             onnxModel.metadata_props,
           );
 

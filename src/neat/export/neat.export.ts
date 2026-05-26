@@ -519,94 +519,37 @@ export async function importStateImpl(
   ) => number | Promise<number>,
   restoreOptions?: NeatCheckpointRestoreOptions,
 ): Promise<NeatControllerForExport> {
-  if (!stateBundle || typeof stateBundle !== 'object')
-    throw new NeatExportStateBundleValidationError('Invalid state bundle');
+  assertStateBundleObject(stateBundle);
 
-  const checkpointFormatVersion = resolveStateFormatVersion(stateBundle);
-  if (checkpointFormatVersion > CURRENT_STATE_FORMAT_VERSION) {
-    throw new NeatExportStateBundleValidationError(
-      `Unsupported NEAT checkpoint format version: ${checkpointFormatVersion}.`,
-    );
-  }
-  if (!stateBundle.neat || typeof stateBundle.neat !== 'object') {
-    throw new NeatExportStateBundleValidationError(
-      'Full checkpoint bundles must include serialized NEAT meta state.',
-    );
-  }
-  if (!Array.isArray(stateBundle.population)) {
-    throw new NeatExportStateBundleValidationError(
-      'Full checkpoint bundles must include a population array.',
-    );
-  }
-  if (
-    checkpointFormatVersion >= CURRENT_STATE_FORMAT_VERSION &&
-    stateBundle.checkpointMode !== FULL_CHECKPOINT_MODE
-  ) {
-    throw new NeatExportStateBundleValidationError(
-      'Versioned full checkpoints must declare checkpointMode: "full".',
-    );
-  }
-  const restoreMode = restoreOptions?.restoreMode ?? 'strict';
-  const requireStrictReplayResume =
-    checkpointFormatVersion >= CURRENT_STATE_FORMAT_VERSION &&
-    restoreMode === 'strict';
+  const checkpointFormatVersion = validateFullCheckpointBundle(stateBundle);
+  const neatMeta = stateBundle.neat as NeatMetaJSON;
+  const runtimeMeta = readCheckpointRuntimeMeta(neatMeta);
+  const requireStrictReplayResume = shouldRequireStrictReplayResume(
+    checkpointFormatVersion,
+    restoreOptions,
+  );
 
-  if (
-    requireStrictReplayResume &&
-    (!stateBundle.speciation || typeof stateBundle.speciation !== 'object')
-  ) {
-    throw new NeatExportStateBundleValidationError(
-      'Versioned full checkpoints must include speciation resume state.',
-    );
-  }
-  const runtimeMeta =
-    stateBundle.neat.runtime && typeof stateBundle.neat.runtime === 'object'
-      ? stateBundle.neat.runtime
-      : undefined;
+  assertFullCheckpointResumeState(
+    stateBundle,
+    runtimeMeta,
+    requireStrictReplayResume,
+  );
 
-  if (requireStrictReplayResume && !runtimeMeta) {
-    throw new NeatExportStateControllerRestoreError(
-      'Versioned full checkpoints must include runtime resume state for exact restore.',
-    );
-  }
-  if (requireStrictReplayResume) {
-    const missingExactResumeRuntimeFields = getMissingExactResumeRuntimeFields(
-      runtimeMeta as NonNullable<typeof runtimeMeta>,
-    );
-
-    if (missingExactResumeRuntimeFields.length > 0) {
-      throw new NeatExportStateControllerRestoreError(
-        `Versioned full checkpoints must include exact-resume runtime fields: ${missingExactResumeRuntimeFields.join(', ')}.`,
-      );
-    }
-  }
-
-  const neatInstance = (
-    this as NeatConstructor & {
-      fromJSON?: typeof fromJSONImpl;
-    }
-  ).fromJSON?.(stateBundle.neat, fitnessFunction);
-
-  if (!neatInstance)
-    throw new NeatExportStateControllerRestoreError(
-      'Failed to create NEAT instance from JSON',
-    );
+  const neatInstance = createCheckpointNeatInstance(
+    this,
+    neatMeta,
+    fitnessFunction,
+  );
 
   await importPopulation.call(
     neatInstance as unknown as NeatLike,
     stateBundle.population,
   );
 
-  if (stateBundle.speciation) {
-    const { default: Network } =
-      await import('../../architecture/network/network');
-
-    restoreSpeciationCheckpoint(
-      neatInstance,
-      stateBundle.speciation,
-      Network as unknown as NetworkClass,
-    );
-  }
+  await restoreCheckpointSpeciationIfPresent(
+    neatInstance,
+    stateBundle.speciation,
+  );
 
   restoreRuntimeMeta(neatInstance, runtimeMeta);
 
@@ -636,12 +579,168 @@ export async function importLightStateImpl(
     network: GenomeWithSerialization,
   ) => number | Promise<number>,
 ): Promise<NeatControllerForExport> {
+  assertLightStateBundleObject(stateBundle);
+  validateLightCheckpointBundle(stateBundle);
+
+  const lightBootstrapMeta = stateBundle.neat as NeatLightStateJSON['neat'];
+  const neatInstance = createLightCheckpointInstance(
+    this,
+    lightBootstrapMeta,
+    fitnessFunction,
+  );
+
+  // Step 1: Reapply the saved generation marker before importing elites.
+  neatInstance.generation =
+    typeof lightBootstrapMeta.generation === 'number'
+      ? lightBootstrapMeta.generation
+      : 0;
+
+  // Step 2: Import only the retained elites from the light bundle.
+  await importPopulation.call(
+    neatInstance as unknown as NeatLike,
+    stateBundle.population,
+  );
+
+  // Step 3: Restore the intended future population target after import.
+  neatInstance.options.popsize = stateBundle.restartPopulationSize;
+
+  return neatInstance;
+}
+
+function assertStateBundleObject(stateBundle: NeatStateJSON): void {
+  if (!stateBundle || typeof stateBundle !== 'object') {
+    throw new NeatExportStateBundleValidationError('Invalid state bundle');
+  }
+}
+
+function validateFullCheckpointBundle(stateBundle: NeatStateJSON): number {
+  const checkpointFormatVersion = resolveStateFormatVersion(stateBundle);
+
+  if (checkpointFormatVersion > CURRENT_STATE_FORMAT_VERSION) {
+    throw new NeatExportStateBundleValidationError(
+      `Unsupported NEAT checkpoint format version: ${checkpointFormatVersion}.`,
+    );
+  }
+  if (!stateBundle.neat || typeof stateBundle.neat !== 'object') {
+    throw new NeatExportStateBundleValidationError(
+      'Full checkpoint bundles must include serialized NEAT meta state.',
+    );
+  }
+  if (!Array.isArray(stateBundle.population)) {
+    throw new NeatExportStateBundleValidationError(
+      'Full checkpoint bundles must include a population array.',
+    );
+  }
+  if (
+    checkpointFormatVersion >= CURRENT_STATE_FORMAT_VERSION &&
+    stateBundle.checkpointMode !== FULL_CHECKPOINT_MODE
+  ) {
+    throw new NeatExportStateBundleValidationError(
+      'Versioned full checkpoints must declare checkpointMode: "full".',
+    );
+  }
+
+  return checkpointFormatVersion;
+}
+
+function readCheckpointRuntimeMeta(
+  neatMeta: NeatMetaJSON,
+): NonNullable<NeatMetaJSON['runtime']> | undefined {
+  return neatMeta.runtime && typeof neatMeta.runtime === 'object'
+    ? neatMeta.runtime
+    : undefined;
+}
+
+function shouldRequireStrictReplayResume(
+  checkpointFormatVersion: number,
+  restoreOptions: NeatCheckpointRestoreOptions | undefined,
+): boolean {
+  const restoreMode = restoreOptions?.restoreMode ?? 'strict';
+
+  return (
+    checkpointFormatVersion >= CURRENT_STATE_FORMAT_VERSION &&
+    restoreMode === 'strict'
+  );
+}
+
+function assertFullCheckpointResumeState(
+  stateBundle: NeatStateJSON,
+  runtimeMeta: NonNullable<NeatMetaJSON['runtime']> | undefined,
+  requireStrictReplayResume: boolean,
+): void {
+  if (!requireStrictReplayResume) {
+    return;
+  }
+  if (!stateBundle.speciation || typeof stateBundle.speciation !== 'object') {
+    throw new NeatExportStateBundleValidationError(
+      'Versioned full checkpoints must include speciation resume state.',
+    );
+  }
+  if (!runtimeMeta) {
+    throw new NeatExportStateControllerRestoreError(
+      'Versioned full checkpoints must include runtime resume state for exact restore.',
+    );
+  }
+
+  const missingExactResumeRuntimeFields =
+    getMissingExactResumeRuntimeFields(runtimeMeta);
+
+  if (missingExactResumeRuntimeFields.length > 0) {
+    throw new NeatExportStateControllerRestoreError(
+      `Versioned full checkpoints must include exact-resume runtime fields: ${missingExactResumeRuntimeFields.join(', ')}.`,
+    );
+  }
+}
+
+function createCheckpointNeatInstance(
+  neatConstructor: NeatConstructor,
+  neatMeta: NeatMetaJSON,
+  fitnessFunction: (
+    network: GenomeWithSerialization,
+  ) => number | Promise<number>,
+): NeatControllerForExport {
+  const neatInstance = (
+    neatConstructor as NeatConstructor & {
+      fromJSON?: typeof fromJSONImpl;
+    }
+  ).fromJSON?.(neatMeta, fitnessFunction);
+
+  if (!neatInstance) {
+    throw new NeatExportStateControllerRestoreError(
+      'Failed to create NEAT instance from JSON',
+    );
+  }
+
+  return neatInstance;
+}
+
+async function restoreCheckpointSpeciationIfPresent(
+  neatInstance: NeatControllerForExport,
+  speciationCheckpoint: NeatStateJSON['speciation'],
+): Promise<void> {
+  if (!speciationCheckpoint) {
+    return;
+  }
+
+  const { default: Network } =
+    await import('../../architecture/network/network');
+
+  restoreSpeciationCheckpoint(
+    neatInstance,
+    speciationCheckpoint,
+    Network as unknown as NetworkClass,
+  );
+}
+
+function assertLightStateBundleObject(stateBundle: NeatLightStateJSON): void {
   if (!stateBundle || typeof stateBundle !== 'object') {
     throw new NeatExportStateBundleValidationError(
       'Invalid light checkpoint bundle',
     );
   }
+}
 
+function validateLightCheckpointBundle(stateBundle: NeatLightStateJSON): void {
   const checkpointFormatVersion =
     typeof stateBundle.formatVersion === 'number'
       ? stateBundle.formatVersion
@@ -679,37 +778,31 @@ export async function importLightStateImpl(
       'Light checkpoint bundles must include a restartPopulationSize that is at least the retained elite count.',
     );
   }
+}
 
-  const lightBootstrapMeta = stateBundle.neat;
-  const bootstrapOptions =
-    lightBootstrapMeta.options &&
-    typeof lightBootstrapMeta.options === 'object' &&
-    !Array.isArray(lightBootstrapMeta.options)
-      ? lightBootstrapMeta.options
-      : {};
-  const neatInstance = new this(
+function createLightCheckpointInstance(
+  neatConstructor: NeatConstructor,
+  lightBootstrapMeta: NeatLightStateJSON['neat'],
+  fitnessFunction: (
+    network: GenomeWithSerialization,
+  ) => number | Promise<number>,
+): NeatControllerForExport {
+  return new neatConstructor(
     lightBootstrapMeta.input as number,
     lightBootstrapMeta.output as number,
     fitnessFunction,
-    bootstrapOptions,
+    resolveLightCheckpointBootstrapOptions(lightBootstrapMeta),
   );
+}
 
-  // Step 1: Reapply the saved generation marker before importing elites.
-  neatInstance.generation =
-    typeof lightBootstrapMeta.generation === 'number'
-      ? lightBootstrapMeta.generation
-      : 0;
-
-  // Step 2: Import only the retained elites from the light bundle.
-  await importPopulation.call(
-    neatInstance as unknown as NeatLike,
-    stateBundle.population,
-  );
-
-  // Step 3: Restore the intended future population target after import.
-  neatInstance.options.popsize = stateBundle.restartPopulationSize;
-
-  return neatInstance;
+function resolveLightCheckpointBootstrapOptions(
+  lightBootstrapMeta: NeatLightStateJSON['neat'],
+): Record<string, unknown> {
+  return lightBootstrapMeta.options &&
+    typeof lightBootstrapMeta.options === 'object' &&
+    !Array.isArray(lightBootstrapMeta.options)
+    ? lightBootstrapMeta.options
+    : {};
 }
 
 /**

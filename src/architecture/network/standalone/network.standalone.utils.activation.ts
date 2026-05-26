@@ -10,7 +10,7 @@ import {
 import type { StandaloneSquashFunction } from './network.standalone.utils.types';
 
 /**
- * Resolve a stable activation function name for emission.
+ * Resolve a stable activation function identifier for standalone code emission.
  *
  * @param currentNode Current node.
  * @param nodeTraversalIndex Node index for anonymous-name fallback.
@@ -25,7 +25,7 @@ export function resolveSquashName(
 }
 
 /**
- * Ensure an activation function is registered and return its table index.
+ * Register an activation implementation once and return its stable index in the generated activation table.
  *
  * @param generationContext Mutable generation context.
  * @param squashName Activation function name.
@@ -56,7 +56,7 @@ export function ensureActivationFunctionIndex(
 }
 
 /**
- * Resolve emitted source for built-in or custom activation functions.
+ * Resolve standalone-ready activation source by preferring built-in snippets and normalizing custom bodies.
  *
  * @param squashName Activation function name.
  * @param squashFunction Activation function implementation.
@@ -208,7 +208,10 @@ function normalizeArrowParameters(parameterSegment: string): string {
 }
 
 /**
- * Normalize arrow body into a function-body block.
+ * Normalize an arrow body to a function-body block.
+ *
+ * Preserves block bodies and wraps expression bodies with an explicit return
+ * so generated standalone activation functions remain syntactically stable.
  *
  * @param bodySegment Raw arrow body segment.
  * @returns Function body block string.
@@ -222,12 +225,11 @@ function normalizeArrowBody(bodySegment: string): string {
 }
 
 /**
- * Register a function source and allocate its numeric index.
+ * Persist a normalized activation source and bind its name to the next generated activation index.
  *
  * @param generationContext Mutable generation context.
  * @param squashName Activation function name.
  * @param functionSource Named function source to store.
- * @returns Void.
  */
 function registerActivationFunction(
   generationContext: GenerationContext,

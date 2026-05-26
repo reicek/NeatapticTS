@@ -158,7 +158,7 @@ export const start = async (
   container: string | HTMLElement = C.DEFAULT_CONTAINER_ID,
   opts: BrowserEntryStartOptions = {},
 ): Promise<AsciiMazeRunHandle> => {
-  if (_activeRunHandle !== null && _activeRunHandle.isRunning()) {
+  if (_activeRunHandle !== null) {
     return _activeRunHandle;
   }
 
@@ -176,6 +176,7 @@ export const start = async (
   let cancelled = false;
   let running = true;
   let finalized = false;
+  let curriculumStarted = false;
   let pendingRestart = false;
   let selectorController: MazeArchitectureSelectorController | null = null;
   const internalController = new AbortController();
@@ -194,6 +195,16 @@ export const start = async (
     resolveDonePromise();
   };
 
+  const requestCancellation = () => {
+    cancelled = true;
+
+    try {
+      internalController.abort();
+    } catch {
+      // Ignore duplicate aborts or unsupported environments.
+    }
+  };
+
   const queueRestart = (nextProfileId: ExampleArchitectureProfileId): void => {
     if (pendingRestart || cancelled) {
       return;
@@ -203,13 +214,7 @@ export const start = async (
     selectorController?.setDisabled(true);
 
     if (running) {
-      cancelled = true;
-
-      try {
-        internalController.abort();
-      } catch {
-        // Ignore abort failures in older or restricted environments.
-      }
+      requestCancellation();
 
       void done.then(() => {
         _activeRunHandle = null;
@@ -267,6 +272,7 @@ export const start = async (
 
   // Step 5: Start curriculum orchestration only when the run is still active.
   if (!cancelled) {
+    curriculumStarted = true;
     runBrowserEntryCurriculum({
       dashboard: hostServices.dashboard,
       combinedSignal,
@@ -274,18 +280,17 @@ export const start = async (
       finish: finalizeRun,
       hostAdapter,
       architectureProfileId: selectedProfileId,
+      workerUrl: opts.workerUrl,
     });
   }
 
   // Step 6: Return the stable lifecycle handle for embedding hosts.
   const handle: AsciiMazeRunHandle = {
     stop: () => {
-      cancelled = true;
-      finalizeRun();
-      try {
-        internalController.abort();
-      } catch {
-        // Ignore duplicate aborts or unsupported environments.
+      requestCancellation();
+
+      if (!curriculumStarted) {
+        finalizeRun();
       }
     },
     isRunning: () => running && !cancelled && !combinedSignal.aborted,
@@ -295,12 +300,14 @@ export const start = async (
     getTelemetry: () => hostServices.runtimeDashboard.getLastTelemetry?.(),
   };
 
-  _activeRunHandle = handle;
-  void handle.done.then(() => {
-    if (_activeRunHandle === handle) {
-      _activeRunHandle = null;
-    }
-  });
+  if (!finalized) {
+    _activeRunHandle = handle;
+    void handle.done.then(() => {
+      if (_activeRunHandle === handle) {
+        _activeRunHandle = null;
+      }
+    });
+  }
 
   return handle;
 };

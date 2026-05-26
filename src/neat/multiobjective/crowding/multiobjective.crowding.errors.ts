@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when crowding helpers cannot resolve a genome back to its source index.
  */
 export class MultiobjectiveCrowdingGenomeIndexResolutionError extends Error {

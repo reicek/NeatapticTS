@@ -1,4 +1,15 @@
 import type { Network } from '../../../src/browser-entry.ts';
+import type {
+  ParameterLayoutEntry,
+  ParameterVector,
+} from '../../../src/neataptic.ts';
+import type {
+  NeatChatAdaptationCandidate,
+  NeatChatCandidateLogEntry,
+} from './neatChat.adaptation.types';
+import type { NeatChatSeedMetadata } from './neatChat.seed-import.types';
+import type { NeatChatEpisodicMemoryBank } from './neatChat.memory.types';
+import type { NeatChatRoutingDecisionLogEntry } from './neatChat.routing.types';
 import {
   NEATCHAT_PUBLISHED_DOCS_EXAMPLE_PATH,
   NEATCHAT_PUBLISHED_EXAMPLES_CATEGORY,
@@ -227,6 +238,25 @@ export interface NeatChatSession {
   readonly contextWindowTokenCount: number;
   /** Number of recent exchanges currently available to replay each update. */
   readonly replayBufferExchangeCount: number;
+  /** Detached candidates that have not yet been promoted or rejected. */
+  readonly pendingCandidates: readonly NeatChatAdaptationCandidate[];
+  /** Durable record of promoted and rejected adaptation candidates. */
+  readonly candidateLog: readonly NeatChatCandidateLogEntry[];
+  /** Episodic memory bank storing retrievable user-specific facts and examples. */
+  readonly memoryBank: NeatChatEpisodicMemoryBank;
+  /**
+   * Durable ordered log of response-path routing decisions for debugging and regression replay.
+   *
+   * Each entry records which candidate paths participated in the comparison, their scalar
+   * scores, the winning path, and which retrieved memories (if any) contributed to a
+   * retrieval-grounded candidate. The log survives snapshot export and import via
+   * `exportNeatChatSessionV2` and `importNeatChatSessionV2` so routing history is
+   * preserved across sessions.
+   *
+   * Routing selection never promotes weights; the log is a pure observability artifact.
+   * Pre-W5 snapshots restore with an empty log (`[]`) as the backward-compatible default.
+   */
+  readonly routingLog: readonly NeatChatRoutingDecisionLogEntry[];
 }
 
 /** Serializable snapshot of a live NEATchat session. */
@@ -247,6 +277,117 @@ export interface NeatChatSessionSnapshot {
   readonly seededTokenPairCount: number;
   /** Active context window preserved with the snapshot. */
   readonly contextWindowTokenCount: number;
+}
+
+/**
+ * Serializable v2 snapshot of a live NEATchat session.
+ *
+ * Version 2 extends the v1 topology JSON with a full parameter-vector payload
+ * so the restored network rebuilds its graph shell from `networkJson` first and
+ * then replays exact scalar weights — including recurrent self-connection weights
+ * for LSTM, GRU, and NARX gates and memory cells — through
+ * `fromParameterVector(...)`. This two-phase restore guarantees that the
+ * in-memory session matches the original at the weight level, not merely at the
+ * topology level, which is the key invariant for deterministic continued training
+ * and candidate comparison.
+ *
+ * The `extensions` bag is a forward-compatible namespace for NEATchat-owned
+ * snapshot metadata. Downstream validation code can read
+ * `extensions.neatchat.vocabularySize` as a sanity check without rebuilding
+ * the full token table from `retainedTerms`.
+ *
+ * @example
+ * ```ts
+ * // Persist a live session and restore it in a later run.
+ * const snapshot = exportNeatChatSessionV2(session);
+ * const json = JSON.stringify(snapshot);
+ * // — later, in a new session —
+ * const restoredSession = importNeatChatSessionV2(JSON.parse(json));
+ * ```
+ */
+export interface NeatChatSessionSnapshotV2 {
+  /** Snapshot schema version for future compatibility guards. */
+  readonly formatVersion: 2;
+  /** Retained non-special vocabulary terms in index order after the control tokens. */
+  readonly retainedTerms: readonly string[];
+  /** Serialized network graph and topology state. */
+  readonly networkJson: Record<string, unknown>;
+  /**
+   * Exact network parameter payload used to restore weights after `networkJson` rebuild.
+   *
+   * The vector includes every trainable weight in the network: feed-forward
+   * connection weights, bias values, and — critically for recurrent
+   * architectures — the recurrent self-connection weights that encode LSTM gate
+   * states, GRU reset and update logic, and NARX memory-tap coupling. Without
+   * this vector, a topology-only restore from `networkJson` would lose the
+   * learned recurrent dynamics accumulated during previous exchanges.
+   *
+   * The v2 exporter writes the summarized JSON-safe branch (plain `values`
+   * array + `layoutEntries` descriptors). The runtime import also accepts a raw
+   * `ParameterVector` so tests and transitional callers can round-trip through
+   * the same `fromParameterVector(...)` seam without an extra serialization step.
+   */
+  readonly parameterVector:
+    | ParameterVector
+    | {
+        /** Scalar parameter values aligned with `layoutEntries`. */
+        readonly values: readonly number[];
+        /** Version of the parameter-layout contract used by the snapshot. */
+        readonly layoutVersion: number;
+        /** Stable descriptor hash for the serialized layout entries. */
+        readonly descriptorHash: string;
+        /** Ordered layout descriptors aligned with `values`. */
+        readonly layoutEntries: readonly ParameterLayoutEntry[];
+      };
+  /** Completed exchanges retained for continued online learning. */
+  readonly exchanges: readonly NeatChatExchangeRecord[];
+  /** Total completed exchange count at export time. */
+  readonly learnedExchangeCount: number;
+  /** Total learned token-pair count at export time. */
+  readonly learnedTokenPairCount: number;
+  /** Total seed token-pair count at export time. */
+  readonly seededTokenPairCount: number;
+  /** Active context window preserved with the snapshot. */
+  readonly contextWindowTokenCount: number;
+  /**
+   * Forward-compatible metadata bag for NEATchat-owned snapshot extensions.
+   *
+   * Each key under `extensions` is a named namespace owned by one subsystem.
+   * The `neatchat` branch is the canonical NEATchat namespace; callers must
+   * not write to it outside the snapshot service. Additional namespaces can be
+   * added by future workstreams without breaking existing importers.
+   */
+  readonly extensions: {
+    /**
+     * NEATchat-owned metadata branch.
+     *
+     * Values here are denormalized hints that let importers run fast sanity
+     * checks — such as vocabulary-size consistency — without needing to
+     * deserialize and rebuild the full token table from `retainedTerms` first.
+     */
+    readonly neatchat: {
+      /**
+       * Total vocabulary size (retained terms + special tokens) at export time.
+       *
+       * This is a denormalized hint: its value equals
+       * `retainedTerms.length + NEATCHAT_SPECIAL_TOKENS.length`. The importer
+       * validates this field against the rebuilt vocabulary to catch
+       * truncated or mismatched snapshot payloads early, before attempting
+       * network activation.
+       */
+      readonly vocabularySize: number;
+      /** Optional metadata describing the external teacher seed that produced this snapshot. */
+      readonly seedMetadata?: NeatChatSeedMetadata;
+      /** Optional episodic memory bank persisted alongside the session snapshot. */
+      readonly memoryBank?: NeatChatEpisodicMemoryBank;
+      /** Optional durable record of promoted and rejected candidates. */
+      readonly candidateLog?: readonly NeatChatCandidateLogEntry[];
+      /** Optional durable record of response-path routing decisions. */
+      readonly routingLog?: readonly NeatChatRoutingDecisionLogEntry[];
+      readonly [key: string]: unknown;
+    };
+    readonly [key: string]: unknown;
+  };
 }
 
 /** Result returned after one user-bot exchange and its supervised update. */

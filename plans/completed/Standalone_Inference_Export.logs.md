@@ -13,7 +13,7 @@
 
 - Confirmed this lane belongs to Phase 4 and does not replace Phase 2 as the active roadmap stage.
 - Preserved the dependency on [plans/completed/Stable_Activation_Ordering_and_Explicit_IO_Roles.md](Stable_Activation_Ordering_and_Explicit_IO_Roles.md) as the deterministic runtime baseline.
-- Preserved the shared inference-IR seam with [plans/Worker_Friendly_Network_Serialization_Fastpath.md](../Worker_Friendly_Network_Serialization_Fastpath.md) and forward compatibility with [plans/Evolution_Training_Interoperability_Contracts.md](../Evolution_Training_Interoperability_Contracts.md).
+- Preserved the shared inference-IR seam with [plans/Worker_Friendly_Network_Serialization_Fastpath.md](../Worker_Friendly_Network_Serialization_Fastpath.md) and forward compatibility with [plans/completed/Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md).
 
 ### [DONE] Groundwork boundary capture
 

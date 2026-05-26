@@ -94,6 +94,13 @@
  * };
  * ```
  */
+/**
+ * Cost (loss) function collection for training and evaluating neural networks.
+ *
+ * Re-exported from `./cost/cost` for unified method-shelf access. Use
+ * `Cost.mse`, `Cost.crossEntropy`, or any other static method to compute a
+ * scalar loss from target and output arrays. See {@link Cost} for the full API.
+ */
 export { default as Cost } from './cost/cost';
 export { default as Rate } from './rate/rate';
 export { default as Activation } from './activation/activation';

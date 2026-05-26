@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   DeterministicNetworkInternals as DeterministicNetworkInternalsType,
   RNGSnapshot,
 } from '../network.types';
@@ -11,7 +11,7 @@ export type { RNGSnapshot };
 export type NetworkInternals = DeterministicNetworkInternalsType;
 
 /**
- * Fixed Weyl increment used to advance deterministic PRNG state.
+ * Fixed Weyl increment used to advance the deterministic PRNG state.
  */
 export const RNG_WEYL_INCREMENT = 0x6d2b79f5;
 

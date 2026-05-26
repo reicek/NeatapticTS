@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Generic layout helpers for browser network visualization.
  *
  * Once topology has been resolved into layers, these helpers place nodes
@@ -11,7 +11,7 @@ import type {
 } from './network-view.types';
 
 /**
- * A simple node representation for layout input.
+ * Minimal node representation used as input to the layout engine, carrying only the index, type role, and bias value needed for positioning.
  */
 export interface VisualNetworkNode {
   index: number;

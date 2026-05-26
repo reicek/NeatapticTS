@@ -1,0 +1,38 @@
+{
+  "evals": [
+    {
+      "id": "plan-sync-validator-output",
+      "target": "plan-sync-validation",
+      "prompt": "Validate the Agentic Workflow Architecture plan registration.",
+      "assertions": [
+        {
+          "text": "The output identifies the plan path and status.",
+          "passed": true,
+          "evidence": "validate-plan-sync.mjs reports plan.path and plan.status in JSON output."
+        },
+        {
+          "text": "The output separates errors from warnings.",
+          "passed": true,
+          "evidence": "All validation reports include counts.errors and counts.warnings."
+        }
+      ]
+    },
+    {
+      "id": "agent-inventory-output",
+      "target": "agent-inventory-audit",
+      "prompt": "Inventory current agents and skills after the numbered SDLC orchestrator migration.",
+      "assertions": [
+        {
+          "text": "The inventory includes total and user-invocable agent counts.",
+          "passed": true,
+          "evidence": "inventory-customizations.mjs reports agents and userInvocableAgents in summary output."
+        },
+        {
+          "text": "The inventory includes total and user-invocable skill counts.",
+          "passed": true,
+          "evidence": "inventory-customizations.mjs reports skills and userInvocableSkills in summary output."
+        }
+      ]
+    }
+  ]
+}

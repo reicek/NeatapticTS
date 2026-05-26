@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when ONNX export cannot resolve a valid layered ordering.
  */
 export class NetworkOnnxLayerOrderingUnresolvableError extends Error {
@@ -39,7 +39,17 @@ export class NetworkOnnxPerceptronSizeValidationError extends Error {
 }
 
 /**
- * Raised when recurrent ONNX export encounters unsupported mixed activations.
+ * Raised when ONNX export produces inconsistent or mismatched tensor dimensions.
+ */
+export class NetworkOnnxShapeValidationError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, { cause: options?.cause });
+    this.name = 'NetworkOnnxShapeValidationError';
+  }
+}
+
+/**
+ * Raised when recurrent ONNX export encounters unsupported mixed activation functions.
  */
 export class NetworkOnnxRecurrentMixedActivationsUnsupportedError extends Error {
   constructor(message: string, options?: ErrorOptions) {

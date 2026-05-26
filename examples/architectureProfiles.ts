@@ -1,4 +1,7 @@
-import { Architect, Layer, methods, type Network } from '../src/neataptic';
+import Architect from '../src/architecture/architect';
+import Layer from '../src/architecture/layer';
+import type Network from '../src/architecture/network/network';
+import * as methods from '../src/methods/methods';
 import {
   FLAPPY_NETWORK_HIDDEN_LAYER_SIZES,
   FLAPPY_NETWORK_INPUT_SIZE,

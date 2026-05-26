@@ -79,6 +79,9 @@ export function updateTelemetryHistory(
   state: DashboardManagerState,
   neatInstance?: { getTelemetry?: () => unknown[] } | undefined,
 ): void {
+  recordCurrentBestFitness(state);
+  recordCurrentProgress(state);
+
   const telemetrySeriesCandidate = neatInstance?.getTelemetry?.();
   if (
     !Array.isArray(telemetrySeriesCandidate) ||
@@ -90,16 +93,6 @@ export function updateTelemetryHistory(
   const telemetrySeries = telemetrySeriesCandidate as DashboardTelemetry[];
   state.lastTelemetry =
     MazeUtils.safeLast<DashboardTelemetry>(telemetrySeries) ?? null;
-
-  const latestFitness = state.currentBest?.result?.fitness;
-  if (typeof latestFitness === 'number') {
-    state.lastBestFitness = latestFitness;
-    state.histories.bestFitness = MazeUtils.pushHistory(
-      state.histories.bestFitness,
-      latestFitness,
-      C.HISTORY_MAX,
-    );
-  }
 
   const complexitySnapshot = state.lastTelemetry?.complexity;
   if (typeof complexitySnapshot?.meanNodes === 'number') {
@@ -125,15 +118,6 @@ export function updateTelemetryHistory(
     );
   }
 
-  const currentProgress = state.currentBest?.result?.progress;
-  if (typeof currentProgress === 'number') {
-    state.histories.progress = MazeUtils.pushHistory(
-      state.histories.progress,
-      currentProgress,
-      C.HISTORY_MAX,
-    );
-  }
-
   if (typeof state.lastTelemetry?.species === 'number') {
     state.histories.speciesCount = MazeUtils.pushHistory(
       state.histories.speciesCount,
@@ -141,6 +125,43 @@ export function updateTelemetryHistory(
       C.HISTORY_MAX,
     );
   }
+}
+
+/**
+ * Record the current best score in the public dashboard history.
+ *
+ * @param state - Mutable dashboard state that owns bounded histories.
+ */
+function recordCurrentBestFitness(state: DashboardManagerState): void {
+  const latestFitness = state.currentBest?.result?.fitness;
+  if (typeof latestFitness !== 'number') {
+    return;
+  }
+
+  state.lastBestFitness = latestFitness;
+  state.histories.bestFitness = MazeUtils.pushHistory(
+    state.histories.bestFitness,
+    latestFitness,
+    C.HISTORY_MAX,
+  );
+}
+
+/**
+ * Record the current best progress in the public dashboard history.
+ *
+ * @param state - Mutable dashboard state that owns bounded histories.
+ */
+function recordCurrentProgress(state: DashboardManagerState): void {
+  const currentProgress = state.currentBest?.result?.progress;
+  if (typeof currentProgress !== 'number') {
+    return;
+  }
+
+  state.histories.progress = MazeUtils.pushHistory(
+    state.histories.progress,
+    currentProgress,
+    C.HISTORY_MAX,
+  );
 }
 
 /**

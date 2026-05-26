@@ -1,0 +1,503 @@
+{
+  "evidence": [
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ActivationSquashFunction"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ConvInferenceKernelEvaluationContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ConvInferenceTraversalContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ConvKernelConsistencyContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ConvRepresentativeKernelContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ConvSharingValidationContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "DenseOrderedNodePayload"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "DenseWeightRow"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "DiagonalRecurrentBuildContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "HiddenLayerHeuristicContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "LayerTraversalContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "LstmCandidateContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxConvEmissionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxQuantizationCalibrationWeightRangePolicy"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxRecurrentCollectionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxRecurrentInputValueInfoContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxRecurrentLayerTraversalContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "RecurrentActivationEmissionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "RecurrentGateParameterCollectionResult"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "RecurrentGateRowCollectionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "RecurrentGraphNames"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "RecurrentInitializerEmissionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "WeightToleranceComparisonContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "ConvLayerPairContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "ConvSharingValidationResult"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "DenseLayerContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "FusedRecurrentGraphNames"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "LayerRecurrentDecisionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxBaseModelBuildContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxBuildResolvedOptions"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxLayerEmissionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxQuantizationCalibrationOptions"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxQuantizationCalibrationRange"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxQuantizationCalibrationSymmetry"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxRecurrentLayerProcessingContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "PoolingEmissionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "RecurrentGateRow"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "RecurrentInitializerNames"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "RecurrentInitializerValues"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "RecurrentLayerEmissionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "SharedActivationNodeBuildParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "SharedGemmNodeBuildParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "ConvOutputCoordinate"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "FusedRecurrentInitializerNames"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "IndexedMetadataAppendContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "LstmPatternStub"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "OnnxGraphDimensionBuildContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "OnnxModelMetadataContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "OnnxPostProcessingContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "OnnxResolvedPrecisionOptions"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "OnnxResolvedQuantizationCalibrationOptions"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "OnnxResolvedQuantizationOptions"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "OptionalLayerOutputParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "PoolingAttributes"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "RecurrentGateBlockCollectionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "RecurrentHeuristicEmissionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "RecurrentRowCollectionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "ResidualAddLayerParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "SpecMetadataAppendContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "DenseWeightRowCollectionContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "FlattenAfterPoolingContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "LayerActivationContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "OnnxConvEmissionParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "OnnxConvParameters"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "OnnxConvTensorNames"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "OnnxLayerEmissionResult"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "OnnxQuantizationCalibrationRoundingMode"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "OnnxQuantizationCalibrationZeroInclusionPolicy"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "RecurrentLayerEmissionParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "ConvInferenceResult"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "DenseLayerParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "DenseWeightBuildResult"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "PerNeuronLayerParams"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "DenseActivationContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "DenseGraphNames"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "DenseInitializerValues"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "DenseTensorNames"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "PerNeuronConcatNodePayload"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "PerNeuronGraphNames"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "PerNeuronLayerContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "PerNeuronNodeContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "PerNeuronSubgraphContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "PerNeuronTensorNames"
+    }
+  ],
+  "normalizedEvidenceDigest": "f3d44e8ade11d3bb8ad421b79cf67d7249a121faee69d6fe06a8dfcb62438a66"
+}

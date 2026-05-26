@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import Network from '../network';
 import { config } from '../../../config';
 import { applyGradientClippingImpl, trainImpl } from './network.training.utils';
@@ -307,6 +308,30 @@ describe('network training chapter', () => {
         });
       });
 
+      describe('given optimizer is an object without a string type', () => {
+        describe('when trainImpl starts', () => {
+          it('throws the unknown-optimizer error', () => {
+            // Arrange
+            const network = createSingleInputOutputNetwork(106_1);
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            const trainWithMissingOptimizerType = () => {
+              trainImpl(network, trainingDataset, {
+                iterations: 1,
+                rate: 0.1,
+                optimizer: {} as unknown as never,
+              });
+            };
+
+            // Assert
+            expect(trainWithMissingOptimizerType).toThrow(
+              NetworkTrainingUnknownOptimizerTypeError,
+            );
+          });
+        });
+      });
+
       describe('given optimizer option is a non-object, non-string value', () => {
         describe('when trainImpl starts', () => {
           it('throws the invalid-optimizer-option error', () => {
@@ -375,6 +400,48 @@ describe('network training chapter', () => {
             expect(trainWithUnknownLookaheadBaseType).toThrow(
               NetworkTrainingUnknownLookaheadBaseTypeError,
             );
+          });
+        });
+      });
+
+      describe('given lookahead relies on its default base settings', () => {
+        describe('when trainImpl also uses max-norm shorthand clipping and momentum', () => {
+          it('completes one iteration while normalizing the runtime clip mode', () => {
+            // Arrange
+            const network = createSingleInputOutputNetwork(107);
+            const trainingDataset = createSingleSampleDataset();
+
+            // Act
+            const trainingSummary = trainImpl(network, trainingDataset, {
+              iterations: 1,
+              rate: 0.1,
+              error: 0,
+              accumulationReduction: 'sum',
+              momentum: 0.9,
+              cost: {
+                fn: (target: number[], output: number[]) => {
+                  return (output[0] - target[0]) ** 2;
+                },
+                calculate: (target: number[], output: number[]) => {
+                  return (output[0] - target[0]) ** 2;
+                },
+              },
+              gradientClip: { maxNorm: 1 },
+              optimizer: { type: 'lookahead' },
+            });
+            const currentGradClip = getNetworkInternal(
+              network,
+              '_currentGradClip',
+            );
+
+            // Assert
+            expect({
+              clipMode: currentGradClip?.mode,
+              iterations: trainingSummary.iterations,
+            }).toStrictEqual({
+              clipMode: 'norm',
+              iterations: 1,
+            });
           });
         });
       });

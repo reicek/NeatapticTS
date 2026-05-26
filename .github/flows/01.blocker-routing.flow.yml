@@ -1,0 +1,37 @@
+id: '01.blocker-routing'
+name: 'Blocker Triage and Routing'
+agent: '01-planning'
+description: >
+  Triages a recorded blocker in the active step and routes it to the
+  smallest relevant numbered agent or to 00-helping if the blocker is
+  cross-tier. Pulls current plan state via neataptic-workflow-mcp:
+  get_active_workflow_snapshot first to read the blocker description without
+  opening files manually. Emits a revised step packet or an explicit
+  BLOCKED output with SUGGESTED_NEXT_AGENT. Does not attempt to resolve
+  implementation or test failures directly.
+
+triggers:
+  - 'Blocker recorded in active step with no clear next action'
+  - 'TASK_STATUS: PARTIAL or FAILED in the previous agent output'
+  - 'Three consecutive gate failures trigger 00-helping escalation'
+  - 'User asks to triage or unblock a stalled plan step'
+
+gates:
+  - 'plan-sync'
+  - 'planning-output-contract'
+
+post-phase-fanout:
+  - '00-helping'
+  - '<smallest-relevant-numbered-agent>'
+
+skills:
+  - 'plan-alignment'
+  - 'tracker-handoff'
+  - 'phase-handoff-workflow'
+
+specialists:
+  - 'Plan Scout'
+  - 'planning-risk-coordinator'
+  - 'helping-gap-resolution-coordinator'
+
+timeout-minutes: 15

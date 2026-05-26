@@ -18,15 +18,15 @@ callback hooks rather than baked into this core layer.
 
 ### EdgePadding
 
-Padding on all four edges.
+Per-edge pixel padding that defines the inset drawable area inside the canvas, providing margins for graph layout and label overflow.
 
 ### NetworkNodeDimensions
 
-Dimensions shared across all nodes in a rendering pass.
+Pixel dimensions shared by every node in a single rendering pass, controlling both the visual node size and the hit-test bounding box for hover interactions.
 
 ### NetworkVisualizationColorScales
 
-Color scale for weight and activation visualization.
+Color palette strings used to encode positive and negative weights, hot and cold activations, and bias magnitudes during canvas rendering passes.
 
 ### NetworkVisualizationResolvedFrame
 
@@ -44,15 +44,15 @@ ASCII Maze could inject custom layer labels, or leave hooks undefined.
 
 ### PositionedNetworkNode
 
-A node with its position and dimensions resolved in canvas coordinates.
+A network node with its center position and pixel dimensions resolved in canvas space, ready for hit-testing and rendering passes.
 
 ### RenderNetworkViewOptions
 
-Options passed to the shared renderer.
+Configuration bag passed to the shared canvas renderer to override default node dimensions, padding, color scales, and optional demo overlay hooks.
 
 ### VisualNetworkConnection
 
-A visual connection between two positioned nodes.
+A visual edge between two positioned network nodes, carrying the synapse weight and enabled state for color-coded rendering.
 
 ## visualization/network-view/network-view.ts
 
@@ -229,7 +229,7 @@ Returns: Positioned nodes.
 
 ### VisualNetworkNode
 
-A simple node representation for layout input.
+Minimal node representation used as input to the layout engine, carrying only the index, type role, and bias value needed for positioning.
 
 ## visualization/network-view/network-view.topology.utils.ts
 
@@ -262,7 +262,7 @@ resolveNetworkVisualizationLayers(
 ): VisualNetworkNode[][]
 ```
 
-Resolves layered node groups for network layout.
+Resolve ordered layered node groups from the topology plan, used by canvas layout and topology-aware rendering helpers.
 
 Parameters:
 - `network` - Runtime network instance (or undefined for fallback).

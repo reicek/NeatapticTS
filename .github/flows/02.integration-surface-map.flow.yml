@@ -1,0 +1,38 @@
+id: '02.integration-surface-map'
+name: 'Integration Surface Mapping'
+agent: '02-researching'
+description: >
+  Identifies landing zones, extension points, validation script contracts,
+  and frontmatter targets for a new artifact. Reads numbered agent
+  frontmatter files under .github/agents/, registered MCP tools in
+  .vscode/mcp.json, and validation script outputs in
+  scripts/agent-customization/ to produce a structured landing-zone map.
+  Suitable for any workstream step that must know where to put a new file,
+  how to extend an existing script, or which agent allow-lists need updating.
+  Read-only; no file edits permitted.
+
+triggers:
+  - 'New artifact needs landing zones, extension points, or frontmatter targets'
+  - 'Phase plan asks: where should this file go?'
+  - 'MCP server extension requires registration path discovery'
+  - 'New gate, flow, or skill needs a home under scripts/ or .github/'
+
+gates:
+  - 'plan-sync'
+  - 'research-findings-evidence'
+
+post-phase-fanout:
+  - '03-red-testing'
+  - '04-implementing'
+
+skills:
+  - 'plan-alignment'
+  - 'agent-frontmatter-standards'
+  - 'mcp-local-server-workflow'
+
+specialists:
+  - 'Boundary Mapper'
+  - 'MCP Runtime Scout'
+  - 'research-codebase-coordinator'
+
+timeout-minutes: 20

@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   TopologyBuildContext,
   TopologyNode,
 } from './network.topology.utils.types';
@@ -27,7 +27,7 @@ export function seedProcessingQueue(buildContext: TopologyBuildContext): void {
 }
 
 /**
- * Process queue until all available nodes are emitted.
+ * Process the Kahn queue until all available topology nodes are emitted.
  *
  * @param buildContext Mutable build context.
  * @returns Void.
@@ -194,7 +194,7 @@ function isSelfConnection(from: TopologyNode, to: TopologyNode): boolean {
 }
 
 /**
- * Sort one node collection by the deterministic activation tie-break.
+ * Sort one node collection by the deterministic activation wave tie-break order.
  *
  * @param nodes Candidate nodes.
  * @returns Sorted node collection.
@@ -206,7 +206,7 @@ export function sortNodesByStableTieBreak(
 }
 
 /**
- * Compare two nodes by stable activation tie-break order.
+ * Compare two nodes using a stable deterministic activation tie-break order.
  *
  * @param leftNode First node.
  * @param rightNode Second node.

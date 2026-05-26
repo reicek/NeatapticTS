@@ -1,4 +1,4 @@
-import Network from '../../network/network';
+﻿import Network from '../../network/network';
 import { config } from '../../../config';
 import Multi from '../../../multithreading/multi';
 import type {
@@ -29,7 +29,8 @@ const complexityCache: WeakMap<
 > = new WeakMap();
 
 /**
- * Compute structural complexity penalty scaled by growth.
+ * Compute structural complexity penalty scaled by growth so larger genomes receive deterministic parsimony pressure during fitness scoring.
+ * Cached structure counts avoid repeated recomputation for unchanged genome objects.
  *
  * @param genome - Candidate network whose complexity to measure.
  * @param growth - Positive scalar controlling parsimony pressure.
@@ -51,7 +52,8 @@ export function computeComplexityPenalty(
 }
 
 /**
- * Build a single-threaded genome fitness evaluator.
+ * Build a single-threaded genome fitness evaluator that repeats scoring, applies complexity penalty, and normalizes by evaluation count.
+ * This path is the deterministic fallback when worker-based evaluation is unavailable.
  *
  * @param set - Dataset of training samples.
  * @param cost - Cost function reference.
@@ -82,7 +84,8 @@ export function buildSingleThreadFitness(
 }
 
 /**
- * Build worker-based population fitness setup.
+ * Build worker-based population fitness setup that serializes the dataset once and assigns a population-scoring function.
+ * When worker construction fails, this helper falls back to the single-thread evaluator automatically.
  *
  * @param set - Dataset.
  * @param cost - Cost function or reference.
@@ -119,7 +122,8 @@ export async function buildMultiThreadFitness(
 }
 
 /**
- * Evaluate one genome with a worker and assign penalized score.
+ * Evaluate one genome with a worker and assign a penalized score that includes structural complexity pressure.
+ * Non-numeric worker results are ignored so calling loops can continue safely.
  *
  * @param worker - Worker instance.
  * @param genome - Genome under evaluation.
@@ -144,7 +148,8 @@ export async function evaluateGenomeWithWorker(
 }
 
 /**
- * Register worker termination hook onto options object.
+ * Register a worker termination hook onto the evolve options object so spawned workers can be cleaned up deterministically.
+ * Termination errors are swallowed to avoid masking primary evolution outcomes.
  *
  * @param options - Evolve options object.
  * @param workers - Spawned worker instances.

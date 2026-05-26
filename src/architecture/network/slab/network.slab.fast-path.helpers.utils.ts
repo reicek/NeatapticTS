@@ -1,5 +1,5 @@
-/**
- * Internal fast slab activation helpers extracted from network.slab.utils.ts.
+﻿/**
+ * Internal fast-slab activation helpers extracted from slab utilities so the hot-path orchestration remains testable, readable, and isolated from broader runtime wiring concerns.
  */
 import type Network from '../../network/network';
 import type Node from '../../node';
@@ -16,7 +16,7 @@ const ZERO = 0;
 const ONE = 1;
 
 /**
- * Predicate gating usage of high-performance slab forward pass.
+ * Evaluate whether the high-performance slab forward pass is currently safe to use under runtime, topology, gating, dropout, and stochastic-regularization constraints.
  *
  * @param training - Whether caller is in training mode.
  * @returns True if fast path can be safely used.
@@ -24,21 +24,63 @@ const ONE = 1;
 export function _canUseFastSlab(this: Network, training: boolean): boolean {
   // Step 1: Evaluate deterministic fast-path eligibility predicates.
   const internalNet = this as unknown as NetworkSlabProps;
-  return !!(
-    !training &&
-    internalNet._enforceAcyclic &&
-    !internalNet._topoDirty &&
-    this.gates.length === 0 &&
-    this.selfconns.length === 0 &&
-    this.dropout === 0 &&
-    internalNet._weightNoiseStd === 0 &&
-    (internalNet._weightNoisePerHidden?.length || 0) === 0 &&
-    (internalNet._stochasticDepth?.length || 0) === 0
-  );
+  if (training) {
+    return false;
+  }
+  if (!_hasFastSlabStructuralEligibility(this, internalNet)) {
+    return false;
+  }
+  return !_hasFastSlabRegularizationBlockers(this, internalNet);
 }
 
 /**
- * Falls back to legacy activation when gating is present.
+ * Check topology and structure constraints that must hold before the slab fast path can execute.
+ *
+ * @param network - Target network.
+ * @param internalNet - Internal slab runtime shape.
+ * @returns True when structure-level fast-path constraints hold.
+ */
+function _hasFastSlabStructuralEligibility(
+  network: Network,
+  internalNet: NetworkSlabProps,
+): boolean {
+  if (!internalNet._enforceAcyclic) {
+    return false;
+  }
+  if (internalNet._topoDirty) {
+    return false;
+  }
+  if (network.gates.length !== ZERO) {
+    return false;
+  }
+  return network.selfconns.length === ZERO;
+}
+
+/**
+ * Check runtime regularization features that invalidate slab fast-path execution.
+ *
+ * @param network - Target network.
+ * @param internalNet - Internal slab runtime shape.
+ * @returns True when a blocker is present.
+ */
+function _hasFastSlabRegularizationBlockers(
+  network: Network,
+  internalNet: NetworkSlabProps,
+): boolean {
+  if (network.dropout !== ZERO) {
+    return true;
+  }
+  if (internalNet._weightNoiseStd !== ZERO) {
+    return true;
+  }
+  if ((internalNet._weightNoisePerHidden?.length ?? ZERO) !== ZERO) {
+    return true;
+  }
+  return (internalNet._stochasticDepth?.length ?? ZERO) !== ZERO;
+}
+
+/**
+ * Attempt an immediate fallback to legacy activation when gating structures are present because gated connections violate the slab fast-path assumptions.
  *
  * @param network - Target network.
  * @param input - Activation input.
@@ -57,7 +99,7 @@ export function _tryFastSlabFallbackForGating(
 }
 
 /**
- * Falls back to legacy activation when slab prerequisites are missing.
+ * Attempt an immediate fallback to legacy activation when required slab arrays or adjacency prerequisites are missing from runtime state so incomplete slab snapshots never execute unsafe fast-path logic.
  *
  * @param network - Target network.
  * @param internalNet - Internal slab runtime shape.
@@ -78,7 +120,7 @@ export function _tryFastSlabFallbackForMissingPrerequisites(
 }
 
 /**
- * Prepares topology and indices for fast slab pass.
+ * Prepare topology ordering and node indexing prerequisites before a fast slab pass so activation loops can run on up-to-date structural metadata.
  *
  * @param network - Target network.
  * @param internalNet - Internal slab runtime shape.
@@ -101,7 +143,7 @@ export function _prepareFastSlabRuntime(
 }
 
 /**
- * Resolves topological iteration order for fast slab pass.
+ * Resolve the node iteration order used by fast slab propagation, preferring cached topological order and falling back to node storage order when needed.
  *
  * @param network - Target network.
  * @param internalNet - Internal slab runtime shape.
@@ -116,7 +158,7 @@ export function _resolveFastTopoOrder(
 }
 
 /**
- * Ensures fast activation/state buffers are allocated and shape-compatible.
+ * Ensure reusable fast activation and state buffers are allocated with the correct length and numeric precision for the upcoming slab propagation pass.
  *
  * @param internalNet - Internal slab runtime shape.
  * @param nodeCount - Node count.
@@ -156,7 +198,7 @@ export function _ensureFastSlabBuffers(
 }
 
 /**
- * Seeds input-layer activations for fast slab pass.
+ * Seed input-layer activation values into the working buffer and mirror those values onto runtime node fields before hidden-layer propagation begins.
  *
  * @param network - Target network.
  * @param input - Activation input.
@@ -176,7 +218,7 @@ export function _seedFastInputLayer(
 }
 
 /**
- * Propagates activations through topology using slab arrays.
+ * Propagate activations through topological order using packed slab arrays so weighted fan-out executes with contiguous memory access patterns and deterministic node-to-node accumulation behavior.
  *
  * @param network - Target network.
  * @param internalNet - Internal slab runtime shape.
@@ -223,7 +265,7 @@ export function _propagateFastSlabActivations(
 }
 
 /**
- * Collects output activations into detached number array.
+ * Collect output activations from the slab working buffer into a detached plain array so callers receive stable values independent of pooled buffer reuse.
  *
  * @param network - Target network.
  * @param activationBuffer - Activation buffer.

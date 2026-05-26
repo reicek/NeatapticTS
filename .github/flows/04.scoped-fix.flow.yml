@@ -1,0 +1,35 @@
+id: '04.scoped-fix'
+name: 'Scoped Bug or Regression Fix'
+agent: '04-implementing'
+description: >
+  Implements the smallest change that makes a failing test pass. Reads the
+  failing test and nearest source boundary, implements a minimal fix, runs
+  the coverage guard, and hands off to green-testing for confirmation.
+  Suitable for isolated regressions, failing red tests, and single-file bug
+  fixes where blast radius is well understood.
+
+triggers:
+  - 'Fix a failing test'
+  - 'Regression reported in CI'
+  - 'Bug fix in a scoped src/ boundary'
+  - 'Red test from a previous 03-red-testing step must be made green'
+
+gates:
+  - 'plan-sync'
+  - 'agent-graph'
+  - 'learning-event'
+
+post-phase-fanout:
+  - '05-green-testing'
+  - 'coverage-guard'
+
+skills:
+  - 'coverage-guard'
+  - 'test-fix-workflow'
+
+specialists:
+  - 'Coverage Guard'
+  - 'failure-triage-specialist'
+  - 'implementation-pattern-scout'
+
+timeout-minutes: 20

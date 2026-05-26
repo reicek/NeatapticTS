@@ -1,0 +1,23 @@
+{
+  "evidence": [
+    {
+      "file": "src/architecture/network/network.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "PruningMethod"
+    },
+    {
+      "file": "src/architecture/network/network.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "CompressedSerializedNetworkArchiveCompression"
+    },
+    {
+      "file": "src/architecture/network/network.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "NodeWithIndex"
+    }
+  ],
+  "normalizedEvidenceDigest": "f744a25188c54446c5cca992af37022aaafe2df25fbc78d8cb486f6a565143c2"
+}

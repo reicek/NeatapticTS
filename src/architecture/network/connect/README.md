@@ -237,6 +237,7 @@ createConnectionsFromSourceNode(
 ```
 
 Build one or more low-level connection objects from source node to target node.
+When a caller omits an explicit weight, this helper resolves a small symmetric random initialization using the network RNG so connection creation remains deterministic under seeded execution.
 
 Parameters:
 - `sourceNode` - Source node.
@@ -256,6 +257,7 @@ markConnectionCachesDirtyWhenNeeded(
 ```
 
 Mark topology and slab caches dirty when connection creation occurred.
+Marking both caches together guarantees that downstream activation scheduling and slab allocation logic re-derive their snapshots from the updated graph before the next forward pass.
 
 Parameters:
 - `internalState` - Runtime network internals used by connection pipeline.
@@ -299,6 +301,7 @@ registerCreatedConnections(
 ```
 
 Register created connections in either normal-connection or self-connection storage.
+The registration step preserves connection ordering guarantees expected by serialization and diagnostics paths while routing self-loops through the dedicated storage shelf when recurrent edges are allowed.
 
 Parameters:
 - `network` - Network instance owning connection collections.
@@ -359,6 +362,7 @@ shouldRejectConnectionForAcyclicMode(
 ```
 
 Determine whether an edge must be rejected to preserve acyclic ordering.
+This guard enforces the feed-forward structural contract by blocking backward index edges when acyclic mode is active, allowing higher-level connection APIs to fail early before mutating graph state.
 
 Parameters:
 - `network` - Network instance owning node ordering.
@@ -380,6 +384,7 @@ disconnectNodes(
 ```
 
 Delegate per-node disconnect cleanup.
+Node-level disconnect ensures inbound and outbound adjacency shelves remain coherent even when top-level network collections are being manipulated by higher-level orchestration.
 
 Parameters:
 - `sourceNode` - Source node.
@@ -415,6 +420,7 @@ markStructureCachesDirty(
 ```
 
 Mark topology/slab caches dirty after structural mutation.
+This invalidation guarantees that both execution ordering and pooled activation storage are recalculated against the post-removal graph before subsequent inference or training calls.
 
 Parameters:
 - `internalState` - Runtime network internals used by connection pipeline.
@@ -452,6 +458,7 @@ removeFirstMatchingConnection(
 ```
 
 Remove first connection that matches source and target nodes.
+The helper removes at most one edge per call to preserve historical behavior for APIs that intentionally manage duplicate parallel edges over multiple mutation steps.
 
 Parameters:
 - `network` - Network instance used for ungating.
@@ -472,6 +479,7 @@ selectConnectionCollection(
 ```
 
 Select the relevant collection to search for the edge.
+Self-loops live in `selfconns` while all other edges live in `connections`, so this helper centralizes that branching and keeps removal orchestration deterministic.
 
 Parameters:
 - `network` - Network instance owning connection collections.

@@ -242,83 +242,99 @@ while orchestrating scheduling, RNG use, regularization, and slab fast-path hook
 
 ### ActivationOutputBuffer
 
-Pooled activation output array type acquired from the shared activation array pool.
+Type of the pooled activation output array acquired from the shared activation array pool.
+Using the pool avoids per-call allocation in tight inference loops.
 
 ### ActivationStats
 
-Activation telemetry collected during a single activation pass.
+Activation telemetry collected during a single forward pass, tracking dropped nodes, skipped layers, dropped connections, and weight-noise statistics.
 
 ### BATCH_INPUTS_COLLECTION_ERROR_MESSAGE
 
-Error message used when batch activation receives a non-array container.
+Error message thrown when `activateBatch` receives a non-array collection as its top-level argument.
+Kept as a named constant so it can be matched in tests without coupling to a raw string literal.
 
 ### BatchActivationContext
 
-Shared state used by batch activation orchestration.
+Shared orchestration state for batch activation, carrying the internal network, the full batch input array, expected input size, and training flag.
 
 ### BatchRowActivationContext
 
-Shared state used while validating and activating one row in a batch.
+Shared state used while validating and activating one row from a batch input collection,
+carrying the input slice, its position index within the batch, and the expected input size for validation.
 
 ### DEFAULT_MAX_ACTIVATION_DEPTH
 
-Default hard limit for recursive activation depth in raw activation mode.
+Hard limit on recursive activation depth used by the raw (non-slab) activation path.
+Prevents unbounded recursion on networks with deep or cyclic structure when the
+caller does not supply an explicit `maxActivationDepth` argument.
 
 ### INITIAL_OUTPUT_WRITE_INDEX
 
-Initial write index used when collecting output activations.
+Starting write index used when collecting output activations into the result buffer.
+The output-collection loop increments from this value, writing one activation per slot.
 
 ### INPUT_NODE_TYPE
 
-Node role label used by activation traversal for input neurons.
+Node role label used by activation traversal to identify input neurons.
+Input nodes do not aggregate incoming connections; they read directly from the input vector.
 
 ### NetworkLayer
 
-Layer container type used by the layered activation paths.
+Layer container type derived from the network's optional layers array for use by layered activation paths.
 
 ### NetworkLayerNodes
 
-Node collection type attached to a single network layer.
+Node collection type derived from one network layer, used by layered dropout and stochastic-depth traversal helpers.
 
 ### NO_TRACE_FAST_SLAB_TRAINING_FLAG
 
-Training flag value used by no-trace fast slab eligibility checks.
+Training flag value used by no-trace fast-slab eligibility checks.
+The slab fast path requires that no gradient traces are accumulated, so this literal
+(`false`) is the only value that passes the eligibility predicate.
 
 ### NoTraceActivationContext
 
-Shared state used by no-trace activation orchestration and helpers.
+Shared context passed through the no-trace activation orchestration pipeline.
+Collecting these fields into one object avoids repeating the same four arguments
+across every helper in the activation chapter.
 
 ### NoTraceNodeTraversalContext
 
-Shared state used for node traversal during no-trace activation.
+Shared context passed to node-traversal helpers during a no-trace activation pass.
+Contains the subset of orchestration state needed to write one node's output into
+the pooled result buffer.
 
 ### OUTPUT_NODE_TYPE
 
-Node role label used by activation traversal for output neurons.
+Node role label used by activation traversal to identify output neurons.
+Output nodes write their activation into the result array at the slot matching their ordered position.
 
 ### OUTPUT_WRITE_INDEX_INCREMENT
 
-Increment applied after writing one output activation value.
+Increment applied after writing one output activation value into the result buffer.
+Using an explicit constant (rather than `++`) keeps the protocol visible and testable.
 
 ### RawActivationContext
 
-Shared state used by raw activation orchestration.
+Shared orchestration state for the raw (non-slab) activation path, carrying the network internals and the caller-supplied input vector.
 
 ### SingleNodeNoTraceActivationContext
 
-Shared state used while activating one node during no-trace traversal.
+Shared activation state for a single node during no-trace traversal, carrying the accumulated input map and the current network node reference.
 
 ### UNDEFINED_INPUT_LENGTH_TEXT
 
-Fallback text for undefined input lengths when formatting validation errors.
+Fallback text rendered when the actual input length is `undefined` inside an activation error message.
+Prevents `'undefined'` from appearing as a raw JS coercion artifact in user-facing error strings.
 
 ### WeightNoiseApplyResult
 
-Marker returned by weight-noise application to drive safe restore logic.
+Marker interface returned by the weight-noise application helper to signal whether noise was applied and whether a restore pass is needed.
 
 ### WeightNoiseStats
 
-Weight-noise telemetry collected during a single activation pass.
+Weight-noise telemetry collected during a single activation pass, capturing perturbation count, absolute sum, maximum, and mean magnitude.
 
 ## architecture/network/activate/network.activate.core.utils.ts
 
@@ -1288,6 +1304,9 @@ Returns: Nothing.
 
 ## architecture/network/activate/network.activate.helpers.utils.ts
 
+Re-export no-trace activation orchestration for callers that want output values
+without retaining per-node trace state.
+
 ### createBatchActivationContext
 
 ```ts
@@ -1298,7 +1317,10 @@ createBatchActivationContext(
 ): BatchActivationContext
 ```
 
-Build shared batch activation context for helper orchestration.
+Create the context consumed by batch activation helpers.
+
+Batch mode carries the full input matrix, expected input width, and training
+trace policy in one object so downstream helpers can stay orchestration-only.
 
 Parameters:
 - `network` - Network instance bound to the activation call.
@@ -1306,6 +1328,13 @@ Parameters:
 - `isTraining` - Whether activation should retain training traces.
 
 Returns: Fully populated batch activation context.
+
+Example:
+
+```ts
+const context = createBatchActivationContext(network, [[0, 1], [1, 0]], false);
+// context.batchInputs can be iterated row-by-row by activation helpers
+```
 
 ### createNoTraceActivationContext
 
@@ -1316,13 +1345,23 @@ createNoTraceActivationContext(
 ): NoTraceActivationContext
 ```
 
-Build shared no-trace activation context for helper orchestration.
+Create the immutable context consumed by no-trace activation helpers.
+
+This context snapshots the caller input and expected input width while exposing
+the internal network surface required by low-level activation utilities.
 
 Parameters:
 - `network` - Network instance bound to the activation call.
 - `inputVector` - Input activation vector supplied by the caller.
 
 Returns: Fully populated no-trace activation context.
+
+Example:
+
+```ts
+const context = createNoTraceActivationContext(network, [0.2, 0.8]);
+// context.expectedInputSize mirrors network.input
+```
 
 ### createRawActivationContext
 
@@ -1335,7 +1374,10 @@ createRawActivationContext(
 ): RawActivationContext
 ```
 
-Build shared raw activation context for helper orchestration.
+Create the context consumed by raw activation helpers.
+
+Raw activation may preserve node traces for training and uses an explicit
+depth limit to prevent runaway recurrent propagation.
 
 Parameters:
 - `network` - Network instance bound to the activation call.
@@ -1344,6 +1386,13 @@ Parameters:
 - `maximumActivationDepth` - Guard against runaway activation depth.
 
 Returns: Fully populated raw activation context.
+
+Example:
+
+```ts
+const context = createRawActivationContext(network, [1, 0], true, 64);
+// context.maximumActivationDepth bounds propagation depth
+```
 
 ### executeBatchActivation
 
@@ -1401,19 +1450,60 @@ Returns: Activation output vector from the network delegate.
 
 ## architecture/network/activate/network.activate.errors.ts
 
-Raised when activation input dimensionality does not match network expectations.
+Raised when the input vector supplied to `activate()` does not match the
+network's expected input size.
+
+This is the most common activation error. It fires when `input.length`
+differs from `network.input` — for example, passing 3 values to a network
+that expects 2.
+
+Example:
+
+```ts
+const network = new Network(2, 1);
+network.activate([0, 1, 0.5]); // throws NetworkActivateInputSizeMismatchError
+```
 
 ### NetworkActivateBatchInputsCollectionError
 
-Raised when batch activation receives a non-array collection.
+Raised when `activateBatch()` receives a value that is not an array as its
+top-level `inputs` argument.
+
+Each element of `inputs` must itself be a `number[]` input row. Passing a
+single flat array of numbers (instead of an array of rows) is the most
+common trigger.
+
+Example:
+
+```ts
+network.activateBatch([0, 1]); // throws — should be [[0, 1]]
+```
 
 ### NetworkActivateCorruptedStructureError
 
-Raised when activation is attempted on a network with invalid node structure.
+Raised when activation is attempted on a network whose node structure is
+inconsistent or internally corrupted — for example, a node list that
+contains `null` entries, or a network reconstructed from a malformed
+serialized snapshot.
+
+If you encounter this error, inspect the network's `nodes` array before
+activation and verify the deserialization path.
 
 ### NetworkActivateInputSizeMismatchError
 
-Raised when activation input dimensionality does not match network expectations.
+Raised when the input vector supplied to `activate()` does not match the
+network's expected input size.
+
+This is the most common activation error. It fires when `input.length`
+differs from `network.input` — for example, passing 3 values to a network
+that expects 2.
+
+Example:
+
+```ts
+const network = new Network(2, 1);
+network.activate([0, 1, 0.5]); // throws NetworkActivateInputSizeMismatchError
+```
 
 ## architecture/network/activate/network.activate.raw.utils.ts
 
@@ -1883,7 +1973,10 @@ createBatchActivationContext(
 ): BatchActivationContext
 ```
 
-Build shared batch activation context for helper orchestration.
+Create the context consumed by batch activation helpers.
+
+Batch mode carries the full input matrix, expected input width, and training
+trace policy in one object so downstream helpers can stay orchestration-only.
 
 Parameters:
 - `network` - Network instance bound to the activation call.
@@ -1891,6 +1984,13 @@ Parameters:
 - `isTraining` - Whether activation should retain training traces.
 
 Returns: Fully populated batch activation context.
+
+Example:
+
+```ts
+const context = createBatchActivationContext(network, [[0, 1], [1, 0]], false);
+// context.batchInputs can be iterated row-by-row by activation helpers
+```
 
 ### createNoTraceActivationContext
 
@@ -1901,13 +2001,23 @@ createNoTraceActivationContext(
 ): NoTraceActivationContext
 ```
 
-Build shared no-trace activation context for helper orchestration.
+Create the immutable context consumed by no-trace activation helpers.
+
+This context snapshots the caller input and expected input width while exposing
+the internal network surface required by low-level activation utilities.
 
 Parameters:
 - `network` - Network instance bound to the activation call.
 - `inputVector` - Input activation vector supplied by the caller.
 
 Returns: Fully populated no-trace activation context.
+
+Example:
+
+```ts
+const context = createNoTraceActivationContext(network, [0.2, 0.8]);
+// context.expectedInputSize mirrors network.input
+```
 
 ### createRawActivationContext
 
@@ -1920,7 +2030,10 @@ createRawActivationContext(
 ): RawActivationContext
 ```
 
-Build shared raw activation context for helper orchestration.
+Create the context consumed by raw activation helpers.
+
+Raw activation may preserve node traces for training and uses an explicit
+depth limit to prevent runaway recurrent propagation.
 
 Parameters:
 - `network` - Network instance bound to the activation call.
@@ -1929,6 +2042,13 @@ Parameters:
 - `maximumActivationDepth` - Guard against runaway activation depth.
 
 Returns: Fully populated raw activation context.
+
+Example:
+
+```ts
+const context = createRawActivationContext(network, [1, 0], true, 64);
+// context.maximumActivationDepth bounds propagation depth
+```
 
 ### toNetworkInternals
 

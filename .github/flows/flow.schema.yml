@@ -1,0 +1,58 @@
+# Flow Schema — NeatapticTS Agentic Flow System
+#
+# A flow file describes a named, repeatable execution path through the
+# numbered SDLC agent system. Flows are selected by the owning agent based
+# on the current task shape. Every flow must declare exit gates and a
+# post-phase fan-out list so that the agent can confirm phase completeness
+# without relying solely on implicit delegation memory.
+#
+# Schema version: 1.0
+# Source of truth: plans/Agentic_Flows_and_Gates_Upgrade.plans.md (Phase 2, Step 01)
+
+# ---------------------------------------------------------------------------
+# Required fields
+# ---------------------------------------------------------------------------
+
+# id (string): Unique flow identifier in the form "<agent-prefix>.<slug>".
+#   Example: "04.scoped-fix"
+id: '<agent-prefix>.<slug>'
+
+# name (string): Human-readable display name for the flow.
+name: '<Human-readable name>'
+
+# agent (string): Owning numbered SDLC agent (e.g., "04-implementing").
+agent: '<numbered-agent-name>'
+
+# triggers (string[]): Natural-language conditions that activate this flow.
+#   The owning agent uses these descriptions to select the appropriate flow.
+triggers:
+  - '<Trigger condition 1>'
+
+# gates (string[]): Gate IDs that must pass before the flow is considered
+#   complete. At least one gate is required. The Tier-1 gate catalog is:
+#   plan-sync, step-packet, agent-graph, learning-event.
+gates:
+  - '<gate-id>'
+
+# post-phase-fanout (string[]): Agents, gate scripts, or named actions to
+#   invoke after the flow body completes. Must be non-empty.
+post-phase-fanout:
+  - '<agent-or-action>'
+
+# ---------------------------------------------------------------------------
+# Optional fields
+# ---------------------------------------------------------------------------
+
+# description (string): Brief explanation of flow purpose and scope.
+description: ''
+
+# skills (string[]): Skill names the owning agent should load during this flow.
+skills: []
+
+# specialists (string[]): Hidden agent names available for delegation during
+#   this flow. The owning agent's agents: allow-list still applies.
+specialists: []
+
+# timeout-minutes (number): Per-flow execution budget hint in minutes.
+#   Not enforced mechanically; used for agent planning and cost guidance.
+timeout-minutes: 30

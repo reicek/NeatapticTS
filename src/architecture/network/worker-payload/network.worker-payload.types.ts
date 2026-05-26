@@ -1,4 +1,4 @@
-/**
+﻿/**
  * One node snapshot inside the worker-friendly inference IR.
  *
  * The IR stores runtime inference data only: stable node indexes, activation
@@ -36,7 +36,8 @@ export interface NetworkInferenceIRNode {
 }
 
 /**
- * One non-self connection snapshot inside the worker-friendly inference IR.
+ * One deterministic non-self connection row inside the worker-friendly inference IR.
+ * This shape keeps forward edges compact and index-addressable so predictor hot paths can traverse weighted inputs without object graph lookups or runtime connection instances.
  *
  * @example
  * ```ts
@@ -125,7 +126,8 @@ export interface PortableInferencePayloadNode {
 }
 
 /**
- * One portable edge record used by the structured-clone payload surface.
+ * One structured-clone-safe edge row used by the portable inference payload strategy.
+ * Portable edges preserve the same deterministic topology as IR edges while staying JSON-like and self-describing for debugging, logs, and cross-version message tracing.
  *
  * @example
  * ```ts
@@ -243,7 +245,8 @@ export interface TransferableInferencePayload {
 }
 
 /**
- * Configuration for transferable payload export.
+ * Configuration knobs for transferable payload export when balancing precision, size, and transport throughput.
+ * Use these options when a worker boundary prefers lower-copy typed shelves but still needs predictable numeric semantics across browser and Node runtimes.
  *
  * @example
  * ```ts
@@ -286,7 +289,8 @@ export interface InferenceChannel {
 }
 
 /**
- * Configuration for one dedicated inference channel.
+ * Configuration for one dedicated persistent inference channel backed by a warm worker predictor.
+ * These options tune local request queue pressure and worker delivery strategy so repeated inference calls stay stable under bursty client traffic.
  *
  * @example
  * ```ts

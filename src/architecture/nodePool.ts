@@ -14,4 +14,7 @@ export {
 
 export type { AcquireNodeOptions } from './nodePool/nodePool';
 
+/**
+ * Default namespace re-export grouping all node-pool operations for callers that prefer a single default import from the architecture root.
+ */
 export { default } from './nodePool/nodePool';

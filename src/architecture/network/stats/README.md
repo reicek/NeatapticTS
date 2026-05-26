@@ -49,6 +49,13 @@ noise scheduling updates).
 
 Returns: A deep-cloned stats object or null if no stats have been recorded yet.
 
+### networkStatsUtils
+
+Default export bundle for the network statistics utilities chapter.
+
+Bundles getRegularizationStats so the network facade can bind it as a method
+without importing it individually.
+
 ### testNetwork
 
 ```ts

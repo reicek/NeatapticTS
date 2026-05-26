@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Contracts for the NEAT innovation-tracker boundary.
  *
  * NEAT needs two kinds of innovation memory at the same time:
@@ -61,10 +61,10 @@ export interface InnovationTracker {
   connectionInnovations: ConnectionInnovationRegistry;
 }
 
-/** JSON tuple entry used when serializing node-split records. */
+/** JSON tuple entry format used when serializing node-split innovation records. */
 export type NodeSplitInnovationEntry = [string, NodeSplitRecord];
 
-/** JSON tuple entry used when serializing connection innovations. */
+/** JSON tuple entry format used when serializing connection innovation numbers. */
 export type ConnectionInnovationEntry = [string, number];
 
 /**

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when tournament selection is asked to sample more entries than exist.
  */
 export class SelectionTournamentOverflowError extends Error {

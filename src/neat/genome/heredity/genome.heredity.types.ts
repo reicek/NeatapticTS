@@ -1,7 +1,7 @@
-import type { NeatGenome, NeatGenomeConnectionGene } from '../genome.types';
+﻿import type { NeatGenome, NeatGenomeConnectionGene } from '../genome.types';
 
 /**
- * Stable parent labels used by the genome-owned heredity selector.
+ * Stable string literal labels identifying which parent contributed a given connection gene during the genome-owned heredity selection pass.
  */
 export type GenomeHereditySourceParent = 'parent1' | 'parent2';
 

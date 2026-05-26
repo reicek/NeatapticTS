@@ -21,7 +21,9 @@
  * @module evolutionEngine/neatConfiguration
  */
 
-import { Neat, Network, methods } from '../../../src/neataptic';
+import Network from '../../../src/architecture/network/network';
+import Neat from '../../../src/neat';
+import * as methods from '../../../src/methods/methods';
 
 /**
  * NEAT configuration object shape for type safety.

@@ -1,4 +1,4 @@
-import { allowsRecurrentConnectionMutation } from '../../topology-intent/neat.topology-intent';
+﻿import { allowsRecurrentConnectionMutation } from '../../topology-intent/neat.topology-intent';
 import * as mutationAddConn from '../add-conn/mutation.add-conn';
 import type {
   GenomeWithMetadata,
@@ -227,7 +227,7 @@ export function ensureHiddenConnectivityForMinHidden(
   }
 }
 
-/** Baseline minimum hidden nodes when no configuration is provided. */
+/** Baseline minimum hidden node count used when no controller configuration is provided. */
 export const MINIMUM_HIDDEN_BASELINE = 0;
 
 /**

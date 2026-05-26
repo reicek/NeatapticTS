@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <link rel="stylesheet" href="../../docs/assets/theme.css" />
     <script defer src="../../docs/assets/theme-tooltips.js"></script>
+    <style>
+      .feature-lane-list { margin: 1rem 0; padding: 0; }
+      .feature-lane-list dt { font-weight: bold; margin-top: 0.75rem; padding: 0.2em 0.5em; border-radius: 3px; display: inline-block; }
+      .feature-lane-list dd { margin: 0.25rem 0 0 0; color: var(--color-text-muted, #ccc); font-size: 0.9em; }
+      .lane-live { background: #0a3020; color: #3dffa0; border: 1px solid #3dffa0; }
+      .lane-experimental { background: #1a1a00; color: #ffe040; border: 1px solid #ffe040; }
+      .lane-background { background: #1a0a00; color: #ff9040; border: 1px solid #ff9040; }
+    </style>
   </head>
   <body class="demo-page">
     <main class="demo-main">
@@ -19,6 +27,23 @@
           behavior versus what is explanatory scaffolding without depending on
           Node.
         </p>
+        <dl class="feature-lane-list">
+          <dt class="lane-label lane-live">Live (stable)</dt>
+          <dd>Tokenization, bounded pretraining, online exchange updates,
+            session export/import, episodic memory bank, A/B metric comparison,
+            regression harness scoring, and safety gate checks.</dd>
+          <dt class="lane-label lane-experimental">Experimental — observability only</dt>
+          <dd>Multi-path routing compares base, personalized, and
+            retrieval-grounded candidates before selecting a reply. The routing
+            log is recorded for inspection; routing does not promote weights or
+            mutate session state.</dd>
+          <dt class="lane-label lane-background">Experimental — background job</dt>
+          <dd>Background adaptation schedules a fine-tune pass asynchronously
+            against a frozen session snapshot. The base network is never
+            silently mutated. Candidates require explicit promotion or
+            rejection. Adaptation runs on the main thread — a worker-thread
+            backend is not yet present.</dd>
+        </dl>
       </section>
 
       <p id="neat-chat-status" class="load-status" role="status" aria-live="polite">

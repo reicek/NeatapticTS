@@ -11,7 +11,7 @@ import type {
 } from '../types/telemetry.types';
 
 /**
- * Compute a hypervolume-like proxy for the Pareto front.
+ * Compute a hypervolume-like proxy for the active Pareto frontier so telemetry captures objective tradeoff quality with a stable, generation-comparable scalar.
  *
  * @param telemetryOptions - Options controlling complexity metric.
  * @param population - Population snapshot.
@@ -54,7 +54,7 @@ export function computeHyperVolumeProxy(
 }
 
 /**
- * Compute sizes of early Pareto fronts.
+ * Compute sizes of the earliest Pareto fronts so recorder outputs can show frontier stratification pressure and rank distribution at this generation.
  *
  * @param population - Population snapshot.
  * @returns Array of front sizes (rank 0..4).
@@ -77,7 +77,7 @@ export function computeParetoFrontSizes(
 }
 
 /**
- * Apply the most recent objective importance snapshot.
+ * Apply the most recent objective-importance snapshot so telemetry entries preserve objective spread evidence computed earlier in the evolutionary pass history.
  *
  * @param telemetryContext - Neat-like context with objective importance.
  * @param entry - Telemetry entry to update.
@@ -98,7 +98,7 @@ export function applyObjectiveImportance(
 }
 
 /**
- * Apply objective age snapshots to the entry.
+ * Apply objective age snapshots to the entry so analysts can distinguish mature objectives from newly introduced optimization signals over long runs.
  *
  * @param telemetryContext - Neat-like context with objective ages.
  * @param entry - Telemetry entry to update.
@@ -116,7 +116,7 @@ export function applyObjectiveAges(
 }
 
 /**
- * Apply and flush objective lifecycle events.
+ * Apply and flush objective lifecycle events so each telemetry entry records adds and removals exactly once at the generation boundary.
  *
  * @param telemetryContext - Neat-like context holding objective events.
  * @param entry - Telemetry entry to update.
@@ -159,7 +159,7 @@ export function applyObjectiveEvents(
 }
 
 /**
- * Apply per-species offspring allocation snapshot.
+ * Apply the per-species offspring allocation snapshot so downstream dashboards can correlate selection pressure with later diversity and fitness changes reliably.
  *
  * @param telemetryContext - Neat-like context with allocation snapshot.
  * @param entry - Telemetry entry to update.
@@ -176,7 +176,7 @@ export function applySpeciesAllocation(
 }
 
 /**
- * Apply objectives list snapshot (keys only).
+ * Apply the active objectives list snapshot using objective keys only so entries remain compact while still exposing current optimization scope.
  *
  * @param telemetryContext - Neat-like context with objective provider.
  * @param entry - Telemetry entry to update.
@@ -196,7 +196,7 @@ export function applyObjectivesSnapshot(
 }
 
 /**
- * Attach hypervolume scalar when requested.
+ * Attach a rounded hypervolume scalar when requested so telemetry consumers can track Pareto quality trends without recalculating expensive frontier aggregates.
  *
  * @param telemetryOptions - Options controlling telemetry fields.
  * @param hyperVolumeProxy - Hypervolume proxy value.

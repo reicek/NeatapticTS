@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Core activation-array-pool chapter for the architecture surface.
  *
  * This folder owns the reusable output buffers that support high-frequency

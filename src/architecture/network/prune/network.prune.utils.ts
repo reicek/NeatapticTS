@@ -24,10 +24,15 @@ import {
   calculateSparsityFromBaseline,
   readInitialSparsityBaseline,
 } from './network.prune.sparsity.utils';
-export {
-  configureSparsityBudget,
-  getSparsityBudgetSnapshot,
-} from './network.prune.budget.utils';
+/**
+ * Configure the network-level sparsity budget used to cap future prune decisions.
+ */
+export { configureSparsityBudget } from './network.prune.budget.utils';
+
+/**
+ * Return the live sparsity-budget snapshot consumed by pruning, telemetry, and diagnostics.
+ */
+export { getSparsityBudgetSnapshot } from './network.prune.budget.utils';
 import { PRUNING_METHOD_MAGNITUDE } from './network.prune.utils.types';
 
 /**
@@ -51,27 +56,15 @@ import { PRUNING_METHOD_MAGNITUDE } from './network.prune.utils.types';
  */
 
 /**
- * Opportunistically perform scheduled pruning during gradient-based training.
- *
- * Scheduling model:
- *  - start / end define an iteration window (inclusive) during which pruning may occur
- *  - frequency defines cadence (every N iterations inside the window)
- *  - targetSparsity is linearly annealed from 0 to its final value across the window
- *  - method chooses ranking heuristic (magnitude | snip)
- *  - optional regrowFraction allows dynamic sparse training: after removing edges we probabilistically regrow
- *    a fraction of them at random unused positions (respecting acyclic constraint if enforced)
- *
- * SNIP heuristic:
- *  - Uses |w * grad| style saliency approximation (here reusing stored delta stats as gradient proxy)
- *  - Falls back to pure magnitude if gradient stats absent.
- */
-/**
  * Perform scheduled pruning at a given training iteration if conditions are met.
  *
- * Scheduling fields (cfg): start, end, frequency, targetSparsity, method ('magnitude' | 'snip'), regrowFraction.
- * The target sparsity ramps linearly from 0 at start to cfg.targetSparsity at end.
+ * Uses schedule fields from `_pruningConfig` (`start`, `end`, `frequency`,
+ * `targetSparsity`, `method`, and optional `regrowFraction`) to decide whether
+ * this iteration should prune, then removes low-ranked connections and can
+ * optionally regrow a bounded subset.
  *
  * @param iteration Current (0-based or 1-based) training iteration counter used for scheduling.
+ * @returns Nothing.
  */
 export function maybePrune(this: Network, iteration: number): void {
   // Step 1: Collect required schedule and baseline context.
@@ -166,7 +159,7 @@ export function pruneToSparsity(
 }
 
 /**
- * Current sparsity fraction relative to the training-time pruning baseline.
+ * Return current sparsity relative to the captured pruning baseline connection count.
  *
  * @returns Current sparsity in the [0,1] range when baseline is available.
  */

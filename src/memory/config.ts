@@ -1,8 +1,19 @@
+﻿/**
+ * Memory manager configuration — constants, types, and registry shapes.
+ *
+ * This module owns the stable, side-effect-free vocabulary consumed by
+ * `MemoryManager`. Splitting config from the manager class keeps the constant
+ * and type surface independently importable: tests, diagnostics tooling, and
+ * worker payloads can reference `MemoryManagerFlagName` or
+ * `MEMORY_DEFAULT_SLAB_POOL_MAX_PER_KEY` without pulling in the manager's
+ * mutable state or constructor dependencies.
+ *
+ * @module memory/config
+ */
 import type { NeatapticConfig } from '../config';
 
 /**
- * Default retained prewarm count for activation-pool warmup when callers leave
- * the global memory config unset.
+ * Default retained prewarm count for activation-pool warmup when callers leave the global memory config unset.
  */
 export const MEMORY_DEFAULT_ACTIVATION_POOL_PREWARM_COUNT = 2;
 
@@ -12,8 +23,7 @@ export const MEMORY_DEFAULT_ACTIVATION_POOL_PREWARM_COUNT = 2;
 export const MEMORY_DEFAULT_SLAB_POOL_MAX_PER_KEY = 4;
 
 /**
- * Browser slab-growth factor used to trade smaller reallocations for lower
- * retained memory pressure in constrained heaps.
+ * Browser slab-growth factor used to trade smaller reallocations for lower retained memory pressure in constrained heaps.
  */
 export const MEMORY_SLAB_GROWTH_FACTOR_BROWSER = 1.25;
 
@@ -41,7 +51,7 @@ export const MEMORY_MANAGER_FLAG_NAMES = [
 ] as const;
 
 /**
- * Narrow flag names controlled by the memory manager.
+ * Narrow union of config flag names controlled exclusively by the memory manager.
  */
 export type MemoryManagerFlagName = (typeof MEMORY_MANAGER_FLAG_NAMES)[number];
 
@@ -56,7 +66,7 @@ export type MemoryManagerFlagMap = Pick<NeatapticConfig, MemoryManagerFlagName>;
 export type MemoryManagerEnvironment = 'browser' | 'node';
 
 /**
- * Stable snapshot returned by `MemoryManager.getConfig()`.
+ * Stable resolved configuration snapshot returned by the `MemoryManager.getConfig()` accessor method.
  */
 export interface MemoryManagerConfigSnapshot extends Omit<
   MemoryManagerFlagMap,

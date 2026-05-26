@@ -72,25 +72,29 @@ Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
    - Prefer: blocking type errors first, then cheap/high-confidence fixes, then
      deeper investigation items.
 4. Prefer a TDD loop inside each fix cluster.
-  - Add or reshape the smallest test that should fail for the intended
-    behavior or regression.
-  - Run only that narrow surface to confirm the red phase when practical.
-  - Implement the repair.
-  - Rerun only that narrow surface until it turns green.
+
+- Add or reshape the smallest test that should fail for the intended
+  behavior or regression.
+- Run only that narrow surface to confirm the red phase when practical.
+- Implement the repair.
+- Rerun only that narrow surface until it turns green.
+
 5. Apply all planned fixes systematically before running broad tests.
 6. Do not run `npm test`, `npm run test:silent`, or broad failure scans during
-  the main fix phase.
-  - Narrow red/green reruns for the active fix cluster are allowed.
+   the main fix phase.
+
+- Narrow red/green reruns for the active fix cluster are allowed.
+
 7. TypeScript-only validation is allowed during the fix phase when it helps
-  confirm compile-time repairs.
+   confirm compile-time repairs.
 8. After the targeted fixes are green, run `coverage-guard` on every `src/`
-  file touched by the repair. Coverage must reach 100% (statements, branches,
-  functions, lines) for every changed file before the session is marked done.
-  Partial coverage is a bug in the change, not an acceptable tradeoff.
+   file touched by the repair. Coverage must reach 100% (statements, branches,
+   functions, lines) for every changed file before the session is marked done.
+   Partial coverage is a bug in the change, not an acceptable tradeoff.
 9. After the planned fixes and coverage gate are both green, run the final
-  broad validation.
+   broad validation.
 10. Analyze any remaining failures and update the plan rather than switching to
-   unstructured iteration.
+    unstructured iteration.
 
 ## Guardrails
 

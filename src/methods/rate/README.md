@@ -277,7 +277,7 @@ createCosineAnnealingRateSchedule(
 ): RateSchedule
 ```
 
-Returns a cosine annealing learning rate schedule.
+Return a cosine-annealing learning-rate schedule that oscillates between base and minimum rates within each period to encourage periodic exploratory updates.
 
 Parameters:
 - `period` - Length of a full cosine cycle.
@@ -295,7 +295,7 @@ createCosineAnnealingWarmRestartsSchedule(
 ): RateSchedule
 ```
 
-Returns a cosine annealing schedule with warm restarts and growing cycles.
+Return a cosine-annealing schedule with warm restarts and optional period growth so each cycle can reset aggressiveness while gradually lengthening exploration windows.
 
 Parameters:
 - `initialPeriod` - Length of the initial cycle.
@@ -312,7 +312,7 @@ createExponentialRateSchedule(
 ): RateSchedule
 ```
 
-Returns an exponential decay learning rate schedule.
+Return an exponential-decay learning-rate schedule that scales the base rate every iteration, producing smooth monotonic annealing across long training runs.
 
 Parameters:
 - `decayFactor` - Multiplicative decay applied every iteration.
@@ -325,7 +325,7 @@ Returns: A learning rate schedule implementing exponential decay.
 createFixedRateSchedule(): RateSchedule
 ```
 
-Returns a schedule that always yields the base learning rate.
+Return a schedule that always yields the base learning rate so callers can disable dynamic decay while still using the shared scheduler pipeline.
 
 Returns: A learning rate schedule that ignores iteration and returns baseRate.
 
@@ -338,7 +338,7 @@ createInverseRateSchedule(
 ): RateSchedule
 ```
 
-Returns an inverse decay learning rate schedule.
+Return an inverse-decay learning-rate schedule whose denominator grows with iteration so decay slows over time while remaining continuous and stable.
 
 Parameters:
 - `decayFactor` - Decay factor controlling the decay rate.
@@ -356,7 +356,7 @@ createLinearWarmupDecaySchedule(
 ): RateSchedule
 ```
 
-Returns a linear warmup followed by linear decay schedule.
+Return a linear warmup followed by linear decay schedule so optimization ramps safely from small initial steps before annealing toward a configurable terminal rate.
 
 Parameters:
 - `totalStepCount` - Total number of steps in the schedule (must be positive).
@@ -373,7 +373,7 @@ createReduceOnPlateauSchedule(
 ): ReduceOnPlateauSchedule
 ```
 
-Returns a ReduceLROnPlateau-style schedule that lowers the rate when no improvement is seen.
+Return a ReduceLROnPlateau-style schedule that lowers the rate when monitored error stops improving, with explicit patience, cooldown, and minimum-rate guardrails for stable adaptive decay.
 
 Parameters:
 - `options` - Optional configuration for factor, patience, minDelta, cooldown, and minimum rate.
@@ -389,7 +389,7 @@ createStepRateSchedule(
 ): RateSchedule
 ```
 
-Returns a step decay learning rate schedule.
+Return a step-decay learning-rate schedule that applies multiplicative drops at fixed iteration intervals for predictable staircase-style annealing behavior in long-running optimization loops.
 
 Parameters:
 - `decayFactor` - Multiplicative decay applied at each decay step.
@@ -399,19 +399,19 @@ Returns: A learning rate schedule implementing step decay.
 
 ### DEFAULT_COSINE_PERIOD
 
-Length of one cosine annealing cycle in iterations.
+Length of one full cosine annealing cycle in training iterations before the schedule wraps or restarts.
 
 ### DEFAULT_DECAY_STEP_SIZE
 
-Step decay interval in iterations; larger values mean fewer decay events.
+Step decay interval in training iterations; increasing this value spaces decay events further apart and keeps the learning rate elevated for longer periods.
 
 ### DEFAULT_EXPONENTIAL_DECAY_FACTOR
 
-Per-iteration exponential decay factor; values just below 1 create gentle decay.
+Per-iteration exponential decay multiplier; values just below 1 create gentle geometric decay over many training steps.
 
 ### DEFAULT_INITIAL_PERIOD
 
-Initial period length for cosine-with-restarts before growth is applied.
+Initial period length in iterations for cosine schedules with warm restarts before the period growth multiplier is applied.
 
 ### DEFAULT_INVERSE_DECAY_FACTOR
 
@@ -423,7 +423,7 @@ Inverse decay exponent; 1 makes decay linear in iteration, 2 makes it quadratic.
 
 ### DEFAULT_LINEAR_END_RATE
 
-Target rate after warmup-decay finishes; often zero or a small floor.
+Target learning rate at the end of the warmup-decay schedule; typically zero or a small positive floor value.
 
 ### DEFAULT_MINIMUM_RATE
 
@@ -435,27 +435,27 @@ Multiplier applied to the cosine cycle length after each restart (>= 1).
 
 ### DEFAULT_REDUCE_ON_PLATEAU_COOLDOWN
 
-Cooldown iterations after a reduction to avoid rapid successive cuts.
+Number of iterations the reduce-on-plateau scheduler stays inactive after a reduction to prevent rapid consecutive rate cuts.
 
 ### DEFAULT_REDUCE_ON_PLATEAU_FACTOR
 
-Reduce-on-plateau shrink factor; halving (0.5) is a common conservative step.
+Reduce-on-plateau multiplicative shrink factor; a value of 0.5 halves the rate on each plateau trigger event.
 
 ### DEFAULT_REDUCE_ON_PLATEAU_MIN_DELTA
 
-Minimum required improvement to count as progress when monitoring error.
+Minimum absolute loss improvement required per iteration to count as genuine progress for the plateau detector.
 
 ### DEFAULT_REDUCE_ON_PLATEAU_MIN_RATE
 
-Minimum rate allowed during reduce-on-plateau adjustments.
+Absolute minimum learning rate enforced during reduce-on-plateau adjustments so the rate never drops to zero permanently.
 
 ### DEFAULT_REDUCE_ON_PLATEAU_PATIENCE
 
-Patience for reduce-on-plateau in iterations before triggering a cut.
+Number of consecutive non-improving iterations the scheduler waits before triggering a rate reduction on plateau.
 
 ### DEFAULT_STEP_DECAY_FACTOR
 
-Step decay multiplier (close to 1 slows decay; smaller drops faster).
+Step decay multiplier applied every `DEFAULT_DECAY_STEP_SIZE` iterations; values close to 1 produce slow decay while smaller values produce steeper rate reduction.
 
 ### DEFAULT_WARMUP_RATIO
 

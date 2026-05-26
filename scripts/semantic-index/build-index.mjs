@@ -1,0 +1,229 @@
+/**
+ * @description Scan the NeatapticTS corpus, chunk documents by family, and populate
+ * `data/semantic-index.sqlite` with BM25-searchable content. Includes `ts-source` family
+ * chunks produced by ts-morph AST traversal of `src/**\/*.ts` (non-test files). Uses a
+ * freshness proof `(mtime_ms, file_size, sha256)` to skip unchanged documents on
+ * incremental rebuilds.
+ *
+ * @param {boolean} [--dry-run] - Scan corpus without writing SQLite rows.
+ * @param {boolean} [--force] - Re-index unchanged documents even if freshness proof matches.
+ * @param {boolean} [--json] - Emit JSON summary `{ scanned, indexed, skipped, chunks, elapsedMs }`.
+ * @param {boolean} [--json-health] - Emit compact health summary JSON.
+ * @param {string}  [--database <path>] - Path to the SQLite database file (default: `data/semantic-index.sqlite`).
+ * @param {boolean} [--help] - Show help and exit.
+ *
+ * @returns {void} Exits 0 on success, 1 on fatal error. JSON summary written to stdout
+ *   when `--json` is passed.
+ */
+import fg from 'fast-glob';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { chunkMarkdown } from './chunker.mjs';
+import { fail, parseCliArgs, printHelp, toRepoRelative, writeJsonOrText } from './cli-utils.mjs';
+import { getFreshnessProof, isFreshDocument } from './freshness.mjs';
+import { defaultDatabasePath, initSemanticIndex, repoRoot } from './init-schema.mjs';
+import { chunkTypeScriptSources } from './ts-chunker.mjs';
+
+const CORPUS_SOURCES = [
+  { family: 'readme', patterns: ['src/**/README.md'] },
+  { family: 'ts-source', patterns: ['src/**/*.ts'], ignore: ['src/**/*.d.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'] },
+  { family: 'skill', patterns: ['.github/skills/**/SKILL.md'] },
+  { family: 'agent', patterns: ['.github/agents/*.agent.md'] },
+  { family: 'plan', patterns: ['plans/**/*.md'], ignore: ['plans/completed/**'] },
+  { family: 'completed-plan', patterns: ['plans/completed/**/*.md'] },
+  { family: 'demo', patterns: ['examples/**/README.md', 'examples/**/*.ts'] },
+  { family: 'benchmark', patterns: ['benchmarks/README.md', 'benchmarks/**/*.test.ts'] },
+  { family: 'root-doc', patterns: ['README.md', 'CLAUDE.md', 'STYLEGUIDE.md', 'CONTRIBUTING.md'] },
+  { family: 'copilot-instructions', patterns: ['.github/copilot-instructions.md'] },
+];
+
+export async function buildSemanticIndex(options = {}) {
+  const databasePath = path.resolve(options.databasePath ?? defaultDatabasePath);
+  const documents = options.corpusDocuments ?? await collectCorpusDocuments();
+  const tsSourceChunksByFilePath = await collectTypeScriptChunksByFilePath(documents);
+  const summary = {
+    databasePath,
+    scanned: documents.length,
+    indexed: 0,
+    skipped: 0,
+    chunks: 0,
+    purged: 0,
+    dryRun: Boolean(options.dryRun),
+    totalDocuments: documents.length,
+    newDocuments: 0,
+    elapsedMs: 0,
+  };
+
+  if (options.dryRun) return summary;
+
+  const database = await initSemanticIndex({ databasePath });
+  summary.purged = deleteMissingDocuments(database, documents);
+  const existingDocument = database.prepare('SELECT * FROM documents WHERE file_path = ?');
+  const upsertDocument = database.prepare(`
+    INSERT INTO documents(file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(file_path) DO UPDATE SET
+      doc_family = excluded.doc_family,
+      mtime_ms = excluded.mtime_ms,
+      file_size = excluded.file_size,
+      sha256 = excluded.sha256,
+      indexed_at = excluded.indexed_at
+  `);
+  const findDocumentId = database.prepare('SELECT doc_id FROM documents WHERE file_path = ?');
+  const deleteChunks = database.prepare('DELETE FROM chunks WHERE doc_id = ?');
+  const insertChunk = database.prepare(`
+    INSERT INTO chunks(doc_id, chunk_index, heading_path, body_text, char_start, char_end)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  const buildLoopStartTime = Date.now();
+
+  const indexDocument = database.transaction((documentRecord, freshnessProof, chunks) => {
+    upsertDocument.run(documentRecord.filePath, documentRecord.family, freshnessProof.mtime_ms, freshnessProof.size, freshnessProof.sha256, Date.now());
+    const { doc_id: documentId } = findDocumentId.get(documentRecord.filePath);
+    deleteChunks.run(documentId);
+    chunks.forEach((chunk, chunkIndex) => {
+      insertChunk.run(documentId, chunkIndex, chunk.heading_path, chunk.body_text, chunk.char_start, chunk.char_end);
+    });
+  });
+
+  for (const documentRecord of documents) {
+    const absolutePath = path.join(repoRoot, documentRecord.filePath);
+    const freshnessProof = await getFreshnessProof(absolutePath);
+    const currentRow = existingDocument.get(documentRecord.filePath);
+
+    if (!options.force && isFreshDocument(currentRow, freshnessProof)) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    if (!currentRow) summary.newDocuments += 1;
+
+    const chunks = await chunkDocument(documentRecord, absolutePath, tsSourceChunksByFilePath);
+    indexDocument(documentRecord, freshnessProof, chunks);
+    summary.indexed += 1;
+    summary.chunks += chunks.length;
+  }
+
+  summary.elapsedMs = Date.now() - buildLoopStartTime;
+
+  database.exec("INSERT INTO chunks_fts(chunks_fts) VALUES('optimize')");
+  database.close();
+  return summary;
+}
+
+export function deleteMissingDocuments(database, documents) {
+  const currentDocumentPaths = new Set(documents.map(({ filePath }) => filePath));
+  const existingDocumentPaths = database.prepare('SELECT file_path FROM documents').all();
+  const deleteDocument = database.prepare('DELETE FROM documents WHERE file_path = ?');
+
+  const purgeDeletedDocuments = database.transaction(() => {
+    let purgedCount = 0;
+    existingDocumentPaths.forEach(({ file_path: filePath }) => {
+      if (currentDocumentPaths.has(filePath)) return;
+      deleteDocument.run(filePath);
+      purgedCount += 1;
+    });
+    return purgedCount;
+  });
+
+  return purgeDeletedDocuments();
+}
+
+async function collectCorpusDocuments() {
+  const records = await Promise.all(CORPUS_SOURCES.map(async (source) => {
+    const entries = await fg(source.patterns, {
+      cwd: repoRoot,
+      absolute: false,
+      onlyFiles: true,
+      dot: true,
+      ignore: source.ignore ?? [],
+    });
+    return entries.toSorted().map((filePath) => ({ filePath: toRepoRelative(path.join(repoRoot, filePath)), family: source.family }));
+  }));
+
+  return records.flat();
+}
+
+async function chunkDocument(documentRecord, absolutePath, tsSourceChunksByFilePath) {
+  if (documentRecord.family === 'ts-source') {
+    return tsSourceChunksByFilePath.get(documentRecord.filePath) ?? [];
+  }
+
+  const markdownText = await readFile(absolutePath, 'utf8');
+  return chunkMarkdown(markdownText);
+}
+
+async function collectTypeScriptChunksByFilePath(documents) {
+  const tsSourcePaths = documents
+    .filter(({ family }) => family === 'ts-source')
+    .map(({ filePath }) => path.join(repoRoot, filePath));
+  if (tsSourcePaths.length === 0) return new Map();
+
+  const tsSourceChunks = await chunkTypeScriptSources({ sourcePaths: tsSourcePaths });
+  return tsSourceChunks.reduce((chunksByFilePath, chunk) => {
+    const existingChunks = chunksByFilePath.get(chunk.file_path) ?? [];
+    existingChunks.push(chunk);
+    chunksByFilePath.set(chunk.file_path, existingChunks);
+    return chunksByFilePath;
+  }, new Map());
+}
+
+async function main() {
+  const args = parseCliArgs(process.argv.slice(2));
+  if (args.help) {
+    printHelp({
+      title: 'Semantic index builder',
+      usage: 'node scripts/semantic-index/build-index.mjs [--dry-run] [--force] [--json] [--database path]',
+      options: ['--dry-run         Scan corpus without writing SQLite rows', '--force           Re-index unchanged documents even if freshness proof matches', '--json            Emit JSON summary', '--json-health     Emit compact health summary JSON', '--database <path> Path to SQLite database file (default: data/semantic-index.sqlite)', '--help            Show this help'],
+    });
+    return;
+  }
+
+  const emitJsonHealth = Boolean(args['json-health']);
+
+  try {
+    const summary = await buildSemanticIndex({ dryRun: Boolean(args['dry-run']), force: Boolean(args.force), databasePath: args.database });
+    if (emitJsonHealth) {
+      console.log(JSON.stringify(createJsonHealthSummary(summary), null, 2));
+      return;
+    }
+
+    writeJsonOrText(summary, Boolean(args.json), (payload) => `Semantic index: scanned ${payload.scanned}, indexed ${payload.indexed}, skipped ${payload.skipped}, chunks ${payload.chunks}${payload.dryRun ? ' (dry run)' : ''}`);
+  } catch (error) {
+    if (emitJsonHealth) {
+      console.log(JSON.stringify(createJsonHealthFailure(error, args.database), null, 2));
+      process.exitCode = 1;
+      return;
+    }
+
+    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+  }
+}
+
+function createJsonHealthSummary(summary) {
+  return {
+    status: 'ok',
+    total_documents: Number(summary.totalDocuments ?? summary.scanned ?? 0),
+    new_documents: Number(summary.newDocuments ?? 0),
+    removed_documents: Number(summary.purged ?? 0),
+    elapsed_ms: Number(summary.elapsedMs ?? 0),
+    index_path: toRepoRelative(path.resolve(summary.databasePath ?? defaultDatabasePath)),
+  };
+}
+
+function createJsonHealthFailure(error, databasePath) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return {
+    status: 'error',
+    total_documents: 0,
+    new_documents: 0,
+    removed_documents: 0,
+    elapsed_ms: 0,
+    index_path: toRepoRelative(path.resolve(databasePath ?? defaultDatabasePath)),
+    message,
+  };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

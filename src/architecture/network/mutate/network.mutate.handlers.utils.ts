@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import type Connection from '../../connection';
 import Layer from '../../layer/layer';
 import Node from '../../node';
@@ -837,8 +837,7 @@ function isForwardCandidateTargetAvailable(
 }
 
 /**
- * Removes one forward connection when structural redundancy constraints are satisfied.
- *
+ * Remove one forward connection only when redundancy checks prove the mutation will not collapse endpoint connectivity or peer-layer coverage.
  * Constraints require endpoint redundancy and avoid disconnecting peer-layer groups.
  *
  * @param this - Bound network.
@@ -1165,8 +1164,7 @@ function containsNode(nodes: Node[], node: Node): boolean {
 }
 
 /**
- * Perturbs one connection weight using a uniform delta sampled from configured bounds.
- *
+ * Perturb one randomly selected connection weight by a sampled uniform delta while honoring configured mutation bounds.
  * The candidate pool includes standard and self-connections.
  *
  * @param this - Bound network.
@@ -1230,8 +1228,7 @@ function sampleUniform(
 }
 
 /**
- * Mutates bias parameters on one random non-input node.
- *
+ * Mutate bias parameters on one random non-input node so scalar offsets can drift without changing graph topology.
  * Output nodes remain eligible for this operator.
  *
  * @param this - Bound network.
@@ -1295,8 +1292,7 @@ function collectMutableNonInputNodes(
 }
 
 /**
- * Mutates activation function on one random non-input node.
- *
+ * Mutate the activation function on one random non-input node using method-controlled output eligibility guards.
  * Output-node eligibility is controlled by `method.mutateOutput` when provided.
  *
  * @param this - Bound network.
@@ -1385,7 +1381,7 @@ function isNodeWithoutSelfLoop(candidateNode: Node): boolean {
 }
 
 /**
- * Removes one existing self-connection chosen at random.
+ * Removes one existing hidden node self-connection chosen uniformly at random.
  *
  * @param this - Bound network.
  * @returns Nothing.
@@ -1405,8 +1401,7 @@ export function subSelfConn(this: Network): void {
 }
 
 /**
- * Assigns a random eligible node as gater for a random ungated connection.
- *
+ * Assign a random eligible node as gater for a random ungated connection to evolve dynamic modulation behavior.
  * Candidate pool includes normal and self-connections.
  *
  * @param this - Bound network.
@@ -1453,7 +1448,7 @@ function isUngatedConnection(candidateConnection: Connection): boolean {
 }
 
 /**
- * Removes gating from one randomly selected gated connection.
+ * Removes active gating from one randomly selected currently gated connection.
  *
  * @param this - Bound network.
  * @returns Nothing.
@@ -1470,8 +1465,7 @@ export function subGate(this: Network): void {
 }
 
 /**
- * Adds one backward (recurrent) connection between eligible node pairs.
- *
+ * Add one backward recurrent connection between eligible node pairs when topology intent allows cyclic graph structure changes.
  * This operation is skipped in acyclic mode.
  *
  * @param this - Bound network.
@@ -1633,7 +1627,7 @@ function isBackwardCandidateTargetAvailable(
 }
 
 /**
- * Removes one backward connection that satisfies redundancy constraints.
+ * Removes one backward connection that satisfies per-endpoint structural redundancy constraints.
  *
  * @param this - Bound network.
  * @returns Nothing.

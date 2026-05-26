@@ -1,0 +1,35 @@
+id: '03.behavior-change-red'
+name: 'Behavior Change Red Contract'
+agent: '03-red-testing'
+description: >
+  Authors the smallest failing test that will go green only after the
+  intended behavior change is correctly implemented. Reads the acceptance
+  criteria from the active plan step (or the preceding 01.acceptance-criteria
+  output) and uses unit-test-writer to produce a focused red test following
+  the single-expect-per-it() repo convention. Confirms the test is red by
+  running a targeted Jest slice. Does not implement the behavior change.
+
+triggers:
+  - 'Planned feature or fix will change observable behavior and no failing test exists yet'
+  - '01-planning acceptance-criteria output is ready for red-test authoring'
+  - 'TDD sequence: acceptance criteria exist; red contract needed before 04-implementing'
+  - 'Regression fix requires a test that reproduces the broken behavior'
+
+gates:
+  - 'plan-sync'
+  - 'red-test-confirmation'
+
+post-phase-fanout:
+  - '04-implementing'
+
+skills:
+  - 'creating-unit-tests'
+  - 'red-test-contracts'
+  - 'plan-alignment'
+
+specialists:
+  - 'unit-test-writer'
+  - 'acceptance-criteria-writer'
+  - 'planning-test-strategy-coordinator'
+
+timeout-minutes: 20

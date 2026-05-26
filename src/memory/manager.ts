@@ -1,4 +1,4 @@
-import { config, type NeatapticConfig } from '../config';
+﻿import { config, type NeatapticConfig } from '../config';
 import {
   MEMORY_DEFAULT_ACTIVATION_POOL_PREWARM_COUNT,
   MEMORY_DEFAULT_SLAB_POOL_MAX_PER_KEY,
@@ -49,6 +49,30 @@ type MemoryTypedArrayAllocationStats = {
  * 1. resolved memory defaults,
  * 2. temporary override lifecycles during tests and harnesses,
  * 3. resettable pool registration for centralized diagnostics.
+ *
+ * **Lifecycle** — typical test or harness usage:
+ *
+ * ```ts
+ * import { memoryManager } from './memory/memoryManager';
+ *
+ * const snapshot = memoryManager.init({ enableSlabArrayPooling: true });
+ * try {
+ *   // run benchmark or test that exercises pooled paths
+ * } finally {
+ *   memoryManager.teardown(); // restores original config and resets pools
+ * }
+ * ```
+ *
+ * **State machine**:
+ *
+ * ```mermaid
+ * stateDiagram-v2
+ *   [*] --> idle : construct
+ *   idle --> active : init(overrides)
+ *   active --> active : setFlag / allocateTypedArray / registerPool
+ *   active --> idle : teardown()
+ *   idle --> idle : getConfig / resolveEnvironment
+ * ```
  */
 export class MemoryManager {
   private readonly configRef: NeatapticConfig;

@@ -8,6 +8,7 @@ import {
   NeatChatSnapshotShapeError,
   NeatChatSnapshotVersionError,
 } from './neatChat.errors';
+import { createNeatChatEpisodicMemoryBank } from './neatChat.memory.services';
 import { buildNeatChatVocabulary } from './neatChat.session.services';
 import { resolvePositiveInteger } from './neatChat.tokenization.utils';
 import type {
@@ -92,6 +93,10 @@ export function importNeatChatSession(
       validatedSnapshot.exchanges.length,
       NEATCHAT_REPLAY_BUFFER_MAX_EXCHANGES,
     ),
+    pendingCandidates: [],
+    candidateLog: [],
+    memoryBank: createNeatChatEpisodicMemoryBank(),
+    routingLog: [],
   };
 }
 

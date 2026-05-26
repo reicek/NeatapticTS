@@ -23,9 +23,9 @@ test-first implementation pass instead of another broad discovery round.
 
 Use a compact table or bullet list with these fields:
 
-| State slice | Current owner | Full exact resume | Light mode | Existing surface | Gap or note |
-| --- | --- | --- | --- | --- | --- |
-| generation index | checkpoint seam | required | optional | orchestration | restore before evaluation |
+| State slice      | Current owner   | Full exact resume | Light mode | Existing surface | Gap or note               |
+| ---------------- | --------------- | ----------------- | ---------- | ---------------- | ------------------------- |
+| generation index | checkpoint seam | required          | optional   | orchestration    | restore before evaluation |
 
 Minimum state categories to classify:
 

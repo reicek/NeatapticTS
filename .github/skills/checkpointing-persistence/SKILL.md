@@ -50,12 +50,12 @@ changes:
 
 1. Read [the Step 0 kickoff guide](references/checkpoint-step-0.md).
 2. Produce or update the state-owner matrix, exactness categories, strict
-  restore matrix, and red-phase test shortlist before proposing code work.
+   restore matrix, and red-phase test shortlist before proposing code work.
 3. Update `plans/Population_Save_Resume_and_Checkpointing.md`,
-  `plans/Roadmap.md`, and `plans/README.md` together if checkpointing becomes
-  the active lane.
+   `plans/Roadmap.md`, and `plans/README.md` together if checkpointing becomes
+   the active lane.
 4. Stop and narrow the boundary again if the orchestration save/load entry
-  surface is still ambiguous after the first mapping pass.
+   surface is still ambiguous after the first mapping pass.
 
 ## Resume Contracts
 
@@ -134,8 +134,8 @@ Validate with: save/load roundtrip tests, deterministic replay test, and npm run
 ## Required Workflow
 
 1. Read `plans/README.md`, then
-  `plans/Roadmap.md`, then
-  `plans/Population_Save_Resume_and_Checkpointing.md`.
+   `plans/Roadmap.md`, then
+   `plans/Population_Save_Resume_and_Checkpointing.md`.
 2. Read the nearest relevant README and restore boundaries before deep source
    edits.
 3. Inventory every stateful input that affects future behavior.

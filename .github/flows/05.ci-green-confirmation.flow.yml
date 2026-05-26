@@ -1,0 +1,32 @@
+id: '05.ci-green-confirmation'
+name: 'CI Baseline Green Confirmation'
+agent: '05-green-testing'
+description: >
+  Runs the full test suite and all plan validators to confirm the CI baseline
+  is green before a phase is marked DONE. Records per-check results with pass
+  or fail evidence in the plan. Does not relax assertions or suppress failures.
+  Any failure is recorded as a blocker and routed before the phase can advance.
+
+triggers:
+  - 'Phase implementation is complete and full suite green confirmation is required'
+  - 'All implementation steps in a phase are marked done; need CI sign-off before logging'
+  - 'Multiple sub-steps completed; CI baseline has not been checked since last src/ change'
+  - 'Phase advancement requires validated green evidence in the plan'
+
+gates:
+  - 'plan-sync'
+  - 'step-packet'
+  - 'green-validation-evidence'
+
+post-phase-fanout:
+  - '07-logging'
+
+skills:
+  - 'running-unit-tests'
+  - 'green-validation-gates'
+
+specialists:
+  - 'unit-test-runner'
+  - 'green-test-failure-triage-coordinator'
+
+timeout-minutes: 30

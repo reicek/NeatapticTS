@@ -1,4 +1,4 @@
-import Node from '../../node';
+﻿import Node from '../../node';
 import Connection from '../../connection';
 import {
   resolveActivationFunction,
@@ -64,7 +64,8 @@ export function createEmptyNetworkJson(
 }
 
 /**
- * Resolves dropout with a numeric fallback when the value is absent.
+ * Resolve dropout with a numeric fallback when the serialized value is absent or undefined.
+ * Normalizing this value at one boundary keeps verbose JSON payloads stable for downstream consumers.
  *
  * @param dropout - Optional dropout value.
  * @returns Effective dropout.
@@ -101,9 +102,8 @@ export function appendJsonNodesAndSelfConnections(
 }
 
 /**
- * Appends JSON entries for forward connections.
- *
- * Non-finite endpoint indices are ignored to prevent malformed output records.
+ * Append JSON entries for forward connections after validating that each endpoint still maps to canonical node indices.
+ * Invalid or stale endpoints are skipped to prevent malformed rows from contaminating serialized payloads.
  *
  * @param networkInternals - Runtime internals.
  * @param networkJson - JSON accumulator.
@@ -163,7 +163,8 @@ function isCurrentJsonEndpoint(
 }
 
 /**
- * Validates the verbose JSON payload root shape.
+ * Validate the verbose JSON payload root shape before node and connection rebuild routines process individual fields.
+ * This early guard prevents non-object payloads from entering best-effort rebuild paths.
  *
  * @param json - Payload candidate.
  * @returns Nothing.
@@ -179,7 +180,8 @@ export function validateNetworkJsonOrThrow(json: NetworkJSON): void {
 }
 
 /**
- * Warns when incoming verbose format version differs from the expected one.
+ * Warn when incoming verbose format version differs from the expected serializer schema version.
+ * The warning-only policy allows controlled migration attempts without forcing immediate import failure.
  *
  * @param formatVersion - Incoming format version.
  * @returns Nothing.
@@ -196,7 +198,8 @@ export function warnWhenJsonFormatVersionIsUnknown(
 }
 
 /**
- * Rebuilds runtime nodes from verbose JSON entries.
+ * Rebuild runtime nodes from verbose JSON entries while restoring scalar fields and optional historical identifiers.
+ * Unknown squash names are normalized through activation fallback logic to keep import paths resilient.
  *
  * @param jsonNodeContext - JSON node rebuild context.
  * @returns Nothing.
@@ -219,9 +222,8 @@ export function rebuildNodesFromJsonPayload(
 }
 
 /**
- * Rebuilds runtime connections from verbose JSON entries.
- *
- * Invalid entries are skipped with warnings so import continues for valid records.
+ * Rebuild runtime connections from verbose JSON entries while preserving best-effort import behavior for mixed-quality payloads.
+ * Invalid rows are skipped with warnings so valid edge records still reconstruct successfully.
  *
  * @param jsonConnectionContext - JSON connection rebuild context.
  * @returns Nothing.

@@ -80,6 +80,88 @@
  * const outputValues = network.activate([0, 1]);
  * ```
  */
+import {
+  createInferencePredictor as createInferencePredictorImpl,
+  exportPortableInferencePayload as exportPortableInferencePayloadImpl,
+  exportTransferableInferencePayload as exportTransferableInferencePayloadImpl,
+  extractNetworkInferenceIR as extractNetworkInferenceIRImpl,
+} from './network/worker-payload/network.worker-payload';
+import type { ConstructResult as ConstructResultType } from './network/construct/network.construct.utils.types';
+import type {
+  InferenceChannelOptions as InferenceChannelOptionsType,
+  NetworkInferenceIREdge as NetworkInferenceIREdgeType,
+  PortableInferencePayloadEdge as PortableInferencePayloadEdgeType,
+  TransferableInferencePayloadOptions as TransferableInferencePayloadOptionsType,
+} from './network/worker-payload/network.worker-payload';
+import type { VisualizationEdgeV1 as VisualizationEdgeV1Type } from './network/visualization/network.visualization.types';
+
+/**
+ * Create a lightweight inference predictor from an exported payload so runtime scoring can run without reconstructing a full mutable network instance, especially in worker and browser inference contexts.
+ *
+ * @param payload - Portable or transferable inference payload.
+ * @returns Predictor object that exposes forward inference helpers.
+ */
+export const createInferencePredictor = createInferencePredictorImpl;
+
+/**
+ * Export a portable inference payload that can be serialized, persisted, and reused outside the live network instance while preserving deterministic node-edge execution semantics for later prediction.
+ *
+ * @param network - Source network.
+ * @param options - Optional export controls.
+ * @returns JSON-friendly portable payload.
+ */
+export const exportPortableInferencePayload =
+  exportPortableInferencePayloadImpl;
+
+/**
+ * Export a transferable inference payload optimized for worker-message transport and typed-array transfer lists so large numeric buffers can move across threads with minimal copying overhead.
+ *
+ * @param network - Source network.
+ * @param options - Transfer export options.
+ * @returns Transfer-oriented payload with buffers.
+ */
+export const exportTransferableInferencePayload =
+  exportTransferableInferencePayloadImpl;
+
+/**
+ * Extract the intermediate inference graph representation used by payload export and worker runtime prediction paths, providing a stable edge-node IR contract for downstream transport helpers.
+ *
+ * @param network - Source network.
+ * @returns Inference graph intermediate representation.
+ */
+export const extractNetworkInferenceIR = extractNetworkInferenceIRImpl;
+
+/**
+ * Structured result returned from network construction helpers, including constructed graph artifacts and metadata used by diagnostics, tests, and architecture-inspection workflows.
+ */
+export type ConstructResult = ConstructResultType;
+
+/**
+ * Options for opening an inference channel that streams request batches to a worker-backed predictor, including transport and lifecycle controls needed for stable long-running sessions.
+ */
+export type InferenceChannelOptions = InferenceChannelOptionsType;
+
+/**
+ * Directed edge entry in the inference intermediate representation graph that links source and target node identifiers with weight metadata required by predictor execution.
+ */
+export type NetworkInferenceIREdge = NetworkInferenceIREdgeType;
+
+/**
+ * Edge record inside a portable inference payload that preserves connection identity, direction, and numeric parameters across serialization and runtime reconstruction boundaries.
+ */
+export type PortableInferencePayloadEdge = PortableInferencePayloadEdgeType;
+
+/**
+ * Options that control transferable payload packing and transfer-list shaping so callers can tune memory ownership, buffer transfer behavior, and channel compatibility.
+ */
+export type TransferableInferencePayloadOptions =
+  TransferableInferencePayloadOptionsType;
+
+/**
+ * Edge schema used by visualization graph exports so rendering tools can consume connection direction, style, and metadata consistently across browser and offline documentation views.
+ */
+export type VisualizationEdgeV1 = VisualizationEdgeV1Type;
+
 export { default } from './network/network';
 export { formatConstructSummary } from './network/construct/network.construct.summary.utils';
 export {
@@ -88,12 +170,8 @@ export {
 } from './network/visualization/network.visualization';
 export {
   createNeatParallelPopulationEvaluator,
-  createInferencePredictor,
   detectInferenceWorkerCapabilities,
   evaluateInWorkers,
-  extractNetworkInferenceIR,
-  exportPortableInferencePayload,
-  exportTransferableInferencePayload,
   getTransferList,
   INFERENCE_ACTIVATION_TABLE,
   openInferenceChannel,
@@ -110,26 +188,21 @@ export type {
   EvaluateInWorkersOptions,
   NeatParallelPopulationEvaluatorOptions,
   InferenceChannel,
-  InferenceChannelOptions,
   InferencePredictor,
   InferenceWorkerCapabilities,
   InferenceWorkerCapabilityOptions,
   NetworkInferenceIR,
-  NetworkInferenceIREdge,
   NetworkInferenceIRNode,
   ParallelInferencePoolOptions,
   ParallelInferenceWorkerLike,
   PortableInferencePayload,
-  PortableInferencePayloadEdge,
   PortableInferencePayloadNode,
   SharedInferenceWorker,
   SharedInferenceWorkerOptions,
   TransferableInferencePayload,
-  TransferableInferencePayloadOptions,
 } from './network/worker-payload/network.worker-payload';
 export type {
   ExportVisualizationOptions,
-  VisualizationEdgeV1,
   VisualizationGraphV1,
   VisualizationIOV1,
   VisualizationMetadataV1,
@@ -142,5 +215,4 @@ export type {
   ConstructGraphSnapshot,
   ConstructOptions,
   ConstructPart,
-  ConstructResult,
 } from './network/construct/network.construct.utils.types';

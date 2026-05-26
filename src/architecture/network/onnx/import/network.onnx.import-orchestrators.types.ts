@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Import-owned type surface for ONNX architecture reconstruction orchestration.
  *
  * These payloads stay close to the orchestration helpers that parse terminal
@@ -18,14 +18,14 @@ import type {
   Pool2DMapping,
 } from '../schema/network.onnx.schema.types';
 
-/** Parsed architecture dimensions extracted from ONNX import graph payloads. */
+/** Parsed architecture dimensions extracted from ONNX import graph payloads, with input, output, and hidden sizes. */
 export type OnnxImportArchitectureResult = {
   inputCount: number;
   outputCount: number;
   hiddenLayerSizes: number[];
 };
 
-/** Shared architecture extraction context with resolved graph dimensions. */
+/** Shared architecture extraction context with resolved graph dimensions, initializers, and metadata properties. */
 export type OnnxImportArchitectureContext = {
   inputShapeDimensions: OnnxDimension[];
   outputShapeDimensions: OnnxDimension[];
@@ -40,6 +40,7 @@ export type OnnxImportDimensionRecord = Record<string, number>;
 export type OnnxImportRecurrentRestorationContext = {
   hiddenLayerSizes: number[];
   metadata: OnnxMetadataProperty[];
+  onnx: OnnxModel;
 };
 
 /** Hidden-layer span payload with one-based layer numbering and global offset. */
@@ -49,7 +50,7 @@ export type OnnxImportHiddenLayerSpan = {
   hiddenStart: number;
 };
 
-/** Execution context for assigning one hidden-layer recurrent diagonal tensor. */
+/** Execution context for assigning one hidden-layer recurrent diagonal tensor, carrying model, nodes, and span. */
 export type OnnxImportLayerConnectionContext = {
   onnx: OnnxModel;
   hiddenNodes: NeatapticNode[];
@@ -62,13 +63,95 @@ export type OnnxImportSelfConnectionUpsertContext = {
   recurrentWeight: number;
 };
 
-/** Parsed pooling metadata payload attached to imported network instances. */
+/** Virtual spatial shape derived from Conv and Pool metadata during import. */
+export type OnnxImportPoolingVirtualShape = {
+  afterLayerIndex: number;
+  inputHeight: number;
+  inputWidth: number;
+  inputChannels: number;
+  outputHeight: number;
+  outputWidth: number;
+  outputChannels: number;
+  flattenedSize?: number;
+};
+
+/** Metadata-only audit record comparing a flattened pooled width to the next dense width. */
+export type OnnxImportFlattenConsistencyAudit = {
+  afterLayerIndex: number;
+  consumerLayerIndex: number;
+  consumerWidth: number;
+  flattenedSize: number;
+  matches: boolean;
+};
+
+/** Parsed pooling metadata payload attached to imported network instances, listing pool specs and virtual shapes. */
 export type OnnxImportPoolingMetadata = {
   layers: number[];
   specs: Pool2DMapping[];
+  flattenLayers: number[];
+  virtualShapes: OnnxImportPoolingVirtualShape[];
+  flattenConsistency?: OnnxImportFlattenConsistencyAudit[];
 };
 
-/** Network instance augmented with optional imported ONNX pooling metadata. */
+/** Audit-only cross-layer feed-forward edge carried through Phase 5 import fallback. */
+export type OnnxImportAdvancedGraphCrossLayerConnection = {
+  sourceNodeIndex: number;
+  sourceLayerIndex: number;
+  targetNodeIndex: number;
+  targetLayerIndex: number;
+  branchTensorName: string;
+};
+
+/** Audit-only shared initializer alias carried through Phase 5 import fallback. */
+export type OnnxImportSharedInitializerAlias = {
+  aliasTensorName: string;
+  canonicalTensorName: string;
+  initializerKind: string;
+};
+
+/** Explicit one-hop residual-add merge carried through Phase 5 import hardening. */
+export type OnnxImportResidualAdd = {
+  sourceLayerIndex: number;
+  targetLayerIndex: number;
+  branchTensorName: string;
+  mergeNodeName: string;
+  mergeOutputName: string;
+};
+
+/** Explicit concat merge carried through Phase 5 import hardening, identifying layer indices and merge tensor names. */
+export type OnnxImportConcatMerge = {
+  sourceLayerIndex: number;
+  targetLayerIndex: number;
+  concatNodeName: string;
+  concatOutputName: string;
+  inputOrder: 'previous_then_source';
+};
+
+/** Explicit fixed-width self-attention block carried through Phase 5 import fallback. */
+export type OnnxImportAttentionBlock = {
+  sourceLayerIndex: number;
+  targetLayerIndex: number;
+  sequenceLength: number;
+  modelWidth: number;
+  heads: number;
+  shadowOutputName: string;
+};
+
+/** Parsed advanced-graph metadata attached to imported network instances, grouping merges, residual adds, and blocks. */
+export type OnnxImportAdvancedGraphMetadata = {
+  crossLayerConnections?: OnnxImportAdvancedGraphCrossLayerConnection[];
+  concatMerges?: OnnxImportConcatMerge[];
+  residualAdds?: OnnxImportResidualAdd[];
+  sharedInitializerAliases?: OnnxImportSharedInitializerAlias[];
+  attentionBlocks?: OnnxImportAttentionBlock[];
+};
+
+/** Network instance augmented with optional imported ONNX pooling metadata via the _onnxPooling field. */
 export type NetworkWithOnnxImportPooling = Network & {
   _onnxPooling?: OnnxImportPoolingMetadata;
+};
+
+/** Network instance augmented with optional imported advanced-graph metadata via the _onnxAdvancedGraph field. */
+export type NetworkWithOnnxImportAdvancedGraph = Network & {
+  _onnxAdvancedGraph?: OnnxImportAdvancedGraphMetadata;
 };

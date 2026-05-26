@@ -1,4 +1,4 @@
-import Node from '../../node';
+﻿import Node from '../../node';
 import Connection from '../../connection';
 import {
   resolveActivationFunction,
@@ -46,7 +46,8 @@ export function refreshNodeIndices(nodes: Node[]): void {
 }
 
 /**
- * Collects node activation values in positional order.
+ * Collect node activation values in positional order so compact payload slot alignment stays deterministic across export and import paths.
+ * The returned vector is index-stable relative to the current node list order.
  *
  * @param nodes - Node list.
  * @returns Activation list aligned to node indices.
@@ -60,7 +61,8 @@ export function collectNodeActivations(nodes: Node[]): number[] {
 }
 
 /**
- * Collects node state values in positional order.
+ * Collect node state values in positional order so recurrent runtime state can be restored exactly after compact deserialization.
+ * This preserves alignment with activation and squash-key arrays in the compact tuple.
  *
  * @param nodes - Node list.
  * @returns State list aligned to node indices.
@@ -72,9 +74,8 @@ export function collectNodeStates(nodes: Node[]): number[] {
 }
 
 /**
- * Collects node activation keys in positional order.
- *
- * Each function reference is normalized to a string key for compact transfer.
+ * Collect node activation keys in positional order by normalizing function references to stable string identifiers.
+ * This keeps compact payloads portable across runtimes where function identity values cannot be serialized directly.
  *
  * @param nodes - Node list.
  * @returns Squash-key list aligned to node indices.
@@ -89,7 +90,8 @@ export function collectNodeSquashKeys(nodes: Node[]): string[] {
 }
 
 /**
- * Collects compact connection records from forward and self connection groups.
+ * Collect compact connection records from forward and self-connection groups while preserving historical identity metadata.
+ * Callers should refresh node indices first so endpoint references remain canonical.
  *
  * @param networkInternals - Runtime internals.
  * @returns Serialized connection list.
@@ -123,9 +125,8 @@ export function collectNodeGeneIds(nodes: Node[]): Array<number | null> {
 }
 
 /**
- * Rebuilds runtime nodes from compact payload arrays.
- *
- * Node type is inferred from index position relative to input/output boundaries.
+ * Rebuild runtime nodes from compact payload arrays by restoring type, scalar state, activation key, and optional gene identifiers.
+ * Node type is inferred from positional input/output boundaries to keep payload shape compact.
  *
  * @param networkInternals - Runtime internals.
  * @param compactNodeContext - Compact node rebuild context.

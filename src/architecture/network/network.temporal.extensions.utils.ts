@@ -49,7 +49,8 @@ type GruRoleNodes = {
 };
 
 /**
- * Split one LSTM layer node list into its canonical role groups.
+ * Split one LSTM layer node list into canonical role groups used by temporal descriptor assembly and validation helpers.
+ * This ensures later descriptor builders can map contiguous runtime node slices back to stable gate semantics.
  *
  * @param layerNodes Flat LSTM layer node list in factory order.
  * @param blockSize Number of nodes allocated per role group.
@@ -73,7 +74,8 @@ export function splitLstmLayerNodes(
 }
 
 /**
- * Split one GRU layer node list into its canonical role groups.
+ * Split one GRU layer node list into canonical role groups required by recurrent descriptor and gating metadata builders.
+ * The partition keeps gate ownership deterministic so inheritance and synchronization logic can remain topology-aware.
  *
  * @param layerNodes Flat GRU layer node list in factory order.
  * @param blockSize Number of nodes allocated per role group.
@@ -98,7 +100,8 @@ export function splitGruLayerNodes(
 }
 
 /**
- * Build the explicit Step 7.4 descriptor set for one runtime LSTM block.
+ * Build the explicit Step 7.4 descriptor set for one runtime LSTM block using canonical role partitions and innovation ownership.
+ * The result captures module and gate boundaries so downstream tooling can keep recurrent structure observable and stable.
  *
  * @param network Runtime network carrying the block.
  * @param roleNodes Canonical LSTM role groups.
@@ -142,7 +145,8 @@ export function buildLstmTemporalDescriptorSet(
 }
 
 /**
- * Build the explicit Step 7.4 descriptor set for one runtime GRU block.
+ * Build the explicit Step 7.4 descriptor set for one runtime GRU block from canonical role slices and gated innovations.
+ * This metadata keeps reconstruction, diagnostics, and visualization aligned with the live recurrent runtime graph.
  *
  * @param network Runtime network carrying the block.
  * @param roleNodes Canonical GRU role groups.
@@ -188,7 +192,8 @@ export function buildGruTemporalDescriptorSet(
 }
 
 /**
- * Build one explicit Step 7.4 descriptor set for a NARX delay line.
+ * Build one explicit Step 7.4 descriptor set for a NARX delay line using delay-step role partitions.
+ * The descriptor preserves memory-shelf structure so serialization and inheritance retain temporal intent across generations.
  *
  * @param network Runtime network carrying the delay line.
  * @param moduleLabel Stable label distinguishing multiple delay-line modules.
@@ -222,7 +227,8 @@ export function buildNarxMemoryTemporalDescriptorSet(
 }
 
 /**
- * Append one or more temporal descriptors to the runtime extension bag.
+ * Append one or more temporal descriptors to the runtime extension bag after synchronizing and deduplicating prior records.
+ * This keeps recurrent metadata consistent with the live graph before mutation, export, or diagnostics consumers read it.
  *
  * @param network Runtime network that should retain explicit temporal metadata.
  * @param descriptorSet Descriptor set to merge into the hydrated extension bag.
@@ -355,7 +361,8 @@ export function describeTemporalStructure(
 }
 
 /**
- * Preserve parent temporal descriptors that remain structurally valid on one offspring.
+ * Preserve parent temporal descriptors that remain structurally valid on one offspring after crossover merges genome material.
+ * Inherited descriptors are filtered against the offspring runtime graph so stale module or gate references never persist.
  *
  * @param offspring Offspring runtime network produced by crossover.
  * @param parents Parent runtime networks that may carry temporal descriptors.

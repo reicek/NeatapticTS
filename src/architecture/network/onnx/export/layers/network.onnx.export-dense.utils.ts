@@ -18,6 +18,7 @@ import type {
   PerNeuronNodeContext,
   PerNeuronSubgraphContext,
   PerNeuronTensorNames,
+  ResidualAddLayerParams,
   SharedActivationNodeBuildParams,
   SharedGemmNodeBuildParams,
 } from '../network.onnx.export.types';
@@ -26,7 +27,7 @@ import {
   buildDenseWeightsAndBiases,
   emitOptionalPoolingAndFlatten,
 } from './network.onnx.export-layer-common.utils';
-import { mapActivationToOnnx } from '../../network.onnx.layer-analysis.utils';
+import { resolveOnnxActivationNodeConfig } from '../../network.onnx.layer-analysis.utils';
 
 /**
  * Emit the compact dense export path for a layer whose neurons all share the
@@ -121,6 +122,7 @@ export function emitDenseLayer(params: DenseLayerParams): string {
       tensorNames,
       graphNames,
       squash: layerContext.activationSquash,
+      opset: layerContext.options.opset ?? 18,
     };
   }
 
@@ -222,6 +224,7 @@ export function emitPerNeuronLayer(params: PerNeuronLayerParams): string {
       previousOutputName: layerContext.previousOutputName,
       previousLayerNodes: layerContext.previousLayerNodes,
       targetNode,
+      opset: layerContext.options.opset ?? 18,
     }));
   }
 
@@ -309,6 +312,121 @@ export function emitPerNeuronLayer(params: PerNeuronLayerParams): string {
       sourceOutputName: layerOutputName,
     });
   }
+}
+
+/**
+ * Emit a one-hop residual-add dense layer.
+ *
+ * This subset preserves one skipped source layer by splitting the target layer
+ * into two affine branches: the ordinary adjacent-layer Gemm keeps the original
+ * bias term, and the skipped source layer emits a bias-free branch whose output
+ * is summed before the layer activation.
+ *
+ * @param params Residual-add emission parameters.
+ * @returns Output tensor name.
+ */
+export function emitResidualAddLayer(params: ResidualAddLayerParams): string {
+  const activationSquash = (
+    params.currentLayerNodes[0] as unknown as NodeInternals
+  ).squash;
+  const mainTensorNames = createDenseTensorNames(params.layerIndex);
+  const mainInitializerValues = buildDenseWeightsAndBiases(
+    params.previousLayerNodes,
+    params.currentLayerNodes,
+  );
+  const residualInitializerValues = buildDenseWeightsAndBiases(
+    params.residualSourceLayerNodes,
+    params.currentLayerNodes,
+  );
+  const residualWeightTensorName = `ResidualW_l${params.layerIndex}`;
+  const residualBiasTensorName = `ResidualB_l${params.layerIndex}`;
+  const mainGemmOutputName = `Gemm_${params.layerIndex}_main`;
+  const activationOutputName = `Layer_${params.layerIndex}`;
+
+  // Step 1: Emit adjacent-layer dense initializers.
+  appendDenseWeightInitializer(
+    {
+      ...params,
+      activationSquash,
+      legacyNodeOrdering: false,
+    },
+    mainTensorNames.weightTensorName,
+    mainInitializerValues.weightMatrixValues,
+  );
+  appendDenseBiasInitializer(
+    {
+      ...params,
+      activationSquash,
+      legacyNodeOrdering: false,
+    },
+    mainTensorNames.biasTensorName,
+    mainInitializerValues.biasVector,
+  );
+
+  // Step 2: Emit the skipped-source residual branch initializers.
+  params.model.graph.initializer.push({
+    name: residualWeightTensorName,
+    data_type: 1,
+    dims: [
+      params.currentLayerNodes.length,
+      params.residualSourceLayerNodes.length,
+    ],
+    float_data: residualInitializerValues.weightMatrixValues,
+  });
+  params.model.graph.initializer.push({
+    name: residualBiasTensorName,
+    data_type: 1,
+    dims: [params.currentLayerNodes.length],
+    float_data: Array.from(
+      { length: params.currentLayerNodes.length },
+      () => 0,
+    ),
+  });
+
+  // Step 3: Emit the main Gemm, residual Gemm, Add, and activation nodes.
+  params.model.graph.node.push(
+    createSharedGemmNodePayload({
+      previousOutputName: params.previousOutputName,
+      weightTensorName: mainTensorNames.weightTensorName,
+      biasTensorName: mainTensorNames.biasTensorName,
+      gemmOutputName: mainGemmOutputName,
+      nodeName: `gemm_l${params.layerIndex}_main`,
+    }),
+    createSharedGemmNodePayload({
+      previousOutputName: params.residualSourceOutputName,
+      weightTensorName: residualWeightTensorName,
+      biasTensorName: residualBiasTensorName,
+      gemmOutputName: params.branchTensorName,
+      nodeName: `residual_gemm_l${params.layerIndex}`,
+    }),
+    {
+      op_type: 'Add',
+      input: [mainGemmOutputName, params.branchTensorName],
+      output: [params.mergeOutputName],
+      name: params.mergeNodeName,
+    },
+    createSharedActivationNodePayload({
+      activationType: resolveOnnxActivationNodeConfig(
+        activationSquash,
+        params.options.opset ?? 18,
+      ).operation,
+      activationAttributes: resolveOnnxActivationNodeConfig(
+        activationSquash,
+        params.options.opset ?? 18,
+      ).attributes,
+      gemmOutputName: params.mergeOutputName,
+      activationOutputName,
+      nodeName: `act_l${params.layerIndex}`,
+    }),
+  );
+
+  // Step 4: Fold to optional pooling and flatten output.
+  return emitOptionalLayerOutput({
+    model: params.model,
+    options: params.options,
+    layerIndex: params.layerIndex,
+    sourceOutputName: activationOutputName,
+  });
 }
 
 /**
@@ -497,8 +615,14 @@ function createGemmNode(
 function createActivationNode(
   denseActivationContext: DenseActivationContext,
 ): DenseActivationNodePayload {
+  const activationConfig = resolveOnnxActivationNodeConfig(
+    denseActivationContext.squash,
+    denseActivationContext.opset,
+  );
+
   return createSharedActivationNodePayload({
-    activationType: mapActivationToOnnx(denseActivationContext.squash),
+    activationType: activationConfig.operation,
+    activationAttributes: activationConfig.attributes,
     gemmOutputName: denseActivationContext.graphNames.gemmOutputName,
     activationOutputName:
       denseActivationContext.graphNames.activationOutputName,
@@ -571,6 +695,7 @@ function emitPerNeuronSubgraph(
       previousLayerNodes: subgraphContext.previousLayerNodes,
       targetNodeInternal:
         subgraphContext.targetNode as unknown as NodeInternals,
+      opset: subgraphContext.opset,
     };
   }
 
@@ -677,10 +802,14 @@ function emitPerNeuronSubgraph(
     nodeContext: PerNeuronNodeContext,
     graphNames: PerNeuronGraphNames,
   ): DenseActivationNodePayload {
+    const activationConfig = resolveOnnxActivationNodeConfig(
+      nodeContext.targetNodeInternal.squash,
+      nodeContext.opset,
+    );
+
     return createSharedActivationNodePayload({
-      activationType: mapActivationToOnnx(
-        nodeContext.targetNodeInternal.squash,
-      ),
+      activationType: activationConfig.operation,
+      activationAttributes: activationConfig.attributes,
       gemmOutputName: graphNames.gemmOutputName,
       activationOutputName: graphNames.activationOutputName,
       nodeName: `act_l${nodeContext.layerIndex}_n${nodeContext.neuronIndex}`,
@@ -774,6 +903,7 @@ function createSharedActivationNodePayload(
     input: [params.gemmOutputName],
     output: [params.activationOutputName],
     name: params.nodeName,
+    attributes: params.activationAttributes,
   };
 }
 

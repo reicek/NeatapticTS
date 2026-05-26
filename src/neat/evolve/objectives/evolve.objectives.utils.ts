@@ -4,6 +4,12 @@ import type {
   ObjectiveDescriptor,
 } from '../evolve.types';
 
+type DynamicObjectiveConfig = NonNullable<
+  NonNullable<
+    NeatControllerForEvolution['options']['multiObjective']
+  >['dynamic']
+>;
+
 /**
  * Objective-scheduling and maintenance helpers for NEAT evolution.
  *
@@ -212,48 +218,125 @@ export function applyDynamicObjectiveSchedule(
   const multiObjective = internal.options.multiObjective;
   if (!multiObjective?.enabled) return;
   const dynamicConfig = multiObjective.dynamic;
-  if (dynamicConfig?.enabled) {
-    // Step 2: Add scheduled objectives.
-    const addComplexityAt = dynamicConfig.addComplexityAt ?? Infinity;
-    const addEntropyAt = dynamicConfig.addEntropyAt ?? Infinity;
-    if (
-      internal.generation + 1 >= addComplexityAt &&
-      !currentObjectiveKeys.includes('complexity')
-    ) {
-      internal.registerObjective(
-        'complexity',
-        'min',
-        (genome) => genome.connections.length,
-      );
-      internal._pendingObjectiveAdds.push('complexity');
-    }
-    if (
-      internal.generation + 1 >= addEntropyAt &&
-      !currentObjectiveKeys.includes('entropy')
-    ) {
-      internal.registerObjective(
-        'entropy',
-        'max',
-        createEntropyAccessor(internal),
-      );
-      internal._pendingObjectiveAdds.push('entropy');
-    }
-    // Step 3: Handle entropy drop/re-add.
-    handleEntropyDropAndReadd(internal, currentObjectiveKeys, dynamicConfig);
-  } else if (multiObjective.autoEntropy) {
-    // Step 4: Auto-entropy fallback.
-    if (
-      internal.generation >= config.autoEntropyAddAt &&
-      !currentObjectiveKeys.includes('entropy')
-    ) {
-      internal.registerObjective(
-        'entropy',
-        'max',
-        createEntropyAccessor(internal),
-      );
-      internal._pendingObjectiveAdds.push('entropy');
-    }
+  if (isDynamicObjectiveScheduleEnabled(dynamicConfig)) {
+    // Step 2: Apply configured dynamic scheduling.
+    applyConfiguredDynamicObjectiveSchedule(
+      internal,
+      currentObjectiveKeys,
+      dynamicConfig,
+    );
+    return;
   }
+
+  // Step 3: Apply the fallback auto-entropy policy when configured.
+  applyAutoEntropyFallback(
+    internal,
+    currentObjectiveKeys,
+    multiObjective.autoEntropy === true,
+    config.autoEntropyAddAt,
+  );
+}
+
+function isDynamicObjectiveScheduleEnabled(
+  dynamicConfig: DynamicObjectiveConfig | undefined,
+): dynamicConfig is DynamicObjectiveConfig {
+  return dynamicConfig?.enabled === true;
+}
+
+function applyConfiguredDynamicObjectiveSchedule(
+  internal: NeatControllerForEvolution,
+  currentObjectiveKeys: string[],
+  dynamicConfig: DynamicObjectiveConfig,
+): void {
+  queueScheduledComplexityObjective(
+    internal,
+    currentObjectiveKeys,
+    dynamicConfig,
+  );
+  queueScheduledEntropyObjective(internal, currentObjectiveKeys, dynamicConfig);
+  handleEntropyDropAndReadd(internal, currentObjectiveKeys, dynamicConfig);
+}
+
+function queueScheduledComplexityObjective(
+  internal: NeatControllerForEvolution,
+  currentObjectiveKeys: string[],
+  dynamicConfig: DynamicObjectiveConfig,
+): void {
+  if (
+    !shouldAddScheduledObjective(
+      internal.generation + 1,
+      dynamicConfig.addComplexityAt,
+      'complexity',
+      currentObjectiveKeys,
+    )
+  ) {
+    return;
+  }
+
+  internal.registerObjective(
+    'complexity',
+    'min',
+    (genome) => genome.connections.length,
+  );
+  internal._pendingObjectiveAdds.push('complexity');
+}
+
+function queueScheduledEntropyObjective(
+  internal: NeatControllerForEvolution,
+  currentObjectiveKeys: string[],
+  dynamicConfig: DynamicObjectiveConfig,
+): void {
+  if (
+    !shouldAddScheduledObjective(
+      internal.generation + 1,
+      dynamicConfig.addEntropyAt,
+      'entropy',
+      currentObjectiveKeys,
+    )
+  ) {
+    return;
+  }
+
+  registerEntropyObjective(internal);
+}
+
+function applyAutoEntropyFallback(
+  internal: NeatControllerForEvolution,
+  currentObjectiveKeys: string[],
+  autoEntropyEnabled: boolean,
+  autoEntropyAddAt: number,
+): void {
+  if (
+    !autoEntropyEnabled ||
+    !shouldAddScheduledObjective(
+      internal.generation,
+      autoEntropyAddAt,
+      'entropy',
+      currentObjectiveKeys,
+    )
+  ) {
+    return;
+  }
+
+  registerEntropyObjective(internal);
+}
+
+function shouldAddScheduledObjective(
+  observedGeneration: number,
+  configuredGeneration: number | undefined,
+  objectiveKey: string,
+  currentObjectiveKeys: string[],
+): boolean {
+  const scheduleGeneration = configuredGeneration ?? Infinity;
+  return (
+    observedGeneration >= scheduleGeneration &&
+    !currentObjectiveKeys.includes(objectiveKey)
+  );
+}
+
+function registerEntropyObjective(internal: NeatControllerForEvolution): void {
+  internal.registerObjective('entropy', 'max', createEntropyAccessor(internal));
+  internal._pendingObjectiveAdds.push('entropy');
 }
 
 /**
@@ -280,11 +363,7 @@ export function applyDynamicObjectiveSchedule(
 function handleEntropyDropAndReadd(
   internal: NeatControllerForEvolution,
   currentObjectiveKeys: string[],
-  dynamicConfig: NonNullable<
-    NonNullable<
-      NeatControllerForEvolution['options']['multiObjective']
-    >['dynamic']
-  >,
+  dynamicConfig: DynamicObjectiveConfig,
 ): void {
   // Step 1: Drop entropy when stagnation threshold hit.
   if (
@@ -318,12 +397,7 @@ function handleEntropyDropAndReadd(
       internal.generation - internal._entropyDropped >=
       dynamicConfig.readdEntropyAfter
     ) {
-      internal.registerObjective(
-        'entropy',
-        'max',
-        createEntropyAccessor(internal),
-      );
-      internal._pendingObjectiveAdds.push('entropy');
+      registerEntropyObjective(internal);
       internal._entropyDropped = undefined;
     }
   }

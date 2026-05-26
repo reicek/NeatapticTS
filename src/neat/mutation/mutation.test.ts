@@ -670,6 +670,75 @@ describe('neat mutation chapter', () => {
         // Assert
         expect(() => createGenomeFromNetwork(network)).not.toThrow();
       });
+
+      it('avoids reusing split innovations already present in the same genome', async () => {
+        // Arrange: split one starter edge through a known record, then recreate
+        // that historical edge so a second split would collide with the earlier
+        // replacement innovations if reuse is applied blindly.
+        const mutationController = new Neat(2, 1, () => 0, {
+          popsize: 1,
+          seed: 732,
+        });
+        const network = mutationController.population[0];
+        const originalConnection = network.connections[0];
+
+        if (!originalConnection) {
+          throw new Error('Expected a starter connection to exist.');
+        }
+
+        const splitKey = `splitConnectionInnovation:${originalConnection.innovation}`;
+        const sourceNode = originalConnection.from;
+        const targetNode = originalConnection.to;
+        const originalWeight = originalConnection.weight;
+        const innovationTracker = (
+          mutationController as unknown as {
+            _innovationTracker: Parameters<typeof recordNodeSplitRecord>[0];
+          }
+        )._innovationTracker;
+
+        recordNodeSplitRecord(innovationTracker, splitKey, {
+          newNodeGeneId: 42,
+          inInnov: 100,
+          outInnov: 101,
+        });
+
+        network.connections.forEach((connectionEntry, connectionIndex) => {
+          connectionEntry.enabled = connectionIndex === 0;
+        });
+
+        await mutateAddNodeReuse.call(
+          mutationController as unknown as ThisParameterType<
+            typeof mutateAddNodeReuse
+          >,
+          network as unknown as Parameters<typeof mutateAddNodeReuse>[0],
+        );
+
+        const recreatedConnection = network.connect(
+          sourceNode,
+          targetNode,
+          originalWeight,
+        )[0];
+
+        if (!recreatedConnection) {
+          throw new Error('Expected to recreate the original edge.');
+        }
+
+        recreatedConnection.innovation = originalConnection.innovation;
+        network.connections.forEach((connectionEntry) => {
+          connectionEntry.enabled = connectionEntry === recreatedConnection;
+        });
+
+        // Act
+        await mutateAddNodeReuse.call(
+          mutationController as unknown as ThisParameterType<
+            typeof mutateAddNodeReuse
+          >,
+          network as unknown as Parameters<typeof mutateAddNodeReuse>[0],
+        );
+
+        // Assert
+        expect(() => createGenomeFromNetwork(network)).not.toThrow();
+      });
     });
 
     describe('given an external genome carries self connections and missing innovation metadata', () => {

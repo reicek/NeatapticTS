@@ -1,7 +1,23 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e ' *)"
+      "Bash(node *)",
+      "Bash(npx *)",
+      "Bash(npm *)",
+      "Bash(git *)",
+      "Bash(grep *)",
+      "Bash(awk *)",
+      "Bash(xargs *)",
+      "Bash(ls *)",
+      "PowerShell",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true
 }

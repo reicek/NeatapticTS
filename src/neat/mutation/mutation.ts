@@ -270,7 +270,10 @@ export async function mutateAddNodeReuse(
   );
   const { default: NodeClass } = await import('../../architecture/node');
 
-  if (splitRecord) {
+  if (
+    splitRecord &&
+    !mutationAddNode.doesSplitRecordConflictWithGenome(genome, splitRecord)
+  ) {
     mutationAddNode.applySplitWithExistingRecord(
       genome,
       chosenConnection,
@@ -278,6 +281,17 @@ export async function mutateAddNodeReuse(
       splitRecord,
       NodeClass,
       internal._getRNG(),
+    );
+    return;
+  }
+
+  if (splitRecord) {
+    mutationAddNode.applySplitWithFreshIdentity(
+      genome,
+      chosenConnection,
+      splitDescriptor,
+      NodeClass,
+      internal,
     );
     return;
   }

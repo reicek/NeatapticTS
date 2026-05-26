@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import type {
   CostDerivative,
   NetworkNode,
@@ -9,7 +9,7 @@ import type {
 import { NetworkTrainingOutputTargetLengthError } from './network.training.errors';
 
 /**
- * Propagate output and hidden errors backward through the network.
+ * Propagate output and hidden error signals backward through the network graph.
  *
  * @param this Bound network instance.
  * @param rate Learning rate.
@@ -18,6 +18,9 @@ import { NetworkTrainingOutputTargetLengthError } from './network.training.error
  * @param target Output target values.
  * @param regularization L2 regularization factor.
  * @param costDerivative Optional output-node derivative override.
+ */
+/**
+ * Contract for propagate.
  */
 export function propagate(
   this: Network,
@@ -49,7 +52,7 @@ export function propagate(
 }
 
 /**
- * Clear all node runtime traces and states.
+ * Clear all accumulated per-node runtime traces and saved activation states.
  *
  * @param this Bound network instance.
  */

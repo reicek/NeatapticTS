@@ -215,8 +215,8 @@ API, default, or runtime contract.
   `### YYYY-MM-DD - Playback boundary pass`.
 
 15. Run the narrow green validation for the active boundary, then run
-  `coverage-guard` on every `src/` file touched by the split to enforce 100%
-  coverage in all four categories (statements, branches, functions, lines).
+    `coverage-guard` on every `src/` file touched by the split to enforce 100%
+    coverage in all four categories (statements, branches, functions, lines).
 
 16. Immediately run `educational-docs` as the next step on the touched
     surface.

@@ -5,6 +5,9 @@ import {
   createNeatChatPretrainingPreview,
   createNeatChatSeedNetwork,
   createNeatChatSession,
+  exportNeatChatSession,
+  formatNeatChatExampleContract,
+  importNeatChatSession,
   pretrainNeatChatSessionWithConversationLines,
   updateNeatChatSessionContextWindowTokenCount,
   extractNeatChatConversationLines,
@@ -14,6 +17,16 @@ import {
   splitNeatChatSeedAndValidationLines,
   tokenizeNeatChatText,
 } from './index';
+import {
+  buildSeedFullStreamTrainingCases,
+  inferResponseTokenIndices,
+  mapTextToVocabularyIndices,
+} from './core/neatChat.session.services';
+import { createNeatChatEpisodicMemoryBank } from './core/neatChat.memory.services';
+import {
+  NeatChatSnapshotShapeError,
+  NeatChatSnapshotVersionError,
+} from './core/neatChat.errors';
 
 describe('neatChat public contract behavior', () => {
   it('exposes a bounded sequence-learning contract with Flappy visualizer reuse metadata', () => {
@@ -116,6 +129,29 @@ describe('neatChat public contract behavior', () => {
       includesUnknownToken: true,
       specialTokens: ['UNK', 'BOS', 'EOS', 'TURN_BREAK'],
       topologyIntent: 'unconstrained',
+    });
+  });
+
+  it('builds GRU and NARX seed networks from the public builder entrypoint', () => {
+    // Arrange
+    const gruSeedNetworkResult = createNeatChatSeedNetwork({
+      architectureFamily: 'gru',
+      recurrentBlockSize: 4,
+      vocabularySize: 8,
+    });
+    const narxSeedNetworkResult = createNeatChatSeedNetwork({
+      architectureFamily: 'narx',
+      recurrentBlockSize: 4,
+      vocabularySize: 8,
+    });
+
+    // Assert
+    expect({
+      gruArchitectureFamily: gruSeedNetworkResult.summary.architectureFamily,
+      narxArchitectureFamily: narxSeedNetworkResult.summary.architectureFamily,
+    }).toEqual({
+      gruArchitectureFamily: 'gru',
+      narxArchitectureFamily: 'narx',
     });
   });
 
@@ -232,6 +268,29 @@ describe('neatChat public contract behavior', () => {
     // Assert
     expect(pretrainingPreview.retainedTerms).toEqual(['star', 'sun']);
   });
+
+  it('formats the contract preview with corpus labels and delivery progress', () => {
+    // Arrange
+    const exampleContract = createNeatChatExampleContract();
+    const seedNetworkSummary = createNeatChatSeedNetwork({
+      vocabularySize: 8,
+    }).summary;
+
+    // Act
+    const formattedContract = formatNeatChatExampleContract(
+      exampleContract,
+      seedNetworkSummary,
+    );
+
+    // Assert
+    expect(
+      formattedContract.includes('Character count') &&
+        formattedContract.includes(
+          'available: Step 1 - Define the example contract',
+        ) &&
+        formattedContract.includes('flappy_bird'),
+    ).toBe(true);
+  });
 });
 
 const COMPACT_ONLINE_LEARNING_RETAINED_TERMS = [
@@ -255,6 +314,19 @@ function createCompactSession(
 
 describe('neatChat online learning behavior', () => {
   describe('vocabulary mapping', () => {
+    it('buildNeatChatVocabulary keeps only the stable control tokens when no retained terms are supplied', () => {
+      // Arrange
+      const vocabulary = buildNeatChatVocabulary();
+
+      // Assert
+      expect(vocabulary.indexToTerm).toEqual([
+        'UNK',
+        'BOS',
+        'EOS',
+        'TURN_BREAK',
+      ]);
+    });
+
     it('buildNeatChatVocabulary places special tokens at stable indices 0–3', () => {
       // Arrange
       const vocabulary = buildNeatChatVocabulary(['hello', 'world']);
@@ -307,6 +379,29 @@ describe('neatChat online learning behavior', () => {
       expect(session.learnedExchangeCount).toBe(0);
     });
 
+    it('createNeatChatSession builds GRU and NARX sessions from the session-service builder branch', () => {
+      // Arrange
+      const gruSession = createNeatChatSession({
+        architectureFamily: 'gru',
+        corpusRetainedTerms: ['hello'],
+        recurrentBlockSize: 4,
+      });
+      const narxSession = createNeatChatSession({
+        architectureFamily: 'narx',
+        corpusRetainedTerms: ['hello'],
+        recurrentBlockSize: 4,
+      });
+
+      // Assert
+      expect({
+        gruVocabularySize: gruSession.vocabulary.size,
+        narxVocabularySize: narxSession.vocabulary.size,
+      }).toEqual({
+        gruVocabularySize: 5,
+        narxVocabularySize: 5,
+      });
+    });
+
     it('createNeatChatSession uses provided contextWindowTokenCount', () => {
       // Arrange
       const session = createCompactSession({ contextWindowTokenCount: 50 });
@@ -349,6 +444,20 @@ describe('neatChat online learning behavior', () => {
         learnedTokenPairCount:
           exchangeResult.updatedSession.learnedTokenPairCount,
       });
+    });
+
+    it('updateNeatChatSessionContextWindowTokenCount returns the same session when the count is unchanged', () => {
+      // Arrange
+      const session = createCompactSession({ contextWindowTokenCount: 24 });
+
+      // Act
+      const updatedSession = updateNeatChatSessionContextWindowTokenCount(
+        session,
+        24,
+      );
+
+      // Assert
+      expect(updatedSession).toBe(session);
     });
 
     it('createNeatChatSession includes non-special bootstrap terms by default', () => {
@@ -551,6 +660,20 @@ describe('neatChat online learning behavior', () => {
       );
     });
 
+    it('pretrainNeatChatSessionWithConversationLines returns the same session when no usable line pairs remain', () => {
+      // Arrange
+      const session = createCompactSession();
+
+      // Act
+      const updatedSession = pretrainNeatChatSessionWithConversationLines(
+        session,
+        ['   '],
+      );
+
+      // Assert
+      expect(updatedSession).toBe(session);
+    });
+
     it('runNeatChatExchange does not emit TURN_BREAK in decoded response tokens', () => {
       // Arrange — tiny fixture with small recurrent block keeps seeding under 2 s
       const sampleConversationLines =
@@ -607,6 +730,215 @@ describe('neatChat online learning behavior', () => {
       // the response must not be UNK
       expect(result.response).not.toBe('UNK');
     });
+
+    it('runNeatChatExchange falls back to the last in-vocabulary token when decoding yields no response tokens', () => {
+      // Arrange
+      const session = createCoverageSession({
+        retainedTerms: ['hello'],
+        network: createStaticScoreNetwork(5),
+      });
+
+      // Act
+      const result = runNeatChatExchange(
+        session,
+        createRepeatedPrompt('hello', 11),
+      );
+
+      // Assert
+      expect(result.response).toBe('hello');
+    });
+
+    it('runNeatChatExchange falls back to UNK when the vocabulary has no non-special terms', () => {
+      // Arrange
+      const session = createCoverageSession({
+        retainedTerms: [],
+        network: createStaticScoreNetwork(4),
+      });
+
+      // Act
+      const result = runNeatChatExchange(
+        session,
+        createRepeatedPrompt('mystery', 11),
+      );
+
+      // Assert
+      expect(result.response).toBe('UNK');
+    });
+
+    it('runNeatChatExchange returns UNK when the prompt tokenizes to no user tokens and decoding emits nothing', () => {
+      // Arrange
+      const session = createCoverageSession({
+        retainedTerms: ['hello'],
+        network: createStaticScoreNetwork(5),
+      });
+
+      // Act
+      const result = runNeatChatExchange(session, '   ');
+
+      // Assert
+      expect(result.response).toBe('UNK');
+    });
+
+    it('runNeatChatExchange can commit a low-confidence update when the baseline error is non-finite', () => {
+      // Arrange
+      const session = createCoverageSession({
+        retainedTerms: ['hello'],
+        network: createStaticScoreNetwork(5, { baselineError: Infinity }),
+      });
+
+      // Act
+      const result = runNeatChatExchange(session, 'hello');
+
+      // Assert
+      expect(result.trainedTokenPairCount).toBeGreaterThan(0);
+    });
+
+    it('runNeatChatExchange skips low-confidence updates when the baseline error does not improve', () => {
+      // Arrange
+      const session = createCoverageSession({
+        retainedTerms: ['hello'],
+        network: createStaticScoreNetwork(5, { baselineError: 0 }),
+      });
+
+      // Act
+      const result = runNeatChatExchange(session, 'hello');
+
+      // Assert
+      expect(result.trainedTokenPairCount).toBe(0);
+    });
+
+    it('runNeatChatExchange replays unknown prior responses even when a previous user turn is empty', () => {
+      // Arrange
+      const session = createCoverageSession({
+        retainedTerms: ['hello'],
+        network: createStaticScoreNetwork(5),
+        exchanges: [
+          {
+            userMessage: '',
+            response: 'mystery',
+            trainedTokenPairCount: 0,
+            userTokens: [],
+            responseTokens: ['mystery'],
+          },
+        ],
+      });
+
+      // Act
+      const result = runNeatChatExchange(
+        session,
+        createRepeatedPrompt('hello', 11),
+      );
+
+      // Assert
+      expect(result.updatedSession.replayBufferExchangeCount).toBe(2);
+    });
+
+    it('runNeatChatExchange replays out-of-vocabulary prior user tokens through the UNK slot', () => {
+      // Arrange
+      const recordingNetwork = createStaticScoreNetwork(5, {
+        activationOutput: [0, 0, 0, 0, 1],
+      });
+      const session = createCoverageSession({
+        retainedTerms: ['hello'],
+        network: recordingNetwork,
+        exchanges: [
+          {
+            userMessage: 'mystery',
+            response: 'hello',
+            trainedTokenPairCount: 0,
+            userTokens: ['mystery'],
+            responseTokens: ['hello'],
+          },
+        ],
+      });
+
+      // Act
+      runNeatChatExchange(session, 'hello');
+
+      // Assert
+      expect(
+        recordingNetwork.getRecordedTrainingCaseIndices().slice(5, 9),
+      ).toEqual([
+        { inputTokenIndex: 1, outputTokenIndex: 0 },
+        { inputTokenIndex: 0, outputTokenIndex: 3 },
+        { inputTokenIndex: 3, outputTokenIndex: 4 },
+        { inputTokenIndex: 4, outputTokenIndex: 2 },
+      ]);
+    });
+  });
+});
+
+describe('neatChat helper edge cases', () => {
+  it('splitNeatChatSeedAndValidationLines keeps every trimmed line in validation when the corpus is too small', () => {
+    // Arrange
+    const smallConversationLines = [' hello ', '', 'there'];
+
+    // Act
+    const splitResult = splitNeatChatSeedAndValidationLines(
+      smallConversationLines,
+      4,
+    );
+
+    // Assert
+    expect(splitResult).toEqual({
+      seedConversationLines: [],
+      validationConversationLines: ['hello', 'there'],
+    });
+  });
+
+  it('mapTextToVocabularyIndices maps out-of-vocabulary tokens to the UNK index', () => {
+    // Arrange
+    const vocabulary = buildNeatChatVocabulary(['hello']);
+
+    // Act
+    const tokenIndices = mapTextToVocabularyIndices(
+      vocabulary,
+      'hello mystery',
+    );
+
+    // Assert
+    expect(tokenIndices).toEqual([4, 0]);
+  });
+
+  it('buildSeedFullStreamTrainingCases keeps the BOS-to-EOS transition even when no seed lines are supplied', () => {
+    // Arrange
+    const vocabulary = buildNeatChatVocabulary(['hello']);
+
+    // Act
+    const trainingCases = buildSeedFullStreamTrainingCases(vocabulary, []);
+
+    // Assert
+    expect(trainingCases).toHaveLength(1);
+  });
+
+  it('buildSeedFullStreamTrainingCases skips blank seed lines instead of adding an empty turn break', () => {
+    // Arrange
+    const vocabulary = buildNeatChatVocabulary(['hello', 'world']);
+
+    // Act
+    const trainingCases = buildSeedFullStreamTrainingCases(vocabulary, [
+      'hello',
+      '   ',
+      'world',
+    ]);
+
+    // Assert
+    expect(trainingCases).toHaveLength(5);
+  });
+
+  it('inferResponseTokenIndices returns no tokens when every candidate score is missing', () => {
+    // Arrange
+    const emptyScoreNetwork = createStaticScoreNetwork(5);
+
+    // Act
+    const responseIndices = inferResponseTokenIndices(
+      emptyScoreNetwork as never,
+      5,
+      [4],
+    );
+
+    // Assert
+    expect(responseIndices).toEqual([]);
   });
 });
 
@@ -881,3 +1213,158 @@ describe('neatChat A/B evaluation behavior', () => {
     });
   });
 });
+
+describe('exportNeatChatSession / importNeatChatSession (v1 roundtrip)', () => {
+  it('exports a bundle with formatVersion 1', () => {
+    // Arrange
+    const session = createNeatChatSession({
+      corpusRetainedTerms: ['hello', 'there', 'general', 'kenobi'],
+      recurrentBlockSize: 8,
+      seedConversationLines: ['hello there', 'general kenobi'],
+    });
+
+    // Act
+    const bundle = exportNeatChatSession(session);
+
+    // Assert
+    expect(bundle.formatVersion).toBe(1);
+  });
+
+  it('imports a round-tripped session with matching vocabulary size', () => {
+    // Arrange
+    const session = createNeatChatSession({
+      corpusRetainedTerms: ['hello', 'there', 'general', 'kenobi'],
+      recurrentBlockSize: 8,
+      seedConversationLines: ['hello there', 'general kenobi'],
+    });
+    const bundle = exportNeatChatSession(session);
+
+    // Act
+    const importedSession = importNeatChatSession(bundle);
+
+    // Assert
+    expect(importedSession.vocabulary.size).toBe(session.vocabulary.size);
+  });
+
+  it('throws NeatChatSnapshotVersionError for wrong formatVersion', () => {
+    // Arrange
+    const seedNetwork = createNeatChatSeedNetwork({
+      vocabularySize: 4,
+    });
+    const invalidSnapshot = {
+      contextWindowTokenCount: 4,
+      exchanges: [],
+      formatVersion: 2,
+      learnedExchangeCount: 0,
+      learnedTokenPairCount: 0,
+      networkJson: seedNetwork.network.toJSON(),
+      retainedTerms: ['hello', 'there'],
+      seededTokenPairCount: 0,
+    };
+
+    // Act
+    const importAction = () => importNeatChatSession(invalidSnapshot as never);
+
+    // Assert
+    expect(importAction).toThrow(NeatChatSnapshotVersionError);
+  });
+
+  it('throws NeatChatSnapshotShapeError for missing retainedTerms', () => {
+    // Arrange
+    const session = createNeatChatSession({
+      corpusRetainedTerms: ['hello', 'there', 'general', 'kenobi'],
+      recurrentBlockSize: 8,
+      seedConversationLines: ['hello there', 'general kenobi'],
+    });
+    const invalidSnapshot = {
+      ...exportNeatChatSession(session),
+      retainedTerms: undefined,
+    };
+
+    // Act
+    const importAction = () => importNeatChatSession(invalidSnapshot as never);
+
+    // Assert
+    expect(importAction).toThrow(NeatChatSnapshotShapeError);
+  });
+});
+
+function createCoverageSession({
+  retainedTerms,
+  network,
+  exchanges = [],
+}: {
+  readonly retainedTerms: readonly string[];
+  readonly network: ReturnType<typeof createStaticScoreNetwork>;
+  readonly exchanges?: Array<{
+    readonly userMessage: string;
+    readonly response: string;
+    readonly trainedTokenPairCount: number;
+    readonly userTokens: readonly string[];
+    readonly responseTokens: readonly string[];
+  }>;
+}): Parameters<typeof runNeatChatExchange>[0] {
+  const vocabulary = buildNeatChatVocabulary(retainedTerms);
+
+  return {
+    vocabulary,
+    network: network as never,
+    exchanges,
+    learnedExchangeCount: exchanges.length,
+    learnedTokenPairCount: exchanges.reduce(
+      (totalCount, exchangeRecord) =>
+        totalCount + exchangeRecord.trainedTokenPairCount,
+      0,
+    ),
+    seededTokenPairCount: 0,
+    contextWindowTokenCount: 24,
+    replayBufferExchangeCount: exchanges.length,
+    pendingCandidates: [],
+    candidateLog: [],
+    memoryBank: createNeatChatEpisodicMemoryBank(),
+    routingLog: [],
+  };
+}
+
+function createStaticScoreNetwork(
+  vocabularySize: number,
+  options: {
+    readonly activationOutput?: readonly number[];
+    readonly baselineError?: number;
+  } = {},
+) {
+  const jsonSourceNetwork = createNeatChatSeedNetwork({
+    recurrentBlockSize: 4,
+    vocabularySize: Math.max(1, vocabularySize - 4),
+  }).network;
+  const activationOutput = options.activationOutput ?? [];
+  const baselineError = options.baselineError ?? 0;
+  const recordedTrainingCaseIndices: Array<{
+    readonly inputTokenIndex: number;
+    readonly outputTokenIndex: number;
+  }> = [];
+
+  return {
+    activate: () => [...activationOutput],
+    clear: () => undefined,
+    getRecordedTrainingCaseIndices: () => [...recordedTrainingCaseIndices],
+    test: () => ({ error: baselineError }),
+    toJSON: () => jsonSourceNetwork.toJSON(),
+    train: (trainingCases: Array<{ input: number[]; output: number[] }>) => {
+      recordedTrainingCaseIndices.splice(
+        0,
+        recordedTrainingCaseIndices.length,
+        ...trainingCases.map((trainingCase) => ({
+          inputTokenIndex: trainingCase.input.indexOf(1),
+          outputTokenIndex: trainingCase.output.indexOf(1),
+        })),
+      );
+
+      return undefined;
+    },
+  };
+}
+
+function createRepeatedPrompt(token: string, repeatCount: number): string {
+  return Array.from({ length: repeatCount }, () => token).join(' ');
+}

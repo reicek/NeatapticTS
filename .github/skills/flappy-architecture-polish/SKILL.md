@@ -116,10 +116,11 @@ surface.
 
 3. Establish a baseline before changing behavior.
    - Prefer a durable CLI or scriptable probe over a multi-minute Jest test.
-  - The current generic runner is `npm run flappy:architecture:progress`.
-  - The LSTM alias remains `npm run flappy:lstm:progress`.
-   - For npm-run named flags, preserve `npm_config_*` fallbacks because npm 11
-     warns on unknown flags and still forwards them through config env vars.
+
+- The current generic runner is `npm run flappy:architecture:progress`.
+- The LSTM alias remains `npm run flappy:lstm:progress`.
+- For npm-run named flags, preserve `npm_config_*` fallbacks because npm 11
+  warns on unknown flags and still forwards them through config env vars.
 
 4. Keep example-specific probes inside the example boundary.
    - If the probe imports Flappy example code, place it under
@@ -163,11 +164,12 @@ surface.
      nonzero exit code only when the user wants a gate.
 
 10. Close with the full validation cadence.
-   - Targeted Jest or boundary-local tests first
-   - `npm run build`
-   - focused `eslint` on changed files
-   - `npm run docs` when package scripts, docs tooling, or JSDoc surfaces moved
-   - final empirical rerun in non-strict or strict mode as requested
+
+- Targeted Jest or boundary-local tests first
+- `npm run build`
+- focused `eslint` on changed files
+- `npm run docs` when package scripts, docs tooling, or JSDoc surfaces moved
+- final empirical rerun in non-strict or strict mode as requested
 
 ## Probe Output Contract
 

@@ -3,13 +3,11 @@ import type { EvolveOptions, NeatRuntime } from '../network.types';
 import type { EvolutionSummary } from './network.evolve.utils.types';
 
 /**
- * Adopt best genome structure or emit warning when unavailable.
+ * Finalization helper that adopts the best evolved genome into the caller's
+ * network when one exists.
  *
- * @param network - Network instance being evolved.
- * @param neatInstance - Active NEAT instance.
- * @param bestGenome - Best genome snapshot.
- * @param clearState - Whether to clear network after adoption.
- * @returns Nothing.
+ * If no best genome is available, the optional NEAT warning hook is invoked so
+ * callers can surface diagnostic context without throwing from finalize flow.
  */
 export function adoptBestGenomeOrWarn(
   network: Network,
@@ -36,7 +34,10 @@ export function adoptBestGenomeOrWarn(
 }
 
 /**
- * Terminate worker resources registered in options.
+ * Best-effort shutdown for worker terminators attached to evolve options.
+ *
+ * This keeps finalize paths resilient when background evaluators were used and
+ * avoids leaking worker resources if teardown throws.
  *
  * @param evolveOptions - Evolve options object.
  * @returns Nothing.
@@ -50,7 +51,7 @@ export function terminateWorkersSafely(evolveOptions: EvolveOptions): void {
 }
 
 /**
- * Build final evolve return payload.
+ * Build the final evolution summary payload returned by the evolve loop.
  *
  * @param error - Final loop error.
  * @param iterations - Final generation count.

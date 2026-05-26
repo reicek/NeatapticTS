@@ -5,7 +5,7 @@ import type {
 } from '../types/telemetry.types';
 
 /**
- * Attach RNG state when configured.
+ * Attach RNG state when configured so telemetry exports preserve replay evidence needed to reproduce stochastic decisions in later forensic runs.
  *
  * @param telemetryContext - Neat-like context with RNG state.
  * @param telemetryOptions - Options controlling RNG telemetry.

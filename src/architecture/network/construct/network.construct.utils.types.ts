@@ -1,4 +1,4 @@
-import type Group from '../../group';
+﻿import type Group from '../../group';
 import type Layer from '../../layer';
 import type Node from '../../node';
 import type Network from '../network';
@@ -25,7 +25,7 @@ export type ConstructNodeId = number | string;
 export type ConstructPart = Group | Layer | Node;
 
 /**
- * Extra validation switches for construct-from-parts materialization.
+ * Extra structural validation switches for the construct-from-parts network materialization pipeline.
  */
 export interface ConstructValidationOptions {
   /** Reject parallel edges that share the same source and target nodes. */
@@ -84,7 +84,13 @@ export interface ConstructDiagnostics {
   activationOrder: number[];
 }
 
-/** One detached node row in the construct graph snapshot. */
+/**
+ * One detached, JSON-serializable node row in the construct graph snapshot.
+ *
+ * Carries stable gene identity, semantic role, and public I/O ordering metadata
+ * so developer tooling can inspect the materialized graph without accessing
+ * mutable `Network` internals directly.
+ */
 export interface ConstructGraphNodeSummary {
   /** Stable runtime node index after deterministic materialization. */
   index: number;
@@ -100,7 +106,12 @@ export interface ConstructGraphNodeSummary {
   outputOrder: number | null;
 }
 
-/** One detached edge row in the construct graph snapshot. */
+/**
+ * One detached, JSON-serializable edge row in the construct graph snapshot.
+ *
+ * Carries stable innovation id, source/target identity, current weight and
+ * enabled state, gater identity when present, and self-loop classification.
+ */
 export interface ConstructGraphConnectionSummary {
   /** Stable historical marking for the connection. */
   innovation: number;
@@ -147,7 +158,7 @@ export interface ConstructGraphSnapshot {
 }
 
 /**
- * Return payload for `Network.construct(...)`.
+ * Return payload emitted by `Network.construct(...)` bundling the network, diagnostics, and graph.
  */
 export interface ConstructResult {
   /** Fully materialized runtime network. */

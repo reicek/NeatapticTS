@@ -1,11 +1,19 @@
 # memory
 
+Memory manager configuration — constants, types, and registry shapes.
+
+This module owns the stable, side-effect-free vocabulary consumed by
+`MemoryManager`. Splitting config from the manager class keeps the constant
+and type surface independently importable: tests, diagnostics tooling, and
+worker payloads can reference `MemoryManagerFlagName` or
+`MEMORY_DEFAULT_SLAB_POOL_MAX_PER_KEY` without pulling in the manager's
+mutable state or constructor dependencies.
+
 ## memory/config.ts
 
 ### MEMORY_DEFAULT_ACTIVATION_POOL_PREWARM_COUNT
 
-Default retained prewarm count for activation-pool warmup when callers leave
-the global memory config unset.
+Default retained prewarm count for activation-pool warmup when callers leave the global memory config unset.
 
 ### MEMORY_DEFAULT_SLAB_POOL_MAX_PER_KEY
 
@@ -17,8 +25,7 @@ Memory-focused config flags owned by the Phase 4 manager surface.
 
 ### MEMORY_SLAB_GROWTH_FACTOR_BROWSER
 
-Browser slab-growth factor used to trade smaller reallocations for lower
-retained memory pressure in constrained heaps.
+Browser slab-growth factor used to trade smaller reallocations for lower retained memory pressure in constrained heaps.
 
 ### MEMORY_SLAB_GROWTH_FACTOR_NODE
 
@@ -26,7 +33,7 @@ Node slab-growth factor used to reduce rebuild churn on larger server heaps.
 
 ### MemoryManagerConfigSnapshot
 
-Stable snapshot returned by `MemoryManager.getConfig()`.
+Stable resolved configuration snapshot returned by the `MemoryManager.getConfig()` accessor method.
 
 ### MemoryManagerEnvironment
 
@@ -38,7 +45,7 @@ Subset of the shared config object that materially changes memory behavior.
 
 ### MemoryManagerFlagName
 
-Narrow flag names controlled by the memory manager.
+Narrow union of config flag names controlled exclusively by the memory manager.
 
 ### RegisteredMemoryPool
 
@@ -60,6 +67,30 @@ source of truth while adding one focused surface for:
 1. resolved memory defaults,
 2. temporary override lifecycles during tests and harnesses,
 3. resettable pool registration for centralized diagnostics.
+
+**Lifecycle** — typical test or harness usage:
+
+```ts
+import { memoryManager } from './memory/memoryManager';
+
+const snapshot = memoryManager.init({ enableSlabArrayPooling: true });
+try {
+  // run benchmark or test that exercises pooled paths
+} finally {
+  memoryManager.teardown(); // restores original config and resets pools
+}
+```
+
+**State machine**:
+
+```mermaid
+stateDiagram-v2
+  [*] --> idle : construct
+  idle --> active : init(overrides)
+  active --> active : setFlag / allocateTypedArray / registerPool
+  active --> idle : teardown()
+  idle --> idle : getConfig / resolveEnvironment
+```
 
 #### allocateTypedArray
 

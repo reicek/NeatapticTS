@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Internal slab adjacency helpers extracted from network.slab.utils.ts.
  */
 import type Network from '../../network/network';

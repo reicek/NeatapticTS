@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   CompressedSerializedNetworkArchiveCompression,
   CompressedSerializedNetworkArchiveOptions,
 } from '../network.types';
@@ -26,19 +26,22 @@ import {
   estimateSerializedByteLength,
 } from './network.serialize.compression.utils';
 
-/** Stable payload tag used for strict-genome archives. */
+/** Stable payload format tag used for reliably identifying strict-genome archives. */
 export const COMPRESSED_GENOME_FORMAT = 'neat-genome-v1';
 
-/** Stable archive wrapper tag used for strict-genome archives. */
+/** Stable archive wrapper format tag used for identifying strict-genome archives. */
 export const COMPRESSED_GENOME_ARCHIVE_FORMAT = 'neat-genome-archive-v1';
 
-/** Archive options for strict-genome compression. */
+/**
+ * Archive options for strict-genome compression that combine binary codec choices with capture-time genome field toggles.
+ * These options let callers tune payload size and fidelity without introducing phenotype-only runtime state.
+ */
 export interface CompressedSerializedGenomeArchiveOptions extends CompressedSerializedNetworkArchiveOptions {
   /** Optional strict-genome capture switches applied before compression. */
   captureOptions?: NeatGenomeCaptureOptions;
 }
 
-/** JSON-safe archive wrapper for one strict genome contract. */
+/** JSON-safe archive wrapper for one strict genome serialization checkpoint contract. */
 export interface CompressedSerializedGenomeArchive {
   /** Stable archive wrapper tag for strict-genome payloads. */
   format: typeof COMPRESSED_GENOME_ARCHIVE_FORMAT;
@@ -108,7 +111,8 @@ export function serializeCompressedGenomeArchive(
 }
 
 /**
- * Archive one runtime phenotype through the strict genome contract and report encode metrics.
+ * Archive one runtime phenotype through the strict genome contract and report deterministic encode metrics for observability.
+ * The metrics payload helps compare codec and capture-option tradeoffs without changing archive semantics.
  *
  * @param options - Optional archive codec and genome-capture settings.
  * @returns Archived strict-genome payload plus encode metrics.
@@ -136,7 +140,8 @@ export function serializeCompressedGenomeArchiveWithMetrics(
 }
 
 /**
- * Parse one archived strict genome contract back into validated JSON state.
+ * Parse one archived strict genome contract back into validated JSON state before any runtime materialization begins.
+ * This boundary enforces archive tags and schema validity so malformed payloads fail with clear diagnostics.
  *
  * @param compressedArchive - Base64-wrapped strict-genome archive payload.
  * @returns Restored strict genome contract.
@@ -213,7 +218,8 @@ export async function parseCompressedGenomeArchiveAsync(
 }
 
 /**
- * Materialize one runnable phenotype from a compressed strict-genome archive.
+ * Materialize one runnable phenotype from a compressed strict-genome archive using validated contract data.
+ * Runtime hints are applied only after strict-genome restoration so deterministic genotype state stays authoritative.
  *
  * @param compressedArchive - Base64-wrapped strict-genome archive payload.
  * @param runtimeHints - Optional phenotype-only metadata to restore.
@@ -230,7 +236,8 @@ export function deserializeCompressedGenomeArchive(
 }
 
 /**
- * Materialize one runnable phenotype from a compressed strict-genome archive and report decode metrics.
+ * Materialize one runnable phenotype from a compressed strict-genome archive and report decode metrics for runtime analysis.
+ * This variant keeps decode telemetry alongside the rebuilt network for reproducibility and performance audits.
  *
  * @param compressedArchive - Base64-wrapped strict-genome archive payload.
  * @param runtimeHints - Optional phenotype-only metadata to restore.
@@ -259,7 +266,8 @@ export function deserializeCompressedGenomeArchiveWithMetrics(
 }
 
 /**
- * Materialize one runnable phenotype from a compressed strict-genome archive with async decode progress.
+ * Materialize one runnable phenotype from a compressed strict-genome archive with async decode progress callbacks.
+ * This path is suited for browser or streaming contexts where large payload inflation should stay responsive.
  *
  * @param compressedArchive - Base64-wrapped strict-genome archive payload.
  * @param runtimeHints - Optional phenotype-only metadata to restore.
@@ -278,7 +286,8 @@ export async function deserializeCompressedGenomeArchiveAsync(
 }
 
 /**
- * Materialize one runnable phenotype from a compressed strict-genome archive with async decode metrics.
+ * Materialize one runnable phenotype from a compressed strict-genome archive with async decode metrics and progress support.
+ * The returned telemetry helps compare streaming decode strategies while preserving the same strict reconstruction contract.
  *
  * @param compressedArchive - Base64-wrapped strict-genome archive payload.
  * @param runtimeHints - Optional phenotype-only metadata to restore.

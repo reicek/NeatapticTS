@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import type Node from '../../node';
 import {
   NetworkRemoveNodeNotFoundError,
@@ -14,7 +14,7 @@ import {
 } from './network.remove.utils.types';
 
 /**
- * Creates validated immutable context for a node-removal operation.
+ * Create a validated immutable context object for one node-removal operation.
  *
  * @param network - Target network.
  * @param targetNode - Node requested for removal.

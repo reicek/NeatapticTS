@@ -1,4 +1,4 @@
-import Network from '../../network/network';
+﻿import Network from '../../network/network';
 import type {
   EvolutionLoopState,
   EvolutionSettings,
@@ -12,7 +12,7 @@ import {
 } from './network.evolve.utils.types';
 
 /**
- * Run core evolution loop until stop condition is met.
+ * Run the core evolution loop until error target or iteration limit is reached.
  *
  * @param neatInstance - Active NEAT instance.
  * @param resolvedSettings - Scalar evolution settings.

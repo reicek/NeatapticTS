@@ -306,6 +306,66 @@ describe('Node', () => {
       });
     });
 
+    describe('given a method object whose name disappears during canonical lookup', () => {
+      describe('when mutating the node', () => {
+        it('covers the undefined canonical mutation fallback branch', () => {
+          // Arrange
+          const node = new Node('hidden');
+          let readCount = 0;
+          const unstableMutationMethod = {
+            get name() {
+              readCount += 1;
+              return readCount === 1 ? 'MOD_BIAS' : undefined;
+            },
+          };
+
+          // Act
+          const applyUnstableMutation = () => {
+            node.mutate(unstableMutationMethod);
+          };
+
+          // Assert
+          expect(applyUnstableMutation).toThrow(
+            'Unsupported mutation method: undefined',
+          );
+        });
+      });
+    });
+
+    describe('given a canonical unsupported mutation whose name disappears during handler lookup', () => {
+      describe('when mutating the node', () => {
+        it('covers the missing-node-handler fallback branch', () => {
+          // Arrange
+          const node = new Node('hidden');
+          let readCount = 0;
+          const canonicalUnsupportedMutation = {
+            get name() {
+              readCount += 1;
+              return readCount <= 2 ? 'ADD_NODE' : undefined;
+            },
+          };
+          const mutationTable = rawMethods.mutation as Record<string, unknown>;
+
+          // Act
+          const mutationError = withTemporaryProperties(
+            mutationTable,
+            { ADD_NODE: canonicalUnsupportedMutation },
+            () => {
+              try {
+                node.mutate(canonicalUnsupportedMutation);
+                return 'no error';
+              } catch (error) {
+                return error instanceof Error ? error.message : String(error);
+              }
+            },
+          );
+
+          // Assert
+          expect(mutationError).toBe('Unsupported mutation method: undefined');
+        });
+      });
+    });
+
     describe('given bias mutation without an explicit range', () => {
       describe('when mutating the node', () => {
         it('uses the default min and max values', () => {

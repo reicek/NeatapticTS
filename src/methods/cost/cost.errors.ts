@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when cost helpers receive target and output arrays of different lengths.
  */
 export class CostTargetOutputLengthMismatchError extends Error {

@@ -1,7 +1,19 @@
-import Network from '../../../../src/architecture/network';
+import Network from '../../../../src/architecture/network/network';
 import Node from '../../../../src/architecture/node';
 import type { DashboardManagerState } from '../dashboardManager.types';
-import { createDetailedStatsSnapshot } from './dashboardManager.telemetry.services';
+import {
+  createDetailedStatsSnapshot,
+  getDashboardLastTelemetry,
+  updateTelemetryHistory,
+} from './dashboardManager.telemetry.services';
+
+const OPTIONAL_TELEMETRY_CASES: readonly {
+  readonly label: string;
+  readonly neatInstance: { getTelemetry?: () => unknown[] };
+}[] = [
+  { label: 'absent telemetry method', neatInstance: {} },
+  { label: 'empty telemetry series', neatInstance: { getTelemetry: () => [] } },
+];
 
 describe('createDetailedStatsSnapshot', () => {
   it('exports compact activation scheduling details from the current best network', () => {
@@ -34,6 +46,27 @@ describe('createDetailedStatsSnapshot', () => {
       recurrentComponentCount: 1,
     });
   });
+});
+
+describe('updateTelemetryHistory', () => {
+  it.each(OPTIONAL_TELEMETRY_CASES)(
+    'records current-best fitness with $label',
+    ({ neatInstance }) => {
+      const state = createDashboardState(new Network(1, 1));
+      state.lastBestFitness = null;
+      state.histories.bestFitness = [];
+
+      updateTelemetryHistory(state, neatInstance);
+
+      expect({
+        bestFitness: getDashboardLastTelemetry(state).bestFitness,
+        history: state.histories.bestFitness,
+      }).toEqual({
+        bestFitness: 12.5,
+        history: [12.5],
+      });
+    },
+  );
 });
 
 function createDashboardState(network: Network): DashboardManagerState {

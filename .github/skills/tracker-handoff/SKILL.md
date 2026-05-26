@@ -60,7 +60,19 @@ close it deliberately.
 - If there is still a real next step from the plan's own context, the plan is
   not closed yet and should stay active with a `Handoff query`.
 
-### Status Markers
+### Flow-Aware Tracker Closure
+
+Tracker closure now runs through the `07.tracker-closure` flow. The flow
+requires the `log-completion-marker` gate to pass before the workstream is
+considered closed. The gate confirms that a compressed log entry is present and
+the target phase is marked `[DONE]`.
+
+When closing a tracker that was run with flow-aware phase steps:
+
+- The `VALIDATION_EVIDENCE` section of the final structured-v1 output block
+  must include `log-completion-marker gate: pass` evidence.
+- If the workstream produced gate exceptions, confirm they are recorded in
+  `.github/ai-learning/learning-log.jsonl` before compressing.
 
 Every durable tracker should use the same three states:
 
@@ -173,7 +185,7 @@ For `.logs.md` files, prefer:
 3. short done-state entries grouped by durable milestone
 4. no active TODO list unless the file is intentionally dual-purpose
 5. the same boundary as the closed `.plans.md` file whenever the workstream is
-  complete
+   complete
 
 ## Guardrails
 
@@ -205,4 +217,7 @@ A strong tracker update should report:
   removed because the plan was terminally closed,
 - whether a same-boundary `.logs.md` file was added or refreshed,
 - whether the closed tracker pair now lives in `plans/completed/`.
+
+```
+
 ```

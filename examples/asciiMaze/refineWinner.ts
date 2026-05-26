@@ -1,4 +1,27 @@
-import { methods } from '../../src/neataptic';
+/**
+ * @module refineWinner
+ *
+ * Functional API for post-evolution network refinement (Lamarckian / Baldwinian
+ * fine-tune pass) for the ASCII Maze NEAT demo.
+ *
+ * ### Lamarckian / Baldwinian fine-tune pair
+ *
+ * This module (`refineWinner.ts`) and its sibling `networkRefinement.ts`
+ * together form the optional fine-tune pass applied after NEAT selects a winner:
+ *
+ * - **`refineWinner.ts`** (this file) — functional `refineWinnerWithBackprop`
+ *   export using `network.train()` with softmax cross-entropy cost and a
+ *   16-sample dataset that varies `progressDelta` for robustness. Preferred
+ *   for one-shot use in a curriculum loop.
+ * - **`networkRefinement.ts`** — class-based API (`NetworkRefinement`) with
+ *   pooled `Float32Array` scratch buffers; preferred when the caller manages
+ *   object lifetimes across many repeated refinement calls.
+ *
+ * Both functions clone the winner before training so the original evolutionary
+ * genome is never mutated. See `networkRefinement.ts` for notes on Lamarckian
+ * versus Baldwinian interpretation.
+ */
+import * as methods from '../../src/methods/methods';
 import Network from '../../src/architecture/network';
 
 /**

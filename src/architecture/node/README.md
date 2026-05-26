@@ -100,19 +100,27 @@ readout.describe({
 
 ### PrimitiveIntent
 
-Small semantic hints that later architecture tooling can read safely.
+Semantic role hints that later architecture tooling can attach to individual primitives.
+
+These labels do not change activation math — they let diagnostics, visualizers, and
+builders identify what a node represents conceptually (e.g. `'gate'` for gating neurons,
+`'memory'` for LSTM cell nodes, `'attention'` for attention-head units).
 
 ### PrimitiveMetadata
 
-Lightweight metadata bag for architecture primitives.
+Lightweight key-value metadata bag attached to architecture primitives. Keys are free-form strings; values are restricted to serializable scalars.
 
 ### PrimitiveMetadataValue
 
-Scalar metadata values retained on architecture primitives.
+Scalar metadata value types retained on architecture primitives. Kept narrow so metadata bags are safe to serialize and diff across checkpoints.
 
 ### PrimitiveNodeType
 
 Runtime-supported primitive roles for architecture-building surfaces.
+
+- `'input'`: receives the external stimulus vector; no bias computation.
+- `'hidden'`: standard neuron with bias, activation function, and trace storage.
+- `'output'`: emits the network result; error and gradient accumulation begin here during back-propagation.
 
 ### resolvePrimitiveIntent
 
@@ -122,7 +130,12 @@ resolvePrimitiveIntent(
 ): PrimitiveIntent | null
 ```
 
-Resolve public primitive intent from a runtime node type when possible.
+Resolve a public primitive intent from a runtime node type string.
+
+Returns the intent that matches the type when the type is one of the
+three standard roles (`'input'`, `'hidden'`, `'output'`), or `null`
+for any other string. Used by descriptor helpers to stamp a default
+intent without requiring the caller to repeat the role mapping.
 
 ### default
 
@@ -144,6 +157,16 @@ Parameters:
 #### _globalNodeIndex
 
 Global index counter for assigning unique indices to nodes.
+
+#### _safeUpdateBias
+
+```ts
+_safeUpdateBias(
+  delta: number,
+): void
+```
+
+Internal helper to safely update the node bias with clipping and NaN checks.
 
 #### _safeUpdateWeight
 
@@ -206,7 +229,7 @@ Parameters:
 
 ```ts
 applyBatchUpdatesWithOptimizer(
-  opts: { type: "sgd" | "rmsprop" | "adagrad" | "adam" | "adamw" | "amsgrad" | "adamax" | "nadam" | "radam" | "lion" | "adabelief" | "lookahead"; momentum?: number | undefined; beta1?: number | undefined; beta2?: number | undefined; eps?: number | undefined; weightDecay?: number | undefined; lrScale?: number | undefined; t?: number | undefined; baseType?: string | undefined; la_k?: number | undefined; la_alpha?: number | undefined; },
+  opts: BatchOptimizerOptions,
 ): void
 ```
 
@@ -376,7 +399,7 @@ Parameters:
 
 #### geneId
 
-Stable per-node gene identifier for NEAT innovation reuse
+Stable per-node gene identifier for NEAT innovation reuse.
 
 #### index
 
@@ -388,7 +411,7 @@ Optional semantic intent for architecture tooling and diagnostics.
 
 #### isActivating
 
-Internal flag to detect cycles during activation
+Internal flag to detect cycles during activation.
 
 #### isConnectedTo
 
@@ -634,11 +657,11 @@ Raised when a node mutation call receives a null or undefined method.
 
 ### NodeUndefinedConnectionTargetError
 
-Raised when a node connection target is missing.
+Raised when a node connection target reference is missing or undefined.
 
 ### NodeUnknownMutationMethodError
 
-Raised when a node mutation method name is unknown.
+Raised when a node mutation method name is not recognized.
 
 ### NodeUnsupportedMutationMethodError
 

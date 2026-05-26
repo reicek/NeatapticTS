@@ -77,11 +77,13 @@ Validate with: benchmarks/activation.bench.ts, then npm run test:silent.
    that Track 2 gates are not yet open.
 2. Read the relevant trace report or benchmark result before editing.
 3. Confirm owner boundary before editing:
-  - transport-size or transfer-list issues belong to
-    `worker-inference-transport`
-  - demo-local rendering or layout issues belong to `visualizer-workflow` or
-    `flappy-architecture-polish`
-  - missing trace rollups belong to `trace-analyzer-extension`
+
+- transport-size or transfer-list issues belong to
+  `worker-inference-transport`
+- demo-local rendering or layout issues belong to `visualizer-workflow` or
+  `flappy-architecture-polish`
+- missing trace rollups belong to `trace-analyzer-extension`
+
 4. Read the source boundary to be changed and its nearest test file.
 5. Confirm the correctness invariant explicitly before touching any code.
 6. Write a correctness regression test (or verify one exists) that will fail

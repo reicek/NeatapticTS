@@ -69,6 +69,21 @@ import { selection as selectionMethods } from '../../methods/selection/selection
 import { createInnovationTracker } from '../innovation-tracker/innovation-tracker';
 import type { InnovationTracker } from '../innovation-tracker/innovation-tracker.types';
 
+/**
+ * Default values applied during NEAT controller construction.
+ *
+ * Every field here becomes the concrete initial value for the corresponding
+ * `NeatOptions` field when the caller does not supply it. Together these
+ * defaults define the out-of-the-box search pressure, structural budget, and
+ * compatibility measurement the controller uses until explicitly overridden.
+ *
+ * @example
+ * ```ts
+ * // Inspect the population size applied when none is specified:
+ * import { NeatConstructorDefaults } from './neat.init';
+ * console.log(NeatConstructorDefaults.populationSize); // 50
+ * ```
+ */
 export interface NeatConstructorDefaults {
   populationSize: number;
   elitism: number;

@@ -86,18 +86,29 @@ export type OnnxDimension = {
   dim_param?: string;
 };
 
-/** ONNX tensor type shape. */
+/**
+ * Tensor-shape envelope used by ONNX value and initializer descriptors.
+ *
+ * The `dim` array preserves rank and per-axis declarations in order.
+ */
 export type OnnxShape = {
   dim: OnnxDimension[];
 };
 
-/** ONNX tensor type. */
+/**
+ * ONNX tensor type descriptor combining element type and shape metadata.
+ */
 export type OnnxTensorType = {
   elem_type: number;
   shape: OnnxShape;
 };
 
-/** ONNX value info (input/output description). */
+/**
+ * Input or output boundary descriptor for an ONNX graph.
+ *
+ * Export uses this to declare the tensor contracts expected at graph entry and
+ * produced at graph exit.
+ */
 export type OnnxValueInfo = {
   name: string;
   type: {
@@ -138,7 +149,9 @@ export type OnnxAttribute = {
  * Notes:
  * - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
  *   conv/pool mappings, etc.). This is where most round-trip hints live.
- * - Initializers currently store floating-point weights in `float_data`.
+ * - Initializers currently store floating-point weights in `float_data`, and the
+ *   Phase 7 storage-fp16 lane can pack half-precision words into `int32_data`
+ *   while keeping the logical tensor shape stable.
  *
  * Security/trust boundary:
  * - Treat this as untrusted input if it comes from outside your process.
@@ -172,13 +185,17 @@ export type OnnxGraph = {
  * Serialized tensor payload stored inside graph initializers.
  *
  * NeatapticTS currently writes floating-point parameter vectors and matrices to
- * `float_data`, along with the tensor name, element type, and logical shape.
+ * `float_data`, while the storage-fp16 lane can pack float16 words into
+ * `int32_data` for JSON-first persistence without changing the logical tensor
+ * shape.
  */
 export type OnnxTensor = {
   name: string;
   data_type: number;
   dims: number[];
   float_data: number[];
+  int32_data?: number[];
+  int64_data?: number[];
 };
 
 /**
@@ -195,7 +212,12 @@ export type OnnxNode = {
   attributes?: OnnxAttribute[];
 };
 
-/** Canonical metadata key-value pair used in ONNX model metadata_props. */
+/**
+ * Canonical metadata key-value pair used by `OnnxModel.metadata_props`.
+ *
+ * Keys are exporter-defined semantic hints (for example layout or fallback
+ * reasons) and values are serialized as plain strings.
+ */
 export type OnnxMetadataProperty = {
   key: string;
   value: string;

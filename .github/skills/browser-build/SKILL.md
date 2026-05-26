@@ -59,7 +59,7 @@ Pass a compact packet that includes:
 - target (root browser dist / example docs asset / smoke test / size audit / CI gate),
 - current plan step from `plans/completed/Browser_Build_and_CDN_Distribution.md`,
 - known constraints (size budget, supported browser targets, module format
--  requirements, worker entry delivery, or HTML consumer),
+- requirements, worker entry delivery, or HTML consumer),
 - validation expectations.
 
 Compact example:
@@ -77,33 +77,39 @@ Validate with: npm run build, browser build entrypoint, then scripts/smoke-brows
 
 1. Read `plans/completed/Browser_Build_and_CDN_Distribution.md` before editing.
 2. Read `scripts/build-browser.mjs`, `scripts/smoke-browser-build.mjs`,
-  `package.json`, and the consuming HTML or docs asset surface to understand
-  the current state.
+   `package.json`, and the consuming HTML or docs asset surface to understand
+   the current state.
 3. Identify whether the task targets:
-  - root browser artifacts under `dist/`, or
-  - a targeted docs/assets example bundle.
+
+- root browser artifacts under `dist/`, or
+- a targeted docs/assets example bundle.
+
 4. Verify actual script exposure before assuming the completed plan text is still
-  mirrored in `package.json` or workflows.
+   mirrored in `package.json` or workflows.
 5. Configure or refresh the artifact:
-  - **Root dist artifacts:** prefer the current package wrapper when present,
-    otherwise run `node scripts/build-browser.mjs` directly.
-  - **Minified-only variant:** prefer the current wrapper when present,
-    otherwise run `node scripts/build-browser.mjs --minify-only`.
-  - **Example docs asset:** rerun the matching targeted example build script,
-    because `npm run build` alone does not refresh those bundles.
+
+- **Root dist artifacts:** prefer the current package wrapper when present,
+  otherwise run `node scripts/build-browser.mjs` directly.
+- **Minified-only variant:** prefer the current wrapper when present,
+  otherwise run `node scripts/build-browser.mjs --minify-only`.
+- **Example docs asset:** rerun the matching targeted example build script,
+  because `npm run build` alone does not refresh those bundles.
+
 6. Validate:
-  - `npm run build` still passes for host code.
-  - The chosen browser artifact path actually refreshed.
-  - The smoke gate passes: prefer the current package wrapper when present,
-    otherwise run `node scripts/smoke-browser-build.mjs` for the root dist path.
-  - Bundle size is within budget when size is part of the task.
+
+- `npm run build` still passes for host code.
+- The chosen browser artifact path actually refreshed.
+- The smoke gate passes: prefer the current package wrapper when present,
+  otherwise run `node scripts/smoke-browser-build.mjs` for the root dist path.
+- Bundle size is within budget when size is part of the task.
+
 7. If workflows, manifests, or browser/docs tooling changed, validate in CI
-  order: `npm ci`, `npm run build`, then the browser build entrypoint.
+   order: `npm ci`, `npm run build`, then the browser build entrypoint.
 8. If any `src/` files were modified, run `coverage-guard` on each changed file
-  before continuing.
+   before continuing.
 9. Run `npm run test:silent` to confirm the Node test suite is unaffected.
 10. Update `plans/completed/Browser_Build_and_CDN_Distribution.md` only after the code and
-   validation are green.
+    validation are green.
 
 ## Bundle Quality Rules
 

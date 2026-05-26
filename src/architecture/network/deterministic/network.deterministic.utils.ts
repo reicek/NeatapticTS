@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Deterministic RNG chapter for replayable `Network` behavior.
  *
  * This folder keeps random state explicit so stochastic network behavior can be
@@ -233,9 +233,12 @@ export function getRandomFn(this: Network): (() => number) | undefined {
 }
 
 /**
- * Default export bundle for convenient named imports.
+ * Default export bundle for the deterministic RNG utilities chapter.
+ *
+ * Bundles the seed, checkpoint, and restore helpers so the network facade can
+ * bind them as methods without importing each function individually.
  */
-export default {
+const networkDeterministicUtils = {
   setSeed,
   snapshotRNG,
   restoreRNG,
@@ -243,3 +246,4 @@ export default {
   setRNGState,
   getRandomFn,
 };
+export default networkDeterministicUtils;

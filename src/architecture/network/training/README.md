@@ -56,7 +56,7 @@ You can persist these snapshots to disk, upload them, or keep them in-memory.
 clearState(): void
 ```
 
-Clear all node runtime traces and states.
+Clear all accumulated per-node runtime traces and saved activation states.
 
 Parameters:
 - `this` - Bound network instance.
@@ -174,16 +174,7 @@ propagate(
 ): void
 ```
 
-Propagate output and hidden errors backward through the network.
-
-Parameters:
-- `this` - Bound network instance.
-- `rate` - Learning rate.
-- `momentum` - Momentum factor.
-- `update` - Whether to apply updates immediately.
-- `target` - Output target values.
-- `regularization` - L2 regularization factor.
-- `costDerivative` - Optional output-node derivative override.
+Contract for propagate.
 
 ### ScheduleConfig
 
@@ -209,23 +200,7 @@ trainImpl(
 ): { error: number; iterations: number; time: number; }
 ```
 
-High-level training orchestration with early stopping, smoothing & callbacks.
-
-This is the main entrypoint used by `Network.train(...)`-style APIs.
-
-Parameters:
-- `net` - Network instance to train.
-- `set` - Training dataset.
-- `options` - Training options (stopping conditions, optimizer, hooks, etc.).
-
-Returns: Summary payload containing final error, iteration count, and elapsed time.
-
-Example:
-
-```ts
-const result = net.train(set, { iterations: 500, rate: 0.3 });
-console.log(result.error);
-```
+Contract for trainImpl.
 
 ### TrainingOptions
 
@@ -290,7 +265,8 @@ Returns: Mean cost across the processed samples.
 
 ### ALLOWED_OPTIMIZERS
 
-Set of supported optimizer identifiers accepted by training options.
+Allow-list of optimizer identifiers accepted by training options before
+optimizer-specific runtime state is initialized.
 
 ### buildMonitoredSmoothingConfig
 
@@ -304,6 +280,9 @@ buildMonitoredSmoothingConfig(
 ```
 
 Build monitored smoothing configuration from options and defaults.
+
+This keeps call sites declarative by normalizing all monitored-smoothing
+fields into one explicit configuration object.
 
 Parameters:
 - `type` - Selected monitored smoothing mode.
@@ -322,27 +301,42 @@ CostDerivative(
 ): number
 ```
 
-Cost-derivative callback shape for output-node backpropagation.
+Derivative callback used by output-node backpropagation.
+
+Inputs are `(target, output)` so custom objectives can match the built-in
+training loop without changing node internals.
 
 ### GradientClipRuntimeConfig
 
-Runtime gradient clipping configuration normalized from training options.
+Normalized runtime gradient clipping configuration.
+
+Optional fields are mode-dependent (`maxNorm` for norm modes, `percentile`
+for percentile modes).
 
 ### NetworkNode
 
-Local node shape alias used by training utility modules.
+Node instance type used by training helpers.
+
+This alias keeps helper signatures short while preserving the exact node
+contract exposed by the owning `Network` instance.
 
 ### OutputNodeWithCostDerivative
 
-Extended output-node contract that supports custom cost derivatives.
+Output-node contract for propagation paths that provide a custom derivative.
 
 ### PropagationContext
 
-Shared immutable context for network propagation helpers.
+Immutable context shared by propagation helpers.
+
+Keeping these values in a single object avoids argument drift across helper
+boundaries and keeps orchestration code declarative.
 
 ### RegularizationArgument
 
-Regularization argument accepted by node-level propagation.
+Regularization payload accepted by `Node.propagate`.
+
+Helpers pass this through unchanged so callers can centralize L1/L2
+configuration at the training entrypoint.
 
 ### resolveEmaAlpha
 
@@ -355,6 +349,9 @@ resolveEmaAlpha(
 
 Resolve default EMA alpha using a window length.
 
+When the caller omits a valid explicit alpha, this helper applies the
+standard EMA conversion `2 / (window + 1)`.
+
 Parameters:
 - `smoothingWindow` - Window length for moving average operations.
 - `explicitAlpha` - Optional user-provided alpha override.
@@ -363,7 +360,8 @@ Returns: A valid EMA alpha in the range (0, 1].
 
 ### TrainingSample
 
-Training sample consumed by training set loops.
+Input/output pair consumed by dataset training loops for one supervision
+step during iterative optimization.
 
 ## architecture/network/training/network.training.finalize.utils.ts
 
@@ -388,6 +386,8 @@ Returns: Final training summary including error, iteration count, and elapsed ti
 
 ## architecture/network/training/network.training.backprop.utils.ts
 
+Propagate output and hidden error signals backward through the network graph.
+
 ### clearNodeState
 
 ```ts
@@ -407,7 +407,7 @@ Parameters:
 clearState(): void
 ```
 
-Clear all node runtime traces and states.
+Clear all accumulated per-node runtime traces and saved activation states.
 
 Parameters:
 - `this` - Bound network instance.
@@ -480,16 +480,7 @@ propagate(
 ): void
 ```
 
-Propagate output and hidden errors backward through the network.
-
-Parameters:
-- `this` - Bound network instance.
-- `rate` - Learning rate.
-- `momentum` - Momentum factor.
-- `update` - Whether to apply updates immediately.
-- `target` - Output target values.
-- `regularization` - L2 regularization factor.
-- `costDerivative` - Optional output-node derivative override.
+Contract for propagate.
 
 ### propagateHiddenLayer
 
@@ -587,6 +578,8 @@ Parameters:
 
 ## architecture/network/training/network.training.loop.utils.ts
 
+Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
+
 ### trainSetCore
 
 ```ts
@@ -603,20 +596,7 @@ trainSetCore(
 ): number
 ```
 
-Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.
-
-Parameters:
-- `net` - Network instance being trained.
-- `set` - Training sample set.
-- `batchSize` - Mini-batch size.
-- `accumulationSteps` - Micro-batches per optimizer step.
-- `currentRate` - Learning rate for this pass.
-- `momentum` - Momentum value used by propagation paths.
-- `regularization` - Regularization settings passed into propagation calls.
-- `costFunction` - Cost function or cost-function object.
-- `optimizer` - Optional optimizer configuration.
-
-Returns: Mean cost over processed samples.
+Contract for trainSetCore.
 
 ## architecture/network/training/network.training.smoothing.utils.ts
 
@@ -632,6 +612,10 @@ computeMonitoredError(
 ```
 
 Compute monitored training error using the configured smoothing strategy.
+
+The helper returns the raw error when smoothing is effectively disabled.
+For stateful modes (`ema`, `adaptive-ema`), the provided state object is
+updated in place so callers can keep continuity across iterations.
 
 Parameters:
 - `trainError` - Raw training error for the current iteration.
@@ -654,6 +638,9 @@ computePlateauMetric(
 
 Compute plateau metric using the configured plateau smoothing strategy.
 
+This metric is intentionally independent from the primary monitored metric so
+plateau detection can use a different noise profile.
+
 Parameters:
 - `trainError` - Raw training error for the current iteration.
 - `plateauErrors` - Plateau window of recent raw errors.
@@ -673,7 +660,7 @@ applyGradientClippingCore(
 ): void
 ```
 
-Apply gradient clipping to accumulated connection and bias deltas.
+Apply gradient clipping to accumulated connection and bias delta buffers.
 
 Parameters:
 - `net` - Network instance whose accumulated gradients are clipped.
@@ -687,11 +674,11 @@ Raised when the training dataset is missing or does not match network IO dimensi
 
 ### NetworkTrainingAccumulationStepsError
 
-Raised when accumulation steps is invalid.
+Raised when accumulation step count is zero, negative, or not a whole number as required for valid gradient accumulation.
 
 ### NetworkTrainingBatchSizeError
 
-Raised when configured batch size exceeds dataset size.
+Raised when the configured batch size exceeds the total dataset size, making mini-batch gradient accumulation impossible.
 
 ### NetworkTrainingDatasetCompatibilityError
 
@@ -699,19 +686,19 @@ Raised when the training dataset is missing or does not match network IO dimensi
 
 ### NetworkTrainingDropoutRangeError
 
-Raised when dropout is outside the expected range [0, 1).
+Raised when the dropout probability falls outside the required half-open interval [0, 1) accepted by the training configuration validator.
 
 ### NetworkTrainingInvalidCostFunctionError
 
-Raised when the provided cost function is not callable or recognized.
+Raised when the provided cost function is not callable or does not match any recognized cost-function identifier in the registry.
 
 ### NetworkTrainingInvalidOptimizerOptionError
 
-Raised when optimizer option type is not supported.
+Raised when an optimizer configuration option carries a type that the selected optimizer does not recognize or accept.
 
 ### NetworkTrainingNestedLookaheadError
 
-Raised when lookahead is configured with a nested lookahead base type.
+Raised when lookahead is configured with another lookahead optimizer as its base, which is not a supported inner optimizer combination.
 
 ### NetworkTrainingOutputTargetLengthError
 
@@ -719,12 +706,87 @@ Raised when output target length does not match the network output width.
 
 ### NetworkTrainingStoppingConditionRequiredError
 
-Raised when no stopping condition is provided to training.
+Raised when training is started without a stopping condition such as a maximum error target or iteration limit.
 
 ### NetworkTrainingUnknownLookaheadBaseTypeError
 
-Raised when lookahead base optimizer type is unknown.
+Raised when the lookahead base optimizer type does not match any supported inner optimizer in the current training stack configuration.
 
 ### NetworkTrainingUnknownOptimizerTypeError
 
-Raised when optimizer type is unknown.
+Raised when the optimizer type string does not match any registered optimizer in the network training configuration registry.
+
+## architecture/network/training/network.training.isolate.utils.ts
+
+### FineTuneOptions
+
+Explicit settings for one isolated fine-tune pass.
+
+`steps` maps to the training loop iteration count and `learningRate` maps to
+the training rate. `seed` is optional because same-runtime ordered
+determinism only becomes a strong claim when the caller supplies both a
+stable dataset order and an explicit deterministic seed.
+
+Without an explicit `seed`, the helper still guarantees isolation: the
+original network and vector are never mutated, but repeated calls may
+produce different trained vectors when the underlying training loop contains
+stochastic behaviour such as dropout.
+
+### FineTuneResult
+
+Detached result from one isolated fine-tune pass.
+
+The helper returns a trained parameter vector rather than a mutated network
+so shared candidate state stays outside the training-owned boundary. Metrics
+are numeric summaries from the existing training loop, not persisted
+optimizer or runtime state.
+
+The returned `trainedVector` can be compared against the original vector,
+forwarded to a worker for scoring, persisted as a checkpoint delta, or
+discarded when only the fitness score matters.
+
+### fineTuneVector
+
+```ts
+fineTuneVector(
+  baseNetwork: default,
+  vector: ParameterVector,
+  dataset: TrainingSample[],
+  options: FineTuneOptions,
+): FineTuneResult
+```
+
+Fine-tune one parameter vector against an ordered dataset without mutating shared state.
+
+The helper clones `baseNetwork`, applies `vector` to that working copy,
+optionally installs an explicit deterministic seed via `Network.setSeed(...)`,
+runs the existing training loop in the caller-provided dataset order, and
+returns a new `ParameterVector` exported from the trained working copy. The
+supplied `baseNetwork` and `vector` are read-only inputs to this helper.
+
+Determinism is intentionally scoped. On the same runtime, repeated calls can
+return the same trained vector when topology, dataset order, training
+settings, and explicit `seed` all match. This helper does not claim
+cross-runtime exact replay, and it does not return transient optimizer,
+activation, or recurrent runtime state.
+
+```ts
+// Export the current parameter vector, fine-tune a working copy, and
+// inspect fitness metrics without modifying the shared candidate network.
+const vector = toParameterVector(candidate);
+const { trainedVector, metrics } = fineTuneVector(candidate, vector, dataset, {
+  steps: 50,
+  learningRate: 0.01,
+  seed: 42,
+});
+console.log('training error:', metrics?.error);
+// `candidate` and `vector` are unchanged after this call.
+```
+
+Parameters:
+- `baseNetwork` - Topology source cloned for the isolated working copy.
+- `vector` - Ordered parameter payload applied to the working copy only.
+- `dataset` - Ordered training samples consumed without shuffling.
+- `options` - Explicit training settings and optional deterministic seed.
+
+Returns: Detached trained vector plus numeric training metrics.

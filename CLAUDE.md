@@ -9,6 +9,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run build               # webpack + tsc
 npm run build:ts            # tsc only (faster for type checking)
 
+# Semantic index — run at every session start to prevent 24-hour indexed_at drift
+npm run index:session-start # touch-refreshes unchanged rows + incremental build for changed files
+npm run index:prewarm       # warms MCP dense search; rerun after corpus-changing docs/source/plan edits
+
 # Type-check without emitting
 npx tsc --noEmit -p tsconfig.json
 npx tsc --noEmit -p tsconfig.test.json
@@ -172,6 +176,8 @@ Invoke skills via slash commands — do not re-state their workflow ad hoc:
 | `/trace-audit-reporting` | Analyzing Chrome/Perfetto traces and producing performance reports |
 | `/trace-analyzer-extension` | Extending `scripts/analyze-trace/analyze-trace.ts` with new rollups |
 
+**Flow-aware routing** — numbered agents pick a named flow from `.github/flows/` for each task shape. Every flow declares exit gates that must return `{pass, evidence, fixHint, owner}` JSON. Gate failures use `scripts/agent-customization/gates/record-gate-exception.mjs`; three consecutive failures in a session escalate to `00-helping` via the `00.cross-tier-helper` flow. Run `node scripts/agent-customization/workflow-gap-audit.mjs --json` to inspect gate health and flow-mention drift. Run `node scripts/agent-customization/gates/cortex-index.gate.mjs --json` to validate Cortex lifecycle health (index freshness, MCP availability, snapshot currency).
+
 **Companion agents** — do read-only recon then hand off into the relevant skill:
 
 | Agent | Hands off to |
@@ -191,6 +197,8 @@ Invoke skills via slash commands — do not re-state their workflow ad hoc:
 | `NGE Core Scout` | `nge-core-algorithm` |
 | `NGE Benchmark Scout` | `nge-benchmark-workflow` |
 | `NEATchat Scout` | `neatchat-systems` |
+| `Repo Cortex Scout` | `repo-cortex-workflow` |
+| `Cortex Embeddings Scout` | `Semantic_Knowledge_Embeddings` (planned) |
 
 ## Tracker and plans conventions
 

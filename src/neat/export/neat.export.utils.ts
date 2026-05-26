@@ -80,71 +80,136 @@ export function assertSerializedGenomeCarriesCheckpointIdentity(
   networkPayload: Record<string, unknown>,
   genomeIndex: number,
 ): void {
-  const serializedNodes = Array.isArray(networkPayload.nodes)
-    ? networkPayload.nodes
-    : [];
-  const serializedConnections = Array.isArray(networkPayload.connections)
-    ? networkPayload.connections
-    : [];
+  const serializedNodes = readSerializedCheckpointEntries(networkPayload.nodes);
+  const serializedConnections = readSerializedCheckpointEntries(
+    networkPayload.connections,
+  );
 
+  assertSerializedNodesCarryCheckpointIdentity(serializedNodes, genomeIndex);
+  assertSerializedConnectionsCarryCheckpointIdentity(
+    serializedConnections,
+    genomeIndex,
+  );
+}
+
+function readSerializedCheckpointEntries(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function assertSerializedNodesCarryCheckpointIdentity(
+  serializedNodes: unknown[],
+  genomeIndex: number,
+): void {
   for (const [nodeIndex, serializedNode] of serializedNodes.entries()) {
-    if (
-      !serializedNode ||
-      typeof serializedNode !== 'object' ||
-      Array.isArray(serializedNode) ||
-      typeof (serializedNode as { geneId?: unknown }).geneId !== 'number'
-    ) {
-      throw new NeatExportPopulationValidationError(
-        `Cannot import population genome ${genomeIndex}: serialized node ${nodeIndex} is missing an explicit geneId.`,
-      );
-    }
+    assertSerializedNodeCarriesCheckpointIdentity(
+      serializedNode,
+      genomeIndex,
+      nodeIndex,
+    );
   }
+}
 
+function assertSerializedNodeCarriesCheckpointIdentity(
+  serializedNode: unknown,
+  genomeIndex: number,
+  nodeIndex: number,
+): void {
+  if (
+    !serializedNode ||
+    typeof serializedNode !== 'object' ||
+    Array.isArray(serializedNode) ||
+    typeof (serializedNode as { geneId?: unknown }).geneId !== 'number'
+  ) {
+    throw new NeatExportPopulationValidationError(
+      `Cannot import population genome ${genomeIndex}: serialized node ${nodeIndex} is missing an explicit geneId.`,
+    );
+  }
+}
+
+function assertSerializedConnectionsCarryCheckpointIdentity(
+  serializedConnections: unknown[],
+  genomeIndex: number,
+): void {
   for (const [
     connectionIndex,
     serializedConnection,
   ] of serializedConnections.entries()) {
-    if (
-      !serializedConnection ||
-      typeof serializedConnection !== 'object' ||
-      Array.isArray(serializedConnection)
-    ) {
-      throw new NeatExportPopulationValidationError(
-        `Cannot import population genome ${genomeIndex}: serialized connection ${connectionIndex} must be an object payload.`,
-      );
-    }
+    const connectionIdentity = readSerializedConnectionIdentity(
+      serializedConnection,
+      genomeIndex,
+      connectionIndex,
+    );
 
-    const connectionIdentity = serializedConnection as {
-      innovation?: unknown;
-      fromGeneId?: unknown;
-      toGeneId?: unknown;
-      gater?: unknown;
-      gaterGeneId?: unknown;
-    };
+    assertSerializedConnectionNumberField(
+      connectionIdentity.innovation,
+      genomeIndex,
+      connectionIndex,
+      'is missing an explicit innovation id.',
+    );
+    assertSerializedConnectionNumberField(
+      connectionIdentity.fromGeneId,
+      genomeIndex,
+      connectionIndex,
+      'is missing fromGeneId.',
+    );
+    assertSerializedConnectionNumberField(
+      connectionIdentity.toGeneId,
+      genomeIndex,
+      connectionIndex,
+      'is missing toGeneId.',
+    );
 
-    if (typeof connectionIdentity.innovation !== 'number') {
-      throw new NeatExportPopulationValidationError(
-        `Cannot import population genome ${genomeIndex}: serialized connection ${connectionIndex} is missing an explicit innovation id.`,
+    if (connectionIdentity.gater != null) {
+      assertSerializedConnectionNumberField(
+        connectionIdentity.gaterGeneId,
+        genomeIndex,
+        connectionIndex,
+        'is missing gaterGeneId.',
       );
     }
-    if (typeof connectionIdentity.fromGeneId !== 'number') {
-      throw new NeatExportPopulationValidationError(
-        `Cannot import population genome ${genomeIndex}: serialized connection ${connectionIndex} is missing fromGeneId.`,
-      );
-    }
-    if (typeof connectionIdentity.toGeneId !== 'number') {
-      throw new NeatExportPopulationValidationError(
-        `Cannot import population genome ${genomeIndex}: serialized connection ${connectionIndex} is missing toGeneId.`,
-      );
-    }
-    if (
-      connectionIdentity.gater != null &&
-      typeof connectionIdentity.gaterGeneId !== 'number'
-    ) {
-      throw new NeatExportPopulationValidationError(
-        `Cannot import population genome ${genomeIndex}: serialized connection ${connectionIndex} is missing gaterGeneId.`,
-      );
-    }
+  }
+}
+
+function readSerializedConnectionIdentity(
+  serializedConnection: unknown,
+  genomeIndex: number,
+  connectionIndex: number,
+): {
+  innovation?: unknown;
+  fromGeneId?: unknown;
+  toGeneId?: unknown;
+  gater?: unknown;
+  gaterGeneId?: unknown;
+} {
+  if (
+    !serializedConnection ||
+    typeof serializedConnection !== 'object' ||
+    Array.isArray(serializedConnection)
+  ) {
+    throw new NeatExportPopulationValidationError(
+      `Cannot import population genome ${genomeIndex}: serialized connection ${connectionIndex} must be an object payload.`,
+    );
+  }
+
+  return serializedConnection as {
+    innovation?: unknown;
+    fromGeneId?: unknown;
+    toGeneId?: unknown;
+    gater?: unknown;
+    gaterGeneId?: unknown;
+  };
+}
+
+function assertSerializedConnectionNumberField(
+  value: unknown,
+  genomeIndex: number,
+  connectionIndex: number,
+  messageSuffix: string,
+): void {
+  if (typeof value !== 'number') {
+    throw new NeatExportPopulationValidationError(
+      `Cannot import population genome ${genomeIndex}: serialized connection ${connectionIndex} ${messageSuffix}`,
+    );
   }
 }
 

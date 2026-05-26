@@ -1,4 +1,4 @@
-import Connection from '../../connection';
+﻿import Connection from '../../connection';
 import { activationArrayPool } from '../../activationArrayPool/activationArrayPool';
 import type Network from '../../network/network';
 import type {
@@ -20,7 +20,8 @@ import {
 } from './network.prune.utils.types';
 
 /**
- * Read the active pruning schedule from network internals.
+ * Read the active pruning schedule from network internals so scheduled pruning logic can run against current runtime policy.
+ * Returning the optional config directly keeps orchestration code declarative and avoids repeated unsafe internal casts.
  * @param currentNetwork - Network instance to inspect.
  * @returns Pruning configuration when enabled; otherwise undefined.
  */
@@ -31,7 +32,8 @@ export function getPruningConfig(
 }
 
 /**
- * Determine whether scheduled pruning should run at this iteration.
+ * Determine whether scheduled pruning should run at this iteration using configured window bounds and cadence guards.
+ * The decision also prevents duplicate pruning passes within the same iteration when callers retry training steps.
  * @param currentIteration - Training iteration being processed.
  * @param currentPruningConfig - Active pruning schedule.
  * @returns True when pruning should execute now.
@@ -55,7 +57,8 @@ export function shouldRunScheduledPrune(
 }
 
 /**
- * Read the scheduled-pruning baseline connection count.
+ * Read the scheduled-pruning baseline connection count used to compute progressive sparsity targets over time.
+ * Keeping this baseline explicit prevents schedule drift when connection totals fluctuate across pruning iterations.
  * @param currentNetwork - Network instance to inspect.
  * @returns Baseline count when captured; otherwise undefined.
  */
@@ -67,7 +70,8 @@ export function getInitialConnectionBaseline(
 }
 
 /**
- * Build current scheduled pruning targets from schedule context.
+ * Build current scheduled pruning targets from schedule context and current connection totals for this iteration.
+ * The output combines desired remaining edges and immediate excess so callers can prune deterministically.
  * @param context - Inputs required to compute desired remaining connections.
  * @param currentConnectionCount - Current number of network connections.
  * @returns Desired remaining connections and current excess.
@@ -103,7 +107,8 @@ export function buildScheduledTarget(
 }
 
 /**
- * Build a connection removal selection from current ranking context.
+ * Build a connection removal selection from ranking context so pruning removes the lowest-priority edges first.
+ * This helper isolates ordering and slicing rules from orchestration code that manages structural side effects.
  * @param context - Inputs for ranking and slicing removable connections.
  * @returns Connections selected for pruning.
  */
@@ -122,7 +127,8 @@ export function buildPruneSelection(
 }
 
 /**
- * Disconnect all selected connections from the network.
+ * Disconnect all selected connections from the network and schedule post-prune activation-pool compaction when needed.
+ * Grouping removal side effects here keeps pruning orchestration compact and consistent across pruning strategies.
  * @param currentNetwork - Network to mutate.
  * @param connectionsToDisconnect - Connections to remove.
  * @returns Nothing.
@@ -143,7 +149,7 @@ export function disconnectConnections(
 }
 
 /**
- * Normalize optional pruning method to a concrete value.
+ * Normalize an optional pruning method to a concrete default value.
  * @param method - Optional configured pruning method.
  * @returns Concrete pruning method.
  */
@@ -154,7 +160,8 @@ export function resolvePruningMethod(
 }
 
 /**
- * Persist the iteration that last performed pruning.
+ * Persist the iteration that last performed pruning so duplicate schedule triggers within the same step are ignored.
+ * This marker is essential for idempotent training loops that may re-enter pruning checks.
  * @param currentPruningConfig - Active pruning configuration.
  * @param currentIteration - Iteration to record.
  * @returns Nothing.
@@ -167,7 +174,7 @@ export function markPruneIteration(
 }
 
 /**
- * Mark topology cache as dirty after structural updates.
+ * Mark the topology cache as dirty after scheduled pruning structural updates.
  * @param currentNetwork - Network with modified connectivity.
  * @returns Nothing.
  */

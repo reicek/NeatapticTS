@@ -2,22 +2,31 @@ import type Network from '../../network/network';
 import type { MonitoredSmoothingConfig } from '../network.types';
 
 /**
- * Local node shape alias used by training utility modules.
+ * Node instance type used by training helpers.
+ *
+ * This alias keeps helper signatures short while preserving the exact node
+ * contract exposed by the owning `Network` instance.
  */
 export type NetworkNode = Network['nodes'][number];
 
 /**
- * Regularization argument accepted by node-level propagation.
+ * Regularization payload accepted by `Node.propagate`.
+ *
+ * Helpers pass this through unchanged so callers can centralize L1/L2
+ * configuration at the training entrypoint.
  */
 export type RegularizationArgument = Parameters<NetworkNode['propagate']>[3];
 
 /**
- * Cost-derivative callback shape for output-node backpropagation.
+ * Derivative callback used by output-node backpropagation.
+ *
+ * Inputs are `(target, output)` so custom objectives can match the built-in
+ * training loop without changing node internals.
  */
 export type CostDerivative = (target: number, output: number) => number;
 
 /**
- * Extended output-node contract that supports custom cost derivatives.
+ * Output-node contract for propagation paths that provide a custom derivative.
  */
 export interface OutputNodeWithCostDerivative {
   propagate(
@@ -31,7 +40,10 @@ export interface OutputNodeWithCostDerivative {
 }
 
 /**
- * Shared immutable context for network propagation helpers.
+ * Immutable context shared by propagation helpers.
+ *
+ * Keeping these values in a single object avoids argument drift across helper
+ * boundaries and keeps orchestration code declarative.
  */
 export interface PropagationContext {
   network: Network;
@@ -43,7 +55,8 @@ export interface PropagationContext {
 }
 
 /**
- * Training sample consumed by training set loops.
+ * Input/output pair consumed by dataset training loops for one supervision
+ * step during iterative optimization.
  */
 export type TrainingSample = {
   input: number[];
@@ -51,7 +64,10 @@ export type TrainingSample = {
 };
 
 /**
- * Runtime gradient clipping configuration normalized from training options.
+ * Normalized runtime gradient clipping configuration.
+ *
+ * Optional fields are mode-dependent (`maxNorm` for norm modes, `percentile`
+ * for percentile modes).
  */
 export type GradientClipRuntimeConfig = {
   mode: 'norm' | 'percentile' | 'layerwiseNorm' | 'layerwisePercentile';
@@ -60,7 +76,8 @@ export type GradientClipRuntimeConfig = {
 };
 
 /**
- * Set of supported optimizer identifiers accepted by training options.
+ * Allow-list of optimizer identifiers accepted by training options before
+ * optimizer-specific runtime state is initialized.
  */
 export const ALLOWED_OPTIMIZERS = new Set<string>([
   'sgd',
@@ -80,6 +97,9 @@ export const ALLOWED_OPTIMIZERS = new Set<string>([
 /**
  * Resolve default EMA alpha using a window length.
  *
+ * When the caller omits a valid explicit alpha, this helper applies the
+ * standard EMA conversion `2 / (window + 1)`.
+ *
  * @param smoothingWindow - Window length for moving average operations.
  * @param explicitAlpha - Optional user-provided alpha override.
  * @returns A valid EMA alpha in the range (0, 1].
@@ -96,6 +116,9 @@ export function resolveEmaAlpha(
 
 /**
  * Build monitored smoothing configuration from options and defaults.
+ *
+ * This keeps call sites declarative by normalizing all monitored-smoothing
+ * fields into one explicit configuration object.
  *
  * @param type - Selected monitored smoothing mode.
  * @param window - Monitored smoothing window length.

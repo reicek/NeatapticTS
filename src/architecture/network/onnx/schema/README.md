@@ -64,7 +64,10 @@ The exporter writes three main collections here:
 
 ### OnnxMetadataProperty
 
-Canonical metadata key-value pair used in ONNX model metadata_props.
+Canonical metadata key-value pair used by `OnnxModel.metadata_props`.
+
+Keys are exporter-defined semantic hints (for example layout or fallback
+reasons) and values are serialized as plain strings.
 
 ### OnnxModel
 
@@ -80,7 +83,9 @@ const restoredModel = JSON.parse(jsonText) as OnnxModel;
 Notes:
 - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
   conv/pool mappings, etc.). This is where most round-trip hints live.
-- Initializers currently store floating-point weights in `float_data`.
+- Initializers currently store floating-point weights in `float_data`, and the
+  Phase 7 storage-fp16 lane can pack half-precision words into `int32_data`
+  while keeping the logical tensor shape stable.
 
 Security/trust boundary:
 - Treat this as untrusted input if it comes from outside your process.
@@ -94,22 +99,29 @@ exported payload easy to serialize, inspect, and diff as plain JSON.
 
 ### OnnxShape
 
-ONNX tensor type shape.
+Tensor-shape envelope used by ONNX value and initializer descriptors.
+
+The `dim` array preserves rank and per-axis declarations in order.
 
 ### OnnxTensor
 
 Serialized tensor payload stored inside graph initializers.
 
 NeatapticTS currently writes floating-point parameter vectors and matrices to
-`float_data`, along with the tensor name, element type, and logical shape.
+`float_data`, while the storage-fp16 lane can pack float16 words into
+`int32_data` for JSON-first persistence without changing the logical tensor
+shape.
 
 ### OnnxTensorType
 
-ONNX tensor type.
+ONNX tensor type descriptor combining element type and shape metadata.
 
 ### OnnxValueInfo
 
-ONNX value info (input/output description).
+Input or output boundary descriptor for an ONNX graph.
+
+Export uses this to declare the tensor contracts expected at graph entry and
+produced at graph exit.
 
 ### Pool2DMapping
 
@@ -118,3 +130,131 @@ Mapping describing a pooling operation inserted after a given export-layer index
 This is represented as metadata and optional graph nodes during export.
 Import uses it to attach pooling-related runtime metadata back onto the reconstructed
 network (when supported).
+
+## architecture/network/onnx/schema/network.onnx.schema.binary.utils.ts
+
+### serializeOnnxModelToBinary
+
+```ts
+serializeOnnxModelToBinary(
+  onnxModel: OnnxModel,
+): Uint8Array<ArrayBufferLike>
+```
+
+Serialize an ONNX-like model into protobuf ModelProto bytes.
+
+This helper turns the shared exporter model view into the deterministic
+binary `ModelProto` surface that Phase 8 and Phase 9 treat as the primary
+runtime-validated artifact for the approved subset.
+It intentionally uses ONNX's typed tensor storage fields such as
+`float_data`, `int32_data`, and `int64_data` rather than widening into
+`raw_data` or `external_data` yet.
+
+Parameters:
+- `onnxModel` - ONNX-like model payload.
+
+Returns: Binary protobuf ModelProto bytes.
+
+## architecture/network/onnx/schema/network.onnx.schema.tensor-data.utils.ts
+
+### createFloat16StoragePayload
+
+```ts
+createFloat16StoragePayload(
+  floatValues: number[],
+): Pick<OnnxTensor, "data_type" | "float_data" | "int32_data">
+```
+
+Create a float16-backed tensor payload from float32 values.
+This helper emits the exact storage fields expected by ONNX initializer writers so callers can downgrade precision while keeping exporter and importer tensor contracts structurally consistent.
+
+Parameters:
+- `floatValues` - Float32-domain values to pack.
+
+Returns: ONNX tensor storage fields for a float16 initializer.
+
+### decodeFloat16Bits
+
+```ts
+decodeFloat16Bits(
+  packedValue: number,
+): number
+```
+
+Decode one packed float16 word into a float32-domain value.
+
+Parameters:
+- `packedValue` - Packed float16 bits.
+
+Returns: Decoded float value.
+
+### decodeFloat16Int32Data
+
+```ts
+decodeFloat16Int32Data(
+  packedValues: number[],
+): number[]
+```
+
+Decode packed float16 words stored as int32 entries into float32-domain values.
+Decoder output is normalized to JavaScript number values so upstream importer logic can reuse one scalar path regardless of original tensor storage precision.
+
+Parameters:
+- `packedValues` - Packed float16 words.
+
+Returns: Decoded float values.
+
+### encodeFloat16Bits
+
+```ts
+encodeFloat16Bits(
+  floatValue: number,
+): number
+```
+
+Encode one float32-domain value into one float16 word.
+
+Parameters:
+- `floatValue` - Float value to encode.
+
+Returns: Packed float16 bits.
+
+### encodeFloat16Int32Data
+
+```ts
+encodeFloat16Int32Data(
+  floatValues: number[],
+): number[]
+```
+
+Encode float32-domain values into packed float16 words stored as int32 entries.
+Packing through this utility keeps round-trip behavior aligned with the paired decoder used by import and schema audit paths, including special-value handling.
+
+Parameters:
+- `floatValues` - Float values to encode.
+
+Returns: Packed float16 words.
+
+### ONNX_FLOAT_DATA_TYPE
+
+ONNX TensorProto numeric data-type enum value used for float32 tensors.
+
+### ONNX_FLOAT16_DATA_TYPE
+
+ONNX TensorProto numeric data-type enum value used for float16 tensors.
+
+### readOnnxTensorFloatData
+
+```ts
+readOnnxTensorFloatData(
+  tensor: Pick<OnnxTensor, "data_type" | "float_data" | "int32_data">,
+): number[]
+```
+
+Read a tensor's floating-point values regardless of whether it is stored as float32 or float16.
+This abstraction gives importer and analysis utilities one read entrypoint that transparently handles native float shelves and packed float16 compatibility shelves.
+
+Parameters:
+- `tensor` - Source ONNX tensor.
+
+Returns: Decoded floating-point values.

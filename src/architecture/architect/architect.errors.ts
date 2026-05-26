@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when architect construction cannot infer input/output nodes from supplied primitives.
  */
 export class ArchitectInputOutputTypeResolutionError extends Error {
@@ -29,7 +29,7 @@ export class ArchitectInvalidPerceptronConfigurationError extends Error {
 }
 
 /**
- * Raised when LSTM builder arguments contain invalid layer-size values.
+ * Raised when LSTM builder arguments contain any invalid layer-size values.
  */
 export class ArchitectInvalidLstmLayerArgumentsError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -49,7 +49,7 @@ export class ArchitectInvalidLstmConfigurationError extends Error {
 }
 
 /**
- * Raised when GRU builder arguments contain invalid layer-size values.
+ * Raised when GRU builder arguments contain any invalid layer-size values.
  */
 export class ArchitectInvalidGruLayerArgumentsError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -69,7 +69,7 @@ export class ArchitectInvalidGruConfigurationError extends Error {
 }
 
 /**
- * Raised when a sparse architect builder receives invalid dimensions or
+ * Raised when a sparse architect builder receives invalid dimensions or.
  * requests more structural edits than the graph can satisfy.
  */
 export class ArchitectInvalidRandomSparseConfigurationError extends Error {

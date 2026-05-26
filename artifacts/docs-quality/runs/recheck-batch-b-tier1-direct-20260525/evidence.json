@@ -1,0 +1,1793 @@
+{
+  "evidence": [
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export-build.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 164,
+      "symbol": "buildOnnxModel"
+    },
+    {
+      "file": "src/architecture/node.ts",
+      "issue": "high complexity",
+      "numericValue": 111,
+      "symbol": "default.applyBatchUpdatesWithOptimizer"
+    },
+    {
+      "file": "src/architecture/node/node.ts",
+      "issue": "high complexity",
+      "numericValue": 111,
+      "symbol": "default.applyBatchUpdatesWithOptimizer"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 111,
+      "symbol": "Node.applyBatchUpdatesWithOptimizer"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 111,
+      "symbol": "Node.applyBatchUpdatesWithOptimizer"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.finalize.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 96,
+      "symbol": "trainFinalizeCore"
+    },
+    {
+      "file": "src/architecture/node.ts",
+      "issue": "high complexity",
+      "numericValue": 52,
+      "symbol": "default.propagate"
+    },
+    {
+      "file": "src/architecture/node/node.ts",
+      "issue": "high complexity",
+      "numericValue": 52,
+      "symbol": "default.propagate"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 52,
+      "symbol": "Node.propagate"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 52,
+      "symbol": "Node.propagate"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export-flow.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 50,
+      "symbol": "runOnnxExportFlow"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 50,
+      "symbol": "runOnnxExportFlow"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.loop.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 47,
+      "symbol": "trainSetCore"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/layers/network.onnx.export-conv.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 43,
+      "symbol": "tryEmitConvLayer"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.gradient-clip.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 41,
+      "symbol": "applyGradientClippingCore"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 29,
+      "symbol": "reconstructFusedRecurrentLayers"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-orchestrators.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 29,
+      "symbol": "reconstructFusedRecurrentLayers"
+    },
+    {
+      "file": "src/architecture/group.ts",
+      "issue": "high complexity",
+      "numericValue": 26,
+      "symbol": "default.disconnect"
+    },
+    {
+      "file": "src/architecture/group/group.ts",
+      "issue": "high complexity",
+      "numericValue": 26,
+      "symbol": "default.disconnect"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 26,
+      "symbol": "Group.disconnect"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 26,
+      "symbol": "Group.disconnect"
+    },
+    {
+      "file": "src/architecture/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 24,
+      "symbol": "default.construct"
+    },
+    {
+      "file": "src/architecture/architect/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 24,
+      "symbol": "default.construct"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 24,
+      "symbol": "Architect.construct"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 24,
+      "symbol": "Architect.construct"
+    },
+    {
+      "file": "src/neat/export/neat.export.population.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 22,
+      "symbol": "hydrateGenomeControllerMeta"
+    },
+    {
+      "file": "src/neat/export/neat.export.ts",
+      "issue": "high complexity",
+      "numericValue": 22,
+      "symbol": "importStateImpl"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "emitLayerGraph"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "emitLayerGraph"
+    },
+    {
+      "file": "src/architecture/node.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "default._activateCore"
+    },
+    {
+      "file": "src/architecture/node/node.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "default._activateCore"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "Node._activateCore"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 21,
+      "symbol": "Node._activateCore"
+    },
+    {
+      "file": "src/architecture/node.ts",
+      "issue": "high complexity",
+      "numericValue": 20,
+      "symbol": "default.mutate"
+    },
+    {
+      "file": "src/architecture/node/node.ts",
+      "issue": "high complexity",
+      "numericValue": 20,
+      "symbol": "default.mutate"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 20,
+      "symbol": "Node.mutate"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 20,
+      "symbol": "Node.mutate"
+    },
+    {
+      "file": "src/architecture/group.ts",
+      "issue": "high complexity",
+      "numericValue": 19,
+      "symbol": "default.connect"
+    },
+    {
+      "file": "src/architecture/group/group.ts",
+      "issue": "high complexity",
+      "numericValue": 19,
+      "symbol": "default.connect"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 19,
+      "symbol": "Group.connect"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 19,
+      "symbol": "Group.connect"
+    },
+    {
+      "file": "src/neat/export/neat.export.speciation.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 18,
+      "symbol": "restoreSpeciationCheckpoint"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 18,
+      "symbol": "resolveNetworkVisualizationTopologyPlan"
+    },
+    {
+      "file": "src/visualization/network-view/network-view.topology.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 18,
+      "symbol": "resolveNetworkVisualizationTopologyPlan"
+    },
+    {
+      "file": "src/visualization/visualization.ts",
+      "issue": "high complexity",
+      "numericValue": 18,
+      "symbol": "resolveNetworkVisualizationTopologyPlan"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.smoothing.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 17,
+      "symbol": "computeMonitoredError"
+    },
+    {
+      "file": "src/neat/export/neat.export.ts",
+      "issue": "high complexity",
+      "numericValue": 17,
+      "symbol": "importLightStateImpl"
+    },
+    {
+      "file": "src/neat/export/neat.export.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 17,
+      "symbol": "assertSerializedGenomeCarriesCheckpointIdentity"
+    },
+    {
+      "file": "src/architecture/group.ts",
+      "issue": "high complexity",
+      "numericValue": 15,
+      "symbol": "default.gate"
+    },
+    {
+      "file": "src/architecture/group/group.ts",
+      "issue": "high complexity",
+      "numericValue": 15,
+      "symbol": "default.gate"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-activations.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 15,
+      "symbol": "assignActivationFunctions"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 15,
+      "symbol": "Group.gate"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 15,
+      "symbol": "Group.gate"
+    },
+    {
+      "file": "src/architecture/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 14,
+      "symbol": "default.enforceMinimumHiddenLayerSizes"
+    },
+    {
+      "file": "src/architecture/architect/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 14,
+      "symbol": "default.enforceMinimumHiddenLayerSizes"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 14,
+      "symbol": "Architect.enforceMinimumHiddenLayerSizes"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 14,
+      "symbol": "Architect.enforceMinimumHiddenLayerSizes"
+    },
+    {
+      "file": "src/neat/evolve/adaptive/evolve.adaptive.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 13,
+      "symbol": "applyAutoCompatibilityTuning"
+    },
+    {
+      "file": "src/neat/export/neat.export.runtime.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 13,
+      "symbol": "restoreRuntimeMeta"
+    },
+    {
+      "file": "src/neat/export/neat.export.runtime.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 13,
+      "symbol": "serializeRuntimeMeta"
+    },
+    {
+      "file": "src/neat/evolve/objectives/evolve.objectives.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 12,
+      "symbol": "applyDynamicObjectiveSchedule"
+    },
+    {
+      "file": "src/neat/speciation/sharing/speciation.sharing.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 12,
+      "symbol": "applyFitnessSharing"
+    },
+    {
+      "file": "src/architecture/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "default.gru"
+    },
+    {
+      "file": "src/architecture/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "default.lstm"
+    },
+    {
+      "file": "src/architecture/architect/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "default.gru"
+    },
+    {
+      "file": "src/architecture/architect/architect.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "default.lstm"
+    },
+    {
+      "file": "src/architecture/network/slab/network.slab.fast-path.helpers.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "_canUseFastSlab"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "Architect.gru"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "Architect.lstm"
+    },
+    {
+      "file": "src/neat/adaptive/mutation/adaptive.mutation.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "resolveMutationSettings"
+    },
+    {
+      "file": "src/neat/adaptive/mutation/adaptive.mutation.utils.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "resolveMutationSettings"
+    },
+    {
+      "file": "src/neat/telemetry/recorder/telemetry.recorder.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "buildTelemetryEntry"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "Architect.gru"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "Architect.lstm"
+    },
+    {
+      "file": "src/architecture/network/deterministic/network.deterministic.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/genetic/network.genetic.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "connectUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "deterministicUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "evolveUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "gatingUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "geneticUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "mutatePublicUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "mutateUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportBuildUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportConvUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportDenseUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportLayerCommonUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportLayerGraphUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportOrchestratorsUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportPostprocessUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportRecurrentUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxExportSetupUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxImportActivationsUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxImportFusedRecurrentUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxImportOrchestratorsUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxImportWeightsUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxLayerAnalysisUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxRuntimeLoadUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "onnxUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "pruneBudgetUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "pruneUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "removeUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "serializePublicUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "serializeUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabAdjacencyHelpersUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabFastPathHelpersUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabPoolUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabRebuildHelpersUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabSharedHelpersUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "slabUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "standaloneUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "statsUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "topologyUtils"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "trainingUtils"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/remove/network.remove.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/stats/network.stats.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/network/worker-payload/network.worker-payload.channel.worker.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "INFERENCE_CHANNEL_WORKER_INTERNALS"
+    },
+    {
+      "file": "src/architecture/network/worker-payload/network.worker-payload.shared.worker.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "SHARED_INFERENCE_WORKER_INTERNALS"
+    },
+    {
+      "file": "src/architecture/nodePool.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/nodePool/nodePool.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/architecture/onnx.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "config"
+    },
+    {
+      "file": "src/browser-entry.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "methods"
+    },
+    {
+      "file": "src/multithreading/multi.utils.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "mishActivation"
+    },
+    {
+      "file": "src/neat/evaluate/evaluate.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "__object"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "config"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "methods"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "multi"
+    },
+    {
+      "file": "src/architecture/architect/architect.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ArchitectInvalidGruLayerArgumentsError"
+    },
+    {
+      "file": "src/architecture/architect/architect.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ArchitectInvalidLstmLayerArgumentsError"
+    },
+    {
+      "file": "src/architecture/network/activate/network.activate.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkLayer"
+    },
+    {
+      "file": "src/architecture/network/activate/network.activate.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkLayerNodes"
+    },
+    {
+      "file": "src/architecture/network/construct/network.construct.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkConstructDuplicateEdgeError"
+    },
+    {
+      "file": "src/architecture/network/deterministic/network.deterministic.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "RNG_WEYL_INCREMENT"
+    },
+    {
+      "file": "src/architecture/network/gating/network.gating.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "BridgingConnectionList"
+    },
+    {
+      "file": "src/architecture/network/gating/network.gating.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ConnectedNodeList"
+    },
+    {
+      "file": "src/architecture/network/gating/network.gating.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "PreservedGaters"
+    },
+    {
+      "file": "src/architecture/network/genetic/network.genetic.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "FIRST_INDEX"
+    },
+    {
+      "file": "src/architecture/network/genetic/network.genetic.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NO_GATER_INDEX"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "hasPath"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "rebuildConnections"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export-orchestrators.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "assignExportNodeIndices"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export-setup.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "CURRENT_ONNX_REFERENCE_OPSET"
+    },
+    {
+      "file": "src/architecture/network/onnx/export/network.onnx.export-setup.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ONNX_STANDARD_DOMAIN_ALIAS"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-external.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxExternalDenseLayer"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-external.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxExternalImportErrorCategory"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkOnnxRecurrentMixedActivationsUnsupportedError"
+    },
+    {
+      "file": "src/architecture/network/onnx/parity/network.onnx.parity.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "OnnxRuntimeParityResult"
+    },
+    {
+      "file": "src/architecture/network/prune/network.prune.budget.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkPruneBudgetMaxConnectionsError"
+    },
+    {
+      "file": "src/architecture/network/remove/network.remove.snapshot.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "createNodeConnectionSnapshot"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkRuntimeStochasticDepthSurvivalArrayError"
+    },
+    {
+      "file": "src/architecture/network/slab/network.slab.view.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "_readSlabVersion"
+    },
+    {
+      "file": "src/architecture/network/standalone/network.standalone.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NETWORK_STANDALONE_INPUT_SIZE_MISMATCH_ERROR_NAME"
+    },
+    {
+      "file": "src/architecture/network/standalone/network.standalone.utils.loop.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "appendInputSeedLine"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.factory.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "rebuildConnections"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.loop.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "sortNodesByStableTieBreak"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "hasPath"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "rebuildConnections"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkTrainingStoppingConditionRequiredError"
+    },
+    {
+      "file": "src/architecture/node/node.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NodeUnknownMutationMethodError"
+    },
+    {
+      "file": "src/architecture/nodePool.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "nodePoolStats"
+    },
+    {
+      "file": "src/architecture/nodePool.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "resetNodePool"
+    },
+    {
+      "file": "src/architecture/nodePool/nodePool.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "nodePoolStats"
+    },
+    {
+      "file": "src/architecture/nodePool/nodePool.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "resetNodePool"
+    },
+    {
+      "file": "src/config.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ActivationPrecision"
+    },
+    {
+      "file": "src/methods/rate/rate.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "DEFAULT_INITIAL_PERIOD"
+    },
+    {
+      "file": "src/methods/rate/rate.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "DEFAULT_REDUCE_ON_PLATEAU_PATIENCE"
+    },
+    {
+      "file": "src/neat/evolve/evolve.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "EVOLVE_DEFAULT_EPSILON_MAX"
+    },
+    {
+      "file": "src/neat/evolve/evolve.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "EVOLVE_DEFAULT_EPSILON_MIN"
+    },
+    {
+      "file": "src/neat/export/neat.export.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "SpeciationCheckpointJSON"
+    },
+    {
+      "file": "src/neat/export/neat.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "SpeciationCheckpointJSON"
+    },
+    {
+      "file": "src/neat/genome/genome.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "GenomeHereditySourceParent"
+    },
+    {
+      "file": "src/neat/genome/genome.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NeatGenomeExtensionValues"
+    },
+    {
+      "file": "src/neat/genome/genome.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NeatGenomeExtensionValues"
+    },
+    {
+      "file": "src/neat/genome/heredity/genome.heredity.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "GenomeHereditySourceParent"
+    },
+    {
+      "file": "src/neat/mutation/repair/mutation.min-hidden.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "MINIMUM_HIDDEN_BASELINE"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkNodeDimensions"
+    },
+    {
+      "file": "src/visualization/network-view/network-view.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkNodeDimensions"
+    },
+    {
+      "file": "src/visualization/visualization.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NetworkNodeDimensions"
+    },
+    {
+      "file": "src/architecture/network/activate/network.activate.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "ActivationStats"
+    },
+    {
+      "file": "src/architecture/network/activate/network.activate.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "WeightNoiseStats"
+    },
+    {
+      "file": "src/architecture/network/construct/network.construct.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkConstructNoInputNodesError"
+    },
+    {
+      "file": "src/architecture/network/construct/network.construct.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkConstructNoOutputNodesError"
+    },
+    {
+      "file": "src/architecture/network/construct/network.construct.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkConstructSelfEdgeError"
+    },
+    {
+      "file": "src/architecture/network/gating/network.gating.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NodeRemovalMutationConfig"
+    },
+    {
+      "file": "src/architecture/network/genetic/network.genetic.setup.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "createNodeBuildContext"
+    },
+    {
+      "file": "src/architecture/network/genetic/network.genetic.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "DEFAULT_REENABLE_PROBABILITY"
+    },
+    {
+      "file": "src/architecture/network/genetic/network.genetic.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "PARENT_COMPATIBILITY_ERROR_MESSAGE"
+    },
+    {
+      "file": "src/architecture/network/mutate/network.mutate.handlers.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "subBackConn"
+    },
+    {
+      "file": "src/architecture/network/mutate/network.mutate.handlers.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "subGate"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-external.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxDecodedBytes"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-orchestrators.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "pruneSingleLayerHiddenPlaceholders"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-weights.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxImportConvLayerContext"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.runtime-load.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "loadRuntimeFactories"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkOnnxShapeValidationError"
+    },
+    {
+      "file": "src/architecture/network/onnx/parity/network.onnx.parity.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "OnnxRuntimeParitySkippedResult"
+    },
+    {
+      "file": "src/architecture/network/prune/network.prune.budget.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkPruneBudgetGrowthGraceFractionError"
+    },
+    {
+      "file": "src/architecture/network/prune/network.prune.evolutionary.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "markEvolutionaryTopologyDirty"
+    },
+    {
+      "file": "src/architecture/network/prune/network.prune.evolutionary.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "normalizeEvolutionaryTargetSparsity"
+    },
+    {
+      "file": "src/architecture/network/prune/network.prune.schedule.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "markTopologyDirty"
+    },
+    {
+      "file": "src/architecture/network/prune/network.prune.schedule.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "resolvePruningMethod"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkRuntimeDropConnectProbabilityRangeError"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkRuntimePruningScheduleWindowError"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkRuntimeWeightNoisePerLayerRangeError"
+    },
+    {
+      "file": "src/architecture/network/serialize/network.serialize.genome.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "COMPRESSED_GENOME_ARCHIVE_FORMAT"
+    },
+    {
+      "file": "src/architecture/network/serialize/network.serialize.genome.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "CompressedSerializedGenomeArchive"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.loop.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "processKahnQueue"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkTrainingBatchSizeError"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkTrainingInvalidOptimizerOptionError"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NetworkTrainingUnknownLookaheadBaseTypeError"
+    },
+    {
+      "file": "src/architecture/node/node.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NodeUndefinedConnectionTargetError"
+    },
+    {
+      "file": "src/config.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "PrecisionConfig"
+    },
+    {
+      "file": "src/config.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "PrecisionConfigOverrides"
+    },
+    {
+      "file": "src/memory/config.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "MemoryManagerFlagName"
+    },
+    {
+      "file": "src/methods/rate/rate.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "DEFAULT_COSINE_PERIOD"
+    },
+    {
+      "file": "src/neat/genome/genome.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NeatGenomeValidationError"
+    },
+    {
+      "file": "src/neat/genome/genome.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NeatGenomeConnectionGene"
+    },
+    {
+      "file": "src/neat/genome/genome.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NeatGenomeValidationError"
+    },
+    {
+      "file": "src/neat/genome/genome.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NeatGenomeConnectionGene"
+    },
+    {
+      "file": "src/neat/innovation-tracker/innovation-tracker.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "INITIAL_NEXT_INNOVATION_ID"
+    },
+    {
+      "file": "src/neat/innovation-tracker/innovation-tracker.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "INITIAL_TRACKER_GENERATION"
+    },
+    {
+      "file": "src/neat/innovation-tracker/innovation-tracker.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "ConnectionInnovationEntry"
+    },
+    {
+      "file": "src/neat/innovation-tracker/innovation-tracker.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NodeSplitInnovationEntry"
+    },
+    {
+      "file": "src/neat/rng/core/rng.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "RNG_SHIFT_LEFT_PRIMARY"
+    },
+    {
+      "file": "src/neat/rng/core/rng.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "RNG_SHIFT_LEFT_SECONDARY"
+    },
+    {
+      "file": "src/neat/rng/core/rng.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "RNG_SHIFT_RIGHT_PRIMARY"
+    },
+    {
+      "file": "src/neat/rng/rng.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "RNG_SHIFT_LEFT_PRIMARY"
+    },
+    {
+      "file": "src/neat/rng/rng.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "RNG_SHIFT_LEFT_SECONDARY"
+    },
+    {
+      "file": "src/neat/rng/rng.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "RNG_SHIFT_RIGHT_PRIMARY"
+    },
+    {
+      "file": "src/architecture/network/activate/network.activate.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "BatchActivationContext"
+    },
+    {
+      "file": "src/architecture/network/activate/network.activate.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "RawActivationContext"
+    },
+    {
+      "file": "src/architecture/network/gating/network.gating.remove.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "resolveSubNodeMutationConfig"
+    },
+    {
+      "file": "src/architecture/network/genetic/network.genetic.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "RandomGenerator"
+    },
+    {
+      "file": "src/architecture/network/mutate/network.mutate.handlers.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "subSelfConn"
+    },
+    {
+      "file": "src/architecture/network/network.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "clearState"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-external.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "OnnxDecodedLongLike"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.layer-analysis.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "inferLayerOrdering"
+    },
+    {
+      "file": "src/architecture/network/onnx/network.onnx.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "inferLayerOrdering"
+    },
+    {
+      "file": "src/architecture/network/onnx/schema/network.onnx.schema.tensor-data.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "ONNX_FLOAT_DATA_TYPE"
+    },
+    {
+      "file": "src/architecture/network/onnx/schema/network.onnx.schema.tensor-data.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "ONNX_FLOAT16_DATA_TYPE"
+    },
+    {
+      "file": "src/architecture/network/remove/network.remove.finalize.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "markNetworkRemovalDirtyFlags"
+    },
+    {
+      "file": "src/architecture/network/remove/network.remove.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "NodeConnectionSnapshotContext"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.diagnostics.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "getLastGradClipGroupCount"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.diagnostics.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "getRawGradientNorm"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "NetworkRuntimeWeightNoiseConfigurationError"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "NetworkRuntimeWeightNoiseStdDevRangeError"
+    },
+    {
+      "file": "src/architecture/network/serialize/network.serialize.genome.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "COMPRESSED_GENOME_FORMAT"
+    },
+    {
+      "file": "src/architecture/network/slab/network.slab.setup.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "_prepareSlabBuildPreconditions"
+    },
+    {
+      "file": "src/architecture/network/standalone/network.standalone.utils.finalize.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "assembleStandaloneSource"
+    },
+    {
+      "file": "src/architecture/network/standalone/network.standalone.utils.loop.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "appendAllNodeComputationLines"
+    },
+    {
+      "file": "src/architecture/network/standalone/network.standalone.utils.loop.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "appendOutputReturnLine"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.path.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "traversePathSearch"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.setup.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "asTopologyProps"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.setup.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "finalizeRecurrentSchedule"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.backprop.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "clearState"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "clearState"
+    },
+    {
+      "file": "src/neat/evolve/evolve.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "EVOLVE_AUTO_COMPAT_MAX_COEFF"
+    },
+    {
+      "file": "src/neat/evolve/evolve.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "EVOLVE_AUTO_COMPAT_MIN_COEFF"
+    },
+    {
+      "file": "src/neat/evolve/evolve.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "EVOLVE_REENABLE_MAX"
+    },
+    {
+      "file": "src/neat/evolve/evolve.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "EVOLVE_REENABLE_MIN"
+    },
+    {
+      "file": "src/neat/export/neat.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "CURRENT_STATE_FORMAT_VERSION"
+    },
+    {
+      "file": "src/neat/export/neat.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "FULL_CHECKPOINT_MODE"
+    },
+    {
+      "file": "src/neat/export/neat.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "LIGHT_CHECKPOINT_MODE"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "NetworkVisualizationColorScales"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "VisualNetworkConnection"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "VisualNetworkNode"
+    },
+    {
+      "file": "src/visualization/network-view/network-view.layout.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "VisualNetworkNode"
+    },
+    {
+      "file": "src/visualization/network-view/network-view.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "NetworkVisualizationColorScales"
+    },
+    {
+      "file": "src/visualization/network-view/network-view.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "VisualNetworkConnection"
+    },
+    {
+      "file": "src/visualization/visualization.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "NetworkVisualizationColorScales"
+    },
+    {
+      "file": "src/visualization/visualization.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "VisualNetworkConnection"
+    },
+    {
+      "file": "src/visualization/visualization.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 7,
+      "symbol": "VisualNetworkNode"
+    },
+    {
+      "file": "src/architecture/network/prune/network.prune.sparsity.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "readInitialSparsityBaseline"
+    },
+    {
+      "file": "src/architecture/network/remove/network.remove.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "NodeRemovalContext"
+    },
+    {
+      "file": "src/architecture/network/remove/network.remove.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "ReconnectEndpointPairContext"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.diagnostics.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "getLossScale"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "NetworkTrainingAccumulationStepsError"
+    },
+    {
+      "file": "src/architecture/network/training/network.training.errors.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "NetworkTrainingUnknownOptimizerTypeError"
+    },
+    {
+      "file": "src/architecture/nodePool.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "AcquireNodeOptions"
+    },
+    {
+      "file": "src/architecture/nodePool/nodePool.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "AcquireNodeOptions"
+    },
+    {
+      "file": "src/methods/rate/rate.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "DEFAULT_REDUCE_ON_PLATEAU_MIN_RATE"
+    },
+    {
+      "file": "src/neat/export/neat.export.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "CURRENT_META_FORMAT_VERSION"
+    },
+    {
+      "file": "src/neataptic.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "RenderNetworkViewOptions"
+    },
+    {
+      "file": "src/visualization/network-view/network-view.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "RenderNetworkViewOptions"
+    },
+    {
+      "file": "src/visualization/visualization.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 6,
+      "symbol": "RenderNetworkViewOptions"
+    },
+    {
+      "file": "src/architecture/network/genetic/network.genetic.setup.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "assignOffspringNodes"
+    },
+    {
+      "file": "src/architecture/network/onnx/import/network.onnx.import-external.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "DecodedExternalOnnxOpsetImport"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.diagnostics.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "getTrainingStats"
+    },
+    {
+      "file": "src/memory/config.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "MemoryManagerConfigSnapshot"
+    },
+    {
+      "file": "src/neat/adaptive/complexity/adaptive.complexity.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "initializeNodeBudget"
+    },
+    {
+      "file": "src/visualization/network-view/network-view.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "EdgePadding"
+    },
+    {
+      "file": "src/visualization/visualization.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 5,
+      "symbol": "EdgePadding"
+    },
+    {
+      "file": "src/architecture/network/construct/network.construct.utils.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "ConstructResult"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.path.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 4,
+      "symbol": "createPathSearchContext"
+    },
+    {
+      "file": "src/architecture/network/topology/network.topology.path.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 3,
+      "symbol": "isSameNode"
+    },
+    {
+      "file": "src/architecture/network/runtime/network.runtime.diagnostics.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 2,
+      "symbol": "disableDropConnect"
+    }
+  ],
+  "normalizedEvidenceDigest": "fc7e08fa50f1bda6a9f74e1d1d71cadd4c8c9412c113dfa4e44b1af1f87d038c"
+}

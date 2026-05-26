@@ -2,22 +2,32 @@
 
 NeatapticTS ONNX-like serialization for networks.
 
-This module provides the two public entry points:
-- `exportToONNX()` turns a runtime `Network` into a plain JSON object (`OnnxModel`).
+This module provides the four public entry points:
+- `exportToONNXBinary()` turns the approved constrained subset into protobuf
+  `ModelProto` bytes and is the primary runtime-validated artifact for the
+  current Phase 8 and Phase 9 subset.
+- `exportToONNX()` turns a runtime `Network` into a plain JSON object
+  (`OnnxModel`) for same-family debug, roundtrip, and importer-owned workflows.
 - `importFromONNX()` reconstructs a `Network` from that JSON object.
+- `importFromONNXBinary()` reconstructs the first honest external binary ONNX
+  subset through a separate standard-domain `ModelProto` ingress lane.
 
 What this format is (and is not):
-- It is **JSON-first** and intentionally resembles ONNX’s model/graph concepts.
-- It is **not** a full ONNX protobuf implementation and is not guaranteed to run on
-  general ONNX runtimes.
-- The compatibility promise is primarily **within this repo**: models produced by
-  `exportToONNX()` should be accepted by `importFromONNX()` (same version family).
+- It exposes two distinct ONNX-adjacent surfaces with different promises.
+- `exportToONNXBinary()` is the compliance and runtime-evidence surface for the
+  documented supported subset.
+- `exportToONNX()` stays **JSON-first** and intentionally resembles ONNX’s
+  model and graph concepts for same-family inspection and roundtrip import.
+- Neither surface is a blanket promise of arbitrary ONNX runtime portability
+  beyond the named subset and validations.
 
 How to read this chapter:
-- Start here for the public round-trip API and the trust boundary.
+- Start here for the public surface split and the trust boundary.
 - Continue into `export/` to see how layered networks become JSON graph payloads.
 - Continue into `import/` to see how that payload becomes a runtime network again.
 - Continue into `schema/` for the persisted wire-format shapes.
+- Continue into `parity/` for the Phase 9 runtime-executed fixture inventory and
+  binary-first ONNX Runtime comparison seam.
 - Use `network.onnx.utils.ts` and `network.onnx.utils.types.ts` as compatibility and
   bridge surfaces rather than the first place to learn the pipeline.
 
@@ -45,6 +55,23 @@ const restored = importFromONNX(modelRoundTrip);
 ```
 
 ## architecture/network/onnx/network.onnx.ts
+
+### AttentionMapping
+
+Explicit export-only attention mapping for the Phase 5E shadow subset.
+
+This contract keeps attention source-owned rather than heuristic: callers
+opt one target layer into a fixed-width self-attention shadow block while the
+stable dense path remains the canonical runtime behavior.
+
+### ConcatMapping
+
+Explicit export-only concat mapping for the narrow Phase 5 merge subset.
+
+This contract keeps concat source-owned instead of inferred: callers name one
+skipped source layer and one target layer, and export preserves the merge as a
+deterministic `Concat -> Gemm` path with the default adjacent-layer slice kept
+first in the merged input order.
 
 ### Conv2DMapping
 
@@ -75,14 +102,93 @@ What you get:
 - A minimal ONNX-ish graph (`model.graph`) plus optional metadata (`model.metadata_props`).
 
 When to use this:
-- You want a portable snapshot that can be inspected/diffed as JSON.
-- You want to reconstruct the network later via `importFromONNX()`.
+- You want a portable same-family snapshot that can be inspected or diffed as JSON.
+- You want the importer-owned roundtrip surface consumed later via `importFromONNX()`.
+- You are debugging export structure rather than producing the primary
+  runtime-validated `.onnx` artifact.
 
 Tradeoffs:
 - The output is ONNX-like, but **not** intended to be universally compatible with all ONNX
   runtimes.
+- This is not the primary runtime-validated artifact for the approved subset;
+  use `exportToONNXBinary()` when the goal is external validation, parity,
+  or the main compliant deliverable.
 - Some advanced features (partial connectivity, mixed activations, recurrent heuristics)
   may produce graphs that are primarily meant for this library’s importer.
+- Phase 6 closes the first optimization wave conservatively: exact unary activation
+  emission now covers `Softplus`, `Softsign`, `Selu`, `Mish` (opset >= 18), and
+  `Gelu` with explicit `approximate='tanh'` (opset >= 20), while opset-incompatible
+  or unsupported activations stay on the honest Identity baseline.
+- Phase 7 is now active on the first reduced-precision lane: `precision.mode =
+  'storage-fp16'` packs eligible same-family dense and Conv weight or bias
+  initializers as float16 payloads and prepends deterministic `Cast -> float32`
+  bridges so `Gemm` and `Conv` inputs stay type-consistent. Recurrent,
+  advanced-graph, mixed-activation, and partial-connectivity requests stay on
+  float32 with explicit metadata fallback reasons instead of silently widening
+  the supported subset.
+- Quantization packets are now exporter-owned and calibration-backed. Static
+  8-bit requests can carry explicit layer-target calibration ranges and emit
+  deterministic scale or zero-point initializers plus metadata for the
+  supported same-family dense and spatial subset. The dense-only Phase 7D
+  lane is now closed for the current explicitly targeted same-family
+  one-output dense subset: those layers can lower into
+  `QuantizeLinear -> QLinearMatMul -> DequantizeLinear`, reattach nonzero
+  bias through an explicit float-domain `Add` bridge, preserve the
+  exporter-owned unary activation node, and emit a deterministic quantized
+  weight tensor with `effective_quantization_mode = static-8bit`. Phase 7E
+  is now also closed for the current explicit Conv subset: supported spatial
+  paths lower into `QuantizeLinear -> QLinearConv -> DequantizeLinear`, emit
+  deterministic quantized Conv weight tensors, quantize the fused bias as
+  one `int32` value per output channel, and return to float32 before pooling,
+  flatten, reshape, or downstream dense boundaries. Phase 7F is now closed
+  for the current dense-only dynamic guidance lane: supported same-family
+  dense paths can either land `metadata-only` guidance or insert
+  `DynamicQuantizeLinear -> DequantizeLinear` ahead of dense `Gemm` inputs
+  while keeping the affine and activation compute on the existing float32
+  path. Wider dense targets, unsupported spatial fallbacks, recurrent,
+  advanced-graph, mixed-activation, and partial-connectivity requests still
+  stay on float32 with explicit fallback metadata instead of widening the
+  supported subset implicitly.
+
+Quantized spatial lowering path:
+
+```mermaid
+flowchart LR
+  Input[Float spatial input] --> Quantize[QuantizeLinear]
+  Quantize --> QConv[QLinearConv]
+  QConv --> Dequantize[DequantizeLinear]
+  Dequantize --> Activation[Unary activation]
+  Activation --> Boundary[Pool flatten reshape dense]
+```
+
+Dynamic dense guidance path:
+
+```mermaid
+flowchart LR
+  Input[Float dense input] --> DQL[DynamicQuantizeLinear]
+  DQL --> DQ[DequantizeLinear]
+  DQ --> Gemm[Gemm]
+  Gemm --> Activation[Unary activation]
+```
+
+The lighter `metadata-only` representation records the same dense-only lane
+without inserting `DynamicQuantizeLinear` nodes.
+- The current spatial subset is still conservative: explicit Conv mappings round-trip,
+  pooling/flatten import remains metadata-driven, and heuristic Conv inference stays
+  metadata-only unless `autoPromoteInferredConv` is enabled and the inferred dense layer
+  passes the shared-kernel safety gate for the current proven subset, including
+  conservative multi-channel layouts, unpooled stacked Conv-like chains, deeper
+  single-channel post-pool chains whose pooled tensor shape can be derived
+  sequentially, and deeper pooled multi-channel chains whose pooled tensor shapes
+  can be derived sequentially while export keeps the pooled source compact per
+  channel. The only proven flatten-after-pool promotion path is the narrow final
+  hidden-stage reshape-bridge subset, where export restores the derived pooled
+  `[C,H,W]` shape before the later Conv. Earlier flattened pooled consumers,
+  repeated flatten-bridge chains, or downstream dense layers that still depend on
+  extra non-pooled inputs keep later inferred stages on the honest fallback path.
+- Export now validates a conservative internal tensor-shape ledger before model
+  finalization and prunes exporter-owned Identity activation scaffolding only when the
+  graph stays semantically equivalent for the already-supported same-family subset.
 
 High-level algorithm:
  1) Normalize/rebuild local connection state for deterministic traversal.
@@ -102,6 +208,62 @@ Parameters:
 
 Returns: ONNX-like model object suitable for persistence or re-import.
 
+### exportToONNXBinary
+
+```ts
+exportToONNXBinary(
+  network: default,
+  options: OnnxExportOptions,
+): Uint8Array<ArrayBufferLike>
+```
+
+Export a NeatapticTS network to protobuf `ModelProto` bytes.
+
+What you get:
+- A deterministic binary payload whose field layout follows ONNX `ModelProto`.
+- The primary compliant and runtime-validated artifact for the approved
+  lower-opset same-family subset.
+- The same constrained model family as `exportToONNX()`, without widening the
+  importer or runtime-compatibility promise beyond the documented subset.
+
+Important boundary:
+- This binary surface now has a repo-owned external validation lane for the
+  current same-family subset: the companion validator decodes and verifies the
+  `ModelProto` payload and asks ONNX Runtime to accept it under the current
+  explicit lower-opset contract.
+- Phase 9 now layers a separate `parity/` seam on top of that load-acceptance
+  boundary. The parity harness keeps binary `.onnx` as the input artifact,
+  freezes deterministic baseline float32, storage-fp16, static-8bit dense
+  qlinear, explicit-Conv static-8bit, and `DynamicQuantizeLinear`
+  dense-guidance golden fixtures, and now also proves seeded randomized
+  parity over bounded shapes or input ranges for that same five-lane subset
+  through an isolated child Node process backed by the raw ONNX Runtime
+  binding, while keeping the dynamic lane narrow to its explicit
+  float-to-uint8 scalar-parameter tolerance packet.
+- That validation lane is still narrower than Phase 9 runtime parity. It does
+  not widen import support, arbitrary external-consumer support, or cross-opset
+  execution claims beyond the documented Phase 8 subset.
+
+When to use this:
+- You want the primary `.onnx` artifact for the repo's current compliance and
+  runtime-evidence claims.
+- You need the binary input used by the validator and the Phase 9 parity seam.
+- You want to persist the supported subset in a format that real ONNX tooling
+  can decode under the documented lower-opset policy.
+
+High-level behavior:
+ 1) Build the shared exporter model view for the supported subset.
+ 2) Normalize binary-only graph boundaries and required `ModelProto` headers.
+ 3) Serialize the resulting model into deterministic protobuf bytes.
+ 4) Keep validation separate: use the validator seam when you need explicit
+    external acceptance evidence for the current supported subset.
+
+Parameters:
+- `network` - Source network instance to serialize.
+- `options` - Export controls shared with `exportToONNX()`.
+
+Returns: Binary protobuf `ModelProto` bytes.
+
 ### importFromONNX
 
 ```ts
@@ -113,11 +275,24 @@ importFromONNX(
 Reconstruct a NeatapticTS network from an exported `OnnxModel`.
 
 Expected input:
-- A model produced by `exportToONNX()` (same repo/version family).
+- A model produced by `exportToONNX()` (same repo/version family), including the
+  current storage-fp16 subset where eligible weight and bias initializers are
+  packed as float16 payloads and decoded back into the native runtime during import.
+- Quantized Phase 7 exports remain export-only for now. The importer does not
+  yet reconstruct `QLinearMatMul`, `QLinearConv`, `DynamicQuantizeLinear`
+  guidance boundaries, or other quantized operators back into the native
+  runtime, so quantized ONNX payloads are outside the current import
+  contract.
 
 Trust boundary:
 - Do not import untrusted blobs. A malformed model can be extremely large or internally
   inconsistent and may cause errors or high memory usage.
+
+Current boundary:
+- `importFromONNX()` continues to consume the repo's JSON-first `OnnxModel` surface.
+- Binary external import now lands through the separate `importFromONNXBinary()` entrypoint
+  for the first standard-domain float32 dense `Gemm -> unary activation` lane only.
+- `importFromONNX()` itself stays scoped to the JSON-first `OnnxModel` surface.
 
 High-level behavior:
  1) Build a perceptron-shaped scaffold from the payload layer sizes.
@@ -136,6 +311,41 @@ Parameters:
 - `onnx` - ONNX-like model to reconstruct.
 
 Returns: Reconstructed network ready for inference/evolution workflows.
+
+### importFromONNXBinary
+
+```ts
+importFromONNXBinary(
+  binaryModel: Uint8Array<ArrayBufferLike>,
+): default
+```
+
+Import the first supported external binary ONNX subset from protobuf `ModelProto` bytes.
+
+Current subset:
+- Exactly one public input, one public output, and one acyclic dense chain.
+- Standard-domain `Gemm` plus zero-or-one trailing unary activation per layer.
+- One final standard-domain `Identity` output alias is accepted when it only republishes
+  the terminal dense tensor as the declared model output.
+- Float32 tensors only, canonical `Gemm` attributes only, and initializer-owned affine terms only.
+- No recurrent, spatial, branching, quantized, custom-domain, or metadata-dependent graphs.
+
+High-level behavior:
+ 1) Decode and verify the binary `ModelProto` payload.
+ 2) Normalize one accepted external dense chain into an importer-owned canonical model.
+ 3) Reuse the existing reconstruction flow to rebuild a runtime network.
+
+Parameters:
+- `binaryModel` - Binary `ModelProto` payload to reconstruct.
+
+Returns: Reconstructed network ready for inference workflows.
+
+### networkOnnxUtils
+
+Default export bundle for the ONNX-like serialization chapter.
+
+Bundles the primary ONNX entry points so the network facade can bind them as
+methods without importing each function individually.
 
 ### OnnxExportOptions
 
@@ -160,6 +370,44 @@ Key fields (high-level):
 - `legacyNodeOrdering`: keeps older node ordering for backward compatibility.
 - `conv2dMappings` / `pool2dMappings`: encode conv/pool semantics for fully-connected
   layers via explicit mapping declarations.
+- `concatMappings`: opt one skipped source layer into the narrow same-family
+  `Concat -> Gemm` merge subset with deterministic `previous_then_source`
+  input order.
+- `attentionMappings`: opt one target layer into the fixed-width same-family
+  self-attention shadow subset.
+- `precision`: opt into reduced-precision export. The current landed lane is
+  `storage-fp16`, which packs eligible same-family dense and Conv weight or
+  bias initializers into float16 storage and inserts deterministic
+  `Cast -> float32` bridges so operator inputs stay type-consistent.
+- `quantization`: declare an explicit quantization request packet. The
+  current exporter can validate static calibration contracts, emit
+  deterministic scale or zero-point parameter initializers for the supported
+  same-family dense and spatial subset, and close the dense-only Phase 7D
+  lane for explicitly targeted same-family one-output dense layers. Those
+  layers can lower into a
+  `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
+  explicit float-domain bias bridge plus the exporter-owned unary
+  activation node when present, while the closed 7E Conv subset lowers
+  supported spatial paths into `QuantizeLinear -> QLinearConv ->
+  DequantizeLinear`, emits one `int32` fused-bias value per output channel,
+  and returns to float32 before pooling, flatten, reshape, or downstream
+  dense boundaries. The closed 7F dynamic lane now adds dense-only guidance:
+  supported same-family dense paths can either record `metadata-only`
+  guidance or insert `DynamicQuantizeLinear -> DequantizeLinear` immediately
+  ahead of dense `Gemm` inputs. Wider dense targets, unsupported spatial
+  fallbacks, recurrent, advanced-graph, mixed-activation, and
+  partial-connectivity requests stay on float32 with explicit fallback
+  metadata.
+- `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
+  emission only when the exporter can prove the dense weights already behave like a
+  shared-kernel spatial layout, including the current conservative multi-channel and
+  unpooled stacked-chain subsets, deeper single-channel post-pool chains whose
+  pooled tensor shapes can be derived sequentially, and deeper pooled
+  multi-channel chains when the pooled tensor shapes can be derived sequentially
+  and the pooled source stays compact per channel. The only proven
+  flatten-after-pool promotion path is the narrow final hidden-stage
+  reshape-bridge subset. Earlier flattened pooled consumers and repeated
+  flatten-bridge chains stay on the honest fallback path.
 
 ### OnnxModel
 
@@ -175,7 +423,9 @@ const restoredModel = JSON.parse(jsonText) as OnnxModel;
 Notes:
 - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
   conv/pool mappings, etc.). This is where most round-trip hints live.
-- Initializers currently store floating-point weights in `float_data`.
+- Initializers currently store floating-point weights in `float_data`, and the
+  Phase 7 storage-fp16 lane can pack half-precision words into `int32_data`
+  while keeping the logical tensor shape stable.
 
 Security/trust boundary:
 - Treat this as untrusted input if it comes from outside your process.
@@ -219,16 +469,64 @@ Current capability set:
    adding per-recurrent-layer previous state inputs and diagonal R matrices.
  - Experimental: heuristic detection and emission of simplified LSTM / GRU fused nodes
    (no sequence axis, simplified bias and recurrence handling) while retaining original Gemm path.
+ - Phase 5 seam preparation: non-adjacent feed-forward edges are preserved as
+   `advanced_graph_cross_layer_connections` metadata and re-attached on import
+   as `_onnxAdvancedGraph` audit payloads, without yet promoting those paths
+   into explicit residual, concat, or attention reconstruction.
+ - Phase 5 alias reuse subset: exact dense and per-neuron initializer duplicates
+   can reuse one canonical tensor name when `includeMetadata` is enabled,
+   recorded as `shared_initializer_aliases` and re-attached on import as
+   `_onnxAdvancedGraph.sharedInitializerAliases`, while near-equal or
+   unsupported-family tensors remain distinct.
+ - Phase 5 residual subset: dense-family one-hop skip branches now emit an
+   explicit `Add` merge when exactly one skipped source layer feeds the
+   target layer, recorded as `advanced_graph_residual_adds` and re-attached
+   on import as `_onnxAdvancedGraph.residualAdds`, while longer or ambiguous
+   non-adjacent merges stay on the audit-only fallback path.
+  - Conservative spatial subset: explicit Conv mappings round-trip through Conv initializers,
+    while pooling/flatten import stays metadata-only (`_onnxPooling` audit payloads) and
+    heuristic Conv inference stays metadata-only by default unless
+    `autoPromoteInferredConv` is enabled and the inferred layer passes the shared-kernel
+    safety gate for the current proven subset, including conservative
+    multi-channel layouts, unpooled stacked Conv-like chains, deeper
+    single-channel post-pool chains whose pooled tensor shapes can be derived
+    sequentially, and deeper pooled multi-channel chains whose pooled tensor
+    shapes can be derived sequentially while the exporter keeps the pooled
+    source compact per channel. The only proven flatten-after-pool promotion
+    path is the final hidden-stage reshape-bridge subset. Earlier flattened
+    pooled consumers, repeated flatten-bridge chains, and downstream dense
+    stages that still depend on extra non-pooled inputs keep the later
+    inferred stage on the honest fallback path.
 
 Scope & Assumptions (current):
  - Network must be strictly layered and acyclic (feed‑forward between layers; optional self recurrence within
    hidden layers when enabled).
  - Homogeneous activation per layer unless `allowMixedActivations` is true (then per-neuron decomposition used).
  - Only a minimal ONNX tensor / node subset is emitted (no external ONNX proto dependency; pure JSON shape).
+ - Cross-layer feed-forward edges are currently audit-only: export records them in metadata,
+   and import preserves that audit payload while keeping the layered fallback scaffold,
+   except for the current one-hop residual-add subset.
+ - Shared initializer alias reuse is currently metadata-gated and limited to
+   exact dense/per-neuron tensor matches from the same exporter version family.
+ - Explicit residual-add support is currently limited to homogeneous dense-family
+   layers with exactly one skipped source layer and same-family import/export.
  - Recurrent support limited to: (a) self-connections mapped to diagonal Rk matrices (single step),
    (b) experimental fused LSTM/GRU heuristics relying on equal partition patterns (not spec-complete).
  - LSTM / GRU biases currently single segment (Wb only) and recurrent bias (Rb) implicitly zero; ordering of
    gates documented in code comments (may differ from canonical ONNX gate ordering and will be normalized later).
+
+Supported recurrent subset (current):
+ - Models exported by this repo that use single-step self recurrence on hidden layers.
+ - Same-family export/import of heuristic LSTM and GRU layers when the emitted `W`, `R`, and `B`
+   tensors are all present and shape-compatible with the importer.
+
+Fallback and rejection boundary:
+ - Arbitrary external ONNX recurrent graphs are not a supported import target.
+ - If fused recurrent metadata is malformed, or one of the required `W`, `R`, or `B` tensors is
+   missing or incompatible, fused reconstruction is skipped and the importer keeps the base layered
+   reconstruction instead of claiming generic recurrent-graph support.
+ - Near-miss recurrent shapes can emit `rnn_pattern_fallback` metadata for diagnostics, but that
+   metadata is not a promise that the graph is an accepted fused recurrent family.
 
 Metadata Keys (may appear in `model.metadata_props` when `includeMetadata` true):
  - `layer_sizes`: JSON array of hidden layer sizes.
@@ -236,6 +534,21 @@ Metadata Keys (may appear in `model.metadata_props` when `includeMetadata` true)
  - `lstm_groups_stub`: Heuristic grouping stubs for prospective LSTM layers (pre-emission discovery data).
  - `lstm_emitted_layers` / `gru_emitted_layers`: Arrays of export-layer indices where fused nodes were emitted.
  - `rnn_pattern_fallback`: Records near-miss pattern sizes for diagnostic purposes.
+ - `conv2d_layers` / `conv2d_specs`: Explicit Conv export mappings for the current spatial subset,
+   including safety-gated auto-promoted heuristic Conv layers when enabled.
+ - `conv2d_inferred_layers` / `conv2d_inferred_specs`: Heuristic Conv-like spatial metadata that
+   remains advisory unless the auto-promotion gate upgrades a layer into real Conv emission.
+ - `pool2d_layers` / `pool2d_specs` / `flatten_layers`: Pooling and flatten bridge metadata consumed as
+   import-side audit hints rather than runtime graph rewrites.
+ - `advanced_graph_cross_layer_connections`: Audit-only records for non-adjacent
+   feed-forward edges that the current exporter either promotes into the narrow
+   residual subset or keeps on the fallback path for later concat/attention work.
+ - `advanced_graph_residual_adds`: Explicit one-hop residual merge records for the
+   supported dense-family subset. Import uses these together with the residual
+   branch tensors and cross-layer audit edges to rebuild the skipped connections.
+ - `shared_initializer_aliases`: Audit-only records mapping reused dense-family
+   initializer names back to their canonical tensors so import can preserve
+   exact roundtrip fidelity while unsupported alias families stay duplicated.
 
 Design Goals:
  - Zero heavy runtime dependencies; the structure is intentionally lightweight & serializable.
@@ -249,7 +562,8 @@ Known limitations:
  - Richer recurrence (off-diagonal intra-layer connectivity) and gating reconstruction fidelity.
 
 NOTE: Import is only guaranteed to work for models produced by `exportToONNX()`; arbitrary ONNX graphs are
-NOT supported. Experimental fused recurrent nodes are best-effort and may silently degrade if shapes mismatch.
+NOT supported. The recurrent import promise is intentionally narrow: same-family export/import for the supported
+subset above, with explicit fallback to the layered baseline when fused recurrent tensors are incomplete.
 
 ### applyModelMetadata
 
@@ -259,12 +573,8 @@ applyModelMetadata(
 ): void
 ```
 
-Attach producer and opset metadata to a model when metadata emission is enabled.
-
-Parameters:
-- `context` - Metadata application context.
-
-Returns: Nothing.
+Apply model metadata to exported artifacts so downstream tools can inspect capability flags and advanced graph hints.
+This alias preserves a stable public seam for metadata population while implementation details stay split by concern.
 
 ### assignActivationFunctions
 
@@ -276,14 +586,8 @@ assignActivationFunctions(
 ): void
 ```
 
-Assign node activation functions from ONNX activation nodes.
-
-Parameters:
-- `network` - Target network to mutate.
-- `onnx` - Source ONNX model.
-- `hiddenLayerSizes` - Hidden layer size list.
-
-Returns: Nothing.
+Assign activation functions during import reconstruction so each rebuilt layer preserves nonlinear behavior captured by export metadata.
+This forwarding seam keeps root ONNX callers stable while the concrete activation mapping logic evolves in import internals.
 
 ### assignWeightsAndBiases
 
@@ -296,15 +600,8 @@ assignWeightsAndBiases(
 ): void
 ```
 
-Assign weights and biases from ONNX initializers to a newly created network.
-
-Parameters:
-- `network` - Target network to mutate.
-- `onnx` - Source ONNX model.
-- `hiddenLayerSizes` - Hidden layer sizes.
-- `metadataProps` - Optional ONNX metadata properties.
-
-Returns: Nothing.
+Assign weights and biases onto imported layers so reconstructed parameters match serialized ONNX tensor values from export.
+Keeping this alias documented at the compatibility barrel helps users discover parameter hydration behavior without reading nested modules first.
 
 ### buildOnnxModel
 
@@ -357,12 +654,8 @@ collectRecurrentLayerIndices(
 ): number[]
 ```
 
-Detect hidden layers with self-recurrence and add matching previous-state graph inputs.
-
-Parameters:
-- `context` - Recurrent collection context.
-
-Returns: Export-layer indices with recurrent self-connections.
+Collect recurrent layer indices so post-processing can identify hidden stages that use supported single-step recurrence.
+Export metadata and import diagnostics both depend on this deterministic recurrent-stage inventory.
 
 ### createBaseModel
 
@@ -372,12 +665,7 @@ createBaseModel(
 ): OnnxModel
 ```
 
-Create the base ONNX model shell with graph input/output declarations.
-
-Parameters:
-- `context` - Base model build context.
-
-Returns: Initialized ONNX model with empty initializer/node lists.
+Create the base ONNX-like model scaffold so later export stages can append graph nodes, initializers, and metadata in deterministic order.
 
 ### createGraphDimensions
 
@@ -387,12 +675,8 @@ createGraphDimensions(
 ): OnnxGraphDimensions
 ```
 
-Build tensor dimensions for model input and output, optionally with symbolic batch dimension.
-
-Parameters:
-- `context` - Dimension construction context.
-
-Returns: Input and output dimension arrays for ONNX value info.
+Create graph dimension metadata so emitted tensor shapes stay explicit and consistent across exporter and importer paths.
+Clear dimension records also improve debugging when validating compatibility between serialized tensors and rebuilt layers.
 
 ### deriveHiddenLayerSizes
 
@@ -403,13 +687,8 @@ deriveHiddenLayerSizes(
 ): number[]
 ```
 
-Extract hidden layer sizes from ONNX initializers (weight tensors).
-
-Parameters:
-- `initializers` - ONNX initializer tensors.
-- `metadataProps` - Optional ONNX metadata properties.
-
-Returns: Hidden layer sizes in order.
+Derive hidden layer sizes from exported graph structures so import routines allocate correctly shaped intermediate containers.
+The helper also centralizes size inference assumptions used by reconstruction and compatibility diagnostics.
 
 ### emitFusedRecurrentHeuristics
 
@@ -422,15 +701,7 @@ emitFusedRecurrentHeuristics(
 ): void
 ```
 
-Emit heuristic fused recurrent operators (LSTM/GRU) when recurrent export is enabled.
-
-Parameters:
-- `model` - Target ONNX model.
-- `layers` - Layered network nodes.
-- `allowRecurrent` - Whether recurrent export is enabled.
-- `previousOutputName` - Current graph output name (kept for backward-compatible emission semantics).
-
-Returns: Nothing.
+Emit fused recurrent heuristic nodes so eligible LSTM and GRU patterns can be represented compactly within the current conservative subset.
 
 ### emitLayerGraph
 
@@ -489,17 +760,8 @@ finalizeExportMetadata(
 ): void
 ```
 
-Finalize export metadata and optional conv-sharing validation.
-
-Parameters:
-- `model` - Target ONNX model.
-- `layers` - Layered network nodes.
-- `options` - Export options.
-- `includeMetadata` - Whether metadata emission is enabled.
-- `hiddenSizesMetadata` - Hidden-layer sizes collected during emission.
-- `recurrentLayerIndices` - Recurrent layer indices.
-
-Returns: Nothing.
+Finalize export metadata so generated models include complete capability records and audit hints for compatibility diagnostics.
+The finalization step normalizes emitted annotations before artifacts are returned to callers or saved.
 
 ### inferLayerOrdering
 
@@ -509,7 +771,7 @@ inferLayerOrdering(
 ): default[][]
 ```
 
-Infer strictly layered ordering from a network.
+Infer a strictly layered node ordering from an analyzed network structure.
 
 Parameters:
 - `network` - Source network.
@@ -530,7 +792,9 @@ const restoredModel = JSON.parse(jsonText) as OnnxModel;
 Notes:
 - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
   conv/pool mappings, etc.). This is where most round-trip hints live.
-- Initializers currently store floating-point weights in `float_data`.
+- Initializers currently store floating-point weights in `float_data`, and the
+  Phase 7 storage-fp16 lane can pack half-precision words into `int32_data`
+  while keeping the logical tensor shape stable.
 
 Security/trust boundary:
 - Treat this as untrusted input if it comes from outside your process.
@@ -543,12 +807,7 @@ rebuildConnectionsLocal(
 ): void
 ```
 
-Rebuild the network's flat connections array from each node's outgoing list.
-
-Parameters:
-- `networkLike` - Network-like instance to mutate.
-
-Returns: Nothing.
+Rebuild local connections from layered ONNX-like data so import flows can restore deterministic adjacency wiring before activation or serialization passes.
 
 ### runOnnxExportFlow
 
@@ -603,14 +862,7 @@ validateLayerHomogeneityAndConnectivity(
 ): void
 ```
 
-Validate connectivity and activation homogeneity constraints per layer.
-
-Parameters:
-- `layers` - Layered node arrays.
-- `network` - Source network (reserved for compatibility).
-- `options` - Export options.
-
-Returns: Nothing.
+Validate layer homogeneity and connectivity so export and import paths fail early when topology assumptions required by the supported ONNX subset are broken.
 
 ## architecture/network/onnx/network.onnx.utils.types.ts
 
@@ -649,8 +901,10 @@ Practical notes:
 Stability & compatibility expectations:
 - This repo’s importer is only guaranteed to accept models produced by this repo’s
   exporter.
-- The schema is JSON-first and may evolve; prefer re-exporting/importing through the
-  library rather than hand-editing blobs.
+- The importer-facing schema is JSON-first and may evolve; prefer
+  re-exporting/importing through the library rather than hand-editing blobs,
+  and use `exportToONNXBinary()` when you need the primary runtime-validated
+  artifact for the approved subset.
 
 ### ActivationFunction
 
@@ -685,7 +939,24 @@ ActivationSquashFunction(
 ): number
 ```
 
-Activation function signature used by ONNX layer emission helpers.
+Activation function signature used by ONNX layer emission helpers for encoding activation operator type attributes.
+
+### AttentionMapping
+
+Explicit export-only attention mapping for the Phase 5E shadow subset.
+
+This contract keeps attention source-owned rather than heuristic: callers
+opt one target layer into a fixed-width self-attention shadow block while the
+stable dense path remains the canonical runtime behavior.
+
+### ConcatMapping
+
+Explicit export-only concat mapping for the narrow Phase 5 merge subset.
+
+This contract keeps concat source-owned instead of inferred: callers name one
+skipped source layer and one target layer, and export preserves the merge as a
+deterministic `Concat -> Gemm` path with the default adjacent-layer slice kept
+first in the merged input order.
 
 ### Conv2DMapping
 
@@ -702,31 +973,31 @@ may reject the model.
 
 ### ConvKernelConsistencyContext
 
-Context for kernel-coordinate consistency checks at one output position.
+Context for kernel-coordinate consistency checks at one output position, comparing representative weights with tolerance.
 
 ### ConvLayerPairContext
 
-Context for one resolved Conv mapping layer pair.
+Context for one resolved Conv mapping layer pair, supplying the Conv spec and adjacent layer node lists.
 
 ### ConvOutputCoordinate
 
-Coordinate for one Conv output neuron position.
+Coordinate for one Conv output neuron, encoding the output channel, row, and column indices together.
 
 ### ConvRepresentativeKernelContext
 
-Context for representative Conv kernel collection per output channel.
+Context for representative Conv kernel collection per output channel, supplying neuron lists and the Conv spec.
 
 ### ConvSharingValidationContext
 
-Context for validating Conv sharing across all declared mappings.
+Context for validating Conv sharing across all declared mappings, holding layer nodes and mapping specifications.
 
 ### ConvSharingValidationResult
 
-Result of Conv sharing validation across declared mappings.
+Result of Conv sharing validation across declared mappings, reporting verified and mismatched layer indices.
 
 ### DenseActivationContext
 
-Dense activation emission context.
+Dense activation emission context carrying layer index, tensor names, graph names, squash function, and opset version.
 
 ### DenseActivationNodePayload
 
@@ -738,27 +1009,27 @@ Strongly typed Gemm node payload used by dense export helpers.
 
 ### DenseGraphNames
 
-Dense graph tensor names.
+Dense graph tensor names identifying the Gemm output and activation output tensors for one layer.
 
 ### DenseInitializerValues
 
-Dense initializer value arrays.
+Dense initializer value arrays holding the flattened weight matrix values and bias vector for one layer.
 
 ### DenseLayerContext
 
-Dense layer context enriched with resolved activation function.
+Dense layer context enriched with the resolved activation squash function derived from the current layer nodes.
 
 ### DenseLayerParams
 
-Parameters for dense layer emission.
+Parameters for dense layer emission, grouping model, layer index, node lists, ordering flag, and export options.
 
 ### DenseOrderedNodePayload
 
-Dense node payload union used by ordered append helpers.
+Dense node payload union used by ordered append helpers, covering Gemm and activation node payloads.
 
 ### DenseTensorNames
 
-Dense initializer tensor names.
+Dense initializer tensor names for one emitted layer, naming the weight and bias initializer tensors.
 
 ### DenseWeightBuildContext
 
@@ -766,23 +1037,23 @@ Context for building dense layer initializers from two adjacent layers.
 
 ### DenseWeightBuildResult
 
-Dense layer initializer fold output.
+Dense layer initializer fold output, containing the flattened weight matrix values and bias vector.
 
 ### DenseWeightRow
 
-One collected dense row before fold to flattened initializers.
+One collected dense row before fold to flattened initializers, containing per-neuron weights and bias value.
 
 ### DenseWeightRowCollectionContext
 
-Context for collecting one dense row.
+Context for collecting one dense row, supplying previous layer nodes and the target neuron internals.
 
 ### DiagonalRecurrentBuildContext
 
-Context for building a diagonal recurrent matrix from self-connections.
+Context for building a diagonal recurrent matrix from self-connections, supplying the current layer node list.
 
 ### FlattenAfterPoolingContext
 
-Flatten emission context after optional pooling.
+Flatten emission context after optional pooling, carrying model, flatten flag, layer index, and source output name.
 
 ### FusedRecurrentEmissionExecutionContext
 
@@ -790,11 +1061,11 @@ Shared execution context for emitting one fused recurrent layer payload.
 
 ### FusedRecurrentGraphNames
 
-Context for ONNX fused recurrent node payload names.
+Context for ONNX fused recurrent node payload names, holding the graph node name and its output tensor name.
 
 ### FusedRecurrentInitializerNames
 
-Context for ONNX fused recurrent initializer names.
+Context for ONNX fused recurrent initializer names, grouping weight, recurrent-weight, and bias tensor name strings.
 
 ### GruEmissionContext
 
@@ -802,23 +1073,23 @@ Context for heuristic GRU emission when a layer matches expected shape.
 
 ### HiddenLayerActivationTraversalContext
 
-Hidden-layer traversal context for assigning imported activation functions.
+Hidden-layer traversal context for assigning imported activation functions, carrying layer index, size, and node lists.
 
 ### HiddenLayerHeuristicContext
 
-Context for one hidden layer during heuristic recurrent emission.
+Context for one hidden layer during heuristic recurrent emission, tracking layer index and model state.
 
 ### IndexedMetadataAppendContext
 
-Append-an-index metadata context for JSON-array metadata keys.
+Append-an-index metadata context for JSON-array metadata keys, supplying model, key, and layer index.
 
 ### LayerActivationContext
 
-Activation analysis context for one layer.
+Activation analysis context for one layer, capturing whether the layer contains mixed activation functions.
 
 ### LayerActivationValidationContext
 
-Activation-homogeneity decision context for one current layer.
+Activation-homogeneity decision context for one current layer, capturing activation names and mixed-activation policy.
 
 ### LayerBuildContext
 
@@ -826,35 +1097,39 @@ Layer build context used while emitting one ONNX graph layer segment.
 
 ### LayerConnectivityValidationContext
 
-Connectivity decision context for one source-target node pair.
+Connectivity decision context for one source-target node pair, including layer index and partial-connectivity policy.
 
 ### LayerOrderingNodeGroups
 
-Node partitions used by ONNX layered-ordering inference traversal.
+Node partitions used by ONNX layered-ordering inference traversal, grouping input, hidden, and output nodes.
 
 ### LayerOrderingResolutionContext
 
-Mutable traversal state while resolving hidden-layer ordering.
+Mutable traversal state while resolving hidden-layer ordering, carrying remaining nodes and accumulated layer groups.
 
 ### LayerRecurrentDecisionContext
 
-Context used to decide recurrent emission branch usage.
+Context used to decide recurrent emission branch usage, carrying layer index and recurrent layer index list.
 
 ### LayerTraversalContext
 
-Layer traversal context with adjacent layers and output classification.
+Layer traversal context with adjacent layers, output classification, and the full LayerBuildContext fields.
 
 ### LayerValidationTraversalContext
 
-Layer-wise validation context for activation and connectivity checks.
+Layer-wise validation context for activation and connectivity checks, supplying layer index and adjacent node lists.
 
 ### LstmEmissionContext
 
 Context for heuristic LSTM emission when a layer matches expected shape.
 
+### NetworkWithOnnxImportAdvancedGraph
+
+Network instance augmented with optional imported advanced-graph metadata via the _onnxAdvancedGraph field.
+
 ### NetworkWithOnnxImportPooling
 
-Network instance augmented with optional imported ONNX pooling metadata.
+Network instance augmented with optional imported ONNX pooling metadata via the _onnxPooling field.
 
 ### NodeInternals
 
@@ -866,19 +1141,19 @@ the public `Node` API instead.
 
 ### NodeInternalsWithExportIndex
 
-Runtime node internals augmented with optional export index metadata.
+Runtime node internals augmented with optional export index metadata, used for deterministic ONNX graph ordering.
 
 ### OnnxActivationAssignmentContext
 
-Shared activation-assignment context for hidden and output traversal.
+Shared activation-assignment context for hidden and output traversal, grouping node lists and per-layer operations.
 
 ### OnnxActivationLayerOperations
 
-Layer-indexed activation operator lookup extracted from ONNX graph nodes.
+Layer-indexed activation operator lookup extracted from ONNX graph nodes for import assignment passes.
 
 ### OnnxActivationOperation
 
-Supported ONNX activation operators recognized during activation import.
+Supported ONNX activation operator strings recognized and mapped during network activation import traversal.
 
 ### OnnxActivationOperationResolutionContext
 
@@ -886,7 +1161,7 @@ Activation operation resolution context for one neuron or layer default.
 
 ### OnnxActivationParseResult
 
-Parsed ONNX activation-node naming payload.
+Parsed ONNX activation-node naming payload, carrying the extracted layer index and optional neuron index.
 
 ### OnnxAttribute
 
@@ -898,31 +1173,31 @@ still preserving the attribute variants needed by the importer.
 
 ### OnnxBaseModelBuildContext
 
-Context for constructing a base ONNX model shell.
+Context for constructing a base ONNX model shell, supplying input and output dimension arrays for the graph.
 
 ### OnnxBuildResolvedOptions
 
-Resolved options used by ONNX model build orchestration.
+Resolved options for ONNX model build orchestration, with all export option defaults already applied and normalized.
 
 ### OnnxConvEmissionContext
 
-Context used after resolving Conv mapping for one layer.
+Context used after resolving Conv mapping for one layer, extending OnnxConvEmissionParams with the resolved Conv2DMapping spec.
 
 ### OnnxConvEmissionParams
 
-Parameters accepted by Conv layer emission.
+Parameters accepted by Conv layer emission, grouping model, options, layer index, previous output, and adjacent node lists.
 
 ### OnnxConvKernelCoordinate
 
-Coordinate for one Conv kernel weight lookup.
+Coordinate for one Conv kernel weight lookup, encoding input channel index, kernel row, and column position.
 
 ### OnnxConvParameters
 
-Flattened Conv parameters for ONNX initializers.
+Flattened Conv parameters for ONNX initializers, containing weight and bias arrays derived from Conv layer neurons.
 
 ### OnnxConvTensorNames
 
-Tensor names generated for Conv parameters.
+Tensor names generated for Conv parameters, holding weight and bias initializer name strings for one layer.
 
 ### OnnxDimension
 
@@ -954,10 +1229,48 @@ Key fields (high-level):
 - `legacyNodeOrdering`: keeps older node ordering for backward compatibility.
 - `conv2dMappings` / `pool2dMappings`: encode conv/pool semantics for fully-connected
   layers via explicit mapping declarations.
+- `concatMappings`: opt one skipped source layer into the narrow same-family
+  `Concat -> Gemm` merge subset with deterministic `previous_then_source`
+  input order.
+- `attentionMappings`: opt one target layer into the fixed-width same-family
+  self-attention shadow subset.
+- `precision`: opt into reduced-precision export. The current landed lane is
+  `storage-fp16`, which packs eligible same-family dense and Conv weight or
+  bias initializers into float16 storage and inserts deterministic
+  `Cast -> float32` bridges so operator inputs stay type-consistent.
+- `quantization`: declare an explicit quantization request packet. The
+  current exporter can validate static calibration contracts, emit
+  deterministic scale or zero-point parameter initializers for the supported
+  same-family dense and spatial subset, and close the dense-only Phase 7D
+  lane for explicitly targeted same-family one-output dense layers. Those
+  layers can lower into a
+  `QuantizeLinear -> QLinearMatMul -> DequantizeLinear` path with an
+  explicit float-domain bias bridge plus the exporter-owned unary
+  activation node when present, while the closed 7E Conv subset lowers
+  supported spatial paths into `QuantizeLinear -> QLinearConv ->
+  DequantizeLinear`, emits one `int32` fused-bias value per output channel,
+  and returns to float32 before pooling, flatten, reshape, or downstream
+  dense boundaries. The closed 7F dynamic lane now adds dense-only guidance:
+  supported same-family dense paths can either record `metadata-only`
+  guidance or insert `DynamicQuantizeLinear -> DequantizeLinear` immediately
+  ahead of dense `Gemm` inputs. Wider dense targets, unsupported spatial
+  fallbacks, recurrent, advanced-graph, mixed-activation, and
+  partial-connectivity requests stay on float32 with explicit fallback
+  metadata.
+- `autoPromoteInferredConv`: upgrades heuristic Conv-like layers into real `Conv`
+  emission only when the exporter can prove the dense weights already behave like a
+  shared-kernel spatial layout, including the current conservative multi-channel and
+  unpooled stacked-chain subsets, deeper single-channel post-pool chains whose
+  pooled tensor shapes can be derived sequentially, and deeper pooled
+  multi-channel chains when the pooled tensor shapes can be derived sequentially
+  and the pooled source stays compact per channel. The only proven
+  flatten-after-pool promotion path is the narrow final hidden-stage
+  reshape-bridge subset. Earlier flattened pooled consumers and repeated
+  flatten-bridge chains stay on the honest fallback path.
 
 ### OnnxFusedGateApplicationContext
 
-Gate-weight application context for one reconstructed fused layer.
+Gate-weight application context for one reconstructed fused layer, carrying spec, unit size, and weight arrays.
 
 ### OnnxFusedGateRowAssignmentContext
 
@@ -965,11 +1278,11 @@ Context for assigning one gate-neuron row from flattened ONNX tensors.
 
 ### OnnxFusedLayerNeighborhood
 
-Hidden-layer neighborhood slices around a reconstructed fused layer.
+Hidden-layer neighborhood slices around a reconstructed fused layer, including old, previous, and next node lists.
 
 ### OnnxFusedLayerReconstructionContext
 
-Execution context for one fused recurrent layer reconstruction.
+Execution context for one fused recurrent layer reconstruction, carrying spec, export index, and hidden layer index.
 
 ### OnnxFusedLayerRuntime
 
@@ -981,7 +1294,7 @@ can be reconnected to the next restored layer.
 
 ### OnnxFusedRecurrentKind
 
-Supported fused recurrent operator families recognized during ONNX import.
+Supported fused recurrent operator families recognized during ONNX import, currently limited to LSTM and GRU.
 
 ### OnnxFusedRecurrentSpec
 
@@ -1010,27 +1323,43 @@ The exporter writes three main collections here:
 
 ### OnnxGraphDimensionBuildContext
 
-Context for constructing input/output ONNX graph dimensions.
+Context for constructing input/output ONNX graph dimensions, carrying width values and the batch-dimension flag.
 
 ### OnnxGraphDimensions
 
 Output dimensions used by ONNX graph input/output value info payloads.
 
+### OnnxImportAdvancedGraphCrossLayerConnection
+
+Audit-only cross-layer feed-forward edge carried through Phase 5 import fallback.
+
+### OnnxImportAdvancedGraphMetadata
+
+Parsed advanced-graph metadata attached to imported network instances, grouping merges, residual adds, and blocks.
+
 ### OnnxImportAggregatedLayerAssignmentContext
 
-Context for assigning aggregated dense tensors for one layer.
+Context for assigning aggregated dense tensors for one layer, supplying the initializer map and layer node pair.
 
 ### OnnxImportAggregatedNeuronAssignmentContext
 
-Context for assigning one aggregated dense target neuron row.
+Context for assigning one aggregated dense target neuron row, carrying previous nodes, target, and tensor refs.
 
 ### OnnxImportArchitectureContext
 
-Shared architecture extraction context with resolved graph dimensions.
+Shared architecture extraction context with resolved graph dimensions, initializers, and metadata properties.
 
 ### OnnxImportArchitectureResult
 
-Parsed architecture dimensions extracted from ONNX import graph payloads.
+Parsed architecture dimensions extracted from ONNX import graph payloads, with input, output, and hidden sizes.
+
+### OnnxImportAttentionBlock
+
+Explicit fixed-width self-attention block carried through Phase 5 import fallback.
+
+### OnnxImportConcatMerge
+
+Explicit concat merge carried through Phase 5 import hardening, identifying layer indices and merge tensor names.
 
 ### OnnxImportConvCoordinateAssignmentContext
 
@@ -1038,35 +1367,40 @@ Context for applying Conv weights and bias at one output coordinate.
 
 ### OnnxImportConvKernelAssignmentContext
 
-Context for assigning one concrete Conv kernel connection weight.
+Context for assigning one concrete Conv kernel connection weight, carrying tensor context, coordinate, and channels.
 
 ### OnnxImportConvLayerContext
 
-Context for reconstructing one Conv layer's imported connectivity.
+Context payload used when rebuilding one imported convolution layer from ONNX graph metadata and tensor shelves.
+The contract captures grouped node slices, tensor mappings, and assignment state so reconstruction stays deterministic across import passes.
 
 ### OnnxImportConvLayerContextBuildParams
 
-Build params for creating one Conv reconstruction layer context.
+Build params for creating one Conv reconstruction layer context, supplying assignment context and Conv metadata.
 
 ### OnnxImportConvMetadata
 
-Parsed Conv metadata payload used for optional reconstruction pass.
+Parsed Conv metadata payload used for optional reconstruction pass, listing Conv layer indices and mapping specs.
 
 ### OnnxImportConvNodeSlices
 
-Layer node slices used while applying Conv reconstruction assignments.
+Layer node slices used while applying Conv reconstruction assignments, carrying target and previous layer nodes.
 
 ### OnnxImportConvOutputCoordinate
 
-Coordinate for one Conv output neuron traversal position.
+Coordinate for one Conv output neuron traversal position, encoding output channel, row, and column indices.
 
 ### OnnxImportConvTensorContext
 
-Resolved Conv initializer tensors and dimensions for one layer.
+Resolved Conv initializer tensors and dimensions for one layer, including channels, kernel height, and width.
 
 ### OnnxImportDimensionRecord
 
 Loose ONNX shape-dimension record used by legacy import payload access.
+
+### OnnxImportFlattenConsistencyAudit
+
+Metadata-only audit record comparing a flattened pooled width to the next dense width.
 
 ### OnnxImportHiddenLayerSpan
 
@@ -1082,51 +1416,63 @@ Inbound connection lookup map keyed by source node for one target neuron.
 
 ### OnnxImportLayerConnectionContext
 
-Execution context for assigning one hidden-layer recurrent diagonal tensor.
+Execution context for assigning one hidden-layer recurrent diagonal tensor, carrying model, nodes, and span.
 
 ### OnnxImportLayerNodePair
 
-Node slices for one sequential imported layer assignment pass.
+Node slices for one sequential imported layer assignment pass, carrying current and previous layer node lists.
 
 ### OnnxImportLayerNodePairBuildParams
 
-Build params for one sequential layer node-pair slice operation.
+Build params for one sequential layer node-pair slice operation, specifying layer index and sequential position.
 
 ### OnnxImportLayerTensorNames
 
-Weight tensor names for one imported layer index.
+Weight tensor names for one imported layer index, identifying weight and bias initializer name strings.
 
 ### OnnxImportLayerWeightBucket
 
-Bucketed ONNX dense/per-neuron tensors for one exported layer index.
+Bucketed ONNX dense/per-neuron tensors for one exported layer index, holding the aggregated and per-neuron lists.
 
 ### OnnxImportPerNeuronAssignmentContext
 
-Context for assigning one per-neuron imported target node.
+Context for assigning one per-neuron imported target node, carrying previous nodes and weight and bias tensors.
 
 ### OnnxImportPerNeuronLayerAssignmentContext
 
-Context for assigning per-neuron tensors for one layer.
+Context for assigning per-neuron tensors for one layer, supplying the initializer map and sequential layer node pair.
 
 ### OnnxImportPoolingMetadata
 
-Parsed pooling metadata payload attached to imported network instances.
+Parsed pooling metadata payload attached to imported network instances, listing pool specs and virtual shapes.
+
+### OnnxImportPoolingVirtualShape
+
+Virtual spatial shape derived from Conv and Pool metadata during import.
 
 ### OnnxImportRecurrentRestorationContext
 
 Context for recurrent self-connection restoration from ONNX metadata and tensors.
 
+### OnnxImportResidualAdd
+
+Explicit one-hop residual-add merge carried through Phase 5 import hardening.
+
 ### OnnxImportSelfConnectionUpsertContext
 
 Context for upserting one hidden node self-connection from recurrent weight.
 
+### OnnxImportSharedInitializerAlias
+
+Audit-only shared initializer alias carried through Phase 5 import fallback.
+
 ### OnnxImportWeightAssignmentBuildParams
 
-Build params for creating shared ONNX import weight-assignment context.
+Build params for creating shared ONNX import weight-assignment context, supplying network, model, and hidden sizes.
 
 ### OnnxImportWeightAssignmentContext
 
-Shared weight-assignment context built once per ONNX import.
+Shared weight-assignment context built once per ONNX import, carrying model, layers, metadata, and initializer map.
 
 ### OnnxIncomingWeightAssignmentContext
 
@@ -1134,11 +1480,11 @@ Context for assigning dense incoming weights for one gate-neuron row.
 
 ### OnnxLayerEmissionContext
 
-Context for emitting non-input layers during model build.
+Context for emitting non-input layers during model build, including layer list, options, and ordering flags.
 
 ### OnnxLayerEmissionResult
 
-Result of emitting non-input export layers.
+Result of emitting non-input export layers, carrying the last output name and the layer output name map.
 
 ### OnnxLayerFactory
 
@@ -1146,7 +1492,10 @@ Runtime factory map used to construct dynamic recurrent layer modules.
 
 ### OnnxMetadataProperty
 
-Canonical metadata key-value pair used in ONNX model metadata_props.
+Canonical metadata key-value pair used by `OnnxModel.metadata_props`.
+
+Keys are exporter-defined semantic hints (for example layout or fallback
+reasons) and values are serialized as plain strings.
 
 ### OnnxModel
 
@@ -1162,14 +1511,16 @@ const restoredModel = JSON.parse(jsonText) as OnnxModel;
 Notes:
 - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
   conv/pool mappings, etc.). This is where most round-trip hints live.
-- Initializers currently store floating-point weights in `float_data`.
+- Initializers currently store floating-point weights in `float_data`, and the
+  Phase 7 storage-fp16 lane can pack half-precision words into `int32_data`
+  while keeping the logical tensor shape stable.
 
 Security/trust boundary:
 - Treat this as untrusted input if it comes from outside your process.
 
 ### OnnxModelMetadataContext
 
-Context for applying optional ONNX model metadata.
+Context for applying optional ONNX model metadata, carrying model reference, opset, producer info, and inclusion flags.
 
 ### OnnxNode
 
@@ -1184,31 +1535,31 @@ Build context for mapping ONNX layer sizes into a Neataptic MLP factory call.
 
 ### OnnxPerceptronSizeValidationContext
 
-Validation context for perceptron size-list checks during ONNX import.
+Validation context for perceptron size-list checks during ONNX import, supplying sizes, minimum count, and message.
 
 ### OnnxPostProcessingContext
 
-Context for post-processing and export metadata finalization.
+Context for post-processing and export metadata finalization, holding model, layers, options, and layer emission result.
 
 ### OnnxRecurrentCollectionContext
 
-Context for collecting recurrent layer indices during model build.
+Context for collecting recurrent layer indices during model build, providing the layer list and export options.
 
 ### OnnxRecurrentInputValueInfoContext
 
-Context for constructing one recurrent previous-state graph input payload.
+Context for constructing one recurrent previous-state graph input payload, carrying name, hidden width, and batch flag.
 
 ### OnnxRecurrentLayerProcessingContext
 
-Execution context for processing one hidden recurrent layer.
+Execution context for processing one hidden recurrent layer during model build traversal and emission.
 
 ### OnnxRecurrentLayerTraversalContext
 
-Traversal context for one hidden layer during recurrent-input collection.
+Traversal context for one hidden layer during recurrent-input collection, supplying layer index and batch-dimension flag.
 
 ### OnnxRuntimeFactories
 
-Runtime factories consumed during ONNX import network reconstruction.
+Runtime factories consumed during ONNX import network reconstruction, grouping the perceptron and layer module.
 
 ### OnnxRuntimeLayerFactory
 
@@ -1218,15 +1569,15 @@ OnnxRuntimeLayerFactory(
 ): default
 ```
 
-Runtime layer-constructor signature used for recurrent layer reconstruction.
+Runtime layer-constructor signature used for recurrent layer reconstruction, accepting size and returning a Layer.
 
 ### OnnxRuntimeLayerFactoryMap
 
-Runtime layer module shape widened for fused-recurrent reconstruction wiring.
+Runtime layer module shape widened for fused-recurrent reconstruction wiring and dynamic layer factory dispatch.
 
 ### OnnxRuntimeLayerModule
 
-Runtime layer module shape consumed by ONNX import orchestration.
+Runtime layer module shape consumed by ONNX import orchestration, exposing LSTM and GRU factory constructors.
 
 ### OnnxRuntimePerceptronFactory
 
@@ -1236,30 +1587,35 @@ OnnxRuntimePerceptronFactory(
 ): default
 ```
 
-Runtime perceptron factory signature used by ONNX import orchestration.
+Runtime perceptron factory signature used by ONNX import orchestration, producing a Network from size arguments.
 
 ### OnnxShape
 
-ONNX tensor type shape.
+Canonical shape descriptor for ONNX tensors used by export, import, and schema validation paths.
+Each entry preserves axis intent so runtime bridges can validate rank-sensitive operators without guessing dimension semantics.
 
 ### OnnxTensor
 
 Serialized tensor payload stored inside graph initializers.
 
 NeatapticTS currently writes floating-point parameter vectors and matrices to
-`float_data`, along with the tensor name, element type, and logical shape.
+`float_data`, while the storage-fp16 lane can pack float16 words into
+`int32_data` for JSON-first persistence without changing the logical tensor
+shape.
 
 ### OnnxTensorType
 
-ONNX tensor type.
+Canonical tensor element type shelf used by schema, import coercion, and export metadata emission.
+Keep this alias at the ONNX root so callers can depend on one stable type name while chapter ownership remains in schema contracts.
 
 ### OnnxValueInfo
 
-ONNX value info (input/output description).
+Canonical tensor value-info descriptor used to name and type graph inputs, outputs, and intermediate values.
+This alias keeps metadata surfaces consistent across ONNX schema parsing, importer reconstruction, and exporter graph emission.
 
 ### OptionalLayerOutputParams
 
-Shared parameters for optional pooling/flatten output emission.
+Shared parameters for optional pooling or flatten output emission after one dense layer output tensor.
 
 ### OptionalPoolingAndFlattenParams
 
@@ -1267,35 +1623,35 @@ Parameters for optional pooling + flatten emission after a layer output.
 
 ### OutputLayerActivationContext
 
-Output-layer activation assignment context.
+Output-layer activation assignment context, carrying output layer index, node list, and activation operations map.
 
 ### PerNeuronConcatNodePayload
 
-Per-neuron concat node payload.
+Per-neuron concat node payload used to merge individual neuron outputs into one combined layer tensor.
 
 ### PerNeuronGraphNames
 
-Per-neuron graph tensor names.
+Per-neuron graph tensor names identifying the Gemm output and activation output for one neuron subgraph.
 
 ### PerNeuronLayerContext
 
-Per-neuron layer context alias.
+Per-neuron layer context alias for PerNeuronLayerParams, used at the per-neuron layer traversal boundary.
 
 ### PerNeuronLayerParams
 
-Parameters for per-neuron layer emission.
+Parameters for per-neuron layer emission, grouping model, layer index, node lists, options, and batch-dimension flag.
 
 ### PerNeuronNodeContext
 
-Per-neuron normalized node context.
+Per-neuron normalized node context replacing raw Node references with resolved NodeInternals for safe emission.
 
 ### PerNeuronSubgraphContext
 
-Per-neuron subgraph emission context.
+Per-neuron subgraph emission context carrying layer index, neuron index, previous output name, and opset version.
 
 ### PerNeuronTensorNames
 
-Per-neuron initializer tensor names.
+Per-neuron initializer tensor names identifying weight and bias tensors for one neuron subgraph.
 
 ### Pool2DMapping
 
@@ -1307,31 +1663,31 @@ network (when supported).
 
 ### PoolingAttributes
 
-Pooling tensor attributes for ONNX node payloads.
+Pooling tensor attributes for ONNX node payloads, grouping kernel shape, strides, and padding values.
 
 ### PoolingEmissionContext
 
-Pooling emission context resolved for one layer output.
+Pooling emission context resolved for one layer output, extending OptionalLayerOutputParams with the Pool2DMapping spec.
 
 ### RecurrentActivationEmissionContext
 
-Context for selecting and emitting recurrent activation node payload.
+Context for selecting and emitting recurrent activation node payload using the layer's dominant squash function.
 
 ### RecurrentGateBlockCollectionContext
 
-Context for collecting one gate parameter block.
+Context for collecting one gate parameter block, supplying gate nodes, previous layer, unit size, and diagonal flag.
 
 ### RecurrentGateParameterCollectionResult
 
-Flattened recurrent gate parameter vectors for one fused operator.
+Flattened recurrent gate parameter vectors for one fused operator, grouping input, recurrent, and bias arrays.
 
 ### RecurrentGateRow
 
-One recurrent gate row payload before flatten fold.
+One recurrent gate row payload before flatten fold, containing input weights, recurrent weights, and bias.
 
 ### RecurrentGateRowCollectionContext
 
-Context for collecting one recurrent gate row (one neuron).
+Context for collecting one recurrent gate row (one neuron), supplying the previous layer node list and unit size.
 
 ### RecurrentGemmEmissionContext
 
@@ -1339,51 +1695,51 @@ Context for emitting one Gemm node for recurrent single-step export.
 
 ### RecurrentGraphNames
 
-Derived graph names for one recurrent single-step layer payload.
+Derived graph names for one recurrent single-step layer payload, with all tensor and node names resolved.
 
 ### RecurrentHeuristicEmissionContext
 
-Context for heuristic recurrent operator emission traversal.
+Context for heuristic recurrent operator emission traversal, carrying model, layer list, and previous output tensor name.
 
 ### RecurrentInitializerEmissionContext
 
-Context for pushing recurrent initializers into ONNX graph state.
+Context for pushing recurrent initializers into ONNX graph state, carrying widths, tensor names, and value arrays.
 
 ### RecurrentInitializerNames
 
-Initializer tensor names for one single-step recurrent layer.
+Initializer tensor names for one single-step recurrent layer, naming weight, bias, and recurrent-weight tensors.
 
 ### RecurrentInitializerValues
 
-Collected initializer vectors for one single-step recurrent layer.
+Collected initializer vectors for one single-step recurrent layer, storing weight matrix, biases, and recurrent weights.
 
 ### RecurrentLayerEmissionContext
 
-Derived execution context for single-step recurrent layer emission.
+Derived execution context for single-step recurrent layer emission, extending params with layer slot and widths.
 
 ### RecurrentLayerEmissionParams
 
-Parameters for single-step recurrent layer emission.
+Parameters for single-step recurrent layer emission, supplying model, layer index, and adjacent node lists.
 
 ### RecurrentRowCollectionContext
 
-Context for collecting one recurrent matrix row.
+Context for collecting one recurrent matrix row, supplying the layer node list and the row index to extract.
 
 ### SharedActivationNodeBuildParams
 
-Shared parameters for constructing an activation node payload.
+Shared parameters for constructing an activation node payload, carrying activation type and output name strings.
 
 ### SharedGemmNodeBuildParams
 
-Shared parameters for constructing a Gemm node payload.
+Shared parameters for constructing a Gemm node payload, carrying weight, bias, output tensor names, and node name.
 
 ### SpecMetadataAppendContext
 
-Append-a-spec metadata context for JSON-array metadata keys.
+Append-a-spec metadata context for JSON-array metadata keys, supplying model, key, and Conv or Pool spec.
 
 ### WeightToleranceComparisonContext
 
-Context for comparing two scalar weights with numeric tolerance.
+Context for comparing two scalar weights with numeric tolerance, used by Conv sharing validation helpers.
 
 ## architecture/network/onnx/network.onnx.errors.ts
 
@@ -1407,7 +1763,11 @@ Raised when ONNX import perceptron metadata omits required input/output sizes.
 
 ### NetworkOnnxRecurrentMixedActivationsUnsupportedError
 
-Raised when recurrent ONNX export encounters unsupported mixed activations.
+Raised when recurrent ONNX export encounters unsupported mixed activation functions.
+
+### NetworkOnnxShapeValidationError
+
+Raised when ONNX export produces inconsistent or mismatched tensor dimensions.
 
 ## architecture/network/onnx/network.onnx.layer-analysis.utils.ts
 
@@ -1618,7 +1978,7 @@ inferLayerOrdering(
 ): default[][]
 ```
 
-Infer strictly layered ordering from a network.
+Infer a strictly layered node ordering from an analyzed network structure.
 
 Parameters:
 - `network` - Source network.
@@ -1645,10 +2005,12 @@ Returns: Initial mutable state for hidden-layer resolution.
 ```ts
 mapActivationToOnnx(
   squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; },
+  opset: number,
 ): OnnxActivationOperation
 ```
 
 Map an internal activation function (squash) to an ONNX op_type.
+Mapping flows through the exporter activation resolver so opset-gated operators and identity fallbacks stay centralized in one compatibility decision path.
 
 Parameters:
 - `squash` - Activation function reference.
@@ -1679,6 +2041,7 @@ rebuildConnectionsLocal(
 ```
 
 Rebuild the network's flat connections array from each node's outgoing list.
+Rehydrating this cache from node-owned adjacency shelves keeps exporter traversal deterministic after structural edits that may leave the flat cache stale.
 
 Parameters:
 - `networkLike` - Network-like instance to mutate.
@@ -1715,12 +2078,31 @@ Parameters:
 
 Returns: Updated resolution state.
 
+### resolveOnnxActivationNodeConfig
+
+```ts
+resolveOnnxActivationNodeConfig(
+  squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; },
+  opset: number,
+): { operation: OnnxActivationOperation; attributes?: OnnxAttribute[] | undefined; }
+```
+
+Resolve the ONNX activation node payload for one runtime activation.
+The payload includes both the resolved operator and any mandatory attributes, allowing downstream graph emission to stay declarative and free of activation-specific branching.
+
+Parameters:
+- `squash` - Activation function reference.
+- `opset` - Target ONNX opset.
+
+Returns: Activation operator plus any required ONNX attributes.
+
 ### resolveOnnxActivationOperation
 
 ```ts
 resolveOnnxActivationOperation(
-  normalizedActivationName: string,
-): OnnxActivationOperation
+  squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; },
+  opset: number,
+): { operation: OnnxActivationOperation; attributes?: OnnxAttribute[] | undefined; didUseFallback: boolean; }
 ```
 
 Resolve ONNX activation op from a normalized activation name token.
@@ -1771,6 +2153,7 @@ validateLayerHomogeneityAndConnectivity(
 ```
 
 Validate connectivity and activation homogeneity constraints per layer.
+Validation enforces exporter baseline assumptions before node emission so unsupported mixed-activation or sparse connectivity cases are surfaced with actionable errors.
 
 Parameters:
 - `layers` - Layered node arrays.
@@ -1828,7 +2211,7 @@ Returns: Nothing.
 
 ```ts
 warnWhenActivationFallbackIsUsed(
-  context: { squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }; resolvedActivationOperation: OnnxActivationOperation; },
+  context: { squash: ((x: number, derivate?: boolean | undefined) => number) & { name?: string | undefined; }; didUseFallback: boolean; },
 ): void
 ```
 

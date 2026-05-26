@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Stable, versioned type contracts for network visualization export.
  *
  * `VisualizationGraphV1` is the canonical data shape produced by
@@ -116,7 +116,11 @@ export interface VisualizationIOV1 {
 }
 
 /**
- * Optional metadata block attached to a visualization graph.
+ * Optional metadata block attached to a {@link VisualizationGraphV1} export.
+ *
+ * Carries a human-readable network name, a scheduling mode hint so renderers
+ * can annotate recurrent edges correctly, and an ISO 8601 creation timestamp
+ * for traceability in logging and checkpoint pipelines.
  */
 export interface VisualizationMetadataV1 {
   /** Optional human-readable name for this network. */

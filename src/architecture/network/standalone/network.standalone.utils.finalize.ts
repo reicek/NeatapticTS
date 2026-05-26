@@ -1,4 +1,4 @@
-import type { StandaloneGenerationContext as GenerationContext } from '../network.types';
+﻿import type { StandaloneGenerationContext as GenerationContext } from '../network.types';
 import {
   ACTIVATION_PRECISION_F16,
   ACTIVATION_PRECISION_F32,
@@ -14,7 +14,7 @@ import {
 } from './network.standalone.errors';
 
 /**
- * Assemble the final standalone IIFE source string.
+ * Assemble the final standalone IIFE source string from the generation context.
  *
  * @param generationContext Mutable generation context.
  * @returns Final generated source string.

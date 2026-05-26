@@ -2105,6 +2105,78 @@ describe('network worker payload chapter', () => {
         });
       });
 
+      it('keeps browser channels open when worker responses omit result ids', async () => {
+        // Arrange
+        const payload = exportTransferableInferencePayload(
+          createWorkerPayloadNetwork(),
+        );
+
+        // Act
+        const result = await withBrowserWorkerGlobals(
+          async ({ createdChannels }) => {
+            const predictChannel = openInferenceChannel(payload, {
+              workerUrl: 'worker-entry.js',
+            });
+            createdChannels[0]?.port1.emit('message', { type: 'ready' });
+            const pendingPrediction = predictChannel.predict([0.25, 0.75]);
+            const resetChannel = openInferenceChannel(payload, {
+              workerUrl: 'worker-entry.js',
+            });
+            createdChannels[1]?.port1.emit('message', { type: 'ready' });
+            const pendingReset = resetChannel.reset();
+            await Promise.resolve();
+            createdChannels[0]?.port1.emit('message', {
+              output: new Float64Array([1]),
+              type: 'predict-result',
+            });
+            const predictState = await Promise.race([
+              pendingPrediction.then(
+                () => 'resolved',
+                () => 'rejected',
+              ),
+              new Promise<'pending'>((resolve) => {
+                queueMicrotask(() => {
+                  resolve('pending');
+                });
+              }),
+            ]);
+            const predictOpenBeforeClose = predictChannel.isOpen;
+            createdChannels[1]?.port1.emit('message', {
+              type: 'reset-result',
+            });
+            const resetState = await Promise.race([
+              pendingReset.then(
+                () => 'resolved',
+                () => 'rejected',
+              ),
+              new Promise<'pending'>((resolve) => {
+                queueMicrotask(() => {
+                  resolve('pending');
+                });
+              }),
+            ]);
+            const resetOpenBeforeClose = resetChannel.isOpen;
+            await predictChannel.close();
+            await resetChannel.close();
+
+            return {
+              predictOpenBeforeClose,
+              predictState,
+              resetOpenBeforeClose,
+              resetState,
+            };
+          },
+        );
+
+        // Assert
+        expect(result).toEqual({
+          predictOpenBeforeClose: true,
+          predictState: 'pending',
+          resetOpenBeforeClose: true,
+          resetState: 'pending',
+        });
+      });
+
       it('wires event-target ports and workers for message and failure delivery', () => {
         // Arrange
         const portHarness = createEventTargetPortHarness();
@@ -2852,9 +2924,10 @@ describe('network worker payload chapter', () => {
         }
       });
 
-      it('matches the runtime baseline across ten sequential inference calls', async () => {
+      it('matches the runtime baseline across repeated sequential inference calls', async () => {
         // Arrange
         const inputValues = [0.5, 0.25];
+        const sequentialInferenceCount = 4;
         const network = createWorkerPayloadNetwork();
         const recurrentOutputNode = network.nodes.find(
           (candidateNode) => candidateNode.type === 'output',
@@ -2875,39 +2948,104 @@ describe('network worker payload chapter', () => {
         network.selfconns = [selfConnection];
         disableFastSlab(network);
 
-        const sharedWorker = openSharedInferenceWorker(
-          exportTransferableInferencePayload(network),
+        const payload = exportTransferableInferencePayload(network);
+
+        // Act
+        const result = await withBrowserWorkerGlobals(
+          async ({ createdWorkers }) => {
+            const sharedWorker = openSharedInferenceWorker(payload, {
+              workerUrl: 'browser-shared-worker.js',
+            });
+            const sharedPredictor = createInferencePredictor(payload);
+            const browserWorker = createdWorkers[0] as unknown as {
+              emit: (type: string, event: unknown) => void;
+              postedMessages: Array<{
+                message: {
+                  controlBuffer: SharedArrayBuffer;
+                  dataBuffer: SharedArrayBuffer;
+                  payload: { outputCount: number };
+                  type: 'bootstrap';
+                };
+                transferList: Transferable[];
+              }>;
+            };
+
+            browserWorker.emit('message', { data: { type: 'ready' } });
+
+            const bootstrapMessage = browserWorker.postedMessages[0]?.message;
+
+            if (!bootstrapMessage) {
+              throw new Error(
+                'Expected a shared worker bootstrap message for the parity test.',
+              );
+            }
+
+            const controlView = new Int32Array(bootstrapMessage.controlBuffer);
+            const dataView = new Float64Array(bootstrapMessage.dataBuffer);
+            const sharedLayout =
+              SHARED_INFERENCE_HOST_INTERNALS.resolveSharedInferenceBufferLayout(
+                payload.inputCount,
+                bootstrapMessage.payload.outputCount,
+              );
+            const runtimeOutputs: number[][] = [];
+            const sharedWorkerOutputs: number[][] = [];
+
+            try {
+              for (
+                let iterationIndex = 0;
+                iterationIndex < sequentialInferenceCount;
+                iterationIndex += 1
+              ) {
+                const sharedOutputPromise = sharedWorker.infer(inputValues);
+
+                await SHARED_INFERENCE_HOST_INTERNALS.waitForSharedStatus(
+                  controlView,
+                  sharedLayout.statusIndexes.status,
+                  sharedLayout.statusValues.inputReady,
+                  () => undefined,
+                );
+
+                const predictorOutput = sharedPredictor.predict(inputValues);
+
+                for (
+                  let outputIndex = 0;
+                  outputIndex < predictorOutput.length;
+                  outputIndex += 1
+                ) {
+                  dataView[sharedLayout.outputOffset + outputIndex] =
+                    predictorOutput[outputIndex] ?? 0;
+                }
+
+                Atomics.store(
+                  controlView,
+                  sharedLayout.statusIndexes.status,
+                  sharedLayout.statusValues.outputReady,
+                );
+                Atomics.notify(controlView, sharedLayout.statusIndexes.status);
+
+                sharedWorkerOutputs.push(
+                  roundVector(Array.from(await sharedOutputPromise)),
+                );
+                runtimeOutputs.push(
+                  roundVector(network.noTraceActivate([...inputValues])),
+                );
+              }
+
+              return {
+                runtimeOutputs,
+                sharedWorkerOutputs,
+              };
+            } finally {
+              await sharedWorker.release();
+            }
+          },
         );
 
-        try {
-          // Act
-          const sharedWorkerOutputs: number[][] = [];
-          const runtimeOutputs: number[][] = [];
-
-          for (
-            let iterationIndex = 0;
-            iterationIndex < 10;
-            iterationIndex += 1
-          ) {
-            sharedWorkerOutputs.push(
-              roundVector(Array.from(await sharedWorker.infer(inputValues))),
-            );
-            runtimeOutputs.push(
-              roundVector(network.noTraceActivate([...inputValues])),
-            );
-          }
-
-          // Assert
-          expect({
-            runtimeOutputs,
-            sharedWorkerOutputs,
-          }).toEqual({
-            runtimeOutputs,
-            sharedWorkerOutputs: runtimeOutputs,
-          });
-        } finally {
-          await sharedWorker.release();
-        }
+        // Assert
+        expect(result).toEqual({
+          runtimeOutputs: result.runtimeOutputs,
+          sharedWorkerOutputs: result.runtimeOutputs,
+        });
       });
     });
 

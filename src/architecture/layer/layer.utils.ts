@@ -165,7 +165,7 @@ export function connectLayer(
 }
 
 /**
- * Orchestrates layer gating behavior with a high-level flow.
+ * Orchestrates layer gating behavior with a high-level flow so recurrent-control helpers can route modulation decisions through one stable delegation boundary.
  *
  * Example:
  *
@@ -187,7 +187,7 @@ export function gateLayer(
 }
 
 /**
- * Orchestrates layer input wiring with a high-level flow.
+ * Orchestrates layer input wiring with a high-level flow so previous-stage outputs attach through one predictable helper path used by builders.
  *
  * Example:
  *
@@ -212,7 +212,7 @@ export function inputLayer(
 }
 
 /**
- * Orchestrates disconnection behavior with a high-level flow.
+ * Orchestrates disconnection behavior with a high-level flow so pruning and rewiring steps can remove stale edges through one validated adapter.
  *
  * Example:
  *
@@ -234,7 +234,7 @@ export function disconnectLayer(
 }
 
 /**
- * Orchestrates clearing node activation state with a high-level flow.
+ * Orchestrates clearing node activation state with a high-level flow so reused layers start each forward pass from deterministic baseline values.
  *
  * @param context The layer state needed to reset nodes.
  * Example:
@@ -249,7 +249,7 @@ export function clearLayer(context: LayerConnectionContext): void {
 }
 
 /**
- * Orchestrates dense layer creation with a high-level flow.
+ * Orchestrates dense layer creation with a high-level flow so factory callers can create fully wired hidden blocks from one concise facade.
  *
  * @param context Factory helpers for constructing the layer instance.
  * @param size Number of nodes in the dense layer.
@@ -271,7 +271,7 @@ export function createDenseLayer<TLayer extends LayerFactoryLayer>(
 }
 
 /**
- * Orchestrates LSTM layer creation with a high-level flow.
+ * Orchestrates LSTM layer creation with a high-level flow so recurrent builders can request gated-memory blocks without duplicating construction details across APIs.
  *
  * @param context Factory helpers for constructing the layer instance.
  * @param size Number of units in the LSTM layer.
@@ -291,7 +291,7 @@ export function createLstmLayer<TLayer extends LayerFactoryLayer>(
 }
 
 /**
- * Orchestrates GRU layer creation with a high-level flow.
+ * Orchestrates GRU layer creation with a high-level flow so compact recurrent units can be produced through the same factory contract.
  *
  * @param context Factory helpers for constructing the layer instance.
  * @param size Number of units in the GRU layer.
@@ -311,7 +311,7 @@ export function createGruLayer<TLayer extends LayerFactoryLayer>(
 }
 
 /**
- * Orchestrates Memory layer creation with a high-level flow.
+ * Orchestrates Memory layer creation with a high-level flow so delay-line style temporal context can be injected by architecture builders consistently.
  *
  * @param context Factory helpers for constructing the layer instance.
  * @param size Number of nodes in each memory block.
@@ -333,7 +333,7 @@ export function createMemoryLayer<TLayer extends LayerFactoryLayer>(
 }
 
 /**
- * Orchestrates batch normalization layer creation with a high-level flow.
+ * Orchestrates batch normalization layer creation with a high-level flow so scale and shift statistics integrate with the standard layer factory path.
  *
  * @param context Factory helpers for constructing the layer instance.
  * @param size Number of nodes in the normalization layer.
@@ -353,7 +353,7 @@ export function createBatchNormLayer<TLayer extends LayerFactoryLayer>(
 }
 
 /**
- * Orchestrates layer normalization layer creation with a high-level flow.
+ * Orchestrates layer normalization layer creation with a high-level flow so sequence-friendly normalization blocks share the same construction workflow across architectures.
  *
  * @param context Factory helpers for constructing the layer instance.
  * @param size Number of nodes in the normalization layer.
@@ -373,7 +373,7 @@ export function createLayerNormLayer<TLayer extends LayerFactoryLayer>(
 }
 
 /**
- * Orchestrates 1D convolution layer creation with a high-level flow.
+ * Orchestrates 1D convolution layer creation with a high-level flow so temporal feature extractors can be emitted through the same factory facade.
  *
  * @param context Factory helpers for constructing the layer instance.
  * @param size Number of output nodes.
@@ -399,7 +399,7 @@ export function createConv1dLayer<TLayer extends LayerFactoryLayer>(
 }
 
 /**
- * Orchestrates attention layer creation with a high-level flow.
+ * Orchestrates attention layer creation with a high-level flow so multi-head context mixing blocks can be created by architecture builders uniformly.
  *
  * @param context Factory helpers for constructing the layer instance.
  * @param size Number of output nodes.

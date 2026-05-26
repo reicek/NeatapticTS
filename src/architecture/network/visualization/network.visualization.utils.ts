@@ -74,7 +74,7 @@ export function buildNodePositionMap(sortedNodes: Node[]): Map<number, number> {
 }
 
 /**
- * Converts a runtime `Node` to a {@link VisualizationNodeV1} descriptor.
+ * Convert a runtime node into a deterministic visualization node descriptor.
  *
  * @param node - Source node instance.
  * @param role - Resolved semantic role for this node.
@@ -106,11 +106,11 @@ export function nodeToVisualizationDescriptor(
 }
 
 /**
- * Converts a runtime `Connection` to a {@link VisualizationEdgeV1} descriptor.
+ * Convert a runtime connection into the exported edge schema with deterministic edge-kind inference.
  *
  * @param connection - Source connection instance.
  * @param nodePositionByGeneId - Sorted position lookup built by {@link buildNodePositionMap}.
- * @param includeWeight - Whether to include the weight field.
+ * @param includeWeight - Whether the emitted descriptor should preserve the runtime weight.
  * @returns Immutable edge descriptor for the visualization schema.
  */
 export function connectionToVisualizationDescriptor(
@@ -136,7 +136,7 @@ export function connectionToVisualizationDescriptor(
 }
 
 /**
- * Resolves the semantic role of a node from the explicit I/O id sets.
+ * Resolve node role by explicit stable-id membership, defaulting to hidden for all remaining nodes.
  *
  * @param node - Node to classify.
  * @param inputIdSet - Set of stable gene ids for input-role nodes.

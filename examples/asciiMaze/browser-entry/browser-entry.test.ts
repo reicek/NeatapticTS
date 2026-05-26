@@ -92,11 +92,21 @@ describe('asciiMaze browser entry start()', () => {
     });
 
     firstHandle.stop();
+    finishLatestCurriculumRun();
+    await firstHandle.done;
   });
 
   it('allows a fresh run after the active handle stops', async () => {
     const firstHandle = await start('ascii-maze-output');
+    const firstCurriculumContext =
+      mockedRunBrowserEntryCurriculum.mock.calls.at(-1)?.[0];
+
+    if (!firstCurriculumContext) {
+      throw new Error('Expected the curriculum runtime context to be captured');
+    }
+
     firstHandle.stop();
+    firstCurriculumContext.finish();
     await firstHandle.done;
     const secondHandle = await start('ascii-maze-output');
 
@@ -109,6 +119,7 @@ describe('asciiMaze browser entry start()', () => {
     });
 
     secondHandle.stop();
+    finishLatestCurriculumRun();
     await secondHandle.done;
   });
 
@@ -137,6 +148,7 @@ describe('asciiMaze browser entry start()', () => {
     });
 
     handle.stop();
+    finishLatestCurriculumRun();
     await handle.done;
   });
 
@@ -191,6 +203,7 @@ describe('asciiMaze browser entry start()', () => {
     });
 
     handle.stop();
+    finishLatestCurriculumRun();
     await handle.done;
   });
 
@@ -205,6 +218,7 @@ describe('asciiMaze browser entry start()', () => {
 
     const cancelledBeforeStop = curriculumContext.isCancelled();
     handle.stop();
+    curriculumContext.finish();
     await handle.done;
 
     expect({
@@ -216,23 +230,65 @@ describe('asciiMaze browser entry start()', () => {
     });
   });
 
-  it('keeps the newer active handle registered when an older handle finishes cleanup later', async () => {
+  it('waits for curriculum cleanup before resolving done after stop', async () => {
+    const handle = await start('ascii-maze-output');
+    const curriculumContext =
+      mockedRunBrowserEntryCurriculum.mock.calls.at(-1)?.[0];
+    let doneResolved = false;
+
+    if (!curriculumContext) {
+      throw new Error('Expected the curriculum runtime context to be captured');
+    }
+
+    void handle.done.then(() => {
+      doneResolved = true;
+    });
+    handle.stop();
+    await Promise.resolve();
+    const resolvedBeforeCleanup = doneResolved;
+    curriculumContext.finish();
+    await handle.done;
+
+    expect({
+      cancelledAfterStop: curriculumContext.isCancelled(),
+      disposeCallCount: disposeResizeHandling.mock.calls.length,
+      resolvedBeforeCleanup,
+      runningAfterStop: handle.isRunning(),
+    }).toEqual({
+      cancelledAfterStop: true,
+      disposeCallCount: 1,
+      resolvedBeforeCleanup: false,
+      runningAfterStop: false,
+    });
+  });
+
+  it('keeps a draining handle registered until cleanup finishes', async () => {
     const firstHandle = await start('ascii-maze-output');
+    const firstCurriculumContext =
+      mockedRunBrowserEntryCurriculum.mock.calls.at(-1)?.[0];
+
+    if (!firstCurriculumContext) {
+      throw new Error('Expected the curriculum runtime context to be captured');
+    }
+
     firstHandle.stop();
     const secondHandle = await start('ascii-maze-output');
 
-    await Promise.resolve();
+    firstCurriculumContext.finish();
+    await firstHandle.done;
     const thirdHandle = await start('ascii-maze-output');
 
     expect({
-      secondHandleReused: secondHandle === thirdHandle,
+      freshHandleAfterCleanup: firstHandle !== thirdHandle,
+      sameHandleWhileDraining: firstHandle === secondHandle,
     }).toEqual({
-      secondHandleReused: true,
+      freshHandleAfterCleanup: true,
+      sameHandleWhileDraining: true,
     });
 
-    secondHandle.stop();
-    await firstHandle.done;
-    await secondHandle.done;
+    thirdHandle.stop();
+    finishLatestCurriculumRun();
+    await thirdHandle.done;
   });
 
   it('restarts with the selected architecture profile when a different selector button is clicked', async () => {
@@ -294,6 +350,7 @@ describe('asciiMaze browser entry start()', () => {
     });
 
     activeHandle.stop();
+    finishLatestCurriculumRun();
     await activeHandle.done;
   });
 
@@ -358,6 +415,18 @@ describe('asciiMaze browser entry start()', () => {
     });
 
     activeHandle.stop();
+    finishLatestCurriculumRun();
     await activeHandle.done;
   });
 });
+
+function finishLatestCurriculumRun(): void {
+  const curriculumContext =
+    mockedRunBrowserEntryCurriculum.mock.calls.at(-1)?.[0];
+
+  if (!curriculumContext) {
+    throw new Error('Expected the curriculum runtime context to be captured');
+  }
+
+  curriculumContext.finish();
+}

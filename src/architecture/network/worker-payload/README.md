@@ -41,7 +41,8 @@ channel.close();
 
 ### InferenceChannelOptions
 
-Configuration for one dedicated inference channel.
+Configuration for one dedicated persistent inference channel backed by a warm worker predictor.
+These options tune local request queue pressure and worker delivery strategy so repeated inference calls stay stable under bursty client traffic.
 
 Example:
 
@@ -84,7 +85,8 @@ console.log(inferenceIr.activationSteps);
 
 ### NetworkInferenceIREdge
 
-One non-self connection snapshot inside the worker-friendly inference IR.
+One deterministic non-self connection row inside the worker-friendly inference IR.
+This shape keeps forward edges compact and index-addressable so predictor hot paths can traverse weighted inputs without object graph lookups or runtime connection instances.
 
 Example:
 
@@ -136,7 +138,8 @@ console.log(payload.activationTable);
 
 ### PortableInferencePayloadEdge
 
-One portable edge record used by the structured-clone payload surface.
+One structured-clone-safe edge row used by the portable inference payload strategy.
+Portable edges preserve the same deterministic topology as IR edges while staying JSON-like and self-describing for debugging, logs, and cross-version message tracing.
 
 Example:
 
@@ -220,7 +223,8 @@ console.log(payload.nodeIds.length);
 
 ### TransferableInferencePayloadOptions
 
-Configuration for transferable payload export.
+Configuration knobs for transferable payload export when balancing precision, size, and transport throughput.
+Use these options when a worker boundary prefers lower-copy typed shelves but still needs predictable numeric semantics across browser and Node runtimes.
 
 Example:
 
@@ -264,7 +268,11 @@ const outputNodeIndexes = inferenceIr.outputNodeIndices;
 
 ### AutoInferenceTransport
 
-Automatic transport selection result for the current host.
+Automatically selected worker-backed inference transport tier for the current host.
+
+- `'shared-memory'` — SharedArrayBuffer transfer path when cross-origin isolation is active.
+- `'channel'` — Persistent channel worker when a channel-worker script was delivered.
+- `'transferable'` — Universal typed-array fallback when higher tiers are unavailable.
 
 ### BatchEvaluationResult
 
@@ -276,7 +284,10 @@ with their original batch shelf without reconstructing indexes manually.
 
 ### BrowserWorkerAssetUrlOptions
 
-Options for resolving a browser worker asset URL.
+Options for resolving a browser worker asset URL relative to the current script or an explicit base URL override.
+
+When `baseUrl` is omitted the helper falls back to `document.currentScript.src`
+and then `location.href`, keeping the worker and host bundle co-located by default.
 
 ### createInferencePredictor
 
@@ -286,20 +297,7 @@ createInferencePredictor(
 ): InferencePredictor
 ```
 
-Create a reusable local predictor from a portable or transferable inference payload.
-
-Parameters:
-- `payload` - Portable or transferable inference payload.
-
-Returns: Predictor that mirrors runtime no-trace activation semantics.
-
-Example:
-
-```ts
-const payload = exportPortableInferencePayload(network);
-const predictor = createInferencePredictor(payload);
-const outputValues = predictor.predict([0.25, 0.75]);
-```
+Create an inference predictor from a portable or transferable payload so repeated forward evaluations can run without reconstructing a mutable network instance.
 
 ### createNeatParallelPopulationEvaluator
 
@@ -405,19 +403,7 @@ exportPortableInferencePayload(
 ): PortableInferencePayload
 ```
 
-Export one universal structured-clone-safe inference payload.
-
-Parameters:
-- `network` - Runtime network to serialize for worker transport.
-
-Returns: Portable inference payload.
-
-Example:
-
-```ts
-const payload = exportPortableInferencePayload(network);
-console.log(payload.nodes[0]?.activation);
-```
+Export a portable inference payload with structured-clone-safe data so browser and node runtimes can persist and reload predictor artifacts reliably.
 
 ### exportTransferableInferencePayload
 
@@ -428,22 +414,7 @@ exportTransferableInferencePayload(
 ): TransferableInferencePayload
 ```
 
-Export one typed-array inference payload for lower-copy worker transport.
-
-Parameters:
-- `network` - Runtime network to serialize for worker transport.
-- `options` - Transferable export configuration.
-
-Returns: Transferable inference payload.
-
-Example:
-
-```ts
-const payload = exportTransferableInferencePayload(network, {
-  numericPrecision: 'f32',
-});
-console.log(payload.edgeWeights.length);
-```
+Export a transferable inference payload so typed-array-heavy artifacts can cross worker boundaries with explicit ownership transfer and reduced copy overhead.
 
 ### extractNetworkInferenceIR
 
@@ -453,19 +424,7 @@ extractNetworkInferenceIR(
 ): NetworkInferenceIR
 ```
 
-Extract a deterministic inference IR from one live network.
-
-Parameters:
-- `network` - Runtime network to snapshot.
-
-Returns: Worker-friendly inference IR.
-
-Example:
-
-```ts
-const inferenceIr = extractNetworkInferenceIR(network);
-console.log(inferenceIr.outputNodeIndices);
-```
+Extract a deterministic inference intermediate representation from a live network so transport and payload-export helpers can share one stable graph contract.
 
 ### getTransferList
 
@@ -527,15 +486,8 @@ channel.close();
 
 ### InferenceChannelOptions
 
-Configuration for one dedicated inference channel.
-
-Example:
-
-```ts
-const channel = openInferenceChannel(payload, {
-  maxConcurrentRequests: 4,
-});
-```
+Channel options that configure request batching, queueing, and lifecycle behavior for asynchronous inference transport endpoints across browser and node worker runtimes.
+These options define how inference requests are buffered, dispatched, and finalized over long-lived channel sessions.
 
 ### InferencePredictor
 
@@ -618,18 +570,8 @@ console.log(inferenceIr.activationSteps);
 
 ### NetworkInferenceIREdge
 
-One non-self connection snapshot inside the worker-friendly inference IR.
-
-Example:
-
-```ts
-const irEdge: NetworkInferenceIREdge = {
-  from: 0,
-  to: 3,
-  weight: 0.75,
-  gaterIndex: -1,
-};
-```
+Directed edge record in the inference graph representation used by payload export, replay, and worker predictor execution pipelines.
+The edge contract preserves stable source-target linkage and weight metadata during transport and reconstruction.
 
 ### NetworkInferenceIRNode
 
@@ -820,18 +762,8 @@ console.log(payload.activationTable);
 
 ### PortableInferencePayloadEdge
 
-One portable edge record used by the structured-clone payload surface.
-
-Example:
-
-```ts
-const portableEdge: PortableInferencePayloadEdge = {
-  from: 0,
-  to: 3,
-  weight: 0.75,
-  gaterIndex: -1,
-};
-```
+Portable payload edge schema preserving source-target linkage and connection metadata in runtime-agnostic JSON-style artifacts.
+This shape is intentionally serialization-friendly so offline tooling can inspect and replay predictor graphs deterministically.
 
 ### PortableInferencePayloadNode
 
@@ -977,15 +909,8 @@ console.log(payload.nodeIds.length);
 
 ### TransferableInferencePayloadOptions
 
-Configuration for transferable payload export.
-
-Example:
-
-```ts
-const payload = exportTransferableInferencePayload(network, {
-  numericPrecision: 'f32',
-});
-```
+Transfer options that control buffer packing and transfer-list behavior for worker-friendly inference payload publication.
+They allow callers to tune ownership and copy semantics for high-throughput cross-thread prediction workloads.
 
 ## architecture/network/worker-payload/network.worker-payload.neat.ts
 
@@ -1347,7 +1272,10 @@ channel.close();
 
 ### BrowserWorkerAssetUrlOptions
 
-Options for resolving a browser worker asset URL.
+Options for resolving a browser worker asset URL relative to the current script or an explicit base URL override.
+
+When `baseUrl` is omitted the helper falls back to `document.currentScript.src`
+and then `location.href`, keeping the worker and host bundle co-located by default.
 
 ### resolveBrowserWorkerAssetUrl
 
@@ -1400,7 +1328,11 @@ const transport = resolveAutoInferenceTransport(capabilities);
 
 ### AutoInferenceTransport
 
-Automatic transport selection result for the current host.
+Automatically selected worker-backed inference transport tier for the current host.
+
+- `'shared-memory'` — SharedArrayBuffer transfer path when cross-origin isolation is active.
+- `'channel'` — Persistent channel worker when a channel-worker script was delivered.
+- `'transferable'` — Universal typed-array fallback when higher tiers are unavailable.
 
 ### detectInferenceWorkerCapabilities
 
@@ -1689,7 +1621,8 @@ createInferencePredictor(
 ): InferencePredictor
 ```
 
-Create a reusable local predictor from a portable or transferable inference payload.
+Create a reusable local predictor from either portable or transferable inference payload contracts.
+The factory normalizes both transport strategies into one inference interface so callers can benchmark or run fallback execution paths without special-case runtime branching.
 
 Parameters:
 - `payload` - Portable or transferable inference payload.
@@ -1819,7 +1752,8 @@ exportPortableInferencePayload(
 ): PortableInferencePayload
 ```
 
-Export one universal structured-clone-safe inference payload.
+Export one structured-clone-safe inference payload from a live runtime network.
+The resulting payload keeps deterministic activation ordering, stable node or edge indexing, and canonical activation names so a worker can replay inference semantics without shipping live graph objects.
 
 Parameters:
 - `network` - Runtime network to serialize for worker transport.
@@ -1842,7 +1776,8 @@ exportTransferableInferencePayload(
 ): TransferableInferencePayload
 ```
 
-Export one typed-array inference payload for lower-copy worker transport.
+Export one typed-array inference payload optimized for low-copy worker transport.
+This variant preserves the same deterministic IR semantics as the portable payload while flattening fields into transfer-friendly typed shelves that can be moved across worker boundaries efficiently.
 
 Parameters:
 - `network` - Runtime network to serialize for worker transport.
@@ -1867,7 +1802,8 @@ extractNetworkInferenceIR(
 ): NetworkInferenceIR
 ```
 
-Extract a deterministic inference IR from one live network.
+Extract a deterministic inference IR from one live network snapshot.
+This extraction pass captures exactly the runtime data required for worker-side forward execution, including node scalars, filtered forward edges, grouped activation steps, and stable output indexing.
 
 Parameters:
 - `network` - Runtime network to snapshot.

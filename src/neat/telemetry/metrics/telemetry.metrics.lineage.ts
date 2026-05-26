@@ -1,4 +1,4 @@
-import type { GenomeDetailed } from '../../shared/neat.shared.types';
+﻿import type { GenomeDetailed } from '../../shared/neat.shared.types';
 import type { NeatLineageContext as LineageContext } from '../../lineage/lineage';
 import { buildAnc, computeAncestorUniqueness } from '../../lineage/lineage';
 import type {
@@ -32,7 +32,7 @@ function resolveLineageRngFactory(
 }
 
 /**
- * Compute lineage depth and pairwise depth-distance statistics.
+ * Compute lineage depth and pairwise depth-distance statistics so telemetry can expose ancestry spread and genealogical divergence for the current generation.
  *
  * @param lineageEnabled - Whether lineage metrics are enabled.
  * @param genomes - Population snapshot.
@@ -79,7 +79,7 @@ export function computeLineageStats(
 }
 
 /**
- * Apply lineage stats for multi-objective mode using ancestor uniqueness.
+ * Apply lineage stats for multi-objective mode using ancestor uniqueness so entries capture genealogy health alongside Pareto progress signals across generations.
  *
  * @param telemetryContext - Neat-like context with lineage settings.
  * @param population - Population snapshot.
@@ -125,7 +125,7 @@ export function applyLineageStatsMultiObjective(
 }
 
 /**
- * Apply lineage stats for mono-objective mode using sampled ancestors.
+ * Apply lineage stats for mono-objective mode using sampled ancestors so single-score runs still report ancestry diversity pressure transparently across long experiments.
  *
  * @param telemetryContext - Neat-like context with lineage settings.
  * @param population - Population snapshot.
@@ -164,7 +164,7 @@ export function applyLineageStatsMonoObjective(
 }
 
 /**
- * Check whether lineage metrics should be computed.
+ * Check whether lineage metrics should be computed for this snapshot so helper calls can short-circuit before any ancestry sampling work.
  *
  * @param context - Neat-like context with lineage flag.
  * @param populationSnapshot - Population snapshot to validate.
@@ -179,7 +179,7 @@ export function isLineageEligible(
 }
 
 /**
- * Collect depth values for the current population.
+ * Collect depth values for the current population so lineage summaries can be derived consistently from one deterministic per-genome mapping pass.
  *
  * @param populationSnapshot - Population snapshot.
  * @returns Array of depth values (defaults to 0).
@@ -190,7 +190,7 @@ export function collectDepths(populationSnapshot: GenomeDetailed[]): number[] {
 }
 
 /**
- * Compute the mean depth from a depth list.
+ * Compute the mean depth from a depth list so telemetry can expose ancestry maturity with one stable, noise-reduced scalar for trend charts.
  *
  * @param depthValues - Depth values to average.
  * @returns Mean depth value.
@@ -204,7 +204,7 @@ export function computeMeanDepth(depthValues: number[]): number {
 }
 
 /**
- * Compute ancestor uniqueness using sampled Jaccard distance.
+ * Compute ancestor uniqueness using sampled Jaccard distance so recorder output reflects how distinct elite ancestry remains across the population over time.
  *
  * @param context - Neat-like context with RNG helpers.
  * @param populationSnapshot - Population snapshot.
@@ -245,7 +245,7 @@ export function computeAncestorUniquenessSampled(
 }
 
 /**
- * Pick two distinct indices using the context RNG.
+ * Pick two distinct indices using the context RNG so pairwise lineage sampling remains deterministic under seeded controller configurations and replay workflows.
  *
  * @param context - Neat-like context with RNG factory.
  * @param populationSize - Population size for index bounds.
@@ -270,7 +270,7 @@ export function pickDistinctPairIndices(
 }
 
 /**
- * Compute Jaccard distance between ancestor sets for a pair.
+ * Compute Jaccard distance between ancestor sets for one sampled pair so uniqueness estimates remain interpretable and mathematically grounded during diagnostics.
  *
  * @param context - Neat-like context for lineage helpers.
  * @param populationSnapshot - Population snapshot.
@@ -307,7 +307,7 @@ export function computePairJaccardDistance(
 }
 
 /**
- * Build a lineage helper context for ancestor operations.
+ * Build a lineage helper context for ancestor operations so ancestry utilities share population and RNG state through one explicit boundary object.
  *
  * @param context - Neat-like context with RNG helpers.
  * @param populationSnapshot - Population snapshot.
@@ -325,7 +325,7 @@ export function buildLineageContext(
 }
 
 /**
- * Count the size of an ancestor intersection.
+ * Count the size of an ancestor intersection so Jaccard distance computation can reuse a clear and testable set-overlap primitive helper.
  *
  * @param ancestorsA - First ancestor set.
  * @param ancestorsB - Second ancestor set.
@@ -344,7 +344,7 @@ export function countAncestorIntersection(
 }
 
 /**
- * Build the lineage entry payload.
+ * Build the lineage entry payload so recorder output stores parent identifiers, depth metrics, and inbreeding context in one normalized shape.
  *
  * @param context - Neat-like context with lineage info.
  * @param bestGenomeSnapshot - Best genome snapshot.

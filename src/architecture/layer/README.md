@@ -696,7 +696,7 @@ clearLayer(
 ): void
 ```
 
-Orchestrates clearing node activation state with a high-level flow.
+Orchestrates clearing node activation state with a high-level flow so reused layers start each forward pass from deterministic baseline values.
 
 Parameters:
 - `context` - The layer state needed to reset nodes.
@@ -746,7 +746,7 @@ createAttentionLayer(
 ): TLayer
 ```
 
-Orchestrates attention layer creation with a high-level flow.
+Orchestrates attention layer creation with a high-level flow so multi-head context mixing blocks can be created by architecture builders uniformly.
 
 Parameters:
 - `context` - Factory helpers for constructing the layer instance.
@@ -769,7 +769,7 @@ createBatchNormLayer(
 ): TLayer
 ```
 
-Orchestrates batch normalization layer creation with a high-level flow.
+Orchestrates batch normalization layer creation with a high-level flow so scale and shift statistics integrate with the standard layer factory path.
 
 Parameters:
 - `context` - Factory helpers for constructing the layer instance.
@@ -794,7 +794,7 @@ createConv1dLayer(
 ): TLayer
 ```
 
-Orchestrates 1D convolution layer creation with a high-level flow.
+Orchestrates 1D convolution layer creation with a high-level flow so temporal feature extractors can be emitted through the same factory facade.
 
 Parameters:
 - `context` - Factory helpers for constructing the layer instance.
@@ -820,7 +820,7 @@ createDenseLayer(
 ): TLayer
 ```
 
-Orchestrates dense layer creation with a high-level flow.
+Orchestrates dense layer creation with a high-level flow so factory callers can create fully wired hidden blocks from one concise facade.
 
 Parameters:
 - `context` - Factory helpers for constructing the layer instance.
@@ -843,7 +843,7 @@ createGruLayer(
 ): TLayer
 ```
 
-Orchestrates GRU layer creation with a high-level flow.
+Orchestrates GRU layer creation with a high-level flow so compact recurrent units can be produced through the same factory contract.
 
 Parameters:
 - `context` - Factory helpers for constructing the layer instance.
@@ -865,7 +865,7 @@ createLayerNormLayer(
 ): TLayer
 ```
 
-Orchestrates layer normalization layer creation with a high-level flow.
+Orchestrates layer normalization layer creation with a high-level flow so sequence-friendly normalization blocks share the same construction workflow across architectures.
 
 Parameters:
 - `context` - Factory helpers for constructing the layer instance.
@@ -887,7 +887,7 @@ createLstmLayer(
 ): TLayer
 ```
 
-Orchestrates LSTM layer creation with a high-level flow.
+Orchestrates LSTM layer creation with a high-level flow so recurrent builders can request gated-memory blocks without duplicating construction details across APIs.
 
 Parameters:
 - `context` - Factory helpers for constructing the layer instance.
@@ -910,7 +910,7 @@ createMemoryLayer(
 ): TLayer
 ```
 
-Orchestrates Memory layer creation with a high-level flow.
+Orchestrates Memory layer creation with a high-level flow so delay-line style temporal context can be injected by architecture builders consistently.
 
 Parameters:
 - `context` - Factory helpers for constructing the layer instance.
@@ -934,7 +934,7 @@ disconnectLayer(
 ): void
 ```
 
-Orchestrates disconnection behavior with a high-level flow.
+Orchestrates disconnection behavior with a high-level flow so pruning and rewiring steps can remove stale edges through one validated adapter.
 
 Example:
 
@@ -957,7 +957,7 @@ gateLayer(
 ): void
 ```
 
-Orchestrates layer gating behavior with a high-level flow.
+Orchestrates layer gating behavior with a high-level flow so recurrent-control helpers can route modulation decisions through one stable delegation boundary.
 
 Example:
 
@@ -981,7 +981,7 @@ inputLayer(
 ): default[]
 ```
 
-Orchestrates layer input wiring with a high-level flow.
+Orchestrates layer input wiring with a high-level flow so previous-stage outputs attach through one predictable helper path used by builders.
 
 Example:
 
@@ -1257,6 +1257,10 @@ Returns: A mask value of 1 or 0 for all nodes in the layer.
 
 ## architecture/layer/layer.connection.utils.ts
 
+Removes an outgoing connection from layer tracking.
+
+This scans in reverse so we can `splice(...)` safely while iterating.
+
 ### clearLayer
 
 ```ts
@@ -1351,7 +1355,7 @@ disconnectFromNode(
 ): void
 ```
 
-Disconnects all layer nodes from a target node.
+Disconnect all layer nodes from one target node while updating tracking arrays.
 
 Parameters:
 - `layerNodes` - Nodes in the layer.
@@ -1463,14 +1467,7 @@ removeIncomingConnection(
 ): void
 ```
 
-Removes an incoming connection from layer tracking.
-
-This scans in reverse so we can `splice(...)` safely while iterating.
-
-Parameters:
-- `layerConnections` - Connection tracking for the layer.
-- `sourceNode` - Source node for the connection.
-- `targetNode` - Target node for the connection.
+Contract for removeIncomingConnection.
 
 ### removeOutgoingConnection
 
@@ -1482,14 +1479,7 @@ removeOutgoingConnection(
 ): void
 ```
 
-Removes an outgoing connection from layer tracking.
-
-This scans in reverse so we can `splice(...)` safely while iterating.
-
-Parameters:
-- `layerConnections` - Connection tracking for the layer.
-- `sourceNode` - Source node for the connection.
-- `targetNode` - Target node for the connection.
+Contract for removeOutgoingConnection.
 
 ## architecture/layer/layer.propagation.utils.ts
 

@@ -139,6 +139,28 @@ type FatalChannelTransitionOptions = {
   shutdownChannel: (shutdownError: Error) => Promise<void>;
 };
 
+type InferenceChannelState = {
+  activeRequestCount: number;
+  bootstrapReject?: (reason?: unknown) => void;
+  bootstrapResolve?: () => void;
+  channelPort?: ChannelPortLike;
+  closePromise?: Promise<void>;
+  dispatchLoopActive: boolean;
+  isOpen: boolean;
+  nextRequestId: number;
+  revokeWorkerUrl?: () => void;
+  workerHandle?: WorkerLike;
+};
+
+type InferenceChannelRuntime = {
+  bootstrapReadyPromise: Promise<void>;
+  maxConcurrentRequests: number;
+  payload: TransferableInferencePayload;
+  pendingRequests: Map<number, PendingChannelRequest>;
+  queuedRequests: QueuedChannelRequest[];
+  state: InferenceChannelState;
+};
+
 /**
  * Open one persistent inference worker channel from a transferable payload.
  *
@@ -161,338 +183,418 @@ export function openInferenceChannel(
   payload: TransferableInferencePayload,
   options: InferenceChannelOptions = {},
 ): InferenceChannel {
-  const maxConcurrentRequests = Math.max(
-    1,
-    Math.trunc(
-      options.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
+  const runtime = createInferenceChannelRuntime(
+    payload,
+    Math.max(
+      1,
+      Math.trunc(
+        options.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
+      ),
     ),
   );
-  const pendingRequests = new Map<number, PendingChannelRequest>();
-  const queuedRequests: QueuedChannelRequest[] = [];
-  let activeRequestCount = 0;
-  let bootstrapReject: ((reason?: unknown) => void) | undefined;
-  let bootstrapResolve: (() => void) | undefined;
-  let channelPort: ChannelPortLike | undefined;
-  let closePromise: Promise<void> | undefined;
-  let dispatchLoopActive = false;
-  let isOpen = true;
-  let nextRequestId = 1;
-  let revokeWorkerUrl: (() => void) | undefined;
-  let workerHandle: WorkerLike | undefined;
-
-  const bootstrapReadyPromise = new Promise<void>((resolve, reject) => {
-    bootstrapResolve = resolve;
-    bootstrapReject = reject;
-  });
-
-  const bootstrapPromise = createBootstrapPromise();
+  const bootstrapPromise = createInferenceChannelBootstrapPromise(
+    runtime,
+    options,
+  );
   void bootstrapPromise.catch((error) => {
-    handleFatalChannelError(asError(error));
+    handleFatalChannelError(runtime, asError(error));
   });
 
   return {
-    async close(): Promise<void> {
-      if (closePromise) {
-        await closePromise;
-        return;
-      }
-
-      closePromise = shutdownChannel(createClosedChannelError());
-      await closePromise;
-    },
-    predict(
-      input: Float64Array | ReadonlyArray<number>,
-    ): Promise<Float64Array> {
-      if (!isOpen) {
-        return Promise.reject(createClosedChannelError());
-      }
-
-      const requestId = nextRequestId;
-      nextRequestId += 1;
-
-      return new Promise<Float64Array>((resolve, reject) => {
-        const transferredInput = Float64Array.from(input);
-        queuedRequests.push({
-          id: requestId,
-          message: {
-            id: requestId,
-            input: transferredInput,
-            type: CHANNEL_PREDICT_MESSAGE_TYPE,
-          },
-          reject,
-          resolve,
-          transferList: [transferredInput.buffer],
-          type: 'predict',
-        });
-        void drainQueuedRequests();
-      });
-    },
-    reset(): Promise<void> {
-      if (!isOpen) {
-        return Promise.reject(createClosedChannelError());
-      }
-
-      const requestId = nextRequestId;
-      nextRequestId += 1;
-
-      return new Promise<void>((resolve, reject) => {
-        queuedRequests.push({
-          id: requestId,
-          message: {
-            id: requestId,
-            type: CHANNEL_RESET_MESSAGE_TYPE,
-          },
-          reject,
-          resolve,
-          transferList: [],
-          type: 'reset',
-        });
-        void drainQueuedRequests();
-      });
-    },
+    close: () => closeInferenceChannel(runtime),
+    predict: (input) => queueInferenceChannelPrediction(runtime, input),
+    reset: () => queueInferenceChannelReset(runtime),
     strategy: CHANNEL_STRATEGY,
     get isOpen(): boolean {
-      return isOpen;
+      return runtime.state.isOpen;
     },
   };
+}
 
-  function handleChannelResponse(message: unknown): void {
-    const responseMessage = message as Partial<ChannelResponseMessage>;
+function createInferenceChannelRuntime(
+  payload: TransferableInferencePayload,
+  maxConcurrentRequests: number,
+): InferenceChannelRuntime {
+  const state: InferenceChannelState = {
+    activeRequestCount: 0,
+    dispatchLoopActive: false,
+    isOpen: true,
+    nextRequestId: 1,
+  };
+  const bootstrapReadyPromise = new Promise<void>((resolve, reject) => {
+    state.bootstrapResolve = resolve;
+    state.bootstrapReject = reject;
+  });
 
-    if (responseMessage.type === CHANNEL_READY_MESSAGE_TYPE) {
-      bootstrapResolve?.();
-      bootstrapResolve = undefined;
-      bootstrapReject = undefined;
-      return;
-    }
+  return {
+    bootstrapReadyPromise,
+    maxConcurrentRequests,
+    payload,
+    pendingRequests: new Map<number, PendingChannelRequest>(),
+    queuedRequests: [],
+    state,
+  };
+}
 
-    if (
-      responseMessage.type === CHANNEL_REQUEST_ERROR_MESSAGE_TYPE &&
-      typeof responseMessage.id === 'number'
-    ) {
-      const pendingRequest = pendingRequests.get(responseMessage.id);
+function createInferenceChannelBootstrapPromise(
+  runtime: InferenceChannelRuntime,
+  options: InferenceChannelOptions,
+): Promise<void> {
+  const initializedWorker = initializeInferenceChannelWorker(options);
 
-      if (!pendingRequest) {
-        return;
-      }
-
-      pendingRequests.delete(responseMessage.id);
-      activeRequestCount = Math.max(0, activeRequestCount - 1);
-      pendingRequest.reject(
-        new Error(
-          responseMessage.message ?? 'InferenceChannel worker request failed.',
-        ),
-      );
-      void drainQueuedRequests();
-      return;
-    }
-
-    if (
-      responseMessage.type === CHANNEL_REQUEST_ERROR_MESSAGE_TYPE &&
-      typeof responseMessage.id !== 'number'
-    ) {
-      handleFatalChannelError(
-        new Error(
-          responseMessage.message ?? 'InferenceChannel bootstrap failed.',
-        ),
-      );
-      return;
-    }
-
-    if (
-      responseMessage.type === CHANNEL_PREDICT_RESULT_MESSAGE_TYPE &&
-      typeof responseMessage.id === 'number'
-    ) {
-      const pendingRequest = pendingRequests.get(responseMessage.id);
-
-      if (!pendingRequest) {
-        return;
-      }
-
-      pendingRequests.delete(responseMessage.id);
-      activeRequestCount = Math.max(0, activeRequestCount - 1);
-      if (pendingRequest.type === 'predict') {
-        pendingRequest.resolve(responseMessage.output ?? new Float64Array());
-      }
-      void drainQueuedRequests();
-      return;
-    }
-
-    if (
-      responseMessage.type === CHANNEL_RESET_RESULT_MESSAGE_TYPE &&
-      typeof responseMessage.id === 'number'
-    ) {
-      const pendingRequest = pendingRequests.get(responseMessage.id);
-
-      if (!pendingRequest) {
-        return;
-      }
-
-      pendingRequests.delete(responseMessage.id);
-      activeRequestCount = Math.max(0, activeRequestCount - 1);
-      if (pendingRequest.type === 'reset') {
-        pendingRequest.resolve();
-      }
-      void drainQueuedRequests();
-    }
-  }
-
-  function createBootstrapPromise(): Promise<void> {
-    const initializedWorker = initializeInferenceChannelWorker(options);
-
-    if (isPromiseLike(initializedWorker)) {
-      return initializedWorker.then((resolvedWorker) => {
-        return startWorkerBootstrap(resolvedWorker);
-      });
-    }
-
-    return startWorkerBootstrap(initializedWorker);
-  }
-
-  function startWorkerBootstrap(
-    initializedWorker: InitializedInferenceChannelWorker,
-  ): Promise<void> {
-    workerHandle = initializedWorker.worker;
-    channelPort = initializedWorker.localPort;
-    revokeWorkerUrl = initializedWorker.revokeWorkerUrl;
-
-    // Allow Node-owned worker resources to stop keeping the Jest host alive once
-    // the channel has no remaining work.
-    workerHandle.unref?.();
-    channelPort.unref?.();
-    (initializedWorker.remotePort as { unref?: () => void }).unref?.();
-
-    attachPortMessageListener(
-      channelPort,
-      (message) => {
-        handleChannelResponse(message);
-      },
-      (error) => {
-        handleFatalChannelError(error);
-      },
-    );
-    attachWorkerLifecycleListeners(initializedWorker.worker, (error) => {
-      handleFatalChannelError(error);
+  if (isPromiseLike(initializedWorker)) {
+    return initializedWorker.then((resolvedWorker) => {
+      return startInferenceChannelBootstrap(runtime, resolvedWorker);
     });
-
-    postMessageToWorker(
-      initializedWorker.worker,
-      {
-        payload,
-        port: initializedWorker.remotePort,
-        type: 'bootstrap',
-      } satisfies BootstrapMessage,
-      [initializedWorker.remotePort, ...getTransferList(payload)],
-    );
-
-    return bootstrapReadyPromise;
   }
 
-  function handleFatalChannelError(error: Error): void {
-    const nextClosePromise = resolveFatalChannelClosePromise(
-      {
-        bootstrapReject,
-        clearBootstrapState: () => {
-          bootstrapResolve = undefined;
-          bootstrapReject = undefined;
+  return startInferenceChannelBootstrap(runtime, initializedWorker);
+}
+
+function startInferenceChannelBootstrap(
+  runtime: InferenceChannelRuntime,
+  initializedWorker: InitializedInferenceChannelWorker,
+): Promise<void> {
+  runtime.state.workerHandle = initializedWorker.worker;
+  runtime.state.channelPort = initializedWorker.localPort;
+  runtime.state.revokeWorkerUrl = initializedWorker.revokeWorkerUrl;
+
+  // Allow Node-owned worker resources to stop keeping the Jest host alive once
+  // the channel has no remaining work.
+  runtime.state.workerHandle.unref?.();
+  runtime.state.channelPort.unref?.();
+  (initializedWorker.remotePort as { unref?: () => void }).unref?.();
+
+  attachPortMessageListener(
+    runtime.state.channelPort,
+    (message) => {
+      handleChannelResponse(runtime, message);
+    },
+    (error) => {
+      handleFatalChannelError(runtime, error);
+    },
+  );
+  attachWorkerLifecycleListeners(initializedWorker.worker, (error) => {
+    handleFatalChannelError(runtime, error);
+  });
+
+  postMessageToWorker(
+    initializedWorker.worker,
+    {
+      payload: runtime.payload,
+      port: initializedWorker.remotePort,
+      type: 'bootstrap',
+    } satisfies BootstrapMessage,
+    [initializedWorker.remotePort, ...getTransferList(runtime.payload)],
+  );
+
+  return runtime.bootstrapReadyPromise;
+}
+
+function handleChannelResponse(
+  runtime: InferenceChannelRuntime,
+  message: unknown,
+): void {
+  const responseMessage = message as Partial<ChannelResponseMessage>;
+
+  if (responseMessage.type === CHANNEL_READY_MESSAGE_TYPE) {
+    resolveInferenceChannelBootstrap(runtime);
+    return;
+  }
+
+  if (responseMessage.type === CHANNEL_REQUEST_ERROR_MESSAGE_TYPE) {
+    handleChannelErrorResponse(runtime, responseMessage);
+    return;
+  }
+
+  if (responseMessage.type === CHANNEL_PREDICT_RESULT_MESSAGE_TYPE) {
+    resolveChannelPredictResponse(runtime, responseMessage);
+    return;
+  }
+
+  if (responseMessage.type === CHANNEL_RESET_RESULT_MESSAGE_TYPE) {
+    resolveChannelResetResponse(runtime, responseMessage);
+  }
+}
+
+function resolveInferenceChannelBootstrap(
+  runtime: InferenceChannelRuntime,
+): void {
+  runtime.state.bootstrapResolve?.();
+  clearInferenceChannelBootstrapState(runtime.state);
+}
+
+function handleChannelErrorResponse(
+  runtime: InferenceChannelRuntime,
+  responseMessage: { id?: number; message?: string },
+): void {
+  if (typeof responseMessage.id === 'number') {
+    settlePendingChannelRequest(
+      runtime,
+      responseMessage.id,
+      (pendingRequest) => {
+        pendingRequest.reject(
+          new Error(
+            responseMessage.message ??
+              'InferenceChannel worker request failed.',
+          ),
+        );
+      },
+    );
+    return;
+  }
+
+  handleFatalChannelError(
+    runtime,
+    new Error(responseMessage.message ?? 'InferenceChannel bootstrap failed.'),
+  );
+}
+
+function resolveChannelPredictResponse(
+  runtime: InferenceChannelRuntime,
+  responseMessage: { id?: number; output?: Float64Array },
+): void {
+  if (typeof responseMessage.id !== 'number') {
+    return;
+  }
+
+  settlePendingChannelRequest(runtime, responseMessage.id, (pendingRequest) => {
+    if (pendingRequest.type === 'predict') {
+      pendingRequest.resolve(responseMessage.output ?? new Float64Array());
+    }
+  });
+}
+
+function resolveChannelResetResponse(
+  runtime: InferenceChannelRuntime,
+  responseMessage: { id?: number },
+): void {
+  if (typeof responseMessage.id !== 'number') {
+    return;
+  }
+
+  settlePendingChannelRequest(runtime, responseMessage.id, (pendingRequest) => {
+    if (pendingRequest.type === 'reset') {
+      pendingRequest.resolve();
+    }
+  });
+}
+
+function settlePendingChannelRequest(
+  runtime: InferenceChannelRuntime,
+  requestId: number,
+  settlePendingRequest: (pendingRequest: PendingChannelRequest) => void,
+): void {
+  const pendingRequest = runtime.pendingRequests.get(requestId);
+
+  if (!pendingRequest) {
+    return;
+  }
+
+  runtime.pendingRequests.delete(requestId);
+  runtime.state.activeRequestCount = Math.max(
+    0,
+    runtime.state.activeRequestCount - 1,
+  );
+  settlePendingRequest(pendingRequest);
+  void drainQueuedRequests(runtime);
+}
+
+function handleFatalChannelError(
+  runtime: InferenceChannelRuntime,
+  error: Error,
+): void {
+  const nextClosePromise = resolveFatalChannelClosePromise(
+    {
+      bootstrapReject: runtime.state.bootstrapReject,
+      clearBootstrapState: () => {
+        clearInferenceChannelBootstrapState(runtime.state);
+      },
+      isOpen: runtime.state.isOpen,
+      shutdownChannel: (shutdownError) =>
+        shutdownInferenceChannel(runtime, shutdownError),
+    },
+    error,
+  );
+
+  if (!nextClosePromise) {
+    return;
+  }
+
+  runtime.state.closePromise = nextClosePromise;
+  void runtime.state.closePromise;
+}
+
+function clearInferenceChannelBootstrapState(
+  state: InferenceChannelState,
+): void {
+  state.bootstrapResolve = undefined;
+  state.bootstrapReject = undefined;
+}
+
+async function closeInferenceChannel(
+  runtime: InferenceChannelRuntime,
+): Promise<void> {
+  if (runtime.state.closePromise) {
+    await runtime.state.closePromise;
+    return;
+  }
+
+  runtime.state.closePromise = shutdownInferenceChannel(
+    runtime,
+    createClosedChannelError(),
+  );
+  await runtime.state.closePromise;
+}
+
+function queueInferenceChannelPrediction(
+  runtime: InferenceChannelRuntime,
+  input: Float64Array | ReadonlyArray<number>,
+): Promise<Float64Array> {
+  if (!runtime.state.isOpen) {
+    return Promise.reject(createClosedChannelError());
+  }
+
+  const requestId = runtime.state.nextRequestId;
+  runtime.state.nextRequestId += 1;
+
+  return new Promise<Float64Array>((resolve, reject) => {
+    const transferredInput = Float64Array.from(input);
+    runtime.queuedRequests.push({
+      id: requestId,
+      message: {
+        id: requestId,
+        input: transferredInput,
+        type: CHANNEL_PREDICT_MESSAGE_TYPE,
+      },
+      reject,
+      resolve,
+      transferList: [transferredInput.buffer],
+      type: 'predict',
+    });
+    void drainQueuedRequests(runtime);
+  });
+}
+
+function queueInferenceChannelReset(
+  runtime: InferenceChannelRuntime,
+): Promise<void> {
+  if (!runtime.state.isOpen) {
+    return Promise.reject(createClosedChannelError());
+  }
+
+  const requestId = runtime.state.nextRequestId;
+  runtime.state.nextRequestId += 1;
+
+  return new Promise<void>((resolve, reject) => {
+    runtime.queuedRequests.push({
+      id: requestId,
+      message: {
+        id: requestId,
+        type: CHANNEL_RESET_MESSAGE_TYPE,
+      },
+      reject,
+      resolve,
+      transferList: [],
+      type: 'reset',
+    });
+    void drainQueuedRequests(runtime);
+  });
+}
+
+async function drainQueuedRequests(
+  runtime: InferenceChannelRuntime,
+): Promise<void> {
+  if (runtime.state.dispatchLoopActive) {
+    return;
+  }
+
+  runtime.state.dispatchLoopActive = true;
+
+  try {
+    await runtime.bootstrapReadyPromise;
+
+    while (
+      runtime.state.isOpen &&
+      runtime.state.channelPort &&
+      runtime.state.activeRequestCount < runtime.maxConcurrentRequests &&
+      runtime.queuedRequests.length > 0
+    ) {
+      const queuedRequest = runtime.queuedRequests.shift()!;
+
+      runtime.pendingRequests.set(queuedRequest.id, queuedRequest);
+      runtime.state.activeRequestCount += 1;
+      postMessageToPort(
+        runtime.state.channelPort,
+        queuedRequest.message,
+        queuedRequest.transferList,
+      );
+    }
+  } catch (error) {
+    handleFatalChannelError(runtime, asError(error));
+  } finally {
+    runtime.state.dispatchLoopActive = false;
+  }
+}
+
+async function shutdownInferenceChannel(
+  runtime: InferenceChannelRuntime,
+  shutdownError: Error,
+): Promise<void> {
+  runtime.state.isOpen = false;
+  rejectQueuedChannelRequests(runtime.queuedRequests, shutdownError);
+  rejectPendingChannelRequests(runtime, shutdownError);
+
+  try {
+    if (runtime.state.channelPort) {
+      postMessageToPort(
+        runtime.state.channelPort,
+        {
+          type: CHANNEL_CLOSE_MESSAGE_TYPE,
         },
-        isOpen,
-        shutdownChannel,
-      },
-      error,
-    );
-
-    if (!nextClosePromise) {
-      return;
+        [],
+      );
     }
 
-    closePromise = nextClosePromise;
-    void closePromise;
-  }
-
-  async function drainQueuedRequests(): Promise<void> {
-    if (dispatchLoopActive) {
-      return;
-    }
-
-    dispatchLoopActive = true;
-
-    try {
-      await bootstrapPromise;
-
-      while (
-        isOpen &&
-        channelPort &&
-        activeRequestCount < maxConcurrentRequests &&
-        queuedRequests.length > 0
-      ) {
-        const queuedRequest = queuedRequests.shift()!;
-
-        pendingRequests.set(queuedRequest.id, queuedRequest);
-        activeRequestCount += 1;
-        postMessageToPort(
-          channelPort,
-          queuedRequest.message,
-          queuedRequest.transferList,
-        );
-      }
-    } catch (error) {
-      handleFatalChannelError(asError(error));
-    } finally {
-      dispatchLoopActive = false;
-    }
-  }
-
-  async function shutdownChannel(shutdownError: Error): Promise<void> {
-    isOpen = false;
-    rejectQueuedRequests(shutdownError);
-    rejectPendingRequests(shutdownError);
-
-    try {
-      if (channelPort) {
-        postMessageToPort(
-          channelPort,
-          {
-            type: CHANNEL_CLOSE_MESSAGE_TYPE,
-          },
-          [],
-        );
-      }
-
-      await new Promise<void>((resolve) => {
-        setImmediate(resolve);
-      });
-    } catch {
-      // Ignore shutdown post races because local teardown continues below.
-    }
-
-    if (channelPort) {
-      await closeChannelPort(channelPort);
-    }
-
-    await disposeWorkerHandle(workerHandle);
-
-    revokeWorkerUrl?.();
-    channelPort = undefined;
-    workerHandle = undefined;
-    revokeWorkerUrl = undefined;
-  }
-
-  function rejectQueuedRequests(error: Error): void {
-    while (queuedRequests.length > 0) {
-      const queuedRequest = queuedRequests.shift();
-
-      queuedRequest?.reject(error);
-    }
-  }
-
-  function rejectPendingRequests(error: Error): void {
-    pendingRequests.forEach((pendingRequest) => {
-      pendingRequest.reject(error);
+    await new Promise<void>((resolve) => {
+      setImmediate(resolve);
     });
-    pendingRequests.clear();
-    activeRequestCount = 0;
+  } catch {
+    // Ignore shutdown post races because local teardown continues below.
   }
+
+  if (runtime.state.channelPort) {
+    await closeChannelPort(runtime.state.channelPort);
+  }
+
+  await disposeWorkerHandle(runtime.state.workerHandle);
+
+  runtime.state.revokeWorkerUrl?.();
+  runtime.state.channelPort = undefined;
+  runtime.state.workerHandle = undefined;
+  runtime.state.revokeWorkerUrl = undefined;
+}
+
+function rejectQueuedChannelRequests(
+  queuedRequests: QueuedChannelRequest[],
+  error: Error,
+): void {
+  while (queuedRequests.length > 0) {
+    const queuedRequest = queuedRequests.shift();
+
+    queuedRequest?.reject(error);
+  }
+}
+
+function rejectPendingChannelRequests(
+  runtime: InferenceChannelRuntime,
+  error: Error,
+): void {
+  runtime.pendingRequests.forEach((pendingRequest) => {
+    pendingRequest.reject(error);
+  });
+  runtime.pendingRequests.clear();
+  runtime.state.activeRequestCount = 0;
 }
 
 function initializeInferenceChannelWorker(
@@ -834,7 +936,11 @@ function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
   return value instanceof Promise;
 }
 
-/** @internal Test-only helper surface for owner-local channel coverage. */
+/**
+ * Test-only helper surface exposing private channel helpers for owner-local coverage.
+ *
+ * @internal
+ */
 export const INFERENCE_CHANNEL_HOST_INTERNALS = {
   asError,
   attachPortMessageListener,

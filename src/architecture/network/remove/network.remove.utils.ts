@@ -72,4 +72,11 @@ export function removeNode(this: Network, node: Node) {
   markNetworkRemovalDirtyFlags(removalContext.internalNetwork);
 }
 
-export default { removeNode };
+/**
+ * Default export bundle for the node removal utilities chapter.
+ *
+ * Bundles removeNode so the network facade can bind it as a method
+ * without importing it individually.
+ */
+const networkRemoveUtils = { removeNode };
+export default networkRemoveUtils;

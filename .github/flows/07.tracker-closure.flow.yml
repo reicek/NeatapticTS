@@ -1,0 +1,32 @@
+id: '07.tracker-closure'
+name: 'Tracker Closure and Archive'
+agent: '07-logging'
+description: >
+  Closes a completed workstream by compressing the active .plans.md into a
+  short closed tracker, writing a matching .logs.md audit record, and moving
+  both into plans/completed/. Uses the tracker-handoff skill to enforce
+  [PLANNED]/[WIP]/[DONE] status markers and the Handoff query section
+  structure. Must not run while any step in the plan is still [WIP] or [PLANNED].
+
+triggers:
+  - 'All phase steps in a plan are marked [DONE]; plan ready for compression and archive'
+  - 'Workstream is terminally closed; plans/completed/ move required'
+  - 'Active .plans.md needs compression; matching .logs.md needs to be written'
+  - 'Plan has no remaining [WIP] or [PLANNED] steps and next frontier is a new plan'
+
+gates:
+  - 'plan-sync'
+  - 'step-packet'
+  - 'log-completion-marker'
+
+post-phase-fanout:
+  - 'NONE'
+
+skills:
+  - 'tracker-handoff'
+  - 'summarizing-session-log'
+
+specialists:
+  - 'file-change-summarizer'
+
+timeout-minutes: 20

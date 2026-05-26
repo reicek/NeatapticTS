@@ -1,0 +1,26 @@
+[
+  {
+    "file": "src/neat.ts",
+    "symbol": "undocumentedMutation",
+    "issue": "missing JSDoc",
+    "numericValue": 0
+  },
+  {
+    "file": "src/architecture/network.ts",
+    "symbol": "buildDenseLayer",
+    "issue": "high complexity",
+    "numericValue": 14
+  },
+  {
+    "file": "src/neat.ts",
+    "symbol": "undocumentedMutation",
+    "issue": "missing JSDoc",
+    "numericValue": 0
+  },
+  {
+    "file": "src/architecture/network.ts",
+    "symbol": "allocateGenome",
+    "issue": "weak JSDoc",
+    "numericValue": 5
+  }
+]

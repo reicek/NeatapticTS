@@ -21,6 +21,11 @@ pnpm-debug.log*
 /nyc_output/
 /test-results/
 /ascii_maze_snapshots/
+data/semantic-index.sqlite
+data/embeddings.sqlite
+data/*.sqlite-journal
+data/mcp-session-override.json
+scripts/semantic-index/models/
 
 # Environment/secret files
 .env

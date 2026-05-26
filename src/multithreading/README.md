@@ -413,11 +413,36 @@ worker wrappers.
 
 ### SerializableNetwork
 
+Minimal interface required of a network to participate in worker evaluation.
+
+Only `serialize()` is needed: workers receive the flat numeric triple
+produced by this method and reconstruct activation state locally without
+holding a reference to the full `Network` object graph.
+
 ### SerializedSample
+
+A single input/output training sample for worker-based batch evaluation.
+
+Both arrays must have lengths consistent with the network's input and
+output dimensions. The serialized dataset format encodes these lengths
+once in a shared header so worker threads can decode samples without
+out-of-band metadata.
 
 ### TestWorkerConstructor
 
+Constructor signature for worker classes used in parallel genome evaluation.
+
+Implementations receive the flat-serialized dataset and the cost function
+descriptor at construction time so the worker can score genomes without
+receiving per-call dataset transfers.
+
 ### TestWorkerInstance
+
+Contract for a running worker instance used in parallel genome evaluation.
+
+`evaluate` scores a single genome and returns a fitness value. `terminate`
+shuts the worker down cleanly. The optional `test` hook exists for
+diagnostic harnesses that need to probe internal worker state.
 
 ## multithreading/multi.utils.ts
 
@@ -429,10 +454,16 @@ absoluteActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Absolute value activation — maps the input to its non-negative magnitude.
 
-Returns: Absolute activation.
+Introduces a V-shaped nonlinearity: zero gradient for positive inputs,
+negated gradient for negative inputs. Useful where magnitude matters but
+sign does not.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: |value|.
 
 ### activateSerializedNetwork
 
@@ -447,6 +478,7 @@ activateSerializedNetwork(
 ```
 
 Activates a serialized network and produces outputs.
+This interpreter executes the compact numeric encoding used by worker threads, including self-gated recurrent state updates and per-edge gating, so predictions can run without rehydrating full object graphs.
 
 Parameters:
 - `inputValues` - Inputs to feed into the network.
@@ -459,7 +491,12 @@ Returns: Activated outputs.
 
 ### ACTIVATION_FUNCTIONS
 
-Returns: Activation functions ordered for serialization compatibility.
+Ordered registry of all built-in activation functions for serialization compatibility.
+
+Worker threads decode the compact network format using the numeric activation
+index stored per node. The index is a direct position into this array, so
+**order must never change**. New activations must be appended at the end to
+preserve backward compatibility with previously serialized networks.
 
 ### bentIdentityActivation
 
@@ -469,10 +506,15 @@ bentIdentityActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Bent identity activation — smooth, near-linear with gentle curvature.
 
-Returns: Bent identity activation.
+Outputs approximately x for large |x| but introduces a small nonlinear
+bend near zero. Formula: (sqrt(x² + 1) − 1) / 2 + x.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: Bent identity output.
 
 ### bipolarActivation
 
@@ -482,10 +524,15 @@ bipolarActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Bipolar step activation — outputs +1 for positive inputs, −1 otherwise.
 
-Returns: Bipolar activation.
+A hard threshold centered at zero. Useful as a binary decision unit where
+outputs must be exactly ±1 rather than 0/1.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: 1 if value > 0, otherwise −1.
 
 ### bipolarSigmoidActivation
 
@@ -495,10 +542,15 @@ bipolarSigmoidActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Bipolar sigmoid activation — a logistic function rescaled to the range (−1, 1).
 
-Returns: Bipolar sigmoid activation.
+Formula: 2 / (1 + exp(−x)) − 1. Equivalent to tanh in range but computed
+differently; retains the zero-crossing property of bipolar functions.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: Activation output in the range (−1, 1).
 
 ### deserializeDataSet
 
@@ -509,6 +561,7 @@ deserializeDataSet(
 ```
 
 Deserializes a dataset from its flat representation.
+The deserializer reverses `serializeDataSet` by reconstructing fixed-width sample rows from the shared header, preserving deterministic sample order for batch evaluation.
 
 Parameters:
 - `serializedSet` - Flat serialized dataset array.
@@ -523,10 +576,16 @@ gaussianActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Gaussian activation — bell-curve response centered at zero.
 
-Returns: Gaussian activation.
+Outputs the normal probability density shape exp(−x²), which peaks at 1
+when x = 0 and decays to 0 for large |x|. Useful in radial basis function
+style networks.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: exp(−value²).
 
 ### geluActivation
 
@@ -536,10 +595,17 @@ geluActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Gaussian Error Linear Unit (GELU) activation — smooth stochastic regularizer.
 
-Returns: GELU activation.
+Formula: x · Φ(x), where Φ is the Gaussian CDF approximated via tanh.
+GELU weighs inputs by their probability under a standard normal, producing
+smooth, non-monotonic behavior. Widely used in transformer architectures.
+See Hendrycks and Gimpel, 2016.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: GELU-activated output.
 
 ### hardTanhActivation
 
@@ -549,10 +615,15 @@ hardTanhActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Hard tanh activation — clamps the input to the range [−1, 1].
 
-Returns: Hard tanh activation.
+A piecewise linear approximation of tanh that is free of exponential
+operations. Output is exactly −1, identity, or +1 depending on the input.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: Clamped value in [−1, 1].
 
 ### identityActivation
 
@@ -562,10 +633,14 @@ identityActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Identity (linear) activation — passes the input through unchanged.
 
-Returns: Identity activation.
+Useful for output nodes in regression networks where no squashing is desired.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: The same value, unmodified.
 
 ### inverseActivation
 
@@ -575,10 +650,15 @@ inverseActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Inverse (complement) activation — reflects the input around 0.5.
 
-Returns: Inverse activation.
+Formula: 1 − x. Useful when a node's output should represent the
+complementary probability or the negated contribution of its input.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: 1 − value.
 
 ### logisticActivation
 
@@ -588,10 +668,16 @@ logisticActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Logistic (sigmoid) activation — maps any real input to the open interval (0, 1).
 
-Returns: Logistic activation.
+Commonly used in output layers for binary classification or as a smooth
+squashing function. See Wikipedia contributors,
+[Sigmoid function](https://en.wikipedia.org/wiki/Sigmoid_function).
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: Activation output in the range (0, 1).
 
 ### mishActivation
 
@@ -601,10 +687,16 @@ mishActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Mish smooth non-monotonic activation function.
 
-Returns: Mish activation.
+Computes `x * tanh(softplus(x))` where `softplus(x) = ln(1 + e^x)`.
+Mish avoids hard zero-saturation and provides better gradient flow than ReLU
+in many deep architectures. See Misra, 2019, "Mish: A Self Regularized Non-Monotonic Activation Function".
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: Mish-activated output.
 
 ### reluActivation
 
@@ -614,10 +706,16 @@ reluActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Rectified Linear Unit (ReLU) activation — passes positive values, zeros negatives.
 
-Returns: ReLU activation.
+The most widely used hidden-layer activation in deep learning due to its
+computational simplicity and resistance to vanishing gradients. See Wikipedia
+contributors, [Rectifier](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)).
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: value if value > 0, otherwise 0.
 
 ### seluActivation
 
@@ -627,10 +725,17 @@ seluActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Scaled Exponential Linear Unit (SELU) activation — self-normalizing variant of ELU.
 
-Returns: SELU activation.
+Designed to push activations toward zero mean and unit variance when used
+throughout a fully connected network, without explicit batch normalization.
+Constants α and λ from Klambauer et al., 2017. See Wikipedia contributors,
+[SELU](https://en.wikipedia.org/wiki/Activation_function#Scaled_exponential_linear_unit).
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: Scaled activation output.
 
 ### serializeDataSet
 
@@ -641,6 +746,7 @@ serializeDataSet(
 ```
 
 Serializes a dataset into a flat numeric array.
+The flattened layout minimizes worker message overhead by encoding one header followed by contiguous input and output rows for each sample.
 
 Parameters:
 - `dataSet` - Collection of samples with input and output arrays.
@@ -655,10 +761,15 @@ sinusoidActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Sinusoidal activation — applies the sine function to the pre-activation value.
 
-Returns: Sinusoid activation.
+Produces periodic, bounded output in [−1, 1]. Useful for networks that
+need to learn cyclic or frequency-based patterns.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: sin(value).
 
 ### softplusActivation
 
@@ -668,10 +779,16 @@ softplusActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Softplus activation — a smooth approximation of ReLU.
 
-Returns: Softplus activation.
+Formula: log(1 + exp(x)). Always positive; approaches x for large x and 0
+for large negative x. Uses numerical approximations at the tails to avoid
+overflow.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: log(1 + exp(value)), with tail approximations for stability.
 
 ### softsignActivation
 
@@ -681,10 +798,15 @@ softsignActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Softsign activation — a smooth, non-saturating alternative to tanh.
 
-Returns: Softsign activation.
+Outputs range in (−1, 1) but with gentler saturation than tanh, preserving
+gradient flow further from zero. Formula: x / (1 + |x|).
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: Activation output in the range (−1, 1).
 
 ### stepActivation
 
@@ -694,10 +816,15 @@ stepActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Step (Heaviside) activation — outputs 1 for positive inputs, 0 otherwise.
 
-Returns: Step activation.
+A hard threshold function with zero gradient almost everywhere. Rarely used
+in gradient-based training but useful for binary thresholding in evaluation.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: 1 if value > 0, otherwise 0.
 
 ### swishActivation
 
@@ -707,10 +834,16 @@ swishActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Swish activation — gated variant of the identity function.
 
-Returns: Swish activation.
+Formula: x · σ(x), where σ is the logistic sigmoid. Self-gated,
+non-monotonic, and smooth. Empirically outperforms ReLU on deeper
+architectures. Proposed by Ramachandran et al., 2017.
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: value · sigmoid(value).
 
 ### tanhActivation
 
@@ -720,10 +853,15 @@ tanhActivation(
 ): number
 ```
 
-Parameters:
-- `value` - Input value.
+Hyperbolic tangent activation — maps any real input to the open interval (−1, 1).
 
-Returns: Hyperbolic tangent activation.
+Zero-centered and saturating; a common choice for hidden layers. See Wikipedia
+contributors, [Hyperbolic functions](https://en.wikipedia.org/wiki/Hyperbolic_functions).
+
+Parameters:
+- `value` - Pre-activation input value.
+
+Returns: Activation output in the range (−1, 1).
 
 ### testSerializedSet
 
@@ -739,6 +877,7 @@ testSerializedSet(
 ```
 
 Tests a serialized dataset using a cost function.
+Each sample is evaluated through the serialized-network interpreter and accumulated into an average finite cost, returning `NaN` when any sample or score violates numeric validity.
 
 Parameters:
 - `serializedSampleSet` - Serialized dataset samples.

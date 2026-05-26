@@ -13,5 +13,5 @@
     "allowSyntheticDefaultImports": true
   },
   "include": ["scripts/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "scripts/**/__tests__/**/*.ts", "scripts/**/*.test.ts"]
 }

@@ -1,0 +1,32 @@
+id: '06.example-publication'
+name: 'Browser Demo Example Publication'
+agent: '06-documenting'
+description: >
+  Publishes a modified browser demo example from examples/ to docs/examples/
+  by running `npm run docs` (which invokes scripts/copy-examples.ts). Confirms
+  the published copy matches the source. Does not edit docs/examples/ directly.
+  Smoke validation is handed off to 05-green-testing when visual parity is
+  required.
+
+triggers:
+  - 'Example source under examples/ modified; published copy under docs/examples/ needs regeneration'
+  - 'Browser demo HTML, CSS, or loader behavior changed; docs copy must be refreshed'
+  - 'npm run docs must be run to republish a demo page'
+  - 'Generated example page is stale relative to the source examples/ file'
+
+gates:
+  - 'plan-sync'
+  - 'docs-artifact-reference'
+
+post-phase-fanout:
+  - '05-green-testing'
+
+skills:
+  - 'browser-build'
+  - 'educational-docs'
+
+specialists:
+  - 'Browser Runtime Scout'
+  - 'Visualizer Scout'
+
+timeout-minutes: 15

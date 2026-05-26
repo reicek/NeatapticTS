@@ -5,7 +5,7 @@ import type {
 } from '../types/telemetry.types';
 
 /**
- * Attach performance stats when configured.
+ * Attach performance stats when configured so each telemetry entry reports evaluation and evolution cost alongside structural and objective outcomes per generation.
  *
  * @param telemetryContext - Neat-like context with performance data.
  * @param telemetryOptions - Options controlling performance telemetry.

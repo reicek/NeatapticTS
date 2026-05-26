@@ -4,7 +4,7 @@ import {
   getTransferList,
   type ParallelInferenceWorkerLike,
   type TransferableInferencePayload,
-} from '../../../src/neataptic';
+} from '../../../src/architecture/network/worker-payload/network.worker-payload';
 import { FitnessEvaluator } from '../fitness';
 import type {
   FitnessEvaluatorFn,
@@ -55,6 +55,11 @@ interface AsciiMazeEvaluationWorker extends ParallelInferenceWorkerLike {
   evaluateFitness(): Promise<number>;
 }
 
+type AsciiMazeLocalGenomeEvaluator = (
+  genome: AsciiMazeWorkerPopulationGenome,
+  genomeIndex: number,
+) => Promise<number> | number;
+
 /**
  * Create the browser-worker population evaluator for ASCII Maze genome scoring.
  *
@@ -82,17 +87,18 @@ export function createAsciiMazeWorkerPopulationFitnessEvaluator(
     return undefined;
   }
 
-  return createNeatParallelPopulationEvaluator<
+  const evaluateGenomeLocally = createAsciiMazeLocalGenomeEvaluator(
+    fitnessContext,
+    fitnessEvaluator,
+  );
+  const evaluatePopulationInWorkers = createNeatParallelPopulationEvaluator<
     AsciiMazeWorkerPopulationGenome,
     AsciiMazeEvaluationWorkerPayload,
     AsciiMazeEvaluationWorker,
     number
   >({
     parallel: true,
-    evaluateGenome: (genome) => {
-      genome.clear?.();
-      return fitnessEvaluator(genome as unknown as INetwork, fitnessContext);
-    },
+    evaluateGenome: evaluateGenomeLocally,
     evaluateWithWorker: (worker) => worker.evaluateFitness(),
     openWorker: (payload) =>
       openAsciiMazeEvaluationWorker(payload, workerEvaluation.workerUrl),
@@ -102,6 +108,76 @@ export function createAsciiMazeWorkerPopulationFitnessEvaluator(
     }),
     workerCount: workerEvaluation.workerCount,
   });
+
+  return async (population): Promise<void> => {
+    try {
+      await evaluatePopulationInWorkers(population);
+      return;
+    } catch (error) {
+      reportAsciiMazeWorkerEvaluationFallback(error);
+    }
+
+    await evaluateAsciiMazePopulationLocally(population, evaluateGenomeLocally);
+  };
+}
+
+/**
+ * Create the local ASCII Maze genome evaluator used by both fallback paths.
+ *
+ * @param fitnessContext - Read-only maze context shared by the active run.
+ * @param fitnessEvaluator - Fitness delegate selected by the evolution engine.
+ * @returns Local evaluator that clears recurrent state before scoring one genome.
+ */
+function createAsciiMazeLocalGenomeEvaluator(
+  fitnessContext: IFitnessEvaluationContext,
+  fitnessEvaluator: FitnessEvaluatorFn,
+): AsciiMazeLocalGenomeEvaluator {
+  return (genome) => {
+    genome.clear?.();
+    return fitnessEvaluator(genome as unknown as INetwork, fitnessContext);
+  };
+}
+
+/**
+ * Score an ASCII Maze population locally after worker evaluation becomes unusable.
+ *
+ * @param population - Ordered genome shelf to score in place.
+ * @param evaluateGenome - Local scorer shared with the worker helper fallback.
+ * @returns Promise resolved after every genome has a local score.
+ */
+async function evaluateAsciiMazePopulationLocally(
+  population: AsciiMazeWorkerPopulationGenome[],
+  evaluateGenome: AsciiMazeLocalGenomeEvaluator,
+): Promise<void> {
+  const localScores = await Promise.all(
+    population.map((genome, genomeIndex) =>
+      evaluateGenome(genome, genomeIndex),
+    ),
+  );
+
+  localScores.forEach((localScore, genomeIndex) => {
+    const genome = population[genomeIndex];
+    if (genome) {
+      genome.score = localScore;
+    }
+  });
+}
+
+/**
+ * Report worker evaluation fallback without making console availability fatal.
+ *
+ * @param error - Worker startup or evaluation error that triggered local scoring.
+ * @returns Nothing.
+ */
+function reportAsciiMazeWorkerEvaluationFallback(error: unknown): void {
+  try {
+    console.warn(
+      '[asciiMaze] worker evaluation failed; falling back to local scoring.',
+      error,
+    );
+  } catch {
+    // Ignore console failures in restricted hosts.
+  }
 }
 
 function canUseAsciiMazeWorkerEvaluation(

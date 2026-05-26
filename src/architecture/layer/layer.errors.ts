@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when caller-provided layer values do not match the number of nodes.
  */
 export class LayerSizeMismatchError extends Error {

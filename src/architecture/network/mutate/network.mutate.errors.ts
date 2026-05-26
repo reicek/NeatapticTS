@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when mutation is requested without a concrete mutation method.
  */
 export class NetworkMutateMethodRequiredError extends Error {

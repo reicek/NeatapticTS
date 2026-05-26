@@ -78,7 +78,8 @@ getConnectionInnovation(
 ): number | undefined
 ```
 
-Look up a reusable connection innovation for the active generation.
+Look up a reusable connection innovation for the active generation using the caller-defined connection identity key.
+Reuse allows homologous edge additions to remain historically aligned across genomes in the same pass.
 
 Parameters:
 - `tracker` - Live tracker.
@@ -95,7 +96,8 @@ getNodeSplitRecord(
 ): NodeSplitRecord | undefined
 ```
 
-Look up a reusable split record for the active generation.
+Look up a reusable split record for the active generation so repeated node-split mutations can share deterministic ids.
+Stable split-key reuse keeps homologous mutations aligned within one generation boundary.
 
 Parameters:
 - `tracker` - Live tracker.
@@ -105,11 +107,11 @@ Returns: Previously recorded split data, if present.
 
 ### INITIAL_NEXT_INNOVATION_ID
 
-Initial next-innovation cursor for a newly created tracker.
+Initial next-innovation id cursor for a newly created innovation tracker.
 
 ### INITIAL_TRACKER_GENERATION
 
-Initial active generation for a newly created tracker.
+Initial active generation number for a newly created innovation tracker.
 
 ### prepareInnovationTrackerForGeneration
 
@@ -174,7 +176,8 @@ recordConnectionInnovation(
 ): void
 ```
 
-Record a reusable connection innovation for the active generation.
+Record a reusable connection innovation for the active generation so matching structural mutations share one canonical id.
+This write path is paired with lookup helpers to preserve deterministic innovation genealogy.
 
 Parameters:
 - `tracker` - Live tracker.
@@ -193,7 +196,8 @@ recordNodeSplitRecord(
 ): void
 ```
 
-Record a reusable split result for the active generation.
+Record a reusable split result for the active generation so equivalent split events keep the same innovation structure.
+This prevents duplicate node-lineage ids from drifting across identical mutations in one generation.
 
 Parameters:
 - `tracker` - Live tracker.
@@ -249,7 +253,8 @@ takeNextInnovationId(
 ): number
 ```
 
-Consume the next global innovation id from the tracker.
+Consume the next global innovation id from the tracker and advance the monotonic innovation counter by one.
+The returned id should be recorded immediately on the matching mutation event to preserve deterministic history.
 
 Parameters:
 - `tracker` - Live tracker.
@@ -286,7 +291,7 @@ registries so restore can continue without silently reassigning identities.
 
 ### ConnectionInnovationEntry
 
-JSON tuple entry used when serializing connection innovations.
+JSON tuple entry format used when serializing connection innovation numbers.
 
 ### ConnectionInnovationRegistry
 
@@ -311,7 +316,7 @@ still has outstanding structural reuse information.
 
 ### NodeSplitInnovationEntry
 
-JSON tuple entry used when serializing node-split records.
+JSON tuple entry format used when serializing node-split innovation records.
 
 ### NodeSplitInnovationRegistry
 

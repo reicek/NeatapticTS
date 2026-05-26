@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when network JSON serialization helpers receive an invalid root payload.
  */
 export class NetworkSerializeInvalidJsonError extends Error {

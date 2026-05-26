@@ -1,0 +1,36 @@
+id: '01.step-packet-revision'
+name: 'Step Packet Revision'
+agent: '01-planning'
+description: >
+  Updates an active or blocked step packet when scope changes, blockers
+  emerge, or the original packet is ambiguous. Pulls current plan state via
+  neataptic-workflow-mcp: get_active_workflow_snapshot first; falls back to
+  direct plan file read if unavailable or if scope is "no-active-phase". Revises only the affected step
+  packet without touching downstream planned steps unless they are directly
+  invalidated by the scope change. Records the revision reason in the tracker
+  and confirms plan validators still pass.
+
+triggers:
+  - 'Active step blocked or scope changed mid-phase'
+  - 'Step packet is missing required fields or stop conditions'
+  - 'User asks to revise or unblock the current active step'
+  - 'Blocker routed back from 00-helping with revised scope'
+
+gates:
+  - 'plan-sync'
+  - 'step-packet'
+  - 'planning-output-contract'
+
+post-phase-fanout:
+  - '<next-active-step-agent>'
+
+skills:
+  - 'tracker-handoff'
+  - 'phase-handoff-workflow'
+  - 'plan-sync-validation'
+
+specialists:
+  - 'Plan Scout'
+  - 'helping-gap-resolution-coordinator'
+
+timeout-minutes: 15

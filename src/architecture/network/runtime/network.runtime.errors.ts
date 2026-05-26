@@ -1,5 +1,5 @@
-/**
- * Raised when a pruning schedule window is invalid.
+﻿/**
+ * Raised when a pruning schedule window size is zero, negative, or otherwise falls outside the valid range accepted by the activation-ordering runtime.
  */
 export class NetworkRuntimePruningScheduleWindowError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -19,7 +19,7 @@ export class NetworkRuntimeTargetSparsityRangeError extends Error {
 }
 
 /**
- * Raised when weight-noise standard deviation is negative.
+ * Raised when the weight-noise standard deviation is negative; only non-negative values produce a well-defined Gaussian noise distribution.
  */
 export class NetworkRuntimeWeightNoiseStdDevRangeError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -29,7 +29,7 @@ export class NetworkRuntimeWeightNoiseStdDevRangeError extends Error {
 }
 
 /**
- * Raised when weight-noise configuration shape is invalid.
+ * Raised when the weight-noise configuration contains an unexpected shape, is missing required fields, or carries incompatible type combinations.
  */
 export class NetworkRuntimeWeightNoiseConfigurationError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -39,7 +39,7 @@ export class NetworkRuntimeWeightNoiseConfigurationError extends Error {
 }
 
 /**
- * Raised when per-hidden-layer weight noise is requested on a non-layered network.
+ * Raised when per-hidden-layer weight noise is requested but the target network was not constructed with an explicit layered topology.
  */
 export class NetworkRuntimeLayeredWeightNoiseRequiredError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -49,7 +49,7 @@ export class NetworkRuntimeLayeredWeightNoiseRequiredError extends Error {
 }
 
 /**
- * Raised when hidden-layer weight-noise entries do not match hidden-layer count.
+ * Raised when the number of hidden-layer weight-noise entries does not match the hidden-layer count in the network topology.
  */
 export class NetworkRuntimeWeightNoiseEntryCountError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -59,7 +59,7 @@ export class NetworkRuntimeWeightNoiseEntryCountError extends Error {
 }
 
 /**
- * Raised when a per-hidden-layer weight-noise value is negative.
+ * Raised when a per-hidden-layer weight-noise standard deviation is negative; each layer entry must be zero or a positive value.
  */
 export class NetworkRuntimeWeightNoisePerLayerRangeError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -69,7 +69,7 @@ export class NetworkRuntimeWeightNoisePerLayerRangeError extends Error {
 }
 
 /**
- * Raised when stochastic-depth survival input is not an array.
+ * Raised when the stochastic-depth survival probability input is not an array of per-layer probability values as required by the runtime.
  */
 export class NetworkRuntimeStochasticDepthSurvivalArrayError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -79,7 +79,7 @@ export class NetworkRuntimeStochasticDepthSurvivalArrayError extends Error {
 }
 
 /**
- * Raised when a stochastic-depth survival probability falls outside (0, 1].
+ * Raised when a stochastic-depth survival probability value falls outside the open-closed interval (0, 1] required for valid layer retention.
  */
 export class NetworkRuntimeStochasticDepthSurvivalRangeError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -89,7 +89,7 @@ export class NetworkRuntimeStochasticDepthSurvivalRangeError extends Error {
 }
 
 /**
- * Raised when stochastic depth is requested on a non-layered network.
+ * Raised when stochastic depth is requested but the target network was not constructed with an explicit layered topology as required.
  */
 export class NetworkRuntimeStochasticDepthLayeredNetworkRequiredError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -99,7 +99,7 @@ export class NetworkRuntimeStochasticDepthLayeredNetworkRequiredError extends Er
 }
 
 /**
- * Raised when stochastic-depth survival entries do not match hidden-layer count.
+ * Raised when the count of stochastic-depth survival entries does not match the number of hidden layers in the network topology.
  */
 export class NetworkRuntimeStochasticDepthEntryCountError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -109,7 +109,7 @@ export class NetworkRuntimeStochasticDepthEntryCountError extends Error {
 }
 
 /**
- * Raised when DropConnect probability is outside [0, 1).
+ * Raised when the DropConnect drop probability falls outside the required half-open interval [0, 1) for valid stochastic connection masking.
  */
 export class NetworkRuntimeDropConnectProbabilityRangeError extends Error {
   constructor(message: string, options?: ErrorOptions) {

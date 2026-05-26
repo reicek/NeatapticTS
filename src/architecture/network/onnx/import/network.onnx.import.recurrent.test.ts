@@ -70,6 +70,19 @@ function buildPartitionedGruNetwork(
   return network;
 }
 
+function buildPartitionedLstmOnnxModelWithoutInitializer(
+  initializerPrefix: string,
+) {
+  const sourceNetwork = buildPartitionedLstmNetwork(2, 2, 1);
+  const onnxModel = exportToONNX(sourceNetwork, { allowRecurrent: true });
+
+  onnxModel.graph.initializer = onnxModel.graph.initializer.filter(
+    (initializerEntry) => !initializerEntry.name.startsWith(initializerPrefix),
+  );
+
+  return onnxModel;
+}
+
 describe('network onnx import recurrent chapter', () => {
   describe('recurrent reconstruction', () => {
     describe('given a partitioned LSTM-like payload', () => {
@@ -203,6 +216,67 @@ describe('network onnx import recurrent chapter', () => {
         });
       });
     });
+
+    describe('given a recurrent payload is missing the fused input initializer', () => {
+      let importedNetwork: Network;
+
+      beforeEach(() => {
+        // Arrange
+        const onnxModel =
+          buildPartitionedLstmOnnxModelWithoutInitializer('LSTM_W');
+
+        // Act
+        importedNetwork = importFromONNX(onnxModel);
+      });
+
+      describe('when the importer falls back to the layered reconstruction path', () => {
+        it('preserves the baseline network shape', () => {
+          // Assert
+          expect({
+            hiddenCount: getHiddenNodes(importedNetwork).length,
+            inputCount: importedNetwork.nodes.filter(
+              (nodeEntry) => nodeEntry.type === 'input',
+            ).length,
+            outputCount: importedNetwork.nodes.filter(
+              (nodeEntry) => nodeEntry.type === 'output',
+            ).length,
+          }).toEqual({
+            hiddenCount: 10,
+            inputCount: 2,
+            outputCount: 1,
+          });
+        });
+      });
+    });
+
+    describe('given a recurrent payload is missing the fused bias initializer', () => {
+      let importedNetwork: Network;
+
+      beforeEach(() => {
+        // Arrange
+        const onnxModel =
+          buildPartitionedLstmOnnxModelWithoutInitializer('LSTM_B');
+
+        // Act
+        importedNetwork = importFromONNX(onnxModel);
+      });
+
+      describe('when the importer falls back to the layered reconstruction path', () => {
+        it('keeps the exported recurrent self-connections on the base network', () => {
+          // Arrange
+          const importedHiddenNodes = getHiddenNodes(importedNetwork);
+
+          // Assert
+          expect(
+            importedHiddenNodes
+              .slice(4, 6)
+              .map(
+                (hiddenNode) => hiddenNode.connections.self[0]?.weight ?? null,
+              ),
+          ).toEqual([0.5, 0.51]);
+        });
+      });
+    });
   });
 
   describe('pooling metadata attachment', () => {
@@ -234,6 +308,88 @@ describe('network onnx import recurrent chapter', () => {
         it('attaches the _onnxPooling helper payload', () => {
           // Assert
           expect(importedNetwork._onnxPooling != null).toBe(true);
+        });
+      });
+    });
+
+    describe('given the exported model includes Conv, Pool, and flatten metadata', () => {
+      let importedNetwork: PoolingAwareNetwork;
+
+      beforeEach(() => {
+        // Arrange
+        const sourceNetwork = Network.createMLP(9, [4], 1);
+        const onnxModel = exportToONNX(sourceNetwork, {
+          conv2dMappings: [
+            {
+              layerIndex: 1,
+              inHeight: 3,
+              inWidth: 3,
+              inChannels: 1,
+              kernelHeight: 2,
+              kernelWidth: 2,
+              strideHeight: 1,
+              strideWidth: 1,
+              outHeight: 2,
+              outWidth: 2,
+              outChannels: 1,
+            },
+          ],
+          flattenAfterPooling: true,
+          includeMetadata: true,
+          pool2dMappings: [
+            {
+              afterLayerIndex: 1,
+              type: 'MaxPool',
+              kernelHeight: 2,
+              kernelWidth: 2,
+              strideHeight: 2,
+              strideWidth: 2,
+            },
+          ],
+        });
+
+        // Act
+        importedNetwork = importFromONNX(onnxModel) as PoolingAwareNetwork;
+      });
+
+      describe('when reading the reconstructed network metadata', () => {
+        it('attaches the derived virtual pooled shape, flatten hint, and consistency audit', () => {
+          // Assert
+          expect(importedNetwork._onnxPooling).toEqual({
+            flattenConsistency: [
+              {
+                afterLayerIndex: 1,
+                consumerLayerIndex: 2,
+                consumerWidth: 1,
+                flattenedSize: 1,
+                matches: true,
+              },
+            ],
+            flattenLayers: [1],
+            layers: [1],
+            specs: [
+              {
+                afterLayerIndex: 1,
+                kernelHeight: 2,
+                kernelWidth: 2,
+                strideHeight: 2,
+                strideWidth: 2,
+                type: 'MaxPool',
+              },
+            ],
+            virtualShapes: [
+              {
+                afterLayerIndex: 1,
+                flattenedSize: 1,
+                inputChannels: 1,
+                inputHeight: 2,
+                inputWidth: 2,
+                outputChannels: 1,
+                outputHeight: 1,
+                outputWidth: 1,
+              },
+            ],
+          });
         });
       });
     });

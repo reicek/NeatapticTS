@@ -16,7 +16,7 @@ Provides:
 clearStochasticDepthSchedule(): void
 ```
 
-Clear the stochastic-depth schedule function.
+Clear the stochastic-depth schedule function so runtime behavior reverts to the currently stored static survival probabilities without additional per-step schedule adjustments.
 
 Parameters:
 - `this` - Target network instance.
@@ -29,7 +29,7 @@ Returns: Nothing.
 clearWeightNoiseSchedule(): void
 ```
 
-Clear the dynamic global weight-noise schedule.
+Clear the dynamic global weight-noise schedule so future steps stop applying schedule-driven standard-deviation updates and keep only explicit static configuration.
 
 Parameters:
 - `this` - Target network instance.
@@ -61,7 +61,7 @@ Returns: Nothing.
 disableStochasticDepth(): void
 ```
 
-Disable stochastic depth.
+Disable stochastic depth entirely so all hidden layers participate in every pass and no layer-skipping regularization is applied at runtime.
 
 Parameters:
 - `this` - Target network instance.
@@ -74,7 +74,7 @@ Returns: Nothing.
 disableWeightNoise(): void
 ```
 
-Disable all configured weight noise.
+Disable all configured weight-noise mechanisms so subsequent training and inference passes execute without global or per-hidden-layer perturbation state, schedule updates, or hidden-layer noise carryover.
 
 Parameters:
 - `this` - Target network instance.
@@ -107,7 +107,7 @@ Returns: Nothing.
 getLastSkippedLayers(): number[]
 ```
 
-Read the last hidden-layer indices skipped by stochastic depth.
+Read the last hidden-layer indices skipped by stochastic depth so diagnostics can inspect which layers were bypassed in the most recent forward pass.
 
 Parameters:
 - `this` - Target network instance.
@@ -120,7 +120,7 @@ Returns: Snapshot of the last skipped hidden-layer indices.
 getRuntimeRegularizationStats(): Record<string, unknown> | null
 ```
 
-Read regularization statistics collected during training.
+Read regularization statistics collected during training so callers can inspect dropout, noise, and penalty telemetry without direct access to internal runtime fields.
 
 Parameters:
 - `this` - Target network instance.
@@ -133,7 +133,7 @@ Returns: Last regularization stats payload or `null` when none exists yet.
 getTrainingStep(): number
 ```
 
-Read the current training-step counter.
+Read the current training-step counter so external schedulers, dashboards, and callback logic can align runtime control decisions with iteration progress.
 
 Parameters:
 - `this` - Target network instance.
@@ -186,7 +186,7 @@ setStochasticDepthSchedule(
 ): void
 ```
 
-Set the stochastic-depth schedule function.
+Set the stochastic-depth schedule function that updates survival probabilities over time using the current training step and previous schedule state.
 
 Parameters:
 - `this` - Target network instance.
@@ -202,7 +202,7 @@ setWeightNoiseSchedule(
 ): void
 ```
 
-Set a dynamic scheduler for global weight noise.
+Set a dynamic scheduler for global weight noise so each training step can derive a new standard deviation from one explicit and testable policy function.
 
 Parameters:
 - `this` - Target network instance.
@@ -306,7 +306,7 @@ Returns: Default scheduling diagnostics snapshot.
 disableDropConnect(): void
 ```
 
-Disable DropConnect.
+Disable DropConnect by resetting the drop probability to zero on the target network instance.
 
 Parameters:
 - `this` - Target network instance.
@@ -352,7 +352,7 @@ Returns: Activation scheduling diagnostics snapshot.
 getLastGradClipGroupCount(): number
 ```
 
-Read the last recorded gradient-clipping group count.
+Read the last recorded gradient-clipping group count from the most recent optimizer step.
 
 Parameters:
 - `this` - Target network instance.
@@ -365,7 +365,7 @@ Returns: Last gradient-clipping group count.
 getLossScale(): number
 ```
 
-Read the active mixed-precision loss scale.
+Read the currently active mixed-precision dynamic loss scale from the network training state.
 
 Parameters:
 - `this` - Target network instance.
@@ -378,7 +378,7 @@ Returns: Current loss scale.
 getRawGradientNorm(): number
 ```
 
-Read the last recorded raw gradient norm.
+Read the raw (pre-clip) gradient norm recorded during the most recent backward pass.
 
 Parameters:
 - `this` - Target network instance.
@@ -391,7 +391,7 @@ Returns: Last raw gradient norm.
 getTrainingStats(): TrainingStatsSnapshot
 ```
 
-Read a consolidated training-health snapshot.
+Read a consolidated training-health snapshot including gradient norms, loss scale, and mixed-precision event counters.
 
 Parameters:
 - `this` - Target network instance.
@@ -414,37 +414,45 @@ Parameters:
 
 Returns: Nothing.
 
+### TrainingStatsSnapshot
+
+Snapshot of key training-health metrics collected from the most recent backward pass.
+
+Aggregates gradient norm readings, dynamic loss scale state, optimizer step index, and
+mixed-precision event counters so the public diagnostic reader can return a coherent bundle
+instead of requiring separate calls for each individual metric.
+
 ## architecture/network/runtime/network.runtime.errors.ts
 
-Raised when a pruning schedule window is invalid.
+Raised when a pruning schedule window size is zero, negative, or otherwise falls outside the valid range accepted by the activation-ordering runtime.
 
 ### NetworkRuntimeDropConnectProbabilityRangeError
 
-Raised when DropConnect probability is outside [0, 1).
+Raised when the DropConnect drop probability falls outside the required half-open interval [0, 1) for valid stochastic connection masking.
 
 ### NetworkRuntimeLayeredWeightNoiseRequiredError
 
-Raised when per-hidden-layer weight noise is requested on a non-layered network.
+Raised when per-hidden-layer weight noise is requested but the target network was not constructed with an explicit layered topology.
 
 ### NetworkRuntimePruningScheduleWindowError
 
-Raised when a pruning schedule window is invalid.
+Raised when a pruning schedule window size is zero, negative, or otherwise falls outside the valid range accepted by the activation-ordering runtime.
 
 ### NetworkRuntimeStochasticDepthEntryCountError
 
-Raised when stochastic-depth survival entries do not match hidden-layer count.
+Raised when the count of stochastic-depth survival entries does not match the number of hidden layers in the network topology.
 
 ### NetworkRuntimeStochasticDepthLayeredNetworkRequiredError
 
-Raised when stochastic depth is requested on a non-layered network.
+Raised when stochastic depth is requested but the target network was not constructed with an explicit layered topology as required.
 
 ### NetworkRuntimeStochasticDepthSurvivalArrayError
 
-Raised when stochastic-depth survival input is not an array.
+Raised when the stochastic-depth survival probability input is not an array of per-layer probability values as required by the runtime.
 
 ### NetworkRuntimeStochasticDepthSurvivalRangeError
 
-Raised when a stochastic-depth survival probability falls outside (0, 1].
+Raised when a stochastic-depth survival probability value falls outside the open-closed interval (0, 1] required for valid layer retention.
 
 ### NetworkRuntimeTargetSparsityRangeError
 
@@ -452,16 +460,16 @@ Raised when pruning target sparsity is outside the open interval (0, 1).
 
 ### NetworkRuntimeWeightNoiseConfigurationError
 
-Raised when weight-noise configuration shape is invalid.
+Raised when the weight-noise configuration contains an unexpected shape, is missing required fields, or carries incompatible type combinations.
 
 ### NetworkRuntimeWeightNoiseEntryCountError
 
-Raised when hidden-layer weight-noise entries do not match hidden-layer count.
+Raised when the number of hidden-layer weight-noise entries does not match the hidden-layer count in the network topology.
 
 ### NetworkRuntimeWeightNoisePerLayerRangeError
 
-Raised when a per-hidden-layer weight-noise value is negative.
+Raised when a per-hidden-layer weight-noise standard deviation is negative; each layer entry must be zero or a positive value.
 
 ### NetworkRuntimeWeightNoiseStdDevRangeError
 
-Raised when weight-noise standard deviation is negative.
+Raised when the weight-noise standard deviation is negative; only non-negative values produce a well-defined Gaussian noise distribution.

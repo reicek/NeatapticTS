@@ -1,0 +1,23 @@
+{
+  "evidence": [
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "high complexity",
+      "numericValue": 34,
+      "symbol": "openInferenceChannel"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "high complexity",
+      "numericValue": 16,
+      "symbol": "openSharedInferenceWorker"
+    },
+    {
+      "file": "src/architecture/network.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "default"
+    }
+  ],
+  "normalizedEvidenceDigest": "04909ccb5cdb743cff3db15661cf2fb83129b0c8c073ac88a28b30cce67e7b8d"
+}

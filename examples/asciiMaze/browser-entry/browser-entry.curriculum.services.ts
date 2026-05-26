@@ -68,7 +68,9 @@ export const runBrowserEntryCurriculum = (
           adaptiveMutation: settings.adaptiveMutation,
           workerEvaluation: {
             enabled: true,
-            workerUrl: resolveAsciiMazeEvaluationWorkerBundleUrl(),
+            workerUrl: resolveAsciiMazeEvaluationWorkerBundleUrl(
+              context.workerUrl,
+            ),
           },
           popSize: settings.popSize,
           maxStagnantGenerations: settings.maxStagnantGenerations,

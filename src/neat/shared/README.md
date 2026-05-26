@@ -66,16 +66,21 @@ Practical reading order:
 
 ### AnyObj
 
-Generic map type used as a stop‑gap where the precise shape is still in flux.
-Prefer a specific interface once the surface stabilises.
+Generic key-value map for temporary shared payloads when helper boundaries
+are still being extracted and no stable chapter-specific contract exists yet.
+Replace this alias with a dedicated interface as each call boundary settles.
 
 ### ComplexityMetrics
 
-Aggregate structural complexity metrics capturing size & growth pressure.
+Aggregated structural complexity signals for one generation, shared by
+telemetry exports, diagnostics summaries, and adaptive budget controllers to
+track growth pressure against configured node and connection ceilings.
 
 ### ConnectionLike
 
-Lightweight connection representation used by telemetry and structural helpers.
+Lightweight connection shape used by shared telemetry, compatibility, and
+history helpers to preserve source/target linkage and optional innovation
+provenance without importing runtime connection implementation details.
 
 ### DiversityStats
 
@@ -177,11 +182,15 @@ without smuggling the full `Neat` facade through every helper signature.
 
 ### NodeLike
 
-Lightweight node representation used by telemetry and structural helpers.
+Lightweight node shape used by shared telemetry, lineage, and compatibility
+contracts that need stable identifiers plus extensible metadata, while
+intentionally avoiding coupling to the full runtime `Node` implementation.
 
 ### ObjAges
 
-Map of objective key to age in generations since introduction.
+Lookup table from objective key to objective age in generations, used by
+dynamic add/remove policies, cooldown gating, and telemetry timeline
+reconstruction when objective sets evolve during a run.
 
 ### ObjectiveDescriptor
 
@@ -215,22 +224,29 @@ const complexityObj: ObjectiveDescriptor = {
 
 ### ObjectiveEvent
 
-Objective add/remove lifecycle event for telemetry and auditing.
+Objective lifecycle event emitted whenever a dynamic objective policy adds
+or removes an objective during evolution, allowing telemetry and audits to
+reconstruct objective-set changes generation by generation.
 
 ### ObjEvent
 
-Dynamic objective lifecycle event (addition or removal).
+Backward-compatible alias for objective lifecycle events emitted when
+objective sets change during dynamic multi-objective runs, preserving older
+helper signatures that still reference the historical type name.
 
 **Deprecated:** Use `ObjectiveEvent` instead.
 
 ### ObjImportance
 
-Map of objective key to its importance metrics (range / variance).
+Lookup table from objective key to per-objective dispersion metrics, so
+dynamic objective scheduling can identify stale, collapsed, or low-signal
+objectives without recomputing full per-genome objective distributions.
 
 ### ObjImportanceEntry
 
-Contribution / dispersion metrics for an objective over a recent window.
-Used to gauge whether an objective meaningfully influences selection.
+Dispersion metrics for one objective over a recent sampling window, used to
+estimate whether that objective still contributes meaningful ranking signal
+before dynamic objective policies decide to keep, demote, or remove it.
 
 ### OperatorStat
 
@@ -242,7 +258,9 @@ A high attempt count with low success can indicate constraints becoming tight
 
 ### OperatorStatsRecord
 
-Aggregated success / attempt counters over a window or entire run.
+Aggregated operator attempt and success counters folded over a telemetry
+window, allowing dashboards and adaptive schedules to compute stable
+operator hit rates without replaying per-generation operator rows.
 
 ### ParetoArchiveEntry
 
@@ -290,7 +308,9 @@ over time.
 
 ### SpeciesAlloc
 
-Offspring allocation for a species during reproduction.
+Per-species offspring allocation result used by reproduction orchestration
+to decide how many children each species contributes to the next generation,
+whether represented as absolute counts or normalized allocation weights.
 
 ### SpeciesHistoryEntry
 
@@ -302,12 +322,15 @@ without requiring callers to inspect the live registry directly.
 
 ### SpeciesHistoryStat
 
-Species statistics at a single historical snapshot (generation boundary).
+Per-species summary row captured at a generation boundary so species-history
+exports can report species size, best score trajectory, and stagnation
+progression without reading mutable live registry state.
 
 ### SpeciesHistoryStatExtended
 
-Extended per-species historical snapshot with optional backfilled metrics
-that may be computed lazily (innovationRange, enabledRatio).
+Extended per-species historical snapshot that adds optional lazily computed
+metrics, such as innovation-id spread and enabled-connection ratio, when a
+caller requests richer history output beyond the base summary row.
 
 ### SpeciesLastStats
 

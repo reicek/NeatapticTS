@@ -73,6 +73,35 @@ Parameters:
 
 Returns: void
 
+### applySplitWithFreshIdentity
+
+```ts
+applySplitWithFreshIdentity(
+  genomeToEdit: GenomeWithMetadata,
+  connectionToSplit: ConnectionWithMetadata,
+  splitDescriptor: { splitKey: string; originalWeight: number; },
+  NodeClass: new (type: "hidden" | "input" | "output", customActivation?: ((x: number, derivate?: boolean | undefined) => number) | undefined, rng?: (() => number) | undefined) => unknown,
+  internal: NeatControllerForMutation,
+): void
+```
+
+Apply a split with fresh local identities without replacing the shared split record.
+
+This is the escape hatch for the rare case where a genome already carries the
+node gene id or replacement connection innovations referenced by the active
+generation's shared split record. The local genome still needs a valid split,
+but the shared record should remain intact for other genomes that do not have
+the collision.
+
+Parameters:
+- `genomeToEdit` - genome being modified
+- `connectionToSplit` - connection being split
+- `splitDescriptor` - metadata for the split
+- `NodeClass` - node constructor
+- `internal` - neat controller context
+
+Returns: void
+
 ### applySplitWithNewRecord
 
 ```ts
@@ -274,6 +303,28 @@ Parameters:
 - `connectionToRemove` - original connection to remove
 
 Returns: void
+
+### doesSplitRecordConflictWithGenome
+
+```ts
+doesSplitRecordConflictWithGenome(
+  genomeToInspect: GenomeWithMetadata,
+  splitRecord: NodeSplitRecord,
+): boolean
+```
+
+Determine whether one reused split record would collide with live genome identity.
+
+Generation-local split reuse is correct across different genomes, but a single
+genome must never stamp the same node gene id or connection innovations twice.
+This guard detects the collision case so callers can fall back to fresh local
+identities while preserving the shared split record for other genomes.
+
+Parameters:
+- `genomeToInspect` - genome about to receive the reused split record
+- `splitRecord` - existing split identity record
+
+Returns: True when reusing the record would duplicate live structural identity.
 
 ### ensureBootstrapConnection
 

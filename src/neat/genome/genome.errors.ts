@@ -1,7 +1,7 @@
-import type { NeatGenomeValidationIssue } from './genome.types';
+﻿import type { NeatGenomeValidationIssue } from './genome.types';
 
 /**
- * Raised when one boundary tries to project malformed state into the strict
+ * Raised when one boundary tries to project malformed state into the strict.
  * genome contract.
  */
 export class NeatGenomeConversionError extends Error {
@@ -16,7 +16,7 @@ export class NeatGenomeConversionError extends Error {
 }
 
 /**
- * Raised when a strict genome contract fails validation.
+ * Raised when a strict genome contract fails structural validation, carrying a structured issue list for diagnostics-first callers.
  */
 export class NeatGenomeValidationError extends Error {
   /** Structured validator findings attached to the thrown error. */

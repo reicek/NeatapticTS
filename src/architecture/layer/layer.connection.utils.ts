@@ -1,4 +1,4 @@
-import Connection from '../connection/connection';
+﻿import Connection from '../connection/connection';
 import Group from '../group/group';
 import * as methods from '../../methods/methods';
 import Node from '../node';
@@ -239,7 +239,7 @@ export function disconnectFromGroup(
 }
 
 /**
- * Disconnects all layer nodes from a target node.
+ * Disconnect all layer nodes from one target node while updating tracking arrays.
  *
  * @param layerNodes Nodes in the layer.
  * @param targetNode Node to disconnect from.
@@ -276,6 +276,9 @@ export function disconnectFromNode(
  * @param sourceNode Source node for the connection.
  * @param targetNode Target node for the connection.
  */
+/**
+ * Contract for removeOutgoingConnection.
+ */
 export function removeOutgoingConnection(
   layerConnections: LayerConnectionContext['connections'],
   sourceNode: Node,
@@ -302,6 +305,9 @@ export function removeOutgoingConnection(
  * @param layerConnections Connection tracking for the layer.
  * @param sourceNode Source node for the connection.
  * @param targetNode Target node for the connection.
+ */
+/**
+ * Contract for removeIncomingConnection.
  */
 export function removeIncomingConnection(
   layerConnections: LayerConnectionContext['connections'],

@@ -1,4 +1,4 @@
-import type { TestWorkerConstructor } from '../../multithreading/types';
+﻿import type { TestWorkerConstructor } from '../../multithreading/types';
 
 const NODE_TEST_WORKER_UNAVAILABLE_MESSAGE =
   'Node test workers are unavailable in browser builds.';

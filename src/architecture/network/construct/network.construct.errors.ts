@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Raised when construct-from-parts cannot resolve an explicit input or output node id.
  */
 export class NetworkConstructNodeIdResolutionError extends Error {
@@ -9,7 +9,7 @@ export class NetworkConstructNodeIdResolutionError extends Error {
 }
 
 /**
- * Raised when one explicit string node id matches multiple labeled nodes.
+ * Raised when a single explicit string node id matches more than one labeled node in the provided parts list during network construction.
  */
 export class NetworkConstructAmbiguousNodeIdError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -29,7 +29,7 @@ export class NetworkConstructMissingReferencedNodeError extends Error {
 }
 
 /**
- * Raised when duplicate source-to-target edges are forbidden during construction.
+ * Raised when the same source-to-target node pair appears more than once while duplicate edges are explicitly disallowed by the construction policy.
  */
 export class NetworkConstructDuplicateEdgeError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -39,7 +39,7 @@ export class NetworkConstructDuplicateEdgeError extends Error {
 }
 
 /**
- * Raised when self edges are forbidden during construction.
+ * Raised when a connection loops from a node back to itself while self-edges are explicitly forbidden by the active construction policy.
  */
 export class NetworkConstructSelfEdgeError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -49,7 +49,7 @@ export class NetworkConstructSelfEdgeError extends Error {
 }
 
 /**
- * Raised when hidden nodes are disconnected while isolated hidden nodes are disallowed.
+ * Raised when the construction pass finds hidden nodes with no connections while the active construction policy forbids isolated hidden neurons in the graph.
  */
 export class NetworkConstructIsolatedHiddenNodeError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -59,7 +59,7 @@ export class NetworkConstructIsolatedHiddenNodeError extends Error {
 }
 
 /**
- * Raised when construction cannot identify any input-role nodes.
+ * Raised when the network construction pass cannot find any nodes classified with an input role in the provided node list.
  */
 export class NetworkConstructNoInputNodesError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -69,7 +69,7 @@ export class NetworkConstructNoInputNodesError extends Error {
 }
 
 /**
- * Raised when a public input node receives one or more incoming edges.
+ * Raised when an input-role node is wired as a connection target while the active construction policy forbids incoming edges on input nodes.
  */
 export class NetworkConstructInputNodeIncomingEdgeError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -79,7 +79,7 @@ export class NetworkConstructInputNodeIncomingEdgeError extends Error {
 }
 
 /**
- * Raised when construction cannot identify any output-role nodes.
+ * Raised when the network construction pass cannot find any nodes classified with an output role in the provided node list.
  */
 export class NetworkConstructNoOutputNodesError extends Error {
   constructor(message: string, options?: ErrorOptions) {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Internal slab rebuild helper functions extracted from network.slab.utils.ts.
  */
 import type Network from '../../network/network';
@@ -34,7 +34,7 @@ const POOL_KIND_GAIN = 'g';
 const POOL_KIND_PLASTIC = 'p';
 
 /**
- * Creates immutable slab build context for one rebuild pass.
+ * Creates immutable slab build context for one rebuild pass so capacity, precision, and runtime pointers stay consistent across helper calls.
  *
  * @param network - Target network.
  * @param growthFactor - Capacity growth multiplier.
@@ -59,7 +59,7 @@ export function _createSlabBuildContext(
 }
 
 /**
- * Determines whether slab rebuild can be skipped.
+ * Determines whether slab rebuild can be skipped so callers avoid unnecessary typed-array churn when no topology mutation invalidated packed connection buffers.
  *
  * @param internalNet - Internal slab runtime shape.
  * @param force - True when rebuild must run regardless of dirty state.
@@ -74,7 +74,7 @@ export function _shouldSkipSlabRebuild(
 }
 
 /**
- * Ensures sync rebuild has enough slab capacity.
+ * Ensures sync rebuild has enough slab capacity so packed arrays can hold every active connection before synchronous field population begins.
  *
  * @param buildContext - Slab build context.
  * @returns Nothing.
@@ -100,7 +100,7 @@ export function _ensureSlabCapacitySync(buildContext: SlabBuildContext): void {
 }
 
 /**
- * Ensures async rebuild has enough slab capacity.
+ * Ensures async rebuild has enough slab capacity so cooperative chunked population can proceed without mid-pass reallocations or pointer invalidation hazards.
  *
  * @param buildContext - Slab build context.
  * @returns Promise resolved after any required cooperative allocations finish.
@@ -128,7 +128,7 @@ export async function _ensureSlabCapacityAsync(
 }
 
 /**
- * Populates core slab arrays in synchronous single pass.
+ * Populates core slab arrays in a synchronous single pass so all connection fields are packed deterministically for the active network snapshot.
  *
  * @param buildContext - Slab build context.
  * @returns Population result flags and optional slabs.
@@ -166,7 +166,7 @@ export function _populateSlabConnectionsSync(
 }
 
 /**
- * Populates core slab arrays in cooperative async chunks.
+ * Populates core slab arrays in cooperative async chunks so large graphs remain responsive while preserving deterministic packed ordering semantics for replayability.
  *
  * @param buildContext - Slab build context.
  * @param chunkSize - Maximum items per chunk.
@@ -224,7 +224,7 @@ async function _yieldAsyncChunkMacrotask(): Promise<void> {
 }
 
 /**
- * Applies gain omission rule by releasing neutral gain slab.
+ * Applies gain omission rule by releasing a fully neutral gain slab so optional gain storage remains absent unless non-default values are present.
  *
  * @param buildContext - Slab build context.
  * @param populateResult - Populate result.
@@ -249,7 +249,7 @@ export function _applyGainOmissionPolicy(
 }
 
 /**
- * Applies sync plastic slab allocation/release policy.
+ * Applies sync plastic slab allocation and release policy so plasticity-rate storage exists only when plastic connections appear in the packed set.
  *
  * @param buildContext - Slab build context.
  * @param populateResult - Populate result.
@@ -290,7 +290,7 @@ export function _applyPlasticPolicySync(
 }
 
 /**
- * Applies async plastic slab allocation/release policy.
+ * Applies async plastic slab allocation and release policy so chunked rebuilds keep plastic-rate arrays aligned with observed plastic connection flags.
  *
  * @param buildContext - Slab build context.
  * @param populateResult - Populate result.
@@ -331,7 +331,7 @@ export function _applyPlasticPolicyAsync(
 }
 
 /**
- * Resolves effective async chunk size using adaptive heuristics.
+ * Resolves effective async chunk size using adaptive heuristics so very large rebuilds honor browser frame budgets without starving throughput under load.
  *
  * @param totalConnections - Number of active connections.
  * @param requestedChunkSize - Requested chunk size.
@@ -366,7 +366,7 @@ export function _resolveAsyncChunkSize(
 }
 
 /**
- * Finalizes sync rebuild bookkeeping fields.
+ * Finalizes sync rebuild bookkeeping fields so connection counts, dirty flags, and slab versions remain coherent for downstream runtime caches and adapters.
  *
  * @param buildContext - Slab build context.
  * @returns Nothing.
@@ -380,7 +380,7 @@ export function _finalizeSyncSlabRebuild(buildContext: SlabBuildContext): void {
 }
 
 /**
- * Finalizes async rebuild bookkeeping fields.
+ * Finalizes async rebuild bookkeeping fields so runtime counters and slab-version invalidation match the completed cooperative population pass in production telemetry.
  *
  * @param buildContext - Slab build context.
  * @returns Nothing.

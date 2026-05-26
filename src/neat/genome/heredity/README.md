@@ -13,7 +13,7 @@ re-enable behavior.
 
 ### GenomeHereditySourceParent
 
-Stable parent labels used by the genome-owned heredity selector.
+Stable string literal labels identifying which parent contributed a given connection gene during the genome-owned heredity selection pass.
 
 ### SelectedGenomeConnectionGene
 

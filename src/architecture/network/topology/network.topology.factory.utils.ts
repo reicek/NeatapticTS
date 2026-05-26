@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import type Connection from '../../connection';
 import Node from '../../node';
 import type { TopologyNetworkProps } from '../network.types';
@@ -13,13 +13,16 @@ interface MlpNodeLayers {
 }
 
 /**
- * Build a strictly layered and fully connected MLP network.
+ * Build a strictly layered, fully connected MLP network from layer sizes.
  *
  * @param this Network constructor.
  * @param inputCount Number of input nodes.
  * @param hiddenCounts Hidden-layer node counts.
  * @param outputCount Number of output nodes.
  * @returns Newly created MLP network.
+ */
+/**
+ * Contract for createMLP.
  */
 export function createMLP(
   this: new (input: number, output: number) => Network,
@@ -56,7 +59,7 @@ export function createMLP(
 }
 
 /**
- * Rebuild the canonical connection array from per-node outgoing lists.
+ * Rebuild the canonical connection array from all per-node outgoing lists.
  *
  * @param networkInstance Target network.
  */

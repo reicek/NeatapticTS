@@ -138,6 +138,13 @@ Example:
 const state = network.getRNGState();
 ```
 
+### networkDeterministicUtils
+
+Default export bundle for the deterministic RNG utilities chapter.
+
+Bundles the seed, checkpoint, and restore helpers so the network facade can
+bind them as methods without importing each function individually.
+
 ### restoreRNG
 
 ```ts
@@ -167,7 +174,7 @@ network.restoreRNG(restoredRandomFunction);
 
 ### RNGSnapshot
 
-Snapshot payload for RNG state restore flows.
+Point-in-time snapshot for RNG state restore. Captures both the xorshift state word and the training step so an exact-resume restore can replay from the same position.
 
 ### setRNGState
 
@@ -255,11 +262,11 @@ Internal deterministic network state shape used across deterministic utility mod
 
 ### RNG_WEYL_INCREMENT
 
-Fixed Weyl increment used to advance deterministic PRNG state.
+Fixed Weyl increment used to advance the deterministic PRNG state.
 
 ### RNGSnapshot
 
-Snapshot payload for RNG state restore flows.
+Point-in-time snapshot for RNG state restore. Captures both the xorshift state word and the training step so an exact-resume restore can replay from the same position.
 
 ### UINT32_NORMALIZER
 
@@ -400,7 +407,7 @@ Returns: Unit-interval floating-point value.
 getRandomFn(): (() => number) | undefined
 ```
 
-Retrieve the active random function reference.
+Return the active random number generator function bound to this network.
 
 Parameters:
 - `this` - Bound Network instance.
@@ -413,7 +420,7 @@ Returns: Function producing numbers in [0,1). May be undefined if never seeded.
 getRNGState(): number | undefined
 ```
 
-Get the current internal 32-bit RNG state value.
+Return the current internal 32-bit RNG state used for deterministic sampling.
 
 Parameters:
 - `this` - Bound Network instance.
@@ -428,12 +435,15 @@ isNumericState(
 ): boolean
 ```
 
-Check whether incoming state is numeric.
+Validate that a candidate RNG state is representable as a numeric value.
+
+This guard keeps state writes predictable by ignoring non-number payloads
+before uint32 normalization.
 
 Parameters:
 - `candidateState` - Candidate state value.
 
-Returns: True when state is numeric.
+Returns: True when the candidate is a number.
 
 ### setRNGState
 
@@ -459,7 +469,10 @@ toUint32(
 ): number
 ```
 
-Convert numeric state to unsigned 32-bit representation.
+Normalize a numeric RNG state into unsigned 32-bit form.
+
+This mirrors the internal LCG-style state representation expected by the
+deterministic helpers.
 
 Parameters:
 - `numericState` - Numeric state value.

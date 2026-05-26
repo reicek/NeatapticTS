@@ -17,6 +17,7 @@ type ConnectionStoragePlan = {
 
 /**
  * Determine whether an edge must be rejected to preserve acyclic ordering.
+ * This guard enforces the feed-forward structural contract by blocking backward index edges when acyclic mode is active, allowing higher-level connection APIs to fail early before mutating graph state.
  *
  * @param network - Network instance owning node ordering.
  * @param internalState - Runtime network internals used by connection pipeline.
@@ -36,6 +37,7 @@ export function shouldRejectConnectionForAcyclicMode(
 
 /**
  * Build one or more low-level connection objects from source node to target node.
+ * When a caller omits an explicit weight, this helper resolves a small symmetric random initialization using the network RNG so connection creation remains deterministic under seeded execution.
  *
  * @param sourceNode - Source node.
  * @param targetNode - Target node.
@@ -57,6 +59,7 @@ export function createConnectionsFromSourceNode(
 
 /**
  * Register created connections in either normal-connection or self-connection storage.
+ * The registration step preserves connection ordering guarantees expected by serialization and diagnostics paths while routing self-loops through the dedicated storage shelf when recurrent edges are allowed.
  *
  * @param network - Network instance owning connection collections.
  * @param internalState - Runtime network internals used by connection pipeline.
@@ -149,6 +152,7 @@ export function registerCreatedConnectionBatches(
 
 /**
  * Mark topology and slab caches dirty when connection creation occurred.
+ * Marking both caches together guarantees that downstream activation scheduling and slab allocation logic re-derive their snapshots from the updated graph before the next forward pass.
  *
  * @param internalState - Runtime network internals used by connection pipeline.
  * @param createdConnectionCount - Number of created low-level connections.

@@ -89,7 +89,11 @@ can highlight the I/O boundary and map external input/output indices.
 
 ### VisualizationMetadataV1
 
-Optional metadata block attached to a visualization graph.
+Optional metadata block attached to a {@link VisualizationGraphV1} export.
+
+Carries a human-readable network name, a scheduling mode hint so renderers
+can annotate recurrent edges correctly, and an ISO 8601 creation timestamp
+for traceability in logging and checkpoint pipelines.
 
 ### VisualizationNodeV1
 
@@ -274,12 +278,12 @@ connectionToVisualizationDescriptor(
 ): VisualizationEdgeV1
 ```
 
-Converts a runtime `Connection` to a {@link VisualizationEdgeV1} descriptor.
+Convert a runtime connection into the exported edge schema with deterministic edge-kind inference.
 
 Parameters:
 - `connection` - Source connection instance.
 - `nodePositionByGeneId` - Sorted position lookup built by  {@link buildNodePositionMap} .
-- `includeWeight` - Whether to include the weight field.
+- `includeWeight` - Whether the emitted descriptor should preserve the runtime weight.
 
 Returns: Immutable edge descriptor for the visualization schema.
 
@@ -317,7 +321,7 @@ nodeToVisualizationDescriptor(
 ): VisualizationNodeV1
 ```
 
-Converts a runtime `Node` to a {@link VisualizationNodeV1} descriptor.
+Convert a runtime node into a deterministic visualization node descriptor.
 
 Parameters:
 - `node` - Source node instance.
@@ -353,7 +357,7 @@ resolveNodeRole(
 ): "hidden" | "input" | "output"
 ```
 
-Resolves the semantic role of a node from the explicit I/O id sets.
+Resolve node role by explicit stable-id membership, defaulting to hidden for all remaining nodes.
 
 Parameters:
 - `node` - Node to classify.

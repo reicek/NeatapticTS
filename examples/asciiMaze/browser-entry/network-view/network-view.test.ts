@@ -1,4 +1,6 @@
-import { exportVisualizationGraph } from '../../../../src/architecture/network';
+/** @jest-environment jsdom */
+
+import { exportVisualizationGraph } from '../../../../src/architecture/network/visualization/network.visualization';
 import { buildExampleArchitectureProfileNetwork } from '../../../architectureProfiles';
 import {
   drawMazeNetworkVisualization,
@@ -20,6 +22,13 @@ describe('resolveMazeNetworkCanvasDimensions', () => {
     expect(resolveMazeNetworkCanvasDimensions(700, 200)).toEqual({
       widthPx: 700,
       heightPx: 200,
+    });
+  });
+
+  it('falls back to width-driven height when the panel has not measured height yet', () => {
+    expect(resolveMazeNetworkCanvasDimensions(500, 0)).toEqual({
+      widthPx: 500,
+      heightPx: 320,
     });
   });
 
@@ -63,10 +72,12 @@ describe('resolveMazeNetworkCanvasDimensions', () => {
     expect({
       heightPx: networkCanvasElement.height,
       styleHeight: networkCanvasElement.style.height,
+      styleWidth: networkCanvasElement.style.width,
       widthPx: networkCanvasElement.width,
     }).toEqual({
       heightPx: 484,
       styleHeight: '484px',
+      styleWidth: '684px',
       widthPx: 684,
     });
 

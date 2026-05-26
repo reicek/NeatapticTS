@@ -15,11 +15,114 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 
 ## Recommended primary agent + skill combo by active roadmap phase
 
+- Meta-workflow reopen — `01-planning` + `tracker-handoff` when reopening [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md)
 - Phase 3 — `Browser Runtime Scout` + `browser-build`
 - Phase 4 — `Plan Scout` + `plan-alignment`
 - Phase 5 — `Plan Scout` + `performance-optimization`
 - Phase 6 — `Plan Scout` + `onnx-work`
 - Phase 7 — `Plan Scout` + `plan-alignment`
+
+## Standalone Workspace MCP Registration Lane [DONE]
+
+**Outcome:** register the repo-owned direct MCP servers in `.vscode/mcp.json`
+with a fixed active-plan path so workspace-local MCP discovery can resolve the
+repo-static workflow packet and the active-step validation allow-list without
+prompt inputs.
+
+- Workspace MCP registration
+  - Plan: [completed/workspace-mcp-registration.plans.md](completed/workspace-mcp-registration.plans.md) [DONE]
+  - Current internal state: the workspace-registration lane is archived as a
+    reopen-only baseline after the bounded `.vscode/mcp.json` registration
+    pass, plan-sync alignment, and shared stdio transport repair. The
+    workspace binding now points at the archived plan path so the fixed plan
+    contract remains explicit, and any future live allow-list work must reopen
+    from this archive instead of treating it as an active packet.
+
+## Standalone Meta-Workflow Lane — Agentic Workflow Architecture [DONE]
+
+**Outcome:** make AI-assisted development in this repository itself a
+first-class, validated product surface: seven numbered user-invocable phase
+agents, hidden specialist delegation, skill-first durable workflow knowledge,
+model routing, validation scripts, skill evals, and plan updates after every
+step.
+
+- Agentic workflow architecture and customization validation
+  - Plan: [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) [DONE]
+  - Current internal state: the standalone meta-workflow lane is archived as a
+    reopen-only baseline after closing the MCP runtime-visibility closure pass.
+    The repo now has seven numbered user-invocable phase agents, hidden
+    specialist delegation, skill-first workflow knowledge, model routing,
+    validation scripts and evals, and the documented MCP ownership boundaries.
+
+**Coordination rule:** this lane is closed for current scope. Any future agent
+or skill customization change that needs new workflow architecture should
+reopen from
+[completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md)
+before touching `.github/agents/`, `.github/skills/`, or customization
+validation scripts.
+
+## Standalone MCP Validation and Hardening Lane [DONE]
+
+**Outcome:** validated and hardened all three configured MCP servers (`neataptic-gate-mcp`, `neataptic-workflow-mcp`, `neataptic-validation-mcp`) for correct post-restart stdio behavior, JSON-RPC framing, tool/resource/prompt lists, representative tool calls, gate MCP contracts, and allow-list security.
+
+- MCP server validation and hardening
+  - Plan: [completed/MCP_Server_Validation_and_Hardening.plans.md](completed/MCP_Server_Validation_and_Hardening.plans.md) [DONE]
+  - Archive note: future reopen work should start from the completed baseline and its matching log, not from a restored active packet.
+  - Permanent binding: [mcp-active-binding.plans.md](mcp-active-binding.plans.md) [WIP] — stable perpetual `loadActivePlanContext` target for MCP server startup; never archive.
+
+**Coordination rule:** this lane is confined to `.vscode/mcp.json`, `scripts/agent-customization/mcp/**`, `scripts/agent-customization/gates/**`, `.github/flows/**` (MCP flow contracts only), and tracker/log files. Do not change `src/` without explicit user confirmation.
+
+## Standalone Meta-Workflow Lane — Agentic Flows and Gates Upgrade [DONE]
+
+**Outcome:** upgrade the repo customization workflow from nested delegation to
+named agent flows, deterministic read-only exit gates, flow-aware local MCP
+resources/prompts/tools, evidence-bearing gate exceptions, and universal
+`00-helping` escalation with learning-event observability.
+
+- Agentic flows, gates, and universal helper upgrade
+  - Plan: [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows_and_Gates_Upgrade.plans.md) [DONE]
+  - All six migration phases (A-F) complete: 30 named flows, 12 gates, 3 MCP servers, 61/61 gate tests green, all 9 acceptance criteria satisfied. Archived 2026-05-22.
+
+**Coordination rule:** this lane is workflow-only infrastructure. Do not modify
+`src/` while executing it, and treat
+[completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md)
+as the archived baseline for existing agent, skill, model-routing, validation,
+and MCP ownership contracts.
+
+## Standalone Documentation Metrics Contract Lane [DONE]
+
+**Outcome:** permanently eliminate weak-doc metric inconsistency by shipping a canonical
+versioned metric contract, deterministic runner artifacts, strict compare guards, MCP/CLI parity,
+and CI-enforced validation.
+
+- Docs quality metrics contract and parity
+  - Plan: [completed/Docs_Quality_Metrics_Contract_and_Parity.plans.md](completed/Docs_Quality_Metrics_Contract_and_Parity.plans.md) [DONE]
+  - Current internal state: this lane is archived as a reopen-only baseline after closing all seven
+    steps, including canonical command wiring (`docs:quality:metrics`, `docs:quality:compare`),
+    deterministic normalization and run artifacts, fail-fast mismatch reason codes, MCP and CLI
+    parity, docs-quality CI gate wiring, and migration runbook closure.
+
+**Coordination rule:** keep this lane constrained to docs-quality metric ownership surfaces
+(`scripts/semantic-index/**`, `scripts/agent-customization/mcp/**`, gate scripts, package scripts,
+CI workflow wiring, and documentation). Avoid unrelated architecture or runtime refactors.
+
+## Standalone Docs-Quality Complexity Cleanup Lane [DONE]
+
+**Outcome:** reduce `npm run docs:quality:metrics` `highComplexity` findings in `src/` to zero by decomposing high-cyclomatic owners into orchestration-first private helpers without changing public APIs or the docs-quality metric contract.
+
+- Docs quality complexity cleanup
+  - Plan: [completed/docs-quality-complexity-cleanup.plans.md](completed/docs-quality-complexity-cleanup.plans.md) [DONE]
+  - Current internal state: this lane is archived after reaching a clean docs-quality metrics summary, a clean TypeScript typecheck, and owned `src/architecture/node/node.ts` coverage at `100/100/100/100`; the unrelated `examples/neatChat/core/neatChat.live-flow.safety.test.ts` baseline stays outside this closed boundary.
+
+**Coordination rule:** keep this lane constrained to `src/` complexity decomposition, owner-local test validation, and tracker evidence. Reopen the archived docs-quality contract lane only when changing the metrics contract, artifact schema, or CLI/MCP parity surfaces.
+
+## Standalone Coverage Metrics + Gap Closure Lane [DONE]
+
+**Outcome:** archived standalone docs-quality coverage lane for additive `summary.coverage` reporting in `npm run docs:quality:metrics`, deterministic per-file deficit rows, and final `src` coverage closure at `100/100/100/100`.
+
+- Coverage metrics + gap closure
+  - Plan: [completed/coverage-metrics-and-gap-closure.plans.md](completed/coverage-metrics-and-gap-closure.plans.md) [DONE]
+  - Current internal state: archived after `npm run test:silent` passed at `427` suites / `4654` tests with `All files` and `src` at `100/100/100/100`, `npm run --silent docs:quality:metrics` reported `filesBelow100: 0`, and `npm run --silent docs:quality:gate` passed.
 
 ## Phase 0 — Hygiene + Refactor Baseline [DONE]
 
@@ -49,7 +152,7 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
   - [analyze-trace-solid-split.plans.md](completed/analyze-trace-solid-split.plans.md) [DONE]
   - These remain roadmap-visible as reopen points and tooling baselines even though they do not change the forward critical path out of Phase 0.
 - Source strict-typing cleanup for `src/` explicit-`any` debt [DONE]
-  - Plan: [src-no-explicit-any-cleanup.plans.md](completed/src-no-explicit-any-cleanup.plans.md)
+  - Plan: [src-no-explicit-any-cleanup.plans.md](completed/src-no-explicit-any-cleanup.plans.md)[DONE]
   - Scope note: this lane replaced the stale root checklist with a roadmap-tracked plan aligned to the current folderized tree and is now the closed baseline for future reopen-only follow-up.
 - ES2023 modernization (completed Phase 0 lane: project-wide named errors with `Error.cause`, targeted syntax cleanup, helper normalization, narrow module-edge cleanup, and lint/CI enforcement) [DONE]
   - Plan: [ES2023 migration](completed/ES2023%20migration)
@@ -104,7 +207,7 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 
 - Plan: [completed/NEATchat.plans.md](completed/NEATchat.plans.md) [DONE]
 - Current internal state: the NEATchat Phase 3 learnability lane is closed for current scope and archived as a completed baseline. The delivered surface remains intentionally toy-scale: near-zero start, short online adaptation, language-agnostic token-stream behavior, and browser or Node experimentation boundaries rather than web-scale training.
-- Follow-up lane: [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]. The new lane owns the post-toy conversational-system push, but it remains planning-only until checkpointing, worker payloads, multithread evaluation, parameter-vector contracts, and recurrent ONNX hardening expose usable public seams. It should build on those foundations instead of widening the closed Phase 3 acceptance surface retroactively.
+- Follow-up lane: [completed/NEATchat_Followup.plans.md](completed/NEATchat_Followup.plans.md) [DONE]. The post-toy conversational-systems lane closed 2026-05-22. All six workstreams closed: W1 durable substrate, W2 stronger seed import, W3 episodic memory and retrieval, W4 background adaptation and candidate search, W5 hybrid routing, W6 evaluation harness, safety gate, and publishable product shape. Unrelated broad-run heap OOM remains outside NEATchat ownership.
 
 9. Visualization export schema (JSON schema + optional DOT output)
    - Plan: [Network_Visualization_Export_Schema.md](completed/Network_Visualization_Export_Schema.plans.md) [DONE]
@@ -137,7 +240,8 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 
 13. Evolution–training interoperability contracts (parameter vectors, isolation, hybrid policies)
 
-- Plan: [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
+- Plan: [completed/Evolution_Training_Interoperability_Contracts.md](completed/Evolution_Training_Interoperability_Contracts.md) [DONE]
+- Current internal state: the hybrid-interoperability lane is archived as done. The closed baseline now covers deterministic `ParameterLayoutV1` ordering, parameter-vector export/import, `fineTuneVector(...)` isolation, explicit hybrid evaluation policy with Lamarckian opt-in, root-facade re-exports, and generated docs closure. The unchanged external ONNX `TS2345` at `src/architecture/network/onnx/validate/network.onnx.validate.ts:135` remains outside this lane.
 
 **Why this ordering:**
 
@@ -149,7 +253,7 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 Next critical-path frontier:
 
 - [completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md) now records the closed Phase 4 checkpointing baseline and the reopen point for future persistence work.
-- The active pre-NGE frontier now moves to [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md), while [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) remains the next planned non-chat foundation lane and [NEATchat.plans.md](NEATchat.plans.md) remains dependency-gated behind those two stop lines.
+- The archived pre-NGE ONNX baseline now lives at [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md), and the archived hybrid baseline now lives at [completed/Evolution_Training_Interoperability_Contracts.md](completed/Evolution_Training_Interoperability_Contracts.md). The NEATchat follow-up is now archived at [completed/NEATchat_Followup.plans.md](completed/NEATchat_Followup.plans.md) [DONE] with all six workstreams closed 2026-05-22. The pre-NGE stop line is now satisfied; Phase 7 / NGE is the next frontier.
 
 ## Phase 5 — Scale & Performance (Memory Optimization Track)
 
@@ -171,20 +275,101 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Phase 6 — Interoperability Breadth (ONNX)
 
-**Outcome:** broader ecosystem compatibility and model portability.
+**Outcome:** standards-compliant ONNX serialization, checker-backed validation, runtime compatibility for the declared supported subset, and named external import subsets with honest rejection outside that boundary.
 
 - ONNX export/import breadth and hardening
-  - Plan: [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
-  - Current internal state: Phase 0-2 are complete, recurrent groundwork is implemented and still being hardened, and convolutional/spatial groundwork is in progress.
+  - Plan: [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md) [DONE]
+  - Current internal state: the ONNX lane is archived as done through the current Phase 9 compliance target for the declared lower-opset same-family subset. The archived baseline now covers recurrent hardening, the conservative spatial contract, the same-family advanced-graph contract, the optimization and fidelity contract, the exporter-owned precision contract, deterministic binary `ModelProto` emission, runtime parity for the approved five-lane subset, and the first named external binary import subset through `importFromONNXBinary()`. Future ONNX work should reopen from the archive only through a narrower new amendment.
 - NEATchat follow-up (persistent pretrained conversational system)
-  - Plan: [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]
-  - Current internal state: the Phase 3 NEATchat demo remains closed as a toy-scale learnability baseline, while the follow-up lane is a dependency-gated later plan for stronger pretrained seeds, checkpointed identity, retrieval-like memory, worker-backed background adaptation, and hybrid candidate routing. It should stay planning-only until checkpointing, worker payloads, multithread evaluation, parameter-vector contracts, and recurrent ONNX hardening are usable enough to support an honest external-seed target.
+  - Plan: [completed/NEATchat_Followup.plans.md](completed/NEATchat_Followup.plans.md) [DONE]
+  - Current internal state: all six workstreams closed 2026-05-22. W1 snapshot v2 and durable substrate; W2 stronger default seed and honest external-seed contract; W3 episodic memory bank and token-overlap retrieval; W4 async-deferred background adaptation and explicit candidate lifecycle; W5 three-path hybrid routing with observability-only routingLog; W6 attribution-aware regression harness, structured safety gate, and publishable browser demo with explicit live/experimental/background-job lane labels.
+- NEATchat live exchange safety red contract (live safety gate + snapshot quality loop)
+  - Plan: [completed/neatChat-live-safety-red.plans.md](completed/neatChat-live-safety-red.plans.md) [DONE]
+  - Current internal state: archived as the closed live safety baseline. `runNeatChatExchange` now screens routing candidates through `checkSafety`, rejects placeholder and incomplete-fragment outputs, and uses a vocabulary-aware bounded fallback floor that satisfies the requested shipped-browser four-turn bar. Reopen only for stricter extended-turn freshness.
 
 **Recommended timing:**
 
-- Continue ONNX work in parallel after Phase 2 (builders) so we have a clean way to produce supported architectures.
-- Keep ONNX scope honest: focus on deterministic export/import behavior and clear “supported subset” docs.
+- Treat the archived ONNX baseline as the reopen point for future interoperability widening rather than keeping the old root tracker active.
+- Keep future ONNX scope honest: start from a narrower new amendment when runtime, external-import, or custom-domain claims need to change instead of reopening the archived baseline implicitly.
 - Treat the NEATchat follow-up lane as an applied consumer of Phase 4 plus Phase 6 work, not as a shortcut around those foundations.
+
+## Standalone Repo Cortex / Semantic Helping Lane [PLANNED]
+
+**Outcome:** a no-compromise semantic helping system for the NeatapticTS repo, library, and
+all demos — covering a SQLite corpus index with BM25 search and freshness proofs, MCP tools
+exposing that index to AI agents, a browser-consumable JSON snapshot for all demos, the
+archived 5-layer agent delegation tier enforcement prerequisite, and optional ONNX-backed
+hybrid dense retrieval as the final advanced step. NeatChat also gains its own separate local
+retrieval and memory layer for conversational quality.
+
+This lane is **meta-workflow infrastructure**. It does not change `src/` library code and can
+proceed in parallel with Phase 7 / NGE work. The six Repo Cortex layers execute sequentially;
+Layers 1-5 are archived and Layer 6 remains planned. The archived Agentic Workflow Enforcement
+Prerequisite ([completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_Enforcement.plans.md))
+had no dependency on the SQLite corpus index and ran in parallel with Layers 1–3; it is now
+[DONE] and no longer blocks Layer 4.
+`NeatChat_Local_Retrieval_Memory.plans.md` can proceed in parallel with Layers 1–3.
+
+### Repo Cortex layers (sequential)
+
+1. Corpus index foundation (SQLite, BM25, freshness)
+
+- Plan: [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) [DONE]
+- Artifacts: `scripts/semantic-index/`, `data/semantic-index.sqlite`
+
+2. MCP tools (search, load, freshness, stats)
+
+- Plan: [completed/Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowledge_MCP_Tools.plans.md) [DONE]
+- Gate: Layer 1 [DONE] satisfied
+- Artifacts: `scripts/mcp-semantic/`, `neataptic-cortex-mcp` in `.vscode/mcp.json`
+
+3. Browser snapshot and IndexedDB loader (all demos)
+
+- Plan: [completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_Knowledge_Browser_Snapshot.plans.md) [DONE]
+- Gate: Layers 1 and 2 [DONE] satisfied; Layer 3 archived
+- Artifacts: `docs/assets/semantic-snapshot.json`, `examples/shared/semantic/`
+
+4. Cortex MCP reliability hardening (Layer 4 — agents, skill, lifecycle gate, MCP enhancements)
+
+- Plan: [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
+- Gate: Layers 1, 2, and 3 [DONE] required; Delegation Tier Enforcement must be [DONE]; `neataptic-workflow-mcp.mjs` must be active
+- Artifacts: `.github/agents/repo-cortex-scout.agent.md`, `.github/agents/cortex-embeddings-scout.agent.md`, `.github/skills/repo-cortex-workflow/SKILL.md`, `scripts/agent-customization/gates/cortex-index.gate.mjs`, `scripts/agent-customization/plan-session-redirect.mjs`, `scripts/agent-customization/validate-tsconfig-docs.mjs`
+
+5. ONNX embeddings + hybrid BM25+dense ranking (Layer 5)
+
+- Plan: [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
+- Gate: Layers 1 and 2 [DONE] required
+- Artifacts: `scripts/semantic-index/embed-index.mjs`, `data/embeddings.sqlite`, ONNX model cache
+
+6. Embedding prewarm + default-on dense contract (Layer 6)
+
+- Plan: [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
+- Gate: Layer 5 [DONE] satisfied; Layer 6 archived after final prewarm, readiness, gate, MCP degradation, and tracker-closure validation
+- Soft dependency: Layer 4 [DONE] improved MCP lifecycle management but was not required to close Layer 6
+- Artifacts: `scripts/semantic-index/prewarm-dense.mjs`, `scripts/semantic-index/dense-readiness.mjs`, `scripts/agent-customization/gates/dense-readiness.gate.mjs`; MCP `search_corpus` now defaults `use_dense: true` with graceful cold-state degradation and warm-state `dense_state` provenance
+
+### Agentic Workflow Enforcement Prerequisite [DONE]
+
+- 5-layer agent delegation tier enforcement
+  - Plan: [completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_Enforcement.plans.md) [DONE]
+  - Current internal state: archived baseline with 55 `tier:` frontmatter assignments, zero delegation-graph violations, the tier inventory or validator or gate or audit-report script surface, and `query_tier_graph` on `neataptic-gate-mcp`
+  - Layer 4 prerequisite: satisfied; Repo Cortex MCP Reliability may now add hidden specialist agents against the archived tier contract
+  - Artifacts: `scripts/agent-customization/tier-inventory.mjs`, `validate-agent-graph.mjs`, `tier-enforcement-gate.mjs`
+
+### Parallel tracks (can run alongside Layers 1–3 and the prerequisite)
+
+- NeatChat local retrieval and memory (separate from Repo Cortex)
+  - Plan: [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [WIP]
+  - Depends on archived [completed/neatChat-live-safety-red.plans.md](completed/neatChat-live-safety-red.plans.md) [DONE] as the closed live safety baseline (no conflict; guarded integration)
+  - May reuse chunking and BM25 patterns from Layers 1–3 but must not import from `scripts/semantic-index/`
+  - Artifacts: `examples/neatChat/memory/` (types, DB adapters, retrieval, services, tests)
+
+**Coordination rules:**
+
+- `completed/Delegation_Tier_Enforcement.plans.md` is the archived Agentic Workflow Enforcement Prerequisite baseline, not a Repo Cortex corpus layer. It has no "Layer N" designation.
+- `data/semantic-index.sqlite` and `data/embeddings.sqlite` are gitignored generated artifacts.
+- `docs/assets/semantic-snapshot.json` is a generated artifact; treat it as read-only.
+- NeatChat memory (`examples/neatChat/memory/`) must never import from `scripts/semantic-index/`.
 
 ## Phase 7 — Advanced Research Features (Last)
 
@@ -203,16 +388,17 @@ This plan is large and can run as a **parallel lane** after Phase 1, but it shou
 
 ## Summary: Critical Path vs Parallel Lanes
 
-Current status: **Phases 0, 1, 2, 3, and 4 are complete for the current roadmap scope, and the pre-NGE memory foundation stop line is archived as done through Track 1 / Phase 10.** The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, preconfigured architectures lane, examples and visualization lanes, worker and checkpointing lanes, and the Phase 5 memory-foundation stop line are closed. **ONNX remains the active pre-NGE `[WIP]` lane, hybrid interoperability remains the next planned non-chat foundation lane, and the NEATchat follow-up remains dependency-gated behind those two foundations rather than closed.**
+Current status: **Phases 0, 1, 2, 3, and 4 are complete for the current roadmap scope, and the pre-NGE memory foundation stop line is archived as done through Track 1 / Phase 10.** The proper-NEAT lane, stable activation-ordering lane, architecture-primitives lane, construct-from-parts lane, preconfigured architectures lane, examples and visualization lanes, worker and checkpointing lanes, the Phase 5 memory-foundation stop line, the full current ONNX compliance target, the hybrid-interoperability lane, and the NEATchat follow-up lane are all closed. **The archived ONNX baseline now includes recurrent hardening, the conservative Phase 4 spatial contract, the Phase 5 advanced-graph contract, the Phase 6 optimization contract, the Phase 7 exporter-owned precision contract, the Phase 8 binary contract, and the Phase 9 runtime-parity plus first external-import closure target for the declared lower-opset same-family subset. The archived hybrid-interoperability baseline now carries deterministic parameter vectors, isolation, explicit persistence policy, and the public docs surface needed by downstream consumers. The NEATchat follow-up lane is now archived as done: all six workstreams closed 2026-05-22, including the evaluation harness, safety gate, and publishable browser demo.**
 
-- **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 memory stop line → Phase 6 ONNX → hybrid interoperability → gated NEATchat follow-up → Phase 7 / NGE
+- **Critical path:** Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 memory stop line → Phase 6 ONNX → archived hybrid interoperability baseline → archived NEATchat follow-up → Phase 7 / NGE
 - **Archived lane A (performance):** [completed/Memory_Optimization.md](completed/Memory_Optimization.md) [DONE]
-- **Active lane B (interop):** [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
-- **Planned lane C (hybrid interoperability):** [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
-- **Planned lane D (applied conversational systems):** [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]
+- **Archived lane B (interop):** [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md) [DONE] — the current ONNX compliance target is closed through the declared Phase 9 stop line, including the binary-first runtime-parity seam and the first named external binary import subset for the approved lower-opset same-family boundary.
+- **Archived lane C (hybrid interoperability):** [completed/Evolution_Training_Interoperability_Contracts.md](completed/Evolution_Training_Interoperability_Contracts.md) [DONE] — deterministic parameter vectors, isolated fine-tuning, explicit persistence policy, root-facade re-exports, and generated docs closure.
+- **Archived lane D (applied conversational systems):** [completed/NEATchat_Followup.plans.md](completed/NEATchat_Followup.plans.md) [DONE] — all six workstreams closed 2026-05-22; persistent session identity, stronger seed, episodic memory, background adaptation, hybrid routing, attribution-aware regression harness, safety gate, and publishable browser demo.
 - **Parallel lane E (quality):** [test-repair-and-coverage.plans.md](completed/test-repair-and-coverage.plans.md) [DONE] — 100% statement/branch/function/line coverage across all of `src/`. 331 suites / 3022 tests green.
-- **Pre-NGE stop line:** not yet closed
-- **Serial pre-NGE handoff:** after the Phase 5 memory stop line, finish [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md), then [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md), then the still-gated [NEATchat.plans.md](NEATchat.plans.md), and only then open Phase 7 / NGE work
+- **Standalone meta-workflow lane F:** [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) [DONE] — numbered user-invocable agent architecture, hidden specialist delegation, skill-first customization, model routing, validators, evals, and the closed MCP runtime-visibility ownership baseline.
+- **Pre-NGE stop line:** closed. NEATchat follow-up lane archived [DONE]; Phase 7 / NGE is now the next frontier.
+- **Serial pre-NGE handoff:** after the archived Phase 5 memory stop line, the archived ONNX baseline, the archived hybrid-interoperability baseline, and the archived NEATchat follow-up baseline, the next lane is Phase 7 / NGE.
 - **Final capstone:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
 
 ## Plan Inventory in Roadmap Order
@@ -224,6 +410,23 @@ This inventory excludes [README.md](README.md), which is the plans index rather
 than a roadmap-tracked plan file.
 
 Completed entries below resolve into `plans/completed/`.
+
+### Standalone meta-workflow inventory
+
+M1. [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) [DONE]
+M2. [completed/workspace-mcp-registration.plans.md](completed/workspace-mcp-registration.plans.md) [DONE]
+M3. [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows_and_Gates_Upgrade.plans.md) [DONE]
+
+### Repo Cortex / Semantic Helping inventory (standalone meta-workflow lane)
+
+M4. [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) [DONE]
+M5. [completed/Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowledge_MCP_Tools.plans.md) [DONE]
+M6. [completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_Knowledge_Browser_Snapshot.plans.md) [DONE]
+M6b. [completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_Enforcement.plans.md) [DONE]
+M7. [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
+M8. [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
+M8b. [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
+M9. [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [WIP]
 
 ### Phase 0 inventory
 
@@ -266,7 +469,7 @@ Completed entries below resolve into `plans/completed/`.
 25. [completed/Worker_Friendly_Network_Serialization_Fastpath.md](completed/Worker_Friendly_Network_Serialization_Fastpath.md) [DONE]
 26. [completed/Turnkey_Multithread_Evaluation_API.md](completed/Turnkey_Multithread_Evaluation_API.md) [DONE]
 27. [completed/Population_Save_Resume_and_Checkpointing.md](completed/Population_Save_Resume_and_Checkpointing.md) [DONE]
-28. [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md) [PLANNED]
+28. [completed/Evolution_Training_Interoperability_Contracts.md](completed/Evolution_Training_Interoperability_Contracts.md) [DONE]
 
 ### Phase 5 inventory
 
@@ -274,8 +477,8 @@ Completed entries below resolve into `plans/completed/`.
 
 ### Phase 6 inventory
 
-30. [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md) [WIP]
-31. [NEATchat.plans.md](NEATchat.plans.md) [PLANNED]
+30. [completed/ONNX_EXPORT_PLAN.md](completed/ONNX_EXPORT_PLAN.md) [DONE]
+31. [completed/NEATchat_Followup.plans.md](completed/NEATchat_Followup.plans.md) [DONE]
 
 ### Phase 7 inventory
 

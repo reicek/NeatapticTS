@@ -80,3 +80,10 @@ the graph yourself.
 const network = new Network(2, 1);
 const outputValues = network.activate([0, 1]);
 ```
+
+Example:
+
+```ts
+const network = Network.createMLP(2, [4], 1);
+const output = network.activate([0, 1]);
+```

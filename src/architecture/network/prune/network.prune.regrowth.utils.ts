@@ -1,4 +1,4 @@
-import type Network from '../../network/network';
+﻿import type Network from '../../network/network';
 import type Node from '../../node';
 import type {
   NetworkPruningProps,
@@ -9,7 +9,7 @@ import type {
 import { REGROW_ATTEMPT_MULTIPLIER } from './network.prune.utils.types';
 
 /**
- * Build and execute a regrowth plan when enabled.
+ * Build and execute a bounded connection-regrowth plan when regrowth is enabled.
  * @param currentNetwork - Network to regrow.
  * @param context - Inputs describing regrowth intent.
  * @returns Nothing.

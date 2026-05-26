@@ -22,8 +22,9 @@
  * @module trainingWarmStart
  */
 
-import type { Neat, Network } from '../../../src/neataptic';
-import { methods } from '../../../src/neataptic';
+import type Network from '../../../src/architecture/network';
+import type Neat from '../../../src/neat';
+import * as methods from '../../../src/methods/methods';
 import type { EngineState, RngCacheParameters } from './engineState.types';
 import { initialiseTelemetryScratch } from './engineState';
 import type { NetworkNode } from './evolutionEngine.types';
