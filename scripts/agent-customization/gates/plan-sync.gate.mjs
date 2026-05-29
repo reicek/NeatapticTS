@@ -13,7 +13,7 @@
 
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { parseArgs, repoRoot } from '../customization-utils.mjs';
+import { extractStatus, parseArgs, repoRoot } from '../customization-utils.mjs';
 
 const options = parseArgs(process.argv.slice(2));
 
@@ -47,12 +47,19 @@ async function runPlanSyncGate() {
     };
   }
 
-  // Step 2: Discover plan files in the active plans/ directory (not completed/).
+  // Step 2: Discover root-level Markdown tracker files in plans/ (not completed/).
   let planFiles = [];
   try {
-    const entries = await readdir(path.join(repoRoot, 'plans'));
+    const entries = await readdir(path.join(repoRoot, 'plans'), { withFileTypes: true });
     planFiles = entries
-      .filter((name) => name.endsWith('.plans.md'))
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter(
+        (name) =>
+          name.endsWith('.md') &&
+          !name.endsWith('.logs.md') &&
+          !['README.md', 'Roadmap.md'].includes(name)
+      )
       .map((name) => `plans/${name}`);
   } catch (error) {
     return {
@@ -63,12 +70,12 @@ async function runPlanSyncGate() {
     };
   }
 
-  // Step 3: Identify which plans carry a [WIP] status marker.
+  // Step 3: Identify which tracker files carry a top-level [WIP] status marker.
   const wipPlans = [];
   for (const planFile of planFiles) {
     try {
       const text = await readFile(path.join(repoRoot, planFile), 'utf8');
-      if (text.includes('[WIP]')) {
+      if (extractStatus(text) === 'WIP') {
         wipPlans.push(planFile);
       }
     } catch {

@@ -31,8 +31,8 @@ import {
 } from '../customization-utils.mjs';
 import { resolveExplicitPlanPath } from './mcp-utils.mjs';
 
-/** Matches a phase header line, e.g. `### Phase 2 — Title [WIP]`. */
-const PHASE_PATTERN = /^### Phase (?<phase>\d+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+/** Matches a phase header line, e.g. `### Phase 2 — Title [WIP]` or `### Phase A — Title [WIP]`. */
+const PHASE_PATTERN = /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 /** Matches a step header line, e.g. `#### Step 03 — Title [PLANNED]`. */
 const STEP_PATTERN = /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 /** Captures the body of the `## Implementation phases` section up to the first validation-gates heading. */
@@ -42,7 +42,7 @@ const IMPLEMENTATION_SECTION_PATTERN = /^## Implementation phases\s*(?<body>[\s\
  * Load the single active phase and step from the workflow plan.
  *
  * @param {string} planPath - Relative plan path.
- * @returns {Promise<{ planPath: string, activePhase: { number: number, title: string, status: string }, activeStep: { number: number, title: string, status: string, metadata: Record<string, unknown>, stepObjective: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean } }>} Active plan context.
+ * @returns {Promise<{ planPath: string, activePhase: { number: number | string, title: string, status: string }, activeStep: { number: number, title: string, status: string, metadata: Record<string, unknown>, stepObjective: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean } }>} Active plan context.
  */
 export async function loadActivePlanContext(planPath) {
   const resolvedPlanPath = resolveExplicitPlanPath(planPath);
@@ -101,8 +101,8 @@ export async function loadActivePlanContext(planPath) {
 /**
  * Build the repo-static workflow snapshot exposed by the workflow MCP.
  *
- * @param {{ planPath: string, activePhase: { number: number, title: string, status: string }, activeStep: { number: number, title: string, status: string, metadata: Record<string, unknown>, stepObjective: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean } }} activePlanContext - Active plan context.
- * @returns {{ scope: string, plan: string, activePhase: { number: number, title: string, status: string }, activeStep: { number: number, title: string, status: string, agent: unknown, agentFile: unknown, objective: string, nextStep: unknown, validationCommands: string[] }, allowlistAuthority: string, sourceBoundary: string[] }} Workflow snapshot.
+ * @param {{ planPath: string, activePhase: { number: number | string, title: string, status: string }, activeStep: { number: number, title: string, status: string, metadata: Record<string, unknown>, stepObjective: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean } }} activePlanContext - Active plan context.
+ * @returns {{ scope: string, plan: string, activePhase: { number: number | string, title: string, status: string }, activeStep: { number: number, title: string, status: string, agent: unknown, agentFile: unknown, objective: string, nextStep: unknown, validationCommands: string[] }, allowlistAuthority: string, sourceBoundary: string[] }} Workflow snapshot.
  */
 export function createWorkflowSnapshot(activePlanContext) {
   return {
@@ -130,8 +130,8 @@ export function createWorkflowSnapshot(activePlanContext) {
 /**
  * Build the active validation allow-list snapshot exposed by the validation MCP.
  *
- * @param {{ planPath: string, activePhase: { number: number, title: string, status: string }, activeStep: { number: number, title: string, status: string, metadata: Record<string, unknown>, stepObjective: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean } }} activePlanContext - Active plan context.
- * @returns {{ scope: string, plan: string, activePhase: { number: number, title: string, status: string }, activeStep: { number: number, title: string, status: string, agent: unknown }, allowlistAuthority: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean }} Validation allow-list snapshot.
+ * @param {{ planPath: string, activePhase: { number: number | string, title: string, status: string }, activeStep: { number: number, title: string, status: string, metadata: Record<string, unknown>, stepObjective: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean } }} activePlanContext - Active plan context.
+ * @returns {{ scope: string, plan: string, activePhase: { number: number | string, title: string, status: string }, activeStep: { number: number, title: string, status: string, agent: unknown }, allowlistAuthority: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean }} Validation allow-list snapshot.
  */
 export function createValidationAllowlistSnapshot(activePlanContext) {
   return {
@@ -159,7 +159,7 @@ export function createValidationAllowlistSnapshot(activePlanContext) {
  * full document.
  *
  * @param {string} planText - Full plan file text.
- * @yields {{ number: number, title: string, status: string, body: string }} Phase descriptors.
+ * @yields {{ number: number | string, title: string, status: string, body: string }} Phase descriptors.
  */
 function* extractPhaseBlocks(planText) {
   const implementationSection = IMPLEMENTATION_SECTION_PATTERN.exec(planText)?.groups?.body;
@@ -176,8 +176,9 @@ function* extractPhaseBlocks(planText) {
     const phaseBodyStart = (phaseMatch.index ?? 0) + phaseMatch[0].length;
     const nextPhaseMatch = phaseMatches.at(phaseIndex + 1);
     const phaseBodyEnd = nextPhaseMatch?.index ?? implementationSection.length;
+    const phaseLabel = phaseMatch.groups.phase;
     yield {
-      number: Number(phaseMatch.groups.phase),
+      number: /^\d+$/.test(phaseLabel) ? Number(phaseLabel) : phaseLabel,
       title: phaseMatch.groups.title,
       status: phaseMatch.groups.status,
       body: implementationSection.slice(phaseBodyStart, phaseBodyEnd),

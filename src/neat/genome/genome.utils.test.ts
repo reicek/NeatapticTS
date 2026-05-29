@@ -5,10 +5,17 @@ import {
   createCompatibilityGenomeView,
   createGenomeFromNetwork,
   createGenomeFromNetworkJson,
+  createNetworkFromGenome,
   createNetworkJsonFromGenome,
   validateGenomeContract,
 } from './genome';
 import type { NeatGenome } from './genome';
+
+type RuntimeNetworkWithNgePrimitiveModules = Network & {
+  _ngePrimitiveModules?: Array<{
+    activate: (inputValues: number[]) => number[];
+  }>;
+};
 
 function collectIssueCodes(issues: Array<{ code: string }>): string[] {
   return issues.map((issue) => issue.code);
@@ -349,6 +356,242 @@ describe('neat genome utility coverage chapter', () => {
             'invalid-recurrent-module-extension',
           ]),
         );
+      });
+    });
+
+    describe('given one strict genome stores NGE motif containers in non-array values', () => {
+      it('reports the malformed NGE extension containers', () => {
+        // Arrange
+        const genome = createGenomeFromNetwork(
+          new Network(1, 1, { seed: 1_462_5 }),
+        );
+
+        genome.extensions = {
+          version: 1,
+          values: {
+            moduleArchetypes: {} as unknown as NonNullable<
+              NeatGenome['extensions']
+            >['values']['moduleArchetypes'],
+            residualStreams: {} as unknown as NonNullable<
+              NeatGenome['extensions']
+            >['values']['residualStreams'],
+            weightSharedCohorts: {} as unknown as NonNullable<
+              NeatGenome['extensions']
+            >['values']['weightSharedCohorts'],
+          },
+        };
+
+        // Act
+        const validationReport = validateGenomeContract(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toEqual(
+          expect.arrayContaining([
+            'invalid-module-archetype-extension',
+            'invalid-residual-stream-extension',
+            'invalid-weight-shared-cohort-extension',
+          ]),
+        );
+      });
+    });
+
+    describe('given one strict genome carries malformed NGE motif descriptors', () => {
+      it('reports module archetype, residual stream, and weight-shared cohort issues', () => {
+        // Arrange
+        const genome = createGenomeFromNetwork(
+          new Network(1, 1, { seed: 1_463 }),
+        );
+
+        genome.extensions = {
+          version: 1,
+          values: {
+            moduleArchetypes: [
+              null,
+              {
+                archetypeId: 'archetype:attention:0',
+                computationType: 'UnknownMotif',
+                parameterSchema: [],
+                residualStreamId: 'stream:0',
+                weightSharedCohortId: 'cohort:0',
+              },
+            ],
+            residualStreams: [
+              null,
+              {
+                streamId: 'stream:0',
+                width: 0,
+              },
+            ],
+            weightSharedCohorts: [
+              null,
+              {
+                cohortId: 'cohort:0',
+                sharedParameterSchema: [],
+              },
+            ],
+          } as unknown as NonNullable<NeatGenome['extensions']>['values'],
+        };
+
+        // Act
+        const validationReport = validateGenomeContract(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toEqual(
+          expect.arrayContaining([
+            'invalid-module-archetype-extension',
+            'invalid-residual-stream-extension',
+            'invalid-weight-shared-cohort-extension',
+          ]),
+        );
+      });
+    });
+
+    describe('given one strict genome carries well-formed NGE motif descriptors', () => {
+      it('accepts the new identity contract without reporting NGE extension issues', () => {
+        // Arrange
+        const genome = createGenomeFromNetwork(
+          new Network(1, 1, { seed: 1_464 }),
+        );
+
+        genome.extensions = {
+          version: 1,
+          values: {
+            moduleArchetypes: [
+              {
+                archetypeId: 'archetype:attention:0',
+                computationType: 'AttentionHead',
+                parameterSchema: { heads: 1 },
+                receivesCoordinates: true,
+                residualStreamId: 'stream:0',
+                weightSharedCohortId: 'cohort:0',
+              },
+              {
+                archetypeId: 'archetype:memory:0',
+                computationType: 'EpisodicSlot',
+              },
+            ],
+            residualStreams: [
+              {
+                streamId: 'stream:0',
+                width: 16,
+              },
+            ],
+            weightSharedCohorts: [
+              {
+                cohortId: 'cohort:0',
+                sharedParameterSchema: {
+                  projection: 'shared',
+                },
+              },
+            ],
+          },
+        };
+
+        // Act
+        const validationReport = validateGenomeContract(genome);
+
+        // Assert
+        expect(
+          collectIssueCodes(validationReport.issues).filter((issueCode) =>
+            [
+              'invalid-module-archetype-extension',
+              'invalid-residual-stream-extension',
+              'invalid-weight-shared-cohort-extension',
+            ].includes(issueCode),
+          ),
+        ).toEqual([]);
+      });
+    });
+
+    describe('given a strict genome carries a non-object GatingRouter mode', () => {
+      it('reports the invalid module-archetype extension issue', () => {
+        // Arrange
+        const genome = createGenomeFromNetwork(
+          new Network(1, 1, { seed: 1_468_861 }),
+        );
+
+        genome.extensions = {
+          version: 1,
+          values: {
+            moduleArchetypes: [
+              {
+                archetypeId: 'archetype:router:non-object-mode',
+                computationType: 'GatingRouter',
+                candidateZone: 'zone:router:non-object-mode',
+                gatingMode: [] as unknown,
+                topK: 1,
+              } as unknown as NonNullable<
+                NonNullable<
+                  NeatGenome['extensions']
+                >['values']['moduleArchetypes']
+              >[number],
+            ],
+          },
+        };
+
+        // Act
+        const validationReport = validateGenomeContract(genome);
+
+        // Assert
+        expect(collectIssueCodes(validationReport.issues)).toContain(
+          'invalid-module-archetype-extension',
+        );
+      });
+    });
+
+    describe('given a strict genome carries an explicit top-k GatingRouter mode with equal activations', () => {
+      it('accepts the governance and keeps the lower candidate index on ties', () => {
+        // Arrange
+        const genome = createGenomeFromNetwork(
+          new Network(1, 1, { seed: 1_468_862 }),
+        );
+
+        genome.extensions = {
+          version: 1,
+          values: {
+            moduleArchetypes: [
+              {
+                archetypeId: 'archetype:router:topk-tie',
+                computationType: 'GatingRouter',
+                candidateZone: 'zone:router:topk-tie',
+                gatingMode: {
+                  type: 'topK',
+                },
+                topK: 1,
+              } as unknown as NonNullable<
+                NonNullable<
+                  NeatGenome['extensions']
+                >['values']['moduleArchetypes']
+              >[number],
+            ],
+          },
+        };
+        const validationReport = validateGenomeContract(genome);
+        const rebuiltNetwork = createNetworkFromGenome(genome, {
+          ngeEnabled: true,
+        }) as RuntimeNetworkWithNgePrimitiveModules;
+        const gatingRouter = rebuiltNetwork._ngePrimitiveModules?.[0];
+
+        if (!gatingRouter) {
+          throw new Error(
+            'Expected one explicit top-k GatingRouter primitive module.',
+          );
+        }
+
+        // Assert
+        expect({
+          invalidModuleArchetypeIssues: collectIssueCodes(
+            validationReport.issues,
+          ).filter(
+            (issueCode) => issueCode === 'invalid-module-archetype-extension',
+          ),
+          routing: gatingRouter
+            .activate([0.7, 0.7, 0.4])
+            .map((activationValue) => Number(activationValue.toFixed(6))),
+        }).toEqual({
+          invalidModuleArchetypeIssues: [],
+          routing: [0.7, 0, 0],
+        });
       });
     });
   });

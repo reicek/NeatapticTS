@@ -83,6 +83,10 @@ import {
 import { createNeatChatEpisodicMemoryBank } from './neatChat.memory.services';
 import { retrieveNeatChatMemories } from './neatChat.memory.services';
 import {
+  retrieveMemoryContext as retrieveDurableMemoryContext,
+  storeExchangeMemory as storeDurableExchangeMemory,
+} from '../memory/neatChat.memory.services';
+import {
   appendNeatChatRoutingDecision,
   generateNeatChatCandidates,
   selectNeatChatCandidate,
@@ -91,6 +95,10 @@ import { checkSafety } from './neatChat.safety.services';
 import type { NeatChatAdaptationManager } from './neatChat.adaptation.types';
 import type { NeatChatRoutingCandidate } from './neatChat.routing.types';
 import type { SafetyViolation } from './neatChat.safety.types';
+import type {
+  MemoryAdapter,
+  MemoryResult,
+} from '../memory/neatChat.memory.types';
 import type {
   CreateNeatChatSessionOptions,
   NeatChatExchangeRecord,
@@ -152,6 +160,32 @@ const NEATCHAT_SYNTHESIZED_FALLBACK_VIOLATIONS = new Set<SafetyViolation>([
   'incomplete-fragment',
 ]);
 
+/** Options for the guarded durable exchange-store sidecar. */
+export interface StoreExchangeMemorySafelyOptions {
+  /** Durable memory adapter used by the optional sidecar. */
+  readonly adapter: Pick<MemoryAdapter, 'store'>;
+  /** Session owner for the durable entry. */
+  readonly sessionId: string;
+  /** User message text to persist. */
+  readonly userMessage: string;
+  /** Assistant response text to persist. */
+  readonly response: string;
+  /** Optional timestamp override used by deterministic tests. */
+  readonly now?: number;
+}
+
+/** Options for the guarded durable retrieval sidecar. */
+export interface RetrieveMemoryContextSafelyOptions {
+  /** Durable memory adapter used by the optional sidecar. */
+  readonly adapter: Pick<MemoryAdapter, 'list' | 'search'>;
+  /** Session owner whose durable entries should be retrieved. */
+  readonly sessionId: string;
+  /** Query text used to retrieve durable memory context. */
+  readonly query: string;
+  /** Maximum number of ranked durable memories to return. */
+  readonly maxResults?: number;
+}
+
 /**
  * Builds a token vocabulary from retained corpus terms plus stable special tokens.
  *
@@ -173,6 +207,90 @@ export function buildNeatChatVocabulary(
   );
 
   return { size: indexToTerm.length, termToIndex, indexToTerm };
+}
+
+/**
+ * Stores a durable exchange sidecar entry without surfacing adapter failures.
+ *
+ * @param options - Durable adapter and exchange details to persist.
+ * @returns Promise that always resolves, even when the durable adapter fails.
+ */
+export async function storeExchangeMemorySafely(
+  options: StoreExchangeMemorySafelyOptions,
+): Promise<void> {
+  try {
+    await storeDurableExchangeMemory(options);
+  } catch {
+    return;
+  }
+}
+
+/**
+ * Retrieves durable memory context without surfacing adapter failures.
+ *
+ * @param options - Durable adapter and query inputs.
+ * @returns Ranked durable memory context, or an empty array on adapter failure.
+ */
+export async function retrieveMemoryContextSafely(
+  options: RetrieveMemoryContextSafelyOptions,
+): Promise<readonly MemoryResult[]> {
+  try {
+    return await retrieveDurableMemoryContext(options);
+  } catch {
+    return [];
+  }
+}
+
+interface NeatChatDurableMemorySidecar {
+  readonly adapter: Pick<MemoryAdapter, 'store' | 'list' | 'search'>;
+  readonly sessionId: string;
+}
+
+type NeatChatSessionWithDurableMemorySidecar = NeatChatSession & {
+  readonly durableMemorySidecar?: NeatChatDurableMemorySidecar;
+};
+
+function triggerDurableRetrievalSidecar(
+  session: NeatChatSession,
+  userMessage: string,
+): void {
+  const durableMemorySidecar = resolveDurableMemorySidecar(session);
+
+  if (durableMemorySidecar == null) {
+    return;
+  }
+
+  void retrieveMemoryContextSafely({
+    adapter: durableMemorySidecar.adapter,
+    sessionId: durableMemorySidecar.sessionId,
+    query: userMessage,
+    maxResults: NEATCHAT_ROUTING_MAX_RETRIEVED_MEMORIES,
+  });
+}
+
+function triggerDurableStoreSidecar(
+  session: NeatChatSession,
+  exchangeRecord: Pick<NeatChatExchangeRecord, 'userMessage' | 'response'>,
+): void {
+  const durableMemorySidecar = resolveDurableMemorySidecar(session);
+
+  if (durableMemorySidecar == null) {
+    return;
+  }
+
+  void storeExchangeMemorySafely({
+    adapter: durableMemorySidecar.adapter,
+    sessionId: durableMemorySidecar.sessionId,
+    userMessage: exchangeRecord.userMessage,
+    response: exchangeRecord.response,
+  });
+}
+
+function resolveDurableMemorySidecar(
+  session: NeatChatSession,
+): NeatChatDurableMemorySidecar | undefined {
+  return (session as NeatChatSessionWithDurableMemorySidecar)
+    .durableMemorySidecar;
 }
 
 /**
@@ -333,6 +451,7 @@ export function runNeatChatExchange(
   const userTokens = tokenizeNeatChatText(userMessage, contextWindow);
 
   // Step 1: Rank memories and compare response-path candidates without mutating weights.
+  triggerDurableRetrievalSidecar(session, userMessage);
   const retrievedMemories = retrieveNeatChatMemories(session, userMessage, {
     maxResults: NEATCHAT_ROUTING_MAX_RETRIEVED_MEMORIES,
   });
@@ -381,6 +500,7 @@ export function runNeatChatExchange(
     userTokens,
     responseTokens,
   };
+  triggerDurableStoreSidecar(session, exchangeRecord);
 
   return {
     response,

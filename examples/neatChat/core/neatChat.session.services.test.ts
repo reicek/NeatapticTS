@@ -95,6 +95,53 @@ describe('neatChat session services', () => {
     expect(result.trainedTokenPairCount).toBe(0);
   });
 
+  it('runNeatChatExchange invokes the optional durable memory sidecar around the live exchange loop', () => {
+    // Arrange
+    const invocationLog: string[] = [];
+    const session = {
+      ...createCoverageSession({
+        retainedTerms: ['hello'],
+        network: createStaticScoreNetwork(5),
+      }),
+      durableMemorySidecar: {
+        sessionId: 'session-1',
+        adapter: {
+          async search(query: {
+            readonly sessionId: string;
+            readonly query: string;
+            readonly maxResults: number;
+          }) {
+            invocationLog.push(
+              `retrieve:${query.sessionId}:${query.query}:${query.maxResults}`,
+            );
+
+            return [];
+          },
+          async list(sessionId: string) {
+            throw new Error(`unexpected durable list for ${sessionId}`);
+          },
+          async store(entry: {
+            readonly sessionId: string;
+            readonly content: string;
+          }) {
+            invocationLog.push(`store:${entry.sessionId}:${entry.content}`);
+
+            return 'entry-1';
+          },
+        },
+      },
+    } as Parameters<typeof runNeatChatExchange>[0];
+
+    // Act
+    const result = runNeatChatExchange(session, 'hello');
+
+    // Assert
+    expect(invocationLog).toEqual([
+      'retrieve:session-1:hello:3',
+      `store:session-1:hello ${result.response}`,
+    ]);
+  });
+
   it('runNeatChatExchange falls back to UNK when the vocabulary has no non-special terms', () => {
     // Arrange
     const session = createCoverageSession({

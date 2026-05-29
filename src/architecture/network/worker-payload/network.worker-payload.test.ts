@@ -3501,6 +3501,7 @@ describe('network worker payload chapter', () => {
             status: 0,
           },
           statusValues: {
+            closed: 4,
             idle: 0,
             inputReady: 1,
             outputReady: 2,
@@ -3990,6 +3991,56 @@ describe('network worker payload chapter', () => {
           okStatus: 1,
           timeoutWaitState: 'resolved',
           secondStatus: 1,
+        });
+      });
+
+      it('wakes blocked shared host waits when shutdown posts the closed status', async () => {
+        // Arrange
+        const layout =
+          SHARED_INFERENCE_HOST_INTERNALS.resolveSharedInferenceBufferLayout(
+            1,
+            1,
+          );
+        const controlView = new Int32Array(
+          new SharedArrayBuffer(
+            Int32Array.BYTES_PER_ELEMENT * layout.controlElementCount,
+          ),
+        );
+        let isOpen = true;
+
+        Atomics.store(
+          controlView,
+          layout.statusIndexes.status,
+          layout.statusValues.idle,
+        );
+
+        // Act
+        const closedWaitPromise =
+          SHARED_INFERENCE_HOST_INTERNALS.waitForSharedStatus(
+            controlView,
+            layout.statusIndexes.status,
+            layout.statusValues.outputReady,
+            () => {
+              if (!isOpen) {
+                throw new Error('shared host closed');
+              }
+            },
+          ).catch((error) => (error as Error).message);
+        await Promise.resolve();
+        isOpen = false;
+        SHARED_INFERENCE_HOST_INTERNALS.signalSharedInferenceWorkerClosed(
+          controlView,
+          layout,
+        );
+        const closedError = await closedWaitPromise;
+
+        // Assert
+        expect({
+          closedError,
+          status: Atomics.load(controlView, layout.statusIndexes.status),
+        }).toEqual({
+          closedError: 'shared host closed',
+          status: layout.statusValues.closed,
         });
       });
 
@@ -4603,7 +4654,7 @@ describe('network worker payload chapter', () => {
         });
       });
 
-      it('handles predict, reset, and waiting shared loop steps', () => {
+      it('handles predict, reset, closed, and waiting shared loop steps', () => {
         // Arrange
         const layout =
           SHARED_INFERENCE_HOST_INTERNALS.resolveSharedInferenceBufferLayout(
@@ -4663,6 +4714,23 @@ describe('network worker payload chapter', () => {
           controlView,
           layout.statusIndexes.status,
         );
+        Atomics.store(
+          controlView,
+          layout.statusIndexes.status,
+          layout.statusValues.closed,
+        );
+        const closedState =
+          SHARED_INFERENCE_WORKER_INTERNALS.handleSharedInferenceLoopStep(
+            controlView,
+            dataView,
+            predictor,
+            layout,
+          );
+        Atomics.store(
+          controlView,
+          layout.statusIndexes.status,
+          layout.statusValues.idle,
+        );
         const waitingState =
           SHARED_INFERENCE_WORKER_INTERNALS.handleSharedInferenceLoopStep(
             controlView,
@@ -4673,6 +4741,7 @@ describe('network worker payload chapter', () => {
 
         // Assert
         expect({
+          closedState,
           loopEvents,
           outputValue,
           postResetStatus,
@@ -4680,6 +4749,7 @@ describe('network worker payload chapter', () => {
           resetState,
           waitingState,
         }).toEqual({
+          closedState: 'closed',
           loopEvents: ['reset'],
           outputValue: 1,
           postResetStatus: 0,
@@ -4687,6 +4757,55 @@ describe('network worker payload chapter', () => {
           resetState: 'reset',
           waitingState: 'waiting',
         });
+      });
+
+      it('returns from the shared worker loop when the host posts the closed status', () => {
+        // Arrange
+        const layout =
+          SHARED_INFERENCE_HOST_INTERNALS.resolveSharedInferenceBufferLayout(
+            1,
+            1,
+          );
+        const controlView = new Int32Array(
+          new SharedArrayBuffer(
+            Int32Array.BYTES_PER_ELEMENT * layout.controlElementCount,
+          ),
+        );
+        const dataView = new Float64Array(
+          new SharedArrayBuffer(
+            Float64Array.BYTES_PER_ELEMENT * layout.dataElementCount,
+          ),
+        );
+        const predictor = {
+          predict() {
+            return [1];
+          },
+          reset() {
+            return undefined;
+          },
+          strategy: 'transferable',
+        } as ReturnType<typeof createInferencePredictor>;
+        let waitCallCount = 0;
+
+        Atomics.store(
+          controlView,
+          layout.statusIndexes.status,
+          layout.statusValues.closed,
+        );
+
+        // Act
+        SHARED_INFERENCE_WORKER_INTERNALS.runSharedInferenceLoop(
+          controlView,
+          dataView,
+          predictor,
+          layout,
+          () => {
+            waitCallCount += 1;
+          },
+        );
+
+        // Assert
+        expect(waitCallCount).toBe(0);
       });
 
       it('uses shared worker message wrappers, browser registration, and exit helpers', () => {

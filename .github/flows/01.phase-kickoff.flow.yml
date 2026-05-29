@@ -10,7 +10,10 @@ description: >
   yet — normal at fresh session start). Selects the Plan Scout only when registration or roadmap
   placement is uncertain. Emits paste-ready step packets covering
   01-planning through 07-logging, with explicit skipped-step records
-  where a red, green, docs, or logging step adds no value.
+  where a red, green, docs, or logging step adds no value. Requires that
+  any previous phase already marked [DONE] has been compressed to a concise
+  coverage note in the tracker before the new phase step packets are authored
+  (phase-compression gate).
 
 triggers:
   - 'New phase objective approved and plan has no step packets yet'
@@ -22,6 +25,7 @@ gates:
   - 'plan-sync'
   - 'step-packet'
   - 'planning-output-contract'
+  - 'phase-compression'
 
 post-phase-fanout:
   - '02-researching'

@@ -1,10 +1,10 @@
 # NEAT Genesis EvoDevo: Predator/Prey Co-evolution Demo
 
-**Status:** [PLANNED]
+**Status:** [WIP]
 
-This plan defines the predator/prey co-evolutionary benchmark for [NEAT Genesis EvoDevo (NGE)](NEAT_Genesis_EvoDevo.md). It is the primary stress test for co-evolutionary dynamics, sensory arms race emergence, structural divergence under non-stationary selection pressure, and reproduction mode diversity — all rendered as a live web canvas simulation in the neon arcade aesthetic used across this project.
+This plan defines the predator/prey co-evolutionary benchmark for [NEAT Genesis EvoDevo (NGE)](completed/NEAT_Genesis_EvoDevo.md). It is the primary stress test for co-evolutionary dynamics, sensory arms race emergence, structural divergence under non-stationary selection pressure, and reproduction mode diversity — all rendered as a live web canvas simulation in the neon arcade aesthetic used across this project.
 
-This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md). If this plan conflicts with either upstream plan, the upstream plan wins.
+This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md). If this plan conflicts with either upstream plan, the upstream plan wins.
 
 ---
 
@@ -14,7 +14,7 @@ This is a benchmark-architecture plan, not an implementation-complete spec.
 
 - **In scope:** world design, two-population co-evolutionary structure, prey and predator sensory channels, coordination signal design, arms race observables, NGE feature mapping, canvas simulation spec, and acceptance criteria.
 - **Out of scope (for now):** exact physics constants and final reward weights.
-- **Authority rule:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md) remain authoritative.
+- **Authority rule:** [NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md) remain authoritative.
 
 ---
 
@@ -954,7 +954,7 @@ SCREAM_DURATION_TICKS = 30; // ticks scream persists after last visual contact
 
 **NGE prerequisites:**
 
-- [ ] NGE Phase G prerequisites met (co-evolutionary evaluation harness implemented).
+- [ ] NGE Phase G prerequisites met (co-evolutionary evaluation harness implemented). <!-- Phase G Step 04 landed `OpponentSnapshotPool` (rolling fixed-capacity opponent history via `addOpponentSnapshot`) and `runCollectiveEvaluationTick` as shared primitives. The two-population NEAT harness (independent gene pools, species tracking) is the remaining unimplemented prerequisite for this benchmark. -->
 - [ ] All Phase 0 computation motif primitives implemented.
 - [ ] Phase E reproduction modes (parthenogenesis, polyandric, sexual) implemented with `modeIsEvolvable` support.
 - [ ] Two-population NEAT harness implemented (independent gene pools, independent species tracking).
@@ -1004,3 +1004,112 @@ SCREAM_DURATION_TICKS = 30; // ticks scream persists after last visual contact
 - [ ] Rolling opponent snapshot verified — single-generation spike does not collapse opponent fitness.
 - [ ] 30+ fps confirmed in hybrid mode with 20+ prey + 10+ predators on display canvas.
 - [ ] Episode worker throughput scales with core count (benchmark on 4-core vs 8-core).
+
+---
+
+## Implementation Phases
+
+### Phase 1 — Predator/Prey Implementation [WIP]
+
+**Phase objective:** Author the seven-step implementation workflow for the Predator/Prey Co-evolution
+Demo and advance to the first active step.
+
+#### Step 01 — Planning packet [WIP]
+
+```yaml
+phase: '1'
+step: 1
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[WIP]'
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md'
+copy_paste: 'true'
+next_step: 'Step 02 — Research boundary mapping'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md
+```
+
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+
+**Step objective:** Packetize the full Predator/Prey implementation workflow into SDLC-numbered
+step packets (Steps 02-07) and confirm the smallest honest first implementation boundary.
+
+**Context the agent must know:**
+
+- This plan is downstream of `plans/completed/NEAT_Genesis_EvoDevo.md` (now fully closed through Phase G)
+  and `plans/completed/Memory_Optimization.md`. If this plan conflicts with either upstream, the
+  upstream plan wins.
+- The `src/neat/nge-collective/` core is available as a shared primitive providing `SharedField`,
+  `OpponentSnapshotPool`, `addOpponentSnapshot`, and `runCollectiveEvaluationTick`.
+- The remaining unimplemented prerequisite is the two-population NEAT harness (independent gene
+  pools, species tracking per population). This must be assessed honestly before any implementation
+  boundary is selected.
+- Do not begin serious implementation before the Readiness Checklist NGE prerequisites are met or
+  an explicit narrowed honest boundary (e.g., environment-only scaffolding) is selected.
+- This plan is a prerequisite for `plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md`; the maze
+  infrastructure (`examples/predator_prey/maze/`) will be reused there.
+- `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` is a peer plan (not a prerequisite for this
+  one) and remains [PLANNED].
+
+**Execution steps:**
+
+1. Re-read this plan's Scope, Readiness Checklist, Implementation Files, and Acceptance Criteria
+   sections to understand the current design intent.
+2. Assess which Readiness Checklist items are currently met, which are unmet, and whether an
+   honest narrow starting boundary (e.g., environment scaffolding only) can be selected before
+   all NGE prerequisites exist.
+3. Author step packets for Steps 02-07 (Research, Red Testing, Implementation, Green Testing,
+   Documentation, Logging) scoped to the selected honest boundary.
+4. Record the boundary decision, non-goals, and any deferred capability gaps in this plan.
+5. Advance to Step 02 only when the plan is self-contained for a fresh research session.
+
+**Stop conditions:**
+
+- **Done:** the plan records the selected honest boundary, step packets for Steps 02-07, and
+  the next active step (Step 02).
+- **Hold:** keep Step 01 [WIP] if the honest boundary cannot be determined without additional
+  research.
+- **Blocked:** a missing upstream prerequisite prevents any honest boundary selection; stop and
+  escalate to `00-helping`.
+- **Route-back:** no earlier step (this is the first step).
+
+**Required validation:**
+
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md`
+
+**Plan update requirement:** Update this plan with the selected boundary, authored step packets,
+non-goals, and the next active step before ending.
+
+**Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested
+`Copy-paste prompt` subsection.
+
+---
+
+## Validation gates
+
+Plan-sync gate for this plan's active step.
+
+### Latest validation evidence
+
+- 2026-05-29: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` → PASS (plan status `WIP`, Phase 1 Step 01 `[WIP]`, no errors, no warnings). Section added to satisfy MCP `IMPLEMENTATION_SECTION_PATTERN` lookahead requirement for workflow-MCP binding.
+
+## Handoff query
+
+```text
+Continue from the current repo state only. Do not rely on prior chat history.
+
+Current NGE workstream state:
+- plans/completed/NEAT_Genesis_EvoDevo.md Phases 0 through G are fully closed.
+- Active frontier: plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md Step 01 — Planning packet [WIP].
+- The src/neat/nge-collective/ shared-field and multi-agent evaluation core is implemented and at
+  100% owner-local runtime coverage. Primitives available: SharedField, OpponentSnapshotPool,
+  addOpponentSnapshot, runCollectiveEvaluationTick.
+- The remaining unimplemented prerequisite for this plan is the two-population NEAT harness
+  (independent gene pools, species tracking).
+- plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md is downstream of this plan and cannot start before
+  the maze infrastructure (examples/predator_prey/maze/) is implemented here.
+- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md is a peer plan (not a prerequisite for this one).
+
+Begin with 01-planning on Step 01. Keep the plan self-contained and fresh-session safe.
+```

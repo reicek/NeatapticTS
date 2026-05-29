@@ -256,7 +256,7 @@ function runSharedInferenceLoop(
     statusIndex: number,
     currentStatus: number,
   ) => void = defaultWaitForSharedStatusChange,
-): never {
+): void {
   while (true) {
     const loopState = handleSharedInferenceLoopStep(
       controlView,
@@ -264,6 +264,10 @@ function runSharedInferenceLoop(
       predictor,
       layout,
     );
+
+    if (loopState === 'closed') {
+      return;
+    }
 
     if (loopState !== 'waiting') {
       continue;
@@ -288,7 +292,7 @@ function handleSharedInferenceLoopStep(
   layout: ReturnType<
     typeof SHARED_INFERENCE_HOST_INTERNALS.resolveSharedInferenceBufferLayout
   >,
-): 'predicted' | 'reset' | 'waiting' {
+): 'closed' | 'predicted' | 'reset' | 'waiting' {
   const currentStatus = Atomics.load(controlView, layout.statusIndexes.status);
 
   if (currentStatus === layout.statusValues.inputReady) {
@@ -326,6 +330,10 @@ function handleSharedInferenceLoopStep(
     );
     Atomics.notify(controlView, layout.statusIndexes.status);
     return 'reset';
+  }
+
+  if (currentStatus === layout.statusValues.closed) {
+    return 'closed';
   }
 
   return 'waiting';

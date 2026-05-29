@@ -13,21 +13,35 @@ import { validateNetworkJsonOrThrow } from '../../architecture/network/serialize
 import { NETWORK_JSON_FORMAT_VERSION } from '../../architecture/network/serialize/network.serialize.utils.types';
 import type { ConnectionLike, GenomeLike } from '../compat/core/compat.types';
 import { NeatGenomeValidationError } from './genome.errors';
+import {
+  NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE,
+  NEAT_GENOME_EPISODIC_SLOT_EVICTION_POLICY_CATALOGUE,
+} from './genome.types';
 import type {
   GenomeMaterializationRuntimeHints,
   NeatGenome,
+  NeatGenomeComputationType,
   NeatGenomeCaptureOptions,
   NeatGenomeConnectionGene,
+  NeatGenomeEpisodicSlotEvictionPolicy,
   NeatGenomeExtensionValues,
+  NeatGenomeGatingRouterArchetypeDescriptor,
+  NeatGenomeGatingRouterMode,
   NeatGenomeGatedBlockDescriptor,
   NeatGenomeExtensions,
+  NeatGenomeModulatorBroadcasterArchetypeDescriptor,
+  NeatGenomeModulatorBroadcasterInputSourceSpec,
+  NeatGenomeModuleArchetypeDescriptor,
   NeatGenomeNodeGene,
   NeatGenomeNodeType,
   NeatGenomeRecurrentModuleDescriptor,
   NeatGenomeRecurrentModuleKind,
+  NeatGenomeResidualStreamDescriptor,
+  NeatGenomeSubstrateCoordinate,
   NeatGenomeValidationIssue,
   NeatGenomeValidationIssueCode,
   NeatGenomeValidationReport,
+  NeatGenomeWeightSharedCohortDescriptor,
 } from './genome.types';
 
 type RuntimeCompatibilitySource = GenomeLike & {
@@ -42,14 +56,138 @@ type GenomeCompatibilitySource = NeatGenome & {
   _compatInnovationMode?: 'require-explicit' | 'allow-fallback';
 };
 
+type NgePrimitiveActivationCoordinates = NeatGenomeSubstrateCoordinate;
+
+type MaterializedAttentionHeadPrimitiveModule = {
+  activate: (
+    inputValues: number[],
+    coordinates?: NgePrimitiveActivationCoordinates,
+  ) => number[];
+  archetypeId: string;
+  computationType: 'AttentionHead';
+  heads: number;
+  outputWidth: number;
+  parameterSchema: Record<string, unknown>;
+  receivesCoordinates: boolean;
+  residualStreamId?: string;
+  weightSharedCohortId?: string;
+};
+
+type MaterializedGatedRecurrentCellPrimitiveModule = {
+  activate: (
+    inputValues: number[],
+    coordinates?: NgePrimitiveActivationCoordinates,
+  ) => number[];
+  archetypeId: string;
+  clear: () => void;
+  computationType: 'GatedRecurrentCell';
+  decayRate: number;
+  hiddenDim: number;
+  parameterSchema: Record<string, unknown>;
+  receivesCoordinates: boolean;
+  residualStreamId?: string;
+  state: number[];
+  weightSharedCohortId?: string;
+};
+
+type MaterializedEpisodicSlotPrimitiveModule = {
+  activate: (
+    inputValues: number[],
+    coordinates?: NgePrimitiveActivationCoordinates,
+  ) => number[];
+  archetypeId: string;
+  computationType: 'EpisodicSlot';
+  evictionPolicy: NeatGenomeEpisodicSlotEvictionPolicy;
+  occupiedSlotCount: number;
+  parameterSchema: Record<string, unknown>;
+  receivesCoordinates: boolean;
+  residualStreamId?: string;
+  retrieveSlot: (
+    queryValues: number[],
+    coordinates?: NgePrimitiveActivationCoordinates,
+  ) => number[] | null;
+  slotCount: number;
+  slotStorage: Float32Array;
+  slotWidth: number;
+  weightSharedCohortId?: string;
+  writeSlot: (
+    activationValues: number[],
+    coordinates?: NgePrimitiveActivationCoordinates,
+  ) => boolean;
+};
+
+type MaterializedModulatorBroadcasterPrimitiveModule = {
+  activate: (
+    inputValues: number[],
+    coordinates?: NgePrimitiveActivationCoordinates,
+  ) => number[];
+  archetypeId: string;
+  broadcastRadius: number;
+  computationType: 'ModulatorBroadcaster';
+  costExempt: true;
+  inputSourceSpec: NeatGenomeModulatorBroadcasterInputSourceSpec;
+  isWithinBroadcastRadius: (
+    targetCoordinates: NgePrimitiveActivationCoordinates,
+  ) => boolean;
+  outputDimensionality: number;
+  position: NgePrimitiveActivationCoordinates;
+  residualStreamId?: string;
+  weightSharedCohortId?: string;
+};
+
+type MaterializedGatingRouterPrimitiveModule = {
+  activate: (
+    inputValues: number[],
+    coordinates?: NgePrimitiveActivationCoordinates,
+  ) => number[];
+  activationThreshold: number;
+  archetypeId: string;
+  candidateZone: string;
+  computationType: 'GatingRouter';
+  gatingMode: NeatGenomeGatingRouterMode['type'];
+  receivesCoordinates: boolean;
+  residualStreamId?: string;
+  topK: number;
+  weightSharedCohortId?: string;
+};
+
+type MaterializedNgePrimitiveModule =
+  | MaterializedAttentionHeadPrimitiveModule
+  | MaterializedGatedRecurrentCellPrimitiveModule
+  | MaterializedEpisodicSlotPrimitiveModule
+  | MaterializedModulatorBroadcasterPrimitiveModule
+  | MaterializedGatingRouterPrimitiveModule;
+
+type EpisodicSlotMatch = {
+  cosineSimilarity: number;
+  dotProduct: number;
+  slotIndex: number;
+};
+
+type RuntimeNetworkWithNgePrimitiveModules = Network & {
+  _ngePrimitiveModules?: MaterializedNgePrimitiveModule[];
+};
+
 const runtimeCompatibilityViewCache = new WeakMap<object, GenomeLike>();
 const genomeCompatibilityViewCache = new WeakMap<object, GenomeLike>();
 const NEAT_GENOME_EXTENSIONS_VERSION = 1;
 const NEUTRAL_CONNECTION_GAIN = 1;
 const NEUTRAL_NODE_RESPONSE = 1;
+const DEFAULT_EPISODIC_SLOT_COUNT = 1;
+const DEFAULT_EPISODIC_SLOT_EVICTION_POLICY: NeatGenomeEpisodicSlotEvictionPolicy =
+  'lru';
+const DEFAULT_GATING_ROUTER_ACTIVATION_THRESHOLD = 0.5;
+const EPISODIC_SLOT_NOVELTY_THRESHOLD = 0.999;
 const SUPPORTED_RECURRENT_MODULE_KINDS = new Set<NeatGenomeRecurrentModuleKind>(
   ['lstm', 'gru', 'narx-memory'],
 );
+const SUPPORTED_NGE_COMPUTATION_TYPES = new Set<NeatGenomeComputationType>(
+  NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE,
+);
+const SUPPORTED_EPISODIC_SLOT_EVICTION_POLICIES =
+  new Set<NeatGenomeEpisodicSlotEvictionPolicy>(
+    NEAT_GENOME_EPISODIC_SLOT_EVICTION_POLICY_CATALOGUE,
+  );
 
 /**
  * Convert one executable phenotype into the strict NEAT genome contract.
@@ -238,6 +376,12 @@ export function createNetworkFromGenome(
       materializedNetwork as Network & { _reenableProb?: number }
     )._reenableProb = disabledConnectionReenableProbability;
   }
+
+  applyNgePrimitiveModuleMaterialization(
+    materializedNetwork as RuntimeNetworkWithNgePrimitiveModules,
+    genome.extensions,
+    runtimeHints,
+  );
 
   return materializedNetwork;
 }
@@ -552,6 +696,776 @@ function readDisabledConnectionReenableProbability(
     Number.isFinite(disabledConnectionReenableProbability)
     ? disabledConnectionReenableProbability
     : undefined;
+}
+
+function applyNgePrimitiveModuleMaterialization(
+  runtimeNetwork: RuntimeNetworkWithNgePrimitiveModules,
+  extensions: NeatGenomeExtensions | undefined,
+  runtimeHints: GenomeMaterializationRuntimeHints,
+): void {
+  if (runtimeHints.ngeEnabled !== true) {
+    Reflect.deleteProperty(runtimeNetwork, '_ngePrimitiveModules');
+    return;
+  }
+
+  runtimeNetwork._ngePrimitiveModules = materializeNgePrimitiveModules(
+    readModuleArchetypes(extensions),
+  );
+}
+
+function readModuleArchetypes(
+  extensions: NeatGenomeExtensions | undefined,
+): NeatGenomeModuleArchetypeDescriptor[] {
+  const moduleArchetypes = (
+    extensions?.values as NeatGenomeExtensionValues | undefined
+  )?.moduleArchetypes;
+
+  return Array.isArray(moduleArchetypes) ? [...moduleArchetypes] : [];
+}
+
+function materializeNgePrimitiveModules(
+  moduleArchetypes: readonly NeatGenomeModuleArchetypeDescriptor[],
+): MaterializedNgePrimitiveModule[] {
+  return moduleArchetypes.reduce<MaterializedNgePrimitiveModule[]>(
+    (materializedPrimitiveModules, moduleArchetype) => {
+      switch (moduleArchetype.computationType) {
+        case 'AttentionHead':
+          materializedPrimitiveModules.push(
+            createAttentionHeadPrimitiveModule(moduleArchetype),
+          );
+          break;
+        case 'GatedRecurrentCell':
+          materializedPrimitiveModules.push(
+            createGatedRecurrentCellPrimitiveModule(moduleArchetype),
+          );
+          break;
+        case 'EpisodicSlot':
+          materializedPrimitiveModules.push(
+            createEpisodicSlotPrimitiveModule(moduleArchetype),
+          );
+          break;
+        case 'ModulatorBroadcaster':
+          materializedPrimitiveModules.push(
+            createModulatorBroadcasterPrimitiveModule(moduleArchetype),
+          );
+          break;
+        case 'GatingRouter':
+          materializedPrimitiveModules.push(
+            createGatingRouterPrimitiveModule(moduleArchetype),
+          );
+          break;
+        default:
+          break;
+      }
+
+      return materializedPrimitiveModules;
+    },
+    [],
+  );
+}
+
+function createAttentionHeadPrimitiveModule(
+  moduleArchetype: NeatGenomeModuleArchetypeDescriptor,
+): MaterializedAttentionHeadPrimitiveModule {
+  const parameterSchema = resolvePrimitiveParameterSchema(
+    moduleArchetype.parameterSchema,
+  );
+  const heads = Math.max(1, Math.trunc(Number(parameterSchema.heads) || 1));
+  const outputWidth = Math.max(
+    1,
+    Math.trunc(Number(parameterSchema.outputWidth) || 1),
+  );
+  const attentionHeadPrimitiveModule: MaterializedAttentionHeadPrimitiveModule =
+    {
+      activate: (
+        inputValues: number[],
+        coordinates?: NgePrimitiveActivationCoordinates,
+      ): number[] => {
+        const routedValues = routeAttentionCandidateValues(
+          resolvePrimitiveInputValues(
+            inputValues,
+            attentionHeadPrimitiveModule.receivesCoordinates,
+            coordinates,
+          ),
+          attentionHeadPrimitiveModule.heads,
+        );
+
+        return Array.from(
+          { length: attentionHeadPrimitiveModule.outputWidth },
+          (_unusedValue, outputIndex) =>
+            routedValues[outputIndex % routedValues.length],
+        );
+      },
+      archetypeId: moduleArchetype.archetypeId,
+      computationType: 'AttentionHead',
+      heads,
+      outputWidth,
+      parameterSchema,
+      receivesCoordinates: moduleArchetype.receivesCoordinates === true,
+      ...(typeof moduleArchetype.residualStreamId === 'string'
+        ? { residualStreamId: moduleArchetype.residualStreamId }
+        : {}),
+      ...(typeof moduleArchetype.weightSharedCohortId === 'string'
+        ? { weightSharedCohortId: moduleArchetype.weightSharedCohortId }
+        : {}),
+    };
+
+  return attentionHeadPrimitiveModule;
+}
+
+function createGatedRecurrentCellPrimitiveModule(
+  moduleArchetype: NeatGenomeModuleArchetypeDescriptor,
+): MaterializedGatedRecurrentCellPrimitiveModule {
+  const parameterSchema = resolvePrimitiveParameterSchema(
+    moduleArchetype.parameterSchema,
+  );
+  const hiddenDim = Math.max(
+    1,
+    Math.trunc(Number(parameterSchema.hiddenDim) || 1),
+  );
+  const decayRate = Math.min(
+    1,
+    Math.max(0, Number(parameterSchema.decayRate) || 0.5),
+  );
+  const gatedRecurrentCellPrimitiveModule: MaterializedGatedRecurrentCellPrimitiveModule =
+    {
+      activate: (
+        inputValues: number[],
+        coordinates?: NgePrimitiveActivationCoordinates,
+      ): number[] => {
+        const primitiveInputValues = resolvePrimitiveInputValues(
+          inputValues,
+          gatedRecurrentCellPrimitiveModule.receivesCoordinates,
+          coordinates,
+        );
+
+        gatedRecurrentCellPrimitiveModule.state = Array.from(
+          { length: gatedRecurrentCellPrimitiveModule.hiddenDim },
+          (_unusedValue, stateIndex) => {
+            const previousStateValue =
+              gatedRecurrentCellPrimitiveModule.state[stateIndex];
+            const currentInputValue =
+              primitiveInputValues[stateIndex % primitiveInputValues.length];
+            const gateValue =
+              1 / (1 + Math.exp(-(currentInputValue + previousStateValue)));
+
+            return Math.tanh(
+              previousStateValue *
+                gatedRecurrentCellPrimitiveModule.decayRate *
+                gateValue +
+                Math.tanh(currentInputValue),
+            );
+          },
+        );
+
+        return [...gatedRecurrentCellPrimitiveModule.state];
+      },
+      archetypeId: moduleArchetype.archetypeId,
+      clear: (): void => {
+        gatedRecurrentCellPrimitiveModule.state = Array(
+          gatedRecurrentCellPrimitiveModule.hiddenDim,
+        ).fill(0);
+      },
+      computationType: 'GatedRecurrentCell',
+      decayRate,
+      hiddenDim,
+      parameterSchema,
+      receivesCoordinates: moduleArchetype.receivesCoordinates === true,
+      ...(typeof moduleArchetype.residualStreamId === 'string'
+        ? { residualStreamId: moduleArchetype.residualStreamId }
+        : {}),
+      state: Array(hiddenDim).fill(0),
+      ...(typeof moduleArchetype.weightSharedCohortId === 'string'
+        ? { weightSharedCohortId: moduleArchetype.weightSharedCohortId }
+        : {}),
+    };
+
+  return gatedRecurrentCellPrimitiveModule;
+}
+
+function createEpisodicSlotPrimitiveModule(
+  moduleArchetype: NeatGenomeModuleArchetypeDescriptor,
+): MaterializedEpisodicSlotPrimitiveModule {
+  const parameterSchema = resolvePrimitiveParameterSchema(
+    moduleArchetype.parameterSchema,
+  );
+  const slotCount = Math.max(
+    DEFAULT_EPISODIC_SLOT_COUNT,
+    Math.trunc(
+      Number(parameterSchema.slotCount) || DEFAULT_EPISODIC_SLOT_COUNT,
+    ),
+  );
+  const evictionPolicy = resolveEpisodicSlotEvictionPolicy(
+    parameterSchema.evictionPolicy,
+  );
+  const slotAccessSequence = new Uint32Array(slotCount);
+  const slotOccupancy = new Uint8Array(slotCount);
+  const slotWriteSequence = new Uint32Array(slotCount);
+  let sequenceValue = 0;
+
+  const episodicSlotPrimitiveModule: MaterializedEpisodicSlotPrimitiveModule = {
+    activate: (
+      inputValues: number[],
+      coordinates?: NgePrimitiveActivationCoordinates,
+    ): number[] =>
+      episodicSlotPrimitiveModule.retrieveSlot(inputValues, coordinates) ?? [],
+    archetypeId: moduleArchetype.archetypeId,
+    computationType: 'EpisodicSlot',
+    evictionPolicy,
+    occupiedSlotCount: 0,
+    parameterSchema,
+    receivesCoordinates: moduleArchetype.receivesCoordinates === true,
+    retrieveSlot: (
+      queryValues: number[],
+      coordinates?: NgePrimitiveActivationCoordinates,
+    ): number[] | null => {
+      if (
+        episodicSlotPrimitiveModule.occupiedSlotCount === 0 ||
+        episodicSlotPrimitiveModule.slotWidth === 0
+      ) {
+        return null;
+      }
+
+      const resolvedQueryVector = resolveEpisodicSlotVector(
+        resolvePrimitiveInputValues(
+          queryValues,
+          episodicSlotPrimitiveModule.receivesCoordinates,
+          coordinates,
+        ),
+        episodicSlotPrimitiveModule.slotWidth,
+      );
+      const bestMatch = findBestMatchingEpisodicSlot(
+        episodicSlotPrimitiveModule.slotStorage,
+        slotOccupancy,
+        episodicSlotPrimitiveModule.slotWidth,
+        resolvedQueryVector,
+      ) as EpisodicSlotMatch;
+
+      sequenceValue += 1;
+      slotAccessSequence[bestMatch.slotIndex] = sequenceValue;
+
+      return Array.from(
+        readEpisodicSlotVector(
+          episodicSlotPrimitiveModule.slotStorage,
+          episodicSlotPrimitiveModule.slotWidth,
+          bestMatch.slotIndex,
+        ),
+      );
+    },
+    ...(typeof moduleArchetype.residualStreamId === 'string'
+      ? { residualStreamId: moduleArchetype.residualStreamId }
+      : {}),
+    slotCount,
+    slotStorage: new Float32Array(0),
+    slotWidth: 0,
+    ...(typeof moduleArchetype.weightSharedCohortId === 'string'
+      ? { weightSharedCohortId: moduleArchetype.weightSharedCohortId }
+      : {}),
+    writeSlot: (
+      activationValues: number[],
+      coordinates?: NgePrimitiveActivationCoordinates,
+    ): boolean => {
+      const primitiveInputValues = resolvePrimitiveInputValues(
+        activationValues,
+        episodicSlotPrimitiveModule.receivesCoordinates,
+        coordinates,
+      );
+
+      if (primitiveInputValues.length === 0) {
+        return false;
+      }
+
+      ensureEpisodicSlotStorageWidth(
+        episodicSlotPrimitiveModule,
+        primitiveInputValues.length,
+      );
+
+      const resolvedSlotVector = resolveEpisodicSlotVector(
+        primitiveInputValues,
+        episodicSlotPrimitiveModule.slotWidth,
+      );
+      const bestMatch = findBestMatchingEpisodicSlot(
+        episodicSlotPrimitiveModule.slotStorage,
+        slotOccupancy,
+        episodicSlotPrimitiveModule.slotWidth,
+        resolvedSlotVector,
+      );
+
+      if (
+        bestMatch &&
+        bestMatch.cosineSimilarity >= EPISODIC_SLOT_NOVELTY_THRESHOLD
+      ) {
+        sequenceValue += 1;
+        slotAccessSequence[bestMatch.slotIndex] = sequenceValue;
+        return false;
+      }
+
+      const targetSlotIndex = selectEpisodicSlotWriteIndex({
+        evictionPolicy: episodicSlotPrimitiveModule.evictionPolicy,
+        occupiedSlotCount: episodicSlotPrimitiveModule.occupiedSlotCount,
+        slotAccessSequence,
+        slotCount: episodicSlotPrimitiveModule.slotCount,
+        slotOccupancy,
+        slotWriteSequence,
+      });
+
+      writeEpisodicSlotVector(
+        episodicSlotPrimitiveModule.slotStorage,
+        episodicSlotPrimitiveModule.slotWidth,
+        targetSlotIndex,
+        resolvedSlotVector,
+      );
+
+      if (slotOccupancy[targetSlotIndex] !== 1) {
+        slotOccupancy[targetSlotIndex] = 1;
+        episodicSlotPrimitiveModule.occupiedSlotCount += 1;
+      }
+
+      sequenceValue += 1;
+      slotAccessSequence[targetSlotIndex] = sequenceValue;
+      slotWriteSequence[targetSlotIndex] = sequenceValue;
+
+      return true;
+    },
+  };
+
+  return episodicSlotPrimitiveModule;
+}
+
+function createModulatorBroadcasterPrimitiveModule(
+  moduleArchetype: NeatGenomeModuleArchetypeDescriptor,
+): MaterializedModulatorBroadcasterPrimitiveModule {
+  const modulatorBroadcasterArchetype =
+    moduleArchetype as NeatGenomeModulatorBroadcasterArchetypeDescriptor;
+  const broadcastRadius = Math.max(
+    0,
+    modulatorBroadcasterArchetype.broadcastRadius,
+  );
+  const inputSourceSpec = structuredClone(
+    modulatorBroadcasterArchetype.inputSourceSpec,
+  );
+  const outputDimensionality = Math.max(
+    1,
+    Math.trunc(modulatorBroadcasterArchetype.outputDimensionality),
+  );
+  const position = [
+    ...modulatorBroadcasterArchetype.position,
+  ] as NgePrimitiveActivationCoordinates;
+  const positionMean =
+    position.reduce(
+      (coordinateSum, coordinateValue) => coordinateSum + coordinateValue,
+      0,
+    ) / position.length;
+  const radiusNormalizer = broadcastRadius + 1;
+  const modulatorBroadcasterPrimitiveModule: MaterializedModulatorBroadcasterPrimitiveModule =
+    {
+      activate: (inputValues: number[]): number[] => {
+        const normalizedInputValues = resolveModulatorBroadcasterInputValues(
+          inputValues,
+          inputSourceSpec.dimensionality,
+        );
+
+        return Array.from(
+          { length: outputDimensionality },
+          (_unusedValue, outputIndex) => {
+            const inputValue =
+              normalizedInputValues[outputIndex % normalizedInputValues.length];
+            const axisBias =
+              position[outputIndex % position.length] / radiusNormalizer;
+
+            return Math.tanh(inputValue + positionMean + axisBias);
+          },
+        );
+      },
+      archetypeId: moduleArchetype.archetypeId,
+      broadcastRadius,
+      computationType: 'ModulatorBroadcaster',
+      costExempt: true,
+      inputSourceSpec,
+      isWithinBroadcastRadius: (
+        targetCoordinates: NgePrimitiveActivationCoordinates,
+      ): boolean =>
+        calculateSquaredCoordinateDistance(position, targetCoordinates) <=
+        broadcastRadius * broadcastRadius,
+      outputDimensionality,
+      position,
+      ...(typeof moduleArchetype.residualStreamId === 'string'
+        ? { residualStreamId: moduleArchetype.residualStreamId }
+        : {}),
+      ...(typeof moduleArchetype.weightSharedCohortId === 'string'
+        ? { weightSharedCohortId: moduleArchetype.weightSharedCohortId }
+        : {}),
+    };
+
+  return modulatorBroadcasterPrimitiveModule;
+}
+
+function createGatingRouterPrimitiveModule(
+  moduleArchetype: NeatGenomeModuleArchetypeDescriptor,
+): MaterializedGatingRouterPrimitiveModule {
+  const gatingRouterArchetype =
+    moduleArchetype as NeatGenomeGatingRouterArchetypeDescriptor;
+  const topK = Math.max(1, Math.trunc(gatingRouterArchetype.topK));
+  const resolvedMode = resolveGatingRouterMode(
+    gatingRouterArchetype.gatingMode,
+  );
+  const gatingRouterPrimitiveModule: MaterializedGatingRouterPrimitiveModule = {
+    activate: (
+      inputValues: number[],
+      coordinates?: NgePrimitiveActivationCoordinates,
+    ): number[] => {
+      const primitiveInputValues = resolvePrimitiveInputValues(
+        inputValues,
+        gatingRouterPrimitiveModule.receivesCoordinates,
+        coordinates,
+      );
+      const selectedCandidateIndices = new Set(
+        selectGatingRouterCandidateIndices({
+          activationThreshold: gatingRouterPrimitiveModule.activationThreshold,
+          gatingMode: gatingRouterPrimitiveModule.gatingMode,
+          inputValues: primitiveInputValues,
+          topK: gatingRouterPrimitiveModule.topK,
+        }),
+      );
+
+      return primitiveInputValues.map((activationValue, candidateIndex) =>
+        selectedCandidateIndices.has(candidateIndex) ? activationValue : 0,
+      );
+    },
+    activationThreshold: resolvedMode.activationThreshold,
+    archetypeId: moduleArchetype.archetypeId,
+    candidateZone: gatingRouterArchetype.candidateZone,
+    computationType: 'GatingRouter',
+    gatingMode: resolvedMode.gatingMode,
+    receivesCoordinates: moduleArchetype.receivesCoordinates === true,
+    ...(typeof moduleArchetype.residualStreamId === 'string'
+      ? { residualStreamId: moduleArchetype.residualStreamId }
+      : {}),
+    topK,
+    ...(typeof moduleArchetype.weightSharedCohortId === 'string'
+      ? { weightSharedCohortId: moduleArchetype.weightSharedCohortId }
+      : {}),
+  };
+
+  return gatingRouterPrimitiveModule;
+}
+
+function resolvePrimitiveParameterSchema(
+  parameterSchema: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  return isPlainObjectRecord(parameterSchema)
+    ? structuredClone(parameterSchema)
+    : {};
+}
+
+function resolveGatingRouterMode(
+  gatingMode: NeatGenomeGatingRouterMode | undefined,
+): {
+  activationThreshold: number;
+  gatingMode: NeatGenomeGatingRouterMode['type'];
+} {
+  if (gatingMode?.type === 'threshold') {
+    return {
+      activationThreshold: gatingMode.activationThreshold,
+      gatingMode: 'threshold',
+    };
+  }
+
+  return {
+    activationThreshold: DEFAULT_GATING_ROUTER_ACTIVATION_THRESHOLD,
+    gatingMode: 'topK',
+  };
+}
+
+function selectGatingRouterCandidateIndices(context: {
+  activationThreshold: number;
+  gatingMode: NeatGenomeGatingRouterMode['type'];
+  inputValues: number[];
+  topK: number;
+}): number[] {
+  return context.inputValues
+    .map((activationValue, candidateIndex) => ({
+      activationValue,
+      candidateIndex,
+    }))
+    .filter(
+      (candidate) =>
+        context.gatingMode !== 'threshold' ||
+        candidate.activationValue >= context.activationThreshold,
+    )
+    .toSorted(
+      (leftCandidate, rightCandidate) =>
+        rightCandidate.activationValue - leftCandidate.activationValue ||
+        leftCandidate.candidateIndex - rightCandidate.candidateIndex,
+    )
+    .slice(0, context.topK)
+    .map((candidate) => candidate.candidateIndex);
+}
+
+function resolveModulatorBroadcasterInputValues(
+  inputValues: number[],
+  inputDimensionality: number,
+): number[] {
+  const resolvedInputDimensionality = Math.max(
+    1,
+    Math.trunc(inputDimensionality),
+  );
+
+  return Array.from(
+    { length: resolvedInputDimensionality },
+    (_unusedValue, inputIndex) => inputValues[inputIndex] ?? 0,
+  );
+}
+
+function calculateSquaredCoordinateDistance(
+  sourceCoordinates: NgePrimitiveActivationCoordinates,
+  targetCoordinates: NgePrimitiveActivationCoordinates,
+): number {
+  return sourceCoordinates.reduce(
+    (squaredDistance, coordinateValue, coordinateIndex) => {
+      const axisDelta = coordinateValue - targetCoordinates[coordinateIndex];
+
+      return squaredDistance + axisDelta * axisDelta;
+    },
+    0,
+  );
+}
+
+function resolvePrimitiveInputValues(
+  inputValues: number[],
+  receivesCoordinates: boolean,
+  coordinates?: NgePrimitiveActivationCoordinates,
+): number[] {
+  return [
+    ...inputValues,
+    ...(receivesCoordinates ? [...(coordinates ?? [])] : []),
+  ];
+}
+
+function resolveEpisodicSlotEvictionPolicy(
+  evictionPolicyValue: unknown,
+): NeatGenomeEpisodicSlotEvictionPolicy {
+  return typeof evictionPolicyValue === 'string' &&
+    SUPPORTED_EPISODIC_SLOT_EVICTION_POLICIES.has(
+      evictionPolicyValue as NeatGenomeEpisodicSlotEvictionPolicy,
+    )
+    ? (evictionPolicyValue as NeatGenomeEpisodicSlotEvictionPolicy)
+    : DEFAULT_EPISODIC_SLOT_EVICTION_POLICY;
+}
+
+function ensureEpisodicSlotStorageWidth(
+  episodicSlotPrimitiveModule: MaterializedEpisodicSlotPrimitiveModule,
+  inputWidth: number,
+): void {
+  if (episodicSlotPrimitiveModule.slotWidth !== 0 || inputWidth <= 0) {
+    return;
+  }
+
+  episodicSlotPrimitiveModule.slotWidth = inputWidth;
+  episodicSlotPrimitiveModule.slotStorage = new Float32Array(
+    episodicSlotPrimitiveModule.slotCount * inputWidth,
+  );
+}
+
+function resolveEpisodicSlotVector(
+  candidateValues: number[],
+  slotWidth: number,
+): Float32Array {
+  const alignedValues = new Float32Array(slotWidth);
+  alignedValues.set(candidateValues.slice(0, slotWidth));
+  return alignedValues;
+}
+
+function findBestMatchingEpisodicSlot(
+  slotStorage: Float32Array,
+  slotOccupancy: Uint8Array,
+  slotWidth: number,
+  queryVector: Float32Array,
+): EpisodicSlotMatch | undefined {
+  let bestMatch: EpisodicSlotMatch | undefined;
+
+  for (let slotIndex = 0; slotIndex < slotOccupancy.length; slotIndex++) {
+    if (slotOccupancy[slotIndex] !== 1) {
+      continue;
+    }
+
+    const storedVector = readEpisodicSlotVector(
+      slotStorage,
+      slotWidth,
+      slotIndex,
+    );
+    const dotProduct = computeVectorDotProduct(queryVector, storedVector);
+    const cosineSimilarity = computeVectorCosineSimilarity(
+      queryVector,
+      storedVector,
+    );
+
+    if (
+      shouldReplaceBestEpisodicSlotMatch(
+        bestMatch,
+        dotProduct,
+        cosineSimilarity,
+        slotIndex,
+      )
+    ) {
+      bestMatch = {
+        cosineSimilarity,
+        dotProduct,
+        slotIndex,
+      };
+    }
+  }
+
+  return bestMatch;
+}
+
+function readEpisodicSlotVector(
+  slotStorage: Float32Array,
+  slotWidth: number,
+  slotIndex: number,
+): Float32Array {
+  const slotStartIndex = slotIndex * slotWidth;
+  return slotStorage.subarray(slotStartIndex, slotStartIndex + slotWidth);
+}
+
+function computeVectorDotProduct(
+  leftValues: ArrayLike<number>,
+  rightValues: ArrayLike<number>,
+): number {
+  let dotProduct = 0;
+
+  for (let valueIndex = 0; valueIndex < leftValues.length; valueIndex++) {
+    dotProduct += leftValues[valueIndex] * rightValues[valueIndex];
+  }
+
+  return dotProduct;
+}
+
+function computeVectorCosineSimilarity(
+  leftValues: ArrayLike<number>,
+  rightValues: ArrayLike<number>,
+): number {
+  let leftMagnitudeSquared = 0;
+  let rightMagnitudeSquared = 0;
+
+  for (let valueIndex = 0; valueIndex < leftValues.length; valueIndex++) {
+    leftMagnitudeSquared += leftValues[valueIndex] ** 2;
+    rightMagnitudeSquared += rightValues[valueIndex] ** 2;
+  }
+
+  if (leftMagnitudeSquared === 0 && rightMagnitudeSquared === 0) {
+    return 1;
+  }
+
+  if (leftMagnitudeSquared === 0 || rightMagnitudeSquared === 0) {
+    return 0;
+  }
+
+  return (
+    computeVectorDotProduct(leftValues, rightValues) /
+    Math.sqrt(leftMagnitudeSquared * rightMagnitudeSquared)
+  );
+}
+
+function shouldReplaceBestEpisodicSlotMatch(
+  bestMatch: EpisodicSlotMatch | undefined,
+  dotProduct: number,
+  cosineSimilarity: number,
+  slotIndex: number,
+): boolean {
+  if (!bestMatch) {
+    return true;
+  }
+
+  if (dotProduct !== bestMatch.dotProduct) {
+    return dotProduct > bestMatch.dotProduct;
+  }
+
+  if (cosineSimilarity !== bestMatch.cosineSimilarity) {
+    return cosineSimilarity > bestMatch.cosineSimilarity;
+  }
+
+  return slotIndex < bestMatch.slotIndex;
+}
+
+function selectEpisodicSlotWriteIndex(context: {
+  evictionPolicy: NeatGenomeEpisodicSlotEvictionPolicy;
+  occupiedSlotCount: number;
+  slotAccessSequence: Uint32Array;
+  slotCount: number;
+  slotOccupancy: Uint8Array;
+  slotWriteSequence: Uint32Array;
+}): number {
+  if (context.occupiedSlotCount < context.slotCount) {
+    return findFirstEmptyEpisodicSlotIndex(context.slotOccupancy);
+  }
+
+  return context.evictionPolicy === 'fifo'
+    ? findOldestEpisodicSlotIndex(context.slotWriteSequence)
+    : findOldestEpisodicSlotIndex(context.slotAccessSequence);
+}
+
+function findFirstEmptyEpisodicSlotIndex(slotOccupancy: Uint8Array): number {
+  for (let slotIndex = 0; slotIndex < slotOccupancy.length; slotIndex++) {
+    if (slotOccupancy[slotIndex] !== 1) {
+      return slotIndex;
+    }
+  }
+
+  return 0;
+}
+
+function findOldestEpisodicSlotIndex(sequenceValues: Uint32Array): number {
+  let selectedIndex = 0;
+
+  for (
+    let sequenceIndex = 1;
+    sequenceIndex < sequenceValues.length;
+    sequenceIndex++
+  ) {
+    const selectedSequenceValue = sequenceValues[selectedIndex];
+    const candidateSequenceValue = sequenceValues[sequenceIndex];
+
+    if (candidateSequenceValue < selectedSequenceValue) {
+      selectedIndex = sequenceIndex;
+    }
+  }
+
+  return selectedIndex;
+}
+
+function writeEpisodicSlotVector(
+  slotStorage: Float32Array,
+  slotWidth: number,
+  slotIndex: number,
+  slotVector: Float32Array,
+): void {
+  const slotStartIndex = slotIndex * slotWidth;
+  slotStorage.fill(0, slotStartIndex, slotStartIndex + slotWidth);
+  slotStorage.set(slotVector.subarray(0, slotWidth), slotStartIndex);
+}
+
+function routeAttentionCandidateValues(
+  candidateValues: number[],
+  heads: number,
+): number[] {
+  return candidateValues.map(
+    (candidateValue, candidateIndex, allCandidates) => {
+      const headWidth = Math.max(1, Math.ceil(allCandidates.length / heads));
+      const groupStartIndex =
+        Math.floor(candidateIndex / headWidth) * headWidth;
+      const groupCandidates = allCandidates.slice(
+        groupStartIndex,
+        groupStartIndex + headWidth,
+      );
+      const groupDenominator = groupCandidates.reduce(
+        (sum, groupCandidateValue) => sum + Math.exp(groupCandidateValue),
+        0,
+      );
+
+      return candidateValue * (Math.exp(candidateValue) / groupDenominator);
+    },
+  );
 }
 
 function readRuntimeDisabledConnectionReenableProbability(
@@ -909,6 +1823,22 @@ function validateExtensions(
     genome.connectionGenes,
     issues,
   );
+
+  const knownResidualStreamIds = validateResidualStreamExtension(
+    (extensions.values as NeatGenomeExtensionValues).residualStreams,
+    issues,
+  );
+  const knownWeightSharedCohortIds = validateWeightSharedCohortExtension(
+    (extensions.values as NeatGenomeExtensionValues).weightSharedCohorts,
+    issues,
+  );
+
+  validateModuleArchetypeExtension(
+    (extensions.values as NeatGenomeExtensionValues).moduleArchetypes,
+    knownResidualStreamIds,
+    knownWeightSharedCohortIds,
+    issues,
+  );
 }
 
 function validateConnectionGainExtension(
@@ -1230,6 +2160,309 @@ function isValidGatedBlockDescriptor(
       gaterGeneIdSet.has(matchedConnectionGene.gaterGeneId)
     );
   });
+}
+
+function validateResidualStreamExtension(
+  residualStreams: NeatGenomeExtensionValues['residualStreams'] | undefined,
+  issues: NeatGenomeValidationIssue[],
+): Set<string> {
+  const knownResidualStreamIds = new Set<string>();
+
+  if (typeof residualStreams === 'undefined') {
+    return knownResidualStreamIds;
+  }
+
+  if (!Array.isArray(residualStreams)) {
+    issues.push(
+      createIssue(
+        'invalid-residual-stream-extension',
+        'extensions.values.residualStreams',
+        'Residual-stream extensions must be stored as one array of supported stream descriptors.',
+      ),
+    );
+    return knownResidualStreamIds;
+  }
+
+  residualStreams.forEach((residualStream, streamIndex) => {
+    if (!isValidResidualStreamDescriptor(residualStream)) {
+      issues.push(
+        createIssue(
+          'invalid-residual-stream-extension',
+          `extensions.values.residualStreams[${streamIndex}]`,
+          'Residual-stream extensions must declare one stable stream id and one positive integer width.',
+          { streamIndex },
+        ),
+      );
+      return;
+    }
+
+    knownResidualStreamIds.add(residualStream.streamId);
+  });
+
+  return knownResidualStreamIds;
+}
+
+function validateWeightSharedCohortExtension(
+  weightSharedCohorts:
+    | NeatGenomeExtensionValues['weightSharedCohorts']
+    | undefined,
+  issues: NeatGenomeValidationIssue[],
+): Set<string> {
+  const knownWeightSharedCohortIds = new Set<string>();
+
+  if (typeof weightSharedCohorts === 'undefined') {
+    return knownWeightSharedCohortIds;
+  }
+
+  if (!Array.isArray(weightSharedCohorts)) {
+    issues.push(
+      createIssue(
+        'invalid-weight-shared-cohort-extension',
+        'extensions.values.weightSharedCohorts',
+        'Weight-shared cohort extensions must be stored as one array of supported cohort descriptors.',
+      ),
+    );
+    return knownWeightSharedCohortIds;
+  }
+
+  weightSharedCohorts.forEach((weightSharedCohort, cohortIndex) => {
+    if (!isValidWeightSharedCohortDescriptor(weightSharedCohort)) {
+      issues.push(
+        createIssue(
+          'invalid-weight-shared-cohort-extension',
+          `extensions.values.weightSharedCohorts[${cohortIndex}]`,
+          'Weight-shared cohort extensions must declare one stable cohort id and an optional plain-object shared parameter schema.',
+          { cohortIndex },
+        ),
+      );
+      return;
+    }
+
+    knownWeightSharedCohortIds.add(weightSharedCohort.cohortId);
+  });
+
+  return knownWeightSharedCohortIds;
+}
+
+function validateModuleArchetypeExtension(
+  moduleArchetypes: NeatGenomeExtensionValues['moduleArchetypes'] | undefined,
+  knownResidualStreamIds: Set<string>,
+  knownWeightSharedCohortIds: Set<string>,
+  issues: NeatGenomeValidationIssue[],
+): void {
+  if (typeof moduleArchetypes === 'undefined') {
+    return;
+  }
+
+  if (!Array.isArray(moduleArchetypes)) {
+    issues.push(
+      createIssue(
+        'invalid-module-archetype-extension',
+        'extensions.values.moduleArchetypes',
+        'Module-archetype extensions must be stored as one array of supported archetype descriptors.',
+      ),
+    );
+    return;
+  }
+
+  moduleArchetypes.forEach((moduleArchetype, archetypeIndex) => {
+    if (
+      !isValidModuleArchetypeDescriptor(
+        moduleArchetype,
+        knownResidualStreamIds,
+        knownWeightSharedCohortIds,
+      )
+    ) {
+      issues.push(
+        createIssue(
+          'invalid-module-archetype-extension',
+          `extensions.values.moduleArchetypes[${archetypeIndex}]`,
+          'Module-archetype extensions must declare one stable archetype id, a supported computationType, optional plain-object parameter schema, optional boolean coordinate injection, only known residual-stream or weight-shared cohort references, and any ModulatorBroadcaster or GatingRouter entries must also provide their required governance fields.',
+          { archetypeIndex },
+        ),
+      );
+    }
+  });
+}
+
+function isValidResidualStreamDescriptor(
+  residualStream: unknown,
+): residualStream is NeatGenomeResidualStreamDescriptor {
+  if (!isPlainObjectRecord(residualStream)) {
+    return false;
+  }
+
+  const streamId = residualStream.streamId;
+  const width = residualStream.width;
+
+  return (
+    typeof streamId === 'string' &&
+    streamId.length > 0 &&
+    typeof width === 'number' &&
+    Number.isInteger(width) &&
+    width > 0
+  );
+}
+
+function isValidWeightSharedCohortDescriptor(
+  weightSharedCohort: unknown,
+): weightSharedCohort is NeatGenomeWeightSharedCohortDescriptor {
+  if (!isPlainObjectRecord(weightSharedCohort)) {
+    return false;
+  }
+
+  const cohortId = weightSharedCohort.cohortId;
+  const sharedParameterSchema = weightSharedCohort.sharedParameterSchema;
+
+  return (
+    typeof cohortId === 'string' &&
+    cohortId.length > 0 &&
+    (typeof sharedParameterSchema === 'undefined' ||
+      isPlainObjectRecord(sharedParameterSchema))
+  );
+}
+
+function isValidModuleArchetypeDescriptor(
+  moduleArchetype: unknown,
+  knownResidualStreamIds: Set<string>,
+  knownWeightSharedCohortIds: Set<string>,
+): moduleArchetype is NeatGenomeModuleArchetypeDescriptor {
+  if (!isPlainObjectRecord(moduleArchetype)) {
+    return false;
+  }
+
+  if (
+    !hasValidModuleArchetypeBaseFields(
+      moduleArchetype,
+      knownResidualStreamIds,
+      knownWeightSharedCohortIds,
+    )
+  ) {
+    return false;
+  }
+
+  if (moduleArchetype.computationType === 'ModulatorBroadcaster') {
+    return hasValidModulatorBroadcasterGovernance(moduleArchetype);
+  }
+
+  if (moduleArchetype.computationType === 'GatingRouter') {
+    return hasValidGatingRouterGovernance(moduleArchetype);
+  }
+
+  return true;
+}
+
+function hasValidModuleArchetypeBaseFields(
+  moduleArchetype: Record<string, unknown>,
+  knownResidualStreamIds: Set<string>,
+  knownWeightSharedCohortIds: Set<string>,
+): boolean {
+  const archetypeId = moduleArchetype.archetypeId;
+  const computationType = moduleArchetype.computationType;
+  const parameterSchema = moduleArchetype.parameterSchema;
+  const receivesCoordinates = moduleArchetype.receivesCoordinates;
+  const residualStreamId = moduleArchetype.residualStreamId;
+  const weightSharedCohortId = moduleArchetype.weightSharedCohortId;
+
+  return (
+    typeof archetypeId === 'string' &&
+    archetypeId.length > 0 &&
+    typeof computationType === 'string' &&
+    SUPPORTED_NGE_COMPUTATION_TYPES.has(
+      computationType as NeatGenomeComputationType,
+    ) &&
+    (typeof parameterSchema === 'undefined' ||
+      isPlainObjectRecord(parameterSchema)) &&
+    (typeof receivesCoordinates === 'undefined' ||
+      typeof receivesCoordinates === 'boolean') &&
+    (typeof residualStreamId === 'undefined' ||
+      (typeof residualStreamId === 'string' &&
+        residualStreamId.length > 0 &&
+        knownResidualStreamIds.has(residualStreamId))) &&
+    (typeof weightSharedCohortId === 'undefined' ||
+      (typeof weightSharedCohortId === 'string' &&
+        weightSharedCohortId.length > 0 &&
+        knownWeightSharedCohortIds.has(weightSharedCohortId)))
+  );
+}
+
+function hasValidModulatorBroadcasterGovernance(
+  moduleArchetype: Record<string, unknown>,
+): boolean {
+  const position = moduleArchetype.position;
+  const broadcastRadius = moduleArchetype.broadcastRadius;
+  const inputSourceSpec = moduleArchetype.inputSourceSpec;
+  const outputDimensionality = moduleArchetype.outputDimensionality;
+
+  return (
+    isValidSubstrateCoordinate(position) &&
+    typeof broadcastRadius === 'number' &&
+    Number.isFinite(broadcastRadius) &&
+    broadcastRadius >= 0 &&
+    isValidModulatorBroadcasterInputSourceSpec(inputSourceSpec) &&
+    typeof outputDimensionality === 'number' &&
+    Number.isInteger(outputDimensionality) &&
+    outputDimensionality > 0
+  );
+}
+
+function hasValidGatingRouterGovernance(
+  moduleArchetype: Record<string, unknown>,
+): boolean {
+  const candidateZone = moduleArchetype.candidateZone;
+  const topK = moduleArchetype.topK;
+  const gatingMode = moduleArchetype.gatingMode;
+
+  return (
+    typeof candidateZone === 'string' &&
+    candidateZone.length > 0 &&
+    typeof topK === 'number' &&
+    Number.isInteger(topK) &&
+    topK > 0 &&
+    (typeof gatingMode === 'undefined' || isValidGatingRouterMode(gatingMode))
+  );
+}
+
+function isValidSubstrateCoordinate(
+  value: unknown,
+): value is NeatGenomeSubstrateCoordinate {
+  return (
+    Array.isArray(value) &&
+    value.length === 3 &&
+    value.every(
+      (coordinateValue) =>
+        typeof coordinateValue === 'number' && Number.isFinite(coordinateValue),
+    )
+  );
+}
+
+function isValidModulatorBroadcasterInputSourceSpec(
+  value: unknown,
+): value is NeatGenomeModulatorBroadcasterInputSourceSpec {
+  return (
+    isPlainObjectRecord(value) &&
+    typeof value.dimensionality === 'number' &&
+    Number.isInteger(value.dimensionality) &&
+    value.dimensionality > 0
+  );
+}
+
+function isValidGatingRouterMode(
+  value: unknown,
+): value is NeatGenomeGatingRouterMode {
+  if (!isPlainObjectRecord(value)) {
+    return false;
+  }
+
+  if (value.type === 'topK') {
+    return true;
+  }
+
+  return (
+    value.type === 'threshold' &&
+    typeof value.activationThreshold === 'number' &&
+    Number.isFinite(value.activationThreshold)
+  );
 }
 
 function isKnownNonEmptyNumberArray(

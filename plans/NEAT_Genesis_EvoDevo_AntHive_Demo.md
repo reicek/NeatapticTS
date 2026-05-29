@@ -2,9 +2,9 @@
 
 **Status:** [PLANNED]
 
-This plan defines the ant-hive ecosystem benchmark for [NEAT Genesis EvoDevo (NGE)](NEAT_Genesis_EvoDevo.md). It is the primary stress test for collective intelligence, stigmergy, role differentiation from identical DNA, and neuromodulation-driven behavioral switching — all rendered as a live web canvas simulation.
+This plan defines the ant-hive ecosystem benchmark for [NEAT Genesis EvoDevo (NGE)](completed/NEAT_Genesis_EvoDevo.md). It is the primary stress test for collective intelligence, stigmergy, role differentiation from identical DNA, and neuromodulation-driven behavioral switching — all rendered as a live web canvas simulation.
 
-This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md), [completed/Memory_Optimization.md](completed/Memory_Optimization.md), and [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md). If this plan conflicts with any upstream plan, the upstream plan wins.
+This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md), [completed/Memory_Optimization.md](completed/Memory_Optimization.md), and [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md). If this plan conflicts with any upstream plan, the upstream plan wins.
 
 ---
 
@@ -14,7 +14,7 @@ This is a benchmark-architecture plan, not an implementation-complete spec.
 
 - **In scope:** world design, GeoFront mechanics, food system, pheromone field, Angel patrol system, agent roles and sensory channels, caste differentiation model, NGE feature mapping, web worker architecture, canvas simulation spec, and acceptance criteria.
 - **Out of scope (for now):** exact physics constants, final reward weights, and GeoFront repair animation details.
-- **Authority rule:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md) remain authoritative.
+- **Authority rule:** [NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md) remain authoritative.
 
 ---
 
@@ -852,10 +852,10 @@ examples/ant_hive/
 
 **NGE prerequisites:**
 
-- [ ] NGE Phase G prerequisites met (stigmergy field infrastructure implemented).
+- [x] NGE Phase G prerequisites met (stigmergy field infrastructure implemented). <!-- Phase G Step 04: `src/neat/nge-collective/neat.nge-collective.shared-field.ts` landed with `createSharedField`, `writeCell`, `readCell`, `applyDecay`, `applyDiffusion`, `clearField`. -->
 - [ ] All Phase 0 computation motif primitives implemented and opt-in verified.
 - [ ] Polyandric reproduction mode (Phase E) implemented.
-- [ ] Multi-agent evaluation harness supports shared pheromone field state.
+- [x] Multi-agent evaluation harness supports shared pheromone field state. <!-- Phase G Step 04: `runCollectiveEvaluationTick` passes the live `SharedField` by reference so sequential evaluators observe each other's writes within a tick. -->
 - [ ] Predator/Prey demo maze infrastructure (`examples/predator_prey/maze/`) implemented.
 
 **Environment:**

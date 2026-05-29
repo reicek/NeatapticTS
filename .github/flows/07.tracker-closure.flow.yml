@@ -7,6 +7,8 @@ description: >
   both into plans/completed/. Uses the tracker-handoff skill to enforce
   [PLANNED]/[WIP]/[DONE] status markers and the Handoff query section
   structure. Must not run while any step in the plan is still [WIP] or [PLANNED].
+  Requires all phases marked [DONE] to have compressed history (phase-compression
+  gate) before the workstream archive is considered complete.
 
 triggers:
   - 'All phase steps in a plan are marked [DONE]; plan ready for compression and archive'
@@ -18,6 +20,8 @@ gates:
   - 'plan-sync'
   - 'step-packet'
   - 'log-completion-marker'
+  - 'phase-compression'
+  - 'stale-wip-plans'
 
 post-phase-fanout:
   - 'NONE'

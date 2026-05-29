@@ -14,6 +14,191 @@ export type NeatGenomeNodeType = 'input' | 'hidden' | 'output';
 export type NeatGenomeRecurrentModuleKind = 'lstm' | 'gru' | 'narx-memory';
 
 /**
+ * Stable public catalogue of NGE computation motifs assignable to one module archetype.
+ *
+ * The catalogue stays opt-in and additive. Classic NEAT does not consume these
+ * tags unless one higher-level NGE flow explicitly attaches module archetypes.
+ */
+export const NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE = [
+  'DenseFeedForward',
+  'AttentionHead',
+  'GatedRecurrentCell',
+  'EpisodicSlot',
+  'ModulatorBroadcaster',
+  'GatingRouter',
+] as const;
+
+/**
+ * Supported computation motifs tracked by the Phase 0 NGE archetype extension lane.
+ */
+export type NeatGenomeComputationType =
+  (typeof NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE)[number];
+
+/**
+ * Stable public catalogue of episodic-slot eviction policies supported by the Phase 0 medium-term memory primitive.
+ */
+export const NEAT_GENOME_EPISODIC_SLOT_EVICTION_POLICY_CATALOGUE = [
+  'lru',
+  'fifo',
+] as const;
+
+/**
+ * Supported eviction policies for the Phase 0 `EpisodicSlot` memory primitive.
+ */
+export type NeatGenomeEpisodicSlotEvictionPolicy =
+  (typeof NEAT_GENOME_EPISODIC_SLOT_EVICTION_POLICY_CATALOGUE)[number];
+
+/**
+ * Parameter schema carried by one `EpisodicSlot` archetype descriptor.
+ *
+ * The first runtime pass keeps governance narrow: DNA can cap the number of
+ * remembered slots and choose how full shelves evict existing memories.
+ */
+export interface NeatGenomeEpisodicSlotParameterSchema extends Record<
+  string,
+  unknown
+> {
+  /** Maximum number of stored medium-term memories for the materialized module. */
+  slotCount?: number;
+  /** Deterministic eviction policy used when the episodic shelf reaches capacity. */
+  evictionPolicy?: NeatGenomeEpisodicSlotEvictionPolicy;
+}
+
+/**
+ * Stable three-axis substrate coordinate used by NGE primitive governance metadata.
+ */
+export type NeatGenomeSubstrateCoordinate = [number, number, number];
+
+/**
+ * Input dimensionality contract consumed by one `ModulatorBroadcaster` archetype during realization.
+ * Specifies the positive input width expected by the broadcaster head at inference time.
+ */
+export interface NeatGenomeModulatorBroadcasterInputSourceSpec extends Record<
+  string,
+  unknown
+> {
+  /** Positive input width expected by the broadcaster head. */
+  dimensionality: number;
+}
+
+/**
+ * Descriptor for one opt-in NGE module archetype stored in the extension bag.
+ *
+ * Step 01 keeps the descriptor intentionally structural. It gives archetypes a
+ * stable identity, a mandatory `computationType`, and optional governance links
+ * without committing to runtime motif behavior before later phases implement it.
+ */
+export interface NeatGenomeModuleArchetypeDescriptor {
+  /** Stable archetype identifier within the extension bag. */
+  archetypeId: string;
+  /** Mandatory computation motif assigned to the archetype. */
+  computationType: NeatGenomeComputationType;
+  /** Optional plain-object parameter schema reserved for later motif-specific options. */
+  parameterSchema?: Record<string, unknown>;
+  /** Whether materialized modules derived from this archetype receive substrate coordinates. */
+  receivesCoordinates?: boolean;
+  /** Stable residual-stream identity when the archetype participates in one shared stream. */
+  residualStreamId?: string;
+  /** Stable weight-shared cohort identity when the archetype participates in shared weights. */
+  weightSharedCohortId?: string;
+}
+
+/**
+ * Specialized descriptor for one `EpisodicSlot` archetype in the additive Phase 0 motif catalogue.
+ */
+export type NeatGenomeEpisodicSlotArchetypeDescriptor = Omit<
+  NeatGenomeModuleArchetypeDescriptor,
+  'computationType' | 'parameterSchema'
+> & {
+  /** Mandatory medium-term memory computation motif tag. */
+  computationType: 'EpisodicSlot';
+  /** Narrow governance schema for slot capacity and deterministic eviction. */
+  parameterSchema?: NeatGenomeEpisodicSlotParameterSchema;
+};
+
+/**
+ * Specialized descriptor for one `ModulatorBroadcaster` archetype in the additive Phase 0 motif catalogue.
+ */
+export type NeatGenomeModulatorBroadcasterArchetypeDescriptor = Omit<
+  NeatGenomeModuleArchetypeDescriptor,
+  'computationType' | 'parameterSchema'
+> & {
+  /** Mandatory neuromodulation motif tag. */
+  computationType: 'ModulatorBroadcaster';
+  /** Fixed substrate origin for the broadcaster zone. */
+  position: NeatGenomeSubstrateCoordinate;
+  /** Non-negative zone radius whose in-range edges are pruning-cost exempt. */
+  broadcastRadius: number;
+  /** Positive summary-input contract for the broadcaster head. */
+  inputSourceSpec: NeatGenomeModulatorBroadcasterInputSourceSpec;
+  /** Positive output width for the emitted gain or bias modulation vector. */
+  outputDimensionality: number;
+};
+
+/**
+ * Routing modes supported by the Phase 0 `GatingRouter` sparse-selection primitive.
+ *
+ * Routers either keep the strongest `topK` candidates outright or first apply
+ * one activation threshold before selecting up to `topK` surviving candidates.
+ */
+export type NeatGenomeGatingRouterMode =
+  | {
+      /** Default sparse-selection mode that keeps the strongest `topK` candidates. */
+      type: 'topK';
+    }
+  | {
+      /** Thresholded sparse-selection mode that admits only candidates above one activation floor. */
+      type: 'threshold';
+      /** Inclusive activation floor used before selecting up to `topK` surviving candidates. */
+      activationThreshold: number;
+    };
+
+/**
+ * Specialized descriptor for one `GatingRouter` archetype in the additive Phase 0 motif catalogue.
+ */
+export type NeatGenomeGatingRouterArchetypeDescriptor = Omit<
+  NeatGenomeModuleArchetypeDescriptor,
+  'computationType' | 'parameterSchema'
+> & {
+  /** Mandatory sparse-routing computation motif tag. */
+  computationType: 'GatingRouter';
+  /** Stable zone identifier whose downstream modules are candidates for sparse selection. */
+  candidateZone: string;
+  /** Positive maximum number of candidates selected during one forward pass. */
+  topK: number;
+  /** Optional routing policy; defaults to `topK` materialization when omitted. */
+  gatingMode?: NeatGenomeGatingRouterMode;
+};
+
+/**
+ * Descriptor for one opt-in residual stream tracked in the extension bag.
+ *
+ * Phase 0 Step 01 only needs a stable stream identity and dimensional contract.
+ * Later phases can add runtime transport semantics without widening the core id
+ * shape introduced here.
+ */
+export interface NeatGenomeResidualStreamDescriptor {
+  /** Stable residual-stream identifier within the extension bag. */
+  streamId: string;
+  /** Positive stream width used by later materialization stages. */
+  width: number;
+}
+
+/**
+ * Descriptor for one opt-in weight-shared cohort tracked in the extension bag.
+ *
+ * Cohort membership is implied by module archetypes that reference the same
+ * `weightSharedCohortId`, which keeps the identity contract stable while this
+ * step remains behavior-free.
+ */
+export interface NeatGenomeWeightSharedCohortDescriptor {
+  /** Stable cohort identifier within the extension bag. */
+  cohortId: string;
+  /** Optional plain-object schema reserved for later shared-parameter metadata. */
+  sharedParameterSchema?: Record<string, unknown>;
+}
+
+/**
  * Descriptor for one explicit recurrent module stored in the extension bag.
  *
  * The executable graph still lives in canonical node and connection genes.
@@ -87,6 +272,18 @@ export interface NeatGenomeExtensionValues extends Record<string, unknown> {
    * Explicit gated-block descriptors for the Step 7.4 extension lane.
    */
   gatedBlocks?: NeatGenomeGatedBlockDescriptor[];
+  /**
+   * Explicit NGE module archetype descriptors for the Phase 0 computation-motif lane.
+   */
+  moduleArchetypes?: NeatGenomeModuleArchetypeDescriptor[];
+  /**
+   * Explicit residual-stream descriptors for the Phase 0 computation-motif lane.
+   */
+  residualStreams?: NeatGenomeResidualStreamDescriptor[];
+  /**
+   * Explicit weight-shared cohort descriptors for the Phase 0 computation-motif lane.
+   */
+  weightSharedCohorts?: NeatGenomeWeightSharedCohortDescriptor[];
 }
 
 /**
@@ -188,6 +385,8 @@ export interface GenomeMaterializationRuntimeHints {
   dropout?: number;
   /** Optional architecture descriptor used by diagnostics consumers. */
   architecture?: NetworkArchitectureDescriptor;
+  /** Enable opt-in NGE primitive motif materialization on the rebuilt runtime network. */
+  ngeEnabled?: boolean;
 }
 
 /**
@@ -215,6 +414,9 @@ export type NeatGenomeValidationIssueCode =
   | 'invalid-connection-reenable-extension'
   | 'invalid-recurrent-module-extension'
   | 'invalid-gated-block-extension'
+  | 'invalid-module-archetype-extension'
+  | 'invalid-residual-stream-extension'
+  | 'invalid-weight-shared-cohort-extension'
   | 'invalid-extensions-bag';
 
 /**

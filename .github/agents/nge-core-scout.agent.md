@@ -27,7 +27,7 @@ Locate the exact Phase 7 algorithm-core boundary in the repo, identify the activ
 
 ## Approach
 
-1. Read the smallest relevant plan surface first, especially `plans/NEAT_Genesis_EvoDevo.md`.
+1. Read the smallest relevant plan surface first, especially `plans/completed/NEAT_Genesis_EvoDevo.md`.
 2. Find the controlling boundary: computation motif, DNA schema, deterministic build step, lifecycle stage, memory tier, neuromodulator rule, reproduction mode, or shared-field primitive.
 3. Identify the nearest code or plan surface that decides the invariant, ordering, or opt-in behavior.
 4. Separate true core problems from neighboring concerns:

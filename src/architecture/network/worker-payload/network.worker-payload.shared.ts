@@ -7,6 +7,7 @@ const SHARED_INFERENCE_IDLE_STATUS = 0;
 const SHARED_INFERENCE_INPUT_READY_STATUS = 1;
 const SHARED_INFERENCE_OUTPUT_READY_STATUS = 2;
 const SHARED_INFERENCE_RESET_REQUESTED_STATUS = 3;
+const SHARED_INFERENCE_CLOSED_STATUS = 4;
 const SHARED_INFERENCE_READY_MESSAGE_TYPE = 'ready';
 const SHARED_INFERENCE_REQUEST_ERROR_MESSAGE_TYPE = 'request-error';
 const SHARED_INFERENCE_ASYNC_CONVERSION_THRESHOLD = 32_768;
@@ -454,6 +455,7 @@ async function shutdownSharedInferenceWorker(
   runtime.state.isOpen = false;
   runtime.state.isReady = false;
   runtime.state.isBusy = false;
+  signalSharedInferenceWorkerClosed(runtime.controlView, runtime.layout);
 
   const workerTermination = runtime.state.workerHandle?.terminate();
 
@@ -468,6 +470,18 @@ async function shutdownSharedInferenceWorker(
   runtime.state.revokeWorkerUrl?.();
   runtime.state.workerHandle = undefined;
   runtime.state.revokeWorkerUrl = undefined;
+}
+
+function signalSharedInferenceWorkerClosed(
+  controlView: Int32Array,
+  layout: SharedInferenceBufferLayout,
+): void {
+  Atomics.store(
+    controlView,
+    layout.statusIndexes.status,
+    layout.statusValues.closed,
+  );
+  Atomics.notify(controlView, layout.statusIndexes.status);
 }
 
 function resolveSharedInferenceBufferLayout(
@@ -489,6 +503,7 @@ function resolveSharedInferenceBufferLayout(
       status: SHARED_INFERENCE_STATUS_INDEX,
     },
     statusValues: {
+      closed: SHARED_INFERENCE_CLOSED_STATUS,
       idle: SHARED_INFERENCE_IDLE_STATUS,
       inputReady: SHARED_INFERENCE_INPUT_READY_STATUS,
       outputReady: SHARED_INFERENCE_OUTPUT_READY_STATUS,
@@ -945,6 +960,7 @@ export const SHARED_INFERENCE_HOST_INTERNALS = {
   asError,
   attachSharedWorkerLifecycleListeners,
   attachSharedWorkerMessageListener,
+  signalSharedInferenceWorkerClosed,
   copyInputValuesIntoSharedBuffer,
   copySharedOutputValues,
   createBrowserSharedInferenceWorker,

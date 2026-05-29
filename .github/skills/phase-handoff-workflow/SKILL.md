@@ -111,7 +111,7 @@ phase can advance.
 phase: N
 step: 1
 agent: '01-planning'
-agent_file: '.github/agents/01-planning-architect.agent.md'
+agent_file: '.github/agents/01-planning.agent.md'
 status: '[WIP|PLANNED|DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/<PlanName>.plans.md'
@@ -147,7 +147,12 @@ work, validation evidence, and the next active step before ending.
 append a second nested `Copy-paste prompt` subsection.
 ````
 
-Completed phases may keep compressed legacy coverage notes until reopened.
+Completed phases **must** have their history compressed to a concise coverage
+note before the next phase is started or the workstream is closed. The
+`phase-compression` gate (enforced in `01.phase-kickoff` and
+`07.tracker-closure`) validates this requirement. Do not author the next
+phase's step packets until the previous `[DONE]` phase has a compact summary
+line in place of its verbose transcript.
 Completed steps inside active phases should also be compressed to concise done
 notes. Active and newly planned phases should use step packets and keep only
 the current step copy-pasteable.

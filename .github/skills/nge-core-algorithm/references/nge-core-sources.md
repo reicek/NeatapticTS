@@ -10,7 +10,7 @@ linked sources for canonical wording and details.
 
 ### 1. NGE plan in this repo
 
-- Source: `plans/NEAT_Genesis_EvoDevo.md`
+- Source: `plans/completed/NEAT_Genesis_EvoDevo.md`
 - Why it matters:
   - This is the primary architectural source for NGE.
   - It defines DNA as a program, the deterministic lifecycle, computation motifs,
