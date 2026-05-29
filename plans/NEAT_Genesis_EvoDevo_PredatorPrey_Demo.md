@@ -1,6 +1,6 @@
 # NEAT Genesis EvoDevo: Predator/Prey Co-evolution Demo
 
-**Status:** [WIP]
+**Status:** [PLANNED]
 
 This plan defines the predator/prey co-evolutionary benchmark for [NEAT Genesis EvoDevo (NGE)](completed/NEAT_Genesis_EvoDevo.md). It is the primary stress test for co-evolutionary dynamics, sensory arms race emergence, structural divergence under non-stationary selection pressure, and reproduction mode diversity — all rendered as a live web canvas simulation in the neon arcade aesthetic used across this project.
 
@@ -1009,19 +1009,19 @@ SCREAM_DURATION_TICKS = 30; // ticks scream persists after last visual contact
 
 ## Implementation Phases
 
-### Phase 1 — Predator/Prey Implementation [WIP]
+### Phase 1 — Predator/Prey Implementation [PLANNED]
 
 **Phase objective:** Author the seven-step implementation workflow for the Predator/Prey Co-evolution
 Demo and advance to the first active step.
 
-#### Step 01 — Planning packet [WIP]
+#### Step 01 — Planning packet [PLANNED]
 
 ```yaml
 phase: '1'
 step: 1
 agent: '01-planning'
 agent_file: '.github/agents/01-planning.agent.md'
-status: '[WIP]'
+status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md'
 copy_paste: 'true'

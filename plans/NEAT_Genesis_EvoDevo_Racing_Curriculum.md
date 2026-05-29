@@ -1,6 +1,6 @@
 # NEAT Genesis EvoDevo: Racing Curriculum
 
-**Status:** [PLANNED]
+**Status:** [WIP]
 
 This plan defines the team adversarial racing benchmark for [NEAT Genesis EvoDevo (NGE)](completed/NEAT_Genesis_EvoDevo.md). It is designed to be a genuine NGE showcase: two independently evolved teams of three cars each, all teammates sharing identical DNA, roles emerging from experience rather than from role-assignment code, team coordination via a stigmergy-analog radio field, tire degradation as a metabolic budget, and co-evolutionary pressure between the two teams.
 
@@ -681,3 +681,106 @@ Tier 1–2 provide explicit optimal-line guidance channels as curriculum scaffol
 - [ ] Canvas rendering approach decided (raw 2D context vs. WebGL).
 - [ ] Deterministic race seeding contract written (same seed → same track layout, starting positions, opponent snapshot).
 - [ ] Tire degradation balance constants verified (fresh tires should last 1–2 full laps at aggressive pace; conservative pace extends tire life meaningfully).
+
+---
+
+## Implementation Phases
+
+### Phase 1 — Racing Curriculum Planning [WIP]
+
+**Phase objective:** Author the seven-step implementation workflow for the Team Racing Curriculum
+benchmark and advance to the first active step.
+
+#### Step 01 — Planning packet [WIP]
+
+```yaml
+phase: '1'
+step: 1
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[WIP]'
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: 'true'
+next_step: 'Step 02 — Research boundary mapping'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+```
+
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+
+**Step objective:** Packetize the full Team Racing Curriculum implementation workflow into SDLC-numbered
+step packets (Steps 02-07) and confirm the smallest honest first implementation boundary.
+
+**Context the agent must know:**
+
+- This plan is downstream of `plans/completed/NEAT_Genesis_EvoDevo.md` (now fully closed through Phase G)
+  and `plans/completed/Memory_Optimization.md`. If this plan conflicts with either upstream, the
+  upstream plan wins.
+- The `src/neat/nge-collective/` core is available as a shared primitive providing `SharedField`,
+  `OpponentSnapshotPool`, `addOpponentSnapshot`, and `runCollectiveEvaluationTick`.
+- This is a benchmark-architecture plan; serious implementation must not begin before the Readiness
+  Checklist NGE prerequisites are met or an explicit honest narrow boundary is agreed.
+- `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` and `plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md`
+  are peer plans (neither is a prerequisite for this one).
+
+**Execution steps:**
+
+1. Re-read this plan's Scope, Category Ladder, Readiness Checklist, and Acceptance Criteria sections
+   to understand the current design intent and which NGE prerequisites are already met.
+2. Assess which Readiness Checklist items are currently met, which are unmet, and whether an
+   honest narrow starting boundary (e.g., single-car Tier 1 scaffolding, sensor contract) can be
+   selected before all NGE prerequisites exist.
+3. Author step packets for Steps 02-07 (Research, Red Testing, Implementation, Green Testing,
+   Documentation, Logging) scoped to the selected honest boundary.
+4. Record the boundary decision, non-goals, and any deferred capability gaps in this plan.
+5. Advance to Step 02 only when the plan is self-contained for a fresh research session.
+
+**Stop conditions:**
+
+- **Done:** the plan records the selected honest boundary, step packets for Steps 02-07, and
+  the next active step (Step 02).
+- **Hold:** keep Step 01 [WIP] if the honest boundary cannot be determined without additional
+  research.
+- **Blocked:** a missing upstream prerequisite prevents any honest boundary selection; stop and
+  escalate to `00-helping`.
+- **Route-back:** no earlier step (this is the first step).
+
+**Required validation:**
+
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+
+---
+
+**Plan update requirement:** Update this plan with the selected boundary, authored step packets,
+non-goals, and the next active step before ending.
+
+**Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested
+`Copy-paste prompt` subsection.
+
+---
+
+## Validation gates
+
+Plan-sync gate for this plan's active step.
+
+### Latest validation evidence
+
+- 2026-05-29: Status advanced from [PLANNED] to [WIP]; `## Implementation Phases` section added to satisfy MCP `IMPLEMENTATION_SECTION_PATTERN` lookahead requirement for workflow-MCP binding.
+
+## Handoff query
+
+```text
+Continue from the current repo state only. Do not rely on prior chat history.
+
+Current NGE workstream state:
+- plans/completed/NEAT_Genesis_EvoDevo.md Phases 0 through G are fully closed.
+- Active frontier: plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md Step 01 — Planning packet [WIP].
+- The src/neat/nge-collective/ shared-field and multi-agent evaluation core is implemented and at
+  100% owner-local runtime coverage. Primitives available: SharedField, OpponentSnapshotPool,
+  addOpponentSnapshot, runCollectiveEvaluationTick.
+- plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md is a peer plan, currently [PLANNED].
+- plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md is a peer plan, currently [PLANNED].
+
+Begin with 01-planning on Step 01. Keep the plan self-contained and fresh-session safe.
+```
