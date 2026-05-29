@@ -17,6 +17,8 @@ jobs:
           node-version: '24'
       - name: Install dependencies
         run: npm ci
+      - name: Build semantic index and snapshot
+        run: npm run index:build && npm run index:build-snapshot
       - name: Run lint
         run: npm run lint
       - name: Build

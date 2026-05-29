@@ -32,6 +32,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Puppeteer browser
+        run: |
+          npx puppeteer browsers install chrome
+          CHROME=$(which google-chrome-stable 2>/dev/null || which google-chrome 2>/dev/null || which chromium-browser 2>/dev/null || which chromium 2>/dev/null || echo "")
+          if [ -n "$CHROME" ]; then
+            echo "PUPPETEER_EXECUTABLE_PATH=$CHROME" >> $GITHUB_ENV
+          fi
+
       - name: Build semantic index
         run: npm run index:build
 

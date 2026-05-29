@@ -30,7 +30,7 @@ advanceAdultState(
 ): AdvanceAdultStateResult
 ```
 
-Advance one owner-local adult optimization cycle.
+Advance one complete owner-local adult optimization and equilibrium detection cycle.
 
 Parameters:
 - `input` - Runtime inputs for the current adult cycle.
@@ -39,11 +39,11 @@ Returns: The composed adult transition for the current cycle.
 
 ### AdvanceAdultStateInput
 
-Runtime inputs for one adult-phase orchestration step.
+Runtime input bag consumed by one adult-phase orchestration step call.
 
 ### AdvanceAdultStateResult
 
-Top-level adult orchestration result for one evaluation cycle.
+Top-level adult orchestration result returned for one full evaluation cycle.
 
 ## neat/nge-adult/neat.nge-adult.errors.ts
 
@@ -65,7 +65,7 @@ Budget split emitted by the adult cooling policy for one focus score.
 
 ### AdultPruneCandidate
 
-Ranked adult prune candidate evaluated before compact is considered.
+Ranked adult prune candidate evaluated before compact morphs are ever considered.
 
 ### AdultPruneCompactDecision
 
@@ -147,7 +147,7 @@ Returns: Reward improvement normalized by the structural edit count.
 
 ## neat/nge-adult/neat.nge-adult.constants.ts
 
-Rolling evaluation-window length used by the adult plateau detector.
+Rolling evaluation-window length used by the adult plateau detector. Defaults to 6 evaluation steps.
 
 ### NGE_ADULT_DEFAULT_GAIN_STABILITY_TOLERANCE
 
@@ -155,7 +155,7 @@ Allowed gain deviation before one adult zone is considered unstable again.
 
 ### NGE_ADULT_DEFAULT_GAIN_STABILITY_WINDOW
 
-Rolling evaluation-window length used by the adult gain-stability detector.
+Rolling evaluation-window length used by the adult gain-stability detector. Defaults to 5 evaluation steps.
 
 ### NGE_ADULT_DEFAULT_GROWTH_COOLING_FACTOR
 
@@ -171,7 +171,7 @@ Smallest meaningful reward improvement that still counts as positive adult retur
 
 ### NGE_ADULT_DEFAULT_PLATEAU_WINDOW
 
-Rolling evaluation-window length used by the adult plateau detector.
+Rolling evaluation-window length used by the adult plateau detector. Defaults to 6 evaluation steps.
 
 ## neat/nge-adult/neat.nge-adult.equilibrium.ts
 
@@ -223,7 +223,7 @@ createAdultState(
 ): AdultState
 ```
 
-Create the initial owner-local adult state for one zone.
+Create the initial owner-local adult state for one fresh zone instance.
 
 Parameters:
 - `zoneId` - Stable adult-zone identifier that anchors the seeded state.

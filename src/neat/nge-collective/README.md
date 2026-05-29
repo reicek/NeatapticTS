@@ -55,7 +55,7 @@ Returned by `createCollectiveEvaluationContext` and updated via `resetCollective
 
 ### CollectiveTickResult
 
-Result produced by one collective evaluation tick via `runCollectiveEvaluationTick`.
+Immutable result produced by one collective evaluation tick via `runCollectiveEvaluationTick`.
 
 ### OpponentSnapshot
 
@@ -307,7 +307,7 @@ Returned by `createCollectiveEvaluationContext` and updated via `resetCollective
 
 ### CollectiveTickResult
 
-Result produced by one collective evaluation tick via `runCollectiveEvaluationTick`.
+Immutable result produced by one collective evaluation tick via `runCollectiveEvaluationTick`.
 
 ### computeRoleDivergenceMetric
 
@@ -745,7 +745,7 @@ Returned by `createCollectiveEvaluationContext` and updated via `resetCollective
 
 ### CollectiveTickResult
 
-Result produced by one collective evaluation tick via `runCollectiveEvaluationTick`.
+Immutable result produced by one collective evaluation tick via `runCollectiveEvaluationTick`.
 
 ### createCollectiveEvaluationContext
 

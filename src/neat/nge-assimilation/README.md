@@ -55,7 +55,7 @@ Error thrown when one assimilation candidate fails schema or envelope validation
 
 ### ASSIMILATION_ENCODING_MODES
 
-Supported encoding modes for owner-local assimilation serialization.
+Supported lossless and lossy encoding modes for owner-local assimilation serialization.
 
 ### DEFAULT_ASSIMILATION_WRITE_BACK_RATE
 
@@ -63,7 +63,7 @@ Default fraction of one structural gap applied during one assimilation write-bac
 
 ### DEFAULT_BUDGET_GUARD_ENABLED
 
-Default budget-guard switch for Phase D assimilation updates.
+Default enabled state for the Phase D assimilation budget-guard enforcement switch.
 
 ## neat/nge-assimilation/neat.nge-assimilation.writeback.ts
 

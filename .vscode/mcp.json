@@ -1,0 +1,37 @@
+{
+  "servers": {
+    "neataptic-workflow-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs",
+        "--plan=plans/mcp-active-binding.plans.md"
+      ]
+    },
+    "neataptic-validation-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "scripts/agent-customization/mcp/neataptic-validation-mcp.mjs",
+        "--plan=plans/mcp-active-binding.plans.md"
+      ]
+    },
+    "neataptic-gate-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "scripts/agent-customization/mcp/neataptic-gate-mcp.mjs"
+      ]
+    },
+    "neataptic-cortex-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "scripts/mcp-semantic/repo-cortex-mcp.mjs"
+      ],
+      "env": {
+        "CORTEX_DB_PATH": "${workspaceFolder}/data/semantic-index.sqlite"
+      }
+    }
+  }
+}

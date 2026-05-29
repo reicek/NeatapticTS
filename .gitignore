@@ -38,7 +38,8 @@ logs/
 # IDE / OS files
 .idea/
 /.vs/
-/.vscode/
+/.vscode/*
+!/.vscode/mcp.json
 .claude/settings.local.json
 .DS_Store
 Thumbs.db

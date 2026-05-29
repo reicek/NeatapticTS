@@ -10,7 +10,7 @@ One pairwise comparison input evaluated by the Phase E composite compatibility c
 
 ### NgeEvolutionCompatibilityDistanceContext
 
-Context bag controlling one Phase E compatibility-distance computation.
+Context bag controlling one Phase E compatibility-distance computation and normalization scope.
 
 ### NgeEvolutionCompatibilityDistanceResult
 
@@ -69,11 +69,11 @@ Parent-role labels used when Phase E operators report how one offspring was asse
 
 ### NgeEvolutionPolyandricAssignedRegion
 
-Region-assignment record for one drone contribution in polyandric reproduction.
+Region-assignment record for one drone's patching contribution in polyandric offspring reproduction.
 
 ### NgeEvolutionPolyandricRegionAssignmentResult
 
-Polyandric region-assignment result reported before drone patches are applied.
+Polyandric region-assignment result reported before any drone patches are applied to offspring.
 
 ### NgeEvolutionReproductionOutcome
 
@@ -108,19 +108,19 @@ Public Phase E compatibility-distance entrypoint exposed from one stable owner-l
 
 ### NGE_EVOLUTION_DEFAULT_ALPHA_COMPUTATION
 
-Default alpha weight for the computation-motif distance term.
+Default alpha weight for the NGE computation-motif distance term used in speciation.
 
 ### NGE_EVOLUTION_DEFAULT_ALPHA_LIFECYCLE
 
-Default alpha weight for the lifecycle-policy distance term.
+Default alpha weight for the NGE lifecycle-policy distance term used in speciation.
 
 ### NGE_EVOLUTION_DEFAULT_ALPHA_MEMORY
 
-Default alpha weight for the memory-tier distance term.
+Default alpha weight for the NGE memory-tier distance term used in speciation.
 
 ### NGE_EVOLUTION_DEFAULT_ALPHA_TOPOLOGY
 
-Default alpha weight for the classic topology-distance term.
+Default alpha weight for the classic NEAT topology-distance term used in speciation.
 
 ### NGE_EVOLUTION_DEFAULT_COMPATIBILITY_DISTANCE_WEIGHTS
 
@@ -163,7 +163,7 @@ One pairwise comparison input evaluated by the Phase E composite compatibility c
 
 ### NgeEvolutionCompatibilityDistanceContext
 
-Context bag controlling one Phase E compatibility-distance computation.
+Context bag controlling one Phase E compatibility-distance computation and normalization scope.
 
 ### NgeEvolutionCompatibilityDistanceResult
 
@@ -222,11 +222,11 @@ Parent-role labels used when Phase E operators report how one offspring was asse
 
 ### NgeEvolutionPolyandricAssignedRegion
 
-Region-assignment record for one drone contribution in polyandric reproduction.
+Region-assignment record for one drone's patching contribution in polyandric offspring reproduction.
 
 ### NgeEvolutionPolyandricRegionAssignmentResult
 
-Polyandric region-assignment result reported before drone patches are applied.
+Polyandric region-assignment result reported before any drone patches are applied to offspring.
 
 ### NgeEvolutionReproductionOutcome
 
@@ -620,19 +620,19 @@ Returns: Stable slice with the target comparison in the first slot.
 
 ### NGE_EVOLUTION_DEFAULT_ALPHA_COMPUTATION
 
-Default alpha weight for the computation-motif distance term.
+Default alpha weight for the NGE computation-motif distance term used in speciation.
 
 ### NGE_EVOLUTION_DEFAULT_ALPHA_LIFECYCLE
 
-Default alpha weight for the lifecycle-policy distance term.
+Default alpha weight for the NGE lifecycle-policy distance term used in speciation.
 
 ### NGE_EVOLUTION_DEFAULT_ALPHA_MEMORY
 
-Default alpha weight for the memory-tier distance term.
+Default alpha weight for the NGE memory-tier distance term used in speciation.
 
 ### NGE_EVOLUTION_DEFAULT_ALPHA_TOPOLOGY
 
-Default alpha weight for the classic topology-distance term.
+Default alpha weight for the classic NEAT topology-distance term used in speciation.
 
 ### NGE_EVOLUTION_DEFAULT_COMPATIBILITY_DISTANCE_WEIGHTS
 
@@ -742,7 +742,7 @@ Returns: Canonical offspring DNA plus per-parent contribution records.
 
 ### ngeEvolutionCompatibilityUtils
 
-Compatibility-distance helpers grouped under one stable owner-local namespace.
+Phase E compatibility-distance helpers grouped under one stable owner-local namespace object.
 
 ### ngeEvolutionConstants
 
@@ -750,16 +750,16 @@ Default Phase E constants grouped under one stable owner-local namespace.
 
 ### ngeEvolutionEpigeneticUtils
 
-Birth-time epigenetic helper grouped under one stable owner-local namespace.
+Birth-time epigenetic prior helper grouped under one stable owner-local namespace object.
 
 ### ngeEvolutionErrors
 
-Error classes grouped under one stable owner-local namespace.
+Phase E evolution error classes grouped under one stable owner-local namespace object.
 
 ### ngeEvolutionReproductionUtils
 
-Reproduction-mode helpers grouped under one stable owner-local namespace.
+Phase E reproduction-mode operator helpers grouped under one stable owner-local namespace.
 
 ### ngeEvolutionUtils
 
-Default helper bundle for the nge-evolution owner boundary.
+Default runtime helper bundle for the entire nge-evolution owner boundary module.

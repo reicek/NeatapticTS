@@ -79,16 +79,28 @@ export function createDirectInvocation(
 /**
  * Writes the injected Puppeteer config file used for Linux CI browser launches.
  *
+ * When `PUPPETEER_EXECUTABLE_PATH` is set in the environment, the generated
+ * config includes an `executablePath` field so Puppeteer uses the system
+ * Chrome/Chromium binary rather than its own downloaded copy. This is the
+ * standard workaround on GitHub Actions ubuntu-latest runners where the
+ * pre-installed `google-chrome-stable` is more reliable than the bundled one.
+ *
  * @param puppeteerConfigFilePath - Target file path for the generated config.
  * @returns Resolves when the config file has been written.
  */
 export async function writePuppeteerConfigFile(
   puppeteerConfigFilePath: string,
 ): Promise<void> {
-  await writeFile(
-    puppeteerConfigFilePath,
-    JSON.stringify({ args: PUPPETEER_CI_LINUX_ARGS }),
-  );
+  const puppeteerConfig: { args: readonly string[]; executablePath?: string } = {
+    args: PUPPETEER_CI_LINUX_ARGS,
+  };
+
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (executablePath) {
+    puppeteerConfig.executablePath = executablePath;
+  }
+
+  await writeFile(puppeteerConfigFilePath, JSON.stringify(puppeteerConfig));
 }
 
 /**
