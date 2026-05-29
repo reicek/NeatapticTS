@@ -2,9 +2,9 @@
 
 **Status:** [PLANNED]
 
-This plan defines the team adversarial racing benchmark for [NEAT Genesis EvoDevo (NGE)](NEAT_Genesis_EvoDevo.md). It is designed to be a genuine NGE showcase: two independently evolved teams of three cars each, all teammates sharing identical DNA, roles emerging from experience rather than from role-assignment code, team coordination via a stigmergy-analog radio field, tire degradation as a metabolic budget, and co-evolutionary pressure between the two teams.
+This plan defines the team adversarial racing benchmark for [NEAT Genesis EvoDevo (NGE)](completed/NEAT_Genesis_EvoDevo.md). It is designed to be a genuine NGE showcase: two independently evolved teams of three cars each, all teammates sharing identical DNA, roles emerging from experience rather than from role-assignment code, team coordination via a stigmergy-analog radio field, tire degradation as a metabolic budget, and co-evolutionary pressure between the two teams.
 
-This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md). If this plan conflicts with either upstream plan, the upstream plan wins.
+This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md). If this plan conflicts with either upstream plan, the upstream plan wins.
 
 ---
 
@@ -32,7 +32,7 @@ This is a benchmark-architecture plan, not an implementation-complete spec.
 
 - **In scope:** team structure, team radio protocol, tire degradation system, pit stop design, category ladder, carry-state semantics, sensory families, behavioral-drive vocabulary, co-evolutionary dynamics, reproduction policy, canvas rendering spec, and acceptance criteria.
 - **Out of scope (for now):** final vehicle-physics constants, rendering library selection, final reward weights, and worker protocol shape.
-- **Authority rule:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md) remain authoritative.
+- **Authority rule:** [NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md) remain authoritative.
 
 ---
 
@@ -63,7 +63,7 @@ This benchmark belongs to **Phase G (Multi-Agent + Collective Intelligence)** in
 - All Phase 0 computation motif primitives are implemented and opt-in verified.
 - Phase E (Evolution integration + reproduction modes) is implemented with polyandric support and `modeIsEvolvable`.
 - Two-population NEAT harness is implemented (independent gene pools, independent species tracking).
-- Stigmergy typed-array field primitive is available (shared with ant hive pheromone infrastructure).
+- Stigmergy typed-array field primitive is available — landed as `src/neat/nge-collective/neat.nge-collective.shared-field.ts` in Phase G Step 04 (shared with ant hive pheromone infrastructure).
 
 ## Recommended agent + skill combo for this Phase G benchmark
 
@@ -667,8 +667,8 @@ Tier 1–2 provide explicit optimal-line guidance channels as curriculum scaffol
 - [ ] `ResidualTap` archetype implemented (Phase 0).
 - [ ] Phase E reproduction modes (parthenogenesis, polyandric, sexual) implemented with `modeIsEvolvable` support.
 - [ ] Two-population NEAT harness implemented (independent gene pools, independent species tracking).
-- [ ] Rolling opponent snapshot mechanism implemented (hall-of-fame + recent-population sampling).
-- [ ] Stigmergy typed-array field primitive available (shared with ant hive pheromone infrastructure).
+- [x] Rolling opponent snapshot mechanism implemented (hall-of-fame + recent-population sampling). <!-- Phase G Step 04: `createOpponentSnapshotPool` + `addOpponentSnapshot` in `src/neat/nge-collective/` provide the fixed-capacity rolling buffer. Benchmark-specific sampling policy (hall-of-fame weighting, population sweep) is a benchmark-local concern. -->
+- [x] Stigmergy typed-array field primitive available (shared with ant hive pheromone infrastructure). <!-- Phase G Step 04: `src/neat/nge-collective/neat.nge-collective.shared-field.ts` is implemented with `createSharedField`, `writeCell`, `readCell`, `applyDecay`, `applyDiffusion`, `clearField`. -->
 - [ ] Tire degradation model (state field, decay function, grip multiplier) implemented.
 - [ ] Tier schema drafted with deterministic race pack semantics and cross-team promotion rules.
 - [ ] Carry-state and reset-state boundary agreed.

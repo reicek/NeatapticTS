@@ -359,7 +359,7 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 ### Parallel tracks (can run alongside Layers 1–3 and the prerequisite)
 
 - NeatChat local retrieval and memory (separate from Repo Cortex)
-  - Plan: [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [WIP]
+  - Plan: [completed/NeatChat_Local_Retrieval_Memory.plans.md](completed/NeatChat_Local_Retrieval_Memory.plans.md) [DONE]
   - Depends on archived [completed/neatChat-live-safety-red.plans.md](completed/neatChat-live-safety-red.plans.md) [DONE] as the closed live safety baseline (no conflict; guarded integration)
   - May reuse chunking and BM25 patterns from Layers 1–3 but must not import from `scripts/semantic-index/`
   - Artifacts: `examples/neatChat/memory/` (types, DB adapters, retrieval, services, tests)
@@ -376,13 +376,13 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 **Outcome:** evo-devo / NGE capabilities and benchmark-driven validation that build on top of all prior infrastructure.
 
 - NEAT Genesis EvoDevo (NGE) — core algorithm (computation motifs, lifecycle, DNA, reproduction, collective intelligence)
-  - Plan: [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) [PLANNED]
+  - Plan: [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
 - NGE Racing Curriculum — single-agent benchmark (sensory specialization, neuromodulation, lifecycle staging)
   - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) [PLANNED]
 - NGE Ant Hive Ecosystem — multi-agent benchmark (stigmergy, role differentiation, collective intelligence)
   - Plan: [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
 - NGE Predator/Prey Co-evolution — co-evolutionary benchmark (sensory arms race, reproduction modes, non-stationary fitness)
-  - Plan: [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]
+  - Plan: [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [WIP]
 
 **Why last:** this work depends heavily on the Memory Optimization track (Track 2 in that plan) and benefits from stable NEAT correctness, deterministic activation semantics, robust serialization/checkpointing, and a mature enough NGE core that benchmark results reflect the algorithm rather than unstable infrastructure.
 
@@ -399,7 +399,7 @@ Current status: **Phases 0, 1, 2, 3, and 4 are complete for the current roadmap 
 - **Standalone meta-workflow lane F:** [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) [DONE] — numbered user-invocable agent architecture, hidden specialist delegation, skill-first customization, model routing, validators, evals, and the closed MCP runtime-visibility ownership baseline.
 - **Pre-NGE stop line:** closed. NEATchat follow-up lane archived [DONE]; Phase 7 / NGE is now the next frontier.
 - **Serial pre-NGE handoff:** after the archived Phase 5 memory stop line, the archived ONNX baseline, the archived hybrid-interoperability baseline, and the archived NEATchat follow-up baseline, the next lane is Phase 7 / NGE.
-- **Final capstone:** [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
+- **Final capstone:** [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
 
 ## Plan Inventory in Roadmap Order
 
@@ -426,7 +426,7 @@ M6b. [completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_
 M7. [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
 M8. [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
 M8b. [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
-M9. [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md) [WIP]
+M9. [completed/NeatChat_Local_Retrieval_Memory.plans.md](completed/NeatChat_Local_Retrieval_Memory.plans.md) [DONE]
 
 ### Phase 0 inventory
 
@@ -482,7 +482,7 @@ M9. [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.p
 
 ### Phase 7 inventory
 
-32. [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md) [PLANNED]
+32. [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
 33. [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) [PLANNED]
 34. [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
-35. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]
+35. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [WIP]

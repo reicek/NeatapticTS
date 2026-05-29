@@ -5,7 +5,7 @@ tier: 1
 model: ['GPT-5.4-mini (copilot)', 'Claude Haiku 4.6 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)']
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
-agents: ['research-codebase-coordinator', 'plan-scout', 'docs-scout', 'boundary-mapper', 'skill-inventory-auditor', 'helping-gap-resolution-coordinator']
+agents: ['research-codebase-coordinator', 'plan-scout', 'docs-scout', 'repo-cortex-scout', 'boundary-mapper', 'skill-inventory-auditor', 'helping-gap-resolution-coordinator']
 skills: ['subagent-delegation-patterns']
 handoffs:
   - label: 'Design Red Tests'

@@ -61,6 +61,7 @@ Gates return a standard contract: `{ pass: boolean, evidence: object, fixHint: s
 | `docs-artifact-reference.gate.mjs` | `node scripts/agent-customization/gates/docs-artifact-reference.gate.mjs [--json]` | Confirms documentation phase artifact references are present |
 | `output-resolution-evidence.gate.mjs` | `node scripts/agent-customization/gates/output-resolution-evidence.gate.mjs [--json]` | Confirms session output-resolution artifacts are present |
 | `log-completion-marker.gate.mjs` | `node scripts/agent-customization/gates/log-completion-marker.gate.mjs [--json]` | Confirms session log includes a completion marker |
+| `stale-wip-plans.gate.mjs` | `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs [--json]` | Detects plans left top-level `[WIP]` after all implementation phases and steps are `[DONE]` |
 | `learning-event.gate.mjs` | `node scripts/agent-customization/gates/learning-event.gate.mjs [--json]` | Checks that a learning event was recorded when required |
 | `research-findings-evidence.gate.mjs` | `node scripts/agent-customization/gates/research-findings-evidence.gate.mjs [--json]` | Confirms research phase findings evidence was captured |
 

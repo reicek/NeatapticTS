@@ -33,10 +33,12 @@ Archive selection guide:
 - [Population_Save_Resume_and_Checkpointing.md](Population_Save_Resume_and_Checkpointing.md): closed Phase 4 checkpointing baseline for population-only snapshots, light checkpoints, strict full checkpoints, and the persistence decision ladder.
 - [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md): closed hybrid-interoperability baseline for deterministic parameter vectors, isolated fine-tuning, explicit hybrid persistence policy, root-facade exports, and the docs surface now consumed by the NEATchat follow-up.
 - [Memory_Optimization.md](Memory_Optimization.md): closed pre-NGE memory foundation baseline through Track 1 / Phase 10.
+- [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md): closed NGE core baseline covering computation motifs, deterministic DNA development, lifecycle stages, assimilation, reproduction modes, scale validation, and the shared collective-intelligence core that downstream benchmark plans now consume.
 - [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): closed ONNX export/import baseline through the current Phase 9 compliance target, including binary-first runtime parity for the approved five-lane subset and the first named external binary import subset.
 - [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md): closed Phase 4 ergonomic extraction baseline for capability probes, transport auto-selection, browser worker delivery helpers, reusable pools, ordered batch evaluation, and the NEAT population helper.
 - [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md): closed Phase 4 transport substrate baseline for the shared inference IR, portable and transferable payloads, persistent channels, and shared-memory workers.
 - [neatChat-live-safety-red.plans.md](neatChat-live-safety-red.plans.md): closed NEATchat live exchange safety baseline for reconnecting `checkSafety`, bounded vocabulary-aware fallback selection, and the shipped-browser four-turn quality bar.
+- [NeatChat_Local_Retrieval_Memory.plans.md](NeatChat_Local_Retrieval_Memory.plans.md): closed NeatChat-local durable memory baseline for the SQLite/FTS5 Node path, raw IndexedDB plus local BM25 browser path, guarded session-service integration, and exported-memory documentation closure.
 - [ES2023 migration](ES2023%20migration): Phase 0 modernization baseline for ES2023 syntax, named errors, and lint enforcement.
 - [Flappy_Bird_Folder_Documentation_Pass.md](Flappy_Bird_Folder_Documentation_Pass.md): completed Flappy Bird documentation pass.
 - [architecture-solid-split.plans.md](architecture-solid-split.plans.md): completed `src/architecture` split baseline.
@@ -78,6 +80,7 @@ Trigger phrases:
 - checkpoint, resume, save population, light checkpoint, strict restore reopen: `plans/completed/Population_Save_Resume_and_Checkpointing.md`
 - hybrid evolution plus training reopen, parameter vectors, fineTuneVector, Lamarckian persistence policy: `plans/completed/Evolution_Training_Interoperability_Contracts.md`
 - memory optimization reopen, release gates, Track 1 memory baseline: `plans/completed/Memory_Optimization.md`
+- NGE core reopen, evo-devo algorithm reopen, computation motifs reopen, deterministic development reopen, lifecycle reopen, reproduction modes reopen, collective intelligence core reopen: `plans/completed/NEAT_Genesis_EvoDevo.md`
 - ONNX export/import reopen, runtime parity, external import subset, supported-subset honesty: `plans/completed/ONNX_EXPORT_PLAN.md`
 - turnkey worker evaluation reopen, transport auto-selection, ordered worker batches, reusable NEAT helper: `plans/completed/Turnkey_Multithread_Evaluation_API.md`
 - worker transport substrate reopen, payload fastpath, channel workers, shared-memory workers: `plans/completed/Worker_Friendly_Network_Serialization_Fastpath.md`
@@ -87,6 +90,7 @@ Trigger phrases:
 - trace analyzer split reopen: `plans/completed/analyze-trace-solid-split.plans.md`
 - Flappy docs or startup preview reopen: `plans/completed/Flappy_Bird_Folder_Documentation_Pass.md`, `plans/completed/flappy-startup-loading-preview.plans.md`
 - neatchat live safety, live exchange safety gate, checkSafety, live flow safety, live-flow safety, neatChat-live-safety-red reopen: `plans/completed/neatChat-live-safety-red.plans.md`
+- neatchat memory, neatchat retrieval, local memory DB, conversation memory, memory services, memory IDB, neatChat local retrieval reopen: `plans/completed/NeatChat_Local_Retrieval_Memory.plans.md`
 - starter examples, learning path, helloNetwork, evolveXor, sequenceReset, browser quickstart, smoke validation reopen: `plans/completed/Interactive_Examples_and_Learning_Path.plans.md`
 
 Archive rule:

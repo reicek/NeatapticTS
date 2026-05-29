@@ -20,20 +20,36 @@
  */
 
 export type {
+  NeatGenomeComputationType,
   NeatGenomeCaptureOptions,
+  NeatGenomeEpisodicSlotArchetypeDescriptor,
+  NeatGenomeEpisodicSlotEvictionPolicy,
+  NeatGenomeEpisodicSlotParameterSchema,
+  NeatGenomeGatingRouterArchetypeDescriptor,
+  NeatGenomeGatingRouterMode,
   NeatGenomeGatedBlockDescriptor,
   GenomeMaterializationRuntimeHints,
+  NeatGenomeModulatorBroadcasterArchetypeDescriptor,
+  NeatGenomeModulatorBroadcasterInputSourceSpec,
   NeatGenome,
   NeatGenomeConnectionGene,
   NeatGenomeExtensionValues,
   NeatGenomeExtensions,
+  NeatGenomeModuleArchetypeDescriptor,
   NeatGenomeNodeGene,
   NeatGenomeNodeType,
   NeatGenomeRecurrentModuleDescriptor,
   NeatGenomeRecurrentModuleKind,
+  NeatGenomeResidualStreamDescriptor,
+  NeatGenomeSubstrateCoordinate,
   NeatGenomeValidationIssue,
   NeatGenomeValidationIssueCode,
   NeatGenomeValidationReport,
+  NeatGenomeWeightSharedCohortDescriptor,
+} from './genome.types';
+export {
+  NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE,
+  NEAT_GENOME_EPISODIC_SLOT_EVICTION_POLICY_CATALOGUE,
 } from './genome.types';
 export type {
   GenomeHereditySelectionContext,

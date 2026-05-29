@@ -74,6 +74,12 @@ const TIER_1_GATES = [
     owner: '.github/ai-learning/learning-log.jsonl',
     description: 'Checks that the learning event log exists and contains at least one event.',
   },
+  {
+    id: 'stale-wip-plans',
+    owner: 'stale-wip-plans.gate.mjs',
+    description:
+      'Detects plans whose top-level Status is [WIP] but all implementation phase/step markers are [DONE] — the missed-closure condition.',
+  },
 ];
 
 const GATES_DIR = path.join(MCP_REPO_ROOT, 'scripts', 'agent-customization', 'gates');
@@ -132,7 +138,7 @@ function createGateTools() {
           gate: {
             type: 'string',
             enum: TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
-            description: 'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, or learning-event).',
+            description: 'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, or stale-wip-plans).',
           },
         },
         required: ['gate'],

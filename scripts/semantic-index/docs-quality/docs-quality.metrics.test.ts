@@ -1,4 +1,11 @@
-import { readFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -43,6 +50,51 @@ interface SpawnedJsonResult<ReportType> {
 const REPO_ROOT = path.resolve(process.cwd());
 const FIXTURES_ROOT = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'docs-quality', '__fixtures__');
 const DOCS_QUALITY_METRICS_PATH = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'docs-quality', 'docs-quality.metrics.mjs');
+const COVERAGE_DIRECTORY_PATH = path.join(REPO_ROOT, 'coverage');
+const COVERAGE_FIXTURE_LCOV = [
+  'TN:',
+  'SF:src/neat.ts',
+  'FN:1,activate',
+  'FNDA:1,activate',
+  'FNF:1',
+  'FNH:1',
+  'DA:1,1',
+  'LF:1',
+  'LH:1',
+  'BRDA:1,0,0,1',
+  'BRF:1',
+  'BRH:1',
+  'end_of_record',
+  '',
+].join('\n');
+const COVERAGE_FIXTURE_SUMMARY = {
+  total: {
+    statements: {
+      pct: 100,
+    },
+  },
+  'src/neat.ts': {
+    statements: {
+      pct: 100,
+    },
+  },
+};
+const PARTIAL_COVERAGE_FIXTURE_SUMMARY = {
+  total: {
+    statements: {
+      pct: 21.5,
+    },
+  },
+  'src/neat.ts': {
+    statements: {
+      pct: 100,
+    },
+  },
+};
+
+interface CoverageDirectorySwapState {
+  backupDirectoryPath: string | null;
+}
 
 describe('docs-quality metrics red contracts', () => {
   it('requires the v1 manifest schema fields and rejects missing scannerVersion', () => {
@@ -119,7 +171,7 @@ describe('docs-quality metrics red contracts', () => {
   });
 
   it('serializes CLI JSON with summary first and evidence last', () => {
-    const result = runMetricsCliEvaluation([
+    const result = runMetricsCliEvaluationWithCoverageFixture([
       '--json',
       '--scope',
       'paths',
@@ -144,6 +196,71 @@ describe('docs-quality metrics red contracts', () => {
             overallLines: expect.any(Number),
             overallBranches: expect.any(Number),
             overallFunctions: expect.any(Number),
+          }),
+        }),
+      }),
+      status: 0,
+    }));
+  });
+
+  it('keeps the CLI coverage contract deterministic when live repo coverage is absent at startup', () => {
+    const result = withCoverageDirectoryTemporarilyMissing(() => runMetricsCliEvaluationWithCoverageFixture([
+      '--json',
+      '--scope',
+      'paths',
+      '--source',
+      'src/neat.ts',
+      '--source',
+      'src/architecture/network.ts',
+      '--run-id',
+      'red-contract-cli-order-coverage-absent',
+    ]));
+
+    expect(result).toEqual(expect.objectContaining({
+      report: expect.objectContaining({
+        firstKey: 'summary',
+        lastKey: 'evidence',
+        summary: expect.objectContaining({
+          coverage: expect.objectContaining({
+            available: true,
+            totalFiles: expect.any(Number),
+            filesBelow100: expect.any(Number),
+            filesBelow100Detail: expect.any(Array),
+            overallLines: expect.any(Number),
+            overallBranches: expect.any(Number),
+            overallFunctions: expect.any(Number),
+          }),
+        }),
+      }),
+      status: 0,
+    }));
+  });
+
+  it('surfaces partial coverage artifacts as partial coverage instead of a normal repo-wide metric state', () => {
+    const result = runMetricsCliEvaluationWithPartialCoverageFixture([
+      '--json',
+      '--scope',
+      'paths',
+      '--source',
+      'src/neat.ts',
+      '--source',
+      'src/architecture/network.ts',
+      '--run-id',
+      'red-contract-cli-partial-coverage',
+    ]);
+
+    expect(result).toEqual(expect.objectContaining({
+      report: expect.objectContaining({
+        summary: expect.objectContaining({
+          coverage: expect.objectContaining({
+            available: true,
+            isPartial: true,
+          }),
+        }),
+        manifest: expect.objectContaining({
+          coverage: expect.objectContaining({
+            available: true,
+            isPartial: true,
           }),
         }),
       }),
@@ -213,6 +330,27 @@ function runMetricsCliEvaluation(argumentsVector: string[]): SpawnedJsonResult<M
   };
 }
 
+function runMetricsCliEvaluationWithCoverageFixture(argumentsVector: string[]): SpawnedJsonResult<MetricsContractReport> {
+  return withTemporaryCoverageFixture(() => runMetricsCliEvaluation(argumentsVector));
+}
+
+function runMetricsCliEvaluationWithPartialCoverageFixture(argumentsVector: string[]): SpawnedJsonResult<MetricsContractReport> {
+  return withTemporaryCoverageFixture(
+    () => runMetricsCliEvaluation(argumentsVector),
+    PARTIAL_COVERAGE_FIXTURE_SUMMARY,
+  );
+}
+
+function withCoverageDirectoryTemporarilyMissing<ResultType>(callback: () => ResultType): ResultType {
+  const coverageDirectorySwapState = hideCoverageDirectory();
+
+  try {
+    return callback();
+  } finally {
+    restoreCoverageDirectory(coverageDirectorySwapState);
+  }
+}
+
 function runModuleEvaluation<ReportType>(source: string): SpawnedJsonResult<ReportType> {
   const spawned = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
     cwd: REPO_ROOT,
@@ -225,6 +363,52 @@ function runModuleEvaluation<ReportType>(source: string): SpawnedJsonResult<Repo
     stderr: spawned.stderr ?? '',
     stdout: spawned.stdout ?? '',
   };
+}
+
+function withTemporaryCoverageFixture<ResultType>(
+  callback: () => ResultType,
+  coverageSummary = COVERAGE_FIXTURE_SUMMARY,
+): ResultType {
+  const coverageDirectorySwapState = installTemporaryCoverageFixture(coverageSummary);
+
+  try {
+    return callback();
+  } finally {
+    restoreCoverageDirectory(coverageDirectorySwapState);
+  }
+}
+
+function hideCoverageDirectory(): CoverageDirectorySwapState {
+  const backupDirectoryPath = existsSync(COVERAGE_DIRECTORY_PATH)
+    ? `${COVERAGE_DIRECTORY_PATH}.docs-quality-backup.${process.pid}.${Date.now()}`
+    : null;
+
+  if (backupDirectoryPath) {
+    renameSync(COVERAGE_DIRECTORY_PATH, backupDirectoryPath);
+  }
+
+  return { backupDirectoryPath };
+}
+
+function installTemporaryCoverageFixture(coverageSummary = COVERAGE_FIXTURE_SUMMARY): CoverageDirectorySwapState {
+  const coverageDirectorySwapState = hideCoverageDirectory();
+
+  mkdirSync(COVERAGE_DIRECTORY_PATH, { recursive: true });
+  writeFileSync(path.join(COVERAGE_DIRECTORY_PATH, 'lcov.info'), COVERAGE_FIXTURE_LCOV);
+  writeFileSync(
+    path.join(COVERAGE_DIRECTORY_PATH, 'coverage-summary.json'),
+    JSON.stringify(coverageSummary, null, 2),
+  );
+
+  return coverageDirectorySwapState;
+}
+
+function restoreCoverageDirectory({ backupDirectoryPath }: CoverageDirectorySwapState): void {
+  rmSync(COVERAGE_DIRECTORY_PATH, { recursive: true, force: true });
+
+  if (backupDirectoryPath && existsSync(backupDirectoryPath)) {
+    renameSync(backupDirectoryPath, COVERAGE_DIRECTORY_PATH);
+  }
 }
 
 function tryParseJson<ReportType>(stdout: string): ReportType | null {

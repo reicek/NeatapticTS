@@ -36,7 +36,7 @@ const config = {
         '!src/**/*.d.ts',
         '!src/**/*.test.ts',
       ],
-      coverageReporters: ['lcov', 'text', 'html'],
+      coverageReporters: ['lcov', 'text', 'html', 'json-summary'],
       testPathIgnorePatterns: [
         '/node_modules/',
         '/dist/',
@@ -150,7 +150,7 @@ const config = {
   setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
   testTimeout: 300000,
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/*.test.ts'],
-  coverageReporters: ['lcov', 'text', 'html'],
+  coverageReporters: ['lcov', 'text', 'html', 'json-summary'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/']
 };
 

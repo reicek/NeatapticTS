@@ -86,7 +86,8 @@ if (phases.length === 0 && !isArchivedClosedPlan) {
 }
 
 for (const [phaseIndex, phaseBlock] of phases.entries()) {
-  await validatePhase(phaseBlock, phaseIndex + 1);
+  const previousPhase = phaseIndex === 0 ? null : phases.at(phaseIndex - 1);
+  await validatePhase(phaseBlock, previousPhase?.headingPhase ?? null);
 }
 
 const wipCount = phases.filter((phaseBlock) => phaseBlock.headingStatus === 'WIP').length;
@@ -121,7 +122,7 @@ function* extractPhaseBlocks(text) {
   if (!implementationMatch?.groups) return;
 
   const implementationBody = implementationMatch.groups.body;
-  const phasePattern = /^### Phase (?<phase>\d+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)]\s*$/gm;
+  const phasePattern = /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)]\s*$/gm;
   const matches = [...implementationBody.matchAll(phasePattern)];
 
   for (const [matchIndex, match] of matches.entries()) {
@@ -131,8 +132,9 @@ function* extractPhaseBlocks(text) {
     const bodyEnd = nextMatch?.index ?? implementationBody.length;
     const phaseBody = implementationBody.slice(bodyStart, bodyEnd);
     const metadata = extractMetadata(phaseBody);
+    const phaseLabel = match.groups.phase;
     yield {
-      headingPhase: Number(match.groups.phase),
+      headingPhase: /^\d+$/.test(phaseLabel) ? Number(phaseLabel) : phaseLabel,
       headingTitle: match.groups.title,
       headingStatus: match.groups.status,
       body: phaseBody,
@@ -161,11 +163,14 @@ function* extractStepBlocks(phaseBody) {
   }
 }
 
-async function validatePhase(phaseBlock, expectedPhase) {
+async function validatePhase(phaseBlock, previousPhaseLabel) {
   const phasePath = `${planPath}#phase-${phaseBlock.headingPhase}`;
 
-  if (phaseBlock.headingPhase !== expectedPhase) {
-    issues.push(issue('error', phasePath, `Expected phase ${expectedPhase}, found phase ${phaseBlock.headingPhase}.`));
+  if (previousPhaseLabel !== null) {
+    const expectedPhaseLabel = getNextPhaseLabel(previousPhaseLabel);
+    if (expectedPhaseLabel !== null && normalizePhaseLabel(phaseBlock.headingPhase) !== expectedPhaseLabel) {
+      issues.push(issue('error', phasePath, `Expected phase ${expectedPhaseLabel}, found phase ${phaseBlock.headingPhase}.`));
+    }
   }
 
   if (phaseBlock.stepBlocks.length > 0) {
@@ -203,8 +208,8 @@ async function validateLegacyPhase(phaseBlock, phasePath) {
     }
   }
 
-  const metadataPhase = Number(phaseBlock.metadata.phase);
-  if (metadataPhase !== phaseBlock.headingPhase) {
+  const metadataPhase = normalizePhaseLabel(phaseBlock.metadata.phase);
+  if (metadataPhase !== normalizePhaseLabel(phaseBlock.headingPhase)) {
     issues.push(issue('error', phasePath, `Metadata phase ${phaseBlock.metadata.phase ?? 'missing'} does not match heading.`));
   }
 
@@ -246,7 +251,9 @@ async function validateLegacyPhase(phaseBlock, phasePath) {
 }
 
 async function validateStepPhase(phaseBlock, phasePath) {
-  if (phaseBlock.stepBlocks[0]?.headingStep !== 1) {
+  const shouldRequireFullStepSequence = phaseBlock.headingStatus !== 'DONE';
+
+  if (shouldRequireFullStepSequence && phaseBlock.stepBlocks[0]?.headingStep !== 1) {
     issues.push(issue('error', phasePath, 'Step-based phases must start with Step 01.'));
   }
 
@@ -260,7 +267,7 @@ async function validateStepPhase(phaseBlock, phasePath) {
   }
 
   for (const [stepIndex, stepBlock] of phaseBlock.stepBlocks.entries()) {
-    const expectedStep = stepIndex + 1;
+    const expectedStep = shouldRequireFullStepSequence ? stepIndex + 1 : stepBlock.headingStep;
     const stepPath = `${phasePath}-step-${String(stepBlock.headingStep).padStart(2, '0')}`;
     const hasYamlMetadata = /^\s*```yaml\r?\n/.test(stepBlock.body);
 
@@ -288,8 +295,8 @@ async function validateStepPhase(phaseBlock, phasePath) {
       }
     }
 
-    const metadataPhase = Number(stepBlock.metadata.phase);
-    if (metadataPhase !== phaseBlock.headingPhase) {
+    const metadataPhase = normalizePhaseLabel(stepBlock.metadata.phase);
+    if (metadataPhase !== normalizePhaseLabel(phaseBlock.headingPhase)) {
       issues.push(issue('error', stepPath, `Metadata phase ${stepBlock.metadata.phase ?? 'missing'} does not match phase heading.`));
     }
 
@@ -319,25 +326,27 @@ async function validateStepPhase(phaseBlock, phasePath) {
       issues.push(issue('error', stepPath, `Metadata agent_file does not exist: ${stepBlock.metadata.agent_file}.`));
     }
 
-    const expectedStepNumber = String(stepBlock.headingStep).padStart(2, '0');
-    if (!usesMatchingNumberedAgent(stepBlock.metadata.agent, expectedStepNumber)) {
-      issues.push(issue('error', stepPath, `Step ${String(stepBlock.headingStep).padStart(2, '0')} must use the matching numbered agent.`));
-    }
+    if (stepBlock.headingStatus !== 'DONE') {
+      const expectedStepNumber = String(stepBlock.headingStep).padStart(2, '0');
+      if (!usesMatchingNumberedAgent(stepBlock.metadata.agent, expectedStepNumber)) {
+        issues.push(issue('error', stepPath, `Step ${String(stepBlock.headingStep).padStart(2, '0')} must use the matching numbered agent.`));
+      }
 
-    for (const section of stepRequiredSections) {
-      if (!stepBlock.body.includes(section)) {
-        issues.push(issue('error', stepPath, `Missing required section: ${section}`));
+      for (const section of stepRequiredSections) {
+        if (!stepBlock.body.includes(section)) {
+          issues.push(issue('error', stepPath, `Missing required section: ${section}`));
+        }
+      }
+
+      if (
+        !stepBlock.body.includes(`select \`${stepBlock.metadata.agent}\``) ||
+          !includesWordsInOrder(stepBlock.body, 'paste this full step packet')
+      ) {
+        issues.push(issue('error', stepPath, 'User instruction must tell the user to select the step agent and paste the full step packet.'));
       }
     }
 
     pushForbiddenSectionIssues(stepBlock.body, stepPath, 'Step packet must not contain a separate Copy-paste prompt section; the whole step is the prompt.');
-
-    if (
-      !stepBlock.body.includes(`select \`${stepBlock.metadata.agent}\``) ||
-        !includesWordsInOrder(stepBlock.body, 'paste this full step packet')
-    ) {
-      issues.push(issue('error', stepPath, 'User instruction must tell the user to select the step agent and paste the full step packet.'));
-    }
   }
 }
 
@@ -371,8 +380,31 @@ function normalizeScalar(value) {
   return value.trim().replace(/^['"]|['"]$/g, '');
 }
 
+function normalizePhaseLabel(value) {
+  return value == null ? null : String(value).trim().toUpperCase();
+}
+
 function stripStatus(value) {
   return value?.replace(/^\[/, '').replace(/]$/, '') ?? null;
+}
+
+function getNextPhaseLabel(phaseLabel) {
+  const normalizedPhaseLabel = normalizePhaseLabel(phaseLabel);
+  if (normalizedPhaseLabel === null) return null;
+
+  if (/^\d+$/.test(normalizedPhaseLabel)) {
+    const numericPhase = Number(normalizedPhaseLabel);
+    if (numericPhase === 0) return 'A';
+    return String(numericPhase + 1);
+  }
+
+  if (/^[A-Z]$/.test(normalizedPhaseLabel)) {
+    return normalizedPhaseLabel === 'Z'
+      ? null
+      : String.fromCharCode(normalizedPhaseLabel.charCodeAt(0) + 1);
+  }
+
+  return null;
 }
 
 function usesMatchingNumberedAgent(agentName, expectedStepNumber) {

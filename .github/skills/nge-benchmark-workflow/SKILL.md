@@ -124,7 +124,7 @@ Validation: focused tests for snapshot sampling, barrier synchronization, and se
 ## Required Workflow
 
 1. Read the smallest relevant benchmark plan first.
-2. Read `plans/NEAT_Genesis_EvoDevo.md` only enough to confirm the core or
+2. Read `plans/completed/NEAT_Genesis_EvoDevo.md` only enough to confirm the core or
    benchmark boundary.
 3. Name the exact observable or acceptance criterion the pass is trying to prove.
 4. Add the smallest owner-local failing test or harness check.

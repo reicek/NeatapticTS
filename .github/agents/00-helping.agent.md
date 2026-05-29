@@ -28,7 +28,7 @@ support CI/configuration checks, and return control to the active SDLC agent.
 - Do not create a session log unless the user asks for one.
 - Do not edit global user settings.
 - Keep always-on instructions short; put reusable workflow detail in agents or skills.
-- Use the generated canonical routing table at [../agent-skill-routing-table.md](../agent-skill-routing-table.md) when checking current agent and skill mappings or freshness.
+- Use the generated canonical routing table at [.github/agent-skill-routing-table.md](.github/agent-skill-routing-table.md) when checking current agent and skill mappings or freshness.
 - Use `agent-frontmatter-standards`, `model-routing-and-budget`, `agent-inventory-audit`, and `subagent-delegation-patterns` instead of copying their durable policies here.
 - Apply low-risk local AI customization fixes immediately; ask before changing project behavior, coding standards, broad visibility, or runtime policy.
 

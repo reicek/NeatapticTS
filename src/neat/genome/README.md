@@ -30,6 +30,17 @@ These values do not become genome state. They exist so checkpoint import and
 other bridges can preserve non-genetic runtime metadata while the genotype
 boundary stays narrow.
 
+### NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE
+
+Stable public catalogue of NGE computation motifs assignable to one module archetype.
+
+The catalogue stays opt-in and additive. Classic NEAT does not consume these
+tags unless one higher-level NGE flow explicitly attaches module archetypes.
+
+### NEAT_GENOME_EPISODIC_SLOT_EVICTION_POLICY_CATALOGUE
+
+Stable public catalogue of episodic-slot eviction policies supported by the Phase 0 medium-term memory primitive.
+
 ### NeatGenome
 
 First-pass genotype contract for the proper-NEAT lift.
@@ -43,9 +54,28 @@ traces stay outside this contract.
 Opt-in capture settings used when projecting runtime payloads into the.
 strict genome contract.
 
+### NeatGenomeComputationType
+
+Supported computation motifs tracked by the Phase 0 NGE archetype extension lane.
+
 ### NeatGenomeConnectionGene
 
 Pure structural connection-gene contract owned by the NEAT genome subtree, carrying innovation identity, endpoint gene ids, weight, enabled state, and optional gater.
+
+### NeatGenomeEpisodicSlotArchetypeDescriptor
+
+Specialized descriptor for one `EpisodicSlot` archetype in the additive Phase 0 motif catalogue.
+
+### NeatGenomeEpisodicSlotEvictionPolicy
+
+Supported eviction policies for the Phase 0 `EpisodicSlot` memory primitive.
+
+### NeatGenomeEpisodicSlotParameterSchema
+
+Parameter schema carried by one `EpisodicSlot` archetype descriptor.
+
+The first runtime pass keeps governance narrow: DNA can cap the number of
+remembered slots and choose how full shelves evict existing memories.
 
 ### NeatGenomeExtensions
 
@@ -69,6 +99,34 @@ connection-gene ownership. The descriptor is therefore about identity and
 checkpoint semantics, not about replacing individual connection genes.
 Disabled gated connection genes still count as dormant block structure until
 the connection or gater identity is removed from the genome.
+
+### NeatGenomeGatingRouterArchetypeDescriptor
+
+Specialized descriptor for one `GatingRouter` archetype in the additive Phase 0 motif catalogue.
+
+### NeatGenomeGatingRouterMode
+
+Routing modes supported by the Phase 0 `GatingRouter` sparse-selection primitive.
+
+Routers either keep the strongest `topK` candidates outright or first apply
+one activation threshold before selecting up to `topK` surviving candidates.
+
+### NeatGenomeModulatorBroadcasterArchetypeDescriptor
+
+Specialized descriptor for one `ModulatorBroadcaster` archetype in the additive Phase 0 motif catalogue.
+
+### NeatGenomeModulatorBroadcasterInputSourceSpec
+
+Input dimensionality contract consumed by one `ModulatorBroadcaster` archetype during realization.
+Specifies the positive input width expected by the broadcaster head at inference time.
+
+### NeatGenomeModuleArchetypeDescriptor
+
+Descriptor for one opt-in NGE module archetype stored in the extension bag.
+
+Step 01 keeps the descriptor intentionally structural. It gives archetypes a
+stable identity, a mandatory `computationType`, and optional governance links
+without committing to runtime motif behavior before later phases implement it.
 
 ### NeatGenomeNodeGene
 
@@ -97,6 +155,18 @@ valid until the referenced genes or gating ownership disappear structurally.
 
 Supported recurrent-module family identifiers tracked by the Step 7.4 temporal extension lane for LSTM, GRU, and NARX.
 
+### NeatGenomeResidualStreamDescriptor
+
+Descriptor for one opt-in residual stream tracked in the extension bag.
+
+Phase 0 Step 01 only needs a stable stream identity and dimensional contract.
+Later phases can add runtime transport semantics without widening the core id
+shape introduced here.
+
+### NeatGenomeSubstrateCoordinate
+
+Stable three-axis substrate coordinate used by NGE primitive governance metadata.
+
 ### NeatGenomeValidationIssue
 
 One structured finding produced by the pure genome validator carrying a stable code, path, and human-readable message.
@@ -108,6 +178,14 @@ Stable machine-readable issue codes produced by the pure genome validator for ea
 ### NeatGenomeValidationReport
 
 Complete validation report returned for one strict genome contract containing all structural findings and summary counts.
+
+### NeatGenomeWeightSharedCohortDescriptor
+
+Descriptor for one opt-in weight-shared cohort tracked in the extension bag.
+
+Cohort membership is implied by module archetypes that reference the same
+`weightSharedCohortId`, which keeps the identity contract stable while this
+step remains behavior-free.
 
 ## neat/genome/genome.ts
 
@@ -203,6 +281,17 @@ These values do not become genome state. They exist so checkpoint import and
 other bridges can preserve non-genetic runtime metadata while the genotype
 boundary stays narrow.
 
+### NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE
+
+Stable public catalogue of NGE computation motifs assignable to one module archetype.
+
+The catalogue stays opt-in and additive. Classic NEAT does not consume these
+tags unless one higher-level NGE flow explicitly attaches module archetypes.
+
+### NEAT_GENOME_EPISODIC_SLOT_EVICTION_POLICY_CATALOGUE
+
+Stable public catalogue of episodic-slot eviction policies supported by the Phase 0 medium-term memory primitive.
+
 ### NeatGenome
 
 First-pass genotype contract for the proper-NEAT lift.
@@ -216,6 +305,10 @@ traces stay outside this contract.
 Opt-in capture settings used when projecting runtime payloads into the.
 strict genome contract.
 
+### NeatGenomeComputationType
+
+Supported computation motifs tracked by the Phase 0 NGE archetype extension lane.
+
 ### NeatGenomeConnectionGene
 
 Pure structural connection-gene contract owned by the NEAT genome subtree, carrying innovation identity, endpoint gene ids, weight, enabled state, and optional gater.
@@ -224,6 +317,21 @@ Pure structural connection-gene contract owned by the NEAT genome subtree, carry
 
 Raised when one boundary tries to project malformed state into the strict.
 genome contract.
+
+### NeatGenomeEpisodicSlotArchetypeDescriptor
+
+Specialized descriptor for one `EpisodicSlot` archetype in the additive Phase 0 motif catalogue.
+
+### NeatGenomeEpisodicSlotEvictionPolicy
+
+Supported eviction policies for the Phase 0 `EpisodicSlot` memory primitive.
+
+### NeatGenomeEpisodicSlotParameterSchema
+
+Parameter schema carried by one `EpisodicSlot` archetype descriptor.
+
+The first runtime pass keeps governance narrow: DNA can cap the number of
+remembered slots and choose how full shelves evict existing memories.
 
 ### NeatGenomeExtensions
 
@@ -247,6 +355,34 @@ connection-gene ownership. The descriptor is therefore about identity and
 checkpoint semantics, not about replacing individual connection genes.
 Disabled gated connection genes still count as dormant block structure until
 the connection or gater identity is removed from the genome.
+
+### NeatGenomeGatingRouterArchetypeDescriptor
+
+Specialized descriptor for one `GatingRouter` archetype in the additive Phase 0 motif catalogue.
+
+### NeatGenomeGatingRouterMode
+
+Routing modes supported by the Phase 0 `GatingRouter` sparse-selection primitive.
+
+Routers either keep the strongest `topK` candidates outright or first apply
+one activation threshold before selecting up to `topK` surviving candidates.
+
+### NeatGenomeModulatorBroadcasterArchetypeDescriptor
+
+Specialized descriptor for one `ModulatorBroadcaster` archetype in the additive Phase 0 motif catalogue.
+
+### NeatGenomeModulatorBroadcasterInputSourceSpec
+
+Input dimensionality contract consumed by one `ModulatorBroadcaster` archetype during realization.
+Specifies the positive input width expected by the broadcaster head at inference time.
+
+### NeatGenomeModuleArchetypeDescriptor
+
+Descriptor for one opt-in NGE module archetype stored in the extension bag.
+
+Step 01 keeps the descriptor intentionally structural. It gives archetypes a
+stable identity, a mandatory `computationType`, and optional governance links
+without committing to runtime motif behavior before later phases implement it.
 
 ### NeatGenomeNodeGene
 
@@ -275,6 +411,18 @@ valid until the referenced genes or gating ownership disappear structurally.
 
 Supported recurrent-module family identifiers tracked by the Step 7.4 temporal extension lane for LSTM, GRU, and NARX.
 
+### NeatGenomeResidualStreamDescriptor
+
+Descriptor for one opt-in residual stream tracked in the extension bag.
+
+Phase 0 Step 01 only needs a stable stream identity and dimensional contract.
+Later phases can add runtime transport semantics without widening the core id
+shape introduced here.
+
+### NeatGenomeSubstrateCoordinate
+
+Stable three-axis substrate coordinate used by NGE primitive governance metadata.
+
 ### NeatGenomeValidationError
 
 Raised when a strict genome contract fails structural validation, carrying a structured issue list for diagnostics-first callers.
@@ -294,6 +442,14 @@ Stable machine-readable issue codes produced by the pure genome validator for ea
 ### NeatGenomeValidationReport
 
 Complete validation report returned for one strict genome contract containing all structural findings and summary counts.
+
+### NeatGenomeWeightSharedCohortDescriptor
+
+Descriptor for one opt-in weight-shared cohort tracked in the extension bag.
+
+Cohort membership is implied by module archetypes that reference the same
+`weightSharedCohortId`, which keeps the identity contract stable while this
+step remains behavior-free.
 
 ### SelectedGenomeConnectionGene
 

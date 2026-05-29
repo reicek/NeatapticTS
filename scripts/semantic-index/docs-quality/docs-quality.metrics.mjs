@@ -23,6 +23,7 @@ const DEFAULT_COMPLEXITY_THRESHOLD = 10;
 const DEFAULT_MIN_JSDOC_WORDS = 10;
 const DEFAULT_RUN_ID = 'default';
 const CANONICAL_GENERATED_AT = '1970-01-01T00:00:00.000Z';
+const FULL_COVERAGE_PCT_THRESHOLD = 99;
 
 /**
  * Run canonical docs-quality metrics and persist run artifacts.
@@ -176,9 +177,11 @@ async function parseLcovSummary(lcovPath) {
     return { available: false };
   }
 
+  const coverageSummaryPath = path.resolve(process.cwd(), 'coverage', 'coverage-summary.json');
   const statementCoverageByFile = await readStatementCoverageByFile(
-    path.resolve(process.cwd(), 'coverage', 'coverage-summary.json'),
+    coverageSummaryPath,
   );
+  const totalStatementCoverage = await readTotalStatementCoverage(coverageSummaryPath);
   const lcovContent = await readFile(lcovPath, 'utf8');
   const coverageRecords = lcovContent
     .split('end_of_record')
@@ -236,8 +239,12 @@ async function parseLcovSummary(lcovPath) {
     }
   }
 
+  const isPartialCoverage = Number.isFinite(totalStatementCoverage)
+    && totalStatementCoverage < FULL_COVERAGE_PCT_THRESHOLD;
+
   return {
     available: true,
+    ...(isPartialCoverage ? { isPartial: true } : {}),
     totalFiles: aggregate.totalFiles,
     filesBelow100: aggregate.filesBelow100,
     filesBelow100Detail: aggregate.filesBelow100Detail.toSorted(compareCoverageDetailRows),
@@ -279,6 +286,30 @@ async function readStatementCoverageByFile(coverageSummaryPath) {
       .filter(Boolean));
   } catch {
     return new Map();
+  }
+}
+
+/**
+ * Read repo-wide total statement coverage from Istanbul's coverage summary when available.
+ *
+ * @param {string} coverageSummaryPath - Absolute path to coverage/coverage-summary.json.
+ * @returns {Promise<number | null>} Total statement coverage percentage.
+ */
+async function readTotalStatementCoverage(coverageSummaryPath) {
+  if (!existsSync(coverageSummaryPath)) {
+    return null;
+  }
+
+  try {
+    const coverageSummary = JSON.parse(await readFile(coverageSummaryPath, 'utf8'));
+    if (!isPlainObject(coverageSummary.total) || !isPlainObject(coverageSummary.total.statements)) {
+      return null;
+    }
+
+    const statementPercent = Number(coverageSummary.total.statements.pct);
+    return Number.isFinite(statementPercent) ? statementPercent : null;
+  } catch {
+    return null;
   }
 }
 

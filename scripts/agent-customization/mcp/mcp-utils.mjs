@@ -261,6 +261,38 @@ export async function invokeServerRequest(server, request) {
 }
 
 /**
+ * Resolve an executable and argument list to a spawn-safe target for the current platform.
+ *
+ * On Windows, `npx` and `npm` are `.cmd` batch scripts co-located with `node.exe`.
+ * Windows cannot directly execute `.cmd` files via `spawn` with `shell: false` —
+ * they require `cmd.exe` as the interpreter. This resolver detects that case and
+ * wraps the call in an explicit `cmd.exe /c <absolute-cmd-path> args...` invocation,
+ * keeping `shell: false` in the `spawn` options so cmd.exe itself is spawned as a
+ * native executable rather than through an environment-supplied shell.
+ *
+ * Using `ComSpec` (or the `cmd.exe` fallback) instead of `shell: true` preserves the
+ * security invariant: the shell interpreter is fixed and not injectable from PATH.
+ *
+ * @param {string} requestedExecutable - Executable token from the tokenized command.
+ * @param {string[]} requestedArgv - Argument list for the executable.
+ * @returns {{ executable: string, argv: string[] }} Spawn-safe executable and argv.
+ */
+function resolveSpawnTarget(requestedExecutable, requestedArgv) {
+  if (/^(node|node\.exe)$/iu.test(requestedExecutable)) {
+    return { executable: process.execPath, argv: requestedArgv };
+  }
+
+  if (process.platform === 'win32' && /^(npx|npm)(\.cmd)?$/iu.test(requestedExecutable)) {
+    const baseName = requestedExecutable.toLowerCase().replace(/\.cmd$/iu, '');
+    const cmdScriptPath = path.join(path.dirname(process.execPath), `${baseName}.cmd`);
+    const comSpec = process.env['ComSpec'] ?? 'cmd.exe';
+    return { executable: comSpec, argv: ['/c', cmdScriptPath, ...requestedArgv] };
+  }
+
+  return { executable: requestedExecutable, argv: requestedArgv };
+}
+
+/**
  * Run an exact allow-listed command without invoking a shell, capturing bounded
  * stdout and stderr output and returning a structured process result.
  *
@@ -273,8 +305,8 @@ export async function invokeServerRequest(server, request) {
  */
 export async function runShellFreeCommand(commandString, options = {}) {
   const tokens = tokenizeShellSafeCommand(commandString);
-  const [requestedExecutable, ...argv] = tokens;
-  const executable = /^(node|node\.exe)$/iu.test(requestedExecutable) ? process.execPath : requestedExecutable;
+  const [requestedExecutable, ...requestedArgv] = tokens;
+  const { executable, argv } = resolveSpawnTarget(requestedExecutable, requestedArgv);
   const startTime = Date.now();
   const maxOutputBytes = Number.isFinite(options.maxOutputBytes) && options.maxOutputBytes > 0
     ? options.maxOutputBytes

@@ -1,0 +1,37 @@
+{
+  "metricVersion": 1,
+  "scannerVersion": "1.0.0",
+  "gitCommit": "1de88b186386aaced065c97e539954332451fb13",
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "thresholdConfig": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeConfig": {
+    "scopeType": "paths",
+    "scopeValue": [
+      "src/architecture/network.ts"
+    ],
+    "scopeDigest": "bc50f2ba8a4ed4205e82db827076c77e14caaccc30b1ab4eb3464daafc733405"
+  },
+  "sourcePathsDigest": "c50705cb4b1c8852468cddef17fe517ab7d4178ae2896fc7889e78dbe99a8eac",
+  "issueBreakdown": {
+    "missingJsdoc": 0,
+    "weakJsdoc": 0,
+    "highComplexity": 0
+  },
+  "weakCount": 0,
+  "normalizedEvidenceDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "threshold": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeType": "paths",
+  "scopeDigest": "c50705cb4b1c8852468cddef17fe517ab7d4178ae2896fc7889e78dbe99a8eac",
+  "coverage": {
+    "available": false
+  },
+  "summaryPath": "artifacts/docs-quality/runs/triage-no-coverage/summary.json",
+  "evidencePath": "artifacts/docs-quality/runs/triage-no-coverage/evidence.json",
+  "manifestPath": "artifacts/docs-quality/runs/triage-no-coverage/manifest.json"
+}

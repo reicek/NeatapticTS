@@ -588,6 +588,18 @@ export interface NeatOptions {
   /** Whether to store/export RNG state for deterministic replay. */
   rngState?: boolean;
 
+  /**
+   * Opt-in NGE feature scaffold.
+   *
+   * Step 01 keeps this intentionally narrow: classic NEAT remains unchanged
+   * unless callers explicitly enable the NGE lane.
+   */
+  nge?: {
+    /** Enable the NGE archetype and motif identity lane. */
+    enabled?: boolean;
+    [k: string]: unknown;
+  };
+
   /** Opt-in genome-extension capture and restore settings. */
   genomeExtensions?: {
     /** Preserve non-neutral ungated connection gain as explicit genome extension state. */

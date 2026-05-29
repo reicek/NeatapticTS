@@ -8,6 +8,7 @@ const XOR_EXAMPLE_MUTATION_AMOUNT = 2;
 const XOR_EXAMPLE_MUTATION_RATE = 0.8;
 const XOR_EXAMPLE_POPULATION_SIZE = 100;
 const XOR_EXAMPLE_SEED = 42;
+const XOR_EXAMPLE_MUTATION_POOL = methods.mutation.FFW.slice();
 const XOR_DATASET = [
   { expectedOutput: 0, inputValues: [0, 0] },
   { expectedOutput: 1, inputValues: [0, 1] },
@@ -51,7 +52,7 @@ export async function runEvolveXorExample(): Promise<EvolveXorExampleResult> {
   const neat = new Neat(2, 1, scoreXorFitness, {
     elitism: XOR_EXAMPLE_ELITISM,
     fastMode: true,
-    mutation: methods.mutation.FFW,
+    mutation: XOR_EXAMPLE_MUTATION_POOL.slice(),
     mutationAmount: XOR_EXAMPLE_MUTATION_AMOUNT,
     mutationRate: XOR_EXAMPLE_MUTATION_RATE,
     popsize: XOR_EXAMPLE_POPULATION_SIZE,
@@ -85,7 +86,7 @@ export async function runEvolveXorExample(): Promise<EvolveXorExampleResult> {
     expectedOutput: xorSample.expectedOutput,
     inputValues: [...xorSample.inputValues],
     outputValue: roundOutputValue(
-      bestGenome.activate([...xorSample.inputValues])[0],
+      activateIndependentOutput(bestGenome, xorSample.inputValues),
     ),
   }));
 
@@ -106,9 +107,10 @@ export async function runEvolveXorExample(): Promise<EvolveXorExampleResult> {
   function scoreXorFitness(candidateNetwork: Network): number {
     const totalAbsoluteError = XOR_DATASET.reduce(
       (currentErrorTotal, xorSample) => {
-        const predictedOutput = candidateNetwork.activate([
-          ...xorSample.inputValues,
-        ])[0];
+        const predictedOutput = activateIndependentOutput(
+          candidateNetwork,
+          xorSample.inputValues,
+        );
 
         return (
           currentErrorTotal +
@@ -120,6 +122,21 @@ export async function runEvolveXorExample(): Promise<EvolveXorExampleResult> {
 
     return XOR_DATASET.length - totalAbsoluteError;
   }
+}
+
+/**
+ * Activates one XOR sample from a fresh network state.
+ *
+ * @param network - Runtime network being evaluated.
+ * @param inputValues - One XOR input row.
+ * @returns Raw output value for that independent sample.
+ */
+function activateIndependentOutput(
+  network: Network,
+  inputValues: readonly number[],
+): number {
+  network.clear();
+  return network.activate([...inputValues])[0] ?? 0;
 }
 
 /**

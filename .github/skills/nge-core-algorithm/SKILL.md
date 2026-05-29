@@ -1,7 +1,7 @@
 ---
 name: nge-core-algorithm
 description: 'Design, implement, or validate the NEAT Genesis EvoDevo core algorithm in NeatapticTS. Use when working on computation motifs, NGE_DNA, deterministic development, lifecycle state machines, local growth or prune policy, memory tiers, neuromodulation, reproduction modes, collective-intelligence primitives, or core invariants that benchmark demos will later consume.'
-argument-hint: 'Describe the NGE phase or primitive in scope, the plan section in NEAT_Genesis_EvoDevo.md, whether the pass is architecture, implementation, or validation, and which invariants must remain deterministic and opt-in.'
+argument-hint: 'Describe the NGE phase or primitive in scope, the archived plan section in plans/completed/NEAT_Genesis_EvoDevo.md, whether the pass is architecture, implementation, or validation, and which invariants must remain deterministic and opt-in.'
 user-invocable: true
 disable-model-invocation: false
 ---
@@ -98,7 +98,7 @@ Compact example:
 
 ```text
 Use nge-core-algorithm for Phase A deterministic development.
-Plan: plans/NEAT_Genesis_EvoDevo.md.
+Plan: plans/completed/NEAT_Genesis_EvoDevo.md.
 Target: canonical NGE_DNA module ordering and deterministic materialization.
 Invariant: same DNA plus seed plus experience stream yields identical module IDs and edge hashes.
 Validation: repeated-build hash tests, ordering tests, and opt-in verification that classic NEAT is unchanged.
@@ -107,7 +107,7 @@ Validation: repeated-build hash tests, ordering tests, and opt-in verification t
 ## Required Workflow
 
 1. Read `plans/Memory_Optimization.md` for authoritative gating when relevant.
-2. Read `plans/NEAT_Genesis_EvoDevo.md` and isolate the smallest active phase or
+2. Read `plans/completed/NEAT_Genesis_EvoDevo.md` and isolate the smallest archived phase or
    primitive.
 3. Decide whether the current work belongs in core algorithm or benchmark/demo
    ownership.

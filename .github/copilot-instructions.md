@@ -1,6 +1,6 @@
 # Repo Copilot Instructions — NeatapticTS
 
-See [agent-skill-routing-table.md](agent-skill-routing-table.md) for the generated canonical agent and skill routing table.
+See [.github/agent-skill-routing-table.md](.github/agent-skill-routing-table.md) for the generated canonical agent and skill routing table.
 
 ## Mandatory routing policy
 
@@ -168,7 +168,7 @@ When adding or reshaping any agent, re-run `validate-agent-graph.mjs` to confirm
 
 ### Canonical routing table
 
-- The generated canonical routing table lives at [agent-skill-routing-table.md](agent-skill-routing-table.md) and is the shared read-only snapshot for current agent and skill routing metadata.
+- The generated canonical routing table lives at [.github/agent-skill-routing-table.md](.github/agent-skill-routing-table.md) and is the shared read-only snapshot for current agent and skill routing metadata.
 - Refresh it with `npm run agents:routing-table` after changing `.github/agents/*.agent.md` or `.github/skills/*/SKILL.md`.
 - Validate freshness with `npm run agents:routing-table:gate` or `node scripts/agent-customization/gates/routing-table-freshness.gate.mjs --json`.
 - Every `.github/agents/*.agent.md` file must declare a `skills: [...]` frontmatter field, even when the list is empty.

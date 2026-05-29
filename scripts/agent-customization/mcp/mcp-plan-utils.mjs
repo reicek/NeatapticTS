@@ -31,8 +31,8 @@ import {
 } from '../customization-utils.mjs';
 import { resolveExplicitPlanPath } from './mcp-utils.mjs';
 
-/** Matches a phase header line, e.g. `### Phase 2 — Title [WIP]`. */
-const PHASE_PATTERN = /^### Phase (?<phase>\d+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+/** Matches a phase header line, e.g. `### Phase 2 — Title [WIP]` or `### Phase A — Title [WIP]`. */
+const PHASE_PATTERN = /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 /** Matches a step header line, e.g. `#### Step 03 — Title [PLANNED]`. */
 const STEP_PATTERN = /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 /** Captures the body of the `## Implementation phases` section up to the first validation-gates heading. */
@@ -176,8 +176,9 @@ function* extractPhaseBlocks(planText) {
     const phaseBodyStart = (phaseMatch.index ?? 0) + phaseMatch[0].length;
     const nextPhaseMatch = phaseMatches.at(phaseIndex + 1);
     const phaseBodyEnd = nextPhaseMatch?.index ?? implementationSection.length;
+    const phaseLabel = phaseMatch.groups.phase;
     yield {
-      number: Number(phaseMatch.groups.phase),
+      number: /^\d+$/.test(phaseLabel) ? Number(phaseLabel) : phaseLabel,
       title: phaseMatch.groups.title,
       status: phaseMatch.groups.status,
       body: implementationSection.slice(phaseBodyStart, phaseBodyEnd),

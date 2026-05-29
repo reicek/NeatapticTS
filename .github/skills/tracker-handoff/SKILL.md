@@ -65,12 +65,16 @@ close it deliberately.
 Tracker closure now runs through the `07.tracker-closure` flow. The flow
 requires the `log-completion-marker` gate to pass before the workstream is
 considered closed. The gate confirms that a compressed log entry is present and
-the target phase is marked `[DONE]`.
+the target phase is marked `[DONE]`. It must also clear the
+`stale-wip-plans` gate so an all-`[DONE]` plan cannot remain top-level `[WIP]`
+after the archive handoff.
 
 When closing a tracker that was run with flow-aware phase steps:
 
 - The `VALIDATION_EVIDENCE` section of the final structured-v1 output block
   must include `log-completion-marker gate: pass` evidence.
+- It must also include `stale-wip-plans gate: pass` evidence, confirming the
+  archived plan no longer appears as a stale top-level `[WIP]` tracker.
 - If the workstream produced gate exceptions, confirm they are recorded in
   `.github/ai-learning/learning-log.jsonl` before compressing.
 
@@ -126,6 +130,20 @@ When a tracker grows too long:
 - keep only the information needed to avoid re-exploring covered work,
 - remove repetitive validation transcripts once the result is captured,
 - prefer concise extent statements over narrative replay.
+
+### Per-Phase Compression Rule (enforced)
+
+When any phase is marked `[DONE]` — whether the workstream continues or closes —
+the owning agent **must** compress that phase's history to a concise coverage
+note before authoring the next phase's step packets or closing the workstream.
+
+- Replace verbose step transcripts and raw validation output with a single
+  compact summary line, e.g.:
+  `[DONE] Phase 2: Implemented X, hardened Y, coverage gate passed.`
+- The `phase-compression` gate (enforced in `01.phase-kickoff` and
+  `07.tracker-closure`) validates this requirement.
+- Do not advance to the next phase or close the workstream until the gate
+  evidence is recorded in `VALIDATION_EVIDENCE`.
 
 When a plan reaches terminal `[DONE]` state:
 
