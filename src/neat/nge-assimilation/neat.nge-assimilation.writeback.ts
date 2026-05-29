@@ -249,7 +249,7 @@ function quantizeCppnParameterValue(
 function omitUndefinedFields<T extends object>(record: T): T {
   return Object.fromEntries(
     Object.entries(record).filter(
-      ([_fieldName, fieldValue]) => fieldValue !== undefined,
+      ([, fieldValue]) => fieldValue !== undefined,
     ),
   ) as T;
 }
