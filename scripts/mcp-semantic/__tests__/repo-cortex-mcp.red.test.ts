@@ -1,5 +1,5 @@
-import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 interface ToolDescriptor {
@@ -21,6 +21,9 @@ interface SmokeReport {
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const MCP_CONFIG_PATH = path.join(REPO_ROOT, '.vscode', 'mcp.json');
+const BUILD_INDEX_PATH = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'build-index.mjs');
+const SNAPSHOT_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'build-browser-snapshot.mjs');
+const DATABASE_PATH = path.join(REPO_ROOT, 'data', 'semantic-index.sqlite');
 
 const runModuleEvaluation = <Result>(source: string): Result => {
   const output = execFileSync(process.execPath, ['--input-type=module', '--eval', source], {
@@ -32,6 +35,21 @@ const runModuleEvaluation = <Result>(source: string): Result => {
 };
 
 describe('repo cortex MCP red contracts', () => {
+  beforeAll(() => {
+    if (!existsSync(DATABASE_PATH)) {
+      spawnSync(process.execPath, [BUILD_INDEX_PATH], {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+        timeout: 600000,
+      });
+    }
+    spawnSync(process.execPath, [SNAPSHOT_SCRIPT_PATH], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      timeout: 120000,
+    });
+  }, 600000);
+
   describe('server shape', () => {
     it('registers all semantic tools through createTool-compatible descriptors', () => {
       const descriptors = runModuleEvaluation<ToolDescriptor[]>(`

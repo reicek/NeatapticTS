@@ -19,6 +19,7 @@ interface SpawnedGateResult {
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const BUILD_INDEX_PATH = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'build-index.mjs');
 const CORTEX_INDEX_GATE_PATH = path.join(REPO_ROOT, 'scripts', 'agent-customization', 'gates', 'cortex-index.gate.mjs');
+const SNAPSHOT_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'build-browser-snapshot.mjs');
 
 describe('cortex-index.gate.mjs', () => {
   describe('red gate contract', () => {
@@ -49,6 +50,11 @@ function runGateContractCheck(): SpawnedGateResult {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     timeout: 600000,
+  });
+  spawnSync(process.execPath, [SNAPSHOT_SCRIPT_PATH], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    timeout: 120000,
   });
   const gateResult = spawnSync(process.execPath, [CORTEX_INDEX_GATE_PATH, '--json'], {
     cwd: REPO_ROOT,
