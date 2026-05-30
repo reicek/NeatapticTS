@@ -6,7 +6,7 @@
  * and a small mutable `RacingRenderState` (tire marks) and produces one frame.
  *
  * Visual style: neon-retro-arcade — dark background, cyan/blue structure,
- * square-outline car, fading tire marks, yellow heading indicator.
+ * square-outline car, fading tire marks, neon-white bumper lighting.
  *
  * The world coordinate system is math-convention (Y increases upward).
  * Canvas pixels use Y-down convention. The affine `WorldTransform` absorbs
@@ -21,6 +21,7 @@ import type {
   TireStateTuple,
 } from '../environment/environment.types';
 import type { TrackSpec } from '../track/track.generator.types';
+import { resolveSplineSampleFrame } from '../track/track.spline.utils';
 import type { RacingRenderFrame } from '../workers/simulation-worker/simulation-worker.types';
 
 // ── Color palette ────────────────────────────────────────────────────────────
@@ -32,12 +33,21 @@ const COLOR_TRACK_GLOW_ALPHA = 0.15;
 const COLOR_CENTERLINE = 'rgba(0,180,220,0.30)';
 const COLOR_GUIDANCE_LINE_RGB = '255,209,102';
 const COLOR_CAR_BODY = '#00e5ff';
-const COLOR_HEADING_INDICATOR = '#ffcc00';
-const COLOR_TIRE_MARK_MAX_ALPHA = 0.52;
-const COLOR_TIRE_GOOD = '#22c55e';
+const COLOR_NEON_WHITE = '#f8feff';
+const COLOR_FRONT_BUMPER = COLOR_NEON_WHITE;
+const COLOR_HEADLIGHT_GLOW_RGB = '248,254,255';
+const COLOR_CAR_INNER_FRAME = 'rgba(248, 254, 255, 0.38)';
+const COLOR_CAR_EDGE_GLINT = 'rgba(248, 254, 255, 0.58)';
+const COLOR_CAR_CANOPY_ACCENT = 'rgba(180, 245, 255, 0.58)';
+const COLOR_CAR_CORE_ACCENT = 'rgba(248, 254, 255, 0.78)';
+const COLOR_TIRE_MARK_MAX_ALPHA = 0.3;
+const COLOR_TIRE_MARK_GLOW_RGB = '170,235,255';
+const COLOR_TIRE_MARK_CORE_RGB = '248,254,255';
+const COLOR_TIRE_GOOD = COLOR_NEON_WHITE;
 const COLOR_TIRE_WARN = '#facc15';
 const COLOR_TIRE_ALERT = '#fb923c';
 const COLOR_TIRE_CRITICAL = '#ef4444';
+const COLOR_TIRE_GLINT = 'rgba(248, 254, 255, 0.6)';
 const COLOR_PIT_TEAM_A = 'rgba(0, 229, 255, 0.38)';
 const COLOR_PIT_TEAM_B = 'rgba(255, 122, 69, 0.38)';
 const COLOR_PIT_OCCUPIED = 'rgba(255, 204, 0, 0.16)';
@@ -50,12 +60,69 @@ const WORLD_PADDING_RATIO = 1.16;
 const CAR_HALF_LENGTH_WORLD = 3.8;
 /** Half-width of the car rectangle in world units (left/right). */
 const CAR_HALF_WIDTH_WORLD = 2.2;
-/** Length of the forward heading indicator in world units. */
-const HEADING_INDICATOR_WORLD_LENGTH = 5.5;
+/** Radius (in canvas pixels) of tire-health corner markers. */
+const CAR_TIRE_CORNER_RADIUS_PX = 1.3;
+/** Clear pixel gap preserved between front tire markers and the bumper ends. */
+const FRONT_BUMPER_TIRE_CLEARANCE_PX = 1;
+/** Inset placing the rendered front bumper just inside the front face. */
+const FRONT_BUMPER_INSET_WORLD = 0.26;
+/** Inset used for a subtle secondary inner frame on the car body. */
+const CAR_INNER_FRAME_INSET_PX = 2.3;
+/** Low-alpha secondary stroke pass used for controlled car-body glow. */
+const CAR_EXTRA_GLOW_ALPHA = 0.22;
+/** Inset from top/bottom edges where front glint lines are drawn. */
+const CAR_EDGE_GLINT_INSET_PX = 1.1;
+/** Fraction of car half-length used by each front edge glint segment. */
+const CAR_EDGE_GLINT_LENGTH_RATIO = 0.26;
+/** Fraction of half-width used to place the canopy accent lines. */
+const CAR_CANOPY_OFFSET_RATIO = 0.38;
+/** Fraction of half-length used for canopy accent start. */
+const CAR_CANOPY_START_RATIO = -0.08;
+/** Fraction of half-length used for canopy accent end. */
+const CAR_CANOPY_END_RATIO = 0.44;
+/** X-position ratio for the central car energy-core accent. */
+const CAR_CORE_X_RATIO = 0.14;
+/** Radius in CSS pixels for the central car energy-core accent. */
+const CAR_CORE_RADIUS_PX = 1.06;
+/** Forward reach of the headlight glow projection in world units. */
+const HEADLIGHT_PROJECTION_WORLD_LENGTH = 8.4;
+/** Extra side spread of the headlight glow projection in world units. */
+const HEADLIGHT_PROJECTION_SPREAD_WORLD = 2.6;
+/** Rearward world offset used when sampling tire-mark trail points. */
+const TIRE_MARK_REAR_OFFSET_WORLD = CAR_HALF_LENGTH_WORLD;
 /** Stroke width in CSS pixels used for the cyan boundary lines. */
 const TRACK_EDGE_LINE_WIDTH_PX = 2.4;
 /** Blur radius in CSS pixels used for the boundary glow. */
 const TRACK_GLOW_BLUR_PX = 18;
+/** Neighbor radius used to smooth pit heading from local spline tangents. */
+const PIT_HEADING_SMOOTHING_RADIUS = 4;
+/** Subtle glow alpha used for pit-overlay neon shine passes. */
+const PIT_OVERLAY_GLOW_ALPHA = 0.24;
+/** Blur radius in CSS pixels used for pit-overlay neon shine. */
+const PIT_OVERLAY_GLOW_BLUR_PX = 8;
+/** Width of the soft pit-overlay glow stroke in CSS pixels. */
+const PIT_OVERLAY_GLOW_LINE_WIDTH_PX = 2.6;
+/** Maximum corner-accent segment length for pit overlay boxes. */
+const PIT_OVERLAY_CORNER_ACCENT_LENGTH_PX = 6;
+/** Alpha used by pit-overlay corner accents. */
+const PIT_OVERLAY_CORNER_ACCENT_ALPHA = 0.62;
+/** Inset for the pit-overlay center scanline accent. */
+const PIT_OVERLAY_SCANLINE_INSET_PX = 2.3;
+/** Alpha used by the pit-overlay center scanline accent. */
+const PIT_OVERLAY_SCANLINE_ALPHA = 0.36;
+/** Radius of pit-overlay side beacon accents. */
+const PIT_OVERLAY_BEACON_RADIUS_PX = 1.08;
+/** Blur radius applied to pit-overlay side beacon accents. */
+const PIT_OVERLAY_BEACON_BLUR_PX = 5;
+/** Alpha used by pit-overlay side beacon accents. */
+const PIT_OVERLAY_BEACON_ALPHA = 0.68;
+/** Epsilon guard for circular heading accumulation near zero-vector sums. */
+const HEADING_ACCUMULATION_EPSILON = 1e-6;
+
+/** Radius in CSS pixels of the tiny wheel-surface highlight dot. */
+const TIRE_GLINT_RADIUS_PX = 0.48;
+/** Inward offset in CSS pixels for the wheel-surface highlight dot. */
+const TIRE_GLINT_OFFSET_PX = 0.58;
 
 // ── Tire-mark accumulation constants ────────────────────────────────────────
 
@@ -70,6 +137,13 @@ const TIRE_MARK_SAMPLE_INTERVAL_TICKS = 3;
 type CanvasPoint = { readonly x: number; readonly y: number };
 /** World-space coordinate pair used while building cached track geometry. */
 type WorldPoint = { readonly x: number; readonly y: number };
+/** Optional pit-orientation fields that may be attached by track generators. */
+type PitOrientationMetadata = {
+  readonly heading?: number;
+  readonly headingRadians?: number;
+  readonly orientation?: number;
+  readonly orientationRadians?: number;
+};
 /** One sampled centerline point with its interpolated track width. */
 type TrackSamplePoint = WorldPoint & { readonly width: number };
 /** Cached spline-derived geometry used by transform and draw helpers. */
@@ -202,7 +276,7 @@ export function computeWorldTransform(
  * Renders one animation frame onto the canvas.
  *
  * Rendering order: background → track glow → track surface → track edges →
- * centerline dashes → tire marks → car body + heading indicator.
+ * centerline dashes → tire marks → car body + front lighting accents.
  *
  * When `renderOptions.frame` is present, the renderer also colors the four tire
  * corners from the packed Tier 4 tire tuple and draws pit entrance/stall
@@ -247,7 +321,7 @@ export function renderRacingFrame(
   // Step 4: Fading tire-mark trail.
   drawTireMarks(ctx, renderState.tireMarks, transform);
 
-  // Step 5: Car body and heading indicator.
+  // Step 5: Car body and front lighting accents.
   drawCar(
     ctx,
     envState,
@@ -258,6 +332,7 @@ export function renderRacingFrame(
       renderOptions.focusCarIndex ?? 0,
     ),
   );
+
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -276,9 +351,14 @@ function advanceTireMarks(
   renderState.ticksSinceLastMark++;
 
   if (renderState.ticksSinceLastMark >= TIRE_MARK_SAMPLE_INTERVAL_TICKS) {
+    const rearSampleX =
+      envState.carX - Math.cos(envState.carHeading) * TIRE_MARK_REAR_OFFSET_WORLD;
+    const rearSampleY =
+      envState.carY - Math.sin(envState.carHeading) * TIRE_MARK_REAR_OFFSET_WORLD;
+
     renderState.tireMarks.push({
-      worldX: envState.carX,
-      worldY: envState.carY,
+      worldX: rearSampleX,
+      worldY: rearSampleY,
       age: 0,
     });
     renderState.ticksSinceLastMark = 0;
@@ -616,22 +696,60 @@ function drawTireMarks(
   marks: readonly TireMark[],
   transform: WorldTransform,
 ): void {
-  for (const mark of marks) {
-    const remainingRatio = 1 - mark.age / TIRE_MARK_MAX_AGE_TICKS;
-    const alpha = remainingRatio * COLOR_TIRE_MARK_MAX_ALPHA;
-    if (alpha <= 0) continue;
-
-    const canvasPos = toCanvas(mark.worldX, mark.worldY, transform);
-    ctx.beginPath();
-    ctx.arc(canvasPos.x, canvasPos.y, 1.5, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(0,185,225,${alpha.toFixed(3)})`;
-    ctx.fill();
+  if (marks.length < 2) {
+    return;
   }
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  for (let markIndex = 1; markIndex < marks.length; markIndex++) {
+    const previousMark = marks[markIndex - 1]!;
+    const currentMark = marks[markIndex]!;
+    const remainingRatio =
+      1 - Math.max(previousMark.age, currentMark.age) / TIRE_MARK_MAX_AGE_TICKS;
+    const alpha = remainingRatio * COLOR_TIRE_MARK_MAX_ALPHA;
+    if (alpha <= 0) {
+      continue;
+    }
+
+    const previousCanvasPos = toCanvas(
+      previousMark.worldX,
+      previousMark.worldY,
+      transform,
+    );
+    const currentCanvasPos = toCanvas(
+      currentMark.worldX,
+      currentMark.worldY,
+      transform,
+    );
+
+    ctx.beginPath();
+    ctx.moveTo(previousCanvasPos.x, previousCanvasPos.y);
+    ctx.lineTo(currentCanvasPos.x, currentCanvasPos.y);
+    ctx.strokeStyle = `rgba(${COLOR_TIRE_MARK_GLOW_RGB}, ${(alpha * 0.62).toFixed(3)})`;
+    ctx.lineWidth = 4.2;
+    ctx.shadowColor = `rgba(${COLOR_TIRE_MARK_GLOW_RGB}, ${(alpha * 0.9).toFixed(3)})`;
+    ctx.shadowBlur = 7;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(previousCanvasPos.x, previousCanvasPos.y);
+    ctx.lineTo(currentCanvasPos.x, currentCanvasPos.y);
+    ctx.strokeStyle = `rgba(${COLOR_TIRE_MARK_CORE_RGB}, ${alpha.toFixed(3)})`;
+    ctx.lineWidth = 1.7;
+    ctx.shadowBlur = 0;
+    ctx.stroke();
+  }
+
+  ctx.restore();
 }
 
 /**
- * Draws the car as a square outline with a yellow heading indicator line
- * extending from the front face.
+ * Draws the car as a square outline with a neon-white front bumper and
+ * forward headlight projection.
  *
  * The car rectangle is drawn in local space (car centre at origin, facing
  * positive local X), then rotated and translated to world position via the
@@ -650,8 +768,36 @@ function drawCar(
   const canvasPos = toCanvas(state.carX, state.carY, transform);
   const halfLengthCanvas = CAR_HALF_LENGTH_WORLD * transform.scale;
   const halfWidthCanvas = CAR_HALF_WIDTH_WORLD * transform.scale;
-  const headingLineLengthCanvas =
-    HEADING_INDICATOR_WORLD_LENGTH * transform.scale;
+  const frontBumperInsetCanvas = FRONT_BUMPER_INSET_WORLD * transform.scale;
+  const frontBumperCanvasX = halfLengthCanvas - frontBumperInsetCanvas;
+  const frontBumperEndInsetCanvas =
+    CAR_TIRE_CORNER_RADIUS_PX + FRONT_BUMPER_TIRE_CLEARANCE_PX;
+  const frontBumperTopCanvasY = -halfWidthCanvas + frontBumperEndInsetCanvas;
+  const frontBumperBottomCanvasY = halfWidthCanvas - frontBumperEndInsetCanvas;
+  const headlightProjectionLengthCanvas =
+    HEADLIGHT_PROJECTION_WORLD_LENGTH * transform.scale;
+  const headlightProjectionSpreadCanvas =
+    HEADLIGHT_PROJECTION_SPREAD_WORLD * transform.scale;
+  const headlightCoreRadiusCanvas =
+    halfWidthCanvas + headlightProjectionSpreadCanvas * 1.3;
+  const headlightSoftRadiusCanvas =
+    halfWidthCanvas + headlightProjectionSpreadCanvas * 3.2;
+  const headlightFrontCenterCanvasX =
+    frontBumperCanvasX + headlightProjectionLengthCanvas * 0.4;
+  const innerFrameInsetCanvas = Math.min(
+    CAR_INNER_FRAME_INSET_PX,
+    Math.min(halfLengthCanvas, halfWidthCanvas) * 0.22,
+  );
+  const edgeGlintLengthCanvas = halfLengthCanvas * CAR_EDGE_GLINT_LENGTH_RATIO;
+  const edgeGlintStartCanvasX =
+    halfLengthCanvas - edgeGlintLengthCanvas - CAR_EDGE_GLINT_INSET_PX;
+  const edgeGlintEndCanvasX = halfLengthCanvas - CAR_EDGE_GLINT_INSET_PX;
+  const edgeGlintTopCanvasY = -halfWidthCanvas + CAR_EDGE_GLINT_INSET_PX;
+  const edgeGlintBottomCanvasY = halfWidthCanvas - CAR_EDGE_GLINT_INSET_PX;
+  const canopyOffsetCanvasY = halfWidthCanvas * CAR_CANOPY_OFFSET_RATIO;
+  const canopyStartCanvasX = halfLengthCanvas * CAR_CANOPY_START_RATIO;
+  const canopyEndCanvasX = halfLengthCanvas * CAR_CANOPY_END_RATIO;
+  const coreAccentCanvasX = halfLengthCanvas * CAR_CORE_X_RATIO;
 
   ctx.save();
   ctx.translate(canvasPos.x, canvasPos.y);
@@ -672,14 +818,149 @@ function drawCar(
   ctx.strokeStyle = COLOR_CAR_BODY;
   ctx.lineWidth = 1.8;
   ctx.stroke();
+
+  // Controlled extra glow pass to add depth without washing out edges.
+  ctx.beginPath();
+  ctx.rect(
+    -halfLengthCanvas,
+    -halfWidthCanvas,
+    halfLengthCanvas * 2,
+    halfWidthCanvas * 2,
+  );
+  ctx.lineWidth = 3.1;
+  ctx.globalAlpha = CAR_EXTRA_GLOW_ALPHA;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Inner frame accent keeps the Tron contour readable at all scales.
+  ctx.beginPath();
+  ctx.rect(
+    -halfLengthCanvas + innerFrameInsetCanvas,
+    -halfWidthCanvas + innerFrameInsetCanvas,
+    (halfLengthCanvas - innerFrameInsetCanvas) * 2,
+    (halfWidthCanvas - innerFrameInsetCanvas) * 2,
+  );
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = COLOR_CAR_INNER_FRAME;
+  ctx.stroke();
+
+  // Front edge glints add a restrained metallic-neon highlight.
+  for (const edgeGlintCanvasY of [edgeGlintTopCanvasY, edgeGlintBottomCanvasY]) {
+    ctx.beginPath();
+    ctx.moveTo(edgeGlintStartCanvasX, edgeGlintCanvasY);
+    ctx.lineTo(edgeGlintEndCanvasX, edgeGlintCanvasY);
+    ctx.strokeStyle = COLOR_CAR_EDGE_GLINT;
+    ctx.lineWidth = 1.05;
+    ctx.stroke();
+  }
+
+  // Cockpit canopy accents for extra Tron readability without adding clutter.
+  for (const canopyCanvasY of [-canopyOffsetCanvasY, canopyOffsetCanvasY]) {
+    ctx.beginPath();
+    ctx.moveTo(canopyStartCanvasX, canopyCanvasY);
+    ctx.lineTo(canopyEndCanvasX, canopyCanvasY);
+    ctx.strokeStyle = COLOR_CAR_CANOPY_ACCENT;
+    ctx.lineWidth = 0.96;
+    ctx.stroke();
+  }
+
+  // Center energy-core accent gives a subtle high-tech focal point.
+  ctx.beginPath();
+  ctx.arc(coreAccentCanvasX, 0, CAR_CORE_RADIUS_PX, 0, Math.PI * 2);
+  ctx.fillStyle = COLOR_CAR_CORE_ACCENT;
+  ctx.shadowColor = COLOR_CAR_CORE_ACCENT;
+  ctx.shadowBlur = 4;
+  ctx.fill();
+
   drawCarTireCorners(ctx, halfLengthCanvas, halfWidthCanvas, tireState);
 
-  // Heading indicator — yellow line extending from the front face.
+  // Headlights — diffuse neon spread emitted from the bumper.
+  const bumperGlowGradient = ctx.createRadialGradient(
+    frontBumperCanvasX,
+    0,
+    0,
+    frontBumperCanvasX,
+    0,
+    headlightCoreRadiusCanvas,
+  );
+  bumperGlowGradient.addColorStop(0, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.16)`);
+  bumperGlowGradient.addColorStop(0.45, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.07)`);
+  bumperGlowGradient.addColorStop(1, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0)`);
+
   ctx.beginPath();
-  ctx.moveTo(halfLengthCanvas, 0);
-  ctx.lineTo(halfLengthCanvas + headingLineLengthCanvas, 0);
-  ctx.strokeStyle = COLOR_HEADING_INDICATOR;
-  ctx.lineWidth = 1.8;
+  ctx.arc(frontBumperCanvasX, 0, headlightCoreRadiusCanvas, 0, Math.PI * 2);
+  ctx.fillStyle = bumperGlowGradient;
+  ctx.fill();
+
+  const frontSpreadGradient = ctx.createRadialGradient(
+    headlightFrontCenterCanvasX,
+    0,
+    0,
+    headlightFrontCenterCanvasX,
+    0,
+    headlightSoftRadiusCanvas,
+  );
+  frontSpreadGradient.addColorStop(0, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.13)`);
+  frontSpreadGradient.addColorStop(0.42, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.06)`);
+  frontSpreadGradient.addColorStop(1, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0)`);
+
+  ctx.beginPath();
+  ctx.arc(
+    headlightFrontCenterCanvasX,
+    0,
+    headlightSoftRadiusCanvas,
+    0,
+    Math.PI * 2,
+  );
+  ctx.fillStyle = frontSpreadGradient;
+  ctx.fill();
+
+  const sideLightYOffset = halfWidthCanvas * 0.55;
+  const sideBloomRadiusCanvas = headlightCoreRadiusCanvas * 0.95;
+  const sideBloomCenterCanvasX =
+    frontBumperCanvasX + headlightProjectionLengthCanvas * 0.2;
+
+  for (const sideLightOffsetY of [-sideLightYOffset, sideLightYOffset]) {
+    const sideBloomGradient = ctx.createRadialGradient(
+      sideBloomCenterCanvasX,
+      sideLightOffsetY,
+      0,
+      sideBloomCenterCanvasX,
+      sideLightOffsetY,
+      sideBloomRadiusCanvas,
+    );
+    sideBloomGradient.addColorStop(0, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.12)`);
+    sideBloomGradient.addColorStop(0.55, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.04)`);
+    sideBloomGradient.addColorStop(1, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0)`);
+
+    ctx.beginPath();
+    ctx.arc(
+      sideBloomCenterCanvasX,
+      sideLightOffsetY,
+      sideBloomRadiusCanvas,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fillStyle = sideBloomGradient;
+    ctx.fill();
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(frontBumperCanvasX, frontBumperTopCanvasY);
+  ctx.lineTo(frontBumperCanvasX, frontBumperBottomCanvasY);
+  ctx.strokeStyle = COLOR_FRONT_BUMPER;
+  ctx.lineWidth = 1.9;
+  ctx.shadowColor = COLOR_FRONT_BUMPER;
+  ctx.shadowBlur = 12;
+  ctx.stroke();
+
+  // Crisp bumper pass over the diffuse bloom to keep the front edge readable.
+  ctx.beginPath();
+  ctx.moveTo(frontBumperCanvasX, frontBumperTopCanvasY);
+  ctx.lineTo(frontBumperCanvasX, frontBumperBottomCanvasY);
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 1.25;
   ctx.stroke();
 
   ctx.restore();
@@ -726,27 +1007,201 @@ function drawPitOverlays(
       width: 18,
       height: 12,
     };
+    const overlayHeadingRadians = resolvePitOverlayHeadingRadians(
+      spec,
+      pitBox,
+      pitBoxCenter,
+    );
 
-    drawAxisAlignedOverlay(
+    drawRotatedOverlay(
       ctx,
       renderedPitBox,
       transform,
       teamColor,
       occupiedTicks > 0,
+      [],
+      overlayHeadingRadians,
     );
-    drawAxisAlignedOverlay(
+    drawRotatedOverlay(
       ctx,
       pitBox.entranceCorridor,
       transform,
       teamColor,
       occupiedTicks > 0,
       [8, 6],
+      overlayHeadingRadians,
     );
   }
 }
 
 /**
- * Draws one axis-aligned overlay rectangle in world space.
+ * Resolves pit-overlay rotation from pit metadata or nearby spline tangent.
+ *
+ * @param spec - Frozen track geometry used for nearest-sample lookup.
+ * @param pitBox - Team pit metadata descriptor.
+ * @param pitCenter - World-space center used to locate the nearest spline sample.
+ * @returns Overlay heading in world radians.
+ */
+function resolvePitOverlayHeadingRadians(
+  spec: TrackSpec,
+  pitBox: NonNullable<TrackSpec['pitBoxes']>[number],
+  pitCenter: WorldPoint,
+): number {
+  const metadataHeadingRadians = resolvePitMetadataHeadingRadians(pitBox);
+  if (metadataHeadingRadians !== undefined) {
+    return metadataHeadingRadians;
+  }
+
+  if (spec.splineSamples.length === 0) {
+    return 0;
+  }
+
+  const nearestSampleIndex = spec.splineSamples.reduce(
+    (closestIndex, sample, sampleIndex, samples) => {
+      const closestSample = samples[closestIndex]!;
+      const currentDistanceSquared =
+        (sample.x - pitCenter.x) ** 2 + (sample.y - pitCenter.y) ** 2;
+      const closestDistanceSquared =
+        (closestSample.x - pitCenter.x) ** 2 +
+        (closestSample.y - pitCenter.y) ** 2;
+
+      return currentDistanceSquared < closestDistanceSquared
+        ? sampleIndex
+        : closestIndex;
+    },
+    0,
+  );
+
+  return resolveSmoothedPitHeadingRadians(spec, pitCenter, nearestSampleIndex);
+}
+
+/**
+ * Resolves a stable pit heading using a weighted circular mean of nearby
+ * spline tangents around the nearest lane-center sample.
+ *
+ * @param spec - Frozen track geometry containing spline samples.
+ * @param pitCenter - World-space pit center used for proximity weighting.
+ * @param nearestSampleIndex - Index of the nearest spline sample.
+ * @returns Smoothed tangent heading in radians.
+ */
+function resolveSmoothedPitHeadingRadians(
+  spec: TrackSpec,
+  pitCenter: WorldPoint,
+  nearestSampleIndex: number,
+): number {
+  const sampleCount = spec.splineSamples.length;
+  if (sampleCount === 0) {
+    return 0;
+  }
+
+  const nearestHeadingRadians = resolveSplineSampleFrame(
+    spec.splineSamples,
+    nearestSampleIndex,
+  ).tangentHeadingRadians;
+  const smoothingRadius = Math.min(
+    PIT_HEADING_SMOOTHING_RADIUS,
+    Math.floor((sampleCount - 1) / 2),
+  );
+
+  if (smoothingRadius === 0) {
+    return nearestHeadingRadians;
+  }
+
+  let accumulatedHeadingCosine = 0;
+  let accumulatedHeadingSine = 0;
+
+  for (
+    let sampleOffset = -smoothingRadius;
+    sampleOffset <= smoothingRadius;
+    sampleOffset++
+  ) {
+    const wrappedSampleIndex =
+      (nearestSampleIndex + sampleOffset + sampleCount) % sampleCount;
+    const splineSample = spec.splineSamples[wrappedSampleIndex]!;
+    const tangentHeadingRadians = resolveSplineSampleFrame(
+      spec.splineSamples,
+      wrappedSampleIndex,
+    ).tangentHeadingRadians;
+    const distanceSquared =
+      (splineSample.x - pitCenter.x) ** 2 + (splineSample.y - pitCenter.y) ** 2;
+    const proximityWeight = 1 / (1 + distanceSquared);
+    const neighborWeight =
+      (smoothingRadius + 1 - Math.abs(sampleOffset)) / (smoothingRadius + 1);
+    const combinedWeight = proximityWeight * neighborWeight;
+
+    accumulatedHeadingCosine +=
+      Math.cos(tangentHeadingRadians) * combinedWeight;
+    accumulatedHeadingSine += Math.sin(tangentHeadingRadians) * combinedWeight;
+  }
+
+  if (
+    Math.abs(accumulatedHeadingCosine) < HEADING_ACCUMULATION_EPSILON &&
+    Math.abs(accumulatedHeadingSine) < HEADING_ACCUMULATION_EPSILON
+  ) {
+    return nearestHeadingRadians;
+  }
+
+  return Math.atan2(accumulatedHeadingSine, accumulatedHeadingCosine);
+}
+
+/**
+ * Resolves a pit heading when the pit metadata already carries orientation.
+ *
+ * @param pitBox - Team pit metadata descriptor.
+ * @returns Optional heading value in radians.
+ */
+function resolvePitMetadataHeadingRadians(
+  pitBox: NonNullable<TrackSpec['pitBoxes']>[number],
+): number | undefined {
+  const pitOrientationMetadata =
+    pitBox as NonNullable<TrackSpec['pitBoxes']>[number] &
+      PitOrientationMetadata;
+  const headingRadians =
+    pitOrientationMetadata.headingRadians ??
+    pitOrientationMetadata.orientationRadians ??
+    pitOrientationMetadata.heading ??
+    pitOrientationMetadata.orientation;
+
+  if (headingRadians === undefined || !Number.isFinite(headingRadians)) {
+    return undefined;
+  }
+
+  return normalizeHeadingRadiansCandidate(headingRadians);
+}
+
+/**
+ * Normalizes a heading candidate to radians in [-pi, pi], tolerating degree
+ * inputs from future pit metadata producers.
+ *
+ * @param headingCandidate - Metadata heading candidate.
+ * @returns Normalized radian heading.
+ */
+function normalizeHeadingRadiansCandidate(headingCandidate: number): number {
+  const maybeDegreesValue = Math.abs(headingCandidate) > Math.PI * 2;
+  const headingRadians = maybeDegreesValue
+    ? (headingCandidate * Math.PI) / 180
+    : headingCandidate;
+
+  return normalizeRadians(headingRadians);
+}
+
+/**
+ * Wraps an angle in radians to the interval [-pi, pi].
+ *
+ * @param valueRadians - Input angle in radians.
+ * @returns Wrapped angle in radians.
+ */
+function normalizeRadians(valueRadians: number): number {
+  const twoPi = Math.PI * 2;
+  const shiftedRadians = valueRadians + Math.PI;
+  const wrappedRadians =
+    ((shiftedRadians % twoPi) + twoPi) % twoPi;
+
+  return wrappedRadians - Math.PI;
+}
+
+/**
+ * Draws one overlay rectangle in world space with optional rotation.
  *
  * @param ctx - 2D rendering context.
  * @param worldBox - World-space rectangle.
@@ -754,8 +1209,9 @@ function drawPitOverlays(
  * @param strokeColor - Outline/fill color.
  * @param occupied - Whether the box is currently occupied.
  * @param dashPattern - Optional dashed outline pattern.
+ * @param rotationRadians - World-space rotation in radians.
  */
-function drawAxisAlignedOverlay(
+function drawRotatedOverlay(
   ctx: CanvasRenderingContext2D,
   worldBox: {
     readonly x: number;
@@ -767,19 +1223,174 @@ function drawAxisAlignedOverlay(
   strokeColor: string,
   occupied: boolean,
   dashPattern: readonly number[] = [],
+  rotationRadians = 0,
 ): void {
-  const topLeft = toCanvas(worldBox.x, worldBox.y, transform);
+  const worldCenter = {
+    x: worldBox.x + worldBox.width / 2,
+    y: worldBox.y + worldBox.height / 2,
+  };
+  const centerCanvas = toCanvas(worldCenter.x, worldCenter.y, transform);
   const canvasWidth = worldBox.width * transform.scale;
   const canvasHeight = worldBox.height * transform.scale;
 
   ctx.save();
+  ctx.translate(centerCanvas.x, centerCanvas.y);
+  ctx.rotate(rotationRadians);
   ctx.setLineDash([...dashPattern]);
-  ctx.lineWidth = 1.4;
   ctx.fillStyle = occupied ? COLOR_PIT_OCCUPIED : 'transparent';
-  ctx.strokeStyle = strokeColor;
+
+  // Step 1: Fill occupancy first so neon outlines remain readable on top.
   ctx.beginPath();
-  ctx.rect(topLeft.x, topLeft.y, canvasWidth, canvasHeight);
+  ctx.rect(-canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
   ctx.fill();
+
+  // Step 2: Add a subtle neon shine halo around each overlay rectangle.
+  ctx.beginPath();
+  ctx.rect(-canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = PIT_OVERLAY_GLOW_LINE_WIDTH_PX;
+  ctx.globalAlpha = PIT_OVERLAY_GLOW_ALPHA;
+  ctx.shadowColor = strokeColor;
+  ctx.shadowBlur = PIT_OVERLAY_GLOW_BLUR_PX;
+  ctx.stroke();
+
+  // Step 3: Draw the crisp overlay stroke over the glow pass.
+  ctx.beginPath();
+  ctx.rect(-canvasWidth / 2, -canvasHeight / 2, canvasWidth, canvasHeight);
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  drawPitOverlayCornerAccents(
+    ctx,
+    canvasWidth,
+    canvasHeight,
+    strokeColor,
+    dashPattern.length > 0,
+  );
+
+  drawPitOverlayCenterDetails(
+    ctx,
+    canvasWidth,
+    canvasHeight,
+    strokeColor,
+    occupied,
+  );
+
+  ctx.restore();
+}
+
+/**
+ * Draws centered pit scanline and side beacons for extra Tron surface detail.
+ *
+ * @param ctx - 2D rendering context.
+ * @param canvasWidth - Overlay width in canvas pixels.
+ * @param canvasHeight - Overlay height in canvas pixels.
+ * @param strokeColor - Team stroke color.
+ * @param occupied - Whether the parent pit overlay is occupied.
+ */
+function drawPitOverlayCenterDetails(
+  ctx: CanvasRenderingContext2D,
+  canvasWidth: number,
+  canvasHeight: number,
+  strokeColor: string,
+  occupied: boolean,
+): void {
+  if (canvasWidth < 9 || canvasHeight < 7) {
+    return;
+  }
+
+  const halfCanvasWidth = canvasWidth / 2;
+  const scanlineInset = Math.min(
+    PIT_OVERLAY_SCANLINE_INSET_PX,
+    halfCanvasWidth * 0.32,
+  );
+
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = occupied
+    ? PIT_OVERLAY_SCANLINE_ALPHA * 1.12
+    : PIT_OVERLAY_SCANLINE_ALPHA;
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(-halfCanvasWidth + scanlineInset, 0);
+  ctx.lineTo(halfCanvasWidth - scanlineInset, 0);
+  ctx.stroke();
+
+  ctx.globalAlpha = occupied
+    ? PIT_OVERLAY_BEACON_ALPHA * 1.08
+    : PIT_OVERLAY_BEACON_ALPHA;
+  ctx.fillStyle = strokeColor;
+  ctx.shadowColor = strokeColor;
+  ctx.shadowBlur = PIT_OVERLAY_BEACON_BLUR_PX;
+
+  for (const beaconCanvasX of [-halfCanvasWidth, halfCanvasWidth]) {
+    ctx.beginPath();
+    ctx.arc(beaconCanvasX, 0, PIT_OVERLAY_BEACON_RADIUS_PX, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Draws compact corner accent marks for pit overlays in local overlay space.
+ *
+ * @param ctx - 2D rendering context.
+ * @param canvasWidth - Overlay width in canvas pixels.
+ * @param canvasHeight - Overlay height in canvas pixels.
+ * @param strokeColor - Team stroke color.
+ * @param dashedOverlay - Whether the parent overlay uses dashed lines.
+ */
+function drawPitOverlayCornerAccents(
+  ctx: CanvasRenderingContext2D,
+  canvasWidth: number,
+  canvasHeight: number,
+  strokeColor: string,
+  dashedOverlay: boolean,
+): void {
+  if (canvasWidth < 8 || canvasHeight < 8) {
+    return;
+  }
+
+  const halfCanvasWidth = canvasWidth / 2;
+  const halfCanvasHeight = canvasHeight / 2;
+  const cornerAccentLength = Math.min(
+    PIT_OVERLAY_CORNER_ACCENT_LENGTH_PX,
+    halfCanvasWidth * 0.58,
+    halfCanvasHeight * 0.58,
+  );
+
+  if (cornerAccentLength <= 1) {
+    return;
+  }
+
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = dashedOverlay
+    ? PIT_OVERLAY_CORNER_ACCENT_ALPHA * 0.82
+    : PIT_OVERLAY_CORNER_ACCENT_ALPHA;
+
+  ctx.beginPath();
+  ctx.moveTo(-halfCanvasWidth, -halfCanvasHeight + cornerAccentLength);
+  ctx.lineTo(-halfCanvasWidth, -halfCanvasHeight);
+  ctx.lineTo(-halfCanvasWidth + cornerAccentLength, -halfCanvasHeight);
+
+  ctx.moveTo(halfCanvasWidth - cornerAccentLength, -halfCanvasHeight);
+  ctx.lineTo(halfCanvasWidth, -halfCanvasHeight);
+  ctx.lineTo(halfCanvasWidth, -halfCanvasHeight + cornerAccentLength);
+
+  ctx.moveTo(-halfCanvasWidth, halfCanvasHeight - cornerAccentLength);
+  ctx.lineTo(-halfCanvasWidth, halfCanvasHeight);
+  ctx.lineTo(-halfCanvasWidth + cornerAccentLength, halfCanvasHeight);
+
+  ctx.moveTo(halfCanvasWidth - cornerAccentLength, halfCanvasHeight);
+  ctx.lineTo(halfCanvasWidth, halfCanvasHeight);
+  ctx.lineTo(halfCanvasWidth, halfCanvasHeight - cornerAccentLength);
   ctx.stroke();
   ctx.restore();
 }
@@ -798,7 +1409,6 @@ function drawCarTireCorners(
   halfWidthCanvas: number,
   tireState: TireStateTuple,
 ): void {
-  const tireCornerRadius = 1.3;
   const tireCornerOffsets = [
     { x: halfLengthCanvas, y: -halfWidthCanvas, tireHealth: tireState[0] },
     { x: halfLengthCanvas, y: halfWidthCanvas, tireHealth: tireState[1] },
@@ -808,11 +1418,33 @@ function drawCarTireCorners(
 
   for (const tireCorner of tireCornerOffsets) {
     ctx.beginPath();
-    ctx.arc(tireCorner.x, tireCorner.y, tireCornerRadius, 0, Math.PI * 2);
+    ctx.arc(
+      tireCorner.x,
+      tireCorner.y,
+      CAR_TIRE_CORNER_RADIUS_PX,
+      0,
+      Math.PI * 2,
+    );
     ctx.fillStyle = resolveTireHealthColor(tireCorner.tireHealth);
+    ctx.fill();
+
+    const glintOffsetX =
+      tireCorner.x >= 0 ? -TIRE_GLINT_OFFSET_PX : TIRE_GLINT_OFFSET_PX;
+    const glintOffsetY =
+      tireCorner.y >= 0 ? -TIRE_GLINT_OFFSET_PX : TIRE_GLINT_OFFSET_PX;
+    ctx.beginPath();
+    ctx.arc(
+      tireCorner.x + glintOffsetX,
+      tireCorner.y + glintOffsetY,
+      TIRE_GLINT_RADIUS_PX,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fillStyle = COLOR_TIRE_GLINT;
     ctx.fill();
   }
 }
+
 
 /**
  * Resolves the rendered tire-health tuple for the focused car.
