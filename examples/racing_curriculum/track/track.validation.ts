@@ -308,6 +308,11 @@ function doAxisAlignedBoxesOverlap(
 /**
  * Returns whether a pit entrance corridor can be reached from the track ribbon.
  *
+ * When spline samples are present, reachability is checked against the smooth
+ * sampled lane center (accurate for corridors placed via spline-normal offsets).
+ * When no spline samples exist (e.g., unit-test fixtures), the check falls back
+ * to the polygon segment approximation.
+ *
  * @param spec - Track specification.
  * @param corridor - Candidate pit entrance corridor.
  * @returns True when the corridor lies within the reachable ribbon distance.
@@ -316,19 +321,30 @@ function isPitCorridorReachable(
   spec: TrackSpec,
   corridor: TrackAabb,
 ): boolean {
-  const corridorCenter = {
-    x: corridor.x + corridor.width / 2,
-    y: corridor.y + corridor.height / 2,
-  };
+  const corridorCenterX = corridor.x + corridor.width / 2;
+  const corridorCenterY = corridor.y + corridor.height / 2;
   const corridorRadius = Math.max(corridor.width, corridor.height) / 2;
 
+  // Prefer spline samples when available — they represent the actual smooth
+  // lane center that corridors are offset from.
+  if (spec.splineSamples.length > 0) {
+    return spec.splineSamples.some((sample) => {
+      const distanceToSample = Math.hypot(
+        corridorCenterX - sample.x,
+        corridorCenterY - sample.y,
+      );
+      return distanceToSample <= sample.width / 2 + corridorRadius;
+    });
+  }
+
+  // Fallback: use polygon segment approximation (for unit-test fixtures with
+  // no spline samples).
   return spec.segments.some((segment) => {
     const distanceToSegment = resolvePointToSegmentDistance(
-      corridorCenter,
+      { x: corridorCenterX, y: corridorCenterY },
       { x: segment.startX, y: segment.startY },
       { x: segment.endX, y: segment.endY },
     );
-
     return distanceToSegment <= segment.width / 2 + corridorRadius;
   });
 }

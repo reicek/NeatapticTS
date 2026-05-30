@@ -1,6 +1,7 @@
 import { createRacingHost } from './host/host';
 import { Network, methods } from '../../../src/browser-entry.ts';
 import { generateTrack } from '../track/track.generator';
+import type { TrackSpec } from '../track/track.generator.types';
 import { stepEnvironment } from '../environment/environment.step.service';
 import {
   computeWorldTransform,
@@ -49,8 +50,6 @@ const DEMO_TRACK_LAYOUT_VERSION = 1;
 const DEMO_TRACK_SIZE_BUCKET = 'medium';
 /** Active browser harness tier for the Step 04 NGE controller integration. */
 const ACTIVE_CURRICULUM_TIER = 1;
-/** Tier 1 observation width before the Tier 2 radio tail is appended. */
-const CONTROLLER_INPUT_COUNT = 70;
 /** Small hidden layer used to pin a deterministic solo driving policy. */
 const CONTROLLER_HIDDEN_LAYER_SIZES = [4] as const;
 /** Observation channel index for the lateral-offset feature. */
@@ -59,15 +58,27 @@ const OBSERVATION_INDEX_OPTIMAL_LINE_LATERAL_OFFSET = 16;
 const OBSERVATION_INDEX_OPTIMAL_LINE_HEADING_ERROR = 17;
 /** Observation channel index for the lateral-speed feature. */
 const OBSERVATION_INDEX_LATERAL_SPEED = 5;
+/** Observation channel index for sin(carHeading) — used as the subtracted baseline for look-ahead differential signals. */
+const OBSERVATION_INDEX_SIN_CAR_HEADING = 2;
+/**
+ * Observation channel index for sin(tangentHeading) at look-ahead offset 1.
+ *
+ * Look-ahead offset 1 = 18 spline samples ahead ≈ one full track segment.
+ * The look-ahead block starts at channel 20; each segment occupies 8 channels;
+ * sin(tangent) is at +4 within each group. So: 20 + 1×8 + 4 = 32.
+ *
+ * Wired against OBSERVATION_INDEX_SIN_CAR_HEADING to form a differential
+ * signal: sin(tangentAhead) − sin(carHeading) ≈ sin(headingErrorAhead),
+ * giving the controller anticipatory steering before curves arrive.
+ */
+const OBSERVATION_INDEX_LOOK_AHEAD_NEAR_SIN_TANGENT = 32;
+
+/** Full-health tire tuple used by the solo Tier 1 harness stability guard. */
+const FULL_HEALTH_TIRE_STATE = [1, 1, 1, 1] as const;
 
 // ── Panel text labels ─────────────────────────────────────────────────────────
 
 const CANVAS_TOOLTIP_HEADING = 'Track Playback';
-const CANVAS_TOOLTIP_LINES = [
-  'This left stage now runs the Tier 1 solo harness: one car, one deterministic seed, and live NGE inference.',
-  'The visual track stays spline-smoothed, but the control loop now flows through the owner-local observation assembler and the public Network.activate(...) seam.',
-  'Later tiers keep this shell and widen the same controller path with self-radio and race-pack authority instead of replacing the browser contract again.',
-];
 const CONTROLLER_TOOLTIP_HEADING = 'Controller Status';
 const CONTROLLER_TOOLTIP_LINES = [
   'This panel now reports the live Tier 1 NGE controller instead of the old scripted baseline seam.',
@@ -128,6 +139,7 @@ interface NetworkPanelNodes {
   throttleValue: Text;
   steerValue: Text;
   tickValue: Text;
+  tierValue: Text;
 }
 
 /** Live-updating text node references for the telemetry panel. */
@@ -136,7 +148,41 @@ interface TelemetryPanelNodes {
   posYValue: Text;
   headingValue: Text;
   tickValue: Text;
+  lapValue: Text;
 }
+
+/** Curriculum tier contract from the racing plan ladder. */
+type CurriculumTier = 1 | 2 | 3 | 4 | 5 | 6;
+
+/** Observation tier currently supported by the owner-local controller seam. */
+type SupportedObservationTier = 1 | 2 | 3 | 4 | 5;
+
+type LapProgressState = {
+  lastClosestSplineSampleIndex: number;
+  completedLaps: number;
+};
+
+type CurriculumProgressState = {
+  tier: CurriculumTier;
+  lapProgress: LapProgressState;
+};
+
+/**
+ * Fallback promotion floor while richer co-evolution promotion logic is unavailable.
+ *
+ * Keep this at 3 laps minimum so tiers cannot end too quickly even if future
+ * threshold checks become more permissive.
+ */
+const LAP_COMPLETIONS_REQUIRED_FOR_TIER_ADVANCE = 3;
+/** Highest curriculum tier in the racing plan ladder. */
+const MAX_CURRICULUM_TIER: CurriculumTier = 6;
+/** Highest observation tier currently implemented in the browser controller seam. */
+const MAX_SUPPORTED_OBSERVATION_TIER: SupportedObservationTier = 5;
+/** Wrap threshold used to detect one completed lap from nearest spline sample indices. */
+const LAP_WRAP_HIGH_WATERMARK_RATIO = 0.75;
+/** Wrap threshold used to detect one completed lap from nearest spline sample indices. */
+const LAP_WRAP_LOW_WATERMARK_RATIO = 0.25;
+
 
 /**
  * Starts the Tier 0 racing curriculum browser demo.
@@ -161,7 +207,11 @@ export async function start(
   const containerElement = resolveContainerElement(container);
   injectRacingStyles();
   const hostHandle = createRacingHost(containerElement);
-  setupCanvasStage(hostHandle.canvasRegionElement, hostHandle.canvasElement);
+  setupCanvasStage(
+    hostHandle.canvasRegionElement,
+    hostHandle.canvasElement,
+    ACTIVE_CURRICULUM_TIER,
+  );
 
   // Step 2: Generate deterministic track.
   const trackSpec = generateTrack({
@@ -171,32 +221,21 @@ export async function start(
   });
 
   // Step 3: Initialise car on the sampled spline lane center and tangent.
-  const firstSegment = trackSpec.segments[0];
-  const firstSplineSample = trackSpec.splineSamples[0];
-  const initialHeading = firstSplineSample
-    ? resolveSplineSampleFrame(
-        trackSpec.splineSamples,
-        firstSplineSample.globalIndex,
-      ).tangentHeadingRadians
-    : Math.atan2(
-        firstSegment.endY - firstSegment.startY,
-        firstSegment.endX - firstSegment.startX,
-      );
-  let envState: EnvironmentState = {
-    tick: 0,
-    carX: firstSplineSample?.x ?? firstSegment.startX,
-    carY: firstSplineSample?.y ?? firstSegment.startY,
-    carHeading: initialHeading,
-  };
+  let envState = createInitialEnvironmentState(trackSpec);
 
   // Step 4: Initialise the deterministic NGE controller and render state.
-  const controller = createNgeController(
-    createDeterministicRacingControllerNetwork(),
+  let curriculumProgress = createInitialCurriculumProgress(trackSpec, envState);
+  let controller = createNgeController(
+    createDeterministicRacingControllerNetwork(
+      resolveObservationTierForCurriculumTier(curriculumProgress.tier),
+    ),
     {
-      tier: ACTIVE_CURRICULUM_TIER,
+      tier: resolveObservationTierForCurriculumTier(curriculumProgress.tier),
     },
   );
-  const guidanceAlpha = resolveGuidanceAlphaForTier(ACTIVE_CURRICULUM_TIER);
+  let guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
+    curriculumProgress.tier,
+  );
   const renderState = createRacingRenderState();
 
   // Step 5: Build info panels inside the host regions.
@@ -234,8 +273,53 @@ export async function start(
       accumulatedMs >= FIXED_TIMESTEP_MS &&
       stepsThisFrame < MAX_CATCHUP_STEPS_PER_FRAME
     ) {
+      const previousCurriculumTier = curriculumProgress.tier;
       lastControlOutput = controller.computeControl(envState, trackSpec);
-      envState = stepEnvironment(envState, lastControlOutput);
+      const steppedEnvironmentState = stepEnvironment(envState, lastControlOutput);
+      envState = stabilizeSoloTierTireGrip(
+        steppedEnvironmentState,
+        curriculumProgress.tier,
+      );
+      curriculumProgress = resolveNextCurriculumProgressState(
+        curriculumProgress,
+        trackSpec,
+        envState,
+      );
+
+      if (curriculumProgress.tier !== previousCurriculumTier) {
+        // Step 1: Rebuild the controller with the promoted tier observation width.
+        const nextObservationTier = resolveObservationTierForCurriculumTier(
+          curriculumProgress.tier,
+        );
+        controller = createNgeController(
+          createDeterministicRacingControllerNetwork(nextObservationTier),
+          { tier: nextObservationTier },
+        );
+        // Step 2: Reset race-local state while carrying the controller policy forward.
+        const resetStabilizationTier =
+          previousCurriculumTier === 3 && curriculumProgress.tier === 4
+            ? previousCurriculumTier
+            : curriculumProgress.tier;
+        envState = stabilizeSoloTierTireGrip(
+          createInitialEnvironmentState(trackSpec),
+          resetStabilizationTier,
+        );
+        // Step 3: Refresh control output at the promoted tier/start-state seam.
+        lastControlOutput = controller.computeControl(envState, trackSpec);
+        curriculumProgress = {
+          ...curriculumProgress,
+          lapProgress: createInitialLapProgress(trackSpec, envState),
+        };
+        guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
+          curriculumProgress.tier,
+        );
+        setupCanvasStage(
+          hostHandle.canvasRegionElement,
+          hostHandle.canvasElement,
+          curriculumProgress.tier,
+        );
+      }
+
       accumulatedMs -= FIXED_TIMESTEP_MS;
       stepsThisFrame++;
     }
@@ -261,8 +345,13 @@ export async function start(
       lastControlOutput.throttle,
       lastControlOutput.steer,
       envState.tick,
+      curriculumProgress.tier,
     );
-    updateTelemetryPanelNodes(telemetryPanelNodes, envState);
+    updateTelemetryPanelNodes(
+      telemetryPanelNodes,
+      envState,
+      curriculumProgress.lapProgress.completedLaps,
+    );
 
     animationFrameId = requestAnimationFrame(animationStep);
   };
@@ -658,8 +747,10 @@ function injectRacingStyles(): void {
 function setupCanvasStage(
   region: HTMLElement,
   canvasElement: HTMLCanvasElement,
+  tier: CurriculumTier,
 ): void {
   region.replaceChildren();
+  const stageNarrative = resolveStageNarrativeForTier(tier);
 
   const stageCardElement = document.createElement('div');
   stageCardElement.className = 'racing-stage-card';
@@ -667,12 +758,11 @@ function setupCanvasStage(
   const headerElement = createPanelHeader(
     'Track Playback',
     CANVAS_TOOLTIP_HEADING,
-    CANVAS_TOOLTIP_LINES,
+    stageNarrative.tooltipLines,
   );
   const subtitleElement = document.createElement('div');
   subtitleElement.className = 'racing-stage-card__subtitle';
-  subtitleElement.textContent =
-    'Tier 1 solo NGE harness with a spline-smoothed visual circuit and faded optimal-line guidance.';
+  subtitleElement.textContent = stageNarrative.subtitle;
 
   const metaElement = document.createElement('div');
   metaElement.className = 'racing-stage-card__meta';
@@ -688,8 +778,7 @@ function setupCanvasStage(
 
   const footerElement = document.createElement('div');
   footerElement.className = 'racing-stage-card__footer';
-  footerElement.textContent =
-    'The car and controller are both live in this solo harness. The help chips call out which surrounding UI slots are active today and which still stay future-facing.';
+  footerElement.textContent = stageNarrative.footer;
 
   stageCardElement.append(
     headerElement,
@@ -724,10 +813,12 @@ function setupNetworkPanel(region: HTMLElement): NetworkPanelNodes {
   const throttleValue = document.createTextNode('0.00');
   const steerValue = document.createTextNode('0.00');
   const tickValue = document.createTextNode('0');
+  const tierValue = document.createTextNode(String(ACTIVE_CURRICULUM_TIER));
 
   controllerCard.bodyElement.append(
     buildPanelRow('Controller', 'Live NGE controller'),
     buildPanelRow('Live NGE AI', 'Active'),
+    buildPanelRowWithLiveNode('Tier', tierValue),
     buildPanelRowWithLiveNode('Throttle', throttleValue),
     buildPanelRowWithLiveNode('Steer', steerValue),
     buildPanelRowWithLiveNode('Tick', tickValue),
@@ -758,7 +849,7 @@ function setupNetworkPanel(region: HTMLElement): NetworkPanelNodes {
   );
   region.append(sideStackElement);
 
-  return { throttleValue, steerValue, tickValue };
+  return { throttleValue, steerValue, tickValue, tierValue };
 }
 
 /**
@@ -788,11 +879,13 @@ function setupTelemetryPanel(region: HTMLElement): TelemetryPanelNodes {
   const posYValue = document.createTextNode('0.0');
   const headingValue = document.createTextNode('0°');
   const tickValue = document.createTextNode('0');
+  const lapValue = document.createTextNode('0');
 
   telemetryGrid.append(
     buildPanelRowWithLiveNode('Pos X', posXValue),
     buildPanelRowWithLiveNode('Pos Y', posYValue),
     buildPanelRowWithLiveNode('Heading', headingValue),
+    buildPanelRowWithLiveNode('Laps', lapValue),
     buildPanelRowWithLiveNode('Tick', tickValue),
   );
 
@@ -817,7 +910,7 @@ function setupTelemetryPanel(region: HTMLElement): TelemetryPanelNodes {
   );
   region.append(lowerPanelsElement);
 
-  return { posXValue, posYValue, headingValue, tickValue };
+  return { posXValue, posYValue, headingValue, tickValue, lapValue };
 }
 
 interface PanelCardElements {
@@ -1056,10 +1149,12 @@ function updateNetworkPanelNodes(
   throttle: number,
   steer: number,
   tick: number,
+  tier: CurriculumTier,
 ): void {
   nodes.throttleValue.textContent = throttle.toFixed(2);
   nodes.steerValue.textContent = steer.toFixed(3);
   nodes.tickValue.textContent = String(tick);
+  nodes.tierValue.textContent = String(tier);
 }
 
 /**
@@ -1067,9 +1162,14 @@ function updateNetworkPanelNodes(
  *
  * @returns Deterministically parameterized controller network.
  */
-function createDeterministicRacingControllerNetwork(): Network {
+export function createDeterministicRacingControllerNetwork(
+  observationTier: SupportedObservationTier = 1,
+): Network {
+  const resolvedInputCount = resolveControllerInputCountForObservationTier(
+    observationTier,
+  );
   const controllerNetwork = Network.createMLP(
-    CONTROLLER_INPUT_COUNT,
+    resolvedInputCount,
     [...CONTROLLER_HIDDEN_LAYER_SIZES],
     2,
   );
@@ -1105,12 +1205,12 @@ function configureDeterministicControllerParameters(
     );
 
   if (
-    inputNodes.length !== CONTROLLER_INPUT_COUNT ||
+    inputNodes.length !== controllerNetwork.input ||
     hiddenNodes.length !== CONTROLLER_HIDDEN_LAYER_SIZES[0] ||
     outputNodes.length !== 2
   ) {
     throw new Error(
-      'Racing curriculum controller expected a 70 -> 4 -> 2 MLP.',
+      'Racing curriculum controller expected a N -> 4 -> 2 MLP.',
     );
   }
 
@@ -1135,7 +1235,7 @@ function configureDeterministicControllerParameters(
         ),
         resolveNodeIndex(hiddenNodes[0]),
       ),
-      1,
+      2.5,
     ],
     [
       createEdgeKey(
@@ -1144,7 +1244,7 @@ function configureDeterministicControllerParameters(
         ),
         resolveNodeIndex(hiddenNodes[1]),
       ),
-      -1,
+      -2.5,
     ],
     [
       createEdgeKey(
@@ -1153,7 +1253,7 @@ function configureDeterministicControllerParameters(
         ),
         resolveNodeIndex(hiddenNodes[2]),
       ),
-      1,
+      1.5,
     ],
     [
       createEdgeKey(
@@ -1162,21 +1262,56 @@ function configureDeterministicControllerParameters(
         ),
         resolveNodeIndex(hiddenNodes[3]),
       ),
-      -1,
+      -1.5,
     ],
     [
       createEdgeKey(
         resolveNodeIndex(inputNodes[OBSERVATION_INDEX_LATERAL_SPEED]),
         resolveNodeIndex(hiddenNodes[2]),
+      ),
+      0.4,
+    ],
+    [
+      createEdgeKey(
+        resolveNodeIndex(inputNodes[OBSERVATION_INDEX_LATERAL_SPEED]),
+        resolveNodeIndex(hiddenNodes[3]),
+      ),
+      -0.4,
+    ],
+    // Look-ahead: sin(tangentAhead) − sin(carHeading) ≈ sin(headingErrorAhead)
+    // Wires the near look-ahead tangent against the car's own heading sin so
+    // h0/h1 see an anticipatory heading error before the curve arrives.
+    [
+      createEdgeKey(
+        resolveNodeIndex(
+          inputNodes[OBSERVATION_INDEX_LOOK_AHEAD_NEAR_SIN_TANGENT],
+        ),
+        resolveNodeIndex(hiddenNodes[0]),
       ),
       0.25,
     ],
     [
       createEdgeKey(
-        resolveNodeIndex(inputNodes[OBSERVATION_INDEX_LATERAL_SPEED]),
-        resolveNodeIndex(hiddenNodes[3]),
+        resolveNodeIndex(
+          inputNodes[OBSERVATION_INDEX_LOOK_AHEAD_NEAR_SIN_TANGENT],
+        ),
+        resolveNodeIndex(hiddenNodes[1]),
       ),
       -0.25,
+    ],
+    [
+      createEdgeKey(
+        resolveNodeIndex(inputNodes[OBSERVATION_INDEX_SIN_CAR_HEADING]),
+        resolveNodeIndex(hiddenNodes[0]),
+      ),
+      -0.25,
+    ],
+    [
+      createEdgeKey(
+        resolveNodeIndex(inputNodes[OBSERVATION_INDEX_SIN_CAR_HEADING]),
+        resolveNodeIndex(hiddenNodes[1]),
+      ),
+      0.25,
     ],
     [
       createEdgeKey(
@@ -1284,9 +1419,334 @@ function createEdgeKey(
 function updateTelemetryPanelNodes(
   nodes: TelemetryPanelNodes,
   envState: EnvironmentState,
+  completedLaps: number,
 ): void {
   nodes.posXValue.textContent = envState.carX.toFixed(1);
   nodes.posYValue.textContent = envState.carY.toFixed(1);
   nodes.headingValue.textContent = `${((envState.carHeading * 180) / Math.PI).toFixed(1)}°`;
+  nodes.lapValue.textContent = String(completedLaps);
   nodes.tickValue.textContent = String(envState.tick);
+}
+
+/**
+ * Runs a deterministic controller probe without touching browser DOM.
+ *
+ * @param tickCount - Number of fixed-timestep ticks to simulate.
+ * @param tier - Curriculum tier used for controller observation width.
+ * @returns Heading and steering summary used by regression tests.
+ */
+export function runDeterministicControllerProbe(
+  tickCount = 240,
+  tier: CurriculumTier = 1,
+): {
+  meanAbsoluteSteer: number;
+  nonTrivialSteerSamples: number;
+  headingDeltaRadians: number;
+} {
+  const trackSpec = generateTrack({
+    seed: DEMO_TRACK_SEED,
+    layoutVersion: DEMO_TRACK_LAYOUT_VERSION,
+    sizeBucket: DEMO_TRACK_SIZE_BUCKET,
+  });
+  const observationTier = resolveObservationTierForCurriculumTier(tier);
+  const controller = createNgeController(
+    createDeterministicRacingControllerNetwork(observationTier),
+    { tier: observationTier },
+  );
+  let envState = createInitialEnvironmentState(trackSpec);
+  const initialHeading = envState.carHeading;
+  const steerSamples: number[] = [];
+
+  for (let tickIndex = 0; tickIndex < tickCount; tickIndex++) {
+    const controlOutput = controller.computeControl(envState, trackSpec);
+    steerSamples.push(controlOutput.steer);
+    const steppedEnvironmentState = stepEnvironment(envState, controlOutput);
+    envState = stabilizeSoloTierTireGrip(steppedEnvironmentState, tier);
+  }
+
+  const meanAbsoluteSteer =
+    steerSamples.reduce(
+      (accumulatedSteer, steerSample) =>
+        accumulatedSteer + Math.abs(steerSample),
+      0,
+    ) / steerSamples.length;
+  const nonTrivialSteerSamples = steerSamples.filter(
+    (steerSample) => Math.abs(steerSample) > 0.05,
+  ).length;
+
+  return {
+    meanAbsoluteSteer,
+    nonTrivialSteerSamples,
+    headingDeltaRadians: Math.abs(envState.carHeading - initialHeading),
+  };
+}
+
+function createInitialEnvironmentState(trackSpec: TrackSpec): EnvironmentState {
+  const firstSegment = trackSpec.segments[0];
+  const firstSplineSample = trackSpec.splineSamples[0];
+  const initialHeading = firstSplineSample
+    ? resolveSplineSampleFrame(
+        trackSpec.splineSamples,
+        firstSplineSample.globalIndex,
+      ).tangentHeadingRadians
+    : Math.atan2(
+        firstSegment.endY - firstSegment.startY,
+        firstSegment.endX - firstSegment.startX,
+      );
+
+  return {
+    tick: 0,
+    carX: firstSplineSample?.x ?? firstSegment.startX,
+    carY: firstSplineSample?.y ?? firstSegment.startY,
+    carHeading: initialHeading,
+  };
+}
+
+/**
+ * Keeps early curriculum tiers pinned at full tire health so steering authority
+ * remains available while validating deterministic controller behavior.
+ *
+ * @param envState - Newly stepped environment state.
+ * @param curriculumTier - Active curriculum tier.
+ * @returns Environment state with early-tier tire grip stabilization applied.
+ */
+function stabilizeSoloTierTireGrip(
+  envState: EnvironmentState,
+  curriculumTier: CurriculumTier,
+): EnvironmentState {
+  if (curriculumTier > 4) {
+    return envState;
+  }
+
+  if (!Array.isArray(envState.cars) || envState.cars.length === 0) {
+    return {
+      ...envState,
+      tireState: [...FULL_HEALTH_TIRE_STATE],
+    };
+  }
+
+  const primaryCar = envState.cars[0];
+  const stabilizedPrimaryCar = {
+    ...primaryCar,
+    tireState: [...FULL_HEALTH_TIRE_STATE],
+  };
+
+  return {
+    ...envState,
+    tireState: [...FULL_HEALTH_TIRE_STATE],
+    cars: [stabilizedPrimaryCar, ...envState.cars.slice(1)],
+  };
+}
+
+function createInitialCurriculumProgress(
+  trackSpec: TrackSpec,
+  envState: EnvironmentState,
+): CurriculumProgressState {
+  return {
+    tier: ACTIVE_CURRICULUM_TIER,
+    lapProgress: createInitialLapProgress(trackSpec, envState),
+  };
+}
+
+function createInitialLapProgress(
+  trackSpec: TrackSpec,
+  envState: EnvironmentState,
+): LapProgressState {
+  return {
+    lastClosestSplineSampleIndex: resolveClosestSplineSampleIndex(
+      trackSpec,
+      envState,
+    ),
+    completedLaps: 0,
+  };
+}
+
+function resolveNextCurriculumProgressState(
+  currentProgress: CurriculumProgressState,
+  trackSpec: TrackSpec,
+  envState: EnvironmentState,
+): CurriculumProgressState {
+  const closestSplineSampleIndex = resolveClosestSplineSampleIndex(
+    trackSpec,
+    envState,
+  );
+  const nextCompletedLapCount = resolveNextCompletedLapCount(
+    currentProgress.lapProgress,
+    closestSplineSampleIndex,
+    trackSpec.splineSamples.length,
+  );
+
+  const promotionResult = resolveTierPromotionFromLapCount(
+    currentProgress.tier,
+    nextCompletedLapCount,
+  );
+
+  if (promotionResult.didAdvance) {
+    return {
+      tier: promotionResult.nextTier,
+      lapProgress: {
+        lastClosestSplineSampleIndex: closestSplineSampleIndex,
+        completedLaps: promotionResult.remainingLaps,
+      },
+    };
+  }
+
+  return {
+    ...currentProgress,
+    lapProgress: {
+      lastClosestSplineSampleIndex: closestSplineSampleIndex,
+      completedLaps: nextCompletedLapCount,
+    },
+  };
+}
+
+function resolveNextCompletedLapCount(
+  lapProgress: LapProgressState,
+  closestSplineSampleIndex: number,
+  sampleCount: number,
+): number {
+  if (sampleCount <= 0) {
+    return lapProgress.completedLaps;
+  }
+
+  const wrappedFromEndToStart =
+    lapProgress.lastClosestSplineSampleIndex >
+      sampleCount * LAP_WRAP_HIGH_WATERMARK_RATIO &&
+    closestSplineSampleIndex < sampleCount * LAP_WRAP_LOW_WATERMARK_RATIO;
+
+  return wrappedFromEndToStart
+    ? lapProgress.completedLaps + 1
+    : lapProgress.completedLaps;
+}
+
+/**
+ * Applies the racing-curriculum fallback promotion rule:
+ * advance one tier whenever the winner completes at least three laps.
+ *
+ * @param currentTier - Active curriculum tier.
+ * @param completedLaps - Completed laps within the current tier race window.
+ * @returns Promotion decision with next tier and remaining lap carry.
+ */
+export function resolveTierPromotionFromLapCount(
+  currentTier: CurriculumTier,
+  completedLaps: number,
+): {
+  nextTier: CurriculumTier;
+  didAdvance: boolean;
+  remainingLaps: number;
+} {
+  if (
+    completedLaps >= LAP_COMPLETIONS_REQUIRED_FOR_TIER_ADVANCE &&
+    currentTier < MAX_CURRICULUM_TIER
+  ) {
+    return {
+      nextTier: (currentTier + 1) as CurriculumTier,
+      didAdvance: true,
+      remainingLaps:
+        completedLaps - LAP_COMPLETIONS_REQUIRED_FOR_TIER_ADVANCE,
+    };
+  }
+
+  return {
+    nextTier: currentTier,
+    didAdvance: false,
+    remainingLaps: completedLaps,
+  };
+}
+
+function resolveClosestSplineSampleIndex(
+  trackSpec: TrackSpec,
+  envState: EnvironmentState,
+): number {
+  let closestSplineSampleIndex = 0;
+  let closestDistanceWorld = Number.POSITIVE_INFINITY;
+
+  for (const splineSample of trackSpec.splineSamples) {
+    const distanceToSampleWorld = Math.hypot(
+      splineSample.x - envState.carX,
+      splineSample.y - envState.carY,
+    );
+
+    if (distanceToSampleWorld < closestDistanceWorld) {
+      closestDistanceWorld = distanceToSampleWorld;
+      closestSplineSampleIndex = splineSample.globalIndex;
+    }
+  }
+
+  return closestSplineSampleIndex;
+}
+
+function resolveObservationTierForCurriculumTier(
+  tier: CurriculumTier,
+): SupportedObservationTier {
+  return Math.min(tier, MAX_SUPPORTED_OBSERVATION_TIER) as SupportedObservationTier;
+}
+
+function resolveGuidanceAlphaForCurriculumTier(tier: CurriculumTier): number {
+  if (tier === 1) {
+    return resolveGuidanceAlphaForTier(1);
+  }
+
+  if (tier >= 2) {
+    return resolveGuidanceAlphaForTier(2);
+  }
+
+  return resolveGuidanceAlphaForTier(0);
+}
+
+function resolveControllerInputCountForObservationTier(
+  observationTier: SupportedObservationTier,
+): number {
+  if (observationTier === 1) {
+    return 70;
+  }
+
+  if (observationTier === 2) {
+    return 77;
+  }
+
+  if (observationTier === 3) {
+    return 91;
+  }
+
+  return 95;
+}
+
+/**
+ * Resolves stage narrative copy for the active curriculum tier.
+ *
+ * @param tier - Active curriculum tier.
+ * @returns Tier-scoped subtitle, footer, and tooltip copy.
+ */
+function resolveStageNarrativeForTier(tier: CurriculumTier): {
+  subtitle: string;
+  footer: string;
+  tooltipLines: readonly string[];
+} {
+  const tierLabel = `Tier ${tier}`;
+
+  if (tier <= 2) {
+    return {
+      subtitle: `${tierLabel} solo NGE harness with a spline-smoothed visual circuit and ${tier === 1 ? 'faded' : 'removed'} optimal-line guidance.`,
+      footer:
+        'The car and controller are both live in this solo harness. The help chips call out which surrounding UI slots are active today and which still stay future-facing.',
+      tooltipLines: [
+        `This left stage now runs the ${tierLabel} solo harness: one car, one deterministic seed, and live NGE inference.`,
+        'The visual track stays spline-smoothed, but the control loop now flows through the owner-local observation assembler and the public Network.activate(...) seam.',
+        'Later tiers keep this shell and widen the same controller path with self-radio and race-pack authority instead of replacing the browser contract again.',
+      ],
+    };
+  }
+
+  return {
+    subtitle:
+      `${tierLabel} keeps the same live shell while widening observation authority after guidance removal.`,
+    footer:
+      'Controller authority stays live through the same browser seam while higher tiers prepare race-pack context instead of reshaping the page contract.',
+    tooltipLines: [
+      `This left stage now runs the ${tierLabel} progression step with live NGE inference and no optimal-line guidance.`,
+      'The same owner-local observation assembler and public Network.activate(...) seam remain in control while tier authority expands.',
+      'Later tiers widen self-radio and race-pack context in-place so this browser contract stays stable as the curriculum advances.',
+    ],
+  };
 }

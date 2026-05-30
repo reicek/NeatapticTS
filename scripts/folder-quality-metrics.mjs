@@ -99,7 +99,9 @@ function parseArgs(argv) {
     json: false,
   };
 
-  for (const rawArgument of argv) {
+  for (let argumentIndex = 0; argumentIndex < argv.length; argumentIndex++) {
+    const rawArgument = argv[argumentIndex];
+
     if (rawArgument === '--help' || rawArgument === '-h') {
       options.help = true;
       continue;
@@ -111,7 +113,18 @@ function parseArgs(argv) {
     }
 
     if (rawArgument.startsWith('--folder=')) {
-      options.folder = rawArgument.slice('--folder='.length);
+      options.folder = sanitizeCliValue(rawArgument.slice('--folder='.length));
+      continue;
+    }
+
+    if (rawArgument === '--folder') {
+      const nextArgument = argv[argumentIndex + 1];
+      if (typeof nextArgument !== 'string' || nextArgument.trim() === '') {
+        throw new Error('Missing value after --folder.');
+      }
+
+      options.folder = sanitizeCliValue(nextArgument);
+      argumentIndex++;
       continue;
     }
 
@@ -119,6 +132,38 @@ function parseArgs(argv) {
   }
 
   return options;
+}
+
+/**
+ * Removes wrapping single or double quotes that can survive shell/npm forwarding.
+ *
+ * @param cliValue - Raw CLI token value.
+ * @returns Trimmed value with one matching quote pair removed.
+ */
+function sanitizeCliValue(cliValue) {
+  const trimmedValue = cliValue.trim();
+  const startsWithSingleQuote = trimmedValue.startsWith("'");
+  const endsWithSingleQuote = trimmedValue.endsWith("'");
+  const startsWithDoubleQuote = trimmedValue.startsWith('"');
+  const endsWithDoubleQuote = trimmedValue.endsWith('"');
+
+  if (
+    (startsWithSingleQuote && endsWithSingleQuote)
+    || (startsWithDoubleQuote && endsWithDoubleQuote)
+  ) {
+    return trimmedValue.slice(1, -1).trim();
+  }
+
+  return trimmedValue;
+}
+function resolveFolderFromNpmEnvironment() {
+  const npmConfigFolder = process.env.npm_config_folder;
+
+  if (typeof npmConfigFolder !== 'string' || npmConfigFolder.trim() === '') {
+    return null;
+  }
+
+  return sanitizeCliValue(npmConfigFolder);
 }
 
 function printUsage() {
@@ -150,16 +195,18 @@ function printUsage() {
 async function main() {
   try {
     const options = parseArgs(process.argv.slice(2));
+    const resolvedFolder = options.folder ?? resolveFolderFromNpmEnvironment();
+
     if (options.help) {
       printUsage();
       return;
     }
 
-    if (!options.folder) {
+    if (!resolvedFolder) {
       throw new Error('--folder=<path> is required.');
     }
 
-    const report = await runFolderQualityMetrics({ folderPath: options.folder });
+    const report = await runFolderQualityMetrics({ folderPath: resolvedFolder });
     writeReport(report, options.json);
     process.exitCode = report.pass ? 0 : 1;
   } catch (error) {

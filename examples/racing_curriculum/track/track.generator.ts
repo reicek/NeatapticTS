@@ -37,6 +37,8 @@ const PIT_BOX_HEIGHT = 12;
 const PIT_CORRIDOR_WIDTH = 12;
 const PIT_CORRIDOR_HEIGHT = 12;
 const PIT_BOX_OFFSET_MULTIPLIER = 1.25;
+/** Fraction of track width used to push the corridor center away from the racing line. */
+const PIT_CORRIDOR_CENTERLINE_OFFSET_MULTIPLIER = 0.5;
 
 /**
  * Generates a deterministic closed-loop `TrackSpec` from the given seed,
@@ -243,6 +245,9 @@ function resolvePitAnchorSample(
 /**
  * Builds one team's pit metadata from a spline anchor and normal direction.
  *
+ * The entrance corridor is offset half a track width away from the centerline
+ * so cars on the normal racing line do not accidentally trigger pit stops.
+ *
  * @param teamIndex - Owning team index.
  * @param anchorSample - Spline sample anchoring the pit location.
  * @param normalDirection - Signed side selector (`1` or `-1`).
@@ -258,9 +263,18 @@ function buildPitBoxForTeam(
     splineSamples,
     anchorSample.globalIndex,
   );
+  // Offset the corridor center toward the pit side of the track so cars
+  // on the racing line (centerline) do not accidentally trigger pit stops.
+  const corridorCenterPoint = resolveOffsetPoint(
+    anchorSample.x,
+    anchorSample.y,
+    sampleFrame.normalX,
+    sampleFrame.normalY,
+    anchorSample.width * PIT_CORRIDOR_CENTERLINE_OFFSET_MULTIPLIER * normalDirection,
+  );
   const corridorCenter = {
-    x: roundTrackGeometry(anchorSample.x),
-    y: roundTrackGeometry(anchorSample.y),
+    x: roundTrackGeometry(corridorCenterPoint.x),
+    y: roundTrackGeometry(corridorCenterPoint.y),
   };
   const boxCenter = resolveOffsetPoint(
     anchorSample.x,
