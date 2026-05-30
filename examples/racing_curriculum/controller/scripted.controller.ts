@@ -6,10 +6,10 @@
  * closed-loop track as the car approaches each endpoint. Steering is a
  * proportional heading-error term; throttle is held at a fixed constant.
  *
- * This controller is intentionally simple — it is a placeholder that proves
- * the animation loop and rendering pipeline before a real NGE-backed network
- * controller is slotted in. The interface (`computeScriptedControl`) is
- * future-friendly: swap it for a network `forward()` call in Phase G.
+ * This controller is intentionally simple and deterministic. It remains useful
+ * as a baseline reference lane for regression comparisons against NGE-backed
+ * controller behavior while preserving the same `computeScriptedControl`
+ * integration seam.
  *
  * @see {@link https://en.wikipedia.org/wiki/Proportional_control Proportional control (Wikipedia)}
  */
@@ -276,5 +276,8 @@ function resolveWrappedSegmentIndex(
   targetSegmentIndex: number,
   segmentCount: number,
 ): number {
-  return ((Math.trunc(targetSegmentIndex) % segmentCount) + segmentCount) % segmentCount;
+  return (
+    ((Math.trunc(targetSegmentIndex) % segmentCount) + segmentCount) %
+    segmentCount
+  );
 }

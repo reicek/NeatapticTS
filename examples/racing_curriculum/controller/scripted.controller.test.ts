@@ -9,7 +9,8 @@ describe('scripted.controller', () => {
   describe('computeScriptedControl', () => {
     it('keeps steer near the lane tangent instead of pulling toward a raw chord endpoint on curved samples', () => {
       const trackSpec = createCurvedTrackSpec();
-      const { focalSample, focalFrame } = selectControllerFocalSample(trackSpec);
+      const { focalSample, focalFrame } =
+        selectControllerFocalSample(trackSpec);
       const envState = createEnvironmentState({
         carX: focalSample.x,
         carY: focalSample.y,

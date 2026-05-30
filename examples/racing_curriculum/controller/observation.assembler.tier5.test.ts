@@ -40,12 +40,14 @@ describe('observation assembler Tier 5 six-car seam', () => {
   describe('ObservationTier type', () => {
     it('accepts 5 as a valid ObservationTier value', async () => {
       // Arrange
-      const tier5ObservationOptionsModulePromise = loadTier5ObservationOptionsModule();
+      const tier5ObservationOptionsModulePromise =
+        loadTier5ObservationOptionsModule();
 
       // Act + Assert
       await expect(
-        tier5ObservationOptionsModulePromise.then(({ createTier5ObservationOptions }) =>
-          acceptTier5ObservationTier(createTier5ObservationOptions().tier),
+        tier5ObservationOptionsModulePromise.then(
+          ({ createTier5ObservationOptions }) =>
+            acceptTier5ObservationTier(createTier5ObservationOptions().tier),
         ),
       ).resolves.toBe(5);
     });
@@ -54,12 +56,14 @@ describe('observation assembler Tier 5 six-car seam', () => {
   describe('assembleTier5Observation', () => {
     it('exists for the Tier 5 3v3 observation seam', async () => {
       // Arrange
-      const tier5ObservationAssemblerModulePromise = loadTier5ObservationAssemblerModule();
+      const tier5ObservationAssemblerModulePromise =
+        loadTier5ObservationAssemblerModule();
 
       // Act + Assert
       await expect(
         tier5ObservationAssemblerModulePromise.then(
-          ({ assembleTier5Observation }) => typeof assembleTier5Observation === 'function',
+          ({ assembleTier5Observation }) =>
+            typeof assembleTier5Observation === 'function',
         ),
       ).resolves.toBe(true);
     });
@@ -68,12 +72,16 @@ describe('observation assembler Tier 5 six-car seam', () => {
       // Arrange
       const tier5ObservationState = createTier5ObservationState();
       const trackSpec = createTrackSpec();
-      const tier5ObservationAssemblerModulePromise = loadTier5ObservationAssemblerModule();
+      const tier5ObservationAssemblerModulePromise =
+        loadTier5ObservationAssemblerModule();
 
       // Act + Assert
       await expect(
-        tier5ObservationAssemblerModulePromise.then(({ assembleTier5Observation }) =>
-          Array.from(assembleTier5Observation(tier5ObservationState, trackSpec)).length,
+        tier5ObservationAssemblerModulePromise.then(
+          ({ assembleTier5Observation }) =>
+            Array.from(
+              assembleTier5Observation(tier5ObservationState, trackSpec),
+            ).length,
         ),
       ).resolves.toBe(95);
     });
@@ -89,14 +97,20 @@ describe('observation assembler Tier 5 six-car seam', () => {
         teammateRadioSlots: teamRadioRows,
       });
       const trackSpec = createTrackSpec();
-      const tier5ObservationAssemblerModulePromise = loadTier5ObservationAssemblerModule();
+      const tier5ObservationAssemblerModulePromise =
+        loadTier5ObservationAssemblerModule();
 
       // Act + Assert
       await expect(
-        tier5ObservationAssemblerModulePromise.then(({ assembleTier5Observation }) =>
-          Array.from(assembleTier5Observation(tier5ObservationState, trackSpec)).slice(70, 91),
+        tier5ObservationAssemblerModulePromise.then(
+          ({ assembleTier5Observation }) =>
+            Array.from(
+              assembleTier5Observation(tier5ObservationState, trackSpec),
+            ).slice(70, 91),
         ),
-      ).resolves.toEqual(teamRadioRows.flatMap((radioRow) => Array.from(radioRow)));
+      ).resolves.toEqual(
+        teamRadioRows.flatMap((radioRow) => Array.from(radioRow)),
+      );
     });
 
     it('writes own-car tire values into channels 91 through 94', async () => {
@@ -104,12 +118,16 @@ describe('observation assembler Tier 5 six-car seam', () => {
       const tireState: TireStateTuple = [0.91, 0.82, 0.73, 0.64];
       const tier5ObservationState = createTier5ObservationState({ tireState });
       const trackSpec = createTrackSpec();
-      const tier5ObservationAssemblerModulePromise = loadTier5ObservationAssemblerModule();
+      const tier5ObservationAssemblerModulePromise =
+        loadTier5ObservationAssemblerModule();
 
       // Act + Assert
       await expect(
-        tier5ObservationAssemblerModulePromise.then(({ assembleTier5Observation }) =>
-          Array.from(assembleTier5Observation(tier5ObservationState, trackSpec)).slice(91, 95),
+        tier5ObservationAssemblerModulePromise.then(
+          ({ assembleTier5Observation }) =>
+            Array.from(
+              assembleTier5Observation(tier5ObservationState, trackSpec),
+            ).slice(91, 95),
         ),
       ).resolves.toEqual(Array.from(Float32Array.from(tireState)));
     });
@@ -118,12 +136,14 @@ describe('observation assembler Tier 5 six-car seam', () => {
   describe('createTier5ObservationOptions', () => {
     it('creates a reusable { tier: 5 } options object', async () => {
       // Arrange
-      const tier5ObservationOptionsModulePromise = loadTier5ObservationOptionsModule();
+      const tier5ObservationOptionsModulePromise =
+        loadTier5ObservationOptionsModule();
 
       // Act + Assert
       await expect(
-        tier5ObservationOptionsModulePromise.then(({ createTier5ObservationOptions }) =>
-          createTier5ObservationOptions(),
+        tier5ObservationOptionsModulePromise.then(
+          ({ createTier5ObservationOptions }) =>
+            createTier5ObservationOptions(),
         ),
       ).resolves.toEqual({ tier: 5 });
     });
@@ -174,16 +194,22 @@ function createTrackSpec(): TrackSpec {
   return generateTrack({ seed: 42, layoutVersion: 1, sizeBucket: 'medium' });
 }
 
-function acceptTier5ObservationTier(tier: 1 | 2 | 3 | 4 | 5): 1 | 2 | 3 | 4 | 5 {
+function acceptTier5ObservationTier(
+  tier: 1 | 2 | 3 | 4 | 5,
+): 1 | 2 | 3 | 4 | 5 {
   return tier;
 }
 
 async function loadTier5ObservationAssemblerModule(): Promise<Tier5ObservationAssemblerModule> {
   const modulePath = './observation.assembler';
-  const module = (await import(modulePath)) as Partial<Tier5ObservationAssemblerModule>;
+  const module = (await import(
+    modulePath
+  )) as Partial<Tier5ObservationAssemblerModule>;
 
   if (typeof module.assembleTier5Observation !== 'function') {
-    throw new Error('Missing Tier 5 observation export: assembleTier5Observation');
+    throw new Error(
+      'Missing Tier 5 observation export: assembleTier5Observation',
+    );
   }
 
   return module as Tier5ObservationAssemblerModule;
@@ -191,7 +217,9 @@ async function loadTier5ObservationAssemblerModule(): Promise<Tier5ObservationAs
 
 async function loadTier5ObservationOptionsModule(): Promise<Tier5ObservationOptionsModule> {
   const modulePath = './observation.assembler';
-  const module = (await import(modulePath)) as Partial<Tier5ObservationOptionsModule>;
+  const module = (await import(
+    modulePath
+  )) as Partial<Tier5ObservationOptionsModule>;
 
   if (typeof module.createTier5ObservationOptions !== 'function') {
     throw new Error(

@@ -17,9 +17,11 @@ describe('track.spline.utils', () => {
       expect({
         sampleCount: splineSamples.length,
         firstSampleSegmentIndex: splineSamples[0]?.segmentIndex,
-        firstSampleIndexWithinSegment: splineSamples[0]?.sampleIndexWithinSegment,
+        firstSampleIndexWithinSegment:
+          splineSamples[0]?.sampleIndexWithinSegment,
         lastSampleSegmentIndex: splineSamples.at(-1)?.segmentIndex,
-        lastSampleIndexWithinSegment: splineSamples.at(-1)?.sampleIndexWithinSegment,
+        lastSampleIndexWithinSegment:
+          splineSamples.at(-1)?.sampleIndexWithinSegment,
       }).toEqual({
         sampleCount:
           trackSpec.segments.length * TRACK_SPLINE_SAMPLES_PER_SEGMENT,

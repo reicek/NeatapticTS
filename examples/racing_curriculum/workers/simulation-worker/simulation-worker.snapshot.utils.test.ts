@@ -25,9 +25,9 @@ describe('simulation worker snapshot utility seam', () => {
         done: false,
       };
 
-      expect(resolveRacingRenderFrameTransferList(racingRenderFrame)).toHaveLength(
-        10,
-      );
+      expect(
+        resolveRacingRenderFrameTransferList(racingRenderFrame),
+      ).toHaveLength(10);
     });
   });
 });

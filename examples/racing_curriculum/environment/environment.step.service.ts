@@ -270,8 +270,9 @@ function resolveControls(
   if (Array.isArray(control)) {
     const perCarControl = control as readonly CarControlOutput[];
 
-    return Array.from({ length: carCount }, (_, carIndex) =>
-      perCarControl[carIndex] ?? { throttle: 0, steer: 0 },
+    return Array.from(
+      { length: carCount },
+      (_, carIndex) => perCarControl[carIndex] ?? { throttle: 0, steer: 0 },
     );
   }
 
@@ -319,7 +320,10 @@ function tickPitOccupancy(
   const nextPitOccupancy = clonePitOccupancy(pitOccupancy);
 
   for (const [teamIndex, record] of nextPitOccupancy.entries()) {
-    if (record.remainingStopTicks <= 0 || record.occupyingCarIndex === NO_CAR_INDEX) {
+    if (
+      record.remainingStopTicks <= 0 ||
+      record.occupyingCarIndex === NO_CAR_INDEX
+    ) {
       continue;
     }
 
@@ -463,7 +467,10 @@ function resolvePitEntries(
  * @returns Mean health across all four corners.
  */
 function resolveMeanTireHealth(tireState: TireStateTuple): number {
-  return tireState.reduce((sum, tireHealth) => sum + tireHealth, 0) / tireState.length;
+  return (
+    tireState.reduce((sum, tireHealth) => sum + tireHealth, 0) /
+    tireState.length
+  );
 }
 
 /**
@@ -475,10 +482,7 @@ function resolveMeanTireHealth(tireState: TireStateTuple): number {
 function clonePitOccupancy(
   pitOccupancy: PitOccupancyState,
 ): MutablePitOccupancyState {
-  return [
-    { ...pitOccupancy[0] },
-    { ...pitOccupancy[1] },
-  ];
+  return [{ ...pitOccupancy[0] }, { ...pitOccupancy[1] }];
 }
 
 /**

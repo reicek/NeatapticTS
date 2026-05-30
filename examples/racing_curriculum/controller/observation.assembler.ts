@@ -425,7 +425,9 @@ function appendOwnTireState(
   baseVector: Float32Array,
   tireState: TireStateTuple,
 ): Float32Array {
-  const tireAwareVector = new Float32Array(baseVector.length + TIRE_CHANNEL_COUNT);
+  const tireAwareVector = new Float32Array(
+    baseVector.length + TIRE_CHANNEL_COUNT,
+  );
 
   tireAwareVector.set(baseVector, 0);
   tireAwareVector.set(tireState, baseVector.length);
@@ -675,8 +677,7 @@ function resolveObservationState(
   const lateralSpeedWorld = envState.lateralSpeedWorld ?? 0;
   const speedWorld =
     envState.speedWorld ?? Math.hypot(forwardSpeedWorld, lateralSpeedWorld);
-  const halfTrackWidthWorld =
-    closestSplineSample.width / 2;
+  const halfTrackWidthWorld = closestSplineSample.width / 2;
   const derivedWaypointDistanceWorld = Math.hypot(
     closestSplineSample.x - envState.carX,
     closestSplineSample.y - envState.carY,
@@ -758,8 +759,7 @@ function findClosestSplineSampleIndex(
  * @returns Bounding box plus center point.
  */
 function resolveTrackBounds(trackSpec: TrackSpec): TrackBounds {
-  const initialSplineSample =
-    trackSpec.splineSamples[0] ?? EMPTY_SPLINE_SAMPLE;
+  const initialSplineSample = trackSpec.splineSamples[0] ?? EMPTY_SPLINE_SAMPLE;
   let minX = initialSplineSample.x;
   let maxX = initialSplineSample.x;
   let minY = initialSplineSample.y;
@@ -955,10 +955,16 @@ function resolveSignedLateralOffsetWorld(
 }
 
 function resolveBoundaryDistanceWorld(boundaryDistanceWorld: number): number {
-  return Math.max(0, Number.isFinite(boundaryDistanceWorld) ? boundaryDistanceWorld : 0);
+  return Math.max(
+    0,
+    Number.isFinite(boundaryDistanceWorld) ? boundaryDistanceWorld : 0,
+  );
 }
 
-function wrapSplineSampleIndex(sampleCount: number, sampleIndex: number): number {
+function wrapSplineSampleIndex(
+  sampleCount: number,
+  sampleIndex: number,
+): number {
   return ((sampleIndex % sampleCount) + sampleCount) % sampleCount;
 }
 

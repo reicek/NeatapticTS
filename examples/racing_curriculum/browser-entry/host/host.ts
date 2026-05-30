@@ -43,11 +43,11 @@ export function createRacingHost(
   canvasElement.setAttribute('role', 'img');
 
   const networkPlaceholderElement = document.createElement('div');
-  networkPlaceholderElement.textContent = 'Network view seam';
+  networkPlaceholderElement.textContent = 'Network view panel';
   networkPlaceholderElement.className = 'racing-host__placeholder';
 
   const visualizerPlaceholderElement = document.createElement('div');
-  visualizerPlaceholderElement.textContent = 'Visualizer seam';
+  visualizerPlaceholderElement.textContent = 'Visualizer panel';
   visualizerPlaceholderElement.className = 'racing-host__placeholder';
 
   canvasRegionElement.append(canvasElement);

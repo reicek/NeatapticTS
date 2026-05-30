@@ -31,8 +31,8 @@ describe('simulation worker Tier 4 pit-status seam', () => {
     it('adds a pitStatus field to RacingRenderFrame when Tier 4 is active', async () => {
       // Arrange + Act + Assert
       await expect(
-        loadTier4SimulationWorkerModule().then(({ createTier4RacePack }) =>
-          'pitStatus' in createTier4RacePack(),
+        loadTier4SimulationWorkerModule().then(
+          ({ createTier4RacePack }) => 'pitStatus' in createTier4RacePack(),
         ),
       ).resolves.toBe(true);
     });
@@ -40,8 +40,8 @@ describe('simulation worker Tier 4 pit-status seam', () => {
     it('packs pitStatus as four scalars for both teams', async () => {
       // Arrange + Act + Assert
       await expect(
-        loadTier4SimulationWorkerModule().then(({ createTier4RacePack }) =>
-          createTier4RacePack().pitStatus.length,
+        loadTier4SimulationWorkerModule().then(
+          ({ createTier4RacePack }) => createTier4RacePack().pitStatus.length,
         ),
       ).resolves.toBe(4);
     });

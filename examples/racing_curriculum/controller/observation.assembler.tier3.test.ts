@@ -41,13 +41,14 @@ describe('Tier 3 observation assembler (21-channel radio)', () => {
   describe('assembleTier3Observation', () => {
     it('returns a 91-channel observation vector', async () => {
       await expect(
-        loadTier3ObservationAssemblerModule().then(({ assembleTier3Observation }) =>
-          Array.from(
-            assembleTier3Observation(
-              createTier3ObservationState(),
-              createTrackSpec(),
-            ),
-          ).length,
+        loadTier3ObservationAssemblerModule().then(
+          ({ assembleTier3Observation }) =>
+            Array.from(
+              assembleTier3Observation(
+                createTier3ObservationState(),
+                createTrackSpec(),
+              ),
+            ).length,
         ),
       ).resolves.toBe(91);
     });
@@ -58,58 +59,64 @@ describe('Tier 3 observation assembler (21-channel radio)', () => {
       ]);
 
       await expect(
-        loadTier3ObservationAssemblerModule().then(({ assembleTier3Observation }) => {
-          const observationVector = Array.from(
-            assembleTier3Observation(
-              createTier3ObservationState({
-                teammateRadioSlots: [liveTeammateRadio],
-              }),
-              createTrackSpec(),
-            ),
-          );
-          const teammateSlotZero = observationVector.slice(70, 77);
-          return teammateSlotZero.every((value) => value !== 0);
-        }),
+        loadTier3ObservationAssemblerModule().then(
+          ({ assembleTier3Observation }) => {
+            const observationVector = Array.from(
+              assembleTier3Observation(
+                createTier3ObservationState({
+                  teammateRadioSlots: [liveTeammateRadio],
+                }),
+                createTrackSpec(),
+              ),
+            );
+            const teammateSlotZero = observationVector.slice(70, 77);
+            return teammateSlotZero.every((value) => value !== 0);
+          },
+        ),
       ).resolves.toBe(true);
     });
 
     it('zero-pads teammate slots 1 and 2 in 2v2 layout', async () => {
       await expect(
-        loadTier3ObservationAssemblerModule().then(({ assembleTier3Observation }) => {
-          const observationVector = Array.from(
-            assembleTier3Observation(
-              createTier3ObservationState({
-                teammateRadioSlots: [
-                  Float32Array.from([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]),
-                ],
-              }),
-              createTrackSpec(),
-            ),
-          );
-          return observationVector.slice(77, 91);
-        }),
+        loadTier3ObservationAssemblerModule().then(
+          ({ assembleTier3Observation }) => {
+            const observationVector = Array.from(
+              assembleTier3Observation(
+                createTier3ObservationState({
+                  teammateRadioSlots: [
+                    Float32Array.from([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]),
+                  ],
+                }),
+                createTrackSpec(),
+              ),
+            );
+            return observationVector.slice(77, 91);
+          },
+        ),
       ).resolves.toEqual(new Array<number>(14).fill(0));
     });
 
     it('allocates exactly 7 channels per teammate slot', async () => {
       await expect(
-        loadTier3ObservationAssemblerModule().then(({ assembleTier3Observation }) => {
-          const observationVector = Array.from(
-            assembleTier3Observation(
-              createTier3ObservationState({
-                teammateRadioSlots: [
-                  Float32Array.from([0.1, -0.1, 0.2, -0.2, 0.3, -0.3, 0.4]),
-                ],
-              }),
-              createTrackSpec(),
-            ),
-          );
-          return [
-            observationVector.slice(70, 77).length,
-            observationVector.slice(77, 84).length,
-            observationVector.slice(84, 91).length,
-          ];
-        }),
+        loadTier3ObservationAssemblerModule().then(
+          ({ assembleTier3Observation }) => {
+            const observationVector = Array.from(
+              assembleTier3Observation(
+                createTier3ObservationState({
+                  teammateRadioSlots: [
+                    Float32Array.from([0.1, -0.1, 0.2, -0.2, 0.3, -0.3, 0.4]),
+                  ],
+                }),
+                createTrackSpec(),
+              ),
+            );
+            return [
+              observationVector.slice(70, 77).length,
+              observationVector.slice(77, 84).length,
+              observationVector.slice(84, 91).length,
+            ];
+          },
+        ),
       ).resolves.toEqual([7, 7, 7]);
     });
   });

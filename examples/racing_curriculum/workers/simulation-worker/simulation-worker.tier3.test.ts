@@ -18,8 +18,8 @@ describe('Tier 3 two-team simulation worker seam', () => {
   describe('race pack initialization', () => {
     it('initializes with agentCount = 4 for 2v2 Tier 3', async () => {
       await expect(
-        loadTier3SimulationWorkerModule().then(({ createTier3RacePack }) =>
-          createTier3RacePack().agentCount,
+        loadTier3SimulationWorkerModule().then(
+          ({ createTier3RacePack }) => createTier3RacePack().agentCount,
         ),
       ).resolves.toBe(4);
     });
@@ -36,8 +36,8 @@ describe('Tier 3 two-team simulation worker seam', () => {
   describe('radio field layout', () => {
     it('allocates radioField of length 28 for 4 agents × 7 channels', async () => {
       await expect(
-        loadTier3SimulationWorkerModule().then(({ createTier3RacePack }) =>
-          createTier3RacePack().radioField.length,
+        loadTier3SimulationWorkerModule().then(
+          ({ createTier3RacePack }) => createTier3RacePack().radioField.length,
         ),
       ).resolves.toBe(28);
     });

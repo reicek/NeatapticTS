@@ -24,11 +24,11 @@ validate exactly that:
 | NGE thesis                              | How team racing validates it                                                                                                                              |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Role differentiation from identical DNA | All three teammates start from the same genotype; queen/blocker/pacer roles emerge from driving experience alone                                          |
-| Stigmergy via shared signal field       | Team radio is a typed-array shared signal, not discrete messages â€” same primitive as ant pheromone                                                        |
+| Stigmergy via shared signal field       | Team radio is a typed-array shared signal, not discrete messages â€” same primitive as ant pheromone                                                      |
 | Polyandric reproduction                 | Winning "queen car" is the primary genetic template; blocker and pacer drone contributions patch distinct DNA regions                                     |
 | Co-evolution between populations        | Team A and Team B are fully independent NEAT populations; one team's improvements shift the other's fitness landscape                                     |
 | Three-tier memory                       | Short-term: recurrent per-episode state; medium-term: rival pit patterns and teammate radio calibration; long-term: cornering priors assimilated into DNA |
-| `ModulatorBroadcaster` neuromodulation  | Behavioral mode switches (sprint â†’ block â†’ hold pit â†’ rejoin) must happen within one forward pass â€” structural change is too slow                         |
+| `ModulatorBroadcaster` neuromodulation  | Behavioral mode switches (sprint â†’ block â†’ hold pit â†’ rejoin) must happen within one forward pass â€” structural change is too slow                 |
 | Wiring economy under complexity         | Six networked agents per race; per-agent networks must compact or they cannot run at browser-frame rates                                                  |
 
 Compare this to the original solo racing design, which exercised `GatedRecurrentCell` and
@@ -65,10 +65,10 @@ This is a benchmark-architecture plan, not an implementation-complete spec.
 | `ModulatorBroadcaster`                   | Behavioral drives (sprint, block, pit, rejoin) must switch within one forward pass; each team car must be capable of all modes                |
 | `GatedRecurrentCell` (short-term memory) | Per-episode recurrent state: recent steering/slip/throttle traces, recent radio state, tire decay trajectory                                  |
 | `EpisodicSlot` (medium-term memory)      | Opponent pit timing patterns, teammate radio calibration (what does a high signal on channel 4 actually mean?), track segment danger profiles |
-| `GatingRouter`                           | Hard task switching: sprint vs. block vs. hold-pit vs. pit-entry vs. recovery â€” distinct policy heads, not soft interpolation                 |
+| `GatingRouter`                           | Hard task switching: sprint vs. block vs. hold-pit vs. pit-entry vs. recovery â€” distinct policy heads, not soft interpolation               |
 | `ResidualTap`                            | Track geometry and race-position signals flow as a residual highway available to all processing zones without wiring cost                     |
 | Identical-DNA role differentiation       | All team members share one genotype; queen/blocker/pacer specialization emerges from driving history and radio interaction alone              |
-| Stigmergy via radio field                | 6â€“8 dimensional team radio written and read by all teammates â€” same typed-array primitive as ant pheromone; no addressed messages             |
+| Stigmergy via radio field                | 6â€“8 dimensional team radio written and read by all teammates â€” same typed-array primitive as ant pheromone; no addressed messages         |
 | Polyandric reproduction                  | Winning queen car = primary template; blocker/pacer drone DNA patches non-overlapping gene regions                                            |
 | Co-evolutionary dynamics                 | Team A and Team B are fully independent NEAT populations; fitness computed against rolling opponent team snapshot                             |
 | `reproductionPolicy.modeIsEvolvable`     | Teams may shift reproduction strategy as co-evolutionary phase shifts (search phase vs. consolidation phase)                                  |
@@ -95,502 +95,15 @@ It must not begin serious implementation before:
 
 - Benchmark architecture, curriculum, and rollout work â€” `NGE Benchmark Scout` +
   `nge-benchmark-workflow`
-- Upstream NGE prerequisite drift â€” `NGE Core Scout` + `nge-core-algorithm`
-- Canvas, layout, and interaction polish â€” `Visualizer Scout` + `visualizer-workflow`
 
----
-
-## Design Pillars
-
-- **Two genuinely independent teams:** Team A and Team B each have their own DNA gene pool, NEAT
-  species tracking, and assimilation cycle. They interact only through the shared evaluation
-  environment.
-- **Identical-DNA teams, divergent roles:** all three teammates start from one genotype. Role
-  divergence (queen/pacer/blocker) emerges from driving experience and radio interaction â€” never
-  from role-assignment code.
-- **Team radio as stigmergy:** a typed-array shared signal written by all three cars and read by
-  all three. No messages, no addressing. Same primitive as ant pheromone â€” teammates must learn
-  to read and write it through evolution.
-- **Team wins if any member wins:** this is the fitness pressure that drives cooperative strategy.
-  A blocker that protects the fast car is rewarded even if it finishes last.
-- **Tire degradation as metabolic budget:** tire state [1.0 â†’ 0.0] decays with driving
-  aggression. Visual feedback per wheel. Tire state is a sensory input channel. Team radio carries
-  teammate tire state. Pit stops restore tire state.
-- **One pit per team:** each team has a fixed dedicated pit position. Pit entrance is wide enough
-  for legal blocking. Team radio coordination governs when to pit and whether to block the
-  opponent from entering their own pit.
-- **No scripted strategies:** all blocking, pacing, pit timing, and radio semantics emerge from
-  the evolved network structure and `ModulatorBroadcaster` gain calibration.
-- **Egocentric observations only:** each car's controller never receives a planner-style full-map
-  oracle.
-- **Visible specialization:** the benchmark should make it easy to observe sensor-family
-  specialization, modular growth around radio-reading and pit-timing, and adult pruning of unused
-  sensor families.
-
----
-
-## Team Structure
-
-### Two Teams, Three Cars Each
-
-```
-Team A:  A1 Â· A2 Â· A3    (all share Team A DNA genotype)
-Team B:  B1 Â· B2 Â· B3    (all share Team B DNA genotype)
-```
-
-**Team A and Team B are fully independent NEAT populations.** They do not share innovation
-numbers, species, DNA, or assimilation cycles.
-
-**Within a team, all three cars share one genotype.** There is no separate DNA for "the blocker
-car." Role divergence emerges from the order in which the network experiences:
-
-- who gets into traffic first
-- who reads high vs. low tire decay signals on the radio
-- who happens to be ahead of the opponent's fast car at lap 1
-
-The network reacts to its current sensory context â€” including the team radio field â€” and the
-`EpisodicSlot` accumulates a history that gradually differentiates the cars' behavioral patterns.
-
-### Team Fitness
-
-**A team's score in one race = the finishing position of its best-finishing car.**
-
-This is the critical fitness pressure. A team that produces a fast queen car and two effective
-blockers beats a team that produces three mediocre individual performers. The three-way shared DNA
-means natural selection acts on the team's collective strategy, not three individual strategies.
-
----
-
-## Team Radio (Stigmergy Analog)
-
-The team radio is a **6â€“8 dimensional typed-array shared field**, written by all three cars and
-read by all three. It is not a message-passing system. There are no recipients, no channels
-reserved for specific cars, and no protocol defined in advance. Teams must evolve a shared
-semantic for the signal through natural selection.
-
-### Radio Field Semantics (evolved, not prescribed)
-
-The radio field has no prescribed semantics at initialization. However, the sensory inputs are designed so that the following semantics are structurally available for evolution to discover:
-
-- tire state of teammates (high-dimensional enough to carry all three)
-- pace signal (is a teammate currently in sprint mode?)
-- threat signal (is a teammate being pressured?)
-- pit-intent signal (is a teammate about to pit?)
-- position context (rough lap position of teammates)
-- coordination request (generic urgency signal)
-
-None of these are labeled. The network learns to write and read them.
-
-### Radio Input to Each Car
-
-Each car reads **three independent radio vectors** (one per teammate) of 6â€“8 dimensions each.
-
-```
-Total radio input per car: 3 teammates Ã— 7 dimensions = 21 channels
-```
-
-Each car also writes a radio output vector of 6â€“8 dimensions, which is placed into the shared field for teammates to read.
-
-The shared field is a typed-array that is updated synchronously with the simulation tick, exactly as the ant hive pheromone field. There is no decay â€” the field reflects the most recent output from each car.
-
-### Why This Fits NGE
-
-The team radio is structurally isomorphic to the ant hive pheromone grid:
-
-| Racing                              | Ant Hive                           |
-| ----------------------------------- | ---------------------------------- |
-| 7-dimensional radio per car         | 6-channel pheromone field per cell |
-| Three cars each writing and reading | Many ants each writing and reading |
-| Team fitness                        | Colony fitness                     |
-| Role divergence from experience     | Role divergence from experience    |
-| Pit timing coordination             | Recruitment coordination           |
-
----
-
-## Tire Degradation System
-
-### Tire State
-
-Each car maintains four tire state values: front-left, front-right, rear-left, rear-right.
-
-```
-tire_state âˆˆ [0.0, 1.0]   (1.0 = fresh, 0.0 = destroyed)
-```
-
-Tire state decays as a function of:
-
-- **lateral force** (cornering aggression)
-- **longitudinal force** (hard braking and acceleration)
-- **speed** (higher speed = faster base decay)
-- **current tire state** (degraded tires decay faster â€” exponential degradation curve)
-
-A fresh tire at nominal pace degrades slowly. Aggressive driving on degraded tires degrades very fast. This creates a genuine strategic tradeoff: aggressive pursuit burns tires faster; conservative driving preserves them but sacrifices pace.
-
-### Visual Feedback
-
-Each car is drawn as a minimalistic **square outline** in its team color, with a short heading indicator. The four tires are drawn as small marks at the four corners of that square (front-left, front-right, rear-left, rear-right). Tires render in a **distinct base color** from the car body so they read as separate elements.
-
-When tire degradation is **enabled**, each corner mark shifts color with its tire state:
-
-```
-1.0 â†’ 0.75  : green
-0.75 â†’ 0.50 : yellow
-0.50 â†’ 0.25 : orange
-0.25 â†’ 0.0  : red
-```
-
-When tire degradation is **disabled** (early tiers / Tier 0 scaffold), the four marks stay in their neutral base color and do not shift.
-
-The four-corner display is always visible. This gives a human observer immediate insight into each car's strategic position without reading numbers.
-
-### Tire State as Sensory Input
-
-Each car receives its own four tire states as sensory inputs (4 channels). Each car also receives teammate tire states via the team radio field. Tire state directly affects:
-
-- grip proxy (low tire state = reduced effective grip)
-- braking urgency estimate (degraded tires need more distance)
-- stability margin (degraded tires = narrower safe slip range)
-
-The car must integrate tire state into its driving strategy. A network that ignores tire state will over-push on degraded tires and crash.
-
-### Performance Effect
-
-Tire degradation affects car performance:
-
-- **grip multiplier:** scales with tire state (degraded tires = lower peak grip)
-- **braking efficiency:** degraded tires extend minimum braking distance
-- **slip onset:** degraded tires lose traction at lower lateral force
-
----
-
-## Pit Stop System
-
-### One Pit Per Team
-
-Each team has exactly **one dedicated pit position**, fixed on the track layout. Teams do not share pits. The pit is:
-
-- wide enough for one car at a time
-- visible on canvas as a colored box (Team A: cyan; Team B: red/orange)
-- entered by driving into the pit entrance corridor
-
-### Pit Stop Mechanics
-
-- A car entering the pit is removed from the active simulation for a **fixed stop duration** (3â€“5 simulation ticks, balancing realism with strategic weight).
-- During the stop, the car's tire states are restored to [1.0, 1.0, 1.0, 1.0].
-- No other repairs occur in the pit. The pit stop is purely a tire restoration event.
-- Only one car may occupy the pit at a time. If a second car from the same team enters while the first is in the pit, it must wait.
-
-### Pit Entrance Blocking
-
-The pit entrance corridor is wide enough for **legal defensive positioning by an opponent car**. A car from the opposing team that is positioned in the pit entrance corridor can legally impede the other team's cars from entering their pit.
-
-This creates a high-stakes coordination scenario:
-
-- **Blocking team:** must sacrifice one car's pace to hold the corridor, coordinated via team radio (no scripted signal â€” must evolve radio semantics for "hold the pit entrance").
-- **Pitting team:** must choose when the window is clear enough to attempt pit entry, or whether to extend the stint and hope the blocker runs out of energy (tire budget).
-
-The pit entrance blocking behavior must emerge from network evolution, not from hardcoded logic.
-
-### Pit Strategy as EpisodicSlot Target
-
-The `EpisodicSlot` medium-term memory is ideally motivated by pit strategy:
-
-- **Opponent pit timing patterns:** when did the opponent team pit last race? Are they pitting early or running long? The `EpisodicSlot` should store opponent pit timing by track configuration similarity.
-- **Teammate radio calibration:** what radio signal pattern precedes a teammate pitting? The `EpisodicSlot` stores radio state â†’ pit-intent associations.
-- **Pit entrance blocking coordination history:** what signal from teammates reliably indicated "hold the corridor"?
-
----
-
-## Co-evolutionary Dynamics
-
-### Two Independent NEAT Populations
-
-Each team maintains its own:
-
-- Gene pool with NEAT innovation tracking
-- Species partitioning (compatibility distance threshold, species representatives)
-- Fitness history and species stagnation counters
-- Assimilation cycle and `reproductionPolicy`
-
-The two teams do **not** share innovation numbers, species, or DNA. They interact only through the shared evaluation environment.
-
-### Rolling Opponent Snapshot
-
-Fitness is evaluated against a **rolling opponent team snapshot** rather than the current live opponent team:
-
-- Each generation, a fixed set of opponent team representatives is frozen (hall-of-fame sample + recent-population sample).
-- Evaluation runs against this frozen set.
-- The snapshot is updated every N generations (configurable; typical: every 5â€“10 generations).
-
-This prevents a single generation breakthrough from collapsing opponent fitness in one step, forcing co-adaptation to be gradual.
-
-### Co-evolutionary Observable
-
-The simulation UI should expose:
-
-- **Team A mean fitness vs. Team B mean fitness** over generations (separate lines)
-- **Strategy divergence metric:** how different are the two teams' network `computationType` compositions? Rising divergence = arms race. Converging = one team copying the other's strategy.
-- **Pit timing distribution:** histogram of pit lap for each team per generation â€” shows whether pit strategies are converging or diverging.
-
----
-
-## Polyandric Reproduction
-
-The canonical reproduction mode for team racing is **polyandric**.
-
-**Why polyandric fits:** within a team, the car that wins (or finishes best) is the "queen." The blocker and pacer cars are "drones" whose DNA contributed to the team's cooperative strategy. All three contributed to the team's success, but in structurally different gene regions.
-
-**Polyandric policy for team racing:**
-
-```ts
-reproductionPolicy: {
-  mode: "polyandric",
-  polyandricDroneCount: 2,               // two drone contributors per child
-  polyandricDroneContributionFraction: 0.25, // each drone patches 25% of DNA
-  queenBias: 0.85,                       // queen DNA dominates
-  assignedRegionStrategy: "non-overlapping",
-  modeIsEvolvable: true,                 // teams may shift to sexual when exploring
-  seedPolicy: "queen-weighted"
-}
-```
-
-**Evolutionary trajectory:**
-
-- Early (unstable, new category): sexual reproduction may dominate â€” high variance favors rapid search.
-- Stable co-evolutionary phase (one team consistently winning): winning team lineages may converge toward parthenogenesis (preserve winning DNA); losing team may shift toward polyandric or sexual for diversity.
-- After a strategic breakthrough by the losing team: winner team shifts back toward sexual or polyandric for rapid adaptation.
-
-The `modeIsEvolvable: true` flag allows the reproduction policy itself to be subject to selection pressure.
-
----
-
-## Category Ladder
-
-The six-tier category ladder is designed so that each tier unlocks one additional layer of strategic complexity. Early tiers verify that the NGE lifecycle can handle basic racecraft before exposing it to team coordination and co-evolutionary arms races.
-
-### Tier 1 â€” 1v1, No Radio
-
-```
-2 cars (one per team), no team radio, no pits, fresh tires only.
-Track: simple oval or wide flowing circuit.
-```
-
-**Purpose:** baseline verification that single-car NGE can learn to drive at all. Eliminates team mechanics from the first learning problem. Both teams evolve a single-car policy.
-
-### Tier 2 â€” 1v1 with Radio
-
-```
-2 cars (one per team), team radio active (only one car per team so self-communication).
-No pits, no tire degradation.
-Track: simple circuit with one tight corner requiring overtaking.
-```
-
-**Purpose:** verify that network can write and read radio without teammates present. The car learns to use radio as a self-monitoring signal (e.g., pace intent, threat level). This is a degenerate but structurally valid use of the radio field.
-
-### Tier 3 â€” 2v2, No Pits
-
-```
-2 cars per team (4 total), team radio active between teammates.
-No pit stops, no tire degradation.
-Track: intermediate circuit with genuine overtaking zones.
-```
-
-**Purpose:** first appearance of role differentiation. Two identical-DNA teammates must develop different behavioral specializations through experience. No pit timing complexity.
-
-### Tier 4 â€” 2v2, Tires and Pits
-
-```
-2 cars per team (4 total), team radio active.
-Tire degradation active, one pit per team.
-Track: intermediate circuit with clear pit window tradeoffs.
-```
-
-**Purpose:** introduce tire degradation as metabolic budget. Teams must evolve pit timing and pit-entrance blocking coordination. First appearance of `EpisodicSlot` motivation (opponent pit timing patterns).
-
-### Tier 5 â€” 3v3 Full
-
-```
-3 cars per team (6 total), full team radio.
-Tire degradation active, one pit per team, pit-entrance blocking legal.
-Track: full competition circuit.
-```
-
-**Purpose:** full NGE team racing. Queen/blocker/pacer roles must emerge from experience. Co-evolutionary arms race between Team A and Team B. Polyandric reproduction active.
-
-### Tier 6 â€” 3v3 Advanced Strategy
-
-```
-3 cars per team (6 total), full team radio.
-Tire degradation active, pit-entrance blocking active.
-Track: full circuit with multi-window strategic decisions.
-Multi-generation hall-of-fame opponent snapshots.
-```
-
-**Purpose:** sustained co-evolutionary arms race. Hall-of-fame opponent evaluation. `reproductionPolicy.modeIsEvolvable` fully engaged. The benchmark for demonstrating that NGE can produce stable, sophisticated, cooperative strategies under non-stationary opponent pressure.
-
----
-
-## Promotion and Refill Rules
-
-The ladder advances only when a team completes the current tier reliably over a small deterministic pack of race variants (not a single lucky race).
-
-**Within-team refill policy (after promotion):**
-
-- The car with the best performance becomes the "queen" for the next generation's polyandric reproduction.
-- Newborns receive queen DNA as primary template, with non-overlapping drone patches from the other cars.
-- Newborns may receive a short driving-school warm-start (see Newborn Nursery).
-
-**Cross-team promotion:** both teams must reach promotion-threshold performance to advance to the next tier together. A team that is far ahead holds at the current tier until the opponent catches up within a threshold, or until a maximum wait generation is reached. This prevents co-evolutionary dynamics from collapsing when one team has a runaway advantage.
-
----
-
-## Carry-State and Reset-State Semantics
-
-Promoted cars carry their phenotype state upward rather than being flattened into fresh random starts.
-
-**State that carries across tier promotion:**
-
-- current weights and biases
-- `GatedRecurrentCell` hidden state (slow lifetime adaptation)
-- `EpisodicSlot` contents (opponent pit timing, teammate radio calibration, track danger profiles)
-- developmental stage and module focus history
-- `ModulatorBroadcaster` gain calibration
-- team radio read/write calibration (learned radio semantic)
-- other category-independent policy state
-
-**State that resets at every new race start:**
-
-- world position, heading, and speed
-- tire states (restored to [1.0, 1.0, 1.0, 1.0])
-- collision cooldowns and off-track timers
-- short-horizon observation buffers (episode-scoped recurrent state)
-- recent action-history buffers
-- current team radio field (cleared at race start)
-- other race-local episode state
-
----
-
-## Rich Sensorium
-
-The benchmark intentionally overprovisions sensory channels to give NGE developmental structure enough raw material to specialize around braking, line tracking, traffic handling, tire management, radio reading, and pit coordination.
-
-### Vehicle-State Senses (16 channels)
-
-- current speed
-- longitudinal acceleration, lateral acceleration, yaw rate
-- heading error relative to track tangent
-- steering angle, steering change rate
-- throttle level, brake level
-- slip angle, traction reserve / grip proxy
-- estimated braking distance, stability margin
-- recent control smoothness / oscillation score
-
-### Tire-State Senses (4 channels)
-
-- front-left tire state, front-right tire state
-- rear-left tire state, rear-right tire state
-
-### Track-Geometry Senses (12 channels)
-
-- lateral offset from centerline
-- lateral offset from the optimal line (when guidance is active)
-- heading error relative to local path tangent
-- curvature ahead at several lookahead distances
-- upcoming corner severity, next apex side, distance to apex
-- local track width, exit width after next corner
-- safe-speed envelope for the next segment
-
-### Boundary and Hazard Senses (10 channels)
-
-- ray distances to asphalt edge, sand boundary, and wall
-- nearest wall angle
-- sand-entry risk, wall-impact urgency
-- rejoin corridor quality, off-track recovery angle
-- surface type under car
-- pit entrance corridor: is it blocked? (binary + blocking car identity: same team / opponent)
-
-### Opponent and Race-Context Senses (18 channels)
-
-- front-left / front / front-right occupancy (opponent cars)
-- left / right overlap
-- rear-left / rear / rear-right pressure
-- relative speed to nearest rival ahead and behind
-- time-to-contact estimate
-- inside lane blocked, outside lane blocked
-- nearest opponent tire state estimate (inferrable from opponent behavior)
-- signed forward progress, current place
-- gap to car ahead and behind
-- time since last clean overtake, time since last collision
-
-### Team Radio Senses (21 channels)
-
-- 3 teammates Ã— 7-dimensional radio vector = 21 channels
-- No semantic labeling at initialization; teams evolve the shared protocol
-
-### Pit and Strategy Senses (8 channels)
-
-- distance to own pit entrance
-- own pit: occupied / clear / blocked by opponent
-- laps since last pit
-- teammate pit status (from radio: is any teammate currently in pit?)
-- current tire degradation rate (derivative of mean tire state)
-- estimated laps remaining before tire failure
-
-### Short-Horizon Memory Senses (10 channels)
-
-These channels are the raw input that `GatedRecurrentCell` modules integrate:
-
-- recent steering, throttle, and brake history (last 3 ticks)
-- recent slip history
-- recent team radio state history (last 2 ticks)
-- recent tire decay rate history
-
-### Initial Scale Guidance
-
-- raw sensory surface: ~99 channels before temporal expansion
-- effective policy input width: ~110â€“130 once short-horizon buffers included
-- team radio output head: 7 auxiliary output channels (stigmergy write)
-- initial scaffold: ~110â€“160 nodes
-- initial sparse connectivity: ~1,000â€“2,000 connections
-
----
-
-## Behavioral Drives and Neuromodulation
-
-Each car's controller must be capable of all behavioral modes â€” the network switches between them via `ModulatorBroadcaster` gain shifts, not by structural change.
-
-**Drive families â†’ `ModulatorBroadcaster` mapping:**
-
-| Drive                     | Modulates                                | Mode switch speed |
-| ------------------------- | ---------------------------------------- | ----------------- |
-| Sprint drive              | Forward-progress zone gain               | Fast              |
-| Line-adherence drive      | Tracking zone gain                       | Fast              |
-| Safety-margin drive       | Boundary/hazard zone gain                | Fast              |
-| Grip-preservation drive   | Slip/traction zone gain                  | Fast              |
-| Collision-avoidance drive | Opponent zone gain                       | Fast              |
-| Blocking drive            | Opponent zone + inside-line zone gain    | Fast              |
-| Pacing drive              | Throttle constraint zone gain            | Fast              |
-| Pit-preparation drive     | Braking zone gain + tire management gain | Fast              |
-| Recovery drive            | Rejoin/correction zone gain              | Fast              |
-| Radio-write drive         | Radio output head gain                   | Fast              |
-| Anti-degeneracy drive     | Global oscillation suppression           | Slow              |
-
-**`GatingRouter` control modes** (hard task switches, not soft interpolations):
-
-- `SPRINT` â€” maximize pace, accept tire burn
-- `BLOCK` â€” hold inside line, sacrifice own pace to impede opponent
-- `PACE` â€” conservative speed, preserve tire budget
-- `PIT_ENTRY` â€” low speed, pit-corridor alignment
-- `RECOVERY` â€” off-track or post-contact stabilization
-- `HOLD_PIT_ENTRANCE` â€” park in opponent's pit corridor at minimum speed
-
-The `GatingRouter` selects the dominant policy head based on the current sensory context, including team radio signals. A car commanded by radio to block does not gradually interpolate toward blocking â€” it hard-routes to the `BLOCK` policy head.
-
----
-
-## Competitive Racecraft
-
-The benchmark should reward racecraft and penalize contact-heavy strategies.
+## Completed phases snapshot (compressed)
+
+- Phase 1 [DONE]: Tier 0 harness packetized, implemented, validated, documented, and closed in `examples/racing_curriculum/`.
+- Phase 2 [DONE]: Tier 1-2 solo NGE controller seam shipped (guidance fade + Tier 2 self-radio), validated, and closed.
+- Phase 3 [DONE]: Tier 3 2v2 roles boundary shipped (two-population harness + 91-channel observation + Tier 3 worker), validated, and closed.
+- Phase 4 [DONE]: Tier 4 tires+pits seams shipped (degradation, pit occupancy, 95-channel observation, renderer overlays), validated, and closed.
+- Phase 5 [DONE]: Tier 5 six-car 3v3 simulation shipped (`agentCount=6`, `radioField=42`, byte-stable 95-channel observation), validated, and closed.
+- Plan-sync status for closed history: no recorded failures.
 
 **Desired behaviors (all emergent):**
 
@@ -926,465 +439,461 @@ The checklist is split into the **honest first implementation boundary** (Tier 0
 
 The honest first implementation boundary is **Tier 0 â€” the Visual Driving Harness**. It is buildable now because it does not require the unmet NGE collective stack (radio, role differentiation, polyandric reproduction, co-evolution). Each later phase layers on capability and unlocks only when its NGE prerequisite lands. Every phase shares the same headless-safe environment, controller seam, worker protocol, and `RacingRenderFrame` contract so nothing built early is throwaway.
 
-| Roadmap phase                       | Delivers                                                                                                                                                                                                                                                                                         | Gating prerequisite                                                |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| **Tier 0 â€” Visual Driving Harness** | Neon-arcade browser shell (canvas left / network right / visualizer last), procedural track generator + validation, fixed-timestep physics, solo car + baseline controller, square-outline car + degradation-colored tires, `RacingRenderFrame` worker protocol, network-view of the focused car | None â€” startable now                                               |
-| **Tier 1â€“2 â€” Solo NGE driving**     | Replace baseline controller with an evolved NGE genome; single-car racecraft; optimal-line fade; radio present but self-only                                                                                                                                                                     | NGE Phase A/B + Phase 0 archetypes                                 |
+| Roadmap phase                         | Delivers                                                                                                                                                                                                                                                                                         | Gating prerequisite                                                |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| **Tier 0 â€” Visual Driving Harness** | Neon-arcade browser shell (canvas left / network right / visualizer last), procedural track generator + validation, fixed-timestep physics, solo car + baseline controller, square-outline car + degradation-colored tires, `RacingRenderFrame` worker protocol, network-view of the focused car | None â€” startable now                                             |
+| **Tier 1â€“2 â€” Solo NGE driving**   | Replace baseline controller with an evolved NGE genome; single-car racecraft; optimal-line fade; radio present but self-only                                                                                                                                                                     | NGE Phase A/B + Phase 0 archetypes                                 |
 | **Tier 3 â€” 2v2 roles**              | Two identical-DNA teammates; role differentiation; team radio between teammates                                                                                                                                                                                                                  | Two-population harness + stigmergy field (field already available) |
 | **Tier 4 â€” Tires + pits**           | Tire degradation budget, pit stops, pit-entrance blocking; tire/pit panels activate                                                                                                                                                                                                              | Tire degradation model                                             |
-| **Tier 5â€“6 â€” Full co-evolution**    | 3v3, polyandric reproduction, rolling opponent snapshots, `modeIsEvolvable`; co-evolution dashboards activate                                                                                                                                                                                    | Reproduction modes + co-evolution loop                             |
+| **Tier 5â€“6 â€” Full co-evolution**  | 3v3, polyandric reproduction, rolling opponent snapshots, `modeIsEvolvable`; co-evolution dashboards activate                                                                                                                                                                                    | Reproduction modes + co-evolution loop                             |
 
 Phase 1 below (planning) packetizes the SDLC steps that build the **Tier 0** boundary first; later roadmap phases are packetized as their prerequisites land.
 
-### Phase 1 â€” Racing Curriculum Planning [DONE]
-
-**Phase outcome:** The Tier 0 visual driving harness boundary is now packetized, implemented,
-validated, documented, and compressed into a reusable closure record for this workstream.
-
-**Next frontier:** No legitimate Phase 2 step packet exists yet in this plan. A future
-`01-planning` pass must author and activate Phase 2 Step 01 before MCP can advance beyond this
-closed Phase 1 boundary.
-
-#### Step 01 â€” Planning packet [DONE]
-
-Packetized the Tier 0 â€” Visual Driving Harness boundary into self-contained Steps 02-07, preserved
-the fixed racing-circuit visual/runtime contracts, and advanced the plan to Step 02 for
-fresh-session research. Validation evidence is recorded below.
-
-#### Step 02 â€” Research boundary mapping [DONE]
-
-Mapped the honest Tier 0 owner boundary to `examples/racing_curriculum/` only, using
-`examples/flappy_bird/`, peer NGE demo plans, and `src/neat/nge-collective/` as the nearest
-README-first anchors. The pass fixed the intended worker/runtime shape, identified the Flappy
-browser-entry surfaces worth reusing, and constrained Step 03 to four honest seams: deterministic
-track generation, fixed-timestep environment replay, packed `RacingRenderFrame`
-transfer/schema validation, and deferred browser-host DOM layout checks. Validation passed.
-
-#### Step 03 â€” Red Testing tier-0 contracts [DONE]
-
-Authored 23 focused Tier 0 tests across three owner-local files for the track generator,
-environment stepping, and simulation-worker snapshot seams. Twenty-two cases were intentionally
-red and one baseline-green scaffold check (`createInitialState` at tick zero) remained green by
-design. `npx tsc --noEmit -p tsconfig.test.json` and plan-sync both passed. Honest caveat
-retained: browser-host DOM layout automation stayed deferred until a real host scaffold existed
-for Step 04/05.
-
-#### Step 04 â€” Implementing tier-0 vertical slice [DONE]
-
-Implemented the Tier 0 slice entirely inside `examples/racing_curriculum/`: deterministic
-`TrackSpec` generation and validation, frozen race-pack reset semantics, fixed-timestep
-environment stepping, packed `RacingRenderFrame` transfer/schema helpers, a Canvas 2D renderer,
-and the thin browser host/runtime seam with stable `canvas-left`, `network-right`, and
-`visualizer-last` markers. The initial focused rerun turned the Step 03 contracts green
-(`PASS 3/3 suites, 23/23 tests`) and `npx tsc --noEmit -p tsconfig.json` passed.
-
-The same step then handled the narrow route-back needed to make the demo honestly usable without
-widening scope: the stale example publication path was refreshed so the demo rendered, the track
-renderer moved to a continuous Catmull-Rom ribbon, the UI made the scripted Tier 0 controller
-explicit, Flappy-parity tooltip/theme/split-alignment passes landed, and the user explicitly
-approved the final visual baseline. `npm run build:racing-curriculum` and plan-sync stayed green
-across the follow-up passes.
-
-#### Step 05 â€” Green Testing focused validation [DONE]
-
-Re-ran honest green validation against the post-polish codebase rather than inheriting the older
-pre-polish result. The exact Tier 0 Jest slice stayed green (`PASS 3/3 suites, 23/23 tests`),
-`npm run build` exited 0, `npm run test:silent` stayed green (`PASS 442/442 suites, 5056/5056
-tests`), and plan-sync returned ok. Coverage guard was N/A because no `src/` files changed. Known
-caveat retained: no honest jsdom `host.layout.test.ts` exists yet, so responsive browser layout
-collapse and live network-view DOM behavior remain manually approved rather than automation-proven.
-
-#### Step 06 â€” Documenting direct deltas [DONE]
-
-Audited only the direct documentation surfaces created or changed by Tier 0. Existing JSDoc on
-the owner-local racing sources was already complete, so the step was mostly publication hygiene:
-`npm run docs:examples` re-published the racing example, full `npm run docs` passed, no Mermaid or
-`src/**/README.md` drift was introduced, and the earlier unrelated docs failure was confirmed
-stale.
-
-#### Step 07 â€” Logging and compression [DONE]
-
-Compressed the finished Phase 1 history into concise done notes, refreshed the final Tier 0
-validation record, cleared stale Phase 1 WIP markers, and left the plan fresh-session safe.
-Phase 1 is now closed. No legitimate Phase 2 packet exists yet in this plan, so the next required
-orchestrator is `01-planning` to author and activate Phase 2 Step 01 when the user wants to open
-the next benchmark boundary.
-
-### Phase 2 â€” Tier 1â€“2: Solo NGE Driving [DONE]
-
-**Phase objective:** Replace the scripted Tier 0 baseline controller with a live NGE genome,
-validate single-car racecraft through the owner-local controller seam, fade optimal-line guidance
-across Tiers 0â€“2, and bring the seven-channel degenerate single-car radio path online for Tier 2.
-
-**Phase outcome:** The solo NGE boundary is now packetized, implemented, validated, documented,
-and compressed into a durable closure record. The Step 04 seam stayed entirely inside
-`examples/racing_curriculum/`; no `src/` files changed, coverage guard remained N/A, and the
-public `Network.activate(...)` path was sufficient for the controller integration.
-
-**Next frontier:** No Phase 3 packet exists yet in this plan. The next legitimate orchestrator is
-`01-planning` to author and activate Phase 3 â€” Tier 3: 2v2 Roles, starting with the still-blocking
 two-population NEAT harness seam at `src/neat/nge-collective/`, likely
-`neat.nge-collective.two-population.ts`.
 
-#### Step 01 â€” Prerequisite audit and packetization [DONE]
+### Tier Completion Matrix
 
-Confirmed the Tier 1â€“2 gate was honestly met: NGE Phases A/B were already closed, the required
-Phase 0 archetypes were exportable, the ResidualTap nuance was documented as a non-blocking
-edge/property implementation detail, and the missing two-population harness was recorded as a
-Phase 3 blocker only. The pass then authored the bounded Step 02â€“07 packets for the solo slice.
+This matrix is the working table for turning the curriculum into a fully complete tier ladder.
+It separates what each tier changes, how many cars are on track, what ends the tier, and what
+still needs to exist before that tier can be considered complete. The table is intentionally
+redundant with the roadmap so it can be used later as a direct expansion checklist.
 
-#### Step 02 â€” Research boundary mapping [DONE]
+| Tier   | On-track roster / spawn         | What changes on this tier                                                                                                                                | Finish condition                                                                                                         | Current completion gate                                                                       | Notes for later expansion                                                                                          |
+| ------ | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Tier 0 | 1 car, solo spawn               | Browser visual driving harness, deterministic track, fixed-timestep physics, baseline controller, focused-car network view, packed render frame contract | Tier 0 scaffold criteria pass: deterministic replay, solo laps, stable frame packing, layout, and style contract         | Still bounded to the visual harness boundary                                                  | This is the first honest implementation boundary and should stay future-proof for later multi-car expansion        |
+| Tier 1 | 1 car, evolved lane             | Live NGE controller replaces the scripted baseline; optimal-line guidance is strongest here                                                              | Tier 1 lane is reproducible and a lineage can complete laps under the deterministic race pack                            | Requires NGE Phase A/B and Phase 0 motifs                                                     | This is the first real learning tier, but still single-car only                                                    |
+| Tier 2 | 1 car, widened observation lane | Same single-car race, but the observation seam widens and self-radio appears                                                                             | Tier 2 finish is the same lane completed with the widened policy inputs and stable self-radio behavior                   | Requires the same single-car controller seam plus the Tier 2 observation tail                 | Use this tier to validate the controller seam before team behavior exists                                          |
+| Tier 3 | 2 cars per team, 2v2 total      | First team phase: identical-DNA teammates, role emergence, and team radio between teammates                                                              | Tier 3 completes when two-population harness, role differentiation, and teammate radio are stable without scripting      | Requires two-population harness and the stigmergy field primitive                             | This is the first true multi-car spawn step; it is where the roster begins to expand                               |
+| Tier 4 | 2 cars per team, 4 total        | Tire degradation, pit stops, pit-entrance blocking, and pit/tire UI become active                                                                        | Tier 4 completes when tire state, pit occupancy, and pit-stop flow are all working and measurable                        | Requires the tire degradation model and pit semantics                                         | This tier adds endurance strategy instead of increasing roster size                                                |
+| Tier 5 | 3 cars per team, 6 total        | Full six-car 3v3 pack, polyandric reproduction hooks, rolling opponent snapshots, and the expanded radio/pit transport contract                          | Tier 5 completes when six-car simulation is stable, byte-stable, and the Tier 5 benchmark criteria pass                  | Requires reproduction modes plus the co-evolution loop                                        | This is the second roster expansion point and the current highest implemented car count                            |
+| Tier 6 | 3 cars per team, 6 total        | Full co-evolution behavior, reproduction-mode evolution, and the arms-race observability surfaces                                                        | Tier 6 completes when the co-evolutionary arms race shows non-trivial alternating advantage instead of collapse or noise | Requires the upstream reproduction and mode-evolution surface that is still out of scope here | Tier 6 is the current end-state target, but it is intentionally left blocked until the upstream prerequisites land |
 
-Mapped the implementation boundary to `examples/racing_curriculum/` only, fixed the
-authoritative guidance contract to Tier 0 full > Tier 1 faded > Tier 2 none, and narrowed the
-production seam to the controller factory, observation assembler, renderer guidance fade, and
-seven-channel self-monitoring radio tail.
+#### Tier completion dimensions
 
-#### Step 03 â€” Red testing NGE controller seam [DONE]
+Use the following dimensions when expanding the plan into a more detailed completion map for each tier:
 
-Authored five owner-local red seams across the controller and observation assembler. Routed the
-tracker contradictions through `00-helping` before red validation, then confirmed the focused
-controller Jest slice failed as intended while plan-sync stayed green.
+| Dimension               | What to capture                                                                                    | Why it matters                                                                             |
+| ----------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Roster / spawn          | Car count, team split, whether the tier changes the active spawn shape                             | This is the most visible user-facing expansion from tier to tier                           |
+| Controller seam         | Which controller surface is active, and whether the tier changes observation width or policy heads | Prevents later tiers from silently changing the contract the browser demo depends on       |
+| Environment surface     | Track, physics, tire, pit, and radio capabilities that are active on the tier                      | Separates what the environment owns from what the browser only renders                     |
+| Worker / frame contract | Packed frame schema, transfer rules, and any tier-specific buffers                                 | Keeps the browser, worker, and headless paths aligned                                      |
+| Completion gate         | Observable pass condition for the tier                                                             | Makes each tier finishable instead of just “more complete”                                 |
+| Upstream blocker        | The prerequisite that must land before the tier can be considered complete                         | Prevents the plan from overpromising capabilities that the core stack does not yet support |
 
-#### Step 04 â€” Implementing NGE controller integration [DONE]
+#### Tier completion expansion ledger (2026-05-30)
 
-Shipped the owner-local controller seam in `examples/racing_curriculum/controller/nge.controller.ts`,
-`examples/racing_curriculum/controller/observation.assembler.ts`,
-`examples/racing_curriculum/renderer/racing.renderer.ts`, and
-`examples/racing_curriculum/browser-entry/browser-entry.ts`. Focused Jest validation turned green,
-the `RacingRenderFrame` schema stayed intact, and no `src/` changes were needed.
+This ledger converts the matrix into concrete completion packets and stop points. It is the source of truth for what is already closed versus what still must run before this workstream can be declared fully complete.
 
-#### Step 05 â€” Green validation Tier 1â€“2 slice [DONE]
+| Tier   | Completion state        | Already complete evidence                                                                      | Remaining implementation / validation / docs / logging                                                           |
+| ------ | ----------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Tier 0 | Complete                | Solo harness, deterministic replay, frame packing, and browser shell shipped in earlier phases | None beyond preserving regression coverage in ongoing follow-up validation                                       |
+| Tier 1 | Complete                | Live NGE controller replaced scripted baseline; deterministic lap completion evidence recorded | None; keep deterministic controller behavior green in follow-up slices                                           |
+| Tier 2 | Complete                | Widened observation lane and self-radio semantics validated and logged                         | None; keep Tier 2 observation/radio contracts regression-covered                                                 |
+| Tier 3 | Complete                | 2v2 role seams, teammate radio, and two-population harness shipped and validated               | None; retain parity in Tier 5+ regression matrix checks                                                          |
+| Tier 4 | Complete                | Tires, pits, occupancy, and Tier 4 transport semantics shipped and validated                   | None; ensure pit/tire semantics stay stable under six-car soak                                                   |
+| Tier 5 | In follow-up completion | Six-car 3v3 simulation, 95-channel byte-stable observation, and Tier 5 worker seam shipped     | Close Phase 6 Step 05-07 with full green matrix + browser soak + docs/log compression evidence                   |
+| Tier 6 | Blocked upstream        | Tier 6 target and blocker contract documented in roadmap and matrix                            | Author blocked-step packet with explicit upstream ownership and no local overreach; keep closure criteria honest |
 
-Workflow MCP confirmed the intended starting state, `00-helping` repaired a Step 05
-allowlist/prose mismatch before validation continued, and validation MCP then passed `npm run
-build`, `npm run test:silent`, and
-`node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`.
-Coverage guard remained N/A because the implementation stayed owner-local to
-`examples/racing_curriculum/`.
+#### Executable tier completion packets (sequential MCP queue)
 
-#### Step 06 â€” Documentation seam deltas [DONE]
+These packets replace pre-planning notes with executable, one-step-at-a-time handoff blocks.
+Active `[WIP]` ownership remains in the phase step packets; this queue mirrors that order.
 
-Kept the work doc-only and owner-local. JSDoc was tightened for the NGE controller, observation
-assembler, renderer, and browser handle surfaces; `tsc --noEmit` and plan-sync passed; no
-`src/**/README.md` regeneration was required.
-
-#### Step 07 â€” Logging and compression Phase 2 closure [DONE]
-
-Workflow MCP confirmed Phase 2 Step 07 was the active frontier before closure. `00-helping`
-repaired the missing `Required validation:` prose so validation MCP stayed honest, then Phase 2
-history was compressed, the handoff was refreshed to Phase 3 packetization, and the tracker was
-left ready for a future `01-planning` pass. Phase 2 is now closed.
-
----
-
-### Phase 3 â€” Tier 3: 2v2 Roles [DONE]
-
-**Phase objective:** Implement the Tier 3 two-vs-two racing tier: two identical-DNA teammates per team (four cars total), team radio active between teammates, role differentiation emerging from driving experience alone, no pit stops, no tire degradation. At Phase 3 kickoff, the primary gating prerequisite was the missing two-population NEAT harness at `src/neat/nge-collective/`, and Step 01 audited that boundary before authoring the bounded Steps 02â€“07 packet set.
-
-**Phase progression rule:** Step 01 is audit-only and must not touch production code or tests. Steps 02â€“07 stay bounded to the Tier 3 roadmap row: two-population harness, 2v2 controller/assembler seams, focused validation, documentation, and closure only.
-
-**Phase outcome:** Landed the team-isolated two-population harness, Tier 3 91-channel teammate-radio observation flow, Tier 3 2v2 worker support, focused green validation, and refreshed public docs, leaving the plan ready for Phase 4 packetization.
-
-#### Step 01 â€” Prerequisite audit and Phase 3 packetization [DONE]
-
-Done note (2026-05-30): confirmed that `src/neat/nge-collective/neat.nge-collective.two-population.ts` does not exist. The current `src/neat/nge-collective/` boundary implements only the shared-field primitive (`createSharedField`, `writeCell`, `readCell`, `applyDecay`, `applyDiffusion`, `clearField`), sequential collective evaluation (`createCollectiveEvaluationContext`, `runCollectiveEvaluationTick`, `resetCollectiveEvaluationState`), and observability helpers (`computeRoleDivergenceMetric`, `createOpponentSnapshotPool`, `addOpponentSnapshot`) plus constants, errors, tests, and generated README coverage. Missing for Phase 3 is any team-scoped two-population harness surface: no Team A / Team B `Neat` pair boundary, no team-isolated species bookkeeping, no independent innovation-tracker ownership, no independent assimilation-cycle orchestration, and no shared-race evaluation facade that advances two isolated populations without shared mutable state.
-
-Audit note: the Phase 1â€“2 seams are present. `examples/racing_curriculum/controller/nge.controller.ts` exists as the controller seam, `examples/racing_curriculum/controller/observation.assembler.ts` exists as the observation assembler, and the racing worker protocol already exists through `examples/racing_curriculum/workers/simulation-worker/simulation-worker.types.ts` plus `simulation-worker.snapshot.utils.ts`. The controller and assembler are still Tier 1â€“2 scoped (`ObservationTier = 1 | 2`, seven-channel self-radio tail only), so Phase 3 still needs the 2v2 / 21-channel extension even though the seam itself is in place.
-
-Recorded minimum Phase 3 harness contract for Step 04:
-
-- One new boundary file at `src/neat/nge-collective/neat.nge-collective.two-population.ts`.
-- One harness-creation API that accepts or creates two distinct `Neat` controllers (`teamA`, `teamB`) and rejects any shared controller/state aliasing.
-- One team-scoped state shape where each team owns its own population, innovation tracker/history, species state/history, assimilation or reproduction cycle state, and opponent snapshot pool.
-- One headless-safe 2v2 evaluation surface that uses the existing shared-field and collective-evaluation primitives to evaluate both teams in the same race without merging controller-owned state.
-- One post-evaluation advance surface that evolves or assimilates Team A and Team B independently, then registers frozen opponent-team snapshots without cross-team mutation leakage.
-
-#### Step 02 â€” Research boundary mapping [DONE]
-
-Done note (2026-05-30): mapped the Phase 3 contract for `src/neat/nge-collective/neat.nge-collective.two-population.ts` against the current `Neat`, NGE adult/assimilation, racing controller, observation, and worker seams. `TeamScopedState` should own one distinct `Neat` controller plus team-local runtime shelves only: the controller remains the owner of the team's population array, innovation tracker, and species bookkeeping; the harness adds one team-local opponent snapshot pool, one team-local adult/assimilation shelf, and one team-local reproduction-policy snapshot so no mutable evolutionary state aliases across teams.
-
-Confirmed API surface for the missing boundary:
-
-- `createTwoPopulationHarness(configA, configB): TwoPopulationHarnessState` should reject aliased controllers/state and return `{ teamA, teamB, sharedEvaluationContext, radioChannelCount, fieldSize }`.
-- `TwoPopulationHarnessState` should own one shared `CollectiveEvaluationContext` for the live 2v2 race (`agentCount = 4`) plus `teamA: TeamScopedState` and `teamB: TeamScopedState`.
-- `runTwoTeamEvaluationTick(harness, raceState)` should compose four stable per-car evaluators (`A0, A1, B0, B1`), call existing `runCollectiveEvaluationTick(...)`, then partition the returned `CollectiveTickResult` back into team-local result slices for later advance.
-- `advanceTwoPopulations(harness, resultsA, resultsB)` should evolve Team A and Team B independently, then register frozen opponent-team snapshots with `addOpponentSnapshot(...)` after each team's advance completes.
-- Isolation contract: Team A and Team B must not share controller instances, population arrays, innovation numbering/history, species representatives/history, adult or assimilation state, reproduction policy state, or opponent snapshot pools.
-
-Worker, observation, and shared-field findings:
-
-- `RacingRenderFrame` is already Phase 3-safe: `agentCount`, `carTeam`, and `radioField` already encode four-car 2v2 frames, and the snapshot transport helpers allocate and transfer typed arrays from `agentCount`; Phase 3 should keep schema `'racing-packed-v1'` unchanged and only populate `agentCount = 4`, `carTeam = [0, 0, 1, 1]`, and `radioField.length = 28`.
-- Tier 3 observation should widen `ObservationTier` to `1 | 2 | 3`; reuse the current seven-channel Tier 2 payload as one teammate slot (`forwardSpeedWorld`, `lateralSpeedWorld`, `speedWorld`, `yawRateRadiansPerSecond`, `slipAngleRadians`, `progress01`, `optimalLineLateralOffsetWorld`), and append three ordered teammate slots (21 channels total) for a 91-channel Tier 3 vector. In 2v2, only slot 0 is live; slots 1-2 are zero-padded (14 zeros) for honest forward compatibility.
-- `createSharedField`, `writeCell`, and `readCell` already fit 2v2 radio if the field is treated as row-major `[agentCount Ã— channelCount]`: `agentCount = 4`, `channelCount = 7`, `fieldSize = 28`, `width = 7`, `height = 4`. Additional seam discovered: the evaluation wrapper must keep opponent rows out of controller-visible radio input even though the underlying shared field stores all four cars in one array.
-
-#### Step 03 â€” Red testing Phase 3 contracts [DONE]
-
-Done note (2026-05-29 21:44:58 UTC): authored owner-local red tests at `src/neat/nge-collective/neat.nge-collective.two-population.test.ts`, `examples/racing_curriculum/controller/observation.assembler.tier3.test.ts`, and `examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier3.test.ts`. The two-population harness seam is now locked to two distinct team states, aliased-controller rejection, `sharedEvaluationContext.agentCount = 4`, partitioned `teamA` / `teamB` evaluation slices, isolated Team A / Team B advance semantics, and opponent-snapshot registration after advance. The Tier 3 observation seam is now locked to a 91-channel vector with one live teammate slot plus 14 zero-padded channels in 2v2, and the worker seam is now locked to `carTeam = [0, 0, 1, 1]`, `radioField.length = 28`, and team-local readable radio rows.
-
-Validation note: focused Jest red validation failed as intended (`FAIL 3/3 suites, 18/18 tests`) when run with `npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns="src/neat/nge-collective/neat.nge-collective.two-population|examples/racing_curriculum/controller/observation.assembler.tier3|examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier3"`; failures were for the expected missing-seam reasons: `./neat.nge-collective.two-population` not found, `./simulation-worker.tier3` not found, and Tier 3 observation exports (`assembleTier3Observation`, `createTier3ObservationOptions`) not present yet. `npx tsc --noEmit -p tsconfig.test.json` exited 0. Plan-sync validation recorded below.
-
-#### Step 04 â€” Implementing Phase 3 two-population slice [DONE]
+##### Packet 1 — Tier 5 closure validation matrix (maps to Phase 6 Step 05)
 
 ```yaml
-phase: 3
-step: 4
-agent: '04-implementing'
-agent_file: '.github/agents/04-implementing.agent.md'
-status: '[DONE]'
-mode: 'fresh-session'
-source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
-copy_paste: false
-next_step: 'Step 05 â€” Green validation Phase 3 slice'
-skills:
-  - 'nge-benchmark-workflow'
-  - 'nge-core-algorithm'
-validation:
-  - 'npx tsc --noEmit -p tsconfig.json'
-  - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns="src/neat/nge-collective|examples/racing_curriculum/controller|examples/racing_curriculum/workers/simulation-worker"'
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
-```
-
-**Step objective:** Implement the smallest honest Phase 3 vertical slice: isolated two-population orchestration plus the 2v2 controller/assembler integration needed to evaluate four cars headlessly.
-
-**Step implementation targets:**
-
-- Implement `src/neat/nge-collective/neat.nge-collective.two-population.ts` with the team-isolated harness contract recorded in Step 01 and refined by Step 02.
-- Extend `examples/racing_curriculum/controller/observation.assembler.ts` from the Tier 2 seven-channel self-radio tail to the forward-compatible 21-channel teammate-radio contract.
-- Extend `examples/racing_curriculum/controller/nge.controller.ts` from the single-car radio seam to a two-car team seam that can consume teammate radio without introducing shared mutable controller state across teams.
-- Validate the Tier 3 four-car / two-team evaluation loop headlessly, reusing the existing racing worker protocol unless Step 02 proved a narrow schema change is unavoidable.
-
-**Required validation:**
-
-```text
-npx tsc --noEmit -p tsconfig.json
-npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns="src/neat/nge-collective|examples/racing_curriculum/controller|examples/racing_curriculum/workers/simulation-worker"
-node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
-```
-
-Done note (2026-05-30): implemented the Phase 3 two-population vertical slice with a new team-isolated harness at `src/neat/nge-collective/neat.nge-collective.two-population.ts`, Tier 3 91-channel teammate-radio assembly in `examples/racing_curriculum/controller/observation.assembler.ts`, and a new Tier 3 2v2 worker race pack at `examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier3.ts`, plus barrel re-exports from `src/neat/nge-collective/neat.nge-collective.ts`. Focused Jest for the three red seams is now green (`18/18 tests`), `npx tsc --noEmit -p tsconfig.json` exited 0, `neat.nge-collective.two-population.ts` is at 100% statements/branches/functions/lines in focused coverage, and `npm run test:silent` finished green (`463 suites / 5104 tests`).
-
-#### Step 05 â€” Green validation Phase 3 slice [DONE]
-
-```yaml
-phase: 3
+phase: 6
 step: 5
 agent: '05-green-testing'
 agent_file: '.github/agents/05-green-testing.agent.md'
-status: '[DONE]'
+status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
-copy_paste: false
-next_step: 'Step 06 â€” Documenting Phase 3 deltas'
+copy_paste: true
+next_step: 'Phase 6 Step 06 — Tier 5 closure docs refresh (manual confirmation gate first)'
 skills:
   - 'green-validation-gates'
   - 'coverage-guard'
 validation:
-  - 'npm run quality:folder -- --folder=src/neat/nge-collective'
   - 'npm run quality:folder -- --folder=examples/racing_curriculum'
-  - 'npm run build'
+  - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=examples/racing_curriculum/browser-entry --testPathPatterns=examples/racing_curriculum/renderer --testPathPatterns=examples/racing_curriculum/workers/simulation-worker'
+  - 'npm run build:racing-curriculum'
   - 'npm run test:silent'
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
 ```
 
-**Step objective:** Prove the Phase 3 slice is green without widening scope beyond the touched two-population and 2v2 racing boundaries.
+**Step objective:** Prove Tier 5 closure-readiness by running the full follow-up green matrix plus manual browser soak evidence without widening scope outside `examples/racing_curriculum/`.
 
-**Step audit targets:**
+**Context the agent must know:**
 
-- Run focused Jest coverage on the two-population harness and Tier 3 loop before broader validation.
-- Confirm `npm run build` and `npm run test:silent` remain green after the Phase 3 slice lands.
-- Invoke `coverage-guard` for every touched `src/` file and hold the line at 100% statements, branches, functions, and lines.
-- Re-run plan-sync so the tracker remains authoritative before documentation or closure begins.
+- Tier 5 implementation seams are already shipped; this packet is validation-first closure proof.
+- Tier 6 remains blocked upstream; this packet must not implement `src/` co-evolution features.
+- Current risk seams: promotion continuity, stage text sync, panel-readiness honesty, six-car parity.
 
-**Required validation:**
+**Execution steps:**
 
-```text
-npm run quality:folder -- --folder=src/neat/nge-collective
-npm run quality:folder -- --folder=examples/racing_curriculum
-npm run build
-npm run test:silent
-node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
-```
+1. Run the required automation matrix in listed order.
+2. Run manual browser soak for repeated progression/restart loops and capture concise pass/fail notes.
+3. If regressions appear, stop and route back to the smallest prior phase packet instead of continuing.
 
-#### Step 06 â€” Documenting Phase 3 deltas [DONE]
+**Stop conditions:**
+
+- **Done:** all matrix gates pass and manual soak evidence is recorded.
+- **Blocked:** any gate fails with no bounded examples-local fix path.
+- **Route-back:** any failure requiring code change returns to `04-implementing` with a narrow defect packet.
+
+**Required validation:** Run every command in the YAML `validation` block and include manual soak evidence summary.
+
+**Plan update requirement:** Record command outcomes, soak notes, and set only Phase 6 Step 06 to `[WIP]` after explicit manual confirmation.
+
+##### Packet 2 — Tier 5 closure documentation refresh (maps to Phase 6 Step 06) [PLANNED]
 
 ```yaml
-phase: 3
+phase: 6
 step: 6
 agent: '06-documenting'
 agent_file: '.github/agents/06-documenting.agent.md'
-status: '[DONE]'
+status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
-copy_paste: false
-next_step: 'Step 07 â€” Logging and compression Phase 3 closure'
+copy_paste: true
+next_step: 'Phase 6 Step 07 — Tier 5 closure logging and compression'
 skills:
   - 'educational-docs'
-  - 'nge-benchmark-workflow'
+  - 'tracker-handoff'
 validation:
   - 'npx tsc --noEmit -p tsconfig.json'
   - 'npm run docs'
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
 ```
 
-**Step objective:** Document only the public Phase 3 deltas introduced by the two-population and 2v2 radio surfaces.
+**Step objective:** Refresh owner-local docs/comments for the closed Tier 5 follow-up behavior and explicit non-goals.
 
-**Step implementation targets:**
+**Context the agent must know:**
 
-- Add or refine JSDoc for the public surface in `src/neat/nge-collective/neat.nge-collective.two-population.ts` and any newly public 2v2 controller/assembler seam.
-- Confirm generated `src/**/README.md` output stays aligned with the new public API surface; regenerate with `npm run docs` only when doc-affecting source changed.
-- Keep documentation atemporal and Tier 3-scoped: no tire, pit, or 3v3 forward leakage.
-- Reconfirm the plan frontier and evidence trail before closure starts.
+- Execute only after Packet 1 evidence is complete and manually confirmed.
+- Keep language honest: Tier 5 closure in this plan is examples-local hardening, not Tier 6 completion.
+- Preserve prior completed-phase history exactly; append only new closure deltas.
 
-**Required validation:**
+**Execution steps:**
 
-```text
-npx tsc --noEmit -p tsconfig.json
-npm run docs
-node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
-```
+1. Update only docs/comments touched by the validated Tier 5+ follow-up seams.
+2. Keep blocked-upstream Tier 6 language explicit and unchanged in meaning.
+3. Prepare concise closure-ready notes for Packet 3 logging.
 
-#### Step 07 â€” Logging and compression Phase 3 closure [DONE]
+**Stop conditions:**
+
+- **Done:** docs/comments updated and validation commands pass.
+- **Blocked:** required docs regeneration fails or surfaces unresolved drift.
+- **Route-back:** if documentation reveals behavior mismatch, route to the smallest correcting phase.
+
+**Required validation:** Run YAML validation commands and capture evidence in plan validation section.
+
+**Plan update requirement:** Mark Step 06 `[DONE]`, advance Step 07 to `[WIP]`, and retain single active step.
+
+##### Packet 3 — Tier 5 closure logging and closure decision (maps to Phase 6 Step 07) [PLANNED]
 
 ```yaml
-phase: 3
+phase: 6
 step: 7
 agent: '07-logging'
 agent_file: '.github/agents/07-logging.agent.md'
-status: '[DONE]'
+status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
-copy_paste: false
-next_step: 'Phase 4 Step 01 â€” Tier 4 packetization when the Tier 3 slice is closed'
+copy_paste: true
+next_step: 'Phase 7 Step 01 — Tier 6 blocked-state governance packet'
 skills:
   - 'tracker-handoff'
+  - 'green-validation-gates'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
 ```
 
-**Step objective:** Compress Phase 3 into a concise closure record and leave an honest handoff toward Tier 4 only after the Tier 3 slice is fully green.
+**Step objective:** Compress Phase 6 to concise done notes and make an explicit closure decision with evidence.
 
-**Step implementation targets:**
+**Context the agent must know:**
 
-- Compress completed Phase 3 history into concise done notes and remove any stale `[WIP]` step markers.
-- Refresh the final validation evidence and handoff so the next legitimate frontier is explicit.
-- Confirm no open Tier 3 blockers remain hidden in chat-only context.
-- Handoff to Phase 4 only after the two-population Tier 3 boundary is closed, validated, and documented.
+- Phase 6 may close only when Packet 1 matrix + soak evidence and Packet 2 docs evidence are present.
+- If any closure criterion is missing, keep Phase 6 open with a narrow unresolved-defect packet.
+- No Tier 6 capability claims are allowed in closure text.
 
-**Required validation:**
+**Execution steps:**
 
-`node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+1. Verify Packet 1 and Packet 2 evidence exists and is internally consistent.
+2. Compress verbose Phase 6 logs into concise completion notes.
+3. Record closure decision and queue Phase 7 blocked-state governance step.
 
-Done note (2026-05-30): advanced Step 07 to [WIP], compressed Phase 3 closure history, marked Phase 3 [DONE], refreshed the handoff to Phase 4 packetization by `01-planning`, and kept the tracker active in `plans/` pending manual testing before any archive move.
+**Stop conditions:**
 
-### Phase 4 — Tier 4: Tires + Pits [DONE]
+- **Done:** closure decision is explicit and evidence-backed.
+- **Blocked:** evidence is incomplete or contradictory.
+- **Route-back:** reopen the smallest prior packet needed to fix evidence gaps.
 
-**Phase objective:** Implement the Tier 4 2v2 racing tier: tire degradation as a metabolic budget, fixed-duration pit stops, pit-entrance blocking, and the smallest honest tire/pit render plus observation seams without widening into Tier 5 3v3 or co-evolution work.
+**Required validation:** Run plan-sync validation and include output in validation evidence.
 
-**Phase outcome:** Phase 4 is complete and compressed.
+**Plan update requirement:** Mark Step 07 `[DONE]` only when criteria are met; then move to Phase 7 Step 01 `[WIP]`.
 
-Deliverables:
-- Tire degradation: `tireState: [fl, fr, rl, rr]` per car (`1.0 = fresh`, `0.0 = destroyed`). Decay: `delta = (lateralForce * 0.002 + longitudinalForce * 0.001 + speed * 0.0001) * (1 + (1 - current) * 0.5)`. Grip multiplier: `mean(tireState)^0.5` on lateral + braking.
-- Pit occupancy: two-slot per-team `pitOccupancy` in `EnvironmentState`. `NO_CAR_INDEX = 255` sentinel. `PIT_STOP_TICKS = 4` fixed duration. On exit, tires reset to `[1, 1, 1, 1]`.
-- `TrackSpec.pitBoxes`: one AABB corridor per team at about 25% / 75% track progress, validated for non-overlap and reachability.
-- Tier 4 observation: 95 channels = Tier 3 (91) + own-car tire `[fl, fr, rl, rr]`. `ObservationTier = 1 | 2 | 3 | 4`.
-- `RacingRenderFrame`: `tireState: Float32Array(16)` + `pitStatus: Int16Array(4)`.
-- Renderer: live tire color corner marks (`green ≥ 0.75` / `yellow ≥ 0.50` / `orange ≥ 0.25` / `red < 0.25`) + pit box overlays.
-- New worker: `simulation-worker.tier4.ts` with `createTier4RacePack()`.
-- Tests: 4 suites / 19 tests green. Full suite at closure: 470 suites / 5,147 tests green.
+##### Packet 4 — Tier 6 blocked-state governance and escalation checks (maps to Phase 7 Step 01) [PLANNED]
 
-**Files touched:**
-- `examples/racing_curriculum/environment/environment.types.ts`
-- `examples/racing_curriculum/environment/environment.step.service.ts`
-- `examples/racing_curriculum/track/track.generator.types.ts`
-- `examples/racing_curriculum/track/track.generator.ts`
-- `examples/racing_curriculum/track/track.validation.ts`
-- `examples/racing_curriculum/controller/observation.assembler.ts`
-- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.types.ts`
-- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.snapshot.utils.ts`
-- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier4.ts`
-- `examples/racing_curriculum/renderer/racing.renderer.ts`
-- Tests: 4 new test files
+```yaml
+phase: 7
+step: 1
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: true
+next_step: 'Planner-defined by this step (blocked-state maintenance or upstream-unblocked execution queue)'
+skills:
+  - 'phase-handoff-workflow'
+  - 'plan-alignment'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+```
 
-**Next: Phase 5 — Tier 5–6: Full Co-Evolution [WIP]**
-Prerequisite audit completed: upstream NGE DNA / reproduction primitives exist, but the usable benchmark-facing loop is still blocked at the harness-integration layer.
-Route to `02-researching` for the examples-only Tier 5 boundary map, then keep Phase 5 honest by shipping only the six-car simulation and basic two-population co-evolution seams that do not require new `src/` reproduction wiring.
+**Step objective:** Keep Tier 6 explicitly blocked with current upstream ownership, escalation path, and precondition checks while preventing scope overreach.
 
-#### Step 01 — Prerequisite audit and Phase 4 packetization [DONE]
+**Context the agent must know:**
 
-Audited the missing tire-degradation prerequisite honestly, kept the boundary examples-only, and packetized the bounded Tier 4 tire/pit steps.
+- Tier 6 is blocked on upstream `src/` prerequisites outside this bounded examples-local plan closure.
+- Required blocker owners: `src/neat.ts` reproduction exposure, `src/neat/nge-collective/` mode-switching wiring, hall-of-fame opponent evaluation seam.
+- This packet is governance-only unless blockers are objectively removed.
 
-#### Step 02 — Research tire and pit boundary mapping [DONE]
+**Execution steps:**
 
-Mapped the owner boundary to `environment/`, `track/`, `controller/`, `workers/simulation-worker/`, and `renderer/`; kept `src/` out of scope; fixed the Tier 4 contract for tire state, pit geometry, pit occupancy, worker transport, and a new 95-channel observation tier.
+1. Re-validate blocker list and ownership against current repo state.
+2. Record escalation/precondition checks and explicitly state no local Tier 6 implementation is authorized.
+3. Author next packet set: either continued blocked maintenance or, if unblocked, a new bounded execution queue.
 
-#### Step 03 — Red testing tire and pit contracts [DONE]
+**Stop conditions:**
 
-Added four owner-local red suites / 19 tests covering tire decay, pit occupancy/reset, pit-box validation, Tier 4 observation expansion, and the new Tier 4 worker pack; the focused slice failed red as intended before implementation.
+- **Done:** blocker status is current, evidence-backed, and escalation path is explicit.
+- **Blocked:** blocker ownership is ambiguous or contradictory.
+- **Route-back:** if contradictions appear, escalate via `00-helping` cross-tier helper before planning further execution.
 
-#### Step 04 — Implementing the Phase 4 tire/pit slice [DONE]
+**Required validation:** run plan-sync and capture blocker-state evidence references.
 
-Landed the examples-only vertical slice: per-car tire decay + grip scaling, two-slot per-team pit occupancy, deterministic `pitBoxes`, Tier 4 observation assembly, `pitStatus` worker transport, `simulation-worker.tier4.ts`, and renderer tire-health / pit overlays.
+**Plan update requirement:** Keep Tier 6 marked blocked unless upstream prerequisites are demonstrably satisfied; never claim Tier 6 completion from this packet.
 
-#### Step 05 — Green validation Phase 4 slice [DONE]
+### Phase 1 - Racing Curriculum Planning [DONE]
 
-Focused Tier 4 validation finished green at `PASS 4/4 suites, 19/19 tests`; the folder-quality gate, TypeScript validation, plan-sync, and full-suite validation stayed green, and coverage guard remained N/A because no `src/` files changed.
+Compressed outcome: Tier 0 harness boundary was packetized, implemented, validated, documented, and closed inside `examples/racing_curriculum/`.
 
-#### Step 06 — Documenting Phase 4 deltas [DONE]
+### Phase 2 - Tier 1-2: Solo NGE Driving [DONE]
 
-Improved JSDoc/comments across the 10 owner-local Tier 4 files, documented the decay formula, pit sentinel / stop semantics, observation layout, packed worker lengths, and renderer contract, and intentionally skipped `npm run docs` because no generated README surface changed.
+Compressed outcome: scripted baseline was replaced with the live NGE controller seam, guidance fade and Tier 2 self-radio landed, validations stayed green, and the phase closed without `src/` edits.
 
-#### Step 07 — Logging and compression Phase 4 closure [DONE]
+### Phase 3 - Tier 3: 2v2 Roles [DONE]
 
-Done note (2026-05-30): compressed Phase 4 history to the closure summary above, marked Phase 4 [DONE], refreshed the handoff to the Phase 5 prerequisite-audit frontier, and kept the plan active at `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` pending user manual test confirmation.
+Compressed outcome: team-isolated two-population harness + Tier 3 observation/worker seams shipped and validated; documentation refreshed; phase closed.
 
-### Phase 5 — Tier 5–6: Full Co-Evolution (Honest Partial: Tier 5 Simulation) [DONE]
+### Phase 4 - Tier 4: Tires + Pits [DONE]
 
-**Phase summary (2026-05-30):**
-- Six-car 3v3 roster: `agentCount = 6`, `carTeam = [0, 0, 0, 1, 1, 1]`, `radioField.length = 42` (`6 × 7`)
-- Packed worker tire buffer: `Float32Array(24)` (`6 × 4`); `pitStatus` stays `Int16Array(4)`
-- Pit occupancy: unchanged 2-slot per-team, first-car-wins under 3v3 traffic
-- `ObservationTier = 1|2|3|4|5`; Tier 5 stays **95 channels**, byte-stable with Tier 4 (3×7 radio slots now fully populated for 3v3 teammates vs zero-padded in 2v2)
-- `simulation-worker.tier5.ts`: `createTier5RacePack()`, readable teammate-row helper
-- `stepEnvironment` confirmed car-count-generic (no 4-car hardcoding)
-- Tests: 4 suites / 22 tests green. Full suite at closure: 474 suites / 5,169 tests green
-- Upstream blockers explicitly recorded: full polyandric queen/drone race-loop and `modeIsEvolvable` strategy switching remain gated on `src/neat.ts` exposure of Phase E reproduction surface
+Compressed outcome: tire degradation, pit occupancy/stop flow, Tier 4 observation/worker transport, and renderer overlays shipped and validated; phase closed.
 
-**Files touched:**
-- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier5.ts` (new)
-- `examples/racing_curriculum/environment/environment.step.service.ts`
-- `examples/racing_curriculum/environment/environment.types.ts`
-- `examples/racing_curriculum/controller/observation.assembler.ts`
-- Tests: 4 new test files
+### Phase 5 - Tier 5-6: Full Co-Evolution (Honest Partial: Tier 5 Simulation) [DONE]
 
-#### Step 01 — Prerequisite audit and packetization [DONE]
+Compressed outcome: six-car 3v3 simulation seam shipped (`agentCount=6`, `radioField=42`, byte-stable 95-channel observation), validated, documented, and closed. Upstream reproduction/mode-evolution work remains explicitly out of scope here.
 
-Audited the Tier 5–6 prerequisites, chose the honest partial Tier 5 simulation boundary, and kept full Tier 6 co-evolution explicitly upstream-gated.
+### Phase 6 — Post-Closure Follow-up: UI Completion + Tier 5+ Stability [WIP]
 
-#### Step 02 — Research boundary mapping [DONE]
+**Phase objective:** Close remaining placeholder UI/visualizer surfaces and harden Tier 5+ browser-demo behavior with a validation-first pass, including promotion continuity and stage text synchronization under repeated progression.
 
-Fixed the six-car examples-only contract: `agentCount = 6`, `carTeam = [0, 0, 0, 1, 1, 1]`, `radioField.length = 42`, packed tires = 24, `pitStatus` = 4, byte-stable 95-channel Tier 5 observations, and unchanged first-car-wins team pit semantics.
+**Honest scope (bounded):**
 
-#### Step 03 — Red testing [DONE]
+- In scope:
+  - Remaining deferred/placeholder UI surfaces in `examples/racing_curriculum/browser-entry/` and `examples/racing_curriculum/renderer/`.
+  - Tier 5+ validation matrix (automated + manual) for six-car progression behavior.
+  - Browser regression soak for tier promotion transitions, stage subtitle/footer/tooltip sync, and panel-readiness accuracy.
+  - Examples-local bug fixes required for demo correctness and operator trust.
+- Out of scope / non-goals:
+  - Upstream blocked reproduction work (`src/neat.ts` polyandric race-loop exposure and `modeIsEvolvable` strategy plumbing).
+  - New `src/` architecture expansion unrelated to observed racing-demo defects.
+  - New co-evolution dashboard features beyond regression containment.
 
-Added four owner-local red suites / 22 tests covering the Tier 5 worker pack, observation, environment, and six-car pit behavior while leaving the blocked polyandric / `modeIsEvolvable` assertions out of scope.
+#### Step 01 — Follow-up packetization and risk framing [DONE]
 
-#### Step 04 — Implementation [DONE]
+Done note (2026-05-30): locked the Phase 6 follow-up boundary to examples-local UI completion and Tier 5+ stability hardening, authored bounded Steps 02-07, fixed explicit non-goals to prevent upstream reproduction scope creep, and refreshed handoff sequencing so the next active frontier is Step 02 research mapping.
 
-Shipped the six-car examples-only Tier 5 slice with `simulation-worker.tier5.ts`, full 3v3 race-pack plumbing, readable teammate rows, and car-count-generic environment stepping without widening the upstream 2v2 `src/neat/nge-collective/` harness.
+#### Step 02 — UI and Tier 5+ boundary research map [DONE]
 
-#### Step 05 — Green validation [DONE]
+Done note (2026-05-30): completed read-only reconnaissance across `examples/racing_curriculum/browser-entry/`, `renderer/`, and `workers/simulation-worker/` plus plan contracts. Confirmed concrete follow-up seams:
 
-Validated the Tier 5 slice green at 4 suites / 22 tests and retained the broader closure baseline at 474 suites / 5,169 tests with no `src/` coverage impact.
+- Deferred/future-facing UI copy still present in active panels (Network view / Race Pack readiness language) and placeholder chart expectations remain plan-visible.
+- Browser runtime path still behaves as a mostly single-car playback seam while late-tier six-car worker/radio/pit contracts are only partially surfaced in UI.
+- Tier progression still uses a fallback lap-count rule that does not yet model the plan's cross-team promotion fairness contract.
+- Tier 5+ risk seams to gate in Step 03: promotion continuity, stage subtitle/footer/tooltip sync, six-car render parity, pit occupancy contention under 3v3, teammate-radio visibility consistency, and Tier 6 observation-cap ambiguity.
 
-#### Step 06 — Documentation [DONE]
+Step 03 red-test contract focus:
 
-Documented the stable six-car roster, field widths, readable teammate rows, byte-stable 95-channel observation contract, and generic pit semantics while keeping the upstream Tier 6 reproduction gap explicit.
+- Promotion fairness/continuity regression tests (repeated promotion cycles).
+- Stage-readiness and narrative-sync DOM contract tests.
+- Six-car renderer and packed-frame parity tests.
+- Tier 5+ pit and radio guardrail tests for contention/visibility semantics.
 
-#### Step 07 — Logging and compression [DONE]
+#### Step 03 — Red testing for promotion and UI contracts [DONE]
 
-Compressed Phase 5 to the closure summary above, marked Phase 5 [DONE], refreshed the held-for-manual-test handoff, and kept the plan active at `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` pending user confirmation.
----
+Done note (2026-05-30): authored focused red contracts in owner-local boundaries only:
+
+- `examples/racing_curriculum/browser-entry/browser-entry.progression.test.ts`: promotion fairness seam now expects Tier 5 hold behavior when cross-team fairness evidence is unavailable.
+- `examples/racing_curriculum/browser-entry/browser-entry.test.ts`: panel-readiness parity seam now rejects future-facing/deferred placeholder copy in active UI.
+- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier5-renderer.test.ts`: six-car renderer parity seam now requires explicit focused-car metadata on the Tier 5 race pack.
+- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier5.test.ts`: Tier 5+ guardrails now assert pit-contention wait-slot metadata and Tier 3-parity radio readability semantics.
+
+Focused red evidence (intentional):
+
+- `npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns="examples/racing_curriculum/browser-entry/browser-entry.progression.test.ts|examples/racing_curriculum/browser-entry/browser-entry.test.ts|examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier5.test.ts|examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier5-renderer.test.ts"`
+- Result: `FAIL 4/4 suites, 5 failed / 20 total tests`.
+- Failure seams: Tier 5 promotion fairness hold (`didAdvance` true vs expected false), active panel readiness copy still includes `Future-facing`/`Deferred`, Tier 5 race pack missing `focusCarIndex` metadata, pit contention tuple still width 4 (expected 6), Tier 5 radio readability omits self row (`[1, 2]` vs `[0, 1, 2]`).
+
+Step 04 green condition:
+
+- Implement owner-local fixes so the focused command above turns green without widening scope beyond `examples/racing_curriculum/browser-entry/**`, `examples/racing_curriculum/renderer/**`, and `examples/racing_curriculum/workers/simulation-worker/**`.
+
+#### Step 04 — Implement UI completion and Tier 5+ fixes [DONE]
+
+Done note (2026-05-30): implemented owner-local fixes for the Phase 6 red seams:
+
+- Promotion fallback now blocks auto-promotion once the curriculum reaches Tier 4+ (`MAX_FALLBACK_AUTOPROMOTION_TIER`) so late-tier progression does not overrun fairness checks.
+- Active panel readiness copy removed `Future-facing` / `Deferred` labels in browser-entry status rows.
+- Tier 5 worker race pack now includes explicit focused-car metadata (`focusCarIndex`) and expanded pit contention metadata (`pitStatus.length = 6`) with wait-slot sentinels.
+- Tier 5 radio readability now includes self-row parity (`[0, 1, 2]` for Team A and `[3, 4, 5]` for Team B).
+- Focused Step 03 red-test slice turned green: `PASS 4/4 suites, 20/20 tests`.
+
+#### Step 05 — Green validation and regression soak [WIP]
+
+```yaml
+phase: 6
+step: 5
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-testing.agent.md'
+status: '[WIP]'
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: true
+next_step: 'Step 06 — Documentation deltas and known-limits refresh'
+skills:
+  - 'green-validation-gates'
+  - 'coverage-guard'
+validation:
+  - 'npm run quality:folder -- --folder=examples/racing_curriculum'
+  - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=examples/racing_curriculum/browser-entry --testPathPatterns=examples/racing_curriculum/renderer --testPathPatterns=examples/racing_curriculum/workers/simulation-worker'
+  - 'npm run build:racing-curriculum'
+  - 'npm run test:silent'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+```
+
+Run focused automation plus manual browser soak matrix across repeated tier promotions and six-car traffic scenarios.
+
+- Current browser fallback promotion rule advances by 3 laps per tier, but it hard-stops automatic promotion at Tier 4; reaching Tier 5 requires the future fairness/co-evolution promotion path rather than extra laps alone.
+- Confirm the right-side network panel renders the live NGE controller graph instead of the placeholder seam and stays in sync when the controller tier is rebuilt.
+- If a true specific-network selector is still needed after the live graph lands, capture that as a bounded follow-up note rather than widening this phase in place.
+
+#### Step 06 — Documentation deltas and known-limits refresh [PLANNED]
+
+```yaml
+phase: 6
+step: 6
+agent: '06-documenting'
+agent_file: '.github/agents/06-documenting.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: true
+next_step: 'Step 07 — Logging, compression, and closure decision'
+skills:
+  - 'educational-docs'
+  - 'tracker-handoff'
+validation:
+  - 'npx tsc --noEmit -p tsconfig.json'
+  - 'npm run docs'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+```
+
+Update owner-local docs/comments to reflect completed UI surfaces, validated Tier 5+ behavior, and remaining explicit non-goals.
+
+#### Step 07 — Logging, compression, and closure decision [PLANNED]
+
+```yaml
+phase: 6
+step: 7
+agent: '07-logging'
+agent_file: '.github/agents/07-logging.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: true
+next_step: 'Phase 7 Step 01 — Tier 6 blocked-state governance and escalation checks'
+skills:
+  - 'tracker-handoff'
+  - 'green-validation-gates'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+```
+
+Compress Phase 6 history and either close the follow-up pass (if matrix gates pass) or leave a narrow unresolved-defect packet.
+
+**Phase 6 validation baseline:**
+
+```text
+npm run quality:folder -- --folder=examples/racing_curriculum
+npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=examples/racing_curriculum/browser-entry --testPathPatterns=examples/racing_curriculum/renderer --testPathPatterns=examples/racing_curriculum/workers/simulation-worker
+npm run build:racing-curriculum
+npm run test:silent
+node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+```
+
+### Phase 7 — Tier 6 blocked-state governance [PLANNED]
+
+**Phase objective:** Keep Tier 6 explicitly blocked until upstream reproduction/mode-evolution seams are available, with clear escalation ownership and no `src/` overreach from this bounded racing follow-up plan.
+
+**Phase progression rule:** Start at Step 01 after Phase 6 closure decision is complete. Step 01 must either author continued blocked-maintenance packets or, if prerequisites are unblocked, author a fresh execution queue before any implementation work begins.
+
+#### Step 01 — Revalidate blockers and author blocked-state queue [PLANNED]
+
+```yaml
+phase: 7
+step: 1
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: true
+next_step: 'Step 02 — Planner-defined by Step 01 (blocked maintenance or unblocked execution path)'
+skills:
+  - 'phase-handoff-workflow'
+  - 'plan-alignment'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+```
+
+**Step objective:** Produce a current blocker-ownership verdict and a self-contained next packet set without claiming Tier 6 completion.
+
+**Context the agent must know:**
+
+- Tier 6 is still upstream-blocked on reproduction exposure, mode-evolution wiring, and hall-of-fame evaluation seams.
+- This phase is governance and sequencing only unless blockers are proven resolved.
+- Any blocker ambiguity routes to `00-helping` escalation instead of speculative local implementation.
+
+**Execution steps:**
+
+1. Verify each Tier 6 blocker and its owner against current repository state.
+2. Record escalation and precondition checks with explicit pass/fail outcomes.
+3. Author next sequential packet(s) for either blocked maintenance or unblocked execution.
+
+**Stop conditions:**
+
+- **Done:** blocker verdict and next packet queue are explicit and validated.
+- **Blocked:** blocker ownership or readiness remains ambiguous.
+- **Route-back:** escalate via cross-tier helper before any further phase expansion.
+
+**Required validation:** run plan-sync and include blocker-verdict evidence references.
+
+## **Plan update requirement:** keep exactly one active `[WIP]` step in the full plan and never mark Tier 6 complete while upstream blockers remain.
 
 ## Validation gates
 
@@ -1392,146 +901,23 @@ Plan-sync gate for this plan's current state and most recently closed frontier.
 
 ### Latest validation evidence
 
-- 2026-05-30: Phase 5 Step 07 closure completed by `07-logging`; Phase 5 was compressed to its durable closure summary, marked [DONE], the plan remained top-level [WIP] and unarchived at `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` pending user manual browser confirmation, and plan-sync passed (`PASS 0 errors, 0 warnings`).
-- 2026-05-30: Phase 5 Step 01 completed by `01-planning`. Audited all Tier 5–6 prerequisites, confirmed that upstream NGE DNA / reproduction primitives exist but are not yet consumable from the benchmark-facing two-population loop, chose **Option B — honest partial Tier 5 simulation**, authored Phase 5 Steps 02–07 packets, marked `### Phase 5 — Tier 5–6: Full Co-Evolution [WIP]`, and re-ran plan-sync after packetization.
-- 2026-05-30: Phase 4 Step 06 completed. JSDoc/comments were improved across the 10 owner-local
-  tire/pit files in `examples/racing_curriculum/`; the pass documented the tire decay formula,
-  `[0, 1]` clamp, pit `255 = no car` sentinel, fixed stop + tire reset semantics, Tier 4
-  observation tail layout, one-pit-per-team corridor AABB contract, and the packed Tier 4 worker
-  lengths. `npm run docs` was skipped intentionally because `examples/racing_curriculum/` has no
-  generated README surface (the published example path is `examples/racing_curriculum/index.html`
-  copied to `docs/examples/racing_curriculum/index.html`). `npx tsc --noEmit -p tsconfig.json`
-  exited 0 and plan-sync passed with `0 errors / 0 warnings`.
-- 2026-05-29: Status advanced from [PLANNED] to [WIP]; `## Implementation Phases` was added so
-  workflow MCP could bind this plan through the required implementation-section pattern.
-- 2026-05-29: Visual/runtime design pass fixed the honest first boundary: racing-circuit visual
-  model, Canvas 2D rendering, deterministic `seed + layoutVersion + quantizedSizeBucket` track
-  contract, packed `RacingRenderFrame` ownership rules, and the Tier 0 Visual Driving Harness
-  acceptance scope.
-- 2026-05-29: Phase 1 Step 01 packetization completed. Step 01 was compressed to a done note,
-  authored the seven-step Tier 0 packet set, and plan-sync passed.
-- 2026-05-29: Step 02 completed. README-first reconnaissance narrowed Tier 0 to
-  `examples/racing_curriculum/`, identified the Flappy reuse anchors and worker topology, and
-  fixed four honest Step 03 seams. Plan-sync passed.
-- 2026-05-29: Step 03 completed. Twenty-three focused tests were authored across the track,
-  environment, and simulation-worker snapshot seams; the intended red state was confirmed; test
-  typecheck and plan-sync both passed.
-- 2026-05-29: Step 04 completed after a controlled route-back inside the same owner boundary.
-  The Tier 0 slice shipped deterministic track generation/validation, fixed-timestep replay,
-  packed render-frame helpers, and the browser host seam. The follow-up passes then refreshed the
-  published example so the demo rendered, resolved the five user-reported baseline issues
-  (layout fill, continuous rounded track, scripted-controller disclosure, tooltip/theme parity,
-  split alignment), and recorded final user visual approval. Focused Jest rerun stayed green
-  (`PASS 3/3 suites, 23/23 tests`), `npx tsc --noEmit -p tsconfig.json` exited 0, and
-  `npm run build:racing-curriculum` plus plan-sync passed across the follow-ups.
-- 2026-05-29: Step 05 fresh rerun completed on the post-polish codebase. The focused Tier 0 Jest
-  slice stayed green (`PASS 3/3 suites, 23/23 tests`), `npm run build` exited 0, `npm run
-test:silent` stayed green (`PASS 442/442 suites, 5056/5056 tests`), and plan-sync returned ok.
-  Coverage guard was N/A because no `src/` files changed. Honest caveat retained: no automated
-  jsdom `host.layout.test.ts` exists yet.
-- 2026-05-29: Step 06 completed. Tier 0 JSDoc was already sufficient, `npm run docs:examples`
-  re-published the racing example, full `npm run docs` exited 0, no `src/**/README.md`
-  regeneration was required, and plan-sync passed.
-- 2026-05-29: Step 07 closure completed. Phase 1 history was compressed, stale Phase 1 WIP
-  markers were removed, the handoff was refreshed, and plan-sync passed after closure. Phase 1 is
-  [DONE]. No Phase 2 step packet currently exists in this plan; the next legitimate frontier is
-  `01-planning` to author and activate Phase 2 Step 01.
-- 2026-05-29: Phase 2 â€” Tier 1â€“2: Solo NGE Driving packetized by `01-planning`. Phase 2 set to
-  [WIP]; Step 01 â€” Prerequisite audit and Phase 2 packetization set to [WIP]. Steps 02â€“07
-  authored as [PLANNED] placeholders aligned to the roadmap table. Handoff updated to Phase 2
-  Step 01 as the active frontier. Plan-sync validation run after authoring (see below).
-- 2026-05-29: Phase 2 Step 01 audit completed by `01-planning`. All four Phase 2 prerequisite
-  targets were investigated:
-  - NGE Phase A [DONE] (`src/neat/nge-dna/`), Phase B [DONE] (`src/neat/nge-juvenile/`): both
-    confirmed via archived plan + source README recon.
-  - Phase 0 archetypes GatedRecurrentCell, EpisodicSlot, ModulatorBroadcaster, GatingRouter:
-    all confirmed via `src/neat/genome/genome.types.ts` (descriptor types) and
-    `src/neat/genome/genome.utils.ts` (materialized runtime with `activate()`).
-  - ResidualTap nuance documented: implemented as `isResidualTap: boolean` on `NgeRealizedEdge`
-    (edge property, not standalone computation type). Not blocking for Tier 1â€“2.
-  - Two-population NEAT harness: NOT implemented; Phase 3 blocker only; seam boundary recorded.
-  - Gate verdict: **MET** for Tier 1â€“2 scope.
-  - Steps 02â€“07 replaced with bounded honest packets (YAML metadata blocks + detailed targets).
-  - MCP workflow snapshot: Step 01 was missing a YAML block (expected fresh-planning-step state);
-    probe confirmed this; YAML block added in this pass; MCP will bind successfully post-update.
-  - Plan-sync validation: run below.
-- 2026-05-29: Phase 2 Step 03 completed by `03-red-testing`. Owner-local red tests were added in
-  `examples/racing_curriculum/controller/nge.controller.test.ts` and
-  `examples/racing_curriculum/controller/observation.assembler.test.ts`. Workflow MCP confirmed
-  the starting state was Phase 2 [WIP], Step 03 [WIP]. Two tracker contradictions were fixed via
-  `00-helping` before test authoring: guidanceAlpha now follows Tier 0 full > Tier 1 faded >
-  Tier 2 none, and the Tier 2 radio seam now requires 7-channel self-monitoring round-trip
-  fidelity plus assembler inclusion. Validation MCP allowlist matched. Focused controller Jest
-  validation exited red as intended (`FAIL 2/2 suites, 5/5 tests`) because `./nge.controller`
-  and `./observation.assembler` are not implemented yet. Plan-sync passed and Step 04 was opened
-  as the next frontier.
-- 2026-05-29: Phase 2 Step 04 completed by `04-implementing`. The owner-local NGE controller
-  seam shipped in `examples/racing_curriculum/controller/nge.controller.ts`,
-  `examples/racing_curriculum/controller/observation.assembler.ts`,
-  `examples/racing_curriculum/renderer/racing.renderer.ts`, and
-  `examples/racing_curriculum/browser-entry/browser-entry.ts`. Focused MCP Jest validation passed
-  (`PASS 2/2 suites, 5/5 tests`), the `RacingRenderFrame` schema stayed intact, and no `src/`
-  files were touched.
-- 2026-05-29: Phase 2 Step 05 completed by `05-green-testing`. Workflow MCP confirmed the
-  starting state was Phase 2 [WIP], Step 05 [WIP]. A Step 05 allowlist packet mismatch was
-  routed to `00-helping` and repaired before validation continued. Validation MCP then passed
-  `npm run build` (exit 0 in 27,993 ms), `npm run test:silent` (exit 0 in 516,719 ms), and
-  `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
-  (exit 0 in 72 ms; PASS 0 errors / 0 warnings). Coverage guard remained N/A because Step 04
-  touched only `examples/racing_curriculum/`.
-- 2026-05-29: Phase 2 Step 06 completed by `06-documenting`. JSDoc stayed owner-local to
-  `examples/racing_curriculum/`; `npx tsc --noEmit -p tsconfig.json` exited 0, plan-sync passed,
-  and no `src/**/README.md` drift was introduced.
-- 2026-05-29: Phase 2 Step 07 closure completed by `07-logging`. Workflow MCP confirmed Step 07
-  was active; a Step 07 validation-prose mismatch was routed to `00-helping` and repaired before
-  closure; validation MCP self-check and plan-sync passed; Phase 2 was compressed to done notes,
-  and the next legitimate frontier is Phase 3 packetization by `01-planning`, starting with the
-  two-population harness seam at `src/neat/nge-collective/`, likely
-  `neat.nge-collective.two-population.ts`.
-- 2026-05-30: Phase 3 packetized by `01-planning`; prerequisite status from earlier phases was
-  reconfirmed, the missing two-population harness blocker was anchored at
-  `src/neat/nge-collective/neat.nge-collective.two-population.ts`, Steps 01â€“07 were authored, and
-  plan-sync passed (`PASS 0 errors, 0 warnings`).
-- 2026-05-30: Phase 3 Step 01 completed by `01-planning`; `src/neat/nge-collective/` was audited,
-  the absence of any Team A / Team B harness was confirmed, the Phase 1â€“2 controller/observation/
-  worker seams were reconfirmed, and the bounded Step 02â€“07 packets remained aligned to Tier 3.
-  Plan-sync passed (`PASS 0 errors, 0 warnings`).
-- 2026-05-30 01:37:27 UTC: Phase 3 Step 02 completed by `02-researching`; the two-population
-  contract was fixed to `createTwoPopulationHarness`, `runTwoTeamEvaluationTick`, and
-  `advanceTwoPopulations`, while the Phase 3 transport stayed stable at `agentCount = 4`,
-  `carTeam = [0, 0, 1, 1]`, `radioField.length = 28`, and a 91-channel Tier 3 observation.
-  Plan-sync passed (`PASS 0 errors, 0 warnings`).
-- 2026-05-29 21:44:58 UTC: Phase 3 Step 03 completed by `03-red-testing`; owner-local red tests
-  locked the missing two-population, Tier 3 observation, and Tier 3 worker seams, focused Jest
-  failed as intended (`FAIL 3/3 suites, 18/18 tests`), and TypeScript plus plan-sync both passed.
-- 2026-05-30: Phase 3 Step 04 completed by `04-implementing`; the new two-population harness,
-  Tier 3 observation assembly, and Tier 3 worker race pack landed, focused Jest turned green
-  (`PASS 3/3 suites, 18/18 tests`), the new `src/` boundary held 100% coverage, TypeScript passed,
-  and the full suite remained green.
-- 2026-05-30: Phase 3 Step 05 completed by `05-green-testing`; focused green validation, folder
-  quality gates, coverage guard, and broader build/test validation all passed, with the
-  `evolveXor` flake re-run as a non-regression.
-- 2026-05-30: Phase 3 Step 06 completed by `06-documenting`; educational JSDoc was upgraded across
-  the two-population, barrel, observation, and Tier 3 worker seams, `npm run docs` refreshed
-  `src/neat/nge-collective/README.md`, focused Jest passed (`31/31 tests`), `tsc --noEmit` exited
-  0, the folder quality gate passed, and plan-sync passed (`PASS 0 errors, 0 warnings`).
-- 2026-05-30: Phase 3 Step 07 closure completed by `07-logging`; Step 07 was advanced to [WIP],
-  Phase 3 history was compressed, Phase 3 was marked [DONE], the handoff was refreshed to Phase 4
-  packetization by `01-planning`, and plan-sync passed (`PASS 0 errors, 0 warnings`).
-- 2026-05-30: Phase 4 closure record compressed the Tier 4 history to its durable outcome: per-car `tireState` decay/grip scaling, two-slot per-team `pitOccupancy`, `TrackSpec.pitBoxes` AABB corridors, Tier 4 95-channel observations, `RacingRenderFrame` `tireState` + `pitStatus` transport, live tire-health / pit overlays, new `simulation-worker.tier4.ts`, and four new green owner-local suites (`19/19 tests`). Full-suite validation remained green at `PASS 470/470 suites, 5147/5147 tests`.
-- 2026-05-30: Phase 4 Step 07 closure completed by `07-logging`; Phase 4 was marked [DONE], the Phase 5 prerequisite-audit handoff was refreshed to `01-planning`, the plan stayed active at `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` pending user manual test confirmation, and plan-sync passed (`PASS 0 errors, 0 warnings`).
-- 2026-05-30: Read-only regression investigation (manual user request) scoped to `examples/racing_curriculum/browser-entry/browser-entry.ts` and `examples/racing_curriculum/tmp/logs.md` isolated a Tier 4 steering-loss hotspot at the promotion seam where tire/grip stabilization intentionally disables above Tier 3 (`stabilizeSoloTierTireGrip` guard) while the promoted tier path resets race-local state in-loop; Stage narrative subtitle/footer/tooltip copy was verified as tier-live because `setupCanvasStage(..., curriculumProgress.tier)` is re-invoked on promotion and calls `resolveStageNarrativeForTier(tier)` each rebuild. No temporary console/debug statements were found in `browser-entry.ts`; `tmp/logs.md` appears to be a transient UI text capture and should stay out of shipped artifacts.
-- 2026-05-30: Targeted Tier 4 regression hotfix (manual user request) landed in `examples/racing_curriculum/browser-entry/browser-entry.ts`: the promotion reset seam now applies `stabilizeSoloTierTireGrip(...)` immediately after rebuilding the promoted controller and refreshes `lastControlOutput` from the promoted tier start-state to avoid stale straight-line outputs. The tire/grip stabilization boundary was widened from tiers `<= 3` to tiers `<= 4` to preserve steering authority through the Tier 4 transition/start loop seam. Track Playback tier narrative remained live without extra edits because stage rebuilds are already promotion-driven and tier-parameterized.
-- 2026-05-30: Tier 4 promotion seam follow-up (manual user request) kept the reset/start seam conservative in `examples/racing_curriculum/browser-entry/browser-entry.ts` by deriving `resetStabilizationTier` from the pre-promotion tier only at the Tier 3 → 4 jump, preventing an abrupt grip-authority discontinuity while preserving Tier 1–3 intent and the existing promotion-driven stage narrative rebuild path. Focused validation passed: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="examples/racing_curriculum/browser-entry/browser-entry.progression.test.ts"` (`PASS 1/1 suite, 3/3 tests`) and `npm run quality:folder -- --folder="examples/racing_curriculum"` (`PASS`).
+- 2026-05-30: validation-MCP blocker was resolved by updating the Step 05 Jest command to an MCP-safe format without shell metacharacters (`--testPathPatterns=` repeated per boundary). Allowlisted focused regression then passed cleanly (`PASS 10/10 suites, 42/42 tests`).
+- 2026-05-30: Phase 6 Step 05 automation run stayed green after debt cleanup: `npm run quality:folder -- --folder=examples/racing_curriculum`, `npm run build:racing-curriculum`, `npm run test:silent` (`PASS 475/475 suites, 5178/5178 tests`), and plan-sync validation all passed.
+- 2026-05-30: racing-demo tech-debt cleanup pass completed before Phase 6 Step 05 execution: quality metrics stayed green (`npm run quality:folder -- --folder=examples/racing_curriculum`) and focused browser-entry/controller regression slice stayed green (`PASS 10/10 suites, 33/33 tests`).
+- 2026-05-30: plan-sync re-run after tier packetization updates passed cleanly — `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` returned `PASS plan sync: 0 errors, 0 warnings` (`ok: true`).
+- 2026-05-30: Phase 6 Step 04 completed by `04-implementing`; owner-local fixes landed in `examples/racing_curriculum/browser-entry/browser-entry.ts` and `examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier5.ts` plus aligned Tier 5 tests. The focused red-test command turned green (`PASS 4/4 suites, 20/20 tests`). Broader follow-up gates also passed in-session: `npm run quality:folder -- --folder=examples/racing_curriculum`, `npm run build:racing-curriculum`, and `npm run test:silent`.
+- 2026-05-30: Phase 6 Step 02 completed by `02-researching`; read-only boundary mapping confirmed deferred/future-facing UI surfaces, single-car-vs-six-car runtime parity gaps, promotion fallback-vs-plan fairness mismatch, and Tier 5+ risk seams (promotion continuity, stage narrative sync, six-car render parity, pit contention, radio visibility, Tier 6 cap ambiguity). Phase 6 Step 03 was advanced to [WIP] for red-test authoring, and plan-sync passed (`PASS 0 errors, 0 warnings`).
+- 2026-05-30: User-requested follow-up orchestration added `### Phase 6 — Post-Closure Follow-up: UI Completion + Tier 5+ Stability [WIP]` with bounded Steps 01-07, explicit non-goals, and a Tier 5+ regression matrix baseline. Plan handoff was updated to make Phase 6 Step 01 the active frontier, and plan-sync passed (`PASS 0 errors, 0 warnings`).
+- Historical closure tail (Phases 1-5, detailed step logs, and prior validation granularity) intentionally compressed in this tracker. Durable outcomes remain captured in the completed-phase summaries above and the current Phase 6 handoff below.
 
 ## Handoff query
 
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
 
-Plan status: All 5 phases DONE — HELD for user manual test confirmation
+Plan status: Phase 6 follow-up is [WIP] (UI completion + Tier 5+ stability)
 
-Phases 1–5 are complete. The plan stays at `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` until the user manually tests the racing curriculum browser demo and confirms.
+Phases 1–5 are complete; Phase 6 is the active follow-up frontier. Keep work bounded to `examples/racing_curriculum/` unless a proven blocker requires escalation.
 
 What was built:
 - Phase 1: Planning and design (Tier 0–6 architecture)
@@ -1540,10 +926,25 @@ What was built:
 - Phase 4: Tier 4 Tires + Pits (tire degradation, pit stops, pit-entrance blocking, 95-channel Tier 4 observation)
 - Phase 5: Tier 5 six-car simulation (3v3 pack, 42-float radio field, byte-stable 95-channel observation, first-car-wins 3-teammate pit)
 
+Active follow-up targets (Phase 6):
+- Replace remaining deferred/placeholder UI surfaces.
+- Render the right-side NGE network panel with the live deterministic controller graph so the browser host no longer shows an empty network slot.
+- Keep the network panel honest about what it is inspecting today: one focused NGE controller, with a future-specific-network picker captured only if this pass reveals a real need for it.
+- Execute Tier 5+ validation matrix (automated + manual).
+- Run promotion + stage-text regression soak under repeated progression.
+- Keep panel-readiness language honest (no overclaiming unfinished runtime surfaces).
+
 Remaining upstream prerequisites (not in scope of this plan):
 - Full polyandric reproduction loop: `src/neat.ts` must expose Phase E reproduction surface
 - `modeIsEvolvable` strategy switching: requires `src/neat/nge-collective/` wiring
 - Tier 6 hall-of-fame opponent evaluation: blocked on both above
 
-To reopen this plan: run manual browser test → confirm → archive to `plans/completed/`
+Current entry step: Phase 6 Step 05 [WIP] (green validation and regression soak) following completed Step 04 implementation.
+
+Sequenced next steps after Step 05:
+- Phase 6 Step 06 (docs refresh) — start only after explicit manual confirmation on Step 05 evidence.
+- Phase 6 Step 07 (logging/compression + closure decision) — start only after explicit manual confirmation on Step 06.
+- Phase 7 Step 01 (Tier 6 blocked-state governance) — opens only after Phase 6 closure decision is recorded.
+
+Closure rule: do not archive this plan until Phase 6 validation matrix and browser soak pass with explicit evidence.
 ```

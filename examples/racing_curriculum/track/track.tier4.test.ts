@@ -38,7 +38,9 @@ describe('track Tier 4 pit geometry seam', () => {
       // Act + Assert
       await expect(
         loadTier4TrackModule().then(({ generateTrack }) =>
-          generateTrack(generatorInput).pitBoxes.map(({ teamIndex }) => teamIndex),
+          generateTrack(generatorInput).pitBoxes.map(
+            ({ teamIndex }) => teamIndex,
+          ),
         ),
       ).resolves.toEqual([0, 1]);
     });
@@ -54,11 +56,12 @@ describe('track Tier 4 pit geometry seam', () => {
       // Act + Assert
       await expect(
         loadTier4TrackModule().then(({ generateTrack }) =>
-          generateTrack(generatorInput).pitBoxes.every(({ entranceCorridor }) =>
-            entranceCorridor.width > 0 &&
-            entranceCorridor.height > 0 &&
-            Number.isFinite(entranceCorridor.x) &&
-            Number.isFinite(entranceCorridor.y),
+          generateTrack(generatorInput).pitBoxes.every(
+            ({ entranceCorridor }) =>
+              entranceCorridor.width > 0 &&
+              entranceCorridor.height > 0 &&
+              Number.isFinite(entranceCorridor.x) &&
+              Number.isFinite(entranceCorridor.y),
           ),
         ),
       ).resolves.toBe(true);
@@ -163,21 +166,27 @@ async function loadTier4TrackModule(): Promise<Tier4TrackModule> {
   const validationModule = await import('./track.validation');
   const tier4ValidationModule = validationModule as Partial<Tier4TrackModule>;
 
-  if (typeof tier4ValidationModule.validatePitCorridorNonOverlap !== 'function') {
+  if (
+    typeof tier4ValidationModule.validatePitCorridorNonOverlap !== 'function'
+  ) {
     throw new Error(
       'Missing Tier 4 track validation export: validatePitCorridorNonOverlap',
     );
   }
 
-  if (typeof tier4ValidationModule.validatePitCorridorReachability !== 'function') {
+  if (
+    typeof tier4ValidationModule.validatePitCorridorReachability !== 'function'
+  ) {
     throw new Error(
       'Missing Tier 4 track validation export: validatePitCorridorReachability',
     );
   }
 
   return {
-    generateTrack: generatorModule.generateTrack as Tier4TrackModule['generateTrack'],
-    validateTrackSpec: validationModule.validateTrackSpec as Tier4TrackModule['validateTrackSpec'],
+    generateTrack:
+      generatorModule.generateTrack as Tier4TrackModule['generateTrack'],
+    validateTrackSpec:
+      validationModule.validateTrackSpec as Tier4TrackModule['validateTrackSpec'],
     validatePitCorridorNonOverlap:
       tier4ValidationModule.validatePitCorridorNonOverlap as Tier4TrackModule['validatePitCorridorNonOverlap'],
     validatePitCorridorReachability:

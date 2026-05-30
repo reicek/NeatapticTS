@@ -1,7 +1,4 @@
-import {
-  createRacingHost,
-  RACING_NARROW_VIEWPORT_THRESHOLD_PX,
-} from './host';
+import { createRacingHost, RACING_NARROW_VIEWPORT_THRESHOLD_PX } from './host';
 
 describe('racing host boundary', () => {
   describe('createRacingHost', () => {
@@ -20,9 +17,7 @@ describe('racing host boundary', () => {
       try {
         const racingHost = createRacingHost(containerElement);
 
-        racingHost.applyViewportLayout(
-          RACING_NARROW_VIEWPORT_THRESHOLD_PX - 1,
-        );
+        racingHost.applyViewportLayout(RACING_NARROW_VIEWPORT_THRESHOLD_PX - 1);
 
         expect(racingHost.rootElement.dataset.racingLayout).toBe('narrow');
       } finally {

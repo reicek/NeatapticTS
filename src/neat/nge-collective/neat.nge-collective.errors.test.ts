@@ -6,12 +6,16 @@ import {
 describe('neat.nge-collective.errors', () => {
   describe('NgeCollective_FieldDimensionError', () => {
     it('sets the error name to NgeCollective_FieldDimensionError', () => {
-      const error = new NgeCollective_FieldDimensionError('width must be positive');
+      const error = new NgeCollective_FieldDimensionError(
+        'width must be positive',
+      );
       expect(error.name).toBe('NgeCollective_FieldDimensionError');
     });
 
     it('sets the message to the provided string', () => {
-      const error = new NgeCollective_FieldDimensionError('height must be a positive integer');
+      const error = new NgeCollective_FieldDimensionError(
+        'height must be a positive integer',
+      );
       expect(error.message).toBe('height must be a positive integer');
     });
 
@@ -29,12 +33,16 @@ describe('neat.nge-collective.errors', () => {
 
   describe('NgeCollective_EvaluationError', () => {
     it('sets the error name to NgeCollective_EvaluationError', () => {
-      const error = new NgeCollective_EvaluationError('no evaluator for agent 2');
+      const error = new NgeCollective_EvaluationError(
+        'no evaluator for agent 2',
+      );
       expect(error.name).toBe('NgeCollective_EvaluationError');
     });
 
     it('sets the message to the provided string', () => {
-      const error = new NgeCollective_EvaluationError('evaluator count mismatch');
+      const error = new NgeCollective_EvaluationError(
+        'evaluator count mismatch',
+      );
       expect(error.message).toBe('evaluator count mismatch');
     });
 

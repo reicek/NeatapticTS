@@ -25,8 +25,11 @@ const TIER_FIVE_RADIO_FIELD_SIZE =
   TIER_FIVE_AGENT_COUNT * RADIO_CHANNEL_COUNT_PER_CAR;
 /** Canonical Tier 5 team layout `[0, 0, 0, 1, 1, 1]` = `[A0, A1, A2, B0, B1, B2]`. */
 const TIER_FIVE_TEAM_LAYOUT = [0, 0, 0, 1, 1, 1] as const;
-/** Packed pit-status width `[teamA_carIndex, teamA_ticks, teamB_carIndex, teamB_ticks]`. */
-const PIT_STATUS_CHANNEL_COUNT = 4;
+/**
+ * Packed pit-status width
+ * `[teamA_carIndex, teamA_ticks, teamA_waitingCarIndex, teamB_carIndex, teamB_ticks, teamB_waitingCarIndex]`.
+ */
+const PIT_STATUS_CHANNEL_COUNT = 6;
 /** Sentinel value meaning a team's pit slot is empty in the packed `pitStatus` tuple. */
 const NO_CAR_INDEX = 255;
 
@@ -39,7 +42,7 @@ const NO_CAR_INDEX = 255;
  * - `carTeam = [0, 0, 0, 1, 1, 1]`, so cars `0..2` are Team A and cars `3..5` are Team B.
  * - `radioField.length = 42` because six cars each publish one seven-channel row.
  * - `tireState.length = 24` because six cars each store four wheel channels.
- * - `pitStatus.length = 4` because the pit shelf is `[teamA_carIndex, teamA_ticks, teamB_carIndex, teamB_ticks]`.
+ * - `pitStatus.length = 6` because the pit shelf includes wait slots for both teams.
  *
  * `NO_CAR_INDEX` marks an empty team pit slot inside that packed `pitStatus` tuple.
  *
@@ -59,10 +62,13 @@ const NO_CAR_INDEX = 255;
  */
 export function createTier5RacePack(): RacingRenderFrame & {
   pitStatus: Int16Array;
+  focusCarIndex: number;
 } {
   const pitStatus = new Int16Array(PIT_STATUS_CHANNEL_COUNT);
   pitStatus[0] = NO_CAR_INDEX;
   pitStatus[2] = NO_CAR_INDEX;
+  pitStatus[3] = NO_CAR_INDEX;
+  pitStatus[5] = NO_CAR_INDEX;
 
   return {
     schemaVersion: 'racing-packed-v1',
@@ -83,6 +89,7 @@ export function createTier5RacePack(): RacingRenderFrame & {
     tireState: new Float32Array(TIER_FIVE_TIRE_STATE_SIZE).fill(1),
     radioField: new Float32Array(TIER_FIVE_RADIO_FIELD_SIZE),
     pitStatus,
+    focusCarIndex: 0,
     // Step 4: Allocate the remaining race-progress lanes.
     lap: new Uint16Array(TIER_FIVE_AGENT_COUNT),
     place: new Uint8Array(TIER_FIVE_AGENT_COUNT),
@@ -95,10 +102,8 @@ export function createTier5RacePack(): RacingRenderFrame & {
  * Resolves which teammate radio rows the querying car may read from the shared field.
  *
  * The shared field stores one seven-channel radio row per car in the canonical
- * roster `[A0, A1, A2, B0, B1, B2]`. Visibility stays team-local and excludes the
- * querying car's own row, so each controller reads exactly the other two cars on
- * its team. For example, car `0` reads rows `1` and `2`, while car `3` reads rows
- * `4` and `5`.
+ * roster `[A0, A1, A2, B0, B1, B2]`. Visibility stays team-local and includes the
+ * querying car row for parity with the Tier 3 helper contract.
  *
  * @param frame - Current packed race frame.
  * @param carIndex - Zero-based index of the querying car.
@@ -109,8 +114,8 @@ export function createTier5RacePack(): RacingRenderFrame & {
  * const teamBAnchorCarIndex = TIER_FIVE_TEAM_SIZE;
  * const frame = createTier5RacePack();
  *
- * resolveReadableRadioRows(frame, teamAAnchorCarIndex); // [1, 2]
- * resolveReadableRadioRows(frame, teamBAnchorCarIndex); // [4, 5]
+ * resolveReadableRadioRows(frame, teamAAnchorCarIndex); // [0, 1, 2]
+ * resolveReadableRadioRows(frame, teamBAnchorCarIndex); // [3, 4, 5]
  * ```
  */
 export function resolveReadableRadioRows(
@@ -120,9 +125,9 @@ export function resolveReadableRadioRows(
   const teamIndex = frame.carTeam[carIndex] ?? 0;
   const readableRows: number[] = [];
 
-  // Step 1: Collect only the other rows owned by the querying car's team.
+  // Step 1: Collect only rows owned by the querying car's team.
   for (let agentIndex = 0; agentIndex < frame.agentCount; agentIndex++) {
-    if (agentIndex !== carIndex && frame.carTeam[agentIndex] === teamIndex) {
+    if (frame.carTeam[agentIndex] === teamIndex) {
       readableRows.push(agentIndex);
     }
   }

@@ -1,6 +1,4 @@
-import type {
-  CarControlOutput,
-} from '../environment/environment.types';
+import type { CarControlOutput } from '../environment/environment.types';
 import type { TrackSpec } from '../track/track.generator.types';
 import {
   assembleNormalizedObservationVector,

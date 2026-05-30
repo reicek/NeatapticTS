@@ -57,7 +57,9 @@ describe('environment Tier 5 six-car seam', () => {
 
       // Act
       const nextState = stepEnvironment(tier5State, neutralControls);
-      const flattenedTireValues = (nextState.cars ?? []).flatMap((car) => car.tireState);
+      const flattenedTireValues = (nextState.cars ?? []).flatMap(
+        (car) => car.tireState,
+      );
 
       // Assert
       expect(flattenedTireValues.length).toBe(24);
@@ -76,7 +78,8 @@ describe('environment Tier 5 six-car seam', () => {
       const nextState = stepEnvironment(tier5State, neutralControls);
       const tier5Summary = {
         carCount: nextState.cars?.length ?? 0,
-        pitSlotCount: nextState.pitOccupancy?.length ?? nextState.pitStatus?.length ?? 0,
+        pitSlotCount:
+          nextState.pitOccupancy?.length ?? nextState.pitStatus?.length ?? 0,
       };
 
       // Assert
@@ -88,7 +91,10 @@ describe('environment Tier 5 six-car seam', () => {
       const competitionState = createTeamPitCompetitionState();
 
       // Act
-      const nextState = stepEnvironment(competitionState, createNeutralControlOutputs(6));
+      const nextState = stepEnvironment(
+        competitionState,
+        createNeutralControlOutputs(6),
+      );
       const pitCompetitionSummary = {
         teamLayout: (nextState.cars ?? []).map((car) => car.teamIndex),
         teamAPitCarIndex: nextState.pitStatus?.[0]?.occupyingCarIndex,
@@ -184,6 +190,8 @@ function createTier5TrackSpec(): Tier5TrackSpec {
   };
 }
 
-function createNeutralControlOutputs(carCount: number): readonly CarControlOutput[] {
+function createNeutralControlOutputs(
+  carCount: number,
+): readonly CarControlOutput[] {
   return Array.from({ length: carCount }, () => ({ throttle: 0, steer: 0 }));
 }

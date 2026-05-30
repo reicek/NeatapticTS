@@ -9,7 +9,10 @@ describe('network activate contexts utility chapter', () => {
   describe('createNoTraceActivationContext', () => {
     it('captures the bound network input width', () => {
       const network = new Network(2, 1, { seed: 1 });
-      const activationContext = createNoTraceActivationContext(network, [0.2, 0.8]);
+      const activationContext = createNoTraceActivationContext(
+        network,
+        [0.2, 0.8],
+      );
 
       expect(activationContext.expectedInputSize).toBe(2);
     });

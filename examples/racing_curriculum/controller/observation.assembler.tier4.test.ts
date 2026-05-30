@@ -46,8 +46,11 @@ describe('observation assembler Tier 4 tire tail', () => {
 
       // Act + Assert
       await expect(
-        loadTier4ObservationAssemblerModule().then(({ assembleTier4Observation }) =>
-          Array.from(assembleTier4Observation(tier4ObservationState, trackSpec)).length,
+        loadTier4ObservationAssemblerModule().then(
+          ({ assembleTier4Observation }) =>
+            Array.from(
+              assembleTier4Observation(tier4ObservationState, trackSpec),
+            ).length,
         ),
       ).resolves.toBe(95);
     });
@@ -72,7 +75,8 @@ describe('observation assembler Tier 4 tire tail', () => {
               tier4Vector
                 .slice(0, 91)
                 .every(
-                  (tier4Value, channelIndex) => tier4Value === tier3Vector[channelIndex],
+                  (tier4Value, channelIndex) =>
+                    tier4Value === tier3Vector[channelIndex],
                 )
             );
           },
@@ -88,11 +92,11 @@ describe('observation assembler Tier 4 tire tail', () => {
 
       // Act + Assert
       await expect(
-        loadTier4ObservationAssemblerModule().then(({ assembleTier4Observation }) =>
-          Array.from(assembleTier4Observation(tier4ObservationState, trackSpec)).slice(
-            91,
-            95,
-          ),
+        loadTier4ObservationAssemblerModule().then(
+          ({ assembleTier4Observation }) =>
+            Array.from(
+              assembleTier4Observation(tier4ObservationState, trackSpec),
+            ).slice(91, 95),
         ),
       ).resolves.toEqual(Array.from(Float32Array.from(tireState)));
     });
@@ -103,7 +107,8 @@ describe('observation assembler Tier 4 tire tail', () => {
       // Arrange + Act + Assert
       await expect(
         loadTier4ObservationAssemblerModule().then(
-          ({ createTier4ObservationOptions }) => createTier4ObservationOptions(),
+          ({ createTier4ObservationOptions }) =>
+            createTier4ObservationOptions(),
         ),
       ).resolves.toEqual({ tier: 4 });
     });
@@ -168,10 +173,14 @@ function acceptObservationTier(tier: 1 | 2 | 3 | 4): 1 | 2 | 3 | 4 {
 
 async function loadTier4ObservationAssemblerModule(): Promise<Tier4ObservationAssemblerModule> {
   const modulePath = './observation.assembler';
-  const module = (await import(modulePath)) as Partial<Tier4ObservationAssemblerModule>;
+  const module = (await import(
+    modulePath
+  )) as Partial<Tier4ObservationAssemblerModule>;
 
   if (typeof module.assembleTier4Observation !== 'function') {
-    throw new Error('Missing Tier 4 observation export: assembleTier4Observation');
+    throw new Error(
+      'Missing Tier 4 observation export: assembleTier4Observation',
+    );
   }
 
   if (typeof module.createTier4ObservationOptions !== 'function') {

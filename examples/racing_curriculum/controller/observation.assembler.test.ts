@@ -112,7 +112,8 @@ describe('observation.assembler', () => {
                 usesSplineHeading:
                   Math.abs(
                     wrapAngleToMinusPiPi(
-                      lookAheadHeadingRadians - focalFrame.tangentHeadingRadians,
+                      lookAheadHeadingRadians -
+                        focalFrame.tangentHeadingRadians,
                     ),
                   ) < 0.05,
                 usesSplineDistance:
@@ -128,7 +129,7 @@ describe('observation.assembler', () => {
         });
       });
 
-      it('derives left and right boundary distances from the car\'s lateral offset inside the rounded lane', async () => {
+      it("derives left and right boundary distances from the car's lateral offset inside the rounded lane", async () => {
         const trackSpec = createCurvedTrackSpec();
         const { splineSamples, focalSample, focalFrame } =
           selectObservationFocalSample(trackSpec);
@@ -148,8 +149,10 @@ describe('observation.assembler', () => {
         const expectedRightBoundaryDistanceWorld =
           focalSample.width / 2 + observationProbe.offsetWorld;
         const expectedBoundaryBalance =
-          (expectedRightBoundaryDistanceWorld - expectedLeftBoundaryDistanceWorld) /
-          (expectedRightBoundaryDistanceWorld + expectedLeftBoundaryDistanceWorld);
+          (expectedRightBoundaryDistanceWorld -
+            expectedLeftBoundaryDistanceWorld) /
+          (expectedRightBoundaryDistanceWorld +
+            expectedLeftBoundaryDistanceWorld);
 
         await expect(
           loadObservationAssemblerModule().then(
@@ -172,11 +175,13 @@ describe('observation.assembler', () => {
                   ) > 1,
                 matchesExpectedLeftBoundary:
                   Math.abs(
-                    boundaryDistanceLeftWorld - expectedLeftBoundaryDistanceWorld,
+                    boundaryDistanceLeftWorld -
+                      expectedLeftBoundaryDistanceWorld,
                   ) < 0.75,
                 matchesExpectedRightBoundary:
                   Math.abs(
-                    boundaryDistanceRightWorld - expectedRightBoundaryDistanceWorld,
+                    boundaryDistanceRightWorld -
+                      expectedRightBoundaryDistanceWorld,
                   ) < 0.75,
                 matchesExpectedBoundaryBalance:
                   Math.abs(boundaryBalance - expectedBoundaryBalance) < 0.05,

@@ -270,7 +270,9 @@ function buildPitBoxForTeam(
     anchorSample.y,
     sampleFrame.normalX,
     sampleFrame.normalY,
-    anchorSample.width * PIT_CORRIDOR_CENTERLINE_OFFSET_MULTIPLIER * normalDirection,
+    anchorSample.width *
+      PIT_CORRIDOR_CENTERLINE_OFFSET_MULTIPLIER *
+      normalDirection,
   );
   const corridorCenter = {
     x: roundTrackGeometry(corridorCenterPoint.x),

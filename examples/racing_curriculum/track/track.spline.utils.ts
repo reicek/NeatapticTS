@@ -41,7 +41,8 @@ export function buildTrackSplineSamples(
     const startPoint = controlPoints[segmentIndex]!;
     const endPoint = controlPoints[(segmentIndex + 1) % controlPoints.length]!;
     const nextPoint = controlPoints[(segmentIndex + 2) % controlPoints.length]!;
-    const nextWidth = segments[(segmentIndex + 1) % segments.length]?.width ?? segment.width;
+    const nextWidth =
+      segments[(segmentIndex + 1) % segments.length]?.width ?? segment.width;
 
     for (
       let sampleIndexWithinSegment = 0;
@@ -60,7 +61,8 @@ export function buildTrackSplineSamples(
 
       splineSamples.push({
         ...sampledPoint,
-        width: segment.width + (nextWidth - segment.width) * interpolationFactor,
+        width:
+          segment.width + (nextWidth - segment.width) * interpolationFactor,
         segmentIndex,
         sampleIndexWithinSegment,
         globalIndex: splineSamples.length,
@@ -97,9 +99,10 @@ export function resolveSplineSampleFrame(
   const previousSample = splineSamples.at(
     wrapSplineSampleIndex(splineSamples.length, wrappedSampleIndex - 1),
   )!;
-  const nextSample = splineSamples[
-    wrapSplineSampleIndex(splineSamples.length, wrappedSampleIndex + 1)
-  ]!;
+  const nextSample =
+    splineSamples[
+      wrapSplineSampleIndex(splineSamples.length, wrappedSampleIndex + 1)
+    ]!;
   const tangentDeltaX = nextSample.x - previousSample.x;
   const tangentDeltaY = nextSample.y - previousSample.y;
   const tangentLength = Math.hypot(tangentDeltaX, tangentDeltaY) || 1;
@@ -134,10 +137,7 @@ function resolveCatmullRomPoint(
           4 * endPoint.x -
           nextPoint.x) *
           interpolationFactorSquared +
-        (-previousPoint.x +
-          3 * startPoint.x -
-          3 * endPoint.x +
-          nextPoint.x) *
+        (-previousPoint.x + 3 * startPoint.x - 3 * endPoint.x + nextPoint.x) *
           interpolationFactorCubed),
     y:
       0.5 *
@@ -148,14 +148,14 @@ function resolveCatmullRomPoint(
           4 * endPoint.y -
           nextPoint.y) *
           interpolationFactorSquared +
-        (-previousPoint.y +
-          3 * startPoint.y -
-          3 * endPoint.y +
-          nextPoint.y) *
+        (-previousPoint.y + 3 * startPoint.y - 3 * endPoint.y + nextPoint.y) *
           interpolationFactorCubed),
   };
 }
 
-function wrapSplineSampleIndex(sampleCount: number, sampleIndex: number): number {
+function wrapSplineSampleIndex(
+  sampleCount: number,
+  sampleIndex: number,
+): number {
   return ((sampleIndex % sampleCount) + sampleCount) % sampleCount;
 }

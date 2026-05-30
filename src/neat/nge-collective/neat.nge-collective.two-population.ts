@@ -110,10 +110,7 @@ export function createTwoPopulationHarness(
   },
 ): TwoPopulationHarnessState {
   // Step 1: Reject aliased controller injection so team state cannot cross-mutate.
-  if (
-    injected?.teamA !== undefined &&
-    injected.teamA === injected.teamB
-  ) {
+  if (injected?.teamA !== undefined && injected.teamA === injected.teamB) {
     throw new Error(
       'Team A and Team B must be distinct Neat controller instances (alias detected)',
     );
@@ -180,7 +177,8 @@ export function runTwoTeamEvaluationTick(
   readonly teamB: readonly unknown[];
 } {
   // Step 1: Partition the four-car scaffold into the two Team A and two Team B slots.
-  const teamBoundaryIndex = harness.sharedEvaluationContext.agentCount / TEAM_AGENT_COUNT;
+  const teamBoundaryIndex =
+    harness.sharedEvaluationContext.agentCount / TEAM_AGENT_COUNT;
   const teamAResults = Array.from(
     { length: teamBoundaryIndex },
     (_unusedValue, teamOffset) => ({

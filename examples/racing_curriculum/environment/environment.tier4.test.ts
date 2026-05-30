@@ -106,7 +106,8 @@ describe('environment Tier 4 tire and pit seam', () => {
           const freshDecay = decayTireState(freshTireState, 2.2, 1.4, 28);
           const halfWornDecay = decayTireState(halfWornTireState, 2.2, 1.4, 28);
           const freshLoss = freshDecay.reduce(
-            (lossAccumulator, tireStateValue) => lossAccumulator + (1 - tireStateValue),
+            (lossAccumulator, tireStateValue) =>
+              lossAccumulator + (1 - tireStateValue),
             0,
           );
           const halfWornLoss = halfWornDecay.reduce(
@@ -124,8 +125,8 @@ describe('environment Tier 4 tire and pit seam', () => {
     it('starts each team with an empty pit occupancy record', async () => {
       // Arrange + Act + Assert
       await expect(
-        loadTier4EnvironmentModule().then(({ createInitialState }) =>
-          createInitialState().pitStatus,
+        loadTier4EnvironmentModule().then(
+          ({ createInitialState }) => createInitialState().pitStatus,
         ),
       ).resolves.toEqual([
         { occupyingCarIndex: 255, remainingStopTicks: 0 },

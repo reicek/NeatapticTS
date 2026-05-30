@@ -114,7 +114,11 @@ export function hasNoSelfIntersection(spec: TrackSpec): boolean {
 export function validatePitCorridorNonOverlap(spec: TrackSpec): true {
   const pitBoxes = spec.pitBoxes ?? [];
 
-  for (let firstPitIndex = 0; firstPitIndex < pitBoxes.length; firstPitIndex++) {
+  for (
+    let firstPitIndex = 0;
+    firstPitIndex < pitBoxes.length;
+    firstPitIndex++
+  ) {
     for (
       let secondPitIndex = firstPitIndex + 1;
       secondPitIndex < pitBoxes.length;
@@ -126,7 +130,9 @@ export function validatePitCorridorNonOverlap(spec: TrackSpec): true {
           pitBoxes[secondPitIndex].entranceCorridor,
         )
       ) {
-        throw new RangeError('TrackSpec pit entrance corridors must not overlap.');
+        throw new RangeError(
+          'TrackSpec pit entrance corridors must not overlap.',
+        );
       }
     }
   }
@@ -150,7 +156,9 @@ export function validatePitCorridorReachability(spec: TrackSpec): true {
 
   for (const pitBox of pitBoxes) {
     if (!isPitCorridorReachable(spec, pitBox.entranceCorridor)) {
-      throw new RangeError('TrackSpec pit entrance corridor must be reachable from the track.');
+      throw new RangeError(
+        'TrackSpec pit entrance corridor must be reachable from the track.',
+      );
     }
   }
 
@@ -317,10 +325,7 @@ function doAxisAlignedBoxesOverlap(
  * @param corridor - Candidate pit entrance corridor.
  * @returns True when the corridor lies within the reachable ribbon distance.
  */
-function isPitCorridorReachable(
-  spec: TrackSpec,
-  corridor: TrackAabb,
-): boolean {
+function isPitCorridorReachable(spec: TrackSpec, corridor: TrackAabb): boolean {
   const corridorCenterX = corridor.x + corridor.width / 2;
   const corridorCenterY = corridor.y + corridor.height / 2;
   const corridorRadius = Math.max(corridor.width, corridor.height) / 2;

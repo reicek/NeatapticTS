@@ -169,9 +169,13 @@ export function resolveOffsetObservationProbe(
   const previousSample = splineSamples.at(
     (focalSampleIndex - 1 + splineSamples.length) % splineSamples.length,
   )!;
-  const nextSample = splineSamples[(focalSampleIndex + 1) % splineSamples.length]!;
+  const nextSample =
+    splineSamples[(focalSampleIndex + 1) % splineSamples.length]!;
   const nearestNeighborDistanceWorld = Math.min(
-    Math.hypot(previousSample.x - focalSample.x, previousSample.y - focalSample.y),
+    Math.hypot(
+      previousSample.x - focalSample.x,
+      previousSample.y - focalSample.y,
+    ),
     Math.hypot(nextSample.x - focalSample.x, nextSample.y - focalSample.y),
   );
   let offsetWorld = Math.min(
@@ -184,7 +188,10 @@ export function resolveOffsetObservationProbe(
     const probeX = focalSample.x + focalFrame.normalX * offsetWorld;
     const probeY = focalSample.y + focalFrame.normalY * offsetWorld;
 
-    if (resolveNearestSplineSampleIndex(probeX, probeY, splineSamples) === focalSampleIndex) {
+    if (
+      resolveNearestSplineSampleIndex(probeX, probeY, splineSamples) ===
+      focalSampleIndex
+    ) {
       return { carX: probeX, carY: probeY, offsetWorld };
     }
 
@@ -243,8 +250,11 @@ function resolveBestObservationSample(
     if (
       splineSample.sampleIndexWithinSegment < 4 ||
       splineSample.sampleIndexWithinSegment > 13 ||
-      resolveNearestChordSegmentIndex(trackSpec, splineSample.x, splineSample.y) !==
-        splineSample.segmentIndex
+      resolveNearestChordSegmentIndex(
+        trackSpec,
+        splineSample.x,
+        splineSample.y,
+      ) !== splineSample.segmentIndex
     ) {
       continue;
     }
@@ -277,8 +287,11 @@ function resolveBestControllerSample(
     if (
       splineSample.sampleIndexWithinSegment < 4 ||
       splineSample.sampleIndexWithinSegment > 13 ||
-      resolveNearestChordSegmentIndex(trackSpec, splineSample.x, splineSample.y) !==
-        splineSample.segmentIndex
+      resolveNearestChordSegmentIndex(
+        trackSpec,
+        splineSample.x,
+        splineSample.y,
+      ) !== splineSample.segmentIndex
     ) {
       continue;
     }
@@ -293,7 +306,10 @@ function resolveBestControllerSample(
       continue;
     }
 
-    const splineFrame = resolveSampleFrame(splineSamples, splineSample.globalIndex);
+    const splineFrame = resolveSampleFrame(
+      splineSamples,
+      splineSample.globalIndex,
+    );
     const chordEndpointHeadingRadians = Math.atan2(
       owningSegment.endY - splineSample.y,
       owningSegment.endX - splineSample.x,
@@ -360,4 +376,3 @@ function resolveNearestSplineSampleIndex(
 
   return bestSampleIndex;
 }
-

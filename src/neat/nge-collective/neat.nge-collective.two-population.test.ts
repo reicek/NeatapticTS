@@ -53,17 +53,19 @@ describe('two-population harness', () => {
       const configB = createHarnessConfig();
 
       await expect(
-        loadTwoPopulationHarnessModule().then(({ createTwoPopulationHarness }) => {
-          const harness = createTwoPopulationHarness(configA, configB);
-          return {
-            distinctTeamStates: harness.teamA !== harness.teamB,
-            distinctControllers:
-              harness.teamA.controller !== harness.teamB.controller,
-            distinctSnapshotPools:
-              harness.teamA.opponentSnapshotPool !==
-              harness.teamB.opponentSnapshotPool,
-          };
-        }),
+        loadTwoPopulationHarnessModule().then(
+          ({ createTwoPopulationHarness }) => {
+            const harness = createTwoPopulationHarness(configA, configB);
+            return {
+              distinctTeamStates: harness.teamA !== harness.teamB,
+              distinctControllers:
+                harness.teamA.controller !== harness.teamB.controller,
+              distinctSnapshotPools:
+                harness.teamA.opponentSnapshotPool !==
+                harness.teamB.opponentSnapshotPool,
+            };
+          },
+        ),
       ).resolves.toEqual({
         distinctTeamStates: true,
         distinctControllers: true,
@@ -75,28 +77,31 @@ describe('two-population harness', () => {
       const sharedController = new Neat();
 
       await expect(
-        loadTwoPopulationHarnessModule().then(({ createTwoPopulationHarness }) =>
-          createTwoPopulationHarness(
-            createHarnessConfig(),
-            createHarnessConfig(),
-            {
-              teamA: sharedController,
-              teamB: sharedController,
-            },
-          ),
+        loadTwoPopulationHarnessModule().then(
+          ({ createTwoPopulationHarness }) =>
+            createTwoPopulationHarness(
+              createHarnessConfig(),
+              createHarnessConfig(),
+              {
+                teamA: sharedController,
+                teamB: sharedController,
+              },
+            ),
         ),
       ).rejects.toThrow(/alias|shared|distinct/i);
     });
 
     it('sets shared evaluation context agentCount to 4 for 2v2', async () => {
       await expect(
-        loadTwoPopulationHarnessModule().then(({ createTwoPopulationHarness }) => {
-          const harness = createTwoPopulationHarness(
-            createHarnessConfig(),
-            createHarnessConfig(),
-          );
-          return harness.sharedEvaluationContext.agentCount;
-        }),
+        loadTwoPopulationHarnessModule().then(
+          ({ createTwoPopulationHarness }) => {
+            const harness = createTwoPopulationHarness(
+              createHarnessConfig(),
+              createHarnessConfig(),
+            );
+            return harness.sharedEvaluationContext.agentCount;
+          },
+        ),
       ).resolves.toBe(4);
     });
   });

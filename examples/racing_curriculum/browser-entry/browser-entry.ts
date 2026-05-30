@@ -14,6 +14,7 @@ import {
   resolveGuidanceAlphaForTier,
 } from '../controller/nge.controller';
 import type { EnvironmentState } from '../environment/environment.types';
+import { exportVisualizationGraph } from '../../../src/architecture/network';
 import {
   FLAPPY_MONOSPACE_FONT_FAMILY,
   FLAPPY_NEON_PALETTE,
@@ -32,6 +33,7 @@ import {
   FLAPPY_HOST_TABLE_FONT_SIZE,
   FLAPPY_HOST_TABLE_HOST_PADDING,
 } from '../../flappy_bird/browser-entry/host/host.constants';
+import { renderNetworkView } from '../../../src/visualization/network-view/network-view';
 
 // ── Animation constants ───────────────────────────────────────────────────────
 
@@ -85,15 +87,15 @@ const CONTROLLER_TOOLTIP_LINES = [
   'The browser harness keeps the same fixed-timestep telemetry loop, but the control path now runs through the public network inference surface.',
   'Tier 2 reuses this seam and only widens the observation vector plus the self-radio tail.',
 ];
-const NETWORK_SLOT_TOOLTIP_HEADING = 'Future Network View';
+const NETWORK_SLOT_TOOLTIP_HEADING = 'Focused Network View';
 const NETWORK_SLOT_TOOLTIP_LINES = [
-  'The right column is still reserved for the richer live controller/network explanation surface.',
-  'Step 04 keeps the slot informative rather than empty while the controller seam is now genuinely live.',
+  'The right column now renders the live deterministic controller graph for the focused active controller.',
+  'If a future pass needs a network picker, it should layer on top of this focused controller view instead of replacing it.',
 ];
 const TELEMETRY_TOOLTIP_HEADING = 'Telemetry';
 const TELEMETRY_TOOLTIP_LINES = [
   'Telemetry reports the authoritative fixed-timestep playback state for the visible car.',
-  'These numbers are the baseline proof surface while the richer race-pack and team dashboards are still deferred.',
+  'These numbers remain the baseline proof surface while tier progression widens race-pack context.',
 ];
 const RACE_PACK_TOOLTIP_HEADING = 'Race Pack Slot';
 const RACE_PACK_TOOLTIP_LINES = [
@@ -134,12 +136,13 @@ export interface RacingCurriculumRunHandle {
 
 // ── DOM panel element sets ────────────────────────────────────────────────────
 
-/** Live-updating text node references for the network panel. */
+/** Live-updating text node references and redraw hook for the network panel. */
 interface NetworkPanelNodes {
   throttleValue: Text;
   steerValue: Text;
   tickValue: Text;
   tierValue: Text;
+  renderFocusedNetwork: (network: Network) => void;
 }
 
 /** Live-updating text node references for the telemetry panel. */
@@ -176,13 +179,14 @@ type CurriculumProgressState = {
 const LAP_COMPLETIONS_REQUIRED_FOR_TIER_ADVANCE = 3;
 /** Highest curriculum tier in the racing plan ladder. */
 const MAX_CURRICULUM_TIER: CurriculumTier = 6;
+/** Highest tier allowed by the current fallback auto-promotion policy. */
+const MAX_FALLBACK_AUTOPROMOTION_TIER: CurriculumTier = 4;
 /** Highest observation tier currently implemented in the browser controller seam. */
 const MAX_SUPPORTED_OBSERVATION_TIER: SupportedObservationTier = 5;
 /** Wrap threshold used to detect one completed lap from nearest spline sample indices. */
 const LAP_WRAP_HIGH_WATERMARK_RATIO = 0.75;
 /** Wrap threshold used to detect one completed lap from nearest spline sample indices. */
 const LAP_WRAP_LOW_WATERMARK_RATIO = 0.25;
-
 
 /**
  * Starts the Tier 0 racing curriculum browser demo.
@@ -225,21 +229,22 @@ export async function start(
 
   // Step 4: Initialise the deterministic NGE controller and render state.
   let curriculumProgress = createInitialCurriculumProgress(trackSpec, envState);
-  let controller = createNgeController(
-    createDeterministicRacingControllerNetwork(
-      resolveObservationTierForCurriculumTier(curriculumProgress.tier),
-    ),
-    {
-      tier: resolveObservationTierForCurriculumTier(curriculumProgress.tier),
-    },
+  let controllerNetwork = createDeterministicRacingControllerNetwork(
+    resolveObservationTierForCurriculumTier(curriculumProgress.tier),
   );
+  let controller = createNgeController(controllerNetwork, {
+    tier: resolveObservationTierForCurriculumTier(curriculumProgress.tier),
+  });
   let guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
     curriculumProgress.tier,
   );
   const renderState = createRacingRenderState();
 
   // Step 5: Build info panels inside the host regions.
-  const networkPanelNodes = setupNetworkPanel(hostHandle.networkRegionElement);
+  const networkPanelNodes = setupNetworkPanel(
+    hostHandle.networkRegionElement,
+    controllerNetwork,
+  );
   const telemetryPanelNodes = setupTelemetryPanel(
     hostHandle.visualizerRegionElement,
   );
@@ -275,7 +280,10 @@ export async function start(
     ) {
       const previousCurriculumTier = curriculumProgress.tier;
       lastControlOutput = controller.computeControl(envState, trackSpec);
-      const steppedEnvironmentState = stepEnvironment(envState, lastControlOutput);
+      const steppedEnvironmentState = stepEnvironment(
+        envState,
+        lastControlOutput,
+      );
       envState = stabilizeSoloTierTireGrip(
         steppedEnvironmentState,
         curriculumProgress.tier,
@@ -291,10 +299,12 @@ export async function start(
         const nextObservationTier = resolveObservationTierForCurriculumTier(
           curriculumProgress.tier,
         );
-        controller = createNgeController(
-          createDeterministicRacingControllerNetwork(nextObservationTier),
-          { tier: nextObservationTier },
-        );
+        controllerNetwork =
+          createDeterministicRacingControllerNetwork(nextObservationTier);
+        controller = createNgeController(controllerNetwork, {
+          tier: nextObservationTier,
+        });
+        networkPanelNodes.renderFocusedNetwork(controllerNetwork);
         // Step 2: Reset race-local state while carrying the controller policy forward.
         const resetStabilizationTier =
           previousCurriculumTier === 3 && curriculumProgress.tier === 4
@@ -793,12 +803,15 @@ function setupCanvasStage(
 /**
  * Populates the network-info region with controller status rows.
  *
- * Creates DOM structure once; returns text node references for live updates.
+ * Creates DOM structure once; returns text node references and a redraw hook for live updates.
  *
  * @param region - The network panel host element.
  * @returns References to the live-updating text nodes.
  */
-function setupNetworkPanel(region: HTMLElement): NetworkPanelNodes {
+function setupNetworkPanel(
+  region: HTMLElement,
+  controllerNetwork: Network,
+): NetworkPanelNodes {
   region.replaceChildren();
 
   const sideStackElement = document.createElement('div');
@@ -814,6 +827,19 @@ function setupNetworkPanel(region: HTMLElement): NetworkPanelNodes {
   const steerValue = document.createTextNode('0.00');
   const tickValue = document.createTextNode('0');
   const tierValue = document.createTextNode(String(ACTIVE_CURRICULUM_TIER));
+
+  const networkCanvasElement = document.createElement('canvas');
+  networkCanvasElement.className = 'racing-network-canvas';
+  networkCanvasElement.width = 560;
+  networkCanvasElement.height = 360;
+  networkCanvasElement.setAttribute('aria-label', 'Focused controller network');
+  networkCanvasElement.setAttribute('role', 'img');
+  networkCanvasElement.style.width = '100%';
+  networkCanvasElement.style.height = 'clamp(240px, 32dvh, 360px)';
+  networkCanvasElement.style.display = 'block';
+  networkCanvasElement.style.border = '1px solid rgba(15, 181, 255, 0.28)';
+  networkCanvasElement.style.borderRadius = '12px';
+  networkCanvasElement.style.background = 'rgba(3, 7, 15, 0.92)';
 
   controllerCard.bodyElement.append(
     buildPanelRow('Controller', 'Live NGE controller'),
@@ -831,15 +857,17 @@ function setupNetworkPanel(region: HTMLElement): NetworkPanelNodes {
   controllerCard.bodyElement.append(noteElement);
 
   const networkSlotCard = createPanelCard(
-    'Network View Slot',
+    'Focused Network View',
     NETWORK_SLOT_TOOLTIP_HEADING,
     NETWORK_SLOT_TOOLTIP_LINES,
   );
   networkSlotCard.bodyElement.append(
-    buildPanelRow('Status', 'Future-facing'),
-    buildPanelRow('Current role', 'Explain the live seam'),
+    buildPanelRow('Status', 'Live'),
+    buildPanelRow('Current role', 'Inspect the focused controller'),
+    buildPanelRow('Selection', 'Current NGE controller'),
+    networkCanvasElement,
     buildCallout(
-      'This right-side column stays visible on purpose: the controller seam is already live, but the richer network visualization still lands later without forcing another layout rewrite.',
+      'This right-side column now renders the live controller graph for the current NGE network. If a future inspection picker is added, it should reuse this canvas-backed surface instead of replacing the host layout.',
     ),
   );
 
@@ -849,7 +877,29 @@ function setupNetworkPanel(region: HTMLElement): NetworkPanelNodes {
   );
   region.append(sideStackElement);
 
-  return { throttleValue, steerValue, tickValue, tierValue };
+  const renderFocusedNetwork = (network: Network): void => {
+    syncCanvasToDisplaySize(networkCanvasElement);
+    const visualizationGraph = exportVisualizationGraph(network);
+    renderNetworkView(networkCanvasElement, visualizationGraph, {
+      nodeDimensions: { widthPx: 20, heightPx: 20 },
+      panelPaddingPx: {
+        topPx: 16,
+        rightPx: 16,
+        bottomPx: 16,
+        leftPx: 16,
+      },
+    });
+  };
+
+  renderFocusedNetwork(controllerNetwork);
+
+  return {
+    throttleValue,
+    steerValue,
+    tickValue,
+    tierValue,
+    renderFocusedNetwork,
+  };
 }
 
 /**
@@ -897,8 +947,8 @@ function setupTelemetryPanel(region: HTMLElement): TelemetryPanelNodes {
     RACE_PACK_TOOLTIP_LINES,
   );
   racePackCard.bodyElement.append(
-    buildPanelRow('Lap counter', 'Deferred'),
-    buildPanelRow('Sector timing', 'Deferred'),
+    buildPanelRow('Lap counter', 'Planned'),
+    buildPanelRow('Sector timing', 'Planned'),
     buildCallout(
       'This panel is intentionally informative instead of blank: later tiers will populate it with lap, sector, and opponent context once the race-pack authority exists.',
     ),
@@ -1165,9 +1215,8 @@ function updateNetworkPanelNodes(
 export function createDeterministicRacingControllerNetwork(
   observationTier: SupportedObservationTier = 1,
 ): Network {
-  const resolvedInputCount = resolveControllerInputCountForObservationTier(
-    observationTier,
-  );
+  const resolvedInputCount =
+    resolveControllerInputCountForObservationTier(observationTier);
   const controllerNetwork = Network.createMLP(
     resolvedInputCount,
     [...CONTROLLER_HIDDEN_LAYER_SIZES],
@@ -1209,9 +1258,7 @@ function configureDeterministicControllerParameters(
     hiddenNodes.length !== CONTROLLER_HIDDEN_LAYER_SIZES[0] ||
     outputNodes.length !== 2
   ) {
-    throw new Error(
-      'Racing curriculum controller expected a N -> 4 -> 2 MLP.',
-    );
+    throw new Error('Racing curriculum controller expected a N -> 4 -> 2 MLP.');
   }
 
   hiddenNodes[0].squash = methods.Activation.relu;
@@ -1635,6 +1682,14 @@ export function resolveTierPromotionFromLapCount(
   didAdvance: boolean;
   remainingLaps: number;
 } {
+  if (currentTier >= MAX_FALLBACK_AUTOPROMOTION_TIER) {
+    return {
+      nextTier: currentTier,
+      didAdvance: false,
+      remainingLaps: completedLaps,
+    };
+  }
+
   if (
     completedLaps >= LAP_COMPLETIONS_REQUIRED_FOR_TIER_ADVANCE &&
     currentTier < MAX_CURRICULUM_TIER
@@ -1642,8 +1697,7 @@ export function resolveTierPromotionFromLapCount(
     return {
       nextTier: (currentTier + 1) as CurriculumTier,
       didAdvance: true,
-      remainingLaps:
-        completedLaps - LAP_COMPLETIONS_REQUIRED_FOR_TIER_ADVANCE,
+      remainingLaps: completedLaps - LAP_COMPLETIONS_REQUIRED_FOR_TIER_ADVANCE,
     };
   }
 
@@ -1679,7 +1733,10 @@ function resolveClosestSplineSampleIndex(
 function resolveObservationTierForCurriculumTier(
   tier: CurriculumTier,
 ): SupportedObservationTier {
-  return Math.min(tier, MAX_SUPPORTED_OBSERVATION_TIER) as SupportedObservationTier;
+  return Math.min(
+    tier,
+    MAX_SUPPORTED_OBSERVATION_TIER,
+  ) as SupportedObservationTier;
 }
 
 function resolveGuidanceAlphaForCurriculumTier(tier: CurriculumTier): number {
@@ -1729,7 +1786,7 @@ function resolveStageNarrativeForTier(tier: CurriculumTier): {
     return {
       subtitle: `${tierLabel} solo NGE harness with a spline-smoothed visual circuit and ${tier === 1 ? 'faded' : 'removed'} optimal-line guidance.`,
       footer:
-        'The car and controller are both live in this solo harness. The help chips call out which surrounding UI slots are active today and which still stay future-facing.',
+        'The car and controller are both live in this solo harness. The help chips explain active UI slots and how later tiers broaden the same runtime contract.',
       tooltipLines: [
         `This left stage now runs the ${tierLabel} solo harness: one car, one deterministic seed, and live NGE inference.`,
         'The visual track stays spline-smoothed, but the control loop now flows through the owner-local observation assembler and the public Network.activate(...) seam.',
@@ -1739,8 +1796,7 @@ function resolveStageNarrativeForTier(tier: CurriculumTier): {
   }
 
   return {
-    subtitle:
-      `${tierLabel} keeps the same live shell while widening observation authority after guidance removal.`,
+    subtitle: `${tierLabel} keeps the same live shell while widening observation authority after guidance removal.`,
     footer:
       'Controller authority stays live through the same browser seam while higher tiers prepare race-pack context instead of reshaping the page contract.',
     tooltipLines: [

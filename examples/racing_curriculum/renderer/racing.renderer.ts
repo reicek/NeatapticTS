@@ -16,7 +16,10 @@
  * same coordinate frame.
  */
 
-import type { EnvironmentState, TireStateTuple } from '../environment/environment.types';
+import type {
+  EnvironmentState,
+  TireStateTuple,
+} from '../environment/environment.types';
 import type { TrackSpec } from '../track/track.generator.types';
 import type { RacingRenderFrame } from '../workers/simulation-worker/simulation-worker.types';
 
@@ -119,7 +122,10 @@ export interface RacingRenderState {
 }
 
 /** Narrow worker-frame fields consumed by the Tier 4 renderer overlays. */
-type RacingRenderOverlayFrame = Pick<RacingRenderFrame, 'pitStatus' | 'tireState'>;
+type RacingRenderOverlayFrame = Pick<
+  RacingRenderFrame,
+  'pitStatus' | 'tireState'
+>;
 
 /**
  * Optional overlays layered on top of the base track render.
@@ -707,20 +713,27 @@ function drawPitOverlays(
   pitStatus?: Uint8Array | Uint16Array | Int16Array,
 ): void {
   for (const pitBox of spec.pitBoxes ?? []) {
-    const teamColor = pitBox.teamIndex === 0 ? COLOR_PIT_TEAM_A : COLOR_PIT_TEAM_B;
+    const teamColor =
+      pitBox.teamIndex === 0 ? COLOR_PIT_TEAM_A : COLOR_PIT_TEAM_B;
     const occupiedTicks = pitStatus?.[pitBox.teamIndex * 2 + 1] ?? 0;
     const pitBoxCenter = pitBox.boxCenter ?? {
       x: pitBox.entranceCorridor.x + pitBox.entranceCorridor.width / 2,
       y: pitBox.entranceCorridor.y + pitBox.entranceCorridor.height / 2,
     };
     const renderedPitBox = pitBox.pitBox ?? {
-        x: pitBoxCenter.x - 9,
-        y: pitBoxCenter.y - 6,
-        width: 18,
-        height: 12,
-      };
+      x: pitBoxCenter.x - 9,
+      y: pitBoxCenter.y - 6,
+      width: 18,
+      height: 12,
+    };
 
-    drawAxisAlignedOverlay(ctx, renderedPitBox, transform, teamColor, occupiedTicks > 0);
+    drawAxisAlignedOverlay(
+      ctx,
+      renderedPitBox,
+      transform,
+      teamColor,
+      occupiedTicks > 0,
+    );
     drawAxisAlignedOverlay(
       ctx,
       pitBox.entranceCorridor,
@@ -744,7 +757,12 @@ function drawPitOverlays(
  */
 function drawAxisAlignedOverlay(
   ctx: CanvasRenderingContext2D,
-  worldBox: { readonly x: number; readonly y: number; readonly width: number; readonly height: number },
+  worldBox: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  },
   transform: WorldTransform,
   strokeColor: string,
   occupied: boolean,
@@ -811,7 +829,10 @@ function resolveRenderTireState(
 ): TireStateTuple {
   const packedOffset = focusCarIndex * 4;
 
-  if (packedTireState !== undefined && packedTireState.length >= packedOffset + 4) {
+  if (
+    packedTireState !== undefined &&
+    packedTireState.length >= packedOffset + 4
+  ) {
     return [
       packedTireState[packedOffset],
       packedTireState[packedOffset + 1],
