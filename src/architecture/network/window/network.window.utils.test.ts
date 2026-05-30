@@ -56,6 +56,21 @@ describe('network window utility chapter', () => {
       });
     });
 
+    describe('given one input row is a Float32Array with the correct width', () => {
+      it('accepts the typed-array row without treating it as an input mismatch', () => {
+        // Arrange
+        const network = createWindowTestNetwork();
+        const activateTypedSequence = () =>
+          forwardWindowed.call(
+            network as never,
+            [new Float32Array([1])] as unknown as number[][],
+          );
+
+        // Assert
+        expect(activateTypedSequence).not.toThrow();
+      });
+    });
+
     describe('given output collection is disabled', () => {
       it('streams window callbacks without retaining the full output matrix', () => {
         // Arrange

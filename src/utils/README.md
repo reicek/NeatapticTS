@@ -316,7 +316,7 @@ Parameters:
 ```ts
 accumulateSlabArrays(
   accumulators: Accumulators,
-  typedArrays: (Uint8Array<ArrayBufferLike> | Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[],
+  typedArrays: (Float32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[],
 ): void
 ```
 
@@ -486,7 +486,7 @@ Parameters:
 ```ts
 collectConnectionTypedArrays(
   network: NetworkView,
-): (Uint8Array<ArrayBufferLike> | Float32Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]
+): (Float32Array<ArrayBufferLike> | Uint8Array<ArrayBufferLike> | Float64Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | Int32Array<ArrayBufferLike>)[]
 ```
 
 Gather all typed arrays that represent connection-parallel data on a network.

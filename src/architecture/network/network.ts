@@ -907,7 +907,7 @@ export default class Network implements NetworkView {
    * Activates the network using the given input array.
    * Performs a forward pass through the network, calculating the activation of each node.
    *
-   * @param {number[]} input - An array of numerical values corresponding to the network's input nodes.
+   * @param {number[] | Float32Array} input - An array or Float32Array of numerical values corresponding to the network's input nodes.
    * @param {boolean} [training=false] - Flag indicating if the activation is part of a training process.
    * @param {number} [maxActivationDepth=1000] - Maximum allowed activation depth to prevent infinite loops/cycles.
    * @returns {number[]} An array of numerical values representing the activations of the network's output nodes.
@@ -919,11 +919,11 @@ export default class Network implements NetworkView {
    * repeated sequence steps.
    */
   activate(
-    input: number[],
+    input: number[] | Float32Array,
     training = false,
     _maxActivationDepth = 1000, // eslint-disable-line @typescript-eslint/no-unused-vars
   ): number[] {
-    return _activate.call(this, input, training);
+    return _activate.call(this, input as number[], training);
   }
 
   /**
@@ -931,15 +931,15 @@ export default class Network implements NetworkView {
    * This is a performance optimization for scenarios where backpropagation is not needed,
    * such as during testing, evaluation, or deployment (inference).
    *
-   * @param {number[]} input - An array of numerical values corresponding to the network's input nodes.
+   * @param {number[] | Float32Array} input - An array or Float32Array of numerical values corresponding to the network's input nodes.
    *                           The length must match the network's `input` size.
    * @returns {number[]} An array of numerical values representing the activations of the network's output nodes.
    *
    * @see {@link Node.noTraceActivate}
    */
   // Delegated activation helpers
-  noTraceActivate(input: number[]): number[] {
-    return _noTraceActivate.call(this, input);
+  noTraceActivate(input: number[] | Float32Array): number[] {
+    return _noTraceActivate.call(this, input as number[]);
   }
 
   /**

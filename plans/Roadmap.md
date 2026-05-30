@@ -29,6 +29,28 @@ with a fixed active-plan path so workspace-local MCP discovery can resolve the
 repo-static workflow packet and the active-step validation allow-list without
 prompt inputs.
 
+## Standalone Folder Quality Gate + Racing Curriculum Hotfix Lane [DONE]
+
+**Outcome:** closed the browser-runtime `NetworkActivateInputSizeMismatchError` (expected 70, got 70)
+triggered when `nge.controller.ts` passed a `Float32Array` to `network.activate(...)`, and shipped
+`scripts/folder-quality-metrics.mjs` as the fast static folder-quality gate for post-edit workflow
+checks.
+
+- Folder quality gate and racing curriculum hotfix
+  - Plan: [completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md](completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md) [DONE]
+  - Current internal state: archived after the typed-array runtime fix, the bounded
+    `number[] | Float32Array` activation contract update, the new `quality:folder` gate, and green
+    validation. Deferred caveats remain explicit: one pre-existing `examples/racing_curriculum`
+    lint error, the pre-existing `missing-test-file` smells in `examples/racing_curriculum` and
+    `src/architecture/network/activate`, and the PowerShell `npm run quality:folder` forwarding
+    quirk.
+
+**Coordination rule:** this lane owns `src/architecture/network/activate/network.activate.core.utils.ts`
+(and parallel activate guards) for the bug fix, and `scripts/folder-quality-metrics.mjs` +
+`scripts/agent-customization/gates/folder-quality.gate.mjs` + `package.json` `quality:folder`
+script + mandatory checklist entries in `.github/copilot-instructions.md` and `CLAUDE.md` for the
+tooling half. Racing Curriculum Phase 3 (Tier 3: 2v2 Roles) is not part of this lane.
+
 - Workspace MCP registration
   - Plan: [completed/workspace-mcp-registration.plans.md](completed/workspace-mcp-registration.plans.md) [DONE]
   - Current internal state: the workspace-registration lane is archived as a
@@ -379,6 +401,12 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
   - Plan: [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
 - NGE Racing Curriculum — single-agent benchmark (sensory specialization, neuromodulation, lifecycle staging)
   - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) [WIP]
+- Racing Path-Tracking Debug and Quality Followup — pre-Phase-3 visual fix, geometry audit, and deferred quality cleanup
+  - Plan: [completed/Racing_Pathtracking_Debug_and_Quality_Followup.plans.md](completed/Racing_Pathtracking_Debug_and_Quality_Followup.plans.md) [DONE]
+  - Current internal state: archived after the shared-spline path-tracking repair, the
+    user-confirmed rounded-lane visual pass, and the bounded folder-quality cleanup. The only
+    remaining caveat is accepted static debt: `examples/racing_curriculum/browser-entry/browser-entry.ts`
+    still lacks a sibling `browser-entry.test.ts`.
 - NGE Ant Hive Ecosystem — multi-agent benchmark (stigmergy, role differentiation, collective intelligence)
   - Plan: [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
 - NGE Predator/Prey Co-evolution — co-evolutionary benchmark (sensory arms race, reproduction modes, non-stationary fitness)
@@ -427,6 +455,7 @@ M7. [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_R
 M8. [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
 M8b. [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
 M9. [completed/NeatChat_Local_Retrieval_Memory.plans.md](completed/NeatChat_Local_Retrieval_Memory.plans.md) [DONE]
+M10. [completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md](completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md) [DONE]
 
 ### Phase 0 inventory
 

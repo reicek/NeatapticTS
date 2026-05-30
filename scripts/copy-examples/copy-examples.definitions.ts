@@ -77,4 +77,13 @@ export const EXAMPLE_DEFINITIONS: readonly ExampleDefinition[] = [
     title: 'NEATchat (NeatapticTS)',
     sourceDir: path.resolve('examples', 'neatChat'),
   },
+  {
+    category: 'flagship',
+    description:
+      'A minimal Tier 0 racing curriculum demo with deterministic procedural tracks, a scripted waypoint-following controller, Canvas 2D rendering, and neon-retro-arcade visuals. The NGE controller slot (Phase G) slots in as a drop-in replacement.',
+    dirName: 'racing_curriculum',
+    label: 'racing_curriculum',
+    title: 'Racing Curriculum (NeatapticTS)',
+    sourceDir: path.resolve('examples', 'racing_curriculum'),
+  },
 ];

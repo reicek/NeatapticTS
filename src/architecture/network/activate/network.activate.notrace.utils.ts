@@ -74,7 +74,8 @@ function isInputVectorLengthValid(
   activationContext: NoTraceActivationContext,
 ): boolean {
   return (
-    Array.isArray(activationContext.inputVector) &&
+    (Array.isArray(activationContext.inputVector) ||
+      ArrayBuffer.isView(activationContext.inputVector)) &&
     activationContext.inputVector.length === activationContext.expectedInputSize
   );
 }

@@ -29,6 +29,7 @@ export async function runFullDocsWorkflow(): Promise<void> {
     { label: 'ASCII Maze bundles', scriptName: 'build:ascii-maze' },
     { label: 'Flappy Bird bundles', scriptName: 'build:flappy-bird' },
     { label: 'NEATchat bundle', scriptName: 'build:neat-chat' },
+    { label: 'Racing Curriculum bundle', scriptName: 'build:racing-curriculum' },
     { label: 'Semantic snapshot', scriptName: 'index:build-snapshot' },
   ]);
 

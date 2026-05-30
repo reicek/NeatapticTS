@@ -1,12 +1,14 @@
 /**
  * NGE Collective Intelligence boundary — Phase G public surface.
  *
- * This module is the entry point for all multi-agent collective evaluation primitives
- * introduced in NGE Phase G. It re-exports three cooperating sub-modules as a single
- * cohesive boundary so consumers need only one import path.
+ * This module is the entry point for the collective-evaluation primitives that
+ * let multiple agents share a stigmergy field, collect per-tick results, track
+ * divergence metrics, and stand up the smallest honest two-team harness. It
+ * re-exports four cooperating sub-modules as one cohesive boundary so consumers
+ * only need a single import path.
  *
- * **Design contract:** classic NEAT behavior is entirely unaffected when this module
- * is not imported. No global state is mutated at import time.
+ * **Design contract:** classic NEAT behavior is entirely unaffected when this
+ * module is not imported. No global state is mutated at import time.
  *
  * ## Architecture
  *
@@ -16,6 +18,8 @@
  *   B["evaluation\nCollectiveEvaluationContext\nrunCollectiveEvaluationTick\nresetCollectiveEvaluationState"] --> C
  *   C["metrics\ncomputeRoleDivergenceMetric\ncreateOpponentSnapshotPool\naddOpponentSnapshot"]
  *   B -->|"passes SharedField\nby reference"| A
+ *   D["two-population\nTwoPopulationHarnessState\ncreateTwoPopulationHarness\nadvanceTwoPopulations"] --> B
+ *   D --> C
  * ```
  *
  * ## Sub-modules
@@ -41,6 +45,14 @@
  * fixed-capacity buffer of deep-cloned opponent payloads for tournament evaluation; the oldest
  * snapshot is evicted FIFO when the pool reaches capacity.
  *
+ * ### two-population
+ * `createTwoPopulationHarness` builds the smallest honest 2v2 scaffold: two isolated team
+ * controllers, one shared four-row radio field, and one evaluation context that can partition
+ * the race pack back into team-local slices. `runTwoTeamEvaluationTick` keeps the public seam
+ * honest by returning those slices without inventing later-stage game theory, while
+ * `advanceTwoPopulations` cross-registers frozen rival snapshots so each team evolves against a
+ * rolling history of opponent champions rather than only the opponent's latest mutable state.
+ *
  * ## Determinism contract
  * Same agent count + same evaluator array + same initial field ⇒ identical
  * `CollectiveTickResult` for every call. `applyDecay` and `applyDiffusion` are both
@@ -60,6 +72,8 @@
  *   computeRoleDivergenceMetric,
  *   createOpponentSnapshotPool,
  *   addOpponentSnapshot,
+ *   createTwoPopulationHarness,
+ *   advanceTwoPopulations,
  * } from './neat.nge-collective';
  *
  * // 1. Create a 10×10 pheromone field shared across 3 agents.
@@ -84,6 +98,10 @@
  * // 5. Maintain a rolling opponent pool for tournament selection.
  * let pool = createOpponentSnapshotPool(5);
  * pool = addOpponentSnapshot(pool, 'agent:alpha', { fitness: 42 }, nextContext.generationTick);
+ *
+ * // 6. Stand up the smallest honest 2v2 harness.
+ * const harness = createTwoPopulationHarness({}, {});
+ * advanceTwoPopulations(harness, [{ genomeId: 'a0', fitness: 5 }], [{ genomeId: 'b0', fitness: 4 }]);
  * ```
  */
 
@@ -120,3 +138,14 @@ export {
   computeRoleDivergenceMetric,
   createOpponentSnapshotPool,
 } from './neat.nge-collective.metrics';
+
+// --- Two-population racing scaffold ---
+export {
+  advanceTwoPopulations,
+  createTwoPopulationHarness,
+  runTwoTeamEvaluationTick,
+} from './neat.nge-collective.two-population';
+export type {
+  TeamScopedState,
+  TwoPopulationHarnessState,
+} from './neat.nge-collective.two-population';

@@ -4146,7 +4146,7 @@ Returns: Reinitialized connection instance.
 
 ```ts
 activate(
-  input: number[],
+  input: number[] | Float32Array<ArrayBufferLike>,
   training: boolean,
   _maxActivationDepth: number,
 ): number[]
@@ -5736,7 +5736,7 @@ Network node collection.
 
 ```ts
 noTraceActivate(
-  input: number[],
+  input: number[] | Float32Array<ArrayBufferLike>,
 ): number[]
 ```
 
@@ -7924,7 +7924,7 @@ Returns: Reinitialized connection instance.
 
 ```ts
 activate(
-  input: number[],
+  input: number[] | Float32Array<ArrayBufferLike>,
   training: boolean,
   _maxActivationDepth: number,
 ): number[]
@@ -9514,7 +9514,7 @@ Network node collection.
 
 ```ts
 noTraceActivate(
-  input: number[],
+  input: number[] | Float32Array<ArrayBufferLike>,
 ): number[]
 ```
 

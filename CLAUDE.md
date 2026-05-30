@@ -17,6 +17,9 @@ npm run index:prewarm       # warms MCP dense search; rerun after corpus-changin
 npx tsc --noEmit -p tsconfig.json
 npx tsc --noEmit -p tsconfig.test.json
 
+# Folder quality gate (fast post-edit static check)
+npm run quality:folder -- --folder=src/architecture/network/activate
+
 # Test
 npm test                    # full suite with coverage (runs build first)
 npm run test:silent         # same, silent output — preferred for coverage analysis
@@ -34,6 +37,8 @@ npm run docs
 ```
 
 > `npm test` triggers `pretest: npm run build`. For iterating on a focused tranche, run `npx jest --config=jest.config.mjs --no-cache --testPathPattern=<path>` directly to skip the rebuild.
+
+After edits in `src/`, `examples/`, or `benchmarks/`, run `npm run quality:folder -- --folder=<touched_folder>` before broader validation. Treat it as the mandatory fast static check alongside targeted tests and coverage guard.
 
 ## Architecture
 

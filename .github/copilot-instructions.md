@@ -370,6 +370,7 @@ type Output = unknown;
 When you modify or create files under `src/`, `testing/`, `benchmarks/`, or `examples/`, run (or advise running) these quick validations. If you cannot run them, still ensure your suggestion would pass them.
 
 - **TypeScript**: run `npm run build` (or `npx tsc --noEmit -p tsconfig.json`) and report pass/fail.
+- **Folder quality gate**: run `npm run quality:folder -- --folder=<touched_folder>` after edits in `src/`, `examples/`, or `benchmarks/`; treat it as the mandatory fast post-edit static check before broader validation.
 - **Clean install**: when `package.json`, `package-lock.json`, or workflow/runtime tooling changes, run `npm ci` and report pass/fail.
 - **Test-expect heuristic**: flag test files that contain more than one top-level `expect(` per `it()` — split into multiple `it()` blocks.
 - **JSDoc**: for new exported symbols, ensure a JSDoc block with `@param`/`@returns` exists (or flag if missing).

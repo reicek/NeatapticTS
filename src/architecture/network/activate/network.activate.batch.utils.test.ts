@@ -31,5 +31,21 @@ describe('network activate batch utility chapter', () => {
         );
       });
     });
+
+    describe('given one batch row is a Float32Array with the expected width', () => {
+      it('accepts the typed-array row without treating it as a width mismatch', () => {
+        // Arrange
+        const activationContext = createBatchActivationContext([
+          new Float32Array([1, 2]) as unknown as number[],
+        ] as unknown as number[][]);
+
+        // Act
+        const activateTypedBatch = () =>
+          executeBatchActivation(activationContext);
+
+        // Assert
+        expect(activateTypedBatch).not.toThrow();
+      });
+    });
   });
 });

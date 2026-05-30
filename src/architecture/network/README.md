@@ -122,7 +122,7 @@ const output = network.activate([0, 1]);
 
 ```ts
 activate(
-  input: number[],
+  input: number[] | Float32Array<ArrayBufferLike>,
   training: boolean,
   _maxActivationDepth: number,
 ): number[]
@@ -743,7 +743,7 @@ Network node collection.
 
 ```ts
 noTraceActivate(
-  input: number[],
+  input: number[] | Float32Array<ArrayBufferLike>,
 ): number[]
 ```
 

@@ -106,7 +106,8 @@ function isBatchRowInputSizeValid(
   rowActivationContext: BatchRowActivationContext,
 ): boolean {
   return (
-    Array.isArray(rowActivationContext.inputVector) &&
+    (Array.isArray(rowActivationContext.inputVector) ||
+      ArrayBuffer.isView(rowActivationContext.inputVector)) &&
     rowActivationContext.inputVector.length ===
       rowActivationContext.expectedInputSize
   );
