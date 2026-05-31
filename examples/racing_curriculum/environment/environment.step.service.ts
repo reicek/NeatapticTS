@@ -17,9 +17,12 @@ const DEFAULT_TRACK_LAYOUT_VERSION = 1;
 const DEFAULT_TRACK_SIZE_BUCKET = 'medium';
 const NO_CAR_INDEX = 255;
 const PIT_STOP_TICKS = 4;
-const TIRE_DECAY_LATERAL_FACTOR = 0.002;
-const TIRE_DECAY_LONGITUDINAL_FACTOR = 0.001;
-const TIRE_DECAY_SPEED_FACTOR = 0.0001;
+/** Base lateral wear contribution per step for the tire-health model. */
+const TIRE_DECAY_LATERAL_FACTOR = 0.0002;
+/** Base longitudinal wear contribution per step for the tire-health model. */
+const TIRE_DECAY_LONGITUDINAL_FACTOR = 0.0001;
+/** Base speed wear contribution per step for the tire-health model. */
+const TIRE_DECAY_SPEED_FACTOR = 0.00001;
 const TIRE_DECAY_ACCELERATION_FACTOR = 0.5;
 const TEAM_LAYOUT: readonly [0, 0, 0, 1, 1, 1] = [0, 0, 0, 1, 1, 1];
 const DEFAULT_TIRE_STATE: TireStateTuple = [1, 1, 1, 1];

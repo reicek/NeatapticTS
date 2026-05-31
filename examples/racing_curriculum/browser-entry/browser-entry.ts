@@ -14,6 +14,7 @@ import {
   resolveGuidanceAlphaForTier,
 } from '../controller/nge.controller';
 import type {
+  CarControlOutput,
   EnvironmentState,
   RacingCarState,
   TireStateTuple,
@@ -82,10 +83,37 @@ const OBSERVATION_INDEX_LOOK_AHEAD_NEAR_SIN_TANGENT = 32;
 
 /** Full-health tire tuple used by the solo Tier 1 harness stability guard. */
 const FULL_HEALTH_TIRE_STATE = [1, 1, 1, 1] as const;
+/** Tier at which live tire wear becomes visible in the browser shell. */
+const TIRE_WEAR_START_TIER = 4;
 /** Tier 4 packs use a four-car 2v2 grid. */
 const TIER_FOUR_TEAM_LAYOUT = [0, 0, 1, 1] as const;
 /** Tier 5+ packs use a six-car 3v3 grid. */
 const TIER_FIVE_TEAM_LAYOUT = [0, 0, 0, 1, 1, 1] as const;
+/** Mutation cadence in completed laps for the within-tier adaptation seam. */
+const WITHIN_TIER_ADAPTATION_LAP_INTERVAL = 1;
+
+type RacingWorkerStepRequest = {
+  type: 'step';
+  requestId: number;
+  envState: EnvironmentState;
+  control: readonly CarControlOutput[] | CarControlOutput;
+};
+
+type RacingWorkerStepResponse = {
+  type: 'step-result';
+  requestId: number;
+  envState: EnvironmentState;
+};
+
+type RacingSimulationWorkerScope = {
+  onmessage: ((event: MessageEvent<RacingWorkerStepRequest>) => void) | null;
+  postMessage(message: RacingWorkerStepResponse): void;
+};
+
+type PendingWorkerStep = {
+  resolve: (envState: EnvironmentState) => void;
+  reject: (reason: Error) => void;
+};
 
 // ── Panel text labels ─────────────────────────────────────────────────────────
 
@@ -256,6 +284,15 @@ export async function start(
     curriculumProgress.tier,
   );
   const renderState = createRacingRenderState();
+  const simulationWorker = createRacingSimulationWorker();
+  const pendingWorkerSteps = new Map<number, PendingWorkerStep>();
+  let nextWorkerRequestId = 0;
+  const handleWorkerMessage = (
+    event: MessageEvent<RacingWorkerStepResponse>,
+  ): void => {
+    handleRacingWorkerMessage(pendingWorkerSteps, event);
+  };
+  simulationWorker?.addEventListener('message', handleWorkerMessage);
 
   // Step 5: Build info panels inside the host regions.
   const networkPanelNodes = setupNetworkPanel(
@@ -281,7 +318,7 @@ export async function start(
   let accumulatedMs = 0;
   let lastControlOutput = controller.computeControl(envState, trackSpec);
 
-  const animationStep = (nowMs: number): void => {
+  const animationStep = async (nowMs: number): Promise<void> => {
     if (!running) return;
 
     // Compute elapsed time since last frame, capped at 4 steps to prevent spiral.
@@ -296,11 +333,26 @@ export async function start(
       stepsThisFrame < MAX_CATCHUP_STEPS_PER_FRAME
     ) {
       const previousCurriculumTier = curriculumProgress.tier;
+      const previousCompletedLaps = curriculumProgress.lapProgress.completedLaps;
       lastControlOutput = controller.computeControl(envState, trackSpec);
-      const steppedEnvironmentState = stepEnvironment(
-        envState,
-        lastControlOutput,
-      );
+      const steppedEnvironmentState = simulationWorker
+        ? await requestRacingWorkerStep(
+            simulationWorker,
+            pendingWorkerSteps,
+            ++nextWorkerRequestId,
+            envState,
+            resolveControlFanOut(
+              lastControlOutput,
+              envState.cars?.length ?? 1,
+            ),
+          )
+        : stepEnvironment(
+            envState,
+            resolveControlFanOut(
+              lastControlOutput,
+              envState.cars?.length ?? 1,
+            ),
+          );
       envState = stabilizeCurriculumTierTireGrip(
         steppedEnvironmentState,
         curriculumProgress.tier,
@@ -343,6 +395,14 @@ export async function start(
           hostHandle.canvasElement,
           curriculumProgress.tier,
         );
+      } else if (
+        curriculumProgress.lapProgress.completedLaps > previousCompletedLaps &&
+        curriculumProgress.lapProgress.completedLaps %
+          WITHIN_TIER_ADAPTATION_LAP_INTERVAL ===
+          0
+      ) {
+        applyWithinTierAdaptation(controllerNetwork);
+        networkPanelNodes.renderFocusedNetwork(controllerNetwork);
       }
 
       accumulatedMs -= FIXED_TIMESTEP_MS;
@@ -400,6 +460,9 @@ export async function start(
       window.removeEventListener('resize', handleViewportResize);
       window.clearInterval(focusedNetworkRefreshIntervalId);
       cancelAnimationFrame(animationFrameId);
+      simulationWorker?.removeEventListener('message', handleWorkerMessage);
+      simulationWorker?.terminate();
+      pendingWorkerSteps.clear();
       hostHandle.rootElement.dataset.running = 'false';
     },
   };
@@ -1709,37 +1772,32 @@ function resolveCurriculumRacePackCars(
 }
 
 /**
- * Keeps early curriculum tiers pinned at full tire health so steering authority
- * remains available while validating deterministic controller behavior.
+ * Returns the stepped environment state without forcing tire-health overrides.
+ *
+ * The browser shell now keeps live tire wear untouched so renderer corner colors
+ * can reflect the active simulation for every curriculum tier.
  *
  * @param envState - Newly stepped environment state.
  * @param curriculumTier - Active curriculum tier.
- * @returns Environment state with early-tier tire grip stabilization applied.
+ * @returns Unmodified stepped environment state.
  */
-function stabilizeCurriculumTierTireGrip(
+export function stabilizeCurriculumTierTireGrip(
   envState: EnvironmentState,
   curriculumTier: CurriculumTier,
 ): EnvironmentState {
-  if (curriculumTier > 4) {
+  if (curriculumTier >= TIRE_WEAR_START_TIER) {
     return envState;
   }
 
-  if (!Array.isArray(envState.cars) || envState.cars.length === 0) {
-    return {
-      ...envState,
-      tireState: [...FULL_HEALTH_TIRE_STATE],
-    };
-  }
-
-  const stabilizedCars = envState.cars.map((car) => ({
-    ...car,
-    tireState: [...FULL_HEALTH_TIRE_STATE],
-  }));
+  const fullHealthTireState = [...FULL_HEALTH_TIRE_STATE] as TireStateTuple;
 
   return {
     ...envState,
-    tireState: [...FULL_HEALTH_TIRE_STATE],
-    cars: stabilizedCars,
+    tireState: fullHealthTireState,
+    cars: envState.cars?.map((carState) => ({
+      ...carState,
+      tireState: [...FULL_HEALTH_TIRE_STATE] as TireStateTuple,
+    })),
   };
 }
 
@@ -1964,3 +2022,169 @@ function resolveStageNarrativeForTier(tier: CurriculumTier): {
     ],
   };
 }
+
+/**
+ * Expands a single controller output across every active car in the roster.
+ *
+ * @param controlOutput - Controller output for the current step.
+ * @param carCount - Number of cars that should receive motion input.
+ * @returns Per-car control array aligned to roster order.
+ */
+function resolveControlFanOut(
+  controlOutput: CarControlOutput,
+  carCount: number,
+): readonly CarControlOutput[] {
+  return Array.from({ length: Math.max(1, carCount) }, () => ({
+    throttle: controlOutput.throttle,
+    steer: controlOutput.steer,
+  }));
+}
+
+/**
+ * Applies a single slow morph cycle to the focused controller network.
+ *
+ * @param controllerNetwork - Live controller network owned by the browser harness.
+ */
+function applyWithinTierAdaptation(
+  controllerNetwork: ReturnType<typeof createDeterministicRacingControllerNetwork>,
+): void {
+  controllerNetwork.mutate(methods.mutation.MOD_WEIGHT);
+}
+
+/**
+ * Creates a worker instance that can step the racing simulation off-thread.
+ *
+ * The worker reuses the current bundle URL so the same file can serve both the
+ * browser host and the worker runtime.
+ *
+ * @returns Worker instance when the current bundle URL is available; otherwise null.
+ */
+function createRacingSimulationWorker(): Worker | null {
+  const workerUrl = resolveRacingSimulationWorkerUrl();
+
+  if (workerUrl === null) {
+    return null;
+  }
+
+  return new Worker(workerUrl);
+}
+
+/**
+ * Resolves the current racing bundle URL for worker bootstrap.
+ *
+ * @returns Script URL when the host is running from a DOM script element.
+ */
+function resolveRacingSimulationWorkerUrl(): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const currentScriptElement = document.currentScript;
+
+  if (!(currentScriptElement instanceof HTMLScriptElement)) {
+    return null;
+  }
+
+  if (currentScriptElement.src.length === 0) {
+    return null;
+  }
+
+  return currentScriptElement.src;
+}
+
+/**
+ * Sends one stepping request to the racing simulation worker.
+ *
+ * @param worker - Live worker instance.
+ * @param pendingWorkerSteps - Resolver map for in-flight requests.
+ * @param requestId - Monotonic request identifier.
+ * @param envState - Current environment snapshot.
+ * @param control - Per-car control input for the next fixed timestep.
+ * @returns Stepped environment snapshot returned by the worker.
+ */
+function requestRacingWorkerStep(
+  worker: Worker,
+  pendingWorkerSteps: Map<number, PendingWorkerStep>,
+  requestId: number,
+  envState: EnvironmentState,
+  control: readonly CarControlOutput[] | CarControlOutput,
+): Promise<EnvironmentState> {
+  return new Promise<EnvironmentState>((resolve, reject) => {
+    pendingWorkerSteps.set(requestId, { resolve, reject });
+    worker.postMessage({
+      type: 'step',
+      requestId,
+      envState,
+      control,
+    } satisfies RacingWorkerStepRequest);
+  });
+}
+
+/**
+ * Resolves worker responses back into the pending request map.
+ *
+ * @param pendingWorkerSteps - In-flight request resolvers.
+ * @param event - Worker message event.
+ */
+function handleRacingWorkerMessage(
+  pendingWorkerSteps: Map<number, PendingWorkerStep>,
+  event: MessageEvent<RacingWorkerStepResponse>,
+): void {
+  const workerResponse = event.data;
+
+  if (workerResponse.type !== 'step-result') {
+    return;
+  }
+
+  const pendingStep = pendingWorkerSteps.get(workerResponse.requestId);
+
+  if (pendingStep === undefined) {
+    return;
+  }
+
+  pendingWorkerSteps.delete(workerResponse.requestId);
+  pendingStep.resolve(workerResponse.envState);
+}
+
+/**
+ * Boots the worker-side stepping bridge when this bundle runs in a worker context.
+ */
+function maybeBootstrapRacingSimulationWorker(): void {
+  if (!isDedicatedRacingSimulationWorkerContext()) {
+    return;
+  }
+
+  const workerGlobalScope = self as RacingSimulationWorkerScope;
+
+  workerGlobalScope.onmessage = (
+    event: MessageEvent<RacingWorkerStepRequest>,
+  ): void => {
+    const workerRequest = event.data;
+
+    if (workerRequest.type !== 'step') {
+      return;
+    }
+
+    workerGlobalScope.postMessage({
+      type: 'step-result',
+      requestId: workerRequest.requestId,
+      envState: stepEnvironment(workerRequest.envState, workerRequest.control),
+    } satisfies RacingWorkerStepResponse);
+  };
+}
+
+/**
+ * Detects whether the current runtime is the worker-side racing bundle.
+ *
+ * @returns True when the bundle is executing in a dedicated worker context.
+ */
+function isDedicatedRacingSimulationWorkerContext(): boolean {
+  return (
+    typeof window === 'undefined' &&
+    typeof document === 'undefined' &&
+    typeof self !== 'undefined' &&
+    'postMessage' in self
+  );
+}
+
+maybeBootstrapRacingSimulationWorker();

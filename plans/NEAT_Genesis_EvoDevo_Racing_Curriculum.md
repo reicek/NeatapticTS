@@ -788,13 +788,13 @@ validation:
 
 Run the listed automation matrix and capture a concise manual browser soak note before any docs refresh.
 
-- The browser currently stays single-car; keep the active tier marker on Tier 2 until user-confirmed 2v2 behavior exists.
-- Latest manual soak confirms Tier 3 runtime remains single-car and Tier 4 runtime also remains single-car in the current demo.
+- Runtime fixes were applied to render the full `envState.cars` roster and to gate visible tire wear so Tier 1-3 stay full-grip while live wear starts at Tier 4; keep the active tier marker on Tier 2 until user reconfirms live 2v2 behavior.
+- Latest manual soak before the fix confirmed Tier 3 runtime remained single-car and Tier 4 runtime also remained single-car in the demo; rerun soak after rebuild to confirm the new runtime behavior.
 - Withdraw Tier 3+ claims from the public tracker until team radio, pits, and tire wear are re-confirmed in the runtime.
 - Keep the right-side network panel synced to the live NGE controller graph and treat a true specific-network selector as follow-up only if the soak proves it is necessary.
 - Do not advance Tier 4+ packets, closure claims, or Phase 7 work until the user explicitly confirms 2v2 behavior in runtime.
 
-Manual soak evidence note (2026-05-31): Browser soak remains single-car in runtime. Tier marker stays at Tier 2; 2v2 is not confirmed. Tier 3 still shows one live car, and Tier 4 also still shows one live car (no current pack expansion). Tier 3+ runtime claims remain withdrawn pending re-check of radio/pits/tire wear. Right-side network panel remains synced to the live NGE controller graph; specific-network selector stays follow-up-only unless soak evidence proves it necessary.
+Manual soak evidence note (2026-05-31): Pre-fix browser soak remained single-car in runtime. Tier marker stays at Tier 2; 2v2 is not yet user-confirmed. Tier 3 and Tier 4 both showed one live car before the patch. Current Step 05 patch changes: renderer now draws the full runtime car roster (`envState.cars`), browser stabilization keeps tires at full health for Tier 1-3, and live tire wear visualization starts at Tier 4 with slower decay. Tier 3+ runtime claims remain withdrawn until post-patch soak confirms multi-car behavior and wear/pit semantics in the demo.
 
 #### Step 06 — Documentation deltas and known-limits refresh [PLANNED]
 

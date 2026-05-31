@@ -156,6 +156,10 @@ type TrackRenderGeometry = {
   readonly minY: number;
   readonly maxY: number;
 };
+/** Pose and optional tire tuple for one renderable car slot. */
+type RenderCarState = Pick<EnvironmentState, 'carX' | 'carY' | 'carHeading'> & {
+  readonly tireState?: TireStateTuple;
+};
 
 const trackRenderGeometryCache = new WeakMap<TrackSpec, TrackRenderGeometry>();
 
@@ -301,6 +305,8 @@ export function renderRacingFrame(
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
+  const renderCars = resolveRenderCars(envState);
+  const focusCarIndex = renderOptions.focusCarIndex ?? 0;
 
   // Step 1: Advance tire marks for this tick.
   advanceTireMarks(renderState, envState);
@@ -322,16 +328,20 @@ export function renderRacingFrame(
   drawTireMarks(ctx, renderState.tireMarks, transform);
 
   // Step 5: Car body and front lighting accents.
-  drawCar(
-    ctx,
-    envState,
-    transform,
-    resolveRenderTireState(
-      envState,
-      renderOptions.frame?.tireState,
-      renderOptions.focusCarIndex ?? 0,
-    ),
-  );
+  for (const [carIndex, renderCar] of renderCars.entries()) {
+    drawCar(
+      ctx,
+      renderCar,
+      transform,
+      resolveRenderTireState(
+        envState,
+        renderCar,
+        renderOptions.frame?.tireState,
+        carIndex,
+        focusCarIndex,
+      ),
+    );
+  }
 
 }
 
@@ -761,7 +771,7 @@ function drawTireMarks(
  */
 function drawCar(
   ctx: CanvasRenderingContext2D,
-  state: EnvironmentState,
+  state: RenderCarState,
   transform: WorldTransform,
   tireState: TireStateTuple,
 ): void {
@@ -1456,10 +1466,12 @@ function drawCarTireCorners(
  */
 function resolveRenderTireState(
   envState: EnvironmentState,
+  renderCar: RenderCarState,
   packedTireState: Float32Array | undefined,
+  carIndex: number,
   focusCarIndex: number,
 ): TireStateTuple {
-  const packedOffset = focusCarIndex * 4;
+  const packedOffset = carIndex * 4;
 
   if (
     packedTireState !== undefined &&
@@ -1473,7 +1485,36 @@ function resolveRenderTireState(
     ];
   }
 
+  if (carIndex === focusCarIndex && envState.tireState !== undefined) {
+    return envState.tireState;
+  }
+
+  if (renderCar.tireState !== undefined) {
+    return renderCar.tireState;
+  }
+
   return envState.tireState ?? [1, 1, 1, 1];
+}
+
+/**
+ * Resolves the render roster from the authoritative environment state.
+ *
+ * @param envState - Current environment snapshot.
+ * @returns Ordered list of car states to draw for this frame.
+ */
+function resolveRenderCars(envState: EnvironmentState): readonly RenderCarState[] {
+  if (Array.isArray(envState.cars) && envState.cars.length > 0) {
+    return envState.cars;
+  }
+
+  return [
+    {
+      carX: envState.carX,
+      carY: envState.carY,
+      carHeading: envState.carHeading,
+      tireState: envState.tireState,
+    },
+  ];
 }
 
 /**

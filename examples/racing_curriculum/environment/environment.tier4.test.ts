@@ -119,6 +119,24 @@ describe('environment Tier 4 tire and pit seam', () => {
         }),
       ).resolves.toBe(true);
     });
+
+    it('keeps fresh tires above the red threshold for about two representative laps', async () => {
+      // Arrange
+      const freshTireState: TireStateTuple = [1, 1, 1, 1];
+
+      // Act + Assert
+      await expect(
+        loadTier4EnvironmentModule().then(({ decayTireState }) => {
+          let nextTireState = freshTireState;
+
+          for (let stepIndex = 0; stepIndex < 240; stepIndex += 1) {
+            nextTireState = decayTireState(nextTireState, 2.2, 1.4, 28);
+          }
+
+          return nextTireState.every((tireStateValue) => tireStateValue > 0.5);
+        }),
+      ).resolves.toBe(true);
+    });
   });
 
   describe('pit occupancy lifecycle', () => {
@@ -199,6 +217,38 @@ describe('environment Tier 4 tire and pit seam', () => {
         pitStatus: { occupyingCarIndex: 255, remainingStopTicks: 0 },
         tireState: [1, 1, 1, 1],
       });
+    });
+
+    it('advances every car when the stepper receives a per-car control array', async () => {
+      // Arrange
+      const tier4EnvironmentState = createTier4EnvironmentState({
+        cars: [
+          createTier4CarState({ teamIndex: 0 }),
+          createTier4CarState({ teamIndex: 0, carX: 40, carY: 40 }),
+          createTier4CarState({ teamIndex: 1, carX: 120, carY: 120 }),
+          createTier4CarState({ teamIndex: 1, carX: 160, carY: 160 }),
+        ],
+      });
+
+      // Act + Assert
+      await expect(
+        loadTier4EnvironmentModule().then(({ stepEnvironment }) => {
+          const nextState = stepEnvironment(tier4EnvironmentState, [
+            { throttle: 1, steer: 0 },
+            { throttle: 1, steer: 0 },
+            { throttle: 1, steer: 0 },
+            { throttle: 1, steer: 0 },
+          ]);
+
+          return nextState.cars.every((carState, carIndex) => {
+            const previousCarState = tier4EnvironmentState.cars[carIndex];
+            return (
+              carState.carX !== previousCarState.carX ||
+              carState.carY !== previousCarState.carY
+            );
+          });
+        }),
+      ).resolves.toBe(true);
     });
   });
 });

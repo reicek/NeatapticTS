@@ -1,6 +1,10 @@
 /** @jest-environment jsdom */
 
-import { start } from './browser-entry';
+import type { EnvironmentState } from '../environment/environment.types';
+import {
+  stabilizeCurriculumTierTireGrip,
+  start,
+} from './browser-entry';
 
 describe('racing curriculum browser entry start()', () => {
   beforeEach(() => {
@@ -42,5 +46,38 @@ describe('racing curriculum browser entry start()', () => {
         '.racing-host__region--network canvas.racing-network-canvas',
       ),
     ).not.toBeNull();
+  });
+
+  it('keeps tire wear disabled before the wear tier and preserves it at the wear tier', () => {
+    const wornEnvironmentState = {
+      tick: 1,
+      carX: 0,
+      carY: 0,
+      carHeading: 0,
+      tireState: [0.4, 0.3, 0.2, 0.1] as const,
+      cars: [
+        {
+          carX: 0,
+          carY: 0,
+          carHeading: 0,
+          teamIndex: 0,
+          tireState: [0.4, 0.3, 0.2, 0.1] as const,
+        },
+      ],
+    } satisfies EnvironmentState;
+
+    expect({
+      tier1: stabilizeCurriculumTierTireGrip(wornEnvironmentState, 1),
+      tier4: stabilizeCurriculumTierTireGrip(wornEnvironmentState, 4),
+    }).toMatchObject({
+      tier1: {
+        tireState: [1, 1, 1, 1],
+        cars: [{ tireState: [1, 1, 1, 1] }],
+      },
+      tier4: {
+        tireState: [0.4, 0.3, 0.2, 0.1],
+        cars: [{ tireState: [0.4, 0.3, 0.2, 0.1] }],
+      },
+    });
   });
 });
