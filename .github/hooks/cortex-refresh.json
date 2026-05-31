@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "node scripts/agent-customization/hooks/refresh-cortex-after-write.mjs",
+        "cwd": ".",
+        "timeout": 180
+      }
+    ]
+  }
+}

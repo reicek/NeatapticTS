@@ -32,9 +32,9 @@ const TRACK_POSITION_WORLD_SCALE = 96;
 /** Normalization scale for boundary and waypoint distances in world units. */
 const DISTANCE_WORLD_SCALE = 64;
 /** Normalization scale for forward and target speeds in world units per second. */
-const SPEED_WORLD_SCALE = 36;
+const SPEED_WORLD_SCALE = 108;
 /** Normalization scale for lateral speed in world units per second. */
-const LATERAL_SPEED_WORLD_SCALE = 18;
+const LATERAL_SPEED_WORLD_SCALE = 54;
 /** Normalization scale for boundary distances from the car centerline. */
 const BOUNDARY_DISTANCE_WORLD_SCALE = 24;
 /** Normalization scale for track-relative lateral offset from the optimal line. */
@@ -42,7 +42,7 @@ const OPTIMAL_LINE_LATERAL_OFFSET_WORLD_SCALE = 18;
 /** Normalization scale for yaw-rate channels. */
 const YAW_RATE_RADIANS_PER_SECOND_SCALE = 1;
 /** Fallback target speed used when the environment has not produced one yet. */
-const DEFAULT_TARGET_SPEED_WORLD = 24;
+const DEFAULT_TARGET_SPEED_WORLD = 72;
 /** Shared empty radio field for Tier 1 or pre-radio Tier 2 states. */
 const EMPTY_RADIO_FIELD = new Float32Array(0);
 /** Shared zero-filled memory trace used when no recurrent trace is available yet. */

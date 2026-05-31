@@ -100,9 +100,9 @@ It must not begin serious implementation before:
 
 - Phase 1 [DONE]: Tier 0 harness packetized, implemented, validated, documented, and closed in `examples/racing_curriculum/`.
 - Phase 2 [DONE]: Tier 1-2 solo NGE controller seam shipped (guidance fade + Tier 2 self-radio), validated, and closed.
-- Phase 3 [DONE]: Tier 3 2v2 roles boundary shipped (two-population harness + 91-channel observation + Tier 3 worker), validated, and closed.
-- Phase 4 [DONE]: Tier 4 tires+pits seams shipped (degradation, pit occupancy, 95-channel observation, renderer overlays), validated, and closed.
-- Phase 5 [DONE]: Tier 5 six-car 3v3 simulation shipped (`agentCount=6`, `radioField=42`, byte-stable 95-channel observation), validated, and closed.
+- Phase 3 [DONE]: Historical implementation delivered Tier 3 2v2 seams (two-population harness + 91-channel observation + Tier 3 worker), but runtime completion claims are withdrawn until user-confirmed 2v2.
+- Phase 4 [DONE]: Historical implementation delivered Tier 4 tires+pits seams (degradation, pit occupancy, 95-channel observation, renderer overlays), but runtime completion claims remain withdrawn pending Tier 3 user-confirmation.
+- Phase 5 [DONE]: Historical implementation delivered Tier 5 six-car 3v3 simulation seams (`agentCount=6`, `radioField=42`, byte-stable 95-channel observation), but runtime completion claims remain withdrawn pending Tier 3 user-confirmed 2v2.
 - Plan-sync status for closed history: no recorded failures.
 
 **Desired behaviors (all emergent):**
@@ -489,10 +489,10 @@ This ledger converts the matrix into concrete completion packets and stop points
 | ------ | ----------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Tier 0 | Complete                | Solo harness, deterministic replay, frame packing, and browser shell shipped in earlier phases | None beyond preserving regression coverage in ongoing follow-up validation                                       |
 | Tier 1 | Complete                | Live NGE controller replaced scripted baseline; deterministic lap completion evidence recorded | None; keep deterministic controller behavior green in follow-up slices                                           |
-| Tier 2 | Complete                | Widened observation lane and self-radio semantics validated and logged                         | None; keep Tier 2 observation/radio contracts regression-covered                                                 |
-| Tier 3 | Complete                | 2v2 role seams, teammate radio, and two-population harness shipped and validated               | None; retain parity in Tier 5+ regression matrix checks                                                          |
-| Tier 4 | Complete                | Tires, pits, occupancy, and Tier 4 transport semantics shipped and validated                   | None; ensure pit/tire semantics stay stable under six-car soak                                                   |
-| Tier 5 | In follow-up completion | Six-car 3v3 simulation, 95-channel byte-stable observation, and Tier 5 worker seam shipped     | Close Phase 6 Step 05-07 with full green matrix + browser soak + docs/log compression evidence                   |
+| Tier 2 | In follow-up completion | Solo baseline exists, but self-radio and widened-lane behavior still need revalidation in the browser harness | Keep Tier 2 as the active rollback frontier until the one-car runtime is re-confirmed                            |
+| Tier 3 | Blocked                | 2v2 role seams and teammate radio are not confirmed in the current browser runtime             | Do not claim multi-car readiness until user confirms 2v2 in the demo                                             |
+| Tier 4 | Blocked upstream        | Tire degradation, pits, and occupancy are not confirmed in the current browser runtime         | Keep pit/tire work parked until the user confirms Tier 3 2v2 behavior in runtime                                 |
+| Tier 5 | Blocked upstream        | Six-car 3v3 simulation and Tier 5 worker seam are not confirmed                                | Do not advance closure claims past Tier 3 until user-confirmed 2v2 unlocks the higher-tier runtime reconfirmation |
 | Tier 6 | Blocked upstream        | Tier 6 target and blocker contract documented in roadmap and matrix                            | Author blocked-step packet with explicit upstream ownership and no local overreach; keep closure criteria honest |
 
 #### Executable tier completion packets (sequential MCP queue)
@@ -500,7 +500,7 @@ This ledger converts the matrix into concrete completion packets and stop points
 These packets replace pre-planning notes with executable, one-step-at-a-time handoff blocks.
 Active `[WIP]` ownership remains in the phase step packets; this queue mirrors that order.
 
-##### Packet 1 — Tier 5 closure validation matrix (maps to Phase 6 Step 05)
+##### Packet 1 — Tier 2 rollback validation matrix (maps to Phase 6 Step 05)
 
 ```yaml
 phase: 6
@@ -511,30 +511,30 @@ status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
 copy_paste: true
-next_step: 'Phase 6 Step 06 — Tier 5 closure docs refresh (manual confirmation gate first)'
+next_step: 'Phase 6 Step 06 — Tier 2 rollback docs refresh (manual confirmation gate first)'
 skills:
   - 'green-validation-gates'
   - 'coverage-guard'
 validation:
   - 'npm run quality:folder -- --folder=examples/racing_curriculum'
-  - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=examples/racing_curriculum/browser-entry --testPathPatterns=examples/racing_curriculum/renderer --testPathPatterns=examples/racing_curriculum/workers/simulation-worker'
+  - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=examples/racing_curriculum/browser-entry --testPathPatterns=examples/racing_curriculum/renderer'
   - 'npm run build:racing-curriculum'
   - 'npm run test:silent'
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
 ```
 
-**Step objective:** Prove Tier 5 closure-readiness by running the full follow-up green matrix plus manual browser soak evidence without widening scope outside `examples/racing_curriculum/`.
+**Step objective:** Prove Tier 2 rollback readiness by running the follow-up green matrix plus manual browser soak evidence without widening scope outside `examples/racing_curriculum/`.
 
 **Context the agent must know:**
 
-- Tier 5 implementation seams are already shipped; this packet is validation-first closure proof.
-- Tier 6 remains blocked upstream; this packet must not implement `src/` co-evolution features.
-- Current risk seams: promotion continuity, stage text sync, panel-readiness honesty, six-car parity.
+- Tier 2 single-car runtime is the active truth boundary; this packet is rollback validation-first evidence.
+- Tier 3+ runtime claims remain withdrawn until user-confirmed 2v2 behavior exists in the demo.
+- Current risk seams: panel-readiness honesty, right-side live graph sync, and one-car soak stability.
 
 **Execution steps:**
 
 1. Run the required automation matrix in listed order.
-2. Run manual browser soak for repeated progression/restart loops and capture concise pass/fail notes.
+2. Run manual browser soak for repeated progression/restart loops, capture concise pass/fail notes, and record whether 2v2 is still unconfirmed.
 3. If regressions appear, stop and route back to the smallest prior phase packet instead of continuing.
 
 **Stop conditions:**
@@ -545,7 +545,7 @@ validation:
 
 **Required validation:** Run every command in the YAML `validation` block and include manual soak evidence summary.
 
-**Plan update requirement:** Record command outcomes, soak notes, and set only Phase 6 Step 06 to `[WIP]` after explicit manual confirmation.
+**Plan update requirement:** Record command outcomes and soak notes, keep Step 05 `[WIP]` until explicit user confirmation of 2v2 unlock conditions, and set only Phase 6 Step 06 to `[WIP]` after that confirmation gate is satisfied.
 
 ##### Packet 2 — Tier 5 closure documentation refresh (maps to Phase 6 Step 06) [PLANNED]
 
@@ -688,30 +688,30 @@ Compressed outcome: scripted baseline was replaced with the live NGE controller 
 
 ### Phase 3 - Tier 3: 2v2 Roles [DONE]
 
-Compressed outcome: team-isolated two-population harness + Tier 3 observation/worker seams shipped and validated; documentation refreshed; phase closed.
+Compressed outcome: historical implementation delivered team-isolated two-population harness + Tier 3 observation/worker seams; runtime completion claims are currently withdrawn pending user-confirmed 2v2 behavior.
 
 ### Phase 4 - Tier 4: Tires + Pits [DONE]
 
-Compressed outcome: tire degradation, pit occupancy/stop flow, Tier 4 observation/worker transport, and renderer overlays shipped and validated; phase closed.
+Compressed outcome: historical implementation delivered tire degradation, pit occupancy/stop flow, Tier 4 observation/worker transport, and renderer overlays; runtime completion claims remain withdrawn until Tier 3 2v2 is user-confirmed.
 
 ### Phase 5 - Tier 5-6: Full Co-Evolution (Honest Partial: Tier 5 Simulation) [DONE]
 
-Compressed outcome: six-car 3v3 simulation seam shipped (`agentCount=6`, `radioField=42`, byte-stable 95-channel observation), validated, documented, and closed. Upstream reproduction/mode-evolution work remains explicitly out of scope here.
+Compressed outcome: historical implementation delivered six-car 3v3 simulation seams (`agentCount=6`, `radioField=42`, byte-stable 95-channel observation), but Tier 5+ runtime completion claims stay withdrawn until user-confirmed Tier 3 2v2 reconfirms the upstream chain.
 
-### Phase 6 — Post-Closure Follow-up: UI Completion + Tier 5+ Stability [WIP]
+### Phase 6 — Post-Closure Follow-up: UI Completion + Tier 2 Rollback [WIP]
 
-**Phase objective:** Close remaining placeholder UI/visualizer surfaces and harden Tier 5+ browser-demo behavior with a validation-first pass, including promotion continuity and stage text synchronization under repeated progression.
+**Phase objective:** Roll the active frontier back to the confirmed single-car baseline, withdraw overclaimed Tier 3+ status, and keep the tracker honest until 2v2 is user-confirmed.
 
 **Honest scope (bounded):**
 
 - In scope:
   - Remaining deferred/placeholder UI surfaces in `examples/racing_curriculum/browser-entry/` and `examples/racing_curriculum/renderer/`.
-  - Tier 5+ validation matrix (automated + manual) for six-car progression behavior.
-  - Browser regression soak for tier promotion transitions, stage subtitle/footer/tooltip sync, and panel-readiness accuracy.
+  - Tier 2 rollback validation for the single-car browser runtime and its active panel copy.
+  - Browser regression soak that confirms the current one-car state and keeps later-tier claims withdrawn.
   - Examples-local bug fixes required for demo correctness and operator trust.
 - Out of scope / non-goals:
   - Upstream blocked reproduction work (`src/neat.ts` polyandric race-loop exposure and `modeIsEvolvable` strategy plumbing).
-  - New `src/` architecture expansion unrelated to observed racing-demo defects.
+  - New `src/` architecture expansion unrelated to the observed single-car mismatch.
   - New co-evolution dashboard features beyond regression containment.
 
 #### Step 01 — Follow-up packetization and risk framing [DONE]
@@ -763,7 +763,7 @@ Done note (2026-05-30): implemented owner-local fixes for the Phase 6 red seams:
 - Tier 5 radio readability now includes self-row parity (`[0, 1, 2]` for Team A and `[3, 4, 5]` for Team B).
 - Focused Step 03 red-test slice turned green: `PASS 4/4 suites, 20/20 tests`.
 
-#### Step 05 — Green validation and regression soak [WIP]
+#### Step 05 — Tier 2 rollback validation and regression soak [WIP]
 
 ```yaml
 phase: 6
@@ -780,17 +780,21 @@ skills:
   - 'coverage-guard'
 validation:
   - 'npm run quality:folder -- --folder=examples/racing_curriculum'
-  - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=examples/racing_curriculum/browser-entry --testPathPatterns=examples/racing_curriculum/renderer --testPathPatterns=examples/racing_curriculum/workers/simulation-worker'
+  - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=examples/racing_curriculum/browser-entry --testPathPatterns=examples/racing_curriculum/renderer'
   - 'npm run build:racing-curriculum'
   - 'npm run test:silent'
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
 ```
 
-Run focused automation plus manual browser soak matrix across repeated tier promotions and six-car traffic scenarios.
+Run the listed automation matrix and capture a concise manual browser soak note before any docs refresh.
 
-- Current browser fallback promotion rule advances by 3 laps per tier, but it hard-stops automatic promotion at Tier 4; reaching Tier 5 requires the future fairness/co-evolution promotion path rather than extra laps alone.
-- Confirm the right-side network panel renders the live NGE controller graph instead of the placeholder seam and stays in sync when the controller tier is rebuilt.
-- If a true specific-network selector is still needed after the live graph lands, capture that as a bounded follow-up note rather than widening this phase in place.
+- The browser currently stays single-car; keep the active tier marker on Tier 2 until user-confirmed 2v2 behavior exists.
+- Latest manual soak confirms Tier 3 runtime remains single-car and Tier 4 runtime also remains single-car in the current demo.
+- Withdraw Tier 3+ claims from the public tracker until team radio, pits, and tire wear are re-confirmed in the runtime.
+- Keep the right-side network panel synced to the live NGE controller graph and treat a true specific-network selector as follow-up only if the soak proves it is necessary.
+- Do not advance Tier 4+ packets, closure claims, or Phase 7 work until the user explicitly confirms 2v2 behavior in runtime.
+
+Manual soak evidence note (2026-05-31): Browser soak remains single-car in runtime. Tier marker stays at Tier 2; 2v2 is not confirmed. Tier 3 still shows one live car, and Tier 4 also still shows one live car (no current pack expansion). Tier 3+ runtime claims remain withdrawn pending re-check of radio/pits/tire wear. Right-side network panel remains synced to the live NGE controller graph; specific-network selector stays follow-up-only unless soak evidence proves it necessary.
 
 #### Step 06 — Documentation deltas and known-limits refresh [PLANNED]
 
@@ -901,13 +905,10 @@ Plan-sync gate for this plan's current state and most recently closed frontier.
 
 ### Latest validation evidence
 
-- 2026-05-30: validation-MCP blocker was resolved by updating the Step 05 Jest command to an MCP-safe format without shell metacharacters (`--testPathPatterns=` repeated per boundary). Allowlisted focused regression then passed cleanly (`PASS 10/10 suites, 42/42 tests`).
-- 2026-05-30: Phase 6 Step 05 automation run stayed green after debt cleanup: `npm run quality:folder -- --folder=examples/racing_curriculum`, `npm run build:racing-curriculum`, `npm run test:silent` (`PASS 475/475 suites, 5178/5178 tests`), and plan-sync validation all passed.
-- 2026-05-30: racing-demo tech-debt cleanup pass completed before Phase 6 Step 05 execution: quality metrics stayed green (`npm run quality:folder -- --folder=examples/racing_curriculum`) and focused browser-entry/controller regression slice stayed green (`PASS 10/10 suites, 33/33 tests`).
-- 2026-05-30: plan-sync re-run after tier packetization updates passed cleanly — `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` returned `PASS plan sync: 0 errors, 0 warnings` (`ok: true`).
-- 2026-05-30: Phase 6 Step 04 completed by `04-implementing`; owner-local fixes landed in `examples/racing_curriculum/browser-entry/browser-entry.ts` and `examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier5.ts` plus aligned Tier 5 tests. The focused red-test command turned green (`PASS 4/4 suites, 20/20 tests`). Broader follow-up gates also passed in-session: `npm run quality:folder -- --folder=examples/racing_curriculum`, `npm run build:racing-curriculum`, and `npm run test:silent`.
-- 2026-05-30: Phase 6 Step 02 completed by `02-researching`; read-only boundary mapping confirmed deferred/future-facing UI surfaces, single-car-vs-six-car runtime parity gaps, promotion fallback-vs-plan fairness mismatch, and Tier 5+ risk seams (promotion continuity, stage narrative sync, six-car render parity, pit contention, radio visibility, Tier 6 cap ambiguity). Phase 6 Step 03 was advanced to [WIP] for red-test authoring, and plan-sync passed (`PASS 0 errors, 0 warnings`).
-- 2026-05-30: User-requested follow-up orchestration added `### Phase 6 — Post-Closure Follow-up: UI Completion + Tier 5+ Stability [WIP]` with bounded Steps 01-07, explicit non-goals, and a Tier 5+ regression matrix baseline. Plan handoff was updated to make Phase 6 Step 01 the active frontier, and plan-sync passed (`PASS 0 errors, 0 warnings`).
+- 2026-05-30: Workflow-update automation hook (`.github/hooks/workflow-update-sync.mjs`) landed and was verified idempotent across repeated runs.
+- 2026-05-30: Phase 6 Steps 01-04 were completed with bounded `examples/racing_curriculum/` fixes and focused red→green evidence (`PASS 4/4 suites, 20/20 tests`).
+- 2026-05-30: Step 05 validation command set was made MCP-safe (`--testPathPatterns=` repeated per boundary), and the focused regression slice passed (`PASS 10/10 suites, 42/42 tests`).
+- 2026-05-30: Plan-sync checks repeatedly passed (`PASS plan sync: 0 errors, 0 warnings`), while Step 05 remains the active `[WIP]` rollback frontier pending user-confirmed 2v2 unlock conditions.
 - Historical closure tail (Phases 1-5, detailed step logs, and prior validation granularity) intentionally compressed in this tracker. Durable outcomes remain captured in the completed-phase summaries above and the current Phase 6 handoff below.
 
 ## Handoff query
@@ -915,36 +916,32 @@ Plan-sync gate for this plan's current state and most recently closed frontier.
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
 
-Plan status: Phase 6 follow-up is [WIP] (UI completion + Tier 5+ stability)
+Plan status: Phase 6 follow-up is [WIP] (Tier 2 rollback validation)
 
-Phases 1–5 are complete; Phase 6 is the active follow-up frontier. Keep work bounded to `examples/racing_curriculum/` unless a proven blocker requires escalation.
+The active frontier is the single-car Tier 2 rollback. Keep work bounded to `examples/racing_curriculum/` unless a proven blocker requires escalation.
 
 What was built:
 - Phase 1: Planning and design (Tier 0–6 architecture)
 - Phase 2: Tier 0 Visual Driving Harness (solo car, canvas renderer, baseline controller, procedural track)
-- Phase 3: Tier 3 2v2 Roles (two-population NEAT harness, team radio, role differentiation seam, `nge-collective`)
-- Phase 4: Tier 4 Tires + Pits (tire degradation, pit stops, pit-entrance blocking, 95-channel Tier 4 observation)
-- Phase 5: Tier 5 six-car simulation (3v3 pack, 42-float radio field, byte-stable 95-channel observation, first-car-wins 3-teammate pit)
+- Tier 3+ claims are withdrawn until the current one-car browser runtime is revalidated and the user confirms 2v2.
 
 Active follow-up targets (Phase 6):
-- Replace remaining deferred/placeholder UI surfaces.
-- Render the right-side NGE network panel with the live deterministic controller graph so the browser host no longer shows an empty network slot.
-- Keep the network panel honest about what it is inspecting today: one focused NGE controller, with a future-specific-network picker captured only if this pass reveals a real need for it.
-- Execute Tier 5+ validation matrix (automated + manual).
-- Run promotion + stage-text regression soak under repeated progression.
-- Keep panel-readiness language honest (no overclaiming unfinished runtime surfaces).
+- Reconfirm the single-car Tier 2 baseline and keep the browser/runtime copy honest.
+- Withdraw Tier 3+ completion claims until 2v2, radio, pits, and tire wear are revalidated in the runtime.
+- Keep the right-side NGE network panel synced to the live controller graph now; evaluate a specific-network selector only as follow-up if soak evidence proves it is needed.
+- Run the Tier 2 rollback validation and regression soak.
 
 Remaining upstream prerequisites (not in scope of this plan):
 - Full polyandric reproduction loop: `src/neat.ts` must expose Phase E reproduction surface
 - `modeIsEvolvable` strategy switching: requires `src/neat/nge-collective/` wiring
 - Tier 6 hall-of-fame opponent evaluation: blocked on both above
 
-Current entry step: Phase 6 Step 05 [WIP] (green validation and regression soak) following completed Step 04 implementation.
+Current entry step: Phase 6 Step 05 [WIP] (Tier 2 rollback validation and regression soak) following the corrected baseline pass.
 
 Sequenced next steps after Step 05:
 - Phase 6 Step 06 (docs refresh) — start only after explicit manual confirmation on Step 05 evidence.
 - Phase 6 Step 07 (logging/compression + closure decision) — start only after explicit manual confirmation on Step 06.
-- Phase 7 Step 01 (Tier 6 blocked-state governance) — opens only after Phase 6 closure decision is recorded.
+- Tier 4+ work and Phase 7 Step 01 stay blocked until the user explicitly confirms Tier 3 2v2 behavior in runtime.
 
 Closure rule: do not archive this plan until Phase 6 validation matrix and browser soak pass with explicit evidence.
 ```

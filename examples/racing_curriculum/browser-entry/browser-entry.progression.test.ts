@@ -1,4 +1,5 @@
 import {
+  createCurriculumEpisodeState,
   resolveTierPromotionFromLapCount,
   runDeterministicControllerProbe,
 } from './browser-entry';
@@ -44,6 +45,26 @@ describe('racing curriculum steering and tier progression', () => {
       const promotionResult = resolveTierPromotionFromLapCount(5, 3);
 
       expect(promotionResult.didAdvance).toBe(false);
+    });
+  });
+
+  describe('createCurriculumEpisodeState', () => {
+    it('expands Tier 4 to the four-car grid on the large track bucket', () => {
+      const episodeState = createCurriculumEpisodeState(4);
+
+      expect({
+        carCount: episodeState.envState.cars?.length ?? 0,
+        sizeBucket: episodeState.trackSpec.sizeBucket,
+      }).toEqual({
+        carCount: 4,
+        sizeBucket: 'large',
+      });
+    });
+
+    it('expands Tier 5 to the six-car grid for the future co-evolution pack', () => {
+      const episodeState = createCurriculumEpisodeState(5);
+
+      expect(episodeState.envState.cars?.length ?? 0).toBe(6);
     });
   });
 });

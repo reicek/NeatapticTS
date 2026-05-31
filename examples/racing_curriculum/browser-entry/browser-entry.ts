@@ -13,7 +13,11 @@ import {
   createNgeController,
   resolveGuidanceAlphaForTier,
 } from '../controller/nge.controller';
-import type { EnvironmentState } from '../environment/environment.types';
+import type {
+  EnvironmentState,
+  RacingCarState,
+  TireStateTuple,
+} from '../environment/environment.types';
 import { exportVisualizationGraph } from '../../../src/architecture/network';
 import {
   FLAPPY_MONOSPACE_FONT_FAMILY,
@@ -45,11 +49,12 @@ const MAX_CATCHUP_STEPS_PER_FRAME = 4;
 
 /** Max device-pixel ratio used for the baseline canvas backbuffer. */
 const MAX_CANVAS_DEVICE_PIXEL_RATIO = 2;
+/** Refresh cadence for the focused network canvas in milliseconds. */
+const FOCUSED_NETWORK_REFRESH_INTERVAL_MS = 5000;
 
-/** Track determinism key: seed 42, layout v1, medium size. */
+/** Track determinism key: seed 42, layout v1. */
 const DEMO_TRACK_SEED = 42;
 const DEMO_TRACK_LAYOUT_VERSION = 1;
-const DEMO_TRACK_SIZE_BUCKET = 'medium';
 /** Active browser harness tier for the Step 04 NGE controller integration. */
 const ACTIVE_CURRICULUM_TIER = 1;
 /** Small hidden layer used to pin a deterministic solo driving policy. */
@@ -77,6 +82,10 @@ const OBSERVATION_INDEX_LOOK_AHEAD_NEAR_SIN_TANGENT = 32;
 
 /** Full-health tire tuple used by the solo Tier 1 harness stability guard. */
 const FULL_HEALTH_TIRE_STATE = [1, 1, 1, 1] as const;
+/** Tier 4 packs use a four-car 2v2 grid. */
+const TIER_FOUR_TEAM_LAYOUT = [0, 0, 1, 1] as const;
+/** Tier 5+ packs use a six-car 3v3 grid. */
+const TIER_FIVE_TEAM_LAYOUT = [0, 0, 0, 1, 1, 1] as const;
 
 // ── Panel text labels ─────────────────────────────────────────────────────────
 
@@ -160,6 +169,12 @@ type CurriculumTier = 1 | 2 | 3 | 4 | 5 | 6;
 /** Observation tier currently supported by the owner-local controller seam. */
 type SupportedObservationTier = 1 | 2 | 3 | 4 | 5;
 
+/** Team index for the browser-local race pack grid. */
+type CurriculumTeamIndex = 0 | 1;
+
+/** Track bucket used by the tier-aware browser track generator. */
+type TrackSizeBucket = 'small' | 'medium' | 'large';
+
 type LapProgressState = {
   lastClosestSplineSampleIndex: number;
   completedLaps: number;
@@ -168,6 +183,11 @@ type LapProgressState = {
 type CurriculumProgressState = {
   tier: CurriculumTier;
   lapProgress: LapProgressState;
+};
+
+type CurriculumEpisodeState = {
+  trackSpec: TrackSpec;
+  envState: EnvironmentState;
 };
 
 /**
@@ -217,15 +237,12 @@ export async function start(
     ACTIVE_CURRICULUM_TIER,
   );
 
-  // Step 2: Generate deterministic track.
-  const trackSpec = generateTrack({
-    seed: DEMO_TRACK_SEED,
-    layoutVersion: DEMO_TRACK_LAYOUT_VERSION,
-    sizeBucket: DEMO_TRACK_SIZE_BUCKET,
-  });
+  // Step 2: Generate the tier-aware track and matching starting grid.
+  let episodeState = createCurriculumEpisodeState(ACTIVE_CURRICULUM_TIER);
+  let trackSpec = episodeState.trackSpec;
 
-  // Step 3: Initialise car on the sampled spline lane center and tangent.
-  let envState = createInitialEnvironmentState(trackSpec);
+  // Step 3: Initialise the packed race state on the sampled spline lane center.
+  let envState = episodeState.envState;
 
   // Step 4: Initialise the deterministic NGE controller and render state.
   let curriculumProgress = createInitialCurriculumProgress(trackSpec, envState);
@@ -284,7 +301,7 @@ export async function start(
         envState,
         lastControlOutput,
       );
-      envState = stabilizeSoloTierTireGrip(
+      envState = stabilizeCurriculumTierTireGrip(
         steppedEnvironmentState,
         curriculumProgress.tier,
       );
@@ -305,14 +322,12 @@ export async function start(
           tier: nextObservationTier,
         });
         networkPanelNodes.renderFocusedNetwork(controllerNetwork);
-        // Step 2: Reset race-local state while carrying the controller policy forward.
-        const resetStabilizationTier =
-          previousCurriculumTier === 3 && curriculumProgress.tier === 4
-            ? previousCurriculumTier
-            : curriculumProgress.tier;
-        envState = stabilizeSoloTierTireGrip(
-          createInitialEnvironmentState(trackSpec),
-          resetStabilizationTier,
+        // Step 2: Rebuild the track and race-local state for the promoted tier.
+        episodeState = createCurriculumEpisodeState(curriculumProgress.tier);
+        trackSpec = episodeState.trackSpec;
+        envState = stabilizeCurriculumTierTireGrip(
+          episodeState.envState,
+          curriculumProgress.tier,
         );
         // Step 3: Refresh control output at the promoted tier/start-state seam.
         lastControlOutput = controller.computeControl(envState, trackSpec);
@@ -368,6 +383,13 @@ export async function start(
 
   hostHandle.rootElement.dataset.running = 'true';
   animationFrameId = requestAnimationFrame(animationStep);
+  const focusedNetworkRefreshIntervalId = window.setInterval(() => {
+    if (!running) {
+      return;
+    }
+
+    networkPanelNodes.renderFocusedNetwork(controllerNetwork);
+  }, FOCUSED_NETWORK_REFRESH_INTERVAL_MS);
 
   const handle: RacingCurriculumRunHandle = {
     done: Promise.resolve(),
@@ -376,6 +398,7 @@ export async function start(
       if (!running) return;
       running = false;
       window.removeEventListener('resize', handleViewportResize);
+      window.clearInterval(focusedNetworkRefreshIntervalId);
       cancelAnimationFrame(animationFrameId);
       hostHandle.rootElement.dataset.running = 'false';
     },
@@ -1490,17 +1513,14 @@ export function runDeterministicControllerProbe(
   nonTrivialSteerSamples: number;
   headingDeltaRadians: number;
 } {
-  const trackSpec = generateTrack({
-    seed: DEMO_TRACK_SEED,
-    layoutVersion: DEMO_TRACK_LAYOUT_VERSION,
-    sizeBucket: DEMO_TRACK_SIZE_BUCKET,
-  });
+  const episodeState = createCurriculumEpisodeState(tier);
+  const trackSpec = episodeState.trackSpec;
   const observationTier = resolveObservationTierForCurriculumTier(tier);
   const controller = createNgeController(
     createDeterministicRacingControllerNetwork(observationTier),
     { tier: observationTier },
   );
-  let envState = createInitialEnvironmentState(trackSpec);
+  let envState = episodeState.envState;
   const initialHeading = envState.carHeading;
   const steerSamples: number[] = [];
 
@@ -1508,7 +1528,7 @@ export function runDeterministicControllerProbe(
     const controlOutput = controller.computeControl(envState, trackSpec);
     steerSamples.push(controlOutput.steer);
     const steppedEnvironmentState = stepEnvironment(envState, controlOutput);
-    envState = stabilizeSoloTierTireGrip(steppedEnvironmentState, tier);
+    envState = stabilizeCurriculumTierTireGrip(steppedEnvironmentState, tier);
   }
 
   const meanAbsoluteSteer =
@@ -1528,7 +1548,17 @@ export function runDeterministicControllerProbe(
   };
 }
 
-function createInitialEnvironmentState(trackSpec: TrackSpec): EnvironmentState {
+/**
+ * Creates the tier-aware starting environment state for the browser shell.
+ *
+ * @param trackSpec - Frozen track specification for the current tier.
+ * @param curriculumTier - Active curriculum tier.
+ * @returns Environment state seeded with the tier-appropriate packed roster.
+ */
+export function createCurriculumEnvironmentState(
+  trackSpec: TrackSpec,
+  curriculumTier: CurriculumTier,
+): EnvironmentState {
   const firstSegment = trackSpec.segments[0];
   const firstSplineSample = trackSpec.splineSamples[0];
   const initialHeading = firstSplineSample
@@ -1540,13 +1570,142 @@ function createInitialEnvironmentState(trackSpec: TrackSpec): EnvironmentState {
         firstSegment.endY - firstSegment.startY,
         firstSegment.endX - firstSegment.startX,
       );
+  const startingCars = resolveCurriculumRacePackCars(
+    trackSpec,
+    curriculumTier,
+    initialHeading,
+  );
+  const primaryCar = startingCars[0];
 
   return {
     tick: 0,
-    carX: firstSplineSample?.x ?? firstSegment.startX,
-    carY: firstSplineSample?.y ?? firstSegment.startY,
-    carHeading: initialHeading,
+    carX: primaryCar?.carX ?? firstSplineSample?.x ?? firstSegment.startX,
+    carY: primaryCar?.carY ?? firstSplineSample?.y ?? firstSegment.startY,
+    carHeading: primaryCar?.carHeading ?? initialHeading,
+    teamIndex: primaryCar?.teamIndex ?? 0,
+    tireState:
+      primaryCar?.tireState ?? ([...FULL_HEALTH_TIRE_STATE] as TireStateTuple),
+    cars: startingCars,
+    trackSpec,
   };
+}
+
+/**
+ * Creates the tier-aware track and environment state used by the browser shell.
+ *
+ * @param curriculumTier - Active curriculum tier.
+ * @returns Frozen track spec plus the matching environment roster for that tier.
+ */
+export function createCurriculumEpisodeState(
+  curriculumTier: CurriculumTier,
+): CurriculumEpisodeState {
+  const trackSpec = generateTrack({
+    seed: DEMO_TRACK_SEED,
+    layoutVersion: DEMO_TRACK_LAYOUT_VERSION,
+    sizeBucket: resolveTrackSizeBucketForCurriculumTier(curriculumTier),
+  });
+
+  return {
+    trackSpec,
+    envState: createCurriculumEnvironmentState(trackSpec, curriculumTier),
+  };
+}
+
+/**
+ * Resolves the course width bucket for a curriculum tier.
+ *
+ * Tier 4 and above use the large course so the multi-agent pack has enough
+ * lateral room to read clearly in the browser demo.
+ *
+ * @param curriculumTier - Active curriculum tier.
+ * @returns Track size bucket for the tier.
+ */
+export function resolveTrackSizeBucketForCurriculumTier(
+  curriculumTier: CurriculumTier,
+): TrackSizeBucket {
+  if (curriculumTier >= 4) {
+    return 'large';
+  }
+
+  return 'medium';
+}
+
+/**
+ * Resolves the canonical packed roster layout for the active curriculum tier.
+ *
+ * @param curriculumTier - Active curriculum tier.
+ * @returns Ordered team indices for the tier-specific race pack.
+ */
+function resolveCurriculumRacePackLayout(
+  curriculumTier: CurriculumTier,
+): readonly CurriculumTeamIndex[] {
+  if (curriculumTier >= 5) {
+    return TIER_FIVE_TEAM_LAYOUT;
+  }
+
+  if (curriculumTier >= 4) {
+    return TIER_FOUR_TEAM_LAYOUT;
+  }
+
+  return [0];
+}
+
+/**
+ * Resolves the tier-specific race-pack cars on the sampled lane center.
+ *
+ * @param trackSpec - Frozen track specification for the current tier.
+ * @param curriculumTier - Active curriculum tier.
+ * @param initialHeading - Heading resolved from the sampled track frame.
+ * @returns Ordered roster seeded from the starting grid.
+ */
+function resolveCurriculumRacePackCars(
+  trackSpec: TrackSpec,
+  curriculumTier: CurriculumTier,
+  initialHeading: number,
+): readonly RacingCarState[] {
+  const firstSplineSample = trackSpec.splineSamples[0];
+  const sampledFrame = firstSplineSample
+    ? resolveSplineSampleFrame(
+        trackSpec.splineSamples,
+        firstSplineSample.globalIndex,
+      )
+    : {
+        tangentHeadingRadians: initialHeading,
+        normalX: 0,
+        normalY: 1,
+      };
+  const teamLayout = resolveCurriculumRacePackLayout(curriculumTier);
+  const trackWidth =
+    firstSplineSample?.width ?? trackSpec.segments[0]?.width ?? 24;
+  const laneOffsetWorldUnits = Math.max(3, trackWidth * 0.18);
+  const gridSpacingWorldUnits = Math.max(6, trackWidth * 0.5);
+  const teamSlotCounts: Record<CurriculumTeamIndex, number> = { 0: 0, 1: 0 };
+
+  return teamLayout.map((teamIndex) => {
+    const teamSlotIndex = teamSlotCounts[teamIndex];
+    teamSlotCounts[teamIndex] = teamSlotIndex + 1;
+    const longitudinalOffsetWorldUnits = -teamSlotIndex * gridSpacingWorldUnits;
+    const lateralOffsetWorldUnits =
+      teamIndex === 0 ? -laneOffsetWorldUnits : laneOffsetWorldUnits;
+    const startX = firstSplineSample?.x ?? trackSpec.segments[0]?.startX ?? 0;
+    const startY = firstSplineSample?.y ?? trackSpec.segments[0]?.startY ?? 0;
+
+    return {
+      carX:
+        startX +
+        Math.cos(sampledFrame.tangentHeadingRadians) *
+          longitudinalOffsetWorldUnits +
+        sampledFrame.normalX * lateralOffsetWorldUnits,
+      carY:
+        startY +
+        Math.sin(sampledFrame.tangentHeadingRadians) *
+          longitudinalOffsetWorldUnits +
+        sampledFrame.normalY * lateralOffsetWorldUnits,
+      carHeading: sampledFrame.tangentHeadingRadians,
+      teamIndex,
+      tireState: [...FULL_HEALTH_TIRE_STATE],
+    } satisfies RacingCarState;
+  });
 }
 
 /**
@@ -1557,7 +1716,7 @@ function createInitialEnvironmentState(trackSpec: TrackSpec): EnvironmentState {
  * @param curriculumTier - Active curriculum tier.
  * @returns Environment state with early-tier tire grip stabilization applied.
  */
-function stabilizeSoloTierTireGrip(
+function stabilizeCurriculumTierTireGrip(
   envState: EnvironmentState,
   curriculumTier: CurriculumTier,
 ): EnvironmentState {
@@ -1572,16 +1731,15 @@ function stabilizeSoloTierTireGrip(
     };
   }
 
-  const primaryCar = envState.cars[0];
-  const stabilizedPrimaryCar = {
-    ...primaryCar,
+  const stabilizedCars = envState.cars.map((car) => ({
+    ...car,
     tireState: [...FULL_HEALTH_TIRE_STATE],
-  };
+  }));
 
   return {
     ...envState,
     tireState: [...FULL_HEALTH_TIRE_STATE],
-    cars: [stabilizedPrimaryCar, ...envState.cars.slice(1)],
+    cars: stabilizedCars,
   };
 }
 

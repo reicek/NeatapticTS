@@ -219,9 +219,9 @@ function resolveSelfMonitoringPayload(
     envState.speedWorld ?? Math.hypot(forwardSpeedWorld, lateralSpeedWorld);
 
   return Float32Array.from([
-    clampControlValue(forwardSpeedWorld / 36),
-    clampControlValue(lateralSpeedWorld / 18),
-    clampControlValue(speedWorld / 36),
+    clampControlValue(forwardSpeedWorld / 108),
+    clampControlValue(lateralSpeedWorld / 54),
+    clampControlValue(speedWorld / 108),
     clampControlValue((envState.yawRateRadiansPerSecond ?? 0) / 1),
     clampControlValue((envState.slipAngleRadians ?? 0) / (Math.PI / 2)),
     clampControlValue((envState.progress01 ?? 0) * 2 - 1),
