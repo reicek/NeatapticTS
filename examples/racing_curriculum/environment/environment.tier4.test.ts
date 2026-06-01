@@ -17,7 +17,7 @@ type PitBoxSpec = {
   entranceCorridor: PitCorridorAabb;
 };
 type Tier4TrackSpec = TrackSpec & {
-  pitBoxes: readonly [PitBoxSpec, PitBoxSpec];
+  pitBoxes: readonly PitBoxSpec[];
 };
 type Tier4CarState = {
   carX: number;
@@ -29,7 +29,7 @@ type Tier4CarState = {
 type Tier4EnvironmentState = {
   tick: number;
   cars: readonly Tier4CarState[];
-  pitStatus: readonly [PitStatusRecord, PitStatusRecord];
+  pitStatus: readonly PitStatusRecord[];
   trackSpec: Tier4TrackSpec;
 };
 type CarControlOutput = {
@@ -149,6 +149,10 @@ describe('environment Tier 4 tire and pit seam', () => {
       ).resolves.toEqual([
         { occupyingCarIndex: 255, remainingStopTicks: 0 },
         { occupyingCarIndex: 255, remainingStopTicks: 0 },
+        { occupyingCarIndex: 255, remainingStopTicks: 0 },
+        { occupyingCarIndex: 255, remainingStopTicks: 0 },
+        { occupyingCarIndex: 255, remainingStopTicks: 0 },
+        { occupyingCarIndex: 255, remainingStopTicks: 0 },
       ]);
     });
 
@@ -197,6 +201,10 @@ describe('environment Tier 4 tire and pit seam', () => {
         ],
         pitStatus: [
           { occupyingCarIndex: 0, remainingStopTicks: 1 },
+          { occupyingCarIndex: 255, remainingStopTicks: 0 },
+          { occupyingCarIndex: 255, remainingStopTicks: 0 },
+          { occupyingCarIndex: 255, remainingStopTicks: 0 },
+          { occupyingCarIndex: 255, remainingStopTicks: 0 },
           { occupyingCarIndex: 255, remainingStopTicks: 0 },
         ],
       });
@@ -250,6 +258,30 @@ describe('environment Tier 4 tire and pit seam', () => {
         }),
       ).resolves.toBe(true);
     });
+
+    it('does not allow a car to enter an opposing team pit corridor', async () => {
+      // Arrange
+      const tier4EnvironmentState = createTier4EnvironmentState({
+        cars: [
+          createTier4CarState({ carX: 106, carY: 108, teamIndex: 0 }),
+          createTier4CarState({ carX: 40, carY: 40, teamIndex: 0 }),
+          createTier4CarState({ carX: 120, carY: 120, teamIndex: 1 }),
+          createTier4CarState({ carX: 160, carY: 160, teamIndex: 1 }),
+        ],
+      });
+
+      // Act + Assert
+      await expect(
+        loadTier4EnvironmentModule().then(({ stepEnvironment }) => {
+          const nextState = stepEnvironment(
+            tier4EnvironmentState,
+            createNeutralControlOutputs(),
+          );
+
+          return nextState.pitStatus[0].occupyingCarIndex;
+        }),
+      ).resolves.toBe(255);
+    });
   });
 });
 
@@ -264,10 +296,7 @@ function createTier4EnvironmentState(
       createTier4CarState({ teamIndex: 1, carX: 120, carY: 120 }),
       createTier4CarState({ teamIndex: 1, carX: 160, carY: 160 }),
     ],
-    pitStatus: [
-      { occupyingCarIndex: 255, remainingStopTicks: 0 },
-      { occupyingCarIndex: 255, remainingStopTicks: 0 },
-    ],
+    pitStatus: createEmptyPitStatus(),
     trackSpec: createTier4TrackSpec(),
   };
 
@@ -278,6 +307,13 @@ function createTier4EnvironmentState(
     pitStatus: overrides.pitStatus ?? defaultState.pitStatus,
     trackSpec: overrides.trackSpec ?? defaultState.trackSpec,
   };
+}
+
+function createEmptyPitStatus(): readonly PitStatusRecord[] {
+  return Array.from({ length: 6 }, () => ({
+    occupyingCarIndex: 255,
+    remainingStopTicks: 0,
+  }));
 }
 
 function createTier4CarState(
@@ -307,9 +343,29 @@ function createTier4TrackSpec(): Tier4TrackSpec {
         entranceCorridor: { x: 6, y: 8, width: 12, height: 12 },
       },
       {
+        teamIndex: 0,
+        pitBox: { x: 30, y: 10, width: 8, height: 8 },
+        entranceCorridor: { x: 26, y: 8, width: 12, height: 12 },
+      },
+      {
+        teamIndex: 0,
+        pitBox: { x: 50, y: 10, width: 8, height: 8 },
+        entranceCorridor: { x: 46, y: 8, width: 12, height: 12 },
+      },
+      {
         teamIndex: 1,
         pitBox: { x: 110, y: 110, width: 8, height: 8 },
         entranceCorridor: { x: 106, y: 108, width: 12, height: 12 },
+      },
+      {
+        teamIndex: 1,
+        pitBox: { x: 130, y: 110, width: 8, height: 8 },
+        entranceCorridor: { x: 126, y: 108, width: 12, height: 12 },
+      },
+      {
+        teamIndex: 1,
+        pitBox: { x: 150, y: 110, width: 8, height: 8 },
+        entranceCorridor: { x: 146, y: 108, width: 12, height: 12 },
       },
     ],
   };

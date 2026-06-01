@@ -54,10 +54,10 @@ export type TrackAabb = {
 /**
  * Per-team pit metadata frozen into the track specification.
  *
- * Tier 4 generates exactly one pit descriptor per team. `entranceCorridor` is
- * the axis-aligned world-space box used by the environment and validators to
- * decide whether a car has legally reached pit entry, while `pitBox` is the
- * off-line stall rectangle drawn by the renderer.
+ * Tier 4+ may generate multiple pit descriptors per team. `entranceCorridor`
+ * is the axis-aligned world-space box used by the environment and validators
+ * to decide whether a car has legally reached pit entry, while `pitBox` is
+ * the off-line stall rectangle drawn by the renderer.
  */
 export type TrackPitBox = {
   /** Team index owning this pit box (`0 = Team A`, `1 = Team B`). */
@@ -80,9 +80,9 @@ export type TrackPitBox = {
  *
  * A `TrackSpec` is frozen into the race pack at episode reset and never
  * regenerated during a live resize. The determinism key is
- * `seed + layoutVersion + sizeBucket`. Generated racing tracks may also carry a
- * fixed `[teamA, teamB]` `pitBoxes` tuple so every team gets exactly one pit
- * entrance corridor and one rendered stall.
+ * `seed + layoutVersion + sizeBucket + viewport`. Generated racing tracks may
+ * also carry a deterministic `pitBoxes` list so each team gets dedicated
+ * pit entrance corridors and rendered stalls.
  */
 export type TrackSpec = {
   /** Seed used to drive the PRNG during generation. */
@@ -95,15 +95,15 @@ export type TrackSpec = {
   readonly segments: readonly TrackSegment[];
   /** Shared sampled lane-center geometry used by the renderer and controllers. */
   readonly splineSamples: readonly SplineSample[];
-  /** Optional `[Team A, Team B]` pit-box tuple. Present on generated racing tracks. */
-  readonly pitBoxes?: readonly [TrackPitBox, TrackPitBox];
+  /** Optional pit-box list. Present on generated racing tracks. */
+  readonly pitBoxes?: readonly TrackPitBox[];
 };
 
 /**
  * Inputs consumed by the deterministic track generator.
  *
- * Together they form the determinism key: same values always produce the same
- * `TrackSpec`.
+ * Together they form the determinism key: the same values always produce the
+ * same `TrackSpec`.
  */
 export type TrackGeneratorInput = {
   /** PRNG seed — determines the geometry of the generated layout. */
@@ -112,4 +112,30 @@ export type TrackGeneratorInput = {
   layoutVersion: number;
   /** Coarse canvas size bucket — determines the target world extent. */
   sizeBucket: string;
+  /**
+   * Optional viewport used to adapt the generated loop shape to the available
+   * drawing area.
+   */
+  viewport?: TrackGenerationViewport;
+};
+
+/**
+ * Optional viewport guidance for shape-aware track generation.
+ *
+ * The generator uses this to choose whether the loop should be closer to a
+ * circle, a horizontal oval, or a vertical oval while preserving rounded
+ * segment geometry.
+ */
+export type TrackGenerationViewport = {
+  /** Available canvas or container width in CSS pixels. */
+  width: number;
+  /** Available canvas or container height in CSS pixels. */
+  height: number;
+  /**
+   * Fractional edge padding reserved on each side before computing aspect.
+   *
+   * Example: `0.08` means 8% padding on the left and right, and 8% on the top
+   * and bottom.
+   */
+  edgePaddingRatio?: number;
 };

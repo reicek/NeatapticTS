@@ -34,7 +34,7 @@ export function createRacingHost(
   const visualizerRegionElement = document.createElement('div');
   visualizerRegionElement.className =
     'racing-host__region racing-host__region--visualizer';
-  visualizerRegionElement.dataset.racingRegion = 'visualizer-last';
+  visualizerRegionElement.dataset.racingRegion = 'visualizer-bottom';
 
   const canvasElement = document.createElement('canvas');
   canvasElement.width = 960;
@@ -46,13 +46,8 @@ export function createRacingHost(
   networkPlaceholderElement.textContent = 'Network view panel';
   networkPlaceholderElement.className = 'racing-host__placeholder';
 
-  const visualizerPlaceholderElement = document.createElement('div');
-  visualizerPlaceholderElement.textContent = 'Visualizer panel';
-  visualizerPlaceholderElement.className = 'racing-host__placeholder';
-
   canvasRegionElement.append(canvasElement);
   networkRegionElement.append(networkPlaceholderElement);
-  visualizerRegionElement.append(visualizerPlaceholderElement);
   rootElement.append(
     canvasRegionElement,
     networkRegionElement,

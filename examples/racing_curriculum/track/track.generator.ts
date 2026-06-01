@@ -30,8 +30,17 @@ const TRACK_VERTEX_VARIATION_COUNT = 3;
 const TRACK_RADIUS_VARIATION_RATIO = 0.18;
 const TRACK_WIDTH_VARIATION_RATIO = 0.1;
 const TRACK_GEOMETRY_PRECISION_FACTOR = 1_000;
-const TEAM_A_PROGRESS = 0.25;
-const TEAM_B_PROGRESS = 0.75;
+const DEFAULT_TRACK_VIEWPORT_EDGE_PADDING_RATIO = 0.08;
+const MIN_TRACK_VIEWPORT_EDGE_PADDING_RATIO = 0;
+const MAX_TRACK_VIEWPORT_EDGE_PADDING_RATIO = 0.3;
+const ALTERNATING_PIT_PROGRESS_SAMPLES = [
+  0.083333,
+  0.25,
+  0.416667,
+  0.583333,
+  0.75,
+  0.916667,
+] as const;
 const PIT_BOX_WIDTH = 18;
 const PIT_BOX_HEIGHT = 12;
 const PIT_CORRIDOR_WIDTH = 12;
@@ -44,11 +53,11 @@ const PIT_CORRIDOR_CENTERLINE_OFFSET_MULTIPLIER = 0.5;
  * Generates a deterministic closed-loop `TrackSpec` from the given seed,
  * layout version, and size bucket.
  *
- * The same `(seed, layoutVersion, sizeBucket)` tuple always produces the same
- * `TrackSpec`. The spec is frozen into the race pack at episode reset; no
- * regeneration occurs during a live viewport resize. Tier 4 also derives one
- * pit box per team at stable lap-progress anchors, with an on-ribbon
- * entrance-corridor AABB and an off-line rendered stall rectangle.
+ * The same `(seed, layoutVersion, sizeBucket, viewport)` tuple always produces
+ * the same `TrackSpec`. The spec is frozen into the race pack at episode reset;
+ * no regeneration occurs during a live viewport resize. Tier 4+ also derives
+ * three pit boxes per team (six total) at stable lap-progress anchors, with
+ * on-ribbon entrance-corridor AABBs and off-line rendered stall rectangles.
  *
  * @param input - Determinism key for the generation algorithm.
  * @returns A frozen `TrackSpec` whose segments form a valid closed loop.
@@ -57,7 +66,7 @@ const PIT_CORRIDOR_CENTERLINE_OFFSET_MULTIPLIER = 0.5;
  * ```ts
  * const spec = generateTrack({ seed: 42, layoutVersion: 1, sizeBucket: 'medium' });
  * spec.segments; // ordered closed-loop centerline segments
- * spec.pitBoxes?.length; // 2
+ * spec.pitBoxes?.length; // 6
  * ```
  */
 export function generateTrack(input: TrackGeneratorInput): TrackSpec {
@@ -67,6 +76,7 @@ export function generateTrack(input: TrackGeneratorInput): TrackSpec {
     TRACK_BUCKET_RADIUS_BY_SIZE[input.sizeBucket] ?? DEFAULT_TRACK_RADIUS;
   const baseWidth =
     TRACK_BUCKET_WIDTH_BY_SIZE[input.sizeBucket] ?? DEFAULT_TRACK_WIDTH;
+  const radiusProfile = resolveTrackRadiusProfile(input, baseRadius, baseWidth);
   const vertexCount =
     TRACK_MIN_VERTEX_COUNT +
     Math.floor(random() * TRACK_VERTEX_VARIATION_COUNT);
@@ -81,8 +91,8 @@ export function generateTrack(input: TrackGeneratorInput): TrackSpec {
     const radius = baseRadius * radiusMultiplier;
 
     return {
-      x: roundTrackGeometry(Math.cos(angleRadians) * radius),
-      y: roundTrackGeometry(Math.sin(angleRadians) * radius),
+      x: roundTrackGeometry(Math.cos(angleRadians) * radius * radiusProfile.x),
+      y: roundTrackGeometry(Math.sin(angleRadians) * radius * radiusProfile.y),
     };
   });
   const segments = vertices.map((startVertex, segmentIndex) => {
@@ -197,21 +207,25 @@ function createDeterministicRandom(initialSeed: number): () => number {
 }
 
 /**
- * Builds the deterministic Team A / Team B pit metadata from spline progress.
+ * Builds deterministic alternating-team pit metadata from spline progress.
  *
  * @param splineSamples - Shared lane-center samples for the generated track.
- * @returns Two frozen pit-box descriptors placed at ~25% and ~75% lap progress.
+ * @returns Six frozen pit-box descriptors in `[0, 1, 0, 1, 0, 1]` ownership order.
  */
 function buildPitBoxes(
   splineSamples: readonly SplineSample[],
-): readonly [TrackPitBox, TrackPitBox] {
-  const teamAAnchor = resolvePitAnchorSample(splineSamples, TEAM_A_PROGRESS);
-  const teamBAnchor = resolvePitAnchorSample(splineSamples, TEAM_B_PROGRESS);
+): readonly TrackPitBox[] {
+  return ALTERNATING_PIT_PROGRESS_SAMPLES.map((pitProgress, pitIndex) => {
+    const teamIndex = (pitIndex % 2) as 0 | 1;
+    const normalDirection = teamIndex === 0 ? 1 : -1;
 
-  return [
-    buildPitBoxForTeam(0, teamAAnchor, splineSamples, 1),
-    buildPitBoxForTeam(1, teamBAnchor, splineSamples, -1),
-  ];
+    return buildPitBoxForTeam(
+      teamIndex,
+      resolvePitAnchorSample(splineSamples, pitProgress),
+      splineSamples,
+      normalDirection,
+    );
+  });
 }
 
 /**
@@ -354,6 +368,69 @@ function createAxisAlignedBox(
 }
 
 /**
+ * Resolves radius scale factors that adapt the loop to viewport aspect ratio.
+ *
+ * The profile scales each axis from the available viewport half-size after
+ * edge padding and lane-width safety margins are reserved, so generated loops
+ * fill the visible area while preserving rounded circle/oval geometry.
+ *
+ * @param input - Generator input possibly carrying viewport metadata.
+ * @param baseRadius - Size-bucket baseline radius before viewport scaling.
+ * @param baseWidth - Size-bucket baseline lane width before viewport scaling.
+ * @returns Radius multipliers for X and Y axes.
+ */
+function resolveTrackRadiusProfile(
+  input: TrackGeneratorInput,
+  baseRadius: number,
+  baseWidth: number,
+): { readonly x: number; readonly y: number } {
+  const viewport = input.viewport;
+  if (
+    viewport === undefined ||
+    !Number.isFinite(viewport.width) ||
+    !Number.isFinite(viewport.height) ||
+    viewport.width <= 0 ||
+    viewport.height <= 0
+  ) {
+    return { x: 1, y: 1 };
+  }
+
+  const safeEdgePaddingRatio = clampNumber(
+    viewport.edgePaddingRatio ?? DEFAULT_TRACK_VIEWPORT_EDGE_PADDING_RATIO,
+    MIN_TRACK_VIEWPORT_EDGE_PADDING_RATIO,
+    MAX_TRACK_VIEWPORT_EDGE_PADDING_RATIO,
+  );
+  const usableWidth = Math.max(
+    1,
+    viewport.width * (1 - safeEdgePaddingRatio * 2),
+  );
+  const usableHeight = Math.max(
+    1,
+    viewport.height * (1 - safeEdgePaddingRatio * 2),
+  );
+  const maxRadiusMultiplier = 1 + TRACK_RADIUS_VARIATION_RATIO;
+  const maxWidthMultiplier = 1 + TRACK_WIDTH_VARIATION_RATIO;
+  const laneHalfWidth = (baseWidth * maxWidthMultiplier) / 2;
+  const availableRadiusX = Math.max(1, usableWidth / 2 - laneHalfWidth);
+  const availableRadiusY = Math.max(1, usableHeight / 2 - laneHalfWidth);
+  const horizontalScale = clampNumber(
+    availableRadiusX / (baseRadius * maxRadiusMultiplier),
+    0.1,
+    Number.POSITIVE_INFINITY,
+  );
+  const verticalScale = clampNumber(
+    availableRadiusY / (baseRadius * maxRadiusMultiplier),
+    0.1,
+    Number.POSITIVE_INFINITY,
+  );
+
+  return {
+    x: roundTrackGeometry(horizontalScale),
+    y: roundTrackGeometry(verticalScale),
+  };
+}
+
+/**
  * Rounds geometry values so serialized specs stay byte-stable.
  *
  * @param value - Floating-point geometry value.
@@ -364,4 +441,16 @@ function roundTrackGeometry(value: number): number {
     Math.round(value * TRACK_GEOMETRY_PRECISION_FACTOR) /
     TRACK_GEOMETRY_PRECISION_FACTOR
   );
+}
+
+/**
+ * Clamps a number to the closed range `[minValue, maxValue]`.
+ *
+ * @param value - Input value.
+ * @param minValue - Lower bound.
+ * @param maxValue - Upper bound.
+ * @returns Clamped value.
+ */
+function clampNumber(value: number, minValue: number, maxValue: number): number {
+  return Math.max(minValue, Math.min(maxValue, value));
 }

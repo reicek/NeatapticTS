@@ -94,6 +94,73 @@ describe('track.generator', () => {
         expect(hasSegments && allPositiveWidth).toBe(true);
       });
     });
+
+    describe('viewport-aware oval shaping', () => {
+      it('stretches horizontally for wide viewport inputs', () => {
+        // Arrange
+        const input = {
+          seed: 42,
+          layoutVersion: 1,
+          sizeBucket: 'medium',
+          viewport: { width: 1600, height: 900, edgePaddingRatio: 0.08 },
+        } as const;
+
+        // Act
+        const spec = generateTrack(input);
+        const bounds = resolveTrackBounds(spec);
+        const widthToHeightRatio =
+          (bounds.maxX - bounds.minX) / (bounds.maxY - bounds.minY);
+
+        // Assert
+        expect(widthToHeightRatio).toBeGreaterThan(1.15);
+      });
+
+      it('stretches vertically for tall viewport inputs', () => {
+        // Arrange
+        const input = {
+          seed: 42,
+          layoutVersion: 1,
+          sizeBucket: 'medium',
+          viewport: { width: 900, height: 1600, edgePaddingRatio: 0.08 },
+        } as const;
+
+        // Act
+        const spec = generateTrack(input);
+        const bounds = resolveTrackBounds(spec);
+        const heightToWidthRatio =
+          (bounds.maxY - bounds.minY) / (bounds.maxX - bounds.minX);
+
+        // Assert
+        expect(heightToWidthRatio).toBeGreaterThan(1.15);
+      });
+
+      it('shrinks track bounds as viewport edge padding increases', () => {
+        // Arrange
+        const lowPaddingInput = {
+          seed: 42,
+          layoutVersion: 1,
+          sizeBucket: 'medium',
+          viewport: { width: 1600, height: 900, edgePaddingRatio: 0.02 },
+        } as const;
+        const highPaddingInput = {
+          seed: 42,
+          layoutVersion: 1,
+          sizeBucket: 'medium',
+          viewport: { width: 1600, height: 900, edgePaddingRatio: 0.2 },
+        } as const;
+
+        // Act
+        const lowPaddingSpec = generateTrack(lowPaddingInput);
+        const highPaddingSpec = generateTrack(highPaddingInput);
+        const lowPaddingBounds = resolveTrackBounds(lowPaddingSpec);
+        const highPaddingBounds = resolveTrackBounds(highPaddingSpec);
+        const lowPaddingWidth = lowPaddingBounds.maxX - lowPaddingBounds.minX;
+        const highPaddingWidth = highPaddingBounds.maxX - highPaddingBounds.minX;
+
+        // Assert
+        expect(lowPaddingWidth > highPaddingWidth).toBe(true);
+      });
+    });
   });
 
   describe('freezeTrackSpec', () => {
@@ -119,6 +186,29 @@ describe('track.generator', () => {
       }).toThrow(TypeError);
     });
   });
+
+  function resolveTrackBounds(spec: { segments: readonly TrackSegment[] }): {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+  } {
+    const xCoordinates = spec.segments.flatMap((segment) => [
+      segment.startX,
+      segment.endX,
+    ]);
+    const yCoordinates = spec.segments.flatMap((segment) => [
+      segment.startY,
+      segment.endY,
+    ]);
+
+    return {
+      minX: Math.min(...xCoordinates),
+      maxX: Math.max(...xCoordinates),
+      minY: Math.min(...yCoordinates),
+      maxY: Math.max(...yCoordinates),
+    };
+  }
 
   describe('validateTrackSpec', () => {
     it('throws RangeError when validating a spec with zero segments', () => {

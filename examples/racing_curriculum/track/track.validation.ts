@@ -103,10 +103,10 @@ export function hasNoSelfIntersection(spec: TrackSpec): boolean {
 }
 
 /**
- * Validates that the two Tier 4 pit corridors do not overlap.
+ * Validates that generated pit corridors do not overlap.
  *
  * Pit entry uses each corridor's axis-aligned bounding box directly, so overlap
- * would make ownership ambiguous and would collapse the one-pit-per-team rule.
+ * would make ownership ambiguous and could invalidate multi-pit team layouts.
  *
  * @param spec - Track specification containing optional pit metadata.
  * @returns `true` when the pit-corridor layout is valid.

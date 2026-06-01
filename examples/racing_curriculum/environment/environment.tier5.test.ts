@@ -24,7 +24,7 @@ type PitBoxSpec = {
 };
 
 type Tier5TrackSpec = TrackSpec & {
-  pitBoxes: readonly [PitBoxSpec, PitBoxSpec];
+  pitBoxes: readonly PitBoxSpec[];
 };
 
 describe('environment Tier 5 six-car seam', () => {
@@ -65,7 +65,7 @@ describe('environment Tier 5 six-car seam', () => {
       expect(flattenedTireValues.length).toBe(24);
     });
 
-    it('keeps pitOccupancy at two slots while the runtime widens to six cars', () => {
+    it('keeps pitOccupancy at six slots while the runtime widens to six cars', () => {
       // Arrange
       const initialState = createInitialState();
       const tier5State = {
@@ -83,7 +83,7 @@ describe('environment Tier 5 six-car seam', () => {
       };
 
       // Assert
-      expect(tier5Summary).toEqual({ carCount: 6, pitSlotCount: 2 });
+      expect(tier5Summary).toEqual({ carCount: 6, pitSlotCount: 6 });
     });
 
     it('keeps first-car-wins pit entry when three Team A cars contest one pit slot', () => {
@@ -97,13 +97,49 @@ describe('environment Tier 5 six-car seam', () => {
       );
       const pitCompetitionSummary = {
         teamLayout: (nextState.cars ?? []).map((car) => car.teamIndex),
-        teamAPitCarIndex: nextState.pitStatus?.[0]?.occupyingCarIndex,
+        teamAOccupiedCarIndices: (nextState.pitStatus ?? [])
+          .slice(0, 3)
+          .map((pitSlot) => pitSlot.occupyingCarIndex)
+          .filter((carIndex) => carIndex !== 255)
+          .toSorted((leftCarIndex, rightCarIndex) => leftCarIndex - rightCarIndex),
       };
 
       // Assert
       expect(pitCompetitionSummary).toEqual({
         teamLayout: [0, 0, 0, 1, 1, 1],
-        teamAPitCarIndex: 0,
+        teamAOccupiedCarIndices: [0],
+      });
+    });
+
+    it('allows three simultaneous pit stops per team when each car reaches its own pit corridor', () => {
+      // Arrange
+      const fullOccupancyState = createFullPitOccupancyState();
+
+      // Act
+      const nextState = stepEnvironment(
+        fullOccupancyState,
+        createNeutralControlOutputs(6),
+      );
+      const pitSlots = nextState.pitStatus ?? [];
+      const fullOccupancySummary = {
+        teamAOccupiedCarIndices: pitSlots
+          .slice(0, 3)
+          .map((pitSlot) => pitSlot.occupyingCarIndex)
+          .toSorted((leftCarIndex, rightCarIndex) => leftCarIndex - rightCarIndex),
+        teamBOccupiedCarIndices: pitSlots
+          .slice(3, 6)
+          .map((pitSlot) => pitSlot.occupyingCarIndex)
+          .toSorted((leftCarIndex, rightCarIndex) => leftCarIndex - rightCarIndex),
+        allSlotsStartedCountdown: pitSlots.every(
+          (pitSlot) => pitSlot.remainingStopTicks > 0,
+        ),
+      };
+
+      // Assert
+      expect(fullOccupancySummary).toEqual({
+        teamAOccupiedCarIndices: [0, 1, 2],
+        teamBOccupiedCarIndices: [3, 4, 5],
+        allSlotsStartedCountdown: true,
       });
     });
   });
@@ -149,6 +185,33 @@ function createTeamPitCompetitionState(): EnvironmentState {
   };
 }
 
+function createFullPitOccupancyState(): EnvironmentState {
+  const initialState = createInitialState();
+  const cars = (initialState.cars ?? []).map((car, carIndex) => {
+    const pitEntryPositions: readonly [readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number]] = [
+      [12, 12],
+      [32, 12],
+      [52, 12],
+      [112, 112],
+      [132, 112],
+      [152, 112],
+    ];
+    const [carX, carY] = pitEntryPositions[carIndex] ?? [car.carX, car.carY];
+
+    return {
+      ...car,
+      carX,
+      carY,
+    };
+  });
+
+  return {
+    ...initialState,
+    cars,
+    trackSpec: createTier5TrackSpec(),
+  };
+}
+
 function createPitCompetitionCar(
   car: RacingCarState,
   carIndex: number,
@@ -182,9 +245,29 @@ function createTier5TrackSpec(): Tier5TrackSpec {
         entranceCorridor: { x: 6, y: 8, width: 12, height: 12 },
       },
       {
+        teamIndex: 0,
+        pitBox: { x: 30, y: 10, width: 8, height: 8 },
+        entranceCorridor: { x: 26, y: 8, width: 12, height: 12 },
+      },
+      {
+        teamIndex: 0,
+        pitBox: { x: 50, y: 10, width: 8, height: 8 },
+        entranceCorridor: { x: 46, y: 8, width: 12, height: 12 },
+      },
+      {
         teamIndex: 1,
         pitBox: { x: 110, y: 110, width: 8, height: 8 },
         entranceCorridor: { x: 106, y: 108, width: 12, height: 12 },
+      },
+      {
+        teamIndex: 1,
+        pitBox: { x: 130, y: 110, width: 8, height: 8 },
+        entranceCorridor: { x: 126, y: 108, width: 12, height: 12 },
+      },
+      {
+        teamIndex: 1,
+        pitBox: { x: 150, y: 110, width: 8, height: 8 },
+        entranceCorridor: { x: 146, y: 108, width: 12, height: 12 },
       },
     ],
   };

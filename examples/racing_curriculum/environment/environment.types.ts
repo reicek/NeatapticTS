@@ -9,12 +9,12 @@ import type { TrackSpec } from '../track/track.generator.types';
 export type TireStateTuple = readonly [number, number, number, number];
 
 /**
- * Fixed pit occupancy record for one team's single pit slot.
+ * Fixed pit occupancy record for one team-owned pit slot.
  *
- * The race pack always exposes one record per team. `occupyingCarIndex = 255`
- * means the pit is empty; otherwise `remainingStopTicks` counts down the fixed
- * stop duration before the environment releases the car and restores all four
- * tire channels back to full health.
+ * `occupyingCarIndex = 255` means the slot is empty; otherwise
+ * `remainingStopTicks` counts down the fixed stop duration before the
+ * environment releases the car and restores all four tire channels back to
+ * full health.
  */
 export type PitOccupancyRecord = {
   /** Car index currently in the pit, or `255` when no car is occupying it. */
@@ -24,16 +24,14 @@ export type PitOccupancyRecord = {
 };
 
 /**
- * Fixed two-record pit shelf shared by Team A and Team B.
+ * Fixed six-record pit shelf shared by Team A and Team B.
  *
- * Slot `0` is Team A's pit and slot `1` is Team B's pit. The shelf width does
- * not change with roster size, so single-car, 2v2, and 3v3 packs all reuse the
- * same `255 = no car` sentinel and stop-tick contract.
+ * The canonical slot order is `[A0, A1, A2, B0, B1, B2]`. The shelf width does
+ * not change with roster size, so single-car, 2v2, and 3v3 packs all reuse this
+ * same six-slot state with the `255 = no car` sentinel and fixed stop-tick
+ * contract.
  */
-export type PitOccupancyState = readonly [
-  PitOccupancyRecord,
-  PitOccupancyRecord,
-];
+export type PitOccupancyState = readonly PitOccupancyRecord[];
 
 /**
  * Per-car racing state tracked by the environment.
@@ -64,7 +62,7 @@ export type RacingCarState = CarState;
  * The legacy top-level `carX`, `carY`, and `carHeading` fields stay in place so
  * the solo browser path remains stable. Multi-car packs layer the ordered `cars`
  * roster on top; the six-car 3v3 slice simply sets `cars.length = 6` while
- * reusing the same per-team `pitOccupancy` and compatibility `pitStatus` shelf.
+ * reusing the same six-slot `pitOccupancy` and compatibility `pitStatus` shelf.
  */
 export type EnvironmentState = {
   /** Monotonic fixed-timestep counter. Starts at 0 and increments by 1 per step. */
@@ -83,9 +81,9 @@ export type EnvironmentState = {
   cars?: readonly RacingCarState[];
   /** Optional frozen track metadata owned by the current episode. */
   trackSpec?: TrackSpec;
-  /** Fixed per-team pit shelf; `255` marks an empty pit and stop ticks count down to tire reset. */
+  /** Fixed six-slot pit shelf; `255` marks an empty slot and stop ticks count down to tire reset. */
   pitOccupancy?: PitOccupancyState;
-  /** Backward-compatible alias exposing the same two-record pit shelf to UI/tests. */
+  /** Backward-compatible alias exposing the same six-record pit shelf to UI/tests. */
   pitStatus?: PitOccupancyState;
 };
 

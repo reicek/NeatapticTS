@@ -1,5 +1,6 @@
 import type {
   TrackGeneratorInput,
+  TrackPitBox,
   TrackSpec,
   TrackSegment,
 } from './track.generator.types';
@@ -15,7 +16,7 @@ type PitBoxSpec = {
   entranceCorridor: PitCorridorAabb;
 };
 type Tier4TrackSpec = TrackSpec & {
-  pitBoxes: readonly [PitBoxSpec, PitBoxSpec];
+  pitBoxes: readonly PitBoxSpec[];
 };
 
 interface Tier4TrackModule {
@@ -27,7 +28,7 @@ interface Tier4TrackModule {
 
 describe('track Tier 4 pit geometry seam', () => {
   describe('generateTrack', () => {
-    it('returns two pit boxes ordered by team index 0 then 1', async () => {
+    it('returns six pit boxes ordered as alternating Team A and Team B stalls', async () => {
       // Arrange
       const generatorInput: TrackGeneratorInput = {
         seed: 42,
@@ -42,7 +43,35 @@ describe('track Tier 4 pit geometry seam', () => {
             ({ teamIndex }) => teamIndex,
           ),
         ),
-      ).resolves.toEqual([0, 1]);
+      ).resolves.toEqual([0, 1, 0, 1, 0, 1]);
+    });
+
+    it('places alternating Team A and Team B boxes around the lap instead of grouping by half track', async () => {
+      // Arrange
+      const generatorInput: TrackGeneratorInput = {
+        seed: 42,
+        layoutVersion: 1,
+        sizeBucket: 'medium',
+      };
+
+      // Act + Assert
+      await expect(
+        loadTier4TrackModule().then(({ generateTrack }) => {
+          const trackSpec = generateTrack(generatorInput);
+          const pitBoxes = trackSpec.pitBoxes as readonly TrackPitBox[];
+          const sampleIndices = pitBoxes.map((pitBox) =>
+            resolveNearestSplineSampleIndex(trackSpec.splineSamples, {
+              x: pitBox.entranceCorridor.x,
+              y: pitBox.entranceCorridor.y,
+            }),
+          );
+
+          return sampleIndices.every(
+            (index, sampleIndex) =>
+              sampleIndex === 0 || index > sampleIndices[sampleIndex - 1],
+          );
+        }),
+      ).resolves.toBe(true);
     });
 
     it('attaches an entrance corridor AABB to every pit box', async () => {
@@ -148,8 +177,24 @@ function createTier4TrackSpec(
         entranceCorridor: { x: 12, y: 4, width: 10, height: 12 },
       },
       {
+        teamIndex: 0,
+        entranceCorridor: { x: 28, y: 4, width: 10, height: 12 },
+      },
+      {
+        teamIndex: 0,
+        entranceCorridor: { x: 44, y: 4, width: 10, height: 12 },
+      },
+      {
         teamIndex: 1,
         entranceCorridor: { x: 98, y: 4, width: 10, height: 12 },
+      },
+      {
+        teamIndex: 1,
+        entranceCorridor: { x: 82, y: 4, width: 10, height: 12 },
+      },
+      {
+        teamIndex: 1,
+        entranceCorridor: { x: 66, y: 4, width: 10, height: 12 },
       },
     ],
   };
@@ -159,6 +204,27 @@ function createTier4TrackSpec(
     ...overrides,
     pitBoxes: overrides.pitBoxes ?? defaultTrackSpec.pitBoxes,
   };
+}
+
+function resolveNearestSplineSampleIndex(
+  splineSamples: readonly { x: number; y: number }[],
+  point: { x: number; y: number },
+): number {
+  let nearestIndex = 0;
+  let nearestDistanceSquared = Number.POSITIVE_INFINITY;
+
+  for (const [sampleIndex, sample] of splineSamples.entries()) {
+    const dx = sample.x - point.x;
+    const dy = sample.y - point.y;
+    const distanceSquared = dx * dx + dy * dy;
+
+    if (distanceSquared < nearestDistanceSquared) {
+      nearestDistanceSquared = distanceSquared;
+      nearestIndex = sampleIndex;
+    }
+  }
+
+  return nearestIndex;
 }
 
 async function loadTier4TrackModule(): Promise<Tier4TrackModule> {

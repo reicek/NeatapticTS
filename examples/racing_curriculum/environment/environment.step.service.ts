@@ -17,12 +17,15 @@ const DEFAULT_TRACK_LAYOUT_VERSION = 1;
 const DEFAULT_TRACK_SIZE_BUCKET = 'medium';
 const NO_CAR_INDEX = 255;
 const PIT_STOP_TICKS = 4;
+const TEAM_COUNT = 2;
+const PIT_SLOTS_PER_TEAM = 3;
+const PIT_SLOT_COUNT = TEAM_COUNT * PIT_SLOTS_PER_TEAM;
 /** Base lateral wear contribution per step for the tire-health model. */
-const TIRE_DECAY_LATERAL_FACTOR = 0.0002;
+const TIRE_DECAY_LATERAL_FACTOR = 0.00012;
 /** Base longitudinal wear contribution per step for the tire-health model. */
-const TIRE_DECAY_LONGITUDINAL_FACTOR = 0.0001;
+const TIRE_DECAY_LONGITUDINAL_FACTOR = 0.00006;
 /** Base speed wear contribution per step for the tire-health model. */
-const TIRE_DECAY_SPEED_FACTOR = 0.00001;
+const TIRE_DECAY_SPEED_FACTOR = 0.000006;
 const TIRE_DECAY_ACCELERATION_FACTOR = 0.5;
 const TEAM_LAYOUT: readonly [0, 0, 0, 1, 1, 1] = [0, 0, 0, 1, 1, 1];
 const DEFAULT_TIRE_STATE: TireStateTuple = [1, 1, 1, 1];
@@ -35,7 +38,7 @@ const DEFAULT_TRACK_SPEC = generateTrack({
 /** Accepted control input for one deterministic environment step. */
 type EnvironmentControlInput = CarControlOutput | readonly CarControlOutput[];
 
-type MutablePitOccupancyState = [PitOccupancyRecord, PitOccupancyRecord];
+type MutablePitOccupancyState = PitOccupancyRecord[];
 
 /**
  * Creates the canonical start-of-episode environment state.
@@ -43,7 +46,7 @@ type MutablePitOccupancyState = [PitOccupancyRecord, PitOccupancyRecord];
  * Tier 5 seeds the owner-local 3v3 layout up front so tire decay, pit status,
  * observation assembly, and renderer fallbacks all share the same initial state.
  * Both `pitOccupancy` and the compatibility alias `pitStatus` point at the same
- * empty two-team shelf, and every car starts with fully healthy tires.
+ * empty six-slot shelf, and every car starts with fully healthy tires.
  *
  * @returns Fresh environment state with six cars, healthy tires, and empty pits.
  */
@@ -122,11 +125,11 @@ export function decayTireState(
  * `state.cars.length = 6` and the same loop structure advances all six cars.
  *
  * Pit lifecycle semantics are intentionally narrow and deterministic: each team
- * owns one pit slot, `255` means the slot is empty, a car that touches its own
- * entrance-corridor AABB serves a fixed four-tick stop, and the environment
- * restores all four tire channels to `1` when that stop expires. If multiple
- * teammates reach the same team pit on one tick, the first eligible car in
- * roster order claims the slot and the others stay on track until it clears.
+ * owns three pit slots (`255` means a slot is empty), a car that touches one of
+ * its team's entrance-corridor AABBs claims an available owned slot for a fixed
+ * four-tick stop, and the environment restores all four tire channels to `1`
+ * when that stop expires. Entry stays deterministic: cars claim in roster order
+ * and each car can claim at most one slot per tick.
  *
  * @param state - Current environment state.
  * @param control - Single-car control or ordered per-car controls for this tick.
@@ -143,12 +146,12 @@ export function stepEnvironment(
   }));
   // Step 2: Expand the caller input to the exact car count for this pack.
   const controls = resolveControls(control, currentCars.length);
-  // Step 3: Tick pit timers before motion so released cars can rejoin this frame.
-  const releasedTeams = new Set<number>();
+  // Step 3: Tick pit timers before motion so expired slots release deterministically.
+  const releasedCars = new Set<number>();
   const pitOccupancy = tickPitOccupancy(
     resolvePitOccupancy(state),
     currentCars,
-    releasedTeams,
+    releasedCars,
   );
   // Step 4: Advance every car that is not currently stopped in its team's pit.
   const steppedCars = currentCars.map((car, carIndex) => {
@@ -158,12 +161,12 @@ export function stepEnvironment(
 
     return stepCarKinematics(car, controls[carIndex]);
   });
-  // Step 5: Let the first eligible teammate claim the single pit slot for its team.
+  // Step 5: Let each car claim one available own-team slot in deterministic roster order.
   const nextPitOccupancy = resolvePitEntries(
     steppedCars,
     pitOccupancy,
     state.trackSpec ?? DEFAULT_TRACK_SPEC,
-    releasedTeams,
+    releasedCars,
   );
   const primaryCar = steppedCars[0] ?? createFallbackPrimaryCar();
 
@@ -220,12 +223,12 @@ function createInitialCars(): readonly RacingCarState[] {
 }
 
 /**
- * Creates an empty per-team pit occupancy shelf.
+ * Creates an empty six-slot pit occupancy shelf.
  *
- * @returns Two-slot pit occupancy tuple with no cars assigned.
+ * @returns Six-slot pit occupancy shelf with no cars assigned.
  */
 function createEmptyPitOccupancy(): PitOccupancyState {
-  return [createEmptyPitRecord(), createEmptyPitRecord()];
+  return Array.from({ length: PIT_SLOT_COUNT }, () => createEmptyPitRecord());
 }
 
 /**
@@ -290,16 +293,52 @@ function resolveControls(
  * Resolves the current pit occupancy shelf from either Tier 4 field name.
  *
  * @param state - Current environment state.
- * @returns Two-slot pit occupancy tuple.
+ * @returns Six-slot pit occupancy shelf.
  */
 function resolvePitOccupancy(state: EnvironmentState): PitOccupancyState {
   const activePitOccupancy = state.pitOccupancy ?? state.pitStatus;
 
   if (activePitOccupancy !== undefined) {
-    return clonePitOccupancy(activePitOccupancy);
+    return normalizePitOccupancy(activePitOccupancy);
   }
 
   return createEmptyPitOccupancy();
+}
+
+/**
+ * Normalizes incoming pit occupancy state to the fixed six-slot layout.
+ *
+ * Legacy two-slot inputs are mapped from `[teamA, teamB]` to
+ * `[A0, A1, A2, B0, B1, B2]` by placing Team A at slot `0` and Team B at
+ * slot `3`.
+ *
+ * @param pitOccupancy - Incoming pit occupancy state.
+ * @returns Six-slot normalized pit occupancy shelf.
+ */
+function normalizePitOccupancy(
+  pitOccupancy: PitOccupancyState,
+): PitOccupancyState {
+  if (pitOccupancy.length === PIT_SLOT_COUNT) {
+    return clonePitOccupancy(pitOccupancy);
+  }
+
+  const normalizedPitOccupancy = clonePitOccupancy(createEmptyPitOccupancy());
+
+  if (pitOccupancy.length === TEAM_COUNT) {
+    normalizedPitOccupancy[0] = { ...pitOccupancy[0] };
+    normalizedPitOccupancy[PIT_SLOTS_PER_TEAM] = { ...pitOccupancy[1] };
+    return normalizedPitOccupancy;
+  }
+
+  for (
+    let pitSlotIndex = 0;
+    pitSlotIndex < Math.min(pitOccupancy.length, PIT_SLOT_COUNT);
+    pitSlotIndex++
+  ) {
+    normalizedPitOccupancy[pitSlotIndex] = { ...pitOccupancy[pitSlotIndex] };
+  }
+
+  return normalizedPitOccupancy;
 }
 
 /**
@@ -307,22 +346,22 @@ function resolvePitOccupancy(state: EnvironmentState): PitOccupancyState {
  *
  * A record remains active while `remainingStopTicks > 0`. When the counter
  * reaches zero, the occupying car's tire tuple is reset to `[1, 1, 1, 1]`, the
- * team is marked as released for the current tick, and the record returns to the
- * `255 = no car` sentinel state.
+ * released car index is marked for same-tick re-entry blocking, and the record
+ * returns to the `255 = no car` sentinel state.
  *
  * @param pitOccupancy - Current pit occupancy shelf.
  * @param cars - Ordered car roster for the current tick.
- * @param releasedTeams - Mutable set filled with team indices released this tick.
+ * @param releasedCars - Mutable set filled with car indices released this tick.
  * @returns Updated pit occupancy shelf after decrementing stop timers.
  */
 function tickPitOccupancy(
   pitOccupancy: PitOccupancyState,
   cars: RacingCarState[],
-  releasedTeams: Set<number>,
+  releasedCars: Set<number>,
 ): PitOccupancyState {
   const nextPitOccupancy = clonePitOccupancy(pitOccupancy);
 
-  for (const [teamIndex, record] of nextPitOccupancy.entries()) {
+  for (const [pitSlotIndex, record] of nextPitOccupancy.entries()) {
     if (
       record.remainingStopTicks <= 0 ||
       record.occupyingCarIndex === NO_CAR_INDEX
@@ -333,7 +372,7 @@ function tickPitOccupancy(
     const nextRemainingStopTicks = record.remainingStopTicks - 1;
 
     if (nextRemainingStopTicks > 0) {
-      nextPitOccupancy[teamIndex] = {
+      nextPitOccupancy[pitSlotIndex] = {
         occupyingCarIndex: record.occupyingCarIndex,
         remainingStopTicks: nextRemainingStopTicks,
       };
@@ -348,8 +387,8 @@ function tickPitOccupancy(
       };
     }
 
-    releasedTeams.add(teamIndex);
-    nextPitOccupancy[teamIndex] = createEmptyPitRecord();
+    releasedCars.add(record.occupyingCarIndex);
+    nextPitOccupancy[pitSlotIndex] = createEmptyPitRecord();
   }
 
   return nextPitOccupancy;
@@ -415,45 +454,43 @@ function stepCarKinematics(
 /**
  * Detects new pit entries after the current tick's car updates complete.
  *
- * Entry is based on the team's `entranceCorridor` axis-aligned box inside the
- * frozen `TrackSpec`. A team cannot claim a second pit slot while one is active,
- * and a car released earlier in the same tick cannot re-enter immediately.
+ * Entry is based on any of the team's `entranceCorridor` axis-aligned boxes
+ * inside the frozen `TrackSpec`. Cars may claim up to one own-team slot each,
+ * but cars released earlier in the same tick cannot re-enter immediately.
  *
  * @param cars - Updated car roster.
  * @param pitOccupancy - Pit occupancy shelf after ticking active stops.
  * @param trackSpec - Active track metadata.
- * @param releasedTeams - Teams released this tick and therefore blocked from re-entry.
+ * @param releasedCars - Cars released this tick and therefore blocked from re-entry.
  * @returns Final pit occupancy shelf for the next state.
  */
 function resolvePitEntries(
   cars: readonly RacingCarState[],
   pitOccupancy: PitOccupancyState,
   trackSpec: TrackSpec,
-  releasedTeams: ReadonlySet<number>,
+  releasedCars: ReadonlySet<number>,
 ): PitOccupancyState {
   const nextPitOccupancy = clonePitOccupancy(pitOccupancy);
   const pitBoxes = trackSpec.pitBoxes ?? [];
 
   for (let carIndex = 0; carIndex < cars.length; carIndex++) {
     const car = cars[carIndex];
-    const teamIndex = car.teamIndex;
 
-    if (
-      nextPitOccupancy[teamIndex].occupyingCarIndex !== NO_CAR_INDEX ||
-      releasedTeams.has(teamIndex)
-    ) {
+    if (releasedCars.has(carIndex) || isCarStoppedInPit(nextPitOccupancy, carIndex)) {
       continue;
     }
 
-    const pitBox = pitBoxes.find(
-      (candidatePitBox) => candidatePitBox.teamIndex === teamIndex,
+    const availablePitSlotIndex = pitBoxes.findIndex(
+      (candidatePitBox, candidatePitSlotIndex) =>
+        candidatePitSlotIndex < nextPitOccupancy.length &&
+        candidatePitBox.teamIndex === car.teamIndex &&
+        nextPitOccupancy[candidatePitSlotIndex].occupyingCarIndex ===
+          NO_CAR_INDEX &&
+        isPointInsideAabb(car.carX, car.carY, candidatePitBox.entranceCorridor),
     );
 
-    if (
-      pitBox !== undefined &&
-      isPointInsideAabb(car.carX, car.carY, pitBox.entranceCorridor)
-    ) {
-      nextPitOccupancy[teamIndex] = {
+    if (availablePitSlotIndex >= 0) {
+      nextPitOccupancy[availablePitSlotIndex] = {
         occupyingCarIndex: carIndex,
         remainingStopTicks: PIT_STOP_TICKS,
       };
@@ -477,7 +514,7 @@ function resolveMeanTireHealth(tireState: TireStateTuple): number {
 }
 
 /**
- * Clones the fixed two-slot pit shelf into a mutable tuple.
+ * Clones the fixed six-slot pit shelf into a mutable array.
  *
  * @param pitOccupancy - Source pit occupancy state.
  * @returns Mutable clone suitable for in-step updates.
@@ -485,7 +522,7 @@ function resolveMeanTireHealth(tireState: TireStateTuple): number {
 function clonePitOccupancy(
   pitOccupancy: PitOccupancyState,
 ): MutablePitOccupancyState {
-  return [{ ...pitOccupancy[0] }, { ...pitOccupancy[1] }];
+  return pitOccupancy.map((record) => ({ ...record }));
 }
 
 /**

@@ -51,11 +51,14 @@ const COLOR_TIRE_GLINT = 'rgba(248, 254, 255, 0.6)';
 const COLOR_PIT_TEAM_A = 'rgba(0, 229, 255, 0.38)';
 const COLOR_PIT_TEAM_B = 'rgba(255, 122, 69, 0.38)';
 const COLOR_PIT_OCCUPIED = 'rgba(255, 204, 0, 0.16)';
+const FEATURE_FLAG_PITS_ENABLED = 0b100;
 
 // ── Geometry constants ───────────────────────────────────────────────────────
 
-/** Padding multiplier applied around the track bounding box before scaling. */
-const WORLD_PADDING_RATIO = 1.16;
+/** Default fraction of the smallest canvas side reserved as edge padding. */
+const DEFAULT_WORLD_EDGE_PADDING_RATIO = 0.08;
+/** Hard upper bound for edge padding, expressed as a side fraction. */
+const MAX_WORLD_EDGE_PADDING_RATIO = 0.3;
 /** Half-length of the car rectangle in world units (front/back). */
 const CAR_HALF_LENGTH_WORLD = 3.8;
 /** Half-width of the car rectangle in world units (left/right). */
@@ -123,6 +126,24 @@ const HEADING_ACCUMULATION_EPSILON = 1e-6;
 const TIRE_GLINT_RADIUS_PX = 0.48;
 /** Inward offset in CSS pixels for the wheel-surface highlight dot. */
 const TIRE_GLINT_OFFSET_PX = 0.58;
+/** Fraction of lane width used for each start-line square side. */
+const START_LINE_SQUARE_SIDE_RATIO = 0.16;
+/** Minimum start-line square side length in world units. */
+const START_LINE_MIN_SQUARE_SIDE_WORLD = 1.6;
+/** Maximum start-line square side length in world units. */
+const START_LINE_MAX_SQUARE_SIDE_WORLD = 3.2;
+/** Gap ratio applied between adjacent start-line squares. */
+const START_LINE_SQUARE_GAP_RATIO = 0.48;
+/** Minimum number of start-line squares shown across the lane. */
+const START_LINE_MIN_SQUARE_COUNT = 5;
+/** Maximum number of start-line squares shown across the lane. */
+const START_LINE_MAX_SQUARE_COUNT = 11;
+/** Stroke width in CSS pixels used for start-line square outlines. */
+const START_LINE_SQUARE_STROKE_WIDTH_PX = 1.35;
+/** Alpha used by the start-line neon glow shadow color. */
+const START_LINE_GLOW_ALPHA = 0.62;
+/** Blur radius in CSS pixels used for start-line neon glow. */
+const START_LINE_GLOW_BLUR_PX = 10;
 
 // ── Tire-mark accumulation constants ────────────────────────────────────────
 
@@ -145,7 +166,12 @@ type PitOrientationMetadata = {
   readonly orientationRadians?: number;
 };
 /** One sampled centerline point with its interpolated track width. */
-type TrackSamplePoint = WorldPoint & { readonly width: number };
+type TrackSamplePoint = WorldPoint & {
+  readonly width: number;
+  readonly segmentIndex: number;
+  readonly sampleIndexWithinSegment: number;
+  readonly globalIndex: number;
+};
 /** Cached spline-derived geometry used by transform and draw helpers. */
 type TrackRenderGeometry = {
   readonly centerlinePoints: readonly TrackSamplePoint[];
@@ -157,7 +183,10 @@ type TrackRenderGeometry = {
   readonly maxY: number;
 };
 /** Pose and optional tire tuple for one renderable car slot. */
-type RenderCarState = Pick<EnvironmentState, 'carX' | 'carY' | 'carHeading'> & {
+type RenderCarState = Pick<
+  EnvironmentState,
+  'carX' | 'carY' | 'carHeading' | 'teamIndex'
+> & {
   readonly tireState?: TireStateTuple;
 };
 
@@ -176,6 +205,12 @@ export interface WorldTransform {
   readonly offsetX: number;
   /** Vertical canvas offset so the track centre is at the canvas centre. */
   readonly offsetY: number;
+}
+
+/** Optional tuning for world-to-canvas fit behavior. */
+export interface WorldTransformOptions {
+  /** Explicit canvas-edge padding in pixels. */
+  readonly edgePaddingPx?: number;
 }
 
 /** One sampled point in the fading tire-mark trail. */
@@ -202,7 +237,7 @@ export interface RacingRenderState {
 /** Narrow worker-frame fields consumed by the Tier 4 renderer overlays. */
 type RacingRenderOverlayFrame = Pick<
   RacingRenderFrame,
-  'pitStatus' | 'tireState'
+  'pitStatus' | 'tireState' | 'featureFlags' | 'carTeam'
 >;
 
 /**
@@ -254,15 +289,23 @@ export function createRacingRenderState(): RacingRenderState {
 export function computeWorldTransform(
   canvas: HTMLCanvasElement,
   spec: TrackSpec,
+  options: WorldTransformOptions = {},
 ): WorldTransform {
   const trackRenderGeometry = getTrackRenderGeometry(spec);
-  const paddedWorldSpanX =
-    (trackRenderGeometry.maxX - trackRenderGeometry.minX) * WORLD_PADDING_RATIO;
-  const paddedWorldSpanY =
-    (trackRenderGeometry.maxY - trackRenderGeometry.minY) * WORLD_PADDING_RATIO;
+  const worldSpanX = Math.max(
+    1,
+    trackRenderGeometry.maxX - trackRenderGeometry.minX,
+  );
+  const worldSpanY = Math.max(
+    1,
+    trackRenderGeometry.maxY - trackRenderGeometry.minY,
+  );
+  const edgePaddingPx = resolveWorldEdgePaddingPx(canvas, options.edgePaddingPx);
+  const drawableWidthPx = Math.max(1, canvas.width - edgePaddingPx * 2);
+  const drawableHeightPx = Math.max(1, canvas.height - edgePaddingPx * 2);
   const scale = Math.min(
-    canvas.width / paddedWorldSpanX,
-    canvas.height / paddedWorldSpanY,
+    drawableWidthPx / worldSpanX,
+    drawableHeightPx / worldSpanY,
   );
   const trackCentreWorldX =
     (trackRenderGeometry.minX + trackRenderGeometry.maxX) / 2;
@@ -274,6 +317,35 @@ export function computeWorldTransform(
     offsetX: canvas.width / 2 - trackCentreWorldX * scale,
     offsetY: canvas.height / 2 - trackCentreWorldY * scale,
   };
+}
+
+/**
+ * Resolves the edge padding used by world-to-canvas fitting.
+ *
+ * @param canvas - Target canvas.
+ * @param requestedEdgePaddingPx - Optional explicit edge padding.
+ * @returns Clamped edge padding in canvas pixels.
+ */
+function resolveWorldEdgePaddingPx(
+  canvas: HTMLCanvasElement,
+  requestedEdgePaddingPx?: number,
+): number {
+  const maxAllowedPaddingPx =
+    Math.min(canvas.width, canvas.height) * MAX_WORLD_EDGE_PADDING_RATIO;
+
+  if (
+    requestedEdgePaddingPx !== undefined &&
+    Number.isFinite(requestedEdgePaddingPx) &&
+    requestedEdgePaddingPx >= 0
+  ) {
+    return Math.min(requestedEdgePaddingPx, maxAllowedPaddingPx);
+  }
+
+  const maxCanvasSidePx = Math.max(1, Math.min(canvas.width, canvas.height));
+  return Math.min(
+    maxCanvasSidePx * DEFAULT_WORLD_EDGE_PADDING_RATIO,
+    maxAllowedPaddingPx,
+  );
 }
 
 /**
@@ -307,6 +379,14 @@ export function renderRacingFrame(
   if (!ctx) return;
   const renderCars = resolveRenderCars(envState);
   const focusCarIndex = renderOptions.focusCarIndex ?? 0;
+  const pitsEnabledForCurrentTier = isPitsEnabledForCurrentTier(
+    renderOptions.frame,
+    renderCars.length,
+    spec.pitBoxes?.length ?? 0,
+  );
+  const visiblePitTeamIndex = pitsEnabledForCurrentTier
+    ? resolveVisiblePitTeamIndex(renderOptions.frame, envState, focusCarIndex)
+    : undefined;
 
   // Step 1: Advance tire marks for this tick.
   advanceTireMarks(renderState, envState);
@@ -322,6 +402,7 @@ export function renderRacingFrame(
     transform,
     renderOptions.guidanceAlpha ?? 0,
     renderOptions.frame?.pitStatus,
+    visiblePitTeamIndex,
   );
 
   // Step 4: Fading tire-mark trail.
@@ -329,6 +410,17 @@ export function renderRacingFrame(
 
   // Step 5: Car body and front lighting accents.
   for (const [carIndex, renderCar] of renderCars.entries()) {
+    const carTeamIndex = resolveRenderCarTeamIndex(
+      renderOptions.frame,
+      envState,
+      renderCar,
+      carIndex,
+      focusCarIndex,
+    );
+    const carOutlineColor = pitsEnabledForCurrentTier
+      ? resolveTeamPitColor(carTeamIndex)
+      : COLOR_CAR_BODY;
+
     drawCar(
       ctx,
       renderCar,
@@ -340,6 +432,7 @@ export function renderRacingFrame(
         carIndex,
         focusCarIndex,
       ),
+      carOutlineColor,
     );
   }
 
@@ -390,7 +483,7 @@ function advanceTireMarks(
  * Draws all track layers onto the canvas context.
  *
  * Layers (back to front): glow halo, asphalt surface, left/right edge lines,
- * dashed centerline.
+ * dashed centerline, start-line neon square crosswalk.
  *
  * @param ctx - 2D rendering context.
  * @param spec - Frozen track geometry.
@@ -402,14 +495,16 @@ function drawTrack(
   transform: WorldTransform,
   guidanceAlpha: number,
   pitStatus?: Uint8Array | Uint16Array | Int16Array,
+  visiblePitTeamIndex?: 0 | 1,
 ): void {
   const trackRenderGeometry = getTrackRenderGeometry(spec);
   drawTrackGlowLayer(ctx, trackRenderGeometry, transform);
   drawTrackSurfaceLayer(ctx, trackRenderGeometry, transform);
   drawTrackEdgeLines(ctx, trackRenderGeometry, transform);
   drawTrackCenterline(ctx, trackRenderGeometry, transform);
+  drawStartLineCrosswalk(ctx, trackRenderGeometry, transform);
   drawOptimalLineGuidance(ctx, trackRenderGeometry, transform, guidanceAlpha);
-  drawPitOverlays(ctx, spec, transform, pitStatus);
+  drawPitOverlays(ctx, spec, transform, pitStatus, visiblePitTeamIndex);
 }
 
 /**
@@ -498,6 +593,117 @@ function drawTrackCenterline(
 
   ctx.setLineDash([]);
   ctx.restore();
+}
+
+/**
+ * Draws a neon-white outlined square crosswalk at the lane start sample.
+ *
+ * Squares are aligned with the local tangent direction and distributed across
+ * the lane width using the local normal direction.
+ *
+ * @param ctx - 2D rendering context.
+ * @param trackRenderGeometry - Cached spline-derived track geometry.
+ * @param transform - World-to-canvas affine transform.
+ */
+function drawStartLineCrosswalk(
+  ctx: CanvasRenderingContext2D,
+  trackRenderGeometry: TrackRenderGeometry,
+  transform: WorldTransform,
+): void {
+  const laneStartSample = trackRenderGeometry.centerlinePoints[0];
+  if (laneStartSample === undefined) {
+    return;
+  }
+
+  const laneStartFrame = resolveSplineSampleFrame(
+    trackRenderGeometry.centerlinePoints,
+    laneStartSample.globalIndex,
+  );
+  const squareSideWorldUnits = resolveStartLineSquareSide(laneStartSample.width);
+  const squareGapWorldUnits = squareSideWorldUnits * START_LINE_SQUARE_GAP_RATIO;
+  const squarePitchWorldUnits = squareSideWorldUnits + squareGapWorldUnits;
+  const squareCount = resolveStartLineSquareCount(
+    laneStartSample.width,
+    squarePitchWorldUnits,
+  );
+  const firstSquareCenterOffsetWorldUnits =
+    ((squareCount - 1) * squarePitchWorldUnits) / 2;
+  const squareSideCanvasPixels = squareSideWorldUnits * transform.scale;
+
+  ctx.save();
+  ctx.strokeStyle = COLOR_NEON_WHITE;
+  ctx.lineWidth = START_LINE_SQUARE_STROKE_WIDTH_PX;
+  ctx.shadowColor = `rgba(248, 254, 255, ${START_LINE_GLOW_ALPHA})`;
+  ctx.shadowBlur = START_LINE_GLOW_BLUR_PX;
+
+  for (
+    let squareIndex = 0;
+    squareIndex < squareCount;
+    squareIndex += 1
+  ) {
+    const laneOffsetWorldUnits =
+      -firstSquareCenterOffsetWorldUnits +
+      squareIndex * squarePitchWorldUnits;
+    const squareCenterWorldX =
+      laneStartSample.x + laneStartFrame.normalX * laneOffsetWorldUnits;
+    const squareCenterWorldY =
+      laneStartSample.y + laneStartFrame.normalY * laneOffsetWorldUnits;
+    const squareCenterCanvasPoint = toCanvas(
+      squareCenterWorldX,
+      squareCenterWorldY,
+      transform,
+    );
+
+    ctx.save();
+    ctx.translate(squareCenterCanvasPoint.x, squareCenterCanvasPoint.y);
+    ctx.rotate(laneStartFrame.tangentHeadingRadians);
+    ctx.strokeRect(
+      -squareSideCanvasPixels / 2,
+      -squareSideCanvasPixels / 2,
+      squareSideCanvasPixels,
+      squareSideCanvasPixels,
+    );
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Resolves one start-line square side length from the current lane width.
+ *
+ * @param laneWidthWorldUnits - Current lane width in world units.
+ * @returns Clamped square side length in world units.
+ */
+function resolveStartLineSquareSide(laneWidthWorldUnits: number): number {
+  return Math.min(
+    START_LINE_MAX_SQUARE_SIDE_WORLD,
+    Math.max(
+      START_LINE_MIN_SQUARE_SIDE_WORLD,
+      laneWidthWorldUnits * START_LINE_SQUARE_SIDE_RATIO,
+    ),
+  );
+}
+
+/**
+ * Resolves how many start-line squares can fit across the current lane width.
+ *
+ * @param laneWidthWorldUnits - Current lane width in world units.
+ * @param squarePitchWorldUnits - Square side plus inter-square gap.
+ * @returns Clamped square count for crosswalk readability.
+ */
+function resolveStartLineSquareCount(
+  laneWidthWorldUnits: number,
+  squarePitchWorldUnits: number,
+): number {
+  const squareFitEstimate =
+    Math.floor((Math.max(0, laneWidthWorldUnits) - squarePitchWorldUnits) /
+      squarePitchWorldUnits) + 2;
+
+  return Math.min(
+    START_LINE_MAX_SQUARE_COUNT,
+    Math.max(START_LINE_MIN_SQUARE_COUNT, squareFitEstimate),
+  );
 }
 
 /**
@@ -774,6 +980,7 @@ function drawCar(
   state: RenderCarState,
   transform: WorldTransform,
   tireState: TireStateTuple,
+  carOutlineColor: string,
 ): void {
   const canvasPos = toCanvas(state.carX, state.carY, transform);
   const halfLengthCanvas = CAR_HALF_LENGTH_WORLD * transform.scale;
@@ -814,10 +1021,10 @@ function drawCar(
   ctx.rotate(state.carHeading);
 
   // Glow behind car body.
-  ctx.shadowColor = COLOR_CAR_BODY;
+  ctx.shadowColor = carOutlineColor;
   ctx.shadowBlur = 10;
 
-  // Car body — cyan square outline.
+  // Car body — team-colored square outline when pits are active.
   ctx.beginPath();
   ctx.rect(
     -halfLengthCanvas,
@@ -825,7 +1032,7 @@ function drawCar(
     halfLengthCanvas * 2,
     halfWidthCanvas * 2,
   );
-  ctx.strokeStyle = COLOR_CAR_BODY;
+  ctx.strokeStyle = carOutlineColor;
   ctx.lineWidth = 1.8;
   ctx.stroke();
 
@@ -1002,8 +1209,16 @@ function drawPitOverlays(
   spec: TrackSpec,
   transform: WorldTransform,
   pitStatus?: Uint8Array | Uint16Array | Int16Array,
+  visiblePitTeamIndex?: 0 | 1,
 ): void {
   for (const pitBox of spec.pitBoxes ?? []) {
+    if (
+      visiblePitTeamIndex !== undefined &&
+      pitBox.teamIndex !== visiblePitTeamIndex
+    ) {
+      continue;
+    }
+
     const teamColor =
       pitBox.teamIndex === 0 ? COLOR_PIT_TEAM_A : COLOR_PIT_TEAM_B;
     const occupiedTicks = pitStatus?.[pitBox.teamIndex * 2 + 1] ?? 0;
@@ -1494,6 +1709,93 @@ function resolveRenderTireState(
   }
 
   return envState.tireState ?? [1, 1, 1, 1];
+}
+
+/**
+ * Resolves whether pit-gated visuals are active for the current render tier.
+ *
+ * Worker-backed paths expose explicit feature flags; browser-local fallback
+ * treats multi-car tiers with authored pit geometry as pit-enabled.
+ *
+ * @param overlayFrame - Optional packed worker frame.
+ * @param carCount - Number of cars in the current render roster.
+ * @param pitBoxCount - Number of generated pit boxes on the current track.
+ * @returns True when pit visuals should be enabled for this frame.
+ */
+function isPitsEnabledForCurrentTier(
+  overlayFrame: RacingRenderOverlayFrame | undefined,
+  carCount: number,
+  pitBoxCount: number,
+): boolean {
+  if (overlayFrame !== undefined) {
+    return (overlayFrame.featureFlags & FEATURE_FLAG_PITS_ENABLED) !== 0;
+  }
+
+  return carCount >= 4 && pitBoxCount > 0;
+}
+
+/**
+ * Resolves which team's pit overlays should be visible in the current frame.
+ *
+ * @param overlayFrame - Optional packed worker frame.
+ * @param envState - Current simulation state.
+ * @param focusCarIndex - Focused car index for packed frames.
+ * @returns Team index for pit visibility, or `undefined` when unavailable.
+ */
+function resolveVisiblePitTeamIndex(
+  overlayFrame: RacingRenderOverlayFrame | undefined,
+  envState: EnvironmentState,
+  focusCarIndex: number,
+): 0 | 1 | undefined {
+  const focusedPackedTeamIndex = overlayFrame?.carTeam?.[focusCarIndex];
+  if (focusedPackedTeamIndex !== undefined) {
+    return focusedPackedTeamIndex === 1 ? 1 : 0;
+  }
+
+  return envState.teamIndex;
+}
+
+/**
+ * Resolves the team index used for per-car pit-colored outlines.
+ *
+ * @param overlayFrame - Optional packed worker frame.
+ * @param envState - Current simulation state.
+ * @param renderCar - Car being rendered.
+ * @param carIndex - Render roster index.
+ * @param focusCarIndex - Focused car index for packed fallbacks.
+ * @returns Normalized team index (`0` or `1`).
+ */
+function resolveRenderCarTeamIndex(
+  overlayFrame: RacingRenderOverlayFrame | undefined,
+  envState: EnvironmentState,
+  renderCar: RenderCarState,
+  carIndex: number,
+  focusCarIndex: number,
+): 0 | 1 {
+  const packedTeamIndex = overlayFrame?.carTeam?.[carIndex];
+  if (packedTeamIndex !== undefined) {
+    return packedTeamIndex === 1 ? 1 : 0;
+  }
+
+  if (renderCar.teamIndex !== undefined) {
+    return renderCar.teamIndex;
+  }
+
+  if (carIndex === focusCarIndex && envState.teamIndex !== undefined) {
+    return envState.teamIndex;
+  }
+
+  return 0;
+}
+
+/**
+ * Resolves the pit palette color for the supplied team index.
+ *
+ * @param teamIndex - Team index (`0 = Team A`, `1 = Team B`).
+ * @returns Team pit color used by both pit overlays and car outlines.
+ */
+function resolveTeamPitColor(teamIndex: 0 | 1): string {
+  return teamIndex === 0 ? COLOR_PIT_TEAM_A : COLOR_PIT_TEAM_B;
 }
 
 /**

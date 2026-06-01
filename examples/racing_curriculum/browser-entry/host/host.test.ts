@@ -34,6 +34,40 @@ describe('racing host boundary', () => {
         }
       }
     });
+
+    it('appends a dedicated visualizer region to the host shell', () => {
+      const previousDocument = Reflect.get(globalThis, 'document');
+      const previousWindow = Reflect.get(globalThis, 'window');
+      const fakeDocument = createMockDocument();
+      const containerElement = createMockElement('div') as HTMLDivElement &
+        MockElement;
+
+      Reflect.set(globalThis, 'document', fakeDocument);
+      Reflect.set(globalThis, 'window', {
+        innerWidth: RACING_NARROW_VIEWPORT_THRESHOLD_PX + 10,
+      });
+
+      try {
+        const racingHost = createRacingHost(containerElement);
+        const hostRootElement = racingHost.rootElement as unknown as MockElement;
+
+        expect(hostRootElement.children.slice(-1)[0]?.className).toContain(
+          'racing-host__region--visualizer',
+        );
+      } finally {
+        if (previousDocument === undefined) {
+          Reflect.deleteProperty(globalThis, 'document');
+        } else {
+          Reflect.set(globalThis, 'document', previousDocument);
+        }
+
+        if (previousWindow === undefined) {
+          Reflect.deleteProperty(globalThis, 'window');
+        } else {
+          Reflect.set(globalThis, 'window', previousWindow);
+        }
+      }
+    });
   });
 });
 
