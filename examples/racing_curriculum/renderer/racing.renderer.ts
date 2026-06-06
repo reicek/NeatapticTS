@@ -300,7 +300,10 @@ export function computeWorldTransform(
     1,
     trackRenderGeometry.maxY - trackRenderGeometry.minY,
   );
-  const edgePaddingPx = resolveWorldEdgePaddingPx(canvas, options.edgePaddingPx);
+  const edgePaddingPx = resolveWorldEdgePaddingPx(
+    canvas,
+    options.edgePaddingPx,
+  );
   const drawableWidthPx = Math.max(1, canvas.width - edgePaddingPx * 2);
   const drawableHeightPx = Math.max(1, canvas.height - edgePaddingPx * 2);
   const scale = Math.min(
@@ -435,7 +438,6 @@ export function renderRacingFrame(
       carOutlineColor,
     );
   }
-
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -455,9 +457,11 @@ function advanceTireMarks(
 
   if (renderState.ticksSinceLastMark >= TIRE_MARK_SAMPLE_INTERVAL_TICKS) {
     const rearSampleX =
-      envState.carX - Math.cos(envState.carHeading) * TIRE_MARK_REAR_OFFSET_WORLD;
+      envState.carX -
+      Math.cos(envState.carHeading) * TIRE_MARK_REAR_OFFSET_WORLD;
     const rearSampleY =
-      envState.carY - Math.sin(envState.carHeading) * TIRE_MARK_REAR_OFFSET_WORLD;
+      envState.carY -
+      Math.sin(envState.carHeading) * TIRE_MARK_REAR_OFFSET_WORLD;
 
     renderState.tireMarks.push({
       worldX: rearSampleX,
@@ -619,8 +623,11 @@ function drawStartLineCrosswalk(
     trackRenderGeometry.centerlinePoints,
     laneStartSample.globalIndex,
   );
-  const squareSideWorldUnits = resolveStartLineSquareSide(laneStartSample.width);
-  const squareGapWorldUnits = squareSideWorldUnits * START_LINE_SQUARE_GAP_RATIO;
+  const squareSideWorldUnits = resolveStartLineSquareSide(
+    laneStartSample.width,
+  );
+  const squareGapWorldUnits =
+    squareSideWorldUnits * START_LINE_SQUARE_GAP_RATIO;
   const squarePitchWorldUnits = squareSideWorldUnits + squareGapWorldUnits;
   const squareCount = resolveStartLineSquareCount(
     laneStartSample.width,
@@ -636,14 +643,9 @@ function drawStartLineCrosswalk(
   ctx.shadowColor = `rgba(248, 254, 255, ${START_LINE_GLOW_ALPHA})`;
   ctx.shadowBlur = START_LINE_GLOW_BLUR_PX;
 
-  for (
-    let squareIndex = 0;
-    squareIndex < squareCount;
-    squareIndex += 1
-  ) {
+  for (let squareIndex = 0; squareIndex < squareCount; squareIndex += 1) {
     const laneOffsetWorldUnits =
-      -firstSquareCenterOffsetWorldUnits +
-      squareIndex * squarePitchWorldUnits;
+      -firstSquareCenterOffsetWorldUnits + squareIndex * squarePitchWorldUnits;
     const squareCenterWorldX =
       laneStartSample.x + laneStartFrame.normalX * laneOffsetWorldUnits;
     const squareCenterWorldY =
@@ -697,8 +699,10 @@ function resolveStartLineSquareCount(
   squarePitchWorldUnits: number,
 ): number {
   const squareFitEstimate =
-    Math.floor((Math.max(0, laneWidthWorldUnits) - squarePitchWorldUnits) /
-      squarePitchWorldUnits) + 2;
+    Math.floor(
+      (Math.max(0, laneWidthWorldUnits) - squarePitchWorldUnits) /
+        squarePitchWorldUnits,
+    ) + 2;
 
   return Math.min(
     START_LINE_MAX_SQUARE_COUNT,
@@ -1063,7 +1067,10 @@ function drawCar(
   ctx.stroke();
 
   // Front edge glints add a restrained metallic-neon highlight.
-  for (const edgeGlintCanvasY of [edgeGlintTopCanvasY, edgeGlintBottomCanvasY]) {
+  for (const edgeGlintCanvasY of [
+    edgeGlintTopCanvasY,
+    edgeGlintBottomCanvasY,
+  ]) {
     ctx.beginPath();
     ctx.moveTo(edgeGlintStartCanvasX, edgeGlintCanvasY);
     ctx.lineTo(edgeGlintEndCanvasX, edgeGlintCanvasY);
@@ -1102,7 +1109,10 @@ function drawCar(
     headlightCoreRadiusCanvas,
   );
   bumperGlowGradient.addColorStop(0, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.16)`);
-  bumperGlowGradient.addColorStop(0.45, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.07)`);
+  bumperGlowGradient.addColorStop(
+    0.45,
+    `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.07)`,
+  );
   bumperGlowGradient.addColorStop(1, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0)`);
 
   ctx.beginPath();
@@ -1118,8 +1128,14 @@ function drawCar(
     0,
     headlightSoftRadiusCanvas,
   );
-  frontSpreadGradient.addColorStop(0, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.13)`);
-  frontSpreadGradient.addColorStop(0.42, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.06)`);
+  frontSpreadGradient.addColorStop(
+    0,
+    `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.13)`,
+  );
+  frontSpreadGradient.addColorStop(
+    0.42,
+    `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.06)`,
+  );
   frontSpreadGradient.addColorStop(1, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0)`);
 
   ctx.beginPath();
@@ -1147,8 +1163,14 @@ function drawCar(
       sideLightOffsetY,
       sideBloomRadiusCanvas,
     );
-    sideBloomGradient.addColorStop(0, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.12)`);
-    sideBloomGradient.addColorStop(0.55, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.04)`);
+    sideBloomGradient.addColorStop(
+      0,
+      `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.12)`,
+    );
+    sideBloomGradient.addColorStop(
+      0.55,
+      `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0.04)`,
+    );
     sideBloomGradient.addColorStop(1, `rgba(${COLOR_HEADLIGHT_GLOW_RGB}, 0)`);
 
     ctx.beginPath();
@@ -1378,9 +1400,10 @@ function resolveSmoothedPitHeadingRadians(
 function resolvePitMetadataHeadingRadians(
   pitBox: NonNullable<TrackSpec['pitBoxes']>[number],
 ): number | undefined {
-  const pitOrientationMetadata =
-    pitBox as NonNullable<TrackSpec['pitBoxes']>[number] &
-      PitOrientationMetadata;
+  const pitOrientationMetadata = pitBox as NonNullable<
+    TrackSpec['pitBoxes']
+  >[number] &
+    PitOrientationMetadata;
   const headingRadians =
     pitOrientationMetadata.headingRadians ??
     pitOrientationMetadata.orientationRadians ??
@@ -1419,8 +1442,7 @@ function normalizeHeadingRadiansCandidate(headingCandidate: number): number {
 function normalizeRadians(valueRadians: number): number {
   const twoPi = Math.PI * 2;
   const shiftedRadians = valueRadians + Math.PI;
-  const wrappedRadians =
-    ((shiftedRadians % twoPi) + twoPi) % twoPi;
+  const wrappedRadians = ((shiftedRadians % twoPi) + twoPi) % twoPi;
 
   return wrappedRadians - Math.PI;
 }
@@ -1670,7 +1692,6 @@ function drawCarTireCorners(
   }
 }
 
-
 /**
  * Resolves the rendered tire-health tuple for the focused car.
  *
@@ -1804,7 +1825,9 @@ function resolveTeamPitColor(teamIndex: 0 | 1): string {
  * @param envState - Current environment snapshot.
  * @returns Ordered list of car states to draw for this frame.
  */
-function resolveRenderCars(envState: EnvironmentState): readonly RenderCarState[] {
+function resolveRenderCars(
+  envState: EnvironmentState,
+): readonly RenderCarState[] {
   if (Array.isArray(envState.cars) && envState.cars.length > 0) {
     return envState.cars;
   }

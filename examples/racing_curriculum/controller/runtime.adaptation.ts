@@ -121,7 +121,9 @@ export interface RuntimeAdaptationEngine {
    * @param tickInput - Per-tick runtime inputs.
    * @returns Deterministic-friendly telemetry for the decision.
    */
-  adaptOnTick(tickInput: RuntimeAdaptationTickInput): RuntimeAdaptationTelemetry;
+  adaptOnTick(
+    tickInput: RuntimeAdaptationTickInput,
+  ): RuntimeAdaptationTelemetry;
   /** Resets cadence boundaries and cooldown state. */
   reset(): void;
 }
@@ -155,7 +157,9 @@ export function createRuntimeAdaptationEngine(
   const evaluateScore = options.evaluateScore ?? evaluateRollingScoreWindow;
   const minimumEvidenceWindow = Math.max(
     1,
-    Math.floor(options.minimumEvidenceWindow ?? DEFAULT_MINIMUM_EVIDENCE_WINDOW),
+    Math.floor(
+      options.minimumEvidenceWindow ?? DEFAULT_MINIMUM_EVIDENCE_WINDOW,
+    ),
   );
   const improvementThreshold =
     options.improvementThreshold ?? DEFAULT_IMPROVEMENT_THRESHOLD;
@@ -167,7 +171,9 @@ export function createRuntimeAdaptationEngine(
   let lastSectorBoundary = Number.NEGATIVE_INFINITY;
 
   return {
-    adaptOnTick(tickInput: RuntimeAdaptationTickInput): RuntimeAdaptationTelemetry {
+    adaptOnTick(
+      tickInput: RuntimeAdaptationTickInput,
+    ): RuntimeAdaptationTelemetry {
       const networkSizeBefore = resolveNetworkSizeSnapshot(tickInput.network);
       const evidenceWindow = resolveEvidenceWindow(tickInput.scoreHistory);
       const baselineScore = evaluateScore(tickInput.network, evidenceWindow);
@@ -342,7 +348,10 @@ function resolveCadenceOptions(
   }
 
   const everyNTicks = Math.max(1, Math.floor(cadence.everyNTicks ?? 1));
-  const boundaryInterval = Math.max(1, Math.floor(cadence.boundaryInterval ?? 1));
+  const boundaryInterval = Math.max(
+    1,
+    Math.floor(cadence.boundaryInterval ?? 1),
+  );
 
   return {
     ...cadence,
@@ -362,7 +371,10 @@ function resolveLimitOptions(
           DEFAULT_LIMITS.maxStructuralEditsPerStep,
       ),
     ),
-    maxNodes: Math.max(1, Math.floor(limits?.maxNodes ?? DEFAULT_LIMITS.maxNodes)),
+    maxNodes: Math.max(
+      1,
+      Math.floor(limits?.maxNodes ?? DEFAULT_LIMITS.maxNodes),
+    ),
     maxConnections: Math.max(
       1,
       Math.floor(limits?.maxConnections ?? DEFAULT_LIMITS.maxConnections),
@@ -518,7 +530,9 @@ function passesSafetyChecks(
   );
 }
 
-function resolveNetworkSizeSnapshot(network: Network): RuntimeNetworkSizeSnapshot {
+function resolveNetworkSizeSnapshot(
+  network: Network,
+): RuntimeNetworkSizeSnapshot {
   return {
     nodes: network.nodes.length,
     connections: network.connections.length,

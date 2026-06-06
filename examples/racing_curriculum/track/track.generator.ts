@@ -34,12 +34,7 @@ const DEFAULT_TRACK_VIEWPORT_EDGE_PADDING_RATIO = 0.08;
 const MIN_TRACK_VIEWPORT_EDGE_PADDING_RATIO = 0;
 const MAX_TRACK_VIEWPORT_EDGE_PADDING_RATIO = 0.3;
 const ALTERNATING_PIT_PROGRESS_SAMPLES = [
-  0.083333,
-  0.25,
-  0.416667,
-  0.583333,
-  0.75,
-  0.916667,
+  0.083333, 0.25, 0.416667, 0.583333, 0.75, 0.916667,
 ] as const;
 const PIT_BOX_WIDTH = 18;
 const PIT_BOX_HEIGHT = 12;
@@ -451,6 +446,10 @@ function roundTrackGeometry(value: number): number {
  * @param maxValue - Upper bound.
  * @returns Clamped value.
  */
-function clampNumber(value: number, minValue: number, maxValue: number): number {
+function clampNumber(
+  value: number,
+  minValue: number,
+  maxValue: number,
+): number {
   return Math.max(minValue, Math.min(maxValue, value));
 }

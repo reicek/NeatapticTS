@@ -203,34 +203,49 @@ export function runTwoTeamEvaluationTick(
 }
 
 /**
- * Advances both team controllers after a completed shared race.
+ * Advances both team controllers only after the shared generation barrier completes.
  *
- * The advance contract is intentionally two-phase. First, each team only
- * advances when it actually produced results for the finished race; an empty
- * result slice means "no completed evaluation," not "advance with zero
- * fitness." Second, every non-empty side cross-registers its results into the
- * opposing `opponentSnapshotPool` via `addOpponentSnapshot`, preserving a
- * rolling history of frozen rival champions.
+ * The barrier is **shared**: a generation increment for either team — and any
+ * mutation of either team's `opponentSnapshotPool` — is suppressed until **both**
+ * teams have produced results for the completed shared race. An empty result
+ * slice on either side means "the shared evaluation has not finished," not
+ * "advance with zero fitness." This invariant keeps the rolling rival archive
+ * aligned to the same generation tick on both sides, which is the smallest
+ * honest contract needed for coevolution-style role specialization.
  *
- * That rolling archive matters because future generations should not face only
- * the opponent's latest mutable state. They instead encounter recent frozen
- * rivals, which is the first honest selection pressure needed for role
- * specialization to emerge.
+ * Once the barrier is complete (both slices non-empty), each team's controller
+ * advances by one generation, and each team's `opponentSnapshotPool` receives
+ * one frozen deep-cloned snapshot of the opposing side's results. Snapshots are
+ * produced through `addOpponentSnapshot`, which preserves the bounded FIFO
+ * invariant and the deep-clone immutability contract.
+ *
+ * Transport-neutral by design: this function does not depend on packed
+ * `race-step` frames, transfer lists, or worker topology. Those details are
+ * deferred to Phase 4 transport normalization.
  *
  * @param harness - Active two-population harness.
  * @param resultsA - Team A evaluation results for the completed race.
  * @param resultsB - Team B evaluation results for the completed race.
+ *
  * @example
  * ```ts
  * const harness = createTwoPopulationHarness({}, {});
  *
+ * // Partial advance: Team A alone has results — barrier is NOT complete,
+ * // so neither generation nor either snapshot pool is mutated.
+ * advanceTwoPopulations(harness, [{ genomeId: 'team-a-0', fitness: 12 }], []);
+ * harness.teamA.controller.generation; // 0
+ * harness.teamB.opponentSnapshotPool.snapshots.length; // 0
+ *
+ * // Barrier complete: both sides advanced and cross-registered.
  * advanceTwoPopulations(
  *   harness,
  *   [{ genomeId: 'team-a-0', fitness: 12 }],
  *   [{ genomeId: 'team-b-0', fitness: 11 }],
  * );
- *
  * harness.teamA.controller.generation; // 1
+ * harness.teamB.controller.generation; // 1
+ * harness.teamA.opponentSnapshotPool.snapshots.length; // 1
  * harness.teamB.opponentSnapshotPool.snapshots.length; // 1
  * ```
  */
@@ -239,31 +254,31 @@ export function advanceTwoPopulations(
   resultsA: readonly unknown[],
   resultsB: readonly unknown[],
 ): void {
-  // Step 1: Advance each team only when it produced results for the completed race.
-  if (resultsA.length > 0) {
-    harness.teamA.controller.generation += 1;
+  // Step 1: Shared barrier — refuse to mutate any team state until both
+  //         sides produced results for the completed shared evaluation.
+  if (resultsA.length === 0 || resultsB.length === 0) {
+    return;
   }
 
-  if (resultsB.length > 0) {
-    harness.teamB.controller.generation += 1;
-  }
+  // Step 2: Barrier complete — advance both controllers by one generation.
+  harness.teamA.controller.generation += 1;
+  harness.teamB.controller.generation += 1;
 
-  // Step 2: Cross-register the opponent champions into the opposing snapshot pools.
-  if (resultsB.length > 0) {
-    harness.teamA.opponentSnapshotPool = addOpponentSnapshot(
-      harness.teamA.opponentSnapshotPool,
-      'team-b-champion',
-      { results: resultsB },
-      harness.teamB.controller.generation,
-    );
-  }
+  // Step 3: Cross-register the opposing-side results as frozen snapshots
+  //         in each team's rolling archive. The snapshot payload is
+  //         deep-cloned inside `addOpponentSnapshot`, so post-registration
+  //         mutations of the result arrays do not corrupt the archive.
+  harness.teamA.opponentSnapshotPool = addOpponentSnapshot(
+    harness.teamA.opponentSnapshotPool,
+    'team-b-champion',
+    { results: resultsB },
+    harness.teamB.controller.generation,
+  );
 
-  if (resultsA.length > 0) {
-    harness.teamB.opponentSnapshotPool = addOpponentSnapshot(
-      harness.teamB.opponentSnapshotPool,
-      'team-a-champion',
-      { results: resultsA },
-      harness.teamA.controller.generation,
-    );
-  }
+  harness.teamB.opponentSnapshotPool = addOpponentSnapshot(
+    harness.teamB.opponentSnapshotPool,
+    'team-a-champion',
+    { results: resultsA },
+    harness.teamA.controller.generation,
+  );
 }

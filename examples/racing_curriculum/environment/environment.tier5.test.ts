@@ -101,7 +101,9 @@ describe('environment Tier 5 six-car seam', () => {
           .slice(0, 3)
           .map((pitSlot) => pitSlot.occupyingCarIndex)
           .filter((carIndex) => carIndex !== 255)
-          .toSorted((leftCarIndex, rightCarIndex) => leftCarIndex - rightCarIndex),
+          .toSorted(
+            (leftCarIndex, rightCarIndex) => leftCarIndex - rightCarIndex,
+          ),
       };
 
       // Assert
@@ -125,11 +127,15 @@ describe('environment Tier 5 six-car seam', () => {
         teamAOccupiedCarIndices: pitSlots
           .slice(0, 3)
           .map((pitSlot) => pitSlot.occupyingCarIndex)
-          .toSorted((leftCarIndex, rightCarIndex) => leftCarIndex - rightCarIndex),
+          .toSorted(
+            (leftCarIndex, rightCarIndex) => leftCarIndex - rightCarIndex,
+          ),
         teamBOccupiedCarIndices: pitSlots
           .slice(3, 6)
           .map((pitSlot) => pitSlot.occupyingCarIndex)
-          .toSorted((leftCarIndex, rightCarIndex) => leftCarIndex - rightCarIndex),
+          .toSorted(
+            (leftCarIndex, rightCarIndex) => leftCarIndex - rightCarIndex,
+          ),
         allSlotsStartedCountdown: pitSlots.every(
           (pitSlot) => pitSlot.remainingStopTicks > 0,
         ),
@@ -188,7 +194,14 @@ function createTeamPitCompetitionState(): EnvironmentState {
 function createFullPitOccupancyState(): EnvironmentState {
   const initialState = createInitialState();
   const cars = (initialState.cars ?? []).map((car, carIndex) => {
-    const pitEntryPositions: readonly [readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number]] = [
+    const pitEntryPositions: readonly [
+      readonly [number, number],
+      readonly [number, number],
+      readonly [number, number],
+      readonly [number, number],
+      readonly [number, number],
+      readonly [number, number],
+    ] = [
       [12, 12],
       [32, 12],
       [52, 12],

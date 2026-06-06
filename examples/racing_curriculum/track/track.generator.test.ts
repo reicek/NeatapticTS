@@ -155,7 +155,8 @@ describe('track.generator', () => {
         const lowPaddingBounds = resolveTrackBounds(lowPaddingSpec);
         const highPaddingBounds = resolveTrackBounds(highPaddingSpec);
         const lowPaddingWidth = lowPaddingBounds.maxX - lowPaddingBounds.minX;
-        const highPaddingWidth = highPaddingBounds.maxX - highPaddingBounds.minX;
+        const highPaddingWidth =
+          highPaddingBounds.maxX - highPaddingBounds.minX;
 
         // Assert
         expect(lowPaddingWidth > highPaddingWidth).toBe(true);

@@ -2,11 +2,11 @@
 
 ## Overview
 
-The **Workflow Update Sync Hook** (`workflow-update-sync.mjs`) is a lightweight, idempotent trigger mechanism that keeps MCP plan state synchronized with the active implementation step. It automates workflow progression without manual intervention while maintaining strict idempotency guarantees.
+The **Workflow Update Sync Hook** (`workflow-update-sync.mjs`) is a lightweight, idempotent trigger mechanism that keeps MCP plan state synchronized with the active implementation step. It now supports two bounded modes: explicit **advancement** when a step is intentionally ready to move forward, and automatic **hook-check** verification after substantive actions without mutating the plan.
 
 ## Design Goals
 
-1. **Minimal maintenance burden** — Runs automatically without manual intervention once integrated into CI or step completion flows.
+1. **Minimal maintenance burden** — Supports automatic post-action integrity checks while keeping step advancement explicit and bounded.
 2. **Idempotent** — Running multiple times does not cause state corruption; each invocation advances exactly one step.
 3. **Boundary-aware** — Updates only the immediate next step, not future-phase steps.
 4. **Evidence trail** — Logs all state updates with timestamp to the plan's validation evidence section.
@@ -42,21 +42,27 @@ The hook identifies:
 
 ### 3. Sync Action Decision
 
-Based on the state, the hook determines one of three actions:
+Based on the state, the hook determines one of these actions:
 
 | Action | Condition | Behavior |
 |--------|-----------|----------|
-| **advance** | Both [WIP] and next [PLANNED] exist | Changes [WIP] → [DONE], [PLANNED] → [WIP] |
+| **advance** | Both [WIP] and next [PLANNED] exist in advancement mode | Changes [WIP] → [DONE], [PLANNED] → [WIP] |
+| **verified** | Current [WIP] step exists in `--hook-check` mode | Confirms workflow integrity without changing the plan |
+| **phase-complete** | No next [PLANNED] step after the current [WIP] step | Treats the phase boundary as a successful no-op |
 | **already-in-sync** | Current state matches expected state | No changes needed |
-| **blocked** | No [WIP] step or no next [PLANNED] step | Cannot advance; phase may be complete |
+| **blocked** | No [WIP] step exists | Cannot verify or advance safely |
 
 ### 4. Plan Update (if advancing)
 
 When advancing, the hook:
-1. Replaces the current step's `[WIP]` marker with `[DONE]`
-2. Replaces the next step's `[PLANNED]` marker with `[WIP]`
-3. Appends a timestamped sync entry to the `### Latest validation evidence` section
-4. Writes all changes atomically to the plan file
+1. Replaces the current step's `[WIP]` marker with `[DONE]` in the markdown header
+2. Replaces the current step's `status: '[WIP]'` with `status: '[DONE]'` in the YAML packet block
+3. Replaces the next step's `[PLANNED]` marker with `[WIP]` in the markdown header
+4. Replaces the next step's `status: '[PLANNED]'` with `status: '[WIP]'` in the YAML packet block
+5. Appends a timestamped sync entry to the `### Latest validation evidence` section
+6. Writes all changes atomically to the plan file
+
+The YAML packet block is identified by searching for the fenced ` ```yaml ` block whose content includes both `phase: N` and `step: M` matching the target step. This prevents false replacements when multiple step packets exist.
 
 ### 5. Validation Evidence
 
@@ -83,11 +89,14 @@ node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md --json
 # Combined (dry-run + JSON)
 node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md --dry-run --json
 
+# Hook integrity check using the workflow MCP-bound plan
+node .github/hooks/workflow-update-sync.mjs --json --hook-check
+
 # Help
 node .github/hooks/workflow-update-sync.mjs --help
 ```
 
-**Required argument:** `--plan=<path>` (e.g., `--plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`)
+**Plan resolution:** `--plan=<path>` is optional. When omitted, the hook resolves the active workflow plan from `.vscode/mcp.json` and falls back to `plans/mcp-active-binding.plans.md`.
 
 ## Output Modes
 
@@ -128,8 +137,8 @@ The hook is **strictly idempotent** — running it multiple times is safe and de
 
 1. **First invocation**: Reads current state (Step N [WIP], Step N+1 [PLANNED]) → advances to Step N+1
 2. **Second invocation**: Reads current state (Step N+1 [WIP], Step N+2 [PLANNED]) → advances to Step N+2
-3. **Third invocation**: Reads current state (Step N+2 [WIP], no next step) → blocked, no changes
-4. **Nth invocation**: Blocked state remains stable; no file mutations
+3. **Third invocation**: Reads current state (Step N+2 [WIP], no next step) → `phase-complete`, no changes
+4. **Nth invocation**: Phase-boundary state remains stable; no file mutations
 
 Each run is independent and based on the current file state, preventing infinite loops or state corruption.
 
@@ -137,10 +146,9 @@ Each run is independent and based on the current file state, preventing infinite
 
 The hook handles these error conditions gracefully:
 
-- **Missing `--plan` argument**: Exits with error message and code 1
 - **Plan file not found**: Exits with descriptive error message
-- **Malformed plan (no [WIP] step)**: Blocks advancement with reason
-- **No next [PLANNED] step**: Blocks advancement (phase likely complete)
+- **Malformed plan (no [WIP] step)**: Blocks verification or advancement with reason
+- **No next [PLANNED] step**: Returns `phase-complete` instead of treating the phase boundary as a failure
 - **Missing validation evidence section**: Creates section before appending
 
 ## Validation Evidence Section
@@ -158,7 +166,7 @@ The hook requires (or creates) a `### Latest validation evidence` section in the
 
 ## Integration Recommendations
 
-### Option 1: Manual Trigger (Safest, Current Recommendation)
+### Option 1: Manual Advancement Trigger
 
 **When to run:** After a step completes and manual confirmation is ready
 
@@ -176,7 +184,25 @@ node .github/hooks/workflow-update-sync.mjs --plan=plans/NEAT_Genesis_EvoDevo_Ra
 - Requires manual invocation
 - Easy to forget if step completion is not immediately followed by confirmation
 
-### Option 2: CI Post-Phase Gate (Future, if appropriate)
+### Option 2: Automatic Post-Action Integrity Check
+
+**When to run:** After substantive actions through the repo's posttool enforcement path
+
+```bash
+# Posttool hook verification
+node .github/hooks/workflow-update-sync.mjs --json --hook-check
+```
+
+**Pros:**
+- Automatically verifies workflow integrity after substantive actions
+- Non-mutating, so routine actions do not accidentally advance the plan
+- Phase boundaries remain successful no-op checks
+
+**Cons:**
+- Does not advance steps on its own
+- Depends on the workflow MCP plan binding being correct
+
+### Option 3: CI Post-Phase Gate (Future, if appropriate)
 
 **When to run:** After final validation gate passes for a completed phase
 
@@ -200,13 +226,14 @@ node .github/hooks/workflow-update-sync.mjs --plan=plans/NEAT_Genesis_EvoDevo_Ra
 - If validation gate is wrong, advancement may be incorrect
 - Requires careful coordination with manual confirmation steps
 
-### Option 3: Hybrid (Recommended for long-term)
+### Option 4: Hybrid (Recommended for long-term)
 
-**When to run:** Both manual trigger AND CI validation gate
+**When to run:** manual advancement plus automatic hook-check, with optional CI advancement where appropriate
 
-1. **Manual trigger**: Operator runs hook after manual confirmation
-2. **CI validation gate**: Hook runs again after automated validation passes
-3. **Idempotency shields**: Since hook is idempotent, duplicate runs are safe
+1. **Manual trigger**: Operator runs the hook after manual confirmation to advance the plan
+2. **Automatic hook-check**: Posttool enforcement verifies workflow integrity after substantive actions
+3. **Optional CI validation gate**: CI can still advance after final validation if the plan lane wants that behavior
+4. **Idempotency shields**: Since the hook is idempotent, duplicate advancement attempts remain safe
 
 ```bash
 # Manual: operator confirms completion

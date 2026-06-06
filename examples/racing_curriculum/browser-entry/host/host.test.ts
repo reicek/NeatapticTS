@@ -49,7 +49,8 @@ describe('racing host boundary', () => {
 
       try {
         const racingHost = createRacingHost(containerElement);
-        const hostRootElement = racingHost.rootElement as unknown as MockElement;
+        const hostRootElement =
+          racingHost.rootElement as unknown as MockElement;
 
         expect(hostRootElement.children.slice(-1)[0]?.className).toContain(
           'racing-host__region--visualizer',

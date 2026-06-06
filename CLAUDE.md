@@ -145,6 +145,7 @@ Approach for each tranche:
 3. Add the smallest owner-local test that exercises the uncovered path.
 4. Validate with a focused Jest slice: `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=<file>`.
 5. Run `npm run test:silent` to confirm the repo-wide suite stays green.
+For strict hook recovery, use `node scripts/agent-customization/enforcement/runtime-enforcement-context.mjs --diagnose --tool-name=<tool> --plan=<active-plan> --session-id=<id>` to see the next preparation step before retrying a blocked write/execute action.
 6. Update the plan file with the completed tranche.
 
 When a test exposes dead code, remove the dead production branch instead of writing a test to force an unreachable path.

@@ -1,5 +1,5 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: 17062128ca41730b1a3d0cd29096b882be48eb679976f14a2e350c83544b13ca -->
+<!-- source-hash: 76ef55c261913dfe9caf11d69fce617dfcd982d9223636daa548d5e41361b308 -->
 <!-- source-file-count: 108 -->
 # Canonical Agent and Skill Routing Table
 
@@ -11,63 +11,63 @@
 
 | Name | Tier | Model | Agents | Skills |
 | --- | --- | --- | --- | --- |
-| 00-helping | 1 | Claude Sonnet 4.6 (copilot)<br>GPT-5.4 (copilot)<br>GPT-5.4-mini (copilot) | helping-gap-resolution-coordinator<br>helping-agent-maintenance-coordinator<br>skill-inventory-auditor<br>agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>model-name-auditor<br>skill-trigger-eval-designer<br>skill-output-eval-grader<br>coverage-guard<br>learning-event-capturer<br>file-change-summarizer | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>subagent-delegation-patterns |
-| 01-planning | 1 | Claude Sonnet 4.6 (copilot)<br>GPT-5.4 (copilot)<br>GPT-5.4-mini (copilot) | planning-context-coordinator<br>planning-risk-coordinator<br>planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>plan-scout<br>model-name-auditor<br>plan-registration-auditor<br>helping-gap-resolution-coordinator | plan-alignment<br>tracker-handoff<br>phase-handoff-workflow<br>agent-frontmatter-standards<br>model-routing-and-budget<br>license-attribution-audit |
-| 02-researching | 1 | GPT-5.4-mini (copilot)<br>Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot)<br>GPT-5.4 (copilot) | research-codebase-coordinator<br>plan-scout<br>docs-scout<br>repo-cortex-scout<br>boundary-mapper<br>skill-inventory-auditor<br>helping-gap-resolution-coordinator | subagent-delegation-patterns |
-| 03-red-testing | 1 | GPT-5.4 (copilot)<br>Claude Sonnet 4.6 (copilot)<br>GPT-5.4-mini (copilot) | planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>unit-test-writer<br>coverage-scout<br>determinism-scout<br>plan-scout<br>helping-gap-resolution-coordinator | red-test-contracts<br>test-fix-workflow<br>coverage-tranche |
-| 04-implementing | 1 | GPT-5.4 (copilot)<br>Claude Sonnet 4.6 (copilot)<br>GPT-5.4-mini (copilot) | implementation-pattern-coordinator<br>boundary-mapper<br>docs-scout<br>browser-runtime-scout<br>worker-payload-scout<br>evaluation-pool-scout<br>checkpoint-scout<br>hybrid-interop-scout<br>determinism-scout<br>visualizer-scout<br>nge-core-scout<br>nge-benchmark-scout<br>neatchat-scout<br>solid-split<br>flappy-architecture-polish<br>agent-frontmatter-auditor<br>phase-handoff-designer<br>mcp-server-architect<br>helping-gap-resolution-coordinator | - |
-| 05-green-testing | 1 | GPT-5.4-mini (copilot)<br>Claude Haiku 4.6 (copilot)<br>GPT-5.4 (copilot) | green-test-failure-triage-coordinator<br>coverage-guard<br>coverage-scout<br>failure-triage-specialist<br>unit-test-runner<br>determinism-scout<br>plan-registration-auditor<br>mcp-validation-auditor<br>helping-gap-resolution-coordinator | green-validation-gates<br>coverage-guard<br>plan-sync-validation |
-| 06-documenting | 1 | Claude Sonnet 4.6 (copilot)<br>GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | docs-scout<br>academic-docs-auditor<br>docs-example-writer<br>plan-scout<br>license-attribution-auditor<br>vscode-ai-extensibility-scout<br>helping-gap-resolution-coordinator | educational-docs<br>docs-academic-citation-audit<br>license-attribution-audit |
-| 07-logging | 1 | Claude Haiku 4.6 (copilot)<br>GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | plan-scout<br>plan-registration-auditor<br>learning-event-capturer<br>file-change-summarizer<br>helping-gap-resolution-coordinator | tracker-handoff<br>plan-sync-validation |
-| academic-docs-auditor | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | docs-academic-citation-audit |
-| acceptance-criteria-writer | 4 | GPT-5.4-mini (copilot)<br>Claude Haiku 4.6 (copilot)<br>GPT-5.4 (copilot) | - | planning-acceptance-criteria |
-| agent-frontmatter-auditor | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | agent-frontmatter-standards |
-| boundary-mapper | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | solid-split |
-| browser-runtime-scout | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | browser-build |
-| checkpoint-scout | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | checkpointing-persistence |
+| 00-helping | 1 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | helping-gap-resolution-coordinator<br>helping-agent-maintenance-coordinator<br>skill-inventory-auditor<br>agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>model-name-auditor<br>skill-trigger-eval-designer<br>skill-output-eval-grader<br>coverage-guard<br>learning-event-capturer<br>file-change-summarizer | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>subagent-delegation-patterns |
+| 01-planning | 1 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | planning-context-coordinator<br>planning-risk-coordinator<br>planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>plan-scout<br>model-name-auditor<br>plan-registration-auditor<br>helping-gap-resolution-coordinator | plan-alignment<br>tracker-handoff<br>phase-handoff-workflow<br>agent-frontmatter-standards<br>model-routing-and-budget<br>license-attribution-audit |
+| 02-researching | 1 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | research-codebase-coordinator<br>plan-scout<br>docs-scout<br>repo-cortex-scout<br>boundary-mapper<br>skill-inventory-auditor<br>helping-gap-resolution-coordinator | subagent-delegation-patterns |
+| 03-red-testing | 1 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>unit-test-writer<br>coverage-scout<br>determinism-scout<br>plan-scout<br>helping-gap-resolution-coordinator | red-test-contracts<br>test-fix-workflow<br>coverage-tranche |
+| 04-implementing | 1 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | implementation-pattern-coordinator<br>boundary-mapper<br>docs-scout<br>browser-runtime-scout<br>worker-payload-scout<br>evaluation-pool-scout<br>checkpoint-scout<br>hybrid-interop-scout<br>determinism-scout<br>visualizer-scout<br>nge-core-scout<br>nge-benchmark-scout<br>neatchat-scout<br>solid-split<br>flappy-architecture-polish<br>agent-frontmatter-auditor<br>phase-handoff-designer<br>mcp-server-architect<br>helping-gap-resolution-coordinator | - |
+| 05-green-testing | 1 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | green-test-failure-triage-coordinator<br>coverage-guard<br>coverage-scout<br>failure-triage-specialist<br>unit-test-runner<br>determinism-scout<br>plan-registration-auditor<br>mcp-validation-auditor<br>helping-gap-resolution-coordinator | green-validation-gates<br>coverage-guard<br>plan-sync-validation |
+| 06-documenting | 1 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | docs-scout<br>academic-docs-auditor<br>docs-example-writer<br>plan-scout<br>license-attribution-auditor<br>vscode-ai-extensibility-scout<br>helping-gap-resolution-coordinator | educational-docs<br>docs-academic-citation-audit<br>license-attribution-audit |
+| 07-logging | 1 | Claude Haiku 4.6 (copilot) | plan-scout<br>plan-registration-auditor<br>learning-event-capturer<br>file-change-summarizer<br>helping-gap-resolution-coordinator | tracker-handoff<br>plan-sync-validation<br>capturing-learning-event |
+| academic-docs-auditor | 3 | Claude Haiku 4.6 (copilot) | - | docs-academic-citation-audit |
+| acceptance-criteria-writer | 4 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | planning-acceptance-criteria |
+| agent-frontmatter-auditor | 3 | Claude Haiku 4.6 (copilot) | - | agent-frontmatter-standards |
+| boundary-mapper | 3 | Claude Haiku 4.6 (copilot) | - | solid-split |
+| browser-runtime-scout | 3 | Claude Haiku 4.6 (copilot) | - | browser-build |
+| checkpoint-scout | 3 | Claude Haiku 4.6 (copilot) | - | checkpointing-persistence |
 | cortex-embeddings-scout | 3 | Claude Haiku 4.6 (copilot) | - | - |
-| coverage-guard | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | coverage-guard |
-| coverage-scout | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | coverage-tranche |
-| determinism-scout | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | reproducibility-contracts |
-| docs-example-writer | 4 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | - |
-| docs-scout | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | educational-docs |
-| evaluation-pool-scout | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | multithread-evaluation |
-| failure-triage-specialist | 3 | Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | - | triaging-test-failures |
-| file-change-summarizer | 4 | Claude Haiku 4.6 (copilot)<br>GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | summarizing-session-log |
-| flappy-architecture-polish | 2 | GPT-5.4 (copilot)<br>Claude Sonnet 4.6 (copilot)<br>GPT-5.4-mini (copilot) | plan-scout | flappy-architecture-polish |
-| green-test-failure-triage-coordinator | 2 | GPT-5.4-mini (copilot)<br>Claude Haiku 4.6 (copilot)<br>GPT-5.4 (copilot) | coverage-guard<br>coverage-scout<br>failure-triage-specialist<br>unit-test-runner<br>plan-registration-auditor<br>mcp-validation-auditor | green-validation-gates |
-| helping-agent-maintenance-coordinator | 2 | GPT-5.4 (copilot)<br>Claude Sonnet 4.6 (copilot)<br>GPT-5.4-mini (copilot) | agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>skill-inventory-auditor<br>model-name-auditor<br>learning-event-capturer | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit |
-| helping-gap-resolution-coordinator | 2 | Claude Sonnet 4.6 (copilot)<br>GPT-5.4 (copilot)<br>GPT-5.4-mini (copilot) | skill-inventory-auditor<br>agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>model-name-auditor<br>learning-event-capturer<br>file-change-summarizer | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>subagent-delegation-patterns |
-| hybrid-interop-scout | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | hybrid-training-interop |
-| implementation-pattern-coordinator | 2 | GPT-5.4 (copilot)<br>Claude Sonnet 4.6 (copilot)<br>GPT-5.4-mini (copilot) | implementation-pattern-scout<br>boundary-mapper<br>docs-scout<br>agent-frontmatter-auditor | subagent-delegation-patterns |
-| implementation-pattern-scout | 3 | GPT-5.4-mini (copilot)<br>Claude Haiku 4.6 (copilot)<br>GPT-5.4 (copilot) | - | - |
-| learning-event-capturer | 4 | Claude Haiku 4.6 (copilot)<br>GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | capturing-learning-event |
-| license-attribution-auditor | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | license-attribution-audit |
-| mcp-runtime-scout | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | mcp-local-server-workflow |
-| mcp-server-architect | 3 | GPT-5.4 (copilot)<br>Claude Sonnet 4.6 (copilot)<br>GPT-5.4-mini (copilot) | - | mcp-local-server-workflow |
-| mcp-validation-auditor | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | mcp-local-server-workflow |
-| model-name-auditor | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | model-routing-and-budget |
-| neatchat-scout | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | neatchat-systems |
-| nge-benchmark-scout | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | nge-benchmark-workflow |
-| nge-core-scout | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | nge-core-algorithm |
-| phase-handoff-designer | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | phase-handoff-workflow |
-| plan-registration-auditor | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | plan-sync-validation |
-| plan-scout | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | plan-alignment |
-| planning-context-coordinator | 2 | GPT-5.4-mini (copilot)<br>Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | plan-scout<br>docs-scout<br>boundary-mapper | plan-alignment |
-| planning-risk-coordinator | 2 | Claude Sonnet 4.6 (copilot)<br>GPT-5.4 (copilot)<br>GPT-5.4-mini (copilot) | plan-scout<br>determinism-scout<br>license-attribution-auditor<br>model-name-auditor | model-routing-and-budget<br>license-attribution-audit |
-| planning-test-strategy-coordinator | 2 | GPT-5.4 (copilot)<br>Claude Sonnet 4.6 (copilot)<br>GPT-5.4-mini (copilot) | coverage-scout<br>determinism-scout<br>acceptance-criteria-writer<br>unit-test-writer | planning-acceptance-criteria<br>red-test-contracts |
+| coverage-guard | 3 | Claude Haiku 4.6 (copilot) | - | coverage-guard |
+| coverage-scout | 3 | Claude Haiku 4.6 (copilot) | - | coverage-tranche |
+| determinism-scout | 3 | Claude Haiku 4.6 (copilot) | - | reproducibility-contracts |
+| docs-example-writer | 4 | Claude Haiku 4.6 (copilot) | - | - |
+| docs-scout | 3 | Claude Haiku 4.6 (copilot) | - | educational-docs |
+| evaluation-pool-scout | 3 | Claude Haiku 4.6 (copilot) | - | multithread-evaluation |
+| failure-triage-specialist | 3 | Claude Haiku 4.6 (copilot) | - | triaging-test-failures |
+| file-change-summarizer | 4 | Claude Haiku 4.6 (copilot) | - | summarizing-session-log |
+| flappy-architecture-polish | 2 | GPT-5.4 (copilot) | plan-scout | flappy-architecture-polish |
+| green-test-failure-triage-coordinator | 2 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | coverage-guard<br>coverage-scout<br>failure-triage-specialist<br>unit-test-runner<br>plan-registration-auditor<br>mcp-validation-auditor | green-validation-gates |
+| helping-agent-maintenance-coordinator | 2 | GPT-5.4 (copilot) | agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>skill-inventory-auditor<br>model-name-auditor<br>learning-event-capturer | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit |
+| helping-gap-resolution-coordinator | 2 | Claude Sonnet 4.6 (copilot) | skill-inventory-auditor<br>agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>model-name-auditor<br>learning-event-capturer<br>file-change-summarizer | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>subagent-delegation-patterns |
+| hybrid-interop-scout | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | hybrid-training-interop |
+| implementation-pattern-coordinator | 2 | GPT-5.4 (copilot) | implementation-pattern-scout<br>boundary-mapper<br>docs-scout<br>agent-frontmatter-auditor | subagent-delegation-patterns |
+| implementation-pattern-scout | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | - |
+| learning-event-capturer | 4 | Claude Haiku 4.6 (copilot) | - | capturing-learning-event |
+| license-attribution-auditor | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | license-attribution-audit |
+| mcp-runtime-scout | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | mcp-local-server-workflow |
+| mcp-server-architect | 3 | GPT-5.4 (copilot) | - | mcp-local-server-workflow |
+| mcp-validation-auditor | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | mcp-local-server-workflow |
+| model-name-auditor | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | model-routing-and-budget |
+| neatchat-scout | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | neatchat-systems |
+| nge-benchmark-scout | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | nge-benchmark-workflow |
+| nge-core-scout | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | nge-core-algorithm |
+| phase-handoff-designer | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | phase-handoff-workflow |
+| plan-registration-auditor | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | plan-sync-validation |
+| plan-scout | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | plan-alignment |
+| planning-context-coordinator | 2 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | plan-scout<br>docs-scout<br>boundary-mapper | plan-alignment |
+| planning-risk-coordinator | 2 | Claude Sonnet 4.6 (copilot) | plan-scout<br>determinism-scout<br>license-attribution-auditor<br>model-name-auditor | model-routing-and-budget<br>license-attribution-audit |
+| planning-test-strategy-coordinator | 2 | GPT-5.4 (copilot) | coverage-scout<br>determinism-scout<br>acceptance-criteria-writer<br>unit-test-writer | planning-acceptance-criteria<br>red-test-contracts |
 | repo-cortex-scout | 3 | Claude Haiku 4.6 (copilot) | - | repo-cortex-workflow |
-| research-codebase-coordinator | 2 | GPT-5.4-mini (copilot)<br>Claude Haiku 4.6 (copilot)<br>Claude Sonnet 4.6 (copilot) | plan-scout<br>docs-scout<br>repo-cortex-scout<br>boundary-mapper<br>browser-runtime-scout<br>worker-payload-scout<br>evaluation-pool-scout<br>checkpoint-scout<br>hybrid-interop-scout<br>determinism-scout<br>visualizer-scout<br>nge-core-scout<br>nge-benchmark-scout<br>neatchat-scout | subagent-delegation-patterns |
-| skill-frontmatter-auditor | 3 | GPT-5.4-mini (copilot)<br>Claude Haiku 4.6 (copilot)<br>GPT-5.4 (copilot) | - | skill-frontmatter-standards |
-| skill-inventory-auditor | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | agent-inventory-audit |
-| skill-output-eval-grader | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | skill-output-evals |
-| skill-trigger-eval-designer | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | skill-description-evals |
-| solid-split | 2 | GPT-5.4 (copilot)<br>Claude Sonnet 4.6 (copilot)<br>GPT-5.4-mini (copilot) | boundary-mapper<br>plan-scout<br>docs-scout | solid-split |
-| unit-test-runner | 3 | GPT-5.4-mini (copilot)<br>Claude Haiku 4.6 (copilot)<br>GPT-5.4 (copilot) | - | running-unit-tests |
-| unit-test-writer | 3 | GPT-5.4 (copilot)<br>Claude Sonnet 4.6 (copilot)<br>GPT-5.4-mini (copilot) | - | creating-unit-tests |
-| visualizer-scout | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | visualizer-workflow |
-| vscode-ai-extensibility-scout | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | - |
-| worker-payload-scout | 3 | GPT-5.4-mini (copilot)<br>GPT-5.4 (copilot) | - | worker-inference-transport |
+| research-codebase-coordinator | 2 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | plan-scout<br>docs-scout<br>repo-cortex-scout<br>boundary-mapper<br>browser-runtime-scout<br>worker-payload-scout<br>evaluation-pool-scout<br>checkpoint-scout<br>hybrid-interop-scout<br>determinism-scout<br>visualizer-scout<br>nge-core-scout<br>nge-benchmark-scout<br>neatchat-scout | subagent-delegation-patterns |
+| skill-frontmatter-auditor | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | skill-frontmatter-standards |
+| skill-inventory-auditor | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | agent-inventory-audit |
+| skill-output-eval-grader | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | skill-output-evals |
+| skill-trigger-eval-designer | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | skill-description-evals |
+| solid-split | 2 | GPT-5.4 (copilot) | boundary-mapper<br>plan-scout<br>docs-scout | solid-split |
+| unit-test-runner | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | running-unit-tests |
+| unit-test-writer | 3 | GPT-5.4 (copilot) | - | creating-unit-tests |
+| visualizer-scout | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | visualizer-workflow |
+| vscode-ai-extensibility-scout | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | - |
+| worker-payload-scout | 3 | gemma4:latest (ollama)<br>GPT-5.4 mini (copilot) | - | worker-inference-transport |
 
 ## Skills
 
@@ -79,7 +79,7 @@
 | architecture-builder | skill | - | - | self |
 | auditing-js-docs | skill | - | - | self |
 | browser-build | skill | - | browser-runtime-scout | self |
-| capturing-learning-event | skill | - | learning-event-capturer | self |
+| capturing-learning-event | skill | - | 07-logging<br>learning-event-capturer | self |
 | checkpointing-persistence | skill | - | checkpoint-scout | self |
 | coverage-guard | skill | - | 05-green-testing<br>coverage-guard | self |
 | coverage-tranche | skill | - | 03-red-testing<br>coverage-scout | self |

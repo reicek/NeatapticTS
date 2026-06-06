@@ -80,9 +80,22 @@ const TIER_1_GATES = [
     description:
       'Detects plans whose top-level Status is [WIP] but all implementation phase/step markers are [DONE] — the missed-closure condition.',
   },
+  {
+    id: 'cortex-index',
+    owner: 'cortex-index.gate.mjs',
+    description:
+      'Checks the semantic index, Repo Cortex MCP, workflow MCP binding, and semantic snapshot freshness.',
+  },
+  {
+    id: 'cortex-first-search',
+    owner: 'cortex-first-search.gate.mjs',
+    description:
+      'Checks the prerequisites for the Cortex-first search policy before corpus-bound work relies on Repo Cortex.',
+  },
 ];
 
 const GATES_DIR = path.join(MCP_REPO_ROOT, 'scripts', 'agent-customization', 'gates');
+const GATE_TOOLS = createGateTools();
 
 const options = parseMcpCliArgs(process.argv.slice(2));
 
@@ -93,7 +106,7 @@ if (options.help) {
     summary:
       'Without flags this script starts a dependency-light stdio MCP server. ' +
       'Use --self-check to confirm that the gate scripts are accessible and return valid contracts.',
-    tools: createGateTools(),
+    tools: GATE_TOOLS,
   });
   process.exit(0);
 }
@@ -101,7 +114,7 @@ if (options.help) {
 const server = createMcpServer({
   serverName: SERVER_NAME,
   serverVersion: SERVER_VERSION,
-  tools: createGateTools(),
+  tools: GATE_TOOLS,
 });
 
 if (options.selfCheck) {
@@ -138,7 +151,7 @@ function createGateTools() {
           gate: {
             type: 'string',
             enum: TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
-            description: 'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, or stale-wip-plans).',
+            description: 'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, or cortex-first-search).',
           },
         },
         required: ['gate'],
@@ -193,7 +206,7 @@ async function runGateSelfCheck({ server }) {
 
   // Step 2: Confirm tool count.
   const toolListResult = await invokeServerRequest(server, { method: 'tools/list' });
-  const expectedToolCount = 4;
+  const expectedToolCount = server.tools.length;
 
   if (!Array.isArray(toolListResult.tools) || toolListResult.tools.length !== expectedToolCount) {
     issues.push(

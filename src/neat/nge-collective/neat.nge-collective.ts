@@ -20,6 +20,8 @@
  *   B -->|"passes SharedField\nby reference"| A
  *   D["two-population\nTwoPopulationHarnessState\ncreateTwoPopulationHarness\nadvanceTwoPopulations"] --> B
  *   D --> C
+ *   E["team-fitness\ncreateTeamFitnessEvaluator\npolicy-injection evaluator seam"]
+ *   Consumers["Racing · Ant Hive\nbenchmark consumers"] -->|"inject scoring policy"| E
  * ```
  *
  * ## Sub-modules
@@ -44,6 +46,12 @@
  * compositions. `createOpponentSnapshotPool` and `addOpponentSnapshot` maintain a rolling
  * fixed-capacity buffer of deep-cloned opponent payloads for tournament evaluation; the oldest
  * snapshot is evicted FIFO when the pool reaches capacity.
+ *
+ * ### team-fitness
+ * `createTeamFitnessEvaluator` keeps team/group aggregation reusable and policy-bound. NGE core
+ * owns the orchestration that maps generic team groups into reusable team-fitness results, while
+ * each benchmark injects its own aggregation rule such as "best finisher wins" or a richer
+ * support-weighted collective score.
  *
  * ### two-population
  * `createTwoPopulationHarness` builds the smallest honest 2v2 scaffold: two isolated team
@@ -72,6 +80,7 @@
  *   computeRoleDivergenceMetric,
  *   createOpponentSnapshotPool,
  *   addOpponentSnapshot,
+ *   createTeamFitnessEvaluator,
  *   createTwoPopulationHarness,
  *   advanceTwoPopulations,
  * } from './neat.nge-collective';
@@ -102,6 +111,16 @@
  * // 6. Stand up the smallest honest 2v2 harness.
  * const harness = createTwoPopulationHarness({}, {});
  * advanceTwoPopulations(harness, [{ genomeId: 'a0', fitness: 5 }], [{ genomeId: 'b0', fitness: 4 }]);
+ *
+ * // 7. Aggregate team fitness through the shared policy-injection evaluator seam.
+ * //    Racing and Ant Hive each supply their own policy; NGE core owns the fold structure.
+ * const evaluateTeamFitness = createTeamFitnessEvaluator<'team-a', { score: number }>(
+ *   (group) => group.memberResults.reduce((total, member) => total + member.score, 0),
+ * );
+ * const teamResults = evaluateTeamFitness([
+ *   { teamId: 'team-a', memberResults: [{ score: 4 }, { score: 6 }] },
+ * ]);
+ * // teamResults[0]?.teamFitness === 10
  * ```
  */
 
@@ -113,6 +132,9 @@ export type {
   OpponentSnapshot,
   OpponentSnapshotPool,
   SharedField,
+  TeamFitnessPolicy,
+  TeamFitnessResult,
+  TeamResultGroup,
 } from './neat.nge-collective.types';
 
 // --- Shared field primitives ---
@@ -138,6 +160,9 @@ export {
   computeRoleDivergenceMetric,
   createOpponentSnapshotPool,
 } from './neat.nge-collective.metrics';
+
+// --- Team/group fitness aggregation ---
+export { createTeamFitnessEvaluator } from './neat.nge-collective.team-fitness';
 
 // --- Two-population racing scaffold ---
 export {

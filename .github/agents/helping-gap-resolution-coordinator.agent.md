@@ -2,7 +2,7 @@
 description: 'Use when: an SDLC agent discovers a missing specialist, weak skill, malformed output contract, routing gap, model-routing issue, or repeated ad hoc prompt pattern.'
 name: 'helping-gap-resolution-coordinator'
 tier: 2
-model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)', 'GPT-5.4-mini (copilot)']
+model: 'Claude Sonnet 4.6 (copilot)'
 tools: [read, search, edit, execute, agent]
 agents: ['skill-inventory-auditor', 'agent-frontmatter-auditor', 'skill-frontmatter-auditor', 'model-name-auditor', 'learning-event-capturer', 'file-change-summarizer']
 skills: ['agent-frontmatter-standards', 'model-routing-and-budget', 'agent-inventory-audit', 'subagent-delegation-patterns']

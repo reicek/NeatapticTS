@@ -2,7 +2,7 @@
 description: 'Use when validating .agent.md frontmatter, tool lists, model strings, subagent allow-lists, handoffs, and user-invocable decisions in NeatapticTS. Keywords: agent frontmatter, YAML validation, tools, models, subagent graph, handoff audit.'
 name: agent-frontmatter-auditor
 tier: 3
-model: ['Claude Haiku 4.6 (copilot)', 'Claude Sonnet 4.6 (copilot)']
+model: 'Claude Haiku 4.6 (copilot)'
 tools: [read, search]
 user-invocable: false
 agents: []

@@ -1,10 +1,7 @@
 /** @jest-environment jsdom */
 
 import type { EnvironmentState } from '../environment/environment.types';
-import {
-  stabilizeCurriculumTierTireGrip,
-  start,
-} from './browser-entry';
+import { stabilizeCurriculumTierTireGrip, start } from './browser-entry';
 
 describe('racing curriculum browser entry start()', () => {
   beforeEach(() => {

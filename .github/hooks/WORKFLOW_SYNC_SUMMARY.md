@@ -32,6 +32,9 @@ node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md --dry-run
 # JSON output (for CI/programmatic use)
 node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md --json
 
+# Hook integrity check (uses the workflow MCP plan binding if --plan is omitted)
+node .github/hooks/workflow-update-sync.mjs --json --hook-check
+
 # Combined options
 node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md --dry-run --json
 
@@ -39,7 +42,7 @@ node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md --dry-run --
 node .github/hooks/workflow-update-sync.mjs --help
 ```
 
-Exit codes: `0` = success, `1` = error or blocked state
+Exit codes: `0` = success / verified / phase-complete, `1` = error or true blocked state
 
 ## Current Workflow State Sync Status
 
@@ -62,13 +65,23 @@ Exit codes: `0` = success, `1` = error or blocked state
 |-------|-------------|-------------|--------------|--------|
 | 1 | Step 5 [WIP], Step 6 [PLANNED] | advance | Step 5 [DONE], Step 6 [WIP] | ✅ PASS |
 | 2 | Step 6 [WIP], Step 7 [PLANNED] | advance | Step 6 [DONE], Step 7 [WIP] | ✅ PASS |
-| 3 | Step 7 [WIP], no next step | blocked | No changes (phase end) | ✅ PASS |
+| 3 | Step 7 [WIP], no next step | phase-complete | No changes (phase end) | ✅ PASS |
 
 **Conclusion**: ✅ IDEMPOTENCY VERIFIED — Multiple runs are safe and deterministic
 
 ## Recommendations
 
-### Current Approach: MANUAL TRIGGER (Safest & Recommended)
+### Current Approach: DUAL MODE
+
+The hook now serves two bounded roles:
+
+1. **Manual advancement mode** — explicit operator or workflow-driven invocation
+   advances the next step when the current step is intentionally complete.
+2. **Automatic post-action integrity mode** — the posttool enforcement path runs
+   `--hook-check` to verify workflow state after substantive actions without
+   auto-advancing the plan.
+
+### Manual advancement mode
 
 **When to run**: After step completion is manually confirmed
 
@@ -78,14 +91,27 @@ node .github/hooks/workflow-update-sync.mjs --plan=plans/NEAT_Genesis_EvoDevo_Ra
 ```
 
 **Advantages**:
-- No CI coupling; explicit operator control
+- Explicit operator control for step advancement
 - Easy to debug and understand state changes
-- Operator remains aware of workflow progression
-- Works with current manual confirmation gate
+- Prevents accidental advancement during routine post-action checks
+- Works with the current manual confirmation gate
 
 **Disadvantages**:
-- Requires manual invocation (easy to forget)
-- Not fully automatic
+- Requires explicit advancement when a step is truly complete
+
+### Automatic post-action integrity mode
+
+**How it runs**:
+- The repo's posttool enforcement hook calls `workflow-update-sync.mjs --hook-check`
+  after substantive actions.
+- Hook-check mode verifies workflow integrity without advancing the plan.
+- Phase boundaries are treated as a successful `phase-complete` outcome rather
+  than a false-positive hook failure.
+
+**Advantages**:
+- Adds automatic post-action workflow verification
+- Avoids false failures at phase boundaries
+- Uses the workflow MCP plan binding by default when `--plan` is omitted
 
 ### Future Option: Hybrid Approach (After Testing)
 
@@ -115,7 +141,7 @@ Add to `.github/workflows/validate.yml`:
 
 | Goal | Status | Evidence |
 |------|--------|----------|
-| Minimal maintenance burden | ✅ | Runs automatically when invoked; no manual tracking needed |
+| Minimal maintenance burden | ✅ | Manual advancement plus automatic hook-check keeps the post-action path bounded |
 | Idempotent | ✅ | Verified with 3+ sequential runs; no state corruption |
 | Boundary-aware | ✅ | Updates only immediate next step; blocks when no next step exists |
 | Evidence trail | ✅ | Timestamped entries logged to plan validation section |
@@ -125,8 +151,9 @@ Add to `.github/workflows/validate.yml`:
 
 1. **Single-step advancement**: Hook advances exactly one step per invocation (intentional for safety)
 2. **No automatic phase transitions**: Must manually set Phase N+1 Step 1 to [WIP]
-3. **File-based state only**: Does not query MCP at runtime; uses plan file as source of truth
-4. **Plan structure required**: Assumes standard [WIP]/[PLANNED]/[DONE] markers and validation section
+3. **Hook-check does not advance steps**: automatic post-action verification is intentionally non-mutating
+4. **File-based state only**: does not query MCP at runtime; uses the bound plan file as source of truth
+5. **Plan structure required**: assumes standard [WIP]/[PLANNED]/[DONE] markers and validation section
 
 ## Testing & Verification Checklist
 

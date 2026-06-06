@@ -476,7 +476,10 @@ function resolvePitEntries(
   for (let carIndex = 0; carIndex < cars.length; carIndex++) {
     const car = cars[carIndex];
 
-    if (releasedCars.has(carIndex) || isCarStoppedInPit(nextPitOccupancy, carIndex)) {
+    if (
+      releasedCars.has(carIndex) ||
+      isCarStoppedInPit(nextPitOccupancy, carIndex)
+    ) {
       continue;
     }
 

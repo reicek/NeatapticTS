@@ -2,7 +2,7 @@
 description: 'Use when writing focused unit tests, red tests, fixtures, mocks, assertions, or coverage tests for a scoped behavior change. Keywords: test, jest, fixture, mock, assertion, coverage.'
 name: 'unit-test-writer'
 tier: 3
-model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
+model: 'GPT-5.4 (copilot)'
 tools: [read, search, edit]
 user-invocable: false
 agents: []

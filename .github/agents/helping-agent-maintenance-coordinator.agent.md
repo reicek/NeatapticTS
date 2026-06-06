@@ -2,7 +2,7 @@
 description: 'Use when: maintaining .agent.md files, repairing YAML frontmatter, updating descriptions, adjusting model fields, narrowing routing lists, or splitting broad agents.'
 name: 'helping-agent-maintenance-coordinator'
 tier: 2
-model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
+model: 'GPT-5.4 (copilot)'
 tools: [read, search, edit, execute, agent]
 agents: ['agent-frontmatter-auditor', 'skill-frontmatter-auditor', 'skill-inventory-auditor', 'model-name-auditor', 'learning-event-capturer']
 skills: ['agent-frontmatter-standards', 'model-routing-and-budget', 'agent-inventory-audit']

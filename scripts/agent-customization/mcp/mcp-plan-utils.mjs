@@ -25,11 +25,14 @@
  * ```
  */
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
+import { parseFrontmatterValue } from '../customization-utils.mjs';
 import {
-  parseFrontmatterValue,
-} from '../customization-utils.mjs';
-import { resolveExplicitPlanPath } from './mcp-utils.mjs';
+  MCP_REPO_ROOT,
+  requireString,
+  resolveExplicitPlanPath,
+} from './mcp-utils.mjs';
 
 /** Matches a phase header line, e.g. `### Phase 2 — Title [WIP]` or `### Phase A — Title [WIP]`. */
 const PHASE_PATTERN = /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
@@ -37,6 +40,8 @@ const PHASE_PATTERN = /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<sta
 const STEP_PATTERN = /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 /** Captures the body of the `## Implementation phases` section up to the first validation-gates heading. */
 const IMPLEMENTATION_SECTION_PATTERN = /^## Implementation phases\s*(?<body>[\s\S]*?)(?=^## [^\n]*\bvalidation gates\b[^\n]*$)/imu;
+const PLANS_ROOT = path.join(MCP_REPO_ROOT, 'plans');
+const SESSION_OVERRIDE_PATH = path.join(MCP_REPO_ROOT, 'data', 'mcp-session-override.json');
 
 /**
  * Load the single active phase and step from the workflow plan.
@@ -96,6 +101,25 @@ export async function loadActivePlanContext(planPath) {
       validationCommandsMatch: compareCommands(validationCommands, requiredValidationCommands),
     },
   };
+}
+
+/**
+ * Resolve the effective active plan path using the shared precedence chain.
+ *
+ * Priority order: (1) per-call `plan_path` argument, (2) session override file
+ * at `data/mcp-session-override.json`, (3) startup `planPath`.
+ *
+ * @param {Record<string, unknown>} argumentsObject - Tool call arguments.
+ * @param {string} startupPlanPath - Startup plan path to fall back to.
+ * @returns {Promise<string>} Resolved effective plan path.
+ */
+export async function resolveEffectivePlanPath(argumentsObject, startupPlanPath) {
+  if (argumentsObject?.plan_path !== undefined) {
+    return resolvePlansScopedPath(argumentsObject.plan_path, 'plan_path');
+  }
+
+  const sessionOverridePlanPath = await readSessionOverridePlanPath();
+  return sessionOverridePlanPath ?? startupPlanPath;
 }
 
 /**
@@ -345,4 +369,52 @@ function compareCommands(leftCommands, rightCommands) {
   }
 
   return leftCommands.every((command, index) => command === rightCommands[index]);
+}
+
+/**
+ * Read the active session override plan path from the session override file.
+ *
+ * Returns `null` when the file is absent, malformed JSON, or does not contain
+ * a usable `plan_path` string, so callers can fall back to the startup plan.
+ *
+ * @returns {Promise<string | null>} Resolved plan path from the session override, or `null`.
+ */
+async function readSessionOverridePlanPath() {
+  try {
+    const rawOverride = await readFile(SESSION_OVERRIDE_PATH, 'utf8');
+    const overridePayload = JSON.parse(rawOverride);
+    if (typeof overridePayload?.plan_path !== 'string' || !overridePayload.plan_path.trim()) {
+      return null;
+    }
+
+    return resolvePlansScopedPath(overridePayload.plan_path, 'session override plan_path');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve and validate a plan path so it stays within the `plans/` directory.
+ *
+ * @param {string} candidatePath - Raw plan path from the caller or session override.
+ * @param {string} fieldName - Human-readable field name for error messages.
+ * @returns {string} Normalized repo-relative plan path within `plans/`.
+ */
+function resolvePlansScopedPath(candidatePath, fieldName) {
+  const requestedPlanPath = requireString(candidatePath, fieldName);
+  const absolutePlanPath = path.isAbsolute(requestedPlanPath)
+    ? path.normalize(requestedPlanPath)
+    : path.resolve(MCP_REPO_ROOT, requestedPlanPath);
+  const relativeToPlans = path.relative(PLANS_ROOT, absolutePlanPath);
+  const staysWithinPlans = relativeToPlans !== ''
+    && !relativeToPlans.startsWith('..')
+    && !path.isAbsolute(relativeToPlans);
+
+  if (!staysWithinPlans) {
+    const error = new Error(`${fieldName} must resolve within plans/. Received: ${requestedPlanPath}`);
+    error.jsonRpcCode = -32602;
+    throw error;
+  }
+
+  return path.relative(MCP_REPO_ROOT, absolutePlanPath).replaceAll(path.sep, '/');
 }

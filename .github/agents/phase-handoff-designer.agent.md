@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for designing or auditing sequential handoffs between the seven NeatapticTS phase agents. Keywords: handoff, phase transition, send false, next phase, prompt packet.'
 name: phase-handoff-designer
 tier: 3
-model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
+model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
 tools: [read, search]
 user-invocable: false
 agents: []

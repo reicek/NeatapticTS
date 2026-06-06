@@ -1,7 +1,7 @@
 ---
 name: tracker-handoff
-description: 'Standardize durable tracker files in NeatapticTS. Use when creating or updating .plans.md or .logs.md files, compressing historical passes, marking [PLANNED]/[WIP]/[DONE], archiving terminally closed trackers in plans/completed, or adding a reusable Handoff query section for safe session continuation.'
-argument-hint: 'Describe the tracker file, whether it is active or archival, the current workstream state, and what the next session should be able to continue safely.'
+description: 'Use when: standardizing NeatapticTS `.plans.md` or `.logs.md` trackers, including creating or refreshing active trackers, compressing completed history, managing `[PLANNED]`/`[WIP]`/`[DONE]`, handling intentional parallel lanes, archiving closed tracker pairs in `plans/completed/`, or updating a reusable `Handoff query` for safe session continuation.'
+argument-hint: 'Describe the tracker path, active vs closed intent, single-lane or parallel-lane state, history to compress, validations required, and what the next session must resume safely.'
 user-invocable: true
 disable-model-invocation: false
 ---
@@ -11,14 +11,15 @@ disable-model-invocation: false
 Use this skill when work needs durable continuity in markdown tracker files.
 
 This skill is the canonical workflow for `.plans.md` and `.logs.md` structure in
-NeatapticTS. It owns the tracker status markers, compression rules for old work,
-the required `Handoff query` section that makes WIP sessions safe to resume
-with a simple copy-paste prompt, and the terminal closure rule for finished
-plans, including archival under `plans/completed/`.
+NeatapticTS. It owns tracker status markers, compression rules for old work, the
+required `Handoff query` section that makes WIP sessions safe to resume with a
+copy-paste prompt, explicit closure mechanics for finished plans, and the
+parallel-lane rules needed when one workstream honestly has more than one active
+frontier.
 
-Other skills may decide when a tracker should be updated, but they should defer
+Other skills may decide **when** a tracker should change, but they should defer
 the tracker shape itself to this skill instead of redefining status markers,
-handoff layout, or history-compression rules ad hoc.
+handoff layout, compression policy, or archive conventions ad hoc.
 
 ## When To Use
 
@@ -29,6 +30,60 @@ handoff layout, or history-compression rules ad hoc.
 - Older tracker history has become too verbose and needs compression.
 - A workflow skill or agent needs a standard tracker format instead of a custom
   local convention.
+- A plan is closing and needs the correct `.plans.md` + `.logs.md` archive pair
+  under `plans/completed/`.
+- A workstream truly needs parallel active lanes and the tracker must represent
+  them intentionally instead of drifting into multiple accidental `[WIP]`
+  branches.
+
+## Task Packet
+
+Pass a compact packet that names the tracker, the intended tracker state, the
+active frontier, and any validations or archive moves that must happen before
+the pass can be called complete.
+
+```text
+Use tracker-handoff for plans/<Workstream>.plans.md.
+Intent: <create | refresh active tracker | compress history | close and archive>.
+Current state: <status marker, active frontier, known blocker if any>.
+Lane model: <single active lane | named parallel lanes>.
+History to compress: <completed sections or none>.
+Validation: <manual only | command list>.
+Next-session goal: <what the next session should continue safely>.
+```
+
+## Quick Start Checklist
+
+1. Identify the file role: active `.plans.md`, accumulating `.logs.md`, or
+   closing archive pair.
+2. Confirm the tracker vocabulary uses only `[PLANNED]`, `[WIP]`, and `[DONE]`.
+3. Preserve detail only at the active frontier; compress completed history into
+   short coverage notes.
+4. Add, refresh, or intentionally remove `## Handoff query` based on whether the
+   workstream is still resumable in-context.
+5. If the plan participates in flow-aware steps, run the relevant sync or gate
+   command before declaring the pass finished.
+6. Summarize what changed, what remains active, and what validation evidence now
+   exists.
+
+## Required Workflow
+
+1. Confirm whether the tracker is active, accumulating, closing, or reopening.
+2. Decide whether the workstream has one active frontier or a justified
+   multi-lane frontier. Default to a single active lane.
+3. Normalize the status markers before changing prose; drifted status vocabulary
+   causes downstream confusion.
+4. Keep the active frontier detailed, but compress completed work into concise
+   coverage notes that prevent re-exploration.
+5. Add or refresh `## Handoff query` for active work. Remove it from terminally
+   closed plans unless the user explicitly wants reopen guidance.
+6. If the tracker participates in flow-aware phase steps, update the tracker and
+   then run the appropriate sync or gate command from the validation section
+   below.
+7. If the workstream is closing, create or refresh the same-boundary `.logs.md`
+   file before moving the pair into `plans/completed/`.
+8. Record only durable evidence in the tracker summary. Do not paste long raw
+   command transcripts into the tracker.
 
 ## Canonical Tracker Rules
 
@@ -41,47 +96,12 @@ handoff layout, or history-compression rules ad hoc.
 - Keep active trackers in `plans/` and move terminally closed `.plans.md` plus
   `.logs.md` pairs into `plans/completed/`.
 
-### Completion Closure Rule
-
-When a workstream becomes fully complete, the final tracker step is always to
-close it deliberately.
-
-- Compress the completed `.plans.md` file into a short closed tracker that
-  preserves only the durable reopen-point context.
-- Add or update a same-boundary `.logs.md` file with the durable done-state
-  record.
-- Move the closed `.plans.md` file and its same-boundary `.logs.md` record into
-  `plans/completed/` as the last tracker action before any next workstream
-  begins.
-- Remove active-session scaffolding that no longer applies, especially stale
-  `Remaining gaps`, `Next step`, or `Handoff query` sections.
-- Do not preserve or emit a next-session handoff prompt on a fully closed plan
-  unless the user explicitly asks for reopen guidance.
-- If there is still a real next step from the plan's own context, the plan is
-  not closed yet and should stay active with a `Handoff query`.
-
-### Flow-Aware Tracker Closure
-
-Tracker closure now runs through the `07.tracker-closure` flow. The flow
-requires the `log-completion-marker` gate to pass before the workstream is
-considered closed. The gate confirms that a compressed log entry is present and
-the target phase is marked `[DONE]`. It must also clear the
-`stale-wip-plans` gate so an all-`[DONE]` plan cannot remain top-level `[WIP]`
-after the archive handoff.
-
-When closing a tracker that was run with flow-aware phase steps:
-
-- The `VALIDATION_EVIDENCE` section of the final structured-v1 output block
-  must include `log-completion-marker gate: pass` evidence.
-- It must also include `stale-wip-plans gate: pass` evidence, confirming the
-  archived plan no longer appears as a stale top-level `[WIP]` tracker.
-- If the workstream produced gate exceptions, confirm they are recorded in
-  `.github/ai-learning/learning-log.jsonl` before compressing.
+### Status Vocabulary And Active Frontier
 
 Every durable tracker should use the same three states:
 
 - `[PLANNED]` for queued work not yet in motion.
-- `[WIP]` for the single active workstream or active section.
+- `[WIP]` for the active workstream or active lane.
 - `[DONE]` for completed durable coverage.
 
 Apply them consistently:
@@ -91,6 +111,23 @@ Apply them consistently:
 - Completed historical sections should become `[DONE]` coverage notes rather
   than verbose transcripts.
 - Queued near-term work should be `[PLANNED]`.
+
+### Parallel Workstream Policy
+
+Some workstreams honestly require more than one active lane, but parallelism
+must be explicit, named, and bounded.
+
+- Default to one active lane. Multiple `[WIP]` sections are an exception, not a
+  convenience.
+- Only keep parallel lanes when the work is truly independent enough that one
+  lane can pause without blocking the others.
+- Name each active lane by responsibility, not by person or session.
+- Keep one short coordinator section near the top that states how the lanes
+  relate and which lane should move next if only one can progress.
+- Give each lane its own next step and validation note so later sessions do not
+  have to infer ownership or order.
+- Refresh the `Handoff query` so it names the exact lane that the next session
+  should continue. Do not make the next session rediscover which lane matters.
 
 ### Handoff Query Section
 
@@ -145,26 +182,136 @@ note before authoring the next phase's step packets or closing the workstream.
 - Do not advance to the next phase or close the workstream until the gate
   evidence is recorded in `VALIDATION_EVIDENCE`.
 
-When a plan reaches terminal `[DONE]` state:
+### Completion Closure Rule
 
-- compress the plan before considering the workstream finished,
-- add or refresh the same-boundary `.logs.md` audit record,
-- keep a short closed tracker focused on scope, final state, audit summary,
-  reopen conditions, and the audit-log pointer.
+When a workstream becomes fully complete, the final tracker step is always to
+close it deliberately.
 
-Good completed note:
+- Compress the completed `.plans.md` file into a short closed tracker that
+  preserves only the durable reopen-point context.
+- Add or update a same-boundary `.logs.md` file with the durable done-state
+  record.
+- Move the closed `.plans.md` file and its same-boundary `.logs.md` record into
+  `plans/completed/` as the last tracker action before any next workstream
+  begins.
+- Remove active-session scaffolding that no longer applies, especially stale
+  `Remaining gaps`, `Immediate next steps`, or `Handoff query` sections.
+- Do not preserve or emit a next-session handoff prompt on a fully closed plan
+  unless the user explicitly asks for reopen guidance.
+- If there is still a real next step from the plan's own context, the plan is
+  not closed yet and should stay active with a `Handoff query`.
 
-- `[DONE] Runtime diagnostics moved to runtime chapter; Network now delegates DropConnect, dropout reset, and training-health readers.`
+### Flow-Aware Tracker Closure
 
-Bad completed note:
+Tracker closure runs through the `07.tracker-closure` flow. The flow requires
+the `log-completion-marker` gate to pass before the workstream is considered
+closed. The gate confirms that a compressed log entry is present and the target
+phase is marked `[DONE]`. Closure must also clear the `stale-wip-plans` gate so
+an all-`[DONE]` plan cannot remain top-level `[WIP]` after the archive handoff.
 
-- a session-style transcript of every read, search, and validation command.
+When closing a tracker that was run with flow-aware phase steps:
+
+- The `VALIDATION_EVIDENCE` section of the final structured-v1 output block
+  must include `log-completion-marker gate: pass` evidence.
+- It must also include `stale-wip-plans gate: pass` evidence, confirming the
+  archived plan no longer appears as a stale top-level `[WIP]` tracker.
+- If the workstream produced gate exceptions, confirm they are recorded in
+  `.github/ai-learning/learning-log.jsonl` before compressing.
 
 ### Heading And Date Rules
 
 - Use stable undated headings.
 - Do not prepend calendar dates to tracker sections.
 - Keep section titles reusable across sessions.
+
+## Automation And Validation
+
+Prefer the narrowest validation that matches the tracker change. Record the
+result as durable evidence, not as a raw transcript dump.
+
+### Common commands
+
+```bash
+node .github/hooks/workflow-update-sync.mjs --plan=<active-plan-path> --json
+node scripts/agent-customization/validate-plan-sync.mjs --json --plan=<active-plan-path>
+node scripts/agent-customization/gates/phase-compression.gate.mjs --json
+node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json
+node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json
+```
+
+### Which command to use
+
+- Run `workflow-update-sync.mjs` after editing an active phase-step plan when the
+  next `[PLANNED]` step should advance automatically to `[WIP]`.
+- Run `validate-plan-sync.mjs` when the plan's active status, README index
+  entry, roadmap placement, or closure registration changed.
+- Run `phase-compression.gate.mjs` after marking a phase `[DONE]` but before
+  advancing to the next phase or closing the workstream.
+- Run `log-completion-marker.gate.mjs` when the workstream is closing and the
+  same-boundary `.logs.md` record was added or refreshed.
+- Run `stale-wip-plans.gate.mjs` when a plan was closed, archived, or otherwise
+  changed from active to terminal so stale top-level `[WIP]` markers do not
+  survive.
+
+### Validation reporting rule
+
+- Report the command, whether it passed, and the one-line evidence or fix
+  applied.
+- Do not paste the entire JSON payload into the tracker unless the user asked
+  for raw output preservation.
+- If validation is intentionally deferred, say why and what exact next command
+  remains.
+
+## Edge Cases And Recovery Rules
+
+### Reopening Archived Work
+
+- If a closed workstream needs new work, prefer reopening intentionally rather
+  than silently editing the archived pair in place.
+- Either move the pair back into `plans/` or create a new active tracker that
+  points to the archived record in `plans/completed/`.
+- Add a fresh `Handoff query`; do not reuse a stale closure-era prompt.
+
+### Interrupted Mid-Validation State
+
+- If edits are made but validation did not complete, keep the tracker `[WIP]`.
+- State the exact missing validation command and any known blocker.
+- Do not compress the frontier so aggressively that the next session has to
+  rediscover what remains unverified.
+
+### Missing Same-Boundary Log On Closure
+
+- A plan is not fully closed until the same-boundary `.logs.md` file exists and
+  records the durable done state.
+- If the log is missing, create or refresh it before moving anything into
+  `plans/completed/`.
+
+### All Phases Done But Top-Level Status Still WIP
+
+- Treat this as a closure bug, not harmless drift.
+- Fix the tracker status, refresh closure evidence, and run the
+  `stale-wip-plans` gate before claiming the archive handoff is complete.
+
+### Parallel Lanes Becoming Sequential Again
+
+- When one lane finishes or becomes blocked permanently, collapse the remaining
+  work back to a single explicit active frontier.
+- Remove obsolete lane headings and refresh the `Handoff query` so it no longer
+  implies parallel work that no longer exists.
+
+## Feedback And Improvement Loop
+
+When tracker work repeatedly needs the same manual cleanup, treat that as a
+workflow-quality signal instead of normal operator burden.
+
+- If tracker friction comes from missing tracker guidance, improve this skill.
+- If it comes from step-packet drift, route to `phase-handoff-workflow`.
+- If it comes from plan/README/Roadmap misalignment, route to
+  `plan-sync-validation`.
+- If a recurring tracker-system gap was fixed, record it with
+  `capturing-learning-event` so future sessions inherit the lesson.
+- Prefer fixing the durable tracker workflow once over repeating a local
+  workaround in each new tracker.
 
 ## Recommended Active Plan Shape
 
@@ -210,7 +357,8 @@ For `.logs.md` files, prefer:
 - Do not use `[]` and `[DONE]` as a mixed progress vocabulary. Use only
   `[PLANNED]`, `[WIP]`, and `[DONE]`.
 - Do not keep multiple active `[WIP]` branches in one tracker unless the user
-  explicitly wants parallel active lanes.
+  explicitly wants parallel active lanes **and** each lane is named, scoped, and
+  resumable on its own.
 - Do not bury the next-session continuation prompt in prose.
 - Do not leave a `.plans.md` file without a `Handoff query` section when the
   workstream is still active.
@@ -222,6 +370,8 @@ For `.logs.md` files, prefer:
 - Do not preserve detailed historical narration when compact coverage notes are
   enough to prevent re-exploration.
 - Do not rewrite generated README files just to record progress; use trackers.
+- Do not treat validation as optional ceremony when the tracker participates in a
+  flow-aware plan or archive handoff.
 
 ## Expected Final Output
 
@@ -229,13 +379,11 @@ A strong tracker update should report:
 
 - which tracker file was updated,
 - whether it is now `[PLANNED]`, `[WIP]`, or `[DONE]`,
+- whether the tracker uses a single active lane or named parallel lanes,
 - what historical content was compressed,
 - what the new active frontier is,
 - whether a `Handoff query` section was added, refreshed, or intentionally
   removed because the plan was terminally closed,
 - whether a same-boundary `.logs.md` file was added or refreshed,
+- whether any workflow sync or gate command passed,
 - whether the closed tracker pair now lives in `plans/completed/`.
-
-```
-
-```

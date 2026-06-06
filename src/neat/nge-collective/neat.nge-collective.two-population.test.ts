@@ -182,6 +182,35 @@ describe('two-population harness', () => {
       });
     });
 
+    it('keeps both team generations at 0 until the shared barrier completes', async () => {
+      await expect(
+        loadTwoPopulationHarnessModule().then(
+          ({ createTwoPopulationHarness, advanceTwoPopulations }) => {
+            const harness = createTwoPopulationHarness(
+              createHarnessConfig(),
+              createHarnessConfig(),
+            );
+            const initialTeamAGeneration = harness.teamA.controller.generation;
+            const initialTeamBGeneration = harness.teamB.controller.generation;
+
+            advanceTwoPopulations(harness, createTeamResults('team-a'), []);
+
+            return {
+              teamAGeneration: harness.teamA.controller.generation,
+              teamBGeneration: harness.teamB.controller.generation,
+              initialTeamAGeneration,
+              initialTeamBGeneration,
+            };
+          },
+        ),
+      ).resolves.toEqual({
+        teamAGeneration: 0,
+        teamBGeneration: 0,
+        initialTeamAGeneration: 0,
+        initialTeamBGeneration: 0,
+      });
+    });
+
     it('advances Team B population without mutating Team A controller state', async () => {
       await expect(
         loadTwoPopulationHarnessModule().then(
@@ -202,6 +231,39 @@ describe('two-population harness', () => {
       ).resolves.toEqual({
         teamAGeneration: 0,
         teamBGeneration: 1,
+      });
+    });
+
+    it('keeps both opponent snapshot pools unchanged until the shared barrier completes', async () => {
+      await expect(
+        loadTwoPopulationHarnessModule().then(
+          ({ createTwoPopulationHarness, advanceTwoPopulations }) => {
+            const harness = createTwoPopulationHarness(
+              createHarnessConfig(),
+              createHarnessConfig(),
+            );
+            const initialTeamASnapshotPool = harness.teamA.opponentSnapshotPool;
+            const initialTeamBSnapshotPool = harness.teamB.opponentSnapshotPool;
+
+            advanceTwoPopulations(harness, createTeamResults('team-a'), []);
+
+            return {
+              teamASnapshotPoolUnchanged:
+                harness.teamA.opponentSnapshotPool === initialTeamASnapshotPool,
+              teamBSnapshotPoolUnchanged:
+                harness.teamB.opponentSnapshotPool === initialTeamBSnapshotPool,
+              teamASnapshotCount:
+                harness.teamA.opponentSnapshotPool.snapshots.length,
+              teamBSnapshotCount:
+                harness.teamB.opponentSnapshotPool.snapshots.length,
+            };
+          },
+        ),
+      ).resolves.toEqual({
+        teamASnapshotPoolUnchanged: true,
+        teamBSnapshotPoolUnchanged: true,
+        teamASnapshotCount: 0,
+        teamBSnapshotCount: 0,
       });
     });
 

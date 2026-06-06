@@ -1,6 +1,6 @@
 ---
 name: updating-agent-frontmatter
-description: 'Use when: updating .agent.md YAML frontmatter, names, descriptions, tools, agents allow-lists, model fallback arrays, handoffs, or visibility flags.'
+description: 'Use when: updating .agent.md YAML frontmatter, names, descriptions, tools, agents allow-lists, model strings, handoffs, or visibility flags.'
 argument-hint: 'Name the agent file, metadata fields to change, visibility target, allowed subagents, model tier, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
@@ -12,7 +12,7 @@ This skill makes safe, targeted edits to YAML frontmatter in existing `.github/a
 
 ## When to Use
 
-- Changing the `model` or model fallback array for an existing agent.
+- Changing the `model` string for an existing agent.
 - Adding, removing, or reordering entries in an `agents: [...]` allow-list.
 - Updating the `description` to improve trigger precision or fix a false-positive pattern.
 - Toggling `user-invocable` when an agent's visibility target changes.
@@ -38,7 +38,7 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 2. Confirm whether the agent is a user-facing orchestrator (must keep `user-invocable: true` and stable name) or a hidden specialist (may have `user-invocable: false`).
 3. Apply the targeted field change; do not alter unrelated frontmatter fields in the same edit.
 4. If changing `agents`, verify that `agent` is present in the `tools` list when the new `agents` list is non-empty.
-5. If changing `model`, use a qualified model string or a validated fallback array; document the rationale.
+5. If changing `model`, use a qualified single model string; when repairing a legacy array-valued `model`, preserve the first listed entry unless the user explicitly wants a routing change.
 6. If changing the agent `name` or description, assess whether any parent allow-lists or skill handoffs reference the old name and update them.
 7. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` after the edit.
 8. Record files changed, fields changed, and compatibility risk in the active plan or chat summary.

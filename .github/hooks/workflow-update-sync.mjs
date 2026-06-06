@@ -29,7 +29,7 @@
  * - Requires the plan file to have a "Latest validation evidence" section
  *
  * Invocation:
- *   node .github/hooks/workflow-update-sync.mjs --plan=<path> [--json] [--dry-run]
+ *   node .github/hooks/workflow-update-sync.mjs [--plan=<path>] [--json] [--dry-run] [--hook-check]
  *
  * Output (JSON mode):
  *   {
@@ -40,7 +40,7 @@
  *     "syncEvent": {
  *       "currentWipStep": "Phase N Step MM",
  *       "nextPlannedStep": "Phase N Step MM+1" | null,
- *       "actionTaken": "advanced"|"already-in-sync"|"blocked",
+ *       "actionTaken": "advanced"|"already-in-sync"|"verified"|"phase-complete"|"blocked",
  *       "reason": "..."
  *     },
  *     "evidence": "Hook sync evidence text"
@@ -53,6 +53,9 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cwd = process.cwd();
+const repoRoot = path.resolve(__dirname, '..', '..');
+const workflowMcpConfigPath = path.join(repoRoot, '.vscode', 'mcp.json');
+const defaultWorkflowPlanPath = 'plans/mcp-active-binding.plans.md';
 
 // ============================================================================
 // Utilities
@@ -72,11 +75,32 @@ function parseArgs(argv) {
       opts.dryRun = true;
     } else if (arg.startsWith('--plan=')) {
       opts.plan = arg.slice('--plan='.length);
+    } else if (arg === '--hook-check') {
+      opts.hookCheck = true;
     } else if (arg === '--help') {
       opts.help = true;
     }
   }
   return opts;
+}
+
+function resolveWorkflowPlanPath() {
+  if (!fs.existsSync(workflowMcpConfigPath)) {
+    return defaultWorkflowPlanPath;
+  }
+
+  try {
+    const configPayload = JSON.parse(fs.readFileSync(workflowMcpConfigPath, 'utf8'));
+    const workflowArgs = configPayload?.servers?.['neataptic-workflow-mcp']?.args;
+    const planArgument = Array.isArray(workflowArgs)
+      ? workflowArgs.find((argument) => typeof argument === 'string' && argument.startsWith('--plan='))
+      : null;
+    return typeof planArgument === 'string' && planArgument.trim()
+      ? planArgument.slice('--plan='.length)
+      : defaultWorkflowPlanPath;
+  } catch {
+    return defaultWorkflowPlanPath;
+  }
 }
 
 /**
@@ -206,7 +230,8 @@ function findNextPlannedStep(steps, currentWip) {
  * Determine the sync action to take.
  * - "advanced": advance nextPlanned → [WIP], currentWip → [DONE]
  * - "already-in-sync": current step matches expected state
- * - "blocked": condition not met (e.g., no next step, out-of-order)
+ * - "phase-complete": no next step exists in the current phase
+ * - "blocked": condition not met (e.g., no current [WIP] step)
  */
 function determineSyncAction(currentWip, nextPlanned) {
   if (!currentWip) {
@@ -218,7 +243,7 @@ function determineSyncAction(currentWip, nextPlanned) {
 
   if (!nextPlanned) {
     return {
-      action: 'blocked',
+      action: 'phase-complete',
       reason: `No [PLANNED] step found immediately after Phase ${currentWip.phase} Step ${currentWip.step}. Phase may be complete.`,
     };
   }
@@ -230,30 +255,106 @@ function determineSyncAction(currentWip, nextPlanned) {
   };
 }
 
+function determineHookCheckAction(currentWip, nextPlanned) {
+  if (!currentWip) {
+    return {
+      action: 'blocked',
+      reason: 'No [WIP] step found in plan. Cannot verify hook-bound workflow state.',
+    };
+  }
+
+  if (!nextPlanned) {
+    return {
+      action: 'phase-complete',
+      reason: `Phase ${currentWip.phase} Step ${currentWip.step} remains active and has no immediate next [PLANNED] step. Treating this as a phase boundary, not a hook failure.`,
+    };
+  }
+
+  return {
+    action: 'verified',
+    reason: `Phase ${currentWip.phase} Step ${currentWip.step} remains [WIP]; post-action workflow integrity check passed without advancing the plan.`,
+  };
+}
+
 /**
- * Apply sync: update plan text by changing step statuses.
- * Returns { updatedText, changed: bool, summary: string }.
+ * Update the YAML status: field inside a step's fenced yaml code block.
+ * Finds the unique block by matching phase + step numbers inside the block content,
+ * so the substitution is unambiguous even when multiple steps share similar headers.
+ *
+ * @param {string} text - Full plan text
+ * @param {string|number} phase - Phase number (e.g. 2)
+ * @param {number} step - Step number (e.g. 2)
+ * @param {string} fromStatus - The current status value, e.g. '[WIP]' or '[PLANNED]'
+ * @param {string} toStatus - The target status value, e.g. '[DONE]' or '[WIP]'
+ * @returns {string} Updated text (unchanged if block not found or status already correct)
  */
+function updateYamlStatusForStep(text, phase, step, fromStatus, toStatus) {
+  const phaseMarker = `phase: ${phase}`;
+  const stepMarker = `step: ${step}`;
+  const fromStatusLine = `status: '${fromStatus}'`;
+  const toStatusLine = `status: '${toStatus}'`;
+
+  const yamlBlockRegex = /```yaml\n([\s\S]*?)```/g;
+  let blockMatch;
+
+  while ((blockMatch = yamlBlockRegex.exec(text)) !== null) {
+    const blockContent = blockMatch[1];
+    if (
+      blockContent.includes(phaseMarker) &&
+      blockContent.includes(stepMarker) &&
+      blockContent.includes(fromStatusLine)
+    ) {
+      const updatedBlock = blockContent.replace(fromStatusLine, toStatusLine);
+      return (
+        text.slice(0, blockMatch.index) +
+        '```yaml\n' +
+        updatedBlock +
+        '```' +
+        text.slice(blockMatch.index + blockMatch[0].length)
+      );
+    }
+  }
+
+  return text; // no matching block found; caller records this as a gap
+}
+
+
 function applySyncToPlanText(text, currentWip, nextPlanned) {
   let updated = text;
   let changed = false;
 
   if (currentWip) {
-    // Replace current [WIP] with [DONE]
+    // Replace current [WIP] with [DONE] in the markdown header
     const oldWipLine = currentWip.originalLine;
     const newWipLine = oldWipLine.replace(/\[WIP\]/, '[DONE]');
     if (newWipLine !== oldWipLine) {
       updated = updated.replace(oldWipLine, newWipLine);
       changed = true;
     }
+    // Also update the YAML status: field inside the step packet code block
+    const afterYaml = updateYamlStatusForStep(
+      updated, currentWip.phase, currentWip.step, '[WIP]', '[DONE]'
+    );
+    if (afterYaml !== updated) {
+      updated = afterYaml;
+      changed = true;
+    }
   }
 
   if (nextPlanned) {
-    // Replace next [PLANNED] with [WIP]
+    // Replace next [PLANNED] with [WIP] in the markdown header
     const oldPlannedLine = nextPlanned.originalLine;
     const newPlannedLine = oldPlannedLine.replace(/\[PLANNED\]/, '[WIP]');
     if (newPlannedLine !== oldPlannedLine) {
       updated = updated.replace(oldPlannedLine, newPlannedLine);
+      changed = true;
+    }
+    // Also update the YAML status: field inside the step packet code block
+    const afterYaml = updateYamlStatusForStep(
+      updated, nextPlanned.phase, nextPlanned.step, '[PLANNED]', '[WIP]'
+    );
+    if (afterYaml !== updated) {
+      updated = afterYaml;
       changed = true;
     }
   }
@@ -315,25 +416,19 @@ Workflow Update Sync Hook
 Synchronizes MCP plan state with active implementation step.
 
 Usage:
-  node .github/hooks/workflow-update-sync.mjs --plan=<path> [--json] [--dry-run]
+  node .github/hooks/workflow-update-sync.mjs [--plan=<path>] [--json] [--dry-run] [--hook-check]
 
 Options:
-  --plan=<path>   (Required) Path to the active plan file (e.g., plans/My_Plan.md)
+  --plan=<path>   Path to the active plan file (defaults to the workflow MCP plan binding)
   --json          Output structured JSON instead of text
   --dry-run       Show what would be changed without writing files
+  --hook-check    Verify workflow integrity without advancing the plan
   --help          Show this message
 `);
     process.exit(0);
   }
 
-  // Validate required --plan argument
-  if (!options.plan) {
-    console.error(
-      'ERROR: --plan=<path> is required. Pass the active plan path, e.g. --plan=plans/My_Plan.md'
-    );
-    process.exitCode = 1;
-    process.exit(1);
-  }
+  options.plan ??= resolveWorkflowPlanPath();
 
   try {
     const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
@@ -346,7 +441,9 @@ Options:
     const nextPlanned = findNextPlannedStep(allSteps, currentWip);
 
     // Determine action
-    const { action, reason } = determineSyncAction(currentWip, nextPlanned);
+    const { action, reason } = options.hookCheck
+      ? determineHookCheckAction(currentWip, nextPlanned)
+      : determineSyncAction(currentWip, nextPlanned);
 
     let syncEvent = {
       currentWipStep: currentWip
@@ -381,6 +478,10 @@ Options:
       }
     } else if (action === 'already-in-sync') {
       evidence = 'Workflow state already in sync; no changes needed.';
+    } else if (action === 'verified') {
+      evidence = reason;
+    } else if (action === 'phase-complete') {
+      evidence = `Workflow sync reached a phase boundary: ${reason}`;
     } else {
       evidence = `Workflow sync blocked: ${reason}`;
     }
@@ -391,14 +492,16 @@ Options:
     }
 
     const report = {
-      ok: action !== 'blocked' || action === 'already-in-sync',
-      pass: action === 'advance' ? changesMade : action === 'already-in-sync',
+      ok: action !== 'blocked',
+      pass: action === 'advance' ? changesMade : action !== 'blocked',
       timestamp,
       plan: { path: options.plan, status: planStatus },
       syncEvent,
       evidence,
       dryRun: options.dryRun,
       summaryText: `Workflow update sync: ${syncEvent.actionTaken}${
+        options.hookCheck ? ' (hook-check)' : ''
+      }${
         options.dryRun ? ' (dry-run)' : ''
       }`,
     };

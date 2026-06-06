@@ -2,7 +2,7 @@
 description: 'Use when selecting a relevant plan document, checking roadmap alignment, mapping trigger phrases to plans, or preparing an architectural alignment brief before coding. Keywords: plans, roadmap, architecture, NEAT correctness, ONNX, workers, checkpointing, visualization.'
 name: 'plan-scout'
 tier: 3
-model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
+model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
 tools: [read, search]
 user-invocable: false
 agents: []

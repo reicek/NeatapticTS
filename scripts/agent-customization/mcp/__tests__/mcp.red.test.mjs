@@ -8,7 +8,7 @@ import {
   createSelfCheckReport,
   selfCheckError,
 } from '../mcp-utils.mjs';
-import { loadActivePlanContext } from '../mcp-plan-utils.mjs';
+import { loadActivePlanContext, resolveEffectivePlanPath } from '../mcp-plan-utils.mjs';
 
 const MCP_CONFIG_PATH = path.resolve(import.meta.dirname, '../../../../.vscode/mcp.json');
 
@@ -79,6 +79,12 @@ describe('MCP hardening red contracts', () => {
         },
         { phase: 1, step: 1, agent: '00-helping' },
       );
+    });
+
+    it('prefers the session override plan path over the startup plan path', async () => {
+      const resolvedPlanPath = await resolveEffectivePlanPath({}, 'plans/mcp-active-binding.plans.md');
+
+      assert.strictEqual(resolvedPlanPath, 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md');
     });
   });
 });

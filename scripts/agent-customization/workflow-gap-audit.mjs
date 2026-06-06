@@ -5,6 +5,7 @@
  * Reads gate exception log and optional session store to aggregate:
  *   - Gate failure frequency (real exceptions only; test-session artifacts filtered)
  *   - Escalation count (gate-escalation category events)
+ *   - Runtime enforcement evidence (pre/post pass pairs, proof mismatches, bypass signals)
  *   - Agent session counts (from SQLite session store when `--db` is provided)
  *   - Agent drift sessions (sessions without a named flow ID in summary)
  *   - Underused flows (flow IDs absent from recent session summaries)
@@ -16,6 +17,14 @@
  *   "windowDays": 7,
  *   "gateFailureFrequency": [{ "gateId": "...", "failureCount": 0, "affectedAgents": [] }],
  *   "escalationCount": 0,
+ *   "runtimeEnforcementEvidence": {
+ *     "preActionPasses": 0,
+ *     "postActionPasses": 0,
+ *     "proofMismatches": 0,
+ *     "blockedActions": 0,
+ *     "missingPostActionPairs": [],
+ *     "postWithoutPrePairs": []
+ *   },
  *   "agentSessionCounts": [{ "agentName": "...", "sessionCount": 0 }],
  *   "agentDriftSessions": [{ "sessionId": "...", "agentName": "...", "summary": "..." }],
  *   "underusedFlows": [{ "flowId": "...", "mentionCount": 0 }],
@@ -104,6 +113,9 @@ async function runWorkflowGapAudit(opts) {
   // Step 4: Count escalation events within the window.
   const escalationCount = countEscalations(realEvents, cutoffDate);
 
+  // Step 4b: Aggregate runtime enforcement evidence within the window.
+  const runtimeEnforcementEvidence = aggregateRuntimeEnforcementEvidence(realEvents, cutoffDate);
+
   // Step 5: Load session store data (graceful fallback when unavailable or empty).
   const sessionData = await loadSessionStoreData(opts.dbPath, cutoffDate, opts.windowDays);
 
@@ -117,6 +129,7 @@ async function runWorkflowGapAudit(opts) {
   const recommendedActions = buildRecommendedActions({
     gateFailureFrequency,
     escalationCount,
+    runtimeEnforcementEvidence,
     agentDriftSessions: sessionData.driftSessions,
     underusedFlows,
   });
@@ -126,6 +139,7 @@ async function runWorkflowGapAudit(opts) {
     windowDays: opts.windowDays,
     gateFailureFrequency,
     escalationCount,
+    runtimeEnforcementEvidence,
     agentSessionCounts: sessionData.agentSessionCounts,
     agentDriftSessions: sessionData.driftSessions,
     underusedFlows,
@@ -227,6 +241,59 @@ function countEscalations(realEvents, cutoffDate) {
       (event.category === 'gate-escalation' || event.eventType === 'gate-escalation') &&
       (typeof event.timestamp !== 'string' || event.timestamp >= cutoffDate),
   ).length;
+}
+
+/**
+ * Aggregate runtime enforcement events from the learning log.
+ *
+ * @param {object[]} realEvents
+ * @param {string} cutoffDate
+ * @returns {{ preActionPasses: number, postActionPasses: number, proofMismatches: number, blockedActions: number, missingPostActionPairs: string[], postWithoutPrePairs: string[] }}
+ */
+function aggregateRuntimeEnforcementEvidence(realEvents, cutoffDate) {
+  const preActionPasses = new Set();
+  const postActionPasses = new Set();
+  let proofMismatches = 0;
+  let blockedActions = 0;
+
+  for (const event of realEvents) {
+    if (typeof event.timestamp === 'string' && event.timestamp < cutoffDate) continue;
+
+    if (event.eventType === 'runtime-action-prepass' && typeof event.actionId === 'string') {
+      preActionPasses.add(event.actionId);
+      continue;
+    }
+
+    if (event.eventType === 'runtime-action-postpass' && typeof event.actionId === 'string') {
+      postActionPasses.add(event.actionId);
+      continue;
+    }
+
+    if (event.eventType === 'runtime-proof-mismatch') {
+      proofMismatches += 1;
+      blockedActions += 1;
+    }
+
+    if (event.eventType === 'runtime-action-blocked') {
+      blockedActions += 1;
+    }
+  }
+
+  const missingPostActionPairs = [...preActionPasses]
+    .filter((actionId) => !postActionPasses.has(actionId))
+    .toSorted();
+  const postWithoutPrePairs = [...postActionPasses]
+    .filter((actionId) => !preActionPasses.has(actionId))
+    .toSorted();
+
+  return {
+    preActionPasses: preActionPasses.size,
+    postActionPasses: postActionPasses.size,
+    proofMismatches,
+    blockedActions,
+    missingPostActionPairs,
+    postWithoutPrePairs,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -361,13 +428,25 @@ function computeUnderusedFlows(allFlowIds, recentSummaries) {
 
 /**
  * Build recommended actions from aggregation results.
- * @param {{ gateFailureFrequency: object[], escalationCount: number, agentDriftSessions: object[], underusedFlows: object[] }} data
+ * @param {{ gateFailureFrequency: object[], escalationCount: number, runtimeEnforcementEvidence: object, agentDriftSessions: object[], underusedFlows: object[] }} data
  * @returns {string[]}
  */
-function buildRecommendedActions({ gateFailureFrequency, escalationCount, agentDriftSessions, underusedFlows }) {
+function buildRecommendedActions({
+  gateFailureFrequency,
+  escalationCount,
+  runtimeEnforcementEvidence,
+  agentDriftSessions,
+  underusedFlows,
+}) {
   const actions = [];
 
-  if (gateFailureFrequency.length === 0 && escalationCount === 0) {
+  if (
+    gateFailureFrequency.length === 0 &&
+    escalationCount === 0 &&
+    runtimeEnforcementEvidence.proofMismatches === 0 &&
+    runtimeEnforcementEvidence.missingPostActionPairs.length === 0 &&
+    runtimeEnforcementEvidence.postWithoutPrePairs.length === 0
+  ) {
     actions.push('No real gate failures or escalations detected in this window — gate health is good.');
   }
 
@@ -380,6 +459,24 @@ function buildRecommendedActions({ gateFailureFrequency, escalationCount, agentD
   if (escalationCount > 0) {
     actions.push(
       `${escalationCount} escalation(s) to 00-helping triggered. Review learning log for consecutive gate failure clusters.`,
+    );
+  }
+
+  if (runtimeEnforcementEvidence.proofMismatches > 0) {
+    actions.push(
+      `${runtimeEnforcementEvidence.proofMismatches} runtime proof mismatch event(s) were recorded. Inspect the repo-owned context carrier or the delegator-chain preparation path.`,
+    );
+  }
+
+  if (runtimeEnforcementEvidence.missingPostActionPairs.length > 0) {
+    actions.push(
+      `${runtimeEnforcementEvidence.missingPostActionPairs.length} action(s) logged a pre-action pass without a matching post-action pass. Inspect PostToolUse coverage or blocked follow-through.`,
+    );
+  }
+
+  if (runtimeEnforcementEvidence.postWithoutPrePairs.length > 0) {
+    actions.push(
+      `${runtimeEnforcementEvidence.postWithoutPrePairs.length} action(s) logged a post-action pass without a matching pre-action pass. Inspect for bypassed pretool enforcement.`,
     );
   }
 
@@ -417,6 +514,8 @@ function printHumanReport(report) {
   console.log(`Window: ${report.windowDays} day(s)\n`);
   console.log(`Gate failures (real, filtered):  ${report.gateFailureFrequency.length} gate(s) with failures`);
   console.log(`Escalation count:                ${report.escalationCount}`);
+  console.log(`Runtime proof mismatches:        ${report.runtimeEnforcementEvidence.proofMismatches}`);
+  console.log(`Missing post-action pairs:       ${report.runtimeEnforcementEvidence.missingPostActionPairs.length}`);
   console.log(`Agent drift sessions:            ${report.agentDriftSessions.length}`);
   console.log(`Top failing gate:                ${report.topFailingGate ?? '(none)'}`);
   console.log(`\nRecommended actions:`);

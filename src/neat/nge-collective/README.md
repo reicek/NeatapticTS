@@ -81,6 +81,37 @@ Example:
 const field: SharedField = createSharedField(10, 10);
 ```
 
+### TeamFitnessPolicy
+
+```ts
+TeamFitnessPolicy(
+  group: TeamResultGroup<TTeamId, TMemberResult>,
+): number
+```
+
+Aggregation policy injected into the reusable team-level evaluator seam.
+
+NGE core owns only the orchestration boundary. Consumers such as racing or
+ant-hive own the scoring policy and can swap it without rewriting the
+evaluator pipeline itself.
+
+Parameters:
+- `group` - Team-local member results to aggregate.
+
+Returns: Scalar team-level fitness score.
+
+### TeamFitnessResult
+
+Reusable team-level fitness result returned by the collective evaluator seam.
+
+### TeamResultGroup
+
+Generic member-result group scored by a reusable team-level fitness policy.
+
+The collective core keeps this shape intentionally policy-first: benchmark
+consumers own the meaning of each member result, while NGE core owns the
+orchestration that applies one aggregation policy per team group.
+
 ## neat/nge-collective/neat.nge-collective.ts
 
 NGE Collective Intelligence boundary — Phase G public surface.
@@ -103,6 +134,8 @@ graph TD
   B -->|"passes SharedField\nby reference"| A
   D["two-population\nTwoPopulationHarnessState\ncreateTwoPopulationHarness\nadvanceTwoPopulations"] --> B
   D --> C
+  E["team-fitness\ncreateTeamFitnessEvaluator\npolicy-injection evaluator seam"]
+  Consumers["Racing · Ant Hive\nbenchmark consumers"] -->|"inject scoring policy"| E
 ```
 
 ## Sub-modules
@@ -127,6 +160,12 @@ L1 (Manhattan) distance over their module-size distributions — a zero score me
 compositions. `createOpponentSnapshotPool` and `addOpponentSnapshot` maintain a rolling
 fixed-capacity buffer of deep-cloned opponent payloads for tournament evaluation; the oldest
 snapshot is evicted FIFO when the pool reaches capacity.
+
+### team-fitness
+`createTeamFitnessEvaluator` keeps team/group aggregation reusable and policy-bound. NGE core
+owns the orchestration that maps generic team groups into reusable team-fitness results, while
+each benchmark injects its own aggregation rule such as "best finisher wins" or a richer
+support-weighted collective score.
 
 ### two-population
 `createTwoPopulationHarness` builds the smallest honest 2v2 scaffold: two isolated team
@@ -156,6 +195,7 @@ import {
   computeRoleDivergenceMetric,
   createOpponentSnapshotPool,
   addOpponentSnapshot,
+  createTeamFitnessEvaluator,
   createTwoPopulationHarness,
   advanceTwoPopulations,
 } from './neat.nge-collective';
@@ -186,6 +226,16 @@ pool = addOpponentSnapshot(pool, 'agent:alpha', { fitness: 42 }, nextContext.gen
 // 6. Stand up the smallest honest 2v2 harness.
 const harness = createTwoPopulationHarness({}, {});
 advanceTwoPopulations(harness, [{ genomeId: 'a0', fitness: 5 }], [{ genomeId: 'b0', fitness: 4 }]);
+
+// 7. Aggregate team fitness through the shared policy-injection evaluator seam.
+//    Racing and Ant Hive each supply their own policy; NGE core owns the fold structure.
+const evaluateTeamFitness = createTeamFitnessEvaluator<'team-a', { score: number }>(
+  (group) => group.memberResults.reduce((total, member) => total + member.score, 0),
+);
+const teamResults = evaluateTeamFitness([
+  { teamId: 'team-a', memberResults: [{ score: 4 }, { score: 6 }] },
+]);
+// teamResults[0]?.teamFitness === 10
 ```
 
 ### addOpponentSnapshot
@@ -232,19 +282,25 @@ advanceTwoPopulations(
 ): void
 ```
 
-Advances both team controllers after a completed shared race.
+Advances both team controllers only after the shared generation barrier completes.
 
-The advance contract is intentionally two-phase. First, each team only
-advances when it actually produced results for the finished race; an empty
-result slice means "no completed evaluation," not "advance with zero
-fitness." Second, every non-empty side cross-registers its results into the
-opposing `opponentSnapshotPool` via `addOpponentSnapshot`, preserving a
-rolling history of frozen rival champions.
+The barrier is **shared**: a generation increment for either team — and any
+mutation of either team's `opponentSnapshotPool` — is suppressed until **both**
+teams have produced results for the completed shared race. An empty result
+slice on either side means "the shared evaluation has not finished," not
+"advance with zero fitness." This invariant keeps the rolling rival archive
+aligned to the same generation tick on both sides, which is the smallest
+honest contract needed for coevolution-style role specialization.
 
-That rolling archive matters because future generations should not face only
-the opponent's latest mutable state. They instead encounter recent frozen
-rivals, which is the first honest selection pressure needed for role
-specialization to emerge.
+Once the barrier is complete (both slices non-empty), each team's controller
+advances by one generation, and each team's `opponentSnapshotPool` receives
+one frozen deep-cloned snapshot of the opposing side's results. Snapshots are
+produced through `addOpponentSnapshot`, which preserves the bounded FIFO
+invariant and the deep-clone immutability contract.
+
+Transport-neutral by design: this function does not depend on packed
+`race-step` frames, transfer lists, or worker topology. Those details are
+deferred to Phase 4 transport normalization.
 
 Parameters:
 - `harness` - Active two-population harness.
@@ -256,13 +312,21 @@ Example:
 ```ts
 const harness = createTwoPopulationHarness({}, {});
 
+// Partial advance: Team A alone has results — barrier is NOT complete,
+// so neither generation nor either snapshot pool is mutated.
+advanceTwoPopulations(harness, [{ genomeId: 'team-a-0', fitness: 12 }], []);
+harness.teamA.controller.generation; // 0
+harness.teamB.opponentSnapshotPool.snapshots.length; // 0
+
+// Barrier complete: both sides advanced and cross-registered.
 advanceTwoPopulations(
   harness,
   [{ genomeId: 'team-a-0', fitness: 12 }],
   [{ genomeId: 'team-b-0', fitness: 11 }],
 );
-
 harness.teamA.controller.generation; // 1
+harness.teamB.controller.generation; // 1
+harness.teamA.opponentSnapshotPool.snapshots.length; // 1
 harness.teamB.opponentSnapshotPool.snapshots.length; // 1
 ```
 
@@ -475,6 +539,50 @@ Example:
 const field = createSharedField(10, 10); // 100-element Float32Array
 ```
 
+### createTeamFitnessEvaluator
+
+```ts
+createTeamFitnessEvaluator(
+  policy: TeamFitnessPolicy<TTeamId, TMemberResult>,
+): (groups: readonly TeamResultGroup<TTeamId, TMemberResult>[]) => readonly TeamFitnessResult<TTeamId, TMemberResult>[]
+```
+
+Build a reusable team-level fitness evaluator for collective benchmarks.
+
+The returned evaluator preserves the planning seam: NGE core owns the
+orchestration that maps generic team groups into reusable team-fitness
+results, while each benchmark injects its own aggregation policy. That keeps
+racing, ant-hive, and future consumers on one shared evaluator contract
+without leaking benchmark-local compensation into the core.
+
+Parameters:
+- `policy` - Consumer-owned aggregation rule for one team group.
+
+Returns: Evaluator that folds each team group into one reusable team-fitness result.
+
+Example:
+
+```ts
+const evaluateTeamFitness = createTeamFitnessEvaluator((group) =>
+  group.memberResults.reduce(
+    (totalScore, memberResult) => totalScore + memberResult.rawScore,
+    0,
+  ),
+);
+
+const result = evaluateTeamFitness([
+  {
+    teamId: 'team-alpha',
+    memberResults: [
+      { memberId: 'alpha-0', rawScore: 4 },
+      { memberId: 'alpha-1', rawScore: 6 },
+    ],
+  },
+]);
+
+result[0]?.teamFitness; // 10
+```
+
 ### createTwoPopulationHarness
 
 ```ts
@@ -657,6 +765,37 @@ Example:
 ```ts
 const field: SharedField = createSharedField(10, 10);
 ```
+
+### TeamFitnessPolicy
+
+```ts
+TeamFitnessPolicy(
+  group: TeamResultGroup<TTeamId, TMemberResult>,
+): number
+```
+
+Aggregation policy injected into the reusable team-level evaluator seam.
+
+NGE core owns only the orchestration boundary. Consumers such as racing or
+ant-hive own the scoring policy and can swap it without rewriting the
+evaluator pipeline itself.
+
+Parameters:
+- `group` - Team-local member results to aggregate.
+
+Returns: Scalar team-level fitness score.
+
+### TeamFitnessResult
+
+Reusable team-level fitness result returned by the collective evaluator seam.
+
+### TeamResultGroup
+
+Generic member-result group scored by a reusable team-level fitness policy.
+
+The collective core keeps this shape intentionally policy-first: benchmark
+consumers own the meaning of each member result, while NGE core owns the
+orchestration that applies one aggregation policy per team group.
 
 ### TeamScopedState
 
@@ -1195,6 +1334,69 @@ const field = createSharedField(3, 3);
 writeCell(field, 1, 1, 0.75); // field.cells[4] === 0.75
 ```
 
+## neat/nge-collective/neat.nge-collective.team-fitness.ts
+
+### buildTeamFitnessResult
+
+```ts
+buildTeamFitnessResult(
+  group: TeamResultGroup<TTeamId, TMemberResult>,
+  policy: TeamFitnessPolicy<TTeamId, TMemberResult>,
+): TeamFitnessResult<TTeamId, TMemberResult>
+```
+
+Create one immutable team-fitness result from one generic team group.
+
+Parameters:
+- `group` - Team-local member results.
+- `policy` - Consumer-owned aggregation rule for this group.
+
+Returns: Reusable team-fitness result preserving the original member slice.
+
+### createTeamFitnessEvaluator
+
+```ts
+createTeamFitnessEvaluator(
+  policy: TeamFitnessPolicy<TTeamId, TMemberResult>,
+): (groups: readonly TeamResultGroup<TTeamId, TMemberResult>[]) => readonly TeamFitnessResult<TTeamId, TMemberResult>[]
+```
+
+Build a reusable team-level fitness evaluator for collective benchmarks.
+
+The returned evaluator preserves the planning seam: NGE core owns the
+orchestration that maps generic team groups into reusable team-fitness
+results, while each benchmark injects its own aggregation policy. That keeps
+racing, ant-hive, and future consumers on one shared evaluator contract
+without leaking benchmark-local compensation into the core.
+
+Parameters:
+- `policy` - Consumer-owned aggregation rule for one team group.
+
+Returns: Evaluator that folds each team group into one reusable team-fitness result.
+
+Example:
+
+```ts
+const evaluateTeamFitness = createTeamFitnessEvaluator((group) =>
+  group.memberResults.reduce(
+    (totalScore, memberResult) => totalScore + memberResult.rawScore,
+    0,
+  ),
+);
+
+const result = evaluateTeamFitness([
+  {
+    teamId: 'team-alpha',
+    memberResults: [
+      { memberId: 'alpha-0', rawScore: 4 },
+      { memberId: 'alpha-1', rawScore: 6 },
+    ],
+  },
+]);
+
+result[0]?.teamFitness; // 10
+```
+
 ## neat/nge-collective/neat.nge-collective.two-population.ts
 
 ### advanceTwoPopulations
@@ -1207,19 +1409,25 @@ advanceTwoPopulations(
 ): void
 ```
 
-Advances both team controllers after a completed shared race.
+Advances both team controllers only after the shared generation barrier completes.
 
-The advance contract is intentionally two-phase. First, each team only
-advances when it actually produced results for the finished race; an empty
-result slice means "no completed evaluation," not "advance with zero
-fitness." Second, every non-empty side cross-registers its results into the
-opposing `opponentSnapshotPool` via `addOpponentSnapshot`, preserving a
-rolling history of frozen rival champions.
+The barrier is **shared**: a generation increment for either team — and any
+mutation of either team's `opponentSnapshotPool` — is suppressed until **both**
+teams have produced results for the completed shared race. An empty result
+slice on either side means "the shared evaluation has not finished," not
+"advance with zero fitness." This invariant keeps the rolling rival archive
+aligned to the same generation tick on both sides, which is the smallest
+honest contract needed for coevolution-style role specialization.
 
-That rolling archive matters because future generations should not face only
-the opponent's latest mutable state. They instead encounter recent frozen
-rivals, which is the first honest selection pressure needed for role
-specialization to emerge.
+Once the barrier is complete (both slices non-empty), each team's controller
+advances by one generation, and each team's `opponentSnapshotPool` receives
+one frozen deep-cloned snapshot of the opposing side's results. Snapshots are
+produced through `addOpponentSnapshot`, which preserves the bounded FIFO
+invariant and the deep-clone immutability contract.
+
+Transport-neutral by design: this function does not depend on packed
+`race-step` frames, transfer lists, or worker topology. Those details are
+deferred to Phase 4 transport normalization.
 
 Parameters:
 - `harness` - Active two-population harness.
@@ -1231,13 +1439,21 @@ Example:
 ```ts
 const harness = createTwoPopulationHarness({}, {});
 
+// Partial advance: Team A alone has results — barrier is NOT complete,
+// so neither generation nor either snapshot pool is mutated.
+advanceTwoPopulations(harness, [{ genomeId: 'team-a-0', fitness: 12 }], []);
+harness.teamA.controller.generation; // 0
+harness.teamB.opponentSnapshotPool.snapshots.length; // 0
+
+// Barrier complete: both sides advanced and cross-registered.
 advanceTwoPopulations(
   harness,
   [{ genomeId: 'team-a-0', fitness: 12 }],
   [{ genomeId: 'team-b-0', fitness: 11 }],
 );
-
 harness.teamA.controller.generation; // 1
+harness.teamB.controller.generation; // 1
+harness.teamA.opponentSnapshotPool.snapshots.length; // 1
 harness.teamB.opponentSnapshotPool.snapshots.length; // 1
 ```
 

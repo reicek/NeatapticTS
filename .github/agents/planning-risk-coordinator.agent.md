@@ -2,7 +2,7 @@
 description: 'Use when: planning needs ambiguity review, blast-radius analysis, reversibility checks, dependency risk, or model-budget risk before implementation.'
 name: 'planning-risk-coordinator'
 tier: 2
-model: ['Claude Sonnet 4.6 (copilot)', 'GPT-5.4 (copilot)', 'GPT-5.4-mini (copilot)']
+model: 'Claude Sonnet 4.6 (copilot)'
 tools: [read, search, agent]
 agents: ['plan-scout', 'determinism-scout', 'license-attribution-auditor', 'model-name-auditor']
 skills: ['model-routing-and-budget', 'license-attribution-audit']

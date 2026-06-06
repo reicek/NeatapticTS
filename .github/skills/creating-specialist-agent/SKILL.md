@@ -26,7 +26,7 @@ Include the job the new specialist will own, the parent orchestrator that will c
 Use creating-specialist-agent for <specialist-job-description>.
 Parent orchestrator: <agent-name>
 Required tools: <list of VS Code tool names>
-Model tier: <e.g. GPT-5.4-mini (copilot) | same-line fallback array>
+Model tier: <e.g. GPT-5.4 mini (copilot)>
 Output contract fields: <field names the parent expects>
 Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs --json
              node scripts/agent-customization/validate-agent-graph.mjs --json

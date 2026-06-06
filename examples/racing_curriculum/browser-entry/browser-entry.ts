@@ -123,6 +123,25 @@ const RUNTIME_ADAPTATION_ROLLBACK_COOLDOWN_TICKS = 12;
 /** Scale UI threshold controls to the engine's score-delta domain. */
 const RUNTIME_ADAPTATION_IMPROVEMENT_THRESHOLD_SCALE = 0.001;
 
+// ── POC worker seam (current: physics delegation only) ───────────────────────
+//
+// The current implementation sends full EnvironmentState to the worker each
+// tick and receives a stepped EnvironmentState back.  Controller inference,
+// evolution, and curriculum progress all run on the host (main) thread.
+//
+// The target worker-authoritative protocol (defined in
+// simulation-worker.evolution.types.ts) inverts this:
+//   Host → Worker: init | request-generation | start-race | request-race-step | stop
+//   Worker → Host: generation-ready | race-step | runtime-status | error
+//
+// Under that protocol the worker owns Team A/B population containers, rolling
+// opponent snapshots, controller inference, and race-step snapshot production.
+// The host receives compact typed-array race-step frames and renders them at
+// display cadence — it never drives simulation ticks directly.
+//
+// These local types below represent the current POC seam and will be replaced
+// when the worker-authoritative protocol is wired end-to-end.
+
 type RacingWorkerStepRequest = {
   type: 'step';
   requestId: number;
@@ -366,16 +385,20 @@ export async function start(
   let activeObservationTier = resolveObservationTierForCurriculumTier(
     curriculumProgress.tier,
   );
-  let controllerNetwork =
-    createDeterministicRacingControllerNetwork(activeObservationTier);
+  let controllerNetwork = createDeterministicRacingControllerNetwork(
+    activeObservationTier,
+  );
   let controller = createNgeController(controllerNetwork, {
     tier: activeObservationTier,
   });
-  let tierSignalEvidenceAccumulator = createEmptyTierSignalEvidenceAccumulator();
+  let tierSignalEvidenceAccumulator =
+    createEmptyTierSignalEvidenceAccumulator();
   let guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
     curriculumProgress.tier,
   );
-  const runtimeAdaptationState = createRuntimeAdaptationState(ACTIVE_CURRICULUM_TIER);
+  const runtimeAdaptationState = createRuntimeAdaptationState(
+    ACTIVE_CURRICULUM_TIER,
+  );
   const previousNetworkSize = resolveNetworkSize(controllerNetwork);
   const renderState = createRacingRenderState();
   const simulationWorker = createRacingSimulationWorker();
@@ -417,10 +440,18 @@ export async function start(
         tuning.cadenceMode = tuning.cadenceMode === 'laps' ? 'ticks' : 'laps';
         break;
       case 'BracketLeft':
-        tuning.cadenceInterval = clampInteger(tuning.cadenceInterval - 1, 1, 360);
+        tuning.cadenceInterval = clampInteger(
+          tuning.cadenceInterval - 1,
+          1,
+          360,
+        );
         break;
       case 'BracketRight':
-        tuning.cadenceInterval = clampInteger(tuning.cadenceInterval + 1, 1, 360);
+        tuning.cadenceInterval = clampInteger(
+          tuning.cadenceInterval + 1,
+          1,
+          360,
+        );
         break;
       case 'KeyM':
         tuning.mutationIntensity = clampNumber(
@@ -437,16 +468,32 @@ export async function start(
         );
         break;
       case 'KeyG':
-        tuning.growthPruneBias = clampNumber(tuning.growthPruneBias + 0.1, -1, 1);
+        tuning.growthPruneBias = clampNumber(
+          tuning.growthPruneBias + 0.1,
+          -1,
+          1,
+        );
         break;
       case 'KeyH':
-        tuning.growthPruneBias = clampNumber(tuning.growthPruneBias - 0.1, -1, 1);
+        tuning.growthPruneBias = clampNumber(
+          tuning.growthPruneBias - 0.1,
+          -1,
+          1,
+        );
         break;
       case 'KeyK':
-        tuning.commitThreshold = clampNumber(tuning.commitThreshold + 0.01, 0, 0.5);
+        tuning.commitThreshold = clampNumber(
+          tuning.commitThreshold + 0.01,
+          0,
+          0.5,
+        );
         break;
       case 'KeyJ':
-        tuning.commitThreshold = clampNumber(tuning.commitThreshold - 0.01, 0, 0.5);
+        tuning.commitThreshold = clampNumber(
+          tuning.commitThreshold - 0.01,
+          0,
+          0.5,
+        );
         break;
       case 'KeyR':
         tuning.rollbackSensitivity = clampNumber(
@@ -470,8 +517,7 @@ export async function start(
       return;
     }
 
-    runtimeAdaptationState.telemetry.lastChangeReason =
-      `manual tuning ${keyboardEvent.code}`;
+    runtimeAdaptationState.telemetry.lastChangeReason = `manual tuning ${keyboardEvent.code}`;
     telemetryPanelNodes.syncRuntimeControls();
     keyboardEvent.preventDefault();
   };
@@ -511,7 +557,8 @@ export async function start(
       stepsThisFrame < MAX_CATCHUP_STEPS_PER_FRAME
     ) {
       const previousCurriculumTier = curriculumProgress.tier;
-      const previousCompletedLaps = curriculumProgress.lapProgress.completedLaps;
+      const previousCompletedLaps =
+        curriculumProgress.lapProgress.completedLaps;
       const controlTickResult = controller.computeControlWithEvidence(
         envState,
         trackSpec,
@@ -527,17 +574,11 @@ export async function start(
             pendingWorkerSteps,
             ++nextWorkerRequestId,
             envState,
-            resolveControlFanOut(
-              lastControlOutput,
-              envState.cars?.length ?? 1,
-            ),
+            resolveControlFanOut(lastControlOutput, envState.cars?.length ?? 1),
           )
         : stepEnvironment(
             envState,
-            resolveControlFanOut(
-              lastControlOutput,
-              envState.cars?.length ?? 1,
-            ),
+            resolveControlFanOut(lastControlOutput, envState.cars?.length ?? 1),
           );
       envState = stabilizeCurriculumTierTireGrip(
         steppedEnvironmentState,
@@ -592,7 +633,8 @@ export async function start(
           trackSpec,
         );
         lastControlOutput = initialControlTick.control;
-        tierSignalEvidenceAccumulator = createEmptyTierSignalEvidenceAccumulator();
+        tierSignalEvidenceAccumulator =
+          createEmptyTierSignalEvidenceAccumulator();
         curriculumProgress = {
           ...curriculumProgress,
           lapProgress: createInitialLapProgress(trackSpec, envState),
@@ -606,7 +648,10 @@ export async function start(
         previousNetworkSize.connections = promotedNetworkSize.connections;
         runtimeAdaptationState.telemetry.lastChangeReason =
           'tier promotion remap';
-        refreshRuntimeAdaptationEngine(runtimeAdaptationState, curriculumProgress.tier);
+        refreshRuntimeAdaptationEngine(
+          runtimeAdaptationState,
+          curriculumProgress.tier,
+        );
         runtimeAdaptationState.engine.reset();
         runtimeAdaptationState.telemetry.adaptationScoreHistory.length = 0;
         guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
@@ -630,7 +675,8 @@ export async function start(
           envState.tick,
           curriculumProgress.lapProgress.completedLaps,
         );
-        tierSignalEvidenceAccumulator = createEmptyTierSignalEvidenceAccumulator();
+        tierSignalEvidenceAccumulator =
+          createEmptyTierSignalEvidenceAccumulator();
         if (didCommitRuntimeAdaptation) {
           networkPanelNodes.renderFocusedNetwork(controllerNetwork);
         }
@@ -1294,14 +1340,10 @@ function setupTelemetryPanel(
   const networkDeltaValue = document.createTextNode('ΔN0 / ΔC0');
   const lastChangeReasonValue = document.createTextNode('startup baseline');
 
-  const runtimeCard = createPanelCard(
-    'Runtime Tuning',
-    'Runtime Controls',
-    [
-      'Tune adaptation behavior live while the simulation loop keeps running.',
-      'The right column mirrors active values so keyboard or pointer changes stay visible.',
-    ],
-  );
+  const runtimeCard = createPanelCard('Runtime Tuning', 'Runtime Controls', [
+    'Tune adaptation behavior live while the simulation loop keeps running.',
+    'The right column mirrors active values so keyboard or pointer changes stay visible.',
+  ]);
   const controlsElement = document.createElement('div');
   controlsElement.className = 'racing-controls';
   const adaptationEnabledInput = document.createElement('input');
@@ -1351,7 +1393,8 @@ function setupTelemetryPanel(
     mutationIntensityInput.value = tuningConfig.mutationIntensity.toFixed(1);
     growthPruneBiasInput.value = tuningConfig.growthPruneBias.toFixed(1);
     commitThresholdInput.value = tuningConfig.commitThreshold.toFixed(2);
-    rollbackSensitivityInput.value = tuningConfig.rollbackSensitivity.toFixed(2);
+    rollbackSensitivityInput.value =
+      tuningConfig.rollbackSensitivity.toFixed(2);
   };
 
   const syncTuningReadout = (): void => {
@@ -1360,7 +1403,8 @@ function setupTelemetryPanel(
       : 'off';
     cadenceModeValue.textContent = tuningConfig.cadenceMode;
     cadenceIntervalValue.textContent = String(tuningConfig.cadenceInterval);
-    mutationIntensityValue.textContent = tuningConfig.mutationIntensity.toFixed(1);
+    mutationIntensityValue.textContent =
+      tuningConfig.mutationIntensity.toFixed(1);
     growthPruneBiasValue.textContent = tuningConfig.growthPruneBias.toFixed(1);
     commitThresholdValue.textContent = tuningConfig.commitThreshold.toFixed(2);
     rollbackSensitivityValue.textContent =
@@ -1379,8 +1423,8 @@ function setupTelemetryPanel(
     syncTuningReadout();
   });
   cadenceModeInput.addEventListener('change', () => {
-    tuningConfig.cadenceMode = cadenceModeInput
-      .value as RuntimeTuningConfig['cadenceMode'];
+    tuningConfig.cadenceMode =
+      cadenceModeInput.value as RuntimeTuningConfig['cadenceMode'];
     syncTuningReadout();
   });
   cadenceIntervalInput.addEventListener('input', () => {
@@ -1430,7 +1474,11 @@ function setupTelemetryPanel(
       adaptationEnabledInput,
       adaptationEnabledValue,
     ),
-    buildControlRowWithInput('Cadence Mode', cadenceModeInput, cadenceModeValue),
+    buildControlRowWithInput(
+      'Cadence Mode',
+      cadenceModeInput,
+      cadenceModeValue,
+    ),
     buildControlRowWithInput(
       'Cadence Interval',
       cadenceIntervalInput,
@@ -1493,10 +1541,7 @@ function setupTelemetryPanel(
     ),
   );
 
-  lowerPanelsElement.append(
-    runtimeCard.cardElement,
-    racePackCard.cardElement,
-  );
+  lowerPanelsElement.append(runtimeCard.cardElement, racePackCard.cardElement);
   region.append(lowerPanelsElement);
 
   return {
@@ -1687,7 +1732,10 @@ function syncCanvasToDisplaySize(canvasElement: HTMLCanvasElement): void {
     parentElement?.clientHeight ?? 0,
     canvasElement.height / devicePixelRatio,
   );
-  const displayWidth = Math.max(1, Math.round(cssDisplayWidth * devicePixelRatio));
+  const displayWidth = Math.max(
+    1,
+    Math.round(cssDisplayWidth * devicePixelRatio),
+  );
   const displayHeight = Math.max(
     1,
     Math.round(cssDisplayHeight * devicePixelRatio),
@@ -2110,11 +2158,15 @@ function updateTelemetryPanelNodes(
     ? 'on'
     : 'off';
   nodes.cadenceModeValue.textContent = runtimeTuning.cadenceMode;
-  nodes.cadenceIntervalValue.textContent = String(runtimeTuning.cadenceInterval);
+  nodes.cadenceIntervalValue.textContent = String(
+    runtimeTuning.cadenceInterval,
+  );
   nodes.mutationIntensityValue.textContent =
     runtimeTuning.mutationIntensity.toFixed(1);
-  nodes.growthPruneBiasValue.textContent = runtimeTuning.growthPruneBias.toFixed(1);
-  nodes.commitThresholdValue.textContent = runtimeTuning.commitThreshold.toFixed(2);
+  nodes.growthPruneBiasValue.textContent =
+    runtimeTuning.growthPruneBias.toFixed(1);
+  nodes.commitThresholdValue.textContent =
+    runtimeTuning.commitThreshold.toFixed(2);
   nodes.rollbackSensitivityValue.textContent =
     runtimeTuning.rollbackSensitivity.toFixed(2);
   nodes.commitCountValue.textContent = String(runtimeTelemetry.commitCount);
@@ -2820,7 +2872,9 @@ function resolveNetworkSize(network: Network): {
  * @param controllerNetwork - Live controller network owned by the browser harness.
  */
 function applyWithinTierAdaptation(
-  controllerNetwork: ReturnType<typeof createDeterministicRacingControllerNetwork>,
+  controllerNetwork: ReturnType<
+    typeof createDeterministicRacingControllerNetwork
+  >,
   curriculumTier: CurriculumTier,
   runtimeAdaptationState: RuntimeAdaptationState,
   tierSignalEvidenceSummary: TierSignalEvidenceSummary,
@@ -2910,7 +2964,10 @@ function createRuntimeAdaptationEngineForTier(
       maxStructuralEditsPerStep:
         curriculumTier <= 1
           ? normalizedMutationIntensity
-          : Math.max(MIN_ADAPTATION_MUTATION_STEPS, normalizedMutationIntensity - 1),
+          : Math.max(
+              MIN_ADAPTATION_MUTATION_STEPS,
+              normalizedMutationIntensity - 1,
+            ),
       maxNodes: RUNTIME_ADAPTATION_MAX_NODES,
       maxConnections: RUNTIME_ADAPTATION_MAX_CONNECTIONS,
       mutationCooldownTicks:
@@ -2985,7 +3042,10 @@ function pushRuntimeAdaptationScoreSample(
 ): void {
   scoreHistory.push(scoreSample);
   if (scoreHistory.length > RUNTIME_ADAPTATION_SCORE_HISTORY_CAP) {
-    scoreHistory.splice(0, scoreHistory.length - RUNTIME_ADAPTATION_SCORE_HISTORY_CAP);
+    scoreHistory.splice(
+      0,
+      scoreHistory.length - RUNTIME_ADAPTATION_SCORE_HISTORY_CAP,
+    );
   }
 }
 
@@ -2993,9 +3053,8 @@ function resolveRuntimeAdaptationScoreSample(
   tierSignalEvidenceSummary: TierSignalEvidenceSummary,
   curriculumTier: CurriculumTier,
 ): number {
-  const guidanceEvidenceWeight = resolveGuidanceEvidenceWeightForTier(
-    curriculumTier,
-  );
+  const guidanceEvidenceWeight =
+    resolveGuidanceEvidenceWeightForTier(curriculumTier);
   const headingMisalignment01 =
     1 - tierSignalEvidenceSummary.meanHeadingAlignment01;
   const weightedAdaptationNeed01 = clampUnitInterval(
@@ -3009,7 +3068,8 @@ function resolveRuntimeAdaptationScoreSample(
 function resolveRuntimeAdaptationReason(
   adaptationTelemetry: RuntimeAdaptationTelemetry,
 ): string {
-  const scoreDelta = adaptationTelemetry.scoreAfter - adaptationTelemetry.scoreBefore;
+  const scoreDelta =
+    adaptationTelemetry.scoreAfter - adaptationTelemetry.scoreBefore;
   const operationSummary =
     adaptationTelemetry.operations.length === 0
       ? 'none'
@@ -3069,7 +3129,9 @@ function remapControllerNetworkForObservationTier(
     const sourceFromRole = sourceRoleByNodeIndex.get(
       resolveNodeIndex(connection.from),
     );
-    const sourceToRole = sourceRoleByNodeIndex.get(resolveNodeIndex(connection.to));
+    const sourceToRole = sourceRoleByNodeIndex.get(
+      resolveNodeIndex(connection.to),
+    );
 
     if (sourceFromRole === undefined || sourceToRole === undefined) {
       return;
@@ -3085,7 +3147,9 @@ function remapControllerNetworkForObservationTier(
     const targetFromRole = targetRoleByNodeIndex.get(
       resolveNodeIndex(connection.from),
     );
-    const targetToRole = targetRoleByNodeIndex.get(resolveNodeIndex(connection.to));
+    const targetToRole = targetRoleByNodeIndex.get(
+      resolveNodeIndex(connection.to),
+    );
 
     if (targetFromRole === undefined || targetToRole === undefined) {
       return;
@@ -3132,7 +3196,8 @@ function remapNodeBiasesAndActivations(
     hiddenNodeIndex < sharedHiddenCount;
     hiddenNodeIndex++
   ) {
-    targetHiddenNodes[hiddenNodeIndex].bias = sourceHiddenNodes[hiddenNodeIndex].bias;
+    targetHiddenNodes[hiddenNodeIndex].bias =
+      sourceHiddenNodes[hiddenNodeIndex].bias;
     targetHiddenNodes[hiddenNodeIndex].squash =
       sourceHiddenNodes[hiddenNodeIndex].squash;
   }
@@ -3142,7 +3207,8 @@ function remapNodeBiasesAndActivations(
     outputNodeIndex < sharedOutputCount;
     outputNodeIndex++
   ) {
-    targetOutputNodes[outputNodeIndex].bias = sourceOutputNodes[outputNodeIndex].bias;
+    targetOutputNodes[outputNodeIndex].bias =
+      sourceOutputNodes[outputNodeIndex].bias;
     targetOutputNodes[outputNodeIndex].squash =
       sourceOutputNodes[outputNodeIndex].squash;
   }
@@ -3162,7 +3228,10 @@ function createNodeRoleMap(network: Network): Map<number, string> {
     const nodesOfType = resolveSortedNodesByType(network, nodeType);
 
     nodesOfType.forEach((node, nodeTypeIndex) => {
-      roleByNodeIndex.set(resolveNodeIndex(node), `${nodeType}:${nodeTypeIndex}`);
+      roleByNodeIndex.set(
+        resolveNodeIndex(node),
+        `${nodeType}:${nodeTypeIndex}`,
+      );
     });
   });
 
@@ -3179,7 +3248,7 @@ function createNodeRoleMap(network: Network): Map<number, string> {
 function resolveSortedNodesByType(
   network: Network,
   nodeType: 'input' | 'hidden' | 'output',
-){
+) {
   return network.nodes
     .filter((node) => node.type === nodeType)
     .toSorted(

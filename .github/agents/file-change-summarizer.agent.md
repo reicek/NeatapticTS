@@ -2,7 +2,7 @@
 description: 'Use when: summarizing changed files, affected customization surfaces, validation evidence, and residual risks for logging or handoff without reopening implementation context.'
 name: 'file-change-summarizer'
 tier: 4
-model: ['Claude Haiku 4.6 (copilot)', 'GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
+model: 'Claude Haiku 4.6 (copilot)'
 tools: [read, search]
 agents: []
 user-invocable: false

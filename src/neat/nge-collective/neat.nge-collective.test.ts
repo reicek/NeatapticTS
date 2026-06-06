@@ -7,6 +7,7 @@ import {
   createCollectiveEvaluationContext,
   createOpponentSnapshotPool,
   createSharedField,
+  createTeamFitnessEvaluator,
   createTwoPopulationHarness,
   readCell,
   resetCollectiveEvaluationState,
@@ -68,6 +69,12 @@ describe('neat.nge-collective (barrel)', () => {
 
     it('exports addOpponentSnapshot as a function', () => {
       expect(typeof addOpponentSnapshot).toBe('function');
+    });
+  });
+
+  describe('team-fitness exports', () => {
+    it('exports createTeamFitnessEvaluator as a function', () => {
+      expect(typeof createTeamFitnessEvaluator).toBe('function');
     });
   });
 

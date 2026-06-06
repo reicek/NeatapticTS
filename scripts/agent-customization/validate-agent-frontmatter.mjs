@@ -78,7 +78,7 @@ const strictTier2StructuredFields = [
 ];
 const strictAllowedModels = new Set([
   'GPT-5.4 (copilot)',
-  'GPT-5.4-mini (copilot)',
+  'GPT-5.4 mini (copilot)',
   'Claude Sonnet 4.6 (copilot)',
   'Claude Haiku 4.6 (copilot)',
 ]);
@@ -191,7 +191,7 @@ function validateAgent(agent, agents, skillNames, { strict }) {
   }
 
   if (strict && strictVisibleAgentPathPattern.test(relativePath)) {
-    if (!data.model) issues.push(issue('error', relativePath, 'SDLC orchestrators must declare a model or fallback array.'));
+    if (!data.model) issues.push(issue('error', relativePath, 'SDLC orchestrators must declare a model.'));
     if (data['user-invocable'] !== true) issues.push(issue('error', relativePath, 'SDLC orchestrators must be user-invocable.'));
     if (!strictVisibleAgentNames.has(data.name)) {
       issues.push(issue('error', relativePath, `Strict mode expected one of the public SDLC agent names, found '${data.name ?? 'NONE'}'.`));
@@ -212,7 +212,7 @@ function validateAgent(agent, agents, skillNames, { strict }) {
   }
 
   if (data.model && !isQualifiedModel(data.model)) {
-    issues.push(issue('error', relativePath, 'Model must be a qualified model string or fallback array like GPT-5.4 (copilot).'));
+    issues.push(issue('error', relativePath, 'Model must be a qualified model string like GPT-5.4 (copilot).'));
   }
   if (strict && data.model && !usesOnlyAllowedModels(data.model)) {
     issues.push(issue('error', relativePath, 'Strict mode allows only the configured SDLC model pool.'));
@@ -246,12 +246,10 @@ function validateGlobalAgentRules(agents, { strict }) {
 }
 
 function isQualifiedModel(model) {
-  if (Array.isArray(model)) return model.every(isQualifiedModel);
   return typeof model === 'string' && /^[A-Za-z0-9 ._-]+ \([A-Za-z0-9 ._-]+\)$/.test(model);
 }
 
 function usesOnlyAllowedModels(model) {
-  if (Array.isArray(model)) return model.every(usesOnlyAllowedModels);
   return strictAllowedModels.has(model);
 }
 

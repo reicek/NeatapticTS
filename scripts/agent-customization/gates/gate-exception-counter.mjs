@@ -2,35 +2,18 @@
 /**
  * gate-exception-counter — Evaluate the three-exceptions escalation rule.
  *
- * Accepts a `--failure-count` argument representing the number of consecutive gate
- * failures in a session. Returns whether the three-exceptions escalation threshold
- * has been reached and, if so, names `00-helping` as the suggested escalation target.
- *
- * Escalation rule:
- *   - failure-count < 3 → escalationTriggered: false
- *   - failure-count >= 3 → escalationTriggered: true, suggestedAgent: "00-helping"
- *   - failure-count === 0 → escalationTriggered: false (counter reset)
- *
- * Output contract:
- *   { escalationTriggered: boolean, suggestedAgent: string | null,
- *     sessionId: string, failureCount: number }
- *
- * Usage:
- *   node scripts/agent-customization/gates/gate-exception-counter.mjs \
- *     --json \
- *     --gate-id=<gate-id> \
- *     --agent=<agent-name> \
- *     --session-id=<session-id> \
- *     --failure-count=<number>
+ * Supports both the legacy explicit `--failure-count=<number>` mode and the
+ * durable learning-log mode used by strict runtime enforcement. In durable mode,
+ * the helper reconstructs the trailing run of gate failures for the current
+ * session from `.github/ai-learning/learning-log.jsonl`, resetting the streak on
+ * `runtime-action-prepass` or `runtime-action-postpass` events.
  */
 
-// Step 1: Parse arguments.
+import { countTrailingGateFailures, loadLearningLogEvents } from '../enforcement/runtime-enforcement.mjs';
+
 const args = parseCounterArgs(process.argv.slice(2));
+const result = await evaluateEscalation(args);
 
-// Step 2: Evaluate the escalation threshold.
-const result = evaluateEscalation(args);
-
-// Step 3: Output JSON to stdout.
 console.log(JSON.stringify(result, null, 2));
 
 process.exitCode = 0;
@@ -40,7 +23,7 @@ process.exitCode = 0;
 /**
  * Parse counter CLI arguments into a structured options object.
  * @param {string[]} argv - Raw process.argv slice.
- * @returns {{ json: boolean, gateId: string, agent: string, sessionId: string, failureCount: number }}
+ * @returns {{ json: boolean, gateId: string, agent: string, sessionId: string, failureCount: number, deriveFromLearningLog: boolean }}
  */
 function parseCounterArgs(argv) {
   const options = {
@@ -49,6 +32,7 @@ function parseCounterArgs(argv) {
     agent: '',
     sessionId: '',
     failureCount: 0,
+    deriveFromLearningLog: false,
   };
 
   for (const rawArg of argv) {
@@ -64,6 +48,8 @@ function parseCounterArgs(argv) {
       const raw = rawArg.slice('--failure-count='.length);
       const parsed = parseInt(raw, 10);
       options.failureCount = isNaN(parsed) ? 0 : parsed;
+    } else if (rawArg === '--derive-from-learning-log') {
+      options.deriveFromLearningLog = true;
     }
   }
 
@@ -73,17 +59,31 @@ function parseCounterArgs(argv) {
 /**
  * Evaluate whether the three-exceptions escalation threshold has been reached.
  *
- * @param {{ gateId: string, agent: string, sessionId: string, failureCount: number }} args
- * @returns {{ escalationTriggered: boolean, suggestedAgent: string | null, sessionId: string, failureCount: number }}
+ * @param {{ gateId: string, agent: string, sessionId: string, failureCount: number, deriveFromLearningLog: boolean }} args
+ * @returns {Promise<{ escalationTriggered: boolean, suggestedAgent: string | null, sessionId: string, failureCount: number, source: string }>}
  */
-function evaluateEscalation(args) {
+async function evaluateEscalation(args) {
   const escalationThreshold = 3;
-  const escalationTriggered = args.failureCount >= escalationThreshold;
+  const failureCount = args.deriveFromLearningLog
+    ? await deriveFailureCountFromLearningLog(args.sessionId)
+    : args.failureCount;
+  const escalationTriggered = failureCount >= escalationThreshold;
 
   return {
     escalationTriggered,
     suggestedAgent: escalationTriggered ? '00-helping' : null,
     sessionId: args.sessionId,
-    failureCount: args.failureCount,
+    failureCount,
+    source: args.deriveFromLearningLog ? 'learning-log' : 'explicit',
   };
+}
+
+async function deriveFailureCountFromLearningLog(sessionId) {
+  const normalizedSessionId = typeof sessionId === 'string' ? sessionId.trim() : '';
+  if (!normalizedSessionId) {
+    return 0;
+  }
+
+  const events = await loadLearningLogEvents();
+  return countTrailingGateFailures(events, normalizedSessionId);
 }

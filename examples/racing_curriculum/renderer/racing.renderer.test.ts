@@ -39,11 +39,17 @@ describe('racing renderer sibling seam', () => {
         trackSpec,
         { edgePaddingPx: 24 },
       );
-      const widePaddingTransform = computeWorldTransform(canvasElement, trackSpec, {
-        edgePaddingPx: 72,
-      });
+      const widePaddingTransform = computeWorldTransform(
+        canvasElement,
+        trackSpec,
+        {
+          edgePaddingPx: 72,
+        },
+      );
 
-      expect(widePaddingTransform.scale).toBeLessThan(compactPaddingTransform.scale);
+      expect(widePaddingTransform.scale).toBeLessThan(
+        compactPaddingTransform.scale,
+      );
     });
   });
 
@@ -69,9 +75,9 @@ describe('racing renderer sibling seam', () => {
         },
       );
 
-      expect(
-        strokeStyleAssignments.includes('rgba(255, 122, 69, 0.38)'),
-      ).toBe(true);
+      expect(strokeStyleAssignments.includes('rgba(255, 122, 69, 0.38)')).toBe(
+        true,
+      );
     });
 
     it('keeps the default car outline color when pit visuals are disabled', () => {
@@ -113,7 +119,9 @@ function createTrackSpecWithoutPits(): TrackSpec {
   };
 }
 
-function createRendererEnvironmentState(trackSpec: TrackSpec): EnvironmentState {
+function createRendererEnvironmentState(
+  trackSpec: TrackSpec,
+): EnvironmentState {
   return {
     tick: 0,
     carX: 0,
