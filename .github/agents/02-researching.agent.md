@@ -2,7 +2,7 @@
 description: 'Use when researching codebase patterns, APIs, dependencies, architecture, external references, existing utilities, and prior art.'
 name: '02-researching'
 tier: 1
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'gemma4:latest (ollama)'
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
 disable-model-invocation: false

@@ -2,7 +2,7 @@
 description: 'Use when: a plan or test phase needs concise acceptance criteria, observable behavior, edge cases, and out-of-scope boundaries before coding.'
 name: 'acceptance-criteria-writer'
 tier: 4
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'Claude Sonnet 4.6 (copilot)'
 tools: [read, search]
 agents: []
 user-invocable: false

@@ -2,7 +2,7 @@
 description: 'Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps.'
 name: '07-logging'
 tier: 1
-model: 'Claude Haiku 4.6 (copilot)'
+model: 'Claude Haiku 4.5 (copilot)'
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '01-planning'
     prompt: 'Continue from the updated tracker and decide the next Step 01 planning task for the next phase or reroute. Preserve completed evidence and avoid reopening closed work without a clear reason.'
     send: false
-    model: 'gemma4:latest (ollama)'
+    model: 'Claude Sonnet 4.6 (copilot)'
 ---
 
 {

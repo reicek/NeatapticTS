@@ -2,7 +2,7 @@
 description: 'Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation.'
 name: '05-green-testing'
 tier: 1
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'gemma4:latest (ollama)'
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
 disable-model-invocation: false

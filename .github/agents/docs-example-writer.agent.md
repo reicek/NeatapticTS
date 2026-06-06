@@ -2,7 +2,7 @@
 description: 'Use when documentation needs a concise example, JSDoc usage snippet, README usage note, or docs-safe sample aligned with the current public API. Keywords: examples, JSDoc snippet, README usage, documentation example.'
 name: docs-example-writer
 tier: 4
-model: 'Claude Haiku 4.6 (copilot)'
+model: 'Claude Haiku 4.5 (copilot)'
 tools: [read, search]
 user-invocable: false
 agents: []

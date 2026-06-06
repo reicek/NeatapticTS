@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for official VS Code AI extensibility reconnaissance, including MCP, hooks, agent plugins, Prompt TSX, model access, and bridge APIs. Keywords: VS Code AI docs, MCP, hooks, plugins, Prompt TSX, extension API.'
 name: 'vscode-ai-extensibility-scout'
 tier: 3
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'gemma4:latest (ollama)'
 tools: [read, search, web]
 user-invocable: false
 agents: []

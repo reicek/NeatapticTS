@@ -2,7 +2,7 @@
 description: 'Use when: capturing an ISO-42001-style local evidence event for an agent-system gap, routing update, skill update, model update, or output-contract fix.'
 name: 'learning-event-capturer'
 tier: 4
-model: 'Claude Haiku 4.6 (copilot)'
+model: 'Claude Haiku 4.5 (copilot)'
 tools: [read, search, edit]
 agents: []
 skills: ['capturing-learning-event']

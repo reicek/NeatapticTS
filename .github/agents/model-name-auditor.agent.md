@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for discovering and validating qualified Copilot model names before NeatapticTS agent frontmatter changes. Keywords: model routing, GPT-5.4, GPT-5.4-mini, scalar model, qualified model.'
 name: model-name-auditor
 tier: 3
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'Claude Sonnet 4.6 (copilot)'
 tools: [read, search]
 user-invocable: false
 agents: []

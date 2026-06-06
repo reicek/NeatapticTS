@@ -2,7 +2,7 @@
 description: 'Use when diagnosing visualizer UI issues such as cramped layout, missing overflow scroll, hover/tooltip instability, or parity drift between demo visualizers. Keywords: visualizer, canvas, tooltip, hover, overflow, layout, parity.'
 name: 'visualizer-scout'
 tier: 3
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'gemma4:latest (ollama)'
 tools: [read, search]
 user-invocable: false
 agents: []

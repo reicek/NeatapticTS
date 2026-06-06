@@ -2,7 +2,7 @@
 description: 'Use when creating failing tests, test plans, fixtures, assertions, mocks, and coverage strategy before implementation.'
 name: '03-red-testing'
 tier: 1
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'gemma4:latest (ollama)'
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
 disable-model-invocation: false

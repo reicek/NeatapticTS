@@ -2,7 +2,7 @@
 description: 'Use for local AI system maintenance, workflow gap troubleshooting, config checks, CI support, and safe continuous-improvement updates.'
 name: '00-helping'
 tier: 1
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'gemma4:latest (ollama)'
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
 disable-model-invocation: false

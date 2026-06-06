@@ -2,7 +2,7 @@
 description: 'Use when mapping parameter-vector layouts, deterministic export/import order, clone-vs-vector isolation, Lamarckian persistence policy, or deciding whether a hybrid evolution-plus-training issue belongs to hybrid-training-interop. Keywords: parameter vector, fine-tuning, Lamarckian, isolation, export, import, layout version, hybrid training.'
 name: hybrid-interop-scout
 tier: 3
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'Claude Sonnet 4.6 (copilot)'
 tools: [read, search]
 user-invocable: false
 agents: []

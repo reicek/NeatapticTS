@@ -2,7 +2,7 @@
 description: 'Use when a focused validation fails and the workflow needs root-cause triage, owner mapping, smallest reroute, or known-unrelated failure separation. Keywords: failure triage, validation failure, root cause, owner mapping, reroute.'
 name: failure-triage-specialist
 tier: 3
-model: 'Claude Haiku 4.6 (copilot)'
+model: 'Claude Haiku 4.5 (copilot)'
 tools: [read, search]
 user-invocable: false
 agents: []

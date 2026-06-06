@@ -2,7 +2,7 @@
 description: 'Use when mapping browser-runtime blockers, bundle format boundaries, smoke-test failures, worker delivery constraints, or deciding whether a browser packaging issue belongs to browser-build. Keywords: browser runtime, bundle, ESM, IIFE, smoke test, CDN, workerUrl, browser build, packaging.'
 name: browser-runtime-scout
 tier: 3
-model: 'Claude Haiku 4.6 (copilot)'
+model: 'Claude Haiku 4.5 (copilot)'
 tools: [read, search]
 user-invocable: false
 agents: []

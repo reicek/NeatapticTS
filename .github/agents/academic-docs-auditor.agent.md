@@ -2,7 +2,7 @@
 description: 'Use when auditing NeatapticTS educational documentation, JSDoc quality, Mermaid diagrams, citations, and generated README alignment. Keywords: academic docs, citation audit, JSDoc, Mermaid, generated README, atemporal docs.'
 name: academic-docs-auditor
 tier: 3
-model: 'Claude Haiku 4.6 (copilot)'
+model: 'Claude Haiku 4.5 (copilot)'
 tools: [read, search]
 user-invocable: false
 agents: []

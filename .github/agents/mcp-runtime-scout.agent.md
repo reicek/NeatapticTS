@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for mapping MCP runtime visibility gaps in NeatapticTS workflows. Keywords: MCP runtime, available agents, active agent, live triggers, model names, client facts.'
 name: mcp-runtime-scout
 tier: 3
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'Claude Sonnet 4.6 (copilot)'
 tools: [read, search]
 user-invocable: false
 agents: []

@@ -2,7 +2,7 @@
 description: 'Use when mapping NEATchat follow-up work such as persistent sessions, multi-tier memory, retrieval ranking, candidate routing, stronger seed import, branch or reset semantics, or deciding whether a conversational-system issue belongs to neatchat-systems. Keywords: NEATchat, chat memory, retrieval, routing, session branch, reset, personalization, dialogue manager.'
 name: neatchat-scout
 tier: 3
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'Claude Sonnet 4.6 (copilot)'
 tools: [read, search]
 user-invocable: false
 agents: []

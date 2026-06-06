@@ -2,7 +2,7 @@
 description: 'Use when: planning needs compact context, plan alignment signals, ownership boundaries, nearest README evidence, freshness notes, or ambiguity triage before decomposition. Keywords: planning context, plan files, README, boundaries, ambiguity.'
 name: 'planning-context-coordinator'
 tier: 2
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'Claude Sonnet 4.6 (copilot)'
 tools: [read, search, agent]
 user-invocable: false
 disable-model-invocation: false

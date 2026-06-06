@@ -80,7 +80,7 @@ const strictAllowedModels = new Set([
   'GPT-5.4 (copilot)',
   'GPT-5.4 mini (copilot)',
   'Claude Sonnet 4.6 (copilot)',
-  'Claude Haiku 4.6 (copilot)',
+  'Claude Haiku 4.5 (copilot)',
 ]);
 
 if (options.help) {

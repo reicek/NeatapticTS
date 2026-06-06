@@ -2,7 +2,7 @@
 description: 'Use when mapping worker payload shapes, structured clone constraints, transfer-list boundaries, SharedArrayBuffer eligibility, fast-path blockers, or deciding whether a worker serialization issue belongs to worker-inference-transport. Keywords: worker payload, transport, structured clone, transfer list, SharedArrayBuffer, workerUrl, inference IR, postMessage.'
 name: 'worker-payload-scout'
 tier: 3
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'gemma4:latest (ollama)'
 tools: [read, search]
 user-invocable: false
 agents: []

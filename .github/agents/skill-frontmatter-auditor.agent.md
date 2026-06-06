@@ -2,7 +2,7 @@
 description: 'Use when auditing SKILL.md frontmatter, folder-name alignment, argument hints, descriptions, visibility flags, compatibility text, or local skill resources. Keywords: skill metadata, frontmatter, SKILL.md, description, visibility, audit.'
 name: 'skill-frontmatter-auditor'
 tier: 3
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'Claude Sonnet 4.6 (copilot)'
 tools: [read, search, execute]
 user-invocable: false
 agents: []

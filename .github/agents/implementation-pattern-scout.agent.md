@@ -2,7 +2,7 @@
 description: 'Use when implementation needs nearby source patterns, naming conventions, helper boundaries, existing utilities, or owner-local test conventions before edits. Keywords: pattern, naming convention, helper, utility, test setup.'
 name: implementation-pattern-scout
 tier: 3
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'Claude Sonnet 4.6 (copilot)'
 tools: [read, search]
 user-invocable: false
 agents: []

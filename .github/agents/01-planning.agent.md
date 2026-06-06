@@ -2,7 +2,7 @@
 description: 'Use when planning implementation work, decomposing user requests, identifying risks, defining acceptance criteria, and preparing test strategy.'
 name: '01-planning'
 tier: 1
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'gemma4:latest (ollama)'
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
 disable-model-invocation: false

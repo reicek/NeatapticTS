@@ -2,7 +2,7 @@
 description: 'Use when planning a refactor, splitting a large module, identifying orchestration files versus helpers, or mapping module boundaries before edits. Keywords: refactor, split file, boundaries, helpers, orchestration, module map.'
 name: boundary-mapper
 tier: 3
-model: 'Claude Haiku 4.6 (copilot)'
+model: 'Claude Haiku 4.5 (copilot)'
 tools: [read, search, todo]
 user-invocable: false
 agents: []

@@ -2,7 +2,7 @@
 description: 'Use when updating user-facing docs, API docs, JSDoc/TSDoc, examples, changelogs, and usage guidance.'
 name: '06-documenting'
 tier: 1
-model: ['gemma4:latest (ollama)', 'GPT-5.4 mini (copilot)']
+model: 'gemma4:latest (ollama)'
 tools: [read, search, edit, execute, todo, agent]
 user-invocable: true
 disable-model-invocation: false
