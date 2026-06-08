@@ -135,351 +135,66 @@ stop_conditions:
 - Bind `implementation-standards` to `04-implementing` and `implementation-executor`.
 - Bind `research-methodology` to `02-researching`.
 
-## Implementation phases
+## Implementation Phases
 
 ### Phase 1: Skill Extraction [DONE]
 
-#### Step 01 — Planning skill extraction strategy [DONE]
+**Outcome:** 3 durable skills extracted from `CLAUDE.md` and `copilot-instructions.md`
 
-**Completion evidence:** Planning brief produced with policy inventories for all three skills. Step 02-04 packets prepared for 06-documenting.
+**Files created:**
+- `.github/skills/implementation-standards/SKILL.md` — ES2023 policies, Module Architecture rules, JSDoc requirements
+- `.github/skills/research-methodology/SKILL.md` — Discovery Order, Cortex-first search, certainty thresholds
+- `.github/skills/routing-optimization-policy/SKILL.md` — Tier graph, delegation rules, mini-agent transition policy
 
-```yaml
-phase: 1
-step: 1
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
-status: '[DONE]'
-mode: 'fresh-session'
-source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
-copy_paste: 'true'
-next_step: 'Step 02 — Author implementation-standards skill'
-skills: 'planning-acceptance-criteria, plan-alignment, skill-frontmatter-standards'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
-```
+**Validation:** All skills PASS `validate-skill-frontmatter` (0 errors, 0 warnings)
 
-**Step objective:** Plan the extraction of three durable skills (`implementation-standards`, `research-methodology`, `routing-optimization-policy`) by identifying which policies to extract from CLAUDE.md and copilot-instructions.md, defining skill boundaries, and preparing Step 02-04 packets.
-
-**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
-
-**Context the agent must know:**
-
-- The upstream authority is `plans/completed/Agentic_Workflow_Architecture.plans.md` (archived baseline); preserve its terminology including skill-first customization, durable workflow knowledge, and tier graph.
-- Skills must follow the standard SKILL.md frontmatter format with `skills:` field, description under 1024 characters, and proper visibility flags.
-- Each skill file must be placed in `.github/skills/<skill-name>/SKILL.md` with proper folder structure.
-- This step is planning-only; do not author the actual skill files (that happens in Steps 02-04).
-
-**Execution steps:**
-
-1. Use `neataptic-workflow-mcp.get_active_workflow_snapshot` to confirm this tracker is active and Step 01 is [WIP].
-2. Read `CLAUDE.md` and `.github/copilot-instructions.md` to identify durable policies to extract.
-3. Plan `implementation-standards` skill: list ES2023 policies, Module Architecture rules, and JSDoc requirements to extract.
-4. Plan `research-methodology` skill: list "Discovery Order" and "Cortex-First" search patterns to formalize.
-5. Plan `routing-optimization-policy` skill: list "mini-agent" delegation rules to document.
-6. For each skill, define acceptance criteria and validation steps.
-7. Prepare Step 02-04 packets (one per skill) with copy-paste instructions for `06-documenting`.
-8. Record the planning output in this tracker before ending the step.
-
-**Stop conditions:**
-
-- **Done:** Planning brief complete with policy inventories for all three skills and Step 02-04 packets prepared.
-- **Hold:** A policy decision is needed before planning can complete.
-- **Blocked:** An MCP/tool/agent gap prevents honest planning; escalate to `00-helping`.
-
-**Required validation:**
-
-`node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
-
-#### Step 02 — Author implementation-standards skill [DONE]
-
-**Completion evidence:** Skill file created at `.github/skills/implementation-standards/SKILL.md` with valid frontmatter (0 errors, 0 warnings).
-
-```yaml
-phase: 1
-step: 2
-agent: '06-documenting'
-agent_file: '.github/agents/06-documenting.agent.md'
-status: '[DONE]'
-mode: 'fresh-session'
-source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
-copy_paste: 'true'
-next_step: 'Step 03 — Author research-methodology skill'
-skills: 'skill-frontmatter-standards, educational-docs'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
-  - node scripts/agent-customization/validate-skill-frontmatter.mjs --json --skill=implementation-standards
-```
-
-**Step objective:** Create `.github/skills/implementation-standards/SKILL.md` with frontmatter and extracted policies from CLAUDE.md and copilot-instructions.md.
-
-**User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
-
-**Context the agent must know:**
-
-- Use the planning brief from Step 01 as the policy inventory.
-- Extract ES2023 policies, Module Architecture rules, and JSDoc requirements.
-- Follow SKILL.md frontmatter format with `skills:` field and description under 1024 characters.
-
-**Execution steps:**
-
-1. Read the Step 01 planning brief and policy inventory for `implementation-standards`.
-2. Read `CLAUDE.md` and `.github/copilot-instructions.md` to extract the identified policies.
-3. Create `.github/skills/implementation-standards/SKILL.md` with proper frontmatter and content.
-4. Validate with `node scripts/agent-customization/validate-skill-frontmatter.mjs --json --skill=implementation-standards`.
-5. Record the skill authoring output in this tracker.
-
-**Stop conditions:**
-
-- **Done:** Skill file exists with valid frontmatter and complete policy content.
-- **Hold:** A policy decision is needed before authoring can complete.
-- **Blocked:** An MCP/tool/agent gap prevents honest skill authoring; escalate to `00-helping`.
-
-**Required validation:**
-
-`node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
-
-#### Step 03 — Author research-methodology skill [DONE]
-
-```yaml
-phase: 1
-step: 3
-agent: '06-documenting'
-agent_file: '.github/agents/06-documenting.agent.md'
-status: '[DONE]'
-mode: 'fresh-session'
-source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
-copy_paste: 'true'
-next_step: 'Step 04 — Author routing-optimization-policy skill'
-skills: 'skill-frontmatter-standards, educational-docs'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
-  - node scripts/agent-customization/validate-skill-frontmatter.mjs --json --skill=research-methodology
-```
-
-**Step objective:** Create `.github/skills/research-methodology/SKILL.md` with frontmatter and formalized discovery order patterns.
-
-**Completed:**
-
-- Created `.github/skills/research-methodology/SKILL.md` with proper frontmatter.
-- Frontmatter validation: PASS (0 errors, 0 warnings).
-- Plan sync validation: PASS (0 errors, 0 warnings).
-
-**Skill content includes:**
-
-- Discovery Order policy (README → parent README → plans → source files).
-- Cortex-first search patterns with `use_dense: true` and prewarm guidance.
-- Plan-aware execution workflow coordinating with `plan-alignment`.
-- Certainty thresholds (< 90% stop, < 95% investigate, ≥ 95% proceed).
-- Context window mitigation (plan updates, handoff prompts).
-- Demo-first library gap policy for investigation from demo symptoms.
-
-**User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
-
-**Context the agent must know:**
-
-- Use the Step 01 planning brief as the policy inventory.
-- Formalize "Discovery Order" and "Cortex-First" search patterns from CLAUDE.md.
-
-**Execution steps:**
-
-1. Read the Step 01 planning brief and policy inventory for `research-methodology`.
-2. Read `CLAUDE.md` to extract the identified discovery patterns.
-3. Create `.github/skills/research-methodology/SKILL.md` with proper frontmatter and content.
-4. Validate with `node scripts/agent-customization/validate-skill-frontmatter.mjs --json --skill=research-methodology`.
-5. Record the skill authoring output in this tracker.
-
-**Stop conditions:**
-
-- **Done:** Skill file exists with valid frontmatter and complete discovery pattern content.
-- **Hold:** A policy decision is needed before authoring can complete.
-- **Blocked:** An MCP/tool/agent gap prevents honest skill authoring; escalate to `00-helping`.
-
-**Required validation:**
-
-`node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
-
-#### Step 04 — Author routing-optimization-policy skill [DONE]
-
-**Completion evidence:** Skill file created at `.github/skills/routing-optimization-policy/SKILL.md` with valid frontmatter (0 errors, 0 warnings).
-
-```yaml
-phase: 1
-step: 4
-agent: '06-documenting'
-agent_file: '.github/agents/06-documenting.agent.md'
-status: '[DONE]'
-mode: 'fresh-session'
-source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
-copy_paste: 'true'
-next_step: 'Phase 2: Specialist Authoring'
-skills: 'skill-frontmatter-standards, educational-docs'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
-  - node scripts/agent-customization/validate-skill-frontmatter.mjs --json --skill=routing-optimization-policy
-```
-
-**Step objective:** Create `.github/skills/routing-optimization-policy/SKILL.md` with frontmatter and mini-agent delegation rules.
-
-**User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
-
-**Context the agent must know:**
-
-- Use the Step 01 planning brief as the policy inventory.
-- Document the "mini-agent" delegation rules to prevent future drift.
-
-**Execution steps:**
-
-1. Read the Step 01 planning brief and policy inventory for `routing-optimization-policy`.
-2. Read `CLAUDE.md` and `plans/` to extract delegation rules.
-3. Create `.github/skills/routing-optimization-policy/SKILL.md` with proper frontmatter and content.
-4. Validate with `node scripts/agent-customization/validate-skill-frontmatter.mjs --json --skill=routing-optimization-policy`.
-5. Record the skill authoring output in this tracker.
-
-**Stop conditions:**
-
-- **Done:** Skill file exists with valid frontmatter and complete delegation rule content.
-- **Hold:** A policy decision is needed before authoring can complete.
-- **Blocked:** An MCP/tool/agent gap prevents honest skill authoring; escalate to `00-helping`.
-
-**Required validation:**
-
-`node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
+**Details:** See `plans/completed/Orchestration_System_Optimization.logs.md`
 
 ### Phase 2: Specialist Authoring [DONE]
 
-**Current Active Step:** Phase 3: Flow Integration [PLANNED]
+**Outcome:** 7 new specialist agents created, Tier 1 allow-lists updated
 
-**Latest validation evidence:**
-- 2026-06-08: Step 02 complete — `implementation-executor.agent.md` created, frontmatter validated (0 errors)
-- 2026-06-08: Step 03 complete — `research-codebase-coordinator.agent.md` created, frontmatter validated (0 errors)
-- 2026-06-08: Step 04-06 complete — 4 additional specialists created with valid frontmatter
-- 2026-06-08: Step 07 complete — Tier 1 agent allow-lists updated (01-planning, 05-green-testing, 07-logging)
-- 2026-06-08: Routing table regenerated and validated (npm run agents:routing-table:gate PASS)
-- 2026-06-08: `workflow-update-sync.mjs` advanced Phase 2→DONE, Phase 3→PLANNED
+**Agents created:**
+- `implementation-executor` (Tier 2) — Execute scoped file edits from `04-implementing`
+- `research-codebase-coordinator` (Tier 2) — Coordinate read-only reconnaissance
+- `research-synthesis-specialist` (Tier 3) — Transform scout data into alignment briefs
+- `code-quality-auditor` (Tier 3) — Run quality gates, classify violations, produce repair packets
+- `test-coverage-analyst` (Tier 3) — Analyze lcov.info, map uncovered paths
+- `acceptance-criteria-writer` (Tier 4) — Observable behavior boundaries
+- `phase-handoff-designer` (Tier 3) — Sequential handoffs between phase agents
 
-**Phase objective:** Create the specialist agent roster identified in Phase 1 gaps analysis. Author agent files with correct tier assignments, frontmatter, and bounded delegation contracts. Ensure each specialist has a clear responsibility boundary and integrates with the new skills from Phase 1.
+**Tier 1 allow-list updates:**
+- `01-planning`: Added `research-synthesis-specialist`, `phase-handoff-designer`
+- `05-green-testing`: Added `test-coverage-analyst`
+- `07-logging`: Added `phase-handoff-designer`
 
-**Phase progression rule:** Start with only Step 01. Step 01 must author the remaining numbered step packets, or explicit skipped-step packets, before the phase can advance.
+**Validation:** `npm run agents:routing-table:gate` PASS (61 agents, 55 skills)
 
-#### Step 01: Plan specialist roster and boundaries [DONE]
+**Details:** See `plans/completed/Orchestration_System_Optimization.logs.md`
 
-**Status:** Complete
+### Phase 3: Routing & Frontmatter Sync [DONE]
 
-**Completion evidence:** Specialist roster defined with tier assignments, boundaries, and Step 02-07 packets prepared in tracker below. Plan sync validation: PASS (0 errors, 0 warnings).
+**Outcome:** All gates PASS, agent quality fixes applied, routing table validated. Tracker compressed — details archived to `plans/completed/Orchestration_System_Optimization.logs.md`.
 
-```yaml
-phase: 2
-step: 1
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
-status: '[DONE]'
-mode: 'fresh-session'
-source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
-copy_paste: 'true'
-next_step: 'Step 02 — Create implementation-executor agent'
-skills: 'planning-acceptance-criteria, plan-alignment, agent-frontmatter-standards, routing-optimization-policy'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
-```
+**Gate results:**
+- `tier-enforcement.gate`: **PASS** (8 Tier 1, 11 Tier 2, 38 Tier 3, 4 Tier 4, 0 violations)
+- `agent-quality.gate`: **PASS** (0 errors, 0 warnings, all 61 agents compliant)
+- `routing-table-freshness.gate`: **PASS** (hash match, 116 sources, 61 agents, 55 skills)
 
-**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+**Agent fixes applied:**
+- `code-quality-auditor.agent.md`: Added `## Approach`, fixed structured-v1 field order (Tier 3)
+- `implementation-executor.agent.md`: Fixed structured-v1 field order (Tier 2)
+- `research-synthesis-specialist.agent.md`: Added `## Approach`, fixed structured-v1 field order (Tier 3)
 
-**Step objective:** Plan the specialist agent roster by defining the exact specialists to create, their tier assignments, responsibility boundaries, and which Tier 1 orchestrators they serve. Prepare Step 02-07 packets for execution.
+**Validation:**
+- `validate-plan-sync`: PASS (0 errors, 0 warnings)
+- `validate-agent-graph`: PASS (0 errors, 0 violations)
 
-**Context the agent must know:**
-
-- Phase 1 created three skills: `implementation-standards`, `research-methodology`, `routing-optimization-policy`.
-- Critical gaps from the audit: 04-implementing lacks a Tier 2 executor, 02-researching lacks synthesis support, research methodology was skill-poor.
-- Specialists must follow the tier graph: Tier 2 may delegate to Tier 3/4, Tier 3 to Tier 4 only, Tier 4 cannot delegate.
-- Only Tier 1 agents are user-invocable; all specialists must have `user-invocable: false`.
-- Each specialist needs proper frontmatter with `tier`, `skills`, `agents` (allow-list), and `model` fields.
-
-**Execution steps:**
-
-1. Use `neataptic-workflow-mcp.get_active_workflow_snapshot` to confirm this tracker is active.
-2. Review the Phase 1 completion evidence and the three new skills created.
-3. Define the specialist roster:
-   - `implementation-executor` (Tier 2): Handles actual file edits for 04-implementing.
-   - `research-synthesis-specialist` (Tier 3): Transforms scout data into alignment briefs for 01-planning.
-   - `code-quality-auditor` (Tier 3): Runs quality gates and interprets results for 05-green-testing.
-   - Additional specialists as needed based on gap analysis.
-4. For each specialist, define: tier, primary owner (which Tier 1 agent delegates to it), responsibility boundary, and required skills binding.
-5. Prepare Step 02-07 packets with copy-paste instructions for the appropriate agents.
-6. Record the specialist roster plan in this tracker before ending the step.
-
-**Stop conditions:**
-
-- **Done:** Specialist roster defined with tier assignments, boundaries, and Step 02-07 packets prepared.
-- **Hold:** A tier or delegation policy decision is needed before planning can complete.
-- **Blocked:** An MCP/tool/agent gap prevents honest planning; escalate to `00-helping`.
+**Details:** See `plans/completed/Orchestration_System_Optimization.logs.md`
 
 ---
 
-## Specialist Roster Plan
-
-### Tier 2 Specialists (Coordinators / Sub-Orchestrators)
-
-| Specialist | Primary Owner | Responsibility Boundary | Skills Binding | Model |
-|---|---|---|---|---|
-| `implementation-executor` | 04-implementing | Actual file edits, patch application, and write-phase synthesis. Consumes implementation packets from 04-implementing and executes scoped changes. | `implementation-standards`, `coverage-guard` | `qwen3.5:cloud` |
-| `research-codebase-coordinator` | 02-researching | Coordinates scout deployments, synthesizes reconnaissance results, and produces alignment briefs for 01-planning. | `research-methodology`, `plan-alignment` | `qwen3.5:cloud` |
-
-### Tier 3 Specialists (Hidden Scouts)
-
-| Specialist | Primary Owner | Responsibility Boundary | Skills Binding | Model |
-|---|---|---|---|---|
-| `research-synthesis-specialist` | research-codebase-coordinator | Transforms raw scout data (from Plan Scout, Docs Scout, Boundary Mapper) into structured alignment briefs. Does not run scouts directly. | `research-methodology`, `plan-alignment` | `qwen3.5:cloud` |
-| `code-quality-auditor` | 05-green-testing | Runs `npm run quality:folder`, interprets results, classifies violations, and produces repair packets for 04-implementing or coverage-tranche. | `green-validation-gates`, `implementation-standards` | `qwen3.5:cloud` |
-| `test-coverage-analyst` | coverage-guard | Analyzes lcov.info, maps uncovered paths to source files, classifies dead vs reachable code, and names owner-local test files for coverage-tranche. | `coverage-guard`, `coverage-tranche` | `qwen3.5:cloud` |
-
-### Tier 4 Specialists (Auxiliaries / One-Shot Helpers)
-
-| Specialist | Primary Owner | Responsibility Boundary | Skills Binding | Model |
-|---|---|---|---|---|
-| `acceptance-criteria-writer` | 01-planning, 03-red-testing | Generates observable acceptance criteria from user intent before coding begins. | `planning-acceptance-criteria`, `red-test-contracts` | `qwen3.5:cloud` |
-| `file-change-summarizer` | 07-logging | Summarizes changed files, affected customization surfaces, validation evidence, and residual risks for logging or handoff. | `summarizing-session-log` | `qwen3.5:cloud` |
-| `phase-handoff-designer` | All Tier 1 agents | Designs sequential handoff prompts between seven phase agents within a plan. | `phase-handoff-workflow`, `tracker-handoff` | `qwen3.5:cloud` |
-
-### Delegation Contracts
-
-```
-Tier 1 → Tier 2:
-  04-implementing → implementation-executor (file edits)
-  02-researching → research-codebase-coordinator (scout coordination)
-
-Tier 2 → Tier 3:
-  research-codebase-coordinator → research-synthesis-specialist (synthesis)
-  05-green-testing → code-quality-auditor (quality gate interpretation)
-  05-green-testing → test-coverage-analyst (coverage gap mapping)
-
-Tier 3 → Tier 4:
-  code-quality-auditor → acceptance-criteria-writer (if criteria missing)
-  01-planning → acceptance-criteria-writer (direct, for planning phase)
-  07-logging → file-change-summarizer (session summary)
-  All Tier 1/2 → phase-handoff-designer (handoff prompt design)
-```
-
-### Frontmatter Requirements
-
-All new specialists must declare:
-
-```yaml
-tier: <2|3|4>
-model: 'qwen3.5:cloud (ollama)'
-tools: [read, search, edit?, execute?, todo, agent?, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
-user-invocable: false
-agents: [<allow-list of specialists this agent may delegate to>]
-skills: [<skill names from Phase 1 or existing>]
-```
-
-**Tool restrictions by tier:**
-- Tier 2: May use `edit`, `execute`, `agent` (delegate to Tier 3/4)
-- Tier 3: May use `edit` only for plan files, `agent` (delegate to Tier 4)
-- Tier 4: No `agent` tool (cannot delegate)
-
----
-
-## Step 02-07 Packets
+## Step 02-07 Packets (Archived)
 
 #### Step 02 — Create implementation-executor agent [DONE]
 
@@ -772,24 +487,6 @@ validation:
 
 ---
 
-### Phase 3: Routing & Frontmatter Sync [DONE]
-
-**Current Active Step:** Phase 3 complete
-
-**Latest validation evidence:**
-- 2026-06-08: Phase 2 [DONE] — All 7 specialist agents created with valid frontmatter, Tier 1 allow-lists updated, routing table regenerated and validated
-- 2026-06-08: Phase 3 [DONE] — All gates PASS (tier-enforcement, agent-quality, plan-sync, routing-table-freshness)
-- 2026-06-08: Step 01 [DONE] — Routing table audited, all 7 specialists indexed, tier violation fixed
-- 2026-06-08: Step 02 [DONE] — Tier 1 delegations confirmed complete, no gaps found
-- 2026-06-08: Step 03 [DONE] — All gates PASS, 3 agent quality fixes applied, routing table regenerated
-- 2026-06-08: `npm run agents:routing-table:gate` PASS (hash match, 61 agents, 55 skills)
-- 2026-06-08: `validate-agent-graph` PASS (0 errors, 0 violations)
-- 2026-06-08: `validate-plan-sync` PASS (0 errors, 0 warnings)
-- 2026-06-08: `agent-quality.gate` PASS (0 errors, 0 warnings)
-- 2026-06-08: `tier-enforcement.gate` PASS (8 Tier 1, 11 Tier 2, 38 Tier 3, 4 Tier 4)
-- 2026-06-08: `routing-table-freshness.gate` PASS (hash match, 116 sources, 61 agents, 55 skills)
-- 2026-06-08: Workflow sync: Phase 3 complete — Phase 4 Step 01 [WIP] for Flow Integration
-
 #### Step 01 — Audit routing table and specialist coverage [DONE]
 
 **Completion evidence:**
@@ -890,7 +587,9 @@ validation:
 - **Hold:** Gate failures require policy decisions.
 - **Blocked:** MCP/tool/agent gap prevents validation.
 
-### Phase 4: Flow Integration [WIP]
+### Phase 4 — Flow Integration [WIP]
+
+#### Step 01 — Map flows to Phase 4 objectives [WIP]
 
 **Current Active Step:** Step 01 — Map flows to Phase 4 objectives [WIP]
 
