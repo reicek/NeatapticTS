@@ -772,24 +772,39 @@ validation:
 
 ---
 
-### Phase 3: Routing & Frontmatter Sync [WIP]
+### Phase 3: Routing & Frontmatter Sync [DONE]
 
-**Current Active Step:** Step 01 — Audit routing table and specialist coverage [WIP]
+**Current Active Step:** Phase 3 complete
 
 **Latest validation evidence:**
 - 2026-06-08: Phase 2 [DONE] — All 7 specialist agents created with valid frontmatter, Tier 1 allow-lists updated, routing table regenerated and validated
+- 2026-06-08: Phase 3 [DONE] — All gates PASS (tier-enforcement, agent-quality, plan-sync, routing-table-freshness)
+- 2026-06-08: Step 01 [DONE] — Routing table audited, all 7 specialists indexed, tier violation fixed
+- 2026-06-08: Step 02 [DONE] — Tier 1 delegations confirmed complete, no gaps found
+- 2026-06-08: Step 03 [DONE] — All gates PASS, 3 agent quality fixes applied, routing table regenerated
 - 2026-06-08: `npm run agents:routing-table:gate` PASS (hash match, 61 agents, 55 skills)
+- 2026-06-08: `validate-agent-graph` PASS (0 errors, 0 violations)
 - 2026-06-08: `validate-plan-sync` PASS (0 errors, 0 warnings)
-- 2026-06-08: Workflow sync: Phase 2 complete — all steps [DONE], Phase 3 Step 01 marked [WIP] for MCP tracking
+- 2026-06-08: `agent-quality.gate` PASS (0 errors, 0 warnings)
+- 2026-06-08: `tier-enforcement.gate` PASS (8 Tier 1, 11 Tier 2, 38 Tier 3, 4 Tier 4)
+- 2026-06-08: `routing-table-freshness.gate` PASS (hash match, 116 sources, 61 agents, 55 skills)
+- 2026-06-08: Workflow sync: Phase 3 complete — Phase 4 Step 01 [WIP] for Flow Integration
 
-#### Step 01 — Audit routing table and specialist coverage [WIP]
+#### Step 01 — Audit routing table and specialist coverage [DONE]
+
+**Completion evidence:**
+- Routing table freshness gate: PASS (61 agents, 55 skills, hash match)
+- All 7 new specialists properly indexed: `implementation-executor` (T2), `research-codebase-coordinator` (T2), `research-synthesis-specialist` (T3), `code-quality-auditor` (T3), `test-coverage-analyst` (T3), `acceptance-criteria-writer` (T4), `file-change-summarizer` (T4), `phase-handoff-designer` (T3)
+- All 8 Tier 1 orchestrators have appropriate specialist delegations
+- Tier violation fixed: Added `implementation-executor` to `TIER_2_AGENT_NAMES` in `tier-graph-utils.mjs`
+- Agent graph validation: PASS (0 errors, 0 violations)
 
 ```yaml
 phase: 3
 step: 1
 agent: '01-planning'
 agent_file: '.github/agents/01-planning.agent.md'
-status: '[WIP]'
+status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
 copy_paste: 'true'
@@ -800,36 +815,118 @@ validation:
   - npm run agents:routing-table:gate
 ```
 
-**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+**Completion evidence:**
+- Routing table freshness gate: PASS (61 agents, 55 skills, hash match)
+- All 7 new specialists properly indexed in routing table
+- All 8 Tier 1 orchestrators have appropriate specialist delegations
+- Tier violation fixed: Added `implementation-executor` to `TIER_2_AGENT_NAMES` in `tier-graph-utils.mjs`
+- Agent graph validation: PASS (0 errors, 0 violations)
 
-**Step objective:** Audit the routing table to confirm all 7 new specialists are properly indexed, and identify any Tier 1 orchestrators that still lack specialist delegations.
+#### Step 02 — Update Tier 1 orchestrator delegations [DONE]
 
-**Context the agent must know:**
+```yaml
+phase: 3
+step: 2
+agent: 'helping-agent-maintenance-coordinator'
+agent_file: '.github/agents/helping-agent-maintenance-coordinator.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 03 — Validate tier enforcement and agent quality'
+skills: 'helping-agent-maintenance-coordinator, agent-frontmatter-standards, routing-optimization-policy'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - npm run agents:routing-table:gate
+```
 
-- Phase 2 created 7 specialists: `implementation-executor` (T2), `research-codebase-coordinator` (T2), `research-synthesis-specialist` (T3), `code-quality-auditor` (T3), `test-coverage-analyst` (T3), plus 2 Tier 4 auxiliaries.
-- Step 07 already updated Tier 1 allow-lists, but this step confirms completeness.
-- Use `neataptic-gate-mcp.query_customization_routing_table` to inspect the routing table.
-- Use `neataptic-gate-mcp.query_tier_graph` to validate tier structure.
+**Confirmation results:**
 
-**Execution steps:**
-
-1. Run `npm run agents:routing-table:gate` to confirm routing table freshness.
-2. Query the routing table with `neataptic-gate-mcp.query_customization_routing_table --includeRows --includeMarkdown`.
-3. Confirm all 7 new specialists appear in the routing table.
-4. Identify any Tier 1 agents that still lack appropriate specialist delegations.
-5. Record audit findings in this tracker.
+- Reviewed all 8 Tier 1 orchestrator `agents:` allow-lists
+- Confirmed Phase 2 Step 07 already updated all required specialist delegations
+- No gaps found — all specialists properly routed
+- Routing table freshness gate: **PASS** (61 agents, 55 skills, hash match)
 
 **Stop conditions:**
 
-- **Done:** Routing table audited, all specialists indexed, Tier 1 delegation gaps identified.
-- **Hold:** A routing table or indexing gap needs user clarification.
-- **Blocked:** A gate or MCP gap prevents honest audit; escalate to `00-helping`.
+- **Done:** All Tier 1 orchestrators have complete specialist delegations, routing table validated. ✅
+- **Hold:** A frontmatter policy decision is needed.
+- **Blocked:** An MCP/tool/agent gap prevents honest agent maintenance.
 
-**Required validation:**
+#### Step 03 — Validate tier enforcement and agent quality [DONE]
 
-`npm run agents:routing-table:gate`
+```yaml
+phase: 3
+step: 3
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-testing.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Phase 4: Flow Integration'
+skills: 'green-validation-gates, coverage-guard, plan-sync-validation'
+validation:
+  - node scripts/agent-customization/gates/tier-enforcement.gate.mjs --json
+  - node scripts/agent-customization/gates/agent-quality.gate.mjs --json
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+```
 
-### Phase 4: Flow Integration [PLANNED]
+**Gate results:**
+
+- `tier-enforcement.gate`: **PASS** (8 Tier 1, 11 Tier 2, 38 Tier 3, 4 Tier 4, 0 violations)
+- `agent-quality.gate`: **PASS** (0 errors, 0 warnings, all 61 agents compliant)
+- `validate-plan-sync`: **PASS** (0 errors, 0 warnings)
+
+**Agent fixes applied:**
+
+- `code-quality-auditor.agent.md`: Added `## Approach` section, fixed structured-v1 field order (Tier 3 scout contract)
+- `implementation-executor.agent.md`: Fixed structured-v1 field order (Tier 2 coordinator contract: added `SPECIALISTS_USED`, `HANDOFF`)
+- `research-synthesis-specialist.agent.md`: Added `## Approach` section, fixed structured-v1 field order (Tier 3 scout contract)
+
+**Stop conditions:**
+
+- **Done:** All gates pass, no tier violations, all specialists properly scoped. ✅
+- **Hold:** Gate failures require policy decisions.
+- **Blocked:** MCP/tool/agent gap prevents validation.
+
+### Phase 4: Flow Integration [WIP]
+
+**Current Active Step:** Step 01 — Map flows to Phase 4 objectives [WIP]
+
+```yaml
+phase: 4
+step: 1
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[WIP]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 02 — Assign flow owners and validation gates'
+skills: 'plan-alignment, agent-frontmatter-standards, routing-optimization-policy'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - node scripts/agent-customization/gates/flow-mention.gate.mjs --json
+```
+
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+
+**Step objective:** Map Phase 4 Flow Integration objectives to named agent flows from `.github/flows/`, assign owners, and define exit gates.
+
+**Execution steps:**
+
+1. Read Phase 4 objectives and existing flow definitions in `.github/flows/`.
+2. Identify which flows map to Flow Integration work (e.g., flow-aware routing, gate protocol enforcement).
+3. Define Step 02-07 packets for value-adding work or explicit skip records for non-value gates.
+4. Update plan with flow assignments, gate contracts, and validation commands.
+5. Run `flow-mention.gate` to confirm flows are properly referenced.
+
+**Stop conditions:**
+
+- **Done:** All Phase 4 objectives mapped to flows, owners assigned, gates defined.
+- **Hold:** Flow definitions missing or ambiguous.
+- **Blocked:** MCP/tool/agent gap prevents flow mapping.
 
 ## Validation Gates
 
@@ -841,14 +938,14 @@ validation:
 
 ### Latest validation evidence
 
-- 2026-06-08: Phase 2 [DONE] — All 7 specialist agents created with valid frontmatter, Tier 1 allow-lists updated, routing table regenerated and validated
+- 2026-06-08: Phase 3 [DONE] — All gates PASS, 3 agent quality fixes applied, routing table validated
 - 2026-06-08: `npm run agents:routing-table:gate` PASS (hash match, 61 agents, 55 skills)
 - 2026-06-08: `validate-plan-sync` PASS (0 errors, 0 warnings)
-- 2026-06-08: Workflow sync: Phase 2 complete — all steps [DONE], Phase 3 ready for promotion to [WIP]
+- 2026-06-08: Workflow sync: Phase 3 complete — Phase 4 Step 01 ready for Flow Integration
 
 ## Handoff query
 
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
-Phase 2 is [DONE] — all 7 specialists created and Tier 1 allow-lists updated. Phase 3 Step 01 is the active frontier. Start a fresh session with `01-planning` and paste the Phase 3 Step 01 packet to begin routing table and frontmatter synchronization work.
+Phase 3 is [DONE] — all gates PASS, agent quality fixed, routing table validated. Phase 4 Step 01 is the active frontier. Start a fresh session with `01-planning` and paste the Phase 4 Step 01 packet to begin flow integration work.
 ```

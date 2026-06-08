@@ -8,14 +8,6 @@
         "timeout": 240
       }
     ],
-    "PreToolUse": [
-      {
-        "type": "command",
-        "command": "node scripts/agent-customization/hooks/pretool-workflow-cortex-preflight.mjs",
-        "cwd": ".",
-        "timeout": 120
-      }
-    ],
     "PostToolUse": [
       {
         "type": "command",

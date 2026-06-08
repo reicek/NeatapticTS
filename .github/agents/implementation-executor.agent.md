@@ -6,7 +6,7 @@ model: qwen3.5:cloud (ollama)
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 disable-model-invocation: false
-agents: ['boundary-mapper', 'docs-scout', 'browser-runtime-scout', 'worker-payload-scout', 'checkpoint-scout', 'determinism-scout', 'helping-gap-resolution-coordinator']
+agents: ['boundary-mapper', 'docs-scout', 'browser-runtime-scout', 'worker-payload-scout', 'checkpoint-scout', 'determinism-scout']
 skills: ['implementation-standards', 'coverage-guard']
 handoffs:
   - label: 'Validate Green'
@@ -108,8 +108,6 @@ Execute scoped file edits delegated from `04-implementing`. You are a pure execu
 
 Return exactly one fenced `structured-v1` block, no prose. All keys and positions are mandatory. Use `NONE` when not applicable.
 
-### Example Output Block
-
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
 TASK_STATUS: SUCCESS | PARTIAL | FAILED
@@ -126,13 +124,14 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
+SPECIALISTS_USED:
+- <Tier 3/4 agent or NONE>
+HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:
 - <risk or NONE>
 LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
-SUB_ORCHESTRATORS_USED:
-- <agent or NONE>
 SUMMARY: <brief truthful summary>
 ```

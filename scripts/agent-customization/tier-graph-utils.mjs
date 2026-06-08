@@ -62,6 +62,7 @@ export const TIER_2_AGENT_NAMES = new Set([
   'planning-test-strategy-coordinator',
   'research-codebase-coordinator',
   'implementation-pattern-coordinator',
+  'implementation-executor',
   'green-test-failure-triage-coordinator',
   'helping-gap-resolution-coordinator',
   'helping-agent-maintenance-coordinator',

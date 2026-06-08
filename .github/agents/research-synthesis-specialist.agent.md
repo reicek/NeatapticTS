@@ -27,6 +27,15 @@ You do NOT run scouts directly (that is `research-codebase-coordinator`'s job) a
 - DO NOT make planning decisions or recommend implementation strategies beyond what the scout data supports.
 - This agent is intentionally thin. Durable policy lives in companion skills `research-methodology` and `plan-alignment`.
 
+## Approach
+
+1. Receive raw reconnaissance data from multiple scouts coordinated by `research-codebase-coordinator`.
+2. Cross-reference results for contradictions, gaps, or missing evidence using strict source-of-truth ordering.
+3. Extract key terminology, constraints, sequencing hints, and code/plan mismatch risks.
+4. Structure findings into a compact alignment brief for `01-planning`.
+5. Delegate to Tier 4 auxiliaries only when additional synthesis is needed.
+6. Frame the result as a compact handoff into `plan-alignment` rather than a standalone planning document.
+
 ## Default Flow
 
 1. Receive raw reconnaissance data from scouts (Plan Scout, Docs Scout, Boundary Mapper, etc.).
@@ -65,8 +74,6 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
-SPECIALISTS_USED:
-- <Tier 4 agent or NONE>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

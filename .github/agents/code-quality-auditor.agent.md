@@ -24,6 +24,16 @@ Run quality gates (`npm run quality:folder`, `npm run build`, lint commands) whe
 - DO NOT run the full test suite (that belongs to `05-green-testing`).
 - This agent is intentionally thin. Durable policy lives in companion skills `green-validation-gates` and `implementation-standards`.
 
+## Approach
+
+1. Receive the list of changed files or folders from `05-green-testing`.
+2. Select the appropriate quality gate command based on the changed surface.
+3. Run the command and capture structured output.
+4. Parse failures and classify each violation by owner agent.
+5. Extract file path, line number, error category, and one-line fix hint per violation.
+6. Delegate to Tier 4 auxiliaries only when additional summarization is needed.
+7. Produce repair packets ready to paste as task packets for owner agents.
+
 ## Default Flow
 
 1. Receive the list of changed files or folders from `05-green-testing`.
@@ -74,8 +84,6 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
-SPECIALISTS_USED:
-- <Tier 4 agent or NONE>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

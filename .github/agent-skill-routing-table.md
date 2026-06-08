@@ -1,5 +1,5 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: 4503222ad35b5a6065a31fe1bf3f53d8f4697db2ef33063e85d428dafb4837d8 -->
+<!-- source-hash: 7e85128cbb24cdc8ef364cd1f066121a8b5306196ac73bd53751364982003922 -->
 <!-- source-file-count: 116 -->
 # Canonical Agent and Skill Routing Table
 
@@ -40,7 +40,7 @@
 | helping-agent-maintenance-coordinator | 2 | qwen3.5:cloud (ollama) | agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>skill-inventory-auditor<br>model-name-auditor<br>learning-event-capturer | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit |
 | helping-gap-resolution-coordinator | 2 | qwen3.5:cloud (ollama) | skill-inventory-auditor<br>agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>model-name-auditor<br>learning-event-capturer<br>file-change-summarizer | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>subagent-delegation-patterns |
 | hybrid-interop-scout | 3 | qwen3.5:cloud (ollama) | - | hybrid-training-interop |
-| implementation-executor | 2 | qwen3.5:cloud (ollama) | boundary-mapper<br>docs-scout<br>browser-runtime-scout<br>worker-payload-scout<br>checkpoint-scout<br>determinism-scout<br>helping-gap-resolution-coordinator | implementation-standards<br>coverage-guard |
+| implementation-executor | 2 | qwen3.5:cloud (ollama) | boundary-mapper<br>docs-scout<br>browser-runtime-scout<br>worker-payload-scout<br>checkpoint-scout<br>determinism-scout | implementation-standards<br>coverage-guard |
 | implementation-pattern-coordinator | 2 | qwen3.5:cloud (ollama) | implementation-pattern-scout<br>boundary-mapper<br>docs-scout<br>agent-frontmatter-auditor | subagent-delegation-patterns |
 | implementation-pattern-scout | 3 | qwen3.5:cloud (ollama) | - | - |
 | learning-event-capturer | 4 | qwen3.5:cloud (ollama) | - | capturing-learning-event |
