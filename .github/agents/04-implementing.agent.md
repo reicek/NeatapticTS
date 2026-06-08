@@ -2,7 +2,7 @@
 description: 'Use when making scoped code changes through focused implementation specialists, reusing project patterns, and avoiding unrelated refactors.'
 name: '04-implementing'
 tier: 1
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '05-green-testing'
     prompt: 'Continue from the active plan and Step 04 implementation diff. Execute Step 05 for the current phase by running focused validation gates and routing failures to the right prior step.'
     send: false
-    model: 'gemma4:latest (ollama)'
+    model: 'qwen3.5:cloud'
 ---
 
 ## Mission

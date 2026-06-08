@@ -2,7 +2,7 @@
 description: 'Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation.'
 name: '05-green-testing'
 tier: 1
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '06-documenting'
     prompt: 'Continue from the active plan and Step 05 validation evidence. Execute Step 06 for the current phase by updating documentation only where the changed surface requires it.'
     send: false
-    model: 'gemma4:latest (ollama)'
+    model: 'qwen3.5:cloud'
 ---
 
 ## Mission

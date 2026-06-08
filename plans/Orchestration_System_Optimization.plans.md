@@ -345,7 +345,721 @@ validation:
 
 `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
 
-### Phase 2: Specialist Authoring [PLANNED]
+### Phase 2: Specialist Authoring [WIP]
+
+**Current Active Step:** Step 02 — Create implementation-executor agent [WIP]
+
+**Latest validation evidence:**
+- 2026-06-08: `node .github/hooks/workflow-update-sync.mjs --plan=plans/Orchestration_System_Optimization.plans.md --hook-check --json` → PASS (Phase 2 Step 2 remains [WIP]; workflow integrity verified)
+
+**Phase objective:** Create the specialist agent roster identified in Phase 1 gaps analysis. Author agent files with correct tier assignments, frontmatter, and bounded delegation contracts. Ensure each specialist has a clear responsibility boundary and integrates with the new skills from Phase 1.
+
+**Phase progression rule:** Start with only Step 01. Step 01 must author the remaining numbered step packets, or explicit skipped-step packets, before the phase can advance.
+
+#### Step 01: Plan specialist roster and boundaries [DONE]
+
+**Status:** Complete
+
+**Completion evidence:** Specialist roster defined with tier assignments, boundaries, and Step 02-07 packets prepared in tracker below. Plan sync validation: PASS (0 errors, 0 warnings).
+
+```yaml
+phase: 2
+step: 1
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 02 — Create implementation-executor agent'
+skills: 'planning-acceptance-criteria, plan-alignment, agent-frontmatter-standards, routing-optimization-policy'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+```
+
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+
+**Step objective:** Plan the specialist agent roster by defining the exact specialists to create, their tier assignments, responsibility boundaries, and which Tier 1 orchestrators they serve. Prepare Step 02-07 packets for execution.
+
+**Context the agent must know:**
+
+- Phase 1 created three skills: `implementation-standards`, `research-methodology`, `routing-optimization-policy`.
+- Critical gaps from the audit: 04-implementing lacks a Tier 2 executor, 02-researching lacks synthesis support, research methodology was skill-poor.
+- Specialists must follow the tier graph: Tier 2 may delegate to Tier 3/4, Tier 3 to Tier 4 only, Tier 4 cannot delegate.
+- Only Tier 1 agents are user-invocable; all specialists must have `user-invocable: false`.
+- Each specialist needs proper frontmatter with `tier`, `skills`, `agents` (allow-list), and `model` fields.
+
+**Execution steps:**
+
+1. Use `neataptic-workflow-mcp.get_active_workflow_snapshot` to confirm this tracker is active.
+2. Review the Phase 1 completion evidence and the three new skills created.
+3. Define the specialist roster:
+   - `implementation-executor` (Tier 2): Handles actual file edits for 04-implementing.
+   - `research-synthesis-specialist` (Tier 3): Transforms scout data into alignment briefs for 01-planning.
+   - `code-quality-auditor` (Tier 3): Runs quality gates and interprets results for 05-green-testing.
+   - Additional specialists as needed based on gap analysis.
+4. For each specialist, define: tier, primary owner (which Tier 1 agent delegates to it), responsibility boundary, and required skills binding.
+5. Prepare Step 02-07 packets with copy-paste instructions for the appropriate agents.
+6. Record the specialist roster plan in this tracker before ending the step.
+
+**Stop conditions:**
+
+- **Done:** Specialist roster defined with tier assignments, boundaries, and Step 02-07 packets prepared.
+- **Hold:** A tier or delegation policy decision is needed before planning can complete.
+- **Blocked:** An MCP/tool/agent gap prevents honest planning; escalate to `00-helping`.
+
+---
+
+## Specialist Roster Plan
+
+### Tier 2 Specialists (Coordinators / Sub-Orchestrators)
+
+| Specialist | Primary Owner | Responsibility Boundary | Skills Binding | Model |
+|---|---|---|---|---|
+| `implementation-executor` | 04-implementing | Actual file edits, patch application, and write-phase synthesis. Consumes implementation packets from 04-implementing and executes scoped changes. | `implementation-standards`, `coverage-guard` | `qwen3.5:cloud` |
+| `research-codebase-coordinator` | 02-researching | Coordinates scout deployments, synthesizes reconnaissance results, and produces alignment briefs for 01-planning. | `research-methodology`, `plan-alignment` | `qwen3.5:cloud` |
+
+### Tier 3 Specialists (Hidden Scouts)
+
+| Specialist | Primary Owner | Responsibility Boundary | Skills Binding | Model |
+|---|---|---|---|---|
+| `research-synthesis-specialist` | research-codebase-coordinator | Transforms raw scout data (from Plan Scout, Docs Scout, Boundary Mapper) into structured alignment briefs. Does not run scouts directly. | `research-methodology`, `plan-alignment` | `qwen3.5:cloud` |
+| `code-quality-auditor` | 05-green-testing | Runs `npm run quality:folder`, interprets results, classifies violations, and produces repair packets for 04-implementing or coverage-tranche. | `green-validation-gates`, `implementation-standards` | `qwen3.5:cloud` |
+| `test-coverage-analyst` | coverage-guard | Analyzes lcov.info, maps uncovered paths to source files, classifies dead vs reachable code, and names owner-local test files for coverage-tranche. | `coverage-guard`, `coverage-tranche` | `qwen3.5:cloud` |
+
+### Tier 4 Specialists (Auxiliaries / One-Shot Helpers)
+
+| Specialist | Primary Owner | Responsibility Boundary | Skills Binding | Model |
+|---|---|---|---|---|
+| `acceptance-criteria-writer` | 01-planning, 03-red-testing | Generates observable acceptance criteria from user intent before coding begins. | `planning-acceptance-criteria`, `red-test-contracts` | `qwen3.5:cloud` |
+| `file-change-summarizer` | 07-logging | Summarizes changed files, affected customization surfaces, validation evidence, and residual risks for logging or handoff. | `summarizing-session-log` | `qwen3.5:cloud` |
+| `phase-handoff-designer` | All Tier 1 agents | Designs sequential handoff prompts between seven phase agents within a plan. | `phase-handoff-workflow`, `tracker-handoff` | `qwen3.5:cloud` |
+
+### Delegation Contracts
+
+```
+Tier 1 → Tier 2:
+  04-implementing → implementation-executor (file edits)
+  02-researching → research-codebase-coordinator (scout coordination)
+
+Tier 2 → Tier 3:
+  research-codebase-coordinator → research-synthesis-specialist (synthesis)
+  05-green-testing → code-quality-auditor (quality gate interpretation)
+  05-green-testing → test-coverage-analyst (coverage gap mapping)
+
+Tier 3 → Tier 4:
+  code-quality-auditor → acceptance-criteria-writer (if criteria missing)
+  01-planning → acceptance-criteria-writer (direct, for planning phase)
+  07-logging → file-change-summarizer (session summary)
+  All Tier 1/2 → phase-handoff-designer (handoff prompt design)
+```
+
+### Frontmatter Requirements
+
+All new specialists must declare:
+
+```yaml
+tier: <2|3|4>
+model: 'qwen3.5:cloud'
+tools: [read, search, edit?, execute?, todo, agent?, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+user-invocable: false
+agents: [<allow-list of specialists this agent may delegate to>]
+skills: [<skill names from Phase 1 or existing>]
+```
+
+**Tool restrictions by tier:**
+- Tier 2: May use `edit`, `execute`, `agent` (delegate to Tier 3/4)
+- Tier 3: May use `edit` only for plan files, `agent` (delegate to Tier 4)
+- Tier 4: No `agent` tool (cannot delegate)
+
+---
+
+## Step 02-07 Packets
+
+#### Step 02 — Create implementation-executor agent [WIP]
+
+```yaml
+phase: 2
+step: 2
+agent: 'creating-specialist-agent'
+agent_file: '.github/agents/creating-specialist-agent.agent.md'
+status: '[WIP]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 03 — Create research-codebase-coordinator agent'
+skills: 'creating-specialist-agent, agent-frontmatter-standards, routing-optimization-policy'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent=implementation-executor
+```
+
+**User instruction:** Start a fresh session, select `creating-specialist-agent`, and paste this full step packet.
+
+**Step objective:** Create `.github/agents/implementation-executor.agent.md` with Tier 2 frontmatter, proper tool allow-list, and delegation contract with 04-implementing.
+
+**Agent specification:**
+
+```yaml
+name: implementation-executor
+tier: 2
+model: 'qwen3.5:cloud'
+tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+user-invocable: false
+agents: ['boundary-mapper', 'docs-scout', 'browser-runtime-scout', 'worker-payload-scout', 'checkpoint-scout', 'determinism-scout', 'helping-gap-resolution-coordinator']
+skills: ['implementation-standards', 'coverage-guard']
+handoffs:
+  - label: 'Validate Green'
+    agent: '05-green-testing'
+    prompt: 'Continue from active plan and Step 02 implementation diff. Execute Step 05 validation for current phase.'
+    send: false
+    model: 'qwen3.5:cloud'
+```
+
+**Responsibility boundary:** Executes scoped file edits delegated from 04-implementing. Does not plan, does not coordinate scouts, does not synthesize research. Pure execution of implementation packets.
+
+**Stop conditions:**
+- **Done:** Agent file created with valid frontmatter (0 errors, 0 warnings).
+- **Hold:** A frontmatter policy decision is needed.
+- **Blocked:** An MCP/tool/agent gap prevents honest agent creation.
+
+---
+
+#### Step 03 — Create research-codebase-coordinator agent [PLANNED]
+
+```yaml
+phase: 2
+step: 3
+agent: 'creating-specialist-agent'
+agent_file: '.github/agents/creating-specialist-agent.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 04 — Create research-synthesis-specialist agent'
+skills: 'creating-specialist-agent, agent-frontmatter-standards, routing-optimization-policy'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent=research-codebase-coordinator
+```
+
+**User instruction:** Start a fresh session, select `creating-specialist-agent`, and paste this full step packet.
+
+**Step objective:** Create `.github/agents/research-codebase-coordinator.agent.md` with Tier 2 frontmatter, scout allow-list, and delegation contract with 02-researching.
+
+**Agent specification:**
+
+```yaml
+name: research-codebase-coordinator
+tier: 2
+model: 'qwen3.5:cloud'
+tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+user-invocable: false
+agents: ['plan-scout', 'docs-scout', 'repo-cortex-scout', 'boundary-mapper', 'research-synthesis-specialist', 'helping-gap-resolution-coordinator']
+skills: ['research-methodology', 'plan-alignment']
+handoffs:
+  - label: 'Design Red Tests'
+    agent: '03-red-testing'
+    prompt: 'Continue from active plan and Step 03 research evidence. Execute Step 03 test design for current phase.'
+    send: false
+    model: 'qwen3.5:cloud'
+```
+
+**Responsibility boundary:** Coordinates scout deployments for 02-researching, synthesizes results via research-synthesis-specialist, produces alignment briefs. Does not execute implementation, does not run tests.
+
+**Stop conditions:**
+- **Done:** Agent file created with valid frontmatter.
+- **Hold:** A frontmatter policy decision is needed.
+- **Blocked:** An MCP/tool/agent gap prevents honest agent creation.
+
+---
+
+#### Step 04 — Create research-synthesis-specialist agent [PLANNED]
+
+```yaml
+phase: 2
+step: 4
+agent: 'creating-specialist-agent'
+agent_file: '.github/agents/creating-specialist-agent.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 05 — Create code-quality-auditor agent'
+skills: 'creating-specialist-agent, agent-frontmatter-standards, routing-optimization-policy'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent=research-synthesis-specialist
+```
+
+**User instruction:** Start a fresh session, select `creating-specialist-agent`, and paste this full step packet.
+
+**Step objective:** Create `.github/agents/research-synthesis-specialist.agent.md` with Tier 3 frontmatter, no delegation (Tier 4 only), and synthesis contract.
+
+**Agent specification:**
+
+```yaml
+name: research-synthesis-specialist
+tier: 3
+model: 'qwen3.5:cloud'
+tools: [read, search, todo, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+user-invocable: false
+agents: ['acceptance-criteria-writer', 'file-change-summarizer']
+skills: ['research-methodology', 'plan-alignment']
+```
+
+**Responsibility boundary:** Transforms raw scout data into structured alignment briefs. Read-only synthesis, no scouts, no implementation. May delegate to Tier 4 auxiliaries for criteria writing or summarization.
+
+**Stop conditions:**
+- **Done:** Agent file created with valid frontmatter.
+- **Hold:** A frontmatter policy decision is needed.
+- **Blocked:** An MCP/tool/agent gap prevents honest agent creation.
+
+---
+
+#### Step 05 — Create code-quality-auditor agent [PLANNED]
+
+```yaml
+phase: 2
+step: 5
+agent: 'creating-specialist-agent'
+agent_file: '.github/agents/creating-specialist-agent.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 06 — Create test-coverage-analyst agent'
+skills: 'creating-specialist-agent, agent-frontmatter-standards, routing-optimization-policy'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent=code-quality-auditor
+```
+
+**User instruction:** Start a fresh session, select `creating-specialist-agent`, and paste this full step packet.
+
+**Step objective:** Create `.github/agents/code-quality-auditor.agent.md` with Tier 3 frontmatter, quality gate interpretation contract, and 05-green-testing delegation.
+
+**Agent specification:**
+
+```yaml
+name: code-quality-auditor
+tier: 3
+model: 'qwen3.5:cloud'
+tools: [read, search, execute, todo, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+user-invocable: false
+agents: ['acceptance-criteria-writer']
+skills: ['green-validation-gates', 'implementation-standards']
+```
+
+**Responsibility boundary:** Runs `npm run quality:folder`, interprets results, classifies violations, produces repair packets. Does not fix violations (delegates to 04-implementing or coverage-tranche).
+
+**Stop conditions:**
+- **Done:** Agent file created with valid frontmatter.
+- **Hold:** A frontmatter policy decision is needed.
+- **Blocked:** An MCP/tool/agent gap prevents honest agent creation.
+
+---
+
+#### Step 06 — Create test-coverage-analyst agent [PLANNED]
+
+```yaml
+phase: 2
+step: 6
+agent: 'creating-specialist-agent'
+agent_file: '.github/agents/creating-specialist-agent.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 07 — Update Tier 1 agent allow-lists'
+skills: 'creating-specialist-agent, agent-frontmatter-standards, routing-optimization-policy'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent=test-coverage-analyst
+```
+
+**User instruction:** Start a fresh session, select `creating-specialist-agent`, and paste this full step packet.
+
+**Step objective:** Create `.github/agents/test-coverage-analyst.agent.md` with Tier 3 frontmatter, coverage analysis contract, and delegation from coverage-guard.
+
+**Agent specification:**
+
+```yaml
+name: test-coverage-analyst
+tier: 3
+model: 'qwen3.5:cloud'
+tools: [read, search, execute, todo, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+user-invocable: false
+agents: []
+skills: ['coverage-guard', 'coverage-tranche']
+```
+
+**Responsibility boundary:** Analyzes lcov.info, maps uncovered paths to source files, classifies dead vs reachable code, names owner-local test files. Read-only reconnaissance for coverage-tranche.
+
+**Stop conditions:**
+- **Done:** Agent file created with valid frontmatter.
+- **Hold:** A frontmatter policy decision is needed.
+- **Blocked:** An MCP/tool/agent gap prevents honest agent creation.
+
+---
+
+#### Step 07 — Update Tier 1 agent allow-lists [PLANNED]
+
+```yaml
+phase: 2
+step: 7
+agent: 'helping-agent-maintenance-coordinator'
+agent_file: '.github/agents/helping-agent-maintenance-coordinator.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Phase 3: Flow Integration'
+skills: 'helping-agent-maintenance-coordinator, agent-frontmatter-standards, routing-optimization-policy'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - npm run agents:routing-table:gate
+```
+
+**User instruction:** Start a fresh session, select `helping-agent-maintenance-coordinator`, and paste this full step packet.
+
+**Step objective:** Update Tier 1 agent frontmatter to include new specialists in their `agents:` allow-lists, then regenerate and validate the routing table.
+
+**Required updates:**
+
+| Agent | Add to agents: |
+|---|---|
+| 04-implementing | `implementation-executor` |
+| 02-researching | `research-codebase-coordinator` |
+| 01-planning | `research-synthesis-specialist`, `acceptance-criteria-writer`, `phase-handoff-designer` |
+| 05-green-testing | `code-quality-auditor`, `test-coverage-analyst` |
+| 07-logging | `file-change-summarizer`, `phase-handoff-designer` |
+
+**Stop conditions:**
+- **Done:** All Tier 1 agents updated, routing table regenerated and validated.
+- **Hold:** A frontmatter policy decision is needed.
+- **Blocked:** An MCP/tool/agent gap prevents honest agent maintenance.
+
+---
+
+**Required validation:**
+
+`node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
+
+#### Step 02: Review specialist boundaries and tier assignments [PLANNED]
+
+```yaml
+phase: 2
+step: 2
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 03 — Define specialist acceptance criteria and validation contracts'
+skills: 'planning-acceptance-criteria, agent-frontmatter-standards, model-routing-and-budget'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+```
+
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+
+**Step objective:** Review each planned specialist for boundary clarity, tier assignment correctness, delegation chain validity, and model routing appropriateness. Resolve any ambiguity before implementation begins.
+
+**Context the agent must know:**
+
+- The specialist roster from Step 01 defines the candidates for creation.
+- Tier 2 agents are named coordinators/sub-orchestrators; Tier 3 are hidden scouts/specialists; Tier 4 are auxiliaries.
+- Model routing must follow phase-default tiers: Full-tier (GPT-5.4/Sonnet 4.6) for implementation, Mini/Haiku for bounded research and validation.
+- No specialist may have `user-invocable: true`; only the eight Tier 1 orchestrators are user-facing.
+- Each specialist must have an explicit `agents: [...]` allow-list if it delegates, or `agents: []` if it does not delegate.
+
+**Execution steps:**
+
+1. Read the Step 01 specialist roster plan.
+2. For each specialist, verify the tier assignment matches its responsibility scope.
+3. Confirm no circular or upward delegation chains exist (no tier may call a higher-numbered tier except via 00.cross-tier-helper).
+4. Assign appropriate model strings using `model-routing-and-budget` skill guidance.
+5. Identify any ambiguity in responsibility boundaries that could cause overlap or gaps.
+6. Record resolved boundaries and any remaining risks in this tracker.
+
+**Stop conditions:**
+
+- **Done:** All specialist boundaries are clear, tier assignments are valid, and model routing is assigned.
+- **Hold:** A boundary conflict or tier policy question needs user clarification.
+- **Blocked:** A tier graph or delegation rule conflict prevents honest resolution; escalate to `00-helping`.
+
+**Required validation:**
+
+`node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
+
+#### Step 03: Define specialist acceptance criteria and validation contracts [PLANNED]
+
+```yaml
+phase: 2
+step: 3
+agent: '01-planning'
+agent_file: '.github/agents/01-planning.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 04 — Author specialist agent files'
+skills: 'planning-acceptance-criteria, skill-frontmatter-standards'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+```
+
+**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+
+**Step objective:** Define acceptance criteria for each specialist agent, including frontmatter validation requirements, agent-graph gate expectations, and integration tests with Tier 1 orchestrators.
+
+**Context the agent must know:**
+
+- Each specialist must pass `validate-agent-frontmatter.mjs --json` after creation.
+- The `agent-graph` gate must confirm no tier violations and correct delegation chains.
+- Specialists must bind to the Phase 1 skills where applicable (e.g., `implementation-executor` binds to `implementation-standards`).
+- Acceptance criteria must be testable: frontmatter validity, tier enforcement, routing table freshness.
+
+**Execution steps:**
+
+1. Read the Step 02 boundary review output.
+2. For each specialist, define acceptance criteria:
+   - Frontmatter must have correct `tier`, `skills`, `agents`, `model`, and `user-invocable: false`.
+   - `validate-agent-frontmatter.mjs --json` must pass with 0 errors.
+   - `agent-graph` gate must confirm valid delegation chain.
+   - Routing table must include the new specialist after metadata refresh.
+3. Define which Tier 1 orchestrator owns delegation to each specialist.
+4. Define integration expectations (e.g., 04-implementing delegates file edits to implementation-executor).
+5. Record acceptance criteria in this tracker for each specialist.
+
+**Stop conditions:**
+
+- **Done:** Acceptance criteria defined for all specialists with clear validation contracts.
+- **Hold:** A validation gate or integration expectation is unclear.
+- **Blocked:** A skill or gate gap prevents honest criteria definition; escalate to `00-helping`.
+
+**Required validation:**
+
+`node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
+
+#### Step 04: Author specialist agent files [PLANNED]
+
+```yaml
+phase: 2
+step: 4
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 05 — Validate specialist frontmatter and agent graph'
+skills: 'implementation-standards, agent-frontmatter-standards, model-routing-and-budget'
+specialists:
+  - 'implementation-executor'
+  - 'research-synthesis-specialist'
+  - 'code-quality-auditor'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - node scripts/agent-customization/validate-agent-frontmatter.mjs --json
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Create the specialist agent files in `.github/agents/` with correct frontmatter, descriptions, and bounded responsibility contracts. Each file must follow the standard `.agent.md` format.
+
+**Context the agent must know:**
+
+- Step 03 defined acceptance criteria for each specialist.
+- Agent files must be placed in `.github/agents/<agent-name>.agent.md`.
+- Frontmatter must include: `name`, `tier`, `user-invocable: false`, `skills: [...]`, `agents: [...]` (or empty), `model`, and `description`.
+- The `implementation-executor` is Tier 2 and handles substantive file edits delegated from 04-implementing.
+- The `research-synthesis-specialist` is Tier 3 and transforms raw research data into briefs.
+- The `code-quality-auditor` is Tier 3 and runs quality gates for validation phases.
+
+**Execution steps:**
+
+1. Read the Step 03 acceptance criteria for each specialist.
+2. Create `.github/agents/implementation-executor.agent.md` (Tier 2) with:
+   - Proper frontmatter including `tier: 2`, `user-invocable: false`.
+   - Binding to `implementation-standards` skill.
+   - Bounded `agents: [...]` allow-list for any Tier 3/4 delegates.
+   - Appropriate Full-tier model string.
+3. Create `.github/agents/research-synthesis-specialist.agent.md` (Tier 3) with:
+   - Proper frontmatter including `tier: 3`, `user-invocable: false`.
+   - Binding to `research-methodology` skill.
+   - Appropriate Mini/Haiku tier model string.
+4. Create `.github/agents/code-quality-auditor.agent.md` (Tier 3) with:
+   - Proper frontmatter including `tier: 3`, `user-invocable: false`.
+   - Binding to relevant quality/validation skills.
+   - Appropriate Mini/Haiku tier model string.
+5. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` to confirm all files pass.
+6. Record the authoring output and validation results in this tracker.
+
+**Stop conditions:**
+
+- **Done:** All specialist agent files exist with valid frontmatter and pass validation.
+- **Hold:** A frontmatter or policy decision is needed before authoring can complete.
+- **Blocked:** A skill, gate, or model-routing gap prevents honest authoring; escalate to `00-helping`.
+
+**Required validation:**
+
+`node scripts/agent-customization/validate-agent-frontmatter.mjs --json`
+
+#### Step 05: Validate specialist frontmatter and agent graph [PLANNED]
+
+```yaml
+phase: 2
+step: 5
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-testing.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 06 — Update routing table and Tier 1 orchestrator bindings'
+skills: 'skill-frontmatter-standards'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict
+  - node scripts/agent-customization/validate-agent-graph.mjs --json
+```
+
+**User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
+
+**Step objective:** Run validation gates to confirm all new specialists have correct frontmatter, valid tier assignments, and proper delegation chains. Ensure no tier violations exist.
+
+**Context the agent must know:**
+
+- Step 04 created the specialist agent files.
+- Validation must confirm: frontmatter schema validity, tier graph integrity, and no circular/upward delegation.
+- The `agent-graph` gate confirms the tier structure is valid.
+- Strict frontmatter validation (`--strict`) should pass now that all specialists are created.
+
+**Execution steps:**
+
+1. Read the Step 04 authoring output and list of created specialist files.
+2. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict` to confirm all agents pass strict validation.
+3. Run `node scripts/agent-customization/validate-agent-graph.mjs --json` to confirm tier structure is valid.
+4. If any validation fails, diagnose the issue (frontmatter error, tier violation, delegation chain problem) and route back to Step 04 for repair.
+5. Record validation evidence in this tracker, including pass/fail status and any fix hints applied.
+
+**Stop conditions:**
+
+- **Done:** All validation gates pass with evidence recorded.
+- **Hold:** A validation failure needs user clarification on how to proceed.
+- **Blocked:** A persistent validation failure indicates a skill or gate gap; escalate to `00-helping`.
+
+**Required validation:**
+
+`node scripts/agent-customization/validate-agent-graph.mjs --json`
+
+#### Step 06: Update routing table and Tier 1 orchestrator bindings [PLANNED]
+
+```yaml
+phase: 2
+step: 6
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Step 07 — Compress phase history and prepare handoff to Phase 3'
+skills: 'routing-optimization-policy, agent-frontmatter-standards'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - npm run agents:routing-table
+  - npm run agents:routing-table:gate
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Refresh the canonical routing table to include the new specialists. Update Tier 1 orchestrator `agents: [...]` allow-lists to delegate to the new specialists where appropriate.
+
+**Context the agent must know:**
+
+- Step 05 validated the new specialist agents.
+- The routing table at `.github/agent-skill-routing-table.md` must be refreshed with `npm run agents:routing-table`.
+- Tier 1 orchestrators must have their `agents: [...]` fields updated to include the new specialists:
+  - 04-implementing should delegate to `implementation-executor`.
+  - 01-planning should delegate to `research-synthesis-specialist`.
+  - 05-green-testing should delegate to `code-quality-auditor`.
+- The `routing-table-freshness` gate must pass after updates.
+
+**Execution steps:**
+
+1. Read the Step 05 validation evidence confirming specialist agents are valid.
+2. Run `npm run agents:routing-table` to refresh the canonical routing table.
+3. Run `npm run agents:routing-table:gate` to confirm routing table freshness.
+4. Update `.github/agents/04-implementing.agent.md` to include `implementation-executor` in its `agents: [...]` allow-list.
+5. Update `.github/agents/01-planning.agent.md` to include `research-synthesis-specialist` in its `agents: [...]` allow-list.
+6. Update `.github/agents/05-green-testing.agent.md` to include `code-quality-auditor` in its `agents: [...]` allow-list.
+7. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` on each updated Tier 1 agent.
+8. Record the routing table update and Tier 1 binding changes in this tracker.
+
+**Stop conditions:**
+
+- **Done:** Routing table is fresh and Tier 1 orchestrators have updated specialist allow-lists.
+- **Hold:** A routing or binding decision needs user clarification.
+- **Blocked:** A routing table or frontmatter gap prevents honest update; escalate to `00-helping`.
+
+**Required validation:**
+
+`npm run agents:routing-table:gate`
+
+#### Step 07: Compress phase history and prepare handoff to Phase 3 [PLANNED]
+
+```yaml
+phase: 2
+step: 7
+agent: '07-logging'
+agent_file: '.github/agents/07-logging.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
+copy_paste: 'true'
+next_step: 'Phase 3: Routing & Frontmatter Sync'
+skills: 'skill-frontmatter-standards'
+validation:
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
+  - node scripts/agent-customization/gates/phase-compression.gate.mjs --json
+```
+
+**User instruction:** Start a fresh session, select `07-logging`, and paste this full step packet.
+
+**Step objective:** Compress the Phase 2 history into a concise coverage note. Update the tracker to mark Phase 2 as [DONE]. Prepare a handoff prompt for Phase 3: Routing & Frontmatter Sync.
+
+**Context the agent must know:**
+
+- Phase 2 Steps 01-06 are complete with validation evidence recorded.
+- The `phase-compression` gate requires that completed phases have their history compressed to a concise summary line before advancing.
+- The tracker must be updated to mark Phase 2 as `[DONE]` and Phase 3 as the next active phase.
+- A handoff prompt should be prepared for Phase 3, which will sync routing and frontmatter across all affected agents.
+
+**Execution steps:**
+
+1. Read the Phase 2 completion evidence from Steps 01-06.
+2. Compress the Phase 2 history into a concise coverage note (e.g., "[DONE] Phase 2: Created 3 specialist agents with valid frontmatter, tier assignments, and Tier 1 bindings.").
+3. Update the tracker to mark Phase 2 as `[DONE]`.
+4. Run `node scripts/agent-customization/gates/phase-compression.gate.mjs --json` to confirm compression is valid.
+5. Prepare a handoff prompt for Phase 3 that includes:
+   - The list of new specialists created.
+   - The updated routing table status.
+   - The next tasks for Phase 3 (sync remaining Tier 1 agents, update flow delegations).
+6. Record the compression and handoff preparation in this tracker.
+
+**Stop conditions:**
+
+- **Done:** Phase 2 is marked `[DONE]` with compressed history and Phase 3 handoff prompt prepared.
+- **Hold:** A compression or handoff decision needs user clarification.
+- **Blocked:** A gate or tracker-update gap prevents honest closure; escalate to `00-helping`.
+
+**Required validation:**
+
+`node scripts/agent-customization/gates/phase-compression.gate.mjs --json`
 
 ### Phase 3: Routing & Frontmatter Sync [PLANNED]
 
@@ -358,6 +1072,15 @@ validation:
 - `agent-quality` gate: Confirm new specialists follow the "mini-agent" (targeted context) pattern.
 - `tier-enforcement` gate: Confirm all agents have correct tier assignments and delegation structure.
 
+
+### Latest validation evidence
+
+- 2026-06-08: Workflow sync: Advanced Phase 2 Step 2 → [DONE]; Phase 2 Step 3 → [WIP]
+- 2026-06-08: Workflow sync: Advanced Phase 2 Step 2 → [DONE]; Phase 2 Step 3 → [WIP]
+
 ## Handoff query
 
-Phase 1 Step 01 is the active frontier. Start a fresh session with `01-planning` and paste the Step 01 packet to plan the skill extraction strategy. The planning agent will produce a brief with policy inventories and prepare Step 02-04 packets for `06-documenting`.
+```text
+Continue from the current repo state only. Do not rely on prior chat history.
+Phase 2 Step 01 is the active frontier. Start a fresh session with `01-planning` and paste the Step 01 packet to plan the specialist agent roster. The planning agent will define the exact specialists to create (implementation-executor Tier 2, research-synthesis-specialist Tier 3, code-quality-auditor Tier 3), their tier assignments, responsibility boundaries, and prepare Step 02-07 packets for execution.
+```

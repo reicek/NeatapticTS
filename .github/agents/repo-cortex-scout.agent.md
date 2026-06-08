@@ -2,7 +2,7 @@
 description: 'Use when checking Repo Cortex index freshness, triggering a corpus rebuild, diagnosing validate-index failures, confirming MCP server binding, or deciding whether a semantic index issue belongs to repo-cortex-workflow. Hands off recon results to the repo-cortex-workflow skill. Keywords: repo cortex, index freshness, validate-index, build-index, cortex MCP, semantic snapshot, cortex lifecycle, cortex scout.'
 name: 'repo-cortex-scout'
 tier: 3
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

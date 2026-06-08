@@ -2,7 +2,7 @@
 description: 'Use when implementation needs nearby source patterns, naming conventions, helper boundaries, existing utilities, or owner-local test conventions before edits. Keywords: pattern, naming convention, helper, utility, test setup.'
 name: implementation-pattern-scout
 tier: 3
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

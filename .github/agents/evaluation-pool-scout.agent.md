@@ -2,7 +2,7 @@
 description: 'Use when mapping worker-pool scheduling, ordered result assembly, dataset broadcast strategy, worker-count sizing, queue backpressure, or deciding whether a multithread batch-evaluation issue belongs to multithread-evaluation. Keywords: worker pool, evaluateInWorkers, queueing, ordered results, dataset broadcast, backpressure, workerCount, fallback.'
 name: evaluation-pool-scout
 tier: 3
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

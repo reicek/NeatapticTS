@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for checking source references and license notes when external workflow standards inform NeatapticTS agents, skills, scripts, or plans. Keywords: license, attribution, Agent Skills, OpenSpec, Superpowers, VS Code docs.'
 name: license-attribution-auditor
 tier: 3
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

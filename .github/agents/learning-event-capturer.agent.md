@@ -2,7 +2,7 @@
 description: 'Use when: capturing an ISO-42001-style local evidence event for an agent-system gap, routing update, skill update, model update, or output-contract fix.'
 name: 'learning-event-capturer'
 tier: 4
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, edit, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: []
 skills: ['capturing-learning-event']

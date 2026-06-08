@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for grading NeatapticTS skill outputs with evidence-backed assertions and baseline comparisons. Keywords: skill output eval, assertion, grading evidence, benchmark, pass rate, grade.'
 name: 'skill-output-eval-grader'
 tier: 3
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

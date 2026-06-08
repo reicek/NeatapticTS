@@ -79,8 +79,8 @@ const strictTier2StructuredFields = [
 const strictAllowedModels = new Set([
   'GPT-5.4 (copilot)',
   'GPT-5.4 mini (copilot)',
-  'gemma4:latest (ollama)',
-  'gemma4:latest (ollama)',
+  'qwen3.5:cloud',
+  'qwen3.5:cloud',
 ]);
 
 if (options.help) {

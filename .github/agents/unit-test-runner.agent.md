@@ -2,7 +2,7 @@
 description: 'Use when running focused unit test commands, checking a red or green result, or summarizing test output for a bounded validation target. Keywords: test, jest, focused, validation, output.'
 name: 'unit-test-runner'
 tier: 3
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

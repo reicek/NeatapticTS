@@ -2,7 +2,7 @@
 description: 'Use when planning implementation work, decomposing user requests, identifying risks, defining acceptance criteria, and preparing test strategy.'
 name: '01-planning'
 tier: 1
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '02-researching'
     prompt: 'Continue from the active plan only. Execute Step 02 research for the current phase, refine the Step 01 workset, and leave the next value-adding step ready with explicit skips for non-value gates.'
     send: false
-    model: 'gemma4:latest (ollama)'
+    model: 'qwen3.5:cloud'
 ---
 
 ## Mission

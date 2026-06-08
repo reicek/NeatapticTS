@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for inventorying NeatapticTS skills and custom agents, counting user-invocable surfaces, and preparing before/after customization drift evidence. Keywords: inventory, skills, agents, visibility, drift, audit.'
 name: 'skill-inventory-auditor'
 tier: 3
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

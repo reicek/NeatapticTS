@@ -2,7 +2,7 @@
 description: 'Use when validating .agent.md frontmatter, tool lists, model strings, subagent allow-lists, handoffs, and user-invocable decisions in NeatapticTS. Keywords: agent frontmatter, YAML validation, tools, models, subagent graph, handoff audit.'
 name: agent-frontmatter-auditor
 tier: 3
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

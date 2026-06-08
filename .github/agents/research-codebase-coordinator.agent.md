@@ -2,7 +2,7 @@
 description: 'Use when: research spans multiple source areas, domain scouts, generated-doc boundaries, worker/runtime seams, or prior plan evidence.'
 name: 'research-codebase-coordinator'
 tier: 2
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['plan-scout', 'docs-scout', 'repo-cortex-scout', 'boundary-mapper', 'browser-runtime-scout', 'worker-payload-scout', 'evaluation-pool-scout', 'checkpoint-scout', 'hybrid-interop-scout', 'determinism-scout', 'visualizer-scout', 'nge-core-scout', 'nge-benchmark-scout', 'neatchat-scout']
 skills: ['subagent-delegation-patterns']

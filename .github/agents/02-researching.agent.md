@@ -2,7 +2,7 @@
 description: 'Use when researching codebase patterns, APIs, dependencies, architecture, external references, existing utilities, and prior art.'
 name: '02-researching'
 tier: 1
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, edit, execute, todo, agent, web, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '03-red-testing'
     prompt: 'Continue from the active plan and Step 02 research evidence. Execute Step 03 for the current phase by designing the smallest red test or explicit skip contract.'
     send: false
-    model: 'gemma4:latest (ollama)'
+    model: 'qwen3.5:cloud'
 ---
 
 ## Mission

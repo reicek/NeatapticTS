@@ -2,7 +2,7 @@
 description: 'Use when: planning needs compact context, plan alignment signals, ownership boundaries, nearest README evidence, freshness notes, or ambiguity triage before decomposition. Keywords: planning context, plan files, README, boundaries, ambiguity.'
 name: 'planning-context-coordinator'
 tier: 2
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 disable-model-invocation: false

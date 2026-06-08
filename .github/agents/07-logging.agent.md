@@ -2,7 +2,7 @@
 description: 'Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps.'
 name: '07-logging'
 tier: 1
-model: 'gemma4:latest (ollama)'
+model: 'qwen3.5:cloud'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '01-planning'
     prompt: 'Continue from the updated tracker and decide the next Step 01 planning task for the next phase or reroute. Preserve completed evidence and avoid reopening closed work without a clear reason.'
     send: false
-    model: 'gemma4:latest (ollama)'
+    model: 'qwen3.5:cloud'
 ---
 ## Mission
 Summarize session activity, decisions, evidence, files touched, delegation structure, improvements, risks, and next steps. Ensure durable continuity for safe resumption of workstreams.
