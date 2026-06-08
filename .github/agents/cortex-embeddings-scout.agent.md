@@ -2,8 +2,8 @@
 description: 'Use when mapping ONNX embedding model cache state, embeddings index readiness, hybrid BM25+dense ranking gaps, or deciding whether an embeddings issue belongs to Semantic_Knowledge_Embeddings. Hands off to the embeddings skill when available. Keywords: cortex embeddings, ONNX embeddings, dense retrieval, embed-index, sqlite-vec, hybrid ranking, MRR, embeddings scout.'
 name: 'cortex-embeddings-scout'
 tier: 3
-model: 'Claude Haiku 4.5 (copilot)'
-tools: [read, search]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: []

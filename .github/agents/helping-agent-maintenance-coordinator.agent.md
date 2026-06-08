@@ -3,7 +3,7 @@ description: 'Use when: maintaining .agent.md files, repairing YAML frontmatter,
 name: 'helping-agent-maintenance-coordinator'
 tier: 2
 model: 'GPT-5.4 (copilot)'
-tools: [read, search, edit, execute, agent]
+tools: [read, search, edit, execute, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['agent-frontmatter-auditor', 'skill-frontmatter-auditor', 'skill-inventory-auditor', 'model-name-auditor', 'learning-event-capturer']
 skills: ['agent-frontmatter-standards', 'model-routing-and-budget', 'agent-inventory-audit']
 user-invocable: false

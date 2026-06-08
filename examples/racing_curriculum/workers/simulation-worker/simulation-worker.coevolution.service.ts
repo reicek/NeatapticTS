@@ -41,7 +41,10 @@ export type CoevolutionContainer = {
    * @param carFinishPositions - Finish positions for that team's cars only.
    * @returns Lowest finish position, or `Infinity` when the list is empty.
    */
-  resolveTeamFitness(teamId: 0 | 1, carFinishPositions: readonly number[]): number;
+  resolveTeamFitness(
+    teamId: 0 | 1,
+    carFinishPositions: readonly number[],
+  ): number;
 };
 
 /** Monotonic counter used to generate distinct population IDs per container. */
@@ -55,10 +58,10 @@ type RacingTeamMemberResult = {
 /** Stable racing team identifiers used to route local results through the core seam. */
 type RacingTeamId = 'team-a' | 'team-b';
 /** Core-owned evaluator reused by the racing benchmark with a racing-local policy. */
-const evaluateRacingTeamFitness =
-  createTeamFitnessEvaluator<RacingTeamId, RacingTeamMemberResult>(
-    selectBestFinishingPosition,
-  );
+const evaluateRacingTeamFitness = createTeamFitnessEvaluator<
+  RacingTeamId,
+  RacingTeamMemberResult
+>(selectBestFinishingPosition);
 
 /**
  * Creates a paired Team A/B coevolution container with independent population
@@ -102,7 +105,10 @@ export function createCoevolutionContainer(
     carFinishPositions: readonly number[],
   ): number {
     // Step 1: Convert benchmark-local finish positions into the reusable core group shape.
-    const racingTeamGroup = createRacingTeamResultGroup(teamId, carFinishPositions);
+    const racingTeamGroup = createRacingTeamResultGroup(
+      teamId,
+      carFinishPositions,
+    );
 
     // Step 2: Reuse the NGE core evaluator seam instead of local aggregation logic.
     return (

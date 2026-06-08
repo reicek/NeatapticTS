@@ -3,7 +3,7 @@ description: 'Use when writing focused unit tests, red tests, fixtures, mocks, a
 name: 'unit-test-writer'
 tier: 3
 model: 'GPT-5.4 (copilot)'
-tools: [read, search, edit]
+tools: [read, search, edit, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['creating-unit-tests']

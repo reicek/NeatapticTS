@@ -7,9 +7,7 @@
  *
  * Single-expect rule enforced throughout.
  */
-import {
-  createOpponentSnapshotStore,
-} from './simulation-worker.opponent-snapshot.service';
+import { createOpponentSnapshotStore } from './simulation-worker.opponent-snapshot.service';
 
 describe('simulation-worker.opponent-snapshot.service module exports', () => {
   describe('createOpponentSnapshotStore', () => {

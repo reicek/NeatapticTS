@@ -403,12 +403,12 @@ validation:
 
 **MCP snapshot evidence (queried before finalizing this packet):**
 
-| Tracker | MCP scope | Active phase/step | Agent |
-| ------- | --------- | ----------------- | ----- |
-| `plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md` | `no-active-phase` | Step 05 is now [DONE]; Phase 2 has not been promoted to [WIP] yet, so direct plan-file context is the fallback | `01-planning` |
-| `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` | `repo-static` | Phase 1 Step 02 [WIP] | `02-researching` |
-| `plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md` | `no-active-phase` | [PLANNED] — no WIP marker | — |
-| `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` | not queried — NOT a Phase 2 consumer | [PLANNED] | — |
+| Tracker                                              | MCP scope                            | Active phase/step                                                                                              | Agent            |
+| ---------------------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md` | `no-active-phase`                    | Step 05 is now [DONE]; Phase 2 has not been promoted to [WIP] yet, so direct plan-file context is the fallback | `01-planning`    |
+| `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`    | `repo-static`                        | Phase 1 Step 02 [WIP]                                                                                          | `02-researching` |
+| `plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md`         | `no-active-phase`                    | [PLANNED] — no WIP marker                                                                                      | —                |
+| `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md`    | not queried — NOT a Phase 2 consumer | [PLANNED]                                                                                                      | —                |
 
 **Downstream trackers directly touched by Phase 2 (team/group fitness aggregation seam):**
 
@@ -470,8 +470,8 @@ claiming later barrier or transport work is complete.
 - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
   passed after the Phase 2 compression edit.
 - The implementation phase already recorded green validation for `npm run
-  build`, `npm run quality:folder -- --folder=src/neat/nge-collective`, `npm
-  run quality:folder -- --folder=examples/racing_curriculum/workers/simulation-worker`,
+build`, `npm run quality:folder -- --folder=src/neat/nge-collective`, `npm
+run quality:folder -- --folder=examples/racing_curriculum/workers/simulation-worker`,
   the focused Jest slices, and `npm run test:silent` with repo-wide 100%
   `src/` coverage.
 - No gate exceptions were recorded across the Phase 2 implementation,
@@ -534,15 +534,15 @@ validation:
 
 **Frozen barrier scope:**
 
-| Boundary | Frozen owner | Phase 3 status |
-| -------- | ------------ | -------------- |
-| Independent `Neat` population state (separate generation counters, species state, assimilation cadence, and opponent-facing evaluation state) | NGE core reusable coevolution semantics | **In scope** |
-| Generation barrier semantics (freeze opponent snapshot at generation start, wait for all participating populations to finish, then release evolution/snapshot advance together) | NGE core reusable coevolution semantics | **In scope** |
-| Barrier lifecycle summaries emitted at the release point (enough to let downstream workers/coordinators know a generation may advance) | NGE core seam, exact transport shape left open | **In scope, transport-neutral** |
-| Worker message unions, packed `race-step` payloads, deterministic evaluation-pack normalization, transfer-list rules | Worker protocol / deterministic transport contract | **Out of scope here — Phase 4** |
-| Racing worker FSM, episode queueing, and host/render cadence | Racing benchmark-local runtime | **Out of scope here** |
-| Predator/Prey coordinator topology, episode-worker pool sizing, and simulation-worker display authority | Predator/Prey benchmark-local runtime | **Out of scope here** |
-| Team/group fitness aggregation semantics | NGE core Phase 2 prerequisite | **Already closed — do not reopen** |
+| Boundary                                                                                                                                                                        | Frozen owner                                       | Phase 3 status                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------- |
+| Independent `Neat` population state (separate generation counters, species state, assimilation cadence, and opponent-facing evaluation state)                                   | NGE core reusable coevolution semantics            | **In scope**                       |
+| Generation barrier semantics (freeze opponent snapshot at generation start, wait for all participating populations to finish, then release evolution/snapshot advance together) | NGE core reusable coevolution semantics            | **In scope**                       |
+| Barrier lifecycle summaries emitted at the release point (enough to let downstream workers/coordinators know a generation may advance)                                          | NGE core seam, exact transport shape left open     | **In scope, transport-neutral**    |
+| Worker message unions, packed `race-step` payloads, deterministic evaluation-pack normalization, transfer-list rules                                                            | Worker protocol / deterministic transport contract | **Out of scope here — Phase 4**    |
+| Racing worker FSM, episode queueing, and host/render cadence                                                                                                                    | Racing benchmark-local runtime                     | **Out of scope here**              |
+| Predator/Prey coordinator topology, episode-worker pool sizing, and simulation-worker display authority                                                                         | Predator/Prey benchmark-local runtime              | **Out of scope here**              |
+| Team/group fitness aggregation semantics                                                                                                                                        | NGE core Phase 2 prerequisite                      | **Already closed — do not reopen** |
 
 **Frozen acceptance criteria:**
 
@@ -648,13 +648,13 @@ from the evaluator seam
 
 **Recorded seam map and owner table (file-backed):**
 
-| Surface | Owner | Evidence | Boundary note |
-| --- | --- | --- | --- |
-| Independent team controllers, shared 4x7 evaluation field, and cross-populated frozen snapshot pools | NGE core / Phase 3 | `src/neat/nge-collective/neat.nge-collective.two-population.ts:104-149,205-269`; `src/neat/nge-collective/neat.nge-collective.metrics.ts:104-148`; `src/neat/nge-collective/neat.nge-collective.types.ts:77-98` | Reusable coevolution semantics: distinct team state, frozen rival archives, and shared evaluation context belong in core. |
-| Team/group scoring seam | Closed prerequisite from Phase 2 | `src/neat/nge-collective/neat.nge-collective.team-fitness.ts:31-42,85-99` | Do not reopen scoring policy here; barriers and transport remain outside the evaluator contract. |
-| Current Racing worker orchestration and local snapshot barrier guards | Racing-local consumer | `examples/racing_curriculum/browser-entry/browser-entry.ts:126-143`; `examples/racing_curriculum/workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts:4-10,22-45,52-66,103-123` | Racing still carries the host↔worker `EnvironmentState` POC bridge while locally enforcing begin/end-evaluation snapshot guards. |
-| Packed `race-step` frames and zero-copy transfer lists | Phase 4 transport normalization / Racing transport | `examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts:52-91,137-192` | Packed schema ownership, transfer-list rules, and postMessage transport stay out of the Phase 3 reusable seam. |
-| Predator/Prey synchronization topology and coordinator protocol | Predator/Prey-local consumer | `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md:498-509,699-736` | The demo consumes the same barrier semantics, but its coordinator/worker topology stays benchmark-local. |
+| Surface                                                                                              | Owner                                              | Evidence                                                                                                                                                                                                        | Boundary note                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Independent team controllers, shared 4x7 evaluation field, and cross-populated frozen snapshot pools | NGE core / Phase 3                                 | `src/neat/nge-collective/neat.nge-collective.two-population.ts:104-149,205-269`; `src/neat/nge-collective/neat.nge-collective.metrics.ts:104-148`; `src/neat/nge-collective/neat.nge-collective.types.ts:77-98` | Reusable coevolution semantics: distinct team state, frozen rival archives, and shared evaluation context belong in core.        |
+| Team/group scoring seam                                                                              | Closed prerequisite from Phase 2                   | `src/neat/nge-collective/neat.nge-collective.team-fitness.ts:31-42,85-99`                                                                                                                                       | Do not reopen scoring policy here; barriers and transport remain outside the evaluator contract.                                 |
+| Current Racing worker orchestration and local snapshot barrier guards                                | Racing-local consumer                              | `examples/racing_curriculum/browser-entry/browser-entry.ts:126-143`; `examples/racing_curriculum/workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts:4-10,22-45,52-66,103-123`             | Racing still carries the host↔worker `EnvironmentState` POC bridge while locally enforcing begin/end-evaluation snapshot guards. |
+| Packed `race-step` frames and zero-copy transfer lists                                               | Phase 4 transport normalization / Racing transport | `examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts:52-91,137-192`                                                                                                     | Packed schema ownership, transfer-list rules, and postMessage transport stay out of the Phase 3 reusable seam.                   |
+| Predator/Prey synchronization topology and coordinator protocol                                      | Predator/Prey-local consumer                       | `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md:498-509,699-736`                                                                                                                                               | The demo consumes the same barrier semantics, but its coordinator/worker topology stays benchmark-local.                         |
 
 **Phase 3 transport-neutral barrier semantics that remain in scope:**
 

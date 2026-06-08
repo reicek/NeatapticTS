@@ -2,8 +2,8 @@
 description: 'Use as a hidden specialist for grading NeatapticTS skill outputs with evidence-backed assertions and baseline comparisons. Keywords: skill output eval, assertion, grading evidence, benchmark, pass rate, grade.'
 name: 'skill-output-eval-grader'
 tier: 3
-model: 'Claude Sonnet 4.6 (copilot)'
-tools: [read, search, execute]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['skill-output-evals']

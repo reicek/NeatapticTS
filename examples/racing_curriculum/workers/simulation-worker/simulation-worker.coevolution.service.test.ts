@@ -7,9 +7,7 @@
  *
  * Single-expect rule enforced throughout.
  */
-import {
-  createCoevolutionContainer,
-} from './simulation-worker.coevolution.service';
+import { createCoevolutionContainer } from './simulation-worker.coevolution.service';
 
 describe('simulation-worker.coevolution.service module exports', () => {
   describe('createCoevolutionContainer', () => {

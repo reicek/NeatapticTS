@@ -3,7 +3,7 @@ description: 'Use when diagnosing visualizer UI issues such as cramped layout, m
 name: 'visualizer-scout'
 tier: 3
 model: 'gemma4:latest (ollama)'
-tools: [read, search]
+tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['visualizer-workflow']

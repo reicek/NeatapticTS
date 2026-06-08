@@ -2,8 +2,8 @@
 description: 'Use when: planning needs ambiguity review, blast-radius analysis, reversibility checks, dependency risk, or model-budget risk before implementation.'
 name: 'planning-risk-coordinator'
 tier: 2
-model: 'Claude Sonnet 4.6 (copilot)'
-tools: [read, search, agent]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['plan-scout', 'determinism-scout', 'license-attribution-auditor', 'model-name-auditor']
 skills: ['model-routing-and-budget', 'license-attribution-audit']
 user-invocable: false

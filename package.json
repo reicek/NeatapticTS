@@ -87,7 +87,7 @@
     "prettier": "npm run prettier:src && npm run prettier:tests && npm run prettier:plans",
     "prettier:src": "npx prettier --write src/**/*.ts",
     "prettier:tests": "npx prettier --write testing/**/*.ts benchmarks/**/*.ts examples/**/*.ts src/**/*.test.ts",
-    "prettier:plans": "npx prettier --write plans/**/*.md",
+    "json-to-md": "node scripts/generate-json-to-md-cli.js",
     "docs": "npm run docs:build-scripts && node ./dist-docs/scripts/run-docs.js all",
     "lint": "eslint src/ testing/ benchmarks/ examples/",
     "lint:fix": "eslint src/ --fix",
@@ -178,3 +178,4 @@
     "undici": "^7.24.6"
   }
 }
+ 

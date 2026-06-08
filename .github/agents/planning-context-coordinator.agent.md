@@ -2,8 +2,8 @@
 description: 'Use when: planning needs compact context, plan alignment signals, ownership boundaries, nearest README evidence, freshness notes, or ambiguity triage before decomposition. Keywords: planning context, plan files, README, boundaries, ambiguity.'
 name: 'planning-context-coordinator'
 tier: 2
-model: 'Claude Sonnet 4.6 (copilot)'
-tools: [read, search, agent]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 disable-model-invocation: false
 agents: ['plan-scout', 'docs-scout', 'boundary-mapper']
@@ -29,7 +29,7 @@ Gather only the project context needed to start a planning or decomposition pass
 - Set `LEARNING_EVENT_NEEDED: true` when recurring ambiguity, missing specialist coverage, or stale context patterns should be captured for maintainers.
 - ALWAYS stop after returning the structured output block; do not continue into implementation or plan editing.
 
-## Default Flow
+## Required Workflow
 
 1. Identify the exact planning question and which context types are actually required: plan alignment, README evidence, ownership clues, or edit boundaries.
 2. Choose the smallest specialist set:

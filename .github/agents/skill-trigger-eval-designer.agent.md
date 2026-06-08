@@ -2,8 +2,8 @@
 description: 'Use as a hidden specialist for designing trigger evals for NeatapticTS skills and phase agents. Keywords: should trigger, should not trigger, description evals, false positive, trigger rate, design.'
 name: 'skill-trigger-eval-designer'
 tier: 3
-model: 'Claude Sonnet 4.6 (copilot)'
-tools: [read, search, execute]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['skill-description-evals']

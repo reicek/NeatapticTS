@@ -3,7 +3,7 @@ description: 'Use when: planning or red-testing needs acceptance criteria, red-t
 name: 'planning-test-strategy-coordinator'
 tier: 2
 model: 'GPT-5.4 (copilot)'
-tools: [read, search, agent]
+tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['coverage-scout', 'determinism-scout', 'acceptance-criteria-writer', 'unit-test-writer']
 skills: ['planning-acceptance-criteria', 'red-test-contracts']
 user-invocable: false

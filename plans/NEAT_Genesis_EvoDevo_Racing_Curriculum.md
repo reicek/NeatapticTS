@@ -147,12 +147,14 @@ Research outcome recorded below.
 ###### Boundary Map
 
 **Host-owned (never move to worker):**
+
 - DOM/canvas rendering, HUD panels, telemetry display, network-view canvas
 - User interaction (keyboard shortcuts, tier selector UI)
 - `requestAnimationFrame` loop cadence and viewport resize handling
 - Receiving and decoding compact typed-array `race-step` snapshots for render
 
 **Worker-owned (target state after Step 04):**
+
 - Team A and Team B `Neat` population instances + species/fitness history
 - Rolling opponent snapshot store: hall-of-fame sample + recent-population
   sample; frozen at generation start, updated every N generations (configurable)
@@ -169,6 +171,7 @@ Research outcome recorded below.
   capability-gated, with single-thread fallback)
 
 **Host↔Worker message seam (target protocol):**
+
 ```
 Host → Worker:
   init        { populationSize, rngSeed, tier, archProfileId? }
@@ -195,47 +198,47 @@ authority.
 
 ###### File-Level Seams
 
-| File | Role | Gap |
-|------|------|-----|
-| `browser-entry/browser-entry.ts` | POC main loop, DOM, controller, curriculum | Owns evolution and controller — must delegate both to worker |
-| `workers/simulation-worker/simulation-worker.types.ts` | `RacingRenderFrame` packed struct | Schema correct; needs evolution-worker message types (new file) |
-| `workers/simulation-worker/simulation-worker.snapshot.utils.ts` | Transfer-list resolver, schema assert | Correct; reusable as-is |
-| `workers/simulation-worker/simulation-worker.tier3.ts` | Tier 3 frame factory + radio resolver | Correct; usable by worker-owned episode stepper |
-| `workers/simulation-worker/simulation-worker.tier4.ts` | Tier 4 frame factory + pit status | Correct; usable by worker-owned episode stepper |
-| `workers/simulation-worker/simulation-worker.tier5.ts` | Tier 5 frame factory + radio resolver | Correct; usable by worker-owned episode stepper |
-| `environment/environment.step.service.ts` | Deterministic physics stepper | Complete; worker will call this inside the episode loop |
-| `environment/environment.types.ts` | Shared state types | Complete |
-| `controller/nge.controller.ts` | Network-based car controller | Must move to worker; host receives snapshots not control output |
-| `controller/runtime.adaptation.ts` | Within-episode mutation engine | Demo-local; keep or discard in worker rewrite |
-| `browser-entry/host/` | DOM panel layout | Host-owned; no change |
-| `evaluation/` (not yet present) | Evaluation harness | Needs: team fitness resolver, race-pack factory, opponent snapshot container |
-| `workers/simulation-worker/simulation-worker.evolution.types.ts` | Evolution worker message types | **Missing — new file needed** |
-| `workers/simulation-worker/simulation-worker.evolution.protocol.service.ts` | FSM router (init→evolve→race→stop) | **Missing — new file needed** |
-| `workers/simulation-worker/simulation-worker.coevolution.service.ts` | Team A/B container | **Missing — new file needed** |
-| `workers/simulation-worker/simulation-worker.race-pack.service.ts` | Deterministic pack factory | **Missing — new file needed** |
-| `workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts` | Rolling snapshot store + barrier | **Missing — new file needed** |
+| File                                                                        | Role                                       | Gap                                                                          |
+| --------------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `browser-entry/browser-entry.ts`                                            | POC main loop, DOM, controller, curriculum | Owns evolution and controller — must delegate both to worker                 |
+| `workers/simulation-worker/simulation-worker.types.ts`                      | `RacingRenderFrame` packed struct          | Schema correct; needs evolution-worker message types (new file)              |
+| `workers/simulation-worker/simulation-worker.snapshot.utils.ts`             | Transfer-list resolver, schema assert      | Correct; reusable as-is                                                      |
+| `workers/simulation-worker/simulation-worker.tier3.ts`                      | Tier 3 frame factory + radio resolver      | Correct; usable by worker-owned episode stepper                              |
+| `workers/simulation-worker/simulation-worker.tier4.ts`                      | Tier 4 frame factory + pit status          | Correct; usable by worker-owned episode stepper                              |
+| `workers/simulation-worker/simulation-worker.tier5.ts`                      | Tier 5 frame factory + radio resolver      | Correct; usable by worker-owned episode stepper                              |
+| `environment/environment.step.service.ts`                                   | Deterministic physics stepper              | Complete; worker will call this inside the episode loop                      |
+| `environment/environment.types.ts`                                          | Shared state types                         | Complete                                                                     |
+| `controller/nge.controller.ts`                                              | Network-based car controller               | Must move to worker; host receives snapshots not control output              |
+| `controller/runtime.adaptation.ts`                                          | Within-episode mutation engine             | Demo-local; keep or discard in worker rewrite                                |
+| `browser-entry/host/`                                                       | DOM panel layout                           | Host-owned; no change                                                        |
+| `evaluation/` (not yet present)                                             | Evaluation harness                         | Needs: team fitness resolver, race-pack factory, opponent snapshot container |
+| `workers/simulation-worker/simulation-worker.evolution.types.ts`            | Evolution worker message types             | **Missing — new file needed**                                                |
+| `workers/simulation-worker/simulation-worker.evolution.protocol.service.ts` | FSM router (init→evolve→race→stop)         | **Missing — new file needed**                                                |
+| `workers/simulation-worker/simulation-worker.coevolution.service.ts`        | Team A/B container                         | **Missing — new file needed**                                                |
+| `workers/simulation-worker/simulation-worker.race-pack.service.ts`          | Deterministic pack factory                 | **Missing — new file needed**                                                |
+| `workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts`  | Rolling snapshot store + barrier           | **Missing — new file needed**                                                |
 
 ###### POC Gap Classification
 
-| Gap | Classification | Owner |
-|-----|----------------|-------|
-| Worker evolution protocol FSM (init/generation/start-race/race-step/stop) | demo-local | racing_curriculum worker |
-| Evolution worker message types (typed union like Flappy) | demo-local | racing_curriculum worker |
-| Packed `race-step` snapshot with generation telemetry | demo-local | racing_curriculum worker |
-| Transfer-list buffer-detach enforcement for race-step frames | demo-local | racing_curriculum worker |
-| Team A/B independent `Neat` population containers | demo-local (2× Neat instances) | racing_curriculum worker |
-| Team fitness: best-finishing car position = team score | demo-local | racing_curriculum worker |
-| Rolling opponent snapshot store (hall-of-fame + recent sample) | demo-local policy | racing_curriculum worker |
-| Generation barrier: freeze snapshot before evaluation, release after | demo-local orchestration | racing_curriculum worker |
-| Deterministic race-pack construction (seed + snapshot → initial conditions) | demo-local | racing_curriculum worker |
-| Radio field transport in RacingRenderFrame | partially exists (type defined, not written) | racing_curriculum worker |
-| Team tier-ladder state management (carry-state / reset-state) | demo-local | racing_curriculum worker |
-| Benchmark observability charts (Team A vs B fitness, radio heatmaps) | demo-local renderer | racing_curriculum host |
-| Stigmergy typed-array field primitive (shared pheromone analog) | **upstream NGE Phase G Step 04** | NGE Core Scout |
-| `ModulatorBroadcaster` neuromodulation | **upstream NGE** | NGE Core Scout |
-| `EpisodicSlot` medium-term memory | **upstream NGE** | NGE Core Scout |
-| `GatingRouter` hard task-switching | **upstream NGE** | NGE Core Scout |
-| Polyandric reproduction mode + `modeIsEvolvable` | **upstream NGE Phase E** | NGE Core Scout |
+| Gap                                                                         | Classification                               | Owner                    |
+| --------------------------------------------------------------------------- | -------------------------------------------- | ------------------------ |
+| Worker evolution protocol FSM (init/generation/start-race/race-step/stop)   | demo-local                                   | racing_curriculum worker |
+| Evolution worker message types (typed union like Flappy)                    | demo-local                                   | racing_curriculum worker |
+| Packed `race-step` snapshot with generation telemetry                       | demo-local                                   | racing_curriculum worker |
+| Transfer-list buffer-detach enforcement for race-step frames                | demo-local                                   | racing_curriculum worker |
+| Team A/B independent `Neat` population containers                           | demo-local (2× Neat instances)               | racing_curriculum worker |
+| Team fitness: best-finishing car position = team score                      | demo-local                                   | racing_curriculum worker |
+| Rolling opponent snapshot store (hall-of-fame + recent sample)              | demo-local policy                            | racing_curriculum worker |
+| Generation barrier: freeze snapshot before evaluation, release after        | demo-local orchestration                     | racing_curriculum worker |
+| Deterministic race-pack construction (seed + snapshot → initial conditions) | demo-local                                   | racing_curriculum worker |
+| Radio field transport in RacingRenderFrame                                  | partially exists (type defined, not written) | racing_curriculum worker |
+| Team tier-ladder state management (carry-state / reset-state)               | demo-local                                   | racing_curriculum worker |
+| Benchmark observability charts (Team A vs B fitness, radio heatmaps)        | demo-local renderer                          | racing_curriculum host   |
+| Stigmergy typed-array field primitive (shared pheromone analog)             | **upstream NGE Phase G Step 04**             | NGE Core Scout           |
+| `ModulatorBroadcaster` neuromodulation                                      | **upstream NGE**                             | NGE Core Scout           |
+| `EpisodicSlot` medium-term memory                                           | **upstream NGE**                             | NGE Core Scout           |
+| `GatingRouter` hard task-switching                                          | **upstream NGE**                             | NGE Core Scout           |
+| Polyandric reproduction mode + `modeIsEvolvable`                            | **upstream NGE Phase E**                     | NGE Core Scout           |
 
 **NGE Core Scout escalation:** NOT required for Step 03 or Step 04 tranche.
 All upstream NGE primitives (ModulatorBroadcaster, EpisodicSlot, GatingRouter,
@@ -249,18 +252,21 @@ explicit TODO comments rather than compensating locally.
 Smallest observable failures that prove the current POC gaps:
 
 **File: `workers/simulation-worker/simulation-worker.evolution.protocol.test.ts`** (new)
+
 - `routeRacingWorkerProtocolMessage` rejects `request-generation` before `init`
 - `routeRacingWorkerProtocolMessage` rejects `start-race` before a generation exists
 - `routeRacingWorkerProtocolMessage` rejects `request-race-step` before `start-race`
 - `routeRacingWorkerProtocolMessage` routes `stop` first regardless of state
 
 **File: `workers/simulation-worker/simulation-worker.coevolution.test.ts`** (new)
+
 - Team A population evolves independently from Team B (separate innovation counters)
 - Team fitness resolves as the best-finishing car index (not sum, not average)
 - Frozen opponent snapshot does not update during active evaluation
 - Snapshot is replaced only after the configured generation boundary
 
 **File: `workers/simulation-worker/simulation-worker.race-pack.test.ts`** (new)
+
 - `createDeterministicRacePack(seed, opponentSnapshot)` returns identical initial
   conditions for identical inputs
 - Pack initial car positions are not all zeros (must spread cars on track grid)
@@ -269,6 +275,7 @@ Smallest observable failures that prove the current POC gaps:
   allocating a new array
 
 **Already-passing test coverage to protect:**
+
 - `simulation-worker.snapshot.utils.test.ts` (schema version + transfer list)
 - `simulation-worker.tier3.test.ts`, `tier4.test.ts`, `tier5.test.ts` (frame factories)
 - `simulation-worker.tier5-renderer.test.ts` (Tier 5 renderer parity)
@@ -378,11 +385,11 @@ this tracker before ending.
 All three files are new, owner-local, in
 `examples/racing_curriculum/workers/simulation-worker/`.
 
-| File | Tests | Target service boundary |
-|------|-------|------------------------|
-| `simulation-worker.evolution.protocol.test.ts` | 4 | `simulation-worker.evolution.protocol.service.ts` (FSM router) |
-| `simulation-worker.race-pack.test.ts` | 5 | `simulation-worker.race-pack.service.ts` (deterministic pack factory + transfer ownership) |
-| `simulation-worker.coevolution.test.ts` | 7 | `simulation-worker.coevolution.service.ts` + `simulation-worker.opponent-snapshot.service.ts` |
+| File                                           | Tests | Target service boundary                                                                       |
+| ---------------------------------------------- | ----- | --------------------------------------------------------------------------------------------- |
+| `simulation-worker.evolution.protocol.test.ts` | 4     | `simulation-worker.evolution.protocol.service.ts` (FSM router)                                |
+| `simulation-worker.race-pack.test.ts`          | 5     | `simulation-worker.race-pack.service.ts` (deterministic pack factory + transfer ownership)    |
+| `simulation-worker.coevolution.test.ts`        | 7     | `simulation-worker.coevolution.service.ts` + `simulation-worker.opponent-snapshot.service.ts` |
 
 ###### Minimal Red-Phase Scaffolding Added
 
@@ -461,14 +468,14 @@ No nested expects, no multi-assertion helpers.
 Step 04 must create these five files in `workers/simulation-worker/` so that all
 16 red tests pass:
 
-| File | Minimum contract |
-|------|-----------------|
-| `simulation-worker.evolution.types.ts` | Typed inbound/outbound message union |
-| `simulation-worker.evolution.protocol.service.ts` | `createInitialProtocolState()` + `routeRacingWorkerProtocolMessage()` must enforce `init → request-generation → start-race → request-race-step → stop` |
-| `simulation-worker.coevolution.service.ts` | `createCoevolutionContainer()` must allocate independent Team A/B containers and resolve team fitness from the best-finishing team car |
-| `simulation-worker.race-pack.service.ts` | `createDeterministicRacePack(seed, snapshot)` must replay identical initial conditions and emit `'racing-packed-v1'` frames |
-| `simulation-worker.opponent-snapshot.service.ts` | `createOpponentSnapshotStore(config)` must freeze rolling opponent snapshots during evaluation and only rotate them at the configured generation barrier |
-| Transfer-list handling inside `simulation-worker.race-pack.service.ts` | Must include every packed frame buffer exactly once and leave transferred buffers detached after handoff |
+| File                                                                   | Minimum contract                                                                                                                                         |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `simulation-worker.evolution.types.ts`                                 | Typed inbound/outbound message union                                                                                                                     |
+| `simulation-worker.evolution.protocol.service.ts`                      | `createInitialProtocolState()` + `routeRacingWorkerProtocolMessage()` must enforce `init → request-generation → start-race → request-race-step → stop`   |
+| `simulation-worker.coevolution.service.ts`                             | `createCoevolutionContainer()` must allocate independent Team A/B containers and resolve team fitness from the best-finishing team car                   |
+| `simulation-worker.race-pack.service.ts`                               | `createDeterministicRacePack(seed, snapshot)` must replay identical initial conditions and emit `'racing-packed-v1'` frames                              |
+| `simulation-worker.opponent-snapshot.service.ts`                       | `createOpponentSnapshotStore(config)` must freeze rolling opponent snapshots during evaluation and only rotate them at the configured generation barrier |
+| Transfer-list handling inside `simulation-worker.race-pack.service.ts` | Must include every packed frame buffer exactly once and leave transferred buffers detached after handoff                                                 |
 
 NGE primitive dependencies (NOT to be compensated locally in Step 04 — record
 as `TODO: NGE_TODO` comments):
@@ -562,17 +569,17 @@ remaining reference-plan gaps, and the focused validation result before ending.
 
 ###### Files Changed
 
-| File | Change type | Summary |
-|------|-------------|---------|
-| `workers/simulation-worker/simulation-worker.evolution.protocol.service.ts` | Rewritten | Full FSM router: idle→initialised→generation-ready→racing→stopped; `stop` always transitions to `stopped`; invalid messages for the current phase return a rejection `error` string |
-| `workers/simulation-worker/simulation-worker.coevolution.service.ts` | Rewritten | Distinct `teamA`/`teamB` population handles with unique `populationId` per container; `resolveTeamFitness` uses `Math.min` (best position), not average |
-| `workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts` | Rewritten | Generation barrier (evaluationActive guard) + generation boundary check (`generation % updateEveryNGenerations === 0`); stores frozen payload; exposes `frozenPayload` field |
-| `workers/simulation-worker/simulation-worker.race-pack.service.ts` | Rewritten | Deterministic `createDeterministicRacePack(seed, snapshot)` using index-based grid offsets; correct `schemaVersion: 'racing-packed-v1'`; `resolveRaceStepTransferList` collects all 10 distinct typed-array buffers |
-| `workers/simulation-worker/simulation-worker.coevolution.service.test.ts` | Created | Sibling smoke tests for quality gate |
-| `workers/simulation-worker/simulation-worker.evolution.protocol.service.test.ts` | Created | Sibling smoke tests for quality gate |
-| `workers/simulation-worker/simulation-worker.opponent-snapshot.service.test.ts` | Created | Sibling smoke tests for quality gate |
-| `workers/simulation-worker/simulation-worker.race-pack.service.test.ts` | Created | Sibling smoke tests for quality gate |
-| `controller/runtime.adaptation.test.ts` | Created | Sibling smoke tests for quality gate (pre-existing gap) |
+| File                                                                             | Change type | Summary                                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workers/simulation-worker/simulation-worker.evolution.protocol.service.ts`      | Rewritten   | Full FSM router: idle→initialised→generation-ready→racing→stopped; `stop` always transitions to `stopped`; invalid messages for the current phase return a rejection `error` string                                 |
+| `workers/simulation-worker/simulation-worker.coevolution.service.ts`             | Rewritten   | Distinct `teamA`/`teamB` population handles with unique `populationId` per container; `resolveTeamFitness` uses `Math.min` (best position), not average                                                             |
+| `workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts`       | Rewritten   | Generation barrier (evaluationActive guard) + generation boundary check (`generation % updateEveryNGenerations === 0`); stores frozen payload; exposes `frozenPayload` field                                        |
+| `workers/simulation-worker/simulation-worker.race-pack.service.ts`               | Rewritten   | Deterministic `createDeterministicRacePack(seed, snapshot)` using index-based grid offsets; correct `schemaVersion: 'racing-packed-v1'`; `resolveRaceStepTransferList` collects all 10 distinct typed-array buffers |
+| `workers/simulation-worker/simulation-worker.coevolution.service.test.ts`        | Created     | Sibling smoke tests for quality gate                                                                                                                                                                                |
+| `workers/simulation-worker/simulation-worker.evolution.protocol.service.test.ts` | Created     | Sibling smoke tests for quality gate                                                                                                                                                                                |
+| `workers/simulation-worker/simulation-worker.opponent-snapshot.service.test.ts`  | Created     | Sibling smoke tests for quality gate                                                                                                                                                                                |
+| `workers/simulation-worker/simulation-worker.race-pack.service.test.ts`          | Created     | Sibling smoke tests for quality gate                                                                                                                                                                                |
+| `controller/runtime.adaptation.test.ts`                                          | Created     | Sibling smoke tests for quality gate (pre-existing gap)                                                                                                                                                             |
 
 ###### Behavior Implemented
 
@@ -585,17 +592,17 @@ remaining reference-plan gaps, and the focused validation result before ending.
 
 ###### Remaining Reference-Plan Gaps
 
-| Gap | Status |
-|-----|--------|
-| Real `Neat` population wiring (Team A/B with actual speciation + fitness tracking) | `TeamPopulationContainer` is an opaque handle; wiring deferred to later pass |
-| Controller inference inside worker (worker owns `network.activate` per car per tick) | Not yet implemented; worker still delegates physics only |
-| Generation-ready summary (`generation-ready` worker→host message) | Protocol types exist; actual generation loop not yet wired |
-| Rolling opponent snapshot hall-of-fame + recent sample selection | Placeholder ID only; no actual network payload sampling |
-| Deterministic race-pack seed → actual grid positions on the real track geometry | Grid positions are index-based, not track-spline-based |
-| Packed `race-step` streaming to host at render cadence | Protocol exists; step loop not yet wired |
-| Team A vs B fitness charts, radio heatmaps, role-divergence observability | Renderer/telemetry pass not yet started |
-| Sand/wall/off-track lifecycle, pit-entrance blocking, braking/slip-onset tire effects | Surface physics not yet complete |
-| Tier-ladder carry-state/reset-state transitions | Not yet implemented |
+| Gap                                                                                   | Status                                                                       |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Real `Neat` population wiring (Team A/B with actual speciation + fitness tracking)    | `TeamPopulationContainer` is an opaque handle; wiring deferred to later pass |
+| Controller inference inside worker (worker owns `network.activate` per car per tick)  | Not yet implemented; worker still delegates physics only                     |
+| Generation-ready summary (`generation-ready` worker→host message)                     | Protocol types exist; actual generation loop not yet wired                   |
+| Rolling opponent snapshot hall-of-fame + recent sample selection                      | Placeholder ID only; no actual network payload sampling                      |
+| Deterministic race-pack seed → actual grid positions on the real track geometry       | Grid positions are index-based, not track-spline-based                       |
+| Packed `race-step` streaming to host at render cadence                                | Protocol exists; step loop not yet wired                                     |
+| Team A vs B fitness charts, radio heatmaps, role-divergence observability             | Renderer/telemetry pass not yet started                                      |
+| Sand/wall/off-track lifecycle, pit-entrance blocking, braking/slip-onset tire effects | Surface physics not yet complete                                             |
+| Tier-ladder carry-state/reset-state transitions                                       | Not yet implemented                                                          |
 
 ###### Focused Validation Results
 
@@ -812,12 +819,12 @@ target before ending.
 
 ###### Files Changed
 
-| File | Change type | Summary |
-|------|-------------|---------|
-| `workers/simulation-worker/simulation-worker.evolution.types.ts` | Updated | Replaced plan-tracking module comment with atemporal JSDoc explaining worker authority, host/worker split, protocol lifecycle, and remaining gaps; added `RacingWorkerOutboundMessage` typed union with JSDoc; expanded all type JSDoc with invariants and semantics |
-| `workers/simulation-worker/simulation-worker.evolution.protocol.service.ts` | Updated | Added module-level JSDoc explaining FSM router, fallback transport, and host/worker authority boundary |
-| `browser-entry/browser-entry.ts` | Updated | Added comment block near POC seam types documenting the current step-delegation seam versus the target worker-authoritative protocol |
-| `workers/simulation-worker/README.md` | Created | Hand-written educational README documenting host/worker authority split, protocol FSM with Mermaid stateDiagram, race-step snapshot schema, team A/B coevolution semantics, rolling opponent snapshot store, deterministic race-pack contract, fallback transport, and remaining reference-plan gaps |
+| File                                                                        | Change type | Summary                                                                                                                                                                                                                                                                                              |
+| --------------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workers/simulation-worker/simulation-worker.evolution.types.ts`            | Updated     | Replaced plan-tracking module comment with atemporal JSDoc explaining worker authority, host/worker split, protocol lifecycle, and remaining gaps; added `RacingWorkerOutboundMessage` typed union with JSDoc; expanded all type JSDoc with invariants and semantics                                 |
+| `workers/simulation-worker/simulation-worker.evolution.protocol.service.ts` | Updated     | Added module-level JSDoc explaining FSM router, fallback transport, and host/worker authority boundary                                                                                                                                                                                               |
+| `browser-entry/browser-entry.ts`                                            | Updated     | Added comment block near POC seam types documenting the current step-delegation seam versus the target worker-authoritative protocol                                                                                                                                                                 |
+| `workers/simulation-worker/README.md`                                       | Created     | Hand-written educational README documenting host/worker authority split, protocol FSM with Mermaid stateDiagram, race-step snapshot schema, team A/B coevolution semantics, rolling opponent snapshot store, deterministic race-pack contract, fallback transport, and remaining reference-plan gaps |
 
 ###### Generated Artifacts
 
@@ -930,7 +937,7 @@ next tranche or closure state, gate evidence, and handoff prompt before ending.
 - Step 06 documented host-owned versus worker-owned responsibilities, fallback
   transport, packed snapshot semantics, and the honest remaining benchmark gaps.
 - Changed-file groups stayed localized to `examples/racing_curriculum/workers/
-  simulation-worker/`, the browser-entry/runtime contract, and the source-facing
+simulation-worker/`, the browser-entry/runtime contract, and the source-facing
   docs/JSDoc that feed generated README and browser assets.
 - No agent, skill, hook, or MCP customization changes were required, and no
   learning-event entry was needed for this tranche.

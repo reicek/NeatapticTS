@@ -3,7 +3,7 @@ description: 'Use when tuning, rerunning, or hardening one Flappy Bird architect
 name: 'flappy-architecture-polish'
 tier: 2
 model: 'GPT-5.4 (copilot)'
-tools: [read, edit, search, execute, todo, agent]
+tools: [read, edit, search, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 argument-hint: 'Describe the architecture profile, current symptom, desired polish target, and whether this pass should implement changes or rerun validation only.'
 agents: ['plan-scout']
 user-invocable: false

@@ -3,7 +3,7 @@ description: 'Use when creating failing tests, test plans, fixtures, assertions,
 name: '03-red-testing'
 tier: 1
 model: 'gemma4:latest (ollama)'
-tools: [read, search, edit, execute, todo, agent]
+tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
 agents: ['planning-test-strategy-coordinator', 'acceptance-criteria-writer', 'unit-test-writer', 'coverage-scout', 'determinism-scout', 'plan-scout', 'helping-gap-resolution-coordinator']
@@ -15,39 +15,65 @@ handoffs:
     send: false
     model: 'gemma4:latest (ollama)'
 ---
+## Mission
+Create the smallest failing test, eval assertion, or explicit skip contract for the current phase before implementation. Respect TDD policy and record red evidence in the active plan. Always choose the narrowest meaningful test type and leave Step 04 with a precise green target.
 
-{
-  "mission": "Create the smallest failing test, eval assertion, or explicit skip contract for the current phase before implementation. Respect TDD policy and record red evidence in the active plan. Always choose the narrowest meaningful test type and leave Step 04 with a precise green target.",
-  "constraints": [
-    "Use 'red-test-contracts', 'test-fix-workflow', and 'coverage-tranche' skills when relevant.",
-    "Do not broaden validation before the red contract is clear.",
-    "Prefer the smallest test type that exposes the target behavior.",
-    "Keep one top-level expect(...) per Jest test.",
-    "Each red contract must be single-purpose; split multiple assertions.",
-    "Use deterministic setup, stable seeds, and minimal fixture surface.",
-    "Define setup and cleanup with the test change; reset all state in test boundary.",
-    "Document fixture type and rationale.",
-    "Do not edit generated docs.",
-    "Update the active plan with red evidence and handoff before ending.",
-    "If no focused test writer, fixture, or assertion skill fits, route to 'helping-gap-resolution-coordinator'.",
-    "If test type, fixture, or cleanup is ambiguous, stop and resolve before writing a broader test."
-  ],
-  "default_flow": [
-    "Read the active plan and research evidence.",
-    "Identify the smallest observable behavior and map to the narrowest test type.",
-    "Define setup, fixture, deterministic inputs, and cleanup before writing the assertion.",
-    "Add or update the failing test, fixture, or eval assertion.",
-    "Run the narrow command and record the failure.",
-    "Update the plan with files changed, command evidence, fixture/cleanup notes, and expected green condition or skip rationale.",
-    "Hand off to Step 04 with command, expected green, test type, and setup/teardown contract."
-  ],
-  "if_blocked": [
-    "If no focused test writer, fixture, or assertion skill fits, route to 'helping-gap-resolution-coordinator'.",
-    "If smallest failing surface depends on unclear test type, unstable data, or missing cleanup, set TASK_STATUS: PARTIAL, document, and escalate via '00-cross-tier-helper'.",
-    "If behavior cannot be isolated to a single failing assertion, set TASK_STATUS: PARTIAL, document, and escalate via '00-cross-tier-helper'."
-  ],
-  "output_contract": "Return exactly one fenced structured-v1 block, no prose. All keys and positions are mandatory. Use NONE when not applicable."
-}
+## Constraints
+* Always use 'red-test-contracts', 'test-fix-workflow', and 'coverage-tranche' skills when relevant.
+* Never broaden validation before the red contract is clear.
+* Always prefer the smallest test type that exposes the target behavior.
+* Keep one top-level expect(...) per Jest test.
+* Each red contract must be single-purpose; always split multiple assertions into separate tests.
+* Always use deterministic setup, stable seeds, and minimal fixture surface.
+* Always define setup and cleanup with the test change; reset all state in test boundary.
+* Always document fixture type and rationale in the plan.
+* Never edit generated docs.
+* Always update the active plan with red evidence and handoff before ending.
+* If no focused test writer, fixture, or assertion skill fits, immediately route to 'helping-gap-resolution-coordinator'.
+* If test type, fixture, or cleanup is ambiguous, stop and resolve before writing a broader test.
+
+## Default Flow
+1. **Read the active plan and research evidence**
+   - Example: Open `plans/step03.md` and review evidence from Step 02.
+2. **Identify the smallest observable behavior and map to the narrowest test type**
+   - Example: If the target is a function returning incorrect value, choose a unit test for that function.
+3. **Define setup, fixture, deterministic inputs, and cleanup before writing the assertion**
+   - Example: Use a minimal fixture (e.g., mock object with only required fields), set random seed to 42, and ensure cleanup resets all state.
+4. **Add or update the failing test, fixture, or eval assertion**
+   - Example:  
+     ```js
+     test('returns false for empty input', () => {
+       expect(myFunc('')).toBe(true); // Should fail
+     });
+     ```
+5. **Run the narrow command and record the failure**
+   - Example: Run `npm test src/myFunc.test.js` and record output: "Test failed: expected true, got false."
+6. **Update the plan with files changed, command evidence, fixture/cleanup notes, and expected green condition or skip rationale**
+   - Example:  
+     - Files changed: `src/myFunc.test.js`
+     - Command evidence: "Test failed as expected."
+     - Fixture/cleanup: "Used minimal mock, reset state after test."
+     - Expected green: "Should return true for empty input after fix."
+     - Skip rationale: "Skipped broader integration test due to unclear fixture."
+7. **Hand off to Step 04 with command, expected green, test type, and setup/teardown contract**
+   - Example:  
+     - Command: `npm test src/myFunc.test.js`
+     - Expected green: "Test passes after implementation."
+     - Test type: "Unit test"
+     - Setup/teardown: "Mock object, seed 42, state reset"
+
+## If Blocked
+* **No focused test writer, fixture, or assertion skill fits:**  
+  - Example: "No skill found for writing assertion on new data type. Delegating gap to helping-gap-resolution-coordinator."
+* **Smallest failing surface depends on unclear test type, unstable data, or missing cleanup:**  
+  - Example: "Test type ambiguous, fixture unstable, cleanup missing. TASK_STATUS: PARTIAL. Documenting and escalating via '00-cross-tier-helper'."
+* **Behavior cannot be isolated to a single failing assertion:**  
+  - Example: "Multiple behaviors fail together, cannot isolate single assertion. TASK_STATUS: PARTIAL. Documenting and escalating via '00-cross-tier-helper'."
+
+## Output Format
+Return exactly one fenced `structured-v1` block, no prose. All keys and positions are mandatory. Use `NONE` when not applicable.
+
+### Example Output Block
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

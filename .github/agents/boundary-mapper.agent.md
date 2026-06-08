@@ -2,8 +2,8 @@
 description: 'Use when planning a refactor, splitting a large module, identifying orchestration files versus helpers, or mapping module boundaries before edits. Keywords: refactor, split file, boundaries, helpers, orchestration, module map.'
 name: boundary-mapper
 tier: 3
-model: 'Claude Haiku 4.5 (copilot)'
-tools: [read, search, todo]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, todo, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['solid-split']

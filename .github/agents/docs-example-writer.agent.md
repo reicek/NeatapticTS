@@ -2,8 +2,8 @@
 description: 'Use when documentation needs a concise example, JSDoc usage snippet, README usage note, or docs-safe sample aligned with the current public API. Keywords: examples, JSDoc snippet, README usage, documentation example.'
 name: docs-example-writer
 tier: 4
-model: 'Claude Haiku 4.5 (copilot)'
-tools: [read, search]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: []

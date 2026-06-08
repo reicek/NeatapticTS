@@ -2,8 +2,8 @@
 description: 'Use when mapping same-seed claims, replay boundaries, RNG-state requirements, ordering drift, floating-point caveats, or deciding whether a reproducibility issue belongs to reproducibility-contracts. Keywords: determinism, reproducibility, replay, RNG state, ordering, floating point, same seed, exact resume.'
 name: determinism-scout
 tier: 3
-model: 'Claude Haiku 4.5 (copilot)'
-tools: [read, search]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['reproducibility-contracts']

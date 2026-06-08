@@ -3,7 +3,7 @@ description: 'Use when running focused unit test commands, checking a red or gre
 name: 'unit-test-runner'
 tier: 3
 model: 'gemma4:latest (ollama)'
-tools: [read, search, execute]
+tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['running-unit-tests']

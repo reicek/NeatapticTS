@@ -2,8 +2,8 @@
 description: 'Use when identifying the next coverage tranche target from lcov.info, mapping which source boundaries are below 100%, or confirming whether an uncovered path is live or dead code. Keywords: coverage, lcov, untested, branches, lines, coverage gap, next tranche, coverage regression.'
 name: coverage-scout
 tier: 3
-model: 'Claude Haiku 4.5 (copilot)'
-tools: [read, search]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['coverage-tranche']

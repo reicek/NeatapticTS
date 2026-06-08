@@ -2,8 +2,8 @@
 description: 'Use when: validation fails, failure ownership is unclear, reroute decisions are needed, or focused tests and coverage gates need ordered interpretation.'
 name: 'green-test-failure-triage-coordinator'
 tier: 2
-model: 'Claude Sonnet 4.6 (copilot)'
-tools: [read, search, execute, agent]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, execute, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['coverage-guard', 'coverage-scout', 'failure-triage-specialist', 'unit-test-runner', 'plan-registration-auditor', 'mcp-validation-auditor']
 skills: ['green-validation-gates']
 user-invocable: false

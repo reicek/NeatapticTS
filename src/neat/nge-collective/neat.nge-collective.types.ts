@@ -120,8 +120,10 @@ export interface TeamResultGroup<TTeamId extends string, TMemberResult> {
  * @typeParam TTeamId - Stable identifier for the team being scored.
  * @typeParam TMemberResult - Benchmark- or policy-specific member result shape.
  */
-export interface TeamFitnessResult<TTeamId extends string, TMemberResult>
-  extends TeamResultGroup<TTeamId, TMemberResult> {
+export interface TeamFitnessResult<
+  TTeamId extends string,
+  TMemberResult,
+> extends TeamResultGroup<TTeamId, TMemberResult> {
   /** Aggregated team-level fitness produced by the injected policy. */
   teamFitness: number;
 }

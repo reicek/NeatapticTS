@@ -3,7 +3,7 @@ description: 'Use when: implementation needs existing pattern discovery, scoped 
 name: 'implementation-pattern-coordinator'
 tier: 2
 model: 'GPT-5.4 (copilot)'
-tools: [read, search, edit, agent]
+tools: [read, search, edit, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['implementation-pattern-scout', 'boundary-mapper', 'docs-scout', 'agent-frontmatter-auditor']
 skills: ['subagent-delegation-patterns']
 user-invocable: false

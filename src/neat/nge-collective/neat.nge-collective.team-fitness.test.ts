@@ -38,7 +38,9 @@ describe('team-level fitness core evaluator', () => {
 
       await expect(
         loadTeamFitnessModule().then(({ createTeamFitnessEvaluator }) => {
-          const evaluator = createTeamFitnessEvaluator(selectWeightedSignalScore);
+          const evaluator = createTeamFitnessEvaluator(
+            selectWeightedSignalScore,
+          );
 
           return evaluator(evaluatorInput).map(({ teamFitness, teamId }) => ({
             teamFitness,
@@ -69,7 +71,9 @@ describe('team-level fitness core evaluator', () => {
 
       await expect(
         loadTeamFitnessModule().then(({ createTeamFitnessEvaluator }) => {
-          const evaluator = createTeamFitnessEvaluator(selectSupportWeightedRawScore);
+          const evaluator = createTeamFitnessEvaluator(
+            selectSupportWeightedRawScore,
+          );
 
           return evaluator(evaluatorInput).at(0)?.teamFitness;
         }),
@@ -78,7 +82,9 @@ describe('team-level fitness core evaluator', () => {
   });
 });
 
-function createGenericTeamGroups(): readonly TeamResultGroup<'team-alpha' | 'team-beta'>[] {
+function createGenericTeamGroups(): readonly TeamResultGroup<
+  'team-alpha' | 'team-beta'
+>[] {
   return [
     {
       teamId: 'team-alpha',

@@ -2,8 +2,8 @@
 description: 'Use when mapping NGE benchmark methodology such as predator/prey coevolution, ant-hive observability, racing curriculum tiers, rolling opponent snapshots, fairness contracts, or deciding whether a Phase 7 demo issue belongs to nge-benchmark-workflow. Keywords: NGE benchmark, predator prey, ant hive, racing curriculum, rolling snapshot, fairness, observability, ablation.'
 name: nge-benchmark-scout
 tier: 3
-model: 'Claude Sonnet 4.6 (copilot)'
-tools: [read, search]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['nge-benchmark-workflow']

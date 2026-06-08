@@ -119,7 +119,10 @@ describe('simulation worker deterministic race-pack service', () => {
     it('includes the expected typed-array buffers exactly once for a packed race-step frame', async () => {
       // Arrange
       const service = await loadRacePackService();
-      const pack = service.createDeterministicRacePack(7, makeMinimalOpponentSnapshot());
+      const pack = service.createDeterministicRacePack(
+        7,
+        makeMinimalOpponentSnapshot(),
+      );
 
       // Act
       const transferList = service.resolveRaceStepTransferList(pack);
@@ -127,7 +130,9 @@ describe('simulation worker deterministic race-pack service', () => {
 
       // Assert — ownership contract requires every typed-array buffer exactly once
       expect({
-        containsCarXBuffer: transferList.includes(pack.carX.buffer as ArrayBuffer),
+        containsCarXBuffer: transferList.includes(
+          pack.carX.buffer as ArrayBuffer,
+        ),
         entryCount: transferList.length,
         uniqueBufferCount,
       }).toEqual({
@@ -140,7 +145,10 @@ describe('simulation worker deterministic race-pack service', () => {
     it('detaches the carX buffer after a simulated transfer using the resolved list', async () => {
       // Arrange
       const service = await loadRacePackService();
-      const pack = service.createDeterministicRacePack(7, makeMinimalOpponentSnapshot());
+      const pack = service.createDeterministicRacePack(
+        7,
+        makeMinimalOpponentSnapshot(),
+      );
       const transferList = service.resolveRaceStepTransferList(pack);
 
       // Act

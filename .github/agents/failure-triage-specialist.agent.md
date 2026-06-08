@@ -2,8 +2,8 @@
 description: 'Use when a focused validation fails and the workflow needs root-cause triage, owner mapping, smallest reroute, or known-unrelated failure separation. Keywords: failure triage, validation failure, root cause, owner mapping, reroute.'
 name: failure-triage-specialist
 tier: 3
-model: 'Claude Haiku 4.5 (copilot)'
-tools: [read, search]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['triaging-test-failures']

@@ -111,6 +111,16 @@ resources/prompts/tools, evidence-bearing gate exceptions, and universal
 as the archived baseline for existing agent, skill, model-routing, validation,
 and MCP ownership contracts.
 
+## Standalone Meta-Workflow Lane — Orchestration System Optimization [PLANNED]
+
+**Outcome:** enforce strict Tier 1→Tier 2/3/4 delegation by extracting durable policies into skills, creating targeted specialist agents, and updating flows to eliminate "God-agent" behavior from the eight numbered SDLC orchestrators.
+
+- Orchestration system optimization (mini-agent transition)
+  - Plan: [Orchestration_System_Optimization.plans.md](Orchestration_System_Optimization.plans.md) [WIP]
+  - Current internal state: Phase 1 Step 01 is [WIP]. Three new skills (`implementation-standards`, `research-methodology`, `routing-optimization-policy`) and three new specialists (`implementation-executor` Tier 2, `research-synthesis-specialist` Tier 3, `code-quality-auditor` Tier 3) are scoped and ready for authoring.
+
+**Coordination rule:** this lane is confined to `.github/agents/`, `.github/skills/`, `.github/flows/`, `scripts/agent-customization/`, and tracker/log files. Do not modify `src/` or MCP server implementations. Treat [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) and [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows_and_Gates_Upgrade.plans.md) as the archived baselines for agent architecture and flow/gates contracts.
+
 ## Standalone Documentation Metrics Contract Lane [DONE]
 
 **Outcome:** permanently eliminate weak-doc metric inconsistency by shipping a canonical

@@ -141,7 +141,9 @@ describe('simulation worker coevolution container', () => {
       });
 
       // Assert — IDs must not collide so evolution state cannot cross-contaminate
-      expect(container.teamA.populationId).not.toBe(container.teamB.populationId);
+      expect(container.teamA.populationId).not.toBe(
+        container.teamB.populationId,
+      );
     });
   });
 

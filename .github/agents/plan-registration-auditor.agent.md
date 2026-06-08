@@ -2,8 +2,8 @@
 description: 'Use as a hidden specialist for validating NeatapticTS plan registration across .plans.md files, plans/README.md, and plans/Roadmap.md. Keywords: plan sync, roadmap status, trigger phrase, tracker registration.'
 name: plan-registration-auditor
 tier: 3
-model: 'Claude Sonnet 4.6 (copilot)'
-tools: [read, search, execute]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['plan-sync-validation']

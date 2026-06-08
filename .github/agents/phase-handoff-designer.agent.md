@@ -2,8 +2,8 @@
 description: 'Use as a hidden specialist for designing or auditing sequential handoffs between the seven NeatapticTS phase agents. Keywords: handoff, phase transition, send false, next phase, prompt packet.'
 name: phase-handoff-designer
 tier: 3
-model: 'Claude Sonnet 4.6 (copilot)'
-tools: [read, search]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['phase-handoff-workflow']

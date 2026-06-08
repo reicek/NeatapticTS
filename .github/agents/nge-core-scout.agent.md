@@ -2,8 +2,8 @@
 description: 'Use when mapping NGE algorithm-core boundaries such as NGE_DNA, deterministic development, lifecycle transitions, computation motifs, memory tiers, neuromodulation, reproduction modes, or deciding whether a Phase 7 issue belongs to nge-core-algorithm. Keywords: NGE core, NGE_DNA, computationType, deterministic development, lifecycle, neuromodulation, reproduction, stigmergy.'
 name: nge-core-scout
 tier: 3
-model: 'Claude Sonnet 4.6 (copilot)'
-tools: [read, search]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['nge-core-algorithm']

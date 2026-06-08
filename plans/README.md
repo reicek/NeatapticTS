@@ -59,6 +59,7 @@ Active selection guide:
 - [plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md): NGE ant hive ecosystem — multi-agent stigmergy, role differentiation, and collective intelligence. [PLANNED]
 - [plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md): NGE predator/prey co-evolution — sensory arms race and reproduction mode dynamics. [PLANNED]
 - [plans/completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md): archived Repo Cortex Layer 1 baseline — SQLite corpus index, BM25 full-text search, freshness proofs (mtime + size + SHA-256), corpus scanner over generated READMEs / skills / agents / plans / demos, and the `validate-index` gate. [DONE]
+- [plans/Orchestration_System_Optimization.plans.md](Orchestration_System_Optimization.plans.md): standalone meta-workflow optimization — Tier 1→Tier 2/3/4 delegation enforcement, skill extraction (`implementation-standards`, `research-methodology`, `routing-optimization-policy`), specialist creation (`implementation-executor`, `research-synthesis-specialist`, `code-quality-auditor`), and flow integration. [PLANNED]
 - [plans/completed/Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowledge_MCP_Tools.plans.md): archived Repo Cortex Layer 2 baseline — `neataptic-cortex-mcp` MCP server exposing `search_corpus`, `load_chunk`, `load_document`, `freshness_check`, `index_stats`, and `list_families` tools for the full repo/library/demos surface. [DONE]
 - [plans/completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_Knowledge_Browser_Snapshot.plans.md): archived Repo Cortex Layer 3 baseline — generated browser JSON snapshot, docs pipeline integration, IndexedDB cache/loader for all demos, and generated-output contract clarification. [DONE]
 - [plans/completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_Enforcement.plans.md): archived Agentic Workflow Enforcement Prerequisite baseline for the 5-layer agent delegation tier graph, all 55 `tier:` frontmatter assignments, `validate-agent-graph.mjs` enforcement, `tier-enforcement-gate.mjs`, the human-readable audit report, and the `query_tier_graph` MCP tool. [DONE]
@@ -107,6 +108,7 @@ Task-to-plan trigger phrases:
 - racing path tracking, rounded racing lane, Catmull-Rom steering, spline path tracking, lane drift, browser-entry test debt: `plans/completed/Racing_Pathtracking_Debug_and_Quality_Followup.plans.md`
 - ant hive, stigmergy, pheromone, role differentiation, colony, collective intelligence, multi-agent: `plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md`
 - predator prey, co-evolution, arms race, camouflage, evasion, pursuit, two populations: `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md`
+- orchestration optimization, mini-agent, Tier 1 delegation, skill extraction, specialist creation, agent frontmatter, routing table, agent-graph gate, tier-enforcement: `plans/Orchestration_System_Optimization.plans.md`
 - archived reopen triggers: see `plans/completed/README.md`
 
 Working rule:

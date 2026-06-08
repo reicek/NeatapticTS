@@ -127,7 +127,8 @@ export function createDeterministicRacePack(
     for (let agentIndex = 0; agentIndex < AGENT_COUNT; agentIndex++) {
       const rowIndex = Math.floor(agentIndex / 2);
       positions[agentIndex] =
-        rowIndex * GRID_ROW_SPACING + (raceSeed + snapshot.generation) * SEED_X_SCALE;
+        rowIndex * GRID_ROW_SPACING +
+        (raceSeed + snapshot.generation) * SEED_X_SCALE;
     }
 
     return positions;

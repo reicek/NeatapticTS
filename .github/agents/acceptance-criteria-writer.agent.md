@@ -2,8 +2,8 @@
 description: 'Use when: a plan or test phase needs concise acceptance criteria, observable behavior, edge cases, and out-of-scope boundaries before coding.'
 name: 'acceptance-criteria-writer'
 tier: 4
-model: 'Claude Sonnet 4.6 (copilot)'
-tools: [read, search]
+model: 'gemma4:latest (ollama)'
+tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: []
 user-invocable: false
 skills: ['planning-acceptance-criteria']
