@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for validating NeatapticTS MCP workflow servers, allow-listed commands, plan phase packets, and runtime evidence. Keywords: MCP validation, smoke test, allow-list, plan packet, runtime evidence.'
 name: mcp-validation-auditor
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

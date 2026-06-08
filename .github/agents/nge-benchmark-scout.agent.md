@@ -2,7 +2,7 @@
 description: 'Use when mapping NGE benchmark methodology such as predator/prey coevolution, ant-hive observability, racing curriculum tiers, rolling opponent snapshots, fairness contracts, or deciding whether a Phase 7 demo issue belongs to nge-benchmark-workflow. Keywords: NGE benchmark, predator prey, ant hive, racing curriculum, rolling snapshot, fairness, observability, ablation.'
 name: nge-benchmark-scout
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

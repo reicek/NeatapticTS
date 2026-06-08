@@ -2,7 +2,7 @@
 description: 'Use when checking generated folder README context, JSDoc drift, missing examples, stale docs, or deciding whether to update source comments versus run npm run docs. Keywords: README, JSDoc, docs, generated docs, drift, examples.'
 name: docs-scout
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

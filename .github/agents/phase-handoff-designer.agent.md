@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for designing or auditing sequential handoffs between the seven NeatapticTS phase agents. Keywords: handoff, phase transition, send false, next phase, prompt packet.'
 name: phase-handoff-designer
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

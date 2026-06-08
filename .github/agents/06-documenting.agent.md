@@ -2,7 +2,7 @@
 description: 'Use when updating user-facing docs, API docs, JSDoc/TSDoc, examples, changelogs, and usage guidance.'
 name: '06-documenting'
 tier: 1
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '07-logging'
     prompt: 'Continue from the active plan, Step 05 validation evidence, and Step 06 documentation changes. Execute Step 07 for the current phase by updating the tracker, handoff query, and logs as appropriate.'
     send: false
-    model: 'qwen3.5:cloud'
+    model: 'qwen3.5:cloud (ollama)'
 ---
 
 ## Mission

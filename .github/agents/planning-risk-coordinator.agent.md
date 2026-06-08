@@ -2,7 +2,7 @@
 description: 'Use when: planning needs ambiguity review, blast-radius analysis, reversibility checks, dependency risk, or model-budget risk before implementation.'
 name: 'planning-risk-coordinator'
 tier: 2
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['plan-scout', 'determinism-scout', 'license-attribution-auditor', 'model-name-auditor']
 skills: ['model-routing-and-budget', 'license-attribution-audit']

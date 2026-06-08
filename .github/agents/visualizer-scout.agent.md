@@ -2,7 +2,7 @@
 description: 'Use when diagnosing visualizer UI issues such as cramped layout, missing overflow scroll, hover/tooltip instability, or parity drift between demo visualizers. Keywords: visualizer, canvas, tooltip, hover, overflow, layout, parity.'
 name: 'visualizer-scout'
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

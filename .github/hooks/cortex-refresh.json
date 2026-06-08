@@ -8,7 +8,6 @@
         "timeout": 240
       }
     ],
-  /*
     "PreToolUse": [
       {
         "type": "command",
@@ -17,7 +16,6 @@
         "timeout": 120
       }
     ],
-  */
     "PostToolUse": [
       {
         "type": "command",

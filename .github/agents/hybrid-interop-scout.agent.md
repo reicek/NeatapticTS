@@ -2,7 +2,7 @@
 description: 'Use when mapping parameter-vector layouts, deterministic export/import order, clone-vs-vector isolation, Lamarckian persistence policy, or deciding whether a hybrid evolution-plus-training issue belongs to hybrid-training-interop. Keywords: parameter vector, fine-tuning, Lamarckian, isolation, export, import, layout version, hybrid training.'
 name: hybrid-interop-scout
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

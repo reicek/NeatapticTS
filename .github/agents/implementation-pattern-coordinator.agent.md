@@ -2,7 +2,7 @@
 description: 'Use when: implementation needs existing pattern discovery, scoped refactor routing, compatibility facade decisions, or reusable specialist assignment.'
 name: 'implementation-pattern-coordinator'
 tier: 2
-model: 'GPT-5.4 (copilot)'
+model: qwen3.5:cloud (ollama)
 tools: [read, search, edit, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['implementation-pattern-scout', 'boundary-mapper', 'docs-scout', 'agent-frontmatter-auditor']
 skills: ['subagent-delegation-patterns']

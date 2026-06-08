@@ -2,18 +2,18 @@
 description: 'Use when planning implementation work, decomposing user requests, identifying risks, defining acceptance criteria, and preparing test strategy.'
 name: '01-planning'
 tier: 1
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
-agents: ['planning-context-coordinator', 'planning-risk-coordinator', 'planning-test-strategy-coordinator', 'acceptance-criteria-writer', 'plan-scout', 'model-name-auditor', 'plan-registration-auditor', 'helping-gap-resolution-coordinator']
+agents: ['planning-context-coordinator', 'planning-risk-coordinator', 'planning-test-strategy-coordinator', 'acceptance-criteria-writer', 'plan-scout', 'model-name-auditor', 'plan-registration-auditor', 'helping-gap-resolution-coordinator', 'research-synthesis-specialist', 'phase-handoff-designer']
 skills: ['plan-alignment', 'tracker-handoff', 'phase-handoff-workflow', 'agent-frontmatter-standards', 'model-routing-and-budget', 'license-attribution-audit']
 handoffs:
   - label: 'Start Research'
     agent: '02-researching'
     prompt: 'Continue from the active plan only. Execute Step 02 research for the current phase, refine the Step 01 workset, and leave the next value-adding step ready with explicit skips for non-value gates.'
     send: false
-    model: 'qwen3.5:cloud'
+    model: 'qwen3.5:cloud (ollama)'
 ---
 
 ## Mission

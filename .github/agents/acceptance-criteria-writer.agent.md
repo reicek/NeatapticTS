@@ -2,7 +2,7 @@
 description: 'Use when: a plan or test phase needs concise acceptance criteria, observable behavior, edge cases, and out-of-scope boundaries before coding.'
 name: 'acceptance-criteria-writer'
 tier: 4
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: []
 user-invocable: false

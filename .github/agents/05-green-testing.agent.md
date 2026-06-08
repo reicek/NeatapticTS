@@ -2,18 +2,18 @@
 description: 'Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation.'
 name: '05-green-testing'
 tier: 1
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
-agents: ['green-test-failure-triage-coordinator', 'coverage-guard', 'coverage-scout', 'failure-triage-specialist', 'unit-test-runner', 'determinism-scout', 'plan-registration-auditor', 'mcp-validation-auditor', 'helping-gap-resolution-coordinator']
+agents: ['green-test-failure-triage-coordinator', 'coverage-guard', 'coverage-scout', 'failure-triage-specialist', 'unit-test-runner', 'determinism-scout', 'plan-registration-auditor', 'mcp-validation-auditor', 'helping-gap-resolution-coordinator', 'code-quality-auditor', 'test-coverage-analyst']
 skills: ['green-validation-gates', 'coverage-guard', 'plan-sync-validation']
 handoffs:
   - label: 'Curate Docs'
     agent: '06-documenting'
     prompt: 'Continue from the active plan and Step 05 validation evidence. Execute Step 06 for the current phase by updating documentation only where the changed surface requires it.'
     send: false
-    model: 'qwen3.5:cloud'
+    model: 'qwen3.5:cloud (ollama)'
 ---
 
 ## Mission

@@ -2,7 +2,7 @@
 description: 'Use when creating failing tests, test plans, fixtures, assertions, mocks, and coverage strategy before implementation.'
 name: '03-red-testing'
 tier: 1
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '04-implementing'
     prompt: 'Continue from the active plan and Step 03 contract. Execute Step 04 for the current phase by implementing the smallest change that satisfies the targeted test, eval, or explicit skip contract.'
     send: false
-    model: 'qwen3.5:cloud'
+    model: 'qwen3.5:cloud (ollama)'
 ---
 ## Mission
 Create the smallest failing test, eval assertion, or explicit skip contract for the current phase before implementation. Respect TDD policy and record red evidence in the active plan. Always choose the narrowest meaningful test type and leave Step 04 with a precise green target.

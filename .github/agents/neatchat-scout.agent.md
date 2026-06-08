@@ -2,7 +2,7 @@
 description: 'Use when mapping NEATchat follow-up work such as persistent sessions, multi-tier memory, retrieval ranking, candidate routing, stronger seed import, branch or reset semantics, or deciding whether a conversational-system issue belongs to neatchat-systems. Keywords: NEATchat, chat memory, retrieval, routing, session branch, reset, personalization, dialogue manager.'
 name: neatchat-scout
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

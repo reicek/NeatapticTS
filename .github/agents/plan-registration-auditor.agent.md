@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for validating NeatapticTS plan registration across .plans.md files, plans/README.md, and plans/Roadmap.md. Keywords: plan sync, roadmap status, trigger phrase, tracker registration.'
 name: plan-registration-auditor
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

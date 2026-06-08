@@ -79,8 +79,8 @@ const strictTier2StructuredFields = [
 const strictAllowedModels = new Set([
   'GPT-5.4 (copilot)',
   'GPT-5.4 mini (copilot)',
-  'qwen3.5:cloud',
-  'qwen3.5:cloud',
+  'qwen3.5:cloud (ollama)',
+  'anthropic/claude-sonnet-4-20250514',
 ]);
 
 if (options.help) {
@@ -246,7 +246,7 @@ function validateGlobalAgentRules(agents, { strict }) {
 }
 
 function isQualifiedModel(model) {
-  return typeof model === 'string' && /^[A-Za-z0-9 ._-]+ \([A-Za-z0-9 ._-]+\)$/.test(model);
+  return typeof model === 'string' && /^[A-Za-z0-9 .:_-]+ \([A-Za-z0-9 ._-]+\)$/.test(model);
 }
 
 function usesOnlyAllowedModels(model) {

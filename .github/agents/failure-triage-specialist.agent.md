@@ -2,7 +2,7 @@
 description: 'Use when a focused validation fails and the workflow needs root-cause triage, owner mapping, smallest reroute, or known-unrelated failure separation. Keywords: failure triage, validation failure, root cause, owner mapping, reroute.'
 name: failure-triage-specialist
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

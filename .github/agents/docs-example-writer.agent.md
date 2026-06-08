@@ -2,7 +2,7 @@
 description: 'Use when documentation needs a concise example, JSDoc usage snippet, README usage note, or docs-safe sample aligned with the current public API. Keywords: examples, JSDoc snippet, README usage, documentation example.'
 name: docs-example-writer
 tier: 4
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

@@ -2,7 +2,7 @@
 description: 'Use when writing focused unit tests, red tests, fixtures, mocks, assertions, or coverage tests for a scoped behavior change. Keywords: test, jest, fixture, mock, assertion, coverage.'
 name: 'unit-test-writer'
 tier: 3
-model: 'GPT-5.4 (copilot)'
+model: qwen3.5:cloud (ollama)
 tools: [read, search, edit, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

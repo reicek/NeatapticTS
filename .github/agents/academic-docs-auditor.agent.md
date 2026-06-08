@@ -2,7 +2,7 @@
 description: 'Use when auditing NeatapticTS educational documentation, JSDoc quality, Mermaid diagrams, citations, and generated README alignment. Keywords: academic docs, citation audit, JSDoc, Mermaid, generated README, atemporal docs.'
 name: academic-docs-auditor
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

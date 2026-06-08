@@ -2,7 +2,7 @@
 description: 'Use when mapping worker payload shapes, structured clone constraints, transfer-list boundaries, SharedArrayBuffer eligibility, fast-path blockers, or deciding whether a worker serialization issue belongs to worker-inference-transport. Keywords: worker payload, transport, structured clone, transfer list, SharedArrayBuffer, workerUrl, inference IR, postMessage.'
 name: 'worker-payload-scout'
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

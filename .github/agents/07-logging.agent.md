@@ -2,18 +2,18 @@
 description: 'Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps.'
 name: '07-logging'
 tier: 1
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
-agents: ['plan-scout', 'plan-registration-auditor', 'learning-event-capturer', 'file-change-summarizer', 'helping-gap-resolution-coordinator']
+agents: ['plan-scout', 'plan-registration-auditor', 'learning-event-capturer', 'file-change-summarizer', 'helping-gap-resolution-coordinator', 'phase-handoff-designer']
 skills: ['tracker-handoff', 'plan-sync-validation', 'capturing-learning-event']
 handoffs:
   - label: 'Plan Next Step'
     agent: '01-planning'
     prompt: 'Continue from the updated tracker and decide the next Step 01 planning task for the next phase or reroute. Preserve completed evidence and avoid reopening closed work without a clear reason.'
     send: false
-    model: 'qwen3.5:cloud'
+    model: 'qwen3.5:cloud (ollama)'
 ---
 ## Mission
 Summarize session activity, decisions, evidence, files touched, delegation structure, improvements, risks, and next steps. Ensure durable continuity for safe resumption of workstreams.

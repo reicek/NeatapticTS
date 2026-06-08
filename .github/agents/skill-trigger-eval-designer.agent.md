@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for designing trigger evals for NeatapticTS skills and phase agents. Keywords: should trigger, should not trigger, description evals, false positive, trigger rate, design.'
 name: 'skill-trigger-eval-designer'
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

@@ -2,7 +2,7 @@
 description: 'Use when: maintaining .agent.md files, repairing YAML frontmatter, updating descriptions, adjusting model fields, narrowing routing lists, or splitting broad agents.'
 name: 'helping-agent-maintenance-coordinator'
 tier: 2
-model: 'GPT-5.4 (copilot)'
+model: qwen3.5:cloud (ollama)
 tools: [read, search, edit, execute, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['agent-frontmatter-auditor', 'skill-frontmatter-auditor', 'skill-inventory-auditor', 'model-name-auditor', 'learning-event-capturer']
 skills: ['agent-frontmatter-standards', 'model-routing-and-budget', 'agent-inventory-audit']

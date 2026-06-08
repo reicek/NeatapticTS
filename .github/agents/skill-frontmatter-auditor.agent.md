@@ -2,7 +2,7 @@
 description: 'Use when auditing SKILL.md frontmatter, folder-name alignment, argument hints, descriptions, visibility flags, compatibility text, or local skill resources. Keywords: skill metadata, frontmatter, SKILL.md, description, visibility, audit.'
 name: 'skill-frontmatter-auditor'
 tier: 3
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []

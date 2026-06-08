@@ -2,7 +2,7 @@
 description: 'Use for local AI system maintenance, workflow gap troubleshooting, config checks, CI support, and safe continuous-improvement updates.'
 name: '00-helping'
 tier: 1
-model: 'qwen3.5:cloud'
+model: 'qwen3.5:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, web, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '01-planning'
     prompt: 'Continue SDLC work via 01-planning. Carry only relevant customization evidence and unresolved gap notes.'
     send: false
-    model: 'qwen3.5:cloud'
+    model: 'qwen3.5:cloud (ollama)'
 ---
 
 ## Mission

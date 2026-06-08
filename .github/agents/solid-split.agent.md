@@ -2,7 +2,7 @@
 description: 'Use when executing a deliberate SOLID module split, folderizing a large file, starting from a user-specified root such as #file:flappy_bird, following or creating a durable split plan, improving JSDoc so generated README files read naturally, updating plan progress, and either ending an active step with a handoff prompt or terminally closing the plan with compression plus logs. Keywords: SOLID split, split plan, folderize, module boundary, orchestration-first, compatibility re-export, generated README, JSDoc, handoff prompt, logs.'
 name: 'solid-split'
 tier: 2
-model: 'GPT-5.4 (copilot)'
+model: qwen3.5:cloud (ollama)
 tools: [read, edit, search, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 argument-hint: 'Describe the module to split, the plan file to follow or create, and the single current step to complete.'
 agents: ['boundary-mapper', 'plan-scout', 'docs-scout']
