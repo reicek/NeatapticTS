@@ -137,16 +137,18 @@ stop_conditions:
 
 ## Implementation phases
 
-### Phase 1: Skill Extraction [WIP]
+### Phase 1: Skill Extraction [DONE]
 
-#### Step 01 — Planning skill extraction strategy [WIP]
+#### Step 01 — Planning skill extraction strategy [DONE]
+
+**Completion evidence:** Planning brief produced with policy inventories for all three skills. Step 02-04 packets prepared for 06-documenting.
 
 ```yaml
 phase: 1
 step: 1
 agent: '01-planning'
 agent_file: '.github/agents/01-planning.agent.md'
-status: '[WIP]'
+status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
 copy_paste: 'true'
@@ -188,14 +190,16 @@ validation:
 
 `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
 
-#### Step 02 — Author implementation-standards skill [PLANNED]
+#### Step 02 — Author implementation-standards skill [DONE]
+
+**Completion evidence:** Skill file created at `.github/skills/implementation-standards/SKILL.md` with valid frontmatter (0 errors, 0 warnings).
 
 ```yaml
 phase: 1
 step: 2
 agent: '06-documenting'
 agent_file: '.github/agents/06-documenting.agent.md'
-status: '[PLANNED]'
+status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
 copy_paste: 'true'
@@ -234,14 +238,14 @@ validation:
 
 `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
 
-#### Step 03 — Author research-methodology skill [PLANNED]
+#### Step 03 — Author research-methodology skill [DONE]
 
 ```yaml
 phase: 1
 step: 3
 agent: '06-documenting'
 agent_file: '.github/agents/06-documenting.agent.md'
-status: '[PLANNED]'
+status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
 copy_paste: 'true'
@@ -253,6 +257,21 @@ validation:
 ```
 
 **Step objective:** Create `.github/skills/research-methodology/SKILL.md` with frontmatter and formalized discovery order patterns.
+
+**Completed:**
+
+- Created `.github/skills/research-methodology/SKILL.md` with proper frontmatter.
+- Frontmatter validation: PASS (0 errors, 0 warnings).
+- Plan sync validation: PASS (0 errors, 0 warnings).
+
+**Skill content includes:**
+
+- Discovery Order policy (README → parent README → plans → source files).
+- Cortex-first search patterns with `use_dense: true` and prewarm guidance.
+- Plan-aware execution workflow coordinating with `plan-alignment`.
+- Certainty thresholds (< 90% stop, < 95% investigate, ≥ 95% proceed).
+- Context window mitigation (plan updates, handoff prompts).
+- Demo-first library gap policy for investigation from demo symptoms.
 
 **User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
 
@@ -279,14 +298,16 @@ validation:
 
 `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md`
 
-#### Step 04 — Author routing-optimization-policy skill [PLANNED]
+#### Step 04 — Author routing-optimization-policy skill [DONE]
+
+**Completion evidence:** Skill file created at `.github/skills/routing-optimization-policy/SKILL.md` with valid frontmatter (0 errors, 0 warnings).
 
 ```yaml
 phase: 1
 step: 4
 agent: '06-documenting'
 agent_file: '.github/agents/06-documenting.agent.md'
-status: '[PLANNED]'
+status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/Orchestration_System_Optimization.plans.md'
 copy_paste: 'true'
