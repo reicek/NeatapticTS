@@ -2,18 +2,18 @@
 description: 'Use when researching codebase patterns, APIs, dependencies, architecture, external references, existing utilities, and prior art.'
 name: '02-researching'
 tier: 1
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, web, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
-agents: ['research-codebase-coordinator', 'plan-scout', 'docs-scout', 'repo-cortex-scout', 'boundary-mapper', 'skill-inventory-auditor', 'helping-gap-resolution-coordinator']
-skills: ['subagent-delegation-patterns']
+agents: ['research-codebase-coordinator', 'plan-scout', 'docs-scout', 'repo-cortex-scout', 'boundary-mapper', 'skill-inventory-auditor', 'helping-gap-resolution-coordinator', 'cortex-embeddings-scout']
+skills: ['subagent-delegation-patterns', 'research-methodology', 'repo-cortex-workflow']
 handoffs:
   - label: 'Design Red Tests'
     agent: '03-red-testing'
     prompt: 'Continue from the active plan and Step 02 research evidence. Execute Step 03 for the current phase by designing the smallest red test or explicit skip contract.'
     send: false
-    model: 'qwen3.5:cloud (ollama)'
+    model: 'glm-5.1:cloud (ollama)'
 ---
 
 ## Mission
@@ -31,6 +31,17 @@ Gather only the minimum evidence needed to refine Step 01 workset, without editi
 * Resolve conflicting evidence strictly by preferring: runtime/validation > static code > comments/docs > external, unless task is external-facing.
 * Never blend incompatible findings; always record conflict, decision rule, and uncertainty.
 * If no suitable scout/skill exists, immediately delegate gap to helping-gap-resolution-coordinator and resume with smallest provisional research path.
+
+## Flow Selection
+- Use `02.codebase-recon` when discovering code patterns, APIs, or dependencies
+- Use `02.prior-art-scan` when searching for prior implementations or external references
+- Use `02.integration-surface-map` when mapping integration boundaries between modules
+- Use `02.mcp-snapshot-first` when workflow context is needed before broad discovery
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `cortex-index` — before broad discovery, verify index freshness
+- `plan-sync` — after updating the plan with research findings
 
 ## Default Flow
 1. **Read the active plan**  

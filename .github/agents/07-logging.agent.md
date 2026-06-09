@@ -2,7 +2,7 @@
 description: 'Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps.'
 name: '07-logging'
 tier: 1
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '01-planning'
     prompt: 'Continue from the updated tracker and decide the next Step 01 planning task for the next phase or reroute. Preserve completed evidence and avoid reopening closed work without a clear reason.'
     send: false
-    model: 'qwen3.5:cloud (ollama)'
+    model: 'glm-5.1:cloud (ollama)'
 ---
 ## Mission
 Summarize session activity, decisions, evidence, files touched, delegation structure, improvements, risks, and next steps. Ensure durable continuity for safe resumption of workstreams.
@@ -33,6 +33,16 @@ Summarize session activity, decisions, evidence, files touched, delegation struc
 * Treat .github/ai-learning/learning-log.jsonl as append-only and schema-stable. Preserve backward compatibility; never rewrite historical entries.
 * Never set PHASE_COMPLETE: true or TASK_STATUS: SUCCESS while open steps, stale/missing handoff queries, unresolved validation gaps, or archival work remain.  
   - Example: If any step is incomplete, set TASK_STATUS: PARTIAL and carry gaps forward.
+
+## Flow Selection
+- Use `07.learning-event-log` when recording a learning event for agent-system gaps
+- Use `07.session-summary` when summarizing a session's work and decisions
+- Use `07.tracker-closure` when closing and archiving a completed plan tracker
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `plan-sync` — after plan status changes or closures
+- `learning-event` — after recording learning events
 
 ## Default Flow
 1. **Read active plan, implementation summary, validation evidence, and docs summary.**  

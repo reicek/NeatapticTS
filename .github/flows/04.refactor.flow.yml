@@ -30,5 +30,6 @@ specialists:
   - 'Boundary Mapper'
   - 'Coverage Guard'
   - 'implementation-pattern-coordinator'
+  - 'implementation-executor'
 
 timeout-minutes: 45

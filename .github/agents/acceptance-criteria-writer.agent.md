@@ -2,7 +2,7 @@
 description: 'Use when: a plan or test phase needs concise acceptance criteria, observable behavior, edge cases, and out-of-scope boundaries before coding.'
 name: 'acceptance-criteria-writer'
 tier: 4
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: []
 user-invocable: false
@@ -20,6 +20,14 @@ Write compact acceptance criteria, observable behavior notes, edge cases, and ou
 - ALWAYS stay read-only.
 - DO NOT edit files.
 - Keep acceptance criteria observable and implementation-agnostic.
+
+## Flow Selection
+- Use `01.acceptance-criteria` when defining acceptance criteria before coding.
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `plan-sync` — after writing acceptance criteria
+- `step-packet` — when scoping validation criteria
 
 ## Default Flow
 

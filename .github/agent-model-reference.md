@@ -39,9 +39,9 @@ NeatapticTS custom-agent frontmatter.
 
 | Qualified model string        | Role in fleet                           | Capability note                                                                                                                   |
 | ----------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `GPT-5.4 (copilot)`           | Full-tier coding and implementation     | Best default for code-heavy implementation, red-test authorship, and specialist work that needs stronger tool-aware reasoning.    |
+| `glm-5.1:cloud (ollama)`           | Full-tier coding and implementation     | Best default for code-heavy implementation, red-test authorship, and specialist work that needs stronger tool-aware reasoning.    |
 | `Claude Sonnet 4.6 (copilot)` | Full-tier synthesis and coordination    | Best default for planning, documentation, maintenance, and ambiguity-heavy coordination.                                          |
-| `GPT-5.4 mini (copilot)`      | Budget-conscious general-purpose work   | Good default for bounded research, validation, subagent coordination, and specialists that still benefit from solid tool use.     |
+| `glm-5.1:cloud (ollama)`      | Budget-conscious general-purpose work   | Good default for bounded research, validation, subagent coordination, and specialists that still benefit from solid tool use.     |
 | `Claude Haiku 4.6 (copilot)`  | Lightweight checklist and summarization | Good default for narrow audits, summaries, small recon tasks, and one-shot helpers where latency and cost matter more than depth. |
 
 Other Copilot models may exist in docs or the client, but they are not
@@ -76,9 +76,9 @@ confirmed in the active client and validated locally.
 
 | Agent need                                               | Canonical scalar model       | Notes                                                                 |
 | -------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------- |
-| Coding-heavy implementation or test synthesis            | `GPT-5.4 (copilot)`          | Prefer when code generation quality and edge-case handling matter.    |
+| Coding-heavy implementation or test synthesis            | `glm-5.1:cloud (ollama)`          | Prefer when code generation quality and edge-case handling matter.    |
 | Ambiguity-heavy planning, maintenance, or docs synthesis | `Claude Sonnet 4.6 (copilot)`| Prefer when the agent must weigh tradeoffs, policy, or prose quality. |
-| Bounded research, validation, or scout work              | `GPT-5.4 mini (copilot)`     | Prefer Mini when the agent still uses tools heavily or needs depth.   |
+| Bounded research, validation, or scout work              | `glm-5.1:cloud (ollama)`     | Prefer Mini when the agent still uses tools heavily or needs depth.   |
 | Lightweight checklist, summaries, or one-shot helpers    | `Claude Haiku 4.6 (copilot)` | Prefer Haiku when the task is narrow, mechanical, and frequent.       |
 
 ## Migration Rule

@@ -2,7 +2,7 @@
 description: 'Use when: implementation needs existing pattern discovery, scoped refactor routing, compatibility facade decisions, or reusable specialist assignment.'
 name: 'implementation-pattern-coordinator'
 tier: 2
-model: qwen3.5:cloud (ollama)
+model: glm-5.1:cloud (ollama)
 tools: [read, search, edit, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['implementation-pattern-scout', 'boundary-mapper', 'docs-scout', 'agent-frontmatter-auditor']
 skills: ['subagent-delegation-patterns']
@@ -23,6 +23,14 @@ Coordinate implementation pattern selection before edits widen scope. When an im
 - ALWAYS invoke `implementation-pattern-scout` before recommending a pattern.
 - ALWAYS stop after returning the structured output block; do not continue into implementation.
 - Keep any edits strictly to surface-level pattern confirmation — never refactor production code here.
+
+## Flow Selection
+- Use `04.scoped-fix` when coordinating implementation patterns for fixes; use `02.codebase-recon` when researching patterns before implementation.
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `agent-graph` — after identifying pattern owners
+- `cortex-index` — before searching for patterns
 
 ## Required Workflow
 

@@ -117,7 +117,7 @@ and MCP ownership contracts.
 
 - Orchestration system optimization (mini-agent transition)
   - Plan: [Orchestration_System_Optimization.plans.md](Orchestration_System_Optimization.plans.md) [WIP]
-  - Current internal state: Phase 3 [DONE] — All gates PASS (tier-enforcement: 8/11/38/4, agent-quality: 0 errors, routing-table-freshness: hash match). Phase 4 Step 01 [WIP] — Flow Integration mapping in progress.
+  - Current internal state: Phase 4 Step 03 [DONE] — All gates PASS (agent-graph: 61 agents/0 issues, tier-enforcement: 0 violations, plan-sync: 0 errors/0 warnings). Flow specialist references updated in 7 flow files. Step 04-07 remaining (flow selection red tests, tier-enforcement with flow awareness, docs, final validation).
 
 **Coordination rule:** this lane is confined to `.github/agents/`, `.github/skills/`, `.github/flows/`, `scripts/agent-customization/`, and tracker/log files. Do not modify `src/` or MCP server implementations. Treat [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) and [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows_and_Gates_Upgrade.plans.md) as the archived baselines for agent architecture and flow/gates contracts.
 
@@ -380,6 +380,12 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 - Soft dependency: Layer 4 [DONE] improved MCP lifecycle management but was not required to close Layer 6
 - Artifacts: `scripts/semantic-index/prewarm-dense.mjs`, `scripts/semantic-index/dense-readiness.mjs`, `scripts/agent-customization/gates/dense-readiness.gate.mjs`; MCP `search_corpus` now defaults `use_dense: true` with graceful cold-state degradation and warm-state `dense_state` provenance
 
+7. Advanced RAG architecture (Layer 7+)
+
+- Plan: [Repo_Cortex_Advanced_RAG_Architecture.plans.md](Repo_Cortex_Advanced_RAG_Architecture.plans.md) [WIP]
+- Gate: Layers 1–6 [DONE] satisfied; builds on the existing BM25+dense hybrid
+- Artifacts: semantic chunking, query classification, cross-encoder re-ranking, context window assembly, entity/relationship graphs, query expansion, relevance feedback, structured metadata filtering, multi-hop retrieval, ANN indexing, RAG eval suite
+
 ### Agentic Workflow Enforcement Prerequisite [DONE]
 
 - 5-layer agent delegation tier enforcement
@@ -410,7 +416,7 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 - NEAT Genesis EvoDevo (NGE) — core algorithm (computation motifs, lifecycle, DNA, reproduction, collective intelligence)
   - Plan: [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
 - NGE Core Readiness Audit — primitive-by-primitive readiness matrix, gap classification by owner boundary, and first implementation tranche selection (core-first; demos are downstream e2e tests)
-  - Plan: [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [WIP]
+  - Plan: [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [PLANNED] — Phase 3 [DONE] (independent populations + generation barriers); Phase 4 [PLANNED] (deterministic evaluation packs); status changed to PLANNED per RAG architecture priority shift
 - NGE Racing Curriculum — Team A/B benchmark (worker-streamed runtime authority, deterministic race packs, rolling opponent snapshots)
   - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) (`plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`) [WIP]
 - Racing Path-Tracking Debug and Quality Followup — pre-Phase-3 visual fix, geometry audit, and deferred quality cleanup

@@ -1,6 +1,6 @@
 # NEAT Genesis EvoDevo: Racing Curriculum Audit
 
-**Status:** [WIP]
+**Status:** [PLANNED]
 
 ## Scope
 

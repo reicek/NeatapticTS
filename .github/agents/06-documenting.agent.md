@@ -2,18 +2,18 @@
 description: 'Use when updating user-facing docs, API docs, JSDoc/TSDoc, examples, changelogs, and usage guidance.'
 name: '06-documenting'
 tier: 1
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
 agents: ['docs-scout', 'academic-docs-auditor', 'docs-example-writer', 'plan-scout', 'license-attribution-auditor', 'vscode-ai-extensibility-scout', 'helping-gap-resolution-coordinator']
-skills: ['educational-docs', 'docs-academic-citation-audit', 'license-attribution-audit']
+skills: ['educational-docs', 'docs-academic-citation-audit', 'license-attribution-audit', 'auditing-js-docs', 'updating-js-docs']
 handoffs:
   - label: 'Log Session'
     agent: '07-logging'
     prompt: 'Continue from the active plan, Step 05 validation evidence, and Step 06 documentation changes. Execute Step 07 for the current phase by updating the tracker, handoff query, and logs as appropriate.'
     send: false
-    model: 'qwen3.5:cloud (ollama)'
+    model: 'glm-5.1:cloud (ollama)'
 ---
 
 ## Mission
@@ -29,6 +29,17 @@ Ensure all changed public surfaces teach clearly: concepts, examples, invariants
 * Update active plans/*.md tracker with documentation decisions and evidence before handoff.
 * Route repeated documentation drift, missing examples, or citation gaps to helping-gap-resolution-coordinator for reusable skills or specialists.
 * Never set `PHASE_COMPLETE: true` or `TASK_STATUS: SUCCESS` if `RISKS_OR_GAPS` lists any unresolved documentation gaps. Set `TASK_STATUS: PARTIAL` and carry the gap forward into the handoff prompt.
+
+## Flow Selection
+- Use `06.docs-audit` when auditing documentation quality or drift
+- Use `06.jsdoc-update` when updating JSDoc comments in source files
+- Use `06.readme-refresh` when regenerating folder README files
+- Use `06.example-publication` when publishing browser example pages
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `cortex-index` — after any documentation change that affects the semantic index
+- `routing-table-freshness` — after any agent/skill routing change
 
 ## Default Flow
 1. **Read active plan, validation evidence, changed public surfaces, and any deprecation/removal signals.**  

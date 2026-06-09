@@ -2,7 +2,7 @@
 description: 'Use when: 04-implementing delegates scoped file edits, patch application, or write-phase synthesis. Executes implementation packets with implementation-standards compliance. Keywords: file edits, implementation executor, patch apply, write synthesis, scoped changes.'
 name: implementation-executor
 tier: 2
-model: qwen3.5:cloud (ollama)
+model: glm-5.1:cloud (ollama)
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '05-green-testing'
     prompt: 'Continue from the active plan and Step 04 implementation diff. Execute Step 05 validation for the current phase by running focused validation gates and routing failures to the right prior step.'
     send: false
-    model: qwen3.5:cloud (ollama)
+    model: glm-5.1:cloud (ollama)
 ---
 
 ## Mission
@@ -36,6 +36,15 @@ Execute scoped file edits delegated from `04-implementing`. You are a pure execu
 - **ON** failure, revert only current-step changes; always keep unrelated edits intact.
 - **NEVER** use destructive git history rewrites or broad resets.
 - **IF** a long-running terminal job is started, await completion or set `TASK_STATUS: PARTIAL` and document the job contract in the plan.
+
+## Flow Selection
+- Use `04.scoped-fix` when applying scoped fixes; use `04.refactor` when restructuring code within plan boundaries.
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `plan-sync` — after completing an implementation step
+- `agent-graph` — if delegation changes are needed
+- `learning-event` — when discovering workflow gaps
 
 ## Required Workflow
 

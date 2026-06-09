@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for designing trigger evals for NeatapticTS skills and phase agents. Keywords: should trigger, should not trigger, description evals, false positive, trigger rate, design.'
 name: 'skill-trigger-eval-designer'
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
@@ -23,11 +23,16 @@ You use `skill-description-evals` to produce evaluation fixtures for skill descr
 - DO NOT edit files.
 - Keep output ready for a JSON eval fixture.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `routing-table-freshness` — after designing trigger evals
+
 ## Approach
 
-1. Identify the target skill or agent description and the trigger boundary under test.
-2. Draft realistic should-trigger and should-not-trigger queries, including near misses.
-3. Return a compact structured result ready for the caller to turn into eval fixtures.
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Identify the target skill or agent description and the trigger boundary under test.
+3. Draft realistic should-trigger and should-not-trigger queries, including near misses.
+4. Return a compact structured result ready for the caller to turn into eval fixtures.
 
 ## If Blocked
 

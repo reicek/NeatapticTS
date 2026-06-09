@@ -2,7 +2,7 @@
 description: 'Use when executing a deliberate SOLID module split, folderizing a large file, starting from a user-specified root such as #file:flappy_bird, following or creating a durable split plan, improving JSDoc so generated README files read naturally, updating plan progress, and either ending an active step with a handoff prompt or terminally closing the plan with compression plus logs. Keywords: SOLID split, split plan, folderize, module boundary, orchestration-first, compatibility re-export, generated README, JSDoc, handoff prompt, logs.'
 name: 'solid-split'
 tier: 2
-model: qwen3.5:cloud (ollama)
+model: glm-5.1:cloud (ollama)
 tools: [read, edit, search, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 argument-hint: 'Describe the module to split, the plan file to follow or create, and the single current step to complete.'
 agents: ['boundary-mapper', 'plan-scout', 'docs-scout']
@@ -36,6 +36,14 @@ Complete exactly one durable SOLID split step at a time, keeping the codebase al
 - **DO NOT** duplicate long-form repo workflow rules when the skill already defines them.
 - When a step changes behavior or meaningfully risks runtime drift, use the TDD cadence: narrow red test first, implementation second, narrow green validation third, coverage expansion toward >95% when practical.
   - *Example:* If extracting `validator` changes behavior, first add a failing test, then implement, then validate, then expand coverage.
+
+## Flow Selection
+- Use `04.refactor` when executing a deliberate SOLID module split.
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `agent-graph` — after module boundary identification
+- `plan-sync` — after completing a split
 
 ## Required Workflow
 

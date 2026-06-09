@@ -2,7 +2,7 @@
 description: 'Use when analyzing coverage gaps from lcov.info, mapping uncovered paths to source files, classifying dead vs reachable code, or naming owner-local test files for coverage-tranche. Keywords: coverage analysis, lcov, uncovered paths, dead code classification, test file mapping.'
 name: test-coverage-analyst
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, bash, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
@@ -28,7 +28,14 @@ You analyze `coverage/lcov.info` to identify uncovered paths, map them to source
 - DO NOT restate the full coverage methodology that belongs in companion skills.
 - This agent is intentionally thin. Durable policy lives in companion skills `coverage-guard` and `coverage-tranche`.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `green-validation-evidence` — after analyzing coverage gaps
+- `cortex-index` — before searching for coverage context
+
 ## Approach
+
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
 
 ### Coverage gap analysis mode
 

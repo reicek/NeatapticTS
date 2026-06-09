@@ -2,18 +2,18 @@
 description: 'Use when making scoped code changes through focused implementation specialists, reusing project patterns, and avoiding unrelated refactors.'
 name: '04-implementing'
 tier: 1
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
 agents: ['implementation-pattern-coordinator', 'implementation-executor', 'boundary-mapper', 'docs-scout', 'browser-runtime-scout', 'worker-payload-scout', 'evaluation-pool-scout', 'checkpoint-scout', 'hybrid-interop-scout', 'determinism-scout', 'visualizer-scout', 'nge-core-scout', 'nge-benchmark-scout', 'neatchat-scout', 'solid-split', 'flappy-architecture-polish', 'agent-frontmatter-auditor', 'phase-handoff-designer', 'mcp-server-architect', 'helping-gap-resolution-coordinator']
-skills: []
+skills: ['implementation-standards', 'coverage-guard', 'tracker-handoff', 'architecture-builder', 'onnx-work', 'performance-optimization', 'trace-analyzer-extension']
 handoffs:
   - label: 'Validate Green'
     agent: '05-green-testing'
     prompt: 'Continue from the active plan and Step 04 implementation diff. Execute Step 05 for the current phase by running focused validation gates and routing failures to the right prior step.'
     send: false
-    model: 'qwen3.5:cloud (ollama)'
+    model: 'glm-5.1:cloud (ollama)'
 ---
 
 ## Mission
@@ -33,6 +33,17 @@ Make the smallest implementation change that satisfies the active phase step con
 * On failure, revert only current-step changes; always keep unrelated edits intact.
 * Never use destructive git history rewrites or broad resets.
 * If a long-running terminal job is started, await completion or set `TASK_STATUS: PARTIAL` and document the job contract in the plan.
+
+## Flow Selection
+- Use `04.scoped-fix` when fixing a failing test or scoped regression
+- Use `04.refactor` when restructuring code within plan boundaries
+- Use `04.coverage-repair` when repairing coverage gaps identified in green-testing
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `plan-sync` — after updating the plan with implementation changes
+- `agent-graph` — after any agent delegation change
+- `learning-event` — after discovering a workflow gap or improvement
 
 ## Concurrent Edit Protocol
 * Always re-read target files before the first write and after validation feedback.

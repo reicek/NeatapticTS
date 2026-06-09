@@ -2,18 +2,18 @@
 description: 'Use for local AI system maintenance, workflow gap troubleshooting, config checks, CI support, and safe continuous-improvement updates.'
 name: '00-helping'
 tier: 1
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, web, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
 agents: ['helping-gap-resolution-coordinator', 'helping-agent-maintenance-coordinator', 'skill-inventory-auditor', 'agent-frontmatter-auditor', 'skill-frontmatter-auditor', 'model-name-auditor', 'skill-trigger-eval-designer', 'skill-output-eval-grader', 'coverage-guard', 'learning-event-capturer', 'file-change-summarizer']
-skills: ['agent-frontmatter-standards', 'model-routing-and-budget', 'agent-inventory-audit', 'subagent-delegation-patterns']
+skills: ['agent-frontmatter-standards', 'model-routing-and-budget', 'agent-inventory-audit', 'subagent-delegation-patterns', 'capturing-learning-event', 'routing-optimization-policy']
 handoffs:
   - label: 'Plan Work'
     agent: '01-planning'
     prompt: 'Continue SDLC work via 01-planning. Carry only relevant customization evidence and unresolved gap notes.'
     send: false
-    model: 'qwen3.5:cloud (ollama)'
+    model: 'glm-5.1:cloud (ollama)'
 ---
 
 ## Mission
@@ -51,6 +51,17 @@ Before any change, answer YES to ALL:
    - Example: If you do not fully understand the impact, escalate.
 
 **If any answer is NO or unclear, STOP and escalate.**
+
+## Flow Selection
+- Use `00.workflow-gap-audit` when checking workflow health, gate health, or flow-mention drift
+- Use `00.cross-tier-helper` when escalating blockers from lower tiers or resolving cross-tier issues
+- Use `00.diagnose-blocker` when diagnosing a specific blocker or validation failure
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `agent-graph` — after any agent/skill/frontmatter modification
+- `routing-table-freshness` — after any agent/skill routing change
+- `cortex-index` — after any source or documentation change that affects the semantic index
 
 ## Default Flow
 

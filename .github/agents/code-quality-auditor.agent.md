@@ -2,8 +2,8 @@
 description: 'Use when running quality gates and interpreting results for 05-green-testing, including npm run quality:folder, npm run build, and lint commands. Keywords: quality gate, folder quality, build validation, lint results, violation classification, repair packet.'
 name: code-quality-auditor
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
-tools: [read, search, bash, agent]
+model: 'glm-5.1:cloud (ollama)'
+tools: [read, search, execute, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: ['file-change-summarizer']
 skills: ['green-validation-gates', 'implementation-standards']
@@ -24,15 +24,21 @@ Run quality gates (`npm run quality:folder`, `npm run build`, lint commands) whe
 - DO NOT run the full test suite (that belongs to `05-green-testing`).
 - This agent is intentionally thin. Durable policy lives in companion skills `green-validation-gates` and `implementation-standards`.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `green-validation-evidence` — after running quality gates
+- `agent-graph` — when delegation changes are needed
+
 ## Approach
 
-1. Receive the list of changed files or folders from `05-green-testing`.
-2. Select the appropriate quality gate command based on the changed surface.
-3. Run the command and capture structured output.
-4. Parse failures and classify each violation by owner agent.
-5. Extract file path, line number, error category, and one-line fix hint per violation.
-6. Delegate to Tier 4 auxiliaries only when additional summarization is needed.
-7. Produce repair packets ready to paste as task packets for owner agents.
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Receive the list of changed files or folders from `05-green-testing`.
+3. Select the appropriate quality gate command based on the changed surface.
+4. Run the command and capture structured output.
+5. Parse failures and classify each violation by owner agent.
+6. Extract file path, line number, error category, and one-line fix hint per violation.
+7. Delegate to Tier 4 auxiliaries only when additional summarization is needed.
+8. Produce repair packets ready to paste as task packets for owner agents.
 
 ## Default Flow
 

@@ -77,9 +77,9 @@ const strictTier2StructuredFields = [
   'SUMMARY',
 ];
 const strictAllowedModels = new Set([
-  'GPT-5.4 (copilot)',
-  'GPT-5.4 mini (copilot)',
-  'qwen3.5:cloud (ollama)',
+  'glm-5.1:cloud (ollama)',
+  'glm-5.1:cloud (ollama)',
+  'glm-5.1:cloud (ollama)',
   'anthropic/claude-sonnet-4-20250514',
 ]);
 
@@ -212,7 +212,7 @@ function validateAgent(agent, agents, skillNames, { strict }) {
   }
 
   if (data.model && !isQualifiedModel(data.model)) {
-    issues.push(issue('error', relativePath, 'Model must be a qualified model string like GPT-5.4 (copilot).'));
+    issues.push(issue('error', relativePath, 'Model must be a qualified model string like glm-5.1:cloud (ollama).'));
   }
   if (strict && data.model && !usesOnlyAllowedModels(data.model)) {
     issues.push(issue('error', relativePath, 'Strict mode allows only the configured SDLC model pool.'));

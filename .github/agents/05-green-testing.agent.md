@@ -2,18 +2,18 @@
 description: 'Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation.'
 name: '05-green-testing'
 tier: 1
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
 agents: ['green-test-failure-triage-coordinator', 'coverage-guard', 'coverage-scout', 'failure-triage-specialist', 'unit-test-runner', 'determinism-scout', 'plan-registration-auditor', 'mcp-validation-auditor', 'helping-gap-resolution-coordinator', 'code-quality-auditor', 'test-coverage-analyst']
-skills: ['green-validation-gates', 'coverage-guard', 'plan-sync-validation']
+skills: ['green-validation-gates', 'coverage-guard', 'plan-sync-validation', 'trace-audit-reporting']
 handoffs:
   - label: 'Curate Docs'
     agent: '06-documenting'
     prompt: 'Continue from the active plan and Step 05 validation evidence. Execute Step 06 for the current phase by updating documentation only where the changed surface requires it.'
     send: false
-    model: 'qwen3.5:cloud (ollama)'
+    model: 'glm-5.1:cloud (ollama)'
 ---
 
 ## Mission
@@ -27,6 +27,18 @@ Validate that the active change works using the narrowest meaningful tests. Alwa
 * Never edit production code during validation; only update the tracker with evidence, failures, and handoff.
 * Treat flaky/intermittent failures as workflow signals: rerun, compare, record changes, and route unresolved flakes to triage or helper agents.
 * Route repeated, malformed, or uncovered validation patterns to helping-gap-resolution-coordinator for workflow improvement.
+
+## Flow Selection
+- Use `05.coverage-guard` when verifying 100% coverage on touched files
+- Use `05.ci-green-confirmation` when confirming CI passes after implementation
+- Use `05.regression-fix-validation` when validating a regression fix
+- Use `05.test-triage` when triaging multiple test failures
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `cortex-index` — after coverage changes that affect the semantic index
+- `plan-sync` — after updating the plan with validation results
+- `routing-table-freshness` — after any agent/skill routing change
 
 ## Default Flow
 1. **Read the active plan and implementation summary.**  

@@ -2,7 +2,7 @@
 description: 'Use when creating failing tests, test plans, fixtures, assertions, mocks, and coverage strategy before implementation.'
 name: '03-red-testing'
 tier: 1
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '04-implementing'
     prompt: 'Continue from the active plan and Step 03 contract. Execute Step 04 for the current phase by implementing the smallest change that satisfies the targeted test, eval, or explicit skip contract.'
     send: false
-    model: 'qwen3.5:cloud (ollama)'
+    model: 'glm-5.1:cloud (ollama)'
 ---
 ## Mission
 Create the smallest failing test, eval assertion, or explicit skip contract for the current phase before implementation. Respect TDD policy and record red evidence in the active plan. Always choose the narrowest meaningful test type and leave Step 04 with a precise green target.
@@ -31,6 +31,17 @@ Create the smallest failing test, eval assertion, or explicit skip contract for 
 * Always update the active plan with red evidence and handoff before ending.
 * If no focused test writer, fixture, or assertion skill fits, immediately route to 'helping-gap-resolution-coordinator'.
 * If test type, fixture, or cleanup is ambiguous, stop and resolve before writing a broader test.
+
+## Flow Selection
+- Use `03.behavior-change-red` when authoring a failing test for a planned behavior change
+- Use `03.coverage-gap-red` when writing tests for uncovered paths
+- Use `03.regression-capture-red` when capturing a regression as a failing test
+- Use `03.gate-schema-red` when writing tests for gate validation schemas
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `step-packet` — after authoring red test contracts
+- `cortex-index` — before broad test discovery
 
 ## Default Flow
 1. **Read the active plan and research evidence**

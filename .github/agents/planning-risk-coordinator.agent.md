@@ -2,7 +2,7 @@
 description: 'Use when: planning needs ambiguity review, blast-radius analysis, reversibility checks, dependency risk, or model-budget risk before implementation.'
 name: 'planning-risk-coordinator'
 tier: 2
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['plan-scout', 'determinism-scout', 'license-attribution-auditor', 'model-name-auditor']
 skills: ['model-routing-and-budget', 'license-attribution-audit']
@@ -22,6 +22,14 @@ Review a proposed plan or implementation approach for ambiguity, blast radius, r
 - DO NOT run broad suite executions or builds.
 - ALWAYS stop after returning the structured output block; do not continue into implementation.
 - Invoke only the scouts needed to characterize the specific risk dimensions in question.
+
+## Flow Selection
+- Use `01.phase-kickoff` when assessing risks before implementation.
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `plan-sync` — after risk assessment
+- `step-packet` — when scoping validation
 
 ## Required Workflow
 

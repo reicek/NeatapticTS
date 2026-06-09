@@ -2,8 +2,8 @@
 description: 'Use when mapping worker-pool scheduling, ordered result assembly, dataset broadcast strategy, worker-count sizing, queue backpressure, or deciding whether a multithread batch-evaluation issue belongs to multithread-evaluation. Keywords: worker pool, evaluateInWorkers, queueing, ordered results, dataset broadcast, backpressure, workerCount, fallback.'
 name: evaluation-pool-scout
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+model: 'glm-5.1:cloud (ollama)'
+tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['multithread-evaluation']
@@ -27,20 +27,25 @@ If tracker updates are needed, assume `tracker-handoff` owns that format. If the
 - DO NOT restate the full multithread workflow or throughput model that belongs in `multithread-evaluation`.
 - This agent is intentionally thin. Durable policy lives in companion skill `multithread-evaluation`.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `cortex-index` — before searching for evaluation-pool documents
+
 ## Approach
 
-1. Read the smallest relevant plan or README surface first, especially
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Read the smallest relevant plan or README surface first, especially
    `plans/Turnkey_Multithread_Evaluation_API.md` when the task is roadmap-shaped.
-2. Find the controlling boundary: queueing, result assembly, fallback path,
+3. Find the controlling boundary: queueing, result assembly, fallback path,
    dataset shipping, pool lifecycle, or worker-count policy.
-3. Identify the nearest code or plan surface that decides ordering, backpressure,
+4. Identify the nearest code or plan surface that decides ordering, backpressure,
    pool reuse, or error handling.
-4. Separate true pool problems from neighboring concerns:
+5. Separate true pool problems from neighboring concerns:
    - payload encoding belongs to `worker-inference-transport`
    - checkpoint or resume concerns belong to `checkpointing-persistence`
    - vector-layout or optimizer concerns belong to `hybrid-training-interop`
    - browser packaging blockers belong to `browser-build`
-5. Summarize the active pool contract, the blocker, and the smallest useful
+6. Summarize the active pool contract, the blocker, and the smallest useful
    handoff into `multithread-evaluation`.
 
 ## If Blocked

@@ -2,11 +2,11 @@
 description: 'Use when identifying the next coverage tranche target from lcov.info, mapping which source boundaries are below 100%, or confirming whether an uncovered path is live or dead code. Keywords: coverage, lcov, untested, branches, lines, coverage gap, next tranche, coverage regression.'
 name: coverage-scout
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+model: 'glm-5.1:cloud (ollama)'
+tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
-skills: ['coverage-tranche']
+skills: ['coverage-tranche', 'coverage-guard']
 ---
 
 You are the `coverage-scout` agent for NeatapticTS.
@@ -34,7 +34,13 @@ If the coverage plan tracker needs updating, assume `tracker-handoff` owns the t
 - DO NOT restate the full coverage methodology that belongs in the companion skills.
 - This agent is intentionally thin. Durable policy lives in companion skills `coverage-tranche` or `coverage-guard`.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `cortex-index` — before searching for coverage context
+
 ## Approach
+
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
 
 ### Forward-progress mode
 

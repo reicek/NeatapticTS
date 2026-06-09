@@ -2,7 +2,7 @@
 description: 'Use when checking Repo Cortex index freshness, triggering a corpus rebuild, diagnosing validate-index failures, confirming MCP server binding, or deciding whether a semantic index issue belongs to repo-cortex-workflow. Hands off recon results to the repo-cortex-workflow skill. Keywords: repo cortex, index freshness, validate-index, build-index, cortex MCP, semantic snapshot, cortex lifecycle, cortex scout.'
 name: 'repo-cortex-scout'
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
@@ -26,18 +26,23 @@ You gather evidence from index-validation output, snapshot metadata, MCP configu
 - DO NOT hand-edit `docs/assets/semantic-snapshot.json`.
 - DO NOT treat workflow MCP binding symptoms as proof that the semantic index is stale without separate evidence.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `cortex-index` — before searching for cortex-related documents
+
 ## Approach
 
-1. **Read the smallest relevant plan, script, or configuration surface first.**  
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. **Read the smallest relevant plan, script, or configuration surface first.**
    - Example: Open only the section of `plans/step02.md` or `scripts/index-validation.sh` that mentions Repo Cortex.
-2. **Identify the controlling boundary:**  
-   - Is the issue about index freshness, snapshot currency, workflow MCP binding, corpus MCP reachability, or missing validation output?  
+3. **Identify the controlling boundary:**
+   - Is the issue about index freshness, snapshot currency, workflow MCP binding, corpus MCP reachability, or missing validation output?
    - Example: If the error log says "index out of date," boundary is index freshness. If "MCP unreachable," boundary is corpus MCP reachability.
-3. **Collect the minimum evidence needed:**  
-   - Use only index-validation output, snapshot metadata, MCP config, and nearby source files.  
-   - Example: Run `cat docs/assets/semantic-snapshot.json | grep "timestamp"` to check snapshot currency.  
+4. **Collect the minimum evidence needed:**
+   - Use only index-validation output, snapshot metadata, MCP config, and nearby source files.
+   - Example: Run `cat docs/assets/semantic-snapshot.json | grep "timestamp"` to check snapshot currency.
    - Example: Run `cat .github/mcp-config.yml` to check MCP binding.
-4. **Summarize the failure surface, strongest evidence, and smallest useful handoff into `repo-cortex-workflow`.**  
+5. **Summarize the failure surface, strongest evidence, and smallest useful handoff into `repo-cortex-workflow`.**
    - Example: "Index validation failed, snapshot timestamp is 3 days old, MCP config unchanged. Handoff to repo-cortex-workflow."
 
 ## If Blocked

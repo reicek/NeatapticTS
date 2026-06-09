@@ -2,8 +2,8 @@
 description: 'Use as a hidden specialist for designing or auditing sequential handoffs between the seven NeatapticTS phase agents. Keywords: handoff, phase transition, send false, next phase, prompt packet.'
 name: phase-handoff-designer
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+model: 'glm-5.1:cloud (ollama)'
+tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['phase-handoff-workflow']
@@ -24,16 +24,22 @@ Check that handoffs are forward-moving, short, reviewable, model-qualified, and 
 - DO NOT restate full phase workflow that belongs in `.github/flows/`.
 - This agent is intentionally thin. Phase execution and gate logic belong to flow definitions.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `plan-sync` — after auditing handoff alignment
+- `step-packet` — when validating phase transition packets
+
 ## Approach
 
-1. Identify the source phase and target phase in the handoff being audited.
-2. Read the handoff prompt: check that it is short, names the control decision, and includes the plan reference.
-3. Verify the model choice in the handoff matches the target agent's tier and declared models.
-4. Check the active plan status fields:
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Identify the source phase and target phase in the handoff being audited.
+3. Read the handoff prompt: check that it is short, names the control decision, and includes the plan reference.
+4. Verify the model choice in the handoff matches the target agent's tier and declared models.
+5. Check the active plan status fields:
    - Does the handoff reference a tracker status or completed tranche?
    - Does the next phase expect a status field or prompt packet to be present?
-5. Audit for cycles: verify the target phase is later than the source phase.
-6. Summarize source phase, target phase, prompt quality, model choice, and validation status.
+6. Audit for cycles: verify the target phase is later than the source phase.
+7. Summarize source phase, target phase, prompt quality, model choice, and validation status.
 
 ## If Blocked
 

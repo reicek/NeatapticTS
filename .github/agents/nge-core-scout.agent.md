@@ -2,8 +2,8 @@
 description: 'Use when mapping NGE algorithm-core boundaries such as NGE_DNA, deterministic development, lifecycle transitions, computation motifs, memory tiers, neuromodulation, reproduction modes, or deciding whether a Phase 7 issue belongs to nge-core-algorithm. Keywords: NGE core, NGE_DNA, computationType, deterministic development, lifecycle, neuromodulation, reproduction, stigmergy.'
 name: nge-core-scout
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+model: 'glm-5.1:cloud (ollama)'
+tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['nge-core-algorithm']
@@ -25,16 +25,21 @@ Locate the exact Phase 7 algorithm-core boundary in the repo, identify the activ
 - DO NOT restate the entire NGE core workflow or phase map that belongs in `nge-core-algorithm`.
 - This agent is intentionally thin. Durable policy lives in companion skill `nge-core-algorithm`.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `cortex-index` — before searching for NGE core documents
+
 ## Approach
 
-1. Read the smallest relevant plan surface first, especially `plans/completed/NEAT_Genesis_EvoDevo.md`.
-2. Find the controlling boundary: computation motif, DNA schema, deterministic build step, lifecycle stage, memory tier, neuromodulator rule, reproduction mode, or shared-field primitive.
-3. Identify the nearest code or plan surface that decides the invariant, ordering, or opt-in behavior.
-4. Separate true core problems from neighboring concerns:
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Read the smallest relevant plan surface first, especially `plans/completed/NEAT_Genesis_EvoDevo.md`.
+3. Find the controlling boundary: computation motif, DNA schema, deterministic build step, lifecycle stage, memory tier, neuromodulator rule, reproduction mode, or shared-field primitive.
+4. Identify the nearest code or plan surface that decides the invariant, ordering, or opt-in behavior.
+5. Separate true core problems from neighboring concerns:
    - benchmark methodology belongs to `nge-benchmark-workflow`
    - browser layout or demo UX belongs to `visualizer-workflow` or other demo-specific areas
    - generic replay-language concerns belong to `reproducibility-contracts` when needed
-5. Summarize the active core invariant, the leakage risk, and the smallest useful handoff into `nge-core-algorithm`.
+6. Summarize the active core invariant, the leakage risk, and the smallest useful handoff into `nge-core-algorithm`.
 
 ## If Blocked
 

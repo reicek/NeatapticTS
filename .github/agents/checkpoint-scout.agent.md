@@ -2,8 +2,8 @@
 description: 'Use when starting or scoping save and resume work, expanding Population_Save_Resume_and_Checkpointing.md Step 0 or Step 1, mapping strict versus best-effort restore behavior, RNG or counter persistence, full versus light checkpoints, or deciding whether a persistence issue belongs to checkpointing-persistence. Keywords: checkpoint, save, resume, restore, step 0, state inventory, strict restore, schema version, RNG state, full checkpoint, light checkpoint, migration.'
 name: checkpoint-scout
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+model: 'glm-5.1:cloud (ollama)'
+tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['checkpointing-persistence']
@@ -28,26 +28,31 @@ If tracker updates are needed, assume `tracker-handoff` owns that format. If the
 - DO NOT restate the entire checkpoint workflow or exactness heuristic that belongs in `checkpointing-persistence`.
 - This agent is intentionally thin. Durable policy lives in companion skill `checkpointing-persistence`.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `cortex-index` — before searching for checkpointing-related documents
+
 ## Approach
 
-1. Read the smallest relevant plan or README surface first, especially
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Read the smallest relevant plan or README surface first, especially
    `plans/Population_Save_Resume_and_Checkpointing.md` when the task is
    roadmap-shaped, and pair it with `plans/Roadmap.md` when kickoff priority is
    part of the question.
-2. Find the controlling boundary: full checkpoint, light checkpoint, strict
+3. Find the controlling boundary: full checkpoint, light checkpoint, strict
    restore, migration, metadata extension, or orchestration save/load API.
-3. If the task is Step 0 or plan expansion, stop at the owner map, exactness
+4. If the task is Step 0 or plan expansion, stop at the owner map, exactness
    blockers, and the smallest next handoff instead of drifting into
    implementation details.
-4. Identify the nearest code or plan surface that decides saved state,
+5. Identify the nearest code or plan surface that decides saved state,
    validation rules, or restore failure behavior.
-5. Separate true checkpoint problems from neighboring concerns:
+6. Separate true checkpoint problems from neighboring concerns:
    - replay-strength language belongs to `reproducibility-contracts`
    - worker scheduling belongs to `multithread-evaluation`
    - payload transport belongs to `worker-inference-transport`
    - vector import or optimizer state concerns belong to
      `hybrid-training-interop`
-6. Summarize the active checkpoint contract, missing state, and the smallest
+7. Summarize the active checkpoint contract, missing state, and the smallest
    useful handoff into `checkpointing-persistence`.
 
 ## If Blocked

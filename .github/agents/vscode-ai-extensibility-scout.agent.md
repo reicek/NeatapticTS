@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for official VS Code AI extensibility reconnaissance, including MCP, hooks, agent plugins, Prompt TSX, model access, and bridge APIs. Keywords: VS Code AI docs, MCP, hooks, plugins, Prompt TSX, extension API.'
 name: 'vscode-ai-extensibility-scout'
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, web, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
@@ -24,17 +24,22 @@ Consult official VS Code and GitHub Copilot documentation to locate MCP, hooks, 
 - Summarize sources concisely and avoid copying large passages.
 - NEVER use unofficial blogs, forums, or user-generated content.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `cortex-index` — before searching for VS Code AI extensibility context
+
 ## Approach
 
-1. **Identify the specific capability or API question.**  
-   - Example: "What is the syntax for MCP hooks in VS Code extensions?"  
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. **Identify the specific capability or API question.**
+   - Example: "What is the syntax for MCP hooks in VS Code extensions?"
    - Example: "What are the security boundaries for Copilot plugins?"
-2. **Search official VS Code and GitHub Copilot documentation for the relevant feature.**  
+3. **Search official VS Code and GitHub Copilot documentation for the relevant feature.**
    - Example: Use https://code.visualstudio.com/docs and https://docs.github.com/en/copilot.
-3. **Collect capability constraints, security implications, and applicable version limits.**  
+4. **Collect capability constraints, security implications, and applicable version limits.**
    - Example: "MCP hooks require VS Code 1.80+, only available in workspace context."
    - Example: "Copilot plugins cannot access file system directly; sandboxed by extension API."
-4. **Frame findings as evidence for downstream planning work.**  
+5. **Frame findings as evidence for downstream planning work.**
    - Example: "MCP hooks are available, but only for workspace events. Security: sandboxed, no direct file access."
 
 ## If Blocked

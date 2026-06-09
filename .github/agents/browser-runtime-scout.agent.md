@@ -2,8 +2,8 @@
 description: 'Use when mapping browser-runtime blockers, bundle format boundaries, smoke-test failures, worker delivery constraints, or deciding whether a browser packaging issue belongs to browser-build. Keywords: browser runtime, bundle, ESM, IIFE, smoke test, CDN, workerUrl, browser build, packaging.'
 name: browser-runtime-scout
 tier: 3
-model: 'qwen3.5:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+model: 'glm-5.1:cloud (ollama)'
+tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 agents: []
 skills: ['browser-build']
@@ -27,19 +27,24 @@ If tracker updates are needed, assume `tracker-handoff` owns that format. If the
 - DO NOT restate the entire browser-build workflow or bundle policy that belongs in `browser-build`.
 - This agent is intentionally thin. Durable policy lives in companion skill `browser-build`.
 
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `cortex-index` — before searching for browser-runtime documents
+
 ## Approach
 
-1. Read the smallest relevant plan or README surface first, especially
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Read the smallest relevant plan or README surface first, especially
    `plans/completed/Browser_Build_and_CDN_Distribution.md` when the task is roadmap-shaped.
-2. Find the controlling boundary: ESM output, IIFE output, smoke test,
+3. Find the controlling boundary: ESM output, IIFE output, smoke test,
    worker-delivery packaging, public API exposure, or size audit.
-3. Identify the nearest code or plan surface that decides bundler behavior,
+4. Identify the nearest code or plan surface that decides bundler behavior,
    module format, or browser load path.
-4. Separate true browser-runtime problems from neighboring concerns:
+5. Separate true browser-runtime problems from neighboring concerns:
    - worker payload concerns belong to `worker-inference-transport`
    - layout or hover issues belong to `visualizer-workflow`
    - demo-only wrappers do not redefine the browser build contract
-5. Summarize the active browser-runtime contract, blocker, and the smallest
+6. Summarize the active browser-runtime contract, blocker, and the smallest
    useful handoff into `browser-build`.
 
 ## If Blocked

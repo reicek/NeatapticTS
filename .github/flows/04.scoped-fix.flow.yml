@@ -31,5 +31,6 @@ specialists:
   - 'Coverage Guard'
   - 'failure-triage-specialist'
   - 'implementation-pattern-scout'
+  - 'implementation-executor'
 
 timeout-minutes: 20

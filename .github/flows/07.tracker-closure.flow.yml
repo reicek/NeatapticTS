@@ -32,5 +32,6 @@ skills:
 
 specialists:
   - 'file-change-summarizer'
+  - 'phase-handoff-designer'
 
 timeout-minutes: 20

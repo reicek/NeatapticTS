@@ -2,12 +2,12 @@
 description: 'Use when tuning, rerunning, or hardening one Flappy Bird architecture profile with a reusable browser-worker polish loop. Keywords: Flappy, LSTM, GRU, NARX, MLP, sparse, warm-start, probe, worker fairness, architecture polish.'
 name: 'flappy-architecture-polish'
 tier: 2
-model: qwen3.5:cloud (ollama)
+model: glm-5.1:cloud (ollama)
 tools: [read, edit, search, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 argument-hint: 'Describe the architecture profile, current symptom, desired polish target, and whether this pass should implement changes or rerun validation only.'
 agents: ['plan-scout']
 user-invocable: false
-skills: ['flappy-architecture-polish']
+skills: ['flappy-architecture-polish', 'architecture-builder']
 ---
 
 You are the `flappy-architecture-polish` agent for NeatapticTS.
@@ -29,6 +29,14 @@ Complete one focused polish pass at a time for one Flappy Bird architecture prof
 - DO NOT treat manual browser success as sufficient when the user asked for polish, repeatability, or rerun capability.
 - DO NOT leave the repo with only a long-running Jest investigation harness when the durable probe contract can be moved into a CLI.
 - DO NOT redefine the shared progress-check vocabulary if the existing check story still applies.
+
+## Flow Selection
+- Use `04.scoped-fix` when tuning or polishing a Flappy Bird architecture profile.
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `plan-sync` — after polishing iteration
+- `cortex-index` — before searching for architecture patterns
 
 ## Required Workflow
 

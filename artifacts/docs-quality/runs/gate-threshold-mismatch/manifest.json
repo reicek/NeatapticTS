@@ -1,7 +1,7 @@
 {
   "metricVersion": 1,
   "scannerVersion": "1.0.0",
-  "gitCommit": "58d8bb6bce0406644c01475d61ecdeb26aa29503",
+  "gitCommit": "fd0e2eb16d06e674fe0de1deaa28a8793b46aa71",
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "thresholdConfig": {
     "minJsdocWords": 11,
@@ -31,7 +31,7 @@
   "scopeDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
   "coverage": {
     "available": true,
-    "totalFiles": 2,
+    "totalFiles": 403,
     "filesBelow100": 0,
     "filesBelow100Detail": [],
     "overallLines": 100,

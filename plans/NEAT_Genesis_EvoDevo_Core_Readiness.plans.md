@@ -1,6 +1,10 @@
 # NEAT Genesis EvoDevo: Core Readiness Audit
 
-**Status:** [WIP]
+**Status:** [PLANNED]
+
+## Audit summary
+
+Phase 3 closed 2026-06-07: independent-population harness and generation-barrier semantics implemented in NGE core (`src/neat/nge-collective/neat.nge-collective.two-population.ts`), validated with 10/10 targeted tests + 89/89 nge-collective regression tests passing, transport-neutral contract documented, deterministic transport normalization deferred to Phase 4. Racing is the first proving ground; Predator/Prey is the second consumer with stronger synchronized-two-population pressure.
 
 ## Scope
 
@@ -150,7 +154,7 @@ stop_conditions:
 ## Open assumptions and planning gaps
 
 - The exact Step 02 readiness table is preserved here verbatim rather than regenerated so every later phase can anchor back to the same audit baseline.
-- The deterministic evaluation-pack owner boundary is still provisional pending seam mapping between NGE core, worker protocol, and racing-owned transport.
+- The deterministic evaluation-pack owner boundary is frozen (Phase 4 Step 01): core (Layer 2) owns the deterministic pack contract; racing (Layer 3) owns frame assembly; worker protocol shares Layer 2 transfer/clone contracts.
 - The lifecycle contradiction between archived closure claims and the current readiness audit remains open until file-backed staging evidence and tracker language reconcile.
 - The exact public entrypoint shape is still open: a narrow experimental namespace may be safer than exporting every internal NGE module at once.
 - The first execution tranche still needs a final priority decision between lifecycle closure, reusable collective-coevolution semantics, and public-surface wiring if all three cannot fit cleanly into one bounded pass.
@@ -489,324 +493,29 @@ run quality:folder -- --folder=examples/racing_curriculum/workers/simulation-wor
   seam, and Phase 4–7 stay queued behind the Phase 3 barrier boundary rather
   than being implied complete.
 
-### Phase 3 — Independent populations and generation barriers [WIP]
+### Phase 3 — Independent populations and generation barriers [DONE]
 
-**Phase objective:** Freeze and then implement the reusable coevolution boundary for independent populations and generation barriers without letting Racing- or Predator/Prey-specific worker topology become the design owner.
+[DONE] Phase 3 compressed: reusable independent-population harness and generation-barrier semantics implemented in NGE core (`src/neat/nge-collective/neat.nge-collective.two-population.ts`), validated with 10/10 targeted tests + 89/89 nge-collective regression tests passing, transport-neutral barrier contract documented, deterministic transport normalization deferred to Phase 4.
 
-**Phase progression rule:** Step 01 must freeze acceptance criteria, owner boundaries, and Phase 4 spillover first. Only after that freeze is recorded may Step 02 advance as the active seam-mapping step.
+**Durable coverage notes:**
 
-#### Step 01 — Planning packet and barrier scope freeze [DONE]
+- **Scope frozen:** planning kept independent-population semantics and transport-neutral generation-barrier semantics in NGE core; Racing and Predator/Prey treated as downstream consumers only.
+- **Implementation boundary:** `createTwoPopulationHarness`, `runTwoTeamEvaluationTick`, `advanceTwoPopulations` in `src/neat/nge-collective/neat.nge-collective.two-population.ts`.
+- **Test evidence:** 10/10 two-population tests green (barrier semantics, snapshot cross-registration); 89/89 nge-collective regression tests passing.
+- **Gate evidence:** plan-sync PASS, agent-graph PASS (61 agents, 0 issues), step-packet PASS, phase-compression PASS, stale-wip-plans PASS.
+- **Deferred to Phase 4:** deterministic evaluation-pack normalization, packed `race-step` transport, transfer-list rules, replay guarantees.
+- **Downstream consumers:** Racing (first proving ground), Predator/Prey (second consumer with stronger synchronized-two-population pressure).
 
-```yaml
-phase: 3
-step: 1
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
-status: '[DONE]'
-mode: 'fresh-session'
-source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-copy_paste: 'true'
-next_step: 'Step 02 — Coevolution and worker-boundary mapping'
-skills: 'plan-alignment, phase-handoff-workflow, nge-benchmark-workflow'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-```
+### Phase 4 — Deterministic evaluation packs / deterministic race packs normalization [WIP]
 
-**Step objective:** Freeze the boundary between reusable independent-population semantics and worker-protocol generation barriers before code changes start.
-
-**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
-
-**Context the agent must know:**
-
-- Phase 2 is closed in this tracker: the reusable team/group fitness evaluator now lives in NGE core, so Phase 3 must treat evaluator semantics as a stable prerequisite rather than reopen scoring policy.
-- The prior Phase 1 handoff said Phase 3 could promote only after Racing confirmed the Phase 2 evaluator as a live upstream dependency. The active Racing tracker is already past that confirmation boundary, so no Phase 2 prerequisite ambiguity blocks this step.
-- Step 02 classified independent populations as partial and generation barriers as missing. Phase 3 must freeze which parts become reusable core semantics versus worker-protocol or benchmark-local coordination.
-- Racing and Predator/Prey are the primary downstream consumers for this phase. Ant Hive is not a direct owner for the independent-population barrier seam.
-- Phase 4 already owns deterministic evaluation-pack and packed transport normalization; Step 01 must keep that spillover out of Phase 3.
-
-**Execution steps:**
-
-1. Re-read only the minimum plan evidence needed for this boundary: this tracker, the Racing curriculum tracker, and the Predator/Prey worker-architecture section.
-2. Freeze the owner split between reusable independent-population semantics, reusable generation-barrier semantics, worker-protocol transport details, and benchmark-local coordinator topology.
-3. Record downstream dependency notes for Racing and Predator/Prey so both plans consume the same core barrier contract without becoming the owner of that contract.
-4. Write observable acceptance criteria, non-goals, and open assumptions for the Phase 3 seam only.
-5. Promote Step 02 only if the Phase 2 evaluator contract is stable and the frozen scope keeps deterministic transport work in Phase 4.
-
-**Frozen barrier scope:**
-
-| Boundary                                                                                                                                                                        | Frozen owner                                       | Phase 3 status                     |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------- |
-| Independent `Neat` population state (separate generation counters, species state, assimilation cadence, and opponent-facing evaluation state)                                   | NGE core reusable coevolution semantics            | **In scope**                       |
-| Generation barrier semantics (freeze opponent snapshot at generation start, wait for all participating populations to finish, then release evolution/snapshot advance together) | NGE core reusable coevolution semantics            | **In scope**                       |
-| Barrier lifecycle summaries emitted at the release point (enough to let downstream workers/coordinators know a generation may advance)                                          | NGE core seam, exact transport shape left open     | **In scope, transport-neutral**    |
-| Worker message unions, packed `race-step` payloads, deterministic evaluation-pack normalization, transfer-list rules                                                            | Worker protocol / deterministic transport contract | **Out of scope here — Phase 4**    |
-| Racing worker FSM, episode queueing, and host/render cadence                                                                                                                    | Racing benchmark-local runtime                     | **Out of scope here**              |
-| Predator/Prey coordinator topology, episode-worker pool sizing, and simulation-worker display authority                                                                         | Predator/Prey benchmark-local runtime              | **Out of scope here**              |
-| Team/group fitness aggregation semantics                                                                                                                                        | NGE core Phase 2 prerequisite                      | **Already closed — do not reopen** |
-
-**Frozen acceptance criteria:**
-
-1. Given two or more independent populations evaluate against a frozen opponent snapshot, when one population finishes early, then the reusable Phase 3 contract must forbid snapshot replacement or generation advance until every participating population reaches the same barrier. Validation: Step 02 file-backed seam map.
-2. Given downstream benchmarks use different worker topologies, when Phase 3 scope is documented, then the reusable contract must own population independence, snapshot freeze/release, and coordinated generation advance, while benchmark-local plans keep queueing, worker-count, and render-transport details. Validation: Step 02 owner-boundary table.
-3. Given Racing and Predator/Prey are downstream consumers, when their dependencies are recorded, then Racing stays the first proving ground and Predator/Prey stays a second consumer with stronger synchronized-two-population pressure; neither benchmark becomes the design owner of barrier semantics. Validation: Step 02 dependency notes.
-4. Given Phase 2 already landed `createTeamFitnessEvaluator`, when Phase 3 proceeds, then the barrier seam must reuse that evaluator boundary without redefining team scoring policy. Validation: Step 02 prerequisite audit.
-5. Given deterministic race packs and transport normalization are adjacent gaps, when Phase 3 scope is frozen, then seed normalization, packed frame schemas, and replay guarantees remain explicit Phase 4 work. Validation: Step 02 out-of-scope note.
-6. Given implementation will follow this planning step, when Step 01 closes, then Step 02 must have enough frozen scope to search code and plans without widening into lifecycle closure, public API exposure, or benchmark-local workarounds. Validation: Step 02 packet review.
-
-**Non-goals:**
-
-- Do not redesign team/group fitness semantics already closed by Phase 2.
-- Do not normalize deterministic race packs, replay guarantees, or packed worker payloads in this phase.
-- Do not move Racing- or Predator/Prey-specific coordinator topology into NGE core.
-- Do not treat benchmark-local worker orchestration as proof that the reusable core barrier contract exists.
-
-**Open assumptions and blocker check:**
-
-- **No blocking Phase 2 ambiguity remains.** The core tracker records Phase 2 as `[DONE]`, and the Racing tracker has already advanced beyond the earlier dependency-confirmation boundary, so Step 01 can close instead of remaining `[WIP]`.
-- Step 02 still needs file-backed evidence for the smallest reusable release summary shape at the barrier boundary; that research is expected and does not block Step 01 completion.
-- If Step 02 discovers a benchmark policy decision about whether non-racing consumers need a named barrier summary contract, record that as a hold for Phase 3 rather than folding transport detail into implementation.
-
-**Stop conditions:** Done when acceptance criteria and barrier scope are frozen; hold on benchmark-policy ambiguity; blocked if Phase 2 still changes prerequisite evaluator semantics.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-**Plan update requirement:** Update this plan with the frozen owner table, acceptance criteria, non-goals, blocker status, and the promoted next active step before ending.
-
-**Whole-step copy rule:** The full Step 01 block is the prompt; do not append a nested copy-paste subsection.
-
-[DONE] Scope freeze complete: Phase 3 now owns reusable independent-population semantics plus transport-neutral generation-barrier semantics, explicitly excludes deterministic transport normalization to Phase 4, and treats Racing plus Predator/Prey as downstream consumers rather than design owners. No unresolved Phase 2 prerequisite ambiguity remains.
-
-#### Step 02 — Coevolution and worker-boundary mapping [DONE]
-
-```yaml
-phase: 3
-step: 2
-agent: '02-researching'
-agent_file: '.github/agents/02-researching.agent.md'
-status: '[DONE]'
-mode: 'fresh-session'
-source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-copy_paste: 'true'
-next_step: 'Step 03 — Red tests for independent populations and barriers'
-skills: 'nge-core-algorithm, multithread-evaluation, repo-cortex-workflow'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-  - node scripts/agent-customization/gates/cortex-first-search.gate.mjs --json
-```
-
-**Step objective:** Map current two-population scaffolds, worker handoff seams, and missing generation barriers with file-backed evidence.
-
-**User instruction:** Start a fresh session, select `02-researching`, and paste this full step packet.
-
-**Context the agent must know:**
-
-- Step 01 is now closed. Use its frozen barrier scope as a hard boundary before reading code or plans.
-- Phase 3 owns reusable independent-population semantics and transport-neutral generation-barrier behavior only.
-- Phase 4 still owns deterministic evaluation-pack normalization, packed `race-step` transport, transfer-list rules, and replay guarantees.
-- Phase 2 is a stable prerequisite. Do not reopen team/group fitness policy; treat `createTeamFitnessEvaluator` as fixed core context.
-- Racing is the first proving ground and Predator/Prey is the second downstream consumer. Their worker topologies may differ, but both must consume the same reusable barrier semantics.
-
-**Execution focus:** Re-read workflow snapshots for this tracker and dependent benchmark trackers, use Repo Cortex to map harness and worker patterns, and separate reusable population semantics from downstream transport work.
-
-**Execution steps:**
-
-1. Re-read this tracker plus the active Racing tracker and the Predator/Prey plan sections that describe two-population synchronization.
-2. Use workflow snapshots and Repo Cortex first to locate current two-population harness, opponent-snapshot, and worker-boundary evidence.
-3. Build a file-backed owner table that separates core reusable barrier semantics from Racing-local and Predator/Prey-local worker orchestration.
-4. Record the exact barrier behaviors that must stay transport-neutral in Phase 3 and the exact transport details deferred to Phase 4.
-5. Call out any unresolved policy question as a hold instead of silently assigning it to NGE core or to a benchmark.
-6. Update this plan with the seam map, citations, and any route-back condition before ending.
-
-**Stop conditions:** Done when seam mapping and ownership boundaries are recorded; hold on policy ambiguity; blocked on missing workflow or Cortex evidence.
-
-**Required validation:**
-
-- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-- `node scripts/agent-customization/gates/cortex-first-search.gate.mjs --json`
-
-**Plan update requirement:** Update this plan with file-backed seam evidence, downstream dependency notes, and any hold/block condition before ending.
-
-**Whole-step copy rule:** The full Step 02 block is the prompt; do not append a nested copy-paste subsection.
-
-[DONE] File-backed seam mapping is now recorded. The reusable Phase 3 seam
-stays in NGE core: `createTwoPopulationHarness` builds distinct team-local
-controllers plus opposing snapshot pools and one shared evaluation context,
-while `advanceTwoPopulations` only increments participating generations and
-cross-registers frozen rival results into the opposing pool
-(`src/neat/nge-collective/neat.nge-collective.two-population.ts:104-149`,
-`src/neat/nge-collective/neat.nge-collective.two-population.ts:205-269`).
-The supporting snapshot contract remains transport-neutral and reusable:
-opponent payloads are deep-cloned at registration time, stored in bounded FIFO
-pools, and exposed through immutable `OpponentSnapshot` /
-`OpponentSnapshotPool` invariants
-(`src/neat/nge-collective/neat.nge-collective.metrics.ts:104-148`,
-`src/neat/nge-collective/neat.nge-collective.types.ts:77-98`). Phase 2 stays
-closed: `createTeamFitnessEvaluator` explicitly excludes generation barriers,
-deterministic race-pack transport, and richer coevolution barrier semantics
-from the evaluator seam
-(`src/neat/nge-collective/neat.nge-collective.team-fitness.ts:31-42`).
-
-**Recorded seam map and owner table (file-backed):**
-
-| Surface                                                                                              | Owner                                              | Evidence                                                                                                                                                                                                        | Boundary note                                                                                                                    |
-| ---------------------------------------------------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Independent team controllers, shared 4x7 evaluation field, and cross-populated frozen snapshot pools | NGE core / Phase 3                                 | `src/neat/nge-collective/neat.nge-collective.two-population.ts:104-149,205-269`; `src/neat/nge-collective/neat.nge-collective.metrics.ts:104-148`; `src/neat/nge-collective/neat.nge-collective.types.ts:77-98` | Reusable coevolution semantics: distinct team state, frozen rival archives, and shared evaluation context belong in core.        |
-| Team/group scoring seam                                                                              | Closed prerequisite from Phase 2                   | `src/neat/nge-collective/neat.nge-collective.team-fitness.ts:31-42,85-99`                                                                                                                                       | Do not reopen scoring policy here; barriers and transport remain outside the evaluator contract.                                 |
-| Current Racing worker orchestration and local snapshot barrier guards                                | Racing-local consumer                              | `examples/racing_curriculum/browser-entry/browser-entry.ts:126-143`; `examples/racing_curriculum/workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts:4-10,22-45,52-66,103-123`             | Racing still carries the host↔worker `EnvironmentState` POC bridge while locally enforcing begin/end-evaluation snapshot guards. |
-| Packed `race-step` frames and zero-copy transfer lists                                               | Phase 4 transport normalization / Racing transport | `examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts:52-91,137-192`                                                                                                     | Packed schema ownership, transfer-list rules, and postMessage transport stay out of the Phase 3 reusable seam.                   |
-| Predator/Prey synchronization topology and coordinator protocol                                      | Predator/Prey-local consumer                       | `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md:498-509,699-736`                                                                                                                                               | The demo consumes the same barrier semantics, but its coordinator/worker topology stays benchmark-local.                         |
-
-**Phase 3 transport-neutral barrier semantics that remain in scope:**
-
-1. Independent populations own separate controllers and generation counters; aliased team state is invalid (`src/neat/nge-collective/neat.nge-collective.two-population.ts:112-148`).
-2. Opponent snapshots must be frozen clones retained in bounded pools and cross-registered only after a completed shared evaluation (`src/neat/nge-collective/neat.nge-collective.metrics.ts:104-148`; `src/neat/nge-collective/neat.nge-collective.two-population.ts:208-218,251-268`).
-3. Snapshot replacement must be blocked while evaluation is active and only released at the configured generation boundary; benchmark workers may implement the guard locally but must consume the same reusable rule (`examples/racing_curriculum/workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts:4-10,37-45,103-123`).
-4. Coordinated next-generation eligibility is reusable, but local worker scheduling may differ. Predator/Prey explicitly allows independent within-generation progress while still requiring both populations to reach the synchronization barrier before the next generation begins (`plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md:499-500,701-736`).
-
-**Phase 4 transport details explicitly deferred out of Phase 3:**
-
-- Worker-authoritative `generation-ready` / `race-step` protocol wiring and host/render cadence (`examples/racing_curriculum/browser-entry/browser-entry.ts:132-143`).
-- Packed race-pack schema ownership, typed-array frame layout, and zero-copy transfer-list rules (`examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts:52-91,137-192`).
-- Deterministic evaluation-pack normalization, replay guarantees, and benchmark-specific queueing / worker-count topology (`plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md:502-509,522-649`).
-
-**Hold and route-back condition:**
-
-- Hold: the exact transport-neutral barrier-release summary shape remains intentionally unresolved. Step 03 may target callback/sequencing behavior, but any named payload fields for barrier release must stay out of Phase 3 and route into Phase 4 transport work.
-- Route-back: if red tests reveal that Racing or Predator/Prey require a named shared barrier-summary payload rather than a transport-neutral callback/seam, record that policy choice here before Step 04 implementation.
-
-#### Step 03 — Red tests for independent populations and barriers [DONE]
-
-```yaml
-phase: 3
-step: 3
-agent: '03-red-testing'
-agent_file: '.github/agents/03-red-testing.agent.md'
-status: '[DONE]'
-mode: 'fresh-session'
-source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-copy_paste: 'true'
-next_step: 'Step 04 — Implement independent populations and generation barriers'
-skills: 'red-test-contracts, creating-unit-tests'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-```
-
-**Step objective:** Add focused failing tests for independent-population state isolation and generation-barrier coordination.
-
-**Execution focus:** Cover barrier semantics, opponent-snapshot freezing, and cross-population coordination seams without widening into deterministic transport normalization owned by Phase 4.
-
-**Stop conditions:** Done when the missing behavior is reproduced with failing tests; hold on unresolved policy assertions; blocked if Step 02 evidence is incomplete.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-**Red evidence:** `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-collective/neat.nge-collective.two-population.test.ts` failed with the two new barrier contracts red, proving partial completion still advances one generation and replaces one snapshot pool.
-
-#### Step 04 — Implement independent populations and generation barriers [WIP]
-
-```yaml
-phase: 3
-step: 4
-agent: '04-implementing'
-agent_file: '.github/agents/04-implementing.agent.md'
-status: '[WIP]'
-mode: 'fresh-session'
-source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-copy_paste: 'true'
-next_step: 'Step 05 — Green validation and coevolution regression audit'
-skills: 'nge-core-algorithm, multithread-evaluation'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-```
-
-**Step objective:** Implement reusable independent-population and generation-barrier behavior without leaking benchmark-local assumptions into core.
-
-**Execution focus:** Keep the implementation bounded to the barrier and population seam selected by planning, and record any remaining transport normalization as Phase 4 work rather than fixing it ad hoc here.
-
-**Stop conditions:** Done when red tests turn green for the intended barrier boundary; hold on new policy decisions; blocked on contradictory worker ownership.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-#### Step 05 — Green validation and coevolution regression audit [PLANNED]
-
-```yaml
-phase: 3
-step: 5
-agent: '05-green-testing'
-agent_file: '.github/agents/05-green-testing.agent.md'
-status: '[PLANNED]'
-mode: 'fresh-session'
-source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-copy_paste: 'true'
-next_step: 'Step 06 — Documentation and benchmark contract alignment'
-skills: 'green-validation-gates'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-```
-
-**Step objective:** Verify the population and barrier tranche stays green for the targeted core and downstream integration seams.
-
-**Execution focus:** Run focused validation for the touched harness and barrier boundaries, confirm no regression in Racing- or Predator/Prey-facing consumers, and document any residual blocker honestly.
-
-**Stop conditions:** Done when focused validation passes; hold on flaky results; blocked if the implementation boundary remains red.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-#### Step 06 — Documentation and benchmark contract alignment [PLANNED]
-
-```yaml
-phase: 3
-step: 6
-agent: '06-documenting'
-agent_file: '.github/agents/06-documenting.agent.md'
-status: '[PLANNED]'
-mode: 'fresh-session'
-source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-copy_paste: 'true'
-next_step: 'Step 07 — Logging and phase closure packet'
-skills: 'educational-docs, nge-benchmark-workflow'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-```
-
-**Step objective:** Update docs and tracker language so independent populations and generation barriers are described as current core behavior only if they are actually file-backed and validated.
-
-**Stop conditions:** Done when touched docs are aligned; hold on unresolved terminology; blocked if validation evidence is missing.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-#### Step 07 — Logging and phase closure packet [PLANNED]
-
-```yaml
-phase: 3
-step: 7
-agent: '07-logging'
-agent_file: '.github/agents/07-logging.agent.md'
-status: '[PLANNED]'
-mode: 'fresh-session'
-source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-copy_paste: 'true'
-next_step: 'Phase 4 — Deterministic evaluation packs / deterministic race packs normalization'
-skills: 'tracker-handoff'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-```
-
-**Step objective:** Compress Phase 3 into durable coverage notes and keep the deterministic transport normalization tranche explicit as the next queue.
-
-**Stop conditions:** Done when the phase summary is compressed and no unfinished work is hidden as deferred; hold on pending user confirmation; blocked if evidence is incomplete.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-### Phase 4 — Deterministic evaluation packs / deterministic race packs normalization [PLANNED]
-
-#### Step 01 — Planning packet and determinism contract freeze [PLANNED]
+#### Step 01 — Planning packet and determinism contract freeze [DONE]
 
 ```yaml
 phase: 4
 step: 1
 agent: '01-planning'
 agent_file: '.github/agents/01-planning.agent.md'
-status: '[PLANNED]'
+status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
 copy_paste: 'true'
@@ -823,6 +532,135 @@ validation:
 **Stop conditions:** Done when contract scope and ownership are frozen; hold on unresolved owner boundaries; blocked if Phase 3 still changes shared prerequisites.
 
 **Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
+
+---
+
+##### Step 01 — Frozen Determinism Contract
+
+###### Determinism rung
+
+**Level 2 — Ordered deterministic.** Same seed, same inputs, same ordering rules,
+and same runtime configuration produce numerically stable outputs within one
+runtime (Node or browser). Cross-environment byte-identical results are NOT
+promised because typed-array layout, transfer semantics, and floating-point
+reduction order may differ between Node `worker_threads` and browser
+`Web Workers`.
+
+Rationale: `createDeterministicRacePack` already proves that same seed + same
+opponent snapshot → identical `RacingRenderFrame` on the same runtime. A Level 3
+(replay exact) claim would require full RNG state capture beyond the pack seed,
+which is out of scope for Phase 4 — the pack seed is sufficient for ordered
+deterministic replay at the pack-creation boundary. A Level 4 (cross-environment
+bounded) claim would require documenting every floating-point and transport
+difference between Node and browser workers, which is deferred to a later
+reproducibility audit after the core normalization seam lands.
+
+###### Contract scope — what Phase 4 normalizes
+
+| Contract element                 | Current location                                    | Target owner after Phase 4          |
+| -------------------------------- | --------------------------------------------------- | ----------------------------------- |
+| Deterministic pack creation      | `simulation-worker.race-pack.service.ts` (racing)   | NGE core — Layer 2                  |
+| Pack replay validation          | No reusable validator exists                        | NGE core — Layer 2                  |
+| Transfer-list resolution        | `simulation-worker.race-pack.service.ts` (racing)   | NGE core — Layer 2                  |
+| Schema versioning / rejection   | `simulation-worker.types.ts` (racing `RacingRenderFrame`) | NGE core — Layer 2 (generic schema) |
+| Clone-safe payload contract     | Implicit in worker transport                        | NGE core — Layer 2 (explicit)      |
+| `RacingRenderFrame` type        | `simulation-worker.types.ts` (racing)              | Racing-owned — Layer 3 (stays)     |
+| Per-tier pack construction       | `simulation-worker.tier3/4/5.ts` (racing)          | Racing-owned — Layer 3 (stays)     |
+| Track physics / tire / pit state | Racing-specific frame fields                         | Racing-owned — Layer 3 (stays)     |
+| Renderer layout                  | Car positions, headings, place                       | Racing-owned — Layer 3 (stays)     |
+
+###### Three-layer ownership boundary
+
+```mermaid
+graph TD
+  L1["Layer 1 — NGE Core Semantics<br/>nge-collective<br/><em>transport-neutral</em>"]
+  L2["Layer 2 — Worker Transport Normalization<br/>NEW Phase 4 module<br/><em>deterministic packs, replay, transfer, schema</em>"]
+  L3["Layer 3 — Benchmark-Local Racing Transport<br/>examples/racing_curriculum<br/><em>RacingRenderFrame, per-tier construction, physics</em>"]
+
+  L1 -->|"evaluation context<br/>team fitness<br/>generation barriers"| L2
+  L2 -->|"generic pack contract<br/>transfer-list rules<br/>schema versioning"| L3
+  L3 -->|"proves contract e2e<br/>does NOT own it"| L2
+```
+
+**Layer 1 — NGE Core Semantics** (`src/neat/nge-collective/`):
+- `runCollectiveEvaluationTick`, `resetCollectiveEvaluationState`
+- `createTeamFitnessEvaluator`, team/group fitness aggregation
+- `createTwoPopulationHarness`, `advanceTwoPopulations`
+- Generation barrier semantics (transport-neutral by Phase 3 design)
+- Opponent snapshot pool management
+- **Invariant:** these functions never depend on `RacingRenderFrame`,
+  transfer lists, worker topology, or any benchmark-specific type.
+
+**Layer 2 — Worker Transport Normalization** (NEW — Phase 4 creates this):
+- Deterministic evaluation-pack creation (core-owned generic contract)
+- Pack replay validation (same seed + same inputs → identical output)
+- Transfer-list resolution (zero-copy `postMessage` contract)
+- Schema versioning and forward-compatibility rejection
+- Clone-safe payload contract for worker boundaries
+- **Invariant:** Layer 2 types are generic (not `RacingRenderFrame`-specific).
+  Racing provides the concrete frame type; Layer 2 provides the
+  deterministic-pack and transfer contracts that any benchmark can reuse.
+
+**Layer 3 — Benchmark-Local Racing Transport** (`examples/racing_curriculum/`):
+- `RacingRenderFrame` type with `schemaVersion: 'racing-packed-v1'`
+- Per-tier pack construction (`simulation-worker.tier3/4/5.ts`)
+- Track-specific physics, tire/pit state, feature flags
+- Renderer-specific layout (car positions, headings, place)
+- **Invariant:** Layer 3 stays racing-owned and is never promoted to core.
+  If Racing exposes a gap in the Layer 2 contract, the gap routes back to
+  NGE core per the core-first routing policy.
+
+###### Seam between Layer 2 and Layer 3
+
+The seam is where core pack creation meets racing-specific frame population.
+Today, `createDeterministicRacePack` in `simulation-worker.race-pack.service.ts`
+fills a `RacingRenderFrame` directly from a seed + snapshot. After Phase 4,
+the core owns a generic `createDeterministicEvaluationPack(seed, inputs)` that
+produces a transport-neutral pack, and Racing wraps that with its own
+`populateRacingFrame(pack, racingConfig)` that injects track physics, tire
+state, and renderer layout. The replay contract applies at the generic pack
+boundary, not at the racing-frame boundary.
+
+###### Provisional owner note — resolved
+
+The Step 02 readiness audit recorded:
+
+> "The deterministic evaluation-pack owner boundary is still provisional
+> pending seam mapping between NGE core, worker protocol, and racing-owned
+> transport."
+
+**Resolution:** The owner boundary is now frozen per the three-layer model
+above. Core (Layer 2) owns the deterministic pack contract. Racing (Layer 3)
+owns the frame assembly. Worker protocol (Layer 2, shared with core) owns the
+transfer-list and clone-safe contracts. No owner boundary remains provisional.
+
+###### Racing as proving ground, not owner
+
+Racing is the first downstream consumer that validates the core deterministic
+evaluation-pack contract works end-to-end. Racing does NOT own the pack
+creation contract, the replay contract, or the transfer contract. If Racing
+exposes a gap in the core contract, the gap routes back to NGE core (per the
+`core_first_routing` acceptance criterion). Predator/Prey and Ant Hive will be
+the second and third proving grounds, but they cannot validate the contract
+until Phase 4 normalization lands and Racing confirms it e2e.
+
+###### Reproducibility tuple for the pack-creation boundary
+
+$$
+R_{\text{pack}} = (\text{seed}, \text{opponentSnapshot}, \text{agentCount}, \text{schemaVersion})
+$$
+
+Same tuple → identical pack on the same runtime. Missing any component weakens
+the claim to seed-repeatable (Level 1). The tuple does NOT include full RNG
+state (Level 3 would require that) or environment assumptions (Level 4 would
+require that).
+
+###### Phase 3 prerequisite — confirmed stable
+
+Phase 3 ([DONE]) closed with transport-neutral generation-barrier semantics in
+`neat.nge-collective.two-population.ts`. The Phase 3 closure notes explicitly
+defer deterministic transport normalization to Phase 4. Phase 3 no longer
+changes shared prerequisites — the blocker condition is not active.
 
 #### Step 02 — Transport and reproducibility seam mapping [PLANNED]
 
@@ -1507,6 +1345,7 @@ validation:
 
 ### Latest validation evidence
 
+- 2026-06-08: Workflow sync: Advanced Phase 3 Step 6 → [DONE]; Phase 3 Step 7 → [WIP]
 - 2026-06-03: `validate-plan-sync` PASS after recording the Phase 3 Step 02 seam map, marking Step 02 `[DONE]`, promoting Step 03 `[WIP]`, and refreshing the handoff query for the red-test packet.
 - 2026-06-03: `cortex-first-search.gate` PASS (`database_path: C:\NeatapticTS\data\semantic-index.sqlite`; `index_documents: 1396`; `index_chunks: 31090`; `index_fresh: true`; `corpus_mcp_alive: true`; `corpus_search_results: 3`) after the Step 02 seam map update.
 - 2026-06-03: `validate-plan-sync` PASS after freezing Phase 3 Step 01 barrier scope, promoting Phase 3 to `[WIP]`, and moving Step 02 to the active seam-mapping packet.

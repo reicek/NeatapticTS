@@ -2,7 +2,7 @@
 description: 'Use when: planning or red-testing needs acceptance criteria, red-test scope, coverage expectations, deterministic claims, fixtures, or validation order.'
 name: 'planning-test-strategy-coordinator'
 tier: 2
-model: qwen3.5:cloud (ollama)
+model: glm-5.1:cloud (ollama)
 tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 agents: ['coverage-scout', 'determinism-scout', 'acceptance-criteria-writer', 'unit-test-writer']
 skills: ['planning-acceptance-criteria', 'red-test-contracts']
@@ -22,6 +22,14 @@ Define acceptance criteria, red-test scope, coverage expectations, fixture strat
 - DO NOT execute broad test suites.
 - ALWAYS stop after returning the structured output block; do not continue into implementation.
 - Scope the strategy to the specific boundary or feature in question — do not produce a repo-wide test plan.
+
+## Flow Selection
+- Use `01.acceptance-criteria` when defining acceptance criteria; use `03.behavior-change-red` when preparing red-test strategy.
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `plan-sync` — after test strategy definition
+- `step-packet` — when scoping test validation
 
 ## Required Workflow
 

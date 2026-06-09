@@ -27,5 +27,6 @@ skills:
 specialists:
   - 'Coverage Guard'
   - 'Coverage Scout'
+  - 'test-coverage-analyst'
 
 timeout-minutes: 20

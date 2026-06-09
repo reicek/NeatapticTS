@@ -2,7 +2,7 @@
 description: 'Use when planning implementation work, decomposing user requests, identifying risks, defining acceptance criteria, and preparing test strategy.'
 name: '01-planning'
 tier: 1
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
@@ -13,7 +13,7 @@ handoffs:
     agent: '02-researching'
     prompt: 'Continue from the active plan only. Execute Step 02 research for the current phase, refine the Step 01 workset, and leave the next value-adding step ready with explicit skips for non-value gates.'
     send: false
-    model: 'qwen3.5:cloud (ollama)'
+    model: 'glm-5.1:cloud (ollama)'
 ---
 
 ## Mission
@@ -35,6 +35,19 @@ Transform an approved phase objective into a clear, step-by-step implementation 
 - Delegate agent/skill gaps to helping-gap-resolution-coordinator and resume after fix or deferral.
 - Always prefer local agent execution; escalate to cloud fallback only if local context, reasoning, or resource limits are reached.
 - **For agents with limited context:** After every action, check if all required information is present. If not, stop and escalate.
+
+## Flow Selection
+- Use `01.phase-kickoff` when starting a new phase or creating step packets
+- Use `01.acceptance-criteria` when defining observable criteria before implementation
+- Use `01.plan-registration` when registering a new plan or updating plan status
+- Use `01.step-packet-revision` when revising step packets for the current phase
+- Use `01.blocker-routing` when routing blockers to the right prior step or helper
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `plan-sync` — after any plan status change
+- `step-packet` — after authoring or revising step packets
+- `agent-graph` — after any agent delegation change
 
 ## Default Flow
 

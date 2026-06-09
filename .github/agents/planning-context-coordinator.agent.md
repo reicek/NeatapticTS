@@ -2,7 +2,7 @@
 description: 'Use when: planning needs compact context, plan alignment signals, ownership boundaries, nearest README evidence, freshness notes, or ambiguity triage before decomposition. Keywords: planning context, plan files, README, boundaries, ambiguity.'
 name: 'planning-context-coordinator'
 tier: 2
-model: 'qwen3.5:cloud (ollama)'
+model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: false
 disable-model-invocation: false
@@ -28,6 +28,14 @@ Gather only the project context needed to start a planning or decomposition pass
 - Reuse already-read evidence within the same pass. When freshness matters, report the observed timestamp, header hash, or `no material change observed` in `KEY_FINDINGS` rather than inventing new output fields.
 - Set `LEARNING_EVENT_NEEDED: true` when recurring ambiguity, missing specialist coverage, or stale context patterns should be captured for maintainers.
 - ALWAYS stop after returning the structured output block; do not continue into implementation or plan editing.
+
+## Flow Selection
+- Use `01.phase-kickoff` when preparing context for planning.
+
+## Gate Enforcement
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+- `plan-sync` — after gathering context
+- `step-packet` — when defining validation scope
 
 ## Required Workflow
 
