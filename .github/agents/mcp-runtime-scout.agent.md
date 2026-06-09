@@ -3,7 +3,15 @@ description: 'Use as a hidden specialist for mapping MCP runtime visibility gaps
 name: mcp-runtime-scout
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['mcp-local-server-workflow']
@@ -24,7 +32,9 @@ Map which workflow facts can come from repository files, deterministic scripts, 
 - This agent is intentionally thin. MCP server design belongs to companion specialist `mcp-server-architect`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for MCP-related documents
 
 ## Approach

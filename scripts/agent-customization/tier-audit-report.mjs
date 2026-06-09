@@ -3,20 +3,32 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { parseArgs, printUsage } from './customization-utils.mjs';
-import { collectTierInventory, runValidateAgentGraph } from './validate-agent-graph.mjs';
+import {
+  collectTierInventory,
+  runValidateAgentGraph,
+} from './validate-agent-graph.mjs';
 
 const options = parseCliOptions(process.argv.slice(2));
 
 if (options.help) {
   printUsage({
-    title: 'Generate a markdown or JSON audit report for agent delegation tiers.',
-    usage: 'node scripts/agent-customization/tier-audit-report.mjs [--json] [--markdown]',
-    options: [['--markdown', 'Write the audit report as Markdown (default when --json is omitted).']],
+    title:
+      'Generate a markdown or JSON audit report for agent delegation tiers.',
+    usage:
+      'node scripts/agent-customization/tier-audit-report.mjs [--json] [--markdown]',
+    options: [
+      [
+        '--markdown',
+        'Write the audit report as Markdown (default when --json is omitted).',
+      ],
+    ],
   });
   process.exit(0);
 }
 
-export async function runTierAuditReport({ workspaceRoot = process.cwd() } = {}) {
+export async function runTierAuditReport({
+  workspaceRoot = process.cwd(),
+} = {}) {
   const inventory = await collectTierInventory({ workspaceRoot });
   const validation = await runValidateAgentGraph({ workspaceRoot });
 
@@ -73,10 +85,14 @@ function renderMarkdownReport(report) {
     '| Agent | Tier | User-invocable | Delegates to | Violations |',
     '| --- | --- | --- | --- | --- |',
     ...report.agents.map((agent) => {
-      const delegationText = agent.delegates_to.length === 0 ? '—' : agent.delegates_to.join(', ');
-      const violationText = agent.violations.length === 0
-        ? '—'
-        : agent.violations.map((currentIssue) => currentIssue.message).join('<br>');
+      const delegationText =
+        agent.delegates_to.length === 0 ? '—' : agent.delegates_to.join(', ');
+      const violationText =
+        agent.violations.length === 0
+          ? '—'
+          : agent.violations
+              .map((currentIssue) => currentIssue.message)
+              .join('<br>');
 
       return `| ${agent.name} | ${agent.tier} (${agent.tier_label}) | ${agent.user_invocable ? 'true' : 'false'} | ${delegationText} | ${violationText} |`;
     }),
@@ -85,12 +101,17 @@ function renderMarkdownReport(report) {
     '',
     ...(report.issues.length === 0
       ? ['- None']
-      : report.issues.map((currentIssue) => `- ${currentIssue.path}: ${currentIssue.message}`)),
+      : report.issues.map(
+          (currentIssue) => `- ${currentIssue.path}: ${currentIssue.message}`,
+        )),
   ];
 
   return markdownLines.join('\n');
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }

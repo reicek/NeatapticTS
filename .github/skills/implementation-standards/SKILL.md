@@ -91,7 +91,8 @@ const nested = data?.items?.at(0)?.name;
 
 // ❌ Avoid
 const value = config && config.timeout ? config.timeout : 5000;
-const nested = data && data.items && data.items[0] ? data.items[0].name : undefined;
+const nested =
+  data && data.items && data.items[0] ? data.items[0].name : undefined;
 ```
 
 ### Numeric Separators
@@ -173,9 +174,15 @@ export function process(data: Data): Result {
   return fold(transformed);
 }
 
-function validateInput(data: Data): ValidatedData { /* ... */ }
-function transform(data: ValidatedData): Transformed { /* ... */ }
-function fold(data: Transformed): Result { /* ... */ }
+function validateInput(data: Data): ValidatedData {
+  /* ... */
+}
+function transform(data: ValidatedData): Transformed {
+  /* ... */
+}
+function fold(data: Transformed): Result {
+  /* ... */
+}
 ```
 
 ## JSDoc Requirements
@@ -185,7 +192,7 @@ and **when** — not just restate the signature.
 
 ### Required Tags
 
-```ts
+````ts
 /**
  * Brief one-line summary of what this does.
  *
@@ -206,7 +213,7 @@ and **when** — not just restate the signature.
 export function myFunction(name: string, options?: Options): Result {
   // ...
 }
-```
+````
 
 ### Constants and Types
 
@@ -236,15 +243,21 @@ export interface MutationResult {
 
 ```ts
 // ✅ Prefer
-for (let i = 0; i < items.length; i++) { /* trivial loop */ }
-for (let index = 0; index < items.length; index++) { /* complex body */ }
+for (let i = 0; i < items.length; i++) {
+  /* trivial loop */
+}
+for (let index = 0; index < items.length; index++) {
+  /* complex body */
+}
 const userInput = getConfig();
 const connectionCount = connections.length;
 
 // ❌ Avoid
 const x = getConfig(); // what is x?
 const cnt = connections.length; // abbreviation without context
-for (let i = 0; i < items.length; i++) { /* 50-line body */ } // too long for short name
+for (let i = 0; i < items.length; i++) {
+  /* 50-line body */
+} // too long for short name
 ```
 
 ### Single-Expect Rule
@@ -272,10 +285,14 @@ it('returns sorted array', () => {
 ```ts
 // ✅ Prefer
 const DEFAULT_MUTATION_RATE = 0.03;
-if (rate > DEFAULT_MUTATION_RATE) { /* ... */ }
+if (rate > DEFAULT_MUTATION_RATE) {
+  /* ... */
+}
 
 // ❌ Avoid
-if (rate > 0.03) { /* ... */ }
+if (rate > 0.03) {
+  /* ... */
+}
 ```
 
 ### Step-Level Inline Comments
@@ -285,13 +302,13 @@ if (rate > 0.03) { /* ... */ }
 export function evolve(population: Population): Population {
   // Step 1: Evaluate fitness for all genomes
   const evaluated = evaluateAll(population);
-  
+
   // Step 2: Select parents based on fitness
   const parents = selectParents(evaluated);
-  
+
   // Step 3: Apply crossover and mutation
   const offspring = reproduce(parents);
-  
+
   // Step 4: Form next generation with elitism
   return formNextGeneration(population, offspring);
 }
@@ -308,9 +325,13 @@ export const ACTIVATION_FUNCTIONS = {
 } as const;
 
 // ❌ Avoid
-if (name === 'sigmoid') { return sigmoidFn; }
-else if (name === 'tanh') { return tanhFn; }
-else if (name === 'relu') { return reluFn; }
+if (name === 'sigmoid') {
+  return sigmoidFn;
+} else if (name === 'tanh') {
+  return tanhFn;
+} else if (name === 'relu') {
+  return reluFn;
+}
 ```
 
 ### Avoid `any` and `unknown`
@@ -325,10 +346,14 @@ function process(data: unknown): asserts data is ValidData {
 
 // With eslint-disable when truly necessary
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function legacyInterop(value: any): LegacyResult { /* ... */ }
+function legacyInterop(value: any): LegacyResult {
+  /* ... */
+}
 
 // ❌ Avoid
-function process(data: any): any { /* ... */ } // no justification
+function process(data: any): any {
+  /* ... */
+} // no justification
 ```
 
 ## Cognitive Complexity Guidelines
@@ -342,18 +367,24 @@ export function complexOperation(input: Input): Result {
   // 1. Local variables and constants
   const threshold = getThreshold();
   const cache = new Map();
-  
+
   // 2. Main logic as calls to small helpers
   const validated = validate(input, threshold);
   const transformed = transform(validated, cache);
-  
+
   // 3. Return
   return finalize(transformed);
-  
+
   // 4. Helpers below the fold
-  function validate(inp: Input, thresh: number): Validated { /* ... */ }
-  function transform(v: Validated, c: Map): Transformed { /* ... */ }
-  function finalize(t: Transformed): Result { /* ... */ }
+  function validate(inp: Input, thresh: number): Validated {
+    /* ... */
+  }
+  function transform(v: Validated, c: Map): Transformed {
+    /* ... */
+  }
+  function finalize(t: Transformed): Result {
+    /* ... */
+  }
 }
 ```
 
@@ -466,14 +497,14 @@ List any flagged legacy patterns and intended replacements:
 
 ## Coordination with Other Skills
 
-| Skill | Handoff Condition |
-|-------|-------------------|
-| `educational-docs` | When JSDoc improvements or README generation is needed |
-| `coverage-guard` | After any `src/` change to verify 100% coverage |
-| `coverage-tranche` | When expanding coverage on passing code |
-| `test-fix-workflow` | When tests fail during implementation |
-| `solid-split` | When module boundaries need refactoring |
-| `docs-academic-citation-audit` | When algorithms need academic citations |
+| Skill                          | Handoff Condition                                      |
+| ------------------------------ | ------------------------------------------------------ |
+| `educational-docs`             | When JSDoc improvements or README generation is needed |
+| `coverage-guard`               | After any `src/` change to verify 100% coverage        |
+| `coverage-tranche`             | When expanding coverage on passing code                |
+| `test-fix-workflow`            | When tests fail during implementation                  |
+| `solid-split`                  | When module boundaries need refactoring                |
+| `docs-academic-citation-audit` | When algorithms need academic citations                |
 
 ## Guardrails
 

@@ -3,7 +3,15 @@ description: 'Use when mapping ONNX embedding model cache state, embeddings inde
 name: 'cortex-embeddings-scout'
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: [repo-cortex-embeddings]
@@ -26,7 +34,9 @@ You gather evidence from plans, data-path expectations, and nearby retrieval cod
 - DO NOT assume the embeddings skill exists; say `repo-cortex-embeddings skill` when naming the downstream owner.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for embeddings-related documents
 
 ## Approach

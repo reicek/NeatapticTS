@@ -3,7 +3,16 @@ description: 'Use when mapping parameter-vector layouts, deterministic export/im
 name: hybrid-interop-scout
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['hybrid-training-interop']
@@ -25,7 +34,9 @@ Locate the exact parameter-vector or isolated fine-tuning seam in the repo, iden
 - This agent is intentionally thin. Durable policy lives in companion skill `hybrid-training-interop`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for hybrid-training documents
 
 ## Approach

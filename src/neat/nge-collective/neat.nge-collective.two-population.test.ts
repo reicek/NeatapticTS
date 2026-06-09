@@ -159,7 +159,7 @@ describe('two-population harness', () => {
   });
 
   describe('advanceTwoPopulations', () => {
-    it('advances Team A population without mutating Team B controller state', async () => {
+    it('keeps both generations at 0 when Team A has results but Team B does not (shared barrier)', async () => {
       await expect(
         loadTwoPopulationHarnessModule().then(
           ({ createTwoPopulationHarness, advanceTwoPopulations }) => {
@@ -177,7 +177,7 @@ describe('two-population harness', () => {
           },
         ),
       ).resolves.toEqual({
-        teamAGeneration: 1,
+        teamAGeneration: 0,
         teamBGeneration: 0,
       });
     });
@@ -211,7 +211,7 @@ describe('two-population harness', () => {
       });
     });
 
-    it('advances Team B population without mutating Team A controller state', async () => {
+    it('keeps both generations at 0 when Team B has results but Team A does not (shared barrier)', async () => {
       await expect(
         loadTwoPopulationHarnessModule().then(
           ({ createTwoPopulationHarness, advanceTwoPopulations }) => {
@@ -230,7 +230,7 @@ describe('two-population harness', () => {
         ),
       ).resolves.toEqual({
         teamAGeneration: 0,
-        teamBGeneration: 1,
+        teamBGeneration: 0,
       });
     });
 

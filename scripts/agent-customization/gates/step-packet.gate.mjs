@@ -69,7 +69,11 @@ async function runStepPacketGate() {
     while ((match = YAML_BLOCK_PATTERN.exec(text)) !== null) {
       const block = match[1];
       // Only check WIP step packets.
-      if (!block.includes('status: "[WIP]"') && !block.includes("status: '[WIP]'")) continue;
+      if (
+        !block.includes('status: "[WIP]"') &&
+        !block.includes("status: '[WIP]'")
+      )
+        continue;
 
       const stepId = `${planFile}:yaml@${match.index}`;
       stepsChecked.push(stepId);
@@ -82,7 +86,10 @@ async function runStepPacketGate() {
       }
 
       // Check for required prose sections in the surrounding context.
-      const surroundingContext = text.slice(match.index, match.index + CONTEXT_WINDOW);
+      const surroundingContext = text.slice(
+        match.index,
+        match.index + CONTEXT_WINDOW,
+      );
       if (
         !surroundingContext.includes('Stop conditions') &&
         !surroundingContext.includes('stop conditions')

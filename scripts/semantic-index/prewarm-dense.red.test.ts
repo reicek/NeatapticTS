@@ -33,7 +33,7 @@ const REPO_ROOT = path.resolve(process.cwd());
 
 describe('prewarm-dense.mjs', () => {
   describe('red prewarm bootstrap contract', () => {
-    it('orchestrates download-model, embed-index, and validate-embeddings in order', () => {
+    it('orchestrates download-model, embed-index, validate-embeddings, download-reranker, and validate-reranker in order', () => {
       // Arrange and Act
       const result = runModuleEvaluation<DensePrewarmContractReport>(`
         import { runDensePrewarm } from './scripts/semantic-index/prewarm-dense.mjs';
@@ -47,6 +47,7 @@ describe('prewarm-dense.mjs', () => {
           json: true,
           logger: () => {},
           modelExists: () => false,
+          rerankerModelExists: () => false,
         });
 
         console.log(JSON.stringify({
@@ -57,13 +58,21 @@ describe('prewarm-dense.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: expect.objectContaining({
-          exitCode: 0,
-          stepNames: ['download-model', 'embed-index', 'validate-embeddings'],
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: expect.objectContaining({
+            exitCode: 0,
+            stepNames: [
+              'download-model',
+              'embed-index',
+              'validate-embeddings',
+              'download-reranker',
+              'validate-reranker',
+            ],
+          }),
+          status: 0,
         }),
-        status: 0,
-      }));
+      );
     });
 
     it('logs dry-run steps in order without invoking subprocesses', () => {
@@ -91,14 +100,18 @@ describe('prewarm-dense.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: expect.objectContaining({
-          commandRunnerCalls: 0,
-          exitCode: 0,
-          logText: expect.stringMatching(/download-model[\s\S]*embed-index[\s\S]*validate-embeddings/u),
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: expect.objectContaining({
+            commandRunnerCalls: 0,
+            exitCode: 0,
+            logText: expect.stringMatching(
+              /download-model[\s\S]*embed-index[\s\S]*validate-embeddings[\s\S]*download-reranker[\s\S]*validate-reranker/u,
+            ),
+          }),
+          status: 0,
         }),
-        status: 0,
-      }));
+      );
     });
 
     it('emits passing JSON with per-step statuses on success', () => {
@@ -120,20 +133,24 @@ describe('prewarm-dense.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: expect.objectContaining({
-          exitCode: 0,
-          report: {
-            pass: true,
-            steps: [
-              { name: 'download-model', status: 'ok' },
-              { name: 'embed-index', status: 'ok' },
-              { name: 'validate-embeddings', status: 'ok' },
-            ],
-          },
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: expect.objectContaining({
+            exitCode: 0,
+            report: {
+              pass: true,
+              steps: [
+                { name: 'download-model', status: 'ok' },
+                { name: 'embed-index', status: 'ok' },
+                { name: 'validate-embeddings', status: 'ok' },
+                { name: 'download-reranker', status: 'ok' },
+                { name: 'validate-reranker', status: 'ok' },
+              ],
+            },
+          }),
+          status: 0,
         }),
-        status: 0,
-      }));
+      );
     });
 
     it('emits failing JSON and stops when embed-index exits non-zero', () => {
@@ -152,6 +169,7 @@ describe('prewarm-dense.mjs', () => {
           json: true,
           logger: () => {},
           modelExists: () => false,
+          rerankerModelExists: () => false,
         });
 
         console.log(JSON.stringify({
@@ -162,27 +180,35 @@ describe('prewarm-dense.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: expect.objectContaining({
-          exitCode: 1,
-          report: {
-            error: expect.stringMatching(/\S/u),
-            failedStep: 'embed-index',
-            pass: false,
-          },
-          stepNames: ['download-model', 'embed-index'],
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: expect.objectContaining({
+            exitCode: 1,
+            report: {
+              error: expect.stringMatching(/\S/u),
+              failedStep: 'embed-index',
+              pass: false,
+            },
+            stepNames: ['download-model', 'embed-index'],
+          }),
+          status: 0,
         }),
-        status: 0,
-      }));
+      );
     });
   });
 });
 
-function runModuleEvaluation<ReportType>(source: string): SpawnedJsonResult<ReportType> {
-  const spawned = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
+function runModuleEvaluation<ReportType>(
+  source: string,
+): SpawnedJsonResult<ReportType> {
+  const spawned = spawnSync(
+    process.execPath,
+    ['--input-type=module', '--eval', source],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    },
+  );
 
   return {
     report: tryParseJson<ReportType>(spawned.stdout ?? ''),

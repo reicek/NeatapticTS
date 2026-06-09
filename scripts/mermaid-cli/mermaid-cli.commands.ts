@@ -21,7 +21,10 @@ import {
   runMermaidCli,
 } from './mermaid-cli.process.js';
 import { EXPORT_COMMAND, VALIDATE_COMMAND } from './mermaid-cli.constants.js';
-import type { MermaidCommandContext, ParsedArguments } from './mermaid-cli.types.js';
+import type {
+  MermaidCommandContext,
+  ParsedArguments,
+} from './mermaid-cli.types.js';
 
 /**
  * Executes the requested Mermaid command by delegating to the appropriate

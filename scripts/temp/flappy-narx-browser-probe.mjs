@@ -14,8 +14,7 @@ const TARGET_PIPE_COUNT = resolvePositiveIntegerEnvValue(
   10,
 );
 const TARGET_ARCHITECTURE_LABEL = process.env.FLAPPY_PROFILE_LABEL ?? 'NARX';
-const TARGET_ARCHITECTURE_PROFILE_ID =
-  process.env.FLAPPY_PROFILE_ID ?? 'narx';
+const TARGET_ARCHITECTURE_PROFILE_ID = process.env.FLAPPY_PROFILE_ID ?? 'narx';
 
 const browser = await puppeteer.launch({
   headless: 'new',
@@ -57,7 +56,9 @@ try {
   );
 
   const architectureLabels = await page.$$eval('button', (buttonElements) =>
-    buttonElements.map((buttonElement) => buttonElement.textContent?.trim() ?? ''),
+    buttonElements.map(
+      (buttonElement) => buttonElement.textContent?.trim() ?? '',
+    ),
   );
   const targetButtonIndex = architectureLabels.findIndex((labelText) =>
     labelText.includes(TARGET_ARCHITECTURE_LABEL),
@@ -87,9 +88,8 @@ try {
     );
     const currentArchitecture =
       finalStats.currentRun.architecture ?? finalStats.bestRun.architecture;
-    const lastObservedGeneration = resolveLastObservedGeneration(
-      recurrentDebugEvents,
-    );
+    const lastObservedGeneration =
+      resolveLastObservedGeneration(recurrentDebugEvents);
 
     if (
       currentArchitecture?.includes(TARGET_ARCHITECTURE_LABEL) &&
@@ -122,15 +122,14 @@ try {
     JSON.stringify(
       {
         success: false,
-          reason:
-            'Timed out while waiting for the target architecture to reach the target pipe count.',
+        reason:
+          'Timed out while waiting for the target architecture to reach the target pipe count.',
         architectureLabels,
-          targetPipeCount: TARGET_PIPE_COUNT,
-          targetArchitectureLabel: TARGET_ARCHITECTURE_LABEL,
+        targetPipeCount: TARGET_PIPE_COUNT,
+        targetArchitectureLabel: TARGET_ARCHITECTURE_LABEL,
         finalStats,
-          lastObservedGeneration: resolveLastObservedGeneration(
-            recurrentDebugEvents,
-          ),
+        lastObservedGeneration:
+          resolveLastObservedGeneration(recurrentDebugEvents),
       },
       null,
       2,
@@ -198,9 +197,7 @@ async function readHudStats(page) {
 
 function resolveLastObservedGeneration(recurrentDebugEvents) {
   return recurrentDebugEvents.reduce((bestGeneration, debugEvent) => {
-    if (
-      debugEvent?.architectureProfileId !== TARGET_ARCHITECTURE_PROFILE_ID
-    ) {
+    if (debugEvent?.architectureProfileId !== TARGET_ARCHITECTURE_PROFILE_ID) {
       return bestGeneration;
     }
 

@@ -3,7 +3,16 @@ description: 'Use when checking generated folder README context, JSDoc drift, mi
 name: docs-scout
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['educational-docs']
@@ -32,7 +41,9 @@ If your recommendation includes updating a tracker file, assume
 - This agent is intentionally thin. Durable policy lives in companion skill `educational-docs`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for documentation context
 
 ## Approach

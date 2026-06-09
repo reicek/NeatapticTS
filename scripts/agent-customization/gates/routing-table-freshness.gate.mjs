@@ -2,7 +2,11 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { fileExists, parseArgs, readWorkspaceFile } from '../customization-utils.mjs';
+import {
+  fileExists,
+  parseArgs,
+  readWorkspaceFile,
+} from '../customization-utils.mjs';
 import {
   collectCustomizationRoutingTable,
   extractRoutingTableSourceHash,
@@ -23,7 +27,8 @@ export async function runRoutingTableFreshnessGate() {
         expectedHash: expectedTable.sourceHash,
         sourceFileCount: expectedTable.sourceFiles.length,
       },
-      fixHint: 'Run `npm run agents:routing-table` to create the canonical generated routing table.',
+      fixHint:
+        'Run `npm run agents:routing-table` to create the canonical generated routing table.',
       owner: 'generate-agent-skill-routing-table.mjs',
     };
   }
@@ -65,6 +70,9 @@ async function main() {
   process.exitCode = result.pass ? 0 : 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }

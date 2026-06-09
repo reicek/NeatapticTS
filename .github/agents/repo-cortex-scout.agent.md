@@ -3,7 +3,16 @@ description: 'Use when checking Repo Cortex index freshness, triggering a corpus
 name: 'repo-cortex-scout'
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['repo-cortex-workflow']
@@ -27,7 +36,9 @@ You gather evidence from index-validation output, snapshot metadata, MCP configu
 - DO NOT treat workflow MCP binding symptoms as proof that the semantic index is stale without separate evidence.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for cortex-related documents
 
 ## Approach

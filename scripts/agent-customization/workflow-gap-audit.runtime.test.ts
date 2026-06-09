@@ -3,8 +3,18 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const LEARNING_LOG_PATH = path.join(REPO_ROOT, '.github', 'ai-learning', 'learning-log.jsonl');
-const WORKFLOW_GAP_AUDIT_PATH = path.join(REPO_ROOT, 'scripts', 'agent-customization', 'workflow-gap-audit.mjs');
+const LEARNING_LOG_PATH = path.join(
+  REPO_ROOT,
+  '.github',
+  'ai-learning',
+  'learning-log.jsonl',
+);
+const WORKFLOW_GAP_AUDIT_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'agent-customization',
+  'workflow-gap-audit.mjs',
+);
 
 describe('workflow-gap-audit runtime enforcement evidence', () => {
   let originalLearningLog = '';

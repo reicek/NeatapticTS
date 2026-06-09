@@ -3,7 +3,19 @@ description: 'Use when executing a deliberate SOLID module split, folderizing a 
 name: 'solid-split'
 tier: 2
 model: glm-5.1:cloud (ollama)
-tools: [read, edit, search, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    edit,
+    search,
+    execute,
+    todo,
+    agent,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 argument-hint: 'Describe the module to split, the plan file to follow or create, and the single current step to complete.'
 agents: ['boundary-mapper', 'plan-scout', 'docs-scout']
 skills: ['solid-split']
@@ -19,13 +31,13 @@ Complete exactly one durable SOLID split step at a time, keeping the codebase al
 - This agent is intentionally thin. Durable policy lives in the companion skill `solid-split`, not here.
 - **ALWAYS** load and follow the companion skill `solid-split`.
 - **ALWAYS** begin by turning the user's request into a compact task packet for the `solid-split` skill.
-  - *Example:* If the user says "split out the validator from moduleA," your packet must include: split root (`moduleA`), target boundary (`validator`), requested mode (e.g., "extract"), current plan path, exact current step, stability requirements for imports, validation expectations, documentation expectations, and worktree cautions.
+  - _Example:_ If the user says "split out the validator from moduleA," your packet must include: split root (`moduleA`), target boundary (`validator`), requested mode (e.g., "extract"), current plan path, exact current step, stability requirements for imports, validation expectations, documentation expectations, and worktree cautions.
 - The task packet must **preserve user-provided specifics** rather than paraphrasing them away.
 - **ALWAYS** use the exact skill name `solid-split` when referring to the companion skill.
 - **ALWAYS** invoke `educational-docs` after a completed split step unless the user explicitly opts out. Treat the current step as incomplete until that follow-up has run or is explicitly deferred.
-  - *Example:* After extracting `validator`, run `educational-docs` on the new boundary.
+  - _Example:_ After extracting `validator`, run `educational-docs` on the new boundary.
 - **ALWAYS** locate and follow the most relevant existing plan in `plans/` before editing. If none exists, create one before making implementation edits.
-  - *Example:* If `plans/moduleA-split.md` does not exist, create it before editing code.
+  - _Example:_ If `plans/moduleA-split.md` does not exist, create it before editing code.
 - **ALWAYS** keep the plan high-level and resumable using `tracker-handoff` status markers `[PLANNED]`, `[WIP]`, and `[DONE]`.
 - **ALWAYS** use `tracker-handoff` to compress the completed `.plans.md` file, add or update the same-boundary `.logs.md` file, and move both closed trackers into `plans/completed/` when the current step closes the whole workstream.
 - **ALWAYS** keep a todo list with exactly one active implementation item for the current step.
@@ -35,20 +47,23 @@ Complete exactly one durable SOLID split step at a time, keeping the codebase al
 - **DO NOT** invent custom tracker formatting when `tracker-handoff` applies.
 - **DO NOT** duplicate long-form repo workflow rules when the skill already defines them.
 - When a step changes behavior or meaningfully risks runtime drift, use the TDD cadence: narrow red test first, implementation second, narrow green validation third, coverage expansion toward >95% when practical.
-  - *Example:* If extracting `validator` changes behavior, first add a failing test, then implement, then validate, then expand coverage.
+  - _Example:_ If extracting `validator` changes behavior, first add a failing test, then implement, then validate, then expand coverage.
 
 ## Flow Selection
+
 - Use `04.refactor` when executing a deliberate SOLID module split.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `agent-graph` — after module boundary identification
 - `plan-sync` — after completing a split
 
 ## Required Workflow
 
 1. **Build a task packet from the current request before deep work.**
-   - *Example:*  
+   - _Example:_
      ```
      {
        "split_root": "moduleA",
@@ -64,30 +79,30 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
      ```
 2. **Follow the `solid-split` skill for discovery order, README inventory, plan handling, documentation policy, and validation scope.**
 3. **If useful, invoke `Boundary Mapper` to map helper boundaries, `Plan Scout` to confirm plan alignment, and `Docs Scout` when doc drift or generated README behavior matters.**
-   - *Example:* Use `Boundary Mapper` to find all validator usages.
+   - _Example:_ Use `Boundary Mapper` to find all validator usages.
 4. **Find the current durable plan step to execute, or create the missing durable plan if none exists.**
-   - *Example:* If no plan, create `plans/moduleA-split.md` with `[PLANNED] Extract validator`.
+   - _Example:_ If no plan, create `plans/moduleA-split.md` with `[PLANNED] Extract validator`.
 5. **Convert the chosen step into a tight todo list with one active item.**
-   - *Example:*  
+   - _Example:_
      ```
      - [ ] Extract validator to validator.js
      ```
 6. **Add or update the smallest boundary-local red-phase test first whenever the step changes behavior or carries meaningful runtime risk.**
-   - *Example:* Add a failing test for validator's new location.
+   - _Example:_ Add a failing test for validator's new location.
 7. **Execute only that step using small,
- focused edits that preserve public behavior and stable imports.**
-   - *Example:* Move validator code, update imports, do not change unrelated code.
+   focused edits that preserve public behavior and stable imports.**
+   - _Example:_ Move validator code, update imports, do not change unrelated code.
 8. **Update the plan immediately after the step is complete or if the durable step ordering changes. Use `tracker-handoff` for plan compression, status markers, and the stored `Handoff query` section.**
-   - *Example:* Mark `[WIP]` during work, `[DONE]` after completion.
+   - _Example:_ Mark `[WIP]` during work, `[DONE]` after completion.
 9. **Run the narrow green validation for the active boundary, then expand coverage on the new or directly related files toward >95% when practical.**
-   - *Example:* Run tests for validator.js, add more if coverage <95%.
+   - _Example:_ Run tests for validator.js, add more if coverage <95%.
 10. **Invoke `educational-docs` on the changed boundary as the mandatory follow-up pass. Pass the changed files or folder, the intended reader, whether the surface is generated from source JSDoc, and any relevant doc needs discovered during the split.**
-    - *Example:*  
+    - _Example:_
       ```
       educational-docs --files=validator.js --reader=dev --from-jsdoc=true --needs="API usage example"
       ```
 11. **Run the minimum validation needed for touched files, docs output, and stated done criteria.**
-    - *Example:* Ensure all tests and doc checks pass.
+    - _Example:_ Ensure all tests and doc checks pass.
 12. **Stop after reporting the completed step. Do not continue into the next durable split step automatically.**
 
 ## If Blocked
@@ -95,7 +110,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **Stop without advancing the plan step to `[DONE]`.**
 - **Record only durable plan changes, not temporary debugging notes.**
 - **Return the blocker, the smallest safe next action, and a revised handoff prompt for the next session using the template below.**
-  - *Example:*  
+  - _Example:_
     - Blocker: "validator.js import cycle detected"
     - Next action: "Refactor imports to break cycle"
     - Handoff prompt: "Ready to refactor imports for validator extraction"

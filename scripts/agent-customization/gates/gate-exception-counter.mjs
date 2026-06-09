@@ -9,7 +9,10 @@
  * `runtime-action-prepass` or `runtime-action-postpass` events.
  */
 
-import { countTrailingGateFailures, loadLearningLogEvents } from '../enforcement/runtime-enforcement.mjs';
+import {
+  countTrailingGateFailures,
+  loadLearningLogEvents,
+} from '../enforcement/runtime-enforcement.mjs';
 
 const args = parseCounterArgs(process.argv.slice(2));
 const result = await evaluateEscalation(args);
@@ -79,7 +82,8 @@ async function evaluateEscalation(args) {
 }
 
 async function deriveFailureCountFromLearningLog(sessionId) {
-  const normalizedSessionId = typeof sessionId === 'string' ? sessionId.trim() : '';
+  const normalizedSessionId =
+    typeof sessionId === 'string' ? sessionId.trim() : '';
   if (!normalizedSessionId) {
     return 0;
   }

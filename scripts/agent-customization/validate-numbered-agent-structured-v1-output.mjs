@@ -96,9 +96,13 @@ const contract = resolveContract(options.contract);
 if (options.help) {
   printUsage({
     title: 'Validate Tier-0 and Tier-1 agent structured-v1 output envelopes.',
-    usage: 'node scripts/agent-customization/validate-numbered-agent-structured-v1-output.mjs [--json] [--contract=tier0|tier1] --input=scripts/agent-customization/fixtures/numbered-agent-structured-v1.valid.md',
+    usage:
+      'node scripts/agent-customization/validate-numbered-agent-structured-v1-output.mjs [--json] [--contract=tier0|tier1] --input=scripts/agent-customization/fixtures/numbered-agent-structured-v1.valid.md',
     options: [
-      ['--contract=<tier0|tier1>', 'Structured-v1 contract to validate. Defaults to tier0.'],
+      [
+        '--contract=<tier0|tier1>',
+        'Structured-v1 contract to validate. Defaults to tier0.',
+      ],
       ['--input=<path>', 'Structured-v1 output fixture to validate.'],
     ],
   });
@@ -110,31 +114,58 @@ const issues = [];
 let outputText = '';
 
 if (!contract) {
-  issues.push(issue('error', 'scripts/agent-customization/validate-numbered-agent-structured-v1-output.mjs', `Unsupported --contract value '${options.contract}'. Use tier0 or tier1.`));
+  issues.push(
+    issue(
+      'error',
+      'scripts/agent-customization/validate-numbered-agent-structured-v1-output.mjs',
+      `Unsupported --contract value '${options.contract}'. Use tier0 or tier1.`,
+    ),
+  );
 }
 
 if (!inputPath) {
-  issues.push(issue('error', 'scripts/agent-customization/validate-numbered-agent-structured-v1-output.mjs', 'The validator requires --input=<path>.'));
+  issues.push(
+    issue(
+      'error',
+      'scripts/agent-customization/validate-numbered-agent-structured-v1-output.mjs',
+      'The validator requires --input=<path>.',
+    ),
+  );
 } else {
   try {
     outputText = await readFile(path.resolve(process.cwd(), inputPath), 'utf8');
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-      issues.push(issue('error', inputPath, 'Structured-v1 output fixture was not found.'));
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'ENOENT'
+    ) {
+      issues.push(
+        issue(
+          'error',
+          inputPath,
+          'Structured-v1 output fixture was not found.',
+        ),
+      );
     } else {
       throw error;
     }
   }
 }
 
-const validationResult = outputText && contract
-  ? validateStructuredV1Output(outputText, inputPath, contract)
-  : { issues: [], detectedFields: [], parsedFields: {} };
+const validationResult =
+  outputText && contract
+    ? validateStructuredV1Output(outputText, inputPath, contract)
+    : { issues: [], detectedFields: [], parsedFields: {} };
 
 issues.push(...validationResult.issues);
 
 const report = {
-  ...summarizeIssues(`${contract?.name ?? 'unknown'} structured-v1 output`, issues),
+  ...summarizeIssues(
+    `${contract?.name ?? 'unknown'} structured-v1 output`,
+    issues,
+  ),
   input: inputPath || null,
   contract: contract?.name ?? null,
   fence: STRUCTURED_V1_FENCE_LABEL,
@@ -147,7 +178,10 @@ writeReport(report, options);
 process.exitCode = report.ok ? 0 : 1;
 
 function resolveContract(contractOption) {
-  const normalized = typeof contractOption === 'string' ? contractOption.trim().toLowerCase() : 'tier0';
+  const normalized =
+    typeof contractOption === 'string'
+      ? contractOption.trim().toLowerCase()
+      : 'tier0';
   const contractName = STRUCTURED_V1_CONTRACT_ALIASES.get(normalized);
   return contractName ? STRUCTURED_V1_CONTRACTS[contractName] : null;
 }
@@ -156,10 +190,17 @@ function validateStructuredV1Output(outputText, outputPath, contract) {
   const issues = [];
   const parsedFields = {};
   const detectedFields = [];
-  const structuredFenceMatch = /^```structured-v1\r?\n(?<body>[\s\S]*?)\r?\n```$/u.exec(outputText.trim());
+  const structuredFenceMatch =
+    /^```structured-v1\r?\n(?<body>[\s\S]*?)\r?\n```$/u.exec(outputText.trim());
 
   if (!structuredFenceMatch?.groups?.body) {
-    issues.push(issue('error', outputPath, 'Output must be only one fenced ```structured-v1``` block with no surrounding prose.'));
+    issues.push(
+      issue(
+        'error',
+        outputPath,
+        'Output must be only one fenced ```structured-v1``` block with no surrounding prose.',
+      ),
+    );
     return { issues, detectedFields, parsedFields };
   }
 
@@ -175,28 +216,58 @@ function validateStructuredV1Output(outputText, outputPath, contract) {
     if (!fieldMatch?.groups) {
       const listItemMatch = STRUCTURED_V1_LIST_ITEM_PATTERN.exec(trimmedLine);
       if (!listItemMatch?.groups?.value) {
-        issues.push(issue('error', outputPath, `Structured-v1 line must match FIELD: value or list-item syntax: ${trimmedLine}`));
+        issues.push(
+          issue(
+            'error',
+            outputPath,
+            `Structured-v1 line must match FIELD: value or list-item syntax: ${trimmedLine}`,
+          ),
+        );
         continue;
       }
 
       if (!activeField) {
-        issues.push(issue('error', outputPath, `List item must belong to a preceding field: ${trimmedLine}`));
+        issues.push(
+          issue(
+            'error',
+            outputPath,
+            `List item must belong to a preceding field: ${trimmedLine}`,
+          ),
+        );
         continue;
       }
 
       if (!contract.listCapableFields.has(activeField)) {
-        issues.push(issue('error', outputPath, `Field ${activeField} does not accept list items.`));
+        issues.push(
+          issue(
+            'error',
+            outputPath,
+            `Field ${activeField} does not accept list items.`,
+          ),
+        );
         continue;
       }
 
       const listValue = listItemMatch.groups.value.trim();
       if (!listValue) {
-        issues.push(issue('error', outputPath, `${activeField} list items must not be empty.`));
+        issues.push(
+          issue(
+            'error',
+            outputPath,
+            `${activeField} list items must not be empty.`,
+          ),
+        );
         continue;
       }
 
       if (typeof parsedFields[activeField] === 'string') {
-        issues.push(issue('error', outputPath, `Field ${activeField} cannot mix inline values with list items.`));
+        issues.push(
+          issue(
+            'error',
+            outputPath,
+            `Field ${activeField} cannot mix inline values with list items.`,
+          ),
+        );
         continue;
       }
 
@@ -213,12 +284,16 @@ function validateStructuredV1Output(outputText, outputPath, contract) {
     activeField = field;
 
     if (!contract.requiredFields.includes(field)) {
-      issues.push(issue('error', outputPath, `Unexpected structured-v1 field: ${field}.`));
+      issues.push(
+        issue('error', outputPath, `Unexpected structured-v1 field: ${field}.`),
+      );
       continue;
     }
 
     if (Object.hasOwn(parsedFields, field)) {
-      issues.push(issue('error', outputPath, `Duplicate structured-v1 field: ${field}.`));
+      issues.push(
+        issue('error', outputPath, `Duplicate structured-v1 field: ${field}.`),
+      );
       continue;
     }
 
@@ -232,17 +307,39 @@ function validateStructuredV1Output(outputText, outputPath, contract) {
 
   for (const requiredField of contract.requiredFields) {
     if (!Object.hasOwn(parsedFields, requiredField)) {
-      issues.push(issue('error', outputPath, `Missing required structured-v1 field: ${requiredField}.`));
+      issues.push(
+        issue(
+          'error',
+          outputPath,
+          `Missing required structured-v1 field: ${requiredField}.`,
+        ),
+      );
     }
   }
 
-  if (detectedFields.some((field, index) => field !== contract.requiredFields[index])) {
-    issues.push(issue('error', outputPath, `Structured-v1 fields must appear in exact ${contract.name} order: ${contract.requiredFields.join(', ')}.`));
+  if (
+    detectedFields.some(
+      (field, index) => field !== contract.requiredFields[index],
+    )
+  ) {
+    issues.push(
+      issue(
+        'error',
+        outputPath,
+        `Structured-v1 fields must appear in exact ${contract.name} order: ${contract.requiredFields.join(', ')}.`,
+      ),
+    );
   }
 
-  validateScalarField(parsedFields, 'OUTPUT_CONTRACT', outputPath, issues, { exactValue: STRUCTURED_V1_FENCE_LABEL });
-  validateScalarField(parsedFields, 'TASK_STATUS', outputPath, issues, { allowedValues: ['SUCCESS', 'PARTIAL', 'FAILED'] });
-  validateScalarField(parsedFields, 'TIER', outputPath, issues, { exactValue: contract.tier });
+  validateScalarField(parsedFields, 'OUTPUT_CONTRACT', outputPath, issues, {
+    exactValue: STRUCTURED_V1_FENCE_LABEL,
+  });
+  validateScalarField(parsedFields, 'TASK_STATUS', outputPath, issues, {
+    allowedValues: ['SUCCESS', 'PARTIAL', 'FAILED'],
+  });
+  validateScalarField(parsedFields, 'TIER', outputPath, issues, {
+    exactValue: contract.tier,
+  });
   validateScalarField(parsedFields, 'ROLE', outputPath, issues);
   validateScalarField(parsedFields, 'TASK_RECEIVED', outputPath, issues);
   validateFieldContent(parsedFields, 'FILES_READ', outputPath, issues);
@@ -256,11 +353,24 @@ function validateStructuredV1Output(outputText, outputPath, contract) {
   }
   validateFieldContent(parsedFields, 'BLOCKERS', outputPath, issues);
   validateFieldContent(parsedFields, 'RISKS_OR_GAPS', outputPath, issues);
-  validateScalarField(parsedFields, 'LEARNING_EVENT_NEEDED', outputPath, issues, { allowedValues: ['true', 'false'] });
+  validateScalarField(
+    parsedFields,
+    'LEARNING_EVENT_NEEDED',
+    outputPath,
+    issues,
+    { allowedValues: ['true', 'false'] },
+  );
   validateScalarField(parsedFields, 'SUGGESTED_NEXT_AGENT', outputPath, issues);
   if (contract.name === 'tier0') {
-    validateScalarField(parsedFields, 'PHASE_COMPLETE', outputPath, issues, { allowedValues: ['true', 'false'] });
-    validateFieldContent(parsedFields, 'SUB_ORCHESTRATORS_USED', outputPath, issues);
+    validateScalarField(parsedFields, 'PHASE_COMPLETE', outputPath, issues, {
+      allowedValues: ['true', 'false'],
+    });
+    validateFieldContent(
+      parsedFields,
+      'SUB_ORCHESTRATORS_USED',
+      outputPath,
+      issues,
+    );
   }
   validateScalarField(parsedFields, 'SUMMARY', outputPath, issues);
 
@@ -275,28 +385,56 @@ function validateFieldContent(parsedFields, fieldName, outputPath, issues) {
   const value = parsedFields[fieldName];
   if (typeof value === 'string') {
     if (!value.trim()) {
-      issues.push(issue('error', outputPath, `${fieldName} must not be empty.`));
+      issues.push(
+        issue('error', outputPath, `${fieldName} must not be empty.`),
+      );
     }
     return;
   }
 
   if (!Array.isArray(value) || value.length === 0) {
-    issues.push(issue('error', outputPath, `${fieldName} must include at least one value.`));
+    issues.push(
+      issue(
+        'error',
+        outputPath,
+        `${fieldName} must include at least one value.`,
+      ),
+    );
   }
 }
 
-function validateScalarField(parsedFields, fieldName, outputPath, issues, { exactValue, allowedValues } = {}) {
+function validateScalarField(
+  parsedFields,
+  fieldName,
+  outputPath,
+  issues,
+  { exactValue, allowedValues } = {},
+) {
   const value = parsedFields[fieldName];
   if (typeof value !== 'string' || !value.trim()) {
-    issues.push(issue('error', outputPath, `${fieldName} must be a non-empty scalar value.`));
+    issues.push(
+      issue(
+        'error',
+        outputPath,
+        `${fieldName} must be a non-empty scalar value.`,
+      ),
+    );
     return;
   }
 
   if (exactValue && value !== exactValue) {
-    issues.push(issue('error', outputPath, `${fieldName} must equal '${exactValue}'.`));
+    issues.push(
+      issue('error', outputPath, `${fieldName} must equal '${exactValue}'.`),
+    );
   }
 
   if (allowedValues && !allowedValues.includes(value)) {
-    issues.push(issue('error', outputPath, `${fieldName} must be one of: ${allowedValues.join(', ')}.`));
+    issues.push(
+      issue(
+        'error',
+        outputPath,
+        `${fieldName} must be one of: ${allowedValues.join(', ')}.`,
+      ),
+    );
   }
 }

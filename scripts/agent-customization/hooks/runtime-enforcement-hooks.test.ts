@@ -3,10 +3,26 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const PRETOOL_HOOK_PATH = path.join(REPO_ROOT, 'scripts', 'agent-customization', 'hooks', 'pretool-workflow-cortex-preflight.mjs');
-const RUNTIME_CONTEXT_CLI_PATH = path.join(REPO_ROOT, 'scripts', 'agent-customization', 'enforcement', 'runtime-enforcement-context.mjs');
+const PRETOOL_HOOK_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'agent-customization',
+  'hooks',
+  'pretool-workflow-cortex-preflight.mjs',
+);
+const RUNTIME_CONTEXT_CLI_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'agent-customization',
+  'enforcement',
+  'runtime-enforcement-context.mjs',
+);
 const TEST_SESSION_ID = 'runtime-hook-test-session';
-const TEST_CONTEXT_PATH = path.join(REPO_ROOT, 'data', `hook-context-${TEST_SESSION_ID}.json`);
+const TEST_CONTEXT_PATH = path.join(
+  REPO_ROOT,
+  'data',
+  `hook-context-${TEST_SESSION_ID}.json`,
+);
 const EDIT_HOOK_INPUT = JSON.stringify({
   tool_name: 'edit',
   parameters: {

@@ -68,7 +68,7 @@ Preserve frontmatter: <yes>
    - Lines 1–17 are the YAML frontmatter.
    - Line 18 is blank.
    - Lines 19–61 are the raw JSON body (object with `mission`, `constraints`, `default_flow`, `tracker_recovery`, `if_blocked`, `output_contract`).
-   - Lines 63–96 are a trailing fenced ```` ```structured-v1 ```` output contract block that must stay untouched.
+   - Lines 63–96 are a trailing fenced ` ```structured-v1 ` output contract block that must stay untouched.
 2. Capture the frontmatter verbatim (lines 1–17 inclusive of the closing `---`).
 3. Parse lines 19–61 as JSON. The script does not need a temp file; embed the object literal inline in the Node `-e` invocation.
 4. Run:

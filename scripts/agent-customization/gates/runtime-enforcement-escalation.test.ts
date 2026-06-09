@@ -3,9 +3,26 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const LEARNING_LOG_PATH = path.join(REPO_ROOT, '.github', 'ai-learning', 'learning-log.jsonl');
-const RECORD_GATE_EXCEPTION_PATH = path.join(REPO_ROOT, 'scripts', 'agent-customization', 'gates', 'record-gate-exception.mjs');
-const GATE_EXCEPTION_COUNTER_PATH = path.join(REPO_ROOT, 'scripts', 'agent-customization', 'gates', 'gate-exception-counter.mjs');
+const LEARNING_LOG_PATH = path.join(
+  REPO_ROOT,
+  '.github',
+  'ai-learning',
+  'learning-log.jsonl',
+);
+const RECORD_GATE_EXCEPTION_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'agent-customization',
+  'gates',
+  'record-gate-exception.mjs',
+);
+const GATE_EXCEPTION_COUNTER_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'agent-customization',
+  'gates',
+  'gate-exception-counter.mjs',
+);
 const TEST_SESSION_ID = 'runtime-escalation-test-session';
 
 describe('runtime gate escalation persistence', () => {
@@ -64,7 +81,9 @@ describe('runtime gate escalation persistence', () => {
       failureCount: number;
     };
     const learningLogText = await readFile(LEARNING_LOG_PATH, 'utf8');
-    const hasEscalationEvent = learningLogText.includes('"eventType":"gate-escalation"');
+    const hasEscalationEvent = learningLogText.includes(
+      '"eventType":"gate-escalation"',
+    );
 
     expect({
       escalationTriggered: parsedCounter.escalationTriggered,

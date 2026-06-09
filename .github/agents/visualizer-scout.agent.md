@@ -3,7 +3,16 @@ description: 'Use when diagnosing visualizer UI issues such as cramped layout, m
 name: 'visualizer-scout'
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['visualizer-workflow']
@@ -28,7 +37,9 @@ You gather evidence from visualizer source files, identify seams in layout alloc
 - DO NOT restate full implementation workflow that belongs in `visualizer-workflow`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for visualizer documents
 
 ## Approach

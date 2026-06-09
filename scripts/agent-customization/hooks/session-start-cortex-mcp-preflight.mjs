@@ -22,7 +22,9 @@ const preflightSteps = Object.freeze([
 ]);
 
 main().catch((error) => {
-  process.stderr.write(`[cortex-session-preflight] runtime context initialization failed: ${error.message}\n`);
+  process.stderr.write(
+    `[cortex-session-preflight] runtime context initialization failed: ${error.message}\n`,
+  );
   process.exit(2);
 });
 
@@ -86,7 +88,10 @@ function parseTrailingJsonPayload(stdoutText) {
     return null;
   }
 
-  const candidateJson = stdoutText.slice(firstJsonBraceIndex, lastJsonBraceIndex + 1);
+  const candidateJson = stdoutText.slice(
+    firstJsonBraceIndex,
+    lastJsonBraceIndex + 1,
+  );
   try {
     return JSON.parse(candidateJson);
   } catch {
@@ -105,8 +110,8 @@ function summarizeParsedOutput(parsedOutput) {
     return parsedOutput.status;
   }
   if (
-    typeof parsedOutput.documents === 'number'
-    && typeof parsedOutput.chunks === 'number'
+    typeof parsedOutput.documents === 'number' &&
+    typeof parsedOutput.chunks === 'number'
   ) {
     return `${parsedOutput.documents} docs / ${parsedOutput.chunks} chunks`;
   }
@@ -129,7 +134,10 @@ function formatSuccessContext(stepSummaries) {
 function formatFailure(stepName, stepResult) {
   const stderrText = String(stepResult.stderr ?? '').trim();
   const stdoutText = String(stepResult.stdout ?? '').trim();
-  const details = stderrText || stdoutText || `${stepName} exited with status ${stepResult.status ?? 'unknown'}.`;
+  const details =
+    stderrText ||
+    stdoutText ||
+    `${stepName} exited with status ${stepResult.status ?? 'unknown'}.`;
   return `[cortex-session-preflight] ${stepName} failed: ${details}\n`;
 }
 

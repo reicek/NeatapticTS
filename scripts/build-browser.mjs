@@ -44,7 +44,15 @@ const sharedBuildOptions = {
   // Workers.getNodeTestWorker(), a code path that is never called in browser
   // contexts. Leaving them as external means the dynamic import will throw at
   // runtime only if the caller actually invokes the Node-only worker path.
-  external: ['child_process', 'path', 'fs', 'worker_threads', 'net', 'tls', 'os'],
+  external: [
+    'child_process',
+    'path',
+    'fs',
+    'worker_threads',
+    'net',
+    'tls',
+    'os',
+  ],
   logLevel: 'info',
   platform: 'browser',
   plugins: [browserEnvAliasPlugin],

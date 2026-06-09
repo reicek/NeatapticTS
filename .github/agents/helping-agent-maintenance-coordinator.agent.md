@@ -3,9 +3,36 @@ description: 'Use when: maintaining .agent.md files, repairing YAML frontmatter,
 name: 'helping-agent-maintenance-coordinator'
 tier: 2
 model: glm-5.1:cloud (ollama)
-tools: [read, search, edit, execute, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
-agents: ['agent-frontmatter-auditor', 'skill-frontmatter-auditor', 'skill-inventory-auditor', 'model-name-auditor', 'learning-event-capturer']
-skills: ['agent-frontmatter-standards', 'model-routing-and-budget', 'agent-inventory-audit', 'agent-json-body-to-md', 'agent-script-tooling', 'creating-specialist-agent', 'splitting-monolithic-agent']
+tools:
+  [
+    read,
+    search,
+    edit,
+    execute,
+    agent,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
+agents:
+  [
+    'agent-frontmatter-auditor',
+    'skill-frontmatter-auditor',
+    'skill-inventory-auditor',
+    'model-name-auditor',
+    'learning-event-capturer',
+  ]
+skills:
+  [
+    'agent-frontmatter-standards',
+    'model-routing-and-budget',
+    'agent-inventory-audit',
+    'agent-json-body-to-md',
+    'agent-script-tooling',
+    'creating-specialist-agent',
+    'splitting-monolithic-agent',
+  ]
 user-invocable: false
 ---
 
@@ -24,10 +51,13 @@ Coordinate focused custom-agent maintenance: repairing YAML frontmatter, updatin
 - ALWAYS stop after returning the structured output block.
 
 ## Flow Selection
+
 - Use `00.workflow-gap-audit` when maintaining agent frontmatter, routing, or skill connections.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `agent-graph` — after any agent configuration change
 - `routing-table-freshness` — after updating skill or agent lists
 

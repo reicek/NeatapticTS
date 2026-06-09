@@ -3,7 +3,16 @@ description: 'Use when identifying the next coverage tranche target from lcov.in
 name: coverage-scout
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['coverage-tranche', 'coverage-guard']
@@ -35,7 +44,9 @@ If the coverage plan tracker needs updating, assume `tracker-handoff` owns the t
 - This agent is intentionally thin. Durable policy lives in companion skills `coverage-tranche` or `coverage-guard`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for coverage context
 
 ## Approach

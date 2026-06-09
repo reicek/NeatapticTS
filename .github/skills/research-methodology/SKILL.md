@@ -129,10 +129,10 @@ Goal: identify the primary plan file and any roadmap mismatch risks.
 
 End every user-facing response with `(Certainty: NN%)`.
 
-| Certainty | Action Required |
-|-----------|-----------------|
+| Certainty | Action Required                                           |
+| --------- | --------------------------------------------------------- |
 | < 90%     | Stop and investigate before proceeding. Do not implement. |
-| 90-94%    | Investigate further and ask follow-up questions. |
+| 90-94%    | Investigate further and ask follow-up questions.          |
 | ≥ 95%     | Requirements and environment are clear enough to proceed. |
 
 **Investigation protocol below 90%:**

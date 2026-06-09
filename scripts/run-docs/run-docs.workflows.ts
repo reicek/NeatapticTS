@@ -9,7 +9,11 @@
  * mode union after the call — callers need no extra type guard.
  */
 
-import { ALL_MODE, FOLDERS_MODE, SUPPORTED_MODES } from './run-docs.constants.js';
+import {
+  ALL_MODE,
+  FOLDERS_MODE,
+  SUPPORTED_MODES,
+} from './run-docs.constants.js';
 import { runScriptTask, runScriptTasksInParallel } from './run-docs.runner.js';
 
 /**
@@ -29,7 +33,10 @@ export async function runFullDocsWorkflow(): Promise<void> {
     { label: 'ASCII Maze bundles', scriptName: 'build:ascii-maze' },
     { label: 'Flappy Bird bundles', scriptName: 'build:flappy-bird' },
     { label: 'NEATchat bundle', scriptName: 'build:neat-chat' },
-    { label: 'Racing Curriculum bundle', scriptName: 'build:racing-curriculum' },
+    {
+      label: 'Racing Curriculum bundle',
+      scriptName: 'build:racing-curriculum',
+    },
     { label: 'Semantic snapshot', scriptName: 'index:build-snapshot' },
   ]);
 

@@ -29,14 +29,16 @@ export function jsonToMarkdown(obj) {
    * @returns {string} The Title Case string.
    */
   function toTitleCase(str) {
-    return str
-      // Replace underscores with spaces
-      .replace(/_/g, ' ')
-      // Add space before capital letters (for camelCase)
-      .replace(/([a-z])([A-Z])/g, '$1 $2')
-      // Capitalize the first letter of each word
-      .replace(/\b\w/g, c => c.toUpperCase())
-      .trim();
+    return (
+      str
+        // Replace underscores with spaces
+        .replace(/_/g, ' ')
+        // Add space before capital letters (for camelCase)
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        // Capitalize the first letter of each word
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+        .trim()
+    );
   }
 
   /**
@@ -50,7 +52,7 @@ export function jsonToMarkdown(obj) {
   function formatContent(value) {
     if (Array.isArray(value)) {
       // Render arrays as Markdown bullet lists
-      return value.map(item => `- ${item}`).join('\n');
+      return value.map((item) => `- ${item}`).join('\n');
     } else if (typeof value === 'object' && value !== null) {
       // Recursively format nested objects
       return Object.entries(value)
@@ -66,7 +68,7 @@ export function jsonToMarkdown(obj) {
   return Object.entries(obj)
     .map(([key, value]) => {
       const sectionTitle = toTitleCase(key); // Format key as section title
-      const content = formatContent(value);  // Format value as section content
+      const content = formatContent(value); // Format value as section content
       // Each section starts with a level-2 heading
       return `## ${sectionTitle}\n\n${content}\n`;
     })

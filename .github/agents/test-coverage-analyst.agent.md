@@ -3,7 +3,16 @@ description: 'Use when analyzing coverage gaps from lcov.info, mapping uncovered
 name: test-coverage-analyst
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, bash, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    bash,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['coverage-guard', 'coverage-tranche']
@@ -29,7 +38,9 @@ You analyze `coverage/lcov.info` to identify uncovered paths, map them to source
 - This agent is intentionally thin. Durable policy lives in companion skills `coverage-guard` and `coverage-tranche`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `green-validation-evidence` — after analyzing coverage gaps
 - `cortex-index` — before searching for coverage context
 

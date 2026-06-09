@@ -3,9 +3,34 @@ description: 'Use when: an SDLC agent discovers a missing specialist, weak skill
 name: 'helping-gap-resolution-coordinator'
 tier: 2
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, edit, execute, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
-agents: ['skill-inventory-auditor', 'agent-frontmatter-auditor', 'skill-frontmatter-auditor', 'model-name-auditor', 'learning-event-capturer', 'file-change-summarizer']
-skills: ['agent-frontmatter-standards', 'model-routing-and-budget', 'agent-inventory-audit', 'subagent-delegation-patterns']
+tools:
+  [
+    read,
+    search,
+    edit,
+    execute,
+    agent,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
+agents:
+  [
+    'skill-inventory-auditor',
+    'agent-frontmatter-auditor',
+    'skill-frontmatter-auditor',
+    'model-name-auditor',
+    'learning-event-capturer',
+    'file-change-summarizer',
+  ]
+skills:
+  [
+    'agent-frontmatter-standards',
+    'model-routing-and-budget',
+    'agent-inventory-audit',
+    'subagent-delegation-patterns',
+  ]
 user-invocable: false
 ---
 
@@ -25,10 +50,13 @@ Coordinate small, local AI-system gap repairs when an SDLC agent discovers a mis
 - ALWAYS stop after returning the structured output block.
 
 ## Flow Selection
+
 - Use `00.diagnose-blocker` when a workflow gap, missing specialist, or routing issue blocks progress.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `agent-graph` — after identifying a routing gap
 - `routing-table-freshness` — after resolving a gap
 

@@ -3,7 +3,16 @@ description: 'Use when running focused unit test commands, checking a red or gre
 name: 'unit-test-runner'
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['running-unit-tests']
@@ -23,7 +32,9 @@ You execute narrowly scoped test runs and return results. This agent does not au
 - DO NOT broaden validation without explicit instruction.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `green-validation-evidence` — after running focused test validation
 
 ## Approach

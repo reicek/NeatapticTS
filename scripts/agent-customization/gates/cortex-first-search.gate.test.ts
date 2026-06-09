@@ -17,27 +17,35 @@ interface SpawnedGateResult {
 }
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const CORTEX_FIRST_SEARCH_GATE_PATH = path.join(REPO_ROOT, 'scripts', 'agent-customization', 'gates', 'cortex-first-search.gate.mjs');
+const CORTEX_FIRST_SEARCH_GATE_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'agent-customization',
+  'gates',
+  'cortex-first-search.gate.mjs',
+);
 
 describe('cortex-first-search.gate.mjs', () => {
   it('returns the honest prerequisite contract for Cortex-first search readiness', () => {
     const result = runGateContractCheck();
 
-    expect(result).toEqual(expect.objectContaining({
-      gateStatus: 0,
-      report: expect.objectContaining({
-        pass: true,
-        evidence: expect.objectContaining({
-          index_documents: 12,
-          index_chunks: 48,
-          index_fresh: true,
-          corpus_mcp_alive: true,
-          corpus_search_results: 3,
+    expect(result).toEqual(
+      expect.objectContaining({
+        gateStatus: 0,
+        report: expect.objectContaining({
+          pass: true,
+          evidence: expect.objectContaining({
+            index_documents: 12,
+            index_chunks: 48,
+            index_fresh: true,
+            corpus_mcp_alive: true,
+            corpus_search_results: 3,
+          }),
+          fixHint: null,
+          owner: 'repo-cortex-workflow',
         }),
-        fixHint: null,
-        owner: 'repo-cortex-workflow',
       }),
-    }));
+    );
   });
 });
 
@@ -52,11 +60,15 @@ function runGateContractCheck(): SpawnedGateResult {
     '});',
     'console.log(JSON.stringify(report));',
   ].join('\n');
-  const gateResult = spawnSync(process.execPath, ['--input-type=module', '--eval', inlineScript], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-    timeout: 600000,
-  });
+  const gateResult = spawnSync(
+    process.execPath,
+    ['--input-type=module', '--eval', inlineScript],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      timeout: 600000,
+    },
+  );
 
   return {
     gateStatus: gateResult.status,

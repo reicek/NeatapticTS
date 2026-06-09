@@ -1,7 +1,7 @@
 {
   "metricVersion": 1,
   "scannerVersion": "1.0.0",
-  "gitCommit": "fd0e2eb16d06e674fe0de1deaa28a8793b46aa71",
+  "gitCommit": "95054b833b675ef3c292bf391c2973b8175ee30b",
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "thresholdConfig": {
     "minJsdocWords": 10,

@@ -21,15 +21,29 @@ interface SmokeReport {
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const MCP_CONFIG_PATH = path.join(REPO_ROOT, '.vscode', 'mcp.json');
-const BUILD_INDEX_PATH = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'build-index.mjs');
-const SNAPSHOT_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'build-browser-snapshot.mjs');
+const BUILD_INDEX_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'semantic-index',
+  'build-index.mjs',
+);
+const SNAPSHOT_SCRIPT_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'semantic-index',
+  'build-browser-snapshot.mjs',
+);
 const DATABASE_PATH = path.join(REPO_ROOT, 'data', 'semantic-index.sqlite');
 
 const runModuleEvaluation = <Result>(source: string): Result => {
-  const output = execFileSync(process.execPath, ['--input-type=module', '--eval', source], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
+  const output = execFileSync(
+    process.execPath,
+    ['--input-type=module', '--eval', source],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    },
+  );
 
   return JSON.parse(output) as Result;
 };
@@ -62,6 +76,7 @@ describe('repo cortex MCP red contracts', () => {
       expect(descriptors.map(({ name }) => name)).toEqual([
         'search_corpus',
         'load_chunk',
+        'load_parent_chunk',
         'load_document',
         'freshness_check',
         'index_stats',
@@ -83,10 +98,14 @@ describe('repo cortex MCP red contracts', () => {
         console.log(JSON.stringify(result));
       `);
 
-      expect(result).toEqual(expect.objectContaining({
-        isError: true,
-        structuredContent: expect.objectContaining({ error: expect.any(String) }),
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          isError: true,
+          structuredContent: expect.objectContaining({
+            error: expect.any(String),
+          }),
+        }),
+      );
     });
 
     it('adds the cortex server registration without replacing existing MCP servers', () => {
@@ -109,11 +128,17 @@ describe('repo cortex MCP red contracts', () => {
         console.log(JSON.stringify(result));
       `);
 
-      expect(result).toEqual(expect.objectContaining({
-        results: expect.arrayContaining([
-          expect.objectContaining({ chunk_id: expect.any(Number), score: expect.any(Number), text: expect.any(String) }),
-        ]),
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          results: expect.arrayContaining([
+            expect.objectContaining({
+              chunk_id: expect.any(Number),
+              score: expect.any(Number),
+              text: expect.any(String),
+            }),
+          ]),
+        }),
+      );
     });
 
     it('load_chunk returns one structured chunk by numeric id', () => {
@@ -123,9 +148,15 @@ describe('repo cortex MCP red contracts', () => {
         console.log(JSON.stringify(result));
       `);
 
-      expect(result).toEqual(expect.objectContaining({
-        chunk: expect.objectContaining({ chunk_id: 1, file_path: expect.any(String), text: expect.any(String) }),
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          chunk: expect.objectContaining({
+            chunk_id: 1,
+            file_path: expect.any(String),
+            text: expect.any(String),
+          }),
+        }),
+      );
     });
 
     it('load_document returns ordered chunks for a repo file path', () => {
@@ -135,10 +166,14 @@ describe('repo cortex MCP red contracts', () => {
         console.log(JSON.stringify(result));
       `);
 
-      expect(result).toEqual(expect.objectContaining({
-        file_path: 'README.md',
-        chunks: expect.arrayContaining([expect.objectContaining({ text: expect.any(String) })]),
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          file_path: 'README.md',
+          chunks: expect.arrayContaining([
+            expect.objectContaining({ text: expect.any(String) }),
+          ]),
+        }),
+      );
     });
 
     it('freshness_check reports stale documents when filesystem proof differs', () => {
@@ -152,7 +187,12 @@ describe('repo cortex MCP red contracts', () => {
         console.log(JSON.stringify(result));
       `);
 
-      expect(result).toEqual(expect.objectContaining({ fresh: false, stale: expect.arrayContaining(['README.md']) }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          fresh: false,
+          stale: expect.arrayContaining(['README.md']),
+        }),
+      );
     });
 
     it('index_stats returns corpus row counts and last build timestamp', () => {
@@ -162,11 +202,13 @@ describe('repo cortex MCP red contracts', () => {
         console.log(JSON.stringify(result));
       `);
 
-      expect(result).toEqual(expect.objectContaining({
-        total_documents: expect.any(Number),
-        total_chunks: expect.any(Number),
-        last_build_timestamp: expect.any(String),
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          total_documents: expect.any(Number),
+          total_chunks: expect.any(Number),
+          last_build_timestamp: expect.any(String),
+        }),
+      );
     });
 
     it('list_families returns indexed document families with counts', () => {
@@ -176,43 +218,68 @@ describe('repo cortex MCP red contracts', () => {
         console.log(JSON.stringify(result));
       `);
 
-      expect(result).toEqual(expect.objectContaining({
-        families: expect.arrayContaining([expect.objectContaining({ family: expect.any(String), documents: expect.any(Number) })]),
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          families: expect.arrayContaining([
+            expect.objectContaining({
+              family: expect.any(String),
+              documents: expect.any(Number),
+            }),
+          ]),
+        }),
+      );
     });
   });
 
   describe('CLI and smoke contracts', () => {
     it('repo-cortex-mcp supports --help with the semantic tool list', () => {
-      const output = execFileSync(process.execPath, ['scripts/mcp-semantic/repo-cortex-mcp.mjs', '--help'], {
-        cwd: REPO_ROOT,
-        encoding: 'utf8',
-      });
+      const output = execFileSync(
+        process.execPath,
+        ['scripts/mcp-semantic/repo-cortex-mcp.mjs', '--help'],
+        {
+          cwd: REPO_ROOT,
+          encoding: 'utf8',
+        },
+      );
 
       expect(output).toContain('search_corpus');
     });
 
     it('repo-cortex-mcp supports --self-check --json with a passing report for the real index', () => {
-      const report = JSON.parse(execFileSync(
-        process.execPath,
-        ['scripts/mcp-semantic/repo-cortex-mcp.mjs', '--self-check', '--json'],
-        { cwd: REPO_ROOT, encoding: 'utf8' },
-      ));
+      const report = JSON.parse(
+        execFileSync(
+          process.execPath,
+          [
+            'scripts/mcp-semantic/repo-cortex-mcp.mjs',
+            '--self-check',
+            '--json',
+          ],
+          { cwd: REPO_ROOT, encoding: 'utf8' },
+        ),
+      );
 
       expect(report).toEqual(expect.objectContaining({ ok: true }));
     });
 
     it('cortex-mcp-smoke returns a failing JSON gate report when the index is absent', () => {
-      const report = JSON.parse(execFileSync(
-        process.execPath,
-        ['scripts/agent-customization/gates/cortex-mcp-smoke.mjs', '--json', '--databasePath=./missing-semantic-index.sqlite'],
-        { cwd: REPO_ROOT, encoding: 'utf8' },
-      )) as SmokeReport;
+      const report = JSON.parse(
+        execFileSync(
+          process.execPath,
+          [
+            'scripts/agent-customization/gates/cortex-mcp-smoke.mjs',
+            '--json',
+            '--databasePath=./missing-semantic-index.sqlite',
+          ],
+          { cwd: REPO_ROOT, encoding: 'utf8' },
+        ),
+      ) as SmokeReport;
 
-      expect(report).toEqual(expect.objectContaining({
-        pass: false,
-        fixHint: 'Run: node scripts/semantic-index/build-index.mjs',
-      }));
+      expect(report).toEqual(
+        expect.objectContaining({
+          pass: false,
+          fixHint: 'Run: node scripts/semantic-index/build-index.mjs',
+        }),
+      );
     });
   });
 });

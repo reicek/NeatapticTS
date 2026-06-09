@@ -10,11 +10,15 @@ import Database from 'better-sqlite3';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
-import { defaultDatabasePath, repoRoot } from '../../semantic-index/init-schema.mjs';
+import {
+  defaultDatabasePath,
+  repoRoot,
+} from '../../semantic-index/init-schema.mjs';
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
 
 /** Human-readable hint for operators when the semantic index database is missing. */
-export const CORTEX_FIX_HINT = 'Run: node scripts/semantic-index/build-index.mjs';
+export const CORTEX_FIX_HINT =
+  'Run: node scripts/semantic-index/build-index.mjs';
 
 /**
  * Resolve the corpus SQLite database path from an explicit override, the
@@ -24,7 +28,9 @@ export const CORTEX_FIX_HINT = 'Run: node scripts/semantic-index/build-index.mjs
  * @returns {string} Absolute resolved database path.
  */
 export function resolveDatabasePath(databasePath) {
-  return path.resolve(databasePath ?? process.env.CORTEX_DB_PATH ?? defaultDatabasePath);
+  return path.resolve(
+    databasePath ?? process.env.CORTEX_DB_PATH ?? defaultDatabasePath,
+  );
 }
 
 /**
@@ -40,10 +46,15 @@ export function resolveDatabasePath(databasePath) {
 export function openCortexDatabase(databasePath) {
   const resolvedDatabasePath = resolveDatabasePath(databasePath);
   if (!existsSync(resolvedDatabasePath)) {
-    throw new Error(`Semantic index not found: ${resolvedDatabasePath}. ${CORTEX_FIX_HINT}`);
+    throw new Error(
+      `Semantic index not found: ${resolvedDatabasePath}. ${CORTEX_FIX_HINT}`,
+    );
   }
 
-  return new Database(resolvedDatabasePath, { readonly: true, fileMustExist: true });
+  return new Database(resolvedDatabasePath, {
+    readonly: true,
+    fileMustExist: true,
+  });
 }
 
 /**
@@ -75,7 +86,10 @@ export function normalizeLimit(value, fallback = 10) {
  * @throws {Error} When the path escapes the repository root.
  */
 export function normalizeRepoPath(filePath) {
-  const requestedPath = requireString(filePath, 'file_path').replaceAll('\\', '/');
+  const requestedPath = requireString(filePath, 'file_path').replaceAll(
+    '\\',
+    '/',
+  );
   const normalizedPath = path.posix.normalize(requestedPath);
   if (normalizedPath.startsWith('../') || path.isAbsolute(normalizedPath)) {
     throw new Error('file_path must stay inside the repository.');
@@ -136,18 +150,42 @@ export function sanitizeFtsQuery(raw) {
 /**
  * Normalize a raw SQLite chunk row into a typed chunk descriptor.
  *
+ * Includes v2 semantic chunking columns (depth, parent_chunk_id,
+ * context_header, symbol_name, signature_text, jsdoc_text, export_type, module_path)
+ * and v3 metadata enrichment columns (arch_layer, jsdoc_quality, jsdoc_word_count,
+ * cyclomatic_complexity, test_coverage, source_path_pattern).
+ *
  * @param {Record<string, unknown>} row - Raw row from `chunks` joined with `documents`.
- * @returns {{ chunk_id: number, file_path: string, family: string, chunk_index: number, heading_path: string | null, text: string, char_start: number, char_end: number }} Normalized chunk descriptor.
+ * @returns {{ chunk_id: number, file_path: string, family: string, chunk_index: number, heading_path: string | null, text: string, char_start: number, char_end: number, depth: number, parent_chunk_id: number | null, context_header: string | null, symbol_name: string | null, signature_text: string | null, jsdoc_text: string | null, export_type: string | null, module_path: string | null, arch_layer: string | null, jsdoc_quality: string | null, jsdoc_word_count: number | null, cyclomatic_complexity: number | null, test_coverage: string | null, source_path_pattern: string | null }} Normalized chunk descriptor with v3 metadata.
  */
 export function readChunkRow(row) {
   return {
-    chunk_id: Number(row.chunk_id),
-    file_path: row.file_path,
-    family: row.doc_family,
-    chunk_index: Number(row.chunk_index),
-    heading_path: row.heading_path ?? null,
-    text: row.body_text,
-    char_start: Number(row.char_start),
+    arch_layer: row.arch_layer ?? null,
     char_end: Number(row.char_end),
+    char_start: Number(row.char_start),
+    chunk_id: Number(row.chunk_id),
+    chunk_index: Number(row.chunk_index),
+    context_header: row.context_header ?? null,
+    cyclomatic_complexity:
+      row.cyclomatic_complexity != null
+        ? Number(row.cyclomatic_complexity)
+        : null,
+    depth: Number(row.depth ?? 0),
+    export_type: row.export_type ?? null,
+    family: row.doc_family,
+    file_path: row.file_path,
+    heading_path: row.heading_path ?? null,
+    jsdoc_quality: row.jsdoc_quality ?? null,
+    jsdoc_text: row.jsdoc_text ?? null,
+    jsdoc_word_count:
+      row.jsdoc_word_count != null ? Number(row.jsdoc_word_count) : null,
+    module_path: row.module_path ?? null,
+    parent_chunk_id:
+      row.parent_chunk_id != null ? Number(row.parent_chunk_id) : null,
+    signature_text: row.signature_text ?? null,
+    source_path_pattern: row.source_path_pattern ?? null,
+    symbol_name: row.symbol_name ?? null,
+    test_coverage: row.test_coverage ?? null,
+    text: row.body_text,
   };
 }

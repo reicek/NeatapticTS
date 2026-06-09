@@ -4,10 +4,18 @@ const HEADING_PATTERN = /^(#{1,6})\s+(.+)$/gm;
 
 export function chunkMarkdown(markdownText, options = {}) {
   const maxChars = Math.max(1, Number(options.maxChars ?? DEFAULT_MAX_CHARS));
-  const overlapChars = Math.max(0, Math.min(Number(options.overlapChars ?? DEFAULT_OVERLAP_CHARS), maxChars - 1));
+  const overlapChars = Math.max(
+    0,
+    Math.min(
+      Number(options.overlapChars ?? DEFAULT_OVERLAP_CHARS),
+      maxChars - 1,
+    ),
+  );
   const sections = collectSections(String(markdownText));
 
-  return sections.flatMap((section) => chunkSection(section, { maxChars, overlapChars }));
+  return sections.flatMap((section) =>
+    chunkSection(section, { maxChars, overlapChars }),
+  );
 }
 
 function collectSections(markdownText) {
@@ -15,29 +23,44 @@ function collectSections(markdownText) {
     marker: match[1],
     text: match[2].trim(),
     index: match.index,
-    lineEnd: markdownText.indexOf('\n', match.index) === -1 ? markdownText.length : markdownText.indexOf('\n', match.index),
+    lineEnd:
+      markdownText.indexOf('\n', match.index) === -1
+        ? markdownText.length
+        : markdownText.indexOf('\n', match.index),
   }));
 
   if (headings.length === 0) {
-    return [{ heading_path: '', body_text: markdownText.trim(), char_start: 0, char_end: markdownText.length }];
+    return [
+      {
+        heading_path: '',
+        body_text: markdownText.trim(),
+        char_start: 0,
+        char_end: markdownText.length,
+      },
+    ];
   }
 
   const headingStack = [];
-  return headings.map((heading, headingIndex) => {
-    const headingLevel = heading.marker.length;
-    while (headingStack.length >= headingLevel) headingStack.pop();
-    headingStack.push(`${heading.marker} ${heading.text}`);
+  return headings
+    .map((heading, headingIndex) => {
+      const headingLevel = heading.marker.length;
+      while (headingStack.length >= headingLevel) headingStack.pop();
+      headingStack.push(`${heading.marker} ${heading.text}`);
 
-    const nextHeading = headings[headingIndex + 1];
-    const charStart = heading.index;
-    const charEnd = nextHeading?.index ?? markdownText.length;
-    return {
-      heading_path: headingStack.join(' > '),
-      body_text: markdownText.slice(heading.lineEnd, charEnd).trim(),
-      char_start: charStart,
-      char_end: charEnd,
-    };
-  }).filter((section) => section.body_text.length > 0 || section.heading_path.length > 0);
+      const nextHeading = headings[headingIndex + 1];
+      const charStart = heading.index;
+      const charEnd = nextHeading?.index ?? markdownText.length;
+      return {
+        heading_path: headingStack.join(' > '),
+        body_text: markdownText.slice(heading.lineEnd, charEnd).trim(),
+        char_start: charStart,
+        char_end: charEnd,
+      };
+    })
+    .filter(
+      (section) =>
+        section.body_text.length > 0 || section.heading_path.length > 0,
+    );
 }
 
 function chunkSection(section, options) {

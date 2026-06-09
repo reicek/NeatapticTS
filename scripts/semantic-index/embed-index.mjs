@@ -23,40 +23,69 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fail, parseCliArgs, printHelp, writeJsonOrText } from './cli-utils.mjs';
+import {
+  fail,
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from './cli-utils.mjs';
 import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
 
 export const DEFAULT_MODEL_ID = 'all-MiniLM-L6-v2';
-export const DEFAULT_MODEL_DIRECTORY = path.join(repoRoot, 'scripts', 'semantic-index', 'models');
-export const DEFAULT_EMBEDDINGS_DATABASE_PATH = path.join(repoRoot, 'data', 'embeddings.sqlite');
+export const DEFAULT_MODEL_DIRECTORY = path.join(
+  repoRoot,
+  'scripts',
+  'semantic-index',
+  'models',
+);
+export const DEFAULT_EMBEDDINGS_DATABASE_PATH = path.join(
+  repoRoot,
+  'data',
+  'embeddings.sqlite',
+);
 const DEFAULT_MAX_SEQUENCE_LENGTH = 512;
 
 export async function buildEmbeddingIndex(options = {}) {
-  const corpusDatabasePath = path.resolve(options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath);
-  const embeddingsDatabasePath = path.resolve(options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH);
+  const corpusDatabasePath = path.resolve(
+    options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath,
+  );
+  const embeddingsDatabasePath = path.resolve(
+    options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
+  );
   const modelId = String(options.modelId ?? DEFAULT_MODEL_ID);
   const dryRun = Boolean(options.dryRun);
   const modelMeta = await readModelMeta(options);
   const dimension = Number(options.dimension ?? modelMeta.dimension ?? 0);
-  const modelSha256 = String(options.modelSha256 ?? modelMeta.model_sha256 ?? '');
+  const modelSha256 = String(
+    options.modelSha256 ?? modelMeta.model_sha256 ?? '',
+  );
 
   if (!Number.isInteger(dimension) || dimension < 1) {
-    throw new Error('Embedding dimension is required. Pass --dimension or provide scripts/semantic-index/models/model-meta.json.');
+    throw new Error(
+      'Embedding dimension is required. Pass --dimension or provide scripts/semantic-index/models/model-meta.json.',
+    );
   }
 
   if (!modelSha256) {
-    throw new Error('Model SHA-256 is required. Pass --model-sha256 or provide scripts/semantic-index/models/model-meta.json.');
+    throw new Error(
+      'Model SHA-256 is required. Pass --model-sha256 or provide scripts/semantic-index/models/model-meta.json.',
+    );
   }
 
-  const embedText = options.embedText ?? await createOnnxTextEmbedder({
-    dimension,
-    modelDirectory: options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
-    modelId,
-  });
+  const embedText =
+    options.embedText ??
+    (await createOnnxTextEmbedder({
+      dimension,
+      modelDirectory: options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
+      modelId,
+    }));
 
   await mkdir(path.dirname(embeddingsDatabasePath), { recursive: true });
 
-  const corpusDatabase = new Database(corpusDatabasePath, { readonly: true, fileMustExist: true });
+  const corpusDatabase = new Database(corpusDatabasePath, {
+    readonly: true,
+    fileMustExist: true,
+  });
   const embeddingsDatabase = new Database(embeddingsDatabasePath);
   initializeEmbeddingsSchema(embeddingsDatabase);
 
@@ -79,13 +108,19 @@ export async function buildEmbeddingIndex(options = {}) {
     });
   }
 
-  const chunkRows = corpusDatabase.prepare(`
+  const chunkRows = corpusDatabase
+    .prepare(
+      `
     SELECT c.chunk_id, c.chunk_index, c.heading_path, c.body_text, c.char_start, c.char_end,
+      c.parent_chunk_id, c.depth, c.context_header, c.symbol_name, c.signature_text,
+      c.jsdoc_text, c.export_type, c.module_path,
       d.file_path, d.doc_family
     FROM chunks c
     LEFT JOIN documents d ON d.doc_id = c.doc_id
     ORDER BY c.chunk_id
-  `).all();
+  `,
+    )
+    .all();
 
   const selectExistingEmbedding = embeddingsDatabase.prepare(`
     SELECT chunk_sha256, model_id
@@ -111,23 +146,28 @@ export async function buildEmbeddingIndex(options = {}) {
       embedded_at = excluded.embedded_at
   `);
 
-  const writeEmbedding = embeddingsDatabase.transaction((chunkId, embeddingBuffer, chunkSha256) => {
-    upsertEmbedding.run(
-      chunkId,
-      embeddingBuffer,
-      chunkSha256,
-      modelId,
-      modelSha256,
-      dimension,
-      new Date().toISOString(),
-    );
-  });
+  const writeEmbedding = embeddingsDatabase.transaction(
+    (chunkId, embeddingBuffer, chunkSha256) => {
+      upsertEmbedding.run(
+        chunkId,
+        embeddingBuffer,
+        chunkSha256,
+        modelId,
+        modelSha256,
+        dimension,
+        new Date().toISOString(),
+      );
+    },
+  );
 
   try {
     for (const chunkRow of chunkRows) {
       const chunkSha256 = createChunkSha256(chunkRow);
       const existingEmbedding = selectExistingEmbedding.get(chunkRow.chunk_id);
-      if (existingEmbedding?.chunk_sha256 === chunkSha256 && existingEmbedding?.model_id === modelId) {
+      if (
+        existingEmbedding?.chunk_sha256 === chunkSha256 &&
+        existingEmbedding?.model_id === modelId
+      ) {
         summary.skipped += 1;
         continue;
       }
@@ -149,7 +189,11 @@ export async function buildEmbeddingIndex(options = {}) {
         }),
         dimension,
       );
-      writeEmbedding(chunkRow.chunk_id, toBlobBuffer(embeddingVector), chunkSha256);
+      writeEmbedding(
+        chunkRow.chunk_id,
+        toBlobBuffer(embeddingVector),
+        chunkSha256,
+      );
       summary.embedded += 1;
     }
   } finally {
@@ -164,7 +208,9 @@ export async function buildEmbeddingIndex(options = {}) {
 export function normalizeEmbeddingVector(vectorLike, dimension) {
   const float32Vector = toFloat32Array(vectorLike);
   if (float32Vector.length !== dimension) {
-    throw new Error(`Expected embedding dimension ${dimension}, received ${float32Vector.length}.`);
+    throw new Error(
+      `Expected embedding dimension ${dimension}, received ${float32Vector.length}.`,
+    );
   }
 
   let magnitudeSquared = 0;
@@ -196,8 +242,15 @@ function initializeEmbeddingsSchema(database) {
   `);
 }
 
-function purgeOrphanedEmbeddings({ corpusDatabase, corpusDatabasePath, embeddingsDatabase, modelId }) {
-  embeddingsDatabase.prepare('ATTACH DATABASE ? AS corpus').run(corpusDatabasePath);
+function purgeOrphanedEmbeddings({
+  corpusDatabase,
+  corpusDatabasePath,
+  embeddingsDatabase,
+  modelId,
+}) {
+  embeddingsDatabase
+    .prepare('ATTACH DATABASE ? AS corpus')
+    .run(corpusDatabasePath);
 
   try {
     const orphanedChunkRows = embeddingsDatabase.prepare(`
@@ -216,7 +269,8 @@ function purgeOrphanedEmbeddings({ corpusDatabase, corpusDatabasePath, embedding
         AND model_id = ?
     `);
     const purgeTransaction = embeddingsDatabase.transaction((rowsToDelete) => {
-      for (const { chunk_id: chunkId } of rowsToDelete) deleteEmbedding.run(chunkId, modelId);
+      for (const { chunk_id: chunkId } of rowsToDelete)
+        deleteEmbedding.run(chunkId, modelId);
     });
 
     purgeTransaction(orphanedRows);
@@ -227,26 +281,44 @@ function purgeOrphanedEmbeddings({ corpusDatabase, corpusDatabasePath, embedding
 }
 
 function createChunkSha256(chunkRow) {
-  return createHash('sha256').update(JSON.stringify({
-    body_text: chunkRow.body_text,
-    char_end: Number(chunkRow.char_end),
-    char_start: Number(chunkRow.char_start),
-    chunk_id: Number(chunkRow.chunk_id),
-    chunk_index: Number(chunkRow.chunk_index),
-    doc_family: chunkRow.doc_family ?? null,
-    file_path: chunkRow.file_path ?? null,
-    heading_path: chunkRow.heading_path ?? null,
-  })).digest('hex');
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        body_text: chunkRow.body_text,
+        char_end: Number(chunkRow.char_end),
+        char_start: Number(chunkRow.char_start),
+        chunk_id: Number(chunkRow.chunk_id),
+        chunk_index: Number(chunkRow.chunk_index),
+        context_header: chunkRow.context_header ?? null,
+        depth: Number(chunkRow.depth ?? 0),
+        doc_family: chunkRow.doc_family ?? null,
+        file_path: chunkRow.file_path ?? null,
+        heading_path: chunkRow.heading_path ?? null,
+        symbol_name: chunkRow.symbol_name ?? null,
+      }),
+    )
+    .digest('hex');
 }
 
 export async function readModelMeta(options = {}) {
   if (options.modelMeta) return options.modelMeta;
 
-  const modelMetaPath = path.resolve(options.modelMetaPath ?? path.join(options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY, 'model-meta.json'));
+  const modelMetaPath = path.resolve(
+    options.modelMetaPath ??
+      path.join(
+        options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
+        'model-meta.json',
+      ),
+  );
   try {
     return JSON.parse(await readFile(modelMetaPath, 'utf8'));
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'ENOENT'
+    ) {
       return {};
     }
     throw error;
@@ -256,14 +328,25 @@ export async function readModelMeta(options = {}) {
 export async function createOnnxTextEmbedder(options = {}) {
   const { Tokenizer } = await import('@huggingface/tokenizers');
   const { InferenceSession, Tensor } = await import('onnxruntime-node');
-  const modelDirectory = path.resolve(options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY);
+  const modelDirectory = path.resolve(
+    options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
+  );
   const modelPath = path.join(modelDirectory, 'model.onnx');
-  const tokenizer = await createWordPieceTokenizer({ modelDirectory, Tokenizer });
+  const tokenizer = await createWordPieceTokenizer({
+    modelDirectory,
+    Tokenizer,
+  });
   const session = await InferenceSession.create(modelPath);
-  const [clsTokenId, sepTokenId] = ['[CLS]', '[SEP]'].map((token) => tokenizer.token_to_id(token));
-  const maxSequenceLength = Number(options.maxSequenceLength ?? DEFAULT_MAX_SEQUENCE_LENGTH);
+  const [clsTokenId, sepTokenId] = ['[CLS]', '[SEP]'].map((token) =>
+    tokenizer.token_to_id(token),
+  );
+  const maxSequenceLength = Number(
+    options.maxSequenceLength ?? DEFAULT_MAX_SEQUENCE_LENGTH,
+  );
   if (clsTokenId === undefined || sepTokenId === undefined) {
-    throw new Error('The local tokenizer vocabulary is missing the required [CLS] or [SEP] tokens.');
+    throw new Error(
+      'The local tokenizer vocabulary is missing the required [CLS] or [SEP] tokens.',
+    );
   }
 
   const embedText = async ({ text }) => {
@@ -271,13 +354,22 @@ export async function createOnnxTextEmbedder(options = {}) {
       add_special_tokens: false,
       return_token_type_ids: true,
     });
-    const truncatedTokenIds = encoded.ids.slice(0, Math.max(0, maxSequenceLength - 2));
+    const truncatedTokenIds = encoded.ids.slice(
+      0,
+      Math.max(0, maxSequenceLength - 2),
+    );
     const inputIds = [clsTokenId, ...truncatedTokenIds, sepTokenId];
     const attentionMaskValues = inputIds.map(() => 1);
     const tokenTypeIdValues = inputIds.map(() => 0);
-    const tokenIds = BigInt64Array.from(inputIds.map((tokenId) => BigInt(tokenId)));
-    const attentionMask = BigInt64Array.from(attentionMaskValues.map((maskValue) => BigInt(maskValue)));
-    const tokenTypeIds = BigInt64Array.from(tokenTypeIdValues.map((tokenTypeId) => BigInt(tokenTypeId)));
+    const tokenIds = BigInt64Array.from(
+      inputIds.map((tokenId) => BigInt(tokenId)),
+    );
+    const attentionMask = BigInt64Array.from(
+      attentionMaskValues.map((maskValue) => BigInt(maskValue)),
+    );
+    const tokenTypeIds = BigInt64Array.from(
+      tokenTypeIdValues.map((tokenTypeId) => BigInt(tokenTypeId)),
+    );
     const sequenceLength = inputIds.length;
     const feeds = {
       attention_mask: new Tensor('int64', attentionMask, [1, sequenceLength]),
@@ -285,16 +377,27 @@ export async function createOnnxTextEmbedder(options = {}) {
     };
 
     if (session.inputNames.includes('token_type_ids')) {
-      feeds.token_type_ids = new Tensor('int64', tokenTypeIds, [1, sequenceLength]);
+      feeds.token_type_ids = new Tensor('int64', tokenTypeIds, [
+        1,
+        sequenceLength,
+      ]);
     }
 
     const outputs = await session.run(feeds);
-    const outputName = session.outputNames.find((name) => name === 'last_hidden_state') ?? session.outputNames[0];
+    const outputName =
+      session.outputNames.find((name) => name === 'last_hidden_state') ??
+      session.outputNames[0];
     if (!outputName || !outputs[outputName]) {
-      throw new Error('ONNX embedding session did not return last_hidden_state output.');
+      throw new Error(
+        'ONNX embedding session did not return last_hidden_state output.',
+      );
     }
 
-    return meanPoolEmbedding(outputs[outputName], attentionMask, options.dimension);
+    return meanPoolEmbedding(
+      outputs[outputName],
+      attentionMask,
+      options.dimension,
+    );
   };
 
   embedText.release = async () => {
@@ -306,8 +409,14 @@ export async function createOnnxTextEmbedder(options = {}) {
 
 async function createWordPieceTokenizer({ Tokenizer, modelDirectory }) {
   const tokenizerJsonPath = path.join(modelDirectory, 'tokenizer.json');
-  const tokenizerConfigPath = path.join(modelDirectory, 'tokenizer_config.json');
-  const specialTokensMapPath = path.join(modelDirectory, 'special_tokens_map.json');
+  const tokenizerConfigPath = path.join(
+    modelDirectory,
+    'tokenizer_config.json',
+  );
+  const specialTokensMapPath = path.join(
+    modelDirectory,
+    'special_tokens_map.json',
+  );
   const [tokenizerJson, tokenizerConfig, specialTokensMap] = await Promise.all([
     readJsonFile(tokenizerJsonPath, null),
     readJsonFile(tokenizerConfigPath, {}),
@@ -315,31 +424,36 @@ async function createWordPieceTokenizer({ Tokenizer, modelDirectory }) {
   ]);
   const vocabulary = tokenizerJson?.model?.vocab;
   if (!vocabulary || typeof vocabulary !== 'object') {
-    throw new Error('tokenizer.json is missing the WordPiece vocabulary required for local tokenization.');
+    throw new Error(
+      'tokenizer.json is missing the WordPiece vocabulary required for local tokenization.',
+    );
   }
   const unkToken = resolveSpecialToken(specialTokensMap.unk_token, '[UNK]');
-  const tokenizer = new Tokenizer({
-    added_tokens: [],
-    decoder: null,
-    model: {
-      type: 'WordPiece',
-      vocab: vocabulary,
-      unk_token: unkToken,
-      continuing_subword_prefix: '##',
-      max_input_chars_per_word: 100,
+  const tokenizer = new Tokenizer(
+    {
+      added_tokens: [],
+      decoder: null,
+      model: {
+        type: 'WordPiece',
+        vocab: vocabulary,
+        unk_token: unkToken,
+        continuing_subword_prefix: '##',
+        max_input_chars_per_word: 100,
+      },
+      normalizer: {
+        type: 'BertNormalizer',
+        clean_text: true,
+        handle_chinese_chars: true,
+        lowercase: Boolean(tokenizerConfig.do_lower_case ?? true),
+        strip_accents: tokenizerConfig.strip_accents ?? true,
+      },
+      post_processor: null,
+      pre_tokenizer: { type: 'BertPreTokenizer' },
     },
-    normalizer: {
-      type: 'BertNormalizer',
-      clean_text: true,
-      handle_chinese_chars: true,
-      lowercase: Boolean(tokenizerConfig.do_lower_case ?? true),
-      strip_accents: tokenizerConfig.strip_accents ?? true,
+    {
+      clean_up_tokenization_spaces: true,
     },
-    post_processor: null,
-    pre_tokenizer: { type: 'BertPreTokenizer' },
-  }, {
-    clean_up_tokenization_spaces: true,
-  });
+  );
 
   return tokenizer;
 }
@@ -348,7 +462,9 @@ function meanPoolEmbedding(lastHiddenStateTensor, attentionMask, dimension) {
   const outputData = toFloat32Array(lastHiddenStateTensor.data);
   const normalizedDimension = Number(dimension);
   if (!Number.isInteger(normalizedDimension) || normalizedDimension < 1) {
-    throw new Error('A positive embedding dimension is required for mean pooling.');
+    throw new Error(
+      'A positive embedding dimension is required for mean pooling.',
+    );
   }
 
   const pooledVector = new Float32Array(normalizedDimension);
@@ -358,27 +474,44 @@ function meanPoolEmbedding(lastHiddenStateTensor, attentionMask, dimension) {
     if (Number(attentionMask[tokenIndex]) === 0) continue;
     includedTokenCount += 1;
     const tokenOffset = tokenIndex * normalizedDimension;
-    for (let dimensionIndex = 0; dimensionIndex < normalizedDimension; dimensionIndex += 1) {
+    for (
+      let dimensionIndex = 0;
+      dimensionIndex < normalizedDimension;
+      dimensionIndex += 1
+    ) {
       pooledVector[dimensionIndex] += outputData[tokenOffset + dimensionIndex];
     }
   }
 
   if (includedTokenCount === 0) return pooledVector;
 
-  for (let dimensionIndex = 0; dimensionIndex < normalizedDimension; dimensionIndex += 1) {
+  for (
+    let dimensionIndex = 0;
+    dimensionIndex < normalizedDimension;
+    dimensionIndex += 1
+  ) {
     pooledVector[dimensionIndex] /= includedTokenCount;
   }
   return pooledVector;
 }
 
 function toBlobBuffer(float32Vector) {
-  return Buffer.from(float32Vector.buffer, float32Vector.byteOffset, float32Vector.byteLength);
+  return Buffer.from(
+    float32Vector.buffer,
+    float32Vector.byteOffset,
+    float32Vector.byteLength,
+  );
 }
 
 function toFloat32Array(vectorLike) {
   if (vectorLike instanceof Float32Array) return vectorLike;
   if (ArrayBuffer.isView(vectorLike)) {
-    return new Float32Array(vectorLike.buffer.slice(vectorLike.byteOffset, vectorLike.byteOffset + vectorLike.byteLength));
+    return new Float32Array(
+      vectorLike.buffer.slice(
+        vectorLike.byteOffset,
+        vectorLike.byteOffset + vectorLike.byteLength,
+      ),
+    );
   }
   return Float32Array.from(Array.isArray(vectorLike) ? vectorLike : []);
 }
@@ -391,7 +524,12 @@ async function readJsonFile(filePath, fallbackValue) {
   try {
     return JSON.parse(await readFile(filePath, 'utf8'));
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'ENOENT'
+    ) {
       return fallbackValue;
     }
     throw error;
@@ -400,7 +538,12 @@ async function readJsonFile(filePath, fallbackValue) {
 
 function resolveSpecialToken(value, fallbackToken) {
   if (typeof value === 'string' && value.trim()) return value;
-  if (value && typeof value === 'object' && typeof value.content === 'string' && value.content.trim()) {
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof value.content === 'string' &&
+    value.content.trim()
+  ) {
     return value.content;
   }
   return fallbackToken;
@@ -437,12 +580,18 @@ async function main() {
       modelId: args['model-id'],
       modelSha256: args['model-sha256'],
     });
-    writeJsonOrText(summary, Boolean(args.json), (payload) => payload.dryRun
-      ? `Embedding build dry run: queued ${payload.queued}, skipped ${payload.skipped}`
-      : `Embedding build complete: embedded ${payload.embedded}, skipped ${payload.skipped}`);
+    writeJsonOrText(summary, Boolean(args.json), (payload) =>
+      payload.dryRun
+        ? `Embedding build dry run: queued ${payload.queued}, skipped ${payload.skipped}`
+        : `Embedding build complete: embedded ${payload.embedded}, skipped ${payload.skipped}`,
+    );
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+    fail(
+      error instanceof Error ? error.message : String(error),
+      Boolean(args.json),
+    );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();

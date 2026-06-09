@@ -3,7 +3,16 @@ description: 'Use as a hidden specialist for checking source references and lice
 name: license-attribution-auditor
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['license-attribution-audit']
@@ -24,7 +33,9 @@ Verify that external standards and workflow patterns are properly attributed wit
 - This agent is intentionally thin. Tracker and skill updates belong to companion skill `tracker-handoff`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for license-related documents
 
 ## Approach

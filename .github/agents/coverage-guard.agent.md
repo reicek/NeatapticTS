@@ -3,7 +3,16 @@ description: 'Use when verifying that a set of recently changed src/ files still
 name: coverage-guard
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, bash, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    bash,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['coverage-guard']
@@ -27,7 +36,9 @@ You verify that every `src/` file touched by a recent change still has 100% stat
 - This agent is intentionally thin. Durable policy lives in companion skill `coverage-guard`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `green-validation-evidence` — after verifying coverage regression results
 - `cortex-index` — before searching for coverage context
 

@@ -39,14 +39,20 @@ const defaultWorkflowPlanPath = 'plans/mcp-active-binding.plans.md';
  * - plan-bound work if the tool or payload mentions plans/.plans.md/.logs.md,
  * - corpus-bound work if the tool or payload targets repo source/doc/search surfaces.
  */
-const substantiveToolPattern = /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol|rg|glob|view|neataptic-cortex-mcp\.(search_corpus|load_document|freshness_check)|neataptic-workflow-mcp\.get_active_workflow_snapshot)$/i;
-const alwaysPlanBoundToolPattern = /^(apply_patch|powershell|task|neataptic-workflow-mcp\.get_active_workflow_snapshot)$/i;
-const alwaysCorpusBoundToolPattern = /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol|rg|glob|neataptic-cortex-mcp\.(search_corpus|load_document|freshness_check))$/i;
+const substantiveToolPattern =
+  /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol|rg|glob|view|neataptic-cortex-mcp\.(search_corpus|load_document|freshness_check)|neataptic-workflow-mcp\.get_active_workflow_snapshot)$/i;
+const alwaysPlanBoundToolPattern =
+  /^(apply_patch|powershell|task|neataptic-workflow-mcp\.get_active_workflow_snapshot)$/i;
+const alwaysCorpusBoundToolPattern =
+  /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol|rg|glob|neataptic-cortex-mcp\.(search_corpus|load_document|freshness_check))$/i;
 const planPathPattern = /(^|[\\/])plans([\\/]|$)|\.plans\.md\b|\.logs\.md\b/i;
-const corpusPathPattern = /(^|[\\/])(src|examples|benchmarks|testing|scripts|\.github|plans)([\\/]|$)|\.(ts|tsx|js|mjs|md|json)\b/i;
+const corpusPathPattern =
+  /(^|[\\/])(src|examples|benchmarks|testing|scripts|\.github|plans)([\\/]|$)|\.(ts|tsx|js|mjs|md|json)\b/i;
 
 main().catch((error) => {
-  process.stderr.write(`[workflow-cortex-preflight] runtime enforcement failed before hook exit: ${error.message}\n`);
+  process.stderr.write(
+    `[workflow-cortex-preflight] runtime enforcement failed before hook exit: ${error.message}\n`,
+  );
   process.exit(2);
 });
 
@@ -54,15 +60,24 @@ async function main() {
   const hookInput = readHookInput();
   const toolName = String(hookInput.tool_name ?? hookInput.toolName ?? '');
   const candidateText = collectCandidateStrings(hookInput).join('\n');
-  const isPlanBound = alwaysPlanBoundToolPattern.test(toolName) || planPathPattern.test(candidateText);
-  const isCorpusBound = alwaysCorpusBoundToolPattern.test(toolName) || corpusPathPattern.test(candidateText);
+  const isPlanBound =
+    alwaysPlanBoundToolPattern.test(toolName) ||
+    planPathPattern.test(candidateText);
+  const isCorpusBound =
+    alwaysCorpusBoundToolPattern.test(toolName) ||
+    corpusPathPattern.test(candidateText);
 
-  if (!substantiveToolPattern.test(toolName) || (!isPlanBound && !isCorpusBound)) {
+  if (
+    !substantiveToolPattern.test(toolName) ||
+    (!isPlanBound && !isCorpusBound)
+  ) {
     writeHookOutput({ continue: true });
     return;
   }
 
-  const runtimeProofRequired = requiresRuntimeProof(toolName) && !isRuntimeContextPreparation(candidateText);
+  const runtimeProofRequired =
+    requiresRuntimeProof(toolName) &&
+    !isRuntimeContextPreparation(candidateText);
   const workflowPlanPath = isPlanBound
     ? await resolveEffectivePlanPath({}, resolveWorkflowPlanPath())
     : null;
@@ -87,7 +102,9 @@ async function main() {
         toolName,
         actionClass: runtimeValidation.actionClass,
         flowId: runtimePreparedAction?.flowId ?? null,
-        currentAgent: runtimePreparedAction?.currentAgent ?? 'pretool-workflow-cortex-preflight',
+        currentAgent:
+          runtimePreparedAction?.currentAgent ??
+          'pretool-workflow-cortex-preflight',
         delegatorChain: runtimePreparedAction?.delegatorChain ?? [],
         requiredSkills: runtimePreparedAction?.requiredSkills ?? [],
         requiredSpecialists: runtimePreparedAction?.requiredSpecialists ?? [],
@@ -121,7 +138,9 @@ async function main() {
       process.stderr.write(
         formatFailure('runtime-enforcement-context', toolName, {
           status: 2,
-          stderr: [runtimeValidation.reason, runtimeValidation.recoveryHint].filter(Boolean).join('\n'),
+          stderr: [runtimeValidation.reason, runtimeValidation.recoveryHint]
+            .filter(Boolean)
+            .join('\n'),
           stdout: '',
         }),
       );
@@ -145,7 +164,9 @@ async function main() {
         toolName,
         stepResult: workflowStep,
       });
-      process.stderr.write(formatFailure('workflow-mcp-self-check', toolName, workflowStep));
+      process.stderr.write(
+        formatFailure('workflow-mcp-self-check', toolName, workflowStep),
+      );
       process.exit(2);
     }
 
@@ -168,7 +189,9 @@ async function main() {
         toolName,
         stepResult: cortexStep,
       });
-      process.stderr.write(formatFailure('cortex-first-search-gate', toolName, cortexStep));
+      process.stderr.write(
+        formatFailure('cortex-first-search-gate', toolName, cortexStep),
+      );
       process.exit(2);
     }
 
@@ -215,7 +238,11 @@ async function main() {
     continue: true,
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
-      additionalContext: formatSuccessContext(toolName, boundaryLabel, stepSummaries),
+      additionalContext: formatSuccessContext(
+        toolName,
+        boundaryLabel,
+        stepSummaries,
+      ),
     },
   });
 }
@@ -261,10 +288,16 @@ function resolveWorkflowPlanPath() {
   }
 
   try {
-    const configPayload = JSON.parse(readFileSync(workflowMcpConfigPath, 'utf8'));
-    const workflowArgs = configPayload?.servers?.['neataptic-workflow-mcp']?.args;
+    const configPayload = JSON.parse(
+      readFileSync(workflowMcpConfigPath, 'utf8'),
+    );
+    const workflowArgs =
+      configPayload?.servers?.['neataptic-workflow-mcp']?.args;
     const planArgument = Array.isArray(workflowArgs)
-      ? workflowArgs.find((argument) => typeof argument === 'string' && argument.startsWith('--plan='))
+      ? workflowArgs.find(
+          (argument) =>
+            typeof argument === 'string' && argument.startsWith('--plan='),
+        )
       : null;
 
     return typeof planArgument === 'string' && planArgument.trim()
@@ -283,7 +316,14 @@ function runNodeStep(stepArgs) {
   });
 }
 
-function recordGateException({ gateId, agent, hookInput, toolName, stepResult, extraEvidence = {} }) {
+function recordGateException({
+  gateId,
+  agent,
+  hookInput,
+  toolName,
+  stepResult,
+  extraEvidence = {},
+}) {
   const evidence = {
     toolName,
     details: summarizeFailure(stepResult),
@@ -307,7 +347,11 @@ function recordGateException({ gateId, agent, hookInput, toolName, stepResult, e
 function summarizeFailure(stepResult) {
   const stderrText = String(stepResult.stderr ?? '').trim();
   const stdoutText = String(stepResult.stdout ?? '').trim();
-  return stderrText || stdoutText || `Exited with status ${stepResult.status ?? 'unknown'}.`;
+  return (
+    stderrText ||
+    stdoutText ||
+    `Exited with status ${stepResult.status ?? 'unknown'}.`
+  );
 }
 
 function summarizeStdout(stdoutText) {
@@ -331,7 +375,10 @@ function parseTrailingJsonPayload(stdoutText) {
     return null;
   }
 
-  const candidateJson = stdoutText.slice(firstJsonBraceIndex, lastJsonBraceIndex + 1);
+  const candidateJson = stdoutText.slice(
+    firstJsonBraceIndex,
+    lastJsonBraceIndex + 1,
+  );
   try {
     return JSON.parse(candidateJson);
   } catch {
@@ -350,7 +397,9 @@ function summarizeParsedOutput(parsedOutput) {
     return parsedOutput.status;
   }
   if (Array.isArray(parsedOutput.issues)) {
-    return parsedOutput.issues.length === 0 ? 'ok' : `issues:${parsedOutput.issues.length}`;
+    return parsedOutput.issues.length === 0
+      ? 'ok'
+      : `issues:${parsedOutput.issues.length}`;
   }
 
   return 'ok';
@@ -366,7 +415,10 @@ function formatSuccessContext(toolName, boundaryLabel, stepSummaries) {
 function formatFailure(stepName, toolName, stepResult) {
   const stderrText = String(stepResult.stderr ?? '').trim();
   const stdoutText = String(stepResult.stdout ?? '').trim();
-  const details = stderrText || stdoutText || `${stepName} exited with status ${stepResult.status ?? 'unknown'}.`;
+  const details =
+    stderrText ||
+    stdoutText ||
+    `${stepName} exited with status ${stepResult.status ?? 'unknown'}.`;
   return `[workflow-cortex-preflight] ${stepName} failed before ${toolName}: ${details}\n`;
 }
 

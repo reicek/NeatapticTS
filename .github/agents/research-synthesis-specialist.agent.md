@@ -3,7 +3,16 @@ description: 'Use when: transforming raw scout reconnaissance data into structur
 name: research-synthesis-specialist
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    agent,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: ['acceptance-criteria-writer', 'file-change-summarizer']
 skills: ['research-methodology', 'plan-alignment']
@@ -28,7 +37,9 @@ You do NOT run scouts directly (that is `research-codebase-coordinator`'s job) a
 - This agent is intentionally thin. Durable policy lives in companion skills `research-methodology` and `plan-alignment`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for research context
 - `plan-sync` — after synthesizing research results
 

@@ -3,7 +3,16 @@ description: 'Use when: planning needs compact context, plan alignment signals, 
 name: 'planning-context-coordinator'
 tier: 2
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    agent,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 disable-model-invocation: false
 agents: ['plan-scout', 'docs-scout', 'boundary-mapper']
@@ -30,10 +39,13 @@ Gather only the project context needed to start a planning or decomposition pass
 - ALWAYS stop after returning the structured output block; do not continue into implementation or plan editing.
 
 ## Flow Selection
+
 - Use `01.phase-kickoff` when preparing context for planning.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `plan-sync` — after gathering context
 - `step-packet` — when defining validation scope
 

@@ -16,11 +16,19 @@ interface SpawnedJsonResult<ReportType> {
 }
 
 const REPO_ROOT = path.resolve(process.cwd());
-const FIXTURES_ROOT = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'docs-quality', '__fixtures__');
+const FIXTURES_ROOT = path.join(
+  REPO_ROOT,
+  'scripts',
+  'semantic-index',
+  'docs-quality',
+  '__fixtures__',
+);
 
 describe('docs-quality parity red contracts', () => {
   it('produces identical manifest digest for CLI and MCP paths with the same inputs and config', () => {
-    const baseManifest = JSON.parse(readFileSync(path.join(FIXTURES_ROOT, 'manifest.v1.base.json'), 'utf8')) as Record<string, unknown>;
+    const baseManifest = JSON.parse(
+      readFileSync(path.join(FIXTURES_ROOT, 'manifest.v1.base.json'), 'utf8'),
+    ) as Record<string, unknown>;
 
     const result = runModuleEvaluation<ParityReport>(`
       import { createRepoCortexMcpServer } from './scripts/mcp-semantic/repo-cortex-mcp.mjs';
@@ -58,22 +66,32 @@ describe('docs-quality parity red contracts', () => {
       }));
     `);
 
-    expect(result).toEqual(expect.objectContaining({
-      report: {
-        leftDigest: '9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11',
-        parity: true,
-        rightDigest: '9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11',
-      },
-      status: 0,
-    }));
+    expect(result).toEqual(
+      expect.objectContaining({
+        report: {
+          leftDigest:
+            '9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11',
+          parity: true,
+          rightDigest:
+            '9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11',
+        },
+        status: 0,
+      }),
+    );
   });
 });
 
-function runModuleEvaluation<ReportType>(source: string): SpawnedJsonResult<ReportType> {
-  const spawned = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
+function runModuleEvaluation<ReportType>(
+  source: string,
+): SpawnedJsonResult<ReportType> {
+  const spawned = spawnSync(
+    process.execPath,
+    ['--input-type=module', '--eval', source],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    },
+  );
 
   return {
     report: tryParseJson<ReportType>(spawned.stdout ?? ''),

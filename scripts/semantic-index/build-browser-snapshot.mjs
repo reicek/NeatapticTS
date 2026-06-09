@@ -3,14 +3,26 @@ import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fail, parseCliArgs, printHelp, writeJsonOrText } from './cli-utils.mjs';
+import {
+  fail,
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from './cli-utils.mjs';
 import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
 
 const SNAPSHOT_SCHEMA_VERSION = '1';
-const defaultOutputPath = path.join(repoRoot, 'docs', 'assets', 'semantic-snapshot.json');
+const defaultOutputPath = path.join(
+  repoRoot,
+  'docs',
+  'assets',
+  'semantic-snapshot.json',
+);
 
 export async function buildBrowserSnapshot(options = {}) {
-  const databasePath = path.resolve(options.databasePath ?? defaultDatabasePath);
+  const databasePath = path.resolve(
+    options.databasePath ?? defaultDatabasePath,
+  );
   const outputPath = path.resolve(options.outputPath ?? defaultOutputPath);
 
   if (!existsSync(databasePath)) {
@@ -19,7 +31,10 @@ export async function buildBrowserSnapshot(options = {}) {
     );
   }
 
-  const database = new Database(databasePath, { readonly: true, fileMustExist: true });
+  const database = new Database(databasePath, {
+    readonly: true,
+    fileMustExist: true,
+  });
   try {
     const documents = readSnapshotDocuments(database);
     const snapshot = {
@@ -31,7 +46,11 @@ export async function buildBrowserSnapshot(options = {}) {
 
     if (!options.dryRun) {
       await mkdir(path.dirname(outputPath), { recursive: true });
-      await writeFile(outputPath, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
+      await writeFile(
+        outputPath,
+        `${JSON.stringify(snapshot, null, 2)}\n`,
+        'utf8',
+      );
     }
 
     return {
@@ -41,7 +60,11 @@ export async function buildBrowserSnapshot(options = {}) {
       generated_at: snapshot.generated_at,
       families: snapshot.families,
       documents: snapshot.documents.length,
-      chunks: snapshot.documents.reduce((chunkCount, documentRecord) => chunkCount + documentRecord.chunks.length, 0),
+      chunks: snapshot.documents.reduce(
+        (chunkCount, documentRecord) =>
+          chunkCount + documentRecord.chunks.length,
+        0,
+      ),
       dryRun: Boolean(options.dryRun),
     };
   } finally {
@@ -50,7 +73,10 @@ export async function buildBrowserSnapshot(options = {}) {
 }
 
 export function createBrowserSnapshot(databasePath = defaultDatabasePath) {
-  const database = new Database(path.resolve(databasePath), { readonly: true, fileMustExist: true });
+  const database = new Database(path.resolve(databasePath), {
+    readonly: true,
+    fileMustExist: true,
+  });
   try {
     const documents = readSnapshotDocuments(database);
     return {
@@ -66,7 +92,9 @@ export function createBrowserSnapshot(databasePath = defaultDatabasePath) {
 
 function readSnapshotDocuments(database) {
   const documentRows = database
-    .prepare('SELECT doc_id, file_path, doc_family AS family FROM documents ORDER BY file_path ASC, doc_id ASC')
+    .prepare(
+      'SELECT doc_id, file_path, doc_family AS family FROM documents ORDER BY file_path ASC, doc_id ASC',
+    )
     .all();
   const chunkRows = database
     .prepare(
@@ -107,7 +135,8 @@ async function main() {
   if (args.help) {
     printHelp({
       title: 'Semantic browser snapshot builder',
-      usage: 'node scripts/semantic-index/build-browser-snapshot.mjs [--database path] [--output path] [--dry-run] [--json]',
+      usage:
+        'node scripts/semantic-index/build-browser-snapshot.mjs [--database path] [--output path] [--dry-run] [--json]',
       options: [
         '--database <path> Path to SQLite semantic index (default: data/semantic-index.sqlite)',
         '--output <path>   Path to browser JSON snapshot (default: docs/assets/semantic-snapshot.json)',
@@ -132,8 +161,12 @@ async function main() {
         `Semantic browser snapshot: ${payload.documents} documents, ${payload.chunks} chunks${payload.dryRun ? ' (dry run)' : ` -> ${payload.outputPath}`}`,
     );
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+    fail(
+      error instanceof Error ? error.message : String(error),
+      Boolean(args.json),
+    );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();

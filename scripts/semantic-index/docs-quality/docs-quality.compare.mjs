@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-import { fail, parseCliArgs, printHelp, writeJsonOrText } from '../cli-utils.mjs';
+import {
+  fail,
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from '../cli-utils.mjs';
 
 const REASON_CODES = {
   METRIC_VERSION_MISMATCH: 'METRIC_VERSION_MISMATCH',
@@ -22,12 +27,17 @@ export function compareDocsQualityRuns(payload) {
   const rightDimensions = extractComparableDimensions(payload.rightManifest);
 
   if (leftDimensions.metricVersion !== rightDimensions.metricVersion) {
-    return { accepted: false, reasonCode: REASON_CODES.METRIC_VERSION_MISMATCH };
+    return {
+      accepted: false,
+      reasonCode: REASON_CODES.METRIC_VERSION_MISMATCH,
+    };
   }
 
   if (
-    leftDimensions.threshold.minJsdocWords !== rightDimensions.threshold.minJsdocWords
-    || leftDimensions.threshold.complexityThreshold !== rightDimensions.threshold.complexityThreshold
+    leftDimensions.threshold.minJsdocWords !==
+      rightDimensions.threshold.minJsdocWords ||
+    leftDimensions.threshold.complexityThreshold !==
+      rightDimensions.threshold.complexityThreshold
   ) {
     return { accepted: false, reasonCode: REASON_CODES.THRESHOLD_MISMATCH };
   }
@@ -41,7 +51,10 @@ export function compareDocsQualityRuns(payload) {
   }
 
   if (leftDimensions.scannerVersion !== rightDimensions.scannerVersion) {
-    return { accepted: false, reasonCode: REASON_CODES.SCANNER_VERSION_MISMATCH };
+    return {
+      accepted: false,
+      reasonCode: REASON_CODES.SCANNER_VERSION_MISMATCH,
+    };
   }
 
   const leftSummary = normalizeSummary(payload.leftSummary);
@@ -61,8 +74,12 @@ export function compareDocsQualityRuns(payload) {
 function extractComparableDimensions(manifest) {
   const thresholdConfig = isPlainObject(manifest.thresholdConfig)
     ? manifest.thresholdConfig
-    : (isPlainObject(manifest.threshold) ? manifest.threshold : {});
-  const scopeConfig = isPlainObject(manifest.scopeConfig) ? manifest.scopeConfig : {};
+    : isPlainObject(manifest.threshold)
+      ? manifest.threshold
+      : {};
+  const scopeConfig = isPlainObject(manifest.scopeConfig)
+    ? manifest.scopeConfig
+    : {};
 
   return {
     metricVersion: Number(manifest.metricVersion ?? 0),
@@ -72,16 +89,27 @@ function extractComparableDimensions(manifest) {
       complexityThreshold: Number(thresholdConfig.complexityThreshold ?? 0),
     },
     scopeType: String(scopeConfig.scopeType ?? manifest.scopeType ?? ''),
-    scopeDigest: String(manifest.scopeDigest ?? scopeConfig.scopeDigest ?? manifest.sourcePathsDigest ?? ''),
+    scopeDigest: String(
+      manifest.scopeDigest ??
+        scopeConfig.scopeDigest ??
+        manifest.sourcePathsDigest ??
+        '',
+    ),
   };
 }
 
 function normalizeSummary(summary) {
-  const issueBreakdown = isPlainObject(summary.issueBreakdown) ? summary.issueBreakdown : {};
+  const issueBreakdown = isPlainObject(summary.issueBreakdown)
+    ? summary.issueBreakdown
+    : {};
   return {
-    missingJsdoc: Number(summary.missingJsdoc ?? issueBreakdown.missingJsdoc ?? 0),
+    missingJsdoc: Number(
+      summary.missingJsdoc ?? issueBreakdown.missingJsdoc ?? 0,
+    ),
     weakJsdoc: Number(summary.weakJsdoc ?? issueBreakdown.weakJsdoc ?? 0),
-    highComplexity: Number(summary.highComplexity ?? issueBreakdown.highComplexity ?? 0),
+    highComplexity: Number(
+      summary.highComplexity ?? issueBreakdown.highComplexity ?? 0,
+    ),
     evidenceCount: Number(summary.evidenceCount ?? 0),
   };
 }
@@ -99,7 +127,8 @@ async function main() {
   if (args.help) {
     printHelp({
       title: 'Docs quality compare',
-      usage: 'node scripts/semantic-index/docs-quality/docs-quality.compare.mjs --left=<manifest> --right=<manifest> [--json]',
+      usage:
+        'node scripts/semantic-index/docs-quality/docs-quality.compare.mjs --left=<manifest> --right=<manifest> [--json]',
       options: [
         '--left <manifestPath>        Left run manifest path.',
         '--right <manifestPath>       Right run manifest path.',
@@ -113,7 +142,10 @@ async function main() {
   const leftManifestPath = String(args.left ?? '').trim();
   const rightManifestPath = String(args.right ?? '').trim();
   if (!leftManifestPath || !rightManifestPath) {
-    fail('Both --left and --right manifest paths are required.', Boolean(args.json));
+    fail(
+      'Both --left and --right manifest paths are required.',
+      Boolean(args.json),
+    );
     return;
   }
 
@@ -129,15 +161,21 @@ async function main() {
       rightSummary,
     });
 
-    writeJsonOrText(result, Boolean(args.json), (payload) => payload.accepted
-      ? `Docs-quality compare accepted. Delta evidence count: ${payload.delta.evidenceCount}`
-      : `Docs-quality compare rejected: ${payload.reasonCode}`);
+    writeJsonOrText(result, Boolean(args.json), (payload) =>
+      payload.accepted
+        ? `Docs-quality compare accepted. Delta evidence count: ${payload.delta.evidenceCount}`
+        : `Docs-quality compare rejected: ${payload.reasonCode}`,
+    );
     if (!result.accepted) process.exitCode = 1;
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+    fail(
+      error instanceof Error ? error.message : String(error),
+      Boolean(args.json),
+    );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();
 
 export { REASON_CODES };

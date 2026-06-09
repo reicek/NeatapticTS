@@ -3,7 +3,16 @@ description: 'Use when mapping same-seed claims, replay boundaries, RNG-state re
 name: determinism-scout
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['reproducibility-contracts']
@@ -28,7 +37,9 @@ If tracker updates are needed, assume `tracker-handoff` owns that format. If the
 - This agent is intentionally thin. Durable policy lives in companion skill `reproducibility-contracts`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for determinism-related documents
 
 ## Approach

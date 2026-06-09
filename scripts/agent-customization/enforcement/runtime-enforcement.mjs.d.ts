@@ -12,11 +12,15 @@ export function countTrailingGateFailures(
 
 export function getRuntimeContextPath(sessionId: string): string;
 
-export function prepareRuntimeContext(options: Record<string, unknown>): Promise<any>;
+export function prepareRuntimeContext(
+  options: Record<string, unknown>,
+): Promise<any>;
 
 export function readRuntimeContext(sessionId: string): Promise<any>;
 
-export function diagnosePreparedRuntimeContext(options: Record<string, unknown>): {
+export function diagnosePreparedRuntimeContext(
+  options: Record<string, unknown>,
+): {
   ok: boolean;
   reason: string;
   recoveryHint: string;
@@ -24,7 +28,9 @@ export function diagnosePreparedRuntimeContext(options: Record<string, unknown>)
   preparedAction: any;
 };
 
-export function validatePreparedRuntimeContext(options: Record<string, unknown>): {
+export function validatePreparedRuntimeContext(
+  options: Record<string, unknown>,
+): {
   ok: boolean;
   reason: string;
   recoveryHint: string;

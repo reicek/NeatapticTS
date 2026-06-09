@@ -4,7 +4,12 @@ import crypto from 'node:crypto';
 import { repoRoot } from '../customization-utils.mjs';
 
 export const RUNTIME_CONTEXT_TTL_MS = 60 * 60 * 1000;
-export const LEARNING_LOG_PATH = path.join(repoRoot, '.github', 'ai-learning', 'learning-log.jsonl');
+export const LEARNING_LOG_PATH = path.join(
+  repoRoot,
+  '.github',
+  'ai-learning',
+  'learning-log.jsonl',
+);
 export const RUNTIME_CONTEXT_DIR = path.join(repoRoot, 'data');
 export const RUNTIME_PROOF_TOOL_PATTERN =
   /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol)$/i;
@@ -26,9 +31,11 @@ export function resolveSessionId(input = {}) {
     process.env.COPILOT_CLI_SESSION_ID,
     'cli-hook-session',
   ];
-  const sessionId = candidateSessionIds.find(
-    (candidateValue) => typeof candidateValue === 'string' && candidateValue.trim().length > 0,
-  ) ?? 'cli-hook-session';
+  const sessionId =
+    candidateSessionIds.find(
+      (candidateValue) =>
+        typeof candidateValue === 'string' && candidateValue.trim().length > 0,
+    ) ?? 'cli-hook-session';
   return sanitizeSessionId(String(sessionId));
 }
 
@@ -50,7 +57,11 @@ export function requiresRuntimeProof(toolName) {
  */
 export function inferActionClass(toolName) {
   const normalizedToolName = String(toolName ?? '');
-  if (/^(apply_patch|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol)$/i.test(normalizedToolName)) {
+  if (
+    /^(apply_patch|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol)$/i.test(
+      normalizedToolName,
+    )
+  ) {
     return 'write';
   }
   if (/^(powershell|task)$/i.test(normalizedToolName)) {
@@ -77,7 +88,10 @@ export function isRuntimeContextPreparation(candidateText) {
  * @returns {string}
  */
 export function getRuntimeContextPath(sessionId) {
-  return path.join(RUNTIME_CONTEXT_DIR, `hook-context-${sanitizeSessionId(sessionId)}.json`);
+  return path.join(
+    RUNTIME_CONTEXT_DIR,
+    `hook-context-${sanitizeSessionId(sessionId)}.json`,
+  );
 }
 
 /**
@@ -96,14 +110,20 @@ export async function ensureRuntimeStateDir() {
  * @param {string} [carrierSource]
  * @returns {Promise<object>}
  */
-export async function initializeRuntimeContextCarrier(sessionId, carrierSource = 'session-start') {
+export async function initializeRuntimeContextCarrier(
+  sessionId,
+  carrierSource = 'session-start',
+) {
   const existingCarrier = await readRuntimeContext(sessionId).catch(() => null);
   const initializedCarrier = {
     schemaVersion: 1,
     sessionId,
-    sessionStartedAt: existingCarrier?.sessionStartedAt ?? new Date().toISOString(),
+    sessionStartedAt:
+      existingCarrier?.sessionStartedAt ?? new Date().toISOString(),
     carrierSource,
-    carrierExpiresAt: new Date(Date.now() + RUNTIME_CONTEXT_TTL_MS).toISOString(),
+    carrierExpiresAt: new Date(
+      Date.now() + RUNTIME_CONTEXT_TTL_MS,
+    ).toISOString(),
     preparedAction: null,
   };
 
@@ -149,7 +169,10 @@ export async function writeRuntimeContext(carrier) {
  */
 export async function prepareRuntimeContext(options) {
   const sessionId = resolveSessionId(options);
-  const baseCarrier = await initializeRuntimeContextCarrier(sessionId, 'prepare');
+  const baseCarrier = await initializeRuntimeContextCarrier(
+    sessionId,
+    'prepare',
+  );
   const preparedAt = new Date();
   const preparedAction = {
     actionId: crypto.randomUUID(),
@@ -161,14 +184,21 @@ export async function prepareRuntimeContext(options) {
     planPath: requireNonEmptyValue(options.planPath, 'planPath'),
     activePhase: String(options.activePhase ?? '').trim() || null,
     activeStep: String(options.activeStep ?? '').trim() || null,
-    allowedActionClass: requireNonEmptyValue(options.allowedActionClass, 'allowedActionClass'),
+    allowedActionClass: requireNonEmptyValue(
+      options.allowedActionClass,
+      'allowedActionClass',
+    ),
     expectedToolName: String(options.expectedToolName ?? '').trim() || null,
     preparedAt: preparedAt.toISOString(),
-    expiresAt: new Date(preparedAt.getTime() + RUNTIME_CONTEXT_TTL_MS).toISOString(),
+    expiresAt: new Date(
+      preparedAt.getTime() + RUNTIME_CONTEXT_TTL_MS,
+    ).toISOString(),
   };
 
   if (preparedAction.delegatorChain.length === 0) {
-    throw new Error('delegatorChain must include at least one agent or orchestrator.');
+    throw new Error(
+      'delegatorChain must include at least one agent or orchestrator.',
+    );
   }
 
   baseCarrier.carrierExpiresAt = preparedAction.expiresAt;
@@ -198,7 +228,9 @@ export async function clearPreparedRuntimeContext(sessionId, actionId = null) {
     return carrier;
   }
 
-  carrier.carrierExpiresAt = new Date(Date.now() + RUNTIME_CONTEXT_TTL_MS).toISOString();
+  carrier.carrierExpiresAt = new Date(
+    Date.now() + RUNTIME_CONTEXT_TTL_MS,
+  ).toISOString();
   carrier.preparedAction = null;
   await writeRuntimeContext(carrier);
   return carrier;
@@ -308,7 +340,10 @@ export function diagnosePreparedRuntimeContext(options) {
     };
   }
 
-  if (!Array.isArray(preparedAction.delegatorChain) || preparedAction.delegatorChain.length === 0) {
+  if (
+    !Array.isArray(preparedAction.delegatorChain) ||
+    preparedAction.delegatorChain.length === 0
+  ) {
     return {
       ok: false,
       reason: 'Prepared action is missing delegatorChain entries.',
@@ -383,7 +418,10 @@ export function diagnosePreparedRuntimeContext(options) {
     };
   }
 
-  if (preparedAction.expectedToolName && preparedAction.expectedToolName !== options.toolName) {
+  if (
+    preparedAction.expectedToolName &&
+    preparedAction.expectedToolName !== options.toolName
+  ) {
     return {
       ok: false,
       reason: `Prepared action expects tool ${preparedAction.expectedToolName}, but observed ${options.toolName}.`,
@@ -398,7 +436,11 @@ export function diagnosePreparedRuntimeContext(options) {
     };
   }
 
-  if (expectedPlanPath && normalizeRepoPath(preparedAction.planPath) !== normalizeRepoPath(expectedPlanPath)) {
+  if (
+    expectedPlanPath &&
+    normalizeRepoPath(preparedAction.planPath) !==
+      normalizeRepoPath(expectedPlanPath)
+  ) {
     return {
       ok: false,
       reason: `Prepared action planPath ${preparedAction.planPath} does not match active plan ${expectedPlanPath}.`,
@@ -529,13 +571,23 @@ export async function loadLearningLogEvents() {
  */
 export function countTrailingGateFailures(events, sessionId) {
   const relevantEvents = events
-    .filter((event) => event?.sessionId === sessionId || event?.['session-id'] === sessionId)
-    .filter((event) => String(event?.gateId ?? event?.['gate-id'] ?? '').trim() || isFailureResetEvent(event));
+    .filter(
+      (event) =>
+        event?.sessionId === sessionId || event?.['session-id'] === sessionId,
+    )
+    .filter(
+      (event) =>
+        String(event?.gateId ?? event?.['gate-id'] ?? '').trim() ||
+        isFailureResetEvent(event),
+    );
 
   let failureCount = 0;
   for (let index = relevantEvents.length - 1; index >= 0; index -= 1) {
     const event = relevantEvents[index];
-    if (event?.eventType === 'gate-exception' || event?.category === 'gate-exception') {
+    if (
+      event?.eventType === 'gate-exception' ||
+      event?.category === 'gate-exception'
+    ) {
       failureCount += 1;
       continue;
     }
@@ -567,7 +619,9 @@ export function isFailureResetEvent(event) {
  * @returns {string}
  */
 export function normalizeRepoPath(repoPath) {
-  return String(repoPath ?? '').replace(/\\/g, '/').trim();
+  return String(repoPath ?? '')
+    .replace(/\\/g, '/')
+    .trim();
 }
 
 /**
@@ -621,5 +675,8 @@ function requireNonEmptyValue(value, fieldName) {
 }
 
 function sanitizeSessionId(sessionId) {
-  return String(sessionId ?? 'cli-hook-session').replace(/[^A-Za-z0-9._-]/g, '_');
+  return String(sessionId ?? 'cli-hook-session').replace(
+    /[^A-Za-z0-9._-]/g,
+    '_',
+  );
 }

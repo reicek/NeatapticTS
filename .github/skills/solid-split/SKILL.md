@@ -98,18 +98,18 @@ Useful optional detail to include up front:
 Pass a compact packet that contains the current-session specifics the skill
 should not have to guess.
 
-| Field | Purpose | Default if omitted |
-| --- | --- | --- |
-| Split root | Names the requested root or `#file:` handle | Required |
-| Mode | `map`, `plan`, `execute`, or `close` | `map` when no active plan exists; otherwise `execute` |
-| Target boundary | Names the exact file, folder, or seam | Infer from the active `[WIP]` step when a plan already exists |
-| Plan path | Gives the durable tracker to follow | Create one when the work is not safely resumable without it |
-| Current step | Pins the exact active task | Use the active `[WIP]` step if present |
-| Stable import rule | Says whether current paths must keep working | Preserve stable imports unless an explicit break is approved |
-| Compatibility shim rule | Says whether old flat files may remain | No shim by default; require a verified compatibility reason |
-| Validation expectations | Lists exact checks or gates to satisfy | Choose the narrowest credible validation lane for the touched surface |
-| Documentation follow-up | States how broad the doc pass should be | Focused `educational-docs` follow-up on the touched boundary |
-| Blockers or cautions | Records generated drift, unrelated edits, or unknown consumers | Record them explicitly before moving code |
+| Field                   | Purpose                                                        | Default if omitted                                                    |
+| ----------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Split root              | Names the requested root or `#file:` handle                    | Required                                                              |
+| Mode                    | `map`, `plan`, `execute`, or `close`                           | `map` when no active plan exists; otherwise `execute`                 |
+| Target boundary         | Names the exact file, folder, or seam                          | Infer from the active `[WIP]` step when a plan already exists         |
+| Plan path               | Gives the durable tracker to follow                            | Create one when the work is not safely resumable without it           |
+| Current step            | Pins the exact active task                                     | Use the active `[WIP]` step if present                                |
+| Stable import rule      | Says whether current paths must keep working                   | Preserve stable imports unless an explicit break is approved          |
+| Compatibility shim rule | Says whether old flat files may remain                         | No shim by default; require a verified compatibility reason           |
+| Validation expectations | Lists exact checks or gates to satisfy                         | Choose the narrowest credible validation lane for the touched surface |
+| Documentation follow-up | States how broad the doc pass should be                        | Focused `educational-docs` follow-up on the touched boundary          |
+| Blockers or cautions    | Records generated drift, unrelated edits, or unknown consumers | Record them explicitly before moving code                             |
 
 ### Ready-To-Paste Packets
 
@@ -245,15 +245,15 @@ natural instead of improvisational.
 Route adjacent concerns to the smallest owner instead of stretching
 `solid-split` into every neighboring job.
 
-| Need | Owner | What to pass |
-| --- | --- | --- |
-| Ambiguous seam, unknown import graph, or unclear consumers | `Boundary Mapper` | Split root, target boundary, stable import rule, and why the seam is unclear |
-| Roadmap-sensitive boundary or terminology | `plan-alignment` or `Plan Scout` | Relevant plan path, terminology that must stay aligned, and any architectural constraint |
-| Tracker creation, compression, or closure | `tracker-handoff` | Plan or log path, current status, and whether the workstream stays active or closes |
-| Mandatory documentation follow-up | `educational-docs` | Changed boundary, intended reader, whether docs are generated from source JSDoc, and validation expectations such as `npm run docs` |
-| Failing post-split validation | `test-fix-workflow` | Exact failing command, touched files, and a compact blocker summary |
-| Post-change `src/` coverage gate | `coverage-guard` | Changed `src/` files, latest green baseline, and whether this is routine post-change checking or regression repair |
-| Pre-existing coverage debt after the split is green | `coverage-tranche` | Exact file and uncovered path, not the whole split packet |
+| Need                                                       | Owner                            | What to pass                                                                                                                        |
+| ---------------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Ambiguous seam, unknown import graph, or unclear consumers | `Boundary Mapper`                | Split root, target boundary, stable import rule, and why the seam is unclear                                                        |
+| Roadmap-sensitive boundary or terminology                  | `plan-alignment` or `Plan Scout` | Relevant plan path, terminology that must stay aligned, and any architectural constraint                                            |
+| Tracker creation, compression, or closure                  | `tracker-handoff`                | Plan or log path, current status, and whether the workstream stays active or closes                                                 |
+| Mandatory documentation follow-up                          | `educational-docs`               | Changed boundary, intended reader, whether docs are generated from source JSDoc, and validation expectations such as `npm run docs` |
+| Failing post-split validation                              | `test-fix-workflow`              | Exact failing command, touched files, and a compact blocker summary                                                                 |
+| Post-change `src/` coverage gate                           | `coverage-guard`                 | Changed `src/` files, latest green baseline, and whether this is routine post-change checking or regression repair                  |
+| Pre-existing coverage debt after the split is green        | `coverage-tranche`               | Exact file and uncovered path, not the whole split packet                                                                           |
 
 If `educational-docs` concludes that the README surface is still too large
 after a focused doc pass, bring the work back to `solid-split` with a compact
@@ -296,14 +296,14 @@ API, default, or runtime contract.
 
 ## Default Decision Rules
 
-| Situation | Default action | Why |
-| --- | --- | --- |
-| A public file is overloaded but still the stable entrypoint | Keep a thin orchestration-first facade and extract focused helpers behind it | Stable imports stay readable without preserving a monolith |
-| The generated README is too large or mixed-topic after one split | Continue splitting into chapter folders instead of accepting a monolithic README | Discoverability is part of architecture in this repo |
-| External compatibility needs are unknown | Keep the smallest stable facade, record a blocker, and prove consumers before deleting old paths | Honest compatibility handling beats speculative cleanup |
-| The real problem is documentation quality, not structure | Use `educational-docs` instead of forcing a code split | Choose the smallest correct tool |
-| A validation failure is outside the active boundary | Stop, stabilize the worktree, and hand off to the right repair workflow | Do not strand a half-moved boundary |
-| An example reveals awkward library ergonomics | Prefer the library-level fix or a planned gap note over a demo-local workaround | Examples are probes, not places to normalize poor DX |
+| Situation                                                        | Default action                                                                                   | Why                                                        |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| A public file is overloaded but still the stable entrypoint      | Keep a thin orchestration-first facade and extract focused helpers behind it                     | Stable imports stay readable without preserving a monolith |
+| The generated README is too large or mixed-topic after one split | Continue splitting into chapter folders instead of accepting a monolithic README                 | Discoverability is part of architecture in this repo       |
+| External compatibility needs are unknown                         | Keep the smallest stable facade, record a blocker, and prove consumers before deleting old paths | Honest compatibility handling beats speculative cleanup    |
+| The real problem is documentation quality, not structure         | Use `educational-docs` instead of forcing a code split                                           | Choose the smallest correct tool                           |
+| A validation failure is outside the active boundary              | Stop, stabilize the worktree, and hand off to the right repair workflow                          | Do not strand a half-moved boundary                        |
+| An example reveals awkward library ergonomics                    | Prefer the library-level fix or a planned gap note over a demo-local workaround                  | Examples are probes, not places to normalize poor DX       |
 
 ## Required Split Workflow
 
@@ -505,14 +505,14 @@ chapter, tests, and documentation story.
 After a split step, run the minimum validation that proves the touched boundary
 is healthy. Make that choice explicit in the plan or summary.
 
-| Surface | Minimum validation | Escalate when needed |
-| --- | --- | --- |
-| `src/` | Focused tests, `npx tsc --noEmit -p tsconfig.json`, and `npm run quality:folder -- --folder=<touched_folder>` | `coverage-guard` for every touched file, plus `npm run test:silent` when the coverage gate or change scope requires repo-wide confirmation |
-| `testing/` | Focused Jest plus `npx tsc --noEmit -p tsconfig.test.json` when types or helpers moved | Also run source-side typecheck if the split changed shared helpers imported from `src/` |
-| `examples/` or `benchmarks/` | Targeted smoke/build for the changed entrypoint plus `npm run quality:folder -- --folder=<touched_folder>` | `npm run docs` when generated README surfaces or published example output changed |
-| `scripts/` or `.github/` | Exact validator or gate for the changed automation boundary | Rerun routing/frontmatter/docs gates when customization metadata or generation inputs moved |
-| Docs-affecting split | `npm run docs` | Re-read the generated output and confirm the source files, not generated artifacts, remain the authoring surface |
-| Package, workflow, or runtime-tooling change | `npm ci` | Follow with the build, docs, or gate command affected by the manifest or tooling shift |
+| Surface                                      | Minimum validation                                                                                            | Escalate when needed                                                                                                                       |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/`                                       | Focused tests, `npx tsc --noEmit -p tsconfig.json`, and `npm run quality:folder -- --folder=<touched_folder>` | `coverage-guard` for every touched file, plus `npm run test:silent` when the coverage gate or change scope requires repo-wide confirmation |
+| `testing/`                                   | Focused Jest plus `npx tsc --noEmit -p tsconfig.test.json` when types or helpers moved                        | Also run source-side typecheck if the split changed shared helpers imported from `src/`                                                    |
+| `examples/` or `benchmarks/`                 | Targeted smoke/build for the changed entrypoint plus `npm run quality:folder -- --folder=<touched_folder>`    | `npm run docs` when generated README surfaces or published example output changed                                                          |
+| `scripts/` or `.github/`                     | Exact validator or gate for the changed automation boundary                                                   | Rerun routing/frontmatter/docs gates when customization metadata or generation inputs moved                                                |
+| Docs-affecting split                         | `npm run docs`                                                                                                | Re-read the generated output and confirm the source files, not generated artifacts, remain the authoring surface                           |
+| Package, workflow, or runtime-tooling change | `npm ci`                                                                                                      | Follow with the build, docs, or gate command affected by the manifest or tooling shift                                                     |
 
 Preferred cadence:
 

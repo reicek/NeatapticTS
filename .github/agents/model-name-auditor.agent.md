@@ -3,7 +3,16 @@ description: 'Use as a hidden specialist for discovering and validating qualifie
 name: model-name-auditor
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['model-routing-and-budget']
@@ -24,7 +33,9 @@ Confirm which qualified model names are known, which still require local model-p
 - This agent is intentionally thin. Model routing policy and Copilot integration belong to VS Code and Copilot product teams.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `routing-table-freshness` — after validating model name changes
 
 ## Approach

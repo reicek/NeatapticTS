@@ -165,12 +165,12 @@ the stronger claim. If evidence weakens, demote the claim immediately.
 
 Use explicit transition language whenever a fact or tool is evolving:
 
-| Situation | Required evidence before promotion | Safe interim state | Forbidden shortcut |
-| --- | --- | --- | --- |
-| Repo-static fact gaining a direct-MCP delivery surface | A shipped tool/resource, matching annotations, and passing self-check output for the exact fact | Keep the fact repo-static and document the planned owner | Claim the fact is direct-MCP before the tool ships and validates |
-| Manual-only fact gaining a bridge plan | A documented extension-host or client API path plus source, freshness, and client-context rules | Keep the fact manual-only and record the blocker | Treat a human-visible UI observation as API-backed evidence |
-| Bridge-required fact gaining direct-MCP status | A repo-owned bridge or MCP surface that ships, passes validation, and proves the trust boundary | Keep the fact bridge-required with a blocker note | Collapse bridge-required into direct-MCP without shipped transport and evidence |
-| Direct-MCP fact losing proof after drift or failure | A successful fix and rerun of the failing self-check or gate | Demote to the strongest still-proven bucket and explain why | Leave the stronger claim in docs after a failing self-check |
+| Situation                                              | Required evidence before promotion                                                              | Safe interim state                                          | Forbidden shortcut                                                              |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Repo-static fact gaining a direct-MCP delivery surface | A shipped tool/resource, matching annotations, and passing self-check output for the exact fact | Keep the fact repo-static and document the planned owner    | Claim the fact is direct-MCP before the tool ships and validates                |
+| Manual-only fact gaining a bridge plan                 | A documented extension-host or client API path plus source, freshness, and client-context rules | Keep the fact manual-only and record the blocker            | Treat a human-visible UI observation as API-backed evidence                     |
+| Bridge-required fact gaining direct-MCP status         | A repo-owned bridge or MCP surface that ships, passes validation, and proves the trust boundary | Keep the fact bridge-required with a blocker note           | Collapse bridge-required into direct-MCP without shipped transport and evidence |
+| Direct-MCP fact losing proof after drift or failure    | A successful fix and rerun of the failing self-check or gate                                    | Demote to the strongest still-proven bucket and explain why | Leave the stronger claim in docs after a failing self-check                     |
 
 ## Validation and Failure Recovery
 

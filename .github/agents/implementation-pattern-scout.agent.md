@@ -3,7 +3,15 @@ description: 'Use when implementation needs nearby source patterns, naming conve
 name: implementation-pattern-scout
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['implementation-standards']
@@ -23,7 +31,9 @@ Map local implementation patterns, naming conventions, and helper boundaries so 
 - DO NOT restate full architecture or design principles that belong in source READMEs.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for implementation patterns
 
 ## Approach

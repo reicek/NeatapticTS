@@ -3,7 +3,16 @@ description: 'Use as a hidden specialist for designing or auditing sequential ha
 name: phase-handoff-designer
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['phase-handoff-workflow']
@@ -25,7 +34,9 @@ Check that handoffs are forward-moving, short, reviewable, model-qualified, and 
 - This agent is intentionally thin. Phase execution and gate logic belong to flow definitions.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `plan-sync` — after auditing handoff alignment
 - `step-packet` — when validating phase transition packets
 

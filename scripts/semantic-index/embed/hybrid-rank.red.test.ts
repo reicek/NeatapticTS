@@ -47,22 +47,32 @@ describe('hybrid-rank.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: {
-          rankedChunkIds: ['chunk-semantic', 'chunk-balanced', 'chunk-bm25'],
-          roundedScores: [0.75, 0.575, 0.25],
-        },
-        status: 0,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: {
+            rankedChunkIds: ['chunk-semantic', 'chunk-balanced', 'chunk-bm25'],
+            roundedScores: [0.75, 0.575, 0.25],
+          },
+          status: 0,
+        }),
+      );
     });
   });
 
   describe('dense candidate source contract', () => {
     it('adds global dense candidates that do not match the BM25 candidate pool', async () => {
       // Arrange
-      const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'semantic-query-dense-red-'));
-      const corpusDatabasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
-      const embeddingsDatabasePath = path.join(fixtureDirectory, 'embeddings.sqlite');
+      const fixtureDirectory = await mkdtemp(
+        path.join(tmpdir(), 'semantic-query-dense-red-'),
+      );
+      const corpusDatabasePath = path.join(
+        fixtureDirectory,
+        'semantic-index.sqlite',
+      );
+      const embeddingsDatabasePath = path.join(
+        fixtureDirectory,
+        'embeddings.sqlite',
+      );
 
       try {
         // Act
@@ -144,14 +154,16 @@ describe('hybrid-rank.mjs', () => {
         `);
 
         // Assert
-        expect(result).toEqual(expect.objectContaining({
-          report: {
-            topChunkId: 2,
-            topHeadingPath: 'Semantic target',
-            useDense: true,
-          },
-          status: 0,
-        }));
+        expect(result).toEqual(
+          expect.objectContaining({
+            report: {
+              topChunkId: 2,
+              topHeadingPath: 'Semantic target',
+              useDense: true,
+            },
+            status: 0,
+          }),
+        );
       } finally {
         await rm(fixtureDirectory, { force: true, recursive: true });
       }
@@ -159,9 +171,17 @@ describe('hybrid-rank.mjs', () => {
 
     it('searches dense candidates when BM25 has no lexical candidate', async () => {
       // Arrange
-      const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'semantic-query-dense-empty-red-'));
-      const corpusDatabasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
-      const embeddingsDatabasePath = path.join(fixtureDirectory, 'embeddings.sqlite');
+      const fixtureDirectory = await mkdtemp(
+        path.join(tmpdir(), 'semantic-query-dense-empty-red-'),
+      );
+      const corpusDatabasePath = path.join(
+        fixtureDirectory,
+        'semantic-index.sqlite',
+      );
+      const embeddingsDatabasePath = path.join(
+        fixtureDirectory,
+        'embeddings.sqlite',
+      );
 
       try {
         // Act
@@ -239,14 +259,16 @@ describe('hybrid-rank.mjs', () => {
         `);
 
         // Assert
-        expect(result).toEqual(expect.objectContaining({
-          report: {
-            topChunkId: 1,
-            topHeadingPath: 'Dense-only target',
-            useDense: true,
-          },
-          status: 0,
-        }));
+        expect(result).toEqual(
+          expect.objectContaining({
+            report: {
+              topChunkId: 1,
+              topHeadingPath: 'Dense-only target',
+              useDense: true,
+            },
+            status: 0,
+          }),
+        );
       } finally {
         await rm(fixtureDirectory, { force: true, recursive: true });
       }
@@ -254,11 +276,17 @@ describe('hybrid-rank.mjs', () => {
   });
 });
 
-function runModuleEvaluation<ReportType>(source: string): SpawnedJsonResult<ReportType> {
-  const spawned = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
+function runModuleEvaluation<ReportType>(
+  source: string,
+): SpawnedJsonResult<ReportType> {
+  const spawned = spawnSync(
+    process.execPath,
+    ['--input-type=module', '--eval', source],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    },
+  );
 
   return {
     report: tryParseJson<ReportType>(spawned.stdout ?? ''),

@@ -3,7 +3,16 @@ description: 'Use as a hidden specialist for grading NeatapticTS skill outputs w
 name: 'skill-output-eval-grader'
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['skill-output-evals']
@@ -24,7 +33,9 @@ You use `skill-output-evals` to assess assertions from observable evidence and v
 - Do not invent pass evidence.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `routing-table-freshness` — after grading skill outputs
 
 ## Approach

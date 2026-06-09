@@ -65,24 +65,25 @@ Output: draft Step 04 packet for user review before send.
    of continuing forward.
 9. Update the active tracker after each phase step when one exists.
 10. After updating the tracker, invoke the workflow sync hook to advance the step
-   markers automatically:
-   ```bash
-   node .github/hooks/workflow-update-sync.mjs --plan=<active-plan-path> --json
-   ```
-   This marks the current step `[DONE]` in the plan header AND the YAML
-   `status:` field, and advances the next `[PLANNED]` step to `[WIP]`.
-   **Exception:** if the step is explicitly awaiting a user response before the
-   next step can start, the hook may be skipped and the step left `[WIP]` until
-   the user replies. Record the hold reason in the plan.
-   If the hook returns `"actionTaken": "blocked"`, verify that the next step
-   exists and has `[PLANNED]` status before escalating.
-11. Before any strict write/execute action inside the current step, prepare the
-   repo-owned runtime proof carrier with
-   `node scripts/agent-customization/enforcement/runtime-enforcement-context.mjs --prepare ...`
-   so pretool and posttool enforcement can validate the flow, delegator chain,
-   required skills, required specialists, and action class. Use
-   `.github/runtime-enforcement-contract.md` as the canonical contract for that
-   payload.
+    markers automatically:
+
+```bash
+node .github/hooks/workflow-update-sync.mjs --plan=<active-plan-path> --json
+```
+
+This marks the current step `[DONE]` in the plan header AND the YAML
+`status:` field, and advances the next `[PLANNED]` step to `[WIP]`.
+**Exception:** if the step is explicitly awaiting a user response before the
+next step can start, the hook may be skipped and the step left `[WIP]` until
+the user replies. Record the hold reason in the plan.
+If the hook returns `"actionTaken": "blocked"`, verify that the next step
+exists and has `[PLANNED]` status before escalating. 11. Before any strict write/execute action inside the current step, prepare the
+repo-owned runtime proof carrier with
+`node scripts/agent-customization/enforcement/runtime-enforcement-context.mjs --prepare ...`
+so pretool and posttool enforcement can validate the flow, delegator chain,
+required skills, required specialists, and action class. Use
+`.github/runtime-enforcement-contract.md` as the canonical contract for that
+payload.
 
 ## Flow-Aware Handoff Contract
 

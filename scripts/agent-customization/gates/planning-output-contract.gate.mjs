@@ -22,8 +22,14 @@ const result = {
     gate: 'planning-output-contract',
     tier: 2,
     agent: '01-planning',
-    check: 'Structured-v1 block contains TASK_STATUS, FILES_CHANGED, ACTIONS_TAKEN, PHASE_COMPLETE',
-    requiredFields: ['TASK_STATUS', 'FILES_CHANGED', 'ACTIONS_TAKEN', 'PHASE_COMPLETE'],
+    check:
+      'Structured-v1 block contains TASK_STATUS, FILES_CHANGED, ACTIONS_TAKEN, PHASE_COMPLETE',
+    requiredFields: [
+      'TASK_STATUS',
+      'FILES_CHANGED',
+      'ACTIONS_TAKEN',
+      'PHASE_COMPLETE',
+    ],
     mode: 'standalone-descriptor',
   },
   fixHint:

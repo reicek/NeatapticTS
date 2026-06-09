@@ -16,31 +16,52 @@
  */
 import { Node, SyntaxKind } from 'ts-morph';
 import { pathToFileURL } from 'node:url';
-import { fail, parseCliArgs, printHelp, writeJsonOrText } from './cli-utils.mjs';
-import { countWords, loadExportedTypeScriptDeclarations, resolveJsdocSummaryText } from './ts-chunker.mjs';
+import {
+  fail,
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from './cli-utils.mjs';
+import {
+  countWords,
+  loadExportedTypeScriptDeclarations,
+  resolveJsdocSummaryText,
+} from './ts-chunker.mjs';
 
 const DEFAULT_COMPLEXITY_THRESHOLD = 10;
 const DEFAULT_MIN_JSDOC_WORDS = 10;
 const DOCUMENTATION_OWNER = '06-documenting';
 
 export async function scanCodeQuality(options = {}) {
-  const complexityThreshold = Number(options.complexityThreshold ?? DEFAULT_COMPLEXITY_THRESHOLD);
-  const minJsdocWords = Number(options.minJsdocWords ?? DEFAULT_MIN_JSDOC_WORDS);
-  const exportedDeclarations = await loadExportedTypeScriptDeclarations(options);
+  const complexityThreshold = Number(
+    options.complexityThreshold ?? DEFAULT_COMPLEXITY_THRESHOLD,
+  );
+  const minJsdocWords = Number(
+    options.minJsdocWords ?? DEFAULT_MIN_JSDOC_WORDS,
+  );
+  const exportedDeclarations =
+    await loadExportedTypeScriptDeclarations(options);
   const evidence = [];
 
   for (const exportedDeclaration of exportedDeclarations) {
-    const documentationIssues = collectDocumentationIssues(exportedDeclaration, minJsdocWords);
-    const complexityIssues = collectComplexityIssues(exportedDeclaration, complexityThreshold);
+    const documentationIssues = collectDocumentationIssues(
+      exportedDeclaration,
+      minJsdocWords,
+    );
+    const complexityIssues = collectComplexityIssues(
+      exportedDeclaration,
+      complexityThreshold,
+    );
     evidence.push(...documentationIssues, ...complexityIssues);
   }
 
   return {
     pass: evidence.length === 0,
     evidence,
-    fixHint: evidence.length === 0
-      ? null
-      : 'Add or strengthen JSDoc for the listed symbols, or simplify the flagged complex functions.',
+    fixHint:
+      evidence.length === 0
+        ? null
+        : 'Add or strengthen JSDoc for the listed symbols, or simplify the flagged complex functions.',
     owner: DOCUMENTATION_OWNER,
   };
 }
@@ -51,28 +72,35 @@ function collectDocumentationIssues(exportedDeclaration, minJsdocWords) {
     exportedDeclaration.jsdoc_source_node,
   );
   if (!jsdocText) {
-    return [{
-      file: exportedDeclaration.file_path,
-      issue: 'missing JSDoc',
-      symbol: exportedDeclaration.symbol_name,
-    }];
+    return [
+      {
+        file: exportedDeclaration.file_path,
+        issue: 'missing JSDoc',
+        symbol: exportedDeclaration.symbol_name,
+      },
+    ];
   }
 
   const jsdocWordCount = countWords(jsdocText);
   if (jsdocWordCount < minJsdocWords) {
-    return [{
-      file: exportedDeclaration.file_path,
-      issue: 'weak JSDoc',
-      symbol: exportedDeclaration.symbol_name,
-      words: jsdocWordCount,
-    }];
+    return [
+      {
+        file: exportedDeclaration.file_path,
+        issue: 'weak JSDoc',
+        symbol: exportedDeclaration.symbol_name,
+        words: jsdocWordCount,
+      },
+    ];
   }
 
   return [];
 }
 
 function collectComplexityIssues(exportedDeclaration, complexityThreshold) {
-  return resolveComplexityTargets(exportedDeclaration.declaration, exportedDeclaration.symbol_name)
+  return resolveComplexityTargets(
+    exportedDeclaration.declaration,
+    exportedDeclaration.symbol_name,
+  )
     .map(({ node, symbol }) => ({
       complexity: calculateCyclomaticComplexity(node),
       symbol,
@@ -93,13 +121,18 @@ function resolveComplexityTargets(declaration, symbolName) {
 
   if (Node.isVariableDeclaration(declaration)) {
     const initializer = declaration.getInitializer();
-    if (initializer && (Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer))) {
+    if (
+      initializer &&
+      (Node.isArrowFunction(initializer) ||
+        Node.isFunctionExpression(initializer))
+    ) {
       return [{ node: initializer, symbol: symbolName }];
     }
   }
 
   if (Node.isClassDeclaration(declaration)) {
-    return declaration.getMethods()
+    return declaration
+      .getMethods()
       .filter((methodDeclaration) => methodDeclaration.getBody() !== undefined)
       .map((methodDeclaration) => ({
         node: methodDeclaration,
@@ -129,9 +162,9 @@ function calculateCyclomaticComplexity(node) {
       case SyntaxKind.BinaryExpression: {
         const operatorKind = descendant.getOperatorToken?.().getKind?.();
         if (
-          operatorKind === SyntaxKind.AmpersandAmpersandToken
-          || operatorKind === SyntaxKind.BarBarToken
-          || operatorKind === SyntaxKind.QuestionQuestionToken
+          operatorKind === SyntaxKind.AmpersandAmpersandToken ||
+          operatorKind === SyntaxKind.BarBarToken ||
+          operatorKind === SyntaxKind.QuestionQuestionToken
         ) {
           complexity += 1;
         }
@@ -146,7 +179,9 @@ function calculateCyclomaticComplexity(node) {
 }
 
 async function main() {
-  const args = parseCliArgs(process.argv.slice(2), { repeatableFlags: ['source'] });
+  const args = parseCliArgs(process.argv.slice(2), {
+    repeatableFlags: ['source'],
+  });
   if (args.help) {
     printHelp({
       title: 'Code quality scanner',
@@ -162,7 +197,10 @@ async function main() {
     return;
   }
 
-  const providedSources = [args.source, ...(Array.isArray(args._) ? args._ : [])]
+  const providedSources = [
+    args.source,
+    ...(Array.isArray(args._) ? args._ : []),
+  ]
     .flat()
     .filter(Boolean);
 
@@ -172,13 +210,19 @@ async function main() {
       minJsdocWords: args['min-jsdoc-words'],
       sourcePaths: providedSources.length > 0 ? providedSources : undefined,
     });
-    writeJsonOrText(report, Boolean(args.json), (payload) => payload.pass
-      ? 'Code quality scan passed.'
-      : `Code quality scan failed: ${payload.evidence.length} issue(s).`);
+    writeJsonOrText(report, Boolean(args.json), (payload) =>
+      payload.pass
+        ? 'Code quality scan passed.'
+        : `Code quality scan failed: ${payload.evidence.length} issue(s).`,
+    );
     if (!report.pass) process.exitCode = 1;
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+    fail(
+      error instanceof Error ? error.message : String(error),
+      Boolean(args.json),
+    );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();

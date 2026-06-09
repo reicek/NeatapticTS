@@ -3,7 +3,16 @@ description: 'Use when mapping NEATchat follow-up work such as persistent sessio
 name: neatchat-scout
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['neatchat-systems']
@@ -27,7 +36,9 @@ Locate the exact follow-up NEATchat boundary in the repo, identify the active wo
 - This agent is intentionally thin. Durable policy lives in companion skill `neatchat-systems`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for NEATchat documents
 
 ## Approach

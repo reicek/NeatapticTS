@@ -3,10 +3,30 @@ description: 'Use when: 04-implementing delegates scoped file edits, patch appli
 name: implementation-executor
 tier: 2
 model: glm-5.1:cloud (ollama)
-tools: [read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    edit,
+    execute,
+    todo,
+    agent,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 disable-model-invocation: false
-agents: ['boundary-mapper', 'docs-scout', 'browser-runtime-scout', 'worker-payload-scout', 'checkpoint-scout', 'determinism-scout']
+agents:
+  [
+    'boundary-mapper',
+    'docs-scout',
+    'browser-runtime-scout',
+    'worker-payload-scout',
+    'checkpoint-scout',
+    'determinism-scout',
+  ]
 skills: ['implementation-standards', 'coverage-guard']
 handoffs:
   - label: 'Validate Green'
@@ -38,10 +58,13 @@ Execute scoped file edits delegated from `04-implementing`. You are a pure execu
 - **IF** a long-running terminal job is started, await completion or set `TASK_STATUS: PARTIAL` and document the job contract in the plan.
 
 ## Flow Selection
+
 - Use `04.scoped-fix` when applying scoped fixes; use `04.refactor` when restructuring code within plan boundaries.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `plan-sync` — after completing an implementation step
 - `agent-graph` — if delegation changes are needed
 - `learning-event` — when discovering workflow gaps
@@ -77,6 +100,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **ON** unresolved conflict, set `TASK_STATUS: PARTIAL`, record the file/conflict in `BLOCKERS`, and escalate via `00.cross-tier-helper`.
 
 ### Example:
+
 - If `src/main.js` was edited by another user after you read it, re-read the file, merge your patch with their changes, and only apply your intended hunk. If you cannot resolve the conflict, set `TASK_STATUS: PARTIAL`, add `"src/main.js: unresolved merge conflict"` to `BLOCKERS`, and escalate.
 
 ## Rollback Protocol
@@ -87,6 +111,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **NEVER** undo unrelated edits for patch simplicity.
 
 ### Example:
+
 - If your patch to `utils/validate.js` fails validation, revert only your changes to that file. Update the plan:
   - `"Reverted validate.js lines 10-20 due to failed validation. Unresolved: input edge case. Next: fix and re-validate."`
 
@@ -97,6 +122,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **NEVER** infer success from stale or partial output; the step remains open unless the handoff says otherwise.
 
 ### Example:
+
 - If you start a build job:
   - Add to `BLOCKERS`: `"build.sh running, check again in 5m, stop if exit code != 0"`
 

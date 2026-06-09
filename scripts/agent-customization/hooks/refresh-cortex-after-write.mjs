@@ -16,7 +16,12 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
-const workflowSyncHookPath = path.join(repoRoot, '.github', 'hooks', 'workflow-update-sync.mjs');
+const workflowSyncHookPath = path.join(
+  repoRoot,
+  '.github',
+  'hooks',
+  'workflow-update-sync.mjs',
+);
 const gateExceptionRecorderPath = path.join(
   repoRoot,
   'scripts',
@@ -24,8 +29,10 @@ const gateExceptionRecorderPath = path.join(
   'gates',
   'record-gate-exception.mjs',
 );
-const writeToolPattern = /^(apply_patch|edit|create|create_file|vscode_renameSymbol|editFiles|replace_string_in_file|createFile|writeFile)$/i;
-const substantiveToolPattern = /^(apply_patch|powershell|task|edit|create|create_file|vscode_renameSymbol|editFiles|replace_string_in_file|createFile|writeFile)$/i;
+const writeToolPattern =
+  /^(apply_patch|edit|create|create_file|vscode_renameSymbol|editFiles|replace_string_in_file|createFile|writeFile)$/i;
+const substantiveToolPattern =
+  /^(apply_patch|powershell|task|edit|create|create_file|vscode_renameSymbol|editFiles|replace_string_in_file|createFile|writeFile)$/i;
 const refreshSteps = Object.freeze([
   {
     name: 'build-index',
@@ -46,7 +53,9 @@ const refreshSteps = Object.freeze([
 ]);
 
 main().catch((error) => {
-  process.stderr.write(`[cortex-auto-refresh] runtime enforcement failed before hook exit: ${error.message}\n`);
+  process.stderr.write(
+    `[cortex-auto-refresh] runtime enforcement failed before hook exit: ${error.message}\n`,
+  );
   process.exit(2);
 });
 
@@ -89,7 +98,8 @@ async function main() {
         toolName,
         actionClass: runtimeValidation.actionClass,
         flowId: runtimePreparedAction?.flowId ?? null,
-        currentAgent: runtimePreparedAction?.currentAgent ?? 'refresh-cortex-after-write',
+        currentAgent:
+          runtimePreparedAction?.currentAgent ?? 'refresh-cortex-after-write',
         delegatorChain: runtimePreparedAction?.delegatorChain ?? [],
         requiredSkills: runtimePreparedAction?.requiredSkills ?? [],
         requiredSpecialists: runtimePreparedAction?.requiredSpecialists ?? [],
@@ -108,7 +118,9 @@ async function main() {
         toolName,
         stepResult: {
           status: 2,
-          stderr: [runtimeValidation.reason, runtimeValidation.recoveryHint].filter(Boolean).join('\n'),
+          stderr: [runtimeValidation.reason, runtimeValidation.recoveryHint]
+            .filter(Boolean)
+            .join('\n'),
           stdout: '',
         },
         extraEvidence: {
@@ -116,16 +128,26 @@ async function main() {
           flowId: runtimePreparedAction?.flowId ?? null,
           currentAgent: runtimePreparedAction?.currentAgent ?? null,
           actionId: runtimePreparedAction?.actionId ?? null,
-        recoveryHint: runtimeValidation.recoveryHint,
+          recoveryHint: runtimeValidation.recoveryHint,
         },
       });
-      process.stderr.write(formatFailure('runtime-enforcement-context', { stderr: runtimeValidation.reason, stdout: '', status: 2 }));
+      process.stderr.write(
+        formatFailure('runtime-enforcement-context', {
+          stderr: runtimeValidation.reason,
+          stdout: '',
+          status: 2,
+        }),
+      );
       process.exit(2);
     }
   }
 
   if (shouldRunWorkflowIntegrity) {
-    const workflowSyncStep = runNodeStep([workflowSyncHookPath, '--json', '--hook-check']);
+    const workflowSyncStep = runNodeStep([
+      workflowSyncHookPath,
+      '--json',
+      '--hook-check',
+    ]);
     if (workflowSyncStep.status !== 0) {
       recordGateException({
         gateId: 'workflow-update-sync-posttool',
@@ -134,7 +156,9 @@ async function main() {
         toolName,
         stepResult: workflowSyncStep,
       });
-      process.stderr.write(formatFailure('workflow-update-sync', workflowSyncStep));
+      process.stderr.write(
+        formatFailure('workflow-update-sync', workflowSyncStep),
+      );
       process.exit(2);
     }
 
@@ -186,7 +210,10 @@ async function main() {
     }).catch(() => {
       // Keep pass logging best-effort so the write path is not more brittle than the current hooks.
     });
-    await clearPreparedRuntimeContext(sessionId, runtimePreparedAction.actionId);
+    await clearPreparedRuntimeContext(
+      sessionId,
+      runtimePreparedAction.actionId,
+    );
     stepSummaries.push({
       name: 'runtime-enforcement-context',
       summary: 'pass',
@@ -255,7 +282,14 @@ function runNodeStep(stepArgs) {
   });
 }
 
-function recordGateException({ gateId, agent, hookInput, toolName, stepResult, extraEvidence = {} }) {
+function recordGateException({
+  gateId,
+  agent,
+  hookInput,
+  toolName,
+  stepResult,
+  extraEvidence = {},
+}) {
   const evidence = {
     toolName,
     details: summarizeFailure(stepResult),
@@ -279,7 +313,11 @@ function recordGateException({ gateId, agent, hookInput, toolName, stepResult, e
 function summarizeFailure(stepResult) {
   const stderrText = String(stepResult.stderr ?? '').trim();
   const stdoutText = String(stepResult.stdout ?? '').trim();
-  return stderrText || stdoutText || `Exited with status ${stepResult.status ?? 'unknown'}.`;
+  return (
+    stderrText ||
+    stdoutText ||
+    `Exited with status ${stepResult.status ?? 'unknown'}.`
+  );
 }
 
 function summarizeStdout(stdoutText) {
@@ -303,7 +341,10 @@ function parseTrailingJsonPayload(stdoutText) {
     return null;
   }
 
-  const candidateJson = stdoutText.slice(firstJsonBraceIndex, lastJsonBraceIndex + 1);
+  const candidateJson = stdoutText.slice(
+    firstJsonBraceIndex,
+    lastJsonBraceIndex + 1,
+  );
   try {
     return JSON.parse(candidateJson);
   } catch {
@@ -346,7 +387,10 @@ function formatSuccessContext(stepSummaries) {
 function formatFailure(stepName, stepResult) {
   const stderrText = String(stepResult.stderr ?? '').trim();
   const stdoutText = String(stepResult.stdout ?? '').trim();
-  const details = stderrText || stdoutText || `${stepName} exited with status ${stepResult.status ?? 'unknown'}.`;
+  const details =
+    stderrText ||
+    stdoutText ||
+    `${stepName} exited with status ${stepResult.status ?? 'unknown'}.`;
   return `[cortex-auto-refresh] ${stepName} failed: ${details}\n`;
 }
 

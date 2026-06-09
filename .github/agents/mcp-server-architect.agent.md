@@ -3,7 +3,16 @@ description: 'Use as a hidden specialist for designing NeatapticTS local MCP ser
 name: mcp-server-architect
 tier: 3
 model: glm-5.1:cloud (ollama)
-tools: [read, search, edit, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    edit,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['mcp-local-server-workflow']
@@ -24,7 +33,9 @@ Design only the minimum viable MCP server contracts for static workflow facts, l
 - This agent is intentionally thin for design; implementation belongs elsewhere.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for MCP-related documents
 
 ## Approach

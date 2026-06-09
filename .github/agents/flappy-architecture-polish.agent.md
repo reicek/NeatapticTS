@@ -3,7 +3,19 @@ description: 'Use when tuning, rerunning, or hardening one Flappy Bird architect
 name: 'flappy-architecture-polish'
 tier: 2
 model: glm-5.1:cloud (ollama)
-tools: [read, edit, search, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    edit,
+    search,
+    execute,
+    todo,
+    agent,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 argument-hint: 'Describe the architecture profile, current symptom, desired polish target, and whether this pass should implement changes or rerun validation only.'
 agents: ['plan-scout']
 user-invocable: false
@@ -31,10 +43,13 @@ Complete one focused polish pass at a time for one Flappy Bird architecture prof
 - DO NOT redefine the shared progress-check vocabulary if the existing check story still applies.
 
 ## Flow Selection
+
 - Use `04.scoped-fix` when tuning or polishing a Flappy Bird architecture profile.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `plan-sync` — after polishing iteration
 - `cortex-index` — before searching for architecture patterns
 

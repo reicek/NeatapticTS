@@ -21,10 +21,21 @@ describe('validate-embeddings.mjs', () => {
   describe('red count-validation contract', () => {
     it('returns pass false when counts mismatch and pass true when counts match', async () => {
       // Arrange
-      const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'semantic-validate-embeddings-red-'));
-      const corpusDatabasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
-      const mismatchEmbeddingsPath = path.join(fixtureDirectory, 'mismatch-embeddings.sqlite');
-      const matchedEmbeddingsPath = path.join(fixtureDirectory, 'matched-embeddings.sqlite');
+      const fixtureDirectory = await mkdtemp(
+        path.join(tmpdir(), 'semantic-validate-embeddings-red-'),
+      );
+      const corpusDatabasePath = path.join(
+        fixtureDirectory,
+        'semantic-index.sqlite',
+      );
+      const mismatchEmbeddingsPath = path.join(
+        fixtureDirectory,
+        'mismatch-embeddings.sqlite',
+      );
+      const matchedEmbeddingsPath = path.join(
+        fixtureDirectory,
+        'matched-embeddings.sqlite',
+      );
 
       // Act
       const result = runModuleEvaluation<ValidateEmbeddingsContractReport>(`
@@ -90,22 +101,30 @@ describe('validate-embeddings.mjs', () => {
       await rm(fixtureDirectory, { recursive: true, force: true });
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: {
-          issues: ['embedding count mismatch'],
-          passes: [false, true],
-        },
-        status: 0,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: {
+            issues: ['embedding count mismatch'],
+            passes: [false, true],
+          },
+          status: 0,
+        }),
+      );
     });
   });
 });
 
-function runModuleEvaluation<ReportType>(source: string): SpawnedJsonResult<ReportType> {
-  const spawned = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
+function runModuleEvaluation<ReportType>(
+  source: string,
+): SpawnedJsonResult<ReportType> {
+  const spawned = spawnSync(
+    process.execPath,
+    ['--input-type=module', '--eval', source],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    },
+  );
 
   return {
     report: tryParseJson<ReportType>(spawned.stdout ?? ''),

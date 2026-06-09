@@ -32,9 +32,15 @@ import {
 const AGENT_QUALITY_CONTRACT_PATH = '.github/AGENT_QUALITY_CONTRACT.md';
 
 const tierContracts = {
-  '1': {
+  1: {
     label: 'Tier-1 orchestrator',
-    requiredSections: ['Mission', 'Constraints', 'Default Flow', 'If Blocked', 'Output Format'],
+    requiredSections: [
+      'Mission',
+      'Constraints',
+      'Default Flow',
+      'If Blocked',
+      'Output Format',
+    ],
     requiredFields: [
       'OUTPUT_CONTRACT',
       'TASK_STATUS',
@@ -60,9 +66,15 @@ const tierContracts = {
       'Keep delegation and downstream handoff boundaries explicit in the workflow text.',
     ],
   },
-  '2': {
+  2: {
     label: 'Tier-2 coordinator',
-    requiredSections: ['Mission', 'Constraints', 'Required Workflow', 'If Blocked', 'Output Format'],
+    requiredSections: [
+      'Mission',
+      'Constraints',
+      'Required Workflow',
+      'If Blocked',
+      'Output Format',
+    ],
     requiredFields: [
       'OUTPUT_CONTRACT',
       'TASK_STATUS',
@@ -88,9 +100,15 @@ const tierContracts = {
       'Keep reroute responsibility explicit through HANDOFF and SUGGESTED_NEXT_AGENT.',
     ],
   },
-  '3': {
+  3: {
     label: 'Tier-3 scout',
-    requiredSections: ['Mission', 'Constraints', 'Approach', 'If Blocked', 'Output Format'],
+    requiredSections: [
+      'Mission',
+      'Constraints',
+      'Approach',
+      'If Blocked',
+      'Output Format',
+    ],
     requiredFields: [
       'OUTPUT_CONTRACT',
       'TASK_STATUS',
@@ -115,9 +133,15 @@ const tierContracts = {
       'Document MCP evidence dependencies only when the scout actually relies on them.',
     ],
   },
-  '4': {
+  4: {
     label: 'Tier-4 auxiliary',
-    requiredSections: ['Mission', 'Constraints', 'Default Flow', 'If Blocked', 'Output Format'],
+    requiredSections: [
+      'Mission',
+      'Constraints',
+      'Default Flow',
+      'If Blocked',
+      'Output Format',
+    ],
     requiredFields: [
       'OUTPUT_CONTRACT',
       'TASK_STATUS',
@@ -147,7 +171,8 @@ const options = parseArgs(process.argv.slice(2));
 if (options.help) {
   printUsage({
     title: 'Validate NeatapticTS agent quality contract compliance.',
-    usage: 'node scripts/agent-customization/validate-agent-quality.mjs [--json]',
+    usage:
+      'node scripts/agent-customization/validate-agent-quality.mjs [--json]',
   });
   process.exit(0);
 }
@@ -160,25 +185,40 @@ export async function runValidateAgentQuality() {
     contractDocument: AGENT_QUALITY_CONTRACT_PATH,
     enforcedRules: {
       mandatorySectionsByTier: Object.fromEntries(
-        Object.entries(tierContracts).map(([tier, contract]) => [tier, contract.requiredSections]),
+        Object.entries(tierContracts).map(([tier, contract]) => [
+          tier,
+          contract.requiredSections,
+        ]),
       ),
       structuredFieldOrderByTier: Object.fromEntries(
-        Object.entries(tierContracts).map(([tier, contract]) => [tier, contract.requiredFields]),
+        Object.entries(tierContracts).map(([tier, contract]) => [
+          tier,
+          contract.requiredFields,
+        ]),
       ),
     },
     documentedExpectations: Object.fromEntries(
-      Object.entries(tierContracts).map(([tier, contract]) => [tier, contract.documentedExpectations]),
+      Object.entries(tierContracts).map(([tier, contract]) => [
+        tier,
+        contract.documentedExpectations,
+      ]),
     ),
-    agents: agentReports.map(({ path: relativePath, name, tier, issues: currentIssues }) => ({
-      path: relativePath,
-      name,
-      tier,
-      counts: {
-        errors: currentIssues.filter((currentIssue) => currentIssue.severity === 'error').length,
-        warnings: currentIssues.filter((currentIssue) => currentIssue.severity === 'warning').length,
-      },
-      issues: currentIssues,
-    })),
+    agents: agentReports.map(
+      ({ path: relativePath, name, tier, issues: currentIssues }) => ({
+        path: relativePath,
+        name,
+        tier,
+        counts: {
+          errors: currentIssues.filter(
+            (currentIssue) => currentIssue.severity === 'error',
+          ).length,
+          warnings: currentIssues.filter(
+            (currentIssue) => currentIssue.severity === 'warning',
+          ).length,
+        },
+        issues: currentIssues,
+      }),
+    ),
   };
 
   return report;
@@ -190,19 +230,27 @@ async function main() {
   process.exitCode = report.ok ? 0 : 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }
 
 async function collectAgentReports() {
-  const agentPaths = await listMarkdownFiles('.github/agents', (relativePath) => relativePath.endsWith('.agent.md'));
+  const agentPaths = await listMarkdownFiles('.github/agents', (relativePath) =>
+    relativePath.endsWith('.agent.md'),
+  );
 
   return Promise.all(
     agentPaths.map(async (relativePath) => {
       const text = await readWorkspaceFile(relativePath);
       const parsed = parseFrontmatter(text, relativePath);
       const tier = normalizeTier(parsed.data.tier);
-      const name = parsed.data.name ?? relativePath.split('/').at(-1)?.replace('.agent.md', '') ?? relativePath;
+      const name =
+        parsed.data.name ??
+        relativePath.split('/').at(-1)?.replace('.agent.md', '') ??
+        relativePath;
       const issues = validateAgent({
         path: relativePath,
         name,
@@ -226,13 +274,25 @@ function validateAgent(agent) {
   const issues = [...agent.parseIssues];
 
   if (!agent.tier) {
-    issues.push(issue('error', agent.path, 'Agent frontmatter must define a valid numeric tier between 1 and 4.'));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        'Agent frontmatter must define a valid numeric tier between 1 and 4.',
+      ),
+    );
     return issues;
   }
 
   const contract = tierContracts[agent.tier];
   if (!contract) {
-    issues.push(issue('error', agent.path, `No agent quality contract is defined for tier '${agent.tier}'.`));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        `No agent quality contract is defined for tier '${agent.tier}'.`,
+      ),
+    );
     return issues;
   }
 
@@ -254,13 +314,19 @@ function validateAgent(agent) {
     return issues;
   }
 
-  issues.push(...validateStructuredOutputContract(agent, contract, outputSection));
+  issues.push(
+    ...validateStructuredOutputContract(agent, contract, outputSection),
+  );
   return issues;
 }
 
 function validateStructuredOutputContract(agent, contract, outputSection) {
   const issues = [];
-  const structuredFenceMatches = [...outputSection.matchAll(/```structured-v1\r?\n(?<body>[\s\S]*?)\r?\n```/gu)];
+  const structuredFenceMatches = [
+    ...outputSection.matchAll(
+      /```structured-v1\r?\n(?<body>[\s\S]*?)\r?\n```/gu,
+    ),
+  ];
 
   if (structuredFenceMatches.length !== 1) {
     issues.push(
@@ -274,7 +340,9 @@ function validateStructuredOutputContract(agent, contract, outputSection) {
   }
 
   const fenceBody = structuredFenceMatches[0].groups?.body ?? '';
-  const firstNonBlankLine = fenceBody.split(/\r?\n/u).find((line) => line.trim());
+  const firstNonBlankLine = fenceBody
+    .split(/\r?\n/u)
+    .find((line) => line.trim());
   if (firstNonBlankLine?.trim() !== 'OUTPUT_CONTRACT: structured-v1') {
     issues.push(
       issue(
@@ -290,7 +358,9 @@ function validateStructuredOutputContract(agent, contract, outputSection) {
 
   if (
     detectedFields.length !== contract.requiredFields.length ||
-    detectedFields.some((field, index) => field !== contract.requiredFields[index])
+    detectedFields.some(
+      (field, index) => field !== contract.requiredFields[index],
+    )
   ) {
     issues.push(
       issue(
@@ -313,7 +383,9 @@ function validateStructuredOutputContract(agent, contract, outputSection) {
     }
   }
 
-  const outputContractField = parsedFields.find(({ field }) => field === 'OUTPUT_CONTRACT');
+  const outputContractField = parsedFields.find(
+    ({ field }) => field === 'OUTPUT_CONTRACT',
+  );
   if (outputContractField?.value !== 'structured-v1') {
     issues.push(
       issue(

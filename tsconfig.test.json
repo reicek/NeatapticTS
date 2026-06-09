@@ -20,7 +20,8 @@
     "src/**/*.ts",
     "testing/jest-setup.ts",
     "benchmarks/**/*.ts",
-    "examples/**/*.ts"
+    "examples/**/*.ts",
+    "scripts/**/*.ts"
   ],
   "exclude": ["dist", "node_modules"]
 }

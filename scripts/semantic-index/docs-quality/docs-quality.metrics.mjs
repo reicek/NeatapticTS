@@ -4,7 +4,12 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { fail, parseCliArgs, printHelp, writeJsonOrText } from '../cli-utils.mjs';
+import {
+  fail,
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from '../cli-utils.mjs';
 import { scanCodeQuality } from '../code-quality-scanner.mjs';
 import {
   DOCS_QUALITY_METRIC_VERSION,
@@ -37,11 +42,16 @@ export async function runDocsQualityMetrics(options = {}) {
   const scannerReport = await scanCodeQuality({
     complexityThreshold: thresholds.complexityThreshold,
     minJsdocWords: thresholds.minJsdocWords,
-    sourcePaths: scopeConfig.scopeType === 'paths' ? scopeConfig.scopeValue : undefined,
+    sourcePaths:
+      scopeConfig.scopeType === 'paths' ? scopeConfig.scopeValue : undefined,
   });
-  const coverage = await parseLcovSummary(path.resolve(process.cwd(), 'coverage', 'lcov.info'));
+  const coverage = await parseLcovSummary(
+    path.resolve(process.cwd(), 'coverage', 'lcov.info'),
+  );
 
-  const canonicalEvidence = normalizeDocsQualityEvidence(scannerReport.evidence);
+  const canonicalEvidence = normalizeDocsQualityEvidence(
+    scannerReport.evidence,
+  );
   const issueBreakdown = summarizeIssueBreakdown(canonicalEvidence);
   const summary = {
     evidenceCount: canonicalEvidence.length,
@@ -52,10 +62,13 @@ export async function runDocsQualityMetrics(options = {}) {
     coverage,
   };
 
-  const normalizedEvidenceDigest = computeNormalizedEvidenceDigest(canonicalEvidence);
-  const sourcePathsDigest = computeSourcePathsDigest(scopeConfig.scopeType === 'paths'
-    ? scopeConfig.scopeValue
-    : [scopeConfig.scopeType]);
+  const normalizedEvidenceDigest =
+    computeNormalizedEvidenceDigest(canonicalEvidence);
+  const sourcePathsDigest = computeSourcePathsDigest(
+    scopeConfig.scopeType === 'paths'
+      ? scopeConfig.scopeValue
+      : [scopeConfig.scopeType],
+  );
   const runId = String(options.runId ?? DEFAULT_RUN_ID);
   const manifest = {
     metricVersion: DOCS_QUALITY_METRIC_VERSION,
@@ -86,7 +99,9 @@ export async function runDocsQualityMetrics(options = {}) {
 
   const validation = validateDocsQualityManifestV1(manifest);
   if (!validation.valid) {
-    throw new Error(`Invalid docs-quality manifest: ${validation.errors.map(({ field }) => field).join(', ')}`);
+    throw new Error(
+      `Invalid docs-quality manifest: ${validation.errors.map(({ field }) => field).join(', ')}`,
+    );
   }
 
   const artifacts = await writeDocsQualityRunArtifacts({
@@ -97,14 +112,22 @@ export async function runDocsQualityMetrics(options = {}) {
     },
     manifest: {
       ...manifest,
-      summaryPath: toRepoRelativePath(path.join('artifacts', 'docs-quality', 'runs', runId, 'summary.json')),
-      evidencePath: toRepoRelativePath(path.join('artifacts', 'docs-quality', 'runs', runId, 'evidence.json')),
-      manifestPath: toRepoRelativePath(path.join('artifacts', 'docs-quality', 'runs', runId, 'manifest.json')),
+      summaryPath: toRepoRelativePath(
+        path.join('artifacts', 'docs-quality', 'runs', runId, 'summary.json'),
+      ),
+      evidencePath: toRepoRelativePath(
+        path.join('artifacts', 'docs-quality', 'runs', runId, 'evidence.json'),
+      ),
+      manifestPath: toRepoRelativePath(
+        path.join('artifacts', 'docs-quality', 'runs', runId, 'manifest.json'),
+      ),
     },
     runId,
   });
 
-  const finalManifest = JSON.parse(await readFile(artifacts.manifestPath, 'utf8'));
+  const finalManifest = JSON.parse(
+    await readFile(artifacts.manifestPath, 'utf8'),
+  );
 
   return {
     pass: scannerReport.pass,
@@ -116,8 +139,12 @@ export async function runDocsQualityMetrics(options = {}) {
 }
 
 function resolveThresholds(options) {
-  const complexityThreshold = Number(options.complexityThreshold ?? DEFAULT_COMPLEXITY_THRESHOLD);
-  const minJsdocWords = Number(options.minJsdocWords ?? DEFAULT_MIN_JSDOC_WORDS);
+  const complexityThreshold = Number(
+    options.complexityThreshold ?? DEFAULT_COMPLEXITY_THRESHOLD,
+  );
+  const minJsdocWords = Number(
+    options.minJsdocWords ?? DEFAULT_MIN_JSDOC_WORDS,
+  );
   if (!Number.isFinite(complexityThreshold) || complexityThreshold < 0) {
     throw new Error('complexityThreshold must be a non-negative number.');
   }
@@ -133,17 +160,28 @@ function resolveThresholds(options) {
 }
 
 function resolveScopeConfig(options) {
-  const normalizedScope = String(options.scope ?? (Array.isArray(options.sourcePaths) && options.sourcePaths.length > 0 ? 'paths' : 'src'));
+  const normalizedScope = String(
+    options.scope ??
+      (Array.isArray(options.sourcePaths) && options.sourcePaths.length > 0
+        ? 'paths'
+        : 'src'),
+  );
   const scopeType = normalizedScope === 'paths' ? 'paths' : 'src';
-  const scopeValue = scopeType === 'paths'
-    ? (Array.isArray(options.sourcePaths) ? options.sourcePaths : [])
-    : ['src'];
+  const scopeValue =
+    scopeType === 'paths'
+      ? Array.isArray(options.sourcePaths)
+        ? options.sourcePaths
+        : []
+      : ['src'];
   const normalizedScopeConfig = normalizeScopeInputAndDigest({
     scopeType,
     scopeValue,
   });
 
-  if (normalizedScopeConfig.scopeType === 'paths' && normalizedScopeConfig.scopeValue.length === 0) {
+  if (
+    normalizedScopeConfig.scopeType === 'paths' &&
+    normalizedScopeConfig.scopeValue.length === 0
+  ) {
     throw new Error('scope=paths requires at least one source path.');
   }
 
@@ -158,9 +196,11 @@ function summarizeIssueBreakdown(canonicalEvidence) {
   };
 
   for (const evidenceEntry of canonicalEvidence) {
-    if (evidenceEntry.issue === 'missing JSDoc') issueBreakdown.missingJsdoc += 1;
+    if (evidenceEntry.issue === 'missing JSDoc')
+      issueBreakdown.missingJsdoc += 1;
     if (evidenceEntry.issue === 'weak JSDoc') issueBreakdown.weakJsdoc += 1;
-    if (evidenceEntry.issue === 'high complexity') issueBreakdown.highComplexity += 1;
+    if (evidenceEntry.issue === 'high complexity')
+      issueBreakdown.highComplexity += 1;
   }
 
   return issueBreakdown;
@@ -177,11 +217,15 @@ async function parseLcovSummary(lcovPath) {
     return { available: false };
   }
 
-  const coverageSummaryPath = path.resolve(process.cwd(), 'coverage', 'coverage-summary.json');
-  const statementCoverageByFile = await readStatementCoverageByFile(
-    coverageSummaryPath,
+  const coverageSummaryPath = path.resolve(
+    process.cwd(),
+    'coverage',
+    'coverage-summary.json',
   );
-  const totalStatementCoverage = await readTotalStatementCoverage(coverageSummaryPath);
+  const statementCoverageByFile =
+    await readStatementCoverageByFile(coverageSummaryPath);
+  const totalStatementCoverage =
+    await readTotalStatementCoverage(coverageSummaryPath);
   const lcovContent = await readFile(lcovPath, 'utf8');
   const coverageRecords = lcovContent
     .split('end_of_record')
@@ -203,7 +247,9 @@ async function parseLcovSummary(lcovPath) {
   for (const coverageRecord of coverageRecords) {
     if (!coverageRecord.includes('SF:')) continue;
 
-    const coverageFilePath = normalizeCoverageFilePath(readLcovSourceFile(coverageRecord));
+    const coverageFilePath = normalizeCoverageFilePath(
+      readLcovSourceFile(coverageRecord),
+    );
     const lineHits = readLcovCounter(coverageRecord, /^LH:(\d+)$/m);
     const lineFound = readLcovCounter(coverageRecord, /^LF:(\d+)$/m);
     const branchHits = readLcovCounter(coverageRecord, /^BRH:(\d+)$/m);
@@ -227,8 +273,12 @@ async function parseLcovSummary(lcovPath) {
       const statementCoverage = statementCoverageByFile.get(coverageFilePath);
       aggregate.filesBelow100Detail.push({
         file: coverageFilePath,
-        statements: Number.isFinite(statementCoverage) ? statementCoverage : lineCoverage,
-        statementCoverageSource: Number.isFinite(statementCoverage) ? 'coverage-summary' : 'lcov-line-fallback',
+        statements: Number.isFinite(statementCoverage)
+          ? statementCoverage
+          : lineCoverage,
+        statementCoverageSource: Number.isFinite(statementCoverage)
+          ? 'coverage-summary'
+          : 'lcov-line-fallback',
         branches: branchCoverage,
         functions: functionCoverage,
         lines: lineCoverage,
@@ -239,18 +289,27 @@ async function parseLcovSummary(lcovPath) {
     }
   }
 
-  const isPartialCoverage = Number.isFinite(totalStatementCoverage)
-    && totalStatementCoverage < FULL_COVERAGE_PCT_THRESHOLD;
+  const isPartialCoverage =
+    Number.isFinite(totalStatementCoverage) &&
+    totalStatementCoverage < FULL_COVERAGE_PCT_THRESHOLD;
 
   return {
     available: true,
     ...(isPartialCoverage ? { isPartial: true } : {}),
     totalFiles: aggregate.totalFiles,
     filesBelow100: aggregate.filesBelow100,
-    filesBelow100Detail: aggregate.filesBelow100Detail.toSorted(compareCoverageDetailRows),
+    filesBelow100Detail: aggregate.filesBelow100Detail.toSorted(
+      compareCoverageDetailRows,
+    ),
     overallLines: toCoveragePercent(aggregate.lineHits, aggregate.lineFound),
-    overallBranches: toCoveragePercent(aggregate.branchHits, aggregate.branchFound),
-    overallFunctions: toCoveragePercent(aggregate.functionHits, aggregate.functionFound),
+    overallBranches: toCoveragePercent(
+      aggregate.branchHits,
+      aggregate.branchFound,
+    ),
+    overallFunctions: toCoveragePercent(
+      aggregate.functionHits,
+      aggregate.functionFound,
+    ),
   };
 }
 
@@ -266,24 +325,35 @@ async function readStatementCoverageByFile(coverageSummaryPath) {
   }
 
   try {
-    const coverageSummary = JSON.parse(await readFile(coverageSummaryPath, 'utf8'));
-    const coverageSummaryEntries = Object.entries(coverageSummary)
-      .filter(([coverageFilePath]) => coverageFilePath !== 'total');
+    const coverageSummary = JSON.parse(
+      await readFile(coverageSummaryPath, 'utf8'),
+    );
+    const coverageSummaryEntries = Object.entries(coverageSummary).filter(
+      ([coverageFilePath]) => coverageFilePath !== 'total',
+    );
 
-    return new Map(coverageSummaryEntries
-      .map(([coverageFilePath, coverageEntry]) => {
-        if (!isPlainObject(coverageEntry) || !isPlainObject(coverageEntry.statements)) {
-          return null;
-        }
+    return new Map(
+      coverageSummaryEntries
+        .map(([coverageFilePath, coverageEntry]) => {
+          if (
+            !isPlainObject(coverageEntry) ||
+            !isPlainObject(coverageEntry.statements)
+          ) {
+            return null;
+          }
 
-        const statementPercent = Number(coverageEntry.statements.pct);
-        if (!Number.isFinite(statementPercent)) {
-          return null;
-        }
+          const statementPercent = Number(coverageEntry.statements.pct);
+          if (!Number.isFinite(statementPercent)) {
+            return null;
+          }
 
-        return [normalizeCoverageFilePath(coverageFilePath), statementPercent];
-      })
-      .filter(Boolean));
+          return [
+            normalizeCoverageFilePath(coverageFilePath),
+            statementPercent,
+          ];
+        })
+        .filter(Boolean),
+    );
   } catch {
     return new Map();
   }
@@ -301,8 +371,13 @@ async function readTotalStatementCoverage(coverageSummaryPath) {
   }
 
   try {
-    const coverageSummary = JSON.parse(await readFile(coverageSummaryPath, 'utf8'));
-    if (!isPlainObject(coverageSummary.total) || !isPlainObject(coverageSummary.total.statements)) {
+    const coverageSummary = JSON.parse(
+      await readFile(coverageSummaryPath, 'utf8'),
+    );
+    if (
+      !isPlainObject(coverageSummary.total) ||
+      !isPlainObject(coverageSummary.total.statements)
+    ) {
       return null;
     }
 
@@ -372,7 +447,10 @@ function readUncoveredBranches(coverageRecord) {
     .split('\n')
     .filter((coverageLine) => coverageLine.startsWith('BRDA:'))
     .map((coverageLine) => coverageLine.slice(5).split(','))
-    .filter(([, , , takenCount]) => takenCount === '-' || Number.parseInt(takenCount ?? '0', 10) === 0)
+    .filter(
+      ([, , , takenCount]) =>
+        takenCount === '-' || Number.parseInt(takenCount ?? '0', 10) === 0,
+    )
     .map(([lineNumber, blockNumber, branchNumber, takenCount]) => ({
       line: Number.parseInt(lineNumber ?? '0', 10),
       block: blockNumber ?? '0',
@@ -406,8 +484,18 @@ function readUncoveredFunctionNames(coverageRecord) {
  * @returns {number} Sort comparator result.
  */
 function compareCoverageDetailRows(leftEntry, rightEntry) {
-  const leftWorstCoverage = Math.min(leftEntry.statements, leftEntry.branches, leftEntry.functions, leftEntry.lines);
-  const rightWorstCoverage = Math.min(rightEntry.statements, rightEntry.branches, rightEntry.functions, rightEntry.lines);
+  const leftWorstCoverage = Math.min(
+    leftEntry.statements,
+    leftEntry.branches,
+    leftEntry.functions,
+    leftEntry.lines,
+  );
+  const rightWorstCoverage = Math.min(
+    rightEntry.statements,
+    rightEntry.branches,
+    rightEntry.functions,
+    rightEntry.lines,
+  );
 
   if (leftWorstCoverage !== rightWorstCoverage) {
     return leftWorstCoverage - rightWorstCoverage;
@@ -474,7 +562,8 @@ async function main() {
   if (args.help) {
     printHelp({
       title: 'Docs quality metrics runner',
-      usage: 'node scripts/semantic-index/docs-quality/docs-quality.metrics.mjs [--json]',
+      usage:
+        'node scripts/semantic-index/docs-quality/docs-quality.metrics.mjs [--json]',
       options: [
         '--json                       Emit full run payload as JSON.',
         '--scope <src|paths>          Scope type (default: src, paths when --source is provided).',
@@ -488,7 +577,10 @@ async function main() {
     return;
   }
 
-  const providedSources = [args.source, ...(Array.isArray(args._) ? args._ : [])]
+  const providedSources = [
+    args.source,
+    ...(Array.isArray(args._) ? args._ : []),
+  ]
     .flat()
     .filter(Boolean);
 
@@ -508,16 +600,24 @@ async function main() {
       evidence: run.evidence,
     };
 
-    writeJsonOrText(serializedRun, Boolean(args.json), (payload) => [
-      `Docs-quality metrics completed: ${payload.summary.evidenceCount} evidence row(s).`,
-      `Manifest: ${payload.manifest.manifestPath}`,
-    ].join('\n'));
+    writeJsonOrText(serializedRun, Boolean(args.json), (payload) =>
+      [
+        `Docs-quality metrics completed: ${payload.summary.evidenceCount} evidence row(s).`,
+        `Manifest: ${payload.manifest.manifestPath}`,
+      ].join('\n'),
+    );
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+    fail(
+      error instanceof Error ? error.message : String(error),
+      Boolean(args.json),
+    );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   if (existsSync(path.resolve(process.argv[1]))) {
     await main();
   }

@@ -3,7 +3,16 @@ description: 'Use as a hidden specialist for validating NeatapticTS MCP workflow
 name: mcp-validation-auditor
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['mcp-local-server-workflow']
@@ -24,7 +33,9 @@ Run only allow-listed validation commands from the active plan. Verify MCP serve
 - DO NOT restate the full MCP workflow that belongs in `mcp-server-architect`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for MCP-related documents
 
 ## Approach

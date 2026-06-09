@@ -22,7 +22,8 @@ const result = {
     gate: 'research-findings-evidence',
     tier: 2,
     agent: '02-researching',
-    check: 'KEY_FINDINGS list contains at least one finding; no file paths are fabricated',
+    check:
+      'KEY_FINDINGS list contains at least one finding; no file paths are fabricated',
     mode: 'standalone-descriptor',
   },
   fixHint:

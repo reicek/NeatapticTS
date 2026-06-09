@@ -28,13 +28,13 @@ This skill owns the durable knowledge surface for routing policy in this reposit
 
 The repository enforces a strict five-tier agent graph. Delegation must flow downward except via the cross-tier helper.
 
-| Tier | Label | User-Invocable | Examples |
-|---|---|---|---|
-| 0 | Default / Main | false | Default VS Code Copilot agent |
-| 1 | Numbered SDLC Orchestrators | true | `00-helping`, `01-planning`, `02-researching`, `03-red-testing`, `04-implementing`, `05-green-testing`, `06-documenting`, `07-logging` |
-| 2 | Named Coordinators / Sub-Orchestrators | false | `planning-context-coordinator`, `solid-split`, `helping-gap-resolution-coordinator` |
-| 3 | Hidden Scouts and Specialists | false | `Boundary Mapper`, `Coverage Scout`, `Plan Scout`, `Docs Scout` |
-| 4 | Auxiliaries and One-Shot Helpers | false | `acceptance-criteria-writer`, `file-change-summarizer` |
+| Tier | Label                                  | User-Invocable | Examples                                                                                                                               |
+| ---- | -------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Default / Main                         | false          | Default VS Code Copilot agent                                                                                                          |
+| 1    | Numbered SDLC Orchestrators            | true           | `00-helping`, `01-planning`, `02-researching`, `03-red-testing`, `04-implementing`, `05-green-testing`, `06-documenting`, `07-logging` |
+| 2    | Named Coordinators / Sub-Orchestrators | false          | `planning-context-coordinator`, `solid-split`, `helping-gap-resolution-coordinator`                                                    |
+| 3    | Hidden Scouts and Specialists          | false          | `Boundary Mapper`, `Coverage Scout`, `Plan Scout`, `Docs Scout`                                                                        |
+| 4    | Auxiliaries and One-Shot Helpers       | false          | `acceptance-criteria-writer`, `file-change-summarizer`                                                                                 |
 
 ### Delegation Rules
 

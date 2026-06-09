@@ -48,22 +48,24 @@ function parseArgs(argv) {
 }
 
 function printUsage() {
-  console.log([
-    'Folder-quality gate',
-    '',
-    'Usage:',
-    '  node scripts/agent-customization/gates/folder-quality.gate.mjs --folder=<path> [--json]',
-    '  node scripts/agent-customization/gates/folder-quality.gate.mjs --help',
-    '',
-    'Flags:',
-    '  --folder=<path>  Repo-relative folder to check.',
-    '  --json           Emit the standard gate contract to stdout as JSON.',
-    '  --help           Show usage and exit codes.',
-    '',
-    'Exit codes:',
-    '  0  Gate passed',
-    '  1  Gate failed or arguments were invalid',
-  ].join('\n'));
+  console.log(
+    [
+      'Folder-quality gate',
+      '',
+      'Usage:',
+      '  node scripts/agent-customization/gates/folder-quality.gate.mjs --folder=<path> [--json]',
+      '  node scripts/agent-customization/gates/folder-quality.gate.mjs --help',
+      '',
+      'Flags:',
+      '  --folder=<path>  Repo-relative folder to check.',
+      '  --json           Emit the standard gate contract to stdout as JSON.',
+      '  --help           Show usage and exit codes.',
+      '',
+      'Exit codes:',
+      '  0  Gate passed',
+      '  1  Gate failed or arguments were invalid',
+    ].join('\n'),
+  );
 }
 
 /**
@@ -107,7 +109,9 @@ async function main() {
     if (options.json) {
       console.log(JSON.stringify(report, null, 2));
     } else {
-      console.log(report.pass ? 'PASS folder-quality gate' : 'FAIL folder-quality gate');
+      console.log(
+        report.pass ? 'PASS folder-quality gate' : 'FAIL folder-quality gate',
+      );
       if (!report.pass) {
         console.log(`fixHint: ${report.fixHint}`);
       }
@@ -121,6 +125,9 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   await main();
 }

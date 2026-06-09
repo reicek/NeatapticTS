@@ -17,7 +17,8 @@ import { createTool } from './mcp-utils.mjs';
 export function createCustomizationRoutingTableTool() {
   return createTool({
     name: 'query_customization_routing_table',
-    description: 'Return the generated canonical agent/skill routing table plus freshness status.',
+    description:
+      'Return the generated canonical agent/skill routing table plus freshness status.',
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: 'object',
@@ -48,7 +49,9 @@ export function createCustomizationRoutingTableTool() {
           sourceFiles: table.sourceFiles.length,
         },
         freshness,
-        rows: includeRows ? { agents: table.agentRows, skills: table.skillRows } : {},
+        rows: includeRows
+          ? { agents: table.agentRows, skills: table.skillRows }
+          : {},
         markdown: includeMarkdown ? table.markdown : null,
       };
     },

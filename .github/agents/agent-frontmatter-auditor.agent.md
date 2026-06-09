@@ -3,7 +3,16 @@ description: 'Use when validating .agent.md frontmatter, tool lists, model strin
 name: agent-frontmatter-auditor
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['agent-frontmatter-standards', 'updating-agent-frontmatter']
@@ -24,7 +33,9 @@ You validate `.agent.md` frontmatter structure, tool lists, model strings, subag
 - ALWAYS verify YAML syntax, required fields (description, name, tier, model, tools, user-invocable, agents), and tool list completeness.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `agent-graph` — after auditing agent configuration
 - `routing-table-freshness` — after identifying routing or skill gaps
 

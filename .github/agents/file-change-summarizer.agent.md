@@ -3,7 +3,15 @@ description: 'Use when: summarizing changed files, affected customization surfac
 name: 'file-change-summarizer'
 tier: 4
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 agents: []
 user-invocable: false
 skills: ['summarizing-session-log']
@@ -22,10 +30,13 @@ Summarize changed files, affected customization surfaces, validation evidence, a
 - Keep the summary scoped to the files and evidence requested by the caller.
 
 ## Flow Selection
+
 - Use `07.session-summary` when summarizing changed files for logging or handoff.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `plan-sync` — after summarizing changes
 
 ## Default Flow

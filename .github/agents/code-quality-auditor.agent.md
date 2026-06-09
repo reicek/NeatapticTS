@@ -3,7 +3,17 @@ description: 'Use when running quality gates and interpreting results for 05-gre
 name: code-quality-auditor
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    agent,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: ['file-change-summarizer']
 skills: ['green-validation-gates', 'implementation-standards']
@@ -25,7 +35,9 @@ Run quality gates (`npm run quality:folder`, `npm run build`, lint commands) whe
 - This agent is intentionally thin. Durable policy lives in companion skills `green-validation-gates` and `implementation-standards`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `green-validation-evidence` — after running quality gates
 - `agent-graph` — when delegation changes are needed
 

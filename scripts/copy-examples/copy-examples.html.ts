@@ -5,7 +5,10 @@
  * return HTML strings that the copy and landing-page layers then write to disk.
  */
 
-import type { ExampleDefinition, PublishedExample } from './copy-examples.types.js';
+import type {
+  ExampleDefinition,
+  PublishedExample,
+} from './copy-examples.types.js';
 import {
   DOCS_HOME_PATH,
   DOCS_THEME_STYLESHEET_PATH,
@@ -45,10 +48,7 @@ export function rewriteExamplePageForDocs(examplePageHtml: string): string {
       REPO_EXAMPLE_TOOLTIP_RUNTIME_PATH,
       EXAMPLE_PAGE_TOOLTIP_RUNTIME_PATH,
     )
-    .replaceAll(
-      "? '../../docs/assets/",
-      "? '../../assets/",
-    );
+    .replaceAll("? '../../docs/assets/", "? '../../assets/");
 }
 
 /**
@@ -269,7 +269,9 @@ export function buildExamplesCategoryMarkup(
  * @param publishedExample - Published example metadata.
  * @returns HTML `<article>` card markup.
  */
-export function buildExampleListItemMarkup(publishedExample: PublishedExample): string {
+export function buildExampleListItemMarkup(
+  publishedExample: PublishedExample,
+): string {
   const localExampleLink = `./${publishedExample.dirName}/${EXAMPLE_ENTRY_FILE_NAME}`;
   const actionLabel = publishedExample.hasBrowserEntry
     ? 'Open browser demo'

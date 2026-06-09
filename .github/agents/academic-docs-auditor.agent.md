@@ -3,7 +3,16 @@ description: 'Use when auditing NeatapticTS educational documentation, JSDoc qua
 name: academic-docs-auditor
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['docs-academic-citation-audit', 'auditing-js-docs']
@@ -22,7 +31,9 @@ Audit educational documentation, JSDoc, Mermaid diagrams, citations, and generat
 - Verify documentation is atemporal: no roadmap phases, PR numbers, plan stages, or before/after framing.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for documentation context
 
 ## Approach
@@ -47,7 +58,6 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Do not attempt edits or broad discovery to work around missing context.
 
 ## Output Format
-
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

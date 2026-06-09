@@ -1,13 +1,20 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
 const runModuleEvaluation = <Result>(source: string): Result => {
-  const output = execFileSync(process.execPath, ['--input-type=module', '--eval', source], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
+  const output = execFileSync(
+    process.execPath,
+    ['--input-type=module', '--eval', source],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    },
+  );
 
   return JSON.parse(output) as Result;
 };
@@ -28,10 +35,13 @@ describe('validate-index.mjs', () => {
         console.log(JSON.stringify(result));
       `);
 
-      expect(result).toEqual(expect.objectContaining({
-        pass: false,
-        fixHint: 'Stale paths detected. Run: node scripts/semantic-index/build-index.mjs',
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          pass: false,
+          fixHint:
+            'Stale paths detected. Run: node scripts/semantic-index/build-index.mjs',
+        }),
+      );
     });
   });
 });

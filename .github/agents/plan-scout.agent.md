@@ -3,7 +3,16 @@ description: 'Use when selecting a relevant plan document, checking roadmap alig
 name: 'plan-scout'
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['plan-alignment']
@@ -28,7 +37,9 @@ You gather evidence from `plans/` directory, identify the smallest relevant plan
 - DO NOT restate the full plan-selection workflow or roadmap guardrails that belong in `plan-alignment`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for plan documents
 - `plan-sync` — after selecting a plan
 

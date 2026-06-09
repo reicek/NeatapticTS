@@ -3,7 +3,17 @@ description: 'Use when planning a refactor, splitting a large module, identifyin
 name: boundary-mapper
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, todo, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    todo,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['solid-split']
@@ -28,7 +38,9 @@ You map folder responsibilities, identify orchestration files versus helper/deta
 - This agent is intentionally thin. Durable refactor policy lives in companion skill `solid-split`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for module boundary context
 
 ## Approach

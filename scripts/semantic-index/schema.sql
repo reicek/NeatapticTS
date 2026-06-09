@@ -18,6 +18,14 @@ CREATE TABLE IF NOT EXISTS chunks (
   body_text TEXT NOT NULL,
   char_start INTEGER NOT NULL,
   char_end INTEGER NOT NULL,
+  parent_chunk_id INTEGER,
+  depth INTEGER NOT NULL DEFAULT 0,
+  context_header TEXT,
+  symbol_name TEXT,
+  signature_text TEXT,
+  jsdoc_text TEXT,
+  export_type TEXT,
+  module_path TEXT,
   UNIQUE(doc_id, chunk_index)
 );
 
@@ -48,3 +56,7 @@ END;
 
 CREATE INDEX IF NOT EXISTS documents_family_idx ON documents(doc_family);
 CREATE INDEX IF NOT EXISTS chunks_doc_id_idx ON chunks(doc_id);
+CREATE INDEX IF NOT EXISTS chunks_parent_idx ON chunks(parent_chunk_id);
+CREATE INDEX IF NOT EXISTS chunks_depth_idx ON chunks(depth);
+CREATE INDEX IF NOT EXISTS chunks_symbol_idx ON chunks(symbol_name);
+CREATE INDEX IF NOT EXISTS chunks_module_idx ON chunks(module_path);

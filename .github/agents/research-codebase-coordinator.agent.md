@@ -3,8 +3,34 @@ description: 'Use when: research spans multiple source areas, domain scouts, gen
 name: 'research-codebase-coordinator'
 tier: 2
 model: glm-5.1:cloud (ollama)
-tools: [read, search, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
-agents: ['plan-scout', 'docs-scout', 'repo-cortex-scout', 'boundary-mapper', 'browser-runtime-scout', 'worker-payload-scout', 'evaluation-pool-scout', 'checkpoint-scout', 'hybrid-interop-scout', 'determinism-scout', 'visualizer-scout', 'nge-core-scout', 'nge-benchmark-scout', 'neatchat-scout', 'research-synthesis-specialist']
+tools:
+  [
+    read,
+    search,
+    agent,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
+agents:
+  [
+    'plan-scout',
+    'docs-scout',
+    'repo-cortex-scout',
+    'boundary-mapper',
+    'browser-runtime-scout',
+    'worker-payload-scout',
+    'evaluation-pool-scout',
+    'checkpoint-scout',
+    'hybrid-interop-scout',
+    'determinism-scout',
+    'visualizer-scout',
+    'nge-core-scout',
+    'nge-benchmark-scout',
+    'neatchat-scout',
+    'research-synthesis-specialist',
+  ]
 skills: ['subagent-delegation-patterns', 'repo-cortex-workflow']
 user-invocable: false
 ---
@@ -24,10 +50,13 @@ Coordinate parallel read-only codebase research across multiple source areas, do
 - Select only the scouts actually needed for the research question — do not invoke all scouts by default.
 
 ## Flow Selection
+
 - Use `02.codebase-recon` when coordinating multi-source research; use `02.prior-art-scan` when searching for existing solutions.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching the codebase
 - `plan-sync` — after research synthesis
 

@@ -3,8 +3,26 @@ description: 'Use when: validation fails, failure ownership is unclear, reroute 
 name: 'green-test-failure-triage-coordinator'
 tier: 2
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
-agents: ['coverage-guard', 'coverage-scout', 'failure-triage-specialist', 'unit-test-runner', 'plan-registration-auditor', 'mcp-validation-auditor']
+tools:
+  [
+    read,
+    search,
+    execute,
+    agent,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
+agents:
+  [
+    'coverage-guard',
+    'coverage-scout',
+    'failure-triage-specialist',
+    'unit-test-runner',
+    'plan-registration-auditor',
+    'mcp-validation-auditor',
+  ]
 skills: ['green-validation-gates']
 user-invocable: false
 ---
@@ -24,10 +42,13 @@ Coordinate green-phase validation triage when tests fail, failure ownership is u
 - Route fix ownership clearly: set `SUGGESTED_NEXT_AGENT` to the agent that should perform the repair.
 
 ## Flow Selection
+
 - Use `05.test-triage` when triaging validation failures or mapping test failures to owners.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `green-validation-evidence` — after triaging a validation failure
 - `cortex-index` — before searching the codebase for failure context
 

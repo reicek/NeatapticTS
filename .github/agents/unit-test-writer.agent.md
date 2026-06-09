@@ -3,7 +3,17 @@ description: 'Use when writing focused unit tests, red tests, fixtures, mocks, a
 name: 'unit-test-writer'
 tier: 3
 model: glm-5.1:cloud (ollama)
-tools: [read, search, execute, edit, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    edit,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['creating-unit-tests']
@@ -24,7 +34,9 @@ You author focused test suites for specific behavioral changes, fixtures, and co
 - ALWAYS match existing file naming and style patterns.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for test pattern context
 
 ## Approach

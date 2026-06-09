@@ -37,7 +37,12 @@ import { getFreshnessProof } from './freshness.mjs';
 import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
 
 const SCRIPT_NAME = 'session-start-index.mjs';
-const BUILD_INDEX_PATH = path.join(repoRoot, 'scripts', 'semantic-index', 'build-index.mjs');
+const BUILD_INDEX_PATH = path.join(
+  repoRoot,
+  'scripts',
+  'semantic-index',
+  'build-index.mjs',
+);
 
 // ---------------------------------------------------------------------------
 // Entry point
@@ -58,18 +63,27 @@ if (
     json: Boolean(args['json']),
     touchOnly: Boolean(args['touch-only']),
     databasePath: args['database'] ?? undefined,
-  }).then((summary) => {
-    writeJsonOrText(summary, Boolean(args['json']), formatSummaryText);
-    process.exit(summary.fatalError ? 1 : 0);
-  }).catch((error) => {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    if (args['json']) {
-      console.log(JSON.stringify({ pass: false, ok: false, error: errorMessage }, null, 2));
-    } else {
-      console.error(`session-start-index: fatal error: ${errorMessage}`);
-    }
-    process.exit(1);
-  });
+  })
+    .then((summary) => {
+      writeJsonOrText(summary, Boolean(args['json']), formatSummaryText);
+      process.exit(summary.fatalError ? 1 : 0);
+    })
+    .catch((error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (args['json']) {
+        console.log(
+          JSON.stringify(
+            { pass: false, ok: false, error: errorMessage },
+            null,
+            2,
+          ),
+        );
+      } else {
+        console.error(`session-start-index: fatal error: ${errorMessage}`);
+      }
+      process.exit(1);
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +100,9 @@ if (
  * @returns {Promise<SessionStartSummary>}
  */
 export async function runSessionStartIndex(options = {}) {
-  const databasePath = path.resolve(options.databasePath ?? defaultDatabasePath);
+  const databasePath = path.resolve(
+    options.databasePath ?? defaultDatabasePath,
+  );
   const startMs = Date.now();
 
   const summary = {
@@ -259,26 +275,28 @@ function formatSummaryText(summary) {
 }
 
 function printUsage() {
-  console.log([
-    'session-start-index — lightweight session-start semantic-index refresh',
-    '',
-    'Usage:',
-    '  node scripts/semantic-index/session-start-index.mjs [--json] [--touch-only] [--database=<path>]',
-    '  node scripts/semantic-index/session-start-index.mjs --help',
-    '',
-    'Options:',
-    '  --json                 Emit machine-readable JSON summary.',
-    '  --touch-only           Run only the touch pass; skip the incremental build pass.',
-    '  --database=<path>      Override the SQLite database path.',
-    '',
-    'Description:',
-    '  Prevents the 24-hour indexed_at staleness gate from drifting red for',
-    '  content that has not changed. Touches indexed_at for fresh rows (no',
-    '  re-chunking), then runs an incremental build for changed or new files.',
-    '',
-    'Recommended usage:',
-    '  npm run index:session-start   # run once at session start',
-  ].join('\n'));
+  console.log(
+    [
+      'session-start-index — lightweight session-start semantic-index refresh',
+      '',
+      'Usage:',
+      '  node scripts/semantic-index/session-start-index.mjs [--json] [--touch-only] [--database=<path>]',
+      '  node scripts/semantic-index/session-start-index.mjs --help',
+      '',
+      'Options:',
+      '  --json                 Emit machine-readable JSON summary.',
+      '  --touch-only           Run only the touch pass; skip the incremental build pass.',
+      '  --database=<path>      Override the SQLite database path.',
+      '',
+      'Description:',
+      '  Prevents the 24-hour indexed_at staleness gate from drifting red for',
+      '  content that has not changed. Touches indexed_at for fresh rows (no',
+      '  re-chunking), then runs an incremental build for changed or new files.',
+      '',
+      'Recommended usage:',
+      '  npm run index:session-start   # run once at session start',
+    ].join('\n'),
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -9,15 +9,33 @@ import path from 'node:path';
  */
 export async function writeDocsQualityRunArtifacts(payload) {
   const runId = normalizeRunId(payload.runId);
-  const runDirectory = path.resolve(process.cwd(), 'artifacts', 'docs-quality', 'runs', runId);
+  const runDirectory = path.resolve(
+    process.cwd(),
+    'artifacts',
+    'docs-quality',
+    'runs',
+    runId,
+  );
   const summaryPath = path.join(runDirectory, 'summary.json');
   const evidencePath = path.join(runDirectory, 'evidence.json');
   const manifestPath = path.join(runDirectory, 'manifest.json');
 
   await mkdir(runDirectory, { recursive: true });
-  await writeFile(summaryPath, `${JSON.stringify(payload.summary, null, 2)}\n`, 'utf8');
-  await writeFile(evidencePath, `${JSON.stringify(payload.evidence, null, 2)}\n`, 'utf8');
-  await writeFile(manifestPath, `${JSON.stringify(payload.manifest, null, 2)}\n`, 'utf8');
+  await writeFile(
+    summaryPath,
+    `${JSON.stringify(payload.summary, null, 2)}\n`,
+    'utf8',
+  );
+  await writeFile(
+    evidencePath,
+    `${JSON.stringify(payload.evidence, null, 2)}\n`,
+    'utf8',
+  );
+  await writeFile(
+    manifestPath,
+    `${JSON.stringify(payload.manifest, null, 2)}\n`,
+    'utf8',
+  );
 
   return {
     evidencePath,

@@ -10,7 +10,10 @@ import {
 
 const options = parseCliArguments(process.argv.slice(2));
 
-if (options.help || (!options.prepare && !options.show && !options.clear && !options.diagnose)) {
+if (
+  options.help ||
+  (!options.prepare && !options.show && !options.clear && !options.diagnose)
+) {
   printUsage();
   process.exit(options.help ? 0 : 1);
 }
@@ -30,7 +33,8 @@ try {
       planPath: options.planPath,
       activePhase: options.activePhase,
       activeStep: options.activeStep,
-      allowedActionClass: options.actionClass || inferActionClass(options.expectedToolName),
+      allowedActionClass:
+        options.actionClass || inferActionClass(options.expectedToolName),
       expectedToolName: options.expectedToolName,
     });
   } else if (options.diagnose) {
@@ -50,7 +54,9 @@ try {
     result = await readRuntimeContext(sessionId);
   }
 
-  console.log(JSON.stringify({ ok: true, sessionId, context: result }, null, 2));
+  console.log(
+    JSON.stringify({ ok: true, sessionId, context: result }, null, 2),
+  );
   process.exitCode = 0;
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
@@ -85,18 +91,32 @@ function parseCliArguments(argv) {
     else if (argument === '--clear') parsed.clear = true;
     else if (argument === '--diagnose') parsed.diagnose = true;
     else if (argument === '--help' || argument === '-h') parsed.help = true;
-    else if (argument.startsWith('--session-id=')) parsed.sessionId = argument.slice('--session-id='.length);
-    else if (argument.startsWith('--flow-id=')) parsed.flowId = argument.slice('--flow-id='.length);
-    else if (argument.startsWith('--agent=')) parsed.currentAgent = argument.slice('--agent='.length);
-    else if (argument.startsWith('--delegator-chain=')) parsed.delegatorChain = argument.slice('--delegator-chain='.length);
-    else if (argument.startsWith('--required-skills=')) parsed.requiredSkills = argument.slice('--required-skills='.length);
-    else if (argument.startsWith('--required-specialists=')) parsed.requiredSpecialists = argument.slice('--required-specialists='.length);
-    else if (argument.startsWith('--plan=')) parsed.planPath = argument.slice('--plan='.length);
-    else if (argument.startsWith('--phase=')) parsed.activePhase = argument.slice('--phase='.length);
-    else if (argument.startsWith('--step=')) parsed.activeStep = argument.slice('--step='.length);
-    else if (argument.startsWith('--action-class=')) parsed.actionClass = argument.slice('--action-class='.length);
-    else if (argument.startsWith('--tool-name=')) parsed.expectedToolName = argument.slice('--tool-name='.length);
-    else if (argument.startsWith('--action-id=')) parsed.actionId = argument.slice('--action-id='.length);
+    else if (argument.startsWith('--session-id='))
+      parsed.sessionId = argument.slice('--session-id='.length);
+    else if (argument.startsWith('--flow-id='))
+      parsed.flowId = argument.slice('--flow-id='.length);
+    else if (argument.startsWith('--agent='))
+      parsed.currentAgent = argument.slice('--agent='.length);
+    else if (argument.startsWith('--delegator-chain='))
+      parsed.delegatorChain = argument.slice('--delegator-chain='.length);
+    else if (argument.startsWith('--required-skills='))
+      parsed.requiredSkills = argument.slice('--required-skills='.length);
+    else if (argument.startsWith('--required-specialists='))
+      parsed.requiredSpecialists = argument.slice(
+        '--required-specialists='.length,
+      );
+    else if (argument.startsWith('--plan='))
+      parsed.planPath = argument.slice('--plan='.length);
+    else if (argument.startsWith('--phase='))
+      parsed.activePhase = argument.slice('--phase='.length);
+    else if (argument.startsWith('--step='))
+      parsed.activeStep = argument.slice('--step='.length);
+    else if (argument.startsWith('--action-class='))
+      parsed.actionClass = argument.slice('--action-class='.length);
+    else if (argument.startsWith('--tool-name='))
+      parsed.expectedToolName = argument.slice('--tool-name='.length);
+    else if (argument.startsWith('--action-id='))
+      parsed.actionId = argument.slice('--action-id='.length);
   }
 
   return parsed;

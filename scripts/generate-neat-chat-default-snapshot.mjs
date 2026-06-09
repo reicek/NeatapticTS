@@ -58,7 +58,9 @@ const bundledGeneratorPath =
 const forwardedGenerationArguments = resolveForwardedGenerationArguments();
 
 await build({
-  entryPoints: ['examples/neatChat/generate-default-pretrained-session-snapshot.ts'],
+  entryPoints: [
+    'examples/neatChat/generate-default-pretrained-session-snapshot.ts',
+  ],
   bundle: true,
   platform: 'node',
   format: 'esm',

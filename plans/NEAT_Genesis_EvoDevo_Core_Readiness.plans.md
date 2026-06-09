@@ -557,17 +557,17 @@ reproducibility audit after the core normalization seam lands.
 
 ###### Contract scope — what Phase 4 normalizes
 
-| Contract element                 | Current location                                    | Target owner after Phase 4          |
-| -------------------------------- | --------------------------------------------------- | ----------------------------------- |
-| Deterministic pack creation      | `simulation-worker.race-pack.service.ts` (racing)   | NGE core — Layer 2                  |
-| Pack replay validation          | No reusable validator exists                        | NGE core — Layer 2                  |
-| Transfer-list resolution        | `simulation-worker.race-pack.service.ts` (racing)   | NGE core — Layer 2                  |
-| Schema versioning / rejection   | `simulation-worker.types.ts` (racing `RacingRenderFrame`) | NGE core — Layer 2 (generic schema) |
-| Clone-safe payload contract     | Implicit in worker transport                        | NGE core — Layer 2 (explicit)      |
-| `RacingRenderFrame` type        | `simulation-worker.types.ts` (racing)              | Racing-owned — Layer 3 (stays)     |
-| Per-tier pack construction       | `simulation-worker.tier3/4/5.ts` (racing)          | Racing-owned — Layer 3 (stays)     |
-| Track physics / tire / pit state | Racing-specific frame fields                         | Racing-owned — Layer 3 (stays)     |
-| Renderer layout                  | Car positions, headings, place                       | Racing-owned — Layer 3 (stays)     |
+| Contract element                 | Current location                                          | Target owner after Phase 4          |
+| -------------------------------- | --------------------------------------------------------- | ----------------------------------- |
+| Deterministic pack creation      | `simulation-worker.race-pack.service.ts` (racing)         | NGE core — Layer 2                  |
+| Pack replay validation           | No reusable validator exists                              | NGE core — Layer 2                  |
+| Transfer-list resolution         | `simulation-worker.race-pack.service.ts` (racing)         | NGE core — Layer 2                  |
+| Schema versioning / rejection    | `simulation-worker.types.ts` (racing `RacingRenderFrame`) | NGE core — Layer 2 (generic schema) |
+| Clone-safe payload contract      | Implicit in worker transport                              | NGE core — Layer 2 (explicit)       |
+| `RacingRenderFrame` type         | `simulation-worker.types.ts` (racing)                     | Racing-owned — Layer 3 (stays)      |
+| Per-tier pack construction       | `simulation-worker.tier3/4/5.ts` (racing)                 | Racing-owned — Layer 3 (stays)      |
+| Track physics / tire / pit state | Racing-specific frame fields                              | Racing-owned — Layer 3 (stays)      |
+| Renderer layout                  | Car positions, headings, place                            | Racing-owned — Layer 3 (stays)      |
 
 ###### Three-layer ownership boundary
 
@@ -583,6 +583,7 @@ graph TD
 ```
 
 **Layer 1 — NGE Core Semantics** (`src/neat/nge-collective/`):
+
 - `runCollectiveEvaluationTick`, `resetCollectiveEvaluationState`
 - `createTeamFitnessEvaluator`, team/group fitness aggregation
 - `createTwoPopulationHarness`, `advanceTwoPopulations`
@@ -592,6 +593,7 @@ graph TD
   transfer lists, worker topology, or any benchmark-specific type.
 
 **Layer 2 — Worker Transport Normalization** (NEW — Phase 4 creates this):
+
 - Deterministic evaluation-pack creation (core-owned generic contract)
 - Pack replay validation (same seed + same inputs → identical output)
 - Transfer-list resolution (zero-copy `postMessage` contract)
@@ -602,6 +604,7 @@ graph TD
   deterministic-pack and transfer contracts that any benchmark can reuse.
 
 **Layer 3 — Benchmark-Local Racing Transport** (`examples/racing_curriculum/`):
+
 - `RacingRenderFrame` type with `schemaVersion: 'racing-packed-v1'`
 - Per-tier pack construction (`simulation-worker.tier3/4/5.ts`)
 - Track-specific physics, tire/pit state, feature flags

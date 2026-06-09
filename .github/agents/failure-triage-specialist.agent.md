@@ -3,7 +3,15 @@ description: 'Use when a focused validation fails and the workflow needs root-ca
 name: failure-triage-specialist
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['triaging-test-failures']
@@ -24,7 +32,9 @@ You triage validation failures without making edits. You perform root-cause anal
 - DO NOT restate the full test-failure, coverage-gap, or validation-gate workflow that belongs in companion skills.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `green-validation-evidence` — after triaging a validation failure
 
 ## Approach

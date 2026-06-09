@@ -42,37 +42,44 @@ const TIER_1_GATES = [
   {
     id: 'plan-sync',
     owner: 'validate-plan-sync.mjs',
-    description: 'Checks that all [WIP] plans are registered in README and Roadmap.',
+    description:
+      'Checks that all [WIP] plans are registered in README and Roadmap.',
   },
   {
     id: 'step-packet',
     owner: 'validate-plan-phase-packets.mjs',
-    description: 'Checks that active [WIP] step packets have required fields and sections.',
+    description:
+      'Checks that active [WIP] step packets have required fields and sections.',
   },
   {
     id: 'agent-graph',
     owner: 'validate-agent-graph.mjs',
-    description: 'Checks that all agent delegation references resolve and no cycles exist.',
+    description:
+      'Checks that all agent delegation references resolve and no cycles exist.',
   },
   {
     id: 'agent-quality',
     owner: 'validate-agent-quality.mjs',
-    description: 'Checks that every agent body has the required sections and tier-specific structured-v1 contract.',
+    description:
+      'Checks that every agent body has the required sections and tier-specific structured-v1 contract.',
   },
   {
     id: 'tier-enforcement',
     owner: 'validate-agent-graph.mjs',
-    description: 'Checks that every agent has a valid tier assignment and only legal tier edges exist.',
+    description:
+      'Checks that every agent has a valid tier assignment and only legal tier edges exist.',
   },
   {
     id: 'routing-table-freshness',
     owner: 'generate-agent-skill-routing-table.mjs',
-    description: 'Checks that the generated canonical routing table matches current agent and skill sources.',
+    description:
+      'Checks that the generated canonical routing table matches current agent and skill sources.',
   },
   {
     id: 'learning-event',
     owner: '.github/ai-learning/learning-log.jsonl',
-    description: 'Checks that the learning event log exists and contains at least one event.',
+    description:
+      'Checks that the learning event log exists and contains at least one event.',
   },
   {
     id: 'stale-wip-plans',
@@ -94,7 +101,12 @@ const TIER_1_GATES = [
   },
 ];
 
-const GATES_DIR = path.join(MCP_REPO_ROOT, 'scripts', 'agent-customization', 'gates');
+const GATES_DIR = path.join(
+  MCP_REPO_ROOT,
+  'scripts',
+  'agent-customization',
+  'gates',
+);
 const GATE_TOOLS = createGateTools();
 
 const options = parseMcpCliArgs(process.argv.slice(2));
@@ -131,7 +143,8 @@ function createGateTools() {
   return [
     createTool({
       name: 'list_gates',
-      description: 'Return the available Tier-1 gate IDs, their owners, and descriptions.',
+      description:
+        'Return the available Tier-1 gate IDs, their owners, and descriptions.',
       annotations: { readOnlyHint: true },
       handler: async () => ({
         gates: TIER_1_GATES,
@@ -151,7 +164,8 @@ function createGateTools() {
           gate: {
             type: 'string',
             enum: TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
-            description: 'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, or cortex-first-search).',
+            description:
+              'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, or cortex-first-search).',
           },
         },
         required: ['gate'],
@@ -205,10 +219,15 @@ async function runGateSelfCheck({ server }) {
   }
 
   // Step 2: Confirm tool count.
-  const toolListResult = await invokeServerRequest(server, { method: 'tools/list' });
+  const toolListResult = await invokeServerRequest(server, {
+    method: 'tools/list',
+  });
   const expectedToolCount = server.tools.length;
 
-  if (!Array.isArray(toolListResult.tools) || toolListResult.tools.length !== expectedToolCount) {
+  if (
+    !Array.isArray(toolListResult.tools) ||
+    toolListResult.tools.length !== expectedToolCount
+  ) {
     issues.push(
       selfCheckError(
         'gate-mcp',
@@ -228,14 +247,22 @@ async function runGateSelfCheck({ server }) {
 
   if (gateCheckResult.isError) {
     issues.push(
-      selfCheckError('gate-mcp', 'run_gate_check tool returned an error during self-check.'),
+      selfCheckError(
+        'gate-mcp',
+        'run_gate_check tool returned an error during self-check.',
+      ),
     );
   }
 
   const gatePayload = gateCheckResult.structuredContent ?? {};
 
   if (typeof gatePayload.pass !== 'boolean') {
-    issues.push(selfCheckError('gate-mcp', 'Gate result missing required "pass" boolean field.'));
+    issues.push(
+      selfCheckError(
+        'gate-mcp',
+        'Gate result missing required "pass" boolean field.',
+      ),
+    );
   }
 
   // Step 4: Run the tier graph query to confirm the new tool surface is live.
@@ -248,12 +275,25 @@ async function runGateSelfCheck({ server }) {
   });
 
   if (tierGraphResult.isError) {
-    issues.push(selfCheckError('gate-mcp', 'query_tier_graph returned an error during self-check.'));
+    issues.push(
+      selfCheckError(
+        'gate-mcp',
+        'query_tier_graph returned an error during self-check.',
+      ),
+    );
   }
 
   const tierGraphPayload = tierGraphResult.structuredContent ?? {};
-  if (typeof tierGraphPayload.summary?.total !== 'number' || tierGraphPayload.summary.total < 1) {
-    issues.push(selfCheckError('gate-mcp', 'query_tier_graph did not report a valid agent total.'));
+  if (
+    typeof tierGraphPayload.summary?.total !== 'number' ||
+    tierGraphPayload.summary.total < 1
+  ) {
+    issues.push(
+      selfCheckError(
+        'gate-mcp',
+        'query_tier_graph did not report a valid agent total.',
+      ),
+    );
   }
 
   // Step 5: Run the routing-table query to confirm freshness reporting is live.
@@ -275,7 +315,10 @@ async function runGateSelfCheck({ server }) {
   }
 
   const routingTablePayload = routingTableResult.structuredContent ?? {};
-  if (typeof routingTablePayload.summary?.agents !== 'number' || routingTablePayload.summary.agents < 1) {
+  if (
+    typeof routingTablePayload.summary?.agents !== 'number' ||
+    routingTablePayload.summary.agents < 1
+  ) {
     issues.push(
       selfCheckError(
         'gate-mcp',
@@ -295,7 +338,13 @@ async function runGateSelfCheck({ server }) {
 
   return createSelfCheckReport('gate-mcp self-check', issues, {
     gatesTested: ['learning-event'],
-    toolsTested: ['run_gate_check', 'query_tier_graph', 'query_customization_routing_table'],
-    toolCount: Array.isArray(toolListResult.tools) ? toolListResult.tools.length : 0,
+    toolsTested: [
+      'run_gate_check',
+      'query_tier_graph',
+      'query_customization_routing_table',
+    ],
+    toolCount: Array.isArray(toolListResult.tools)
+      ? toolListResult.tools.length
+      : 0,
   });
 }

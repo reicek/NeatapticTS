@@ -31,11 +31,15 @@
   document.addEventListener('pointermove', onPointerMove, true);
   document.addEventListener('focusin', onFocusIn, true);
   document.addEventListener('focusout', onFocusOut, true);
-  window.addEventListener('scroll', () => {
-    if (activeAnchorElement) {
-      positionTooltip(activeAnchorElement);
-    }
-  }, true);
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (activeAnchorElement) {
+        positionTooltip(activeAnchorElement);
+      }
+    },
+    true,
+  );
   window.addEventListener('resize', () => {
     if (activeAnchorElement) {
       positionTooltip(activeAnchorElement);
@@ -54,8 +58,7 @@
       hydrateTitleElement(titledAnchor);
     }
 
-    const resolvedTooltipAnchor =
-      eventTarget.closest(TOOLTIP_CONTENT_SELECTOR);
+    const resolvedTooltipAnchor = eventTarget.closest(TOOLTIP_CONTENT_SELECTOR);
     if (!resolvedTooltipAnchor) {
       return;
     }
@@ -74,7 +77,10 @@
     }
 
     const relatedTarget = event.relatedTarget;
-    if (relatedTarget instanceof Node && activeAnchorElement.contains(relatedTarget)) {
+    if (
+      relatedTarget instanceof Node &&
+      activeAnchorElement.contains(relatedTarget)
+    ) {
       return;
     }
 
@@ -114,8 +120,7 @@
       hydrateTitleElement(eventTarget);
     }
 
-    const resolvedTooltipAnchor =
-      eventTarget.closest(TOOLTIP_CONTENT_SELECTOR);
+    const resolvedTooltipAnchor = eventTarget.closest(TOOLTIP_CONTENT_SELECTOR);
     if (!resolvedTooltipAnchor) {
       return;
     }
@@ -134,7 +139,10 @@
     }
 
     const relatedTarget = event.relatedTarget;
-    if (relatedTarget instanceof Node && activeAnchorElement.contains(relatedTarget)) {
+    if (
+      relatedTarget instanceof Node &&
+      activeAnchorElement.contains(relatedTarget)
+    ) {
       return;
     }
 
@@ -157,9 +165,15 @@
       return;
     }
 
-    const explicitTooltipTitle = anchorElement.getAttribute(TOOLTIP_TITLE_ATTRIBUTE);
+    const explicitTooltipTitle = anchorElement.getAttribute(
+      TOOLTIP_TITLE_ATTRIBUTE,
+    );
     const fallbackTooltipTitle = deriveTooltipTitle(anchorElement);
-    const tooltipTitle = (explicitTooltipTitle || fallbackTooltipTitle || 'Details').trim();
+    const tooltipTitle = (
+      explicitTooltipTitle ||
+      fallbackTooltipTitle ||
+      'Details'
+    ).trim();
 
     activeAnchorElement = anchorElement;
     tooltipTitleElement.textContent = tooltipTitle;
@@ -230,7 +244,10 @@
     }
 
     if (top + tooltipRect.height > viewportHeight - horizontalMargin) {
-      top = Math.max(horizontalMargin, viewportHeight - tooltipRect.height - horizontalMargin);
+      top = Math.max(
+        horizontalMargin,
+        viewportHeight - tooltipRect.height - horizontalMargin,
+      );
     }
 
     tooltipElement.style.left = `${left}px`;
@@ -305,14 +322,18 @@
       return ariaLabel.trim();
     }
 
-    const ownText = (anchorElement.textContent || '').replace(/\s+/g, ' ').trim();
+    const ownText = (anchorElement.textContent || '')
+      .replace(/\s+/g, ' ')
+      .trim();
     if (ownText) {
       return ownText;
     }
 
     const nearestTableHeader = anchorElement.closest('th');
     if (nearestTableHeader) {
-      const headerText = (nearestTableHeader.textContent || '').replace(/\s+/g, ' ').trim();
+      const headerText = (nearestTableHeader.textContent || '')
+        .replace(/\s+/g, ' ')
+        .trim();
       if (headerText) {
         return `${headerText} column`;
       }

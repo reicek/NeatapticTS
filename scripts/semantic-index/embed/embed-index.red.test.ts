@@ -23,9 +23,17 @@ describe('embed-index.mjs', () => {
   describe('red embedding builder contract', () => {
     it('stores BLOB vectors for a seeded corpus and skips unchanged chunks incrementally', async () => {
       // Arrange
-      const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'semantic-embed-index-red-'));
-      const corpusDatabasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
-      const embeddingsDatabasePath = path.join(fixtureDirectory, 'embeddings.sqlite');
+      const fixtureDirectory = await mkdtemp(
+        path.join(tmpdir(), 'semantic-embed-index-red-'),
+      );
+      const corpusDatabasePath = path.join(
+        fixtureDirectory,
+        'semantic-index.sqlite',
+      );
+      const embeddingsDatabasePath = path.join(
+        fixtureDirectory,
+        'embeddings.sqlite',
+      );
 
       // Act
       const result = runModuleEvaluation<EmbeddingIndexContractReport>(`
@@ -41,28 +49,46 @@ describe('embed-index.mjs', () => {
             mtime_ms INTEGER NOT NULL,
             file_size INTEGER NOT NULL,
             sha256 TEXT NOT NULL,
-            indexed_at INTEGER NOT NULL
+            indexed_at INTEGER NOT NULL,
+            arch_layer TEXT,
+            test_coverage TEXT CHECK(test_coverage IN ('full', 'partial', 'none', 'unknown')),
+            source_path_pattern TEXT
           );
           CREATE TABLE chunks (
             chunk_id INTEGER PRIMARY KEY,
-            doc_id INTEGER NOT NULL,
+            doc_id INTEGER NOT NULL REFERENCES documents(doc_id) ON DELETE CASCADE,
             chunk_index INTEGER NOT NULL,
             heading_path TEXT,
             body_text TEXT NOT NULL,
             char_start INTEGER NOT NULL,
-            char_end INTEGER NOT NULL
+            char_end INTEGER NOT NULL,
+            parent_chunk_id INTEGER,
+            depth INTEGER NOT NULL DEFAULT 0,
+            context_header TEXT,
+            symbol_name TEXT,
+            signature_text TEXT,
+            jsdoc_text TEXT,
+            export_type TEXT,
+            module_path TEXT,
+            arch_layer TEXT,
+            jsdoc_quality TEXT CHECK(jsdoc_quality IN ('none', 'weak', 'adequate', 'good')),
+            jsdoc_word_count INTEGER,
+            cyclomatic_complexity INTEGER,
+            test_coverage TEXT CHECK(test_coverage IN ('full', 'partial', 'none', 'unknown')),
+            source_path_pattern TEXT,
+            UNIQUE(doc_id, chunk_index)
           );
         \`);
         const documentInsert = corpusDatabase.prepare(
-          'INSERT INTO documents (file_path, doc_family, mtime_ms, file_size, sha256, indexed_at) VALUES (?, ?, ?, ?, ?, ?)'
+          'INSERT INTO documents (file_path, doc_family, mtime_ms, file_size, sha256, indexed_at, arch_layer, test_coverage, source_path_pattern) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         const chunkInsert = corpusDatabase.prepare(
-          'INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          'INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, parent_chunk_id, depth, context_header, symbol_name, signature_text, jsdoc_text, export_type, module_path, arch_layer, jsdoc_quality, jsdoc_word_count, cyclomatic_complexity, test_coverage, source_path_pattern) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
-        const documentId = Number(documentInsert.run('fixture.md', 'plan', 1, 100, 'fixture-doc-sha', 1).lastInsertRowid);
-        chunkInsert.run(1, documentId, 0, 'Embedding setup', 'alpha dense retrieval note', 0, 26);
-        chunkInsert.run(2, documentId, 1, 'Hybrid search', 'beta weighted rank note', 27, 51);
-        chunkInsert.run(3, documentId, 2, 'Validation', 'gamma count check note', 52, 74);
+        const documentId = Number(documentInsert.run('fixture.md', 'plan', 1, 100, 'fixture-doc-sha', 1, 'doc', 'unknown', 'docs/**').lastInsertRowid);
+        chunkInsert.run(1, documentId, 0, 'Embedding setup', 'alpha dense retrieval note', 0, 26, null, 0, null, null, null, null, null, null, 'doc', 'none', null, null, 'unknown', 'docs/**');
+        chunkInsert.run(2, documentId, 1, 'Hybrid search', 'beta weighted rank note', 27, 51, null, 1, null, null, null, null, null, null, 'doc', 'none', null, null, 'unknown', 'docs/**');
+        chunkInsert.run(3, documentId, 2, 'Validation', 'gamma count check note', 52, 74, null, 2, null, null, null, null, null, null, 'doc', 'none', null, null, 'unknown', 'docs/**');
         corpusDatabase.close();
 
         const vectorsByChunkId = new Map([
@@ -125,24 +151,32 @@ describe('embed-index.mjs', () => {
       await rm(fixtureDirectory, { recursive: true, force: true });
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: {
-          firstSummary: { embedded: 3, skipped: 0 },
-          purgeSummary: { embedded: 0, purged: 1, skipped: 3 },
-          rows: { blobBytes: [12, 12, 12], count: 3, dimensions: [3, 3, 3] },
-          secondSummary: { embedded: 0, skipped: 3 },
-        },
-        status: 0,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: {
+            firstSummary: { embedded: 3, skipped: 0 },
+            purgeSummary: { embedded: 0, purged: 1, skipped: 3 },
+            rows: { blobBytes: [12, 12, 12], count: 3, dimensions: [3, 3, 3] },
+            secondSummary: { embedded: 0, skipped: 3 },
+          },
+          status: 0,
+        }),
+      );
     });
   });
 });
 
-function runModuleEvaluation<ReportType>(source: string): SpawnedJsonResult<ReportType> {
-  const spawned = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
+function runModuleEvaluation<ReportType>(
+  source: string,
+): SpawnedJsonResult<ReportType> {
+  const spawned = spawnSync(
+    process.execPath,
+    ['--input-type=module', '--eval', source],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    },
+  );
 
   return {
     report: tryParseJson<ReportType>(spawned.stdout ?? ''),

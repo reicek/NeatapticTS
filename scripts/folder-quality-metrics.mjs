@@ -34,7 +34,8 @@ const SOURCE_FILE_SUFFIX = '.ts';
 const DECLARATION_FILE_SUFFIX = '.d.ts';
 const TEST_FILE_SUFFIX = '.test.ts';
 const NON_MODULE_FILE_SUFFIXES = ['.types.ts', '.constants.ts'];
-const EXPORTED_SYMBOL_PATTERN = /^\s*export\s+(?:async\s+)?(?:(function|class|const)\s+([A-Za-z0-9_$]+))/u;
+const EXPORTED_SYMBOL_PATTERN =
+  /^\s*export\s+(?:async\s+)?(?:(function|class|const)\s+([A-Za-z0-9_$]+))/u;
 const IGNORED_DIRECTORY_NAMES = new Set([
   '.git',
   'coverage',
@@ -51,7 +52,9 @@ const IGNORED_DIRECTORY_NAMES = new Set([
  */
 export async function runFolderQualityMetrics({ folderPath }) {
   const resolvedFolder = await resolveFolderPath(folderPath);
-  const sourceFilePaths = await collectTypeScriptFiles(resolvedFolder.absolutePath);
+  const sourceFilePaths = await collectTypeScriptFiles(
+    resolvedFolder.absolutePath,
+  );
   const moduleFilePaths = sourceFilePaths.filter(isModuleOwnedSourceFile);
   const collectedSmells = [];
   const evidence = [];
@@ -71,7 +74,8 @@ export async function runFolderQualityMetrics({ folderPath }) {
   collectedSmells.push(...jsdocResult.smells);
   evidence.push(jsdocResult.evidence);
 
-  const testPresenceResult = await collectMissingTestFileSmells(moduleFilePaths);
+  const testPresenceResult =
+    await collectMissingTestFileSmells(moduleFilePaths);
   collectedSmells.push(...testPresenceResult.smells);
   evidence.push(testPresenceResult.evidence);
 
@@ -148,8 +152,8 @@ function sanitizeCliValue(cliValue) {
   const endsWithDoubleQuote = trimmedValue.endsWith('"');
 
   if (
-    (startsWithSingleQuote && endsWithSingleQuote)
-    || (startsWithDoubleQuote && endsWithDoubleQuote)
+    (startsWithSingleQuote && endsWithSingleQuote) ||
+    (startsWithDoubleQuote && endsWithDoubleQuote)
   ) {
     return trimmedValue.slice(1, -1).trim();
   }
@@ -167,29 +171,31 @@ function resolveFolderFromNpmEnvironment() {
 }
 
 function printUsage() {
-  console.log([
-    'Folder-quality metrics',
-    '',
-    'Usage:',
-    '  node scripts/folder-quality-metrics.mjs --folder=<path> [--json]',
-    '  node scripts/folder-quality-metrics.mjs --help',
-    '',
-    'Flags:',
-    '  --folder=<path>  Repo-relative folder to scan.',
-    '  --json           Emit the structured report to stdout as JSON.',
-    '  --help           Show usage, checks, and exit codes.',
-    '',
-    'Checks:',
-    '  - TypeScript diagnostics scoped to the target folder',
-    '  - ESLint error diagnostics scoped to the target folder',
-    '  - Exported-symbol JSDoc presence',
-    '  - Missing sibling .test.ts files',
-    '  - Optional coverage/lcov.info line-coverage deficits',
-    '',
-    'Exit codes:',
-    '  0  No blocking smells found',
-    '  1  Blocking smells found, invalid arguments, or unexpected failure',
-  ].join('\n'));
+  console.log(
+    [
+      'Folder-quality metrics',
+      '',
+      'Usage:',
+      '  node scripts/folder-quality-metrics.mjs --folder=<path> [--json]',
+      '  node scripts/folder-quality-metrics.mjs --help',
+      '',
+      'Flags:',
+      '  --folder=<path>  Repo-relative folder to scan.',
+      '  --json           Emit the structured report to stdout as JSON.',
+      '  --help           Show usage, checks, and exit codes.',
+      '',
+      'Checks:',
+      '  - TypeScript diagnostics scoped to the target folder',
+      '  - ESLint error diagnostics scoped to the target folder',
+      '  - Exported-symbol JSDoc presence',
+      '  - Missing sibling .test.ts files',
+      '  - Optional coverage/lcov.info line-coverage deficits',
+      '',
+      'Exit codes:',
+      '  0  No blocking smells found',
+      '  1  Blocking smells found, invalid arguments, or unexpected failure',
+    ].join('\n'),
+  );
 }
 
 async function main() {
@@ -206,7 +212,9 @@ async function main() {
       throw new Error('--folder=<path> is required.');
     }
 
-    const report = await runFolderQualityMetrics({ folderPath: resolvedFolder });
+    const report = await runFolderQualityMetrics({
+      folderPath: resolvedFolder,
+    });
     writeReport(report, options.json);
     process.exitCode = report.pass ? 0 : 1;
   } catch (error) {
@@ -228,11 +236,13 @@ async function resolveFolderPath(folderPath) {
   const relativePath = normalizePath(path.relative(REPO_ROOT, absolutePath));
 
   if (
-    relativePath === ''
-    || relativePath.startsWith('..')
-    || path.isAbsolute(relativePath)
+    relativePath === '' ||
+    relativePath.startsWith('..') ||
+    path.isAbsolute(relativePath)
   ) {
-    throw new Error('The target folder must resolve inside the repository root.');
+    throw new Error(
+      'The target folder must resolve inside the repository root.',
+    );
   }
 
   const folderStats = await stat(absolutePath).catch(() => null);
@@ -267,9 +277,9 @@ async function collectTypeScriptFiles(folderPath) {
       }
 
       if (
-        directoryEntry.isFile()
-        && entryPath.endsWith(SOURCE_FILE_SUFFIX)
-        && !entryPath.endsWith(DECLARATION_FILE_SUFFIX)
+        directoryEntry.isFile() &&
+        entryPath.endsWith(SOURCE_FILE_SUFFIX) &&
+        !entryPath.endsWith(DECLARATION_FILE_SUFFIX)
       ) {
         discoveredFiles.push(path.normalize(entryPath));
       }
@@ -282,14 +292,17 @@ async function collectTypeScriptFiles(folderPath) {
 }
 
 function isModuleOwnedSourceFile(filePath) {
-  return !filePath.endsWith(TEST_FILE_SUFFIX)
-    && !NON_MODULE_FILE_SUFFIXES.some((suffix) => filePath.endsWith(suffix));
+  return (
+    !filePath.endsWith(TEST_FILE_SUFFIX) &&
+    !NON_MODULE_FILE_SUFFIXES.some((suffix) => filePath.endsWith(suffix))
+  );
 }
 
 async function collectTypeScriptSmells(resolvedFolder, sourceFilePaths) {
   if (sourceFilePaths.length === 0) {
     return {
-      evidence: 'TypeScript: no .ts files found under the target folder; skipped.',
+      evidence:
+        'TypeScript: no .ts files found under the target folder; skipped.',
       smells: [],
     };
   }
@@ -327,9 +340,11 @@ async function collectTypeScriptSmells(resolvedFolder, sourceFilePaths) {
     options: parsedConfig.options,
     rootNames: sourceFilePaths,
   });
-  const inFolderDiagnostics = typescript.getPreEmitDiagnostics(program).filter(
-    (diagnostic) => isDiagnosticInsideFolder(diagnostic, resolvedFolder.absolutePath),
-  );
+  const inFolderDiagnostics = typescript
+    .getPreEmitDiagnostics(program)
+    .filter((diagnostic) =>
+      isDiagnosticInsideFolder(diagnostic, resolvedFolder.absolutePath),
+    );
 
   return {
     evidence: `TypeScript (${configFileName}): ${inFolderDiagnostics.length} in-folder diagnostic(s) across ${sourceFilePaths.length} file(s).`,
@@ -359,7 +374,9 @@ async function collectEslintSmells(sourceFilePaths) {
   const smells = [];
 
   for (const lintResult of lintResults) {
-    const filePath = normalizePath(path.relative(REPO_ROOT, lintResult.filePath));
+    const filePath = normalizePath(
+      path.relative(REPO_ROOT, lintResult.filePath),
+    );
     for (const message of lintResult.messages.filter(
       (lintMessage) => lintMessage.severity === 2,
     )) {
@@ -421,14 +438,18 @@ async function collectJsdocSmells(moduleFilePaths) {
 async function collectMissingTestFileSmells(moduleFilePaths) {
   if (moduleFilePaths.length === 0) {
     return {
-      evidence: 'Tests: no source modules required sibling test-file inspection.',
+      evidence:
+        'Tests: no source modules required sibling test-file inspection.',
       smells: [],
     };
   }
 
   const smells = [];
   for (const moduleFilePath of moduleFilePaths) {
-    const siblingTestFilePath = moduleFilePath.replace(/\.ts$/u, TEST_FILE_SUFFIX);
+    const siblingTestFilePath = moduleFilePath.replace(
+      /\.ts$/u,
+      TEST_FILE_SUFFIX,
+    );
     const siblingTestExists = await pathExists(siblingTestFilePath);
     if (siblingTestExists) {
       continue;
@@ -447,7 +468,10 @@ async function collectMissingTestFileSmells(moduleFilePaths) {
   };
 }
 
-async function collectCoverageDeficitSmells(relativeFolderPath, moduleFilePaths) {
+async function collectCoverageDeficitSmells(
+  relativeFolderPath,
+  moduleFilePaths,
+) {
   if (!(await pathExists(COVERAGE_LCOV_PATH))) {
     return {
       evidence: 'Coverage: coverage/lcov.info missing; deficit lookup skipped.',
@@ -461,7 +485,9 @@ async function collectCoverageDeficitSmells(relativeFolderPath, moduleFilePaths)
   let matchedFileCount = 0;
 
   for (const moduleFilePath of moduleFilePaths) {
-    const relativeFilePath = normalizePath(path.relative(REPO_ROOT, moduleFilePath));
+    const relativeFilePath = normalizePath(
+      path.relative(REPO_ROOT, moduleFilePath),
+    );
     if (!isRelativePathInside(relativeFolderPath, relativeFilePath)) {
       continue;
     }
@@ -472,11 +498,17 @@ async function collectCoverageDeficitSmells(relativeFolderPath, moduleFilePaths)
     }
 
     matchedFileCount += 1;
-    if (coverageEntry.linesFound === 0 || coverageEntry.linesHit === coverageEntry.linesFound) {
+    if (
+      coverageEntry.linesFound === 0 ||
+      coverageEntry.linesHit === coverageEntry.linesFound
+    ) {
       continue;
     }
 
-    const lineCoveragePercent = ((coverageEntry.linesHit / coverageEntry.linesFound) * 100).toFixed(2);
+    const lineCoveragePercent = (
+      (coverageEntry.linesHit / coverageEntry.linesFound) *
+      100
+    ).toFixed(2);
     smells.push({
       detail: `Line coverage ${lineCoveragePercent}% (${coverageEntry.linesHit}/${coverageEntry.linesFound}) is below 100%.`,
       file: relativeFilePath,
@@ -516,7 +548,10 @@ function hasLeadingJsdoc(fileLines, exportLineIndex) {
     currentLineIndex -= 1;
   }
 
-  if (currentLineIndex < 0 || !fileLines[currentLineIndex].trim().endsWith('*/')) {
+  if (
+    currentLineIndex < 0 ||
+    !fileLines[currentLineIndex].trim().endsWith('*/')
+  ) {
     return false;
   }
 
@@ -550,29 +585,37 @@ function deduplicateSmells(smells) {
 }
 
 function compareSmells(leftSmell, rightSmell) {
-  return leftSmell.file.localeCompare(rightSmell.file)
-    || leftSmell.kind.localeCompare(rightSmell.kind)
-    || leftSmell.detail.localeCompare(rightSmell.detail);
+  return (
+    leftSmell.file.localeCompare(rightSmell.file) ||
+    leftSmell.kind.localeCompare(rightSmell.kind) ||
+    leftSmell.detail.localeCompare(rightSmell.detail)
+  );
 }
 
 function isDiagnosticInsideFolder(diagnostic, folderPath) {
   const diagnosticFilePath = diagnostic.file?.fileName;
-  return typeof diagnosticFilePath === 'string'
-    && isAbsolutePathInside(folderPath, diagnosticFilePath);
+  return (
+    typeof diagnosticFilePath === 'string' &&
+    isAbsolutePathInside(folderPath, diagnosticFilePath)
+  );
 }
 
 function isAbsolutePathInside(parentPath, candidatePath) {
   const relativePath = path.relative(parentPath, candidatePath);
-  return relativePath !== ''
-    && !relativePath.startsWith('..')
-    && !path.isAbsolute(relativePath);
+  return (
+    relativePath !== '' &&
+    !relativePath.startsWith('..') &&
+    !path.isAbsolute(relativePath)
+  );
 }
 
 function isRelativePathInside(parentPath, candidatePath) {
   const normalizedParentPath = normalizePath(parentPath);
   const normalizedCandidatePath = normalizePath(candidatePath);
-  return normalizedCandidatePath === normalizedParentPath
-    || normalizedCandidatePath.startsWith(`${normalizedParentPath}/`);
+  return (
+    normalizedCandidatePath === normalizedParentPath ||
+    normalizedCandidatePath.startsWith(`${normalizedParentPath}/`)
+  );
 }
 
 function parseLcovCoverage(coverageText) {
@@ -661,6 +704,9 @@ function writeReport(report, jsonOutput) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   await main();
 }

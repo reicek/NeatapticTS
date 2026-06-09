@@ -11,7 +11,10 @@
  */
 
 import { type ChildProcess, spawn } from 'node:child_process';
-import { createNpmRunCommand, stopSiblingProcesses } from './run-docs.process.js';
+import {
+  createNpmRunCommand,
+  stopSiblingProcesses,
+} from './run-docs.process.js';
 import type { RunningTask, ScriptTask } from './run-docs.types.js';
 
 /** Shared mutable state threaded through both event handlers of one task batch. */
@@ -134,7 +137,13 @@ export async function runScriptTasksInParallel(
 
       childProcess.once(
         'error',
-        buildErrorHandler(scriptTask, runningTasks, childProcess, state, reject),
+        buildErrorHandler(
+          scriptTask,
+          runningTasks,
+          childProcess,
+          state,
+          reject,
+        ),
       );
       childProcess.once(
         'exit',

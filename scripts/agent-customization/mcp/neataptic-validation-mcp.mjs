@@ -47,17 +47,24 @@ import {
 
 const SERVER_NAME = 'neataptic-validation-mcp';
 const SERVER_VERSION = '0.1.0';
-const SELF_CHECK_COMMAND_PATTERN = /neataptic-(workflow|validation)-mcp\.mjs|--self-check/iu;
+const SELF_CHECK_COMMAND_PATTERN =
+  /neataptic-(workflow|validation)-mcp\.mjs|--self-check/iu;
 const PLANS_ROOT = path.join(MCP_REPO_ROOT, 'plans');
-const SESSION_OVERRIDE_PATH = path.join(MCP_REPO_ROOT, 'data', 'mcp-session-override.json');
+const SESSION_OVERRIDE_PATH = path.join(
+  MCP_REPO_ROOT,
+  'data',
+  'mcp-session-override.json',
+);
 
 const options = parseMcpCliArgs(process.argv.slice(2));
 
 if (options.help) {
   printMcpUsage({
-    title: 'Expose active-step allow-listed validation commands as a direct MCP server.',
+    title:
+      'Expose active-step allow-listed validation commands as a direct MCP server.',
     entrypoint: 'scripts/agent-customization/mcp/neataptic-validation-mcp.mjs',
-    summary: 'Without flags this script starts a dependency-light stdio MCP server. Use --self-check to confirm that the current active step packet is the only allow-list authority and that bounded validation commands still execute without a shell.',
+    summary:
+      'Without flags this script starts a dependency-light stdio MCP server. Use --self-check to confirm that the current active step packet is the only allow-list authority and that bounded validation commands still execute without a shell.',
     tools: createValidationTools('plans/help-only.md'),
   });
   process.exit(0);
@@ -97,34 +104,49 @@ function createValidationTools(planPath) {
   return [
     createTool({
       name: 'get_active_validation_allowlist',
-      description: 'Return the exact allow-listed validation commands from the active step packet.',
+      description:
+        'Return the exact allow-listed validation commands from the active step packet.',
       annotations: { readOnlyHint: true },
       handler: async () => {
         const effectivePlanPath = await resolveEffectivePlanPath({}, planPath);
-        return createValidationAllowlistSnapshot(await loadActivePlanContext(effectivePlanPath));
+        return createValidationAllowlistSnapshot(
+          await loadActivePlanContext(effectivePlanPath),
+        );
       },
     }),
     createTool({
       name: 'run_allowlisted_validation',
-      description: 'Run one exact command already named by the active step packet without using a shell.',
+      description:
+        'Run one exact command already named by the active step packet without using a shell.',
       annotations: { readOnlyHint: false },
       inputSchema: {
         type: 'object',
         properties: {
           command: {
             type: 'string',
-            description: 'Exact command string returned by get_active_validation_allowlist.',
+            description:
+              'Exact command string returned by get_active_validation_allowlist.',
           },
         },
         required: ['command'],
         additionalProperties: false,
       },
       handler: async (argumentsObject) => {
-        const requestedCommand = requireString(argumentsObject.command, 'command');
+        const requestedCommand = requireString(
+          argumentsObject.command,
+          'command',
+        );
         const effectivePlanPath = await resolveEffectivePlanPath({}, planPath);
-        const activePlanContext = await loadActivePlanContext(effectivePlanPath);
-        if (!activePlanContext.activeStep.validationCommands.includes(requestedCommand)) {
-          throw new Error('Command is not allow-listed by the active step packet.');
+        const activePlanContext =
+          await loadActivePlanContext(effectivePlanPath);
+        if (
+          !activePlanContext.activeStep.validationCommands.includes(
+            requestedCommand,
+          )
+        ) {
+          throw new Error(
+            'Command is not allow-listed by the active step packet.',
+          );
         }
 
         const commandResult = await runShellFreeCommand(requestedCommand);
@@ -165,7 +187,9 @@ async function runValidationSelfCheck({ server, planPath }) {
       clientInfo: { name: 'self-check', version: SERVER_VERSION },
     },
   });
-  const toolListResult = await invokeServerRequest(server, { method: 'tools/list' });
+  const toolListResult = await invokeServerRequest(server, {
+    method: 'tools/list',
+  });
   const allowlistResult = await invokeServerRequest(server, {
     method: 'tools/call',
     params: {
@@ -175,33 +199,70 @@ async function runValidationSelfCheck({ server, planPath }) {
   });
 
   if (initializeResult.protocolVersion !== MCP_PROTOCOL_VERSION) {
-    issues.push(selfCheckError(effectivePlanPath, `Expected protocol version ${MCP_PROTOCOL_VERSION}, received ${String(initializeResult.protocolVersion)}.`));
+    issues.push(
+      selfCheckError(
+        effectivePlanPath,
+        `Expected protocol version ${MCP_PROTOCOL_VERSION}, received ${String(initializeResult.protocolVersion)}.`,
+      ),
+    );
   }
 
-  if (!Array.isArray(toolListResult.tools) || toolListResult.tools.length !== 2) {
-    issues.push(selfCheckError(effectivePlanPath, `Expected 2 validation tools, found ${Array.isArray(toolListResult.tools) ? toolListResult.tools.length : 'none'}.`));
+  if (
+    !Array.isArray(toolListResult.tools) ||
+    toolListResult.tools.length !== 2
+  ) {
+    issues.push(
+      selfCheckError(
+        effectivePlanPath,
+        `Expected 2 validation tools, found ${Array.isArray(toolListResult.tools) ? toolListResult.tools.length : 'none'}.`,
+      ),
+    );
   }
 
   if (allowlistResult.isError) {
-    issues.push(selfCheckError(effectivePlanPath, 'Validation allow-list tool returned an error during self-check.'));
+    issues.push(
+      selfCheckError(
+        effectivePlanPath,
+        'Validation allow-list tool returned an error during self-check.',
+      ),
+    );
   }
 
   const allowlistSnapshot = allowlistResult.structuredContent ?? {};
   if (!allowlistSnapshot.validationCommandsMatch) {
-    issues.push(selfCheckError(effectivePlanPath, 'Validation allow-list disagrees with the Required validation prose in the active step packet.'));
+    issues.push(
+      selfCheckError(
+        effectivePlanPath,
+        'Validation allow-list disagrees with the Required validation prose in the active step packet.',
+      ),
+    );
   }
 
-  if (allowlistSnapshot.activeStep?.number !== activePlanContext.activeStep.number) {
-    issues.push(selfCheckError(effectivePlanPath, 'Validation allow-list did not resolve the current active step.'));
+  if (
+    allowlistSnapshot.activeStep?.number !== activePlanContext.activeStep.number
+  ) {
+    issues.push(
+      selfCheckError(
+        effectivePlanPath,
+        'Validation allow-list did not resolve the current active step.',
+      ),
+    );
   }
 
-  const executableValidationCommands = (allowlistSnapshot.validationCommands ?? [])
+  const executableValidationCommands = (
+    allowlistSnapshot.validationCommands ?? []
+  )
     .filter((command) => typeof command === 'string')
     .filter((command) => !SELF_CHECK_COMMAND_PATTERN.test(command))
     .slice(0, 2);
 
   if (executableValidationCommands.length === 0) {
-    issues.push(selfCheckError(effectivePlanPath, 'Validation self-check could not find any non-recursive allow-listed commands to run.'));
+    issues.push(
+      selfCheckError(
+        effectivePlanPath,
+        'Validation self-check could not find any non-recursive allow-listed commands to run.',
+      ),
+    );
   }
 
   const commandResults = [];
@@ -215,8 +276,16 @@ async function runValidationSelfCheck({ server, planPath }) {
     });
 
     commandResults.push(toolCallResult.structuredContent ?? null);
-    if (toolCallResult.isError || toolCallResult.structuredContent?.exitCode !== 0) {
-      issues.push(selfCheckError(effectivePlanPath, `Allow-listed validation command failed during self-check: ${command}`));
+    if (
+      toolCallResult.isError ||
+      toolCallResult.structuredContent?.exitCode !== 0
+    ) {
+      issues.push(
+        selfCheckError(
+          effectivePlanPath,
+          `Allow-listed validation command failed during self-check: ${command}`,
+        ),
+      );
     }
   }
 
@@ -230,18 +299,30 @@ async function runValidationSelfCheck({ server, planPath }) {
     },
   });
   if (!rejectedUnknownCommand.isError) {
-    issues.push(selfCheckError(effectivePlanPath, 'Validation MCP did not reject a command outside the active allow-list.'));
+    issues.push(
+      selfCheckError(
+        effectivePlanPath,
+        'Validation MCP did not reject a command outside the active allow-list.',
+      ),
+    );
   }
 
   let rejectedUnsafeCommand = false;
   try {
-    tokenizeShellSafeCommand('node scripts/agent-customization/validate-plan-sync.mjs ; injected');
+    tokenizeShellSafeCommand(
+      'node scripts/agent-customization/validate-plan-sync.mjs ; injected',
+    );
   } catch {
     rejectedUnsafeCommand = true;
   }
 
   if (!rejectedUnsafeCommand) {
-    issues.push(selfCheckError(effectivePlanPath, 'Validation command tokenizer did not reject shell metacharacters.'));
+    issues.push(
+      selfCheckError(
+        effectivePlanPath,
+        'Validation command tokenizer did not reject shell metacharacters.',
+      ),
+    );
   }
 
   return createSelfCheckReport('neataptic-validation-mcp self-check', issues, {
@@ -298,11 +379,17 @@ async function readSessionOverridePlanPath() {
   try {
     const rawOverride = await readFile(SESSION_OVERRIDE_PATH, 'utf8');
     const overridePayload = JSON.parse(rawOverride);
-    if (typeof overridePayload?.plan_path !== 'string' || !overridePayload.plan_path.trim()) {
+    if (
+      typeof overridePayload?.plan_path !== 'string' ||
+      !overridePayload.plan_path.trim()
+    ) {
       return null;
     }
 
-    return resolvePlansScopedPath(overridePayload.plan_path, 'session override plan_path');
+    return resolvePlansScopedPath(
+      overridePayload.plan_path,
+      'session override plan_path',
+    );
   } catch {
     return null;
   }
@@ -325,15 +412,20 @@ function resolvePlansScopedPath(candidatePath, fieldName) {
     ? path.normalize(requestedPlanPath)
     : path.resolve(MCP_REPO_ROOT, requestedPlanPath);
   const relativeToPlans = path.relative(PLANS_ROOT, absolutePlanPath);
-  const staysWithinPlans = relativeToPlans !== ''
-    && !relativeToPlans.startsWith('..')
-    && !path.isAbsolute(relativeToPlans);
+  const staysWithinPlans =
+    relativeToPlans !== '' &&
+    !relativeToPlans.startsWith('..') &&
+    !path.isAbsolute(relativeToPlans);
 
   if (!staysWithinPlans) {
-    const error = new Error(`${fieldName} must resolve within plans/. Received: ${requestedPlanPath}`);
+    const error = new Error(
+      `${fieldName} must resolve within plans/. Received: ${requestedPlanPath}`,
+    );
     error.jsonRpcCode = -32602;
     throw error;
   }
 
-  return path.relative(MCP_REPO_ROOT, absolutePlanPath).replaceAll(path.sep, '/');
+  return path
+    .relative(MCP_REPO_ROOT, absolutePlanPath)
+    .replaceAll(path.sep, '/');
 }

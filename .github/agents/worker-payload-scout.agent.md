@@ -3,7 +3,16 @@ description: 'Use when mapping worker payload shapes, structured clone constrain
 name: 'worker-payload-scout'
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['worker-inference-transport']
@@ -27,7 +36,9 @@ If the real blocker is a tracker update, assume `tracker-handoff` owns that form
 - DO NOT restate the entire transport workflow or cost model that belongs in `worker-inference-transport`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for worker-transport documents
 
 ## Approach

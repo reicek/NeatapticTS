@@ -3,7 +3,16 @@ description: 'Use when: capturing an ISO-42001-style local evidence event for an
 name: 'learning-event-capturer'
 tier: 4
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, edit, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    edit,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 agents: []
 skills: ['capturing-learning-event']
 user-invocable: false
@@ -22,10 +31,13 @@ Capture compact ISO-42001-style local learning events when a caller identifies a
 - Keep the recorded gap, change, and follow-up action concise and evidence-backed.
 
 ## Flow Selection
+
 - Use `07.learning-event-log` when capturing a local evidence event.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `learning-event` — after recording a learning event
 
 ## Default Flow

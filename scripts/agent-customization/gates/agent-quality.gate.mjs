@@ -21,7 +21,9 @@ const options = parseArgs(process.argv.slice(2));
 
 export async function runAgentQualityGate() {
   const validationReport = await runValidateAgentQuality();
-  const failingAgents = validationReport.agents.filter((agentReport) => agentReport.counts.errors > 0);
+  const failingAgents = validationReport.agents.filter(
+    (agentReport) => agentReport.counts.errors > 0,
+  );
 
   return {
     pass: validationReport.ok,
@@ -57,6 +59,9 @@ async function main() {
   process.exitCode = report.pass ? 0 : 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }

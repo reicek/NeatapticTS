@@ -31,7 +31,8 @@ export async function writeExamplesLandingPage(
 ): Promise<void> {
   await mkdir(DOCS_EXAMPLES_DIR, { recursive: true });
 
-  const examplesLandingPageHtml = buildExamplesLandingPageHtml(publishedExamples);
+  const examplesLandingPageHtml =
+    buildExamplesLandingPageHtml(publishedExamples);
   await writeFile(
     path.join(DOCS_EXAMPLES_DIR, EXAMPLE_ENTRY_FILE_NAME),
     examplesLandingPageHtml,

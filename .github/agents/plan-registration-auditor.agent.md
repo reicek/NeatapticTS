@@ -3,7 +3,16 @@ description: 'Use as a hidden specialist for validating NeatapticTS plan registr
 name: plan-registration-auditor
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['plan-sync-validation']
@@ -25,7 +34,9 @@ Validate that plans are correctly registered across `.plans.md` files, `plans/RE
 - This agent is intentionally thin. Plan updates and tracker format belong to companion skill `tracker-handoff`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `plan-sync` — after validating plan registration
 
 ## Approach

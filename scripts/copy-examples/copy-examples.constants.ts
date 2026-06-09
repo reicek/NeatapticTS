@@ -38,7 +38,8 @@ export const REPO_EXAMPLE_THEME_STYLESHEET_PATH = '../../docs/assets/theme.css';
  * This is the value that appears in source `index.html` files and must be
  * rewritten to {@link EXAMPLE_PAGE_TOOLTIP_RUNTIME_PATH} when copying into docs.
  */
-export const REPO_EXAMPLE_TOOLTIP_RUNTIME_PATH = '../../docs/assets/theme-tooltips.js';
+export const REPO_EXAMPLE_TOOLTIP_RUNTIME_PATH =
+  '../../docs/assets/theme-tooltips.js';
 
 /**
  * Relative path back to the docs home (`docs/index.html`) as seen from the
@@ -62,7 +63,8 @@ export const EXAMPLE_PAGE_THEME_STYLESHEET_PATH = '../../assets/theme.css';
  * Relative path to the tooltip runtime as seen from inside a published example
  * page (`docs/examples/<name>/`).
  */
-export const EXAMPLE_PAGE_TOOLTIP_RUNTIME_PATH = '../../assets/theme-tooltips.js';
+export const EXAMPLE_PAGE_TOOLTIP_RUNTIME_PATH =
+  '../../assets/theme-tooltips.js';
 
 /**
  * Relative path back to the docs home as seen from inside a published example

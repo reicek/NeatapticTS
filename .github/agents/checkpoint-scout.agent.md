@@ -3,7 +3,16 @@ description: 'Use when starting or scoping save and resume work, expanding Popul
 name: checkpoint-scout
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['checkpointing-persistence']
@@ -29,7 +38,9 @@ If tracker updates are needed, assume `tracker-handoff` owns that format. If the
 - This agent is intentionally thin. Durable policy lives in companion skill `checkpointing-persistence`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for checkpointing-related documents
 
 ## Approach

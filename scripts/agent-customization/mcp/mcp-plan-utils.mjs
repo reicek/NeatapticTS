@@ -35,13 +35,20 @@ import {
 } from './mcp-utils.mjs';
 
 /** Matches a phase header line, e.g. `### Phase 2 — Title [WIP]` or `### Phase A — Title [WIP]`. */
-const PHASE_PATTERN = /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+const PHASE_PATTERN =
+  /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 /** Matches a step header line, e.g. `#### Step 03 — Title [PLANNED]`. */
-const STEP_PATTERN = /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+const STEP_PATTERN =
+  /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 /** Captures the body of the `## Implementation phases` section up to the first validation-gates heading. */
-const IMPLEMENTATION_SECTION_PATTERN = /^## Implementation phases\s*(?<body>[\s\S]*?)(?=^## [^\n]*\bvalidation gates\b[^\n]*$)/imu;
+const IMPLEMENTATION_SECTION_PATTERN =
+  /^## Implementation phases\s*(?<body>[\s\S]*?)(?=^## [^\n]*\bvalidation gates\b[^\n]*$)/imu;
 const PLANS_ROOT = path.join(MCP_REPO_ROOT, 'plans');
-const SESSION_OVERRIDE_PATH = path.join(MCP_REPO_ROOT, 'data', 'mcp-session-override.json');
+const SESSION_OVERRIDE_PATH = path.join(
+  MCP_REPO_ROOT,
+  'data',
+  'mcp-session-override.json',
+);
 
 /**
  * Load the single active phase and step from the workflow plan.
@@ -56,7 +63,12 @@ export async function loadActivePlanContext(planPath) {
   try {
     planText = await readFile(resolvedPlanPath.absolutePath, 'utf8');
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'ENOENT'
+    ) {
       throw new Error(`Plan file not found: ${resolvedPlanPath.displayPath}`);
     }
 
@@ -64,10 +76,14 @@ export async function loadActivePlanContext(planPath) {
   }
 
   const phases = [...extractPhaseBlocks(planText)];
-  const activePhases = phases.filter((phaseBlock) => phaseBlock.status === 'WIP');
+  const activePhases = phases.filter(
+    (phaseBlock) => phaseBlock.status === 'WIP',
+  );
 
   if (activePhases.length !== 1) {
-    throw new Error(`Expected exactly one [WIP] phase in ${planPath}, found ${activePhases.length}.`);
+    throw new Error(
+      `Expected exactly one [WIP] phase in ${planPath}, found ${activePhases.length}.`,
+    );
   }
 
   const activePhase = activePhases[0];
@@ -75,13 +91,19 @@ export async function loadActivePlanContext(planPath) {
   const activeSteps = steps.filter((stepBlock) => stepBlock.status === 'WIP');
 
   if (activeSteps.length !== 1) {
-    throw new Error(`Expected exactly one [WIP] step in Phase ${activePhase.number}, found ${activeSteps.length}.`);
+    throw new Error(
+      `Expected exactly one [WIP] step in Phase ${activePhase.number}, found ${activeSteps.length}.`,
+    );
   }
 
   const activeStep = activeSteps[0];
   const metadata = parseStepMetadata(activeStep.body);
-  const validationCommands = normalizeCommands(Array.isArray(metadata.validation) ? metadata.validation : []);
-  const requiredValidationCommands = normalizeCommands(extractRequiredValidationCommands(activeStep.body));
+  const validationCommands = normalizeCommands(
+    Array.isArray(metadata.validation) ? metadata.validation : [],
+  );
+  const requiredValidationCommands = normalizeCommands(
+    extractRequiredValidationCommands(activeStep.body),
+  );
 
   return {
     planPath: resolvedPlanPath.displayPath,
@@ -98,7 +120,10 @@ export async function loadActivePlanContext(planPath) {
       stepObjective: extractSectionSummary(activeStep.body, 'Step objective'),
       validationCommands,
       requiredValidationCommands,
-      validationCommandsMatch: compareCommands(validationCommands, requiredValidationCommands),
+      validationCommandsMatch: compareCommands(
+        validationCommands,
+        requiredValidationCommands,
+      ),
     },
   };
 }
@@ -113,7 +138,10 @@ export async function loadActivePlanContext(planPath) {
  * @param {string} startupPlanPath - Startup plan path to fall back to.
  * @returns {Promise<string>} Resolved effective plan path.
  */
-export async function resolveEffectivePlanPath(argumentsObject, startupPlanPath) {
+export async function resolveEffectivePlanPath(
+  argumentsObject,
+  startupPlanPath,
+) {
   if (argumentsObject?.plan_path !== undefined) {
     return resolvePlansScopedPath(argumentsObject.plan_path, 'plan_path');
   }
@@ -144,10 +172,7 @@ export function createWorkflowSnapshot(activePlanContext) {
       validationCommands: activePlanContext.activeStep.validationCommands,
     },
     allowlistAuthority: 'active-step.validation',
-    sourceBoundary: [
-      'plan metadata',
-      'deterministic customization scripts',
-    ],
+    sourceBoundary: ['plan metadata', 'deterministic customization scripts'],
   };
 }
 
@@ -170,8 +195,10 @@ export function createValidationAllowlistSnapshot(activePlanContext) {
     },
     allowlistAuthority: 'active-step.validation',
     validationCommands: activePlanContext.activeStep.validationCommands,
-    requiredValidationCommands: activePlanContext.activeStep.requiredValidationCommands,
-    validationCommandsMatch: activePlanContext.activeStep.validationCommandsMatch,
+    requiredValidationCommands:
+      activePlanContext.activeStep.requiredValidationCommands,
+    validationCommandsMatch:
+      activePlanContext.activeStep.validationCommandsMatch,
   };
 }
 
@@ -186,7 +213,8 @@ export function createValidationAllowlistSnapshot(activePlanContext) {
  * @yields {{ number: number | string, title: string, status: string, body: string }} Phase descriptors.
  */
 function* extractPhaseBlocks(planText) {
-  const implementationSection = IMPLEMENTATION_SECTION_PATTERN.exec(planText)?.groups?.body;
+  const implementationSection =
+    IMPLEMENTATION_SECTION_PATTERN.exec(planText)?.groups?.body;
   if (!implementationSection) {
     return;
   }
@@ -248,7 +276,8 @@ function* extractStepBlocks(phaseBody) {
  * @throws {Error} When no YAML metadata block is present in the step.
  */
 function parseStepMetadata(stepBody) {
-  const yamlBlock = /```yaml\r?\n(?<yaml>[\s\S]*?)```/u.exec(stepBody)?.groups?.yaml;
+  const yamlBlock = /```yaml\r?\n(?<yaml>[\s\S]*?)```/u.exec(stepBody)?.groups
+    ?.yaml;
   if (!yamlBlock) {
     throw new Error('Active step packet is missing a YAML metadata block.');
   }
@@ -263,11 +292,15 @@ function parseStepMetadata(stepBody) {
 
     const listItemMatch = /^\s+-\s+(?<value>.+)$/u.exec(rawLine);
     if (listItemMatch?.groups && activeListKey) {
-      metadata[activeListKey].push(parseFrontmatterValue(listItemMatch.groups.value.trim()));
+      metadata[activeListKey].push(
+        parseFrontmatterValue(listItemMatch.groups.value.trim()),
+      );
       continue;
     }
 
-    const keyValueMatch = /^(?<key>[A-Za-z0-9_-]+):(?<value>.*)$/u.exec(rawLine.trimStart());
+    const keyValueMatch = /^(?<key>[A-Za-z0-9_-]+):(?<value>.*)$/u.exec(
+      rawLine.trimStart(),
+    );
     if (!keyValueMatch?.groups) {
       continue;
     }
@@ -298,8 +331,13 @@ function parseStepMetadata(stepBody) {
  * @returns {string[]} Array of required validation command strings.
  */
 function extractRequiredValidationCommands(stepBody) {
-  const requiredValidationBody = extractSectionBody(stepBody, 'Required validation');
-  return [...requiredValidationBody.matchAll(/`([^`]+)`/gu)].map((match) => match[1]);
+  const requiredValidationBody = extractSectionBody(
+    stepBody,
+    'Required validation',
+  );
+  return [...requiredValidationBody.matchAll(/`([^`]+)`/gu)].map(
+    (match) => match[1],
+  );
 }
 
 /**
@@ -368,7 +406,9 @@ function compareCommands(leftCommands, rightCommands) {
     return false;
   }
 
-  return leftCommands.every((command, index) => command === rightCommands[index]);
+  return leftCommands.every(
+    (command, index) => command === rightCommands[index],
+  );
 }
 
 /**
@@ -383,11 +423,17 @@ async function readSessionOverridePlanPath() {
   try {
     const rawOverride = await readFile(SESSION_OVERRIDE_PATH, 'utf8');
     const overridePayload = JSON.parse(rawOverride);
-    if (typeof overridePayload?.plan_path !== 'string' || !overridePayload.plan_path.trim()) {
+    if (
+      typeof overridePayload?.plan_path !== 'string' ||
+      !overridePayload.plan_path.trim()
+    ) {
       return null;
     }
 
-    return resolvePlansScopedPath(overridePayload.plan_path, 'session override plan_path');
+    return resolvePlansScopedPath(
+      overridePayload.plan_path,
+      'session override plan_path',
+    );
   } catch {
     return null;
   }
@@ -406,15 +452,20 @@ function resolvePlansScopedPath(candidatePath, fieldName) {
     ? path.normalize(requestedPlanPath)
     : path.resolve(MCP_REPO_ROOT, requestedPlanPath);
   const relativeToPlans = path.relative(PLANS_ROOT, absolutePlanPath);
-  const staysWithinPlans = relativeToPlans !== ''
-    && !relativeToPlans.startsWith('..')
-    && !path.isAbsolute(relativeToPlans);
+  const staysWithinPlans =
+    relativeToPlans !== '' &&
+    !relativeToPlans.startsWith('..') &&
+    !path.isAbsolute(relativeToPlans);
 
   if (!staysWithinPlans) {
-    const error = new Error(`${fieldName} must resolve within plans/. Received: ${requestedPlanPath}`);
+    const error = new Error(
+      `${fieldName} must resolve within plans/. Received: ${requestedPlanPath}`,
+    );
     error.jsonRpcCode = -32602;
     throw error;
   }
 
-  return path.relative(MCP_REPO_ROOT, absolutePlanPath).replaceAll(path.sep, '/');
+  return path
+    .relative(MCP_REPO_ROOT, absolutePlanPath)
+    .replaceAll(path.sep, '/');
 }

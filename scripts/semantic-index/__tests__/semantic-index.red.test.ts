@@ -3,6 +3,9 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 interface MarkdownChunk {
   heading_path: string;
@@ -15,10 +18,14 @@ interface DeletionCleanupResult {
 }
 
 const runModuleEvaluation = <Result>(source: string): Result => {
-  const output = execFileSync(process.execPath, ['--input-type=module', '--eval', source], {
-    cwd: path.resolve(__dirname, '..', '..', '..'),
-    encoding: 'utf8',
-  });
+  const output = execFileSync(
+    process.execPath,
+    ['--input-type=module', '--eval', source],
+    {
+      cwd: path.resolve(__dirname, '..', '..', '..'),
+      encoding: 'utf8',
+    },
+  );
 
   return JSON.parse(output) as Result;
 };
@@ -26,7 +33,10 @@ const runModuleEvaluation = <Result>(source: string): Result => {
 describe('semantic-index red contracts', () => {
   describe('cli-utils.mjs', () => {
     it('accumulates repeatable source flags when requested', () => {
-      const parsedArgs = runModuleEvaluation<{ _: string[], source: string[] }>(`
+      const parsedArgs = runModuleEvaluation<{
+        _: string[];
+        source: string[];
+      }>(`
         import { parseCliArgs } from './scripts/semantic-index/cli-utils.mjs';
 
         const parsedArgs = parseCliArgs([
@@ -40,31 +50,37 @@ describe('semantic-index red contracts', () => {
         console.log(JSON.stringify(parsedArgs));
       `);
 
-      expect(parsedArgs).toEqual(expect.objectContaining({
-        source: [
-          'scripts/agent-customization/mcp/mcp-utils.mjs',
-          'scripts/agent-customization/mcp/mcp-plan-utils.mjs',
-        ],
-      }));
+      expect(parsedArgs).toEqual(
+        expect.objectContaining({
+          source: [
+            'scripts/agent-customization/mcp/mcp-utils.mjs',
+            'scripts/agent-customization/mcp/mcp-plan-utils.mjs',
+          ],
+        }),
+      );
     });
 
     it('preserves scalar flag parsing when repeatable mode is not enabled', () => {
-      const parsedArgs = runModuleEvaluation<{ _: string[], source: string }>(`
+      const parsedArgs = runModuleEvaluation<{ _: string[]; source: string }>(`
         import { parseCliArgs } from './scripts/semantic-index/cli-utils.mjs';
 
         const parsedArgs = parseCliArgs(['--source', 'scripts/semantic-index/cli-utils.mjs']);
         console.log(JSON.stringify(parsedArgs));
       `);
 
-      expect(parsedArgs).toEqual(expect.objectContaining({
-        source: 'scripts/semantic-index/cli-utils.mjs',
-      }));
+      expect(parsedArgs).toEqual(
+        expect.objectContaining({
+          source: 'scripts/semantic-index/cli-utils.mjs',
+        }),
+      );
     });
   });
 
   describe('freshness.mjs', () => {
     it('returns mtime_ms, size, and sha256 for a known file', async () => {
-      const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'semantic-index-freshness-'));
+      const fixtureDirectory = await mkdtemp(
+        path.join(tmpdir(), 'semantic-index-freshness-'),
+      );
       const fixturePath = path.join(fixtureDirectory, 'known.md');
       const fixtureText = '# Known\n\nFreshness proof fixture.\n';
       await writeFile(fixturePath, fixtureText, 'utf8');
@@ -107,7 +123,9 @@ describe('semantic-index red contracts', () => {
         console.log(JSON.stringify(chunks));
       `);
 
-      expect(chunks.map(({ heading_path }: MarkdownChunk) => heading_path)).toEqual([
+      expect(
+        chunks.map(({ heading_path }: MarkdownChunk) => heading_path),
+      ).toEqual([
         '# Semantic Index',
         '# Semantic Index > ## Scope',
         '# Semantic Index > ## Scope > ### Freshness',
@@ -139,7 +157,9 @@ describe('semantic-index red contracts', () => {
 
   describe('build-index.mjs', () => {
     it('purges document, chunk, and FTS rows when a previously indexed file disappears from the scan', async () => {
-      const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'semantic-index-build-'));
+      const fixtureDirectory = await mkdtemp(
+        path.join(tmpdir(), 'semantic-index-build-'),
+      );
       const databasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
 
       const deletionCleanup = runModuleEvaluation<DeletionCleanupResult>(`
@@ -165,8 +185,16 @@ describe('semantic-index red contracts', () => {
       await rm(fixtureDirectory, { recursive: true, force: true });
 
       expect(deletionCleanup).toEqual({
-        firstSummary: expect.objectContaining({ scanned: 1, indexed: 1, purged: 0 }),
-        secondSummary: expect.objectContaining({ scanned: 0, indexed: 0, purged: 1 }),
+        firstSummary: expect.objectContaining({
+          scanned: 1,
+          indexed: 1,
+          purged: 0,
+        }),
+        secondSummary: expect.objectContaining({
+          scanned: 0,
+          indexed: 0,
+          purged: 1,
+        }),
         counts: { documents: 0, chunks: 0, ftsRows: 0 },
       });
     });

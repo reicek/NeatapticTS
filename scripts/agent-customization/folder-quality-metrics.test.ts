@@ -118,24 +118,30 @@ async function createFolderQualityFixture(): Promise<{
 
   return {
     fixtureDirectory,
-    relativeFolderPath: path.relative(REPO_ROOT, fixtureDirectory).split(path.sep).join('/'),
+    relativeFolderPath: path
+      .relative(REPO_ROOT, fixtureDirectory)
+      .split(path.sep)
+      .join('/'),
   };
 }
 
 function runFolderQualityMetrics(
   args: string[],
 ): SpawnedFolderQualityMetricsResult {
-  const spawnedResult = spawnSync(process.execPath, [
-    FOLDER_QUALITY_METRICS_PATH,
-    ...args,
-  ], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-    timeout: 600_000,
-  });
+  const spawnedResult = spawnSync(
+    process.execPath,
+    [FOLDER_QUALITY_METRICS_PATH, ...args],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      timeout: 600_000,
+    },
+  );
 
   return {
-    report: tryParseJson<FolderQualityMetricsReport>(spawnedResult.stdout ?? ''),
+    report: tryParseJson<FolderQualityMetricsReport>(
+      spawnedResult.stdout ?? '',
+    ),
     status: spawnedResult.status,
     stderr: spawnedResult.stderr ?? '',
     stdout: spawnedResult.stdout ?? '',

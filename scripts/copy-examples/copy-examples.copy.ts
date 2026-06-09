@@ -19,7 +19,10 @@ import {
   rewriteExamplePageForDocs,
 } from './copy-examples.html.js';
 import { pathExists } from './copy-examples.io.js';
-import type { ExampleDefinition, PublishedExample } from './copy-examples.types.js';
+import type {
+  ExampleDefinition,
+  PublishedExample,
+} from './copy-examples.types.js';
 
 /**
  * Copies one example entrypoint into `docs/examples/<name>/index.html`.
@@ -81,11 +84,7 @@ export async function copyExampleEntryPoint(
       buildSourceFirstExamplePageHtml(exampleDefinition),
     );
 
-    await writeFile(
-      destinationIndexPath,
-      generatedExamplePageHtml,
-      'utf8',
-    );
+    await writeFile(destinationIndexPath, generatedExamplePageHtml, 'utf8');
 
     console.log(
       `${DOCS_EXAMPLES_LOG_PREFIX} Generated source-first page for ${exampleDefinition.dirName}`,

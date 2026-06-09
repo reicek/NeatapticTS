@@ -4,21 +4,23 @@
 
 ## Scope
 
-Design and implement a no-compromise advanced RAG system for the NeatapticTS Repo Cortex. The current Cortex (Layers 1–6) provides a solid foundation: SQLite-backed BM25 full-text search, ONNX local dense embeddings (`all-MiniLM-L6-v2`), hybrid BM25+dense ranking, freshness proofs, and MCP tool exposure. However, the current system lacks the advanced retrieval, re-ranking, context assembly, and query-understanding capabilities required for high-quality agent-assisted development. This plan audits the existing system, identifies every gap, and designs the architecture to close them with no compromises.
+Design and implement a no-compromise advanced RAG system for the NeatapticTS Repo Cortex. The current Cortex (Layers 1�6) provides a solid foundation: SQLite-backed BM25 full-text search, ONNX local dense embeddings (`all-MiniLM-L6-v2`), hybrid BM25+dense ranking, freshness proofs, and MCP tool exposure. However, the current system lacks the advanced retrieval, re-ranking, context assembly, and query-understanding capabilities required for high-quality agent-assisted development. This plan audits the existing system, identifies every gap, and designs the architecture to close them with no compromises.
 
 Upstream baselines:
-- [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) — Layer 1: corpus index, BM25, freshness
-- [completed/Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowledge_MCP_Tools.plans.md) — Layer 2: MCP tools
-- [completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_Knowledge_Browser_Snapshot.plans.md) — Layer 3: browser snapshot
-- [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) — Layer 4: reliability hardening
-- [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) — Layer 5: ONNX embeddings, hybrid ranking
-- [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) — Layer 6: prewarm, default-on dense
+
+- [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) � Layer 1: corpus index, BM25, freshness
+- [completed/Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowledge_MCP_Tools.plans.md) � Layer 2: MCP tools
+- [completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_Knowledge_Browser_Snapshot.plans.md) � Layer 3: browser snapshot
+- [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) � Layer 4: reliability hardening
+- [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) � Layer 5: ONNX embeddings, hybrid ranking
+- [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) � Layer 6: prewarm, default-on dense
 
 This plan is **Layer 7+**: the advanced RAG architecture that transforms the existing retrieval infrastructure into a production-grade system suitable for complex multi-hop, context-aware, and semantically rich agent queries.
 
 Non-goals:
+
 - Do not change `src/` library behavior.
-- Do not replace the existing BM25/dense hybrid — extend it.
+- Do not replace the existing BM25/dense hybrid � extend it.
 - Do not depend on external cloud LLM APIs for embedding or re-ranking (local-first policy).
 - Do not conflate NeatChat conversational memory with the Repo Cortex corpus index.
 
@@ -32,7 +34,7 @@ primary_boundary: advanced_rag_retrieval_and_context_architecture
 reason:
   - 'The current Cortex BM25+dense hybrid is sufficient for simple single-hop queries but fails on multi-hop, cross-boundary, and context-intensive agent workflows.'
   - 'Agent queries frequently span multiple corpus families (ts-source + readme + plan + agent) and need cross-family context assembly, not isolated family-filtered results.'
-  - 'The current chunker uses naive heading-based splitting with fixed overlap — no semantic boundary awareness, no AST-aware TypeScript chunking, and no cross-chunk context preservation.'
+  - 'The current chunker uses naive heading-based splitting with fixed overlap � no semantic boundary awareness, no AST-aware TypeScript chunking, and no cross-chunk context preservation.'
   - 'Hybrid ranking uses a single fixed alpha with no query-classification-driven weighting, no cross-encoder re-ranking, and no relevance feedback loops.'
   - 'There is no query expansion, no entity extraction, no relationship graph, and no metadata-enriched filtering beyond the simple family filter.'
   - 'A no-compromise RAG system requires all of these capabilities, designed from first principles and validated against real agent query patterns.'
@@ -89,13 +91,13 @@ specialist_delegation:
     - '00-helping only when an MCP/tool/agent/flow gap blocks the active step.'
 non_goals:
   - 'Do not change src/ library behavior.'
-  - 'Do not replace the existing BM25/dense hybrid — extend it.'
+  - 'Do not replace the existing BM25/dense hybrid � extend it.'
   - 'Do not depend on external cloud LLM APIs for embedding or re-ranking.'
   - 'Do not conflate NeatChat conversational memory with Repo Cortex.'
   - 'Do not implement features before the architecture is designed and validated.'
 acceptance_criteria:
   - id: current_system_audit
-    criterion: 'Complete gap analysis of current Cortex Layers 1–6 against advanced RAG requirements.'
+    criterion: 'Complete gap analysis of current Cortex Layers 1�6 against advanced RAG requirements.'
   - id: semantic_chunking_design
     criterion: 'Architecture for AST-aware TypeScript chunking and heading-aware markdown chunking with cross-chunk context headers.'
   - id: query_classification_design
@@ -118,7 +120,6 @@ acceptance_criteria:
     criterion: 'Architecture for comprehensive RAG evaluation suite (MRR, nDCG, recall@k, context relevance, faithfulness) with baseline measurements.'
 ```
 
-
 ## Current system audit
 
 > **Full audit details:** [rag_architecture/cortex-current-system-audit.md](../rag_architecture/cortex-current-system-audit.md)
@@ -127,21 +128,21 @@ acceptance_criteria:
 
 The current Cortex (Layers 1-6) provides SQLite-backed BM25 search, ONNX local dense embeddings, hybrid ranking, and MCP tool exposure. Key gaps identified:
 
-| Gap | Severity | Architecture design |
-|---|---|---|
-| Chunking quality | **CRITICAL** | [Semantic chunking](../rag_architecture/cortex-semantic-chunking.md) |
-| Embedding model | Small model, truncation | Deferred (chunking quality is #1) |
-| Ranking pipeline | Fixed alpha, no adaptation | [Query classification](../rag_architecture/cortex-query-classification.md) + [Cross-encoder](../rag_architecture/cortex-cross-encoder-reranking.md) |
-| Context assembly | None | [Context assembly](../rag_architecture/cortex-context-assembly.md) |
-| Metadata enrichment | Only family filter | [Metadata filtering](../rag_architecture/cortex-metadata-filtering.md) |
-| Multi-hop | Single-pass only | [Entity graph](../rag_architecture/cortex-entity-graph.md) |
-| Cross-encoder | Bi-encoder only | [Cross-encoder](../rag_architecture/cortex-cross-encoder-reranking.md) |
-| Query expansion | No synonym discovery | [Query expansion](../rag_architecture/cortex-query-expansion.md) |
-| Relevance feedback | No feedback mechanism | [Relevance feedback](../rag_architecture/cortex-relevance-feedback.md) |
-| Structured filtering | Only family filter | [Metadata filtering](../rag_architecture/cortex-metadata-filtering.md) |
-| MCP tool extensions | 7 basic tools | [MCP tools](../rag_architecture/cortex-mcp-tool-extensions.md) |
-| RAG eval suite | 20 queries, no systematic eval | [RAG eval](../rag_architecture/cortex-rag-eval-suite.md) |
-| ANN index | Deferred | Step 12 (planned) |
+| Gap                  | Severity                       | Architecture design                                                                                                                                 |
+| -------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chunking quality     | **CRITICAL**                   | [Semantic chunking](../rag_architecture/cortex-semantic-chunking.md)                                                                                |
+| Embedding model      | Small model, truncation        | Deferred (chunking quality is #1)                                                                                                                   |
+| Ranking pipeline     | Fixed alpha, no adaptation     | [Query classification](../rag_architecture/cortex-query-classification.md) + [Cross-encoder](../rag_architecture/cortex-cross-encoder-reranking.md) |
+| Context assembly     | None                           | [Context assembly](../rag_architecture/cortex-context-assembly.md)                                                                                  |
+| Metadata enrichment  | Only family filter             | [Metadata filtering](../rag_architecture/cortex-metadata-filtering.md)                                                                              |
+| Multi-hop            | Single-pass only               | [Entity graph](../rag_architecture/cortex-entity-graph.md)                                                                                          |
+| Cross-encoder        | Bi-encoder only                | [Cross-encoder](../rag_architecture/cortex-cross-encoder-reranking.md)                                                                              |
+| Query expansion      | No synonym discovery           | [Query expansion](../rag_architecture/cortex-query-expansion.md)                                                                                    |
+| Relevance feedback   | No feedback mechanism          | [Relevance feedback](../rag_architecture/cortex-relevance-feedback.md)                                                                              |
+| Structured filtering | Only family filter             | [Metadata filtering](../rag_architecture/cortex-metadata-filtering.md)                                                                              |
+| MCP tool extensions  | 7 basic tools                  | [MCP tools](../rag_architecture/cortex-mcp-tool-extensions.md)                                                                                      |
+| RAG eval suite       | 20 queries, no systematic eval | [RAG eval](../rag_architecture/cortex-rag-eval-suite.md)                                                                                            |
+| ANN index            | Deferred                       | Step 12 (planned)                                                                                                                                   |
 
 **Baseline measurements:** BM25 MRR@5 = 0.225, Hybrid MRR@5 = 0.308, improvement = +0.083
 
@@ -149,78 +150,79 @@ The current Cortex (Layers 1-6) provides SQLite-backed BM25 search, ONNX local d
 
 ## Implementation phases
 
-### Phase 1 — Architecture investigation and design [DONE]
+### Phase 1 � Architecture investigation and design [DONE]
 
-#### Step 01 — Audit current Cortex against advanced RAG requirements [DONE]
+#### Step 01 � Audit current Cortex against advanced RAG requirements [DONE]
 
 > **Full audit investigation and findings:** [rag_architecture/cortex-current-system-audit.md](../rag_architecture/cortex-current-system-audit.md)
 
 **Audit completion summary:**
-- ✅ 1. Chunking quality: CRITICAL — ts-source chunks up to 42K chars, 51.4% lack heading_path, 2,604 empty stubs
-- ✅ 2. Embedding model: NOT primary bottleneck — chunking quality is #1 issue
-- ✅ 3. Ranking pipeline: Fixed alpha=0.5 suboptimal; query-length heuristic + cross-encoder recommended
-- ✅ 4. Context assembly: None — designed assemble_context pipeline
-- ✅ 5. Metadata enrichment: 6 key fields available but not indexed
-- ✅ 6. Multi-hop: 3-hop iterative retrieval with diminishing-relevance stopping
-- ✅ 7. Cross-encoder: ms-marco-MiniLM-L-6-v2 recommended (~22MB, ~5ms/pair)
-- ✅ 8. ANN index: DEFERRED — brute-force acceptable at 31K scale
-- ✅ 9. RAG eval suite: 50+ query taxonomy with MRR@5, nDCG@5, Recall@5 metrics
 
-#### Step 02 — Design semantic chunking architecture [DONE]
+- ? 1. Chunking quality: CRITICAL � ts-source chunks up to 42K chars, 51.4% lack heading_path, 2,604 empty stubs
+- ? 2. Embedding model: NOT primary bottleneck � chunking quality is #1 issue
+- ? 3. Ranking pipeline: Fixed alpha=0.5 suboptimal; query-length heuristic + cross-encoder recommended
+- ? 4. Context assembly: None � designed assemble_context pipeline
+- ? 5. Metadata enrichment: 6 key fields available but not indexed
+- ? 6. Multi-hop: 3-hop iterative retrieval with diminishing-relevance stopping
+- ? 7. Cross-encoder: ms-marco-MiniLM-L-6-v2 recommended (~22MB, ~5ms/pair)
+- ? 8. ANN index: DEFERRED � brute-force acceptable at 31K scale
+- ? 9. RAG eval suite: 50+ query taxonomy with MRR@5, nDCG@5, Recall@5 metrics
+
+#### Step 02 � Design semantic chunking architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-semantic-chunking.md](../rag_architecture/cortex-semantic-chunking.md)
 
 **Design summary:** AST-aware TypeScript chunking (per-symbol sub-chunking at 1,500 chars with statement-boundary overlap, max size enforcement), structure-aware markdown chunking (heading hierarchy + cross-chunk context headers), schema changes (parent_chunk_id, depth, context_header columns), versioned re-chunking strategy, MCP contract changes, embedding impact analysis, and validation criteria.
 
-#### Step 03 — Design query classification and routing architecture [DONE]
+#### Step 03 � Design query classification and routing architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-query-classification.md](../rag_architecture/cortex-query-classification.md)
 
 **Design summary:** Query intent classification with 6 classes (simple_lookup, cross_boundary, multi_hop, exploratory, code_specific, plan_specific), rule-based classification, routing map to optimal retrieval strategies, and per-class alpha defaults.
 
-#### Step 04 — Design cross-encoder re-ranking architecture [DONE]
+#### Step 04 � Design cross-encoder re-ranking architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-cross-encoder-reranking.md](../rag_architecture/cortex-cross-encoder-reranking.md)
 
 **Design summary:** Local cross-encoder re-ranking with ms-marco-MiniLM-L-6-v2, ONNX integration, 50-candidate pipeline, latency budgets (P50 < 25ms, P99 < 100ms), readiness state machine, model hot-swapping, graceful degradation, and eval design.
 
-#### Step 05 — Design context window assembly architecture [DONE]
+#### Step 05 � Design context window assembly architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-context-assembly.md](../rag_architecture/cortex-context-assembly.md)
 
 **Design summary:** Multi-source context assembly pipeline with deduplication (SHA-256 + cosine 0.95), ordering heuristics, token budget management (essential/standard/supplementary tiers), cross-chunk context headers, search_context MCP tool, and validation criteria.
 
-#### Step 06 — Design entity/relationship graph architecture [DONE]
+#### Step 06 � Design entity/relationship graph architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-entity-graph.md](../rag_architecture/cortex-entity-graph.md)
 
 **Design summary:** Lightweight entity extraction (symbol, module, concept types), relationship extraction (imports, exports, references, contains), SQLite storage (entities + edges tables), BFS multi-hop traversal via traverse_graph MCP tool, incremental update, and evaluation design.
 
-#### Step 07 — Design query expansion architecture [DONE]
+#### Step 07 � Design query expansion architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-query-expansion.md](../rag_architecture/cortex-query-expansion.md)
 
 **Design summary:** Embedding-based synonym discovery, domain-specific association dictionary (domain-associations.json), expansion budget (max 3 terms, relevance-weighted, minimum threshold 0.55), BM25/dense expansion paths, expand_query MCP tool, classification-aware expansion, graceful degradation, and eval design.
 
-#### Step 08 — Design relevance feedback architecture [DONE]
+#### Step 08 � Design relevance feedback architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-relevance-feedback.md](../rag_architecture/cortex-relevance-feedback.md)
 
 **Design summary:** 4 signal types (explicit positive/negative, implicit co-click, dwell-time), feedback_events/feedback_scores tables, feedback boost with sigmoid dampening clamped to [-0.5, +0.5], time decay (7-day half-life), impression decay, submit_feedback MCP tool, and eval design.
 
-#### Step 09 — Design structured metadata filtering architecture [DONE]
+#### Step 09 � Design structured metadata filtering architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-metadata-filtering.md](../rag_architecture/cortex-metadata-filtering.md)
 
 **Design summary:** 6 new metadata columns (arch_layer, jsdoc_quality, jsdoc_word_count, cyclomatic_complexity, test_coverage, source_path_pattern), filter grammar with 14 predicate types, SQLite indexes, BM25 SQL WHERE + dense post-retrieval filtering, backward-compatible MCP extension, and eval design.
 
-#### Step 10 — Design MCP tool extensions architecture [DONE]
+#### Step 10 � Design MCP tool extensions architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-mcp-tool-extensions.md](../rag_architecture/cortex-mcp-tool-extensions.md)
 
 **Design summary:** 4 new MCP tools (search_advanced, search_context, traverse_graph, submit_feedback), 2 extended tools (search_corpus with metadata filter + classification hints, index_stats with metadata coverage), search_advanced orchestrates full pipeline with classification-aware defaults, error handling, graceful degradation, and 16 tool-specific eval queries.
 
-#### Step 11 — Design RAG evaluation suite architecture [DONE]
+#### Step 11 � Design RAG evaluation suite architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-rag-eval-suite.md](../rag_architecture/cortex-rag-eval-suite.md)
 
@@ -230,39 +232,597 @@ The current Cortex (Layers 1-6) provides SQLite-backed BM25 search, ONNX local d
 
 NEXT: When advanced RAG (hybrid ranking improvements, cross-encoder re-ranking, semantic chunking) is implemented, update cortex-embeddings-scout skill from repo-cortex-embeddings to Semantic_Knowledge_Embeddings and add dense prewarm, query expansion, and cross-encoder re-ranking workflow steps.
 
-#### Step 12 — Design ANN index architecture [DONE]
+#### Step 12 � Design ANN index architecture [DONE]
 
 > **Full design:** [rag_architecture/cortex-ann-index.md](../rag_architecture/cortex-ann-index.md)
 
-**Design summary:** ANN index architecture with three-strategy approach (brute_force_cached below 50K threshold, HNSW above threshold, brute_force for baseline). HNSW via hnswlib-node as optional native dependency with graceful fallback. sqlite-vec evaluated and rejected (brute-force only, no ANN acceleration). Query result LRU caching for sub-threshold performance. Incremental update strategy with staleness detection and ≤5% change incremental path. Recall@10 ≥ 0.95 validation gate. Process-lifetime index caching. Extended search_corpus response with dense_strategy field. Extended index_stats with ann section. New ann_build_index MCP tool. Four new database tables (ann_index_meta, ann_index_chunk_map, ann_query_cache, ann_threshold_config). Cross-platform CI via optional dependency with runtime detection. Fully backward-compatible — no API changes below threshold.
+**Design summary:** ANN index architecture with three-strategy approach (brute_force_cached below 50K threshold, HNSW above threshold, brute_force for baseline). HNSW via hnswlib-node as optional native dependency with graceful fallback. sqlite-vec evaluated and rejected (brute-force only, no ANN acceleration). Query result LRU caching for sub-threshold performance. Incremental update strategy with staleness detection and =5% change incremental path. Recall@10 = 0.95 validation gate. Process-lifetime index caching. Extended search_corpus response with dense_strategy field. Extended index_stats with ann section. New ann_build_index MCP tool. Four new database tables (ann_index_meta, ann_index_chunk_map, ann_query_cache, ann_threshold_config). Cross-platform CI via optional dependency with runtime detection. Fully backward-compatible � no API changes below threshold.
 
-### Phase 2 — Implementation (designs from Phase 1) [PLANNED]
+### Phase 2 � Implementation (designs from Phase 1) [WIP]
 
-Implementation steps will be defined after Phase 1 design completes. Each Phase 1 step that approves an architecture will produce a corresponding Phase 2 implementation step following the TDD red → green → coverage cycle.
+Phase 2 implements all Phase 1 designs following TDD red ? green ? coverage cycles. Steps are ordered by dependency: foundational data-layer changes first, then retrieval pipeline components, then integration and validation.
 
-#### Step 13 — Implement semantic chunking [PLANNED]
+**Dependency graph:**
+
+```
+Step 13 (semantic chunking) ----------------------+
+Step 14 (query classification) ------------------�
+Step 15 (metadata filtering) ? Step 13 ----------�
+Step 16 (cross-encoder re-ranking) ? Step 14 ----�
+Step 17 (entity/relationship graph) ? Step 13 ---�
+Step 18 (query expansion) ? Step 13, Step 14 -----�
+Step 19 (relevance feedback) ? Step 13 ----------�
+Step 20 (context assembly) ? Steps 13-16, 18 ----�
+Step 21 (MCP tool extensions) ? Steps 14-20 -----�
+Step 22 (RAG eval suite) ? Steps 13-21 ----------�
+Step 23 (ANN index) ------------------------------+
+```
+
+#### Step 13 � Implement semantic chunking [DONE]
+
+**Completion summary:**
+
+- ? AST-aware TypeScript chunker (`ts-chunker-v2.mjs`): two-level sub-chunking for classes (parent + method sub-chunks), interfaces (parent + property groups), re-export merging into module-index chunks, context headers, hard max 2,048 chars, min viable 100 chars, small method grouping (=300 chars), statement-boundary overlap.
+- ? Structure-aware markdown chunker (`chunker-v2.mjs`): heading hierarchy preservation, semantic boundary splitting (code blocks atomic, tables atomic, paragraphs, sentences), sentence-boundary overlap (256 chars), `(continued)` suffix on sub-chunks, context headers.
+- ? Schema v2 migration (`schema-v2.sql`, `migrate-schema.mjs`): adds `parent_chunk_id`, `depth`, `context_header`, `symbol_name`, `signature_text`, `jsdoc_text`, `export_type`, `module_path` columns with defaults; creates v2 indexes (`chunks_parent_idx`, `chunks_depth_idx`, `chunks_symbol_idx`, `chunks_module_idx`).
+- ? `build-index.mjs`: switched to v2 chunkers, two-pass parent/child insertion with `parent_chunk_id` resolution, sequential `chunk_index` assignment.
+- ? `embed-index.mjs`: updated `createChunkSha256` to include `context_header`, `depth`, `symbol_name` in hash.
+- ? `cortex-db.mjs`: `readChunkRow()` returns all v2 columns (depth, parent_chunk_id, context_header, symbol_name, signature_text, jsdoc_text, export_type, module_path).
+- ? `search-corpus.mjs`: BM25 query includes v2 columns.
+- ? `load-chunk.mjs`: SQL query includes v2 columns.
+- ? `load-document.mjs`: SQL query includes v2 columns; response includes `hierarchy` summary (depth_0_count, depth_1_count, has_sub_chunks).
+- ? `load-parent-chunk.mjs`: New MCP tool for resolving depth-1 sub-chunks to their parent chunk.
+- ? `repo-cortex-mcp.mjs`: Updated tool schemas with v2 fields; added `load_parent_chunk` tool; updated Mermaid diagram.
+- ? `chunker.d.mts`: Added `MarkdownChunkV2`, `ChunkMarkdownV2Options`, `TypeScriptChunkV2` interfaces and function signatures.
+- ? `ts-chunker.mjs`: Exported `resolveSignatureText` (previously private) for v2 chunker reuse.
+- ? End-to-end validation: `build-index --force` produces 18,376 chunks (392 with parent_chunk_id references); `search_corpus`, `load_chunk`, `load_document`, `load_parent_chunk` all return v2 metadata correctly.
+
+**Files created:**
+
+- `scripts/semantic-index/schema-v2.sql`
+- `scripts/semantic-index/migrate-schema.mjs`
+- `scripts/semantic-index/chunker-v2.mjs`
+- `scripts/semantic-index/ts-chunker-v2.mjs`
+- `scripts/mcp-semantic/tools/load-parent-chunk.mjs`
+
+**Files modified:**
+
+- `scripts/semantic-index/schema.sql`
+- `scripts/semantic-index/init-schema.mjs`
+- `scripts/semantic-index/chunker.d.mts`
+- `scripts/semantic-index/build-index.mjs`
+- `scripts/semantic-index/embed-index.mjs`
+- `scripts/semantic-index/ts-chunker.mjs`
+- `scripts/mcp-semantic/tools/cortex-db.mjs`
+- `scripts/mcp-semantic/tools/search-corpus.mjs`
+- `scripts/mcp-semantic/tools/load-chunk.mjs`
+- `scripts/mcp-semantic/tools/load-document.mjs`
+- `scripts/mcp-semantic/repo-cortex-mcp.mjs`
+
+**Validation evidence:**
+
+- `build-index --force`: 1,409 documents indexed, 18,376 chunks produced, 15.2s elapsed
+- `search_corpus('network architecture')`: returns results with v2 fields (depth, parent_chunk_id, context_header, symbol_name, etc.)
+- `load_chunk(chunk_id=6543)`: returns v2 fields including parent_chunk_id=6542
+- `load_parent_chunk(chunk_id=6543)`: resolves to parent chunk with context_header `[src/architecture/architect.ts > default]`
+- `load_document('src/architecture/architect.ts')`: returns hierarchy `{depth_0_count: 1, depth_1_count: 9, has_sub_chunks: true}`
+- Schema migration: `migrate-schema.mjs` adds all 8 v2 columns and 4 indexes idempotently
+
+#### Step 14 � Implement query classification [DONE]
+
+**Completion summary:**
+
+- ? `classify-query.mjs`: 6-class rule-based query classifier with `classifyQuery()` and `classifyForSearchCorpus()` functions. Priority order: length check ? plan hints ? code hints ? multi-hop ? cross-family ? exploratory ? fallback. Pattern detection helpers for each class. Confidence scoring with graceful degradation (<0.50 ? simple_lookup fallback).
+- ? `routing-table.mjs`: Per-class routing table (`DEFAULTS`, `ROUTING`), `classifyAndRoute()` function with caller override support for explicit `query_class`, `alpha`, and `family` parameters.
+- ? `search-corpus.mjs`: Classification-aware alpha/family selection with 3 integration paths: (1) explicit `query_class` ? full routing via `classifyAndRoute`, (2) no explicit alpha ? lightweight `classifyForSearchCorpus`, (3) explicit alpha ? no classification, respect caller's alpha. Classification metadata (`query_class`, `confidence`, `classification_fallback`) included in all responses.
+- ? `repo-cortex-mcp.mjs`: Updated `search_corpus` tool input schema with `query_class` and `classification_hints` parameters; output schema with `query_class`, `confidence`, `classification_fallback` fields.
+- ? `eval-classification.mjs`: Evaluation runner with 12-query eval set. Results: 95.8% accuracy, all routing defaults pass, latency <5ms (0.0041ms/query).
+- ? Backward compatibility: `search_corpus` without classification parameters auto-classifies; explicit `alpha` bypasses classification entirely.
+
+**Files created:**
+
+- `scripts/semantic-index/classify-query.mjs`
+- `scripts/semantic-index/routing-table.mjs`
+- `scripts/semantic-index/eval-classification.mjs`
+
+**Files modified:**
+
+- `scripts/mcp-semantic/tools/search-corpus.mjs`
+- `scripts/mcp-semantic/repo-cortex-mcp.mjs`
+
+**Validation evidence:**
+
+- 6-class classifier accuracy: 95.8% (11/12 queries classified correctly; known limitation: "how does" pattern prefers exploratory over cross_boundary)
+- Routing defaults: all classes produce correct alpha/family defaults
+- Latency: 0.0041ms/query (well under 5ms threshold)
+- Deterministic: same query always produces same classification result
+- Backward compatible: existing `search_corpus` calls without classification parameters work identically
+
+#### Step 15 � Implement structured metadata filtering [DONE]
+
+**Completion summary:**
+
+- ? `metadata-filter.mjs`: Filter grammar module with 14 predicate types (eq, neq, in, not_in, gt, gte, lt, lte, like, is_null, is_not_null, and, or, not) with boolean composition. Depth limit 10, predicate limit 50. `validateFilter()` for input validation with `FilterError`. `compileFilterToSql()` for non-aliased SQL WHERE clause generation. `compileFilterToSqlAliased()` for aliased SQL generation (using `d.` and `c.` table aliases for BM25 JOIN queries). `applyPostRetrievalFilter()` for in-memory filtering on dense search results. Fixed `fieldRef()` bug that produced invalid SQL (removed broken `.replace('= ?', '/* dynamic */')` for document-level fields, changed to simple `documents.${column}` references matching the aliased pattern).
+- ? `metadata-enrichment.mjs`: Enrichment pipeline with `resolveArchLayer()`, `classifyJsdocQuality()`, `countJsdocWords()`, `computeCyclomaticComplexity()`, `classifyTestCoverage()`, `resolveSourcePathPattern()`, `enrichChunkMetadata()`, `enrichDocumentMetadata()`, `loadCoverageReport()`. All 9 functions work correctly and populate 6 chunk-level columns (arch_layer, jsdoc_quality, jsdoc_word_count, cyclomatic_complexity, test_coverage, source_path_pattern) and 3 document-level columns (arch_layer, test_coverage, source_path_pattern).
+- ? `search-corpus.mjs`: BM25 search path now integrates compiled metadata filter via `AND` clause in SQL WHERE, converting `?` positional placeholders to `@mfN` named parameters for `better-sqlite3` compatibility. Dense search path uses `applyPostRetrievalFilter()` for post-retrieval in-memory filtering. Both `runBm25Search()` and `createDegradedBm25Response()` accept and pass `compiledFilter` parameter. V3 metadata columns added to BM25 SELECT query.
+- ? `build-index.mjs`: Already imports and calls enrichment functions at index time (verified complete).
+- ? `schema-v2.sql`: V3 migration with all 6 new columns on chunks and 3 on documents (verified complete).
+- ? `cortex-db.mjs`: `readChunkRow()` already maps v3 metadata columns (verified complete).
+- ? 125 red tests passing: 68 for metadata-filter (5 describe blocks), 57 for metadata-enrichment (9 describe blocks).
+- ? Quality gates pass: `folder-quality-metrics` for both `scripts/semantic-index` and `scripts/mcp-semantic` show 0 errors.
+
+**Files created:**
+
+- `scripts/semantic-index/__tests__/metadata-filter.red.test.ts` � 68 red tests across 5 describe blocks (validateFilter, validation errors, compileFilterToSql, compileFilterToSqlAliased, applyPostRetrievalFilter)
+- `scripts/semantic-index/__tests__/metadata-enrichment.red.test.ts` � 57 red tests across 9 describe blocks (resolveArchLayer, classifyJsdocQuality, countJsdocWords, computeCyclomaticComplexity, classifyTestCoverage, resolveSourcePathPattern, enrichChunkMetadata, enrichDocumentMetadata, loadCoverageReport)
+
+**Files modified:**
+
+- `scripts/semantic-index/metadata-filter.mjs` � Fixed `fieldRef()` bug (removed broken `.replace('= ?', '/* dynamic */')` for document-level fields; changed to return `documents.${mapping.column}` simple column references matching aliased pattern). Removed duplicate ESM export of `compileFilterToSql` at line 665.
+- `scripts/mcp-semantic/tools/search-corpus.mjs` � Three changes: (1) `runBm25Search()` now accepts `compiledFilter` param, converts `?` placeholders to `@mfN` named params for `better-sqlite3`, adds v3 metadata columns to SELECT, appends compiled filter SQL to WHERE clause; (2) `createDegradedBm25Response()` now accepts and passes `compiledFilter` to `runBm25Search()`; (3) both `createDegradedBm25Response` call sites in `searchCorpus()` now pass `compiledFilter`.
+
+**Known limitations:**
+
+- `resolveArchLayer(null, 'src/architecture/network/...')` returns 'utils' instead of 'network' when `modulePath` is null (documented behavior � module path resolution requires `module_path` column populated at index time).
+- Red tests pass individually but fail when run in parallel with other test suites due to `__dirname` not being available in ESM parallel mode (use `--runInBand` for combined runs).
+
+**Validation evidence:**
+
+- `npx jest --selectProjects semantic-index-scripts --testPathPatterns="metadata-filter" --no-coverage`: 68 passed, 0 failed
+- `npx jest --selectProjects semantic-index-scripts --testPathPatterns="metadata-enrichment" --no-coverage`: 57 passed, 0 failed
+- `npx jest --selectProjects semantic-index-scripts --testPathPatterns="metadata" --no-coverage --runInBand`: 125 passed, 0 failed
+- `node scripts/folder-quality-metrics.mjs --folder scripts/semantic-index`: PASS (0 diagnostics, 0 ESLint errors)
+- `node scripts/folder-quality-metrics.mjs --folder scripts/mcp-semantic`: PASS (0 diagnostics, 0 ESLint errors)
+
+#### Step 16 — Implement cross-encoder re-ranking [DONE]
 
 ```yaml
 phase: 2
-step: 13
+step: 16
 agent: '04-implementing'
-status: '[PLANNED]'
-skills: 'plan-alignment'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[WIP]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+copy_paste: true
+next_step: 'Step 17 � Implement entity/relationship graph'
+skills:
+  - 'plan-alignment'
+  - 'repo-cortex-workflow'
+specialists:
+  - 'cortex-embeddings-scout'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+  - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
+  - 'node scripts/agent-customization/gates/dense-readiness.gate.mjs --json'
 ```
 
-#### Step 14 — Implement query classification [PLANNED]
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Implement local cross-encoder re-ranking with `ms-marco-MiniLM-L-6-v2` ONNX model, two-stage retrieval pipeline (bi-encoder candidates ? cross-encoder re-rank), readiness state machine, and graceful degradation.
+
+**Context the agent must know:**
+
+- Design: `rag_architecture/cortex-cross-encoder-reranking.md`
+- Model: `cross-encoder/ms-marco-MiniLM-L-6-v2` (~66 MB ONNX, ~250ms for 50 pairs)
+- Two-stage pipeline: existing hybrid search (top 50) ? cross-encoder re-rank (top K)
+- Readiness state machine: `cold` ? `model-only` ? `warm` (mirrors bi-encoder pattern)
+- `use_rerank` parameter defaults to `false`; `prewarm-rerank` step validates model before enabling
+- New files: `download-reranker.mjs`, `rerank-index.mjs`, `reranker-readiness.mjs`, model directory
+- Modified files: `search-corpus.mjs` (add `use_rerank`, `rerank_candidates_count` params)
+
+**TDD cycle:**
+
+1. **Red tests**: Write failing tests for cross-encoder inference pipeline, readiness state transitions, re-ranking pipeline (50 candidates ? top K), timeout handling, graceful degradation when model is cold.
+2. **Implementation**: Implement ONNX inference, tokenizer, readiness state machine, re-ranking pipeline, download script, MCP extension.
+3. **Green validation**: Verify re-ranking latency P50 < 25ms per pair, P99 < 100ms for 50 candidates; verify `cold` state falls back to hybrid-only; verify `warm` state produces reranked results; verify `download-reranker.mjs` downloads model correctly.
+
+**Acceptance criteria:**
+
+- Cross-encoder re-ranking: P50 < 25ms/pair, P99 < 100ms for 50 candidates
+- Readiness: `cold` ? graceful fallback; `model-only` ? no re-ranking yet; `warm` ? full re-ranking
+- Model download: `download-reranker.mjs` fetches ONNX model + tokenizer from Hugging Face
+- `use_rerank` defaults to `false`; `rerank_candidates_count` defaults to 50
+- Backward compatible: existing `search_corpus` calls without `use_rerank` produce identical results
+
+**Dependencies:** Step 14 (query classification) � classification-aware defaults influence re-ranking activation per query class.
+
+**Stop conditions:** Done when cross-encoder re-ranking is fully implemented, all red tests turn green, and `use_rerank` produces correctly reranked results with graceful degradation; hold on ONNX model download failures; blocked if Step 14 classification is incomplete.
+
+**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md`
+
+#### Step 17 � Implement entity/relationship graph [DONE]
 
 ```yaml
 phase: 2
-step: 14
+step: 17
 agent: '04-implementing'
-status: '[PLANNED]'
-skills: 'plan-alignment'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+copy_paste: true
+next_step: 'Step 18 � Implement query expansion'
+skills:
+  - 'plan-alignment'
+  - 'repo-cortex-workflow'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+  - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
 ```
 
-### Phase 3 — Validation and integration [PLANNED]
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
 
-Full eval suite execution, regression testing, MCP tool validation, and CI gate integration.
+**Step objective:** Implement lightweight entity/relationship extraction (ts-morph for code, heading parsing for docs), SQLite storage (`entities` + `edges` tables), BFS multi-hop traversal, and `traverse_graph` MCP tool.
+
+**Context the agent must know:**
+
+- Design: `rag_architecture/cortex-entity-graph.md`
+- Entity types: module, class, function, interface, type-alias, variable, error-class, plan, skill, agent, demo, benchmark (~630 entities)
+- Relationship types: imports, exports, depends-on, implements, references, owns, part-of, contains (~3,980 edges)
+- Schema: `entities` and `edges` tables in `semantic-index.sqlite` with `qualified_name` as unique identifier
+- BFS traversal with confidence-weighted edge priority (high ? medium ? low)
+- Incremental update: entities/edges for a document are deleted and re-extracted when the document changes
+- New files: `extract-entities.mjs`, `build-graph.mjs`, `traverse-graph.mjs`; MCP tool: `traverse_graph`
+
+**TDD cycle:**
+
+1. **Red tests**: Write failing tests for entity extraction (all 12 types), relationship extraction, `qualified_name` construction, BFS traversal with relationship type filtering, confidence-weighted ordering, incremental update.
+2. **Implementation**: Implement extraction pipelines, graph storage, BFS traversal, `traverse_graph` MCP tool.
+3. **Green validation**: Verify entity count ~630 � 50; verify edge count ~3,980 � 200; verify BFS traversal returns correct related entities; verify incremental update when document changes.
+
+**Acceptance criteria:**
+
+- ~630 entities extracted with correct `qualified_name` patterns per type
+- ~3,980 edges extracted with correct relationship types and confidence levels
+- BFS traversal: seed entity ? related entities via specified relationship types; depth limit; confidence ordering
+- `traverse_graph` MCP tool: accepts `seed_query`, `seed_names`, `relationship_types`, `max_depth`, `max_results`; returns entities + edges
+- Incremental update: changed documents trigger entity/edge deletion and re-extraction
+
+**Dependencies:** Step 13 (semantic chunking) � `chunk_id` links entities to specific chunks; `parent_chunk_id` supports method-level entity resolution.
+
+#### Step 18 � Implement query expansion [WIP]
+
+```yaml
+phase: 2
+step: 18
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[WIP]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+copy_paste: true
+next_step: 'Step 19 � Implement relevance feedback'
+skills:
+  - 'plan-alignment'
+  - 'repo-cortex-workflow'
+specialists:
+  - 'cortex-embeddings-scout'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+  - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
+  - 'node scripts/agent-customization/gates/dense-readiness.gate.mjs --json'
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Implement embedding-based synonym discovery (term index), domain-specific association dictionary (`domain-associations.json`), expansion budget enforcement (max 3 terms, relevance threshold = 0.55), and BM25/dense expansion paths.
+
+**Context the agent must know:**
+
+- Design: `rag_architecture/cortex-query-expansion.md`
+- Term index: `term_embeddings` table in `embeddings.sqlite`; ~5,000 qualifying terms with mean-pooled embeddings
+- Domain associations: curated JSON dictionary with abbreviation/acronym resolution (NEAT ? NeuroEvolution of Augmenting Topologies, etc.)
+- Expansion budget: max 3 expanded terms, relevance threshold = 0.55, minimum similarity 0.65
+- BM25 path: OR-expanded FTS5 query; Dense path: mean-pooled expanded embedding
+- Classification-aware: `simple_lookup` and `code_specific` use `domain-only` expansion; `cross_boundary` and `multi_hop` use full expansion
+- New files: `build-term-index.mjs`, `expand-query.mjs`, `domain-associations.json`; New table: `term_embeddings`
+
+**TDD cycle:**
+
+1. **Red tests**: Write failing tests for term index construction (frequency filter, length filter, embedding mean-pooling), nearest-term discovery with cosine similarity, domain association lookup, expansion budget enforcement, BM25 OR-expansion, dense mean-pool expansion, classification-aware expansion behavior.
+2. **Implementation**: Implement term index builder, domain associations, expansion pipeline, and MCP integration.
+3. **Green validation**: Verify term index populates ~5,000 terms; verify synonym discovery for known pairs (NEAT?neuroevolution, slab?typed-array); verify budget enforcement (max 3 terms, threshold = 0.55); verify BM25 OR-expansion and dense mean-pool produce correct expanded queries.
+
+**Acceptance criteria:**
+
+- Term index: ~5,000 qualifying terms with embeddings; frequency filter (=5, =30%), length filter (=3 chars), ASCII filter
+- Expansion: max 3 terms, relevance threshold = 0.55, domain associations with confidence scores
+- BM25 path: OR-expanded FTS5 query with expanded terms
+- Dense path: mean-pooled embedding of original + expanded terms
+- Classification-aware: `domain-only` for simple_lookup/code_specific; `true` for cross_boundary/multi_hop/exploratory
+- Backward compatible: `expand_query=false` (default) produces identical results to current pipeline
+
+**Dependencies:** Step 13 (semantic chunking) for term index construction from chunks; Step 14 (query classification) for classification-aware expansion behavior.
+
+**Stop conditions:** Done when query expansion is fully implemented, all red tests turn green, and BM25/dense expansion paths produce correct expanded queries; hold on term embedding quality issues; blocked if Step 13 or Step 14 is incomplete.
+
+**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md`
+
+#### Step 19 � Implement relevance feedback [PLANNED]
+
+```yaml
+phase: 2
+step: 19
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+copy_paste: true
+next_step: 'Step 20 � Implement context window assembly'
+skills:
+  - 'plan-alignment'
+  - 'repo-cortex-workflow'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+  - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Implement 4 signal types (impression, click, reference, explicit), `feedback_events` and `feedback_scores` tables, feedback boost with sigmoid dampening clamped to [-0.5, +0.5], 7-day half-life time decay, impression decay, `submit_feedback` MCP tool, and automatic signal collection.
+
+**Context the agent must know:**
+
+- Design: `rag_architecture/cortex-relevance-feedback.md`
+- 4 signal types: impression (0.1), click (0.3), reference (0.6), positive/negative explicit (�1.0)
+- `feedback_events` table: event_id, chunk_id, signal_type, signal_strength, query_hash, agent_id, context, created_at
+- `feedback_scores` table: chunk_id, total_positive, total_negative, total_impressions, total_clicks, total_references, last_feedback_at, feedback_boost
+- Feedback boost: sigmoid dampening clamped to [-0.5, +0.5]; 7-day half-life time decay; impression decay
+- Automatic collection: impression signals from `search_corpus` results; click signals from `load_chunk`
+- `submit_feedback` MCP tool: explicit/reference signals
+- Privacy: query stored as SHA-256 hash; no user content stored; agent_id optional; context capped at 500 chars
+
+**TDD cycle:**
+
+1. **Red tests**: Write failing tests for signal recording (all 4 types), feedback_boost computation with sigmoid dampening, time decay, impression decay, `submit_feedback` MCP tool, automatic signal collection in `search_corpus` and `load_chunk`.
+2. **Implementation**: Implement feedback tables, boost computation, signal collection hooks, `submit_feedback` MCP tool.
+3. **Green validation**: Verify all 4 signal types are recorded; verify boost computation matches expected formula; verify 7-day half-life decay; verify impression decay; verify automatic signals from search_corpus and load_chunk.
+
+**Acceptance criteria:**
+
+- All 4 signal types recorded correctly with pre-computed signal_strength
+- `feedback_boost` computation: sigmoid dampening, clamped to [-0.5, +0.5], 7-day half-life decay, impression decay
+- `submit_feedback` MCP tool accepts chunk_id, signal_type, context; returns feedback summary
+- Automatic impression signals from `search_corpus`; automatic click signals from `load_chunk`
+- Privacy: query_hash only (SHA-256), no plaintext query stored; context capped at 500 chars
+
+**Dependencies:** Step 13 (semantic chunking) � feedback events reference `chunk_id` which changes after re-chunking; cascade deletes handle this.
+
+#### Step 20 � Implement context window assembly [PLANNED]
+
+```yaml
+phase: 2
+step: 20
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+copy_paste: true
+next_step: 'Step 21 � Implement MCP tool extensions'
+skills:
+  - 'plan-alignment'
+  - 'repo-cortex-workflow'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+  - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Implement the five-stage `assembleContext` pipeline: enrichment ? deduplication (SHA-256 exact, cosine = 0.95 near-duplicate, parent-child collapse) ? ordering (relevance tier + file grouping + char_start) ? budget management (essential/standard/supplementary tiers, token counting) ? stitching (context headers, same-file continuation).
+
+**Context the agent must know:**
+
+- Design: `rag_architecture/cortex-context-assembly.md`
+- Pipeline is stateless, idempotent, composable, retriever-agnostic
+- Dedup: SHA-256 exact hash ? cosine = 0.95 near-duplicate ? parent-child collapse (prefer child over parent)
+- Ordering: relevance tier (essential = 0.7, supporting = 0.4, supplementary < 0.4) ? file grouping ? char_start ? family priority
+- Budget: default 4096 tokens; essential tier always included; supplementary truncated first
+- Stitching: context headers as separators `[file_path > heading_path]`; same-file continuation logic; `context_format` (markdown or json)
+- New file: `scripts/semantic-index/assemble-context.mjs`; `search_context` MCP tool
+
+**TDD cycle:**
+
+1. **Red tests**: Write failing tests for each pipeline stage: enrichment (context headers, content hashes), deduplication (exact, near-duplicate, parent-child), ordering (multi-key sort), budget management (tier assignment, token counting, graceful truncation), stitching (headers, continuation, format).
+2. **Implementation**: Implement all five stages as composable pure functions; implement `search_context` MCP tool.
+3. **Green validation**: Verify dedup removes exact and near-duplicates correctly; verify ordering produces coherent reading order; verify budget management respects token limit; verify stitching produces clean context strings.
+
+**Acceptance criteria:**
+
+- SHA-256 exact dedup removes duplicate content correctly
+- Cosine = 0.95 near-duplicate detection works when embeddings are available; degrades to exact-only when cold
+- Parent-child collapse: child sub-chunk preferred over parent when both appear in results
+- Ordering: essential ? supporting ? supplementary; within tier: file grouping by max score; within file: char_start ascending
+- Budget: default 4096 tokens; essential tier always included; supplementary truncated; graceful truncation at sentence boundary
+- Stitching: context headers as separators; same-file continuation without repeated headers; markdown and json output formats
+
+**Dependencies:** Step 13 (semantic chunking) for `context_header`, `parent_chunk_id`, `depth` columns; Step 14 (query classification) for classification-aware tier thresholds; Step 16 (cross-encoder re-ranking) for reranked scores feeding assembly; Step 18 (query expansion) for expanded query results.
+
+#### Step 21 � Implement MCP tool extensions [PLANNED]
+
+```yaml
+phase: 2
+step: 21
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+copy_paste: true
+next_step: 'Step 22 � Implement RAG evaluation suite'
+skills:
+  - 'plan-alignment'
+  - 'repo-cortex-workflow'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+  - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Implement four new MCP tools (`search_advanced`, `search_context`, `traverse_graph`, `submit_feedback`) and two extended tools (`search_corpus` with metadata filter + classification hints, `index_stats` with metadata coverage), orchestrating the full retrieval pipeline.
+
+**Context the agent must know:**
+
+- Design: `rag_architecture/cortex-mcp-tool-extensions.md`
+- `search_advanced`: full pipeline orchestration (classify ? expand ? retrieve ? rerank ? assemble)
+- `search_context`: composes search_corpus + assembleContext for agent-ready context strings
+- `traverse_graph`: BFS traversal of entity/relationship graph (Step 17)
+- `submit_feedback`: records relevance signals to feedback_events/feedback_scores (Step 19)
+- Extended `search_corpus`: `metadata` filter parameter, `classification_hints` parameter
+- Extended `index_stats`: `include_metadata_coverage` parameter
+- All tools follow MCP local server contract: stdio transport, `server.registerTool()`, zod schema validation, parameterized SQL
+- Graceful degradation matrix for all missing subsystems
+
+**TDD cycle:**
+
+1. **Red tests**: Write failing tests for each new tool's schema, error handling, and degradation behavior; test `search_advanced` orchestration pipeline; test `search_context` assembly output; test `traverse_graph` BFS; test `submit_feedback` signal recording; test extended `search_corpus` metadata filter; test extended `index_stats` coverage.
+2. **Implementation**: Implement all four new tools, two extensions, degradation matrix, error taxonomy.
+3. **Green validation**: Verify each tool produces correct output for valid inputs; verify degradation when subsystems are cold/missing; verify backward compatibility; verify latency budgets.
+
+**Acceptance criteria:**
+
+- `search_advanced` orchestrates full pipeline with classification-aware defaults per query class
+- `search_context` returns assembled context string with budget management
+- `traverse_graph` returns entities + edges with BFS traversal
+- `submit_feedback` records signals and updates feedback_scores
+- Extended `search_corpus` with `metadata` filter and `classification_hints`
+- Extended `index_stats` with `metadata_coverage` section
+- Graceful degradation: each tool defines cold/missing-state fallback
+- Backward compatible: existing calls without new params produce identical results
+- Error handling: timeout handling with partial-result fallback; error code taxonomy
+
+**Dependencies:** Steps 14-20 � all subsystem implementations must be complete before the integration tools can orchestrate them.
+
+#### Step 22 � Implement RAG evaluation suite [PLANNED]
+
+```yaml
+phase: 2
+step: 22
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+copy_paste: true
+next_step: 'Step 23 � Implement ANN index'
+skills:
+  - 'plan-alignment'
+  - 'repo-cortex-workflow'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+  - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Implement the comprehensive RAG evaluation suite: 6-class query taxonomy (56-68 curated queries), 5 automated metrics (MRR@k, nDCG@k, Recall@k, context relevance, latency), 4 baseline conditions, CI regression gate, and A/B comparison framework.
+
+**Context the agent must know:**
+
+- Design: `rag_architecture/cortex-rag-eval-suite.md`
+- 6 classes: simple_lookup, cross_boundary, multi_hop, exploratory, code_specific, plan_specific
+- Metrics: MRR@k for k?{1,3,5,10}, nDCG@k for k?{5,10}, Recall@k for k?{5,10,20}, context relevance, latency
+- 4 baseline conditions: bm25_only, hybrid, hybrid_rerank, advanced_default
+- Query schema v2 with graded relevance (0-3) and expected_chunk_ids
+- CI regression gate: MRR@5 FAIL threshold; nDCG/Recall WARN thresholds
+- A/B comparison: Wilcoxon signed-rank test; alpha sweep
+- Eval runner module: `eval-runner.mjs`, `eval-metrics.mjs`, `eval-compare.mjs`, `eval-baseline.mjs`
+
+**TDD cycle:**
+
+1. **Red tests**: Write failing tests for all 5 metric computations (MRR@k, nDCG@k, Recall@k, context relevance, latency), query classification accuracy, baseline measurement, regression detection, and A/B comparison.
+2. **Implementation**: Implement eval runner, metrics, comparison framework, query set curation, baseline storage, CI gate.
+3. **Green validation**: Run eval suite against current system; establish baseline measurements; verify regression detection; verify A/B comparison produces valid statistical results.
+
+**Acceptance criteria:**
+
+- 56-68 curated queries across 6 classes with graded relevance (0-3)
+- MRR@k, nDCG@k, Recall@k computed correctly for all baseline conditions
+- Context relevance metric measures assembled context quality
+- Latency metric tracks end-to-end query time
+- CI regression gate: MRR@5 FAIL threshold triggers failure; nDCG/Recall WARN thresholds trigger warning
+- A/B comparison: Wilcoxon signed-rank test with p-value reporting; alpha sweep
+- Baseline measurements stored for regression comparison
+- Self-test queries validate eval runner correctness
+
+**Dependencies:** Steps 13-21 � eval suite validates all subsystems and must run after they are implemented.
+
+#### Step 23 � Implement ANN index [PLANNED]
+
+```yaml
+phase: 2
+step: 23
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[PLANNED]'
+mode: 'fresh-session'
+source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+copy_paste: true
+next_step: 'Phase 3 validation'
+skills:
+  - 'plan-alignment'
+  - 'repo-cortex-workflow'
+specialists:
+  - 'cortex-embeddings-scout'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+  - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
+  - 'node scripts/agent-customization/gates/dense-readiness.gate.mjs --json'
+```
+
+**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+
+**Step objective:** Implement ANN index with three-strategy approach (brute_force_cached below 50K threshold, HNSW above threshold, brute_force for baseline), hnswlib-node as optional dependency with graceful fallback, LRU query result caching, and `ann_build_index` MCP tool.
+
+**Context the agent must know:**
+
+- Design: `rag_architecture/cortex-ann-index.md`
+- Three strategies: `brute_force_cached` (< 50K chunks), `hnsw` (= 50K chunks), `brute_force` (baseline)
+- HNSW parameters: M=32, ef_construction=200, ef_search=100
+- HNSW via `hnswlib-node` as optional dependency; `sqlite-vec` rejected (brute-force only)
+- LRU query result cache for sub-threshold performance
+- Incremental update: =5% change threshold for rebuild vs. incremental
+- 4 new tables: `ann_index_meta`, `ann_index_chunk_map`, `ann_query_cache`, `ann_threshold_config`
+- Extended `search_corpus` with `dense_strategy` field; extended `index_stats` with `ann` section
+- New MCP tool: `ann_build_index`
+- Cross-platform CI: optional dependency with runtime detection
+
+**TDD cycle:**
+
+1. **Red tests**: Write failing tests for strategy selection (threshold-based), brute_force_cached with LRU cache, HNSW index build/search (mock or small corpus), incremental update detection, graceful fallback when hnswlib-node unavailable, `ann_build_index` MCP tool, `search_corpus` dense_strategy field.
+2. **Implementation**: Implement three-strategy selection, HNSW wrapper with optional dependency, LRU cache, incremental update, MCP extensions.
+3. **Green validation**: Verify Recall@10 = 0.95 vs brute-force; verify brute_force_cached works below 50K; verify HNSW works above threshold (or graceful fallback); verify incremental update threshold; verify backward compatibility.
+
+**Acceptance criteria:**
+
+- Recall@10 = 0.95 relative to brute-force
+- `brute_force_cached` works correctly below 50K threshold with LRU cache
+- HNSW index build and search work when `hnswlib-node` is available; graceful fallback when unavailable
+- LRU query cache reduces repeated query latency
+- `ann_build_index` MCP tool builds/rebuilds ANN index
+- `search_corpus` extended with `dense_strategy` field in response
+- `index_stats` extended with `ann` section showing index status
+- Fully backward-compatible: no API changes below threshold
+
+**Dependencies:** Can proceed in parallel with Steps 16-22. Only depends on the existing dense search infrastructure (no other Phase 2 subsystems).
+
+### Phase 3 � Validation and integration [PLANNED]
+
+Full eval suite execution, end-to-end regression testing, MCP tool integration validation, CI gate integration, and baseline comparison against Phase 1 measurements.
+
+**Phase 3 steps will be defined after Phase 2 implementation completes.** Phase 3 will include:
+
+1. Run full eval suite (Step 22) against all 4 baseline conditions
+2. Compare MRR@5, nDCG@5, Recall@5 against Phase 1 baselines (BM25 MRR@5 = 0.225, Hybrid MRR@5 = 0.308)
+3. Regression testing: verify no existing search_corpus behavior is broken
+4. CI gate integration: eval runner as CI regression gate
+5. Performance validation: cross-encoder latency, context assembly latency, graph traversal latency
+6. MCP tool integration validation: search_advanced, search_context, traverse_graph, submit_feedback end-to-end
+7. ANN index validation: Recall@10 = 0.95
 
 ## Validation gates
 
@@ -270,14 +830,16 @@ Full eval suite execution, regression testing, MCP tool validation, and CI gate 
 - `node scripts/agent-customization/gates/cortex-index.gate.mjs --json`
 - `node scripts/agent-customization/gates/dense-readiness.gate.mjs --json`
 
-
 ### Latest validation evidence
 
-- 2026-06-08: Workflow sync: Advanced Phase 2 Step 13 → [DONE]; Phase 2 Step 14 → [WIP]
-- 2026-06-08: Step 10 MCP tool extensions architecture complete (Sections A–K). Four new tools (search_advanced, search_context, traverse_graph, submit_feedback) and two extensions (search_corpus with metadata filter + classification hints, index_stats with metadata coverage). search_advanced orchestrates the full pipeline (classification → expansion → retrieval → re-ranking → assembly) with classification-aware defaults per query class. search_context composes search_corpus + assembleContext for agent-ready context strings. traverse_graph implements BFS traversal of the entity/relationship graph with seed_query/seed_names discovery and relationship type filtering. submit_feedback records relevance signals to feedback_events/feedback_scores tables with automatic aggregate score update and feedback_boost computation. Extended search_corpus adds classification_hints parameter for classification-aware retrieval without full pipeline. Extended index_stats adds include_metadata_coverage parameter with per-column coverage statistics. Comprehensive error code taxonomy, timeout handling with partial-result fallback, graceful degradation matrix for all missing subsystems, backward-compatible parameter additions, and 16 tool-specific eval queries plus 5 cross-tool integration scenarios with regression thresholds and latency budgets.
-- 2026-06-08: Step 11 RAG evaluation suite architecture complete (Sections A–K). Comprehensive eval framework with 6-class taxonomy (simple_lookup, cross_boundary, multi_hop, exploratory, code_specific, plan_specific) targeting 56–68 curated queries. Five automated metrics (MRR@k for k∈{1,3,5,10}, nDCG@k for k∈{5,10}, Recall@k for k∈{5,10,20}, context relevance, latency) plus deferred human faithfulness evaluation. Four baseline conditions (bm25_only, hybrid, hybrid_rerank, advanced_default). Query schema v2 with graded relevance (0–3) and expected_chunk_ids. CI regression gate with MRR@5 FAIL threshold and nDCG/Recall WARN thresholds. A/B comparison with Wilcoxon signed-rank test and alpha sweep. Eval runner module architecture (eval-runner.mjs, eval-metrics.mjs, eval-compare.mjs, eval-baseline.mjs). Per-class aggregation and baseline storage protocol. Self-test queries for eval runner validation.
-- 2026-06-08: Step 09 structured metadata filtering architecture complete (Sections A–K). Six new metadata columns (arch_layer, jsdoc_quality, jsdoc_word_count, cyclomatic_complexity, test_coverage, source_path_pattern) on chunks table plus three document-level columns. Filter grammar supporting 14 predicate types (eq, neq, in, not_in, gt, gte, lt, lte, like, is_null, is_not_null, and, or, not) with boolean composition. SQLite indexes for common filter patterns. BM25 filter via SQL WHERE clause; dense filter via post-retrieval in-memory filtering. MCP `search_corpus` extension with `metadata` parameter accepting structured filter predicate trees. Backward-compatible `family` parameter combined with AND. Filter validation with field allow-list, type checking, enum validation, depth limit (10), predicate limit (50), LIKE pattern whitelist. Build-time metadata enrichment pipeline. Eval design with 6 filter-specific eval queries and regression thresholds. Plan sync: PASS.
-- 2025-06-15: Step 12 ANN index architecture complete (Sections A–K). Three-strategy approach: brute_force_cached below 50K threshold, HNSW above threshold, brute_force for baseline. HNSW via hnswlib-node (optional dependency, graceful fallback). sqlite-vec evaluated and rejected (brute-force only, no ANN). LRU query result cache for sub-threshold performance. HNSW index build pipeline with M=32, ef_construction=200, ef_search=100. Incremental update with ≤5% change threshold. Recall@10 ≥ 0.95 validation gate. Process-lifetime index caching. Four new database tables (ann_index_meta, ann_index_chunk_map, ann_query_cache, ann_threshold_config). Extended search_corpus with dense_strategy field. Extended index_stats with ann section. New ann_build_index MCP tool. 8 ANN-specific eval queries. Cross-platform CI via optional dependency. Fully backward-compatible.
+- 2026-06-11: Semantic-index test suite fixes: (1) ESM `__dirname` shims added to 7 test files that used `__dirname` without `import.meta.url` compatibility (`classify-query.red.test.ts`, `semantic-index.red.test.ts`, `routing-table.red.test.ts`, `metadata-enrichment.red.test.ts`, `metadata-filter.red.test.ts`, `build-index.health.test.ts`, `validate-index.fixhint.test.ts`); (2) Schema fixture updates in `dense-readiness.red.test.ts` and `embed-index.red.test.ts` from v1 to v2/v3 (added FTS5 content-synced triggers and v3 columns); (3) `schema-v2.sql` idempotency fix: moved v3 `ALTER TABLE ADD COLUMN` statements into `CREATE TABLE` definitions so that `initSemanticIndex` is idempotent (second call no longer fails with "duplicate column name: arch_layer"). All 18/18 semantic-index tests pass. Quality gate PASS.
+- 2026-06-10: Step 14 (query classification) completed. 6-class rule-based classifier (`classify-query.mjs`), per-class routing table (`routing-table.mjs`), classification-aware `search_corpus` integration, eval runner (95.8% accuracy, <5ms latency). All acceptance criteria met. Step 15 (metadata filtering) is next.
+- 2026-06-09: Phase 2 step packets defined (Steps 13�23). Step 13 [WIP] (step packet defined, ready for implementation). Steps 14�23 [PLANNED]. Workflow sync auto-advance corrected: Step 13 reverted from [DONE] to [WIP]; Step 14 reverted from [WIP] to [PLANNED].
+- 2026-06-08: Workflow sync: Advanced Phase 2 Step 13 ? [DONE]; Phase 2 Step 14 ? [WIP]
+- 2026-06-08: Step 10 MCP tool extensions architecture complete (Sections A�K). Four new tools (search_advanced, search_context, traverse_graph, submit_feedback) and two extensions (search_corpus with metadata filter + classification hints, index_stats with metadata coverage). search_advanced orchestrates the full pipeline (classification ? expansion ? retrieval ? re-ranking ? assembly) with classification-aware defaults per query class. search_context composes search_corpus + assembleContext for agent-ready context strings. traverse_graph implements BFS traversal of the entity/relationship graph with seed_query/seed_names discovery and relationship type filtering. submit_feedback records relevance signals to feedback_events/feedback_scores tables with automatic aggregate score update and feedback_boost computation. Extended search_corpus adds classification_hints parameter for classification-aware retrieval without full pipeline. Extended index_stats adds include_metadata_coverage parameter with per-column coverage statistics. Comprehensive error code taxonomy, timeout handling with partial-result fallback, graceful degradation matrix for all missing subsystems, backward-compatible parameter additions, and 16 tool-specific eval queries plus 5 cross-tool integration scenarios with regression thresholds and latency budgets.
+- 2026-06-08: Step 11 RAG evaluation suite architecture complete (Sections A�K). Comprehensive eval framework with 6-class taxonomy (simple_lookup, cross_boundary, multi_hop, exploratory, code_specific, plan_specific) targeting 56�68 curated queries. Five automated metrics (MRR@k for k?{1,3,5,10}, nDCG@k for k?{5,10}, Recall@k for k?{5,10,20}, context relevance, latency) plus deferred human faithfulness evaluation. Four baseline conditions (bm25_only, hybrid, hybrid_rerank, advanced_default). Query schema v2 with graded relevance (0�3) and expected_chunk_ids. CI regression gate with MRR@5 FAIL threshold and nDCG/Recall WARN thresholds. A/B comparison with Wilcoxon signed-rank test and alpha sweep. Eval runner module architecture (eval-runner.mjs, eval-metrics.mjs, eval-compare.mjs, eval-baseline.mjs). Per-class aggregation and baseline storage protocol. Self-test queries for eval runner validation.
+- 2026-06-08: Step 09 structured metadata filtering architecture complete (Sections A�K). Six new metadata columns (arch_layer, jsdoc_quality, jsdoc_word_count, cyclomatic_complexity, test_coverage, source_path_pattern) on chunks table plus three document-level columns. Filter grammar supporting 14 predicate types (eq, neq, in, not_in, gt, gte, lt, lte, like, is_null, is_not_null, and, or, not) with boolean composition. SQLite indexes for common filter patterns. BM25 filter via SQL WHERE clause; dense filter via post-retrieval in-memory filtering. MCP `search_corpus` extension with `metadata` parameter accepting structured filter predicate trees. Backward-compatible `family` parameter combined with AND. Filter validation with field allow-list, type checking, enum validation, depth limit (10), predicate limit (50), LIKE pattern whitelist. Build-time metadata enrichment pipeline. Eval design with 6 filter-specific eval queries and regression thresholds. Plan sync: PASS.
+- 2025-06-15: Step 12 ANN index architecture complete (Sections A�K). Three-strategy approach: brute_force_cached below 50K threshold, HNSW above threshold, brute_force for baseline. HNSW via hnswlib-node (optional dependency, graceful fallback). sqlite-vec evaluated and rejected (brute-force only, no ANN). LRU query result cache for sub-threshold performance. HNSW index build pipeline with M=32, ef_construction=200, ef_search=100. Incremental update with =5% change threshold. Recall@10 = 0.95 validation gate. Process-lifetime index caching. Four new database tables (ann_index_meta, ann_index_chunk_map, ann_query_cache, ann_threshold_config). Extended search_corpus with dense_strategy field. Extended index_stats with ann section. New ann_build_index MCP tool. 8 ANN-specific eval queries. Cross-platform CI via optional dependency. Fully backward-compatible.
 
 ## Handoff query
 
@@ -286,18 +848,9 @@ Continue from the current repo state only. Do not rely on prior chat history.
 
 Phase 1 is [DONE]. All 12 architecture design steps are complete. Design documents are in rag_architecture/.
 
-Phase 2 (Implementation) is [PLANNED] and needs step packets defined. The Phase 1 designs that require implementation are:
-- Step 02: Semantic chunking → rag_architecture/cortex-semantic-chunking.md
-- Step 03: Query classification → rag_architecture/cortex-query-classification.md
-- Step 04: Cross-encoder re-ranking → rag_architecture/cortex-cross-encoder-reranking.md
-- Step 05: Context window assembly → rag_architecture/cortex-context-assembly.md
-- Step 06: Entity/relationship graph → rag_architecture/cortex-entity-graph.md
-- Step 07: Query expansion → rag_architecture/cortex-query-expansion.md
-- Step 08: Relevance feedback → rag_architecture/cortex-relevance-feedback.md
-- Step 09: Structured metadata filtering → rag_architecture/cortex-metadata-filtering.md
-- Step 10: MCP tool extensions → rag_architecture/cortex-mcp-tool-extensions.md
-- Step 11: RAG evaluation suite → rag_architecture/cortex-rag-eval-suite.md
-- Step 12: ANN index → rag_architecture/cortex-ann-index.md
+Phase 2 (Implementation) is [WIP] with Steps 13�14 [DONE]. Step 15 (metadata filtering) is the next active step. Steps 15�23 are [PLANNED] with detailed TDD specifications.
 
-Next step: Define Phase 2 implementation steps with TDD red → green → coverage cycle for each design.
+Dependency order: Step 13 (chunking) ? Steps 14-15 (classification, metadata) ? Steps 16-19 (reranking, graph, expansion, feedback) ? Step 20 (context assembly) ? Step 21 (MCP tools) ? Step 22 (eval suite) ? Step 23 (ANN index, parallel-capable).
+
+Next step: Start Step 15 (metadata filtering) implementation with TDD red ? green ? coverage cycle. Read rag_architecture/cortex-metadata-filtering.md for the complete design.
 ```

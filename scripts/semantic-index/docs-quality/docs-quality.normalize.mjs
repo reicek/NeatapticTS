@@ -1,11 +1,17 @@
 import crypto from 'node:crypto';
 
 const LEGACY_SCOPE_DIGEST_OVERRIDES = new Map([
-  ['paths|src/architecture/network.ts|src/neat.ts', 'd36d8aef57058f860ee0e6ff49fd2d34413806b0bafcbf4f818a4378515f7f53'],
+  [
+    'paths|src/architecture/network.ts|src/neat.ts',
+    'd36d8aef57058f860ee0e6ff49fd2d34413806b0bafcbf4f818a4378515f7f53',
+  ],
 ]);
 
 const LEGACY_SOURCE_DIGEST_OVERRIDES = new Map([
-  ['src/architecture/network.ts|src/neat.ts', '9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11'],
+  [
+    'src/architecture/network.ts|src/neat.ts',
+    '9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11',
+  ],
 ]);
 
 /**
@@ -22,7 +28,12 @@ export function normalizeDocsQualityEvidence(evidence) {
       numericValue: resolveNumericValue(entry),
       symbol: String(entry.symbol ?? ''),
     }))
-    .filter((entry) => entry.file.length > 0 && entry.issue.length > 0 && entry.symbol.length > 0)
+    .filter(
+      (entry) =>
+        entry.file.length > 0 &&
+        entry.issue.length > 0 &&
+        entry.symbol.length > 0,
+    )
     .toSorted(compareEvidenceRowsForPresentation);
 
   const dedupedRows = [];
@@ -45,12 +56,19 @@ export function normalizeDocsQualityEvidence(evidence) {
  */
 export function normalizeScopeInputAndDigest(config = {}) {
   const normalizedScopeType = config.scopeType === 'paths' ? 'paths' : 'src';
-  const normalizedScopeValue = normalizedScopeType === 'paths'
-    ? normalizePathList(config.scopeValue)
-    : ['src'];
+  const normalizedScopeValue =
+    normalizedScopeType === 'paths'
+      ? normalizePathList(config.scopeValue)
+      : ['src'];
   const scopeKey = `${normalizedScopeType}|${normalizedScopeValue.join('|')}`;
-  const scopeDigest = LEGACY_SCOPE_DIGEST_OVERRIDES.get(scopeKey)
-    ?? sha256Hex(JSON.stringify({ scopeType: normalizedScopeType, scopeValue: normalizedScopeValue }));
+  const scopeDigest =
+    LEGACY_SCOPE_DIGEST_OVERRIDES.get(scopeKey) ??
+    sha256Hex(
+      JSON.stringify({
+        scopeType: normalizedScopeType,
+        scopeValue: normalizedScopeValue,
+      }),
+    );
 
   return {
     scopeDigest,
@@ -68,8 +86,10 @@ export function normalizeScopeInputAndDigest(config = {}) {
 export function computeSourcePathsDigest(sourcePaths) {
   const normalizedSourcePaths = normalizePathList(sourcePaths);
   const digestKey = normalizedSourcePaths.join('|');
-  return LEGACY_SOURCE_DIGEST_OVERRIDES.get(digestKey)
-    ?? sha256Hex(JSON.stringify(normalizedSourcePaths));
+  return (
+    LEGACY_SOURCE_DIGEST_OVERRIDES.get(digestKey) ??
+    sha256Hex(JSON.stringify(normalizedSourcePaths))
+  );
 }
 
 /**
@@ -79,11 +99,19 @@ export function computeSourcePathsDigest(sourcePaths) {
  * @returns {string} Evidence digest.
  */
 export function computeNormalizedEvidenceDigest(canonicalEvidence) {
-  return sha256Hex(JSON.stringify((Array.isArray(canonicalEvidence) ? canonicalEvidence : []).toSorted(compareEvidenceRowsForDigest)));
+  return sha256Hex(
+    JSON.stringify(
+      (Array.isArray(canonicalEvidence) ? canonicalEvidence : []).toSorted(
+        compareEvidenceRowsForDigest,
+      ),
+    ),
+  );
 }
 
 function compareEvidenceRowsForPresentation(left, right) {
-  const severityComparison = resolveIssueSeverityRank(left.issue) - resolveIssueSeverityRank(right.issue);
+  const severityComparison =
+    resolveIssueSeverityRank(left.issue) -
+    resolveIssueSeverityRank(right.issue);
   if (severityComparison !== 0) return severityComparison;
 
   const numericComparison = right.numericValue - left.numericValue;
@@ -131,13 +159,17 @@ function normalizePathList(paths) {
 }
 
 function normalizePathValue(pathValue) {
-  return String(pathValue ?? '').trim().replaceAll('\\', '/');
+  return String(pathValue ?? '')
+    .trim()
+    .replaceAll('\\', '/');
 }
 
 function resolveNumericValue(entry) {
-  if (Number.isFinite(Number(entry.numericValue))) return Number(entry.numericValue);
+  if (Number.isFinite(Number(entry.numericValue)))
+    return Number(entry.numericValue);
   if (Number.isFinite(Number(entry.words))) return Number(entry.words);
-  if (Number.isFinite(Number(entry.complexity))) return Number(entry.complexity);
+  if (Number.isFinite(Number(entry.complexity)))
+    return Number(entry.complexity);
   return 0;
 }
 

@@ -22,7 +22,8 @@ const result = {
     gate: 'green-validation-evidence',
     tier: 2,
     agent: '05-green-testing',
-    check: 'Per-check result table present; no check marked PASS without evidence',
+    check:
+      'Per-check result table present; no check marked PASS without evidence',
     mode: 'standalone-descriptor',
   },
   fixHint:

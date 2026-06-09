@@ -3,7 +3,16 @@ description: 'Use as a hidden specialist for inventorying NeatapticTS skills and
 name: 'skill-inventory-auditor'
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['agent-inventory-audit']
@@ -24,7 +33,9 @@ You use `agent-inventory-audit` and script tools under `scripts/agent-customizat
 - Prefer JSON inventory and validation scripts under `scripts/agent-customization/` when available.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `agent-graph` — after inventorying agents or skills
 - `routing-table-freshness` — after identifying drift or visibility gaps
 

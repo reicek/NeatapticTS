@@ -3,7 +3,15 @@ description: 'Use when documentation needs a concise example, JSDoc usage snippe
 name: docs-example-writer
 tier: 4
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['educational-docs']
@@ -24,10 +32,13 @@ You write small documentation examples and JSDoc snippets aligned with the curre
 - DO NOT include plan language, roadmap references, or before/after framing in examples.
 
 ## Flow Selection
+
 - Use `06.jsdoc-update` when updating JSDoc examples; use `06.example-publication` when publishing docs examples.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for documentation context
 
 ## Default Flow

@@ -87,7 +87,9 @@ function parseCliOptions(argv) {
 
   return {
     ...base,
-    windowDays: windowArg ? Math.max(1, parseInt(windowArg.slice('--window='.length), 10) || 7) : 7,
+    windowDays: windowArg
+      ? Math.max(1, parseInt(windowArg.slice('--window='.length), 10) || 7)
+      : 7,
     dbPath: dbArg ? dbArg.slice('--db='.length) : null,
   };
 }
@@ -99,7 +101,9 @@ function parseCliOptions(argv) {
  */
 async function runWorkflowGapAudit(opts) {
   const reportDate = new Date().toISOString();
-  const cutoffDate = new Date(Date.now() - opts.windowDays * 24 * 60 * 60 * 1000).toISOString();
+  const cutoffDate = new Date(
+    Date.now() - opts.windowDays * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   // Step 1: Load and parse the gate exception log.
   const allEvents = await loadLearningLog();
@@ -114,16 +118,24 @@ async function runWorkflowGapAudit(opts) {
   const escalationCount = countEscalations(realEvents);
 
   // Step 4b: Aggregate runtime enforcement evidence within the window.
-  const runtimeEnforcementEvidence = aggregateRuntimeEnforcementEvidence(realEvents);
+  const runtimeEnforcementEvidence =
+    aggregateRuntimeEnforcementEvidence(realEvents);
 
   // Step 5: Load session store data (graceful fallback when unavailable or empty).
-  const sessionData = await loadSessionStoreData(opts.dbPath, cutoffDate, opts.windowDays);
+  const sessionData = await loadSessionStoreData(
+    opts.dbPath,
+    cutoffDate,
+    opts.windowDays,
+  );
 
   // Step 6: Load all registered flow IDs from .github/flows/*.flow.yml.
   const allFlowIds = await loadFlowIds();
 
   // Step 7: Compute underused flows against session summaries.
-  const underusedFlows = computeUnderusedFlows(allFlowIds, sessionData.recentSummaries);
+  const underusedFlows = computeUnderusedFlows(
+    allFlowIds,
+    sessionData.recentSummaries,
+  );
 
   // Step 8: Build recommended actions from aggregation results.
   const recommendedActions = buildRecommendedActions({
@@ -189,7 +201,8 @@ async function loadLearningLog() {
 function filterTestArtifacts(events) {
   return events.filter((event) => {
     if (TEST_SESSION_IDS.has(event.sessionId)) return false;
-    if (TEST_EVIDENCE_REASONS.has(event.exceptionEvidence?.reason)) return false;
+    if (TEST_EVIDENCE_REASONS.has(event.exceptionEvidence?.reason))
+      return false;
     return true;
   });
 }
@@ -210,7 +223,11 @@ function aggregateGateFailures(realEvents) {
     const agent = event.agent ?? 'unknown';
 
     if (!failureMap.has(gateId)) {
-      failureMap.set(gateId, { gateId, failureCount: 0, affectedAgents: new Set() });
+      failureMap.set(gateId, {
+        gateId,
+        failureCount: 0,
+        affectedAgents: new Set(),
+      });
     }
     const entry = failureMap.get(gateId);
     entry.failureCount += 1;
@@ -236,7 +253,8 @@ function aggregateGateFailures(realEvents) {
 function countEscalations(realEvents) {
   return realEvents.filter(
     (event) =>
-      event.category === 'gate-escalation' || event.eventType === 'gate-escalation',
+      event.category === 'gate-escalation' ||
+      event.eventType === 'gate-escalation',
   ).length;
 }
 
@@ -253,12 +271,18 @@ function aggregateRuntimeEnforcementEvidence(realEvents) {
   let blockedActions = 0;
 
   for (const event of realEvents) {
-    if (event.eventType === 'runtime-action-prepass' && typeof event.actionId === 'string') {
+    if (
+      event.eventType === 'runtime-action-prepass' &&
+      typeof event.actionId === 'string'
+    ) {
       preActionPasses.add(event.actionId);
       continue;
     }
 
-    if (event.eventType === 'runtime-action-postpass' && typeof event.actionId === 'string') {
+    if (
+      event.eventType === 'runtime-action-postpass' &&
+      typeof event.actionId === 'string'
+    ) {
       postActionPasses.add(event.actionId);
       continue;
     }
@@ -303,7 +327,11 @@ function aggregateRuntimeEnforcementEvidence(realEvents) {
  * @returns {Promise<{ agentSessionCounts: object[], driftSessions: object[], recentSummaries: string[] }>}
  */
 async function loadSessionStoreData(dbPath, cutoffDate, windowDays) {
-  const emptyResult = { agentSessionCounts: [], driftSessions: [], recentSummaries: [] };
+  const emptyResult = {
+    agentSessionCounts: [],
+    driftSessions: [],
+    recentSummaries: [],
+  };
 
   if (!dbPath) {
     return emptyResult;
@@ -394,7 +422,8 @@ async function loadFlowIds() {
 
   const flowIds = [];
   for (const filename of entries) {
-    if (!filename.endsWith('.flow.yml') || filename === 'flow.schema.yml') continue;
+    if (!filename.endsWith('.flow.yml') || filename === 'flow.schema.yml')
+      continue;
     // Derive flow ID from filename: e.g., `04.scoped-fix.flow.yml` → `04.scoped-fix`
     flowIds.push(filename.replace(/\.flow\.yml$/, ''));
   }
@@ -411,7 +440,9 @@ async function loadFlowIds() {
  */
 function computeUnderusedFlows(allFlowIds, recentSummaries) {
   return allFlowIds.map((flowId) => {
-    const mentionCount = recentSummaries.filter((summary) => summary.includes(flowId)).length;
+    const mentionCount = recentSummaries.filter((summary) =>
+      summary.includes(flowId),
+    ).length;
     return { flowId, mentionCount };
   });
 }
@@ -441,7 +472,9 @@ function buildRecommendedActions({
     runtimeEnforcementEvidence.missingPostActionPairs.length === 0 &&
     runtimeEnforcementEvidence.postWithoutPrePairs.length === 0
   ) {
-    actions.push('No real gate failures or escalations detected in this window — gate health is good.');
+    actions.push(
+      'No real gate failures or escalations detected in this window — gate health is good.',
+    );
   }
 
   for (const entry of gateFailureFrequency.slice(0, 3)) {
@@ -480,7 +513,9 @@ function buildRecommendedActions({
     );
   }
 
-  const zeroMentionFlows = underusedFlows.filter((flow) => flow.mentionCount === 0);
+  const zeroMentionFlows = underusedFlows.filter(
+    (flow) => flow.mentionCount === 0,
+  );
   if (zeroMentionFlows.length > 0 && underusedFlows.length > 0) {
     const sample = zeroMentionFlows
       .slice(0, 5)
@@ -506,12 +541,22 @@ function buildRecommendedActions({
 function printHumanReport(report) {
   console.log(`\nWorkflow Gap Audit — ${report.reportDate}`);
   console.log(`Window: ${report.windowDays} day(s)\n`);
-  console.log(`Gate failures (real, filtered):  ${report.gateFailureFrequency.length} gate(s) with failures`);
+  console.log(
+    `Gate failures (real, filtered):  ${report.gateFailureFrequency.length} gate(s) with failures`,
+  );
   console.log(`Escalation count:                ${report.escalationCount}`);
-  console.log(`Runtime proof mismatches:        ${report.runtimeEnforcementEvidence.proofMismatches}`);
-  console.log(`Missing post-action pairs:       ${report.runtimeEnforcementEvidence.missingPostActionPairs.length}`);
-  console.log(`Agent drift sessions:            ${report.agentDriftSessions.length}`);
-  console.log(`Top failing gate:                ${report.topFailingGate ?? '(none)'}`);
+  console.log(
+    `Runtime proof mismatches:        ${report.runtimeEnforcementEvidence.proofMismatches}`,
+  );
+  console.log(
+    `Missing post-action pairs:       ${report.runtimeEnforcementEvidence.missingPostActionPairs.length}`,
+  );
+  console.log(
+    `Agent drift sessions:            ${report.agentDriftSessions.length}`,
+  );
+  console.log(
+    `Top failing gate:                ${report.topFailingGate ?? '(none)'}`,
+  );
   console.log(`\nRecommended actions:`);
   for (const action of report.recommendedActions) {
     console.log(`  - ${action}`);

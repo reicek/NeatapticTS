@@ -4,9 +4,21 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const RUNTIME_ENFORCEMENT_MODULE_URL = pathToFileURL(path.join(REPO_ROOT, 'scripts', 'agent-customization', 'enforcement', 'runtime-enforcement.mjs')).href;
+const RUNTIME_ENFORCEMENT_MODULE_URL = pathToFileURL(
+  path.join(
+    REPO_ROOT,
+    'scripts',
+    'agent-customization',
+    'enforcement',
+    'runtime-enforcement.mjs',
+  ),
+).href;
 const TEST_SESSION_ID = 'runtime-enforcement-test-session';
-const TEST_CONTEXT_PATH = path.join(REPO_ROOT, 'data', `hook-context-${TEST_SESSION_ID}.json`);
+const TEST_CONTEXT_PATH = path.join(
+  REPO_ROOT,
+  'data',
+  `hook-context-${TEST_SESSION_ID}.json`,
+);
 
 describe('runtime-enforcement.mjs', () => {
   afterEach(async () => {
@@ -15,19 +27,21 @@ describe('runtime-enforcement.mjs', () => {
 
   it('writes a prepared action carrier', async () => {
     const carrier = runRuntimeEnforcementEval([
-      `const preparedCarrier = await runtimeEnforcement.prepareRuntimeContext(${JSON.stringify({
-        sessionId: TEST_SESSION_ID,
-        flowId: '04.scoped-fix',
-        currentAgent: '04-implementing',
-        delegatorChain: ['01-planning', '04-implementing'],
-        requiredSkills: ['plan-alignment'],
-        requiredSpecialists: [],
-        planPath: 'plans/mcp-active-binding.plans.md',
-        activePhase: '1',
-        activeStep: '1',
-        allowedActionClass: 'write',
-        expectedToolName: 'apply_patch',
-      })});`,
+      `const preparedCarrier = await runtimeEnforcement.prepareRuntimeContext(${JSON.stringify(
+        {
+          sessionId: TEST_SESSION_ID,
+          flowId: '04.scoped-fix',
+          currentAgent: '04-implementing',
+          delegatorChain: ['01-planning', '04-implementing'],
+          requiredSkills: ['plan-alignment'],
+          requiredSpecialists: [],
+          planPath: 'plans/mcp-active-binding.plans.md',
+          activePhase: '1',
+          activeStep: '1',
+          allowedActionClass: 'write',
+          expectedToolName: 'apply_patch',
+        },
+      )});`,
       `const currentCarrier = await runtimeEnforcement.readRuntimeContext(${JSON.stringify(TEST_SESSION_ID)});`,
       'console.log(JSON.stringify(currentCarrier));',
     ]);
@@ -37,19 +51,21 @@ describe('runtime-enforcement.mjs', () => {
 
   it('rejects mismatched expected tool names', async () => {
     const validationResult = runRuntimeEnforcementEval([
-      `const preparedCarrier = await runtimeEnforcement.prepareRuntimeContext(${JSON.stringify({
-        sessionId: TEST_SESSION_ID,
-        flowId: '04.scoped-fix',
-        currentAgent: '04-implementing',
-        delegatorChain: ['01-planning', '04-implementing'],
-        requiredSkills: ['plan-alignment'],
-        requiredSpecialists: [],
-        planPath: 'plans/mcp-active-binding.plans.md',
-        activePhase: '1',
-        activeStep: '1',
-        allowedActionClass: 'write',
-        expectedToolName: 'apply_patch',
-      })});`,
+      `const preparedCarrier = await runtimeEnforcement.prepareRuntimeContext(${JSON.stringify(
+        {
+          sessionId: TEST_SESSION_ID,
+          flowId: '04.scoped-fix',
+          currentAgent: '04-implementing',
+          delegatorChain: ['01-planning', '04-implementing'],
+          requiredSkills: ['plan-alignment'],
+          requiredSpecialists: [],
+          planPath: 'plans/mcp-active-binding.plans.md',
+          activePhase: '1',
+          activeStep: '1',
+          allowedActionClass: 'write',
+          expectedToolName: 'apply_patch',
+        },
+      )});`,
       `const validation = runtimeEnforcement.validatePreparedRuntimeContext({
         carrier: preparedCarrier,
         toolName: 'edit',
@@ -63,11 +79,13 @@ describe('runtime-enforcement.mjs', () => {
 
   it('describes a recovery hint when a strict carrier is missing', () => {
     const diagnosisResult = runRuntimeEnforcementEval([
-      `const diagnosis = runtimeEnforcement.diagnosePreparedRuntimeContext(${JSON.stringify({
-        sessionId: TEST_SESSION_ID,
-        toolName: 'powershell',
-        planPath: 'plans/mcp-active-binding.plans.md',
-      })});`,
+      `const diagnosis = runtimeEnforcement.diagnosePreparedRuntimeContext(${JSON.stringify(
+        {
+          sessionId: TEST_SESSION_ID,
+          toolName: 'powershell',
+          planPath: 'plans/mcp-active-binding.plans.md',
+        },
+      )});`,
       'console.log(JSON.stringify(diagnosis));',
     ]);
 
@@ -84,19 +102,21 @@ describe('runtime-enforcement.mjs', () => {
 
   it('clears the prepared action after cleanup', async () => {
     const clearedCarrier = runRuntimeEnforcementEval([
-      `const preparedCarrier = await runtimeEnforcement.prepareRuntimeContext(${JSON.stringify({
-        sessionId: TEST_SESSION_ID,
-        flowId: '04.scoped-fix',
-        currentAgent: '04-implementing',
-        delegatorChain: ['01-planning', '04-implementing'],
-        requiredSkills: ['plan-alignment'],
-        requiredSpecialists: [],
-        planPath: 'plans/mcp-active-binding.plans.md',
-        activePhase: '1',
-        activeStep: '1',
-        allowedActionClass: 'write',
-        expectedToolName: 'apply_patch',
-      })});`,
+      `const preparedCarrier = await runtimeEnforcement.prepareRuntimeContext(${JSON.stringify(
+        {
+          sessionId: TEST_SESSION_ID,
+          flowId: '04.scoped-fix',
+          currentAgent: '04-implementing',
+          delegatorChain: ['01-planning', '04-implementing'],
+          requiredSkills: ['plan-alignment'],
+          requiredSpecialists: [],
+          planPath: 'plans/mcp-active-binding.plans.md',
+          activePhase: '1',
+          activeStep: '1',
+          allowedActionClass: 'write',
+          expectedToolName: 'apply_patch',
+        },
+      )});`,
       `await runtimeEnforcement.clearPreparedRuntimeContext(${JSON.stringify(TEST_SESSION_ID)}, preparedCarrier.preparedAction?.actionId ?? null);`,
       `const currentCarrier = await runtimeEnforcement.readRuntimeContext(${JSON.stringify(TEST_SESSION_ID)});`,
       'console.log(JSON.stringify(currentCarrier));',
@@ -107,23 +127,25 @@ describe('runtime-enforcement.mjs', () => {
 
   it('counts only the trailing gate failures after a pass reset', () => {
     const failureCount = runRuntimeEnforcementEval([
-      `const failureCount = runtimeEnforcement.countTrailingGateFailures(${JSON.stringify([
-        {
-          eventType: 'gate-exception',
-          sessionId: TEST_SESSION_ID,
-          gateId: 'first',
-        },
-        {
-          eventType: 'runtime-action-prepass',
-          sessionId: TEST_SESSION_ID,
-          actionId: 'reset-action',
-        },
-        {
-          eventType: 'gate-exception',
-          sessionId: TEST_SESSION_ID,
-          gateId: 'second',
-        },
-      ])}, ${JSON.stringify(TEST_SESSION_ID)});`,
+      `const failureCount = runtimeEnforcement.countTrailingGateFailures(${JSON.stringify(
+        [
+          {
+            eventType: 'gate-exception',
+            sessionId: TEST_SESSION_ID,
+            gateId: 'first',
+          },
+          {
+            eventType: 'runtime-action-prepass',
+            sessionId: TEST_SESSION_ID,
+            actionId: 'reset-action',
+          },
+          {
+            eventType: 'gate-exception',
+            sessionId: TEST_SESSION_ID,
+            gateId: 'second',
+          },
+        ],
+      )}, ${JSON.stringify(TEST_SESSION_ID)});`,
       'console.log(JSON.stringify(failureCount));',
     ]);
 

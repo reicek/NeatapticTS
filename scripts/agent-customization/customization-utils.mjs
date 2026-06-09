@@ -51,9 +51,12 @@ export function parseArgs(argv) {
     if (rawArg === '--json') options.json = true;
     else if (rawArg === '--strict') options.strict = true;
     else if (rawArg === '--help' || rawArg === '-h') options.help = true;
-    else if (rawArg.startsWith('--contract=')) options.contract = rawArg.slice('--contract='.length);
-    else if (rawArg.startsWith('--input=')) options.input = rawArg.slice('--input='.length);
-    else if (rawArg.startsWith('--plan=')) options.plan = rawArg.slice('--plan='.length);
+    else if (rawArg.startsWith('--contract='))
+      options.contract = rawArg.slice('--contract='.length);
+    else if (rawArg.startsWith('--input='))
+      options.input = rawArg.slice('--input='.length);
+    else if (rawArg.startsWith('--plan='))
+      options.plan = rawArg.slice('--plan='.length);
   }
 
   return options;
@@ -70,7 +73,10 @@ export function parseArgs(argv) {
 export function printUsage({ title, usage, options = [] }) {
   const optionLines = [
     ['--json', 'Write machine-readable JSON to stdout.'],
-    ['--strict', 'Enforce the final target architecture rather than auditing the current state.'],
+    [
+      '--strict',
+      'Enforce the final target architecture rather than auditing the current state.',
+    ],
     ['--help, -h', 'Show this help text.'],
     ...options,
   ];
@@ -98,9 +104,13 @@ export function writeReport(report, { json }) {
     return;
   }
 
-  console.log(report.summaryText ?? `${report.ok ? 'PASS' : 'FAIL'} ${report.name}`);
+  console.log(
+    report.summaryText ?? `${report.ok ? 'PASS' : 'FAIL'} ${report.name}`,
+  );
   for (const issue of report.issues ?? []) {
-    console.log(`- ${issue.severity.toUpperCase()}: ${issue.path}: ${issue.message}`);
+    console.log(
+      `- ${issue.severity.toUpperCase()}: ${issue.path}: ${issue.message}`,
+    );
   }
 }
 
@@ -134,7 +144,8 @@ export async function listMarkdownFiles(rootRelativePath, predicate) {
       }
 
       const relativePath = normalizePath(path.relative(repoRoot, absolutePath));
-      if (entry.isFile() && predicate(relativePath)) discovered.push(relativePath);
+      if (entry.isFile() && predicate(relativePath))
+        discovered.push(relativePath);
     }
   }
 
@@ -186,17 +197,23 @@ export function parseFrontmatter(text, relativePath) {
       data: {},
       body: normalized,
       raw: '',
-      issues: [issue('error', relativePath, 'Missing opening YAML frontmatter fence.')],
+      issues: [
+        issue('error', relativePath, 'Missing opening YAML frontmatter fence.'),
+      ],
     };
   }
 
-  const endIndex = lines.findIndex((line, index) => index > 0 && line === '---');
+  const endIndex = lines.findIndex(
+    (line, index) => index > 0 && line === '---',
+  );
   if (endIndex === -1) {
     return {
       data: {},
       body: normalized,
       raw: lines.slice(1).join('\n'),
-      issues: [issue('error', relativePath, 'Missing closing YAML frontmatter fence.')],
+      issues: [
+        issue('error', relativePath, 'Missing closing YAML frontmatter fence.'),
+      ],
     };
   }
 
@@ -211,7 +228,13 @@ export function parseFrontmatter(text, relativePath) {
 
     const match = /^(?<key>[A-Za-z0-9_-]+):(?<value>.*)$/.exec(line);
     if (!match?.groups) {
-      issues.push(issue('warning', relativePath, `Could not parse frontmatter line: ${line}`));
+      issues.push(
+        issue(
+          'warning',
+          relativePath,
+          `Could not parse frontmatter line: ${line}`,
+        ),
+      );
       continue;
     }
 
@@ -301,8 +324,12 @@ export function issue(severity, relativePath, message) {
  * @returns Report with `ok`, `counts` (`errors`/`warnings`), `summaryText`, and `issues`.
  */
 export function summarizeIssues(name, issues) {
-  const errors = issues.filter((currentIssue) => currentIssue.severity === 'error').length;
-  const warnings = issues.filter((currentIssue) => currentIssue.severity === 'warning').length;
+  const errors = issues.filter(
+    (currentIssue) => currentIssue.severity === 'error',
+  ).length;
+  const warnings = issues.filter(
+    (currentIssue) => currentIssue.severity === 'warning',
+  ).length;
   return {
     name,
     ok: errors === 0,
@@ -322,7 +349,9 @@ export function summarizeIssues(name, issues) {
  * @returns Array of relative link target strings starting with `'./'`.
  */
 export function extractMarkdownLinks(body) {
-  return [...body.matchAll(/\[[^\]]+]\((\.\/[^)]+)\)/g)].map((match) => match[1]);
+  return [...body.matchAll(/\[[^\]]+]\((\.\/[^)]+)\)/g)].map(
+    (match) => match[1],
+  );
 }
 
 /**
@@ -335,5 +364,8 @@ export function extractMarkdownLinks(body) {
  * @returns `'DONE'`, `'WIP'`, `'PLANNED'`, or `null` when the pattern is absent.
  */
 export function extractStatus(text) {
-  return /\*\*Status:\*\* \[(?<status>DONE|WIP|PLANNED)\]/.exec(text)?.groups?.status ?? null;
+  return (
+    /\*\*Status:\*\* \[(?<status>DONE|WIP|PLANNED)\]/.exec(text)?.groups
+      ?.status ?? null
+  );
 }

@@ -3,7 +3,16 @@ description: 'Use when mapping NGE benchmark methodology such as predator/prey c
 name: nge-benchmark-scout
 tier: 3
 model: 'glm-5.1:cloud (ollama)'
-tools: [read, search, execute, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['nge-benchmark-workflow']
@@ -26,7 +35,9 @@ Locate the exact Phase 7 benchmark or demo-harness boundary in the repo, identif
 - This agent is intentionally thin. Durable policy lives in companion skill `nge-benchmark-workflow`.
 
 ## Gate Enforcement
+
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
 - `cortex-index` — before searching for NGE benchmark documents
 
 ## Approach
