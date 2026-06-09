@@ -72,7 +72,6 @@ async function runLearningEventGate() {
       path: LEARNING_LOG_PATH,
       eventCount: events.length,
       rawLineCount: rawLines.length,
-      latestTimestamp: events.at(-1)?.timestamp ?? null,
       categories,
     },
     fixHint: pass

@@ -20,19 +20,16 @@ describe('workflow-gap-audit runtime enforcement evidence', () => {
       LEARNING_LOG_PATH,
       [
         JSON.stringify({
-          timestamp: '2026-06-03T00:00:00.000Z',
           eventType: 'runtime-action-prepass',
           sessionId: 'runtime-audit-test-session',
           actionId: 'action-pre-only',
         }),
         JSON.stringify({
-          timestamp: '2026-06-03T00:01:00.000Z',
           eventType: 'runtime-action-postpass',
           sessionId: 'runtime-audit-test-session',
           actionId: 'action-post-only',
         }),
         JSON.stringify({
-          timestamp: '2026-06-03T00:02:00.000Z',
           eventType: 'runtime-proof-mismatch',
           sessionId: 'runtime-audit-test-session',
           reason: 'Missing runtime enforcement context carrier.',

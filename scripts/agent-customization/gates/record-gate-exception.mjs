@@ -6,7 +6,7 @@
  * record to stdout. Optionally appends the record to the learning log as a JSONL event.
  *
  * Output contract:
- *   { timestamp: ISO-8601 string, "gate-id": string, "exception-evidence": object,
+ *   { "gate-id": string, "exception-evidence": object,
  *     agent: string, "session-id": string }
  *
  * Usage:
@@ -97,7 +97,7 @@ function parseExceptionArgs(argv) {
 /**
  * Build the structured gate-exception record from parsed arguments.
  * @param {{ gateId: string, agent: string, sessionId: string, evidence: object }} args
- * @returns {{ timestamp: string, "gate-id": string, "exception-evidence": object, agent: string, "session-id": string }}
+ * @returns {{ "gate-id": string, "exception-evidence": object, agent: string, "session-id": string }}
  */
 function buildExceptionRecord(args) {
   const gateId = requireNonEmptyField(args.gateId, 'gate-id');
@@ -105,7 +105,6 @@ function buildExceptionRecord(args) {
   const sessionId = requireNonEmptyField(args.sessionId, 'session-id');
 
   return {
-    timestamp: new Date().toISOString(),
     'gate-id': gateId,
     'exception-evidence': args.evidence,
     agent,
@@ -129,7 +128,6 @@ function requireNonEmptyField(value, fieldName) {
  */
 async function appendLearningEvent(record) {
   const event = JSON.stringify({
-    timestamp: record.timestamp,
     eventType: 'gate-exception',
     category: 'gate-exception',
     gateId: record['gate-id'],
@@ -153,7 +151,6 @@ async function appendEscalationEventIfNeeded(record) {
   }
 
   const escalationEvent = JSON.stringify({
-    timestamp: new Date().toISOString(),
     eventType: 'gate-escalation',
     category: 'gate-escalation',
     gateId: record['gate-id'],

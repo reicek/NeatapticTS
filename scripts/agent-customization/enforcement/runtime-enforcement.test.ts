@@ -109,19 +109,16 @@ describe('runtime-enforcement.mjs', () => {
     const failureCount = runRuntimeEnforcementEval([
       `const failureCount = runtimeEnforcement.countTrailingGateFailures(${JSON.stringify([
         {
-          timestamp: '2026-06-03T00:00:00.000Z',
           eventType: 'gate-exception',
           sessionId: TEST_SESSION_ID,
           gateId: 'first',
         },
         {
-          timestamp: '2026-06-03T00:01:00.000Z',
           eventType: 'runtime-action-prepass',
           sessionId: TEST_SESSION_ID,
           actionId: 'reset-action',
         },
         {
-          timestamp: '2026-06-03T00:02:00.000Z',
           eventType: 'gate-exception',
           sessionId: TEST_SESSION_ID,
           gateId: 'second',

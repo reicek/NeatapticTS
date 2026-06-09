@@ -440,7 +440,6 @@ export async function appendLearningEvent(event) {
  */
 export async function recordRuntimeActionEvent(options) {
   const event = {
-    timestamp: new Date().toISOString(),
     eventType: options.eventType,
     category: 'runtime-enforcement',
     sessionId: resolveSessionId(options),
@@ -531,10 +530,7 @@ export async function loadLearningLogEvents() {
 export function countTrailingGateFailures(events, sessionId) {
   const relevantEvents = events
     .filter((event) => event?.sessionId === sessionId || event?.['session-id'] === sessionId)
-    .filter((event) => String(event?.gateId ?? event?.['gate-id'] ?? '').trim() || isFailureResetEvent(event))
-    .toSorted((leftEvent, rightEvent) =>
-      String(leftEvent?.timestamp ?? '').localeCompare(String(rightEvent?.timestamp ?? '')),
-    );
+    .filter((event) => String(event?.gateId ?? event?.['gate-id'] ?? '').trim() || isFailureResetEvent(event));
 
   let failureCount = 0;
   for (let index = relevantEvents.length - 1; index >= 0; index -= 1) {

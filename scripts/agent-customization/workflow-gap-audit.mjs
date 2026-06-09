@@ -108,13 +108,13 @@ async function runWorkflowGapAudit(opts) {
   const realEvents = filterTestArtifacts(allEvents);
 
   // Step 3: Aggregate gate failure frequency from real exceptions only.
-  const gateFailureFrequency = aggregateGateFailures(realEvents, cutoffDate);
+  const gateFailureFrequency = aggregateGateFailures(realEvents);
 
   // Step 4: Count escalation events within the window.
-  const escalationCount = countEscalations(realEvents, cutoffDate);
+  const escalationCount = countEscalations(realEvents);
 
   // Step 4b: Aggregate runtime enforcement evidence within the window.
-  const runtimeEnforcementEvidence = aggregateRuntimeEnforcementEvidence(realEvents, cutoffDate);
+  const runtimeEnforcementEvidence = aggregateRuntimeEnforcementEvidence(realEvents);
 
   // Step 5: Load session store data (graceful fallback when unavailable or empty).
   const sessionData = await loadSessionStoreData(opts.dbPath, cutoffDate, opts.windowDays);
@@ -198,15 +198,13 @@ function filterTestArtifacts(events) {
  * Aggregate gate failure frequency from real gate-exception events within the window.
  * Returns list sorted by failure count descending.
  * @param {object[]} realEvents - Filtered real events.
- * @param {string} cutoffDate - ISO-8601 cutoff date string.
  * @returns {{ gateId: string, failureCount: number, affectedAgents: string[] }[]}
  */
-function aggregateGateFailures(realEvents, cutoffDate) {
+function aggregateGateFailures(realEvents) {
   const failureMap = new Map();
 
   for (const event of realEvents) {
     if (event.eventType !== 'gate-exception') continue;
-    if (typeof event.timestamp === 'string' && event.timestamp < cutoffDate) continue;
 
     const gateId = event.gateId ?? 'unknown';
     const agent = event.agent ?? 'unknown';
@@ -235,11 +233,10 @@ function aggregateGateFailures(realEvents, cutoffDate) {
  * @param {string} cutoffDate - ISO-8601 cutoff date string.
  * @returns {number}
  */
-function countEscalations(realEvents, cutoffDate) {
+function countEscalations(realEvents) {
   return realEvents.filter(
     (event) =>
-      (event.category === 'gate-escalation' || event.eventType === 'gate-escalation') &&
-      (typeof event.timestamp !== 'string' || event.timestamp >= cutoffDate),
+      event.category === 'gate-escalation' || event.eventType === 'gate-escalation',
   ).length;
 }
 
@@ -247,18 +244,15 @@ function countEscalations(realEvents, cutoffDate) {
  * Aggregate runtime enforcement events from the learning log.
  *
  * @param {object[]} realEvents
- * @param {string} cutoffDate
  * @returns {{ preActionPasses: number, postActionPasses: number, proofMismatches: number, blockedActions: number, missingPostActionPairs: string[], postWithoutPrePairs: string[] }}
  */
-function aggregateRuntimeEnforcementEvidence(realEvents, cutoffDate) {
+function aggregateRuntimeEnforcementEvidence(realEvents) {
   const preActionPasses = new Set();
   const postActionPasses = new Set();
   let proofMismatches = 0;
   let blockedActions = 0;
 
   for (const event of realEvents) {
-    if (typeof event.timestamp === 'string' && event.timestamp < cutoffDate) continue;
-
     if (event.eventType === 'runtime-action-prepass' && typeof event.actionId === 'string') {
       preActionPasses.add(event.actionId);
       continue;
