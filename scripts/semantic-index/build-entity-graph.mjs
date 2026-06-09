@@ -289,12 +289,10 @@ async function collectDocDocuments() {
         dot: true,
         ignore: source.ignore ?? [],
       });
-      return entries
-        .toSorted()
-        .map((filePath) => ({
-          filePath: toRepoRelative(path.join(repoRoot, filePath)),
-          family: source.family,
-        }));
+      return entries.toSorted().map((filePath) => ({
+        filePath: toRepoRelative(path.join(repoRoot, filePath)),
+        family: source.family,
+      }));
     }),
   );
 

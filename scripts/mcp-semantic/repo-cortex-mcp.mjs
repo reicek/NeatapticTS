@@ -19,6 +19,7 @@
  *   MCP --> index_stats
  *   MCP --> list_families
  *   MCP --> scan_code_quality
+ *   MCP --> expand_query
  *   search_corpus --> searchCorpus
  *   load_chunk --> loadChunk
  *   load_parent_chunk --> loadParentChunk
@@ -27,6 +28,7 @@
  *   index_stats --> indexStats
  *   list_families --> listFamilies
  *   scan_code_quality --> runDocsQualityMetrics
+ *   expand_query --> expandQuery
  * ```
  */
 import { pathToFileURL } from 'node:url';
@@ -51,6 +53,7 @@ import { loadParentChunk } from './tools/load-parent-chunk.mjs';
 import { runDocsQualityMetrics } from '../semantic-index/docs-quality/docs-quality.metrics.mjs';
 import { searchCorpus } from './tools/search-corpus.mjs';
 import { traverseGraphHandler } from './tools/traverse-graph.mjs';
+import { expandQueryHandler } from './tools/expand-query.mjs';
 
 const SERVER_VERSION = '0.1.0';
 const ENTRYPOINT = 'scripts/mcp-semantic/repo-cortex-mcp.mjs';
@@ -140,6 +143,14 @@ export function createRepoCortexTools(databasePath) {
             description:
               'Number of hybrid candidates to re-rank with the cross-encoder (default: 50). Ignored when use_rerank is false.',
           },
+          expand_query: {
+            description:
+              'Enable query expansion before search. true for full expansion (domain associations + embedding synonyms), "domain-only" for domain associations only, false (default) for no expansion.',
+            oneOf: [
+              { type: 'boolean' },
+              { type: 'string', enum: ['domain-only'] },
+            ],
+          },
         },
         required: ['query'],
         additionalProperties: false,
@@ -176,6 +187,27 @@ export function createRepoCortexTools(databasePath) {
             type: 'string',
             description:
               'Human-readable degradation reason when cross-encoder re-ranking fell back; run npm run index:prewarm:reranker.',
+          },
+          expansion: {
+            type: 'object',
+            description:
+              'Query expansion metadata. Present when expand_query is enabled.',
+            properties: {
+              applied: {
+                type: 'boolean',
+                description: 'Whether query expansion was applied.',
+              },
+              degraded: {
+                type: 'boolean',
+                description:
+                  'True when expansion degraded (e.g., ONNX model unavailable).',
+              },
+              reason: {
+                type: 'string',
+                description:
+                  'Reason when expansion was not applied or degraded.',
+              },
+            },
           },
           query_class: {
             type: 'string',
@@ -565,6 +597,81 @@ export function createRepoCortexTools(databasePath) {
         ],
       },
       handler: (argumentsObject) => traverseGraphHandler(argumentsObject),
+    }),
+    createTool({
+      name: 'expand_query',
+      description:
+        'Expand a search query using domain associations and embedding-based synonym discovery. Returns expanded terms, an OR-expanded BM25 query, and expansion metadata. Supports classification-aware expansion behavior (simple_lookup=false, code_specific/plan_specific=domain-only, cross_boundary/multi_hop/exploratory=full).',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Free-text query string to expand.',
+          },
+          expand_query: {
+            description:
+              'Enable query expansion. true for full expansion (domain associations + embedding synonyms), "domain-only" for domain associations only, false (default) for no expansion.',
+            oneOf: [
+              { type: 'boolean' },
+              { type: 'string', enum: ['domain-only'] },
+            ],
+          },
+          query_class: {
+            type: 'string',
+            enum: [
+              'simple_lookup',
+              'cross_boundary',
+              'multi_hop',
+              'exploratory',
+              'code_specific',
+              'plan_specific',
+            ],
+            description:
+              'Override query classification for expansion behavior. When provided, expansion behavior is determined by expansionBehaviorForClass().',
+          },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          original_query: { type: 'string' },
+          expanded_terms: {
+            type: 'array',
+            items: { type: 'object' },
+            description:
+              'Array of expanded term objects with original, expanded, source, confidence, similarity, relevanceScore, and type fields.',
+          },
+          bm25_query: {
+            type: 'string',
+            description:
+              'OR-expanded FTS5 query string, or null if no expansion applied.',
+          },
+          expansion: {
+            type: 'object',
+            properties: {
+              applied: {
+                type: 'boolean',
+                description: 'Whether expansion was applied.',
+              },
+              degraded: {
+                type: 'boolean',
+                description: 'True when expansion degraded.',
+              },
+              reason: {
+                type: 'string',
+                description:
+                  'Reason when expansion was not applied or degraded.',
+              },
+            },
+          },
+        },
+        required: ['original_query', 'expanded_terms', 'expansion'],
+        additionalProperties: true,
+      },
+      handler: (argumentsObject) => expandQueryHandler({ ...argumentsObject }),
     }),
   ];
 }

@@ -35,6 +35,8 @@
     "index:validate-embeddings": "node scripts/semantic-index/validate-embeddings.mjs --json",
     "index:build-graph": "node scripts/semantic-index/build-entity-graph.mjs",
     "index:build-graph:json": "node scripts/semantic-index/build-entity-graph.mjs --json",
+    "index:build-terms": "node scripts/semantic-index/build-term-index.mjs",
+    "index:build-terms:json": "node scripts/semantic-index/build-term-index.mjs --json",
     "index:prewarm:reranker": "node scripts/semantic-index/download-reranker.mjs",
     "index:validate:reranker": "node scripts/semantic-index/reranker-readiness.mjs --json",
     "index:eval": "node scripts/semantic-index/eval-embeddings.mjs --json",

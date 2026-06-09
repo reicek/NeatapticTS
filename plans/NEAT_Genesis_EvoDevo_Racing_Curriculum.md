@@ -301,7 +301,7 @@ copy_paste: 'true'
 next_step: 'Step 04 — Implement worker-authoritative racing runtime foundation'
 ```
 
-**User instruction:** Start a fresh session, select `03-red-testing`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Add the smallest failing owner-local tests that prove the
 current POC lacks the worker-authoritative runtime and Team A/B coevolution
@@ -499,7 +499,7 @@ copy_paste: 'true'
 next_step: 'Step 05 — Green validation and regression triage'
 ```
 
-**User instruction:** Start a fresh session, select `04-implementing`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Implement the minimum runtime/evolution foundation that
 makes the Step 03 tests pass while moving racing toward the reference plan's
@@ -627,7 +627,7 @@ copy_paste: 'true'
 next_step: 'Step 06 — Documentation and educational runtime contract'
 ```
 
-**User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Prove the implemented tranche is green, does not regress
 existing racing behavior, and remains MCP-trackable through plan and gate
@@ -758,7 +758,7 @@ copy_paste: 'true'
 next_step: 'Step 07 — Logging and tracker handoff'
 ```
 
-**User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Document the racing runtime contract so future benchmark
 work can understand worker authority, fallback transport, Team A/B semantics,
@@ -866,7 +866,7 @@ copy_paste: 'true'
 next_step: 'Close or re-scope the next racing curriculum tranche'
 ```
 
-**User instruction:** Start a fresh session, select `07-logging`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Compress the completed tranche into durable tracker evidence,
 record remaining benchmark gaps, and prepare either closure or the next

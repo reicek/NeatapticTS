@@ -186,8 +186,7 @@ See Current-state audit summary above for file-backed evidence.
 ```yaml
 phase: 1
 step: 2
-agent: '02-researching'
-agent_file: '.github/agents/02-researching.agent.md'
+goal: 'researching'
 status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -198,7 +197,7 @@ validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 ```
 
-**User instruction:** Start a fresh session, select `02-researching`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Produce a primitive-by-primitive readiness matrix, paste the exact Step 02 readiness matrix into this tracker, and classify each gap by owner boundary so the named readiness phases can be selected with confidence.
 
@@ -235,8 +234,7 @@ validation:
 ```yaml
 phase: 1
 step: 3
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
+goal: 'planning'
 status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -271,8 +269,7 @@ validation:
 ```yaml
 phase: 1
 step: 4
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
+goal: 'planning'
 status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -368,8 +365,7 @@ blocker without hiding any unfinished work behind a later bucket.
 ```yaml
 phase: 1
 step: 5
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
+goal: 'planning'
 status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -513,8 +509,7 @@ run quality:folder -- --folder=examples/racing_curriculum/workers/simulation-wor
 ```yaml
 phase: 4
 step: 1
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
+goal: 'planning'
 status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -670,8 +665,7 @@ changes shared prerequisites — the blocker condition is not active.
 ```yaml
 phase: 4
 step: 2
-agent: '02-researching'
-agent_file: '.github/agents/02-researching.agent.md'
+goal: 'researching'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -699,8 +693,8 @@ validation:
 ```yaml
 phase: 4
 step: 3
-agent: '03-red-testing'
-agent_file: '.github/agents/03-red-testing.agent.md'
+goal: 'red-testing'
+tdd_sequence: 'red-green'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -724,8 +718,8 @@ validation:
 ```yaml
 phase: 4
 step: 4
-agent: '04-implementing'
-agent_file: '.github/agents/04-implementing.agent.md'
+goal: 'implementing'
+tdd_sequence: 'red-green'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -749,8 +743,8 @@ validation:
 ```yaml
 phase: 4
 step: 5
-agent: '05-green-testing'
-agent_file: '.github/agents/05-green-testing.agent.md'
+goal: 'green-testing'
+tdd_sequence: 'green-only'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -772,8 +766,7 @@ validation:
 ```yaml
 phase: 4
 step: 6
-agent: '06-documenting'
-agent_file: '.github/agents/06-documenting.agent.md'
+goal: 'documenting'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -795,8 +788,7 @@ validation:
 ```yaml
 phase: 4
 step: 7
-agent: '07-logging'
-agent_file: '.github/agents/07-logging.agent.md'
+goal: 'logging'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -820,8 +812,7 @@ validation:
 ```yaml
 phase: 5
 step: 1
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
+goal: 'planning'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -845,8 +836,7 @@ validation:
 ```yaml
 phase: 5
 step: 2
-agent: '02-researching'
-agent_file: '.github/agents/02-researching.agent.md'
+goal: 'researching'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -874,8 +864,8 @@ validation:
 ```yaml
 phase: 5
 step: 3
-agent: '03-red-testing'
-agent_file: '.github/agents/03-red-testing.agent.md'
+goal: 'red-testing'
+tdd_sequence: 'red-green'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -899,8 +889,8 @@ validation:
 ```yaml
 phase: 5
 step: 4
-agent: '04-implementing'
-agent_file: '.github/agents/04-implementing.agent.md'
+goal: 'implementing'
+tdd_sequence: 'red-green'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -924,8 +914,8 @@ validation:
 ```yaml
 phase: 5
 step: 5
-agent: '05-green-testing'
-agent_file: '.github/agents/05-green-testing.agent.md'
+goal: 'green-testing'
+tdd_sequence: 'green-only'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -947,8 +937,7 @@ validation:
 ```yaml
 phase: 5
 step: 6
-agent: '06-documenting'
-agent_file: '.github/agents/06-documenting.agent.md'
+goal: 'documenting'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -970,8 +959,7 @@ validation:
 ```yaml
 phase: 5
 step: 7
-agent: '07-logging'
-agent_file: '.github/agents/07-logging.agent.md'
+goal: 'logging'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -995,8 +983,7 @@ validation:
 ```yaml
 phase: 6
 step: 1
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
+goal: 'planning'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1020,8 +1007,7 @@ validation:
 ```yaml
 phase: 6
 step: 2
-agent: '02-researching'
-agent_file: '.github/agents/02-researching.agent.md'
+goal: 'researching'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1049,8 +1035,8 @@ validation:
 ```yaml
 phase: 6
 step: 3
-agent: '03-red-testing'
-agent_file: '.github/agents/03-red-testing.agent.md'
+goal: 'red-testing'
+tdd_sequence: 'red-green'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1074,8 +1060,8 @@ validation:
 ```yaml
 phase: 6
 step: 4
-agent: '04-implementing'
-agent_file: '.github/agents/04-implementing.agent.md'
+goal: 'implementing'
+tdd_sequence: 'red-green'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1099,8 +1085,8 @@ validation:
 ```yaml
 phase: 6
 step: 5
-agent: '05-green-testing'
-agent_file: '.github/agents/05-green-testing.agent.md'
+goal: 'green-testing'
+tdd_sequence: 'green-only'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1122,8 +1108,7 @@ validation:
 ```yaml
 phase: 6
 step: 6
-agent: '06-documenting'
-agent_file: '.github/agents/06-documenting.agent.md'
+goal: 'documenting'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1145,8 +1130,7 @@ validation:
 ```yaml
 phase: 6
 step: 7
-agent: '07-logging'
-agent_file: '.github/agents/07-logging.agent.md'
+goal: 'logging'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1170,8 +1154,7 @@ validation:
 ```yaml
 phase: 7
 step: 1
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
+goal: 'planning'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1195,8 +1178,7 @@ validation:
 ```yaml
 phase: 7
 step: 2
-agent: '02-researching'
-agent_file: '.github/agents/02-researching.agent.md'
+goal: 'researching'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1224,8 +1206,8 @@ validation:
 ```yaml
 phase: 7
 step: 3
-agent: '03-red-testing'
-agent_file: '.github/agents/03-red-testing.agent.md'
+goal: 'red-testing'
+tdd_sequence: 'red-green'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1249,8 +1231,8 @@ validation:
 ```yaml
 phase: 7
 step: 4
-agent: '04-implementing'
-agent_file: '.github/agents/04-implementing.agent.md'
+goal: 'implementing'
+tdd_sequence: 'red-green'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1274,8 +1256,8 @@ validation:
 ```yaml
 phase: 7
 step: 5
-agent: '05-green-testing'
-agent_file: '.github/agents/05-green-testing.agent.md'
+goal: 'green-testing'
+tdd_sequence: 'green-only'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1301,8 +1283,7 @@ validation:
 ```yaml
 phase: 7
 step: 6
-agent: '06-documenting'
-agent_file: '.github/agents/06-documenting.agent.md'
+goal: 'documenting'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
@@ -1324,8 +1305,7 @@ validation:
 ```yaml
 phase: 7
 step: 7
-agent: '07-logging'
-agent_file: '.github/agents/07-logging.agent.md'
+goal: 'logging'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'

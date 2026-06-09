@@ -47,6 +47,7 @@ import {
   compileFilterToSqlAliased,
   applyPostRetrievalFilter,
 } from '../../semantic-index/metadata-filter.mjs';
+import { expandQuery } from '../../semantic-index/expand-query.mjs';
 
 /**
  * Process-lifetime cache for the dense-readiness probe result.
@@ -96,6 +97,9 @@ let cachedRerankerReadiness = null;
  * @param {string} [options.rerankerModelId] - Override reranker model identifier (for testing).
  * @param {Function} [options.rerankerReadinessProbe] - Override reranker readiness probe (for testing).
  * @param {Function} [options.rerankerFn] - Override rerankCandidates implementation (for testing).
+ * @param {boolean | string} [options.expand_query=false] - Enable query expansion: `true` for full expansion, `'domain-only'` for domain associations only, `false` (default) for no expansion.
+ * @param {string} [options.associationsPath] - Override domain associations file path (for testing).
+ * @param {Function} [options.expandQueryFn] - Override expandQuery implementation (for testing).
  * @returns {Promise<object>} Search result payload including `query`, `limit`, `use_dense`, and `results`.
  */
 export async function searchCorpus(options = {}) {
@@ -158,25 +162,61 @@ export async function searchCorpus(options = {}) {
     options.rerank_candidates_count,
   );
 
+  // Query expansion pipeline: when expand_query is truthy, expand the query
+  // with domain associations and/or embedding-based synonyms before search.
+  let expansionMetadata = null;
+  let expandedBm25Query = null;
+
+  if (options.expand_query) {
+    const expandQueryFn = options.expandQueryFn ?? expandQuery;
+    try {
+      const expansionResult = await expandQueryFn({
+        query: rawQuery,
+        expandQuery: options.expand_query,
+        embeddingsDatabasePath: options.embeddingsDatabasePath,
+        modelDirectory: options.modelDirectory,
+        modelId: options.modelId,
+        associationsPath: options.associationsPath,
+      });
+      expansionMetadata = expansionResult.expansion;
+      if (expansionResult.bm25Query) {
+        expandedBm25Query = expansionResult.bm25Query;
+      }
+    } catch {
+      // Expansion failed — fall back to unexpanded search
+      expansionMetadata = {
+        applied: false,
+        degraded: true,
+        reason: 'Query expansion failed',
+      };
+    }
+  }
+
   if (!query) {
     if (!useDense)
-      return createEmptyBm25Response({
-        classificationMetadata,
-        family: classifiedFamily,
-        limit,
-        rawQuery,
-      });
+      return {
+        ...createEmptyBm25Response({
+          classificationMetadata,
+          family: classifiedFamily,
+          limit,
+          rawQuery,
+        }),
+        ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
+      };
 
     const readinessReport = await getDenseReadiness(options);
     if (readinessReport.state !== 'warm') {
-      return createDegradedBm25Response({
-        classificationMetadata,
-        compiledFilter,
-        family: classifiedFamily,
-        limit,
-        query: rawQuery,
-        readinessReport,
-      });
+      return {
+        ...createDegradedBm25Response({
+          classificationMetadata,
+          compiledFilter,
+          family: classifiedFamily,
+          limit,
+          query: rawQuery,
+          readinessReport,
+        }),
+        ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
+      };
     }
 
     return {
@@ -192,6 +232,7 @@ export async function searchCorpus(options = {}) {
               classificationMetadata.classification_fallback,
           }
         : {}),
+      ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
       query: rawQuery,
       results: [],
       use_dense: true,
@@ -209,15 +250,18 @@ export async function searchCorpus(options = {}) {
   if (useDense) {
     const readinessReport = await getDenseReadiness(options);
     if (readinessReport.state !== 'warm') {
-      return createDegradedBm25Response({
-        classificationMetadata,
-        compiledFilter,
-        databasePath: options.databasePath,
-        family: classifiedFamily,
-        limit,
-        query,
-        readinessReport,
-      });
+      return {
+        ...createDegradedBm25Response({
+          classificationMetadata,
+          compiledFilter,
+          databasePath: options.databasePath,
+          family: classifiedFamily,
+          limit,
+          query: expandedBm25Query ?? query,
+          readinessReport,
+        }),
+        ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
+      };
     }
 
     const denseQuery = options.denseQuery ?? queryDenseIndex;
@@ -253,6 +297,7 @@ export async function searchCorpus(options = {}) {
               classificationMetadata.classification_fallback,
           }
         : {}),
+      ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
       dense_state: 'warm',
     };
 
@@ -292,14 +337,17 @@ export async function searchCorpus(options = {}) {
     };
   }
 
-  return runBm25Search({
-    classificationMetadata,
-    compiledFilter,
-    databasePath: options.databasePath,
-    family: classifiedFamily,
-    limit,
-    query,
-  });
+  return {
+    ...runBm25Search({
+      classificationMetadata,
+      compiledFilter,
+      databasePath: options.databasePath,
+      family: classifiedFamily,
+      limit,
+      query: expandedBm25Query ?? query,
+    }),
+    ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
+  };
 }
 
 /**

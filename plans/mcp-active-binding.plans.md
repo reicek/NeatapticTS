@@ -29,8 +29,7 @@ workstream plan.
 ```yaml
 phase: 1
 step: 1
-agent: '00-helping'
-agent_file: '.github/agents/00-helping.agent.md'
+goal: 'helping'
 status: '[WIP]'
 mode: 'perpetual'
 source_of_truth: 'plans/mcp-active-binding.plans.md'

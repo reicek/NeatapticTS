@@ -132,3 +132,20 @@ CREATE INDEX IF NOT EXISTS edges_target_idx ON edges(target_entity_id);
 CREATE INDEX IF NOT EXISTS edges_relationship_idx ON edges(relationship);
 CREATE INDEX IF NOT EXISTS edges_source_rel_idx ON edges(source_entity_id, relationship);
 CREATE INDEX IF NOT EXISTS edges_target_rel_idx ON edges(target_entity_id, relationship);
+
+-- v5: Term embeddings for query expansion
+CREATE TABLE IF NOT EXISTS term_embeddings (
+  term TEXT NOT NULL,
+  embedding BLOB NOT NULL,
+  term_sha256 TEXT NOT NULL,
+  model_id TEXT NOT NULL,
+  model_sha256 TEXT NOT NULL,
+  dimension INTEGER NOT NULL,
+  frequency INTEGER NOT NULL,
+  doc_family_count INTEGER NOT NULL,
+  embedded_at TEXT NOT NULL,
+  PRIMARY KEY (term, model_id)
+);
+
+CREATE INDEX IF NOT EXISTS term_embeddings_model_idx ON term_embeddings(model_id, term_sha256);
+CREATE INDEX IF NOT EXISTS term_embeddings_frequency_idx ON term_embeddings(frequency DESC);

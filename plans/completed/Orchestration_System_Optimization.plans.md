@@ -231,7 +231,7 @@ validation:
 - Updated `04-implementing.agent.md` to include `implementation-executor` in agents allow-list
 - Frontmatter validation: 0 errors for implementation-executor
 
-**User instruction:** Start a fresh session, select `creating-specialist-agent`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Create `.github/agents/implementation-executor.agent.md` with Tier 2 frontmatter, proper tool allow-list, and delegation contract with 04-implementing.
 
@@ -302,7 +302,7 @@ validation:
   - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent=research-codebase-coordinator
 ```
 
-**User instruction:** Start a fresh session, select `creating-specialist-agent`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Create `.github/agents/research-codebase-coordinator.agent.md` with Tier 2 frontmatter, scout allow-list, and delegation contract with 02-researching.
 
@@ -372,7 +372,7 @@ validation:
   - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent=research-synthesis-specialist
 ```
 
-**User instruction:** Start a fresh session, select `creating-specialist-agent`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Create `.github/agents/research-synthesis-specialist.agent.md` with Tier 3 frontmatter, no delegation (Tier 4 only), and synthesis contract.
 
@@ -425,7 +425,7 @@ validation:
   - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent=code-quality-auditor
 ```
 
-**User instruction:** Start a fresh session, select `creating-specialist-agent`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Create `.github/agents/code-quality-auditor.agent.md` with Tier 3 frontmatter, quality gate interpretation contract, and 05-green-testing delegation.
 
@@ -479,7 +479,7 @@ validation:
   - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent=test-coverage-analyst
 ```
 
-**User instruction:** Start a fresh session, select `creating-specialist-agent`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Create `.github/agents/test-coverage-analyst.agent.md` with Tier 3 frontmatter, coverage analysis contract, and delegation from coverage-guard.
 
@@ -543,7 +543,7 @@ validation:
 - Regenerated routing table with `npm run agents:routing-table`
 - Validated with `npm run agents:routing-table:gate` - PASS (hash match, 61 agents, 55 skills)
 
-**User instruction:** Start a fresh session, select `helping-agent-maintenance-coordinator`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Update Tier 1 agent frontmatter to include new specialists in their `agents:` allow-lists, then regenerate and validate the routing table.
 
@@ -708,7 +708,7 @@ validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
 ```
 
-**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Author Step 02-07 packets for Phase 5 Validation & Polish work, including full test suite validation, CI gate confirmation, and tracker closure preparation.
 
@@ -775,7 +775,7 @@ validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
 ```
 
-**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Map Phase 4 Flow Integration objectives to named agent flows from `.github/flows/`, assign owners, and define exit gates.
 
@@ -826,7 +826,7 @@ validation:
 - `workflow-gap-audit.mjs --json`: PASS (30 flows exist, zero mentions expected for new flows)
 - `validate-plan-sync`: PASS (0 errors, 0 warnings)
 
-**User instruction:** Start a fresh session, select `helping-agent-maintenance-coordinator`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Update flow YAML files to reference the new specialists created in Phase 2 (implementation-executor, research-codebase-coordinator, research-synthesis-specialist, code-quality-auditor, test-coverage-analyst, acceptance-criteria-writer, phase-handoff-designer) in their `specialists:` lists where appropriate.
 
@@ -915,7 +915,7 @@ validation:
 }
 ```
 
-**User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Run the `agent-graph` gate to confirm that flow specialist references align with agent `agents:` allow-lists, and that no Tier 1 agent is performing work that should be delegated to Tier 2/3 specialists via flows.
 
@@ -1031,7 +1031,7 @@ validation:
 - Flow specialist references align with agent allow-lists
 - No tier violations exist in the delegation graph
 
-**User instruction:** Start a fresh session, select `05-green-testing`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Run the `tier-enforcement` gate with explicit flow-aware validation, confirming that flow specialist references do not introduce tier violations and that all delegation chains remain valid.
 
@@ -1077,7 +1077,7 @@ validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md
 ```
 
-**User instruction:** Start a fresh session, select `06-documenting`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Create or update a flow usage guide in `.github/FLOWS.md` or `docs/flows/` that documents when each flow should be selected, which specialists it delegates to, and what evidence it produces.
 
@@ -1195,7 +1195,7 @@ validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md'
 ```
 
-**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Author complete Step 02-07 packets for Phase 5 Validation & Polish. Define clear objectives, validation commands, and stop conditions for each step. Ensure packets are self-contained for fresh-session execution.
 

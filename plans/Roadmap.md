@@ -121,6 +121,16 @@ and MCP ownership contracts.
 
 **Coordination rule:** this lane is confined to `.github/agents/`, `.github/skills/`, `.github/flows/`, `scripts/agent-customization/`, and tracker/log files. Do not modify `src/` or MCP server implementations. Treat [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) and [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows_and_Gates_Upgrade.plans.md) as the archived baselines for agent architecture and flow/gates contracts.
 
+## Standalone Meta-Workflow Lane — Step Packet Goal Redesign [WIP]
+
+**Outcome:** replace the step packet YAML `agent` and `agent_file` fields with a `goal` field that declares what outcome a step needs rather than who does it, add an optional `tdd_sequence` field for multi-phase dispatch decomposition, update the orchestrator routing table in `copilot-instructions.md` §3, migrate all existing plan files, and remove backward compatibility.
+
+- Step Packet Goal Redesign
+  - Plan: [Step_Packet_Goal_Redesign.plans.md](Step_Packet_Goal_Redesign.plans.md) [WIP]
+  - Current internal state: Phase 1 Step 01 [WIP] — planning the redesign. The step-packet gate currently requires `agent`; Phase 1 Step 02 must update it to accept `goal` before Phase 2 migration begins.
+
+**Coordination rule:** this lane is confined to `.github/copilot-instructions.md`, `.github/skills/phase-handoff-workflow/SKILL.md`, `scripts/agent-customization/gates/step-packet.gate.mjs`, and plan file step packet YAML. Do not modify `src/` library code, flow YAML files (`.github/flows/*.flow.yml` use `agent:` for flow ownership, a different concern), or runtime enforcement scripts.
+
 ## Standalone Documentation Metrics Contract Lane [DONE]
 
 **Outcome:** permanently eliminate weak-doc metric inconsistency by shipping a canonical
@@ -474,6 +484,7 @@ M8. [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowle
 M8b. [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
 M9. [completed/NeatChat_Local_Retrieval_Memory.plans.md](completed/NeatChat_Local_Retrieval_Memory.plans.md) [DONE]
 M10. [completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md](completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md) [DONE]
+M11. [Step_Packet_Goal_Redesign.plans.md](Step_Packet_Goal_Redesign.plans.md) [WIP]
 
 ### Phase 0 inventory
 

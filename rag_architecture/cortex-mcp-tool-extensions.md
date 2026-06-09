@@ -28,7 +28,7 @@ validation:
   - 'node .github/hooks/workflow-update-sync.mjs --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md --json'
 ```
 
-**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Design the architecture for new and extended MCP tools in the Repo Cortex system. Produce detailed design sections (A–K following the established pattern from Steps 01–09) covering `search_advanced`, `search_context`, `traverse_graph`, `submit_feedback`, extended `search_corpus` (metadata filter + query classification hints), and extended `index_stats` (metadata coverage statistics).
 
