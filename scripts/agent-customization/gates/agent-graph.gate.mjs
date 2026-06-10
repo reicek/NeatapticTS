@@ -20,7 +20,9 @@ import { runValidateAgentGraph } from '../validate-agent-graph.mjs';
 
 const options = parseArgs(process.argv.slice(2));
 
-export async function runAgentGraphGate({ workspaceRoot = process.cwd() } = {}) {
+export async function runAgentGraphGate({
+  workspaceRoot = process.cwd(),
+} = {}) {
   const innerReport = await runValidateAgentGraph({ workspaceRoot });
 
   return {
@@ -52,6 +54,9 @@ async function main() {
   process.exitCode = result.pass ? 0 : 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }

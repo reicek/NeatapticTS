@@ -2,8 +2,16 @@
 description: 'Use as a hidden specialist for mapping MCP runtime visibility gaps in NeatapticTS workflows. Keywords: MCP runtime, available agents, active agent, live triggers, model names, client facts.'
 name: mcp-runtime-scout
 tier: 3
-model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
-tools: [read, search]
+model: 'glm-5.1:cloud (ollama)'
+tools:
+  [
+    read,
+    search,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['mcp-local-server-workflow']
@@ -23,16 +31,23 @@ Map which workflow facts can come from repository files, deterministic scripts, 
 - DO NOT make assumptions about MCP server availability; note that as a gap.
 - This agent is intentionally thin. MCP server design belongs to companion specialist `mcp-server-architect`.
 
+## Gate Enforcement
+
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
+- `cortex-index` — before searching for MCP-related documents
+
 ## Approach
 
-1. Identify the workflow fact in question (e.g., "which agents are available now", "what is the active model", "what phases exist").
-2. Check repository files (agents/, skills/, plans/, CLAUDE.md) to see if the fact is statically known.
-3. Identify whether the fact is live (changes per session/user/client) or static (does not change across runs).
-4. For each fact, note:
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Identify the workflow fact in question (e.g., "which agents are available now", "what is the active model", "what phases exist").
+3. Check repository files (agents/, skills/, plans/, CLAUDE.md) to see if the fact is statically known.
+4. Identify whether the fact is live (changes per session/user/client) or static (does not change across runs).
+5. For each fact, note:
    - Source: file path if repository-static, or "client bridge" if live
    - MCP fit: whether a deterministic script or local server could serve the fact
    - Client bridge required: YES if the fact is live and cannot be served by repo + local server
-5. Summarize runtime fact inventory, source candidates, direct MCP fit, bridge requirements, and validation options.
+6. Summarize runtime fact inventory, source candidates, direct MCP fit, bridge requirements, and validation options.
 
 ## If Blocked
 

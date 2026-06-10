@@ -1,6 +1,6 @@
 ---
 name: model-routing-and-budget
-description: 'Choose, validate, and document model routing for NeatapticTS custom agents. Use when assigning GPT-5.4, GPT-5.4-mini, Claude Sonnet 4.6, Claude Haiku 4.6, fallback arrays, phase-specific model budgets, or when a model string must be verified before frontmatter changes.'
+description: 'Choose, validate, and document model routing for NeatapticTS custom agents. Use when assigning GPT-5.4, GPT-5.4-mini, Claude Sonnet 4.6, Claude Haiku 4.6, phase-specific model budgets, or when a model string must be verified before frontmatter changes.'
 argument-hint: 'Describe the agent phase, desired model tier, available model names, and whether validation should be advisory or strict.'
 user-invocable: false
 disable-model-invocation: false
@@ -13,12 +13,13 @@ a frontmatter model string must be verified as a valid qualified name before
 it is committed.
 
 This skill owns the phase-default routing table, qualified name validation
-process, and fallback array design for NeatapticTS custom agents.
+process, and CLI-compatible scalar `model` policy for NeatapticTS custom
+agents.
 
 ## When to Use
 
 - A new agent file is being created and its `model` field needs a phase-
-  appropriate qualified name and fallback array.
+  appropriate qualified name.
 - An existing agent's model string is producing routing errors or resolving to
   an unexpected model tier.
 - The available Copilot model list has changed and agent frontmatter needs to
@@ -48,17 +49,18 @@ Validation: advisory — confirm qualified name before committing.
 2. Treat session-local availability constraints as controlling for frontmatter
    edits. Under the current cost-tier restriction, `GPT-5.5 (copilot)` must
    not be written to frontmatter.
-3. Use `GPT-5.4 (copilot)` for coding-heavy implementation and red-test
+3. Use `glm-5.1:cloud (ollama)` for coding-heavy implementation and red-test
    synthesis when available.
 4. Use `Claude Sonnet 4.6 (copilot)` for planning, documentation synthesis,
    nuanced maintenance, and ambiguity-heavy coordination when available.
-5. Use `GPT-5.4-mini (copilot)` for bounded research, validation, and subagent
+5. Use `glm-5.1:cloud (ollama)` for bounded research, validation, and subagent
    work where coding or tool strength still matters.
 6. Use `Claude Haiku 4.6 (copilot)` for narrow checklist, summarization, and
    mechanical assistant work. If the model picker exposes only a different Haiku
    generation, update the qualified name before strict validation.
-7. Use fallback arrays so agents degrade to an available qualified Copilot model
-   when the primary is unavailable.
+7. Write a single qualified model string in `model:`. When repairing a legacy
+   array-valued `model`, preserve the first listed entry unless the user
+   explicitly requests a different routing decision.
 8. Validate frontmatter shape with
    `node scripts/agent-customization/validate-agent-frontmatter.mjs`.
 
@@ -85,8 +87,8 @@ Validation: advisory — confirm qualified name before committing.
   `GPT-5.5 (copilot)` must not be written to frontmatter.
 - Do not assign a Full-tier model to phases where a Mini or Haiku tier is
   sufficient; unnecessary cost undermines the budget design.
-- Do not omit a fallback array for agents that must be resilient to model
-  availability changes.
+- Do not write arrays into `model:` frontmatter in this repo; NeatapticTS
+  targets Copilot CLI-compatible scalar model strings.
 - Do not hand-edit qualified names without re-running
   `validate-agent-frontmatter.mjs`; the validator catches typos and schema
   drift that manual review misses.
@@ -96,6 +98,5 @@ Validation: advisory — confirm qualified name before committing.
 A strong model-routing pass should produce:
 
 - the confirmed qualified model name for the target agent and phase,
-- the fallback array if the model has known availability constraints,
 - the `validate-agent-frontmatter.mjs` result confirming schema validity,
-- an updated agent frontmatter `model` field ready to commit.
+- an updated scalar `model` value ready to commit.

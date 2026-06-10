@@ -120,7 +120,9 @@ async function runStaleWipGate() {
   // Step 1: Discover root-level Markdown tracker files in plans/ (not completed/).
   let planFiles = [];
   try {
-    const entries = await readdir(path.join(repoRoot, 'plans'), { withFileTypes: true });
+    const entries = await readdir(path.join(repoRoot, 'plans'), {
+      withFileTypes: true,
+    });
     planFiles = entries
       .filter((entry) => entry.isFile())
       .map((entry) => entry.name)
@@ -128,7 +130,7 @@ async function runStaleWipGate() {
         (name) =>
           name.endsWith('.md') &&
           !name.endsWith('.logs.md') &&
-          !['README.md', 'Roadmap.md'].includes(name)
+          !['README.md', 'Roadmap.md'].includes(name),
       )
       .map((name) => `plans/${name}`);
   } catch (error) {

@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "node scripts/agent-customization/hooks/session-start-cortex-mcp-preflight.mjs",
+        "cwd": ".",
+        "timeout": 240
+      }
+    ],
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "node scripts/agent-customization/hooks/refresh-cortex-after-write.mjs",
+        "cwd": ".",
+        "timeout": 180
+      }
+    ]
+  }
+}

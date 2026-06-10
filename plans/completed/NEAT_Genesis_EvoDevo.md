@@ -1280,7 +1280,7 @@ validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo.md
 ```
 
-**User instruction:** Start a fresh session, select `07-logging`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Compress Phase F into durable closure notes, archive the evidence in the
 matching log surface, and determine honestly whether the phase can close or must remain on the

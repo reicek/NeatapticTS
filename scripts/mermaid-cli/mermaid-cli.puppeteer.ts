@@ -21,7 +21,10 @@ import {
   PUPPETEER_CONFIG_FILE_NAME,
   PUPPETEER_TEMP_DIRECTORY_PREFIX,
 } from './mermaid-cli.constants.js';
-import type { MermaidCliInvocation, ParsedArguments } from './mermaid-cli.types.js';
+import type {
+  MermaidCliInvocation,
+  ParsedArguments,
+} from './mermaid-cli.types.js';
 
 /**
  * Builds the Mermaid CLI invocation, injecting a CI-safe Puppeteer config when
@@ -91,9 +94,10 @@ export function createDirectInvocation(
 export async function writePuppeteerConfigFile(
   puppeteerConfigFilePath: string,
 ): Promise<void> {
-  const puppeteerConfig: { args: readonly string[]; executablePath?: string } = {
-    args: PUPPETEER_CI_LINUX_ARGS,
-  };
+  const puppeteerConfig: { args: readonly string[]; executablePath?: string } =
+    {
+      args: PUPPETEER_CI_LINUX_ARGS,
+    };
 
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
   if (executablePath) {

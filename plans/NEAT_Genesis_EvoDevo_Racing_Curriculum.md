@@ -1,786 +1,998 @@
-# NEAT Genesis EvoDevo: Racing Curriculum
-
-**Status:** [WIP]
-
-This plan defines the team adversarial racing benchmark for [NEAT Genesis EvoDevo (NGE)](completed/NEAT_Genesis_EvoDevo.md). It is designed to be a genuine NGE showcase: two independently evolved teams of three cars each, all teammates sharing identical DNA, roles emerging from experience rather than from role-assignment code, team coordination via a stigmergy-analog radio field, tire degradation as a metabolic budget, and co-evolutionary pressure between the two teams.
-
-This benchmark is downstream of [NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md). If this plan conflicts with either upstream plan, the upstream plan wins.
-
----
-
-## Why Team Racing Fits NGE
-
-The core NGE thesis is that complex, specialized, cooperative behaviors emerge from simple genetic programs — not from hand-coded role scripts. Team adversarial racing is structured to validate exactly that:
-
-| NGE thesis                              | How team racing validates it                                                                                                                              |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Role differentiation from identical DNA | All three teammates start from the same genotype; queen/blocker/pacer roles emerge from driving experience alone                                          |
-| Stigmergy via shared signal field       | Team radio is a typed-array shared signal, not discrete messages — same primitive as ant pheromone                                                        |
-| Polyandric reproduction                 | Winning "queen car" is the primary genetic template; blocker and pacer drone contributions patch distinct DNA regions                                     |
-| Co-evolution between populations        | Team A and Team B are fully independent NEAT populations; one team's improvements shift the other's fitness landscape                                     |
-| Three-tier memory                       | Short-term: recurrent per-episode state; medium-term: rival pit patterns and teammate radio calibration; long-term: cornering priors assimilated into DNA |
-| `ModulatorBroadcaster` neuromodulation  | Behavioral mode switches (sprint → block → hold pit → rejoin) must happen within one forward pass — structural change is too slow                         |
-| Wiring economy under complexity         | Six networked agents per race; per-agent networks must compact or they cannot run at browser-frame rates                                                  |
-
-Compare this to the original solo racing design, which exercised `GatedRecurrentCell` and `ModulatorBroadcaster` but not role differentiation, stigmergy, polyandric reproduction, or co-evolution. The team structure closes those gaps.
-
----
-
-## Scope and Maturity
-
-This is a benchmark-architecture plan, not an implementation-complete spec.
-
-- **In scope:** team structure, team radio protocol, tire degradation system, pit stop design, category ladder, carry-state semantics, sensory families, behavioral-drive vocabulary, co-evolutionary dynamics, reproduction policy, canvas rendering spec, and acceptance criteria.
-- **Out of scope (for now):** final vehicle-physics constants, rendering library selection, final reward weights, and worker protocol shape.
-- **Authority rule:** [NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and [completed/Memory_Optimization.md](completed/Memory_Optimization.md) remain authoritative.
-
----
-
-## NGE Capabilities Exercised
-
-| NGE capability                           | How team racing exercises it                                                                                                                  |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `computationType` specialization         | Braking, line-tracking, traffic, radio-reading, and pit-timing zones should produce structurally distinct modules per emerged role            |
-| `ModulatorBroadcaster`                   | Behavioral drives (sprint, block, pit, rejoin) must switch within one forward pass; each team car must be capable of all modes                |
-| `GatedRecurrentCell` (short-term memory) | Per-episode recurrent state: recent steering/slip/throttle traces, recent radio state, tire decay trajectory                                  |
-| `EpisodicSlot` (medium-term memory)      | Opponent pit timing patterns, teammate radio calibration (what does a high signal on channel 4 actually mean?), track segment danger profiles |
-| `GatingRouter`                           | Hard task switching: sprint vs. block vs. hold-pit vs. pit-entry vs. recovery — distinct policy heads, not soft interpolation                 |
-| `ResidualTap`                            | Track geometry and race-position signals flow as a residual highway available to all processing zones without wiring cost                     |
-| Identical-DNA role differentiation       | All team members share one genotype; queen/blocker/pacer specialization emerges from driving history and radio interaction alone              |
-| Stigmergy via radio field                | 6–8 dimensional team radio written and read by all teammates — same typed-array primitive as ant pheromone; no addressed messages             |
-| Polyandric reproduction                  | Winning queen car = primary template; blocker/pacer drone DNA patches non-overlapping gene regions                                            |
-| Co-evolutionary dynamics                 | Team A and Team B are fully independent NEAT populations; fitness computed against rolling opponent team snapshot                             |
-| `reproductionPolicy.modeIsEvolvable`     | Teams may shift reproduction strategy as co-evolutionary phase shifts (search phase vs. consolidation phase)                                  |
-| Wiring economy                           | Six networked agents must run at browser-frame rates; per-agent compaction under team complexity is the key pressure test                     |
-
----
-
-## Execution Alignment
-
-This benchmark belongs to **Phase G (Multi-Agent + Collective Intelligence)** in the NGE roadmap. It must not begin serious implementation before:
-
-- NGE Phase A (DNA + deterministic development) and Phase B (Juvenile focus) are stable.
-- All Phase 0 computation motif primitives are implemented and opt-in verified.
-- Phase E (Evolution integration + reproduction modes) is implemented with polyandric support and `modeIsEvolvable`.
-- Two-population NEAT harness is implemented (independent gene pools, independent species tracking).
-- Stigmergy typed-array field primitive is available — landed as `src/neat/nge-collective/neat.nge-collective.shared-field.ts` in Phase G Step 04 (shared with ant hive pheromone infrastructure).
-
-## Recommended agent + skill combo for this Phase G benchmark
-
-- Benchmark architecture, curriculum, and rollout work — `NGE Benchmark Scout` + `nge-benchmark-workflow`
-- Upstream NGE prerequisite drift — `NGE Core Scout` + `nge-core-algorithm`
-- Canvas, layout, and interaction polish — `Visualizer Scout` + `visualizer-workflow`
-
----
-
-## Design Pillars
-
-- **Two genuinely independent teams:** Team A and Team B each have their own DNA gene pool, NEAT species tracking, and assimilation cycle. They interact only through the shared evaluation environment.
-- **Identical-DNA teams, divergent roles:** all three teammates start from one genotype. Role divergence (queen/pacer/blocker) emerges from driving experience and radio interaction — never from role-assignment code.
-- **Team radio as stigmergy:** a typed-array shared signal written by all three cars and read by all three. No messages, no addressing. Same primitive as ant pheromone — teammates must learn to read and write it through evolution.
-- **Team wins if any member wins:** this is the fitness pressure that drives cooperative strategy. A blocker that protects the fast car is rewarded even if it finishes last.
-- **Tire degradation as metabolic budget:** tire state [1.0 → 0.0] decays with driving aggression. Visual feedback per wheel. Tire state is a sensory input channel. Team radio carries teammate tire state. Pit stops restore tire state.
-- **One pit per team:** each team has a fixed dedicated pit position. Pit entrance is wide enough for legal blocking. Team radio coordination governs when to pit and whether to block the opponent from entering their own pit.
-- **No scripted strategies:** all blocking, pacing, pit timing, and radio semantics emerge from the evolved network structure and `ModulatorBroadcaster` gain calibration.
-- **Egocentric observations only:** each car's controller never receives a planner-style full-map oracle.
-- **Visible specialization:** the benchmark should make it easy to observe sensor-family specialization, modular growth around radio-reading and pit-timing, and adult pruning of unused sensor families.
-
----
-
-## Team Structure
-
-### Two Teams, Three Cars Each
-
-```
-Team A:  A1 · A2 · A3    (all share Team A DNA genotype)
-Team B:  B1 · B2 · B3    (all share Team B DNA genotype)
-```
-
-**Team A and Team B are fully independent NEAT populations.** They do not share innovation numbers, species, DNA, or assimilation cycles.
-
-**Within a team, all three cars share one genotype.** There is no separate DNA for "the blocker car." Role divergence emerges from the order in which the network experiences:
-
-- who gets into traffic first
-- who reads high vs. low tire decay signals on the radio
-- who happens to be ahead of the opponent's fast car at lap 1
-
-The network reacts to its current sensory context — including the team radio field — and the `EpisodicSlot` accumulates a history that gradually differentiates the cars' behavioral patterns.
-
-### Team Fitness
-
-**A team's score in one race = the finishing position of its best-finishing car.**
-
-This is the critical fitness pressure. A team that produces a fast queen car and two effective blockers beats a team that produces three mediocre individual performers. The three-way shared DNA means natural selection acts on the team's collective strategy, not three individual strategies.
-
----
-
-## Team Radio (Stigmergy Analog)
-
-The team radio is a **6–8 dimensional typed-array shared field**, written by all three cars and read by all three. It is not a message-passing system. There are no recipients, no channels reserved for specific cars, and no protocol defined in advance. Teams must evolve a shared semantic for the signal through natural selection.
-
-### Radio Field Semantics (evolved, not prescribed)
-
-The radio field has no prescribed semantics at initialization. However, the sensory inputs are designed so that the following semantics are structurally available for evolution to discover:
-
-- tire state of teammates (high-dimensional enough to carry all three)
-- pace signal (is a teammate currently in sprint mode?)
-- threat signal (is a teammate being pressured?)
-- pit-intent signal (is a teammate about to pit?)
-- position context (rough lap position of teammates)
-- coordination request (generic urgency signal)
-
-None of these are labeled. The network learns to write and read them.
-
-### Radio Input to Each Car
-
-Each car reads **three independent radio vectors** (one per teammate) of 6–8 dimensions each.
-
-```
-Total radio input per car: 3 teammates × 7 dimensions = 21 channels
-```
-
-Each car also writes a radio output vector of 6–8 dimensions, which is placed into the shared field for teammates to read.
-
-The shared field is a typed-array that is updated synchronously with the simulation tick, exactly as the ant hive pheromone field. There is no decay — the field reflects the most recent output from each car.
-
-### Why This Fits NGE
-
-The team radio is structurally isomorphic to the ant hive pheromone grid:
-
-| Racing                              | Ant Hive                           |
-| ----------------------------------- | ---------------------------------- |
-| 7-dimensional radio per car         | 6-channel pheromone field per cell |
-| Three cars each writing and reading | Many ants each writing and reading |
-| Team fitness                        | Colony fitness                     |
-| Role divergence from experience     | Role divergence from experience    |
-| Pit timing coordination             | Recruitment coordination           |
-
----
-
-## Tire Degradation System
-
-### Tire State
-
-Each car maintains four tire state values: front-left, front-right, rear-left, rear-right.
-
-```
-tire_state ∈ [0.0, 1.0]   (1.0 = fresh, 0.0 = destroyed)
-```
-
-Tire state decays as a function of:
-
-- **lateral force** (cornering aggression)
-- **longitudinal force** (hard braking and acceleration)
-- **speed** (higher speed = faster base decay)
-- **current tire state** (degraded tires decay faster — exponential degradation curve)
-
-A fresh tire at nominal pace degrades slowly. Aggressive driving on degraded tires degrades very fast. This creates a genuine strategic tradeoff: aggressive pursuit burns tires faster; conservative driving preserves them but sacrifices pace.
-
-### Visual Feedback
-
-Each tire is drawn at its corner of the car icon on canvas. Color encodes tire state:
-
-```
-1.0 → 0.75  : green
-0.75 → 0.50 : yellow
-0.50 → 0.25 : orange
-0.25 → 0.0  : red
-```
-
-The four-corner color display is always visible. This gives a human observer immediate insight into each car's strategic position without reading numbers.
-
-### Tire State as Sensory Input
-
-Each car receives its own four tire states as sensory inputs (4 channels). Each car also receives teammate tire states via the team radio field. Tire state directly affects:
-
-- grip proxy (low tire state = reduced effective grip)
-- braking urgency estimate (degraded tires need more distance)
-- stability margin (degraded tires = narrower safe slip range)
-
-The car must integrate tire state into its driving strategy. A network that ignores tire state will over-push on degraded tires and crash.
-
-### Performance Effect
-
-Tire degradation affects car performance:
-
-- **grip multiplier:** scales with tire state (degraded tires = lower peak grip)
-- **braking efficiency:** degraded tires extend minimum braking distance
-- **slip onset:** degraded tires lose traction at lower lateral force
-
----
-
-## Pit Stop System
-
-### One Pit Per Team
-
-Each team has exactly **one dedicated pit position**, fixed on the track layout. Teams do not share pits. The pit is:
-
-- wide enough for one car at a time
-- visible on canvas as a colored box (Team A: cyan; Team B: red/orange)
-- entered by driving into the pit entrance corridor
-
-### Pit Stop Mechanics
-
-- A car entering the pit is removed from the active simulation for a **fixed stop duration** (3–5 simulation ticks, balancing realism with strategic weight).
-- During the stop, the car's tire states are restored to [1.0, 1.0, 1.0, 1.0].
-- No other repairs occur in the pit. The pit stop is purely a tire restoration event.
-- Only one car may occupy the pit at a time. If a second car from the same team enters while the first is in the pit, it must wait.
-
-### Pit Entrance Blocking
-
-The pit entrance corridor is wide enough for **legal defensive positioning by an opponent car**. A car from the opposing team that is positioned in the pit entrance corridor can legally impede the other team's cars from entering their pit.
-
-This creates a high-stakes coordination scenario:
-
-- **Blocking team:** must sacrifice one car's pace to hold the corridor, coordinated via team radio (no scripted signal — must evolve radio semantics for "hold the pit entrance").
-- **Pitting team:** must choose when the window is clear enough to attempt pit entry, or whether to extend the stint and hope the blocker runs out of energy (tire budget).
-
-The pit entrance blocking behavior must emerge from network evolution, not from hardcoded logic.
-
-### Pit Strategy as EpisodicSlot Target
-
-The `EpisodicSlot` medium-term memory is ideally motivated by pit strategy:
-
-- **Opponent pit timing patterns:** when did the opponent team pit last race? Are they pitting early or running long? The `EpisodicSlot` should store opponent pit timing by track configuration similarity.
-- **Teammate radio calibration:** what radio signal pattern precedes a teammate pitting? The `EpisodicSlot` stores radio state → pit-intent associations.
-- **Pit entrance blocking coordination history:** what signal from teammates reliably indicated "hold the corridor"?
-
----
-
-## Co-evolutionary Dynamics
-
-### Two Independent NEAT Populations
-
-Each team maintains its own:
-
-- Gene pool with NEAT innovation tracking
-- Species partitioning (compatibility distance threshold, species representatives)
-- Fitness history and species stagnation counters
-- Assimilation cycle and `reproductionPolicy`
-
-The two teams do **not** share innovation numbers, species, or DNA. They interact only through the shared evaluation environment.
-
-### Rolling Opponent Snapshot
-
-Fitness is evaluated against a **rolling opponent team snapshot** rather than the current live opponent team:
-
-- Each generation, a fixed set of opponent team representatives is frozen (hall-of-fame sample + recent-population sample).
-- Evaluation runs against this frozen set.
-- The snapshot is updated every N generations (configurable; typical: every 5–10 generations).
-
-This prevents a single generation breakthrough from collapsing opponent fitness in one step, forcing co-adaptation to be gradual.
-
-### Co-evolutionary Observable
-
-The simulation UI should expose:
-
-- **Team A mean fitness vs. Team B mean fitness** over generations (separate lines)
-- **Strategy divergence metric:** how different are the two teams' network `computationType` compositions? Rising divergence = arms race. Converging = one team copying the other's strategy.
-- **Pit timing distribution:** histogram of pit lap for each team per generation — shows whether pit strategies are converging or diverging.
-
----
-
-## Polyandric Reproduction
-
-The canonical reproduction mode for team racing is **polyandric**.
-
-**Why polyandric fits:** within a team, the car that wins (or finishes best) is the "queen." The blocker and pacer cars are "drones" whose DNA contributed to the team's cooperative strategy. All three contributed to the team's success, but in structurally different gene regions.
-
-**Polyandric policy for team racing:**
-
-```ts
-reproductionPolicy: {
-  mode: "polyandric",
-  polyandricDroneCount: 2,               // two drone contributors per child
-  polyandricDroneContributionFraction: 0.25, // each drone patches 25% of DNA
-  queenBias: 0.85,                       // queen DNA dominates
-  assignedRegionStrategy: "non-overlapping",
-  modeIsEvolvable: true,                 // teams may shift to sexual when exploring
-  seedPolicy: "queen-weighted"
-}
-```
-
-**Evolutionary trajectory:**
-
-- Early (unstable, new category): sexual reproduction may dominate — high variance favors rapid search.
-- Stable co-evolutionary phase (one team consistently winning): winning team lineages may converge toward parthenogenesis (preserve winning DNA); losing team may shift toward polyandric or sexual for diversity.
-- After a strategic breakthrough by the losing team: winner team shifts back toward sexual or polyandric for rapid adaptation.
-
-The `modeIsEvolvable: true` flag allows the reproduction policy itself to be subject to selection pressure.
-
----
-
-## Category Ladder
-
-The six-tier category ladder is designed so that each tier unlocks one additional layer of strategic complexity. Early tiers verify that the NGE lifecycle can handle basic racecraft before exposing it to team coordination and co-evolutionary arms races.
-
-### Tier 1 — 1v1, No Radio
-
-```
-2 cars (one per team), no team radio, no pits, fresh tires only.
-Track: simple oval or wide flowing circuit.
-```
-
-**Purpose:** baseline verification that single-car NGE can learn to drive at all. Eliminates team mechanics from the first learning problem. Both teams evolve a single-car policy.
-
-### Tier 2 — 1v1 with Radio
-
-```
-2 cars (one per team), team radio active (only one car per team so self-communication).
-No pits, no tire degradation.
-Track: simple circuit with one tight corner requiring overtaking.
-```
-
-**Purpose:** verify that network can write and read radio without teammates present. The car learns to use radio as a self-monitoring signal (e.g., pace intent, threat level). This is a degenerate but structurally valid use of the radio field.
-
-### Tier 3 — 2v2, No Pits
-
-```
-2 cars per team (4 total), team radio active between teammates.
-No pit stops, no tire degradation.
-Track: intermediate circuit with genuine overtaking zones.
-```
-
-**Purpose:** first appearance of role differentiation. Two identical-DNA teammates must develop different behavioral specializations through experience. No pit timing complexity.
-
-### Tier 4 — 2v2, Tires and Pits
-
-```
-2 cars per team (4 total), team radio active.
-Tire degradation active, one pit per team.
-Track: intermediate circuit with clear pit window tradeoffs.
-```
-
-**Purpose:** introduce tire degradation as metabolic budget. Teams must evolve pit timing and pit-entrance blocking coordination. First appearance of `EpisodicSlot` motivation (opponent pit timing patterns).
-
-### Tier 5 — 3v3 Full
-
-```
-3 cars per team (6 total), full team radio.
-Tire degradation active, one pit per team, pit-entrance blocking legal.
-Track: full competition circuit.
-```
-
-**Purpose:** full NGE team racing. Queen/blocker/pacer roles must emerge from experience. Co-evolutionary arms race between Team A and Team B. Polyandric reproduction active.
-
-### Tier 6 — 3v3 Advanced Strategy
-
-```
-3 cars per team (6 total), full team radio.
-Tire degradation active, pit-entrance blocking active.
-Track: full circuit with multi-window strategic decisions.
-Multi-generation hall-of-fame opponent snapshots.
-```
-
-**Purpose:** sustained co-evolutionary arms race. Hall-of-fame opponent evaluation. `reproductionPolicy.modeIsEvolvable` fully engaged. The benchmark for demonstrating that NGE can produce stable, sophisticated, cooperative strategies under non-stationary opponent pressure.
-
----
-
-## Promotion and Refill Rules
-
-The ladder advances only when a team completes the current tier reliably over a small deterministic pack of race variants (not a single lucky race).
-
-**Within-team refill policy (after promotion):**
-
-- The car with the best performance becomes the "queen" for the next generation's polyandric reproduction.
-- Newborns receive queen DNA as primary template, with non-overlapping drone patches from the other cars.
-- Newborns may receive a short driving-school warm-start (see Newborn Nursery).
-
-**Cross-team promotion:** both teams must reach promotion-threshold performance to advance to the next tier together. A team that is far ahead holds at the current tier until the opponent catches up within a threshold, or until a maximum wait generation is reached. This prevents co-evolutionary dynamics from collapsing when one team has a runaway advantage.
-
----
-
-## Carry-State and Reset-State Semantics
-
-Promoted cars carry their phenotype state upward rather than being flattened into fresh random starts.
-
-**State that carries across tier promotion:**
-
-- current weights and biases
-- `GatedRecurrentCell` hidden state (slow lifetime adaptation)
-- `EpisodicSlot` contents (opponent pit timing, teammate radio calibration, track danger profiles)
-- developmental stage and module focus history
-- `ModulatorBroadcaster` gain calibration
-- team radio read/write calibration (learned radio semantic)
-- other category-independent policy state
-
-**State that resets at every new race start:**
-
-- world position, heading, and speed
-- tire states (restored to [1.0, 1.0, 1.0, 1.0])
-- collision cooldowns and off-track timers
-- short-horizon observation buffers (episode-scoped recurrent state)
-- recent action-history buffers
-- current team radio field (cleared at race start)
-- other race-local episode state
-
----
-
-## Rich Sensorium
-
-The benchmark intentionally overprovisions sensory channels to give NGE developmental structure enough raw material to specialize around braking, line tracking, traffic handling, tire management, radio reading, and pit coordination.
-
-### Vehicle-State Senses (16 channels)
-
-- current speed
-- longitudinal acceleration, lateral acceleration, yaw rate
-- heading error relative to track tangent
-- steering angle, steering change rate
-- throttle level, brake level
-- slip angle, traction reserve / grip proxy
-- estimated braking distance, stability margin
-- recent control smoothness / oscillation score
-
-### Tire-State Senses (4 channels)
-
-- front-left tire state, front-right tire state
-- rear-left tire state, rear-right tire state
-
-### Track-Geometry Senses (12 channels)
-
-- lateral offset from centerline
-- lateral offset from the optimal line (when guidance is active)
-- heading error relative to local path tangent
-- curvature ahead at several lookahead distances
-- upcoming corner severity, next apex side, distance to apex
-- local track width, exit width after next corner
-- safe-speed envelope for the next segment
-
-### Boundary and Hazard Senses (10 channels)
-
-- ray distances to asphalt edge, sand boundary, and wall
-- nearest wall angle
-- sand-entry risk, wall-impact urgency
-- rejoin corridor quality, off-track recovery angle
-- surface type under car
-- pit entrance corridor: is it blocked? (binary + blocking car identity: same team / opponent)
-
-### Opponent and Race-Context Senses (18 channels)
-
-- front-left / front / front-right occupancy (opponent cars)
-- left / right overlap
-- rear-left / rear / rear-right pressure
-- relative speed to nearest rival ahead and behind
-- time-to-contact estimate
-- inside lane blocked, outside lane blocked
-- nearest opponent tire state estimate (inferrable from opponent behavior)
-- signed forward progress, current place
-- gap to car ahead and behind
-- time since last clean overtake, time since last collision
-
-### Team Radio Senses (21 channels)
-
-- 3 teammates × 7-dimensional radio vector = 21 channels
-- No semantic labeling at initialization; teams evolve the shared protocol
-
-### Pit and Strategy Senses (8 channels)
-
-- distance to own pit entrance
-- own pit: occupied / clear / blocked by opponent
-- laps since last pit
-- teammate pit status (from radio: is any teammate currently in pit?)
-- current tire degradation rate (derivative of mean tire state)
-- estimated laps remaining before tire failure
-
-### Short-Horizon Memory Senses (10 channels)
-
-These channels are the raw input that `GatedRecurrentCell` modules integrate:
-
-- recent steering, throttle, and brake history (last 3 ticks)
-- recent slip history
-- recent team radio state history (last 2 ticks)
-- recent tire decay rate history
-
-### Initial Scale Guidance
-
-- raw sensory surface: ~99 channels before temporal expansion
-- effective policy input width: ~110–130 once short-horizon buffers included
-- team radio output head: 7 auxiliary output channels (stigmergy write)
-- initial scaffold: ~110–160 nodes
-- initial sparse connectivity: ~1,000–2,000 connections
-
----
-
-## Behavioral Drives and Neuromodulation
-
-Each car's controller must be capable of all behavioral modes — the network switches between them via `ModulatorBroadcaster` gain shifts, not by structural change.
-
-**Drive families → `ModulatorBroadcaster` mapping:**
-
-| Drive                     | Modulates                                | Mode switch speed |
-| ------------------------- | ---------------------------------------- | ----------------- |
-| Sprint drive              | Forward-progress zone gain               | Fast              |
-| Line-adherence drive      | Tracking zone gain                       | Fast              |
-| Safety-margin drive       | Boundary/hazard zone gain                | Fast              |
-| Grip-preservation drive   | Slip/traction zone gain                  | Fast              |
-| Collision-avoidance drive | Opponent zone gain                       | Fast              |
-| Blocking drive            | Opponent zone + inside-line zone gain    | Fast              |
-| Pacing drive              | Throttle constraint zone gain            | Fast              |
-| Pit-preparation drive     | Braking zone gain + tire management gain | Fast              |
-| Recovery drive            | Rejoin/correction zone gain              | Fast              |
-| Radio-write drive         | Radio output head gain                   | Fast              |
-| Anti-degeneracy drive     | Global oscillation suppression           | Slow              |
-
-**`GatingRouter` control modes** (hard task switches, not soft interpolations):
-
-- `SPRINT` — maximize pace, accept tire burn
-- `BLOCK` — hold inside line, sacrifice own pace to impede opponent
-- `PACE` — conservative speed, preserve tire budget
-- `PIT_ENTRY` — low speed, pit-corridor alignment
-- `RECOVERY` — off-track or post-contact stabilization
-- `HOLD_PIT_ENTRANCE` — park in opponent's pit corridor at minimum speed
-
-The `GatingRouter` selects the dominant policy head based on the current sensory context, including team radio signals. A car commanded by radio to block does not gradually interpolate toward blocking — it hard-routes to the `BLOCK` policy head.
-
----
-
-## Competitive Racecraft
-
-The benchmark should reward racecraft and penalize contact-heavy strategies.
-
-**Desired behaviors (all emergent):**
-
-- clean overtake
-- slipstream capture and pass
-- inside-line protection
-- outside pressure without contact
-- forcing a rival onto a slower but safe line
-- aborting a pass when the move becomes unsafe
-- tire-aware pace modulation (back off when tires are degraded)
-- radio-coordinated pit timing with teammates
-- pit-entrance blocking via `HOLD_PIT_ENTRANCE` mode
-- pacing a teammate's race (leading a blocker/pacer role from sprint to pace)
-
-**Undesired exploit patterns:**
-
-- intentional wall-push behavior
-- contact farming
-- freezing in place to avoid risk
-- wrong-direction blocking
-- repeated unsafe rejoins
-- pitting every lap to avoid tire degradation (must be penalized by stop-time cost)
-
----
-
-## Newborn Nursery Warm-start
-
-Newborns may receive a short driving-school warm-start before entering scored tier races. This is a one-time bootstrap pass that moves newborns out of pure-random territory without replacing the real evolutionary search.
-
-**Nursery goals:**
-
-- stay on track
-- follow the optimal line when available
-- brake before high curvature
-- recover from simple slides
-- suppress wrong-direction behavior
-- write and read team radio (any signal, not a prescribed semantic)
-
-**Warm-start guardrails:**
-
-- same observation surface as the scored task
-- short and budgeted (not a full training run)
-- topology fixed during warm-start; only parameters adjusted inside the existing scaffold
-- post-nursery noise applied so the prior is shared but non-rigid
-- radio semantic must remain undetermined — nursery does not teach any specific radio protocol
-- does not cover blocking, pit timing, or advanced racecraft
-
-Promoted cars do not return to the nursery. It is a newborn-only scaffold.
-
----
-
-## Optimal-Line Guidance Fade Policy
-
-Tier 1–2 provide explicit optimal-line guidance channels as curriculum scaffold. These fade through the tier ladder:
-
-- **Tier 1–2:** explicit optimal line, lateral error, heading error, target speed envelope
-- **Tier 3–4:** guidance available but less reliable; traffic and tire pressure dominate
-- **Tier 5–6:** guidance reduced or removed; network must have internalized cornering priors into `EpisodicSlot` and DNA-assimilated weights by this point
-
----
-
-## Canvas Rendering Spec
-
-### Agent Rendering
-
-- **Team A cars:** cyan triangles (5–6 px, pointing in heading direction)
-- **Team B cars:** red/orange triangles (5–6 px, pointing in heading direction)
-- **Tire state:** four colored dots at the car icon corners (front-left, front-right, rear-left, rear-right), each colored green → yellow → orange → red based on tire state value
-- **Radio activity:** faint halo pulsing when radio write output is above threshold (optional toggle)
-- **Mode indicator:** small letter overlay (S=Sprint, B=Block, P=Pace, I=PitEntry, H=HoldPit, R=Recovery) for debug/inspection
-
-### Track Rendering
-
-- **Pit boxes:** colored rectangle at each team's pit position (Team A: cyan; Team B: red/orange)
-- **Pit entrance corridor:** faintly marked as a dashed line from track edge to pit box
-- **Optimal-line overlay:** faint white dashed line (visible in early tiers, fades in later tiers)
-- **Sand trap zones:** tan colored sections off asphalt
-- **Wall boundaries:** solid grey lines
-
-### UI Panels
-
-- Play / pause / step
-- Speed multiplier (1×, 2×, 5×, 10×)
-- **Team fitness chart:** Team A mean fitness vs. Team B mean fitness over generations (two-line chart)
-- **Tire degradation overlay:** per-car tire state bar for all 6 cars visible during live race
-- **Team radio monitor:** 6×7 heatmap of current radio field values (Team A cars on top row, Team B on bottom row) — purely diagnostic
-- **Reproduction mode chart:** stacked bar per team per generation (parthenogenetic / polyandric / sexual %)
-- **Co-evolutionary strategy divergence:** metric showing how different the two teams' `computationType` compositions are over generations
-- **Category tier indicator:** current tier label, promotion threshold progress
-- Episode stats: cars alive per team, current lap, race timer
-- Layer toggles: optimal-line overlay, tire colors, radio halo, mode overlay
-
-### Performance Targets
-
-- 6 agents (3 per team) at 30+ fps on canvas
-- Tire state update: 4 floats per car, 24 total — trivial cost
-- Radio field: 6 cars × 7 floats = 42 floats per tick — typed-array, trivial
-- Agent network evaluation: slab-backed typed-array forward passes
-- Optional: Web Worker offload for network evaluations
-
----
-
-## Acceptance Criteria
-
-- Both teams run at 30+ fps with 3 cars each on canvas.
-- Tier 1 is reliably solvable by at least one lineage in each team under deterministic race packs.
-- Tier 5 produces measurable role differentiation within teams: at least one car consistently scores lower individual position but improves team score (blocker behavior).
-- Tire degradation creates measurable strategy divergence between teams: different mean pit laps, different driving aggression profiles.
-- Team radio field shows non-random structure by Tier 3 (mutual information between radio output and next-tick behavior is above baseline).
-- `ModulatorBroadcaster` mode switches are measurably fast: sprint → block mode switch completes within 1–2 forward passes of trigger signal.
-- Pit-entrance blocking behavior emerges without scripting: cars from the opposing team hold the pit corridor in at least 10% of late-tier races.
-- `EpisodicSlot` contents show opponent pit timing patterns: networks that recall opponent pit timing should outperform those that do not (measurable by ablation in evaluation).
-- Polyandric reproduction produces viable offspring by Tier 5: teams using polyandric mode should not stagnate relative to teams using sexual reproduction alone.
-- `modeIsEvolvable: true` produces observable reproduction mode shifts correlated with co-evolutionary phase transitions.
-- Total agent network wiring cost declines over generations relative to task performance (compact specialists emerge; bloated generalists are outcompeted).
-- Tier 6 co-evolutionary arms race shows non-trivial trajectory: not immediate fixed-point convergence, not pure random walk — alternating advantage between the two teams is the target observable.
-
----
-
-## Readiness Checklist (for implementation start)
-
-- [ ] NGE Phase A (DNA + deterministic development) stable enough for phenotype lifecycle and deterministic replay.
-- [ ] NGE Phase B (Juvenile focus + local growth/prune) implemented.
-- [ ] `ModulatorBroadcaster` archetype implemented (Phase 0).
-- [ ] `GatedRecurrentCell` archetype implemented (Phase 0).
-- [ ] `EpisodicSlot` archetype implemented (Phase 0).
-- [ ] `GatingRouter` archetype implemented (Phase 0).
-- [ ] `ResidualTap` archetype implemented (Phase 0).
-- [ ] Phase E reproduction modes (parthenogenesis, polyandric, sexual) implemented with `modeIsEvolvable` support.
-- [ ] Two-population NEAT harness implemented (independent gene pools, independent species tracking).
-- [x] Rolling opponent snapshot mechanism implemented (hall-of-fame + recent-population sampling). <!-- Phase G Step 04: `createOpponentSnapshotPool` + `addOpponentSnapshot` in `src/neat/nge-collective/` provide the fixed-capacity rolling buffer. Benchmark-specific sampling policy (hall-of-fame weighting, population sweep) is a benchmark-local concern. -->
-- [x] Stigmergy typed-array field primitive available (shared with ant hive pheromone infrastructure). <!-- Phase G Step 04: `src/neat/nge-collective/neat.nge-collective.shared-field.ts` is implemented with `createSharedField`, `writeCell`, `readCell`, `applyDecay`, `applyDiffusion`, `clearField`. -->
-- [ ] Tire degradation model (state field, decay function, grip multiplier) implemented.
-- [ ] Tier schema drafted with deterministic race pack semantics and cross-team promotion rules.
-- [ ] Carry-state and reset-state boundary agreed.
-- [ ] Team radio protocol: typed-array size fixed; no semantic prescribed.
-- [ ] Optimal-line guidance fade policy fixed per tier.
-- [ ] Sensor-family normalization contract written.
-- [ ] Behavioral-drive vocabulary and `GatingRouter` policy-head count agreed.
-- [ ] Newborn nursery warm-start contract fixed.
-- [ ] Reward and penalty contract written (anti-contact-exploit guardrails, pit-spam penalty, wrong-direction penalty).
-- [ ] Canvas rendering approach decided (raw 2D context vs. WebGL).
-- [ ] Deterministic race seeding contract written (same seed → same track layout, starting positions, opponent snapshot).
-- [ ] Tire degradation balance constants verified (fresh tires should last 1–2 full laps at aggressive pace; conservative pace extends tire life meaningfully).
-
----
-
-## Implementation Phases
-
-### Phase 1 — Racing Curriculum Planning [WIP]
-
-**Phase objective:** Author the seven-step implementation workflow for the Team Racing Curriculum
-benchmark and advance to the first active step.
-
-#### Step 01 — Planning packet [WIP]
+# NEAT Genesis EvoDevo: Racing Curriculum Audit
+
+**Status:** [PLANNED]
+
+## Scope
+
+Refactor `examples/racing_curriculum` from a proof of concept into the Team
+Racing Curriculum benchmark described by `examples/racing_curriculum/reference.plans.md`.
+The benchmark remains downstream of `plans/completed/NEAT_Genesis_EvoDevo.md`
+and `plans/completed/Memory_Optimization.md`; when those upstream plans conflict
+with the demo plan, the upstream plan wins.
+
+## Current state
+
+- The current POC is strongest in deterministic runtime scaffolding, local
+  runtime adaptation, track generation, tire/pit mechanics, and renderer
+  plumbing.
+- The largest plan-fidelity gap is still runtime/evolution semantics: the POC is
+  single-controller centric, not two independent Team A/B NEAT populations with
+  rolling opponent snapshots, generation barriers, and team-level fitness.
+- The worker seam exists, but the racing demo does not yet follow the
+  Flappy-style pattern where a worker owns evolution/playback authority and the
+  host receives compact real-time `race-step` frames.
+- Track and physics are partial: surface-type semantics, sand/wall/off-track
+  lifecycle, pit-entrance blocking, braking-distance tire effects, and slip-onset
+  tire effects are not yet complete.
+- UI/observability are partial: benchmark-grade charts for Team A vs Team B
+  fitness, radio heatmaps, pit/tire strategy, role divergence, reproduction mode,
+  and playback controls remain incomplete.
+
+## MCP tracking plan
 
 ```yaml
-phase: '1'
-step: 1
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
-status: '[WIP]'
-mode: 'fresh-session'
-source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
-copy_paste: 'true'
-next_step: 'Step 02 — Research boundary mapping'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+workstream: racing_curriculum_reference_completion
+source_reference: examples/racing_curriculum/reference.plans.md
+active_tracker: plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+primary_boundary: full_team_a_b_coevolution_worker_loop
+reason:
+  - 'The worker-authoritative runtime foundation is complete, so the next highest-fidelity gap is full Team A/B coevolution.'
+  - 'Worker-owned controller inference and generation looping are required before the benchmark can claim reference-plan depth.'
+  - 'Flappy Bird already proves the host/worker split: generation-ready summaries plus real-time playback-step snapshots.'
+preserve_terms:
+  - Team A and Team B
+  - identical-DNA teams
+  - team radio as stigmergy
+  - rolling opponent snapshot
+  - polyandric reproduction
+  - category ladder
+  - carry-state and reset-state semantics
+  - deterministic race packs
+mcp_services:
+  workflow:
+    - neataptic-workflow-mcp.get_active_workflow_snapshot
+    - neataptic-workflow-mcp.get_customization_inventory
+  cortex:
+    - neataptic-cortex-mcp.search_corpus
+    - neataptic-cortex-mcp.freshness_check
+  gates:
+    - neataptic-gate-mcp.list_gates
+    - neataptic-gate-mcp.run_gate_check
+    - neataptic-gate-mcp.query_customization_routing_table
+  validation:
+    - neataptic-validation-mcp.get_active_validation_allowlist
+    - neataptic-validation-mcp.run_allowlisted_validation
+specialist_delegation:
+  research:
+    - NGE Benchmark Scout
+    - Worker Payload Scout
+    - Evaluation Pool Scout
+    - Repo Cortex Scout
+  implementation:
+    - 04-implementing
+    - NGE Core Scout
+    - Visualizer Scout
+  validation:
+    - 05-green-testing
+    - Coverage Guard
+  escalation:
+    - '00-helping only when an MCP/tool/agent/flow gap blocks the active step.'
+non_goals:
+  - 'Do not hand-code queen, blocker, pacer, or pit-strategy roles.'
+  - 'Do not claim full Tier 5 or Tier 6 completion before Team A/B coevolution and observability gates exist.'
+  - 'Do not move browser rendering authority into workers; workers own simulation/evolution, host owns DOM/canvas presentation.'
+  - 'Do not patch missing NGE primitives locally inside the demo; route missing core primitives to NGE Core Scout.'
+  - 'Do not edit generated docs/examples output directly.'
+acceptance_criteria:
+  - id: worker_authority
+    criterion: 'Given the browser demo is running, when evolution or race playback advances, then controller inference and simulation state advance in a worker rather than on the main thread.'
+    validation: 'focused worker protocol tests plus browser bundle build'
+  - id: streaming_frames
+    criterion: 'Given a race is active, when the host requests live display, then it receives compact race-step snapshots suitable for render-cadence streaming.'
+    validation: 'packed snapshot transfer-list tests'
+  - id: independent_populations
+    criterion: 'Given Team A and Team B evolve, then each team keeps independent population/species/fitness state and only interacts through the race environment.'
+    validation: 'coevolution container tests'
+  - id: frozen_opponents
+    criterion: 'Given a generation starts, then evaluation uses a frozen rolling opponent snapshot until the configured snapshot boundary.'
+    validation: 'snapshot selection and generation-barrier tests'
+  - id: deterministic_packs
+    criterion: 'Given the same race pack seed and opponent snapshot, then repeated evaluation returns stable comparable episode inputs.'
+    validation: 'deterministic replay tests'
+  - id: tier_ladder
+    criterion: 'Given a team promotes, then the category ladder advances only through deterministic pack reliability and records explicit carry-state/reset-state behavior.'
+    validation: 'tier transition tests'
+  - id: observability
+    criterion: 'Given training progresses beyond early tiers, then UI telemetry exposes Team A vs Team B fitness, radio/tire/pit signals, role divergence, and reproduction-mode summaries.'
+    validation: 'renderer/telemetry tests and manual browser smoke'
+stop_conditions:
+  done: 'All Step 02-07 packets have completed and the tracker is closed by 07-logging.'
+  hold: 'The active step needs user prioritization or benchmark-policy clarification.'
+  blocked: 'A missing upstream NGE primitive or MCP/tooling gap prevents honest implementation.'
 ```
 
-**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+## Implementation phases
 
-**Step objective:** Packetize the full Team Racing Curriculum implementation workflow into SDLC-numbered
-step packets (Steps 02-07) and confirm the smallest honest first implementation boundary.
+### Phase 1 — Racing curriculum refactor packetization [WIP]
+
+#### Step 01 — Gap audit and first-boundary selection [DONE]
+
+[DONE] Gap audit compressed: `examples/racing_curriculum` is a deterministic
+POC with partial track, tire, pit, renderer, and worker seams; the selected first
+boundary is runtime/evolution plus worker streaming because it is the highest
+plan-fidelity and performance prerequisite for Team A/B coevolution.
+
+#### Step 02 — Research boundary mapping [DONE]
+
+```yaml
+phase: 1
+step: 2
+agent: '02-researching'
+agent_file: '.github/agents/02-researching.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: 'true'
+next_step: 'Step 03 — Red tests for worker runtime and coevolution contracts'
+```
+
+[DONE] Boundary map complete. Validation gates all passed (plan-sync ✓,
+plan-phase-packets ✓, routing-table-freshness ✓). No escalation required.
+Research outcome recorded below.
+
+---
+
+##### Step 02 — Research Output
+
+###### Boundary Map
+
+**Host-owned (never move to worker):**
+
+- DOM/canvas rendering, HUD panels, telemetry display, network-view canvas
+- User interaction (keyboard shortcuts, tier selector UI)
+- `requestAnimationFrame` loop cadence and viewport resize handling
+- Receiving and decoding compact typed-array `race-step` snapshots for render
+
+**Worker-owned (target state after Step 04):**
+
+- Team A and Team B `Neat` population instances + species/fitness history
+- Rolling opponent snapshot store: hall-of-fame sample + recent-population
+  sample; frozen at generation start, updated every N generations (configurable)
+- Generation lifecycle: evaluate against frozen snapshot → select → evolve →
+  emit `generation-ready` summary
+- Race episode lifecycle: construct deterministic race pack → tick simulation →
+  run controller inference per car per tick → pack and stream `race-step`
+  typed-array snapshot
+- Controller inference (network.activate per car each simulation tick)
+- Packed `race-step` snapshot construction and transfer-list resolution
+- Deterministic race-pack construction (seed + opponent snapshot → initial state)
+- Generation barrier enforcement (no opponent update while evaluation runs)
+- Optional nested evaluation-pool dispatch (SharedArrayBuffer / nested workers;
+  capability-gated, with single-thread fallback)
+
+**Host↔Worker message seam (target protocol):**
+
+```
+Host → Worker:
+  init        { populationSize, rngSeed, tier, archProfileId? }
+  request-generation { }
+  start-race  { tierConfig, opponentSnapshotId }
+  request-race-step { requestId, stepsToAdvance }
+  stop        { }
+
+Worker → Host:
+  generation-ready { generation, teamABestFitness, teamBBestFitness,
+                     bestNetworkPayload?, populationNetworkPayloads? }
+  race-step        { requestId, snapshot: RacingRenderFrame, done }
+  runtime-status   { phase, statusText }
+  error            { message }
+```
+
+**Current POC seam (to be replaced):**
+`{type:'step', requestId, envState, control}` → `{type:'step-result', requestId, envState}`
+
+The host sends full `EnvironmentState` every tick and the worker returns a new
+`EnvironmentState`. Controller inference, curriculum progress, and evolution all
+run on the main thread. The worker is a one-shot physics delegate, not an
+authority.
+
+###### File-Level Seams
+
+| File                                                                        | Role                                       | Gap                                                                          |
+| --------------------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `browser-entry/browser-entry.ts`                                            | POC main loop, DOM, controller, curriculum | Owns evolution and controller — must delegate both to worker                 |
+| `workers/simulation-worker/simulation-worker.types.ts`                      | `RacingRenderFrame` packed struct          | Schema correct; needs evolution-worker message types (new file)              |
+| `workers/simulation-worker/simulation-worker.snapshot.utils.ts`             | Transfer-list resolver, schema assert      | Correct; reusable as-is                                                      |
+| `workers/simulation-worker/simulation-worker.tier3.ts`                      | Tier 3 frame factory + radio resolver      | Correct; usable by worker-owned episode stepper                              |
+| `workers/simulation-worker/simulation-worker.tier4.ts`                      | Tier 4 frame factory + pit status          | Correct; usable by worker-owned episode stepper                              |
+| `workers/simulation-worker/simulation-worker.tier5.ts`                      | Tier 5 frame factory + radio resolver      | Correct; usable by worker-owned episode stepper                              |
+| `environment/environment.step.service.ts`                                   | Deterministic physics stepper              | Complete; worker will call this inside the episode loop                      |
+| `environment/environment.types.ts`                                          | Shared state types                         | Complete                                                                     |
+| `controller/nge.controller.ts`                                              | Network-based car controller               | Must move to worker; host receives snapshots not control output              |
+| `controller/runtime.adaptation.ts`                                          | Within-episode mutation engine             | Demo-local; keep or discard in worker rewrite                                |
+| `browser-entry/host/`                                                       | DOM panel layout                           | Host-owned; no change                                                        |
+| `evaluation/` (not yet present)                                             | Evaluation harness                         | Needs: team fitness resolver, race-pack factory, opponent snapshot container |
+| `workers/simulation-worker/simulation-worker.evolution.types.ts`            | Evolution worker message types             | **Missing — new file needed**                                                |
+| `workers/simulation-worker/simulation-worker.evolution.protocol.service.ts` | FSM router (init→evolve→race→stop)         | **Missing — new file needed**                                                |
+| `workers/simulation-worker/simulation-worker.coevolution.service.ts`        | Team A/B container                         | **Missing — new file needed**                                                |
+| `workers/simulation-worker/simulation-worker.race-pack.service.ts`          | Deterministic pack factory                 | **Missing — new file needed**                                                |
+| `workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts`  | Rolling snapshot store + barrier           | **Missing — new file needed**                                                |
+
+###### POC Gap Classification
+
+| Gap                                                                         | Classification                               | Owner                    |
+| --------------------------------------------------------------------------- | -------------------------------------------- | ------------------------ |
+| Worker evolution protocol FSM (init/generation/start-race/race-step/stop)   | demo-local                                   | racing_curriculum worker |
+| Evolution worker message types (typed union like Flappy)                    | demo-local                                   | racing_curriculum worker |
+| Packed `race-step` snapshot with generation telemetry                       | demo-local                                   | racing_curriculum worker |
+| Transfer-list buffer-detach enforcement for race-step frames                | demo-local                                   | racing_curriculum worker |
+| Team A/B independent `Neat` population containers                           | demo-local (2× Neat instances)               | racing_curriculum worker |
+| Team fitness: best-finishing car position = team score                      | demo-local                                   | racing_curriculum worker |
+| Rolling opponent snapshot store (hall-of-fame + recent sample)              | demo-local policy                            | racing_curriculum worker |
+| Generation barrier: freeze snapshot before evaluation, release after        | demo-local orchestration                     | racing_curriculum worker |
+| Deterministic race-pack construction (seed + snapshot → initial conditions) | demo-local                                   | racing_curriculum worker |
+| Radio field transport in RacingRenderFrame                                  | partially exists (type defined, not written) | racing_curriculum worker |
+| Team tier-ladder state management (carry-state / reset-state)               | demo-local                                   | racing_curriculum worker |
+| Benchmark observability charts (Team A vs B fitness, radio heatmaps)        | demo-local renderer                          | racing_curriculum host   |
+| Stigmergy typed-array field primitive (shared pheromone analog)             | **upstream NGE Phase G Step 04**             | NGE Core Scout           |
+| `ModulatorBroadcaster` neuromodulation                                      | **upstream NGE**                             | NGE Core Scout           |
+| `EpisodicSlot` medium-term memory                                           | **upstream NGE**                             | NGE Core Scout           |
+| `GatingRouter` hard task-switching                                          | **upstream NGE**                             | NGE Core Scout           |
+| Polyandric reproduction mode + `modeIsEvolvable`                            | **upstream NGE Phase E**                     | NGE Core Scout           |
+
+**NGE Core Scout escalation:** NOT required for Step 03 or Step 04 tranche.
+All upstream NGE primitives (ModulatorBroadcaster, EpisodicSlot, GatingRouter,
+polyandric) are advanced-tier features needed by Tier 5/6. The first tranche
+targets Tier 1–3 worker authority, which only needs standard `Neat` populations
+and network inference. Step 04 must document NGE primitive dependencies with
+explicit TODO comments rather than compensating locally.
+
+###### Step 03 Red-Test Targets
+
+Smallest observable failures that prove the current POC gaps:
+
+**File: `workers/simulation-worker/simulation-worker.evolution.protocol.test.ts`** (new)
+
+- `routeRacingWorkerProtocolMessage` rejects `request-generation` before `init`
+- `routeRacingWorkerProtocolMessage` rejects `start-race` before a generation exists
+- `routeRacingWorkerProtocolMessage` rejects `request-race-step` before `start-race`
+- `routeRacingWorkerProtocolMessage` routes `stop` first regardless of state
+
+**File: `workers/simulation-worker/simulation-worker.coevolution.test.ts`** (new)
+
+- Team A population evolves independently from Team B (separate innovation counters)
+- Team fitness resolves as the best-finishing car index (not sum, not average)
+- Frozen opponent snapshot does not update during active evaluation
+- Snapshot is replaced only after the configured generation boundary
+
+**File: `workers/simulation-worker/simulation-worker.race-pack.test.ts`** (new)
+
+- `createDeterministicRacePack(seed, opponentSnapshot)` returns identical initial
+  conditions for identical inputs
+- Pack initial car positions are not all zeros (must spread cars on track grid)
+- Transfer list from a `race-step` snapshot contains no duplicate buffers
+- Detached buffer (after transfer-list postMessage) cannot be reused without
+  allocating a new array
+
+**Already-passing test coverage to protect:**
+
+- `simulation-worker.snapshot.utils.test.ts` (schema version + transfer list)
+- `simulation-worker.tier3.test.ts`, `tier4.test.ts`, `tier5.test.ts` (frame factories)
+- `simulation-worker.tier5-renderer.test.ts` (Tier 5 renderer parity)
+- `environment.step.service.test.ts` (physics stepper)
+
+###### Validation Gate Results (Step 02)
+
+- `validate-plan-sync`: PASS (0 errors, 0 warnings)
+- `validate-plan-phase-packets`: PASS (0 errors, 0 warnings; Phase 1 WIP, agent 02-researching)
+- `routing-table-freshness.gate`: PASS (hash match, 57 agents, 51 skills)
+
+#### Step 03 — Red tests for worker runtime and coevolution contracts [DONE]
+
+```yaml
+phase: 1
+step: 3
+agent: '03-red-testing'
+agent_file: '.github/agents/03-red-testing.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: 'true'
+next_step: 'Step 04 — Implement worker-authoritative racing runtime foundation'
+```
+
+**User instruction:** Paste this full step packet.
+
+**Step objective:** Add the smallest failing owner-local tests that prove the
+current POC lacks the worker-authoritative runtime and Team A/B coevolution
+contracts selected by Step 02.
 
 **Context the agent must know:**
 
-- This plan is downstream of `plans/completed/NEAT_Genesis_EvoDevo.md` (now fully closed through Phase G)
-  and `plans/completed/Memory_Optimization.md`. If this plan conflicts with either upstream, the
-  upstream plan wins.
-- The `src/neat/nge-collective/` core is available as a shared primitive providing `SharedField`,
-  `OpponentSnapshotPool`, `addOpponentSnapshot`, and `runCollectiveEvaluationTick`.
-- This is a benchmark-architecture plan; serious implementation must not begin before the Readiness
-  Checklist NGE prerequisites are met or an explicit honest narrow boundary is agreed.
-- `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` and `plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md`
-  are peer plans (neither is a prerequisite for this one).
+- Step 02 boundary map is in the `Step 02 — Research Output` section of this
+  tracker. Read it before writing any test.
+- The current worker seam (`createRacingSimulationWorker` in `browser-entry.ts`)
+  is a one-shot step-delegation worker, not an evolution-authority worker.
+  Current protocol: `{type:'step', envState, control}` → `{type:'step-result', envState}`.
+  Target protocol: `init → request-generation → start-race → request-race-step → stop`.
+- New files needed (all in `workers/simulation-worker/`):
+  - `simulation-worker.evolution.types.ts` — typed message union (like Flappy's `types.ts`)
+  - `simulation-worker.evolution.protocol.service.ts` — FSM router
+  - `simulation-worker.coevolution.service.ts` — Team A/B container
+  - `simulation-worker.race-pack.service.ts` — deterministic pack factory
+  - `simulation-worker.opponent-snapshot.service.ts` — rolling snapshot store + barrier
+- Tests must follow the single-expect rule and should fail for the intended POC
+  gap before implementation begins.
+- Prioritize behavior that unlocks performance and plan fidelity: worker-owned
+  simulation/evolution, compact race-step streaming, Team A/B population state,
+  rolling opponent snapshots, generation barriers, and deterministic race packs.
+- Do not write tests that require hard-coded roles or prescribed radio
+  semantics; role differentiation and radio meaning must remain emergent.
+- NGE Core Scout escalation NOT needed for this tranche. The first tranche uses
+  standard `Neat` populations and network inference only. Document NGE motif
+  dependencies (ModulatorBroadcaster, EpisodicSlot, GatingRouter, polyandric) as
+  explicit TODO comments rather than compensating locally.
 
 **Execution steps:**
 
-1. Re-read this plan's Scope, Category Ladder, Readiness Checklist, and Acceptance Criteria sections
-   to understand the current design intent and which NGE prerequisites are already met.
-2. Assess which Readiness Checklist items are currently met, which are unmet, and whether an
-   honest narrow starting boundary (e.g., single-car Tier 1 scaffolding, sensor contract) can be
-   selected before all NGE prerequisites exist.
-3. Author step packets for Steps 02-07 (Research, Red Testing, Implementation, Green Testing,
-   Documentation, Logging) scoped to the selected honest boundary.
-4. Record the boundary decision, non-goals, and any deferred capability gaps in this plan.
-5. Advance to Step 02 only when the plan is self-contained for a fresh research session.
+1. Read the Step 02 boundary map in this tracker and nearest owner-local racing
+   worker/runtime tests (`simulation-worker.snapshot.utils.test.ts` etc.).
+2. Add failing tests for worker protocol lifecycle FSM in
+   `simulation-worker.evolution.protocol.test.ts`:
+   `init → request-generation → start-race → request-race-step → stop`.
+3. Add failing tests for packed `race-step` snapshot schemas and transfer-list
+   ownership in `simulation-worker.race-pack.test.ts` so detached buffers
+   cannot be reused accidentally.
+4. Add failing tests for independent Team A/B population containers and team-level
+   fitness (best-finishing car = team score) in
+   `simulation-worker.coevolution.test.ts`.
+5. Add failing tests for frozen rolling opponent snapshot selection and
+   generation-barrier semantics (snapshot is not updated during evaluation).
+6. Add failing tests for deterministic race-pack replay: same seed + snapshot =
+   identical initial conditions.
+7. Run the focused red-test slice and record exact failing tests plus expected
+   failure reasons.
 
 **Stop conditions:**
 
-- **Done:** the plan records the selected honest boundary, step packets for Steps 02-07, and
-  the next active step (Step 02).
-- **Hold:** keep Step 01 [WIP] if the honest boundary cannot be determined without additional
-  research.
-- **Blocked:** a missing upstream prerequisite prevents any honest boundary selection; stop and
-  escalate to `00-helping`.
-- **Route-back:** no earlier step (this is the first step).
+- **Done:** focused tests fail for the intended missing contracts and are ready
+  for Step 04 implementation.
+- **Hold:** Step 02 did not provide enough boundary detail to write targeted
+  failing tests.
+- **Blocked:** a required test helper depends on an upstream NGE primitive that
+  is not available; route to NGE Core Scout.
+- **Route-back:** return to `02-researching` if the red tests expose an
+  unmapped file boundary.
 
 **Required validation:**
 
-- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+- `npx jest --config=jest.config.mjs --no-cache --runInBand --runTestsByPath examples/racing_curriculum/index.test.ts`
+
+**Plan update requirement:** Record red-test files, expected failing assertions,
+single-expect compliance notes, and the exact Step 04 implementation target in
+this tracker before ending.
+
+**Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested `Copy-paste prompt` subsection.
 
 ---
 
-**Plan update requirement:** Update this plan with the selected boundary, authored step packets,
-non-goals, and the next active step before ending.
+##### Step 03 — Red-Phase Evidence
 
-**Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested
-`Copy-paste prompt` subsection.
+###### Red-Test Files Added
+
+All three files are new, owner-local, in
+`examples/racing_curriculum/workers/simulation-worker/`.
+
+| File                                           | Tests | Target service boundary                                                                       |
+| ---------------------------------------------- | ----- | --------------------------------------------------------------------------------------------- |
+| `simulation-worker.evolution.protocol.test.ts` | 4     | `simulation-worker.evolution.protocol.service.ts` (FSM router)                                |
+| `simulation-worker.race-pack.test.ts`          | 5     | `simulation-worker.race-pack.service.ts` (deterministic pack factory + transfer ownership)    |
+| `simulation-worker.coevolution.test.ts`        | 7     | `simulation-worker.coevolution.service.ts` + `simulation-worker.opponent-snapshot.service.ts` |
+
+###### Minimal Red-Phase Scaffolding Added
+
+The following placeholder boundaries were added only so Jest can load the
+intended Step 04 seams while still failing on the missing contracts:
+
+- `simulation-worker.evolution.types.ts`
+- `simulation-worker.evolution.protocol.service.ts`
+- `simulation-worker.coevolution.service.ts`
+- `simulation-worker.race-pack.service.ts`
+- `simulation-worker.opponent-snapshot.service.ts`
+
+Each scaffold is intentionally incomplete and must be replaced or hardened in
+Step 04.
+
+###### Focused Red-Test Run Output (13 FAILED / 3 PASSED / 16 TOTAL)
+
+```
+FAIL simulation-worker.evolution.protocol.test.ts
+  ● request-generation before init → expect(result.error).toBeDefined()
+      Received: undefined
+  ● start-race before generation-ready → expect(result.error).toBeDefined()
+      Received: undefined
+  ● request-race-step before start-race → expect(result.error).toBeDefined()
+      Received: undefined
+  ● stop routing → expect(result.nextState.phase).toBe('stopped')
+      Received: 'idle'
+
+FAIL simulation-worker.race-pack.test.ts
+  ● identical carX for identical seed + snapshot → expect(Array.from(packA.carX)).toEqual(Array.from(packB.carX))
+      Received first differing value: 1 vs 2
+  ● packed schema sentinel → expect(pack.schemaVersion).toBe('racing-packed-v1')
+      Received: 'racing-packed-v0'
+  ● transfer ownership → expect({ containsCarXBuffer, entryCount, uniqueBufferCount }).toEqual(...)
+      Received: { containsCarXBuffer: false, entryCount: 1, uniqueBufferCount: 1 }
+  ● detached-buffer safety → expect(pack.carX.byteLength).toBe(0)
+      Received: 16
+
+FAIL simulation-worker.coevolution.test.ts
+  ● teamA/teamB isolation → expect(container.teamA).not.toBe(container.teamB)
+      Received shared object: { populationId: 'shared-population' }
+  ● population identity isolation → expect(container.teamA.populationId).not.toBe(container.teamB.populationId)
+      Received: 'shared-population'
+  ● team-level fitness uses best finisher → expect(teamFitness).toBe(3)
+      Received: 5
+  ● team-level fitness does not average finishes → expect(teamFitness).toBe(1)
+      Received: 5
+  ● generation barrier before boundary → expect(updateApplied).toBe(false)
+      Received: true
+
+Test Suites: 3 failed, 3 total
+Tests:       13 failed, 3 passed, 16 total
+```
+
+**Failure reason:** Jest now resolves the intended Step 04 seams, and the
+focused red slice fails for the actual missing contracts: lifecycle rejection
+rules are absent, `stop` does not transition to `stopped`, deterministic
+race-pack replay is not stable, the packed snapshot schema/transfer ownership is
+incomplete, Team A/B containers alias shared state, team fitness averages
+finishes instead of taking the best finisher, and opponent snapshots ignore the
+configured generation barrier.
+
+###### Single-Expect Compliance
+
+Every `it()` block contains exactly one top-level `expect(...)` call.
+No nested expects, no multi-assertion helpers.
+
+###### Validation Gate Results (Step 03)
+
+- `validate-plan-sync`: **PASS** (0 errors, 0 warnings)
+- `validate-plan-phase-packets`: **PASS** (0 errors, 0 warnings)
+- `index.test.ts`: **PASS** (1 passing — existing suite unaffected)
+
+###### Step 04 Implementation Target
+
+Step 04 must create these five files in `workers/simulation-worker/` so that all
+16 red tests pass:
+
+| File                                                                   | Minimum contract                                                                                                                                         |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `simulation-worker.evolution.types.ts`                                 | Typed inbound/outbound message union                                                                                                                     |
+| `simulation-worker.evolution.protocol.service.ts`                      | `createInitialProtocolState()` + `routeRacingWorkerProtocolMessage()` must enforce `init → request-generation → start-race → request-race-step → stop`   |
+| `simulation-worker.coevolution.service.ts`                             | `createCoevolutionContainer()` must allocate independent Team A/B containers and resolve team fitness from the best-finishing team car                   |
+| `simulation-worker.race-pack.service.ts`                               | `createDeterministicRacePack(seed, snapshot)` must replay identical initial conditions and emit `'racing-packed-v1'` frames                              |
+| `simulation-worker.opponent-snapshot.service.ts`                       | `createOpponentSnapshotStore(config)` must freeze rolling opponent snapshots during evaluation and only rotate them at the configured generation barrier |
+| Transfer-list handling inside `simulation-worker.race-pack.service.ts` | Must include every packed frame buffer exactly once and leave transferred buffers detached after handoff                                                 |
+
+NGE primitive dependencies (NOT to be compensated locally in Step 04 — record
+as `TODO: NGE_TODO` comments):
+
+- `ModulatorBroadcaster` for team radio neuromodulation (upstream Phase G)
+- `EpisodicSlot` for opponent snapshot payload enrichment (upstream Phase G)
+- `GatingRouter` for `carMode` hard task-switch (upstream Phase G)
+- Polyandric reproduction + `modeIsEvolvable` (upstream Phase E)
+
+#### Step 04 — Implement worker-authoritative racing runtime foundation [DONE]
+
+```yaml
+phase: 1
+step: 4
+agent: '04-implementing'
+agent_file: '.github/agents/04-implementing.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: 'true'
+next_step: 'Step 05 — Green validation and regression triage'
+```
+
+**User instruction:** Paste this full step packet.
+
+**Step objective:** Implement the minimum runtime/evolution foundation that
+makes the Step 03 tests pass while moving racing toward the reference plan's
+worker-authoritative Team A/B benchmark.
+
+**Context the agent must know:**
+
+- Host-owned responsibilities: DOM controls, HUD, canvas rendering, telemetry
+  panel wiring, and user interaction.
+- Worker-owned responsibilities: environment state, controller inference,
+  generation and race lifecycle, Team A/B runtime state, race-step snapshot
+  packing, and optional nested evaluation-pool dispatch.
+- Reuse Flappy-style patterns where they fit: generation-ready summaries,
+  playback/race-step streaming, typed-array snapshot schemas, transfer-list
+  resolution, capability-gated optimized transports, and fallback paths when
+  SharedArrayBuffer or nested workers are unavailable.
+- Keep benchmark-local code honest. If implementation requires a new NGE motif,
+  reproduction primitive, or memory primitive, stop and route the missing core
+  requirement to NGE Core Scout.
+
+**Execution steps:**
+
+1. Implement the smallest protocol and type boundary that satisfies the worker
+   lifecycle red tests without moving renderer authority into the worker.
+2. Introduce or harden packed race-step snapshots for car positions, headings,
+   team ids, tire summaries, radio summaries, alive/pit status, and generation
+   telemetry needed by the host.
+3. Add transfer-list handling that mirrors Flappy's safe transferable-payload
+   pattern and prevents reused detached buffers.
+4. Introduce independent Team A/B runtime containers with population/species/
+   fitness separation, even if the first pass uses narrow placeholder population
+   adapters behind explicit TODO-free interfaces.
+5. Implement rolling opponent snapshot selection and generation-barrier
+   orchestration at the benchmark layer, using existing NGE collective
+   primitives where available.
+6. Implement deterministic race-pack setup for repeatable evaluation across
+   teams and opponent snapshots.
+7. Keep all new public or exported symbols documented, replace magic numbers
+   with named constants, and keep helper flow declarative.
+
+**Stop conditions:**
+
+- **Done:** Step 03 tests pass through the implemented worker/co-evolution
+  foundation without hiding failures behind demo-local fallbacks.
+- **Hold:** a behavior choice affects benchmark semantics and requires planning
+  clarification.
+- **Blocked:** missing upstream core primitive, browser-build issue, or MCP/tool
+  issue prevents implementation; route to the correct owner before continuing.
+- **Route-back:** return to `03-red-testing` if implementation reveals that the
+  red contract was too broad or not observable.
+
+**Required validation:**
+
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+- `npm run quality:folder -- --folder=examples/racing_curriculum`
+- `npm run build:racing-curriculum`
+- `npx jest --config=jest.config.mjs --no-cache --runInBand --runTestsByPath examples/racing_curriculum/index.test.ts`
+
+**Plan update requirement:** Record changed files, behavior implemented,
+remaining reference-plan gaps, and the focused validation result before ending.
+
+**Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested `Copy-paste prompt` subsection.
 
 ---
+
+##### Step 04 — Implementation Record
+
+###### Files Changed
+
+| File                                                                             | Change type | Summary                                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workers/simulation-worker/simulation-worker.evolution.protocol.service.ts`      | Rewritten   | Full FSM router: idle→initialised→generation-ready→racing→stopped; `stop` always transitions to `stopped`; invalid messages for the current phase return a rejection `error` string                                 |
+| `workers/simulation-worker/simulation-worker.coevolution.service.ts`             | Rewritten   | Distinct `teamA`/`teamB` population handles with unique `populationId` per container; `resolveTeamFitness` uses `Math.min` (best position), not average                                                             |
+| `workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts`       | Rewritten   | Generation barrier (evaluationActive guard) + generation boundary check (`generation % updateEveryNGenerations === 0`); stores frozen payload; exposes `frozenPayload` field                                        |
+| `workers/simulation-worker/simulation-worker.race-pack.service.ts`               | Rewritten   | Deterministic `createDeterministicRacePack(seed, snapshot)` using index-based grid offsets; correct `schemaVersion: 'racing-packed-v1'`; `resolveRaceStepTransferList` collects all 10 distinct typed-array buffers |
+| `workers/simulation-worker/simulation-worker.coevolution.service.test.ts`        | Created     | Sibling smoke tests for quality gate                                                                                                                                                                                |
+| `workers/simulation-worker/simulation-worker.evolution.protocol.service.test.ts` | Created     | Sibling smoke tests for quality gate                                                                                                                                                                                |
+| `workers/simulation-worker/simulation-worker.opponent-snapshot.service.test.ts`  | Created     | Sibling smoke tests for quality gate                                                                                                                                                                                |
+| `workers/simulation-worker/simulation-worker.race-pack.service.test.ts`          | Created     | Sibling smoke tests for quality gate                                                                                                                                                                                |
+| `controller/runtime.adaptation.test.ts`                                          | Created     | Sibling smoke tests for quality gate (pre-existing gap)                                                                                                                                                             |
+
+###### Behavior Implemented
+
+- **Evolution protocol FSM:** `routeRacingWorkerProtocolMessage` now enforces phase-gated message routing. `stop` always reaches `stopped`. All other messages outside the current phase return `error` rather than passing through.
+- **Team A/B coevolution containers:** `createCoevolutionContainer` allocates two independent objects with distinct `populationId` strings (using a monotonic serial counter seeded by `rngSeed`). `resolveTeamFitness` returns `Math.min(...positions)`.
+- **Generation barrier + boundary enforcement:** `createOpponentSnapshotStore` applies two guards before updating: (1) evaluation must not be active, (2) `generation % updateEveryNGenerations === 0`. Failed updates return `false`; successful updates return `true` and store the frozen payload.
+- **Deterministic race-pack:** `createDeterministicRacePack(seed, snapshot)` builds a stable `RacingRenderFrame` using grid offsets computed from agent index and seed alone — no counter, no mutable state. Same inputs always produce the same `carX`/`carY` values. `resolveRaceStepTransferList` collects all 10 typed-array buffers (carX, carY, carHeading, carActive, carTeam, carMode, tireState, radioField, lap, place) into a deduplicated transfer list.
+- **Named constants:** `AGENT_COUNT`, `GRID_COLUMN_SPACING`, `GRID_ROW_SPACING`, `SEED_X_SCALE`, `EXPECTED_TRANSFER_BUFFER_COUNT` replace all magic numbers.
+- **NGE primitive TODOs:** `ModulatorBroadcaster`, `EpisodicSlot`, `GatingRouter`, and polyandric reproduction are documented as `NGE_TODO` comments in the coevolution and race-pack services.
+
+###### Remaining Reference-Plan Gaps
+
+| Gap                                                                                   | Status                                                                       |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Real `Neat` population wiring (Team A/B with actual speciation + fitness tracking)    | `TeamPopulationContainer` is an opaque handle; wiring deferred to later pass |
+| Controller inference inside worker (worker owns `network.activate` per car per tick)  | Not yet implemented; worker still delegates physics only                     |
+| Generation-ready summary (`generation-ready` worker→host message)                     | Protocol types exist; actual generation loop not yet wired                   |
+| Rolling opponent snapshot hall-of-fame + recent sample selection                      | Placeholder ID only; no actual network payload sampling                      |
+| Deterministic race-pack seed → actual grid positions on the real track geometry       | Grid positions are index-based, not track-spline-based                       |
+| Packed `race-step` streaming to host at render cadence                                | Protocol exists; step loop not yet wired                                     |
+| Team A vs B fitness charts, radio heatmaps, role-divergence observability             | Renderer/telemetry pass not yet started                                      |
+| Sand/wall/off-track lifecycle, pit-entrance blocking, braking/slip-onset tire effects | Surface physics not yet complete                                             |
+| Tier-ladder carry-state/reset-state transitions                                       | Not yet implemented                                                          |
+
+###### Focused Validation Results
+
+```
+validate-plan-sync:             PASS (0 errors, 0 warnings)
+npm run quality:folder:         PASS (0 TS errors, 0 ESLint errors, 64/64 JSDoc, 0 missing test files)
+npm run build:racing-curriculum PASS (679.1 kb bundle in 132 ms)
+npx jest (Step 03 target tests): PASS (17/17 tests, 4 suites)
+```
+
+#### Step 05 — Green validation and regression triage [DONE]
+
+```yaml
+phase: 1
+step: 5
+agent: '05-green-testing'
+agent_file: '.github/agents/05-green-testing.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: 'true'
+next_step: 'Step 06 — Documentation and educational runtime contract'
+```
+
+**User instruction:** Paste this full step packet.
+
+**Step objective:** Prove the implemented tranche is green, does not regress
+existing racing behavior, and remains MCP-trackable through plan and gate
+validation.
+
+**Context the agent must know:**
+
+- Validate the exact Step 03/04 boundary first, then expand only to nearby
+  racing slices and standard build gates.
+- Use `test-fix-workflow` if multiple unrelated failures appear.
+- If any touched files under `src/` appear, run `coverage-guard` for those
+  source files before declaring completion.
+- Do not claim full benchmark completion from green runtime foundation tests;
+  surface remaining tier, physics, radio, reproduction, and observability gaps.
+
+**Execution steps:**
+
+1. Use `neataptic-validation-mcp.get_active_validation_allowlist` for the active
+   allow-listed validation commands when the active step packet exposes them.
+2. Run the focused worker/runtime red-test slice from Step 03 and confirm it is
+   green.
+3. Run owner-local racing tests for environment, track, renderer, worker, and
+   browser-entry boundaries touched by Step 04.
+4. Run `npm run quality:folder -- --folder=examples/racing_curriculum` and
+   `npm run build:racing-curriculum`.
+5. Run `npm run build:ts` if TypeScript surfaces outside the bundle-specific
+   example build changed.
+6. Triage failures to the smallest owner: implementation regression,
+   test-contract issue, browser-build issue, upstream NGE primitive, or
+   unrelated baseline failure.
+7. Record concise validation evidence and any remaining risks.
+
+**Stop conditions:**
+
+- **Done:** focused tests, folder quality, and bundle/build validation pass or
+  unrelated baseline failures are clearly isolated with evidence.
+- **Hold:** validation exposes a benchmark-policy ambiguity rather than a code
+  defect.
+- **Blocked:** repeated validation failures require `test-fix-workflow` or
+  `00-helping` escalation.
+- **Route-back:** return to `04-implementing` for implementation-owned
+  regressions or to `03-red-testing` for incorrect red contracts.
+
+**Required validation:**
+
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+- `npm run quality:folder -- --folder=examples/racing_curriculum`
+- `npm run build:racing-curriculum`
+- `npm run build:ts`
+
+**Plan update requirement:** Record pass/fail evidence, regression ownership,
+and whether Step 06 may proceed. Compress completed validation detail to a
+concise coverage note.
+
+**Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested `Copy-paste prompt` subsection.
+
+---
+
+##### Step 05 — Green-Phase Evidence
+
+###### MCP Validation Status
+
+- `plan-session-redirect --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`: PASS
+  (`mcp-session-override.json` now points at this tracker, so workflow MCP reads
+  Phase 1 / Step 05 correctly).
+- `neataptic-validation-mcp.get_active_validation_allowlist`: PASS
+  (`requiredValidationCommands` matched the step packet for this tracker).
+- `neataptic-validation-mcp.run_allowlisted_validation`: not usable for this step
+  because the active packet exposes no executable `validationCommands`; direct
+  command execution was used for the required validations instead.
+
+###### Focused Step 03/04 Boundary Validation
+
+- `npx jest --config=jest.config.mjs --no-cache --runInBand --runTestsByPath <Step 03/04 slice>`:
+  PASS (10 suites, 41 tests). Worker protocol, coevolution, deterministic
+  race-pack, transfer-list safety, packed snapshot helpers, Tier 3/4/5 frame
+  factories, renderer parity, environment step service, and `index.test.ts`
+  stayed green together.
+
+###### Nearby Owner-Local Regression Validation
+
+- `npx jest --config=jest.config.mjs --no-cache --runInBand --runTestsByPath <owner-local racing slice>`:
+  PASS (12 suites, 64 tests). Browser-entry, browser-entry progression, host,
+  Tier 5 environment, renderer, track generator, runtime adaptation, worker
+  snapshot, and sibling worker-service smoke tests all remained green.
+
+###### Required Validation Results
+
+- `validate-plan-sync`: PASS (0 errors, 0 warnings).
+- `validate-plan-phase-packets`: PASS (0 errors, 0 warnings).
+- `npm run quality:folder -- --folder=examples/racing_curriculum`: PASS
+  (0 TS errors, 0 ESLint errors, 64/64 exported symbols documented, 0 missing
+  sibling tests).
+- `npm run build:racing-curriculum`: PASS (browser bundle emitted:
+  `docs/assets/racing-curriculum.bundle.js`).
+- `npm run build:ts`: PASS.
+
+###### Coverage Note
+
+- No `src/` files changed in this tranche, so `coverage-guard` was not required.
+
+###### Regression Ownership and Remaining Risks
+
+- **Regression ownership:** none detected. No Step 04 implementation regression,
+  no Step 03 contract issue, no browser-build failure, no upstream NGE blocker,
+  and no unrelated baseline failure were found in the validated slices.
+- **Failure recording status:** no gate exception was recorded; `.github/ai-learning/learning-log.jsonl`
+  was not updated by Step 05.
+- **Step 06 readiness:** yes — documentation may proceed.
+- **Still out of scope / still pending:** real Team A/B `Neat` wiring, worker-owned
+  controller inference and generation loop, rolling hall-of-fame snapshot
+  sampling, track-geometry race-pack placement, tier ladder carry/reset rules,
+  surface-physics completion, radio semantics, reproduction analytics, and
+  observability charts/heatmaps.
+
+#### Step 06 — Documentation and educational runtime contract [DONE]
+
+```yaml
+phase: 1
+step: 6
+agent: '06-documenting'
+agent_file: '.github/agents/06-documenting.agent.md'
+status: '[DONE]'
+mode: 'fresh-session'
+source_of_truth: 'plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: 'true'
+next_step: 'Step 07 — Logging and tracker handoff'
+```
+
+**User instruction:** Paste this full step packet.
+
+**Step objective:** Document the racing runtime contract so future benchmark
+work can understand worker authority, fallback transport, Team A/B semantics,
+and the remaining path to full reference-plan completion.
+
+**Context the agent must know:**
+
+- Public docs should explain current concepts, boundaries, invariants, and
+  tradeoffs; do not describe chat history or internal plan chronology.
+- Generated `docs/examples/**` output must not be edited directly. Edit source
+  example docs or JSDoc only when documentation changes are needed.
+- If JSDoc or generated README inputs change, run the appropriate docs workflow
+  rather than hand-editing generated `src/**/README.md` files.
+- Keep the docs honest: worker runtime foundation is not the same as full
+  category ladder, radio semantics, polyandric reproduction, or Tier 6 arms-race
+  completion.
+
+**Execution steps:**
+
+1. Read Step 04 changed files and Step 05 validation evidence.
+2. Update source-facing docs or JSDoc to explain host-owned versus worker-owned
+   racing responsibilities, packed race-step snapshots, fallback transport, and
+   deterministic race-pack expectations.
+3. Document remaining reference-plan gaps: surface physics, full Team A/B
+   coevolution depth, radio heatmaps, role-divergence observability, tier
+   promotion, and reproduction-mode analytics.
+4. Add short examples only where they reflect the actual public/runtime API.
+5. If browser-demo source docs changed, run the source generation/build command
+   required by the changed surface.
+6. Record documentation files touched and any generated artifacts intentionally
+   refreshed.
+
+**Stop conditions:**
+
+- **Done:** docs explain the implemented runtime contract and clearly distinguish
+  completed foundation from remaining benchmark work.
+- **Hold:** documentation would need to describe behavior not yet validated.
+- **Blocked:** docs generation or browser-build tooling fails; route to
+  `browser-build` or `00-helping` as appropriate.
+- **Route-back:** return to `04-implementing` if docs reveal an API or runtime
+  contract inconsistency.
+
+**Required validation:**
+
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+- `npm run build:racing-curriculum`
+- `npm run docs`
+
+**Plan update requirement:** Record docs updated, commands run, generated
+artifacts refreshed or intentionally untouched, and the final Step 07 logging
+target before ending.
+
+**Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested `Copy-paste prompt` subsection.
+
+---
+
+##### Step 06 — Documentation Evidence
+
+###### Files Changed
+
+| File                                                                        | Change type | Summary                                                                                                                                                                                                                                                                                              |
+| --------------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workers/simulation-worker/simulation-worker.evolution.types.ts`            | Updated     | Replaced plan-tracking module comment with atemporal JSDoc explaining worker authority, host/worker split, protocol lifecycle, and remaining gaps; added `RacingWorkerOutboundMessage` typed union with JSDoc; expanded all type JSDoc with invariants and semantics                                 |
+| `workers/simulation-worker/simulation-worker.evolution.protocol.service.ts` | Updated     | Added module-level JSDoc explaining FSM router, fallback transport, and host/worker authority boundary                                                                                                                                                                                               |
+| `browser-entry/browser-entry.ts`                                            | Updated     | Added comment block near POC seam types documenting the current step-delegation seam versus the target worker-authoritative protocol                                                                                                                                                                 |
+| `workers/simulation-worker/README.md`                                       | Created     | Hand-written educational README documenting host/worker authority split, protocol FSM with Mermaid stateDiagram, race-step snapshot schema, team A/B coevolution semantics, rolling opponent snapshot store, deterministic race-pack contract, fallback transport, and remaining reference-plan gaps |
+
+###### Generated Artifacts
+
+- `docs/assets/racing-curriculum.bundle.js` — refreshed by `npm run build:racing-curriculum` (679.1 kb, no content change from JSDoc-only edits).
+- `src/**/README.md` files — `npm run docs` completed successfully; no `src/` JSDoc was changed so no generated README changed.
+- `docs/examples/**` — not touched (source example HTML unchanged).
+
+###### Validation Results
+
+- `validate-plan-sync`: **PASS** (0 errors, 0 warnings).
+- `npm run build:racing-curriculum`: **PASS** (679.1 kb bundle).
+- `npm run docs`: **PASS** (HTML docs generated, 180 Mermaid diagrams validated).
+- `npm run quality:folder -- --folder=examples/racing_curriculum`: **PASS** (0 TS errors, 0 ESLint errors, 64/64 exported symbols documented, 0 missing sibling tests).
+- Focused Step 03/04 tests: **PASS** (17/17 across 4 suites).
+
+###### Documentation Scope and Gaps
+
+The documentation pass explains the implemented runtime foundation — protocol
+lifecycle, host/worker authority, team A/B container semantics, rolling snapshot
+guards, deterministic race-pack contract, and transfer-list safety — without
+claiming the full category ladder, radio semantics, polyandric reproduction, or
+Tier 6 arms-race completion. Remaining gaps are tabulated in the README and
+referenced as `NGE_TODO` in the service files.
+
+The boundary was comfortably within a docs-only pass. No `solid-split`
+escalation was required.
+
+#### Step 07 — Logging and tracker handoff [WIP]
+
+```yaml
+phase: 1
+step: 7
+agent: '07-logging'
+agent_file: '.github/agents/07-logging.agent.md'
+status: '[WIP]'
+mode: 'fresh-session'
+source_of_truth: 'plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md'
+copy_paste: 'true'
+next_step: 'Close or re-scope the next racing curriculum tranche'
+```
+
+**User instruction:** Paste this full step packet.
+
+**Step objective:** Compress the completed tranche into durable tracker evidence,
+record remaining benchmark gaps, and prepare either closure or the next
+MCP-tracked racing-curriculum tranche.
+
+**Context the agent must know:**
+
+- This workstream should remain active unless the full reference-plan completion
+  boundary is genuinely done; a worker-runtime foundation alone is not terminal
+  benchmark completion.
+- Tracker history should be compressed to concise coverage notes once each phase
+  or step completes.
+- If the workstream closes, follow `tracker-handoff`: refresh the same-boundary
+  `.logs.md`, remove stale handoff scaffolding, and archive the closed tracker
+  pair under `plans/completed/`.
+- If the workstream continues, keep a fresh `Handoff query` naming the next
+  narrow boundary.
+
+**Execution steps:**
+
+1. Summarize completed Step 02-06 evidence into compact coverage notes.
+2. Record durable changed-file groups, validation outcomes, and residual risks.
+3. Run MCP gate checks for plan-sync, step-packet, routing-table freshness, and
+   stale-WIP risk where applicable.
+4. If no customization gap occurred, record that no agent/skill/hook changes
+   were required; if a gap occurred, ensure the learning event was recorded.
+5. Decide whether the next tranche should target full Team A/B coevolution,
+   surface/boundary physics, category ladder promotion, radio/observability, or
+   docs/browser polish.
+6. Refresh the `Handoff query` for the next active boundary or close/archive the
+   tracker only if the plan is terminally complete.
+
+**Stop conditions:**
+
+- **Done:** tracker evidence is compressed, the active next boundary is clear,
+  and required gates pass or have owner-routed blockers.
+- **Hold:** user must choose the next tranche after the worker-runtime foundation.
+- **Blocked:** stale-WIP, plan-sync, or step-packet gates fail and cannot be
+  repaired locally; escalate to `00-helping`.
+- **Route-back:** return to the owner of any incomplete Step 02-06 evidence.
+
+**Required validation:**
+
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+- `node scripts/agent-customization/gates/routing-table-freshness.gate.mjs --json`
+- `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json`
+
+**Plan update requirement:** Update this tracker with the compressed log summary,
+next tranche or closure state, gate evidence, and handoff prompt before ending.
+
+**Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested `Copy-paste prompt` subsection.
+
+##### Step 07 — Logging Evidence
+
+- Step 02 compressed the boundary map: worker-owned simulation/evolution plus
+  packed race-step streaming was selected because it is the first plan-fidelity
+  prerequisite for Team A/B coevolution.
+- Step 03 added the smallest failing owner-local tests for the worker FSM,
+  deterministic race-pack replay, transfer-list ownership, Team A/B isolation,
+  best-finisher team fitness, and the opponent-snapshot barrier.
+- Step 04 implemented the worker-authoritative foundation: typed protocol
+  boundaries, independent Team A/B containers, deterministic race packs,
+  packed frame ownership, and frozen rolling-opponent snapshot rotation.
+- Step 05 validated the focused Step 03/04 slice plus nearby owner-local
+  regressions; no Step 04 regression, upstream NGE blocker, or browser-build
+  failure was detected.
+- Step 06 documented host-owned versus worker-owned responsibilities, fallback
+  transport, packed snapshot semantics, and the honest remaining benchmark gaps.
+- Changed-file groups stayed localized to `examples/racing_curriculum/workers/
+simulation-worker/`, the browser-entry/runtime contract, and the source-facing
+  docs/JSDoc that feed generated README and browser assets.
+- No agent, skill, hook, or MCP customization changes were required, and no
+  learning-event entry was needed for this tranche.
+- Residual risks remain in worker-owned controller inference and generation
+  loop depth, full Team A/B coevolution, surface/boundary physics, tier ladder
+  promotion, radio/observability, and reproduction analytics.
+- Same-boundary durable log: `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`
+  captures the compressed Step 02-06 evidence and current next-tranche boundary.
 
 ## Validation gates
 
-Plan-sync gate for this plan's active step.
+- `plan-sync`: confirms the active [WIP] plan is registered in plan indexes.
+- `step-packet`: confirms Step 02-07 packets are copy-pasteable and MCP-readable.
+- `routing-table-freshness`: confirms agent/skill routing metadata is current.
+- `stale-wip-plans`: used by Step 07 before closure or archival handoff.
 
-### Latest validation evidence
+## Latest validation evidence
 
-- 2026-05-29: Status advanced from [PLANNED] to [WIP]; `## Implementation Phases` section added to satisfy MCP `IMPLEMENTATION_SECTION_PATTERN` lookahead requirement for workflow-MCP binding.
+- MCP workflow snapshot confirms `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md`
+  is the active repo-static workflow source.
+- MCP Cortex index statistics: 1379 documents, 30909 chunks, latest build
+  timestamp `2026-06-01T00:15:50.727Z`.
+- MCP routing-table freshness reports pass for `.github/agent-skill-routing-table.md`.
+- 00-helping gap audit found no critical agent, skill, hook, or MCP tooling
+  blocker; the required fix was plan packet content, not customization
+  infrastructure.
+- `validate-plan-sync.mjs` passes for
+  `plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`.
+- `validate-plan-phase-packets.mjs` passes once Step 07 is marked [WIP].
+- `routing-table-freshness.gate.mjs` passes with a fresh generated routing table.
+- `stale-wip-plans.gate.mjs` passes; no stale terminal WIP plans are present.
+- No customization gap occurred, so no learning-event record was written.
+- Same-boundary log refreshed at `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 
 ## Handoff query
 
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
 
-Current NGE workstream state:
-- plans/completed/NEAT_Genesis_EvoDevo.md Phases 0 through G are fully closed.
-- Active frontier: plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md Step 01 — Planning packet [WIP].
-- The src/neat/nge-collective/ shared-field and multi-agent evaluation core is implemented and at
-  100% owner-local runtime coverage. Primitives available: SharedField, OpponentSnapshotPool,
-  addOpponentSnapshot, runCollectiveEvaluationTick.
-- plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md is a peer plan, currently [PLANNED].
-- plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md is a peer plan, currently [PLANNED].
+Active workstream:
+- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+- Phase 1 Step 07 — Logging and tracker handoff [WIP]
+- Steps 02–06 complete: boundary map, red tests, worker-runtime implementation,
+  green validation, and documentation are compressed into durable tracker
+  evidence.
 
-Begin with 01-planning on Step 01. Keep the plan self-contained and fresh-session safe.
+Use 04-implementing. The current tranche is logged; keep the workstream open and
+route the next tranche to full Team A/B coevolution with worker-owned controller
+inference and the generation loop. Do not close/archive yet: the reference-plan
+boundary is still incomplete. Refresh the Handoff query after the next tranche
+is selected.
+
+Required validations:
+- node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+- node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+- node scripts/agent-customization/gates/routing-table-freshness.gate.mjs --json
+- node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json
 ```

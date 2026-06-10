@@ -17,6 +17,9 @@ npm run index:prewarm       # warms MCP dense search; rerun after corpus-changin
 npx tsc --noEmit -p tsconfig.json
 npx tsc --noEmit -p tsconfig.test.json
 
+# Folder quality gate (fast post-edit static check)
+npm run quality:folder -- --folder=src/architecture/network/activate
+
 # Test
 npm test                    # full suite with coverage (runs build first)
 npm run test:silent         # same, silent output — preferred for coverage analysis
@@ -34,6 +37,8 @@ npm run docs
 ```
 
 > `npm test` triggers `pretest: npm run build`. For iterating on a focused tranche, run `npx jest --config=jest.config.mjs --no-cache --testPathPattern=<path>` directly to skip the rebuild.
+
+After edits in `src/`, `examples/`, or `benchmarks/`, run `npm run quality:folder -- --folder=<touched_folder>` before broader validation. Treat it as the mandatory fast static check alongside targeted tests and coverage guard.
 
 ## Architecture
 
@@ -140,6 +145,7 @@ Approach for each tranche:
 3. Add the smallest owner-local test that exercises the uncovered path.
 4. Validate with a focused Jest slice: `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=<file>`.
 5. Run `npm run test:silent` to confirm the repo-wide suite stays green.
+For strict hook recovery, use `node scripts/agent-customization/enforcement/runtime-enforcement-context.mjs --diagnose --tool-name=<tool> --plan=<active-plan> --session-id=<id>` to see the next preparation step before retrying a blocked write/execute action.
 6. Update the plan file with the completed tranche.
 
 When a test exposes dead code, remove the dead production branch instead of writing a test to force an unreachable path.

@@ -2,8 +2,17 @@
 description: 'Use when verifying that a set of recently changed src/ files still have 100% coverage in all four categories, or when a quick coverage regression check is needed before marking a task complete. Keywords: coverage regression, 100%, guard, verify coverage, post-change check.'
 name: coverage-guard
 tier: 3
-model: ['Claude Haiku 4.6 (copilot)', 'Claude Sonnet 4.6 (copilot)']
-tools: [read, search, bash]
+model: 'glm-5.1:cloud (ollama)'
+tools:
+  [
+    read,
+    search,
+    bash,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['coverage-guard']
@@ -26,23 +35,31 @@ You verify that every `src/` file touched by a recent change still has 100% stat
 - DO NOT restate the full `coverage-guard` workflow. Surface findings and produce a compact handoff.
 - This agent is intentionally thin. Durable policy lives in companion skill `coverage-guard`.
 
+## Gate Enforcement
+
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
+- `green-validation-evidence` — after verifying coverage regression results
+- `cortex-index` — before searching for coverage context
+
 ## Approach
 
-1. Receive the list of changed `src/` files from the caller.
-2. For each file, run a focused Jest slice to get per-file coverage:
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Receive the list of changed `src/` files from the caller.
+3. For each file, run a focused Jest slice to get per-file coverage:
    ```bash
    npx jest --config=jest.config.mjs --no-cache --coverage \
      --testPathPattern=<nearest-test-file-for-boundary>
    ```
-3. Read the output. For every file not at 100% in all four categories,
+4. Read the output. For every file not at 100% in all four categories,
    record the specific uncovered line ranges and branch conditions.
-4. For each uncovered path, read the source file to classify:
+5. For each uncovered path, read the source file to classify:
    - `reachable` — a legal input combination can exercise it,
    - `likely dead code` — no call site or input combination appears to
      reach it, with a one-line reason.
-5. Check whether an owner-local test file exists for the boundary so the
+6. Check whether an owner-local test file exists for the boundary so the
    handoff can name it.
-6. Summarize the status of every file in the change set.
+7. Summarize the status of every file in the change set.
 
 ## If Blocked
 

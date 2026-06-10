@@ -20,10 +20,13 @@ import { parseArgs } from '../customization-utils.mjs';
 import { runCortexMcpSmoke } from './cortex-mcp-smoke.mjs';
 
 const OWNER = 'repo-cortex-workflow';
-const DEFAULT_FIX_HINT = 'Run `node scripts/semantic-index/build-index.mjs` and confirm the Repo Cortex MCP is reachable before relying on Cortex-first search.';
+const DEFAULT_FIX_HINT =
+  'Run `node scripts/semantic-index/build-index.mjs` and confirm the Repo Cortex MCP is reachable before relying on Cortex-first search.';
 
 export async function runCortexFirstSearchGate(options = {}) {
-  const databasePath = path.resolve(options.databasePath ?? defaultDatabasePath);
+  const databasePath = path.resolve(
+    options.databasePath ?? defaultDatabasePath,
+  );
   const indexValidator = options.indexValidator ?? validateDatabase;
   const mcpSmoke = options.mcpSmoke ?? runCortexMcpSmoke;
 
@@ -39,7 +42,9 @@ export async function runCortexFirstSearchGate(options = {}) {
       index_chunks: Number(indexReport.chunks ?? 0),
       index_fresh: Boolean(indexReport.pass),
       corpus_mcp_alive: Boolean(corpusMcpReport.pass),
-      corpus_search_results: Number(corpusMcpReport.evidence?.searchResults ?? 0),
+      corpus_search_results: Number(
+        corpusMcpReport.evidence?.searchResults ?? 0,
+      ),
     },
     fixHint: pass ? null : resolveFixHint(indexReport, corpusMcpReport),
     owner: OWNER,
@@ -51,23 +56,27 @@ function parseCliOptions(argv) {
 
   return {
     ...base,
-    databasePath: argv.find((argument) => argument.startsWith('--databasePath='))?.slice('--databasePath='.length),
+    databasePath: argv
+      .find((argument) => argument.startsWith('--databasePath='))
+      ?.slice('--databasePath='.length),
   };
 }
 
 function printUsage() {
-  console.log([
-    'Cortex-first search prerequisite gate',
-    '',
-    'Usage:',
-    '  node scripts/agent-customization/gates/cortex-first-search.gate.mjs [--json] [--databasePath=<path>]',
-    '  node scripts/agent-customization/gates/cortex-first-search.gate.mjs --help',
-    '',
-    'Options:',
-    '  --json                 Emit machine-readable gate JSON.',
-    '  --databasePath=<path>  Override the semantic index database path.',
-    '  --help                 Show this help.',
-  ].join('\n'));
+  console.log(
+    [
+      'Cortex-first search prerequisite gate',
+      '',
+      'Usage:',
+      '  node scripts/agent-customization/gates/cortex-first-search.gate.mjs [--json] [--databasePath=<path>]',
+      '  node scripts/agent-customization/gates/cortex-first-search.gate.mjs --help',
+      '',
+      'Options:',
+      '  --json                 Emit machine-readable gate JSON.',
+      '  --databasePath=<path>  Override the semantic index database path.',
+      '  --help                 Show this help.',
+    ].join('\n'),
+  );
 }
 
 function resolveFixHint(indexReport, corpusMcpReport) {
@@ -86,13 +95,20 @@ async function main() {
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
-    console.log(report.pass ? 'PASS cortex-first-search gate' : 'FAIL cortex-first-search gate');
+    console.log(
+      report.pass
+        ? 'PASS cortex-first-search gate'
+        : 'FAIL cortex-first-search gate',
+    );
     if (!report.pass) console.log(`fixHint: ${report.fixHint}`);
   }
 
   process.exitCode = report.pass ? 0 : 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }

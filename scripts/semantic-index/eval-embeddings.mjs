@@ -25,7 +25,12 @@ import Database from 'better-sqlite3';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fail, parseCliArgs, printHelp, writeJsonOrText } from './cli-utils.mjs';
+import {
+  fail,
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from './cli-utils.mjs';
 import {
   DEFAULT_EMBEDDINGS_DATABASE_PATH,
   DEFAULT_MODEL_DIRECTORY,
@@ -36,23 +41,43 @@ import {
 import { queryDenseIndex } from './query-dense.mjs';
 import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
 
-const DEFAULT_QUERY_FILE_PATH = path.join(repoRoot, 'scripts', 'semantic-index', 'eval-queries.json');
+const DEFAULT_QUERY_FILE_PATH = path.join(
+  repoRoot,
+  'scripts',
+  'semantic-index',
+  'eval-queries.json',
+);
 const DEFAULT_MIN_HYBRID_IMPROVEMENT = 0.02;
 
 export async function evaluateEmbeddings(options = {}) {
-  const corpusDatabasePath = path.resolve(options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath);
-  const embeddingsDatabasePath = path.resolve(options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH);
-  const queryFilePath = path.resolve(options.queryFilePath ?? DEFAULT_QUERY_FILE_PATH);
+  const corpusDatabasePath = path.resolve(
+    options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath,
+  );
+  const embeddingsDatabasePath = path.resolve(
+    options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
+  );
+  const queryFilePath = path.resolve(
+    options.queryFilePath ?? DEFAULT_QUERY_FILE_PATH,
+  );
   const querySpecs = JSON.parse(await readFile(queryFilePath, 'utf8'));
-  const modelMeta = await readModelMeta({ modelDirectory: options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY, modelMeta: options.modelMeta });
-  const modelId = String(options.modelId ?? modelMeta.model_id ?? DEFAULT_MODEL_ID);
-  const embedText = options.embedText ?? await createOnnxTextEmbedder({
-    dimension: Number(options.dimension ?? modelMeta.dimension ?? 0),
+  const modelMeta = await readModelMeta({
     modelDirectory: options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
-    modelId,
+    modelMeta: options.modelMeta,
   });
+  const modelId = String(
+    options.modelId ?? modelMeta.model_id ?? DEFAULT_MODEL_ID,
+  );
+  const embedText =
+    options.embedText ??
+    (await createOnnxTextEmbedder({
+      dimension: Number(options.dimension ?? modelMeta.dimension ?? 0),
+      modelDirectory: options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
+      modelId,
+    }));
   const limit = 5;
-  const minHybridImprovement = Number(options.minHybridImprovement ?? DEFAULT_MIN_HYBRID_IMPROVEMENT);
+  const minHybridImprovement = Number(
+    options.minHybridImprovement ?? DEFAULT_MIN_HYBRID_IMPROVEMENT,
+  );
   const alpha = Number(options.alpha ?? 0.5);
 
   const queryReports = [];
@@ -96,16 +121,29 @@ export async function evaluateEmbeddings(options = {}) {
       });
     }
   } finally {
-    if (typeof options.embedText?.release !== 'function' && typeof embedText?.release === 'function') {
+    if (
+      typeof options.embedText?.release !== 'function' &&
+      typeof embedText?.release === 'function'
+    ) {
       await embedText.release();
     }
   }
 
   const bm25MrrAt5 = querySpecs.length > 0 ? bm25Total / querySpecs.length : 0;
-  const hybridMrrAt5 = querySpecs.length > 0 ? hybridTotal / querySpecs.length : 0;
-  const tsSourceQueries = querySpecs.filter((querySpec) => Array.isArray(querySpec.expected_doc_families) && querySpec.expected_doc_families.includes('ts-source')).length;
-  const { chunkCount, embeddingCount } = loadCorpusCounts(corpusDatabasePath, embeddingsDatabasePath, modelId);
-  const pass = hybridMrrAt5 >= bm25MrrAt5 + minHybridImprovement && tsSourceQueries >= 5;
+  const hybridMrrAt5 =
+    querySpecs.length > 0 ? hybridTotal / querySpecs.length : 0;
+  const tsSourceQueries = querySpecs.filter(
+    (querySpec) =>
+      Array.isArray(querySpec.expected_doc_families) &&
+      querySpec.expected_doc_families.includes('ts-source'),
+  ).length;
+  const { chunkCount, embeddingCount } = loadCorpusCounts(
+    corpusDatabasePath,
+    embeddingsDatabasePath,
+    modelId,
+  );
+  const pass =
+    hybridMrrAt5 >= bm25MrrAt5 + minHybridImprovement && tsSourceQueries >= 5;
 
   return {
     alpha,
@@ -124,15 +162,28 @@ export async function evaluateEmbeddings(options = {}) {
 }
 
 function loadCorpusCounts(corpusDatabasePath, embeddingsDatabasePath, modelId) {
-  const corpusDatabase = new Database(corpusDatabasePath, { readonly: true, fileMustExist: true });
-  const embeddingsDatabase = new Database(embeddingsDatabasePath, { readonly: true, fileMustExist: true });
+  const corpusDatabase = new Database(corpusDatabasePath, {
+    readonly: true,
+    fileMustExist: true,
+  });
+  const embeddingsDatabase = new Database(embeddingsDatabasePath, {
+    readonly: true,
+    fileMustExist: true,
+  });
 
   try {
-    const [{ count: chunkCount }] = corpusDatabase.prepare('SELECT COUNT(*) AS count FROM chunks').all();
-    const [{ count: embeddingCount }] = embeddingsDatabase.prepare(
-      'SELECT COUNT(*) AS count FROM chunk_embeddings WHERE model_id = ?'
-    ).all(modelId);
-    return { chunkCount: Number(chunkCount), embeddingCount: Number(embeddingCount) };
+    const [{ count: chunkCount }] = corpusDatabase
+      .prepare('SELECT COUNT(*) AS count FROM chunks')
+      .all();
+    const [{ count: embeddingCount }] = embeddingsDatabase
+      .prepare(
+        'SELECT COUNT(*) AS count FROM chunk_embeddings WHERE model_id = ?',
+      )
+      .all(modelId);
+    return {
+      chunkCount: Number(chunkCount),
+      embeddingCount: Number(embeddingCount),
+    };
   } finally {
     corpusDatabase.close();
     embeddingsDatabase.close();
@@ -140,8 +191,15 @@ function loadCorpusCounts(corpusDatabasePath, embeddingsDatabasePath, modelId) {
 }
 
 function findHitRank(results, querySpec, limit) {
-  const deepestAcceptedRank = Math.min(limit, Number(querySpec.min_rank_of_hit ?? limit));
-  for (let resultIndex = 0; resultIndex < Math.min(results.length, limit); resultIndex += 1) {
+  const deepestAcceptedRank = Math.min(
+    limit,
+    Number(querySpec.min_rank_of_hit ?? limit),
+  );
+  for (
+    let resultIndex = 0;
+    resultIndex < Math.min(results.length, limit);
+    resultIndex += 1
+  ) {
     const candidate = results[resultIndex];
     if (!matchesQueryExpectation(candidate, querySpec)) continue;
     const rank = resultIndex + 1;
@@ -151,8 +209,11 @@ function findHitRank(results, querySpec, limit) {
 }
 
 function matchesQueryExpectation(result, querySpec) {
-  const expectedFamilies = Array.isArray(querySpec.expected_doc_families) ? querySpec.expected_doc_families : [];
-  if (expectedFamilies.length > 0 && !expectedFamilies.includes(result.family)) return false;
+  const expectedFamilies = Array.isArray(querySpec.expected_doc_families)
+    ? querySpec.expected_doc_families
+    : [];
+  if (expectedFamilies.length > 0 && !expectedFamilies.includes(result.family))
+    return false;
 
   const headingNeedle = normalizeNeedle(querySpec.expected_heading_contains);
   const symbolNeedle = normalizeNeedle(querySpec.expected_symbol_contains);
@@ -164,7 +225,9 @@ function matchesQueryExpectation(result, querySpec) {
 }
 
 function normalizeNeedle(value) {
-  return String(value ?? '').trim().toLowerCase();
+  return String(value ?? '')
+    .trim()
+    .toLowerCase();
 }
 
 async function main() {
@@ -198,13 +261,19 @@ async function main() {
       modelId: args['model-id'],
       queryFilePath: args['query-file'],
     });
-    writeJsonOrText(report, Boolean(args.json), (payload) => payload.pass
-      ? `Dense eval passed: hybrid MRR@5 ${payload.hybridMrrAt5.toFixed(3)} vs BM25 ${payload.bm25MrrAt5.toFixed(3)}`
-      : `Dense eval failed: hybrid MRR@5 ${payload.hybridMrrAt5.toFixed(3)} vs BM25 ${payload.bm25MrrAt5.toFixed(3)}`);
+    writeJsonOrText(report, Boolean(args.json), (payload) =>
+      payload.pass
+        ? `Dense eval passed: hybrid MRR@5 ${payload.hybridMrrAt5.toFixed(3)} vs BM25 ${payload.bm25MrrAt5.toFixed(3)}`
+        : `Dense eval failed: hybrid MRR@5 ${payload.hybridMrrAt5.toFixed(3)} vs BM25 ${payload.bm25MrrAt5.toFixed(3)}`,
+    );
     if (!report.pass) process.exitCode = 1;
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+    fail(
+      error instanceof Error ? error.message : String(error),
+      Boolean(args.json),
+    );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();

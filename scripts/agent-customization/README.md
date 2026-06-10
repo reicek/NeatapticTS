@@ -33,7 +33,8 @@ frontmatter surface. They are noninteractive, JSON-capable, and idempotent.
 | --- | --- | --- |
 | `inventory-customizations.mjs` | `node scripts/agent-customization/inventory-customizations.mjs [--json]` | Inventories all customization files (agents, skills, flows, instructions) |
 | `generate-agent-skill-routing-table.mjs` | `node scripts/agent-customization/generate-agent-skill-routing-table.mjs [--json]` | Regenerates `.github/agent-skill-routing-table.md` from current agent and skill frontmatter with a normalized source hash |
-| `workflow-gap-audit.mjs` | `node scripts/agent-customization/workflow-gap-audit.mjs [--json]` | Audits workflow gaps: missing skills, gate health, flow-mention drift |
+| `workflow-gap-audit.mjs` | `node scripts/agent-customization/workflow-gap-audit.mjs [--json]` | Audits workflow gaps: gate health, escalation evidence, runtime proof mismatches, and missing pre/post hook pairs |
+| `enforcement/runtime-enforcement-context.mjs` | `node scripts/agent-customization/enforcement/runtime-enforcement-context.mjs --prepare ...` | Prepares, diagnoses, shows, or clears the repo-owned runtime proof carrier for strict write/execute actions |
 
 ### Eval runners
 
@@ -74,6 +75,12 @@ node scripts/agent-customization/gates/record-gate-exception.mjs \
 
 Records a gate exception to `.github/ai-learning/learning-log.jsonl`.
 Three consecutive gate failures in a session trigger automatic escalation to `00-helping`.
+
+## Runtime enforcement
+
+See `.github/runtime-enforcement-contract.md` for the canonical strict runtime
+enforcement contract, including the repo-owned context carrier, pre/post hook
+events, and escalation behavior.
 
 ## MCP server scripts (`mcp/`)
 

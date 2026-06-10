@@ -13,7 +13,11 @@
  * @returns {void} Exits 0 when the dense runtime is warm, 1 otherwise.
  */
 import { pathToFileURL } from 'node:url';
-import { parseCliArgs, printHelp, writeJsonOrText } from '../../semantic-index/cli-utils.mjs';
+import {
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from '../../semantic-index/cli-utils.mjs';
 import { checkDenseReadiness } from '../../semantic-index/dense-readiness.mjs';
 
 const FIX_HINT = 'Run `npm run index:prewarm` to build the embedding index.';
@@ -62,7 +66,8 @@ async function main() {
   if (args.help) {
     printHelp({
       title: 'Dense readiness gate',
-      usage: 'node scripts/agent-customization/gates/dense-readiness.gate.mjs [--json]',
+      usage:
+        'node scripts/agent-customization/gates/dense-readiness.gate.mjs [--json]',
       options: [
         '--json                       Emit the standard gate JSON contract.',
         '--database <path>            Override the semantic-index corpus database path.',
@@ -81,8 +86,13 @@ async function main() {
     modelDirectory: args['model-directory'],
     modelId: args['model-id'],
   });
-  writeJsonOrText(report, Boolean(args.json), (payload) => `${payload.pass ? 'PASS' : 'FAIL'} dense-readiness.gate`);
+  writeJsonOrText(
+    report,
+    Boolean(args.json),
+    (payload) => `${payload.pass ? 'PASS' : 'FAIL'} dense-readiness.gate`,
+  );
   if (!report.pass) process.exitCode = 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();

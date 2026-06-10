@@ -297,13 +297,16 @@ function resolvePublishedDocsTargetFromRepositoryPath(
     return 'examples';
   }
 
-  const exampleReadmeMatch = /^examples\/([^/]+)\/README\.md$/.exec(normalizedPath);
+  const exampleReadmeMatch = /^examples\/([^/]+)\/README\.md$/.exec(
+    normalizedPath,
+  );
   if (exampleReadmeMatch) {
     return `examples/${exampleReadmeMatch[1]}/docs`;
   }
 
-  const nestedExampleReadmeMatch =
-    /^examples\/([^/]+)\/(.+)\/README\.md$/.exec(normalizedPath);
+  const nestedExampleReadmeMatch = /^examples\/([^/]+)\/(.+)\/README\.md$/.exec(
+    normalizedPath,
+  );
   if (nestedExampleReadmeMatch) {
     return `examples/${nestedExampleReadmeMatch[1]}/docs/${nestedExampleReadmeMatch[2]}`;
   }

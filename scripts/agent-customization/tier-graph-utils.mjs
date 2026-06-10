@@ -62,6 +62,7 @@ export const TIER_2_AGENT_NAMES = new Set([
   'planning-test-strategy-coordinator',
   'research-codebase-coordinator',
   'implementation-pattern-coordinator',
+  'implementation-executor',
   'green-test-failure-triage-coordinator',
   'helping-gap-resolution-coordinator',
   'helping-agent-maintenance-coordinator',
@@ -92,7 +93,9 @@ export const TIER_4_AGENT_NAMES = new Set([
  * @param options.workspaceRoot - Absolute path to the repository root; defaults to `process.cwd()`.
  * @returns Structured report with `agents`, `violations`, and `summary` counts.
  */
-export async function collectTierInventory({ workspaceRoot = process.cwd() } = {}) {
+export async function collectTierInventory({
+  workspaceRoot = process.cwd(),
+} = {}) {
   const collectedAgents = await collectAgents({ workspaceRoot });
   const issues = [];
   const byName = new Map(collectedAgents.map((agent) => [agent.name, agent]));
@@ -104,7 +107,9 @@ export async function collectTierInventory({ workspaceRoot = process.cwd() } = {
     for (const childName of agent.delegatesTo) {
       const childAgent = byName.get(childName);
       if (!childAgent) {
-        issues.push(issue('error', agent.file, `Unknown subagent '${childName}'.`));
+        issues.push(
+          issue('error', agent.file, `Unknown subagent '${childName}'.`),
+        );
         continue;
       }
 
@@ -121,7 +126,13 @@ export async function collectTierInventory({ workspaceRoot = process.cwd() } = {
   }
 
   for (const cycle of findDelegationCycles(collectedAgents, byName)) {
-    issues.push(issue('error', AGENT_DIRECTORY, `Delegation cycle detected: ${cycle.join(' -> ')}`));
+    issues.push(
+      issue(
+        'error',
+        AGENT_DIRECTORY,
+        `Delegation cycle detected: ${cycle.join(' -> ')}`,
+      ),
+    );
   }
 
   const issuesByPath = groupIssuesByPath(issues);
@@ -143,8 +154,13 @@ export async function collectTierInventory({ workspaceRoot = process.cwd() } = {
     summary: {
       total: agents.length,
       by_tier: countAgentsByTier(agents),
-      user_invocable_total: agents.filter((agent) => agent.user_invocable === true).length,
-      delegation_edges: agents.reduce((total, agent) => total + agent.delegates_to.length, 0),
+      user_invocable_total: agents.filter(
+        (agent) => agent.user_invocable === true,
+      ).length,
+      delegation_edges: agents.reduce(
+        (total, agent) => total + agent.delegates_to.length,
+        0,
+      ),
       violation_count: issues.length,
     },
   };
@@ -161,7 +177,9 @@ export async function collectTierInventory({ workspaceRoot = process.cwd() } = {
  * @param options.workspaceRoot - Absolute path to the repository root; defaults to `process.cwd()`.
  * @returns Validation report with `ok`, `graph`, `inventory`, and the raw violation list.
  */
-export async function runValidateAgentGraph({ workspaceRoot = process.cwd() } = {}) {
+export async function runValidateAgentGraph({
+  workspaceRoot = process.cwd(),
+} = {}) {
   const inventory = await collectTierInventory({ workspaceRoot });
 
   return {
@@ -216,7 +234,10 @@ export function resolveTierLabel(tier) {
  * @returns Integer tier (1–4), or `null` when invalid.
  */
 export function parseTier(value) {
-  const parsedValue = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
+  const parsedValue =
+    typeof value === 'number'
+      ? value
+      : Number.parseInt(String(value ?? ''), 10);
   if (!Number.isInteger(parsedValue) || parsedValue < 1 || parsedValue > 4) {
     return null;
   }
@@ -256,8 +277,15 @@ export function isAllowedDelegation(parentTier, childTier) {
 }
 
 async function collectAgents({ workspaceRoot }) {
-  const agentFiles = await listAgentFiles(workspaceRoot, path.join(workspaceRoot, AGENT_DIRECTORY));
-  return Promise.all(agentFiles.map((absoluteFilePath) => readAgentDefinition({ absoluteFilePath, workspaceRoot })));
+  const agentFiles = await listAgentFiles(
+    workspaceRoot,
+    path.join(workspaceRoot, AGENT_DIRECTORY),
+  );
+  return Promise.all(
+    agentFiles.map((absoluteFilePath) =>
+      readAgentDefinition({ absoluteFilePath, workspaceRoot }),
+    ),
+  );
 }
 
 async function listAgentFiles(workspaceRoot, directoryPath) {
@@ -273,7 +301,9 @@ async function listAgentFiles(workspaceRoot, directoryPath) {
   for (const entry of entries) {
     const absoluteEntryPath = path.join(directoryPath, entry.name);
     if (entry.isDirectory()) {
-      discoveredFiles.push(...(await listAgentFiles(workspaceRoot, absoluteEntryPath)));
+      discoveredFiles.push(
+        ...(await listAgentFiles(workspaceRoot, absoluteEntryPath)),
+      );
       continue;
     }
 
@@ -286,8 +316,13 @@ async function listAgentFiles(workspaceRoot, directoryPath) {
 }
 
 async function readAgentDefinition({ absoluteFilePath, workspaceRoot }) {
-  const relativePath = normalizePath(path.relative(workspaceRoot, absoluteFilePath));
-  const parsed = parseFrontmatter(await readFile(absoluteFilePath, 'utf8'), relativePath);
+  const relativePath = normalizePath(
+    path.relative(workspaceRoot, absoluteFilePath),
+  );
+  const parsed = parseFrontmatter(
+    await readFile(absoluteFilePath, 'utf8'),
+    relativePath,
+  );
   const name = parsed.data.name ?? path.basename(relativePath, '.agent.md');
 
   return {
@@ -307,7 +342,13 @@ function validateAgentTierAssignment(agent) {
   const expectedTier = resolveExpectedTier(agent.name);
 
   if (agent.tier === null) {
-    issues.push(issue('error', agent.file, 'Missing or invalid `tier` frontmatter; expected an integer from 1 to 4.'));
+    issues.push(
+      issue(
+        'error',
+        agent.file,
+        'Missing or invalid `tier` frontmatter; expected an integer from 1 to 4.',
+      ),
+    );
   } else if (agent.tier !== expectedTier) {
     issues.push(
       issue(
@@ -319,15 +360,33 @@ function validateAgentTierAssignment(agent) {
   }
 
   if (expectedTier === 1 && agent.userInvocable !== true) {
-    issues.push(issue('error', agent.file, 'Tier 1 numbered SDLC orchestrators must set `user-invocable: true`.'));
+    issues.push(
+      issue(
+        'error',
+        agent.file,
+        'Tier 1 numbered SDLC orchestrators must set `user-invocable: true`.',
+      ),
+    );
   }
 
   if (expectedTier !== 1 && agent.userInvocable !== false) {
-    issues.push(issue('error', agent.file, 'Only Tier 1 numbered SDLC orchestrators may set `user-invocable: true`.'));
+    issues.push(
+      issue(
+        'error',
+        agent.file,
+        'Only Tier 1 numbered SDLC orchestrators may set `user-invocable: true`.',
+      ),
+    );
   }
 
   if (expectedTier === 4 && agent.delegatesTo.length > 0) {
-    issues.push(issue('error', agent.file, 'Tier 4 auxiliaries may not delegate to other agents.'));
+    issues.push(
+      issue(
+        'error',
+        agent.file,
+        'Tier 4 auxiliaries may not delegate to other agents.',
+      ),
+    );
   }
 
   return issues;

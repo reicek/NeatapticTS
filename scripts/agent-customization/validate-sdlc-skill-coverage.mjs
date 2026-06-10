@@ -15,7 +15,8 @@ const options = parseArgs(process.argv.slice(2));
 if (options.help) {
   printUsage({
     title: 'Validate NeatapticTS SDLC skill coverage.',
-    usage: 'node scripts/agent-customization/validate-sdlc-skill-coverage.mjs [--json]',
+    usage:
+      'node scripts/agent-customization/validate-sdlc-skill-coverage.mjs [--json]',
   });
   process.exit(0);
 }
@@ -27,8 +28,14 @@ const requiredCapabilities = [
   ['test failure triage', ['triaging-test-failures', 'test-fix-workflow']],
   ['docs audit', ['auditing-js-docs', 'docs-academic-citation-audit']],
   ['docs update', ['updating-js-docs', 'educational-docs']],
-  ['agent frontmatter', ['agent-frontmatter-standards', 'updating-agent-frontmatter']],
-  ['skill frontmatter', ['skill-frontmatter-standards', 'updating-skill-frontmatter']],
+  [
+    'agent frontmatter',
+    ['agent-frontmatter-standards', 'updating-agent-frontmatter'],
+  ],
+  [
+    'skill frontmatter',
+    ['skill-frontmatter-standards', 'updating-skill-frontmatter'],
+  ],
   ['specialist creation', ['creating-specialist-agent']],
   ['agent splitting', ['splitting-monolithic-agent']],
   ['learning events', ['capturing-learning-event']],
@@ -46,15 +53,29 @@ const skillsByName = new Map(skills.map((skill) => [skill.name, skill]));
 const issues = [];
 
 for (const [capability, skillNames] of requiredCapabilities) {
-  const missing = skillNames.filter((skillName) => !skillsByName.has(skillName));
+  const missing = skillNames.filter(
+    (skillName) => !skillsByName.has(skillName),
+  );
   if (missing.length > 0) {
-    issues.push(issue('error', '.github/skills', `${capability} is missing required skill(s): ${missing.join(', ')}`));
+    issues.push(
+      issue(
+        'error',
+        '.github/skills',
+        `${capability} is missing required skill(s): ${missing.join(', ')}`,
+      ),
+    );
   }
 }
 
 for (const skill of skills) {
   if (!skill.argumentHint) {
-    issues.push(issue('warning', skill.path, 'Skill has no argument-hint; routing prompts may be underspecified.'));
+    issues.push(
+      issue(
+        'warning',
+        skill.path,
+        'Skill has no argument-hint; routing prompts may be underspecified.',
+      ),
+    );
   }
 }
 
@@ -75,10 +96,15 @@ writeReport(report, options);
 process.exitCode = report.ok ? 0 : 1;
 
 async function collectSkills() {
-  const paths = await listMarkdownFiles('.github/skills', (relativePath) => relativePath.endsWith('/SKILL.md'));
+  const paths = await listMarkdownFiles('.github/skills', (relativePath) =>
+    relativePath.endsWith('/SKILL.md'),
+  );
   return Promise.all(
     paths.map(async (relativePath) => {
-      const { data } = parseFrontmatter(await readWorkspaceFile(relativePath), relativePath);
+      const { data } = parseFrontmatter(
+        await readWorkspaceFile(relativePath),
+        relativePath,
+      );
       return {
         path: relativePath,
         name: data.name ?? '',

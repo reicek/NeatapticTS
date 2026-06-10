@@ -282,7 +282,10 @@ function assertForwardWindowInputSize(
   expectedInputSize: number,
   inputIndex: number,
 ): void {
-  if (Array.isArray(inputVector) && inputVector.length === expectedInputSize) {
+  if (
+    (Array.isArray(inputVector) || ArrayBuffer.isView(inputVector)) &&
+    inputVector.length === expectedInputSize
+  ) {
     return;
   }
 

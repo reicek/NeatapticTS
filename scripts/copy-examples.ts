@@ -16,7 +16,10 @@
  *   copy-examples.landing.ts     — writeExamplesLandingPage
  */
 
-import { copyExampleEntryPoint, removeRetiredPublishedExamples } from './copy-examples/copy-examples.copy.js';
+import {
+  copyExampleEntryPoint,
+  removeRetiredPublishedExamples,
+} from './copy-examples/copy-examples.copy.js';
 import { EXAMPLE_DEFINITIONS } from './copy-examples/copy-examples.definitions.js';
 import { isPublishedExample } from './copy-examples/copy-examples.io.js';
 import { writeExamplesLandingPage } from './copy-examples/copy-examples.landing.js';

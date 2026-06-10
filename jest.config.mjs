@@ -129,6 +129,24 @@ const config = {
         setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
         testTimeout: 300000,
       },
+      {
+        displayName: 'semantic-index-mjs',
+        testMatch: [
+          '**/scripts/semantic-index/**/*.test.mjs',
+        ],
+        testEnvironment: 'node',
+        transform: {},
+        testTimeout: 300000,
+      },
+      {
+        displayName: 'mcp-semantic-mjs',
+        testMatch: [
+          '**/scripts/mcp-semantic/**/*.test.mjs',
+        ],
+        testEnvironment: 'node',
+        transform: {},
+        testTimeout: 300000,
+      },
   ],
   testMatch: [
     '**/src/**/*.test.ts',

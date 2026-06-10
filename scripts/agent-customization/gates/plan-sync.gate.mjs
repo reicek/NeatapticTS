@@ -36,12 +36,22 @@ async function runPlanSyncGate() {
   let roadmapText = '';
 
   try {
-    readmeText = await readFile(path.join(repoRoot, 'plans', 'README.md'), 'utf8');
-    roadmapText = await readFile(path.join(repoRoot, 'plans', 'Roadmap.md'), 'utf8');
+    readmeText = await readFile(
+      path.join(repoRoot, 'plans', 'README.md'),
+      'utf8',
+    );
+    roadmapText = await readFile(
+      path.join(repoRoot, 'plans', 'Roadmap.md'),
+      'utf8',
+    );
   } catch (error) {
     return {
       pass: false,
-      evidence: { error: String(error), readmeFound: false, roadmapFound: false },
+      evidence: {
+        error: String(error),
+        readmeFound: false,
+        roadmapFound: false,
+      },
       fixHint: 'Ensure plans/README.md and plans/Roadmap.md both exist.',
       owner: 'validate-plan-sync.mjs',
     };
@@ -50,7 +60,9 @@ async function runPlanSyncGate() {
   // Step 2: Discover root-level Markdown tracker files in plans/ (not completed/).
   let planFiles = [];
   try {
-    const entries = await readdir(path.join(repoRoot, 'plans'), { withFileTypes: true });
+    const entries = await readdir(path.join(repoRoot, 'plans'), {
+      withFileTypes: true,
+    });
     planFiles = entries
       .filter((entry) => entry.isFile())
       .map((entry) => entry.name)
@@ -58,7 +70,7 @@ async function runPlanSyncGate() {
         (name) =>
           name.endsWith('.md') &&
           !name.endsWith('.logs.md') &&
-          !['README.md', 'Roadmap.md'].includes(name)
+          !['README.md', 'Roadmap.md'].includes(name),
       )
       .map((name) => `plans/${name}`);
   } catch (error) {
@@ -94,7 +106,8 @@ async function runPlanSyncGate() {
     return !roadmapText.includes(basename);
   });
 
-  const pass = missingFromReadme.length === 0 && missingFromRoadmap.length === 0;
+  const pass =
+    missingFromReadme.length === 0 && missingFromRoadmap.length === 0;
 
   return {
     pass,

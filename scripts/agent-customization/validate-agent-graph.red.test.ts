@@ -62,15 +62,17 @@ describe('tier enforcement red contracts', () => {
         }),
       });
 
-      expect(report).toEqual(expect.objectContaining({
-        ok: false,
-        issues: expect.arrayContaining([
-          expect.objectContaining({
-            path: '.github/agents/coverage-scout.agent.md',
-            message: expect.stringContaining('user-invocable'),
-          }),
-        ]),
-      }));
+      expect(report).toEqual(
+        expect.objectContaining({
+          ok: false,
+          issues: expect.arrayContaining([
+            expect.objectContaining({
+              path: '.github/agents/coverage-scout.agent.md',
+              message: expect.stringContaining('user-invocable'),
+            }),
+          ]),
+        }),
+      );
     });
 
     it('does not report a user-invocable violation for a Tier-1 orchestrator', async () => {
@@ -82,10 +84,12 @@ describe('tier enforcement red contracts', () => {
         }),
       });
 
-      expect(report).toEqual(expect.objectContaining({
-        ok: true,
-        issues: [],
-      }));
+      expect(report).toEqual(
+        expect.objectContaining({
+          ok: true,
+          issues: [],
+        }),
+      );
     });
 
     it('reports a violation for an upward or lateral delegation edge', async () => {
@@ -96,22 +100,25 @@ describe('tier enforcement red contracts', () => {
           userInvocable: false,
           agents: ['planning-context-coordinator'],
         }),
-        '.github/agents/planning-context-coordinator.agent.md': createAgentFrontmatter({
-          name: 'planning-context-coordinator',
-          tier: 2,
-          userInvocable: false,
-        }),
+        '.github/agents/planning-context-coordinator.agent.md':
+          createAgentFrontmatter({
+            name: 'planning-context-coordinator',
+            tier: 2,
+            userInvocable: false,
+          }),
       });
 
-      expect(report).toEqual(expect.objectContaining({
-        ok: false,
-        issues: expect.arrayContaining([
-          expect.objectContaining({
-            path: '.github/agents/boundary-mapper.agent.md',
-            message: expect.stringContaining('tier'),
-          }),
-        ]),
-      }));
+      expect(report).toEqual(
+        expect.objectContaining({
+          ok: false,
+          issues: expect.arrayContaining([
+            expect.objectContaining({
+              path: '.github/agents/boundary-mapper.agent.md',
+              message: expect.stringContaining('tier'),
+            }),
+          ]),
+        }),
+      );
     });
   });
 
@@ -125,27 +132,38 @@ describe('tier enforcement red contracts', () => {
         }),
       });
 
-      expect(gateResult).toEqual(expect.objectContaining({
-        status: 1,
-        report: expect.objectContaining({
-          pass: false,
-          evidence: expect.any(Object),
+      expect(gateResult).toEqual(
+        expect.objectContaining({
+          status: 1,
+          report: expect.objectContaining({
+            pass: false,
+            evidence: expect.any(Object),
+          }),
         }),
-      }));
+      );
     });
   });
 });
 
 async function runValidateAgentGraph(agentFiles: Record<string, string>) {
-  const { report } = await runJsonScript<AgentGraphReport>(VALIDATE_AGENT_GRAPH_PATH, agentFiles);
+  const { report } = await runJsonScript<AgentGraphReport>(
+    VALIDATE_AGENT_GRAPH_PATH,
+    agentFiles,
+  );
   return report as AgentGraphReport;
 }
 
 async function runTierEnforcementGate(agentFiles: Record<string, string>) {
-  return runJsonScript<TierEnforcementGateReport>(TIER_ENFORCEMENT_GATE_PATH, agentFiles);
+  return runJsonScript<TierEnforcementGateReport>(
+    TIER_ENFORCEMENT_GATE_PATH,
+    agentFiles,
+  );
 }
 
-async function runJsonScript<ReportType>(scriptPath: string, workspaceFiles: Record<string, string>) {
+async function runJsonScript<ReportType>(
+  scriptPath: string,
+  workspaceFiles: Record<string, string>,
+) {
   const workspacePath = await createFixtureWorkspace(workspaceFiles);
 
   try {
@@ -177,10 +195,16 @@ async function createFixtureWorkspace(workspaceFiles: Record<string, string>) {
   return workspacePath;
 }
 
-function createAgentFrontmatter({ agents = [], name, tier, userInvocable }: AgentFixtureOptions) {
-  const serializedAgents = agents.length === 0
-    ? '[]'
-    : `[${agents.map((agentName) => `'${agentName}'`).join(', ')}]`;
+function createAgentFrontmatter({
+  agents = [],
+  name,
+  tier,
+  userInvocable,
+}: AgentFixtureOptions) {
+  const serializedAgents =
+    agents.length === 0
+      ? '[]'
+      : `[${agents.map((agentName) => `'${agentName}'`).join(', ')}]`;
 
   return [
     '---',

@@ -1030,7 +1030,7 @@ validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md
 ```
 
-**User instruction:** Start a fresh session, select `01-planning`, and paste this full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** Packetize the full Predator/Prey implementation workflow into SDLC-numbered
 step packets (Steps 02-07) and confirm the smallest honest first implementation boundary.

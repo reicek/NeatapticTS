@@ -2,8 +2,17 @@
 description: 'Use when checking generated folder README context, JSDoc drift, missing examples, stale docs, or deciding whether to update source comments versus run npm run docs. Keywords: README, JSDoc, docs, generated docs, drift, examples.'
 name: docs-scout
 tier: 3
-model: ['Claude Haiku 4.6 (copilot)', 'Claude Sonnet 4.6 (copilot)']
-tools: [read, search]
+model: 'glm-5.1:cloud (ollama)'
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['educational-docs']
@@ -31,15 +40,22 @@ If your recommendation includes updating a tracker file, assume
 - DO NOT restate the full documentation workflow, tone model, or guardrails that belong in `educational-docs`.
 - This agent is intentionally thin. Durable policy lives in companion skill `educational-docs`.
 
+## Gate Enforcement
+
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
+- `cortex-index` — before searching for documentation context
+
 ## Approach
 
-1. Read the nearest folder `README.md` first, then the nearest useful parent README if the task spans sibling modules.
-2. Read only the source files needed to verify the README summary against implementation.
-3. Distinguish between three cases: README is sufficient, JSDoc should be improved, or docs likely just need regeneration with `npm run docs`.
-4. If the README is structurally too broad, call that out as a `solid-split`
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Read the nearest folder `README.md` first, then the nearest useful parent README if the task spans sibling modules.
+3. Read only the source files needed to verify the README summary against implementation.
+4. Distinguish between three cases: README is sufficient, JSDoc should be improved, or docs likely just need regeneration with `npm run docs`.
+5. If the README is structurally too broad, call that out as a `solid-split`
    escalation target instead of pretending a longer doc pass will solve it.
-5. Call out examples, invariants, exported symbols, or user-facing plan-speak and before/after framing that seem under-documented or conceptually misframed.
-6. Frame your result as a compact handoff into `educational-docs` rather than a
+6. Call out examples, invariants, exported symbols, or user-facing plan-speak and before/after framing that seem under-documented or conceptually misframed.
+7. Frame your result as a compact handoff into `educational-docs` rather than a
    standalone rewrite plan.
 
 ## If Blocked

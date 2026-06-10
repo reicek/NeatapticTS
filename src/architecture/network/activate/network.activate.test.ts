@@ -340,6 +340,26 @@ describe('network activate chapter', () => {
         });
       });
 
+      describe('given the input vector is a Float32Array with matching width', () => {
+        describe('when activation starts', () => {
+          it('does not throw an input size mismatch error', () => {
+            // Arrange
+            const network = new Network(2, 1, { seed: 21 });
+            const typedInputVector = new Float32Array([1, 2]);
+
+            // Act
+            const activateWithTypedArray = () =>
+              (
+                network.activate as unknown as (
+                  inputVector: Float32Array,
+                ) => number[]
+              )(typedInputVector);
+
+            // Assert
+            expect(activateWithTypedArray).not.toThrow();
+          });
+        });
+      });
       describe('when node storage order drifts away from the compiled acyclic schedule', () => {
         it('still follows explicit IO roles and scheduled output order', () => {
           // Arrange
@@ -625,6 +645,23 @@ describe('network activate chapter', () => {
 
           // Assert
           expect(output.length).toBe(expectedLength);
+        });
+
+        it('accepts a Float32Array input with the expected width', () => {
+          // Arrange
+          const network = new Network(2, 1, { seed: 22 });
+          const typedInputVector = new Float32Array([1, 2]);
+
+          // Act
+          const activateWithTypedArray = () =>
+            (
+              network.noTraceActivate as unknown as (
+                inputVector: Float32Array,
+              ) => number[]
+            )(typedInputVector);
+
+          // Assert
+          expect(activateWithTypedArray).not.toThrow();
         });
 
         it('does not recompute topology when the cached order is already clean', () => {

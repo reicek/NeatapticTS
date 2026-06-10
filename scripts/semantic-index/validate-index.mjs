@@ -16,7 +16,12 @@ import Database from 'better-sqlite3';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fail, parseCliArgs, printHelp, writeJsonOrText } from './cli-utils.mjs';
+import {
+  fail,
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from './cli-utils.mjs';
 import { getFreshnessProof, isFreshDocument } from './freshness.mjs';
 import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
 
@@ -36,16 +41,24 @@ export async function validateSemanticIndex(input = {}) {
   const minChunks = Number(input.minChunks ?? 0);
   const chunks = Number(input.chunks ?? documents.length);
   const now = Number(input.now ?? Date.now());
-  const maxStalenessMs = Number(input.maxStalenessMs ?? DEFAULT_MAX_STALENESS_MS);
+  const maxStalenessMs = Number(
+    input.maxStalenessMs ?? DEFAULT_MAX_STALENESS_MS,
+  );
   const failures = [];
   const stalePaths = [];
   const missingPaths = [];
   const overAgePaths = [];
 
-  if (documents.length < minDocuments) failures.push(`Expected at least ${minDocuments} documents; found ${documents.length}.`);
-  if (chunks < minChunks) failures.push(`Expected at least ${minChunks} chunks; found ${chunks}.`);
+  if (documents.length < minDocuments)
+    failures.push(
+      `Expected at least ${minDocuments} documents; found ${documents.length}.`,
+    );
+  if (chunks < minChunks)
+    failures.push(`Expected at least ${minChunks} chunks; found ${chunks}.`);
 
-  const freshnessByPath = new Map(freshnessChecks.map((proof) => [proof.file_path, proof]));
+  const freshnessByPath = new Map(
+    freshnessChecks.map((proof) => [proof.file_path, proof]),
+  );
   for (const documentRow of documents) {
     const freshnessProof = freshnessByPath.get(documentRow.file_path);
     if (freshnessProof?.missing === true) {
@@ -59,7 +72,10 @@ export async function validateSemanticIndex(input = {}) {
       pushUnique(stalePaths, documentRow.file_path);
     }
 
-    if (documentRow.indexed_at && now - Number(documentRow.indexed_at) > maxStalenessMs) {
+    if (
+      documentRow.indexed_at &&
+      now - Number(documentRow.indexed_at) > maxStalenessMs
+    ) {
       failures.push(`Index row too old for ${documentRow.file_path}.`);
       pushUnique(overAgePaths, documentRow.file_path);
     }
@@ -76,7 +92,9 @@ export async function validateSemanticIndex(input = {}) {
 }
 
 export async function validateDatabase(options = {}) {
-  const databasePath = path.resolve(options.databasePath ?? defaultDatabasePath);
+  const databasePath = path.resolve(
+    options.databasePath ?? defaultDatabasePath,
+  );
   if (!existsSync(databasePath)) {
     return createValidationResult({
       failures: [`Database not found: ${databasePath}`],
@@ -85,35 +103,65 @@ export async function validateDatabase(options = {}) {
     });
   }
 
-  const database = new Database(databasePath, { readonly: true, fileMustExist: true });
-  const documents = database.prepare('SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents ORDER BY file_path').all();
-  const [{ count: chunkCount }] = database.prepare('SELECT COUNT(*) AS count FROM chunks').all();
+  const database = new Database(databasePath, {
+    readonly: true,
+    fileMustExist: true,
+  });
+  const documents = database
+    .prepare(
+      'SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents ORDER BY file_path',
+    )
+    .all();
+  const [{ count: chunkCount }] = database
+    .prepare('SELECT COUNT(*) AS count FROM chunks')
+    .all();
   database.close();
 
-  const freshnessChecks = await Promise.all(documents.map(async (documentRow) => {
-    const absolutePath = path.join(repoRoot, documentRow.file_path);
+  const freshnessChecks = await Promise.all(
+    documents.map(async (documentRow) => {
+      const absolutePath = path.join(repoRoot, documentRow.file_path);
 
-    try {
-      return {
-        file_path: documentRow.file_path,
-        ...(await getFreshnessProof(absolutePath)),
-      };
-    } catch (error) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      try {
         return {
           file_path: documentRow.file_path,
-          missing: true,
+          ...(await getFreshnessProof(absolutePath)),
         };
+      } catch (error) {
+        if (
+          error &&
+          typeof error === 'object' &&
+          'code' in error &&
+          error.code === 'ENOENT'
+        ) {
+          return {
+            file_path: documentRow.file_path,
+            missing: true,
+          };
+        }
+
+        throw error;
       }
+    }),
+  );
 
-      throw error;
-    }
-  }));
-
-  return validateSemanticIndex({ documents, freshnessChecks, chunks: chunkCount, minDocuments: options.minDocuments, minChunks: options.minChunks, maxStalenessMs: options.maxStalenessMs });
+  return validateSemanticIndex({
+    documents,
+    freshnessChecks,
+    chunks: chunkCount,
+    minDocuments: options.minDocuments,
+    minChunks: options.minChunks,
+    maxStalenessMs: options.maxStalenessMs,
+  });
 }
 
-function createValidationResult({ failures, documents, chunks, stalePaths = [], missingPaths = [], overAgePaths = [] }) {
+function createValidationResult({
+  failures,
+  documents,
+  chunks,
+  stalePaths = [],
+  missingPaths = [],
+  overAgePaths = [],
+}) {
   const pass = failures.length === 0;
 
   return {
@@ -125,7 +173,9 @@ function createValidationResult({ failures, documents, chunks, stalePaths = [], 
     stale_paths: stalePaths,
     missing_paths: missingPaths,
     over_age_paths: overAgePaths,
-    fixHint: pass ? null : resolveFixHint({ stalePaths, missingPaths, overAgePaths, failures }),
+    fixHint: pass
+      ? null
+      : resolveFixHint({ stalePaths, missingPaths, overAgePaths, failures }),
   };
 }
 
@@ -145,19 +195,40 @@ async function main() {
   if (args.help) {
     printHelp({
       title: 'Semantic index validator',
-      usage: 'node scripts/semantic-index/validate-index.mjs [--json] [--min-documents 1] [--min-chunks 1]',
-      options: ['--json                Emit JSON validation result', '--min-documents <n>   Minimum expected document rows (default: 1)', '--min-chunks <n>      Minimum expected chunk rows (default: 1)', '--max-age-ms <ms>     Maximum row age in milliseconds (default: 86400000 / 24 h)', '--database <path>     Path to SQLite database file (default: data/semantic-index.sqlite)', '--help                Show this help'],
+      usage:
+        'node scripts/semantic-index/validate-index.mjs [--json] [--min-documents 1] [--min-chunks 1]',
+      options: [
+        '--json                Emit JSON validation result',
+        '--min-documents <n>   Minimum expected document rows (default: 1)',
+        '--min-chunks <n>      Minimum expected chunk rows (default: 1)',
+        '--max-age-ms <ms>     Maximum row age in milliseconds (default: 86400000 / 24 h)',
+        '--database <path>     Path to SQLite database file (default: data/semantic-index.sqlite)',
+        '--help                Show this help',
+      ],
     });
     return;
   }
 
   try {
-    const result = await validateDatabase({ minDocuments: args['min-documents'], minChunks: args['min-chunks'] ?? DEFAULT_MIN_CHUNKS, maxStalenessMs: args['max-age-ms'], databasePath: args.database });
-    writeJsonOrText(result, Boolean(args.json), (payload) => payload.pass ? `Semantic index valid: ${payload.documents} documents, ${payload.chunks} chunks` : `Semantic index invalid: ${payload.failures.join('; ')}`);
+    const result = await validateDatabase({
+      minDocuments: args['min-documents'],
+      minChunks: args['min-chunks'] ?? DEFAULT_MIN_CHUNKS,
+      maxStalenessMs: args['max-age-ms'],
+      databasePath: args.database,
+    });
+    writeJsonOrText(result, Boolean(args.json), (payload) =>
+      payload.pass
+        ? `Semantic index valid: ${payload.documents} documents, ${payload.chunks} chunks`
+        : `Semantic index invalid: ${payload.failures.join('; ')}`,
+    );
     if (!result.pass) process.exitCode = 1;
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+    fail(
+      error instanceof Error ? error.message : String(error),
+      Boolean(args.json),
+    );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();

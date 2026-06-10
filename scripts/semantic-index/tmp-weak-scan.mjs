@@ -9,5 +9,11 @@ const targets = new Set([
   'src/architecture/network/prune/network.prune.utils.ts',
 ]);
 const targetWeak = weak.filter((entry) => targets.has(normalize(entry.file)));
-console.log(JSON.stringify({ weakGlobal: weak.length, weakInTargets: targetWeak.length, targetWeak }, null, 2));
+console.log(
+  JSON.stringify(
+    { weakGlobal: weak.length, weakInTargets: targetWeak.length, targetWeak },
+    null,
+    2,
+  ),
+);
 process.exit(report.pass ? 0 : 1);

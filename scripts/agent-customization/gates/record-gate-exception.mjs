@@ -6,7 +6,7 @@
  * record to stdout. Optionally appends the record to the learning log as a JSONL event.
  *
  * Output contract:
- *   { timestamp: ISO-8601 string, "gate-id": string, "exception-evidence": object,
+ *   { "gate-id": string, "exception-evidence": object,
  *     agent: string, "session-id": string }
  *
  * Usage:
@@ -21,24 +21,48 @@
 import { appendFile } from 'node:fs/promises';
 import path from 'node:path';
 import { repoRoot } from '../customization-utils.mjs';
+import {
+  countTrailingGateFailures,
+  loadLearningLogEvents,
+} from '../enforcement/runtime-enforcement.mjs';
 
-const LEARNING_LOG_PATH = path.join(repoRoot, '.github', 'ai-learning', 'learning-log.jsonl');
+const LEARNING_LOG_PATH = path.join(
+  repoRoot,
+  '.github',
+  'ai-learning',
+  'learning-log.jsonl',
+);
 
 // Step 1: Parse arguments.
 const args = parseExceptionArgs(process.argv.slice(2));
 
-// Step 2: Build the exception record.
-const record = buildExceptionRecord(args);
+try {
+  // Step 2: Build the exception record.
+  const record = buildExceptionRecord(args);
 
-// Step 3: Output JSON to stdout.
-console.log(JSON.stringify(record, null, 2));
+  // Step 3: Output JSON to stdout.
+  console.log(JSON.stringify(record, null, 2));
 
-// Step 4: Append to learning log (best-effort; does not affect exit code).
-await appendLearningEvent(record).catch(() => {
-  /* Swallow append errors to keep helper non-blocking. */
-});
+  // Step 4: Append to learning log (best-effort; does not affect exit code).
+  await appendLearningEvent(record).catch(() => {
+    /* Swallow append errors to keep helper non-blocking. */
+  });
 
-process.exitCode = 0;
+  await appendEscalationEventIfNeeded(record).catch(() => {
+    /* Keep escalation logging best-effort on the exception path. */
+  });
+
+  process.exitCode = 0;
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (args.json) {
+    console.log(JSON.stringify({ ok: false, error: message }, null, 2));
+  } else {
+    console.error(message);
+  }
+
+  process.exitCode = 1;
+}
 
 // ---------------------------------------------------------------------------
 
@@ -81,16 +105,28 @@ function parseExceptionArgs(argv) {
 /**
  * Build the structured gate-exception record from parsed arguments.
  * @param {{ gateId: string, agent: string, sessionId: string, evidence: object }} args
- * @returns {{ timestamp: string, "gate-id": string, "exception-evidence": object, agent: string, "session-id": string }}
+ * @returns {{ "gate-id": string, "exception-evidence": object, agent: string, "session-id": string }}
  */
 function buildExceptionRecord(args) {
+  const gateId = requireNonEmptyField(args.gateId, 'gate-id');
+  const agent = requireNonEmptyField(args.agent, 'agent');
+  const sessionId = requireNonEmptyField(args.sessionId, 'session-id');
+
   return {
-    timestamp: new Date().toISOString(),
-    'gate-id': args.gateId,
+    'gate-id': gateId,
     'exception-evidence': args.evidence,
-    agent: args.agent,
-    'session-id': args.sessionId,
+    agent,
+    'session-id': sessionId,
   };
+}
+
+function requireNonEmptyField(value, fieldName) {
+  const normalizedValue = typeof value === 'string' ? value.trim() : '';
+  if (!normalizedValue) {
+    throw new Error(`Missing required non-empty --${fieldName} value.`);
+  }
+
+  return normalizedValue;
 }
 
 /**
@@ -100,7 +136,6 @@ function buildExceptionRecord(args) {
  */
 async function appendLearningEvent(record) {
   const event = JSON.stringify({
-    timestamp: record.timestamp,
     eventType: 'gate-exception',
     category: 'gate-exception',
     gateId: record['gate-id'],
@@ -109,4 +144,29 @@ async function appendLearningEvent(record) {
     exceptionEvidence: record['exception-evidence'],
   });
   await appendFile(LEARNING_LOG_PATH, event + '\n', 'utf8');
+}
+
+async function appendEscalationEventIfNeeded(record) {
+  const sessionId = String(record['session-id'] ?? '').trim();
+  if (!sessionId) {
+    return;
+  }
+
+  const events = await loadLearningLogEvents();
+  const failureCount = countTrailingGateFailures(events, sessionId);
+  if (failureCount !== 3) {
+    return;
+  }
+
+  const escalationEvent = JSON.stringify({
+    eventType: 'gate-escalation',
+    category: 'gate-escalation',
+    gateId: record['gate-id'],
+    agent: record.agent,
+    sessionId,
+    failureCount,
+    suggestedAgent: '00-helping',
+    reason: 'Three consecutive gate failures reached the escalation threshold.',
+  });
+  await appendFile(LEARNING_LOG_PATH, escalationEvent + '\n', 'utf8');
 }

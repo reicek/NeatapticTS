@@ -17,34 +17,51 @@ import { parseArgs, repoRoot } from './customization-utils.mjs';
 
 const DEFAULT_DEBOUNCE_MS = 250;
 const WATCH_DIRECTORIES = ['.github/agents', '.github/skills'];
-const GENERATOR_PATH = path.join(repoRoot, 'scripts', 'agent-customization', 'generate-agent-skill-routing-table.mjs');
+const GENERATOR_PATH = path.join(
+  repoRoot,
+  'scripts',
+  'agent-customization',
+  'generate-agent-skill-routing-table.mjs',
+);
 
 function parseCliOptions(argv) {
   const base = parseArgs(argv);
-  const debounceArgument = argv.find((argument) => argument.startsWith('--debounce-ms='));
+  const debounceArgument = argv.find((argument) =>
+    argument.startsWith('--debounce-ms='),
+  );
 
   return {
     ...base,
-    debounceMs: debounceArgument ? Math.max(0, Number(debounceArgument.slice('--debounce-ms='.length)) || DEFAULT_DEBOUNCE_MS) : DEFAULT_DEBOUNCE_MS,
+    debounceMs: debounceArgument
+      ? Math.max(
+          0,
+          Number(debounceArgument.slice('--debounce-ms='.length)) ||
+            DEFAULT_DEBOUNCE_MS,
+        )
+      : DEFAULT_DEBOUNCE_MS,
   };
 }
 
 function printUsage() {
-  console.log([
-    'Routing-table watch utility',
-    '',
-    'Usage:',
-    '  node scripts/agent-customization/watch-routing-table.mjs [--debounce-ms=<n>]',
-    '  node scripts/agent-customization/watch-routing-table.mjs --help',
-    '',
-    'Options:',
-    '  --debounce-ms=<n>  Delay before regeneration after a watched file event.',
-    '  --help             Show this help.',
-  ].join('\n'));
+  console.log(
+    [
+      'Routing-table watch utility',
+      '',
+      'Usage:',
+      '  node scripts/agent-customization/watch-routing-table.mjs [--debounce-ms=<n>]',
+      '  node scripts/agent-customization/watch-routing-table.mjs --help',
+      '',
+      'Options:',
+      '  --debounce-ms=<n>  Delay before regeneration after a watched file event.',
+      '  --help             Show this help.',
+    ].join('\n'),
+  );
 }
 
 function shouldRegenerate(relativePath = '') {
-  return relativePath.endsWith('.agent.md') || relativePath.endsWith('SKILL.md');
+  return (
+    relativePath.endsWith('.agent.md') || relativePath.endsWith('SKILL.md')
+  );
 }
 
 function runGenerator(triggerLabel) {
@@ -56,7 +73,9 @@ function runGenerator(triggerLabel) {
   if (result.status !== 0) {
     const stderr = result.stderr?.trim();
     const stdout = result.stdout?.trim();
-    console.error(`[routing-table-watch] regeneration failed after ${triggerLabel}`);
+    console.error(
+      `[routing-table-watch] regeneration failed after ${triggerLabel}`,
+    );
     if (stderr) console.error(stderr);
     if (!stderr && stdout) console.error(stdout);
     return;
@@ -64,7 +83,9 @@ function runGenerator(triggerLabel) {
 
   const report = tryParseJson(result.stdout);
   if (!report) {
-    console.error('[routing-table-watch] regeneration returned unreadable JSON output.');
+    console.error(
+      '[routing-table-watch] regeneration returned unreadable JSON output.',
+    );
     return;
   }
 
@@ -87,17 +108,25 @@ function tryParseJson(value) {
 function startWatcher(relativeDirectory, debounceMs, scheduleRefresh) {
   const absoluteDirectory = path.join(repoRoot, relativeDirectory);
 
-  return watch(absoluteDirectory, { recursive: true }, (_eventType, filename) => {
-    const relativePath = typeof filename === 'string'
-      ? path.posix.join(relativeDirectory.replace(/\\/g, '/'), filename.replace(/\\/g, '/'))
-      : relativeDirectory;
+  return watch(
+    absoluteDirectory,
+    { recursive: true },
+    (_eventType, filename) => {
+      const relativePath =
+        typeof filename === 'string'
+          ? path.posix.join(
+              relativeDirectory.replace(/\\/g, '/'),
+              filename.replace(/\\/g, '/'),
+            )
+          : relativeDirectory;
 
-    if (!shouldRegenerate(relativePath)) {
-      return;
-    }
+      if (!shouldRegenerate(relativePath)) {
+        return;
+      }
 
-    scheduleRefresh(relativePath, debounceMs);
-  });
+      scheduleRefresh(relativePath, debounceMs);
+    },
+  );
 }
 
 async function main() {
@@ -122,7 +151,9 @@ async function main() {
     watchers.push(startWatcher(directory, options.debounceMs, scheduleRefresh));
   }
 
-  console.error('[routing-table-watch] watching .github/agents and .github/skills for changes');
+  console.error(
+    '[routing-table-watch] watching .github/agents and .github/skills for changes',
+  );
 
   const shutdown = () => {
     clearTimeout(debounceHandle);
@@ -136,6 +167,9 @@ async function main() {
   process.on('SIGTERM', shutdown);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }

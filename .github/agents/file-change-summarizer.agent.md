@@ -2,8 +2,16 @@
 description: 'Use when: summarizing changed files, affected customization surfaces, validation evidence, and residual risks for logging or handoff without reopening implementation context.'
 name: 'file-change-summarizer'
 tier: 4
-model: ['Claude Haiku 4.6 (copilot)', 'GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
-tools: [read, search]
+model: 'glm-5.1:cloud (ollama)'
+tools:
+  [
+    read,
+    search,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 agents: []
 user-invocable: false
 skills: ['summarizing-session-log']
@@ -20,6 +28,16 @@ Summarize changed files, affected customization surfaces, validation evidence, a
 - ALWAYS stay read-only.
 - DO NOT edit files.
 - Keep the summary scoped to the files and evidence requested by the caller.
+
+## Flow Selection
+
+- Use `07.session-summary` when summarizing changed files for logging or handoff.
+
+## Gate Enforcement
+
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
+- `plan-sync` — after summarizing changes
 
 ## Default Flow
 

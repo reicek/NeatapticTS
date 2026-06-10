@@ -2,8 +2,17 @@
 description: 'Use when mapping NGE benchmark methodology such as predator/prey coevolution, ant-hive observability, racing curriculum tiers, rolling opponent snapshots, fairness contracts, or deciding whether a Phase 7 demo issue belongs to nge-benchmark-workflow. Keywords: NGE benchmark, predator prey, ant hive, racing curriculum, rolling snapshot, fairness, observability, ablation.'
 name: nge-benchmark-scout
 tier: 3
-model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
-tools: [read, search]
+model: 'glm-5.1:cloud (ollama)'
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['nge-benchmark-workflow']
@@ -25,16 +34,23 @@ Locate the exact Phase 7 benchmark or demo-harness boundary in the repo, identif
 - DO NOT restate the entire benchmark workflow or acceptance taxonomy that belongs in `nge-benchmark-workflow`.
 - This agent is intentionally thin. Durable policy lives in companion skill `nge-benchmark-workflow`.
 
+## Gate Enforcement
+
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
+- `cortex-index` — before searching for NGE benchmark documents
+
 ## Approach
 
-1. Read the smallest relevant benchmark plan first: racing, predator/prey, or ant-hive.
-2. Find the controlling boundary: curriculum tier, environment rule, rolling-opponent snapshot, worker topology, ablation, or observable metric.
-3. Identify the nearest code or plan surface that decides fairness, acceptance, or world-state behavior.
-4. Separate true benchmark problems from neighboring concerns:
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Read the smallest relevant benchmark plan first: racing, predator/prey, or ant-hive.
+3. Find the controlling boundary: curriculum tier, environment rule, rolling-opponent snapshot, worker topology, ablation, or observable metric.
+4. Identify the nearest code or plan surface that decides fairness, acceptance, or world-state behavior.
+5. Separate true benchmark problems from neighboring concerns:
    - missing motifs or DNA semantics belong to `nge-core-algorithm`
    - browser packaging blockers belong to `browser-build`
    - demo layout issues belong to `visualizer-workflow`
-5. Summarize the active observable, the fairness contract, and the smallest useful handoff into `nge-benchmark-workflow`.
+6. Summarize the active observable, the fairness contract, and the smallest useful handoff into `nge-benchmark-workflow`.
 
 ## If Blocked
 

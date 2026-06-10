@@ -2,8 +2,18 @@
 description: 'Use when writing focused unit tests, red tests, fixtures, mocks, assertions, or coverage tests for a scoped behavior change. Keywords: test, jest, fixture, mock, assertion, coverage.'
 name: 'unit-test-writer'
 tier: 3
-model: ['GPT-5.4 (copilot)', 'Claude Sonnet 4.6 (copilot)', 'GPT-5.4-mini (copilot)']
-tools: [read, search, edit]
+model: glm-5.1:cloud (ollama)
+tools:
+  [
+    read,
+    search,
+    execute,
+    edit,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['creating-unit-tests']
@@ -23,11 +33,18 @@ You author focused test suites for specific behavioral changes, fixtures, and co
 - ALWAYS follow single-expect-per-test convention.
 - ALWAYS match existing file naming and style patterns.
 
+## Gate Enforcement
+
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
+- `cortex-index` — before searching for test pattern context
+
 ## Approach
 
-1. Read the nearest owner-local tests and the smallest production surface that needs coverage.
-2. Write the narrowest test or fixture needed for the requested behavior boundary.
-3. Stop after returning the structured result to the caller.
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Read the nearest owner-local tests and the smallest production surface that needs coverage.
+3. Write the narrowest test or fixture needed for the requested behavior boundary.
+4. Stop after returning the structured result to the caller.
 
 ## If Blocked
 

@@ -28,24 +28,28 @@ function parseArgs(argv) {
     help: argv.includes('--help') || argv.includes('-h'),
     json: argv.includes('--json'),
     clear: argv.includes('--clear'),
-    plan: argv.find((argument) => argument.startsWith('--plan='))?.slice('--plan='.length),
+    plan: argv
+      .find((argument) => argument.startsWith('--plan='))
+      ?.slice('--plan='.length),
   };
 }
 
 function printUsage() {
-  console.log([
-    'Plan session redirect',
-    '',
-    'Usage:',
-    '  node scripts/agent-customization/plan-session-redirect.mjs --plan=<path> [--json]',
-    '  node scripts/agent-customization/plan-session-redirect.mjs --clear [--json]',
-    '  node scripts/agent-customization/plan-session-redirect.mjs --help',
-    '',
-    'Options:',
-    '  --plan=<path>  Plan path to persist in data/mcp-session-override.json.',
-    '  --clear        Remove the override file. Idempotent when it is already absent.',
-    '  --json         Emit machine-readable JSON.',
-  ].join('\n'));
+  console.log(
+    [
+      'Plan session redirect',
+      '',
+      'Usage:',
+      '  node scripts/agent-customization/plan-session-redirect.mjs --plan=<path> [--json]',
+      '  node scripts/agent-customization/plan-session-redirect.mjs --clear [--json]',
+      '  node scripts/agent-customization/plan-session-redirect.mjs --help',
+      '',
+      'Options:',
+      '  --plan=<path>  Plan path to persist in data/mcp-session-override.json.',
+      '  --clear        Remove the override file. Idempotent when it is already absent.',
+      '  --json         Emit machine-readable JSON.',
+    ].join('\n'),
+  );
 }
 
 /**
@@ -64,11 +68,17 @@ async function writeSessionOverride(planPath) {
   };
 
   await mkdir(path.dirname(OVERRIDE_PATH), { recursive: true });
-  await writeFile(OVERRIDE_PATH, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  await writeFile(
+    OVERRIDE_PATH,
+    `${JSON.stringify(payload, null, 2)}\n`,
+    'utf8',
+  );
 
   const confirmedPayload = JSON.parse(await readFile(OVERRIDE_PATH, 'utf8'));
   if (confirmedPayload.plan_path !== resolvedPlanPath) {
-    throw new Error('Session override readback did not match the requested plan_path.');
+    throw new Error(
+      'Session override readback did not match the requested plan_path.',
+    );
   }
 
   return {
@@ -115,16 +125,21 @@ function resolvePlanPath(candidatePath) {
     ? path.normalize(candidatePath)
     : path.resolve(repoRoot, candidatePath);
   const relativeToPlans = path.relative(PLANS_ROOT, absolutePlanPath);
-  const staysWithinPlans = relativeToPlans !== ''
-    && !relativeToPlans.startsWith('..')
-    && !path.isAbsolute(relativeToPlans);
+  const staysWithinPlans =
+    relativeToPlans !== '' &&
+    !relativeToPlans.startsWith('..') &&
+    !path.isAbsolute(relativeToPlans);
 
   if (!staysWithinPlans) {
-    throw new Error(`Plan path must resolve within plans/. Received: ${candidatePath}`);
+    throw new Error(
+      `Plan path must resolve within plans/. Received: ${candidatePath}`,
+    );
   }
 
   if (!existsSync(absolutePlanPath)) {
-    throw new Error(`Plan file not found: ${normalizePath(path.relative(repoRoot, absolutePlanPath))}`);
+    throw new Error(
+      `Plan file not found: ${normalizePath(path.relative(repoRoot, absolutePlanPath))}`,
+    );
   }
 
   return normalizePath(path.relative(repoRoot, absolutePlanPath));
@@ -153,7 +168,9 @@ function writeOutput(result, json) {
     return;
   }
 
-  console.log(result.pass ? 'PASS plan-session-redirect' : 'FAIL plan-session-redirect');
+  console.log(
+    result.pass ? 'PASS plan-session-redirect' : 'FAIL plan-session-redirect',
+  );
 }
 
 async function main() {
@@ -172,7 +189,11 @@ async function main() {
     writeOutput(await writeSessionOverride(options.plan), options.json);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const failure = { pass: false, fixHint: 'Use --plan=<path> within plans/ or --clear to remove the override.' };
+    const failure = {
+      pass: false,
+      fixHint:
+        'Use --plan=<path> within plans/ or --clear to remove the override.',
+    };
     if (options.json) {
       console.log(JSON.stringify({ ...failure, error: message }, null, 2));
     } else {
@@ -182,6 +203,9 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   await main();
 }

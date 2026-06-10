@@ -17,50 +17,76 @@ interface SpawnedGateResult {
 }
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const BUILD_INDEX_PATH = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'build-index.mjs');
-const CORTEX_INDEX_GATE_PATH = path.join(REPO_ROOT, 'scripts', 'agent-customization', 'gates', 'cortex-index.gate.mjs');
-const SNAPSHOT_SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'semantic-index', 'build-browser-snapshot.mjs');
+const BUILD_INDEX_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'semantic-index',
+  'build-index.mjs',
+);
+const CORTEX_INDEX_GATE_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'agent-customization',
+  'gates',
+  'cortex-index.gate.mjs',
+);
+const SNAPSHOT_SCRIPT_PATH = path.join(
+  REPO_ROOT,
+  'scripts',
+  'semantic-index',
+  'build-browser-snapshot.mjs',
+);
 
 describe('cortex-index.gate.mjs', () => {
   describe('red gate contract', () => {
     it('returns the helping-owned passing contract when all sub-checks are green', () => {
       const result = runGateContractCheck();
 
-      expect(result).toEqual(expect.objectContaining({
-        buildStatus: 0,
-        gateStatus: 0,
-        report: expect.objectContaining({
-          pass: true,
-          evidence: expect.objectContaining({
-            index_documents: expect.any(Number),
-            index_fresh: true,
-            corpus_mcp_alive: true,
-            workflow_mcp_alive: true,
+      expect(result).toEqual(
+        expect.objectContaining({
+          buildStatus: 0,
+          gateStatus: 0,
+          report: expect.objectContaining({
+            pass: true,
+            evidence: expect.objectContaining({
+              index_documents: expect.any(Number),
+              index_fresh: true,
+              corpus_mcp_alive: true,
+              workflow_mcp_alive: true,
+            }),
+            fixHint: null,
+            owner: '00-helping',
           }),
-          fixHint: null,
-          owner: '00-helping',
         }),
-      }));
+      );
     });
   });
 });
 
 function runGateContractCheck(): SpawnedGateResult {
-  const buildIndexResult = spawnSync(process.execPath, [BUILD_INDEX_PATH, '--json-health'], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-    timeout: 600000,
-  });
+  const buildIndexResult = spawnSync(
+    process.execPath,
+    [BUILD_INDEX_PATH, '--json-health'],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      timeout: 600000,
+    },
+  );
   spawnSync(process.execPath, [SNAPSHOT_SCRIPT_PATH], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     timeout: 120000,
   });
-  const gateResult = spawnSync(process.execPath, [CORTEX_INDEX_GATE_PATH, '--json'], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-    timeout: 600000,
-  });
+  const gateResult = spawnSync(
+    process.execPath,
+    [CORTEX_INDEX_GATE_PATH, '--json'],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      timeout: 600000,
+    },
+  );
 
   return {
     buildStatus: buildIndexResult.status,

@@ -22,7 +22,8 @@ const result = {
     gate: 'red-test-confirmation',
     tier: 2,
     agent: '03-red-testing',
-    check: 'At least two red test file paths declared and a failure reason recorded in the plan',
+    check:
+      'At least two red test file paths declared and a failure reason recorded in the plan',
     minimumRedTests: 2,
     mode: 'standalone-descriptor',
   },

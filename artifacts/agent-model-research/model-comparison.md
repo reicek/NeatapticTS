@@ -58,7 +58,7 @@ These are the budget-safe choices for high-frequency or low-stakes agents:
 
 ### Economy Premium (≤ 0.33×)
 Good for mini/haiku replacement candidates:
-- `GPT-5.4 mini` — 0.33× (vs current `GPT-5.4-mini (copilot)` in our fleet)
+- `GPT-5.4 mini` — 0.33× (vs current `glm-5.1:cloud (ollama)` in our fleet)
 - `GPT-5.4 nano` — 0.25×
 - `Claude Haiku 4.5` — 0.33× (one-generation older than current `Claude Haiku 4.6`)
 - `Gemini 3 Flash` — 0.33×
@@ -100,8 +100,8 @@ GPT-5.5 is listed among the **OpenAI** models available through GitHub Copilot. 
 ### Local environment evidence
 
 The existing NeatapticTS fleet uses the `(copilot)` qualifier suffix for all four current model strings:
-- `GPT-5.4 (copilot)` — confirmed working
-- `GPT-5.4-mini (copilot)` — confirmed working
+- `glm-5.1:cloud (ollama)` — confirmed working
+- `glm-5.1:cloud (ollama)` — confirmed working
 - `Claude Sonnet 4.6 (copilot)` — confirmed working
 - `Claude Haiku 4.6 (copilot)` — confirmed working
 
@@ -139,9 +139,9 @@ The `model-routing-and-budget` skill (`.github/skills/model-routing-and-budget/S
 
 | Current String | Potential Upgrade | Multiplier Δ | Notes |
 |---|---|---|---|
-| `GPT-5.4 (copilot)` | `GPT-5.5 (copilot)` | 1× → 7.5× | Significant cost increase; requires qualified-name confirmation |
+| `glm-5.1:cloud (ollama)` | `GPT-5.5 (copilot)` | 1× → 7.5× | Significant cost increase; requires qualified-name confirmation |
 | `Claude Sonnet 4.6 (copilot)` | `Claude Opus 4.6 (copilot)` | 1× → 3× | Higher reasoning ceiling; requires qualified-name confirmation |
-| `GPT-5.4-mini (copilot)` | `GPT-5.4 nano (copilot)` | 0.33× → 0.25× | Slight cost reduction; requires qualified-name confirmation |
+| `glm-5.1:cloud (ollama)` | `GPT-5.4 nano (copilot)` | 0.33× → 0.25× | Slight cost reduction; requires qualified-name confirmation |
 | `Claude Haiku 4.6 (copilot)` | No direct upgrade listed | — | Haiku 4.6 appears to be current generation; Haiku 4.5 is older |
 
 > All upgrade candidates require `model-name-auditor` confirmation of the exact `(copilot)` qualified string before any `.agent.md` frontmatter changes.

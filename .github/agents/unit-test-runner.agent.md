@@ -2,8 +2,17 @@
 description: 'Use when running focused unit test commands, checking a red or green result, or summarizing test output for a bounded validation target. Keywords: test, jest, focused, validation, output.'
 name: 'unit-test-runner'
 tier: 3
-model: ['GPT-5.4-mini (copilot)', 'Claude Haiku 4.6 (copilot)', 'GPT-5.4 (copilot)']
-tools: [read, search, execute]
+model: 'glm-5.1:cloud (ollama)'
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['running-unit-tests']
@@ -22,11 +31,18 @@ You execute narrowly scoped test runs and return results. This agent does not au
 - ALWAYS stay focused on the specified test target.
 - DO NOT broaden validation without explicit instruction.
 
+## Gate Enforcement
+
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
+- `green-validation-evidence` — after running focused test validation
+
 ## Approach
 
-1. Confirm the exact test target or focused validation command.
-2. Run only the narrowest requested command and capture the result.
-3. Return the structured result without expanding into broader validation.
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Confirm the exact test target or focused validation command.
+3. Run only the narrowest requested command and capture the result.
+4. Return the structured result without expanding into broader validation.
 
 ## If Blocked
 

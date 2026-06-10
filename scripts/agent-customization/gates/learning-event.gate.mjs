@@ -62,7 +62,9 @@ async function runLearningEventGate() {
 
   // Step 3: Collect category summary for evidence.
   const categories = [
-    ...new Set(events.map((event) => event.eventType ?? event.category).filter(Boolean)),
+    ...new Set(
+      events.map((event) => event.eventType ?? event.category).filter(Boolean),
+    ),
   ];
 
   return {
@@ -72,7 +74,6 @@ async function runLearningEventGate() {
       path: LEARNING_LOG_PATH,
       eventCount: events.length,
       rawLineCount: rawLines.length,
-      latestTimestamp: events.at(-1)?.timestamp ?? null,
       categories,
     },
     fixHint: pass

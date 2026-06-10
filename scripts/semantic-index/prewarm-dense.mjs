@@ -17,24 +17,64 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseCliArgs, printHelp, writeJsonOrText } from './cli-utils.mjs';
 import { DEFAULT_MODEL_DIRECTORY } from './embed-index.mjs';
+import { DEFAULT_RERANKER_MODEL_DIRECTORY } from './reranker-readiness.mjs';
 import { repoRoot } from './init-schema.mjs';
 
 const MODEL_PATH = path.join(DEFAULT_MODEL_DIRECTORY, 'model.onnx');
+const RERANKER_MODEL_PATH = path.join(
+  DEFAULT_RERANKER_MODEL_DIRECTORY,
+  'model.onnx',
+);
 const STEP_DEFINITIONS = Object.freeze([
   {
     args: [],
     name: 'download-model',
-    scriptPath: path.join(repoRoot, 'scripts', 'semantic-index', 'download-model.mjs'),
+    scriptPath: path.join(
+      repoRoot,
+      'scripts',
+      'semantic-index',
+      'download-model.mjs',
+    ),
   },
   {
     args: [],
     name: 'embed-index',
-    scriptPath: path.join(repoRoot, 'scripts', 'semantic-index', 'embed-index.mjs'),
+    scriptPath: path.join(
+      repoRoot,
+      'scripts',
+      'semantic-index',
+      'embed-index.mjs',
+    ),
   },
   {
     args: ['--json'],
     name: 'validate-embeddings',
-    scriptPath: path.join(repoRoot, 'scripts', 'semantic-index', 'validate-embeddings.mjs'),
+    scriptPath: path.join(
+      repoRoot,
+      'scripts',
+      'semantic-index',
+      'validate-embeddings.mjs',
+    ),
+  },
+  {
+    args: [],
+    name: 'download-reranker',
+    scriptPath: path.join(
+      repoRoot,
+      'scripts',
+      'semantic-index',
+      'download-reranker.mjs',
+    ),
+  },
+  {
+    args: ['--json'],
+    name: 'validate-reranker',
+    scriptPath: path.join(
+      repoRoot,
+      'scripts',
+      'semantic-index',
+      'reranker-readiness.mjs',
+    ),
   },
 ]);
 
@@ -47,6 +87,7 @@ const STEP_DEFINITIONS = Object.freeze([
  *   json?: boolean,
  *   logger?: (line: string) => void,
  *   modelExists?: () => boolean,
+ *   rerankerModelExists?: () => boolean,
  * }} [options] - Runtime options and test doubles.
  * @returns {Promise<{ exitCode: number, report: { pass: boolean, steps: Array<{ name: string, status: 'ok' | 'skipped' }> } | { pass: false, failedStep: string, error: string } }>} Execution summary.
  */
@@ -54,11 +95,15 @@ export async function runDensePrewarm(options = {}) {
   const logger = options.logger ?? console.log;
   const dryRun = Boolean(options.dryRun);
   const modelExists = options.modelExists ?? (() => existsSync(MODEL_PATH));
+  const rerankerModelExists =
+    options.rerankerModelExists ?? (() => existsSync(RERANKER_MODEL_PATH));
   const commandRunner = options.commandRunner ?? runBootstrapStep;
   const steps = [];
 
   for (const stepDefinition of STEP_DEFINITIONS) {
-    const stepShouldSkip = stepDefinition.name === 'download-model' && modelExists();
+    const stepShouldSkip =
+      (stepDefinition.name === 'download-model' && modelExists()) ||
+      (stepDefinition.name === 'download-reranker' && rerankerModelExists());
 
     if (dryRun) {
       logger(formatDryRunMessage(stepDefinition, stepShouldSkip));
@@ -66,7 +111,7 @@ export async function runDensePrewarm(options = {}) {
     }
 
     if (stepShouldSkip) {
-      logger('download-model: model present, skipping download');
+      logger(`${stepDefinition.name}: model present, skipping download`);
       steps.push({ name: stepDefinition.name, status: 'skipped' });
       continue;
     }
@@ -100,7 +145,8 @@ export async function runDensePrewarm(options = {}) {
 }
 
 function formatDryRunMessage(stepDefinition, stepShouldSkip) {
-  if (stepShouldSkip) return `${stepDefinition.name}: model present, skipping download`;
+  if (stepShouldSkip)
+    return `${stepDefinition.name}: model present, skipping download`;
   return `${stepDefinition.name}: dry-run`;
 }
 
@@ -114,7 +160,9 @@ function runBootstrapStep(step) {
 function createErrorMessage(stepName, stepResult) {
   const stderrText = String(stepResult?.stderr ?? '').trim();
   const stdoutText = String(stepResult?.stdout ?? '').trim();
-  return stderrText || stdoutText || `${stepName} exited with a non-zero status.`;
+  return (
+    stderrText || stdoutText || `${stepName} exited with a non-zero status.`
+  );
 }
 
 async function main() {
@@ -123,7 +171,8 @@ async function main() {
   if (args.help) {
     printHelp({
       title: 'Dense prewarm bootstrap',
-      usage: 'node scripts/semantic-index/prewarm-dense.mjs [--dry-run] [--json]',
+      usage:
+        'node scripts/semantic-index/prewarm-dense.mjs [--dry-run] [--json]',
       options: [
         '--dry-run  Log the planned bootstrap steps without spawning subprocesses.',
         '--json     Emit a machine-readable success or failure summary.',
@@ -138,11 +187,14 @@ async function main() {
     json: Boolean(args.json),
   });
 
-  writeJsonOrText(result.report, Boolean(args.json), (payload) => payload.pass
-    ? payload.steps.map((step) => `${step.name}: ${step.status}`).join('\n')
-    : `${payload.failedStep}: ${payload.error}`);
+  writeJsonOrText(result.report, Boolean(args.json), (payload) =>
+    payload.pass
+      ? payload.steps.map((step) => `${step.name}: ${step.status}`).join('\n')
+      : `${payload.failedStep}: ${payload.error}`,
+  );
 
   if (result.exitCode !== 0) process.exitCode = result.exitCode;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();

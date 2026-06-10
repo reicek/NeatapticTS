@@ -21,7 +21,12 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fail, parseCliArgs, printHelp, writeJsonOrText } from './cli-utils.mjs';
+import {
+  fail,
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from './cli-utils.mjs';
 import {
   DEFAULT_EMBEDDINGS_DATABASE_PATH,
   DEFAULT_MODEL_DIRECTORY,
@@ -48,9 +53,15 @@ export async function checkDenseReadiness(options = {}) {
   const forcedState = normalizeForcedState(process.env.DENSE_FORCE_STATE);
   if (forcedState) return createForcedReadinessReport(forcedState);
 
-  const corpusDatabasePath = path.resolve(options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath);
-  const embeddingsDatabasePath = path.resolve(options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH);
-  const modelDirectory = path.resolve(options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY);
+  const corpusDatabasePath = path.resolve(
+    options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath,
+  );
+  const embeddingsDatabasePath = path.resolve(
+    options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
+  );
+  const modelDirectory = path.resolve(
+    options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
+  );
   const modelId = String(options.modelId ?? DEFAULT_MODEL_ID);
   const modelPath = path.join(modelDirectory, 'model.onnx');
 
@@ -112,7 +123,8 @@ export async function checkDenseReadiness(options = {}) {
 }
 
 function normalizeForcedState(forcedState) {
-  const trimmedState = typeof forcedState === 'string' ? forcedState.trim() : '';
+  const trimmedState =
+    typeof forcedState === 'string' ? forcedState.trim() : '';
   return FORCED_STATES.has(trimmedState) ? trimmedState : null;
 }
 
@@ -165,10 +177,18 @@ async function main() {
       modelDirectory: args['model-directory'],
       modelId: args['model-id'],
     });
-    writeJsonOrText(report, Boolean(args.json), (payload) => `${payload.state}: ${payload.reason}`);
+    writeJsonOrText(
+      report,
+      Boolean(args.json),
+      (payload) => `${payload.state}: ${payload.reason}`,
+    );
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+    fail(
+      error instanceof Error ? error.message : String(error),
+      Boolean(args.json),
+    );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();

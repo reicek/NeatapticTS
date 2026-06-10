@@ -130,7 +130,10 @@ function prepareTopologyForActivation(
  * @returns Nothing.
  */
 function validateInputVector(network: Network, inputVector: number[]): void {
-  if (!Array.isArray(inputVector) || inputVector.length !== network.input) {
+  if (
+    !(Array.isArray(inputVector) || ArrayBuffer.isView(inputVector)) ||
+    inputVector.length !== network.input
+  ) {
     throw new NetworkActivateInputSizeMismatchError(
       `Input size mismatch: expected ${network.input}, got ${
         inputVector ? inputVector.length : UNDEFINED_INPUT_LENGTH_TEXT

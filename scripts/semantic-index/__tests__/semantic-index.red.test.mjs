@@ -6,7 +6,9 @@ import path from 'node:path';
 describe('semantic-index red contracts', () => {
   describe('freshness.mjs', () => {
     it('returns mtime_ms, size, and sha256 for a known file', async () => {
-      const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'semantic-index-freshness-'));
+      const fixtureDirectory = await mkdtemp(
+        path.join(tmpdir(), 'semantic-index-freshness-'),
+      );
       const fixturePath = path.join(fixtureDirectory, 'known.md');
       const fixtureText = '# Known\n\nFreshness proof fixture.\n';
       await writeFile(fixturePath, fixtureText, 'utf8');
@@ -42,7 +44,10 @@ describe('semantic-index red contracts', () => {
       ].join('\n');
       const { chunkMarkdown } = await import('../chunker.mjs');
 
-      const chunks = chunkMarkdown(sampleMarkdown, { maxChars: 90, overlapChars: 0 });
+      const chunks = chunkMarkdown(sampleMarkdown, {
+        maxChars: 90,
+        overlapChars: 0,
+      });
 
       expect(chunks.map(({ heading_path }) => heading_path)).toEqual([
         '# Semantic Index',
@@ -58,12 +63,40 @@ describe('semantic-index red contracts', () => {
       const validationCases = [
         await validateSemanticIndex({ documents: [], freshnessChecks: [] }),
         await validateSemanticIndex({
-          documents: [{ file_path: 'README.md', mtime_ms: 1, file_size: 1, sha256: 'stale' }],
-          freshnessChecks: [{ file_path: 'README.md', mtime_ms: 2, file_size: 1, sha256: 'fresh' }],
+          documents: [
+            {
+              file_path: 'README.md',
+              mtime_ms: 1,
+              file_size: 1,
+              sha256: 'stale',
+            },
+          ],
+          freshnessChecks: [
+            {
+              file_path: 'README.md',
+              mtime_ms: 2,
+              file_size: 1,
+              sha256: 'fresh',
+            },
+          ],
         }),
         await validateSemanticIndex({
-          documents: [{ file_path: 'README.md', mtime_ms: 2, file_size: 1, sha256: 'fresh' }],
-          freshnessChecks: [{ file_path: 'README.md', mtime_ms: 2, file_size: 1, sha256: 'fresh' }],
+          documents: [
+            {
+              file_path: 'README.md',
+              mtime_ms: 2,
+              file_size: 1,
+              sha256: 'fresh',
+            },
+          ],
+          freshnessChecks: [
+            {
+              file_path: 'README.md',
+              mtime_ms: 2,
+              file_size: 1,
+              sha256: 'fresh',
+            },
+          ],
         }),
       ];
 

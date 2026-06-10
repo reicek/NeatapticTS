@@ -29,6 +29,28 @@ with a fixed active-plan path so workspace-local MCP discovery can resolve the
 repo-static workflow packet and the active-step validation allow-list without
 prompt inputs.
 
+## Standalone Folder Quality Gate + Racing Curriculum Hotfix Lane [DONE]
+
+**Outcome:** closed the browser-runtime `NetworkActivateInputSizeMismatchError` (expected 70, got 70)
+triggered when `nge.controller.ts` passed a `Float32Array` to `network.activate(...)`, and shipped
+`scripts/folder-quality-metrics.mjs` as the fast static folder-quality gate for post-edit workflow
+checks.
+
+- Folder quality gate and racing curriculum hotfix
+  - Plan: [completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md](completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md) [DONE]
+  - Current internal state: archived after the typed-array runtime fix, the bounded
+    `number[] | Float32Array` activation contract update, the new `quality:folder` gate, and green
+    validation. Deferred caveats remain explicit: one pre-existing `examples/racing_curriculum`
+    lint error, the pre-existing `missing-test-file` smells in `examples/racing_curriculum` and
+    `src/architecture/network/activate`, and the PowerShell `npm run quality:folder` forwarding
+    quirk.
+
+**Coordination rule:** this lane owns `src/architecture/network/activate/network.activate.core.utils.ts`
+(and parallel activate guards) for the bug fix, and `scripts/folder-quality-metrics.mjs` +
+`scripts/agent-customization/gates/folder-quality.gate.mjs` + `package.json` `quality:folder`
+script + mandatory checklist entries in `.github/copilot-instructions.md` and `CLAUDE.md` for the
+tooling half. Racing Curriculum Phase 3 (Tier 3: 2v2 Roles) is not part of this lane.
+
 - Workspace MCP registration
   - Plan: [completed/workspace-mcp-registration.plans.md](completed/workspace-mcp-registration.plans.md) [DONE]
   - Current internal state: the workspace-registration lane is archived as a
@@ -88,6 +110,26 @@ resources/prompts/tools, evidence-bearing gate exceptions, and universal
 [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md)
 as the archived baseline for existing agent, skill, model-routing, validation,
 and MCP ownership contracts.
+
+## Standalone Meta-Workflow Lane — Orchestration System Optimization [PLANNED]
+
+**Outcome:** enforce strict Tier 1→Tier 2/3/4 delegation by extracting durable policies into skills, creating targeted specialist agents, and updating flows to eliminate "God-agent" behavior from the eight numbered SDLC orchestrators.
+
+- Orchestration system optimization (mini-agent transition)
+  - Plan: [Orchestration_System_Optimization.plans.md](Orchestration_System_Optimization.plans.md) [WIP]
+  - Current internal state: Phase 4 Step 03 [DONE] — All gates PASS (agent-graph: 61 agents/0 issues, tier-enforcement: 0 violations, plan-sync: 0 errors/0 warnings). Flow specialist references updated in 7 flow files. Step 04-07 remaining (flow selection red tests, tier-enforcement with flow awareness, docs, final validation).
+
+**Coordination rule:** this lane is confined to `.github/agents/`, `.github/skills/`, `.github/flows/`, `scripts/agent-customization/`, and tracker/log files. Do not modify `src/` or MCP server implementations. Treat [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) and [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows_and_Gates_Upgrade.plans.md) as the archived baselines for agent architecture and flow/gates contracts.
+
+## Standalone Meta-Workflow Lane — Step Packet Goal Redesign [WIP]
+
+**Outcome:** replace the step packet YAML `agent` and `agent_file` fields with a `goal` field that declares what outcome a step needs rather than who does it, add an optional `tdd_sequence` field for multi-phase dispatch decomposition, update the orchestrator routing table in `copilot-instructions.md` §3, migrate all existing plan files, and remove backward compatibility.
+
+- Step Packet Goal Redesign
+  - Plan: [Step_Packet_Goal_Redesign.plans.md](Step_Packet_Goal_Redesign.plans.md) [WIP]
+  - Current internal state: Phase 1 Step 01 [WIP] — planning the redesign. The step-packet gate currently requires `agent`; Phase 1 Step 02 must update it to accept `goal` before Phase 2 migration begins.
+
+**Coordination rule:** this lane is confined to `.github/copilot-instructions.md`, `.github/skills/phase-handoff-workflow/SKILL.md`, `scripts/agent-customization/gates/step-packet.gate.mjs`, and plan file step packet YAML. Do not modify `src/` library code, flow YAML files (`.github/flows/*.flow.yml` use `agent:` for flow ownership, a different concern), or runtime enforcement scripts.
 
 ## Standalone Documentation Metrics Contract Lane [DONE]
 
@@ -348,6 +390,12 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 - Soft dependency: Layer 4 [DONE] improved MCP lifecycle management but was not required to close Layer 6
 - Artifacts: `scripts/semantic-index/prewarm-dense.mjs`, `scripts/semantic-index/dense-readiness.mjs`, `scripts/agent-customization/gates/dense-readiness.gate.mjs`; MCP `search_corpus` now defaults `use_dense: true` with graceful cold-state degradation and warm-state `dense_state` provenance
 
+7. Advanced RAG architecture (Layer 7+)
+
+- Plan: [Repo_Cortex_Advanced_RAG_Architecture.plans.md](Repo_Cortex_Advanced_RAG_Architecture.plans.md) [WIP]
+- Gate: Layers 1–6 [DONE] satisfied; builds on the existing BM25+dense hybrid
+- Artifacts: semantic chunking, query classification, cross-encoder re-ranking, context window assembly, entity/relationship graphs, query expansion, relevance feedback, structured metadata filtering, multi-hop retrieval, ANN indexing, RAG eval suite
+
 ### Agentic Workflow Enforcement Prerequisite [DONE]
 
 - 5-layer agent delegation tier enforcement
@@ -377,8 +425,16 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 
 - NEAT Genesis EvoDevo (NGE) — core algorithm (computation motifs, lifecycle, DNA, reproduction, collective intelligence)
   - Plan: [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
-- NGE Racing Curriculum — single-agent benchmark (sensory specialization, neuromodulation, lifecycle staging)
-  - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) [WIP]
+- NGE Core Readiness Audit — primitive-by-primitive readiness matrix, gap classification by owner boundary, and first implementation tranche selection (core-first; demos are downstream e2e tests)
+  - Plan: [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [PLANNED] — Phase 3 [DONE] (independent populations + generation barriers); Phase 4 [PLANNED] (deterministic evaluation packs); status changed to PLANNED per RAG architecture priority shift
+- NGE Racing Curriculum — Team A/B benchmark (worker-streamed runtime authority, deterministic race packs, rolling opponent snapshots)
+  - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) (`plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`) [WIP]
+- Racing Path-Tracking Debug and Quality Followup — pre-Phase-3 visual fix, geometry audit, and deferred quality cleanup
+  - Plan: [completed/Racing_Pathtracking_Debug_and_Quality_Followup.plans.md](completed/Racing_Pathtracking_Debug_and_Quality_Followup.plans.md) [DONE]
+  - Current internal state: archived after the shared-spline path-tracking repair, the
+    user-confirmed rounded-lane visual pass, and the bounded folder-quality cleanup. The only
+    remaining caveat is accepted static debt: `examples/racing_curriculum/browser-entry/browser-entry.ts`
+    still lacks a sibling `browser-entry.test.ts`.
 - NGE Ant Hive Ecosystem — multi-agent benchmark (stigmergy, role differentiation, collective intelligence)
   - Plan: [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
 - NGE Predator/Prey Co-evolution — co-evolutionary benchmark (sensory arms race, reproduction modes, non-stationary fitness)
@@ -427,6 +483,8 @@ M7. [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_R
 M8. [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
 M8b. [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
 M9. [completed/NeatChat_Local_Retrieval_Memory.plans.md](completed/NeatChat_Local_Retrieval_Memory.plans.md) [DONE]
+M10. [completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md](completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md) [DONE]
+M11. [Step_Packet_Goal_Redesign.plans.md](Step_Packet_Goal_Redesign.plans.md) [WIP]
 
 ### Phase 0 inventory
 
@@ -483,6 +541,7 @@ M9. [completed/NeatChat_Local_Retrieval_Memory.plans.md](completed/NeatChat_Loca
 ### Phase 7 inventory
 
 32. [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
-33. [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) [WIP]
+    32b. [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [WIP]
+33. [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) (`plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`) [WIP]
 34. [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
 35. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]

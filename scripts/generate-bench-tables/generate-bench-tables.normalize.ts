@@ -110,7 +110,9 @@ function applyLegacyEntryMetrics(
  * @param rawModeBucket - Unknown raw mode payload.
  * @returns Normalized size buckets.
  */
-export function normalizeModeBucket(rawModeBucket: unknown): AggregatedModeBucket {
+export function normalizeModeBucket(
+  rawModeBucket: unknown,
+): AggregatedModeBucket {
   if (!isRecord(rawModeBucket)) {
     return {};
   }
@@ -130,7 +132,9 @@ export function normalizeModeBucket(rawModeBucket: unknown): AggregatedModeBucke
  * @param rawSizeBucket - Unknown raw size payload from the artifact.
  * @returns Normalized map of scenario names to scenario metric buckets.
  */
-export function normalizeSizeBucket(rawSizeBucket: unknown): AggregatedSizeBucket {
+export function normalizeSizeBucket(
+  rawSizeBucket: unknown,
+): AggregatedSizeBucket {
   if (!isRecord(rawSizeBucket)) {
     return {};
   }

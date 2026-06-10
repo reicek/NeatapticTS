@@ -7,7 +7,8 @@ import { pathToFileURL } from 'node:url';
 import { repoRoot } from './customization-utils.mjs';
 
 const TSCONFIG_DOCS_PATH = path.join(repoRoot, 'tsconfig.docs.json');
-const FIX_HINT = 'Update tsconfig.docs.json include globs or restore the missing paths before running npm run docs.';
+const FIX_HINT =
+  'Update tsconfig.docs.json include globs or restore the missing paths before running npm run docs.';
 
 function parseArgs(argv) {
   return {
@@ -17,20 +18,24 @@ function parseArgs(argv) {
 }
 
 function printUsage() {
-  console.log([
-    'Validate docs TSConfig include globs',
-    '',
-    'Usage:',
-    '  node scripts/agent-customization/validate-tsconfig-docs.mjs [--json]',
-    '  node scripts/agent-customization/validate-tsconfig-docs.mjs --help',
-    '',
-    'Options:',
-    '  --json  Emit machine-readable JSON.',
-  ].join('\n'));
+  console.log(
+    [
+      'Validate docs TSConfig include globs',
+      '',
+      'Usage:',
+      '  node scripts/agent-customization/validate-tsconfig-docs.mjs [--json]',
+      '  node scripts/agent-customization/validate-tsconfig-docs.mjs --help',
+      '',
+      'Options:',
+      '  --json  Emit machine-readable JSON.',
+    ].join('\n'),
+  );
 }
 
 export async function validateTsconfigDocs() {
-  const tsconfigPayload = JSON.parse(await readFile(TSCONFIG_DOCS_PATH, 'utf8'));
+  const tsconfigPayload = JSON.parse(
+    await readFile(TSCONFIG_DOCS_PATH, 'utf8'),
+  );
   const checkedPaths = Array.isArray(tsconfigPayload.include)
     ? tsconfigPayload.include.filter((value) => typeof value === 'string')
     : [];
@@ -62,7 +67,9 @@ function writeOutput(result, json) {
     return;
   }
 
-  console.log(result.pass ? 'PASS validate-tsconfig-docs' : 'FAIL validate-tsconfig-docs');
+  console.log(
+    result.pass ? 'PASS validate-tsconfig-docs' : 'FAIL validate-tsconfig-docs',
+  );
   if (!result.pass) console.log(`fixHint: ${result.fixHint}`);
 }
 
@@ -91,6 +98,9 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   await main();
 }

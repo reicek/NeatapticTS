@@ -7,7 +7,11 @@
  * remain schema-agnostic.
  */
 
-import type { AGGREGATED_METRICS, DELTA_METRICS, HEAP_METRICS } from './generate-bench-tables.constants.js';
+import type {
+  AGGREGATED_METRICS,
+  DELTA_METRICS,
+  HEAP_METRICS,
+} from './generate-bench-tables.constants.js';
 
 /** String literal union of the two build variant identifiers emitted by the benchmark suite. */
 export type BenchmarkMode = 'src' | 'dist';

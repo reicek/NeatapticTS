@@ -8,8 +8,15 @@
  * benchmark rows remain easy to scan in docs and pull-request diffs.
  */
 
-import { DELTA_METRICS, HEAP_METRICS } from './generate-bench-tables.constants.js';
-import { cell, fmtNum, resolveOrderedSizes } from './generate-bench-tables.format.js';
+import {
+  DELTA_METRICS,
+  HEAP_METRICS,
+} from './generate-bench-tables.constants.js';
+import {
+  cell,
+  fmtNum,
+  resolveOrderedSizes,
+} from './generate-bench-tables.format.js';
 import { normalizeAggregated } from './generate-bench-tables.normalize.js';
 import type {
   BenchmarkArtifact,
@@ -223,7 +230,18 @@ function appendDeltaRowsForSize(
     const { dAbs, dPct } = computeDeltaStatistics(srcMean, distMean);
     const flag = computeDeltaFlag(dPct, threshold);
     const note = computeDeltaNote(metric, flag, dAbs);
-    rows.push(buildDeltaTableRow(size, metric, srcMean, distMean, dAbs, dPct, flag, note));
+    rows.push(
+      buildDeltaTableRow(
+        size,
+        metric,
+        srcMean,
+        distMean,
+        dAbs,
+        dPct,
+        flag,
+        note,
+      ),
+    );
   }
 }
 

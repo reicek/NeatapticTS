@@ -16,7 +16,8 @@ const options = parseArgs(process.argv.slice(2));
 if (options.help) {
   printUsage({
     title: 'Inventory NeatapticTS agent customizations.',
-    usage: 'node scripts/agent-customization/inventory-customizations.mjs [--json]',
+    usage:
+      'node scripts/agent-customization/inventory-customizations.mjs [--json]',
   });
   process.exit(0);
 }
@@ -29,9 +30,13 @@ export async function runCustomizationInventory() {
     ok: true,
     summary: {
       agents: agents.length,
-      userInvocableAgents: agents.filter((agent) => agent.userInvocable !== false).length,
+      userInvocableAgents: agents.filter(
+        (agent) => agent.userInvocable !== false,
+      ).length,
       skills: skills.length,
-      userInvocableSkills: skills.filter((skill) => skill.userInvocable !== false).length,
+      userInvocableSkills: skills.filter(
+        (skill) => skill.userInvocable !== false,
+      ).length,
     },
     agents,
     skills,
@@ -54,17 +59,24 @@ async function main() {
 }
 
 async function collectAgents() {
-  const paths = await listMarkdownFiles('.github/agents', (relativePath) => relativePath.endsWith('.agent.md'));
+  const paths = await listMarkdownFiles('.github/agents', (relativePath) =>
+    relativePath.endsWith('.agent.md'),
+  );
   return Promise.all(paths.map(readAgent));
 }
 
 async function collectSkills() {
-  const paths = await listMarkdownFiles('.github/skills', (relativePath) => relativePath.endsWith('/SKILL.md'));
+  const paths = await listMarkdownFiles('.github/skills', (relativePath) =>
+    relativePath.endsWith('/SKILL.md'),
+  );
   return Promise.all(paths.map(readSkill));
 }
 
 async function readAgent(relativePath) {
-  const { data, raw } = parseFrontmatter(await readWorkspaceFile(relativePath), relativePath);
+  const { data, raw } = parseFrontmatter(
+    await readWorkspaceFile(relativePath),
+    relativePath,
+  );
   return {
     path: relativePath,
     name: data.name ?? relativePath.split('/').at(-1)?.replace('.agent.md', ''),
@@ -81,7 +93,10 @@ async function readAgent(relativePath) {
 }
 
 async function readSkill(relativePath) {
-  const { data, body } = parseFrontmatter(await readWorkspaceFile(relativePath), relativePath);
+  const { data, body } = parseFrontmatter(
+    await readWorkspaceFile(relativePath),
+    relativePath,
+  );
   return {
     path: relativePath,
     name: data.name ?? '',
@@ -95,6 +110,9 @@ async function readSkill(relativePath) {
   };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }

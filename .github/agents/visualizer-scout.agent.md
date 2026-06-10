@@ -2,8 +2,17 @@
 description: 'Use when diagnosing visualizer UI issues such as cramped layout, missing overflow scroll, hover/tooltip instability, or parity drift between demo visualizers. Keywords: visualizer, canvas, tooltip, hover, overflow, layout, parity.'
 name: 'visualizer-scout'
 tier: 3
-model: ['GPT-5.4-mini (copilot)', 'GPT-5.4 (copilot)']
-tools: [read, search]
+model: 'glm-5.1:cloud (ollama)'
+tools:
+  [
+    read,
+    search,
+    execute,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['visualizer-workflow']
@@ -27,16 +36,23 @@ You gather evidence from visualizer source files, identify seams in layout alloc
 - DO NOT propose generated-doc edits for visualizer runtime issues.
 - DO NOT restate full implementation workflow that belongs in `visualizer-workflow`.
 
+## Gate Enforcement
+
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
+- `cortex-index` — before searching for visualizer documents
+
 ## Approach
 
-1. Read nearest visualizer README context first, then parent README when the issue spans sibling demos.
-2. Map the issue across three layers:
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Read nearest visualizer README context first, then parent README when the issue spans sibling demos.
+3. Map the issue across three layers:
    - shell/layout CSS,
    - browser-entry host services,
    - renderer and helper utilities.
-3. Identify the most likely owner boundary and one fallback boundary.
-4. Note the minimal validation surface (typecheck, focused tests, manual viewport checks) that should follow implementation.
-5. Return a short evidence-based handoff packet to `visualizer-workflow`.
+4. Identify the most likely owner boundary and one fallback boundary.
+5. Note the minimal validation surface (typecheck, focused tests, manual viewport checks) that should follow implementation.
+6. Return a short evidence-based handoff packet to `visualizer-workflow`.
 
 ## If Blocked
 

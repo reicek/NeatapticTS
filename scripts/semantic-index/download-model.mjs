@@ -25,35 +25,78 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fail, parseCliArgs, printHelp, writeJsonOrText } from './cli-utils.mjs';
+import {
+  fail,
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from './cli-utils.mjs';
 import { DEFAULT_MODEL_DIRECTORY, DEFAULT_MODEL_ID } from './embed-index.mjs';
 
 const DEFAULT_MODEL_REPOSITORY_ID = 'sentence-transformers/all-MiniLM-L6-v2';
 const DEFAULT_MODEL_DIMENSION = 384;
 const MODEL_ASSETS = [
-  { localName: 'model.onnx', remotePath: 'onnx/model.onnx', verifySha256: true, urlMode: 'resolve' },
-  { localName: 'tokenizer.json', remotePath: 'tokenizer.json', verifySha256: false, urlMode: 'raw' },
-  { localName: 'tokenizer_config.json', remotePath: 'tokenizer_config.json', verifySha256: false, urlMode: 'raw' },
-  { localName: 'special_tokens_map.json', remotePath: 'special_tokens_map.json', verifySha256: false, urlMode: 'raw' },
+  {
+    localName: 'model.onnx',
+    remotePath: 'onnx/model.onnx',
+    verifySha256: true,
+    urlMode: 'resolve',
+  },
+  {
+    localName: 'tokenizer.json',
+    remotePath: 'tokenizer.json',
+    verifySha256: false,
+    urlMode: 'raw',
+  },
+  {
+    localName: 'tokenizer_config.json',
+    remotePath: 'tokenizer_config.json',
+    verifySha256: false,
+    urlMode: 'raw',
+  },
+  {
+    localName: 'special_tokens_map.json',
+    remotePath: 'special_tokens_map.json',
+    verifySha256: false,
+    urlMode: 'raw',
+  },
 ];
 const DEFAULT_DOWNLOAD_RETRIES = 3;
 
 export async function downloadModelAssets(options = {}) {
-  const modelDirectory = path.resolve(options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY);
-  const repositoryId = String(options.repositoryId ?? DEFAULT_MODEL_REPOSITORY_ID);
+  const modelDirectory = path.resolve(
+    options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
+  );
+  const repositoryId = String(
+    options.repositoryId ?? DEFAULT_MODEL_REPOSITORY_ID,
+  );
   const modelId = String(options.modelId ?? DEFAULT_MODEL_ID);
   await mkdir(modelDirectory, { recursive: true });
 
-  const repositoryMetadata = await fetchJson(`https://huggingface.co/api/models/${repositoryId}`);
-  const modelSibling = repositoryMetadata?.siblings?.find?.(({ rfilename }) => rfilename === 'onnx/model.onnx') ?? null;
-  let expectedModelSha256 = String(options.expectedSha256 ?? modelSibling?.lfs?.oid ?? '');
+  const repositoryMetadata = await fetchJson(
+    `https://huggingface.co/api/models/${repositoryId}`,
+  );
+  const modelSibling =
+    repositoryMetadata?.siblings?.find?.(
+      ({ rfilename }) => rfilename === 'onnx/model.onnx',
+    ) ?? null;
+  let expectedModelSha256 = String(
+    options.expectedSha256 ?? modelSibling?.lfs?.oid ?? '',
+  );
   if (!expectedModelSha256) {
-    expectedModelSha256 = await resolveExpectedModelSha256FromPointer(repositoryId, 'onnx/model.onnx');
+    expectedModelSha256 = await resolveExpectedModelSha256FromPointer(
+      repositoryId,
+      'onnx/model.onnx',
+    );
   }
 
   const assetReports = [];
   for (const asset of MODEL_ASSETS) {
-    const assetUrl = createAssetUrl(repositoryId, asset.remotePath, asset.urlMode);
+    const assetUrl = createAssetUrl(
+      repositoryId,
+      asset.remotePath,
+      asset.urlMode,
+    );
     const assetDownload = asset.verifySha256
       ? await downloadBinaryWithMetadata(assetUrl)
       : { buffer: await downloadBinary(assetUrl), finalUrl: assetUrl };
@@ -61,10 +104,14 @@ export async function downloadModelAssets(options = {}) {
     const targetPath = path.join(modelDirectory, asset.localName);
     const assetSha256 = createSha256(assetBuffer);
     if (asset.verifySha256 && !expectedModelSha256) {
-      throw new Error('Unable to resolve the expected SHA-256 for onnx/model.onnx from the Hugging Face metadata or raw Git LFS pointer.');
+      throw new Error(
+        'Unable to resolve the expected SHA-256 for onnx/model.onnx from the Hugging Face metadata or raw Git LFS pointer.',
+      );
     }
     if (asset.verifySha256 && assetSha256 !== expectedModelSha256) {
-      throw new Error(`SHA-256 mismatch for ${asset.localName}: expected ${expectedModelSha256}, received ${assetSha256}.`);
+      throw new Error(
+        `SHA-256 mismatch for ${asset.localName}: expected ${expectedModelSha256}, received ${assetSha256}.`,
+      );
     }
 
     await writeFile(targetPath, assetBuffer);
@@ -82,7 +129,10 @@ export async function downloadModelAssets(options = {}) {
     model_sha256: expectedModelSha256,
     repository_id: repositoryId,
   };
-  await writeFile(path.join(modelDirectory, 'model-meta.json'), `${JSON.stringify(modelMeta, null, 2)}\n`);
+  await writeFile(
+    path.join(modelDirectory, 'model-meta.json'),
+    `${JSON.stringify(modelMeta, null, 2)}\n`,
+  );
 
   return {
     assets: assetReports,
@@ -104,19 +154,28 @@ function createAssetUrl(repositoryId, remotePath, urlMode) {
 
 async function fetchJson(url) {
   const response = await fetchWithRetry(url);
-  if (!response.ok) throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+  if (!response.ok)
+    throw new Error(
+      `Failed to fetch ${url}: ${response.status} ${response.statusText}`,
+    );
   return response.json();
 }
 
 async function downloadBinary(url) {
   const response = await fetchWithRetry(url);
-  if (!response.ok) throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);
+  if (!response.ok)
+    throw new Error(
+      `Failed to download ${url}: ${response.status} ${response.statusText}`,
+    );
   return Buffer.from(await response.arrayBuffer());
 }
 
 async function downloadBinaryWithMetadata(url) {
   const response = await fetchWithRetry(url);
-  if (!response.ok) throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);
+  if (!response.ok)
+    throw new Error(
+      `Failed to download ${url}: ${response.status} ${response.statusText}`,
+    );
   return {
     buffer: Buffer.from(await response.arrayBuffer()),
     finalUrl: response.url,
@@ -134,14 +193,18 @@ async function fetchWithRetry(url, retries = DEFAULT_DOWNLOAD_RETRIES) {
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error(`Failed to fetch ${url}`);
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`Failed to fetch ${url}`);
 }
 
 async function resolveExpectedModelSha256FromPointer(repositoryId, remotePath) {
   const pointerUrl = `https://huggingface.co/${repositoryId}/raw/main/${remotePath}`;
   const response = await fetchWithRetry(pointerUrl);
   if (!response.ok) {
-    throw new Error(`Failed to fetch ${pointerUrl}: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch ${pointerUrl}: ${response.status} ${response.statusText}`,
+    );
   }
 
   const pointerText = await response.text();
@@ -175,10 +238,19 @@ async function main() {
       modelId: args['model-id'],
       repositoryId: args['repository-id'],
     });
-    writeJsonOrText(summary, Boolean(args.json), (payload) => `Downloaded dense model ${payload.modelId} to ${payload.modelDirectory}`);
+    writeJsonOrText(
+      summary,
+      Boolean(args.json),
+      (payload) =>
+        `Downloaded dense model ${payload.modelId} to ${payload.modelDirectory}`,
+    );
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+    fail(
+      error instanceof Error ? error.message : String(error),
+      Boolean(args.json),
+    );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();

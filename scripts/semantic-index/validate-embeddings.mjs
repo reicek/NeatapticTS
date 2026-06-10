@@ -16,23 +16,46 @@
 import Database from 'better-sqlite3';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fail, parseCliArgs, printHelp, writeJsonOrText } from './cli-utils.mjs';
+import {
+  fail,
+  parseCliArgs,
+  printHelp,
+  writeJsonOrText,
+} from './cli-utils.mjs';
 import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
 
-export const DEFAULT_EMBEDDINGS_DATABASE_PATH = path.join(repoRoot, 'data', 'embeddings.sqlite');
+export const DEFAULT_EMBEDDINGS_DATABASE_PATH = path.join(
+  repoRoot,
+  'data',
+  'embeddings.sqlite',
+);
 
 export async function validateEmbeddings(options = {}) {
-  const corpusDatabasePath = path.resolve(options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath);
-  const embeddingsDatabasePath = path.resolve(options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH);
+  const corpusDatabasePath = path.resolve(
+    options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath,
+  );
+  const embeddingsDatabasePath = path.resolve(
+    options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
+  );
   const modelId = String(options.modelId ?? 'all-MiniLM-L6-v2');
-  const corpusDatabase = new Database(corpusDatabasePath, { readonly: true, fileMustExist: true });
-  const embeddingsDatabase = new Database(embeddingsDatabasePath, { readonly: true, fileMustExist: true });
+  const corpusDatabase = new Database(corpusDatabasePath, {
+    readonly: true,
+    fileMustExist: true,
+  });
+  const embeddingsDatabase = new Database(embeddingsDatabasePath, {
+    readonly: true,
+    fileMustExist: true,
+  });
 
   try {
-    const [{ count: chunkCount }] = corpusDatabase.prepare('SELECT COUNT(*) AS count FROM chunks').all();
-    const [{ count: embeddingCount }] = embeddingsDatabase.prepare(
-      'SELECT COUNT(*) AS count FROM chunk_embeddings WHERE model_id = ?'
-    ).all(modelId);
+    const [{ count: chunkCount }] = corpusDatabase
+      .prepare('SELECT COUNT(*) AS count FROM chunks')
+      .all();
+    const [{ count: embeddingCount }] = embeddingsDatabase
+      .prepare(
+        'SELECT COUNT(*) AS count FROM chunk_embeddings WHERE model_id = ?',
+      )
+      .all(modelId);
 
     const evidence = [];
     if (Number(embeddingCount) !== Number(chunkCount)) {
@@ -49,7 +72,10 @@ export async function validateEmbeddings(options = {}) {
       embedding_count: Number(embeddingCount),
       pass: evidence.length === 0,
       evidence,
-      fixHint: evidence.length === 0 ? null : 'Run: node scripts/semantic-index/embed-index.mjs',
+      fixHint:
+        evidence.length === 0
+          ? null
+          : 'Run: node scripts/semantic-index/embed-index.mjs',
       owner: '05-green-testing',
     };
   } finally {
@@ -81,13 +107,19 @@ async function main() {
       embeddingsDatabasePath: args['embeddings-database'],
       modelId: args['model-id'],
     });
-    writeJsonOrText(report, Boolean(args.json), (payload) => payload.pass
-      ? 'Embeddings validation passed.'
-      : `Embeddings validation failed: ${payload.evidence.map(({ issue }) => issue).join(', ')}`);
+    writeJsonOrText(report, Boolean(args.json), (payload) =>
+      payload.pass
+        ? 'Embeddings validation passed.'
+        : `Embeddings validation failed: ${payload.evidence.map(({ issue }) => issue).join(', ')}`,
+    );
     if (!report.pass) process.exitCode = 1;
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error), Boolean(args.json));
+    fail(
+      error instanceof Error ? error.message : String(error),
+      Boolean(args.json),
+    );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await main();

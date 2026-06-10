@@ -22,7 +22,8 @@ const options = parseArgs(process.argv.slice(2));
 if (options.help) {
   printUsage({
     title: 'Generate the canonical NeatapticTS agent and skill routing table.',
-    usage: 'node scripts/agent-customization/generate-agent-skill-routing-table.mjs [--json]',
+    usage:
+      'node scripts/agent-customization/generate-agent-skill-routing-table.mjs [--json]',
   });
   process.exit(0);
 }
@@ -50,7 +51,9 @@ export async function collectCustomizationRoutingTable() {
   };
 }
 
-export async function runGenerateCustomizationRoutingTable({ write = true } = {}) {
+export async function runGenerateCustomizationRoutingTable({
+  write = true,
+} = {}) {
   const table = await collectCustomizationRoutingTable();
   const currentMarkdown = (await fileExists(ROUTING_TABLE_PATH))
     ? await readWorkspaceFile(ROUTING_TABLE_PATH)
@@ -58,7 +61,11 @@ export async function runGenerateCustomizationRoutingTable({ write = true } = {}
   const changed = currentMarkdown !== table.markdown;
 
   if (write && changed) {
-    await writeFile(path.join(repoRoot, ROUTING_TABLE_PATH), table.markdown, 'utf8');
+    await writeFile(
+      path.join(repoRoot, ROUTING_TABLE_PATH),
+      table.markdown,
+      'utf8',
+    );
   }
 
   return {
@@ -82,12 +89,19 @@ export async function runGenerateCustomizationRoutingTable({ write = true } = {}
 }
 
 export function extractRoutingTableSourceHash(markdown) {
-  return /<!-- source-hash: (?<sourceHash>[a-f0-9]{64}) -->/u.exec(markdown)?.groups?.sourceHash ?? null;
+  return (
+    /<!-- source-hash: (?<sourceHash>[a-f0-9]{64}) -->/u.exec(markdown)?.groups
+      ?.sourceHash ?? null
+  );
 }
 
 async function collectRoutingSourceFiles() {
-  const agentPaths = await listMarkdownFiles('.github/agents', (relativePath) => relativePath.endsWith('.agent.md'));
-  const skillPaths = await listMarkdownFiles('.github/skills', (relativePath) => relativePath.endsWith('/SKILL.md'));
+  const agentPaths = await listMarkdownFiles('.github/agents', (relativePath) =>
+    relativePath.endsWith('.agent.md'),
+  );
+  const skillPaths = await listMarkdownFiles('.github/skills', (relativePath) =>
+    relativePath.endsWith('/SKILL.md'),
+  );
   return [...agentPaths, ...skillPaths].toSorted();
 }
 
@@ -104,7 +118,9 @@ async function computeRoutingSourceHash(sourceFiles) {
 
 function createAgentRows(agents) {
   return agents
-    .toSorted((leftAgent, rightAgent) => leftAgent.name.localeCompare(rightAgent.name))
+    .toSorted((leftAgent, rightAgent) =>
+      leftAgent.name.localeCompare(rightAgent.name),
+    )
     .map((agent) => ({
       name: agent.name,
       tier: agent.tier ?? '-',
@@ -126,7 +142,9 @@ function createSkillRows(skills, agents) {
   );
 
   return skills
-    .toSorted((leftSkill, rightSkill) => leftSkill.name.localeCompare(rightSkill.name))
+    .toSorted((leftSkill, rightSkill) =>
+      leftSkill.name.localeCompare(rightSkill.name),
+    )
     .map((skill) => ({
       name: skill.name,
       tier: 'skill',
@@ -149,7 +167,12 @@ function normalizeForHash(text) {
   return text.replace(/\r\n/g, '\n');
 }
 
-function renderRoutingTableMarkdown({ sourceHash, sourceFiles, agentRows, skillRows }) {
+function renderRoutingTableMarkdown({
+  sourceHash,
+  sourceFiles,
+  agentRows,
+  skillRows,
+}) {
   return [
     '<!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->',
     `<!-- source-hash: ${sourceHash} -->`,
@@ -184,6 +207,9 @@ async function main() {
   writeReport(report, options);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }

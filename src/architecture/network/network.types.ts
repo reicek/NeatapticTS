@@ -397,7 +397,7 @@ export interface ActivateNetworkInternals {
   _reuseSequenceBuffers?: boolean;
   /** Standard `activate` method used when the slab fast path is not eligible. */
   activate: (
-    input: number[],
+    input: number[] | Float32Array,
     training?: boolean,
     maxActivationDepth?: number,
   ) => number[];
@@ -1723,7 +1723,7 @@ export interface TrainingNetworkInternals {
   /** Separate-bias clipping flag */
   _gradClipSeparateBias?: boolean;
   /** Activation hook */
-  activate: (input: number[], training?: boolean) => number[];
+  activate: (input: number[] | Float32Array, training?: boolean) => number[];
   /** Optional pruning callback hook */
   _maybePrune?: (epoch: number) => void;
 }

@@ -84,14 +84,16 @@ describe('dense-readiness.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: expect.objectContaining({
-          ready: false,
-          reason: expect.stringMatching(/\S/u),
-          state: 'cold',
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: expect.objectContaining({
+            ready: false,
+            reason: expect.stringMatching(/\S/u),
+            state: 'cold',
+          }),
+          status: 0,
         }),
-        status: 0,
-      }));
+      );
     });
 
     it('reports model-only when model.onnx is present and the embeddings database is absent', () => {
@@ -117,14 +119,16 @@ describe('dense-readiness.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: expect.objectContaining({
-          ready: false,
-          reason: expect.stringMatching(/\S/u),
-          state: 'model-only',
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: expect.objectContaining({
+            ready: false,
+            reason: expect.stringMatching(/\S/u),
+            state: 'model-only',
+          }),
+          status: 0,
         }),
-        status: 0,
-      }));
+      );
     });
 
     it('distinguishes partial embeddings from matching warm embeddings', () => {
@@ -189,15 +193,17 @@ describe('dense-readiness.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: {
-          chunkCounts: [2, 2],
-          embeddingCounts: [1, 2],
-          readyValues: [false, true],
-          states: ['model-only', 'warm'],
-        },
-        status: 0,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: {
+            chunkCounts: [2, 2],
+            embeddingCounts: [1, 2],
+            readyValues: [false, true],
+            states: ['model-only', 'warm'],
+          },
+          status: 0,
+        }),
+      );
     });
 
     it('lets DENSE_FORCE_STATE override filesystem state for cold and model-only', () => {
@@ -218,13 +224,15 @@ describe('dense-readiness.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: {
-          readyValues: [false, false],
-          states: ['cold', 'model-only'],
-        },
-        status: 0,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: {
+            readyValues: [false, false],
+            states: ['cold', 'model-only'],
+          },
+          status: 0,
+        }),
+      );
     });
   });
 
@@ -257,23 +265,26 @@ describe('dense-readiness.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: {
-          cold: {
-            evidence: { state: 'cold' },
-            fixHint: 'Run `npm run index:prewarm` to build the embedding index.',
-            owner: '01-planning',
-            pass: false,
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: {
+            cold: {
+              evidence: { state: 'cold' },
+              fixHint:
+                'Run `npm run index:prewarm` to build the embedding index.',
+              owner: '01-planning',
+              pass: false,
+            },
+            warm: {
+              evidence: { chunk_count: 7, embedding_count: 7, state: 'warm' },
+              fixHint: null,
+              owner: '01-planning',
+              pass: true,
+            },
           },
-          warm: {
-            evidence: { chunk_count: 7, embedding_count: 7, state: 'warm' },
-            fixHint: null,
-            owner: '01-planning',
-            pass: true,
-          },
-        },
-        status: 0,
-      }));
+          status: 0,
+        }),
+      );
     });
   });
 
@@ -322,40 +333,79 @@ describe('dense-readiness.mjs', () => {
               mtime_ms INTEGER NOT NULL,
               file_size INTEGER NOT NULL,
               sha256 TEXT NOT NULL,
-              indexed_at INTEGER NOT NULL
+              indexed_at INTEGER NOT NULL,
+              arch_layer TEXT,
+              test_coverage TEXT CHECK(test_coverage IN ('full', 'partial', 'none', 'unknown')),
+              source_path_pattern TEXT
             );
             CREATE TABLE chunks (
               chunk_id INTEGER PRIMARY KEY,
-              doc_id INTEGER NOT NULL,
+              doc_id INTEGER NOT NULL REFERENCES documents(doc_id) ON DELETE CASCADE,
               chunk_index INTEGER NOT NULL,
               heading_path TEXT,
               body_text TEXT NOT NULL,
               char_start INTEGER NOT NULL,
-              char_end INTEGER NOT NULL
+              char_end INTEGER NOT NULL,
+              parent_chunk_id INTEGER,
+              depth INTEGER NOT NULL DEFAULT 0,
+              context_header TEXT,
+              symbol_name TEXT,
+              signature_text TEXT,
+              jsdoc_text TEXT,
+              export_type TEXT,
+              module_path TEXT,
+              arch_layer TEXT,
+              jsdoc_quality TEXT CHECK(jsdoc_quality IN ('none', 'weak', 'adequate', 'good')),
+              jsdoc_word_count INTEGER,
+              cyclomatic_complexity INTEGER,
+              test_coverage TEXT CHECK(test_coverage IN ('full', 'partial', 'none', 'unknown')),
+              source_path_pattern TEXT,
+              UNIQUE(doc_id, chunk_index)
             );
-            CREATE VIRTUAL TABLE chunks_fts USING fts5(body_text);
-            INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
-              VALUES (1, 'fixture.md', 'plan', 1, 100, 'fixture-sha', 1);
-            INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end)
-              VALUES (1, 1, 0, 'Fixture', 'NEAT activation retrieval contract', 0, 34);
-            INSERT INTO chunks_fts (rowid, body_text) VALUES (1, 'NEAT activation retrieval contract');
+            CREATE VIRTUAL TABLE chunks_fts USING fts5(
+              body_text,
+              heading_path,
+              content='chunks',
+              content_rowid='chunk_id',
+              tokenize='porter unicode61'
+            );
+            CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
+              INSERT INTO chunks_fts(rowid, body_text, heading_path)
+              VALUES (new.chunk_id, new.body_text, new.heading_path);
+            END;
+            CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
+              INSERT INTO chunks_fts(chunks_fts, rowid, body_text, heading_path)
+              VALUES ('delete', old.chunk_id, old.body_text, old.heading_path);
+            END;
+            CREATE TRIGGER IF NOT EXISTS chunks_au AFTER UPDATE ON chunks BEGIN
+              INSERT INTO chunks_fts(chunks_fts, rowid, body_text, heading_path)
+              VALUES ('delete', old.chunk_id, old.body_text, old.heading_path);
+              INSERT INTO chunks_fts(rowid, body_text, heading_path)
+              VALUES (new.chunk_id, new.body_text, new.heading_path);
+            END;
+            INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at, arch_layer, test_coverage, source_path_pattern)
+              VALUES (1, 'fixture.md', 'plan', 1, 100, 'fixture-sha', 1, 'doc', 'unknown', 'docs/**');
+            INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, parent_chunk_id, depth, context_header, symbol_name, signature_text, jsdoc_text, export_type, module_path, arch_layer, jsdoc_quality, jsdoc_word_count, cyclomatic_complexity, test_coverage, source_path_pattern)
+              VALUES (1, 1, 0, 'Fixture', 'NEAT activation retrieval contract', 0, 34, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 'doc', 'none', NULL, NULL, 'unknown', 'docs/**');
           \`);
           database.close();
         }
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: {
-          denseReasonHasContent: true,
-          denseQueryCalls: 0,
-          dense_degraded: true,
-          dense_state: 'cold',
-          resultCount: 1,
-          use_dense: false,
-        },
-        status: 0,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: {
+            denseReasonHasContent: true,
+            denseQueryCalls: 0,
+            dense_degraded: true,
+            dense_state: 'cold',
+            resultCount: 1,
+            use_dense: false,
+          },
+          status: 0,
+        }),
+      );
     });
 
     it('treats omitted use_dense as true and proves the warm dense path', () => {
@@ -390,16 +440,18 @@ describe('dense-readiness.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: {
-          denseQueryCalls: 1,
-          dense_state: 'warm',
-          hasDenseDegraded: false,
-          resultCount: 1,
-          use_dense: true,
-        },
-        status: 0,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: {
+            denseQueryCalls: 1,
+            dense_state: 'warm',
+            hasDenseDegraded: false,
+            resultCount: 1,
+            use_dense: true,
+          },
+          status: 0,
+        }),
+      );
     });
 
     it('declares the search_corpus use_dense input schema default as true', () => {
@@ -414,10 +466,12 @@ describe('dense-readiness.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: { defaultValue: true },
-        status: 0,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: { defaultValue: true },
+          status: 0,
+        }),
+      );
     });
 
     it('caches one warm readiness probe across two dense searches', () => {
@@ -454,22 +508,30 @@ describe('dense-readiness.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: {
-          denseQueryCalls: 2,
-          readinessCalls: 1,
-        },
-        status: 0,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: {
+            denseQueryCalls: 2,
+            readinessCalls: 1,
+          },
+          status: 0,
+        }),
+      );
     });
   });
 });
 
-function runModuleEvaluation<ReportType>(source: string): SpawnedJsonResult<ReportType> {
-  const spawned = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
+function runModuleEvaluation<ReportType>(
+  source: string,
+): SpawnedJsonResult<ReportType> {
+  const spawned = spawnSync(
+    process.execPath,
+    ['--input-type=module', '--eval', source],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    },
+  );
 
   return {
     report: tryParseJson<ReportType>(spawned.stdout ?? ''),

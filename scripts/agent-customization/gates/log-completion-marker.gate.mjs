@@ -22,7 +22,8 @@ const result = {
     gate: 'log-completion-marker',
     tier: 2,
     agent: '07-logging',
-    check: 'Compressed log entry present and target phase marked [DONE] in the tracker',
+    check:
+      'Compressed log entry present and target phase marked [DONE] in the tracker',
     mode: 'standalone-descriptor',
   },
   fixHint:

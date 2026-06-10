@@ -64,6 +64,26 @@ Output: draft Step 04 packet for user review before send.
 8. Route failed Green Testing back to the smallest relevant prior phase instead
    of continuing forward.
 9. Update the active tracker after each phase step when one exists.
+10. After updating the tracker, invoke the workflow sync hook to advance the step
+    markers automatically:
+
+```bash
+node .github/hooks/workflow-update-sync.mjs --plan=<active-plan-path> --json
+```
+
+This marks the current step `[DONE]` in the plan header AND the YAML
+`status:` field, and advances the next `[PLANNED]` step to `[WIP]`.
+**Exception:** if the step is explicitly awaiting a user response before the
+next step can start, the hook may be skipped and the step left `[WIP]` until
+the user replies. Record the hold reason in the plan.
+If the hook returns `"actionTaken": "blocked"`, verify that the next step
+exists and has `[PLANNED]` status before escalating. 11. Before any strict write/execute action inside the current step, prepare the
+repo-owned runtime proof carrier with
+`node scripts/agent-customization/enforcement/runtime-enforcement-context.mjs --prepare ...`
+so pretool and posttool enforcement can validate the flow, delegator chain,
+required skills, required specialists, and action class. Use
+`.github/runtime-enforcement-contract.md` as the canonical contract for that
+payload.
 
 ## Flow-Aware Handoff Contract
 
@@ -87,12 +107,54 @@ complete. Post-phase fan-out from the flow definition runs after the flow body.
 
 Every active or planned executable phase in an active `.plans.md` file should
 be organized as a phase boundary plus numbered step packets. The user should be
-able to start a fresh session, select the agent named in the current step, and
-paste that step packet without relying on prior chat history.
+able to paste the step packet without relying on prior chat history.
 
 Step 01 always belongs to `01-planning`. It is responsible for planning the rest
 of that phase and authoring Step 02-07 packets, or explicit skipped-step
 packets, before execution continues.
+
+### Field Definitions
+
+| Field             | Required | Description                                                                                                                                                  |
+| ----------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `phase`           | Yes      | Phase number (integer)                                                                                                                                       |
+| `step`            | Yes      | Step number within the phase (integer)                                                                                                                       |
+| `goal`            | Yes      | What outcome this step needs. Must be one of: `planning`, `researching`, `red-testing`, `implementing`, `green-testing`, `documenting`, `logging`, `helping` |
+| `tdd_sequence`    | No       | How the orchestrator should decompose this step across phases. Must be one of: `red-green`, `green-only`. When absent, single-phase dispatch                 |
+| `status`          | Yes      | Step status: `[PLANNED]`, `[WIP]`, or `[DONE]`                                                                                                               |
+| `mode`            | Yes      | Session mode: `fresh-session` or `perpetual`                                                                                                                 |
+| `source_of_truth` | Yes      | Path to the authoritative plan file                                                                                                                          |
+| `copy_paste`      | Yes      | Whether the step packet is a paste-ready prompt (`true`/`false`)                                                                                             |
+| `next_step`       | Yes      | Description of the next step, or `null` for terminal steps                                                                                                   |
+| `skills`          | Yes      | List of skill names the agent should load                                                                                                                    |
+| `specialists`     | No       | List of hidden specialist agent names for delegation                                                                                                         |
+| `validation`      | Yes      | List of validation commands or evidence gates                                                                                                                |
+
+The orchestrator resolves `goal` to the dispatched agent using the routing
+table in `.github/copilot-instructions.md` §3. When `tdd_sequence` is present,
+the orchestrator decomposes the step across the specified phases rather than
+dispatching a single agent.
+
+### Backward Compatibility
+
+During the migration transition, step packets may still contain the deprecated
+`agent` and `agent_file` fields:
+
+- If a step YAML contains `agent:` but not `goal:`, treat `agent` as an alias
+  for `goal` using the mapping: `00-helping` → `helping`, `01-planning` →
+  `planning`, `02-researching` → `researching`, `03-red-testing` →
+  `red-testing`, `04-implementing` → `implementing`, `05-green-testing` →
+  `green-testing`, `06-documenting` → `documenting`, `07-logging` → `logging`.
+- If a step YAML contains both `agent:` and `goal:`, `goal` takes precedence;
+  emit a deprecation warning.
+- If a step YAML contains neither `agent:` nor `goal:`, the step-packet gate
+  MUST fail with a fixHint explaining that one of these fields is required.
+- `agent_file` is redundant because the orchestrator derives the file path from
+  the goal-derived agent name.
+
+This backward-compatibility period lasts until all plan files in `plans/` have
+been migrated to the new format, at which point `agent` and `agent_file` become
+invalid.
 
 Use this shape:
 
@@ -110,8 +172,7 @@ phase can advance.
 ```yaml
 phase: N
 step: 1
-agent: '01-planning'
-agent_file: '.github/agents/01-planning.agent.md'
+goal: 'planning'
 status: '[WIP|PLANNED|DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/<PlanName>.plans.md'
@@ -125,8 +186,7 @@ validation:
   - '<focused command or manual evidence gate>'
 ```
 
-**User instruction:** Start a fresh session, select `<agent>`, and paste this
-full step packet.
+**User instruction:** Paste this full step packet.
 
 **Step objective:** One concise paragraph describing what this step must
 produce.

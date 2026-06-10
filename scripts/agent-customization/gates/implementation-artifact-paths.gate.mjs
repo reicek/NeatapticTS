@@ -22,7 +22,8 @@ const result = {
     gate: 'implementation-artifact-paths',
     tier: 2,
     agent: '04-implementing',
-    check: 'Changed file paths declared; for workflow-only tasks none under src/',
+    check:
+      'Changed file paths declared; for workflow-only tasks none under src/',
     mode: 'standalone-descriptor',
   },
   fixHint:
@@ -33,7 +34,10 @@ const result = {
 if (options.json) {
   console.log(JSON.stringify(result, null, 2));
 } else {
-  console.log(result.pass ? 'PASS' : 'FAIL', 'implementation-artifact-paths gate');
+  console.log(
+    result.pass ? 'PASS' : 'FAIL',
+    'implementation-artifact-paths gate',
+  );
   if (!result.pass) console.log('fixHint:', result.fixHint);
 }
 

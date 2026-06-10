@@ -2,8 +2,16 @@
 description: 'Use when a focused validation fails and the workflow needs root-cause triage, owner mapping, smallest reroute, or known-unrelated failure separation. Keywords: failure triage, validation failure, root cause, owner mapping, reroute.'
 name: failure-triage-specialist
 tier: 3
-model: ['Claude Haiku 4.6 (copilot)', 'Claude Sonnet 4.6 (copilot)']
-tools: [read, search]
+model: 'glm-5.1:cloud (ollama)'
+tools:
+  [
+    read,
+    search,
+    neataptic-cortex-mcp/*,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 user-invocable: false
 agents: []
 skills: ['triaging-test-failures']
@@ -23,18 +31,25 @@ You triage validation failures without making edits. You perform root-cause anal
 - This agent is intentionally thin. Durable triage policy and fix execution belong to the owning skill (e.g., `test-fix-workflow`, `coverage-guard`).
 - DO NOT restate the full test-failure, coverage-gap, or validation-gate workflow that belongs in companion skills.
 
+## Gate Enforcement
+
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+
+- `green-validation-evidence` — after triaging a validation failure
+
 ## Approach
 
-1. Receive the failure summary: validation name, error message, failing file or test, and repro steps.
-2. Read the failing code or test to understand the assertion or contract violation.
-3. Search for related failures or known issues in the recent log or plan surface.
-4. Identify whether the failure is:
+1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+2. Receive the failure summary: validation name, error message, failing file or test, and repro steps.
+3. Read the failing code or test to understand the assertion or contract violation.
+4. Search for related failures or known issues in the recent log or plan surface.
+5. Identify whether the failure is:
    - Legitimate bug in production or test code (owner: responsible skill or test-fix-workflow).
    - Flaky or environment-dependent (owner: infrastructure or skip logic).
    - Unrelated to the current change (owner: pre-existing).
    - Policy violation or missing piece (owner: validation-gate or the responsible domain skill).
-5. Map the specific owner agent or skill and the smallest reroute.
-6. Frame findings as a compact handoff.
+6. Map the specific owner agent or skill and the smallest reroute.
+7. Frame findings as a compact handoff.
 
 ## If Blocked
 

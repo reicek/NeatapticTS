@@ -20,7 +20,9 @@ import { runValidateAgentGraph } from '../validate-agent-graph.mjs';
 
 const options = parseArgs(process.argv.slice(2));
 
-export async function runTierEnforcementGate({ workspaceRoot = process.cwd() } = {}) {
+export async function runTierEnforcementGate({
+  workspaceRoot = process.cwd(),
+} = {}) {
   const validationReport = await runValidateAgentGraph({ workspaceRoot });
   const tierIssues = (validationReport.issues ?? []).filter((currentIssue) =>
     /tier|user-invocable/i.test(currentIssue.message),
@@ -32,7 +34,8 @@ export async function runTierEnforcementGate({ workspaceRoot = process.cwd() } =
       ok: validationReport.ok,
       issueCount: tierIssues.length,
       byTier: validationReport.inventory?.summary?.by_tier ?? null,
-      userInvocableTotal: validationReport.inventory?.summary?.user_invocable_total ?? null,
+      userInvocableTotal:
+        validationReport.inventory?.summary?.user_invocable_total ?? null,
       issues: tierIssues,
     },
     fixHint:
@@ -56,6 +59,9 @@ async function main() {
   process.exitCode = report.pass ? 0 : 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }

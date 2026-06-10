@@ -30,5 +30,6 @@ specialists:
   - 'Coverage Scout'
   - 'Coverage Guard'
   - 'unit-test-writer'
+  - 'test-coverage-analyst'
 
 timeout-minutes: 30

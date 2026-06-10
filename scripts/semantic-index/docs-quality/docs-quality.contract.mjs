@@ -31,40 +31,76 @@ export function validateDocsQualityManifestV1(manifest) {
 
   for (const fieldName of REQUIRED_MANIFEST_FIELDS) {
     if (!(fieldName in manifest)) {
-      errors.push({ field: fieldName, message: `Missing required field: ${fieldName}` });
+      errors.push({
+        field: fieldName,
+        message: `Missing required field: ${fieldName}`,
+      });
     }
   }
 
   if (!Number.isInteger(manifest.metricVersion)) {
-    errors.push({ field: 'metricVersion', message: 'metricVersion must be an integer.' });
+    errors.push({
+      field: 'metricVersion',
+      message: 'metricVersion must be an integer.',
+    });
   }
 
-  if (typeof manifest.scannerVersion !== 'string' || !manifest.scannerVersion.trim()) {
-    errors.push({ field: 'scannerVersion', message: 'scannerVersion must be a non-empty string.' });
+  if (
+    typeof manifest.scannerVersion !== 'string' ||
+    !manifest.scannerVersion.trim()
+  ) {
+    errors.push({
+      field: 'scannerVersion',
+      message: 'scannerVersion must be a non-empty string.',
+    });
   }
 
   if (!isPlainObject(manifest.thresholdConfig)) {
-    errors.push({ field: 'thresholdConfig', message: 'thresholdConfig must be an object.' });
+    errors.push({
+      field: 'thresholdConfig',
+      message: 'thresholdConfig must be an object.',
+    });
   }
 
   if (!isPlainObject(manifest.scopeConfig)) {
-    errors.push({ field: 'scopeConfig', message: 'scopeConfig must be an object.' });
+    errors.push({
+      field: 'scopeConfig',
+      message: 'scopeConfig must be an object.',
+    });
   }
 
-  if (typeof manifest.sourcePathsDigest !== 'string' || !manifest.sourcePathsDigest.trim()) {
-    errors.push({ field: 'sourcePathsDigest', message: 'sourcePathsDigest must be a non-empty string.' });
+  if (
+    typeof manifest.sourcePathsDigest !== 'string' ||
+    !manifest.sourcePathsDigest.trim()
+  ) {
+    errors.push({
+      field: 'sourcePathsDigest',
+      message: 'sourcePathsDigest must be a non-empty string.',
+    });
   }
 
   if (!isPlainObject(manifest.issueBreakdown)) {
-    errors.push({ field: 'issueBreakdown', message: 'issueBreakdown must be an object.' });
+    errors.push({
+      field: 'issueBreakdown',
+      message: 'issueBreakdown must be an object.',
+    });
   }
 
   if (!Number.isInteger(manifest.weakCount) || manifest.weakCount < 0) {
-    errors.push({ field: 'weakCount', message: 'weakCount must be a non-negative integer.' });
+    errors.push({
+      field: 'weakCount',
+      message: 'weakCount must be a non-negative integer.',
+    });
   }
 
-  if (typeof manifest.normalizedEvidenceDigest !== 'string' || !manifest.normalizedEvidenceDigest.trim()) {
-    errors.push({ field: 'normalizedEvidenceDigest', message: 'normalizedEvidenceDigest must be a non-empty string.' });
+  if (
+    typeof manifest.normalizedEvidenceDigest !== 'string' ||
+    !manifest.normalizedEvidenceDigest.trim()
+  ) {
+    errors.push({
+      field: 'normalizedEvidenceDigest',
+      message: 'normalizedEvidenceDigest must be a non-empty string.',
+    });
   }
 
   return {

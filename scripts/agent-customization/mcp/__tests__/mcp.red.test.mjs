@@ -8,37 +8,61 @@ import {
   createSelfCheckReport,
   selfCheckError,
 } from '../mcp-utils.mjs';
-import { loadActivePlanContext } from '../mcp-plan-utils.mjs';
+import {
+  loadActivePlanContext,
+  resolveEffectivePlanPath,
+} from '../mcp-plan-utils.mjs';
 
-const MCP_CONFIG_PATH = path.resolve(import.meta.dirname, '../../../../.vscode/mcp.json');
+const MCP_CONFIG_PATH = path.resolve(
+  import.meta.dirname,
+  '../../../../.vscode/mcp.json',
+);
 
 describe('MCP hardening red contracts', () => {
   describe('RED contracts', () => {
     it('rejects archived completed plan arguments in .vscode/mcp.json', async () => {
       const mcpConfigText = await readFile(MCP_CONFIG_PATH, 'utf8');
       const mcpConfig = JSON.parse(mcpConfigText);
-      const archivedPlanArgs = Object.values(mcpConfig.servers ?? {}).flatMap((serverConfig) =>
-        Array.isArray(serverConfig?.args)
-          ? serverConfig.args.filter(
-              (argumentValue) =>
-                typeof argumentValue === 'string' && argumentValue.startsWith('--plan=plans/completed/'),
-            )
-          : [],
+      const archivedPlanArgs = Object.values(mcpConfig.servers ?? {}).flatMap(
+        (serverConfig) =>
+          Array.isArray(serverConfig?.args)
+            ? serverConfig.args.filter(
+                (argumentValue) =>
+                  typeof argumentValue === 'string' &&
+                  argumentValue.startsWith('--plan=plans/completed/'),
+              )
+            : [],
       );
 
       assert.deepStrictEqual(archivedPlanArgs, []);
     });
 
     it('supports resources/list without rejecting', async () => {
-      const server = createMcpServer({ serverName: 't', serverVersion: '0', tools: [] });
-      const dispatchPromise = server.dispatch({ jsonrpc: '2.0', id: 1, method: 'resources/list' });
+      const server = createMcpServer({
+        serverName: 't',
+        serverVersion: '0',
+        tools: [],
+      });
+      const dispatchPromise = server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'resources/list',
+      });
 
       await assert.doesNotReject(dispatchPromise);
     });
 
     it('supports prompts/list without rejecting', async () => {
-      const server = createMcpServer({ serverName: 't', serverVersion: '0', tools: [] });
-      const dispatchPromise = server.dispatch({ jsonrpc: '2.0', id: 1, method: 'prompts/list' });
+      const server = createMcpServer({
+        serverName: 't',
+        serverVersion: '0',
+        tools: [],
+      });
+      const dispatchPromise = server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'prompts/list',
+      });
 
       await assert.doesNotReject(dispatchPromise);
     });
@@ -63,13 +87,20 @@ describe('MCP hardening red contracts', () => {
     });
 
     it('throws when loadActivePlanContext is given a completed plan archive', async () => {
-      const completedPlanLoad = loadActivePlanContext('plans/completed/workspace-mcp-registration.plans.md');
+      const completedPlanLoad = loadActivePlanContext(
+        'plans/completed/workspace-mcp-registration.plans.md',
+      );
 
-      await assert.rejects(completedPlanLoad, /Expected exactly one \[WIP\] phase/);
+      await assert.rejects(
+        completedPlanLoad,
+        /Expected exactly one \[WIP\] phase/,
+      );
     });
 
     it('loads active context when the validation heading includes validation gates', async () => {
-      const activePlanContext = await loadActivePlanContext('plans/mcp-active-binding.plans.md');
+      const activePlanContext = await loadActivePlanContext(
+        'plans/mcp-active-binding.plans.md',
+      );
 
       assert.deepStrictEqual(
         {
@@ -78,6 +109,18 @@ describe('MCP hardening red contracts', () => {
           agent: activePlanContext.activeStep.metadata.agent,
         },
         { phase: 1, step: 1, agent: '00-helping' },
+      );
+    });
+
+    it('prefers the session override plan path over the startup plan path', async () => {
+      const resolvedPlanPath = await resolveEffectivePlanPath(
+        {},
+        'plans/mcp-active-binding.plans.md',
+      );
+
+      assert.strictEqual(
+        resolvedPlanPath,
+        'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md',
       );
     });
   });

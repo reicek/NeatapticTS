@@ -43,7 +43,10 @@ import {
  */
 export const MCP_PROTOCOL_VERSION = '2024-11-05';
 /** Absolute path to the repository root, resolved from this module's location. */
-export const MCP_REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+export const MCP_REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../..',
+);
 
 /** Default maximum captured output bytes per stream when running shell-free commands. */
 const DEFAULT_OUTPUT_LIMIT = 24_576;
@@ -69,7 +72,9 @@ export function parseMcpCliArgs(argv) {
     help: argv.includes('--help') || argv.includes('-h'),
     json: argv.includes('--json'),
     selfCheck: argv.includes('--self-check'),
-    plan: argv.find((argument) => argument.startsWith('--plan='))?.slice('--plan='.length),
+    plan: argv
+      .find((argument) => argument.startsWith('--plan='))
+      ?.slice('--plan='.length),
   };
 }
 
@@ -82,7 +87,9 @@ export function parseMcpCliArgs(argv) {
  */
 export function requireExplicitPlanPath(planPath) {
   if (typeof planPath !== 'string' || !planPath.trim()) {
-    throw new Error('MCP entrypoints require --plan=<path>; no default plan path is assumed.');
+    throw new Error(
+      'MCP entrypoints require --plan=<path>; no default plan path is assumed.',
+    );
   }
 
   return planPath.trim();
@@ -111,13 +118,16 @@ export function resolveExplicitPlanPath(planPath) {
   const explicitPlanPath = requireExplicitPlanPath(planPath);
   const absolutePath = resolveRepoRootPath(explicitPlanPath);
   const repoRelativePath = path.relative(MCP_REPO_ROOT, absolutePath);
-  const isRepoRelativePath = repoRelativePath !== ''
-    && !repoRelativePath.startsWith('..')
-    && !path.isAbsolute(repoRelativePath);
+  const isRepoRelativePath =
+    repoRelativePath !== '' &&
+    !repoRelativePath.startsWith('..') &&
+    !path.isAbsolute(repoRelativePath);
 
   return {
     absolutePath,
-    displayPath: normalizePath(isRepoRelativePath ? repoRelativePath : absolutePath),
+    displayPath: normalizePath(
+      isRepoRelativePath ? repoRelativePath : absolutePath,
+    ),
   };
 }
 
@@ -136,11 +146,17 @@ export function printMcpUsage({ title, entrypoint, summary, tools }) {
   console.log(`  node ${entrypoint} --help`);
   console.log('');
   console.log('Modes:');
-  console.log('  --plan=<path> Required workflow plan path resolved from the repository root.');
+  console.log(
+    '  --plan=<path> Required workflow plan path resolved from the repository root.',
+  );
   console.log('  --help        Show this help text.');
   console.log('  --json        Write machine-readable self-check output.');
-  console.log('  --self-check  Run bounded local checks instead of starting the stdio server.');
-  console.log('  default       Start the stdio MCP server on stdin/stdout using the explicit plan path.');
+  console.log(
+    '  --self-check  Run bounded local checks instead of starting the stdio server.',
+  );
+  console.log(
+    '  default       Start the stdio MCP server on stdin/stdout using the explicit plan path.',
+  );
   console.log('');
   console.log('Tools:');
 
@@ -282,11 +298,20 @@ function resolveSpawnTarget(requestedExecutable, requestedArgv) {
     return { executable: process.execPath, argv: requestedArgv };
   }
 
-  if (process.platform === 'win32' && /^(npx|npm)(\.cmd)?$/iu.test(requestedExecutable)) {
+  if (
+    process.platform === 'win32' &&
+    /^(npx|npm)(\.cmd)?$/iu.test(requestedExecutable)
+  ) {
     const baseName = requestedExecutable.toLowerCase().replace(/\.cmd$/iu, '');
-    const cmdScriptPath = path.join(path.dirname(process.execPath), `${baseName}.cmd`);
+    const cmdScriptPath = path.join(
+      path.dirname(process.execPath),
+      `${baseName}.cmd`,
+    );
     const comSpec = process.env['ComSpec'] ?? 'cmd.exe';
-    return { executable: comSpec, argv: ['/c', cmdScriptPath, ...requestedArgv] };
+    return {
+      executable: comSpec,
+      argv: ['/c', cmdScriptPath, ...requestedArgv],
+    };
   }
 
   return { executable: requestedExecutable, argv: requestedArgv };
@@ -306,11 +331,15 @@ function resolveSpawnTarget(requestedExecutable, requestedArgv) {
 export async function runShellFreeCommand(commandString, options = {}) {
   const tokens = tokenizeShellSafeCommand(commandString);
   const [requestedExecutable, ...requestedArgv] = tokens;
-  const { executable, argv } = resolveSpawnTarget(requestedExecutable, requestedArgv);
+  const { executable, argv } = resolveSpawnTarget(
+    requestedExecutable,
+    requestedArgv,
+  );
   const startTime = Date.now();
-  const maxOutputBytes = Number.isFinite(options.maxOutputBytes) && options.maxOutputBytes > 0
-    ? options.maxOutputBytes
-    : DEFAULT_OUTPUT_LIMIT;
+  const maxOutputBytes =
+    Number.isFinite(options.maxOutputBytes) && options.maxOutputBytes > 0
+      ? options.maxOutputBytes
+      : DEFAULT_OUTPUT_LIMIT;
 
   return await new Promise((resolve, reject) => {
     const childProcess = spawn(executable, argv, {
@@ -387,7 +416,9 @@ export function tokenizeShellSafeCommand(commandString) {
   }
 
   if (SHELL_METACHARACTER_PATTERN.test(normalizedCommand)) {
-    throw new Error('Shell metacharacters are not allowed in validation commands.');
+    throw new Error(
+      'Shell metacharacters are not allowed in validation commands.',
+    );
   }
 
   const tokens = scanShellSafeTokens(normalizedCommand);
@@ -452,7 +483,10 @@ function createMcpMethodHandlerMap({ listedTools, serverInfo, toolRegistry }) {
     ['notifications/initialized', () => null],
     ['ping', () => ({})],
     ['tools/list', () => ({ tools: listedTools })],
-    ['tools/call', (request) => callRegisteredTool(toolRegistry, request.params)],
+    [
+      'tools/call',
+      (request) => callRegisteredTool(toolRegistry, request.params),
+    ],
     ['resources/list', () => ({ resources: [] })],
     ['prompts/list', () => ({ prompts: [] })],
   ]);
@@ -500,10 +534,10 @@ async function callRegisteredTool(toolRegistry, params) {
 
 function isJsonRpcError(error) {
   return Boolean(
-    error
-      && typeof error === 'object'
-      && 'jsonRpcCode' in error
-      && typeof error.jsonRpcCode === 'number',
+    error &&
+    typeof error === 'object' &&
+    'jsonRpcCode' in error &&
+    typeof error.jsonRpcCode === 'number',
   );
 }
 
@@ -525,7 +559,9 @@ function formatToolResult(handlerResult) {
     };
   }
 
-  const structuredContent = isPlainObject(handlerResult) ? handlerResult : { value: handlerResult ?? null };
+  const structuredContent = isPlainObject(handlerResult)
+    ? handlerResult
+    : { value: handlerResult ?? null };
   return {
     content: [
       {
@@ -588,11 +624,14 @@ function parseStdioJsonRpcRequest(messageBuffer, framing) {
   try {
     return JSON.parse(messageBuffer.toString('utf8'));
   } catch {
-    writeJsonRpcMessage({
-      jsonrpc: '2.0',
-      id: null,
-      error: { code: -32700, message: 'Invalid JSON payload.' },
-    }, framing);
+    writeJsonRpcMessage(
+      {
+        jsonrpc: '2.0',
+        id: null,
+        error: { code: -32700, message: 'Invalid JSON payload.' },
+      },
+      framing,
+    );
     return null;
   }
 }
@@ -602,11 +641,14 @@ function writeJsonRpcSuccessResponse(request, result, framing) {
     return;
   }
 
-  writeJsonRpcMessage({
-    jsonrpc: '2.0',
-    id: request.id,
-    result,
-  }, framing);
+  writeJsonRpcMessage(
+    {
+      jsonrpc: '2.0',
+      id: request.id,
+      result,
+    },
+    framing,
+  );
 }
 
 function writeStdioJsonRpcErrorResponse(request, error, framing) {
@@ -615,15 +657,20 @@ function writeStdioJsonRpcErrorResponse(request, error, framing) {
     return;
   }
 
-  writeJsonRpcMessage({
-    jsonrpc: '2.0',
-    id: request.id,
-    error: {
-      code: error?.jsonRpcCode ?? -32603,
-      message: error instanceof Error ? error.message : String(error),
-      ...(error?.jsonRpcData === undefined ? {} : { data: error.jsonRpcData }),
+  writeJsonRpcMessage(
+    {
+      jsonrpc: '2.0',
+      id: request.id,
+      error: {
+        code: error?.jsonRpcCode ?? -32603,
+        message: error instanceof Error ? error.message : String(error),
+        ...(error?.jsonRpcData === undefined
+          ? {}
+          : { data: error.jsonRpcData }),
+      },
     },
-  }, framing);
+    framing,
+  );
 }
 
 function createQueuedStdinParserHandler(parser) {
@@ -714,7 +761,9 @@ function writeJsonRpcMessage(payload, framing = CONTENT_LENGTH_FRAME) {
   }
 
   const contentLength = Buffer.byteLength(serializedPayload, 'utf8');
-  process.stdout.write(`Content-Length: ${contentLength}\r\n\r\n${serializedPayload}`);
+  process.stdout.write(
+    `Content-Length: ${contentLength}\r\n\r\n${serializedPayload}`,
+  );
 }
 
 /**
@@ -772,7 +821,9 @@ function createStdioJsonRpcParser(onMessage) {
           return;
         }
 
-        const messageBuffer = trimTrailingCarriageReturn(buffer.subarray(0, lineEndIndex));
+        const messageBuffer = trimTrailingCarriageReturn(
+          buffer.subarray(0, lineEndIndex),
+        );
         buffer = buffer.subarray(lineEndIndex + 1);
         if (messageBuffer.toString('utf8').trim() === '') {
           continue;
@@ -797,7 +848,9 @@ function createStdioJsonRpcParser(onMessage) {
  * @returns {boolean} Whether the buffer starts with a content-length header.
  */
 function startsWithContentLengthHeader(buffer) {
-  const leadingText = buffer.subarray(0, Math.min(buffer.length, 64)).toString('utf8');
+  const leadingText = buffer
+    .subarray(0, Math.min(buffer.length, 64))
+    .toString('utf8');
   return /^content-length\s*:/iu.test(leadingText);
 }
 
@@ -820,7 +873,9 @@ function readContentLengthFrame(buffer) {
   const headerText = buffer.subarray(0, headerEndIndex).toString('utf8');
   const contentLength = extractContentLength(headerText);
   if (contentLength === null) {
-    throw new Error('Received an MCP message without a valid Content-Length header.');
+    throw new Error(
+      'Received an MCP message without a valid Content-Length header.',
+    );
   }
 
   const bodyStartIndex = headerEndIndex + HEADER_SEPARATOR.length;
@@ -847,7 +902,10 @@ function readContentLengthFrame(buffer) {
  */
 function dropLeadingLineBreaks(buffer) {
   let firstContentIndex = 0;
-  while (firstContentIndex < buffer.length && (buffer[firstContentIndex] === 10 || buffer[firstContentIndex] === 13)) {
+  while (
+    firstContentIndex < buffer.length &&
+    (buffer[firstContentIndex] === 10 || buffer[firstContentIndex] === 13)
+  ) {
     firstContentIndex += 1;
   }
 

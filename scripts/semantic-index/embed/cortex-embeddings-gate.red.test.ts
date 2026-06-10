@@ -47,22 +47,33 @@ describe('cortex-embeddings.gate.mjs', () => {
       `);
 
       // Assert
-      expect(result).toEqual(expect.objectContaining({
-        report: {
-          issues: [['embedding count mismatch'], ['hybrid MRR@5 improvement below threshold']],
-          passes: [false, false],
-        },
-        status: 0,
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          report: {
+            issues: [
+              ['embedding count mismatch'],
+              ['hybrid MRR@5 improvement below threshold'],
+            ],
+            passes: [false, false],
+          },
+          status: 0,
+        }),
+      );
     });
   });
 });
 
-function runModuleEvaluation<ReportType>(source: string): SpawnedJsonResult<ReportType> {
-  const spawned = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-  });
+function runModuleEvaluation<ReportType>(
+  source: string,
+): SpawnedJsonResult<ReportType> {
+  const spawned = spawnSync(
+    process.execPath,
+    ['--input-type=module', '--eval', source],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    },
+  );
 
   return {
     report: tryParseJson<ReportType>(spawned.stdout ?? ''),

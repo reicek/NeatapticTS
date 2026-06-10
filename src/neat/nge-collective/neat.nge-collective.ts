@@ -1,12 +1,14 @@
 /**
  * NGE Collective Intelligence boundary — Phase G public surface.
  *
- * This module is the entry point for all multi-agent collective evaluation primitives
- * introduced in NGE Phase G. It re-exports three cooperating sub-modules as a single
- * cohesive boundary so consumers need only one import path.
+ * This module is the entry point for the collective-evaluation primitives that
+ * let multiple agents share a stigmergy field, collect per-tick results, track
+ * divergence metrics, and stand up the smallest honest two-team harness. It
+ * re-exports four cooperating sub-modules as one cohesive boundary so consumers
+ * only need a single import path.
  *
- * **Design contract:** classic NEAT behavior is entirely unaffected when this module
- * is not imported. No global state is mutated at import time.
+ * **Design contract:** classic NEAT behavior is entirely unaffected when this
+ * module is not imported. No global state is mutated at import time.
  *
  * ## Architecture
  *
@@ -16,6 +18,10 @@
  *   B["evaluation\nCollectiveEvaluationContext\nrunCollectiveEvaluationTick\nresetCollectiveEvaluationState"] --> C
  *   C["metrics\ncomputeRoleDivergenceMetric\ncreateOpponentSnapshotPool\naddOpponentSnapshot"]
  *   B -->|"passes SharedField\nby reference"| A
+ *   D["two-population\nTwoPopulationHarnessState\ncreateTwoPopulationHarness\nadvanceTwoPopulations"] --> B
+ *   D --> C
+ *   E["team-fitness\ncreateTeamFitnessEvaluator\npolicy-injection evaluator seam"]
+ *   Consumers["Racing · Ant Hive\nbenchmark consumers"] -->|"inject scoring policy"| E
  * ```
  *
  * ## Sub-modules
@@ -41,6 +47,20 @@
  * fixed-capacity buffer of deep-cloned opponent payloads for tournament evaluation; the oldest
  * snapshot is evicted FIFO when the pool reaches capacity.
  *
+ * ### team-fitness
+ * `createTeamFitnessEvaluator` keeps team/group aggregation reusable and policy-bound. NGE core
+ * owns the orchestration that maps generic team groups into reusable team-fitness results, while
+ * each benchmark injects its own aggregation rule such as "best finisher wins" or a richer
+ * support-weighted collective score.
+ *
+ * ### two-population
+ * `createTwoPopulationHarness` builds the smallest honest 2v2 scaffold: two isolated team
+ * controllers, one shared four-row radio field, and one evaluation context that can partition
+ * the race pack back into team-local slices. `runTwoTeamEvaluationTick` keeps the public seam
+ * honest by returning those slices without inventing later-stage game theory, while
+ * `advanceTwoPopulations` cross-registers frozen rival snapshots so each team evolves against a
+ * rolling history of opponent champions rather than only the opponent's latest mutable state.
+ *
  * ## Determinism contract
  * Same agent count + same evaluator array + same initial field ⇒ identical
  * `CollectiveTickResult` for every call. `applyDecay` and `applyDiffusion` are both
@@ -60,6 +80,9 @@
  *   computeRoleDivergenceMetric,
  *   createOpponentSnapshotPool,
  *   addOpponentSnapshot,
+ *   createTeamFitnessEvaluator,
+ *   createTwoPopulationHarness,
+ *   advanceTwoPopulations,
  * } from './neat.nge-collective';
  *
  * // 1. Create a 10×10 pheromone field shared across 3 agents.
@@ -84,6 +107,20 @@
  * // 5. Maintain a rolling opponent pool for tournament selection.
  * let pool = createOpponentSnapshotPool(5);
  * pool = addOpponentSnapshot(pool, 'agent:alpha', { fitness: 42 }, nextContext.generationTick);
+ *
+ * // 6. Stand up the smallest honest 2v2 harness.
+ * const harness = createTwoPopulationHarness({}, {});
+ * advanceTwoPopulations(harness, [{ genomeId: 'a0', fitness: 5 }], [{ genomeId: 'b0', fitness: 4 }]);
+ *
+ * // 7. Aggregate team fitness through the shared policy-injection evaluator seam.
+ * //    Racing and Ant Hive each supply their own policy; NGE core owns the fold structure.
+ * const evaluateTeamFitness = createTeamFitnessEvaluator<'team-a', { score: number }>(
+ *   (group) => group.memberResults.reduce((total, member) => total + member.score, 0),
+ * );
+ * const teamResults = evaluateTeamFitness([
+ *   { teamId: 'team-a', memberResults: [{ score: 4 }, { score: 6 }] },
+ * ]);
+ * // teamResults[0]?.teamFitness === 10
  * ```
  */
 
@@ -95,6 +132,9 @@ export type {
   OpponentSnapshot,
   OpponentSnapshotPool,
   SharedField,
+  TeamFitnessPolicy,
+  TeamFitnessResult,
+  TeamResultGroup,
 } from './neat.nge-collective.types';
 
 // --- Shared field primitives ---
@@ -120,3 +160,17 @@ export {
   computeRoleDivergenceMetric,
   createOpponentSnapshotPool,
 } from './neat.nge-collective.metrics';
+
+// --- Team/group fitness aggregation ---
+export { createTeamFitnessEvaluator } from './neat.nge-collective.team-fitness';
+
+// --- Two-population racing scaffold ---
+export {
+  advanceTwoPopulations,
+  createTwoPopulationHarness,
+  runTwoTeamEvaluationTick,
+} from './neat.nge-collective.two-population';
+export type {
+  TeamScopedState,
+  TwoPopulationHarnessState,
+} from './neat.nge-collective.two-population';
