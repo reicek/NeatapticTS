@@ -109,11 +109,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **If a required gate tool is unavailable or ambiguous, set TASK_STATUS: PARTIAL, document the stall, and escalate via 00-cross-tier-helper.**
   - Example: "coverage-guard tool not found. TASK_STATUS: PARTIAL. Escalated via 00-cross-tier-helper."
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block, no prose. All keys and positions are mandatory. Use `NONE` when not applicable.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

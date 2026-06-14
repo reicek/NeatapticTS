@@ -59,11 +59,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -90,13 +86,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Proposed model or legacy array:` the frontmatter value in question.
-- `Model tier:` e.g., "GLM-5.1 family", "kimi-k2.7-code:cloud family", or "mixed legacy array".
-- `Qualification status:` each model entry is `QUALIFIED` | `UNVERIFIED` | `INVALID`.
-- `Evidence source:` file paths or recent handoff where the model appears (or "model-picker unresolved").
-- `Proposed frontmatter:` correctly formatted frontmatter single string.
-- `Unresolved verification need:` brief note if local model-picker must confirm (or NONE).
-- `Summary:` one paragraph confirming safety and readiness to update frontmatter, or noting blockers.

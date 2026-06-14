@@ -102,11 +102,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **If generated doc outputs conflict with source changes and cannot be resolved locally, set `TASK_STATUS: PARTIAL` and escalate via 00-cross-tier-helper with conflict details.**
   - Example: "Generated README.md does not match updated JSDoc. TASK_STATUS: PARTIAL. Escalated via 00-cross-tier-helper with conflict details."
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block, no prose. All keys and positions are mandatory. Use `NONE` when not applicable.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

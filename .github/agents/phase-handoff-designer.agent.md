@@ -57,11 +57,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -88,15 +84,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Source phase:` phase agent name and tier.
-- `Target phase:` phase agent name and tier.
-- `Handoff prompt:` brief excerpt or summary.
-- `Prompt quality:` PASS | INCOMPLETE | UNCLEAR; note any missing tracker reference.
-- `Model choice:` verified against target agent frontmatter.
-- `Plan reference:` tracker status field or plan name cited.
-- `Cycle check:` PASS (target > source) | FAIL (backtrack detected).
-- `Send decision:` READY | BLOCKED; note any validation needed before handoff.
-- `Summary:` one paragraph confirming handoff integrity and any required validation or repair.

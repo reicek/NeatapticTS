@@ -324,11 +324,7 @@ These are high-value automation items to consider adding outside this agent doc 
 
 Document these automation items in the plan as `NEXT:` work if you want to mature the flow further.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block, no prose. All keys and positions are mandatory. Use `NONE` when not applicable.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -357,5 +353,3 @@ SUB_ORCHESTRATORS_USED:
 - <agent or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Addendum: Every `VALIDATION_EVIDENCE` entry should point to either a file path in the repo (e.g., `artifacts/phase-e-step06-mcp-rerun.json`) or a concise one-line command result (e.g., `tsc: OK`, `lint: 0 issues`).

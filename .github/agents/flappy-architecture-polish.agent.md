@@ -71,11 +71,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Record the blocker and the smallest safe next action.
 - Return a handoff prompt suitable for continuing the pass in a new session.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Report participants, files, validations, blockers, and gaps truthfully. Use `NONE` when nothing applies.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

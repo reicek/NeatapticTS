@@ -51,11 +51,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the requested boundary is too ambiguous to write observable criteria.
 - Record the smallest blocker, suggest the next agent, and stop without inventing hidden requirements.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -68,7 +64,7 @@ FILES_READ:
 FILES_CHANGED:
 - <path or NONE>
 KEY_FINDINGS:
-- <criterion or NONE>
+- <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
 BLOCKERS:

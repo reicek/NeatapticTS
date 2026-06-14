@@ -50,11 +50,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the target description or trigger boundary is unclear.
 - Record the smallest blocker, suggest the next agent, and stop without inventing extra scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

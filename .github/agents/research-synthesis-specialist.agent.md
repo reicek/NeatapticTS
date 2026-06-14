@@ -69,11 +69,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when scout results are insufficient or contradictory.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -100,13 +96,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Primary plan:` path and one-sentence reason.
-- `Optional secondary plan:` path and one-sentence reason, or `none`.
-- `Scout results consumed:` short bullet list naming each scout and its key finding.
-- `Key terms:` short comma-separated list.
-- `Guardrails:` 2 to 4 short bullets.
-- `Possible mismatch risks:` 0 to 3 short bullets.
-- `plan-alignment handoff:` one short paragraph describing the safest aligned next planning step.

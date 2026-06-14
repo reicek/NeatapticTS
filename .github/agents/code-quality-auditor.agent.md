@@ -80,11 +80,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when quality gate commands fail to run or produce ambiguous output.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -111,16 +107,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Commands run:` list of quality gate commands executed.
-- `All clear:` list of files/folders that passed all checks.
-- `Violations found:` for each violation:
-  - file path and line number,
-  - error category (TypeScript, ESLint, Prettier, JSDoc, coverage, dead code),
-  - error message (short form),
-  - owner agent (`04-implementing`, `06-documenting`, `coverage-tranche`, etc.),
-  - one-line fix hint.
-- `Repair packets:` one short paragraph per owner agent, ready to paste as a task packet, naming each file with a violation, the specific error, and the fix hint.
-- `green-validation-gates handoff:` one short paragraph describing the quality gate results and recommended next validation step.

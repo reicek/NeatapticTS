@@ -56,11 +56,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -87,14 +83,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Failure received:` validation name and brief error summary.
-- `Root cause:` one short line describing the failure classification.
-- `Affected file(s):` path list.
-- `Failure type:` `legitimate bug`, `flaky/environment`, `pre-existing`, or `policy violation`.
-- `Owner:` name of responsible skill, agent, or domain.
-- `Separation from unrelated:` yes or no; if yes, list unrelated failures.
-- `Smallest reroute:` one short line describing the next action (rerun, file issue, escalate, etc.).
-- `Handoff summary:` one short paragraph ready to paste as a task packet to the owner, naming the failure type, affected code, root cause, and next step.

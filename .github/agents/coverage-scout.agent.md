@@ -81,11 +81,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -112,16 +108,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Mode:` `forward-progress` or `regression-check`.
-- `Coverage source used:` `coverage/lcov.info` or focused run output.
-- `Top gap:` file path, coverage % per category, uncovered count.
-- `Uncovered lines:` compact line-range list with brief path description.
-- `Likely path type:` `reachable` or `possibly dead code` with a one-line reason.
-- `Nearest test file:` path or `none found`.
-- `Baseline:` most recent green suite count from plan or run output.
-- `Handoff:` one short paragraph ready to paste as a task packet into the
-  appropriate companion skill (`coverage-tranche` or `coverage-guard`),
-  naming the file path, coverage metric, baseline, plan file path, and mode.

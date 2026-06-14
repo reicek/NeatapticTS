@@ -289,51 +289,7 @@ This enables deterministic parsing by downstream orchestrators.
 - If plan tracker is malformed, attempt bounded recovery using the latest plan history; if unresolved, escalate immediately and set TASK_STATUS: PARTIAL.
 - When agent/skill gaps prevent completion, call `helping-gap-resolution-coordinator` and attach its response.
 
-## Output Format
-
-Return exactly one fenced structured-v1 block, no prose. All keys and positions are mandatory. Use NONE when not applicable.
-
-```structured-v1
-OUTPUT_CONTRACT: structured-v1
-TASK_STATUS: SUCCESS | PARTIAL | FAILED
-TIER: 1
-ROLE: 01-planning
-TASK_RECEIVED: <brief restatement>
-FILES_READ:
-- <path or NONE>
-FILES_CHANGED:
-- <path or NONE>
-KEY_FINDINGS:
-- <finding or NONE>
-ACTIONS_TAKEN:
-- <action or NONE>
-VALIDATION_EVIDENCE:
-- <command/result or NOT RUN>
-BLOCKERS:
-- <blocker or NONE>
-RISKS_OR_GAPS:
-- <risk or NONE>
-LEARNING_EVENT_NEEDED: true | false
-SUGGESTED_NEXT_AGENT: <agent name or NONE>
-PHASE_COMPLETE: true | false
-SUB_ORCHESTRATORS_USED:
-- <agent or NONE>
-SUMMARY: <brief truthful summary>
-```
-
-## If Blocked
-
-- If roadmap context is ambiguous, delegate to Plan Scout before writing step packets.
-- If objectives or success conditions are ambiguous, record decision boundary, set TASK_STATUS: PARTIAL, escalate via 00-cross-tier-helper.
-- If tracker is missing/malformed, attempt smallest bounded recovery; if unresolved, escalate instead of fabricating continuity.
-- If agent/skill gap, delegate to helping-gap-resolution-coordinator and resume after fix/deferral.
-- If plan registration/model-routing assumptions cannot be resolved, set TASK_STATUS: PARTIAL, document blocker, escalate via 00-cross-tier-helper.
-- If local agent cannot complete due to context or resource limits, escalate to cloud fallback and record the reason.
-- **For agents with limited context:** After any failed action, immediately stop, record the failure, and escalate. Never guess or fabricate missing information.
-
-## Output Format
-
-Return exactly one fenced structured-v1 block, no prose. All keys and positions are mandatory. Use NONE when not applicable.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

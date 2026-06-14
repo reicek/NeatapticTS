@@ -134,11 +134,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **For unresolvable archive or handoff conflicts, set TASK_STATUS: PARTIAL and escalate via 00-cross-tier-helper.**
   - Example: "Archive conflict, TASK_STATUS: PARTIAL, escalation initiated."
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block, no prose. All keys and positions are mandatory. Use `NONE` when not applicable.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

@@ -71,11 +71,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -102,16 +98,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Checkpoint surface:` one short line naming the active boundary.
-- `Checkpoint mode:` `full`, `light`, `strict-restore`, `migration`, or `mixed`.
-- `Kickoff stage:` `step-0`, `step-1+`, or `implementation-follow-up`.
-- `Controlling files or plans:` short path list.
-- `State inventory gaps:` 2 to 5 short bullets.
-- `Exactness or restore blockers:` 0 to 4 short bullets.
-- `Not checkpoint-owned:` 0 to 3 short bullets naming secondary owners when
-  relevant.
-- `checkpointing-persistence handoff:` one short paragraph naming the active
-  mode, missing state, restore risk, and the smallest focused next pass.

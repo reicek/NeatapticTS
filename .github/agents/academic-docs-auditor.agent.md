@@ -57,7 +57,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - If repeated scout failure or missing coverage suggests a reusable agent-system gap, set `LEARNING_EVENT_NEEDED: true` and suggest `helping-gap-resolution-coordinator`.
 - Do not attempt edits or broad discovery to work around missing context.
 
-## Output Format
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -84,14 +84,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Documents checked:` path list.
-- `Citation gaps:` 0 to 4 short bullets (missing Wikipedia links, unattributed algorithms, or paper references).
-- `Generated README risks:` 0 to 3 short bullets (stale summary, drift from source, regeneration needed).
-- `Atemporal violations:` 0 to 3 short bullets (plan language, phase references, before/after framing).
-- `Mermaid diagram audit:` 0 to 3 short bullets (color scheme, structure clarity, accessibility).
-- `Recommended source edits:` 0 to 4 short bullets (JSDoc targets, citation additions, example improvements).
-- `Validation command:` `npm run docs` if regeneration is likely needed, or `none` if JSDoc edits alone suffice.
-- `educational-docs handoff:` one short paragraph naming the citation gaps, atemporal risks, and smallest focused follow-up pass.

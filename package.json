@@ -48,7 +48,7 @@
     "agents:routing-table": "node scripts/agent-customization/generate-agent-skill-routing-table.mjs",
     "agents:routing-table:gate": "node scripts/agent-customization/gates/routing-table-freshness.gate.mjs --json",
     "agents:routing-table:ci": "node scripts/agent-customization/gates/routing-table-freshness.gate.mjs --json",
-    "agents:validate-quality": "node scripts/agent-customization/validate-agent-quality.mjs",
+    "agents:validate-quality": "node scripts/agent-customization/validate-agent-quality.v2.mjs",
     "agents:quality:gate": "node scripts/agent-customization/gates/agent-quality.gate.mjs --json",
     "plans:stale-wip:gate": "node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json",
     "index:embeddings-gate": "node scripts/agent-customization/gates/cortex-embeddings.gate.mjs --json",

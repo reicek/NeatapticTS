@@ -64,13 +64,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - If you cannot gather required evidence (e.g., missing docs, unclear plan), set `TASK_STATUS: PARTIAL`.
 - Record the smallest blocker (e.g., "VS Code AI docs unavailable"), suggest the next agent (e.g., "helping-gap-resolution-coordinator"), and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -97,13 +91,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Proposed server boundary:` one short line describing scope (e.g., "static workflow facts and live validation commands").
-- `Tools or resources:` list of tool/resource names and brief schema.
-- `Bridge dependency:` what client facts the server must accept or validate.
-- `Security constraints:` allow-list rules, signed input requirements, or validation gates.
-- `Files to touch:` anticipated paths for server definition, schema, and validation.
-- `Validation gates:` MCP tests or smoke tests to verify contract compliance.
-- `Architecture summary:` one paragraph explaining the server boundary, why it stays within scope, and the next design step.

@@ -63,11 +63,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -94,16 +90,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Folder README used:` path list.
-- `Assessment:` one short paragraph.
-- `Boundary pressure:` `healthy` or `needs solid-split`, with a one-line reason.
-- `JSDoc targets:` short bullet list of source files or exported symbols.
-- `Docs refresh needed:` `yes` or `no`, with a one-line reason.
-- `User-facing gaps:` 0 to 4 short bullets.
-- `educational-docs handoff:` one short paragraph describing the most useful
-  focused follow-up pass when the boundary is healthy enough for docs work.
-- `solid-split escalation:` one short paragraph only when the README is too
-  large or monolithic for a docs-only pass.

@@ -69,11 +69,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `SUGGESTED_NEXT_AGENT` to the agent best positioned to unblock.
 - Do not attempt source edits to work around triage blockers.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Report participants, files, validations, blockers, and gaps truthfully. Use `NONE` when nothing applies.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

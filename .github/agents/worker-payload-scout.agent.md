@@ -69,13 +69,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
   - Example: "Could not find payload boundary in plan or code. Blocker: missing documentation. SUGGESTED_NEXT_AGENT: plan-scout."
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.  
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.  
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -102,13 +96,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Transport surface:` one short line naming the active payload boundary.
-- `Fallback rung:` `portable`, `transferable`, `channel`, `shared`, or `mixed`.
-- `Controlling files or plans:` short path list.
-- `Clone or transfer constraints:` 2 to 4 short bullets.
-- `Fast-path blockers:` 0 to 4 short bullets.
-- `Not transport-owned:` 0 to 3 short bullets naming secondary owners when relevant.
-- `worker-inference-transport handoff:` one short paragraph naming the active rung, boundary, blocker, and the smallest focused next pass.

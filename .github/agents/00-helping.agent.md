@@ -99,24 +99,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
   - Example: "Change affects multiple agents. Out of scope. Handing off to 01-planning."
 - **NEVER** guess or proceed if unsure—always escalate.
 
-## Output Format
-
-**MANDATORY:** Return exactly one fenced `structured-v1` block, no prose.
-
-- All keys and positions are mandatory.
-- Use `NONE` when not applicable.
-- Place the block at the end of your output.
-- Do NOT add any explanation or extra text.
-
-- Machine validation: include a machine-check hook and validator command. After edits run
-   `node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent .github/agents/00-helping.agent.md`
-   and expect exit code 0 with no `errors` (or JSON `{ "pass": true }`).
-
-- Pre-action self-check (recommended): run
-   `node scripts/agent-customization/pre-action-check.mjs --agent .github/agents/00-helping.agent.md`
-   which should return a small gate contract such as `{ "ok": true, "checks": { "local": true } }`.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

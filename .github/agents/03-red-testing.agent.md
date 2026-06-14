@@ -110,11 +110,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **Behavior cannot be isolated to a single failing assertion:**
   - Example: "Multiple behaviors fail together, cannot isolate single assertion. TASK_STATUS: PARTIAL. Documenting and escalating via '00-cross-tier-helper'."
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block, no prose. All keys and positions are mandatory. Use `NONE` when not applicable.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

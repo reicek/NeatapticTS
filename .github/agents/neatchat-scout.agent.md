@@ -61,11 +61,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -92,13 +88,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `System surface:` one short line naming the active boundary.
-- `NEATchat workstream:` `seeds`, `memory`, `retrieval-routing`, `background-adaptation`, `evaluation`, or `mixed`.
-- `Controlling files or plans:` short path list.
-- `Dependency gates:` 2 to 5 short bullets.
-- `Product-behavior risks:` 0 to 4 short bullets.
-- `Not NEATchat-owned:` 0 to 4 short bullets naming secondary owners when relevant.
-- `neatchat-systems handoff:` one short paragraph naming the workstream, missing gates, user-visible target, and the smallest focused next pass.

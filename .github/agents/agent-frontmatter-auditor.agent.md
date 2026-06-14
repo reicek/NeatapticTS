@@ -59,11 +59,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -90,14 +86,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Files checked:` path list.
-- `Errors:` 0 to 6 short bullets (missing fields, invalid YAML, policy violations, invalid model names, tool mismatches, circular refs).
-- `Warnings:` 0 to 4 short bullets (uncommon but valid configurations, unused agent references, suspicious handoff names).
-- `All clear:` list of files with valid frontmatter and no violations.
-- `Strict-mode expectation:` `ready for final SDLC validation` or `needs fixes before strict validation`.
-- `Graph status:` `acyclic and valid` or `has cycles or breaks`.
-- `Concrete fixes:` 0 to 6 short bullets (specific field corrections, tool removals/additions, agent reference updates).
-- `agent-frontmatter-standards handoff:` one short paragraph naming files with errors, error types, and smallest fix order.

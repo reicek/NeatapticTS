@@ -69,12 +69,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - If repeated scout failure or missing coverage suggests a reusable agent-system gap, set `LEARNING_EVENT_NEEDED: true` and suggest `helping-gap-resolution-coordinator`.
 - Do not attempt edits or broad discovery to work around missing context.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. The position of every field is mandatory: `FILES_CHANGED` must appear immediately before `KEY_FINDINGS`, even when one or both values are `NONE`. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
-Report participants, files, validations, blockers, and gaps truthfully.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

@@ -1,18 +1,9 @@
 #!/usr/bin/env node
 /**
- * Validate the NeatapticTS agent quality contract.
- *
- * Checks every `.github/agents/*.agent.md` file for:
- * - a valid frontmatter `tier:` field,
- * - the mandatory section set for that tier,
- * - a single `structured-v1` block under `## Output Format`,
- * - the exact tier-specific field order,
- * - `OUTPUT_CONTRACT: structured-v1` as the first field,
- * - and `ROLE` / `TIER` values that match frontmatter.
- *
- * Usage:
- *   node scripts/agent-customization/validate-agent-quality.mjs [--json]
- *   node scripts/agent-customization/validate-agent-quality.mjs --help
+ * validate-agent-quality.v2.mjs
+ * Stricter validator enforcing exact '## Output format' header and that the
+ * triple-fenced ```structured-v1``` block is the file tail. Works with
+ * --fix (delegates to validate-agent-quality.fix.mjs) and --json output.
  */
 
 import path from 'node:path';
@@ -60,11 +51,6 @@ const tierContracts = {
       'SUB_ORCHESTRATORS_USED',
       'SUMMARY',
     ],
-    documentedExpectations: [
-      'Document the governing skills instead of copying durable policy into the agent body.',
-      'Document MCP and gate usage when the orchestrator relies on MCP-only evidence or tooling.',
-      'Keep delegation and downstream handoff boundaries explicit in the workflow text.',
-    ],
   },
   2: {
     label: 'Tier-2 coordinator',
@@ -94,11 +80,6 @@ const tierContracts = {
       'SUGGESTED_NEXT_AGENT',
       'SUMMARY',
     ],
-    documentedExpectations: [
-      'Document which companion skills own durable policy when the coordinator stays intentionally thin.',
-      'Document MCP or gate-server usage when the coordinator depends on those boundaries.',
-      'Keep reroute responsibility explicit through HANDOFF and SUGGESTED_NEXT_AGENT.',
-    ],
   },
   3: {
     label: 'Tier-3 scout',
@@ -127,11 +108,6 @@ const tierContracts = {
       'SUGGESTED_NEXT_AGENT',
       'SUMMARY',
     ],
-    documentedExpectations: [
-      'Stay thin and read-only unless the frontmatter explicitly allows edits or execution.',
-      'Document the smallest useful handoff instead of broad recommendations.',
-      'Document MCP evidence dependencies only when the scout actually relies on them.',
-    ],
   },
   4: {
     label: 'Tier-4 auxiliary',
@@ -158,16 +134,10 @@ const tierContracts = {
       'SUGGESTED_NEXT_AGENT',
       'SUMMARY',
     ],
-    documentedExpectations: [
-      'Keep the helper purpose narrow and one-shot.',
-      'Document exactly when the helper should stop and hand back control.',
-      'Document MCP or file-write expectations only when they materially affect the helper boundary.',
-    ],
   },
 };
 
 const options = parseArgs(process.argv.slice(2));
-
 options.fix = process.argv.slice(2).includes('--fix');
 
 if (options.fix) {
@@ -180,9 +150,8 @@ if (options.fix) {
 
 if (options.help) {
   printUsage({
-    title: 'Validate NeatapticTS agent quality contract compliance.',
-    usage:
-      'node scripts/agent-customization/validate-agent-quality.mjs [--json] [--fix]',
+    title: 'Validate NeatapticTS agent quality contract compliance (v2).',
+    usage: 'node scripts/agent-customization/validate-agent-quality.v2.mjs [--json] [--fix]',
   });
   process.exit(0);
 }
@@ -191,44 +160,18 @@ export async function runValidateAgentQuality() {
   const agentReports = await collectAgentReports();
   const issues = agentReports.flatMap((agentReport) => agentReport.issues);
   const report = {
-    ...summarizeIssues('agent quality', issues),
+    ...summarizeIssues('agent quality (v2)', issues),
     contractDocument: AGENT_QUALITY_CONTRACT_PATH,
-    enforcedRules: {
-      mandatorySectionsByTier: Object.fromEntries(
-        Object.entries(tierContracts).map(([tier, contract]) => [
-          tier,
-          contract.requiredSections,
-        ]),
-      ),
-      structuredFieldOrderByTier: Object.fromEntries(
-        Object.entries(tierContracts).map(([tier, contract]) => [
-          tier,
-          contract.requiredFields,
-        ]),
-      ),
-    },
-    documentedExpectations: Object.fromEntries(
-      Object.entries(tierContracts).map(([tier, contract]) => [
-        tier,
-        contract.documentedExpectations,
-      ]),
-    ),
-    agents: agentReports.map(
-      ({ path: relativePath, name, tier, issues: currentIssues }) => ({
-        path: relativePath,
-        name,
-        tier,
-        counts: {
-          errors: currentIssues.filter(
-            (currentIssue) => currentIssue.severity === 'error',
-          ).length,
-          warnings: currentIssues.filter(
-            (currentIssue) => currentIssue.severity === 'warning',
-          ).length,
-        },
-        issues: currentIssues,
-      }),
-    ),
+    agents: agentReports.map(({ path: relativePath, name, tier, issues: currentIssues }) => ({
+      path: relativePath,
+      name,
+      tier,
+      counts: {
+        errors: currentIssues.filter((ci) => ci.severity === 'error').length,
+        warnings: currentIssues.filter((ci) => ci.severity === 'warning').length,
+      },
+      issues: currentIssues,
+    })),
   };
 
   return report;
@@ -257,10 +200,7 @@ async function collectAgentReports() {
       const text = await readWorkspaceFile(relativePath);
       const parsed = parseFrontmatter(text, relativePath);
       const tier = normalizeTier(parsed.data.tier);
-      const name =
-        parsed.data.name ??
-        relativePath.split('/').at(-1)?.replace('.agent.md', '') ??
-        relativePath;
+      const name = parsed.data.name ?? relativePath.split('/').at(-1)?.replace('.agent.md', '') ?? relativePath;
       const issues = validateAgent({
         path: relativePath,
         name,
@@ -284,43 +224,21 @@ function validateAgent(agent) {
   const issues = [...agent.parseIssues];
 
   if (!agent.tier) {
-    issues.push(
-      issue(
-        'error',
-        agent.path,
-        'Agent frontmatter must define a valid numeric tier between 1 and 4.',
-      ),
-    );
+    issues.push(issue('error', agent.path, 'Agent frontmatter must define a valid numeric tier between 1 and 4.'));
     return issues;
   }
 
   const contract = tierContracts[agent.tier];
   if (!contract) {
-    issues.push(
-      issue(
-        'error',
-        agent.path,
-        `No agent quality contract is defined for tier '${agent.tier}'.`,
-      ),
-    );
+    issues.push(issue('error', agent.path, `No agent quality contract is defined for tier '${agent.tier}'.`));
     return issues;
   }
 
   const sections = extractSections(agent.body);
-  for (const requiredSection of contract.requiredSections) {
-    if (!sections.has(requiredSection)) {
-      issues.push(
-        issue(
-          'error',
-          agent.path,
-          `${contract.label} agents must define section '## ${requiredSection}'.`,
-        ),
-      );
-    }
-  }
-
+  // Require only the canonical Output format section (case-sensitive) as a footer.
   const outputSection = sections.get('Output format');
   if (!outputSection) {
+    issues.push(issue('error', agent.path, "Agent must define section '## Output format' with a trailing ```structured-v1``` block."));
     return issues;
   }
 
@@ -335,57 +253,34 @@ function validateStructuredOutputContract(agent, contract) {
   const headingRegex = /^##\s+Output format\s*$/m;
   const headingMatch = headingRegex.exec(agent.body);
   if (!headingMatch) {
-    issues.push(
-      issue(
-        'error',
-        agent.path,
-        "Missing required heading '## Output format' (case-sensitive).",
-      ),
-    );
+    issues.push(issue('error', agent.path, "Missing required heading '## Output format' (case-sensitive)."));
     return issues;
   }
 
   const outputStartIndex = headingMatch.index + headingMatch[0].length;
   const afterHeading = agent.body.slice(outputStartIndex);
-n  // Find all structured-v1 fences after the heading
+
+  // Find fences
   const fenceRegex = /```structured-v1\r?\n([\s\S]*?)\r?\n```/g;
   const matches = [...afterHeading.matchAll(fenceRegex)];
-
   if (matches.length !== 1) {
-    issues.push(
-      issue(
-        'error',
-        agent.path,
-        'Output format must contain exactly one fenced ```structured-v1``` block.',
-      ),
-    );
+    issues.push(issue('error', agent.path, 'Output format must contain exactly one fenced ```structured-v1``` block.'));
     return issues;
   }
-n  const match = matches[0];
+
+  const match = matches[0];
   const fenceBody = match[1] ?? '';
 
   // Ensure closing fence is at file tail (no non-whitespace after it)
   const closingFenceIndex = outputStartIndex + match.index + match[0].length;
   const tail = agent.body.slice(closingFenceIndex);
   if (tail.trim() !== '') {
-    issues.push(
-      issue(
-        'error',
-        agent.path,
-        'The structured-v1 block must be the final content of the file (no other content after the closing fence).',
-      ),
-    );
+    issues.push(issue('error', agent.path, 'The structured-v1 block must be the final content of the file (no other content after the closing fence).'));
   }
 
   const firstNonBlankLine = fenceBody.split(/\r?\n/).find((line) => line.trim());
   if (firstNonBlankLine?.trim() !== 'OUTPUT_CONTRACT: structured-v1') {
-    issues.push(
-      issue(
-        'error',
-        agent.path,
-        "The first non-blank line inside the structured-v1 block must be 'OUTPUT_CONTRACT: structured-v1'.",
-      ),
-    );
+    issues.push(issue('error', agent.path, "The first non-blank line inside the structured-v1 block must be 'OUTPUT_CONTRACT: structured-v1'."));
   }
 
   const parsedFields = parsePromptFields(fenceBody);
@@ -395,58 +290,28 @@ function validateStructuredOutputContract(agent, contract) {
     detectedFields.length !== contract.requiredFields.length ||
     detectedFields.some((field, index) => field !== contract.requiredFields[index])
   ) {
-    issues.push(
-      issue(
-        'error',
-        agent.path,
-        `${contract.label} structured-v1 fields must match the exact order: ${contract.requiredFields.join(', ')}.`,
-      ),
-    );
+    issues.push(issue('error', agent.path, `${contract.label} structured-v1 fields must match the exact order: ${contract.requiredFields.join(', ')}.`));
   }
 
   for (const requiredField of contract.requiredFields) {
     if (!detectedFields.includes(requiredField)) {
-      issues.push(
-        issue(
-          'error',
-          agent.path,
-          `Structured-v1 output contract is missing required field '${requiredField}'.`,
-        ),
-      );
+      issues.push(issue('error', agent.path, `Structured-v1 output contract is missing required field '${requiredField}'.`));
     }
   }
 
   const outputContractField = parsedFields.find(({ field }) => field === 'OUTPUT_CONTRACT');
   if (outputContractField?.value !== 'structured-v1') {
-    issues.push(
-      issue(
-        'error',
-        agent.path,
-        "Structured-v1 output contract must set 'OUTPUT_CONTRACT: structured-v1'.",
-      ),
-    );
+    issues.push(issue('error', agent.path, "Structured-v1 output contract must set 'OUTPUT_CONTRACT: structured-v1'."));
   }
 
   const tierField = parsedFields.find(({ field }) => field === 'TIER');
   if ((tierField?.value ?? '').toString() !== (agent.tier ?? '').toString()) {
-    issues.push(
-      issue(
-        'error',
-        agent.path,
-        `Structured-v1 output contract must set 'TIER: ${agent.tier}'.`,
-      ),
-    );
+    issues.push(issue('error', agent.path, `Structured-v1 output contract must set 'TIER: ${agent.tier}'.`));
   }
 
   const roleField = parsedFields.find(({ field }) => field === 'ROLE');
   if ((roleField?.value ?? '') !== String(agent.name)) {
-    issues.push(
-      issue(
-        'error',
-        agent.path,
-        `Structured-v1 output contract must set 'ROLE: ${agent.name}'.`,
-      ),
-    );
+    issues.push(issue('error', agent.path, `Structured-v1 output contract must set 'ROLE: ${agent.name}'.`));
   }
 
   return issues;

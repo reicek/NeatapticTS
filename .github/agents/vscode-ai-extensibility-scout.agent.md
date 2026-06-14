@@ -61,13 +61,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Suggest the next agent (e.g., "helping-gap-resolution-coordinator").
 - Stop without broadening scope or guessing.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -94,5 +88,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return: official source URLs, relevant capability, limitation, bridge impact, security/trust note, and next plan update.

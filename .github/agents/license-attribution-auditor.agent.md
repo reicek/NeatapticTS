@@ -55,11 +55,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -86,12 +82,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Files audited:` path list.
-- `External sources identified:` list of source names (e.g., "VS Code AI extensibility docs", "Agent Skills patterns", "OpenSpec").
-- `License notes present:` YES | PARTIAL | NO.
-- `Missing attribution:` list of unsourced claims or paraphrased concepts (or NONE).
-- `Source names verified:` YES | NO; note any that need correction.
-- `Suggested repair:` brief note on which files need attribution updates and what skill/plan handles tracker changes.
