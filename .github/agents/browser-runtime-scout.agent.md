@@ -2,7 +2,7 @@
 description: 'Use when mapping browser-runtime blockers, bundle format boundaries, smoke-test failures, worker delivery constraints, or deciding whether a browser packaging issue belongs to browser-build. Keywords: browser runtime, bundle, ESM, IIFE, smoke test, CDN, workerUrl, browser build, packaging.'
 name: browser-runtime-scout
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

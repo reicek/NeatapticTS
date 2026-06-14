@@ -2,7 +2,7 @@
 description: 'Use when: summarizing changed files, affected customization surfaces, validation evidence, and residual risks for logging or handoff without reopening implementation context.'
 name: 'file-change-summarizer'
 tier: 4
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

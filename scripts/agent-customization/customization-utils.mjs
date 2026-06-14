@@ -221,13 +221,14 @@ export function parseFrontmatter(text, relativePath) {
   const data = {};
   const issues = [];
 
-  for (const line of rawLines) {
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
     if (!line.trim() || line.trim().startsWith('#')) continue;
-    if (/^\s+-\s/.test(line)) continue;
-    if (/^\s+/.test(line)) continue;
 
     const match = /^(?<key>[A-Za-z0-9_-]+):(?<value>.*)$/.exec(line);
     if (!match?.groups) {
+      // Skip indented structural lines (handoffs, nested maps, list items)
+      if (/^\s+/.test(line)) continue;
       issues.push(
         issue(
           'warning',
@@ -239,7 +240,38 @@ export function parseFrontmatter(text, relativePath) {
     }
 
     const key = match.groups.key;
-    const value = match.groups.value.trim();
+    let value = match.groups.value.trim();
+
+    // Support multi-line bracketed inline arrays where the opening '[' is on
+    // a following indented line or the array spans multiple lines before ']'.
+    if (value === '') {
+      // Peek ahead for a bracketed array block starting on subsequent lines.
+      let j = i + 1;
+      while (j < rawLines.length && !rawLines[j].trim()) j++;
+      if (j < rawLines.length && rawLines[j].trim().startsWith('[')) {
+        const collected = [];
+        while (j < rawLines.length) {
+          const next = rawLines[j].trim();
+          collected.push(next);
+          if (next.includes(']')) break;
+          j++;
+        }
+        value = collected.join(' ');
+        i = j; // advance outer loop to skip consumed lines
+      }
+    } else if (/^\[.*$/.test(value) && !/\]$/.test(value)) {
+      // Handle case where '[' starts on the same line but the ']' appears later.
+      let j = i + 1;
+      while (j < rawLines.length) {
+        value += ' ' + rawLines[j].trim();
+        if (rawLines[j].includes(']')) {
+          i = j;
+          break;
+        }
+        j++;
+      }
+    }
+
     data[key] = parseFrontmatterValue(value);
   }
 

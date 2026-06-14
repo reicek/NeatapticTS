@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for designing NeatapticTS local MCP server contracts, bridge boundaries, tool/resource schemas, and trust controls. Keywords: MCP server, stdio, resources, tools, bridge, validation.'
 name: mcp-server-architect
 tier: 3
-model: glm-5.1:cloud (ollama)
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

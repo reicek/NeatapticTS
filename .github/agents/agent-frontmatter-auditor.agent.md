@@ -2,7 +2,7 @@
 description: 'Use when validating .agent.md frontmatter, tool lists, model strings, subagent allow-lists, handoffs, and user-invocable decisions in NeatapticTS. Keywords: agent frontmatter, YAML validation, tools, models, subagent graph, handoff audit.'
 name: agent-frontmatter-auditor
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

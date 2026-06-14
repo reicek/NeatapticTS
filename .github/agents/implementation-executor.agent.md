@@ -2,7 +2,7 @@
 description: 'Use when: 04-implementing delegates scoped file edits, patch application, or write-phase synthesis. Executes implementation packets with implementation-standards compliance. Keywords: file edits, implementation executor, patch apply, write synthesis, scoped changes.'
 name: implementation-executor
 tier: 2
-model: glm-5.1:cloud (ollama)
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for validating NeatapticTS MCP workflow servers, allow-listed commands, plan phase packets, and runtime evidence. Keywords: MCP validation, smoke test, allow-list, plan packet, runtime evidence.'
 name: mcp-validation-auditor
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

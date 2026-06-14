@@ -232,7 +232,7 @@ function validateAgent(agent, agents, skillNames, { strict }) {
   if (
     Array.isArray(data.agents) &&
     data.agents.length > 0 &&
-    !data.tools?.includes('agent')
+    !(Array.isArray(data.tools) && data.tools.includes('agent'))
   ) {
     issues.push(
       issue(

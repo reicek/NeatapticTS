@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for designing or auditing sequential handoffs between the seven NeatapticTS phase agents. Keywords: handoff, phase transition, send false, next phase, prompt packet.'
 name: phase-handoff-designer
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

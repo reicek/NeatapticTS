@@ -168,11 +168,21 @@ const tierContracts = {
 
 const options = parseArgs(process.argv.slice(2));
 
+options.fix = process.argv.slice(2).includes('--fix');
+
+if (options.fix) {
+  const { runFix } = await import('./validate-agent-quality.fix.mjs');
+  const fixReport = await runFix({ json: options.json });
+  writeReport(fixReport, options);
+  process.exitCode = fixReport.ok ? 0 : 1;
+  process.exit();
+}
+
 if (options.help) {
   printUsage({
     title: 'Validate NeatapticTS agent quality contract compliance.',
     usage:
-      'node scripts/agent-customization/validate-agent-quality.mjs [--json]',
+      'node scripts/agent-customization/validate-agent-quality.mjs [--json] [--fix]',
   });
   process.exit(0);
 }

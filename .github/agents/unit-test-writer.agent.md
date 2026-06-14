@@ -2,7 +2,7 @@
 description: 'Use when writing focused unit tests, red tests, fixtures, mocks, assertions, or coverage tests for a scoped behavior change. Keywords: test, jest, fixture, mock, assertion, coverage.'
 name: 'unit-test-writer'
 tier: 3
-model: glm-5.1:cloud (ollama)
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

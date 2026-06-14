@@ -2,7 +2,7 @@
 description: 'Use when: planning or red-testing needs acceptance criteria, red-test scope, coverage expectations, deterministic claims, fixtures, or validation order.'
 name: 'planning-test-strategy-coordinator'
 tier: 2
-model: glm-5.1:cloud (ollama)
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

@@ -2,7 +2,7 @@
 description: 'Use when: implementation needs existing pattern discovery, scoped refactor routing, compatibility facade decisions, or reusable specialist assignment.'
 name: 'implementation-pattern-coordinator'
 tier: 2
-model: glm-5.1:cloud (ollama)
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

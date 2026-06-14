@@ -2,7 +2,7 @@
 description: 'Use when mapping NGE algorithm-core boundaries such as NGE_DNA, deterministic development, lifecycle transitions, computation motifs, memory tiers, neuromodulation, reproduction modes, or deciding whether a Phase 7 issue belongs to nge-core-algorithm. Keywords: NGE core, NGE_DNA, computationType, deterministic development, lifecycle, neuromodulation, reproduction, stigmergy.'
 name: nge-core-scout
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

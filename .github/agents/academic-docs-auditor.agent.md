@@ -2,7 +2,7 @@
 description: 'Use when auditing NeatapticTS educational documentation, JSDoc quality, Mermaid diagrams, citations, and generated README alignment. Keywords: academic docs, citation audit, JSDoc, Mermaid, generated README, atemporal docs.'
 name: academic-docs-auditor
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

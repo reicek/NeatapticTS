@@ -2,7 +2,7 @@
 description: 'Use when checking Repo Cortex index freshness, triggering a corpus rebuild, diagnosing validate-index failures, confirming MCP server binding, or deciding whether a semantic index issue belongs to repo-cortex-workflow. Hands off recon results to the repo-cortex-workflow skill. Keywords: repo cortex, index freshness, validate-index, build-index, cortex MCP, semantic snapshot, cortex lifecycle, cortex scout.'
 name: 'repo-cortex-scout'
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

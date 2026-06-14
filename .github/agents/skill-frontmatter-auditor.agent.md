@@ -2,7 +2,7 @@
 description: 'Use when auditing SKILL.md frontmatter, folder-name alignment, argument hints, descriptions, visibility flags, compatibility text, or local skill resources. Keywords: skill metadata, frontmatter, SKILL.md, description, visibility, audit.'
 name: 'skill-frontmatter-auditor'
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

@@ -2,7 +2,7 @@
 description: 'Use when running quality gates and interpreting results for 05-green-testing, including npm run quality:folder, npm run build, and lint commands. Keywords: quality gate, folder quality, build validation, lint results, violation classification, repair packet.'
 name: code-quality-auditor
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

@@ -2,7 +2,7 @@
 description: 'Use when documentation needs a concise example, JSDoc usage snippet, README usage note, or docs-safe sample aligned with the current public API. Keywords: examples, JSDoc snippet, README usage, documentation example.'
 name: docs-example-writer
 tier: 4
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

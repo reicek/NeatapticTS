@@ -2,7 +2,7 @@
 description: 'Use when: capturing an ISO-42001-style local evidence event for an agent-system gap, routing update, skill update, model update, or output-contract fix.'
 name: 'learning-event-capturer'
 tier: 4
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

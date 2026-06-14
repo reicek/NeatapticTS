@@ -2,7 +2,7 @@
 description: 'Use when a focused validation fails and the workflow needs root-cause triage, owner mapping, smallest reroute, or known-unrelated failure separation. Keywords: failure triage, validation failure, root cause, owner mapping, reroute.'
 name: failure-triage-specialist
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

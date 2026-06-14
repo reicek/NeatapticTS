@@ -2,7 +2,7 @@
 description: 'Use when mapping worker-pool scheduling, ordered result assembly, dataset broadcast strategy, worker-count sizing, queue backpressure, or deciding whether a multithread batch-evaluation issue belongs to multithread-evaluation. Keywords: worker pool, evaluateInWorkers, queueing, ordered results, dataset broadcast, backpressure, workerCount, fallback.'
 name: evaluation-pool-scout
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

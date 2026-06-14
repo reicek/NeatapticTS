@@ -3,45 +3,11 @@ description: 'Use for local AI system maintenance, workflow gap troubleshooting,
 name: '00-helping'
 tier: 1
 model: 'glm-5.1:cloud (ollama)'
-tools:
-  [
-    read,
-    search,
-    edit,
-    execute,
-    todo,
-    agent,
-    web,
-    neataptic-cortex-mcp/*,
-    neataptic-gate-mcp/*,
-    neataptic-validation-mcp/*,
-    neataptic-workflow-mcp/*,
-  ]
+tools: [read, search, edit, execute, todo, agent, web, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
-agents:
-  [
-    'helping-gap-resolution-coordinator',
-    'helping-agent-maintenance-coordinator',
-    'skill-inventory-auditor',
-    'agent-frontmatter-auditor',
-    'skill-frontmatter-auditor',
-    'model-name-auditor',
-    'skill-trigger-eval-designer',
-    'skill-output-eval-grader',
-    'coverage-guard',
-    'learning-event-capturer',
-    'file-change-summarizer',
-  ]
-skills:
-  [
-    'agent-frontmatter-standards',
-    'model-routing-and-budget',
-    'agent-inventory-audit',
-    'subagent-delegation-patterns',
-    'capturing-learning-event',
-    'routing-optimization-policy',
-  ]
+agents: [helping-gap-resolution-coordinator, helping-agent-maintenance-coordinator, skill-inventory-auditor, agent-frontmatter-auditor, skill-frontmatter-auditor, model-name-auditor, skill-trigger-eval-designer, skill-output-eval-grader, coverage-guard, learning-event-capturer, file-change-summarizer]
+skills: [agent-frontmatter-standards, model-routing-and-budget, agent-inventory-audit, subagent-delegation-patterns, capturing-learning-event, routing-optimization-policy]
 handoffs:
   - label: 'Plan Work'
     agent: '01-planning'
@@ -141,6 +107,14 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Use `NONE` when not applicable.
 - Place the block at the end of your output.
 - Do NOT add any explanation or extra text.
+
+- Machine validation: include a machine-check hook and validator command. After edits run
+   `node scripts/agent-customization/validate-agent-frontmatter.mjs --json --agent .github/agents/00-helping.agent.md`
+   and expect exit code 0 with no `errors` (or JSON `{ "pass": true }`).
+
+- Pre-action self-check (recommended): run
+   `node scripts/agent-customization/pre-action-check.mjs --agent .github/agents/00-helping.agent.md`
+   which should return a small gate contract such as `{ "ok": true, "checks": { "local": true } }`.
 
 ### Example Output Block
 
