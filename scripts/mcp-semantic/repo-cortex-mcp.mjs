@@ -54,6 +54,7 @@ import { loadChunk } from './tools/load-chunk.mjs';
 import { loadDocument } from './tools/load-document.mjs';
 import { loadParentChunk } from './tools/load-parent-chunk.mjs';
 import { runDocsQualityMetrics } from '../semantic-index/docs-quality/docs-quality.metrics.mjs';
+import { searchContext } from './tools/search-context.mjs';
 import { searchCorpus } from './tools/search-corpus.mjs';
 import { submitFeedback } from './tools/submit-feedback.mjs';
 import { traverseGraphHandler } from './tools/traverse-graph.mjs';
@@ -261,6 +262,50 @@ export function createRepoCortexTools(databasePath) {
       },
       handler: (argumentsObject) =>
         searchCorpus({ ...argumentsObject, databasePath }),
+    }),
+    createTool({
+      name: 'search_context',
+      description:
+        'Search the corpus and assemble a token-bounded context window. Combines hybrid retrieval with chunk enrichment, deduplication, ordering, budget enforcement, and stitching. Returns the assembled context plus provenance metadata including chunk count, token count, tier counts, and dense-search health.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string' },
+          limit: { type: 'number' },
+          budget: { type: 'number' },
+          context_format: { type: 'string', enum: ['markdown', 'json'] },
+          use_dense: { type: 'boolean', default: true },
+          use_rerank: { type: 'boolean' },
+          alpha: { type: 'number' },
+          expand_query: { type: ['boolean', 'string'] },
+          rerank_candidates_count: { type: 'number' },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          context: { oneOf: [{ type: 'string' }, { type: 'array' }] },
+          token_count: { type: 'number' },
+          tier_counts: {
+            type: 'object',
+            properties: {
+              essential: { type: 'number' },
+              supporting: { type: 'number' },
+              supplementary: { type: 'number' },
+            },
+          },
+          dense_state: { type: 'string' },
+          dense_degraded: { type: 'boolean' },
+          context_format: { type: 'string' },
+          metadata: { type: 'object' },
+        },
+        required: ['context', 'token_count', 'tier_counts'],
+        additionalProperties: true,
+      },
+      handler: (argumentsObject) =>
+        searchContext({ ...argumentsObject, databasePath }),
     }),
     createTool({
       name: 'load_chunk',

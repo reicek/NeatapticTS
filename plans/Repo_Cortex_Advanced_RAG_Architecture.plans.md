@@ -558,7 +558,7 @@ status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
 copy_paste: true
-next_step: 'Step 20 — Implement context window assembly'
+next_step: 'Step 21 — Implement MCP tool extensions'
 skills:
   - 'plan-alignment'
   - 'repo-cortex-workflow'
@@ -668,14 +668,14 @@ NEXT: 'Step 20 — Implement context window assembly'
 
 **Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md`
 
-#### Step 20 — Implement context window assembly [PLANNED]
+#### Step 20 — Implement context window assembly [DONE]
 
 ```yaml
 phase: 2
 step: 20
 goal: 'implementing'
 tdd_sequence: 'red-green'
-status: '[PLANNED]'
+status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
 copy_paste: true
@@ -688,45 +688,106 @@ validation:
   - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
 ```
 
-**User instruction:** Paste this full step packet.
+**User instruction:** Paste this full step packet. Implement the five-stage `assembleContext` pipeline: enrichment → deduplication (SHA-256 exact, cosine = 0.95 near-duplicate, parent-child collapse) → ordering (relevance tier + file grouping + char_start) → budget management (essential/standard/supplementary tiers, token counting) → stitching (context headers, same-file continuation).
 
-**Step objective:** Implement the five-stage `assembleContext` pipeline: enrichment ? deduplication (SHA-256 exact, cosine = 0.95 near-duplicate, parent-child collapse) ? ordering (relevance tier + file grouping + char_start) ? budget management (essential/standard/supplementary tiers, token counting) ? stitching (context headers, same-file continuation).
-
-**Context the agent must know:**
-
-- Design: `rag_architecture/cortex-context-assembly.md`
-- Pipeline is stateless, idempotent, composable, retriever-agnostic
-- Dedup: SHA-256 exact hash ? cosine = 0.95 near-duplicate ? parent-child collapse (prefer child over parent)
-- Ordering: relevance tier (essential = 0.7, supporting = 0.4, supplementary < 0.4) ? file grouping ? char_start ? family priority
-- Budget: default 4096 tokens; essential tier always included; supplementary truncated first
-- Stitching: context headers as separators `[file_path > heading_path]`; same-file continuation logic; `context_format` (markdown or json)
-- New file: `scripts/semantic-index/assemble-context.mjs`; `search_context` MCP tool
+**Step objective / context:**
+- Design doc: `rag_architecture/cortex-context-assembly.md`
+- Pipeline must be stateless, idempotent, composable, retriever-agnostic.
+- Dedup: SHA-256 exact hash → cosine ≥ 0.95 near-duplicate → parent-child collapse (prefer child over parent).
+- Ordering: relevance tier thresholds (essential ≥ 0.7, supporting ≥ 0.4, supplementary < 0.4) → file grouping by max score → within file: char_start ascending → family priority.
+- Budget: default 4096 tokens; essential tier always included; supplementary truncated first; graceful truncation at sentence boundary.
+- Stitching: context headers as separators `[file_path > heading_path]`; same-file continuation logic; output `context_format` (markdown or json).
+- New file: `scripts/semantic-index/assemble-context.mjs`; implement `search_context` MCP tool.
 
 **TDD cycle:**
-
-1. **Red tests**: Write failing tests for each pipeline stage: enrichment (context headers, content hashes), deduplication (exact, near-duplicate, parent-child), ordering (multi-key sort), budget management (tier assignment, token counting, graceful truncation), stitching (headers, continuation, format).
-2. **Implementation**: Implement all five stages as composable pure functions; implement `search_context` MCP tool.
-3. **Green validation**: Verify dedup removes exact and near-duplicates correctly; verify ordering produces coherent reading order; verify budget management respects token limit; verify stitching produces clean context strings.
+1. Red tests for each pipeline stage.
+2. Implementation of all five stages as composable pure functions + `search_context` MCP tool.
+3. Green validation: dedup, ordering, budget, stitching.
 
 **Acceptance criteria:**
+- SHA-256 exact dedup removes duplicate content.
+- Cosine ≥ 0.95 near-duplicate detection works when embeddings are available; degrades to exact-only when cold.
+- Parent-child collapse prefers child sub-chunk over parent.
+- Ordering: essential → supporting → supplementary; within tier file grouping by max score; within file char_start ascending.
+- Budget: default 4096 tokens; essential always included; supplementary truncated; graceful sentence-boundary truncation.
+- Stitching: headers as separators; same-file continuation without repeated headers; markdown and json output formats.
 
-- SHA-256 exact dedup removes duplicate content correctly
-- Cosine = 0.95 near-duplicate detection works when embeddings are available; degrades to exact-only when cold
-- Parent-child collapse: child sub-chunk preferred over parent when both appear in results
-- Ordering: essential ? supporting ? supplementary; within tier: file grouping by max score; within file: char_start ascending
-- Budget: default 4096 tokens; essential tier always included; supplementary truncated; graceful truncation at sentence boundary
-- Stitching: context headers as separators; same-file continuation without repeated headers; markdown and json output formats
+**Dependencies:** Step 13 (semantic chunking columns `context_header`, `parent_chunk_id`, `depth`), Step 14 (query classification for tier thresholds), Step 16 (cross-encoder reranking scores), Step 18 (query expansion results).
 
-**Dependencies:** Step 13 (semantic chunking) for `context_header`, `parent_chunk_id`, `depth` columns; Step 14 (query classification) for classification-aware tier thresholds; Step 16 (cross-encoder re-ranking) for reranked scores feeding assembly; Step 18 (query expansion) for expanded query results.
+**Slices:**
 
-#### Step 21 — Implement MCP tool extensions [PLANNED]
+```yaml
+slices:
+  - slice_id: '20-red-tests'
+    title: 'Writing red tests for assembleContext pipeline and search_context tool contract'
+    files_to_change:
+      - 'scripts/mcp-semantic/__tests__/assemble-context.red.test.mjs'
+    estimate_hours: 4
+    acceptance_criteria:
+      - Red tests exist and fail for each pipeline stage (enrichment, exact dedup, near-dup, parent-child collapse, ordering, budget, stitching).
+      - Red tests exist and fail for search_context tool schema/contract.
+      - Tests follow existing semantic-index test patterns (better-sqlite3 temp DB, schema-v2.sql, ESM __dirname shim).
+      - Single expect per it() block.
+    parallelizable: false
+
+  - slice_id: '20-core-pipeline'
+    title: 'Implementing assembleContext enrichment, deduplication, ordering, budget, and stitching pure functions'
+    files_to_change:
+      - 'scripts/semantic-index/assemble-context.mjs'
+      - 'scripts/mcp-semantic/__tests__/assemble-context.red.test.mjs'
+    estimate_hours: 6
+    acceptance_criteria:
+      - New `assembleContext` module exports pure functions for each stage: `enrichChunks`, `deduplicateChunks`, `orderChunks`, `enforceBudget`, `stitchContext`.
+      - SHA-256 exact dedup selects representative by score, metadata richness, family priority, lowest chunk_id.
+      - Cosine near-duplicate uses threshold 0.95; skipped when embeddings unavailable.
+      - Parent-child collapse removes a parent when any child is present.
+      - Ordering: tier → file max score → char_start → family priority.
+      - Budget: default 4096 tokens; essential always included; supporting/supplementary soft includes; graceful sentence-boundary truncation; returns metadata.
+      - Stitching produces markdown and json formats with headers and same-file continuation.
+    parallelizable: false
+
+  - slice_id: '20-mcp-tool'
+    title: 'Implementing search_context MCP tool and registering it in the server'
+    files_to_change:
+      - 'scripts/mcp-semantic/tools/search-context.mjs'
+      - 'scripts/mcp-semantic/repo-cortex-mcp.mjs'
+      - 'scripts/mcp-semantic/__tests__/search-context.red.test.mjs'
+    estimate_hours: 4
+    acceptance_criteria:
+      - `searchContext` tool composes `searchCorpus` + `assembleContext` with the input schema from the design doc.
+      - Tool registered in `createRepoCortexTools` alongside `search_corpus`.
+      - Graceful degradation when dense/reranker are cold.
+      - Red tests for schema, composition, and cold-state fallback pass.
+    parallelizable: false
+
+  - slice_id: '20-green-validation'
+    title: 'Green validation, coverage guard, and plan sync for Step 20'
+    files_to_change:
+      - 'coverage/lcov.info'
+      - 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
+    estimate_hours: 3
+    acceptance_criteria:
+      - All red tests pass; new src/ files hit 100% statements/branches/functions/lines.
+      - `npm run quality:folder -- --folder=scripts/semantic-index` PASS.
+      - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md` PASS.
+      - `node scripts/agent-customization/gates/cortex-index.gate.mjs --json` PASS.
+      - Step 20 status advanced to [DONE]; validation evidence appended to plan.
+    parallelizable: false
+```
+
+**Handoff query:**
+- Which slice should Agent Zero dispatch first: `20-red-tests` to `03-red-testing`, then `20-core-pipeline` and `20-mcp-tool` to `04-implementing`, then `20-green-validation` to `05-green-testing`.
+- Confirm whether `search_context` should be implemented as a standalone tool (recommended by design doc) or as a `use_assembly` extension of `search_corpus`.
+- Verify that Step 13 semantic chunking columns (`context_header`, `parent_chunk_id`, `depth`) and Step 16 reranker scores are present and warm before starting `20-mcp-tool`.
+
+#### Step 21 — Implement MCP tool extensions [WIP]
 
 ```yaml
 phase: 2
 step: 21
 goal: 'implementing'
 tdd_sequence: 'red-green'
-status: '[PLANNED]'
+status: '[WIP]'
 mode: 'fresh-session'
 source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
 copy_paste: true
@@ -910,6 +971,8 @@ Full eval suite execution, end-to-end regression testing, MCP tool integration v
 
 ### Latest validation evidence
 
+- 2026-06-15: Step 20 green validation complete. Focused `mcp-semantic-mjs` tests 31/31 pass; broader `semantic-index-mjs` + `mcp-semantic-mjs` suite 219/219 pass. `quality:folder` PASS for `scripts/semantic-index/` and `scripts/mcp-semantic/`. Plan-sync gate PASS; cortex-index gate PASS after rebuilding stale index. Step 20 marked [DONE]; Step 21 now [WIP].
+- 2026-06-15: Step 20 (context window assembly) expanded into executable slices: `20-red-tests`, `20-core-pipeline`, `20-mcp-tool`, `20-green-validation`. Plan sync PASS. Status remains [WIP]; ready for Agent Zero to dispatch `03-red-testing` → `04-implementing` → `05-green-testing` in sequence.
 - 2026-06-09: Workflow sync: Advanced Phase 2 Step 19 → [DONE]; Phase 2 Step 20 → [WIP]
 - 2026-06-11: Semantic-index test suite fixes: (1) ESM `__dirname` shims added to 7 test files that used `__dirname` without `import.meta.url` compatibility (`classify-query.red.test.ts`, `semantic-index.red.test.ts`, `routing-table.red.test.ts`, `metadata-enrichment.red.test.ts`, `metadata-filter.red.test.ts`, `build-index.health.test.ts`, `validate-index.fixhint.test.ts`); (2) Schema fixture updates in `dense-readiness.red.test.ts` and `embed-index.red.test.ts` from v1 to v2/v3 (added FTS5 content-synced triggers and v3 columns); (3) `schema-v2.sql` idempotency fix: moved v3 `ALTER TABLE ADD COLUMN` statements into `CREATE TABLE` definitions so that `initSemanticIndex` is idempotent (second call no longer fails with "duplicate column name: arch_layer"). All 18/18 semantic-index tests pass. Quality gate PASS.
 - 2026-06-10: Step 14 (query classification) completed. 6-class rule-based classifier (`classify-query.mjs`), per-class routing table (`routing-table.mjs`), classification-aware `search_corpus` integration, eval runner (95.8% accuracy, <5ms latency). All acceptance criteria met. Step 15 (metadata filtering) is next.
@@ -977,9 +1040,9 @@ Continue from the current repo state only. Do not rely on prior chat history.
 
 Phase 1 is [DONE]. All 12 architecture design steps are complete. Design documents are in rag_architecture/.
 
-Phase 2 (Implementation) is [WIP] with Steps 13-19 [DONE]. Step 20 (context window assembly) is the active step. Steps 21-23 are [PLANNED] with detailed TDD specifications.
+Phase 2 (Implementation) is [WIP] with Steps 13-20 [DONE]. Step 21 (MCP tool extensions) is the active step [WIP]. Steps 22-23 are [PLANNED] with detailed TDD specifications.
 
-Dependency order: Step 13 (chunking) ? Steps 14-15 (classification, metadata) ? Steps 16-19 (reranking, graph, expansion, feedback) ? Step 20 (context assembly) ? Step 21 (MCP tools) ? Step 22 (eval suite) ? Step 23 (ANN index, parallel-capable).
+Dependency order: Step 13 (chunking) → Steps 14-15 (classification, metadata) → Steps 16-19 (reranking, graph, expansion, feedback) → Step 20 (context assembly) → Step 21 (MCP tools) → Step 22 (eval suite) → Step 23 (ANN index, parallel-capable).
 
-Next step: Begin Step 20 (context window assembly) implementation with TDD red -> green -> coverage cycle. Read rag_architecture/cortex-context-assembly.md for the complete design.
+Next step: Dispatch Step 21 to `04-implementing`. Read `rag_architecture/cortex-mcp-tool-extensions.md` for the complete design.
 ```
