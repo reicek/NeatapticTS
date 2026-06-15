@@ -26,6 +26,7 @@
  *   J -- yes --> L[queryDenseIndex<br/>Hybrid dense results]
  * ```
  */
+import Database from 'better-sqlite3';
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
 import { queryDenseIndex } from '../../semantic-index/query-dense.mjs';
 import { checkDenseReadiness } from '../../semantic-index/dense-readiness.mjs';
@@ -38,6 +39,7 @@ import {
   normalizeLimit,
   openCortexDatabase,
   readChunkRow,
+  resolveDatabasePath,
   sanitizeFtsQuery,
 } from './cortex-db.mjs';
 import { classifyForSearchCorpus } from '../../semantic-index/classify-query.mjs';
@@ -48,6 +50,7 @@ import {
   applyPostRetrievalFilter,
 } from '../../semantic-index/metadata-filter.mjs';
 import { expandQuery } from '../../semantic-index/expand-query.mjs';
+import { recordFeedbackEvent } from './feedback-core.mjs';
 
 /**
  * Process-lifetime cache for the dense-readiness probe result.
@@ -102,7 +105,7 @@ let cachedRerankerReadiness = null;
  * @param {Function} [options.expandQueryFn] - Override expandQuery implementation (for testing).
  * @returns {Promise<object>} Search result payload including `query`, `limit`, `use_dense`, and `results`.
  */
-export async function searchCorpus(options = {}) {
+async function searchCorpusImpl(options = {}) {
   const rawQuery = requireString(options.query, 'query');
   const query = sanitizeFtsQuery(rawQuery);
   const limit = normalizeLimit(options.limit, 10);
@@ -348,6 +351,145 @@ export async function searchCorpus(options = {}) {
     }),
     ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
   };
+}
+
+/**
+ * Fire-and-forget impression recording for every chunk returned by a search.
+ *
+ * Uses a fresh writable SQLite connection so the read-only search database
+ * connection can close immediately. Errors are caught and silently dropped
+ * so feedback writes never fail the search response or add response latency.
+ *
+ * @param {object} response - Search response payload.
+ * @param {string} response.query - Query string correlated with the impressions.
+ * @param {Array<{chunk_id?: number}>} [response.results] - Search result chunks.
+ * @param {string | undefined} databasePath - Optional corpus database path override.
+ */
+function recordSearchImpressions(response, databasePath) {
+  const results = response?.results;
+  const query = response?.query;
+  if (!Array.isArray(results) || results.length === 0 || typeof query !== 'string') {
+    return;
+  }
+
+  Promise.resolve().then(() => {
+    try {
+      const feedbackDb = new Database(resolveDatabasePath(databasePath));
+      try {
+        for (const result of results) {
+          const chunkId = result?.chunk_id;
+          if (typeof chunkId === 'number') {
+            recordFeedbackEvent(feedbackDb, {
+              chunk_id: chunkId,
+              signal_type: 'impression',
+              query,
+            });
+          }
+        }
+      } finally {
+        feedbackDb.close();
+      }
+    } catch {
+      // Best-effort: silently drop feedback write failures.
+    }
+  });
+}
+
+/**
+ * Default feedback signal counters used when no score row exists for a chunk.
+ */
+const DEFAULT_FEEDBACK_SIGNALS = {
+  total_positive: 0,
+  total_negative: 0,
+  total_impressions: 0,
+  total_clicks: 0,
+  total_references: 0,
+};
+
+/**
+ * Attach feedback boost and signal counters to each search result.
+ *
+ * Queries the `feedback_scores` table read-only and mutates each result object
+ * in place. When no score row exists, `feedback_boost` is set to `0` and the
+ * signal counters are zeroed. Errors are swallowed so feedback enrichment never
+ * fails a search response.
+ *
+ * @param {Array<object>} results - Search result list.
+ * @param {string | undefined} databasePath - Optional corpus database path override.
+ */
+export function attachFeedbackToResults(results, databasePath) {
+  if (!Array.isArray(results) || results.length === 0) {
+    return;
+  }
+
+  const chunkIds = results
+    .map((result) => result?.chunk_id)
+    .filter((chunkId) => typeof chunkId === 'number');
+
+  if (chunkIds.length === 0) {
+    for (const result of results) {
+      result.feedback_boost = 0;
+      result.feedback_signals = { ...DEFAULT_FEEDBACK_SIGNALS };
+    }
+    return;
+  }
+
+  /** @type {Map<number, object>} */
+  const scoresByChunkId = new Map();
+  try {
+    const database = openCortexDatabase(databasePath);
+    try {
+      const placeholders = chunkIds.map(() => '?').join(',');
+      const rows = database
+        .prepare(
+          `SELECT chunk_id, feedback_boost, total_positive, total_negative, total_impressions, total_clicks, total_references FROM feedback_scores WHERE chunk_id IN (${placeholders})`,
+        )
+        .all(...chunkIds);
+
+      for (const row of rows) {
+        scoresByChunkId.set(row.chunk_id, row);
+      }
+    } finally {
+      database.close();
+    }
+  } catch {
+    // Best-effort: silently skip feedback enrichment when the table is missing.
+  }
+
+  for (const result of results) {
+    const score = scoresByChunkId.get(result.chunk_id);
+    if (score) {
+      result.feedback_boost = Number(score.feedback_boost);
+      result.feedback_signals = {
+        total_positive: Number(score.total_positive),
+        total_negative: Number(score.total_negative),
+        total_impressions: Number(score.total_impressions),
+        total_clicks: Number(score.total_clicks),
+        total_references: Number(score.total_references),
+      };
+    } else {
+      result.feedback_boost = 0;
+      result.feedback_signals = { ...DEFAULT_FEEDBACK_SIGNALS };
+    }
+  }
+}
+
+/**
+ * Search the indexed corpus using BM25 or hybrid dense reranking.
+ *
+ * This is the public entry point. It delegates to the internal search
+ * implementation, attaches per-result feedback boost and signal counters,
+ * and then schedules best-effort impression feedback recording for every
+ * returned chunk without blocking the response.
+ *
+ * @param {object} [options={}] - Search options (same as {@link searchCorpusImpl}).
+ * @returns {Promise<object>} Search result payload with `feedback_boost` and `feedback_signals` on each result.
+ */
+export async function searchCorpus(options = {}) {
+  const response = await searchCorpusImpl(options);
+  attachFeedbackToResults(response.results, options?.databasePath);
+  recordSearchImpressions(response, options?.databasePath);
+  return response;
 }
 
 /**

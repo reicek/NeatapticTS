@@ -188,6 +188,39 @@ step_packet:
 
 ## Acceptance Criteria (examples and automation mapping)
 
+## Slice Grouping (execution slices)
+
+When implementation work is large, `01-planning` MUST author `slices` inside
+the step packet. Each `slice` is a small, independently executable unit that
+can be assigned to a single `04-implementing` instance and validated by
+`05-green-testing`.
+
+Recommended `slice` schema (add to the step_packet):
+
+```yaml
+slices:
+  - slice_id: string
+    title: string
+    files_to_change:
+      - src/foo/**
+    estimate_hours: number
+    acceptance_criteria:
+      - type: unit-test
+        value: "src/foo/**::shouldDoX"
+    parallelizable: false
+```
+
+Guidelines:
+- Target slice size: prefer <= 8 hours or single-file/folder boundaries.
+- Include explicit `acceptance_criteria` and `gates_required` per slice.
+- Mark `parallelizable: true` only when slices do not share state or
+  ordering constraints.
+- `01-planning` must indicate slice ordering and whether slices can run
+  concurrently. If slices are sequential, include `next_slice` references.
+
+Agent Zero will use these `slices` to orchestrate per-slice `04`→`05`
+cycles as described in the global orchestrator instructions.
+
 - Unit test: provide exact test path/name; automation runs `npx jest --testPathPattern="<path>"`.
 - Coverage: exact glob and percent (NeatapticTS policy: 100% for touched files); automation should add coverage result to `evidence`.
 - Lint: `npm run lint` exit code 0.

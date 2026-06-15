@@ -93,6 +93,22 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 8. **Hand off to Step 07 with documentation evidence and any residual gaps.**
    - Example: Handoff prompt includes summary of changes, blockers, and unresolved gaps.
 
+When invoked as the finalizer for a multi-slice implementation step (i.e., after
+Agent Zero reports all slices have passing `05` evidence), `06-documenting`
+MUST run the docs-quality checks referenced by the plan and attach the
+resulting evidence. Example commands (prepared for the user to run or run in
+automation):
+
+```
+# If JSDoc changed
+npm run docs
+
+# Run a docs quality script (example helper)
+node .github/hooks/doc-quality-check.mjs --plan=plans/<plan>.plans.md --json
+```
+
+Do not mark `TASK_STATUS: SUCCESS` for the step if docs-quality gaps remain.
+
 ## If Blocked
 
 - **If a documentation gap is reusable, route to helping-gap-resolution-coordinator to create a skill or specialist before continuing.**

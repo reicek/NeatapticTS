@@ -6,8 +6,8 @@ model: 'glm-5.1:cloud (ollama)'
 tools: [read, search, edit, execute, todo, agent, web, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
 user-invocable: true
 disable-model-invocation: false
-agents: [helping-gap-resolution-coordinator, helping-agent-maintenance-coordinator, skill-inventory-auditor, agent-frontmatter-auditor, skill-frontmatter-auditor, model-name-auditor, skill-trigger-eval-designer, skill-output-eval-grader, coverage-guard, learning-event-capturer, file-change-summarizer]
-skills: [agent-frontmatter-standards, model-routing-and-budget, agent-inventory-audit, subagent-delegation-patterns, capturing-learning-event, routing-optimization-policy]
+agents: [helping-gap-resolution-coordinator, helping-agent-maintenance-coordinator, skill-inventory-auditor, agent-frontmatter-auditor, skill-frontmatter-auditor, model-name-auditor, skill-trigger-eval-designer, skill-output-eval-grader, coverage-guard, learning-event-capturer, file-change-summarizer, slice-orchestration-scheduler]
+skills: [agent-frontmatter-standards, model-routing-and-budget, agent-inventory-audit, subagent-delegation-patterns, capturing-learning-event, routing-optimization-policy, phase-handoff-workflow, tracker-handoff]
 handoffs:
   - label: 'Plan Work'
     agent: '01-planning'
@@ -56,6 +56,7 @@ Before any change, answer YES to ALL:
 
 ## Flow Selection
 
+- Use `00.slice-orchestration` when a step packet contains slices and per-slice orchestration is needed
 - Use `00.workflow-gap-audit` when checking workflow health, gate health, or flow-mention drift
 - Use `00.cross-tier-helper` when escalating blockers from lower tiers or resolving cross-tier issues
 - Use `00.diagnose-blocker` when diagnosing a specific blocker or validation failure

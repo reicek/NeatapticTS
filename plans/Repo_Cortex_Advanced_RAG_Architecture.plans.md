@@ -547,14 +547,14 @@ validation:
 
 **Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md`
 
-#### Step 19 — Implement relevance feedback [WIP]
+#### Step 19 — Implement relevance feedback [DONE]
 
 ```yaml
 phase: 2
 step: 19
 goal: 'implementing'
 tdd_sequence: 'red-green'
-status: '[WIP]'
+status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
 copy_paste: true
@@ -565,6 +565,72 @@ skills:
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md'
   - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
+slices:
+  - slice_id: '19.1'
+    title: 'Schema and red tests for signal recording and boost computation'
+    files_to_change:
+      - 'scripts/semantic-index/schema-v2.sql'
+      - 'scripts/mcp-semantic/__tests__/feedback.red.test.mjs'
+    estimate_hours: 4
+    acceptance_criteria:
+      - 'feedback_events and feedback_scores tables with indexes added to schema-v2.sql'
+      - 'Red tests exist for all 4 signal types with pre-computed signal_strength'
+      - 'Red tests exist for feedback_boost sigmoid dampening clamped to [-0.5, +0.5]'
+      - 'Red tests exist for 7-day half-life time decay and impression decay (CTR-based)'
+      - 'Red tests exist for privacy constraints (SHA-256 query hash, context capped at 500 chars, cascade delete)'
+      - 'Tests compile but fail (red phase confirmed)'
+    parallelizable: false
+  - slice_id: '19.2'
+    title: 'Core feedback module — recording, boost computation, and aggregation'
+    files_to_change:
+      - 'scripts/mcp-semantic/tools/feedback-core.mjs'
+    estimate_hours: 5
+    acceptance_criteria:
+      - 'recordFeedbackEvent inserts into feedback_events with correct pre-computed signal_strength for all 4 types'
+      - 'computeFeedbackBoost applies sigmoid dampening (0.5 * tanh(netFeedback * 2.0)) clamped to [-0.5, +0.5]'
+      - 'Time decay uses 7-day half-life (FEEDBACK_HALF_LIFE_MS = 7 * 24 * 60 * 60 * 1000)'
+      - 'Impression decay computed with MIN_IMPRESSIONS_FOR_DECAY=10, MIN_CTR_FOR_NEUTRAL=0.1'
+      - 'updateFeedbackScores and recomputeAllFeedbackScores maintain feedback_scores table'
+      - 'Privacy enforced: context truncated to 500 chars, query hashed with SHA-256, no plaintext stored'
+      - 'Red tests from slice 19.1 that test core module functions pass'
+    parallelizable: false
+  - slice_id: '19.3'
+    title: 'Automatic signal collection and submit_feedback MCP tool'
+    files_to_change:
+      - 'scripts/mcp-semantic/tools/search-corpus.mjs'
+      - 'scripts/mcp-semantic/tools/load-chunk.mjs'
+      - 'scripts/mcp-semantic/tools/submit-feedback.mjs'
+      - 'scripts/mcp-semantic/repo-cortex-mcp.mjs'
+    estimate_hours: 5
+    acceptance_criteria:
+      - 'search_corpus records impression signals (fire-and-forget) for every returned chunk with query_hash'
+      - 'load_chunk records click signals with query_hash correlation via LRU cache (size 50)'
+      - 'submit_feedback MCP tool accepts chunk_id, signal_type, context; returns {chunk_id, signal_type, recorded, feedback_boost_after}'
+      - 'submit_feedback registered in repo-cortex-mcp.mjs tool list'
+      - 'Automatic signal writes are best-effort (silent drop on failure, no latency added)'
+      - 'All red tests for automatic collection and submit_feedback pass'
+    parallelizable: false
+  - slice_id: '19.4'
+    title: 'index_stats extension, search_corpus response extension, and green validation'
+    files_to_change:
+      - 'scripts/mcp-semantic/tools/index-stats.mjs'
+      - 'scripts/mcp-semantic/tools/search-corpus.mjs'
+    estimate_hours: 4
+    acceptance_criteria:
+      - 'index_stats returns feedback_stats (total_events, events_by_type, chunks_with_feedback, average_feedback_boost, feedback_weight, feedback_half_life_days, last_recomputed_at)'
+      - 'search_corpus results include feedback_boost and feedback_signals per result'
+      - 'All feedback tests pass (green)'
+      - '100% coverage on new/modified src/ files (feedback-core.mjs, submit-feedback.mjs, search-corpus.mjs changes, load-chunk.mjs changes, index-stats.mjs changes)'
+      - 'npm run quality:folder -- --folder=scripts/mcp-semantic passes'
+      - 'npm run test:silent passes with no regressions'
+    parallelizable: false
+VALIDATION_EVIDENCE:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md — PASS'
+  - 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json — PASS'
+  - 'npm run quality:folder -- --folder=scripts/mcp-semantic — PASS'
+  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=feedback --selectProjects=mcp-semantic-mjs with NODE_OPTIONS=--experimental-vm-modules — 59/59 PASS'
+  - 'Coverage on feedback-core.mjs, index-stats.mjs, load-chunk.mjs, submit-feedback.mjs — 100% statements/branches/functions/lines'
+NEXT: 'Step 20 — Implement context window assembly'
 ```
 
 **User instruction:** Paste this full step packet.
@@ -911,9 +977,9 @@ Continue from the current repo state only. Do not rely on prior chat history.
 
 Phase 1 is [DONE]. All 12 architecture design steps are complete. Design documents are in rag_architecture/.
 
-Phase 2 (Implementation) is [WIP] with Steps 13-18 [DONE]. Step 19 (relevance feedback) is the active step. Steps 20-23 are [PLANNED] with detailed TDD specifications.
+Phase 2 (Implementation) is [WIP] with Steps 13-19 [DONE]. Step 20 (context window assembly) is the active step. Steps 21-23 are [PLANNED] with detailed TDD specifications.
 
 Dependency order: Step 13 (chunking) ? Steps 14-15 (classification, metadata) ? Steps 16-19 (reranking, graph, expansion, feedback) ? Step 20 (context assembly) ? Step 21 (MCP tools) ? Step 22 (eval suite) ? Step 23 (ANN index, parallel-capable).
 
-Next step: Continue Step 19 (relevance feedback) implementation with TDD red -> green -> coverage cycle. Read rag_architecture/cortex-relevance-feedback.md for the complete design.
+Next step: Begin Step 20 (context window assembly) implementation with TDD red -> green -> coverage cycle. Read rag_architecture/cortex-context-assembly.md for the complete design.
 ```

@@ -227,6 +227,45 @@ The orchestrator **MUST NOT** monolithically delegate an entire TDD cycle to a s
 
 ---
 
+## Slice-Based Implementation Orchestration
+
+When an implementation step is large, touches many files, or is estimated
+to exceed a reasonable single-slice effort, the orchestrator (Agent Zero)
+must ensure the work is broken into executable `slices` before assigning
+implementation work to a single `04-implementing` instance. The following
+protocol governs slice-based execution and validation:
+
+- Step 01: If a step is monolithic or lacks an execution breakdown, Agent
+  Zero MUST call `01-planning` and request a `slices`-grouped step-packet.
+
+- Slice structure: Each `slice` authored by `01-planning` should include:
+  - `slice_id`: unique identifier within the step
+  - `title`: short intent
+  - `files_to_change`: globs or paths scoped to the slice
+  - `estimate_hours`: an upper-bound (target: <= 8h per slice)
+  - `acceptance_criteria`: list of validations (tests, coverage, lint)
+  - `parallelizable`: boolean — whether slices may run concurrently
+
+- Orchestration loop (Agent Zero):
+  1. Assign a single `slice` to a `04-implementing` instance.
+  2. Wait for the implementing instance to produce its `HandoffPayload`
+    and prepared evidence, then invoke `05-green-testing` to validate
+    that `slice` (slice-level tests + coverage guard).
+  3. If `05` returns failure for the slice, Agent Zero SHOULD spawn a new
+    `04-implementing` instance with a focused `slice-fix` packet and
+    re-run `05` until the slice passes.
+  4. When a `slice` passes, record its `VALIDATION_EVIDENCE` and move to
+    the next slice (or run slices in parallel only when `parallelizable`
+    is true).
+  5. After all slices for the step are passing, Agent Zero MUST call
+    `06-documenting` to run docs-quality checks and close the step.
+
+Agent Zero remains a router: it MUST NOT perform code edits itself and
+must delegate implementation and validation tasks to the appropriate
+Tier-1 agents. This section only adds a lifecycle responsibility —
+slice-level orchestration and retry — while preserving the core
+delegation contract.
+
 ## §4 Certainty Thresholds
 
 - End every user-facing response with `(Certainty: NN%)`.

@@ -79,6 +79,27 @@ Make the smallest implementation change that satisfies the active phase step con
 - Never use destructive git history rewrites or broad resets.
 - If a long-running terminal job is started, await completion or set `TASK_STATUS: PARTIAL` and document the job contract in the plan.
 
+## Slice Implementation Contract
+
+When assigned a `slice` (via the step packet `slices` field authored by
+`01-planning`), `04-implementing` must treat the `slice` as the single
+authoritative edit boundary. Implementers MUST:
+
+- Respect `slice_id` and only change files listed in `slice.files_to_change`.
+- Prepare a `HandoffPayload` that includes `slice_id`, the changed files,
+  preflight outputs (tsc, lint, focused jest slice), and a `coverage_summary`.
+- Include in the `PlanUpdate` block the `slice_id` and any `parallelizable`
+  metadata so Agent Zero can orchestrate subsequent slices.
+- Target each slice to be small: one implementer, one PR, and one focused
+  validation run by `05-green-testing`.
+- If the implementing agent discovers work outside the slice boundary that
+  must be changed, stop, record a decision, and call `01-planning` to
+  re-slice or expand the step — do not silently expand the owned slice.
+
+Failure of slice validation should not be auto-fixed by `04` without an
+explicit `slice-fix` handoff: prepare a targeted `slice-fix` packet that
+references the failing `slice_id`, failing tests, and suggested remediations.
+
 ## Flow Selection
 
 - Use `04.scoped-fix` when fixing a failing test or scoped regression

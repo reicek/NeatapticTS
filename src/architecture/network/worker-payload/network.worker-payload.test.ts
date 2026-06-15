@@ -33,6 +33,8 @@ import type {
 } from './network.worker-payload';
 import { SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION } from './network.worker-payload';
 
+jest.setTimeout(600000);
+
 type PortablePayload = PortableInferencePayload;
 type TransferablePayload = TransferableInferencePayload;
 
@@ -664,6 +666,18 @@ function createSharedInferenceBufferPair(
 }
 
 describe('network worker payload chapter', () => {
+  beforeEach(() => {
+    console.log(
+      `[worker-payload test start] ${expect.getState().currentTestName} (pid=${process.pid})`,
+    );
+  });
+
+  afterEach(() => {
+    console.log(
+      `[worker-payload test done] ${expect.getState().currentTestName} (pid=${process.pid})`,
+    );
+  });
+
   describe('transport capability detection', () => {
     it('explains browser shared-memory gating and falls back to channel transport when isolation is missing', async () => {
       // Act

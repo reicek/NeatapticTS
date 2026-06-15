@@ -76,6 +76,43 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - `plan-sync` — after updating the plan with validation results
 - `routing-table-freshness` — after any agent/skill routing change
 
+## Slice Validation Contract
+
+When validating an implementation `slice` (step packet `slice_id`), `05-green-testing`
+must perform slice-scoped validation runs and return a slice-level gate object.
+Minimum requirements:
+
+- Run focused tests that cover `slice.files_to_change` and produce a `test_results`
+  artifact (example: focused `npx jest --testPathPattern=<nearest-test-file>`).
+- Run `coverage-guard` for the touched files and produce a `coverage_summary` with
+  statements/branches/functions/lines percentages (NeatapticTS policy: 100% for
+  touched files when unit tests are applicable).
+- Run any lint or quality checks the slice requires as listed in the slice's
+  `acceptance_criteria` and attach their one-line outputs.
+
+Slice-level gate contract (structured JSON):
+
+```json
+{
+  "pass": boolean,
+  "slice_id": "<slice_id>",
+  "evidence": {
+    "coverage_summary": {"statements":100,"branches":100,"functions":100,"lines":100},
+    "test_results": "artifacts/slice-<id>-tests.json"
+  },
+  "fixHint": "string|null",
+  "owner": "05-green-testing"
+}
+```
+
+If the gate `pass` is `false`, include detailed failing tests, diff-aware
+suggestions, and a `SUGGESTED_NEXT_AGENT` field that will typically be
+`04-implementing` with a `slice-fix` packet reference.
+
+After producing the slice-level gate object, update the plan's
+`VALIDATION_EVIDENCE` with the gate JSON and do not mark the step complete
+until all slices have passing gate evidence.
+
 ## Default Flow
 
 1. **Read the active plan and implementation summary.**

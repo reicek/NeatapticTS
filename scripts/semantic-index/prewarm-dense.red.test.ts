@@ -124,6 +124,7 @@ describe('prewarm-dense.mjs', () => {
           json: true,
           logger: () => {},
           modelExists: () => false,
+          rerankerModelExists: () => false,
         });
 
         console.log(JSON.stringify({

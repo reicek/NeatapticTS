@@ -1,6 +1,6 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: 28a64963c8f31d1bd9aa56f82740292de5d293f3ac91ec1e21d845b8ebe66482 -->
-<!-- source-file-count: 117 -->
+<!-- source-hash: 87deefb0684a95ef68d415c48c06dfbd288162c8eb565737ec88e79111ad3637 -->
+<!-- source-file-count: 118 -->
 # Canonical Agent and Skill Routing Table
 
 > Generated file. Do not edit manually.
@@ -11,7 +11,7 @@
 
 | Name | Tier | Model | Agents | Skills |
 | --- | --- | --- | --- | --- |
-| 00-helping | 1 | glm-5.1:cloud (ollama) | helping-gap-resolution-coordinator<br>helping-agent-maintenance-coordinator<br>skill-inventory-auditor<br>agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>model-name-auditor<br>skill-trigger-eval-designer<br>skill-output-eval-grader<br>coverage-guard<br>learning-event-capturer<br>file-change-summarizer | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>subagent-delegation-patterns<br>capturing-learning-event<br>routing-optimization-policy |
+| 00-helping | 1 | glm-5.1:cloud (ollama) | helping-gap-resolution-coordinator<br>helping-agent-maintenance-coordinator<br>skill-inventory-auditor<br>agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>model-name-auditor<br>skill-trigger-eval-designer<br>skill-output-eval-grader<br>coverage-guard<br>learning-event-capturer<br>file-change-summarizer<br>slice-orchestration-scheduler | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>subagent-delegation-patterns<br>capturing-learning-event<br>routing-optimization-policy<br>phase-handoff-workflow<br>tracker-handoff |
 | 01-planning | 1 | glm-5.1:cloud (ollama) | planning-context-coordinator<br>planning-risk-coordinator<br>planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>plan-scout<br>model-name-auditor<br>plan-registration-auditor<br>helping-gap-resolution-coordinator<br>research-synthesis-specialist<br>phase-handoff-designer | plan-alignment<br>tracker-handoff<br>phase-handoff-workflow<br>agent-frontmatter-standards<br>model-routing-and-budget<br>license-attribution-audit |
 | 02-researching | 1 | glm-5.1:cloud (ollama) | research-codebase-coordinator<br>plan-scout<br>docs-scout<br>repo-cortex-scout<br>boundary-mapper<br>skill-inventory-auditor<br>helping-gap-resolution-coordinator<br>cortex-embeddings-scout | subagent-delegation-patterns<br>research-methodology<br>repo-cortex-workflow |
 | 03-red-testing | 1 | glm-5.1:cloud (ollama) | planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>unit-test-writer<br>coverage-scout<br>determinism-scout<br>plan-scout<br>helping-gap-resolution-coordinator | red-test-contracts<br>test-fix-workflow<br>coverage-tranche |
@@ -65,6 +65,7 @@
 | skill-inventory-auditor | 3 | kimi-k2.7-code:cloud (ollama) | - | agent-inventory-audit |
 | skill-output-eval-grader | 3 | kimi-k2.7-code:cloud (ollama) | - | skill-output-evals |
 | skill-trigger-eval-designer | 3 | kimi-k2.7-code:cloud (ollama) | - | skill-description-evals |
+| slice-orchestration-scheduler | 3 | glm-5.1:cloud (ollama) | - | subagent-delegation-patterns<br>phase-handoff-workflow<br>tracker-handoff |
 | solid-split | 2 | kimi-k2.7-code:cloud (ollama) | boundary-mapper<br>plan-scout<br>docs-scout | solid-split |
 | test-coverage-analyst | 3 | kimi-k2.7-code:cloud (ollama) | - | coverage-guard<br>coverage-tranche |
 | unit-test-runner | 3 | kimi-k2.7-code:cloud (ollama) | - | running-unit-tests |
@@ -105,7 +106,7 @@
 | nge-core-algorithm | skill | - | nge-core-scout | self |
 | onnx-work | skill | - | 04-implementing | self |
 | performance-optimization | skill | - | 04-implementing | self |
-| phase-handoff-workflow | skill | - | 01-planning<br>phase-handoff-designer | self |
+| phase-handoff-workflow | skill | - | 00-helping<br>01-planning<br>phase-handoff-designer<br>slice-orchestration-scheduler | self |
 | plan-alignment | skill | - | 01-planning<br>plan-scout<br>planning-context-coordinator<br>research-synthesis-specialist | self |
 | plan-sync-validation | skill | - | 05-green-testing<br>07-logging<br>plan-registration-auditor | self |
 | planning-acceptance-criteria | skill | - | acceptance-criteria-writer<br>planning-test-strategy-coordinator | self |
@@ -121,12 +122,12 @@
 | skill-output-evals | skill | - | skill-output-eval-grader | self |
 | solid-split | skill | - | boundary-mapper<br>solid-split | self |
 | splitting-monolithic-agent | skill | - | helping-agent-maintenance-coordinator | self |
-| subagent-delegation-patterns | skill | - | 00-helping<br>02-researching<br>helping-gap-resolution-coordinator<br>implementation-pattern-coordinator<br>research-codebase-coordinator | self |
+| subagent-delegation-patterns | skill | - | 00-helping<br>02-researching<br>helping-gap-resolution-coordinator<br>implementation-pattern-coordinator<br>research-codebase-coordinator<br>slice-orchestration-scheduler | self |
 | summarizing-session-log | skill | - | file-change-summarizer | self |
 | test-fix-workflow | skill | - | 03-red-testing | self |
 | trace-analyzer-extension | skill | - | 04-implementing | self |
 | trace-audit-reporting | skill | - | 05-green-testing | self |
-| tracker-handoff | skill | - | 01-planning<br>04-implementing<br>07-logging | self |
+| tracker-handoff | skill | - | 00-helping<br>01-planning<br>04-implementing<br>07-logging<br>slice-orchestration-scheduler | self |
 | triaging-test-failures | skill | - | failure-triage-specialist | self |
 | updating-agent-frontmatter | skill | - | agent-frontmatter-auditor | self |
 | updating-js-docs | skill | - | 06-documenting | self |

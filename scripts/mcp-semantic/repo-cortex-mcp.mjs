@@ -20,6 +20,7 @@
  *   MCP --> list_families
  *   MCP --> scan_code_quality
  *   MCP --> expand_query
+ *   MCP --> submit_feedback
  *   search_corpus --> searchCorpus
  *   load_chunk --> loadChunk
  *   load_parent_chunk --> loadParentChunk
@@ -29,6 +30,7 @@
  *   list_families --> listFamilies
  *   scan_code_quality --> runDocsQualityMetrics
  *   expand_query --> expandQuery
+ *   submit_feedback --> submitFeedback
  * ```
  */
 import { pathToFileURL } from 'node:url';
@@ -44,6 +46,7 @@ import {
   runStdioMcpServer,
   selfCheckError,
 } from '../agent-customization/mcp/mcp-utils.mjs';
+import { expandQueryHandler } from './tools/expand-query.mjs';
 import { freshnessCheck } from './tools/freshness-check.mjs';
 import { indexStats } from './tools/index-stats.mjs';
 import { listFamilies } from './tools/list-families.mjs';
@@ -52,8 +55,8 @@ import { loadDocument } from './tools/load-document.mjs';
 import { loadParentChunk } from './tools/load-parent-chunk.mjs';
 import { runDocsQualityMetrics } from '../semantic-index/docs-quality/docs-quality.metrics.mjs';
 import { searchCorpus } from './tools/search-corpus.mjs';
+import { submitFeedback } from './tools/submit-feedback.mjs';
 import { traverseGraphHandler } from './tools/traverse-graph.mjs';
-import { expandQueryHandler } from './tools/expand-query.mjs';
 
 const SERVER_VERSION = '0.1.0';
 const ENTRYPOINT = 'scripts/mcp-semantic/repo-cortex-mcp.mjs';
@@ -265,7 +268,14 @@ export function createRepoCortexTools(databasePath) {
         'Load one indexed corpus chunk by numeric chunk ID. Returns v2 semantic metadata including depth, parent_chunk_id, context_header, symbol_name, signature_text, jsdoc_text, export_type, and module_path.',
       inputSchema: {
         type: 'object',
-        properties: { chunk_id: { type: 'number' } },
+        properties: {
+          chunk_id: { type: 'number' },
+          query: {
+            type: 'string',
+            description:
+              'Optional originating query for click correlation and deduplication.',
+          },
+        },
         required: ['chunk_id'],
         additionalProperties: false,
       },
@@ -672,6 +682,60 @@ export function createRepoCortexTools(databasePath) {
         additionalProperties: true,
       },
       handler: (argumentsObject) => expandQueryHandler({ ...argumentsObject }),
+    }),
+    createTool({
+      name: 'submit_feedback',
+      description:
+        'Submit an explicit feedback signal for a corpus chunk. Records reference, positive, or negative events and recomputes the chunk feedback boost score.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          chunk_id: {
+            type: 'number',
+            description: 'Numeric chunk identifier that received the feedback.',
+          },
+          signal_type: {
+            type: 'string',
+            enum: ['reference', 'positive', 'negative'],
+            description:
+              'Feedback signal type: reference (cited), positive (helpful), or negative (not helpful).',
+          },
+          context: {
+            type: 'string',
+            description:
+              'Optional free-text context explaining the feedback (truncated to 500 characters).',
+          },
+          query: {
+            type: 'string',
+            description: 'Optional originating query for correlation.',
+          },
+          agent_id: {
+            type: 'string',
+            description: 'Optional agent identifier that submitted the feedback.',
+          },
+        },
+        required: ['chunk_id', 'signal_type'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          chunk_id: { type: 'number' },
+          signal_type: { type: 'string' },
+          recorded: {
+            type: 'boolean',
+            description: 'True when the event was persisted.',
+          },
+          feedback_boost_after: {
+            type: 'number',
+            description: 'Recomputed feedback boost score after recording the event.',
+          },
+        },
+        required: ['chunk_id', 'signal_type', 'recorded', 'feedback_boost_after'],
+        additionalProperties: false,
+      },
+      handler: (argumentsObject) =>
+        submitFeedback({ ...argumentsObject, databasePath }),
     }),
   ];
 }
