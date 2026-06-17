@@ -1,3 +1,7 @@
+---
+tier: 1
+---
+
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
 TASK_STATUS: SUCCESS | PARTIAL | FAILED

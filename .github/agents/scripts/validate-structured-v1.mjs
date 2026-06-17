@@ -6,11 +6,12 @@ const args = process.argv.slice(2);
 const file = args[0];
 
 try {
-  const content = file ? fs.readFileSync(file, 'utf8') : fs.readFileSync(0, 'utf8');
+  let content = file ? fs.readFileSync(file, 'utf8') : fs.readFileSync(0, 'utf8');
 
-  // Determine agent tier from YAML frontmatter so the structured-v1 contract can
-  // match the canonical quality contract (Tier 1 uses PHASE_COMPLETE / SUB_ORCHESTRATORS_USED;
-  // lower tiers omit them).
+  // Remove UTF-8 BOM if present and trim any leading whitespace/newlines
+  content = content.replace(/^\uFEFF/, '').trim();
+
+  // Match YAML frontmatter block at the start of the file
   const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!frontmatterMatch) {
     console.error(JSON.stringify({ pass: false, errors: ['No YAML frontmatter block found'] }));
