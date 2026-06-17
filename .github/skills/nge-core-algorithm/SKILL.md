@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # NGE Core Algorithm Playbook
 
 Use this skill when the work is about the algorithmic core of NGE rather than a

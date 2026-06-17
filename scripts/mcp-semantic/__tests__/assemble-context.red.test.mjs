@@ -48,13 +48,20 @@ describe('assemble-context pipeline', () => {
   describe('enrichChunks', () => {
     it('adds a SHA-256 hash and context header to each chunk', async () => {
       const { enrichChunks } = await loadAssembleContext();
-      const chunk = makeChunk({ chunk_id: 10, file_path: 'src/bar.ts', heading_path: 'Bar', body_text: 'const x = 1;' });
-      const [enriched] = await enrichChunks([chunk], { query_class: 'code' });
-      expect(enriched).toEqual(expect.objectContaining({
+      const chunk = makeChunk({
         chunk_id: 10,
-        sha256: sha256('const x = 1;'),
-        context_header: 'src/bar.ts > Bar',
-      }));
+        file_path: 'src/bar.ts',
+        heading_path: 'Bar',
+        body_text: 'const x = 1;',
+      });
+      const [enriched] = await enrichChunks([chunk], { query_class: 'code' });
+      expect(enriched).toEqual(
+        expect.objectContaining({
+          chunk_id: 10,
+          sha256: sha256('const x = 1;'),
+          context_header: 'src/bar.ts > Bar',
+        }),
+      );
     });
 
     it('preserves existing embeddings when they are already present', async () => {
@@ -90,7 +97,9 @@ describe('assemble-context pipeline', () => {
     it('removes near-duplicate chunks when cosine similarity is >= 0.95', async () => {
       const { deduplicateChunks } = await loadAssembleContext();
       const embedding = vector(4, 0.5);
-      const nearDuplicate = embedding.map((v, index) => (index === 0 ? v + 0.02 : v));
+      const nearDuplicate = embedding.map((v, index) =>
+        index === 0 ? v + 0.02 : v,
+      );
       const chunks = [
         makeChunk({ chunk_id: 1, embedding }),
         makeChunk({ chunk_id: 2, embedding: nearDuplicate }),
@@ -113,8 +122,14 @@ describe('assemble-context pipeline', () => {
     it('collapses parents in favor of their children', async () => {
       const { deduplicateChunks } = await loadAssembleContext();
       const parent = makeChunk({ chunk_id: 1, parent_chunk_id: null });
-      const child = makeChunk({ chunk_id: 2, parent_chunk_id: 1, body_text: 'child body' });
-      const result = deduplicateChunks([parent, child], { cosineThreshold: 0.95 });
+      const child = makeChunk({
+        chunk_id: 2,
+        parent_chunk_id: 1,
+        body_text: 'child body',
+      });
+      const result = deduplicateChunks([parent, child], {
+        cosineThreshold: 0.95,
+      });
       expect(result.map((c) => c.chunk_id)).toEqual([2]);
     });
 
@@ -160,15 +175,34 @@ describe('assemble-context pipeline', () => {
         makeChunk({ chunk_id: 3, file_path: 'src/mid.ts', score: 0.5 }),
       ];
       const result = orderChunks(chunks);
-      expect(result.map((c) => c.file_path)).toEqual(['src/high.ts', 'src/mid.ts', 'src/low.ts']);
+      expect(result.map((c) => c.file_path)).toEqual([
+        'src/high.ts',
+        'src/mid.ts',
+        'src/low.ts',
+      ]);
     });
 
     it('orders chunks within a file by char_start ascending', async () => {
       const { orderChunks } = await loadAssembleContext();
       const chunks = [
-        makeChunk({ chunk_id: 1, file_path: 'src/a.ts', char_start: 40, score: 0.6 }),
-        makeChunk({ chunk_id: 2, file_path: 'src/a.ts', char_start: 10, score: 0.6 }),
-        makeChunk({ chunk_id: 3, file_path: 'src/a.ts', char_start: 25, score: 0.6 }),
+        makeChunk({
+          chunk_id: 1,
+          file_path: 'src/a.ts',
+          char_start: 40,
+          score: 0.6,
+        }),
+        makeChunk({
+          chunk_id: 2,
+          file_path: 'src/a.ts',
+          char_start: 10,
+          score: 0.6,
+        }),
+        makeChunk({
+          chunk_id: 3,
+          file_path: 'src/a.ts',
+          char_start: 25,
+          score: 0.6,
+        }),
       ];
       const result = orderChunks(chunks);
       expect(result.map((c) => c.chunk_id)).toEqual([2, 3, 1]);
@@ -177,8 +211,18 @@ describe('assemble-context pipeline', () => {
     it('prefers family priority when scores are equal', async () => {
       const { orderChunks } = await loadAssembleContext();
       const chunks = [
-        makeChunk({ chunk_id: 1, file_path: 'src/a.ts', score: 0.6, doc_family: 'test' }),
-        makeChunk({ chunk_id: 2, file_path: 'src/b.ts', score: 0.6, doc_family: 'src' }),
+        makeChunk({
+          chunk_id: 1,
+          file_path: 'src/a.ts',
+          score: 0.6,
+          doc_family: 'test',
+        }),
+        makeChunk({
+          chunk_id: 2,
+          file_path: 'src/b.ts',
+          score: 0.6,
+          doc_family: 'src',
+        }),
       ];
       const result = orderChunks(chunks, { familyPriority: ['src', 'test'] });
       expect(result.map((c) => c.chunk_id)).toEqual([2, 1]);
@@ -195,7 +239,13 @@ describe('assemble-context pipeline', () => {
 
     it('includes all essential chunks even when over budget', async () => {
       const { enforceBudget } = await loadAssembleContext();
-      const chunks = [makeChunk({ chunk_id: 1, tier: 'essential', body_text: 'a '.repeat(5000) })];
+      const chunks = [
+        makeChunk({
+          chunk_id: 1,
+          tier: 'essential',
+          body_text: 'a '.repeat(5000),
+        }),
+      ];
       const result = enforceBudget(chunks, { budget: 10 });
       expect(result.selectedChunks.map((c) => c.chunk_id)).toEqual([1]);
     });
@@ -203,8 +253,16 @@ describe('assemble-context pipeline', () => {
     it('truncates supplementary chunks before supporting chunks', async () => {
       const { enforceBudget } = await loadAssembleContext();
       const chunks = [
-        makeChunk({ chunk_id: 1, tier: 'supplementary', body_text: 'extra content here' }),
-        makeChunk({ chunk_id: 2, tier: 'supporting', body_text: 'supporting content' }),
+        makeChunk({
+          chunk_id: 1,
+          tier: 'supplementary',
+          body_text: 'extra content here',
+        }),
+        makeChunk({
+          chunk_id: 2,
+          tier: 'supporting',
+          body_text: 'supporting content',
+        }),
       ];
       const result = enforceBudget(chunks, { budget: 5 });
       expect(result.selectedChunks.map((c) => c.chunk_id)).toEqual([2]);
@@ -213,8 +271,16 @@ describe('assemble-context pipeline', () => {
     it('reports token_count not exceeding the budget', async () => {
       const { enforceBudget } = await loadAssembleContext();
       const chunks = [
-        makeChunk({ chunk_id: 1, tier: 'essential', body_text: 'one two three four five' }),
-        makeChunk({ chunk_id: 2, tier: 'supplementary', body_text: 'six seven eight nine ten' }),
+        makeChunk({
+          chunk_id: 1,
+          tier: 'essential',
+          body_text: 'one two three four five',
+        }),
+        makeChunk({
+          chunk_id: 2,
+          tier: 'supplementary',
+          body_text: 'six seven eight nine ten',
+        }),
       ];
       const result = enforceBudget(chunks, { budget: 4 });
       expect(result.tokenCount).toBeLessThanOrEqual(4);
@@ -223,7 +289,9 @@ describe('assemble-context pipeline', () => {
     it('truncates at the last sentence boundary when possible', async () => {
       const { enforceBudget } = await loadAssembleContext();
       const body = 'First sentence. Second sentence. Third sentence.';
-      const chunks = [makeChunk({ chunk_id: 1, tier: 'essential', body_text: body })];
+      const chunks = [
+        makeChunk({ chunk_id: 1, tier: 'essential', body_text: body }),
+      ];
       const result = enforceBudget(chunks, { budget: 5 });
       expect(result.selectedChunks[0].body_text).toMatch(/\.$/);
     });
@@ -233,7 +301,13 @@ describe('assemble-context pipeline', () => {
     it('emits context headers in markdown format', async () => {
       const { stitchContext } = await loadAssembleContext();
       const chunks = [
-        makeChunk({ chunk_id: 1, file_path: 'src/a.ts', heading_path: 'A', context_header: 'src/a.ts > A', body_text: 'body a' }),
+        makeChunk({
+          chunk_id: 1,
+          file_path: 'src/a.ts',
+          heading_path: 'A',
+          context_header: 'src/a.ts > A',
+          body_text: 'body a',
+        }),
       ];
       const result = stitchContext(chunks, { context_format: 'markdown' });
       expect(result).toMatch(/\[src\/a\.ts > A\]\s*\n?body a/);
@@ -242,8 +316,20 @@ describe('assemble-context pipeline', () => {
     it('does not repeat the same file header for contiguous same-file chunks', async () => {
       const { stitchContext } = await loadAssembleContext();
       const chunks = [
-        makeChunk({ chunk_id: 1, file_path: 'src/a.ts', heading_path: 'A', context_header: 'src/a.ts > A', body_text: 'one' }),
-        makeChunk({ chunk_id: 2, file_path: 'src/a.ts', heading_path: 'A', context_header: 'src/a.ts > A', body_text: 'two' }),
+        makeChunk({
+          chunk_id: 1,
+          file_path: 'src/a.ts',
+          heading_path: 'A',
+          context_header: 'src/a.ts > A',
+          body_text: 'one',
+        }),
+        makeChunk({
+          chunk_id: 2,
+          file_path: 'src/a.ts',
+          heading_path: 'A',
+          context_header: 'src/a.ts > A',
+          body_text: 'two',
+        }),
       ];
       const result = stitchContext(chunks, { context_format: 'markdown' });
       const headerCount = (result.match(/\[src\/a\.ts > A\]/g) || []).length;
@@ -252,20 +338,40 @@ describe('assemble-context pipeline', () => {
 
     it('emits JSON output when context_format is json', async () => {
       const { stitchContext } = await loadAssembleContext();
-      const chunks = [makeChunk({ chunk_id: 1, context_header: 'src/a.ts > A', body_text: 'body a' })];
+      const chunks = [
+        makeChunk({
+          chunk_id: 1,
+          context_header: 'src/a.ts > A',
+          body_text: 'body a',
+        }),
+      ];
       const result = stitchContext(chunks, { context_format: 'json' });
-      expect(result).toEqual(expect.objectContaining({
-        chunks: expect.any(Array),
-        context: expect.any(String),
-        tokenCount: expect.any(Number),
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          chunks: expect.any(Array),
+          context: expect.any(String),
+          tokenCount: expect.any(Number),
+        }),
+      );
     });
 
     it('re-emits a header when the file changes', async () => {
       const { stitchContext } = await loadAssembleContext();
       const chunks = [
-        makeChunk({ chunk_id: 1, file_path: 'src/a.ts', heading_path: 'A', context_header: 'src/a.ts > A', body_text: 'a' }),
-        makeChunk({ chunk_id: 2, file_path: 'src/b.ts', heading_path: 'B', context_header: 'src/b.ts > B', body_text: 'b' }),
+        makeChunk({
+          chunk_id: 1,
+          file_path: 'src/a.ts',
+          heading_path: 'A',
+          context_header: 'src/a.ts > A',
+          body_text: 'a',
+        }),
+        makeChunk({
+          chunk_id: 2,
+          file_path: 'src/b.ts',
+          heading_path: 'B',
+          context_header: 'src/b.ts > B',
+          body_text: 'b',
+        }),
       ];
       const result = stitchContext(chunks, { context_format: 'markdown' });
       expect(result).toMatch(/\[src\/a\.ts > A\]/);
@@ -277,25 +383,43 @@ describe('assemble-context pipeline', () => {
     it('runs the full pipeline and returns context and metadata', async () => {
       const { assembleContext } = await loadAssembleContext();
       const chunks = [
-        makeChunk({ chunk_id: 1, file_path: 'src/a.ts', score: 0.8, body_text: 'important.' }),
-        makeChunk({ chunk_id: 2, file_path: 'src/a.ts', score: 0.2, body_text: 'noise.' }),
+        makeChunk({
+          chunk_id: 1,
+          file_path: 'src/a.ts',
+          score: 0.8,
+          body_text: 'important.',
+        }),
+        makeChunk({
+          chunk_id: 2,
+          file_path: 'src/a.ts',
+          score: 0.2,
+          body_text: 'noise.',
+        }),
       ];
       const result = await assembleContext(chunks, {
         budget: 100,
         context_format: 'markdown',
         query_class: 'code',
       });
-      expect(result).toEqual(expect.objectContaining({
-        context: expect.any(String),
-        tokenCount: expect.any(Number),
-        tierCounts: expect.any(Object),
-      }));
+      expect(result).toEqual(
+        expect.objectContaining({
+          context: expect.any(String),
+          tokenCount: expect.any(Number),
+          tierCounts: expect.any(Object),
+        }),
+      );
     });
 
     it('returns the same result for identical inputs', async () => {
       const { assembleContext } = await loadAssembleContext();
-      const chunks = [makeChunk({ chunk_id: 1, score: 0.6, body_text: 'stable.' })];
-      const options = { budget: 50, context_format: 'markdown', query_class: 'code' };
+      const chunks = [
+        makeChunk({ chunk_id: 1, score: 0.6, body_text: 'stable.' }),
+      ];
+      const options = {
+        budget: 50,
+        context_format: 'markdown',
+        query_class: 'code',
+      };
       const first = await assembleContext(chunks, options);
       const second = await assembleContext(chunks, options);
       expect(second).toEqual(first);
@@ -312,25 +436,35 @@ describe('search-context MCP tool', () => {
 
     it('rejects an unsupported context_format', async () => {
       const { searchContext } = await loadSearchContext();
-      await expect(searchContext({ query: 'NEAT', context_format: 'xml' })).rejects.toThrow('context_format');
+      await expect(
+        searchContext({ query: 'NEAT', context_format: 'xml' }),
+      ).rejects.toThrow('context_format');
     });
 
     it('rejects a non-positive token budget', async () => {
       const { searchContext } = await loadSearchContext();
-      await expect(searchContext({ query: 'NEAT', budget: 0 })).rejects.toThrow('budget');
+      await expect(searchContext({ query: 'NEAT', budget: 0 })).rejects.toThrow(
+        'budget',
+      );
     });
   });
 
   describe('output contract', () => {
     it('returns context, token_count, tier_counts, and dense_state', async () => {
       const { searchContext } = await loadSearchContext();
-      const result = await searchContext({ query: 'NEAT', limit: 3, budget: 100 });
-      expect(result).toEqual(expect.objectContaining({
-        context: expect.any(String),
-        token_count: expect.any(Number),
-        tier_counts: expect.any(Object),
-        dense_state: expect.any(String),
-      }));
+      const result = await searchContext({
+        query: 'NEAT',
+        limit: 3,
+        budget: 100,
+      });
+      expect(result).toEqual(
+        expect.objectContaining({
+          context: expect.any(String),
+          token_count: expect.any(Number),
+          tier_counts: expect.any(Object),
+          dense_state: expect.any(String),
+        }),
+      );
     });
 
     it('returns dense_degraded true when embeddings are cold', async () => {

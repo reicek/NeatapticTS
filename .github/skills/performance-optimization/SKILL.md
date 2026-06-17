@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Performance Optimization Playbook
 
 Use this skill when NeatapticTS source needs a measured memory or runtime
@@ -68,7 +70,7 @@ Use performance-optimization for slab allocator pool reuse.
 Evidence: trace shows ~40% of activation time in Float64Array allocation.
 Plan: Memory_Optimization.md Track 1 Phase 4.
 Invariant: activation output must be numerically identical before and after.
-Validate with: benchmarks/activation.bench.ts, then npm run test:silent.
+Validate with: benchmarks/activation.bench.ts. Only run `npm run test:silent` if the active step packet or user explicitly requires repo-wide confirmation.
 ```
 
 ## Required Workflow
@@ -96,7 +98,7 @@ Validate with: benchmarks/activation.bench.ts, then npm run test:silent.
    four categories (statements, branches, functions, lines) is required before
    proceeding.
 10. Run or author a benchmark to measure the improvement.
-11. Run `npm run test:silent` to confirm no regressions.
+11. Run `npm run test:silent` only if the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
 12. Update `plans/Memory_Optimization.md` with the completed phase.
 
 ## Correctness Contract

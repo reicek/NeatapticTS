@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Agent Inventory Audit
 
 This skill produces a structured snapshot of all agents and skills in the NeatapticTS customization system. It runs the four inventory and validation scripts, summarizes counts and errors, and records the result as evidence in the active plan. Use it before and after any customization change batch to establish a before/after comparison.

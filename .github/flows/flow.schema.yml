@@ -56,3 +56,16 @@ specialists: []
 # timeout-minutes (number): Per-flow execution budget hint in minutes.
 #   Not enforced mechanically; used for agent planning and cost guidance.
 timeout-minutes: 30
+
+# search-policy (object): Optional Cortex-First search policy declaration.
+#   Declares the primary and fallback search mechanisms for the flow, the
+#   allowed Cortex MCP tool names, and a human-readable description.
+#   primary (string, required): Primary search mechanism. Default "cortex-mcp".
+#   fallback (string, optional): Fallback search mechanism. Default "native-tools".
+#   tools (string[], optional): Allowed Cortex MCP tool names.
+#   description (string, optional): Human-readable description of the search policy.
+search-policy:
+  primary: 'cortex-mcp'
+  fallback: 'native-tools'
+  tools: []
+  description: ''

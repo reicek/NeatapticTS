@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Skill Description Evals
 
 This skill designs and grades trigger evaluation sets for NeatapticTS skill and agent descriptions. A description is the sole discovery surface; this skill validates that it fires on the right prompts and stays silent on near-misses, then feeds failures back into the description without overfitting.

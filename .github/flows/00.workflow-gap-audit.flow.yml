@@ -37,3 +37,17 @@ specialists:
   - 'Plan Scout'
 
 timeout-minutes: 30
+
+search-policy:
+  primary: cortex-mcp
+  fallback: native-tools
+  tools:
+    - freshness_check
+    - search_corpus
+    - search_advanced
+    - search_context
+    - load_chunk
+    - load_document
+    - traverse_graph
+    - expand_query
+  description: 'Cortex RAG is the primary search mechanism. Use Cortex MCP tools first; fall back to grep/glob/view only when Cortex is degraded or target is a known file path.'

@@ -33,15 +33,23 @@ function teardownDb(db, tempDir) {
 }
 
 function insertDocumentAndChunk(database) {
-  database.prepare(`
+  database
+    .prepare(
+      `
     INSERT INTO documents (file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
     VALUES ('test.ts', 'src', 0, 0, 'abc', 0)
-  `).run();
+  `,
+    )
+    .run();
   const doc = database.prepare('SELECT doc_id FROM documents').get();
-  database.prepare(`
+  database
+    .prepare(
+      `
     INSERT INTO chunks (doc_id, chunk_index, body_text, char_start, char_end, depth)
     VALUES (?, 0, 'test body', 0, 9, 0)
-  `).run(doc.doc_id);
+  `,
+    )
+    .run(doc.doc_id);
   return database.prepare('SELECT chunk_id FROM chunks').get().chunk_id;
 }
 
@@ -50,9 +58,13 @@ describe('feedback-core', () => {
     it('creates feedback_events table with required columns', async () => {
       const { db, tempDir } = await setupDb();
       try {
-        const row = db.prepare(`
+        const row = db
+          .prepare(
+            `
           SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'feedback_events'
-        `).get();
+        `,
+          )
+          .get();
         expect(row).toEqual({ name: 'feedback_events' });
       } finally {
         await teardownDb(db, tempDir);
@@ -62,9 +74,13 @@ describe('feedback-core', () => {
     it('creates feedback_scores table with required columns', async () => {
       const { db, tempDir } = await setupDb();
       try {
-        const row = db.prepare(`
+        const row = db
+          .prepare(
+            `
           SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'feedback_scores'
-        `).get();
+        `,
+          )
+          .get();
         expect(row).toEqual({ name: 'feedback_scores' });
       } finally {
         await teardownDb(db, tempDir);
@@ -75,12 +91,16 @@ describe('feedback-core', () => {
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO feedback_events (event_id, chunk_id, signal_type, signal_strength)
           VALUES ('evt1', ?, 'impression', 0.1)
-        `).run(chunkId);
+        `,
+        ).run(chunkId);
         db.prepare('DELETE FROM chunks WHERE chunk_id = ?').run(chunkId);
-        const row = db.prepare('SELECT COUNT(*) as count FROM feedback_events').get();
+        const row = db
+          .prepare('SELECT COUNT(*) as count FROM feedback_events')
+          .get();
         expect(row).toEqual({ count: 0 });
       } finally {
         await teardownDb(db, tempDir);
@@ -91,12 +111,16 @@ describe('feedback-core', () => {
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO feedback_scores (chunk_id, total_positive, total_negative, total_impressions, total_clicks, total_references, feedback_boost)
           VALUES (?, 1, 0, 0, 0, 0, 0.1)
-        `).run(chunkId);
+        `,
+        ).run(chunkId);
         db.prepare('DELETE FROM chunks WHERE chunk_id = ?').run(chunkId);
-        const row = db.prepare('SELECT COUNT(*) as count FROM feedback_scores').get();
+        const row = db
+          .prepare('SELECT COUNT(*) as count FROM feedback_scores')
+          .get();
         expect(row).toEqual({ count: 0 });
       } finally {
         await teardownDb(db, tempDir);
@@ -110,8 +134,16 @@ describe('feedback-core', () => {
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        await recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'impression', query_hash: 'hash123' });
-        const row = db.prepare("SELECT signal_strength FROM feedback_events WHERE signal_type = 'impression'").get();
+        await recordFeedbackEvent(db, {
+          chunk_id: chunkId,
+          signal_type: 'impression',
+          query_hash: 'hash123',
+        });
+        const row = db
+          .prepare(
+            "SELECT signal_strength FROM feedback_events WHERE signal_type = 'impression'",
+          )
+          .get();
         expect(row).toEqual({ signal_strength: 0.1 });
       } finally {
         await teardownDb(db, tempDir);
@@ -123,8 +155,16 @@ describe('feedback-core', () => {
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        await recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'click', query_hash: 'hash123' });
-        const row = db.prepare("SELECT signal_strength FROM feedback_events WHERE signal_type = 'click'").get();
+        await recordFeedbackEvent(db, {
+          chunk_id: chunkId,
+          signal_type: 'click',
+          query_hash: 'hash123',
+        });
+        const row = db
+          .prepare(
+            "SELECT signal_strength FROM feedback_events WHERE signal_type = 'click'",
+          )
+          .get();
         expect(row).toEqual({ signal_strength: 0.3 });
       } finally {
         await teardownDb(db, tempDir);
@@ -136,8 +176,16 @@ describe('feedback-core', () => {
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        await recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'reference', query_hash: 'hash123' });
-        const row = db.prepare("SELECT signal_strength FROM feedback_events WHERE signal_type = 'reference'").get();
+        await recordFeedbackEvent(db, {
+          chunk_id: chunkId,
+          signal_type: 'reference',
+          query_hash: 'hash123',
+        });
+        const row = db
+          .prepare(
+            "SELECT signal_strength FROM feedback_events WHERE signal_type = 'reference'",
+          )
+          .get();
         expect(row).toEqual({ signal_strength: 0.6 });
       } finally {
         await teardownDb(db, tempDir);
@@ -149,8 +197,16 @@ describe('feedback-core', () => {
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        await recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'positive', query_hash: 'hash123' });
-        const row = db.prepare("SELECT signal_strength FROM feedback_events WHERE signal_type = 'positive'").get();
+        await recordFeedbackEvent(db, {
+          chunk_id: chunkId,
+          signal_type: 'positive',
+          query_hash: 'hash123',
+        });
+        const row = db
+          .prepare(
+            "SELECT signal_strength FROM feedback_events WHERE signal_type = 'positive'",
+          )
+          .get();
         expect(row).toEqual({ signal_strength: 1.0 });
       } finally {
         await teardownDb(db, tempDir);
@@ -162,8 +218,16 @@ describe('feedback-core', () => {
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        await recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'negative', query_hash: 'hash123' });
-        const row = db.prepare("SELECT signal_strength FROM feedback_events WHERE signal_type = 'negative'").get();
+        await recordFeedbackEvent(db, {
+          chunk_id: chunkId,
+          signal_type: 'negative',
+          query_hash: 'hash123',
+        });
+        const row = db
+          .prepare(
+            "SELECT signal_strength FROM feedback_events WHERE signal_type = 'negative'",
+          )
+          .get();
         expect(row).toEqual({ signal_strength: -1.0 });
       } finally {
         await teardownDb(db, tempDir);
@@ -176,7 +240,11 @@ describe('feedback-core', () => {
       try {
         const chunkId = insertDocumentAndChunk(db);
         expect(() =>
-          recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'bogus', query_hash: 'hash123' }),
+          recordFeedbackEvent(db, {
+            chunk_id: chunkId,
+            signal_type: 'bogus',
+            query_hash: 'hash123',
+          }),
         ).toThrow('Unknown signal_type');
       } finally {
         await teardownDb(db, tempDir);
@@ -194,7 +262,11 @@ describe('feedback-core', () => {
           signal_type: 'impression',
           query_hash: preHashed,
         });
-        const row = db.prepare("SELECT query_hash FROM feedback_events WHERE signal_type = 'impression'").get();
+        const row = db
+          .prepare(
+            "SELECT query_hash FROM feedback_events WHERE signal_type = 'impression'",
+          )
+          .get();
         expect(row.query_hash).toBe(preHashed.toLowerCase());
       } finally {
         await teardownDb(db, tempDir);
@@ -282,11 +354,15 @@ describe('feedback-core', () => {
     });
 
     it('applies exponential time decay with 7-day half-life during recompute', async () => {
-      const { recordFeedbackEvent, recomputeAllFeedbackScores } = await import(modulePath);
+      const { recordFeedbackEvent, recomputeAllFeedbackScores } = await import(
+        modulePath
+      );
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const sevenDaysAgo = new Date(
+          Date.now() - 7 * 24 * 60 * 60 * 1000,
+        ).toISOString();
         await recordFeedbackEvent(db, {
           chunk_id: chunkId,
           signal_type: 'positive',
@@ -294,7 +370,11 @@ describe('feedback-core', () => {
           created_at: sevenDaysAgo,
         });
         await recomputeAllFeedbackScores(db);
-        const row = db.prepare('SELECT feedback_boost FROM feedback_scores WHERE chunk_id = ?').get(chunkId);
+        const row = db
+          .prepare(
+            'SELECT feedback_boost FROM feedback_scores WHERE chunk_id = ?',
+          )
+          .get(chunkId);
         // After 7 days decay = 0.5; total_positive_decayed = 0.5; boost = 0.5 * tanh(1.0) ≈ 0.381
         expect(row.feedback_boost).toBeCloseTo(0.5 * Math.tanh(1.0), 2);
       } finally {
@@ -354,7 +434,9 @@ describe('feedback-core', () => {
     });
 
     it('applies impression decay during full recompute for low-CTR chunks', async () => {
-      const { recordFeedbackEvent, recomputeAllFeedbackScores } = await import(modulePath);
+      const { recordFeedbackEvent, recomputeAllFeedbackScores } = await import(
+        modulePath
+      );
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
@@ -365,9 +447,17 @@ describe('feedback-core', () => {
             query_hash: `hash${i}`,
           });
         }
-        await recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'click', query_hash: 'hash0' });
+        await recordFeedbackEvent(db, {
+          chunk_id: chunkId,
+          signal_type: 'click',
+          query_hash: 'hash0',
+        });
         await recomputeAllFeedbackScores(db);
-        const row = db.prepare('SELECT feedback_boost FROM feedback_scores WHERE chunk_id = ?').get(chunkId);
+        const row = db
+          .prepare(
+            'SELECT feedback_boost FROM feedback_scores WHERE chunk_id = ?',
+          )
+          .get(chunkId);
         // 20 impressions, 1 click => CTR = 0.05 < 0.1 => negative decay applied
         expect(row.feedback_boost).toBeLessThan(0);
       } finally {
@@ -388,7 +478,11 @@ describe('feedback-core', () => {
           signal_type: 'positive',
           context: longContext,
         });
-        const row = db.prepare("SELECT context FROM feedback_events WHERE signal_type = 'positive'").get();
+        const row = db
+          .prepare(
+            "SELECT context FROM feedback_events WHERE signal_type = 'positive'",
+          )
+          .get();
         expect(row.context.length).toBeLessThanOrEqual(500);
       } finally {
         await teardownDb(db, tempDir);
@@ -406,7 +500,11 @@ describe('feedback-core', () => {
           signal_type: 'impression',
           query_hash: query,
         });
-        const row = db.prepare("SELECT query_hash FROM feedback_events WHERE signal_type = 'impression'").get();
+        const row = db
+          .prepare(
+            "SELECT query_hash FROM feedback_events WHERE signal_type = 'impression'",
+          )
+          .get();
         const expectedHash = createHash('sha256').update(query).digest('hex');
         expect(row.query_hash).toBe(expectedHash);
       } finally {
@@ -417,12 +515,22 @@ describe('feedback-core', () => {
 
   describe('updateFeedbackScores', () => {
     it('updates scores with negative events', async () => {
-      const { recordFeedbackEvent, updateFeedbackScores } = await import(modulePath);
+      const { recordFeedbackEvent, updateFeedbackScores } = await import(
+        modulePath
+      );
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        await recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'positive', query_hash: 'hash123' });
-        await recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'negative', query_hash: 'hash123' });
+        await recordFeedbackEvent(db, {
+          chunk_id: chunkId,
+          signal_type: 'positive',
+          query_hash: 'hash123',
+        });
+        await recordFeedbackEvent(db, {
+          chunk_id: chunkId,
+          signal_type: 'negative',
+          query_hash: 'hash123',
+        });
         const nowMs = Date.now();
         const score = await updateFeedbackScores(db, chunkId, nowMs);
         expect(score.total_negative).toBeGreaterThan(0);
@@ -445,7 +553,9 @@ describe('feedback-core', () => {
     });
 
     it('applies time decay from numeric created_at timestamps', async () => {
-      const { recordFeedbackEvent, updateFeedbackScores } = await import(modulePath);
+      const { recordFeedbackEvent, updateFeedbackScores } = await import(
+        modulePath
+      );
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
@@ -465,7 +575,9 @@ describe('feedback-core', () => {
     });
 
     it('falls back to 0 for unparseable created_at strings', async () => {
-      const { recordFeedbackEvent, updateFeedbackScores } = await import(modulePath);
+      const { recordFeedbackEvent, updateFeedbackScores } = await import(
+        modulePath
+      );
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
@@ -483,11 +595,17 @@ describe('feedback-core', () => {
     });
 
     it('uses the current time when now is omitted', async () => {
-      const { recordFeedbackEvent, updateFeedbackScores } = await import(modulePath);
+      const { recordFeedbackEvent, updateFeedbackScores } = await import(
+        modulePath
+      );
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        await recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'positive', query_hash: 'hash123' });
+        await recordFeedbackEvent(db, {
+          chunk_id: chunkId,
+          signal_type: 'positive',
+          query_hash: 'hash123',
+        });
         const score = await updateFeedbackScores(db, chunkId);
         expect(score.total_positive).toBeGreaterThan(0);
       } finally {
@@ -496,17 +614,22 @@ describe('feedback-core', () => {
     });
 
     it('recomputes all scores using the current time when now is omitted', async () => {
-      const { recordFeedbackEvent, recomputeAllFeedbackScores } = await import(modulePath);
+      const { recordFeedbackEvent, recomputeAllFeedbackScores } = await import(
+        modulePath
+      );
       const { db, tempDir } = await setupDb();
       try {
         const chunkId = insertDocumentAndChunk(db);
-        await recordFeedbackEvent(db, { chunk_id: chunkId, signal_type: 'positive', query_hash: 'hash123' });
+        await recordFeedbackEvent(db, {
+          chunk_id: chunkId,
+          signal_type: 'positive',
+          query_hash: 'hash123',
+        });
         const count = await recomputeAllFeedbackScores(db);
         expect(count).toBe(1);
       } finally {
         await teardownDb(db, tempDir);
       }
     });
-
   });
 });

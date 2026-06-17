@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Checkpointing And Persistence Playbook
 
 Use this skill when NeatapticTS work touches the Phase 4 save, load, or resume
@@ -128,7 +130,7 @@ Plan: plans/Population_Save_Resume_and_Checkpointing.md.
 Mode: full + strict restore.
 Invariant: resumed deterministic run must match the original trajectory once the checkpoint is restored.
 Migration concern: network serialization already preserves innovation and gene identity, but orchestration counters and RNG state are still missing.
-Validate with: save/load roundtrip tests, deterministic replay test, and npm run test:silent.
+Validate with: save/load roundtrip tests and deterministic replay test. Only run `npm run test:silent` if the active step packet or user explicitly requires repo-wide confirmation.
 ```
 
 ## Required Workflow
@@ -187,7 +189,7 @@ Validate with: save/load roundtrip tests, deterministic replay test, and npm run
 - Deterministic replay tests when exact resume is part of the claim.
 - Negative tests for strict restore failures.
 - Focused serialization tests when the change interacts with network identity.
-- `npm run test:silent` after the focused tranche is green.
+- `npm run test:silent` only when the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
 
 ## Guardrails
 

@@ -39,7 +39,7 @@ NeatapticTS custom-agent frontmatter.
 
 | Qualified model string        | Role in fleet                           | Capability note                                                                                                                   |
 | ----------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `glm-5.1:cloud (ollama)`      | Elite coding and complex orchestration  | Best for SWE-Bench Pro performance, long-horizon autonomy, complex TypeScript refactoring, and multi-step engineering tasks.    |
+| `glm-5.2:cloud (ollama)`      | Elite coding and complex orchestration  | Best for SWE-Bench Pro performance, long-horizon autonomy, complex TypeScript refactoring, and multi-step engineering tasks.    |
 | `kimi-k2.7-code:cloud (ollama)`     | Frontend-focused and tool integration   | Optimized for modern TS ecosystems (React, Next.js), visual components, MCP tool calling, and cost-effective agentic workflows. |
 
 Other Copilot models may exist in docs or the client, but they are not
@@ -55,7 +55,7 @@ confirmed in the active client and validated locally.
    Decide whether the agent is primarily backend/infrastructure implementation,
    frontend/UI work, tool integration, or long-horizon orchestration.
 3. Choose the appropriate model for the job.
-   Use `glm-5.1:cloud (ollama)` for complex backend logic, SWE-Bench style tasks,
+   Use `glm-5.2:cloud (ollama)` for complex backend logic, SWE-Bench style tasks,
    and marathon execution loops. Use `kimi-k2.7-code:cloud (ollama)` for frontend work,
    visual components, rapid iteration, and tool-heavy workflows.
 4. Write a single model string.
@@ -75,7 +75,7 @@ after any frontmatter edit.
 
 | Agent type                                               | Canonical scalar model       | Notes                                                                 |
 | -------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------- |
-| Main orchestrators (00-07 numbered agents)               | `glm-5.1:cloud (ollama)`     | Long-horizon autonomy, complex SDLC phase coordination, marathon execution loops without strategy fatigue. |
+| Main orchestrators (00-07 numbered agents)               | `glm-5.2:cloud (ollama)`     | Long-horizon autonomy, complex SDLC phase coordination, marathon execution loops without strategy fatigue. |
 | Specialized executors/scouts (all other agents)          | `kimi-k2.7-code:cloud (ollama)` | Superior tool integration, MCP workflows, 30% fewer reasoning tokens, cost-effective for focused tasks. |
 
 

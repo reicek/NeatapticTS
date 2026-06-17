@@ -10,23 +10,84 @@ import {
 } from './customization-utils.mjs';
 
 // Match only the exact canonical footer at file end (case-sensitive header)
-const FOOTER_REGEX = /## Output format\s*\r?\n```structured-v1[\s\S]*?```\s*$/mu;
+const FOOTER_REGEX =
+  /## Output format\s*\r?\n```structured-v1[\s\S]*?```\s*$/mu;
 // Find any Output format heading (case-insensitive) for prefix extraction
 const OUTPUT_HEADING_RE = /##\s+Output format/iu;
 
 // Minimal per-tier required fields mapping (kept in sync with the v2 validator)
 const TIER_REQUIRED_FIELDS = {
-  '1': [
-    'OUTPUT_CONTRACT','TASK_STATUS','TIER','ROLE','TASK_RECEIVED','FILES_READ','FILES_CHANGED','KEY_FINDINGS','ACTIONS_TAKEN','VALIDATION_EVIDENCE','BLOCKERS','RISKS_OR_GAPS','LEARNING_EVENT_NEEDED','SUGGESTED_NEXT_AGENT','PHASE_COMPLETE','SUB_ORCHESTRATORS_USED','SUMMARY'
+  1: [
+    'OUTPUT_CONTRACT',
+    'TASK_STATUS',
+    'TIER',
+    'ROLE',
+    'TASK_RECEIVED',
+    'FILES_READ',
+    'FILES_CHANGED',
+    'KEY_FINDINGS',
+    'ACTIONS_TAKEN',
+    'VALIDATION_EVIDENCE',
+    'BLOCKERS',
+    'RISKS_OR_GAPS',
+    'LEARNING_EVENT_NEEDED',
+    'SUGGESTED_NEXT_AGENT',
+    'PHASE_COMPLETE',
+    'SUB_ORCHESTRATORS_USED',
+    'SUMMARY',
   ],
-  '2': [
-    'OUTPUT_CONTRACT','TASK_STATUS','TIER','ROLE','TASK_RECEIVED','FILES_READ','FILES_CHANGED','KEY_FINDINGS','ACTIONS_TAKEN','VALIDATION_EVIDENCE','SPECIALISTS_USED','HANDOFF','BLOCKERS','RISKS_OR_GAPS','LEARNING_EVENT_NEEDED','SUGGESTED_NEXT_AGENT','SUMMARY'
+  2: [
+    'OUTPUT_CONTRACT',
+    'TASK_STATUS',
+    'TIER',
+    'ROLE',
+    'TASK_RECEIVED',
+    'FILES_READ',
+    'FILES_CHANGED',
+    'KEY_FINDINGS',
+    'ACTIONS_TAKEN',
+    'VALIDATION_EVIDENCE',
+    'SPECIALISTS_USED',
+    'HANDOFF',
+    'BLOCKERS',
+    'RISKS_OR_GAPS',
+    'LEARNING_EVENT_NEEDED',
+    'SUGGESTED_NEXT_AGENT',
+    'SUMMARY',
   ],
-  '3': [
-    'OUTPUT_CONTRACT','TASK_STATUS','TIER','ROLE','TASK_RECEIVED','FILES_READ','FILES_CHANGED','KEY_FINDINGS','ACTIONS_TAKEN','VALIDATION_EVIDENCE','HANDOFF','BLOCKERS','RISKS_OR_GAPS','LEARNING_EVENT_NEEDED','SUGGESTED_NEXT_AGENT','SUMMARY'
+  3: [
+    'OUTPUT_CONTRACT',
+    'TASK_STATUS',
+    'TIER',
+    'ROLE',
+    'TASK_RECEIVED',
+    'FILES_READ',
+    'FILES_CHANGED',
+    'KEY_FINDINGS',
+    'ACTIONS_TAKEN',
+    'VALIDATION_EVIDENCE',
+    'HANDOFF',
+    'BLOCKERS',
+    'RISKS_OR_GAPS',
+    'LEARNING_EVENT_NEEDED',
+    'SUGGESTED_NEXT_AGENT',
+    'SUMMARY',
   ],
-  '4': [
-    'OUTPUT_CONTRACT','TASK_STATUS','TIER','ROLE','TASK_RECEIVED','FILES_READ','FILES_CHANGED','KEY_FINDINGS','ACTIONS_TAKEN','BLOCKERS','RISKS_OR_GAPS','LEARNING_EVENT_NEEDED','SUGGESTED_NEXT_AGENT','SUMMARY'
+  4: [
+    'OUTPUT_CONTRACT',
+    'TASK_STATUS',
+    'TIER',
+    'ROLE',
+    'TASK_RECEIVED',
+    'FILES_READ',
+    'FILES_CHANGED',
+    'KEY_FINDINGS',
+    'ACTIONS_TAKEN',
+    'BLOCKERS',
+    'RISKS_OR_GAPS',
+    'LEARNING_EVENT_NEEDED',
+    'SUGGESTED_NEXT_AGENT',
+    'SUMMARY',
   ],
 };
 
@@ -45,7 +106,8 @@ function makeCanonicalFooter(tier, role) {
     FILES_CHANGED: () => 'FILES_CHANGED:\n- <path or NONE>',
     KEY_FINDINGS: () => 'KEY_FINDINGS:\n- <finding or NONE>',
     ACTIONS_TAKEN: () => 'ACTIONS_TAKEN:\n- <action or NONE>',
-    VALIDATION_EVIDENCE: () => 'VALIDATION_EVIDENCE:\n- <command/result or NOT RUN>',
+    VALIDATION_EVIDENCE: () =>
+      'VALIDATION_EVIDENCE:\n- <command/result or NOT RUN>',
     BLOCKERS: () => 'BLOCKERS:\n- <blocker or NONE>',
     RISKS_OR_GAPS: () => 'RISKS_OR_GAPS:\n- <risk or NONE>',
     LEARNING_EVENT_NEEDED: () => 'LEARNING_EVENT_NEEDED: true | false',
@@ -86,7 +148,13 @@ export async function runFix({ json = false } = {}) {
     const hasFrontmatter = normalized.trimStart().startsWith('---');
     // Always attempt to produce a canonical footer when frontmatter is present.
     if (!hasFrontmatter) {
-      report.issues.push(issue('error', relativePath, 'Missing YAML frontmatter; skipping auto-fix'));
+      report.issues.push(
+        issue(
+          'error',
+          relativePath,
+          'Missing YAML frontmatter; skipping auto-fix',
+        ),
+      );
       continue;
     }
 
@@ -97,7 +165,10 @@ export async function runFix({ json = false } = {}) {
     } catch (err) {
       // ignore parse errors; we will still attempt a safe fix using filename defaults
     }
-    const role = parsed.data?.name ?? relativePath.split('/').at(-1)?.replace('.agent.md', '') ?? '';
+    const role =
+      parsed.data?.name ??
+      relativePath.split('/').at(-1)?.replace('.agent.md', '') ??
+      '';
     const tier = parsed.data?.tier ?? '';
 
     // Attempt fix: preserve content up to any existing '## Output format' heading
@@ -108,12 +179,20 @@ export async function runFix({ json = false } = {}) {
     const newContent = prefix.replace(/\s+$/u, '') + '\n\n' + newFooter;
 
     try {
-      await writeFile(path.join(process.cwd(), relativePath), newContent, 'utf8');
+      await writeFile(
+        path.join(process.cwd(), relativePath),
+        newContent,
+        'utf8',
+      );
       report.fixed.push(relativePath);
     } catch (err) {
       report.ok = false;
       report.issues.push(
-        issue('error', relativePath, `Failed to write fixed file: ${String(err)}`),
+        issue(
+          'error',
+          relativePath,
+          `Failed to write fixed file: ${String(err)}`,
+        ),
       );
     }
   }

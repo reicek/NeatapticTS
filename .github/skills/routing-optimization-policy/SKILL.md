@@ -7,6 +7,8 @@ disable-model-invocation: false
 tools: [neataptic-gate-mcp/*, neataptic-workflow-mcp/*]
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Routing Optimization Policy
 
 Use this skill when routing discipline needs enforcement, validation, or audit across the eight numbered SDLC orchestrators and their delegated specialists.

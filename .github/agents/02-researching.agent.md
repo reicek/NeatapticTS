@@ -2,7 +2,7 @@
 description: 'Use when researching codebase patterns, APIs, dependencies, architecture, external references, existing utilities, and prior art.'
 name: '02-researching'
 tier: 1
-model: 'glm-5.1:cloud (ollama)'
+model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -29,8 +29,8 @@ schemas:
   - schemas/structured-v1.json
 expected_output: structured-v1
 tool_restrictions:
-  edit: "plans/*.md"
-  execute: "node .github/hooks/workflow-update-sync.mjs"
+  edit: 'plans/*.md'
+  execute: 'node .github/hooks/workflow-update-sync.mjs'
 pre_action_script: scripts/validate-structured-v1.mjs
 examples:
   - examples/structured-v1-example.md
@@ -56,8 +56,24 @@ handoffs:
     agent: '03-red-testing'
     prompt: 'Continue from the active plan and Step 02 research evidence. Execute Step 03 for the current phase by designing the smallest red test or explicit skip contract.'
     send: false
-    model: 'glm-5.1:cloud (ollama)'
+    model: 'glm-5.2:cloud (ollama)'
 ---
+
+## Cortex-First Search Policy
+
+This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
+2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
+4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
+5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
+6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
+7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
+8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
+9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
 
 ## Mission
 

@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Coverage Tranche Playbook
 
 Use this skill to bring a specific `src/` boundary from its current coverage
@@ -63,6 +65,13 @@ Mode: implementation.
 
 ## Required Workflow
 
+The full test suite (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`,
+`npm run jest:mjs`) is large and slow. **Never run it speculatively.** Stay on
+focused Jest slices (`npx jest --config=jest.config.mjs --no-cache
+--testPathPattern=<file>`) for the tranche. Only run the repo-wide suite when
+the user or active step packet explicitly requires repo-wide confirmation;
+otherwise, record the focused slice results as the tranche evidence.
+
 1. Read the target source file in full.
 2. Read the nearest existing test file for that boundary.
 3. Identify the uncovered path from `coverage/lcov.info` or a focused run:
@@ -81,10 +90,13 @@ Mode: implementation.
    npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=<file>
    ```
    Confirm 100% across all four categories for the target file.
-7. Run the repo-wide suite to confirm no regressions:
+7. Run the repo-wide suite **only if** the active step packet or user explicitly
+   requires repo-wide confirmation:
    ```bash
    npm run test:silent
    ```
+   Otherwise, record the focused slice result as the tranche evidence and note
+   that the full suite was intentionally skipped.
 8. Update `plans/test-repair-and-coverage.plans.md` with the completed tranche:
    - Mark the tranche `[DONE]`.
    - State the new coverage baseline (suite count, test count).
@@ -109,7 +121,7 @@ Group by scenario, not by assertion: one `it()` per observable behavior.
 ## Validation Rules
 
 - During the tranche: focused Jest slice for the target file only.
-- After the tranche: `npm run test:silent` for repo-wide green confirmation.
+- After the tranche: run `npm run test:silent` only when the user or active step packet explicitly requires repo-wide confirmation.
 - Do not run the broad suite during implementation; run only the focused slice.
 
 ## Companion Agent and Sibling Skill
@@ -127,9 +139,9 @@ forward progress; `coverage-guard` is for regression prevention after changes.
 - Do not create a new test file when an existing owner-local test file exists.
 - Do not write a test whose sole purpose is to inflate a coverage number.
   If an uncovered path is dead code, remove the production branch.
-- Do not skip `npm run test:silent` after the focused tranche succeeds.
-- Do not mark a tranche `[DONE]` in the plan before the repo-wide suite is
-  confirmed green.
+- Do not run `npm run test:silent` speculatively. Only run it when the user or active step packet explicitly requires repo-wide confirmation.
+- Do not mark a tranche `[DONE]` in the plan before the focused slice confirms
+  100% coverage.
 - Do not modify the test runner configuration; use the existing
   `jest.config.mjs` and `--testPathPattern` flag only.
 - Do not pad `plans/test-repair-and-coverage.plans.md` with verbose session

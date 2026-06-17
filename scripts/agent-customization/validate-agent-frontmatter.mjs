@@ -106,9 +106,9 @@ const strictTier2StructuredFields = [
   'SUMMARY',
 ];
 const strictAllowedModels = new Set([
-  'glm-5.1:cloud (ollama)',
-  'glm-5.1:cloud (ollama)',
-  'glm-5.1:cloud (ollama)',
+  'glm-5.2:cloud (ollama)',
+  'glm-5.2:cloud (ollama)',
+  'glm-5.2:cloud (ollama)',
   'anthropic/claude-sonnet-4-20250514',
 ]);
 
@@ -352,7 +352,7 @@ function validateAgent(agent, agents, skillNames, { strict }) {
       issue(
         'error',
         relativePath,
-        'Model must be a qualified model string like glm-5.1:cloud (ollama).',
+        'Model must be a qualified model string like glm-5.2:cloud (ollama).',
       ),
     );
   }

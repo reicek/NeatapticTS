@@ -15,6 +15,7 @@ import {
   repoRoot,
 } from '../../semantic-index/init-schema.mjs';
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
+import { sanitizeFtsQuery as sanitizeFtsQueryImpl } from '../../semantic-index/tokenizer.mjs';
 
 /** Human-readable hint for operators when the semantic index database is missing. */
 export const CORTEX_FIX_HINT =
@@ -128,23 +129,15 @@ export function asIsoTimestamp(value) {
 /**
  * Sanitizes user-supplied text for safe use as an FTS5 MATCH query.
  *
- * FTS5 treats several characters as query operators (`-` as NOT, `@` as
- * syntax marker, `:` as column filter, etc.). Passing arbitrary natural-language
- * text—such as an MCP agent query—directly to MATCH causes errors like
- * "no such column: source" when a word follows a `-` (e.g. `ts-source`).
- *
- * This helper replaces known FTS5 operator characters with spaces so each
- * word is treated as an independent search term (implicit AND), which is the
- * correct behaviour for natural-language corpus search.
+ * Delegates to {@link sanitizeFtsQueryImpl} in `scripts/semantic-index/tokenizer.mjs`,
+ * which preserves code identifiers (dotted, camelCase, snake_case, file-extension
+ * hints) as quoted phrases and applies prefix wildcards to plain words.
  *
  * @param {string} raw - User-supplied or agent-supplied query string.
  * @returns {string} FTS5-safe query string, or empty string if no terms remain.
  */
 export function sanitizeFtsQuery(raw) {
-  return raw
-    .replace(/[-@^*{}():"]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return sanitizeFtsQueryImpl(raw);
 }
 
 /**

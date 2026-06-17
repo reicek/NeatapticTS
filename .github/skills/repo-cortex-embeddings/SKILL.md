@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Repo Cortex Embeddings
 
 Use this skill for Repo Cortex embeddings readiness assessment only: ONNX model

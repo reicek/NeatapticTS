@@ -2,7 +2,7 @@
 description: 'Use when making scoped code changes through focused implementation specialists, reusing project patterns, and avoiding unrelated refactors.'
 name: '04-implementing'
 tier: 1
-model: 'glm-5.1:cloud (ollama)'
+model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -56,8 +56,24 @@ handoffs:
     agent: '05-green-testing'
     prompt: 'Continue from the active plan and Step 04 implementation diff. Execute Step 05 for the current phase by running focused validation gates and routing failures to the right prior step.'
     send: false
-    model: 'glm-5.1:cloud (ollama)'
+    model: 'glm-5.2:cloud (ollama)'
 ---
+
+## Cortex-First Search Policy
+
+This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
+2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
+4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
+5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
+6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
+7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
+8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
+9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
 
 ## Mission
 
@@ -137,10 +153,10 @@ The following skills must be invoked (or their checks executed) and evidence att
   - Example commands: `npx tsc --noEmit -p tsconfig.json`, `npm run lint`.
 
 - **`coverage-guard`**: evidence that every changed `src/` file remains at 100% in statements, branches, functions, and lines.
-  - Required evidence: focused `jest` slice output showing 100% in all four categories for each changed file, plus the repo-wide `npm run test:silent` result.
+  - Required evidence: focused `jest` slice output showing 100% in all four categories for each changed file. Only attach a repo-wide suite result when the active step packet or user explicitly requires it; never run the full suite speculatively.
   - Example commands:
     - `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=<nearest-test-file>`
-    - `npm run test:silent`
+    - `npm run test:silent` (only when explicitly required)
 
 - **`tracker-handoff`**: evidence that the `PlanUpdate` YAML block is present in the plan and the `Handoff query` is refreshed.
   - Required evidence: the `PlanUpdate` block (in `plans/*.md`) and a one-line gate run confirming plan-sync (see MCP Gate Commands below).
@@ -170,7 +186,7 @@ Implementers MUST prepare a `HandoffPayload` block for inclusion in a PR descrip
       "lint": "lint: 0 issues"
     },
     "validation": [
-      {"command": "npx jest --testPathPattern=testing/foo.test.ts", "exit": 0}
+      { "command": "npx jest --testPathPattern=testing/foo.test.ts", "exit": 0 }
     ],
     "coverage_guard": {
       "files": ["src/foo/bar.ts"],
@@ -251,14 +267,18 @@ On rollback, include the rollback git command suggested for reviewers (e.g. `git
 
 1. **Read the active plan, phase step contract, and all relevant source files.**
    - Example: Open `plans/step04.md`, read the contract, and load `src/feature.js`.
-  - Required: if the plan lacks a `Claim:` line (see File Claim / Edit Lock), add one before edits.
+
+- Required: if the plan lacks a `Claim:` line (see File Claim / Edit Lock), add one before edits.
+
 2. **Use specialists for domain reconnaissance or implementation packets.**
    - Example: If a regex change is needed, delegate to `implementation-pattern-scout`.
 3. **Re-read target files before writing if edits may have occurred.**
    - Example: If `src/feature.js` was edited by another agent, re-read before applying your patch.
 4. **Edit only files required for the current step.**
    - Example: Only change `src/feature.js` if that’s the file in the plan boundary.
-  - Required: prepare a recommended branch name according to the branch naming convention below and produce the exact git commands for the user to run (for example: `git checkout -b implement/<ticket-or-summary>-<short-hash>` and the subsequent `git add`/`git commit`/`git push` commands). **Agents MUST NOT create branches, run `git commit`, `git push`, or open PRs automatically.** Provide the patch and the manual commands for the user to execute and include the prepared PR description text for the user's convenience.
+
+- Required: prepare a recommended branch name according to the branch naming convention below and produce the exact git commands for the user to run (for example: `git checkout -b implement/<ticket-or-summary>-<short-hash>` and the subsequent `git add`/`git commit`/`git push` commands). **Agents MUST NOT create branches, run `git commit`, `git push`, or open PRs automatically.** Provide the patch and the manual commands for the user to execute and include the prepared PR description text for the user's convenience.
+
 5. **Keep scripts noninteractive, deterministic, and validation-friendly.**
    - Example: All scripts must run without user input and produce the same result each time.
 6. **If validation fails, fix forward safely or roll back failing hunks.**
@@ -279,14 +299,14 @@ PlanUpdate:
   changed_files:
     - src/path/changed.file.ts
   preflight:
-    - "npx tsc --noEmit -p tsconfig.json"
-    - "npm run lint"
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
   validation:
-    - command: "npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=testing/nearest.test.ts"
+    - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=testing/nearest.test.ts'
       expected_exit: 0
   rollback:
-    - "git revert <commit>"
-  next: "Run 05-green-testing and attach coverage-guard evidence"
+    - 'git revert <commit>'
+  next: 'Run 05-green-testing and attach coverage-guard evidence'
 ```
 
 Attach this block to the plan and include it in `VALIDATION_EVIDENCE` before invoking `plan-sync`.
@@ -329,6 +349,7 @@ artifacts/implementing/<YYYYMMDD>T<HHMMSS>-<type>.<ext>
 ```
 
 Examples:
+
 - `artifacts/implementing/20260614T123456-coverage.json`
 - `artifacts/implementing/20260614T123456-preflight.txt`
 

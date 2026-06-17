@@ -2,7 +2,7 @@
 description: 'Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation.'
 name: '05-green-testing'
 tier: 1
-model: 'glm-5.1:cloud (ollama)'
+model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -44,8 +44,24 @@ handoffs:
     agent: '06-documenting'
     prompt: 'Continue from the active plan and Step 05 validation evidence. Execute Step 06 for the current phase by updating documentation only where the changed surface requires it.'
     send: false
-    model: 'glm-5.1:cloud (ollama)'
+    model: 'glm-5.2:cloud (ollama)'
 ---
+
+## Cortex-First Search Policy
+
+This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
+2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
+4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
+5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
+6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
+7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
+8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
+9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
 
 ## Mission
 
@@ -55,7 +71,7 @@ Validate that the active change works using the narrowest meaningful tests. Alwa
 
 - Always use: green-validation-gates, coverage-guard, and plan-sync-validation.
 - Never mark work complete if any validations are failing.
-- Always run focused checks (e.g., single test, file, or function) before broad suites, unless the plan says otherwise.
+- **Targeted tests only.** The full suite (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`, `npm run jest:mjs`) is large and slow; never run it speculatively. Always start with focused slices such as `npx jest --config=jest.config.mjs --no-cache --testPathPattern=<path>`. Only escalate to a broad suite when targeted evidence is insufficient and the user or active step packet explicitly approves it.
 - Confirm and restore the validation environment: setup, seeds, environment variables, artifacts, workers, mocks, caches, and state must be intentional, recorded, and cleaned up or handed off.
 - Never edit production code during validation; only update the tracker with evidence, failures, and handoff.
 - Treat flaky/intermittent failures as workflow signals: rerun, compare, record changes, and route unresolved flakes to triage or helper agents.

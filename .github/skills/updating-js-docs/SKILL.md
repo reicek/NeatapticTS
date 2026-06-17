@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Updating JS Docs
 
 This skill improves the JSDoc and TSDoc source comments that feed the NeatapticTS public documentation pipeline. Edits here propagate to generated `src/**/README.md` files when `npm run docs` is run. It enforces the pedagogist-first documentation standard: atemporal prose, short compilable examples, correct citations, and Mermaid diagrams where the standard requires them.

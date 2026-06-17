@@ -33,6 +33,7 @@
  *   submit_feedback --> submitFeedback
  * ```
  */
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
@@ -54,10 +55,12 @@ import { loadChunk } from './tools/load-chunk.mjs';
 import { loadDocument } from './tools/load-document.mjs';
 import { loadParentChunk } from './tools/load-parent-chunk.mjs';
 import { runDocsQualityMetrics } from '../semantic-index/docs-quality/docs-quality.metrics.mjs';
+import { searchAdvanced } from './tools/search-advanced.mjs';
 import { searchContext } from './tools/search-context.mjs';
 import { searchCorpus } from './tools/search-corpus.mjs';
 import { submitFeedback } from './tools/submit-feedback.mjs';
 import { traverseGraphHandler } from './tools/traverse-graph.mjs';
+import { buildAnnIndex } from './tools/ann-index.mjs';
 
 const SERVER_VERSION = '0.1.0';
 const ENTRYPOINT = 'scripts/mcp-semantic/repo-cortex-mcp.mjs';
@@ -79,6 +82,46 @@ export function createRepoCortexMcpServer(options = {}) {
 }
 
 /**
+ * Default model and dimension used for the dense ANN index.
+ *
+ * Kept consistent with the rest of the Repo Cortex dense search pipeline.
+ */
+const DEFAULT_ANN_MODEL_ID = 'all-MiniLM-L6-v2';
+const DEFAULT_ANN_DIMENSION = 384;
+
+/**
+ * Build or refresh the ANN index from an MCP tool invocation.
+ *
+ * Resolves the embeddings database path as a sibling to the corpus database,
+ * then delegates to {@link buildAnnIndex}. `validate_recall` is accepted by
+ * the schema but is a no-op in this slice — recall validation is handled in
+ * the green-validation follow-up slice.
+ *
+ * @param {object} options - Handler options.
+ * @param {string | undefined} options.databasePath - Corpus database path override.
+ * @param {'hnsw' | 'brute_force_cached' | 'brute_force' | undefined} options.force - Strategy override.
+ * @returns {Promise<{ strategy: string, build_status: string, [key: string]: unknown }>} Build result.
+ */
+async function buildAnnIndexHandler(options = {}) {
+  const databasePath = options.databasePath;
+  const embeddingsDatabasePath =
+    typeof databasePath === 'string'
+      ? path.join(path.dirname(databasePath), 'embeddings.sqlite')
+      : 'data/embeddings.sqlite';
+
+  return buildAnnIndex({
+    embeddingsDatabasePath,
+    indexFilePath:
+      typeof databasePath === 'string'
+        ? path.join(path.dirname(databasePath), 'ann-index.dat')
+        : 'data/ann-index.dat',
+    modelId: DEFAULT_ANN_MODEL_ID,
+    dimension: DEFAULT_ANN_DIMENSION,
+    forceStrategy: options.force,
+  });
+}
+
+/**
  * Build the full tool list for the Repo Cortex MCP server.
  *
  * @param {string | undefined} databasePath - Optional corpus database path override.
@@ -94,7 +137,10 @@ export function createRepoCortexTools(databasePath) {
         type: 'object',
         properties: {
           query: { type: 'string' },
-          limit: { type: 'number' },
+          limit: {
+            type: 'number',
+            description: 'Maximum result count (default 5).',
+          },
           family: { type: 'string' },
           use_dense: {
             type: 'boolean',
@@ -154,6 +200,25 @@ export function createRepoCortexTools(databasePath) {
               { type: 'boolean' },
               { type: 'string', enum: ['domain-only'] },
             ],
+          },
+          compact: {
+            type: 'boolean',
+            default: false,
+            description:
+              'When true, return only essential fields and truncate text snippets to a compact threshold.',
+          },
+          metadata: {
+            type: 'object',
+            description:
+              'Optional metadata filter with a structured predicate tree. Supports eq, neq, in, not_in, gt, gte, lt, lte, like, is_null, is_not_null, and, or, and not.',
+            properties: {
+              filter: {
+                type: 'object',
+                description:
+                  'Structured filter predicate tree applied to chunk metadata columns.',
+              },
+            },
+            additionalProperties: false,
           },
         },
         required: ['query'],
@@ -252,6 +317,11 @@ export function createRepoCortexTools(databasePath) {
             description:
               'Human-readable degradation reason when dense search falls back to BM25; operators should run npm run index:prewarm.',
           },
+          response_tokens: {
+            type: 'number',
+            description:
+              'Estimated tokens consumed by the response text snippets.',
+          },
           results: {
             type: 'array',
             items: { type: 'object' },
@@ -261,7 +331,11 @@ export function createRepoCortexTools(databasePath) {
         additionalProperties: true,
       },
       handler: (argumentsObject) =>
-        searchCorpus({ ...argumentsObject, databasePath }),
+        searchCorpus({
+          ...argumentsObject,
+          compact: argumentsObject.compact ?? true,
+          databasePath,
+        }),
     }),
     createTool({
       name: 'search_context',
@@ -271,14 +345,46 @@ export function createRepoCortexTools(databasePath) {
         type: 'object',
         properties: {
           query: { type: 'string' },
-          limit: { type: 'number' },
-          budget: { type: 'number' },
+          limit: {
+            type: 'number',
+            description:
+              'Maximum number of corpus results to retrieve (default 5).',
+          },
+          budget: {
+            type: 'number',
+            description:
+              'Token budget for the assembled context (default 1024).',
+          },
           context_format: { type: 'string', enum: ['markdown', 'json'] },
           use_dense: { type: 'boolean', default: true },
           use_rerank: { type: 'boolean' },
           alpha: { type: 'number' },
           expand_query: { type: ['boolean', 'string'] },
           rerank_candidates_count: { type: 'number' },
+          include_metadata: {
+            type: 'boolean',
+            description:
+              'When true, include the full v2 semantic metadata object for each chunk in the results array.',
+          },
+          compact: {
+            type: 'boolean',
+            default: false,
+            description:
+              'When true, return only essential per-chunk fields and truncate the assembled context to a compact threshold.',
+          },
+          read_top_result: {
+            type: 'boolean',
+            default: false,
+            description:
+              'When true, include the full text of the top-ranked result inline in the response, avoiding a separate load_chunk call.',
+          },
+          dedup_strategy: {
+            type: 'string',
+            enum: ['exact', 'cosine'],
+            default: 'exact',
+            description:
+              'Deduplication strategy: exact (hash-based collapse) or cosine (embedding similarity collapse).',
+          },
         },
         required: ['query'],
         additionalProperties: false,
@@ -288,6 +394,10 @@ export function createRepoCortexTools(databasePath) {
         properties: {
           context: { oneOf: [{ type: 'string' }, { type: 'array' }] },
           token_count: { type: 'number' },
+          context_budget_consumed: {
+            type: 'number',
+            description: 'Tokens consumed from the assembled context budget.',
+          },
           tier_counts: {
             type: 'object',
             properties: {
@@ -300,12 +410,227 @@ export function createRepoCortexTools(databasePath) {
           dense_degraded: { type: 'boolean' },
           context_format: { type: 'string' },
           metadata: { type: 'object' },
+          top_result: {
+            type: 'object',
+            description:
+              'Full text and provenance of the top-ranked result, present when read_top_result is true.',
+            properties: {
+              chunk_id: { type: 'number' },
+              file_path: { type: 'string' },
+              family: { type: 'string' },
+              text: { type: 'string' },
+            },
+          },
+          follow_up_refs: {
+            type: 'array',
+            description:
+              'Suggested next tool calls, such as load_chunk for the top result or a related search_advanced query.',
+            items: {
+              type: 'object',
+              properties: {
+                tool: { type: 'string' },
+                args: { type: 'object' },
+                reason: { type: 'string' },
+              },
+            },
+          },
         },
         required: ['context', 'token_count', 'tier_counts'],
         additionalProperties: true,
       },
       handler: (argumentsObject) =>
-        searchContext({ ...argumentsObject, databasePath }),
+        searchContext({
+          ...argumentsObject,
+          compact: argumentsObject.compact ?? true,
+          read_top_result: argumentsObject.read_top_result ?? true,
+          databasePath,
+        }),
+    }),
+    createTool({
+      name: 'search_advanced',
+      description:
+        'Full-pipeline advanced corpus search: classify the query, optionally expand it, retrieve hybrid results, re-rank, and optionally assemble an agent-ready context window. Returns pipeline metadata (query_class, alpha, expand_query, use_rerank, use_dense, dense_state, rerank_state, expansion) alongside results.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Free-text query string.' },
+          query_class: {
+            type: 'string',
+            enum: [
+              'simple_lookup',
+              'cross_boundary',
+              'multi_hop',
+              'exploratory',
+              'code_specific',
+              'plan_specific',
+            ],
+            description:
+              'Optional query-class override. When omitted the query is classified automatically.',
+          },
+          limit: {
+            type: 'number',
+            description: 'Maximum number of results (default 5).',
+          },
+          alpha: {
+            type: 'number',
+            description:
+              'BM25/dense blend weight (0 = BM25 only, 1 = dense only).',
+          },
+          use_dense: {
+            type: 'boolean',
+            default: true,
+            description:
+              'Enable hybrid dense reranking when the index is warm.',
+          },
+          use_rerank: {
+            type: 'boolean',
+            description:
+              'Enable cross-encoder re-ranking. Defaults are query-class dependent.',
+          },
+          expand_query: {
+            type: 'boolean',
+            description:
+              'Enable query expansion. Defaults are query-class dependent.',
+          },
+          rerank_candidates_count: {
+            type: 'number',
+            description:
+              'Number of hybrid candidates to re-rank with the cross-encoder (default: 10).',
+          },
+          compact: {
+            type: 'boolean',
+            default: false,
+            description:
+              'When true, return only essential fields and truncate text snippets to a compact threshold.',
+          },
+          read_top_result: {
+            type: 'boolean',
+            default: false,
+            description:
+              'When true, include the full text of the top-ranked result inline in the response, avoiding a separate load_chunk call.',
+          },
+          context_budget: {
+            type: 'number',
+            description:
+              'When provided, assemble a token-bounded context window from the retrieved results.',
+          },
+          timeout_ms: {
+            type: 'number',
+            description: 'Pipeline timeout in milliseconds.',
+          },
+          explain_ranking: {
+            type: 'boolean',
+            default: false,
+            description:
+              'When true, every result includes a ranking_explanation object showing BM25, dense, rerank, and final scores plus a short reason.',
+          },
+          include_code_only: {
+            type: 'boolean',
+            description:
+              'When true, suppress generated README families and focus on code-source results. Defaults to true for the code_specific query class.',
+          },
+          auto_fallback: {
+            type: 'boolean',
+            description:
+              'When true, run a native substring fallback and merge its results when the primary pipeline is empty or low-confidence.',
+          },
+          metadata: {
+            type: 'object',
+            properties: {
+              filter: { type: 'object' },
+            },
+            additionalProperties: false,
+          },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string' },
+          query_class: { type: 'string' },
+          confidence: { type: 'number' },
+          alpha: { type: 'number' },
+          expand_query: { type: 'boolean' },
+          use_rerank: { type: 'boolean' },
+          use_dense: { type: 'boolean' },
+          limit: { type: 'number' },
+          results: { type: 'array', items: { type: 'object' } },
+          dense_state: { type: 'string' },
+          rerank_state: { type: 'string' },
+          rerank_candidates_count: {
+            type: 'number',
+            description:
+              'Number of hybrid candidates selected for cross-encoder reranking.',
+          },
+          dense_degraded: { type: 'boolean' },
+          expansion: { type: 'object' },
+          response_tokens: {
+            type: 'number',
+            description:
+              'Estimated tokens consumed by the response text snippets.',
+          },
+          context: { type: 'string' },
+          token_count: { type: 'number' },
+          tier_counts: { type: 'object' },
+          chunks_in_context: { type: 'number' },
+          error: { type: 'string' },
+          top_result: {
+            type: 'object',
+            description:
+              'Full text and provenance of the top-ranked result, present when read_top_result is true.',
+            properties: {
+              chunk_id: { type: 'number' },
+              file_path: { type: 'string' },
+              family: { type: 'string' },
+              text: { type: 'string' },
+            },
+          },
+          follow_up_refs: {
+            type: 'array',
+            description:
+              'Suggested next tool calls, such as load_chunk for the top result or a related search_advanced query.',
+            items: {
+              type: 'object',
+              properties: {
+                tool: { type: 'string' },
+                args: { type: 'object' },
+                reason: { type: 'string' },
+              },
+            },
+          },
+          fallback: {
+            type: 'object',
+            description:
+              'Present when auto_fallback was triggered. Contains the merged fallback results that were used to populate the response.',
+            properties: {
+              triggered: { type: 'boolean' },
+              results: { type: 'array', items: { type: 'object' } },
+            },
+          },
+        },
+        required: [
+          'query',
+          'query_class',
+          'alpha',
+          'expand_query',
+          'use_rerank',
+          'use_dense',
+          'limit',
+          'results',
+          'dense_state',
+          'rerank_state',
+          'expansion',
+        ],
+        additionalProperties: true,
+      },
+      handler: (argumentsObject) =>
+        searchAdvanced({
+          ...argumentsObject,
+          auto_fallback: argumentsObject.auto_fallback ?? true,
+          databasePath,
+        }),
     }),
     createTool({
       name: 'load_chunk',
@@ -485,8 +810,48 @@ export function createRepoCortexTools(databasePath) {
     createTool({
       name: 'index_stats',
       description:
-        'Return corpus row counts, family counts, and last indexed timestamp.',
-      handler: () => indexStats({ databasePath }),
+        'Return corpus row counts, family counts, and last indexed timestamp. When include_metadata_coverage is true, also returns per-column metadata coverage statistics for chunks and documents.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          include_metadata_coverage: {
+            type: 'boolean',
+            default: false,
+            description:
+              'When true, compute metadata column coverage for chunks and documents.',
+          },
+        },
+        additionalProperties: false,
+      },
+      handler: (argumentsObject) =>
+        indexStats({ ...argumentsObject, databasePath }),
+    }),
+    createTool({
+      name: 'ann_build_index',
+      description:
+        'Build or refresh the Approximate-Nearest-Neighbor (ANN) index for dense corpus search. When hnswlib-node is unavailable or the corpus is below the threshold, the index metadata is prepared for brute_force_cached search.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          force: {
+            type: 'string',
+            enum: ['hnsw', 'brute_force_cached', 'brute_force'],
+            description: 'Override the automatically selected ANN strategy.',
+          },
+          validate_recall: {
+            type: 'boolean',
+            default: false,
+            description:
+              'When true, validate index recall against brute-force results (reserved for future validation).',
+          },
+        },
+        additionalProperties: false,
+      },
+      handler: (argumentsObject) =>
+        buildAnnIndexHandler({
+          ...argumentsObject,
+          databasePath,
+        }),
     }),
     createTool({
       name: 'list_families',
@@ -608,7 +973,7 @@ export function createRepoCortexTools(databasePath) {
             type: 'number',
             default: 2,
             description:
-              'Maximum number of hops from seed entities. Default: 2, max: 3.',
+              'Maximum number of hops from seed entities. Default: 2, min: 1, max: 4.',
           },
           max_results: {
             type: 'number',
@@ -741,9 +1106,14 @@ export function createRepoCortexTools(databasePath) {
           },
           signal_type: {
             type: 'string',
-            enum: ['reference', 'positive', 'negative'],
+            enum: ['reference', 'positive', 'negative', 'irrelevant'],
             description:
-              'Feedback signal type: reference (cited), positive (helpful), or negative (not helpful).',
+              'Feedback signal type: reference (cited), positive (helpful), negative (not helpful), or irrelevant.',
+          },
+          signal_strength: {
+            type: 'number',
+            description:
+              'Optional signal strength override. Falls back to class defaults when omitted.',
           },
           context: {
             type: 'string',
@@ -756,7 +1126,8 @@ export function createRepoCortexTools(databasePath) {
           },
           agent_id: {
             type: 'string',
-            description: 'Optional agent identifier that submitted the feedback.',
+            description:
+              'Optional agent identifier that submitted the feedback.',
           },
         },
         required: ['chunk_id', 'signal_type'],
@@ -767,17 +1138,36 @@ export function createRepoCortexTools(databasePath) {
         properties: {
           chunk_id: { type: 'number' },
           signal_type: { type: 'string' },
+          signal_strength: { type: 'number' },
           recorded: {
             type: 'boolean',
             description: 'True when the event was persisted.',
           },
           feedback_boost_after: {
             type: 'number',
-            description: 'Recomputed feedback boost score after recording the event.',
+            description:
+              'Recomputed feedback boost score after recording the event.',
+          },
+          feedback_score: {
+            type: 'number',
+            description: 'Aggregate feedback score for the chunk.',
+          },
+          total_signals: {
+            type: 'number',
+            description: 'Total number of feedback signals for the chunk.',
+          },
+          feedback_boost: {
+            type: 'number',
+            description: 'Feedback boost applied to future rankings.',
           },
         },
-        required: ['chunk_id', 'signal_type', 'recorded', 'feedback_boost_after'],
-        additionalProperties: false,
+        required: [
+          'chunk_id',
+          'signal_type',
+          'recorded',
+          'feedback_boost_after',
+        ],
+        additionalProperties: true,
       },
       handler: (argumentsObject) =>
         submitFeedback({ ...argumentsObject, databasePath }),

@@ -77,7 +77,9 @@ export async function loadChunk(options = {}) {
   if (shouldRecordClick) {
     Promise.resolve().then(() => {
       try {
-        const feedbackDb = new Database(resolveDatabasePath(options.databasePath));
+        const feedbackDb = new Database(
+          resolveDatabasePath(options.databasePath),
+        );
         try {
           recordFeedbackEvent(feedbackDb, {
             chunk_id: chunkId,
@@ -98,7 +100,7 @@ export async function loadChunk(options = {}) {
     const row = database
       .prepare(
         `
-      SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
+      SELECT d.file_path, d.doc_family, c.doc_id, c.chunk_id, c.chunk_index, c.heading_path,
         c.body_text, c.char_start, c.char_end,
         c.parent_chunk_id, c.depth, c.context_header,
         c.symbol_name, c.signature_text, c.jsdoc_text, c.export_type, c.module_path
@@ -115,7 +117,7 @@ export async function loadChunk(options = {}) {
         ? database
             .prepare(
               `
-      SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
+        SELECT d.file_path, d.doc_family, c.doc_id, c.chunk_id, c.chunk_index, c.heading_path,
         c.body_text, c.char_start, c.char_end,
         c.parent_chunk_id, c.depth, c.context_header,
         c.symbol_name, c.signature_text, c.jsdoc_text, c.export_type, c.module_path
@@ -129,7 +131,29 @@ export async function loadChunk(options = {}) {
         : null);
 
     if (!resolvedRow) throw new Error(`Chunk not found: ${chunkId}`);
-    return { chunk: { ...readChunkRow(resolvedRow), chunk_id: chunkId } };
+
+    const nextChunkRow = database
+      .prepare(
+        `
+        SELECT c.chunk_id
+        FROM chunks c
+        WHERE c.doc_id = @docId AND c.chunk_index > @chunkIndex
+        ORDER BY c.chunk_index ASC
+        LIMIT 1
+      `,
+      )
+      .get({
+        docId: resolvedRow.doc_id,
+        chunkIndex: resolvedRow.chunk_index,
+      });
+
+    return {
+      chunk: {
+        ...readChunkRow(resolvedRow),
+        chunk_id: chunkId,
+        next_chunk_id: nextChunkRow ? Number(nextChunkRow.chunk_id) : null,
+      },
+    };
   } finally {
     database.close();
   }

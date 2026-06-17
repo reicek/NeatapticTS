@@ -22,6 +22,22 @@ skills: ['solid-split']
 user-invocable: false
 ---
 
+## Cortex-First Search Policy
+
+This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
+2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
+4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
+5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
+6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
+7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
+8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
+9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
+
 ## Mission
 
 Complete exactly one durable SOLID split step at a time, keeping the codebase aligned with a resumable plan document. After each step, either emit a handoff prompt ready to start the next step in a new session, or terminally close the plan with compression plus logs when no in-plan follow-up remains. The companion skill `solid-split` owns all canonical repository workflow, documentation policy, and validation knowledge — always defer to it for durable decisions.

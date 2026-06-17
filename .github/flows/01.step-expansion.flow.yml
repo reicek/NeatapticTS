@@ -1,0 +1,55 @@
+id: '01.step-expansion'
+name: 'Step Expansion and Slice Authoring'
+agent: '01-planning'
+description: >
+  Expands a pasted step-level packet into full execution slices when the step
+  declares `expansion: slices` and `auto_expand: true`. The flow reads the
+  active plan state, identifies the step's required outcome from `goal` and
+  `tdd_sequence`, and authors a complete `slices` list with red-testing,
+  implementing, and green-testing slices (or a subset for `green-only`). Each
+  slice includes `slice_id`, `title`, `status`, `goal`, `estimate_hours`,
+  `files_to_change`, `acceptance_criteria`, `parallelizable`, `dependencies`,
+  and `next_slice`. The resulting step packet is then handed to
+  `00.slice-orchestration` for sequential dispatch. If the step uses
+  `expansion: none` or `auto_expand: false`, this flow is a no-op and the step
+  is routed directly to the agent derived from `goal`.
+
+triggers:
+  - 'Step packet with expansion: slices and auto_expand: true needs slice list'
+  - 'User asks 01-planning to expand a pasted step into slices'
+  - 'Orchestrator detected a step block that requires auto-expansion'
+  - 'Slice list is missing, incomplete, or uses legacy schema'
+
+gates:
+  - 'plan-sync'
+  - 'step-packet'
+  - 'planning-output-contract'
+
+post-phase-fanout:
+  - '00-helping'
+
+skills:
+  - 'plan-alignment'
+  - 'phase-handoff-workflow'
+  - 'tracker-handoff'
+  - 'implementation-standards'
+
+specialists:
+  - 'slice-orchestration-scheduler'
+  - 'planning-risk-coordinator'
+
+timeout-minutes: 25
+
+search-policy:
+  primary: cortex-mcp
+  fallback: native-tools
+  tools:
+    - freshness_check
+    - search_corpus
+    - search_advanced
+    - search_context
+    - load_chunk
+    - load_document
+    - traverse_graph
+    - expand_query
+  description: 'Cortex RAG is the primary search mechanism. Use Cortex MCP tools first; fall back to grep/glob/view only when Cortex is degraded or target is a known file path.'

@@ -41,7 +41,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+
+   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
+   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
+   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
+   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
+   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
+   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
+   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
+
+   If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
+
 2. Identify the plan(s) in scope: individual `plans/*.plans.md` file(s), and the tracker registry.
 3. Read the smallest relevant tracker surface: `plans/README.md` (mapping trigger → plan file) and `plans/Roadmap.md` (sequencing).
 4. For each plan file, verify:

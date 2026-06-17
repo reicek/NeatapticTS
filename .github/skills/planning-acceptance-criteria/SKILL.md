@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Planning Acceptance Criteria
 
 This skill converts user intent into a precise, testable acceptance criteria set. Each criterion is tied to an observable behavior or validation method, non-goals are made explicit to prevent scope creep, and open assumptions are surfaced before implementation begins.

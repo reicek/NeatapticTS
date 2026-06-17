@@ -24,7 +24,7 @@ import { normalizeRepoPath, openCortexDatabase } from './cortex-db.mjs';
  * @param {string} [options.file_path] - Repo-relative file path to check.
  * @param {object} [options.freshnessProof] - Pre-computed freshness proof (for testing).
  * @param {string} [options.databasePath] - Override corpus database path.
- * @returns {Promise<{ fresh: boolean, stale: string[], documents: Array<object> }>} Freshness report.
+ * @returns {Promise<{ fresh: boolean, stale: string[], freshness: object, documents: Array<object> }>} Freshness report.
  * @throws {Error} When a specific `file_path` is not found in the index.
  */
 export async function freshnessCheck(options = {}) {
@@ -56,7 +56,25 @@ export async function freshnessCheck(options = {}) {
     const stale = checks
       .filter((check) => !check.fresh)
       .map((check) => check.file_path);
-    return { fresh: stale.length === 0, stale, documents: checks };
+    const timestamp = Date.now();
+    const freshness = {
+      timestamp,
+      stale: stale.length > 0,
+      last_update_source: 'filesystem',
+    };
+    return {
+      fresh: stale.length === 0,
+      stale,
+      freshness,
+      documents: checks.map((check) => ({
+        ...check,
+        freshness: {
+          timestamp,
+          stale: !check.fresh,
+          last_update_source: 'filesystem',
+        },
+      })),
+    };
   } finally {
     database.close();
   }

@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Triaging Test Failures
 
 This skill interprets failing validation output and assigns ownership to each failure without widening the fix scope. It classifies failures by type, identifies the smallest owner boundary, and recommends the next agent or command rather than attempting a broad repair.

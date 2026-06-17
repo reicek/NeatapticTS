@@ -3,67 +3,101 @@ import {
   extractStatus,
   fileExists,
   issue,
+  normalizePath,
   parseArgs,
+  parsePlanYamlBlock,
   printUsage,
   readWorkspaceFile,
   summarizeIssues,
   writeReport,
 } from './customization-utils.mjs';
 
-const legacyRequiredMetadataKeys = [
+const GOAL_VALUES = new Set([
+  'planning',
+  'researching',
+  'red-testing',
+  'implementing',
+  'green-testing',
+  'documenting',
+  'logging',
+  'helping',
+]);
+
+const TDD_SEQUENCE_VALUES = new Set(['red-green', 'green-only']);
+const EXPANSION_PHASE = 'steps';
+const EXPANSION_STEP_VALUES = new Set(['none', 'slices']);
+const SLICE_GOAL_VALUES = new Set([
+  'red-testing',
+  'implementing',
+  'green-testing',
+  'helping',
+]);
+
+const PHASE_REQUIRED_KEYS = [
   'phase',
-  'agent',
-  'agent_file',
+  'title',
   'status',
+  'goal',
+  'expansion',
+  'auto_expand',
   'mode',
   'source_of_truth',
   'copy_paste',
-  'requires_prior_phase',
   'next_phase',
+  'skills',
+  'validation',
+  'acceptance_criteria',
+  'placeholder_steps',
 ];
 
-const legacyRequiredSections = [
-  '**User instruction:**',
-  '**Objective:**',
-  '**Context the agent must know:**',
-  '**Execution steps:**',
-  '**Stop conditions:**',
-  '**Required validation:**',
-  '**Plan update requirement:**',
-];
-
-const stepRequiredMetadataKeys = [
+const STEP_REQUIRED_KEYS = [
   'phase',
   'step',
-  'agent',
-  'agent_file',
+  'title',
   'status',
+  'goal',
   'mode',
   'source_of_truth',
   'copy_paste',
   'next_step',
+  'skills',
+  'validation',
+  'acceptance_criteria',
 ];
 
-const stepRequiredSections = [
-  '**User instruction:**',
-  '**Step objective:**',
-  '**Context the agent must know:**',
-  '**Execution steps:**',
+const STEP_OPTIONAL_KEYS = new Set([
+  'tdd_sequence',
+  'expansion',
+  'auto_expand',
+  'slices',
+  'specialists',
+]);
+
+const PHASE_REQUIRED_SECTIONS = [
+  '**Phase objective:**',
   '**Stop conditions:**',
   '**Required validation:**',
-  '**Plan update requirement:**',
-  '**Whole-step copy rule:**',
 ];
 
-const forbiddenSections = ['**Copy-paste prompt:**'];
+const STEP_REQUIRED_SECTIONS = [
+  '**User instruction:**',
+  '**Step objective:**',
+  '**Stop conditions:**',
+  '**Required validation:**',
+];
+
+const FORBIDDEN_SECTIONS = ['**Copy-paste prompt:**'];
+
+const MIGRATION_HINT =
+  'Legacy plan block detected. Run: node scripts/agent-customization/migrate-plan-format.mjs --plan=<plan-file>';
 
 const options = parseArgs(process.argv.slice(2));
 
 if (options.help) {
   printUsage({
-    title: 'Validate copy-pasteable plan phase step packets.',
+    title: 'Validate copy-pasteable plan phase/step packets.',
     usage:
-      'node scripts/agent-customization/validate-plan-phase-packets.mjs [--json] [--plan=plans/completed/Agentic_Workflow_Architecture.plans.md]',
+      'node scripts/agent-customization/validate-plan-phase-packets.mjs [--json] [--plan=plans/PlanName.plans.md]',
     options: [
       [
         '--plan=<path>',
@@ -75,9 +109,9 @@ if (options.help) {
 }
 
 const planPath = options.plan;
+const normalizedPlanPath = normalizePath(planPath);
 const planText = await readWorkspaceFile(planPath);
 const planStatus = extractStatus(planText);
-const normalizedPlanPath = planPath.replaceAll('\\', '/');
 const isArchivedClosedPlan =
   planStatus === 'DONE' && normalizedPlanPath.startsWith('plans/completed/');
 const issues = [];
@@ -100,6 +134,7 @@ for (const [phaseIndex, phaseBlock] of phases.entries()) {
 const wipCount = phases.filter(
   (phaseBlock) => phaseBlock.headingStatus === 'WIP',
 ).length;
+
 if (isArchivedClosedPlan && wipCount !== 0) {
   issues.push(
     issue(
@@ -127,13 +162,12 @@ const report = {
     phase: phaseBlock.headingPhase,
     title: phaseBlock.headingTitle,
     status: phaseBlock.headingStatus,
-    schema: phaseBlock.stepBlocks.length > 0 ? 'step' : 'legacy',
-    agent:
+    schema: phaseBlock.metadata?.step !== undefined ? 'step' : 'phase',
+    goal:
       phaseBlock.stepBlocks.find(
         (stepBlock) => stepBlock.headingStatus === 'WIP',
-      )?.metadata.agent ??
-      phaseBlock.stepBlocks[0]?.metadata.agent ??
-      phaseBlock.metadata.agent ??
+      )?.metadata?.goal ??
+      phaseBlock.metadata?.goal ??
       null,
   })),
 };
@@ -143,14 +177,14 @@ process.exitCode = report.ok ? 0 : 1;
 
 function* extractPhaseBlocks(text) {
   const implementationMatch =
-    /## Implementation phases\s*(?<body>[\s\S]*?)(?=^## Validation gates)/m.exec(
+    /^## Implementation phases\s*(?<body>[\s\S]*?)(?=^## [^\n]*\bvalidation gates\b[^\n]*$)/imu.exec(
       text,
     );
   if (!implementationMatch?.groups) return;
 
   const implementationBody = implementationMatch.groups.body;
   const phasePattern =
-    /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)]\s*$/gm;
+    /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
   const matches = [...implementationBody.matchAll(phasePattern)];
 
   for (const [matchIndex, match] of matches.entries()) {
@@ -159,10 +193,10 @@ function* extractPhaseBlocks(text) {
     const nextMatch = matches.at(matchIndex + 1);
     const bodyEnd = nextMatch?.index ?? implementationBody.length;
     const phaseBody = implementationBody.slice(bodyStart, bodyEnd);
-    const metadata = extractMetadata(phaseBody);
+    const metadata = parseMetadataBlock(phaseBody);
     const phaseLabel = match.groups.phase;
     yield {
-      headingPhase: /^\d+$/.test(phaseLabel) ? Number(phaseLabel) : phaseLabel,
+      headingPhase: /^\d+$/u.test(phaseLabel) ? Number(phaseLabel) : phaseLabel,
       headingTitle: match.groups.title,
       headingStatus: match.groups.status,
       body: phaseBody,
@@ -173,7 +207,7 @@ function* extractPhaseBlocks(text) {
 
 function* extractStepBlocks(phaseBody) {
   const stepPattern =
-    /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)]\s*$/gm;
+    /^#### Step (?<step>\d{2,})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
   const matches = [...phaseBody.matchAll(stepPattern)];
 
   for (const [matchIndex, match] of matches.entries()) {
@@ -187,8 +221,18 @@ function* extractStepBlocks(phaseBody) {
       headingTitle: match.groups.title,
       headingStatus: match.groups.status,
       body: stepBody,
-      metadata: extractMetadata(stepBody),
+      metadata: parseMetadataBlock(stepBody),
     };
+  }
+}
+
+function parseMetadataBlock(body) {
+  const match = /^\s*```yaml\r?\n(?<yaml>[\s\S]*?)\r?\n```/mu.exec(body);
+  if (!match?.groups) return null;
+  try {
+    return parsePlanYamlBlock(match.groups.yaml);
+  } catch (error) {
+    return { __parseError: String(error) };
   }
 }
 
@@ -211,162 +255,245 @@ async function validatePhase(phaseBlock, previousPhaseLabel) {
     }
   }
 
-  if (phaseBlock.stepBlocks.length > 0) {
-    await validateStepPhase(phaseBlock, phasePath);
-    return;
-  }
+  const { metadata } = phaseBlock;
 
-  await validateLegacyPhase(phaseBlock, phasePath);
-}
-
-async function validateLegacyPhase(phaseBlock, phasePath) {
-  const hasYamlMetadata = /^\s*```yaml\r?\n/.test(phaseBlock.body);
-
-  if (!hasYamlMetadata) {
-    pushForbiddenSectionIssues(
-      phaseBlock.body,
-      phasePath,
-      'Phase packet must not contain a separate Copy-paste prompt section; the whole phase is the prompt.',
-    );
-
+  if (metadata === null) {
     if (phaseBlock.headingStatus !== 'DONE') {
       issues.push(
         issue(
           'error',
           phasePath,
-          'Active or planned phases must use numbered step packets that start with Step 01 planning.',
-        ),
-      );
-      return;
-    }
-
-    if (phaseBlock.body.trim().length === 0) {
-      issues.push(
-        issue(
-          'error',
-          phasePath,
-          'Compressed done phase must keep a concise coverage note.',
+          'Active or planned phase must contain a YAML metadata block.',
         ),
       );
     }
     return;
   }
 
-  if (phaseBlock.headingStatus !== 'DONE') {
+  if (metadata.__parseError) {
     issues.push(
       issue(
         'error',
         phasePath,
-        'Active or planned phases must use numbered step packets that start with Step 01 planning.',
+        `Could not parse phase YAML: ${metadata.__parseError}`,
       ),
     );
+    return;
   }
 
-  for (const key of legacyRequiredMetadataKeys) {
-    if (!Object.hasOwn(phaseBlock.metadata, key)) {
-      issues.push(issue('error', phasePath, `Missing metadata key: ${key}.`));
-    }
+  if (isLegacyBlock(metadata, phaseBlock.headingStatus)) {
+    issues.push(issue('error', phasePath, `${MIGRATION_HINT} (phase-level)`));
+    return;
   }
 
-  const metadataPhase = normalizePhaseLabel(phaseBlock.metadata.phase);
-  if (metadataPhase !== normalizePhaseLabel(phaseBlock.headingPhase)) {
-    issues.push(
-      issue(
-        'error',
-        phasePath,
-        `Metadata phase ${phaseBlock.metadata.phase ?? 'missing'} does not match heading.`,
-      ),
-    );
+  const isStepPacket = metadata.step !== undefined;
+
+  if (isStepPacket) {
+    await validateStepPacketInPhase(phaseBlock, phasePath);
+    return;
   }
 
-  const metadataStatus = stripStatus(phaseBlock.metadata.status);
-  if (metadataStatus !== phaseBlock.headingStatus) {
-    issues.push(
-      issue(
-        'error',
-        phasePath,
-        `Metadata status ${phaseBlock.metadata.status ?? 'missing'} does not match heading.`,
-      ),
-    );
-  }
+  await validatePhasePacket(phaseBlock, phasePath);
+}
 
-  if (phaseBlock.metadata.mode !== 'fresh-session') {
-    issues.push(
-      issue('error', phasePath, 'Metadata mode must be fresh-session.'),
-    );
-  }
+async function validatePhasePacket(phaseBlock, phasePath) {
+  const { metadata, body, headingPhase, headingTitle, headingStatus } =
+    phaseBlock;
 
-  if (phaseBlock.metadata.source_of_truth !== planPath) {
-    issues.push(
-      issue(
-        'error',
-        phasePath,
-        `Metadata source_of_truth must be ${planPath}.`,
-      ),
-    );
-  }
-
-  if (phaseBlock.metadata.copy_paste !== 'true') {
-    issues.push(issue('error', phasePath, 'Metadata copy_paste must be true.'));
-  }
-
-  if (
-    phaseBlock.metadata.agent_file &&
-    !(await fileExists(phaseBlock.metadata.agent_file))
-  ) {
-    issues.push(
-      issue(
-        'error',
-        phasePath,
-        `Metadata agent_file does not exist: ${phaseBlock.metadata.agent_file}.`,
-      ),
-    );
-  }
-
-  for (const section of legacyRequiredSections) {
-    if (!phaseBlock.body.includes(section)) {
+  for (const key of PHASE_REQUIRED_KEYS) {
+    if (!Object.hasOwn(metadata, key)) {
       issues.push(
-        issue('error', phasePath, `Missing required section: ${section}`),
+        issue('error', phasePath, `Missing phase metadata key: ${key}.`),
       );
     }
   }
 
-  pushForbiddenSectionIssues(
-    phaseBlock.body,
-    phasePath,
-    'Phase packet must not contain a separate Copy-paste prompt section; the whole phase is the prompt.',
+  if (metadata.title !== headingTitle) {
+    issues.push(
+      issue(
+        'error',
+        phasePath,
+        `Metadata title ${String(metadata.title)} does not match heading title.`,
+      ),
+    );
+  }
+
+  const metadataPhase = normalizePhaseLabel(metadata.phase);
+  if (metadataPhase !== normalizePhaseLabel(headingPhase)) {
+    issues.push(
+      issue(
+        'error',
+        phasePath,
+        `Metadata phase ${String(metadata.phase)} does not match heading.`,
+      ),
+    );
+  }
+
+  const metadataStatus = stripStatus(metadata.status);
+  if (metadataStatus !== headingStatus) {
+    issues.push(
+      issue(
+        'error',
+        phasePath,
+        `Metadata status ${String(metadata.status)} does not match heading.`,
+      ),
+    );
+  }
+
+  if (metadata.goal !== 'planning') {
+    issues.push(
+      issue(
+        'error',
+        phasePath,
+        `Phase-level goal must be 'planning', found ${String(metadata.goal)}.`,
+      ),
+    );
+  }
+
+  if (metadata.expansion !== EXPANSION_PHASE) {
+    issues.push(
+      issue(
+        'error',
+        phasePath,
+        `Phase-level expansion must be '${EXPANSION_PHASE}', found ${String(metadata.expansion)}.`,
+      ),
+    );
+  }
+
+  if (metadata.auto_expand !== false) {
+    issues.push(
+      issue(
+        'error',
+        phasePath,
+        `Phase-level auto_expand must be false, found ${String(metadata.auto_expand)}.`,
+      ),
+    );
+  }
+
+  if (!['fresh-session', 'perpetual'].includes(metadata.mode)) {
+    issues.push(
+      issue(
+        'error',
+        phasePath,
+        "Metadata mode must be 'fresh-session' or 'perpetual'.",
+      ),
+    );
+  }
+
+  const normalizedSource = normalizePath(
+    String(metadata.source_of_truth ?? ''),
   );
+  if (normalizedSource !== normalizedPlanPath) {
+    issues.push(
+      issue(
+        'error',
+        phasePath,
+        `Metadata source_of_truth must be ${normalizedPlanPath}.`,
+      ),
+    );
+  }
+
+  if (!booleanValue(metadata.copy_paste)) {
+    issues.push(issue('error', phasePath, 'Metadata copy_paste must be true.'));
+  }
+
+  if (!Array.isArray(metadata.skills) || metadata.skills.length === 0) {
+    issues.push(
+      issue('error', phasePath, 'Metadata skills must be a non-empty list.'),
+    );
+  }
+
+  if (!Array.isArray(metadata.validation) || metadata.validation.length === 0) {
+    issues.push(
+      issue(
+        'error',
+        phasePath,
+        'Metadata validation must be a non-empty list.',
+      ),
+    );
+  }
 
   if (
-    !phaseBlock.body.includes(`select \`${phaseBlock.metadata.agent}\``) ||
-    !includesWordsInOrder(phaseBlock.body, 'paste this full phase packet')
+    !Array.isArray(metadata.acceptance_criteria) ||
+    metadata.acceptance_criteria.length === 0
   ) {
     issues.push(
       issue(
         'error',
         phasePath,
-        'User instruction must tell the user to select the phase agent and paste the full phase packet.',
+        'Metadata acceptance_criteria must be a non-empty list.',
       ),
+    );
+  }
+
+  if (
+    !Array.isArray(metadata.placeholder_steps) ||
+    metadata.placeholder_steps.length === 0
+  ) {
+    issues.push(
+      issue(
+        'error',
+        phasePath,
+        'Metadata placeholder_steps must be a non-empty list.',
+      ),
+    );
+  }
+
+  if (headingStatus !== 'DONE') {
+    for (const section of PHASE_REQUIRED_SECTIONS) {
+      if (!body.includes(section)) {
+        issues.push(
+          issue('error', phasePath, `Missing required section: ${section}`),
+        );
+      }
+    }
+  }
+
+  pushForbiddenSectionIssues(body, phasePath);
+
+  for (const stepBlock of phaseBlock.stepBlocks) {
+    await validateStepPacketInPhase(
+      phaseBlock,
+      `${phasePath}-step-${String(stepBlock.headingStep).padStart(2, '0')}`,
+      stepBlock,
     );
   }
 }
 
-async function validateStepPhase(phaseBlock, phasePath) {
-  const shouldRequireFullStepSequence = phaseBlock.headingStatus !== 'DONE';
+async function validateStepPacketInPhase(
+  phaseBlock,
+  phasePath,
+  explicitStepBlock = null,
+) {
+  const stepBlocks = explicitStepBlock
+    ? [explicitStepBlock]
+    : phaseBlock.stepBlocks;
+  const shouldRequireFullStepSequence =
+    phaseBlock.headingStatus !== 'DONE' && !explicitStepBlock;
 
   if (
     shouldRequireFullStepSequence &&
+    phaseBlock.stepBlocks.length > 0 &&
     phaseBlock.stepBlocks[0]?.headingStep !== 1
   ) {
     issues.push(
-      issue('error', phasePath, 'Step-based phases must start with Step 01.'),
+      issue(
+        'error',
+        phasePath,
+        'Step-based phases must start with Step 01 when active.',
+      ),
     );
   }
 
   const wipSteps = phaseBlock.stepBlocks.filter(
     (stepBlock) => stepBlock.headingStatus === 'WIP',
   ).length;
-  if (phaseBlock.headingStatus === 'WIP' && wipSteps !== 1) {
+
+  if (
+    phaseBlock.headingStatus === 'WIP' &&
+    wipSteps !== 1 &&
+    !explicitStepBlock
+  ) {
     issues.push(
       issue(
         'error',
@@ -376,7 +503,11 @@ async function validateStepPhase(phaseBlock, phasePath) {
     );
   }
 
-  if (phaseBlock.headingStatus !== 'WIP' && wipSteps !== 0) {
+  if (
+    phaseBlock.headingStatus !== 'WIP' &&
+    wipSteps !== 0 &&
+    !explicitStepBlock
+  ) {
     issues.push(
       issue(
         'error',
@@ -386,203 +517,397 @@ async function validateStepPhase(phaseBlock, phasePath) {
     );
   }
 
-  for (const [stepIndex, stepBlock] of phaseBlock.stepBlocks.entries()) {
-    const expectedStep = shouldRequireFullStepSequence
-      ? stepIndex + 1
-      : stepBlock.headingStep;
+  for (const [stepIndex, stepBlock] of stepBlocks.entries()) {
+    const expectedStep = explicitStepBlock
+      ? stepBlock.headingStep
+      : shouldRequireFullStepSequence
+        ? stepIndex + 1
+        : stepBlock.headingStep;
     const stepPath = `${phasePath}-step-${String(stepBlock.headingStep).padStart(2, '0')}`;
-    const hasYamlMetadata = /^\s*```yaml\r?\n/.test(stepBlock.body);
+    const { metadata, body, headingStep, headingTitle, headingStatus } =
+      stepBlock;
 
     if (stepBlock.headingStep !== expectedStep) {
       issues.push(
         issue(
           'error',
           stepPath,
-          `Expected step ${String(expectedStep).padStart(2, '0')}, found step ${String(stepBlock.headingStep).padStart(2, '0')}.`,
+          `Expected step ${String(expectedStep).padStart(2, '0')}, found step ${String(headingStep).padStart(2, '0')}.`,
         ),
       );
     }
 
-    if (!hasYamlMetadata) {
-      pushForbiddenSectionIssues(
-        stepBlock.body,
-        stepPath,
-        'Step packet must not contain a separate Copy-paste prompt section; the whole step is the prompt.',
-      );
-
-      if (stepBlock.headingStatus !== 'DONE') {
+    if (metadata === null) {
+      if (headingStatus !== 'DONE') {
         issues.push(
           issue(
             'error',
             stepPath,
-            'Active or planned steps must keep a full step packet with yaml metadata.',
-          ),
-        );
-        continue;
-      }
-
-      if (stepBlock.body.trim().length === 0) {
-        issues.push(
-          issue(
-            'error',
-            stepPath,
-            'Compressed done step must keep a concise coverage note.',
+            'Active or planned steps must keep a YAML metadata block.',
           ),
         );
       }
       continue;
     }
 
-    for (const key of stepRequiredMetadataKeys) {
-      if (!Object.hasOwn(stepBlock.metadata, key)) {
-        issues.push(issue('error', stepPath, `Missing metadata key: ${key}.`));
+    if (metadata.__parseError) {
+      issues.push(
+        issue(
+          'error',
+          stepPath,
+          `Could not parse step YAML: ${metadata.__parseError}`,
+        ),
+      );
+      continue;
+    }
+
+    if (isLegacyBlock(metadata, headingStatus)) {
+      issues.push(issue('error', stepPath, `${MIGRATION_HINT} (step-level)`));
+      continue;
+    }
+
+    for (const key of STEP_REQUIRED_KEYS) {
+      if (
+        headingStatus === 'DONE' &&
+        (key === 'title' || key === 'acceptance_criteria')
+      ) {
+        continue;
+      }
+      if (!Object.hasOwn(metadata, key)) {
+        issues.push(
+          issue('error', stepPath, `Missing step metadata key: ${key}.`),
+        );
       }
     }
 
-    const metadataPhase = normalizePhaseLabel(stepBlock.metadata.phase);
+    const unknownKeys = Object.keys(metadata).filter(
+      (key) =>
+        !STEP_REQUIRED_KEYS.includes(key) &&
+        !STEP_OPTIONAL_KEYS.has(key) &&
+        !PHASE_REQUIRED_KEYS.includes(key),
+    );
+    for (const key of unknownKeys) {
+      issues.push(
+        issue('warning', stepPath, `Unexpected metadata key: ${key}.`),
+      );
+    }
+
+    if (metadata.title !== undefined && metadata.title !== headingTitle) {
+      issues.push(
+        issue(
+          'error',
+          stepPath,
+          `Metadata title ${String(metadata.title)} does not match heading title.`,
+        ),
+      );
+    }
+
+    const metadataPhase = normalizePhaseLabel(metadata.phase);
     if (metadataPhase !== normalizePhaseLabel(phaseBlock.headingPhase)) {
       issues.push(
         issue(
           'error',
           stepPath,
-          `Metadata phase ${stepBlock.metadata.phase ?? 'missing'} does not match phase heading.`,
+          `Metadata phase ${String(metadata.phase)} does not match phase heading.`,
         ),
       );
     }
 
-    const metadataStep = Number(stepBlock.metadata.step);
-    if (metadataStep !== stepBlock.headingStep) {
+    const metadataStep = Number(metadata.step);
+    if (!Number.isNaN(metadataStep) && metadataStep !== headingStep) {
       issues.push(
         issue(
           'error',
           stepPath,
-          `Metadata step ${stepBlock.metadata.step ?? 'missing'} does not match step heading.`,
+          `Metadata step ${String(metadata.step)} does not match step heading.`,
         ),
       );
     }
 
-    const metadataStatus = stripStatus(stepBlock.metadata.status);
-    if (metadataStatus !== stepBlock.headingStatus) {
+    const metadataStatus = stripStatus(metadata.status);
+    if (metadataStatus !== headingStatus) {
       issues.push(
         issue(
           'error',
           stepPath,
-          `Metadata status ${stepBlock.metadata.status ?? 'missing'} does not match step heading.`,
+          `Metadata status ${String(metadata.status)} does not match step heading.`,
         ),
       );
     }
 
-    if (stepBlock.metadata.mode !== 'fresh-session') {
-      issues.push(
-        issue('error', stepPath, 'Metadata mode must be fresh-session.'),
-      );
-    }
-
-    if (stepBlock.metadata.source_of_truth !== planPath) {
+    if (!GOAL_VALUES.has(metadata.goal)) {
       issues.push(
         issue(
           'error',
           stepPath,
-          `Metadata source_of_truth must be ${planPath}.`,
+          `Invalid goal '${String(metadata.goal)}'. Must be one of: ${[...GOAL_VALUES].join(', ')}.`,
         ),
       );
     }
 
-    if (stepBlock.metadata.copy_paste !== 'true') {
+    if (metadata.goal === 'planning' && headingStep !== 1) {
       issues.push(
-        issue('error', stepPath, 'Metadata copy_paste must be true.'),
+        issue('error', stepPath, "Only Step 01 may have goal 'planning'."),
       );
     }
 
     if (
-      stepBlock.metadata.agent_file &&
-      !(await fileExists(stepBlock.metadata.agent_file))
+      metadata.tdd_sequence !== undefined &&
+      !TDD_SEQUENCE_VALUES.has(metadata.tdd_sequence)
     ) {
       issues.push(
         issue(
           'error',
           stepPath,
-          `Metadata agent_file does not exist: ${stepBlock.metadata.agent_file}.`,
+          `Invalid tdd_sequence '${String(metadata.tdd_sequence)}'.`,
         ),
       );
     }
 
-    if (stepBlock.headingStatus !== 'DONE') {
-      const expectedStepNumber = String(stepBlock.headingStep).padStart(2, '0');
-      if (
-        !usesMatchingNumberedAgent(stepBlock.metadata.agent, expectedStepNumber)
-      ) {
+    if (!['fresh-session', 'perpetual'].includes(metadata.mode)) {
+      issues.push(
+        issue(
+          'error',
+          stepPath,
+          "Metadata mode must be 'fresh-session' or 'perpetual'.",
+        ),
+      );
+    }
+
+    const normalizedSource = normalizePath(
+      String(metadata.source_of_truth ?? ''),
+    );
+    if (normalizedSource !== normalizedPlanPath) {
+      issues.push(
+        issue(
+          'error',
+          stepPath,
+          `Metadata source_of_truth must be ${normalizedPlanPath}.`,
+        ),
+      );
+    }
+
+    if (!booleanValue(metadata.copy_paste)) {
+      issues.push(
+        issue('error', stepPath, 'Metadata copy_paste must be true.'),
+      );
+    }
+
+    if (!Array.isArray(metadata.skills) || metadata.skills.length === 0) {
+      issues.push(
+        issue('error', stepPath, 'Metadata skills must be a non-empty list.'),
+      );
+    }
+
+    if (
+      !Array.isArray(metadata.validation) ||
+      metadata.validation.length === 0
+    ) {
+      issues.push(
+        issue(
+          'error',
+          stepPath,
+          'Metadata validation must be a non-empty list.',
+        ),
+      );
+    }
+
+    if (
+      headingStatus !== 'DONE' &&
+      (!Array.isArray(metadata.acceptance_criteria) ||
+        metadata.acceptance_criteria.length === 0)
+    ) {
+      issues.push(
+        issue(
+          'error',
+          stepPath,
+          'Metadata acceptance_criteria must be a non-empty list.',
+        ),
+      );
+    }
+
+    const expansion = metadata.expansion;
+    if (expansion !== undefined && !EXPANSION_STEP_VALUES.has(expansion)) {
+      issues.push(
+        issue(
+          'error',
+          stepPath,
+          `Invalid expansion '${String(expansion)}'. Must be 'none' or 'slices'.`,
+        ),
+      );
+    }
+
+    if (expansion === 'slices') {
+      if (metadata.auto_expand !== true) {
         issues.push(
           issue(
             'error',
             stepPath,
-            `Step ${String(stepBlock.headingStep).padStart(2, '0')} must use the matching numbered agent.`,
+            "Expansion 'slices' requires auto_expand: true.",
           ),
         );
       }
 
-      for (const section of stepRequiredSections) {
-        if (!stepBlock.body.includes(section)) {
+      if (!metadata.tdd_sequence) {
+        issues.push(
+          issue(
+            'error',
+            stepPath,
+            "Expansion 'slices' requires a tdd_sequence field.",
+          ),
+        );
+      }
+
+      if (!Array.isArray(metadata.slices) || metadata.slices.length === 0) {
+        issues.push(
+          issue(
+            'error',
+            stepPath,
+            "Expansion 'slices' requires a non-empty slices list.",
+          ),
+        );
+      } else {
+        await validateSlices(metadata.slices, stepPath, metadata.tdd_sequence);
+      }
+    }
+
+    if (headingStatus !== 'DONE') {
+      for (const section of STEP_REQUIRED_SECTIONS) {
+        if (!body.includes(section)) {
           issues.push(
             issue('error', stepPath, `Missing required section: ${section}`),
           );
         }
       }
+    }
 
-      if (
-        !stepBlock.body.includes(`select \`${stepBlock.metadata.agent}\``) ||
-        !includesWordsInOrder(stepBlock.body, 'paste this full step packet')
-      ) {
-        issues.push(
-          issue(
-            'error',
-            stepPath,
-            'User instruction must tell the user to select the step agent and paste the full step packet.',
-          ),
-        );
+    pushForbiddenSectionIssues(body, stepPath);
+
+    if (metadata.agent_file && !(await fileExists(metadata.agent_file))) {
+      issues.push(
+        issue(
+          'error',
+          stepPath,
+          `Metadata agent_file does not exist: ${String(metadata.agent_file)}.`,
+        ),
+      );
+    }
+  }
+}
+
+async function validateSlices(slices, stepPath, tddSequence) {
+  const expectedGoals =
+    tddSequence === 'green-only'
+      ? ['implementing', 'green-testing']
+      : ['red-testing', 'implementing', 'green-testing'];
+
+  for (const [sliceIndex, slice] of slices.entries()) {
+    const slicePath = `${stepPath}-slice-${sliceIndex}`;
+    const sliceId = slice?.slice_id ?? '<missing>';
+    const sliceIdPath = `${slicePath}(${sliceId})`;
+
+    const requiredSliceKeys = [
+      'slice_id',
+      'title',
+      'status',
+      'goal',
+      'estimate_hours',
+      'files_to_change',
+      'acceptance_criteria',
+      'parallelizable',
+      'dependencies',
+    ];
+
+    for (const key of requiredSliceKeys) {
+      if (!Object.hasOwn(slice ?? {}, key)) {
+        issues.push(issue('error', sliceIdPath, `Missing slice key: ${key}.`));
       }
     }
 
-    pushForbiddenSectionIssues(
-      stepBlock.body,
-      stepPath,
-      'Step packet must not contain a separate Copy-paste prompt section; the whole step is the prompt.',
-    );
-  }
-}
+    if (slice && !SLICE_GOAL_VALUES.has(slice.goal)) {
+      issues.push(
+        issue(
+          'error',
+          sliceIdPath,
+          `Invalid slice goal '${String(slice.goal)}'.`,
+        ),
+      );
+    }
 
-function includesWordsInOrder(body, phrase) {
-  const escapedWords = phrase
-    .split(/\s+/)
-    .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  return new RegExp(escapedWords.join('\\s+')).test(body);
-}
+    if (slice && !Array.isArray(slice.files_to_change)) {
+      issues.push(
+        issue('error', sliceIdPath, 'Slice files_to_change must be a list.'),
+      );
+    }
 
-function pushForbiddenSectionIssues(body, sectionPath, message) {
-  for (const section of forbiddenSections) {
-    if (body.includes(section)) {
-      issues.push(issue('error', sectionPath, message));
+    if (slice && !Array.isArray(slice.acceptance_criteria)) {
+      issues.push(
+        issue(
+          'error',
+          sliceIdPath,
+          'Slice acceptance_criteria must be a list.',
+        ),
+      );
+    }
+
+    if (slice && typeof slice.parallelizable !== 'boolean') {
+      issues.push(
+        issue('error', sliceIdPath, 'Slice parallelizable must be a boolean.'),
+      );
+    }
+
+    if (slice && !Array.isArray(slice.dependencies)) {
+      issues.push(
+        issue('error', sliceIdPath, 'Slice dependencies must be a list.'),
+      );
+    }
+
+    if (slice && typeof slice.estimate_hours !== 'number') {
+      issues.push(
+        issue('error', sliceIdPath, 'Slice estimate_hours must be a number.'),
+      );
+    }
+
+    const expectedGoal = expectedGoals[sliceIndex];
+    if (slice && expectedGoal && slice.goal !== expectedGoal) {
+      issues.push(
+        issue(
+          'error',
+          sliceIdPath,
+          `Expected slice ${sliceIndex} goal to be '${expectedGoal}', found '${String(slice.goal)}'.`,
+        ),
+      );
     }
   }
 }
 
-function extractMetadata(phaseBody) {
-  const match = /^\s*```yaml\r?\n(?<yaml>[\s\S]*?)\r?\n```/.exec(phaseBody);
-  if (!match?.groups) return {};
-
-  const metadata = {};
-  for (const line of match.groups.yaml.split(/\r?\n/)) {
-    const keyValueMatch = /^(?<key>[a-z_]+):\s*(?<value>.*)$/.exec(line);
-    if (!keyValueMatch?.groups) continue;
-    metadata[keyValueMatch.groups.key] = normalizeScalar(
-      keyValueMatch.groups.value,
-    );
-  }
-  return metadata;
+function isLegacyBlock(metadata, headingStatus) {
+  if (headingStatus === 'DONE') return false;
+  if (!metadata || typeof metadata !== 'object') return false;
+  if (metadata.agent !== undefined || metadata.agent_file !== undefined)
+    return true;
+  if (metadata.expansion === undefined) return true;
+  return false;
 }
 
-function normalizeScalar(value) {
-  return value.trim().replace(/^['"]|['"]$/g, '');
+function booleanValue(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value === 'true';
+  return false;
+}
+
+function pushForbiddenSectionIssues(body, sectionPath) {
+  for (const section of FORBIDDEN_SECTIONS) {
+    if (body.includes(section)) {
+      issues.push(
+        issue(
+          'error',
+          sectionPath,
+          'Packet must not contain a separate Copy-paste prompt section; the whole packet is the prompt.',
+        ),
+      );
+    }
+  }
 }
 
 function normalizePhaseLabel(value) {
@@ -590,33 +915,24 @@ function normalizePhaseLabel(value) {
 }
 
 function stripStatus(value) {
-  return value?.replace(/^\[/, '').replace(/]$/, '') ?? null;
+  return value?.replace(/^\[/u, '').replace(/\]$/u, '') ?? null;
 }
 
 function getNextPhaseLabel(phaseLabel) {
   const normalizedPhaseLabel = normalizePhaseLabel(phaseLabel);
   if (normalizedPhaseLabel === null) return null;
 
-  if (/^\d+$/.test(normalizedPhaseLabel)) {
+  if (/^\d+$/u.test(normalizedPhaseLabel)) {
     const numericPhase = Number(normalizedPhaseLabel);
     if (numericPhase === 0) return 'A';
     return String(numericPhase + 1);
   }
 
-  if (/^[A-Z]$/.test(normalizedPhaseLabel)) {
+  if (/^[A-Z]$/u.test(normalizedPhaseLabel)) {
     return normalizedPhaseLabel === 'Z'
       ? null
       : String.fromCharCode(normalizedPhaseLabel.charCodeAt(0) + 1);
   }
 
   return null;
-}
-
-function usesMatchingNumberedAgent(agentName, expectedStepNumber) {
-  if (!agentName) return false;
-
-  return (
-    agentName.startsWith(`${expectedStepNumber}-`) ||
-    agentName.startsWith(`${expectedStepNumber} `)
-  );
 }

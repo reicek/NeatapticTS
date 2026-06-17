@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Splitting Monolithic Agent
 
 This skill decomposes an overloaded `.agent.md` file into a bounded orchestrator, hidden specialists, and reusable skills. It preserves the original user-visible API unless an explicit rename is approved, and ensures every new boundary has a validated output contract and delegation edge before the split is declared complete.

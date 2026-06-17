@@ -19,12 +19,17 @@
  * @returns {object} Traversal results with entities, relationships, chunk_ids, doc_ids.
  */
 import Database from 'better-sqlite3';
+import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
   defaultDatabasePath,
   repoRoot,
 } from '../../semantic-index/init-schema.mjs';
+import { ErrorCodes, cortexError } from './cortex-error.mjs';
+
+/** In-memory graph cache keyed by resolved database path. */
+const graphCache = new Map();
 
 /** All valid relationship types. */
 const ALL_RELATIONSHIP_TYPES = [
@@ -69,10 +74,10 @@ const CODE_ENTITY_TYPES = new Set([
 ]);
 
 /** Maximum hops allowed. */
-const MAX_HOPS_LIMIT = 3;
+const MAX_HOPS_LIMIT = 4;
 
 /** Maximum results allowed. */
-const MAX_RESULTS_LIMIT = 50;
+const MAX_RESULTS_LIMIT = 100;
 
 /**
  * Traverse the entity/relationship graph from seed entities.
@@ -92,10 +97,26 @@ const MAX_RESULTS_LIMIT = 50;
  * @returns {Promise<object>} Traversal results.
  */
 export async function traverseGraph(options = {}) {
-  const maxHops = Math.min(
-    Math.max(Number(options.max_hops ?? 2), 1),
-    MAX_HOPS_LIMIT,
-  );
+  const seedNames = options.seed_names;
+  const seedQuery = options.seed_query;
+  const hasSeeds =
+    (Array.isArray(seedNames) && seedNames.length > 0) ||
+    (typeof seedQuery === 'string' && seedQuery.length > 0);
+  if (!hasSeeds) {
+    throw cortexError(
+      ErrorCodes.SEED_REQUIRED,
+      'At least one of seed_query or seed_names is required.',
+    );
+  }
+
+  const rawMaxHops = options.max_hops;
+  let maxHops =
+    rawMaxHops === undefined || rawMaxHops === null ? 2 : Number(rawMaxHops);
+  if (!Number.isInteger(maxHops) || maxHops < 1) {
+    maxHops = 2;
+  }
+  maxHops = Math.min(maxHops, MAX_HOPS_LIMIT);
+
   const maxResults = Math.min(
     Math.max(Number(options.max_results ?? 20), 1),
     MAX_RESULTS_LIMIT,
@@ -114,6 +135,8 @@ export async function traverseGraph(options = {}) {
     'low',
   ]);
   const confidenceSet = new Set(confidenceFilter);
+
+  const startTime = Date.now();
 
   const databasePath = path.resolve(
     options.databasePath ?? defaultDatabasePath,
@@ -143,15 +166,21 @@ export async function traverseGraph(options = {}) {
       total_discovered: 0,
       returned_count: 0,
       graph_available: false,
+      graph_state: 'not_built',
+      traversal_stats: {
+        total_entities_discovered: 0,
+        total_edges_traversed: 0,
+        hops_completed: 0,
+        query_time_ms: Date.now() - startTime,
+      },
     };
   }
 
-  // Phase 1: Resolve seed entities.
-  const seedEntities = resolveSeedEntities(
-    database,
-    options.seed_names,
-    options.seed_query,
-  );
+  // Phase 1: Load graph into memory (cached per DB path + file metadata).
+  const graph = await getCachedGraph(databasePath, database);
+
+  // Phase 2: Resolve seed entities.
+  const seedEntities = resolveSeedEntities(graph, seedNames, seedQuery);
   if (seedEntities.length === 0) {
     database.close();
     return {
@@ -164,68 +193,28 @@ export async function traverseGraph(options = {}) {
       total_discovered: 0,
       returned_count: 0,
       graph_available: true,
+      graph_state: 'ready',
+      traversal_stats: {
+        total_entities_discovered: 0,
+        total_edges_traversed: 0,
+        hops_completed: 0,
+        query_time_ms: Date.now() - startTime,
+      },
     };
   }
 
-  // Phase 2: BFS traversal.
-  const visited = new Set(seedEntities.map((e) => e.entity_id));
-  const discovered = [...seedEntities];
-  const distanceMap = new Map();
-  for (const seed of seedEntities) {
-    distanceMap.set(seed.entity_id, 0);
-  }
+  // Phase 3: BFS traversal in memory.
+  const relationshipTypesSet = new Set(relationshipTypes);
+  const entityTypesSet = new Set(entityTypes);
+  const { discovered, allEdges, hopsCompleted, distanceMap } =
+    traverseFromSeeds(graph, seedEntities, {
+      maxHops,
+      relationshipTypesSet,
+      confidenceSet,
+      entityTypesSet,
+    });
 
-  let currentFrontier = [...seedEntities];
-  const allEdges = [];
-
-  for (let hop = 1; hop <= maxHops; hop++) {
-    const nextFrontier = [];
-
-    for (const entity of currentFrontier) {
-      // Follow outgoing edges.
-      const outgoingEdges = queryOutgoingEdges(
-        database,
-        entity.entity_id,
-        relationshipTypes,
-        confidenceSet,
-      );
-      for (const edge of outgoingEdges) {
-        const target = getEntityById(database, edge.target_entity_id);
-        if (!target || visited.has(target.entity_id)) continue;
-        if (!entityTypes.includes(target.entity_type)) continue;
-
-        visited.add(target.entity_id);
-        distanceMap.set(target.entity_id, hop);
-        discovered.push(target);
-        nextFrontier.push(target);
-        allEdges.push(edge);
-      }
-
-      // Follow incoming edges (reverse traversal).
-      const incomingEdges = queryIncomingEdges(
-        database,
-        entity.entity_id,
-        relationshipTypes,
-        confidenceSet,
-      );
-      for (const edge of incomingEdges) {
-        const source = getEntityById(database, edge.source_entity_id);
-        if (!source || visited.has(source.entity_id)) continue;
-        if (!entityTypes.includes(source.entity_type)) continue;
-
-        visited.add(source.entity_id);
-        distanceMap.set(source.entity_id, hop);
-        discovered.push(source);
-        nextFrontier.push(source);
-        allEdges.push(edge);
-      }
-    }
-
-    currentFrontier = nextFrontier;
-    if (currentFrontier.length === 0) break;
-  }
-
-  // Phase 3: Rank and limit results.
+  // Phase 4: Rank and limit results.
   const edgeCounts = computeEdgeCounts(discovered, allEdges);
   const rankedEntities = rankEntities(
     discovered,
@@ -251,199 +240,346 @@ export async function traverseGraph(options = {}) {
     .filter((e) => e.chunk_id == null && e.doc_id != null)
     .map((e) => e.doc_id);
 
+  const queryTimeMs = Date.now() - startTime;
+
   database.close();
 
   return {
-    seed_entities: seedEntities.map(formatEntity),
-    entities: topEntities.map(formatEntity),
-    relationships: relevantEdges.map(formatEdge),
+    seed_entities: seedEntities.map((e) => formatEntity(e, distanceMap)),
+    entities: topEntities.map((e) => formatEntity(e, distanceMap)),
+    relationships: relevantEdges.map(formatEdge).filter(Boolean),
     chunk_ids: [...new Set(chunkIds)],
     doc_ids: [...new Set(docIds)],
     hop_count: maxHops,
     total_discovered: discovered.length,
     returned_count: topEntities.length,
     graph_available: true,
+    graph_state: 'ready',
+    traversal_stats: {
+      total_entities_discovered: discovered.length,
+      total_edges_traversed: allEdges.length,
+      hops_completed: hopsCompleted,
+      query_time_ms: queryTimeMs,
+    },
   };
 }
 
 /**
- * Resolve seed entities from seed_names or seed_query.
+ * Resolve seed entities from seed_names or seed_query against the in-memory graph.
  *
- * @param {object} database - SQLite database connection.
+ * @param {object} graph - In-memory graph cache.
  * @param {string[]} seedNames - Qualified names or partial names.
  * @param {string} seedQuery - Free-text query for seed discovery.
  * @returns {Array<object>} Seed entities.
  */
-function resolveSeedEntities(database, seedNames, seedQuery) {
+function resolveSeedEntities(graph, seedNames, seedQuery) {
+  const seen = new Set();
+  const seeds = [];
+
   if (Array.isArray(seedNames) && seedNames.length > 0) {
-    return resolveByNames(database, seedNames);
+    for (const entity of resolveByNames(graph, seedNames)) {
+      if (!seen.has(entity.entity_id)) {
+        seeds.push(entity);
+        seen.add(entity.entity_id);
+      }
+    }
   }
 
   if (typeof seedQuery === 'string' && seedQuery.length > 0) {
-    return resolveByQuery(database, seedQuery);
+    for (const entity of resolveByQuery(graph, seedQuery)) {
+      if (!seen.has(entity.entity_id)) {
+        seeds.push(entity);
+        seen.add(entity.entity_id);
+      }
+    }
   }
 
-  return [];
+  return seeds;
 }
 
 /**
- * Resolve seed entities by qualified names or partial name matching.
+ * Resolve seed entities by qualified names or partial name matching from the in-memory graph.
  *
- * Uses SQL LIKE with wildcards for prefix matching.
- *
- * @param {object} database - SQLite database.
+ * @param {object} graph - In-memory graph cache.
  * @param {string[]} names - Name patterns to search.
  * @returns {Array<object>} Matching entities.
  */
-function resolveByNames(database, names) {
-  const entities = [];
-  const findExact = database.prepare(
-    'SELECT * FROM entities WHERE qualified_name = ? LIMIT 10',
-  );
-  const findPrefix = database.prepare(
-    "SELECT * FROM entities WHERE qualified_name LIKE ? || '%' ORDER BY LENGTH(qualified_name) LIMIT 10",
-  );
-  const findFuzzy = database.prepare(
-    "SELECT * FROM entities WHERE qualified_name LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' ORDER BY CASE WHEN qualified_name = ? THEN 0 WHEN qualified_name LIKE ? || '%' THEN 1 WHEN name = ? THEN 2 ELSE 3 END, LENGTH(qualified_name) LIMIT 10",
-  );
-
+function resolveByNames(graph, names) {
+  const matches = [];
   const seen = new Set();
+
   for (const name of names) {
-    // Try exact match first.
-    const exact = findExact.get(name);
+    const normalized = name.toLowerCase();
+
+    // Exact match on qualified_name.
+    const exact = graph.entitiesByQualifiedName.get(name);
     if (exact && !seen.has(exact.entity_id)) {
-      entities.push(exact);
+      matches.push(exact);
       seen.add(exact.entity_id);
       continue;
     }
 
-    // Try prefix match.
-    const prefix = findPrefix.all(name);
-    for (const entity of prefix) {
-      if (!seen.has(entity.entity_id)) {
-        entities.push(entity);
-        seen.add(entity.entity_id);
+    // Prefix match on qualified_name, shortest first.
+    const prefixMatches = [];
+    for (const [qualifiedName, entity] of graph.entitiesByQualifiedName) {
+      if (qualifiedName.startsWith(name)) {
+        prefixMatches.push(entity);
       }
     }
-    if (entities.length > 0) continue;
-
-    // Try fuzzy match.
-    const fuzzy = findFuzzy.all(name, name, name, name, name);
-    for (const entity of fuzzy) {
+    prefixMatches.sort(
+      (a, b) => a.qualified_name.length - b.qualified_name.length,
+    );
+    let foundPrefix = false;
+    for (const entity of prefixMatches.slice(0, 10)) {
       if (!seen.has(entity.entity_id)) {
-        entities.push(entity);
+        matches.push(entity);
+        seen.add(entity.entity_id);
+        foundPrefix = true;
+      }
+    }
+    if (foundPrefix) continue;
+
+    // Fuzzy match on qualified_name or name with priority ordering.
+    const fuzzyMatches = [];
+    for (const entity of graph.entities.values()) {
+      const qualifiedName = entity.qualified_name.toLowerCase();
+      const entityName = (entity.name ?? '').toLowerCase();
+      if (
+        qualifiedName.includes(normalized) ||
+        entityName.includes(normalized)
+      ) {
+        fuzzyMatches.push(entity);
+      }
+    }
+    fuzzyMatches.sort((a, b) => {
+      const aQualified = a.qualified_name.toLowerCase();
+      const bQualified = b.qualified_name.toLowerCase();
+      const aName = (a.name ?? '').toLowerCase();
+      const bName = (b.name ?? '').toLowerCase();
+      const priorityA =
+        aQualified === normalized
+          ? 0
+          : aQualified.startsWith(normalized)
+            ? 1
+            : aName === normalized
+              ? 2
+              : 3;
+      const priorityB =
+        bQualified === normalized
+          ? 0
+          : bQualified.startsWith(normalized)
+            ? 1
+            : bName === normalized
+              ? 2
+              : 3;
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      return a.qualified_name.length - b.qualified_name.length;
+    });
+    for (const entity of fuzzyMatches.slice(0, 10)) {
+      if (!seen.has(entity.entity_id)) {
+        matches.push(entity);
         seen.add(entity.entity_id);
       }
     }
   }
 
-  return entities.slice(0, 10);
+  return matches.slice(0, 10);
 }
 
 /**
- * Resolve seed entities by free-text query using FTS on entity names.
+ * Resolve seed entities by free-text query against the in-memory graph.
  *
- * @param {object} database - SQLite database.
+ * @param {object} graph - In-memory graph cache.
  * @param {string} query - Free-text query.
  * @returns {Array<object>} Top-5 matching entities.
  */
-function resolveByQuery(database, query) {
+function resolveByQuery(graph, query) {
   const sanitized = query
     .replace(/[-@^*{}():"]/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
+    .toLowerCase();
 
   if (!sanitized) return [];
 
   const terms = sanitized.split(' ').filter(Boolean);
-  const likeClauses = terms
-    .map(() => '(qualified_name LIKE ? OR name LIKE ?)')
-    .join(' AND ');
-  const params = terms.flatMap((term) => [`%${term}%`, `%${term}%`]);
+  const matches = [];
+  for (const entity of graph.entities.values()) {
+    const qualifiedName = entity.qualified_name.toLowerCase();
+    const entityName = (entity.name ?? '').toLowerCase();
+    if (
+      terms.every(
+        (term) => qualifiedName.includes(term) || entityName.includes(term),
+      )
+    ) {
+      matches.push(entity);
+    }
+  }
 
-  const stmt = database.prepare(
-    `SELECT * FROM entities WHERE ${likeClauses} ORDER BY LENGTH(qualified_name) LIMIT 5`,
-  );
-
-  return stmt.all(...params);
+  matches.sort((a, b) => a.qualified_name.length - b.qualified_name.length);
+  return matches.slice(0, 5);
 }
 
 /**
- * Query outgoing edges from an entity with relationship and confidence filters.
+ * Load the full entity/edge graph into memory with two batched SQL queries.
  *
  * @param {object} database - SQLite database.
- * @param {number} entityId - Source entity ID.
- * @param {string[]} relationshipTypes - Relationship types to follow.
- * @param {Set} confidenceSet - Allowed confidence levels.
- * @returns {Array<object>} Matching edges with source and target names.
+ * @returns {object} In-memory graph structure.
  */
-function queryOutgoingEdges(
-  database,
-  entityId,
-  relationshipTypes,
-  confidenceSet,
-) {
-  const placeholders = relationshipTypes.map(() => '?').join(',');
-  const confidencePlaceholders = [...confidenceSet].map(() => '?').join(',');
-  const stmt = database.prepare(`
-    SELECT e.*, 
+function loadGraph(database) {
+  const entities = new Map();
+  const entitiesByQualifiedName = new Map();
+
+  const entityRows = database
+    .prepare('SELECT * FROM entities ORDER BY entity_id')
+    .all();
+  for (const entity of entityRows) {
+    entities.set(entity.entity_id, entity);
+    entitiesByQualifiedName.set(entity.qualified_name, entity);
+  }
+
+  const edgesBySource = new Map();
+  const edgesByTarget = new Map();
+  const allEdges = [];
+
+  const edgeRows = database
+    .prepare(
+      `SELECT e.*,
            src.qualified_name AS source_qualified_name, src.entity_type AS source_entity_type,
            tgt.qualified_name AS target_qualified_name, tgt.entity_type AS target_entity_type
     FROM edges e
     JOIN entities src ON e.source_entity_id = src.entity_id
     JOIN entities tgt ON e.target_entity_id = tgt.entity_id
-    WHERE e.source_entity_id = ?
-      AND e.relationship IN (${placeholders})
-      AND e.confidence IN (${confidencePlaceholders})
-  `);
+    ORDER BY e.edge_id`,
+    )
+    .all();
 
-  const params = [entityId, ...relationshipTypes, ...confidenceSet];
-  return stmt.all(...params);
+  for (const edge of edgeRows) {
+    allEdges.push(edge);
+    if (!edgesBySource.has(edge.source_entity_id)) {
+      edgesBySource.set(edge.source_entity_id, []);
+    }
+    edgesBySource.get(edge.source_entity_id).push(edge);
+    if (!edgesByTarget.has(edge.target_entity_id)) {
+      edgesByTarget.set(edge.target_entity_id, []);
+    }
+    edgesByTarget.get(edge.target_entity_id).push(edge);
+  }
+
+  return {
+    entities,
+    entitiesByQualifiedName,
+    edgesBySource,
+    edgesByTarget,
+    allEdges,
+  };
 }
 
 /**
- * Query incoming edges to an entity with relationship and confidence filters.
+ * Return a cached in-memory graph, reloading when the DB file changes.
  *
+ * @param {string} databasePath - Resolved database path.
  * @param {object} database - SQLite database.
- * @param {number} entityId - Target entity ID.
- * @param {string[]} relationshipTypes - Relationship types to follow.
- * @param {Set} confidenceSet - Allowed confidence levels.
- * @returns {Array<object>} Matching edges.
+ * @returns {Promise<object>} In-memory graph.
  */
-function queryIncomingEdges(
-  database,
-  entityId,
-  relationshipTypes,
-  confidenceSet,
-) {
-  const placeholders = relationshipTypes.map(() => '?').join(',');
-  const confidencePlaceholders = [...confidenceSet].map(() => '?').join(',');
-  const stmt = database.prepare(`
-    SELECT e.*,
-           src.qualified_name AS source_qualified_name, src.entity_type AS source_entity_type,
-           tgt.qualified_name AS target_qualified_name, tgt.entity_type AS target_entity_type
-    FROM edges e
-    JOIN entities src ON e.source_entity_id = src.entity_id
-    JOIN entities tgt ON e.target_entity_id = tgt.entity_id
-    WHERE e.target_entity_id = ?
-      AND e.relationship IN (${placeholders})
-      AND e.confidence IN (${confidencePlaceholders})
-  `);
+async function getCachedGraph(databasePath, database) {
+  const fileStats = await stat(databasePath);
+  const cached = graphCache.get(databasePath);
 
-  const params = [entityId, ...relationshipTypes, ...confidenceSet];
-  return stmt.all(...params);
+  if (
+    cached &&
+    cached.mtimeMs === fileStats.mtimeMs &&
+    cached.size === fileStats.size
+  ) {
+    return cached.graph;
+  }
+
+  const graph = loadGraph(database);
+  graphCache.set(databasePath, {
+    mtimeMs: fileStats.mtimeMs,
+    size: fileStats.size,
+    graph,
+  });
+  return graph;
 }
 
 /**
- * Get an entity by its ID.
+ * BFS traversal over the in-memory graph.
  *
- * @param {object} database - SQLite database.
- * @param {number} entityId - Entity ID.
- * @returns {object | null} Entity row or null.
+ * @param {object} graph - In-memory graph cache.
+ * @param {Array<object>} seedEntities - Seed entities.
+ * @param {object} options - Traversal options.
+ * @param {number} options.maxHops - Maximum hops.
+ * @param {Set<string>} options.relationshipTypesSet - Allowed relationship types.
+ * @param {Set<string>} options.confidenceSet - Allowed confidence levels.
+ * @param {Set<string>} options.entityTypesSet - Allowed entity types.
+ * @returns {object} Traversal state.
  */
-function getEntityById(database, entityId) {
-  const stmt = database.prepare('SELECT * FROM entities WHERE entity_id = ?');
-  return stmt.get(entityId) ?? null;
+function traverseFromSeeds(graph, seedEntities, options) {
+  const { maxHops, relationshipTypesSet, confidenceSet, entityTypesSet } =
+    options;
+
+  const visited = new Set(seedEntities.map((e) => e.entity_id));
+  const discovered = [...seedEntities];
+  const distanceMap = new Map();
+  for (const seed of seedEntities) {
+    distanceMap.set(seed.entity_id, 0);
+  }
+
+  let currentFrontier = [...seedEntities];
+  const allEdges = [];
+  let hopsCompleted = 0;
+
+  for (let hop = 1; hop <= maxHops; hop++) {
+    const nextFrontier = [];
+
+    for (const entity of currentFrontier) {
+      const outgoingEdges = graph.edgesBySource.get(entity.entity_id) ?? [];
+      for (const edge of outgoingEdges) {
+        if (!relationshipTypesSet.has(edge.relationship)) continue;
+        if (!confidenceSet.has(edge.confidence)) continue;
+        if (visited.has(edge.target_entity_id)) continue;
+
+        const target = graph.entities.get(edge.target_entity_id);
+        if (!target) continue;
+        if (!entityTypesSet.has(target.entity_type)) continue;
+
+        visited.add(target.entity_id);
+        distanceMap.set(target.entity_id, hop);
+        discovered.push(target);
+        nextFrontier.push(target);
+        allEdges.push(edge);
+      }
+
+      const incomingEdges = graph.edgesByTarget.get(entity.entity_id) ?? [];
+      for (const edge of incomingEdges) {
+        if (!relationshipTypesSet.has(edge.relationship)) continue;
+        if (!confidenceSet.has(edge.confidence)) continue;
+        if (visited.has(edge.source_entity_id)) continue;
+
+        const source = graph.entities.get(edge.source_entity_id);
+        if (!source) continue;
+        if (!entityTypesSet.has(source.entity_type)) continue;
+
+        visited.add(source.entity_id);
+        distanceMap.set(source.entity_id, hop);
+        discovered.push(source);
+        nextFrontier.push(source);
+        allEdges.push(edge);
+      }
+    }
+
+    currentFrontier = nextFrontier;
+    hopsCompleted = hop;
+    if (currentFrontier.length === 0) break;
+  }
+
+  return {
+    discovered,
+    allEdges,
+    hopsCompleted,
+    distanceMap,
+  };
 }
 
 /**
@@ -518,9 +654,10 @@ function rankEntities(discovered, distanceMap, edgeCounts, entityTypes) {
  * Format an entity for output.
  *
  * @param {object} entity - Entity row with optional _rank.
+ * @param {Map<number, number>} [distanceMap] - Entity ID → hop distance from seeds.
  * @returns {object} Formatted entity.
  */
-function formatEntity(entity) {
+function formatEntity(entity, distanceMap) {
   return {
     entity_id: entity.entity_id,
     entity_type: entity.entity_type,
@@ -531,16 +668,41 @@ function formatEntity(entity) {
     module_path: entity.module_path,
     signature_text: entity.signature_text,
     file_path: entity.file_path,
+    hop_distance: distanceMap?.get(entity.entity_id) ?? 0,
   };
+}
+
+/**
+ * Check that an edge row has all required string fields with non-empty values.
+ *
+ * @param {object} edge - Edge row with joined source/target names.
+ * @returns {boolean} True when the edge is safe to emit.
+ */
+function isWellFormedEdge(edge) {
+  const requiredStringFields = [
+    'source_qualified_name',
+    'target_qualified_name',
+    'source_entity_type',
+    'target_entity_type',
+    'relationship',
+    'confidence',
+  ];
+  return requiredStringFields.every((field) => {
+    const value = edge[field];
+    return typeof value === 'string' && value.length > 0;
+  });
 }
 
 /**
  * Format an edge for output.
  *
  * @param {object} edge - Edge row with joined source/target names.
- * @returns {object} Formatted edge.
+ * @returns {object | null} Formatted edge, or null when the edge is malformed.
  */
 function formatEdge(edge) {
+  if (!isWellFormedEdge(edge)) {
+    return null;
+  }
   return {
     edge_id: edge.edge_id,
     source_entity_id: edge.source_entity_id,
@@ -575,6 +737,16 @@ function validateArrayOption(value, allowedValues) {
  * @returns {Promise<object>} Traversal results.
  */
 export async function traverseGraphHandler(argumentsObject) {
+  const rawMaxHops = argumentsObject.max_hops;
+  const maxHops =
+    rawMaxHops === undefined || rawMaxHops === null ? 2 : Number(rawMaxHops);
+  if (!Number.isInteger(maxHops) || maxHops < 1 || maxHops > MAX_HOPS_LIMIT) {
+    throw cortexError(
+      ErrorCodes.INVALID_MAX_HOPS,
+      `max_hops must be an integer between 1 and ${MAX_HOPS_LIMIT}.`,
+    );
+  }
+
   return traverseGraph({
     seed_names: argumentsObject.seed_names,
     seed_query: argumentsObject.seed_query,

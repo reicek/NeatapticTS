@@ -45,7 +45,13 @@ const AGENT_QUALITY_CONTRACT_PATH = '.github/AGENT_QUALITY_CONTRACT.md';
 const tierContracts = {
   1: {
     label: 'Tier-1 orchestrator',
-    requiredSections: ['Mission', 'Constraints', 'Default Flow', 'If Blocked', 'Output format'],
+    requiredSections: [
+      'Mission',
+      'Constraints',
+      'Default Flow',
+      'If Blocked',
+      'Output format',
+    ],
     requiredFields: [
       'OUTPUT_CONTRACT',
       'TASK_STATUS',
@@ -68,7 +74,13 @@ const tierContracts = {
   },
   2: {
     label: 'Tier-2 coordinator',
-    requiredSections: ['Mission', 'Constraints', 'Required Workflow', 'If Blocked', 'Output format'],
+    requiredSections: [
+      'Mission',
+      'Constraints',
+      'Required Workflow',
+      'If Blocked',
+      'Output format',
+    ],
     requiredFields: [
       'OUTPUT_CONTRACT',
       'TASK_STATUS',
@@ -91,7 +103,13 @@ const tierContracts = {
   },
   3: {
     label: 'Tier-3 scout',
-    requiredSections: ['Mission', 'Constraints', 'Approach', 'If Blocked', 'Output format'],
+    requiredSections: [
+      'Mission',
+      'Constraints',
+      'Approach',
+      'If Blocked',
+      'Output format',
+    ],
     requiredFields: [
       'OUTPUT_CONTRACT',
       'TASK_STATUS',
@@ -113,7 +131,13 @@ const tierContracts = {
   },
   4: {
     label: 'Tier-4 auxiliary',
-    requiredSections: ['Mission', 'Constraints', 'Default Flow', 'If Blocked', 'Output format'],
+    requiredSections: [
+      'Mission',
+      'Constraints',
+      'Default Flow',
+      'If Blocked',
+      'Output format',
+    ],
     requiredFields: [
       'OUTPUT_CONTRACT',
       'TASK_STATUS',
@@ -148,7 +172,8 @@ if (options.fix) {
 if (options.help) {
   printUsage({
     title: 'Validate NeatapticTS agent quality contract compliance.',
-    usage: 'node scripts/agent-customization/validate-agent-quality.mjs [--json] [--fix]',
+    usage:
+      'node scripts/agent-customization/validate-agent-quality.mjs [--json] [--fix]',
   });
   process.exit(0);
 }
@@ -164,16 +189,19 @@ export async function runValidateAgentQuality() {
   const report = {
     ...summarizeIssues('agent quality', issues),
     contractDocument: AGENT_QUALITY_CONTRACT_PATH,
-    agents: agentReports.map(({ path: relativePath, name, tier, issues: currentIssues }) => ({
-      path: relativePath,
-      name,
-      tier,
-      counts: {
-        errors: currentIssues.filter((ci) => ci.severity === 'error').length,
-        warnings: currentIssues.filter((ci) => ci.severity === 'warning').length,
-      },
-      issues: currentIssues,
-    })),
+    agents: agentReports.map(
+      ({ path: relativePath, name, tier, issues: currentIssues }) => ({
+        path: relativePath,
+        name,
+        tier,
+        counts: {
+          errors: currentIssues.filter((ci) => ci.severity === 'error').length,
+          warnings: currentIssues.filter((ci) => ci.severity === 'warning')
+            .length,
+        },
+        issues: currentIssues,
+      }),
+    ),
   };
 
   return report;
@@ -186,7 +214,10 @@ async function main() {
   process.exitCode = report.ok ? 0 : 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
   await main();
 }
 
@@ -195,14 +226,19 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
  * Uses customization-utils to read files and parse frontmatter.
  */
 async function collectAgentReports() {
-  const agentPaths = await listMarkdownFiles('.github/agents', (relativePath) => relativePath.endsWith('.agent.md'));
+  const agentPaths = await listMarkdownFiles('.github/agents', (relativePath) =>
+    relativePath.endsWith('.agent.md'),
+  );
 
   return Promise.all(
     agentPaths.map(async (relativePath) => {
       const text = await readWorkspaceFile(relativePath);
       const parsed = parseFrontmatter(text, relativePath);
       const tier = normalizeTier(parsed.data.tier);
-      const name = parsed.data.name ?? relativePath.split('/').at(-1)?.replace('.agent.md', '') ?? relativePath;
+      const name =
+        parsed.data.name ??
+        relativePath.split('/').at(-1)?.replace('.agent.md', '') ??
+        relativePath;
 
       const issues = validateAgent({
         path: relativePath,
@@ -229,13 +265,25 @@ function validateAgent(agent) {
 
   // The tier must be present and normalized to 1-4.
   if (!agent.tier) {
-    issues.push(issue('error', agent.path, 'Agent frontmatter must define a valid numeric tier between 1 and 4.'));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        'Agent frontmatter must define a valid numeric tier between 1 and 4.',
+      ),
+    );
     return issues;
   }
 
   const contract = tierContracts[agent.tier];
   if (!contract) {
-    issues.push(issue('error', agent.path, `No agent quality contract is defined for tier '${agent.tier}'.`));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        `No agent quality contract is defined for tier '${agent.tier}'.`,
+      ),
+    );
     return issues;
   }
 
@@ -243,7 +291,13 @@ function validateAgent(agent) {
   const sections = extractSections(agent.body);
   const outputSection = sections.get('Output format');
   if (!outputSection) {
-    issues.push(issue('error', agent.path, "Agent must define section '## Output format' with a trailing ```structured-v1``` block."));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        "Agent must define section '## Output format' with a trailing ```structured-v1``` block.",
+      ),
+    );
     return issues;
   }
 
@@ -272,7 +326,13 @@ function validateStructuredOutputContract(agent, contract) {
   const headingRegex = /^##\s+Output format\s*$/m;
   const headingMatch = headingRegex.exec(agent.body);
   if (!headingMatch) {
-    issues.push(issue('error', agent.path, "Missing required heading '## Output format' (case-sensitive)."));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        "Missing required heading '## Output format' (case-sensitive).",
+      ),
+    );
     return issues;
   }
 
@@ -283,7 +343,13 @@ function validateStructuredOutputContract(agent, contract) {
   const fenceRegex = /```structured-v1\r?\n([\s\S]*?)\r?\n```/g;
   const matches = [...afterHeading.matchAll(fenceRegex)];
   if (matches.length !== 1) {
-    issues.push(issue('error', agent.path, 'Output format must contain exactly one fenced ```structured-v1``` block.'));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        'Output format must contain exactly one fenced ```structured-v1``` block.',
+      ),
+    );
     return issues;
   }
 
@@ -294,13 +360,27 @@ function validateStructuredOutputContract(agent, contract) {
   const closingFenceIndex = outputStartIndex + match.index + match[0].length;
   const tail = agent.body.slice(closingFenceIndex);
   if (tail.trim() !== '') {
-    issues.push(issue('error', agent.path, 'The structured-v1 block must be the final content of the file (no other content after the closing fence).'));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        'The structured-v1 block must be the final content of the file (no other content after the closing fence).',
+      ),
+    );
   }
 
   // First non-blank line must declare the contract marker.
-  const firstNonBlankLine = fenceBody.split(/\r?\n/).find((line) => line.trim());
+  const firstNonBlankLine = fenceBody
+    .split(/\r?\n/)
+    .find((line) => line.trim());
   if (firstNonBlankLine?.trim() !== 'OUTPUT_CONTRACT: structured-v1') {
-    issues.push(issue('error', agent.path, "The first non-blank line inside the structured-v1 block must be 'OUTPUT_CONTRACT: structured-v1'."));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        "The first non-blank line inside the structured-v1 block must be 'OUTPUT_CONTRACT: structured-v1'.",
+      ),
+    );
   }
 
   // Parse uppercase FIELD: value lines inside the fence body.
@@ -310,34 +390,68 @@ function validateStructuredOutputContract(agent, contract) {
   // Enforce exact field count and ordering per contract.
   if (
     detectedFields.length !== contract.requiredFields.length ||
-    detectedFields.some((field, index) => field !== contract.requiredFields[index])
+    detectedFields.some(
+      (field, index) => field !== contract.requiredFields[index],
+    )
   ) {
-    issues.push(issue('error', agent.path, `${contract.label} structured-v1 fields must match the exact order: ${contract.requiredFields.join(', ')}.`));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        `${contract.label} structured-v1 fields must match the exact order: ${contract.requiredFields.join(', ')}.`,
+      ),
+    );
   }
 
   // Ensure each required field is present (redundant but provides clear missing-field errors).
   for (const requiredField of contract.requiredFields) {
     if (!detectedFields.includes(requiredField)) {
-      issues.push(issue('error', agent.path, `Structured-v1 output contract is missing required field '${requiredField}'.`));
+      issues.push(
+        issue(
+          'error',
+          agent.path,
+          `Structured-v1 output contract is missing required field '${requiredField}'.`,
+        ),
+      );
     }
   }
 
   // OUTPUT_CONTRACT value check
-  const outputContractField = parsedFields.find(({ field }) => field === 'OUTPUT_CONTRACT');
+  const outputContractField = parsedFields.find(
+    ({ field }) => field === 'OUTPUT_CONTRACT',
+  );
   if (outputContractField?.value !== 'structured-v1') {
-    issues.push(issue('error', agent.path, "Structured-v1 output contract must set 'OUTPUT_CONTRACT: structured-v1'."));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        "Structured-v1 output contract must set 'OUTPUT_CONTRACT: structured-v1'.",
+      ),
+    );
   }
 
   // TIER must match the parsed frontmatter tier
   const tierField = parsedFields.find(({ field }) => field === 'TIER');
   if ((tierField?.value ?? '').toString() !== (agent.tier ?? '').toString()) {
-    issues.push(issue('error', agent.path, `Structured-v1 output contract must set 'TIER: ${agent.tier}'.`));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        `Structured-v1 output contract must set 'TIER: ${agent.tier}'.`,
+      ),
+    );
   }
 
   // ROLE must match the agent name
   const roleField = parsedFields.find(({ field }) => field === 'ROLE');
   if ((roleField?.value ?? '') !== String(agent.name)) {
-    issues.push(issue('error', agent.path, `Structured-v1 output contract must set 'ROLE: ${agent.name}'.`));
+    issues.push(
+      issue(
+        'error',
+        agent.path,
+        `Structured-v1 output contract must set 'ROLE: ${agent.name}'.`,
+      ),
+    );
   }
 
   return issues;
@@ -381,7 +495,10 @@ function parsePromptFields(fenceBody) {
     const fieldMatch = /^(?<field>[A-Z_]+):\s*(?<value>.*)$/u.exec(trimmedLine);
     if (!fieldMatch?.groups) continue;
 
-    parsedFields.push({ field: fieldMatch.groups.field, value: fieldMatch.groups.value.trim() });
+    parsedFields.push({
+      field: fieldMatch.groups.field,
+      value: fieldMatch.groups.value.trim(),
+    });
   }
 
   return parsedFields;

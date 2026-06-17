@@ -23,13 +23,26 @@ export const MIN_IMPRESSIONS_FOR_DECAY = 10;
 /** Neutral click-through-rate threshold; above this no impression decay applies. */
 export const MIN_CTR_FOR_NEUTRAL = 0.1;
 
+/** Lower bound for explicit signal-strength overrides. */
+const MIN_EXPLICIT_SIGNAL_STRENGTH = -1.0;
+
+/** Upper bound for explicit signal-strength overrides. */
+const MAX_EXPLICIT_SIGNAL_STRENGTH = 1.0;
+
+/** Time window within which repeated same-session positive signals are normalized. */
+const SAME_SESSION_WINDOW_MS = 60 * 60 * 1000;
+
 const SIGNAL_STRENGTHS = {
   click: 0.3,
   impression: 0.1,
   negative: -1.0,
   positive: 1.0,
   reference: 0.6,
+  irrelevant: -0.5,
 };
+
+/** Valid signal_type values accepted by the feedback pipeline. */
+export const VALID_SIGNAL_TYPES = Object.freeze(Object.keys(SIGNAL_STRENGTHS));
 
 /**
  * Hash a plaintext query with SHA-256.
@@ -75,6 +88,48 @@ function parseCreatedAt(createdAt) {
 }
 
 /**
+ * Clamp an explicit signal strength to the designed feedback range.
+ *
+ * @param {number} strength - Raw signal strength.
+ * @returns {number} Strength clamped to [MIN_EXPLICIT_SIGNAL_STRENGTH, MAX_EXPLICIT_SIGNAL_STRENGTH].
+ */
+function clampSignalStrength(strength) {
+  if (typeof strength !== 'number' || Number.isNaN(strength)) {
+    return strength;
+  }
+  return Math.max(
+    MIN_EXPLICIT_SIGNAL_STRENGTH,
+    Math.min(MAX_EXPLICIT_SIGNAL_STRENGTH, strength),
+  );
+}
+
+/**
+ * Check whether a positive signal for the same chunk and agent was already
+ * recorded within the same-session window, regardless of query.
+ *
+ * @param {import('better-sqlite3').Database} db - SQLite database connection.
+ * @param {number} chunkId - Target chunk ID.
+ * @param {string | null} agentId - Agent identifier.
+ * @param {number} now - Current time in milliseconds since epoch.
+ * @returns {boolean} True when a recent same-session positive event exists.
+ */
+function hasRecentSameSessionPositive(db, chunkId, agentId, now) {
+  if (!agentId) {
+    return false;
+  }
+  const cutoff = new Date(now - SAME_SESSION_WINDOW_MS).toISOString();
+  const row = db
+    .prepare(
+      `SELECT 1 FROM feedback_events
+       WHERE chunk_id = ? AND signal_type = 'positive'
+         AND agent_id = ? AND created_at >= ?
+       LIMIT 1`,
+    )
+    .get(chunkId, agentId, cutoff);
+  return Boolean(row);
+}
+
+/**
  * Record a feedback event in the feedback_events table.
  *
  * @param {import('better-sqlite3').Database} db - SQLite database connection.
@@ -86,15 +141,19 @@ function parseCreatedAt(createdAt) {
  * @param {string} [params.agent_id] - Optional agent identifier.
  * @param {string} [params.context] - Optional free-text context (will be truncated to 500 chars).
  * @param {number | string} [params.created_at] - Optional timestamp; defaults to now.
- * @returns {object} The inserted feedback event row.
+ * @returns {object} The inserted feedback event row, or the existing same-session row when a duplicate positive signal is normalized.
  * @throws {Error} When signal_type is not recognized.
  */
 export function recordFeedbackEvent(db, params) {
   const eventId = randomUUID();
-  const signalStrength = SIGNAL_STRENGTHS[params.signal_type];
-  if (signalStrength === undefined) {
+  const defaultStrength = SIGNAL_STRENGTHS[params.signal_type];
+  if (defaultStrength === undefined) {
     throw new Error(`Unknown signal_type: ${params.signal_type}`);
   }
+  const signalStrength =
+    params.signal_strength !== undefined && params.signal_strength !== null
+      ? clampSignalStrength(Number(params.signal_strength))
+      : defaultStrength;
 
   const rawQuery = params.query ?? params.query_hash;
   const queryHash = normalizeQueryHash(rawQuery);
@@ -108,6 +167,26 @@ export function recordFeedbackEvent(db, params) {
       ? new Date().toISOString()
       : params.created_at;
 
+  // Normalize repeated same-session positive signals so they cannot inflate
+  // the feedback score. Return the existing event without inserting a duplicate.
+  const now = Date.now();
+  if (
+    params.signal_type === 'positive' &&
+    hasRecentSameSessionPositive(db, params.chunk_id, agentId, now)
+  ) {
+    const cutoff = new Date(now - SAME_SESSION_WINDOW_MS).toISOString();
+    const existing = db
+      .prepare(
+        `SELECT * FROM feedback_events
+         WHERE chunk_id = ? AND signal_type = 'positive'
+           AND agent_id = ? AND created_at >= ?
+         ORDER BY created_at DESC
+         LIMIT 1`,
+      )
+      .get(params.chunk_id, agentId, cutoff);
+    return existing;
+  }
+
   const insert = db.prepare(`
     INSERT INTO feedback_events
       (event_id, chunk_id, signal_type, signal_strength, query_hash, agent_id, context, created_at)
@@ -116,7 +195,16 @@ export function recordFeedbackEvent(db, params) {
     RETURNING *
   `);
 
-  return insert.get(eventId, params.chunk_id, params.signal_type, signalStrength, queryHash, agentId, context, createdAt);
+  return insert.get(
+    eventId,
+    params.chunk_id,
+    params.signal_type,
+    signalStrength,
+    queryHash,
+    agentId,
+    context,
+    createdAt,
+  );
 }
 
 /**
@@ -145,11 +233,13 @@ export function computeFeedbackBoost(scores) {
 
   const clickThroughRate = totalClicks / Math.max(1, totalImpressions);
   const referenceBonus = Math.min(1.0, totalReferences * 0.2);
-  const combinedPositive = totalPositive + clickThroughRate * 0.3 + referenceBonus;
+  const combinedPositive =
+    totalPositive + clickThroughRate * 0.3 + referenceBonus;
   let netFeedback = combinedPositive - totalNegative;
 
   const impressionDecayScore =
-    totalImpressions >= MIN_IMPRESSIONS_FOR_DECAY && clickThroughRate < MIN_CTR_FOR_NEUTRAL
+    totalImpressions >= MIN_IMPRESSIONS_FOR_DECAY &&
+    clickThroughRate < MIN_CTR_FOR_NEUTRAL
       ? -0.2 * (1.0 - clickThroughRate / MIN_CTR_FOR_NEUTRAL)
       : 0.0;
 
@@ -167,7 +257,9 @@ export function computeFeedbackBoost(scores) {
  * @returns {object | null} Score counters and boost, or null when no events exist.
  */
 function buildChunkAggregate(db, chunkId, now) {
-  const events = db.prepare('SELECT * FROM feedback_events WHERE chunk_id = ?').all(chunkId);
+  const events = db
+    .prepare('SELECT * FROM feedback_events WHERE chunk_id = ?')
+    .all(chunkId);
   if (events.length === 0) {
     return null;
   }
@@ -197,6 +289,7 @@ function buildChunkAggregate(db, chunkId, now) {
         totalPositive += strength;
         break;
       case 'negative':
+      case 'irrelevant':
         totalNegative += Math.abs(strength);
         break;
     }
@@ -280,7 +373,9 @@ export function updateFeedbackScores(db, chunkId, now = Date.now()) {
  * @returns {number} Number of chunks whose scores were recomputed.
  */
 export function recomputeAllFeedbackScores(db, now = Date.now()) {
-  const rows = db.prepare('SELECT DISTINCT chunk_id FROM feedback_events').all();
+  const rows = db
+    .prepare('SELECT DISTINCT chunk_id FROM feedback_events')
+    .all();
   let count = 0;
   for (const { chunk_id: chunkId } of rows) {
     const score = buildChunkAggregate(db, chunkId, now);

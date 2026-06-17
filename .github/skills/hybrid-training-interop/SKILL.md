@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Hybrid Training Interoperability Playbook
 
 Use this skill when NeatapticTS work touches the parameter-vector and isolated
@@ -99,7 +101,7 @@ Plan: plans/Evolution_Training_Interoperability_Contracts.md.
 Target: deterministic ParameterVector layout v1.
 Isolation rule: import must not mutate unrelated candidates.
 Policy: fitness-only for now; no Lamarckian persistence in this pass.
-Validate with: vector roundtrip inference equality, layout compatibility negative tests, and npm run test:silent.
+Validate with: vector roundtrip inference equality and layout compatibility negative tests. Only run `npm run test:silent` if the active step packet or user explicitly requires repo-wide confirmation.
 ```
 
 ## Required Workflow
@@ -157,7 +159,7 @@ Validate with: vector roundtrip inference equality, layout compatibility negativ
   another candidate.
 - Policy tests proving fitness-only versus persistent training behavior differ in
   the intended way.
-- `npm run test:silent` after the focused tranche is green.
+- `npm run test:silent` only when the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
 
 ## Guardrails
 

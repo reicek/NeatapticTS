@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Browser Build Playbook
 
 Use this skill when NeatapticTS needs a browser runtime artifact configured,
@@ -107,7 +109,7 @@ Validate with: npm run build, browser build entrypoint, then scripts/smoke-brows
    order: `npm ci`, `npm run build`, then the browser build entrypoint.
 8. If any `src/` files were modified, run `coverage-guard` on each changed file
    before continuing.
-9. Run `npm run test:silent` to confirm the Node test suite is unaffected.
+9. Run `npm run test:silent` only if the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
 10. Update `plans/completed/Browser_Build_and_CDN_Distribution.md` only after the code and
     validation are green.
 

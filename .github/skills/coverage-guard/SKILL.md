@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Coverage Guard Playbook
 
 Use this skill as a **mandatory enforcement gate** after any change to `src/`
@@ -51,6 +53,13 @@ Mode: post-change check.
 ```
 
 ## Required Workflow
+
+The full test suite (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`,
+`npm run jest:mjs`) is large and slow. **Never run it speculatively.** Start
+with focused Jest slices for each changed file. Only run the repo-wide suite
+when the user or active step packet explicitly requires repo-wide confirmation;
+otherwise, record the focused slice results as the coverage-guard evidence and
+note that the full suite was intentionally skipped.
 
 ### Step 1 — Identify changed files
 
@@ -104,17 +113,22 @@ removal.
 Work through every changed file. Do not move to the repo-wide suite until
 every file in the change set is at 100%.
 
-### Step 5 — Run the repo-wide suite
+### Step 5 — Run the repo-wide suite (only when explicitly required)
 
-After all changed files are verified at 100%, run:
+After all changed files are verified at 100%, run the repo-wide suite **only if**
+the active step packet or user explicitly requires repo-wide confirmation:
 
 ```bash
 npm run test:silent
 ```
 
-Confirm the full suite is green and the baseline has not regressed. If new
-failures appear, resolve them with `test-fix-workflow` before marking this
-gate passed.
+If the full suite is required, confirm it is green and that the baseline has not
+regressed. If new failures appear, resolve them with `test-fix-workflow` before
+marking this gate passed.
+
+If repo-wide confirmation is **not** required, report the focused slice results
+as the final coverage-guard evidence and note that the full suite was
+intentionally skipped.
 
 ### Step 6 — Report
 
@@ -177,8 +191,8 @@ Group by scenario, not by assertion count.
 - Do not accept partial coverage. 99% is not passing.
 - Do not write a test whose only purpose is to inflate a metric.
   If a path is unreachable, remove it.
-- Do not skip the repo-wide suite after file-level verification passes.
-- Do not mark the gate passed until `npm run test:silent` is green.
+- Do not run the repo-wide suite speculatively. Only run it when the user or active step packet explicitly requires repo-wide confirmation.
+- Do not mark the gate passed until every changed `src/` file is at 100% from focused slices.
 - Do not create a new test file when an owner-local test file exists for
   the boundary.
 - Do not modify `jest.config.mjs` or other runner configuration.

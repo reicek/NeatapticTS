@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Architecture Builder Playbook
 
 Use this skill when a preconfigured architecture builder needs to be added,
@@ -71,7 +73,7 @@ Use architecture-builder for the GRU builder in src/architecture/network/.
 State: implementing builder + roundtrip test.
 Plan: plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md.
 Demo: not in scope this pass.
-Validate with: npx jest --testPathPattern=gru, then npm run test:silent.
+Validate with: npx jest --testPathPattern=gru. Only run `npm run test:silent` if the active step packet or user explicitly requires repo-wide confirmation.
 ```
 
 ## Required Workflow
@@ -109,7 +111,7 @@ Validate with: npx jest --testPathPattern=gru, then npm run test:silent.
 10. Run `npm run docs` to verify generated README output.
 11. Update `plans/Preconfigured_Architectures_MLP_LSTM_GRU_NARX.md` with the
     completed step.
-12. Run `npm run test:silent` to confirm repo-wide green.
+12. Run `npm run test:silent` only if the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
 13. Invoke `educational-docs` on the changed boundary as the mandatory follow-up
     documentation pass.
 

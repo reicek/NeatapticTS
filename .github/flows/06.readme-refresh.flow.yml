@@ -16,6 +16,7 @@ triggers:
 gates:
   - 'plan-sync'
   - 'docs-artifact-reference'
+  - 'cortex-first-search'
 
 post-phase-fanout:
   - '07-logging'
@@ -27,3 +28,17 @@ specialists:
   - 'Docs Scout'
 
 timeout-minutes: 15
+
+search-policy:
+  primary: cortex-mcp
+  fallback: native-tools
+  tools:
+    - freshness_check
+    - search_corpus
+    - search_advanced
+    - search_context
+    - load_chunk
+    - load_document
+    - traverse_graph
+    - expand_query
+  description: 'Cortex RAG is the primary search mechanism. Use Cortex MCP tools first; fall back to grep/glob/view only when Cortex is degraded or target is a known file path.'

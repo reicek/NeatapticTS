@@ -3,16 +3,19 @@ name: 'Slice Orchestration'
 agent: '00-helping'
 description: >
   Orchestrates per-slice implementation lifecycle for large implementation
-  steps. Agent Zero routes to this flow when a step packet contains slices.
-  The flow's specialist (slice-orchestration-scheduler) prepares per-slice
-  execution packets and collects validation evidence; the parent agent
-  (00-helping) dispatches each slice to 04-implementing and 05-green-testing
-  in sequence, retries failures, and fans out to 06-documenting when all
-  slices pass.
+  steps. Agent Zero routes to this flow after `01.step-expansion` has expanded
+  a pasted step packet into full slices. The flow's specialist
+  (slice-orchestration-scheduler) prepares per-slice execution packets and
+  collects validation evidence; the parent agent (00-helping) dispatches each
+  slice to the `goal`-derived phase agent (red → 03, implement → 04, green →
+  05) in sequence, retries failures, and fans out to 06-documenting when all
+  slices pass. Slices declare `goal`, `status`, `dependencies`, and
+  `next_slice` so the scheduler can order them deterministically.
 
 triggers:
-  - 'Step packet contains slices'
-  - 'Plan requests slice orchestration'
+  - 'Step packet with expansion: slices and auto_expand: true has been expanded'
+  - '01.step-expansion flow produced slice packets ready for dispatch'
+  - 'Plan requests slice orchestration after step expansion'
   - 'Manual request: orchestrate slices for a large step'
 
 gates:

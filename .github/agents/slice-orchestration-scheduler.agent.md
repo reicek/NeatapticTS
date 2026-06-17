@@ -2,7 +2,7 @@
 description: 'Prepares per-slice execution packets, tracks slice statuses, collects validation evidence, and produces consolidated PlanUpdate blocks for the parent agent to dispatch.'
 name: 'slice-orchestration-scheduler'
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -18,13 +18,24 @@ user-invocable: false
 disable-model-invocation: false
 agents: []
 skills:
-  [
-    'subagent-delegation-patterns',
-    'phase-handoff-workflow',
-    'tracker-handoff',
-  ]
-
+  ['subagent-delegation-patterns', 'phase-handoff-workflow', 'tracker-handoff']
 ---
+
+## Cortex-First Search Policy
+
+This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
+2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
+4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
+5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
+6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
+7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
+8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
+9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
 
 ## Mission
 
@@ -82,37 +93,6 @@ evidence so the parent can route them.
    artifacts, then signal the parent to dispatch to `06-documenting` for
    docs-quality finalization.
 
-## Output contract
-
-When invoked, return a `structured-v1` output block with the following fields:
-
-```structured-v1
-OUTPUT_CONTRACT: structured-v1
-TASK_STATUS: SUCCESS | PARTIAL | FAILED
-TIER: 3
-ROLE: slice-orchestration-scheduler
-TASK_RECEIVED: <brief restatement>
-SLICES_READ:
-- <slice_id or NONE>
-SLICES_UPDATED:
-- <slice_id:status>
-EXECUTION_PACKETS:
-- <slice_id: packet summary or NONE>
-VALIDATION_PACKETS:
-- <slice_id: packet summary or NONE>
-VALIDATION_EVIDENCE:
-- <artifact or NOT RUN>
-PARENT_DISPATCH_REQUIRED:
-- <slice_id: assign-slice | validate-slice | finalize-docs | NONE>
-BLOCKERS:
-- <blocker or NONE>
-SUMMARY: <brief summary>
-```
-
-The `PARENT_DISPATCH_REQUIRED` field tells the parent agent (`00-helping`)
-which dispatches are needed next, so the Tier-3 specialist never calls
-Tier-1 agents directly.
-
 ## Guardrails
 
 - Do not claim or modify slices outside the active step packet.
@@ -121,5 +101,40 @@ Tier-1 agents directly.
 - Do not auto-merge or auto-push PRs; prepare the git commands and PR body only.
 - Do not dispatch directly to Tier-1 agents; return dispatch instructions to
   the parent agent instead.
+- The `PARENT_DISPATCH_REQUIRED` guidance tells the parent agent (`00-helping`)
+  which dispatches are needed next, so this Tier-3 specialist never calls
+  Tier-1 agents directly.
 
----
+## Output format
+
+When invoked, return a `structured-v1` output block with the following fields.
+Use `FILES_READ`/`FILES_CHANGED` for the active plan file and any slice claim
+updates; use `KEY_FINDINGS` to report slice statuses and prepared packets;
+use `HANDOFF` to indicate the parent dispatch required (`assign-slice`,
+`validate-slice`, `finalize-docs`, or `NONE`).
+
+```structured-v1
+OUTPUT_CONTRACT: structured-v1
+TASK_STATUS: SUCCESS | PARTIAL | FAILED
+TIER: 3
+ROLE: slice-orchestration-scheduler
+TASK_RECEIVED: <brief restatement>
+FILES_READ:
+- <plan file path or NONE>
+FILES_CHANGED:
+- <plan file path or NONE>
+KEY_FINDINGS:
+- <slice status / packet summary or NONE>
+ACTIONS_TAKEN:
+- <action or NONE>
+VALIDATION_EVIDENCE:
+- <artifact or NOT RUN>
+HANDOFF: <assign-slice | validate-slice | finalize-docs | NONE>
+BLOCKERS:
+- <blocker or NONE>
+RISKS_OR_GAPS:
+- <risk or NONE>
+LEARNING_EVENT_NEEDED: true | false
+SUGGESTED_NEXT_AGENT: <agent name or NONE>
+SUMMARY: <brief summary>
+```

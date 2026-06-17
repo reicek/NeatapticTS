@@ -55,9 +55,7 @@ function insertDocumentAndChunk(database, bodyText, filePath = 'test.ts') {
     .run(doc.doc_id, bodyText, bodyText.length);
 
   return database
-    .prepare(
-      'SELECT chunk_id FROM chunks WHERE doc_id = ? AND chunk_index = 0',
-    )
+    .prepare('SELECT chunk_id FROM chunks WHERE doc_id = ? AND chunk_index = 0')
     .get(doc.doc_id).chunk_id;
 }
 
@@ -90,7 +88,6 @@ describe('feedback integration', () => {
         await teardownDb(db, tempDir);
       }
     });
-
   });
 
   describe('load_chunk clicks', () => {
@@ -166,17 +163,31 @@ describe('feedback integration', () => {
         const { loadChunk } = await import('../tools/load-chunk.mjs');
         const originalQuery = 'cache-original';
 
-        await loadChunk({ chunk_id: chunkId, query: originalQuery, databasePath: dbPath });
+        await loadChunk({
+          chunk_id: chunkId,
+          query: originalQuery,
+          databasePath: dbPath,
+        });
         // Fill cache with distinct chunk+query pairs for the same chunk.
         for (let i = 1; i <= 60; i++) {
-          await loadChunk({ chunk_id: chunkId, query: `cache-filler-${i}`, databasePath: dbPath });
+          await loadChunk({
+            chunk_id: chunkId,
+            query: `cache-filler-${i}`,
+            databasePath: dbPath,
+          });
         }
         await new Promise((resolve) => setTimeout(resolve, 50));
         // The original pair should have been evicted, so this reload records a new click.
-        await loadChunk({ chunk_id: chunkId, query: originalQuery, databasePath: dbPath });
+        await loadChunk({
+          chunk_id: chunkId,
+          query: originalQuery,
+          databasePath: dbPath,
+        });
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        const originalHash = createHash('sha256').update(originalQuery).digest('hex');
+        const originalHash = createHash('sha256')
+          .update(originalQuery)
+          .digest('hex');
         const row = db
           .prepare(
             "SELECT COUNT(*) as count FROM feedback_events WHERE chunk_id = ? AND signal_type = 'click' AND query_hash = ?",
@@ -214,14 +225,24 @@ describe('feedback integration', () => {
 
     it('rejects loadChunk without arguments', async () => {
       const { loadChunk } = await import('../tools/load-chunk.mjs');
-      await expect(loadChunk()).rejects.toThrow('chunk_id must be a positive integer');
+      await expect(loadChunk()).rejects.toThrow(
+        'chunk_id must be a positive integer',
+      );
     });
 
     it('falls back to the lowest-ID chunk when chunk_id is 1 and no exact row exists', async () => {
       const { db, dbPath, tempDir } = await setupDb();
       try {
-        const firstChunkId = insertDocumentAndChunk(db, 'first body', 'fallback-first.ts');
-        const secondChunkId = insertDocumentAndChunk(db, 'second body', 'fallback-second.ts');
+        const firstChunkId = insertDocumentAndChunk(
+          db,
+          'first body',
+          'fallback-first.ts',
+        );
+        const secondChunkId = insertDocumentAndChunk(
+          db,
+          'second body',
+          'fallback-second.ts',
+        );
         db.prepare('DELETE FROM chunks WHERE chunk_id = ?').run(firstChunkId);
         const { loadChunk } = await import('../tools/load-chunk.mjs');
 
@@ -238,11 +259,21 @@ describe('feedback integration', () => {
       const { createHash } = await import('node:crypto');
       const { db, dbPath, tempDir } = await setupDb();
       try {
-        const chunkId = insertDocumentAndChunk(db, 'hash query body', 'hash-query-test.ts');
+        const chunkId = insertDocumentAndChunk(
+          db,
+          'hash query body',
+          'hash-query-test.ts',
+        );
         const { loadChunk } = await import('../tools/load-chunk.mjs');
-        const queryHash = createHash('sha256').update('pre-hashed-query').digest('hex');
+        const queryHash = createHash('sha256')
+          .update('pre-hashed-query')
+          .digest('hex');
 
-        await loadChunk({ chunk_id: chunkId, query_hash: queryHash, databasePath: dbPath });
+        await loadChunk({
+          chunk_id: chunkId,
+          query_hash: queryHash,
+          databasePath: dbPath,
+        });
 
         const row = db
           .prepare(
@@ -265,9 +296,7 @@ describe('feedback integration', () => {
           'kappa lambda mu',
           'submit-test.ts',
         );
-        const { submitFeedback } = await import(
-          '../tools/submit-feedback.mjs'
-        );
+        const { submitFeedback } = await import('../tools/submit-feedback.mjs');
 
         const summary = await submitFeedback({
           chunk_id: chunkId,
@@ -286,7 +315,9 @@ describe('feedback integration', () => {
         expect(typeof summary.feedback_boost_after).toBe('number');
 
         const score = db
-          .prepare('SELECT feedback_boost FROM feedback_scores WHERE chunk_id = ?')
+          .prepare(
+            'SELECT feedback_boost FROM feedback_scores WHERE chunk_id = ?',
+          )
           .get(chunkId);
         expect(score.feedback_boost).toBe(summary.feedback_boost_after);
       } finally {
@@ -297,10 +328,12 @@ describe('feedback integration', () => {
     it('rejects invalid signal_type values', async () => {
       const { db, dbPath, tempDir } = await setupDb();
       try {
-        const chunkId = insertDocumentAndChunk(db, 'nu xi omicron', 'invalid-test.ts');
-        const { submitFeedback } = await import(
-          '../tools/submit-feedback.mjs'
+        const chunkId = insertDocumentAndChunk(
+          db,
+          'nu xi omicron',
+          'invalid-test.ts',
         );
+        const { submitFeedback } = await import('../tools/submit-feedback.mjs');
 
         await expect(
           submitFeedback({
@@ -317,9 +350,7 @@ describe('feedback integration', () => {
     it('rejects a non-positive chunk_id', async () => {
       const { db, dbPath, tempDir } = await setupDb();
       try {
-        const { submitFeedback } = await import(
-          '../tools/submit-feedback.mjs'
-        );
+        const { submitFeedback } = await import('../tools/submit-feedback.mjs');
 
         await expect(
           submitFeedback({
@@ -570,9 +601,8 @@ describe('feedback integration', () => {
 
   describe('attachFeedbackToResults', () => {
     it('leaves an empty result list unchanged', async () => {
-      const { attachFeedbackToResults } = await import(
-        '../tools/search-corpus.mjs'
-      );
+      const { attachFeedbackToResults } =
+        await import('../tools/search-corpus.mjs');
       const results = [];
 
       await attachFeedbackToResults(results);
@@ -581,9 +611,8 @@ describe('feedback integration', () => {
     });
 
     it('applies default signals to results without a numeric chunk_id', async () => {
-      const { attachFeedbackToResults } = await import(
-        '../tools/search-corpus.mjs'
-      );
+      const { attachFeedbackToResults } =
+        await import('../tools/search-corpus.mjs');
       const results = [{ text: 'no chunk id' }];
 
       await attachFeedbackToResults(results);
@@ -614,9 +643,8 @@ describe('feedback integration', () => {
         `,
         ).run(chunkId);
 
-        const { attachFeedbackToResults } = await import(
-          '../tools/search-corpus.mjs'
-        );
+        const { attachFeedbackToResults } =
+          await import('../tools/search-corpus.mjs');
         const results = [{ chunk_id: chunkId }, { text: 'plain object' }];
         await attachFeedbackToResults(results, dbPath);
 
@@ -651,9 +679,8 @@ describe('feedback integration', () => {
         );
         db.exec('DROP TABLE feedback_scores');
 
-        const { attachFeedbackToResults } = await import(
-          '../tools/search-corpus.mjs'
-        );
+        const { attachFeedbackToResults } =
+          await import('../tools/search-corpus.mjs');
         const results = [{ chunk_id: chunkId }];
         await attachFeedbackToResults(results, dbPath);
 
@@ -673,9 +700,7 @@ describe('feedback integration', () => {
 
   describe('MCP tool registration', () => {
     it('includes submit_feedback in the Repo Cortex tool list', async () => {
-      const { createRepoCortexTools } = await import(
-        '../repo-cortex-mcp.mjs'
-      );
+      const { createRepoCortexTools } = await import('../repo-cortex-mcp.mjs');
       const tools = createRepoCortexTools();
       const names = tools.map((tool) => tool.name);
 

@@ -156,8 +156,10 @@ function estimateTokenCount(text, charsPerToken = DEFAULT_CHARS_PER_TOKEN) {
  * @returns {'essential'|'supporting'|'supplementary'}
  */
 function assignTier(score, thresholds = {}) {
-  const essentialThreshold = thresholds.essential ?? DEFAULT_TIER_THRESHOLDS.essential;
-  const supportingThreshold = thresholds.supporting ?? DEFAULT_TIER_THRESHOLDS.supporting;
+  const essentialThreshold =
+    thresholds.essential ?? DEFAULT_TIER_THRESHOLDS.essential;
+  const supportingThreshold =
+    thresholds.supporting ?? DEFAULT_TIER_THRESHOLDS.supporting;
   if (score >= essentialThreshold) return 'essential';
   if (score >= supportingThreshold) return 'supporting';
   return 'supplementary';
@@ -310,7 +312,9 @@ export function deduplicateChunks(chunks, options = {}) {
 
     if (embeddingsAvailable) {
       // Warm embeddings: use cosine near-duplicate collapse within the family.
-      afterDeduplication.push(...collapseNearDuplicates(group, cosineThreshold));
+      afterDeduplication.push(
+        ...collapseNearDuplicates(group, cosineThreshold),
+      );
       continue;
     }
 
@@ -468,7 +472,10 @@ export function enforceBudget(chunks, options = {}) {
 
   const tierOrder = ['essential', 'supporting', 'supplementary'];
   const chunksByTier = new Map(
-    tierOrder.map((tier) => [tier, chunks.filter((chunk) => chunk.tier === tier)]),
+    tierOrder.map((tier) => [
+      tier,
+      chunks.filter((chunk) => chunk.tier === tier),
+    ]),
   );
 
   for (const tier of tierOrder) {

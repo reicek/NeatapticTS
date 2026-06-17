@@ -23,20 +23,27 @@
 
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
 import { normalizeLimit } from './cortex-db.mjs';
-import { searchCorpus } from './search-corpus.mjs';
+import { buildResponseFreshness, searchCorpus } from './search-corpus.mjs';
 import { assembleContext } from '../../semantic-index/assemble-context.mjs';
 
 /**
  * Default token budget for an assembled context window.
+ * Kept small (800-1200 tokens) so the response fits in an LLM context window.
  * @type {number}
  */
-const DEFAULT_BUDGET = 4096;
+const DEFAULT_BUDGET = 1024;
 
 /**
  * Default result limit passed to corpus retrieval.
  * @type {number}
  */
-const DEFAULT_LIMIT = 10;
+const DEFAULT_LIMIT = 5;
+
+/**
+ * Maximum characters for the assembled context string in compact mode.
+ * @type {number}
+ */
+const COMPACT_CONTEXT_THRESHOLD = 2000;
 
 /**
  * Default context serialization format.
@@ -117,6 +124,55 @@ function normalizeSearchResultToChunk(result) {
 }
 
 /**
+ * Build the inline top_result descriptor from the first raw corpus result.
+ *
+ * @param {object | undefined} result - Top raw corpus result.
+ * @returns {{ chunk_id: number, file_path: string, family: string, text: string } | null} Top result descriptor.
+ */
+function buildTopResult(result) {
+  if (!result) {
+    return null;
+  }
+  return {
+    chunk_id: result.chunk_id,
+    file_path: result.file_path,
+    family: result.family,
+    text: result.body_text ?? result.text ?? '',
+  };
+}
+
+/**
+ * Build suggested follow-up tool calls from the top corpus results.
+ *
+ * @param {Array<object>} results - Raw corpus search results.
+ * @param {string} query - Original query string.
+ * @returns {Array<{ tool: string, args: object, reason: string }>} Follow-up refs.
+ */
+function buildFollowUpRefs(results, query) {
+  const refs = [];
+  if (results[0]) {
+    refs.push({
+      tool: 'load_chunk',
+      args: { chunk_id: results[0].chunk_id, query },
+      reason: 'Full text of the top-ranked result',
+    });
+  }
+  if (results[1]) {
+    refs.push({
+      tool: 'load_chunk',
+      args: { chunk_id: results[1].chunk_id, query },
+      reason: 'Next sequential chunk in the same document',
+    });
+  }
+  refs.push({
+    tool: 'search_context',
+    args: { query: `Related: ${query}` },
+    reason: 'Explore related context',
+  });
+  return refs;
+}
+
+/**
  * Search the corpus and assemble a bounded context window.
  *
  * @param {SearchContextOptions} [options={}]
@@ -128,6 +184,10 @@ export async function searchContext(options = {}) {
   const limit = normalizeLimit(options.limit, DEFAULT_LIMIT);
   const budget = validateBudget(options.budget);
   const contextFormat = validateContextFormat(options.context_format);
+  const dedupStrategy = options.dedup_strategy ?? 'exact';
+  const includeMetadata = options.include_metadata === true;
+  const compact = options.compact === true;
+  const readTopResult = options.read_top_result === true;
 
   const searchResponse = await searchCorpus({
     query,
@@ -143,6 +203,8 @@ export async function searchContext(options = {}) {
   const chunks = (searchResponse.results ?? []).map(
     normalizeSearchResultToChunk,
   );
+  const topResult = readTopResult ? buildTopResult(chunks[0]) : null;
+  const followUpRefs = buildFollowUpRefs(chunks, query);
   const assembled = await assembleContext(chunks, {
     budget,
     context_format: contextFormat,
@@ -153,6 +215,10 @@ export async function searchContext(options = {}) {
     typeof searchResponse.dense_state === 'string'
       ? searchResponse.dense_state
       : 'none';
+  const rerankState =
+    typeof searchResponse.rerank_state === 'string'
+      ? searchResponse.rerank_state
+      : 'not_requested';
 
   const tierCounts = assembled.tierCounts ?? {
     essential: 0,
@@ -160,27 +226,83 @@ export async function searchContext(options = {}) {
     supplementary: 0,
   };
 
-  const truncated = assembled.selectedChunks?.some(
-    (chunk) => chunk.truncated === true,
-  );
+  const selectedChunks = assembled.selectedChunks ?? [];
+  const tokenCount = assembled.tokenCount ?? 0;
+  const budgetRemaining = Math.max(0, budget - tokenCount);
+
+  const results = compact
+    ? selectedChunks.map((chunk) => ({
+        chunk_id: chunk.chunk_id,
+        truncated: chunk.truncated === true,
+      }))
+    : selectedChunks.map((chunk) => {
+        const result = {
+          chunk_id: chunk.chunk_id,
+          feedback_boost: chunk.feedback_boost ?? 0,
+          truncated: chunk.truncated === true,
+        };
+        if (includeMetadata) {
+          result.metadata = {
+            file_path: chunk.file_path ?? null,
+            family: chunk.family ?? null,
+            chunk_index: chunk.chunk_index ?? null,
+            heading_path: chunk.heading_path ?? null,
+            depth: chunk.depth ?? null,
+            parent_chunk_id: chunk.parent_chunk_id ?? null,
+            context_header: chunk.context_header ?? null,
+            symbol_name: chunk.symbol_name ?? null,
+            signature_text: chunk.signature_text ?? null,
+            jsdoc_text: chunk.jsdoc_text ?? null,
+            export_type: chunk.export_type ?? null,
+            module_path: chunk.module_path ?? null,
+            arch_layer: chunk.arch_layer ?? null,
+            jsdoc_quality: chunk.jsdoc_quality ?? null,
+            jsdoc_word_count: chunk.jsdoc_word_count ?? null,
+            cyclomatic_complexity: chunk.cyclomatic_complexity ?? null,
+            test_coverage: chunk.test_coverage ?? null,
+            source_path_pattern: chunk.source_path_pattern ?? null,
+          };
+        }
+        return result;
+      });
+
+  let context = assembled.context;
+  if (
+    compact &&
+    typeof context === 'string' &&
+    context.length > COMPACT_CONTEXT_THRESHOLD
+  ) {
+    context = `${context.slice(0, COMPACT_CONTEXT_THRESHOLD - 1)}…`;
+  }
 
   return {
-    context: assembled.context,
-    token_count: assembled.tokenCount,
+    context,
+    compact,
+    token_count: tokenCount,
     tier_counts: tierCounts,
     dense_state: denseState,
+    rerank_state: rerankState,
     context_format: contextFormat,
-    ...(searchResponse.dense_degraded === true
-      ? { dense_degraded: true }
-      : {}),
+    total_chunks_retrieved: chunks.length,
+    chunks_in_context: selectedChunks.length,
+    tokens_used: tokenCount,
+    context_budget_consumed: tokenCount,
+    budget_remaining: budgetRemaining,
+    dedup_strategy: dedupStrategy,
+    results,
+    ...(searchResponse.dense_degraded === true ? { dense_degraded: true } : {}),
+    freshness:
+      searchResponse.freshness ?? buildResponseFreshness(options.databasePath),
     metadata: {
       chunkCount: chunks.length,
-      totalTokens: assembled.tokenCount,
+      totalTokens: tokenCount,
       budget,
       tiersIncluded: tierCounts,
-      truncated,
+      truncated: selectedChunks.some((chunk) => chunk.truncated === true),
       format: contextFormat,
     },
+    ...(topResult ? { top_result: topResult } : {}),
+    follow_up_refs: followUpRefs,
   };
 }
 

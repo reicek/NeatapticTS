@@ -154,7 +154,7 @@ CREATE INDEX IF NOT EXISTS term_embeddings_frequency_idx ON term_embeddings(freq
 CREATE TABLE IF NOT EXISTS feedback_events (
   event_id TEXT PRIMARY KEY,
   chunk_id INTEGER NOT NULL REFERENCES chunks(chunk_id) ON DELETE CASCADE,
-  signal_type TEXT NOT NULL CHECK(signal_type IN ('impression', 'click', 'reference', 'positive', 'negative')),
+  signal_type TEXT NOT NULL CHECK(signal_type IN ('impression', 'click', 'reference', 'positive', 'negative', 'irrelevant')),
   signal_strength REAL NOT NULL DEFAULT 0.0,
   query_hash TEXT,
   agent_id TEXT,
