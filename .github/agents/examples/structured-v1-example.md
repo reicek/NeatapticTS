@@ -1,29 +1,27 @@
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
-TASK_STATUS: SUCCESS
+TASK_STATUS: SUCCESS | PARTIAL | FAILED
 TIER: 1
 ROLE: 02-researching
-TASK_RECEIVED: Map integration surface for feature X
+TASK_RECEIVED: <brief restatement>
 FILES_READ:
-- plans/feature-x.step01.md
-- src/feature/x/controller.ts
+- <path or NONE>
 FILES_CHANGED:
-- NONE
+- <path or NONE>
 KEY_FINDINGS:
-- { "finding": "Controller uses legacy API v1; adapter exists in src/adapters/v1->v2.ts", "confidence": 94, "provenance": { "source": "static_code", "path": "src/feature/x/controller.ts", "timestamp": "2026-06-14T12:30:00Z" } }
+- <finding or NONE>
 ACTIONS_TAKEN:
-- ran boundary-mapper and docs-scout; updated plans/feature-x.step01.md with evidence
+- <action or NONE>
 VALIDATION_EVIDENCE:
-- neataptic-gate-mcp:run_gate_check --gate=plan-sync -> { "pass": true }
+- <command/result or NOT RUN>
 BLOCKERS:
-- NONE
+- <blocker or NONE>
 RISKS_OR_GAPS:
-- { "risk": "Tests not present for v1->v2 adapter", "severity": "medium" }
-LEARNING_EVENT_NEEDED: false
-SUGGESTED_NEXT_AGENT: 03-red-testing
-PHASE_COMPLETE: true
+- <risk or NONE>
+LEARNING_EVENT_NEEDED: true | false
+SUGGESTED_NEXT_AGENT: <agent name or NONE>
+PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- boundary-mapper
-- docs-scout
-SUMMARY: Found legacy API usage; plan updated and handed off to red-testing
+- <agent or NONE>
+SUMMARY: <brief truthful summary>
 ```
