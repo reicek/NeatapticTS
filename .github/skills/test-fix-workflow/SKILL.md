@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Test Fix Workflow
 
 Use this skill when multiple test failures need a disciplined, low-distraction
@@ -56,10 +58,16 @@ Use test-fix-workflow for failing Flappy Bird trainer tests.
 Available output: ts errors in trainer/evaluation plus 6 runtime test failures.
 Type: mixed TypeScript + runtime.
 Plan: plans/TestsFix.md.
-Final validation: npx tsc --noEmit -p tsconfig.test.json, then npm test.
+Final validation: npx tsc --noEmit -p tsconfig.test.json, then focused Jest slices; only run the full suite when explicitly required.
 ```
 
 ## Required Workflow
+
+The full test suite (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`,
+`npm run jest:mjs`) is large and slow. **Never run it speculatively.** Stay on
+narrow red/green reruns for the active fix cluster. Only run the repo-wide
+suite at the end if the user or active step packet explicitly requires
+repo-wide confirmation.
 
 1. Create or update a durable fix plan before changing code.
    - If the tracker format itself is being created or rewritten, follow
@@ -129,8 +137,10 @@ Preferred validation cadence:
   touched by the repair. All four categories must reach 100% for each file.
   Use the dead-code rule: remove unreachable branches rather than forcing
   contorted tests.
-- After all planned fixes and the coverage gate: `npm run test:silent` to
-  confirm the repo-wide suite is green and the baseline has not regressed.
+- After all planned fixes and the coverage gate: run `npm run test:silent` **only
+  if** the user or active step packet explicitly requires repo-wide
+  confirmation. Otherwise, report the focused cluster results as the final
+  validation evidence.
 
 **Coverage is a hard gate, not a recommendation.** No test-fix session is
 complete until every changed `src/` file is at 100% and the suite is green.
@@ -147,6 +157,6 @@ A strong run should report:
 - which validations were intentionally deferred until the end,
 - `coverage-guard` result for every changed `src/` file (per-file 100%
   confirmation or gaps resolved),
-- final `npm run test:silent` result,
+- final focused-slice result (and repo-wide suite result only when explicitly required),
 - new green baseline (suite count, test count),
 - any remaining failures or follow-up items.

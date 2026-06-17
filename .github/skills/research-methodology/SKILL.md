@@ -8,9 +8,13 @@ skills:
   - plan-alignment
 tools:
   - neataptic-cortex-mcp-search_corpus
+  - neataptic-cortex-mcp-search_advanced
+  - neataptic-cortex-mcp-search_context
   - neataptic-cortex-mcp-load_document
   - neataptic-cortex-mcp-load_chunk
   - neataptic-cortex-mcp-freshness_check
+  - neataptic-cortex-mcp-traverse_graph
+  - neataptic-cortex-mcp-expand_query
   - neataptic-workflow-mcp-get_active_workflow_snapshot
 model: anthropic/claude-sonnet-4-20250514
 ---
@@ -70,22 +74,62 @@ context is clear.
 
 ## Cortex-First Search
 
-When semantic search would find relevant patterns faster than manual lookup:
+This skill is the canonical owner of the Cortex-First Search Policy for
+NeatapticTS. All investigation, discovery, research, and file-reading work
+should follow this policy before falling back to native tools (`grep`, `glob`,
+`view`).
 
-```text
-Use neataptic-cortex-mcp-search_corpus with:
-  query: "<conceptual query describing the pattern>"
-  use_dense: true
-  limit: 10
-```
+### Cortex MCP Tool Reference
 
-**Required workflow:**
+| Tool              | Purpose                                                        |
+| ----------------- | -------------------------------------------------------------- |
+| `freshness_check` | Verify index currency before searching.                        |
+| `search_corpus`   | BM25 + dense hybrid search over indexed chunks.                |
+| `search_advanced` | Full pipeline: classify, expand, retrieve, re-rank, assemble.  |
+| `search_context`  | Token-budgeted context window assembly from retrieval results. |
+| `load_chunk`      | Load full chunk content by numeric ID.                         |
+| `load_document`   | Load all ordered chunks for a repository path.                 |
+| `traverse_graph`  | Entity/relationship graph traversal from seed entities.        |
+| `expand_query`    | Domain-aware query expansion with synonym discovery.           |
+
+### 9-Step Search Order
+
+Before manual file reads, follow this ordered search workflow:
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
+2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid
+   discovery.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for
+   agent-facing queries (includes reranking, ranking explanations,
+   `read_top_result`, `follow_up_refs`).
+4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window
+   assembly.
+5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
+6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
+7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph
+   traversal.
+8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
+9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is
+   degraded, the target is a known file path, or Cortex returned zero results.
+
+### Gap Escalation Rule
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG
+enhancement. Use native tools as a temporary fallback only.
+
+### Required Workflow
 
 1. Run `npm run index:prewarm` when `dense_state` reports cold or model-only.
 2. Use `load_document` for full-file context when a chunk is insufficient.
 3. Use `load_chunk` for targeted retrieval when the chunk ID is known.
 4. Use `freshness_check` to validate index currency before relying on results.
-5. Treat BM25 + dense reranking as the default search mode.
+5. Use `search_advanced` for agent-facing queries that need reranking or
+   context assembly.
+6. Use `search_context` when a token-budgeted context window is needed.
+7. Use `traverse_graph` for dependency and entity graph exploration.
+8. Use `expand_query` to broaden a query before retrieval when initial results
+   are sparse.
+9. Treat BM25 + dense reranking as the default search mode.
 
 **Example search queries:**
 

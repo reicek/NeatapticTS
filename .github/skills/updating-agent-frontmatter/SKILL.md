@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Updating Agent Frontmatter
 
 This skill makes safe, targeted edits to YAML frontmatter in existing `.github/agents/*.agent.md` files. It validates that names remain stable, delegation stays bounded, model strings are qualified, and the updated file passes automated frontmatter validation before the change is recorded.

@@ -2,7 +2,7 @@
  * @module mcp-plan-utils
  * @description Markdown plan parser and workflow-snapshot builders for the NeatapticTS MCP servers.
  *
- * Extracts the single active `[WIP]` phase and step from a `plans/*.plans.md`
+ * Extracts the active `[WIP]` phase and step from a `plans/*.plans.md`
  * file and converts the structured context into typed snapshot objects that
  * the workflow and validation MCP tools expose to AI agents.
  *
@@ -15,19 +15,20 @@
  *   B --> C{Exactly one WIP phase?}
  *   C -- no  --> D[throw Error]
  *   C -- yes --> E[extractStepBlocks<br/>STEP_PATTERN]
- *   E --> F{Exactly one WIP step?}
- *   F -- no  --> G[throw Error]
- *   F -- yes --> H[parseStepMetadata<br/>YAML fenced block]
- *   H --> I[extractRequiredValidationCommands<br/>prose backtick scan]
+ *   E --> F{WIP step or phase-only?}
+ *   F -- step  --> G[parseStepMetadata<br/>YAML fenced block]
+ *   G --> H[extractRequiredValidationCommands<br/>prose backtick scan]
+ *   H --> I[findActiveSlice]
  *   I --> J[Active plan context]
  *   J --> K[createWorkflowSnapshot]
  *   J --> L[createValidationAllowlistSnapshot]
+ *   F -- phase-only --> J
  * ```
  */
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { parseFrontmatterValue } from '../customization-utils.mjs';
+import { parsePlanYamlBlock } from '../customization-utils.mjs';
 import {
   MCP_REPO_ROOT,
   requireString,
@@ -39,7 +40,7 @@ const PHASE_PATTERN =
   /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 /** Matches a step header line, e.g. `#### Step 03 — Title [PLANNED]`. */
 const STEP_PATTERN =
-  /^#### Step (?<step>\d{2})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+  /^#### Step (?<step>\d{2,})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 /** Captures the body of the `## Implementation phases` section up to the first validation-gates heading. */
 const IMPLEMENTATION_SECTION_PATTERN =
   /^## Implementation phases\s*(?<body>[\s\S]*?)(?=^## [^\n]*\bvalidation gates\b[^\n]*$)/imu;
@@ -51,10 +52,25 @@ const SESSION_OVERRIDE_PATH = path.join(
 );
 
 /**
- * Load the single active phase and step from the workflow plan.
+ * Load the active phase and step (or phase-only context) from the workflow plan.
  *
  * @param {string} planPath - Relative plan path.
- * @returns {Promise<{ planPath: string, activePhase: { number: number | string, title: string, status: string }, activeStep: { number: number, title: string, status: string, metadata: Record<string, unknown>, stepObjective: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean } }>} Active plan context.
+ * @returns {Promise<{
+ *   planPath: string,
+ *   activePhase: { number: number | string, title: string, status: string },
+ *   activeStep: {
+ *     number: number,
+ *     title: string,
+ *     status: string,
+ *     metadata: Record<string, unknown>,
+ *     stepObjective: string,
+ *     validationCommands: string[],
+ *     requiredValidationCommands: string[],
+ *     validationCommandsMatch: boolean,
+ *     activeSlice: { slice_id: string, title: string, status: string, goal: string } | null,
+ *   } | null,
+ *   phaseMetadata: Record<string, unknown> | null,
+ * }>} Active plan context.
  */
 export async function loadActivePlanContext(planPath) {
   const resolvedPlanPath = resolveExplicitPlanPath(planPath);
@@ -90,9 +106,34 @@ export async function loadActivePlanContext(planPath) {
   const steps = [...extractStepBlocks(activePhase.body)];
   const activeSteps = steps.filter((stepBlock) => stepBlock.status === 'WIP');
 
-  if (activeSteps.length !== 1) {
+  if (activeSteps.length > 1) {
     throw new Error(
-      `Expected exactly one [WIP] step in Phase ${activePhase.number}, found ${activeSteps.length}.`,
+      `Expected at most one [WIP] step in Phase ${activePhase.number}, found ${activeSteps.length}.`,
+    );
+  }
+
+  const phaseMetadata = parsePhaseMetadata(activePhase.body);
+
+  if (activeSteps.length === 0) {
+    if (
+      phaseMetadata &&
+      phaseMetadata.expansion === 'steps' &&
+      phaseMetadata.auto_expand === false
+    ) {
+      return {
+        planPath: resolvedPlanPath.displayPath,
+        activePhase: {
+          number: activePhase.number,
+          title: activePhase.title,
+          status: activePhase.status,
+        },
+        activeStep: null,
+        phaseMetadata,
+      };
+    }
+
+    throw new Error(
+      `Phase ${activePhase.number} is [WIP] but has no [WIP] step. Pasted phase blocks must list steps and stop; when slices are expected, a step must be [WIP].`,
     );
   }
 
@@ -124,7 +165,9 @@ export async function loadActivePlanContext(planPath) {
         validationCommands,
         requiredValidationCommands,
       ),
+      activeSlice: findActiveSlice(metadata),
     },
+    phaseMetadata,
   };
 }
 
@@ -153,24 +196,49 @@ export async function resolveEffectivePlanPath(
 /**
  * Build the repo-static workflow snapshot exposed by the workflow MCP.
  *
- * @param {{ planPath: string, activePhase: { number: number | string, title: string, status: string }, activeStep: { number: number, title: string, status: string, metadata: Record<string, unknown>, stepObjective: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean } }} activePlanContext - Active plan context.
- * @returns {{ scope: string, plan: string, activePhase: { number: number | string, title: string, status: string }, activeStep: { number: number, title: string, status: string, agent: unknown, agentFile: unknown, objective: string, nextStep: unknown, validationCommands: string[] }, allowlistAuthority: string, sourceBoundary: string[] }} Workflow snapshot.
+ * @param {Awaited<ReturnType<typeof loadActivePlanContext>>} activePlanContext - Active plan context.
+ * @returns {{
+ *   scope: string,
+ *   plan: string,
+ *   activePhase: { number: number | string, title: string, status: string },
+ *   activeStep: {
+ *     number: number,
+ *     title: string,
+ *     status: string,
+ *     agent: unknown,
+ *     agentFile: unknown,
+ *     objective: string,
+ *     nextStep: unknown,
+ *     validationCommands: string[],
+ *     activeSlice: { slice_id: string, title: string, status: string, goal: string } | null,
+ *   } | null,
+ *   phaseMetadata: Record<string, unknown> | null,
+ *   allowlistAuthority: string,
+ *   sourceBoundary: string[],
+ * }} Workflow snapshot.
  */
 export function createWorkflowSnapshot(activePlanContext) {
   return {
     scope: 'repo-static',
     plan: activePlanContext.planPath,
     activePhase: activePlanContext.activePhase,
-    activeStep: {
-      number: activePlanContext.activeStep.number,
-      title: activePlanContext.activeStep.title,
-      status: activePlanContext.activeStep.status,
-      agent: activePlanContext.activeStep.metadata.agent ?? null,
-      agentFile: activePlanContext.activeStep.metadata.agent_file ?? null,
-      objective: activePlanContext.activeStep.stepObjective,
-      nextStep: activePlanContext.activeStep.metadata.next_step ?? null,
-      validationCommands: activePlanContext.activeStep.validationCommands,
-    },
+    activeStep: activePlanContext.activeStep
+      ? {
+          number: activePlanContext.activeStep.number,
+          title: activePlanContext.activeStep.title,
+          status: activePlanContext.activeStep.status,
+          agent:
+            activePlanContext.activeStep.metadata.agent ??
+            activePlanContext.activeStep.metadata.goal ??
+            null,
+          agentFile: activePlanContext.activeStep.metadata.agent_file ?? null,
+          objective: activePlanContext.activeStep.stepObjective,
+          nextStep: activePlanContext.activeStep.metadata.next_step ?? null,
+          validationCommands: activePlanContext.activeStep.validationCommands,
+          activeSlice: activePlanContext.activeStep.activeSlice,
+        }
+      : null,
+    phaseMetadata: activePlanContext.phaseMetadata,
     allowlistAuthority: 'active-step.validation',
     sourceBoundary: ['plan metadata', 'deterministic customization scripts'],
   };
@@ -179,26 +247,47 @@ export function createWorkflowSnapshot(activePlanContext) {
 /**
  * Build the active validation allow-list snapshot exposed by the validation MCP.
  *
- * @param {{ planPath: string, activePhase: { number: number | string, title: string, status: string }, activeStep: { number: number, title: string, status: string, metadata: Record<string, unknown>, stepObjective: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean } }} activePlanContext - Active plan context.
- * @returns {{ scope: string, plan: string, activePhase: { number: number | string, title: string, status: string }, activeStep: { number: number, title: string, status: string, agent: unknown }, allowlistAuthority: string, validationCommands: string[], requiredValidationCommands: string[], validationCommandsMatch: boolean }} Validation allow-list snapshot.
+ * @param {Awaited<ReturnType<typeof loadActivePlanContext>>} activePlanContext - Active plan context.
+ * @returns {{
+ *   scope: string,
+ *   plan: string,
+ *   activePhase: { number: number | string, title: string, status: string },
+ *   activeStep: {
+ *     number: number,
+ *     title: string,
+ *     status: string,
+ *     agent: unknown,
+ *   } | null,
+ *   activeSlice: { slice_id: string, title: string, status: string, goal: string } | null,
+ *   allowlistAuthority: string,
+ *   validationCommands: string[],
+ *   requiredValidationCommands: string[],
+ *   validationCommandsMatch: boolean,
+ * }} Validation allow-list snapshot.
  */
 export function createValidationAllowlistSnapshot(activePlanContext) {
   return {
     scope: 'direct-MCP',
     plan: activePlanContext.planPath,
     activePhase: activePlanContext.activePhase,
-    activeStep: {
-      number: activePlanContext.activeStep.number,
-      title: activePlanContext.activeStep.title,
-      status: activePlanContext.activeStep.status,
-      agent: activePlanContext.activeStep.metadata.agent ?? null,
-    },
+    activeStep: activePlanContext.activeStep
+      ? {
+          number: activePlanContext.activeStep.number,
+          title: activePlanContext.activeStep.title,
+          status: activePlanContext.activeStep.status,
+          agent:
+            activePlanContext.activeStep.metadata.agent ??
+            activePlanContext.activeStep.metadata.goal ??
+            null,
+        }
+      : null,
+    activeSlice: activePlanContext.activeStep?.activeSlice ?? null,
     allowlistAuthority: 'active-step.validation',
-    validationCommands: activePlanContext.activeStep.validationCommands,
+    validationCommands: activePlanContext.activeStep?.validationCommands ?? [],
     requiredValidationCommands:
-      activePlanContext.activeStep.requiredValidationCommands,
+      activePlanContext.activeStep?.requiredValidationCommands ?? [],
     validationCommandsMatch:
-      activePlanContext.activeStep.validationCommandsMatch,
+      activePlanContext.activeStep?.validationCommandsMatch ?? false,
   };
 }
 
@@ -264,12 +353,31 @@ function* extractStepBlocks(phaseBody) {
 }
 
 /**
+ * Parse the YAML metadata block from a phase body into a key–value map.
+ *
+ * @param {string} phaseBody - Phase body text.
+ * @returns {Record<string, unknown>} Parsed metadata, or an empty object if no YAML block is present.
+ */
+function parsePhaseMetadata(phaseBody) {
+  const yamlBlock = /```yaml\r?\n(?<yaml>[\s\S]*?)```/u.exec(phaseBody)?.groups
+    ?.yaml;
+  if (!yamlBlock) {
+    return {};
+  }
+
+  try {
+    return parsePlanYamlBlock(yamlBlock);
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Parse the YAML metadata block from a step body into a key–value map.
  *
- * Looks for a fenced ` ```yaml ` block and walks it line by line. Values are
- * parsed with {@link parseFrontmatterValue} so quoted strings, booleans, and
- * YAML list items are handled correctly. Throws if no YAML block is found,
- * because a missing metadata block is always a plan-authoring error.
+ * Looks for a fenced ` ```yaml ` block and parses it with
+ * {@link parsePlanYamlBlock}, which supports scalar lists and object lists
+ * such as slices.
  *
  * @param {string} stepBody - Step body text extracted by {@link extractStepBlocks}.
  * @returns {Record<string, unknown>} Parsed metadata map.
@@ -282,42 +390,49 @@ function parseStepMetadata(stepBody) {
     throw new Error('Active step packet is missing a YAML metadata block.');
   }
 
-  const metadata = {};
-  let activeListKey = null;
+  return parsePlanYamlBlock(yamlBlock);
+}
 
-  for (const rawLine of yamlBlock.split(/\r?\n/u)) {
-    if (!rawLine.trim()) {
-      continue;
-    }
-
-    const listItemMatch = /^\s+-\s+(?<value>.+)$/u.exec(rawLine);
-    if (listItemMatch?.groups && activeListKey) {
-      metadata[activeListKey].push(
-        parseFrontmatterValue(listItemMatch.groups.value.trim()),
-      );
-      continue;
-    }
-
-    const keyValueMatch = /^(?<key>[A-Za-z0-9_-]+):(?<value>.*)$/u.exec(
-      rawLine.trimStart(),
-    );
-    if (!keyValueMatch?.groups) {
-      continue;
-    }
-
-    const key = keyValueMatch.groups.key;
-    const value = keyValueMatch.groups.value.trim();
-    if (!value) {
-      metadata[key] = [];
-      activeListKey = key;
-      continue;
-    }
-
-    metadata[key] = parseFrontmatterValue(value);
-    activeListKey = Array.isArray(metadata[key]) ? key : null;
+/**
+ * Find the currently active slice from step metadata.
+ *
+ * Prefers the first `[WIP]` slice, then the first `[PLANNED]` slice in slice
+ * dependency order. Returns `null` when the step has no slices.
+ *
+ * @param {Record<string, unknown>} metadata - Parsed step metadata.
+ * @returns {{ slice_id: string, title: string, status: string, goal: string } | null} Active slice descriptor.
+ */
+function findActiveSlice(metadata) {
+  const slices = Array.isArray(metadata.slices) ? metadata.slices : [];
+  if (slices.length === 0) {
+    return null;
   }
 
-  return metadata;
+  const wipSlice = slices.find((slice) => slice?.status === '[WIP]');
+  if (wipSlice) {
+    return pickSliceFields(wipSlice);
+  }
+
+  const plannedSlice = slices.find((slice) => slice?.status === '[PLANNED]');
+  if (plannedSlice) {
+    return pickSliceFields(plannedSlice);
+  }
+
+  const firstSlice = slices[0];
+  return pickSliceFields(firstSlice);
+}
+
+/**
+ * @param {Record<string, unknown>} slice - Slice metadata.
+ * @returns {{ slice_id: string, title: string, status: string, goal: string }} Slice descriptor.
+ */
+function pickSliceFields(slice) {
+  return {
+    slice_id: String(slice.slice_id ?? ''),
+    title: String(slice.title ?? ''),
+    status: String(slice.status ?? ''),
+    goal: String(slice.goal ?? ''),
+  };
 }
 
 /**

@@ -2,7 +2,7 @@
 description: 'Use as a hidden specialist for designing NeatapticTS local MCP server contracts, bridge boundaries, tool/resource schemas, and trust controls. Keywords: MCP server, stdio, resources, tools, bridge, validation.'
 name: mcp-server-architect
 tier: 3
-model: glm-5.1:cloud (ollama)
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -40,7 +40,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+
+   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
+   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
+   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
+   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
+   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
+   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
+   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
+
+   If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
+
 2. **Read the active plan phase packet.**
    - Example: Open `plans/phase02.md` and locate the section describing workflow facts and validation gates.
 3. **Identify which workflow facts would benefit from MCP server exposure.**
@@ -64,13 +77,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - If you cannot gather required evidence (e.g., missing docs, unclear plan), set `TASK_STATUS: PARTIAL`.
 - Record the smallest blocker (e.g., "VS Code AI docs unavailable"), suggest the next agent (e.g., "helping-gap-resolution-coordinator"), and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -97,13 +104,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Proposed server boundary:` one short line describing scope (e.g., "static workflow facts and live validation commands").
-- `Tools or resources:` list of tool/resource names and brief schema.
-- `Bridge dependency:` what client facts the server must accept or validate.
-- `Security constraints:` allow-list rules, signed input requirements, or validation gates.
-- `Files to touch:` anticipated paths for server definition, schema, and validation.
-- `Validation gates:` MCP tests or smoke tests to verify contract compliance.
-- `Architecture summary:` one paragraph explaining the server boundary, why it stays within scope, and the next design step.

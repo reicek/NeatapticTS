@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Summarizing Session Log
 
 This skill produces compact, high-signal continuity summaries of a work session. It distills what changed, what was validated, what learning events were recorded, what risks remain, and what the next action is — without replaying the full transcript. Use it at session end, before a handoff, or when updating a tracker with session progress.

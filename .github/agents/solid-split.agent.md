@@ -2,7 +2,7 @@
 description: 'Use when executing a deliberate SOLID module split, folderizing a large file, starting from a user-specified root such as #file:flappy_bird, following or creating a durable split plan, improving JSDoc so generated README files read naturally, updating plan progress, and either ending an active step with a handoff prompt or terminally closing the plan with compression plus logs. Keywords: SOLID split, split plan, folderize, module boundary, orchestration-first, compatibility re-export, generated README, JSDoc, handoff prompt, logs.'
 name: 'solid-split'
 tier: 2
-model: glm-5.1:cloud (ollama)
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -21,6 +21,22 @@ agents: ['boundary-mapper', 'plan-scout', 'docs-scout']
 skills: ['solid-split']
 user-invocable: false
 ---
+
+## Cortex-First Search Policy
+
+This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
+2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
+4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
+5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
+6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
+7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
+8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
+9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
 
 ## Mission
 
@@ -115,13 +131,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
     - Next action: "Refactor imports to break cycle"
     - Handoff prompt: "Ready to refactor imports for validator extraction"
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Report participants, files, validations, blockers, and gaps truthfully. Use `NONE` when nothing applies.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -149,79 +159,4 @@ RISKS_OR_GAPS:
 LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
-```
-
-If the workstream remains active, the last part of every successful run MUST be a next-session handoff prompt rendered in a fenced `text` code block. If the workstream closes completely, compress the plan, add or update the `.logs.md` file, and move both into `plans/completed/` — do not emit a handoff prompt unless the user asks for reopen guidance. If blocked, emit the same template but replace the completion request with the smallest safe unblock action.
-
-## Handoff Prompt Template
-
-Use this as the default next-session prompt shape for active-plan continuation and specialize every placeholder:
-
-```text
-Continue the <workstream name> SOLID split in <workspace root> by executing Step <N> from <plan path>: <step goal>.
-
-Current state to assume:
-- Step <N-1> is complete.
-- <Previously completed boundary or durable milestone>.
-- The real facade now lives in <current facade path>.
-- The legacy entrypoint <compatibility shim path> is now a compatibility re-export.
-- <Other durable file-location fact that the next step should assume>.
-- <plan path> already marks Step <N-1> as done.
-- Required validations most recently succeeded with:
-  - <validation command 1>
-  - <validation command 2>
-- The working tree may contain unrelated generated README/doc changes from docs generation or prior refactor work. Do not revert unrelated changes.
-
-What to do:
-1. Read <nearest folder README path> first.
-2. Read <plan path>.
-3. Inspect the current surface for this step and its closest related files, especially:
-	- <primary file path>
-	- <related file path>
-	- any nearby consumers/importers or sibling helpers affected by this boundary
-4. Create and execute the Step <N> split or refactor using the repo's folder-first pattern:
-	- <module>/<module>.ts
-	- <module>/<module>.types.ts
-	- <module>/<module>.utils.ts
-	- <module>/<module>.services.ts
-	- <module>/<module>.constants.ts
-	- add nested subfolders only if clearly justified by existing responsibility seams
-5. Keep the public API stable. Existing imports of <stable import path> should keep working.
-6. Make the main facade orchestration-first. Move <responsibility cluster list> behind focused helpers, services, or submodules.
-7. Improve JSDoc for exported/public surfaces you touch. Do not hand-edit generated README files under generated-doc locations; update source JSDoc instead.
-8. Update <plan path> to reflect durable Step <N> progress once the step is actually complete.
-9. Validate with:
-	- <validation command 1>
-	- <validation command 2>
-10. Do not run broad test suites unless truly necessary. Preserve unrelated worktree changes.
-
-Implementation constraints:
-- Use apply_patch for edits.
-- Keep changes minimal and focused on Step <N>.
-- Do not revert user changes or unrelated generated files.
-- Follow the repo's TypeScript, JSDoc, and style constraints from <instructions path>.
-- Prefer ES2023 style where touched code benefits from it.
-- Keep naming descriptive; avoid short local identifiers.
-- If the target module is too large for a single safe pass, split one helper category at a time but finish the full Step <N> boundary in this session if feasible.
-
-Definition of done:
-- <Module or boundary> is no longer the obvious coordination sink.
-- The main facade is thin and orchestration-first.
-- Focused helper files own <responsibility cluster list> responsibilities.
-- Existing consumers still compile without import churn.
-- <plan path> reflects the new durable shape.
-- <validation outcome 1> passes.
-- <validation outcome 2> passes.
-
-Final response requirements:
-- Summarize the new <module or boundary> shape.
-- Mention which files became the new public facade and compatibility shim, if any.
-- Report validation results for the required checks.
-- Provide a handoff prompt to perform Step <N+1> in a new session inside a text-copy box. The last step must be to generate the prompt for the next step using this same template.
-```
-
-Every successful run that leaves the workstream active must end with a handoff prompt using the complete template above, at minimum preserving this opening sentence shape:
-
-```text
-Continue with <plan path>, starting Step <N>: <step title>. First read the nearest folder README.md files, confirm plan alignment, complete only this step, update the plan when done, validate the touched surface, and stop with the next handoff prompt.
 ```

@@ -14,11 +14,13 @@
  *
  * ```mermaid
  * flowchart TD
- *   Q[Incoming query] --> L{Length &lt; 5 tokens<br/>and no family hints?}
+ *   Q[Incoming query] --> L{Length &lt; 5 tokens<br/>and no family hints<br/>and no code identifiers?}
  *   L -- yes --> SL[simple_lookup]
  *   L -- no --> P{Contains plan/doc<br/>hint terms?}
  *   P -- yes --> PS[plan_specific]
- *   P -- no --> C{Contains code<br/>hint terms?}
+ *   P -- no --> I{Contains code<br/>identifier?}
+ *   I -- yes --> CS[code_specific]
+ *   I -- no --> C{Contains code<br/>hint terms?}
  *   C -- yes --> CS[code_specific]
  *   C -- no --> M{Contains multi-hop<br/>indicators?}
  *   M -- yes --> MH[multi_hop]
@@ -32,8 +34,8 @@
  * ```js
  * import { classifyQuery } from './classify-query.mjs';
  *
- * const result = classifyQuery('Network.activate');
- * // { query_class: 'simple_lookup', confidence: 0.9, hints: { short_query: true } }
+ * const result = classifyQuery('network.activate');
+ * // { query_class: 'code_specific', confidence: 0.85, hints: { family_filter: 'ts-source' } }
  *
  * const result2 = classifyQuery('how does the training pipeline work');
  * // { query_class: 'exploratory', confidence: 0.65, hints: { broad_retrieval: true } }
@@ -55,6 +57,9 @@ const CONFIDENCE_PLAN_HINTS = 0.85;
 
 /** Confidence for code-specific keyword detection. */
 const CONFIDENCE_CODE_HINTS = 0.8;
+
+/** Confidence for code-identifier detection (dotted, camelCase, snake_case). */
+const CONFIDENCE_CODE_IDENTIFIERS = 0.85;
 
 /** Confidence for multi-hop structural indicator detection. */
 const CONFIDENCE_MULTI_HOP = 0.75;
@@ -122,6 +127,23 @@ const EXPLORATORY_KEYWORDS = Object.freeze([
   'how do',
 ]);
 
+/**
+ * Pattern matching code-like identifiers in a query.
+ *
+ * Captures:
+ * - dotted identifiers (`network.activate`)
+ * - snake_case identifiers (`snake_case_function`)
+ * - file-extension hints (`network.ts`, `code.ts`)
+ * - camelCase identifiers (`findTheNEATSelectionCode`)
+ *
+ * Uses Unicode property escapes so non-ASCII identifiers are supported.
+ */
+const CODE_IDENTIFIER_PATTERN = new RegExp(
+  String.raw`[\p{L}_][\p{L}\p{N}_]*(?:[._][\p{L}_][\p{L}\p{N}_]*)+|` +
+    String.raw`[\p{Ll}][\p{Ll}\p{N}]*[\p{Lu}][\p{L}\p{N}]*`,
+  'u',
+);
+
 // ---------------------------------------------------------------------------
 // Embedded alpha and family defaults for lightweight sync classification
 // ---------------------------------------------------------------------------
@@ -188,6 +210,29 @@ export function hasPlanHints(normalizedQuery) {
  */
 export function hasCodeHints(normalizedQuery) {
   return CODE_KEYWORDS.some((keyword) => normalizedQuery.includes(keyword));
+}
+
+/**
+ * Detect code-like identifiers in a raw query.
+ *
+ * Captures dotted, snake_case, file-extension, and camelCase identifiers
+ * such as `network.activate`, `snake_case_function`, `code.ts`, and
+ * `findTheNEATSelectionCode`. Short plain words or all-caps acronyms alone
+ * are not enough to trigger this detector.
+ *
+ * @param {string} query - Raw query string.
+ * @returns {boolean} `true` when the query contains a code identifier.
+ *
+ * @example
+ * ```js
+ * hasCodeIdentifiers('network.activate');        // true
+ * hasCodeIdentifiers('snake_case_function');     // true
+ * hasCodeIdentifiers('findTheNEATSelectionCode'); // true
+ * hasCodeIdentifiers('how does NEAT work');      // false
+ * ```
+ */
+export function hasCodeIdentifiers(query) {
+  return CODE_IDENTIFIER_PATTERN.test(query);
 }
 
 /**
@@ -288,9 +333,11 @@ export function hasFamilyHints(normalizedQuery) {
  * The classifier is deterministic: the same query always produces the same
  * result. It follows a strict priority order:
  *
- * 1. **Length check** — short queries (< 5 tokens, no family hints) → `simple_lookup`
+ * 1. **Length check** — short queries (< 5 tokens, no family hints, no code
+ *    identifiers) → `simple_lookup`
  * 2. **Plan-specific** — plan/design keywords → `plan_specific`
- * 3. **Code-specific** — code/implementation keywords → `code_specific`
+ * 3. **Code-specific** — code identifiers or code/implementation keywords →
+ *    `code_specific`
  * 4. **Multi-hop** — connective patterns → `multi_hop`
  * 5. **Cross-boundary** — relationship/connection keywords → `cross_boundary`
  * 6. **Exploratory** — "how does"/"explain" patterns → `exploratory`
@@ -307,8 +354,11 @@ export function hasFamilyHints(normalizedQuery) {
  *
  * @example
  * ```js
- * classifyQuery('Network.activate');
- * // { query_class: 'simple_lookup', confidence: 0.9, hints: { short_query: true } }
+ * classifyQuery('network.activate');
+ * // { query_class: 'code_specific', confidence: 0.85, hints: { family_filter: 'ts-source' } }
+ *
+ * classifyQuery('findTheNEATSelectionCode');
+ * // { query_class: 'code_specific', confidence: 0.85, hints: { family_filter: 'ts-source' } }
  *
  * classifyQuery('how does the training pipeline work');
  * // { query_class: 'exploratory', confidence: 0.65, hints: { broad_retrieval: true } }
@@ -324,10 +374,12 @@ export function classifyQuery(query) {
   const tokens = query.trim().split(/\s+/);
   const normalizedQuery = query.toLowerCase();
 
-  // Step 1: Length heuristic — short queries with no family hints are simple lookups
+  // Step 1: Length heuristic — short queries with no family hints and no
+  // code identifiers are simple lookups
   if (
     tokens.length < SHORT_QUERY_TOKEN_THRESHOLD &&
-    !hasFamilyHints(normalizedQuery)
+    !hasFamilyHints(normalizedQuery) &&
+    !hasCodeIdentifiers(query)
   ) {
     return {
       query_class: 'simple_lookup',
@@ -345,7 +397,15 @@ export function classifyQuery(query) {
     };
   }
 
-  // Step 3: Code-specific detection
+  // Step 3: Code-specific detection (identifiers or keywords)
+  if (hasCodeIdentifiers(query)) {
+    return {
+      query_class: 'code_specific',
+      confidence: CONFIDENCE_CODE_IDENTIFIERS,
+      hints: { family_filter: 'ts-source' },
+    };
+  }
+
   if (hasCodeHints(normalizedQuery)) {
     return {
       query_class: 'code_specific',

@@ -3,7 +3,6 @@
 (async () => {
   if (typeof globalThis.structuredClone === 'undefined') {
     // Use Node.js v8 serialization as a spec-compliant substitute.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return
     const v8 = await import('v8');
     globalThis.structuredClone = <T>(obj: T): T =>
       v8.deserialize(v8.serialize(obj)) as T;

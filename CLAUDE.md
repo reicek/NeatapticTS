@@ -62,12 +62,12 @@ Two cooperating layers, each with deep subfolder hierarchies:
 
 `src/neat.ts` (exported as `Neat`) is the public control desk. `src/neat/` is organized into four lanes:
 
-| Lane | Folders |
-|---|---|
-| Lifecycle | `init/`, `evaluate/`, `evolve/` |
-| Search pressure | `mutation/`, `selection/`, `speciation/` |
-| Observability | `telemetry/`, `lineage/`, `diversity/`, `multiobjective/` |
-| Reproducibility | `export/`, `rng/`, `cache/`, `maintenance/` |
+| Lane            | Folders                                                   |
+| --------------- | --------------------------------------------------------- |
+| Lifecycle       | `init/`, `evaluate/`, `evolve/`                           |
+| Search pressure | `mutation/`, `selection/`, `speciation/`                  |
+| Observability   | `telemetry/`, `lineage/`, `diversity/`, `multiobjective/` |
+| Reproducibility | `export/`, `rng/`, `cache/`, `maintenance/`               |
 
 `src/neat/adaptive/` owns the adaptive mutation controller. `src/neat/topology-intent/` owns feed-forward vs. recurrent policy enforcement.
 
@@ -83,7 +83,18 @@ Node.js `worker_threads` backend for parallel genome evaluation. Public surface:
 
 ```ts
 // src/neataptic.ts — everything the library exports
-export { Neat, Network, Node, Layer, Group, Connection, Architect, methods, config, multi }
+export {
+  Neat,
+  Network,
+  Node,
+  Layer,
+  Group,
+  Connection,
+  Architect,
+  methods,
+  config,
+  multi,
+};
 ```
 
 ## Module naming convention
@@ -124,7 +135,7 @@ This is a **pedagogist-first, research-and-education library**. Documentation qu
 - **External references**: link to Wikipedia as the primary source. Always cite academic papers (Stanley & Miikkulainen NEAT paper, etc.) by title and URL.
 - **Always credit sources** — never paraphrase a concept without attributing it. When touching existing documentation that contains un-attributed concepts, algorithms, or formulas, **add the missing attribution proactively** — do not leave prior attribution gaps behind.
 - **Examples**: short, dependency-light fenced code blocks (`\`\`\`ts`) in JSDoc so the docs generator preserves them.
-- **Conceptual depth**: explain the *why* — invariants, tradeoffs, failure modes, historical motivation — not just the *what*.
+- **Conceptual depth**: explain the _why_ — invariants, tradeoffs, failure modes, historical motivation — not just the _what_.
 - **Live sandboxes**: link to runnable browser examples (`docs/` assets) wherever relevant.
 
 Documentation style (from `copilot-instructions.md`): dark-background, blue/cyan structural lines, high-contrast labels, restrained warm neon accents — matches the Astro Bird / neon-retro-arcade aesthetic used in the Mermaid diagram theme.
@@ -140,12 +151,13 @@ Active plan: [plans/test-repair-and-coverage.plans.md](plans/test-repair-and-cov
 The forward-progress pass works file-by-file from the lowest-covered boundary upward. The latest authoritative run is green at **296 passing suites / 2570 passing tests**. The current next target is `src/architecture/network/topology/network.topology.utils.ts` at 96.55% (28/29 lines).
 
 Approach for each tranche:
+
 1. Read the source boundary and its nearest existing test file.
 2. Identify uncovered paths from `coverage/lcov.info` (or a focused `--coverage` run).
 3. Add the smallest owner-local test that exercises the uncovered path.
 4. Validate with a focused Jest slice: `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=<file>`.
 5. Run `npm run test:silent` to confirm the repo-wide suite stays green.
-For strict hook recovery, use `node scripts/agent-customization/enforcement/runtime-enforcement-context.mjs --diagnose --tool-name=<tool> --plan=<active-plan> --session-id=<id>` to see the next preparation step before retrying a blocked write/execute action.
+   For strict hook recovery, use `node scripts/agent-customization/enforcement/runtime-enforcement-context.mjs --diagnose --tool-name=<tool> --plan=<active-plan> --session-id=<id>` to see the next preparation step before retrying a blocked write/execute action.
 6. Update the plan file with the completed tranche.
 
 When a test exposes dead code, remove the dead production branch instead of writing a test to force an unreachable path.
@@ -156,54 +168,54 @@ After **any** change to `src/`, run `/coverage-guard` on every file that was tou
 
 Invoke skills via slash commands — do not re-state their workflow ad hoc:
 
-| Slash command | Use when |
-|---|---|
-| `/test-fix-workflow` | Repairing multiple **failing** tests (red suite) |
-| `/coverage-tranche` | Expanding coverage on **passing** code toward 100% |
-| `/coverage-guard` | Enforcing 100% coverage after **any** change to `src/` |
-| `/solid-split` | SOLID-based module refactor |
-| `/tracker-handoff` | Creating, compressing, or closing `.plans.md` / `.logs.md` files |
-| `/educational-docs` | JSDoc quality, README tone, Mermaid diagrams, citations |
-| `/plan-alignment` | Aligning changes with roadmap intent |
-| `/worker-inference-transport` | Worker-friendly inference payloads, transfer ladders, and browser/Node worker parity |
-| `/multithread-evaluation` | Ordered worker-pool batch evaluation, queueing, dataset shipping, and fallback behavior |
-| `/checkpointing-persistence` | Full/light checkpoints, strict restore behavior, and durable resume boundaries |
-| `/hybrid-training-interop` | Parameter vectors, isolated fine-tuning, and explicit persistence policy |
-| `/reproducibility-contracts` | Seed/replay language, RNG state, ordering, and exact-vs-bounded determinism |
-| `/flappy-architecture-polish` | Tuning Flappy Bird architecture profiles |
-| `/visualizer-workflow` | Debugging or improving demo visualizers (layout, overflow, hover/tooltip, parity) |
-| `/architecture-builder` | Adding or extending preconfigured builders (MLP/LSTM/GRU/NARX) |
-| `/nge-core-algorithm` | Phase 7 DNA, development, lifecycle, memory tiers, neuromodulation, and reproduction core semantics |
-| `/nge-benchmark-workflow` | Phase 7 benchmark methodology, curricula, fairness, observability, and demo harnesses |
-| `/neatchat-systems` | Dependency-gated NEATchat follow-up system with memory tiers, retrieval/routing, and branchable state |
-| `/onnx-work` | ONNX-like export/import hardening, constrained recurrent import, and honest seed-ingestion boundaries |
-| `/performance-optimization` | Measured library hotspots, slab/cache optimizations, and trace-backed implementation passes |
-| `/browser-build` | Root browser artifacts, docs asset bundles, smoke gates, and browser runtime packaging |
-| `/trace-audit-reporting` | Analyzing Chrome/Perfetto traces and producing performance reports |
-| `/trace-analyzer-extension` | Extending `scripts/analyze-trace/analyze-trace.ts` with new rollups |
+| Slash command                 | Use when                                                                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `/test-fix-workflow`          | Repairing multiple **failing** tests (red suite)                                                      |
+| `/coverage-tranche`           | Expanding coverage on **passing** code toward 100%                                                    |
+| `/coverage-guard`             | Enforcing 100% coverage after **any** change to `src/`                                                |
+| `/solid-split`                | SOLID-based module refactor                                                                           |
+| `/tracker-handoff`            | Creating, compressing, or closing `.plans.md` / `.logs.md` files                                      |
+| `/educational-docs`           | JSDoc quality, README tone, Mermaid diagrams, citations                                               |
+| `/plan-alignment`             | Aligning changes with roadmap intent                                                                  |
+| `/worker-inference-transport` | Worker-friendly inference payloads, transfer ladders, and browser/Node worker parity                  |
+| `/multithread-evaluation`     | Ordered worker-pool batch evaluation, queueing, dataset shipping, and fallback behavior               |
+| `/checkpointing-persistence`  | Full/light checkpoints, strict restore behavior, and durable resume boundaries                        |
+| `/hybrid-training-interop`    | Parameter vectors, isolated fine-tuning, and explicit persistence policy                              |
+| `/reproducibility-contracts`  | Seed/replay language, RNG state, ordering, and exact-vs-bounded determinism                           |
+| `/flappy-architecture-polish` | Tuning Flappy Bird architecture profiles                                                              |
+| `/visualizer-workflow`        | Debugging or improving demo visualizers (layout, overflow, hover/tooltip, parity)                     |
+| `/architecture-builder`       | Adding or extending preconfigured builders (MLP/LSTM/GRU/NARX)                                        |
+| `/nge-core-algorithm`         | Phase 7 DNA, development, lifecycle, memory tiers, neuromodulation, and reproduction core semantics   |
+| `/nge-benchmark-workflow`     | Phase 7 benchmark methodology, curricula, fairness, observability, and demo harnesses                 |
+| `/neatchat-systems`           | Dependency-gated NEATchat follow-up system with memory tiers, retrieval/routing, and branchable state |
+| `/onnx-work`                  | ONNX-like export/import hardening, constrained recurrent import, and honest seed-ingestion boundaries |
+| `/performance-optimization`   | Measured library hotspots, slab/cache optimizations, and trace-backed implementation passes           |
+| `/browser-build`              | Root browser artifacts, docs asset bundles, smoke gates, and browser runtime packaging                |
+| `/trace-audit-reporting`      | Analyzing Chrome/Perfetto traces and producing performance reports                                    |
+| `/trace-analyzer-extension`   | Extending `scripts/analyze-trace/analyze-trace.ts` with new rollups                                   |
 
 **Flow-aware routing** — numbered agents pick a named flow from `.github/flows/` for each task shape. Every flow declares exit gates that must return `{pass, evidence, fixHint, owner}` JSON. Gate failures use `scripts/agent-customization/gates/record-gate-exception.mjs`; three consecutive failures in a session escalate to `00-helping` via the `00.cross-tier-helper` flow. Run `node scripts/agent-customization/workflow-gap-audit.mjs --json` to inspect gate health and flow-mention drift. Run `node scripts/agent-customization/gates/cortex-index.gate.mjs --json` to validate Cortex lifecycle health (index freshness, MCP availability, snapshot currency).
 
 **Companion agents** — do read-only recon then hand off into the relevant skill:
 
-| Agent | Hands off to |
-|---|---|
-| `Boundary Mapper` | `solid-split` |
-| `Docs Scout` | `educational-docs` |
-| `Plan Scout` | `plan-alignment` |
-| `Visualizer Scout` | `visualizer-workflow` |
-| `Coverage Scout` | `coverage-tranche` |
-| `Coverage Guard` (agent) | `coverage-guard` |
-| `Worker Payload Scout` | `worker-inference-transport` |
-| `Evaluation Pool Scout` | `multithread-evaluation` |
-| `Checkpoint Scout` | `checkpointing-persistence` |
-| `Hybrid Interop Scout` | `hybrid-training-interop` |
-| `Browser Runtime Scout` | `browser-build` |
-| `Determinism Scout` | `reproducibility-contracts` |
-| `NGE Core Scout` | `nge-core-algorithm` |
-| `NGE Benchmark Scout` | `nge-benchmark-workflow` |
-| `NEATchat Scout` | `neatchat-systems` |
-| `Repo Cortex Scout` | `repo-cortex-workflow` |
+| Agent                     | Hands off to                              |
+| ------------------------- | ----------------------------------------- |
+| `Boundary Mapper`         | `solid-split`                             |
+| `Docs Scout`              | `educational-docs`                        |
+| `Plan Scout`              | `plan-alignment`                          |
+| `Visualizer Scout`        | `visualizer-workflow`                     |
+| `Coverage Scout`          | `coverage-tranche`                        |
+| `Coverage Guard` (agent)  | `coverage-guard`                          |
+| `Worker Payload Scout`    | `worker-inference-transport`              |
+| `Evaluation Pool Scout`   | `multithread-evaluation`                  |
+| `Checkpoint Scout`        | `checkpointing-persistence`               |
+| `Hybrid Interop Scout`    | `hybrid-training-interop`                 |
+| `Browser Runtime Scout`   | `browser-build`                           |
+| `Determinism Scout`       | `reproducibility-contracts`               |
+| `NGE Core Scout`          | `nge-core-algorithm`                      |
+| `NGE Benchmark Scout`     | `nge-benchmark-workflow`                  |
+| `NEATchat Scout`          | `neatchat-systems`                        |
+| `Repo Cortex Scout`       | `repo-cortex-workflow`                    |
 | `Cortex Embeddings Scout` | `Semantic_Knowledge_Embeddings` (planned) |
 
 ## Tracker and plans conventions
@@ -223,13 +235,22 @@ Before touching architecture, major refactors, or new subsystems, check `plans/R
 - **Orchestration-first**: top-level exported functions are declarative steps calling small SRP helpers defined below the fold.
 - **No `any`/`unknown`** in `src/`, `testing/`, `benchmarks/`, or `examples/` without an eslint-disable comment and short justification.
 - **Cognitive complexity**: keep helpers small, pure, and single-responsibility. Declarative `collect → transform → fold` over nested control flow.
+- **Cortex-First Search**: Use Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) as the primary codebase search mechanism. Native tools (`grep`, `glob`, `view`) are fallbacks for when Cortex is degraded or the target is a known file path. If Cortex can't answer a query, report the gap for RAG enhancement.
 
 ## Discovery order for non-trivial tasks
 
-1. Nearest folder `README.md` (generated, compressed overview)
-2. Parent folder `README.md` when the task spans sibling areas
-3. `plans/README.md` → `plans/Roadmap.md` for roadmap alignment
-4. Specific source files
+**Cortex-First Search Policy:** Cortex RAG is the premium primary search source. Use Cortex MCP tools before native tools.
+
+1. `neataptic-cortex-mcp:freshness_check` — verify index is current.
+2. `neataptic-cortex-mcp:search_corpus` — broad BM25 + dense hybrid search.
+3. `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+4. `neataptic-cortex-mcp:search_context` — token-budgeted context window.
+5. `neataptic-cortex-mcp:load_chunk` / `load_document` — full chunk/document content.
+6. `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
+7. `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+8. **Fallback only:** Nearest folder `README.md` → parent folder `README.md` → `plans/README.md` → `plans/Roadmap.md` → specific source files via `view`/`grep`/`glob`.
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
 
 ## Certainty and investigation thresholds
 
@@ -240,12 +261,14 @@ Before touching architecture, major refactors, or new subsystems, check `plans/R
 ## Low context window mitigation
 
 When a change requires more context than is currently available:
+
 - Update the relevant source plan document with a `NEXT:` item describing the change and the reason, so future work in that area has more context.
 - Provide a handoff prompt in a text-copy box with the relevant context and a clear question, so a companion agent can pick it up and investigate.
 
 ## Demo-first library gap policy
 
 Examples in `examples/` are probes that should reveal where the public API, defaults, or runtime contracts fall short. When demo work exposes a mismatch between obvious user intent and library behavior:
+
 - Treat the demo as evidence of a **library DX gap first**.
 - Prefer fixing the library, public API, or shared runtime semantics.
 - Use demo-local compensation only when the issue is genuinely demo-specific or a library fix would be unsafe for the current task.

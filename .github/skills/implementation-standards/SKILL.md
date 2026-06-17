@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Implementation Standards Playbook
 
 Use this skill to apply and enforce the durable code standards for NeatapticTS.
@@ -429,7 +431,19 @@ When logic is complex:
 
 ## Validation Checklist
 
-After implementation work, validate with these gates:
+After implementation work, validate with these gates.
+
+### Targeted Test Rule
+
+The full test suite (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`,
+`npm run jest:mjs`) is large and slow. **Never run it speculatively.**
+Prefer focused slices:
+
+- `npx jest --config=jest.config.mjs --no-cache --testPathPattern=<file-or-folder>`
+- `npm run quality:folder -- --folder=<folder>`
+
+Only run the full suite when explicitly requested by the user, required by the
+active step packet's `validation` list, or at a phase boundary with user approval.
 
 ### Type Checking
 

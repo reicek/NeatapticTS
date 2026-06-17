@@ -2,7 +2,7 @@
 description: 'Use when planning a refactor, splitting a large module, identifying orchestration files versus helpers, or mapping module boundaries before edits. Keywords: refactor, split file, boundaries, helpers, orchestration, module map.'
 name: boundary-mapper
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -45,7 +45,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+
+   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
+   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
+   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
+   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
+   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
+   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
+   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
+
+   If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
+
 2. Read the nearest folder `README.md` and parent README when needed.
 3. For architectural work, read `plans/README.md` and the single most relevant detailed plan.
 4. Identify whether the triggering issue is truly demo-local or whether the demo is surfacing a reusable library DX gap.
@@ -59,11 +72,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -90,13 +99,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Primary orchestration file:` path.
-- `Helper clusters:` short bullet list.
-- `Likely red-phase test owner:` short bullet list.
-- `Likely affected tests/docs:` short bullet list.
-- `Suggested edit sequence:` 3 to 6 numbered steps.
-- `Risk notes:` 0 to 4 short bullets.
-- `solid-split handoff:` one short paragraph describing the safest focused next implementation step.

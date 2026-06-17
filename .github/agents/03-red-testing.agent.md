@@ -2,7 +2,7 @@
 description: 'Use when creating failing tests, test plans, fixtures, assertions, mocks, and coverage strategy before implementation.'
 name: '03-red-testing'
 tier: 1
-model: 'glm-5.1:cloud (ollama)'
+model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -34,8 +34,24 @@ handoffs:
     agent: '04-implementing'
     prompt: 'Continue from the active plan and Step 03 contract. Execute Step 04 for the current phase by implementing the smallest change that satisfies the targeted test, eval, or explicit skip contract.'
     send: false
-    model: 'glm-5.1:cloud (ollama)'
+    model: 'glm-5.2:cloud (ollama)'
 ---
+
+## Cortex-First Search Policy
+
+This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
+2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
+4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
+5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
+6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
+7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
+8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
+9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
 
 ## Mission
 
@@ -86,7 +102,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
      });
      ```
 5. **Run the narrow command and record the failure**
-   - Example: Run `npm test src/myFunc.test.js` and record output: "Test failed: expected true, got false."
+   - Example: Run `npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/myFunc.test.js` and record output: "Test failed: expected true, got false."
 6. **Update the plan with files changed, command evidence, fixture/cleanup notes, and expected green condition or skip rationale**
    - Example:
      - Files changed: `src/myFunc.test.js`
@@ -96,7 +112,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
      - Skip rationale: "Skipped broader integration test due to unclear fixture."
 7. **Hand off to Step 04 with command, expected green, test type, and setup/teardown contract**
    - Example:
-     - Command: `npm test src/myFunc.test.js`
+     - Command: `npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/myFunc.test.js`
      - Expected green: "Test passes after implementation."
      - Test type: "Unit test"
      - Setup/teardown: "Mock object, seed 42, state reset"
@@ -110,11 +126,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **Behavior cannot be isolated to a single failing assertion:**
   - Example: "Multiple behaviors fail together, cannot isolate single assertion. TASK_STATUS: PARTIAL. Documenting and escalating via '00-cross-tier-helper'."
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block, no prose. All keys and positions are mandatory. Use `NONE` when not applicable.
-
-### Example Output Block
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

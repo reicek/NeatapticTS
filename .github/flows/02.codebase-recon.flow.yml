@@ -19,6 +19,7 @@ triggers:
 gates:
   - 'plan-sync'
   - 'research-findings-evidence'
+  - 'cortex-first-search'
 
 post-phase-fanout:
   - '04-implementing'

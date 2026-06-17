@@ -2,7 +2,7 @@
 description: 'Use when starting or scoping save and resume work, expanding Population_Save_Resume_and_Checkpointing.md Step 0 or Step 1, mapping strict versus best-effort restore behavior, RNG or counter persistence, full versus light checkpoints, or deciding whether a persistence issue belongs to checkpointing-persistence. Keywords: checkpoint, save, resume, restore, step 0, state inventory, strict restore, schema version, RNG state, full checkpoint, light checkpoint, migration.'
 name: checkpoint-scout
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -45,7 +45,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+
+   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
+   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
+   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
+   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
+   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
+   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
+   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
+
+   If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
+
 2. Read the smallest relevant plan or README surface first, especially
    `plans/Population_Save_Resume_and_Checkpointing.md` when the task is
    roadmap-shaped, and pair it with `plans/Roadmap.md` when kickoff priority is
@@ -71,11 +84,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -102,16 +111,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Checkpoint surface:` one short line naming the active boundary.
-- `Checkpoint mode:` `full`, `light`, `strict-restore`, `migration`, or `mixed`.
-- `Kickoff stage:` `step-0`, `step-1+`, or `implementation-follow-up`.
-- `Controlling files or plans:` short path list.
-- `State inventory gaps:` 2 to 5 short bullets.
-- `Exactness or restore blockers:` 0 to 4 short bullets.
-- `Not checkpoint-owned:` 0 to 3 short bullets naming secondary owners when
-  relevant.
-- `checkpointing-persistence handoff:` one short paragraph naming the active
-  mode, missing state, restore risk, and the smallest focused next pass.

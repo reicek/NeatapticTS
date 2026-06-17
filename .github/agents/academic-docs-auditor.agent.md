@@ -2,7 +2,7 @@
 description: 'Use when auditing NeatapticTS educational documentation, JSDoc quality, Mermaid diagrams, citations, and generated README alignment. Keywords: academic docs, citation audit, JSDoc, Mermaid, generated README, atemporal docs.'
 name: academic-docs-auditor
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -38,7 +38,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+
+   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
+   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
+   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
+   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
+   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
+   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
+   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
+
+   If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
+
 2. Identify the exact planning question and which context types are actually required: plan alignment, README evidence, ownership clues, or edit boundaries.
 3. Choose the smallest specialist set:
    - Invoke `plan-scout` for plan files, roadmap alignment, terminology, and active-tracker context.
@@ -57,7 +70,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - If repeated scout failure or missing coverage suggests a reusable agent-system gap, set `LEARNING_EVENT_NEEDED: true` and suggest `helping-gap-resolution-coordinator`.
 - Do not attempt edits or broad discovery to work around missing context.
 
-## Output Format
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -84,14 +97,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Documents checked:` path list.
-- `Citation gaps:` 0 to 4 short bullets (missing Wikipedia links, unattributed algorithms, or paper references).
-- `Generated README risks:` 0 to 3 short bullets (stale summary, drift from source, regeneration needed).
-- `Atemporal violations:` 0 to 3 short bullets (plan language, phase references, before/after framing).
-- `Mermaid diagram audit:` 0 to 3 short bullets (color scheme, structure clarity, accessibility).
-- `Recommended source edits:` 0 to 4 short bullets (JSDoc targets, citation additions, example improvements).
-- `Validation command:` `npm run docs` if regeneration is likely needed, or `none` if JSDoc edits alone suffice.
-- `educational-docs handoff:` one short paragraph naming the citation gaps, atemporal risks, and smallest focused follow-up pass.

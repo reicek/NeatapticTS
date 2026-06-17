@@ -1,10 +1,12 @@
-﻿---
+---
 name: solid-split
 description: 'Use when: planning or executing a repo-consistent SOLID split in NeatapticTS across src/, examples/, benchmarks/, testing/, scripts/, or tooling surfaces; mapping seams from a root such as #file:flappy_bird; folderizing an overloaded module; migrating imports directly to new chapter folders; coordinating tracker-handoff, educational-docs, coverage-guard, and plan-alignment follow-up; or continuing one durable split step with stable imports and explicit validations.'
 argument-hint: 'Provide split root, mode (map|plan|execute|close), current boundary, plan path, stable import or compatibility requirements, expected validations, documentation follow-up needs, and any blocker or worktree caution.'
 user-invocable: true
 disable-model-invocation: false
 ---
+
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
 
 # Solid Split Playbook
 
@@ -505,14 +507,14 @@ chapter, tests, and documentation story.
 After a split step, run the minimum validation that proves the touched boundary
 is healthy. Make that choice explicit in the plan or summary.
 
-| Surface                                      | Minimum validation                                                                                            | Escalate when needed                                                                                                                       |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/`                                       | Focused tests, `npx tsc --noEmit -p tsconfig.json`, and `npm run quality:folder -- --folder=<touched_folder>` | `coverage-guard` for every touched file, plus `npm run test:silent` when the coverage gate or change scope requires repo-wide confirmation |
-| `testing/`                                   | Focused Jest plus `npx tsc --noEmit -p tsconfig.test.json` when types or helpers moved                        | Also run source-side typecheck if the split changed shared helpers imported from `src/`                                                    |
-| `examples/` or `benchmarks/`                 | Targeted smoke/build for the changed entrypoint plus `npm run quality:folder -- --folder=<touched_folder>`    | `npm run docs` when generated README surfaces or published example output changed                                                          |
-| `scripts/` or `.github/`                     | Exact validator or gate for the changed automation boundary                                                   | Rerun routing/frontmatter/docs gates when customization metadata or generation inputs moved                                                |
-| Docs-affecting split                         | `npm run docs`                                                                                                | Re-read the generated output and confirm the source files, not generated artifacts, remain the authoring surface                           |
-| Package, workflow, or runtime-tooling change | `npm ci`                                                                                                      | Follow with the build, docs, or gate command affected by the manifest or tooling shift                                                     |
+| Surface                                      | Minimum validation                                                                                            | Escalate when needed                                                                                                                                       |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/`                                       | Focused tests, `npx tsc --noEmit -p tsconfig.json`, and `npm run quality:folder -- --folder=<touched_folder>` | `coverage-guard` for every touched file, plus `npm run test:silent` only when the coverage gate or change scope explicitly requires repo-wide confirmation |
+| `testing/`                                   | Focused Jest plus `npx tsc --noEmit -p tsconfig.test.json` when types or helpers moved                        | Also run source-side typecheck if the split changed shared helpers imported from `src/`                                                                    |
+| `examples/` or `benchmarks/`                 | Targeted smoke/build for the changed entrypoint plus `npm run quality:folder -- --folder=<touched_folder>`    | `npm run docs` when generated README surfaces or published example output changed                                                                          |
+| `scripts/` or `.github/`                     | Exact validator or gate for the changed automation boundary                                                   | Rerun routing/frontmatter/docs gates when customization metadata or generation inputs moved                                                                |
+| Docs-affecting split                         | `npm run docs`                                                                                                | Re-read the generated output and confirm the source files, not generated artifacts, remain the authoring surface                                           |
+| Package, workflow, or runtime-tooling change | `npm ci`                                                                                                      | Follow with the build, docs, or gate command affected by the manifest or tooling shift                                                                     |
 
 Preferred cadence:
 

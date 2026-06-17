@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Running Unit Tests
 
 This skill executes a focused Jest command against a bounded test surface and reports the outcome with a minimal, actionable summary. It enforces the rule of running the narrowest possible scope first, separates pre-existing failures from active-change failures, and routes failures to `triaging-test-failures` when ownership is unclear.
@@ -35,8 +37,8 @@ On failure: <summarize | reroute to triaging-test-failures>
 1. Choose the narrowest Jest scope appropriate for the active change:
    - Single file: `--testPathPattern=src/neat/mutation/neat.mutation.ts`
    - Folder: `--testPathPattern=src/neat/mutation`
-   - Full suite (coverage): `npm run test:silent`
-2. Run the focused command; do not run `npm test` (which triggers a full build) until the targeted slice is green.
+   - Full suite (coverage, explicit-only): `npm run test:silent` — only when the user or active step packet explicitly requires a repo-wide run.
+2. Run the focused command; do not run `npm test` (which triggers a full build) until the targeted slice is green and the full suite is explicitly required.
 3. Read the exit status and failure output; do not declare green until the requested command passes cleanly.
 4. Separate failures into two groups: caused by the active change, and pre-existing/unrelated.
 5. For pre-existing failures: note them and confirm they were present before the active change.
@@ -47,7 +49,7 @@ On failure: <summarize | reroute to triaging-test-failures>
 
 ## Guardrails
 
-- Do not run `npm test` or the full suite until the focused slice is in the expected state.
+- Do not run `npm test` or the full suite speculatively. The full suite (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`, `npm run jest:mjs`) is large and slow. Only run it when the user or active step packet explicitly requires a repo-wide run; otherwise stay on focused slices.
 - Do not claim green until the requested command exits with code 0.
 - Do not conflate pre-existing failures with active-change failures; always separate them.
 - Do not attempt to fix failures within this skill; diagnosis belongs to `triaging-test-failures` and fixes belong to the appropriate implementation skill.

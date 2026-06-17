@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Capturing Learning Event
 
 This skill appends a structured, append-only learning evidence record to `.github/ai-learning/learning-log.jsonl`. It documents agent-system gaps, corrective updates, and routing changes in a compact, public-project-friendly format that supports session continuity without making compliance claims.

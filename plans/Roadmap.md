@@ -392,9 +392,15 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 
 7. Advanced RAG architecture (Layer 7+)
 
-- Plan: [Repo_Cortex_Advanced_RAG_Architecture.plans.md](Repo_Cortex_Advanced_RAG_Architecture.plans.md) [WIP]
+- Plan: [completed/Repo_Cortex_Advanced_RAG_Architecture.plans.md](completed/Repo_Cortex_Advanced_RAG_Architecture.plans.md) [DONE]
 - Gate: Layers 1–6 [DONE] satisfied; builds on the existing BM25+dense hybrid
 - Artifacts: semantic chunking, query classification, cross-encoder re-ranking, context window assembly, entity/relationship graphs, query expansion, relevance feedback, structured metadata filtering, multi-hop retrieval, ANN indexing, RAG eval suite
+
+8. Premium primary search (Layer 7+ follow-up)
+
+- Plan: [completed/Cortex_RAG_Premium_Primary_Search.plans.md](completed/Cortex_RAG_Premium_Primary_Search.plans.md) [DONE]
+- Gate: Layer 7 [DONE] required
+- Artifacts: smart freshness hooks, BM25/code-source fixes, reranker/graph hardening, exact symbol lookup, cold-start latency reduction, deterministic ANN, README noise filter, native search fallback, freshness transparency, feedback normalization, compact mode, single-call search-and-read, follow-up refs, explain_ranking, include_code_only, auto_fallback, tiered high-signal results
 
 ### Agentic Workflow Enforcement Prerequisite [DONE]
 
@@ -426,7 +432,7 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 - NEAT Genesis EvoDevo (NGE) — core algorithm (computation motifs, lifecycle, DNA, reproduction, collective intelligence)
   - Plan: [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
 - NGE Core Readiness Audit — primitive-by-primitive readiness matrix, gap classification by owner boundary, and first implementation tranche selection (core-first; demos are downstream e2e tests)
-  - Plan: [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [PLANNED] — Phase 3 [DONE] (independent populations + generation barriers); Phase 4 [PLANNED] (deterministic evaluation packs); status changed to PLANNED per RAG architecture priority shift
+  - Plan: [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [WIP] — Phase 3 [DONE] (independent populations + generation barriers); Phase 4 [WIP] (Step 04: implement deterministic evaluation-pack normalization).
 - NGE Racing Curriculum — Team A/B benchmark (worker-streamed runtime authority, deterministic race packs, rolling opponent snapshots)
   - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) (`plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`) [WIP]
 - Racing Path-Tracking Debug and Quality Followup — pre-Phase-3 visual fix, geometry audit, and deferred quality cleanup
@@ -482,6 +488,7 @@ M6b. [completed/Delegation_Tier_Enforcement.plans.md](completed/Delegation_Tier_
 M7. [completed/Repo_Cortex_MCP_Reliability.plans.md](completed/Repo_Cortex_MCP_Reliability.plans.md) [DONE]
 M8. [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
 M8b. [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
+M8c. [completed/Cortex_RAG_Premium_Primary_Search.plans.md](completed/Cortex_RAG_Premium_Primary_Search.plans.md) [DONE]
 M9. [completed/NeatChat_Local_Retrieval_Memory.plans.md](completed/NeatChat_Local_Retrieval_Memory.plans.md) [DONE]
 M10. [completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md](completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md) [DONE]
 M11. [Step_Packet_Goal_Redesign.plans.md](Step_Packet_Goal_Redesign.plans.md) [WIP]

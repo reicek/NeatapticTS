@@ -26,6 +26,7 @@
  *   J -- yes --> L[queryDenseIndex<br/>Hybrid dense results]
  * ```
  */
+import Database from 'better-sqlite3';
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
 import { queryDenseIndex } from '../../semantic-index/query-dense.mjs';
 import { checkDenseReadiness } from '../../semantic-index/dense-readiness.mjs';
@@ -38,8 +39,9 @@ import {
   normalizeLimit,
   openCortexDatabase,
   readChunkRow,
-  sanitizeFtsQuery,
+  resolveDatabasePath,
 } from './cortex-db.mjs';
+import { sanitizeFtsQuery } from '../../semantic-index/tokenizer.mjs';
 import { classifyForSearchCorpus } from '../../semantic-index/classify-query.mjs';
 import { classifyAndRoute } from '../../semantic-index/routing-table.mjs';
 import {
@@ -48,6 +50,32 @@ import {
   applyPostRetrievalFilter,
 } from '../../semantic-index/metadata-filter.mjs';
 import { expandQuery } from '../../semantic-index/expand-query.mjs';
+import { recordFeedbackEvent } from './feedback-core.mjs';
+import { ErrorCodes, cortexError } from './cortex-error.mjs';
+import {
+  DEFAULT_ANN_THRESHOLD,
+  isHnswAvailable,
+  resolveDenseStrategy,
+} from './ann-strategy.mjs';
+
+/**
+ * Default maximum number of corpus results returned by searchCorpus.
+ * Kept small (3-5) so responses fit comfortably in an LLM context window.
+ * @type {number}
+ */
+const DEFAULT_LIMIT = 5;
+
+/**
+ * Maximum characters for a result text snippet in compact mode.
+ * @type {number}
+ */
+const COMPACT_TEXT_THRESHOLD = 300;
+
+/**
+ * Rough characters-per-token estimate for response token budgeting.
+ * @type {number}
+ */
+const RESPONSE_CHARS_PER_TOKEN = 4;
 
 /**
  * Process-lifetime cache for the dense-readiness probe result.
@@ -100,12 +128,71 @@ let cachedRerankerReadiness = null;
  * @param {boolean | string} [options.expand_query=false] - Enable query expansion: `true` for full expansion, `'domain-only'` for domain associations only, `false` (default) for no expansion.
  * @param {string} [options.associationsPath] - Override domain associations file path (for testing).
  * @param {Function} [options.expandQueryFn] - Override expandQuery implementation (for testing).
- * @returns {Promise<object>} Search result payload including `query`, `limit`, `use_dense`, and `results`.
+ * @returns {Promise<object>} Search result payload including `query`, `limit`, `use_dense`, `results`, `latency_ms`, and, when an exact symbol match is found, `exact_symbol_match: true`.
  */
-export async function searchCorpus(options = {}) {
+
+/**
+ * Determine the chunk count to use for dense-strategy selection.
+ *
+ * Prefers the count from a warm readiness report, then falls back to a direct
+ * SQL count so callers that only mock `readinessProbe` still receive the right
+ * strategy for their fixture database.
+ *
+ * @param {string | undefined} databasePath - Corpus database path override.
+ * @param {object} readinessReport - Dense readiness report.
+ * @returns {number} Chunk count.
+ */
+function resolveChunkCountForStrategy(databasePath, readinessReport) {
+  if (
+    readinessReport &&
+    typeof readinessReport.chunk_count === 'number' &&
+    Number.isFinite(readinessReport.chunk_count)
+  ) {
+    return readinessReport.chunk_count;
+  }
+
+  try {
+    const db = openCortexDatabase(databasePath);
+    try {
+      const row = db.prepare('SELECT COUNT(*) AS count FROM chunks').get();
+      return Number(row?.count ?? 0);
+    } finally {
+      db.close();
+    }
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Resolve the ANN strategy for a dense search response.
+ *
+ * @param {object} options - Strategy inputs.
+ * @param {string | undefined} options.databasePath - Corpus database path override.
+ * @param {object} options.readinessReport - Dense readiness report.
+ * @returns {'brute_force_cached' | 'hnsw' | 'brute_force'} Selected strategy.
+ */
+function resolveDenseStrategyForSearch({ databasePath, readinessReport }) {
+  const chunkCount = resolveChunkCountForStrategy(
+    databasePath,
+    readinessReport,
+  );
+  const indexStatus =
+    readinessReport?.ann_index_status ??
+    (readinessReport?.state === 'warm' ? 'ready' : 'stale');
+
+  return resolveDenseStrategy({
+    chunkCount,
+    annThreshold: DEFAULT_ANN_THRESHOLD,
+    indexStatus,
+    hnswAvailable: isHnswAvailable,
+  });
+}
+
+async function searchCorpusImpl(options = {}) {
   const rawQuery = requireString(options.query, 'query');
   const query = sanitizeFtsQuery(rawQuery);
-  const limit = normalizeLimit(options.limit, 10);
+  const limit = normalizeLimit(options.limit, DEFAULT_LIMIT);
   const explicitFamily =
     typeof options.family === 'string' && options.family.trim()
       ? options.family.trim()
@@ -115,15 +202,24 @@ export async function searchCorpus(options = {}) {
   // Validate and compile metadata filter if provided
   const metadataFilter = options.metadata?.filter;
   let compiledFilter = null;
-  if (metadataFilter) {
-    validateFilter(metadataFilter);
-    compiledFilter = compileFilterToSqlAliased(metadataFilter);
+  if (metadataFilter !== undefined && metadataFilter !== null) {
+    try {
+      validateFilter(metadataFilter);
+      compiledFilter = compileFilterToSqlAliased(metadataFilter);
+    } catch (error) {
+      throw cortexError(
+        ErrorCodes.INVALID_METADATA_FILTER,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   // Classification-aware alpha and family selection
   const explicitAlpha = options.alpha;
   const queryClass = options.query_class;
   const classificationHints = options.classification_hints;
+  const hintAlpha = classificationHints?.alpha;
+  const hintFamily = classificationHints?.family;
 
   let classificationMetadata = null;
 
@@ -134,18 +230,29 @@ export async function searchCorpus(options = {}) {
   if (queryClass) {
     // Explicit class from caller — use full routing
     const routing = classifyAndRoute(rawQuery, classificationHints);
-    effectiveAlpha = explicitAlpha ?? routing.alpha;
-    effectiveFamily = explicitFamily ?? routing.strategy.family;
+    effectiveAlpha = hintAlpha ?? explicitAlpha ?? routing.alpha;
+    effectiveFamily = hintFamily ?? explicitFamily ?? routing.strategy.family;
     classificationMetadata = {
       query_class: routing.query_class,
       confidence: routing.confidence,
       classification_fallback: false,
     };
-  } else if (explicitAlpha === undefined) {
+  } else if (explicitAlpha === undefined && hintAlpha === undefined) {
     // No explicit alpha and no explicit class → lightweight classification
     const classification = classifyForSearchCorpus(rawQuery);
     effectiveAlpha = classification.alpha;
-    effectiveFamily = explicitFamily ?? classification.family;
+    effectiveFamily = hintFamily ?? explicitFamily ?? classification.family;
+    classificationMetadata = {
+      query_class: classification.query_class,
+      confidence: classification.confidence,
+      classification_fallback: classification.classification_fallback,
+    };
+  } else {
+    // Caller supplied explicit alpha/hints without a query_class; still
+    // emit classification metadata from lightweight classification.
+    const classification = classifyForSearchCorpus(rawQuery);
+    effectiveAlpha = hintAlpha ?? explicitAlpha ?? classification.alpha;
+    effectiveFamily = hintFamily ?? explicitFamily ?? classification.family;
     classificationMetadata = {
       query_class: classification.query_class,
       confidence: classification.confidence,
@@ -192,6 +299,19 @@ export async function searchCorpus(options = {}) {
     }
   }
 
+  // Exact symbol fast path: when the raw query names a known symbol, return
+  // the matching chunk(s) directly without running BM25 or dense ranking.
+  const exactSymbolResponse = tryExactSymbolLookup({
+    classificationMetadata,
+    databasePath: options.databasePath,
+    family: classifiedFamily,
+    limit,
+    rawQuery,
+  });
+  if (exactSymbolResponse) {
+    return exactSymbolResponse;
+  }
+
   if (!query) {
     if (!useDense)
       return {
@@ -205,9 +325,15 @@ export async function searchCorpus(options = {}) {
       };
 
     const readinessReport = await getDenseReadiness(options);
+    const denseStrategy = resolveDenseStrategyForSearch({
+      databasePath: options.databasePath,
+      readinessReport,
+    });
+
     if (readinessReport.state !== 'warm') {
       return {
         ...createDegradedBm25Response({
+          alpha,
           classificationMetadata,
           compiledFilter,
           family: classifiedFamily,
@@ -216,12 +342,14 @@ export async function searchCorpus(options = {}) {
           readinessReport,
         }),
         ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
+        dense_strategy: denseStrategy,
       };
     }
 
     return {
       alpha,
       dense_state: 'warm',
+      dense_strategy: denseStrategy,
       limit,
       ...(classifiedFamily ? { family: classifiedFamily } : {}),
       ...(classificationMetadata
@@ -249,18 +377,63 @@ export async function searchCorpus(options = {}) {
 
   if (useDense) {
     const readinessReport = await getDenseReadiness(options);
+    const denseStrategy = resolveDenseStrategyForSearch({
+      databasePath: options.databasePath,
+      readinessReport,
+    });
+
     if (readinessReport.state !== 'warm') {
-      return {
-        ...createDegradedBm25Response({
-          classificationMetadata,
-          compiledFilter,
-          databasePath: options.databasePath,
-          family: classifiedFamily,
-          limit,
-          query: expandedBm25Query ?? query,
-          readinessReport,
-        }),
+      const degradedResponse = createDegradedBm25Response({
+        alpha,
+        classificationMetadata,
+        compiledFilter,
+        databasePath: options.databasePath,
+        family: classifiedFamily,
+        limit,
+        query: expandedBm25Query ?? query,
+        readinessReport,
+      });
+      const degradedBase = {
+        ...degradedResponse,
         ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
+        dense_strategy: denseStrategy,
+      };
+
+      if (!useRerank) {
+        return degradedBase;
+      }
+
+      const rerankerReadiness = await getRerankerReadiness(options);
+      if (rerankerReadiness.state !== 'warm') {
+        return {
+          ...degradedBase,
+          rerank_degraded: true,
+          rerank_reason: normalizeRerankReason(
+            rerankerReadiness.reason,
+            rerankerReadiness.state,
+          ),
+          rerank_state: rerankerReadiness.state,
+          use_rerank: false,
+        };
+      }
+
+      const rerankerFn = options.rerankerFn ?? rerankCandidates;
+      const candidatesForRerank = degradedResponse.results.slice(
+        0,
+        rerankCandidatesCount,
+      );
+      const rerankedResults = await rerankerFn(rawQuery, candidatesForRerank, {
+        rerankerModelDirectory: options.rerankerModelDirectory,
+        rerankerModelId: options.rerankerModelId,
+        rerankCandidatesCount,
+      });
+
+      return {
+        ...degradedBase,
+        rerank_candidates_count: rerankCandidatesCount,
+        results: rerankedResults.slice(0, limit),
+        rerank_state: 'warm',
+        use_rerank: true,
       };
     }
 
@@ -299,6 +472,7 @@ export async function searchCorpus(options = {}) {
         : {}),
       ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
       dense_state: 'warm',
+      dense_strategy: denseStrategy,
     };
 
     // Cross-encoder re-ranking: when use_rerank is requested, check reranker
@@ -339,6 +513,7 @@ export async function searchCorpus(options = {}) {
 
   return {
     ...runBm25Search({
+      alpha,
       classificationMetadata,
       compiledFilter,
       databasePath: options.databasePath,
@@ -348,6 +523,342 @@ export async function searchCorpus(options = {}) {
     }),
     ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
   };
+}
+
+/**
+ * Build a concise ranking explanation for a single corpus result.
+ *
+ * Exposes the per-stage scores that contributed to the final ranking so callers
+ * can debug why a chunk was selected. Unavailable stages (for example dense
+ * similarity when `use_dense` is false) are reported as zero with a short reason.
+ *
+ * @param {object} result - Raw corpus search result.
+ * @param {boolean} useDense - Whether dense similarity was requested.
+ * @param {boolean} useRerank - Whether cross-encoder reranking was requested.
+ * @returns {{ bm25_score: number, dense_score: number, rerank_score: number, final_score: number, reason: string }} Ranking explanation descriptor.
+ */
+export function buildRankingExplanation(result, useDense, useRerank) {
+  const bm25Score =
+    typeof result.bm25_score === 'number'
+      ? result.bm25_score
+      : typeof result.score === 'number'
+        ? result.score
+        : 0;
+  const denseScore = useDense
+    ? typeof result.cosine_score === 'number'
+      ? result.cosine_score
+      : 0
+    : 0;
+  const rerankScore = useRerank
+    ? typeof result.rerank_score === 'number'
+      ? result.rerank_score
+      : 0
+    : 0;
+  const finalScore = typeof result.score === 'number' ? result.score : 0;
+
+  const stages = ['BM25 lexical match'];
+  if (useDense) {
+    stages.push('dense cosine similarity');
+  }
+  if (useRerank) {
+    stages.push('cross-encoder rerank');
+  }
+
+  return {
+    bm25_score: bm25Score,
+    dense_score: denseScore,
+    rerank_score: rerankScore,
+    final_score: finalScore,
+    reason: `Final score blends ${stages.join(', ')}.`,
+  };
+}
+
+/**
+ * Strip non-essential metadata from a single corpus result and truncate its text
+ * snippet to {@link COMPACT_TEXT_THRESHOLD} characters.
+ *
+ * Compact mode keeps only the fields an LLM caller typically needs for
+ * relevance decisions: identity, provenance, score, and a short text preview.
+ * When a ranking explanation is present it is preserved so compact callers still
+ * receive transparency into how each result was ranked.
+ *
+ * @param {object} result - Raw corpus search result.
+ * @returns {object} Compact result descriptor.
+ */
+function compactSearchResult(result) {
+  const text = typeof result.text === 'string' ? result.text : '';
+  const truncated =
+    text.length > COMPACT_TEXT_THRESHOLD
+      ? `${text.slice(0, COMPACT_TEXT_THRESHOLD - 1)}…`
+      : text;
+  const compacted = {
+    chunk_id: result.chunk_id,
+    file_path: result.file_path,
+    family: result.family,
+    chunk_index: result.chunk_index,
+    heading_path: result.heading_path ?? null,
+    context_header: result.context_header ?? null,
+    symbol_name: result.symbol_name ?? null,
+    text: truncated,
+    score: result.score,
+    feedback_boost: result.feedback_boost ?? 0,
+    feedback_signals: result.feedback_signals,
+  };
+
+  if (
+    typeof result.ranking_explanation === 'object' &&
+    result.ranking_explanation !== null
+  ) {
+    compacted.ranking_explanation = result.ranking_explanation;
+  }
+
+  return compacted;
+}
+
+/**
+ * Estimate the token cost of a list of compact corpus results.
+ *
+ * Uses a conservative character-per-token ratio so callers can compare the
+ * response size against their own context budget.
+ *
+ * @param {Array<object>} results - Corpus results (after optional compact filtering).
+ * @returns {number} Estimated token count.
+ */
+function estimateResponseTokens(results) {
+  const charCount = results.reduce(
+    (sum, result) => sum + (result.text?.length ?? 0),
+    0,
+  );
+  return Math.ceil(charCount / RESPONSE_CHARS_PER_TOKEN);
+}
+
+/**
+ * Fire-and-forget impression recording for every chunk returned by a search.
+ *
+ * Uses a fresh writable SQLite connection so the read-only search database
+ * connection can close immediately. Errors are caught and silently dropped
+ * so feedback writes never fail the search response or add response latency.
+ *
+ * @param {object} response - Search response payload.
+ * @param {string} response.query - Query string correlated with the impressions.
+ * @param {Array<{chunk_id?: number}>} [response.results] - Search result chunks.
+ * @param {string | undefined} databasePath - Optional corpus database path override.
+ */
+function recordSearchImpressions(response, databasePath) {
+  const results = response?.results;
+  const query = response?.query;
+  if (
+    !Array.isArray(results) ||
+    results.length === 0 ||
+    typeof query !== 'string'
+  ) {
+    return;
+  }
+
+  Promise.resolve().then(() => {
+    try {
+      const feedbackDb = new Database(resolveDatabasePath(databasePath));
+      try {
+        for (const result of results) {
+          const chunkId = result?.chunk_id;
+          if (typeof chunkId === 'number') {
+            recordFeedbackEvent(feedbackDb, {
+              chunk_id: chunkId,
+              signal_type: 'impression',
+              query,
+            });
+          }
+        }
+      } finally {
+        feedbackDb.close();
+      }
+    } catch {
+      // Best-effort: silently drop feedback write failures.
+    }
+  });
+}
+
+/**
+ * Default feedback signal counters used when no score row exists for a chunk.
+ */
+const DEFAULT_FEEDBACK_SIGNALS = {
+  total_positive: 0,
+  total_negative: 0,
+  total_impressions: 0,
+  total_clicks: 0,
+  total_references: 0,
+};
+
+/**
+ * Attach feedback boost and signal counters to each search result.
+ *
+ * Queries the `feedback_scores` table read-only and mutates each result object
+ * in place. When no score row exists, `feedback_boost` is set to `0` and the
+ * signal counters are zeroed. Errors are swallowed so feedback enrichment never
+ * fails a search response.
+ *
+ * @param {Array<object>} results - Search result list.
+ * @param {string | undefined} databasePath - Optional corpus database path override.
+ */
+export function attachFeedbackToResults(results, databasePath) {
+  if (!Array.isArray(results) || results.length === 0) {
+    return;
+  }
+
+  const chunkIds = results
+    .map((result) => result?.chunk_id)
+    .filter((chunkId) => typeof chunkId === 'number');
+
+  if (chunkIds.length === 0) {
+    for (const result of results) {
+      result.feedback_boost = 0;
+      result.feedback_signals = { ...DEFAULT_FEEDBACK_SIGNALS };
+    }
+    return;
+  }
+
+  /** @type {Map<number, object>} */
+  const scoresByChunkId = new Map();
+  try {
+    const database = openCortexDatabase(databasePath);
+    try {
+      const placeholders = chunkIds.map(() => '?').join(',');
+      const rows = database
+        .prepare(
+          `SELECT chunk_id, feedback_boost, total_positive, total_negative, total_impressions, total_clicks, total_references FROM feedback_scores WHERE chunk_id IN (${placeholders})`,
+        )
+        .all(...chunkIds);
+
+      for (const row of rows) {
+        scoresByChunkId.set(row.chunk_id, row);
+      }
+    } finally {
+      database.close();
+    }
+  } catch {
+    // Best-effort: silently skip feedback enrichment when the table is missing.
+  }
+
+  for (const result of results) {
+    const score = scoresByChunkId.get(result.chunk_id);
+    if (score) {
+      result.feedback_boost = Number(score.feedback_boost);
+      result.feedback_signals = {
+        total_positive: Number(score.total_positive),
+        total_negative: Number(score.total_negative),
+        total_impressions: Number(score.total_impressions),
+        total_clicks: Number(score.total_clicks),
+        total_references: Number(score.total_references),
+      };
+    } else {
+      result.feedback_boost = 0;
+      result.feedback_signals = { ...DEFAULT_FEEDBACK_SIGNALS };
+    }
+  }
+}
+
+/**
+ * Build a lightweight freshness stanza for search responses.
+ *
+ * Reads the corpus documents table to report the last known index update and
+ * whether the corpus appears empty. This avoids filesystem access so it adds
+ * minimal latency to search responses while still providing the transparency
+ * contract (timestamp, stale flag, last_update_source).
+ *
+ * @param {string | undefined} databasePath - Optional corpus database path override.
+ * @returns {{ timestamp: number, stale: boolean, last_update_source: string, last_indexed_at?: number, freshness_proof?: object }} Freshness stanza.
+ */
+export function buildResponseFreshness(databasePath) {
+  const timestamp = Date.now();
+  try {
+    const database = openCortexDatabase(databasePath);
+    try {
+      const row = database
+        .prepare(
+          'SELECT COUNT(*) AS count, MAX(indexed_at) AS last_indexed_at FROM documents',
+        )
+        .get();
+      const count = Number(row?.count ?? 0);
+      const lastIndexedAt = row?.last_indexed_at
+        ? Number(row.last_indexed_at)
+        : null;
+      const freshness = {
+        timestamp,
+        stale: count === 0,
+        last_update_source: count === 0 ? 'empty_corpus_index' : 'corpus_index',
+      };
+      if (lastIndexedAt) {
+        freshness.last_indexed_at = lastIndexedAt;
+        const proofRow = database
+          .prepare(
+            'SELECT mtime_ms, file_size, sha256 FROM documents ORDER BY indexed_at DESC LIMIT 1',
+          )
+          .get();
+        if (proofRow) {
+          freshness.freshness_proof = {
+            mtime_ms:
+              proofRow.mtime_ms === null ? null : Number(proofRow.mtime_ms),
+            size:
+              proofRow.file_size === null ? null : Number(proofRow.file_size),
+            sha256: proofRow.sha256 ?? null,
+          };
+        }
+      }
+      return freshness;
+    } finally {
+      database.close();
+    }
+  } catch {
+    return {
+      timestamp,
+      stale: true,
+      last_update_source: 'unknown',
+    };
+  }
+}
+
+/**
+ * Search the indexed corpus using BM25 or hybrid dense reranking.
+ *
+ * This is the public entry point. It delegates to the internal search
+ * implementation, attaches per-result feedback boost and signal counters,
+ * and then schedules best-effort impression feedback recording for every
+ * returned chunk without blocking the response.
+ *
+ * @param {object} [options={}] - Search options (same as {@link searchCorpusImpl}).
+ * @returns {Promise<object>} Search result payload with `feedback_boost` and `feedback_signals` on each result.
+ */
+export async function searchCorpus(options = {}) {
+  const startTime = performance.now();
+  try {
+    const response = await searchCorpusImpl(options);
+    attachFeedbackToResults(response.results, options?.databasePath);
+    recordSearchImpressions(response, options?.databasePath);
+
+    if (options.compact === true) {
+      response.results = (response.results ?? []).map(compactSearchResult);
+    }
+    response.compact = options.compact === true;
+    response.response_tokens = estimateResponseTokens(response.results ?? []);
+
+    response.latency_ms = performance.now() - startTime;
+    response.freshness = buildResponseFreshness(options?.databasePath);
+    return response;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (
+      message.includes('Semantic index not found') ||
+      message.includes('unable to open database') ||
+      message.includes('SQLITE_CANTOPEN') ||
+      message.includes('no such table')
+    ) {
+      throw cortexError(
+        ErrorCodes.CORPUS_NOT_FOUND,
+        `Corpus database not found: ${options?.databasePath ?? 'default path'}.`,
+      );
+    }
+    throw error;
+  }
 }
 
 /**
@@ -446,6 +957,7 @@ function createEmptyBm25Response({
  * @returns {object} BM25 results with `dense_degraded: true` and degradation details.
  */
 function createDegradedBm25Response({
+  alpha,
   classificationMetadata,
   compiledFilter,
   databasePath,
@@ -456,6 +968,7 @@ function createDegradedBm25Response({
 }) {
   const bm25Response = query
     ? runBm25Search({
+        alpha,
         classificationMetadata,
         compiledFilter,
         databasePath,
@@ -584,6 +1097,99 @@ function normalizeRerankReason(reason, state) {
 }
 
 /**
+ * Try an exact `symbol_name` lookup for the raw query.
+ *
+ * Returns a response object when the corpus contains one or more chunks whose
+ * `symbol_name` equals the raw query, otherwise `null` so the normal BM25 or
+ * dense search path can proceed.
+ *
+ * @param {{ classificationMetadata?: object | null, databasePath?: string, family: string | null, limit: number, rawQuery: string }} params - Lookup parameters.
+ * @returns {object | null} Exact-symbol response, or `null` when no symbol matches.
+ */
+function tryExactSymbolLookup({
+  classificationMetadata,
+  databasePath,
+  family,
+  limit,
+  rawQuery,
+}) {
+  const rows = runExactSymbolLookup({
+    databasePath,
+    family,
+    limit,
+    rawQuery,
+  });
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return null;
+  }
+
+  return {
+    exact_symbol_match: true,
+    limit,
+    query: rawQuery,
+    results: rows,
+    use_dense: false,
+    ...(family ? { family } : {}),
+    ...(classificationMetadata
+      ? {
+          query_class: classificationMetadata.query_class,
+          confidence: classificationMetadata.confidence,
+          classification_fallback:
+            classificationMetadata.classification_fallback,
+        }
+      : {}),
+  };
+}
+
+/**
+ * Query the corpus for chunks whose `symbol_name` exactly matches the query.
+ *
+ * Uses the dedicated `chunks_symbol_idx` index on `symbol_name`. When the
+ * corpus database is missing or the lookup fails, returns an empty array so
+ * the caller can fall back to the normal search path.
+ *
+ * @param {{ databasePath?: string, family: string | null, limit: number, rawQuery: string }} params - Lookup parameters.
+ * @returns {Array<object>} Matching chunk rows, or an empty array when no symbol matches.
+ */
+function runExactSymbolLookup({ databasePath, family, limit, rawQuery }) {
+  let database;
+  try {
+    database = openCortexDatabase(databasePath);
+  } catch {
+    return [];
+  }
+
+  try {
+    const familyFilter = family ? 'AND d.doc_family = @family' : '';
+
+    const rows = database
+      .prepare(
+        `
+      SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
+        c.body_text, c.char_start, c.char_end,
+        c.parent_chunk_id, c.depth, c.context_header,
+        c.symbol_name, c.signature_text, c.jsdoc_text, c.export_type, c.module_path,
+        c.arch_layer, c.jsdoc_quality, c.jsdoc_word_count,
+        c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern
+      FROM chunks c
+      JOIN documents d ON d.doc_id = c.doc_id
+      WHERE c.symbol_name = @symbol ${familyFilter}
+      ORDER BY c.chunk_id
+      LIMIT @limit
+    `,
+      )
+      .all({ family, limit, symbol: rawQuery });
+
+    return rows.map((row) => ({
+      ...readChunkRow(row),
+      body_text: row.body_text,
+    }));
+  } finally {
+    database.close();
+  }
+}
+
+/**
  * Execute a BM25 full-text search against the corpus SQLite database.
  *
  * Queries the FTS5 virtual table (`chunks_fts`) joined with `chunks` and
@@ -600,6 +1206,7 @@ function normalizeRerankReason(reason, state) {
  * @returns {object} BM25 results payload with `query`, `limit`, `use_dense: false`, and `results`.
  */
 function runBm25Search({
+  alpha,
   classificationMetadata,
   compiledFilter,
   databasePath,
@@ -651,6 +1258,7 @@ function runBm25Search({
     return {
       query,
       limit,
+      alpha,
       ...(family ? { family } : {}),
       ...(classificationMetadata
         ? {
@@ -663,6 +1271,7 @@ function runBm25Search({
       use_dense: false,
       results: rows.map((row) => ({
         ...readChunkRow(row),
+        body_text: row.body_text,
         score: Number(row.score),
       })),
     };

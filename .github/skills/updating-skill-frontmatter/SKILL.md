@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Updating Skill Frontmatter
 
 This skill makes safe, targeted edits to YAML frontmatter in existing `.github/skills/<skill-name>/SKILL.md` files. It preserves the skill's existing intent and name stability, ensures descriptions remain within the 1024-character limit, and validates the result before recording the change.

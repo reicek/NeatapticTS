@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Multithread Evaluation Playbook
 
 Use this skill when NeatapticTS work touches the Phase 4 worker-pool and
@@ -175,7 +177,7 @@ Validate with: focused multithreading tests, a small batch integration test, and
   - `src/multithreading/workers/node/worker.test.ts`
 - Focused integration test for a small deterministic batch.
 - Browser smoke validation when browser worker parity is part of the step.
-- `npm run test:silent` after the focused tranche is green.
+- `npm run test:silent` only when the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
 
 ## Guardrails
 

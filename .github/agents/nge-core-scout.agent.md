@@ -2,7 +2,7 @@
 description: 'Use when mapping NGE algorithm-core boundaries such as NGE_DNA, deterministic development, lifecycle transitions, computation motifs, memory tiers, neuromodulation, reproduction modes, or deciding whether a Phase 7 issue belongs to nge-core-algorithm. Keywords: NGE core, NGE_DNA, computationType, deterministic development, lifecycle, neuromodulation, reproduction, stigmergy.'
 name: nge-core-scout
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -42,7 +42,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+
+   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
+   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
+   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
+   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
+   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
+   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
+   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
+
+   If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
+
 2. Read the smallest relevant plan surface first, especially `plans/completed/NEAT_Genesis_EvoDevo.md`.
 3. Find the controlling boundary: computation motif, DNA schema, deterministic build step, lifecycle stage, memory tier, neuromodulator rule, reproduction mode, or shared-field primitive.
 4. Identify the nearest code or plan surface that decides the invariant, ordering, or opt-in behavior.
@@ -57,11 +70,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -88,13 +97,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Core surface:` one short line naming the active boundary.
-- `NGE phase:` `0`, `A`, `B`, `C`, `D`, `E`, `G-core`, or `mixed`.
-- `Controlling files or plans:` short path list.
-- `Core-invariant pressure:` 2 to 4 short bullets.
-- `Benchmark leakage risks:` 0 to 4 short bullets.
-- `Not core-owned:` 0 to 3 short bullets naming secondary owners when relevant.
-- `nge-core-algorithm handoff:` one short paragraph naming the active phase, invariant, leakage risk, and the smallest focused next pass.

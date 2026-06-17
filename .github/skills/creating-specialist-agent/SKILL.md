@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Creating Specialist Agent
 
 This skill scaffolds new hidden specialist or auxiliary `.agent.md` files in the NeatapticTS customization system. A specialist agent owns exactly one narrow, reusable job; this skill ensures it has the correct tool set, model tier, output contract, bounded delegation, and parent routing before validation.
@@ -26,7 +28,7 @@ Include the job the new specialist will own, the parent orchestrator that will c
 Use creating-specialist-agent for <specialist-job-description>.
 Parent orchestrator: <agent-name>
 Required tools: <list of VS Code tool names>
-Model tier: <e.g. glm-5.1:cloud (ollama)>
+Model tier: <e.g. glm-5.2:cloud (ollama)>
 Output contract fields: <field names the parent expects>
 Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs --json
              node scripts/agent-customization/validate-agent-graph.mjs --json

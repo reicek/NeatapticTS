@@ -349,12 +349,22 @@ function postWorkerMessage(
   postTarget?.postMessage?.(message);
 }
 
+const SHARED_INFERENCE_WAIT_TIMEOUT_MS = 1000;
+
 function defaultWaitForSharedStatusChange(
   controlView: Int32Array,
   statusIndex: number,
   currentStatus: number,
 ): void {
-  Atomics.wait(controlView, statusIndex, currentStatus);
+  // Use a finite timeout as a safeguard against missed Atomics.notify wakeups.
+  // The surrounding loop rechecks the status after every return, so a timeout
+  // simply causes the worker to retry rather than hanging forever.
+  Atomics.wait(
+    controlView,
+    statusIndex,
+    currentStatus,
+    SHARED_INFERENCE_WAIT_TIMEOUT_MS,
+  );
 }
 
 function resolveMessageEventData(event: unknown): unknown {

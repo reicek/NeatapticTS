@@ -2,7 +2,7 @@
 description: 'Use when: planning needs ambiguity review, blast-radius analysis, reversibility checks, dependency risk, or model-budget risk before implementation.'
 name: 'planning-risk-coordinator'
 tier: 2
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -23,6 +23,22 @@ agents:
 skills: ['model-routing-and-budget', 'license-attribution-audit']
 user-invocable: false
 ---
+
+## Cortex-First Search Policy
+
+This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
+2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
+4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
+5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
+6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
+7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
+8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
+9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
 
 You are the `planning-risk-coordinator` agent for NeatapticTS.
 
@@ -65,11 +81,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `SUGGESTED_NEXT_AGENT` to the agent best positioned to resolve the blocker.
 - Do not attempt edits to work around missing information.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Report participants, files, validations, blockers, and gaps truthfully. Use `NONE` when nothing applies.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

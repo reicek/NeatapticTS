@@ -24,6 +24,7 @@
  *
  * @returns {void} Exits 0 on success, 1 on error.
  */
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -216,36 +217,33 @@ async function createRerankTokenizer({
   }
 
   const unkToken = resolveSpecialToken(specialTokensMap.unk_token, '[UNK]');
-  const tokenizer = new Tokenizer({
-    added_tokens: [],
-    decoder: null,
-    model: {
-      type: 'WordPiece',
-      unk_token: unkToken,
-      vocab: vocabulary,
+  const tokenizer = new Tokenizer(
+    {
+      added_tokens: [],
+      decoder: null,
+      model: {
+        type: 'WordPiece',
+        unk_token: unkToken,
+        vocab: vocabulary,
+      },
+      normalizer: tokenizerJson.normalizer ?? null,
+      pre_tokenizer: tokenizerJson.pre_tokenizer ?? null,
+      post_processor: null,
     },
-    normalizer: tokenizerJson.normalizer ?? null,
-    pre_tokenizer: tokenizerJson.pre_tokenizer ?? null,
-    post_processor: null,
-  });
+    {
+      clean_up_tokenization_spaces: true,
+    },
+  );
 
   if (tokenizerConfig.model_max_length) {
-    tokenizer.setTruncation(Number(tokenizerConfig.model_max_length), {
-      strategy: 'longest_first',
-    });
+    // Native Tokenizer v0.1.x does not expose setTruncation/setPadding.
+    // The configured max_length is honoured manually when building pairs.
+    // See scorePair() for the longest-first truncation applied to documents.
   }
 
   if (tokenizerConfig.pad_token ?? specialTokensMap.pad_token) {
-    const padToken = tokenizerConfig.pad_token ?? specialTokensMap.pad_token;
-    const padTokenId = tokenizer.token_to_id(
-      typeof padToken === 'object' ? padToken.content : padToken,
-    );
-    tokenizer.setPadding({
-      direction: 'right',
-      pad_id: padTokenId,
-      pad_token: typeof padToken === 'object' ? padToken.content : padToken,
-      pad_type_id: 0,
-    });
+    // Padding is configured on the tokenizer but, for v0.1.x, applied
+    // manually by callers when batching is required.
   }
 
   return tokenizer;
@@ -315,29 +313,65 @@ async function scorePair(
 ) {
   const { Tensor } = await import('onnxruntime-node');
 
-  // Tokenize as a paired input: [CLS] query [SEP] document [SEP]
-  const encoded = tokenizer(query, {
-    text_pair: documentText,
-    add_special_tokens: true,
-    max_length: maxLength,
-    padding: 'max_length',
-    truncation: 'longest_first',
-    return_tensors: false,
+  // The installed @huggingface/tokenizers v0.1.x only exposes encode(text).
+  // It does not support text_pair, setTruncation, setPadding, or special-token
+  // wrapping, so we build the [CLS] query [SEP] document [SEP] sequence by hand
+  // and apply longest-first truncation to the document segment.
+  const clsId = tokenizer.token_to_id('[CLS]');
+  const sepId = tokenizer.token_to_id('[SEP]');
+
+  const queryIds = tokenizer.encode(String(query)).ids;
+  const documentIds = tokenizer.encode(String(documentText)).ids;
+
+  let inputIds = [clsId, ...queryIds, sepId, ...documentIds, sepId];
+
+  // Longest-first truncation: keep the query intact and remove document tokens.
+  if (inputIds.length > maxLength) {
+    const overhead = 3; // [CLS] + [SEP] + [SEP]
+    const maxDocumentIds = Math.max(0, maxLength - queryIds.length - overhead);
+    inputIds = [
+      clsId,
+      ...queryIds,
+      sepId,
+      ...documentIds.slice(0, maxDocumentIds),
+      sepId,
+    ];
+  }
+
+  let sequenceLength = inputIds.length;
+  const attentionMask = Array.from({ length: sequenceLength }, () => 1);
+  const tokenTypeIds = Array.from({ length: sequenceLength }, (_, index) => {
+    // [CLS] + query + first [SEP] belong to segment 0; document + final [SEP]
+    // belong to segment 1.
+    return index <= queryIds.length + 1 ? 0 : 1;
   });
 
-  const inputIds = BigInt64Array.from(encoded.input_ids.map(BigInt));
-  const attentionMask = BigInt64Array.from(encoded.attention_mask.map(BigInt));
-  const tokenTypeIds = BigInt64Array.from(encoded.token_type_ids.map(BigInt));
+  const encoded = {
+    input_ids: inputIds,
+    attention_mask: attentionMask,
+    token_type_ids: tokenTypeIds,
+  };
+  const truncated = createRerankInput(query, documentText, encoded, maxLength);
+
+  sequenceLength = truncated.input_ids.length;
+
+  const inputIdsTensor = BigInt64Array.from(truncated.input_ids.map(BigInt));
+  const attentionMaskTensor = BigInt64Array.from(
+    truncated.attention_mask.map(BigInt),
+  );
+  const tokenTypeIdsTensor = BigInt64Array.from(
+    truncated.token_type_ids.map(BigInt),
+  );
 
   const feeds = {
-    attention_mask: new Tensor('int64', attentionMask, [
+    attention_mask: new Tensor('int64', attentionMaskTensor, [
       1,
-      encoded.input_ids.length,
+      sequenceLength,
     ]),
-    input_ids: new Tensor('int64', inputIds, [1, encoded.input_ids.length]),
-    token_type_ids: new Tensor('int64', tokenTypeIds, [
+    input_ids: new Tensor('int64', inputIdsTensor, [1, sequenceLength]),
+    token_type_ids: new Tensor('int64', tokenTypeIdsTensor, [
       1,
-      encoded.token_type_ids.length,
+      sequenceLength,
     ]),
   };
 
@@ -346,6 +380,12 @@ async function scorePair(
     session.outputNames.find((name) => name === 'logits') ??
     session.outputNames[0];
   const logitsData = outputs[outputName].data;
+
+  if (logitsData.length === 1) {
+    // Exported ms-marco-MiniLM-L-6-v2 returns a single logit of shape [1, 1];
+    // apply sigmoid to obtain a [0, 1] relevance probability.
+    return 1 / (1 + Math.exp(-Number(logitsData[0])));
+  }
 
   // logits shape is [1, 2]: [not_relevant, relevant]
   const notRelevant = Number(logitsData[0]);

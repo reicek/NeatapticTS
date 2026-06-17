@@ -39,7 +39,9 @@ if (!planExplicit) {
   process.exit(1);
 }
 
-const planPath = options.plan;
+// Normalize the plan path so Windows-style backslash invocations are handled
+// the same as POSIX-style forward-slash invocations.
+const planPath = options.plan.replace(/\\/g, '/');
 const planText = await readWorkspaceFile(planPath);
 const readmeText = await readWorkspaceFile('plans/README.md');
 const roadmapText = await readWorkspaceFile('plans/Roadmap.md');

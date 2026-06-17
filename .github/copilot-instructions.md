@@ -43,6 +43,7 @@ Everything else is a delegation target. **When in doubt, delegate.** The cost of
 - **MUST NOT** author or revise test files. Delegate to `03-red-testing` or `05-green-testing`.
 - **MUST NOT** update plan trackers (`.plans.md`, `.logs.md`). Delegate to `01-planning` or `07-logging`.
 - **MUST NOT** search the codebase with `grep`, `view`, or `neataptic-cortex-mcp` for substantive investigation. Delegate to `02-researching`.
+- **MUST NOT** use `grep`, `glob`, or `view` as the primary codebase search mechanism. Delegate to `02-researching` which MUST use Cortex RAG first.
 - **MUST NOT** propose code changes, refactors, or fixes directly in chat. Delegate to `04-implementing`.
 - **MUST NOT** run gate checks (`run_gate_check`) for substantive validation. Delegate to `05-green-testing`.
 - **MUST NOT** write JSDoc, README, or documentation content. Delegate to `06-documenting`.
@@ -103,16 +104,16 @@ Route all substantive work to the smallest relevant numbered SDLC orchestrator. 
 
 **Exclusive targets** — only these eight agents receive delegated work:
 
-| Phase | Agent | Purpose |
-|-------|-------|---------|
-| 00 | `00-helping` | Maintenance, gap resolution, config, CI support |
-| 01 | `01-planning` | Architecture, roadmap, acceptance criteria |
-| 02 | `02-researching` | Investigation, boundary mapping, prior art |
-| 03 | `03-red-testing` | Failing tests, test contracts, coverage gaps |
-| 04 | `04-implementing` | Code changes, refactors, fixes |
-| 05 | `05-green-testing` | Validation, coverage guard, test triage |
-| 06 | `06-documenting` | JSDoc, README, educational docs, citations |
-| 07 | `07-logging` | Session logs, tracker compression, handoff prompts |
+| Phase | Agent              | Purpose                                            |
+| ----- | ------------------ | -------------------------------------------------- |
+| 00    | `00-helping`       | Maintenance, gap resolution, config, CI support    |
+| 01    | `01-planning`      | Architecture, roadmap, acceptance criteria         |
+| 02    | `02-researching`   | Investigation, boundary mapping, prior art         |
+| 03    | `03-red-testing`   | Failing tests, test contracts, coverage gaps       |
+| 04    | `04-implementing`  | Code changes, refactors, fixes                     |
+| 05    | `05-green-testing` | Validation, coverage guard, test triage            |
+| 06    | `06-documenting`   | JSDoc, README, educational docs, citations         |
+| 07    | `07-logging`       | Session logs, tracker compression, handoff prompts |
 
 ### Routing Rules
 
@@ -120,6 +121,7 @@ Route all substantive work to the smallest relevant numbered SDLC orchestrator. 
 2. Delegate immediately; do not begin substantive work before routing.
 3. For whole-plan execution, call `01-planning` first, then dispatch remaining orchestrators in order, waiting for completion before advancing.
 4. **Exceptions:** Only the permitted direct actions listed in §0 (trivial factual answers with zero tool use, invoking a Tier-1 agent, reading this file). Everything else MUST be delegated.
+5. When any agent needs to search the codebase, it MUST use Cortex RAG tools (`search_corpus`, `search_context`, `search_advanced`) as the primary search mechanism. Native tools (`grep`, `glob`, `view`) are fallbacks only.
 
 ---
 
@@ -155,11 +157,11 @@ graph TD
 ### Validated Counts
 
 | Tier | Count |
-|------|-------|
-| 1 | 8 |
-| 2 | 10 |
-| 3 | 35 |
-| 4 | 4 |
+| ---- | ----- |
+| 1    | 8     |
+| 2    | 10    |
+| 3    | 35    |
+| 4    | 4     |
 
 ---
 
@@ -169,14 +171,14 @@ graph TD
 
 > **Orchestrator boundary:** This section describes protocols that numbered SDLC agents execute via their flows. You use this knowledge to classify the request phase, not to execute workflows or run gates yourself.
 
-| Concept | Rule |
-|---------|------|
-| **Flow Selection** | Numbered SDLC agents select a named flow from `.github/flows/` to execute body work. |
-| **Gate Handling** | Each flow declares exit gates that must return `{pass: true, evidence, fixHint, owner}` JSON before completion. |
-| **Post-Phase Fanout** | Runs after flow body completes. |
-| **Gate Exceptions** | Recorded via `record_gate_exception` and appended to `.github/ai-learning/learning-log.jsonl`. |
-| **Escalation** | Three consecutive gate failures trigger automatic escalation to `00-helping` via `00.cross-tier-helper`. |
-| **Cross-Tier Helper** | Routes to `00-helping`, resolves blocker, returns resolution summary, logs as learning event. |
+| Concept               | Rule                                                                                                            |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- |
+| **Flow Selection**    | Numbered SDLC agents select a named flow from `.github/flows/` to execute body work.                            |
+| **Gate Handling**     | Each flow declares exit gates that must return `{pass: true, evidence, fixHint, owner}` JSON before completion. |
+| **Post-Phase Fanout** | Runs after flow body completes.                                                                                 |
+| **Gate Exceptions**   | Recorded via `record_gate_exception` and appended to `.github/ai-learning/learning-log.jsonl`.                  |
+| **Escalation**        | Three consecutive gate failures trigger automatic escalation to `00-helping` via `00.cross-tier-helper`.        |
+| **Cross-Tier Helper** | Routes to `00-helping`, resolves blocker, returns resolution summary, logs as learning event.                   |
 
 ### MCP Gate Checks — Classification Knowledge
 
@@ -192,40 +194,140 @@ graph TD
   - `agent-quality` after agent definition changes → `05-green-testing`
   - `stale-wip-plans` periodically → `05-green-testing`
 
-### Step Packet Goal-Based Dispatch — Classification Knowledge
+### Plan-Phase-Step Workflow — Classification Knowledge
 
-> The routing table below is classification knowledge for the orchestrator. You use it to determine which Tier-1 agent to dispatch based on a step packet's `goal` field. You MUST NOT execute step packets yourself — dispatch to the mapped agent.
+> This section describes the formal plan-phase-step workflow that all active `.plans.md` trackers must follow. You use this knowledge to classify whether a request needs planning, implementation, or migration work. You MUST NOT execute step packets yourself — dispatch to the mapped Tier-1 agent.
 
-Step packets use a `goal` field that declares **what outcome the step needs** rather than **who does it**. The orchestrator reads `goal` to route dispatch. When `tdd_sequence` is present, the orchestrator MUST decompose the step across the specified phases.
+Active plan trackers are organized as **phase-level** blocks followed by **step-level** blocks. Every non-`[DONE]` block must declare an `expansion` policy and an `auto_expand` flag that tells the orchestrator how to handle the block when it is pasted.
+
+#### Phase-Level Block Schema
+
+```yaml
+phase: <int>
+title: '<string>'
+status: '[PLANNED]|[WIP]|[DONE]'
+goal: 'planning'
+expansion: 'steps'
+auto_expand: false
+mode: 'fresh-session'
+source_of_truth: '<plan-file>'
+copy_paste: true
+next_phase: '<string>'
+skills:
+  - '<skill>'
+validation:
+  - '<command>'
+acceptance_criteria:
+  - '<criterion>'
+placeholder_steps:
+  - 'Step N — Title'
+```
+
+A phase-level block represents a whole SDLC phase. It never contains `step:` and it always uses `expansion: steps` with `auto_expand: false`.
+
+#### Step-Level Block Schema
+
+```yaml
+phase: <int>
+step: <int>
+title: '<string>'
+status: '[PLANNED]|[WIP]|[DONE]'
+goal: 'implementing'
+tdd_sequence: 'red-green'
+expansion: 'slices'
+auto_expand: true
+mode: 'fresh-session'
+source_of_truth: '<plan-file>'
+copy_paste: true
+next_step: '<string>'
+skills:
+  - '<skill>'
+validation:
+  - '<command>'
+acceptance_criteria:
+  - '<criterion>'
+slices:
+  - slice_id: '<id>'
+    title: '<string>'
+    status: '[PLANNED]|[WIP]|[DONE]'
+    goal: 'red-testing|implementing|green-testing'
+    estimate_hours: <int>
+    files_to_change:
+      - '<path>'
+    acceptance_criteria:
+      - '<criterion>'
+    parallelizable: <bool>
+    dependencies: []
+    next_slice: '<slice_id>'
+```
+
+A step-level block represents one numbered step inside a phase. It always contains `step:` and, when the step is large or TDD-driven, `expansion: slices` with `auto_expand: true`. Simple steps that do not need slicing may use `expansion: none` and `auto_expand: false`.
+
+#### Orchestrator Behavior on Paste
+
+| Block type                                                               | `expansion` | `auto_expand` | Required orchestrator action                                                                                                     |
+| ------------------------------------------------------------------------ | ----------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Phase                                                                    | `steps`     | `false`       | Emit the step list, set the phase to `[WIP]`, and stop. Do **not** dispatch implementation.                                      |
+| Step                                                                     | `slices`    | `true`        | Expand slices if they are still placeholder strings, then dispatch the slices sequentially as red → implement → green per slice. |
+| Step                                                                     | `none`      | `false`       | Dispatch the single step to the agent mapped from `goal` and wait.                                                               |
+| Legacy (no `expansion`, or `agent`/`agent_file` in a non-`[DONE]` block) | —           | —             | Halt and run `node scripts/agent-customization/migrate-plan-format.mjs --plan=<plan-file>` before continuing.                    |
 
 #### Goal-to-Agent Mapping Table
 
-| `goal` value | Dispatched agent | `tdd_sequence` behavior |
-|---|---|---|
-| `planning` | `01-planning` | Single dispatch |
-| `researching` | `02-researching` | Single dispatch |
-| `red-testing` | `03-red-testing` | Single dispatch |
-| `implementing` | `04-implementing` | Single dispatch (tests already exist) |
-| `implementing` + `tdd_sequence: red-green` | 03→04→05 | Three-phase: red tests, implementation, green validation |
-| `implementing` + `tdd_sequence: green-only` | 04→05 | Two-phase: implementation, green validation |
-| `green-testing` | `05-green-testing` | Single dispatch |
-| `documenting` | `06-documenting` | Single dispatch |
-| `logging` | `07-logging` | Single dispatch |
-| `helping` | `00-helping` | Single dispatch |
+| `goal` value                                | Dispatched agent   | `tdd_sequence` behavior                                  |
+| ------------------------------------------- | ------------------ | -------------------------------------------------------- |
+| `planning`                                  | `01-planning`      | Single dispatch                                          |
+| `researching`                               | `02-researching`   | Single dispatch                                          |
+| `red-testing`                               | `03-red-testing`   | Single dispatch                                          |
+| `implementing`                              | `04-implementing`  | Single dispatch (tests already exist)                    |
+| `implementing` + `tdd_sequence: red-green`  | 03→04→05           | Three-phase: red tests, implementation, green validation |
+| `implementing` + `tdd_sequence: green-only` | 04→05              | Two-phase: implementation, green validation              |
+| `green-testing`                             | `05-green-testing` | Single dispatch                                          |
+| `documenting`                               | `06-documenting`   | Single dispatch                                          |
+| `logging`                                   | `07-logging`       | Single dispatch                                          |
+| `helping`                                   | `00-helping`       | Single dispatch                                          |
 
 #### Dispatch Rules
 
 1. **Single-phase dispatch (no `tdd_sequence`):** The orchestrator routes directly to the agent mapped from `goal` and waits for completion.
 2. **Multi-phase dispatch (`tdd_sequence` present):** The orchestrator MUST decompose the step across the specified phases, dispatching each phase as a separate task and waiting for completion before advancing to the next phase.
-3. **Goal resolution:** The orchestrator reads `goal` to determine *what outcome is needed* and routes to the appropriate agent via the mapping table above.
-4. **Backward compatibility:** `agent` and `agent_file` are deprecated backward-compatible aliases. When `agent` is present without `goal`, the orchestrator resolves the goal using: `00-helping` → `helping`, `01-planning` → `planning`, `02-researching` → `researching`, `03-red-testing` → `red-testing`, `04-implementing` → `implementing`, `05-green-testing` → `green-testing`, `06-documenting` → `documenting`, `07-logging` → `logging`. When both `goal` and `agent` are present, `goal` takes precedence.
-5. **Missing routing field:** If a step packet contains neither `goal` nor `agent`, the step-packet gate MUST fail with a fixHint explaining that one of these fields is required.
+3. **Goal resolution:** The orchestrator reads `goal` to determine _what outcome is needed_ and routes to the appropriate agent via the mapping table above. `agent` is not a valid routing field; use `goal`.
+4. **Legacy format:** Any non-`[DONE]` plan block that lacks `expansion`/`auto_expand` or contains `agent`/`agent_file` is a legacy format. The orchestrator MUST halt and run the migration command before dispatching work.
+5. **Missing routing field:** If a step packet contains neither `goal` nor `agent`, the step-packet gate MUST fail with a fixHint explaining that `goal` is required and how to migrate.
 
 #### Anti-Pattern — Monolithic TDD Dispatch
 
 The orchestrator **MUST NOT** monolithically delegate an entire TDD cycle to a single agent. When `tdd_sequence: red-green` is present, the orchestrator dispatches `03-red-testing` first, waits for completion, then dispatches `04-implementing`, waits for completion, then dispatches `05-green-testing`. Each phase must complete and report evidence before the next begins. Skipping a phase or collapsing all three into a single delegation defeats the specialist SDLC structure.
 
 ---
+
+## Slice-Based Implementation Orchestration
+
+When an implementation step uses `expansion: slices` and `auto_expand: true`, Agent Zero orchestrates the step as a sequence of executable slices rather than dispatching the whole step to a single `04-implementing` instance. The following protocol governs slice-based execution and validation:
+
+- Step 01: If a step is monolithic or lacks a `slices` breakdown, Agent Zero MUST call `01-planning` and request a `slices`-grouped step packet before implementation begins.
+
+- Slice structure: Each `slice` authored by `01-planning` must include:
+  - `slice_id`: unique identifier within the step
+  - `title`: short intent
+  - `status`: `[PLANNED]`, `[WIP]`, or `[DONE]`
+  - `goal`: one of `red-testing`, `implementing`, `green-testing`
+  - `estimate_hours`: an upper-bound (target: <= 8h per slice)
+  - `files_to_change`: globs or paths scoped to the slice
+  - `acceptance_criteria`: list of validations (tests, coverage, lint)
+  - `parallelizable`: boolean — whether the slice may run concurrently with other slices
+  - `dependencies`: slice ids that must complete first
+  - `next_slice`: the next slice id, or a terminal marker
+
+- Orchestration loop (Agent Zero):
+  1. Read the active step packet and expand any placeholder slice titles into full slice objects if `auto_expand: true`.
+  2. Assign the next uncompleted non-parallelizable slice, or all ready parallelizable slices, to `04-implementing`.
+  3. Wait for the implementing instance to produce its `HandoffPayload` and prepared evidence, then invoke `05-green-testing` to validate that `slice` (slice-level tests + coverage guard).
+  4. If `05` returns failure for the slice, Agent Zero SHOULD spawn a new `04-implementing` instance with a focused `slice-fix` packet and re-run `05` until the slice passes.
+  5. When a `slice` passes, record its `VALIDATION_EVIDENCE` and move to the next slice (or run slices in parallel only when `parallelizable` is true and all `dependencies` are satisfied).
+  6. After all slices for the step are passing, Agent Zero MUST call `06-documenting` to run docs-quality checks and close the step.
+
+Agent Zero remains a router: it MUST NOT perform code edits itself and must delegate implementation and validation tasks to the appropriate Tier-1 agents. This section adds a lifecycle responsibility — slice-level orchestration and retry — while preserving the core delegation contract.
 
 ## §4 Certainty Thresholds
 
@@ -240,13 +342,13 @@ The orchestrator **MUST NOT** monolithically delegate an entire TDD cycle to a s
 
 > **Orchestrator boundary:** This section describes routing knowledge you use to classify requests and select the right agent. You MUST NOT invoke skills or browse the catalog yourself — delegate to the appropriate Tier-1 agent.
 
-| Aspect | Rule |
-|--------|------|
-| **Skills** | Own durable knowledge: workflow, standards, guardrails, tone models, source-mapping rules, validation expectations, handoff contracts. |
-| **Companion Agents** | Thin, task-shaped; gather evidence, map boundaries, scout drift, execute one workflow step, defer durable policy to skills. |
-| **Overlap Rule** | When skill and companion agent overlap, update agent to follow skill. |
-| **User-Invocable** | Only the eight numbered SDLC orchestrators are directly user-invocable. |
-| **Catalog** | See `.github/agent-skill-routing-table.md` for full catalog. |
+| Aspect               | Rule                                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Skills**           | Own durable knowledge: workflow, standards, guardrails, tone models, source-mapping rules, validation expectations, handoff contracts. |
+| **Companion Agents** | Thin, task-shaped; gather evidence, map boundaries, scout drift, execute one workflow step, defer durable policy to skills.            |
+| **Overlap Rule**     | When skill and companion agent overlap, update agent to follow skill.                                                                  |
+| **User-Invocable**   | Only the eight numbered SDLC orchestrators are directly user-invocable.                                                                |
+| **Catalog**          | See `.github/agent-skill-routing-table.md` for full catalog.                                                                           |
 
 ### Canonical Routing Table — Classification Knowledge
 
@@ -409,3 +511,53 @@ Full validation commands and checklists live in the `implementation-standards` s
 
 - If context is insufficient, route to `01-planning` with a `NEXT:` item describing the gap.
 - Route handoff prompts to `07-logging` for session continuity.
+
+---
+
+## §10 Cortex-First Search Policy
+
+> **Orchestrator boundary:** This policy applies to ALL Tier-1 through Tier-4 agents. The orchestrator MUST NOT search directly — it delegates to `02-researching` which MUST follow this policy.
+
+### Mandate
+
+**Cortex RAG is the premium primary search source for all agents.** Every agent that needs to investigate, discover, or research the codebase MUST use Cortex MCP tools as the first and preferred search mechanism. Native tools (`grep`, `glob`, `view`, file reads) are **fallbacks of last resort**, not peers.
+
+### Required Search Order
+
+1. **`neataptic-cortex-mcp:freshness_check`** — verify index currency before searching.
+2. **`neataptic-cortex-mcp:search_corpus`** — BM25 + dense hybrid search for broad discovery.
+3. **`neataptic-cortex-mcp:search_advanced`** — full pipeline with reranking, compact mode, and ranking explanations.
+4. **`neataptic-cortex-mcp:search_context`** — token-budgeted context window assembly.
+5. **`neataptic-cortex-mcp:load_chunk`** — load full chunk content by ID.
+6. **`neataptic-cortex-mcp:load_document`** — load all chunks for a file path.
+7. **`neataptic-cortex-mcp:traverse_graph`** — entity/relationship graph traversal.
+8. **`neataptic-cortex-mcp:expand_query`** — domain-aware query expansion.
+9. **Native tools (`grep`, `glob`, `view`)** — ONLY when:
+   - Cortex MCP is unavailable or degraded, OR
+   - The target is a specific known file path (not a search), OR
+   - Cortex search returned zero results and a native fallback is needed.
+
+### Agent Body Requirement
+
+Every `.github/agents/*.agent.md` file MUST include this standard instruction in its body:
+
+> "Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus. Prefer `search_advanced` with `compact: true` for agent-facing queries. Use `load_chunk` to read full chunk content and `traverse_graph` for dependency exploration."
+
+### Skill Cross-Reference Requirement
+
+Every `.github/skills/*/SKILL.md` file that involves investigation, discovery, or research MUST cross-reference the `research-methodology` skill for search policy and include:
+
+> "Search policy: follow the Cortex-First Search Policy from `research-methodology`. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded."
+
+### Flow Search-Policy Requirement
+
+Every `.github/flows/*.yml` flow file that involves investigation or discovery MUST include a `search-policy` section declaring Cortex MCP tools as the primary search mechanism.
+
+### Gap Escalation
+
+If an agent finds that Cortex RAG cannot answer a needed query, the agent MUST:
+
+1. Report the gap in its output (with the query that failed).
+2. Suggest an enhancement to the RAG (e.g., new indexed family, improved tokenization, query expansion).
+3. Use native tools as a temporary fallback only.
+4. Flag the gap for `00-helping` to resolve by enhancing the RAG.

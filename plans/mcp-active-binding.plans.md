@@ -20,6 +20,27 @@ are open or archived.
 
 ### Phase 1 — Permanent MCP binding [WIP]
 
+```yaml
+phase: 1
+title: 'Permanent MCP binding'
+status: '[WIP]'
+goal: planning
+expansion: steps
+auto_expand: false
+mode: fresh-session
+source_of_truth: plans/mcp-active-binding.plans.md
+copy_paste: true
+next_phase: null
+skills:
+  - plan-alignment
+validation:
+  - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/mcp-active-binding.plans.md'
+acceptance_criteria:
+  - 'Phase/step metadata validates with the new plan-phase-step schema.'
+placeholder_steps:
+  - 'Step 01 — MCP servers operational'
+```
+
 This phase never closes. It provides a stable `[WIP]` context for MCP server startup so the
 workflow and validation servers can call `loadActivePlanContext` without depending on any specific
 workstream plan.
@@ -29,15 +50,21 @@ workstream plan.
 ```yaml
 phase: 1
 step: 1
-goal: 'helping'
+title: 'MCP servers operational'
 status: '[WIP]'
-mode: 'perpetual'
-source_of_truth: 'plans/mcp-active-binding.plans.md'
+goal: helping
+expansion: none
+auto_expand: false
+mode: perpetual
+source_of_truth: plans/mcp-active-binding.plans.md
 copy_paste: false
-next_step: 'null'
-skills: 'mcp-local-server-workflow'
+skills:
+  - mcp-local-server-workflow
+next_step: null
 validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md'
+acceptance_criteria:
+  - 'Phase/step metadata validates with the new plan-phase-step schema.'
 ```
 
 **Step objective:** Provide a perpetual stable binding for MCP server startup. This step does not

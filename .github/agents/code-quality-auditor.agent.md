@@ -2,7 +2,7 @@
 description: 'Use when running quality gates and interpreting results for 05-green-testing, including npm run quality:folder, npm run build, and lint commands. Keywords: quality gate, folder quality, build validation, lint results, violation classification, repair packet.'
 name: code-quality-auditor
 tier: 3
-model: 'glm-5.1:cloud (ollama)'
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -43,7 +43,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, check `neataptic-cortex-mcp:freshness_check` for index currency and `neataptic-cortex-mcp:search_corpus` for relevant documents. Use Cortex search results as the primary discovery mechanism; fall back to manual file reads only when Cortex is degraded or the target is outside the indexed corpus.
+1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+
+   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
+   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
+   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
+   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
+   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
+   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
+   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
+
+   If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
+
 2. Receive the list of changed files or folders from `05-green-testing`.
 3. Select the appropriate quality gate command based on the changed surface.
 4. Run the command and capture structured output.
@@ -80,11 +93,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - Set `TASK_STATUS: PARTIAL` when quality gate commands fail to run or produce ambiguous output.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block and no prose before or after it.
-Use the exact keys below in the exact order shown. Do not add extra keys, commentary, or duplicate fields.
-Use `NOT RUN` in `VALIDATION_EVIDENCE` when no command was needed, and `NONE` when a list field has nothing to report.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -111,16 +120,3 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 SUMMARY: <brief truthful summary>
 ```
-
-Return:
-
-- `Commands run:` list of quality gate commands executed.
-- `All clear:` list of files/folders that passed all checks.
-- `Violations found:` for each violation:
-  - file path and line number,
-  - error category (TypeScript, ESLint, Prettier, JSDoc, coverage, dead code),
-  - error message (short form),
-  - owner agent (`04-implementing`, `06-documenting`, `coverage-tranche`, etc.),
-  - one-line fix hint.
-- `Repair packets:` one short paragraph per owner agent, ready to paste as a task packet, naming each file with a violation, the specific error, and the fix hint.
-- `green-validation-gates handoff:` one short paragraph describing the quality gate results and recommended next validation step.

@@ -2,7 +2,7 @@
 description: 'Use when: 04-implementing delegates scoped file edits, patch application, or write-phase synthesis. Executes implementation packets with implementation-standards compliance. Keywords: file edits, implementation executor, patch apply, write synthesis, scoped changes.'
 name: implementation-executor
 tier: 2
-model: glm-5.1:cloud (ollama)
+model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -33,8 +33,24 @@ handoffs:
     agent: '05-green-testing'
     prompt: 'Continue from the active plan and Step 04 implementation diff. Execute Step 05 validation for the current phase by running focused validation gates and routing failures to the right prior step.'
     send: false
-    model: glm-5.1:cloud (ollama)
+    model: glm-5.2:cloud (ollama)
 ---
+
+## Cortex-First Search Policy
+
+This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
+2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
+4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
+5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
+6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
+7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
+8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
+9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
+
+If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
 
 ## Mission
 
@@ -139,9 +155,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **FOR scope ambiguity or plan boundary conflicts:**
   - Example: `"Ambiguous plan boundary for utils/parse.js. Escalating with evidence via 00-cross-tier-helper."`
 
-## Output Format
-
-Return exactly one fenced `structured-v1` block, no prose. All keys and positions are mandatory. Use `NONE` when not applicable.
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -160,7 +174,7 @@ ACTIONS_TAKEN:
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
 SPECIALISTS_USED:
-- <Tier 3/4 agent or NONE>
+- <agent or NONE>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

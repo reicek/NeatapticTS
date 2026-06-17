@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Creating Unit Tests
 
 This skill writes the smallest test that proves a specific behavior in the NeatapticTS codebase. It follows the TDD order (red → implement → green), respects the repo's single-expect rule, and places tests in owner-local files near the source boundary being tested.
@@ -40,7 +42,7 @@ Focused command: npx jest --config=jest.config.mjs --no-cache --testPathPattern=
 5. Place the test in an owner-local file near the source boundary (e.g., `src/neat/mutation/` tests alongside `src/neat/mutation/` source).
 6. Follow existing framework conventions: describe block naming, beforeEach setup, mock/stub patterns already used in sibling tests.
 7. Run the focused Jest command to confirm the expected initial state (red if TDD, green if verifying existing behavior).
-8. Do not run the full suite until the focused test is in the expected state.
+8. Do not run the full suite until the focused test is in the expected state and the user or active step packet explicitly requires a repo-wide run.
 9. Report the command run, exit status, and the expected red/green state.
 
 ## Guardrails
@@ -48,7 +50,7 @@ Focused command: npx jest --config=jest.config.mjs --no-cache --testPathPattern=
 - Do not use broad snapshots unless the project already uses them for the target surface.
 - Do not write multiple top-level `expect(...)` calls in a single `it()` block; split into separate tests instead.
 - Do not place tests in a shared or unrelated folder; keep them owner-local near the source boundary.
-- Do not run `npm test` (full suite) until the focused test is in the correct state; use the targeted Jest command first.
+- Do not run `npm test` or any full-suite command (`npm run test:silent`, `npm run jest:esm-ts`, `npm run jest:mjs`) speculatively. Use the targeted Jest command first. Only run the full suite when the user or active step packet explicitly requires it.
 - Do not use single-letter local variable names except `i` and `j` in trivial loops; match the descriptive naming style of the codebase.
 - Do not write a test to force an unreachable path; if a branch cannot be reached, remove it from production code instead.
 

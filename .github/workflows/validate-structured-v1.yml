@@ -1,0 +1,34 @@
+name: Validate structured-v1 agent outputs
+
+on:
+  push:
+    paths:
+      - '.github/agents/**'
+  pull_request:
+    paths:
+      - '.github/agents/**'
+
+jobs:
+  validate-structured-v1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Find and validate structured-v1 blocks
+        run: |
+          set -euo pipefail
+          FILES=$(grep -rl "OUTPUT_CONTRACT: structured-v1" .github/agents || true)
+          if [ -z "$FILES" ]; then
+            echo "No structured-v1 outputs found; skipping."
+            exit 0
+          fi
+          for f in $FILES; do
+            echo "Validating $f"
+            node .github/agents/scripts/validate-structured-v1.mjs "$f"
+          done

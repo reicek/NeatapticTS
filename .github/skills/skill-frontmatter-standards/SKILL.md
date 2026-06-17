@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Skill Frontmatter Standards
 
 This skill governs the design and validation of YAML frontmatter in `.github/skills/<skill-name>/SKILL.md` files. It ensures that every skill has a discoverable description, a compact argument hint, a correct visibility flag, and passes the automated skill frontmatter validator.

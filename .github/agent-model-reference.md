@@ -39,10 +39,8 @@ NeatapticTS custom-agent frontmatter.
 
 | Qualified model string        | Role in fleet                           | Capability note                                                                                                                   |
 | ----------------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `glm-5.1:cloud (ollama)`           | Full-tier coding and implementation     | Best default for code-heavy implementation, red-test authorship, and specialist work that needs stronger tool-aware reasoning.    |
-| `Claude Sonnet 4.6 (copilot)` | Full-tier synthesis and coordination    | Best default for planning, documentation, maintenance, and ambiguity-heavy coordination.                                          |
-| `glm-5.1:cloud (ollama)`      | Budget-conscious general-purpose work   | Good default for bounded research, validation, subagent coordination, and specialists that still benefit from solid tool use.     |
-| `Claude Haiku 4.6 (copilot)`  | Lightweight checklist and summarization | Good default for narrow audits, summaries, small recon tasks, and one-shot helpers where latency and cost matter more than depth. |
+| `glm-5.2:cloud (ollama)`      | Elite coding and complex orchestration  | Best for SWE-Bench Pro performance, long-horizon autonomy, complex TypeScript refactoring, and multi-step engineering tasks.    |
+| `kimi-k2.7-code:cloud (ollama)`     | Frontend-focused and tool integration   | Optimized for modern TS ecosystems (React, Next.js), visual components, MCP tool calling, and cost-effective agentic workflows. |
 
 Other Copilot models may exist in docs or the client, but they are not
 canonical for NeatapticTS agent frontmatter until the exact qualified string is
@@ -54,12 +52,12 @@ confirmed in the active client and validated locally.
    Use the active Copilot model picker or `model-name-auditor` to confirm the
    exact qualified string before touching frontmatter.
 2. Classify the agent job.
-   Decide whether the agent is primarily implementation, synthesis,
-   research/validation, or lightweight checklist/summarization.
-3. Choose the lowest-cost model that still fits the job.
-   Use `GPT-5.4` for coding-heavy implementation, `Claude Sonnet 4.6` for
-   nuanced synthesis, `GPT-5.4-mini` for bounded research and validation, and
-   `Claude Haiku 4.6` for narrow mechanical work.
+   Decide whether the agent is primarily backend/infrastructure implementation,
+   frontend/UI work, tool integration, or long-horizon orchestration.
+3. Choose the appropriate model for the job.
+   Use `glm-5.2:cloud (ollama)` for complex backend logic, SWE-Bench style tasks,
+   and marathon execution loops. Use `kimi-k2.7-code:cloud (ollama)` for frontend work,
+   visual components, rapid iteration, and tool-heavy workflows.
 4. Write a single model string.
    Do not use arrays in `model:` frontmatter for this repo.
 5. Preserve intent during migrations.
@@ -67,19 +65,19 @@ confirmed in the active client and validated locally.
    unless the user explicitly wants a different routing decision.
 6. Validate before committing.
    Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json`
-   after any frontmatter edit.
+   
+after any frontmatter edit.
 7. Refresh the generated routing table only after frontmatter changes land.
    This reference is hand-maintained; `.github/agent-skill-routing-table.md` is
    generated and should be refreshed after the actual agent changes, not before.
 
 ## Default Assignment Patterns
 
-| Agent need                                               | Canonical scalar model       | Notes                                                                 |
+| Agent type                                               | Canonical scalar model       | Notes                                                                 |
 | -------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------- |
-| Coding-heavy implementation or test synthesis            | `glm-5.1:cloud (ollama)`          | Prefer when code generation quality and edge-case handling matter.    |
-| Ambiguity-heavy planning, maintenance, or docs synthesis | `Claude Sonnet 4.6 (copilot)`| Prefer when the agent must weigh tradeoffs, policy, or prose quality. |
-| Bounded research, validation, or scout work              | `glm-5.1:cloud (ollama)`     | Prefer Mini when the agent still uses tools heavily or needs depth.   |
-| Lightweight checklist, summaries, or one-shot helpers    | `Claude Haiku 4.6 (copilot)` | Prefer Haiku when the task is narrow, mechanical, and frequent.       |
+| Main orchestrators (00-07 numbered agents)               | `glm-5.2:cloud (ollama)`     | Long-horizon autonomy, complex SDLC phase coordination, marathon execution loops without strategy fatigue. |
+| Specialized executors/scouts (all other agents)          | `kimi-k2.7-code:cloud (ollama)` | Superior tool integration, MCP workflows, 30% fewer reasoning tokens, cost-effective for focused tasks. |
+
 
 ## Migration Rule
 

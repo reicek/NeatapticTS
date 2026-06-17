@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "structured-v1",
+  "description": "Tier-specific structured output contract for .github/agents/*.agent.md files. Required fields vary by TIER to match the canonical contract in .github/AGENT_QUALITY_CONTRACT.md.",
+  "type": "object",
+  "properties": {
+    "OUTPUT_CONTRACT": { "const": "structured-v1" },
+    "TASK_STATUS": { "type": "string", "enum": ["SUCCESS", "PARTIAL", "FAILED"] },
+    "TIER": { "type": "integer", "minimum": 1, "maximum": 4 },
+    "ROLE": { "type": "string" },
+    "TASK_RECEIVED": { "type": "string" },
+    "FILES_READ": { "type": "array", "items": { "type": "string" } },
+    "FILES_CHANGED": { "type": "array", "items": { "type": "string" } },
+    "KEY_FINDINGS": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "required": ["finding", "confidence", "provenance"],
+            "properties": {
+              "finding": { "type": "string" },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 100 },
+              "provenance": {
+                "type": "object",
+                "required": ["source"],
+                "properties": {
+                  "source": { "type": "string" },
+                  "path": { "type": "string" },
+                  "timestamp": { "type": "string", "format": "date-time" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "ACTIONS_TAKEN": { "type": "array", "items": { "type": "string" } },
+    "VALIDATION_EVIDENCE": { "type": "array", "items": { "type": "string" } },
+    "SPECIALISTS_USED": { "type": "array", "items": { "type": "string" } },
+    "HANDOFF": { "type": "string" },
+    "BLOCKERS": { "type": "array", "items": { "type": "string" } },
+    "RISKS_OR_GAPS": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "properties": {
+              "risk": { "type": "string" },
+              "severity": { "type": "string", "enum": ["low", "medium", "high"] }
+            },
+            "required": ["risk"]
+          }
+        ]
+      }
+    },
+    "LEARNING_EVENT_NEEDED": { "type": "boolean" },
+    "SUGGESTED_NEXT_AGENT": { "type": "string" },
+    "PHASE_COMPLETE": { "type": "boolean" },
+    "SUB_ORCHESTRATORS_USED": { "type": "array", "items": { "type": "string" } },
+    "SUMMARY": { "type": "string" },
+    "TIMESTAMP": { "type": "string", "format": "date-time" },
+    "DURATION_MS": { "type": "integer", "minimum": 0 }
+  },
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "description": "Tier 1 orchestrator contract",
+      "properties": { "TIER": { "const": 1 } },
+      "required": [
+        "OUTPUT_CONTRACT", "TASK_STATUS", "TIER", "ROLE", "TASK_RECEIVED",
+        "FILES_READ", "FILES_CHANGED", "KEY_FINDINGS", "ACTIONS_TAKEN", "VALIDATION_EVIDENCE",
+        "BLOCKERS", "RISKS_OR_GAPS", "LEARNING_EVENT_NEEDED", "SUGGESTED_NEXT_AGENT",
+        "PHASE_COMPLETE", "SUB_ORCHESTRATORS_USED", "SUMMARY"
+      ]
+    },
+    {
+      "description": "Tier 2 coordinator contract",
+      "properties": { "TIER": { "const": 2 } },
+      "required": [
+        "OUTPUT_CONTRACT", "TASK_STATUS", "TIER", "ROLE", "TASK_RECEIVED",
+        "FILES_READ", "FILES_CHANGED", "KEY_FINDINGS", "ACTIONS_TAKEN", "VALIDATION_EVIDENCE",
+        "SPECIALISTS_USED", "HANDOFF", "BLOCKERS", "RISKS_OR_GAPS", "LEARNING_EVENT_NEEDED",
+        "SUGGESTED_NEXT_AGENT", "SUMMARY"
+      ]
+    },
+    {
+      "description": "Tier 3 scout contract",
+      "properties": { "TIER": { "const": 3 } },
+      "required": [
+        "OUTPUT_CONTRACT", "TASK_STATUS", "TIER", "ROLE", "TASK_RECEIVED",
+        "FILES_READ", "FILES_CHANGED", "KEY_FINDINGS", "ACTIONS_TAKEN", "VALIDATION_EVIDENCE",
+        "HANDOFF", "BLOCKERS", "RISKS_OR_GAPS", "LEARNING_EVENT_NEEDED", "SUGGESTED_NEXT_AGENT",
+        "SUMMARY"
+      ]
+    },
+    {
+      "description": "Tier 4 auxiliary contract",
+      "properties": { "TIER": { "const": 4 } },
+      "required": [
+        "OUTPUT_CONTRACT", "TASK_STATUS", "TIER", "ROLE", "TASK_RECEIVED",
+        "FILES_READ", "FILES_CHANGED", "KEY_FINDINGS", "ACTIONS_TAKEN", "BLOCKERS",
+        "RISKS_OR_GAPS", "LEARNING_EVENT_NEEDED", "SUGGESTED_NEXT_AGENT", "SUMMARY"
+      ]
+    }
+  ]
+}

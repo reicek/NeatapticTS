@@ -150,7 +150,7 @@ export async function runSessionStartIndex(options = {}) {
  * @param {string} databasePath - Resolved path to the SQLite database file.
  * @returns {Promise<TouchResult>}
  */
-async function runTouchPass(databasePath) {
+export async function runTouchPass(databasePath) {
   const result = { touched: 0, contentChanged: 0, onDiskMissing: 0 };
 
   const database = new Database(databasePath);
@@ -247,7 +247,7 @@ async function probeDocumentFreshness(documentRow) {
  * @param {string} databasePath - Resolved path to the SQLite database file.
  * @returns {{ exitCode: number }}
  */
-function runBuildPass(databasePath) {
+export function runBuildPass(databasePath) {
   const spawnResult = spawnSync(
     process.execPath,
     [BUILD_INDEX_PATH, `--database=${databasePath}`],

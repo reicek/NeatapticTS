@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Agent JSON Body to MD
 
 This skill converts the JSON body of a NeatapticTS `.github/agents/*.agent.md` file into Markdown and rewrites the file so that the body is human-readable Markdown while the YAML frontmatter (between the leading and trailing `---` fences) is preserved unchanged.

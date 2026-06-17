@@ -43,20 +43,32 @@ export function parseArgs(argv) {
     json: false,
     strict: false,
     help: false,
+    all: false,
+    dryRun: false,
     contract: 'tier0',
     plan: 'plans/completed/Agentic_Workflow_Architecture.plans.md',
   };
 
-  for (const rawArg of argv) {
+  for (let argIndex = 0; argIndex < argv.length; argIndex++) {
+    const rawArg = argv[argIndex];
     if (rawArg === '--json') options.json = true;
     else if (rawArg === '--strict') options.strict = true;
+    else if (rawArg === '--all') options.all = true;
+    else if (rawArg === '--dry-run' || rawArg === '--dry_run')
+      options.dryRun = true;
     else if (rawArg === '--help' || rawArg === '-h') options.help = true;
     else if (rawArg.startsWith('--contract='))
       options.contract = rawArg.slice('--contract='.length);
+    else if (rawArg === '--contract' && argv[argIndex + 1] !== undefined)
+      options.contract = argv[++argIndex];
     else if (rawArg.startsWith('--input='))
       options.input = rawArg.slice('--input='.length);
+    else if (rawArg === '--input' && argv[argIndex + 1] !== undefined)
+      options.input = argv[++argIndex];
     else if (rawArg.startsWith('--plan='))
       options.plan = rawArg.slice('--plan='.length);
+    else if (rawArg === '--plan' && argv[argIndex + 1] !== undefined)
+      options.plan = argv[++argIndex];
   }
 
   return options;
@@ -221,13 +233,14 @@ export function parseFrontmatter(text, relativePath) {
   const data = {};
   const issues = [];
 
-  for (const line of rawLines) {
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
     if (!line.trim() || line.trim().startsWith('#')) continue;
-    if (/^\s+-\s/.test(line)) continue;
-    if (/^\s+/.test(line)) continue;
 
     const match = /^(?<key>[A-Za-z0-9_-]+):(?<value>.*)$/.exec(line);
     if (!match?.groups) {
+      // Skip indented structural lines (handoffs, nested maps, list items)
+      if (/^\s+/.test(line)) continue;
       issues.push(
         issue(
           'warning',
@@ -239,7 +252,38 @@ export function parseFrontmatter(text, relativePath) {
     }
 
     const key = match.groups.key;
-    const value = match.groups.value.trim();
+    let value = match.groups.value.trim();
+
+    // Support multi-line bracketed inline arrays where the opening '[' is on
+    // a following indented line or the array spans multiple lines before ']'.
+    if (value === '') {
+      // Peek ahead for a bracketed array block starting on subsequent lines.
+      let j = i + 1;
+      while (j < rawLines.length && !rawLines[j].trim()) j++;
+      if (j < rawLines.length && rawLines[j].trim().startsWith('[')) {
+        const collected = [];
+        while (j < rawLines.length) {
+          const next = rawLines[j].trim();
+          collected.push(next);
+          if (next.includes(']')) break;
+          j++;
+        }
+        value = collected.join(' ');
+        i = j; // advance outer loop to skip consumed lines
+      }
+    } else if (/^\[.*$/.test(value) && !/\]$/.test(value)) {
+      // Handle case where '[' starts on the same line but the ']' appears later.
+      let j = i + 1;
+      while (j < rawLines.length) {
+        value += ' ' + rawLines[j].trim();
+        if (rawLines[j].includes(']')) {
+          i = j;
+          break;
+        }
+        j++;
+      }
+    }
+
     data[key] = parseFrontmatterValue(value);
   }
 
@@ -337,6 +381,239 @@ export function summarizeIssues(name, issues) {
     counts: { errors, warnings },
     summaryText: `${errors === 0 ? 'PASS' : 'FAIL'} ${name}: ${errors} errors, ${warnings} warnings`,
   };
+}
+
+/**
+ * Parses a plan YAML metadata block into a JavaScript object.
+ *
+ * Supports the subset used by plan step/phase packets: scalar key–value pairs,
+ * lists of scalars, and lists of objects (e.g. `slices`). Empty values on a
+ * top-level key are interpreted as the start of a list. Multi-line object lists
+ * use the standard YAML `- key: value` indentation pattern.
+ *
+ * @param yamlText - Raw YAML string (without the surrounding fence).
+ * @returns Object with parsed values; lists are arrays, nested object lists are
+ *   arrays of objects.
+ */
+export function parsePlanYamlBlock(yamlText) {
+  const lines = yamlText.split(/\r?\n/u);
+  const result = {};
+  let index = 0;
+
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) {
+      index++;
+      continue;
+    }
+
+    const topMatch = /^(?<key>[A-Za-z0-9_]+):(?<rest>.*)$/u.exec(line);
+    if (!topMatch?.groups) {
+      index++;
+      continue;
+    }
+
+    const key = topMatch.groups.key;
+    const rest = topMatch.groups.rest.trim();
+
+    if (rest === '' || rest === '>' || rest === '|') {
+      const next = peekNextNonEmptyLine(lines, index);
+      if (next && /^\s*-\s/.test(next.line)) {
+        const parsed = parseListBlock(lines, index + 1, next.indent);
+        result[key] = parsed.list;
+        index = parsed.nextIndex;
+        continue;
+      }
+      result[key] = [];
+      index++;
+      continue;
+    }
+
+    result[key] = normalizeYamlScalar(rest);
+    index++;
+  }
+
+  return result;
+}
+
+/**
+ * Returns the next non-empty line and its indentation (number of leading spaces).
+ *
+ * @param lines - Line array.
+ * @param startIndex - Index to search after.
+ * @returns Object with `line`, `indent`, and `index`, or `null` when exhausted.
+ */
+function peekNextNonEmptyLine(lines, startIndex) {
+  for (let i = startIndex + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line === undefined) continue;
+    if (line.trim() === '') continue;
+    const indent = line.match(/^\s*/u)?.[0].length ?? 0;
+    return { line, indent, index: i };
+  }
+  return null;
+}
+
+/**
+ * Parses a YAML list block starting at a line that begins with `- `.
+ *
+ * Handles both scalar lists and object lists. Nested object fields may
+ * themselves contain scalar lists.
+ *
+ * @param lines - Full line array.
+ * @param startIndex - Index of the first list item line.
+ * @param baseIndent - Indentation (spaces) of the `- ` marker.
+ * @returns Object with `list` and the `nextIndex` after the list.
+ */
+function parseListBlock(lines, startIndex, baseIndent) {
+  const list = [];
+  let index = startIndex;
+
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const line = rawLine.trim();
+    if (line === '' || line.startsWith('#')) {
+      index++;
+      continue;
+    }
+
+    const currentIndent = rawLine.match(/^\s*/u)?.[0].length ?? 0;
+    if (currentIndent < baseIndent || !/^-\s/.test(line)) {
+      break;
+    }
+
+    const remainder = line.slice(line.indexOf('-') + 1).trim();
+    if (/^(?<key>[A-Za-z0-9_]+):(?<rest>.*)$/u.test(remainder)) {
+      // Object list item; first key is inline, remaining fields follow.
+      const objectResult = parseObjectFields(lines, index, baseIndent);
+      list.push(objectResult.object);
+      index = objectResult.nextIndex;
+      continue;
+    }
+
+    if (/^.*:\s*$/.test(remainder)) {
+      // Object list item starting on next line.
+      const objectResult = parseObjectFields(lines, index, baseIndent, true);
+      list.push(objectResult.object);
+      index = objectResult.nextIndex;
+      continue;
+    }
+
+    // Scalar list item.
+    list.push(normalizeYamlScalar(remainder));
+    index++;
+  }
+
+  return { list, nextIndex: index };
+}
+
+/**
+ * Parses the fields of one object inside a YAML list block.
+ *
+ * @param lines - Full line array.
+ * @param startIndex - Index of the `- ` line that starts the object.
+ * @param baseIndent - Indentation of the list item marker.
+ * @param firstFieldOnNextLine - Whether the first field appears on the next line.
+ * @returns Object with `object` and `nextIndex` after the object.
+ */
+function parseObjectFields(
+  lines,
+  startIndex,
+  baseIndent,
+  firstFieldOnNextLine = false,
+) {
+  const object = {};
+  let index = firstFieldOnNextLine ? startIndex + 1 : startIndex;
+
+  // Parse optional inline first key on the `- ` line.
+  if (!firstFieldOnNextLine) {
+    const rawLine = lines[startIndex];
+    const remainder = rawLine
+      .trim()
+      .slice(rawLine.trim().indexOf('-') + 1)
+      .trim();
+    const firstMatch = /^(?<key>[A-Za-z0-9_]+):(?<rest>.*)$/u.exec(remainder);
+    if (firstMatch?.groups) {
+      const key = firstMatch.groups.key;
+      const rest = firstMatch.groups.rest.trim();
+      if (rest === '') {
+        const next = peekNextNonEmptyLine(lines, startIndex);
+        if (next && /^\s*-\s/.test(next.line) && next.indent > baseIndent) {
+          const parsed = parseListBlock(lines, next.index, next.indent);
+          object[key] = parsed.list;
+          index = parsed.nextIndex;
+        } else {
+          object[key] = [];
+          index = startIndex + 1;
+        }
+      } else {
+        object[key] = normalizeYamlScalar(rest);
+        index = startIndex + 1;
+      }
+    }
+  }
+
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const line = rawLine.trim();
+    if (line === '' || line.startsWith('#')) {
+      index++;
+      continue;
+    }
+
+    const currentIndent = rawLine.match(/^\s*/u)?.[0].length ?? 0;
+    if (currentIndent <= baseIndent) {
+      // Back to list level or lower means end of this object.
+      break;
+    }
+
+    const fieldMatch = /^(?<key>[A-Za-z0-9_]+):(?<rest>.*)$/u.exec(line);
+    if (!fieldMatch?.groups) {
+      index++;
+      continue;
+    }
+
+    const key = fieldMatch.groups.key;
+    const rest = fieldMatch.groups.rest.trim();
+    if (rest === '') {
+      const next = peekNextNonEmptyLine(lines, index);
+      if (next && /^\s*-\s/.test(next.line) && next.indent > currentIndent) {
+        const parsed = parseListBlock(lines, next.index, next.indent);
+        object[key] = parsed.list;
+        index = parsed.nextIndex;
+        continue;
+      }
+      object[key] = [];
+      index++;
+      continue;
+    }
+
+    object[key] = normalizeYamlScalar(rest);
+    index++;
+  }
+
+  return { object, nextIndex: index };
+}
+
+/**
+ * Normalizes a YAML scalar string: strips matching quotes and collapses
+ * bracketed empty arrays to `[]`.
+ *
+ * @param value - Raw scalar string.
+ * @returns Normalized scalar value.
+ */
+function normalizeYamlScalar(value) {
+  const trimmed = value.trim();
+  if (trimmed === '[]') return [];
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (/^['"].*['"]$/u.test(trimmed)) return trimmed.slice(1, -1);
+  if (/^-?\d+(?:\.\d+)?$/u.test(trimmed)) {
+    const numeric = Number(trimmed);
+    if (Number.isFinite(numeric)) return numeric;
+  }
+  return trimmed;
 }
 
 /**

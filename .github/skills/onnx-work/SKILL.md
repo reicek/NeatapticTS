@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # ONNX Work Playbook
 
 Use this skill when ONNX-like export or import needs to be extended, hardened,
@@ -86,7 +88,7 @@ Use onnx-work for recurrent import hardening.
 Plan: plans/completed/ONNX_EXPORT_PLAN.md (archived baseline; create or follow a narrower active amendment before widening support).
 Target: compact recurrent import subset for external seed compatibility.
 Mode: import hardening + supported-subset documentation.
-Validate with: focused ONNX Jest slice, import acceptance/rejection tests, then npm run test:silent.
+Validate with: focused ONNX Jest slice and import acceptance/rejection tests. Only run `npm run test:silent` if the active step packet or user explicitly requires repo-wide confirmation.
 ```
 
 ## Required Workflow
@@ -129,7 +131,7 @@ Validate with: focused ONNX Jest slice, import acceptance/rejection tests, then 
     surface to reflect the new operator.
 11. Run `npm run docs` to verify generated output.
 12. Update the active ONNX follow-up amendment with the completed step, or create a narrower active amendment in `plans/` before coding if the work widens support beyond the archived ONNX baseline.
-13. Run `npm run test:silent` to confirm repo-wide green.
+13. Run `npm run test:silent` only if the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
 
 ## JSON-First Trust Boundary
 

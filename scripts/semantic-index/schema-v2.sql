@@ -149,3 +149,30 @@ CREATE TABLE IF NOT EXISTS term_embeddings (
 
 CREATE INDEX IF NOT EXISTS term_embeddings_model_idx ON term_embeddings(model_id, term_sha256);
 CREATE INDEX IF NOT EXISTS term_embeddings_frequency_idx ON term_embeddings(frequency DESC);
+
+-- v6: Feedback events and scores for relevance feedback signals
+CREATE TABLE IF NOT EXISTS feedback_events (
+  event_id TEXT PRIMARY KEY,
+  chunk_id INTEGER NOT NULL REFERENCES chunks(chunk_id) ON DELETE CASCADE,
+  signal_type TEXT NOT NULL CHECK(signal_type IN ('impression', 'click', 'reference', 'positive', 'negative', 'irrelevant')),
+  signal_strength REAL NOT NULL DEFAULT 0.0,
+  query_hash TEXT,
+  agent_id TEXT,
+  context TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS feedback_events_chunk_idx ON feedback_events(chunk_id);
+CREATE INDEX IF NOT EXISTS feedback_events_query_hash_idx ON feedback_events(query_hash);
+CREATE INDEX IF NOT EXISTS feedback_events_created_at_idx ON feedback_events(created_at);
+
+CREATE TABLE IF NOT EXISTS feedback_scores (
+  chunk_id INTEGER PRIMARY KEY REFERENCES chunks(chunk_id) ON DELETE CASCADE,
+  total_positive INTEGER NOT NULL DEFAULT 0,
+  total_negative INTEGER NOT NULL DEFAULT 0,
+  total_impressions INTEGER NOT NULL DEFAULT 0,
+  total_clicks INTEGER NOT NULL DEFAULT 0,
+  total_references INTEGER NOT NULL DEFAULT 0,
+  last_feedback_at DATETIME,
+  feedback_boost REAL NOT NULL DEFAULT 0.0
+);

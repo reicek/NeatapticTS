@@ -6,6 +6,8 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
 # Skill Output Evals
 
 This skill designs and runs evidence-backed output evaluations for NeatapticTS skills. It compares with-skill behavior against a no-skill baseline or a prior skill version, grades each assertion mechanically where possible, and aggregates pass rates to support a keep/revise/remove decision.

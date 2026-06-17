@@ -2,24 +2,25 @@ id: '01.phase-kickoff'
 name: 'Phase Kickoff and Step Packet Authoring'
 agent: '01-planning'
 description: >
-  Converts a new phase objective into numbered step packets ready for
-  downstream SDLC agents. Pulls the current plan state via the MCP workflow
-  snapshot first (neataptic-workflow-mcp: get_active_workflow_snapshot),
-  then reads the plan file directly if the snapshot is stale, unavailable,
-  or returns scope "no-active-phase" (meaning no [WIP] phase/step exists
-  yet — normal at fresh session start). Selects the Plan Scout only when registration or roadmap
-  placement is uncertain. Emits paste-ready step packets covering
-  01-planning through 07-logging, with explicit skipped-step records
-  where a red, green, docs, or logging step adds no value. Requires that
-  any previous phase already marked [DONE] has been compressed to a concise
-  coverage note in the tracker before the new phase step packets are authored
-  (phase-compression gate).
+  Converts a new phase objective into a paste-ready phase-level YAML block
+  plus `placeholder_steps` describing the phase step sequence. The
+  orchestrator MUST stop after a phase block is pasted; it does NOT auto-expand
+  the phase (`expansion: steps`, `auto_expand: false`). The phase block sets
+  `[WIP]`, emits the placeholder step list, and waits for the user to paste the
+  next step packet. Once a step packet is pasted, the orchestrator uses
+  `01.step-expansion` if the step has `expansion: slices` and `auto_expand:
+  true`, otherwise it routes directly to the `goal`-derived agent. Pulls the
+  current plan state via the MCP workflow snapshot first, then reads the plan
+  file directly if the snapshot is stale or unavailable. Requires that any
+  previous phase already marked [DONE] has been compressed to a concise
+  coverage note before the new phase is started (phase-compression gate).
 
 triggers:
-  - 'New phase objective approved and plan has no step packets yet'
+  - 'Phase block with expansion: steps and auto_expand: false needs placeholder_steps'
   - 'Phase transition needed after previous phase marked [DONE]'
-  - 'User asks 01-planning to start a new migration phase'
+  - 'User asks 01-planning to start a new phase'
   - 'Plan tracker has a NEXT: item pointing to a new phase start'
+  - 'Legacy phase block detected without expansion or with agent/agent_file (halt and run legacy-plan-format gate)'
 
 gates:
   - 'plan-sync'
@@ -44,3 +45,17 @@ specialists:
   - 'Plan Registration Auditor'
 
 timeout-minutes: 25
+
+search-policy:
+  primary: cortex-mcp
+  fallback: native-tools
+  tools:
+    - freshness_check
+    - search_corpus
+    - search_advanced
+    - search_context
+    - load_chunk
+    - load_document
+    - traverse_graph
+    - expand_query
+  description: 'Cortex RAG is the primary search mechanism. Use Cortex MCP tools first; fall back to grep/glob/view only when Cortex is degraded or target is a known file path.'
