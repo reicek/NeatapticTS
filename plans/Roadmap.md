@@ -509,7 +509,7 @@ archived Repo Cortex layer plans as the baselines this migration builds upon.
 - NEAT Genesis EvoDevo (NGE) — core algorithm (computation motifs, lifecycle, DNA, reproduction, collective intelligence)
   - Plan: [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
 - NGE Core Readiness Audit — primitive-by-primitive readiness matrix, gap classification by owner boundary, and first implementation tranche selection (core-first; demos are downstream e2e tests)
-  - Plan: [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [WIP] — Phase 5 [DONE] (lifecycle staging closure and nge-adult readiness reconciliation); Phase 6 [WIP] — Step 01: planning packet and export-surface freeze.
+  - Plan: [completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [DONE]
 - NGE Racing Curriculum — Team A/B benchmark (worker-streamed runtime authority, deterministic race packs, rolling opponent snapshots)
   - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) (`plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`) [WIP]
 - Racing Path-Tracking Debug and Quality Followup — pre-Phase-3 visual fix, geometry audit, and deferred quality cleanup
@@ -627,7 +627,7 @@ M12. [completed/turso-rag-migration.plans.md](completed/turso-rag-migration.plan
 ### Phase 7 inventory
 
 32. [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
-    32b. [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [WIP] — Phase 5 [DONE] / Phase 6 [WIP] / Step 01 active.
+    32b. [completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [DONE]
 33. [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) (`plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`) [WIP]
 34. [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
 35. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]

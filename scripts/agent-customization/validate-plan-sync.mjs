@@ -1,5 +1,25 @@
 #!/usr/bin/env node
+/**
+ * Validate agentic workflow plan registration.
+ *
+ * Checks that a single active plan is registered in `plans/README.md` and
+ * `plans/Roadmap.md` with a consistent top-level status marker. Also extracts
+ * any downstream tracker plans referenced inside the plan body so callers can
+ * see which benchmark or dependency trackers are linked from the active plan.
+ *
+ * @example
+ * ```bash
+ * node scripts/agent-customization/validate-plan-sync.mjs \
+ *   --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
+ * ```
+ *
+ * Output (JSON mode) includes:
+ *   - `ok`, `issues`, `counts` — standard validation contract
+ *   - `plan.path` and `plan.status` — the validated plan and its top-level status
+ *   - `downstreamTrackers` — sorted repo-relative paths of linked tracker plans
+ */
 import {
+  extractDownstreamTrackers,
   extractStatus,
   issue,
   parseArgs,
@@ -46,6 +66,7 @@ const planText = await readWorkspaceFile(planPath);
 const readmeText = await readWorkspaceFile('plans/README.md');
 const roadmapText = await readWorkspaceFile('plans/Roadmap.md');
 const planStatus = extractStatus(planText);
+const downstreamTrackers = await extractDownstreamTrackers(planText, planPath);
 const issues = [];
 
 if (!planStatus) {
@@ -94,6 +115,7 @@ const report = {
   // Surface the validated plan path so callers can confirm the right plan was checked.
   summaryText: `${baseReport.summaryText} (plan: ${planPath})`,
   plan: { path: planPath, status: planStatus },
+  downstreamTrackers,
 };
 
 writeReport(report, options);

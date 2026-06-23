@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Workflow Update Sync Hook** (`workflow-update-sync.mjs`) is a lightweight, idempotent trigger mechanism that keeps MCP plan state synchronized with the active implementation step. It now supports two bounded modes: explicit **advancement** when a step is intentionally ready to move forward, and automatic **hook-check** verification after substantive actions without mutating the plan.
+The **Workflow Update Sync Hook** (`workflow-update-sync.mjs`) is a lightweight, idempotent trigger mechanism that keeps MCP plan state synchronized with the active implementation step. It supports two bounded modes: explicit **advancement** when a step is intentionally ready to move forward, and automatic **hook-check** verification after substantive actions without mutating the plan.
 
 ## Design Goals
 
@@ -22,6 +22,22 @@ The **Workflow Update Sync Hook** (`workflow-update-sync.mjs`) is a lightweight,
 
 ## How It Works
 
+```mermaid
+flowchart LR
+    A["Read active plan"] --> B["Extract phase/step headers"]
+    B --> C["Extract downstream trackers"]
+    C --> D{"Advancement or hook-check?"}
+    D -- "advance" --> E["Find current WIP + next PLANNED"]
+    D -- "hook-check" --> F["Verify current WIP only"]
+    E --> G{"Next step exists?"}
+    G -- "yes" --> H["Update markers & evidence"]
+    G -- "no" --> I["phase-complete"]
+    F --> J["verified / blocked"]
+    H --> K["Return syncEvent + downstreamTrackers"]
+    I --> K
+    J --> K
+```
+
 ### 1. Plan Parsing
 
 The hook reads the active plan file and extracts all phase/step entries using a markdown header regex pattern:
@@ -34,7 +50,20 @@ Matches: #### Step 05 — Title text [WIP|PLANNED|DONE]
 
 For each match, the hook stores: `{ phase, step, title, status, lineNumber, originalLine }`
 
-### 2. State Detection
+### 2. Downstream Tracker Extraction
+
+After parsing the plan body, the hook extracts downstream tracker plans so that every sync event carries cross-plan handoff visibility. It reuses `extractDownstreamTrackers` from `customization-utils.mjs`, which:
+
+1. Scans the plan text for `plans/` Markdown references (`plans/<Name>.md`).
+2. Normalizes each match to a repo-relative path.
+3. Drops the active plan itself so a plan never lists itself as its own downstream.
+4. Drops `plans/README.md`, `plans/Roadmap.md`, and any `plans/completed/` archive.
+5. Verifies that the remaining candidates exist on disk.
+6. Returns a sorted array of downstream tracker paths.
+
+The resulting `downstreamTrackers` array is included in the JSON `syncEvent` so MCP-aware callers can confirm which benchmark or dependency trackers are linked from the active plan without re-scanning the markdown manually.
+
+### 3. State Detection
 
 The hook identifies:
 - **Current [WIP] step**: The single active step in the plan
@@ -115,18 +144,22 @@ Workflow sync: Advanced Phase 6 Step 5 → [DONE]; Phase 6 Step 6 → [WIP]
 {
   "ok": true,
   "pass": true,
-  "timestamp": "2026-05-30",
+  "timestamp": "YYYY-MM-DD",
   "plan": {
-    "path": "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md",
+    "path": "plans/My_Plan.md",
     "status": "WIP"
   },
   "syncEvent": {
-    "currentWipStep": "Phase 6 Step 5",
-    "nextPlannedStep": "Phase 6 Step 6",
+    "currentWipStep": "Phase N Step M",
+    "nextPlannedStep": "Phase N Step M+1",
     "actionTaken": "advance",
-    "reason": "Phase 6 Step 5 is [WIP]; next step is [PLANNED]. Ready to advance."
+    "reason": "Phase N Step M is [WIP]; next step is [PLANNED]. Ready to advance.",
+    "downstreamTrackers": [
+      "plans/Downstream_Tracker_A.md",
+      "plans/Downstream_Tracker_B.md"
+    ]
   },
-  "evidence": "Workflow sync: Advanced Phase 6 Step 5 → [DONE]; Phase 6 Step 6 → [WIP]",
+  "evidence": "Workflow sync: Advanced Phase N Step M → [DONE]; Phase N Step M+1 → [WIP]",
   "summaryText": "Workflow update sync: advance"
 }
 ```
@@ -171,8 +204,8 @@ The hook requires (or creates) a `### Latest validation evidence` section in the
 **When to run:** After a step completes and manual confirmation is ready
 
 ```bash
-# After Phase 6 Step 05 [WIP] completion is confirmed:
-node .github/hooks/workflow-update-sync.mjs --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+# After the current [WIP] step completion is confirmed:
+node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md
 ```
 
 **Pros:**
@@ -202,7 +235,7 @@ node .github/hooks/workflow-update-sync.mjs --json --hook-check
 - Does not advance steps on its own
 - Depends on the workflow MCP plan binding being correct
 
-### Option 3: CI Post-Phase Gate (Future, if appropriate)
+### Option 3: CI Post-Phase Gate
 
 **When to run:** After final validation gate passes for a completed phase
 
@@ -212,7 +245,7 @@ node .github/hooks/workflow-update-sync.mjs --json --hook-check
   if: steps.final-validation.outcome == 'success'
   run: |
     node .github/hooks/workflow-update-sync.mjs \
-      --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md \
+      --plan=plans/My_Plan.md \
       --json
 ```
 
@@ -250,49 +283,45 @@ node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md
 ### Test Dry-Run (preview changes without writing)
 
 ```bash
-node .github/hooks/workflow-update-sync.mjs --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md --dry-run
+node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md --dry-run
 ```
 
 ### Test Idempotency
 
 ```bash
 # Run once
-node .github/hooks/workflow-update-sync.mjs --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md
 
 # Run again (should detect new [WIP] step)
-node .github/hooks/workflow-update-sync.mjs --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md
 
 # Run again (should block when no next step)
-node .github/hooks/workflow-update-sync.mjs --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md
 ```
 
 ### Test JSON Output
 
 ```bash
-node .github/hooks/workflow-update-sync.mjs --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md --json | head -20
+node .github/hooks/workflow-update-sync.mjs --plan=plans/My_Plan.md --json | head -20
 ```
 
 ### Test Against Live Plan (Revert to Original)
 
 ```bash
 # After testing, revert to original state
-git checkout plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
+git checkout plans/My_Plan.md
 ```
 
-## Current Status
+## Behavioral Guarantees
 
-**Implementation:** ✅ Complete and tested
+The hook provides the following invariants regardless of invocation count or caller:
 
-**Verification:**
-- ✅ Regex pattern correctly matches plan step headers
-- ✅ Plan text replacement works without side effects
-- ✅ Validation evidence is appended correctly
-- ✅ Idempotency verified across 3+ sequential runs
-- ✅ Dry-run mode shows expected changes without writing
-- ✅ JSON output is valid and structured
-- ✅ Text output is human-readable
-- ✅ Error handling covers edge cases
-- ✅ Exit codes are correct (0 = success, 1 = error)
+- **Single-step boundary**: Only the immediate next step is ever advanced; future steps stay untouched.
+- **Idempotence**: Repeated invocations read the current file state and produce the same action class for that state. The result is deterministic, so running the hook twice on the same file state does not corrupt the plan. See [Idempotence (Wikipedia)](https://en.wikipedia.org/wiki/Idempotence) for the CS background.
+- **Evidence preservation**: Every advancing invocation appends a timestamped entry to the plan's `### Latest validation evidence` section before writing.
+- **Non-mutating preview**: `--dry-run` reports the same `syncEvent` the real run would produce without modifying the plan file.
+- **Graceful phase boundaries**: When no next [PLANNED] step exists, the hook returns `phase-complete` rather than an error.
+- **Downstream visibility**: Every JSON report includes `syncEvent.downstreamTrackers` so callers can see linked tracker plans without re-parsing the markdown.
 
 ## Known Limitations
 
@@ -304,13 +333,15 @@ git checkout plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md
 
 4. **No remote MCP calls**: The hook reads the plan file from disk but does not query `neataptic-workflow-mcp` at runtime. It uses the plan file as the source of truth. If MCP state diverges, manual reconciliation is needed.
 
-## Future Enhancements
+## Possible Extensions
 
-1. **MCP snapshot comparison**: Compare plan file state with `neataptic-workflow-mcp` snapshot and report divergence
-2. **Phase auto-transition**: Detect when a phase is complete and auto-transition to Phase 1 Step 1 of the next phase
-3. **Multi-plan support**: Extend to synchronize multiple plans in a coordinated workflow
-4. **Slack/email notifications**: Send notifications when steps advance
-5. **Git commit integration**: Automatically commit plan changes with descriptive commit messages
+These changes are not currently implemented. Each trades additional automation against the current invariant of explicit, bounded advancement:
+
+- **MCP snapshot comparison**: Cross-check the plan file against `neataptic-workflow-mcp` and surface divergence. Tradeoff: adds a runtime dependency on the MCP service for a file-first tool.
+- **Phase auto-transition**: When the last step of a phase is marked [DONE], advance to Phase N+1 Step 1 automatically. Tradeoff: removes the explicit operator decision point at phase boundaries.
+- **Coordinated multi-plan sync**: Advance or verify several linked plans in one invocation. Tradeoff: increases blast radius and ordering complexity.
+- **External notifications**: Send Slack or email alerts when steps advance. Tradeoff: couples the hook to an external service and introduces delivery failure modes.
+- **Automatic commits**: Commit plan changes with a descriptive message after advancement. Tradeoff: turns a read-mostly hook into a write actor that needs Git authentication and rollback handling.
 
 ## See Also
 

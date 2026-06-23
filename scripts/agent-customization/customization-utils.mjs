@@ -646,3 +646,41 @@ export function extractStatus(text) {
       ?.status ?? null
   );
 }
+
+/**
+ * Extracts downstream tracker plan paths referenced in a plan body.
+ *
+ * Scans the plan text for repo-relative plans markdown references, normalizes
+ * them, and returns the set of existing tracker files that are neither the
+ * active plan itself nor index/roadmap/completed archive files.
+ *
+ * @param text - Plan document body text to scan.
+ * @param activePlanPath - Repo-relative path of the plan being analyzed.
+ * @returns Sorted array of downstream tracker paths.
+ */
+export async function extractDownstreamTrackers(text, activePlanPath) {
+  const normalizedActive = normalizePath(activePlanPath).replace(/^\.\//, '');
+  const rawMatches = [...text.matchAll(/\bplans\/[A-Za-z0-9_\-\/]+\.md\b/g)];
+  const candidates = [
+    ...new Set(
+      rawMatches
+        .map((match) => normalizePath(match[0]))
+        .filter((path) => path !== normalizedActive),
+    ),
+  ];
+
+  const downstream = [];
+  for (const candidate of candidates) {
+    if (candidate === 'plans/README.md' || candidate === 'plans/Roadmap.md') {
+      continue;
+    }
+    if (candidate.includes('plans/completed/')) {
+      continue;
+    }
+    if (await fileExists(candidate)) {
+      downstream.push(candidate);
+    }
+  }
+
+  return downstream.toSorted();
+}

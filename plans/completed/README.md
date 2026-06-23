@@ -36,6 +36,7 @@ Archive selection guide:
 - [Evolution_Training_Interoperability_Contracts.md](Evolution_Training_Interoperability_Contracts.md): closed hybrid-interoperability baseline for deterministic parameter vectors, isolated fine-tuning, explicit hybrid persistence policy, root-facade exports, and the docs surface now consumed by the NEATchat follow-up.
 - [Memory_Optimization.md](Memory_Optimization.md): closed pre-NGE memory foundation baseline through Track 1 / Phase 10.
 - [NEAT_Genesis_EvoDevo.md](NEAT_Genesis_EvoDevo.md): closed NGE core baseline covering computation motifs, deterministic DNA development, lifecycle stages, assimilation, reproduction modes, scale validation, and the shared collective-intelligence core that downstream benchmark plans now consume.
+- [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md): closed NGE core readiness audit baseline — primitive-by-primitive readiness matrix, gap classification by owner boundary, first implementation tranche selection, and MCP-aware downstream benchmark synchronization. Core-first: demos are downstream e2e tests; racing is the first e2e proving ground.
 - [ONNX_EXPORT_PLAN.md](ONNX_EXPORT_PLAN.md): closed ONNX export/import baseline through the current Phase 9 compliance target, including binary-first runtime parity for the approved five-lane subset and the first named external binary import subset.
 - [Turnkey_Multithread_Evaluation_API.md](Turnkey_Multithread_Evaluation_API.md): closed Phase 4 ergonomic extraction baseline for capability probes, transport auto-selection, browser worker delivery helpers, reusable pools, ordered batch evaluation, and the NEAT population helper.
 - [Worker_Friendly_Network_Serialization_Fastpath.md](Worker_Friendly_Network_Serialization_Fastpath.md): closed Phase 4 transport substrate baseline for the shared inference IR, portable and transferable payloads, persistent channels, and shared-memory workers.
@@ -100,6 +101,7 @@ Trigger phrases:
 - neatchat live safety, live exchange safety gate, checkSafety, live flow safety, live-flow safety, neatChat-live-safety-red reopen: `plans/completed/neatChat-live-safety-red.plans.md`
 - neatchat memory, neatchat retrieval, local memory DB, conversation memory, memory services, memory IDB, neatChat local retrieval reopen: `plans/completed/NeatChat_Local_Retrieval_Memory.plans.md`
 - starter examples, learning path, helloNetwork, evolveXor, sequenceReset, browser quickstart, smoke validation reopen: `plans/completed/Interactive_Examples_and_Learning_Path.plans.md`
+- NGE core readiness reopen, NGE primitive audit reopen, NGE readiness matrix reopen, core-first NGE reopen, NGE gap classification reopen, NGE first tranche reopen, nge-adult readiness reopen, team-level fitness gap reopen, generation barriers gap reopen, deterministic evaluation packs gap reopen, NGE public API exposure reopen: `plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
 
 Archive rule:
 

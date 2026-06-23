@@ -24,7 +24,7 @@ frontmatter surface. They are noninteractive, JSON-capable, and idempotent.
 | `validate-skill-frontmatter.mjs` | `node scripts/agent-customization/validate-skill-frontmatter.mjs [--json]` | Validates required YAML frontmatter fields for all `SKILL.md` files |
 | `validate-sdlc-skill-coverage.mjs` | `node scripts/agent-customization/validate-sdlc-skill-coverage.mjs [--json]` | Confirms numbered SDLC orchestrators reference the expected canonical skills |
 | `validate-plan-phase-packets.mjs` | `node scripts/agent-customization/validate-plan-phase-packets.mjs [--json]` | Checks that active plan files have correctly structured phase step packets |
-| `validate-plan-sync.mjs` | `node scripts/agent-customization/validate-plan-sync.mjs --plan=<path> [--json]` | Validates a single plan's registration in `plans/README.md` and `plans/Roadmap.md` |
+| `validate-plan-sync.mjs` | `node scripts/agent-customization/validate-plan-sync.mjs --plan=<path> [--json]` | Validates a single plan's registration in `plans/README.md` and `plans/Roadmap.md`, and emits the linked `downstreamTrackers` for cross-plan handoff visibility |
 | `validate-numbered-agent-structured-v1-output.mjs` | `node scripts/agent-customization/validate-numbered-agent-structured-v1-output.mjs [--json]` | Validates that numbered SDLC agents output a correctly structured `structured-v1` block |
 
 ### Inventory and reporting

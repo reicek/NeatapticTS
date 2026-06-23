@@ -18,10 +18,11 @@
  * Implementation approach:
  * 1. Read the active plan file from `neataptic-workflow-mcp`
  * 2. Extract current [WIP] step and identify the next [PLANNED] step in sequence
- * 3. Detect if the MCP snapshot shows a different active step than the plan
- * 4. If they diverge, update the plan file to align with MCP state
- * 5. Record the sync event in the validation evidence section
- * 6. Return structured evidence { pass, evidence, timestamp, syncedSteps }
+ * 3. Extract downstream tracker plans referenced in the plan body for handoff visibility
+ * 4. Detect if the MCP snapshot shows a different active step than the plan
+ * 5. If they diverge, update the plan file to align with MCP state
+ * 6. Record the sync event in the validation evidence section
+ * 7. Return structured evidence { pass, evidence, timestamp, syncedSteps, downstreamTrackers }
  *
  * Limitations:
  * - Only advances a single step per invocation (idempotent boundary)
@@ -41,7 +42,8 @@
  *       "currentWipStep": "Phase N Step MM",
  *       "nextPlannedStep": "Phase N Step MM+1" | null,
  *       "actionTaken": "advanced"|"already-in-sync"|"verified"|"phase-complete"|"blocked",
- *       "reason": "..."
+ *       "reason": "...",
+ *       "downstreamTrackers": ["plans/Linked_Tracker.md", ...]
  *     },
  *     "evidence": "Hook sync evidence text"
  *   }
@@ -50,6 +52,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { extractDownstreamTrackers } from '../../scripts/agent-customization/customization-utils.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const cwd = process.cwd();
@@ -90,10 +93,16 @@ function resolveWorkflowPlanPath() {
   }
 
   try {
-    const configPayload = JSON.parse(fs.readFileSync(workflowMcpConfigPath, 'utf8'));
-    const workflowArgs = configPayload?.servers?.['neataptic-workflow-mcp']?.args;
+    const configPayload = JSON.parse(
+      fs.readFileSync(workflowMcpConfigPath, 'utf8'),
+    );
+    const workflowArgs =
+      configPayload?.servers?.['neataptic-workflow-mcp']?.args;
     const planArgument = Array.isArray(workflowArgs)
-      ? workflowArgs.find((argument) => typeof argument === 'string' && argument.startsWith('--plan='))
+      ? workflowArgs.find(
+          (argument) =>
+            typeof argument === 'string' && argument.startsWith('--plan='),
+        )
       : null;
     return typeof planArgument === 'string' && planArgument.trim()
       ? planArgument.slice('--plan='.length)
@@ -168,7 +177,7 @@ function extractPhaseSteps(text) {
     // Match: #### Step 01 — ... [WIP|PLANNED|DONE]
     // or: ##### Packet 1 — ... [WIP|PLANNED|DONE]
     const match = line.match(
-      /^#{4,5}\s+(?:Step|Packet)\s+(\d+)\s+(?:—|-)\s+(.+)\s\[([A-Z]+)\]/
+      /^#{4,5}\s+(?:Step|Packet)\s+(\d+)\s+(?:—|-)\s+(.+)\s\[([A-Z]+)\]/,
     );
     if (match) {
       const stepNum = parseInt(match[1], 10);
@@ -214,12 +223,14 @@ function findCurrentWipStep(steps) {
 function findNextPlannedStep(steps, currentWip) {
   if (!currentWip) return null;
 
-  return steps.find(
-    (s) =>
-      s.phase === currentWip.phase &&
-      s.step === currentWip.step + 1 &&
-      s.status === 'PLANNED'
-  ) || null;
+  return (
+    steps.find(
+      (s) =>
+        s.phase === currentWip.phase &&
+        s.step === currentWip.step + 1 &&
+        s.status === 'PLANNED',
+    ) || null
+  );
 }
 
 // ============================================================================
@@ -259,7 +270,8 @@ function determineHookCheckAction(currentWip, nextPlanned) {
   if (!currentWip) {
     return {
       action: 'blocked',
-      reason: 'No [WIP] step found in plan. Cannot verify hook-bound workflow state.',
+      reason:
+        'No [WIP] step found in plan. Cannot verify hook-bound workflow state.',
     };
   }
 
@@ -318,7 +330,6 @@ function updateYamlStatusForStep(text, phase, step, fromStatus, toStatus) {
   return text; // no matching block found; caller records this as a gap
 }
 
-
 function applySyncToPlanText(text, currentWip, nextPlanned) {
   let updated = text;
   let changed = false;
@@ -333,7 +344,11 @@ function applySyncToPlanText(text, currentWip, nextPlanned) {
     }
     // Also update the YAML status: field inside the step packet code block
     const afterYaml = updateYamlStatusForStep(
-      updated, currentWip.phase, currentWip.step, '[WIP]', '[DONE]'
+      updated,
+      currentWip.phase,
+      currentWip.step,
+      '[WIP]',
+      '[DONE]',
     );
     if (afterYaml !== updated) {
       updated = afterYaml;
@@ -351,7 +366,11 @@ function applySyncToPlanText(text, currentWip, nextPlanned) {
     }
     // Also update the YAML status: field inside the step packet code block
     const afterYaml = updateYamlStatusForStep(
-      updated, nextPlanned.phase, nextPlanned.step, '[PLANNED]', '[WIP]'
+      updated,
+      nextPlanned.phase,
+      nextPlanned.step,
+      '[PLANNED]',
+      '[WIP]',
     );
     if (afterYaml !== updated) {
       updated = afterYaml;
@@ -391,15 +410,16 @@ function appendValidationEvidence(text, evidence, timestamp) {
   const firstBulletIndex = afterSection.indexOf('\n-');
   if (firstBulletIndex === -1) {
     // No bullet yet; add one
-    return text.replace(
-      section,
-      `${section}\n\n- ${timestamp}: ${evidence}`
-    );
+    return text.replace(section, `${section}\n\n- ${timestamp}: ${evidence}`);
   }
 
   // Insert before the first bullet
   const insertPos = sectionIndex + section.length + firstBulletIndex + 1; // +1 for the \n
-  return text.slice(0, insertPos) + `- ${timestamp}: ${evidence}\n` + text.slice(insertPos);
+  return (
+    text.slice(0, insertPos) +
+    `- ${timestamp}: ${evidence}\n` +
+    text.slice(insertPos)
+  );
 }
 
 // ============================================================================
@@ -434,6 +454,10 @@ Options:
     const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const planText = await readWorkspaceFile(options.plan);
     const planStatus = extractStatus(planText);
+    const downstreamTrackers = await extractDownstreamTrackers(
+      planText,
+      options.plan,
+    );
 
     // Extract phase/step entries
     const allSteps = extractPhaseSteps(planText);
@@ -454,6 +478,7 @@ Options:
         : null,
       actionTaken: action,
       reason,
+      downstreamTrackers,
     };
 
     let updatedPlanText = planText;
@@ -464,7 +489,7 @@ Options:
       const { updatedText, changed, summary } = applySyncToPlanText(
         planText,
         currentWip,
-        nextPlanned
+        nextPlanned,
       );
 
       if (changed) {
@@ -473,7 +498,11 @@ Options:
         evidence = `Workflow sync: ${summary}`;
 
         // Then append validation evidence to the updated text
-        updatedPlanText = appendValidationEvidence(updatedPlanText, evidence, timestamp);
+        updatedPlanText = appendValidationEvidence(
+          updatedPlanText,
+          evidence,
+          timestamp,
+        );
         changesMade = true;
       }
     } else if (action === 'already-in-sync') {
@@ -501,9 +530,7 @@ Options:
       dryRun: options.dryRun,
       summaryText: `Workflow update sync: ${syncEvent.actionTaken}${
         options.hookCheck ? ' (hook-check)' : ''
-      }${
-        options.dryRun ? ' (dry-run)' : ''
-      }`,
+      }${options.dryRun ? ' (dry-run)' : ''}`,
     };
 
     writeReport(report, options);

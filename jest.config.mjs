@@ -14,10 +14,14 @@ const config = {
         '**/src/**/*.test.ts',
         '**/benchmarks/**/*.test.ts',
         '**/examples/**/*.test.ts',
+        '**/testing/**/*.test.ts',
       ],
       preset: 'ts-jest/presets/default-esm',
       testEnvironment: 'node',
       extensionsToTreatAsEsm: ['.ts'],
+      moduleNameMapper: {
+        '^neataptic$': '<rootDir>/src/neataptic.ts',
+      },
       transform: {
         '^.+\\.ts$': [
           'ts-jest',
@@ -163,9 +167,13 @@ const config = {
     '**/src/**/*.test.ts',
     '**/benchmarks/**/*.test.ts',
     '**/examples/**/*.test.ts',
+    '**/testing/**/*.test.ts',
   ],
   moduleFileExtensions: ['ts', 'js', 'mjs', 'cjs', 'json'],
   extensionsToTreatAsEsm: ['.ts'],
+  moduleNameMapper: {
+    '^neataptic$': '<rootDir>/src/neataptic.ts',
+  },
   transform: {
     '^.+\\.ts$': [
       'ts-jest',
