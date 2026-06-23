@@ -23,6 +23,8 @@ pnpm-debug.log*
 /ascii_maze_snapshots/
 data/semantic-index.sqlite
 data/embeddings.sqlite
+data/turso-replica.sqlite
+data/turso-replica.sqlite.backup-pre-migration
 data/*.sqlite-journal
 data/mcp-session-override.json
 data/hook-context-*.json
@@ -66,3 +68,8 @@ bench-browser/jest-*.html
 bench-browser/tmp-*.html
 benchmarks/asciiMaze.benchmark.results.
 .tmp_liquidcarrot_flappy
+
+# Trace storage (Chrome DevTools MCP performance traces)
+tmp/
+freshness-proof-*/
+tmp-feedback-*/

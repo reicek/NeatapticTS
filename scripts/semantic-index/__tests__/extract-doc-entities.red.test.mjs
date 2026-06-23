@@ -244,7 +244,7 @@ describe('extract-doc-entities', () => {
       // Use an actual plan file that exists in the repo.
       const documents = [
         {
-          filePath: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md',
+          filePath: 'plans/completed/Repo_Cortex_Advanced_RAG_Architecture.plans.md',
           family: 'plan',
         },
       ];
@@ -264,7 +264,7 @@ describe('extract-doc-entities', () => {
 
       const documents = [
         {
-          filePath: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md',
+          filePath: 'plans/completed/Repo_Cortex_Advanced_RAG_Architecture.plans.md',
           family: 'plan',
         },
       ];
@@ -289,7 +289,7 @@ describe('extract-doc-entities', () => {
 
       const documents = [
         {
-          filePath: 'plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md',
+          filePath: 'plans/completed/Repo_Cortex_Advanced_RAG_Architecture.plans.md',
           family: 'plan',
         },
       ];

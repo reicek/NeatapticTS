@@ -6,10 +6,11 @@
  * chunk and immediately recomputes the chunk's feedback boost score so that
  * subsequent searches can incorporate the new signal.
  */
-import Database from 'better-sqlite3';
-
-import { resolveDatabasePath } from './cortex-db.mjs';
-import { recordFeedbackEvent, updateFeedbackScores } from './feedback-core.mjs';
+import { getTursoClient } from './cortex-db.mjs';
+import {
+  recordFeedbackEventAsync,
+  updateFeedbackScoresAsync,
+} from './feedback-core.mjs';
 import { ErrorCodes, cortexError } from './cortex-error.mjs';
 
 /** Explicit feedback signal types accepted by the submit_feedback tool. */
@@ -51,43 +52,44 @@ export async function submitFeedback(options = {}) {
     );
   }
 
-  const db = new Database(resolveDatabasePath(options.databasePath));
-  try {
-    const chunkExists = db
-      .prepare('SELECT 1 FROM chunks WHERE chunk_id = ?')
-      .get(chunkId);
-    if (!chunkExists) {
-      throw cortexError(
-        ErrorCodes.MISSING_CHUNK_ID,
-        `chunk_id ${chunkId} does not exist.`,
-      );
-    }
+  const client = options.client ?? (await getTursoClient(options.databasePath));
 
-    const recorded = recordFeedbackEvent(db, {
-      chunk_id: chunkId,
-      signal_type: signalType,
-      signal_strength: options.signal_strength,
-      query: options.query,
-      agent_id: options.agent_id,
-      context: options.context,
-    });
-
-    const score = updateFeedbackScores(db, chunkId, Date.now());
-    const totalSignals = db
-      .prepare('SELECT COUNT(*) AS c FROM feedback_events WHERE chunk_id = ?')
-      .get(chunkId).c;
-
-    return {
-      chunk_id: chunkId,
-      signal_type: signalType,
-      signal_strength: recorded.signal_strength,
-      recorded: true,
-      feedback_boost_after: score.feedback_boost,
-      feedback_score: score.feedback_boost,
-      feedback_boost: score.feedback_boost,
-      total_signals: totalSignals,
-    };
-  } finally {
-    db.close();
+  const chunkResult = await client.execute({
+    sql: 'SELECT 1 FROM chunks WHERE chunk_id = ?',
+    args: [chunkId],
+  });
+  if (chunkResult.rows.length === 0) {
+    throw cortexError(
+      ErrorCodes.MISSING_CHUNK_ID,
+      `chunk_id ${chunkId} does not exist.`,
+    );
   }
+
+  const eventParams = {
+    chunk_id: chunkId,
+    signal_type: signalType,
+    signal_strength: options.signal_strength,
+    query: options.query,
+    agent_id: options.agent_id,
+    context: options.context,
+  };
+  const recorded = await recordFeedbackEventAsync(client, eventParams);
+
+  const score = await updateFeedbackScoresAsync(client, chunkId, Date.now());
+  const countResult = await client.execute({
+    sql: 'SELECT COUNT(*) AS c FROM feedback_events WHERE chunk_id = ?',
+    args: [chunkId],
+  });
+  const totalSignals = Number(countResult.rows[0].c);
+
+  return {
+    chunk_id: chunkId,
+    signal_type: signalType,
+    signal_strength: Number(recorded.signal_strength),
+    recorded: true,
+    feedback_boost_after: score ? score.feedback_boost : null,
+    feedback_score: score ? score.feedback_boost : null,
+    feedback_boost: score ? score.feedback_boost : null,
+    total_signals: totalSignals,
+  };
 }

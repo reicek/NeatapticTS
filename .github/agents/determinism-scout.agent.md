@@ -72,6 +72,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 6. Summarize the active claim, the missing tuple components, and the smallest
    useful handoff into `reproducibility-contracts`.
 
+## Determinism Check Patterns
+
+- **Same-seed verification:** Verify that the same seed produces identical output across runs. Use fixed seeds in test fixtures. Flag any non-deterministic ordering or floating-point drift.
+- **RNG state persistence:** Verify that RNG state is correctly saved and restored in checkpoints. Compare output before save and after restore with the same seed.
+- **Ordering drift:** Check whether array iteration order, Map/Set iteration, or async resolution order could introduce non-determinism. Flag unsorted iterations.
+- **Floating-point caveats:** Verify that floating-point operations produce identical results across runs on the same runtime. Flag operations that may differ across platforms (e.g., `Math.fround` vs native).
+- **Replay boundary:** Identify which operations are replay-safe (deterministic given same inputs) and which are not. Flag operations that depend on external state, timestamps, or randomness.
+- **Counter persistence:** Verify that internal counters (generation, evaluation count) are correctly persisted and restored. Mismatched counters break replay.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

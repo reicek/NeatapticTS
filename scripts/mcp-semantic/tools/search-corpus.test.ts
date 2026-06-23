@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createClient } from '@libsql/client';
 
 // Tests run from the repository root, so cwd is a stable anchor for repo-relative
 // paths without needing import.meta.url (which currently breaks ts-jest for the
@@ -119,7 +120,7 @@ describe('search-corpus.mjs classification-aware routing', () => {
   });
 
   describe('red exact symbol lookup contract', () => {
-    it('flags an exact symbol match when the query matches a known symbol_name', () => {
+    it('flags an exact symbol match when the query matches a known symbol_name', async () => {
       const result = runModuleEvaluation<{
         exact_symbol_match?: boolean;
         matchedSymbol?: string | null;
@@ -128,20 +129,20 @@ describe('search-corpus.mjs classification-aware routing', () => {
         import { mkdtemp, readFile } from 'node:fs/promises';
         import { tmpdir } from 'node:os';
         import path from 'node:path';
-        import Database from 'better-sqlite3';
+        import { createClient } from '@libsql/client';
         import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
 
         const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'search-corpus-exact-symbol-'));
         const databasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
-        const database = new Database(databasePath);
-        database.exec(await readFile('./scripts/semantic-index/schema-v2.sql', 'utf8'));
-        database.exec(\`
+        const database = createClient({ url: 'file:' + databasePath });
+        const schema = await readFile('./scripts/semantic-index/schema-turso.sql', 'utf8');
+        await database.executeMultiple(schema + \`
           INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
             VALUES (1, 'src/network.ts', 'ts-source', 1, 100, 'fixture-sha', 1);
           INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, depth, symbol_name)
             VALUES (1, 1, 0, 'activateNetwork', 'Exact symbol lookup fixture body.', 0, 31, 0, 'activateNetwork');
         \`);
-        database.close();
+        await database.close();
 
         const response = await searchCorpus({ databasePath, query: 'activateNetwork', use_dense: false });
 
@@ -225,14 +226,17 @@ describe('search-corpus.mjs classification-aware routing', () => {
  * caps are observable. Some chunks contain long body text so compact-mode
  * truncation is also observable.
  */
-function makeMultiChunkFixture(): { databasePath: string; tempDir: string } {
+async function makeMultiChunkFixture(): Promise<{
+  databasePath: string;
+  tempDir: string;
+}> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'search-corpus-defaults-red-'),
   );
   const databasePath = path.join(tempDir, 'corpus.sqlite');
-  const db = new (require('better-sqlite3'))(databasePath);
+  const db = createClient({ url: 'file:' + databasePath });
   try {
-    db.exec(`
+    await db.executeMultiple(`
       CREATE TABLE documents (
       doc_id INTEGER PRIMARY KEY,
       doc_family TEXT NOT NULL,
@@ -290,28 +294,24 @@ function makeMultiChunkFixture(): { databasePath: string; tempDir: string } {
       (6, 'neural network speciation guide part six compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding');
     `);
   } finally {
-    db.close();
+    await db.close();
   }
   return { databasePath, tempDir };
 }
 
 describe('search-corpus conservative default response sizes and compact mode', () => {
   describe('default result limit', () => {
-    it('defaults to at most five results', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('defaults to at most five results', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ limit: number }>(`
         import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
-        import fs from 'node:fs';
-
         const databasePath = ${JSON.stringify(databasePath)};
         const response = await searchCorpus({
           databasePath,
           query: 'neural network',
           use_dense: false,
         });
-
-        fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
         console.log(JSON.stringify({ limit: response.limit }));
       `);
 
@@ -325,21 +325,17 @@ describe('search-corpus conservative default response sizes and compact mode', (
       }
     });
 
-    it('caps the number of returned results to the default limit', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('caps the number of returned results to the default limit', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ resultCount: number }>(`
         import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
-        import fs from 'node:fs';
-
         const databasePath = ${JSON.stringify(databasePath)};
         const response = await searchCorpus({
           databasePath,
           query: 'neural network',
           use_dense: false,
         });
-
-        fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
         console.log(JSON.stringify({ resultCount: response.results.length }));
       `);
 
@@ -355,13 +351,11 @@ describe('search-corpus conservative default response sizes and compact mode', (
   });
 
   describe('compact mode', () => {
-    it('strips non-essential metadata fields from results', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('strips non-essential metadata fields from results', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ allStripped: boolean }>(`
         import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
-        import fs from 'node:fs';
-
         const databasePath = ${JSON.stringify(databasePath)};
         const response = await searchCorpus({
           databasePath,
@@ -379,8 +373,6 @@ describe('search-corpus conservative default response sizes and compact mode', (
         const allStripped = response.results.every((result) =>
           nonEssential.every((key) => !(key in result)),
         );
-
-        fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
         console.log(JSON.stringify({ allStripped }));
       `);
 
@@ -394,13 +386,11 @@ describe('search-corpus conservative default response sizes and compact mode', (
       }
     });
 
-    it('truncates result text to the compact threshold', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('truncates result text to the compact threshold', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ maxTextLength: number }>(`
         import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
-        import fs from 'node:fs';
-
         const databasePath = ${JSON.stringify(databasePath)};
         const response = await searchCorpus({
           databasePath,
@@ -413,8 +403,6 @@ describe('search-corpus conservative default response sizes and compact mode', (
           (max, result) => Math.max(max, result.text?.length ?? 0),
           0,
         );
-
-        fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
         console.log(JSON.stringify({ maxTextLength }));
       `);
 

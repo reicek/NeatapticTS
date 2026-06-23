@@ -4,6 +4,10 @@ description: 'Inventory and audit NeatapticTS agents and skills. Use when mappin
 argument-hint: 'Describe whether the audit is baseline, after an edit batch, strict target validation, or registration evidence.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - agent-frontmatter-standards
+  - skill-frontmatter-standards
+  - routing-optimization-policy
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,26 @@ This skill produces a structured snapshot of all agents and skills in the Neatap
 - When preparing validation evidence for a plan tracker or session handoff.
 - When investigating an unexpected routing result and needing to see the full agent graph.
 - When strict validation is expected to pass and you want confirmation that the eight-agent SDLC surface is correct.
+
+
+## When NOT to use
+
+Do NOT use for validating a single agent file - use `agent-frontmatter-standards` instead. Do NOT use for skill frontmatter - use `skill-frontmatter-standards` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Run inventory script"] --> B["Count agents, skills, tiers"]
+    B --> C["Compare to routing table"]
+    C --> D{"Counts match?"}
+    D -- "Yes" --> E["Audit complete"]
+    D -- "No" --> F["Identify drift source"]
+    F --> G["Fix frontmatter or regenerate table"]
+    G --> H["Re-run inventory"]
+    H --> D
+```
 
 ## Task Packet
 
@@ -43,6 +67,41 @@ Record in: <plan file path or chat summary>
 6. Compare user-invocable agent count, skill count, graph errors, and frontmatter warnings against the expected baseline or target.
 7. Note any expected pre-migration drift explicitly so it is not treated as a defect.
 8. Summarize counts, errors, and drift in the active plan or session handoff note.
+
+
+## Why This Matters
+
+Each inventory script serves a specific purpose in the customization pipeline. The inventory script counts agents, skills, and tiers from live frontmatter - it is the ground truth for the routing table. When inventory drifts from the generated routing table, agents may be misrouted, invisible to delegation, or silently dropped from CI validation. Running the audit after any customization change catches drift before it becomes a silent routing failure.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Inventory audit"] --> B{"When?"}
+    B -- "Before changes" --> C["Baseline audit"]
+    B -- "After edit batch" --> D["Post-edit audit"]
+    B -- "Final validation" --> E["Strict audit"]
+    C --> F["Record counts"]
+    D --> F
+    E --> G["Confirm eight-agent surface"]
+```
+
+## Before / After Examples
+
+**Before (incomplete report):**
+```text
+Audit done. 8 agents found.
+```
+
+**After (complete report):**
+```text
+Baseline audit:
+- User-invocable agents: 8
+- Skills: 24
+- Graph errors: 0
+- Frontmatter warnings: 0
+- Drift from routing table: none
+```
 
 ## Guardrails
 

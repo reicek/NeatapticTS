@@ -7,52 +7,50 @@
  * error taxonomy.
  */
 
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import Database from 'better-sqlite3';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-async function readSchema() {
-  const schemaPath = path.join(__dirname, '../../semantic-index/schema-v2.sql');
-  return readFile(schemaPath, 'utf8');
-}
+import { createClient } from '@libsql/client';
+import { readCorpusSchema, splitSqlStatements } from './turso-test-helpers.mjs';
 
 async function setupDb() {
   const tempDir = await mkdtemp(
     path.join(tmpdir(), 'traverse-graph-harden-test-'),
   );
   const dbPath = path.join(tempDir, 'test.sqlite');
-  const db = new Database(dbPath);
-  db.exec(await readSchema());
-  db.exec(`
+  const client = createClient({ url: 'file:' + dbPath });
+  const schemaSql = await readCorpusSchema();
+  for (const stmt of splitSqlStatements(schemaSql)) {
+    await client.execute(stmt);
+  }
+  await client.execute(`
     INSERT INTO documents (file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
     VALUES ('src/graph.ts', 'ts-source', 0, 100, 'a', 1);
   `);
-  const docId = db.prepare('SELECT doc_id FROM documents').get().doc_id;
-  db.exec(`
-    INSERT INTO entities (entity_id, entity_type, name, qualified_name, doc_id, file_path)
+  const docResult = await client.execute('SELECT doc_id FROM documents');
+  const docId = docResult.rows[0].doc_id;
+  await client.execute({
+    sql: `INSERT INTO entities (entity_id, entity_type, name, qualified_name, doc_id, file_path)
     VALUES
-      (1, 'function', 'foo', 'src.graph.foo', ${docId}, 'src/graph.ts'),
-      (2, 'function', 'bar', 'src.graph.bar', ${docId}, 'src/graph.ts'),
-      (3, 'function', 'baz', 'src.graph.baz', ${docId}, 'src/graph.ts'),
-      (4, 'function', 'qux', 'src.graph.qux', ${docId}, 'src/graph.ts');
-  `);
-  db.exec(`
+      (?, 'function', 'foo', 'src.graph.foo', ?, 'src/graph.ts'),
+      (?, 'function', 'bar', 'src.graph.bar', ?, 'src/graph.ts'),
+      (?, 'function', 'baz', 'src.graph.baz', ?, 'src/graph.ts'),
+      (?, 'function', 'qux', 'src.graph.qux', ?, 'src/graph.ts')`,
+    args: [1, docId, 2, docId, 3, docId, 4, docId],
+  });
+  await client.execute(`
     INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence)
     VALUES
       (1, 2, 'depends-on', 'high'),
       (2, 3, 'depends-on', 'medium'),
       (3, 4, 'depends-on', 'low');
   `);
-  db.close();
-  return { dbPath, tempDir };
+  return { client, dbPath, tempDir };
 }
 
-function teardown(tempDir) {
-  return rm(tempDir, { recursive: true, force: true });
+async function teardown(client, tempDir) {
+  await client.close();
+  await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }
 
 describe('traverse-graph hardened', () => {
@@ -60,47 +58,47 @@ describe('traverse-graph hardened', () => {
     it('rejects missing seed_query and seed_names with SEED_REQUIRED', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
-        await expect(
-          traverseGraphHandler({ databasePath: dbPath }),
-        ).rejects.toThrow(/SEED_REQUIRED/);
+        await expect(traverseGraphHandler({ client })).rejects.toThrow(
+          /SEED_REQUIRED/,
+        );
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
 
     it('rejects max_hops greater than 4 with INVALID_MAX_HOPS', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         await expect(
           traverseGraphHandler({
-            databasePath: dbPath,
+            client,
             seed_names: ['src.graph.foo'],
             max_hops: 5,
           }),
         ).rejects.toThrow(/INVALID_MAX_HOPS/);
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
 
     it('rejects max_hops of zero with INVALID_MAX_HOPS', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         await expect(
           traverseGraphHandler({
-            databasePath: dbPath,
+            client,
             seed_names: ['src.graph.foo'],
             max_hops: 0,
           }),
         ).rejects.toThrow(/INVALID_MAX_HOPS/);
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
   });
@@ -109,10 +107,10 @@ describe('traverse-graph hardened', () => {
     it('returns graph_state and traversal_stats for a populated graph', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const result = await traverseGraphHandler({
-          databasePath: dbPath,
+          client,
           seed_names: ['src.graph.foo'],
         });
 
@@ -128,17 +126,17 @@ describe('traverse-graph hardened', () => {
           }),
         );
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
 
     it('returns seed_entities for named seeds', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const result = await traverseGraphHandler({
-          databasePath: dbPath,
+          client,
           seed_names: ['src.graph.foo'],
         });
 
@@ -151,24 +149,24 @@ describe('traverse-graph hardened', () => {
           ]),
         );
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
 
     it('returns edges between discovered entities', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const result = await traverseGraphHandler({
-          databasePath: dbPath,
+          client,
           seed_names: ['src.graph.foo'],
           max_hops: 2,
         });
 
         expect(result.relationships?.length).toBeGreaterThan(0);
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
   });
@@ -177,10 +175,10 @@ describe('traverse-graph hardened', () => {
     it('discovers direct neighbors at hop 1', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const result = await traverseGraphHandler({
-          databasePath: dbPath,
+          client,
           seed_names: ['src.graph.foo'],
           max_hops: 1,
         });
@@ -190,17 +188,17 @@ describe('traverse-graph hardened', () => {
           'src.graph.bar',
         ]);
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
 
     it('discovers neighbors of neighbors at hop 2', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const result = await traverseGraphHandler({
-          databasePath: dbPath,
+          client,
           seed_names: ['src.graph.foo'],
           max_hops: 2,
         });
@@ -210,7 +208,7 @@ describe('traverse-graph hardened', () => {
           'src.graph.baz',
         ]);
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
   });
@@ -219,10 +217,10 @@ describe('traverse-graph hardened', () => {
     it('respects max_results', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const result = await traverseGraphHandler({
-          databasePath: dbPath,
+          client,
           seed_names: ['src.graph.foo'],
           max_hops: 3,
           max_results: 2,
@@ -230,17 +228,17 @@ describe('traverse-graph hardened', () => {
 
         expect(result.entities.length).toBeLessThanOrEqual(2);
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
 
     it('respects confidence_filter', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const result = await traverseGraphHandler({
-          databasePath: dbPath,
+          client,
           seed_names: ['src.graph.foo'],
           max_hops: 3,
           confidence_filter: ['high', 'medium'],
@@ -252,17 +250,17 @@ describe('traverse-graph hardened', () => {
           ),
         ).toBe(true);
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
 
     it('unions seed_query and seed_names seeds', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const result = await traverseGraphHandler({
-          databasePath: dbPath,
+          client,
           seed_names: ['src.graph.foo'],
           seed_query: 'qux',
           max_hops: 1,
@@ -272,7 +270,7 @@ describe('traverse-graph hardened', () => {
         expect(seedIds).toContain(1);
         expect(seedIds).toContain(4);
       } finally {
-        await teardown(tempDir);
+        await teardown(client, tempDir);
       }
     });
   });
@@ -285,19 +283,18 @@ describe('traverse-graph hardened', () => {
         path.join(tmpdir(), 'traverse-graph-empty-test-'),
       );
       const dbPath = path.join(tempDir, 'empty.sqlite');
-      const db = new Database(dbPath);
-      db.exec('CREATE TABLE dummy (id INTEGER PRIMARY KEY)');
-      db.close();
+      const emptyClient = createClient({ url: 'file:' + dbPath });
+      await emptyClient.execute('CREATE TABLE dummy (id INTEGER PRIMARY KEY)');
 
       try {
         const result = await traverseGraphHandler({
-          databasePath: dbPath,
+          client: emptyClient,
           seed_names: ['src.graph.foo'],
         });
 
         expect(result.graph_state).toBe('not_built');
       } finally {
-        await teardown(tempDir);
+        await teardown(emptyClient, tempDir);
       }
     });
   });

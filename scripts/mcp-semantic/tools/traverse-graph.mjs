@@ -18,18 +18,8 @@
  *
  * @returns {object} Traversal results with entities, relationships, chunk_ids, doc_ids.
  */
-import Database from 'better-sqlite3';
-import { stat } from 'node:fs/promises';
-import path from 'node:path';
-
-import {
-  defaultDatabasePath,
-  repoRoot,
-} from '../../semantic-index/init-schema.mjs';
+import { getTursoClient } from './cortex-db.mjs';
 import { ErrorCodes, cortexError } from './cortex-error.mjs';
-
-/** In-memory graph cache keyed by resolved database path. */
-const graphCache = new Map();
 
 /** All valid relationship types. */
 const ALL_RELATIONSHIP_TYPES = [
@@ -138,24 +128,15 @@ export async function traverseGraph(options = {}) {
 
   const startTime = Date.now();
 
-  const databasePath = path.resolve(
-    options.databasePath ?? defaultDatabasePath,
-  );
-  const database = new Database(databasePath, {
-    readonly: true,
-    fileMustExist: false,
-  });
+  const client = options.client ?? (await getTursoClient(options.databasePath));
 
   // Check if graph tables exist.
-  const tableCheck = database
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('entities', 'edges')",
-    )
-    .all();
-  const existingTables = new Set(tableCheck.map((row) => row.name));
+  const tableResult = await client.execute({
+    sql: "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('entities', 'edges')",
+  });
+  const existingTables = new Set(tableResult.rows.map((row) => row.name));
 
   if (!existingTables.has('entities') || !existingTables.has('edges')) {
-    database.close();
     return {
       seed_entities: [],
       entities: [],
@@ -176,13 +157,12 @@ export async function traverseGraph(options = {}) {
     };
   }
 
-  // Phase 1: Load graph into memory (cached per DB path + file metadata).
-  const graph = await getCachedGraph(databasePath, database);
+  // Load graph via async client queries.
+  const graph = await loadGraphAsync(client);
 
   // Phase 2: Resolve seed entities.
   const seedEntities = resolveSeedEntities(graph, seedNames, seedQuery);
   if (seedEntities.length === 0) {
-    database.close();
     return {
       seed_entities: [],
       entities: [],
@@ -224,7 +204,6 @@ export async function traverseGraph(options = {}) {
   );
   const topEntities = rankedEntities.slice(0, maxResults);
 
-  // Phase 4: Collect associated chunks and docs.
   const topEntityIds = new Set(topEntities.map((e) => e.entity_id));
   const relevantEdges = allEdges.filter(
     (edge) =>
@@ -242,14 +221,12 @@ export async function traverseGraph(options = {}) {
 
   const queryTimeMs = Date.now() - startTime;
 
-  database.close();
-
   return {
     seed_entities: seedEntities.map((e) => formatEntity(e, distanceMap)),
     entities: topEntities.map((e) => formatEntity(e, distanceMap)),
     relationships: relevantEdges.map(formatEdge).filter(Boolean),
-    chunk_ids: [...new Set(chunkIds)],
-    doc_ids: [...new Set(docIds)],
+    chunk_ids: [...new Set(chunkIds.map(Number))],
+    doc_ids: [...new Set(docIds.map(Number))],
     hop_count: maxHops,
     total_discovered: discovered.length,
     returned_count: topEntities.length,
@@ -421,49 +398,54 @@ function resolveByQuery(graph, query) {
 }
 
 /**
- * Load the full entity/edge graph into memory with two batched SQL queries.
+ * Load the full entity/edge graph into memory with two batched async SQL queries.
  *
- * @param {object} database - SQLite database.
- * @returns {object} In-memory graph structure.
+ * @param {import('@libsql/client').Client} client - libSQL client.
+ * @returns {Promise<object>} In-memory graph structure.
  */
-function loadGraph(database) {
+async function loadGraphAsync(client) {
   const entities = new Map();
   const entitiesByQualifiedName = new Map();
 
-  const entityRows = database
-    .prepare('SELECT * FROM entities ORDER BY entity_id')
-    .all();
-  for (const entity of entityRows) {
-    entities.set(entity.entity_id, entity);
-    entitiesByQualifiedName.set(entity.qualified_name, entity);
+  const entityResult = await client.execute(
+    'SELECT * FROM entities ORDER BY entity_id',
+  );
+  for (const entity of entityResult.rows) {
+    const entityId = Number(entity.entity_id);
+    const normalized = { ...entity, entity_id: entityId };
+    entities.set(entityId, normalized);
+    entitiesByQualifiedName.set(entity.qualified_name, normalized);
   }
 
   const edgesBySource = new Map();
   const edgesByTarget = new Map();
   const allEdges = [];
 
-  const edgeRows = database
-    .prepare(
-      `SELECT e.*,
-           src.qualified_name AS source_qualified_name, src.entity_type AS source_entity_type,
-           tgt.qualified_name AS target_qualified_name, tgt.entity_type AS target_entity_type
+  const edgeResult = await client.execute({
+    sql: `SELECT e.*,
+            src.qualified_name AS source_qualified_name, src.entity_type AS source_entity_type,
+            tgt.qualified_name AS target_qualified_name, tgt.entity_type AS target_entity_type
     FROM edges e
     JOIN entities src ON e.source_entity_id = src.entity_id
     JOIN entities tgt ON e.target_entity_id = tgt.entity_id
     ORDER BY e.edge_id`,
-    )
-    .all();
+  });
 
-  for (const edge of edgeRows) {
-    allEdges.push(edge);
-    if (!edgesBySource.has(edge.source_entity_id)) {
-      edgesBySource.set(edge.source_entity_id, []);
+  for (const edge of edgeResult.rows) {
+    const normalizedEdge = {
+      ...edge,
+      source_entity_id: Number(edge.source_entity_id),
+      target_entity_id: Number(edge.target_entity_id),
+    };
+    allEdges.push(normalizedEdge);
+    if (!edgesBySource.has(normalizedEdge.source_entity_id)) {
+      edgesBySource.set(normalizedEdge.source_entity_id, []);
     }
-    edgesBySource.get(edge.source_entity_id).push(edge);
-    if (!edgesByTarget.has(edge.target_entity_id)) {
-      edgesByTarget.set(edge.target_entity_id, []);
+    edgesBySource.get(normalizedEdge.source_entity_id).push(normalizedEdge);
+    if (!edgesByTarget.has(normalizedEdge.target_entity_id)) {
+      edgesByTarget.set(normalizedEdge.target_entity_id, []);
     }
-    edgesByTarget.get(edge.target_entity_id).push(edge);
+    edgesByTarget.get(normalizedEdge.target_entity_id).push(normalizedEdge);
   }
 
   return {
@@ -473,34 +455,6 @@ function loadGraph(database) {
     edgesByTarget,
     allEdges,
   };
-}
-
-/**
- * Return a cached in-memory graph, reloading when the DB file changes.
- *
- * @param {string} databasePath - Resolved database path.
- * @param {object} database - SQLite database.
- * @returns {Promise<object>} In-memory graph.
- */
-async function getCachedGraph(databasePath, database) {
-  const fileStats = await stat(databasePath);
-  const cached = graphCache.get(databasePath);
-
-  if (
-    cached &&
-    cached.mtimeMs === fileStats.mtimeMs &&
-    cached.size === fileStats.size
-  ) {
-    return cached.graph;
-  }
-
-  const graph = loadGraph(database);
-  graphCache.set(databasePath, {
-    mtimeMs: fileStats.mtimeMs,
-    size: fileStats.size,
-    graph,
-  });
-  return graph;
 }
 
 /**

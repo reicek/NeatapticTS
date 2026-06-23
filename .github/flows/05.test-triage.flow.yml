@@ -21,7 +21,12 @@ gates:
 post-phase-fanout:
   - '04-implementing'
 
+loop-back: >
+  If green validation fails, return observations to the orchestrator for
+  a NEW 04-implementing instance.
+
 skills:
+  - 'execute'
   - 'triaging-test-failures'
   - 'test-fix-workflow'
   - 'running-unit-tests'
@@ -31,6 +36,9 @@ specialists:
   - 'green-test-failure-triage-coordinator'
   - 'code-quality-auditor'
   - 'test-coverage-analyst'
+  - 'performance-trace-specialist'
+  - 'browser-ui-specialist'
+  - 'browser-memory-specialist'
 
 timeout-minutes: 15
 

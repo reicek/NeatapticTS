@@ -36,13 +36,21 @@ import {
   fail,
 } from './cli-utils.mjs';
 import { repoRoot } from './init-schema.mjs';
+import { getTursoClient } from '../mcp-semantic/tools/cortex-db.mjs';
+import {
+  DEFAULT_MODEL_DIRECTORY,
+  DEFAULT_MODEL_ID,
+  createOnnxTextEmbedder,
+  normalizeEmbeddingVector,
+  readModelMeta,
+} from './embed-index.mjs';
 
 /** Default query file path. */
 export const DEFAULT_QUERY_FILE_PATH = path.join(
   repoRoot,
   'scripts',
   'semantic-index',
-  'eval-queries-v2.json',
+  'eval-queries.json',
 );
 
 /** Self-test query set used by {@link runSelfTest}. */
@@ -503,6 +511,337 @@ function formatTable(payload) {
   return lines.join('\n');
 }
 
+// ---------------------------------------------------------------------------
+// Recall benchmark — DiskANN vs brute-force (Phase 4 Step 06)
+// ---------------------------------------------------------------------------
+
+/** Default k for recall@k computation in the vector search benchmark. */
+const DEFAULT_RECALL_K = 10;
+
+/** Minimum recall@10 to pass the benchmark. */
+const DEFAULT_MIN_RECALL = 0.9;
+
+/** Maximum average latency in milliseconds to pass the benchmark. */
+const DEFAULT_MAX_LATENCY_MS = 50;
+
+/** Maximum heap delta in MB to pass the memory stability check. */
+const DEFAULT_MAX_HEAP_DELTA_MB = 50;
+
+/** Default query file for the recall benchmark (v1 20-query set). */
+const DEFAULT_RECALL_QUERY_FILE_PATH = path.join(
+  repoRoot,
+  'scripts',
+  'semantic-index',
+  'eval-queries.json',
+);
+
+/**
+ * Compute recall@k as the fraction of ANN top-k chunk IDs that also appear in
+ * the brute-force top-k set.
+ *
+ * Uses the standard definition:
+ * `recall@k = |ANN_top_k ∩ BF_top_k| / |BF_top_k|`
+ *
+ * When either set is empty, returns 0 to avoid division by zero.
+ *
+ * @param {number[]} annIds - Ordered chunk IDs from the ANN (vector_top_k) path.
+ * @param {number[]} bruteForceIds - Ordered chunk IDs from the brute-force path.
+ * @param {number} k - The k for recall@k.
+ * @returns {number} Recall score in [0, 1].
+ *
+ * @example
+ * ```js
+ * const recall = computeVectorRecall([1, 2, 3, 4, 5], [1, 2, 3, 4, 6], 5);
+ * // recall = 4 / 5 = 0.8
+ * ```
+ */
+export function computeVectorRecall(annIds, bruteForceIds, k) {
+  const annTopK = new Set(annIds.slice(0, k));
+  const bfTopK = new Set(bruteForceIds.slice(0, k));
+  if (annTopK.size === 0 || bfTopK.size === 0) return 0;
+  let intersection = 0;
+  for (const id of annTopK) {
+    if (bfTopK.has(id)) intersection += 1;
+  }
+  return intersection / bfTopK.size;
+}
+
+/**
+ * Run the DiskANN vector search recall and performance benchmark.
+ *
+ * For each query in the eval set:
+ *   1. Generate an embedding via the ONNX embedder (or a provided mock).
+ *   2. Run the ANN path (`vector_top_k`) and the brute-force path
+ *      (`vector_distance_cos`) against the same database.
+ *   3. Compute recall@k as the fraction of ANN top-k chunk IDs that match the
+ *      brute-force top-k chunk IDs.
+ *   4. Measure latency for both paths using `performance.now()`.
+ *
+ * Memory stability is verified by comparing `process.memoryUsage().heapUsed`
+ * before and after the benchmark run. A significant heap increase indicates
+ * embeddings are being loaded into JS memory (a regression of the server-side
+ * vector search design).
+ *
+ * When the DiskANN index is unavailable (e.g. in-memory test databases where
+ * `libsql_vector_idx` indexes are skipped), the ANN path fails and the
+ * benchmark records `ann_available: false`. In that case, recall is not
+ * meaningful and the `recall_pass` criterion is set to `null`.
+ *
+ * @param {object} options - Benchmark options.
+ * @param {object[]} [options.queries] - Eval query specs (uses eval-queries.json by default).
+ * @param {string} [options.queryFilePath] - Override the query file path.
+ * @param {import('@libsql/client').Client} [options.client] - Optional libSQL client (for testing).
+ * @param {string} [options.databasePath] - Database path override (when no client).
+ * @param {Function} [options.embedText] - Optional pre-created embedder function.
+ * @param {string} [options.modelDirectory] - Override model cache directory.
+ * @param {string} [options.modelId] - Override model identifier.
+ * @param {number} [options.k=10] - k for recall@k computation.
+ * @param {number} [options.minRecall=0.90] - Minimum recall@k to pass.
+ * @param {number} [options.maxLatencyMs=50] - Maximum average latency in ms to pass.
+ * @param {number} [options.maxHeapDeltaMb=50] - Maximum heap delta in MB to pass.
+ * @returns {Promise<object>} Benchmark report with recall, latency, memory, and pass/fail.
+ *
+ * @example
+ * ```js
+ * import { runRecallBenchmark } from './eval-runner.mjs';
+ * const report = await runRecallBenchmark({ databasePath: 'data/turso-replica.sqlite' });
+ * console.log(report.recall_at_k, report.latency_ms, report.heap_delta_mb);
+ * ```
+ */
+export async function runRecallBenchmark(options = {}) {
+  const k = Math.max(1, Math.trunc(Number(options.k ?? DEFAULT_RECALL_K)));
+  const minRecall = Number(options.minRecall ?? DEFAULT_MIN_RECALL);
+  const maxLatencyMs = Number(options.maxLatencyMs ?? DEFAULT_MAX_LATENCY_MS);
+  const maxHeapDeltaMb = Number(
+    options.maxHeapDeltaMb ?? DEFAULT_MAX_HEAP_DELTA_MB,
+  );
+
+  // Step 1: Load queries from file or use provided set.
+  let queries;
+  if (Array.isArray(options.queries)) {
+    queries = options.queries;
+  } else {
+    const queryFilePath = path.resolve(
+      options.queryFilePath ?? DEFAULT_RECALL_QUERY_FILE_PATH,
+    );
+    const text = await readFile(queryFilePath, 'utf8');
+    queries = JSON.parse(text);
+  }
+
+  // Step 2: Resolve embedder, model metadata, and database client.
+  const modelMeta = await readModelMeta({
+    modelDirectory: options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
+    modelMeta: options.modelMeta,
+  });
+  const dimension = Number(options.dimension ?? modelMeta.dimension ?? 0);
+  const modelId = String(
+    options.modelId ?? modelMeta.model_id ?? DEFAULT_MODEL_ID,
+  );
+
+  const embedText =
+    options.embedText ??
+    (await createOnnxTextEmbedder({
+      dimension,
+      modelDirectory: options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
+      modelId,
+    }));
+
+  const client = options.client ?? (await getTursoClient(options.databasePath));
+
+  // Step 3: Measure heap before the benchmark run.
+  const heapBefore = process.memoryUsage().heapUsed;
+
+  const perQueryReports = [];
+  let annAvailable = true;
+
+  try {
+    for (const querySpec of queries) {
+      const queryText = String(querySpec.query ?? '').trim();
+      if (!queryText) continue;
+
+      // Generate query embedding.
+      const rawEmbedding = await embedText({ text: queryText });
+      const queryEmbedding = normalizeEmbeddingVector(rawEmbedding, dimension);
+      const queryEmbeddingBuffer = Buffer.from(
+        queryEmbedding.buffer,
+        queryEmbedding.byteOffset,
+        queryEmbedding.byteLength,
+      );
+
+      // Run ANN path (vector_top_k) — try, catch for fallback detection.
+      const annResult = await runAnnQuery({
+        client,
+        queryEmbeddingBuffer,
+        k: k * 2,
+        modelId,
+      });
+      let annIds;
+      let annLatencyMs;
+      if (annResult.ok) {
+        annIds = annResult.ids;
+        annLatencyMs = annResult.latencyMs;
+      } else {
+        annAvailable = false;
+        annIds = [];
+        annLatencyMs = annResult.latencyMs;
+      }
+
+      // Run brute-force path (vector_distance_cos).
+      const bruteForceResult = await runBruteForceQuery({
+        client,
+        queryEmbeddingBuffer,
+        k,
+        modelId,
+      });
+      const bruteForceIds = bruteForceResult.ids;
+      const bruteForceLatencyMs = bruteForceResult.latencyMs;
+
+      const recall = computeVectorRecall(annIds, bruteForceIds, k);
+
+      perQueryReports.push({
+        query: queryText,
+        ann_chunk_ids: annIds.slice(0, k),
+        brute_force_chunk_ids: bruteForceIds.slice(0, k),
+        recall_at_k: recall,
+        ann_latency_ms: annLatencyMs,
+        brute_force_latency_ms: bruteForceLatencyMs,
+      });
+    }
+  } finally {
+    if (
+      typeof options.embedText?.release !== 'function' &&
+      typeof embedText?.release === 'function'
+    ) {
+      await embedText.release();
+    }
+  }
+
+  // Step 4: Measure heap after the benchmark run.
+  const heapAfter = process.memoryUsage().heapUsed;
+  const heapDeltaBytes = heapAfter - heapBefore;
+  const heapDeltaMb = heapDeltaBytes / (1024 * 1024);
+
+  // Step 5: Aggregate metrics.
+  const queryCount = perQueryReports.length;
+  const avgRecall =
+    queryCount > 0
+      ? perQueryReports.reduce((sum, report) => sum + report.recall_at_k, 0) /
+        queryCount
+      : 0;
+  const avgAnnLatency =
+    queryCount > 0
+      ? perQueryReports.reduce(
+          (sum, report) => sum + report.ann_latency_ms,
+          0,
+        ) / queryCount
+      : 0;
+  const avgBruteForceLatency =
+    queryCount > 0
+      ? perQueryReports.reduce(
+          (sum, report) => sum + report.brute_force_latency_ms,
+          0,
+        ) / queryCount
+      : 0;
+
+  // Step 6: Evaluate pass/fail criteria.
+  const recallPass = annAvailable ? avgRecall >= minRecall : null;
+  const latencyPass = avgAnnLatency < maxLatencyMs;
+  const memoryPass = heapDeltaMb < maxHeapDeltaMb;
+
+  return {
+    benchmark: 'recall-benchmark',
+    query_count: queryCount,
+    k,
+    ann_available: annAvailable,
+    recall_at_k: Math.round(avgRecall * 1000) / 1000,
+    ann_latency_ms: Math.round(avgAnnLatency * 1000) / 1000,
+    brute_force_latency_ms: Math.round(avgBruteForceLatency * 1000) / 1000,
+    heap_before_mb: Math.round((heapBefore / (1024 * 1024)) * 1000) / 1000,
+    heap_after_mb: Math.round((heapAfter / (1024 * 1024)) * 1000) / 1000,
+    heap_delta_mb: Math.round(heapDeltaMb * 1000) / 1000,
+    thresholds: {
+      min_recall: minRecall,
+      max_latency_ms: maxLatencyMs,
+      max_heap_delta_mb: maxHeapDeltaMb,
+    },
+    criteria: {
+      recall_pass: recallPass,
+      latency_pass: latencyPass,
+      memory_pass: memoryPass,
+    },
+    pass: recallPass !== false && latencyPass && memoryPass,
+    per_query: perQueryReports,
+  };
+}
+
+/**
+ * Run a single ANN (vector_top_k) query and measure latency.
+ *
+ * Tries `vector_top_k(chunks_embedding_idx, vector8(?), ?)` to retrieve
+ * approximate nearest neighbors from the DiskANN index. When the index is
+ * unavailable, the query fails and `ok` is set to `false`.
+ *
+ * @param {object} params - Query parameters.
+ * @param {import('@libsql/client').Client} params.client - libSQL client.
+ * @param {Buffer} params.queryEmbeddingBuffer - Float32 query embedding buffer.
+ * @param {number} params.k - Number of ANN candidates to retrieve.
+ * @param {string} params.modelId - Model identifier for embedding_model filter.
+ * @returns {Promise<{ ok: boolean, ids: number[], latencyMs: number }>}
+ */
+async function runAnnQuery({ client, queryEmbeddingBuffer, k, modelId }) {
+  const start = performance.now();
+  try {
+    const result = await client.execute({
+      sql: `
+        SELECT c.chunk_id
+        FROM vector_top_k(chunks_embedding_idx, vector8(?), ?) AS v
+        JOIN chunks c ON c.rowid = v.rowid
+        WHERE c.embedding IS NOT NULL AND c.embedding_model = ?
+      `,
+      args: [queryEmbeddingBuffer, k, modelId],
+    });
+    const ids = result.rows.map((row) => Number(row.chunk_id));
+    return { ok: true, ids, latencyMs: performance.now() - start };
+  } catch {
+    return { ok: false, ids: [], latencyMs: performance.now() - start };
+  }
+}
+
+/**
+ * Run a single brute-force (vector_distance_cos) query and measure latency.
+ *
+ * Queries all chunks with embeddings, computes cosine distance server-side,
+ * and orders by ascending distance. This is the ground-truth baseline for
+ * recall computation.
+ *
+ * @param {object} params - Query parameters.
+ * @param {import('@libsql/client').Client} params.client - libSQL client.
+ * @param {Buffer} params.queryEmbeddingBuffer - Float32 query embedding buffer.
+ * @param {number} params.k - Maximum results to return.
+ * @param {string} params.modelId - Model identifier for embedding_model filter.
+ * @returns {Promise<{ ids: number[], latencyMs: number }>}
+ */
+async function runBruteForceQuery({
+  client,
+  queryEmbeddingBuffer,
+  k,
+  modelId,
+}) {
+  const start = performance.now();
+  const result = await client.execute({
+    sql: `
+      SELECT c.chunk_id
+      FROM chunks c
+      WHERE c.embedding IS NOT NULL AND c.embedding_model = ?
+      ORDER BY vector_distance_cos(c.embedding, vector8(?))
+      LIMIT ?
+    `,
+    args: [modelId, queryEmbeddingBuffer, k],
+  });
+  const ids = result.rows.map((row) => Number(row.chunk_id));
+  return { ids, latencyMs: performance.now() - start };
+}
+
 /**
  * CLI entry point for the eval runner.
  *
@@ -527,6 +866,10 @@ export async function runCli(argv) {
         '--regression-threshold <n>     MRR@5 regression threshold (default: 0.01)',
         '--compare                     Run A/B comparison between two conditions',
         '--alpha-sweep <values>        Comma-separated alpha values to sweep',
+        '--recall-benchmark             Run DiskANN recall + latency benchmark vs brute-force',
+        '--k <n>                        k for recall@k (default: 10)',
+        '--min-recall <n>               Minimum recall@k to pass (default: 0.90)',
+        '--max-latency <n>             Maximum avg latency in ms (default: 50)',
         '--output <path>               Write full results to file (JSON)',
         '--json                        Emit JSON summary to stdout',
         '--help                        Show help and exit',
@@ -536,6 +879,32 @@ export async function runCli(argv) {
   }
 
   try {
+    if (args['recall-benchmark']) {
+      const report = await runRecallBenchmark({
+        queries: args['query-file']
+          ? JSON.parse(await readFile(path.resolve(args['query-file']), 'utf8'))
+          : undefined,
+        queryFilePath: args['query-file'],
+        databasePath: args.database,
+        k: args.k,
+        minRecall: args['min-recall'],
+        maxLatencyMs: args['max-latency'],
+      });
+      writeJsonOrText(report, Boolean(args.json), (payload) =>
+        [
+          `Recall Benchmark (k=${payload.k}, ${payload.query_count} queries)`,
+          `  ANN available:    ${payload.ann_available}`,
+          `  Recall@${payload.k}:       ${payload.recall_at_k}`,
+          `  ANN latency:      ${payload.ann_latency_ms}ms`,
+          `  BF latency:        ${payload.brute_force_latency_ms}ms`,
+          `  Heap delta:        ${payload.heap_delta_mb}MB`,
+          `  Pass:              ${payload.pass}`,
+        ].join('\n'),
+      );
+      if (!report.pass) process.exitCode = 1;
+      return;
+    }
+
     let conditions = args.condition ?? 'all';
     if (typeof conditions === 'string') conditions = [conditions];
     if (conditions.includes('all')) {

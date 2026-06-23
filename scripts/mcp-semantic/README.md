@@ -1,33 +1,62 @@
 # Repo Cortex MCP Server
 
-`neataptic-cortex-mcp` exposes the Repo Cortex semantic index as read-only MCP tools. It is a local `stdio` server over the repository's SQLite corpus index, so agents can search, load, and validate indexed repository context without walking the raw filesystem for every question.
+`neataptic-cortex-mcp` exposes the Repo Cortex semantic index as read-only MCP tools.
+It is an async Turso/libSQL-backed semantic corpus MCP server, so agents can search,
+load, and validate indexed repository context without walking the raw filesystem for
+every question. The driver is `@libsql/client` `createClient()` — fully async
+(Promise-based), never blocks the event loop.
 
-The server is intentionally bounded to repo-static and direct-MCP facts. It reads indexed files, chunk metadata, freshness proofs, and aggregate corpus counts from `data/semantic-index.sqlite`. It does not read live VS Code UI state, Copilot client state, selected agent state, tool-picker state, or model-selection state; those remain outside this direct MCP surface unless a future documented bridge supplies them with source and freshness metadata.
+The server is intentionally bounded to repo-static and direct-MCP facts. It reads
+indexed files, chunk metadata, freshness proofs, and aggregate corpus counts from
+the consolidated Turso corpus database (default local embedded replica at
+`data/turso-replica.sqlite`). It does not read live VS Code UI state, Copilot client state,
+selected agent state, tool-picker state, or model-selection state; those remain
+outside this direct MCP surface unless a future documented bridge supplies them
+with source and freshness metadata.
 
 ## Relationship to the MCP Server Set
 
 The workspace registers four sibling MCP servers. Repo Cortex adds semantic corpus access without replacing the workflow, validation, or gate servers.
 
-| Server | Boundary | What it answers |
-|---|---|---|
-| `neataptic-workflow-mcp` | Repo-static workflow context | Active plan and deterministic workflow inventory facts. |
-| `neataptic-validation-mcp` | Direct validation gate execution | Exact allow-listed validation commands from the active step packet. |
-| `neataptic-gate-mcp` | Release gate contracts | Gate metadata and contract-oriented release checks. |
-| `neataptic-cortex-mcp` | Repo-static semantic corpus | BM25 search, chunk/document loading, index freshness, and corpus statistics. |
+| Server                     | Boundary                         | What it answers                                                                                                                |
+| -------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `neataptic-workflow-mcp`   | Repo-static workflow context     | Active plan and deterministic workflow inventory facts.                                                                        |
+| `neataptic-validation-mcp` | Direct validation gate execution | Exact allow-listed validation commands from the active step packet.                                                            |
+| `neataptic-gate-mcp`       | Release gate contracts           | Gate metadata and contract-oriented release checks.                                                                            |
+| `neataptic-cortex-mcp`     | Repo-static semantic corpus      | Hybrid BM25 + dense vector search with RRF fusion, graph traversal, context assembly, freshness checks, and corpus statistics. |
 
 ## Index Configuration
 
-The server opens the semantic index in read-only mode. The MCP registration provides the default index path through `CORTEX_DB_PATH`:
+The server opens the Turso (libSQL) corpus database in async mode via
+`@libsql/client` `createClient()`. The primary configuration is through the
+`TURSO_DATABASE_URL` environment variable:
 
 ```json
 {
   "env": {
-    "CORTEX_DB_PATH": "${workspaceFolder}/data/semantic-index.sqlite"
+    "TURSO_DATABASE_URL": "file:${workspaceFolder}/data/turso-replica.sqlite"
   }
 }
 ```
 
-For direct script runs, you can also pass `--databasePath=<path>` or set `CORTEX_DB_PATH` in the environment. If the index is missing or stale, rebuild it from repository sources:
+Supported environment variables:
+
+| Variable              | Purpose                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TURSO_DATABASE_URL`  | Primary database URL. Use `file:./data/turso-replica.sqlite` (or `file:${workspaceFolder}/data/turso-replica.sqlite`) for a local embedded replica, or `libsql://<db>.turso.io` for cloud. |
+| `TURSO_AUTH_TOKEN`    | JWT auth token for cloud access (optional for local `file:` URLs).                                                                                                                         |
+| `TURSO_SYNC_URL`      | Remote sync URL for embedded replica mode (optional; when set, the local `file:` DB syncs from a remote Turso primary).                                                                    |
+| `TURSO_SYNC_INTERVAL` | Sync interval in seconds (optional, default 60).                                                                                                                                           |
+| `TURSO_CONCURRENCY`   | Max in-flight parallel search queries (optional, default 20).                                                                                                                              |
+
+**Fallback behavior:** When Turso is unreachable, an embedded replica (`file:` URL)
+continues serving reads locally with read-your-writes semantics. If no embedded
+replica is configured and the cloud primary is unreachable, search calls return an
+error.
+
+For direct script runs, you can also pass `--databasePath=<path>` or set
+`TURSO_DATABASE_URL` in the environment. If the index is missing or stale, rebuild
+it from repository sources:
 
 ```powershell
 node scripts/semantic-index/build-index.mjs
@@ -35,11 +64,16 @@ node scripts/semantic-index/build-index.mjs
 
 ## Tool Schemas and Examples
 
-The examples below show representative `tools/call` arguments and shortened outputs. Exact counts, chunk IDs, scores, and timestamps depend on the current `data/semantic-index.sqlite` build.
+The server exposes **18 MCP tools**. The examples below show representative
+`tools/call` arguments and shortened outputs. Exact counts, chunk IDs, scores, and
+timestamps depend on the current Turso corpus database build.
 
 ### `search_corpus`
 
-BM25 full-text search over indexed chunks with default-on hybrid dense reranking and compact, LLM-friendly output.
+BM25 full-text search over indexed chunks with default-on hybrid dense reranking
+and compact, LLM-friendly output. Hybrid ranking uses server-side Reciprocal Rank
+Fusion (RRF, k=60) — BM25 (FTS5) and dense vector results are fused server-side,
+not via a JS-side alpha blend.
 
 By default the MCP handler sets `compact: true`, so the response contains only the fields an agent typically needs for a relevance decision: `chunk_id`, `file_path`, `family`, `chunk_index`, `heading_path`, `context_header`, `symbol_name`, a truncated text snippet, the `score`, and any `ranking_explanation`. Set `compact: false` to receive the full per-result metadata. Every response also carries a `freshness` stanza that proves the index state (timestamp, stale flag, last indexed document, and an `mtime_ms`/`size`/`sha256` freshness proof).
 
@@ -50,17 +84,61 @@ Schema:
   "type": "object",
   "properties": {
     "query": { "type": "string" },
-    "limit": { "type": "number", "description": "Maximum result count (default 5, clamped to [1, 100])." },
-    "family": { "type": "string", "description": "Optional document family filter, e.g. src, examples, scripts, plans." },
-    "use_dense": { "type": "boolean", "default": true, "description": "Enable hybrid dense reranking when the index is warm." },
-    "alpha": { "type": "number", "description": "BM25/dense blend weight (0 = BM25 only, 1 = dense only)." },
-    "query_class": { "type": "string", "enum": ["simple_lookup", "cross_boundary", "multi_hop", "exploratory", "code_specific", "plan_specific"], "description": "Override query classification for routing." },
-    "classification_hints": { "type": "object", "description": "Optional overrides for classification-derived alpha and family." },
-    "expand_query": { "type": ["boolean", "string"], "description": "Enable query expansion: true for full expansion, 'domain-only' for domain associations only, false for no expansion." },
-    "use_rerank": { "type": "boolean", "default": false, "description": "Enable cross-encoder re-ranking of the top hybrid candidates." },
-    "rerank_candidates_count": { "type": "number", "description": "Number of hybrid candidates to feed the reranker (default 50)." },
-    "compact": { "type": "boolean", "default": true, "description": "When true, return only essential fields and truncate text snippets." },
-    "metadata": { "type": "object", "description": "Optional structured metadata filter predicate tree." }
+    "limit": {
+      "type": "number",
+      "description": "Maximum result count (default 5, clamped to [1, 100])."
+    },
+    "family": {
+      "type": "string",
+      "description": "Optional document family filter, e.g. src, examples, scripts, plans."
+    },
+    "use_dense": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable hybrid dense reranking when the index is warm."
+    },
+    "alpha": {
+      "type": "number",
+      "description": "BM25/dense blend weight (0 = BM25 only, 1 = dense only)."
+    },
+    "query_class": {
+      "type": "string",
+      "enum": [
+        "simple_lookup",
+        "cross_boundary",
+        "multi_hop",
+        "exploratory",
+        "code_specific",
+        "plan_specific"
+      ],
+      "description": "Override query classification for routing."
+    },
+    "classification_hints": {
+      "type": "object",
+      "description": "Optional overrides for classification-derived alpha and family."
+    },
+    "expand_query": {
+      "type": ["boolean", "string"],
+      "description": "Enable query expansion: true for full expansion, 'domain-only' for domain associations only, false for no expansion."
+    },
+    "use_rerank": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable cross-encoder re-ranking of the top hybrid candidates."
+    },
+    "rerank_candidates_count": {
+      "type": "number",
+      "description": "Number of hybrid candidates to feed the reranker (default 50)."
+    },
+    "compact": {
+      "type": "boolean",
+      "default": true,
+      "description": "When true, return only essential fields and truncate text snippets."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional structured metadata filter predicate tree."
+    }
   },
   "required": ["query"],
   "additionalProperties": false
@@ -123,7 +201,12 @@ Use `family` when the search should stay inside one indexed document family. Whe
 
 ### `search_context`
 
-Hybrid search plus context assembly. The tool runs a search, then stitches the best matching chunks into a single token-bounded context window suitable for a language-model prompt. It is the fastest way to turn a question into a compact block of relevant source text.
+Hybrid search plus context assembly. The tool runs a search, then stitches the best
+matching chunks into a single token-bounded context window suitable for a
+language-model prompt. Context assembly is performed server-side (SQL JOIN
+enrichment, GROUP BY dedup); budget enforcement and stitching are preserved
+client-side. It is the fastest way to turn a question into a compact block of
+relevant source text.
 
 The MCP handler defaults `compact` to `true` and `read_top_result` to `true`. The assembled `context` is always included; when `read_top_result` is true, `top_result` carries the full metadata for the best hit, and `follow_up_refs` lists related chunks and symbols discovered through graph traversal so the caller can dig deeper without a second search.
 
@@ -134,19 +217,63 @@ Schema:
   "type": "object",
   "properties": {
     "query": { "type": "string" },
-    "limit": { "type": "number", "description": "Maximum result count before context assembly (default 5)." },
-    "budget": { "type": "number", "default": 1024, "description": "Approximate output-token budget for the assembled context." },
-    "context_format": { "type": "string", "default": "text", "enum": ["text", "json"], "description": "Format of the returned context string." },
-    "include_metadata": { "type": "boolean", "default": false, "description": "Return full v2 metadata for every chunk in the results array." },
-    "dedup_strategy": { "type": "string", "default": "cosine", "enum": ["exact", "cosine"], "description": "Collapse near-duplicate chunks by hash or embedding similarity." },
-    "expand_query": { "type": ["boolean", "string"], "description": "Enable query expansion before search." },
-    "use_dense": { "type": "boolean", "default": true, "description": "Enable hybrid dense reranking." },
+    "limit": {
+      "type": "number",
+      "description": "Maximum result count before context assembly (default 5)."
+    },
+    "budget": {
+      "type": "number",
+      "default": 1024,
+      "description": "Approximate output-token budget for the assembled context."
+    },
+    "context_format": {
+      "type": "string",
+      "default": "text",
+      "enum": ["text", "json"],
+      "description": "Format of the returned context string."
+    },
+    "include_metadata": {
+      "type": "boolean",
+      "default": false,
+      "description": "Return full v2 metadata for every chunk in the results array."
+    },
+    "dedup_strategy": {
+      "type": "string",
+      "default": "cosine",
+      "enum": ["exact", "cosine"],
+      "description": "Collapse near-duplicate chunks by hash or embedding similarity."
+    },
+    "expand_query": {
+      "type": ["boolean", "string"],
+      "description": "Enable query expansion before search."
+    },
+    "use_dense": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable hybrid dense reranking."
+    },
     "alpha": { "type": "number", "description": "BM25/dense blend weight." },
-    "use_rerank": { "type": "boolean", "default": false, "description": "Enable cross-encoder re-ranking." },
+    "use_rerank": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable cross-encoder re-ranking."
+    },
     "family": { "type": "string", "description": "Optional family filter." },
-    "compact": { "type": "boolean", "default": true, "description": "Return essential fields only for search results." },
-    "read_top_result": { "type": "boolean", "default": true, "description": "Return full metadata and content for the highest-ranked result." },
-    "follow_up_refs": { "type": "boolean", "default": true, "description": "Include graph-discovered related chunks and symbols." }
+    "compact": {
+      "type": "boolean",
+      "default": true,
+      "description": "Return essential fields only for search results."
+    },
+    "read_top_result": {
+      "type": "boolean",
+      "default": true,
+      "description": "Return full metadata and content for the highest-ranked result."
+    },
+    "follow_up_refs": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include graph-discovered related chunks and symbols."
+    }
   },
   "required": ["query"],
   "additionalProperties": false
@@ -184,11 +311,19 @@ Representative output:
     "score": -8.31
   },
   "follow_up_refs": [
-    { "chunk_id": 43, "relationship": "parent_chunk", "symbol_name": "propagate" },
+    {
+      "chunk_id": 43,
+      "relationship": "parent_chunk",
+      "symbol_name": "propagate"
+    },
     { "chunk_id": 44, "relationship": "references", "symbol_name": "Network" }
   ],
   "dense_state": "warm",
-  "freshness": { "timestamp": 1779540000000, "stale": false, "last_indexed_at": 1779539000000 }
+  "freshness": {
+    "timestamp": 1779540000000,
+    "stale": false,
+    "last_indexed_at": 1779539000000
+  }
 }
 ```
 
@@ -207,25 +342,93 @@ Schema:
   "type": "object",
   "properties": {
     "query": { "type": "string" },
-    "limit": { "type": "number", "description": "Maximum result count (default 5)." },
-    "context_budget": { "type": "number", "description": "Token budget when assembling a context window." },
-    "query_class": { "type": "string", "enum": ["simple_lookup", "cross_boundary", "multi_hop", "exploratory", "code_specific", "plan_specific"], "description": "Override query classification." },
-    "classification_hints": { "type": "object", "description": "Override classification-derived alpha and family." },
+    "limit": {
+      "type": "number",
+      "description": "Maximum result count (default 5)."
+    },
+    "context_budget": {
+      "type": "number",
+      "description": "Token budget when assembling a context window."
+    },
+    "query_class": {
+      "type": "string",
+      "enum": [
+        "simple_lookup",
+        "cross_boundary",
+        "multi_hop",
+        "exploratory",
+        "code_specific",
+        "plan_specific"
+      ],
+      "description": "Override query classification."
+    },
+    "classification_hints": {
+      "type": "object",
+      "description": "Override classification-derived alpha and family."
+    },
     "alpha": { "type": "number", "description": "BM25/dense blend weight." },
-    "use_dense": { "type": "boolean", "default": true, "description": "Enable hybrid dense reranking." },
-    "expand_query": { "type": ["boolean", "string"], "description": "Enable query expansion." },
-    "use_rerank": { "type": "boolean", "default": false, "description": "Enable cross-encoder re-ranking." },
-    "rerank_candidates_count": { "type": "number", "description": "Number of hybrid candidates for reranking." },
-    "include_metadata": { "type": "boolean", "default": false, "description": "Return full v2 metadata per chunk." },
-    "dedup_strategy": { "type": "string", "default": "cosine", "enum": ["exact", "cosine"] },
+    "use_dense": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable hybrid dense reranking."
+    },
+    "expand_query": {
+      "type": ["boolean", "string"],
+      "description": "Enable query expansion."
+    },
+    "use_rerank": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable cross-encoder re-ranking."
+    },
+    "rerank_candidates_count": {
+      "type": "number",
+      "description": "Number of hybrid candidates for reranking."
+    },
+    "include_metadata": {
+      "type": "boolean",
+      "default": false,
+      "description": "Return full v2 metadata per chunk."
+    },
+    "dedup_strategy": {
+      "type": "string",
+      "default": "cosine",
+      "enum": ["exact", "cosine"]
+    },
     "family": { "type": "string", "description": "Optional family filter." },
-    "compact": { "type": "boolean", "default": true, "description": "Return essential fields only." },
-    "read_top_result": { "type": "boolean", "default": true, "description": "Return full top-result metadata." },
-    "follow_up_refs": { "type": "boolean", "default": true, "description": "Include graph-discovered related chunks and symbols." },
-    "auto_fallback": { "type": "boolean", "default": true, "description": "Automatically retry with a fallback query if the primary search is empty." },
-    "include_code_only": { "type": "boolean", "description": "For code_specific queries, return only source-code chunks. Defaults to true." },
-    "explain_ranking": { "type": "boolean", "default": false, "description": "Return a human-readable ranking_explanation." },
-    "metadata": { "type": "object", "description": "Structured metadata filter predicate tree." }
+    "compact": {
+      "type": "boolean",
+      "default": true,
+      "description": "Return essential fields only."
+    },
+    "read_top_result": {
+      "type": "boolean",
+      "default": true,
+      "description": "Return full top-result metadata."
+    },
+    "follow_up_refs": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include graph-discovered related chunks and symbols."
+    },
+    "auto_fallback": {
+      "type": "boolean",
+      "default": true,
+      "description": "Automatically retry with a fallback query if the primary search is empty."
+    },
+    "include_code_only": {
+      "type": "boolean",
+      "description": "For code_specific queries, return only source-code chunks. Defaults to true."
+    },
+    "explain_ranking": {
+      "type": "boolean",
+      "default": false,
+      "description": "Return a human-readable ranking_explanation."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Structured metadata filter predicate tree."
+    }
   },
   "required": ["query"],
   "additionalProperties": false
@@ -270,7 +473,11 @@ Representative output:
   },
   "ranking_explanation": "Selected because the chunk directly matches the identifier 'activate' and contains recurrent-connection handling in the same file.",
   "dense_state": "warm",
-  "freshness": { "timestamp": 1779540000000, "stale": false, "last_indexed_at": 1779539000000 },
+  "freshness": {
+    "timestamp": 1779540000000,
+    "stale": false,
+    "last_indexed_at": 1779539000000
+  },
   "latency_ms": 120
 }
 ```
@@ -484,6 +691,66 @@ Representative output:
   ]
 }
 ```
+
+### `load_parent_chunk`
+
+Load the parent chunk for a given depth-1 sub-chunk by its numeric chunk ID.
+Returns the full parent chunk descriptor with v2 semantic metadata.
+
+### `scan_code_quality`
+
+Scan exported TypeScript symbols for missing or weak JSDoc and high cyclomatic
+complexity. Accepts optional `source_paths`, `min_jsdoc_words`, and
+`complexity_threshold` parameters.
+
+### `traverse_graph`
+
+Traverse the entity/relationship graph from seed entities, following specified
+relationship types for a configurable number of hops. Returns discovered entities,
+relationships, and associated chunk IDs for context expansion. Accepts
+`seed_names` or `seed_query`, `relationship_types`, `entity_types`, `max_hops`,
+`max_results`, and `confidence_filter`.
+
+### `expand_query`
+
+Expand a search query using domain associations and embedding-based synonym
+discovery. Returns expanded terms, an OR-expanded BM25 query, and expansion
+metadata. Supports classification-aware expansion behavior.
+
+### `submit_feedback`
+
+Submit an explicit feedback signal for a corpus chunk. Records reference, positive,
+negative, or irrelevant events and recomputes the chunk feedback boost score. The
+boost is applied via SQL time-decay `POWER(0.95, days)` and LEFT JOINed into BM25
+search results. Impressions are recorded via `client.batch()`.
+
+### `parallel_search`
+
+Run multiple SQL queries concurrently and merge results via Reciprocal Ranked
+Fusion (RRF). Respects the `TURSO_CONCURRENCY` env var to limit in-flight requests
+(default 20). Graceful degradation: surviving query results are returned when
+individual queries fail.
+
+### `multi_hop_search`
+
+Multi-hop graph-augmented search that chains multiple retrieval rounds, using graph
+traversal between rounds to expand the candidate set across entity relationships.
+
+### `ann_build_index`
+
+Build or refresh the Approximate-Nearest-Neighbor (ANN) index for dense corpus
+search. Creates a DiskANN vector index using `libsql_vector_idx` on the embeddings
+column with cosine metric.
+
+### `turso_branch`
+
+Create or switch a Turso database branch for isolated experimentation. Allows
+index modifications without affecting the primary database.
+
+### `turso_pitr`
+
+Perform a Turso point-in-time recovery operation, restoring the database to a
+specified past timestamp. Useful for rolling back unintended index changes.
 
 ## Query routing and tokenization
 

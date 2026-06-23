@@ -42,7 +42,17 @@ export interface AdultState {
   plateauRecord: PlateauRecord;
   /** Gain-stability evidence carried across adult evaluation cycles. */
   gainStabilityRecord: GainStabilityRecord;
-  /** Current equilibrium candidate snapshot for the active adult zone. */
+  /**
+   * Current equilibrium evidence snapshot for the active adult zone.
+   *
+   * **Experimental semantics:** this field stores the latest plateau and
+   * gain-stability readings for the zone, but it does *not* mean an equilibrium
+   * event was emitted. The emitted candidate is produced by
+   * `detectEquilibriumCandidate` and may be `null` even while this snapshot
+   * carries the same zone identifier. Callers should treat this field as
+   * owner-local diagnostic state until the adult/assimilation boundary fully
+   * closes the snapshot-vs-emission distinction.
+   */
   equilibriumCandidate: EquilibriumCandidate;
   /** Whether adult growth has been cooled to leave budget for prune and compact actions. */
   growthCoolingActive: boolean;

@@ -71,6 +71,24 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 7. Frame your result as a compact handoff into `educational-docs` rather than a
    standalone rewrite plan.
 
+## Docs Discovery Decision Tree
+
+1. **Is the target a generated README?**
+   - Yes → Search for the source module's JSDoc to understand what the README should contain. Flag mismatches between JSDoc and generated README.
+   - No → Continue to step 2.
+
+2. **Is the target JSDoc for a specific exported symbol?**
+   - Yes → Use `search_corpus` with the symbol name, then `load_chunk` to read the JSDoc content. Check for `@param`, `@returns`, `@throws`, `@example`.
+   - No → Continue to step 3.
+
+3. **Is the target a Mermaid diagram?**
+   - Yes → Search for diagram definitions in the corpus. Verify syntax validity and topology relevance.
+   - No → Continue to step 4.
+
+4. **Is the target a citation or academic reference?**
+   - Yes → Search for citation patterns in the corpus. Check for Wikipedia, arXiv, or paper references. Flag uncited claims.
+   - No → Use broad `search_corpus` with documentation-related keywords.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

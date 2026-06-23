@@ -69,6 +69,27 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - Trigger phrase alignment (CLAUDE.md → README → actual files).
 7. Summarize missing references, inconsistent status, and next tracker update.
 
+## Plan Registration Checklist
+
+- **Plan file presence:** Verify the plan file exists at the path referenced in `plans/README.md`. Flag missing plan files.
+- **Roadmap placement:** Verify the plan appears in `plans/Roadmap.md` with the correct status. Flag plans missing from the roadmap.
+- **Trigger phrase mapping:** Verify trigger phrases in the plan description match the keywords used in `.github/agent-skill-routing-table.md`. Flag mismatched or missing trigger phrases.
+- **Tracker registration:** Verify the plan is registered in the plan tracker with the correct status (`[PLANNED]`, `[WIP]`, or `[DONE]`). Flag unregistered plans.
+- **README index entry:** Verify the plan has an entry in `plans/README.md` with a description and link. Flag missing index entries.
+
+## Validation Script Reference Paths
+
+```bash
+# Plan sync validation:
+node scripts/agent-customization/validate-plan-sync.mjs --json --plan=<plan-path>
+
+# Workflow update sync:
+node .github/hooks/workflow-update-sync.mjs --plan=<plan-path> --json
+
+# Plan sync gate:
+neataptic-gate-mcp:run_gate_check --gate plan-sync
+```
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

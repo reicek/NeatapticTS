@@ -4,6 +4,10 @@ description: 'Design, implement, or validate the NEAT Genesis EvoDevo core algor
 argument-hint: 'Describe the NGE phase or primitive in scope, the archived plan section in plans/completed/NEAT_Genesis_EvoDevo.md, whether the pass is architecture, implementation, or validation, and which invariants must remain deterministic and opt-in.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - nge-benchmark-workflow
+  - reproducibility-contracts
+  - performance-optimization
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -61,6 +65,11 @@ program and governance knobs produce the graph?"
 - Introducing typed-array stigmergy or shared-field semantics as a primitive
   later used by demos.
 
+
+## When NOT to use
+
+Do NOT use for benchmarking or evaluation - use `nge-benchmark-workflow` instead. Do NOT use for general NEAT evolution - use the standard NEAT workflow instead.
+
 ## Phase Ownership
 
 This skill primarily owns the algorithm side of these plan phases:
@@ -85,6 +94,21 @@ This skill primarily owns the algorithm side of these plan phases:
 - Assimilation writes back structural priors, not inherited weights.
 - Core before benchmark: shared primitives should stabilize before benchmark code
   starts compensating for missing library contracts.
+
+
+## Workflow Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Embryo
+    Embryo --> Juvenile: development complete
+    Juvenile --> Adult: maturity threshold
+    Adult --> Reproducing: fitness evaluated
+    Reproducing --> Embryo: offspring created
+    Reproducing --> [*]: termination
+    note right of Embryo: NGE_DNA encoded
+    note right of Adult: Neuromodulation active
+```
 
 ## Task Packet
 
@@ -178,6 +202,33 @@ as hidden tuning noise.
 - Reproduction-mode correctness tests.
 - Memory-tier correctness tests.
 - Opt-in isolation tests proving classic NEAT is unchanged.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["NGE work"] --> B{"Which owner?"}
+    B -- "DNA, motifs, lifecycle, reproduction" --> C["nge-core-algorithm"]
+    B -- "Demo world, curriculum, fairness" --> D["nge-benchmark-workflow"]
+    B -- "Runtime speed or memory" --> E["performance-optimization"]
+    B -- "Plan or roadmap alignment" --> F["plan-alignment"]
+```
+
+## Before / After Examples
+
+**Before:**
+```ts
+interface NGE_DNA { modules: any[]; } // vague schema
+```
+
+**After:**
+```ts
+interface NGE_DNA {
+  computationType: ComputationMotif;
+  lifecycleStage: LifecycleStage;
+  modules: NGEModule[];
+}
+```
 
 ## Guardrails
 

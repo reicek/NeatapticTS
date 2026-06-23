@@ -4,6 +4,10 @@ description: 'Use when: updating .agent.md YAML frontmatter, names, descriptions
 argument-hint: 'Name the agent file, metadata fields to change, visibility target, allowed subagents, model tier, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - agent-frontmatter-standards
+  - model-routing-and-budget
+  - skill-frontmatter-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,26 @@ This skill makes safe, targeted edits to YAML frontmatter in existing `.github/a
 - Toggling `user-invocable` when an agent's visibility target changes.
 - Adding or updating `handoffs` entries.
 - Fixing a frontmatter field that caused a silent loading failure in VS Code.
+
+
+## When NOT to use
+
+Do NOT use for skill frontmatter updates - use `updating-skill-frontmatter` instead. Do NOT use for frontmatter validation - use `agent-frontmatter-standards` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Read agent file"] --> B["Identify fields to update"]
+    B --> C["Apply changes"]
+    C --> D["Validate with agent-frontmatter-standards"]
+    D --> E{"Pass?"}
+    E -- "Yes" --> F["Regenerate routing table"]
+    E -- "No" --> G["Fix validation errors"]
+    G --> D
+    F --> H["Done"]
+```
 
 ## Task Packet
 
@@ -44,6 +68,51 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 6. If changing the agent `name` or description, assess whether any parent allow-lists or skill handoffs reference the old name and update them.
 7. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` after the edit.
 8. Record files changed, fields changed, and compatibility risk in the active plan or chat summary.
+
+
+## Why Each Field Matters
+
+Each frontmatter field controls a specific aspect of agent behavior. The `tier` field determines delegation direction and routing. The `model` field controls which AI model processes the agent. The `tools` field limits what the agent can access. The `agents` allow-list controls sub-delegation. The `skills` field attaches durable procedures. A wrong value in any field can cause silent failures - the agent loads but behaves incorrectly.
+
+## Before/After Frontmatter Examples
+
+**Before (incomplete):**
+```yaml
+---
+name: my-agent
+description: Does things
+---
+```
+
+**After (complete):**
+```yaml
+---
+name: my-agent
+description: Use when: validating X for Y boundary. Provides Z.
+argument-hint: Name the target file and validation mode.
+user-invocable: false
+tier: 3
+model: anthropic/claude-haiku-3.5
+skills:
+  - implementation-standards
+tools:
+  - neataptic-cortex-mcp-search_corpus
+---
+```
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Frontmatter field change"] --> B{"Field affects routing?"}
+    B -- "No (description, argument-hint)" --> C["Single-field update + validate"]
+    B -- "Yes (name, agents, model)" --> D{"Name changed?"}
+    D -- "No" --> E["Update field + validate + regenerate routing table"]
+    D -- "Yes" --> F["Update field + check parent allow-lists + regenerate"]
+    C --> G["Run validate-agent-frontmatter.mjs"]
+    E --> G
+    F --> G
+```
 
 ## Guardrails
 

@@ -4,6 +4,10 @@ description: 'Use when: running focused unit tests, confirming red or green stat
 argument-hint: 'Provide the focused command or test path, expected red/green state, and whether output should be summarized or rerouted.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - triaging-test-failures
+  - coverage-guard
+  - creating-unit-tests
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,30 @@ This skill executes a focused Jest command against a bounded test surface and re
 - Producing a bounded summary of test output for a tracker note or handoff packet.
 - Checking whether a pre-existing failure is unrelated to the active change before reporting it as a defect.
 - Running `npm run test:silent` for repo-wide coverage analysis without verbose output noise.
+
+
+## When NOT to use
+
+Do NOT use for triaging test failures - use `triaging-test-failures` instead. Do NOT use for coverage verification - use `coverage-guard` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Need to run tests"] --> B{"What scope?"}
+    B -- "Single file" --> C["npx jest --testPathPattern=file"]
+    B -- "Folder" --> D["npx jest --testPathPattern=folder"]
+    B -- "Full suite" --> E["npm run test:silent"]
+    B -- "Coverage" --> F["npx jest --coverage --testPathPattern=file"]
+    C --> G["Run"]
+    D --> G
+    E --> G
+    F --> G
+    G --> H{"Pass?"}
+    H -- "Yes" --> I["Done"]
+    H -- "No" --> J["Triage failures"]
+```
 
 ## Task Packet
 
@@ -46,6 +74,40 @@ On failure: <summarize | reroute to triaging-test-failures>
 7. If failure ownership is unclear or multiple failures span unrelated files, route to `triaging-test-failures`.
 8. For coverage runs: report statement, branch, function, and line percentages for touched files.
 9. Report command run, pass/fail evidence, and reroute recommendation in the session output.
+
+
+## Why Focused Tests First
+
+The full test suite is large and slow. Running it speculatively wastes time and produces noise. Focused slices test only the boundary that changed, giving fast feedback on whether the change is correct. Start with the narrowest test that covers the changed code, then expand only if the focused slice passes but you suspect broader issues.
+
+## Decision Tree: Scope Selection
+
+```mermaid
+flowchart TD
+    A["Tests needed"] --> B{"Changed files known?"}
+    B -- "Yes" --> C["Find nearest test file"]
+    B -- "No" --> D["Run full suite"]
+    C --> E["Run focused slice"]
+    E --> F{"Pass?"}
+    F -- "Yes" --> G["Done"]
+    F -- "No" --> H["Triage failures"]
+    D --> H
+```
+
+## Before / After Examples
+
+**Before:**
+```text
+Ran tests. Some failed. Need to fix the mutation test.
+```
+
+**After:**
+```text
+Command: npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/mutation
+Result: PASS — 42 passed, 0 failed (exit 0)
+Touched files: src/neat/mutation/neat.mutation.ts
+Coverage: statements 100%, branches 100%, functions 100%, lines 100%
+```
 
 ## Guardrails
 

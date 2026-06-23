@@ -1,11 +1,14 @@
 #!/usr/bin/env node
-import Database from 'better-sqlite3';
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import {
+  closeTursoClient,
+  getTursoClient,
+} from '../../mcp-semantic/tools/cortex-db.mjs';
 import {
   defaultDatabasePath,
   repoRoot,
@@ -153,17 +156,14 @@ async function readSnapshotCurrency({
     return fallbackResult;
   }
 
-  const database = new Database(databasePath, {
-    readonly: true,
-    fileMustExist: true,
-  });
+  const client = await getTursoClient(databasePath);
 
   try {
-    const snapshotRow = database
-      .prepare(
-        'SELECT COUNT(*) AS documents, MAX(indexed_at) AS indexed_at FROM documents',
-      )
-      .get();
+    const snapshotResult = await client.execute({
+      sql: 'SELECT COUNT(*) AS documents, MAX(indexed_at) AS indexed_at FROM documents',
+      args: [],
+    });
+    const snapshotRow = snapshotResult.rows[0] ?? {};
     const indexedAtMs = Number(snapshotRow.indexed_at ?? 0);
     const snapshotAgeMs = Math.max(0, indexedAtMs - snapshotGeneratedAtMs);
 
@@ -175,7 +175,7 @@ async function readSnapshotCurrency({
         indexedAtMs > 0 ? new Date(indexedAtMs).toISOString() : null,
     };
   } finally {
-    database.close();
+    await closeTursoClient(databasePath);
   }
 }
 

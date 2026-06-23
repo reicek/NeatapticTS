@@ -5,6 +5,10 @@ argument-hint: 'Describe the routing decision, tier boundary, or gate protocol t
 user-invocable: false
 disable-model-invocation: false
 tools: [neataptic-gate-mcp/*, neataptic-workflow-mcp/*]
+skills:
+  - execute
+  - agent-frontmatter-standards
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -25,6 +29,26 @@ This skill owns the durable knowledge surface for routing policy in this reposit
 - A `.github/agents/*.agent.md` file is missing the `skills: [...]` frontmatter field.
 - A skill and companion agent overlap in ownership; the agent needs updating to follow the skill's durable policy.
 - Three consecutive gate failures have occurred in a session without escalation to `00-helping`.
+
+
+## When NOT to use
+
+Do NOT use for simple routing decisions that `execute` can handle directly. Do NOT use for frontmatter validation - use `agent-frontmatter-standards` instead.
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Routing request"] --> B["Classify surface"]
+    B --> C{"Tier boundary?"}
+    C -- "Yes" --> D["Check delegation direction"]
+    C -- "No" --> E["Check gate or freshness"]
+    D --> F["Dispatch to correct tier"]
+    E --> G["Run validation gate"]
+    F --> H["Record evidence"]
+    G --> H
+    H --> I["Done"]
+```
 
 ## Tier Graph Contract
 
@@ -204,6 +228,17 @@ Validate: grep .github/ai-learning/learning-log.jsonl for gate_exception entries
 - Use `agent-inventory-auditor` to discover tier violations across the full agent graph.
 - Use `helping-agent-maintenance-coordinator` when agent frontmatter needs repair.
 - Use `helping-gap-resolution-coordinator` when a routing gap reveals a missing specialist or weak skill.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Routing question"] --> B{"What kind?"}
+    B -- "Simple delegation" --> C["Use execute skill"]
+    B -- "Tier/gate enforcement" --> D["Use routing-optimization-policy"]
+    B -- "Frontmatter validation" --> E["Use agent-frontmatter-standards"]
+    B -- "Routing table freshness" --> F["Run npm run agents:routing-table:gate"]
+```
 
 ## Guardrails
 

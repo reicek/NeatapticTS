@@ -4,6 +4,10 @@ description: 'Extend, harden, or validate ONNX-like export and import in Neatapt
 argument-hint: 'Describe the ONNX target (export operator / import subset / recurrent hardening / external seed path), the current plan phase, and whether this is implementation, import hardening, documentation, or roundtrip validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - reproducibility-contracts
+  - hybrid-training-interop
+  - neatchat-systems
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -70,6 +74,26 @@ or newer-version deltas are needed.
   export coverage added.
 - A downstream consumer such as the planned NEATchat follow-up lane needs an
   honest recurrent seed-import boundary.
+
+
+## When NOT to use
+
+Do NOT use for internal serialization - use Network native methods instead. Do NOT use for general network construction - use `architecture-builder` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Network"] --> B["Export to ONNX-like JSON"]
+    B --> C["Import back"]
+    C --> D["Reconstruct Network"]
+    D --> E["Compare activation output"]
+    E --> F{"Within tolerance?"}
+    F -- "Yes" --> G["Roundtrip verified"]
+    F -- "No" --> H["Debug operator mapping"]
+    H --> B
+```
 
 ## Task Packet
 
@@ -180,6 +204,29 @@ ONNX export must satisfy:
 - If NEATchat or another downstream system needs a stronger seed path before the
   recurrent subset is honest, choose and document a non-ONNX bridge explicitly.
 - Keep the downstream consumer honest about what it can actually host.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["ONNX task"] --> B{"Which surface?"}
+    B -- "Add operator mapping" --> C["Export mapping"]
+    B -- "Constrained recurrent import" --> D["Import hardening"]
+    B -- "Export/import fidelity" --> E["Roundtrip validation"]
+    B -- "Operator table update" --> F["Supported-subset docs"]
+```
+
+## Before / After Examples
+
+**Before:**
+```ts
+const shape = [1, 4, 4]; // hardcoded for one network config
+```
+
+**After:**
+```ts
+const shape = deriveShapeFromGraph(graph); // derived from live graph topology
+```
 
 ## Guardrails
 

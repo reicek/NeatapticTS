@@ -65,6 +65,16 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - generic replay-language concerns belong to `reproducibility-contracts` when needed
 6. Summarize the active core invariant, the leakage risk, and the smallest useful handoff into `nge-core-algorithm`.
 
+## NGE Core Boundary Patterns
+
+- **NGE_DNA boundaries:** Verify that NGE_DNA operations (mutation, crossover, development) are isolated from visualization and evaluation concerns. Flag DNA code that depends on rendering or fitness evaluation.
+- **Deterministic development:** Verify that genome development produces identical neural networks given the same DNA and the same seed. Flag non-deterministic development paths.
+- **Lifecycle transitions:** Verify that lifecycle state transitions (embryo → mature → reproduction) are explicit and guarded. Flag implicit state changes that bypass the lifecycle contract.
+- **Computation motifs:** Identify which computation types (feedforward, recurrent, sparse) the genome supports. Flag unsupported computation types that should produce clear errors.
+- **Memory tiers:** Verify that memory tiers (working memory, short-term, long-term) are correctly initialized and isolated. Flag cross-tier memory contamination.
+- **Neuromodulation:** Verify that neuromodulation signals (excitatory/inhibitory) are correctly routed and do not leak across unrelated pathways.
+- **Reproduction modes:** Verify that reproduction modes (asexual, sexual, budding) are explicitly selected and produce valid offspring. Flag silent defaulting to a mode.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

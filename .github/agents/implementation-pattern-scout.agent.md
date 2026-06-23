@@ -7,6 +7,7 @@ tools:
   [
     read,
     search,
+    execute,
     neataptic-cortex-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
@@ -61,6 +62,16 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 4. Identify the nearest active test file to understand test conventions (single `expect`, test naming, setup).
 5. Check if the area has owner-local constants or error types (`.constants.ts`, `.errors.ts`, `.types.ts` siblings).
 6. Summarize patterns and return findings as structured bullets.
+
+## Pattern Discovery Checklist
+
+- **Naming conventions:** Check for folder-based module patterns (`bar.foo.ts`, `bar.foo.utils.ts`, `bar.foo.types.ts`). Identify the naming convention used in the target folder.
+- **Orchestration-first pattern:** Identify the main `.ts` file that exports the public API. Verify it uses declarative steps calling small helpers.
+- **Helper structure:** Check whether helpers are ordered as: locals → calls → return → helpers at end. Flag inline complex logic that should be extracted.
+- **ES2023 usage:** Check for immutable array methods (`toSorted`, `toReversed`, `at(-1)`), `structuredClone`, nullish coalescing, optional chaining, numeric separators. Flag legacy patterns (`sort()`, `JSON.parse(JSON.stringify())`, index math).
+- **JSDoc presence:** Verify all exported symbols have JSDoc with `@param`, `@returns`, `@throws`, `@example`. Flag missing or shallow JSDoc.
+- **Fixed mappings:** Check for single-table or enum patterns instead of if/else chains. Flag `if (name === 'x')` chains that should be lookup tables.
+- **Cognitive complexity:** Identify functions with high cyclomatic complexity. Flag nested control flow that should be declarative pipelines.
 
 ## If Blocked
 

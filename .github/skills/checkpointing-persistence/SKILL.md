@@ -4,6 +4,10 @@ description: 'Design, implement, validate, or actively plan versioned save and r
 argument-hint: 'Describe the checkpoint mode, current step in Population_Save_Resume_and_Checkpointing.md (including Step 0 kickoff when relevant), target orchestration surface, determinism requirement, and whether the pass is design, implementation, migration, or validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - reproducibility-contracts
+  - hybrid-training-interop
+  - multithread-evaluation
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -44,6 +48,11 @@ on PRNG state, serialization compatibility, and restore invariants.
 - ID counters, innovation counters, or RNG state restoration is the active bug.
 - NEATchat needs durable identity or memory metadata on top of a shared
   checkpoint seam.
+
+
+## When NOT to use
+
+Do NOT use for determinism contracts - use `reproducibility-contracts` instead. Do NOT use for parameter-vector training bridges - use `hybrid-training-interop` instead.
 
 ## Step 0 kickoff
 
@@ -109,6 +118,24 @@ R_{exact} = population \land species \land rng \land counters \land adaptive\ st
 $$
 
 If any term is absent, the checkpoint is not exact-resume capable.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Training iteration"] --> B["Save checkpoint"]
+    B --> C{"Checkpoint type?"}
+    C -- "Full" --> D["Save all state + RNG"]
+    C -- "Light" --> E["Save counters only"]
+    D --> F["Write to disk"]
+    E --> F
+    F --> G["Continue training"]
+    G --> H{"Interrupted?"}
+    H -- "Yes" --> I["Resume from checkpoint"]
+    H -- "No" --> J["Complete"]
+    I --> A
+```
 
 ## Task Packet
 
@@ -190,6 +217,49 @@ Validate with: save/load roundtrip tests and deterministic replay test. Only run
 - Negative tests for strict restore failures.
 - Focused serialization tests when the change interacts with network identity.
 - `npm run test:silent` only when the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Checkpoint needed"] --> B{"Exact resume required?"}
+    B -- "Yes" --> C["Full checkpoint + strict restore"]
+    B -- "No, best-effort" --> D["Light checkpoint"]
+    B -- "Missing fields on load" --> E{"Strict mode?"}
+    E -- "Yes" --> F["Throw on missing required fields"]
+    E -- "No" --> G["Warn + downgrade to best-effort"]
+    C --> H["Capture full state tuple"]
+    D --> I["Capture best genomes + seed + config"]
+```
+
+## Before / After Examples
+
+**Before:**
+```json
+{
+  "version": 1,
+  "generation": 50,
+  "population": [...],
+  "seed": 42
+}
+// incomplete: missing RNG state, counters, species state → cannot exact-resume
+```
+
+**After:**
+```json
+{
+  "version": 1,
+  "generation": 50,
+  "population": [...],
+  "species": [...],
+  "rngState": { ... },
+  "innovationCounter": 1024,
+  "geneCounter": 2048,
+  "adaptiveState": { ... },
+  "seed": 42
+}
+// complete: all stateful inputs captured → strict exact-resume capable
+```
 
 ## Guardrails
 

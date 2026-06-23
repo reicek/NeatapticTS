@@ -7,8 +7,17 @@ import type { AdultState } from './neat.nge-adult.types';
 /**
  * Create the initial owner-local adult state for one fresh zone instance.
  *
+ * Seeds empty plateau and gain-stability histories, marks the zone as not yet
+ * in equilibrium, and disables growth cooling until the first adult cycle resolves it.
+ *
  * @param zoneId - Stable adult-zone identifier that anchors the seeded state.
- * @returns A compile-only placeholder while the Step 06 red contract is active.
+ * @returns Fresh adult state ready for the first `advanceAdultState` cycle.
+ *
+ * @example
+ * ```ts
+ * const adultState = createAdultState('zone:alpha');
+ * console.log(adultState.equilibriumCandidate.zoneId); // 'zone:alpha'
+ * ```
  */
 export function createAdultState(zoneId: string): AdultState {
   return {

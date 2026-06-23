@@ -130,15 +130,15 @@ describe('routing-table.mjs', () => {
   // ---------------------------------------------------------------------------
 
   describe('classifyAndRoute', () => {
-    it('returns routing for simple_lookup queries', () => {
+    it('returns routing for code_specific queries with dotted identifiers', () => {
       const result = runModuleEvaluation<ClassifyAndRouteResult>(`
         import { classifyAndRoute } from './scripts/semantic-index/routing-table.mjs';
         console.log(JSON.stringify(classifyAndRoute('Network.activate')));
       `);
-      expect(result.query_class).toBe('simple_lookup');
-      expect(result.confidence).toBe(0.9);
-      expect(result.alpha).toBe(0.75);
-      expect(result.strategy.family).toBeNull();
+      expect(result.query_class).toBe('code_specific');
+      expect(result.confidence).toBe(0.85);
+      expect(result.alpha).toBe(0.7);
+      expect(result.strategy.family).toBe('ts-source');
       expect(result.strategy.expansion).toBe('none');
       expect(result.strategy.post_processing).toBe('default');
     });
@@ -205,15 +205,15 @@ describe('routing-table.mjs', () => {
           console.log(JSON.stringify(classifyAndRoute('Network.activate', { alpha: 0.9 })));
         `);
         expect(result.alpha).toBe(0.9);
-        expect(result.query_class).toBe('simple_lookup');
+        expect(result.query_class).toBe('code_specific');
       });
 
       it('allows overriding family via classification_hints', () => {
         const result = runModuleEvaluation<ClassifyAndRouteResult>(`
           import { classifyAndRoute } from './scripts/semantic-index/routing-table.mjs';
-          console.log(JSON.stringify(classifyAndRoute('Network.activate', { family: 'ts-source' })));
+          console.log(JSON.stringify(classifyAndRoute('Network.activate', { family: 'plan' })));
         `);
-        expect(result.strategy.family).toBe('ts-source');
+        expect(result.strategy.family).toBe('plan');
       });
 
       it('uses per-class default alpha when no hints are provided', () => {
@@ -221,7 +221,7 @@ describe('routing-table.mjs', () => {
           import { classifyAndRoute } from './scripts/semantic-index/routing-table.mjs';
           console.log(JSON.stringify(classifyAndRoute('Network.activate')));
         `);
-        expect(result.alpha).toBe(0.75);
+        expect(result.alpha).toBe(0.7);
       });
 
       it('uses per-class default strategy when no hints are provided', () => {
@@ -229,7 +229,7 @@ describe('routing-table.mjs', () => {
           import { classifyAndRoute } from './scripts/semantic-index/routing-table.mjs';
           console.log(JSON.stringify(classifyAndRoute('Network.activate')));
         `);
-        expect(result.strategy.family).toBeNull();
+        expect(result.strategy.family).toBe('ts-source');
         expect(result.strategy.expansion).toBe('none');
       });
     });

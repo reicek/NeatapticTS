@@ -10,13 +10,14 @@
 
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 interface SearchCall {
   querySpec: Record<string, unknown>;
   conditionOptions: Record<string, unknown>;
 }
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
 /**
  * Evaluate a short ESM snippet in a child Node process rooted at the repo root.

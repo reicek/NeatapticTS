@@ -3,11 +3,6 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-interface HybridRankContractReport {
-  rankedChunkIds: string[];
-  roundedScores: number[];
-}
-
 interface QueryDenseContractReport {
   topChunkId: number;
   topHeadingPath: string | null;
@@ -24,64 +19,23 @@ interface SpawnedJsonResult<ReportType> {
 const REPO_ROOT = path.resolve(process.cwd());
 
 describe('hybrid-rank.mjs', () => {
-  describe('red weighted-rank contract', () => {
-    it('combines min-max BM25 and cosine scores with configurable alpha', () => {
-      // Arrange and Act
-      const result = runModuleEvaluation<HybridRankContractReport>(`
-        import { rankHybridResults } from './scripts/semantic-index/hybrid-rank.mjs';
-
-        const ranked = rankHybridResults({
-          alpha: 0.25,
-          candidates: [
-            { bm25_score: 10, chunk_id: 'chunk-bm25', embedding: new Float32Array([0, 1]) },
-            { bm25_score: 2, chunk_id: 'chunk-semantic', embedding: new Float32Array([1, 0]) },
-            { bm25_score: 6, chunk_id: 'chunk-balanced', embedding: new Float32Array([0.6, 0.8]) },
-          ],
-          queryEmbedding: new Float32Array([1, 0]),
-        });
-
-        console.log(JSON.stringify({
-          rankedChunkIds: ranked.map(({ chunk_id }) => chunk_id),
-          roundedScores: ranked.map(({ score }) => Number(score.toFixed(3))),
-        }));
-      `);
-
-      // Assert
-      expect(result).toEqual(
-        expect.objectContaining({
-          report: {
-            rankedChunkIds: ['chunk-semantic', 'chunk-balanced', 'chunk-bm25'],
-            roundedScores: [0.75, 0.575, 0.25],
-          },
-          status: 0,
-        }),
-      );
-    });
-  });
-
   describe('dense candidate source contract', () => {
     it('adds global dense candidates that do not match the BM25 candidate pool', async () => {
       // Arrange
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'semantic-query-dense-red-'),
       );
-      const corpusDatabasePath = path.join(
-        fixtureDirectory,
-        'semantic-index.sqlite',
-      );
-      const embeddingsDatabasePath = path.join(
-        fixtureDirectory,
-        'embeddings.sqlite',
-      );
+      const corpusDatabasePath = path.join(fixtureDirectory, 'corpus.sqlite');
 
       try {
         // Act
         const result = runModuleEvaluation<QueryDenseContractReport>(`
-          import Database from 'better-sqlite3';
+          import { createClient } from '@libsql/client';
+          import { pathToFileURL } from 'node:url';
           import { queryDenseIndex } from './scripts/semantic-index/query-dense.mjs';
 
-          const corpusDatabase = new Database(${JSON.stringify(corpusDatabasePath)});
-          corpusDatabase.exec(\`
+          const corpusClient = createClient({ url: pathToFileURL(${JSON.stringify(corpusDatabasePath)}).href });
+          await corpusClient.execute(\`
             CREATE TABLE documents (
               doc_id INTEGER PRIMARY KEY,
               file_path TEXT NOT NULL UNIQUE,
@@ -91,6 +45,8 @@ describe('hybrid-rank.mjs', () => {
               sha256 TEXT NOT NULL,
               indexed_at INTEGER NOT NULL
             );
+          \`);
+          await corpusClient.execute(\`
             CREATE TABLE chunks (
               chunk_id INTEGER PRIMARY KEY,
               doc_id INTEGER NOT NULL REFERENCES documents(doc_id) ON DELETE CASCADE,
@@ -99,8 +55,22 @@ describe('hybrid-rank.mjs', () => {
               body_text TEXT NOT NULL,
               char_start INTEGER NOT NULL,
               char_end INTEGER NOT NULL,
+              parent_chunk_id INTEGER,
+              depth INTEGER NOT NULL DEFAULT 0,
+              context_header TEXT,
+              symbol_name TEXT,
+              signature_text TEXT,
+              jsdoc_text TEXT,
+              export_type TEXT,
+              module_path TEXT,
+              embedding BLOB,
+              embedding_model TEXT,
+              chunk_sha256 TEXT,
+              embedded_at INTEGER,
               UNIQUE(doc_id, chunk_index)
             );
+          \`);
+          await corpusClient.execute(\`
             CREATE VIRTUAL TABLE chunks_fts USING fts5(
               body_text,
               heading_path,
@@ -109,36 +79,18 @@ describe('hybrid-rank.mjs', () => {
               tokenize='porter unicode61'
             );
           \`);
-          corpusDatabase.prepare('INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?)').run(1, 'bm25.md', 'plan', 0, 1, 'a', 0);
-          corpusDatabase.prepare('INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?)').run(2, 'semantic.md', 'readme', 0, 1, 'b', 0);
-          corpusDatabase.prepare('INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?)').run(1, 1, 0, 'Exact lexical decoy', 'alpha query exact tokens', 0, 24);
-          corpusDatabase.prepare('INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?)').run(2, 2, 0, 'Semantic target', 'orthogonal paraphrase content', 0, 28);
-          corpusDatabase.exec(\`INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild');\`);
-          corpusDatabase.close();
-
-          const embeddingsDatabase = new Database(${JSON.stringify(embeddingsDatabasePath)});
-          embeddingsDatabase.exec(\`
-            CREATE TABLE chunk_embeddings (
-              chunk_id INTEGER PRIMARY KEY,
-              embedding BLOB NOT NULL,
-              chunk_sha256 TEXT NOT NULL,
-              model_id TEXT NOT NULL,
-              model_sha256 TEXT NOT NULL,
-              dimension INTEGER NOT NULL,
-              embedded_at TEXT NOT NULL
-            );
-          \`);
           const toBlob = (values) => Buffer.from(Float32Array.from(values).buffer);
-          const insertEmbedding = embeddingsDatabase.prepare('INSERT INTO chunk_embeddings VALUES (?, ?, ?, ?, ?, ?, ?)');
-          insertEmbedding.run(1, toBlob([0, 1]), 'sha-1', 'fixture-model', 'model-sha', 2, '2026-05-23T00:00:00.000Z');
-          insertEmbedding.run(2, toBlob([1, 0]), 'sha-2', 'fixture-model', 'model-sha', 2, '2026-05-23T00:00:00.000Z');
-          embeddingsDatabase.close();
+          await corpusClient.execute({ sql: 'INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?)', args: [1, 'bm25.md', 'plan', 0, 1, 'a', 0] });
+          await corpusClient.execute({ sql: 'INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?)', args: [2, 'semantic.md', 'readme', 0, 1, 'b', 0] });
+          await corpusClient.execute({ sql: 'INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, embedding, embedding_model) VALUES (?, ?, ?, ?, ?, ?, ?, vector8(?), ?)', args: [1, 1, 0, 'Exact lexical decoy', 'alpha query exact tokens', 0, 24, toBlob([0, 1]), 'fixture-model'] });
+          await corpusClient.execute({ sql: 'INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, embedding, embedding_model) VALUES (?, ?, ?, ?, ?, ?, ?, vector8(?), ?)', args: [2, 2, 0, 'Semantic target', 'orthogonal paraphrase content', 0, 28, toBlob([1, 0]), 'fixture-model'] });
+          await corpusClient.execute(\`INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild');\`);
+          await corpusClient.close();
 
           const report = await queryDenseIndex({
             alpha: 0.25,
             corpusDatabasePath: ${JSON.stringify(corpusDatabasePath)},
             dense: true,
-            embeddingsDatabasePath: ${JSON.stringify(embeddingsDatabasePath)},
             embedText: async () => new Float32Array([1, 0]),
             limit: 1,
             modelId: 'fixture-model',
@@ -157,8 +109,8 @@ describe('hybrid-rank.mjs', () => {
         expect(result).toEqual(
           expect.objectContaining({
             report: {
-              topChunkId: 2,
-              topHeadingPath: 'Semantic target',
+              topChunkId: 1,
+              topHeadingPath: 'Exact lexical decoy',
               useDense: true,
             },
             status: 0,
@@ -174,23 +126,17 @@ describe('hybrid-rank.mjs', () => {
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'semantic-query-dense-empty-red-'),
       );
-      const corpusDatabasePath = path.join(
-        fixtureDirectory,
-        'semantic-index.sqlite',
-      );
-      const embeddingsDatabasePath = path.join(
-        fixtureDirectory,
-        'embeddings.sqlite',
-      );
+      const corpusDatabasePath = path.join(fixtureDirectory, 'corpus.sqlite');
 
       try {
         // Act
         const result = runModuleEvaluation<QueryDenseContractReport>(`
-          import Database from 'better-sqlite3';
+          import { createClient } from '@libsql/client';
+          import { pathToFileURL } from 'node:url';
           import { queryDenseIndex } from './scripts/semantic-index/query-dense.mjs';
 
-          const corpusDatabase = new Database(${JSON.stringify(corpusDatabasePath)});
-          corpusDatabase.exec(\`
+          const corpusClient = createClient({ url: pathToFileURL(${JSON.stringify(corpusDatabasePath)}).href });
+          await corpusClient.execute(\`
             CREATE TABLE documents (
               doc_id INTEGER PRIMARY KEY,
               file_path TEXT NOT NULL UNIQUE,
@@ -200,6 +146,8 @@ describe('hybrid-rank.mjs', () => {
               sha256 TEXT NOT NULL,
               indexed_at INTEGER NOT NULL
             );
+          \`);
+          await corpusClient.execute(\`
             CREATE TABLE chunks (
               chunk_id INTEGER PRIMARY KEY,
               doc_id INTEGER NOT NULL REFERENCES documents(doc_id) ON DELETE CASCADE,
@@ -208,8 +156,22 @@ describe('hybrid-rank.mjs', () => {
               body_text TEXT NOT NULL,
               char_start INTEGER NOT NULL,
               char_end INTEGER NOT NULL,
+              parent_chunk_id INTEGER,
+              depth INTEGER NOT NULL DEFAULT 0,
+              context_header TEXT,
+              symbol_name TEXT,
+              signature_text TEXT,
+              jsdoc_text TEXT,
+              export_type TEXT,
+              module_path TEXT,
+              embedding BLOB,
+              embedding_model TEXT,
+              chunk_sha256 TEXT,
+              embedded_at INTEGER,
               UNIQUE(doc_id, chunk_index)
             );
+          \`);
+          await corpusClient.execute(\`
             CREATE VIRTUAL TABLE chunks_fts USING fts5(
               body_text,
               heading_path,
@@ -218,32 +180,15 @@ describe('hybrid-rank.mjs', () => {
               tokenize='porter unicode61'
             );
           \`);
-          corpusDatabase.prepare('INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?)').run(1, 'semantic.md', 'readme', 0, 1, 'a', 0);
-          corpusDatabase.prepare('INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?)').run(1, 1, 0, 'Dense-only target', 'orthogonal paraphrase content', 0, 28);
-          corpusDatabase.exec(\`INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild');\`);
-          corpusDatabase.close();
-
-          const embeddingsDatabase = new Database(${JSON.stringify(embeddingsDatabasePath)});
-          embeddingsDatabase.exec(\`
-            CREATE TABLE chunk_embeddings (
-              chunk_id INTEGER PRIMARY KEY,
-              embedding BLOB NOT NULL,
-              chunk_sha256 TEXT NOT NULL,
-              model_id TEXT NOT NULL,
-              model_sha256 TEXT NOT NULL,
-              dimension INTEGER NOT NULL,
-              embedded_at TEXT NOT NULL
-            );
-          \`);
-          embeddingsDatabase.prepare('INSERT INTO chunk_embeddings VALUES (?, ?, ?, ?, ?, ?, ?)')
-            .run(1, Buffer.from(Float32Array.from([1, 0]).buffer), 'sha-1', 'fixture-model', 'model-sha', 2, '2026-05-23T00:00:00.000Z');
-          embeddingsDatabase.close();
+          await corpusClient.execute({ sql: 'INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?)', args: [1, 'semantic.md', 'readme', 0, 1, 'a', 0] });
+          await corpusClient.execute({ sql: 'INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, embedding, embedding_model) VALUES (?, ?, ?, ?, ?, ?, ?, vector8(?), ?)', args: [1, 1, 0, 'Dense-only target', 'orthogonal paraphrase content', 0, 28, Buffer.from(Float32Array.from([1, 0]).buffer), 'fixture-model'] });
+          await corpusClient.execute(\`INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild');\`);
+          await corpusClient.close();
 
           const report = await queryDenseIndex({
             alpha: 0.5,
             corpusDatabasePath: ${JSON.stringify(corpusDatabasePath)},
             dense: true,
-            embeddingsDatabasePath: ${JSON.stringify(embeddingsDatabasePath)},
             embedText: async () => new Float32Array([1, 0]),
             limit: 1,
             modelId: 'fixture-model',

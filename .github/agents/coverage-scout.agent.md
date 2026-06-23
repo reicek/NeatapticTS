@@ -88,6 +88,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 3. For any file below 100%, identify the uncovered line ranges and classify.
 4. Frame as a compact handoff into `coverage-guard`.
 
+## Coverage Gap Classification Patterns
+
+- **Uncovered branch:** A conditional branch with no test exercising it. Classify as reachable (add test) or dead code (remove branch).
+- **Uncovered function:** An exported or internal function with no test calling it. Classify as reachable (add test) or dead code (remove function).
+- **Uncovered line:** A line within a function that no test path reaches. Usually inside an uncovered branch. Classify with the branch.
+- **Dead code classification:** A path is dead code if NO legal input combination can reach it. Verify by reading the source and all call sites before classifying. Dead code should be removed, not tested.
+- **Reachable live path classification:** A path is reachable if a legal input combination can reach it. Add the smallest owner-local test to exercise it. One `it()` block, one top-level `expect()`.
+- **Coverage tranche target:** Identify the next file below 100% that has the most uncovered lines. This is the highest-value tranche target.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

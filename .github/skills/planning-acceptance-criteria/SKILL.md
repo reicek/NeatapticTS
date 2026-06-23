@@ -4,6 +4,10 @@ description: 'Use when: turning user intent into observable acceptance criteria,
 argument-hint: 'Describe the user request, target surface, edge cases, non-goals, and validation or done-state expectations.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - plan-alignment
+  - red-test-contracts
+  - tracker-handoff
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,26 @@ This skill converts user intent into a precise, testable acceptance criteria set
 - When a prior implementation did not satisfy the user's intent and you need to clarify expectations before retrying.
 - When preparing a handoff packet for an implementation agent that needs to know exactly what "done" looks like.
 - When scope is likely to widen during implementation and explicit non-goals are needed to contain it.
+
+
+## When NOT to use
+
+Do NOT use for plan alignment checking - use `plan-alignment` instead. Do NOT use for red test contracts - use `red-test-contracts` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Feature request"] --> B["Identify observable behaviors"]
+    B --> C["Write acceptance criteria"]
+    C --> D{"Can it be split?"}
+    D -- "Yes" --> E["Decompose into slices"]
+    D -- "No" --> F["Keep as single step"]
+    E --> G["Define each slice boundary"]
+    F --> H["Proceed to red testing"]
+    G --> H
+```
 
 ## Task Packet
 
@@ -44,6 +68,48 @@ Done-state: <what must be true for this to be complete>
 6. Identify open assumptions: decisions that depend on user preference or environmental state that cannot be determined from the task description alone.
 7. Keep the criteria concise enough to fit into a handoff packet; aim for five to ten well-scoped criteria rather than an exhaustive checklist.
 8. Surface open assumptions to the user or record them in the tracker before implementation proceeds.
+
+## No Deferred Cleanup — Mandatory Acceptance Criterion
+
+For any step, slice, or task that involves migration, refactoring, or API
+replacement, the acceptance criteria MUST include a criterion verifying that
+old code is removed in the same step:
+
+> "The old API/implementation is fully removed (no backward-compatibility
+> wrappers, no dual-path code, no deferred cleanup) in this step."
+
+This is a non-negotiable acceptance criterion. A step that introduces new code
+alongside old code without removing the old code MUST NOT pass acceptance
+review. The criterion MUST be observable: cite the specific files or exports
+that were deleted, not just "old code removed."
+
+
+## Before/After Examples: Vague to Precise
+
+**Before (vague):**
+```md
+- The builder should work correctly.
+```
+
+**After (precise):**
+```md
+- buildMLP() with default config produces a network with exactly 5 nodes
+  (2 inputs, 2 hidden, 1 output) and 6 connections.
+- buildMLP() with empty hiddenLayers throws an error naming the field.
+- Same config + same seed produces identical network shape.
+```
+
+## Decision Tree: Splitting Work
+
+```mermaid
+flowchart TD
+    A["Acceptance criteria"] --> B{"Multiple independent behaviors?"}
+    B -- "Yes" --> C["Split into slices"]
+    B -- "No" --> D["Single step"]
+    C --> E["Each slice has its own files_to_change"]
+    E --> F["Each slice has its own acceptance criteria"]
+    F --> G["Define parallelizable flag"]
+```
 
 ## Guardrails
 

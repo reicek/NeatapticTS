@@ -52,16 +52,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
    If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
 
-2. Identify the exact planning question and which context types are actually required: plan alignment, README evidence, ownership clues, or edit boundaries.
-3. Choose the smallest specialist set:
-   - Invoke `plan-scout` for plan files, roadmap alignment, terminology, and active-tracker context.
-   - Invoke `docs-scout` when nearest README or JSDoc-backed documentation context matters.
-   - Invoke `boundary-mapper` when ownership seams, orchestration files, or edit boundaries matter.
-4. Run independent read-only scouts in parallel only when their scopes do not overlap materially.
-5. If one scout fails or returns incomplete evidence, retry once with a tighter packet or smaller question, then keep any successful findings and record the missing evidence explicitly.
-6. Resolve conflicting findings with the documented source-of-truth order instead of blending them. If more than one plausible plan, owner, or boundary still remains, record both options and mark the result `PARTIAL`.
-7. Synthesize a compact planning brief in the structured output block, including any freshness note or changed-since-prior-pass signal only when the caller supplied prior evidence or the file metadata makes it obvious.
-8. Stop. Return the block and nothing else.
+2. Identify the exact documentation boundary to audit: which generated README, JSDoc surface, or Mermaid diagram is in scope.
+3. Perform your OWN investigation — do NOT delegate to other scouts or coordinators. This is a thin Tier 3 auditor, not a Tier 2 orchestrator.
+4. Run the academic documentation audit checklist (below) against the target surface.
+5. Classify each finding as: citation gap, generated-output risk, atemporal violation, Mermaid quality issue, or JSDoc quality issue.
+6. Record findings compactly. Do NOT fix anything — implementation belongs to the companion skill.
+7. Stop. Return the structured output block and nothing else.
+
+## Academic Documentation Audit Checklist
+
+- **Citation gaps:** Verify every algorithm, architecture, or design claim has an academic citation (Wikipedia, arXiv, or peer-reviewed paper). Flag uncited claims.
+- **Generated-output risks:** Check whether generated README content could drift from source JSDoc. Flag mismatches between JSDoc and generated README.
+- **Atemporal verification:** Ensure documentation contains no roadmap phases, PR numbers, plan stages, "before/after" framing, or temporal references that will become stale. Documentation must be atemporal.
+- **Mermaid diagram quality:** Verify Mermaid diagrams render correctly, use valid syntax, show meaningful topology, and have descriptive labels. Flag broken or trivial diagrams.
+- **JSDoc quality:** Verify exported symbols have JSDoc with `@param`, `@returns`, `@throws`, and `@example` where applicable. Flag missing or shallow JSDoc.
 
 ## If Blocked
 

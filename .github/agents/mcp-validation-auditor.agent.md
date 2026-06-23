@@ -67,6 +67,24 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 6. Route failures: plan-sync issues to `tracker-handoff`, server contract issues to `mcp-server-architect`, model issues to `model-name-auditor`.
 7. Summarize commands run, pass/fail evidence, verified facts, and residual risk.
 
+## Allow-Listed Validation Command Catalog
+
+- **Plan sync:** `node .github/hooks/workflow-update-sync.mjs --plan=<plan-path> --json`
+- **Plan validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=<plan-path>`
+- **Agent graph validation:** `node scripts/agent-customization/validate-agent-graph.mjs --json`
+- **Agent frontmatter validation:** `node scripts/agent-customization/validate-agent-frontmatter.mjs --json`
+- **Routing table gate:** `npm run agents:routing-table:gate`
+- **Phase compression gate:** `node scripts/agent-customization/gates/phase-compression.gate.mjs --json`
+- **Cortex index gate:** `neataptic-gate-mcp:run_gate_check --gate cortex-index`
+- **Cortex first search gate:** `neataptic-gate-mcp:run_gate_check --gate cortex-first-search`
+
+## Runtime Fact Verification Patterns
+
+- **Static verification:** Commands that can be verified by reading repo files (script existence, configuration files). Use `view` or `grep` to confirm.
+- **Live verification:** Commands that require runtime execution (MCP server responses, gate checks). Use `neataptic-gate-mcp:run_gate_check` to execute.
+- **Allow-list matching:** Verify that validation commands in the active step packet match the allow-list exactly. Flag commands that are close but not exact matches (e.g., extra flags, wrong path).
+- **Evidence recording:** Verify that validation evidence includes the command, exit code, and one-line result. Flag missing or incomplete evidence.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

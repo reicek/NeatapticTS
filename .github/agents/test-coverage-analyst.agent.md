@@ -7,7 +7,7 @@ tools:
   [
     read,
     search,
-    bash,
+    execute,
     neataptic-cortex-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
@@ -81,6 +81,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    ```
 3. For any file below 100%, identify the uncovered line ranges and classify.
 4. Frame as a compact handoff into `coverage-guard`.
+
+## lcov.info Parsing Patterns
+
+- **File-level coverage:** Parse `lcov.info` for `SF:` (source file) and `LF:`/`LH:` (line found / line hit) records. Files with `LH < LF` have uncovered lines.
+- **Branch coverage:** Parse `BRF:` (branch found) and `BRH:` (branch hit) records. Branches with `BRH < BRF` have uncovered branches.
+- **Function coverage:** Parse `FNF:` (function found) and `FNH:` (function hit) records. Functions with `FNH < FNF` have uncovered functions.
+- **Dead code mapping:** Cross-reference uncovered lines with source file content. If no legal input reaches the line, classify as dead code for removal. If reachable, classify for test addition.
+- **Next tranche target:** Sort files by uncovered line count descending. The file with the most uncovered lines and the clearest path to coverage is the next tranche target.
+- **Coverage regression detection:** Compare current `lcov.info` against a prior baseline. Any file that decreased in coverage is a regression that must be fixed before merge.
 
 ## If Blocked
 

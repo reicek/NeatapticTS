@@ -58,6 +58,33 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 3. Draft realistic should-trigger and should-not-trigger queries, including near misses.
 4. Return a compact structured result ready for the caller to turn into eval fixtures.
 
+## Trigger Eval Design Patterns
+
+- **Should-trigger cases:** Design test inputs that match the skill's description keywords and should activate the skill. Verify the trigger fires.
+- **Should-not-trigger cases:** Design test inputs that are similar but outside the skill's scope. Verify the trigger does NOT fire (no false positives).
+- **False positive testing:** Test inputs that share surface keywords but have different intent. Example: "coverage" in "test coverage report" vs "code coverage tranche". Verify correct disambiguation.
+- **Description quality:** Verify the description includes specific trigger keywords. Flag vague descriptions that produce low trigger rates.
+- **Trigger rate measurement:** Calculate the trigger rate as (correct triggers / total should-trigger cases). Flag skills with trigger rate below 80%.
+
+## Eval Fixture Output Format Template
+
+```yaml
+trigger_eval:
+  skill_name: <skill-name>
+  should_trigger:
+    - input: <test input>
+      expected: true
+      actual: true|false
+      reason: <why it should trigger>
+  should_not_trigger:
+    - input: <test input>
+      expected: false
+      actual: true|false
+      reason: <why it should not trigger>
+  trigger_rate: <percentage>
+  false_positive_rate: <percentage>
+```
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the target description or trigger boundary is unclear.

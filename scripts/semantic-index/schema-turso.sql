@@ -1,8 +1,19 @@
--- Schema v2/v3: Semantic chunking with parent-child hierarchy, context metadata,
--- and metadata enrichment columns. FTS5 continues to index body_text and
--- heading_path only (context_header is agent-facing metadata, not search content).
-
-PRAGMA foreign_keys = ON;
+-- Schema Turso: Consolidated schema for Turso/libSQL RAG database.
+--
+-- Merges the two-file SQLite split (semantic-index.sqlite + embeddings.sqlite)
+-- into a single Turso database with native F8_BLOB(384) vector columns and
+-- DiskANN (libsql_vector_idx) ANN indexes. Uses a _schema_version table for
+-- schema versioning and an _index_metadata table for application metadata,
+-- both of which are read-write on Turso Cloud.
+--
+-- Based on schema-v2.sql with the following changes:
+--   - chunk_embeddings table merged into chunks as embedding F8_BLOB(384)
+--   - embedding_model TEXT, chunk_sha256 TEXT, embedded_at INTEGER added to chunks
+--   - term_embeddings.embedding changed from BLOB to F8_BLOB(384)
+--   - DiskANN vector indexes on chunks.embedding and term_embeddings.embedding
+--   - _schema_version table for schema versioning (read-only pragmas not supported on Turso)
+--   - _index_metadata table for application metadata
+--   - No unsupported pragmas or cleanup commands (both unavailable on Turso Cloud)
 
 CREATE TABLE IF NOT EXISTS documents (
   doc_id INTEGER PRIMARY KEY,
@@ -39,6 +50,10 @@ CREATE TABLE IF NOT EXISTS chunks (
   cyclomatic_complexity INTEGER,
   test_coverage TEXT CHECK(test_coverage IN ('full', 'partial', 'none', 'unknown')),
   source_path_pattern TEXT,
+  embedding F8_BLOB(384),
+  embedding_model TEXT,
+  chunk_sha256 TEXT,
+  embedded_at INTEGER,
   UNIQUE(doc_id, chunk_index)
 );
 
@@ -88,6 +103,9 @@ CREATE INDEX IF NOT EXISTS chunks_depth_idx ON chunks(depth);
 CREATE INDEX IF NOT EXISTS chunks_symbol_idx ON chunks(symbol_name);
 CREATE INDEX IF NOT EXISTS chunks_module_idx ON chunks(module_path);
 
+-- DiskANN vector index on chunks.embedding (metric=cosine, max_neighbors=59, alpha=1.2, search_l=80)
+CREATE INDEX IF NOT EXISTS chunks_embedding_idx ON chunks(libsql_vector_idx(embedding));
+
 -- v4: Entity/relationship graph tables
 CREATE TABLE IF NOT EXISTS entities (
   entity_id INTEGER PRIMARY KEY,
@@ -133,10 +151,10 @@ CREATE INDEX IF NOT EXISTS edges_relationship_idx ON edges(relationship);
 CREATE INDEX IF NOT EXISTS edges_source_rel_idx ON edges(source_entity_id, relationship);
 CREATE INDEX IF NOT EXISTS edges_target_rel_idx ON edges(target_entity_id, relationship);
 
--- v5: Term embeddings for query expansion
+-- v5: Term embeddings for query expansion (F8_BLOB quantized)
 CREATE TABLE IF NOT EXISTS term_embeddings (
   term TEXT NOT NULL,
-  embedding BLOB NOT NULL,
+  embedding F8_BLOB(384) NOT NULL,
   term_sha256 TEXT NOT NULL,
   model_id TEXT NOT NULL,
   model_sha256 TEXT NOT NULL,
@@ -149,6 +167,9 @@ CREATE TABLE IF NOT EXISTS term_embeddings (
 
 CREATE INDEX IF NOT EXISTS term_embeddings_model_idx ON term_embeddings(model_id, term_sha256);
 CREATE INDEX IF NOT EXISTS term_embeddings_frequency_idx ON term_embeddings(frequency DESC);
+
+-- DiskANN vector index on term_embeddings.embedding (metric=cosine, max_neighbors=32, search_l=100)
+CREATE INDEX IF NOT EXISTS term_embeddings_embedding_idx ON term_embeddings(libsql_vector_idx(embedding));
 
 -- v6: Feedback events and scores for relevance feedback signals
 CREATE TABLE IF NOT EXISTS feedback_events (
@@ -175,4 +196,16 @@ CREATE TABLE IF NOT EXISTS feedback_scores (
   total_references INTEGER NOT NULL DEFAULT 0,
   last_feedback_at DATETIME,
   feedback_boost REAL NOT NULL DEFAULT 0.0
+);
+
+-- Schema versioning (read-only schema pragma not supported on Turso)
+CREATE TABLE IF NOT EXISTS _schema_version (
+  version INTEGER NOT NULL,
+  applied_at INTEGER NOT NULL
+);
+
+-- Index metadata (replaces application_id pragma)
+CREATE TABLE IF NOT EXISTS _index_metadata (
+  key TEXT PRIMARY KEY,
+  value TEXT
 );

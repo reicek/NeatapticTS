@@ -1,8 +1,65 @@
 # NEAT Genesis EvoDevo: Core Readiness Audit
 
-**Status:** [WIP] (Phase 4 Step 05 — Green validation and determinism audit)
+**Status:** [WIP] (Phase 4 [DONE]; Phase 5 [DONE]; Phase 6 ? Experimental root public API exposure [WIP]; Phase 6 Step 01 [WIP])
 
-Claim: 04-implementing @ 2026-06-16
+Claim: 04-implementing @ 2026-06-22T20:19:59-04:00
+
+```yaml
+PlanUpdate:
+  slice_id: 04-impl
+  changed_files:
+    - src/neat/nge-adult/neat.nge-adult.cooling.ts
+    - src/neat/nge-adult/neat.nge-adult.utils.ts
+    - src/neat/neat.nge-lifecycle.ts
+    - src/neat/nge-juvenile/neat.nge-juvenile.ts
+    - src/neat/nge-assimilation/neat.nge-assimilation.ts
+    - src/neat/nge-adult/neat.nge-adult.test.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --check <touched-files>'
+  validation:
+    - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns="src/neat/(nge-adult/neat.nge-adult|neat.nge-lifecycle|nge-assimilation/neat.nge-assimilation)"'
+      expected_exit: 0
+  rollback:
+    - 'git checkout -- src/neat/nge-adult/neat.nge-adult.cooling.ts src/neat/nge-adult/neat.nge-adult.utils.ts src/neat/neat.nge-lifecycle.ts src/neat/nge-juvenile/neat.nge-juvenile.ts src/neat/nge-adult/neat.nge-adult.test.ts'
+    - 'rm src/neat/neat.nge-lifecycle.ts src/neat/nge-juvenile/neat.nge-juvenile.ts'
+  next: 'Run 05-green-testing slice 04-green and attach coverage-guard evidence.'
+```
+
+```yaml
+PlanUpdate:
+  slice_id: 04-green
+  validator: 05-green-testing
+  changed_files:
+    - src/neat/nge-adult/neat.nge-adult.cooling.ts
+    - src/neat/nge-adult/neat.nge-adult.utils.ts
+    - src/neat/neat.nge-lifecycle.ts
+    - src/neat/nge-juvenile/neat.nge-juvenile.ts
+    - src/neat/nge-adult/neat.nge-adult.cooling.test.ts
+    - src/neat/neat.nge-lifecycle.test.ts
+    - src/neat/nge-juvenile/neat.nge-juvenile.test.ts
+  validation:
+    - gate: plan-sync
+      command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+      result: pass
+    - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns="src/neat/(nge-adult/neat.nge-adult|neat.nge-lifecycle|nge-juvenile/neat.nge-juvenile)"'
+      result: pass
+      suites: '4 passed, 4 total'
+      tests: '164 passed, 164 total'
+    - command: 'npm run lint'
+      result: pass
+    - gate: delegate-skill-coverage
+      command: 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
+      result: pass
+  coverage_guard:
+    src/neat/neat.nge-lifecycle.ts: { statements: 100, branches: 100, functions: 100, lines: 100 }
+    src/neat/nge-adult/neat.nge-adult.cooling.ts: { statements: 100, branches: 100, functions: 100, lines: 100 }
+    src/neat/nge-adult/neat.nge-adult.utils.ts: { statements: 100, branches: 100, functions: 100, lines: 100 }
+    src/neat/nge-juvenile/neat.nge-juvenile.ts: { statements: 100, branches: 100, functions: 100, lines: 100 }
+  status: '[DONE]'
+  next: 'Advance to Step 05 — Green validation and lifecycle audit.'
+```
 
 ## Audit summary
 
@@ -174,6 +231,34 @@ stop_conditions:
 
 ### Phase 1 — Readiness audit, matrix preservation, and phase packetization [DONE]
 
+```yaml
+phase: 1
+title: 'Readiness audit, matrix preservation, and phase packetization'
+status: '[DONE]'
+goal: 'planning'
+expansion: 'steps'
+auto_expand: false
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+copy_paste: true
+next_phase: 'Phase 2 — Team-level fitness core evaluator'
+skills:
+  - execute
+  - nge-core-algorithm
+  - plan-alignment
+  - phase-handoff-workflow
+validation:
+  - 'node scripts/agent-customization/validate-agent-graph.mjs'
+acceptance_criteria:
+  - 'All readiness audit steps complete'
+placeholder_steps:
+  - 'Step 01 — Boundary mapping'
+  - 'Step 02 — Prior art scan'
+  - 'Step 03 — Core algorithm design'
+  - 'Step 04 — Benchmark methodology'
+  - 'Step 05 — Documentation baseline'
+```
+
 #### Step 01 — Initial survey and findings [DONE]
 
 [DONE] Initial audit compressed: upstream plan evidence, code exploration, and
@@ -189,12 +274,16 @@ See Current-state audit summary above for file-backed evidence.
 phase: 1
 step: 2
 goal: 'researching'
+expansion: none
+auto_expand: false
 status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
 copy_paste: 'true'
 next_step: 'Step 03 — Gap-to-phase mapping'
-skills: 'nge-core-algorithm'
+skills:
+  - execute
+  - nge-core-algorithm
 validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 ```
@@ -236,13 +325,19 @@ validation:
 ```yaml
 phase: 1
 step: 3
-goal: 'planning'
+goal: 'researching'
+expansion: none
+auto_expand: false
 status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
 copy_paste: 'true'
 next_step: 'Step 04 — First active implementation cycle selection'
-skills: 'plan-alignment, phase-handoff-workflow, nge-core-algorithm'
+skills:
+  - execute
+  - plan-alignment
+  - phase-handoff-workflow
+  - nge-core-algorithm
 validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 ```
@@ -271,13 +366,19 @@ validation:
 ```yaml
 phase: 1
 step: 4
-goal: 'planning'
+goal: 'researching'
+expansion: none
+auto_expand: false
 status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
 copy_paste: 'true'
 next_step: 'Step 05 — Cross-plan MCP handoff packet'
-skills: 'plan-alignment, phase-handoff-workflow, nge-core-algorithm'
+skills:
+  - execute
+  - plan-alignment
+  - phase-handoff-workflow
+  - nge-core-algorithm
 validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 ```
@@ -367,13 +468,19 @@ blocker without hiding any unfinished work behind a later bucket.
 ```yaml
 phase: 1
 step: 5
-goal: 'planning'
+goal: 'researching'
+expansion: none
+auto_expand: false
 status: '[DONE]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
 copy_paste: 'true'
 next_step: 'Phase 2 — Team-level fitness core evaluator'
-skills: 'plan-alignment, phase-handoff-workflow, repo-cortex-workflow'
+skills:
+  - execute
+  - plan-alignment
+  - phase-handoff-workflow
+  - repo-cortex-workflow
 validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 ```
@@ -504,1120 +611,58 @@ run quality:folder -- --folder=examples/racing_curriculum/workers/simulation-wor
 - **Deferred to Phase 4:** deterministic evaluation-pack normalization, packed `race-step` transport, transfer-list rules, replay guarantees.
 - **Downstream consumers:** Racing (first proving ground), Predator/Prey (second consumer with stronger synchronized-two-population pressure).
 
-### Phase 4 — Deterministic evaluation packs / deterministic race packs normalization [WIP]
+### Phase 4 — Deterministic evaluation packs / deterministic race packs normalization [DONE]
 
-```yaml
-phase: 4
-title: 'Deterministic evaluation packs / deterministic race packs normalization'
-status: '[WIP]'
-goal: planning
-expansion: steps
-auto_expand: false
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-next_phase: 'Lifecycle staging closure and nge-adult readiness reconciliation'
-skills:
-  - plan-alignment
-validation:
-  - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-placeholder_steps:
-  - 'Step 01 — Planning packet and determinism contract freeze'
-  - 'Step 02 — Transport and reproducibility seam mapping'
-  - 'Step 03 — Red tests for deterministic evaluation packs'
-  - 'Step 04 — Implement deterministic evaluation-pack normalization'
-  - 'Step 05 — Green validation and determinism audit'
-  - 'Step 06 — Documentation and reproducibility contract alignment'
-  - 'Step 07 — Logging and phase closure packet'
-```
+[DONE] Phase 4: Deterministic evaluation-pack normalization implemented and validated.
 
-#### Step 01 — Planning packet and determinism contract freeze [DONE]
+**Durable coverage notes:**
 
-```yaml
-phase: 4
-step: 1
-goal: 'planning'
-status: '[DONE]'
-mode: 'fresh-session'
-source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-copy_paste: 'true'
-next_step: 'Step 02 — Transport and reproducibility seam mapping'
-skills: 'plan-alignment, phase-handoff-workflow, reproducibility-contracts'
-validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-```
+- **Scope frozen:** Froze Layer 1/2/3 ownership: NGE core Layer 1 owns transport-neutral collective evaluation and generation barriers; NGE core Layer 2 owns the generic deterministic pack contract (`createDeterministicEvaluationPack`, `resolveTransferList`, `assertSchemaVersion`); Racing Layer 3 owns `RacingRenderFrame` assembly, per-tier construction, and track physics; Racing stays the first proving ground, not the contract owner.
+- **Implementation boundary:** `src/architecture/network/evaluation-pack/network.evaluation-pack.ts` (Layer 2 core); `examples/racing_curriculum/workers/simulation-worker/simulation-worker.evaluation-pack.normalizer.ts` (Layer 3 racing wrapper).
+- **Test evidence:** 8/8 core pack tests green (`network.evaluation-pack.test.ts`); `network.evaluation-pack.ts` at 100% statements / branches / functions / lines. 7/7 racing normalizer tests green (`simulation-worker.evaluation-pack.normalizer.test.ts`).
+- **Docs evidence:** Source JSDoc updated with bounded same-runtime determinism, generic reproducibility tuple (`seed, agentCount, schemaVersion`), racing reproducibility tuple (`seed, agentCount, packSchemaVersion, opponentSnapshot, trackId, featureFlags`), citations, and runnable examples; generated `src/architecture/network/evaluation-pack/README.md` regenerated via `npm run docs:folders:src`.
+- **Gate evidence:** plan-sync PASS; step-packet PASS; agent-graph PASS (65 agents, 0 issues); phase-compression PASS; log-completion-marker PASS; stale-wip-plans PASS; delegate-skill-coverage PASS; chrome-devtools-mcp-coverage PASS (browser-determinism audit skipped because no browser render-loop/transfer-list surface was touched in this phase).
+- **Deferred to Phase 5:** lifecycle staging closure and `nge-adult` readiness reconciliation.
+- **Downstream consumers:** Racing (first proving ground), Predator/Prey and Ant Hive (will reuse the generic Layer 2 contract once their own worker seams are in scope).
 
-**Step objective:** Freeze the deterministic evaluation-pack contract and clarify which pieces are core semantics versus worker transport normalization.
+### Phase 5 ? Lifecycle staging closure and nge-adult readiness reconciliation [DONE]
 
-**Execution focus:** Preserve the provisional owner note from the readiness audit, define the normalization boundary explicitly, and keep Racing as the proving ground rather than the owner.
+**Closed:** 2026-06-23
 
-**Stop conditions:** Done when contract scope and ownership are frozen; hold on unresolved owner boundaries; blocked if Phase 3 still changes shared prerequisites.
+**Scope:** Close lifecycle staging gaps, reconcile `nge-adult` readiness with file-backed evidence, and resolve contradictions with archived closure claims.
 
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
+**Implementation boundary:**
+- `src/neat/nge-adult/neat.nge-adult.cooling.ts` ? runtime growth-cooling decision.
+- `src/neat/nge-adult/neat.nge-adult.utils.ts` ? adult-state seeding helpers.
+- `src/neat/neat.nge-lifecycle.ts` ? lifecycle staging runner.
+- `src/neat/nge-juvenile/neat.nge-juvenile.ts` ? juvenile root orchestrator.
 
----
+**Validation evidence:**
+- Phase/step packet validation PASS (`validate-plan-sync.mjs`, `validate-plan-phase-packets.mjs`).
+- Red tests reproduced hardcoded `growthCoolingActive: true` and missing lifecycle runner (Step 03).
+- Green validation: 164/164 focused lifecycle tests pass; touched `src/` files at 100% statements/branches/functions/lines.
+- `npm run lint` exit 0; `npx tsc --noEmit -p tsconfig.json` exit 0.
+- `npm run docs` regenerated READMEs; `docs-quality-metrics.gate.mjs` PASS; `cortex-index` gate PASS.
+- plan-sync, phase-compression, log-completion-marker, stale-wip-plans, delegate-skill-coverage gates PASS.
 
-##### Step 01 — Frozen Determinism Contract
+**Decisions:**
+- Runtime cooling decision uses focus floor; stale placeholder JSDoc corrected in adult cooling and utils.
+- `runNgeLifecycle` sequences juvenile ? assimilation ? adult stages.
+- Juvenile root orchestrator re-exports owner-local helpers.
+- C5 snapshot-vs-emission semantic gap documented as experimental caveat; full resolution deferred to assimilation-wiring follow-up.
 
-###### Determinism rung
+**Risks:**
+- C5 adult-state snapshot semantics remain unresolved beyond documented caveat.
+- Lifecycle integration beyond the staged runner is not yet exercised by a downstream benchmark.
 
-**Level 2 — Ordered deterministic.** Same seed, same inputs, same ordering rules,
-and same runtime configuration produce numerically stable outputs within one
-runtime (Node or browser). Cross-environment byte-identical results are NOT
-promised because typed-array layout, transfer semantics, and floating-point
-reduction order may differ between Node `worker_threads` and browser
-`Web Workers`.
+**Next resume point:** Phase 6 ? Experimental root public API exposure [WIP].
 
-Rationale: `createDeterministicRacePack` already proves that same seed + same
-opponent snapshot → identical `RacingRenderFrame` on the same runtime. A Level 3
-(replay exact) claim would require full RNG state capture beyond the pack seed,
-which is out of scope for Phase 4 — the pack seed is sufficient for ordered
-deterministic replay at the pack-creation boundary. A Level 4 (cross-environment
-bounded) claim would require documenting every floating-point and transport
-difference between Node and browser workers, which is deferred to a later
-reproducibility audit after the core normalization seam lands.
-
-###### Contract scope — what Phase 4 normalizes
-
-| Contract element                 | Current location                                          | Target owner after Phase 4          |
-| -------------------------------- | --------------------------------------------------------- | ----------------------------------- |
-| Deterministic pack creation      | `simulation-worker.race-pack.service.ts` (racing)         | NGE core — Layer 2                  |
-| Pack replay validation           | No reusable validator exists                              | NGE core — Layer 2                  |
-| Transfer-list resolution         | `simulation-worker.race-pack.service.ts` (racing)         | NGE core — Layer 2                  |
-| Schema versioning / rejection    | `simulation-worker.types.ts` (racing `RacingRenderFrame`) | NGE core — Layer 2 (generic schema) |
-| Clone-safe payload contract      | Implicit in worker transport                              | NGE core — Layer 2 (explicit)       |
-| `RacingRenderFrame` type         | `simulation-worker.types.ts` (racing)                     | Racing-owned — Layer 3 (stays)      |
-| Per-tier pack construction       | `simulation-worker.tier3/4/5.ts` (racing)                 | Racing-owned — Layer 3 (stays)      |
-| Track physics / tire / pit state | Racing-specific frame fields                              | Racing-owned — Layer 3 (stays)      |
-| Renderer layout                  | Car positions, headings, place                            | Racing-owned — Layer 3 (stays)      |
-
-###### Three-layer ownership boundary
-
-```mermaid
-graph TD
-  L1["Layer 1 — NGE Core Semantics<br/>nge-collective<br/><em>transport-neutral</em>"]
-  L2["Layer 2 — Worker Transport Normalization<br/>NEW Phase 4 module<br/><em>deterministic packs, replay, transfer, schema</em>"]
-  L3["Layer 3 — Benchmark-Local Racing Transport<br/>examples/racing_curriculum<br/><em>RacingRenderFrame, per-tier construction, physics</em>"]
-
-  L1 -->|"evaluation context<br/>team fitness<br/>generation barriers"| L2
-  L2 -->|"generic pack contract<br/>transfer-list rules<br/>schema versioning"| L3
-  L3 -->|"proves contract e2e<br/>does NOT own it"| L2
-```
-
-**Layer 1 — NGE Core Semantics** (`src/neat/nge-collective/`):
-
-- `runCollectiveEvaluationTick`, `resetCollectiveEvaluationState`
-- `createTeamFitnessEvaluator`, team/group fitness aggregation
-- `createTwoPopulationHarness`, `advanceTwoPopulations`
-- Generation barrier semantics (transport-neutral by Phase 3 design)
-- Opponent snapshot pool management
-- **Invariant:** these functions never depend on `RacingRenderFrame`,
-  transfer lists, worker topology, or any benchmark-specific type.
-
-**Layer 2 — Worker Transport Normalization** (NEW — Phase 4 creates this):
-
-- Deterministic evaluation-pack creation (core-owned generic contract)
-- Pack replay validation (same seed + same inputs → identical output)
-- Transfer-list resolution (zero-copy `postMessage` contract)
-- Schema versioning and forward-compatibility rejection
-- Clone-safe payload contract for worker boundaries
-- **Invariant:** Layer 2 types are generic (not `RacingRenderFrame`-specific).
-  Racing provides the concrete frame type; Layer 2 provides the
-  deterministic-pack and transfer contracts that any benchmark can reuse.
-
-**Layer 3 — Benchmark-Local Racing Transport** (`examples/racing_curriculum/`):
-
-- `RacingRenderFrame` type with `schemaVersion: 'racing-packed-v1'`
-- Per-tier pack construction (`simulation-worker.tier3/4/5.ts`)
-- Track-specific physics, tire/pit state, feature flags
-- Renderer-specific layout (car positions, headings, place)
-- **Invariant:** Layer 3 stays racing-owned and is never promoted to core.
-  If Racing exposes a gap in the Layer 2 contract, the gap routes back to
-  NGE core per the core-first routing policy.
-
-###### Seam between Layer 2 and Layer 3
-
-The seam is where core pack creation meets racing-specific frame population.
-Today, `createDeterministicRacePack` in `simulation-worker.race-pack.service.ts`
-fills a `RacingRenderFrame` directly from a seed + snapshot. After Phase 4,
-the core owns a generic `createDeterministicEvaluationPack(seed, inputs)` that
-produces a transport-neutral pack, and Racing wraps that with its own
-`populateRacingFrame(pack, racingConfig)` that injects track physics, tire
-state, and renderer layout. The replay contract applies at the generic pack
-boundary, not at the racing-frame boundary.
-
-###### Provisional owner note — resolved
-
-The Step 02 readiness audit recorded:
-
-> "The deterministic evaluation-pack owner boundary is still provisional
-> pending seam mapping between NGE core, worker protocol, and racing-owned
-> transport."
-
-**Resolution:** The owner boundary is now frozen per the three-layer model
-above. Core (Layer 2) owns the deterministic pack contract. Racing (Layer 3)
-owns the frame assembly. Worker protocol (Layer 2, shared with core) owns the
-transfer-list and clone-safe contracts. No owner boundary remains provisional.
-
-###### Racing as proving ground, not owner
-
-Racing is the first downstream consumer that validates the core deterministic
-evaluation-pack contract works end-to-end. Racing does NOT own the pack
-creation contract, the replay contract, or the transfer contract. If Racing
-exposes a gap in the core contract, the gap routes back to NGE core (per the
-`core_first_routing` acceptance criterion). Predator/Prey and Ant Hive will be
-the second and third proving grounds, but they cannot validate the contract
-until Phase 4 normalization lands and Racing confirms it e2e.
-
-###### Reproducibility tuple for the pack-creation boundary
-
-$$
-R_{\text{pack}} = (\text{seed}, \text{opponentSnapshot}, \text{agentCount}, \text{schemaVersion})
-$$
-
-Same tuple → identical pack on the same runtime. Missing any component weakens
-the claim to seed-repeatable (Level 1). The tuple does NOT include full RNG
-state (Level 3 would require that) or environment assumptions (Level 4 would
-require that).
-
-###### Phase 3 prerequisite — confirmed stable
-
-Phase 3 ([DONE]) closed with transport-neutral generation-barrier semantics in
-`neat.nge-collective.two-population.ts`. The Phase 3 closure notes explicitly
-defer deterministic transport normalization to Phase 4. Phase 3 no longer
-changes shared prerequisites — the blocker condition is not active.
-
-#### Step 02 — Transport and reproducibility seam mapping [DONE]
-
-```yaml
-phase: 4
-step: 2
-title: 'Transport and reproducibility seam mapping'
-status: '[DONE]'
-goal: researching
-expansion: none
-auto_expand: false
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - 'reproducibility-contracts, worker-inference-transport, repo-cortex-workflow'
-next_step: 'Step 03 — Red tests for deterministic evaluation packs'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-  - 'node scripts/agent-customization/gates/cortex-first-search.gate.mjs --json'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-```
-
-**Step objective:** Map current pack generation, race-step transport, and reproducibility seams before writing tests.
-
-**Execution focus:** Use Repo Cortex to map existing race-pack helpers, worker-frame schemas, and determinism notes; classify which files own normalization and which remain benchmark-local adapters.
-
-**Stop conditions:** Done when seam mapping and owner boundaries are recorded; hold on unresolved transport ownership; blocked on missing workflow or Cortex evidence.
-
-**Required validation:**
-
-- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md` → **PASS** (0 errors, 0 warnings)
-- `node scripts/agent-customization/gates/cortex-first-search.gate.mjs --json` → **FAIL** (`index_fresh: false`, stale paths from plan file edits; `corpus_mcp_alive: true`, `corpus_search_results: 3`). Fix: `node scripts/semantic-index/build-index.mjs` (maintenance, not blocking research).
-
-**Seam mapping findings (Step 02 research output):**
-
-**1. Pack generation seam**
-
-Current owner: `examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts`
-
-- `createDeterministicRacePack(seed, opponentSnapshot): RacingRenderFrame` — fills `RacingRenderFrame` typed arrays directly from seed + opponent snapshot.
-- Reproducibility tuple: `R_pack = (seed, opponentSnapshot, agentCount, schemaVersion)`. Same tuple → identical pack on same runtime.
-- Does NOT capture full RNG state or environment assumptions (Level 2 determinism, not Level 3).
-- Target: generalize to `createDeterministicEvaluationPack(seed, inputs)` in Layer 2 (transport-neutral). Racing wraps with `populateRacingFrame(pack, racingConfig)` injecting track physics/tire/renderer.
-
-Classification: **Benchmark-local adapter** (Layer 3). Pack creation logic is racing-specific because it fills `RacingRenderFrame` fields. The deterministic seed→pack pattern is generalizable but currently lives in racing code.
-
-**2. Race-step transport seam**
-
-Current state: **The racing benchmark does NOT use the library's `evaluateInWorkers`/`ParallelInferencePool` infrastructure.** It rolls its own transport:
-
-- `resolveRaceStepTransferList(frame: RacingRenderFrame): ArrayBuffer[]` in `simulation-worker.race-pack.service.ts` — builds postMessage transfer list from frame typed arrays.
-- `resolveRacingRenderFrameTransferList(frame)` in `simulation-worker.snapshot.utils.ts` — mirror implementation.
-- `assertRacingSchemaVersion(frame)` in `simulation-worker.snapshot.utils.ts` — rejects frames with wrong `schemaVersion`.
-- Direct `postMessage` with transfer lists; no `ParallelInferencePool`, no `evaluateInWorkers`, no `NetworkInferenceIR`, no `InferenceChannel`.
-- Verified: zero imports of `multithreading`, `worker-payload`, `ParallelInferencePool`, `evaluateInWorkers`, `resolveBrowserWorkerAssetUrl`, `InferenceChannel`, or `NetworkInferenceIR` in `examples/racing_curriculum/`.
-
-Library-owned transport infrastructure (existing, NOT consumed by racing):
-
-- `src/architecture/network/worker-payload/network.worker-payload.batch.ts` — `evaluateInWorkers<TInput, TPayload, TWorker, TResult>(options)` + `EvaluateInWorkersOptions` + `BatchEvaluationResult`. Ordered batch evaluation with local fallback. Caller-owned transport substrate.
-- `src/architecture/network/worker-payload/network.worker-payload.pool.ts` — `ParallelInferencePool<TPayload, TWorker>` with `evaluateOrderedBatch()`, `ParallelInferencePoolOptions`, `ParallelInferenceWorkerLike`.
-- `src/architecture/network/worker-payload/network.worker-payload.browser-url.ts` — `resolveBrowserWorkerAssetUrl()` for CSP/custom packaging.
-- `src/architecture/network/worker-payload/network.worker-payload.types.ts` — `NetworkInferenceIR`, `NetworkInferenceIRNode`, `NetworkInferenceIREdge`, `InferenceChannel`, `InferenceChannelOptions`, `InferencePredictor`. Deterministic worker-consumable network snapshot IR.
-- `src/multithreading/multi.ts` — `Multi` facade with `activateSerializedNetwork`, `testSerializedSet`. Legacy multithreading boundary.
-- `src/multithreading/types.ts` — `SerializableNetwork`, `SerializedSample`, `TestWorkerConstructor/Instance`. Legacy shared contracts.
-- `src/multithreading/workers/workers.ts` — `Workers` class with `getBrowserTestWorker()`/`getNodeTestWorker()` runtime loader shelf.
-
-Classification: **Two parallel transport stacks with no shared contract.**
-
-- Library stack (`src/architecture/network/worker-payload/` + `src/multithreading/`): handles ordered batch evaluation, worker pool management, browser URL resolution, network IR serialization. **Library-owned** (Layer 2 candidate).
-- Racing stack (`examples/racing_curriculum/workers/simulation-worker/`): handles `RacingRenderFrame` packing, transfer-list resolution, schema versioning, direct `postMessage`. **Benchmark-local adapter** (Layer 3).
-- **Gap:** No shared contract between the two. The library stack has no deterministic pack creation, no schema versioning/rejection, no transfer-list resolution for arbitrary packed frames. The racing stack has no connection to the library's pool/batch infrastructure.
-
-**3. Reproducibility seam**
-
-Library-owned determinism primitives:
-
-- `src/architecture/network/deterministic/network.deterministic.utils.ts` — `setSeed`, `snapshotRNG`, `restoreRNG`, `getRNGState`, `setRNGState`, `getRandomFn`, `RNGSnapshot` interface (`{ step: number | undefined; state: number | undefined }`). These are the Level 3 exact-resume primitives.
-- `src/neat/nge-collective/neat.nge-collective.evaluation.ts` — `runCollectiveEvaluationTick` enforces sequential evaluator order `[0, 1, ..., N-1]`. `evaluationOrder` array tracks sequence. `resetCollectiveEvaluationState` resets evaluation state. This is the deterministic ordering enforcement point for collective evaluation.
-- `src/neat/nge-collective/neat.nge-collective.types.ts` — `OpponentSnapshot` (NGE core: `{ agentId, snapshot, frozenAt }`), `SharedField`, `CollectiveEvaluationContext`, `CollectiveTickResult`.
-- `src/neat/nge-collective/neat.nge-collective.two-population.ts` — `createTwoPopulationHarness`, `advanceTwoPopulations`. Generation barrier enforcement (transport-neutral).
-
-Racing-local reproducibility adapters:
-
-- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts` — `OpponentSnapshotStore` with generation barrier enforcement (rejects updates during evaluation) and generation boundary (only updates at multiples of `updateEveryNGenerations`). Racing-local `OpponentSnapshot` type: `{ snapshotId, generation, networkPayloads }`.
-- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.types.ts` — `RacingRenderFrame` with `schemaVersion: 'racing-packed-v1'`. Zero-copy transfer contract in JSDoc: every ArrayBuffer backing a typed-array field must appear exactly once in the postMessage transfer list; buffer is detached after transfer; producer must not reuse it; consumers must reject wrong `schemaVersion`.
-
-Classification:
-
-- **Library-owned** (Layer 1): `runCollectiveEvaluationTick`, `resetCollectiveEvaluationState`, `createCollectiveEvaluationContext`, `createTeamFitnessEvaluator`, generation barriers, opponent snapshot pool. Transport-neutral.
-- **Library-owned** (Layer 2 candidate): `RNGSnapshot`, `setSeed`, `snapshotRNG`, `restoreRNG` — deterministic RNG primitives for Level 3 exact-resume.
-- **Benchmark-local adapter** (Layer 3): `OpponentSnapshotStore` with racing-specific `OpponentSnapshot` type, `RacingRenderFrame` schema versioning, generation barrier enforcement.
-
-**4. Owner classification table**
-
-| Seam                        | Current file                                                                     | Current owner   | Target owner       | Classification                                        |
-| --------------------------- | -------------------------------------------------------------------------------- | --------------- | ------------------ | ----------------------------------------------------- |
-| Deterministic pack creation | `simulation-worker.race-pack.service.ts`                                         | Racing (L3)     | Layer 2 (new)      | Benchmark-local adapter → generalize                  |
-| Pack replay validation      | (none exists)                                                                    | —               | Layer 2 (new)      | Gap: no reusable validator                            |
-| Transfer-list resolution    | `simulation-worker.race-pack.service.ts` + `simulation-worker.snapshot.utils.ts` | Racing (L3)     | Layer 2 (new)      | Benchmark-local adapter → generalize                  |
-| Schema versioning/rejection | `simulation-worker.types.ts` + `simulation-worker.snapshot.utils.ts`             | Racing (L3)     | Layer 2 (new)      | Benchmark-local adapter → generalize (generic schema) |
-| Clone-safe payload contract | implicit (JSDoc only)                                                            | —               | Layer 2 (new)      | Gap: no explicit contract                             |
-| Ordered batch evaluation    | `network.worker-payload.batch.ts`                                                | Library (L2)    | Layer 2 (existing) | Library-owned, already in `src/`                      |
-| Worker pool management      | `network.worker-payload.pool.ts`                                                 | Library (L2)    | Layer 2 (existing) | Library-owned, already in `src/`                      |
-| Browser worker URL          | `network.worker-payload.browser-url.ts`                                          | Library (L2)    | Layer 2 (existing) | Library-owned, already in `src/`                      |
-| Network inference IR        | `network.worker-payload.types.ts`                                                | Library (L2)    | Layer 2 (existing) | Library-owned, already in `src/`                      |
-| RNG state capture/restore   | `network.deterministic.utils.ts`                                                 | Library (L1/L2) | Layer 2 (existing) | Library-owned, already in `src/`                      |
-| Collective evaluation order | `neat.nge-collective.evaluation.ts`                                              | Library (L1)    | Layer 1 (frozen)   | Library-owned, transport-neutral                      |
-| Generation barriers         | `neat.nge-collective.two-population.ts`                                          | Library (L1)    | Layer 1 (frozen)   | Library-owned, transport-neutral                      |
-| `RacingRenderFrame` type    | `simulation-worker.types.ts`                                                     | Racing (L3)     | Layer 3 (stays)    | Benchmark-local, never promoted                       |
-| Per-tier pack construction  | racing demo code                                                                 | Racing (L3)     | Layer 3 (stays)    | Benchmark-local, never promoted                       |
-| Track physics/tire/pit      | racing demo code                                                                 | Racing (L3)     | Layer 3 (stays)    | Benchmark-local, never promoted                       |
-| Opponent snapshot store     | `simulation-worker.opponent-snapshot.service.ts`                                 | Racing (L3)     | Layer 3 (stays)    | Benchmark-local adapter                               |
-
-**5. Gaps and blockers**
-
-- **GAP-1: Two parallel transport stacks with no shared contract.** The library's `evaluateInWorkers`/`ParallelInferencePool` infrastructure and the racing benchmark's `RacingRenderFrame`/`postMessage` transport are completely independent. Phase 4 Layer 2 must bridge this by providing generic pack creation, schema versioning, transfer-list resolution, and clone-safe payload contracts that both sides can use.
-- **GAP-2: No reusable pack replay validator.** Nothing in `src/` or `examples/` validates that a replayed pack reproduces the same outputs. This is a new Layer 2 responsibility.
-- **GAP-3: No explicit clone-safe payload contract.** The zero-copy transfer contract exists only as JSDoc in `simulation-worker.types.ts`. It needs to be an explicit, enforceable interface in Layer 2.
-- **GAP-4: Schema versioning is racing-specific.** `schemaVersion: 'racing-packed-v1'` and `assertRacingSchemaVersion` are hardcoded to racing. Layer 2 needs a generic schema versioning/rejection mechanism.
-- **GAP-5: Cortex index stale.** `cortex-first-search.gate.mjs` reports `index_fresh: false`. Dense search degraded (`model-only`, embeddings incomplete: expected 18581, found 18540). Multiple `search_corpus` calls with `family: ts-source` + `query_class: code_specific` returned ZERO results — the family filter strips BM25 tokens for compound queries. Native grep/glob used as fallback. Fix: `node scripts/semantic-index/build-index.mjs` + `npm run index:prewarm`.
-- **BLOCKER: none.** All five research questions answered. Transport ownership is resolved (racing owns racing-specific transport, library owns generic transport, Layer 2 bridges the gap). No unresolved ownership ambiguity.
-
-**6. Layer 2 → Layer 3 seam design (from Step 01 frozen contract, confirmed by Step 02 research)**
-
-Today: `createDeterministicRacePack(seed, opponentSnapshot)` fills `RacingRenderFrame` directly.
-After Phase 4: Core owns `createDeterministicEvaluationPack(seed, inputs)` (transport-neutral). Racing wraps with `populateRacingFrame(pack, racingConfig)` injecting track physics/tire/renderer. Replay contract applies at generic pack boundary, not racing-frame boundary.
-
-Transfer-list resolution generalizes from `resolveRaceStepTransferList(frame: RacingRenderFrame)` to `resolveTransferList(pack: DeterministicEvaluationPack): ArrayBuffer[]` in Layer 2. Racing's `resolveRaceStepTransferList` becomes a thin wrapper that calls the generic resolver.
-
-Schema versioning generalizes from `assertRacingSchemaVersion(frame)` to `assertSchemaVersion(pack, expectedVersion)` in Layer 2. Racing keeps `'racing-packed-v1'` as its specific version string.
-
-**7. Cortex search evidence**
-
-- `freshness_check`: index fresh for most docs, plan file stale (recently modified). Dense: `model-only`, embeddings incomplete (18540/18581).
-- `search_corpus` "worker pool evaluation batch ordered results multithreading": returned skill/agent/completed-plan results. `evaluateInWorkers`, `ParallelInferencePool`, `resolveBrowserWorkerAssetUrl` identified.
-- `search_corpus` "RNG deterministic seed snapshot restore" (family: ts-source): returned `network.deterministic.utils.ts` with `setSeed`, `snapshotRNG`, `restoreRNG`, `RNGSnapshot`.
-- `search_corpus`/`search_advanced` with `family: ts-source` + `query_class: code_specific`: ZERO results (Cortex gap — family filter strips BM25 tokens for compound queries). Fallback: native grep/glob.
-- `load_document` on 10+ source files: confirmed all seam locations and ownership classifications above.
-- `load_document` on `network.worker-payload.batch.ts`: confirmed `evaluateInWorkers` definition, `EvaluateInWorkersOptions` (7 fields), `BatchEvaluationResult` (ordered results + task ids + mode).
-- `load_document` on `network.worker-payload.types.ts`: confirmed `NetworkInferenceIR`, `InferenceChannel`, `InferencePredictor`, `InferenceChannelOptions` types.
-- Native grep confirmed: zero imports of library worker transport in `examples/racing_curriculum/`; racing uses `createTeamFitnessEvaluator` from `src/neat/nge-collective/` (Layer 1 → Layer 3 seam).
-
-**TASK_STATUS: SUCCESS.** Seam mapping complete. All five research questions answered. Owner boundaries recorded. Ready for Step 03 (red tests for deterministic evaluation packs).
-
-#### Step 03 — Red tests for deterministic evaluation packs [DONE]
-
-Claim: 04-implementing @ 2026-06-16
-
-```yaml
-phase: 4
-step: 3
-title: 'Red tests for deterministic evaluation packs'
-status: '[DONE]'
-goal: red-testing
-expansion: slices
-tdd_sequence: red-green
-auto_expand: true
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - 'red-test-contracts, creating-unit-tests'
-next_step: 'Step 04 — Implement deterministic evaluation-pack normalization'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-slices:
-  - slice_id: step-3-red-tests
-    title: 'Write red tests'
-    status: '[DONE]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - 'src/architecture/network/evaluation-pack/network.evaluation-pack.ts (stub)'
-      - 'src/architecture/network/evaluation-pack/network.evaluation-pack.test.ts (7 red tests)'
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-3-core
-  - slice_id: step-3-core
-    title: 'Implement the core behavior'
-    status: '[DONE]'
-    goal: implementing
-    estimate_hours: 8
-    files_to_change:
-      - 'src/architecture/network/evaluation-pack/network.evaluation-pack.ts'
-    acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
-    parallelizable: false
-    dependencies:
-      - step-3-red-tests
-    next_slice: step-3-green
-  - slice_id: step-3-green
-    title: 'Green validation and coverage guard'
-    status: '[DONE]'
-    goal: green-testing
-    estimate_hours: 4
-    files_to_change:
-      - coverage/lcov.info
-    acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
-    parallelizable: false
-    dependencies:
-      - step-3-core
-```
-
-**Step objective:** Add focused failing tests for deterministic pack normalization, replay stability, and race-step transport contracts.
-
-**Execution focus:** Keep tests narrow to the selected normalization seam and avoid folding in broader population or lifecycle work that belongs to adjacent phases.
-
-**Stop conditions:** Done when the missing determinism contract fails under focused tests; hold on unresolved owner boundary assertions; blocked if Step 02 mapping is incomplete.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md` → **PASS** (0 errors, 0 warnings)
-
-**Red evidence (step-3-red-tests slice — DONE):**
-
-- **Prerequisite:** Step 02 seam mapping is [DONE] with no blockers. Layer 2 → Layer 3 seam is frozen: core owns `createDeterministicEvaluationPack(seed, inputs)`, `resolveTransferList(pack)`, and `assertSchemaVersion(pack, expectedVersion)`. Racing wraps with `populateRacingFrame(pack, racingConfig)`.
-- **Cortex search evidence:** Chunks 101586 (Step 02 [DONE] header), 101581 (seam between Layer 2 and Layer 3), 99232 (race-pack service source), 99246/99247 (snapshot utils source), 99267/99268 (RacingRenderFrame type), 87746 (deterministic utils snapshotRNG), 89336 (getTransferList worker-payload). `freshness_check`: index fresh.
-- **Files created:**
-  - `src/architecture/network/evaluation-pack/network.evaluation-pack.ts` — stub module with `DeterministicEvaluationPack`, `EvaluationPackInputs` types and `createDeterministicEvaluationPack`, `resolveTransferList`, `assertSchemaVersion` function stubs (throw `Error('Not implemented …')`).
-  - `src/architecture/network/evaluation-pack/network.evaluation-pack.test.ts` — 7 red tests targeting the three normalization contracts.
-- **Test command:** `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=network.evaluation-pack`
-- **Result:** 7 failed / 7 total. All fail for the expected reason (stubs throw "Not implemented — Phase 4 Step 03 red contract"). No import/syntax errors.
-- **Red contracts encoded:**
-  1. `createDeterministicEvaluationPack` — same seed + same inputs → identical packs (Level 2 ordered-deterministic).
-  2. `createDeterministicEvaluationPack` — different seeds → different packs (determinism distinctness).
-  3. Replay stability — replayed packs produce byte-identical typed array contents.
-  4. `resolveTransferList` — collects all distinct buffer entries from a pack.
-  5. `resolveTransferList` — deduplicates buffers shared across multiple typed arrays.
-  6. `assertSchemaVersion` — accepts a pack whose schema version matches (no throw).
-  7. `assertSchemaVersion` — throws `RangeError` on schema version mismatch (generic, not racing-specific).
-- **Gate checks:** `step-packet` → PASS. `plan-sync` → PASS.
-- **Handoff to step-3-core (04-implementing):**
-  - **Module:** `src/architecture/network/evaluation-pack/network.evaluation-pack.ts`
-  - **Test file:** `src/architecture/network/evaluation-pack/network.evaluation-pack.test.ts`
-  - **Validate with:** `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=network.evaluation-pack`
-  - **Green target:** All 7 tests pass when `createDeterministicEvaluationPack` produces deterministic typed arrays from `(seed, inputs)`, `resolveTransferList` collects and deduplicates buffers from `pack.arrays`, and `assertSchemaVersion` throws `RangeError` on mismatch and silently accepts on match.
-  - **Contract:** DeterministicEvaluationPack = `{ schemaVersion: string; seed: number; arrays: readonly ArrayBufferView[] }`. EvaluationPackInputs = `{ agentCount: number; schemaVersion: string }`.
-  - **Setup/teardown:** Deterministic fixtures (SEED=42, ALT_SEED=99, INPUTS={agentCount:4, schemaVersion:'test-eval-pack-v1'}). No external state. Pure helper functions for typed-array comparison.
-
-**Core implementation evidence (step-3-core slice — DONE):**
-
-- **File changed:** `src/architecture/network/evaluation-pack/network.evaluation-pack.ts`
-- **What each function does:**
-  - `createDeterministicEvaluationPack(seed, inputs)` — seeds a self-contained xorshift32 PRNG, builds `Float32Array` agent states, `Float64Array` agent weights, and `Uint8Array` active flags of length `inputs.agentCount`, and returns a frozen pack with `schemaVersion`, `seed`, and `arrays`. Same `(seed, inputs)` → byte-identical pack on the same runtime.
-  - `resolveTransferList(pack)` — walks `pack.arrays`, collects each view's `.buffer`, and deduplicates shared `ArrayBuffer` references using a `Set`.
-  - `assertSchemaVersion(pack, expectedVersion)` — accepts when `pack.schemaVersion === expectedVersion`; throws `RangeError` with a descriptive message on mismatch.
-- **Type refinements:** `DeterministicEvaluationPack.arrays` kept as `readonly ArrayBufferView[]` to stay generic across benchmark wrappers; helper `buildPackArrays` returns `ArrayBufferView[]` with concrete `Float32Array | Float64Array | Uint8Array` elements. No `any`/`unknown` introduced.
-- **Preflight checks:**
-  - `npx tsc --noEmit -p tsconfig.json` → pass (exit 0)
-  - `npx tsc --noEmit -p tsconfig.test.json` → pass (exit 0)
-  - `npm run lint` → pass (0 errors)
-  - `npx prettier --check src/architecture/network/evaluation-pack/network.evaluation-pack.ts` → pass
-  - `npx prettier --check src/architecture/network/evaluation-pack/network.evaluation-pack.test.ts` → [warn] formatting issues exist in test file (left unchanged per red-test contract; green validator may decide to format)
-- **Focused tests:** `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=network.evaluation-pack` → **7 passed / 7 total**
-- **Folder quality gate:** `npm run quality:folder -- --folder=src/architecture/network/evaluation-pack` → PASS (0 diagnostics, 0 ESLint errors, 3/3 exported symbols documented, sibling test present, line coverage 100%)
-- **Focused coverage:** `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=network.evaluation-pack` → statements 100%, branches 83.33%, functions 100%, lines 100%; uncovered branch is the `seed === 0` fallback in `createPackPRNG` (line 209). The fallback is reachable defensive code and is deferred to step-3-green coverage guard.
-- **Gate checks:** `step-packet` → PASS. `plan-sync` → PASS (0 errors, 0 warnings).
-
-```yaml
-PlanUpdate:
-  slice_id: step-3-core
-  changed_files:
-    - src/architecture/network/evaluation-pack/network.evaluation-pack.ts
-  preflight:
-    - 'npx tsc --noEmit -p tsconfig.json'
-    - 'npx tsc --noEmit -p tsconfig.test.json'
-    - 'npm run lint'
-    - 'npm run quality:folder -- --folder=src/architecture/network/evaluation-pack'
-  validation:
-    - command: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=network.evaluation-pack'
-      expected_exit: 0
-  rollback:
-    - 'git checkout -- src/architecture/network/evaluation-pack/network.evaluation-pack.ts'
-  coverage_note:
-    file: 'src/architecture/network/evaluation-pack/network.evaluation-pack.ts'
-    statements: 100
-    branches: 83.33
-    functions: 100
-    lines: 100
-    uncovered_branch: 'seed === 0 fallback in createPackPRNG (line 209) — deferred to step-3-green coverage guard'
-  next: 'Run 05-green-testing and attach coverage-guard evidence'
-```
-
-**Handoff to step-3-green (05-green-testing):**
-
-- Validate focused slice still passes: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=network.evaluation-pack`
-- Close branch-coverage gap for line 209 (`seed === 0` fallback in `createPackPRNG`) or confirm it is acceptable dead code.
-- Run repo-wide suite only if the active step packet or user explicitly requires repo-wide confirmation.
-- Confirm `coverage-guard` for `src/architecture/network/evaluation-pack/network.evaluation-pack.ts` reaches 100% in all four categories before closing the slice.
-
-**Green validation evidence (step-3-green slice — DONE):**
-
-- **Files changed:**
-  - `src/architecture/network/evaluation-pack/network.evaluation-pack.test.ts` — added one focused test covering the `seed === 0` fallback branch in `createPackPRNG`.
-- **Coverage closure:** New test `'falls back to a non-zero PRNG state when the seed is zero'` calls `createDeterministicEvaluationPack(0, INPUTS)` and asserts `pack.arrays` has length `3`. This exercises the `seed === 0 ? PACK_PRNG_FALLBACK_SEED : seed >>> 0` branch and brings branch coverage to 100%.
-- **Prettier:** `npx prettier --write src/architecture/network/evaluation-pack/network.evaluation-pack.test.ts` applied; `npx prettier --check` passes for both source and test files.
-- **Focused test + coverage:**
-  - Command: `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=network.evaluation-pack`
-  - Result: 8 passed / 8 total
-  - Coverage for `src/architecture/network/evaluation-pack/network.evaluation-pack.ts`: statements 100%, branches 100%, functions 100%, lines 100%
-- **Type check:** `npx tsc --noEmit -p tsconfig.json` and `npx tsc --noEmit -p tsconfig.test.json` both pass.
-- **Lint:** `npm run lint` passes (0 errors).
-- **Folder quality gate:** `npm run quality:folder -- --folder=src/architecture/network/evaluation-pack` → PASS (0 diagnostics, 0 ESLint errors, 3/3 exported symbols documented, sibling test present, 1 lcov entry at 100%).
-- **Full suite:** `npm run test:silent` — `src/architecture/network/evaluation-pack/network.evaluation-pack.test.ts` passes; the only failures are 3 unrelated pre-existing test suites (`scripts/agent-customization/plan-workflow.test.ts`, `scripts/mcp-semantic/__tests__/repo-cortex-mcp.red.test.ts`, `scripts/agent-customization/hooks/runtime-enforcement-hooks.test.ts`, 4 tests total) that are outside the `src/architecture/network/evaluation-pack/` boundary and not caused by this change.
-- **Coverage guard:** All touched `src/` files (`src/architecture/network/evaluation-pack/network.evaluation-pack.ts`) are at 100% across statements, branches, functions, and lines.
-- **Plan-sync gate:** run after updating this plan.
-
-#### Step 04 — Implement deterministic evaluation-pack normalization [DONE]
-
-```yaml
-phase: 4
-step: 4
-title: 'Implement deterministic evaluation-pack normalization'
-status: '[DONE]'
-goal: implementing
-expansion: slices
-tdd_sequence: red-green
-auto_expand: true
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - 'reproducibility-contracts, worker-inference-transport'
-next_step: 'Step 05 — Green validation and determinism audit'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-slices:
-  - slice_id: step-4-red-tests
-    title: 'Write red tests'
-    status: '[DONE]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - examples/racing_curriculum/workers/simulation-worker/simulation-worker.evaluation-pack.normalizer.ts
-      - examples/racing_curriculum/workers/simulation-worker/simulation-worker.evaluation-pack.normalizer.test.ts
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-4-core
-    notes:
-      - 'Seam: Layer 2 core DeterministicEvaluationPack -> Layer 3 RacingRenderFrame normalization boundary in examples/racing_curriculum/workers/simulation-worker.'
-      - 'Contracts: populateRacingFrame returns a RacingRenderFrame-shaped object; same pack + same config yields identical typed-array contents; transfer list includes all ArrayBuffers owned by the frame; assertRacingPackSchemaVersion accepts matching version and rejects mismatch with RangeError; wrapper rejects mismatched agentCount.'
-      - 'Red evidence: npx jest --config=jest.config.mjs --no-cache --testPathPatterns=simulation-worker.evaluation-pack.normalizer -> 7 failed / 7 total, all throwing Error("Not implemented ...").'
-      - 'Handoff to step-4-core: implement the stub functions in simulation-worker.evaluation-pack.normalizer.ts so that the 7 tests in simulation-worker.evaluation-pack.normalizer.test.ts pass and no broad suite regressions are introduced.'
-  - slice_id: step-4-core
-    title: 'Implement the core behavior'
-    status: '[DONE]'
-    goal: implementing
-    estimate_hours: 8
-    files_to_change:
-      - examples/racing_curriculum/workers/simulation-worker/simulation-worker.evaluation-pack.normalizer.ts
-    acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
-    parallelizable: false
-    dependencies:
-      - step-4-red-tests
-    next_slice: step-4-green
-    notes:
-      - 'Implemented populateRacingFrame, resolveRacingTransferList, and assertRacingPackSchemaVersion in the Layer 3 normalizer.'
-      - 'populateRacingFrame validates schema version and agent count, then deterministically maps the three core pack arrays (agentStates, agentWeights, agentActive) to the RacingRenderFrame typed-array fields.'
-      - 'resolveRacingTransferList delegates to resolveRacingRenderFrameTransferList from simulation-worker.snapshot.utils to share the existing zero-copy ownership contract.'
-      - 'assertRacingPackSchemaVersion mirrors the generic assertSchemaVersion contract, throwing RangeError on mismatch.'
-      - 'Preflight: npx tsc --noEmit -p tsconfig.json -> OK; npm run lint -> 0 issues; npx prettier --check normalizer.ts -> OK.'
-      - 'Focused tests: npx jest --config=jest.config.mjs --no-cache --testPathPatterns=simulation-worker.evaluation-pack.normalizer -> 7 passed / 7 total.'
-      - 'Coverage note: changed file is in examples/, so coverage-guard 100% rule (src/ only) does not apply; step-4-green should still verify no broad suite regressions.'
-      - 'Handoff to step-4-green: run green validation and determinism audit; optional repo-wide suite only if explicitly required.'
-  - slice_id: step-4-green
-    title: 'Green validation and coverage guard'
-    status: '[DONE]'
-    goal: green-testing
-    estimate_hours: 4
-    files_to_change:
-      - coverage/lcov.info
-    acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
-    parallelizable: false
-    dependencies:
-      - step-4-core
-    notes:
-      - 'Focused slice: npx jest --config=jest.config.mjs --no-cache --testPathPatterns=simulation-worker.evaluation-pack.normalizer -> 7 passed / 7 total.'
-      - 'Preflight: npx tsc --noEmit -p tsconfig.json -> pass; npm run lint -> 0 errors; npx prettier --check on normalizer.ts and normalizer.test.ts -> pass.'
-      - 'Quality gate: npm run quality:folder -- --folder=examples/racing_curriculum/workers/simulation-worker -> PASS (0 TS errors, 0 ESLint errors, 17/17 JSDoc symbols, 0 missing tests, 0 lcov entries below 100%).'
-      - 'Coverage guard: no src/ files touched; examples/ file does not trigger 100% coverage obligation.'
-      - 'Plan-sync gate: PASS (0 errors, 0 warnings).'
-      - 'No test or implementation changes were required.'
-```
-
-**Step objective:** Implement the deterministic evaluation-pack and race-pack normalization seam selected by the red tests.
-
-**Execution focus:** Keep the code bounded to normalized pack generation, stable transport, and explicit ownership boundaries; route any new lifecycle or benchmark-policy questions back to their named phases.
-
-**Stop conditions:** Done when red tests turn green for the selected normalization seam; hold on policy ambiguity; blocked on contradictory worker transport ownership.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-**Core implementation evidence (step-4-core slice — DONE):**
-
-- **File changed:** `examples/racing_curriculum/workers/simulation-worker/simulation-worker.evaluation-pack.normalizer.ts`
-- **What each function does:**
-  - `populateRacingFrame(pack, racingConfig)` — asserts the generic pack schema version matches `racingConfig.packSchemaVersion`, validates that every core pack typed-array dimension equals `racingConfig.agentCount`, then deterministically maps `agentStates` → `carX`/`carHeading`/`tireState`, `agentWeights` → `carY`, and `agentActive` → `carActive`/`carTeam`/`carMode`/`lap`/`place`. Returns a `RacingRenderFrame` with `schemaVersion: 'racing-packed-v1'`.
-  - `resolveRacingTransferList(frame)` — delegates to `resolveRacingRenderFrameTransferList` from `simulation-worker.snapshot.utils` to collect distinct `ArrayBuffer` references owned by the frame.
-  - `assertRacingPackSchemaVersion(pack, expectedVersion)` — accepts when `pack.schemaVersion === expectedVersion`; throws `RangeError` with a descriptive message on mismatch.
-- **Preflight checks:**
-  - `npx tsc --noEmit -p tsconfig.json` → pass (exit 0)
-  - `npm run lint` → pass (0 errors)
-  - `npx prettier --check examples/racing_curriculum/workers/simulation-worker/simulation-worker.evaluation-pack.normalizer.ts` → pass
-- **Focused tests:** `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=simulation-worker.evaluation-pack.normalizer` → **7 passed / 7 total**
-- **Coverage note:** The changed file lives in `examples/`; `coverage-guard` 100% rule applies to `src/` files only. No `src/` files were modified, so no coverage regression is expected. Step-4-green should still verify focused slice and check for broad suite regressions.
-- **Gate checks:**
-  - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md` → PASS (0 errors, 0 warnings)
-  - `node .github/hooks/workflow-update-sync.mjs --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md --json` → advance (Phase 4 Step 4 → [DONE]; Phase 4 Step 5 → [WIP])
-
-```yaml
-PlanUpdate:
-  slice_id: step-4-core
-  changed_files:
-    - examples/racing_curriculum/workers/simulation-worker/simulation-worker.evaluation-pack.normalizer.ts
-  preflight:
-    - 'npx tsc --noEmit -p tsconfig.json'
-    - 'npm run lint'
-    - 'npx prettier --check examples/racing_curriculum/workers/simulation-worker/simulation-worker.evaluation-pack.normalizer.ts'
-  validation:
-    - command: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=simulation-worker.evaluation-pack.normalizer'
-      expected_exit: 0
-  rollback:
-    - 'git checkout -- examples/racing_curriculum/workers/simulation-worker/simulation-worker.evaluation-pack.normalizer.ts'
-  coverage_note:
-    scope: 'examples/ file; coverage-guard 100% rule applies to src/ only'
-    next: 'step-4-green validates no broad suite regressions'
-  next: 'Run step-4-green (05-green-testing) focused slice and attach green evidence'
-```
-
-**Handoff to step-4-green (05-green-testing):**
-
-- Files to validate: `examples/racing_curriculum/workers/simulation-worker/simulation-worker.evaluation-pack.normalizer.ts` (and its red-test sibling `simulation-worker.evaluation-pack.normalizer.test.ts`, which must remain unchanged).
-- Run the focused slice: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=simulation-worker.evaluation-pack.normalizer` and confirm 7/7 passing.
-- Optional: run `npm run test:silent` only if the active step packet or user explicitly requires repo-wide confirmation.
-- Confirm `npx tsc --noEmit -p tsconfig.json` and `npm run lint` remain clean.
-
-#### Step 05 — Green validation and determinism audit [WIP]
-
-```yaml
-phase: 4
-step: 5
-title: 'Green validation and determinism audit'
-status: '[WIP]'
-goal: green-testing
-expansion: slices
-tdd_sequence: green-only
-auto_expand: true
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - 'green-validation-gates, reproducibility-contracts'
-next_step: 'Step 06 — Documentation and reproducibility contract alignment'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-slices:
-  - slice_id: step-5-red-tests
-    title: 'Write red tests'
-    status: '[PLANNED]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-5-core
-  - slice_id: step-5-core
-    title: 'Implement the core behavior'
-    status: '[PLANNED]'
-    goal: implementing
-    estimate_hours: 8
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
-    parallelizable: false
-    dependencies:
-      - step-5-red-tests
-    next_slice: step-5-green
-  - slice_id: step-5-green
-    title: 'Green validation and coverage guard'
-    status: '[PLANNED]'
-    goal: green-testing
-    estimate_hours: 4
-    files_to_change:
-      - coverage/lcov.info
-    acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
-    parallelizable: false
-    dependencies:
-      - step-5-core
-```
-
-**Step objective:** Confirm deterministic packs, replay behavior, and transport invariants stay green for the touched boundary.
-
-**Stop conditions:** Done when focused validation passes and determinism evidence is recorded; hold on flaky replay output; blocked if implementation remains red.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-#### Step 06 — Documentation and reproducibility contract alignment [PLANNED]
-
-```yaml
-phase: 4
-step: 6
-title: 'Documentation and reproducibility contract alignment'
-status: '[PLANNED]'
-goal: documenting
-expansion: none
-auto_expand: false
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - 'educational-docs, reproducibility-contracts'
-next_step: 'Step 07 — Logging and phase closure packet'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-```
-
-**Step objective:** Update touched docs so deterministic evaluation-pack semantics, caveats, and downstream benchmark usage are explicit and accurate.
-
-**Stop conditions:** Done when docs align to file-backed behavior; hold on unresolved wording; blocked if green validation evidence is missing.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-#### Step 07 — Logging and phase closure packet [PLANNED]
-
-```yaml
-phase: 4
-step: 7
-title: 'Logging and phase closure packet'
-status: '[PLANNED]'
-goal: logging
-expansion: none
-auto_expand: false
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - tracker-handoff
-next_step: 'Phase 5 — Lifecycle staging closure and nge-adult readiness reconciliation'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-```
-
-**Step objective:** Compress deterministic-pack coverage, record validation evidence, and keep lifecycle staging reconciliation as the next explicit queue.
-
-**Stop conditions:** Done when the tracker reflects durable coverage and remaining lifecycle work stays visible; hold on pending user confirmation; blocked if evidence is missing.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-### Phase 5 — Lifecycle staging closure and nge-adult readiness reconciliation [PLANNED]
-
-```yaml
-phase: 5
-title: 'Lifecycle staging closure and nge-adult readiness reconciliation'
-status: '[PLANNED]'
-goal: planning
-expansion: steps
-auto_expand: false
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-next_phase: 'Experimental root public API exposure'
-skills:
-  - plan-alignment
-validation:
-  - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-placeholder_steps:
-  - 'Step 01 — Planning packet and lifecycle contradiction freeze'
-  - 'Step 02 — Lifecycle seam and evidence mapping'
-  - 'Step 03 — Red tests for lifecycle staging readiness'
-  - 'Step 04 — Implement lifecycle staging closure'
-  - 'Step 05 — Green validation and lifecycle audit'
-  - 'Step 06 — Documentation and lifecycle contract alignment'
-  - 'Step 07 — Logging and phase closure packet'
-```
-
-#### Step 01 — Planning packet and lifecycle contradiction freeze [PLANNED]
-
-```yaml
-phase: 5
-step: 1
-title: 'Planning packet and lifecycle contradiction freeze'
-status: '[PLANNED]'
-goal: planning
-expansion: none
-auto_expand: false
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - 'plan-alignment, phase-handoff-workflow, nge-core-algorithm'
-next_step: 'Step 02 — Lifecycle seam and evidence mapping'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-```
-
-**Step objective:** Freeze the lifecycle staging acceptance criteria and reconcile how archived completion claims differ from the current readiness audit.
-
-**Execution focus:** Preserve lifecycle staging, juvenile, assimilation, Phase B/D/E/G, and `nge-adult` terminology; record what counts as closure versus scaffolded behavior.
-
-**Stop conditions:** Done when lifecycle closure criteria are explicit; hold on unresolved archival contradictions; blocked if earlier phases still change prerequisite lifecycle contracts.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-#### Step 02 — Lifecycle seam and evidence mapping [PLANNED]
-
-```yaml
-phase: 5
-step: 2
-title: 'Lifecycle seam and evidence mapping'
-status: '[PLANNED]'
-goal: researching
-expansion: none
-auto_expand: false
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - 'nge-core-algorithm, repo-cortex-workflow'
-next_step: 'Step 03 — Red tests for lifecycle staging readiness'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-  - 'node scripts/agent-customization/gates/cortex-first-search.gate.mjs --json'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-```
-
-**Step objective:** Map lifecycle-stage seams, `nge-adult` readiness, and archived contradiction points with file-backed evidence.
-
-**Execution focus:** Re-read upstream NGE docs, use Repo Cortex for lifecycle staging evidence, and identify which claims are implemented, partial, or still placeholder behavior.
-
-**Stop conditions:** Done when file-backed contradictions and gaps are recorded; hold on unresolved stage semantics; blocked on missing workflow or Cortex evidence.
-
-**Required validation:**
-
-- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-- `node scripts/agent-customization/gates/cortex-first-search.gate.mjs --json`
-
-#### Step 03 — Red tests for lifecycle staging readiness [PLANNED]
-
-```yaml
-phase: 5
-step: 3
-title: 'Red tests for lifecycle staging readiness'
-status: '[PLANNED]'
-goal: red-testing
-expansion: slices
-tdd_sequence: red-green
-auto_expand: true
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - 'red-test-contracts, creating-unit-tests'
-next_step: 'Step 04 — Implement lifecycle staging closure'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-slices:
-  - slice_id: step-3-red-tests
-    title: 'Write red tests'
-    status: '[PLANNED]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-3-core
-  - slice_id: step-3-core
-    title: 'Implement the core behavior'
-    status: '[PLANNED]'
-    goal: implementing
-    estimate_hours: 8
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
-    parallelizable: false
-    dependencies:
-      - step-3-red-tests
-    next_slice: step-3-green
-  - slice_id: step-3-green
-    title: 'Green validation and coverage guard'
-    status: '[PLANNED]'
-    goal: green-testing
-    estimate_hours: 4
-    files_to_change:
-      - coverage/lcov.info
-    acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
-    parallelizable: false
-    dependencies:
-      - step-3-core
-```
-
-**Step objective:** Add focused failing tests that prove the current lifecycle staging and `nge-adult` readiness claims are incomplete or contradictory.
-
-**Execution focus:** Cover juvenile, assimilation, and adult-stage boundaries with the smallest failing test slice and avoid folding in public API export work owned by Phase 6.
-
-**Stop conditions:** Done when the intended lifecycle gap is reproduced in red; hold on unresolved semantics; blocked if Step 02 evidence is incomplete.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-#### Step 04 — Implement lifecycle staging closure [PLANNED]
-
-```yaml
-phase: 5
-step: 4
-title: 'Implement lifecycle staging closure'
-status: '[PLANNED]'
-goal: implementing
-expansion: slices
-tdd_sequence: red-green
-auto_expand: true
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - nge-core-algorithm
-next_step: 'Step 05 — Green validation and lifecycle audit'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-slices:
-  - slice_id: step-4-red-tests
-    title: 'Write red tests'
-    status: '[PLANNED]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-4-core
-  - slice_id: step-4-core
-    title: 'Implement the core behavior'
-    status: '[PLANNED]'
-    goal: implementing
-    estimate_hours: 8
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
-    parallelizable: false
-    dependencies:
-      - step-4-red-tests
-    next_slice: step-4-green
-  - slice_id: step-4-green
-    title: 'Green validation and coverage guard'
-    status: '[PLANNED]'
-    goal: green-testing
-    estimate_hours: 4
-    files_to_change:
-      - coverage/lcov.info
-    acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
-    parallelizable: false
-    dependencies:
-      - step-4-core
-```
-
-**Step objective:** Implement the lifecycle staging closure selected by red tests and reconcile `nge-adult` readiness with file-backed behavior.
-
-**Execution focus:** Keep the implementation bounded to lifecycle semantics, do not over-claim benchmark readiness, and leave export-surface work for Phase 6.
-
-**Stop conditions:** Done when red tests turn green and lifecycle contradictions are resolved in code; hold on new policy questions; blocked on conflicting archived assumptions that need escalation.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-#### Step 05 — Green validation and lifecycle audit [PLANNED]
-
-```yaml
-phase: 5
-step: 5
-title: 'Green validation and lifecycle audit'
-status: '[PLANNED]'
-goal: green-testing
-expansion: slices
-tdd_sequence: green-only
-auto_expand: true
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - green-validation-gates
-next_step: 'Step 06 — Documentation and lifecycle contract alignment'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-slices:
-  - slice_id: step-5-red-tests
-    title: 'Write red tests'
-    status: '[PLANNED]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-5-core
-  - slice_id: step-5-core
-    title: 'Implement the core behavior'
-    status: '[PLANNED]'
-    goal: implementing
-    estimate_hours: 8
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
-    parallelizable: false
-    dependencies:
-      - step-5-red-tests
-    next_slice: step-5-green
-  - slice_id: step-5-green
-    title: 'Green validation and coverage guard'
-    status: '[PLANNED]'
-    goal: green-testing
-    estimate_hours: 4
-    files_to_change:
-      - coverage/lcov.info
-    acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
-    parallelizable: false
-    dependencies:
-      - step-5-core
-```
-
-**Step objective:** Validate the touched lifecycle boundary and confirm the code now supports the documented staging claims.
-
-**Stop conditions:** Done when focused validation passes; hold on flaky lifecycle output; blocked if implementation remains red.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-#### Step 06 — Documentation and lifecycle contract alignment [PLANNED]
-
-```yaml
-phase: 5
-step: 6
-title: 'Documentation and lifecycle contract alignment'
-status: '[PLANNED]'
-goal: documenting
-expansion: none
-auto_expand: false
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - 'educational-docs, docs-academic-citation-audit'
-next_step: 'Step 07 — Logging and phase closure packet'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-```
-
-**Step objective:** Update touched lifecycle docs so current readiness, remaining caveats, and benchmark implications are explicit and honest.
-
-**Stop conditions:** Done when docs align to file-backed lifecycle behavior; hold on unresolved wording; blocked if validation evidence is missing.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-#### Step 07 — Logging and phase closure packet [PLANNED]
-
-```yaml
-phase: 5
-step: 7
-title: 'Logging and phase closure packet'
-status: '[PLANNED]'
-goal: logging
-expansion: none
-auto_expand: false
-mode: fresh-session
-source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-copy_paste: true
-skills:
-  - tracker-handoff
-next_step: 'Phase 6 — Experimental root public API exposure'
-validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
-acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
-```
-
-**Step objective:** Compress lifecycle-phase coverage and keep experimental API exposure as the next explicit tranche.
-
-**Stop conditions:** Done when lifecycle work is summarized without hiding unresolved items; hold on pending user confirmation; blocked if evidence is incomplete.
-
-**Required validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
-
-### Phase 6 — Experimental root public API exposure [PLANNED]
+### Phase 6 — Experimental root public API exposure [WIP]
 
 ```yaml
 phase: 6
 title: 'Experimental root public API exposure'
-status: '[PLANNED]'
+status: '[WIP]'
 goal: planning
 expansion: steps
 auto_expand: false
@@ -1627,8 +672,10 @@ copy_paste: true
 next_phase: 'Downstream benchmark dependency + MCP synchronization'
 skills:
   - plan-alignment
+  - execute
 validation:
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 placeholder_steps:
@@ -1641,27 +688,36 @@ placeholder_steps:
   - 'Step 07 — Logging and phase closure packet'
 ```
 
-#### Step 01 — Planning packet and export-surface freeze [PLANNED]
+**Phase objective:**
+
+Expose a narrow experimental public entrypoint for NGE surfaces from src/neataptic.ts without exporting every internal module at once.
+
+#### Step 01 — Planning packet and export-surface freeze [WIP]
 
 ```yaml
 phase: 6
 step: 1
 title: 'Planning packet and export-surface freeze'
-status: '[PLANNED]'
+status: '[WIP]'
 goal: planning
 expansion: none
 auto_expand: false
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
-skills:
-  - 'plan-alignment, phase-handoff-workflow, nge-core-algorithm'
 next_step: 'Step 02 — Public-surface and dependency mapping'
+skills:
+  - 'plan-alignment, phase-handoff-workflow, nge-core-algorithm, execute'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 ```
+
+**User instruction:**
+
+Paste this full step packet.
 
 **Step objective:** Freeze the narrow experimental public API shape and the migration constraints around `src/neataptic.ts`.
 
@@ -1684,15 +740,20 @@ auto_expand: false
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
-skills:
-  - 'nge-core-algorithm, repo-cortex-workflow'
 next_step: 'Step 03 — Red tests for experimental root API exposure'
+skills:
+  - 'nge-core-algorithm, repo-cortex-workflow, execute'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
   - 'node scripts/agent-customization/gates/cortex-first-search.gate.mjs --json'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 ```
+
+**User instruction:**
+
+Paste this full step packet.
 
 **Step objective:** Map the missing root export seam and every downstream consumer that should use the experimental entrypoint.
 
@@ -1713,19 +774,23 @@ step: 3
 title: 'Red tests for experimental root API exposure'
 status: '[PLANNED]'
 goal: red-testing
-expansion: slices
 tdd_sequence: red-green
+expansion: slices
 auto_expand: true
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
-skills:
-  - 'red-test-contracts, creating-unit-tests'
 next_step: 'Step 04 — Implement experimental root API exposure'
+skills:
+  - 'red-test-contracts, creating-unit-tests, execute, chrome-devtools-mcp'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=chrome-devtools-mcp-coverage --json'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
+  - 'Red tests fail for the expected export-surface gap (not syntax/fixture errors).'
+  - 'If a browser demo consumes the root API, red tests include a Chrome DevTools MCP specialist-delegated browser check that fails before the export is added.'
 slices:
   - slice_id: step-3-red-tests
     title: 'Write red tests'
@@ -1766,6 +831,10 @@ slices:
       - step-3-core
 ```
 
+**User instruction:**
+
+Paste this full step packet.
+
 **Step objective:** Add the smallest failing tests that prove the experimental NGE root export surface is missing or incomplete.
 
 **Execution focus:** Protect the intended namespace shape and consumer import path without widening into benchmark implementation work.
@@ -1782,17 +851,19 @@ step: 4
 title: 'Implement experimental root API exposure'
 status: '[PLANNED]'
 goal: implementing
-expansion: slices
 tdd_sequence: red-green
+expansion: slices
 auto_expand: true
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
+next_step: 'Step 05 — Green validation and export-surface audit'
 skills:
   - nge-core-algorithm
-next_step: 'Step 05 — Green validation and export-surface audit'
+  - execute
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 slices:
@@ -1835,6 +906,10 @@ slices:
       - step-4-core
 ```
 
+**User instruction:**
+
+Paste this full step packet.
+
 **Step objective:** Implement the agreed experimental root NGE export surface in `src/neataptic.ts` and any required narrow supporting exports.
 
 **Execution focus:** Keep the change experimental and bounded, do not over-export unfinished internals, and preserve downstream tracker dependencies explicitly.
@@ -1851,58 +926,70 @@ step: 5
 title: 'Green validation and export-surface audit'
 status: '[PLANNED]'
 goal: green-testing
-expansion: slices
 tdd_sequence: green-only
+expansion: slices
 auto_expand: true
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
+next_step: 'Step 06 — Documentation and API usage alignment'
 skills:
   - green-validation-gates
-next_step: 'Step 06 — Documentation and API usage alignment'
+  - execute
+  - chrome-devtools-mcp
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=chrome-devtools-mcp-coverage --json'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
+  - 'Focused Jest suites pass; coverage guard passes on touched src/ files.'
+  - 'If a browser demo consumes the new root API, Chrome DevTools MCP specialist delegation (browser-ui-specialist) confirms the import path resolves and the demo renders without console errors.'
 slices:
-  - slice_id: step-5-red-tests
-    title: 'Write red tests'
-    status: '[PLANNED]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-5-core
-  - slice_id: step-5-core
-    title: 'Implement the core behavior'
+  - slice_id: step-5-impl-verify
+    title: 'Confirm Step 04 export-surface implementation is stable and all prior red tests are green'
     status: '[PLANNED]'
     goal: implementing
-    estimate_hours: 8
+    estimate_hours: 2
     files_to_change:
-      - TBD
     acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
+      - 'All Step 04 red tests now pass green.'
+      - 'No regressions in export-surface tests.'
     parallelizable: false
     dependencies:
-      - step-5-red-tests
-    next_slice: step-5-green
-  - slice_id: step-5-green
-    title: 'Green validation and coverage guard'
+    next_slice: step-5-green-jest
+  - slice_id: step-5-green-jest
+    title: 'Green Jest validation and coverage guard'
+    status: '[PLANNED]'
+    goal: green-testing
+    estimate_hours: 3
+    files_to_change:
+      - coverage/lcov.info
+    acceptance_criteria:
+      - 'All targeted Jest suites pass.'
+      - '100% coverage on touched src/ files.'
+    parallelizable: false
+    dependencies:
+      - step-5-impl-verify
+    next_slice: step-5-browser-export
+  - slice_id: step-5-browser-export
+    title: 'Browser export-surface audit via Chrome DevTools MCP'
     status: '[PLANNED]'
     goal: green-testing
     estimate_hours: 4
     files_to_change:
-      - coverage/lcov.info
     acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
+      - 'If a browser demo consumes the experimental root API, delegate browser-ui-specialist to verify the import path resolves in the browser and the demo renders without console errors.'
+      - 'If export-surface API overhead matters, delegate performance-trace-specialist to capture a trace and confirm the import does not add measurable overhead.'
+      - 'If no browser demo consumes this export yet, record an explicit skip note and exit.'
     parallelizable: false
     dependencies:
-      - step-5-core
+      - step-5-green-jest
 ```
+
+**User instruction:**
+
+Paste this full step packet.
 
 **Step objective:** Verify the new experimental export surface works for focused consumer slices and does not regress unrelated public API behavior.
 
@@ -1923,14 +1010,19 @@ auto_expand: false
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
-skills:
-  - educational-docs
 next_step: 'Step 07 — Logging and phase closure packet'
+skills:
+  - 'educational-docs, execute'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 ```
+
+**User instruction:**
+
+Paste this full step packet.
 
 **Step objective:** Align docs and examples with the experimental root entrypoint without teaching broader export support than the code actually provides.
 
@@ -1951,14 +1043,20 @@ auto_expand: false
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
+next_step: 'Phase 7 — Downstream benchmark dependency + MCP synchronization'
 skills:
   - tracker-handoff
-next_step: 'Phase 7 — Downstream benchmark dependency + MCP synchronization'
+  - execute
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 ```
+
+**User instruction:**
+
+Paste this full step packet.
 
 **Step objective:** Compress export-surface coverage and keep downstream benchmark/MCP synchronization visible as the last named readiness phase.
 
@@ -1981,8 +1079,10 @@ copy_paste: true
 next_phase: null
 skills:
   - plan-alignment
+  - execute
 validation:
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 placeholder_steps:
@@ -1994,6 +1094,10 @@ placeholder_steps:
   - 'Step 06 — Documentation and handoff alignment'
   - 'Step 07 — Logging and phase closure packet'
 ```
+
+**Phase objective:**
+
+Synchronize downstream benchmark dependencies and hand completed core evidence back to Racing, Predator/Prey, and Ant Hive trackers via MCP-aware cross-plan packets.
 
 #### Step 01 — Planning packet and cross-plan synchronization scope [PLANNED]
 
@@ -2008,14 +1112,19 @@ auto_expand: false
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
-skills:
-  - 'plan-alignment, phase-handoff-workflow, repo-cortex-workflow'
 next_step: 'Step 02 — Downstream tracker and MCP seam mapping'
+skills:
+  - 'plan-alignment, phase-handoff-workflow, repo-cortex-workflow, execute'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 ```
+
+**User instruction:**
+
+Paste this full step packet.
 
 **Step objective:** Freeze the downstream tracker, MCP, and return-condition scope needed to synchronize Racing, Predator/Prey, and Ant Hive with completed core readiness work.
 
@@ -2038,15 +1147,20 @@ auto_expand: false
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
-skills:
-  - 'repo-cortex-workflow, nge-benchmark-workflow'
 next_step: 'Step 03 — Red tests for synchronization contracts'
+skills:
+  - 'repo-cortex-workflow, nge-benchmark-workflow, execute'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
   - 'node scripts/agent-customization/gates/cortex-first-search.gate.mjs --json'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 ```
+
+**User instruction:**
+
+Paste this full step packet.
 
 **Step objective:** Re-read workflow snapshots for this tracker and the downstream benchmark trackers, then map the exact MCP synchronization seams and dependency gaps.
 
@@ -2067,19 +1181,23 @@ step: 3
 title: 'Red tests for synchronization contracts'
 status: '[PLANNED]'
 goal: red-testing
-expansion: slices
 tdd_sequence: red-green
+expansion: slices
 auto_expand: true
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
-skills:
-  - red-test-contracts
 next_step: 'Step 04 — Implement synchronization hooks and tracker updates'
+skills:
+  - 'red-test-contracts, execute, chrome-devtools-mcp'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=chrome-devtools-mcp-coverage --json'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
+  - 'Red tests fail for the expected synchronization contract gap (not syntax/fixture errors).'
+  - 'If synchronization behavior is observable in a browser benchmark, red tests include a Chrome DevTools MCP specialist-delegated browser check that fails before synchronization is implemented.'
 slices:
   - slice_id: step-3-red-tests
     title: 'Write red tests'
@@ -2120,6 +1238,10 @@ slices:
       - step-3-core
 ```
 
+**User instruction:**
+
+Paste this full step packet.
+
 **Step objective:** Add the smallest failing tests or checks that prove the downstream synchronization contract is still missing.
 
 **Execution focus:** Keep the red boundary on tracker synchronization, MCP wiring, and dependency handoff semantics; do not reopen resolved core implementation work inside this step.
@@ -2136,17 +1258,19 @@ step: 4
 title: 'Implement synchronization hooks and tracker updates'
 status: '[PLANNED]'
 goal: implementing
-expansion: slices
 tdd_sequence: red-green
+expansion: slices
 auto_expand: true
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
+next_step: 'Step 05 — Green validation and MCP audit'
 skills:
   - repo-cortex-workflow
-next_step: 'Step 05 — Green validation and MCP audit'
+  - execute
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 slices:
@@ -2189,6 +1313,10 @@ slices:
       - step-4-core
 ```
 
+**User instruction:**
+
+Paste this full step packet.
+
 **Step objective:** Implement the synchronization work needed to keep downstream benchmark trackers and mandatory MCP flow aligned with this readiness tracker.
 
 **Execution focus:** Keep changes bounded to tracker state, MCP wiring, and dependency handoff surfaces; route any new workflow infrastructure gaps to `00-helping`.
@@ -2205,61 +1333,101 @@ step: 5
 title: 'Green validation and MCP audit'
 status: '[PLANNED]'
 goal: green-testing
-expansion: slices
 tdd_sequence: green-only
+expansion: slices
 auto_expand: true
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
-skills:
-  - 'green-validation-gates, repo-cortex-workflow'
 next_step: 'Step 06 — Documentation and handoff alignment'
+skills:
+  - 'green-validation-gates, repo-cortex-workflow, execute, chrome-devtools-mcp'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
   - 'node scripts/agent-customization/mcp/neataptic-gate-mcp.mjs --self-check --json'
+  - 'neataptic-gate-mcp:run_gate_check --gate=chrome-devtools-mcp-coverage --json'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
+  - 'Focused Jest suites pass; coverage guard passes on touched src/ files.'
+  - 'Chrome DevTools MCP specialist delegation REQUIRED for browser benchmark validation: performance-trace-specialist captures traces for racing/ant-hive/predator-prey benchmark render loops and confirms no unacceptable frame drops or jank.'
+  - 'browser-memory-specialist captures heap snapshots for long-running benchmark sessions and confirms no unbounded memory growth or leak pattern.'
+  - 'browser-ui-specialist verifies benchmark visualizers render correctly (DOM structure, canvas state, no console errors) after synchronization hooks are applied.'
 slices:
-  - slice_id: step-5-red-tests
-    title: 'Write red tests'
-    status: '[PLANNED]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-5-core
-  - slice_id: step-5-core
-    title: 'Implement the core behavior'
+  - slice_id: step-5-impl-verify
+    title: 'Confirm Step 04 synchronization implementation is stable and all prior red tests are green'
     status: '[PLANNED]'
     goal: implementing
-    estimate_hours: 8
+    estimate_hours: 2
     files_to_change:
-      - TBD
     acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
+      - 'All Step 04 red tests now pass green.'
+      - 'No regressions in synchronization contract tests.'
     parallelizable: false
     dependencies:
-      - step-5-red-tests
-    next_slice: step-5-green
-  - slice_id: step-5-green
-    title: 'Green validation and coverage guard'
+    next_slice: step-5-green-jest
+  - slice_id: step-5-green-jest
+    title: 'Green Jest validation and coverage guard'
+    status: '[PLANNED]'
+    goal: green-testing
+    estimate_hours: 3
+    files_to_change:
+      - coverage/lcov.info
+    acceptance_criteria:
+      - 'All targeted Jest suites pass.'
+      - '100% coverage on touched src/ files.'
+    parallelizable: false
+    dependencies:
+      - step-5-impl-verify
+    next_slice: step-5-browser-perf
+  - slice_id: step-5-browser-perf
+    title: 'Browser benchmark performance trace audit via Chrome DevTools MCP'
+    status: '[PLANNED]'
+    goal: green-testing
+    estimate_hours: 5
+    files_to_change:
+    acceptance_criteria:
+      - 'Delegate performance-trace-specialist to capture Chrome DevTools performance traces for racing, ant-hive, and predator-prey benchmark render loops.'
+      - 'Confirm no unacceptable frame drops (>5 consecutive dropped frames) or excessive layout thrashing in the benchmark render loop.'
+      - 'Save traces to tmp/traces/ for archival evidence.'
+    parallelizable: false
+    dependencies:
+      - step-5-green-jest
+    next_slice: step-5-browser-memory
+  - slice_id: step-5-browser-memory
+    title: 'Browser benchmark memory leak audit via Chrome DevTools MCP'
     status: '[PLANNED]'
     goal: green-testing
     estimate_hours: 4
     files_to_change:
-      - coverage/lcov.info
     acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
+      - 'Delegate browser-memory-specialist to capture heap snapshots before and after a long-running benchmark session (>=100 generations or equivalent).'
+      - 'Confirm no unbounded memory growth pattern (retained objects should stabilize, not grow linearly with generations).'
+      - 'Classify any retained object growth as leak or expected and record the classification.'
     parallelizable: false
     dependencies:
-      - step-5-core
+      - step-5-browser-perf
+    next_slice: step-5-browser-ui
+  - slice_id: step-5-browser-ui
+    title: 'Browser benchmark UI validation via Chrome DevTools MCP'
+    status: '[PLANNED]'
+    goal: green-testing
+    estimate_hours: 3
+    files_to_change:
+    acceptance_criteria:
+      - 'Delegate browser-ui-specialist to verify benchmark visualizers render correctly: DOM structure, canvas state, no console errors.'
+      - 'Verify benchmark controls (start/stop/reset) are accessible and functional after synchronization hooks are applied.'
+      - 'If a benchmark demo is not browser-rendered, record an explicit skip note and exit.'
+    parallelizable: false
+    dependencies:
+      - step-5-browser-memory
 ```
 
-**Step objective:** Verify the synchronization implementation and MCP wiring stay green and report accurate evidence.
+**User instruction:**
+
+Paste this full step packet.
+
+**Step objective:** Verify the synchronization implementation and MCP wiring stay green and report accurate evidence. This is the prime Chrome DevTools MCP validation step: browser benchmarks (racing, ant-hive, predator-prey) must be validated via specialist-delegated performance traces, memory profiling, and UI checks.
 
 **Stop conditions:** Done when focused synchronization validation passes; hold on transient MCP failures; blocked if the implementation or gate evidence remains red.
 
@@ -2281,14 +1449,19 @@ auto_expand: false
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
-skills:
-  - 'tracker-handoff, repo-cortex-workflow'
 next_step: 'Step 07 — Logging and phase closure packet'
+skills:
+  - 'tracker-handoff, repo-cortex-workflow, execute'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 ```
+
+**User instruction:**
+
+Paste this full step packet.
 
 **Step objective:** Refresh tracker-facing docs and handoff language so downstream benchmark synchronization is explicit, current, and MCP-aware.
 
@@ -2309,14 +1482,20 @@ auto_expand: false
 mode: fresh-session
 source_of_truth: plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
 copy_paste: true
+next_step: 'User confirmation before any named phase closes'
 skills:
   - tracker-handoff
-next_step: 'User confirmation before any named phase closes'
+  - execute
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
 ```
+
+**User instruction:**
+
+Paste this full step packet.
 
 **Step objective:** Compress the final synchronization phase history while preserving the invariant that nothing closes until file-backed evidence exists and the user confirms completion.
 
@@ -2326,10 +1505,20 @@ acceptance_criteria:
 
 ## Validation gates
 
-`node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`
+- `neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json`
+- `neataptic-gate-mcp:run_gate_check --gate=chrome-devtools-mcp-coverage --json`
 
 ### Latest validation evidence
+- 2026-06-23: Phase 5 closed ? compression and logging complete; Phase 5 [DONE], Phase 6 promoted to [WIP] / Step 01 active; plan-sync, phase-compression, log-completion-marker, stale-wip-plans, and delegate-skill-coverage gates PASS.
 
+- 2026-06-23: Workflow sync: Advanced Phase 5 Step 5 → [DONE]; Phase 5 Step 6 → [WIP]
+- 2026-06-23: Workflow sync: Advanced Phase 5 Step 3 → [DONE]; Phase 5 Step 4 → [WIP]
+- 2026-06-23: Workflow sync: Advanced Phase 5 Step 1 → [DONE]; Phase 5 Step 2 → [WIP]
+- 2026-06-22: Phase 4 closed — compression and logging complete; phase-compression, log-completion-marker, stale-wip-plans, plan-sync, delegate-skill-coverage gates PASS; Phase 5 remains [PLANNED] as the explicit next phase.
+- 2026-06-23: Phase 5 kickoff — promoted Phase 5 to [WIP] and Step 01 to [WIP]; reconciled archived lifecycle closure claims against `src/neat/nge-adult/*` file-backed evidence; authored machine-actionable Step 02-07 packets with valid YAML skill lists and TDD-conformant slices; `validate-plan-sync`, `validate-plan-phase-packets`, `delegate-skill-coverage`, and `step-packet` gates PASS; `plans/README.md` and `plans/Roadmap.md` updated to Phase 5 [WIP] / Step 01 active. Workflow sync advanced Step 01 → [DONE] and Step 02 → [WIP].
+- 2026-06-20: Orchestration-alignment refresh: added `execute` skill to all Phase 4-7 WIP/PLANNED step packets; added `chrome-devtools-mcp` skill to Phase 5/6/7 Step 03 (red-testing) and Step 05 (green-testing); fixed green-only Step 05 slices to remove incorrect red-tests/core placeholder slices and replace with green-validation + Chrome DevTools MCP specialist-delegated browser audit slices; Phase 7 Step 05 rewritten as prime Chrome DevTools MCP candidate with performance-trace-specialist, browser-memory-specialist, and browser-ui-specialist slices for racing/ant-hive/predator-prey benchmark validation.
 - 2026-06-17: Workflow sync: Advanced Phase 4 Step 4 → [DONE]; Phase 4 Step 5 → [WIP]
 - 2026-06-16: Workflow sync: Advanced Phase 4 Step 4 → [DONE]; Phase 4 Step 5 → [WIP]
 - 2026-06-08: Workflow sync: Advanced Phase 3 Step 6 → [DONE]; Phase 3 Step 7 → [WIP]
@@ -2348,48 +1537,25 @@ acceptance_criteria:
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
 
-Workstream: NGE core readiness tracker (`plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`).
-
-Current durable coverage:
-- Phase 1 readiness audit and packetization are `[DONE]`.
-- Phase 2 team-level fitness core evaluator is `[DONE]`; `createTeamFitnessEvaluator` now lives in NGE core, Racing consumes it, and the touched validation/docs evidence is recorded in the Phase 2 coverage note.
-- Phase 3 is the active phase.
-- Phase 3 Step 01 is `[DONE]`; the reusable boundary is now frozen: core owns independent-population semantics plus transport-neutral generation-barrier behavior, while deterministic transport normalization stays in Phase 4.
+Context: NGE core readiness tracker ? Phase 5 lifecycle staging closure is [DONE]; Phase 6 experimental root public API exposure is now [WIP].
+Current boundary: Phase 6 Step 01 ? Planning packet and export-surface freeze.
+What is already covered:
+- Phase 5 Steps 01-07 complete: lifecycle contradiction freeze, seam mapping, red tests, implementation (runtime cooling decision + lifecycle runner + juvenile orchestrator), green validation (164/164 tests, 100% coverage), documentation/README regeneration, and phase compression/logging.
+- Phase 4 deterministic evaluation-pack normalization is [DONE].
+- C5 snapshot-vs-emission semantic gap is documented as experimental caveat; full resolution deferred to future assimilation-wiring work.
 
 Next narrow task:
-- Continue with Phase 3 Step 03 — Red tests for independent populations and barriers.
-- Add the smallest failing tests that prove population isolation, snapshot freeze/release, and coordinated next-generation eligibility without asserting Phase 4 transport schema details.
-- Preserve the frozen owner split already recorded here: Phase 3 owns barrier semantics, Phase 4 owns deterministic evaluation/race-pack transport normalization, and downstream benchmarks remain consumers rather than design owners.
+- Paste and execute the Phase 6 Step 01 planning packet.
+- Freeze the experimental root public API exposure acceptance criteria and identify the narrowest NGE surface to export from `src/neataptic.ts`.
+- Do not implement code changes yet; plan and author Step 02-07 packets before execution continues.
 
-Seam map and owner table (file-backed evidence):
-
-- NGE core — two-population harness and snapshot pool (Phase 3 reusable semantics):
-  - src\neat\nge-collective\neat.nge-collective.two-population.ts:104-149,205-269 — `createTwoPopulationHarness`, `runTwoTeamEvaluationTick`, and `advanceTwoPopulations` isolate team-local controllers, retain one shared evaluation context, and cross-register frozen rival snapshots.
-  - src\neat\nge-collective\neat.nge-collective.metrics.ts:104-148 — `createOpponentSnapshotPool` / `addOpponentSnapshot` deep-clone payloads and rotate bounded frozen snapshot history.
-  - src\neat\nge-collective\neat.nge-collective.types.ts:77-98 — `OpponentSnapshot` / `OpponentSnapshotPool` invariants define immutable frozen payloads and FIFO retention.
-  - src\neat\nge-collective\neat.nge-collective.team-fitness.ts:31-42,85-99 — `createTeamFitnessEvaluator` stays a closed Phase 2 prerequisite and explicitly excludes barriers and transport.
-
-- Racing benchmark — worker-local barrier enforcement and transport shapes (benchmark-local, Phase 4 transport deferred):
-  - examples\racing_curriculum\browser-entry\browser-entry.ts:126-143 — current browser seam still sends full `EnvironmentState` each tick, while the target worker-owned protocol moves populations, snapshots, and `race-step` production into the worker.
-  - examples\racing_curriculum\workers\simulation-worker\simulation-worker.opponent-snapshot.service.ts:4-10,22-45,52-66,103-123 — `beginEvaluation` / `endEvaluation` / `tryUpdateSnapshot` implement local generation-barrier guards.
-  - examples\racing_curriculum\workers\simulation-worker\simulation-worker.race-pack.service.ts:52-91,137-192 — `createDeterministicRacePack` and `resolveRaceStepTransferList` own packed frame schema and transfer-list rules.
-
-- Predator/Prey plan (downstream consumer):
-  - plans\NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md:498-509,699-736 — describes two independent NEAT workers, a coordinator barrier, frozen rolling opponent snapshots, and generation restart only after both populations report ready.
-
-Frozen Phase 3 ownership (transport-neutral barrier semantics):
-- Core must own: population independence, opponent snapshot freeze/retention semantics, and coordinated next-generation eligibility without transport assumptions.
-- Benchmarks must own: worker FSMs, episode queueing, host/render cadence, transfer-list rules, and packed `race-step` payload shapes (transport details remain Phase 4).
-
-Holds / unresolved policy questions (require explicit hold rather than silent assignment):
-- Hold: Whether Phase 3 must provide a named minimal barrier-summary payload or only a transport-neutral callback/seam. Step 03 should test sequencing first; if payload fields become necessary, record that policy decision here and defer the concrete shape to Phase 4 transport work.
-
-Required validation:
+Required validations:
 - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
-- node scripts/agent-customization/gates/cortex-first-search.gate.mjs --json
+- node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md
+- neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json
 
-Route-back / return condition:
-- When Step 03 confirms the failing barrier/isolation behavior and either keeps the hold as callback-only or records a named summary-policy decision, Step 04 can implement the reusable barrier seam without widening into transport work.
-
-
+Known worktree cautions:
+- Phase 6 must not export every internal NGE module at once; keep the experimental surface narrow and honest.
+- Phase 7 downstream benchmark synchronization remains queued; do not imply downstream closures are solved by core readiness work.
 ```
+

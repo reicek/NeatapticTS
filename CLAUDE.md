@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run build               # webpack + tsc
 npm run build:ts            # tsc only (faster for type checking)
 
-# Semantic index — run at every session start to prevent 24-hour indexed_at drift
+# Semantic index — run at every session start to keep the Turso-backed index current
 npm run index:session-start # touch-refreshes unchanged rows + incremental build for changed files
 npm run index:prewarm       # warms MCP dense search; rerun after corpus-changing docs/source/plan edits
 
@@ -235,11 +235,11 @@ Before touching architecture, major refactors, or new subsystems, check `plans/R
 - **Orchestration-first**: top-level exported functions are declarative steps calling small SRP helpers defined below the fold.
 - **No `any`/`unknown`** in `src/`, `testing/`, `benchmarks/`, or `examples/` without an eslint-disable comment and short justification.
 - **Cognitive complexity**: keep helpers small, pure, and single-responsibility. Declarative `collect → transform → fold` over nested control flow.
-- **Cortex-First Search**: Use Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) as the primary codebase search mechanism. Native tools (`grep`, `glob`, `view`) are fallbacks for when Cortex is degraded or the target is a known file path. If Cortex can't answer a query, report the gap for RAG enhancement.
+- **Cortex-First Search**: Use Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`, `parallel_search`, `multi_hop_search`) as the primary codebase search mechanism. Cortex RAG is backed by a Turso (libSQL) database with native vector search (DiskANN ANN index, `F8_BLOB` 8-bit quantized embeddings), server-side Reciprocal Rank Fusion (RRF, k=60) hybrid ranking, and parallel multi-query retrieval. Native tools (`grep`, `glob`, `view`) are fallbacks of last resort — use them only when Cortex is degraded, the target is a known file path, or Cortex returned zero results. If Cortex can't answer a query, report the gap for RAG enhancement.
 
 ## Discovery order for non-trivial tasks
 
-**Cortex-First Search Policy:** Cortex RAG is the premium primary search source. Use Cortex MCP tools before native tools.
+**Cortex-First Search Policy:** Cortex RAG is the premium primary search source. The Cortex MCP server is backed by Turso (libSQL) with native vector search, DiskANN ANN, FTS5 full-text search, server-side RRF hybrid ranking, and parallel multi-query retrieval. Use Cortex MCP tools before native tools.
 
 1. `neataptic-cortex-mcp:freshness_check` — verify index is current.
 2. `neataptic-cortex-mcp:search_corpus` — broad BM25 + dense hybrid search.
@@ -248,9 +248,29 @@ Before touching architecture, major refactors, or new subsystems, check `plans/R
 5. `neataptic-cortex-mcp:load_chunk` / `load_document` — full chunk/document content.
 6. `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
 7. `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
-8. **Fallback only:** Nearest folder `README.md` → parent folder `README.md` → `plans/README.md` → `plans/Roadmap.md` → specific source files via `view`/`grep`/`glob`.
+8. `neataptic-cortex-mcp:parallel_search` — run multiple SQL queries concurrently and merge via RRF (Reciprocal Rank Fusion, k=60). Respects `TURSO_CONCURRENCY` for in-flight request limits.
+9. `neataptic-cortex-mcp:multi_hop_search` — multi-hop graph traversal that chains entity/relationship hops across the indexed corpus.
+10. **Fallback only:** Nearest folder `README.md` → parent folder `README.md` → `plans/README.md` → `plans/Roadmap.md` → specific source files via `view`/`grep`/`glob`.
 
 If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
+
+## Turso RAG configuration
+
+The Cortex RAG system is backed by a Turso (libSQL) database. The async `@libsql/client` driver provides non-blocking database access with native vector search, DiskANN ANN indexing, and server-side RRF hybrid ranking. All 18 MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `load_parent_chunk`, `load_document`, `freshness_check`, `index_stats`, `ann_build_index`, `list_families`, `scan_code_quality`, `traverse_graph`, `expand_query`, `submit_feedback`, `parallel_search`, `multi_hop_search`, `turso_branch`, `turso_pitr`) route through a single cached `@libsql/client` `Client` instance.
+
+### Environment variables
+
+| Variable              | Required         | Description                                                                                                                                                            |
+| --------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TURSO_DATABASE_URL`  | No (recommended) | Primary database URL (e.g. `libsql://my-db.turso.io` or `file:data/turso-replica.sqlite`). When set, it is used verbatim as a URL.                                     |
+| `TURSO_AUTH_TOKEN`    | No               | JWT auth token for Turso cloud access. Required only when `TURSO_DATABASE_URL` points to a remote Turso instance.                                                      |
+| `TURSO_SYNC_URL`      | No               | Sync URL for embedded replica mode. When set, the client uses a local `file:` database that syncs from a remote Turso primary. Read-your-writes is enabled by default. |
+| `TURSO_SYNC_INTERVAL` | No               | Embedded replica sync interval in **seconds** (default 60).                                                                                                            |
+| `TURSO_CONCURRENCY`   | No               | Maximum in-flight parallel search requests (default 20). Controls `parallel_search` concurrency.                                                                       |
+
+### Fallback behavior when Turso env vars are not set
+
+When `TURSO_DATABASE_URL` is not configured, the Cortex MCP server uses the compiled default local path `data/turso-replica.sqlite`. This local-only mode provides full search functionality but without network resilience, embedded replica sync, or cloud scalability. Agents should set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` for production use. If that local database file does not exist, MCP tools return a `CORTEX_FIX_HINT` instructing the operator to run `node scripts/semantic-index/build-index.mjs`.
 
 ## Certainty and investigation thresholds
 

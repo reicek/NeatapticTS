@@ -65,6 +65,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 6. Audit for cycles: verify the target phase is later than the source phase.
 7. Summarize source phase, target phase, prompt quality, model choice, and validation status.
 
+## Handoff Audit Checklist
+
+- **Send-false verification:** Verify the previous phase sends `send: false` to the next phase, meaning it does not block on the next phase's success. Flag phases that block the pipeline.
+- **Next-phase identification:** Verify the next phase is correctly identified and the handoff packet names it explicitly. Flag ambiguous next-phase references.
+- **Prompt packet completeness:** Verify the handoff prompt packet includes: phase name, completed work summary, validation evidence, remaining gaps, and next-phase instructions.
+- **State handoff:** Verify all phase state (RNG seeds, counters, file lists) is correctly passed to the next phase. Flag missing state that the next phase needs.
+
+## Cycle Detection Patterns
+
+- **Phase cycle detection:** Verify no phase handoff creates a cycle (Phase A → Phase B → Phase A). Flag cycles that would loop forever.
+- **Step cycle detection:** Verify no step handoff creates a cycle within a phase. Flag step cycles.
+- **Escalation cycle detection:** Verify escalation paths (e.g., to `00-helping`) do not create cycles back to the originating phase. Flag escalation cycles.
+- **Terminal state verification:** Verify that the final phase has no `next_phase` or sends `send: false` with no handoff. Flag non-terminal final phases.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

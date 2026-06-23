@@ -21,6 +21,7 @@ disable-model-invocation: false
 agents:
   [
     'implementation-pattern-coordinator',
+    'implementation-pattern-scout',
     'implementation-executor',
     'boundary-mapper',
     'docs-scout',
@@ -50,6 +51,8 @@ skills:
     'onnx-work',
     'performance-optimization',
     'trace-analyzer-extension',
+    'worker-inference-transport',
+    'execute',
   ]
 handoffs:
   - label: 'Validate Green'
@@ -94,6 +97,7 @@ Make the smallest implementation change that satisfies the active phase step con
 - On failure, revert only current-step changes; always keep unrelated edits intact.
 - Never use destructive git history rewrites or broad resets.
 - If a long-running terminal job is started, await completion or set `TASK_STATUS: PARTIAL` and document the job contract in the plan.
+- **No Deferred Cleanup Policy:** When implementing any migration, refactor, or API replacement, the old code MUST be removed in the same step that introduces the new code. No backward-compatibility wrappers, no dual-path code, no deferred cleanup. Dead code is removed immediately. This applies to ALL code in the library — src/, scripts/, examples/, benchmarks/, testing/. If the slice or step plan does not include removal of the old code, stop and call `01-planning` to re-slice — do not silently introduce dual-path code.
 
 ## Slice Implementation Contract
 
@@ -267,11 +271,13 @@ On rollback, include the rollback git command suggested for reviewers (e.g. `git
 
 1. **Read the active plan, phase step contract, and all relevant source files.**
    - Example: Open `plans/step04.md`, read the contract, and load `src/feature.js`.
+   - Before delegating, consult `.github/agent-skill-routing-table.md` for the canonical agent-to-skill mapping and delegation target discovery.
 
 - Required: if the plan lacks a `Claim:` line (see File Claim / Edit Lock), add one before edits.
 
 2. **Use specialists for domain reconnaissance or implementation packets.**
    - Example: If a regex change is needed, delegate to `implementation-pattern-scout`.
+   - Name specific Tier 3 scouts: use `implementation-pattern-scout` for pattern discovery and naming convention lookup, `boundary-mapper` for boundary mapping before multi-file edits.
 3. **Re-read target files before writing if edits may have occurred.**
    - Example: If `src/feature.js` was edited by another agent, re-read before applying your patch.
 4. **Edit only files required for the current step.**
@@ -310,6 +316,20 @@ PlanUpdate:
 ```
 
 Attach this block to the plan and include it in `VALIDATION_EVIDENCE` before invoking `plan-sync`.
+
+## Delegation Targets
+
+| Task Type                                | Primary Delegation Target            | Tier |
+| ---------------------------------------- | ------------------------------------ | ---- |
+| Implementation pattern coordination      | `implementation-pattern-coordinator` | 2    |
+| Scoped code edits and patch application  | `implementation-executor`            | 3    |
+| Pattern discovery and naming conventions | `implementation-pattern-scout`       | 3    |
+| Boundary mapping before multi-file edits | `boundary-mapper`                    | 3    |
+| SOLID module split and folderization     | `solid-split`                        | 2    |
+
+## Escalation Protocol
+
+If 3 consecutive delegation attempts to the same specialist fail to resolve the issue, escalate to `00-helping` via `00.cross-tier-helper` with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
 
 ## If Blocked
 
@@ -392,6 +412,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent or NONE>
+- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
 SUMMARY: <brief truthful summary>
 ```

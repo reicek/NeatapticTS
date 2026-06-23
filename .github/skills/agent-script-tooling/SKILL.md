@@ -4,6 +4,10 @@ description: 'Design reusable scripts for NeatapticTS agent customization workfl
 argument-hint: 'Describe the script purpose, inputs, outputs, failure modes, and whether it reads, validates, or changes files.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - agent-frontmatter-standards
+  - green-validation-gates
+  - implementation-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -32,6 +36,28 @@ and validation exit codes.
   strict gate context.
 - An existing script produces output that agents cannot parse reliably and needs
   a structured output contract.
+
+
+## When NOT to use
+
+Do NOT use for scripts outside the `scripts/agent-customization/` directory - this skill only covers agent customization tooling.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Script change"] --> B["Run script directly"]
+    B --> C{"Exit code?"}
+    C -- "0" --> D["Check stderr for warnings"]
+    C -- "Non-zero" --> E["Fix reported error"]
+    D --> F["Run validate-agent-frontmatter"]
+    E --> B
+    F --> G{"Pass?"}
+    G -- "Yes" --> H["Done"]
+    G -- "No" --> I["Fix validation issue"]
+    I --> F
+```
 
 ## Task Packet
 
@@ -84,6 +110,48 @@ Read or write: read-only.
 
 - `--dry-run`: show what would change without writing anything.
 - `--verbose`: additional diagnostic detail to stderr.
+
+
+## Exit Code Reference
+
+| Exit Code | Meaning | Action |
+|-----------|---------|--------|
+| 0 | Success, no issues | Proceed |
+| 1 | Validation errors found | Fix reported issues |
+| 2 | Usage or argument error | Check command syntax |
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Need new script"] --> B{"Purpose?"}
+    B -- "Block on pass/fail" --> C["Create gate script (--json, exit codes)"]
+    B -- "Summarize state" --> D["Create reporting script (--json summary)"]
+    B -- "One-off helper" --> E["Create utility script (--help)"]
+    C --> F["Audit in dry-run, then wire to gate"]
+    D --> F
+    E --> G["Document in top-of-file JSDoc"]
+```
+
+## Before / After Examples
+
+**Before:**
+```js
+// ad hoc: no --help, prose on stdout, no exit code contract
+console.log("Index is " + (stale ? "stale" : "fresh"));
+```
+
+**After:**
+```js
+/**
+ * Validate semantic index freshness. Exit 0 if fresh, 1 if stale.
+ * @example node validate-index.mjs --json
+ */
+if (process.argv.includes('--json')) {
+  console.log(JSON.stringify({ pass: !stale, evidence, fixHint, owner }));
+}
+process.exit(stale ? 1 : 0);
+```
 
 ## Guardrails
 

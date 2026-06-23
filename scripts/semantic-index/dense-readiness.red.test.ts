@@ -75,8 +75,7 @@ describe('dense-readiness.mjs', () => {
 
         const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'dense-readiness-cold-'));
         const report = await checkDenseReadiness({
-          corpusDatabasePath: path.join(fixtureDirectory, 'semantic-index.sqlite'),
-          embeddingsDatabasePath: path.join(fixtureDirectory, 'embeddings.sqlite'),
+          corpusDatabasePath: path.join(fixtureDirectory, 'corpus.sqlite'),
           modelDirectory: path.join(fixtureDirectory, 'models'),
         });
 
@@ -110,8 +109,7 @@ describe('dense-readiness.mjs', () => {
         await mkdir(modelDirectory, { recursive: true });
         await writeFile(path.join(modelDirectory, 'model.onnx'), 'fixture model');
         const report = await checkDenseReadiness({
-          corpusDatabasePath: path.join(fixtureDirectory, 'semantic-index.sqlite'),
-          embeddingsDatabasePath: path.join(fixtureDirectory, 'embeddings.sqlite'),
+          corpusDatabasePath: path.join(fixtureDirectory, 'corpus.sqlite'),
           modelDirectory,
         });
 
@@ -134,25 +132,24 @@ describe('dense-readiness.mjs', () => {
     it('distinguishes partial embeddings from matching warm embeddings', () => {
       // Arrange and Act
       const result = runModuleEvaluation<DenseReadinessStateSequenceReport>(`
-        import Database from 'better-sqlite3';
+        import { createClient } from '@libsql/client';
         import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
         import { tmpdir } from 'node:os';
         import path from 'node:path';
+        import { pathToFileURL } from 'node:url';
         import { checkDenseReadiness } from './scripts/semantic-index/dense-readiness.mjs';
 
         const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'dense-readiness-counts-'));
         const modelDirectory = path.join(fixtureDirectory, 'models');
-        const corpusDatabasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
-        const partialEmbeddingsPath = path.join(fixtureDirectory, 'partial-embeddings.sqlite');
-        const warmEmbeddingsPath = path.join(fixtureDirectory, 'warm-embeddings.sqlite');
+        const corpusDatabasePath = path.join(fixtureDirectory, 'corpus.sqlite');
+        const modelId = 'all-MiniLM-L6-v2';
         await mkdir(modelDirectory, { recursive: true });
         await writeFile(path.join(modelDirectory, 'model.onnx'), 'fixture model');
-        createCorpusDatabase(corpusDatabasePath, 2);
-        createEmbeddingsDatabase(partialEmbeddingsPath, 1);
-        createEmbeddingsDatabase(warmEmbeddingsPath, 2);
+        await createCorpusDatabase(corpusDatabasePath, 2);
 
-        const partial = await checkDenseReadiness({ corpusDatabasePath, embeddingsDatabasePath: partialEmbeddingsPath, modelDirectory });
-        const warm = await checkDenseReadiness({ corpusDatabasePath, embeddingsDatabasePath: warmEmbeddingsPath, modelDirectory });
+        const partial = await checkDenseReadiness({ corpusDatabasePath, modelDirectory, modelId });
+        await setEmbeddingModel(corpusDatabasePath, modelId);
+        const warm = await checkDenseReadiness({ corpusDatabasePath, modelDirectory, modelId });
 
         console.log(JSON.stringify({
           chunkCounts: [partial.chunk_count, warm.chunk_count],
@@ -161,34 +158,25 @@ describe('dense-readiness.mjs', () => {
           states: [partial.state, warm.state],
         }));
 
-        function createCorpusDatabase(databasePath, chunkCount) {
-          const database = new Database(databasePath);
-          database.exec('CREATE TABLE chunks (chunk_id INTEGER PRIMARY KEY, body_text TEXT NOT NULL);');
-          const insertChunk = database.prepare('INSERT INTO chunks (chunk_id, body_text) VALUES (?, ?)');
-          for (let chunkNumber = 1; chunkNumber <= chunkCount; chunkNumber += 1) insertChunk.run(chunkNumber, 'fixture chunk');
-          database.close();
+        async function createCorpusDatabase(databasePath, chunkCount) {
+          const client = createClient({ url: pathToFileURL(databasePath).href });
+          await client.execute('CREATE TABLE chunks (chunk_id INTEGER PRIMARY KEY, body_text TEXT NOT NULL, embedding BLOB, embedding_model TEXT);');
+          for (let chunkNumber = 1; chunkNumber <= chunkCount; chunkNumber += 1) {
+            await client.execute({
+              sql: 'INSERT INTO chunks (chunk_id, body_text, embedding, embedding_model) VALUES (?, ?, ?, ?)',
+              args: [chunkNumber, 'fixture chunk', Buffer.from(new Float32Array([1, 0, 0]).buffer), 'other-model'],
+            });
+          }
+          await client.close();
         }
 
-        function createEmbeddingsDatabase(databasePath, embeddingCount) {
-          const database = new Database(databasePath);
-          database.exec(\`
-            CREATE TABLE chunk_embeddings (
-              chunk_id INTEGER PRIMARY KEY,
-              embedding BLOB NOT NULL,
-              chunk_sha256 TEXT NOT NULL,
-              model_id TEXT NOT NULL,
-              model_sha256 TEXT NOT NULL,
-              dimension INTEGER NOT NULL,
-              embedded_at TEXT NOT NULL
-            );
-          \`);
-          const insertEmbedding = database.prepare(
-            'INSERT INTO chunk_embeddings (chunk_id, embedding, chunk_sha256, model_id, model_sha256, dimension, embedded_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-          );
-          for (let chunkNumber = 1; chunkNumber <= embeddingCount; chunkNumber += 1) {
-            insertEmbedding.run(chunkNumber, Buffer.from(new Float32Array([1, 0, 0]).buffer), 'sha', 'all-MiniLM-L6-v2', 'model-sha', 3, '2026-05-23T00:00:00.000Z');
-          }
-          database.close();
+        async function setEmbeddingModel(databasePath, targetModel) {
+          const client = createClient({ url: pathToFileURL(databasePath).href });
+          await client.execute({
+            sql: 'UPDATE chunks SET embedding_model = ?',
+            args: [targetModel],
+          });
+          await client.close();
         }
       `);
 
@@ -197,7 +185,7 @@ describe('dense-readiness.mjs', () => {
         expect.objectContaining({
           report: {
             chunkCounts: [2, 2],
-            embeddingCounts: [1, 2],
+            embeddingCounts: [0, 2],
             readyValues: [false, true],
             states: ['model-only', 'warm'],
           },
@@ -292,15 +280,16 @@ describe('dense-readiness.mjs', () => {
     it('returns BM25-only degraded output with cold readiness', () => {
       // Arrange and Act
       const result = runModuleEvaluation<SearchCorpusColdReport>(`
-        import Database from 'better-sqlite3';
+        import { createClient } from '@libsql/client';
         import { mkdtemp } from 'node:fs/promises';
         import { tmpdir } from 'node:os';
         import path from 'node:path';
+        import { pathToFileURL } from 'node:url';
         import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
 
         const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'dense-readiness-search-cold-'));
-        const databasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
-        createSearchCorpusDatabase(databasePath);
+        const databasePath = path.join(fixtureDirectory, 'corpus.sqlite');
+        await createSearchCorpusDatabase(databasePath);
         let denseQueryCalls = 0;
         const result = await searchCorpus({
           databasePath,
@@ -323,9 +312,9 @@ describe('dense-readiness.mjs', () => {
           use_dense: result.use_dense,
         }));
 
-        function createSearchCorpusDatabase(targetPath) {
-          const database = new Database(targetPath);
-          database.exec(\`
+        async function createSearchCorpusDatabase(targetPath) {
+          const client = createClient({ url: pathToFileURL(targetPath).href });
+          await client.execute(\`
             CREATE TABLE documents (
               doc_id INTEGER PRIMARY KEY,
               file_path TEXT NOT NULL UNIQUE,
@@ -338,6 +327,8 @@ describe('dense-readiness.mjs', () => {
               test_coverage TEXT CHECK(test_coverage IN ('full', 'partial', 'none', 'unknown')),
               source_path_pattern TEXT
             );
+          \`);
+          await client.execute(\`
             CREATE TABLE chunks (
               chunk_id INTEGER PRIMARY KEY,
               doc_id INTEGER NOT NULL REFERENCES documents(doc_id) ON DELETE CASCADE,
@@ -362,6 +353,8 @@ describe('dense-readiness.mjs', () => {
               source_path_pattern TEXT,
               UNIQUE(doc_id, chunk_index)
             );
+          \`);
+          await client.execute(\`
             CREATE VIRTUAL TABLE chunks_fts USING fts5(
               body_text,
               heading_path,
@@ -369,26 +362,36 @@ describe('dense-readiness.mjs', () => {
               content_rowid='chunk_id',
               tokenize='porter unicode61'
             );
+          \`);
+          await client.execute(\`
             CREATE TRIGGER IF NOT EXISTS chunks_ai AFTER INSERT ON chunks BEGIN
               INSERT INTO chunks_fts(rowid, body_text, heading_path)
               VALUES (new.chunk_id, new.body_text, new.heading_path);
             END;
+          \`);
+          await client.execute(\`
             CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON chunks BEGIN
               INSERT INTO chunks_fts(chunks_fts, rowid, body_text, heading_path)
               VALUES ('delete', old.chunk_id, old.body_text, old.heading_path);
             END;
+          \`);
+          await client.execute(\`
             CREATE TRIGGER IF NOT EXISTS chunks_au AFTER UPDATE ON chunks BEGIN
               INSERT INTO chunks_fts(chunks_fts, rowid, body_text, heading_path)
               VALUES ('delete', old.chunk_id, old.body_text, old.heading_path);
               INSERT INTO chunks_fts(rowid, body_text, heading_path)
               VALUES (new.chunk_id, new.body_text, new.heading_path);
             END;
+          \`);
+          await client.execute(\`
             INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at, arch_layer, test_coverage, source_path_pattern)
               VALUES (1, 'fixture.md', 'plan', 1, 100, 'fixture-sha', 1, 'doc', 'unknown', 'docs/**');
+          \`);
+          await client.execute(\`
             INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, parent_chunk_id, depth, context_header, symbol_name, signature_text, jsdoc_text, export_type, module_path, arch_layer, jsdoc_quality, jsdoc_word_count, cyclomatic_complexity, test_coverage, source_path_pattern)
               VALUES (1, 1, 0, 'Fixture', 'NEAT activation retrieval contract', 0, 34, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, 'doc', 'none', NULL, NULL, 'unknown', 'docs/**');
           \`);
-          database.close();
+          await client.close();
         }
       `);
 
@@ -459,7 +462,7 @@ describe('dense-readiness.mjs', () => {
       const result = runModuleEvaluation<SearchCorpusSchemaReport>(`
         import { createRepoCortexTools } from './scripts/mcp-semantic/repo-cortex-mcp.mjs';
 
-        const searchTool = createRepoCortexTools('./data/semantic-index.sqlite').find((tool) => tool.name === 'search_corpus');
+        const searchTool = createRepoCortexTools('./data/turso-replica.sqlite').find((tool) => tool.name === 'search_corpus');
         const defaultValue = searchTool?.inputSchema?.properties?.use_dense?.default ?? null;
 
         console.log(JSON.stringify({ defaultValue }));

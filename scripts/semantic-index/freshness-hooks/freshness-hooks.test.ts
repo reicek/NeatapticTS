@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
+import { pathToFileURL } from 'node:url';
 
 // Tests run from the repository root, so cwd is a stable anchor for repo-relative
 // paths without needing import.meta.url (which currently breaks ts-jest for the
@@ -91,28 +92,26 @@ async function seedDocument(
  * @param filePath - Repo-relative path of the document.
  * @returns The stored row, or `null` if the document is missing.
  */
-function getDocumentRow(databasePath: string, filePath: string) {
-  const db = new Database(databasePath, {
-    readonly: true,
-    fileMustExist: true,
-  });
+async function getDocumentRow(databasePath: string, filePath: string) {
+  const client = createClient({ url: pathToFileURL(databasePath).href });
   try {
-    const row = db
-      .prepare(
-        'SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents WHERE file_path = ?',
-      )
-      .get(filePath);
+    const result = await client.execute({
+      sql: 'SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents WHERE file_path = ?',
+      args: [filePath],
+    });
     return (
-      (row as {
-        file_path: string;
-        mtime_ms: number;
-        file_size: number;
-        sha256: string;
-        indexed_at: number;
-      } | null) ?? null
+      (result.rows[0] as unknown as
+        | {
+            file_path: string;
+            mtime_ms: number;
+            file_size: number;
+            sha256: string;
+            indexed_at: number;
+          }
+        | undefined) ?? null
     );
   } finally {
-    db.close();
+    await client.close();
   }
 }
 
@@ -266,7 +265,12 @@ describe('freshness-hooks.mjs', () => {
           const matchedFilePaths = search.results.map((r) => r.file_path);
           expect(matchedFilePaths).toContain(fixture.filePath);
         } finally {
-          await rm(fixture.dir, { recursive: true, force: true });
+          await rm(fixture.dir, {
+            recursive: true,
+            force: true,
+            maxRetries: 5,
+            retryDelay: 200,
+          });
         }
       });
 
@@ -305,7 +309,12 @@ describe('freshness-hooks.mjs', () => {
 
           expect(result.elapsedMs).toBeLessThan(5000);
         } finally {
-          await rm(fixture.dir, { recursive: true, force: true });
+          await rm(fixture.dir, {
+            recursive: true,
+            force: true,
+            maxRetries: 5,
+            retryDelay: 200,
+          });
         }
       });
     });
@@ -321,7 +330,7 @@ describe('freshness-hooks.mjs', () => {
             fixture,
             '# First\n\nFirst revision of the fixture.',
           );
-          const before = getDocumentRow(databasePath, fixture.filePath);
+          const before = await getDocumentRow(databasePath, fixture.filePath);
           expect(before).not.toBeNull();
 
           await new Promise((resolve) => setTimeout(resolve, 30));
@@ -344,7 +353,7 @@ describe('freshness-hooks.mjs', () => {
             console.log(JSON.stringify({ flushed: true }));
           `);
 
-          const after = getDocumentRow(databasePath, fixture.filePath);
+          const after = await getDocumentRow(databasePath, fixture.filePath);
           expect(after).toEqual(
             expect.objectContaining({
               file_path: fixture.filePath,
@@ -357,7 +366,12 @@ describe('freshness-hooks.mjs', () => {
             Number(before?.indexed_at),
           );
         } finally {
-          await rm(fixture.dir, { recursive: true, force: true });
+          await rm(fixture.dir, {
+            recursive: true,
+            force: true,
+            maxRetries: 5,
+            retryDelay: 200,
+          });
         }
       });
     });
@@ -498,7 +512,12 @@ describe('freshness-hooks.mjs', () => {
           );
           expect(match).toBeTruthy();
         } finally {
-          await rm(fixture.dir, { recursive: true, force: true });
+          await rm(fixture.dir, {
+            recursive: true,
+            force: true,
+            maxRetries: 5,
+            retryDelay: 200,
+          });
         }
       });
     });

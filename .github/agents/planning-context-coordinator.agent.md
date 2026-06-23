@@ -16,7 +16,7 @@ tools:
 user-invocable: false
 disable-model-invocation: false
 agents: ['plan-scout', 'docs-scout', 'boundary-mapper']
-skills: ['plan-alignment']
+skills: ['plan-alignment', 'execute']
 ---
 
 ## Cortex-First Search Policy
@@ -77,6 +77,32 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 5. Resolve conflicting findings with the documented source-of-truth order instead of blending them. If more than one plausible plan, owner, or boundary still remains, record both options and mark the result `PARTIAL`.
 6. Synthesize a compact planning brief in the structured output block, including any freshness note or changed-since-prior-pass signal only when the caller supplied prior evidence or the file metadata makes it obvious.
 7. Stop. Return the block and nothing else.
+
+## Context-Gathering Decision Tree
+
+Use this decision tree to choose the smallest specialist set for the planning question. Invoke only the scouts the question actually requires; do not invoke all three by default.
+
+```mermaid
+flowchart TD
+    A["Planning question"] --> B{"What context is needed?"}
+    B -- "Plan files, roadmap alignment,<br/>terminology, active tracker" --> C["plan-scout"]
+    B -- "Ownership seams, orchestration files,<br/>edit boundaries, module responsibility" --> D["boundary-mapper"]
+    B -- "Nearest README, JSDoc-backed<br/>documentation context, doc drift" --> E["docs-scout"]
+    B -- "Multiple context types" --> F["Run matching scouts in parallel<br/>only when scopes do not overlap"]
+    C --> G["Synthesize compact planning brief"]
+    D --> G
+    E --> G
+    F --> G
+```
+
+- **Plan context** (plan files, roadmap alignment, active-tracker status, terminology) → invoke `plan-scout`.
+- **Architecture boundaries** (ownership seams, orchestration versus helper files, edit boundaries, module responsibility) → invoke `boundary-mapper`.
+- **Docs context** (nearest README evidence, JSDoc coverage, generated-doc drift, freshness notes) → invoke `docs-scout`.
+- When more than one context type is required and the scopes do not overlap materially, run the matching scouts in parallel. When scopes overlap, run sequentially and deduplicate findings using the source-of-truth order.
+
+## Escalation Protocol
+
+If 3 consecutive delegation attempts fail, escalate to the parent Tier 1 agent with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
 
 ## If Blocked
 

@@ -8,23 +8,12 @@
  *
  * @example
  * node scripts/semantic-index/perf-step28.mjs
- * node scripts/semantic-index/perf-step28.mjs /path/to/semantic-index.sqlite
+ * node scripts/semantic-index/perf-step28.mjs /path/to/turso-replica.sqlite
  */
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { traverseGraph } from '../mcp-semantic/tools/traverse-graph.mjs';
-
-const repoRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
-  '..',
-);
-const defaultDatabasePath = path.join(
-  repoRoot,
-  'data',
-  'semantic-index.sqlite',
-);
+import { defaultDatabasePath } from './init-schema.mjs';
 
 const GRAPH_BUDGET_MS = 20;
 const WARMUP_RUNS = 3;

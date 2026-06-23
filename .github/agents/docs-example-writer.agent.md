@@ -65,6 +65,21 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 4. Verify the example works against the current public API and matches the pedagogist-first library philosophy.
 5. Frame examples as a compact handoff into `educational-docs` for integration into JSDoc or README.
 
+## Example Output Template
+
+````yaml
+docs_example:
+  target: <JSDoc symbol, README section, or docs page>
+  example_type: code-snippet|jsdoc-usage|readme-note
+  code: |
+    ```ts
+    <minimal TypeScript example, 3-10 lines>
+    ```
+  explanation: <one-line pedagogical note>
+  api_verification: <confirmed against current public API>
+  educational_docs_followup: true|false
+````
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
@@ -86,6 +101,9 @@ KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
+VALIDATION_EVIDENCE:
+- <command/result or NOT RUN>
+HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:

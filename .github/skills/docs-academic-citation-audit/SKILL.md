@@ -4,6 +4,10 @@ description: 'Audit NeatapticTS educational documentation quality for customizat
 argument-hint: 'Describe the documentation surface, source files, generated outputs, citations needed, and validation command.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - educational-docs
+  - license-attribution-audit
+  - updating-js-docs
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -32,6 +36,27 @@ for generated README artifacts.
   phase markers) in a public-facing README that should be atemporal.
 - A new algorithm is introduced in `src/` without a Wikipedia or paper citation
   in its JSDoc.
+
+
+## When NOT to use
+
+Do NOT use for license auditing - use `license-attribution-audit` instead. Do NOT use for generating READMEs - use `educational-docs` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Scan docs for citations"] --> B["Check each citation"]
+    B --> C{"Source exists?"}
+    C -- "Yes" --> D["Verify claim matches source"]
+    C -- "No" --> E["Flag missing citation"]
+    D --> F{"Accurate?"}
+    F -- "Yes" --> G["Pass"]
+    F -- "No" --> H["Flag inaccurate citation"]
+    E --> I["Report findings"]
+    H --> I
+```
 
 ## Task Packet
 
@@ -74,6 +99,24 @@ Validate with: npm run docs — confirm the generated README reflects the citati
   or subsystems.
 - Use `license-attribution-audit` when external workflow sources inform
   customization docs and the license terms need to be checked.
+
+
+## Before/After Citation Examples
+
+**Before (weak citation):**
+```md
+NEAT uses a genetic algorithm to evolve networks.
+```
+
+**After (strong citation):**
+```md
+NEAT uses a genetic algorithm to evolve network topologies through
+speciation and complexification [Stanley & Miikkulainen, 2002].
+
+[Stanley & Miikkulainen, 2002]: K.O. Stanley and R. Miikkulainen,
+"Evolving Neural Networks through Augmenting Topologies,"
+Evolutionary Computation, vol. 10, no. 2, pp. 99-127, 2002.
+```
 
 ## Guardrails
 

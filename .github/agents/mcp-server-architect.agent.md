@@ -72,6 +72,30 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 7. **Summarize the proposed boundary, tools/resources/prompts, bridge dependency, security constraints, and validation gates.**
    - Example: "Boundary: only exposes test coverage and session log. Tools: coverage-tool, session-log-tool. Bridge: signed session token. Security: allow-list. Validation: coverage percent must be between 0 and 100."
 
+## File Path Allow-List for Edit Tool
+
+This agent may edit ONLY the following file types:
+- **Design documents:** `docs/mcp-*.md`, `plans/*mcp*.md`, `.github/skills/mcp-local-server-workflow/*.md`
+- **Configuration templates:** `*.mcp.json` templates, `mcp-config.json` examples
+
+This agent must NOT edit:
+- **Production code:** `src/**/*.ts`, `scripts/**/*.mjs`, `scripts/**/*.ts`
+- **Agent files:** `.github/agents/*.agent.md`
+- **Skill files:** `.github/skills/*/SKILL.md` (use `updating-skill-frontmatter` skill instead)
+
+## MCP Server Contract Design Patterns
+
+- **Tool schema:** Define each tool with a clear `name`, `description`, and `inputSchema` (JSON Schema). Tools must be stateless and deterministic where possible.
+- **Resource schema:** Define resources with a clear `uri` pattern, `mimeType`, and `description`. Resources should be read-only and cacheable.
+- **Bridge dependency:** Document which MCP server capabilities depend on which repository scripts or modules. Map tool names to implementation files.
+- **Security constraint templates:** Define security boundaries: no file writes outside allowed paths, no network access unless explicitly required, no secrets in tool outputs.
+
+## VS Code AI Extensibility Reference URLs
+
+- **VS Code Docs:** https://code.visualstudio.com/docs
+- **GitHub Copilot Docs:** https://docs.github.com/en/copilot
+- **VS Code Extension API:** https://code.visualstudio.com/api
+
 ## If Blocked
 
 - If you cannot gather required evidence (e.g., missing docs, unclear plan), set `TASK_STATUS: PARTIAL`.

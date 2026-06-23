@@ -24,7 +24,12 @@ post-phase-fanout:
   - '05-green-testing'
   - 'coverage-guard'
 
+loop-back: >
+  Orchestrator manages the RED→IMPLEMENT→GREEN loop. If green fails,
+  orchestrator spawns a new 04-implementing instance with observations.
+
 skills:
+  - 'execute'
   - 'coverage-guard'
   - 'test-fix-workflow'
 
@@ -33,6 +38,9 @@ specialists:
   - 'failure-triage-specialist'
   - 'implementation-pattern-scout'
   - 'implementation-executor'
+  - 'performance-trace-specialist'
+  - 'browser-ui-specialist'
+  - 'browser-memory-specialist'
 
 timeout-minutes: 20
 

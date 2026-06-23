@@ -1,22 +1,42 @@
 # Semantic Index — scripts/semantic-index/
 
-A SQLite-backed retrieval system for the NeatapticTS repository. Two cooperating
-layers provide complementary coverage:
+A Turso (libSQL) backed retrieval system for the NeatapticTS repository. Two
+cooperating layers provide complementary coverage:
 
 - **BM25 layer** — full-text search over every textual surface: generated folder
   READMEs, skill files, agent files, plan trackers, demo source summaries, and key
   root docs. Exact keyword and phrase matching.
 - **Dense embedding layer** — locally cached `all-MiniLM-L6-v2` ONNX
-  sentence-transformer producing 384-dimensional float32 vectors for each corpus
-  chunk. Enables semantic (paraphrase-tolerant) retrieval and hybrid ranking. The
-  CLI enables this with `--dense`; the MCP `search_corpus` tool defaults
-  `use_dense` to `true` and falls back honestly to BM25 when the dense runtime is
-  not warm.
+  sentence-transformer producing 384-dimensional vectors for each corpus chunk,
+  stored as F8_BLOB quantized vectors (8-bit quantization, ~4× compression vs
+  float32) in the consolidated Turso database. Enables semantic
+  (paraphrase-tolerant) retrieval and hybrid ranking via server-side Reciprocal
+  Rank Fusion (RRF, k=60). The CLI enables this with `--dense`; the MCP
+  `search_corpus` tool defaults `use_dense` to `true` and falls back honestly to
+  BM25 when the dense runtime is not warm.
 
 AI agents and MCP tools use this index to retrieve accurate, up-to-date context
 without exhaustive codebase traversal. This directory is the **offline build-time
 layer only**. MCP tool exposure is handled in
 [Semantic_Knowledge_MCP_Tools.plans.md](../../plans/Semantic_Knowledge_MCP_Tools.plans.md).
+
+### Turso configuration
+
+The index uses a single consolidated Turso (libSQL) database. Configuration is via
+environment variables:
+
+| Variable              | Purpose                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TURSO_DATABASE_URL`  | Primary database URL. Use `file:./data/turso-replica.sqlite` (or `file:${workspaceFolder}/data/turso-replica.sqlite`) for a local embedded replica, or `libsql://<db>.turso.io` for cloud. |
+| `TURSO_AUTH_TOKEN`    | JWT auth token for cloud access (optional for local `file:` URLs).                                                                                                                         |
+| `TURSO_SYNC_URL`      | Remote sync URL for embedded replica mode (optional; when set, the local `file:` DB syncs from a remote Turso primary).                                                                    |
+| `TURSO_SYNC_INTERVAL` | Sync interval in seconds (optional, default 60).                                                                                                                                           |
+| `TURSO_CONCURRENCY`   | Max in-flight parallel search queries (optional, default 20).                                                                                                                              |
+
+**Fallback behavior:** When Turso is unreachable, an embedded replica (`file:` URL)
+continues serving reads locally with read-your-writes semantics. If no embedded
+replica is configured and the cloud primary is unreachable, search calls return an
+error.
 
 ---
 
@@ -24,45 +44,44 @@ layer only**. MCP tool exposure is handled in
 
 ### BM25 index
 
-| File | Role |
-|---|---|
-| `build-index.mjs` | CLI — scans corpus, chunks documents, writes `data/semantic-index.sqlite` |
-| `query-index.mjs` | CLI — BM25 full-text query with family filter and JSON output |
-| `validate-index.mjs` | CLI — asserts min row counts, freshness proofs, and max staleness |
-| `init-schema.mjs` | Schema initializer — creates tables and FTS5 virtual table on first run |
-| `schema.sql` | Source-of-truth schema definition (read by `init-schema.mjs`) |
-| `chunker.mjs` | Text windowing — overlapping fixed-size windows + heading extraction |
-| `ts-chunker.mjs` | CLI — ts-morph AST-level symbol chunker for `ts-source` family |
-| `freshness.mjs` | Freshness prover — `(mtime_ms, file_size_bytes, sha256_hex)` triple |
-| `cli-utils.mjs` | Shared CLI helpers — `parseCliArgs`, `printHelp`, `writeJsonOrText`, `fail` |
-| `data/semantic-index.sqlite` | **Generated artifact** — gitignored, produced by `build-index.mjs` |
+| File                        | Role                                                                                      |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `build-index.mjs`           | CLI — scans corpus, chunks documents, writes the Turso corpus database                    |
+| `query-index.mjs`           | CLI — BM25 full-text query with family filter and JSON output                             |
+| `validate-index.mjs`        | CLI — asserts min row counts, freshness proofs, and max staleness                         |
+| `init-schema.mjs`           | Schema initializer — creates tables and FTS5 virtual table on first run                   |
+| `schema.sql`                | Source-of-truth schema definition (read by `init-schema.mjs`)                             |
+| `chunker.mjs`               | Text windowing — overlapping fixed-size windows + heading extraction                      |
+| `ts-chunker.mjs`            | CLI — ts-morph AST-level symbol chunker for `ts-source` family                            |
+| `freshness.mjs`             | Freshness prover — `(mtime_ms, file_size_bytes, sha256_hex)` triple                       |
+| `cli-utils.mjs`             | Shared CLI helpers — `parseCliArgs`, `printHelp`, `writeJsonOrText`, `fail`               |
+| `data/turso-replica.sqlite` | **Generated artifact** — gitignored local embedded replica, produced by `build-index.mjs` |
 
 ### Dense embedding layer
 
-| File | Role |
-|---|---|
-| `download-model.mjs` | CLI — downloads ONNX model + tokenizer assets to `scripts/semantic-index/models/` |
-| `embed-index.mjs` | CLI — runs ONNX inference, stores BLOB vectors in `data/embeddings.sqlite` |
-| `prewarm-dense.mjs` | CLI — idempotent bootstrap that downloads the model when needed, embeds changed chunks, then validates the dense store |
-| `dense-readiness.mjs` | CLI probe — reports `cold`, `model-only`, or `warm` with counts and a human-readable reason |
-| `validate-embeddings.mjs` | CLI gate — asserts vector count matches corpus chunk count |
-| `eval-embeddings.mjs` | CLI — MRR@5 evaluation of BM25-only vs hybrid retrieval quality |
-| `hybrid-rank.mjs` | Library — BM25 + cosine linear combination with configurable alpha |
-| `query-dense.mjs` | CLI — BM25 query with optional hybrid dense reranking |
-| `code-quality-scanner.mjs` | CLI gate — flags missing/weak JSDoc and high-complexity symbols |
-| `eval-queries.json` | Canonical 20-query eval set with hit criteria and MRR@5 threshold |
-| `data/embeddings.sqlite` | **Generated artifact** — gitignored, BLOB vector store |
+| File                       | Role                                                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `download-model.mjs`       | CLI — downloads ONNX model + tokenizer assets to `scripts/semantic-index/models/`                                      |
+| `embed-index.mjs`          | CLI — runs ONNX inference, stores F8_BLOB quantized vectors in the Turso corpus database                               |
+| `prewarm-dense.mjs`        | CLI — idempotent bootstrap that downloads the model when needed, embeds changed chunks, then validates the dense store |
+| `dense-readiness.mjs`      | CLI probe — reports `cold`, `model-only`, or `warm` with counts and a human-readable reason                            |
+| `validate-embeddings.mjs`  | CLI gate — asserts at least one usable embedding exists for the active model                                           |
+| `eval-embeddings.mjs`      | CLI — MRR@5 evaluation of BM25-only vs hybrid retrieval quality                                                        |
+| `hybrid-rank.mjs`          | Library — hybrid ranking helpers (RRF fusion, server-side query assembly)                                              |
+| `query-dense.mjs`          | CLI — BM25 query with optional hybrid dense reranking                                                                  |
+| `code-quality-scanner.mjs` | CLI gate — flags missing/weak JSDoc and high-complexity symbols                                                        |
+| `eval-queries.json`        | Canonical 20-query eval set with hit criteria and MRR@5 threshold                                                      |
 
-The generated database lives at `data/semantic-index.sqlite` (repo root) and is
-excluded from version control via `.gitignore`. Rebuild it at any time with
-`npm run index:build`. Prepare the dense sidecar with `npm run index:prewarm`
-after the corpus exists.
+The generated local database lives at `data/turso-replica.sqlite` (repo root) as an embedded
+replica and is excluded from version control via `.gitignore`. Rebuild it at any
+time with `npm run index:build`. Prepare the dense vectors with
+`npm run index:prewarm` after the corpus exists.
 
 ---
 
 ## Bootstrap contract
 
-Fresh clones do not contain `data/embeddings.sqlite` or
+Fresh clones do not contain `data/turso-replica.sqlite` or
 `scripts/semantic-index/models/` because both are generated, gitignored runtime
 artifacts. After `npm install` and `npm run build`, run the dense bootstrap before
 expecting MCP dense search to be warm:
@@ -73,8 +92,8 @@ npm run index:prewarm
 
 The bootstrap is idempotent. It downloads the ONNX model only when
 `scripts/semantic-index/models/model.onnx` is missing, incrementally embeds only
-chunks whose content hash changed, then validates that the embedding count matches
-the corpus chunk count.
+chunks whose content hash changed, then validates that the corpus contains at least
+one embedding for the active model.
 
 Use the readiness probe to check the current state without issuing a search:
 
@@ -85,24 +104,42 @@ npm run index:dense-readiness
 Example readiness outputs:
 
 ```json
-{ "ready": false, "state": "cold", "reason": "Dense model assets are absent.", "chunk_count": null, "embedding_count": null }
+{
+  "ready": false,
+  "state": "cold",
+  "reason": "Dense model assets are absent.",
+  "chunk_count": null,
+  "embedding_count": null
+}
 ```
 
 ```json
-{ "ready": false, "state": "model-only", "reason": "Dense model is present but the embeddings database is absent.", "chunk_count": null, "embedding_count": null }
+{
+  "ready": false,
+  "state": "model-only",
+  "reason": "Dense model is present but no usable embeddings exist in the corpus.",
+  "chunk_count": null,
+  "embedding_count": null
+}
 ```
 
 ```json
-{ "ready": true, "state": "warm", "reason": "All 29300 chunks have embeddings.", "chunk_count": 29300, "embedding_count": 29300 }
+{
+  "ready": true,
+  "state": "warm",
+  "reason": "Usable embeddings are present in the corpus.",
+  "chunk_count": 128,
+  "embedding_count": 128
+}
 ```
 
 Readiness states map directly to MCP behavior:
 
-| State | Meaning | MCP `search_corpus` behavior |
-|---|---|---|
-| `cold` | Model assets are absent. | Returns BM25 results with `dense_degraded: true`, `dense_state: "cold"`, and `dense_reason`. |
-| `model-only` | Model exists, but embeddings are absent or incomplete. | Returns BM25 results with `dense_degraded: true`, `dense_state: "model-only"`, and `dense_reason`. |
-| `warm` | Model exists and embedding count equals corpus chunk count. | Uses hybrid dense ranking by default and emits `dense_state: "warm"`. |
+| State        | Meaning                                                    | MCP `search_corpus` behavior                                                                       |
+| ------------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `cold`       | Model assets are absent.                                   | Returns BM25 results with `dense_degraded: true`, `dense_state: "cold"`, and `dense_reason`.       |
+| `model-only` | Model exists, but embeddings are absent or incomplete.     | Returns BM25 results with `dense_degraded: true`, `dense_state: "model-only"`, and `dense_reason`. |
+| `warm`       | Model exists and at least one usable embedding is present. | Uses hybrid dense ranking by default and emits `dense_state: "warm"`.                              |
 
 Rewarm whenever the corpus changes: source JSDoc regenerated into `src/**/README.md`,
 plans, skills, agents, examples, benchmarks, or root docs. The standard rewarm
@@ -125,7 +162,12 @@ failure with a fix hint that points operators back to `npm run index:prewarm`.
 
 ---
 
-## SQLite schema
+## Turso / libSQL schema
+
+The index uses a single consolidated Turso (libSQL) database. The driver is
+`@libsql/client` `createClient()` — fully async (Promise-based), never blocks the
+event loop. Schema versioning uses a `_schema_version` table (PRAGMA is read-only
+on Turso).
 
 ```sql
 -- One row per scanned file
@@ -141,16 +183,20 @@ CREATE TABLE documents (
 
 -- One row per text window
 CREATE TABLE chunks (
-  chunk_id     INTEGER PRIMARY KEY,
-  doc_id       INTEGER NOT NULL REFERENCES documents(doc_id) ON DELETE CASCADE,
-  chunk_index  INTEGER NOT NULL,         -- 0-based window index within the document
-  heading_path TEXT,                     -- e.g. "## Scope > ### Artifacts"
-  body_text    TEXT    NOT NULL,         -- raw window text (~2 KB, 128-token overlap)
-  char_start   INTEGER NOT NULL,         -- byte offset into original document
-  char_end     INTEGER NOT NULL
+  chunk_id          INTEGER PRIMARY KEY,
+  doc_id            INTEGER NOT NULL REFERENCES documents(doc_id) ON DELETE CASCADE,
+  chunk_index       INTEGER NOT NULL,         -- 0-based window index within the document
+  heading_path      TEXT,                     -- e.g. "## Scope > ### Artifacts"
+  body_text         TEXT    NOT NULL,         -- raw window text (~2 KB, 128-token overlap)
+  char_start        INTEGER NOT NULL,         -- byte offset into original document
+  char_end          INTEGER NOT NULL,
+  embedding         F8_BLOB(384),             -- quantized dense vector (NULL until embedded)
+  embedding_model   TEXT,                     -- model identifier, e.g. `all-MiniLM-L6-v2`
+  chunk_sha256      TEXT,                     -- content hash at embedding time
+  embedded_at       INTEGER                   -- Unix ms when the embedding was written
 );
 
--- FTS5 virtual table (BM25 ranking via built-in SQLite scorer)
+-- FTS5 virtual table (BM25 ranking via built-in libSQL scorer)
 CREATE VIRTUAL TABLE chunks_fts USING fts5(
   body_text,
   heading_path,
@@ -162,7 +208,11 @@ CREATE VIRTUAL TABLE chunks_fts USING fts5(
 
 Three triggers (`chunks_ai`, `chunks_ad`, `chunks_au`) keep `chunks_fts` in sync
 with the `chunks` table automatically. A `documents_family_idx` index accelerates
-family-filtered queries.
+family-filtered queries. Dense vectors are stored in the `chunks.embedding` column
+using the native Turso `F8_BLOB` quantized vector type (8-bit quantization, ~4×
+compression vs float32). Vector search uses server-side `vector_distance_cos()` and
+the DiskANN `libsql_vector_idx` index — no brute-force full-scan, no loading all
+embeddings into JS memory.
 
 ---
 
@@ -170,18 +220,18 @@ family-filtered queries.
 
 Documents are collected in the following priority order and tagged with a family label:
 
-| Priority | Family label | Glob | Chunker |
-|---|---|---|---|
-| 1 | `readme` | `src/**/README.md` | Markdown heading-window |
-| 2 | `ts-source` | `src/**/*.ts` (non-test, non-declaration) | ts-morph symbol-level (`ts-chunker.mjs`) |
-| 3 | `skill` | `.github/skills/**/SKILL.md` | Markdown heading-window |
-| 4 | `agent` | `.github/agents/*.agent.md` | Markdown heading-window |
-| 5 | `plan` | `plans/**/*.md` (excluding `plans/completed/`) | Markdown heading-window |
-| 6 | `completed-plan` | `plans/completed/**/*.md` | Markdown heading-window |
-| 7 | `demo` | `examples/**/README.md`, `examples/**/*.ts` | Markdown heading-window |
-| 8 | `benchmark` | `benchmarks/README.md`, `benchmarks/**/*.test.ts` | Markdown heading-window |
-| 9 | `root-doc` | `README.md`, `CLAUDE.md`, `STYLEGUIDE.md`, `CONTRIBUTING.md` | Markdown heading-window |
-| 10 | `copilot-instructions` | `.github/copilot-instructions.md` | Markdown heading-window |
+| Priority | Family label           | Glob                                                         | Chunker                                  |
+| -------- | ---------------------- | ------------------------------------------------------------ | ---------------------------------------- |
+| 1        | `readme`               | `src/**/README.md`                                           | Markdown heading-window                  |
+| 2        | `ts-source`            | `src/**/*.ts` (non-test, non-declaration)                    | ts-morph symbol-level (`ts-chunker.mjs`) |
+| 3        | `skill`                | `.github/skills/**/SKILL.md`                                 | Markdown heading-window                  |
+| 4        | `agent`                | `.github/agents/*.agent.md`                                  | Markdown heading-window                  |
+| 5        | `plan`                 | `plans/**/*.md` (excluding `plans/completed/`)               | Markdown heading-window                  |
+| 6        | `completed-plan`       | `plans/completed/**/*.md`                                    | Markdown heading-window                  |
+| 7        | `demo`                 | `examples/**/README.md`, `examples/**/*.ts`                  | Markdown heading-window                  |
+| 8        | `benchmark`            | `benchmarks/README.md`, `benchmarks/**/*.test.ts`            | Markdown heading-window                  |
+| 9        | `root-doc`             | `README.md`, `CLAUDE.md`, `STYLEGUIDE.md`, `CONTRIBUTING.md` | Markdown heading-window                  |
+| 10       | `copilot-instructions` | `.github/copilot-instructions.md`                            | Markdown heading-window                  |
 
 The `ts-source` family uses the **ts-morph AST chunker** (`ts-chunker.mjs`) instead of
 the text-window chunker. Each chunk covers one exported symbol (function, class,
@@ -216,16 +266,16 @@ every stored document and fails if any row's triple no longer matches. Use
 
 ### build-index.mjs
 
-Scan the corpus, chunk documents, and populate `data/semantic-index.sqlite`.
+Scan the corpus, chunk documents, and populate the Turso corpus database.
 
 ```
 node scripts/semantic-index/build-index.mjs [options]
 
 Options:
-  --dry-run          Scan corpus without writing SQLite rows
+  --dry-run          Scan corpus without writing database rows
   --force            Re-index unchanged documents even if freshness proof matches
   --json             Emit JSON summary { scanned, indexed, skipped, chunks }
-  --database <path>  Path to SQLite database file (default: data/semantic-index.sqlite)
+  --database <path>  Path to the Turso corpus database (default: data/turso-replica.sqlite)
   --help             Show help
 ```
 
@@ -243,7 +293,7 @@ Options:
   --limit <n>        Maximum result count (default: 10)
   --family <name>    Restrict results to one document family
   --json             Emit JSON results
-  --database <path>  Path to SQLite database file (default: data/semantic-index.sqlite)
+  --database <path>  Path to the Turso corpus database (default: data/turso-replica.sqlite)
   --help             Show help
 ```
 
@@ -261,11 +311,12 @@ Options:
   --min-documents <n>   Minimum expected document rows (default: 1)
   --min-chunks <n>      Minimum expected chunk rows (default: 1)
   --max-age-ms <ms>     Maximum row age in milliseconds (default: 86400000 / 24 h)
-  --database <path>     Path to SQLite database file (default: data/semantic-index.sqlite)
+  --database <path>     Path to the Turso corpus database (default: data/turso-replica.sqlite)
   --help                Show help
 ```
 
 **npm alias:** `npm run index:validate`
+
 ### ts-chunker.mjs
 
 Extract `ts-source` family chunks from `src/**/*.ts` using ts-morph AST traversal.
@@ -307,9 +358,10 @@ Options:
 ### embed-index.mjs
 
 Build or incrementally update the dense embedding index. Reads corpus chunks from
-`data/semantic-index.sqlite`, runs each chunk through the ONNX model (mean-pool →
-L2-normalize → 384-dim float32 BLOB), and stores vectors in `data/embeddings.sqlite`.
-Skips chunks whose `chunk_sha256` and `model_id` are unchanged (incremental rule).
+the Turso corpus database, runs each chunk through the ONNX model (mean-pool →
+L2-normalize → 384-dim vector), and stores F8_BLOB quantized vectors in the same
+consolidated Turso database. Skips chunks whose `chunk_sha256` and `model_id` are
+unchanged (incremental rule).
 
 ```
 node scripts/semantic-index/embed-index.mjs [options]
@@ -317,8 +369,7 @@ node scripts/semantic-index/embed-index.mjs [options]
 Options:
   --dry-run                  Count work without writing embeddings
   --json                     Emit JSON summary { embedded, skipped, queued, dryRun }
-  --database <path>          Override corpus database path
-  --embeddings-database <p>  Override embeddings database path
+  --database <path>          Override Turso corpus database path
   --model-directory <path>   Override local model cache directory
   --model-id <id>            Override model identifier
   --dimension <n>            Override embedding dimension
@@ -330,16 +381,15 @@ Options:
 
 ### validate-embeddings.mjs
 
-Assert that the embedding index is complete: vector count for the active model must
-equal the corpus chunk count. Emits the standard gate JSON contract.
+Assert that the embedding index is usable: at least one chunk has an embedding for
+the active model. Emits the standard gate JSON contract.
 
 ```
 node scripts/semantic-index/validate-embeddings.mjs [options]
 
 Options:
   --json                     Emit the standard gate JSON contract
-  --database <path>          Override corpus database path
-  --embeddings-database <p>  Override embeddings database path
+  --database <path>          Override Turso corpus database path
   --model-id <id>            Restrict validation to one model id
   --help                     Show this help
 ```
@@ -371,8 +421,7 @@ node scripts/semantic-index/dense-readiness.mjs [options]
 
 Options:
   --json                       Emit the readiness report as JSON
-  --database <path>            Override the semantic-index corpus database path
-  --embeddings-database <p>    Override the embeddings database path
+  --database <path>            Override the Turso corpus database path
   --model-directory <path>     Override the local dense model directory
   --model-id <id>              Override the embedding model identifier
   --help                       Show help
@@ -392,8 +441,7 @@ node scripts/semantic-index/eval-embeddings.mjs [options]
 Options:
   --json                        Emit JSON evaluation output
   --alpha <n>                   Hybrid BM25 weight 0–1 (default: 0.5)
-  --database <path>             Override corpus database path
-  --embeddings-database <p>     Override embeddings database path
+  --database <path>             Override Turso corpus database path
   --model-directory <path>      Override local model cache directory
   --model-id <id>               Override model identifier
   --query-file <path>           Override eval query set path
@@ -416,8 +464,7 @@ Options:
   --alpha <n>                 Hybrid BM25 weight 0–1 (default: 0.5)
   --limit <n>                 Maximum result count (default: 10)
   --family <name>             Restrict to one document family
-  --database <path>           Override corpus database path
-  --embeddings-database <p>   Override embeddings database path
+  --database <path>           Override Turso corpus database path
   --model-directory <path>    Override local model cache directory
   --model-id <id>             Override model identifier
   --json                      Emit JSON results
@@ -483,13 +530,13 @@ Options:
 
 Strict compare requirements and rejection reason codes:
 
-| Requirement | Reason code on mismatch |
-|---|---|
-| `metricVersion` must match | `METRIC_VERSION_MISMATCH` |
-| `threshold.minJsdocWords` and `threshold.complexityThreshold` must match | `THRESHOLD_MISMATCH` |
-| `scopeType` must match (`src` vs `paths`) | `SCOPE_TYPE_MISMATCH` |
-| `scopeDigest` must match | `SCOPE_DIGEST_MISMATCH` |
-| `scannerVersion` must match | `SCANNER_VERSION_MISMATCH` |
+| Requirement                                                              | Reason code on mismatch    |
+| ------------------------------------------------------------------------ | -------------------------- |
+| `metricVersion` must match                                               | `METRIC_VERSION_MISMATCH`  |
+| `threshold.minJsdocWords` and `threshold.complexityThreshold` must match | `THRESHOLD_MISMATCH`       |
+| `scopeType` must match (`src` vs `paths`)                                | `SCOPE_TYPE_MISMATCH`      |
+| `scopeDigest` must match                                                 | `SCOPE_DIGEST_MISMATCH`    |
+| `scannerVersion` must match                                              | `SCANNER_VERSION_MISMATCH` |
 
 ### docs-quality-metrics.gate.mjs
 
@@ -507,10 +554,10 @@ node scripts/agent-customization/gates/docs-quality-metrics.gate.mjs [--json]
 Each run is written under `artifacts/docs-quality/runs/<run-id>/` with three
 canonical files:
 
-| File | Purpose |
-|---|---|
-| `summary.json` | Aggregated counts (`evidenceCount`, issue totals) |
-| `evidence.json` | Canonical normalized evidence rows plus evidence digest |
+| File            | Purpose                                                      |
+| --------------- | ------------------------------------------------------------ |
+| `summary.json`  | Aggregated counts (`evidenceCount`, issue totals)            |
+| `evidence.json` | Canonical normalized evidence rows plus evidence digest      |
 | `manifest.json` | Contract metadata and pointers to summary/evidence artifacts |
 
 ### Migration note: retire ad hoc measurement flows
@@ -548,34 +595,33 @@ is never accessed at query time after that.
 
 **Required assets** (downloaded by `download-model.mjs`):
 
-| File | Role |
-|---|---|
-| `model.onnx` | ONNX sentence-transformer graph — the inference model |
-| `tokenizer.json` | WordPiece vocabulary and tokenization rules |
-| `tokenizer_config.json` | Tokenizer configuration (max length, padding, etc.) |
-| `special_tokens_map.json` | CLS, SEP, PAD, MASK token identifiers |
-| `model-meta.json` | Sidecar written by `download-model.mjs` — `{ model_id, model_sha256, dimension }` |
+| File                      | Role                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| `model.onnx`              | ONNX sentence-transformer graph — the inference model                             |
+| `tokenizer.json`          | WordPiece vocabulary and tokenization rules                                       |
+| `tokenizer_config.json`   | Tokenizer configuration (max length, padding, etc.)                               |
+| `special_tokens_map.json` | CLS, SEP, PAD, MASK token identifiers                                             |
+| `model-meta.json`         | Sidecar written by `download-model.mjs` — `{ model_id, model_sha256, dimension }` |
 
 The SHA-256 of `model.onnx` is verified on every download and stored in `model-meta.json`
 as a reproducibility anchor. The `models/` directory is gitignored; every developer or
 CI job that needs dense search must run `download-model.mjs` once.
 
-### `chunk_embeddings` table schema
+### `chunks.embedding` column schema
 
-Stored in a separate `data/embeddings.sqlite` (gitignored), keeping vector blobs
-out of the BM25 database. In-process cosine similarity is computed over float32 BLOBs
-without any native SQLite vector extension (`sqlite-vec` is a conditional upgrade path
-that requires Windows/CI compatibility confirmation).
+Dense vectors are stored in the same consolidated Turso database as the BM25
+index, in the `chunks.embedding` column using the native Turso `F8_BLOB` quantized
+vector type (8-bit quantization, ~4× compression vs float32). Vector search is
+performed server-side via `vector_distance_cos()` and the DiskANN
+`libsql_vector_idx` index — no brute-force full-scan, no loading all embeddings
+into JS memory, and no native SQLite vector extension loading.
 
-| Column | Type | Notes |
-|---|---|---|
-| `chunk_id` | INTEGER | Foreign key → `data/semantic-index.sqlite` `chunks.chunk_id` |
-| `embedding` | BLOB | Raw IEEE 754 float32 vector; dimension fixed per `model_id` |
-| `chunk_sha256` | TEXT | Content hash of the chunk at embedding time (freshness / incremental key) |
-| `model_id` | TEXT | Canonical model identifier, e.g. `all-MiniLM-L6-v2` |
-| `model_sha256` | TEXT | SHA-256 of the ONNX model file (reproducibility anchor) |
-| `dimension` | INTEGER | Embedding vector dimension (384 for MiniLM-L6-v2) |
-| `embedded_at` | TEXT | ISO 8601 timestamp — used for staleness detection |
+| Column            | Type    | Notes                                                                     |
+| ----------------- | ------- | ------------------------------------------------------------------------- |
+| `embedding`       | F8_BLOB | Quantized vector; dimension fixed per `embedding_model`                   |
+| `embedding_model` | TEXT    | Canonical model identifier, e.g. `all-MiniLM-L6-v2`                       |
+| `chunk_sha256`    | TEXT    | Content hash of the chunk at embedding time (freshness / incremental key) |
+| `embedded_at`     | INTEGER | Unix ms when the embedding was written                                    |
 
 ### Incremental embedding rule
 
@@ -588,19 +634,22 @@ It **re-embeds** when either the chunk body changes (detected via SHA-256) or th
 is upgraded to a new version. This makes incremental rebuilds fast: only added or edited
 source chunks require new ONNX inference.
 
-### Hybrid rank formula
+### Hybrid ranking — Reciprocal Rank Fusion (RRF)
 
-When `--dense` / `use_dense: true` is enabled, BM25 and cosine similarity scores are
-linearly combined using:
+When `--dense` / `use_dense: true` is enabled, BM25 (FTS5) and dense vector results
+are fused server-side using **Reciprocal Rank Fusion (RRF, k=60)**:
 
-$$\text{score}(d, q) = \alpha \cdot \text{BM25\_norm}(d, q) + (1 - \alpha) \cdot \cos(\mathbf{e}_d, \mathbf{e}_q)$$
+$$\text{RRF}(d) = \sum_{r \in R} \frac{1}{k + \text{rank}_r(d)}$$
 
 where:
-- $\text{BM25\_norm}$ is min-max normalized over the candidate set.
-- $\mathbf{e}_d$ and $\mathbf{e}_q$ are L2-normalized float32 embedding vectors.
-- $\alpha$ is the BM25 weight (default 0.5, configurable via `--alpha`).
-- The candidate set is the union of the BM25 pool and the nearest-neighbour dense pool
-  (so dense search can surface chunks with no lexical overlap with the query).
+
+- $R$ is the set of rankers (BM25, dense vector).
+- $\text{rank}_r(d)$ is the rank of document $d$ under ranker $r$.
+- $k = 60$ is the standard RRF constant that dampens the influence of high ranks.
+- The candidate set is the union of the BM25 pool and the nearest-neighbour dense
+  pool (so dense search can surface chunks with no lexical overlap with the query).
+- The `alpha` parameter still controls the BM25/dense blend weight for candidate
+  selection, but final fusion is RRF, not a JS-side linear combination.
 
 ### Default-on MCP and CLI opt-in policy
 
@@ -613,13 +662,13 @@ difference between a true hybrid result and a fallback.
 The standalone CLI remains explicit so local debugging can choose BM25-only or
 hybrid behavior per command:
 
-| Context | Dense behavior |
-|---|---|
-| `query-dense.mjs` CLI | Pass `--dense` to enable hybrid reranking |
+| Context                  | Dense behavior                                                           |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `query-dense.mjs` CLI    | Pass `--dense` to enable hybrid reranking                                |
 | `search_corpus` MCP tool | Defaults to `"use_dense": true`; pass `"use_dense": false` for BM25-only |
-| Direct API call | `{ useDense: true }` in options |
+| Direct API call          | `{ useDense: true }` in options                                          |
 
-BM25-only behavior is identical whether or not the embeddings database exists. Dense
+BM25-only behavior is identical whether or not the dense vectors exist. Dense
 retrieval adds semantic recall, but it requires the local model cache and a completed
 embedding build; run `npm run index:prewarm` to make default-on MCP dense search warm.
 
@@ -634,17 +683,18 @@ member AND (when non-null) the chunk heading or symbol name contains the expecte
 substring. Zero is scored for queries with no hit in the top 5.
 
 The eval set (`eval-queries.json`) contains **20 canonical queries** covering:
+
 - BM25-friendly exact-match queries (`readme`, `plan`, `skill` families).
 - Semantic paraphrase queries that benefit from dense retrieval.
 - 16 queries targeting the `ts-source` family (TypeScript symbol lookup).
 
-**Measured MRR@5 results** (full corpus, `all-MiniLM-L6-v2`, alpha = 0.5):
+**Measured MRR@5 results** (full corpus, `all-MiniLM-L6-v2`, RRF k=60):
 
-| Ranker | MRR@5 |
-|---|---|
-| BM25-only | 0.1875 |
-| Hybrid (α = 0.5) | 0.300 |
-| Improvement | +0.1125 (required minimum: +0.02) |
+| Ranker            | MRR@5                             |
+| ----------------- | --------------------------------- |
+| BM25-only         | 0.1875                            |
+| Hybrid (RRF k=60) | 0.300                             |
+| Improvement       | +0.1125 (required minimum: +0.02) |
 
 The gate script `cortex-embeddings.gate.mjs` enforces the +0.02 improvement threshold
 and fails the gate if the hybrid MRR@5 drops below BM25 + 0.02 on any re-evaluation.
@@ -713,17 +763,17 @@ after changing the chunking window size or schema).
 
 ---
 
-## Generated databases and .gitignore
+## Generated database and .gitignore
 
-Both SQLite databases are developer-tool artifacts, not tracked assets.
+The local embedded replica database is a developer-tool artifact, not a tracked
+asset.
 
-| Database | Path | Build command |
-|---|---|---|
-| BM25 index | `data/semantic-index.sqlite` | `npm run index:build` |
-| Embedding vectors | `data/embeddings.sqlite` | `npm run index:embed` |
+| Database                                         | Path                        | Build command                                    |
+| ------------------------------------------------ | --------------------------- | ------------------------------------------------ |
+| Consolidated Turso corpus (BM25 + dense vectors) | `data/turso-replica.sqlite` | `npm run index:build` then `npm run index:embed` |
 
-Both paths are excluded from version control via `.gitignore`. Each developer or CI
-job that needs these databases must build them locally:
+The `data/turso-replica.sqlite` path is excluded from version control via `.gitignore`. Each
+developer or CI job that needs this database must build it locally:
 
 ```sh
 # Standard full setup

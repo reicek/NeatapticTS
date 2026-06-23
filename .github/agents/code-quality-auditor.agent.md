@@ -88,6 +88,30 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - `file-change-summarizer` for change surface summaries
 7. Produce a repair packet for the appropriate owner agent.
 
+## Quality Gate Command Reference
+
+| Gate                  | Command                                       | Expected            |
+| --------------------- | --------------------------------------------- | ------------------- |
+| TypeScript check      | `npx tsc --noEmit -p tsconfig.json`           | 0 errors            |
+| Test TypeScript check | `npx tsc --noEmit -p tsconfig.test.json`      | 0 errors            |
+| Folder quality        | `npm run quality:folder -- --folder=<folder>` | 0 violations        |
+| Build                 | `npm run build`                               | Success             |
+| Prettier              | `npx prettier --check .`                      | All files formatted |
+| Lint                  | `npm run lint`                                | 0 issues            |
+| Docs                  | `npm run docs`                                | Success             |
+
+## Violation Classification Taxonomy
+
+- **Error (must fix):** TypeScript compilation errors, build failures, test failures. These block merge.
+- **Warning (should fix):** Lint warnings, missing JSDoc on exported symbols, formatting issues. These should be fixed but do not block merge.
+- **Info (consider fixing):** Style suggestions, complexity warnings, naming convention notes. These are improvements, not blockers.
+- **Convention violation:** Code that doesn't follow repo patterns (e.g., using `sort()` instead of `toSorted()`). Flag with the correct replacement.
+- **Coverage gap:** Changed `src/` file below 100% in any category. Route to `coverage-guard`.
+
+## Agent Tool Usage
+
+This auditor uses `read`, `search`, and `execute` tools. The `execute` tool is used ONLY for running read-only validation commands (tsc, lint, quality:folder, build). This auditor does NOT edit production code — it reports violations and routes fixes to the appropriate skill.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when quality gate commands fail to run or produce ambiguous output.

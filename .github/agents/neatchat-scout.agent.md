@@ -69,6 +69,16 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - browser packaging blockers belong to `browser-build`
 6. Summarize the active workstream, missing gates, and the smallest useful handoff into `neatchat-systems`.
 
+## NEATchat Dependency Gate Checklist
+
+- **Persistent sessions:** Verify that chat session persistence is implemented (session state survives across messages). Flag sessions that are lost on each turn.
+- **Multi-tier memory:** Verify that memory tiers (short-term context, long-term episodic, semantic) are correctly initialized and queried. Flag missing memory tiers.
+- **Retrieval ranking:** Verify that retrieval results are ranked by relevance (BM25 + dense hybrid). Flag unranked retrieval that returns arbitrary order.
+- **Candidate routing:** Verify that response candidates are routed through a ranking/selection pipeline. Flag direct generation without ranking.
+- **Stronger seed import:** Verify that the seed import path produces a functional initial network. Flag seed imports that produce non-functional or degenerate networks.
+- **Branch/reset semantics:** Verify that conversation branching and reset operations are clearly defined. Flag ambiguous reset behavior that may retain stale context.
+- **Personalization:** Verify that personalization (user preferences, conversation history) is correctly scoped and does not leak across users.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

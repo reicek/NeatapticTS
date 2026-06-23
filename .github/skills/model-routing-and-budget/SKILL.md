@@ -4,6 +4,10 @@ description: 'Choose, validate, and document model routing for NeatapticTS custo
 argument-hint: 'Describe the agent phase, desired model tier, available model names, and whether validation should be advisory or strict.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - customize-cloud-agent
+  - agent-frontmatter-standards
+  - routing-optimization-policy
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -30,6 +34,29 @@ agents.
   to be validated before wiring.
 - Frontmatter shape needs to be confirmed with `validate-agent-frontmatter.mjs`
   before the agent is used in a gate or handoff.
+
+
+## When NOT to use
+
+Do NOT use for cloud agent setup - use `customize-cloud-agent` instead. Do NOT use for frontmatter validation - use `agent-frontmatter-standards` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Select model"] --> B{"Agent tier?"}
+    B -- "Tier 0-1" --> C["Use high-capability model"]
+    B -- "Tier 2-3" --> D["Use mid-capability model"]
+    B -- "Tier 4" --> E["Use lightweight model"]
+    C --> F["Check context budget"]
+    D --> F
+    E --> F
+    F --> G{"Within budget?"}
+    G -- "Yes" --> H["Approve routing"]
+    G -- "No" --> I["Downgrade model"]
+    I --> F
+```
 
 ## Task Packet
 
@@ -78,6 +105,36 @@ Validation: advisory — confirm qualified name before committing.
 | 05 Green Testing  | Mini / Haiku  | Verification is mostly mechanical.                                        |
 | 06 Documentation  | Sonnet / Mini | Educational docs benefit from stronger writing after facts exist.         |
 | 07 Logging        | Haiku / Mini  | Summarization and tracker updates should be lightweight.                  |
+
+
+## Decision Tree: Model Selection by Tier
+
+```mermaid
+flowchart TD
+    A["Need model for agent"] --> B{"What tier?"}
+    B -- "Tier 0 (Agent Zero)" --> C["claude-sonnet-4-20250514"]
+    B -- "Tier 1 (SDLC)" --> C
+    B -- "Tier 2 (Coordinators)" --> D["haiku-3.5 or equivalent"]
+    B -- "Tier 3 (Scouts)" --> D
+    B -- "Tier 4 (Auxiliaries)" --> E["Lightest available model"]
+```
+
+## Before / After Examples
+
+**Before:**
+```yaml
+---
+model: claude-sonnet
+---
+```
+
+**After:**
+```yaml
+---
+# Qualified name confirmed in the active Copilot client; tier budget matches phase default.
+model: claude-sonnet-4-20250514
+---
+```
 
 ## Guardrails
 

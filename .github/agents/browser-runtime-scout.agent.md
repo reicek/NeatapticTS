@@ -71,6 +71,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 6. Summarize the active browser-runtime contract, blocker, and the smallest
    useful handoff into `browser-build`.
 
+## Browser Runtime Boundary Patterns
+
+- **Bundle format boundaries:** Verify that ESM, IIFE, and classic bundle formats are correctly identified. Flag code that assumes a specific format without checking.
+- **ESM compatibility:** Verify that all browser-targeted code uses ESM-compatible syntax (`import`/`export`, no `require`). Flag CommonJS patterns in browser bundles.
+- **IIFE packaging:** Verify that IIFE bundles are self-contained with no external dependencies. Flag IIFE bundles that reference external modules.
+- **Smoke-test failures:** Identify browser smoke tests that fail and classify as: bundle format issue, missing dependency, API incompatibility, or runtime error.
+- **Worker URL delivery:** Verify that `workerUrl` configuration points to a valid, accessible worker bundle. Flag worker URLs that 404 or point to wrong formats.
+- **CDN packaging:** Verify that CDN bundles include all necessary assets and have correct MIME types. Flag missing source maps or incorrect content types.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

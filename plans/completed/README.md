@@ -58,6 +58,8 @@ Archive selection guide:
 - [flappy-startup-loading-preview.plans.md](flappy-startup-loading-preview.plans.md): completed Flappy startup loading preview lane.
 - [test-colocation-and-root-examples.plans.md](test-colocation-and-root-examples.plans.md): completed test colocation and root examples lane.
 - [Interactive_Examples_and_Learning_Path.plans.md](Interactive_Examples_and_Learning_Path.plans.md): completed Phase 3 starter-examples lane (helloNetwork, evolveXor, sequenceReset, browser quickstart, learning-path docs, smoke validation).
+- [Agent_Dispatch_MCP_Server.plans.md](Agent_Dispatch_MCP_Server.plans.md): closed standalone meta-workflow lane for the `neataptic-dispatch-mcp` server — resolves agent targets against `.github/agents/*.agent.md`, checks caller-to-target tier direction and user-invocable rules, and returns a structured dispatch packet without spawning subagents. Includes server implementation, `.mcp.json` / `.vscode/mcp.json` registration, and `execute` skill documentation.
+- [Chrome_DevTools_MCP_Integration.plans.md](Chrome_DevTools_MCP_Integration.plans.md): closed standalone meta-workflow lane for Chrome DevTools MCP server integration — three new Tier 3 specialists (performance-trace, browser-ui, browser-memory), new `execute` and `chrome-devtools-mcp` skills, strict sliced RED→IMPLEMENT→GREEN loop, updated testing agents, trace analysis infrastructure scripts, and two new validation gates.
 
 Trigger phrases:
 
@@ -90,6 +92,8 @@ Trigger phrases:
 - worker transport substrate reopen, payload fastpath, channel workers, shared-memory workers: `plans/completed/Worker_Friendly_Network_Serialization_Fastpath.md`
 - ES2023, immutable array methods, named errors, no CommonJS in new work: `plans/completed/ES2023 migration`
 - methods docs or split reopen: `plans/completed/methods-docs.plans.md`, `plans/completed/methods-solid-split.plans.md`
+- agent dispatch MCP reopen, neataptic-dispatch-mcp reopen, dispatch packet reopen, build_dispatch_packet reopen, get_dispatch_policy reopen, list_dispatchable_agents reopen, delegation lookup reopen, agent target resolution reopen: `plans/completed/Agent_Dispatch_MCP_Server.plans.md`
+- Chrome DevTools MCP reopen, browser testing reopen, performance trace specialist reopen, execute skill reopen, sliced implementation loop reopen, chrome-devtools-mcp skill reopen: `plans/completed/Chrome_DevTools_MCP_Integration.plans.md`
 - README opening drift or docs-generator reopen: `plans/completed/readme-first-section-pass.plans.md`, `plans/completed/generate-docs-solid-split.plans.md`, `plans/completed/render-docs-html-solid-split.plans.md`
 - trace analyzer split reopen: `plans/completed/analyze-trace-solid-split.plans.md`
 - Flappy docs or startup preview reopen: `plans/completed/Flappy_Bird_Folder_Documentation_Pass.md`, `plans/completed/flappy-startup-loading-preview.plans.md`

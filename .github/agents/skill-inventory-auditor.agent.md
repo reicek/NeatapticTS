@@ -59,6 +59,33 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 3. Prefer the narrowest inventory or validation script that can answer the question.
 4. Return a compact structured inventory summary without editing files.
 
+## Inventory Script Reference Paths
+
+```bash
+# Inventory customization script:
+node scripts/agent-customization/inventory-customizations.mjs --json
+
+# Routing table generation:
+npm run agents:routing-table
+
+# Routing table validation:
+npm run agents:routing-table:gate
+
+# Agent graph validation:
+node scripts/agent-customization/validate-agent-graph.mjs --json
+
+# Agent frontmatter validation:
+node scripts/agent-customization/validate-agent-frontmatter.mjs --json
+```
+
+## Inventory Comparison Patterns
+
+- **Before/after drift:** Run inventory before and after a customization change. Compare the JSON output to identify added, removed, or modified agents/skills.
+- **User-invocable count:** Count `user-invocable: true` agents. Verify only Tier 1 agents have this flag. Flag violations.
+- **Tier distribution:** Verify tier counts match expected distribution (Tier 0: 1, Tier 1: 8, Tier 2: 11, Tier 3: ~42, Tier 4: ~4). Flag unexpected changes.
+- **Skill attachment coverage:** Verify every agent has at least one skill attached (except when justified). Flag agents with empty skills arrays.
+- **Routing table freshness:** Verify the generated routing table at `.github/agent-skill-routing-table.md` matches the live agent inventory. Flag stale routing tables.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when inventory scripts or required source files are unavailable.

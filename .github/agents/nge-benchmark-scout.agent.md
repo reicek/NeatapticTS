@@ -65,6 +65,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - demo layout issues belong to `visualizer-workflow`
 6. Summarize the active observable, the fairness contract, and the smallest useful handoff into `nge-benchmark-workflow`.
 
+## Benchmark Boundary Patterns
+
+- **Predator/prey coevolution:** Verify that predator and prey populations are correctly isolated and that fitness evaluation uses the correct opponent population. Flag cross-contamination of populations.
+- **Ant-hive observability:** Verify that ant-hive benchmarks have observable metrics (food collected, trail quality, colony survival). Flag benchmarks with only aggregate fitness scores.
+- **Racing curriculum tiers:** Verify that curriculum tiers progress correctly (easy → medium → hard) and that tier advancement is gated by performance thresholds. Flag skipping tiers.
+- **Rolling opponent snapshots:** Verify that opponent snapshots are taken at regular intervals and that the rolling window is correctly sized. Flag stale opponents that no longer represent current capability.
+- **Fairness contracts:** Verify that both populations in coevolution have equal opportunity (same evaluation budget, same mutation rate range). Flag asymmetric configurations.
+- **Observability gaps:** Identify benchmarks that lack per-generation metrics, per-genome traces, or population diversity measures. Flag missing observability.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

@@ -440,9 +440,7 @@ describe('legacy-plan-format.gate.mjs', () => {
 
 describe('validate-plan-phase-packets.mjs', () => {
   it('passes on the RAG plan', () => {
-    const report = runValidator(
-      'plans/Cortex_RAG_Premium_Primary_Search.plans.md',
-    );
+    const report = runValidator('plans/turso-rag-migration.plans.md');
     expect(report.ok).toBe(true);
     expect(report.counts.errors).toBe(0);
   });

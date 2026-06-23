@@ -4,6 +4,10 @@ description: 'Analyze Chrome trace or Perfetto trace captures, run scripts/analy
 argument-hint: 'Describe the trace file, feature area, and target report file.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - trace-analyzer-extension
+  - performance-optimization
+  - tracker-handoff
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -32,6 +36,26 @@ implementation, hand off to `performance-optimization`.
 - Reusing the repository trace tooling instead of manually inspecting raw JSON.
 - A `performance-optimization` or `flappy-architecture-polish` pass needs an
   evidence baseline before implementation begins.
+
+
+## When NOT to use
+
+Do NOT use for extending the analyzer tool - use `trace-analyzer-extension` instead. Do NOT use for implementing optimizations - use `performance-optimization` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Trace file"] --> B["Run analyze-trace.ts"]
+    B --> C["Read output sections"]
+    C --> D["Identify hotspots"]
+    D --> E{"Enough data?"}
+    E -- "Yes" --> F["Write report"]
+    E -- "No" --> G["Request analyzer extension"]
+    G --> H["trace-analyzer-extension"]
+    F --> I["Update tracker"]
+```
 
 ## Task Packet
 
@@ -93,6 +117,49 @@ Top events to focus: RunTask, HandlePostMessage, FireAnimationFrame.
 9. End the report with a prioritized action plan that states clearly whether
    each finding should be fixed in the library, in shared infrastructure, or
    only in the demo.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Trace capture received"] --> B{"Is it a Chrome trace or Perfetto JSON?"}
+    B -- "Yes" --> C["Run analyze-trace.ts"]
+    B -- "No" --> D["Request proper trace export first"]
+    D --> A
+    C --> E["Read output sections: thread totals, longest events, dropped frames"]
+    E --> F{"Hotspots identified?"}
+    F -- "Yes" --> G["Map each hotspot to source file"]
+    F -- "No" --> H["Extend analyzer via trace-analyzer-extension"]
+    H --> C
+    G --> I{"Is the bottleneck library-level?"}
+    I -- "Yes" --> J["Recommend library fix via performance-optimization"]
+    I -- "No, demo-only" --> K["Recommend demo-local fix"]
+    I -- "No, worker/protocol" --> L["Recommend protocol fix"]
+    J --> M["Write report with prioritized action plan"]
+    K --> M
+    L --> M
+    M --> N["Update tracker via tracker-handoff"]
+```
+
+## Before/After Examples
+
+**Before (no trace audit):**
+
+> "The worker seems slow. We should probably look at the evaluation loop."
+
+No evidence, no layer separation, no source attribution.
+
+**After (with trace audit):**
+
+> "Trace window: 10.2s, 47 dropped frames. Worker thread dominates at 78% of
+> total CPU time. Longest `HandlePostMessage` event: 234ms in
+> `src/multithread/evaluation-pool.ts:142`. The bottleneck is
+> `structuredClone` of the full dataset on each `postMessage` call.
+> **Action 1 (library):** Switch to `SharedArrayBuffer` for dataset
+> broadcast in `evaluation-pool.ts`. **Action 2 (demo-local):** Reduce
+> render frequency from 60fps to 30fps in `flappy-bird/render-loop.ts`."
+
+Evidence-backed, source-mapped, layered, and prioritized.
 
 ## Guardrails
 

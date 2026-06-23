@@ -23,7 +23,12 @@ gates:
 post-phase-fanout:
   - '05-green-testing'
 
+loop-back: >
+  Orchestrator manages the RED→IMPLEMENT→GREEN loop. If green fails,
+  orchestrator spawns a new 04-implementing instance with observations.
+
 skills:
+  - 'execute'
   - 'solid-split'
   - 'coverage-guard'
 
@@ -32,6 +37,9 @@ specialists:
   - 'Coverage Guard'
   - 'implementation-pattern-coordinator'
   - 'implementation-executor'
+  - 'performance-trace-specialist'
+  - 'browser-ui-specialist'
+  - 'browser-memory-specialist'
 
 timeout-minutes: 45
 

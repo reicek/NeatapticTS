@@ -96,7 +96,7 @@ describe('semantic-index red contracts', () => {
         const proof = await getFreshnessProof(${JSON.stringify(fixturePath)});
         console.log(JSON.stringify(proof));
       `);
-      await rm(fixtureDirectory, { recursive: true, force: true });
+      await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 
       expect(proof).toEqual(expectedProof);
     });
@@ -160,10 +160,11 @@ describe('semantic-index red contracts', () => {
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'semantic-index-build-'),
       );
-      const databasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
+      const databasePath = path.join(fixtureDirectory, 'corpus.sqlite');
 
       const deletionCleanup = runModuleEvaluation<DeletionCleanupResult>(`
-        import Database from 'better-sqlite3';
+        import { createClient } from '@libsql/client';
+        import { pathToFileURL } from 'node:url';
         import { buildSemanticIndex } from './scripts/semantic-index/build-index.mjs';
 
         const databasePath = ${JSON.stringify(databasePath)};
@@ -174,15 +175,18 @@ describe('semantic-index red contracts', () => {
         });
         const secondSummary = await buildSemanticIndex({ databasePath, force: true, corpusDocuments: [] });
 
-        const database = new Database(databasePath, { readonly: true, fileMustExist: true });
-        const [{ documents }] = database.prepare('SELECT COUNT(*) AS documents FROM documents').all();
-        const [{ chunks }] = database.prepare('SELECT COUNT(*) AS chunks FROM chunks').all();
-        const [{ ftsRows }] = database.prepare('SELECT COUNT(*) AS ftsRows FROM chunks_fts').all();
-        database.close();
+        const client = createClient({ url: pathToFileURL(databasePath).href });
+        const documentsResult = await client.execute('SELECT COUNT(*) AS documents FROM documents');
+        const chunksResult = await client.execute('SELECT COUNT(*) AS chunks FROM chunks');
+        const ftsRowsResult = await client.execute('SELECT COUNT(*) AS ftsRows FROM chunks_fts');
+        const [{ documents }] = documentsResult.rows;
+        const [{ chunks }] = chunksResult.rows;
+        const [{ ftsRows }] = ftsRowsResult.rows;
+        await client.close();
 
         console.log(JSON.stringify({ firstSummary, secondSummary, counts: { documents, chunks, ftsRows } }));
       `);
-      await rm(fixtureDirectory, { recursive: true, force: true });
+      await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 
       expect(deletionCleanup).toEqual({
         firstSummary: expect.objectContaining({

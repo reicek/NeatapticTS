@@ -276,11 +276,12 @@ export async function rerankCandidates(query, candidates, options = {}) {
 
   const scoredCandidates = [];
   for (const candidate of candidateSlice) {
+    const documentText = candidate.body_text ?? candidate.text ?? '';
     const rerankScore = await scorePair(
       session,
       tokenizer,
       query,
-      candidate.body_text,
+      documentText,
       maxLength,
     );
     scoredCandidates.push({ ...candidate, rerank_score: rerankScore });

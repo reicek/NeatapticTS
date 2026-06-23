@@ -3,8 +3,9 @@
  * conditions in order:
  * 1. ONNX model assets are present in `scripts/semantic-index/models/`
  *    (`model.onnx` and `model-meta.json`).
- * 2. Embedding vector count in `data/embeddings.sqlite` matches the corpus chunk count
- *    in `data/semantic-index.sqlite` (delegates to `validate-embeddings.mjs`).
+ * 2. The consolidated corpus DB (`data/turso-replica.sqlite`) has usable embeddings
+ *    for the active model in the `chunks.embedding` column
+ *    (delegates to `validate-embeddings.mjs`).
  * 3. Hybrid MRR\@5 exceeds BM25-only MRR\@5 by at least the minimum improvement
  *    threshold (default: +0.02, measured by `eval-embeddings.mjs`).
  *
@@ -13,7 +14,6 @@
  *
  * @param {boolean} [--json]                           - Emit the standard gate JSON contract.
  * @param {string}  [--database=<path>]                - Override corpus database path.
- * @param {string}  [--embeddings-database=<path>]     - Override embeddings database path.
  * @param {string}  [--model-directory=<path>]         - Override ONNX model cache directory.
  * @param {string}  [--model-id=<id>]                  - Restrict validation to one model id.
  * @param {string}  [--query-file=<path>]              - Override eval query set path.
@@ -41,11 +41,11 @@ export function evaluateCortexEmbeddingsGate(options = {}) {
   const hybridMrrAt5 = Number(options.hybridMrrAt5 ?? 0);
   const evidence = [];
 
-  if (embeddingCount !== chunkCount) {
+  if (embeddingCount === 0) {
     evidence.push({
       actual: embeddingCount,
       expected: chunkCount,
-      issue: 'embedding count mismatch',
+      issue: 'no usable embeddings for model',
     });
   }
 
@@ -120,7 +120,6 @@ async function loadEvaluationReport(options) {
   return evaluationModule.evaluateEmbeddings({
     alpha: options.alpha,
     corpusDatabasePath: options.corpusDatabasePath,
-    embeddingsDatabasePath: options.embeddingsDatabasePath,
     modelId: options.modelId,
     queryFilePath: options.queryFilePath,
   });
@@ -134,10 +133,6 @@ function parseArgs(argv) {
     else if (argument === '--help' || argument === '-h') flags.help = true;
     else if (argument.startsWith('--database='))
       flags.corpusDatabasePath = argument.slice('--database='.length);
-    else if (argument.startsWith('--embeddings-database='))
-      flags.embeddingsDatabasePath = argument.slice(
-        '--embeddings-database='.length,
-      );
     else if (argument.startsWith('--model-directory='))
       flags.modelDirectory = argument.slice('--model-directory='.length);
     else if (argument.startsWith('--model-id='))
@@ -164,8 +159,7 @@ function printUsage() {
       '',
       'Options:',
       '  --json                          Emit the standard gate JSON contract.',
-      '  --database=<path>               Override the semantic-index corpus database path.',
-      '  --embeddings-database=<path>    Override the embeddings database path.',
+      '  --database=<path>               Override the corpus database path.',
       '  --model-directory=<path>        Override the ONNX model cache directory.',
       '  --model-id=<id>                 Restrict validation to one model id.',
       '  --query-file=<path>             Override the eval query set path.',

@@ -21,7 +21,7 @@ describe('semantic-index red contracts', () => {
 
       const { getFreshnessProof } = await import('../freshness.mjs');
       const proof = await getFreshnessProof(fixturePath);
-      await rm(fixtureDirectory, { recursive: true, force: true });
+      await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 
       expect(proof).toEqual(expectedProof);
     });

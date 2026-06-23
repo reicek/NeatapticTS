@@ -4,6 +4,10 @@ description: 'Validate alignment between NeatapticTS active plans, plans/README.
 argument-hint: 'Describe the plan path, expected status, index entry, roadmap placement, and whether this is advisory or blocking.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - plan-alignment
+  - tracker-handoff
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -30,6 +34,24 @@ shape or closure rules are needed, `tracker-handoff` is the canonical skill.
   roadmap, with a compressed record moved to `plans/completed/`.
 - A flow gate declares a `plan-sync` check and it must return `"pass": true`
   before the flow step can close.
+
+
+## When NOT to use
+
+Do NOT use for plan alignment or selection - use `plan-alignment` instead. Do NOT use for tracker updates - use `tracker-handoff` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Plan edited"] --> B["Run workflow-update-sync"]
+    B --> C["Run validate-plan-sync"]
+    C --> D{"Pass?"}
+    D -- "Yes" --> E["Sync complete"]
+    D -- "No" --> F["Fix status/README/roadmap"]
+    F --> B
+```
 
 ## Task Packet
 
@@ -83,6 +105,41 @@ Mode: blocking gate.
    `.logs.md` file will move to `plans/completed/` and that the active README
    and Roadmap entries will be removed or updated. Use `tracker-handoff` for the
    closure mechanics.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Plan / README / Roadmap"] --> B{"Which surface is wrong?"}
+    B -- "Plan status stale" --> C["Update plan file marker"]
+    B -- "README entry missing/stale" --> D["Update plans/README.md"]
+    B -- "Roadmap lane mismatch" --> E["Update plans/Roadmap.md"]
+    B -- "All three disagree" --> F["Fix plan first, then propagate"]
+    C --> G["Re-run validate-plan-sync"]
+    D --> G
+    E --> G
+    F --> G
+```
+
+## Before / After Examples
+
+**Before:**
+```text
+# In plans/README.md (stale)
+- **Flappy Visualization** — [WIP] — trigger: flappy viz
+
+# In plan file (already done)
+**Status:** [DONE]
+```
+
+**After:**
+```text
+# In plans/README.md (corrected)
+- **Flappy Visualization** — [DONE] — trigger: flappy viz
+
+# In plan file (matches)
+**Status:** [DONE]
+```
 
 ## Guardrails
 

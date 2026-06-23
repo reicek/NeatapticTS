@@ -61,6 +61,26 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 2. Group the changed files and evidence into a compact handoff-friendly summary.
 3. Return only the structured result to the caller.
 
+## Change Summary Output Template
+
+```yaml
+change_summary:
+  changed_files:
+    - path: <file path>
+      change_type: added|modified|deleted
+      summary: <one-line description of change>
+  affected_surfaces:
+    - <customization surface affected>
+  validation_evidence:
+    - command: <validation command>
+      result: pass|fail
+      summary: <one-line result>
+  residual_risks:
+    - <risk or NONE>
+  rollback:
+    - <git command to rollback>
+```
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the changed-file surface or required evidence is unavailable.
@@ -82,6 +102,9 @@ KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
+VALIDATION_EVIDENCE:
+- <command/result or NOT RUN>
+HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:

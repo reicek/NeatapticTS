@@ -14,6 +14,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
+import { createClient } from '@libsql/client';
 
 const REPO_ROOT = path.resolve();
 
@@ -66,14 +67,14 @@ const runModuleEvaluation = <Result>(source: string): Result => {
  * The fixture is created in a temporary directory and deleted after each
  * evaluation. It contains only the tables/columns required by `runBm25Search`.
  */
-function makeCorpusFixture(): { databasePath: string; tempDir: string } {
+async function makeCorpusFixture(): Promise<{ databasePath: string; tempDir: string }> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'search-advanced-red-'),
   );
   const databasePath = path.join(tempDir, 'corpus.sqlite');
-  const db = new (require('better-sqlite3'))(databasePath);
+  const db = createClient({ url: 'file:' + databasePath });
   try {
-    db.exec(`
+    await db.executeMultiple(`
       CREATE TABLE documents (
         doc_id INTEGER PRIMARY KEY,
         doc_family TEXT NOT NULL,
@@ -122,20 +123,18 @@ function makeCorpusFixture(): { databasePath: string; tempDir: string } {
         (12, 'penguin swimming in cold water facts');
     `);
   } finally {
-    db.close();
+    await db.close();
   }
   return { databasePath, tempDir };
 }
 
 describe('search-advanced reranker integration', () => {
   describe('reranker should change results when requested', () => {
-    it('applies the reranker to BM25 candidates when dense index is degraded', () => {
-      const { databasePath, tempDir } = makeCorpusFixture();
+    it('applies the reranker to BM25 candidates when dense index is degraded', async () => {
+      const { databasePath, tempDir } = await makeCorpusFixture();
       try {
         const result = runModuleEvaluation<RerankProbeResult>(`
           import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           let rerankerCalled = false;
 
@@ -172,9 +171,6 @@ describe('search-advanced reranker integration', () => {
               max_sequence_length: 512,
             }),
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             rerankerCalled,
             rerankState: response.rerank_state,
@@ -195,8 +191,8 @@ describe('search-advanced reranker integration', () => {
       }
     });
 
-    it('reports reranker candidates count and scores when rerank is active', () => {
-      const { databasePath, tempDir } = makeCorpusFixture();
+    it('reports reranker candidates count and scores when rerank is active', async () => {
+      const { databasePath, tempDir } = await makeCorpusFixture();
       try {
         const result = runModuleEvaluation<{
           hasRerankCandidatesCount: boolean;
@@ -205,8 +201,6 @@ describe('search-advanced reranker integration', () => {
           rerankState: string;
         }>(`
           import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
 
           const response = await searchCorpus({
@@ -231,9 +225,6 @@ describe('search-advanced reranker integration', () => {
               max_sequence_length: 512,
             }),
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             hasRerankCandidatesCount: typeof response.rerank_candidates_count === 'number',
             hasRerankScores: response.results?.every((r) => typeof r.rerank_score === 'number'),
@@ -261,14 +252,14 @@ describe('search-advanced reranker integration', () => {
  * TypeScript source doc. Used to test README suppression and fallback
  * behavior in the advanced search pipeline.
  */
-function makeMixedCorpusFixture(): { databasePath: string; tempDir: string } {
+async function makeMixedCorpusFixture(): Promise<{ databasePath: string; tempDir: string }> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'search-advanced-mixed-red-'),
   );
   const databasePath = path.join(tempDir, 'corpus.sqlite');
-  const db = new (require('better-sqlite3'))(databasePath);
+  const db = createClient({ url: 'file:' + databasePath });
   try {
-    db.exec(`
+    await db.executeMultiple(`
     CREATE TABLE documents (
       doc_id INTEGER PRIMARY KEY,
       doc_family TEXT NOT NULL,
@@ -319,23 +310,21 @@ function makeMixedCorpusFixture(): { databasePath: string; tempDir: string } {
       (12, 'neural network training crossover source code');
   `);
   } finally {
-    db.close();
+    await db.close();
   }
   return { databasePath, tempDir };
 }
 
 describe('search-advanced README suppression', () => {
   describe('include_code_only option suppresses generated README chunks', () => {
-    it('excludes readme family results when include_code_only is true', () => {
-      const { databasePath, tempDir } = makeMixedCorpusFixture();
+    it('excludes readme family results when include_code_only is true', async () => {
+      const { databasePath, tempDir } = await makeMixedCorpusFixture();
       try {
         const result = runModuleEvaluation<{
           hasReadmeResults: boolean;
           resultCount: number;
         }>(`
         import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-        import fs from 'node:fs';
-
         const databasePath = ${JSON.stringify(databasePath)};
 
         const response = await searchAdvanced({
@@ -346,9 +335,6 @@ describe('search-advanced README suppression', () => {
           limit: 10,
           databasePath,
         });
-
-        fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
         console.log(JSON.stringify({
           hasReadmeResults: response.results?.some((r) => r.family === 'readme'),
           resultCount: response.results?.length ?? 0,
@@ -369,16 +355,14 @@ describe('search-advanced README suppression', () => {
 
 describe('search-advanced native fallback', () => {
   describe('auto_fallback option triggers when main results are empty', () => {
-    it('sets fallback_triggered when auto_fallback is true and no results match', () => {
-      const { databasePath, tempDir } = makeMixedCorpusFixture();
+    it('sets fallback_triggered when auto_fallback is true and no results match', async () => {
+      const { databasePath, tempDir } = await makeMixedCorpusFixture();
       try {
         const result = runModuleEvaluation<{
           fallbackTriggered: boolean;
           mainResultCount: number;
         }>(`
         import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-        import fs from 'node:fs';
-
         const databasePath = ${JSON.stringify(databasePath)};
 
         const response = await searchAdvanced({
@@ -389,9 +373,6 @@ describe('search-advanced native fallback', () => {
           limit: 10,
           databasePath,
         });
-
-        fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
         console.log(JSON.stringify({
           fallbackTriggered: response.fallback_triggered === true,
           mainResultCount: response.results?.length ?? 0,
@@ -416,17 +397,17 @@ describe('search-advanced native fallback', () => {
  * Used to verify that `include_code_only` suppresses generated READMEs
  * regardless of the exact family string.
  */
-function makeGeneratedReadmeFixture(): {
+async function makeGeneratedReadmeFixture(): Promise<{
   databasePath: string;
   tempDir: string;
-} {
+}> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'search-advanced-generated-readme-red-'),
   );
   const databasePath = path.join(tempDir, 'corpus.sqlite');
-  const db = new (require('better-sqlite3'))(databasePath);
+  const db = createClient({ url: 'file:' + databasePath });
   try {
-    db.exec(`
+    await db.executeMultiple(`
       CREATE TABLE documents (
         doc_id INTEGER PRIMARY KEY,
         doc_family TEXT NOT NULL,
@@ -477,20 +458,18 @@ function makeGeneratedReadmeFixture(): {
         (12, 'neural network training crossover source code');
     `);
   } finally {
-    db.close();
+    await db.close();
   }
   return { databasePath, tempDir };
 }
 
 describe('search-advanced ranking explanation', () => {
   describe('explain_ranking option', () => {
-    it('attaches a ranking_explanation object to every result', () => {
-      const { databasePath, tempDir } = makeCorpusFixture();
+    it('attaches a ranking_explanation object to every result', async () => {
+      const { databasePath, tempDir } = await makeCorpusFixture();
       try {
         const result = runModuleEvaluation<RankingExplanationResult>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
 
           const response = await searchAdvanced({
@@ -506,9 +485,6 @@ describe('search-advanced ranking explanation', () => {
           const allHaveExplanations = results.length > 0 && results.every(
             (r) => typeof r.ranking_explanation === 'object' && r.ranking_explanation !== null,
           );
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             allHaveExplanations,
             firstHasRequiredFields: false,
@@ -526,13 +502,11 @@ describe('search-advanced ranking explanation', () => {
       }
     });
 
-    it('includes bm25_score, dense_score, rerank_score, final_score and a reason string', () => {
-      const { databasePath, tempDir } = makeCorpusFixture();
+    it('includes bm25_score, dense_score, rerank_score, final_score and a reason string', async () => {
+      const { databasePath, tempDir } = await makeCorpusFixture();
       try {
         const result = runModuleEvaluation<RankingExplanationResult>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
 
           const response = await searchAdvanced({
@@ -552,9 +526,6 @@ describe('search-advanced ranking explanation', () => {
             typeof ex.final_score === 'number' &&
             typeof ex.reason === 'string' &&
             ex.reason.trim().length > 0;
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             allHaveExplanations: false,
             firstHasRequiredFields,
@@ -576,13 +547,11 @@ describe('search-advanced ranking explanation', () => {
 
 describe('search-advanced generated-readme suppression', () => {
   describe('include_code_only option filters generated-readme family', () => {
-    it('excludes generated-readme family results when include_code_only is true', () => {
-      const { databasePath, tempDir } = makeGeneratedReadmeFixture();
+    it('excludes generated-readme family results when include_code_only is true', async () => {
+      const { databasePath, tempDir } = await makeGeneratedReadmeFixture();
       try {
         const result = runModuleEvaluation<GeneratedReadmeFilterResult>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
 
           const response = await searchAdvanced({
@@ -596,9 +565,6 @@ describe('search-advanced generated-readme suppression', () => {
 
           const results = response.results ?? [];
           const hasGeneratedReadmeResults = results.some((r) => r.family === 'generated-readme');
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             hasGeneratedReadmeResults,
             resultCount: results.length,
@@ -619,13 +585,11 @@ describe('search-advanced generated-readme suppression', () => {
 
 describe('search-advanced structured fallback', () => {
   describe('auto_fallback option exposes merged fallback results', () => {
-    it('returns a fallback object with triggered=true and merged results', () => {
-      const { databasePath, tempDir } = makeGeneratedReadmeFixture();
+    it('returns a fallback object with triggered=true and merged results', async () => {
+      const { databasePath, tempDir } = await makeGeneratedReadmeFixture();
       try {
         const result = runModuleEvaluation<StructuredFallbackResult>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
 
           const response = await searchAdvanced({
@@ -644,9 +608,6 @@ describe('search-advanced structured fallback', () => {
             fallback.triggered === true &&
             Array.isArray(fallback.results) &&
             fallback.results.length > 0;
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             hasFallbackField,
             fallbackResultCount: fallback?.results?.length ?? 0,
@@ -670,14 +631,14 @@ describe('search-advanced structured fallback', () => {
  * caps are observable. Some chunks contain long body text so compact-mode
  * truncation is also observable.
  */
-function makeMultiChunkFixture(): { databasePath: string; tempDir: string } {
+async function makeMultiChunkFixture(): Promise<{ databasePath: string; tempDir: string }> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'search-advanced-defaults-red-'),
   );
   const databasePath = path.join(tempDir, 'corpus.sqlite');
-  const db = new (require('better-sqlite3'))(databasePath);
+  const db = createClient({ url: 'file:' + databasePath });
   try {
-    db.exec(`
+    await db.executeMultiple(`
       CREATE TABLE documents (
         doc_id INTEGER PRIMARY KEY,
         doc_family TEXT NOT NULL,
@@ -732,20 +693,18 @@ function makeMultiChunkFixture(): { databasePath: string; tempDir: string } {
         (6, 'neural network speciation guide part six compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding');
     `);
   } finally {
-    db.close();
+    await db.close();
   }
   return { databasePath, tempDir };
 }
 
 describe('search-advanced conservative defaults and compact mode', () => {
   describe('default result limit', () => {
-    it('defaults to at most five results', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('defaults to at most five results', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ limit: number }>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchAdvanced({
             databasePath,
@@ -753,8 +712,6 @@ describe('search-advanced conservative defaults and compact mode', () => {
             query_class: 'simple_lookup',
             use_dense: false,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
           console.log(JSON.stringify({ limit: response.limit }));
         `);
 
@@ -770,15 +727,13 @@ describe('search-advanced conservative defaults and compact mode', () => {
   });
 
   describe('default rerank candidate count', () => {
-    it('uses a conservative rerank candidate count when rerank is requested', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('uses a conservative rerank candidate count when rerank is requested', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{
           rerankCandidatesCount: number | undefined;
         }>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchAdvanced({
             databasePath,
@@ -787,8 +742,6 @@ describe('search-advanced conservative defaults and compact mode', () => {
             use_dense: false,
             use_rerank: true,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
           console.log(JSON.stringify({
             rerankCandidatesCount: response.rerank_candidates_count,
           }));
@@ -809,13 +762,11 @@ describe('search-advanced conservative defaults and compact mode', () => {
   });
 
   describe('compact mode', () => {
-    it('strips non-essential metadata fields from results', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('strips non-essential metadata fields from results', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ allStripped: boolean }>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchAdvanced({
             databasePath,
@@ -834,8 +785,6 @@ describe('search-advanced conservative defaults and compact mode', () => {
           const allStripped = response.results.every((result) =>
             nonEssential.every((key) => !(key in result)),
           );
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
           console.log(JSON.stringify({ allStripped }));
         `);
 
@@ -849,13 +798,11 @@ describe('search-advanced conservative defaults and compact mode', () => {
       }
     });
 
-    it('truncates result text to the compact threshold', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('truncates result text to the compact threshold', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ maxTextLength: number }>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchAdvanced({
             databasePath,
@@ -869,8 +816,6 @@ describe('search-advanced conservative defaults and compact mode', () => {
             (max, result) => Math.max(max, result.text?.length ?? 0),
             0,
           );
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
           console.log(JSON.stringify({ maxTextLength }));
         `);
 
@@ -888,13 +833,11 @@ describe('search-advanced conservative defaults and compact mode', () => {
 
 describe('search-advanced single-call search-and-read', () => {
   describe('read_top_result option', () => {
-    it('includes a top_result field when read_top_result is requested', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('includes a top_result field when read_top_result is requested', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ hasTopResult: boolean }>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchAdvanced({
             databasePath,
@@ -903,9 +846,6 @@ describe('search-advanced single-call search-and-read', () => {
             use_dense: false,
             read_top_result: true,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             hasTopResult: response.top_result != null,
           }));
@@ -921,17 +861,15 @@ describe('search-advanced single-call search-and-read', () => {
       }
     });
 
-    it('returns the full untruncated top result text inline even in compact mode', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('returns the full untruncated top result text inline even in compact mode', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{
           topText: string | null;
           expectedText: string;
         }>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import Database from 'better-sqlite3';
-          import fs from 'node:fs';
-
+          import { createClient } from '@libsql/client';
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchAdvanced({
             databasePath,
@@ -942,15 +880,12 @@ describe('search-advanced single-call search-and-read', () => {
             read_top_result: true,
           });
 
-          const db = new Database(databasePath);
-          const row = db.prepare('SELECT body_text FROM chunks WHERE chunk_id = 1').get();
-          db.close();
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
+          const db = createClient({ url: 'file:' + databasePath });
+          const { rows } = await db.execute({ sql: 'SELECT body_text FROM chunks WHERE chunk_id = 1' });
+          await db.close();
           console.log(JSON.stringify({
             topText: response.top_result?.text ?? null,
-            expectedText: row?.body_text ?? null,
+            expectedText: rows[0]?.[0] ?? null,
           }));
         `);
 
@@ -966,13 +901,11 @@ describe('search-advanced single-call search-and-read', () => {
   });
 
   describe('follow_up_refs option', () => {
-    it('emits a follow_up_refs array', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('emits a follow_up_refs array', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ hasFollowUpRefs: boolean }>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchAdvanced({
             databasePath,
@@ -980,9 +913,6 @@ describe('search-advanced single-call search-and-read', () => {
             query_class: 'simple_lookup',
             use_dense: false,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             hasFollowUpRefs: Array.isArray(response.follow_up_refs),
           }));
@@ -998,13 +928,11 @@ describe('search-advanced single-call search-and-read', () => {
       }
     });
 
-    it('includes a load_chunk ref for the top result chunk', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('includes a load_chunk ref for the top result chunk', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ hasTopLoadChunkRef: boolean }>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchAdvanced({
             databasePath,
@@ -1017,9 +945,6 @@ describe('search-advanced single-call search-and-read', () => {
           const ref = response.follow_up_refs?.find(
             (r) => r.tool === 'load_chunk' && r.args?.chunk_id === topChunkId,
           );
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({ hasTopLoadChunkRef: ref != null }));
         `);
 
@@ -1033,13 +958,11 @@ describe('search-advanced single-call search-and-read', () => {
       }
     });
 
-    it('includes a load_chunk ref for the next sequential chunk', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('includes a load_chunk ref for the next sequential chunk', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ hasNextLoadChunkRef: boolean }>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchAdvanced({
             databasePath,
@@ -1052,9 +975,6 @@ describe('search-advanced single-call search-and-read', () => {
           const ref = response.follow_up_refs?.find(
             (r) => r.tool === 'load_chunk' && r.args?.chunk_id === nextChunkId,
           );
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({ hasNextLoadChunkRef: ref != null }));
         `);
 
@@ -1068,13 +988,11 @@ describe('search-advanced single-call search-and-read', () => {
       }
     });
 
-    it('includes a search_advanced ref with a suggested follow-up query', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('includes a search_advanced ref with a suggested follow-up query', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ hasSearchAdvancedRef: boolean }>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchAdvanced({
             databasePath,
@@ -1086,9 +1004,6 @@ describe('search-advanced single-call search-and-read', () => {
           const ref = response.follow_up_refs?.find(
             (r) => r.tool === 'search_advanced' && typeof r.args?.query === 'string',
           );
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({ hasSearchAdvancedRef: ref != null }));
         `);
 

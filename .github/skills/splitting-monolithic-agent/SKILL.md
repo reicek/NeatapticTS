@@ -4,6 +4,11 @@ description: 'Use when: splitting an overloaded custom agent into an orchestrato
 argument-hint: 'Describe the source agent, broad responsibilities, desired compatibility surface, candidate specialists, skills to extract, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - solid-split
+  - creating-specialist-agent
+  - agent-frontmatter-standards
+  - skill-frontmatter-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +25,26 @@ This skill decomposes an overloaded `.agent.md` file into a bounded orchestrator
 - A coordination layer (orchestrator or sub-orchestrator) needs to be separated from execution logic (specialist).
 - The customization system has accumulated routing debt and needs a structural cleanup.
 - Preparing a before/after split map for a tracker or plan alignment review.
+
+
+## When NOT to use
+
+Do NOT use for splitting code modules - use `solid-split` instead. Do NOT use for creating new agents - use `creating-specialist-agent` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Monolithic agent"] --> B["Identify responsibilities"]
+    B --> C["Map boundaries"]
+    C --> D{"Split decision"}
+    D -- "Distinct roles" --> E["Split into specialists"]
+    D -- "Overlapping" --> F["Refactor, dont split"]
+    E --> G["Create new agent files"]
+    G --> H["Update routing table"]
+    H --> I["Validate frontmatter"]
+```
 
 ## Task Packet
 
@@ -47,6 +72,20 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 8. Define an explicit output contract for each new boundary so the orchestrator can consume specialist output deterministically.
 9. Add eval or validation coverage for the new routing boundary to detect regressions.
 10. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` and `validate-agent-graph.mjs --json` to confirm no orphaned edges or frontmatter errors.
+
+
+## Decision Tree: Split Decisions
+
+```mermaid
+flowchart TD
+    A["Agent too large"] --> B{"Multiple distinct responsibilities?"}
+    B -- "Yes" --> C["Split into specialists"]
+    B -- "No" --> D{"Just too much code?"}
+    D -- "Yes" --> E["Extract skills, keep agent thin"]
+    D -- "No" --> F["No split needed"]
+    C --> G["Each gets single responsibility"]
+    E --> H["Move procedures to SKILL.md"]
+```
 
 ## Guardrails
 

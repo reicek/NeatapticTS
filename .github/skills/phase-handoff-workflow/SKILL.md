@@ -4,6 +4,10 @@ description: 'Design and validate the seven-step NeatapticTS agent workflow insi
 argument-hint: 'Name the source phase, target phase, current plan state, and whether the handoff should be user-reviewed or auto-sent.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - execute
+  - tracker-handoff
+  - plan-sync-validation
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -33,6 +37,11 @@ skill.
   the `00-helping` cross-tier helper.
 - The active tracker has drifted from the standard step-packet shape and needs
   to be brought back into conformance.
+
+
+## When NOT to use
+
+Do NOT use for single-phase work without inter-phase handoffs. Do NOT use for tracker management - use `tracker-handoff` instead.
 
 ## Task Packet
 
@@ -86,6 +95,23 @@ so pretool and posttool enforcement can validate the flow, delegator chain,
 required skills, required specialists, and action class. Use
 `.github/runtime-enforcement-contract.md` as the canonical contract for that
 payload.
+12. **Phase Compression (mandatory).** When all steps in a phase are marked
+`[DONE]` and green validation has passed, the orchestrator MUST dispatch
+`07-logging` to compress the completed phase before advancing to the next
+phase or performing the phase-to-phase handoff. Compression means:
+
+1. Move detailed step/slice/VALIDATION_EVIDENCE blocks from the plan file
+   to the corresponding `.logs.md` file.
+2. Replace the detailed content in the plan file with a compact `[DONE]`
+   marker and a reference to the logs file.
+3. Keep the phase header, goal, and status as `[DONE]` in the plan file.
+
+This keeps plan files lean and focused on active work. Plan files should
+never carry verbose `[DONE]` phase details — those belong in logs.
+
+Skipping phase compression is a workflow violation. The orchestrator must
+not advance to the next phase or send the phase-to-phase handoff until
+compression is complete.
 
 ## Flow-Aware Handoff Contract
 
@@ -222,6 +248,33 @@ the current step copy-pasteable.
 Tracker YAML step packets are workflow artifacts. They do not replace the
 required Tier-0 or Tier-1 `structured-v1` chat envelope, which remains the
 mandatory response shape when those agents answer in chat.
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Phase completes"] --> B["Author step packet"]
+    B --> C["Set send/model"]
+    C --> D["Dispatch to next phase"]
+    D --> E["Next phase executes"]
+    E --> F{"Green pass?"}
+    F -- "Yes" --> G["Advance to next phase"]
+    F -- "No" --> H["Route back to prior phase"]
+    H --> B
+```
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Phase step result"] --> B{"Green testing?"}
+    B -- "Pass" --> C["Advance to next phase"]
+    B -- "Fail" --> D["Loop back to prior phase"]
+    C --> E{"More steps?"}
+    E -- "Yes" --> F["Author next step packet"]
+    E -- "No" --> G["Close phase"]
+    D --> H["3 failures? Escalate to 00-helping"]
+```
 
 ## Guardrails
 

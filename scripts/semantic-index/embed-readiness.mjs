@@ -10,7 +10,6 @@
  *
  * @param {boolean} [--json]                         - Emit JSON readiness output.
  * @param {string}  [--database <path>]                - Override the corpus database path.
- * @param {string}  [--embeddings-database <path>]      - Override the embeddings database path.
  * @param {string}  [--model-directory <path>]           - Override the local model directory.
  * @param {string}  [--model-id <id>]                  - Override the embedding model identifier.
  * @param {boolean} [--help]                           - Show help and exit.
@@ -44,7 +43,6 @@ function buildOptionsKey(options) {
   return JSON.stringify({
     corpusDatabasePath:
       options.corpusDatabasePath ?? options.databasePath ?? null,
-    embeddingsDatabasePath: options.embeddingsDatabasePath ?? null,
     modelDirectory: options.modelDirectory ?? null,
     modelId: options.modelId ?? null,
   });
@@ -60,7 +58,6 @@ function buildOptionsKey(options) {
  * @param {{
  *   corpusDatabasePath?: string,
  *   databasePath?: string,
- *   embeddingsDatabasePath?: string,
  *   modelDirectory?: string,
  *   modelId?: string,
  * }} [options={}] - Probe configuration.
@@ -113,7 +110,6 @@ async function main() {
       options: [
         '--json                       Emit the readiness report as JSON.',
         '--database <path>            Override the semantic-index corpus database path.',
-        '--embeddings-database <p>    Override the embeddings database path.',
         '--model-directory <path>     Override the local dense model directory.',
         '--model-id <id>              Override the embedding model identifier.',
         '--help                       Show this help.',
@@ -125,7 +121,6 @@ async function main() {
   try {
     const report = await getEmbedReadiness({
       corpusDatabasePath: args.database,
-      embeddingsDatabasePath: args['embeddings-database'],
       modelDirectory: args['model-directory'],
       modelId: args['model-id'],
     });

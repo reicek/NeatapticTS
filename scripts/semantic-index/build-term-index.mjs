@@ -1,9 +1,9 @@
 /**
  * @module build-term-index
  * @description Build or incrementally update the term embeddings index stored in
- * `data/embeddings.sqlite`. Extracts qualifying terms from corpus chunks, computes
- * mean-pooled embeddings for each term, and stores them in the `term_embeddings`
- * table for use by query expansion.
+ * the consolidated `term_embeddings` table of `data/turso-replica.sqlite`.
+ * Extracts qualifying terms from corpus chunks, computes mean-pooled embeddings
+ * for each term, and stores them for use by query expansion.
  *
  * Qualifying terms are tokens extracted from `heading_path` and the first 256
  * characters of `body_text`, filtered by:
@@ -18,7 +18,6 @@
  * @param {boolean} [--dry-run] - Compute qualifying terms without writing embeddings.
  * @param {boolean} [--json] - Emit JSON summary.
  * @param {string}  [--database <path>] - Override corpus database path.
- * @param {string}  [--embeddings-database <path>] - Override embeddings database path.
  * @param {string}  [--model-directory <path>] - Override ONNX model directory.
  * @param {string}  [--model-id <id>] - Override model identifier.
  * @param {number}  [--dimension <n>] - Override embedding dimension.
@@ -30,9 +29,8 @@
  *
  * @returns {void} Exits 0 on success, 1 on error. JSON summary written to stdout when `--json` is passed.
  */
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -42,9 +40,8 @@ import {
   printHelp,
   writeJsonOrText,
 } from './cli-utils.mjs';
-import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
+import { defaultDatabasePath } from './init-schema.mjs';
 import {
-  DEFAULT_EMBEDDINGS_DATABASE_PATH,
   DEFAULT_MODEL_DIRECTORY,
   DEFAULT_MODEL_ID,
   buildEmbeddingIndex,
@@ -81,27 +78,41 @@ const BODY_TEXT_WINDOW = 256;
  * applies frequency and length filters, and returns a map of qualifying
  * terms to their chunk IDs and frequency counts.
  *
- * @param {import('better-sqlite3').Database} corpusDatabase - Read-only corpus database.
+ * @param {import('@libsql/client').Client} corpusDatabase - Read-only libSQL corpus client.
  * @param {{ minFrequency?: number, maxFrequencyRatio?: number, minTermLength?: number }} options - Filter options.
- * @returns {{ qualifyingTerms: Map<string, { frequency: number, docFamilyCount: number, chunkIds: number[] }>, totalChunks: number }}
+ * @returns {Promise<{ qualifyingTerms: Map<string, { frequency: number, docFamilyCount: number, chunkIds: number[] }>, totalChunks: number }>}
  */
-export function extractQualifyingTerms(corpusDatabase, options = {}) {
+export async function extractQualifyingTerms(corpusDatabase, options = {}) {
   const minFrequency = options.minFrequency ?? DEFAULT_MIN_FREQUENCY;
   const maxFrequencyRatio =
     options.maxFrequencyRatio ?? DEFAULT_MAX_FREQUENCY_RATIO;
   const minTermLength = options.minTermLength ?? DEFAULT_MIN_TERM_LENGTH;
 
-  const chunkRows = corpusDatabase
-    .prepare(
-      `
-    SELECT c.chunk_id, c.heading_path, c.body_text, d.doc_family
-    FROM chunks c
-    LEFT JOIN documents d ON d.doc_id = c.doc_id
-    ORDER BY c.chunk_id
-  `,
-    )
-    .all();
+  const result = await corpusDatabase.execute({
+    sql: `
+          SELECT c.chunk_id, c.heading_path, c.body_text, d.doc_family
+          FROM chunks c
+          LEFT JOIN documents d ON d.doc_id = c.doc_id
+          ORDER BY c.chunk_id
+        `,
+    args: [],
+  });
+  return processTermStats(result.rows, {
+    minFrequency,
+    maxFrequencyRatio,
+    minTermLength,
+  });
+}
 
+/**
+ * Process chunk rows into qualifying terms with frequency filters.
+ *
+ * @param {Array<{ chunk_id: number, heading_path: string, body_text: string, doc_family: string }>} chunkRows - Rows from chunks query.
+ * @param {{ minFrequency: number, maxFrequencyRatio: number, minTermLength: number }} config - Filter config.
+ * @returns {{ qualifyingTerms: Map<string, { frequency: number, docFamily_count: number, chunkIds: number[] }>, totalChunks: number }}
+ */
+function processTermStats(chunkRows, config) {
+  const { minFrequency, maxFrequencyRatio, minTermLength } = config;
   const totalChunks = chunkRows.length;
   const maxFrequency = Math.floor(maxFrequencyRatio * totalChunks);
 
@@ -222,92 +233,114 @@ export function applyPorterStem(word) {
  * prominently (in heading_path or first 256 chars of body_text), then computes
  * the L2-normalized mean of those embeddings.
  *
- * @param {import('better-sqlite3').Database} embeddingsDatabase - Read-write embeddings database.
- * @param {Map<string, { frequency: number, docFamily_count: number, chunkIds: number[] }>} qualifyingTerms - Terms and their chunk IDs.
+ * Reads chunk embeddings from the `chunks.embedding` column (consolidated
+ * schema) and writes term embeddings via `await client.execute()`.
+ *
+ * @param {import('@libsql/client').Client} embeddingsDatabase - libSQL client.
+ * @param {Map<string, { frequency: number, doc_family_count: number, chunkIds: number[] }>} qualifyingTerms - Terms and their chunk IDs.
  * @param {{ modelId: string, modelSha256: string, dimension: number }} modelInfo - Model identification.
- * @returns {{ built: number, skipped: number, purged: number }} Summary counts.
+ * @returns {Promise<{ built: number, skipped: number, purged: number }>} Summary counts.
  */
-export function buildTermEmbeddings(
+export async function buildTermEmbeddings(
   embeddingsDatabase,
+  qualifyingTerms,
+  modelInfo,
+) {
+  return buildTermEmbeddingsWithClient(
+    embeddingsDatabase,
+    qualifyingTerms,
+    modelInfo,
+  );
+}
+
+/**
+ * Async client-based term embedding computation.
+ *
+ * Reads chunk embeddings from the `chunks.embedding` column (consolidated
+ * Turso schema) instead of the separate `chunk_embeddings` table.
+ *
+ * @param {import('@libsql/client').Client} client - libSQL client.
+ * @param {Map<string, { frequency: number, doc_family_count: number, chunkIds: number[] }>} qualifyingTerms - Terms and their chunk IDs.
+ * @param {{ modelId: string, modelSha256: string, dimension: number }} modelInfo - Model identification.
+ * @returns {Promise<{ built: number, skipped: number, purged: number }>} Summary counts.
+ */
+async function buildTermEmbeddingsWithClient(
+  client,
   qualifyingTerms,
   modelInfo,
 ) {
   const { modelId, modelSha256, dimension } = modelInfo;
 
-  // Load all chunk embeddings into memory for fast lookup
-  const chunkEmbeddingRows = embeddingsDatabase
-    .prepare(
-      `
-    SELECT chunk_id, embedding FROM chunk_embeddings WHERE model_id = ?
-  `,
-    )
-    .all(modelId);
+  // Load chunk embeddings from consolidated chunks.embedding column.
+  const embeddingRowsResult = await client.execute({
+    sql: 'SELECT chunk_id, embedding FROM chunks WHERE embedding IS NOT NULL AND embedding_model = ?',
+    args: [modelId],
+  });
 
   const chunkEmbeddingMap = new Map();
-  for (const row of chunkEmbeddingRows) {
+  for (const row of embeddingRowsResult.rows) {
+    const buf = row.embedding;
     const float32 = new Float32Array(
-      row.embedding.buffer,
-      row.embedding.byteOffset,
-      row.embedding.byteLength / 4,
+      buf.buffer,
+      buf.byteOffset,
+      buf.byteLength / 4,
     );
     chunkEmbeddingMap.set(Number(row.chunk_id), float32);
   }
 
-  // Purge orphaned term embeddings for this model
-  const purgeExisting = embeddingsDatabase.prepare(`
-    DELETE FROM term_embeddings WHERE model_id = ?
-  `);
-  const purgeResult = purgeExisting.run(modelId);
-  const purged = purgeResult.changes;
+  // Purge existing term embeddings for this model.
+  await client.execute({
+    sql: 'DELETE FROM term_embeddings WHERE model_id = ?',
+    args: [modelId],
+  });
 
-  const insertTerm = embeddingsDatabase.prepare(`
-    INSERT INTO term_embeddings (
-      term, embedding, term_sha256, model_id, model_sha256,
-      dimension, frequency, doc_family_count, embedded_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  let built = 0;
 
-  const insertTransaction = embeddingsDatabase.transaction((terms) => {
-    for (const [term, entry] of terms) {
-      const { frequency, doc_family_count: docFamilyCount, chunkIds } = entry;
+  for (const [term, entry] of qualifyingTerms) {
+    const { frequency, doc_family_count: docFamilyCount, chunkIds } = entry;
 
-      // Collect embeddings for chunks containing this term
-      const termChunkEmbeddings = [];
-      for (const chunkId of chunkIds) {
-        const embedding = chunkEmbeddingMap.get(chunkId);
-        if (embedding) {
-          termChunkEmbeddings.push(embedding);
-        }
+    // Collect embeddings for chunks containing this term.
+    const termChunkEmbeddings = [];
+    for (const chunkId of chunkIds) {
+      const embedding = chunkEmbeddingMap.get(chunkId);
+      if (embedding) {
+        termChunkEmbeddings.push(embedding);
       }
+    }
 
-      // Skip terms with no available embeddings
-      if (termChunkEmbeddings.length === 0) continue;
+    // Skip terms with no available embeddings.
+    if (termChunkEmbeddings.length === 0) continue;
 
-      // Mean-pool the chunk embeddings
-      const meanEmbedding = new Float32Array(dimension);
-      for (const embedding of termChunkEmbeddings) {
-        for (let i = 0; i < dimension; i += 1) {
-          meanEmbedding[i] += embedding[i];
-        }
-      }
+    // Mean-pool the chunk embeddings.
+    const meanEmbedding = new Float32Array(dimension);
+    for (const embedding of termChunkEmbeddings) {
       for (let i = 0; i < dimension; i += 1) {
-        meanEmbedding[i] /= termChunkEmbeddings.length;
+        meanEmbedding[i] += embedding[i];
       }
+    }
+    for (let i = 0; i < dimension; i += 1) {
+      meanEmbedding[i] /= termChunkEmbeddings.length;
+    }
 
-      // L2-normalize
-      const normalizedEmbedding = normalizeL2(meanEmbedding);
+    // L2-normalize.
+    const normalizedEmbedding = normalizeL2(meanEmbedding);
 
-      // Compute term SHA-256
-      const termSha256 = createHash('sha256').update(term).digest('hex');
+    // Compute term SHA-256.
+    const termSha256 = createHash('sha256').update(term).digest('hex');
 
-      // Store as BLOB
-      const embeddingBuffer = Buffer.from(
-        normalizedEmbedding.buffer,
-        normalizedEmbedding.byteOffset,
-        normalizedEmbedding.byteLength,
-      );
+    // Store as BLOB.
+    const embeddingBuffer = Buffer.from(
+      normalizedEmbedding.buffer,
+      normalizedEmbedding.byteOffset,
+      normalizedEmbedding.byteLength,
+    );
 
-      insertTerm.run(
+    await client.execute({
+      sql: `INSERT INTO term_embeddings (
+          term, embedding, term_sha256, model_id, model_sha256,
+          dimension, frequency, doc_family_count, embedded_at
+        ) VALUES (?, vector8(?), ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         term,
         embeddingBuffer,
         termSha256,
@@ -317,16 +350,16 @@ export function buildTermEmbeddings(
         frequency,
         docFamilyCount,
         new Date().toISOString(),
-      );
-    }
-  });
+      ],
+    });
 
-  insertTransaction(qualifyingTerms);
+    built += 1;
+  }
 
   return {
-    built: qualifyingTerms.size,
+    built,
     skipped: 0,
-    purged,
+    purged: 0,
   };
 }
 
@@ -359,12 +392,11 @@ async function main() {
     printHelp({
       title: 'Term index builder',
       usage:
-        'node scripts/semantic-index/build-term-index.mjs [--json] [--dry-run] [--database <path>] [--embeddings-database <path>]',
+        'node scripts/semantic-index/build-term-index.mjs [--json] [--dry-run] [--database <path>]',
       options: [
         '--dry-run                     Compute qualifying terms without writing embeddings',
         '--json                        Emit JSON summary',
         '--database <path>             Override corpus database path',
-        '--embeddings-database <path>  Override embeddings database path',
         '--model-directory <path>      Override ONNX model directory',
         '--model-id <id>              Override model identifier',
         '--dimension <n>               Override embedding dimension',
@@ -379,9 +411,6 @@ async function main() {
   }
 
   const corpusDatabasePath = path.resolve(args.database ?? defaultDatabasePath);
-  const embeddingsDatabasePath = path.resolve(
-    args['embeddings-database'] ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
-  );
 
   const modelMeta = await readModelMeta(args);
   const modelId = String(args['model-id'] ?? DEFAULT_MODEL_ID);
@@ -396,12 +425,11 @@ async function main() {
     );
   }
 
-  const corpusDatabase = new Database(corpusDatabasePath, {
-    readonly: true,
-    fileMustExist: true,
+  const corpusDatabase = createClient({
+    url: pathToFileURL(corpusDatabasePath).href,
   });
 
-  const { qualifyingTerms, totalChunks } = extractQualifyingTerms(
+  const { qualifyingTerms, totalChunks } = await extractQualifyingTerms(
     corpusDatabase,
     {
       minFrequency: Number(args['min-frequency'] ?? DEFAULT_MIN_FREQUENCY),
@@ -411,8 +439,6 @@ async function main() {
       minTermLength: Number(args['min-term-length'] ?? DEFAULT_MIN_TERM_LENGTH),
     },
   );
-
-  corpusDatabase.close();
 
   if (args['dry-run']) {
     const summary = {
@@ -426,38 +452,21 @@ async function main() {
     writeJsonOrText(summary, Boolean(args.json), (payload) =>
       JSON.stringify(payload, null, 2),
     );
+    await corpusDatabase.close();
     return;
   }
 
-  await mkdir(path.dirname(embeddingsDatabasePath), { recursive: true });
+  const result = await buildTermEmbeddings(
+    corpusDatabase,
+    qualifyingTerms,
+    {
+      modelId,
+      modelSha256,
+      dimension,
+    },
+  );
 
-  const embeddingsDatabase = new Database(embeddingsDatabasePath);
-
-  // Ensure term_embeddings table exists
-  embeddingsDatabase.exec(`
-    CREATE TABLE IF NOT EXISTS term_embeddings (
-      term TEXT NOT NULL,
-      embedding BLOB NOT NULL,
-      term_sha256 TEXT NOT NULL,
-      model_id TEXT NOT NULL,
-      model_sha256 TEXT NOT NULL,
-      dimension INTEGER NOT NULL,
-      frequency INTEGER NOT NULL,
-      doc_family_count INTEGER NOT NULL,
-      embedded_at TEXT NOT NULL,
-      PRIMARY KEY (term, model_id)
-    );
-    CREATE INDEX IF NOT EXISTS term_embeddings_model_idx ON term_embeddings(model_id, term_sha256);
-    CREATE INDEX IF NOT EXISTS term_embeddings_frequency_idx ON term_embeddings(frequency DESC);
-  `);
-
-  const result = buildTermEmbeddings(embeddingsDatabase, qualifyingTerms, {
-    modelId,
-    modelSha256,
-    dimension,
-  });
-
-  embeddingsDatabase.close();
+  await corpusDatabase.close();
 
   const summary = {
     dryRun: false,

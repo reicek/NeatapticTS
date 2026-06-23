@@ -4,7 +4,6 @@
  * Tests focus on dry-run mode to keep execution time reasonable.
  * Full database write tests are deferred to integration testing.
  */
-import Database from 'better-sqlite3';
 
 describe('build-entity-graph', () => {
   describe('buildEntityGraph (dry-run)', () => {

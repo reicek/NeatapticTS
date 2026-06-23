@@ -6,9 +6,9 @@
  * result-row normalization, and input sanitization utilities used by every
  * corpus tool in `scripts/mcp-semantic/tools/`.
  */
-import Database from 'better-sqlite3';
-import { existsSync } from 'node:fs';
+import { createClient } from '@libsql/client';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import {
   defaultDatabasePath,
@@ -22,40 +22,165 @@ export const CORTEX_FIX_HINT =
   'Run: node scripts/semantic-index/build-index.mjs';
 
 /**
- * Resolve the corpus SQLite database path from an explicit override, the
- * `CORTEX_DB_PATH` environment variable, or the compiled-in default path.
+ * Default embedded-replica sync interval in seconds.
+ *
+ * Tuned for RAG workloads where the corpus changes infrequently and a
+ * one-minute lag is acceptable (Phase 1 verified the unit is seconds).
+ */
+const DEFAULT_SYNC_INTERVAL_SECONDS = 60;
+
+/**
+ * Cache of `@libsql/client` `Client` instances keyed by database URL.
+ *
+ * Each unique URL gets a single cached client so repeated calls to
+ * {@link getTursoClient} reuse the same connection rather than opening a
+ * new one on every invocation.
+ */
+const tursoClientCache = new Map();
+
+/**
+ * Resolve the corpus database URL from an explicit override, the
+ * `TURSO_DATABASE_URL` environment variable, or the compiled-in default path.
+ *
+ * When `TURSO_DATABASE_URL` is set (e.g. `libsql://my-db.turso.io` or
+ * `file:data/turso-replica.sqlite`), it is returned verbatim — it is already
+ * a URL, not a filesystem path, so `path.resolve` must not be applied.
+ *
+ * When no Turso URL is configured, the compiled-in default path
+ * (`defaultDatabasePath`) is used and resolved to an absolute path via
+ * `path.resolve`.
  *
  * @param {string | undefined} databasePath - Explicit database path override.
- * @returns {string} Absolute resolved database path.
+ * @returns {string} Database URL or absolute resolved database path.
  */
 export function resolveDatabasePath(databasePath) {
-  return path.resolve(
-    databasePath ?? process.env.CORTEX_DB_PATH ?? defaultDatabasePath,
-  );
+  const tursoUrl = process.env.TURSO_DATABASE_URL;
+  if (tursoUrl) return tursoUrl;
+  return path.resolve(databasePath ?? defaultDatabasePath);
+}
+/**
+ * Get an async `@libsql/client` `Client` for the corpus database.
+ *
+ * This is the sole database entry point for all Repo Cortex MCP tools. It
+ * creates (or reuses a cached) `Client` instance configured from
+ * environment variables and/or an explicit database path override.
+ *
+ * **Connection caching:** A single `Client` is cached per database URL so
+ * repeated calls do not open new connections.
+ *
+ * **Embedded replica support:** When `TURSO_SYNC_URL` is set, the client is
+ * configured as an embedded replica — a local `file:` database that syncs
+ * from a remote Turso instance. The `TURSO_SYNC_INTERVAL` env var controls
+ * the sync interval in **seconds** (Phase 1 verified the unit is seconds,
+ * not milliseconds). Read-your-writes is enabled by default.
+ *
+ * **Environment variables:**
+ * - `TURSO_DATABASE_URL` — primary URL (checked via {@link resolveDatabasePath})
+ * - `TURSO_AUTH_TOKEN` — JWT auth token for cloud access (optional)
+ * - `TURSO_SYNC_URL` — sync URL for embedded replica (optional)
+ * - `TURSO_SYNC_INTERVAL` — sync interval in seconds (optional, default 60)
+ *
+ * @param {string | undefined} [databasePath] - Explicit database URL or path
+ *   override. When omitted, {@link resolveDatabasePath} determines the URL.
+ * @returns {Promise<import('@libsql/client').Client>} Cached or newly created
+ *   async libSQL client.
+ */
+export async function getTursoClient(databasePath) {
+  const url = databasePath ?? resolveDatabasePath();
+
+  const cachedClient = tursoClientCache.get(url);
+  if (cachedClient) return cachedClient;
+
+  // Convert plain filesystem paths to file: URLs for @libsql/client.
+  // Only known URL schemes (libsql:, file:, http:, https:, ws:, wss:, :memory:) are passed as-is.
+  // Windows drive letters (C:) look like schemes but are not valid URL schemes.
+  const isUrl =
+    /^(libsql|wss|ws|https|http|file):/i.test(url) || url === ':memory:';
+  const resolvedUrl = isUrl ? url : pathToFileURL(url).href;
+
+  const clientConfig = { url: resolvedUrl };
+  clientConfig.authToken = process.env.TURSO_AUTH_TOKEN;
+  clientConfig.syncUrl = process.env.TURSO_SYNC_URL;
+
+  const syncIntervalEnv = process.env.TURSO_SYNC_INTERVAL;
+  clientConfig.syncInterval =
+    syncIntervalEnv != null && syncIntervalEnv !== ''
+      ? Number(syncIntervalEnv)
+      : DEFAULT_SYNC_INTERVAL_SECONDS;
+
+  const client = createClient(clientConfig);
+  tursoClientCache.set(url, client);
+  return client;
 }
 
 /**
- * Open the corpus SQLite database in read-only mode.
+ * Close and evict a cached `@libsql/client` `Client` from the internal cache.
  *
- * Throws a descriptive error with {@link CORTEX_FIX_HINT} when the database
- * file does not exist, so operators know how to rebuild the index.
+ * Useful for tests and short-lived CLI scripts that need to release file
+ * handles before deleting temp directories. In the long-lived MCP server
+ * process, clients are cached for the process lifetime and never closed.
  *
- * @param {string | undefined} databasePath - Explicit database path override.
- * @returns {import('better-sqlite3').Database} Open read-only database connection.
- * @throws {Error} When the database file does not exist.
+ * @param {string | undefined} [databasePath] - Database path or URL that was
+ *   passed to {@link getTursoClient}. Must match the key used for caching.
+ * @returns {Promise<void>}
  */
-export function openCortexDatabase(databasePath) {
-  const resolvedDatabasePath = resolveDatabasePath(databasePath);
-  if (!existsSync(resolvedDatabasePath)) {
-    throw new Error(
-      `Semantic index not found: ${resolvedDatabasePath}. ${CORTEX_FIX_HINT}`,
-    );
+export async function closeTursoClient(databasePath) {
+  const url = databasePath ?? resolveDatabasePath();
+  const cached = tursoClientCache.get(url);
+  if (cached) {
+    await cached.close();
+    tursoClientCache.delete(url);
   }
+}
 
-  return new Database(resolvedDatabasePath, {
-    readonly: true,
-    fileMustExist: true,
+/**
+ * Return the number of cached libSQL clients.
+ *
+ * Used by diagnostics and benchmarks to verify that connection pooling is
+ * working (a healthy long-lived process should have one client per database
+ * URL rather than a new client per query).
+ *
+ * @returns {number} Size of the internal client cache.
+ */
+export function getCachedClientCount() {
+  return tursoClientCache.size;
+}
+
+/**
+ * Read a single chunk by ID using an async `@libsql/client` `Client`.
+ *
+ * This is the Turso/libSQL replacement for the synchronous
+ * `db.prepare(sql).get()` + {@link readChunkRow} pattern used by the MCP
+ * load-chunk tool. It queries the `chunks` table joined with `documents`
+ * and returns a normalized chunk descriptor via {@link readChunkRow}.
+ *
+ * @param {import('@libsql/client').Client} client - Async libSQL client
+ *   (obtained from {@link getTursoClient}).
+ * @param {number} chunkId - Numeric chunk ID to read.
+ * @returns {Promise<ReturnType<typeof readChunkRow>>} Normalized chunk
+ *   descriptor.
+ * @throws {Error} When the chunk ID does not exist in the database.
+ */
+export async function readChunk(client, chunkId) {
+  const result = await client.execute({
+    sql: `
+      SELECT d.file_path, d.doc_family, c.doc_id, c.chunk_id, c.chunk_index,
+        c.heading_path, c.body_text, c.char_start, c.char_end,
+        c.parent_chunk_id, c.depth, c.context_header,
+        c.symbol_name, c.signature_text, c.jsdoc_text, c.export_type,
+        c.module_path, c.arch_layer, c.jsdoc_quality, c.jsdoc_word_count,
+        c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern
+      FROM chunks c
+      JOIN documents d ON d.doc_id = c.doc_id
+      WHERE c.chunk_id = ?
+    `,
+    args: [chunkId],
   });
+
+  const row = result.rows[0];
+  if (!row) throw new Error(`Chunk not found: ${chunkId}`);
+
+  return readChunkRow(row);
 }
 
 /**

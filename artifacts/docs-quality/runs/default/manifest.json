@@ -1,21 +1,20 @@
 {
   "metricVersion": 1,
   "scannerVersion": "1.0.0",
-  "gitCommit": "43462ed5bf76b6100f03dd8fdf21dce25fc78e74",
+  "gitCommit": "fca07e1207f436cfb0e218237c884f377eb96052",
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "thresholdConfig": {
     "minJsdocWords": 10,
     "complexityThreshold": 10
   },
   "scopeConfig": {
-    "scopeType": "paths",
+    "scopeType": "src",
     "scopeValue": [
-      "src/architecture/network.ts",
-      "src/neat.ts"
+      "src"
     ],
-    "scopeDigest": "d36d8aef57058f860ee0e6ff49fd2d34413806b0bafcbf4f818a4378515f7f53"
+    "scopeDigest": "d6ca942726b8a69d898c20c8b28d26532e08eca8c3226322463b5f2df41ef4e8"
   },
-  "sourcePathsDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
+  "sourcePathsDigest": "8a5ddc82a12b33bd1f871e54d98212e1e63dc8150e183c40b0c2d6086f41cd8c",
   "issueBreakdown": {
     "missingJsdoc": 0,
     "weakJsdoc": 0,
@@ -27,13 +26,13 @@
     "minJsdocWords": 10,
     "complexityThreshold": 10
   },
-  "scopeType": "paths",
-  "scopeDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
+  "scopeType": "src",
+  "scopeDigest": "8a5ddc82a12b33bd1f871e54d98212e1e63dc8150e183c40b0c2d6086f41cd8c",
   "coverage": {
     "available": true,
     "isPartial": true,
-    "totalFiles": 386,
-    "filesBelow100": 385,
+    "totalFiles": 388,
+    "filesBelow100": 372,
     "filesBelow100Detail": [
       {
         "file": "src/architecture/activationArrayPool/activationArrayPool.ts",
@@ -9466,6 +9465,99 @@
         ],
         "uncoveredBranches": [],
         "uncoveredFunctions": []
+      },
+      {
+        "file": "src/architecture/network/evaluation-pack/network.evaluation-pack.ts",
+        "statements": 0,
+        "statementCoverageSource": "coverage-summary",
+        "branches": 0,
+        "functions": 0,
+        "lines": 0,
+        "uncoveredLines": [
+          166,
+          170,
+          173,
+          207,
+          236,
+          237,
+          248,
+          249,
+          250,
+          253,
+          256,
+          259,
+          262,
+          268,
+          270,
+          272,
+          273,
+          274,
+          277,
+          288,
+          289,
+          290,
+          292,
+          293,
+          294,
+          295,
+          298,
+          307,
+          308,
+          310,
+          311,
+          313,
+          314,
+          317,
+          318,
+          321
+        ],
+        "uncoveredBranches": [
+          {
+            "line": 236,
+            "block": "0",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 236,
+            "block": "0",
+            "branch": "1",
+            "taken": 0
+          },
+          {
+            "line": 268,
+            "block": "1",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 268,
+            "block": "1",
+            "branch": "1",
+            "taken": 0
+          },
+          {
+            "line": 313,
+            "block": "2",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 313,
+            "block": "2",
+            "branch": "1",
+            "taken": 0
+          }
+        ],
+        "uncoveredFunctions": [
+          "createDeterministicEvaluationPack",
+          "resolveTransferList",
+          "assertSchemaVersion",
+          "createPackPRNG",
+          "next",
+          "buildPackArrays",
+          "collectDistinctBuffers"
+        ]
       },
       {
         "file": "src/architecture/network/evolve/network.evolve.errors.ts",
@@ -76715,352 +76807,6 @@
         "uncoveredFunctions": []
       },
       {
-        "file": "src/neat/nge-adult/neat.nge-adult.constants.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 100,
-        "functions": 100,
-        "lines": 0,
-        "uncoveredLines": [
-          4,
-          9,
-          14,
-          19,
-          24,
-          29
-        ],
-        "uncoveredBranches": [],
-        "uncoveredFunctions": []
-      },
-      {
-        "file": "src/neat/nge-adult/neat.nge-adult.cooling.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          56,
-          58,
-          76,
-          77,
-          80,
-          83,
-          84,
-          88,
-          90,
-          91,
-          94,
-          100,
-          113,
-          114,
-          117,
-          118,
-          121,
-          122,
-          125
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 52,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 53,
-            "block": "1",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 56,
-            "block": "2",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 56,
-            "block": "2",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 83,
-            "block": "3",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 83,
-            "block": "3",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 90,
-            "block": "4",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 90,
-            "block": "4",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 105,
-            "block": "5",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 105,
-            "block": "5",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 113,
-            "block": "6",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 113,
-            "block": "6",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 113,
-            "block": "7",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 113,
-            "block": "7",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 117,
-            "block": "8",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 117,
-            "block": "8",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 121,
-            "block": "9",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 121,
-            "block": "9",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "resolveGrowthCoolingDecision",
-          "arbitratePruneCompactDominance",
-          "(anonymous_2)",
-          "(anonymous_3)",
-          "resolveDominantMorphKinds"
-        ]
-      },
-      {
-        "file": "src/neat/nge-adult/neat.nge-adult.equilibrium.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          21,
-          26,
-          29,
-          47,
-          48,
-          52,
-          53,
-          71,
-          72,
-          75
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 19,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 26,
-            "block": "1",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 26,
-            "block": "1",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 71,
-            "block": "2",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 71,
-            "block": "2",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 71,
-            "block": "3",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 71,
-            "block": "3",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "advanceGainStabilityRecord",
-          "hasStableGainWindow",
-          "(anonymous_2)",
-          "(anonymous_3)",
-          "detectEquilibriumCandidate"
-        ]
-      },
-      {
-        "file": "src/neat/nge-adult/neat.nge-adult.errors.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 100,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          10,
-          11,
-          24,
-          25
-        ],
-        "uncoveredBranches": [],
-        "uncoveredFunctions": [
-          "(anonymous_0)",
-          "(anonymous_1)"
-        ]
-      },
-      {
-        "file": "src/neat/nge-adult/neat.nge-adult.plateau.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          18,
-          19,
-          23,
-          25,
-          27,
-          30,
-          48,
-          49,
-          54
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 16,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 25,
-            "block": "1",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 25,
-            "block": "1",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 48,
-            "block": "2",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 48,
-            "block": "2",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "advancePlateauRecord",
-          "(anonymous_1)",
-          "computeMarginalReturn"
-        ]
-      },
-      {
-        "file": "src/neat/nge-adult/neat.nge-adult.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 100,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          70,
-          74,
-          78,
-          79,
-          85,
-          89,
-          96
-        ],
-        "uncoveredBranches": [],
-        "uncoveredFunctions": [
-          "advanceAdultState"
-        ]
-      },
-      {
-        "file": "src/neat/nge-adult/neat.nge-adult.utils.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 100,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          14
-        ],
-        "uncoveredBranches": [],
-        "uncoveredFunctions": [
-          "createAdultState"
-        ]
-      },
-      {
         "file": "src/neat/nge-assimilation/neat.nge-assimilation.constants.ts",
         "statements": 0,
         "statementCoverageSource": "coverage-summary",
@@ -77077,11 +76823,11 @@
       },
       {
         "file": "src/neat/nge-assimilation/neat.nge-assimilation.errors.ts",
-        "statements": 0,
+        "statements": 33.33,
         "statementCoverageSource": "coverage-summary",
         "branches": 100,
         "functions": 0,
-        "lines": 0,
+        "lines": 33,
         "uncoveredLines": [
           10,
           11,
@@ -77092,376 +76838,6 @@
         "uncoveredFunctions": [
           "(anonymous_0)",
           "(anonymous_1)"
-        ]
-      },
-      {
-        "file": "src/neat/nge-assimilation/neat.nge-assimilation.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          24,
-          26,
-          27,
-          31,
-          34
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 26,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 26,
-            "block": "0",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "assimilateEquilibriumCandidate"
-        ]
-      },
-      {
-        "file": "src/neat/nge-assimilation/neat.nge-assimilation.utils.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          18,
-          19,
-          24,
-          25,
-          30,
-          31,
-          36,
-          38,
-          43,
-          48,
-          62,
-          87
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 18,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 18,
-            "block": "0",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 24,
-            "block": "1",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 24,
-            "block": "1",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 30,
-            "block": "2",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 30,
-            "block": "2",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 38,
-            "block": "3",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 38,
-            "block": "3",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 39,
-            "block": "4",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 39,
-            "block": "4",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 83,
-            "block": "5",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 92,
-            "block": "6",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 92,
-            "block": "6",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "validateAssimilationCandidate",
-          "buildAssimilationTelemetry",
-          "buildAssimilationResult"
-        ]
-      },
-      {
-        "file": "src/neat/nge-assimilation/neat.nge-assimilation.writeback.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          16,
-          25,
-          26,
-          40,
-          41,
-          45,
-          49,
-          84,
-          99,
-          100,
-          103,
-          105,
-          106,
-          109,
-          120,
-          121,
-          124,
-          125,
-          136,
-          137,
-          140,
-          142,
-          156,
-          159,
-          169,
-          170,
-          173,
-          176,
-          177,
-          181,
-          182,
-          188,
-          193,
-          195,
-          207,
-          209,
-          211,
-          214,
-          215,
-          218,
-          219,
-          222,
-          226,
-          233,
-          234,
-          236,
-          243,
-          244,
-          246,
-          250,
-          251
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 40,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 40,
-            "block": "0",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 99,
-            "block": "1",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 99,
-            "block": "1",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 105,
-            "block": "2",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 105,
-            "block": "2",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 110,
-            "block": "3",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 110,
-            "block": "3",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 110,
-            "block": "3",
-            "branch": "2",
-            "taken": 0
-          },
-          {
-            "line": 120,
-            "block": "4",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 120,
-            "block": "4",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 136,
-            "block": "5",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 136,
-            "block": "5",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 169,
-            "block": "6",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 169,
-            "block": "6",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 181,
-            "block": "7",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 181,
-            "block": "7",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 207,
-            "block": "8",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 207,
-            "block": "8",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 209,
-            "block": "9",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 209,
-            "block": "9",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 214,
-            "block": "10",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 214,
-            "block": "10",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 218,
-            "block": "11",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 218,
-            "block": "11",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "applyAssimilationWriteback",
-          "shouldRollbackForBudget",
-          "updateRuleParameterRecord",
-          "(anonymous_3)",
-          "updateOptionalDeltaRecord",
-          "(anonymous_5)",
-          "updateNumericDelta",
-          "updateCppnParameterBlock",
-          "(anonymous_8)",
-          "(anonymous_9)",
-          "clampWriteBackValue",
-          "normalizeNumericValue",
-          "resolveCppnQuantizationScale",
-          "quantizeCppnParameterValue",
-          "omitUndefinedFields",
-          "(anonymous_15)"
         ]
       },
       {
@@ -80319,1069 +79695,6 @@
         ],
         "uncoveredBranches": [],
         "uncoveredFunctions": []
-      },
-      {
-        "file": "src/neat/nge-juvenile/neat.nge-juvenile.constants.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 100,
-        "functions": 100,
-        "lines": 0,
-        "uncoveredLines": [
-          10,
-          22,
-          27,
-          33,
-          39,
-          44,
-          50,
-          56,
-          66,
-          71,
-          77,
-          83,
-          89,
-          94,
-          100,
-          105,
-          110
-        ],
-        "uncoveredBranches": [],
-        "uncoveredFunctions": []
-      },
-      {
-        "file": "src/neat/nge-juvenile/neat.nge-juvenile.errors.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 100,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          10,
-          11,
-          24,
-          25,
-          38,
-          39
-        ],
-        "uncoveredBranches": [],
-        "uncoveredFunctions": [
-          "(anonymous_0)",
-          "(anonymous_1)",
-          "(anonymous_2)"
-        ]
-      },
-      {
-        "file": "src/neat/nge-juvenile/neat.nge-juvenile.focus.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          26,
-          66,
-          69,
-          72,
-          73,
-          82,
-          83,
-          86,
-          87,
-          108,
-          110,
-          113,
-          115,
-          117,
-          120,
-          144,
-          146,
-          152,
-          164,
-          166,
-          169,
-          170,
-          172,
-          173,
-          177,
-          178
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 32,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 32,
-            "block": "0",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 35,
-            "block": "1",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 35,
-            "block": "1",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 38,
-            "block": "2",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 38,
-            "block": "2",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 41,
-            "block": "3",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 41,
-            "block": "3",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 44,
-            "block": "4",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 44,
-            "block": "4",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 46,
-            "block": "5",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 46,
-            "block": "5",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 48,
-            "block": "6",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 48,
-            "block": "6",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "resolveFocusConfig",
-          "computeFocusScores",
-          "(anonymous_2)",
-          "(anonymous_3)",
-          "(anonymous_4)",
-          "buildNormalizedMetricColumns",
-          "(anonymous_6)",
-          "(anonymous_7)",
-          "(anonymous_8)",
-          "(anonymous_9)",
-          "(anonymous_10)",
-          "buildFocusScore",
-          "normalizeRawScores",
-          "(anonymous_13)",
-          "(anonymous_14)",
-          "(anonymous_15)",
-          "(anonymous_16)"
-        ]
-      },
-      {
-        "file": "src/neat/nge-juvenile/neat.nge-juvenile.grow.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          32,
-          49,
-          74,
-          95,
-          99,
-          104,
-          136,
-          137,
-          142,
-          143,
-          148,
-          153,
-          158,
-          184,
-          185,
-          190,
-          191,
-          196,
-          217,
-          219,
-          220,
-          225,
-          227,
-          231,
-          236,
-          238,
-          239,
-          244,
-          247,
-          278,
-          279,
-          282,
-          285,
-          286,
-          287,
-          288,
-          290,
-          291,
-          296,
-          297,
-          304,
-          305,
-          307,
-          311,
-          316,
-          317,
-          318,
-          319,
-          321,
-          325,
-          330
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 33,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 33,
-            "block": "0",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 51,
-            "block": "1",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 51,
-            "block": "1",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 95,
-            "block": "2",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 95,
-            "block": "2",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 136,
-            "block": "3",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 136,
-            "block": "3",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 142,
-            "block": "4",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 142,
-            "block": "4",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 148,
-            "block": "5",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 148,
-            "block": "5",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 184,
-            "block": "6",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 184,
-            "block": "6",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 190,
-            "block": "7",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 190,
-            "block": "7",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 217,
-            "block": "8",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 217,
-            "block": "8",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 217,
-            "block": "8",
-            "branch": "2",
-            "taken": 0
-          },
-          {
-            "line": 217,
-            "block": "8",
-            "branch": "3",
-            "taken": 0
-          },
-          {
-            "line": 217,
-            "block": "8",
-            "branch": "4",
-            "taken": 0
-          },
-          {
-            "line": 219,
-            "block": "9",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 219,
-            "block": "9",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 227,
-            "block": "10",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 227,
-            "block": "10",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 238,
-            "block": "11",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 238,
-            "block": "11",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 278,
-            "block": "12",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 278,
-            "block": "12",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 290,
-            "block": "13",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 290,
-            "block": "13",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 307,
-            "block": "14",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 307,
-            "block": "14",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 308,
-            "block": "15",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 308,
-            "block": "15",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 321,
-            "block": "16",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 321,
-            "block": "16",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 322,
-            "block": "17",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 322,
-            "block": "17",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "canGrowNow",
-          "advanceGrowthHysteresis",
-          "commitGrowth",
-          "planEdgeDensification",
-          "planSlotExpansion",
-          "planNodeAddition",
-          "validateMorphDelta",
-          "planGrowthMorphs"
-        ]
-      },
-      {
-        "file": "src/neat/nge-juvenile/neat.nge-juvenile.probe.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          27,
-          28,
-          33,
-          54,
-          75,
-          78,
-          79,
-          85,
-          107,
-          136,
-          159,
-          161,
-          162,
-          165,
-          179,
-          180,
-          183,
-          184,
-          187,
-          188,
-          192,
-          202,
-          213,
-          214,
-          216,
-          217,
-          222,
-          224,
-          225,
-          228
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 27,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 27,
-            "block": "0",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 34,
-            "block": "1",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 34,
-            "block": "1",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 36,
-            "block": "2",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 36,
-            "block": "2",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 38,
-            "block": "3",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 38,
-            "block": "3",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 40,
-            "block": "4",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 40,
-            "block": "4",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 41,
-            "block": "5",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 41,
-            "block": "5",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 43,
-            "block": "6",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 43,
-            "block": "6",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 75,
-            "block": "7",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 75,
-            "block": "7",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 78,
-            "block": "8",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 78,
-            "block": "8",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 161,
-            "block": "9",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 161,
-            "block": "9",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 183,
-            "block": "10",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 183,
-            "block": "10",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 216,
-            "block": "11",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 216,
-            "block": "11",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 224,
-            "block": "12",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 224,
-            "block": "12",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "resolveProbeSchedulerConfig",
-          "defaultProbeSchedulerState",
-          "decideProbe",
-          "advanceSchedulerState",
-          "buildProbeLedgerEntry",
-          "appendProbeLedgerEntry",
-          "computeProbeRewardDelta",
-          "(anonymous_7)",
-          "(anonymous_8)",
-          "serializeLedger",
-          "deserializeLedger"
-        ]
-      },
-      {
-        "file": "src/neat/nge-juvenile/neat.nge-juvenile.prune.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          27,
-          44,
-          69,
-          88,
-          90,
-          94,
-          96,
-          97,
-          101,
-          103,
-          104,
-          107,
-          112,
-          113,
-          118,
-          134,
-          135,
-          140,
-          145,
-          146,
-          151,
-          175,
-          176,
-          181,
-          202,
-          204,
-          209,
-          210,
-          215,
-          218,
-          219,
-          224,
-          228,
-          257,
-          258,
-          261,
-          264,
-          265,
-          266,
-          267,
-          268,
-          270,
-          274,
-          279,
-          280,
-          281,
-          282,
-          284,
-          285,
-          290
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 28,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 28,
-            "block": "0",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 46,
-            "block": "1",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 46,
-            "block": "1",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 96,
-            "block": "2",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 96,
-            "block": "2",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 103,
-            "block": "3",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 103,
-            "block": "3",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 112,
-            "block": "4",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 112,
-            "block": "4",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 134,
-            "block": "5",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 134,
-            "block": "5",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 145,
-            "block": "6",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 145,
-            "block": "6",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 175,
-            "block": "7",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 175,
-            "block": "7",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 202,
-            "block": "8",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 202,
-            "block": "8",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 202,
-            "block": "8",
-            "branch": "2",
-            "taken": 0
-          },
-          {
-            "line": 202,
-            "block": "8",
-            "branch": "3",
-            "taken": 0
-          },
-          {
-            "line": 202,
-            "block": "8",
-            "branch": "4",
-            "taken": 0
-          },
-          {
-            "line": 209,
-            "block": "9",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 209,
-            "block": "9",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 218,
-            "block": "10",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 218,
-            "block": "10",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 257,
-            "block": "11",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 257,
-            "block": "11",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 270,
-            "block": "12",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 270,
-            "block": "12",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 271,
-            "block": "13",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 271,
-            "block": "13",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 284,
-            "block": "14",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 284,
-            "block": "14",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "canPruneNow",
-          "advancePruneHysteresis",
-          "commitPrune",
-          "selectPruneCandidate",
-          "(anonymous_4)",
-          "(anonymous_5)",
-          "planEdgePrune",
-          "planCompact",
-          "validatePruneDelta",
-          "planPruneMorphs"
-        ]
-      },
-      {
-        "file": "src/neat/nge-juvenile/neat.nge-juvenile.utils.ts",
-        "statements": 0,
-        "statementCoverageSource": "coverage-summary",
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "uncoveredLines": [
-          11,
-          12,
-          13,
-          15,
-          16,
-          19,
-          33,
-          37,
-          39,
-          42,
-          43,
-          45,
-          46,
-          50,
-          51,
-          58,
-          60,
-          61,
-          64,
-          67
-        ],
-        "uncoveredBranches": [
-          {
-            "line": 15,
-            "block": "0",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 15,
-            "block": "0",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 15,
-            "block": "1",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 15,
-            "block": "1",
-            "branch": "1",
-            "taken": 0
-          },
-          {
-            "line": 60,
-            "block": "2",
-            "branch": "0",
-            "taken": 0
-          },
-          {
-            "line": 60,
-            "block": "2",
-            "branch": "1",
-            "taken": 0
-          }
-        ],
-        "uncoveredFunctions": [
-          "minMaxNormalize",
-          "(anonymous_1)",
-          "(anonymous_2)",
-          "softmaxTopK",
-          "(anonymous_4)",
-          "(anonymous_5)",
-          "(anonymous_6)",
-          "(anonymous_7)",
-          "(anonymous_8)",
-          "(anonymous_9)",
-          "(anonymous_10)"
-        ]
       },
       {
         "file": "src/neat/objectives/core/objectives.core.ts",
@@ -90235,11 +88548,229 @@
           "drawNodes",
           "(anonymous_25)"
         ]
+      },
+      {
+        "file": "src/neat/nge-assimilation/neat.nge-assimilation.writeback.ts",
+        "statements": 54.71,
+        "statementCoverageSource": "coverage-summary",
+        "branches": 36,
+        "functions": 69,
+        "lines": 55,
+        "uncoveredLines": [
+          41,
+          100,
+          109,
+          121,
+          140,
+          142,
+          173,
+          176,
+          177,
+          181,
+          182,
+          188,
+          193,
+          195,
+          209,
+          211,
+          215,
+          219,
+          233,
+          234,
+          236,
+          243,
+          244,
+          246
+        ],
+        "uncoveredBranches": [
+          {
+            "line": 40,
+            "block": "0",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 99,
+            "block": "1",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 105,
+            "block": "2",
+            "branch": "1",
+            "taken": 0
+          },
+          {
+            "line": 110,
+            "block": "3",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 110,
+            "block": "3",
+            "branch": "1",
+            "taken": 0
+          },
+          {
+            "line": 110,
+            "block": "3",
+            "branch": "2",
+            "taken": 0
+          },
+          {
+            "line": 120,
+            "block": "4",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 136,
+            "block": "5",
+            "branch": "1",
+            "taken": 0
+          },
+          {
+            "line": 169,
+            "block": "6",
+            "branch": "1",
+            "taken": 0
+          },
+          {
+            "line": 181,
+            "block": "7",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 181,
+            "block": "7",
+            "branch": "1",
+            "taken": 0
+          },
+          {
+            "line": 207,
+            "block": "8",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 209,
+            "block": "9",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 209,
+            "block": "9",
+            "branch": "1",
+            "taken": 0
+          },
+          {
+            "line": 214,
+            "block": "10",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 218,
+            "block": "11",
+            "branch": "0",
+            "taken": 0
+          }
+        ],
+        "uncoveredFunctions": [
+          "(anonymous_5)",
+          "(anonymous_8)",
+          "(anonymous_9)",
+          "resolveCppnQuantizationScale",
+          "quantizeCppnParameterValue"
+        ]
+      },
+      {
+        "file": "src/neat/nge-assimilation/neat.nge-assimilation.utils.ts",
+        "statements": 75,
+        "statementCoverageSource": "coverage-summary",
+        "branches": 46,
+        "functions": 100,
+        "lines": 75,
+        "uncoveredLines": [
+          19,
+          25,
+          31,
+          43
+        ],
+        "uncoveredBranches": [
+          {
+            "line": 18,
+            "block": "0",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 24,
+            "block": "1",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 30,
+            "block": "2",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 38,
+            "block": "3",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 39,
+            "block": "4",
+            "branch": "1",
+            "taken": 0
+          },
+          {
+            "line": 83,
+            "block": "5",
+            "branch": "0",
+            "taken": 0
+          },
+          {
+            "line": 92,
+            "block": "6",
+            "branch": "1",
+            "taken": 0
+          }
+        ],
+        "uncoveredFunctions": []
+      },
+      {
+        "file": "src/neat/nge-assimilation/neat.nge-assimilation.ts",
+        "statements": 87.5,
+        "statementCoverageSource": "coverage-summary",
+        "branches": 50,
+        "functions": 100,
+        "lines": 88,
+        "uncoveredLines": [
+          27
+        ],
+        "uncoveredBranches": [
+          {
+            "line": 26,
+            "block": "0",
+            "branch": "0",
+            "taken": 0
+          }
+        ],
+        "uncoveredFunctions": []
       }
     ],
-    "overallLines": 0,
-    "overallBranches": 0,
-    "overallFunctions": 0
+    "overallLines": 2,
+    "overallBranches": 2,
+    "overallFunctions": 2
   },
   "summaryPath": "artifacts/docs-quality/runs/default/summary.json",
   "evidencePath": "artifacts/docs-quality/runs/default/evidence.json",

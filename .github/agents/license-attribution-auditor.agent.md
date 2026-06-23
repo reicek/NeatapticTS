@@ -63,6 +63,24 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - The idea is summarized in original words, not paraphrased without credit.
 6. Summarize missing attribution, incomplete references, and suggested plan or skill updates.
 
+## Attribution Check Patterns
+
+- **Source reference verification:** Verify every external code reference, algorithm, or design pattern has a license note or attribution. Flag missing attributions.
+- **License compatibility:** Verify external sources have licenses compatible with the repo's license (check `LICENSE` file). Flag incompatible licenses.
+- **Agent Skills attribution:** Verify agent skills that reference external workflow standards (OpenSpec, Superpowers, VS Code docs) include attribution. Flag missing attributions.
+- **Script attribution:** Verify utility scripts that are adapted from external sources include source attribution. Flag missing source notes.
+- **Citation format:** Verify attributions follow a consistent format (source URL, license name, author if applicable). Flag inconsistent or incomplete attributions.
+
+## External Source Reference Table
+
+| Source | URL | License |
+|---|---|---|
+| OpenSpec | https://github.com/.../openspec | MIT |
+| Superpowers | https://github.com/.../superpowers | MIT |
+| VS Code Docs | https://code.visualstudio.com/docs | CC-BY-4.0 |
+| GitHub Copilot Docs | https://docs.github.com/en/copilot | CC-BY-4.0 |
+| ONNX Operators | https://onnx.ai/onnx/operators/ | Apache-2.0 |
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

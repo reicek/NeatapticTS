@@ -21,20 +21,16 @@
  * Create a mock corpus database that returns the given chunk rows.
  *
  * Each row has chunk_id, heading_path, body_text, and doc_family.
- * The mock only intercepts the specific SQL query that
- * extractQualifyingTerms uses.
+ * The mock mimics the async `@libsql/client` Client API that
+ * extractQualifyingTerms uses via `corpusDatabase.execute({ sql, args })`.
  *
  * @param {Array<object>} rows - Chunk rows to return.
- * @returns {{ prepare: Function }} Mock database object.
+ * @returns {{ execute: Function }} Mock database object.
  */
 function createMockDatabase(rows) {
   return {
-    prepare() {
-      return {
-        all() {
-          return rows;
-        },
-      };
+    async execute() {
+      return { rows };
     },
   };
 }
@@ -71,7 +67,7 @@ describe('build-term-index: extractQualifyingTerms frequency filter', () => {
       ...generateRowsWithTerm(8, 'communterm', 2),
     ];
 
-    const { qualifyingTerms } = extractQualifyingTerms(
+    const { qualifyingTerms } = await extractQualifyingTerms(
       createMockDatabase(rows),
       { minFrequency: 5 },
     );
@@ -85,7 +81,7 @@ describe('build-term-index: extractQualifyingTerms frequency filter', () => {
     // "stopword" appears in all 10 rows (100%), exceeding 30% threshold
     const rows = generateRowsWithTerm(10, 'stopword', 0);
 
-    const { qualifyingTerms } = extractQualifyingTerms(
+    const { qualifyingTerms } = await extractQualifyingTerms(
       createMockDatabase(rows),
       { maxFrequencyRatio: 0.3 },
     );
@@ -102,7 +98,7 @@ describe('build-term-index: extractQualifyingTerms frequency filter', () => {
       ...generateRowsWithTerm(14, 'otherterm', 6),
     ];
 
-    const { qualifyingTerms } = extractQualifyingTerms(
+    const { qualifyingTerms } = await extractQualifyingTerms(
       createMockDatabase(rows),
       { minFrequency: 5, maxFrequencyRatio: 0.35 },
     );
@@ -122,7 +118,7 @@ describe('build-term-index: extractQualifyingTerms length filter', () => {
     // "ab" is 2 chars after stemming, below minTermLength default of 3
     const rows = generateRowsWithTerm(6, 'ab xy validterm', 0);
 
-    const { qualifyingTerms } = extractQualifyingTerms(
+    const { qualifyingTerms } = await extractQualifyingTerms(
       createMockDatabase(rows),
       { minFrequency: 1, maxFrequencyRatio: 1.0, minTermLength: 3 },
     );
@@ -135,7 +131,7 @@ describe('build-term-index: extractQualifyingTerms length filter', () => {
 
     const rows = generateRowsWithTerm(6, 'validterm', 0);
 
-    const { qualifyingTerms } = extractQualifyingTerms(
+    const { qualifyingTerms } = await extractQualifyingTerms(
       createMockDatabase(rows),
       { minFrequency: 1, maxFrequencyRatio: 1.0, minTermLength: 3 },
     );
@@ -155,7 +151,7 @@ describe('build-term-index: extractQualifyingTerms ASCII filter', () => {
     // "123456" is a pure numeric token — no ASCII letter
     const rows = generateRowsWithTerm(6, '123456 validterm', 0);
 
-    const { qualifyingTerms } = extractQualifyingTerms(
+    const { qualifyingTerms } = await extractQualifyingTerms(
       createMockDatabase(rows),
       { minFrequency: 1, maxFrequencyRatio: 1.0 },
     );
@@ -168,7 +164,7 @@ describe('build-term-index: extractQualifyingTerms ASCII filter', () => {
 
     const rows = generateRowsWithTerm(6, 'abc123', 0);
 
-    const { qualifyingTerms } = extractQualifyingTerms(
+    const { qualifyingTerms } = await extractQualifyingTerms(
       createMockDatabase(rows),
       { minFrequency: 1, maxFrequencyRatio: 1.0 },
     );

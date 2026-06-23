@@ -4,6 +4,11 @@ description: 'Design, debug, and harden browser visualizers in examples/ and doc
 argument-hint: 'Describe the visualizer path, current symptom, expected behavior or parity target, rendering surface (canvas/SVG/DOM), and whether this pass is reconnaissance, implementation, or validation-only.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - educational-docs
+  - tracker-handoff
+  - plan-alignment
+  - chrome-devtools-mcp
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -37,6 +42,11 @@ When the task changes roadmap-sensitive architecture/runtime semantics,
 - Opacity or blend behavior harms readability of labels, glyphs, or overlays.
 - Responsive breakpoints collapse useful visual density too early.
 
+
+## When NOT to use
+
+Do NOT use for documentation generation - use `educational-docs` instead. Do NOT use for performance profiling - use `chrome-devtools-mcp` instead.
+
 ## Scope Boundary
 
 This skill owns visualizer behavior and presentation for:
@@ -47,6 +57,23 @@ This skill owns visualizer behavior and presentation for:
 - parity passes between sibling demo visualizers.
 
 This skill does not replace `educational-docs` for long-form teaching docs.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Visualizer issue"] --> B["Reproduce in browser"]
+    B --> C["Inspect DOM/canvas"]
+    C --> D{"Layout problem?"}
+    D -- "Cramped" --> E["Adjust CSS/overflow"]
+    D -- "Tooltip" --> F["Fix hover handlers"]
+    D -- "Parity drift" --> G["Compare demo visualizers"]
+    E --> H["Verify fix"]
+    F --> H
+    G --> H
+    H --> I["Update plan"]
+```
 
 ## Task Packet
 
@@ -107,6 +134,32 @@ tooltip semantics, and invariants before changing code.
 7. Close with evidence.
    - State what changed, why, and which symptom is now resolved.
    - Note any unresolved visual debt separately.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Visualizer symptom"] --> B{"Primary issue class?"}
+    B -- "Cramped or clipped layout" --> C["layout-allocation fix"]
+    B -- "No scroll for wide content" --> D["overflow-contract fix"]
+    B -- "Hover/tooltip unstable" --> E["hit-area-sync fix"]
+    B -- "Color/opacity mismatch" --> F["style-parity fix"]
+```
+
+## Before / After Examples
+
+**Before:**
+```css
+/* cramped canvas: fixed width, no overflow handling */
+canvas { width: 400px; overflow: hidden; }
+```
+
+**After:**
+```css
+/* responsive layout: fills container, horizontal scroll for wide lines */
+.panel { width: 100%; overflow-x: auto; }
+canvas { width: 100%; }
+```
 
 ## Visualizer Guardrails
 

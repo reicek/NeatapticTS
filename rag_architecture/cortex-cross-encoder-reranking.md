@@ -2,6 +2,8 @@
 
 > Extracted from `plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md` (Step 04) for permanent reference.
 
+> **Backing database.** The Repo Cortex is backed by a single consolidated Turso (libSQL) database accessed via the fully async `@libsql/client` driver (default local embedded replica `data/turso-replica.sqlite`; cloud primary `libsql://<db>.turso.io`). Vectors use native Turso vectors with `F8_BLOB` 8-bit quantization, approximate nearest neighbor search runs server-side via DiskANN (`libsql_vector_idx`, `vector_top_k()`), and hybrid ranking is performed SQL-side via Reciprocal Rank Fusion (RRF, k=60). The historical design content below describes the pre-Turso architecture that was subsequently migrated to this stack.
+
 Complete design for local cross-encoder re-ranking integration for second-stage result refinement.
 
 ---
@@ -624,7 +626,7 @@ scripts/mcp-semantic/tools/search-corpus.mjs   # Add use_rerank, rerank_candidat
 scripts/mcp-semantic/repo-cortex-mcp.mjs         # Register updated search_corpus schema
 scripts/semantic-index/prewarm-dense.mjs          # Add download-reranker + validate-reranker steps
 scripts/semantic-index/query-dense.mjs            # Add rerank pipeline hook after hybrid ranking
-data/embeddings.sqlite                             # No schema changes (cross-encoder is stateless)
+data/turso-replica.sqlite                           # No schema changes (cross-encoder is stateless)
 ```
 
 **No schema changes to the corpus or embeddings databases.** The cross-encoder is stateless — it scores query-document pairs at query time without storing any data. This is a critical design property: no re-indexing is needed when the cross-encoder model is swapped.
@@ -680,7 +682,7 @@ data/embeddings.sqlite                             # No schema changes (cross-en
 
 1. **Local-first**: No cloud API calls for re-ranking. The cross-encoder must run entirely on the developer's machine using `onnxruntime-node`.
 2. **No browser runtime**: The cross-encoder is Node.js-only. No `onnxruntime-web` integration is planned. The browser snapshot remains read-only (no browser-side re-ranking).
-3. **No schema changes**: The cross-encoder is stateless. No new tables or columns in `semantic-index.sqlite` or `embeddings.sqlite`.
+3. **No schema changes**: The cross-encoder is stateless. No new tables or columns in the consolidated Turso (libSQL) database.
 4. **Backward compatible**: `use_rerank` defaults to `false`. Existing `search_corpus` calls work identically without changes.
 5. **Same ONNX runtime**: The cross-encoder uses the existing `onnxruntime-node@^1.26.0` dependency. No new native dependencies.
 6. **Graceful degradation**: Cold/model-only states degrade to hybrid-only with clear metadata in the response.

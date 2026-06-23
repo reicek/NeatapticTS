@@ -66,6 +66,24 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 6. Extract terminology, constraints, sequencing hints, and any likely code/plan mismatch risks.
 7. Frame the result as a compact handoff into `plan-alignment` rather than a standalone roadmap policy document.
 
+## Plan Discovery Decision Tree
+
+1. **Is the task about a specific feature or component?**
+   - Yes → Search `plans/README.md` for matching plan title, then read the single most relevant detailed plan.
+   - No, broad roadmap question → Read `plans/README.md` and identify the top 2-3 relevant plans.
+
+2. **Is the task about NEAT core algorithm correctness?**
+   - Yes → Read `plans/completed/neat.plans.md` for the archived baseline, plus any active NEAT amendment in `plans/`.
+   - No → Continue to step 3.
+
+3. **Is the task about a specific phase (ONNX, memory, browser, etc.)?**
+   - Yes → Match the phase keyword to plan titles in `plans/README.md`.
+   - No → Use `search_corpus` with the task keywords to find the most relevant plan.
+
+4. **Is there an active `[WIP]` plan that matches?**
+   - Yes → Prioritize the active plan over archived ones.
+   - No → Use the most recent `[DONE]` plan that covers the topic.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

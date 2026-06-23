@@ -4,6 +4,10 @@ description: 'Use when: creating a hidden specialist or auxiliary .agent.md for 
 argument-hint: 'Describe the missing specialist job, parent orchestrator, required tools, model tier, output fields, and validation commands.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - splitting-monolithic-agent
+  - agent-frontmatter-standards
+  - subagent-delegation-patterns
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -19,6 +23,28 @@ This skill scaffolds new hidden specialist or auxiliary `.agent.md` files in the
 - A new SDLC phase needs an auxiliary agent (e.g., a coverage-guard specialist or a docs-scout).
 - Building a before/after split where the new agent takes over one responsibility from an existing overloaded agent.
 - Preparing a companion agent that performs read-only recon and hands off to a skill.
+
+
+## When NOT to use
+
+Do NOT use for splitting an existing monolithic agent - use `splitting-monolithic-agent` instead. Do NOT use for skill creation - skills and agents are different customization types.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Need new specialist"] --> B{"Agent or skill?"}
+    B -- "Reusable procedure" --> C["Create skill"]
+    B -- "Autonomous worker" --> D["Create agent"]
+    D --> E{"Specialist or orchestrator?"}
+    E -- "Scoped worker" --> F["Create specialist (Tier 3)"]
+    E -- "Coordinates others" --> G["Create coordinator (Tier 2)"]
+    F --> H["Write frontmatter"]
+    G --> H
+    H --> I["Validate with agent-frontmatter-standards"]
+    I --> J["Add to routing table"]
+```
 
 ## Task Packet
 
@@ -46,6 +72,44 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 8. Add the new agent to the smallest parent allow-list (`agents: [...]`) that legitimately needs it; do not add it to all orchestrators by default.
 9. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` to confirm frontmatter correctness.
 10. Run `node scripts/agent-customization/validate-agent-graph.mjs --json` to confirm the delegation edge is correctly registered.
+
+
+## Before/After Example
+
+**Before (vague agent scope):**
+```yaml
+---
+name: helper
+description: 'Helps with stuff'
+tier: 3
+---
+```
+
+**After (precise specialist scope):**
+```yaml
+---
+name: coverage-scout
+description: 'Identify the next coverage tranche target from lcov.info and map uncovered paths to source files.'
+tier: 3
+user-invocable: false
+tools:
+  - neataptic-cortex-mcp-search_corpus
+---
+```
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Recurring workflow gap"] --> B{"Needs isolated context or restricted tools?"}
+    B -- "No" --> C["Create or update a skill"]
+    B -- "Yes" --> D{"Coordinates other agents?"}
+    D -- "No — scoped worker" --> E["Create specialist agent (Tier 3)"]
+    D -- "Yes — delegates to others" --> F["Create coordinator agent (Tier 2)"]
+    C --> G["Validate skill frontmatter"]
+    E --> H["Validate agent frontmatter + graph"]
+    F --> H
+```
 
 ## Guardrails
 

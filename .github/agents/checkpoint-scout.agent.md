@@ -79,6 +79,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 7. Summarize the active checkpoint contract, missing state, and the smallest
    useful handoff into `checkpointing-persistence`.
 
+## Checkpoint Boundary Patterns
+
+- **Full vs light checkpoint:** Distinguish full checkpoints (complete population state, all genomes, all metadata) from light checkpoints (minimal state for resume). Verify the checkpoint type matches the persistence contract.
+- **Strict restore behavior:** Verify that strict restore reproduces identical state including RNG state, generation counter, and population composition. Flag any non-deterministic restore.
+- **Schema version:** Verify the checkpoint schema version is recorded. Flag checkpoints without version tags that may break future migrations.
+- **RNG state persistence:** Verify the RNG state is saved and restored correctly. Compare pre-save and post-restore output with the same seed. Mismatched RNG breaks replay.
+- **Counter persistence:** Verify internal counters (generation, evaluation count, best fitness) are persisted and restored. Counter drift breaks reproducibility.
+- **Migration path:** Verify that older checkpoint schemas can be migrated to the current schema. Flag breaking changes without migration support.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

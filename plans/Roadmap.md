@@ -111,25 +111,57 @@ resources/prompts/tools, evidence-bearing gate exceptions, and universal
 as the archived baseline for existing agent, skill, model-routing, validation,
 and MCP ownership contracts.
 
-## Standalone Meta-Workflow Lane — Orchestration System Optimization [PLANNED]
+## Standalone Meta-Workflow Lane — Orchestration System Optimization [DONE]
 
 **Outcome:** enforce strict Tier 1→Tier 2/3/4 delegation by extracting durable policies into skills, creating targeted specialist agents, and updating flows to eliminate "God-agent" behavior from the eight numbered SDLC orchestrators.
 
 - Orchestration system optimization (mini-agent transition)
-  - Plan: [Orchestration_System_Optimization.plans.md](Orchestration_System_Optimization.plans.md) [WIP]
-  - Current internal state: Phase 4 Step 03 [DONE] — All gates PASS (agent-graph: 61 agents/0 issues, tier-enforcement: 0 violations, plan-sync: 0 errors/0 warnings). Flow specialist references updated in 7 flow files. Step 04-07 remaining (flow selection red tests, tier-enforcement with flow awareness, docs, final validation).
+  - Plan: [completed/Orchestration_System_Optimization.plans.md](completed/Orchestration_System_Optimization.plans.md) [DONE]
+  - Final state: all 5 phases complete. Structural delegation infrastructure delivered (execute skill, routing table, frontmatter agents arrays, specialist creation, flow specialist references). Archived. The instructional follow-up (per-agent body mandates, output contract tightening, gate enforcement) is handled by the Tier 1 Delegation Remediation lane below.
 
 **Coordination rule:** this lane is confined to `.github/agents/`, `.github/skills/`, `.github/flows/`, `scripts/agent-customization/`, and tracker/log files. Do not modify `src/` or MCP server implementations. Treat [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) and [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows_and_Gates_Upgrade.plans.md) as the archived baselines for agent architecture and flow/gates contracts.
 
-## Standalone Meta-Workflow Lane — Step Packet Goal Redesign [WIP]
+## Standalone Meta-Workflow Lane — Chrome DevTools MCP Integration [DONE]
+
+**Outcome:** integrate the Chrome DevTools MCP server into the multi-tier agent orchestration
+system to enable direct performance measurements, UI testing, and browser-based validation.
+Delivered three new Tier 3 specialists (performance-trace-specialist, browser-ui-specialist,
+browser-memory-specialist), two new skills (`execute` for mandatory delegation enforcement and
+`chrome-devtools-mcp` for durable browser tool knowledge), strict sliced RED→IMPLEMENT→GREEN
+implementation loop enforcement, updated testing agents with Chrome DevTools MCP awareness,
+trace analysis infrastructure scripts, and two new validation gates. All 8 phases complete;
+all gates pass; plan archived.
+
+- Chrome DevTools MCP integration
+  - Plan: [completed/Chrome_DevTools_MCP_Integration.plans.md](completed/Chrome_DevTools_MCP_Integration.plans.md) [DONE]
+  - Final state: 65 agents (3 new Tier 3), 58 skills (2 new), 52 new tests (100% coverage),
+    2 new gates, all 11 flows updated with sliced loop-back protocol. Archived to
+    `plans/completed/`.
+
+**Coordination rule:** this lane is confined to `.github/agents/`, `.github/skills/`,
+`.github/flows/`, `.github/copilot-instructions.md`, `scripts/agent-customization/`,
+`scripts/analyze-trace/`, `.vscode/mcp.json`, `.gitignore`, and plan index files. Do not modify
+`src/` library code.
+
+## Standalone Meta-Workflow Lane — Step Packet Goal Redesign [DONE]
 
 **Outcome:** replace the step packet YAML `agent` and `agent_file` fields with a `goal` field that declares what outcome a step needs rather than who does it, add an optional `tdd_sequence` field for multi-phase dispatch decomposition, update the orchestrator routing table in `copilot-instructions.md` §3, migrate all existing plan files, and remove backward compatibility.
 
 - Step Packet Goal Redesign
-  - Plan: [Step_Packet_Goal_Redesign.plans.md](Step_Packet_Goal_Redesign.plans.md) [WIP]
-  - Current internal state: Phase 1 Step 01 [WIP] — planning the redesign. The step-packet gate currently requires `agent`; Phase 1 Step 02 must update it to accept `goal` before Phase 2 migration begins.
+  - Plan: [completed/Step_Packet_Goal_Redesign.plans.md](completed/Step_Packet_Goal_Redesign.plans.md) [DONE]
+  - Final state: goal-based dispatch and tdd_sequence migration complete. Archived.
 
 **Coordination rule:** this lane is confined to `.github/copilot-instructions.md`, `.github/skills/phase-handoff-workflow/SKILL.md`, `scripts/agent-customization/gates/step-packet.gate.mjs`, and plan file step packet YAML. Do not modify `src/` library code, flow YAML files (`.github/flows/*.flow.yml` use `agent:` for flow ownership, a different concern), or runtime enforcement scripts.
+
+## Standalone Meta-Workflow Lane — Holistic Agent & Skill Optimization [WIP]
+
+**Outcome:** grade, fix, and regrade ALL 65 agents (8 Tier 1, 11 Tier 2, 42 Tier 3, 4 Tier 4) and ALL 58 skills to 100/100/100 across three dimensions — Orchestration, Tools & Skills, and Role Knowledge — using a grade→fix→regrade loop where the executor never assesses itself. Then update all WIP/PLANNED plans to use the updated agentic contracts, `delegate_to` fields, and delegation mandates. Supersedes the archived Tier 1 Delegation Remediation lane, which addressed only Tier 1 instructional and output-contract gaps (P0–P5: output contract tightening + gate enforcement, Mission-level delegation mandate, slice `delegate_to` schema field, Tier 1→specialist lookup table, routing table body references, ordered flow dispatch sequences). The structural infrastructure from the archived Orchestration System Optimization lane remains sound; this lane expands remediation to every tier and every skill.
+
+- Holistic agent & skill optimization
+  - Plan: [holistic-agent-skill-optimization.plans.md](holistic-agent-skill-optimization.plans.md) [WIP]
+  - Current internal state: Phase 0 (planning) [DONE], Phase 1 (agent grading round 1) [DONE], Phase 2 (agent fixes round 1) [WIP] (Tier 2 DONE, Tier 1 in progress, Tier 3+4 + execute/gate fixes queued). Phases 3–6 (regrade, skill grading, skill fixes, plan updates) [PLANNED].
+
+**Coordination rule:** this lane is confined to `.github/agents/*.agent.md` (65 files — all tiers), `.github/skills/*/SKILL.md` (58 files), `.github/skills/execute/SKILL.md`, `.github/flows/*.flow.yml`, `scripts/agent-customization/gates/delegate-skill-coverage.gate.mjs` + `.test.ts`, `.github/agent-skill-routing-table.md` (regeneration only if frontmatter changed), WIP/PLANNED plan files, and tracker/log files. Do not modify `src/` library code or MCP server implementations. Treat [completed/Orchestration_System_Optimization.plans.md](completed/Orchestration_System_Optimization.plans.md) as the archived structural baseline and this lane as its expanded holistic follow-up.
 
 ## Standalone Documentation Metrics Contract Lane [DONE]
 
@@ -425,6 +457,51 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 - `docs/assets/semantic-snapshot.json` is a generated artifact; treat it as read-only.
 - NeatChat memory (`examples/neatChat/memory/`) must never import from `scripts/semantic-index/`.
 
+## Standalone Turso RAG Migration Lane [WIP]
+
+**Outcome:** migrate the Repo Cortex RAG system from the legacy synchronous local SQLite driver
+
+- brute-force vector search to **Turso** (libSQL cloud database with
+  native vector search, DiskANN ANN, FTS5, embedded replicas, and Platform API).
+  This is the single largest infrastructure change the RAG layer has undergone:
+  it replaces the database driver, the vector index, the hybrid ranking strategy,
+  the deployment topology, and the connection model — all while keeping the 14+ MCP
+  tools, the 26+ npm scripts, and the 58 skills / 65 agents that depend on Cortex
+  search functioning. The goal is to make Turso-powered RAG the **unambiguous primary
+  search mechanism** that every agent can rely on.
+
+This lane is **meta-workflow infrastructure**. It does not change `src/` library
+code and can proceed in parallel with Phase 7 / NGE work. It depends on all
+archived Repo Cortex Layers 1–8 being [DONE] (they are). The 8 phases execute
+sequentially:
+
+- Turso RAG migration (8 phases, ~40 steps) [DONE]
+  - Plan: [completed/turso-rag-migration.plans.md](completed/turso-rag-migration.plans.md) [DONE]
+  - Final state: all phases complete, index warm and searchable, legacy SQLite artifacts removed.
+  - Phase 1: FTS5 compatibility, vector quantization, DiskANN recall, embedded
+    replica topology, and full legacy sync SQLite driver import site audit.
+  - Phase 2: Schema migration (two SQLite DBs → one Turso DB, F8_BLOB embeddings,
+    PRAGMA replacements, idempotent migration script).
+  - Phase 3: Core driver migration (legacy sync SQLite driver → @libsql/client, sync → async
+    across 33+ files).
+  - Phase 4: Vector search migration (brute-force JS cosine → native
+    vector_distance_cos() + DiskANN + metadata filtering).
+  - Phase 5: Search pipeline improvements (server-side RRF, parallel queries,
+    batch transactions, server-side context assembly, SQL time-decay feedback).
+  - Phase 6: MCP tool updates (4 new tools: parallel_search, multi_hop_search,
+    turso_branch, turso_pitr; update existing 14 tools for Turso-native features).
+  - Phase 7: Agent/skill/script documentation updates (CLAUDE.md,
+    copilot-instructions.md, research-methodology skill, package.json scripts).
+  - Phase 8: Evaluation, optimization, and rollout (eval suite MRR@5 ≥ 0.350,
+    latency optimization, final legacy sync SQLite driver cleanup, rollout signoff).
+
+**Gate:** all archived Repo Cortex Layers 1–8 [DONE] satisfied.
+
+**Coordination rule:** this lane is confined to `scripts/mcp-semantic/`,
+`scripts/semantic-index/`, `.mcp.json`, `.vscode/mcp.json`, `package.json` scripts,
+and agent/skill documentation files. Do not modify `src/` library code. Treat the
+archived Repo Cortex layer plans as the baselines this migration builds upon.
+
 ## Phase 7 — Advanced Research Features (Last)
 
 **Outcome:** evo-devo / NGE capabilities and benchmark-driven validation that build on top of all prior infrastructure.
@@ -432,7 +509,7 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 - NEAT Genesis EvoDevo (NGE) — core algorithm (computation motifs, lifecycle, DNA, reproduction, collective intelligence)
   - Plan: [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
 - NGE Core Readiness Audit — primitive-by-primitive readiness matrix, gap classification by owner boundary, and first implementation tranche selection (core-first; demos are downstream e2e tests)
-  - Plan: [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [WIP] — Phase 3 [DONE] (independent populations + generation barriers); Phase 4 [WIP] (Step 04: implement deterministic evaluation-pack normalization).
+  - Plan: [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [WIP] — Phase 5 [DONE] (lifecycle staging closure and nge-adult readiness reconciliation); Phase 6 [WIP] — Step 01: planning packet and export-surface freeze.
 - NGE Racing Curriculum — Team A/B benchmark (worker-streamed runtime authority, deterministic race packs, rolling opponent snapshots)
   - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) (`plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`) [WIP]
 - Racing Path-Tracking Debug and Quality Followup — pre-Phase-3 visual fix, geometry audit, and deferred quality cleanup
@@ -478,6 +555,7 @@ Completed entries below resolve into `plans/completed/`.
 M1. [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) [DONE]
 M2. [completed/workspace-mcp-registration.plans.md](completed/workspace-mcp-registration.plans.md) [DONE]
 M3. [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows_and_Gates_Upgrade.plans.md) [DONE]
+M3b. [completed/Agent_Dispatch_MCP_Server.plans.md](completed/Agent_Dispatch_MCP_Server.plans.md) [DONE] — implemented `neataptic-dispatch-mcp`, registered in `.mcp.json` / `.vscode/mcp.json`, updated `execute` skill docs; Phase 1 green validation passed and tracker archived.
 
 ### Repo Cortex / Semantic Helping inventory (standalone meta-workflow lane)
 
@@ -492,6 +570,7 @@ M8c. [completed/Cortex_RAG_Premium_Primary_Search.plans.md](completed/Cortex_RAG
 M9. [completed/NeatChat_Local_Retrieval_Memory.plans.md](completed/NeatChat_Local_Retrieval_Memory.plans.md) [DONE]
 M10. [completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md](completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md) [DONE]
 M11. [Step_Packet_Goal_Redesign.plans.md](Step_Packet_Goal_Redesign.plans.md) [WIP]
+M12. [completed/turso-rag-migration.plans.md](completed/turso-rag-migration.plans.md) [DONE]
 
 ### Phase 0 inventory
 
@@ -548,7 +627,7 @@ M11. [Step_Packet_Goal_Redesign.plans.md](Step_Packet_Goal_Redesign.plans.md) [W
 ### Phase 7 inventory
 
 32. [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
-    32b. [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [WIP]
+    32b. [NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans\NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [WIP] — Phase 5 [DONE] / Phase 6 [WIP] / Step 01 active.
 33. [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) (`plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`) [WIP]
 34. [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
 35. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]

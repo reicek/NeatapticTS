@@ -7,7 +7,7 @@ tools:
   [
     read,
     search,
-    bash,
+    execute,
     neataptic-cortex-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
@@ -73,6 +73,28 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 6. Check whether an owner-local test file exists for the boundary so the
    handoff can name it.
 7. Summarize the status of every file in the change set.
+
+## Focused Coverage Command Reference
+
+```bash
+# Focused coverage for a single changed file:
+npx jest --config=jest.config.mjs --no-cache --coverage \
+  --testPathPattern=<nearest-test-file>
+
+# Folder quality gate:
+npm run quality:folder -- --folder=<touched-folder>
+
+# Type checking:
+npx tsc --noEmit -p tsconfig.json
+```
+
+### Coverage Verification Rules
+
+- Run the focused Jest slice for EACH changed `src/` file individually.
+- Verify all four categories show 100%: Statements, Branches, Functions, Lines.
+- A file is only clear when ALL FOUR categories show 100%.
+- If any category is below 100%, classify the gap (reachable vs dead code) before acting.
+- Do NOT run the full suite unless the step packet explicitly requires it.
 
 ## If Blocked
 

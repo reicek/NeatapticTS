@@ -57,6 +57,33 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 3. Run only the narrowest requested command and capture the result.
 4. Return the structured result without expanding into broader validation.
 
+## Focused Test Command Reference
+
+```bash
+# Run a single test file:
+npx jest --config=jest.config.mjs --no-cache --testPathPattern=<test-file>
+
+# Run with coverage for a single file:
+npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=<test-file>
+
+# Run a specific test by name pattern:
+npx jest --config=jest.config.mjs --no-cache --testPathPattern=<test-file> -t "<test-name>"
+
+# Run a folder of tests:
+npx jest --config=jest.config.mjs --no-cache --testPathPattern=<folder>/
+
+# Folder quality gate:
+npm run quality:folder -- --folder=<folder>
+```
+
+## Test Result Interpretation Patterns
+
+- **Pass/fail classification:** Green = all tests passed, exit code 0. Red = at least one test failed, exit code non-zero. Flag ambiguous results.
+- **Coverage output:** Read the coverage table. Verify all four categories (Stmts, Branch, Funcs, Lines) are at 100% for changed files. Flag any category below 100%.
+- **Failure message parsing:** Extract the failing test name, assertion message, and stack trace. Classify as: assertion failure, timeout, crash, or setup error.
+- **Flaky detection:** If the same test passes on retry but fails on first run, classify as flaky. Flag environment-dependent tests.
+- **Suite vs test count:** Report both suite count and test count. A suite count change may indicate a missing or extra describe block.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the requested test target is missing or the command cannot be run.

@@ -39,6 +39,9 @@ skills:
     'agent-frontmatter-standards',
     'model-routing-and-budget',
     'license-attribution-audit',
+    'planning-acceptance-criteria',
+    'plan-sync-validation',
+    'execute',
   ]
 handoffs:
   - label: 'Start Research'
@@ -70,6 +73,8 @@ Transform an approved phase objective into a clear, step-by-step, machine-readab
 
 **For agents with limited context or reasoning:** produce the Structured Limited-Context Output block (see below) and never proceed if required inputs are missing or unclear.
 
+**Delegation Mandate:** This agent MUST delegate substantive work to Tier 2 coordinators and Tier 3 specialists. Use `.github/agent-skill-routing-table.md` as the canonical delegation target lookup. The output contract MUST report which sub-agents were used (not `NONE`). A completion with zero delegations is a defect unless the task is trivially self-contained.
+
 ## Constraints
 
 - Reference skills for durable policies; do not restate.
@@ -84,6 +89,7 @@ Transform an approved phase objective into a clear, step-by-step, machine-readab
 - Delegate agent/skill gaps to helping-gap-resolution-coordinator and resume after fix or deferral.
 - Always prefer local agent execution; escalate to cloud fallback only if local context, reasoning, or resource limits are reached.
 - **For agents with limited context:** After every action, check if all required information is present. If not, stop and escalate.
+- **No Deferred Cleanup Policy:** When planning any migration, refactor, or API replacement, the step MUST remove the old code in the same step that introduces the new code. No backward-compatibility wrappers, no dual-path code, no deferred cleanup. Dead code is removed immediately. This applies to ALL code in the library — src/, scripts/, examples/, benchmarks/, testing/. A step or slice that introduces new code alongside old code without removing the old code is a planning defect and MUST be rejected before implementation begins.
 
 - Every authored plan block MUST conform to the schemas in this document.
 - Phase-level blocks require: `phase`, `title`, `status`, `goal: planning`, `expansion: steps`, `auto_expand: false`, `mode`, `source_of_truth`, `copy_paste`, `next_phase`, `skills`, `validation`, `acceptance_criteria`, `placeholder_steps`.
@@ -114,6 +120,7 @@ Include the exact command used and paste the full JSON output into `step_packet.
 
 1. **Read the active plan, current phase, and nearest plan index/roadmap entry.**
    - If any are missing, unreadable, or malformed, do not proceed. Go to Tracker Recovery.
+   - Before delegating, consult `.github/agent-skill-routing-table.md` for the canonical agent-to-skill mapping and delegation target discovery.
 2. **Identify phase objective, validations, blockers, and which downstream steps are value-adding, folded, or skipped.**
    - If any are ambiguous or conflicting, write a bounded decision record and escalate.
 3. **Delegate focused research packets to specialists.**
@@ -259,6 +266,38 @@ Use the schemas above as the canonical reference for every new or revised plan b
 
 ## Acceptance Criteria (examples and automation mapping)
 
+Acceptance criteria must be **observable** and **implementation-agnostic** — they describe what the system does, not how the code is written.
+
+### Pattern Examples
+
+**Behavioral (preferred for most steps):**
+
+- `Network.activate(inputs) returns expected output within float32 tolerance`
+- `buildMLP({ inputSize: 2, hiddenLayers: [4], outputSize: 1 }) produces a network with 7 nodes`
+- `Exported ONNX model inference output matches Network.activate() within 1e-6`
+
+**Coverage (for src/ changes):**
+
+- `100% statements, branches, functions, lines on all touched src/ files`
+- `Focused jest slice passes with zero failures`
+
+**Gate (for workflow/customization steps):**
+
+- `plan-sync gate returns pass: true`
+- `step-packet gate returns pass: true`
+- `agent-graph gate returns pass: true`
+
+**Determinism (for reproducibility-sensitive work):**
+
+- `Same seed + same config produces bitwise-identical network shape`
+- `Same network + same inputs produces bitwise-identical activation output`
+
+### Anti-patterns (avoid)
+
+- `Uses toSorted() instead of sort()` — implementation-specific, not observable
+- `Code is clean and readable` — subjective, not measurable
+- `Tests are well-written` — subjective, not automatable
+
 ## Slice Grouping (execution slices)
 
 When a step uses `expansion: slices` and `auto_expand: true`, `01-planning`
@@ -391,6 +430,21 @@ confidence: 92
 
 This enables deterministic parsing by downstream orchestrators.
 
+## Delegation Targets
+
+| Task Type                                | Primary Delegation Target            | Tier |
+| ---------------------------------------- | ------------------------------------ | ---- |
+| Plan context gathering                   | `planning-context-coordinator`       | 2    |
+| Risk and blast-radius analysis           | `planning-risk-coordinator`          | 2    |
+| Test strategy and acceptance criteria    | `planning-test-strategy-coordinator` | 2    |
+| Plan and roadmap alignment               | `plan-scout`                         | 3    |
+| Boundary mapping before multi-file edits | `boundary-mapper`                    | 3    |
+| Acceptance criteria authoring            | `acceptance-criteria-writer`         | 3    |
+
+## Escalation Protocol
+
+If 3 consecutive delegation attempts to the same specialist fail to resolve the issue, escalate to `00-helping` via `00.cross-tier-helper` with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
+
 ## If Blocked (refined)
 
 - If roadmap/context ambiguous, delegate to Plan Scout and attach Decision Record with TASK_STATUS: PARTIAL.
@@ -423,6 +477,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent or NONE>
+- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
 SUMMARY: <brief truthful summary>
 ```

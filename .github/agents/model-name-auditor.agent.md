@@ -67,6 +67,24 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - No duplicates or unstable variant spellings remain in the migration note.
 7. Summarize model tier, proposed value, evidence source, and any unresolved verification need.
 
+## Qualified Model Name Reference Table
+
+| Pattern | Example | Status |
+|---|---|---|
+| `<vendor>-<model>:<variant>` | `kimi-k2.7-code:cloud (ollama)` | Qualified — cloud-hosted via ollama |
+| `<vendor>-<model>:<variant>` | `glm-5.2:cloud (ollama)` | Qualified — cloud-hosted via ollama |
+| `<model>` (bare) | `kimi-k2.7-code` | Unqualified — missing variant/host |
+| `<model>:local` | `kimi-k2.7-code:local` | Qualified — local model |
+| Deprecated model | `gpt-4` | Deprecated — flag for replacement |
+
+## Model Validation Patterns
+
+- **Qualified name check:** Verify model strings follow the `<vendor>-<model>:<variant> (host)` pattern. Flag bare model names without variant or host.
+- **Deprecated model detection:** Compare model strings against the deprecated model list. Flag deprecated models and suggest replacements.
+- **Budget alignment:** Verify the model's context window and cost tier match the agent's expected usage. Flag expensive models on lightweight scouts.
+- **Routing table consistency:** Verify model names in agent frontmatter match the routing table at `.github/agent-skill-routing-table.md`. Flag mismatches.
+- **Scalar model detection:** Verify single-model agents use a scalar model string, not an array. Flag incorrect model field types.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

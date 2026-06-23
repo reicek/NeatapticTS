@@ -4,6 +4,10 @@ description: 'Design and grade trigger evals for NeatapticTS Agent Skill and cus
 argument-hint: 'Name the skill or agent, describe expected trigger scope, and provide observed trigger results or planned eval queries.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - skill-frontmatter-standards
+  - skill-output-evals
+  - agent-frontmatter-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,29 @@ This skill designs and grades trigger evaluation sets for NeatapticTS skill and 
 - Optimizing a description that is approaching the 1024-character Agent Skills limit.
 - Building initial eval coverage for a newly created skill or agent before it goes live.
 - Preparing evidence that a description change improved precision without reducing recall.
+
+
+## When NOT to use
+
+Do NOT use for output evaluation - use `skill-output-evals` instead. Do NOT use for frontmatter validation - use `skill-frontmatter-standards` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Skill description"] --> B["Run eval"]
+    B --> C{"Pass?"}
+    C -- "Yes" --> D["Done"]
+    C -- "No" --> E{"Failure category?"}
+    E -- "Too vague" --> F["Add specificity"]
+    E -- "Missing use case" --> G["Add when-to-use"]
+    E -- "Too long" --> H["Trim to 1024 chars"]
+    F --> I["Re-run eval"]
+    G --> I
+    H --> I
+    I --> C
+```
 
 ## Task Packet
 
@@ -44,6 +71,30 @@ Eval mode: <train-only | train+validation split>
 7. Revise the description based on failure patterns; avoid adding exact failed-query keywords as one-off fixes.
 8. Keep the revised description under 1024 characters.
 9. Record trigger rates and failure categories in the active plan.
+
+
+## Before/After Description Examples
+
+**Before (vague):**
+```yaml
+description: 'Helps with tests.'
+```
+
+**After (specific):**
+```yaml
+description: 'Run focused Jest slices for specific source boundaries. Use when validating a code change with the nearest test file, not for full suite runs.'
+```
+
+## Decision Tree: Failure Categories
+
+```mermaid
+flowchart TD
+    A["Eval failed"] --> B{"Why?"}
+    B -- "No 'Use when' trigger" --> C["Add use-case trigger"]
+    B -- "Description too generic" --> D["Add specificity: name target, action, scope"]
+    B -- "Exceeds 1024 chars" --> E["Compress description"]
+    B -- "No argument-hint" --> F["Add argument-hint"]
+```
 
 ## Guardrails
 

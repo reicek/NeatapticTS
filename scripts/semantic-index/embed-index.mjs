@@ -1,15 +1,15 @@
 /**
  * @description Build or incrementally update the dense embedding index stored in
- * `data/embeddings.sqlite`. Reads all chunks from `data/semantic-index.sqlite`, runs
- * each chunk body through the locally cached `all-MiniLM-L6-v2` ONNX model
- * (mean-pool → L2-normalize → 384-dim float32 BLOB), and stores vectors in the
- * `chunk_embeddings` table. Skips chunks whose `chunk_sha256` and `model_id` are
- * unchanged (incremental rule). Run `download-model.mjs` once before this script.
+ * the consolidated `chunks.embedding` column of `data/turso-replica.sqlite`.
+ * Reads all chunks, runs each chunk body through the locally cached
+ * `all-MiniLM-L6-v2` ONNX model (mean-pool → L2-normalize → 384-dim float32),
+ * and stores vectors as F8_BLOB via Turso's `vector8()` function.
+ * Skips chunks whose `chunk_sha256` and `model_id` are unchanged (incremental
+ * rule). Run `download-model.mjs` once before this script.
  *
  * @param {boolean} [--dry-run]                     - Count queued chunks without writing embeddings.
  * @param {boolean} [--json]                         - Emit JSON summary `{ embedded, skipped, queued, dryRun }`.
  * @param {string}  [--database <path>]              - Override corpus database path.
- * @param {string}  [--embeddings-database <p>]      - Override embeddings database path.
  * @param {string}  [--model-directory <path>]       - Override local model cache directory.
  * @param {string}  [--model-id <id>]                - Override model identifier.
  * @param {number}  [--dimension <n>]                - Override embedding dimension.
@@ -18,9 +18,9 @@
  *
  * @returns {void} Exits 0 on success, 1 on error. JSON summary written to stdout when `--json` is passed.
  */
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -38,19 +38,14 @@ export const DEFAULT_MODEL_DIRECTORY = path.join(
   'semantic-index',
   'models',
 );
-export const DEFAULT_EMBEDDINGS_DATABASE_PATH = path.join(
-  repoRoot,
-  'data',
-  'embeddings.sqlite',
-);
 const DEFAULT_MAX_SEQUENCE_LENGTH = 512;
+
+/** Maximum number of SQL statements per client.batch() call. */
+const BATCH_SIZE = 1000;
 
 export async function buildEmbeddingIndex(options = {}) {
   const corpusDatabasePath = path.resolve(
     options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath,
-  );
-  const embeddingsDatabasePath = path.resolve(
-    options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
   );
   const modelId = String(options.modelId ?? DEFAULT_MODEL_ID);
   const dryRun = Boolean(options.dryRun);
@@ -80,128 +75,131 @@ export async function buildEmbeddingIndex(options = {}) {
       modelId,
     }));
 
-  await mkdir(path.dirname(embeddingsDatabasePath), { recursive: true });
-
-  const corpusDatabase = new Database(corpusDatabasePath, {
-    readonly: true,
-    fileMustExist: true,
+  const client =
+    options.client ??
+    createClient({ url: pathToFileURL(corpusDatabasePath).href });
+  return buildEmbeddingIndexWithClient({
+    client,
+    embedText,
+    modelId,
+    modelSha256,
+    dimension,
+    dryRun,
   });
-  const embeddingsDatabase = new Database(embeddingsDatabasePath);
-  initializeEmbeddingsSchema(embeddingsDatabase);
+}
 
+/**
+ * Async client-based embedding index builder.
+ *
+ * Reads chunks from the client, computes embeddings, and writes them to
+ * the `chunks.embedding` column (consolidated Turso schema) via UPDATE.
+ *
+ * @param {object} params - Build parameters.
+ * @param {import('@libsql/client').Client} params.client - libSQL client.
+ * @param {Function} params.embedText - Embedding function.
+ * @param {string} params.modelId - Model identifier.
+ * @param {string} params.modelSha256 - Model SHA-256 hash.
+ * @param {number} params.dimension - Embedding dimension.
+ * @param {boolean} params.dryRun - Skip writing if true.
+ * @returns {Promise<object>} Summary with embedded/skipped/queued counts.
+ */
+async function buildEmbeddingIndexWithClient({
+  client,
+  embedText,
+  modelId,
+  modelSha256,
+  dimension,
+  dryRun,
+}) {
   const summary = {
     dryRun,
     embedded: 0,
-    embeddingsDatabasePath,
     modelId,
     purged: 0,
     queued: 0,
     skipped: 0,
   };
 
-  if (!dryRun) {
-    summary.purged = purgeOrphanedEmbeddings({
-      corpusDatabase,
-      corpusDatabasePath,
-      embeddingsDatabase,
-      modelId,
+  const chunkRowsResult = await client.execute({
+    sql: `
+      SELECT c.chunk_id, c.chunk_index, c.heading_path, c.body_text, c.char_start, c.char_end,
+        c.parent_chunk_id, c.depth, c.context_header, c.symbol_name, c.signature_text,
+        c.jsdoc_text, c.export_type, c.module_path,
+        d.file_path, d.doc_family
+      FROM chunks c
+      LEFT JOIN documents d ON d.doc_id = c.doc_id
+      ORDER BY c.chunk_id
+    `,
+    args: [],
+  });
+  const chunkRows = chunkRowsResult.rows;
+  const pendingUpdates = [];
+
+  for (const chunkRow of chunkRows) {
+    const chunkSha256 = createChunkSha256(chunkRow);
+
+    // Check if embedding is already up-to-date.
+    const existingResult = await client.execute({
+      sql: 'SELECT chunk_sha256, embedding_model FROM chunks WHERE chunk_id = ?',
+      args: [chunkRow.chunk_id],
     });
-  }
-
-  const chunkRows = corpusDatabase
-    .prepare(
-      `
-    SELECT c.chunk_id, c.chunk_index, c.heading_path, c.body_text, c.char_start, c.char_end,
-      c.parent_chunk_id, c.depth, c.context_header, c.symbol_name, c.signature_text,
-      c.jsdoc_text, c.export_type, c.module_path,
-      d.file_path, d.doc_family
-    FROM chunks c
-    LEFT JOIN documents d ON d.doc_id = c.doc_id
-    ORDER BY c.chunk_id
-  `,
-    )
-    .all();
-
-  const selectExistingEmbedding = embeddingsDatabase.prepare(`
-    SELECT chunk_sha256, model_id
-    FROM chunk_embeddings
-    WHERE chunk_id = ?
-  `);
-  const upsertEmbedding = embeddingsDatabase.prepare(`
-    INSERT INTO chunk_embeddings (
-      chunk_id,
-      embedding,
-      chunk_sha256,
-      model_id,
-      model_sha256,
-      dimension,
-      embedded_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(chunk_id) DO UPDATE SET
-      embedding = excluded.embedding,
-      chunk_sha256 = excluded.chunk_sha256,
-      model_id = excluded.model_id,
-      model_sha256 = excluded.model_sha256,
-      dimension = excluded.dimension,
-      embedded_at = excluded.embedded_at
-  `);
-
-  const writeEmbedding = embeddingsDatabase.transaction(
-    (chunkId, embeddingBuffer, chunkSha256) => {
-      upsertEmbedding.run(
-        chunkId,
-        embeddingBuffer,
-        chunkSha256,
-        modelId,
-        modelSha256,
-        dimension,
-        new Date().toISOString(),
-      );
-    },
-  );
-
-  try {
-    for (const chunkRow of chunkRows) {
-      const chunkSha256 = createChunkSha256(chunkRow);
-      const existingEmbedding = selectExistingEmbedding.get(chunkRow.chunk_id);
-      if (
-        existingEmbedding?.chunk_sha256 === chunkSha256 &&
-        existingEmbedding?.model_id === modelId
-      ) {
-        summary.skipped += 1;
-        continue;
-      }
-
-      if (dryRun) {
-        summary.queued += 1;
-        continue;
-      }
-
-      const embeddingVector = normalizeEmbeddingVector(
-        await embedText({
-          chunk: chunkRow,
-          chunkId: Number(chunkRow.chunk_id),
-          dimension,
-          filePath: chunkRow.file_path ?? null,
-          headingPath: chunkRow.heading_path ?? null,
-          modelId,
-          text: chunkRow.body_text,
-        }),
-        dimension,
-      );
-      writeEmbedding(
-        chunkRow.chunk_id,
-        toBlobBuffer(embeddingVector),
-        chunkSha256,
-      );
-      summary.embedded += 1;
+    const existing = existingResult.rows[0];
+    if (
+      existing?.chunk_sha256 === chunkSha256 &&
+      existing?.embedding_model === modelId
+    ) {
+      summary.skipped += 1;
+      continue;
     }
-  } finally {
-    corpusDatabase.close();
-    embeddingsDatabase.close();
-    await releaseEmbedText(embedText);
+
+    if (dryRun) {
+      summary.queued += 1;
+      continue;
+    }
+
+    const embeddingVector = normalizeEmbeddingVector(
+      await embedText({
+        chunk: chunkRow,
+        chunkId: Number(chunkRow.chunk_id),
+        dimension,
+        filePath: chunkRow.file_path ?? null,
+        headingPath: chunkRow.heading_path ?? null,
+        modelId,
+        text: chunkRow.body_text,
+      }),
+      dimension,
+    );
+
+    pendingUpdates.push({
+      sql: 'UPDATE chunks SET embedding = vector8(?), embedding_model = ?, chunk_sha256 = ?, embedded_at = ? WHERE chunk_id = ?',
+      args: [
+        Buffer.from(
+          embeddingVector.buffer,
+          embeddingVector.byteOffset,
+          embeddingVector.byteLength,
+        ),
+        modelId,
+        chunkSha256,
+        Date.now(),
+        chunkRow.chunk_id,
+      ],
+    });
+
+    summary.embedded += 1;
+
+    // Flush accumulated updates in batches of BATCH_SIZE.
+    if (pendingUpdates.length >= BATCH_SIZE) {
+      const batchSlice = pendingUpdates.splice(0, BATCH_SIZE);
+      await client.batch(batchSlice, 'write');
+    }
   }
 
+  // Flush any remaining pending updates.
+  if (pendingUpdates.length > 0) {
+    await client.batch(pendingUpdates.splice(0), 'write');
+  }
+
+  await releaseEmbedText(embedText);
   return summary;
 }
 
@@ -224,60 +222,6 @@ export function normalizeEmbeddingVector(vectorLike, dimension) {
     normalizedVector[valueIndex] = float32Vector[valueIndex] / magnitude;
   }
   return normalizedVector;
-}
-
-function initializeEmbeddingsSchema(database) {
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS chunk_embeddings (
-      chunk_id INTEGER PRIMARY KEY,
-      embedding BLOB NOT NULL,
-      chunk_sha256 TEXT NOT NULL,
-      model_id TEXT NOT NULL,
-      model_sha256 TEXT NOT NULL,
-      dimension INTEGER NOT NULL,
-      embedded_at TEXT NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS chunk_embeddings_model_idx
-      ON chunk_embeddings(model_id, chunk_sha256);
-  `);
-}
-
-function purgeOrphanedEmbeddings({
-  corpusDatabase,
-  corpusDatabasePath,
-  embeddingsDatabase,
-  modelId,
-}) {
-  embeddingsDatabase
-    .prepare('ATTACH DATABASE ? AS corpus')
-    .run(corpusDatabasePath);
-
-  try {
-    const orphanedChunkRows = embeddingsDatabase.prepare(`
-      SELECT chunk_embeddings.chunk_id
-      FROM chunk_embeddings
-      LEFT JOIN corpus.chunks ON corpus.chunks.chunk_id = chunk_embeddings.chunk_id
-      WHERE chunk_embeddings.model_id = ?
-        AND corpus.chunks.chunk_id IS NULL
-    `);
-    const orphanedRows = orphanedChunkRows.all(modelId);
-    if (orphanedRows.length === 0) return 0;
-
-    const deleteEmbedding = embeddingsDatabase.prepare(`
-      DELETE FROM chunk_embeddings
-      WHERE chunk_id = ?
-        AND model_id = ?
-    `);
-    const purgeTransaction = embeddingsDatabase.transaction((rowsToDelete) => {
-      for (const { chunk_id: chunkId } of rowsToDelete)
-        deleteEmbedding.run(chunkId, modelId);
-    });
-
-    purgeTransaction(orphanedRows);
-    return orphanedRows.length;
-  } finally {
-    embeddingsDatabase.prepare('DETACH DATABASE corpus').run();
-  }
 }
 
 function createChunkSha256(chunkRow) {
@@ -495,12 +439,24 @@ function meanPoolEmbedding(lastHiddenStateTensor, attentionMask, dimension) {
   return pooledVector;
 }
 
-function toBlobBuffer(float32Vector) {
-  return Buffer.from(
-    float32Vector.buffer,
-    float32Vector.byteOffset,
-    float32Vector.byteLength,
-  );
+/**
+ * Quantize a Float32 embedding vector to an F8 (int8) BLOB buffer.
+ *
+ * Each float32 value in the range [-1, 1] is mapped to an int8 value in
+ * [-127, 127]. Values outside [-1, 1] are clamped. The result is a Buffer
+ * of length equal to the input vector length (384 bytes for 384-dim),
+ * achieving 4x compression versus the 1536-byte Float32 representation.
+ *
+ * @param {Float32Array} float32Vector - L2-normalized embedding vector.
+ * @returns {Buffer} Int8-quantized buffer (one byte per dimension).
+ */
+export function toF8BlobBuffer(float32Vector) {
+  const buffer = Buffer.alloc(float32Vector.length);
+  for (let i = 0; i < float32Vector.length; i += 1) {
+    const clamped = Math.max(-1, Math.min(1, float32Vector[i]));
+    buffer.writeInt8(Math.round(clamped * 127), i);
+  }
+  return buffer;
 }
 
 function toFloat32Array(vectorLike) {
@@ -558,8 +514,7 @@ async function main() {
       options: [
         '--dry-run                  Count work without writing embeddings.',
         '--json                     Emit JSON summary.',
-        '--database <path>          Override the semantic-index corpus database path.',
-        '--embeddings-database <p>  Override the embeddings database path.',
+        '--database <path>          Override the corpus database path.',
         '--model-directory <path>   Override the local model cache directory.',
         '--model-id <id>            Override the model identifier.',
         '--dimension <n>            Override the embedding dimension.',
@@ -575,7 +530,6 @@ async function main() {
       corpusDatabasePath: args.database,
       dimension: args.dimension,
       dryRun: Boolean(args['dry-run']),
-      embeddingsDatabasePath: args['embeddings-database'],
       modelDirectory: args['model-directory'],
       modelId: args['model-id'],
       modelSha256: args['model-sha256'],

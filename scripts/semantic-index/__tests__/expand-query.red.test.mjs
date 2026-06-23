@@ -386,83 +386,9 @@ describe('expand-query: expansion relevance', () => {
 });
 
 // ---------------------------------------------------------------------------
-// findNearestTerms tests
+// findNearestTerms tests — removed (old client-side cosine similarity)
+// The server-side vector_top_k approach replaces findNearestTerms.
 // ---------------------------------------------------------------------------
-
-describe('expand-query: nearest term discovery', () => {
-  it('excludes the query term from results', async () => {
-    const { findNearestTerms } = await import('../expand-query.mjs');
-
-    const termMap = new Map();
-    termMap.set('neuroevolution', {
-      embedding: new Float32Array([0.9, 0.1, 0.1, 0.1]),
-      frequency: 10,
-      docFamilyCount: 3,
-    });
-    termMap.set('neat', {
-      embedding: new Float32Array([1, 0, 0, 0]),
-      frequency: 20,
-      docFamilyCount: 5,
-    });
-
-    const queryEmbedding = new Float32Array([1, 0, 0, 0]);
-    const nearest = findNearestTerms(queryEmbedding, 'neat', termMap, {
-      minSimilarity: 0.0,
-    });
-
-    expect(nearest.every((n) => n.term !== 'neat')).toBe(true);
-  });
-
-  it('filters candidates below minimum similarity', async () => {
-    const { findNearestTerms } = await import('../expand-query.mjs');
-
-    const termMap = new Map();
-    termMap.set('similar', {
-      embedding: new Float32Array([0.9, 0.1, 0.1, 0.1]),
-      frequency: 10,
-      docFamilyCount: 3,
-    });
-    termMap.set('dissimilar', {
-      embedding: new Float32Array([0, 0, 0, 1]),
-      frequency: 10,
-      docFamilyCount: 3,
-    });
-
-    const queryEmbedding = new Float32Array([1, 0, 0, 0]);
-    const nearest = findNearestTerms(queryEmbedding, 'query', termMap, {
-      minSimilarity: 0.5,
-    });
-
-    // All results should meet minSimilarity
-    expect(nearest.every((n) => n.similarity >= 0.5)).toBe(true);
-  });
-
-  it('respects maxTerms limit', async () => {
-    const { findNearestTerms } = await import('../expand-query.mjs');
-
-    const termMap = new Map();
-    for (let i = 0; i < 10; i++) {
-      termMap.set(`term${i}`, {
-        embedding: new Float32Array([
-          Math.cos(i * 0.3),
-          Math.sin(i * 0.3),
-          0,
-          0,
-        ]),
-        frequency: 10,
-        docFamilyCount: 3,
-      });
-    }
-
-    const queryEmbedding = new Float32Array([1, 0, 0, 0]);
-    const nearest = findNearestTerms(queryEmbedding, 'query', termMap, {
-      maxTerms: 3,
-      minSimilarity: 0.0,
-    });
-
-    expect(nearest.length).toBeLessThanOrEqual(3);
-  });
-});
 
 // ---------------------------------------------------------------------------
 // Constants

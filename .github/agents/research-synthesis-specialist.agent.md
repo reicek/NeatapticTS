@@ -8,6 +8,7 @@ tools:
     read,
     search,
     agent,
+    execute,
     neataptic-cortex-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
@@ -76,6 +77,31 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - `acceptance-criteria-writer` for observable behavior boundaries.
    - `file-change-summarizer` for change surface summaries.
 6. Frame the result as a compact handoff into `plan-alignment` rather than a standalone planning document.
+
+## Synthesis Output Template
+
+```yaml
+synthesis:
+  query: <original research question>
+  sources:
+    - agent: <scout-name>
+      findings: <compact summary>
+      confidence: high|medium|low
+  alignment_brief:
+    key_insight: <single most important finding>
+    supporting_evidence: [<compact evidence items>]
+    contradictions: [<conflicting findings with source attribution>]
+  recommendations:
+    - <actionable recommendation>
+  gaps:
+    - <unanswered question or missing evidence>
+```
+
+## Delegation Clarification
+
+- Delegate to `acceptance-criteria-writer` when the synthesis output needs to become observable acceptance criteria for a planning phase. Provide the synthesis brief as input.
+- Delegate to `file-change-summarizer` when the synthesis output needs to become a compact change summary for logging or handoff. Provide the changed files and validation evidence as input.
+- Do NOT confuse the two: `acceptance-criteria-writer` produces pre-implementation criteria; `file-change-summarizer` produces post-implementation summaries.
 
 ## If Blocked
 

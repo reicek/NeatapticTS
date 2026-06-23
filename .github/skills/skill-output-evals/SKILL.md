@@ -4,6 +4,10 @@ description: 'Evaluate NeatapticTS skill output quality with evidence-backed ass
 argument-hint: 'Describe the skill, eval fixtures, expected outputs, assertions, and baseline or previous version.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - skill-description-evals
+  - skill-frontmatter-standards
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,28 @@ This skill designs and runs evidence-backed output evaluations for NeatapticTS s
 - Preparing a before/after comparison to justify a skill rewrite in a tracker.
 - Checking that a skill's output contract matches what downstream agents or orchestrators expect.
 - Aggregating pass rates across multiple fixtures to identify the weakest assertion category.
+
+
+## When NOT to use
+
+Do NOT use for description evaluation - use `skill-description-evals` instead. Do NOT use for frontmatter validation - use `skill-frontmatter-standards` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Skill output"] --> B["Run eval"]
+    B --> C{"Assertion type?"}
+    C -- "Contains check" --> D["Verify expected text present"]
+    C -- "Structure check" --> E["Verify YAML/JSON shape"]
+    C -- "Behavior check" --> F["Verify observable action"]
+    D --> G{"Pass?"}
+    E --> G
+    F --> G
+    G -- "Yes" --> H["Done"]
+    G -- "No" --> I["Report failure"]
+```
 
 ## Task Packet
 
@@ -44,6 +70,37 @@ Record in: <plan file or chat summary>
 7. Aggregate pass rate, timing, and token cost when available; group failures by category.
 8. Feed failure patterns back into skill instructions; avoid overfitting instructions to a single fixture prompt.
 9. Record pass rate, failure categories, and keep/revise/remove recommendation in the active plan.
+
+
+## Before/After Output Comparison
+
+**Before (weak output):**
+```text
+TASK_STATUS: done
+FILES_CHANGED: some files
+```
+
+**After (structured output):**
+```text
+TASK_STATUS: SUCCESS
+FILES_CHANGED:
+- src/architecture/network/builders/gru.ts
+- testing/architecture/network/builders/gru.test.ts
+VALIDATION_EVIDENCE:
+- tsc: OK
+- jest: 3/3 passed
+```
+
+## Decision Tree: Assertion Type
+
+```mermaid
+flowchart TD
+    A["Evaluate output"] --> B{"What to check?"}
+    B -- "Text present" --> C["Contains assertion"]
+    B -- "Structured shape" --> D["Structure assertion"]
+    B -- "Observable behavior" --> E["Behavior assertion"]
+    B -- "No regression" --> F["Comparison assertion"]
+```
 
 ## Guardrails
 

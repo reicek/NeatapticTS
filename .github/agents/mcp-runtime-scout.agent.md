@@ -7,6 +7,7 @@ tools:
   [
     read,
     search,
+    execute,
     neataptic-cortex-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
@@ -61,6 +62,13 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - MCP fit: whether a deterministic script or local server could serve the fact
    - Client bridge required: YES if the fact is live and cannot be served by repo + local server
 6. Summarize runtime fact inventory, source candidates, direct MCP fit, bridge requirements, and validation options.
+
+## Runtime Fact Classification Patterns
+
+- **Static vs live:** Distinguish facts that are static (embedded in agent frontmatter, skill definitions, or configuration files) from facts that are live (only knowable at runtime by querying MCP servers). Static facts can be verified by reading files. Live facts require MCP tool invocation.
+- **Repository-static vs client bridge:** Distinguish facts about the repository's own MCP servers (defined in `scripts/`, `package.json`, or config) from facts about the client bridge (how Claude Code or VS Code connects to MCP servers). Repository-static facts are verifiable from repo files. Client bridge facts may require external documentation.
+- **Available vs active:** Distinguish which MCP servers are *available* (configured and ready) from which are *active* (currently running and responding). Available servers may not be active if not started or if the client hasn't connected.
+- **Model name verification:** Verify model names reported by MCP servers against the qualified model name table. Flag unqualified, deprecated, or hallucinated model names.
 
 ## If Blocked
 

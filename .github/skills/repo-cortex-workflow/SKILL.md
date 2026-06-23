@@ -4,6 +4,10 @@ description: 'Use when maintaining Repo Cortex health: checking semantic-index f
 argument-hint: 'Describe the Cortex symptom, failing command or gate, known stale paths or plan binding, whether snapshot or dense search is in scope, and the desired green proof.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - repo-cortex-embeddings
+  - research-methodology
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -32,6 +36,26 @@ maintenance surfaces drift red on their own.
   wrong.
 - Session-start or post-write automation needs a predictable Cortex maintenance
   packet with machine-readable evidence.
+
+## When NOT to use
+
+Do NOT use for embedding-specific work - use `repo-cortex-embeddings` instead. Do NOT use for general research - use `research-methodology` instead.
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Index stale?"] --> B["Run freshness check"]
+    B --> C{"Fresh?"}
+    C -- "Yes" --> D["Search ready"]
+    C -- "No" --> E["Rebuild index"]
+    E --> F["Run build-index"]
+    F --> G["Run validate-index"]
+    G --> H{"Pass?"}
+    H -- "Yes" --> D
+    H -- "No" --> I["Fix indexing error"]
+    I --> F
+```
 
 ## Task Packet
 
@@ -140,7 +164,7 @@ Desired end state: validate-index passes, snapshot is current, and cortex-index 
 - Reserve `--force` for suspected freshness-proof corruption, schema drift, or
   parser changes that make "unchanged" rows untrustworthy.
 - Rebuild the browser snapshot only after the index is green, because the
-  snapshot is downstream of the SQLite corpus.
+  snapshot is downstream of the Turso (libSQL) corpus.
 
 ## Persistent-Issue Escalation and Feedback
 
@@ -199,11 +223,48 @@ Prefer existing automation surfaces over bespoke shell glue:
 - **Dense-search consumers**: pair corpus rebuilds with `npm run index:prewarm`
   only in environments that actually need warm dense search.
 
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Cortex symptom"] --> B{"What's failing?"}
+    B -- "stale_paths / missing_paths" --> C["Incremental rebuild"]
+    B -- "validate-index clean, search wrong" --> D["Check MCP binding"]
+    B -- "Gate fails, index green" --> E["Diagnose MCP / snapshot"]
+    B -- "Freshness-proof corruption" --> F["Forced rebuild"]
+    C --> G["Rerun validate-index"]
+    D --> H["Check workflow MCP self-check"]
+    E --> I["Isolate failing surface"]
+    F --> G
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+# Stale Cortex index
+validate-index: stale_paths: ["src/architecture/network/README.md", ...]
+search_corpus("network inference") → returns deleted-file results
+cortex-index gate: { pass: false }
+```
+
+**After:**
+
+```text
+# Repaired index with freshness proof
+node scripts/semantic-index/build-index.mjs --json
+validate-index: { stale_paths: [], missing_paths: [] }
+search_corpus("network inference") → returns current results
+cortex-index gate: { pass: true, evidence: { index_fresh: true, ... } }
+```
+
 ## Guardrails
 
-- Do not hand-edit `data/semantic-index.sqlite` or
+- Do not hand-edit the Turso (libSQL) corpus database
+  (`data/semantic-index.sqlite` in local-only fallback mode) or
   `docs/assets/semantic-snapshot.json`.
-- Do not use SQLite file modification time as a freshness proxy when index
+- Do not use database file modification time as a freshness proxy when index
   content timestamps are available.
 - Do not treat workflow MCP binding failures as proof that the corpus needs a
   rebuild.

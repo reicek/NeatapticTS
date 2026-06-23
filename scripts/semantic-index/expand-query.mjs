@@ -18,26 +18,24 @@
  * const result = await expandQuery({
  *   query: 'NEAT crossover',
  *   expandQuery: true,
- *   embeddingsDatabasePath: 'data/embeddings.sqlite',
+ *   databasePath: 'data/turso-replica.sqlite',
  * });
  * // result.expansion.applied === true
  * // result.expansion.expanded_terms contains up to 3 expanded terms
  * ```
  */
-import Database from 'better-sqlite3';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
-  DEFAULT_EMBEDDINGS_DATABASE_PATH,
   DEFAULT_MODEL_ID,
   createOnnxTextEmbedder,
   normalizeEmbeddingVector,
   readModelMeta,
 } from './embed-index.mjs';
-import { computeCosineSimilarity } from './hybrid-rank.mjs';
 import { porterTokenize } from './build-term-index.mjs';
-import { repoRoot } from './init-schema.mjs';
+import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
+import { getTursoClient } from '../mcp-semantic/tools/cortex-db.mjs';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -136,82 +134,160 @@ export function lookupDomainAssociations(queryTerms, dictionary) {
 }
 
 // ---------------------------------------------------------------------------
-// Embedding-based synonym discovery
+// Embedding-based synonym discovery (server-side via Turso vector functions)
 // ---------------------------------------------------------------------------
 
 /**
- * Load all term embeddings from the embeddings database.
+ * Find nearest terms to a query embedding using server-side vector search.
  *
- * Returns a Map from term string to its embedding Float32Array and metadata.
+ * Tries the DiskANN-backed `vector_top_k()` ANN path first, which uses the
+ * `term_embeddings_embedding_idx` index for approximate nearest-neighbor
+ * retrieval. When the ANN index is cold, missing, or the query fails for
+ * any reason (e.g. in-memory test clients without DiskANN), falls back to
+ * the brute-force `vector_distance_cos()` path that scans all term rows.
  *
- * @param {import('better-sqlite3').Database} embeddingsDatabase - Read-only embeddings database.
+ * Both paths return cosine distance (0 = identical, 2 = opposite), which
+ * is converted to similarity as `1 - distance`.
+ *
+ * @param {import('@libsql/client').Client} client - Turso/libSQL client.
+ * @param {Buffer} queryEmbeddingBuffer - Query embedding as a Buffer for `vector8(?)`.
  * @param {string} modelId - Model identifier to filter by.
- * @returns {Map<string, { embedding: Float32Array, frequency: number, docFamilyCount: number }>}
- *   Map of term → embedding data.
+ * @param {{ maxTerms?: number, minSimilarity?: number }} [options] - Search options.
+ * @returns {Promise<Array<{ term: string, similarity: number, frequency: number }>>}
+ *   Nearest term candidates sorted by similarity (descending).
  */
-export function loadTermEmbeddings(embeddingsDatabase, modelId) {
-  const rows = embeddingsDatabase
-    .prepare(
-      `
-    SELECT term, embedding, frequency, doc_family_count FROM term_embeddings WHERE model_id = ?
-  `,
-    )
-    .all(modelId);
-
-  const termMap = new Map();
-  for (const row of rows) {
-    const float32 = new Float32Array(
-      row.embedding.buffer,
-      row.embedding.byteOffset,
-      row.embedding.byteLength / 4,
-    );
-    termMap.set(row.term, {
-      embedding: float32,
-      frequency: Number(row.frequency),
-      docFamilyCount: Number(row.doc_family_count),
-    });
-  }
-  return termMap;
-}
-
-/**
- * Find nearest terms by cosine similarity to a query embedding.
- *
- * Searches all term embeddings for terms similar to the query term's
- * embedding. Returns candidates sorted by similarity (descending),
- * filtered by minimum similarity and excluding the query term itself.
- *
- * @param {Float32Array} queryEmbedding - The embedding of the query term.
- * @param {string} queryTerm - The original query term (excluded from results).
- * @param {Map<string, { embedding: Float32Array, frequency: number, docFamilyCount: number }>} termEmbeddings - Term embeddings map.
- * @param {{ maxTerms?: number, minSimilarity?: number }} options - Search options.
- * @returns {Array<{ term: string, similarity: number, frequency: number }>}
- *   Nearest term candidates sorted by similarity.
- */
-export function findNearestTerms(
-  queryEmbedding,
-  queryTerm,
-  termEmbeddings,
+export async function findNearestTermsServerSide(
+  client,
+  queryEmbeddingBuffer,
+  modelId,
   options = {},
 ) {
   const maxTerms = options.maxTerms ?? MAX_NEAREST_TERMS;
   const minSimilarity = options.minSimilarity ?? MIN_SIMILARITY;
 
+  try {
+    return await findNearestTermsAnn(
+      client,
+      queryEmbeddingBuffer,
+      modelId,
+      maxTerms,
+      minSimilarity,
+    );
+  } catch {
+    return await findNearestTermsBruteForce(
+      client,
+      queryEmbeddingBuffer,
+      modelId,
+      maxTerms,
+      minSimilarity,
+    );
+  }
+}
+
+/**
+ * Load nearest terms via the DiskANN ANN index using `vector_top_k`.
+ *
+ * Uses `vector_top_k(term_embeddings_embedding_idx, vector8(?), ?)` to
+ * retrieve the top-k approximate nearest neighbors from the DiskANN index,
+ * then JOINs with `term_embeddings` to retrieve the term text and frequency.
+ * The actual cosine distance is recomputed with `vector_distance_cos` in
+ * the SELECT clause for accurate similarity scoring.
+ *
+ * @param {import('@libsql/client').Client} client - Turso/libSQL client.
+ * @param {Buffer} queryEmbeddingBuffer - Query embedding buffer for `vector8(?)`.
+ * @param {string} modelId - Model identifier to filter by.
+ * @param {number} maxTerms - Maximum number of terms to return.
+ * @param {number} minSimilarity - Minimum cosine similarity threshold.
+ * @returns {Promise<Array<{ term: string, similarity: number, frequency: number }>>}
+ *   Nearest term candidates sorted by similarity (descending).
+ */
+async function findNearestTermsAnn(
+  client,
+  queryEmbeddingBuffer,
+  modelId,
+  maxTerms,
+  minSimilarity,
+) {
+  const annK = Math.max(maxTerms * 2, 10);
+  const sql = `
+    SELECT te.term,
+      vector_distance_cos(te.embedding, vector8(?)) AS distance,
+      te.frequency
+    FROM vector_top_k(term_embeddings_embedding_idx, vector8(?), ?) AS v
+    JOIN term_embeddings te ON te.rowid = v.rowid
+    WHERE te.model_id = ?
+    ORDER BY distance
+  `;
+  const result = await client.execute({
+    sql,
+    args: [queryEmbeddingBuffer, queryEmbeddingBuffer, annK, modelId],
+  });
+  return rowsToCandidates(result.rows, minSimilarity, maxTerms);
+}
+
+/**
+ * Load nearest terms via brute-force `vector_distance_cos` (fallback).
+ *
+ * Queries all term embeddings with Turso's server-side
+ * `vector_distance_cos(te.embedding, vector8(?))` function, ordered by
+ * ascending distance (closest first). This is the fallback used when the
+ * DiskANN ANN index is cold or missing (e.g. in-memory test clients).
+ *
+ * @param {import('@libsql/client').Client} client - Turso/libSQL client.
+ * @param {Buffer} queryEmbeddingBuffer - Query embedding buffer for `vector8(?)`.
+ * @param {string} modelId - Model identifier to filter by.
+ * @param {number} maxTerms - Maximum number of terms to return.
+ * @param {number} minSimilarity - Minimum cosine similarity threshold.
+ * @returns {Promise<Array<{ term: string, similarity: number, frequency: number }>>}
+ *   Nearest term candidates sorted by similarity (descending).
+ */
+async function findNearestTermsBruteForce(
+  client,
+  queryEmbeddingBuffer,
+  modelId,
+  maxTerms,
+  minSimilarity,
+) {
+  const sql = `
+    SELECT te.term,
+      vector_distance_cos(te.embedding, vector8(?)) AS distance,
+      te.frequency
+    FROM term_embeddings te
+    WHERE te.model_id = ?
+    ORDER BY distance
+    LIMIT ?
+  `;
+  const result = await client.execute({
+    sql,
+    args: [queryEmbeddingBuffer, modelId, Math.max(maxTerms * 2, 10)],
+  });
+  return rowsToCandidates(result.rows, minSimilarity, maxTerms);
+}
+
+/**
+ * Convert SQL result rows to sorted expansion candidates.
+ *
+ * Converts cosine distance to similarity (`1 - distance`), filters by
+ * minimum similarity, and sorts by similarity (descending).
+ *
+ * @param {Array} rows - SQL result rows with `term`, `distance`, `frequency`.
+ * @param {number} minSimilarity - Minimum cosine similarity threshold.
+ * @param {number} maxTerms - Maximum number of terms to return.
+ * @returns {Array<{ term: string, similarity: number, frequency: number }>}
+ *   Nearest term candidates sorted by similarity (descending).
+ */
+function rowsToCandidates(rows, minSimilarity, maxTerms) {
   const candidates = [];
-
-  for (const [term, data] of termEmbeddings) {
-    if (term.toLowerCase() === queryTerm.toLowerCase()) continue;
-
-    const similarity = computeCosineSimilarity(queryEmbedding, data.embedding);
+  for (const row of rows) {
+    const distance = Number(row.distance);
+    const similarity = 1.0 - distance;
     if (similarity < minSimilarity) continue;
-
     candidates.push({
-      term,
+      term: row.term,
       similarity,
-      frequency: data.frequency,
+      frequency: Number(row.frequency),
     });
   }
-
   return candidates
     .toSorted((a, b) => b.similarity - a.similarity)
     .slice(0, maxTerms);
@@ -415,15 +491,14 @@ export function expansionBehaviorForClass(queryClass) {
  * @param {object} options - Expansion options.
  * @param {string} options.query - Raw query string.
  * @param {boolean | 'domain-only'} [options.expandQuery=false] - Whether to expand.
- * @param {string} [options.embeddingsDatabasePath] - Override embeddings database path.
+ * @param {string} [options.databasePath] - Override corpus database path.
  * @param {string} [options.modelDirectory] - Override ONNX model directory.
  * @param {string} [options.modelId] - Override model identifier.
  * @param {string} [options.associationsPath] - Override domain associations file path.
  * @param {number} [options.maxExpansions] - Override max expanded terms (default: 3).
  * @param {number} [options.minRelevance] - Override min relevance (default: 0.55).
  * @param {Function} [options.embedText] - Override embed function (for testing).
- * @param {Function} [options.termLookup] - Override term lookup (for testing).
- * @param {Map<string, { embedding: Float32Array, frequency: number }>} [options.termEmbeddingsMap] - Override term embeddings (for testing).
+ * @param {import('@libsql/client').Client} [options.client] - Injected Turso/libSQL client (for testing).
  * @returns {Promise<{ originalQuery: string, expandedTerms: Array, bm25Query: string | null, expandedEmbedding: Float32Array | null, expansion: { applied: boolean, degraded?: boolean, reason?: string } }>}
  *   Expansion result.
  */
@@ -469,38 +544,28 @@ export async function expandQuery(options = {}) {
   const isDomainOnly = expandQuery === 'domain-only';
 
   let embeddingExpansions = [];
-  let termEmbeddingsMap = options.termEmbeddingsMap ?? null;
   let expandedEmbedding = null;
   let degraded = false;
 
-  // Step 3: Embedding-based synonym discovery (if not domain-only and embeddings available)
+  // Step 3: Embedding-based synonym discovery via server-side vector search
+  // (if not domain-only and embeddings available)
   if (!isDomainOnly) {
     try {
-      const embeddingsDatabasePath = path.resolve(
-        options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
+      const databasePath = path.resolve(
+        options.databasePath ?? defaultDatabasePath,
       );
       const modelId = String(options.modelId ?? DEFAULT_MODEL_ID);
 
-      // Try to load term embeddings
-      let embeddingsDatabase = null;
+      // Use the injected client or get a cached Turso client.
+      // getTursoClient handles path-to-URL conversion and caching internally.
+      const client =
+        options.client ?? (await getTursoClient(databasePath));
       try {
-        embeddingsDatabase = new Database(embeddingsDatabasePath, {
-          readonly: true,
-        });
-
-        // Check if term_embeddings table exists
-        const tableCheck = embeddingsDatabase
-          .prepare(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='term_embeddings'",
-          )
-          .get();
-
-        if (tableCheck) {
-          if (!termEmbeddingsMap) {
-            termEmbeddingsMap = loadTermEmbeddings(embeddingsDatabase, modelId);
-          }
-
-          // Embed each query term and find nearest terms
+        const tableResult = await client.execute(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='term_embeddings'",
+        );
+        if (tableResult.rows.length > 0) {
+          // Embed each query term and find nearest terms server-side
           const embedText =
             options.embedText ??
             (await createOnnxTextEmbedder({
@@ -509,8 +574,6 @@ export async function expandQuery(options = {}) {
             }));
 
           for (const queryTerm of queryTerms) {
-            if (termEmbeddingsMap.size === 0) break;
-
             try {
               const queryEmbeddingResult = await embedText({
                 text: queryTerm,
@@ -522,14 +585,20 @@ export async function expandQuery(options = {}) {
                 queryEmbeddingResult.length,
               );
 
-              const nearest = findNearestTerms(
-                queryEmbedding,
-                queryTerm,
-                termEmbeddingsMap,
+              // Convert Float32Array to Buffer for vector8(?) SQL parameter
+              const queryEmbeddingBuffer = Buffer.from(
+                queryEmbedding.buffer,
+                queryEmbedding.byteOffset,
+                queryEmbedding.byteLength,
+              );
+
+              const nearest = await findNearestTermsServerSide(
+                client,
+                queryEmbeddingBuffer,
+                modelId,
               );
 
               for (const candidate of nearest) {
-                const termData = termEmbeddingsMap.get(candidate.term);
                 const relevanceScore = expansionRelevance({
                   similarity: candidate.similarity,
                   frequency: candidate.frequency,
@@ -559,8 +628,6 @@ export async function expandQuery(options = {}) {
         }
       } catch {
         degraded = true;
-      } finally {
-        embeddingsDatabase?.close();
       }
     } catch {
       degraded = true;
@@ -570,19 +637,19 @@ export async function expandQuery(options = {}) {
   // If domain-only and no domain expansions found, still report degraded if term table missing
   if (isDomainOnly && !degraded) {
     try {
-      const embeddingsDatabasePath = path.resolve(
-        options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
+      const databasePath = path.resolve(
+        options.databasePath ?? defaultDatabasePath,
       );
-      const embeddingsDatabase = new Database(embeddingsDatabasePath, {
-        readonly: true,
-      });
-      const tableCheck = embeddingsDatabase
-        .prepare(
+      const domainCheckClient =
+        options.client ?? (await getTursoClient(databasePath));
+      try {
+        const tableResult = await domainCheckClient.execute(
           "SELECT name FROM sqlite_master WHERE type='table' AND name='term_embeddings'",
-        )
-        .get();
-      if (!tableCheck) degraded = true;
-      embeddingsDatabase.close();
+        );
+        if (tableResult.rows.length === 0) degraded = true;
+      } catch {
+        degraded = true;
+      }
     } catch {
       degraded = true;
     }
@@ -602,7 +669,7 @@ export async function expandQuery(options = {}) {
     : null;
 
   // Build expanded embedding (if we have embedding expansions)
-  if (applied && termEmbeddingsMap && !isDomainOnly) {
+  if (applied && embeddingExpansions.length > 0 && !isDomainOnly) {
     try {
       // Compute original query embedding and expansion embeddings
       // For domain-only or when embeddings unavailable, skip expanded embedding

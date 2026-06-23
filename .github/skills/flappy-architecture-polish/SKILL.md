@@ -4,6 +4,11 @@ description: 'Tune, stabilize, and instrument one Flappy Bird architecture profi
 argument-hint: 'Describe the Flappy architecture profile, the current symptom or polish target, whether a durable probe already exists, and whether this pass is reconnaissance, implementation, or rerun validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - tracker-handoff
+  - plan-alignment
+  - architecture-builder
+  - coverage-guard
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -37,6 +42,11 @@ runtime direction, `plan-alignment` owns plan selection and terminology.
 - A long-running Jest probe was useful for investigation, but the durable end
   state should be a CLI or scriptable probe rather than a multi-minute test.
 
+
+## When NOT to use
+
+Do NOT use for creating new architectures from scratch - use `architecture-builder` instead. Do NOT use for general Flappy Bird bug fixes - use `test-fix-workflow` instead.
+
 ## Scope Boundary
 
 This skill owns the repeatable Flappy architecture-polish workflow for:
@@ -50,6 +60,21 @@ This skill owns the repeatable Flappy architecture-polish workflow for:
 
 This skill does not replace `plan-alignment` for roadmap selection, and it does
 not replace `tracker-handoff` for tracker structure.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Select architecture profile"] --> B["Run training probe"]
+    B --> C["Analyze results"]
+    C --> D{"Meets target?"}
+    D -- "Yes" --> E["Record polished profile"]
+    D -- "No" --> F["Adjust hyperparams"]
+    F --> G["Re-run probe"]
+    G --> C
+    E --> H["Update plan"]
+```
 
 ## Task Packet
 
@@ -185,6 +210,29 @@ A durable polish probe should normally emit:
 
 If the probe supports strict mode, the strict flag should only affect exit code
 behavior, not hide the summary.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Flappy symptom"] --> B{"Which owner boundary?"}
+    B -- "Recurrent tuning, hyperparams" --> C["LSTM/GRU architecture tuning"]
+    B -- "Per-generation seed rotation" --> D["Worker fairness (flappy-evolution-worker.runtime.service)"]
+    B -- "Post-warm-start regression" --> E["Warm-start (flappy-evolution-worker.warm-start.service)"]
+    B -- "Topology or connection density" --> F["Sparse architecture (architecture-builder)"]
+```
+
+## Before / After Examples
+
+**Before:**
+```text
+lstmProfile: { hiddenSize: 8, lr: 0.01 } // random hyperparams, no probe baseline
+```
+
+**After:**
+```text
+lstmProfile: { hiddenSize: 12, lr: 0.005 } // probe-guided: p95 frames +18% over 30 gens
+```
 
 ## Guardrails
 

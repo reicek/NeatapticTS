@@ -42,10 +42,22 @@ export interface AdultPruneCompactDecision {
 /**
  * Resolve the current adult cooling decision for one normalized focus score.
  *
+ * Growth cooling is active only when the focus score is above the floor and the
+ * residual growth budget is non-zero. A zero cooling factor or a sub-floor focus score
+ * fully suppresses adult growth and leaves the entire morph budget for prune and
+ * compact actions.
+ *
  * @param focusScore - Normalized adult focus score for the active module.
  * @param growthCoolingFactor - Residual growth fraction preserved by adult cooling.
  * @param focusFloor - Minimum focus score that keeps residual growth alive.
- * @returns A placeholder decision that is intentionally incorrect during the red phase.
+ * @returns Cooling decision carrying the active flag and budget split for the cycle.
+ *
+ * @example
+ * ```ts
+ * const decision = resolveGrowthCoolingDecision(0.82, 0.1, 0.6);
+ * console.log(decision.growthCoolingActive); // true
+ * console.log(decision.growthBudgetFraction); // 0.1
+ * ```
  */
 export function resolveGrowthCoolingDecision(
   focusScore: number,
@@ -56,7 +68,7 @@ export function resolveGrowthCoolingDecision(
     focusScore >= focusFloor ? growthCoolingFactor : 0;
 
   return {
-    growthCoolingActive: true,
+    growthCoolingActive: growthBudgetFraction > 0,
     growthBudgetFraction,
     pruneCompactBudgetFraction: 1 - growthBudgetFraction,
   };
@@ -65,9 +77,22 @@ export function resolveGrowthCoolingDecision(
 /**
  * Arbitrate whether adult prune and compact dominate the cooled morph budget.
  *
+ * Selects the highest-priority non-reward-critical prune candidate, preferring
+ * inter-module edges and longer edges, then resolves which morph kinds are eligible
+ * for the cooled budget based on candidate and compact availability.
+ *
  * @param candidates - Ranked prune candidates visible to the local adult module.
  * @param compactEligible - Whether compact still has headroom in the current window.
- * @returns A placeholder decision that is intentionally incorrect during the red phase.
+ * @returns Prune-compact decision naming the dominant morph kinds and selected candidate.
+ *
+ * @example
+ * ```ts
+ * const decision = arbitratePruneCompactDominance(
+ *   [{ candidateId: 'e1', edgeLength: 2, isInterModule: true, isRewardCritical: false }],
+ *   true,
+ * );
+ * console.log(decision.dominantMorphKinds); // ['edgePrune', 'compact']
+ * ```
  */
 export function arbitratePruneCompactDominance(
   candidates: readonly AdultPruneCandidate[],

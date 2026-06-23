@@ -4,6 +4,11 @@ description: 'Design, implement, test, and document preconfigured architecture b
 argument-hint: 'Name the architecture type (mlp, lstm, gru, narx, sparse), describe the current state of the builder, and state whether this is API design, implementation, testing, or documentation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - educational-docs
+  - tracker-handoff
+  - plan-alignment
+  - coverage-guard
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -55,6 +60,26 @@ All preconfigured builders must satisfy the Phase 2 gate before the lane closes:
   educational.
 - A builder's API contract needs test coverage for determinism, diagnostics,
   and roundtrip shape.
+
+
+## When NOT to use
+
+Do NOT use for refactoring existing module boundaries - use `solid-split` instead. Do NOT use for general network construction - use `Network.construct()` directly.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Design builder API"] --> B["Implement builder function"]
+    B --> C["Write roundtrip tests"]
+    C --> D["Run focused Jest slice"]
+    D --> E["Run coverage-guard"]
+    E --> F["Improve JSDoc"]
+    F --> G["Run npm run docs"]
+    G --> H["Update plan"]
+    H --> I["Invoke educational-docs"]
+```
 
 ## Task Packet
 
@@ -141,6 +166,33 @@ Builder README chapters should teach the reader:
 - at least one Mermaid diagram showing the network topology shape.
 
 These rules apply to every architecture type: MLP, LSTM, GRU, NARX, sparse.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Builder work"] --> B{"Which phase?"}
+    B -- "Define typed config + defaults" --> C["API design"]
+    B -- "Implement build<Arch>()" --> D["Implementation"]
+    B -- "Roundtrip + determinism tests" --> E["Testing"]
+    B -- "JSDoc + generated README" --> F["Documentation"]
+```
+
+## Before / After Examples
+
+**Before:**
+```ts
+export function buildGRU(config?: any): Network { /* crashes if config undefined */ }
+```
+
+**After:**
+```ts
+export function buildGRU(config: Partial<GRUConfig> = {}): Network {
+  const full = { ...DEFAULT_GRU_CONFIG, ...config };
+  validateGRUConfig(full);
+  return constructGRU(full);
+}
+```
 
 ## Guardrails
 

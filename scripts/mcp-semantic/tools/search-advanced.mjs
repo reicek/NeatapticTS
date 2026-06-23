@@ -25,7 +25,7 @@ import {
   searchCorpus,
 } from './search-corpus.mjs';
 import { ErrorCodes, cortexError } from './cortex-error.mjs';
-import { openCortexDatabase, readChunkRow } from './cortex-db.mjs';
+import { getTursoClient, readChunkRow } from './cortex-db.mjs';
 
 const DEFAULT_LIMIT = 5;
 const DEFAULT_BUDGET = 1024;
@@ -265,6 +265,7 @@ async function runRetrieval(query, config) {
     expand_query: false,
     rerank_candidates_count: config.rerank_candidates_count,
     databasePath: config.databasePath,
+    client: config.client,
   });
 
   return searchResult;
@@ -360,19 +361,13 @@ function mergeResults(primary, fallback) {
  * @param {number} limit - Maximum number of fallback results.
  * @returns {Promise<Array<object>>} Native fallback results.
  */
-async function runNativeFallback(query, databasePath, limit) {
+async function runNativeFallback(query, databasePath, limit, client) {
   const fallbackResults = [];
-  if (!databasePath) {
+  if (!databasePath && !client) {
     return fallbackResults;
   }
 
-  let database;
-  try {
-    database = openCortexDatabase(databasePath);
-  } catch {
-    return fallbackResults;
-  }
-
+  const resolvedClient = client ?? (await getTursoClient(databasePath));
   try {
     const tokens = query
       .trim()
@@ -383,18 +378,17 @@ async function runNativeFallback(query, databasePath, limit) {
     }
 
     const conditions = [];
-    const params = { limit };
-    for (let i = 0; i < tokens.length; i++) {
-      const key = `t${i}`;
-      params[key] = `%${escapeLikeToken(tokens[i])}%`;
+    const args = [];
+    for (const token of tokens) {
+      const pattern = `%${escapeLikeToken(token)}%`;
       conditions.push(
-        `(c.body_text LIKE @${key} ESCAPE '\\' OR d.file_path LIKE @${key} ESCAPE '\\')`,
+        `(c.body_text LIKE ? ESCAPE '\\' OR d.file_path LIKE ? ESCAPE '\\')`,
       );
+      args.push(pattern, pattern);
     }
+    args.push(limit);
 
-    const rows = database
-      .prepare(
-        `
+    const sql = `
         SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
           c.body_text, c.char_start, c.char_end,
           c.parent_chunk_id, c.depth, c.context_header,
@@ -405,23 +399,21 @@ async function runNativeFallback(query, databasePath, limit) {
         JOIN documents d ON d.doc_id = c.doc_id
         WHERE ${conditions.join(' OR ')}
         ORDER BY c.chunk_id
-        LIMIT @limit
-      `,
-      )
-      .all(params);
+        LIMIT ?
+      `;
 
-    fallbackResults.push(
-      ...rows.map((row) => ({
+    const result = await resolvedClient.execute({ sql, args });
+
+    for (const row of result.rows) {
+      fallbackResults.push({
         ...readChunkRow(row),
         body_text: row.body_text,
-      })),
-    );
+      });
+    }
 
     if (fallbackResults.length === 0) {
-      const broadParams = { limit };
-      const broadRows = database
-        .prepare(
-          `
+      const broadResult = await resolvedClient.execute({
+        sql: `
           SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
             c.body_text, c.char_start, c.char_end,
             c.parent_chunk_id, c.depth, c.context_header,
@@ -431,25 +423,20 @@ async function runNativeFallback(query, databasePath, limit) {
           FROM chunks c
           JOIN documents d ON d.doc_id = c.doc_id
           ORDER BY c.chunk_id
-          LIMIT @limit
+          LIMIT ?
         `,
-        )
-        .all(broadParams);
-      fallbackResults.push(
-        ...broadRows.map((row) => ({
+        args: [limit],
+      });
+      for (const row of broadResult.rows) {
+        fallbackResults.push({
           ...readChunkRow(row),
           body_text: row.body_text,
-        })),
-      );
+        });
+      }
     }
-  } finally {
-    try {
-      database.close();
-    } catch {
-      // Ignore best-effort close failures.
-    }
+  } catch {
+    // Best-effort: return whatever was collected.
   }
-
   return fallbackResults;
 }
 
@@ -535,32 +522,35 @@ function buildTopResult(result) {
  * reference without requiring a separate search round-trip.
  *
  * @param {Array<object>} results - Ranked search results.
- * @param {import('better-sqlite3').Database} db - Open database connection.
- * @returns {Array<object>} Results with the next sequential chunk appended.
+ * @param {import('@libsql/client').Client | null} client - libSQL client for async path.
+ * @returns {Promise<Array<object>>} Results with the next sequential chunk appended.
  */
-function appendNextSequentialChunk(results, db) {
+async function appendNextSequentialChunk(results, client) {
   const topResult = results?.[0];
-  if (!topResult || !db) {
+  if (!topResult || !client) {
     return results;
   }
 
   let docId = topResult.doc_id;
   if (typeof docId !== 'number') {
-    const docRow = db
-      .prepare('SELECT doc_id FROM chunks WHERE chunk_id = @chunkId')
-      .get({
-        chunkId: topResult.chunk_id,
+    try {
+      const result = await client.execute({
+        sql: 'SELECT doc_id FROM chunks WHERE chunk_id = ?',
+        args: [topResult.chunk_id],
       });
-    docId = docRow?.doc_id;
+      docId = result.rows[0] ? Number(result.rows[0].doc_id) : undefined;
+    } catch {
+      return results;
+    }
   }
   if (typeof docId !== 'number') {
     return results;
   }
 
-  const nextChunkId = resolveNextSequentialChunkId(
-    db,
+  const nextChunkId = await resolveNextSequentialChunkId(
     docId,
     topResult.chunk_id,
+    client,
   );
   if (typeof nextChunkId !== 'number') {
     return results;
@@ -571,10 +561,10 @@ function appendNextSequentialChunk(results, db) {
   if (alreadyPresent) {
     return results;
   }
-  const row = readChunkRow(
-    db
-      .prepare(
-        `
+
+  try {
+    const result = await client.execute({
+      sql: `
         SELECT
           c.chunk_id,
           c.doc_id,
@@ -594,15 +584,18 @@ function appendNextSequentialChunk(results, db) {
           c.body_text AS text
         FROM chunks c
         JOIN documents d ON d.doc_id = c.doc_id
-        WHERE c.chunk_id = @chunkId
+        WHERE c.chunk_id = ?
       `,
-      )
-      .get({ chunkId: nextChunkId }),
-  );
-  if (!row) {
+      args: [nextChunkId],
+    });
+    const row = result.rows[0];
+    if (!row) {
+      return results;
+    }
+    return [...results, readChunkRow(row)];
+  } catch {
     return results;
   }
-  return [...results, row];
 }
 
 /**
@@ -613,27 +606,34 @@ function appendNextSequentialChunk(results, db) {
  * primary key and is monotonically assigned during indexing, so it is a safe
  * fallback ordering for the "next sequential chunk" follow-up reference.
  *
- * @param {import('better-sqlite3').Database} db - Open database connection.
  * @param {number} docId - Document id of the current chunk.
  * @param {number} currentChunkId - Current chunk id.
- * @returns {number | null} Next chunk id, or null if none exists.
+ * @param {import('@libsql/client').Client | null} client - libSQL client for async path.
+ * @returns {Promise<number | null>} Next chunk id, or null if none exists.
  */
-function resolveNextSequentialChunkId(db, docId, currentChunkId) {
-  if (!db || typeof docId !== 'number' || typeof currentChunkId !== 'number') {
+async function resolveNextSequentialChunkId(docId, currentChunkId, client) {
+  if (typeof docId !== 'number' || typeof currentChunkId !== 'number') {
     return null;
   }
-  const row = db
-    .prepare(
-      `
-      SELECT chunk_id
-      FROM chunks
-      WHERE doc_id = @docId AND chunk_id > @currentChunkId
-      ORDER BY chunk_id ASC
-      LIMIT 1
-    `,
-    )
-    .get({ docId, currentChunkId });
-  return row?.chunk_id ?? null;
+  if (!client) {
+    return null;
+  }
+  try {
+    const result = await client.execute({
+      sql: `
+        SELECT chunk_id
+        FROM chunks
+        WHERE doc_id = ? AND chunk_id > ?
+        ORDER BY chunk_id ASC
+        LIMIT 1
+      `,
+      args: [docId, currentChunkId],
+    });
+    const row = result.rows[0];
+    return row ? Number(row.chunk_id) : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -641,10 +641,10 @@ function resolveNextSequentialChunkId(db, docId, currentChunkId) {
  *
  * @param {Array<object>} results - Raw advanced search results.
  * @param {string} query - Original query string.
- * @param {import('better-sqlite3').Database} db - Open database connection.
- * @returns {Array<{ tool: string, args: object, reason: string }>} Follow-up refs.
+ * @param {import('@libsql/client').Client | null} client - libSQL client for async path.
+ * @returns {Promise<Array<{ tool: string, args: object, reason: string }>>} Follow-up refs.
  */
-function buildFollowUpRefs(results, query, db) {
+async function buildFollowUpRefs(results, query, client) {
   const refs = [];
   const topResult = results?.[0];
   if (!topResult) {
@@ -658,18 +658,23 @@ function buildFollowUpRefs(results, query, db) {
   });
 
   let docId = topResult.doc_id;
-  if (typeof docId !== 'number' && db) {
-    const docRow = db
-      .prepare('SELECT doc_id FROM chunks WHERE chunk_id = @chunkId')
-      .get({
-        chunkId: topResult.chunk_id,
-      });
-    docId = docRow?.doc_id;
+  if (typeof docId !== 'number') {
+    if (client) {
+      try {
+        const result = await client.execute({
+          sql: 'SELECT doc_id FROM chunks WHERE chunk_id = ?',
+          args: [topResult.chunk_id],
+        });
+        docId = result.rows[0] ? Number(result.rows[0].doc_id) : undefined;
+      } catch {
+        // best-effort
+      }
+    }
   }
-  const nextChunkId = resolveNextSequentialChunkId(
-    db,
+  const nextChunkId = await resolveNextSequentialChunkId(
     docId,
     topResult.chunk_id,
+    client,
   );
   if (typeof nextChunkId === 'number') {
     refs.push({
@@ -756,6 +761,7 @@ export async function searchAdvanced(options = {}) {
     ...config,
     query_class: queryClass,
     databasePath: options.databasePath,
+    client: options.client,
   });
 
   if (isTimedOut(startTime, deadline)) {
@@ -815,6 +821,7 @@ export async function searchAdvanced(options = {}) {
       query,
       options.databasePath,
       config.limit,
+      options.client,
     );
     filteredResults = mergeResults(filteredResults, fallbackResults);
     fallbackTriggered = true;
@@ -839,24 +846,20 @@ export async function searchAdvanced(options = {}) {
     );
   }
 
-  let db = null;
-  try {
-    db = openCortexDatabase(options.databasePath);
-  } catch {
-    // Best-effort: follow-up refs that require a DB lookup will be skipped.
-  }
+  const resolvedClient =
+    options.client ?? (await getTursoClient(options.databasePath));
 
   const readTopResult = options.read_top_result === true;
-  const enrichedResults = appendNextSequentialChunk(filteredResults, db);
+  const enrichedResults = await appendNextSequentialChunk(
+    filteredResults,
+    resolvedClient,
+  );
   const topResult = readTopResult ? buildTopResult(enrichedResults[0]) : null;
-  const followUpRefs = buildFollowUpRefs(enrichedResults, query, db);
-  if (db) {
-    try {
-      db.close();
-    } catch {
-      // Ignore best-effort close failures.
-    }
-  }
+  const followUpRefs = await buildFollowUpRefs(
+    enrichedResults,
+    query,
+    resolvedClient,
+  );
 
   if (options.compact === true) {
     filteredResults = enrichedResults.map(compactAdvancedResult);
@@ -880,7 +883,13 @@ export async function searchAdvanced(options = {}) {
     fallback_triggered: fallbackTriggered,
     expansion,
     freshness:
-      searchResult.freshness ?? buildResponseFreshness(options.databasePath),
+      searchResult.freshness ??
+      (await buildResponseFreshness(options.databasePath, options.client)),
+    turso_native_features: {
+      diskann_used: searchResult.diskann_used ?? false,
+      rrf_used: searchResult.rrf_used ?? false,
+      vector_search_used: config.use_dense === true && denseState === 'warm',
+    },
   };
 
   if (config.use_rerank) {

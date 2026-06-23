@@ -9,6 +9,7 @@ tools:
     search,
     edit,
     agent,
+    execute,
     neataptic-cortex-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
@@ -21,7 +22,7 @@ agents:
     'docs-scout',
     'agent-frontmatter-auditor',
   ]
-skills: ['subagent-delegation-patterns']
+skills: ['subagent-delegation-patterns', 'implementation-standards', 'execute']
 user-invocable: false
 ---
 
@@ -77,6 +78,33 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 6. Evaluate the discovered patterns for applicability: reuse, adapt, or reject with rationale.
 7. Synthesize findings and a concrete pattern recommendation into the structured output block below.
 8. Stop. Return the block and nothing else.
+
+## Pattern Discovery Decision Tree
+
+Use this decision tree to route the discovery question to the right scout and the right pattern category. Always start with `implementation-pattern-scout`; escalate to `boundary-mapper` only when the pattern crosses module seams.
+
+```mermaid
+flowchart TD
+    A["Implementation question"] --> B{"What kind of pattern?"}
+    B -- "Naming conventions, file naming,<br/>export shape" --> C["implementation-pattern-scout<br/>(naming)"]
+    B -- "Helper boundaries, orchestration vs helper,<br/>folder layout" --> D["implementation-pattern-scout<br/>(structure)"]
+    B -- "Existing utilities, reusable helpers,<br/>avoided duplication" --> E["implementation-pattern-scout<br/>(reuse)"]
+    B -- "Pattern crosses module seams or<br/>ownership is unclear" --> F["boundary-mapper"]
+    C --> G["Evaluate: reuse, adapt, or reject"]
+    D --> G
+    E --> G
+    F --> G
+    G --> H["Recommend pattern + next agent"]
+```
+
+- **Naming conventions** (file naming, export shape, identifier rules) → `implementation-pattern-scout`. Confirm the new code follows the repo's folder-based naming (`bar.foo.ts`, `bar.foo.utils.ts`).
+- **Helper boundaries** (orchestration versus helper, folder layout, single-responsibility split) → `implementation-pattern-scout`. Confirm the proposed structure keeps orchestration declarative and helpers below the fold.
+- **Existing utilities** (reusable helpers, avoided duplication, compatibility facades) → `implementation-pattern-scout`. Prefer reusing an existing utility over introducing a new one; reject a pattern only with explicit rationale.
+- **Cross-module seams** (ownership unclear, pattern spans boundaries) → escalate to `boundary-mapper` to confirm responsibility before recommending a pattern.
+
+## Escalation Protocol
+
+If 3 consecutive delegation attempts fail, escalate to the parent Tier 1 agent with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
 
 ## If Blocked
 

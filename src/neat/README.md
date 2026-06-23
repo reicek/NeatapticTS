@@ -676,3 +676,53 @@ Parameters:
 - `graph` - Network to summarize structurally.
 
 Returns: Shannon-style entropy of the out-degree distribution.
+
+## neat/neat.nge-lifecycle.ts
+
+### NgeAdultLifecycleInput
+
+Inputs for the adult stage of the NGE lifecycle runner, including an equilibrium
+candidate and the assimilation envelope needed to write back structural priors.
+
+### NgeJuvenileLifecycleInput
+
+Inputs for the juvenile stage of the NGE lifecycle runner.
+
+### NgeLifecycleResult
+
+Result emitted by one call to the NGE lifecycle staging runner.
+
+### runNgeLifecycle
+
+```ts
+runNgeLifecycle(
+  input: NgeJuvenileLifecycleInput | NgeAdultLifecycleInput,
+): NgeLifecycleResult
+```
+
+Run one NGE lifecycle staging step, sequencing juvenile growth, equilibrium
+assimilation, and adult cooling as the provided stage requires.
+
+- `juvenile` recomputes the focus vector and growth morph plan for the supplied
+  module, then transitions to the adult stage.
+- `adult` runs the assimilation pass for the supplied equilibrium candidate and
+  policy, producing a structural-prior delta while remaining in the adult stage.
+
+Parameters:
+- `input` - Runtime inputs for the selected lifecycle stage.
+
+Returns: The lifecycle result naming the reached stage and any stage-specific outputs.
+
+Example:
+
+```ts
+const result = runNgeLifecycle({
+  stage: 'juvenile',
+  moduleId: 'module:alpha',
+  metrics,
+  budget,
+  config,
+  hysteresis,
+});
+console.log(result.stage); // 'adult'
+```

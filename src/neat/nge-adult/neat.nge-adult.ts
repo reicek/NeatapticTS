@@ -60,6 +60,14 @@ export interface AdvanceAdultStateResult {
 /**
  * Advance one complete owner-local adult optimization and equilibrium detection cycle.
  *
+ * @remarks
+ * The returned `adultState.equilibriumCandidate` is a zone evidence snapshot,
+ * not an emission signal. The `equilibriumCandidate` field in the result is
+ * the emitted event and may be `null` when the plateau and gain-stability
+ * guards do not both hold. This semantic distinction is still experimental:
+ * downstream assimilation wiring should consume the emitted candidate rather
+ * than the state snapshot.
+ *
  * @param input - Runtime inputs for the current adult cycle.
  * @returns The composed adult transition for the current cycle.
  */

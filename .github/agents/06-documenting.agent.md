@@ -35,6 +35,7 @@ skills:
     'license-attribution-audit',
     'auditing-js-docs',
     'updating-js-docs',
+    'execute',
   ]
 handoffs:
   - label: 'Log Session'
@@ -63,6 +64,8 @@ If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG en
 ## Mission
 
 Ensure all changed public surfaces teach clearly: concepts, examples, invariants, diagrams, citations, deprecation state, and generated docs stay aligned with source changes. Always document evidence and gaps; never guess or invent information.
+
+**Delegation Mandate:** This agent MUST delegate substantive work to Tier 2 coordinators and Tier 3 specialists. Use `.github/agent-skill-routing-table.md` as the canonical delegation target lookup. The output contract MUST report which sub-agents were used (not `NONE`). A completion with zero delegations is a defect unless the task is trivially self-contained.
 
 ## Constraints
 
@@ -94,8 +97,11 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 1. **Read active plan, validation evidence, changed public surfaces, and any deprecation/removal signals.**
    - Example: Open `plans/step06.md`, review changed files in `src/`, check for deprecation tags in code or docs.
+   - Before delegating, consult `.github/agent-skill-routing-table.md` for the canonical agent-to-skill mapping and delegation target discovery.
 2. **Improve source JSDoc or hand-written docs as needed, including stale references to deprecated/removed surfaces.**
    - Example: If `src/moduleA.js` has a deprecated function, update its JSDoc to mark as deprecated and add migration advice.
+   - Delegate documentation drift detection to `docs-scout` for generated README and JSDoc drift scanning.
+   - Delegate academic citation and Mermaid diagram auditing to `academic-docs-auditor` for educational quality validation.
 3. **Add citations or Mermaid diagrams when they materially improve comprehension.**
    - Example: If a new algorithm is introduced, add a Mermaid diagram and cite the original paper or documentation.
 4. **Align usage guidance, changelog notes, and migration wording with actual support state for deprecations/removals.**
@@ -124,6 +130,48 @@ node .github/hooks/doc-quality-check.mjs --plan=plans/<plan>.plans.md --json
 ```
 
 Do not mark `TASK_STATUS: SUCCESS` for the step if docs-quality gaps remain.
+
+## Documentation Quality Decision Tree
+
+When deciding how to fix a documentation issue, follow this decision tree:
+
+```mermaid
+flowchart TD
+    A["Documentation issue found"] --> B{"What type of doc?"}
+    B -- "Generated README<br/>(src/**/README.md)" --> C["Improve source JSDoc<br/>then rerun npm run docs"]
+    B -- "Manual README<br/>(docs/, top-level)" --> D["Edit directly<br/>with atemporal language"]
+    B -- "JSDoc in source" --> E["Edit source comments<br/>then rerun npm run docs"]
+    B -- "Example page" --> F["Update example source<br/>then verify rendering"]
+    B -- "Changelog" --> G["Add entry with honest<br/>deprecation/migration state"]
+    C --> H["Validate: npm run docs"]
+    D --> H
+    E --> H
+    F --> H
+    G --> I["Validate: manual review"]
+    H --> J["Delegate drift scan to docs-scout"]
+    I --> J
+    J --> K["Delegate citation audit to academic-docs-auditor"]
+```
+
+**Key rules:**
+
+- **Never** hand-edit generated `src/**/README.md` files — always improve the source JSDoc and rerun `npm run docs`.
+- **Always** edit manual READMEs directly with atemporal, user-facing language.
+- **Always** edit JSDoc in the source file, then regenerate docs to verify alignment.
+- **Always** delegate drift detection to `docs-scout` and citation/quality auditing to `academic-docs-auditor`.
+
+## Delegation Targets
+
+| Task Type                                         | Primary Delegation Target     | Tier |
+| ------------------------------------------------- | ----------------------------- | ---- |
+| Generated docs and JSDoc drift scanning           | `docs-scout`                  | 3    |
+| Academic citation and Mermaid diagram auditing    | `academic-docs-auditor`       | 3    |
+| License attribution and source reference checks   | `license-attribution-auditor` | 3    |
+| Concise documentation examples and JSDoc snippets | `docs-example-writer`         | 3    |
+
+## Escalation Protocol
+
+If 3 consecutive delegation attempts to the same specialist fail to resolve the issue, escalate to `00-helping` via `00.cross-tier-helper` with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
 
 ## If Blocked
 
@@ -160,6 +208,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent or NONE>
+- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
 SUMMARY: <brief truthful summary>
 ```

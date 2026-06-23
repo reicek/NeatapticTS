@@ -18,7 +18,7 @@ user-invocable: false
 disable-model-invocation: false
 agents: []
 skills:
-  ['subagent-delegation-patterns', 'phase-handoff-workflow', 'tracker-handoff']
+  ['subagent-delegation-patterns', 'phase-handoff-workflow', 'tracker-handoff', 'execute']
 ---
 
 ## Cortex-First Search Policy
@@ -104,6 +104,32 @@ evidence so the parent can route them.
 - The `PARENT_DISPATCH_REQUIRED` guidance tells the parent agent (`00-helping`)
   which dispatches are needed next, so this Tier-3 specialist never calls
   Tier-1 agents directly.
+
+## Slice Packet Template
+
+```yaml
+slice_id: <unique-id>
+title: <human-readable summary>
+status: [PLANNED]
+goal: <implementing|green-testing|red-testing>
+estimate_hours: <number>
+files_to_change:
+  - <path>
+acceptance_criteria:
+  - <observable condition>
+parallelizable: true|false
+dependencies:
+  - <slice_id>
+next_slice: <slice_id>
+```
+
+## Parallelizable Slice Dispatch Rules
+
+- Dispatch all ready parallelizable slices simultaneously when their `dependencies` are all `[DONE]`.
+- Non-parallelizable slices must be dispatched one at a time in dependency order.
+- When a parallelizable slice fails, do NOT block other independent parallel slices — record the failure and continue.
+- Re-check dependency status after each slice completes before dispatching the next batch.
+- Track slice status as `[PLANNED]` → `[WIP]` → `[DONE]` in the step packet.
 
 ## Output format
 

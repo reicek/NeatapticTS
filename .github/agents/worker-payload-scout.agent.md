@@ -76,6 +76,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 6. **Summarize the active payload rung, the blocker, and the smallest useful handoff into `worker-inference-transport`.**
    - Example: "Active rung: transferable payload via postMessage. Blocker: fallback to JSON not implemented for legacy browsers. Handoff: worker-inference-transport must add JSON fallback."
 
+## Worker Payload Classification Patterns
+
+- **Structured clone constraints:** Verify payload fields are structured-clone-compatible (primitives, typed arrays, Maps, Sets, plain objects). Flag functions, Symbols, class instances, and DOM types as non-transferable.
+- **Transfer-list boundaries:** Identify which `ArrayBuffer` instances can be transferred (zero-copy) vs copied. Verify the transfer list matches the payload's ArrayBuffer fields. Flag missed transfer opportunities.
+- **SharedArrayBuffer eligibility:** Check whether the payload could use `SharedArrayBuffer` for shared memory. Verify the runtime supports it (COOP/COEP headers required in browser).
+- **Fast-path blockers:** Identify payload fields that force slow serialization (class instances with custom prototypes, circular references, large nested objects). Flag these as fast-path blockers.
+- **Worker URL pattern:** Verify the `workerUrl` configuration matches the expected bundle format (ESM, IIFE, or classic). Mismatched formats cause worker startup failures.
+- **Inference IR shape:** Verify the inference intermediate representation (IR) payload matches the worker's expected schema. Flag schema version mismatches.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

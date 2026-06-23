@@ -18,7 +18,7 @@ tools:
   ]
 argument-hint: 'Describe the module to split, the plan file to follow or create, and the single current step to complete.'
 agents: ['boundary-mapper', 'plan-scout', 'docs-scout']
-skills: ['solid-split']
+skills: ['solid-split', 'implementation-standards', 'execute']
 user-invocable: false
 ---
 
@@ -120,6 +120,57 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 11. **Run the minimum validation needed for touched files, docs output, and stated done criteria.**
     - _Example:_ Ensure all tests and doc checks pass.
 12. **Stop after reporting the completed step. Do not continue into the next durable split step automatically.**
+
+## SOLID Principle Decision Tree
+
+Use this decision tree to decide whether to split a module or keep it cohesive. A split is warranted only when a SOLID principle is genuinely violated; otherwise cohesion wins.
+
+```mermaid
+flowchart TD
+    A["Large module"] --> B{"Does it have more than one<br/>reason to change? (SRP)"}
+    B -- "No" --> C["Keep cohesive — do not split"]
+    B -- "Yes" --> D{"Are the responsibilities<br/>used by different consumers? (OCP/LSP)"}
+    D -- "No, same consumers" --> E["Keep cohesive; extract helpers,<br/>do not folderize"]
+    D -- "Yes, different consumers" --> F{"Can consumers depend on<br/>a narrow interface? (ISP)"}
+    F -- "No" --> G["Split into sub-modules<br/>with compatibility re-export"]
+    F -- "Yes" --> H["Split into sub-modules;<br/>expose narrow facades"]
+    G --> I["Folderize with naming convention"]
+    H --> I
+```
+
+- **Split when**: the module has multiple reasons to change (SRP), the responsibilities serve different consumers (OCP/LSP), and a narrow interface would let consumers depend only on what they use (ISP).
+- **Do not split when**: the module has a single responsibility, the consumers are the same, or splitting would create a facade wider than the original. Prefer extracting helpers below the fold over folderizing in that case.
+- **Compatibility re-export**: every split must preserve the public import surface via a re-export so existing consumers do not break.
+
+## Module Naming Convention Reference (Folderized Output)
+
+When a split folderizes a module `foo` inside parent `bar`, follow the repo's standard layout so generated READMEs and imports stay legible:
+
+```
+bar/foo/
+  bar.foo.ts            ← orchestration (public surface, exports)
+  bar.foo.utils.ts      ← helper functions
+  bar.foo.types.ts      ← interfaces, types, result objects
+  bar.foo.errors.ts     ← error classes
+  bar.foo.constants.ts  ← named constants
+```
+
+- Sub-modules follow the same convention: `bar/foo/sub/bar.foo.sub.ts`, `bar/foo/sub/bar.foo.sub.types.ts`.
+- The orchestration file (`bar.foo.ts`) exports the public API and keeps top-level functions declarative; complex logic lives in named single-responsibility helpers below the fold.
+- Use `.js` extensions in imports (`import { X } from './bar.foo.utils.js'`) per the ES2023 module policy.
+
+## JSDoc-First Approach For Generated README Compatibility
+
+Generated README files under each folder are produced from source JSDoc via `npm run docs`. To keep generated READMEs readable after a split:
+
+- **Author JSDoc, not READMEs**: Never hand-edit generated `src/**/README.md` files. Improve the JSDoc on the exported symbols and re-run `npm run docs`.
+- **Document what, why, and when**: Every exported symbol's JSDoc must explain its purpose, design tradeoffs, and a `@example` block — the generated README renders these, so missing JSDoc produces a hollow chapter.
+- **Use Mermaid in JSDoc for topology**: When a split introduces a new topology or boundary, add a Mermaid diagram in the orchestration file's leading JSDoc so the generated README renders it.
+- **Run `educational-docs` after the split**: Treat the split step as incomplete until `educational-docs` has run on the new boundary (or is explicitly deferred), because it owns the generated-README quality pass.
+
+## Escalation Protocol
+
+If 3 consecutive delegation attempts fail, escalate to the parent Tier 1 agent with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
 
 ## If Blocked
 

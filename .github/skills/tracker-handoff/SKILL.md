@@ -4,6 +4,11 @@ description: 'Use when: standardizing NeatapticTS `.plans.md` or `.logs.md` trac
 argument-hint: 'Describe the tracker path, active vs closed intent, single-lane or parallel-lane state, history to compress, validations required, and what the next session must resume safely.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - plan-sync-validation
+  - plan-alignment
+  - summarizing-session-log
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -23,6 +28,10 @@ Other skills may decide **when** a tracker should change, but they should defer
 the tracker shape itself to this skill instead of redefining status markers,
 handoff layout, compression policy, or archive conventions ad hoc.
 
+## When NOT to use
+
+Do NOT use for non-durable tracking like scratch notes or temporary buffers. Do NOT use for session logs - use `summarizing-session-log` instead.
+
 ## When To Use
 
 - A `.plans.md` file needs to be created, rewritten, compressed, or updated.
@@ -37,6 +46,21 @@ handoff layout, compression policy, or archive conventions ad hoc.
 - A workstream truly needs parallel active lanes and the tracker must represent
   them intentionally instead of drifting into multiple accidental `[WIP]`
   branches.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Tracker state"] --> B{"Active or closing?"}
+    B -- "Active" --> C["Update WIP section"]
+    B -- "Closing" --> D["Compress to DONE"]
+    C --> E["Refresh handoff query"]
+    D --> F["Create .logs.md"]
+    F --> G["Move to plans/completed/"]
+    E --> H["Run sync gates"]
+    G --> H
+```
 
 ## Task Packet
 
@@ -183,6 +207,24 @@ note before authoring the next phase's step packets or closing the workstream.
   `07.tracker-closure`) validates this requirement.
 - Do not advance to the next phase or close the workstream until the gate
   evidence is recorded in `VALIDATION_EVIDENCE`.
+
+### Phase Compression Policy
+
+When all steps in a phase are marked `[DONE]` and green validation has passed,
+the orchestrator MUST dispatch `07-logging` to compress the completed phase
+before advancing to the next phase. Compression means:
+
+1. Move detailed step/slice/VALIDATION_EVIDENCE blocks from the plan file to
+   the corresponding `.logs.md` file.
+2. Replace the detailed content in the plan file with a compact `[DONE]`
+   marker and a reference to the logs file.
+3. Keep the phase header, goal, and status as `[DONE]` in the plan file.
+
+This keeps plan files lean and focused on active work. Plan files should never
+carry verbose `[DONE]` phase details — those belong in logs.
+
+Skipping phase compression is a workflow violation. The orchestrator must not
+advance to the next phase until compression is complete.
 
 ### Completion Closure Rule
 
@@ -353,6 +395,38 @@ For `.logs.md` files, prefer:
 4. no active TODO list unless the file is intentionally dual-purpose
 5. the same boundary as the closed `.plans.md` file whenever the workstream is
    complete
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Tracker action"] --> B{"Tracker state?"}
+    B -- "Active, work ongoing" --> C["Refresh WIP + Handoff query"]
+    B -- "All phases complete" --> D["Compress to DONE + create .logs.md"]
+    B -- "Archived, needs new work" --> E["Reopen: move back or new tracker"]
+    C --> F["Run sync gates"]
+    D --> G["Move pair to plans/completed/"]
+    E --> H["Add fresh Handoff query"]
+```
+
+## Before / After Examples
+
+**Before:**
+```text
+## Step 3: Implemented mutation
+Ran command: npx jest --testPathPattern=src/neat/mutation
+Output: PASS 42 tests, 0 failures
+Coverage: 100% 100% 100% 100%
+Took 3.2 seconds
+Also fixed the import in line 15
+And renamed the helper function
+Then ran lint, all passed
+```
+
+**After:**
+```text
+[DONE] Step 3: Implemented mutation, coverage gate passed.
+```
 
 ## Guardrails
 

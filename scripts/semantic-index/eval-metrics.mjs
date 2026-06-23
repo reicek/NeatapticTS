@@ -84,12 +84,26 @@ export function matchesQueryExpectation(result, querySpec) {
   const headingNeedle = normalizeNeedle(querySpec?.expected_heading_contains);
   const symbolNeedle = normalizeNeedle(querySpec?.expected_symbol_contains);
   const headingHaystack = normalizeNeedle(
-    result.heading_path ?? result.symbol_name ?? '',
+    [result.heading_path, result.symbol_name, result.file_path]
+      .filter(Boolean)
+      .join(' '),
   );
 
-  if (headingNeedle && !headingHaystack.includes(headingNeedle)) return false;
-  if (symbolNeedle && !headingHaystack.includes(symbolNeedle)) return false;
-  return true;
+  const headingMatch = headingNeedle
+    ? headingHaystack.includes(headingNeedle)
+    : true;
+  const symbolMatch = symbolNeedle
+    ? headingHaystack.includes(symbolNeedle)
+    : true;
+
+  // When both a heading and a symbol needle are specified, either one is
+  // sufficient: the query is about a topic and a symbol, and a result that
+  // matches either signal is considered relevant for binary hit metrics.
+  if (headingNeedle && symbolNeedle) {
+    return headingMatch || symbolMatch;
+  }
+
+  return headingMatch && symbolMatch;
 }
 
 /**

@@ -4,6 +4,10 @@ description: 'Configure, validate, and publish browser runtime artifacts for Nea
 argument-hint: 'Describe the target artifact (root browser dist / example docs asset / smoke test / size audit / CI gate), the current plan step, and known constraints such as size budget, worker entry delivery, HTML consumer, or browser targets.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - visualizer-workflow
+  - chrome-devtools-mcp
+  - performance-optimization
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -53,6 +57,28 @@ plan/log shape. When roadmap alignment is needed, use `plan-alignment`.
 - Verifying whether the current repo actually exposes a package script for the
   browser build or whether the workflow must call `node scripts/build-browser.mjs`
   directly.
+
+
+## When NOT to use
+
+Do NOT use for general build or lint tasks - use standard `npm run build` and `npm run lint` instead. Do NOT use for visualizer debugging - use `visualizer-workflow` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Source change"] --> B["Run webpack build"]
+    B --> C{"Build succeeds?"}
+    C -- "Yes" --> D["Check bundle size"]
+    C -- "No" --> E["Fix build error"]
+    E --> B
+    D --> F["Run smoke test in browser"]
+    F --> G{"Pass?"}
+    G -- "Yes" --> H["Done"]
+    G -- "No" --> I["Debug in browser"]
+    I --> E
+```
 
 ## Task Packet
 
@@ -152,6 +178,31 @@ The minimum root-artifact smoke gate is the current
 When the task targets a docs-served example bundle instead of the root dist
 artifact, validate the consuming HTML or entry surface that actually loads the
 bundle.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Browser work"] --> B{"Which artifact?"}
+    B -- "Root dist ESM/IIFE bundle" --> C["scripts/build-browser.mjs"]
+    B -- "docs/assets example bundle" --> D["Targeted example build script"]
+    B -- "Load + instantiate smoke" --> E["scripts/smoke-browser-build.mjs"]
+    B -- "Size or tree-shaking audit" --> F["Bundle size analysis"]
+```
+
+## Before / After Examples
+
+**Before:**
+```html
+<script src="docs/assets/flappy.bundle.js"></script>
+<!-- workerUrl still points at stale v1 path -->
+```
+
+**After:**
+```html
+<script src="docs/assets/flappy.bundle.js"></script>
+<!-- workerUrl refreshed to dist/neataptic.worker.esm.js (ESM boundary) -->
+```
 
 ## Guardrails
 

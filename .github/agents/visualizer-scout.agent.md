@@ -67,6 +67,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 5. Note the minimal validation surface (typecheck, focused tests, manual viewport checks) that should follow implementation.
 6. Return a short evidence-based handoff packet to `visualizer-workflow`.
 
+## Visualizer Issue Patterns
+
+- **Cramped layout:** Check for nodes/edges that overlap or are too close together. Flag visualizers where node positions are not spread adequately. Suggest layout algorithm improvements.
+- **Missing overflow scroll:** Verify that large networks have scroll/zoom containers. Flag visualizers where content overflows the viewport without scroll support.
+- **Hover/tooltip instability:** Check whether hover tooltips flicker, disappear too fast, or show stale data. Flag tooltip implementations that don't update on node state change.
+- **Parity drift:** Compare the demo visualizer's rendering against the reference visualizer. Flag differences in node colors, edge styles, label formatting, or interaction behavior.
+- **Canvas rendering issues:** Check for canvas-based visualizers with incorrect device pixel ratio handling, blurry text, or performance issues on high-DPI displays.
+- **Interactive example gaps:** Verify that interactive examples have the expected controls (play/pause, step, reset). Missing controls indicate incomplete implementation.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

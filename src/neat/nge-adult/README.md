@@ -82,11 +82,25 @@ arbitratePruneCompactDominance(
 
 Arbitrate whether adult prune and compact dominate the cooled morph budget.
 
+Selects the highest-priority non-reward-critical prune candidate, preferring
+inter-module edges and longer edges, then resolves which morph kinds are eligible
+for the cooled budget based on candidate and compact availability.
+
 Parameters:
 - `candidates` - Ranked prune candidates visible to the local adult module.
 - `compactEligible` - Whether compact still has headroom in the current window.
 
-Returns: A placeholder decision that is intentionally incorrect during the red phase.
+Returns: Prune-compact decision naming the dominant morph kinds and selected candidate.
+
+Example:
+
+```ts
+const decision = arbitratePruneCompactDominance(
+  [{ candidateId: 'e1', edgeLength: 2, isInterModule: true, isRewardCritical: false }],
+  true,
+);
+console.log(decision.dominantMorphKinds); // ['edgePrune', 'compact']
+```
 
 ### resolveGrowthCoolingDecision
 
@@ -100,12 +114,25 @@ resolveGrowthCoolingDecision(
 
 Resolve the current adult cooling decision for one normalized focus score.
 
+Growth cooling is active only when the focus score is above the floor and the
+residual growth budget is non-zero. A zero cooling factor or a sub-floor focus score
+fully suppresses adult growth and leaves the entire morph budget for prune and
+compact actions.
+
 Parameters:
 - `focusScore` - Normalized adult focus score for the active module.
 - `growthCoolingFactor` - Residual growth fraction preserved by adult cooling.
 - `focusFloor` - Minimum focus score that keeps residual growth alive.
 
-Returns: A placeholder decision that is intentionally incorrect during the red phase.
+Returns: Cooling decision carrying the active flag and budget split for the cycle.
+
+Example:
+
+```ts
+const decision = resolveGrowthCoolingDecision(0.82, 0.1, 0.6);
+console.log(decision.growthCoolingActive); // true
+console.log(decision.growthBudgetFraction); // 0.1
+```
 
 ## neat/nge-adult/neat.nge-adult.plateau.ts
 
@@ -225,7 +252,17 @@ createAdultState(
 
 Create the initial owner-local adult state for one fresh zone instance.
 
+Seeds empty plateau and gain-stability histories, marks the zone as not yet
+in equilibrium, and disables growth cooling until the first adult cycle resolves it.
+
 Parameters:
 - `zoneId` - Stable adult-zone identifier that anchors the seeded state.
 
-Returns: A compile-only placeholder while the Step 06 red contract is active.
+Returns: Fresh adult state ready for the first `advanceAdultState` cycle.
+
+Example:
+
+```ts
+const adultState = createAdultState('zone:alpha');
+console.log(adultState.equilibriumCandidate.zoneId); // 'zone:alpha'
+```

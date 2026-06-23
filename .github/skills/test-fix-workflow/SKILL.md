@@ -4,6 +4,11 @@ description: 'Systematically fix multiple test failures by planning first, prefe
 argument-hint: 'Describe the failing surface, available failure output, whether the issue is type-level, runtime, or mixed, and any known plan file or validation constraints.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - triaging-test-failures
+  - coverage-guard
+  - running-unit-tests
+  - red-test-contracts
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -39,6 +44,27 @@ Do not invoke this skill for **coverage expansion** on passing code. Use
 `coverage-tranche` instead when the test suite is green and the goal is to
 raise coverage metrics toward 100%. The two skills are complements: this skill
 repairs failures first; `coverage-tranche` expands coverage afterward.
+
+
+## When NOT to use
+
+Do NOT use for triaging failures when root cause is unknown - use `triaging-test-failures` first. Do NOT use for coverage enforcement - use `coverage-guard` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Test failure"] --> B["Reproduce"]
+    B --> C["Identify root cause"]
+    C --> D{"Fixable?"}
+    D -- "Yes" --> E["Apply fix"]
+    D -- "No" --> F["Escalate to 00-helping"]
+    E --> G["Re-run test"]
+    G --> H{"Pass?"}
+    H -- "Yes" --> I["Run coverage-guard"]
+    H -- "No" --> C
+```
 
 ## Task Packet
 
@@ -103,6 +129,40 @@ repo-wide confirmation.
    broad validation.
 10. Analyze any remaining failures and update the plan rather than switching to
     unstructured iteration.
+
+
+## Decision Tree: Repair vs Escalate
+
+```mermaid
+flowchart TD
+    A["Failing test"] --> B["Reproduce locally"]
+    B --> C{"Root cause clear?"}
+    C -- "Yes" --> D["Fix"]
+    C -- "No" --> E["Triage with triaging-test-failures"]
+    D --> F{"Fix works?"}
+    F -- "Yes" --> G["Done"]
+    F -- "No" --> H{"3 attempts?"}
+    H -- "Yes" --> I["Escalate to 00-helping"]
+    H -- "No" --> D
+    E --> J{"Root cause found?"}
+    J -- "Yes" --> D
+    J -- "No" --> I
+```
+
+## Before / After Examples
+
+**Before:**
+```text
+5 tests failing in flappy trainer. Seems like a timing issue. Will try increasing timeout.
+```
+
+**After:**
+```text
+Root cause: evaluation loop awaited batch results out of order after async refactor.
+Fix: restore ordered result assembly in evaluateInWorkers.
+Validation: npx jest --testPathPattern=testing/flappy/trainer → 6/6 pass
+Coverage: coverage-guard on src/flappy/trainer.ts → 100% all categories
+```
 
 ## Guardrails
 

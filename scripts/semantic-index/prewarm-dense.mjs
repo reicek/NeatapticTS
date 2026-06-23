@@ -1,9 +1,10 @@
 /**
  * @description Bootstrap the local dense-search runtime by ensuring the ONNX model
- * cache exists, building any missing embeddings, and validating that embedding
- * counts match the corpus chunk count. The script is idempotent: when
- * `model.onnx` is already present the download step is skipped, `embed-index.mjs`
- * reuses its existing skip-unchanged behavior, and validation is read-only.
+ * cache exists, building any missing embeddings in the consolidated
+ * `data/turso-replica.sqlite` corpus DB, and validating that usable embeddings
+ * are present. The script is idempotent: when `model.onnx` is already present the
+ * download step is skipped, `embed-index.mjs` reuses its existing skip-unchanged
+ * behavior, and validation is read-only.
  *
  * @param {boolean} [--dry-run] - Log the planned bootstrap steps without spawning subprocesses.
  * @param {boolean} [--json] - Emit machine-readable success or failure output.

@@ -267,7 +267,7 @@ business logic. Two real adapters ship with this module:
 
 | Adapter               | Runtime  | Dependency       |
 | --------------------- | -------- | ---------------- |
-| `SqliteMemoryAdapter` | Node     | `better-sqlite3` |
+| `SqliteMemoryAdapter` | Node     | `@libsql/client` |
 | `IdbMemoryAdapter`    | Browser  | none (raw IDB)   |
 
 Tests inject a tiny in-memory adapter that satisfies the same interface without touching
@@ -444,5 +444,5 @@ await adapter.close?.();
 
 - [Okapi BM25 — Wikipedia](https://en.wikipedia.org/wiki/Okapi_BM25)
 - [SQLite FTS5 — External Content Tables](https://www.sqlite.org/fts5.html#external_content_tables)
-- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
+- [libSQL / Turso](https://docs.turso.tech/libsql/client-access)
 - [IndexedDB API — MDN](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)

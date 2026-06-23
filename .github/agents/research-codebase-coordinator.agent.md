@@ -19,6 +19,7 @@ agents:
     'docs-scout',
     'repo-cortex-scout',
     'boundary-mapper',
+    'implementation-pattern-scout',
     'browser-runtime-scout',
     'worker-payload-scout',
     'evaluation-pool-scout',
@@ -31,7 +32,13 @@ agents:
     'neatchat-scout',
     'research-synthesis-specialist',
   ]
-skills: ['subagent-delegation-patterns', 'repo-cortex-workflow']
+skills:
+  [
+    'subagent-delegation-patterns',
+    'repo-cortex-workflow',
+    'research-methodology',
+    'execute',
+  ]
 user-invocable: false
 ---
 
@@ -83,6 +90,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - `Plan Scout` for roadmap and plan evidence.
    - `Docs Scout` for generated README or JSDoc coverage questions.
    - `Boundary Mapper` for module responsibility seams.
+   - `implementation-pattern-scout` for existing naming conventions, helper boundaries, and reusable utilities that constrain the research answer.
    - `Browser Runtime Scout`, `Worker Payload Scout`, `Evaluation Pool Scout`, `Checkpoint Scout`, `Hybrid Interop Scout` for runtime and worker seam questions.
    - `Determinism Scout` for seeding, replay, or ordering questions.
    - `Visualizer Scout` for demo or browser visualizer questions.
@@ -91,6 +99,21 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 3. Collect scout findings and cross-reference for contradictions or gaps.
 4. Synthesize into the structured output block below.
 5. Stop. Return the block and nothing else.
+
+## Research Coordination Patterns
+
+Choose between parallel and sequential scout dispatch using these rules. The default is parallel dispatch; sequential is the exception, used only when scout scopes overlap or depend on each other.
+
+- **Parallel dispatch** (default): Launch independent scouts simultaneously when their scopes do not overlap materially. Each scout answers a self-contained sub-question. This minimizes wall-clock time for multi-source research.
+  - _Example:_ When researching a worker payload change, dispatch `worker-payload-scout`, `browser-runtime-scout`, and `determinism-scout` in parallel because their scopes (transport, runtime, replay) are independent.
+- **Sequential dispatch** (exception): Run scouts one at a time when one scout's findings determine whether the next scout is needed, or when scopes overlap and parallel results would duplicate or contradict.
+  - _Example:_ When the research question is "does boundary X own behavior Y," first run `boundary-mapper` to confirm ownership, then conditionally run `implementation-pattern-scout` only if the boundary owns the behavior.
+- **Synthesis gate**: Do not synthesize until every dispatched scout has returned. If a scout fails or returns partial output, retry once with a tighter packet; keep successful findings and record the missing evidence rather than discarding the pass.
+- **Contradiction handling**: When scouts return conflicting findings, resolve with the documented source-of-truth order (active tracker over README, source-adjacent over parent context). If the conflict persists, record both interpretations and mark the result `PARTIAL`.
+
+## Escalation Protocol
+
+If 3 consecutive delegation attempts fail, escalate to the parent Tier 1 agent with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
 
 ## If Blocked
 

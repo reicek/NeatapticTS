@@ -4,6 +4,10 @@ description: 'Prepare precise subagent task packets for NeatapticTS. Use when de
 argument-hint: 'Describe the parent phase, specialist needed, task packet, expected output format, and whether calls can run in parallel.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - execute
+  - creating-specialist-agent
+  - splitting-monolithic-agent
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -32,6 +36,26 @@ specialist output before trusting it.
   to be narrowed and retried.
 - A hidden specialist agent is available and assigning it improves coherence or
   cost efficiency.
+
+
+## When NOT to use
+
+Do NOT use for simple 1-2 read tasks that can be done directly with grep/view. Do NOT use for tasks that dont need delegation at all.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Task to delegate"] --> B{"Independent?"}
+    B -- "Yes" --> C["Launch in parallel"]
+    B -- "No" --> D["Sequential dispatch"]
+    C --> E["Collect all results"]
+    D --> F["Wait for each result"]
+    E --> G["Merge findings"]
+    F --> G
+    G --> H["Done"]
+```
 
 ## Task Packet
 
@@ -73,6 +97,36 @@ Task: <one narrow objective>
 Files or plans: <bounded list>
 Constraints: <read-only/edit/validation limits>
 Return: <exact output fields>
+```
+
+
+## Parallel vs Sequential Decision Tree
+
+```mermaid
+flowchart TD
+    A["Multiple sub-tasks"] --> B{"Independent?"}
+    B -- "Yes" --> C["Parallel: launch all at once"]
+    B -- "No" --> D["Sequential: wait for each"]
+    C --> E["Collect results in order"]
+    D --> F["Pass result to next agent"]
+    E --> G["Merge"]
+    F --> G
+```
+
+## Before / After Examples
+
+**Before:**
+```text
+Task: look into the multithreading stuff and tell me what you find.
+```
+
+**After:**
+```text
+Role: boundary-mapper
+Task: identify all public surfaces in src/multithreading that cross the worker boundary
+Files: src/multithreading/**, testing/multithreading/**
+Constraints: read-only; no edits
+Return: list of crossing surfaces with transport type and coverage gaps
 ```
 
 ## Guardrails

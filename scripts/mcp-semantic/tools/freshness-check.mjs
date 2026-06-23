@@ -12,7 +12,7 @@ import {
   isFreshDocument,
 } from '../../semantic-index/freshness.mjs';
 import { repoRoot } from '../../semantic-index/init-schema.mjs';
-import { normalizeRepoPath, openCortexDatabase } from './cortex-db.mjs';
+import { normalizeRepoPath, getTursoClient } from './cortex-db.mjs';
 
 /**
  * Check corpus document freshness against current filesystem metadata.
@@ -32,52 +32,50 @@ export async function freshnessCheck(options = {}) {
     typeof options.file_path === 'string' && options.file_path.trim()
       ? normalizeRepoPath(options.file_path)
       : null;
-  const database = openCortexDatabase(options.databasePath);
+  const client = options.client ?? (await getTursoClient(options.databasePath));
 
-  try {
-    const rows = filePath
-      ? database
-          .prepare(
-            'SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents WHERE file_path = @filePath',
-          )
-          .all({ filePath })
-      : database
-          .prepare(
-            'SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents ORDER BY file_path',
-          )
-          .all();
+  const result = filePath
+    ? await client.execute({
+        sql: 'SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents WHERE file_path = ?',
+        args: [filePath],
+      })
+    : await client.execute({
+        sql: 'SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents ORDER BY file_path',
+      });
 
-    if (filePath && rows.length === 0)
-      throw new Error(`Document not found: ${filePath}`);
+  const rows = result.rows;
+  if (filePath && rows.length === 0)
+    throw new Error(`Document not found: ${filePath}`);
 
-    const checks = await Promise.all(
-      rows.map(async (row) => checkDocument(row, options.freshnessProof)),
-    );
-    const stale = checks
-      .filter((check) => !check.fresh)
-      .map((check) => check.file_path);
-    const timestamp = Date.now();
-    const freshness = {
-      timestamp,
-      stale: stale.length > 0,
-      last_update_source: 'filesystem',
-    };
-    return {
-      fresh: stale.length === 0,
-      stale,
-      freshness,
-      documents: checks.map((check) => ({
-        ...check,
-        freshness: {
-          timestamp,
-          stale: !check.fresh,
-          last_update_source: 'filesystem',
-        },
-      })),
-    };
-  } finally {
-    database.close();
-  }
+  const checks = await Promise.all(
+    rows.map(async (row) => checkDocument(row, options.freshnessProof)),
+  );
+  const stale = checks
+    .filter((check) => !check.fresh)
+    .map((check) => check.file_path);
+  const timestamp = Date.now();
+  const freshness = {
+    timestamp,
+    stale: stale.length > 0,
+    last_update_source: 'filesystem',
+    last_sync: null,
+    sync_lag_ms: null,
+  };
+  return {
+    fresh: stale.length === 0,
+    stale,
+    freshness,
+    documents: checks.map((check) => ({
+      ...check,
+      freshness: {
+        timestamp,
+        stale: !check.fresh,
+        last_update_source: 'filesystem',
+        last_sync: null,
+        sync_lag_ms: null,
+      },
+    })),
+  };
 }
 
 /**

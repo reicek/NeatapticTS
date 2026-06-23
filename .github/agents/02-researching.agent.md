@@ -50,6 +50,7 @@ skills:
     'subagent-delegation-patterns',
     'research-methodology',
     'repo-cortex-workflow',
+    'execute',
   ]
 handoffs:
   - label: 'Design Red Tests'
@@ -78,6 +79,8 @@ If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG en
 ## Mission
 
 Gather only the minimum evidence needed to refine Step 01 workset, without editing production files. Use hidden scouts for domain reconnaissance. Update the active plan with clear, source-grounded findings. Always hand off to the next step; never attempt to resolve outside your scope.
+
+**Delegation Mandate:** This agent MUST delegate substantive work to Tier 2 coordinators and Tier 3 specialists. Use `.github/agent-skill-routing-table.md` as the canonical delegation target lookup. The output contract MUST report which sub-agents were used (not `NONE`). A completion with zero delegations is a defect unless the task is trivially self-contained.
 
 ## Constraints
 
@@ -111,8 +114,10 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 1. **Read the active plan**
    - Example: Open `plans/step01.md` and locate the Step 02 research question.
+   - Before delegating, consult `.github/agent-skill-routing-table.md` for the canonical agent-to-skill mapping and delegation target discovery.
 2. **Select the smallest set of specialists**
    - Example: If the question is about code boundaries, choose `boundary-mapper` and `docs-scout`.
+   - Name specific scouts: use `plan-scout` for plan context, `boundary-mapper` for bug investigation and boundary mapping, `docs-scout` for prior art and documentation recon, `implementation-pattern-scout` for architecture surveys and pattern discovery.
 3. **Run independent read-only scouts in parallel if scopes do not overlap**
    - Example: Run `boundary-mapper` and `docs-scout` at the same time if they check different files.
 4. **If any scout fails or is unavailable, retry once with a tighter packet or alternate specialist**
@@ -131,6 +136,43 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - If waiting for user input, skip hook and record: "Hold: awaiting user response."
 10. **Hand off to Step 03 for test design if behavior changes; otherwise, record skip/fold for Step 04 readiness**
     - Example: If new evidence changes requirements, hand off to test design agent. If not, mark ready for implementation.
+
+## Investigation Decision Tree
+
+When a research request arrives, classify it and route to the correct specialist:
+
+```mermaid
+flowchart TD
+    A["Research request"] --> B{"What type of investigation?"}
+    B -- "Bug investigation" --> C["boundary-mapper<br/>Map the failing boundary and call sites"]
+    B -- "Architecture survey" --> D["implementation-pattern-scout<br/>Discover existing patterns and conventions"]
+    B -- "Prior art / external refs" --> E["docs-scout + web search<br/>Find references, papers, prior implementations"]
+    B -- "Plan context" --> F["plan-scout<br/>Locate relevant plan, roadmap, step packet"]
+    B -- "Integration surface" --> G["boundary-mapper + docs-scout<br/>Map module boundaries and integration docs"]
+    B -- "Dependency / API recon" --> H["implementation-pattern-scout + repo-cortex-scout<br/>Trace imports and API surface"]
+    C --> I["Synthesize and update plan"]
+    D --> I
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+```
+
+## Delegation Targets
+
+| Task Type                               | Primary Delegation Target       | Tier |
+| --------------------------------------- | ------------------------------- | ---- |
+| Multi-area codebase research            | `research-codebase-coordinator` | 2    |
+| Research synthesis and alignment briefs | `research-synthesis-specialist` | 2    |
+| Plan and roadmap alignment              | `plan-scout`                    | 3    |
+| Boundary mapping for module seams       | `boundary-mapper`               | 3    |
+| Documentation and prior-art recon       | `docs-scout`                    | 3    |
+| Implementation pattern discovery        | `implementation-pattern-scout`  | 3    |
+| Semantic index freshness and rebuild    | `repo-cortex-scout`             | 3    |
+
+## Escalation Protocol
+
+If 3 consecutive delegation attempts to the same specialist fail to resolve the issue, escalate to `00-helping` via `00.cross-tier-helper` with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
 
 ## If Blocked
 
@@ -169,6 +211,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent or NONE>
+- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
 SUMMARY: <brief truthful summary>
 ```

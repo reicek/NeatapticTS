@@ -4,6 +4,11 @@ description: 'Design red-phase tests and eval assertions for NeatapticTS before 
 argument-hint: 'Describe the behavior change, target file or skill, expected failing assertion, and validation command.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - creating-unit-tests
+  - test-fix-workflow
+  - coverage-guard
+  - coverage-tranche
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -31,6 +36,27 @@ actually fails, and handing off cleanly to the implementation phase.
   is missing or stale.
 - Multiple tests are failing and the repair scope needs to be narrowed to the
   smallest honest failing assertion first.
+
+
+## When NOT to use
+
+Do NOT use for writing unit tests - use `creating-unit-tests` instead. Do NOT use for fixing failing tests - use `test-fix-workflow` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Feature to test"] --> B["Define expected behavior"]
+    B --> C["Write failing test"]
+    C --> D["Run test"]
+    D --> E{"Fails for right reason?"}
+    E -- "Yes" --> F["Red contract complete"]
+    E -- "No, fails for wrong reason" --> G["Fix test fixture"]
+    E -- "No, passes already" --> H["Check if test is meaningful"]
+    G --> D
+    H --> I["Add edge case or remove"]
+```
 
 ## Task Packet
 
@@ -77,6 +103,58 @@ Validate with: npx jest --config=jest.config.mjs --no-cache --testPathPattern=ne
   not writing a new failing assertion first.
 - Use `coverage-guard` after any `src/` change to confirm 100% coverage is
   maintained on every touched file.
+
+
+## Test Pattern Examples
+
+**Behavior-first contract:**
+```ts
+it('throws when hiddenLayers is empty', () => {
+  expect(() => buildMLP({ hiddenLayers: [] })).toThrow(/hiddenLayers/);
+});
+```
+
+**Determinism contract:**
+```ts
+it('produces identical output for same config and seed', () => {
+  const net1 = buildGRU({ units: 4, seed: 42 });
+  const net2 = buildGRU({ units: 4, seed: 42 });
+  expect(net1.toJSON()).toEqual(net2.toJSON());
+});
+```
+
+**Shape contract:**
+```ts
+it('produces correct node count for 3-layer MLP', () => {
+  const net = buildMLP({ hiddenLayers: [4, 4], inputSize: 2, outputSize: 1 });
+  expect(net.nodes.length).toBe(7);
+});
+```
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Test work"] --> B{"What kind?"}
+    B -- "No failing test yet exists" --> C["red-test-contracts (create red contract)"]
+    B -- "Tests already failing, need repair" --> D["test-fix-workflow"]
+    B -- "Passing code needs more coverage" --> E["coverage-tranche"]
+    B -- "Post-change coverage gate" --> F["coverage-guard"]
+```
+
+## Before / After Examples
+
+**Before:**
+```ts
+it('should work', () => { expect(fn()).toBeDefined(); });
+```
+
+**After:**
+```ts
+it('throws RangeError when node count is zero', () => {
+  expect(() => buildMLP({ hiddenLayers: [] })).toThrow(/hiddenLayers/);
+});
+```
 
 ## Guardrails
 

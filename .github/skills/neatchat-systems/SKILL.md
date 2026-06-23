@@ -4,6 +4,13 @@ description: 'Design, implement, or validate the post-toy NEATchat system in Nea
 argument-hint: 'Describe the NEATchat workstream, the active section in NEATchat.plans.md, whether the pass is architecture, implementation, evaluation, or dependency gating, which prerequisite owners are already satisfied, and what user-visible conversational behavior must be proven.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - checkpointing-persistence
+  - worker-inference-transport
+  - multithread-evaluation
+  - hybrid-training-interop
+  - onnx-work
+  - browser-build
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -25,6 +32,28 @@ layer.
 See [NEATchat sources](./references/neatchat-sources.md) for paraphrased notes on
 dialogue systems, episodic memory, information retrieval, and the current repo
 plan boundary.
+
+## When NOT to use
+
+Do NOT use for general chat systems or simple Q&A - this skill is specifically for NEATchat conversational architecture. Do NOT use for ONNX export alone - use `onnx-work` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["User input"] --> B["Dialogue manager"]
+    B --> C["Retrieve from memory tiers"]
+    C --> D["Rank candidates"]
+    D --> E["Route to response generator"]
+    E --> F["Generate response"]
+    F --> G["Update session memory"]
+    G --> H["Return response"]
+    B --> I["Branch / reset check"]
+    I --> J{"Reset?"}
+    J -- "Yes" --> K["Clear session state"]
+    J -- "No" --> H
+```
 
 ## Scope Boundary
 
@@ -162,6 +191,35 @@ traceable reason why a memory was surfaced.
   mutated.
 - Same-input reproducibility checks at the exact rung promised by
   `reproducibility-contracts`.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["NEATchat task"] --> B{"Which dependency gate?"}
+    B -- "Seed import needs pretrained recurrent model" --> C["onnx-work"]
+    B -- "Session save/branch/restore" --> D["checkpointing-persistence"]
+    B -- "Semantic ranking over corpus" --> E["repo-cortex-embeddings / advanced RAG"]
+    B -- "Browser delivery or worker payload" --> F["browser-build / worker-inference-transport"]
+    B -- "Custom NEATchat-internal bridge" --> G["neatchat-systems owns the bridge"]
+```
+
+## Before / After Examples
+
+**Before:**
+```text
+session: { turns: [] } // flat list, no tiering, every turn written to durable store
+```
+
+**After:**
+```text
+session: {
+  working: Turn[],
+  episodic: EpisodicMemory[],
+  semantic: ProfileMemory[],
+  snapshot: Checkpoint,
+} // multi-tier retrieval with provenance
+```
 
 ## Guardrails
 

@@ -201,7 +201,7 @@ describe('classifyQuery', () => {
   it('classifies short direct queries as simple_lookup with confidence 0.9', () => {
     const result = runModuleEvaluation<ClassificationResult>(`
       import { classifyQuery } from './scripts/semantic-index/classify-query.mjs';
-      const r = classifyQuery('Network.activate');
+      const r = classifyQuery('crossover');
       console.log(JSON.stringify(r));
     `);
     expect(result.query_class).toBe('simple_lookup');
@@ -356,7 +356,7 @@ describe('classifyForSearchCorpus', () => {
   it('returns per-class alpha for simple_lookup', () => {
     const result = runModuleEvaluation<SearchCorpusResult>(`
       import { classifyForSearchCorpus } from './scripts/semantic-index/classify-query.mjs';
-      console.log(JSON.stringify(classifyForSearchCorpus('Network.activate')));
+      console.log(JSON.stringify(classifyForSearchCorpus('crossover')));
     `);
     expect(result.alpha).toBe(0.75);
     expect(result.family).toBeNull();

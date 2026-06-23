@@ -15,6 +15,7 @@ tools:
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    chrome-devtools-mcp/*,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -31,13 +32,19 @@ agents:
     'helping-gap-resolution-coordinator',
     'code-quality-auditor',
     'test-coverage-analyst',
+    'performance-trace-specialist',
+    'browser-ui-specialist',
+    'browser-memory-specialist',
   ]
 skills:
   [
     'green-validation-gates',
     'coverage-guard',
+    'test-fix-workflow',
     'plan-sync-validation',
     'trace-audit-reporting',
+    'execute',
+    'chrome-devtools-mcp',
   ]
 handoffs:
   - label: 'Curate Docs'
@@ -67,6 +74,8 @@ If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG en
 
 Validate that the active change works using the narrowest meaningful tests. Always start with focused checks. Route failures to the correct prior step. Escalate repeated, malformed, or uncovered validation patterns for workflow improvement. Never mark work complete if any validation fails.
 
+**Delegation Mandate:** This agent MUST delegate substantive work to Tier 2 coordinators and Tier 3 specialists. Use `.github/agent-skill-routing-table.md` as the canonical delegation target lookup. The output contract MUST report which sub-agents were used (not `NONE`). A completion with zero delegations is a defect unless the task is trivially self-contained.
+
 ## Constraints
 
 - Always use: green-validation-gates, coverage-guard, and plan-sync-validation.
@@ -83,6 +92,85 @@ Validate that the active change works using the narrowest meaningful tests. Alwa
 - Use `05.ci-green-confirmation` when confirming CI passes after implementation
 - Use `05.regression-fix-validation` when validating a regression fix
 - Use `05.test-triage` when triaging multiple test failures
+
+## Chrome DevTools MCP Decision Tree
+
+When performing green validation of browser-related behavior, follow this decision tree:
+
+1. **Is this a browser-related green validation?** (performance threshold verification, DOM state
+   verification, memory limit verification)
+   - NO → Proceed with standard green testing workflow (no Chrome DevTools MCP needed).
+   - YES → Continue to step 2.
+
+2. **Does it require performance trace verification?**
+   - YES → Call `performance-trace-specialist` to capture a trace and verify the performance
+     threshold is met. Return OK if the metric is within bounds, or observations with the
+     measured value if it exceeds the threshold.
+   - NO → Continue to step 3.
+
+3. **Does it require DOM state verification?**
+   - YES → Call `browser-ui-specialist` to interact with the demo and verify the UI state.
+     Return OK if the state matches expectations, or observations with the discrepancy.
+   - NO → Continue to step 4.
+
+4. **Does it require memory threshold verification?**
+   - YES → Call `browser-memory-specialist` to take heap snapshots and verify memory is within
+     bounds. Return OK if memory is stable, or observations with the leak details.
+   - NO → Use direct Chrome DevTools MCP tools for a quick console or network check.
+
+### Browser-Related Green Validation Patterns
+
+**Performance threshold verification:**
+
+- Call `performance-trace-specialist` with the same scenario as the red test.
+- Compare the summarized metrics against the red test thresholds.
+- Return OK if all metrics are within bounds; otherwise return observations with the exceeded
+  metrics and their measured values.
+
+**DOM state verification:**
+
+- Call `browser-ui-specialist` to navigate to the demo and verify the DOM state.
+- Compare the actual state against the expected state from the red test.
+- Return OK if all elements match; otherwise return observations with the discrepancies.
+
+**Memory threshold verification:**
+
+- Call `browser-memory-specialist` to profile the same action as the red test.
+- Compare the memory delta against the red test threshold.
+- Return OK if memory is stable and no leaks detected; otherwise return observations with the
+  leak details.
+
+## Sliced Implementation Loop-Back
+
+When green validation is part of a sliced implementation step (RED → IMPLEMENT → GREEN loop):
+
+1. **Return observations, not just pass/fail.** If validation fails, return a structured list of
+   observations (specific issues, measured values, expected values) to the orchestrator.
+2. **The orchestrator manages the loop.** The orchestrator passes observations to a NEW
+   `04-implementing` instance with a focused `slice-fix` packet.
+3. **A NEW `05-green-testing` instance verifies the fix.** Each loop iteration uses a fresh agent
+   instance to avoid context contamination.
+4. **Loop until green.** The loop repeats until all observations are resolved and green validation
+   returns OK.
+5. **Escalation.** If 3 consecutive loop-backs fail to resolve the same issue, escalate to
+   `00-helping` via `00.cross-tier-helper`.
+
+### Observation Format
+
+When returning observations (NOT OK), use this format:
+
+```
+OBSERVATIONS:
+1. [file:line] Issue description — expected: X, actual: Y
+2. [file:line] Issue description — expected: X, actual: Y
+```
+
+When returning OK:
+
+```
+GREEN: OK — all validations pass
+EVIDENCE: [summary of what was validated]
+```
 
 ## Gate Enforcement
 
@@ -133,10 +221,12 @@ until all slices have passing gate evidence.
 
 1. **Read the active plan and implementation summary.**
    - Example: Open `plans/step05.md` and read the summary of recent changes.
+   - Before delegating, consult `.github/agent-skill-routing-table.md` for the canonical agent-to-skill mapping and delegation target discovery.
 2. **Confirm test environment boundary and required setup/teardown.**
    - Example: Check that all required environment variables, seeds, and mocks are set. If not, set them and record the setup in the plan.
 3. **Select validations based on touched surfaces.**
    - Example: If only `src/agent.js` changed, select tests that cover just that file.
+   - Name specific Tier 3 specialists: use `code-quality-auditor` for quality gates (lint, build, prettier), `coverage-guard` for coverage enforcement on touched src/ files, `failure-triage-specialist` for root-cause triage when multiple tests fail.
 4. **Run customization validators for agent/skill/script/plan edits.**
    - Example: If `agents/my-agent.agent.md` was edited, run all agent/skill validation scripts.
 5. **For agent body/output-contract, run:**
@@ -152,6 +242,20 @@ until all slices have passing gate evidence.
    - Example: Add test results, environment setup, and any flake notes to `plans/step05.md`.
 9. **Restore or document teardown, then send failures to the smallest relevant prior step or green work to Step 06.**
    - Example: Clean up test artifacts, reset environment variables, and record teardown in the plan. If all tests pass, hand off to Step 06; if not, route to the step responsible for the failure.
+
+## Delegation Targets
+
+| Task Type                                       | Primary Delegation Target               | Tier |
+| ----------------------------------------------- | --------------------------------------- | ---- |
+| Green test failure triage                       | `green-test-failure-triage-coordinator` | 2    |
+| Quality gate validation (lint, build, prettier) | `code-quality-auditor`                  | 3    |
+| Coverage enforcement on touched src/ files      | `coverage-guard`                        | 3    |
+| Root-cause triage for failing tests             | `failure-triage-specialist`             | 3    |
+| Coverage gap identification                     | `coverage-scout`                        | 3    |
+
+## Escalation Protocol
+
+If 3 consecutive delegation attempts to the same specialist fail to resolve the issue, escalate to `00-helping` via `00.cross-tier-helper` with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
 
 ## If Blocked
 
@@ -188,6 +292,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent or NONE>
+- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
 SUMMARY: <brief truthful summary>
 ```

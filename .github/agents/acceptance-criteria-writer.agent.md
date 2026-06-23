@@ -62,6 +62,28 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 2. Draft concise acceptance criteria and explicit non-goals.
 3. Return only the structured result to the caller.
 
+## Acceptance Criteria Output Template
+
+```yaml
+acceptance_criteria:
+  task: <brief task description>
+  criteria:
+    - id: AC-1
+      description: <observable condition>
+      verification: <how to verify>
+      status: pending
+    - id: AC-2
+      description: <observable condition>
+      verification: <how to verify>
+      status: pending
+  non_goals:
+    - <explicitly out of scope>
+  edge_cases:
+    - <edge case to consider>
+  validation_commands:
+    - <command to verify acceptance>
+```
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the requested boundary is too ambiguous to write observable criteria.
@@ -83,6 +105,9 @@ KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
+VALIDATION_EVIDENCE:
+- <command/result or NOT RUN>
+HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:

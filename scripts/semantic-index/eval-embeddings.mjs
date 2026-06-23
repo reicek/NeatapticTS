@@ -11,7 +11,6 @@
  * @param {boolean} [--json]                      - Emit JSON evaluation output.
  * @param {number}  [--alpha <n>]                 - Hybrid BM25 weight (0–1, default: 0.5).
  * @param {string}  [--database <path>]           - Override corpus database path.
- * @param {string}  [--embeddings-database <p>]   - Override embeddings database path.
  * @param {string}  [--model-directory <path>]    - Override local model cache directory.
  * @param {string}  [--model-id <id>]             - Override model identifier.
  * @param {string}  [--query-file <path>]         - Override eval query set path.
@@ -21,7 +20,7 @@
  * @returns {void} Exits 0 when the hybrid improvement threshold is met, 1 otherwise.
  *   JSON report written to stdout when `--json` is passed.
  */
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -32,7 +31,6 @@ import {
   writeJsonOrText,
 } from './cli-utils.mjs';
 import {
-  DEFAULT_EMBEDDINGS_DATABASE_PATH,
   DEFAULT_MODEL_DIRECTORY,
   DEFAULT_MODEL_ID,
   createOnnxTextEmbedder,
@@ -52,9 +50,6 @@ const DEFAULT_MIN_HYBRID_IMPROVEMENT = 0.02;
 export async function evaluateEmbeddings(options = {}) {
   const corpusDatabasePath = path.resolve(
     options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath,
-  );
-  const embeddingsDatabasePath = path.resolve(
-    options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
   );
   const queryFilePath = path.resolve(
     options.queryFilePath ?? DEFAULT_QUERY_FILE_PATH,
@@ -92,18 +87,19 @@ export async function evaluateEmbeddings(options = {}) {
         family: querySpec.family ?? null,
         limit,
         query: querySpec.query,
+        client: options.client,
       });
       const hybridResult = await queryDenseIndex({
         alpha,
         corpusDatabasePath,
         dense: true,
-        embeddingsDatabasePath,
         family: querySpec.family ?? null,
         limit,
         modelDirectory: options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
         modelId,
         query: querySpec.query,
         embedText,
+        client: options.client,
       });
       const bm25Rank = findHitRank(bm25Result.results, querySpec, limit);
       const hybridRank = findHitRank(hybridResult.results, querySpec, limit);
@@ -137,11 +133,9 @@ export async function evaluateEmbeddings(options = {}) {
       Array.isArray(querySpec.expected_doc_families) &&
       querySpec.expected_doc_families.includes('ts-source'),
   ).length;
-  const { chunkCount, embeddingCount } = loadCorpusCounts(
-    corpusDatabasePath,
-    embeddingsDatabasePath,
-    modelId,
-  );
+  const { chunkCount, embeddingCount } = options.client
+    ? await loadCorpusCountsWithClient(options.client, modelId)
+    : await loadCorpusCounts(corpusDatabasePath, modelId);
   const pass =
     hybridMrrAt5 >= bm25MrrAt5 + minHybridImprovement && tsSourceQueries >= 5;
 
@@ -161,33 +155,51 @@ export async function evaluateEmbeddings(options = {}) {
   };
 }
 
-function loadCorpusCounts(corpusDatabasePath, embeddingsDatabasePath, modelId) {
-  const corpusDatabase = new Database(corpusDatabasePath, {
-    readonly: true,
-    fileMustExist: true,
-  });
-  const embeddingsDatabase = new Database(embeddingsDatabasePath, {
-    readonly: true,
-    fileMustExist: true,
+async function loadCorpusCounts(corpusDatabasePath, modelId) {
+  const corpusClient = createClient({
+    url: pathToFileURL(corpusDatabasePath).href,
   });
 
   try {
-    const [{ count: chunkCount }] = corpusDatabase
-      .prepare('SELECT COUNT(*) AS count FROM chunks')
-      .all();
-    const [{ count: embeddingCount }] = embeddingsDatabase
-      .prepare(
-        'SELECT COUNT(*) AS count FROM chunk_embeddings WHERE model_id = ?',
-      )
-      .all(modelId);
+    const chunkResult = await corpusClient.execute(
+      'SELECT COUNT(*) AS count FROM chunks',
+    );
+    const embeddingResult = await corpusClient.execute({
+      sql: 'SELECT COUNT(*) AS count FROM chunks WHERE embedding IS NOT NULL AND embedding_model = ?',
+      args: [modelId],
+    });
     return {
-      chunkCount: Number(chunkCount),
-      embeddingCount: Number(embeddingCount),
+      chunkCount: Number(chunkResult.rows[0].count),
+      embeddingCount: Number(embeddingResult.rows[0].count),
     };
   } finally {
-    corpusDatabase.close();
-    embeddingsDatabase.close();
+    await corpusClient.close();
   }
+}
+
+/**
+ * Async client path for loading corpus counts via a Turso/libSQL client.
+ *
+ * Reads both chunk count and embedding count from the single consolidated
+ * database. Embeddings are stored in the `chunks.embedding` column (not a
+ * separate `chunk_embeddings` table).
+ *
+ * @param {import('@libsql/client').Client} client - Turso/libSQL client.
+ * @param {string} modelId - Embedding model identifier.
+ * @returns {Promise<{ chunkCount: number, embeddingCount: number }>}
+ */
+async function loadCorpusCountsWithClient(client, modelId) {
+  const chunkResult = await client.execute(
+    'SELECT COUNT(*) AS count FROM chunks',
+  );
+  const embeddingResult = await client.execute({
+    sql: 'SELECT COUNT(*) AS count FROM chunks WHERE embedding IS NOT NULL AND embedding_model = ?',
+    args: [modelId],
+  });
+  return {
+    chunkCount: Number(chunkResult.rows[0].count),
+    embeddingCount: Number(embeddingResult.rows[0].count),
+  };
 }
 
 function findHitRank(results, querySpec, limit) {
@@ -239,8 +251,7 @@ async function main() {
       options: [
         '--json                     Emit JSON evaluation output.',
         '--alpha <n>                Hybrid BM25 weight (default: 0.5).',
-        '--database <path>          Override the semantic-index corpus database path.',
-        '--embeddings-database <p>  Override the embeddings database path.',
+        '--database <path>          Override the corpus database path.',
         '--model-directory <path>   Override the local model cache directory.',
         '--model-id <id>            Override the model identifier.',
         '--query-file <path>        Override the eval query set path.',
@@ -255,7 +266,6 @@ async function main() {
     const report = await evaluateEmbeddings({
       alpha: args.alpha,
       corpusDatabasePath: args.database,
-      embeddingsDatabasePath: args['embeddings-database'],
       minHybridImprovement: args['min-hybrid-improvement'],
       modelDirectory: args['model-directory'],
       modelId: args['model-id'],

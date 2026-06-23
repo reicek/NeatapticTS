@@ -1,5 +1,5 @@
 /**
- * @description Assert the health of `data/semantic-index.sqlite`: minimum document and
+ * @description Assert the health of `data/turso-replica.sqlite`: minimum document and
  * chunk row counts, per-document freshness proof validity, and optional staleness age
  * enforcement. Emits the standard gate JSON contract `{ ok, pass, documents, chunks, failures }`.
  *
@@ -7,12 +7,12 @@
  * @param {number}  [--min-documents <n>]   - Minimum expected document rows (default: 1).
  * @param {number}  [--min-chunks <n>]      - Minimum expected chunk rows (default: 1).
  * @param {number}  [--max-age-ms <ms>]     - Maximum allowed row age in milliseconds (default: 86 400 000 / 24 h).
- * @param {string}  [--database <path>]     - Path to the SQLite database file (default: `data/semantic-index.sqlite`).
+ * @param {string}  [--database <path>]     - Path to the SQLite database file (default: `data/turso-replica.sqlite`).
  * @param {boolean} [--help]                - Show help and exit.
  *
  * @returns {void} Exits 0 when the index is healthy, 1 when any assertion fails.
  */
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -92,6 +92,55 @@ export async function validateSemanticIndex(input = {}) {
 }
 
 export async function validateDatabase(options = {}) {
+  if (options.client) {
+    const docsResult = await options.client.execute({
+      sql: 'SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents ORDER BY file_path',
+      args: [],
+    });
+    const chunkCountResult = await options.client.execute({
+      sql: 'SELECT COUNT(*) AS count FROM chunks',
+      args: [],
+    });
+    const documents = docsResult.rows;
+    const chunkCount = Number(chunkCountResult.rows[0].count);
+
+    const freshnessChecks = await Promise.all(
+      documents.map(async (documentRow) => {
+        const absolutePath = path.join(repoRoot, documentRow.file_path);
+
+        try {
+          return {
+            file_path: documentRow.file_path,
+            ...(await getFreshnessProof(absolutePath)),
+          };
+        } catch (error) {
+          if (
+            error &&
+            typeof error === 'object' &&
+            'code' in error &&
+            error.code === 'ENOENT'
+          ) {
+            return {
+              file_path: documentRow.file_path,
+              missing: true,
+            };
+          }
+
+          throw error;
+        }
+      }),
+    );
+
+    return validateSemanticIndex({
+      documents,
+      freshnessChecks,
+      chunks: chunkCount,
+      minDocuments: options.minDocuments,
+      minChunks: options.minChunks,
+      maxStalenessMs: options.maxStalenessMs,
+    });
+  }
+
   const databasePath = path.resolve(
     options.databasePath ?? defaultDatabasePath,
   );
@@ -103,19 +152,18 @@ export async function validateDatabase(options = {}) {
     });
   }
 
-  const database = new Database(databasePath, {
-    readonly: true,
-    fileMustExist: true,
+  const database = createClient({ url: pathToFileURL(databasePath).href });
+  const docsResult = await database.execute({
+    sql: 'SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents ORDER BY file_path',
+    args: [],
   });
-  const documents = database
-    .prepare(
-      'SELECT file_path, mtime_ms, file_size, sha256, indexed_at FROM documents ORDER BY file_path',
-    )
-    .all();
-  const [{ count: chunkCount }] = database
-    .prepare('SELECT COUNT(*) AS count FROM chunks')
-    .all();
-  database.close();
+  const chunkCountResult = await database.execute({
+    sql: 'SELECT COUNT(*) AS count FROM chunks',
+    args: [],
+  });
+  const documents = docsResult.rows;
+  const chunkCount = Number(chunkCountResult.rows[0].count);
+  await database.close();
 
   const freshnessChecks = await Promise.all(
     documents.map(async (documentRow) => {
@@ -202,7 +250,7 @@ async function main() {
         '--min-documents <n>   Minimum expected document rows (default: 1)',
         '--min-chunks <n>      Minimum expected chunk rows (default: 1)',
         '--max-age-ms <ms>     Maximum row age in milliseconds (default: 86400000 / 24 h)',
-        '--database <path>     Path to SQLite database file (default: data/semantic-index.sqlite)',
+        '--database <path>     Path to SQLite database file (default: data/turso-replica.sqlite)',
         '--help                Show this help',
       ],
     });

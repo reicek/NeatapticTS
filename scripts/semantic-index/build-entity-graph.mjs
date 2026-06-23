@@ -3,7 +3,7 @@
  * @description Main entity graph extraction orchestration script. Extracts code
  * entities (module, class, function, interface, type-alias, variable, error-class),
  * doc entities (plan, skill, agent, demo, benchmark), and cross-reference edges,
- * then inserts them into the `entities` and `edges` tables in `semantic-index.sqlite`.
+ * then inserts them into the `entities` and `edges` tables in `turso-replica.sqlite`.
  *
  * Follows the same freshness-based incremental update pattern as `build-index.mjs`:
  * unchanged documents skip extraction; changed documents trigger entity/edge
@@ -142,28 +142,30 @@ export async function buildEntityGraph(options = {}) {
     return summary;
   }
 
-  // Phase 4: Insert into SQLite.
-  const database = await initSemanticIndex({ databasePath });
+  // Phase 4: Insert into SQLite via async Turso/libSQL client.
+  const client = await initSemanticIndex(
+    options.client ? { client: options.client } : { databasePath },
+  );
 
-  // Check if entities/edges tables exist (graceful degradation).
-  const tableCheck = database
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('entities', 'edges')",
-    )
-    .all();
-  const existingTables = new Set(tableCheck.map((row) => row.name));
-  if (!existingTables.has('entities') || !existingTables.has('edges')) {
-    // Tables don't exist yet — run schema creation.
-    const { readFile: readSchema } = await import('node:fs/promises');
-    const schemaPath = path.join(
-      path.dirname(import.meta.url.replace(/^file:\/\//, '')),
-      'schema-v2.sql',
-    );
-    const schema = await readSchema(schemaPath, 'utf8');
-    database.exec(schema);
-  }
+  return buildEntityGraphWithClient({
+    client,
+    allEntities: collectAllEntities(codeResult, docResult),
+    codeEdges: codeResult.edges,
+    docEdges: docResult.edges,
+    crossRefEdges: crossRefResult.edges,
+    summary,
+    startTime,
+  });
+}
 
-  // Collect all entities and deduplicate by qualified_name.
+/**
+ * Collect and deduplicate entities from code and doc results by qualified_name.
+ *
+ * @param {{ entities: Array }} codeResult - Code extraction result.
+ * @param {{ entities: Array }} docResult - Doc extraction result.
+ * @returns {Array} Deduplicated entity list.
+ */
+function collectAllEntities(codeResult, docResult) {
   const allEntities = [];
   const seenQNames = new Set();
   for (const entity of [...codeResult.entities, ...docResult.entities]) {
@@ -172,44 +174,64 @@ export async function buildEntityGraph(options = {}) {
       allEntities.push(entity);
     }
   }
+  return allEntities;
+}
 
-  // Insert entities and build qualified_name → entity_id map.
-  const insertEntity = database.prepare(`
-    INSERT INTO entities(entity_type, name, qualified_name, doc_id, chunk_id, module_path, signature_text, file_path, char_start, char_end, extra_metadata, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch())
-  `);
+/**
+ * Async client-based entity graph insertion.
+ *
+ * Uses `await client.execute()` for all database operations against a
+ * Turso/libSQL client. The client is NOT closed — the caller owns its lifecycle.
+ *
+ * @param {object} params - Insert parameters.
+ * @param {import('@libsql/client').Client} params.client - libSQL client.
+ * @param {Array} params.allEntities - Deduplicated entity list.
+ * @param {Array} params.codeEdges - Code-derived edges.
+ * @param {Array} params.docEdges - Doc-derived edges.
+ * @param {Array} params.crossRefEdges - Cross-reference edges.
+ * @param {object} params.summary - Summary object to populate.
+ * @param {number} params.startTime - Build start timestamp.
+ * @returns {Promise<object>} Populated summary.
+ */
+async function buildEntityGraphWithClient({
+  client,
+  allEntities,
+  codeEdges,
+  docEdges,
+  crossRefEdges,
+  summary,
+  startTime,
+}) {
+  // Step 1: Delete existing entities and edges.
+  await client.execute({ sql: 'DELETE FROM edges', args: [] });
+  await client.execute({ sql: 'DELETE FROM entities', args: [] });
 
-  const findDocId = database.prepare(
-    'SELECT doc_id FROM documents WHERE file_path = ?',
-  );
-  const findChunkId = database.prepare(
-    'SELECT chunk_id FROM chunks WHERE doc_id = ? AND (symbol_name = ? OR heading_path = ?) LIMIT 1',
-  );
+  // Step 2: Insert entities and build qualified_name → entity_id map.
+  const entityQNameToId = new Map();
 
-  // Delete existing entities and edges before re-inserting.
-  const deleteAllEntities = database.prepare('DELETE FROM entities');
-  const deleteAllEdges = database.prepare('DELETE FROM edges');
+  for (const entity of allEntities) {
+    // Resolve doc_id from file_path.
+    let docId = null;
+    const docResult = await client.execute({
+      sql: 'SELECT doc_id FROM documents WHERE file_path = ?',
+      args: [entity.file_path],
+    });
+    if (docResult.rows[0]) docId = docResult.rows[0].doc_id;
 
-  const insertGraph = database.transaction(() => {
-    deleteAllEdges.run();
-    deleteAllEntities.run();
+    // Resolve chunk_id if possible.
+    let chunkId = null;
+    if (docId && entity.entity_type !== 'module') {
+      const chunkResult = await client.execute({
+        sql: 'SELECT chunk_id FROM chunks WHERE doc_id = ? AND (symbol_name = ? OR heading_path = ?) LIMIT 1',
+        args: [docId, entity.name, entity.name],
+      });
+      if (chunkResult.rows[0]) chunkId = chunkResult.rows[0].chunk_id;
+    }
 
-    const entityQNameToId = new Map();
-
-    for (const entity of allEntities) {
-      // Resolve doc_id from file_path.
-      let docId = null;
-      const docRow = findDocId.get(entity.file_path);
-      if (docRow) docId = docRow.doc_id;
-
-      // Resolve chunk_id if possible.
-      let chunkId = null;
-      if (docId && entity.entity_type !== 'module') {
-        const chunkRow = findChunkId.get(docId, entity.name, entity.name);
-        if (chunkRow) chunkId = chunkRow.chunk_id;
-      }
-
-      const result = insertEntity.run(
+    await client.execute({
+      sql: `INSERT INTO entities(entity_type, name, qualified_name, doc_id, chunk_id, module_path, signature_text, file_path, char_start, char_end, extra_metadata, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch())`,
+      args: [
         entity.entity_type,
         entity.name,
         entity.qualified_name,
@@ -221,52 +243,42 @@ export async function buildEntityGraph(options = {}) {
         entity.char_start ?? null,
         entity.char_end ?? null,
         entity.extra_metadata ?? '{}',
-      );
+      ],
+    });
 
-      entityQNameToId.set(
-        entity.qualified_name,
-        Number(result.lastInsertRowid),
-      );
-    }
+    const rowIdResult = await client.execute(
+      'SELECT last_insert_rowid() AS id',
+    );
+    entityQNameToId.set(entity.qualified_name, Number(rowIdResult.rows[0].id));
+  }
 
-    // Collect all edges.
-    const allEdges = [
-      ...codeResult.edges,
-      ...docResult.edges,
-      ...crossRefResult.edges,
-    ];
+  // Step 3: Insert edges, resolving qualified_names to entity_ids.
+  const allEdges = [...codeEdges, ...docEdges, ...crossRefEdges];
 
-    // Insert edges, resolving qualified_names to entity_ids.
-    const insertEdge = database.prepare(`
-      INSERT OR IGNORE INTO edges(source_entity_id, target_entity_id, relationship, confidence, extra_metadata, created_at)
-      VALUES (?, ?, ?, ?, ?, unixepoch())
-    `);
+  for (const edge of allEdges) {
+    const sourceId = entityQNameToId.get(edge.source_qualified_name);
+    const targetId = entityQNameToId.get(edge.target_qualified_name);
+    if (sourceId == null || targetId == null) continue;
 
-    for (const edge of allEdges) {
-      const sourceId = entityQNameToId.get(edge.source_qualified_name);
-      const targetId = entityQNameToId.get(edge.target_qualified_name);
-      if (sourceId == null || targetId == null) continue;
-
-      insertEdge.run(
+    await client.execute({
+      sql: `INSERT OR IGNORE INTO edges(source_entity_id, target_entity_id, relationship, confidence, extra_metadata, created_at)
+            VALUES (?, ?, ?, ?, ?, unixepoch())`,
+      args: [
         sourceId,
         targetId,
         edge.relationship,
         edge.confidence ?? 'high',
         edge.extra_metadata ?? '{}',
-      );
-    }
+      ],
+    });
+  }
 
-    summary.entities = entityQNameToId.size;
-    summary.edges = allEdges.filter((edge) => {
-      const sourceId = entityQNameToId.get(edge.source_qualified_name);
-      const targetId = entityQNameToId.get(edge.target_qualified_name);
-      return sourceId != null && targetId != null;
-    }).length;
-  });
-
-  insertGraph();
-
-  database.close();
+  summary.entities = entityQNameToId.size;
+  summary.edges = allEdges.filter((edge) => {
+    const sourceId = entityQNameToId.get(edge.source_qualified_name);
+    const targetId = entityQNameToId.get(edge.target_qualified_name);
+    return sourceId != null && targetId != null;
+  }).length;
   summary.elapsedMs = Date.now() - startTime;
   return summary;
 }
@@ -372,7 +384,7 @@ async function main() {
         '--dry-run         Extract without writing SQLite rows.',
         '--force           Re-extract unchanged documents.',
         '--json            Emit JSON summary.',
-        '--database <path> Path to SQLite database (default: data/semantic-index.sqlite).',
+        '--database <path> Path to SQLite database (default: data/turso-replica.sqlite).',
         '--help            Show this help.',
       ],
     });

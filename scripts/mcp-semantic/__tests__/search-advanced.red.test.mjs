@@ -10,41 +10,39 @@
  * search-advanced.mjs is implemented and registered in repo-cortex-mcp.mjs.
  */
 
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import Database from 'better-sqlite3';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-async function readSchema() {
-  const schemaPath = path.join(__dirname, '../../semantic-index/schema-v2.sql');
-  return readFile(schemaPath, 'utf8');
-}
+import { createClient } from '@libsql/client';
+import { readCorpusSchema, splitSqlStatements } from './turso-test-helpers.mjs';
+import { closeTursoClient } from '../tools/cortex-db.mjs';
 
 async function setupDb() {
   const tempDir = await mkdtemp(path.join(tmpdir(), 'search-advanced-test-'));
   const dbPath = path.join(tempDir, 'test.sqlite');
-  const db = new Database(dbPath);
-  db.exec(await readSchema());
-  db.exec(`
+  const client = createClient({ url: 'file:' + dbPath });
+  const schemaSql = await readCorpusSchema();
+  for (const stmt of splitSqlStatements(schemaSql)) {
+    await client.execute(stmt);
+  }
+  await client.execute(`
     INSERT INTO documents (file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
     VALUES ('src/network.ts', 'ts-source', 0, 100, 'a', 1);
   `);
-  const docId = db.prepare('SELECT doc_id FROM documents').get().doc_id;
-  db.prepare(
-    `
-    INSERT INTO chunks (doc_id, chunk_index, body_text, char_start, char_end, depth, arch_layer)
-    VALUES (?, 0, 'NEAT activation function in network', 0, 35, 0, 'network')
-  `,
-  ).run(docId);
-  db.close();
-  return { dbPath, tempDir };
+  const docResult = await client.execute('SELECT doc_id FROM documents');
+  const docId = docResult.rows[0].doc_id;
+  await client.execute({
+    sql: `INSERT INTO chunks (doc_id, chunk_index, body_text, char_start, char_end, depth, arch_layer)
+    VALUES (?, 0, 'NEAT activation function in network', 0, 35, 0, 'network')`,
+    args: [docId],
+  });
+  return { client, dbPath, tempDir };
 }
 
-function teardownDb(tempDir) {
-  return rm(tempDir, { recursive: true, force: true });
+async function teardownDb(client, tempDir, dbPath) {
+  await client.close();
+  if (dbPath) await closeTursoClient(dbPath);
+  await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }
 
 describe('search-advanced', () => {
@@ -52,7 +50,7 @@ describe('search-advanced', () => {
     it('registers search_advanced in the MCP tool list', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const listed = await server.dispatch({
@@ -65,7 +63,7 @@ describe('search-advanced', () => {
           'search_advanced',
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
   });
@@ -74,7 +72,7 @@ describe('search-advanced', () => {
     it('rejects a missing query parameter with EMPTY_QUERY code', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -96,14 +94,14 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
 
     it('rejects an invalid budget type', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -125,14 +123,14 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
 
     it('rejects an invalid limit type', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -154,7 +152,7 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
   });
@@ -163,7 +161,7 @@ describe('search-advanced', () => {
     it('uses BM25-heavy defaults for simple_lookup query class', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -188,14 +186,14 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
 
     it('uses dense expansion defaults for cross_boundary query class', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -220,7 +218,7 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
   });
@@ -229,7 +227,7 @@ describe('search-advanced', () => {
     it('returns pipeline metadata: classification, expansion, results', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -255,14 +253,14 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
 
     it('assembles context when context_budget is provided', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -291,7 +289,7 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
   });
@@ -300,7 +298,7 @@ describe('search-advanced', () => {
     it('reports dense_state when dense subsystem is cold', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -322,14 +320,14 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
 
     it('reports rerank_state when reranker is cold', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -351,14 +349,14 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
 
     it('reports expansion degradation when expansion is cold', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -382,7 +380,7 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
   });
@@ -391,7 +389,7 @@ describe('search-advanced', () => {
     it('returns a partial result with CORTEX_TIMEOUT_PARTIAL error code', async () => {
       const { createRepoCortexMcpServer } =
         await import('../repo-cortex-mcp.mjs');
-      const { dbPath, tempDir } = await setupDb();
+      const { client, dbPath, tempDir } = await setupDb();
       try {
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
@@ -413,7 +411,7 @@ describe('search-advanced', () => {
           }),
         );
       } finally {
-        await teardownDb(tempDir);
+        await teardownDb(client, tempDir, dbPath);
       }
     });
   });

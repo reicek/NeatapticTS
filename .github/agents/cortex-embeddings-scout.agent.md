@@ -7,6 +7,7 @@ tools:
   [
     read,
     search,
+    execute,
     neataptic-cortex-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
@@ -59,6 +60,13 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 3. Identify the active readiness surface: embedding-model cache, SQLite embeddings store presence, hybrid ranking boundary, or evaluation gap.
 4. Collect the minimum evidence needed from nearby files, path expectations, and retrieval-facing source.
 5. Summarize the active blocker and the smallest useful handoff for the repo-cortex-embeddings skill owner.
+
+## Embeddings Readiness Check Patterns
+
+- **Model-cache availability:** Verify the ONNX embedding model is downloaded and cached. Check for model files in the expected cache directory. If missing, the dense search path is degraded to BM25-only.
+- **SQLite store presence:** Verify the SQLite vector store exists and contains embeddings. Check for `*.sqlite` files with vector tables. If missing, dense retrieval cannot function.
+- **Hybrid ranking boundary:** Verify the hybrid BM25 + dense ranking pipeline is functional. Check that `search_corpus` returns both BM25 and dense results with `dense_state` reporting "warm". If dense is "cold" or "model-only", only BM25 results are valid.
+- **Index freshness:** Verify the corpus index is up-to-date with current file metadata. Use `freshness_check` to compare indexed proofs against filesystem metadata. Stale indexes produce degraded search results.
 
 ## If Blocked
 

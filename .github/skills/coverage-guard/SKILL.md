@@ -4,6 +4,10 @@ description: 'Verify that 100% coverage is maintained across all four categories
 argument-hint: 'List the src/ files that were changed, provide the most recent green baseline, and state whether this is a post-change check or a regression repair.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - coverage-tranche
+  - red-test-contracts
+  - creating-unit-tests
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -34,6 +38,28 @@ Invoke `coverage-guard` after **every** workflow that edits `src/` code:
 Do **not** use this skill instead of `coverage-tranche`. This skill is the
 post-change gate; `coverage-tranche` is the forward-progress workflow for
 files that are already passing but have not yet reached 100%.
+
+
+## When NOT to use
+
+Do NOT use for coverage expansion on passing code - use `coverage-tranche` instead. Do NOT use for writing new tests from scratch - use `creating-unit-tests` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["src/ file changed"] --> B["Run focused Jest slice"]
+    B --> C{"All 4 categories 100%?"}
+    C -- "Yes" --> D["Gate passed"]
+    C -- "No" --> E["Classify gap"]
+    E --> F{"Reachable?"}
+    F -- "Yes" --> G["Add smallest owner-local test"]
+    F -- "No" --> H["Remove dead code"]
+    G --> I["Re-run focused slice"]
+    H --> I
+    I --> C
+```
 
 ## Task Packet
 
@@ -185,6 +211,28 @@ When a gap is unreachable:
 
 Every new `it()` block must contain **exactly one top-level `expect(...)`**.
 Group by scenario, not by assertion count.
+
+## Before / After Examples
+
+**Before:**
+```ts
+// New branch added with no test — branches drop to 83%
+function validate(input: unknown): Result {
+  if (Array.isArray(input)) {
+    return foldArray(input);  // uncovered
+  }
+  return foldScalar(input);
+}
+```
+
+**After:**
+```ts
+// Smallest owner-local test added to the nearest existing test file — back to 100%
+it('folds array input', () => {
+  const result = validate([1, 2, 3]);
+  expect(result).toEqual(expected);
+});
+```
 
 ## Guardrails
 

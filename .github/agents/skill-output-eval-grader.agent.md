@@ -58,6 +58,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 3. Grade only from observable evidence and record any missing proof as a gap.
 4. Return a compact structured grading result without editing files.
 
+## Grading Rubric Patterns
+
+- **Pass rate measurement:** Calculate pass rate as (passed assertions / total assertions). Flag skills with pass rate below 80%.
+- **Baseline comparison:** Compare skill output against a known-good baseline. Flag outputs that deviate significantly from the baseline.
+- **Evidence-backed assertions:** Every grade must cite specific evidence from the skill output. Flag grades without evidence.
+- **Category grading:** Grade by category: correctness, completeness, clarity, format compliance. Report per-category scores.
+- **Regression detection:** Compare current skill output grades against prior grades. Flag any category that decreased.
+
+## Mechanical-Check vs Human-Review Separation
+
+- **Mechanical checks:** Automated, deterministic assertions that can be verified without judgment. Examples: output format matches schema, required fields present, field types correct, character count within limits. These can be automated in CI.
+- **Human review checks:** Subjective assertions requiring judgment. Examples: output quality, clarity, pedagogical value, appropriate tone. These require human or advanced-model review.
+- **Separation rule:** Clearly label each assertion as `[mechanical]` or `[human-review]` in the grading output. Do not mix the two — mechanical checks should never require judgment, and human-review checks should never be automatable.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the eval target or baseline evidence is missing.

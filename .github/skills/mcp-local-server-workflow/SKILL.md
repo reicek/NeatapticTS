@@ -4,6 +4,10 @@ description: 'Use when: designing, updating, or validating local MCP runtime-vis
 argument-hint: 'Name the runtime facts, current and target classification, planned component, evidence source and freshness, blocker or validation failure, required self-checks or gates, and how the limitation or promotion should be communicated.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - repo-cortex-workflow
+  - agent-script-tooling
+  - routing-optimization-policy
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -56,6 +60,11 @@ the MCP-specific classification, transition, and trust-boundary rules.
   the capability must be rolled back or blocked without ambiguity.
 - A change to MCP tool definitions, plan-packet parsing, or trust-boundary docs
   needs CI-visible evidence and a clear maintainer-facing summary.
+
+
+## When NOT to use
+
+Do NOT use for general agent customization - use `agent-frontmatter-standards` instead. Do NOT use for routing table management - use `routing-optimization-policy` instead.
 
 ## Task Packet
 

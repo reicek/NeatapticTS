@@ -4,6 +4,11 @@ description: 'Use when: planning or executing a repo-consistent SOLID split in N
 argument-hint: 'Provide split root, mode (map|plan|execute|close), current boundary, plan path, stable import or compatibility requirements, expected validations, documentation follow-up needs, and any blocker or worktree caution.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - splitting-monolithic-agent
+  - educational-docs
+  - tracker-handoff
+  - coverage-guard
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -76,6 +81,11 @@ The default promise is:
   documentation follow-up, or targeted validation were not explicit enough.
 - Documentation work revealed that the real fix is a boundary split rather than
   more prose on the current shape.
+
+
+## When NOT to use
+
+Do NOT use for splitting agents - use `splitting-monolithic-agent` instead. Do NOT use for general refactoring - use `implementation-standards` instead.
 
 ## Invocation Pattern
 
@@ -296,16 +306,22 @@ For demos under `examples/`, treat DX gaps as library or runtime evidence
 first. Do not normalize demo-specific workarounds if the real issue is a shared
 API, default, or runtime contract.
 
-## Default Decision Rules
+## Decision Tree
 
-| Situation                                                        | Default action                                                                                   | Why                                                        |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| A public file is overloaded but still the stable entrypoint      | Keep a thin orchestration-first facade and extract focused helpers behind it                     | Stable imports stay readable without preserving a monolith |
-| The generated README is too large or mixed-topic after one split | Continue splitting into chapter folders instead of accepting a monolithic README                 | Discoverability is part of architecture in this repo       |
-| External compatibility needs are unknown                         | Keep the smallest stable facade, record a blocker, and prove consumers before deleting old paths | Honest compatibility handling beats speculative cleanup    |
-| The real problem is documentation quality, not structure         | Use `educational-docs` instead of forcing a code split                                           | Choose the smallest correct tool                           |
-| A validation failure is outside the active boundary              | Stop, stabilize the worktree, and hand off to the right repair workflow                          | Do not strand a half-moved boundary                        |
-| An example reveals awkward library ergonomics                    | Prefer the library-level fix or a planned gap note over a demo-local workaround                  | Examples are probes, not places to normalize poor DX       |
+```mermaid
+flowchart TD
+    A["Overloaded public file"] --> B{"Stable entrypoint?"}
+    B -- "Yes" --> C["Keep thin facade, extract helpers"]
+    B -- "No — internal" --> D["Folderize freely"]
+    C --> E{"README too large?"}
+    E -- "Yes" --> F["Split into chapter folders"]
+    E -- "No" --> G["Single split is enough"]
+    D --> G
+    F --> H{"Real problem is docs?"}
+    H -- "Yes" --> I["Use educational-docs instead"]
+    H -- "No" --> J["Proceed with code split"]
+    G --> J
+```
 
 ## Required Split Workflow
 
@@ -609,6 +625,31 @@ If a companion agent uses this skill, it should:
    `educational-docs`, and validation repair to the appropriate testing
    workflow instead of broadening the prompt.
 6. Update the agent when this skill changes materially so both remain aligned.
+
+## Before / After Examples
+
+**Before:**
+```ts
+// src/neat/mutation.ts — 500-line monolith
+export function mutate(genome: Genome): Genome {
+  // ... 200 lines of ADD mutation logic ...
+  // ... 150 lines of SUB mutation logic ...
+  // ... 150 lines of SWAP mutation logic ...
+}
+```
+
+**After:**
+```ts
+// src/neat/mutation/neat.mutation.ts — orchestration
+export function mutate(genome: Genome): Genome {
+  const picked = pickMutationType();
+  return applyMutation(genome, picked);
+}
+
+// src/neat/mutation/neat.mutation.utils.ts — focused helpers
+function applyMutation(genome: Genome, type: MutationType): Genome { /* ... */ }
+function pickMutationType(): MutationType { /* ... */ }
+```
 
 ## Guardrails
 

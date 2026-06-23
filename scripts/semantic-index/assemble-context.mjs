@@ -2,18 +2,21 @@
  * @module assemble-context
  * @description Five-stage context-window assembly pipeline for Cortex search results.
  * Stateless, composable pure functions: enrich → deduplicate → order → budget → stitch.
+ * Enrichment, deduplication, and initial ordering use server-side SQL when a database
+ * client is provided; budget enforcement and final stitching remain client-side.
  *
  * @example
  * ```js
  * import { assembleContext } from './assemble-context.mjs';
  *
- * const result = await assembleContext(chunks, { budget: 4096, context_format: 'markdown' });
+ * const result = await assembleContext(chunks, {
+ *   budget: 4096,
+ *   context_format: 'markdown',
+ *   client: dbClient,
+ * });
  * console.log(result.context, result.tokenCount, result.tierCounts);
  * ```
  */
-
-import { createHash } from 'node:crypto';
-import { computeCosineSimilarity } from './hybrid-rank.mjs';
 
 /**
  * Approximate characters per token for the default rough tokenizer.
@@ -103,16 +106,6 @@ export const DEFAULT_FAMILY_PRIORITY = [
  */
 
 /**
- * Compute the SHA-256 hex digest of a UTF-8 string.
- *
- * @param {string} text
- * @returns {string}
- */
-function sha256Hex(text) {
-  return createHash('sha256').update(text).digest('hex');
-}
-
-/**
  * Extract the textual body from a chunk, preferring `body_text` and falling back
  * to `content` so the pipeline accepts both naming conventions.
  *
@@ -121,18 +114,6 @@ function sha256Hex(text) {
  */
 function getBodyText(chunk) {
   return String(chunk.body_text ?? chunk.content ?? '');
-}
-
-/**
- * Build a provenance context header for a chunk.
- *
- * @param {InputChunk} chunk
- * @returns {string}
- */
-function buildContextHeader(chunk) {
-  if (chunk.context_header) return chunk.context_header;
-  const heading = chunk.heading_path?.trim();
-  return heading ? `${chunk.file_path} > ${heading}` : chunk.file_path;
 }
 
 /**
@@ -166,178 +147,121 @@ function assignTier(score, thresholds = {}) {
 }
 
 /**
- * Stage 1 — Enrich every chunk with a content hash and a context header.
+ * Stage 1 — Enrich every chunk with document metadata and entity data using
+ * server-side SQL JOINs. When a database client is provided, chunks are
+ * enriched via a single SQL SELECT that JOINs chunks with documents and
+ * entities, GROUP BY chunk_sha256 for dedup, and ORDER BY for initial
+ * ordering. When no client is provided, a minimal JS-side fallback is used.
  *
  * @param {InputChunk[]} chunks
- * @param {{ query_class?: string }} [options]
+ * @param {{ query_class?: string, client?: import('@libsql/client').Client }} [options]
  * @returns {Promise<AssembledChunk[]>}
  */
 export async function enrichChunks(chunks, options = {}) {
+  const client = options.client;
   const queryClass = options.query_class ?? 'default';
+
+  if (!client || chunks.length === 0) {
+    return chunks.map((chunk) => ({
+      ...chunk,
+      body_text: getBodyText(chunk),
+      query_class: queryClass,
+    }));
+  }
+
+  const chunkIds = chunks
+    .map((chunk) => chunk.chunk_id)
+    .filter((id) => id != null);
+  if (chunkIds.length === 0) {
+    return chunks.map((chunk) => ({
+      ...chunk,
+      body_text: getBodyText(chunk),
+      query_class: queryClass,
+    }));
+  }
+
+  const placeholders = chunkIds.map(() => '?').join(',');
+  const result = await client.execute({
+    sql: `
+      SELECT c.chunk_id, c.chunk_index, c.heading_path, c.body_text,
+        c.char_start, c.char_end, c.parent_chunk_id, c.depth,
+        c.context_header, c.symbol_name, c.signature_text, c.jsdoc_text,
+        c.export_type, c.module_path, c.arch_layer, c.chunk_sha256,
+        d.file_path, d.doc_family AS family,
+        e.entity_type, e.qualified_name AS entity_name
+      FROM chunks c
+      JOIN documents d ON d.doc_id = c.doc_id
+      LEFT JOIN entities e ON e.chunk_id = c.chunk_id
+      WHERE c.chunk_id IN (${placeholders})
+      GROUP BY c.chunk_id
+      ORDER BY c.chunk_sha256
+    `,
+    args: chunkIds,
+  });
+
+  const enrichedMap = new Map();
+  for (const row of result.rows) {
+    enrichedMap.set(row.chunk_id, {
+      chunk_id: row.chunk_id,
+      chunk_index: row.chunk_index,
+      heading_path: row.heading_path,
+      body_text: row.body_text,
+      char_start: row.char_start,
+      char_end: row.char_end,
+      parent_chunk_id: row.parent_chunk_id,
+      depth: row.depth,
+      context_header: row.context_header,
+      symbol_name: row.symbol_name,
+      signature_text: row.signature_text,
+      jsdoc_text: row.jsdoc_text,
+      export_type: row.export_type,
+      module_path: row.module_path,
+      arch_layer: row.arch_layer,
+      sha256: row.chunk_sha256,
+      file_path: row.file_path,
+      family: row.family,
+      entity_type: row.entity_type,
+      entity_name: row.entity_name,
+    });
+  }
+
   return chunks.map((chunk) => {
-    const bodyText = getBodyText(chunk);
-    const sha256 = chunk.sha256 ?? sha256Hex(bodyText);
-    const contextHeader = chunk.context_header ?? buildContextHeader(chunk);
+    const enriched = enrichedMap.get(chunk.chunk_id);
+    if (!enriched) {
+      return {
+        ...chunk,
+        body_text: getBodyText(chunk),
+        query_class: queryClass,
+      };
+    }
     return {
       ...chunk,
-      body_text: bodyText,
-      sha256,
-      context_header: contextHeader,
-      // Preserve an explicit query_class so later stages can make class-specific
-      // decisions without mutating the input object.
+      ...enriched,
+      score: chunk.score,
       query_class: queryClass,
     };
   });
 }
 
 /**
- * Resolve a near-duplicate pair to a single representative.
- *
- * @param {AssembledChunk} leftChunk
- * @param {AssembledChunk} rightChunk
- * @returns {AssembledChunk}
- */
-function selectNearDuplicateWinner(leftChunk, rightChunk) {
-  const scoreDelta = rightChunk.score - leftChunk.score;
-  if (scoreDelta > 0) return rightChunk;
-  if (scoreDelta < 0) return leftChunk;
-  const leftLength = getBodyText(leftChunk).length;
-  const rightLength = getBodyText(rightChunk).length;
-  if (leftLength !== rightLength) {
-    return leftLength <= rightLength ? leftChunk : rightChunk;
-  }
-  return leftChunk.chunk_id <= rightChunk.chunk_id ? leftChunk : rightChunk;
-}
-
-/**
- * Collapse a group of identical-content chunks into near-duplicate survivors.
- *
- * @param {AssembledChunk[]} group
- * @param {number} cosineThreshold
- * @returns {AssembledChunk[]}
- */
-function collapseNearDuplicates(group, cosineThreshold) {
-  const removedIds = new Set();
-  for (let leftIndex = 0; leftIndex < group.length; leftIndex += 1) {
-    const leftChunk = group[leftIndex];
-    if (removedIds.has(leftChunk.chunk_id)) continue;
-    for (
-      let rightIndex = leftIndex + 1;
-      rightIndex < group.length;
-      rightIndex += 1
-    ) {
-      const rightChunk = group[rightIndex];
-      if (removedIds.has(rightChunk.chunk_id)) continue;
-      const similarity = computeCosineSimilarity(
-        leftChunk.embedding,
-        rightChunk.embedding,
-      );
-      if (similarity >= cosineThreshold) {
-        const winner = selectNearDuplicateWinner(leftChunk, rightChunk);
-        const loser =
-          winner.chunk_id === leftChunk.chunk_id ? rightChunk : leftChunk;
-        removedIds.add(loser.chunk_id);
-      }
-    }
-  }
-  return group.filter((chunk) => !removedIds.has(chunk.chunk_id));
-}
-
-/**
- * Collapse parent chunks in favor of their children when the child is at least
- * as relevant as the parent.
- *
- * @param {AssembledChunk[]} chunks
- * @returns {AssembledChunk[]}
- */
-function collapseParentChild(chunks) {
-  const idToChunk = new Map(chunks.map((chunk) => [chunk.chunk_id, chunk]));
-  const parentToChildren = new Map();
-  for (const chunk of chunks) {
-    if (chunk.parent_chunk_id == null) continue;
-    const children = parentToChildren.get(chunk.parent_chunk_id) ?? [];
-    children.push(chunk);
-    parentToChildren.set(chunk.parent_chunk_id, children);
-  }
-
-  const removedIds = new Set();
-  for (const [parentId, children] of parentToChildren.entries()) {
-    const parent = idToChunk.get(parentId);
-    if (!parent) continue;
-    const maxChildScore = Math.max(...children.map((child) => child.score));
-    if (maxChildScore >= parent.score) {
-      removedIds.add(parentId);
-    } else {
-      for (const child of children) {
-        removedIds.add(child.chunk_id);
-      }
-    }
-  }
-
-  return chunks.filter((chunk) => !removedIds.has(chunk.chunk_id));
-}
-
-/**
- * Stage 2 — Deduplicate chunks by exact hash, near-duplicate embedding cosine,
- * and parent-child collapse.
+ * Stage 2 — Deduplicate chunks by content hash. Server-side SQL dedup
+ * (GROUP BY chunk_sha256) is handled in the enrichment query. This
+ * client-side pass collapses any remaining exact-hash duplicates.
  *
  * @param {AssembledChunk[]} chunks
  * @param {{ cosineThreshold?: number }} [options]
  * @returns {AssembledChunk[]}
  */
 export function deduplicateChunks(chunks, options = {}) {
-  const cosineThreshold = options.cosineThreshold ?? DEFAULT_COSINE_THRESHOLD;
-
-  // Group chunks by exact content hash.
-  const hashGroups = new Map();
+  const seen = new Set();
+  const deduped = [];
   for (const chunk of chunks) {
-    const key = chunk.sha256 ?? sha256Hex(getBodyText(chunk));
-    const group = hashGroups.get(key) ?? [];
-    group.push(chunk);
-    hashGroups.set(key, group);
+    const key = chunk.sha256 ?? chunk.body_text ?? chunk.chunk_id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(chunk);
   }
-  const groups = Array.from(hashGroups.values());
-  const singleExactFamily = groups.length === 1;
-
-  const afterDeduplication = [];
-  for (const group of groups) {
-    if (group.length <= 1) {
-      afterDeduplication.push(...group);
-      continue;
-    }
-
-    const embeddingsAvailable = group.every(
-      (chunk) => Array.isArray(chunk.embedding) && chunk.embedding.length > 0,
-    );
-
-    if (embeddingsAvailable) {
-      // Warm embeddings: use cosine near-duplicate collapse within the family.
-      afterDeduplication.push(
-        ...collapseNearDuplicates(group, cosineThreshold),
-      );
-      continue;
-    }
-
-    if (singleExactFamily) {
-      // Cold embeddings and the whole result set is one exact-duplicate family:
-      // preserve every member because we have no signal to choose a winner.
-      afterDeduplication.push(...group);
-      continue;
-    }
-
-    // Multiple exact families with cold embeddings: keep the highest-scored
-    // representative from this duplicate family.
-    const representative = group
-      .toSorted((leftChunk, rightChunk) => {
-        const scoreDelta = rightChunk.score - leftChunk.score;
-        if (scoreDelta !== 0) return scoreDelta;
-        return leftChunk.chunk_id - rightChunk.chunk_id;
-      })
-      .at(0);
-    if (representative) afterDeduplication.push(representative);
-  }
-
-  return collapseParentChild(afterDeduplication);
+  return deduped;
 }
 
 /**
@@ -555,7 +479,10 @@ function stitchMarkdown(chunks, _options) {
   const parts = [];
   let currentFile = null;
   for (const chunk of chunks) {
-    const header = chunk.context_header ?? buildContextHeader(chunk);
+    const heading = chunk.heading_path?.trim();
+    const header =
+      chunk.context_header ??
+      (heading ? `${chunk.file_path} > ${heading}` : chunk.file_path);
     const body = getBodyText(chunk);
     if (chunk.file_path !== currentFile) {
       parts.push(`[${header}]\n${body}`);
@@ -603,6 +530,7 @@ function stitchJson(chunks, options) {
  *   supporting?: number,
  *   familyPriority?: string[],
  *   query_class?: string,
+ *   client?: import('@libsql/client').Client,
  * }} [options]
  * @returns {Promise<{ context: string, tokenCount: number, tierCounts: Object.<string, number>, selectedChunks: AssembledChunk[] }>}
  */

@@ -5,7 +5,34 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
+import { closeTursoClient } from '../tools/cortex-db.mjs';
+
+function createTestDb(databasePath) {
+  const client = createClient({ url: 'file:' + databasePath });
+  return {
+    client,
+    async exec(sql) {
+      return client.execute(sql);
+    },
+    prepare(sql) {
+      return {
+        async run(...args) {
+          return client.execute({ sql, args });
+        },
+        async get(...args) {
+          return (await client.execute({ sql, args })).rows[0];
+        },
+        async all(...args) {
+          return (await client.execute({ sql, args })).rows;
+        },
+      };
+    },
+    async close() {
+      return client.close();
+    },
+  };
+}
 
 describe('traverse-graph', () => {
   describe('traverseGraph', () => {
@@ -20,9 +47,9 @@ describe('traverse-graph', () => {
 
       try {
         // Create an empty database without entities/edges tables.
-        const db = new Database(databasePath);
-        db.exec('CREATE TABLE dummy (id INTEGER PRIMARY KEY)');
-        db.close();
+        const client = createTestDb(databasePath);
+        await client.exec('CREATE TABLE dummy (id INTEGER PRIMARY KEY)');
+        await client.close();
 
         const result = await traverseGraph({
           databasePath,
@@ -35,7 +62,8 @@ describe('traverse-graph', () => {
         expect(result.chunk_ids).toEqual([]);
         expect(result.doc_ids).toEqual([]);
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -49,8 +77,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -77,7 +105,7 @@ describe('traverse-graph', () => {
             UNIQUE(source_entity_id, target_entity_id, relationship)
           );
         `);
-        db.close();
+        await client.close();
 
         const result = await traverseGraph({
           databasePath,
@@ -89,7 +117,8 @@ describe('traverse-graph', () => {
         expect(result.entities).toEqual([]);
         expect(result.total_discovered).toBe(0);
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -103,8 +132,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -132,16 +161,18 @@ describe('traverse-graph', () => {
           );
         `);
 
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'class',
-          'Network',
-          'src/architecture/network.Network',
-          'src/architecture/network/network.ts',
-        );
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'class',
+            'Network',
+            'src/architecture/network.Network',
+            'src/architecture/network/network.ts',
+          );
 
-        db.close();
+        await client.close();
 
         const result = await traverseGraph({
           databasePath,
@@ -155,7 +186,8 @@ describe('traverse-graph', () => {
           'src/architecture/network.Network',
         );
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -169,8 +201,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -199,31 +231,37 @@ describe('traverse-graph', () => {
         `);
 
         // Insert seed entity.
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'class',
-          'Network',
-          'src/architecture/network.Network',
-          'src/architecture/network/network.ts',
-        );
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'class',
+            'Network',
+            'src/architecture/network.Network',
+            'src/architecture/network/network.ts',
+          );
 
         // Insert target entity reachable via outgoing edge.
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'function',
-          'evolve',
-          'src/architecture/network.Network.evolve',
-          'src/architecture/network/network.ts',
-        );
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'function',
+            'evolve',
+            'src/architecture/network.Network.evolve',
+            'src/architecture/network/network.ts',
+          );
 
         // Insert outgoing edge.
-        db.prepare(
-          'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
-        ).run(1, 2, 'owns', 'high');
+        await client
+          .prepare(
+            'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
+          )
+          .run(1, 2, 'owns', 'high');
 
-        db.close();
+        await client.close();
 
         const result = await traverseGraph({
           databasePath,
@@ -239,7 +277,8 @@ describe('traverse-graph', () => {
           'src/architecture/network.Network.evolve',
         );
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -253,8 +292,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -283,31 +322,37 @@ describe('traverse-graph', () => {
         `);
 
         // Insert source entity that owns the seed.
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'module',
-          'network',
-          'src/architecture/network',
-          'src/architecture/network/network.ts',
-        );
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'module',
+            'network',
+            'src/architecture/network',
+            'src/architecture/network/network.ts',
+          );
 
         // Insert seed entity.
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'class',
-          'Network',
-          'src/architecture/network.Network',
-          'src/architecture/network/network.ts',
-        );
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'class',
+            'Network',
+            'src/architecture/network.Network',
+            'src/architecture/network/network.ts',
+          );
 
         // Module owns the class (incoming edge to seed).
-        db.prepare(
-          'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
-        ).run(1, 2, 'owns', 'high');
+        await client
+          .prepare(
+            'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
+          )
+          .run(1, 2, 'owns', 'high');
 
-        db.close();
+        await client.close();
 
         const result = await traverseGraph({
           databasePath,
@@ -321,7 +366,8 @@ describe('traverse-graph', () => {
         const entityNames = result.entities.map((e) => e.qualified_name);
         expect(entityNames).toContain('src/architecture/network');
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -335,8 +381,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -364,48 +410,60 @@ describe('traverse-graph', () => {
           );
         `);
 
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'module',
-          'network',
-          'src/architecture/network',
-          'src/architecture/network/network.ts',
-        );
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'module',
+            'network',
+            'src/architecture/network',
+            'src/architecture/network/network.ts',
+          );
 
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'class',
-          'Network',
-          'src/architecture/network.Network',
-          'src/architecture/network/network.ts',
-        );
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'class',
+            'Network',
+            'src/architecture/network.Network',
+            'src/architecture/network/network.ts',
+          );
 
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'function',
-          'evolve',
-          'src/architecture/network.Network.evolve',
-          'src/architecture/network/network.ts',
-        );
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'function',
+            'evolve',
+            'src/architecture/network.Network.evolve',
+            'src/architecture/network/network.ts',
+          );
 
         // owns edge: module → class
-        db.prepare(
-          'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
-        ).run(1, 2, 'owns', 'high');
+        await client
+          .prepare(
+            'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
+          )
+          .run(1, 2, 'owns', 'high');
 
         // imports edge: module → some other module (should be filtered out)
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run('module', 'methods', 'src/methods', 'src/methods/index.ts');
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run('module', 'methods', 'src/methods', 'src/methods/index.ts');
 
-        db.prepare(
-          'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
-        ).run(1, 4, 'imports', 'high');
+        await client
+          .prepare(
+            'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
+          )
+          .run(1, 4, 'imports', 'high');
 
-        db.close();
+        await client.close();
 
         // Only follow "owns" relationship — imports should be ignored.
         const result = await traverseGraph({
@@ -420,7 +478,8 @@ describe('traverse-graph', () => {
         // The methods module should NOT be discovered since we only follow "owns".
         expect(entityNames).not.toContain('src/methods');
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -434,8 +493,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -466,17 +525,21 @@ describe('traverse-graph', () => {
         // Create a chain: A → B → C → D
         const names = ['entity.A', 'entity.B', 'entity.C', 'entity.D'];
         for (let i = 0; i < names.length; i++) {
-          db.prepare(
-            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-          ).run('class', names[i].split('.')[1], names[i], 'test.ts');
+          await client
+            .prepare(
+              'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+            )
+            .run('class', names[i].split('.')[1], names[i], 'test.ts');
         }
         for (let i = 0; i < names.length - 1; i++) {
-          db.prepare(
-            'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
-          ).run(i + 1, i + 2, 'depends-on', 'high');
+          await client
+            .prepare(
+              'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
+            )
+            .run(i + 1, i + 2, 'depends-on', 'high');
         }
 
-        db.close();
+        await client.close();
 
         // With max_hops=1, should only discover B (1 hop from A).
         const result = await traverseGraph({
@@ -491,7 +554,8 @@ describe('traverse-graph', () => {
         expect(entityNames).not.toContain('entity.C');
         expect(entityNames).not.toContain('entity.D');
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -505,8 +569,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -535,27 +599,33 @@ describe('traverse-graph', () => {
         `);
 
         // Seed entity.
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run('module', 'network', 'src.architecture.network', 'test.ts');
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run('module', 'network', 'src.architecture.network', 'test.ts');
 
         // Create 10 target entities.
         for (let i = 1; i <= 10; i++) {
-          db.prepare(
-            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-          ).run(
-            'class',
-            `Class${i}`,
-            `src.architecture.network.Class${i}`,
-            'test.ts',
-          );
+          await client
+            .prepare(
+              'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+            )
+            .run(
+              'class',
+              `Class${i}`,
+              `src.architecture.network.Class${i}`,
+              'test.ts',
+            );
 
-          db.prepare(
-            'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
-          ).run(1, i + 1, 'owns', 'high');
+          await client
+            .prepare(
+              'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
+            )
+            .run(1, i + 1, 'owns', 'high');
         }
 
-        db.close();
+        await client.close();
 
         const result = await traverseGraph({
           databasePath,
@@ -567,7 +637,8 @@ describe('traverse-graph', () => {
         // Should return at most 5 entities (plus seed).
         expect(result.returned_count).toBeLessThanOrEqual(5);
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -581,8 +652,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -611,37 +682,47 @@ describe('traverse-graph', () => {
         `);
 
         // Seed.
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run('module', 'network', 'src.architecture.network', 'test.ts');
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run('module', 'network', 'src.architecture.network', 'test.ts');
 
         // High-confidence target.
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'class',
-          'HighConfClass',
-          'src.architecture.network.HighConfClass',
-          'test.ts',
-        );
-        db.prepare(
-          'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
-        ).run(1, 2, 'owns', 'high');
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'class',
+            'HighConfClass',
+            'src.architecture.network.HighConfClass',
+            'test.ts',
+          );
+        await client
+          .prepare(
+            'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
+          )
+          .run(1, 2, 'owns', 'high');
 
         // Low-confidence target.
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'class',
-          'LowConfClass',
-          'src.architecture.network.LowConfClass',
-          'test.ts',
-        );
-        db.prepare(
-          'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
-        ).run(1, 3, 'references', 'low');
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'class',
+            'LowConfClass',
+            'src.architecture.network.LowConfClass',
+            'test.ts',
+          );
+        await client
+          .prepare(
+            'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
+          )
+          .run(1, 3, 'references', 'low');
 
-        db.close();
+        await client.close();
 
         // Filter to only high+medium confidence.
         const result = await traverseGraph({
@@ -658,7 +739,8 @@ describe('traverse-graph', () => {
           'src.architecture.network.LowConfClass',
         );
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -672,8 +754,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -702,21 +784,29 @@ describe('traverse-graph', () => {
         `);
 
         // Create cycle: A → B → A
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run('class', 'A', 'entity.A', 'test.ts');
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run('class', 'B', 'entity.B', 'test.ts');
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run('class', 'A', 'entity.A', 'test.ts');
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run('class', 'B', 'entity.B', 'test.ts');
 
-        db.prepare(
-          'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
-        ).run(1, 2, 'depends-on', 'high');
-        db.prepare(
-          'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
-        ).run(2, 1, 'depends-on', 'high');
+        await client
+          .prepare(
+            'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
+          )
+          .run(1, 2, 'depends-on', 'high');
+        await client
+          .prepare(
+            'INSERT INTO edges (source_entity_id, target_entity_id, relationship, confidence) VALUES (?, ?, ?, ?)',
+          )
+          .run(2, 1, 'depends-on', 'high');
 
-        db.close();
+        await client.close();
 
         const result = await traverseGraph({
           databasePath,
@@ -727,7 +817,8 @@ describe('traverse-graph', () => {
         // Should not loop infinitely; should discover exactly 2 entities.
         expect(result.total_discovered).toBe(2);
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -741,8 +832,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -770,16 +861,18 @@ describe('traverse-graph', () => {
           );
         `);
 
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'class',
-          'Network',
-          'src/architecture/network.Network',
-          'test.ts',
-        );
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'class',
+            'Network',
+            'src/architecture/network.Network',
+            'test.ts',
+          );
 
-        db.close();
+        await client.close();
 
         // Use partial name for seed resolution.
         const result = await traverseGraph({
@@ -790,7 +883,8 @@ describe('traverse-graph', () => {
 
         expect(result.seed_entities.length).toBeGreaterThan(0);
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
 
@@ -804,8 +898,8 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'test.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec(`
+        const client = createTestDb(databasePath);
+        await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
             entity_type TEXT NOT NULL,
@@ -833,16 +927,18 @@ describe('traverse-graph', () => {
           );
         `);
 
-        db.prepare(
-          'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
-        ).run(
-          'class',
-          'Network',
-          'src/architecture/network.Network',
-          'test.ts',
-        );
+        await client
+          .prepare(
+            'INSERT INTO entities (entity_type, name, qualified_name, file_path) VALUES (?, ?, ?, ?)',
+          )
+          .run(
+            'class',
+            'Network',
+            'src/architecture/network.Network',
+            'test.ts',
+          );
 
-        db.close();
+        await client.close();
 
         const result = await traverseGraph({
           databasePath,
@@ -852,7 +948,8 @@ describe('traverse-graph', () => {
 
         expect(result.seed_entities.length).toBeGreaterThan(0);
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
   });
@@ -868,9 +965,9 @@ describe('traverse-graph', () => {
       const databasePath = path.join(fixtureDirectory, 'empty.sqlite');
 
       try {
-        const db = new Database(databasePath);
-        db.exec('CREATE TABLE dummy (id INTEGER PRIMARY KEY)');
-        db.close();
+        const client = createTestDb(databasePath);
+        await client.exec('CREATE TABLE dummy (id INTEGER PRIMARY KEY)');
+        await client.close();
 
         const result = await traverseGraphHandler({
           seed_query: 'test',
@@ -886,7 +983,8 @@ describe('traverse-graph', () => {
         // Should not throw; returns gracefully even with empty graph.
         expect(result.graph_available).toBe(false);
       } finally {
-        await rm(fixtureDirectory, { recursive: true, force: true });
+        await closeTursoClient(databasePath);
+        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
       }
     });
   });

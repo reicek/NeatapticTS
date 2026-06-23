@@ -2,6 +2,44 @@
 
 **Status:** [WIP]
 
+## Current state
+
+Claim: 04-implementing @ 2026-06-21T00:00:00Z
+
+Scoped cleanup pass from `05-green-testing`: migrate remaining `schema-v2.sql` fixture references to `schema-turso.sql`, delete the legacy `schema-v2.sql` fixture, and surface per-query errors in `parallel-search.mjs`.
+
+Recent fixes — ESM `__dirname` / feedback teardown hang:
+- Replaced ESM-incompatible `__dirname` with `fileURLToPath` shim in `examples/shared/semantic/build-browser-snapshot.test.ts` and `scripts/mcp-semantic/repo-cortex-mcp.test.ts`.
+- Awaited `recordSearchImpressions(...)` in `scripts/mcp-semantic/tools/search-corpus.mjs` so feedback writes finish before callers tear down the libSQL client.
+- Switched `scripts/mcp-semantic/__tests__/feedback.integration.test.mjs` from file-backed temp DBs to `:memory:` clients via `createSchemaClient()` to eliminate Windows file-handle lock contention that made `rm(tempDir)` hang indefinitely.
+
+```yaml
+PlanUpdate:
+  changed_files:
+    - examples/shared/semantic/build-browser-snapshot.test.ts
+    - scripts/mcp-semantic/repo-cortex-mcp.test.ts
+    - scripts/mcp-semantic/__tests__/feedback.integration.test.mjs
+    - scripts/mcp-semantic/tools/search-corpus.mjs
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npm run lint'
+    - 'npx prettier --check <changed-files>: pass'
+  validation:
+    - command: "NODE_OPTIONS='--experimental-vm-modules' npx jest --config=jest.config.mjs --no-cache --forceExit --testPathPatterns='build-browser-snapshot.test.ts|repo-cortex-mcp.test.ts|feedback.integration.test.mjs'"
+      expected_exit: 0
+      result: '3 suites / 32 tests passed, no indefinite hang'
+  gates:
+    - 'plan-sync: pass (validate-plan-sync.mjs + neataptic-gate-mcp:run_gate_check plan-sync)'
+    - 'plan-phase-packets: pre-existing 3 errors in mcp-active-binding.plans.md (missing Phase objective, copy_paste, User instruction); unrelated to this fix'
+  rollback:
+    - 'git checkout -- examples/shared/semantic/build-browser-snapshot.test.ts'
+    - 'git checkout -- scripts/mcp-semantic/repo-cortex-mcp.test.ts'
+    - 'git checkout -- scripts/mcp-semantic/__tests__/feedback.integration.test.mjs'
+    - 'git checkout -- scripts/mcp-semantic/tools/search-corpus.mjs'
+  next: '05-green-testing focused confirmation or user approval to merge'
+```
+
 ## Purpose
 
 This plan is a **permanent MCP server binding**, not a workstream tracker. It exists solely to
@@ -33,10 +71,13 @@ copy_paste: true
 next_phase: null
 skills:
   - plan-alignment
+  - execute
 validation:
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/mcp-active-binding.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
+  - 'execute skill present on any agent dispatched from this plan boundary.'
 placeholder_steps:
   - 'Step 01 — MCP servers operational'
 ```
@@ -60,27 +101,45 @@ source_of_truth: plans/mcp-active-binding.plans.md
 copy_paste: false
 skills:
   - mcp-local-server-workflow
+  - execute
 next_step: null
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md'
+  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
+  - 'execute skill present so any delegated specialist follows the strict sliced RED → IMPLEMENT → GREEN loop.'
 ```
 
 **Step objective:** Provide a perpetual stable binding for MCP server startup. This step does not
 advance to [DONE]. Both `neataptic-workflow-mcp` and `neataptic-validation-mcp` reference this
 step via the `--plan` arg in `.vscode/mcp.json`.
 
+**Chrome DevTools MCP availability:** This plan does not directly own browser work, but any
+delegated specialist that needs browser-based validation (performance traces, DOM/UI inspection,
+or heap/memory profiling) should route through the Tier 3 Chrome DevTools MCP specialists
+(`performance-trace-specialist`, `browser-ui-specialist`, `browser-memory-specialist`) per the
+`execute` skill decision tree rather than calling Chrome DevTools MCP tools directly.
+
 **Required validation:**
 
 `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md`
+
+`neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json`
 
 **Stop conditions:** Never — this step is perpetually [WIP] by design.
 
 ## Validation gates
 
 No workstream-specific gates. Run the self-check commands above to confirm MCP server startup
-health at any time.
+health at any time. Two orchestration-system gates now apply to any delegated work from this
+boundary:
+
+- `delegate-skill-coverage` — confirms the `execute` skill is present on dispatched agents.
+- `chrome-devtools-mcp-coverage` — confirms `03-red-testing` and `05-green-testing` carry the
+  `chrome-devtools-mcp` skill and the three Chrome DevTools MCP specialists
+  (`performance-trace-specialist`, `browser-ui-specialist`, `browser-memory-specialist`)
+  are available for any browser-related validation routed from this plan boundary.
 
 ### Latest validation evidence
 
@@ -98,6 +157,40 @@ health at any time.
 - 2026-05-29: targeted Repo Cortex CI hardening updated `scripts/agent-customization/gates/cortex-index.gate.test.ts` to build the browser snapshot before running `cortex-index.gate.mjs`, updated `scripts/mcp-semantic/__tests__/repo-cortex-mcp.red.test.ts` to provision the semantic index and browser snapshot in `beforeAll`, and updated `.github/workflows/deploy-pages.yml` to clear `~/.cache/puppeteer` before `npx puppeteer browsers install chrome`. Validation: `npx tsc --noEmit -p tsconfig.test.json` -> PASS (`exit 0`); `npx jest --config=jest.config.mjs --no-cache --testPathPattern="cortex-index.gate.test" --runInBand` -> FAIL (`testPathPattern` option renamed by current Jest CLI); corrective rerun `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="cortex-index.gate.test" --runInBand` -> PASS (`1 suite`, `1 test`); `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md` -> PASS (`ok: true`, `0 errors`, `0 warnings`).
 - 2026-06-04: runtime-enforcement blocker fix aligned strict-action hooks with the session override plan chain. Validation: `npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns="scripts/agent-customization/hooks/runtime-enforcement-hooks.test.ts|scripts/agent-customization/mcp/__tests__/mcp.red.test.mjs"` -> PASS for the runtime enforcement hook suite; `node --test scripts/agent-customization/mcp/__tests__/mcp.red.test.mjs` -> PASS (`8 tests`, `0 failed`), including the session-override precedence regression.
 - 2026-06-08: Orchestration_System_Optimization Phase 4 Step 05 validation — `tier-enforcement.gate.mjs --json` -> PASS (`ok: true`, `issueCount: 0`, `byTier: {1: 8, 2: 11, 3: 38, 4: 4}`, `userInvocableTotal: 8`); `validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md` -> PASS (`0 errors`, `0 warnings`, status: `WIP`). Flow specialist references validated with zero tier violations.
+- 2026-06-20: orchestration-alignment refresh after Chrome DevTools MCP Integration closure — `execute` skill added to the phase and step `skills:` lists; `delegate-skill-coverage` gate added to validation; Chrome DevTools MCP specialist availability noted for any browser-related validation routed from this boundary. `chrome-devtools-mcp-coverage` gate applies to any `03-red-testing`/`05-green-testing` dispatch from this plan. No substantive change to the perpetual binding contract.
+- 2026-06-21: scoped cleanup pass from `05-green-testing`. Changed fixture references `schema.sql`/`schema-v2.sql` → `schema-turso.sql` in `examples/shared/semantic/build-browser-snapshot.test.ts`, `scripts/mcp-semantic/tools/freshness-check.test.ts`, `scripts/mcp-semantic/tools/search-corpus.test.ts`, `scripts/mcp-semantic/tools/submit-feedback.test.ts`; deleted legacy `scripts/semantic-index/schema-v2.sql`; surfaced per-query errors from `scripts/semantic-index/parallel-search.mjs` via a non-enumerable `errors` array and propagated them through the `parallel_search` MCP handler in `scripts/mcp-semantic/repo-cortex-mcp.mjs`; added targeted test `runParallelQueries surfaces per-query errors on the returned array` in `scripts/mcp-semantic/__tests__/parallel-search.test.mjs`. Validation: `npx tsc --noEmit -p tsconfig.json` -> PASS; `npm run lint` -> PASS; `npx prettier --check <touched files>` -> PASS; `npx jest ... --testPathPatterns=build-browser-snapshot` -> PASS (1 suite, 1 test); `npx jest ... --testPathPatterns="freshness-check.test|search-corpus.test|submit-feedback.test"` -> PASS (3 suites, 17 tests); `NODE_OPTIONS=--experimental-vm-modules npx jest ... --selectProjects mcp-semantic-mjs --testPathPatterns=parallel-search.test.mjs` -> PASS (1 suite, 16 tests); `node --check scripts/semantic-index/parallel-search.mjs` and `node --check scripts/mcp-semantic/repo-cortex-mcp.mjs` -> OK. Note: `scripts/mcp-semantic/repo-cortex-mcp.test.ts` and `scripts/mcp-semantic/__tests__/repo-cortex-mcp.red.test.ts` currently fail to run with `ReferenceError: __dirname is not defined` under ts-jest ESM; this is a pre-existing red-test issue outside the scoped cleanup items and was left untouched per the "no red tests" boundary. Gate checks: `validate-plan-sync` -> PASS; `delegate-skill-coverage` -> PASS; `chrome-devtools-mcp-coverage` -> PASS. No `src/` files were changed, so no additional coverage-guard obligation.
+
+```yaml
+PlanUpdate:
+  changed_files:
+    - examples/shared/semantic/build-browser-snapshot.test.ts
+    - scripts/mcp-semantic/tools/freshness-check.test.ts
+    - scripts/mcp-semantic/tools/search-corpus.test.ts
+    - scripts/mcp-semantic/tools/submit-feedback.test.ts
+    - scripts/semantic-index/parallel-search.mjs
+    - scripts/mcp-semantic/repo-cortex-mcp.mjs
+    - scripts/mcp-semantic/__tests__/parallel-search.test.mjs
+    - plans/mcp-active-binding.plans.md
+  removed_files:
+    - scripts/semantic-index/schema-v2.sql
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --check <touched files>'
+  validation:
+    - command: 'npx jest --config=jest.config.mjs --no-cache --runInBand --forceExit --testPathPatterns=build-browser-snapshot'
+      expected_exit: 0
+    - command: 'npx jest --config=jest.config.mjs --no-cache --runInBand --forceExit --testPathPatterns="freshness-check.test|search-corpus.test|submit-feedback.test"'
+      expected_exit: 0
+    - command: '$env:NODE_OPTIONS="--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules"; npx jest --config=jest.config.mjs --no-cache --runInBand --forceExit --selectProjects mcp-semantic-mjs --testPathPatterns=parallel-search.test.mjs'
+      expected_exit: 0
+    - command: 'node --check scripts/semantic-index/parallel-search.mjs; node --check scripts/mcp-semantic/repo-cortex-mcp.mjs'
+      expected_exit: 0
+  rollback:
+    - 'git checkout -- examples/shared/semantic/build-browser-snapshot.test.ts scripts/mcp-semantic/tools/freshness-check.test.ts scripts/mcp-semantic/tools/search-corpus.test.ts scripts/mcp-semantic/tools/submit-feedback.test.ts scripts/semantic-index/parallel-search.mjs scripts/mcp-semantic/repo-cortex-mcp.mjs scripts/mcp-semantic/__tests__/parallel-search.test.mjs plans/mcp-active-binding.plans.md'
+    - 'git restore --source=HEAD -- scripts/semantic-index/schema-v2.sql'
+  next: 'Handoff to 05-green-testing for focused slice confirmation; no src/ files touched, so coverage-guard is not required beyond noting zero production-source changes.'
+```
 
 ## Handoff query
 

@@ -69,6 +69,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 5. **Summarize the failure surface, strongest evidence, and smallest useful handoff into `repo-cortex-workflow`.**
    - Example: "Index validation failed, snapshot timestamp is 3 days old, MCP config unchanged. Handoff to repo-cortex-workflow."
 
+## Cortex Health Check Checklist
+
+- **Index freshness:** Run `neataptic-cortex-mcp:freshness_check` to compare indexed proofs against filesystem metadata. Flag stale chunks.
+- **Corpus row counts:** Run `neataptic-cortex-mcp:index_stats` to verify chunk and document counts are non-zero and match expected ranges.
+- **Family coverage:** Run `neataptic-cortex-mcp:list_families` to verify all expected document families are indexed. Missing families indicate a build-index gap.
+- **Search functionality:** Run a test `search_corpus` query to verify BM25 search returns results. Empty results indicate a corrupted index.
+- **Dense search state:** Check `dense_state` in search results. "warm" means dense search is functional. "cold" or "model-only" means only BM25 is available — suggest `npm run index:prewarm`.
+- **Validate-index gate:** Run `neataptic-gate-mcp:run_gate_check` with `cortex-index` to verify the index passes validation.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

@@ -21,7 +21,12 @@ gates:
 post-phase-fanout:
   - '07-logging'
 
+loop-back: >
+  If green validation fails, return observations to the orchestrator for
+  a NEW 04-implementing instance.
+
 skills:
+  - 'execute'
   - 'coverage-guard'
   - 'running-unit-tests'
 
@@ -29,6 +34,9 @@ specialists:
   - 'Coverage Guard'
   - 'Coverage Scout'
   - 'test-coverage-analyst'
+  - 'performance-trace-specialist'
+  - 'browser-ui-specialist'
+  - 'browser-memory-specialist'
 
 timeout-minutes: 20
 

@@ -19,83 +19,73 @@ const REPO_ROOT = path.resolve(process.cwd());
 
 describe('validate-embeddings.mjs', () => {
   describe('red count-validation contract', () => {
-    it('returns pass false when counts mismatch and pass true when counts match', async () => {
+    it('returns pass false when no usable embeddings and pass true when embeddings are present', async () => {
       // Arrange
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'semantic-validate-embeddings-red-'),
       );
-      const corpusDatabasePath = path.join(
+      const emptyCorpusDatabasePath = path.join(
         fixtureDirectory,
-        'semantic-index.sqlite',
+        'empty-corpus.sqlite',
       );
-      const mismatchEmbeddingsPath = path.join(
+      const embeddedCorpusDatabasePath = path.join(
         fixtureDirectory,
-        'mismatch-embeddings.sqlite',
-      );
-      const matchedEmbeddingsPath = path.join(
-        fixtureDirectory,
-        'matched-embeddings.sqlite',
+        'embedded-corpus.sqlite',
       );
 
       // Act
       const result = runModuleEvaluation<ValidateEmbeddingsContractReport>(`
-        import Database from 'better-sqlite3';
+        import { createClient } from '@libsql/client';
+        import { pathToFileURL } from 'node:url';
         import { validateEmbeddings } from './scripts/semantic-index/validate-embeddings.mjs';
 
-        const corpusDatabase = new Database(${JSON.stringify(corpusDatabasePath)});
-        corpusDatabase.exec(\`
-          CREATE TABLE chunks (chunk_id INTEGER PRIMARY KEY, body_text TEXT NOT NULL);
-          INSERT INTO chunks (chunk_id, body_text) VALUES (1, 'first chunk'), (2, 'second chunk');
-        \`);
-        corpusDatabase.close();
-
-        for (const [databasePath, rowCount] of [
-          [${JSON.stringify(mismatchEmbeddingsPath)}, 1],
-          [${JSON.stringify(matchedEmbeddingsPath)}, 2],
-        ]) {
-          const embeddingsDatabase = new Database(databasePath);
-          embeddingsDatabase.exec(\`
-            CREATE TABLE chunk_embeddings (
+        const toBlob = (values) => Buffer.from(Float32Array.from(values).buffer);
+        const createChunksTable = async (client) => {
+          await client.execute(\`
+            CREATE TABLE chunks (
               chunk_id INTEGER PRIMARY KEY,
-              embedding BLOB NOT NULL,
-              chunk_sha256 TEXT NOT NULL,
-              model_id TEXT NOT NULL,
-              model_sha256 TEXT NOT NULL,
-              dimension INTEGER NOT NULL,
-              embedded_at TEXT NOT NULL
+              doc_id INTEGER NOT NULL,
+              chunk_index INTEGER NOT NULL,
+              heading_path TEXT,
+              body_text TEXT NOT NULL,
+              char_start INTEGER NOT NULL,
+              char_end INTEGER NOT NULL,
+              embedding BLOB,
+              embedding_model TEXT,
+              chunk_sha256 TEXT,
+              embedded_at INTEGER
             );
           \`);
-          const insertEmbedding = embeddingsDatabase.prepare(
-            'INSERT INTO chunk_embeddings (chunk_id, embedding, chunk_sha256, model_id, model_sha256, dimension, embedded_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
-          );
-          for (let chunkNumber = 1; chunkNumber <= rowCount; chunkNumber += 1) {
-            insertEmbedding.run(
-              chunkNumber,
-              Buffer.from(new Float32Array([1, 0, 0]).buffer),
-              \`chunk-sha-\${chunkNumber}\`,
-              'all-MiniLM-L6-v2',
-              'fixture-model-sha256',
-              3,
-              '2026-05-23T00:00:00.000Z'
-            );
-          }
-          embeddingsDatabase.close();
-        }
+        };
 
-        const mismatchReport = await validateEmbeddings({
-          corpusDatabasePath: ${JSON.stringify(corpusDatabasePath)},
-          embeddingsDatabasePath: ${JSON.stringify(mismatchEmbeddingsPath)},
+        const emptyClient = createClient({ url: pathToFileURL(${JSON.stringify(emptyCorpusDatabasePath)}).href });
+        await createChunksTable(emptyClient);
+        await emptyClient.execute({
+          sql: "INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          args: [1, 1, 0, null, 'first chunk', 0, 11],
+        });
+        await emptyClient.close();
+
+        const embeddedClient = createClient({ url: pathToFileURL(${JSON.stringify(embeddedCorpusDatabasePath)}).href });
+        await createChunksTable(embeddedClient);
+        await embeddedClient.execute({
+          sql: 'INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, embedding, embedding_model) VALUES (?, ?, ?, ?, ?, ?, ?, vector8(?), ?)',
+          args: [1, 1, 0, null, 'first chunk', 0, 11, toBlob([1, 0, 0]), 'all-MiniLM-L6-v2'],
+        });
+        await embeddedClient.close();
+
+        const emptyReport = await validateEmbeddings({
+          corpusDatabasePath: ${JSON.stringify(emptyCorpusDatabasePath)},
           modelId: 'all-MiniLM-L6-v2',
         });
-        const matchedReport = await validateEmbeddings({
-          corpusDatabasePath: ${JSON.stringify(corpusDatabasePath)},
-          embeddingsDatabasePath: ${JSON.stringify(matchedEmbeddingsPath)},
+        const embeddedReport = await validateEmbeddings({
+          corpusDatabasePath: ${JSON.stringify(embeddedCorpusDatabasePath)},
           modelId: 'all-MiniLM-L6-v2',
         });
 
         console.log(JSON.stringify({
-          issues: mismatchReport.evidence.map(({ issue }) => issue),
-          passes: [mismatchReport.pass, matchedReport.pass],
+          issues: emptyReport.evidence.map(({ issue }) => issue),
+          passes: [emptyReport.pass, embeddedReport.pass],
         }));
       `);
       await rm(fixtureDirectory, { recursive: true, force: true });
@@ -104,7 +94,7 @@ describe('validate-embeddings.mjs', () => {
       expect(result).toEqual(
         expect.objectContaining({
           report: {
-            issues: ['embedding count mismatch'],
+            issues: ['no embeddings for model'],
             passes: [false, true],
           },
           status: 0,

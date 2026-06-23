@@ -4,6 +4,11 @@ description: 'Design, implement, or validate NGE benchmark environments and demo
 argument-hint: 'Describe the benchmark family, the active plan file, whether the pass is world design, harness implementation, metrics, or validation, which core primitives are assumed available, and what observable or acceptance criterion must be demonstrated.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - nge-core-algorithm
+  - multithread-evaluation
+  - visualizer-workflow
+  - browser-build
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -102,6 +107,28 @@ boundaries.
 - Validating whether role differentiation or collective behavior is actually
   observable.
 
+
+## When NOT to use
+
+Do NOT use for core algorithm work - use `nge-core-algorithm` instead. Do NOT use for general performance optimization - use `performance-optimization` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Define benchmark"] --> B["Set up curriculum tiers"]
+    B --> C["Create predator/prey populations"]
+    C --> D["Run coevolution"]
+    D --> E["Capture rolling snapshots"]
+    E --> F["Score opponents"]
+    F --> G{"Fairness contract met?"}
+    G -- "Yes" --> H["Record results"]
+    G -- "No" --> I["Adjust fairness"]
+    I --> D
+    H --> J["Report"]
+```
+
 ## Task Packet
 
 Pass a compact packet that includes:
@@ -190,6 +217,29 @@ Prefer benchmark observables that expose mechanism instead of only score:
   tunnel-coverage response,
 - racing: blocker emergence, pit-lap distribution, radio mutual information,
   role divergence.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Benchmark work"] --> B{"Which layer?"}
+    B -- "World or environment rules" --> C["World setup"]
+    B -- "Episode or coordinator logic" --> D["Harness implementation"]
+    B -- "Charts, ablation, observables" --> E["Metrics and observability"]
+    B -- "Seed-pack or snapshot fairness" --> F["Fairness validation"]
+```
+
+## Before / After Examples
+
+**Before:**
+```text
+opponent: latestPopulation // undefined fairness, live opponent each gen
+```
+
+**After:**
+```text
+opponent: rollingSnapshot(generation - 10) // frozen snapshot, deterministic seed pack
+```
 
 ## Guardrails
 

@@ -45,6 +45,7 @@ Capture compact ISO-42001-style local learning events when a caller identifies a
 - Only append or update the smallest necessary learning-event record.
 - Do not make unrelated edits outside the requested learning-event boundary.
 - Keep the recorded gap, change, and follow-up action concise and evidence-backed.
+- ONLY edit `.github/ai-learning/learning-log.jsonl`. Do not edit any other files.
 
 ## Flow Selection
 
@@ -61,6 +62,20 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 1. Read the requested learning-event context and confirm the gap or change to record.
 2. Update the smallest appropriate learning-event surface when the caller requested a write.
 3. Return only the structured result to the caller.
+
+## Learning Event Record Template
+
+```json
+{
+  "timestamp": "<ISO 8601 timestamp>",
+  "category": "agent-system-gap|routing-update|skill-update|model-update|output-contract-fix",
+  "description": "<concise description of the gap or change>",
+  "evidence": "<evidence supporting the event>",
+  "followup_action": "<recommended follow-up action>",
+  "agent_source": "<agent that identified the gap>",
+  "status": "open|resolved"
+}
+```
 
 ## If Blocked
 
@@ -83,6 +98,9 @@ KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
+VALIDATION_EVIDENCE:
+- <command/result or NOT RUN>
+HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:

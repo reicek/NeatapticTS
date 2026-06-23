@@ -8,22 +8,12 @@
  *   - `index_stats` emits an `ann` section describing strategy/index state.
  */
 
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import Database from 'better-sqlite3';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-/**
- * Load the v2 corpus schema from the semantic-index scripts directory.
- * @returns {Promise<string>} SQL text.
- */
-async function readCorpusSchema() {
-  const schemaPath = path.join(__dirname, '../../semantic-index/schema-v2.sql');
-  return readFile(schemaPath, 'utf8');
-}
+import { createClient } from '@libsql/client';
+import { readCorpusSchema, splitSqlStatements } from './turso-test-helpers.mjs';
+import { closeTursoClient } from '../tools/cortex-db.mjs';
 
 /**
  * Create a minimal corpus database for search/index_stats fixtures.
@@ -32,28 +22,33 @@ async function readCorpusSchema() {
 async function setupCorpusDb() {
   const tempDir = await mkdtemp(path.join(tmpdir(), 'ann-build-index-test-'));
   const dbPath = path.join(tempDir, 'corpus.sqlite');
-  const db = new Database(dbPath);
-  db.exec(await readCorpusSchema());
-  db.exec(`
+  const client = createClient({ url: 'file:' + dbPath });
+  const schemaSql = await readCorpusSchema();
+  for (const stmt of splitSqlStatements(schemaSql)) {
+    await client.execute(stmt);
+  }
+  await client.execute(`
     INSERT INTO documents (file_path, doc_family, mtime_ms, file_size, sha256, indexed_at, arch_layer)
     VALUES
       ('src/network.ts', 'ts-source', 0, 100, 'a', 1, 'network'),
       ('src/methods.ts', 'ts-source', 0, 100, 'b', 1, 'methods'),
       ('plans/roadmap.md', 'plans', 0, 100, 'c', 1, 'planning');
   `);
-  const docs = db
-    .prepare('SELECT doc_id, doc_family, arch_layer FROM documents')
-    .all();
+  const docsResult = await client.execute(
+    'SELECT doc_id, doc_family, arch_layer FROM documents',
+  );
+  const docs = docsResult.rows;
   for (const doc of docs) {
-    db.prepare(
-      'INSERT INTO chunks (doc_id, chunk_index, body_text, char_start, char_end, depth, arch_layer) VALUES (?, 0, ?, 0, 10, 0, ?)',
-    ).run(
-      doc.doc_id,
-      `${doc.doc_family} ${doc.arch_layer} content`,
-      doc.arch_layer,
-    );
+    await client.execute({
+      sql: 'INSERT INTO chunks (doc_id, chunk_index, body_text, char_start, char_end, depth, arch_layer) VALUES (?, 0, ?, 0, 10, 0, ?)',
+      args: [
+        doc.doc_id,
+        `${doc.doc_family} ${doc.arch_layer} content`,
+        doc.arch_layer,
+      ],
+    });
   }
-  db.close();
+  await client.close();
   return { dbPath, tempDir };
 }
 
@@ -62,8 +57,14 @@ async function setupCorpusDb() {
  * @param {string} tempDir
  * @returns {Promise<void>}
  */
-function teardown(tempDir) {
-  return rm(tempDir, { recursive: true, force: true });
+async function teardown(tempDir, dbPath) {
+  if (dbPath) await closeTursoClient(dbPath);
+  await rm(tempDir, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 200,
+  });
 }
 
 /**
@@ -110,7 +111,7 @@ describe('ann_build_index MCP tool', () => {
         inputSchema: expect.objectContaining({
           properties: expect.objectContaining({
             force: expect.objectContaining({
-              enum: ['hnsw', 'brute_force_cached', 'brute_force'],
+              enum: ['diskann'],
             }),
             validate_recall: expect.objectContaining({ type: 'boolean' }),
           }),
@@ -142,7 +143,7 @@ describe('ann_build_index MCP tool', () => {
         }),
       );
     } finally {
-      await teardown(tempDir);
+      await teardown(tempDir, dbPath);
     }
   });
 
@@ -184,11 +185,11 @@ describe('search_corpus dense_strategy extension', () => {
 
       expect(result).toEqual(
         expect.objectContaining({
-          dense_strategy: 'brute_force_cached',
+          dense_strategy: 'diskann',
         }),
       );
     } finally {
-      await teardown(tempDir);
+      await teardown(tempDir, dbPath);
     }
   });
 });
@@ -210,11 +211,11 @@ describe('index_stats ann section', () => {
         }),
       );
     } finally {
-      await teardown(tempDir);
+      await teardown(tempDir, dbPath);
     }
   });
 
-  it('reports brute_force_cached with no index when below threshold', async () => {
+  it('reports diskann with no index when below threshold', async () => {
     const { indexStats } = await import('../tools/index-stats.mjs');
     const { dbPath, tempDir } = await setupCorpusDb();
     try {
@@ -222,7 +223,7 @@ describe('index_stats ann section', () => {
 
       expect(result.ann).toEqual(
         expect.objectContaining({
-          strategy: 'brute_force_cached',
+          strategy: 'diskann',
           build_status: 'not_applicable',
           threshold: 50000,
           current_chunk_count: 3,
@@ -231,7 +232,7 @@ describe('index_stats ann section', () => {
         }),
       );
     } finally {
-      await teardown(tempDir);
+      await teardown(tempDir, dbPath);
     }
   });
 });

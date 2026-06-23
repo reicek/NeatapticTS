@@ -4,6 +4,11 @@ description: 'Run and interpret green-phase validation for NeatapticTS agent wor
 argument-hint: 'Describe changed files, expected validations, latest failures, and whether strict customization validation should pass yet.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - plan-sync-validation
+  - tracker-handoff
+  - coverage-guard
+  - triaging-test-failures
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -35,6 +40,34 @@ owns that gate.
   escalate via `00.cross-tier-helper`.
 - A TypeScript, source, or package-script change requires build or lint
   confirmation alongside coverage verification.
+
+
+## When NOT to use
+
+Do NOT use for test repair - use `test-fix-workflow` instead. Do NOT use for plan consistency checking - use `plan-sync-validation` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Implementation complete"] --> B["Run tsc"]
+    B --> C{"Pass?"}
+    C -- "No" --> D["Fix type errors"]
+    C -- "Yes" --> E["Run lint"]
+    D --> B
+    E --> F{"Pass?"}
+    F -- "No" --> G["Fix lint issues"]
+    F -- "Yes" --> H["Run focused jest"]
+    G --> E
+    H --> I{"Pass?"}
+    I -- "No" --> J["Triage failures"]
+    I -- "Yes" --> K["Run coverage-guard"]
+    J --> L["Fix or escalate"]
+    K --> M{"100%?"}
+    M -- "Yes" --> N["Gates passed"]
+    M -- "No" --> O["Fix coverage gap"]
+```
 
 ## Task Packet
 
@@ -108,6 +141,33 @@ active step packet's `validation` list, or at a phase boundary with user approva
 | `step-packet`    | Active step has yaml block, status, next_step, validation, stop conditions | `scripts/agent-customization/gates/step-packet.gate.mjs`    |
 | `agent-graph`    | All flow/gate/agent references resolve to real files                       | `scripts/agent-customization/gates/agent-graph.gate.mjs`    |
 | `learning-event` | A learning event exists for any gate exception or cross-tier call          | `scripts/agent-customization/gates/learning-event.gate.mjs` |
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Implementation complete"] --> B{"Changed surface?"}
+    B -- "src/ TypeScript" --> C["Run tsc + lint + coverage-guard"]
+    B -- ".github/agents/" --> D["Run agent-graph + frontmatter gates"]
+    B -- ".github/skills/" --> E["Run skill frontmatter validation"]
+    B -- "plans/" --> F["Run plan-sync gate"]
+    C --> G["All gates pass?"]
+    D --> G
+    E --> G
+    F --> G
+```
+
+## Before / After Examples
+
+**Before:**
+```json
+{ "pass": false, "evidence": "tsc failed", "owner": "unknown" }
+```
+
+**After:**
+```json
+{ "pass": true, "evidence": "tsc exit 0, 0 errors", "fixHint": "n/a", "owner": "npx tsc --noEmit" }
+```
 
 ## Guardrails
 

@@ -4,6 +4,10 @@ description: 'Systematically expand test coverage for a specific source boundary
 argument-hint: 'Name the target source file, provide the current coverage % or uncovered line count from lcov.info or a focused run, and state whether this is reconnaissance, implementation, or validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - coverage-guard
+  - creating-unit-tests
+  - red-test-contracts
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -41,6 +45,28 @@ return to coverage expansion.
 - The task is to add the **smallest** owner-local test that exercises an
   uncovered path — not to fix a broken assertion.
 - Dead code should be confirmed and removed as part of the tranche.
+
+
+## When NOT to use
+
+Do NOT use for post-edit coverage enforcement - use `coverage-guard` instead. Do NOT use for fixing failing tests - use `test-fix-workflow` first.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Read lcov.info"] --> B["Find file below 100%"]
+    B --> C["Identify uncovered lines"]
+    C --> D{"Dead code?"}
+    D -- "Yes" --> E["Remove branch"]
+    D -- "No" --> F["Write smallest test"]
+    E --> G["Re-run focused slice"]
+    F --> G
+    G --> H{"100% now?"}
+    H -- "Yes" --> I["Tranche complete"]
+    H -- "No" --> C
+```
 
 ## Task Packet
 
@@ -133,6 +159,19 @@ The scout is read-only recon; this skill is the execution workflow.
 Use `coverage-guard` when a code change has just landed and you need to verify
 the touched files have not dropped below 100%. `coverage-tranche` is for
 forward progress; `coverage-guard` is for regression prevention after changes.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Coverage work needed"] --> B{"Tests passing?"}
+    B -- "No — failing" --> C["Use test-fix-workflow first"]
+    B -- "Yes, but below 100%" --> D["Use coverage-tranche (this skill)"]
+    B -- "Yes, change just landed" --> E["Use coverage-guard"]
+    C --> F["Fix failures, then return"]
+    D --> G["Add smallest test or remove dead code"]
+    E --> H["Verify touched files at 100%"]
+```
 
 ## Guardrails
 

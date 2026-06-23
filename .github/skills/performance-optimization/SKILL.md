@@ -4,6 +4,10 @@ description: 'Implement memory efficiency, slab optimization, typed-array usage,
 argument-hint: 'Describe the optimization target (slab, typed array, activation path, cache layout, browser-worker hotspot), the evidence (trace report or benchmark), and the current plan phase.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - trace-audit-reporting
+  - trace-analyzer-extension
+  - implementation-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -51,6 +55,32 @@ When roadmap alignment is needed, use `plan-alignment`.
 - Activation throughput benchmarks show regression.
 - A slab or typed-array change is needed before another lane can proceed
   efficiently, without taking ownership of that lane's public contract.
+
+
+## When NOT to use
+
+Do NOT use for trace analysis or reporting - use `trace-audit-reporting` instead. Do NOT use for trace analyzer extension - use `trace-analyzer-extension` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Profiled hotspot"] --> B{"Target type?"}
+    B -- "Memory allocation" --> C["Slab/pool optimization"]
+    B -- "Activation path" --> D["Fast-path optimization"]
+    B -- "Data layout" --> E["Cache-friendly refactor"]
+    C --> F["Write correctness test"]
+    D --> F
+    E --> F
+    F --> G["Implement optimization"]
+    G --> H["Verify invariant"]
+    H --> I{"Output identical?"}
+    I -- "Yes" --> J["Run benchmark"]
+    I -- "No" --> K["Debug"]
+    K --> G
+    J --> L["Report improvement"]
+```
 
 ## Task Packet
 
@@ -121,6 +151,32 @@ Every performance change must satisfy:
 Do not start Hyper (Track 2) work until the Track 1 stability conditions in
 `Memory_Optimization.md` are fully satisfied. If those conditions appear met,
 use `plan-alignment` to verify before proceeding.
+
+
+## Decision Tree: Optimization Targets
+
+```mermaid
+flowchart TD
+    A["Performance complaint"] --> B{"Where is the hotspot?"}
+    B -- "Library code in src/" --> C["This skill"]
+    B -- "Demo rendering / DOM" --> D["visualizer-workflow"]
+    B -- "Worker payload encoding" --> E["worker-inference-transport"]
+    B -- "Trace tooling gap" --> F["trace-analyzer-extension"]
+    B -- "Unknown" --> G["trace-audit-reporting first"]
+```
+
+## Before / After Examples
+
+**Before:**
+```text
+Slab allocation: 12,000 ops/sec, 41% activation time in Float64Array allocation
+```
+
+**After:**
+```text
+Slab pool reuse: 28,500 ops/sec (+137%), allocation time reduced to 9% of activation
+Correctness invariant: bitwise identical output, same seed → same result
+```
 
 ## Guardrails
 

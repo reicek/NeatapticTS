@@ -16,13 +16,10 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import Database from 'better-sqlite3';
+import { getTursoClient } from '../../mcp-semantic/tools/cortex-db.mjs';
 
 import { buildSemanticIndex } from '../build-index.mjs';
-import {
-  DEFAULT_EMBEDDINGS_DATABASE_PATH,
-  buildEmbeddingIndex,
-} from '../embed-index.mjs';
+import { buildEmbeddingIndex } from '../embed-index.mjs';
 import { defaultDatabasePath, repoRoot } from '../init-schema.mjs';
 import { parseCliArgs, writeJsonOrText } from '../cli-utils.mjs';
 
@@ -86,8 +83,7 @@ const FAMILY_RULES = Object.freeze([
  * Create a debounced, batched post-write freshness hook.
  *
  * @param {object} [options={}] - Hook configuration.
- * @param {string} [options.databasePath] - Corpus SQLite database path (default: data/semantic-index.sqlite).
- * @param {string} [options.embeddingsDatabasePath] - Embeddings SQLite database path (default: data/embeddings.sqlite).
+ * @param {string} [options.databasePath] - Corpus SQLite database path (default: data/turso-replica.sqlite).
  * @param {number} [options.debounce_ms=2000] - Milliseconds to wait for additional notifications before flushing.
  * @param {ReadonlyArray<string>} [options.changed_file_globs] - Globs that filter which notifications trigger a build.
  * @param {boolean} [options.skip_ann=false] - When true, skip the background dense-embedding update.
@@ -106,12 +102,12 @@ export function createFreshnessHook(options = {}) {
   const databasePath = path.resolve(
     options.databasePath ?? defaultDatabasePath,
   );
-  const embeddingsDatabasePath = path.resolve(
-    options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
-  );
+  const client = options.client ?? null;
   const logWarning = options.logWarning ?? console.warn;
   const runIncrementalBuild =
-    options.runIncrementalBuild ?? defaultRunIncrementalBuild;
+    options.runIncrementalBuild ??
+    ((changedPaths, buildOptions) =>
+      defaultRunIncrementalBuild(changedPaths, buildOptions));
 
   /** @type {Set<string>} */
   let pendingPaths = new Set();
@@ -155,7 +151,7 @@ export function createFreshnessHook(options = {}) {
       return { updated: [], failed: [] };
     }
 
-    const indexedPaths = collectIndexedPaths(databasePath);
+    const indexedPaths = await collectIndexedPaths(databasePath, client);
 
     const filteredPaths = paths.filter(
       (filePath) =>
@@ -170,16 +166,16 @@ export function createFreshnessHook(options = {}) {
     try {
       const result = await runIncrementalBuild(filteredPaths, {
         databasePath,
-        embeddingsDatabasePath,
         skip_ann: skipAnn,
         logWarning,
+        client,
       });
 
       if (!skipAnn) {
         queueEmbeddingUpdate({
           databasePath,
-          embeddingsDatabasePath,
           logWarning,
+          client,
         });
       }
 
@@ -276,28 +272,16 @@ export function createFreshnessHook(options = {}) {
  */
 async function defaultRunIncrementalBuild(changedPaths, options) {
   const databasePath = options.databasePath;
+  const client = options.client ?? (await getTursoClient(databasePath));
 
-  if (!existsSync(databasePath)) {
-    throw new Error(
-      `Semantic index database not found: ${databasePath}. Run 'npm run index:build' first.`,
-    );
-  }
-
-  const database = new Database(databasePath, {
-    readonly: true,
-    fileMustExist: true,
-  });
-
-  // Preserve every document already in the index so the incremental build does
-  // not purge unrelated files. Changed/new paths will override or extend this set.
-  const existingRows = database
-    .prepare('SELECT file_path, doc_family FROM documents')
-    .all();
-  database.close();
+  // Read existing documents from the corpus index via async libSQL client.
+  const result = await client.execute(
+    'SELECT file_path, doc_family FROM documents',
+  );
 
   /** @type {Map<string, string>} */
   const documentMap = new Map();
-  for (const row of existingRows) {
+  for (const row of result.rows) {
     documentMap.set(String(row.file_path), String(row.doc_family ?? 'unknown'));
   }
 
@@ -322,6 +306,7 @@ async function defaultRunIncrementalBuild(changedPaths, options) {
     databasePath,
     corpusDocuments,
     force: false,
+    client,
   });
 
   return {
@@ -349,12 +334,12 @@ async function defaultRunIncrementalBuild(changedPaths, options) {
  * Never awaited by the caller; failures are logged as warnings. This keeps the
  * post-write hook non-blocking while still driving the ANN index forward.
  *
- * @param {{ databasePath: string, embeddingsDatabasePath: string, logWarning: Function }} options
+ * @param {{ databasePath: string, logWarning: Function, client?: import('@libsql/client').Client }} options
  */
 function queueEmbeddingUpdate(options) {
   buildEmbeddingIndex({
     corpusDatabasePath: options.databasePath,
-    embeddingsDatabasePath: options.embeddingsDatabasePath,
+    client: options.client ?? null,
   }).catch((error) => {
     options.logWarning(
       `Freshness hook background embedding update failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -370,21 +355,13 @@ function queueEmbeddingUpdate(options) {
  * @param {string} databasePath - Resolved corpus database path.
  * @returns {Set<string>}
  */
-function collectIndexedPaths(databasePath) {
-  if (!existsSync(databasePath)) {
-    return new Set();
-  }
+async function collectIndexedPaths(databasePath, client = null) {
+  const resolvedClient = client ?? (await getTursoClient(databasePath));
 
-  const database = new Database(databasePath, {
-    readonly: true,
-    fileMustExist: true,
-  });
-  try {
-    const rows = database.prepare('SELECT file_path FROM documents').all();
-    return new Set(rows.map((row) => String(row.file_path)));
-  } finally {
-    database.close();
-  }
+  const result = await resolvedClient.execute(
+    'SELECT file_path FROM documents',
+  );
+  return new Set(result.rows.map((row) => String(row.file_path)));
 }
 
 /**
@@ -502,11 +479,6 @@ async function runFreshnessHookCli(args) {
   const databasePath = path.resolve(
     args['database'] ?? args['databasePath'] ?? defaultDatabasePath,
   );
-  const embeddingsDatabasePath = path.resolve(
-    args['embeddings-database'] ??
-      args['embeddingsDatabasePath'] ??
-      DEFAULT_EMBEDDINGS_DATABASE_PATH,
-  );
 
   const rawFiles = args['files'] ?? args['_'] ?? [];
   const filePaths = Array.isArray(rawFiles)
@@ -524,7 +496,6 @@ async function runFreshnessHookCli(args) {
 
   const summary = {
     databasePath,
-    embeddingsDatabasePath,
     notified: filePaths.length,
     flushed: false,
     result: { updated: [], failed: [] },
@@ -539,7 +510,6 @@ async function runFreshnessHookCli(args) {
 
   const hook = createFreshnessHook({
     databasePath,
-    embeddingsDatabasePath,
     debounce_ms: 0,
     changed_file_globs: globs,
     skip_ann: Boolean(args['skip-ann'] ?? args['skipAnn'] ?? false),
@@ -587,7 +557,6 @@ function printUsage() {
       'Options:',
       '  --files=<csv>              Comma-separated repo-relative changed paths.',
       '  --database=<path>          Corpus database path.',
-      '  --embeddings-database=<path> Embeddings database path.',
       '  --changed-file-globs=<csv> Comma-separated globs that filter notifications.',
       '  --skip-ann                 Skip the background dense-embedding update.',
       '  --json                     Emit JSON summary.',
@@ -608,7 +577,6 @@ function printUsage() {
 /**
  * @typedef {object} IncrementalBuildOptions
  * @property {string} databasePath
- * @property {string} embeddingsDatabasePath
  * @property {boolean} skip_ann
  * @property {Function} logWarning
  */

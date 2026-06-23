@@ -2,8 +2,8 @@
  * @description Report whether dense search can run without degrading to BM25-only.
  * The readiness states are:
  * - `cold`: the ONNX model cache is absent.
- * - `model-only`: the model exists, but the embeddings database is absent or incomplete.
- * - `warm`: the model exists and the embedding count matches the corpus chunk count.
+ * - `model-only`: the model exists, but the consolidated corpus has no embeddings.
+ * - `warm`: the model exists and the corpus has usable embeddings.
  *
  * `DENSE_FORCE_STATE` supports deterministic overrides for `cold` and `model-only`.
  * When either value is present, the probe returns the forced state immediately
@@ -11,7 +11,6 @@
  *
  * @param {boolean} [--json] - Emit machine-readable readiness output.
  * @param {string}  [--database <path>] - Override the corpus database path.
- * @param {string}  [--embeddings-database <path>] - Override the embeddings database path.
  * @param {string}  [--model-directory <path>] - Override the local model directory.
  * @param {string}  [--model-id <id>] - Override the embedding model identifier.
  * @param {boolean} [--help] - Show help and exit.
@@ -28,7 +27,6 @@ import {
   writeJsonOrText,
 } from './cli-utils.mjs';
 import {
-  DEFAULT_EMBEDDINGS_DATABASE_PATH,
   DEFAULT_MODEL_DIRECTORY,
   DEFAULT_MODEL_ID,
 } from './embed-index.mjs';
@@ -43,7 +41,6 @@ const FORCED_STATES = new Set(['cold', 'model-only']);
  * @param {{
  *   corpusDatabasePath?: string,
  *   databasePath?: string,
- *   embeddingsDatabasePath?: string,
  *   modelDirectory?: string,
  *   modelId?: string,
  * }} [options] - Probe configuration.
@@ -55,9 +52,6 @@ export async function checkDenseReadiness(options = {}) {
 
   const corpusDatabasePath = path.resolve(
     options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath,
-  );
-  const embeddingsDatabasePath = path.resolve(
-    options.embeddingsDatabasePath ?? DEFAULT_EMBEDDINGS_DATABASE_PATH,
   );
   const modelDirectory = path.resolve(
     options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
@@ -75,21 +69,11 @@ export async function checkDenseReadiness(options = {}) {
     };
   }
 
-  if (!existsSync(embeddingsDatabasePath)) {
-    return {
-      chunk_count: null,
-      embedding_count: null,
-      ready: false,
-      reason: 'Dense model is present but the embeddings database is absent.',
-      state: 'model-only',
-    };
-  }
-
   try {
     const validationReport = await validateEmbeddings({
       corpusDatabasePath,
-      embeddingsDatabasePath,
       modelId,
+      client: options.client,
     });
     const chunkCount = normalizeCount(validationReport.chunk_count);
     const embeddingCount = normalizeCount(validationReport.embedding_count);
@@ -99,7 +83,7 @@ export async function checkDenseReadiness(options = {}) {
         chunk_count: chunkCount,
         embedding_count: embeddingCount,
         ready: true,
-        reason: `All ${chunkCount ?? 0} chunks have embeddings.`,
+        reason: `${embeddingCount ?? 0} chunks have embeddings.`,
         state: 'warm',
       };
     }
@@ -160,8 +144,7 @@ async function main() {
       usage: 'node scripts/semantic-index/dense-readiness.mjs [--json]',
       options: [
         '--json                       Emit the readiness report as JSON.',
-        '--database <path>            Override the semantic-index corpus database path.',
-        '--embeddings-database <p>    Override the embeddings database path.',
+        '--database <path>            Override the corpus database path.',
         '--model-directory <path>     Override the local dense model directory.',
         '--model-id <id>              Override the embedding model identifier.',
         '--help                       Show this help.',
@@ -173,7 +156,6 @@ async function main() {
   try {
     const report = await checkDenseReadiness({
       corpusDatabasePath: args.database,
-      embeddingsDatabasePath: args['embeddings-database'],
       modelDirectory: args['model-directory'],
       modelId: args['model-id'],
     });

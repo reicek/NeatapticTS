@@ -37,8 +37,7 @@ describe('embed-readiness.mjs', () => {
 
         const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'embed-readiness-latency-'));
         const options = {
-          corpusDatabasePath: path.join(fixtureDirectory, 'semantic-index.sqlite'),
-          embeddingsDatabasePath: path.join(fixtureDirectory, 'embeddings.sqlite'),
+          corpusDatabasePath: path.join(fixtureDirectory, 'corpus.sqlite'),
           modelDirectory: path.join(fixtureDirectory, 'models'),
         };
 
@@ -77,8 +76,7 @@ describe('embed-readiness.mjs', () => {
 
         const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'embed-readiness-latency-bound-'));
         const report = await getEmbedReadiness({
-          corpusDatabasePath: path.join(fixtureDirectory, 'semantic-index.sqlite'),
-          embeddingsDatabasePath: path.join(fixtureDirectory, 'embeddings.sqlite'),
+          corpusDatabasePath: path.join(fixtureDirectory, 'corpus.sqlite'),
           modelDirectory: path.join(fixtureDirectory, 'models'),
         });
 

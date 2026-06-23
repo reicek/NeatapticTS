@@ -4,6 +4,10 @@ description: 'Design, implement, or validate NeatapticTS batch evaluation in Nod
 argument-hint: 'Describe the pool target, current step in Turnkey_Multithread_Evaluation_API.md, environment, dataset strategy, and whether the pass is design, implementation, benchmark, or validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - worker-inference-transport
+  - reproducibility-contracts
+  - coverage-guard
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -46,6 +50,11 @@ worker-pool scheduling notes, source attribution, and queueing heuristics.
 - Dataset shipping is dominating runtime and must move to init-time broadcast.
 - Evolution-loop integration is being added on top of a pool that already works.
 
+
+## When NOT to use
+
+Do NOT use for single-threaded evaluation - use direct evaluation calls instead. Do NOT use for worker payload encoding - use `worker-inference-transport` instead.
+
 ## Core Contracts
 
 ### Result-order contract
@@ -85,6 +94,21 @@ critical path. In practice, pool startup, dataset broadcast, queue contention,
 and browser scheduling can dominate the theoretical win for small batches.
 
 Choose pool complexity only when the batch size and compute cost justify it.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Start evaluation"] --> B["Broadcast dataset to workers"]
+    B --> C["Schedule genome batches"]
+    C --> D["Workers evaluate in parallel"]
+    D --> E["Collect ordered results"]
+    E --> F{"All done?"}
+    F -- "No" --> C
+    F -- "Yes" --> G["Assemble final scores"]
+    G --> H["Done"]
+```
 
 ## Task Packet
 
@@ -178,6 +202,38 @@ Validate with: focused multithreading tests, a small batch integration test, and
 - Focused integration test for a small deterministic batch.
 - Browser smoke validation when browser worker parity is part of the step.
 - `npm run test:silent` only when the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Batch to evaluate"] --> B{"Workers available?"}
+    B -- "No / unsupported" --> C["Single-thread fallback"]
+    B -- "Yes" --> D{"Batch size predictable?"}
+    D -- "Yes" --> E["Fixed pool"]
+    D -- "No, varies widely" --> F["Dynamic sizing"]
+    C --> G["Preserve result semantics"]
+    E --> H["Bounded queue + backpressure"]
+    F --> H
+```
+
+## Before / After Examples
+
+**Before:**
+```ts
+// unbounded worker spawn: one worker per task, no limit
+for (const genome of genomes) {
+  const worker = new Worker(url);
+  worker.postMessage(genome); // no queue, no backpressure
+}
+```
+
+**After:**
+```ts
+// bounded pool with backpressure: fixed worker count, queued tasks
+const pool = createWorkerPool({ workerCount: 4, maxQueueDepth: 100 });
+const results = await pool.evaluate(genomes); // ordered, backpressured
+```
 
 ## Guardrails
 

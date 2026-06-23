@@ -4,6 +4,10 @@ description: 'Use when: a validation command fails and the workflow needs failur
 argument-hint: 'Provide the failing command, relevant output summary, changed files, and whether failures may be unrelated or environment-owned.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - test-fix-workflow
+  - running-unit-tests
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,29 @@ This skill interprets failing validation output and assigns ownership to each fa
 - A test was expected to be green but is red, and the root cause is not immediately obvious.
 - Deciding whether to proceed with a fix, skip a pre-existing failure, or escalate to a different skill.
 - An environment-owned failure (flaky test, missing dependency, port conflict) needs to be separated from a code defect.
+
+
+## When NOT to use
+
+Do NOT use for fixing tests - use `test-fix-workflow` after triage. Do NOT use for running tests - use `running-unit-tests` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Test failure"] --> B["Classify failure"]
+    B --> C{"Type?"}
+    C -- "Assertion" --> D["Check expected vs actual"]
+    C -- "Timeout" --> E["Check async/await"]
+    C -- "Import error" --> F["Check module paths"]
+    C -- "Environment" --> G["Check config/fixture"]
+    D --> H["Route to owner"]
+    E --> H
+    F --> H
+    G --> H
+    H --> I["Report triage"]
+```
 
 ## Task Packet
 
@@ -49,6 +76,45 @@ Environment factor: <none | possible port conflict | missing build artifact | fl
 7. For flaky failures: recommend a retry and note the flakiness in the tracker.
 8. Recommend the next agent or command — do not attempt a broad fix within this skill.
 9. Preserve raw evidence as concise command/result snippets; do not paste full stack traces.
+
+
+## Concrete Failure Classification Examples
+
+**Assertion mismatch:**
+```text
+Expected: [1, 2, 3]
+Received: [3, 1, 2]
+Classification: logic error in sort, not test error
+Owner: src/utils/sort.ts
+```
+
+**Import error:**
+```text
+Cannot find module ./network.js
+Classification: missing .js extension in ESM import
+Owner: import statement in source file
+```
+
+**Timeout:**
+```text
+Test exceeded 5000ms timeout
+Classification: async operation not awaited or infinite loop
+Owner: test file or source async path
+```
+
+## Before / After Examples
+
+**Before (vague):**
+```text
+Tests are failing. Something about sort and maybe imports. Not sure which ones are ours.
+```
+
+**After (structured):**
+```text
+Failing: sort.test.ts › "returns sorted array" → active-change, owner: src/utils/sort.ts
+Failing: network.test.ts › "loads config" → pre-existing, unrelated to active change
+Reroute: fix sort.ts, skip network.test.ts as pre-existing
+```
 
 ## Guardrails
 

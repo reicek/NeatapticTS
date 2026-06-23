@@ -4,6 +4,11 @@ description: 'Audit source references and license notes for NeatapticTS workflow
 argument-hint: 'List the external sources used, target files, whether text was summarized or copied, and required license notes.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - docs-academic-citation-audit
+  - educational-docs
+  - research-methodology
+  - agent-frontmatter-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -31,6 +36,11 @@ internal location, and recording unknown license details as blockers.
   updated and the source license needs to be documented.
 - An external source with an unknown license was used and the project needs a
   recorded blocker before the change can be merged.
+
+
+## When NOT to use
+
+Do NOT use for citation auditing - use `docs-academic-citation-audit` instead. Do NOT use for general documentation - use `educational-docs` instead.
 
 ## Task Packet
 
@@ -68,6 +78,52 @@ Action: confirm text is summarized (not copied), add attribution in the referenc
 - VS Code documentation: cite as Microsoft/VS Code documentation source for
   supported fields and behavior; no code reproduction needed for API shape
   descriptions.
+
+
+## Why License Attribution Matters
+
+License attribution ensures the repo complies with open-source license requirements when external workflow standards (Agent Skills, OpenSpec, Superpowers) inform NeatapticTS agents, skills, or scripts. Missing attribution creates legal risk and violates the spirit of open-source collaboration. The audit catches unattributed external sources before they reach production.
+
+## Before/After Attribution Examples
+
+**Before (missing attribution):**
+```md
+This workflow follows the standard TDD loop.
+```
+
+**After (with attribution):**
+```md
+This workflow follows the standard TDD loop as described in the
+Agent Skills specification [copilot-instructions.md, MIT licensed].
+```
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["External source used"] --> B["Identify license"]
+    B --> C{"License known?"}
+    C -- "Yes" --> D["Summarize, don't copy"]
+    C -- "No" --> E["Record blocker"]
+    D --> F["Add attribution to references"]
+    E --> G["Halt until resolved"]
+    F --> H["Record in learning log"]
+    G --> H
+    H --> I["Done"]
+```
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["External source found"] --> B{"License known?"}
+    B -- "Yes, permissive" --> C["Audit and add attribution"]
+    B -- "Yes, restrictive" --> D["Summarize only, note constraints"]
+    B -- "Unknown" --> E["Record as blocker"]
+    C --> F["Record in references file"]
+    D --> F
+    E --> G["Do not merge until resolved"]
+```
 
 ## Guardrails
 

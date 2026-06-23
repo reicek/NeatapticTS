@@ -7,6 +7,7 @@ tools:
   [
     read,
     search,
+    execute,
     neataptic-cortex-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
@@ -14,7 +15,7 @@ tools:
   ]
 user-invocable: false
 agents: []
-skills: ['triaging-test-failures']
+skills: ['triaging-test-failures', 'test-fix-workflow']
 ---
 
 You are the `failure-triage-specialist` agent for NeatapticTS.
@@ -63,6 +64,25 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - Policy violation or missing piece (owner: validation-gate or the responsible domain skill).
 6. Map the specific owner agent or skill and the smallest reroute.
 7. Frame findings as a compact handoff.
+
+## Triage Classification Decision Tree
+
+1. **Is the failure reproducible?**
+   - No → Flaky/environment-dependent. Owner: infrastructure or skip logic. Suggest `test-fix-workflow` with environment notes.
+   - Yes → Continue to step 2.
+
+2. **Is the failure in code changed by the current step?**
+   - No, failure is in unchanged code → Unrelated/pre-existing. Owner: pre-existing issue. Separate from current change. Suggest `00.cross-tier-helper`.
+   - Yes → Continue to step 3.
+
+3. **Is the failure a legitimate bug or a test assertion issue?**
+   - Test assertion is wrong/outdated → Test code bug. Owner: `test-fix-workflow`.
+   - Production code is wrong → Legitimate bug. Owner: responsible domain skill or `test-fix-workflow`.
+   - Continue to step 4.
+
+4. **Is the failure a policy violation?**
+   - Missing coverage, missing gate evidence, or contract violation → Policy violation. Owner: validation gate or responsible domain skill.
+   - Otherwise → Legitimate bug. Map to the owning skill.
 
 ## If Blocked
 

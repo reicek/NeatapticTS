@@ -40,7 +40,7 @@
  *   node scripts/agent-customization/workflow-gap-audit.mjs [--json] [--window=7] [--db=<sqlite-path>] [--help]
  */
 
-import { readdir, readFile } from 'node:fs/promises';
+import { access, constants, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parseArgs, repoRoot } from './customization-utils.mjs';
 
@@ -320,7 +320,7 @@ function aggregateRuntimeEnforcementEvidence(realEvents) {
 
 /**
  * Load session store data: agent counts, drift sessions, and recent summaries.
- * Uses better-sqlite3 when `--db=<path>` is provided; otherwise returns empty arrays.
+ * Uses @libsql/client when `--db=<path>` is provided; otherwise returns empty arrays.
  * @param {string | null} dbPath - Optional absolute path to the SQLite session store file.
  * @param {string} cutoffDate - ISO-8601 cutoff date string.
  * @param {number} windowDays - Rolling window for underused-flow detection (longer: 30d).
@@ -337,43 +337,40 @@ async function loadSessionStoreData(dbPath, cutoffDate, windowDays) {
     return emptyResult;
   }
 
-  // Attempt to dynamically import better-sqlite3 (optional peer dependency).
-  let Database;
+  // Enforce the same "file must exist" semantics the old synchronous SQLite reader used.
   try {
-    const module = await import('better-sqlite3');
-    Database = module.default ?? module.Database;
+    await access(dbPath, constants.R_OK);
   } catch {
-    // better-sqlite3 not available; session store aggregations return empty.
     return emptyResult;
   }
 
   let db;
   try {
-    db = new Database(dbPath, { readonly: true, fileMustExist: true });
+    const { createClient } = await import('@libsql/client');
+    db = createClient({ url: 'file:' + dbPath });
   } catch {
+    // @libsql/client not available; session store aggregations return empty.
     return emptyResult;
   }
 
   try {
     // Agent session counts within the window.
-    const agentSessionCounts = db
-      .prepare(
-        `SELECT agent_name AS agentName, COUNT(*) AS sessionCount
+    const { rows: agentSessionCounts } = await db.execute({
+      sql: `SELECT agent_name AS agentName, COUNT(*) AS sessionCount
          FROM sessions
          WHERE created_at > :cutoff AND agent_name IS NOT NULL
          GROUP BY agent_name
          ORDER BY sessionCount DESC`,
-      )
-      .all({ cutoff: cutoffDate });
+      args: { cutoff: cutoffDate },
+    });
 
     // Drift sessions: recent sessions whose summary contains no named flow ID.
-    const recentRows = db
-      .prepare(
-        `SELECT id AS sessionId, agent_name AS agentName, summary
+    const { rows: recentRows } = await db.execute({
+      sql: `SELECT id AS sessionId, agent_name AS agentName, summary
          FROM sessions
          WHERE created_at > :cutoff AND summary IS NOT NULL`,
-      )
-      .all({ cutoff: cutoffDate });
+      args: { cutoff: cutoffDate },
+    });
 
     const driftSessions = recentRows
       .filter((row) => !FLOW_ID_PATTERN.test(row.summary ?? ''))
@@ -387,11 +384,10 @@ async function loadSessionStoreData(dbPath, cutoffDate, windowDays) {
     const longCutoff = new Date(
       Date.now() - Math.max(windowDays, 30) * 24 * 60 * 60 * 1000,
     ).toISOString();
-    const longRows = db
-      .prepare(
-        `SELECT summary FROM sessions WHERE created_at > :cutoff AND summary IS NOT NULL`,
-      )
-      .all({ cutoff: longCutoff });
+    const { rows: longRows } = await db.execute({
+      sql: `SELECT summary FROM sessions WHERE created_at > :cutoff AND summary IS NOT NULL`,
+      args: { cutoff: longCutoff },
+    });
 
     const recentSummaries = longRows.map((row) => row.summary ?? '');
 
@@ -399,7 +395,7 @@ async function loadSessionStoreData(dbPath, cutoffDate, windowDays) {
   } catch {
     return emptyResult;
   } finally {
-    db.close();
+    await db.close();
   }
 }
 

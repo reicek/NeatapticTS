@@ -21,8 +21,8 @@ const config = {
       transform: {
         '^.+\\.ts$': [
           'ts-jest',
-          { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true }
-        ]
+          { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
+        ],
       },
       setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
       testTimeout: 300000,
@@ -36,112 +36,128 @@ const config = {
         '/node_modules/',
         '/dist/',
         '/examples/asciiMaze/',
-         '/examples/starter-examples.smoke.test.ts',
+        '/examples/starter-examples.smoke.test.ts',
       ],
     },
     {
       displayName: 'asciiMaze-browser',
-      testMatch: [
-        '**/examples/asciiMaze/**/*.test.ts',
-      ],
-        preset: 'ts-jest/presets/default-esm',
-        testEnvironment: 'jsdom',
+      testMatch: ['**/examples/asciiMaze/**/*.test.ts'],
+      preset: 'ts-jest/presets/default-esm',
+      testEnvironment: 'jsdom',
       extensionsToTreatAsEsm: ['.ts'],
       transform: {
         '^.+\\.ts$': [
           'ts-jest',
-          { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true }
-        ]
+          { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
+        ],
       },
       setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
       testTimeout: 3000000,
     },
-      {
-        displayName: 'starter-examples',
-        testMatch: [
-          '**/examples/starter-examples.smoke.test.ts',
+    {
+      displayName: 'starter-examples',
+      testMatch: ['**/examples/starter-examples.smoke.test.ts'],
+      preset: 'ts-jest/presets/default-esm',
+      testEnvironment: 'node',
+      extensionsToTreatAsEsm: ['.ts'],
+      transform: {
+        '^.+\\.ts$': [
+          'ts-jest',
+          { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
         ],
-        preset: 'ts-jest/presets/default-esm',
-        testEnvironment: 'node',
-        extensionsToTreatAsEsm: ['.ts'],
-        transform: {
-          '^.+\\.ts$': [
-            'ts-jest',
-            { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true }
-          ]
-        },
-        setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
-        testTimeout: 300000,
       },
-      {
-        displayName: 'semantic-index-scripts',
-        testMatch: [
-          '**/scripts/semantic-index/**/*.test.ts',
+      setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
+      testTimeout: 300000,
+    },
+    {
+      displayName: 'semantic-index-scripts',
+      testMatch: ['**/scripts/semantic-index/**/*.test.ts'],
+      preset: 'ts-jest/presets/default-esm',
+      testEnvironment: 'node',
+      extensionsToTreatAsEsm: ['.ts'],
+      transform: {
+        '^.+\\.ts$': [
+          'ts-jest',
+          { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
         ],
-        preset: 'ts-jest/presets/default-esm',
-        testEnvironment: 'node',
-        extensionsToTreatAsEsm: ['.ts'],
-        transform: {
-          '^.+\\.ts$': [
-            'ts-jest',
-            { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true }
-          ]
-        },
-        setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
-        testTimeout: 300000,
       },
-      {
-        displayName: 'agent-customization-scripts',
-        testMatch: [
-          '**/scripts/agent-customization/**/*.test.ts',
+      setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
+      testTimeout: 300000,
+    },
+    {
+      displayName: 'agent-customization-scripts',
+      testMatch: ['**/scripts/agent-customization/**/*.test.ts'],
+      preset: 'ts-jest/presets/default-esm',
+      testEnvironment: 'node',
+      extensionsToTreatAsEsm: ['.ts'],
+      transform: {
+        '^.+\\.ts$': [
+          'ts-jest',
+          { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
         ],
-        preset: 'ts-jest/presets/default-esm',
-        testEnvironment: 'node',
-        extensionsToTreatAsEsm: ['.ts'],
-        transform: {
-          '^.+\\.ts$': [
-            'ts-jest',
-            { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true }
-          ]
-        },
-        setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
-        testTimeout: 300000,
       },
-      {
-        displayName: 'mcp-semantic-scripts',
-        testMatch: [
-          '**/scripts/mcp-semantic/**/*.test.ts',
+      setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
+      testTimeout: 300000,
+    },
+    {
+      displayName: 'mcp-semantic-scripts',
+      testMatch: ['**/scripts/mcp-semantic/**/*.test.ts'],
+      preset: 'ts-jest/presets/default-esm',
+      testEnvironment: 'node',
+      extensionsToTreatAsEsm: ['.ts'],
+      transform: {
+        '^.+\\.ts$': [
+          'ts-jest',
+          { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
         ],
-        preset: 'ts-jest/presets/default-esm',
-        testEnvironment: 'node',
-        extensionsToTreatAsEsm: ['.ts'],
-        transform: {
-          '^.+\\.ts$': [
-            'ts-jest',
-            { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true }
-          ]
-        },
-        setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
-        testTimeout: 300000,
       },
-      {
-        displayName: 'semantic-index-mjs',
-        testMatch: [
-          '**/scripts/semantic-index/**/*.test.mjs',
+      setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
+      testTimeout: 300000,
+    },
+    {
+      displayName: 'semantic-index-mjs',
+      testMatch: ['**/scripts/semantic-index/**/*.test.mjs'],
+      testEnvironment: 'node',
+      transform: {},
+      testTimeout: 300000,
+    },
+    {
+      displayName: 'mcp-semantic-mjs',
+      testMatch: ['**/scripts/mcp-semantic/**/*.test.mjs'],
+      testEnvironment: 'node',
+      transform: {},
+      testTimeout: 300000,
+    },
+    {
+      displayName: 'analyze-trace-scripts',
+      testMatch: ['**/scripts/analyze-trace/**/*.test.ts'],
+      preset: 'ts-jest/presets/default-esm',
+      testEnvironment: 'node',
+      extensionsToTreatAsEsm: ['.ts'],
+      moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1',
+      },
+      transform: {
+        '^.+\\.ts$': [
+          'ts-jest',
+          { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
         ],
-        testEnvironment: 'node',
-        transform: {},
-        testTimeout: 300000,
       },
-      {
-        displayName: 'mcp-semantic-mjs',
-        testMatch: [
-          '**/scripts/mcp-semantic/**/*.test.mjs',
-        ],
-        testEnvironment: 'node',
-        transform: {},
-        testTimeout: 300000,
-      },
+      setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
+      testTimeout: 300000,
+      collectCoverageFrom: ['scripts/analyze-trace/analyze-trace.io.ts'],
+    },
+    {
+      displayName: 'trace-scripts-mjs',
+      testMatch: ['**/scripts/trace-*.test.mjs'],
+      testEnvironment: 'node',
+      transform: {},
+      testTimeout: 300000,
+      collectCoverageFrom: [
+        'scripts/trace-compress.mjs',
+        'scripts/trace-summarize.mjs',
+      ],
+    },
   ],
   testMatch: [
     '**/src/**/*.test.ts',
@@ -156,15 +172,15 @@ const config = {
       {
         useESM: true,
         tsconfig: 'tsconfig.test.json',
-        diagnostics: true
-      }
-    ]
+        diagnostics: true,
+      },
+    ],
   },
   setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
   testTimeout: 300000,
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/*.test.ts'],
   coverageReporters: ['lcov', 'text', 'html', 'json-summary'],
-  testPathIgnorePatterns: ['/node_modules/', '/dist/']
+  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
 };
 
 export default config;

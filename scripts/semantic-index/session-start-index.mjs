@@ -15,7 +15,7 @@
  *
  * @param {boolean} [--json]             - Emit JSON summary.
  * @param {boolean} [--touch-only]       - Run only the touch pass; skip the build pass.
- * @param {string}  [--database <path>]  - Path to the SQLite database file (default: `data/semantic-index.sqlite`).
+ * @param {string}  [--database <path>]  - Path to the SQLite database file (default: `data/turso-replica.sqlite`).
  * @param {boolean} [--help]             - Show help and exit.
  *
  * @returns {void} Exits 0 on success, 1 on fatal error.
@@ -26,9 +26,9 @@
  * npm run index:session-start
  * ```
  */
-import Database from 'better-sqlite3';
-import { spawnSync } from 'node:child_process';
+import { createClient } from '@libsql/client';
 import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -116,14 +116,16 @@ export async function runSessionStartIndex(options = {}) {
     fatalError: null,
   };
 
-  if (!existsSync(databasePath)) {
+  if (!options.client && !existsSync(databasePath)) {
     summary.fatalError = `Database not found: ${databasePath}. Run npm run index:build first.`;
     summary.elapsedMs = Date.now() - startMs;
     return summary;
   }
 
   // Step 1: Touch pass — bump indexed_at for content-fresh rows.
-  const touchResult = await runTouchPass(databasePath);
+  const touchResult = await runTouchPass(
+    options.client ? { client: options.client } : databasePath,
+  );
   summary.touched = touchResult.touched;
   summary.contentChanged = touchResult.contentChanged;
   summary.onDiskMissing = touchResult.onDiskMissing;
@@ -147,37 +149,66 @@ export async function runSessionStartIndex(options = {}) {
  * Update `indexed_at` to NOW() for every row whose on-disk content still matches
  * the stored freshness proof. Returns counts for changed and missing files.
  *
- * @param {string} databasePath - Resolved path to the SQLite database file.
+ * @param {string|object} databasePathOrOptions - Resolved path to the SQLite database file,
+ *   or an options object with a `client` property for Turso/libSQL mode.
  * @returns {Promise<TouchResult>}
  */
-export async function runTouchPass(databasePath) {
+export async function runTouchPass(databasePathOrOptions) {
   const result = { touched: 0, contentChanged: 0, onDiskMissing: 0 };
 
-  const database = new Database(databasePath);
-  const allDocuments = database
-    .prepare('SELECT file_path, mtime_ms, file_size, sha256 FROM documents')
-    .all();
+  if (
+    typeof databasePathOrOptions === 'object' &&
+    databasePathOrOptions !== null &&
+    databasePathOrOptions.client
+  ) {
+    const { client } = databasePathOrOptions;
+    const docsResult = await client.execute({
+      sql: 'SELECT file_path, mtime_ms, file_size, sha256 FROM documents',
+      args: [],
+    });
+    const allDocuments = docsResult.rows;
 
-  const touchStatement = database.prepare(
-    'UPDATE documents SET indexed_at = ? WHERE file_path = ?',
-  );
+    const freshPaths = await collectFreshPaths(allDocuments, result);
 
-  const batchTouch = database.transaction((freshPaths, nowMs) => {
-    for (const filePath of freshPaths) {
-      touchStatement.run(nowMs, filePath);
+    if (freshPaths.length > 0) {
+      const nowMs = Date.now();
+      for (const filePath of freshPaths) {
+        await client.execute({
+          sql: 'UPDATE documents SET indexed_at = ? WHERE file_path = ?',
+          args: [nowMs, filePath],
+        });
+      }
+      result.touched = freshPaths.length;
     }
+
+    return result;
+  }
+
+  const databasePath = databasePathOrOptions;
+  const client = createClient({ url: pathToFileURL(databasePath).href });
+  const docsResult = await client.execute({
+    sql: 'SELECT file_path, mtime_ms, file_size, sha256 FROM documents',
+    args: [],
   });
+  const allDocuments = docsResult.rows;
 
   // Step 1: Classify each document row by comparing on-disk freshness proof.
   const freshPaths = await collectFreshPaths(allDocuments, result);
 
   // Step 2: Batch-update indexed_at for content-fresh rows.
   if (freshPaths.length > 0) {
-    batchTouch(freshPaths, Date.now());
+    const nowMs = Date.now();
+    await client.batch(
+      freshPaths.map((filePath) => ({
+        sql: 'UPDATE documents SET indexed_at = ? WHERE file_path = ?',
+        args: [nowMs, filePath],
+      })),
+      'write',
+    );
     result.touched = freshPaths.length;
   }
 
-  database.close();
+  await client.close();
   return result;
 }
 

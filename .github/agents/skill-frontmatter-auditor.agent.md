@@ -58,6 +58,24 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 4. **Return only the structured audit result to the caller.**
    - Example: Fill out the output block with findings, blockers, and suggested next agent.
 
+## Skill Frontmatter Validation Checklist
+
+- **Folder-name alignment:** Verify the skill folder name matches the `name` field in `SKILL.md` frontmatter. Flag mismatches.
+- **Argument hints:** Verify `arguments` field is present when the skill accepts arguments. Check argument hints match actual usage.
+- **Description quality:** Verify the description is specific and includes trigger keywords. Flag vague descriptions like "Use for various tasks."
+- **Visibility flags:** Verify `visibility: hidden` is set for internal skills. Flag missing or incorrect visibility flags.
+- **Compatibility text:** Verify compatibility text is present when the skill has version constraints. Flag missing compatibility notes.
+- **Local resources:** Verify referenced files (assets, references) exist at the declared paths. Flag missing resources.
+
+## Cortex-First Search Policy Steps
+
+1. Check `neataptic-cortex-mcp:freshness_check` for index currency before searching skill content.
+2. Use `neataptic-cortex-mcp:search_corpus` to discover skill definitions and frontmatter patterns.
+3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries.
+4. Use `neataptic-cortex-mcp:load_chunk` to read full skill frontmatter by chunk ID.
+5. Use `neataptic-cortex-mcp:load_document` to load all chunks for a skill file path.
+6. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded or target is a known file path.
+
 ## If Blocked
 
 - **Set `TASK_STATUS: PARTIAL` when the target skill files or required evidence cannot be read.**

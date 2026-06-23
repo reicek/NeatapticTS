@@ -4,6 +4,10 @@ description: 'Turn JSDoc and source comments into world-class educational docume
 argument-hint: 'Describe the target folder or public surface, the intended reader, and whether you need tone shaping, source mapping, Mermaid diagrams, citations, or Wikimedia-safe media.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - docs-academic-citation-audit
+  - updating-js-docs
+  - auditing-js-docs
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -104,6 +108,11 @@ better teaching choice.
   and the license obligations can be satisfied.
 - A `solid-split` step has just completed and the touched boundary now needs a
   focused educational-docs follow-up pass.
+
+
+## When NOT to use
+
+Do NOT use for citation auditing - use `docs-academic-citation-audit` instead. Do NOT use for JSDoc auditing - use `auditing-js-docs` instead.
 
 ## Companion Workflow Input
 
@@ -605,6 +614,58 @@ textual, reviewable, and close to the code they explain.
 
 For diagram selection, syntax caveats, and validation guidance, use
 [Mermaid diagram playbook](./assets/mermaid-diagram-playbook.md).
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Read source JSDoc"] --> B["Read nearest README"]
+    B --> C["Map source to README"]
+    C --> D["Improve JSDoc"]
+    D --> E["Add Mermaid/citations"]
+    E --> F["Regenerate docs"]
+    F --> G["Inspect output"]
+    G --> H["Report changes"]
+```
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Docs work needed"] --> B{"What kind?"}
+    B -- "JSDoc quality audit" --> C["Use auditing-js-docs"]
+    B -- "Update existing JSDoc" --> D["Use updating-js-docs"]
+    B -- "Educational rewrite" --> E["Use educational-docs"]
+    B -- "Citation check" --> F["Use docs-academic-citation-audit"]
+```
+
+## Before / After Examples
+
+**Before:**
+```ts
+/** Build a network. */
+export function buildMLP(config: MLPConfig): Network { ... }
+```
+
+**After:**
+```ts
+/**
+ * Build a multi-layer perceptron with configurable hidden layers.
+ *
+ * Implements the feedforward MLP architecture described in
+ * [Multi-layer perceptron (Wikipedia)](https://en.wikipedia.org/wiki/Multilayer_perceptron).
+ *
+ * @param config - Partial config; all fields have defaults
+ * @returns A Network ready for activation
+ * @throws Error when units < 1 or hiddenLayers is empty
+ *
+ * @example
+ * ```ts
+ * const net = buildMLP({ hiddenLayers: [4, 4] });
+ * ```
+ */
+export function buildMLP(config?: Partial<MLPConfig>): Network { ... }
+```
 
 ## Guardrails
 

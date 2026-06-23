@@ -4,6 +4,10 @@ description: 'Extend scripts/analyze-trace/analyze-trace.ts with new rollups, co
 argument-hint: 'Describe the trace question, missing metric, and validation trace file.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - trace-audit-reporting
+  - performance-optimization
+  - tracker-handoff
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -29,6 +33,26 @@ report log, `tracker-handoff` owns the plan/log structure.
 - The report needs percentiles, top-N comparisons, or a tighter summary format.
 - A one-off shell command would be too fragile or too noisy to repeat reliably
   across future trace captures.
+
+
+## When NOT to use
+
+Do NOT use for trace reporting or analysis - use `trace-audit-reporting` instead. Do NOT use for performance optimization implementation - use `performance-optimization` instead.
+
+
+## Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Analyzer cant answer question"] --> B["Read analyze-trace.ts"]
+    B --> C["Design new section"]
+    C --> D["Implement helper"]
+    D --> E["Validate against trace"]
+    E --> F{"Output correct?"}
+    F -- "Yes" --> G["Update trace-audit-reporting docs"]
+    F -- "No" --> C
+    G --> H["Done"]
+```
 
 ## Task Packet
 
@@ -84,6 +108,34 @@ Output format: compact table, one row per thread, columns p50/p95/max.
 - Preserve thread awareness so renderer, worker, browser, and GPU work remain
   separable.
 - Avoid sections that require manual post-processing to become useful.
+
+
+## Before/After Analyzer Output
+
+**Before (insufficient):**
+```text
+Top events by duration:
+  HandlePostMessage: 45ms (12 occurrences)
+```
+
+**After (with per-thread breakdown):**
+```text
+Per-thread p95 durations:
+| Thread   | p50   | p95   | Max   |
+|----------|-------|-------|-------|
+| renderer | 2ms   | 8ms   | 15ms  |
+| worker   | 5ms   | 22ms  | 45ms  |
+```
+
+## Decision Tree
+
+```mermaid
+flowchart TD
+    A["Trace work"] --> B{"What kind?"}
+    B -- "Analyzer cannot answer question" --> C["trace-analyzer-extension"]
+    B -- "Write report from analyzer output" --> D["trace-audit-reporting"]
+    B -- "Implement perf optimization" --> E["performance-optimization"]
+```
 
 ## Guardrails
 

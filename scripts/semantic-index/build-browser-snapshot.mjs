@@ -1,5 +1,4 @@
-import Database from 'better-sqlite3';
-import { existsSync } from 'node:fs';
+import { createClient } from '@libsql/client';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -20,90 +19,76 @@ const defaultOutputPath = path.join(
 );
 
 export async function buildBrowserSnapshot(options = {}) {
+  const outputPath = path.resolve(options.outputPath ?? defaultOutputPath);
   const databasePath = path.resolve(
     options.databasePath ?? defaultDatabasePath,
   );
-  const outputPath = path.resolve(options.outputPath ?? defaultOutputPath);
 
-  if (!existsSync(databasePath)) {
-    throw new Error(
-      `Semantic SQLite index not found at ${databasePath}. Run "npm run index:build" before building the browser snapshot, or pass --database <path>.`,
+  const client =
+    options.client ?? createClient({ url: pathToFileURL(databasePath).href });
+  const documents = await readSnapshotDocumentsWithClient(client);
+  const snapshot = {
+    schema_version: SNAPSHOT_SCHEMA_VERSION,
+    generated_at: new Date().toISOString(),
+    families: [...new Set(documents.map(({ family }) => family))].toSorted(),
+    documents,
+  };
+
+  if (!options.dryRun) {
+    await mkdir(path.dirname(outputPath), { recursive: true });
+    await writeFile(
+      outputPath,
+      `${JSON.stringify(snapshot, null, 2)}\n`,
+      'utf8',
     );
   }
 
-  const database = new Database(databasePath, {
-    readonly: true,
-    fileMustExist: true,
-  });
-  try {
-    const documents = readSnapshotDocuments(database);
-    const snapshot = {
-      schema_version: SNAPSHOT_SCHEMA_VERSION,
-      generated_at: new Date().toISOString(),
-      families: [...new Set(documents.map(({ family }) => family))].toSorted(),
-      documents,
-    };
-
-    if (!options.dryRun) {
-      await mkdir(path.dirname(outputPath), { recursive: true });
-      await writeFile(
-        outputPath,
-        `${JSON.stringify(snapshot, null, 2)}\n`,
-        'utf8',
-      );
-    }
-
-    return {
-      outputPath,
-      databasePath,
-      schema_version: snapshot.schema_version,
-      generated_at: snapshot.generated_at,
-      families: snapshot.families,
-      documents: snapshot.documents.length,
-      chunks: snapshot.documents.reduce(
-        (chunkCount, documentRecord) =>
-          chunkCount + documentRecord.chunks.length,
-        0,
-      ),
-      dryRun: Boolean(options.dryRun),
-    };
-  } finally {
-    database.close();
-  }
+  return {
+    outputPath,
+    databasePath,
+    schema_version: snapshot.schema_version,
+    generated_at: snapshot.generated_at,
+    families: snapshot.families,
+    documents: snapshot.documents.length,
+    chunks: snapshot.documents.reduce(
+      (chunkCount, documentRecord) => chunkCount + documentRecord.chunks.length,
+      0,
+    ),
+    dryRun: Boolean(options.dryRun),
+  };
 }
 
-export function createBrowserSnapshot(databasePath = defaultDatabasePath) {
-  const database = new Database(path.resolve(databasePath), {
-    readonly: true,
-    fileMustExist: true,
+export async function createBrowserSnapshot(
+  databasePath = defaultDatabasePath,
+) {
+  const client = createClient({
+    url: pathToFileURL(path.resolve(databasePath)).href,
   });
-  try {
-    const documents = readSnapshotDocuments(database);
-    return {
-      schema_version: SNAPSHOT_SCHEMA_VERSION,
-      generated_at: new Date().toISOString(),
-      families: [...new Set(documents.map(({ family }) => family))].toSorted(),
-      documents,
-    };
-  } finally {
-    database.close();
-  }
+  const documents = await readSnapshotDocumentsWithClient(client);
+  return {
+    schema_version: SNAPSHOT_SCHEMA_VERSION,
+    generated_at: new Date().toISOString(),
+    families: [...new Set(documents.map(({ family }) => family))].toSorted(),
+    documents,
+  };
 }
 
-function readSnapshotDocuments(database) {
-  const documentRows = database
-    .prepare(
-      'SELECT doc_id, file_path, doc_family AS family FROM documents ORDER BY file_path ASC, doc_id ASC',
-    )
-    .all();
-  const chunkRows = database
-    .prepare(
-      'SELECT chunk_id, doc_id, heading_path, body_text, char_start, char_end FROM chunks ORDER BY doc_id ASC, chunk_index ASC, chunk_id ASC',
-    )
-    .all();
-  const chunksByDocumentId = groupChunksByDocumentId(chunkRows);
+/**
+ * Async client path for reading snapshot documents via a Turso/libSQL client.
+ *
+ * @param {import('@libsql/client').Client} client - Turso/libSQL client.
+ * @returns {Promise<Array<object>>} Document records with nested chunks.
+ */
+async function readSnapshotDocumentsWithClient(client) {
+  const documentResult = await client.execute(
+    'SELECT doc_id, file_path, doc_family AS family FROM documents ORDER BY file_path ASC, doc_id ASC',
+  );
+  const chunkResult = await client.execute(
+    'SELECT chunk_id, doc_id, heading_path, body_text, char_start, char_end FROM chunks ORDER BY doc_id ASC, chunk_index ASC, chunk_id ASC',
+  );
+  const chunksByDocumentId = groupChunksByDocumentId(chunkResult.rows);
 
-  return documentRows.map((documentRow) => ({
+  return documentResult.rows.map((documentRow) => ({
     doc_id: documentRow.doc_id,
     file_path: normalizeRepoPath(documentRow.file_path),
     family: documentRow.family,
@@ -138,7 +123,7 @@ async function main() {
       usage:
         'node scripts/semantic-index/build-browser-snapshot.mjs [--database path] [--output path] [--dry-run] [--json]',
       options: [
-        '--database <path> Path to SQLite semantic index (default: data/semantic-index.sqlite)',
+        '--database <path> Path to SQLite semantic index (default: data/turso-replica.sqlite)',
         '--output <path>   Path to browser JSON snapshot (default: docs/assets/semantic-snapshot.json)',
         '--dry-run         Read and summarize the snapshot without writing JSON',
         '--json            Emit JSON summary',

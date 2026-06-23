@@ -17,15 +17,15 @@ const REPO_ROOT = path.resolve(process.cwd());
 
 describe('cortex-embeddings.gate.mjs', () => {
   describe('red embeddings gate contract', () => {
-    it('returns pass false when counts mismatch or hybrid MRR improvement is too small', () => {
+    it('returns pass false when no usable embeddings or hybrid MRR improvement is too small', () => {
       // Arrange and Act
       const result = runModuleEvaluation<CortexEmbeddingsGateContractReport>(`
         import { evaluateCortexEmbeddingsGate } from './scripts/agent-customization/gates/cortex-embeddings.gate.mjs';
 
-        const mismatchReport = evaluateCortexEmbeddingsGate({
+        const noEmbeddingsReport = evaluateCortexEmbeddingsGate({
           bm25MrrAt5: 0.4,
           chunkCount: 3,
-          embeddingCount: 2,
+          embeddingCount: 0,
           hybridMrrAt5: 0.45,
           minHybridImprovement: 0.02,
         });
@@ -39,10 +39,10 @@ describe('cortex-embeddings.gate.mjs', () => {
 
         console.log(JSON.stringify({
           issues: [
-            mismatchReport.evidence.map(({ issue }) => issue),
+            noEmbeddingsReport.evidence.map(({ issue }) => issue),
             lowImprovementReport.evidence.map(({ issue }) => issue),
           ],
-          passes: [mismatchReport.pass, lowImprovementReport.pass],
+          passes: [noEmbeddingsReport.pass, lowImprovementReport.pass],
         }));
       `);
 
@@ -51,7 +51,7 @@ describe('cortex-embeddings.gate.mjs', () => {
         expect.objectContaining({
           report: {
             issues: [
-              ['embedding count mismatch'],
+              ['no usable embeddings for model'],
               ['hybrid MRR@5 improvement below threshold'],
             ],
             passes: [false, false],

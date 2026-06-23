@@ -12,7 +12,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 
 const REPO_ROOT = path.resolve();
 
@@ -60,12 +60,12 @@ const runModuleEvaluation = <Result>(source: string): Result => {
  * relationship and confidence so the edge survives the current filters and
  * exposes the missing target qualified name in the serialized output.
  */
-function makeGraphFixture(): { databasePath: string; tempDir: string } {
+async function makeGraphFixture(): Promise<{ databasePath: string; tempDir: string }> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'traverse-graph-red-'));
   const databasePath = path.join(tempDir, 'graph.sqlite');
-  const db = new Database(databasePath);
+  const db = createClient({ url: 'file:' + databasePath });
   try {
-    db.exec(`
+    await db.executeMultiple(`
       CREATE TABLE entities (
         entity_id INTEGER PRIMARY KEY,
         entity_type TEXT NOT NULL,
@@ -92,20 +92,18 @@ function makeGraphFixture(): { databasePath: string; tempDir: string } {
         VALUES (100, 1, 2, 'depends-on', 'high');
     `);
   } finally {
-    db.close();
+    await db.close();
   }
   return { databasePath, tempDir };
 }
 
 describe('traverse-graph serialization', () => {
   describe('relationship objects must be well-formed', () => {
-    it('does not emit relationships with undefined or null qualified names', () => {
-      const { databasePath, tempDir } = makeGraphFixture();
+    it('does not emit relationships with undefined or null qualified names', async () => {
+      const { databasePath, tempDir } = await makeGraphFixture();
       try {
         const result = runModuleEvaluation<TraversalProbeResult>(`
           import { traverseGraph } from './scripts/mcp-semantic/tools/traverse-graph.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await traverseGraph({
             seed_names: ['activationFunction'],
@@ -116,9 +114,6 @@ describe('traverse-graph serialization', () => {
             max_results: 10,
             databasePath,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             relationships: response.relationships,
             graph_available: response.graph_available,
@@ -146,13 +141,11 @@ describe('traverse-graph serialization', () => {
       }
     });
 
-    it('does not emit relationships with empty relationship or confidence strings', () => {
-      const { databasePath, tempDir } = makeGraphFixture();
+    it('does not emit relationships with empty relationship or confidence strings', async () => {
+      const { databasePath, tempDir } = await makeGraphFixture();
       try {
         const result = runModuleEvaluation<TraversalProbeResult>(`
           import { traverseGraph } from './scripts/mcp-semantic/tools/traverse-graph.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await traverseGraph({
             seed_names: ['activationFunction'],
@@ -163,9 +156,6 @@ describe('traverse-graph serialization', () => {
             max_results: 10,
             databasePath,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             relationships: response.relationships,
             graph_available: response.graph_available,

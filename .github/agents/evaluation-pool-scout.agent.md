@@ -72,6 +72,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 6. Summarize the active pool contract, the blocker, and the smallest useful
    handoff into `multithread-evaluation`.
 
+## Pool Scheduling Patterns
+
+- **Worker-count sizing:** Size the worker pool based on available CPU cores and memory per worker. Default to `navigator.hardwareConcurrency` or `os.cpus().length`. Flag oversized pools that cause memory pressure.
+- **Ordered result assembly:** Verify that results from parallel workers are assembled in the original input order, not completion order. Flag unordered assembly that breaks reproducibility.
+- **Dataset broadcast strategy:** Verify the dataset is broadcast to all workers efficiently. Prefer `postMessage` with transferable ArrayBuffers over JSON serialization for large datasets.
+- **Queue backpressure:** Detect when the task queue grows faster than workers can process. Implement backpressure by pausing task submission when queue depth exceeds a threshold.
+- **Fallback behavior:** Verify the pool falls back to single-threaded execution when workers fail to initialize. Flag silent fallback that hides worker initialization errors.
+- **Worker fairness:** Verify that no single worker is starved while others are idle. Check for task distribution imbalance.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.

@@ -65,6 +65,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - ONNX graph conversion belongs to `onnx-work`
 6. Summarize the active layout or policy contract, mutation risk, and the smallest useful handoff into `hybrid-training-interop`.
 
+## Interop Boundary Patterns
+
+- **Parameter-vector layout:** Verify the parameter vector layout matches the network's connection ordering. Flag layout version mismatches that produce incorrect weight assignments.
+- **Deterministic export/import order:** Verify that exporting and importing a parameter vector is deterministic — same network produces the same vector every time. Flag non-deterministic ordering.
+- **Clone-vs-vector isolation:** Verify that clone-based isolation and vector-based isolation produce equivalent results. Flag divergence between the two approaches.
+- **Lamarckian persistence policy:** Verify whether training-acquired weights persist across generations (Lamarckian) or are discarded (Darwinian). Flag inconsistent persistence policies.
+- **Fine-tuning boundary:** Identify which network parameters are trainable via gradient descent vs. fixed by NEAT evolution. Flag conflicts between the two optimization paths.
+- **Isolation contract:** Verify that training one network does not affect another via shared references. Flag shared mutable state across networks.
+
 ## If Blocked
 
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
