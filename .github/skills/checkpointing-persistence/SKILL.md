@@ -49,7 +49,6 @@ on PRNG state, serialization compatibility, and restore invariants.
 - NEATchat needs durable identity or memory metadata on top of a shared
   checkpoint seam.
 
-
 ## When NOT to use
 
 Do NOT use for determinism contracts - use `reproducibility-contracts` instead. Do NOT use for parameter-vector training bridges - use `hybrid-training-interop` instead.
@@ -118,7 +117,6 @@ R_{exact} = population \land species \land rng \land counters \land adaptive\ st
 $$
 
 If any term is absent, the checkpoint is not exact-resume capable.
-
 
 ## Workflow Diagram
 
@@ -235,6 +233,7 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```json
 {
   "version": 1,
@@ -246,6 +245,7 @@ flowchart TD
 ```
 
 **After:**
+
 ```json
 {
   "version": 1,

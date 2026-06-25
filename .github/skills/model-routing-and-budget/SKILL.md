@@ -35,11 +35,9 @@ agents.
 - Frontmatter shape needs to be confirmed with `validate-agent-frontmatter.mjs`
   before the agent is used in a gate or handoff.
 
-
 ## When NOT to use
 
 Do NOT use for cloud agent setup - use `customize-cloud-agent` instead. Do NOT use for frontmatter validation - use `agent-frontmatter-standards` instead.
-
 
 ## Workflow Diagram
 
@@ -106,7 +104,6 @@ Validation: advisory — confirm qualified name before committing.
 | 06 Documentation  | Sonnet / Mini | Educational docs benefit from stronger writing after facts exist.         |
 | 07 Logging        | Haiku / Mini  | Summarization and tracker updates should be lightweight.                  |
 
-
 ## Decision Tree: Model Selection by Tier
 
 ```mermaid
@@ -122,6 +119,7 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```yaml
 ---
 model: claude-sonnet
@@ -129,6 +127,7 @@ model: claude-sonnet
 ```
 
 **After:**
+
 ```yaml
 ---
 # Qualified name confirmed in the active Copilot client; tier budget matches phase default.

@@ -60,7 +60,10 @@ const runModuleEvaluation = <Result>(source: string): Result => {
  * relationship and confidence so the edge survives the current filters and
  * exposes the missing target qualified name in the serialized output.
  */
-async function makeGraphFixture(): Promise<{ databasePath: string; tempDir: string }> {
+async function makeGraphFixture(): Promise<{
+  databasePath: string;
+  tempDir: string;
+}> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'traverse-graph-red-'));
   const databasePath = path.join(tempDir, 'graph.sqlite');
   const db = createClient({ url: 'file:' + databasePath });

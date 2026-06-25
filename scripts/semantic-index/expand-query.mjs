@@ -558,8 +558,7 @@ export async function expandQuery(options = {}) {
 
       // Use the injected client or get a cached Turso client.
       // getTursoClient handles path-to-URL conversion and caching internally.
-      const client =
-        options.client ?? (await getTursoClient(databasePath));
+      const client = options.client ?? (await getTursoClient(databasePath));
       try {
         const tableResult = await client.execute(
           "SELECT name FROM sqlite_master WHERE type='table' AND name='term_embeddings'",

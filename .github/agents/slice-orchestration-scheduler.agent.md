@@ -18,7 +18,12 @@ user-invocable: false
 disable-model-invocation: false
 agents: []
 skills:
-  ['subagent-delegation-patterns', 'phase-handoff-workflow', 'tracker-handoff', 'execute']
+  [
+    'subagent-delegation-patterns',
+    'phase-handoff-workflow',
+    'tracker-handoff',
+    'execute',
+  ]
 ---
 
 ## Cortex-First Search Policy

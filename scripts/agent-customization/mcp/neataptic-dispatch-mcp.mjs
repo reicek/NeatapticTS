@@ -192,7 +192,10 @@ function createDispatchTools() {
 
         const targetTier = Number(target.tier);
 
-        if (!Number.isInteger(callerTier) || !ALLOWED_CALLER_TIERS.includes(callerTier)) {
+        if (
+          !Number.isInteger(callerTier) ||
+          !ALLOWED_CALLER_TIERS.includes(callerTier)
+        ) {
           return {
             ok: false,
             dispatch_allowed: false,

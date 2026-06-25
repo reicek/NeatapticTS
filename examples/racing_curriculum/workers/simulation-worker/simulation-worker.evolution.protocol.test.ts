@@ -33,9 +33,19 @@ type RacingWorkerInboundMessage =
   | { type: 'request-race-step'; requestId: string; stepsToAdvance: number }
   | { type: 'stop' };
 
+type GenerationReadyResponse = {
+  readonly type: 'generation-ready';
+  readonly generation: number;
+  readonly teamABestFitness: number;
+  readonly teamBBestFitness: number;
+  readonly bestNetworkPayload?: unknown;
+  /** Optional zero-copy transfer list for the generation payload. */
+  readonly transferList?: readonly ArrayBuffer[];
+};
+
 type EvolutionProtocolRouteResult = {
   readonly nextState: EvolutionProtocolState;
-  readonly response?: unknown;
+  readonly response?: GenerationReadyResponse | unknown;
   /** Populated when the message is rejected in the current phase. */
   readonly error?: string;
 };
@@ -78,6 +88,40 @@ describe('simulation worker evolution protocol FSM', () => {
 
       // Assert
       expect(result.error).toBeDefined();
+    });
+  });
+
+  describe('request-generation in initialised phase', () => {
+    it('returns a generation-ready response when request-generation is routed', async () => {
+      // Arrange
+      const service = await loadEvolutionProtocolService();
+      const initialisedState: EvolutionProtocolState = { phase: 'initialised' };
+
+      // Act
+      const result = service.routeRacingWorkerProtocolMessage(
+        { type: 'request-generation' },
+        initialisedState,
+      );
+      const response = result.response as GenerationReadyResponse | undefined;
+
+      // Assert
+      expect(response?.type).toBe('generation-ready');
+    });
+
+    it('includes a non-empty transfer list in the generation-ready response', async () => {
+      // Arrange
+      const service = await loadEvolutionProtocolService();
+      const initialisedState: EvolutionProtocolState = { phase: 'initialised' };
+
+      // Act
+      const result = service.routeRacingWorkerProtocolMessage(
+        { type: 'request-generation' },
+        initialisedState,
+      );
+      const response = result.response as GenerationReadyResponse | undefined;
+
+      // Assert
+      expect(response?.transferList?.length ?? 0).toBeGreaterThan(0);
     });
   });
 

@@ -4,40 +4,43 @@
 
 ## Current state
 
-Claim: 04-implementing @ 2026-06-21T00:00:00Z
+Claim: 04-implementing @ 2026-06-24T12:00:00Z
 
-Scoped cleanup pass from `05-green-testing`: migrate remaining `schema-v2.sql` fixture references to `schema-turso.sql`, delete the legacy `schema-v2.sql` fixture, and surface per-query errors in `parallel-search.mjs`.
-
-Recent fixes — ESM `__dirname` / feedback teardown hang:
-- Replaced ESM-incompatible `__dirname` with `fileURLToPath` shim in `examples/shared/semantic/build-browser-snapshot.test.ts` and `scripts/mcp-semantic/repo-cortex-mcp.test.ts`.
-- Awaited `recordSearchImpressions(...)` in `scripts/mcp-semantic/tools/search-corpus.mjs` so feedback writes finish before callers tear down the libSQL client.
-- Switched `scripts/mcp-semantic/__tests__/feedback.integration.test.mjs` from file-backed temp DBs to `:memory:` clients via `createSchemaClient()` to eliminate Windows file-handle lock contention that made `rm(tempDir)` hang indefinitely.
+Downstream tracker discovery fix for `validate-plan-sync.mjs` and `workflow-update-sync.mjs`. The shared `extractDownstreamTrackers` utility in `scripts/agent-customization/customization-utils.mjs` now matches `.plans.md` tracker filenames and falls back to the active plan's `plans/Roadmap.md` phase section when a plan body is compressed, so NGE benchmark demos are correctly reported as downstream trackers.
 
 ```yaml
 PlanUpdate:
   changed_files:
-    - examples/shared/semantic/build-browser-snapshot.test.ts
-    - scripts/mcp-semantic/repo-cortex-mcp.test.ts
-    - scripts/mcp-semantic/__tests__/feedback.integration.test.mjs
-    - scripts/mcp-semantic/tools/search-corpus.mjs
+    - scripts/agent-customization/customization-utils.mjs
+    - scripts/agent-customization/plan-workflow.test.ts
+    - plans/mcp-active-binding.plans.md
   preflight:
     - 'npx tsc --noEmit -p tsconfig.json'
     - 'npx tsc --noEmit -p tsconfig.test.json'
     - 'npm run lint'
-    - 'npx prettier --check <changed-files>: pass'
+    - 'npx prettier --check scripts/agent-customization/customization-utils.mjs scripts/agent-customization/plan-workflow.test.ts plans/mcp-active-binding.plans.md'
   validation:
-    - command: "NODE_OPTIONS='--experimental-vm-modules' npx jest --config=jest.config.mjs --no-cache --forceExit --testPathPatterns='build-browser-snapshot.test.ts|repo-cortex-mcp.test.ts|feedback.integration.test.mjs'"
+    - command: "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='scripts/agent-customization/plan-workflow'"
       expected_exit: 0
-      result: '3 suites / 32 tests passed, no indefinite hang'
+      actual_exit: 0
+      result: 'PASS — 1 suite / 9 tests passed (both downstream synchronization contract tests green)'
+    - command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
+      expected_exit: 0
+      actual_exit: 0
+      result: 'PASS — downstreamTrackers contains AntHive and PredatorPrey demos'
+    - command: 'node .github/hooks/workflow-update-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
+      expected_exit: 0
+      actual_exit: 1
+      result: 'FAIL — syncEvent.downstreamTrackers DOES contain AntHive and PredatorPrey demos, but script reports "No [WIP] step found in plan. Cannot determine sync state." and exits non-zero'
   gates:
-    - 'plan-sync: pass (validate-plan-sync.mjs + neataptic-gate-mcp:run_gate_check plan-sync)'
-    - 'plan-phase-packets: pre-existing 3 errors in mcp-active-binding.plans.md (missing Phase objective, copy_paste, User instruction); unrelated to this fix'
+    - 'plan-sync: PASS (node scripts/agent-customization/gates/plan-sync.gate.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md)'
+    - 'learning-event: PASS (node scripts/agent-customization/gates/learning-event.gate.mjs --json)'
+    - 'agent-graph: N/A (no delegation changes)'
   rollback:
-    - 'git checkout -- examples/shared/semantic/build-browser-snapshot.test.ts'
-    - 'git checkout -- scripts/mcp-semantic/repo-cortex-mcp.test.ts'
-    - 'git checkout -- scripts/mcp-semantic/__tests__/feedback.integration.test.mjs'
-    - 'git checkout -- scripts/mcp-semantic/tools/search-corpus.mjs'
-  next: '05-green-testing focused confirmation or user approval to merge'
+    - 'git checkout -- scripts/agent-customization/customization-utils.mjs'
+    - 'git checkout -- scripts/agent-customization/plan-workflow.test.ts'
+    - 'git checkout -- plans/mcp-active-binding.plans.md'
+  next: 'Route workflow-update-sync.mjs "No [WIP] step" failure back to 04-implementing or 01-planning for plan-state fix; downstream tracker extraction itself is green.'
 ```
 
 ## Purpose
@@ -194,6 +197,7 @@ PlanUpdate:
 
 ## Handoff query
 
-Stable perpetual binding — no active workstream. Both MCP servers should start without error
-when `.vscode/mcp.json` points `--plan` at this file. Run `--self-check` on either server to
-verify startup health.
+Perpetual binding with one active workflow fix: downstream tracker discovery in
+`scripts/agent-customization/customization-utils.mjs` is green, and the two
+`plan-workflow.test.ts` downstream-synchronization contract tests pass. Next
+step is `05-green-testing` focused confirmation on the changed script/test files.

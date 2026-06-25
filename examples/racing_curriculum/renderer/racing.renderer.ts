@@ -21,7 +21,10 @@ import type {
   TireStateTuple,
 } from '../environment/environment.types';
 import type { TrackSpec } from '../track/track.generator.types';
-import { resolveSplineSampleFrame } from '../track/track.spline.utils';
+import {
+  resolveSplineSampleFrame,
+  resolveInnerLaneCenterlinePoint,
+} from '../track/track.spline.utils';
 import type { RacingRenderFrame } from '../workers/simulation-worker/simulation-worker.types';
 
 // ── Color palette ────────────────────────────────────────────────────────────
@@ -32,6 +35,8 @@ const COLOR_TRACK_EDGE = '#00d4f5';
 const COLOR_TRACK_GLOW_ALPHA = 0.15;
 const COLOR_CENTERLINE = 'rgba(0,180,220,0.30)';
 const COLOR_GUIDANCE_LINE_RGB = '255,209,102';
+const COLOR_GUIDING_LINE_TEAM_A_RGB = '0,229,255';
+const COLOR_GUIDING_LINE_TEAM_B_RGB = '255,0,255';
 const COLOR_CAR_BODY = '#00e5ff';
 const COLOR_NEON_WHITE = '#f8feff';
 const COLOR_FRONT_BUMPER = COLOR_NEON_WHITE;
@@ -177,6 +182,7 @@ type TrackRenderGeometry = {
   readonly centerlinePoints: readonly TrackSamplePoint[];
   readonly leftBoundaryPoints: readonly WorldPoint[];
   readonly rightBoundaryPoints: readonly WorldPoint[];
+  readonly optimalLinePoints: readonly TrackSamplePoint[];
   readonly minX: number;
   readonly maxX: number;
   readonly minY: number;
@@ -271,6 +277,57 @@ export interface RacingRenderOptions {
  */
 export function createRacingRenderState(): RacingRenderState {
   return { tireMarks: [], ticksSinceLastMark: 0 };
+}
+
+/**
+ * Builds a fresh per-team guiding line parallel to the inner-lane centerline.
+ *
+ * Team A (`teamIndex = 0`) starts exactly on the inner-lane centerline so the
+ * first point matches the car start position. Team B (`teamIndex = 1`) uses a
+ * small constant inward offset that keeps the line inside the inner lane. Each
+ * call returns a distinct array, so callers may mutate or cache freely.
+ *
+ * @param trackSpec - Frozen track geometry.
+ * @param teamIndex - Team index: 0 = Team A, 1 = Team B.
+ * @returns Fresh ordered list of world-space `{x, y}` guiding points.
+ *
+ * @example
+ * ```ts
+ * const teamAGuidingLine = buildGuidingLineForTeam(trackSpec, 0);
+ * const teamBGuidingLine = buildGuidingLineForTeam(trackSpec, 1);
+ * ```
+ */
+export function buildGuidingLineForTeam(
+  trackSpec: TrackSpec,
+  teamIndex: number,
+): Array<{ readonly x: number; readonly y: number }> {
+  const samples = trackSpec.splineSamples;
+  if (samples.length === 0) {
+    return [];
+  }
+
+  const firstSample = samples[0];
+  const laneWidthWorld =
+    firstSample?.laneWidthWorld ?? (firstSample?.width ?? 0) / 2;
+  const teamBOffsetWorld = laneWidthWorld * 0.25;
+  const lateralOffsetWorld = teamIndex === 0 ? 0 : teamBOffsetWorld;
+
+  const guidingLine: Array<{ readonly x: number; readonly y: number }> = [];
+  for (let sampleIndex = 0; sampleIndex < samples.length; sampleIndex++) {
+    const sample = samples[sampleIndex]!;
+    const sampleFrame = resolveSplineSampleFrame(samples, sampleIndex);
+    const centerlinePoint = resolveInnerLaneCenterlinePoint(
+      sample,
+      sampleFrame,
+    );
+
+    guidingLine.push({
+      x: centerlinePoint.x + sampleFrame.normalX * lateralOffsetWorld,
+      y: centerlinePoint.y + sampleFrame.normalY * lateralOffsetWorld,
+    });
+  }
+
+  return guidingLine;
 }
 
 /**
@@ -508,6 +565,7 @@ function drawTrack(
   drawTrackCenterline(ctx, trackRenderGeometry, transform);
   drawStartLineCrosswalk(ctx, trackRenderGeometry, transform);
   drawOptimalLineGuidance(ctx, trackRenderGeometry, transform, guidanceAlpha);
+  drawTeamGuidingLines(ctx, spec, transform, guidanceAlpha);
   drawPitOverlays(ctx, spec, transform, pitStatus, visiblePitTeamIndex);
 }
 
@@ -736,10 +794,105 @@ function drawOptimalLineGuidance(
   ctx.lineWidth = 2.1;
   ctx.shadowColor = `rgba(${COLOR_GUIDANCE_LINE_RGB}, ${Math.min(0.75, clampedGuidanceAlpha + 0.1).toFixed(3)})`;
   ctx.shadowBlur = 12;
-  traceClosedSamplePath(ctx, trackRenderGeometry.centerlinePoints, transform);
+  traceClosedSamplePath(ctx, trackRenderGeometry.optimalLinePoints, transform);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.restore();
+}
+
+/**
+ * Draws a per-team dashed guiding line over the track when the guidance overlay
+ * is enabled.
+ *
+ * Team A uses cyan and Team B uses magenta so each agent has a visually distinct
+ * lane marker. The lines are drawn before car bodies because this helper runs
+ * inside the track-drawing pass.
+ *
+ * @param ctx - 2D rendering context.
+ * @param spec - Frozen track geometry.
+ * @param transform - World-to-canvas affine transform.
+ * @param guidanceAlpha - Overlay alpha in [0, 1].
+ */
+function drawTeamGuidingLines(
+  ctx: CanvasRenderingContext2D,
+  spec: TrackSpec,
+  transform: WorldTransform,
+  guidanceAlpha: number,
+): void {
+  const clampedGuidanceAlpha = Math.max(0, Math.min(1, guidanceAlpha));
+
+  if (clampedGuidanceAlpha <= 0) {
+    return;
+  }
+
+  const teamAGuidingLine = buildGuidingLineForTeam(spec, 0);
+  const teamBGuidingLine = buildGuidingLineForTeam(spec, 1);
+
+  ctx.save();
+  ctx.setLineDash([12, 8]);
+  ctx.lineWidth = 2.0;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  drawGuidingLinePath(
+    ctx,
+    teamAGuidingLine,
+    transform,
+    COLOR_GUIDING_LINE_TEAM_A_RGB,
+    clampedGuidanceAlpha,
+  );
+  drawGuidingLinePath(
+    ctx,
+    teamBGuidingLine,
+    transform,
+    COLOR_GUIDING_LINE_TEAM_B_RGB,
+    clampedGuidanceAlpha,
+  );
+
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+/**
+ * Traces and strokes one guiding line path with the requested team color.
+ *
+ * @param ctx - 2D rendering context.
+ * @param worldPoints - Ordered world-space guiding points.
+ * @param transform - World-to-canvas affine transform.
+ * @param rgbColor - RGB color string without alpha wrapper.
+ * @param alpha - Stroke alpha in [0, 1].
+ */
+function drawGuidingLinePath(
+  ctx: CanvasRenderingContext2D,
+  worldPoints: readonly { readonly x: number; readonly y: number }[],
+  transform: WorldTransform,
+  rgbColor: string,
+  alpha: number,
+): void {
+  if (worldPoints.length === 0) {
+    return;
+  }
+
+  const firstPoint = worldPoints[0];
+  if (firstPoint === undefined) {
+    return;
+  }
+
+  ctx.strokeStyle = `rgba(${rgbColor}, ${alpha.toFixed(3)})`;
+  ctx.shadowColor = `rgba(${rgbColor}, ${Math.min(0.75, alpha + 0.1).toFixed(3)})`;
+  ctx.shadowBlur = 10;
+
+  ctx.beginPath();
+  const firstCanvasPoint = toCanvas(firstPoint.x, firstPoint.y, transform);
+  ctx.moveTo(firstCanvasPoint.x, firstCanvasPoint.y);
+
+  for (const worldPoint of worldPoints.slice(1)) {
+    const canvasPoint = toCanvas(worldPoint.x, worldPoint.y, transform);
+    ctx.lineTo(canvasPoint.x, canvasPoint.y);
+  }
+
+  ctx.closePath();
+  ctx.stroke();
 }
 
 /**
@@ -757,6 +910,7 @@ function getTrackRenderGeometry(spec: TrackSpec): TrackRenderGeometry {
   const centerlinePoints = spec.splineSamples;
   const leftBoundaryPoints: WorldPoint[] = [];
   const rightBoundaryPoints: WorldPoint[] = [];
+  const optimalLinePoints: TrackSamplePoint[] = [];
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
@@ -774,6 +928,10 @@ function getTrackRenderGeometry(spec: TrackSpec): TrackRenderGeometry {
     const normalX = -tangentDeltaY / tangentLength;
     const normalY = tangentDeltaX / tangentLength;
     const halfWidth = samplePoint.width / 2;
+    const laneCount = samplePoint.laneCount ?? 2;
+    const laneWidthWorld =
+      samplePoint.laneWidthWorld ?? samplePoint.width / laneCount;
+    const innerOffsetWorld = halfWidth - laneWidthWorld / 2;
     const leftPoint = {
       x: samplePoint.x + normalX * halfWidth,
       y: samplePoint.y + normalY * halfWidth,
@@ -782,20 +940,30 @@ function getTrackRenderGeometry(spec: TrackSpec): TrackRenderGeometry {
       x: samplePoint.x - normalX * halfWidth,
       y: samplePoint.y - normalY * halfWidth,
     };
+    const optimalLinePoint = {
+      x: samplePoint.x + normalX * innerOffsetWorld,
+      y: samplePoint.y + normalY * innerOffsetWorld,
+      width: samplePoint.width,
+      segmentIndex: samplePoint.segmentIndex,
+      sampleIndexWithinSegment: samplePoint.sampleIndexWithinSegment,
+      globalIndex: samplePoint.globalIndex,
+    };
 
     leftBoundaryPoints.push(leftPoint);
     rightBoundaryPoints.push(rightPoint);
+    optimalLinePoints.push(optimalLinePoint);
 
-    minX = Math.min(minX, leftPoint.x, rightPoint.x);
-    maxX = Math.max(maxX, leftPoint.x, rightPoint.x);
-    minY = Math.min(minY, leftPoint.y, rightPoint.y);
-    maxY = Math.max(maxY, leftPoint.y, rightPoint.y);
+    minX = Math.min(minX, leftPoint.x, rightPoint.x, optimalLinePoint.x);
+    maxX = Math.max(maxX, leftPoint.x, rightPoint.x, optimalLinePoint.x);
+    minY = Math.min(minY, leftPoint.y, rightPoint.y, optimalLinePoint.y);
+    maxY = Math.max(maxY, leftPoint.y, rightPoint.y, optimalLinePoint.y);
   }
 
   const resolvedGeometry = {
     centerlinePoints,
     leftBoundaryPoints,
     rightBoundaryPoints,
+    optimalLinePoints,
     minX,
     maxX,
     minY,

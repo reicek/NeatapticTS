@@ -8,12 +8,20 @@ import { createTeamFitnessEvaluator } from '../../../../src/neat/nge-collective/
  * is routed through the reusable NGE core evaluator, using the racing policy
  * "best (lowest) finishing position among that team's cars."
  *
- * TODO: NGE_TODO — When ModulatorBroadcaster and EpisodicSlot become available
- * (upstream Phase G), each team container should support neuromodulation
- * broadcast across team members.
+ * The two-population shape follows the competitive coevolution pattern: each
+ * team is evaluated against frozen snapshots of the other, so neither side
+ * optimizes against a stationary target.  This helps keep the search from
+ * collapsing into a one-sided arms race.  See
+ * [Coevolution (Wikipedia)](https://en.wikipedia.org/wiki/Coevolution)
+ * for background, and
+ * [Neuroevolution of augmenting topologies (Wikipedia)](https://en.wikipedia.org/wiki/Neuroevolution_of_augmenting_topologies)
+ * for the NEAT algorithm that underpins the population containers.
  *
- * TODO: NGE_TODO — Polyandric reproduction (`modeIsEvolvable`, upstream Phase E)
- * should extend the population container once that primitive exists.
+ * Extension points:
+ * - Extend this container to broadcast neuromodulation across team members
+ *   when `ModulatorBroadcaster` and `EpisodicSlot` primitives are available.
+ * - Extend this container with polyandric reproduction (`modeIsEvolvable`)
+ *   once that primitive is available.
  */
 
 /** Narrow config used to allocate the racing coevolution container. */
@@ -23,13 +31,26 @@ export type CoevolutionConfig = {
   readonly tier: number;
 };
 
-/** Opaque per-team population handle wrapping a future `Neat` instance. */
+/**
+ * Opaque per-team population handle wrapping a future `Neat` instance.
+ *
+ * The handle exposes a stable identity and a mutable generation counter so the
+ * racing benchmark can track each team's progress independently.
+ */
 export type TeamPopulationContainer = {
   /** Stable unique identity token — distinct between Team A and Team B. */
   readonly populationId: string;
+  /** Current NEAT generation for this team's isolated population. */
+  generation: number;
 };
 
-/** Paired Team A/B coevolution container with team-fitness resolver. */
+/**
+ * Paired Team A/B coevolution container with a racing-specific team-fitness
+ * resolver.
+ *
+ * The container exposes both team handles and the policy that converts finishing
+ * positions into a scalar fitness value for each side.
+ */
 export type CoevolutionContainer = {
   readonly teamA: TeamPopulationContainer;
   readonly teamB: TeamPopulationContainer;
@@ -45,6 +66,12 @@ export type CoevolutionContainer = {
     teamId: 0 | 1,
     carFinishPositions: readonly number[],
   ): number;
+  /**
+   * Advances one team's isolated population by a single generation.
+   *
+   * @param teamId - `'team-a'` for Team A or `'team-b'` for Team B.
+   */
+  advanceTeamGeneration(teamId: 'team-a' | 'team-b'): void;
 };
 
 /** Monotonic counter used to generate distinct population IDs per container. */
@@ -86,12 +113,14 @@ export function createCoevolutionContainer(
 
   const teamA: TeamPopulationContainer = {
     populationId: `team-a-seed${config.rngSeed}-${serialA}`,
+    generation: 0,
   };
   const teamB: TeamPopulationContainer = {
     populationId: `team-b-seed${config.rngSeed}-${serialB}`,
+    generation: 0,
   };
 
-  return { teamA, teamB, resolveTeamFitness };
+  return { teamA, teamB, resolveTeamFitness, advanceTeamGeneration };
 
   /**
    * Resolves team fitness through the reusable NGE core evaluator.
@@ -115,6 +144,16 @@ export function createCoevolutionContainer(
       evaluateRacingTeamFitness([racingTeamGroup]).at(0)?.teamFitness ??
       Number.POSITIVE_INFINITY
     );
+  }
+
+  /**
+   * Advances the requested team's isolated generation counter by one.
+   *
+   * @param teamId - Stable team identifier to advance.
+   */
+  function advanceTeamGeneration(teamId: 'team-a' | 'team-b'): void {
+    const target = teamId === 'team-a' ? teamA : teamB;
+    target.generation += 1;
   }
 }
 

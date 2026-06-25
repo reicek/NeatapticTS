@@ -25,7 +25,6 @@ This skill improves the JSDoc and TSDoc source comments that feed the NeatapticT
 - Adding a Mermaid diagram to a folder-level chapter that currently has none.
 - Cleaning up plan-language ("this will be implemented in Phase 7") that leaked into public JSDoc.
 
-
 ## When NOT to use
 
 Do NOT use for citation auditing - use `docs-academic-citation-audit` instead. Do NOT use for README generation - use `educational-docs` instead.
@@ -53,7 +52,6 @@ Run npm run docs after: <yes | no>
 8. Run `npm run docs` when generated README outputs should be refreshed; confirm that the generated output looks correct.
 9. Report docs changed, generated-output decision, and any residual documentation gaps in the session output.
 
-
 ## Why JSDoc Is Source of Truth for Generated README
 
 The generated README pipeline extracts JSDoc comments directly from source code. If JSDoc is thin or missing, the generated README is thin or missing. JSDoc is not documentation-about-code; it IS the documentation. The README is a rendered view of the JSDoc. Keeping JSDoc accurate and rich ensures the README stays educational without manual editing.
@@ -61,13 +59,15 @@ The generated README pipeline extracts JSDoc comments directly from source code.
 ## Before/After JSDoc Examples
 
 **Before (thin):**
+
 ```ts
 /** Build a network. */
 export function buildMLP(config: MLPConfig): Network { ... }
 ```
 
 **After (rich):**
-```ts
+
+````ts
 /**
  * Build a multi-layer perceptron with configurable hidden layers.
  *
@@ -84,7 +84,7 @@ export function buildMLP(config: MLPConfig): Network { ... }
  * ```
  */
 export function buildMLP(config?: Partial<MLPConfig>): Network { ... }
-```
+````
 
 ## Workflow Diagram
 

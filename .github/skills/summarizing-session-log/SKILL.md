@@ -25,11 +25,9 @@ This skill produces compact, high-signal continuity summaries of a work session.
 - Preparing a handoff packet for a companion agent or a different SDLC phase.
 - After a coverage or test tranche to record which files were touched and what passed.
 
-
 ## When NOT to use
 
 Do NOT use for active tracker management - use `tracker-handoff` instead. Do NOT use for plan validation - use `plan-sync-validation` instead.
-
 
 ## Workflow Diagram
 
@@ -69,7 +67,6 @@ Destination: <chat summary | tracker note | log entry>
 8. For chat summaries: output the summary in the session response; do not create a new file unless the user explicitly asked for one.
 9. Keep public summaries free of private or chat-only detail that does not help continuation.
 
-
 ## Why Compression Matters for Context Budget
 
 Session logs that preserve full transcripts consume context budget in future sessions that load them. Compression to concise coverage notes prevents re-exploration while keeping the log lightweight. A good compressed log entry captures what was done, what was verified, and what remains - not the full command transcript. This is especially important for agents with limited context windows that need to resume work efficiently.
@@ -77,8 +74,10 @@ Session logs that preserve full transcripts consume context budget in future ses
 ## Concrete Log Structure Examples
 
 **Good compressed entry:**
+
 ```md
 ### Builder: GRU implementation
+
 - Implemented buildGRU() with config validation and roundtrip test
 - Coverage: 100% all categories, focused slice passed
 - JSDoc complete, npm run docs verified
@@ -86,8 +85,10 @@ Session logs that preserve full transcripts consume context budget in future ses
 ```
 
 **Bad verbose entry (avoid):**
+
 ```md
 ### Builder: GRU implementation
+
 - Ran `npx tsc --noEmit -p tsconfig.json` and got 0 errors
 - Ran `npm run lint` and got 0 issues
 - Ran `npx jest --testPathPattern=gru` and saw:

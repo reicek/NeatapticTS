@@ -51,7 +51,10 @@ const runModuleEvaluation = <Result>(source: string): Result => {
  * caps are observable. Some chunks contain long body text so compact-mode
  * truncation is also observable.
  */
-async function makeMultiChunkFixture(): Promise<{ databasePath: string; tempDir: string }> {
+async function makeMultiChunkFixture(): Promise<{
+  databasePath: string;
+  tempDir: string;
+}> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'search-context-defaults-red-'),
   );

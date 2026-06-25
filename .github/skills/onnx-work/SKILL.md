@@ -75,11 +75,9 @@ or newer-version deltas are needed.
 - A downstream consumer such as the planned NEATchat follow-up lane needs an
   honest recurrent seed-import boundary.
 
-
 ## When NOT to use
 
 Do NOT use for internal serialization - use Network native methods instead. Do NOT use for general network construction - use `architecture-builder` instead.
-
 
 ## Workflow Diagram
 
@@ -219,11 +217,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```ts
 const shape = [1, 4, 4]; // hardcoded for one network config
 ```
 
 **After:**
+
 ```ts
 const shape = deriveShapeFromGraph(graph); // derived from live graph topology
 ```

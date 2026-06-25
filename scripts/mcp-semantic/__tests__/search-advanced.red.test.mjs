@@ -42,7 +42,12 @@ async function setupDb() {
 async function teardownDb(client, tempDir, dbPath) {
   await client.close();
   if (dbPath) await closeTursoClient(dbPath);
-  await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  await rm(tempDir, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 200,
+  });
 }
 
 describe('search-advanced', () => {

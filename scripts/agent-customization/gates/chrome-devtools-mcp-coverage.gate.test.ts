@@ -81,10 +81,7 @@ function makeAgentMissingSpecialist(name: string): string {
 
 function buildLoaderSource(inventory: Record<string, string>): string {
   return Object.entries(inventory)
-    .map(
-      ([key, value]) =>
-        `    '${key}': ${JSON.stringify(value)},`,
-    )
+    .map(([key, value]) => `    '${key}': ${JSON.stringify(value)},`)
     .join('\n');
 }
 

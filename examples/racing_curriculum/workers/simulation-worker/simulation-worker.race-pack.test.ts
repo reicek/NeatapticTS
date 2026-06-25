@@ -17,6 +17,12 @@
  * be extended to include episodic context and hard task-switch state.
  */
 import type { RacingRenderFrame } from './simulation-worker.types';
+import type { TrackSpec } from '../../track/track.generator.types';
+import { generateTrack } from '../../track/track.generator';
+import {
+  resolveSplineSampleFrame,
+  resolveInnerLaneCenterlinePoint,
+} from '../../track/track.spline.utils';
 
 // ---------------------------------------------------------------------------
 // Locally-defined interface
@@ -48,6 +54,42 @@ interface RacePackService {
    * owned by this service boundary.
    */
   resolveRaceStepTransferList(frame: RacingRenderFrame): ArrayBuffer[];
+
+  /**
+   * Builds a runnable episode whose `tick()` advances physics and runs one
+   * controller inference per car per tick.
+   */
+  createRaceEpisodeRunner(
+    seed: number,
+    opponentSnapshot: OpponentSnapshot,
+    networks: readonly RaceControllerNetwork[],
+  ): RaceEpisodeRunner;
+}
+
+/**
+ * Minimal controller handle used inside a race episode runner.
+ * The runner only needs an `activate(inputs)` function; real networks are
+ * wrapped by the caller.
+ */
+type RaceControllerNetwork = {
+  /** Runs inference and returns the controller's output vector. */
+  activate(inputs: number[]): number[];
+};
+
+type RaceControllerNetworkSpy = RaceControllerNetwork & {
+  /** Jest mock used to assert inference calls in red-phase contracts. */
+  activate: jest.Mock<number[], [number[]]>;
+};
+
+/**
+ * Mutable episode state returned by `createRaceEpisodeRunner`.
+ * `frame` exposes the current packed render frame; `tick()` advances it.
+ */
+interface RaceEpisodeRunner {
+  /** Current packed render frame. */
+  readonly frame: RacingRenderFrame;
+  /** Advances the physics state by one fixed timestep and runs inference. */
+  tick(): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -69,6 +111,12 @@ function makeMinimalOpponentSnapshot(): OpponentSnapshot {
     generation: 1,
     networkPayloads: [],
   };
+}
+
+function makeSpyRaceNetworks(count: number): RaceControllerNetworkSpy[] {
+  return Array.from({ length: count }, () => ({
+    activate: jest.fn<number[], [number[]]>().mockReturnValue([0, 0]),
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -157,5 +205,590 @@ describe('simulation worker deterministic race-pack service', () => {
       // Assert
       expect(pack.carX.byteLength).toBe(0);
     });
+  });
+
+  describe('createRaceEpisodeRunner episode tick contract', () => {
+    it('exists as a function exported from the race-pack service', async () => {
+      // Arrange
+      const service = await loadRacePackService();
+
+      // Assert
+      expect(typeof service.createRaceEpisodeRunner).toBe('function');
+    });
+
+    it('advances the episode tick counter when tick() is called', async () => {
+      // Arrange
+      const service = await loadRacePackService();
+      const networks = makeSpyRaceNetworks(4);
+      const runner = service.createRaceEpisodeRunner(
+        42,
+        makeMinimalOpponentSnapshot(),
+        networks,
+      );
+      const tickBefore = runner.frame.tick;
+
+      // Act
+      runner.tick();
+
+      // Assert
+      expect(runner.frame.tick).toBeGreaterThan(tickBefore);
+    });
+
+    it('activates a network for every car during tick()', async () => {
+      // Arrange
+      const service = await loadRacePackService();
+      const networks = makeSpyRaceNetworks(4);
+      const runner = service.createRaceEpisodeRunner(
+        42,
+        makeMinimalOpponentSnapshot(),
+        networks,
+      );
+
+      // Act
+      runner.tick();
+
+      // Assert
+      expect(
+        networks.every((network) => network.activate.mock.calls.length === 1),
+      ).toBe(true);
+    });
+  });
+});
+
+describe('per-agent guiding line state', () => {
+  it('attaches a guidingLines array with one entry per car to the runner', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+    const runnerWithGuidingLines = runner as unknown as {
+      guidingLines?: unknown[];
+    };
+    const guidingLines = runnerWithGuidingLines.guidingLines;
+    const isValidArray =
+      Array.isArray(guidingLines) && guidingLines.length === runner.frame.agentCount;
+
+    expect(isValidArray).toBe(true);
+  });
+
+  it('positions each guiding line start point at the matching car start position', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+    const runnerWithGuidingLines = runner as unknown as {
+      guidingLines?: Array<Array<{ readonly x: number; readonly y: number }>>;
+    };
+    const guidingLines = runnerWithGuidingLines.guidingLines ?? [];
+
+    let allStartPositionsValid = true;
+    for (let carIndex = 0; carIndex < runner.frame.agentCount; carIndex++) {
+      const carGuidingLine = guidingLines[carIndex];
+      if (!Array.isArray(carGuidingLine) || carGuidingLine.length === 0) {
+        allStartPositionsValid = false;
+        break;
+      }
+      const startPoint = carGuidingLine[0];
+      if (startPoint === undefined) {
+        allStartPositionsValid = false;
+        break;
+      }
+      const expectedX = runner.frame.carX[carIndex];
+      const expectedY = runner.frame.carY[carIndex];
+      const distance = Math.hypot(
+        startPoint.x - expectedX,
+        startPoint.y - expectedY,
+      );
+      if (distance >= 1e-6) {
+        allStartPositionsValid = false;
+        break;
+      }
+    }
+
+    expect(allStartPositionsValid).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 1 deterministic constants (pinned by Step 03 red tests)
+// ---------------------------------------------------------------------------
+
+const MAX_EPISODE_TICKS = 1800 as const;
+const OFF_TRACK_GRACE_TICKS = 60 as const;
+const COMPLETION_BONUS = 2000 as const;
+const PROGRESS_WEIGHT = 0.5 as const;
+const OFF_TRACK_PENALTY = 500 as const;
+
+// ---------------------------------------------------------------------------
+// Tier 1 deterministic fixtures and helpers
+// ---------------------------------------------------------------------------
+
+function makeTier1Track(seed: number): TrackSpec {
+  return generateTrack({ seed, layoutVersion: 1, sizeBucket: 'medium' });
+}
+
+function resolveTier1InnerLaneStart(track: TrackSpec): {
+  x: number;
+  y: number;
+  heading: number;
+} {
+  const startSample = track.splineSamples[0];
+  const sampleFrame = resolveSplineSampleFrame(track.splineSamples, 0);
+  const point = resolveInnerLaneCenterlinePoint(startSample, sampleFrame);
+
+  return {
+    x: point.x,
+    y: point.y,
+    heading: sampleFrame.tangentHeadingRadians,
+  };
+}
+
+function makeFullThrottleNetworks(count: number): RaceControllerNetwork[] {
+  return Array.from({ length: count }, () => ({
+    activate: () => [1, 0],
+  }));
+}
+
+function getRunnerFitness(
+  runner: unknown,
+  carIndex: number,
+): number | undefined {
+  const runnerWithFitness = runner as {
+    computeFitness?: (index: number) => number;
+  };
+  if (typeof runnerWithFitness.computeFitness === 'function') {
+    return runnerWithFitness.computeFitness(carIndex);
+  }
+  return undefined;
+}
+
+function createRaceStepMessageOrUndefined(runner: unknown): unknown {
+  const runnerWithMessage = runner as {
+    createRaceStepMessage?: () => unknown;
+  };
+  if (typeof runnerWithMessage.createRaceStepMessage === 'function') {
+    return runnerWithMessage.createRaceStepMessage();
+  }
+  return undefined;
+}
+
+type FitnessState = {
+  progress01: number[];
+  lapCompleted: number[];
+  lapTimeTicks?: number[];
+  endedOffTrack: boolean;
+};
+
+function setFitnessState(runner: unknown, state: FitnessState): void {
+  const runnerRecord = runner as Record<string, unknown>;
+  const frameRecord = (runner as { frame: Record<string, unknown> }).frame;
+
+  frameRecord.progress01 = new Float32Array(state.progress01);
+  runnerRecord.lapCompleted = new Uint8Array(state.lapCompleted);
+  runnerRecord.lapTimeTicks =
+    state.lapTimeTicks === undefined
+      ? new Uint32Array(state.progress01.length)
+      : new Uint32Array(state.lapTimeTicks);
+  runnerRecord.endedOffTrack = state.endedOffTrack;
+}
+
+// ---------------------------------------------------------------------------
+// Tier 1 red tests — race-pack factory / setup
+// ---------------------------------------------------------------------------
+
+describe('Tier 1 race-pack factory / setup', () => {
+  it('creates a runner with exactly two active cars', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    expect(runner.frame.agentCount).toBe(2);
+  });
+
+  it('marks both cars as active in the initial frame', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    expect(Array.from(runner.frame.carActive)).toEqual([1, 1]);
+  });
+
+  it('assigns Team A to car 0 and Team B to car 1', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    expect(Array.from(runner.frame.carTeam)).toEqual([0, 1]);
+  });
+
+  it('places both cars on the inner-lane centerline of the generated simple track', async () => {
+    const service = await loadRacePackService();
+    const seed = 42;
+    const track = makeTier1Track(seed);
+    const startPoint = resolveTier1InnerLaneStart(track);
+    const runner = service.createRaceEpisodeRunner(
+      seed,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    let maxDistance = 0;
+    for (let carIndex = 0; carIndex < runner.frame.agentCount; carIndex++) {
+      const positionDistance = Math.hypot(
+        runner.frame.carX[carIndex] - startPoint.x,
+        runner.frame.carY[carIndex] - startPoint.y,
+      );
+      const headingDelta = Math.abs(
+        runner.frame.carHeading[carIndex] - startPoint.heading,
+      );
+      const wrappedHeadingDelta = Math.min(
+        headingDelta,
+        2 * Math.PI - headingDelta,
+      );
+      maxDistance = Math.max(
+        maxDistance,
+        positionDistance + wrappedHeadingDelta,
+      );
+    }
+
+    expect(maxDistance).toBeLessThan(0.01);
+  });
+
+  it('sets frame.trackId to the deterministic track seed', async () => {
+    const service = await loadRacePackService();
+    const seed = 42;
+    const runner = service.createRaceEpisodeRunner(
+      seed,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    expect(runner.frame.trackId).toBe(seed);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 1 red tests — episode runner tick loop
+// ---------------------------------------------------------------------------
+
+describe('Tier 1 episode runner tick loop', () => {
+  it('advances car positions along the track after a single tick', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+    const carXBefore = Array.from(runner.frame.carX);
+    const carYBefore = Array.from(runner.frame.carY);
+
+    runner.tick();
+
+    let maxDistance = 0;
+    for (let carIndex = 0; carIndex < runner.frame.agentCount; carIndex++) {
+      const distance = Math.hypot(
+        runner.frame.carX[carIndex] - carXBefore[carIndex],
+        runner.frame.carY[carIndex] - carYBefore[carIndex],
+      );
+      maxDistance = Math.max(maxDistance, distance);
+    }
+
+    expect(maxDistance).toBeGreaterThan(0);
+  });
+
+  it('terminates the episode after consecutive off-track ticks exceed the grace budget', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    for (let tickIndex = 0; tickIndex <= OFF_TRACK_GRACE_TICKS; tickIndex++) {
+      (runner.frame.carX as Float32Array)[0] = 9999;
+      (runner.frame.carY as Float32Array)[0] = 9999;
+      runner.tick();
+    }
+
+    expect(runner.frame.done).toBe(true);
+  });
+
+  it('terminates the episode when the max tick budget is reached', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    for (let tickIndex = 0; tickIndex < MAX_EPISODE_TICKS; tickIndex++) {
+      runner.tick();
+    }
+
+    expect(runner.frame.done).toBe(true);
+  });
+
+  it('reports per-car progress01 inside the closed unit interval after a tick', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    runner.tick();
+
+    const frameWithProgress = runner.frame as unknown as {
+      progress01?: Float32Array;
+    };
+    const progress01 = frameWithProgress.progress01;
+    const valuesAreInRange =
+      progress01 !== undefined &&
+      progress01.length === runner.frame.agentCount &&
+      Array.from(progress01).every((value) => value >= 0 && value <= 1);
+
+    expect(valuesAreInRange).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 1 red tests — lap detection
+// ---------------------------------------------------------------------------
+
+describe('Tier 1 lap detection', () => {
+  it('increments frame.lap when the car crosses the start/finish line', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    for (let tickIndex = 0; tickIndex < MAX_EPISODE_TICKS; tickIndex++) {
+      runner.tick();
+      if (runner.frame.lap[0] > 0) {
+        break;
+      }
+    }
+
+    expect(runner.frame.lap[0]).toBeGreaterThan(0);
+  });
+
+  it('sets a per-car lapCompleted flag after a lap is finished', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    for (let tickIndex = 0; tickIndex < MAX_EPISODE_TICKS; tickIndex++) {
+      runner.tick();
+      const lapCompleted = (runner as unknown as { lapCompleted?: Uint8Array })
+        .lapCompleted;
+      if (lapCompleted !== undefined && lapCompleted[0] === 1) {
+        break;
+      }
+    }
+
+    const lapCompleted = (runner as unknown as { lapCompleted?: Uint8Array })
+      .lapCompleted;
+    expect(lapCompleted !== undefined && lapCompleted[0] === 1).toBe(true);
+  });
+
+  it('records lapTimeTicks when a lap is completed', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    for (let tickIndex = 0; tickIndex < MAX_EPISODE_TICKS; tickIndex++) {
+      runner.tick();
+      const lapTimeTicks = (runner as unknown as { lapTimeTicks?: Uint32Array })
+        .lapTimeTicks;
+      if (lapTimeTicks !== undefined && lapTimeTicks[0] > 0) {
+        break;
+      }
+    }
+
+    const lapTimeTicks = (runner as unknown as { lapTimeTicks?: Uint32Array })
+      .lapTimeTicks;
+    expect(lapTimeTicks !== undefined && lapTimeTicks[0] > 0).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 1 red tests — lap-time fitness
+// ---------------------------------------------------------------------------
+
+describe('Tier 1 lap-time fitness', () => {
+  it('assigns higher fitness to a completed lap than to an incomplete episode', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    setFitnessState(runner, {
+      progress01: [0.5, 0.25],
+      lapCompleted: [1, 0],
+      lapTimeTicks: [600, 0],
+      endedOffTrack: false,
+    });
+
+    const completedFitness = getRunnerFitness(runner, 0);
+    const incompleteFitness = getRunnerFitness(runner, 1);
+
+    expect(
+      (completedFitness ?? Number.NEGATIVE_INFINITY) >
+        (incompleteFitness ?? Number.NEGATIVE_INFINITY),
+    ).toBe(true);
+  });
+
+  it('adds the completion bonus and rewards lower lap times', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    setFitnessState(runner, {
+      progress01: [0.5, 0.5],
+      lapCompleted: [1, 1],
+      lapTimeTicks: [600, 1200],
+      endedOffTrack: false,
+    });
+
+    const fasterFitness = getRunnerFitness(runner, 0);
+    const slowerFitness = getRunnerFitness(runner, 1);
+    const expectedDifference =
+      (COMPLETION_BONUS + (MAX_EPISODE_TICKS - 600)) -
+      (COMPLETION_BONUS + (MAX_EPISODE_TICKS - 1200));
+
+    expect(
+      (fasterFitness ?? NaN) - (slowerFitness ?? NaN),
+    ).toBe(expectedDifference);
+  });
+
+  it('applies the off-track penalty to incomplete fitness when the episode ends off-track', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    setFitnessState(runner, {
+      progress01: [0.5, 0.5],
+      lapCompleted: [0, 0],
+      endedOffTrack: true,
+    });
+
+    const penalisedFitness = getRunnerFitness(runner, 0);
+    const expectedPenalisedFitness =
+      PROGRESS_WEIGHT * 0.5 * MAX_EPISODE_TICKS - OFF_TRACK_PENALTY;
+
+    expect(penalisedFitness).toBe(expectedPenalisedFitness);
+  });
+
+  it('returns deterministic fitness for identical genomes and track seeds', async () => {
+    const service = await loadRacePackService();
+    const snapshot = makeMinimalOpponentSnapshot();
+    const networks = makeFullThrottleNetworks(2);
+    const runnerA = service.createRaceEpisodeRunner(7, snapshot, networks);
+    const runnerB = service.createRaceEpisodeRunner(7, snapshot, networks);
+
+    setFitnessState(runnerA, {
+      progress01: [0.4, 0],
+      lapCompleted: [0, 0],
+      endedOffTrack: true,
+    });
+    setFitnessState(runnerB, {
+      progress01: [0.4, 0],
+      lapCompleted: [0, 0],
+      endedOffTrack: true,
+    });
+
+    const fitnessA = getRunnerFitness(runnerA, 0);
+    const fitnessB = getRunnerFitness(runnerB, 0);
+
+    expect(fitnessA !== undefined && fitnessA === fitnessB).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 1 red tests — worker message contract
+// ---------------------------------------------------------------------------
+
+describe('Tier 1 worker race-step message', () => {
+  it('produces a message whose type is race-step', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+    const message = createRaceStepMessageOrUndefined(runner) as
+      | { type?: string }
+      | undefined;
+
+    expect(message?.type).toBe('race-step');
+  });
+
+  it('includes the packed frame with car positions, progress, lap counts, and done flag', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+    const message = createRaceStepMessageOrUndefined(runner) as
+      | { frame?: RacingRenderFrame & { progress01?: Float32Array } }
+      | undefined;
+    const frame = message?.frame;
+    const hasRequiredFields =
+      frame !== undefined &&
+      frame.carX !== undefined &&
+      frame.carY !== undefined &&
+      frame.lap !== undefined &&
+      frame.done !== undefined &&
+      frame.progress01 !== undefined;
+
+    expect(hasRequiredFields).toBe(true);
+  });
+
+  it('includes a transfer list with the car position buffers', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+    const message = createRaceStepMessageOrUndefined(runner) as
+      | { frame?: RacingRenderFrame; transferList?: ArrayBuffer[] }
+      | undefined;
+    const transferList = message?.transferList ?? [];
+    const carXBuffer = message?.frame?.carX.buffer as ArrayBuffer | undefined;
+
+    expect(carXBuffer !== undefined && transferList.includes(carXBuffer)).toBe(
+      true,
+    );
   });
 });

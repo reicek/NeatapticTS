@@ -1496,6 +1496,7 @@ drawNetworkVisualization(
   outputSize: number,
   hoverState: NetworkVisualizationHoverState | undefined,
   inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
+  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
 ): NetworkVisualizationPositionedScene
 ```
 
@@ -1510,6 +1511,8 @@ Parameters:
 - `inputSize` - Input-layer size.
 - `outputSize` - Output-layer size.
 - `hoverState` - Optional host-owned hover state for interactive emphasis.
+- `inputLabelGroupDefinitions` - Optional semantic input-label group definitions.
+- `connectionLayerStyle` - Optional override for connection stroke visibility.
 
 Returns: Positioned node snapshot reused by host-side hover hit testing.
 
@@ -1737,21 +1740,21 @@ Parameters:
 
 Returns: Nothing.
 
-### formatNodeBiasLabel
+### formatNodeActivationLabel
 
 ```ts
-formatNodeBiasLabel(
-  nodeBias: number,
+formatNodeActivationLabel(
+  activation: number,
 ): string
 ```
 
-Formats node bias labels with fixed sign and precision.
+Formats node activation labels with fixed precision.
 
-Consistent sign and precision make dense node labels easier to scan quickly in
-the rendered network panel.
+Two decimal places keep the compact node labels scannable while still giving
+enough precision to distinguish meaningfully different activation values.
 
 Parameters:
-- `nodeBias` - Node bias value.
+- `activation` - Node activation value.
 
 Returns: Label text.
 

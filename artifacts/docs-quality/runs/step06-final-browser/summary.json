@@ -1,0 +1,16 @@
+{
+  "evidenceCount": 1,
+  "highComplexity": 1,
+  "missingJsdoc": 0,
+  "weakCount": 0,
+  "weakJsdoc": 0,
+  "coverage": {
+    "available": true,
+    "totalFiles": 407,
+    "filesBelow100": 0,
+    "filesBelow100Detail": [],
+    "overallLines": 100,
+    "overallBranches": 100,
+    "overallFunctions": 100
+  }
+}

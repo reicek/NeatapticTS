@@ -74,6 +74,7 @@ import {
   drawBiasNodesLayer,
   drawNetworkColorLegend,
   drawWeightedConnectionsLayer,
+  type WeightedConnectionLayerStyle,
 } from '../visualization/visualization.draw.service';
 import { resolveDefaultNetworkLegendLayout } from '../visualization/visualization.legend.utils';
 import { resolveNetworkVisualizationColorScales } from '../visualization/visualization.colors.utils';
@@ -173,6 +174,8 @@ export interface NetworkVisualizationResolvedFrame {
  * @param inputSize - Input-layer size.
  * @param outputSize - Output-layer size.
  * @param hoverState - Optional host-owned hover state for interactive emphasis.
+ * @param inputLabelGroupDefinitions - Optional semantic input-label group definitions.
+ * @param connectionLayerStyle - Optional override for connection stroke visibility.
  * @returns Positioned node snapshot reused by host-side hover hit testing.
  */
 export function drawNetworkVisualization(
@@ -182,6 +185,7 @@ export function drawNetworkVisualization(
   outputSize: number,
   hoverState?: NetworkVisualizationHoverState,
   inputLabelGroupDefinitions?: readonly InputLabelGroupDefinition[],
+  connectionLayerStyle?: Partial<WeightedConnectionLayerStyle>,
 ): NetworkVisualizationPositionedScene {
   // Step 1: Resolve the reusable frame cache for the current network payload.
   const resolvedNetworkVisualizationFrame = resolveNetworkVisualizationFrame(
@@ -197,6 +201,7 @@ export function drawNetworkVisualization(
     context,
     resolvedNetworkVisualizationFrame,
     hoverState,
+    connectionLayerStyle,
   );
 
   // Step 3: Return the positioned node scene for host-owned hover hit testing.
@@ -271,12 +276,14 @@ export function resolveNetworkVisualizationFrame(
  * @param context - Canvas 2D drawing context.
  * @param resolvedNetworkVisualizationFrame - Reusable frame cache.
  * @param hoverState - Optional host-owned hover state for interactive emphasis.
+ * @param connectionLayerStyle - Optional override for connection stroke visibility.
  * @returns Positioned node snapshot reused by host-side hover hit testing.
  */
 export function drawResolvedNetworkVisualization(
   context: CanvasRenderingContext2D,
   resolvedNetworkVisualizationFrame: NetworkVisualizationResolvedFrame,
   hoverState?: NetworkVisualizationHoverState,
+  connectionLayerStyle?: Partial<WeightedConnectionLayerStyle>,
 ): NetworkVisualizationPositionedScene {
   // Step 1: Paint the cached base canvas background before graph layers are drawn.
   paintNetworkVisualizationCanvasBase(
@@ -289,6 +296,7 @@ export function drawResolvedNetworkVisualization(
     context,
     resolvedNetworkVisualizationFrame,
     hoverState,
+    connectionLayerStyle,
   );
 
   // Step 3: Draw the legend after the graph so the overlay stays visually on top.
@@ -486,7 +494,7 @@ function resolveNetworkVisualizationScene(
     outputSize,
   );
   const colorScales = resolveNetworkVisualizationColorScales(network);
-  const hideNetworkOverlays = shouldHideNetworkOverlays(context, canvasWidthPx);
+  const hideNetworkOverlays = shouldHideNetworkOverlays(context);
   const graphPaddingContext = resolveBaseGraphPaddingContext(
     hideNetworkOverlays,
     inputSize,
@@ -654,12 +662,14 @@ function resolvePositionedNetworkGraphScene(
  * @param context - Canvas 2D drawing context.
  * @param resolvedNetworkVisualizationFrame - Resolved network visualization frame containing positioned scene, connections, and color scales.
  * @param hoverState - Optional host-owned hover state for interactive emphasis.
+ * @param connectionLayerStyle - Optional override for connection stroke visibility.
  * @returns Nothing.
  */
 function drawPositionedNetworkGraph(
   context: CanvasRenderingContext2D,
   resolvedNetworkVisualizationFrame: NetworkVisualizationResolvedFrame,
   hoverState?: NetworkVisualizationHoverState,
+  connectionLayerStyle?: Partial<WeightedConnectionLayerStyle>,
 ): void {
   // Step 1: Draw weighted connections beneath the node rectangles.
   drawWeightedConnectionsLayer(
@@ -668,6 +678,7 @@ function drawPositionedNetworkGraph(
     resolvedNetworkVisualizationFrame.positionByNodeIndex,
     resolvedNetworkVisualizationFrame.colorScales.connectionScale,
     hoverState?.animatedHoveredNodes,
+    connectionLayerStyle,
   );
 
   // Step 2: Draw input-group label bands only when overlays are visible.
@@ -743,18 +754,12 @@ function resolveBaseGraphPaddingContext(
  * Determines whether responsive rules hide auxiliary network overlays.
  *
  * @param context - Canvas 2D drawing context.
- * @param fallbackViewportWidthPx - Fallback viewport width.
  * @returns True when overlays should be hidden.
  */
-function shouldHideNetworkOverlays(
-  context: CanvasRenderingContext2D,
-  fallbackViewportWidthPx: number,
-): boolean {
-  // Step 1: Prefer the browser viewport width and fall back to canvas width in tests.
-  const viewportWidthPx =
-    context.canvas.ownerDocument?.defaultView?.innerWidth ??
-    fallbackViewportWidthPx;
-  return viewportWidthPx < FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX;
+function shouldHideNetworkOverlays(context: CanvasRenderingContext2D): boolean {
+  return (
+    context.canvas.width < FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX
+  );
 }
 
 /**

@@ -34,11 +34,9 @@ report log, `tracker-handoff` owns the plan/log structure.
 - A one-off shell command would be too fragile or too noisy to repeat reliably
   across future trace captures.
 
-
 ## When NOT to use
 
 Do NOT use for trace reporting or analysis - use `trace-audit-reporting` instead. Do NOT use for performance optimization implementation - use `performance-optimization` instead.
-
 
 ## Workflow Diagram
 
@@ -109,16 +107,17 @@ Output format: compact table, one row per thread, columns p50/p95/max.
   separable.
 - Avoid sections that require manual post-processing to become useful.
 
-
 ## Before/After Analyzer Output
 
 **Before (insufficient):**
+
 ```text
 Top events by duration:
   HandlePostMessage: 45ms (12 occurrences)
 ```
 
 **After (with per-thread breakdown):**
+
 ```text
 Per-thread p95 durations:
 | Thread   | p50   | p95   | Max   |

@@ -11,16 +11,17 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Tests run from the repository root, so cwd is a stable anchor for repo-relative
+// paths without needing import.meta.url (which currently breaks ts-jest for the
+// mcp-semantic-scripts project).
+const REPO_ROOT = path.resolve();
 
 interface ToolCallResult {
   isError: boolean;
   structuredContent?: Record<string, unknown>;
 }
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const BUILD_INDEX_PATH = path.join(
   REPO_ROOT,
   'scripts',

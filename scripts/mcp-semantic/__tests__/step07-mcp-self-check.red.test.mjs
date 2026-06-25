@@ -76,9 +76,7 @@ describe('Phase 6 Step 07 — MCP server registration and self-check', () => {
     it('includes a tools_checked entry for every registered tool', () => {
       const report = runSelfCheckReport();
       const checked = report.tools_checked ?? [];
-      const checkedNames = checked
-        .map((entry) => entry.name)
-        .sort();
+      const checkedNames = checked.map((entry) => entry.name).sort();
       expect(checkedNames).toEqual(EXPECTED_TOOL_NAMES);
     });
 

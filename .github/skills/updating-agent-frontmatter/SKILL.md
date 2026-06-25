@@ -25,11 +25,9 @@ This skill makes safe, targeted edits to YAML frontmatter in existing `.github/a
 - Adding or updating `handoffs` entries.
 - Fixing a frontmatter field that caused a silent loading failure in VS Code.
 
-
 ## When NOT to use
 
 Do NOT use for skill frontmatter updates - use `updating-skill-frontmatter` instead. Do NOT use for frontmatter validation - use `agent-frontmatter-standards` instead.
-
 
 ## Workflow Diagram
 
@@ -69,7 +67,6 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 7. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` after the edit.
 8. Record files changed, fields changed, and compatibility risk in the active plan or chat summary.
 
-
 ## Why Each Field Matters
 
 Each frontmatter field controls a specific aspect of agent behavior. The `tier` field determines delegation direction and routing. The `model` field controls which AI model processes the agent. The `tools` field limits what the agent can access. The `agents` allow-list controls sub-delegation. The `skills` field attaches durable procedures. A wrong value in any field can cause silent failures - the agent loads but behaves incorrectly.
@@ -77,6 +74,7 @@ Each frontmatter field controls a specific aspect of agent behavior. The `tier` 
 ## Before/After Frontmatter Examples
 
 **Before (incomplete):**
+
 ```yaml
 ---
 name: my-agent
@@ -85,6 +83,7 @@ description: Does things
 ```
 
 **After (complete):**
+
 ```yaml
 ---
 name: my-agent

@@ -34,11 +34,9 @@ shape, status markers, compression, and `Handoff query` structure.
 - A demo or example symptom may actually indicate a higher-leverage library/API
   or runtime-contract gap.
 
-
 ## When NOT to use
 
 Do NOT use for consistency checking or sync validation - use `plan-sync-validation` instead. Do NOT use for tracker updates - use `tracker-handoff` instead.
-
 
 ## Workflow Diagram
 
@@ -143,6 +141,7 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```text
 # context overflow: reading 5 plan files before starting
 Read: neat.plans.md, multithread.plans.md, worker.plans.md,
@@ -151,6 +150,7 @@ Read: neat.plans.md, multithread.plans.md, worker.plans.md,
 ```
 
 **After:**
+
 ```text
 # targeted: 1 plan + roadmap lane check
 Read: plans/Turnkey_Multithread_Evaluation_API.md

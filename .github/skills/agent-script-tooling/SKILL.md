@@ -37,11 +37,9 @@ and validation exit codes.
 - An existing script produces output that agents cannot parse reliably and needs
   a structured output contract.
 
-
 ## When NOT to use
 
 Do NOT use for scripts outside the `scripts/agent-customization/` directory - this skill only covers agent customization tooling.
-
 
 ## Workflow Diagram
 
@@ -111,14 +109,13 @@ Read or write: read-only.
 - `--dry-run`: show what would change without writing anything.
 - `--verbose`: additional diagnostic detail to stderr.
 
-
 ## Exit Code Reference
 
-| Exit Code | Meaning | Action |
-|-----------|---------|--------|
-| 0 | Success, no issues | Proceed |
-| 1 | Validation errors found | Fix reported issues |
-| 2 | Usage or argument error | Check command syntax |
+| Exit Code | Meaning                 | Action               |
+| --------- | ----------------------- | -------------------- |
+| 0         | Success, no issues      | Proceed              |
+| 1         | Validation errors found | Fix reported issues  |
+| 2         | Usage or argument error | Check command syntax |
 
 ## Decision Tree
 
@@ -136,12 +133,14 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```js
 // ad hoc: no --help, prose on stdout, no exit code contract
-console.log("Index is " + (stale ? "stale" : "fresh"));
+console.log('Index is ' + (stale ? 'stale' : 'fresh'));
 ```
 
 **After:**
+
 ```js
 /**
  * Validate semantic index freshness. Exit 0 if fresh, 1 if stale.

@@ -17,7 +17,12 @@ interface SearchCall {
   conditionOptions: Record<string, unknown>;
 }
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+);
 
 /**
  * Evaluate a short ESM snippet in a child Node process rooted at the repo root.

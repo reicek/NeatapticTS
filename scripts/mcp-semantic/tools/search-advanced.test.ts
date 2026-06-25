@@ -67,7 +67,10 @@ const runModuleEvaluation = <Result>(source: string): Result => {
  * The fixture is created in a temporary directory and deleted after each
  * evaluation. It contains only the tables/columns required by `runBm25Search`.
  */
-async function makeCorpusFixture(): Promise<{ databasePath: string; tempDir: string }> {
+async function makeCorpusFixture(): Promise<{
+  databasePath: string;
+  tempDir: string;
+}> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'search-advanced-red-'),
   );
@@ -252,7 +255,10 @@ describe('search-advanced reranker integration', () => {
  * TypeScript source doc. Used to test README suppression and fallback
  * behavior in the advanced search pipeline.
  */
-async function makeMixedCorpusFixture(): Promise<{ databasePath: string; tempDir: string }> {
+async function makeMixedCorpusFixture(): Promise<{
+  databasePath: string;
+  tempDir: string;
+}> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'search-advanced-mixed-red-'),
   );
@@ -631,7 +637,10 @@ describe('search-advanced structured fallback', () => {
  * caps are observable. Some chunks contain long body text so compact-mode
  * truncation is also observable.
  */
-async function makeMultiChunkFixture(): Promise<{ databasePath: string; tempDir: string }> {
+async function makeMultiChunkFixture(): Promise<{
+  databasePath: string;
+  tempDir: string;
+}> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'search-advanced-defaults-red-'),
   );

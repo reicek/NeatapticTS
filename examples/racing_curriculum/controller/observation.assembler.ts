@@ -5,6 +5,7 @@ import type {
 import type { SplineSample, TrackSpec } from '../track/track.generator.types';
 import {
   TRACK_SPLINE_SAMPLES_PER_SEGMENT,
+  resolveInnerLaneCenterlineOffsetWorld,
   resolveSplineSampleFrame,
   type SplineSampleFrame,
 } from '../track/track.spline.utils';
@@ -673,6 +674,10 @@ function resolveObservationState(
     closestSplineSample,
     closestSplineSampleFrame,
   );
+  const innerLaneCenterlineOffsetWorld =
+    resolveInnerLaneCenterlineOffsetWorld(closestSplineSample);
+  const optimalLineLateralOffsetWorld =
+    signedLateralOffsetWorld - innerLaneCenterlineOffsetWorld;
   const forwardSpeedWorld = envState.forwardSpeedWorld ?? 0;
   const lateralSpeedWorld = envState.lateralSpeedWorld ?? 0;
   const speedWorld =
@@ -711,7 +716,7 @@ function resolveObservationState(
     waypointDistanceWorld:
       envState.waypointDistanceWorld ?? derivedWaypointDistanceWorld,
     optimalLineLateralOffsetWorld:
-      envState.optimalLineLateralOffsetWorld ?? signedLateralOffsetWorld,
+      envState.optimalLineLateralOffsetWorld ?? optimalLineLateralOffsetWorld,
     optimalLineHeadingErrorRadians:
       envState.optimalLineHeadingErrorRadians ??
       wrapAngleToMinusPiPi(

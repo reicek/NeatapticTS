@@ -25,11 +25,9 @@ This skill designs and runs evidence-backed output evaluations for NeatapticTS s
 - Checking that a skill's output contract matches what downstream agents or orchestrators expect.
 - Aggregating pass rates across multiple fixtures to identify the weakest assertion category.
 
-
 ## When NOT to use
 
 Do NOT use for description evaluation - use `skill-description-evals` instead. Do NOT use for frontmatter validation - use `skill-frontmatter-standards` instead.
-
 
 ## Workflow Diagram
 
@@ -71,16 +69,17 @@ Record in: <plan file or chat summary>
 8. Feed failure patterns back into skill instructions; avoid overfitting instructions to a single fixture prompt.
 9. Record pass rate, failure categories, and keep/revise/remove recommendation in the active plan.
 
-
 ## Before/After Output Comparison
 
 **Before (weak output):**
+
 ```text
 TASK_STATUS: done
 FILES_CHANGED: some files
 ```
 
 **After (structured output):**
+
 ```text
 TASK_STATUS: SUCCESS
 FILES_CHANGED:

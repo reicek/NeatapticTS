@@ -51,7 +51,6 @@ attribution.
 - A downstream system such as NEATchat needs to compare frozen, personalized,
   and candidate parameter deltas without inventing its own vector format.
 
-
 ## When NOT to use
 
 Do NOT use for purely evolutionary training without gradient-based fine-tuning. Do NOT use for checkpoint management - use `checkpointing-persistence` instead.
@@ -89,7 +88,6 @@ $$
 
 where $\eta$ is the learning rate and $E$ is the loss. In this repo, that means
 the gradient mechanism and the persistence decision must stay separate.
-
 
 ## Workflow Diagram
 
@@ -200,11 +198,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```ts
 const vec = network.toVector(); // no layout metadata, order unspecified
 ```
 
 **After:**
+
 ```ts
 const pv = toParameterVector(network); // layout v1: weights then biases, node-id keyed
 ```

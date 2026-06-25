@@ -293,8 +293,9 @@ export async function resolveSearchFn(condition, options) {
  * @returns {object}
  */
 export function buildConditionOptions(condition, querySpec, options) {
-  const limit = Number(options.limit ?? 10);
-  const alpha = Number(options.alpha ?? 0.5);
+  const resolvedOptions = options ?? {};
+  const limit = Number(resolvedOptions.limit ?? 10);
+  const alpha = Number(resolvedOptions.alpha ?? 0.5);
   const isCodeSpecific = querySpec?.class === 'code_specific';
 
   switch (condition) {
@@ -310,7 +311,7 @@ export function buildConditionOptions(condition, querySpec, options) {
         useRerank: true,
         alpha,
         limit,
-        contextBudget: options.contextBudget ?? 4096,
+        contextBudget: resolvedOptions.contextBudget ?? 4096,
         compact: true,
         read_top_result: true,
         auto_fallback: true,

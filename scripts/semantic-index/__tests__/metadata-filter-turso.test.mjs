@@ -31,7 +31,11 @@ import { closeTursoClient } from '../../mcp-semantic/tools/cortex-db.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const METADATA_FILTER_PATH = path.resolve(__dirname, '..', 'metadata-filter.mjs');
+const METADATA_FILTER_PATH = path.resolve(
+  __dirname,
+  '..',
+  'metadata-filter.mjs',
+);
 const QUERY_DENSE_PATH = path.resolve(__dirname, '..', 'query-dense.mjs');
 const SEARCH_CORPUS_PATH = path.resolve(
   __dirname,
@@ -88,7 +92,9 @@ describe('metadata-filter-turso: brute-force vector_distance_cos WHERE clause', 
     const source = await readSource(QUERY_DENSE_PATH);
     // The brute-force SQL should incorporate the compiled filter SQL fragment
     // as an additional WHERE condition (AND ${compiledFilter.sql}).
-    expect(source).toMatch(/loadDenseRowsBruteForce[\s\S]*?compiledFilter\.sql/i);
+    expect(source).toMatch(
+      /loadDenseRowsBruteForce[\s\S]*?compiledFilter\.sql/i,
+    );
   });
 });
 
@@ -176,7 +182,9 @@ describe('metadata-filter-turso: partial index WHERE clause in ann-index.mjs', (
     const source = await readSource(ANN_INDEX_PATH);
     // The buildAnnIndex function should accept an option for the partial index
     // WHERE clause so callers can create pre-filtered ANN indexes.
-    expect(source).toMatch(/partialFilter|partialIndexFilter|whereClause|indexWhereClause/i);
+    expect(source).toMatch(
+      /partialFilter|partialIndexFilter|whereClause|indexWhereClause/i,
+    );
   });
 });
 
@@ -212,7 +220,9 @@ describe('metadata-filter-turso: Turso-compatible SQL in vector queries', () => 
     // The compiled filter SQL fragment should be incorporated as an AND
     // condition in the vector query SQL (not applied as a JS post-filter).
     // This ensures the filter runs server-side in Turso/libSQL.
-    expect(source).toMatch(/AND[\s\S]*?compiledFilter\.sql|compiledFilter\.sql[\s\S]*?AND/i);
+    expect(source).toMatch(
+      /AND[\s\S]*?compiledFilter\.sql|compiledFilter\.sql[\s\S]*?AND/i,
+    );
   });
 
   it('query-dense.mjs merges compiledFilter.params into args before the SQL execute call', async () => {
@@ -220,6 +230,8 @@ describe('metadata-filter-turso: Turso-compatible SQL in vector queries', () => 
     // The compiled filter params must be spread into the args array used by
     // the SQL execute call. This ensures filter values are parameterized
     // server-side, not interpolated into SQL strings.
-    expect(source).toMatch(/args[\s\S]*?compiledFilter\.params|compiledFilter\.params[\s\S]*?args/i);
+    expect(source).toMatch(
+      /args[\s\S]*?compiledFilter\.params|compiledFilter\.params[\s\S]*?args/i,
+    );
   });
 });

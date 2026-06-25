@@ -63,7 +63,12 @@ describe('traverse-graph', () => {
         expect(result.doc_ids).toEqual([]);
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -118,7 +123,12 @@ describe('traverse-graph', () => {
         expect(result.total_discovered).toBe(0);
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -187,7 +197,12 @@ describe('traverse-graph', () => {
         );
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -278,7 +293,12 @@ describe('traverse-graph', () => {
         );
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -367,7 +387,12 @@ describe('traverse-graph', () => {
         expect(entityNames).toContain('src/architecture/network');
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -479,7 +504,12 @@ describe('traverse-graph', () => {
         expect(entityNames).not.toContain('src/methods');
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -555,7 +585,12 @@ describe('traverse-graph', () => {
         expect(entityNames).not.toContain('entity.D');
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -638,7 +673,12 @@ describe('traverse-graph', () => {
         expect(result.returned_count).toBeLessThanOrEqual(5);
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -740,7 +780,12 @@ describe('traverse-graph', () => {
         );
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -818,7 +863,12 @@ describe('traverse-graph', () => {
         expect(result.total_discovered).toBe(2);
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -884,7 +934,12 @@ describe('traverse-graph', () => {
         expect(result.seed_entities.length).toBeGreaterThan(0);
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
 
@@ -949,7 +1004,12 @@ describe('traverse-graph', () => {
         expect(result.seed_entities.length).toBeGreaterThan(0);
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
   });
@@ -984,7 +1044,12 @@ describe('traverse-graph', () => {
         expect(result.graph_available).toBe(false);
       } finally {
         await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+        await rm(fixtureDirectory, {
+          recursive: true,
+          force: true,
+          maxRetries: 10,
+          retryDelay: 200,
+        });
       }
     });
   });

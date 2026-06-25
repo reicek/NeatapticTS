@@ -107,7 +107,9 @@ export async function runChromeDevToolsMcpCoverageGate(options = {}) {
       missingSkillAgents,
       missingSpecialistAgents,
     },
-    fixHint: pass ? null : buildFixHint(missingSkillAgents, missingSpecialistAgents),
+    fixHint: pass
+      ? null
+      : buildFixHint(missingSkillAgents, missingSpecialistAgents),
     owner: OWNER,
   };
 }
@@ -122,7 +124,10 @@ export async function runChromeDevToolsMcpCoverageGate(options = {}) {
  */
 async function inspectAgent(agentName, agentLoader) {
   const rawContents = await agentLoader(agentName);
-  const { data } = parseFrontmatter(rawContents, `${AGENTS_DIR}/${agentName}.agent.md`);
+  const { data } = parseFrontmatter(
+    rawContents,
+    `${AGENTS_DIR}/${agentName}.agent.md`,
+  );
 
   const skills = toArray(data.skills);
   const agents = toArray(data.agents);

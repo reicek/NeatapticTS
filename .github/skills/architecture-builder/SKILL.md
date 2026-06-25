@@ -61,11 +61,9 @@ All preconfigured builders must satisfy the Phase 2 gate before the lane closes:
 - A builder's API contract needs test coverage for determinism, diagnostics,
   and roundtrip shape.
 
-
 ## When NOT to use
 
 Do NOT use for refactoring existing module boundaries - use `solid-split` instead. Do NOT use for general network construction - use `Network.construct()` directly.
-
 
 ## Workflow Diagram
 
@@ -181,11 +179,15 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```ts
-export function buildGRU(config?: any): Network { /* crashes if config undefined */ }
+export function buildGRU(config?: any): Network {
+  /* crashes if config undefined */
+}
 ```
 
 **After:**
+
 ```ts
 export function buildGRU(config: Partial<GRUConfig> = {}): Network {
   const full = { ...DEFAULT_GRU_CONFIG, ...config };

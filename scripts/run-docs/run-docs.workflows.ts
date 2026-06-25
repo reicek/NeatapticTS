@@ -20,8 +20,11 @@ import { runScriptTask, runScriptTasksInParallel } from './run-docs.runner.js';
  * Runs the complete docs-generation pipeline:
  *
  * 1. Builds all browser example bundles and the semantic snapshot in parallel.
- * 2. Copies example assets and generates all folder-level READMEs in parallel.
- * 3. Renders the final HTML site (sequential — depends on step 2 output).
+ * 2. Generates all folder-level READMEs in parallel.
+ * 3. Copies example browser entrypoints and static docs into the published docs
+ *    tree (sequential — must happen after step 2 so hand-written docs are not
+ *    overwritten by generated folder output).
+ * 4. Renders the final HTML site (sequential — depends on steps 2 and 3).
  *
  * @returns A promise that resolves when the full pipeline completes.
  */
@@ -41,7 +44,6 @@ export async function runFullDocsWorkflow(): Promise<void> {
   ]);
 
   await runScriptTasksInParallel([
-    { label: 'Examples copy', scriptName: 'docs:examples:built' },
     { label: 'Source folder docs', scriptName: 'docs:folders:src:built' },
     {
       label: 'ASCII Maze folder docs',
@@ -51,7 +53,16 @@ export async function runFullDocsWorkflow(): Promise<void> {
       label: 'Flappy Bird folder docs',
       scriptName: 'docs:folders:flappy-bird:built',
     },
+    {
+      label: 'Racing Curriculum folder docs',
+      scriptName: 'docs:folders:racing-curriculum:built',
+    },
   ]);
+
+  await runScriptTask({
+    label: 'Examples copy',
+    scriptName: 'docs:examples:built',
+  });
 
   await runScriptTask({
     label: 'HTML docs render',
@@ -78,6 +89,10 @@ export async function runFoldersWorkflow(): Promise<void> {
     {
       label: 'Flappy Bird folder docs',
       scriptName: 'docs:folders:flappy-bird:built',
+    },
+    {
+      label: 'Racing Curriculum folder docs',
+      scriptName: 'docs:folders:racing-curriculum:built',
     },
   ]);
 }

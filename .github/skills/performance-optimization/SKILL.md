@@ -56,11 +56,9 @@ When roadmap alignment is needed, use `plan-alignment`.
 - A slab or typed-array change is needed before another lane can proceed
   efficiently, without taking ownership of that lane's public contract.
 
-
 ## When NOT to use
 
 Do NOT use for trace analysis or reporting - use `trace-audit-reporting` instead. Do NOT use for trace analyzer extension - use `trace-analyzer-extension` instead.
-
 
 ## Workflow Diagram
 
@@ -152,7 +150,6 @@ Do not start Hyper (Track 2) work until the Track 1 stability conditions in
 `Memory_Optimization.md` are fully satisfied. If those conditions appear met,
 use `plan-alignment` to verify before proceeding.
 
-
 ## Decision Tree: Optimization Targets
 
 ```mermaid
@@ -168,11 +165,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```text
 Slab allocation: 12,000 ops/sec, 41% activation time in Float64Array allocation
 ```
 
 **After:**
+
 ```text
 Slab pool reuse: 28,500 ops/sec (+137%), allocation time reduced to 9% of activation
 Correctness invariant: bitwise identical output, same seed → same result

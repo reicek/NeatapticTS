@@ -45,11 +45,9 @@ Do not invoke this skill for **coverage expansion** on passing code. Use
 raise coverage metrics toward 100%. The two skills are complements: this skill
 repairs failures first; `coverage-tranche` expands coverage afterward.
 
-
 ## When NOT to use
 
 Do NOT use for triaging failures when root cause is unknown - use `triaging-test-failures` first. Do NOT use for coverage enforcement - use `coverage-guard` instead.
-
 
 ## Workflow Diagram
 
@@ -130,7 +128,6 @@ repo-wide confirmation.
 10. Analyze any remaining failures and update the plan rather than switching to
     unstructured iteration.
 
-
 ## Decision Tree: Repair vs Escalate
 
 ```mermaid
@@ -152,11 +149,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```text
 5 tests failing in flappy trainer. Seems like a timing issue. Will try increasing timeout.
 ```
 
 **After:**
+
 ```text
 Root cause: evaluation loop awaited batch results out of order after async refactor.
 Fix: restore ordered result assembly in evaluateInWorkers.

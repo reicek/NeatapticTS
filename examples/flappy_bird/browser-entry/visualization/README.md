@@ -775,21 +775,21 @@ The topology boundary resolves node layering, while this helper module adds a
 few small presentation-oriented utilities that are reused by the visualization
 panel.
 
-### formatNodeBiasLabel
+### formatNodeActivationLabel
 
 ```ts
-formatNodeBiasLabel(
-  nodeBias: number,
+formatNodeActivationLabel(
+  activation: number,
 ): string
 ```
 
-Formats node bias labels with fixed sign and precision.
+Formats node activation labels with fixed precision.
 
-Consistent sign and precision make dense node labels easier to scan quickly in
-the rendered network panel.
+Two decimal places keep the compact node labels scannable while still giving
+enough precision to distinguish meaningfully different activation values.
 
 Parameters:
-- `nodeBias` - Node bias value.
+- `activation` - Node activation value.
 
 Returns: Label text.
 

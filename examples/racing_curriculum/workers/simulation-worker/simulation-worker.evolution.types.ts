@@ -7,6 +7,12 @@
  * production.  This file defines the typed envelope for every message that
  * crosses the host↔worker boundary.
  *
+ * The two-team, frozen-snapshot evaluation model follows the competitive
+ * coevolution pattern.  See [Coevolution (Wikipedia)](https://en.wikipedia.org/wiki/Coevolution)
+ * and Stanley & Miikkulainen (2002) on
+ * [Neuroevolution of augmenting topologies](https://en.wikipedia.org/wiki/Neuroevolution_of_augmenting_topologies)
+ * for the algorithmic background.
+ *
  * ## Protocol lifecycle
  *
  * The protocol is a forward-only FSM with five phases:
@@ -19,7 +25,8 @@
  *
  * Messages that arrive in a phase where they are not permitted return an error
  * string from `routeRacingWorkerProtocolMessage` and leave the FSM state
- * unchanged.
+ * unchanged.  See [Finite-state machine (Wikipedia)](https://en.wikipedia.org/wiki/Finite-state_machine)
+ * for background on the state-machine pattern.
  *
  * ## Worker-owned responsibilities
  *
@@ -32,7 +39,9 @@
  * - Race episode lifecycle: build a deterministic race pack → tick simulation →
  *   run controller inference per car per tick → stream packed `race-step`
  *   typed-array snapshots.
- * - Transfer-list resolution for zero-copy `postMessage` frame delivery.
+ * - Transfer-list resolution for zero-copy `postMessage` frame delivery.  See
+ *   [Transferable objects (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects)
+ *   for the transfer-list semantics.
  *
  * ## Host-owned responsibilities
  *
@@ -41,19 +50,18 @@
  * - Receiving and decoding compact `race-step` typed-array snapshots for render.
  * - User interaction (tier selector, keyboard shortcuts).
  *
- * ## Remaining gaps
+ * ## Extension points
  *
- * - Real `Neat` population wiring (speciation, fitness, genome selection) is
- *   deferred; `TeamPopulationContainer` is currently an opaque handle.
- * - `generation-ready` worker→host message is typed but the generation loop is
- *   not yet wired into the host.
- * - Rolling opponent snapshot hall-of-fame + recent-sample selection is a
- *   placeholder; no actual network payload sampling exists yet.
+ * - `TeamPopulationContainer` is a typed handle; the actual NEAT population
+ *   wiring will replace the opaque container.
+ * - The `generation-ready` worker→host message is typed, but the host consumer
+ *   that starts the generation loop is not yet wired end-to-end.
+ * - Hall-of-fame + recent opponent sampling is typed, but the network-payload
+ *   sampling implementation depends on a real `Neat` snapshot payload.
  * - Radio semantics (`ModulatorBroadcaster`, `EpisodicSlot`, `GatingRouter`)
- *   depend on upstream NGE Phase G primitives — marked as `NGE_TODO` in the
- *   coevolution and race-pack service files.
- * - Polyandric reproduction (`modeIsEvolvable`, upstream NGE Phase E) is not
- *   yet available.
+ *   depend on NGE primitives that are not yet available.
+ * - Polyandric reproduction (`modeIsEvolvable`) depends on an NGE primitive
+ *   that is not yet available.
  */
 
 /**
@@ -121,6 +129,8 @@ export type RacingWorkerOutboundMessage =
       teamABestFitness: number;
       teamBBestFitness: number;
       bestNetworkPayload?: unknown;
+      /** Optional zero-copy transfer list for the generation payload. */
+      transferList?: readonly ArrayBuffer[];
     }
   | {
       type: 'race-step';
@@ -129,6 +139,20 @@ export type RacingWorkerOutboundMessage =
     }
   | { type: 'runtime-status'; phase: RacingWorkerPhase; statusText: string }
   | { type: 'error'; message: string };
+
+/**
+ * Typed generation-ready response produced by the worker evolution loop.
+ *
+ * Carries per-team best fitness and an optional zero-copy payload transfer list.
+ */
+export type GenerationReadyResponse = {
+  readonly type: 'generation-ready';
+  readonly generation: number;
+  readonly teamABestFitness: number;
+  readonly teamBBestFitness: number;
+  readonly bestNetworkPayload?: unknown;
+  readonly transferList?: readonly ArrayBuffer[];
+};
 
 /**
  * Route result returned by `routeRacingWorkerProtocolMessage` for one inbound

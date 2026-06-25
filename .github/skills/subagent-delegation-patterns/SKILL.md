@@ -37,11 +37,9 @@ specialist output before trusting it.
 - A hidden specialist agent is available and assigning it improves coherence or
   cost efficiency.
 
-
 ## When NOT to use
 
 Do NOT use for simple 1-2 read tasks that can be done directly with grep/view. Do NOT use for tasks that dont need delegation at all.
-
 
 ## Workflow Diagram
 
@@ -99,7 +97,6 @@ Constraints: <read-only/edit/validation limits>
 Return: <exact output fields>
 ```
 
-
 ## Parallel vs Sequential Decision Tree
 
 ```mermaid
@@ -116,11 +113,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```text
 Task: look into the multithreading stuff and tell me what you find.
 ```
 
 **After:**
+
 ```text
 Role: boundary-mapper
 Task: identify all public surfaces in src/multithreading that cross the worker boundary

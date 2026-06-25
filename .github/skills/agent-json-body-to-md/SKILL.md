@@ -25,11 +25,9 @@ It exists because many agent descriptions ship as a single raw JSON object (with
 - An existing agent is being rewritten and the body should be re-emitted as Markdown for reviewability.
 - The conversion needs to be re-run after the JSON body changes (e.g. constraints, flow steps, or recovery rules were updated).
 
-
 ## When NOT to use
 
 Do NOT use for agents already in markdown format - this skill is only for JSON-body to markdown conversion.
-
 
 ## Workflow Diagram
 
@@ -122,19 +120,28 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```json
-{"mission":"Plan work","constraints":["Stay in scope"],"default_flow":["Read plan","Decompose"]}
+{
+  "mission": "Plan work",
+  "constraints": ["Stay in scope"],
+  "default_flow": ["Read plan", "Decompose"]
+}
 ```
 
 **After:**
+
 ```markdown
 ## Mission
+
 Plan work
 
 ## Constraints
+
 - Stay in scope
 
 ## Default Flow
+
 - Read plan
 - Decompose
 ```

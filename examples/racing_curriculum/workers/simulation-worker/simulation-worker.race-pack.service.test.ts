@@ -10,6 +10,7 @@
 import {
   createDeterministicRacePack,
   resolveRaceStepTransferList,
+  createRaceEpisodeRunner,
 } from './simulation-worker.race-pack.service';
 
 describe('simulation-worker.race-pack.service module exports', () => {
@@ -53,6 +54,12 @@ describe('simulation-worker.race-pack.service module exports', () => {
       const transferList = resolveRaceStepTransferList(frame);
 
       expect(Array.isArray(transferList)).toBe(true);
+    });
+  });
+
+  describe('createRaceEpisodeRunner', () => {
+    it('is exported as a function', () => {
+      expect(typeof createRaceEpisodeRunner).toBe('function');
     });
   });
 });

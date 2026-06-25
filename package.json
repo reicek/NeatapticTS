@@ -91,6 +91,8 @@
     "docs:folders:asciiMaze": "npm run docs:build-scripts && npm run docs:folders:asciiMaze:built",
     "docs:folders:flappy-bird:built": "node ./dist-docs/scripts/generate-docs/generate-docs.js --target=flappy-bird",
     "docs:folders:flappy-bird": "npm run docs:build-scripts && npm run docs:folders:flappy-bird:built",
+    "docs:folders:racing-curriculum:built": "node ./dist-docs/scripts/generate-docs/generate-docs.js --target=racing-curriculum",
+    "docs:folders:racing-curriculum": "npm run docs:build-scripts && npm run docs:folders:racing-curriculum:built",
     "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/run-docs.js folders",
     "docs:html:built": "node ./dist-docs/scripts/render-docs-html.js",
     "docs:html": "npm run docs:build-scripts && npm run docs:html:built",

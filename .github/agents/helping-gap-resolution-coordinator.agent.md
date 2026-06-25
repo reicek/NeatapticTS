@@ -96,14 +96,14 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 Map each gap type to its resolution pattern before performing the repair. Each pattern names the auditor to invoke first and the minimum safe repair.
 
-| Gap type | Signal | First auditor | Minimum safe repair |
-| --- | --- | --- | --- |
-| **Missing specialist** | An SDLC agent needs a capability no Tier 3 scout provides. | `skill-inventory-auditor` (confirm none exists) | Scaffold a new specialist stub via `creating-specialist-agent`; add it to the routing allow-list; do not duplicate an existing scout. |
-| **Weak skill** | A skill exists but lacks the coverage or decision tree the workflow needs. | `skill-frontmatter-auditor` | Tighten the skill's scope or add the missing decision tree; do not fork a parallel skill. |
-| **Malformed output contract** | An agent's structured-v1 block is missing required fields or drifts from the contract. | `agent-frontmatter-auditor` | Correct the frontmatter and output block; re-run `validate-agent-frontmatter`. |
-| **Routing gap** | A delegation path references an agent not in the allow-list, or the routing table is stale. | `skill-inventory-auditor` + `mcp-runtime-scout` | Add the missing routing entry or regenerate the routing table; verify runtime triggers with `mcp-runtime-scout`. |
-| **Model-routing issue** | A model string is unqualified, outdated, or exceeds budget. | `model-name-auditor` | Correct the model string to a qualified name; confirm budget compliance. |
-| **Repeated ad hoc pattern** | The same prompt workaround recurs across sessions. | `learning-event-capturer` | Capture the pattern as a learning event; route to `helping-agent-maintenance-coordinator` if a durable skill update is warranted. |
+| Gap type                      | Signal                                                                                      | First auditor                                   | Minimum safe repair                                                                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Missing specialist**        | An SDLC agent needs a capability no Tier 3 scout provides.                                  | `skill-inventory-auditor` (confirm none exists) | Scaffold a new specialist stub via `creating-specialist-agent`; add it to the routing allow-list; do not duplicate an existing scout. |
+| **Weak skill**                | A skill exists but lacks the coverage or decision tree the workflow needs.                  | `skill-frontmatter-auditor`                     | Tighten the skill's scope or add the missing decision tree; do not fork a parallel skill.                                             |
+| **Malformed output contract** | An agent's structured-v1 block is missing required fields or drifts from the contract.      | `agent-frontmatter-auditor`                     | Correct the frontmatter and output block; re-run `validate-agent-frontmatter`.                                                        |
+| **Routing gap**               | A delegation path references an agent not in the allow-list, or the routing table is stale. | `skill-inventory-auditor` + `mcp-runtime-scout` | Add the missing routing entry or regenerate the routing table; verify runtime triggers with `mcp-runtime-scout`.                      |
+| **Model-routing issue**       | A model string is unqualified, outdated, or exceeds budget.                                 | `model-name-auditor`                            | Correct the model string to a qualified name; confirm budget compliance.                                                              |
+| **Repeated ad hoc pattern**   | The same prompt workaround recurs across sessions.                                          | `learning-event-capturer`                       | Capture the pattern as a learning event; route to `helping-agent-maintenance-coordinator` if a durable skill update is warranted.     |
 
 - Always confirm with the named auditor before editing. Never repair a gap the auditor has not validated.
 - Keep repairs minimal: correct one field, add one routing entry, or scaffold one stub. Do not opportunistically refactor adjacent agents.

@@ -26,10 +26,7 @@ import {
   printHelp,
   writeJsonOrText,
 } from './cli-utils.mjs';
-import {
-  DEFAULT_MODEL_DIRECTORY,
-  DEFAULT_MODEL_ID,
-} from './embed-index.mjs';
+import { DEFAULT_MODEL_DIRECTORY, DEFAULT_MODEL_ID } from './embed-index.mjs';
 import { defaultDatabasePath } from './init-schema.mjs';
 import { validateEmbeddings } from './validate-embeddings.mjs';
 

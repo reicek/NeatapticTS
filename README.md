@@ -78,7 +78,7 @@ The project gives you:
 - **Rich telemetry** — per-generation diversity, species history, Pareto fronts, novelty tracking.
 - **Worker-backed evaluation** — parallel genome scoring for Node and browser environments.
 - **ONNX export** — trained networks portable to ONNX-compatible inference runtimes.
-- **Educational examples** — two full examples (Flappy Bird, ASCII Maze) that teach architecture choices rather than hiding them.
+- **Educational examples** — three full examples (Flappy Bird, ASCII Maze, Racing Curriculum) that teach architecture choices rather than hiding them.
 
 ---
 

@@ -26,7 +26,12 @@ async function teardownDb(client, tempDir) {
   await client.close();
   // In-memory databases need no directory cleanup; tempDir is null.
   if (tempDir !== null) {
-    await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
   }
 }
 
@@ -337,9 +342,8 @@ describe('feedback-core', () => {
     });
 
     it.skip('applies exponential time decay with 7-day half-life during recompute', async () => {
-      const { recordFeedbackEventAsync, recomputeAllFeedbackScores } = await import(
-        modulePath
-      );
+      const { recordFeedbackEventAsync, recomputeAllFeedbackScores } =
+        await import(modulePath);
       const { client, tempDir } = await setupDb();
       try {
         const chunkId = await insertDocumentAndChunk(client);
@@ -417,9 +421,8 @@ describe('feedback-core', () => {
     });
 
     it.skip('applies impression decay during full recompute for low-CTR chunks', async () => {
-      const { recordFeedbackEventAsync, recomputeAllFeedbackScores } = await import(
-        modulePath
-      );
+      const { recordFeedbackEventAsync, recomputeAllFeedbackScores } =
+        await import(modulePath);
       const { client, tempDir } = await setupDb();
       try {
         const chunkId = await insertDocumentAndChunk(client);
@@ -496,9 +499,8 @@ describe('feedback-core', () => {
 
   describe('updateFeedbackScores', () => {
     it('updates scores with negative events', async () => {
-      const { recordFeedbackEventAsync, updateFeedbackScoresAsync } = await import(
-        modulePath
-      );
+      const { recordFeedbackEventAsync, updateFeedbackScoresAsync } =
+        await import(modulePath);
       const { client, tempDir } = await setupDb();
       try {
         const chunkId = await insertDocumentAndChunk(client);
@@ -547,9 +549,8 @@ describe('feedback-core', () => {
     });
 
     it('applies time decay from numeric created_at timestamps', async () => {
-      const { recordFeedbackEventAsync, updateFeedbackScoresAsync } = await import(
-        modulePath
-      );
+      const { recordFeedbackEventAsync, updateFeedbackScoresAsync } =
+        await import(modulePath);
       const { client, tempDir } = await setupDb();
       try {
         const chunkId = await insertDocumentAndChunk(client);
@@ -569,9 +570,8 @@ describe('feedback-core', () => {
     });
 
     it('falls back to 0 for unparseable created_at strings', async () => {
-      const { recordFeedbackEventAsync, updateFeedbackScoresAsync } = await import(
-        modulePath
-      );
+      const { recordFeedbackEventAsync, updateFeedbackScoresAsync } =
+        await import(modulePath);
       const { client, tempDir } = await setupDb();
       try {
         const chunkId = await insertDocumentAndChunk(client);
@@ -593,9 +593,8 @@ describe('feedback-core', () => {
     });
 
     it('uses the current time when now is omitted', async () => {
-      const { recordFeedbackEventAsync, updateFeedbackScoresAsync } = await import(
-        modulePath
-      );
+      const { recordFeedbackEventAsync, updateFeedbackScoresAsync } =
+        await import(modulePath);
       const { client, tempDir } = await setupDb();
       try {
         const chunkId = await insertDocumentAndChunk(client);
@@ -612,9 +611,8 @@ describe('feedback-core', () => {
     });
 
     it.skip('recomputes all scores using the current time when now is omitted', async () => {
-      const { recordFeedbackEventAsync, recomputeAllFeedbackScores } = await import(
-        modulePath
-      );
+      const { recordFeedbackEventAsync, recomputeAllFeedbackScores } =
+        await import(modulePath);
       const { client, tempDir } = await setupDb();
       try {
         const chunkId = await insertDocumentAndChunk(client);

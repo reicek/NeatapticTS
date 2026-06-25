@@ -58,11 +58,9 @@ Do **not** use this skill for:
 - test-only changes without production code (use `coverage-tranche` or `test-fix-workflow`),
 - planning or roadmap alignment (use `plan-alignment`).
 
-
 ## When NOT to use
 
 Do NOT use for scripts or config files - use standard lint and build commands instead. Do NOT use for test-only changes - use `creating-unit-tests` or `coverage-tranche` instead.
-
 
 ## Workflow Diagram
 

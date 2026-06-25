@@ -26,11 +26,9 @@ This skill appends a structured, append-only learning evidence record to `.githu
 - Closing a session and needing to record what changed so the next session can resume without re-diagnosing.
 - Preparing validation evidence for an agent-system audit.
 
-
 ## When NOT to use
 
 Do NOT use for routine validation passes - use `green-validation-gates` instead. Do NOT use for plan tracking - use `tracker-handoff` instead.
-
 
 ## Workflow Diagram
 
@@ -93,7 +91,6 @@ Schema:
 }
 ```
 
-
 ## Why This Matters
 
 The learning event log creates an ISO-42001-style evidence trail for workflow improvements. Without it, the same workflow gaps recur across sessions because there is no durable record of what was discovered and fixed. Each event type (routing, skill, model, output contract) represents a different class of system improvement that future sessions should inherit rather than rediscover.
@@ -123,13 +120,26 @@ flowchart TD
 ## Before / After Examples
 
 **Before (vague log entry):**
+
 ```json
-{"eventType": "routing", "gap": "something broke", "resolution": "fixed it"}
+{ "eventType": "routing", "gap": "something broke", "resolution": "fixed it" }
 ```
 
 **After (structured log entry):**
+
 ```json
-{"timestamp": "2026-06-20T21:43:58Z", "eventType": "routing-update", "triggeringTask": "delegate to new specialist", "gap": "new specialist missing from routing table", "resolution": "added specialist to allow-list and regenerated table", "filesChanged": [".github/agent-skill-routing-table.md"], "agentsAffected": ["04-implementing"], "skillsAffected": ["execute"], "confirmation": "user-confirmed", "resumeAction": "re-dispatch the original task"}
+{
+  "timestamp": "2026-06-20T21:43:58Z",
+  "eventType": "routing-update",
+  "triggeringTask": "delegate to new specialist",
+  "gap": "new specialist missing from routing table",
+  "resolution": "added specialist to allow-list and regenerated table",
+  "filesChanged": [".github/agent-skill-routing-table.md"],
+  "agentsAffected": ["04-implementing"],
+  "skillsAffected": ["execute"],
+  "confirmation": "user-confirmed",
+  "resumeAction": "re-dispatch the original task"
+}
 ```
 
 ## Guardrails

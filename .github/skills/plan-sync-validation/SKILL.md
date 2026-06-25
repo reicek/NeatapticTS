@@ -35,11 +35,9 @@ shape or closure rules are needed, `tracker-handoff` is the canonical skill.
 - A flow gate declares a `plan-sync` check and it must return `"pass": true`
   before the flow step can close.
 
-
 ## When NOT to use
 
 Do NOT use for plan alignment or selection - use `plan-alignment` instead. Do NOT use for tracker updates - use `tracker-handoff` instead.
-
 
 ## Workflow Diagram
 
@@ -124,6 +122,7 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```text
 # In plans/README.md (stale)
 - **Flappy Visualization** — [WIP] — trigger: flappy viz
@@ -133,6 +132,7 @@ flowchart TD
 ```
 
 **After:**
+
 ```text
 # In plans/README.md (corrected)
 - **Flappy Visualization** — [DONE] — trigger: flappy viz

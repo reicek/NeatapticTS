@@ -28,7 +28,10 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { defaultDatabasePath } from '../../semantic-index/init-schema.mjs';
+import {
+  defaultDatabasePath,
+  repoRoot,
+} from '../../semantic-index/init-schema.mjs';
 
 const MODULE_PATH = '../tools/cortex-db.mjs';
 
@@ -275,5 +278,16 @@ describe('normalizeRepoPath (unchanged pure logic)', () => {
   it('rejects path traversal attempts', async () => {
     const { normalizeRepoPath } = await loadModule();
     expect(() => normalizeRepoPath('../../etc/passwd')).toThrow();
+  });
+
+  it('accepts the absolute repository root and returns "."', async () => {
+    const { normalizeRepoPath } = await loadModule();
+    expect(normalizeRepoPath(repoRoot)).toBe('.');
+  });
+
+  it('accepts an absolute file inside the repository and returns a repo-relative path', async () => {
+    const { normalizeRepoPath } = await loadModule();
+    const absoluteFilePath = path.join(repoRoot, 'README.md');
+    expect(normalizeRepoPath(absoluteFilePath)).toBe('README.md');
   });
 });

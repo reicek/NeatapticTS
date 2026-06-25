@@ -456,15 +456,11 @@ async function main() {
     return;
   }
 
-  const result = await buildTermEmbeddings(
-    corpusDatabase,
-    qualifyingTerms,
-    {
-      modelId,
-      modelSha256,
-      dimension,
-    },
-  );
+  const result = await buildTermEmbeddings(corpusDatabase, qualifyingTerms, {
+    modelId,
+    modelSha256,
+    dimension,
+  });
 
   await corpusDatabase.close();
 

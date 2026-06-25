@@ -89,13 +89,13 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 Classify every identified risk against these five categories before reporting. Each risk must name its category, severity (low/medium/high), and the smallest safe mitigation.
 
-| Category | Question to answer | Severity signal |
-| --- | --- | --- |
-| **Ambiguity** | Is the plan boundary, owner, or acceptance criteria underspecified? | High when multiple plausible interpretations remain after applying the source-of-truth order. |
-| **Blast radius** | How many files, modules, or consumers does the change touch? | High when the change crosses module boundaries or affects public API surface. |
-| **Reversibility** | Can the change be rolled back cleanly without history rewrites? | High when rollback requires manual state repair or loses unrelated edits. |
-| **Dependency risk** | Does the change add, upgrade, or couple to external dependencies? | High when a new runtime dependency, ONNX operator, or copied algorithm is introduced. |
-| **Model-budget risk** | Does the change affect model routing strings or token budgets? | High when a model string is unqualified or a budget ceiling is exceeded. |
+| Category              | Question to answer                                                  | Severity signal                                                                               |
+| --------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Ambiguity**         | Is the plan boundary, owner, or acceptance criteria underspecified? | High when multiple plausible interpretations remain after applying the source-of-truth order. |
+| **Blast radius**      | How many files, modules, or consumers does the change touch?        | High when the change crosses module boundaries or affects public API surface.                 |
+| **Reversibility**     | Can the change be rolled back cleanly without history rewrites?     | High when rollback requires manual state repair or loses unrelated edits.                     |
+| **Dependency risk**   | Does the change add, upgrade, or couple to external dependencies?   | High when a new runtime dependency, ONNX operator, or copied algorithm is introduced.         |
+| **Model-budget risk** | Does the change affect model routing strings or token budgets?      | High when a model string is unqualified or a budget ceiling is exceeded.                      |
 
 - Report each risk as a separate `RISKS_OR_GAPS` entry tagged with its category.
 - When a risk spans multiple categories, lead with the highest-severity category and note the secondary.

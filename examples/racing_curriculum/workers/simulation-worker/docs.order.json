@@ -1,0 +1,16 @@
+{
+  "introFile": "simulation-worker.evolution.protocol.service.ts",
+  "fileOrder": [
+    "simulation-worker.evolution.protocol.service.ts",
+    "simulation-worker.evolution.types.ts",
+    "simulation-worker.coevolution.service.ts",
+    "simulation-worker.opponent-snapshot.service.ts",
+    "simulation-worker.race-pack.service.ts",
+    "simulation-worker.snapshot.utils.ts",
+    "simulation-worker.evaluation-pack.normalizer.ts",
+    "simulation-worker.types.ts",
+    "simulation-worker.tier3.ts",
+    "simulation-worker.tier4.ts",
+    "simulation-worker.tier5.ts"
+  ]
+}

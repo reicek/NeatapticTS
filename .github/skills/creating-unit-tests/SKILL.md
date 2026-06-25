@@ -25,11 +25,9 @@ This skill writes the smallest test that proves a specific behavior in the Neata
 - Expanding coverage for a specific file to reach 100% as part of a coverage tranche.
 - Writing a regression test for a bug that was fixed so it cannot silently recur.
 
-
 ## When NOT to use
 
 Do NOT use for red test contract design - use `red-test-contracts` instead. Do NOT use for coverage gap analysis - use `coverage-tranche` instead.
-
 
 ## Workflow Diagram
 
@@ -69,7 +67,6 @@ Focused command: npx jest --config=jest.config.mjs --no-cache --testPathPattern=
 8. Do not run the full suite until the focused test is in the expected state and the user or active step packet explicitly requires a repo-wide run.
 9. Report the command run, exit status, and the expected red/green state.
 
-
 ## Why the Single-Expect Rule Exists
 
 The single-expect rule ensures each test block validates one observable behavior. When multiple assertions share an `it()` block, a failure in the first assertion masks failures in subsequent ones, making debugging harder. Group by scenario, not by assertion count - each `it()` should answer one question.
@@ -77,15 +74,17 @@ The single-expect rule ensures each test block validates one observable behavior
 ## Test Pattern Examples
 
 **AAA (Arrange-Act-Assert):**
+
 ```ts
 it('returns sorted array', () => {
-  const input = [3, 1, 2];        // Arrange
+  const input = [3, 1, 2]; // Arrange
   const result = input.toSorted(); // Act
   expect(result).toEqual([1, 2, 3]); // Assert
 });
 ```
 
 **Single-expect:**
+
 ```ts
 it('does not mutate the original array', () => {
   const original = [3, 1, 2];
@@ -95,6 +94,7 @@ it('does not mutate the original array', () => {
 ```
 
 **Owner-local (use nearest existing test file):**
+
 ```ts
 // In testing/architecture/network/builders/gru.test.ts
 it('produces deterministic output under fixed seed', () => {
@@ -122,6 +122,7 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```ts
 it('works', () => {
   const a = buildGRU({ units: 4, seed: 1 });
@@ -134,6 +135,7 @@ it('works', () => {
 ```
 
 **After:**
+
 ```ts
 // Shared fixture extracted to module-level helper
 const makeGRU = () => buildGRU({ units: 4, seed: 1 });

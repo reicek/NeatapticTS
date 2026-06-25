@@ -41,7 +41,7 @@
  *     "syncEvent": {
  *       "currentWipStep": "Phase N Step MM",
  *       "nextPlannedStep": "Phase N Step MM+1" | null,
- *       "actionTaken": "advanced"|"already-in-sync"|"verified"|"phase-complete"|"blocked",
+ *       "actionTaken": "advanced"|"already-in-sync"|"verified"|"phase-complete"|"between-steps"|"blocked",
  *       "reason": "...",
  *       "downstreamTrackers": ["plans/Linked_Tracker.md", ...]
  *     },
@@ -210,6 +210,49 @@ function extractPhaseSteps(text) {
 }
 
 /**
+ * Extract phase headers and their status markers.
+ *
+ * Returns an array of `{ phase, title, status, lineNumber, originalLine }`
+ * for every line matching `### Phase N — Title [STATUS]`.
+ */
+function extractPhaseStatuses(text) {
+  const lines = text.split('\n');
+  const phases = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(
+      /^###\s+Phase\s+(\d+|[A-Z])\s+(?:—|-)\s+(.+)\s\[([A-Z]+)\]/,
+    );
+    if (match) {
+      phases.push({
+        phase: match[1],
+        title: match[2].trim(),
+        status: match[3],
+        lineNumber: i + 1,
+        originalLine: line,
+      });
+    }
+  }
+
+  return phases;
+}
+
+/**
+ * Find the phase that is currently marked [WIP].
+ */
+function findWipPhase(phaseStatuses) {
+  return phaseStatuses.find((p) => p.status === 'WIP') || null;
+}
+
+/**
+ * Find the first [PLANNED] step inside a specific phase.
+ */
+function findNextPlannedStepInPhase(steps, phase) {
+  return steps.find((s) => s.phase === phase && s.status === 'PLANNED') || null;
+}
+
+/**
  * Find the current [WIP] step in the plan.
  */
 function findCurrentWipStep(steps) {
@@ -232,7 +275,6 @@ function findNextPlannedStep(steps, currentWip) {
     ) || null
   );
 }
-
 // ============================================================================
 // Plan Sync Logic
 // ============================================================================
@@ -242,13 +284,22 @@ function findNextPlannedStep(steps, currentWip) {
  * - "advanced": advance nextPlanned → [WIP], currentWip → [DONE]
  * - "already-in-sync": current step matches expected state
  * - "phase-complete": no next step exists in the current phase
- * - "blocked": condition not met (e.g., no current [WIP] step)
+ * - "between-steps": the active phase is [WIP] but no step is [WIP]
+ * - "blocked": condition not met (e.g., no current [WIP] step or phase)
  */
-function determineSyncAction(currentWip, nextPlanned) {
+function determineSyncAction(currentWip, nextPlanned, wipPhase) {
+  if (!currentWip && wipPhase) {
+    return {
+      action: 'between-steps',
+      reason: `Phase ${wipPhase.phase} is [WIP] but no step is currently [WIP]; the plan is between steps and awaiting the next step to become active.`,
+    };
+  }
+
   if (!currentWip) {
     return {
       action: 'blocked',
-      reason: 'No [WIP] step found in plan. Cannot determine sync state.',
+      reason:
+        'No [WIP] step or [WIP] phase found in plan. Cannot determine sync state.',
     };
   }
 
@@ -266,12 +317,19 @@ function determineSyncAction(currentWip, nextPlanned) {
   };
 }
 
-function determineHookCheckAction(currentWip, nextPlanned) {
+function determineHookCheckAction(currentWip, nextPlanned, wipPhase) {
+  if (!currentWip && wipPhase) {
+    return {
+      action: 'between-steps',
+      reason: `Phase ${wipPhase.phase} is [WIP] but no step is currently [WIP]; hook integrity verified at a phase boundary between steps.`,
+    };
+  }
+
   if (!currentWip) {
     return {
       action: 'blocked',
       reason:
-        'No [WIP] step found in plan. Cannot verify hook-bound workflow state.',
+        'No [WIP] step or [WIP] phase found in plan. Cannot verify hook-bound workflow state.',
     };
   }
 
@@ -461,13 +519,21 @@ Options:
 
     // Extract phase/step entries
     const allSteps = extractPhaseSteps(planText);
+    const phaseStatuses = extractPhaseStatuses(planText);
+    const wipPhase = findWipPhase(phaseStatuses);
     const currentWip = findCurrentWipStep(allSteps);
-    const nextPlanned = findNextPlannedStep(allSteps, currentWip);
+    let nextPlanned = findNextPlannedStep(allSteps, currentWip);
+
+    // If a phase is [WIP] but no step is [WIP], the plan is between steps.
+    // Surface the next [PLANNED] step in that phase for handoff visibility.
+    if (!currentWip && wipPhase) {
+      nextPlanned = findNextPlannedStepInPhase(allSteps, wipPhase.phase);
+    }
 
     // Determine action
     const { action, reason } = options.hookCheck
-      ? determineHookCheckAction(currentWip, nextPlanned)
-      : determineSyncAction(currentWip, nextPlanned);
+      ? determineHookCheckAction(currentWip, nextPlanned, wipPhase)
+      : determineSyncAction(currentWip, nextPlanned, wipPhase);
 
     let syncEvent = {
       currentWipStep: currentWip
@@ -511,6 +577,8 @@ Options:
       evidence = reason;
     } else if (action === 'phase-complete') {
       evidence = `Workflow sync reached a phase boundary: ${reason}`;
+    } else if (action === 'between-steps') {
+      evidence = `Workflow sync between steps: ${reason}`;
     } else {
       evidence = `Workflow sync blocked: ${reason}`;
     }

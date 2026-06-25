@@ -2,6 +2,10 @@ import type { EnvironmentState } from '../environment/environment.types';
 import { generateTrack } from '../track/track.generator';
 import type { TrackSpec } from '../track/track.generator.types';
 import {
+  buildTrackSplineSamples,
+  resolveSplineSampleFrame,
+} from '../track/track.spline.utils';
+import {
   BOUNDARY_DISTANCE_WORLD_SCALE,
   DISTANCE_WORLD_SCALE,
   createCurvedTrackSpec,
@@ -198,6 +202,67 @@ describe('observation.assembler', () => {
     });
   });
 });
+
+describe('assembleNormalizedObservationVector inner-lane optimal line', () => {
+  it('reports near-zero optimal-line offset for a car on the inner-lane centerline', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const focalSampleIndex = 2;
+    const focalSample = trackSpec.splineSamples[focalSampleIndex]!;
+    const frame = resolveSplineSampleFrame(
+      trackSpec.splineSamples,
+      focalSample.globalIndex,
+    );
+    const laneCount = 2;
+    const laneWidthWorld = focalSample.width / laneCount;
+    const innerOffsetWorld = focalSample.width / 2 - laneWidthWorld / 2;
+    const envState = createExpandedEnvironmentState({
+      carX: focalSample.x + frame.normalX * innerOffsetWorld,
+      carY: focalSample.y + frame.normalY * innerOffsetWorld,
+      carHeading: frame.tangentHeadingRadians,
+      boundaryDistanceLeftWorld: undefined,
+      boundaryDistanceRightWorld: undefined,
+      optimalLineLateralOffsetWorld: undefined,
+      optimalLineHeadingErrorRadians: undefined,
+    });
+
+    await expect(
+      loadObservationAssemblerModule().then(
+        ({ assembleNormalizedObservationVector }) => {
+          const observationVector = Array.from(
+            assembleNormalizedObservationVector(envState, trackSpec, {
+              tier: 1,
+            }),
+          );
+
+          return {
+            channel16: observationVector[16] ?? 0,
+            channel17: observationVector[17] ?? 0,
+          };
+        },
+      ),
+    ).resolves.toEqual({
+      channel16: expect.closeTo(0, 2),
+      channel17: expect.closeTo(0, 2),
+    });
+  });
+});
+
+function createStraightTrackSpec(): TrackSpec {
+  const segments = [
+    { startX: 0, startY: 0, endX: 100, endY: 0, width: 24 },
+    { startX: 100, startY: 0, endX: 100, endY: 100, width: 24 },
+    { startX: 100, startY: 100, endX: 0, endY: 100, width: 24 },
+    { startX: 0, startY: 100, endX: 0, endY: 0, width: 24 },
+  ];
+
+  return {
+    seed: 1,
+    layoutVersion: 1,
+    sizeBucket: 'straight-red',
+    segments,
+    splineSamples: [...buildTrackSplineSamples(segments)],
+  };
+}
 
 type ExpandedEnvironmentState = EnvironmentState & {
   forwardSpeedWorld?: number;

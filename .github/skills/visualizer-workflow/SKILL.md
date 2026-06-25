@@ -42,7 +42,6 @@ When the task changes roadmap-sensitive architecture/runtime semantics,
 - Opacity or blend behavior harms readability of labels, glyphs, or overlays.
 - Responsive breakpoints collapse useful visual density too early.
 
-
 ## When NOT to use
 
 Do NOT use for documentation generation - use `educational-docs` instead. Do NOT use for performance profiling - use `chrome-devtools-mcp` instead.
@@ -57,7 +56,6 @@ This skill owns visualizer behavior and presentation for:
 - parity passes between sibling demo visualizers.
 
 This skill does not replace `educational-docs` for long-form teaching docs.
-
 
 ## Workflow Diagram
 
@@ -149,16 +147,26 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```css
 /* cramped canvas: fixed width, no overflow handling */
-canvas { width: 400px; overflow: hidden; }
+canvas {
+  width: 400px;
+  overflow: hidden;
+}
 ```
 
 **After:**
+
 ```css
 /* responsive layout: fills container, horizontal scroll for wide lines */
-.panel { width: 100%; overflow-x: auto; }
-canvas { width: 100%; }
+.panel {
+  width: 100%;
+  overflow-x: auto;
+}
+canvas {
+  width: 100%;
+}
 ```
 
 ## Visualizer Guardrails

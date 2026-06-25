@@ -28,10 +28,13 @@ import { normalizeRepoPath, getTursoClient } from './cortex-db.mjs';
  * @throws {Error} When a specific `file_path` is not found in the index.
  */
 export async function freshnessCheck(options = {}) {
-  const filePath =
+  let filePath =
     typeof options.file_path === 'string' && options.file_path.trim()
       ? normalizeRepoPath(options.file_path)
       : null;
+  if (filePath === '.' || filePath === '') {
+    filePath = null;
+  }
   const client = options.client ?? (await getTursoClient(options.databasePath));
 
   const result = filePath

@@ -25,11 +25,9 @@ This skill interprets failing validation output and assigns ownership to each fa
 - Deciding whether to proceed with a fix, skip a pre-existing failure, or escalate to a different skill.
 - An environment-owned failure (flaky test, missing dependency, port conflict) needs to be separated from a code defect.
 
-
 ## When NOT to use
 
 Do NOT use for fixing tests - use `test-fix-workflow` after triage. Do NOT use for running tests - use `running-unit-tests` instead.
-
 
 ## Workflow Diagram
 
@@ -77,10 +75,10 @@ Environment factor: <none | possible port conflict | missing build artifact | fl
 8. Recommend the next agent or command — do not attempt a broad fix within this skill.
 9. Preserve raw evidence as concise command/result snippets; do not paste full stack traces.
 
-
 ## Concrete Failure Classification Examples
 
 **Assertion mismatch:**
+
 ```text
 Expected: [1, 2, 3]
 Received: [3, 1, 2]
@@ -89,6 +87,7 @@ Owner: src/utils/sort.ts
 ```
 
 **Import error:**
+
 ```text
 Cannot find module ./network.js
 Classification: missing .js extension in ESM import
@@ -96,6 +95,7 @@ Owner: import statement in source file
 ```
 
 **Timeout:**
+
 ```text
 Test exceeded 5000ms timeout
 Classification: async operation not awaited or infinite loop
@@ -105,11 +105,13 @@ Owner: test file or source async path
 ## Before / After Examples
 
 **Before (vague):**
+
 ```text
 Tests are failing. Something about sort and maybe imports. Not sure which ones are ours.
 ```
 
 **After (structured):**
+
 ```text
 Failing: sort.test.ts › "returns sorted array" → active-change, owner: src/utils/sort.ts
 Failing: network.test.ts › "loads config" → pre-existing, unrelated to active change

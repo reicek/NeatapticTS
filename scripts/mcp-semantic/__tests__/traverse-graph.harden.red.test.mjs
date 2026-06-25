@@ -50,7 +50,12 @@ async function setupDb() {
 
 async function teardown(client, tempDir) {
   await client.close();
-  await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  await rm(tempDir, {
+    recursive: true,
+    force: true,
+    maxRetries: 10,
+    retryDelay: 200,
+  });
 }
 
 describe('traverse-graph hardened', () => {

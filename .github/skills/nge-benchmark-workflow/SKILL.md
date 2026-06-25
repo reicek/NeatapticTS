@@ -107,11 +107,9 @@ boundaries.
 - Validating whether role differentiation or collective behavior is actually
   observable.
 
-
 ## When NOT to use
 
 Do NOT use for core algorithm work - use `nge-core-algorithm` instead. Do NOT use for general performance optimization - use `performance-optimization` instead.
-
 
 ## Workflow Diagram
 
@@ -232,11 +230,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```text
 opponent: latestPopulation // undefined fairness, live opponent each gen
 ```
 
 **After:**
+
 ```text
 opponent: rollingSnapshot(generation - 10) // frozen snapshot, deterministic seed pack
 ```

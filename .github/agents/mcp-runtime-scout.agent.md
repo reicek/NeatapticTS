@@ -67,7 +67,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 - **Static vs live:** Distinguish facts that are static (embedded in agent frontmatter, skill definitions, or configuration files) from facts that are live (only knowable at runtime by querying MCP servers). Static facts can be verified by reading files. Live facts require MCP tool invocation.
 - **Repository-static vs client bridge:** Distinguish facts about the repository's own MCP servers (defined in `scripts/`, `package.json`, or config) from facts about the client bridge (how Claude Code or VS Code connects to MCP servers). Repository-static facts are verifiable from repo files. Client bridge facts may require external documentation.
-- **Available vs active:** Distinguish which MCP servers are *available* (configured and ready) from which are *active* (currently running and responding). Available servers may not be active if not started or if the client hasn't connected.
+- **Available vs active:** Distinguish which MCP servers are _available_ (configured and ready) from which are _active_ (currently running and responding). Available servers may not be active if not started or if the client hasn't connected.
 - **Model name verification:** Verify model names reported by MCP servers against the qualified model name table. Flag unqualified, deprecated, or hallucinated model names.
 
 ## If Blocked

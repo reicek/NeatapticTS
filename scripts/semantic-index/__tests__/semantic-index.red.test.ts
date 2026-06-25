@@ -96,7 +96,12 @@ describe('semantic-index red contracts', () => {
         const proof = await getFreshnessProof(${JSON.stringify(fixturePath)});
         console.log(JSON.stringify(proof));
       `);
-      await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+      await rm(fixtureDirectory, {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 200,
+      });
 
       expect(proof).toEqual(expectedProof);
     });
@@ -186,7 +191,12 @@ describe('semantic-index red contracts', () => {
 
         console.log(JSON.stringify({ firstSummary, secondSummary, counts: { documents, chunks, ftsRows } }));
       `);
-      await rm(fixtureDirectory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+      await rm(fixtureDirectory, {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 200,
+      });
 
       expect(deletionCleanup).toEqual({
         firstSummary: expect.objectContaining({

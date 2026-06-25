@@ -24,11 +24,9 @@ This skill scaffolds new hidden specialist or auxiliary `.agent.md` files in the
 - Building a before/after split where the new agent takes over one responsibility from an existing overloaded agent.
 - Preparing a companion agent that performs read-only recon and hands off to a skill.
 
-
 ## When NOT to use
 
 Do NOT use for splitting an existing monolithic agent - use `splitting-monolithic-agent` instead. Do NOT use for skill creation - skills and agents are different customization types.
-
 
 ## Workflow Diagram
 
@@ -73,10 +71,10 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 9. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` to confirm frontmatter correctness.
 10. Run `node scripts/agent-customization/validate-agent-graph.mjs --json` to confirm the delegation edge is correctly registered.
 
-
 ## Before/After Example
 
 **Before (vague agent scope):**
+
 ```yaml
 ---
 name: helper
@@ -86,6 +84,7 @@ tier: 3
 ```
 
 **After (precise specialist scope):**
+
 ```yaml
 ---
 name: coverage-scout

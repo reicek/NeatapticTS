@@ -35,6 +35,26 @@ describe('runtime enforcement hook path', () => {
     await rm(TEST_CONTEXT_PATH, { force: true });
   });
 
+  beforeAll(() => {
+    // The hook also invokes the cortex-first-search gate, which fails when the
+    // semantic index is stale. Refresh the index once so these enforcement tests
+    // are self-contained and not coupled to the environment's index state.
+    const refreshResult = spawnSync(
+      process.execPath,
+      ['scripts/semantic-index/session-start-index.mjs'],
+      {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+        timeout: 120000,
+      },
+    );
+    if (refreshResult.status !== 0) {
+      throw new Error(
+        `Session-start index refresh failed before runtime hook tests:\n${refreshResult.stderr || refreshResult.stdout}`,
+      );
+    }
+  });
+
   it('blocks a strict write action when no prepared runtime proof exists', () => {
     const hookResult = spawnSync(process.execPath, [PRETOOL_HOOK_PATH], {
       cwd: REPO_ROOT,
@@ -46,7 +66,6 @@ describe('runtime enforcement hook path', () => {
       input: EDIT_HOOK_INPUT,
       timeout: 120000,
     });
-
     expect(
       hookResult.status === 2 &&
         hookResult.stderr.includes(
@@ -108,7 +127,7 @@ describe('runtime enforcement hook path', () => {
         '--delegator-chain=01-planning,04-implementing',
         '--required-skills=plan-alignment',
         '--required-specialists=',
-        '--plan=plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md',
+        '--plan=plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md',
         '--phase=3',
         '--step=3',
         '--tool-name=edit',

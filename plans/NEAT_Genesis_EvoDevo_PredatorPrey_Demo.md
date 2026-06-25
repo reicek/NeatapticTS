@@ -1049,7 +1049,7 @@ step packets (Steps 02-07) and confirm the smallest honest first implementation 
   an explicit narrowed honest boundary (e.g., environment-only scaffolding) is selected.
 - This plan is a prerequisite for `plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md`; the maze
   infrastructure (`examples/predator_prey/maze/`) will be reused there.
-- `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` is a peer plan (not a prerequisite for this
+- `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md` is a peer plan (not a prerequisite for this
   one) and remains [PLANNED].
 
 **Execution steps:**
@@ -1109,7 +1109,7 @@ Current NGE workstream state:
   (independent gene pools, species tracking).
 - plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md is downstream of this plan and cannot start before
   the maze infrastructure (examples/predator_prey/maze/) is implemented here.
-- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md is a peer plan (not a prerequisite for this one).
+- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md is a peer plan (not a prerequisite for this one).
 
 Begin with 01-planning on Step 01. Keep the plan self-contained and fresh-session safe.
 ```

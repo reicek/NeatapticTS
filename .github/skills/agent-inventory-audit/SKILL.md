@@ -25,11 +25,9 @@ This skill produces a structured snapshot of all agents and skills in the Neatap
 - When investigating an unexpected routing result and needing to see the full agent graph.
 - When strict validation is expected to pass and you want confirmation that the eight-agent SDLC surface is correct.
 
-
 ## When NOT to use
 
 Do NOT use for validating a single agent file - use `agent-frontmatter-standards` instead. Do NOT use for skill frontmatter - use `skill-frontmatter-standards` instead.
-
 
 ## Workflow Diagram
 
@@ -68,7 +66,6 @@ Record in: <plan file path or chat summary>
 7. Note any expected pre-migration drift explicitly so it is not treated as a defect.
 8. Summarize counts, errors, and drift in the active plan or session handoff note.
 
-
 ## Why This Matters
 
 Each inventory script serves a specific purpose in the customization pipeline. The inventory script counts agents, skills, and tiers from live frontmatter - it is the ground truth for the routing table. When inventory drifts from the generated routing table, agents may be misrouted, invisible to delegation, or silently dropped from CI validation. Running the audit after any customization change catches drift before it becomes a silent routing failure.
@@ -89,11 +86,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before (incomplete report):**
+
 ```text
 Audit done. 8 agents found.
 ```
 
 **After (complete report):**
+
 ```text
 Baseline audit:
 - User-invocable agents: 8

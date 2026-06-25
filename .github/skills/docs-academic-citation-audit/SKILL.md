@@ -37,11 +37,9 @@ for generated README artifacts.
 - A new algorithm is introduced in `src/` without a Wikipedia or paper citation
   in its JSDoc.
 
-
 ## When NOT to use
 
 Do NOT use for license auditing - use `license-attribution-audit` instead. Do NOT use for generating READMEs - use `educational-docs` instead.
-
 
 ## Workflow Diagram
 
@@ -100,15 +98,16 @@ Validate with: npm run docs — confirm the generated README reflects the citati
 - Use `license-attribution-audit` when external workflow sources inform
   customization docs and the license terms need to be checked.
 
-
 ## Before/After Citation Examples
 
 **Before (weak citation):**
+
 ```md
 NEAT uses a genetic algorithm to evolve networks.
 ```
 
 **After (strong citation):**
+
 ```md
 NEAT uses a genetic algorithm to evolve network topologies through
 speciation and complexification [Stanley & Miikkulainen, 2002].

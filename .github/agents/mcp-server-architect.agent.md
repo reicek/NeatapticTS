@@ -75,10 +75,12 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 ## File Path Allow-List for Edit Tool
 
 This agent may edit ONLY the following file types:
+
 - **Design documents:** `docs/mcp-*.md`, `plans/*mcp*.md`, `.github/skills/mcp-local-server-workflow/*.md`
 - **Configuration templates:** `*.mcp.json` templates, `mcp-config.json` examples
 
 This agent must NOT edit:
+
 - **Production code:** `src/**/*.ts`, `scripts/**/*.mjs`, `scripts/**/*.ts`
 - **Agent files:** `.github/agents/*.agent.md`
 - **Skill files:** `.github/skills/*/SKILL.md` (use `updating-skill-frontmatter` skill instead)

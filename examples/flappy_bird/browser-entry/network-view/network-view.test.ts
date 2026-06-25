@@ -6,8 +6,9 @@ import {
   FLAPPY_NETWORK_INPUT_GROUP_PADDING_PX,
   FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX,
   FLAPPY_NETWORK_INPUT_SIZE,
+  FLAPPY_NETWORK_OUTPUT_SIZE,
 } from '../../constants/constants';
-import { resolveNetworkArchitectureLabel } from './network-view';
+import { drawNetworkVisualization, resolveNetworkArchitectureLabel } from './network-view';
 import {
   alignInputNodesToDescriptionScenes,
   resolveInputDescriptionScenes,
@@ -741,5 +742,125 @@ describe('resolveInputGroupLabelBandScenes', () => {
         (inputGroupLabelBandScenes[0]!.topPx +
           inputGroupLabelBandScenes[0]!.heightPx),
     ).toBe(FLAPPY_NETWORK_INPUT_GROUP_VERTICAL_GAP_PX);
+  });
+});
+
+function createStubContext(
+  canvasWidthPx: number,
+  viewportWidthPx: number = canvasWidthPx,
+) {
+  const canvas = {
+    width: canvasWidthPx,
+    height: 600,
+    ownerDocument: {
+      defaultView: {
+        innerWidth: viewportWidthPx,
+      },
+    },
+  } as unknown as HTMLCanvasElement;
+
+  const fillTextCalls: Array<{ text: string; x: number; y: number }> = [];
+  const context = {
+    canvas,
+    save: jest.fn(),
+    restore: jest.fn(),
+    fillRect: jest.fn(),
+    strokeRect: jest.fn(),
+    clearRect: jest.fn(),
+    beginPath: jest.fn(),
+    closePath: jest.fn(),
+    moveTo: jest.fn(),
+    lineTo: jest.fn(),
+    quadraticCurveTo: jest.fn(),
+    stroke: jest.fn(),
+    fill: jest.fn(),
+    fillText: jest.fn((text: string, x: number, y: number) => {
+      fillTextCalls.push({ text, x, y });
+    }),
+    measureText: jest.fn((text: string) => ({
+      width: text.length * 6,
+      actualBoundingBoxAscent: 8,
+      actualBoundingBoxDescent: 2,
+    })),
+    setLineDash: jest.fn(),
+    arc: jest.fn(),
+    rect: jest.fn(),
+    clip: jest.fn(),
+    getImageData: jest.fn(() => ({ data: [] })),
+    putImageData: jest.fn(),
+    createLinearGradient: jest.fn(() => ({ addColorStop: jest.fn() })),
+    createPattern: jest.fn(() => null),
+    drawImage: jest.fn(),
+    translate: jest.fn(),
+    rotate: jest.fn(),
+    scale: jest.fn(),
+    transform: jest.fn(),
+    setTransform: jest.fn(),
+    resetTransform: jest.fn(),
+    createImageData: jest.fn(() => ({ data: [] })),
+    getTransform: jest.fn(() => [1, 0, 0, 1, 0, 0]),
+    isPointInPath: jest.fn(() => false),
+    isPointInStroke: jest.fn(() => false),
+    fillStyle: '',
+    strokeStyle: '',
+    font: '',
+    textAlign: 'start',
+    textBaseline: 'alphabetic',
+    lineWidth: 1,
+    lineCap: 'butt',
+    globalAlpha: 1,
+    shadowBlur: 0,
+    shadowColor: '',
+  } as unknown as CanvasRenderingContext2D;
+
+  return { context, fillTextCalls };
+}
+
+describe('drawNetworkVisualization overlay visibility', () => {
+  it('produces input-group label band scenes when the host canvas is wide despite a narrow viewport', () => {
+    const network = new Network(FLAPPY_NETWORK_INPUT_SIZE, FLAPPY_NETWORK_OUTPUT_SIZE, { seed: 42 });
+    const { context } = createStubContext(900, 600);
+    const positionedScene = drawNetworkVisualization(
+      context,
+      network,
+      FLAPPY_NETWORK_INPUT_SIZE,
+      FLAPPY_NETWORK_OUTPUT_SIZE,
+    );
+
+    expect(positionedScene.inputGroupLabelBandScenes.length).toBeGreaterThan(0);
+  });
+
+  it('produces input-description scenes when the host canvas is wide despite a narrow viewport', () => {
+    const network = new Network(FLAPPY_NETWORK_INPUT_SIZE, FLAPPY_NETWORK_OUTPUT_SIZE, { seed: 42 });
+    const { context } = createStubContext(900, 600);
+    const positionedScene = drawNetworkVisualization(
+      context,
+      network,
+      FLAPPY_NETWORK_INPUT_SIZE,
+      FLAPPY_NETWORK_OUTPUT_SIZE,
+    );
+
+    expect(positionedScene.inputDescriptionScenes.length).toBeGreaterThan(0);
+  });
+});
+
+describe('drawNetworkVisualization activation labels', () => {
+  it('renders the input node activation value after a forward pass', () => {
+    const network = Architect.perceptron(1, 1, 1);
+    network.nodes.forEach((node) => {
+      node.bias = 0;
+    });
+    network.connections.forEach((connection) => {
+      connection.weight = 1;
+    });
+    network.activate([0.75]);
+    const inputActivation = network.nodes[0].activation.toFixed(2);
+
+    const { context, fillTextCalls } = createStubContext(900, 900);
+    drawNetworkVisualization(context, network, 1, 1);
+
+    expect(
+      fillTextCalls.some((fillTextCall) => fillTextCall.text.includes(inputActivation)),
+    ).toBe(true);
   });
 });

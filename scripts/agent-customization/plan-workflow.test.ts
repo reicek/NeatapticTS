@@ -20,9 +20,10 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const SCRIPTS_DIR = path.join(REPO_ROOT, 'scripts', 'agent-customization');
 const TEMP_DIR = path.join(REPO_ROOT, 'plans', '_test-temp');
 const TEMP_PREFIX = '_plan-workflow-test-';
-const ACTIVE_PLAN = 'plans/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md';
+const ACTIVE_PLAN =
+  'plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md';
 const DOWNSTREAM_TRACKER_PLANS = [
-  'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md',
+  'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md',
   'plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md',
   'plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md',
 ];
@@ -500,7 +501,7 @@ describe('legacy-plan-format.gate.mjs', () => {
 
 describe('validate-plan-phase-packets.mjs', () => {
   it('passes on the RAG plan', () => {
-    const report = runValidator('plans/turso-rag-migration.plans.md');
+    const report = runValidator('plans/completed/turso-rag-migration.plans.md');
     expect(report.ok).toBe(true);
     expect(report.counts.errors).toBe(0);
   });
@@ -557,6 +558,87 @@ describe('downstream synchronization contract', () => {
       expect(report.syncEvent.downstreamTrackers).toEqual(
         expect.arrayContaining(DOWNSTREAM_TRACKER_PLANS),
       );
+    });
+
+    it('passes when a phase is [WIP] but no step is [WIP]', async () => {
+      const fileName = `${TEMP_PREFIX}no-step-wip.plans.md`;
+      const filePath = path.join(REPO_ROOT, 'plans', fileName);
+      const relativePath = `plans/${fileName}`;
+      const content = `# Test plan — no step WIP
+
+**Status:** [WIP]
+
+## Scope
+
+This plan is downstream of:
+- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md
+- plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md
+- plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md
+
+## Implementation phases
+
+### Phase 1 — Active phase [WIP]
+
+#### Step 01 — Completed step [DONE]
+
+\`\`\`yaml
+phase: 1
+step: 1
+title: 'Completed step'
+status: '[DONE]'
+goal: planning
+expansion: none
+auto_expand: false
+mode: fresh-session
+source_of_truth: 'plans/_test-temp/placeholder.plans.md'
+copy_paste: true
+next_step: 'null'
+skills:
+  - 'plan-alignment'
+validation:
+  - 'echo ok'
+acceptance_criteria:
+  - 'OK'
+\`\`\`
+
+#### Step 02 — Planned step [PLANNED]
+
+\`\`\`yaml
+phase: 1
+step: 2
+title: 'Planned step'
+status: '[PLANNED]'
+goal: planning
+expansion: none
+auto_expand: false
+mode: fresh-session
+source_of_truth: 'plans/_test-temp/placeholder.plans.md'
+copy_paste: true
+next_step: 'null'
+skills:
+  - 'plan-alignment'
+validation:
+  - 'echo ok'
+acceptance_criteria:
+  - 'OK'
+\`\`\`
+`;
+      await writeFile(filePath, content, 'utf8');
+      try {
+        const report = runWorkflowHook(['--json', `--plan=${relativePath}`]);
+        expect(report).toMatchObject({
+          ok: true,
+          pass: true,
+          syncEvent: {
+            actionTaken: 'between-steps',
+            downstreamTrackers: expect.arrayContaining(
+              DOWNSTREAM_TRACKER_PLANS,
+            ),
+          },
+        });
+      } finally {
+        await unlink(filePath).catch(() => undefined);
+      }
     });
   });
 });

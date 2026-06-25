@@ -199,29 +199,31 @@ export function normalizeLimit(value, fallback = 10) {
 /**
  * Normalize and validate a file path so it stays inside the repository root.
  *
- * **Security:** Rejects any path that, after POSIX normalization, begins with
- * `../` or is absolute. This prevents path-traversal attacks where a malicious
- * caller could request files outside the repository (e.g. `../../etc/passwd`
- * or an absolute system path such as `/etc/shadow`).
+ * **Security:** Rejects any path that resolves outside `repoRoot` (i.e. the
+ * relative result begins with `../` or is absolute). This prevents
+ * path-traversal attacks where a malicious caller could request files outside
+ * the repository (e.g. `../../etc/passwd` or an absolute system path such as
+ * `/etc/shadow`).
  *
- * Backslashes are replaced with forward slashes before normalization so
- * Windows path separators cannot bypass the traversal check.
+ * Absolute paths that resolve inside `repoRoot` are accepted and converted to
+ * POSIX repo-relative paths, which is required on Windows where callers may
+ * pass the absolute repository root (e.g. `C:\NeatapticTS`).
  *
  * @param {string} filePath - Caller-supplied file path.
- * @returns {string} POSIX-normalized repo-relative path.
+ * @returns {string} POSIX-normalized repo-relative path (`'.'` for the repo root).
  * @throws {Error} When the path escapes the repository root.
  */
 export function normalizeRepoPath(filePath) {
-  const requestedPath = requireString(filePath, 'file_path').replaceAll(
-    '\\',
-    '/',
-  );
-  const normalizedPath = path.posix.normalize(requestedPath);
-  if (normalizedPath.startsWith('../') || path.isAbsolute(normalizedPath)) {
+  const requestedPath = requireString(filePath, 'file_path');
+  const absoluteRequested = path.resolve(repoRoot, requestedPath);
+  const relativeToRepo = path
+    .relative(repoRoot, absoluteRequested)
+    .replaceAll('\\', '/');
+  if (relativeToRepo.startsWith('../') || path.isAbsolute(relativeToRepo)) {
     throw new Error('file_path must stay inside the repository.');
   }
 
-  return normalizedPath;
+  return relativeToRepo === '' ? '.' : relativeToRepo;
 }
 
 /**

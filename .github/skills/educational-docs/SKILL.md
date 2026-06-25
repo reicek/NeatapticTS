@@ -109,7 +109,6 @@ better teaching choice.
 - A `solid-split` step has just completed and the touched boundary now needs a
   focused educational-docs follow-up pass.
 
-
 ## When NOT to use
 
 Do NOT use for citation auditing - use `docs-academic-citation-audit` instead. Do NOT use for JSDoc auditing - use `auditing-js-docs` instead.
@@ -642,13 +641,15 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```ts
 /** Build a network. */
 export function buildMLP(config: MLPConfig): Network { ... }
 ```
 
 **After:**
-```ts
+
+````ts
 /**
  * Build a multi-layer perceptron with configurable hidden layers.
  *
@@ -665,7 +666,7 @@ export function buildMLP(config: MLPConfig): Network { ... }
  * ```
  */
 export function buildMLP(config?: Partial<MLPConfig>): Network { ... }
-```
+````
 
 ## Guardrails
 

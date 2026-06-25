@@ -30,7 +30,6 @@ This skill owns the durable knowledge surface for routing policy in this reposit
 - A skill and companion agent overlap in ownership; the agent needs updating to follow the skill's durable policy.
 - Three consecutive gate failures have occurred in a session without escalation to `00-helping`.
 
-
 ## When NOT to use
 
 Do NOT use for simple routing decisions that `execute` can handle directly. Do NOT use for frontmatter validation - use `agent-frontmatter-standards` instead.

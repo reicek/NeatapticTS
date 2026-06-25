@@ -25,11 +25,9 @@ This skill converts user intent into a precise, testable acceptance criteria set
 - When preparing a handoff packet for an implementation agent that needs to know exactly what "done" looks like.
 - When scope is likely to widen during implementation and explicit non-goals are needed to contain it.
 
-
 ## When NOT to use
 
 Do NOT use for plan alignment checking - use `plan-alignment` instead. Do NOT use for red test contracts - use `red-test-contracts` instead.
-
 
 ## Workflow Diagram
 
@@ -83,15 +81,16 @@ alongside old code without removing the old code MUST NOT pass acceptance
 review. The criterion MUST be observable: cite the specific files or exports
 that were deleted, not just "old code removed."
 
-
 ## Before/After Examples: Vague to Precise
 
 **Before (vague):**
+
 ```md
 - The builder should work correctly.
 ```
 
 **After (precise):**
+
 ```md
 - buildMLP() with default config produces a network with exactly 5 nodes
   (2 inputs, 2 hidden, 1 output) and 6 connections.

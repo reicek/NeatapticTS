@@ -37,7 +37,6 @@ plan boundary.
 
 Do NOT use for general chat systems or simple Q&A - this skill is specifically for NEATchat conversational architecture. Do NOT use for ONNX export alone - use `onnx-work` instead.
 
-
 ## Workflow Diagram
 
 ```mermaid
@@ -207,11 +206,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```text
 session: { turns: [] } // flat list, no tiering, every turn written to durable store
 ```
 
 **After:**
+
 ```text
 session: {
   working: Turn[],

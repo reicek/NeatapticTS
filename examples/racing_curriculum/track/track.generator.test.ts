@@ -162,6 +162,33 @@ describe('track.generator', () => {
         expect(lowPaddingWidth > highPaddingWidth).toBe(true);
       });
     });
+
+    describe('lane metadata', () => {
+      it('carries default laneCount and derived laneWidthWorld and innerOffsetWorld', () => {
+        const spec = generateTrack({
+          seed: 42,
+          layoutVersion: 1,
+          sizeBucket: 'medium',
+        });
+        const expectedLaneCount = 2;
+        const expectedLaneWidthWorld =
+          spec.segments[0]!.width / expectedLaneCount;
+        const expectedInnerOffsetWorld =
+          spec.segments[0]!.width / 2 - expectedLaneWidthWorld / 2;
+        const firstSample = spec.splineSamples[0]!;
+
+        expect({
+          laneCount: (spec as { laneCount?: number }).laneCount,
+          laneWidthWorld: (spec as { laneWidthWorld?: number }).laneWidthWorld,
+          innerOffsetWorld: (firstSample as { innerOffsetWorld?: number })
+            .innerOffsetWorld,
+        }).toEqual({
+          laneCount: expectedLaneCount,
+          laneWidthWorld: expectedLaneWidthWorld,
+          innerOffsetWorld: expectedInnerOffsetWorld,
+        });
+      });
+    });
   });
 
   describe('freezeTrackSpec', () => {

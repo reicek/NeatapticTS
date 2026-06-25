@@ -37,11 +37,9 @@ implementation, hand off to `performance-optimization`.
 - A `performance-optimization` or `flappy-architecture-polish` pass needs an
   evidence baseline before implementation begins.
 
-
 ## When NOT to use
 
 Do NOT use for extending the analyzer tool - use `trace-analyzer-extension` instead. Do NOT use for implementing optimizations - use `performance-optimization` instead.
-
 
 ## Workflow Diagram
 

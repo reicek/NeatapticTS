@@ -26,11 +26,9 @@ This skill governs the design and validation of YAML frontmatter in `.github/age
 - Auditing hidden specialists to confirm they carry `user-invocable: false` and bounded `agents: []`.
 - Preparing validation evidence before or after a customization batch, migration step, or CI gate.
 
-
 ## When NOT to use
 
 Do NOT use for skill frontmatter validation - use `skill-frontmatter-standards` instead. Do NOT use for inventory-wide audits - use `agent-inventory-audit` instead.
-
 
 ## Workflow Diagram
 
@@ -120,6 +118,7 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 ## Before / After Examples
 
 **Before:**
+
 ```yaml
 ---
 name: my-agent
@@ -128,6 +127,7 @@ description: does stuff
 ```
 
 **After:**
+
 ```yaml
 ---
 name: my-agent

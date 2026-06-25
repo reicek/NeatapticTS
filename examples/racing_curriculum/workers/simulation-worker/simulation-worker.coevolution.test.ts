@@ -41,6 +41,8 @@ type CoevolutionConfig = {
 type TeamPopulationContainer = {
   /** Opaque identity token — distinct between teamA and teamB. */
   readonly populationId: string;
+  /** Current NEAT generation for this team's isolated population. */
+  generation: number;
 };
 
 type CoevolutionContainer = {
@@ -58,6 +60,11 @@ type CoevolutionContainer = {
     teamId: 0 | 1,
     carFinishPositions: readonly number[],
   ): number;
+  /**
+   * Advances one team's isolated population by a single generation.
+   * Step 04 wires this to the per-team `Neat` controller.
+   */
+  advanceTeamGeneration(teamId: 'team-a' | 'team-b'): void;
 };
 
 interface CoevolutionService {
@@ -144,6 +151,40 @@ describe('simulation worker coevolution container', () => {
       expect(container.teamA.populationId).not.toBe(
         container.teamB.populationId,
       );
+    });
+  });
+
+  describe('independent team generation advancement', () => {
+    it('advances teamA generation when asked', async () => {
+      // Arrange
+      const service = await loadCoevolutionService();
+      const container = service.createCoevolutionContainer({
+        populationSize: 6,
+        rngSeed: 7,
+        tier: 1,
+      });
+
+      // Act
+      container.advanceTeamGeneration('team-a');
+
+      // Assert — teamA must have moved forward exactly one generation
+      expect(container.teamA.generation).toBe(1);
+    });
+
+    it('does not advance teamB generation when advancing teamA', async () => {
+      // Arrange
+      const service = await loadCoevolutionService();
+      const container = service.createCoevolutionContainer({
+        populationSize: 6,
+        rngSeed: 7,
+        tier: 1,
+      });
+
+      // Act
+      container.advanceTeamGeneration('team-a');
+
+      // Assert — teamB must remain at generation zero
+      expect(container.teamB.generation).toBe(0);
     });
   });
 

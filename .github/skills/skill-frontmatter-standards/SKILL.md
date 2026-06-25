@@ -25,11 +25,9 @@ This skill governs the design and validation of YAML frontmatter in `.github/ski
 - Moving skill-specific scripts, templates, or resources into the owning skill folder.
 - Running `validate-skill-frontmatter.mjs` in strict mode to confirm all skills meet the standard.
 
-
 ## When NOT to use
 
 Do NOT use for agent frontmatter validation - use `agent-frontmatter-standards` instead. Do NOT use for skill output evaluation - use `skill-output-evals` instead.
-
 
 ## Workflow Diagram
 
@@ -69,7 +67,6 @@ Validate with: node scripts/agent-customization/validate-skill-frontmatter.mjs -
 7. Run `node scripts/agent-customization/validate-skill-frontmatter.mjs --json --strict` after metadata edits.
 8. Record validation output and any residual routing risk in the active plan or chat summary.
 
-
 ## Decision Tree: User-Invocable Visibility
 
 ```mermaid
@@ -85,11 +82,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before (too broad):**
+
 ```yaml
 description: 'Helps with testing and coverage tasks across the codebase.'
 ```
 
 **After (well-scoped with Use-when trigger):**
+
 ```yaml
 description: 'Use when: expanding test coverage for a specific src/ file that is below 100% in any category and the test suite is already green.'
 ```

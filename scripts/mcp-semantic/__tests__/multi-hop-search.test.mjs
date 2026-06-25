@@ -114,7 +114,12 @@ async function teardownDb(client, tempDir, dbPath) {
   await client.close();
   if (dbPath && dbPath !== ':memory:') await closeTursoClient(dbPath);
   if (tempDir) {
-    await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
   }
 }
 
@@ -206,7 +211,12 @@ describe('multi-hop-search.mjs: hop 2 graph traversal finds related entities', (
       { entity_id: 11, name: 'activate', entity_type: 'function', chunk_id: 2 },
     ];
     const edgeRows = [
-      { edge_id: 1, src_entity_id: 10, dst_entity_id: 11, relationship_type: 'owns' },
+      {
+        edge_id: 1,
+        src_entity_id: 10,
+        dst_entity_id: 11,
+        relationship_type: 'owns',
+      },
     ];
     const { client } = createMockClient({
       rowFactory: ({ sql }) => {
@@ -254,7 +264,14 @@ describe('multi-hop-search.mjs: hop 3 vector search on neighbor chunks', () => {
           return [{ chunk_id: 1, body_text: 'seed', distance: 0.1 }];
         }
         if (/entities/i.test(sql) && /edges/i.test(sql)) {
-          return [{ entity_id: 10, name: 'Network', entity_type: 'class', chunk_id: 1 }];
+          return [
+            {
+              entity_id: 10,
+              name: 'Network',
+              entity_type: 'class',
+              chunk_id: 1,
+            },
+          ];
         }
         return [];
       },
@@ -276,7 +293,9 @@ describe('multi-hop-search.mjs: hop 3 vector search on neighbor chunks', () => {
 describe('multi-hop-search.mjs: combined ranking', () => {
   it('source computes combined score from vector_distance and graph_proximity', () => {
     const source = readSource(MULTI_HOP_SEARCH_PATH);
-    expect(source).toMatch(/vector_distance.*graph_proximity|graph_proximity.*vector_distance|combined.*score/is);
+    expect(source).toMatch(
+      /vector_distance.*graph_proximity|graph_proximity.*vector_distance|combined.*score/is,
+    );
   });
 
   it('multiHopSearch returns results sorted by combined score descending', async () => {
@@ -295,7 +314,14 @@ describe('multi-hop-search.mjs: combined ranking', () => {
           return [{ chunk_id: 1, body_text: 'seed', distance: 0.1 }];
         }
         if (/entities/i.test(sql) && /edges/i.test(sql)) {
-          return [{ entity_id: 10, name: 'Network', entity_type: 'class', chunk_id: 1 }];
+          return [
+            {
+              entity_id: 10,
+              name: 'Network',
+              entity_type: 'class',
+              chunk_id: 1,
+            },
+          ];
         }
         return [];
       },
@@ -306,7 +332,9 @@ describe('multi-hop-search.mjs: combined ranking', () => {
       max_hops: 3,
       limit: 5,
     });
-    expect(result.results[0].combined_score).toBeGreaterThanOrEqual(result.results[1].combined_score);
+    expect(result.results[0].combined_score).toBeGreaterThanOrEqual(
+      result.results[1].combined_score,
+    );
   });
 });
 
@@ -316,7 +344,8 @@ describe('multi-hop-search.mjs: combined ranking', () => {
 
 describe('multi_hop_search MCP tool registration', () => {
   it('registers multi_hop_search in the MCP tool list', async () => {
-    const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+    const { createRepoCortexMcpServer } =
+      await import('../repo-cortex-mcp.mjs');
     const { client, dbPath, tempDir } = await setupDb();
     try {
       const server = createRepoCortexMcpServer({ databasePath: dbPath });
@@ -325,7 +354,9 @@ describe('multi_hop_search MCP tool registration', () => {
         id: 1,
         method: 'tools/list',
       });
-      expect(listed.tools.map((tool) => tool.name)).toContain('multi_hop_search');
+      expect(listed.tools.map((tool) => tool.name)).toContain(
+        'multi_hop_search',
+      );
     } finally {
       await teardownDb(client, tempDir, dbPath);
     }

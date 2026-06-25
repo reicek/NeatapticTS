@@ -65,7 +65,6 @@ program and governance knobs produce the graph?"
 - Introducing typed-array stigmergy or shared-field semantics as a primitive
   later used by demos.
 
-
 ## When NOT to use
 
 Do NOT use for benchmarking or evaluation - use `nge-benchmark-workflow` instead. Do NOT use for general NEAT evolution - use the standard NEAT workflow instead.
@@ -94,7 +93,6 @@ This skill primarily owns the algorithm side of these plan phases:
 - Assimilation writes back structural priors, not inherited weights.
 - Core before benchmark: shared primitives should stabilize before benchmark code
   starts compensating for missing library contracts.
-
 
 ## Workflow Diagram
 
@@ -217,11 +215,15 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```ts
-interface NGE_DNA { modules: any[]; } // vague schema
+interface NGE_DNA {
+  modules: any[];
+} // vague schema
 ```
 
 **After:**
+
 ```ts
 interface NGE_DNA {
   computationType: ComputationMotif;

@@ -46,11 +46,9 @@ return to coverage expansion.
   uncovered path — not to fix a broken assertion.
 - Dead code should be confirmed and removed as part of the tranche.
 
-
 ## When NOT to use
 
 Do NOT use for post-edit coverage enforcement - use `coverage-guard` instead. Do NOT use for fixing failing tests - use `test-fix-workflow` first.
-
 
 ## Workflow Diagram
 

@@ -33,10 +33,7 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const GATE_URL = pathToFileURL(
   path.resolve(__dirname, 'delegate-skill-coverage.gate.mjs'),
 ).href;
-const GATE_PATH = path.resolve(
-  __dirname,
-  'delegate-skill-coverage.gate.mjs',
-);
+const GATE_PATH = path.resolve(__dirname, 'delegate-skill-coverage.gate.mjs');
 
 function makeAgent(
   name: string,

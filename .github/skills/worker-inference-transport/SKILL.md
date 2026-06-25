@@ -54,7 +54,6 @@ platform notes, cost models, and attribution.
   behavior needs hardening.
 - Shared memory is being considered and the task needs explicit fallback rules.
 
-
 ## When NOT to use
 
 Do NOT use for general worker management - use `multithread-evaluation` instead. Do NOT use for performance optimization of shared library code - use `performance-optimization` instead.
@@ -114,7 +113,6 @@ Use this simple model when comparing strategies:
 
 Choose the next strategy only if the additional complexity is justified by a
 measured bottleneck, not by intuition alone.
-
 
 ## Workflow Diagram
 
@@ -232,12 +230,14 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```ts
 // verbose payload: deep-clones every message, no ownership transfer
 worker.postMessage({ ir: network.toJSON(), input: float32Array });
 ```
 
 **After:**
+
 ```ts
 // optimized transferable: zero-copy ownership move with portable fallback
 const { buffer } = float32Array;

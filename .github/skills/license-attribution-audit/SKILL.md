@@ -37,7 +37,6 @@ internal location, and recording unknown license details as blockers.
 - An external source with an unknown license was used and the project needs a
   recorded blocker before the change can be merged.
 
-
 ## When NOT to use
 
 Do NOT use for citation auditing - use `docs-academic-citation-audit` instead. Do NOT use for general documentation - use `educational-docs` instead.
@@ -79,7 +78,6 @@ Action: confirm text is summarized (not copied), add attribution in the referenc
   supported fields and behavior; no code reproduction needed for API shape
   descriptions.
 
-
 ## Why License Attribution Matters
 
 License attribution ensures the repo complies with open-source license requirements when external workflow standards (Agent Skills, OpenSpec, Superpowers) inform NeatapticTS agents, skills, or scripts. Missing attribution creates legal risk and violates the spirit of open-source collaboration. The audit catches unattributed external sources before they reach production.
@@ -87,11 +85,13 @@ License attribution ensures the repo complies with open-source license requireme
 ## Before/After Attribution Examples
 
 **Before (missing attribution):**
+
 ```md
 This workflow follows the standard TDD loop.
 ```
 
 **After (with attribution):**
+
 ```md
 This workflow follows the standard TDD loop as described in the
 Agent Skills specification [copilot-instructions.md, MIT licensed].

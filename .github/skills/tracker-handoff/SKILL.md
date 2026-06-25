@@ -47,7 +47,6 @@ Do NOT use for non-durable tracking like scratch notes or temporary buffers. Do 
   them intentionally instead of drifting into multiple accidental `[WIP]`
   branches.
 
-
 ## Workflow Diagram
 
 ```mermaid
@@ -412,6 +411,7 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```text
 ## Step 3: Implemented mutation
 Ran command: npx jest --testPathPattern=src/neat/mutation
@@ -424,6 +424,7 @@ Then ran lint, all passed
 ```
 
 **After:**
+
 ```text
 [DONE] Step 3: Implemented mutation, coverage gate passed.
 ```

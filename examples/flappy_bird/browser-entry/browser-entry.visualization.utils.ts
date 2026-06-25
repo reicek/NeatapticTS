@@ -23,6 +23,6 @@ export {
   resolveNetworkLegendLayout,
 } from './visualization/visualization.legend.utils';
 export {
-  formatNodeBiasLabel,
+  formatNodeActivationLabel,
   resolveNetworkVisualizationLayers,
 } from './visualization/visualization.topology.utils';

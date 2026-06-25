@@ -59,7 +59,7 @@ import {
   createColorLegendRows,
   resolveNetworkLegendLayout,
 } from './visualization.legend.utils';
-import { formatNodeBiasLabel } from './visualization.topology.utils';
+import { formatNodeActivationLabel } from './visualization.topology.utils';
 import type {
   DynamicColorScale,
   NetworkVisualizationColorScales,
@@ -600,7 +600,9 @@ function resolveBiasNodeScene(
   hoverIntensity: number,
 ): BiasNodeScene {
   // Step 1: Resolve color and emphasis rules from node type and bias value.
-  const nodeLabel = formatNodeBiasLabel(positionedNode.node.bias);
+  const nodeLabel = formatNodeActivationLabel(
+    positionedNode.node.activation ?? 0,
+  );
   const biasNodePaintStyle = resolveBiasNodePaintStyle(
     positionedNode,
     biasScale,
@@ -783,12 +785,7 @@ function drawBiasNodeScene(
     biasNodeScene.resolvedNodeHeightPx,
   );
 
-  // Step 2: Skip label painting for output nodes, which render as emphasized solid blocks.
-  if (biasNodeScene.isOutputNode) {
-    return;
-  }
-
-  // Step 3: Paint the centered bias label inside the node rectangle.
+  // Step 2: Paint the centered activation label inside the node rectangle.
   context.fillStyle = FLAPPY_NETWORK_NODE_LABEL_FILL_COLOR;
   context.font = biasNodeScene.labelFont;
   context.textAlign = FLAPPY_CANVAS_TEXT_ALIGN_CENTER;
@@ -833,11 +830,9 @@ function interpolateNumber(
 function shouldHideNetworkColorLegend(
   context: CanvasRenderingContext2D,
 ): boolean {
-  // Step 1: Prefer the live window width when available, otherwise fall back to canvas width.
-  const viewportWidthPx =
-    context.canvas.ownerDocument?.defaultView?.innerWidth ??
-    context.canvas.width;
-  return viewportWidthPx < FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX;
+  return (
+    context.canvas.width < FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX
+  );
 }
 
 /**

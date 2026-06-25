@@ -17,11 +17,7 @@ tools:
 user-invocable: false
 agents: []
 skills:
-  [
-    'chrome-devtools-mcp',
-    'trace-audit-reporting',
-    'trace-analyzer-extension',
-  ]
+  ['chrome-devtools-mcp', 'trace-audit-reporting', 'trace-analyzer-extension']
 ---
 
 You are the `performance-trace-specialist` agent for NeatapticTS.

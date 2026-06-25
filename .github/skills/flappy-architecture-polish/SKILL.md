@@ -42,7 +42,6 @@ runtime direction, `plan-alignment` owns plan selection and terminology.
 - A long-running Jest probe was useful for investigation, but the durable end
   state should be a CLI or scriptable probe rather than a multi-minute test.
 
-
 ## When NOT to use
 
 Do NOT use for creating new architectures from scratch - use `architecture-builder` instead. Do NOT use for general Flappy Bird bug fixes - use `test-fix-workflow` instead.
@@ -60,7 +59,6 @@ This skill owns the repeatable Flappy architecture-polish workflow for:
 
 This skill does not replace `plan-alignment` for roadmap selection, and it does
 not replace `tracker-handoff` for tracker structure.
-
 
 ## Workflow Diagram
 
@@ -225,11 +223,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```text
 lstmProfile: { hiddenSize: 8, lr: 0.01 } // random hyperparams, no probe baseline
 ```
 
 **After:**
+
 ```text
 lstmProfile: { hiddenSize: 12, lr: 0.005 } // probe-guided: p95 frames +18% over 30 gens
 ```

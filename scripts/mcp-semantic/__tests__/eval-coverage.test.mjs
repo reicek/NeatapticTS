@@ -148,7 +148,12 @@ describe('eval-baseline coverage', () => {
   });
 
   afterEach(async () => {
-    await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
   });
 
   it('throws when storeBaseline is missing a baseline id', async () => {
@@ -334,7 +339,12 @@ describe('eval-runner coverage', () => {
     consoleErrorSpy.mockRestore();
     process.exitCode = undefined;
     delete process.env.EVAL_FORCE_SYNTHETIC;
-    await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
   });
 
   it('validates a well-formed query', () => {
@@ -611,7 +621,12 @@ describe('eval-runner remaining coverage', () => {
   });
 
   afterEach(async () => {
-    await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
     delete process.env.EVAL_FORCE_SYNTHETIC;
   });
 
@@ -733,7 +748,12 @@ describe('eval-coverage extra', () => {
   });
 
   afterEach(async () => {
-    await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
     tempDir = await mkdtemp(path.join(process.cwd(), '.test-extra-'));
     process.exitCode = 0;
     delete process.env.EVAL_FORCE_SYNTHETIC;

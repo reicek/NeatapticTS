@@ -25,11 +25,9 @@ This skill owns the durable workflow for customizing cloud-based model routing i
 - An agent's `disable-model-invocation` flag needs review after a cloud model swap.
 - The routing table needs regeneration after a model customization change.
 
-
 ## When NOT to use
 
 Do NOT use for model selection alone - use `model-routing-and-budget` instead. Do NOT use for frontmatter validation - use `agent-frontmatter-standards` instead.
-
 
 ## Workflow Diagram
 
@@ -83,12 +81,12 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 
 ## Coordination with Other Skills
 
-| Skill | Handoff Condition |
-| ----- | ----------------- |
-| `model-routing-and-budget` | When tier routing rules or budget thresholds need authoritative reference |
-| `agent-frontmatter-standards` | When frontmatter structure validation is needed after a model change |
-| `capturing-learning-event` | When a model customization reveals a reusable pattern or gap |
-| `routing-optimization-policy` | When routing table optimization is needed after multiple model swaps |
+| Skill                         | Handoff Condition                                                         |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| `model-routing-and-budget`    | When tier routing rules or budget thresholds need authoritative reference |
+| `agent-frontmatter-standards` | When frontmatter structure validation is needed after a model change      |
+| `capturing-learning-event`    | When a model customization reveals a reusable pattern or gap              |
+| `routing-optimization-policy` | When routing table optimization is needed after multiple model swaps      |
 
 ## Decision Tree
 
@@ -108,6 +106,7 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```yaml
 ---
 name: my-agent
@@ -116,6 +115,7 @@ model: claude-3.5-sonnet:local
 ```
 
 **After:**
+
 ```yaml
 ---
 name: my-agent

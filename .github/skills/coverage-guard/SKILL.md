@@ -39,11 +39,9 @@ Do **not** use this skill instead of `coverage-tranche`. This skill is the
 post-change gate; `coverage-tranche` is the forward-progress workflow for
 files that are already passing but have not yet reached 100%.
 
-
 ## When NOT to use
 
 Do NOT use for coverage expansion on passing code - use `coverage-tranche` instead. Do NOT use for writing new tests from scratch - use `creating-unit-tests` instead.
-
 
 ## Workflow Diagram
 
@@ -215,17 +213,19 @@ Group by scenario, not by assertion count.
 ## Before / After Examples
 
 **Before:**
+
 ```ts
 // New branch added with no test — branches drop to 83%
 function validate(input: unknown): Result {
   if (Array.isArray(input)) {
-    return foldArray(input);  // uncovered
+    return foldArray(input); // uncovered
   }
   return foldScalar(input);
 }
 ```
 
 **After:**
+
 ```ts
 // Smallest owner-local test added to the nearest existing test file — back to 100%
 it('folds array input', () => {

@@ -25,11 +25,9 @@ This skill designs and grades trigger evaluation sets for NeatapticTS skill and 
 - Building initial eval coverage for a newly created skill or agent before it goes live.
 - Preparing evidence that a description change improved precision without reducing recall.
 
-
 ## When NOT to use
 
 Do NOT use for output evaluation - use `skill-output-evals` instead. Do NOT use for frontmatter validation - use `skill-frontmatter-standards` instead.
-
 
 ## Workflow Diagram
 
@@ -72,15 +70,16 @@ Eval mode: <train-only | train+validation split>
 8. Keep the revised description under 1024 characters.
 9. Record trigger rates and failure categories in the active plan.
 
-
 ## Before/After Description Examples
 
 **Before (vague):**
+
 ```yaml
 description: 'Helps with tests.'
 ```
 
 **After (specific):**
+
 ```yaml
 description: 'Run focused Jest slices for specific source boundaries. Use when validating a code change with the nearest test file, not for full suite runs.'
 ```

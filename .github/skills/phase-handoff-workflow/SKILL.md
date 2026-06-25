@@ -38,7 +38,6 @@ skill.
 - The active tracker has drifted from the standard step-packet shape and needs
   to be brought back into conformance.
 
-
 ## When NOT to use
 
 Do NOT use for single-phase work without inter-phase handoffs. Do NOT use for tracker management - use `tracker-handoff` instead.
@@ -94,8 +93,7 @@ repo-owned runtime proof carrier with
 so pretool and posttool enforcement can validate the flow, delegator chain,
 required skills, required specialists, and action class. Use
 `.github/runtime-enforcement-contract.md` as the canonical contract for that
-payload.
-12. **Phase Compression (mandatory).** When all steps in a phase are marked
+payload. 12. **Phase Compression (mandatory).** When all steps in a phase are marked
 `[DONE]` and green validation has passed, the orchestrator MUST dispatch
 `07-logging` to compress the completed phase before advancing to the next
 phase or performing the phase-to-phase handoff. Compression means:

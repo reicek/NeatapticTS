@@ -62,6 +62,41 @@ linked sources for canonical wording and detail.
   - This supports both ant pheromone fields and racing radio as shared-field,
     indirect coordination primitives.
 
+### 7. Wikipedia: proportional control
+
+- URL: https://en.wikipedia.org/wiki/Proportional_control
+- Authors: Wikipedia contributors
+- License note: Wikipedia text is available under CC BY-SA 4.0.
+- Why it matters:
+  - Proportional feedback is a standard baseline for steering and throttle
+    controllers in the racing benchmark.
+  - The racing controller blends proportional line-following signals with
+    evolved network outputs, so the concept is relevant to both scripted and
+    evolved policies.
+
+### 8. MDN: Transferable objects
+
+- URL: https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects
+- Authors: Mozilla contributors
+- License note: MDN content is available under CC BY-SA 2.5; code samples are
+  available under CC0 / MIT.
+- Why it matters:
+  - Racing benchmark worker messages use transfer lists to move packed
+    typed-array snapshots zero-copy between the worker and the host.
+  - Correct transfer-list ownership prevents detached-buffer bugs and keeps
+    the streaming path fast enough for display cadence.
+
+### 9. Wikipedia: forward compatibility
+
+- URL: https://en.wikipedia.org/wiki/Forward_compatibility
+- Authors: Wikipedia contributors
+- License note: Wikipedia text is available under CC BY-SA 4.0.
+- Why it matters:
+  - The `RacingRenderFrame` schema version is a forward-compatibility gate:
+    hosts reject frames whose `schemaVersion` they do not recognize.
+  - This pattern lets the packed snapshot format evolve without silently
+    corrupting older consumers.
+
 ## Practical Notes
 
 ### Benchmarks prove behavior, not just throughput

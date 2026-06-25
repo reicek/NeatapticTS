@@ -340,7 +340,12 @@ async function hop3ScopedVectorSearch(
     JOIN chunks c ON c.rowid = v.rowid
     WHERE c.chunk_id IN (${placeholders})
   `;
-  const args = [queryEmbeddingBuffer, queryEmbeddingBuffer, annK, ...neighborChunkIds];
+  const args = [
+    queryEmbeddingBuffer,
+    queryEmbeddingBuffer,
+    annK,
+    ...neighborChunkIds,
+  ];
 
   const result = await client.execute({ sql, args });
   return result.rows.map((row) => ({

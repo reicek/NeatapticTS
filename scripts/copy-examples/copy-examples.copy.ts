@@ -8,6 +8,7 @@
 
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { copy } from 'fs-extra';
 import {
   DOCS_EXAMPLES_DIR,
   DOCS_EXAMPLES_LOG_PREFIX,
@@ -100,6 +101,47 @@ export async function copyExampleEntryPoint(
     runCommand: exampleDefinition.runCommand,
     title: exampleDefinition.title,
   };
+}
+
+/**
+ * Copies static documentation files from an example's `docs/` folder into the
+ * published docs tree.
+ *
+ * The generator owns per-directory README files and the root README mirror, but
+ * hand-written educational markdown files placed under `examples/<name>/docs/`
+ * are not automatically published.  This function copies them so links from
+ * the generated root README resolve in both the source tree and the published
+ * docs site.
+ *
+ * README.md files are skipped because they are produced by the folder docs
+ * generator and must not be overwritten by hand-written copies.
+ *
+ * @param exampleDefinition - Example publishing definition.
+ * @returns Nothing.
+ */
+export async function copyExampleDocs(
+  exampleDefinition: ExampleDefinition,
+): Promise<void> {
+  const sourceDocsDir = path.join(exampleDefinition.sourceDir, 'docs');
+  if (!(await pathExists(sourceDocsDir))) {
+    return;
+  }
+
+  const destinationDocsDir = path.join(
+    DOCS_EXAMPLES_DIR,
+    exampleDefinition.dirName,
+    'docs',
+  );
+  await mkdir(destinationDocsDir, { recursive: true });
+
+  await copy(sourceDocsDir, destinationDocsDir, {
+    overwrite: true,
+    filter: (src) => path.basename(src) !== 'README.md',
+  });
+
+  console.log(
+    `${DOCS_EXAMPLES_LOG_PREFIX} Copied docs for ${exampleDefinition.dirName}`,
+  );
 }
 
 /**

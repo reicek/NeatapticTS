@@ -73,13 +73,13 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## External Source Reference Table
 
-| Source | URL | License |
-|---|---|---|
-| OpenSpec | https://github.com/.../openspec | MIT |
-| Superpowers | https://github.com/.../superpowers | MIT |
-| VS Code Docs | https://code.visualstudio.com/docs | CC-BY-4.0 |
-| GitHub Copilot Docs | https://docs.github.com/en/copilot | CC-BY-4.0 |
-| ONNX Operators | https://onnx.ai/onnx/operators/ | Apache-2.0 |
+| Source              | URL                                | License    |
+| ------------------- | ---------------------------------- | ---------- |
+| OpenSpec            | https://github.com/.../openspec    | MIT        |
+| Superpowers         | https://github.com/.../superpowers | MIT        |
+| VS Code Docs        | https://code.visualstudio.com/docs | CC-BY-4.0  |
+| GitHub Copilot Docs | https://docs.github.com/en/copilot | CC-BY-4.0  |
+| ONNX Operators      | https://onnx.ai/onnx/operators/    | Apache-2.0 |
 
 ## If Blocked
 

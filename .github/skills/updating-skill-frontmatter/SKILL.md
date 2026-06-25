@@ -25,11 +25,9 @@ This skill makes safe, targeted edits to YAML frontmatter in existing `.github/s
 - Updating compatibility notes or local resource links after a skill refactor.
 - Preparing a skill for a trigger eval pass by stabilizing its description first.
 
-
 ## When NOT to use
 
 Do NOT use for agent frontmatter updates - use `updating-agent-frontmatter` instead. Do NOT use for skill validation - use `skill-frontmatter-standards` instead.
-
 
 ## Workflow Diagram
 
@@ -69,7 +67,6 @@ Validate with: node scripts/agent-customization/validate-skill-frontmatter.mjs -
 8. If the description changed significantly, flag the skill for a trigger eval pass using `skill-description-evals`.
 9. Record skill files changed, trigger-scope decision, validation evidence, and any follow-up eval needs in the active plan.
 
-
 ## Why Each Field Matters
 
 Skill frontmatter fields control discoverability and invocation. The `name` must match the folder name for routing. The `description` is the trigger phrase - if it lacks a clear "Use when" clause, the skill wont be invoked when needed. The `user-invocable` flag controls whether users see the skill. The `argument-hint` shapes how tasks are framed. A wrong value in any field can make a skill invisible or incorrectly invoked.
@@ -77,6 +74,7 @@ Skill frontmatter fields control discoverability and invocation. The `name` must
 ## Before/After Frontmatter Examples
 
 **Before (incomplete):**
+
 ```yaml
 ---
 name: my-skill
@@ -85,6 +83,7 @@ description: Helps with things
 ```
 
 **After (complete):**
+
 ```yaml
 ---
 name: my-skill

@@ -98,7 +98,12 @@ async function teardownDb(client, tempDir, dbPath) {
   await client.close();
   if (dbPath && dbPath !== ':memory:') await closeTursoClient(dbPath);
   if (tempDir) {
-    await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
   }
 }
 
@@ -259,7 +264,8 @@ describe('turso-branch.mjs: branch deletion behavior', () => {
 
 describe('turso_branch MCP tool registration', () => {
   it('registers turso_branch in the MCP tool list', async () => {
-    const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+    const { createRepoCortexMcpServer } =
+      await import('../repo-cortex-mcp.mjs');
     const { client, dbPath, tempDir } = await setupDb();
     try {
       const server = createRepoCortexMcpServer({ databasePath: dbPath });
@@ -286,7 +292,8 @@ describe('turso_branch MCP tool registration', () => {
 
 describe('turso_branch MCP tool schema completeness', () => {
   it('turso_branch tool inputSchema includes a branch_name property', async () => {
-    const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+    const { createRepoCortexMcpServer } =
+      await import('../repo-cortex-mcp.mjs');
     const { client, dbPath, tempDir } = await setupDb();
     try {
       const server = createRepoCortexMcpServer({ databasePath: dbPath });
@@ -303,7 +310,8 @@ describe('turso_branch MCP tool schema completeness', () => {
   });
 
   it('turso_branch tool inputSchema includes an action property (create|delete)', async () => {
-    const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+    const { createRepoCortexMcpServer } =
+      await import('../repo-cortex-mcp.mjs');
     const { client, dbPath, tempDir } = await setupDb();
     try {
       const server = createRepoCortexMcpServer({ databasePath: dbPath });
@@ -446,6 +454,8 @@ describe('turso-branch.mjs: validation and edge cases', () => {
 
   it('throws when called with no arguments (default param branch)', async () => {
     const { tursoBranch } = await import(TURSO_BRANCH_PATH);
-    await expect(tursoBranch()).rejects.toThrow('tursoBranch requires a branch_name');
+    await expect(tursoBranch()).rejects.toThrow(
+      'tursoBranch requires a branch_name',
+    );
   });
 });

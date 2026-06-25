@@ -1,4 +1,69 @@
+/**
+ * Racing curriculum browser shell.
+ *
+ * This folder is the browser-side presentation layer for the racing curriculum.
+ * It builds a two-region DOM host — track canvas on the left and a focused
+ * controller network view on the right — and runs the rendering and control
+ * loop. Runtime controls live below the track, inside the canvas region. The
+ * host owns only DOM regions and drawing; simulation stepping and controller
+ * inference are driven by local services that mirror the worker-authoritative
+ * protocol defined in
+ * {@link ../workers/simulation-worker/simulation-worker.evolution.types.ts}.
+ *
+ * The layout intentionally mirrors the Flappy Bird parity shape: a left canvas
+ * region, a right sidebar network-visualizer region, and no separate bottom
+ * visualizer strip. The right sidebar routes through the shared Flappy network
+ * visualizer via the racing adapter in `network-view/`; the host owns hover
+ * state, resolved-frame caching, and `installRacingNetworkResize` viewport sync.
+ *
+ * Read this boundary as the browser-side answer to one practical question:
+ * how do you inspect a learned racing controller in the browser without letting
+ * DOM concerns leak into physics or evolution? The answer is a thin host that
+ * owns stable regions and rendering, while the controller and simulation state
+ * are passed in as plain data.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Start["start()"]:::accent --> Host["host/\nDOM and canvas shell"]:::base
+ *   Start --> Controller["deterministic controller\n + local physics"]:::base
+ *   Host --> Canvas["track canvas\n(left region)"]:::base
+ *   Host --> Network["network-view/\n(right region)"]:::base
+ *   Network --> Resize["host.resize.service\nviewport sync"]:::base
+ * Network --> Tooltip["host.ts\nhover + redraw controller"]:::base
+ * ```
+ *
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Browser["Main thread browser host"]:::accent --> Regions["two-region layout"]:::base
+ *   Regions --> Controls["runtime controls\n(below track)"]:::base
+ *   Browser --> Loop["requestAnimationFrame\nfixed-timestep loop"]:::base
+ *   Loop --> Worker["worker-ready seam\n(local fallback)"]:::base
+ * ```
+ *
+ * For the browser execution model, see
+ * [Web Workers (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API)
+ * and
+ * [Transferable objects (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects).
+ * For the fixed-timestep game-loop pattern, see
+ * [Fix Your Timestep! (Gaffer On Games)](https://gafferongames.com/post/fix_your_timestep/).
+ *
+ * @example
+ * ```ts
+ * import { start } from './browser-entry/browser-entry';
+ *
+ * const handle = await start('racing-curriculum-output');
+ * // Later: handle.stop();
+ * ```
+ */
+
 import { createRacingHost } from './host/host';
+import type { RacingNetworkHudNodes } from './host/host.types';
 import { Network, methods } from '../../../src/browser-entry.ts';
 import { generateTrack } from '../track/track.generator';
 import type {
@@ -28,10 +93,9 @@ import type {
   RacingCarState,
   TireStateTuple,
 } from '../environment/environment.types';
-import { exportVisualizationGraph } from '../../../src/architecture/network';
+import { FLAPPY_NEON_PALETTE } from '../../flappy_bird/constants/constants.palette';
+import { FLAPPY_MONOSPACE_FONT_FAMILY } from '../../flappy_bird/constants/constants.frame';
 import {
-  FLAPPY_MONOSPACE_FONT_FAMILY,
-  FLAPPY_NEON_PALETTE,
   FLAPPY_SCREEN_PADDING_PX,
   FLAPPY_UI_CANVAS_INSET_SHADOW,
   FLAPPY_UI_DOUBLE_PANEL_BORDER,
@@ -40,14 +104,13 @@ import {
   FLAPPY_UI_OUTER_FRAME_MIN_SIDE_PADDING_PX,
   FLAPPY_UI_OUTER_FRAME_SIDE_PADDING_OFFSET_PX,
   FLAPPY_UI_UNIFIED_INSET_SHADOW,
-} from '../../flappy_bird/constants/constants';
+} from '../../flappy_bird/constants/constants.layout';
 import {
   FLAPPY_HOST_PANEL_PADDING,
   FLAPPY_HOST_STATS_SPLIT_GAP,
   FLAPPY_HOST_TABLE_FONT_SIZE,
   FLAPPY_HOST_TABLE_HOST_PADDING,
 } from '../../flappy_bird/browser-entry/host/host.constants';
-import { renderNetworkView } from '../../../src/visualization/network-view/network-view';
 
 // ── Animation constants ───────────────────────────────────────────────────────
 
@@ -65,8 +128,10 @@ const FOCUSED_NETWORK_REFRESH_INTERVAL_MS = 5000;
 /** Track determinism key: seed 42, layout v1. */
 const DEMO_TRACK_SEED = 42;
 const DEMO_TRACK_LAYOUT_VERSION = 1;
-/** Active browser harness tier for the Step 04 NGE controller integration. */
+/** Active browser harness tier for the NGE controller integration. */
 const ACTIVE_CURRICULUM_TIER = 1;
+/** Population size sent to the simulation worker during host initialisation. */
+const RACING_CURRICULUM_POPULATION_SIZE = 10;
 /** Small hidden layer used to pin a deterministic solo driving policy. */
 const CONTROLLER_HIDDEN_LAYER_SIZES = [4] as const;
 /** Observation channel index for the lateral-offset feature. */
@@ -87,6 +152,7 @@ const OBSERVATION_INDEX_SIN_CAR_HEADING = 2;
  * Wired against OBSERVATION_INDEX_SIN_CAR_HEADING to form a differential
  * signal: sin(tangentAhead) − sin(carHeading) ≈ sin(headingErrorAhead),
  * giving the controller anticipatory steering before curves arrive.
+ * @internal
  */
 const OBSERVATION_INDEX_LOOK_AHEAD_NEAR_SIN_TANGENT = 32;
 
@@ -98,6 +164,8 @@ const TIRE_WEAR_START_TIER = 4;
 const TIER_FOUR_TEAM_LAYOUT = [0, 0, 1, 1] as const;
 /** Tier 5+ packs use a six-car 3v3 grid. */
 const TIER_FIVE_TEAM_LAYOUT = [0, 0, 0, 1, 1, 1] as const;
+/** Tier 1 packs use a two-car 1v1 grid so both team guiding lines are visible. */
+const TIER_ONE_TEAM_LAYOUT = [0, 1] as const;
 /** Default Tier 1 adaptation cadence in fixed-timestep ticks (very frequent). */
 const DEFAULT_RUNTIME_ADAPTATION_CADENCE_INTERVAL_TICKS = 1;
 /** Minimum mutation intensity while adaptation remains active in higher tiers. */
@@ -123,14 +191,14 @@ const RUNTIME_ADAPTATION_ROLLBACK_COOLDOWN_TICKS = 12;
 /** Scale UI threshold controls to the engine's score-delta domain. */
 const RUNTIME_ADAPTATION_IMPROVEMENT_THRESHOLD_SCALE = 0.001;
 
-// ── POC worker seam (current: physics delegation only) ───────────────────────
+// ── POC worker seam (physics-only delegation) ────────────────────────────────
 //
-// The current implementation sends full EnvironmentState to the worker each
-// tick and receives a stepped EnvironmentState back.  Controller inference,
-// evolution, and curriculum progress all run on the host (main) thread.
+// This seam sends a full EnvironmentState to the worker each tick and receives
+// a stepped EnvironmentState back.  Controller inference, evolution, and
+// curriculum progress all run on the host (main) thread.
 //
-// The target worker-authoritative protocol (defined in
-// simulation-worker.evolution.types.ts) inverts this:
+// The worker-authoritative protocol (defined in
+// simulation-worker.evolution.types.ts) inverts this relationship:
 //   Host → Worker: init | request-generation | start-race | request-race-step | stop
 //   Worker → Host: generation-ready | race-step | runtime-status | error
 //
@@ -139,8 +207,9 @@ const RUNTIME_ADAPTATION_IMPROVEMENT_THRESHOLD_SCALE = 0.001;
 // The host receives compact typed-array race-step frames and renders them at
 // display cadence — it never drives simulation ticks directly.
 //
-// These local types below represent the current POC seam and will be replaced
-// when the worker-authoritative protocol is wired end-to-end.
+// The local types below belong to the physics-only seam.  They will be
+// replaced by the worker-authoritative message types once that protocol is
+// wired end-to-end.
 
 type RacingWorkerStepRequest = {
   type: 'step';
@@ -168,22 +237,6 @@ type PendingWorkerStep = {
 // ── Panel text labels ─────────────────────────────────────────────────────────
 
 const CANVAS_TOOLTIP_HEADING = 'Track Playback';
-const CONTROLLER_TOOLTIP_HEADING = 'Controller Status';
-const CONTROLLER_TOOLTIP_LINES = [
-  'This panel now reports the live Tier 1 NGE controller instead of the old scripted baseline seam.',
-  'The browser harness keeps the same fixed-timestep telemetry loop, but the control path now runs through the public network inference surface.',
-  'Tier 2 reuses this seam and only widens the observation vector plus the self-radio tail.',
-];
-const NETWORK_SLOT_TOOLTIP_HEADING = 'Focused Network View';
-const NETWORK_SLOT_TOOLTIP_LINES = [
-  'The right column now renders the live deterministic controller graph for the focused active controller.',
-  'If a future pass needs a network picker, it should layer on top of this focused controller view instead of replacing it.',
-];
-const RACE_PACK_TOOLTIP_HEADING = 'Race Pack Slot';
-const RACE_PACK_TOOLTIP_LINES = [
-  'Lap counters, sector timing, and multi-car comparisons belong here once race-pack authority exists.',
-  'Tier 0 keeps the slot visible so later tiers can populate it without changing the browser-shell contract.',
-];
 
 let racingTooltipIdCounter = 0;
 
@@ -218,15 +271,7 @@ export interface RacingCurriculumRunHandle {
 
 // ── DOM panel element sets ────────────────────────────────────────────────────
 
-/** Live-updating text node references and redraw hook for the network panel. */
-interface NetworkPanelNodes {
-  throttleValue: Text;
-  steerValue: Text;
-  tickValue: Text;
-  tierValue: Text;
-  renderFocusedNetwork: (network: Network) => void;
-}
-
+/** Live-updating redraw hook and text node references for the network panel. */
 /** Live-updating text node references for the telemetry panel. */
 interface TelemetryPanelNodes {
   tickValue: Text;
@@ -244,6 +289,7 @@ interface TelemetryPanelNodes {
   networkSizeValue: Text;
   networkDeltaValue: Text;
   lastChangeReasonValue: Text;
+  controlsElement: HTMLDivElement;
   syncRuntimeControls: () => void;
 }
 
@@ -282,7 +328,7 @@ interface RuntimeAdaptationState {
 /** Curriculum tier contract from the racing plan ladder. */
 type CurriculumTier = 1 | 2 | 3 | 4 | 5 | 6;
 
-/** Observation tier currently supported by the owner-local controller seam. */
+/** Observation tier supported by the owner-local controller seam. */
 type SupportedObservationTier = 1 | 2 | 3 | 4 | 5;
 
 /** Team index for the browser-local race pack grid. */
@@ -324,13 +370,14 @@ type TierSignalEvidenceSummary = {
  *
  * Keep this at 3 laps minimum so tiers cannot end too quickly even if future
  * threshold checks become more permissive.
+ * @internal
  */
 const LAP_COMPLETIONS_REQUIRED_FOR_TIER_ADVANCE = 3;
 /** Highest curriculum tier in the racing plan ladder. */
 const MAX_CURRICULUM_TIER: CurriculumTier = 6;
-/** Highest tier allowed by the current fallback auto-promotion policy. */
+/** Highest tier allowed by the fallback auto-promotion policy. */
 const MAX_FALLBACK_AUTOPROMOTION_TIER: CurriculumTier = 4;
-/** Highest observation tier currently implemented in the browser controller seam. */
+/** Highest observation tier implemented in the browser controller seam. */
 const MAX_SUPPORTED_OBSERVATION_TIER: SupportedObservationTier = 5;
 /** Wrap threshold used to detect one completed lap from nearest spline sample indices. */
 const LAP_WRAP_HIGH_WATERMARK_RATIO = 0.75;
@@ -342,9 +389,16 @@ const DEFAULT_TRACK_VIEWPORT_EDGE_PADDING_RATIO = 0.08;
 /**
  * Starts the Tier 0 racing curriculum browser demo.
  *
- * Sets up the three-panel layout (canvas, network info, telemetry), generates
- * a deterministic track, and launches a `requestAnimationFrame` animation loop
- * with fixed-timestep physics driven by a deterministic NGE controller network.
+ * Sets up the two-region layout created by {@link createRacingHost} — a track
+ * canvas on the left and a focused-controller network view on the right —
+ * generates a deterministic track, and launches a `requestAnimationFrame`
+ * animation loop with fixed-timestep physics driven by a deterministic NGE
+ * controller network.
+ *
+ * Runtime controls live below the track, inside the canvas region. The network
+ * sidebar stays in sync with the viewport through
+ * {@link installRacingNetworkResize} and is redrawn from the shared
+ * {@link drawRacingNetworkVisualization} racing adapter.
  *
  * @param container - Host element or element id.
  * @returns Lightweight run handle.
@@ -353,6 +407,13 @@ const DEFAULT_TRACK_VIEWPORT_EDGE_PADDING_RATIO = 0.08;
  * ```ts
  * const handle = await start('racing-curriculum-output');
  * // Later: handle.stop();
+ * ```
+ * @example
+ * ```ts
+ * const handle = await start(document.getElementById('racing-output')!);
+ * console.log(handle.isRunning);
+ * handle.stop();
+ * await handle.done;
  * ```
  */
 export async function start(
@@ -402,6 +463,12 @@ export async function start(
   const previousNetworkSize = resolveNetworkSize(controllerNetwork);
   const renderState = createRacingRenderState();
   const simulationWorker = createRacingSimulationWorker();
+  simulationWorker?.postMessage({
+    type: 'init',
+    populationSize: RACING_CURRICULUM_POPULATION_SIZE,
+    rngSeed: DEMO_TRACK_SEED,
+    tier: ACTIVE_CURRICULUM_TIER,
+  });
   const pendingWorkerSteps = new Map<number, PendingWorkerStep>();
   let nextWorkerRequestId = 0;
   const handleWorkerMessage = (
@@ -412,12 +479,11 @@ export async function start(
   simulationWorker?.addEventListener('message', handleWorkerMessage);
 
   // Step 5: Build info panels inside the host regions.
-  const networkPanelNodes = setupNetworkPanel(
-    hostHandle.networkRegionElement,
-    controllerNetwork,
-  );
-  const telemetryPanelNodes = setupTelemetryPanel(
-    hostHandle.visualizerRegionElement,
+  hostHandle.renderNetworkArchitecture(controllerNetwork);
+  const stageCardElement =
+    hostHandle.canvasRegionElement.querySelector('.racing-stage-card');
+  const runtimeControls = setupRuntimeControls(
+    (stageCardElement as HTMLElement | null) ?? hostHandle.canvasRegionElement,
     runtimeAdaptationState.tuning,
   );
   const handleRuntimeTuningKeydown = (keyboardEvent: KeyboardEvent): void => {
@@ -518,7 +584,7 @@ export async function start(
     }
 
     runtimeAdaptationState.telemetry.lastChangeReason = `manual tuning ${keyboardEvent.code}`;
-    telemetryPanelNodes.syncRuntimeControls();
+    runtimeControls.syncRuntimeControls();
     keyboardEvent.preventDefault();
   };
   window.addEventListener('keydown', handleRuntimeTuningKeydown);
@@ -616,7 +682,7 @@ export async function start(
         controller = createNgeController(controllerNetwork, {
           tier: activeObservationTier,
         });
-        networkPanelNodes.renderFocusedNetwork(controllerNetwork);
+        hostHandle.renderNetworkArchitecture(controllerNetwork);
         // Step 2: Rebuild the track and race-local state for the promoted tier.
         episodeState = createCurriculumEpisodeState(
           curriculumProgress.tier,
@@ -678,7 +744,7 @@ export async function start(
         tierSignalEvidenceAccumulator =
           createEmptyTierSignalEvidenceAccumulator();
         if (didCommitRuntimeAdaptation) {
-          networkPanelNodes.renderFocusedNetwork(controllerNetwork);
+          hostHandle.renderNetworkArchitecture(controllerNetwork);
         }
       }
 
@@ -701,20 +767,14 @@ export async function start(
       { guidanceAlpha },
     );
 
-    // Update info panels (text-only, no innerHTML churn).
-    updateNetworkPanelNodes(
-      networkPanelNodes,
-      lastControlOutput.throttle,
-      lastControlOutput.steer,
-      envState.tick,
-      curriculumProgress.tier,
-    );
+    // Update telemetry readouts (text-only, no innerHTML churn).
     updateTelemetryPanelNodes(
-      telemetryPanelNodes,
+      runtimeControls,
       runtimeAdaptationState,
       controllerNetwork,
       envState,
       curriculumProgress.lapProgress.completedLaps,
+      hostHandle.networkHud,
     );
 
     animationFrameId = requestAnimationFrame(animationStep);
@@ -727,7 +787,7 @@ export async function start(
       return;
     }
 
-    networkPanelNodes.renderFocusedNetwork(controllerNetwork);
+    hostHandle.renderNetworkArchitecture(controllerNetwork);
   }, FOCUSED_NETWORK_REFRESH_INTERVAL_MS);
 
   const handle: RacingCurriculumRunHandle = {
@@ -738,6 +798,7 @@ export async function start(
       running = false;
       window.removeEventListener('resize', handleViewportResize);
       window.removeEventListener('keydown', handleRuntimeTuningKeydown);
+      hostHandle.resizeRedrawController.uninstall();
       window.clearInterval(focusedNetworkRefreshIntervalId);
       cancelAnimationFrame(animationFrameId);
       simulationWorker?.removeEventListener('message', handleWorkerMessage);
@@ -757,6 +818,7 @@ export async function start(
  *
  * @param container - Host element or element id.
  * @returns Resolved host element.
+ * @internal
  */
 function resolveContainerElement(container: HTMLElement | string): HTMLElement {
   if (typeof container !== 'string') {
@@ -779,6 +841,7 @@ function resolveContainerElement(container: HTMLElement | string): HTMLElement {
  * layout and panel CSS.
  *
  * Idempotent: will not inject if already present (checked by id attribute).
+ * @internal
  */
 function injectRacingStyles(): void {
   if (document.getElementById('racing-curriculum-styles')) return;
@@ -820,7 +883,7 @@ function injectRacingStyles(): void {
     .racing-host {
       display: grid;
       grid-template-columns: var(--racing-wide-layout-columns);
-      grid-template-rows: minmax(0, 1fr) auto;
+      grid-template-rows: minmax(0, 1fr);
       gap: var(--racing-card-gap);
       width: 100%;
       height: 100%;
@@ -835,7 +898,7 @@ function injectRacingStyles(): void {
     }
     .racing-host--narrow {
       grid-template-columns: 1fr;
-      grid-template-rows: auto auto auto;
+      grid-template-rows: auto auto;
     }
     .racing-host__region {
       min-width: 0;
@@ -907,12 +970,101 @@ function injectRacingStyles(): void {
       grid-column: 1;
       grid-row: 2;
     }
-    .racing-host__region--visualizer {
-      grid-column: 1 / -1;
-      grid-row: 2;
+    .racing-network-canvas-host {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      border: var(--racing-panel-border-double);
+      background: var(--racing-network-background);
+      box-shadow: var(--racing-canvas-shadow);
+      overflow: hidden;
     }
-    .racing-host--narrow .racing-host__region--visualizer {
-      grid-row: 3;
+    .racing-network-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+    .racing-network-canvas-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      border-top: 1px solid rgba(15, 181, 255, 0.34);
+    }
+    .racing-network-hud {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 10px var(--racing-panel-padding);
+      background: linear-gradient(180deg, rgba(0, 21, 34, 0.96), rgba(4, 11, 19, 0.99));
+      border-bottom: 1px solid rgba(15, 181, 255, 0.34);
+      box-shadow: inset 0 0 12px rgba(15, 181, 255, 0.08), 0 0 10px rgba(15, 181, 255, 0.12);
+    }
+    .racing-network-hud__cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .racing-network-hud__label {
+      color: var(--racing-text-muted);
+      font-family: var(--racing-mono);
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .racing-network-hud__value {
+      color: var(--racing-text);
+      font-family: var(--racing-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .racing-network-hud__run {
+      color: var(--racing-accent);
+      text-shadow: 0 0 8px rgba(255, 154, 46, 0.45);
+    }
+    .racing-network-hud__status {
+      color: var(--racing-highlight);
+      text-shadow: 0 0 8px rgba(255, 92, 255, 0.45);
+    }
+    .racing-network-help-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px var(--racing-panel-padding);
+      background: rgba(0, 21, 34, 0.78);
+      border-top: 1px solid rgba(15, 181, 255, 0.18);
+    }
+    .racing-network-help-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border: 1px solid rgba(15, 181, 255, 0.34);
+      border-radius: var(--racing-control-radius);
+      background: rgba(6, 11, 20, 0.72);
+      color: var(--racing-text-muted);
+      font-family: var(--racing-mono);
+      font-size: 9px;
+      letter-spacing: 0.04em;
+      line-height: 1.4;
+      box-shadow: var(--racing-control-idle-shadow);
+    }
+    .racing-network-help-chip__emoji {
+      font-size: 10px;
+      line-height: 1;
+    }
+    .racing-network-help-chip__text {
+      text-transform: uppercase;
     }
     .racing-side-stack,
     .racing-lower-panels {
@@ -1138,6 +1290,24 @@ function injectRacingStyles(): void {
       line-height: 1.45;
       white-space: normal;
     }
+    .racing-network-tooltip {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+      padding: ${FLAPPY_SELECTOR_TOOLTIP_PADDING};
+      border: 1px solid var(--racing-border-color);
+      border-radius: ${FLAPPY_SELECTOR_TOOLTIP_RADIUS_PX}px;
+      background: linear-gradient(180deg, rgba(0, 21, 34, 0.96), rgba(4, 11, 19, 0.99));
+      box-shadow: 0 0 14px rgba(15, 181, 255, 0.34), inset 0 0 12px rgba(15, 181, 255, 0.08);
+      color: var(--racing-text);
+      font-family: var(--racing-mono);
+      font-size: ${FLAPPY_SELECTOR_TOOLTIP_BODY_FONT_SIZE};
+      line-height: 1.45;
+      pointer-events: none;
+      display: none;
+      white-space: nowrap;
+    }
     @media (max-width: 960px) {
       .racing-stage-card,
       .racing-card {
@@ -1156,6 +1326,7 @@ function injectRacingStyles(): void {
  *
  * @param region - Canvas host region.
  * @param canvasElement - Playback canvas element to place inside the stage.
+ * @internal
  */
 function setupCanvasStage(
   region: HTMLElement,
@@ -1204,124 +1375,21 @@ function setupCanvasStage(
 }
 
 /**
- * Populates the network-info region with controller status rows.
+ * Builds the live runtime-tuning controls and telemetry readouts.
+ * Builds the live runtime-tuning controls and telemetry readouts.
  *
- * Creates DOM structure once; returns text node references and a redraw hook for live updates.
+ * The controls live inside the canvas region below the stage, matching the
+ * Flappy Bird parity layout where runtime widgets share the left column.
  *
- * @param region - The network panel host element.
- * @returns References to the live-updating text nodes.
+ * @param region - The stage-card body element inside the canvas region.
+ * @param tuningConfig - Mutable runtime tuning configuration.
+ * @returns References to live-updating telemetry text nodes plus a sync hook.
+ * @internal
  */
-function setupNetworkPanel(
-  region: HTMLElement,
-  controllerNetwork: Network,
-): NetworkPanelNodes {
-  region.replaceChildren();
-
-  const sideStackElement = document.createElement('div');
-  sideStackElement.className = 'racing-side-stack';
-
-  const controllerCard = createPanelCard(
-    'Controller Status',
-    CONTROLLER_TOOLTIP_HEADING,
-    CONTROLLER_TOOLTIP_LINES,
-  );
-
-  const throttleValue = document.createTextNode('0.00');
-  const steerValue = document.createTextNode('0.00');
-  const tickValue = document.createTextNode('0');
-  const tierValue = document.createTextNode(String(ACTIVE_CURRICULUM_TIER));
-
-  const networkCanvasElement = document.createElement('canvas');
-  networkCanvasElement.className = 'racing-network-canvas';
-  networkCanvasElement.width = 560;
-  networkCanvasElement.height = 360;
-  networkCanvasElement.setAttribute('aria-label', 'Focused controller network');
-  networkCanvasElement.setAttribute('role', 'img');
-  networkCanvasElement.style.width = '100%';
-  networkCanvasElement.style.height = 'clamp(240px, 32dvh, 360px)';
-  networkCanvasElement.style.display = 'block';
-  networkCanvasElement.style.border = '1px solid rgba(15, 181, 255, 0.28)';
-  networkCanvasElement.style.borderRadius = '12px';
-  networkCanvasElement.style.background = 'rgba(3, 7, 15, 0.92)';
-
-  controllerCard.bodyElement.append(
-    buildPanelRow('Controller', 'Live NGE controller'),
-    buildPanelRow('Live NGE AI', 'Active'),
-    buildPanelRowWithLiveNode('Tier', tierValue),
-    buildPanelRowWithLiveNode('Throttle', throttleValue),
-    buildPanelRowWithLiveNode('Steer', steerValue),
-    buildPanelRowWithLiveNode('Tick', tickValue),
-  );
-
-  const noteElement = document.createElement('div');
-  noteElement.className = 'racing-panel__note';
-  noteElement.textContent =
-    'This controller now runs through the owner-local observation seam and the public Network.activate(...) surface. Tier 2 can widen the same seam with self-radio channels without reshaping the browser shell.';
-  controllerCard.bodyElement.append(noteElement);
-
-  const networkSlotCard = createPanelCard(
-    'Focused Network View',
-    NETWORK_SLOT_TOOLTIP_HEADING,
-    NETWORK_SLOT_TOOLTIP_LINES,
-  );
-  networkSlotCard.bodyElement.append(
-    buildPanelRow('Status', 'Live'),
-    buildPanelRow('Current role', 'Inspect the focused controller'),
-    buildPanelRow('Selection', 'Current NGE controller'),
-    networkCanvasElement,
-    buildCallout(
-      'This right-side column now renders the live controller graph for the current NGE network. If a future inspection picker is added, it should reuse this canvas-backed surface instead of replacing the host layout.',
-    ),
-  );
-
-  sideStackElement.append(
-    controllerCard.cardElement,
-    networkSlotCard.cardElement,
-  );
-  region.append(sideStackElement);
-
-  const renderFocusedNetwork = (network: Network): void => {
-    syncCanvasToDisplaySize(networkCanvasElement);
-    const visualizationGraph = exportVisualizationGraph(network);
-    renderNetworkView(networkCanvasElement, visualizationGraph, {
-      nodeDimensions: { widthPx: 20, heightPx: 20 },
-      panelPaddingPx: {
-        topPx: 16,
-        rightPx: 16,
-        bottomPx: 16,
-        leftPx: 16,
-      },
-    });
-  };
-
-  renderFocusedNetwork(controllerNetwork);
-
-  return {
-    throttleValue,
-    steerValue,
-    tickValue,
-    tierValue,
-    renderFocusedNetwork,
-  };
-}
-
-/**
- * Populates the lower panel region with runtime and adaptation readouts.
- *
- * Creates DOM structure once; returns text node references for live updates.
- *
- * @param region - The visualizer panel host element.
- * @returns References to the live-updating text nodes.
- */
-function setupTelemetryPanel(
+function setupRuntimeControls(
   region: HTMLElement,
   tuningConfig: RuntimeTuningConfig,
 ): TelemetryPanelNodes {
-  region.replaceChildren();
-
-  const lowerPanelsElement = document.createElement('div');
-  lowerPanelsElement.className = 'racing-lower-panels';
-
   const tickValue = document.createTextNode('0');
   const lapValue = document.createTextNode('0');
   const adaptationEnabledValue = document.createTextNode('on');
@@ -1528,21 +1596,7 @@ function setupTelemetryPanel(
     runtimeTuningKeyboardHint,
   );
 
-  const racePackCard = createPanelCard(
-    'Race Pack Slot',
-    RACE_PACK_TOOLTIP_HEADING,
-    RACE_PACK_TOOLTIP_LINES,
-  );
-  racePackCard.bodyElement.append(
-    buildPanelRow('Lap counter', 'Planned'),
-    buildPanelRow('Sector timing', 'Planned'),
-    buildCallout(
-      'This panel is intentionally informative instead of blank: later tiers will populate it with lap, sector, and opponent context once the race-pack authority exists.',
-    ),
-  );
-
-  lowerPanelsElement.append(runtimeCard.cardElement, racePackCard.cardElement);
-  region.append(lowerPanelsElement);
+  region.append(runtimeCard.cardElement);
 
   return {
     tickValue,
@@ -1560,6 +1614,7 @@ function setupTelemetryPanel(
     networkSizeValue,
     networkDeltaValue,
     lastChangeReasonValue,
+    controlsElement,
     syncRuntimeControls,
   };
 }
@@ -1576,6 +1631,7 @@ interface PanelCardElements {
  * @param tooltipHeading - Tooltip heading text.
  * @param tooltipBodyLines - Tooltip body copy.
  * @returns Card shell and body element for further population.
+ * @internal
  */
 function createPanelCard(
   title: string,
@@ -1605,6 +1661,7 @@ function createPanelCard(
  * @param tooltipHeading - Tooltip heading text.
  * @param tooltipBodyLines - Tooltip body copy.
  * @returns Header element.
+ * @internal
  */
 function createPanelHeader(
   title: string,
@@ -1631,6 +1688,7 @@ function createPanelHeader(
  * @param label - Chip label.
  * @param value - Chip value.
  * @returns Status chip element.
+ * @internal
  */
 function createStatusChip(label: string, value: string): HTMLDivElement {
   const chipElement = document.createElement('div');
@@ -1652,6 +1710,7 @@ function createStatusChip(label: string, value: string): HTMLDivElement {
  *
  * @param text - Callout body text.
  * @returns Callout element.
+ * @internal
  */
 function buildCallout(text: string): HTMLDivElement {
   const calloutElement = document.createElement('div');
@@ -1666,6 +1725,7 @@ function buildCallout(text: string): HTMLDivElement {
  * @param heading - Tooltip heading.
  * @param bodyLines - Tooltip body lines.
  * @returns Tooltip help wrapper.
+ * @internal
  */
 function createTooltipHelp(
   heading: string,
@@ -1712,6 +1772,7 @@ function createTooltipHelp(
  * Keeps the canvas backbuffer aligned with its CSS display size.
  *
  * @param canvasElement - Playback canvas.
+ * @internal
  */
 function syncCanvasToDisplaySize(canvasElement: HTMLCanvasElement): void {
   const devicePixelRatio = Math.min(
@@ -1753,34 +1814,12 @@ function syncCanvasToDisplaySize(canvasElement: HTMLCanvasElement): void {
 }
 
 /**
- * Builds a static label/value panel row element.
- *
- * @param label - Left label text.
- * @param value - Right value text (static).
- * @returns Completed row element.
- */
-function buildPanelRow(label: string, value: string): HTMLElement {
-  const row = document.createElement('div');
-  row.className = 'racing-panel__row';
-
-  const labelSpan = document.createElement('span');
-  labelSpan.className = 'racing-panel__label';
-  labelSpan.textContent = label;
-
-  const valueSpan = document.createElement('span');
-  valueSpan.className = 'racing-panel__value';
-  valueSpan.textContent = value;
-
-  row.append(labelSpan, valueSpan);
-  return row;
-}
-
-/**
  * Builds a label/value panel row element whose value is backed by a live text node.
  *
  * @param label - Left label text.
  * @param liveTextNode - Text node whose content will be mutated each frame.
  * @returns Completed row element.
+ * @internal
  */
 function buildPanelRowWithLiveNode(
   label: string,
@@ -1808,6 +1847,7 @@ function buildPanelRowWithLiveNode(
  * @param inputElement - Interactive input element.
  * @param liveValueNode - Text node reflecting the current active value.
  * @returns Completed control row.
+ * @internal
  */
 function buildControlRowWithInput(
   label: string,
@@ -1836,6 +1876,7 @@ function buildControlRowWithInput(
  * @param minimum - Inclusive minimum.
  * @param maximum - Inclusive maximum.
  * @returns Clamped numeric value.
+ * @internal
  */
 function clampNumber(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
@@ -1848,30 +1889,10 @@ function clampNumber(value: number, minimum: number, maximum: number): number {
  * @param minimum - Inclusive minimum.
  * @param maximum - Inclusive maximum.
  * @returns Clamped integer value.
+ * @internal
  */
 function clampInteger(value: number, minimum: number, maximum: number): number {
   return Math.round(clampNumber(value, minimum, maximum));
-}
-
-/**
- * Updates network panel text nodes for the current tick.
- *
- * @param nodes - Live text node references.
- * @param throttle - Current throttle output.
- * @param steer - Current steer output.
- * @param tick - Current simulation tick.
- */
-function updateNetworkPanelNodes(
-  nodes: NetworkPanelNodes,
-  throttle: number,
-  steer: number,
-  tick: number,
-  tier: CurriculumTier,
-): void {
-  nodes.throttleValue.textContent = throttle.toFixed(2);
-  nodes.steerValue.textContent = steer.toFixed(3);
-  nodes.tickValue.textContent = String(tick);
-  nodes.tierValue.textContent = String(tier);
 }
 
 /**
@@ -1897,6 +1918,7 @@ export function createDeterministicRacingControllerNetwork(
  * Pins one small parameter layout so the browser harness uses a stable steering policy.
  *
  * @param controllerNetwork - Newly created public network facade.
+ * @internal
  */
 function configureDeterministicControllerParameters(
   controllerNetwork: Network,
@@ -2099,6 +2121,7 @@ function configureDeterministicControllerParameters(
  *
  * @param nodeWithIndex - Node-like value exposing an optional numeric index.
  * @returns Stable node index.
+ * @internal
  */
 function resolveNodeIndex(nodeWithIndex: { index?: number }): number {
   if (typeof nodeWithIndex.index !== 'number') {
@@ -2116,6 +2139,7 @@ function resolveNodeIndex(nodeWithIndex: { index?: number }): number {
  * @param sourceNodeIndex - Source node index.
  * @param targetNodeIndex - Target node index.
  * @returns Stable edge key.
+ * @internal
  */
 function createEdgeKey(
   sourceNodeIndex: number,
@@ -2130,6 +2154,7 @@ function createEdgeKey(
  * @param sourceRole - Source node role (`type:position`).
  * @param targetRole - Target node role (`type:position`).
  * @returns Stable role-edge key.
+ * @internal
  */
 function createRoleEdgeKey(sourceRole: string, targetRole: string): string {
   return `${sourceRole}->${targetRole}`;
@@ -2140,6 +2165,7 @@ function createRoleEdgeKey(sourceRole: string, targetRole: string): string {
  *
  * @param nodes - Live text node references.
  * @param envState - Current physics state.
+ * @internal
  */
 function updateTelemetryPanelNodes(
   nodes: TelemetryPanelNodes,
@@ -2147,6 +2173,7 @@ function updateTelemetryPanelNodes(
   controllerNetwork: Network,
   envState: EnvironmentState,
   completedLaps: number,
+  networkHud?: RacingNetworkHudNodes,
 ): void {
   const networkSize = resolveNetworkSize(controllerNetwork);
   const runtimeTelemetry = runtimeAdaptationState.telemetry;
@@ -2175,10 +2202,59 @@ function updateTelemetryPanelNodes(
   nodes.networkSizeValue.textContent = `N${networkSize.nodes} / C${networkSize.connections}`;
   nodes.networkDeltaValue.textContent = `ΔN${runtimeTelemetry.networkDeltaNodes} / ΔC${runtimeTelemetry.networkDeltaConnections}`;
   nodes.lastChangeReasonValue.textContent = runtimeTelemetry.lastChangeReason;
+
+  if (!networkHud) {
+    return;
+  }
+
+  networkHud.sizeValue.textContent = `N${networkSize.nodes} / C${networkSize.connections}`;
+  networkHud.lastChangeValue.textContent = runtimeTelemetry.lastChangeReason;
+  networkHud.statusValue.textContent = resolveNetworkHudStatus(
+    runtimeTuning.adaptationEnabled,
+    runtimeTelemetry.recentImprovementTrend,
+  );
 }
 
 /**
- * Runs a deterministic controller probe without touching browser DOM.
+ * Resolves the short status label shown in the network panel HUD strip.
+ *
+ * @param adaptationEnabled - Whether runtime adaptation is currently active.
+ * @param recentTrend - Latest improvement trend telemetry value.
+ * @returns Uppercase status label.
+ */
+export function resolveNetworkHudStatus(
+  adaptationEnabled: boolean,
+  recentTrend: string,
+): string {
+  if (!adaptationEnabled) {
+    return 'HOLD';
+  }
+
+  if (recentTrend === 'improving') {
+    return 'ADAPTING';
+  }
+
+  if (recentTrend === 'regressing') {
+    return 'CAUTION';
+  }
+
+  return 'STABLE';
+}
+
+/**
+ * Updates the focused-network panel live-value text nodes from the current
+ * control output and curriculum state.
+ *
+ * @param nodes - Live text node references for the network panel.
+ * @param control - Latest controller output (throttle / steer).
+ * @param tick - Current simulation tick.
+ * @param tier - Current curriculum tier.
+ * @internal
+ */
+/**
+ * Runs a deterministic controller probe without touching browser DOM or
+ * rendering.  This is a headless smoke-test entry point used by regression tests
+ * and benchmark harnesses.
  *
  * @param tickCount - Number of fixed-timestep ticks to simulate.
  * @param tier - Curriculum tier used for controller observation width.
@@ -2298,6 +2374,7 @@ export function createCurriculumEpisodeState(
  *
  * @param canvasElement - Active simulation canvas.
  * @returns Viewport dimensions and edge padding for initial track shaping.
+ * @internal
  */
 function resolveTrackGenerationViewport(
   canvasElement: HTMLCanvasElement,
@@ -2332,6 +2409,7 @@ function resolveTrackGenerationViewport(
  *
  * @param dimensionCandidates - Ordered viewport dimension candidates.
  * @returns Positive finite viewport dimension in pixels.
+ * @internal
  */
 function resolvePositiveViewportDimension(
   ...dimensionCandidates: readonly number[]
@@ -2369,6 +2447,7 @@ export function resolveTrackSizeBucketForCurriculumTier(
  *
  * @param curriculumTier - Active curriculum tier.
  * @returns Ordered team indices for the tier-specific race pack.
+ * @internal
  */
 function resolveCurriculumRacePackLayout(
   curriculumTier: CurriculumTier,
@@ -2381,16 +2460,25 @@ function resolveCurriculumRacePackLayout(
     return TIER_FOUR_TEAM_LAYOUT;
   }
 
+  if (curriculumTier === 1) {
+    return TIER_ONE_TEAM_LAYOUT;
+  }
+
   return [0];
 }
 
 /**
- * Resolves the tier-specific race-pack cars on the sampled lane center.
+ * Resolves the tier-specific race-pack cars on the inner-lane centerline.
+ *
+ * Cars are seeded on the inner-lane centerline of the first spline sample so the
+ * demo starts on the optimal racing line. Team 0 (the primary car) sits on the
+ * inward side of the loop; additional team slots step outward.
  *
  * @param trackSpec - Frozen track specification for the current tier.
  * @param curriculumTier - Active curriculum tier.
  * @param initialHeading - Heading resolved from the sampled track frame.
  * @returns Ordered roster seeded from the starting grid.
+ * @internal
  */
 function resolveCurriculumRacePackCars(
   trackSpec: TrackSpec,
@@ -2411,7 +2499,11 @@ function resolveCurriculumRacePackCars(
   const teamLayout = resolveCurriculumRacePackLayout(curriculumTier);
   const trackWidth =
     firstSplineSample?.width ?? trackSpec.segments[0]?.width ?? 24;
-  const laneOffsetWorldUnits = Math.max(3, trackWidth * 0.18);
+  const laneCount = firstSplineSample?.laneCount ?? 2;
+  const laneWidthWorld =
+    firstSplineSample?.laneWidthWorld ?? trackWidth / laneCount;
+  const innerOffsetWorld =
+    firstSplineSample?.innerOffsetWorld ?? trackWidth / 2 - laneWidthWorld / 2;
   const gridSpacingWorldUnits = Math.max(6, trackWidth * 0.5);
   const teamSlotCounts: Record<CurriculumTeamIndex, number> = { 0: 0, 1: 0 };
 
@@ -2420,7 +2512,7 @@ function resolveCurriculumRacePackCars(
     teamSlotCounts[teamIndex] = teamSlotIndex + 1;
     const longitudinalOffsetWorldUnits = -teamSlotIndex * gridSpacingWorldUnits;
     const lateralOffsetWorldUnits =
-      teamIndex === 0 ? -laneOffsetWorldUnits : laneOffsetWorldUnits;
+      teamIndex === 0 ? innerOffsetWorld : -innerOffsetWorld;
     const startX = firstSplineSample?.x ?? trackSpec.segments[0]?.startX ?? 0;
     const startY = firstSplineSample?.y ?? trackSpec.segments[0]?.startY ?? 0;
 
@@ -2643,6 +2735,7 @@ function resolveGuidanceAlphaForCurriculumTier(tier: CurriculumTier): number {
  *
  * @param value - Incoming floating-point value.
  * @returns Clamped unit-interval value.
+ * @internal
  */
 function clampUnitInterval(value: number): number {
   return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
@@ -2671,6 +2764,7 @@ function resolveControllerInputCountForObservationTier(
  *
  * @param tier - Active curriculum tier.
  * @returns Tier-scoped subtitle, footer, and tooltip copy.
+ * @internal
  */
 function resolveStageNarrativeForTier(tier: CurriculumTier): {
   subtitle: string;
@@ -2710,6 +2804,7 @@ function resolveStageNarrativeForTier(tier: CurriculumTier): {
  * @param controlOutput - Controller output for the current step.
  * @param carCount - Number of cars that should receive motion input.
  * @returns Per-car control array aligned to roster order.
+ * @internal
  */
 function resolveControlFanOut(
   controlOutput: CarControlOutput,
@@ -2725,6 +2820,7 @@ function resolveControlFanOut(
  * Creates a fresh tier-signal accumulator for per-tick center-guide evidence.
  *
  * @returns Zeroed evidence accumulator.
+ * @internal
  */
 function createEmptyTierSignalEvidenceAccumulator(): TierSignalEvidenceAccumulator {
   return {
@@ -2741,6 +2837,7 @@ function createEmptyTierSignalEvidenceAccumulator(): TierSignalEvidenceAccumulat
  * @param currentAccumulator - Current per-lap evidence accumulator.
  * @param evidence - Tick evidence from the active observation seam.
  * @returns Updated accumulator.
+ * @internal
  */
 function collectTierSignalEvidence(
   currentAccumulator: TierSignalEvidenceAccumulator,
@@ -2765,6 +2862,7 @@ function collectTierSignalEvidence(
  *
  * @param accumulator - Per-lap evidence accumulator.
  * @returns Mean evidence summary.
+ * @internal
  */
 function summarizeTierSignalEvidence(
   accumulator: TierSignalEvidenceAccumulator,
@@ -2870,6 +2968,7 @@ function resolveNetworkSize(network: Network): {
  * Applies a single slow morph cycle to the focused controller network.
  *
  * @param controllerNetwork - Live controller network owned by the browser harness.
+ * @internal
  */
 function applyWithinTierAdaptation(
   controllerNetwork: ReturnType<
@@ -3085,6 +3184,7 @@ function resolveRuntimeAdaptationReason(
  *
  * @param curriculumTier - Active curriculum tier.
  * @returns Guidance evidence weight in [0, 1].
+ * @internal
  */
 function resolveGuidanceEvidenceWeightForTier(
   curriculumTier: CurriculumTier,
@@ -3114,6 +3214,7 @@ function resolveGuidanceEvidenceWeightForTier(
  * @param sourceNetwork - Evolved network from the previous tier.
  * @param nextObservationTier - Observation tier for the promoted curriculum tier.
  * @returns Remapped network with carried phenotype and widened input seam.
+ * @internal
  */
 function remapControllerNetworkForObservationTier(
   sourceNetwork: Network,
@@ -3173,6 +3274,7 @@ function remapControllerNetworkForObservationTier(
  *
  * @param sourceNetwork - Previous tier network.
  * @param targetNetwork - Next tier network.
+ * @internal
  */
 function remapNodeBiasesAndActivations(
   sourceNetwork: Network,
@@ -3219,6 +3321,7 @@ function remapNodeBiasesAndActivations(
  *
  * @param network - Network whose nodes should be role-mapped.
  * @returns Role mapping keyed by node index.
+ * @internal
  */
 function createNodeRoleMap(network: Network): Map<number, string> {
   const roleByNodeIndex = new Map<number, string>();
@@ -3244,6 +3347,7 @@ function createNodeRoleMap(network: Network): Map<number, string> {
  * @param network - Source network.
  * @param nodeType - Target node type.
  * @returns Stable node list for the type.
+ * @internal
  */
 function resolveSortedNodesByType(
   network: Network,
@@ -3264,6 +3368,7 @@ function resolveSortedNodesByType(
  * browser host and the worker runtime.
  *
  * @returns Worker instance when the current bundle URL is available; otherwise null.
+ * @internal
  */
 function createRacingSimulationWorker(): Worker | null {
   const workerUrl = resolveRacingSimulationWorkerUrl();
@@ -3279,6 +3384,7 @@ function createRacingSimulationWorker(): Worker | null {
  * Resolves the current racing bundle URL for worker bootstrap.
  *
  * @returns Script URL when the host is running from a DOM script element.
+ * @internal
  */
 function resolveRacingSimulationWorkerUrl(): string | null {
   if (typeof document === 'undefined') {
@@ -3307,6 +3413,7 @@ function resolveRacingSimulationWorkerUrl(): string | null {
  * @param envState - Current environment snapshot.
  * @param control - Per-car control input for the next fixed timestep.
  * @returns Stepped environment snapshot returned by the worker.
+ * @internal
  */
 function requestRacingWorkerStep(
   worker: Worker,
@@ -3331,6 +3438,7 @@ function requestRacingWorkerStep(
  *
  * @param pendingWorkerSteps - In-flight request resolvers.
  * @param event - Worker message event.
+ * @internal
  */
 function handleRacingWorkerMessage(
   pendingWorkerSteps: Map<number, PendingWorkerStep>,
@@ -3354,6 +3462,7 @@ function handleRacingWorkerMessage(
 
 /**
  * Boots the worker-side stepping bridge when this bundle runs in a worker context.
+ * @internal
  */
 function maybeBootstrapRacingSimulationWorker(): void {
   if (!isDedicatedRacingSimulationWorkerContext()) {
@@ -3383,6 +3492,7 @@ function maybeBootstrapRacingSimulationWorker(): void {
  * Detects whether the current runtime is the worker-side racing bundle.
  *
  * @returns True when the bundle is executing in a dedicated worker context.
+ * @internal
  */
 function isDedicatedRacingSimulationWorkerContext(): boolean {
   return (

@@ -508,10 +508,11 @@ archived Repo Cortex layer plans as the baselines this migration builds upon.
 
 - NEAT Genesis EvoDevo (NGE) — core algorithm (computation motifs, lifecycle, DNA, reproduction, collective intelligence)
   - Plan: [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
-- NGE Core Readiness Audit — primitive-by-primitive readiness matrix, gap classification by owner boundary, and first implementation tranche selection (core-first; demos are downstream e2e tests)
+- NGE Core Readiness — prior primitive-by-primitive readiness audit (computation motifs, lifecycle, DNA, reproduction, barriers, deterministic evaluation packs, experimental public API). Reopen-only baseline.
   - Plan: [completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [DONE]
-- NGE Racing Curriculum — Team A/B benchmark (worker-streamed runtime authority, deterministic race packs, rolling opponent snapshots)
-  - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) (`plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`) [WIP]
+  - Archive: [completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md`) [DONE]
+- NGE Racing Curriculum — canonical long-form racing curriculum readiness plan: Phase 1 UI/behavior completion to Flappy Bird parity and inner-track centerline [DONE]; Phase 2 Tier 1 single-agent simple track [DONE] (worker-authoritative race-pack service, per-agent cyan/magenta guiding lines, browser visual confirmation, Tier 1 README contract); Phase 3 Tier 2 single-car-with-radio [WIP] (Step 01 planning Tier 2 boundary). Tier 1–6 green-gated ladder with promotion rules and carry/reset semantics from `examples/racing_curriculum/reference.plans.md`. Downstream trackers point here for tier semantics.
+  - Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) (`plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md`) [WIP]
 - Racing Path-Tracking Debug and Quality Followup — pre-Phase-3 visual fix, geometry audit, and deferred quality cleanup
   - Plan: [completed/Racing_Pathtracking_Debug_and_Quality_Followup.plans.md](completed/Racing_Pathtracking_Debug_and_Quality_Followup.plans.md) [DONE]
   - Current internal state: archived after the shared-spline path-tracking repair, the
@@ -538,7 +539,7 @@ Current status: **Phases 0, 1, 2, 3, and 4 are complete for the current roadmap 
 - **Standalone meta-workflow lane F:** [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) [DONE] — numbered user-invocable agent architecture, hidden specialist delegation, skill-first customization, model routing, validators, evals, and the closed MCP runtime-visibility ownership baseline.
 - **Pre-NGE stop line:** closed. NEATchat follow-up lane archived [DONE]; Phase 7 / NGE is now the next frontier.
 - **Serial pre-NGE handoff:** after the archived Phase 5 memory stop line, the archived ONNX baseline, the archived hybrid-interoperability baseline, and the archived NEATchat follow-up baseline, the next lane is Phase 7 / NGE.
-- **Final capstone:** [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
+- **Final capstone:** [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
 
 ## Plan Inventory in Roadmap Order
 
@@ -627,7 +628,8 @@ M12. [completed/turso-rag-migration.plans.md](completed/turso-rag-migration.plan
 ### Phase 7 inventory
 
 32. [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
-    32b. [completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [DONE]
-33. [NEAT_Genesis_EvoDevo_Racing_Curriculum.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.md) (`plans\NEAT_Genesis_EvoDevo_Racing_Curriculum.md`) [WIP]
+    32b. [completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [DONE] — prior core readiness audit
+    32c. [completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md`) [DONE] — prior core audit archive
+33. [NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) (`plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md`) [WIP] — canonical racing curriculum readiness plan; Phase 1 [DONE], Phase 2 [DONE], Phase 3 [WIP] (Step 01 planning Tier 2 boundary).
 34. [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
 35. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]

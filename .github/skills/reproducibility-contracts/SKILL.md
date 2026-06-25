@@ -123,7 +123,6 @@ If any required component is missing, the claim weakens.
 - Functions, DOM nodes, and some metadata cannot be cloned.
 - Replay claims across workers must use clone-safe payloads and explicit state.
 
-
 ## Workflow Diagram
 
 ```mermaid
@@ -241,12 +240,14 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```ts
 // vague: no level named, no caveats
 /** Produces deterministic results with the same seed. */
 ```
 
 **After:**
+
 ```ts
 // precise: level named, seed and tolerance stated
 /**

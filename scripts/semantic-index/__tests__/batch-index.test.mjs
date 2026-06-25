@@ -27,7 +27,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-import { createSchemaClient, insertTestFixtures } from './turso-test-helpers.mjs';
+import {
+  createSchemaClient,
+  insertTestFixtures,
+} from './turso-test-helpers.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -179,8 +182,26 @@ describe('Batch transactions: atomicity (guard)', () => {
         sql: `INSERT INTO chunks (doc_id, chunk_index, heading_path, body_text, char_start, char_end, parent_chunk_id, depth, context_header, symbol_name, signature_text, jsdoc_text, export_type, module_path, arch_layer, jsdoc_quality, jsdoc_word_count, cyclomatic_complexity, test_coverage, source_path_pattern)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
-          600001, 1, 'BatchTest', 'batch rollback guard', 0, 20, null, 0,
-          null, null, null, null, null, null, 'network', null, 0, 0, null, null,
+          600001,
+          1,
+          'BatchTest',
+          'batch rollback guard',
+          0,
+          20,
+          null,
+          0,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          'network',
+          null,
+          0,
+          0,
+          null,
+          null,
         ],
       },
       {

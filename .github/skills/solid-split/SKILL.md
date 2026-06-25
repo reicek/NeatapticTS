@@ -82,7 +82,6 @@ The default promise is:
 - Documentation work revealed that the real fix is a boundary split rather than
   more prose on the current shape.
 
-
 ## When NOT to use
 
 Do NOT use for splitting agents - use `splitting-monolithic-agent` instead. Do NOT use for general refactoring - use `implementation-standards` instead.
@@ -629,6 +628,7 @@ If a companion agent uses this skill, it should:
 ## Before / After Examples
 
 **Before:**
+
 ```ts
 // src/neat/mutation.ts — 500-line monolith
 export function mutate(genome: Genome): Genome {
@@ -639,6 +639,7 @@ export function mutate(genome: Genome): Genome {
 ```
 
 **After:**
+
 ```ts
 // src/neat/mutation/neat.mutation.ts — orchestration
 export function mutate(genome: Genome): Genome {
@@ -647,8 +648,12 @@ export function mutate(genome: Genome): Genome {
 }
 
 // src/neat/mutation/neat.mutation.utils.ts — focused helpers
-function applyMutation(genome: Genome, type: MutationType): Genome { /* ... */ }
-function pickMutationType(): MutationType { /* ... */ }
+function applyMutation(genome: Genome, type: MutationType): Genome {
+  /* ... */
+}
+function pickMutationType(): MutationType {
+  /* ... */
+}
 ```
 
 ## Guardrails

@@ -95,7 +95,12 @@ async function teardownDb(client, tempDir, dbPath) {
   await client.close();
   if (dbPath && dbPath !== ':memory:') await closeTursoClient(dbPath);
   if (tempDir) {
-    await rm(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
   }
 }
 
@@ -207,7 +212,8 @@ describe('turso-pitr.mjs: PITR database creation behavior', () => {
 
 describe('turso_pitr MCP tool registration', () => {
   it('registers turso_pitr in the MCP tool list', async () => {
-    const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+    const { createRepoCortexMcpServer } =
+      await import('../repo-cortex-mcp.mjs');
     const { client, dbPath, tempDir } = await setupDb();
     try {
       const server = createRepoCortexMcpServer({ databasePath: dbPath });
@@ -234,7 +240,8 @@ describe('turso_pitr MCP tool registration', () => {
 
 describe('turso_pitr MCP tool schema completeness', () => {
   it('turso_pitr tool inputSchema includes a timestamp property', async () => {
-    const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+    const { createRepoCortexMcpServer } =
+      await import('../repo-cortex-mcp.mjs');
     const { client, dbPath, tempDir } = await setupDb();
     try {
       const server = createRepoCortexMcpServer({ databasePath: dbPath });
@@ -251,7 +258,8 @@ describe('turso_pitr MCP tool schema completeness', () => {
   });
 
   it('turso_pitr tool inputSchema includes a database_name property for the recovered database', async () => {
-    const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+    const { createRepoCortexMcpServer } =
+      await import('../repo-cortex-mcp.mjs');
     const { client, dbPath, tempDir } = await setupDb();
     try {
       const server = createRepoCortexMcpServer({ databasePath: dbPath });
@@ -261,7 +269,9 @@ describe('turso_pitr MCP tool schema completeness', () => {
         method: 'tools/list',
       });
       const tool = listed.tools.find((t) => t.name === 'turso_pitr');
-      expect(Object.keys(tool.inputSchema.properties)).toContain('database_name');
+      expect(Object.keys(tool.inputSchema.properties)).toContain(
+        'database_name',
+      );
     } finally {
       await teardownDb(client, tempDir, dbPath);
     }
@@ -381,7 +391,9 @@ describe('turso-pitr.mjs: validation and edge cases', () => {
 
   it('throws when called with no arguments (default param branch)', async () => {
     const { tursoPitr } = await import(TURSO_PITR_PATH);
-    await expect(tursoPitr()).rejects.toThrow('tursoPitr requires a databaseName');
+    await expect(tursoPitr()).rejects.toThrow(
+      'tursoPitr requires a databaseName',
+    );
   });
 
   it('falls back to the passed databaseName when API response omits name', async () => {

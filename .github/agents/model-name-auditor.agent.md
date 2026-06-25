@@ -69,13 +69,13 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Qualified Model Name Reference Table
 
-| Pattern | Example | Status |
-|---|---|---|
+| Pattern                      | Example                         | Status                              |
+| ---------------------------- | ------------------------------- | ----------------------------------- |
 | `<vendor>-<model>:<variant>` | `kimi-k2.7-code:cloud (ollama)` | Qualified — cloud-hosted via ollama |
-| `<vendor>-<model>:<variant>` | `glm-5.2:cloud (ollama)` | Qualified — cloud-hosted via ollama |
-| `<model>` (bare) | `kimi-k2.7-code` | Unqualified — missing variant/host |
-| `<model>:local` | `kimi-k2.7-code:local` | Qualified — local model |
-| Deprecated model | `gpt-4` | Deprecated — flag for replacement |
+| `<vendor>-<model>:<variant>` | `glm-5.2:cloud (ollama)`        | Qualified — cloud-hosted via ollama |
+| `<model>` (bare)             | `kimi-k2.7-code`                | Unqualified — missing variant/host  |
+| `<model>:local`              | `kimi-k2.7-code:local`          | Qualified — local model             |
+| Deprecated model             | `gpt-4`                         | Deprecated — flag for replacement   |
 
 ## Model Validation Patterns
 

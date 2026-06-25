@@ -1,0 +1,47 @@
+{
+  "metricVersion": 1,
+  "scannerVersion": "1.0.0",
+  "gitCommit": "45a64bb2ed7fa69dc528ab219b8ee2521fc57469",
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "thresholdConfig": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeConfig": {
+    "scopeType": "paths",
+    "scopeValue": [
+      "examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts",
+      "examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts",
+      "examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.types.ts",
+      "examples/racing_curriculum/workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts",
+      "examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts"
+    ],
+    "scopeDigest": "6c0892f09c55a52d2c9dd0a8dab09ebe123694251d1de81d8551e2abb021eee0"
+  },
+  "sourcePathsDigest": "58126ce61b13c5da083675d94018019f26236eb06ae8c41998ec1dfbf51c3608",
+  "issueBreakdown": {
+    "missingJsdoc": 0,
+    "weakJsdoc": 0,
+    "highComplexity": 0
+  },
+  "weakCount": 0,
+  "normalizedEvidenceDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "threshold": {
+    "minJsdocWords": 10,
+    "complexityThreshold": 10
+  },
+  "scopeType": "paths",
+  "scopeDigest": "58126ce61b13c5da083675d94018019f26236eb06ae8c41998ec1dfbf51c3608",
+  "coverage": {
+    "available": true,
+    "totalFiles": 407,
+    "filesBelow100": 0,
+    "filesBelow100Detail": [],
+    "overallLines": 100,
+    "overallBranches": 100,
+    "overallFunctions": 100
+  },
+  "summaryPath": "artifacts/docs-quality/runs/step06-final-worker/summary.json",
+  "evidencePath": "artifacts/docs-quality/runs/step06-final-worker/evidence.json",
+  "manifestPath": "artifacts/docs-quality/runs/step06-final-worker/manifest.json"
+}

@@ -8,15 +8,15 @@
 export { resolveNetworkVisualizationLayers } from '../network-view/network-view.topology.utils';
 
 /**
- * Formats node bias labels with fixed sign and precision.
+ * Formats node activation labels with fixed precision.
  *
- * Consistent sign and precision make dense node labels easier to scan quickly in
- * the rendered network panel.
+ * Two decimal places keep the compact node labels scannable while still giving
+ * enough precision to distinguish meaningfully different activation values.
  *
- * @param nodeBias - Node bias value.
+ * @param activation - Node activation value.
  * @returns Label text.
  */
-export function formatNodeBiasLabel(nodeBias: number): string {
-  const roundedBias = Number.isFinite(nodeBias) ? nodeBias : 0;
-  return `${roundedBias >= 0 ? '+' : ''}${roundedBias.toFixed(2)}`;
+export function formatNodeActivationLabel(activation: number): string {
+  const roundedActivation = Number.isFinite(activation) ? activation : 0;
+  return roundedActivation.toFixed(2);
 }

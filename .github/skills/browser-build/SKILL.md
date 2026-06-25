@@ -58,11 +58,9 @@ plan/log shape. When roadmap alignment is needed, use `plan-alignment`.
   browser build or whether the workflow must call `node scripts/build-browser.mjs`
   directly.
 
-
 ## When NOT to use
 
 Do NOT use for general build or lint tasks - use standard `npm run build` and `npm run lint` instead. Do NOT use for visualizer debugging - use `visualizer-workflow` instead.
-
 
 ## Workflow Diagram
 
@@ -193,12 +191,14 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```html
 <script src="docs/assets/flappy.bundle.js"></script>
 <!-- workerUrl still points at stale v1 path -->
 ```
 
 **After:**
+
 ```html
 <script src="docs/assets/flappy.bundle.js"></script>
 <!-- workerUrl refreshed to dist/neataptic.worker.esm.js (ESM boundary) -->

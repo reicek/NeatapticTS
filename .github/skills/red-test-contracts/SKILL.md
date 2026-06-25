@@ -37,11 +37,9 @@ actually fails, and handing off cleanly to the implementation phase.
 - Multiple tests are failing and the repair scope needs to be narrowed to the
   smallest honest failing assertion first.
 
-
 ## When NOT to use
 
 Do NOT use for writing unit tests - use `creating-unit-tests` instead. Do NOT use for fixing failing tests - use `test-fix-workflow` instead.
-
 
 ## Workflow Diagram
 
@@ -104,10 +102,10 @@ Validate with: npx jest --config=jest.config.mjs --no-cache --testPathPattern=ne
 - Use `coverage-guard` after any `src/` change to confirm 100% coverage is
   maintained on every touched file.
 
-
 ## Test Pattern Examples
 
 **Behavior-first contract:**
+
 ```ts
 it('throws when hiddenLayers is empty', () => {
   expect(() => buildMLP({ hiddenLayers: [] })).toThrow(/hiddenLayers/);
@@ -115,6 +113,7 @@ it('throws when hiddenLayers is empty', () => {
 ```
 
 **Determinism contract:**
+
 ```ts
 it('produces identical output for same config and seed', () => {
   const net1 = buildGRU({ units: 4, seed: 42 });
@@ -124,6 +123,7 @@ it('produces identical output for same config and seed', () => {
 ```
 
 **Shape contract:**
+
 ```ts
 it('produces correct node count for 3-layer MLP', () => {
   const net = buildMLP({ hiddenLayers: [4, 4], inputSize: 2, outputSize: 1 });
@@ -145,11 +145,15 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```ts
-it('should work', () => { expect(fn()).toBeDefined(); });
+it('should work', () => {
+  expect(fn()).toBeDefined();
+});
 ```
 
 **After:**
+
 ```ts
 it('throws RangeError when node count is zero', () => {
   expect(() => buildMLP({ hiddenLayers: [] })).toThrow(/hiddenLayers/);

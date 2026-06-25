@@ -50,7 +50,6 @@ worker-pool scheduling notes, source attribution, and queueing heuristics.
 - Dataset shipping is dominating runtime and must move to init-time broadcast.
 - Evolution-loop integration is being added on top of a pool that already works.
 
-
 ## When NOT to use
 
 Do NOT use for single-threaded evaluation - use direct evaluation calls instead. Do NOT use for worker payload encoding - use `worker-inference-transport` instead.
@@ -94,7 +93,6 @@ critical path. In practice, pool startup, dataset broadcast, queue contention,
 and browser scheduling can dominate the theoretical win for small batches.
 
 Choose pool complexity only when the batch size and compute cost justify it.
-
 
 ## Workflow Diagram
 
@@ -220,6 +218,7 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```ts
 // unbounded worker spawn: one worker per task, no limit
 for (const genome of genomes) {
@@ -229,6 +228,7 @@ for (const genome of genomes) {
 ```
 
 **After:**
+
 ```ts
 // bounded pool with backpressure: fixed worker count, queued tasks
 const pool = createWorkerPool({ workerCount: 4, maxQueueDepth: 100 });

@@ -41,11 +41,9 @@ owns that gate.
 - A TypeScript, source, or package-script change requires build or lint
   confirmation alongside coverage verification.
 
-
 ## When NOT to use
 
 Do NOT use for test repair - use `test-fix-workflow` instead. Do NOT use for plan consistency checking - use `plan-sync-validation` instead.
-
 
 ## Workflow Diagram
 
@@ -160,13 +158,20 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```json
 { "pass": false, "evidence": "tsc failed", "owner": "unknown" }
 ```
 
 **After:**
+
 ```json
-{ "pass": true, "evidence": "tsc exit 0, 0 errors", "fixHint": "n/a", "owner": "npx tsc --noEmit" }
+{
+  "pass": true,
+  "evidence": "tsc exit 0, 0 errors",
+  "fixHint": "n/a",
+  "owner": "npx tsc --noEmit"
+}
 ```
 
 ## Guardrails

@@ -1,11 +1,56 @@
 import type { RacingRenderFrame } from './simulation-worker.types';
+import type { TrackSpec } from '../../track/track.generator.types';
+import type { SplineSample } from '../../track/track.generator.types';
+import { generateTrack } from '../../track/track.generator';
+import {
+  resolveSplineSampleFrame,
+  resolveInnerLaneCenterlinePoint,
+} from '../../track/track.spline.utils';
+import { buildGuidingLineForTeam } from '../../renderer/racing.renderer';
+
+/** Schema sentinel for all packed race-step frames. */
+const RACING_SCHEMA_VERSION = 'racing-packed-v1' as const;
+
+/** Default agent count for a deterministic pack without controller networks. */
+const DEFAULT_AGENT_COUNT = 2 as const;
+
+/** Maximum number of fixed-timestep ticks in a single episode. */
+const MAX_EPISODE_TICKS = 1800 as const;
+
+/** Consecutive off-track ticks allowed before the episode is terminated. */
+const OFF_TRACK_GRACE_TICKS = 60 as const;
+
+/** Fitness bonus awarded for completing at least one lap. */
+const COMPLETION_BONUS = 2000 as const;
+
+/** Weight applied to incomplete-episode progress fitness. */
+const PROGRESS_WEIGHT = 0.5 as const;
+
+/** Fitness penalty applied when the episode ends off-track. */
+const OFF_TRACK_PENALTY = 500 as const;
+
+/** Fixed physics timestep in seconds (60 Hz). */
+const FIXED_TIMESTEP_SECONDS = 1 / 60;
+
+/** Maximum forward speed in logical world units per second. */
+const MAX_FORWARD_SPEED_UNITS_PER_SECOND = 108 as const;
+
+/** Expected number of distinct ArrayBuffer entries in a Tier-0 transfer list. */
+const EXPECTED_TRANSFER_BUFFER_COUNT = 10 as const;
 
 /**
  * Frozen opponent snapshot used as deterministic race-pack input.
  *
- * TODO: NGE_TODO — When NGE EpisodicSlot and GatingRouter primitives become
- * available (upstream Phase G/E), the snapshot payload format should be extended
- * to include episodic context and hard task-switch state.
+ * Identical seed + identical snapshot produce identical starting frames, which
+ * makes race episodes replayable and comparative fitness claims fair.  The
+ * zero-copy transfer path uses `ArrayBuffer` transfer lists supported by Web
+ * Workers; see [Transferable objects (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects)
+ * for details.
+ *
+ * Extension point:
+ * - Extend the snapshot payload format to include episodic context and hard
+ *   task-switch state when `EpisodicSlot` and `GatingRouter` primitives are
+ *   available.
  */
 export type OpponentSnapshot = {
   /** Stable identifier frozen at snapshot capture time. */
@@ -16,30 +61,78 @@ export type OpponentSnapshot = {
   readonly networkPayloads: readonly unknown[];
 };
 
-/** Number of agent slots in a standard Tier-0 race pack. */
-const AGENT_COUNT = 4 as const;
+/** Minimal controller handle used inside a race episode runner. */
+export type RaceControllerNetwork = {
+  /** Runs inference and returns the controller's output vector. */
+  activate(inputs: number[]): number[];
+};
 
-/** Grid column spacing in logical world units. */
-const GRID_COLUMN_SPACING = 12 as const;
+/**
+ * Packed render frame augmented with the per-car unit-progress field used by the
+ * race-pack runner. The `progress01` buffer is intentionally not part of the
+ * zero-copy transfer list; it is computed locally and kept attached to the
+ * runner frame.
+ */
+type RaceEpisodeRunnerFrame = RacingRenderFrame & {
+  /** Unit progress [0, 1] along the current lap for each car. */
+  progress01: Float32Array;
+};
 
-/** Grid row spacing in logical world units. */
-const GRID_ROW_SPACING = 20 as const;
+/**
+ * Mutable episode state returned by `createRaceEpisodeRunner`.
+ *
+ * `frame` exposes the current packed render frame; `tick()` advances it by one
+ * fixed timestep and runs one controller inference per car.
+ */
+export type RaceEpisodeRunner = {
+  /** Current packed render frame including local-only `progress01`. */
+  readonly frame: RaceEpisodeRunnerFrame;
+  /** Advances the physics state by one fixed timestep and runs inference. */
+  tick(): void;
+  /** Computes the lap-time fitness for the requested car. */
+  computeFitness(carIndex: number): number;
+  /**
+   * Builds a `race-step` worker message for the current frame.
+   *
+   * @returns Message object and the transfer list that owns its typed-array buffers.
+   */
+  createRaceStepMessage(): {
+    type: 'race-step';
+    frame: RacingRenderFrame;
+    transferList: ArrayBuffer[];
+  };
+  /** Per-car lap-completion flag (1 = completed, 0 = not yet). */
+  lapCompleted: Uint8Array;
+  /** Per-car tick index at which the first lap was completed. */
+  lapTimeTicks: Uint32Array;
+  /** True when the episode was terminated because a car left the track. */
+  endedOffTrack: boolean;
+  /**
+   * Per-car guiding line points used by the host renderer to draw a dedicated
+   * lane marker for each agent.
+   */
+  guidingLines: Array<readonly { readonly x: number; readonly y: number }[]>;
+};
 
-/** Seed scale factor for X offset per agent. */
-const SEED_X_SCALE = 0.01 as const;
-
-/** Expected typed-array buffer count (no pitStatus) for the standard pack. */
-const EXPECTED_TRANSFER_BUFFER_COUNT = 10 as const;
+type BuildRaceFrameOptions = {
+  seed: number;
+  trackId: number;
+  featureFlags: number;
+  agentCount: number;
+  track: TrackSpec;
+  centerline: TrackCenterline;
+};
 
 /**
  * Constructs an initial race frame deterministically from a seed and a frozen
  * opponent snapshot.  Identical seed + identical snapshot → identical frame.
  *
- * Car positions are spread on a 2×2 grid offset by the seed so that no car
- * starts at the origin and positions are repeatable without an external PRNG.
+ * All cars start on the inner-lane centerline of the deterministic medium
+ * simple track so that full-throttle episodes produce comparable lap times.
  *
  * @param seed - Deterministic race-pack seed.
- * @param opponentSnapshot - Frozen opponent snapshot for the episode.
+ * @param _opponentSnapshot - Frozen opponent snapshot for the episode (reserved
+ *   for future episodic context wiring; currently unused for determinism).
  * @returns Packed `RacingRenderFrame` with `schemaVersion: 'racing-packed-v1'`.
  *
  * @example
@@ -51,90 +144,21 @@ const EXPECTED_TRANSFER_BUFFER_COUNT = 10 as const;
  */
 export function createDeterministicRacePack(
   seed: number,
-  opponentSnapshot: OpponentSnapshot,
+  _opponentSnapshot: OpponentSnapshot,
 ): RacingRenderFrame {
-  // Step 1: Build deterministic per-car X and Y positions from seed + index.
-  const carXPositions = buildDeterministicCarXPositions(seed);
-  const carYPositions = buildDeterministicCarYPositions(seed, opponentSnapshot);
+  void _opponentSnapshot;
+  const track = generateTrack({ seed, layoutVersion: 1, sizeBucket: 'medium' });
+  const centerline = buildTrackCenterline(track.splineSamples);
 
-  // Step 2: Build the remaining per-car arrays.
-  const carHeadings = new Float32Array(AGENT_COUNT);
-  const carActive = new Uint8Array([1, 1, 1, 1]);
-  const carTeam = new Uint8Array([0, 0, 1, 1]);
-  const carMode = new Uint8Array(AGENT_COUNT);
-  const tireState = new Float32Array(AGENT_COUNT * 4);
-  const radioField = new Float32Array(0);
-  const lap = new Uint16Array(AGENT_COUNT);
-  const place = new Uint8Array([1, 2, 3, 4]);
-
-  // Step 3: Assemble the packed frame.
-  return {
-    schemaVersion: 'racing-packed-v1',
-    tick: 0,
+  return buildRaceFrame({
     seed,
-    trackId: 0,
-    agentCount: AGENT_COUNT,
+    trackId: seed,
     featureFlags: 0,
-    carX: carXPositions,
-    carY: carYPositions,
-    carHeading: carHeadings,
-    carActive,
-    carTeam,
-    carMode,
-    tireState,
-    radioField,
-    lap,
-    place,
-    raceTimeMs: 0,
-    done: false,
-  };
-
-  /**
-   * Builds deterministic X positions spread across a 2-column grid.
-   * Position depends only on agent index and seed so identical inputs yield
-   * identical outputs.
-   *
-   * @param raceSeed - Race-pack seed value.
-   * @returns Float32Array of length AGENT_COUNT.
-   */
-  function buildDeterministicCarXPositions(raceSeed: number): Float32Array {
-    const positions = new Float32Array(AGENT_COUNT);
-
-    for (let agentIndex = 0; agentIndex < AGENT_COUNT; agentIndex++) {
-      const columnIndex = agentIndex % 2;
-      positions[agentIndex] =
-        columnIndex * GRID_COLUMN_SPACING + raceSeed * SEED_X_SCALE;
-    }
-
-    return positions;
-  }
-
-  /**
-   * Builds deterministic Y positions spread across grid rows.
-   * Incorporates the snapshot generation to ensure pack distinctness between
-   * different opponent snapshots.
-   *
-   * @param raceSeed - Race-pack seed value.
-   * @param snapshot - Frozen opponent snapshot for the episode.
-   * @returns Float32Array of length AGENT_COUNT.
-   */
-  function buildDeterministicCarYPositions(
-    raceSeed: number,
-    snapshot: OpponentSnapshot,
-  ): Float32Array {
-    const positions = new Float32Array(AGENT_COUNT);
-
-    for (let agentIndex = 0; agentIndex < AGENT_COUNT; agentIndex++) {
-      const rowIndex = Math.floor(agentIndex / 2);
-      positions[agentIndex] =
-        rowIndex * GRID_ROW_SPACING +
-        (raceSeed + snapshot.generation) * SEED_X_SCALE;
-    }
-
-    return positions;
-  }
+    agentCount: DEFAULT_AGENT_COUNT,
+    track,
+    centerline,
+  });
 }
-
 /**
  * Collects every `ArrayBuffer` backing a typed-array field in the frame into a
  * transfer list for zero-copy `postMessage` transfer.
@@ -148,6 +172,7 @@ export function createDeterministicRacePack(
  * - Shared buffers are deduplicated (listed only once).
  * - A standard pack without `pitStatus` produces exactly
  *   {@link EXPECTED_TRANSFER_BUFFER_COUNT} entries.
+ * - The local-only `progress01` field is never transferred.
  *
  * @param frame - Packed render frame whose buffers will be transferred.
  * @returns Ordered list of `ArrayBuffer` references for postMessage transfer.
@@ -178,7 +203,6 @@ export function resolveRaceStepTransferList(
     ...(frame.pitStatus !== undefined ? [frame.pitStatus] : []),
   ];
 
-  // Step 1: Walk fields; deduplicate shared buffers; collect in order.
   for (const typedArray of typedArrayFields) {
     const buffer = typedArray.buffer as ArrayBuffer;
 
@@ -191,6 +215,416 @@ export function resolveRaceStepTransferList(
   }
 
   return transferList;
+}
+
+/**
+ * Builds a runnable race episode whose `tick()` advances physics and runs one
+ * controller inference per car per tick.
+ *
+ * The runner owns a deterministic initial frame produced from the same medium
+ * simple-track generator used by {@link createDeterministicRacePack}. Each call
+ * to `tick()` increments the frame tick counter, advances each car along the
+ * inner-lane centerline, detects lap completion, and invokes every provided
+ * network exactly once.
+ *
+ * @param seed - Deterministic race-pack seed.
+ * @param _opponentSnapshot - Frozen opponent snapshot for the episode (reserved
+ *   for future episodic context wiring; currently unused for determinism).
+ * @param networks - One controller network per car slot.
+ * @returns Runnable race episode with an initial packed frame.
+ *
+ * @example
+ * ```ts
+ * const runner = createRaceEpisodeRunner(42, snapshot, [netA, netB]);
+ * runner.tick();
+ * console.log(runner.frame.tick); // 1
+ * ```
+ */
+export function createRaceEpisodeRunner(
+  seed: number,
+  _opponentSnapshot: OpponentSnapshot,
+  networks: readonly RaceControllerNetwork[],
+): RaceEpisodeRunner {
+  void _opponentSnapshot;
+  const agentCount = networks.length;
+  const track = generateTrack({ seed, layoutVersion: 1, sizeBucket: 'medium' });
+  const centerline = buildTrackCenterline(track.splineSamples);
+  const trackLength = centerline.trackLength;
+  const frame = buildRaceFrame({
+    seed,
+    trackId: seed,
+    featureFlags: 0,
+    agentCount,
+    track,
+    centerline,
+  });
+
+  const distanceAlongTrack = new Float32Array(agentCount);
+  const offTrackCounter = new Int16Array(agentCount);
+  const lapCompleted = new Uint8Array(agentCount);
+  const lapTimeTicks = new Uint32Array(agentCount);
+
+  const guidingLines = Array.from({ length: agentCount }, (_, carIndex) => {
+    const carGuidingLine = buildGuidingLineForTeam(
+      track,
+      frame.carTeam[carIndex] ?? 0,
+    );
+    // Snap the first point to the car's actual start position so the host
+    // renderer can anchor the per-agent line exactly where the car appears.
+    return [
+      { x: frame.carX[carIndex], y: frame.carY[carIndex] },
+      ...carGuidingLine.slice(1),
+    ];
+  });
+
+  const runnerState: RaceEpisodeRunner = {
+    frame,
+    tick,
+    computeFitness,
+    createRaceStepMessage,
+    lapCompleted,
+    lapTimeTicks,
+    endedOffTrack: false,
+    guidingLines,
+  };
+
+  return runnerState;
+
+  function tick(): void {
+    if (runnerState.frame.done) {
+      return;
+    }
+
+    runnerState.frame.tick += 1;
+    runnerState.frame.raceTimeMs =
+      runnerState.frame.tick * FIXED_TIMESTEP_SECONDS * 1000;
+
+    for (let carIndex = 0; carIndex < agentCount; carIndex++) {
+      const network = networks[carIndex];
+      if (network === undefined) {
+        continue;
+      }
+
+      const controllerOutput = network.activate([
+        runnerState.frame.carX[carIndex],
+        runnerState.frame.carY[carIndex],
+        runnerState.frame.carHeading[carIndex],
+        runnerState.frame.progress01[carIndex],
+        runnerState.frame.tick,
+      ]);
+      const throttle = clamp01(controllerOutput[0] ?? 0);
+
+      const currentCenterline = resolveTrackPointAtDistance(
+        distanceAlongTrack[carIndex],
+        centerline,
+      );
+      const distanceFromCenterline = Math.hypot(
+        runnerState.frame.carX[carIndex] - currentCenterline.x,
+        runnerState.frame.carY[carIndex] - currentCenterline.y,
+      );
+
+      const currentSampleIndex = resolveProgressSampleIndex(
+        runnerState.frame.progress01[carIndex],
+        track.splineSamples.length,
+      );
+      const currentSample = track.splineSamples[currentSampleIndex]!;
+
+      if (distanceFromCenterline > currentSample.width / 2) {
+        offTrackCounter[carIndex] += 1;
+
+        if (offTrackCounter[carIndex] >= OFF_TRACK_GRACE_TICKS) {
+          runnerState.endedOffTrack = true;
+          runnerState.frame.done = true;
+        }
+
+        continue;
+      }
+
+      offTrackCounter[carIndex] = 0;
+
+      const forwardStep =
+        throttle * MAX_FORWARD_SPEED_UNITS_PER_SECOND * FIXED_TIMESTEP_SECONDS;
+      distanceAlongTrack[carIndex] += forwardStep;
+
+      const newCenterline = resolveTrackPointAtDistance(
+        distanceAlongTrack[carIndex],
+        centerline,
+      );
+
+      runnerState.frame.carX[carIndex] = newCenterline.x;
+      runnerState.frame.carY[carIndex] = newCenterline.y;
+      runnerState.frame.carHeading[carIndex] = newCenterline.heading;
+
+      const completedLaps = Math.floor(
+        distanceAlongTrack[carIndex] / trackLength,
+      );
+      if (completedLaps > runnerState.frame.lap[carIndex]) {
+        runnerState.frame.lap[carIndex] = completedLaps;
+
+        if (completedLaps === 1 && runnerState.lapCompleted[carIndex] === 0) {
+          runnerState.lapCompleted[carIndex] = 1;
+          runnerState.lapTimeTicks[carIndex] = runnerState.frame.tick;
+        }
+      }
+
+      runnerState.frame.progress01[carIndex] =
+        (distanceAlongTrack[carIndex] % trackLength) / trackLength;
+    }
+
+    recomputePlaces();
+
+    if (runnerState.frame.tick >= MAX_EPISODE_TICKS) {
+      runnerState.frame.done = true;
+    }
+  }
+
+  function computeFitness(carIndex: number): number {
+    const progress = runnerState.frame.progress01[carIndex];
+
+    if (runnerState.lapCompleted[carIndex] === 1) {
+      return (
+        COMPLETION_BONUS +
+        (MAX_EPISODE_TICKS - runnerState.lapTimeTicks[carIndex])
+      );
+    }
+
+    const baseFitness = PROGRESS_WEIGHT * progress * MAX_EPISODE_TICKS;
+    return runnerState.endedOffTrack
+      ? baseFitness - OFF_TRACK_PENALTY
+      : baseFitness;
+  }
+
+  function createRaceStepMessage(): {
+    type: 'race-step';
+    frame: RacingRenderFrame;
+    transferList: ArrayBuffer[];
+  } {
+    return {
+      type: 'race-step',
+      frame: runnerState.frame,
+      transferList: resolveRaceStepTransferList(runnerState.frame),
+    };
+  }
+
+  function recomputePlaces(): void {
+    const indices = Array.from({ length: agentCount }, (_, index) => index);
+    indices.sort((a, b) => {
+      const progressDelta =
+        runnerState.frame.progress01[b] - runnerState.frame.progress01[a];
+      if (progressDelta !== 0) {
+        return progressDelta;
+      }
+      return a - b;
+    });
+
+    for (let rank = 0; rank < agentCount; rank++) {
+      runnerState.frame.place[indices[rank]] = rank + 1;
+    }
+  }
+}
+
+function buildRaceFrame(
+  options: BuildRaceFrameOptions,
+): RaceEpisodeRunnerFrame {
+  const { seed, trackId, featureFlags, agentCount, centerline } = options;
+
+  const carX = new Float32Array(agentCount);
+  const carY = new Float32Array(agentCount);
+  const carHeading = new Float32Array(agentCount);
+  const carActive = new Uint8Array(agentCount).fill(1);
+  const carTeam = new Uint8Array(agentCount);
+  const carMode = new Uint8Array(agentCount);
+  const tireState = new Float32Array(agentCount * 4);
+  const radioField = new Float32Array(0);
+  const lap = new Uint16Array(agentCount);
+  const place = new Uint8Array(agentCount);
+  const progress01 = new Float32Array(agentCount);
+
+  for (let carIndex = 0; carIndex < agentCount; carIndex++) {
+    carTeam[carIndex] = carIndex % 2;
+    place[carIndex] = carIndex + 1;
+  }
+
+  const startPoint = resolveTrackPointAtDistance(0, centerline);
+
+  for (let carIndex = 0; carIndex < agentCount; carIndex++) {
+    carX[carIndex] = startPoint.x;
+    carY[carIndex] = startPoint.y;
+    carHeading[carIndex] = startPoint.heading;
+  }
+
+  return {
+    schemaVersion: RACING_SCHEMA_VERSION,
+    tick: 0,
+    seed,
+    trackId,
+    agentCount,
+    featureFlags,
+    carX,
+    carY,
+    carHeading,
+    carActive,
+    carTeam,
+    carMode,
+    tireState,
+    radioField,
+    lap,
+    place,
+    raceTimeMs: 0,
+    done: false,
+    progress01,
+  };
+}
+
+type TrackCenterline = {
+  /** Cumulative chordal distance from sample 0 to the start of each segment. */
+  readonly cumulativeDistances: Float32Array;
+  /** Inner-lane centerline point and heading for each spline sample. */
+  readonly points: readonly {
+    readonly x: number;
+    readonly y: number;
+    readonly heading: number;
+  }[];
+  /** Total closed-loop length in world units. */
+  readonly trackLength: number;
+};
+
+function buildTrackCenterline(
+  splineSamples: readonly SplineSample[],
+): TrackCenterline {
+  const sampleCount = splineSamples.length;
+
+  if (sampleCount === 0) {
+    return {
+      cumulativeDistances: new Float32Array(1),
+      points: [],
+      trackLength: 0,
+    };
+  }
+
+  const cumulativeDistances = new Float32Array(sampleCount + 1);
+  const points: { x: number; y: number; heading: number }[] = [];
+
+  for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
+    const sample = splineSamples[sampleIndex]!;
+    const splineFrame = resolveSplineSampleFrame(splineSamples, sampleIndex);
+    const centerlinePoint = resolveInnerLaneCenterlinePoint(
+      sample,
+      splineFrame,
+    );
+
+    points.push({
+      x: centerlinePoint.x,
+      y: centerlinePoint.y,
+      heading: splineFrame.tangentHeadingRadians,
+    });
+
+    if (sampleIndex < sampleCount - 1) {
+      const nextSample = splineSamples[sampleIndex + 1]!;
+      const nextFrame = resolveSplineSampleFrame(
+        splineSamples,
+        sampleIndex + 1,
+      );
+      const nextPoint = resolveInnerLaneCenterlinePoint(nextSample, nextFrame);
+      cumulativeDistances[sampleIndex + 1] =
+        cumulativeDistances[sampleIndex] +
+        Math.hypot(
+          nextPoint.x - centerlinePoint.x,
+          nextPoint.y - centerlinePoint.y,
+        );
+    }
+  }
+
+  const firstPoint = points[0]!;
+  const lastPoint = points[sampleCount - 1]!;
+  cumulativeDistances[sampleCount] =
+    cumulativeDistances[sampleCount - 1] +
+    Math.hypot(firstPoint.x - lastPoint.x, firstPoint.y - lastPoint.y);
+
+  return {
+    cumulativeDistances,
+    points,
+    trackLength: cumulativeDistances[sampleCount],
+  };
+}
+
+function resolveTrackPointAtDistance(
+  distance: number,
+  centerline: TrackCenterline,
+): { x: number; y: number; heading: number } {
+  const { trackLength, cumulativeDistances, points } = centerline;
+
+  if (points.length === 0) {
+    return { x: 0, y: 0, heading: 0 };
+  }
+
+  if (trackLength <= 0) {
+    return points[0]!;
+  }
+
+  let normalizedDistance = distance % trackLength;
+  if (normalizedDistance < 0) {
+    normalizedDistance += trackLength;
+  }
+
+  const segmentCount = points.length;
+  let segmentIndex = 0;
+  while (
+    segmentIndex < segmentCount &&
+    cumulativeDistances[segmentIndex + 1] < normalizedDistance
+  ) {
+    segmentIndex++;
+  }
+  if (segmentIndex >= segmentCount) {
+    segmentIndex = segmentCount - 1;
+  }
+
+  const segmentStart = cumulativeDistances[segmentIndex]!;
+  const segmentEnd = cumulativeDistances[segmentIndex + 1]!;
+  const segmentLength = segmentEnd - segmentStart || Number.MIN_VALUE;
+  const interpolationFactor =
+    (normalizedDistance - segmentStart) / segmentLength;
+
+  const startPoint = points[segmentIndex]!;
+  const endPoint = points[(segmentIndex + 1) % segmentCount]!;
+
+  return {
+    x: startPoint.x + (endPoint.x - startPoint.x) * interpolationFactor,
+    y: startPoint.y + (endPoint.y - startPoint.y) * interpolationFactor,
+    heading: lerpAngle(
+      startPoint.heading,
+      endPoint.heading,
+      interpolationFactor,
+    ),
+  };
+}
+
+function lerpAngle(
+  startRadians: number,
+  endRadians: number,
+  factor: number,
+): number {
+  const wrappedDelta =
+    ((endRadians - startRadians + Math.PI) % (2 * Math.PI)) - Math.PI;
+  const delta =
+    wrappedDelta < -Math.PI ? wrappedDelta + 2 * Math.PI : wrappedDelta;
+  return startRadians + delta * factor;
+}
+
+function resolveProgressSampleIndex(
+  progress01: number,
+  sampleCount: number,
+): number {
+  const floatIndex = progress01 * (sampleCount - 1);
+  const index = Math.floor(floatIndex);
+  return Math.max(0, Math.min(sampleCount - 1, index));
+}
+
+function clamp01(value: number): number {
+  if (Number.isNaN(value)) {
+    return 0;
+  }
+  return Math.min(1, Math.max(0, value));
 }
 
 export { EXPECTED_TRANSFER_BUFFER_COUNT };

@@ -2,9 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Tests run from the repository root, so cwd is a stable anchor for repo-relative
+// paths without needing import.meta.url (which currently breaks ts-jest for tests
+// in this project).
+const repositoryRoot = path.resolve();
 
 interface BrowserSnapshot {
   generated_at: string;
@@ -21,7 +23,6 @@ describe('semantic browser snapshot', () => {
       );
       const databasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
       const outputPath = path.join(fixtureDirectory, 'semantic-snapshot.json');
-      const repositoryRoot = path.resolve(__dirname, '..', '..', '..');
 
       execFileSync(
         process.execPath,

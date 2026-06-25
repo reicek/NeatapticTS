@@ -26,11 +26,9 @@ This skill performs a structured read-only audit of JSDoc/TSDoc quality across a
 - Preparing a documentation improvement plan for a coverage tranche or SDLC phase.
 - Verifying that stale invariant descriptions or removed parameters have been cleaned up.
 
-
 ## When NOT to use
 
 Do NOT use for citation auditing - use `docs-academic-citation-audit` instead. Do NOT use for generating READMEs - use `educational-docs` instead.
-
 
 ## Workflow Diagram
 
@@ -70,7 +68,6 @@ Standards to check: <examples | citations | Mermaid | formulas | param completen
 8. Recommend `educational-docs` when the gaps require Mermaid diagrams, deep source mapping, or conceptual depth rewrites.
 9. Do not hand-edit generated `src/**/README.md` files; note source files to edit instead.
 
-
 ## Why JSDoc Quality Matters
 
 JSDoc is the source of truth for the generated README pipeline. Weak or missing JSDoc produces poor educational documentation, missing examples, and reduced discoverability. The README generation pipeline (`npm run docs`) extracts JSDoc comments directly - if the JSDoc is thin, the generated README is thin. Auditing JSDoc before documentation generation catches gaps early.
@@ -78,13 +75,15 @@ JSDoc is the source of truth for the generated README pipeline. Weak or missing 
 ## Before/After JSDoc Examples
 
 **Before (weak):**
+
 ```ts
 /** Creates a network. */
 export function buildMLP(config?: MLPConfig): Network { ... }
 ```
 
 **After (strong):**
-```ts
+
+````ts
 /**
  * Build a multi-layer perceptron network with sensible defaults.
  *
@@ -103,7 +102,7 @@ export function buildMLP(config?: MLPConfig): Network { ... }
  * ```
  */
 export function buildMLP(config?: MLPConfig): Network { ... }
-```
+````
 
 ## Decision Tree
 

@@ -17,6 +17,7 @@
  */
 
 import {
+  copyExampleDocs,
   copyExampleEntryPoint,
   removeRetiredPublishedExamples,
 } from './copy-examples/copy-examples.copy.js';
@@ -36,7 +37,16 @@ import { DOCS_EXAMPLES_LOG_PREFIX } from './copy-examples/copy-examples.constant
  */
 async function main(): Promise<void> {
   const publishedExamples = (
-    await Promise.all(EXAMPLE_DEFINITIONS.map(copyExampleEntryPoint))
+    await Promise.all(
+      EXAMPLE_DEFINITIONS.map(async (exampleDefinition) => {
+        const publishedExample = await copyExampleEntryPoint(exampleDefinition);
+        // Static docs are copied regardless of whether the example has a browser
+        // entrypoint, so educational markdown files under <example>/docs/ are
+        // always published alongside the generated folder READMEs.
+        await copyExampleDocs(exampleDefinition);
+        return publishedExample;
+      }),
+    )
   ).filter(isPublishedExample);
 
   await removeRetiredPublishedExamples(publishedExamples);

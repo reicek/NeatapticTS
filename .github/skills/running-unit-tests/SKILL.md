@@ -25,11 +25,9 @@ This skill executes a focused Jest command against a bounded test surface and re
 - Checking whether a pre-existing failure is unrelated to the active change before reporting it as a defect.
 - Running `npm run test:silent` for repo-wide coverage analysis without verbose output noise.
 
-
 ## When NOT to use
 
 Do NOT use for triaging test failures - use `triaging-test-failures` instead. Do NOT use for coverage verification - use `coverage-guard` instead.
-
 
 ## Workflow Diagram
 
@@ -75,7 +73,6 @@ On failure: <summarize | reroute to triaging-test-failures>
 8. For coverage runs: report statement, branch, function, and line percentages for touched files.
 9. Report command run, pass/fail evidence, and reroute recommendation in the session output.
 
-
 ## Why Focused Tests First
 
 The full test suite is large and slow. Running it speculatively wastes time and produces noise. Focused slices test only the boundary that changed, giving fast feedback on whether the change is correct. Start with the narrowest test that covers the changed code, then expand only if the focused slice passes but you suspect broader issues.
@@ -97,11 +94,13 @@ flowchart TD
 ## Before / After Examples
 
 **Before:**
+
 ```text
 Ran tests. Some failed. Need to fix the mutation test.
 ```
 
 **After:**
+
 ```text
 Command: npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/mutation
 Result: PASS — 42 passed, 0 failed (exit 0)

@@ -61,7 +61,6 @@ the MCP-specific classification, transition, and trust-boundary rules.
 - A change to MCP tool definitions, plan-packet parsing, or trust-boundary docs
   needs CI-visible evidence and a clear maintainer-facing summary.
 
-
 ## When NOT to use
 
 Do NOT use for general agent customization - use `agent-frontmatter-standards` instead. Do NOT use for routing table management - use `routing-optimization-policy` instead.

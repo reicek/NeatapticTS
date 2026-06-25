@@ -26,7 +26,6 @@ MCP tools directly or delegate to a Tier 3 specialist.
 
 Do NOT use for simple code lookups or grep searches - use `research-methodology` instead. Do NOT use for general performance profiling without a trace - use `performance-optimization` instead.
 
-
 ## Workflow Diagram
 
 ```mermaid
@@ -168,19 +167,19 @@ Most Chrome DevTools MCP operations should be delegated to a Tier 3
 specialist. The narrow exceptions below are safe for direct MCP tool
 calls from any agent.
 
-| Situation | Action |
-|---|---|
-| Quick DOM query (single element) | Use Chrome DevTools MCP directly |
-| Single navigation to a URL | Use Chrome DevTools MCP directly |
-| Single console log check | Use Chrome DevTools MCP directly |
-| Single network request inspection | Use Chrome DevTools MCP directly |
-| Performance trace capture & analysis | Delegate to `performance-trace-specialist` |
-| Multi-step UI interaction sequence | Delegate to `browser-ui-specialist` |
-| Layout verification across a demo flow | Delegate to `browser-ui-specialist` |
-| Element property inspection across multiple elements | Delegate to `browser-ui-specialist` |
-| Heap snapshot & memory profiling | Delegate to `browser-memory-specialist` |
-| Memory leak detection | Delegate to `browser-memory-specialist` |
-| Screenshot capture (token-expensive) | Only when explicitly required; prefer DOM queries |
+| Situation                                            | Action                                            |
+| ---------------------------------------------------- | ------------------------------------------------- |
+| Quick DOM query (single element)                     | Use Chrome DevTools MCP directly                  |
+| Single navigation to a URL                           | Use Chrome DevTools MCP directly                  |
+| Single console log check                             | Use Chrome DevTools MCP directly                  |
+| Single network request inspection                    | Use Chrome DevTools MCP directly                  |
+| Performance trace capture & analysis                 | Delegate to `performance-trace-specialist`        |
+| Multi-step UI interaction sequence                   | Delegate to `browser-ui-specialist`               |
+| Layout verification across a demo flow               | Delegate to `browser-ui-specialist`               |
+| Element property inspection across multiple elements | Delegate to `browser-ui-specialist`               |
+| Heap snapshot & memory profiling                     | Delegate to `browser-memory-specialist`           |
+| Memory leak detection                                | Delegate to `browser-memory-specialist`           |
+| Screenshot capture (token-expensive)                 | Only when explicitly required; prefer DOM queries |
 
 ### Delegation Rationale
 
