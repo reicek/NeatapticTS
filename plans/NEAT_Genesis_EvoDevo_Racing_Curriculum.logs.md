@@ -48,6 +48,101 @@ Durable compressed log for the racing-curriculum reference-completion workstream
 **Residual risks (carry-forward):**
 
 - `node scripts/agent-customization/validate-docs-examples.mjs --json` is referenced by the plan but does not exist in the repo; the Tier 2 README example was validated manually via `tsx` instead.
+
+## Phase 3 — Tier 2: 1v1 with radio — COMPLETED
+
+**Status:** [DONE] — all steps (Step 08 through Step 19) complete; Phase 3 green gate passes (348 tests, lint clean, tsc clean). Phase 3 compressed 2026-06-26.
+
+### Step summary (Step 08 – Step 19)
+
+- [DONE] Step 08 — Red tests for Tier 1/Tier 2 racing baseline rules: added focused red tests in `racing.renderer.test.ts`, `browser-entry.test.ts`, `track.generator.test.ts`, and `environment.step.service.test.ts` covering renderer colors, per-car guides, lane constants, alternating pits, and boundary walls; failures were honest missing-implementation gaps.
+- [DONE] Step 09 — Implement Tier 1/Tier 2 racing baseline rules: implemented the five baseline rules (renderer color/guidance, lane constants, alternating pits, boundary clamping); all four focused Jest slices passed, build and plan validators passed.
+- [DONE] Step 10 — Green validation and regression triage: confirmed Step 09 did not break existing focused tests, race-pack regressions, controller tests, or quality gates; no Step 09-caused failures detected; coverage for touched `examples/` files is outside the `collectCoverageFrom` glob (not applicable).
+- [DONE] Step 11 — Document Tier 1/Tier 2 baseline contract: updated `examples/racing_curriculum/README.md` with the baseline contract; `npm run docs:quality:metrics` and `npm run lint` passed.
+- [DONE] Step 12 — Reconcile user-reported Tier 2 demo defects and plan hardening steps: scope reconciliation assigned seven user-reported defects to Phase 3 hardening (renderer, physics, tier layout/start) or deferred to Phase 4; `ACTIVE_CURRICULUM_TIER` default decision (Tier 1) and Tier 3 4-car fallback decision recorded; Step 13–17 packets authored with red-green slices.
+- [DONE] Step 13 — Renderer hardening: guide lines + trails + header text: renderer hardening implemented; green validation slice `p3-s13-green-renderer` [DONE] — 7 suites, 85 tests passed; lint, tsc (tsconfig.json + tsconfig.test.json), `npm run build:racing-curriculum` (732.9 kb bundle), plan-sync, and plan-phase-packets all PASS.
+- [DONE] Step 14 — Physics hardening: off-track penalty + wrong direction + car pushing: physics hardening (off-track penalty, wrong-direction detection, car-vs-car pushing) implemented; green validation slice `p3-s14-green-physics` [DONE].
+- [DONE] Step 15 — Tier layout/start: Tier 1 default + Tier 3 fallback: tier layout implemented; implementation slice `p3-s15-impl-tier-layout` [DONE] (29 suites, 249 tests PASS, bundle 733.7 kb), green validation slice `p3-s15-green-tier-layout` [DONE] (Tier 1 2-car probe and Tier 3 4-car fallback probe both exercised).
+- [DONE] Step 16 — Document updated Tier 1/Tier 2 demo contract: updated `examples/racing_curriculum/README.md` with the updated demo contract; `npm run docs` (HTML docs generated, Mermaid diagrams validated), lint, and plan validators passed.
+- [DONE] Step 18 — Tier 1 demo defect investigation: source-grounded alignment brief identified four Tier 1 demo defects (red guide-line ignored, car overlap, yellow guide-line, cyan center divider) with file:line evidence mapped to `observation.assembler.ts`, `browser-entry.ts`, `environment.step.service.ts` / `simulation-worker.race-pack.service.ts`, and `renderer/racing.renderer.ts`.
+- [DONE] Step 19 — Tier 1 independent-agent architecture pivot: pivoted from shared-controller fan-out to independent per-car NEAT agents. All 22 red-green slices [DONE]; 348 tests pass, lint clean, tsc clean. See slice archive and decision record below.
+- [DONE] Step 17 — Logging and tracker handoff: compressed Phase 3 step/slice details into this logs file; Phase 3 marked [DONE]; `plans/README.md` and `plans/Roadmap.md` updated; Phase 4 left [PLANNED] pending user browser-demo confirmation.
+
+### Step 19 slice archive — Tier 1 independent-agent architecture pivot
+
+All 22 slices are [DONE]. Validation evidence per slice:
+
+| # | slice_id | title | goal | key evidence |
+|---|----------|-------|------|--------------|
+| 1 | `p3-s19-red-obs-team-offset` | Red tests for team-aware observation offset | red-testing | 7/8 tests, 1 expected failure (teamIndex 1 outer-lane centerline) |
+| 2 | `p3-s19-impl-obs-team-offset` | Implement team-aware observation offset | implementing | 8/8 tests; tsc PASS; lint PASS |
+| 3 | `p3-s19-green-obs-team-offset` | Green validation for team-aware observation offset | green-testing | 8/8 tests; browser-entry 69/69 across 6 suites; tsc PASS; build:racing-curriculum PASS |
+| 4 | `p3-s19-red-per-car-observation` | Red tests for per-car observation-state helper | red-testing | 8 passed, 4 failed (derivePerCarObservationState undefined) — honest missing-implementation gap |
+| 5 | `p3-s19-impl-per-car-observation` | Implement per-car observation-state helper | implementing | 12/12 tests; tsc PASS; lint PASS |
+| 6 | `p3-s19-green-per-car-observation` | Green validation for per-car observation-state helper | green-testing | 12/12 tests; browser-entry 69/69; tsc PASS; build PASS |
+| 7 | `p3-s19-red-browser-per-car-controller` | Red tests for independent per-car controllers in browser harness | red-testing | 4 new per-car controller contracts fail (resolveControlFanOut still present, single controller); 70/74 pass |
+| 8 | `p3-s19-impl-browser-per-car-controller` | Implement per-car controller Map in browser harness | implementing | Map<carIndex, NgeController> maintained; resolveControlFanOut removed; per-car observation wired |
+| 9 | `p3-s19-green-browser-per-car-controller` | Green validation for independent per-car browser control | green-testing | Red tests now pass; no regressions in browser-entry suite |
+| 10 | `p3-s19-red-separation-grid` | Red tests for car separation and worker grid | red-testing | Environment + worker tests fail on overlapping bounding boxes and identical starting positions |
+| 11 | `p3-s19-impl-separation-grid` | Implement car separation and worker starting-grid alignment | implementing | CAR_MIN_CENTER_SEPARATION prevents overlap; worker buildRaceFrame staggers cars with grid-spacing |
+| 12 | `p3-s19-green-separation-grid` | Green validation for car separation and worker grid | green-testing | Red tests now pass; no regressions; baselines updated |
+| 13 | `p3-s19-red-renderer-cleanup` | Red tests for renderer visual cleanup | red-testing | Renderer test fails on yellow optimal-line overlay / cyan centerline |
+| 14 | `p3-s19-impl-renderer-cleanup` | Implement renderer visual cleanup | implementing | drawOptimalLineGuidance, COLOR_GUIDANCE_LINE_RGB, drawTrackCenterline, COLOR_CENTERLINE removed; only blue/red team guide lines remain |
+| 15 | `p3-s19-green-renderer-cleanup` | Green validation for renderer visual cleanup | green-testing | Red tests now pass; no yellow/cyan assertions remain; no regressions |
+| 16 | `p3-s19-red-per-car-adaptation` | Red tests for continuous per-car runtime adaptation | red-testing | Test fails when single shared adaptation state mutates every car identically |
+| 17 | `p3-s19-impl-per-car-adaptation` | Implement per-car runtime adaptation / continuous evolution | implementing | Map<carIndex, RuntimeAdaptationState>; no global singleton; browser harness wires each car to its own adaptation entry |
+| 18 | `p3-s19-green-per-car-adaptation` | Green validation for continuous per-car evolution | green-testing | Red tests pass; deterministic probe shows blue/red controllers diverge within 120 frames; no regressions |
+| 19 | `p3-s19-red-worker-independent-genomes` | Red tests for worker evaluation of independent genomes | red-testing | Test fails when runner uses one shared network for every car; asserts distinct per-car networks and fitness |
+| 20 | `p3-s19-impl-worker-independent-genomes` | Implement per-car genome/network wiring in worker race-pack | implementing | createRaceEpisodeRunner accepts one network per car; coevolution container provides one NEAT genome per car; evolution protocol returns per-car/per-team payloads |
+| 21 | `p3-s19-green-worker-independent-genomes` | Green validation for worker independent-genome evaluation | green-testing | Red tests pass; no regressions; worker starting-grid baselines updated |
+| 22 | `p3-s19-green-tier1-divergence-probe` | Green validation — Tier 1 blue/red divergence probe | green-testing | Deterministic Tier 1 probe records distinct steering/lateral positions for blue and red within 120 frames; blue follows inner guide, red follows outer guide, no overlap, no cyan divider |
+
+**Final Step 19 validation gate:** 348 tests pass across all focused suites; `npm run lint` clean; `npx tsc --noEmit -p tsconfig.json` clean; `npx tsc --noEmit -p tsconfig.test.json` clean; `npm run build:racing-curriculum` succeeds; `validate-plan-sync` PASS (0 errors, 0 warnings); `validate-plan-phase-packets` PASS (0 errors, 0 warnings).
+
+**Superseded pre-pivot slices (removed from active chain):**
+
+- `p3-s19-red-browser-per-car` — replaced by `p3-s19-red-browser-per-car-controller` plus per-car observation/adaptation slices.
+- `p3-s19-impl-browser-per-car` — replaced by `p3-s19-impl-browser-per-car-controller`.
+- `p3-s19-green-browser-per-car` — replaced by `p3-s19-green-browser-per-car-controller`.
+
+Their single concern (stop fanning one control to every car) is now enforced by the per-car observation helper, the per-car controller Map, the per-car adaptation Map, and the per-car worker genome wiring.
+
+### Decision Record — DR-2026-06-26-01
+
+```yaml
+decision_record:
+  id: 'DR-2026-06-26-01'
+  context: 'Tier 1 racing demo currently creates a single NGE controller and fans its single {throttle, steer} output to all cars via resolveControlFanOut. This masks team-aware observation, prevents independent evolution, and produces overlapping, identical cars.'
+  options:
+    - id: 'fan-out'
+      desc: 'Keep the shared NEAT controller and continue fanning one control output to every car, only patching the observation offset.'
+    - id: 'independent-agents'
+      desc: 'Give every car its own continuously evolving NEAT network/controller and derive a separate observation state for each car.'
+  chosen: 'independent-agents'
+  rationale: 'The NGE racing curriculum is intended as a multi-agent benchmark ladder. A shared controller cannot demonstrate coevolution, team specialization, or independent adaptation. Per-car networks are a prerequisite for Tier 1 → Tier 3 progression and align with the Ant Hive / Predator-Prey demos.'
+  owner: '01-planning'
+  rollback_plan: 'If green validation fails, restore the pre-pivot Step 19 packet and reactivate the superseded p3-s19-red-browser-per-car fan-out slice. Remove per-car Map and helper code in the same rollback commit.'
+  created_at: '2026-06-26T00:00:00Z'
+```
+
+### Planning claim — per-car NEAT agents
+
+The previous "one NEAT controller fanned out to every car" design is superseded. In Tier 1, every car is an independently evolving NEAT agent: its own genome-derived network, its own per-car observation state, its own controller instance, and its own runtime adaptation cadence. This contract carries forward to Phase 4 (Tier 3 2v2): every car has its own NEAT genome-derived network, observation, controller, and adaptation state; teammates share only radio/team observations and a team-scoped fitness signal. The Ant Hive and Predator/Prey NGE demos will reuse this independent-agent pattern when their active phases begin.
+
+### Phase 3 changed file groups
+
+- `examples/racing_curriculum/renderer/racing.renderer.ts`, `racing.renderer.test.ts`
+- `examples/racing_curriculum/browser-entry/browser-entry.ts`, `browser-entry.test.ts` (and sibling test files)
+- `examples/racing_curriculum/controller/observation.assembler.ts`, `observation.assembler.test.ts`
+- `examples/racing_curriculum/controller/nge.controller.ts`, `nge.controller.test.ts`
+- `examples/racing_curriculum/controller/runtime.adaptation.ts`, `runtime.adaptation.test.ts`
+- `examples/racing_curriculum/environment/environment.step.service.ts`, `environment.step.service.test.ts`
+- `examples/racing_curriculum/track/track.generator.test.ts`
+- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts`, `simulation-worker.race-pack.test.ts`
+- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts`
+- `examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts`
+- `examples/racing_curriculum/README.md`
+- Generated docs bundle: `docs/assets/racing-curriculum.bundle.js`
 - `cortex-index` gate reports stale semantic index across pre-existing files; a rebuild did not resolve it. Owner: `00-helping`; not a Phase 3 closure blocker.
 - `routing-table-freshness` gate reports `.github/agent-skill-routing-table.md` is stale relative to source files; no routing changes were made in this phase. Owner: routing-table generator; not a Phase 3 closure blocker.
 - Worker-authoritative evolution protocol integration was explicitly deferred to Tier 3 or beyond; Tier 2 validated on the browser-host POC seam.
